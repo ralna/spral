@@ -1,0 +1,19 @@
+The following standards avoid polluting the namespace (both of ourselves and
+the user) and make finding routines easier.
+* Module naming to reflect file name and position in directory hierarchy
+  eg src/ssids/alloc.f90 contains a module called spral_ssids_alloc.
+  Note the exception that the main module for a directory is in that
+  directory, e.g. src/ssids/ssids.f90 NOT src/ssids.f90.
+* All modules to use PRIVATE and explicitly export symbols using PUBLIC (with
+  one line comment as to purpose on export line)
+* When USEing modules in Fortran, use ONLY specifier if you need 5 or fewer
+  symbols.
+* Ensure module USE list and corresponding dependencies in Makefile.am are
+  up to date when a symbol is no longer used, or a new symbol is added.
+* All C symbols visible to linker must start spral_ plus any subdirectory name
+  as per module naming scheme.
+* CUDA kernels related to a specific x.f90 should be in a file called
+  x_kernels.cu unless there is a good reason to use multiple files, in which
+  case they shuold be named sensibly, but still end in _kernels.
+* For routines at top level, add a short description of their purpose to
+  README file.

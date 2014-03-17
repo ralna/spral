@@ -1,0 +1,28 @@
+core_analyse
+   Core analyse phase functionality for symmetric patterned matrices.
+cuda
+   Explicit Fortran interface to CUDA API and some helper routines.
+match_order
+   Matching-based ordering for numerically difficult symmetric indefinite
+   problems.
+matrix_util
+   Utilities for handling matrices. Various format conversion, verification and
+   printing routines.
+metis4_wrapper
+   Wrapper around Metis v4.
+metis5_wrapper
+   Wrapper around Metis v5.
+pgm
+   Utilities for writing pgm and ppm files
+random
+   A random number generator for reals and integers
+random_matrix
+   Generate a random sparse matrix (for testing purposes)
+rutherford_boeing
+   Routines for handling Rutherford-Boeing files.
+scaling
+   Various routines for scaling sparse matrices.
+ssids
+   Sparse Symmetric Indefinite Solver for GPUs.
+timer
+   Timing routines built on top of C's clock_gettime() function.

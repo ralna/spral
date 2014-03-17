@@ -1,0 +1,67 @@
+{
+   libcuda:calloc
+   Memcheck:Leak
+   fun:calloc
+   obj:/usr/lib/libcuda.so.331.20
+   obj:/usr/lib/libcuda.so.331.20
+   obj:/usr/lib/libcuda.so.331.20
+   obj:/usr/lib/libcuda.so.331.20
+   obj:/usr/lib/libcuda.so.331.20
+   obj:/usr/lib/libcuda.so.331.20
+   obj:/usr/lib/libcuda.so.331.20
+   obj:/usr/lib/libcuda.so.331.20
+   obj:/usr/lib/libcuda.so.331.20
+   obj:/usr/lib/libcuda.so.331.20
+   obj:/usr/lib/libcuda.so.331.20
+}
+
+{
+   libcuda:initDriverContextEv_calloc
+   Memcheck:Leak
+   fun:calloc
+   ...
+   fun:_ZN6cudart19contextStateManager17initDriverContextEv
+}
+
+{
+   libcuda:cuInit_calloc
+   Memcheck:Leak
+   fun:calloc
+   ...
+   fun:cuInit
+}
+
+{
+   libcuda:cuInit_malloc
+   Memcheck:Leak
+   fun:malloc
+   ...
+   fun:cuInit
+}
+
+{
+   libcuda:cudaMalloc_driverHelper_calloc
+   Memcheck:Leak
+   fun:calloc
+   ...
+   fun:cuMemAlloc_v2
+   fun:_ZN6cudart12driverHelper9mallocPtrEmPPv
+}
+
+{
+   libcublas:calloc
+   Memcheck:Leak
+   fun:calloc
+   ...
+   obj:/usr/lib/libcuda.so.331.20
+   obj:/home/local/cuda-5.5/lib64/libcublas.so.5.5.22
+}
+
+{
+   libcuda:cuStreamCreate_calloc
+   Memcheck:Leak
+   fun:calloc
+   ...
+   fun:cuStreamCreate
+}
+
