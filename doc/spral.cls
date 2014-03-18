@@ -7,7 +7,7 @@
 % Library name definition
 \RequirePackage{url}
 \newcommand{\libraryname}{SPRAL}
-\newcommand{\libraryurl}{\url{http://unknown.ac.uk/}}
+\newcommand{\libraryurl}{\url{http://www.numerical.rl.ac.uk/spral}}
 
 % Colors
 \RequirePackage{pgf}
