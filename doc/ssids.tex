@@ -14,7 +14,7 @@ sparse {\bf symmetric} equations  ${AX = B}$ using a multifrontal method on an
 The package covers the following cases:
 \begin{enumerate}
 \item $A$ is {\bf indefinite}.
-SSIDS computes the sparse factorization
+\texttt{SSIDS} computes the sparse factorization
 $$
    A =  PLD(PL)^T
 $$
@@ -22,15 +22,16 @@ where $P$ is a permutation matrix, $L$ is unit lower triangular,
 and $D$ is block diagonal with blocks of size $1 \times 1 $
 and $2 \times 2$.
 \item $A$ is {\bf positive definite}.
-SSIDS computes the {\bf sparse Cholesky factorization}
+\texttt{SSIDS} computes the {\bf sparse Cholesky factorization}
 $$
    A =  PL(PL)^T
 $$
 where $P$ is a permutation matrix and $L$ is lower triangular.
-\textit{However, this will be slower than a dedicated Cholesky solver.}
+\textit{However, as \texttt{SSIDS} is designed primarily for indefinite
+systems, this may be slower than a dedicated Cholesky solver.}
 \end{enumerate}
 
-SSIDS has been designed to return bit-compatible results.
+\texttt{SSIDS} returns bit-compatible results.
 
 An option exists to scale the matrix. In this case, the factorization of
 the scaled matrix  $ {\overline{A} = S A S}$ is computed,
@@ -58,11 +59,11 @@ where ${S}$ is a diagonal scaling matrix.
 %%%%%%%%%%%%%%%%%%%%%% installation %%%%%%%%%%%%%%%%%%%%%%
 
 \section{Installation}
-Please see the dedicated SPRAL install document. In particular note that:
+Please see the SPRAL install documentation. In particular note that:
 \begin{itemize}
    \item A CUDA compiler (\texttt{nvcc}) is required.
    \item A METIS library is required.
-   \item A BLAS library is required.
+   \item A BLAS library is required (in addition to CUBLAS).
    \item For multi-GPU or multi-stream work, OpenMP must be enabled
 \end{itemize}
 
@@ -72,7 +73,7 @@ Please see the dedicated SPRAL install document. In particular note that:
 
 \subsection{Calling sequences}
 
-Access to the module requires a {\tt USE} statement \\ \\
+Access to the package requires a {\tt USE} statement \\ \\
 \indent\hspace{8mm}{\tt use spral\_ssids} \\
 
 \medskip
@@ -80,60 +81,57 @@ Access to the module requires a {\tt USE} statement \\ \\
 \noindent
 The following procedures are available to the user:
 \begin{itemize}
-\item {\tt ssids\_analyse} accepts the matrix data in compressed
+\item {\tt ssids\_analyse()} accepts the matrix data in compressed
 sparse column format and optionally checks it for duplicates and  out-of-range entries.
 The user may supply an elimination order; otherwise
 one is generated. Using this elimination order,
-{\tt ssids\_analyse}  analyses the sparsity pattern of
+{\tt ssids\_analyse()} analyses the sparsity pattern of
 the matrix and prepares the data structures for the factorization.
 
- \item {\tt ssids\_analyse\_coord} is an alternative to
-{\tt ssids\_analyse} that may be used if the user has
-the matrix data held in coordinate
+ \item {\tt ssids\_analyse\_coord()} is an alternative to
+{\tt ssids\_analyse()} that may be used if the user has
+the matrix data in coordinate
 format. Again, the user may supply an elimination order; otherwise
-one is generated. {\tt ssids\_analyse\_coord}
+one is generated. {\tt ssids\_analyse\_coord()}
 checks the matrix data  for duplicates and  out-of-range entries,
 stores
 it in compressed sparse column format and then proceeds
-in the same way as {\tt ssids\_analyse}.
+in the same way as {\tt ssids\_analyse()}.
 
-\item {\tt ssids\_factor} uses the data structures
-set up by {\tt ssids\_analyse} to compute a sparse
-factorization. More than one call to  {\tt ssids\_factor}
-may follow a call to {\tt ssids\_analyse} (allowing more than
+\item {\tt ssids\_factor()} uses the data structures
+set up by {\tt ssids\_analyse()} to compute a sparse
+factorization. More than one call to  {\tt ssids\_factor()}
+may follow a call to {\tt ssids\_analyse()} (allowing more than
 one matrix with the same sparsity pattern but different
 numerical values to be factorized without multiple calls to
-{\tt ssids\_analyse}).
+{\tt ssids\_analyse()}).
 An option exists to scale the matrix.
 
-\item {\tt ssids\_solve} uses the computed factors generated
-by  {\tt ssids\_factor}
+\item {\tt ssids\_solve()} uses the computed factors generated
+by  {\tt ssids\_factor()}
 to solve systems ${AX= B}$
 for one or more right-hand sides $B$.
-Multiple calls to {\tt ssids\_solve} may follow a call to
-{\tt ssids\_factor}.
+Multiple calls to {\tt ssids\_solve()} may follow a call to
+{\tt ssids\_factor()}.
 An option is available to perform a partial solution.
 
-\item {\tt ssids\_finalise} should be called after all other calls
+\item {\tt ssids\_free()} should be called after all other calls
 are complete for a problem (including after an error
 return that does not allow the computation
 to continue). It frees memory referenced by components of
-the derived data types.
+the derived data types. This routine also allows created by either
+{\tt ssids\_analyse() or ssids\_factorize()} to be freed seperately.
 \end{itemize}
 
 \noindent
 In addition, the following routines may be called:
 \begin{itemize}
-\item {\tt ssids\_free} may be called to free memory associated with {\tt akeep}
-or {\tt fkeep} when a call to {\tt ssids\_finalise} is not appropriate (for
-example, if a further factorization is to be performed for a matrix with the
-same sparsity pattern).
-\item {\tt ssids\_enquire\_posdef} may be called
+\item {\tt ssids\_enquire\_posdef()} may be called
 in the  positive-definite case to obtain the pivots used.
-\item {\tt ssids\_enquire\_indef} may be called
+\item {\tt ssids\_enquire\_indef()} may be called
 in the indefinite case to obtain the pivot sequence used by the factorization
 and the entries of  ${D}^{-1}$.
-\item {\tt ssids\_alter} may be called in the indefinite case to alter
+\item {\tt ssids\_alter()} may be called in the indefinite case to alter
 the entries of ${D}^{-1}$.
 Note that this means that  $PLD(PL)^T$ is no longer
 a factorization of $A$.
@@ -145,7 +143,7 @@ a factorization of $A$.
 \subsection{Derived types} \label{derived types}
 
 For each problem, the user must employ the derived types defined by the
-module to declare scalars of the types
+package to declare scalars of the types
 {\tt ssids\_options}, {\tt ssids\_inform}, {\tt ssids\_akeep}, and {\tt ssids\_fkeep}.
 The following pseudo-code illustrates this.
 \begin{verbatim}
@@ -182,11 +180,8 @@ arguments be called by keyword, not by position}.
 {\tt INTEGER(long)} denotes {\tt INTEGER(kind=selected\_int\_kind(18))}.
 
 \noindent
-{\tt REAL} denotes default real if the single precision version, and double
-precision real if the double precision is being used.
-We use the term {\bf package type} to mean
-default real if the single precision version is being used,
-double precision real for the double precision version.
+{\tt REAL} denotes double precision real.
+We also use the term {\bf package type} to mean the same.
 
 \subsection{Data formats} \label{dataformats}
 
@@ -214,15 +209,16 @@ This standard data format consists of the following data:
    real,    size(ptr(n+1)-1) :: val    ! numerical values
 \end{verbatim}
 Non-zero matrix entries are ordered by increasing column index and stored in
-the arrays \texttt{row(:)} and \texttt{val(:)} such that \texttt{row(k)} gives
-the row number and \texttt{val(k)} gives the value of the \texttt{k}-th entry.
+the arrays \texttt{row(:)} and \texttt{val(:)} such that \texttt{row(k)} holds
+the row number and \texttt{val(k)} holds the value of the \texttt{k}-th entry.
 The \texttt{ptr(:)} array stores column pointers such that \texttt{ptr(i)} is
 the first entry in the \texttt{i}-th column, and \texttt{ptr(n+1)} is one more
 than the total number of entries.
 Entries that are zero, including those on the diagonal, need not be specified.
 
-\texttt{SSIDS} requires that only the lower triangluar entries are supplied,
-and there are no duplicate entries. If the \texttt{check} argument to
+\texttt{SSIDS} requires that only the lower triangular entries of $A$ are
+supplied, and there should be no duplicate entries. If the \texttt{check}
+argument to
 \texttt{ssids\_analyse()} is \texttt{.true.}, out of range entries (including
 those in the upper triangle) will be discarded and any duplicates will be
 summed.
@@ -288,7 +284,9 @@ Figure~\ref{format eg}.
 }
 
 \noindent
-Matrix data should be supplied as described in Section~\ref{dataformats}.
+Matrix data should be supplied as described in Section~\ref{dataformats}. As
+the package uses CSC format internally, \texttt{ssids\_analyse()} with checking
+disabled provides the most efficient interface.
 
 \noindent
 
@@ -300,8 +298,8 @@ type  {\tt LOGICAL}. If set to {\tt .true.} the matrix
 data is checked for errors and the cleaned matrix
 (duplicates are summed and out-of-range entries
 discarded) is stored in {\tt akeep}.
-Otherwise, no checking of the matrix data is carried out
-and {\tt ptr} and {\tt row} must be passed unchanged to the factorization routines.
+Otherwise, for data in CSC format, no checking of the matrix data is carried out
+and {\tt ptr} and {\tt row} must be passed unchanged to the factorization routines. Checking is always performed for coordinate data.
 
 \item[\texttt{n}{\rm ,} \texttt{ptr(:)}{\rm ,} \texttt{row(:)}] are \intentin\ 
    variables of type {\tt INTEGER} specifying the lower triangular part of $A$
@@ -309,14 +307,15 @@ and {\tt ptr} and {\tt row} must be passed unchanged to the factorization routin
 
 \item[\texttt{n}{\rm ,} \texttt{ne}{\rm ,} \texttt{row(:)}{\rm ,} \texttt{col(:)}]
    are \intentin\ variables of type {\tt INTEGER} specifying the lower
-   (or upper) triangular part of $A$ in Coordinate format (see Section~\ref{coordformat}).
+   (or upper) triangular part of $A$ in coordinate format (see Section~\ref{coordformat}).
 
 \item[\texttt{akeep}] is an \intentout\ scalar of type
 {\tt ssids\_akeep}. It is used to hold data about the problem being
 solved and must be passed unchanged to the other subroutines.
 
-\item[\texttt{options}] is an \intentin\ scalar of type {\tt ssids\_options}
-(see Section~\ref{typeoptions}).
+\item[\texttt{options}] is an \intentin\ scalar of type {\tt ssids\_options}.
+Its components specify the algorithmic options used by the subroutine, as
+explained in Section~\ref{typeoptions}.
 
 \item[\texttt{inform}] is an \intentout\ scalar of type
 {\tt ssids\_inform}. Its components provide information about the execution
@@ -331,10 +330,11 @@ routines as part of {\tt akeep}); this order may give slightly more fill-in
 than the user-supplied order and, in the indefinite case, may be modified by
 {\tt ssids\_factor} to maintain numerical stability. 
 
-\item[\texttt{val(:)}] is an optional \intentin\ array of package type giving
-the numerical values of the matrix as described in Section~\ref{dataformats}.
-{\tt val} must be present if a matching-based elimination ordering is required
-({\tt options\%ordering$=$2}), and is otherwise ignored.
+\item[\texttt{val(:)}] is an optional \intentin\ array of package type that must
+hold the numerical values of the entries of the matrix, as described in
+Section~\ref{dataformats}.
+{\tt val(:)} must be present if a matching-based elimination ordering is
+required ({\tt options\%ordering$=$2}), and is otherwise ignored.
 
 \end{description}
 
@@ -354,7 +354,8 @@ must be set to {\tt .true.} if the matrix is positive-definite, and
 {\tt .false.} if it is indefinite.
 
 \item[\texttt{val(:)}] is an \intentin\ array of package type that must hold
-the numerical values of the matrix as described in Section~\ref{dataformats}.
+the numerical values of the entries of the matrix, as described in
+Section~\ref{dataformats}.
 
 \item[\texttt{akeep}]  is an \intentin\ scalar of type
 {\tt ssids\_akeep} that must be unchanged since the
@@ -364,8 +365,9 @@ call to {\tt ssids\_analyse()} or {\tt ssids\_analyse\_coord()}.
 {\tt ssids\_fkeep}. It is used to hold data about the problem being
 solved and must be passed unchanged to the other subroutines.
 
-\item[\texttt{options}] is an \intentin\ scalar of type {\tt ssids\_options}
-(see Section~\ref{typeoptions}).
+\item[\texttt{options}] is an \intentin\ scalar of type {\tt ssids\_options}.
+Its components specify the algorithmic options used by the subroutine, as
+explained in Section~\ref{typeoptions}.
 
 \item[\texttt{inform}] is an \intentout\ scalar of type
 {\tt ssids\_inform}. Its components provide information about the execution
@@ -407,17 +409,17 @@ parameter {\tt job}.
 \begin{description}
 \item[\texttt{x1(:)}] is an \intentinout\ array of package type and size
 \texttt{n}. It must be set such that \texttt{x1(i)} holds the component of
-the right-hand side for variables \texttt{i}. On exit, \texttt{x1(i)} holds the
-solution for variable \texttt{i}.
+the right-hand side for variables $i$. On exit, \texttt{x1(i)} holds the
+solution for variable $i$.
 
 \item[\texttt{nrhs}] is an \intentin\ scalar of type {\tt INTEGER} that holds
 the number of right-hand sides.
 
 \item[\texttt{x(:,:)}] is an \intentinout\ array of package type with extents
 \texttt{ldx} and \texttt{rhs}. It must be set so that \texttt{x(i,j)} holds the
-component of the right-hand side for variable \texttt{i} to the \texttt{j}-th
-system. On exit, \texttt{x(i,j)} holds the solution for variable \texttt{i} to
-the \texttt{j}-th system.
+component of the right-hand side for variable $i$ to the $j$-th
+system. On exit, \texttt{x(i,j)} holds the solution for variable $i$ to
+the $j$-th system.
 
 \item[\texttt{ldx}] is an \intentin\ scalar of type {\tt INTEGER} that must be
 set to the first extent of array \texttt{x}.
@@ -428,8 +430,9 @@ must be unchanged since the last call to {\tt ssids\_factor()}.
 \item[\texttt{fkeep}]  is an \intentin\ scalar of type {\tt ssids\_fkeep} that
 must be unchanged since the last call to {\tt ssids\_factor()}.
 
-\item[\texttt{options}] is an \intentin\ scalar of type {\tt ssids\_options}
-(see Section~\ref{typeoptions}).
+\item[\texttt{options}] is an \intentin\ scalar of type {\tt ssids\_options}.
+Its components specify the algorithmic options used by the subroutine, as
+explained in Section~\ref{typeoptions}.
 
 \item[\texttt{inform}] is an \intentout\ scalar of type
 {\tt ssids\_inform}. Its components provide information about the execution
@@ -481,7 +484,7 @@ in the below table.
 \subsection{\texttt{ssids\_free()}}
 \textbf{To free memory and resources,
    \begin{itemize}
-      \item[] allocated by \texttt{ssids\_analyze()} or \texttt{ssids\_analyze\_coord()}:
+      \item[] allocated by \texttt{ssids\_analyse()} or \texttt{ssids\_analyse\_coord()}:
       \vspace*{0.1cm} \\
       \texttt{ \hspace*{0.2cm}
          call ssids\_free(akeep,cuda\_error)
@@ -500,9 +503,9 @@ in the below table.
 }
 Once all other calls are complete for a problem or after an error
 return that does not allow the computation to continue,
-a call should be made to free memory and CUDA resources allocated by SSIDS and
-associated with the structures {\tt akeep} and/or {\tt fkeep} using calls to
-\texttt{ssids\_free}.
+a call should be made to free memory and CUDA resources allocated by
+\texttt{SSIDS} and associated with the derived data types {\tt akeep} and/or
+{\tt fkeep} using calls to \texttt{ssids\_free()}.
 
 \begin{description}
 
@@ -519,8 +522,8 @@ released.
 \item[\texttt{cuda\_error}] is an \intentout\ scalar of type default integer.
 On exit, a non-zero value gives a CUDA error code. This may indicate either
 a failure to deallocate GPU memory, or a pre-existing CUDA error condition.
-Such a pre-existing error condition may have resulted from either user or
-\texttt{SSIDS} code.
+Note that due to the asynchronous nature of GPU execution, the
+reported error may have a casue errors external to {\tt SSIDS}.
 
 \end{description}
 
@@ -544,15 +547,16 @@ must be unchanged since the call to {\tt ssids\_factor()}.
 \item[\texttt{fkeep}]  is an \intentin\ scalar of type {\tt ssids\_fkeep} that
 must be unchanged since the call to {\tt ssids\_factor()}.
 
-\item[\texttt{options}] is an \intentin\ scalar of type {\tt ssids\_options}
-(see Section~\ref{typeoptions}).
+\item[\texttt{options}] is an \intentin\ scalar of type {\tt ssids\_options}.
+Its components specify the algorithmic options used by the subroutine, as
+explained in Section~\ref{typeoptions}.
 
 \item[\texttt{inform}] is an \intentout\ scalar of type
 {\tt ssids\_inform}. Its components provide information about the execution
 of the subroutine, as explained in Section~\ref{typeinform}.
 
 \item[\texttt{d(:)}] is an  \intentout\ rarray of type {\tt  REAL} and
-size {\tt n}. The {\tt i}-th diagonal entry of $D$ will be placed in {\tt d(i)}.
+size {\tt n}. The $i$-th diagonal entry of $D$ will be placed in {\tt d(i)}.
 
 \end{description}
 %%%%%%% enquire subroutine %%%%%%
@@ -574,8 +578,9 @@ must be unchanged since the call to {\tt ssids\_factor()}.
 \item[\texttt{fkeep}]  is an \intentin\ scalar of type {\tt ssids\_fkeep} that
 must be unchanged since the call to {\tt ssids\_factor()}.
 
-\item[\texttt{options}] is an \intentin\ scalar of type {\tt ssids\_options}
-(see Section~\ref{typeoptions}).
+\item[\texttt{options}] is an \intentin\ scalar of type {\tt ssids\_options}.
+Its components specify the algorithmic options used by the subroutine, as
+explained in Section~\ref{typeoptions}.
 
 \item[\texttt{inform}] is an \intentout\ scalar of type
 {\tt ssids\_inform}. Its components provide information about the execution
@@ -583,16 +588,16 @@ of the subroutine, as explained in Section~\ref{typeinform}.
 
 \item[\texttt{piv\_order(:)}] is an optional \intentout\ array of type
 {\tt INTEGER} and size {\tt n}. If present, on exit
-$|\texttt{piv\_order(i)}|$ gives the position of vairable {\tt i} in the pivot
-order. The sign will be positive if {\tt i} is a $1\times1$ pivot, and negative
-if {\tt i} is part of a $2 \times 2$ pivot.
+$|\texttt{piv\_order(i)}|$ gives the position of variable $i$ in the pivot
+order. The sign will be positive if $i$ is a $1\times1$ pivot, and negative
+if $i$ is part of a $2 \times 2$ pivot.
 
 \item[\texttt{d(:,:)}] is an optional \intentout\ array of package type with
 extents {\tt 2} and {\tt n}.
 If present, on exit diagonal entries of ${D}^{-1}$ will be placed
-in {\tt d(1,i)}, {\tt i = 1,2,\ldots,n},
+in {\tt d(1,i)}, $i = 1,2,\ldots,n$,
 the off-diagonal entries  of ${D}^{-1}$ will be placed in
-{\tt d(2,i)}, {\tt i = 1,2,\ldots,n-1}, and
+{\tt d(2,i)}, $i = 1,2,\ldots,n-1$, and
 {\tt d(2,n)} will be set to zero.
 
 \end{description}
@@ -612,9 +617,9 @@ the off-diagonal entries  of ${D}^{-1}$ will be placed in
 
 \item[\texttt{d(:,:)}] is an \intentin\ array of package type with
 extents {\tt 2}  and {\tt n}. The diagonal entries
-of ${D}^{-1}$ will be altered to {\tt d(1,i)}, {\tt i = 1,2,...,n},
+of ${D}^{-1}$ will be altered to {\tt d(1,i)}, $i = 1,2,\ldots,n$,
 and the off-diagonal entries will be altered to
-{\tt d(2,i)}, {\tt i = 1,2,...,n-1} (and $PLD(PL)^T$ will no longer be
+{\tt d(2,i)}, $i = 1,2,\ldots,n-1$ (and $PLD(PL)^T$ will no longer be
 a factorization of $A$).
 
 \item[\texttt{akeep}]  is an \intentin\ scalar of type {\tt ssids\_akeep} that
@@ -631,8 +636,8 @@ that must be unchanged since the call to {\tt ssids\_factor()}.
 \subsection{\texttt{ssids\_options}}
 \label{typeoptions}
 
-The derived data type {\tt ssids\_options}
-is used to specify solver options. The components, which are automatically
+The derived data type {\tt ssids\_options} is used to specify the options used
+within \texttt{SSIDS}. The components, that are automatically
 given default values in the definition of the type, are: \\
 
 %%%%%%%%%%%%
@@ -641,7 +646,7 @@ given default values in the definition of the type, are: \\
 \begin{description}
 
 \item[\texttt{print\_level}] is a scalar of type  {\tt INTEGER}
-that is used to controls the level of  printing. The different levels are:
+that is used to control the level of printing. The different levels are:
 \begin{description}
 \item{\tt $<$ 0 } No printing.
 \item{\tt = 0 } Error and warning messages only.
@@ -685,12 +690,12 @@ or {\tt ssids\_analyse\_coord}.
 The options are:
 \begin{description}
 \item{} {\tt 0} User-supplied ordering is used.
-\item{} {\tt 1} METIS ordering with default settings is used. Note that the user needs to supply the
-METIS library. If METIS is not supplied and this option is requested, the routine
-will return immediately with an error.
-\item{} {\tt 2} A matching-based elimination ordering is computed using {\tt HSL\_MC80}.
-METIS is used on the compressed matrix. This option should only be chosen for indefinite systems.
-A scaling is also computed that may be passed to {\tt ssids\_factor}
+\item{} {\tt 1} METIS ordering with default settings is used.
+\item{} {\tt 2} A matching-based elimination ordering is computed (the Hungarian
+algorithm is used to identify large off-diagonal entries. A restricted METIS
+ordering is then used that forces these on to the subdiagonal).
+This option should only be chosen for indefinite systems.
+A scaling is also computed that may be used in {\tt ssids\_factor()}
 (see {\tt options\%scaling} below).
 \end{description}
 The default is {\tt ordering}$=${\tt 1}.
@@ -722,7 +727,7 @@ options are:
       the same as that generated with {\tt options\%scaling $=$ 1} if matrix
       values have not changed. This option will generate an error if a
       matching-based ordering was not used.
-   \item[\texttt{ $\ge$ 2 }] Generate a scaling by applying the norm-equilibriation
+   \item[\texttt{ $\ge$ 4 }] Generate a scaling by applying the norm-equilibriation
       algorithm of Ruiz.
 \end{description}
 The default is {\tt scaling}$=${\tt 0}.
@@ -743,14 +748,11 @@ The default is {\tt action}$=${\tt .true.}
 
 \item[\texttt{small}] is a scalar of type {\tt REAL}.
 Any pivot whose modulus is less than {\tt small} is treated as zero.
-The default in the double and double complex versions is
-{\tt small}$ = {\tt 10^{-20}}$, and in the single and single complex versions
-is {\tt small}$ = {\tt 10^{-12}}$.
+The default is {\tt small}$ = {\tt 10^{-20}}$.
 
 \item[\texttt{u}] is a scalar of type {\tt REAL} that holds the relative pivot
 tolerance $u$.
-The default in the double and double complex versions is {\tt u}$=${\tt 0.01},
-and in the single and single complex versions is {\tt u}$=${\tt 0.1}.
+The default is {\tt u}$=${\tt 0.01}.
 Values outside the range $[0,0.5]$ are treated as the closest value in that range.
 
 \end{description}
@@ -760,9 +762,11 @@ Values outside the range $[0,0.5]$ are treated as the closest value in that rang
 
 \begin{description}
 \item[\texttt{use\_gpu\_solve}] is a scalar of type {\tt LOGICAL} that specifies
-   whether to use the CPU or GPU for the solve. If \texttt{.true.}, the GPU is
-   used for the solve, but some more advanced features are not available (see
-   the description of the \texttt{job} parameter in Section~\ref{solve}).
+   whether to use the CPU or GPU for the \texttt{ssids\_solve()}. If
+   \texttt{.true.}, the GPU is used, but some more advanced features are not
+   available (see the description of the \texttt{job} parameter in
+   Section~\ref{solve}).
+   The default value is \texttt{use\_gpu\_solve}$=$\texttt{.true.}.
 \item[\texttt{presolve}] is a scalar of type {\tt INTEGER} that specifies the
    amount of extra work performed during factorization to accelerate the solve.
    It can take the following values:
@@ -776,6 +780,7 @@ Values outside the range $[0,0.5]$ are treated as the closest value in that rang
          $L$ and $D$ are altered, the routines {\tt ssids\_enquire\_posdef()},
          {\tt ssids\_enquire\_indef()}, and {\tt ssids\_alter()} cannot be used.
    \end{description}
+   The default option is \texttt{presolve}$=$\texttt{0}.
 \end{description}
 
 %%%%%%%%%%% inform type %%%%%%%%%%%
@@ -877,7 +882,7 @@ holds the error code returned (and is {\tt 0} otherwise).
 \item[\texttt{cuda\_error}] is a scalar of type {\tt INTEGER}.
 In the event of a CUDA error, it holds the error code returned (and is {\tt 0}
 otherwise). Note that due to the asynchronous nature of GPU execution, the
-reported error may be casued by errors external to {\tt SSIDS}.
+reported error may have a casue errors external to {\tt SSIDS}.
 
 \end{description}
 
