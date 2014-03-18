@@ -21,8 +21,9 @@ module spral_ssids_solve_gpu
 
 contains
 
-subroutine bwd_solve_gpu(nnodes, sptr, nstream, stream_handle, stream_data, &
-      top_data, n, invp, x, st, cuda_error)
+subroutine bwd_solve_gpu(posdef, nnodes, sptr, nstream, stream_handle, &
+      stream_data, top_data, n, invp, x, st, cuda_error)
+   logical, intent(in) :: posdef
    integer, intent(in) :: nnodes
    integer, dimension(nnodes+1), intent(in) :: sptr
    integer, intent(in) :: nstream
@@ -55,16 +56,16 @@ subroutine bwd_solve_gpu(nnodes, sptr, nstream, stream_handle, stream_data, &
    if(cuda_error.ne.0) return
 
    ! Backwards solve for top part of tree
-   call subtree_bwd_solve_gpu(top_data%num_levels, top_data%bwd_slv_lookup,   &
-      top_data%bwd_slv_lwork, top_data%bwd_slv_nsync, gpu_x, st, cuda_error,  &
-      stream_handle(1))
+   call subtree_bwd_solve_gpu(posdef, top_data%num_levels,                     &
+      top_data%bwd_slv_lookup, top_data%bwd_slv_lwork, top_data%bwd_slv_nsync, &
+      gpu_x, st, cuda_error, stream_handle(1))
    if(cuda_error.ne.0) return
 
    ! Backwards solve for lower parts of tree
    ! (As they are independant, order of loop doesn't matter)
    ! FIXME: Should probably be an OpenMP parallel do eventually
    do stream = 1, nstream
-      call subtree_bwd_solve_gpu(stream_data(stream)%num_levels,               &
+      call subtree_bwd_solve_gpu(posdef, stream_data(stream)%num_levels,       &
          stream_data(stream)%bwd_slv_lookup, stream_data(stream)%bwd_slv_lwork,&
          stream_data(stream)%bwd_slv_nsync, gpu_x, st, cuda_error,             &
          stream_handle(stream))
@@ -88,8 +89,9 @@ end subroutine bwd_solve_gpu
 ! This subroutine performs a backwards solve on the chunk of nodes specified
 ! by sa:en.
 !
-subroutine subtree_bwd_solve_gpu(num_levels, bwd_slv_lookup, lwork, nsync, &
-      gpu_x, st, cuda_error, stream)
+subroutine subtree_bwd_solve_gpu(posdef, num_levels, bwd_slv_lookup, lwork, &
+      nsync, gpu_x, st, cuda_error, stream)
+   logical, intent(in) :: posdef
    integer, intent(in) :: num_levels
    type(lookups_gpu_bwd), dimension(:) :: bwd_slv_lookup
    integer, intent(in) :: lwork
@@ -105,10 +107,13 @@ subroutine subtree_bwd_solve_gpu(num_levels, bwd_slv_lookup, lwork, nsync, &
    integer(long) :: nrect, ndiag
    integer :: lvl
 
-   nrect = 0; ndiag = 0
+   logical(C_BOOL) :: cposdef
 
+   nrect = 0; ndiag = 0
    cuda_error = 0
    st = 0
+
+   cposdef = posdef
 
    ! Allocate workspace
    cuda_error = cudaMalloc(gpu_work, lwork*C_SIZEOF(dummy_real))
@@ -118,7 +123,7 @@ subroutine subtree_bwd_solve_gpu(num_levels, bwd_slv_lookup, lwork, nsync, &
    
    ! Backwards solve DL^Tx = z or L^Tx = z
    do lvl = num_levels, 1, -1
-      call run_bwd_solve_kernels(gpu_x, gpu_work, nsync, gpu_sync, &
+      call run_bwd_solve_kernels(cposdef, gpu_x, gpu_work, nsync, gpu_sync, &
          bwd_slv_lookup(lvl), stream)
    end do
 
@@ -141,8 +146,9 @@ subroutine free_lookup_gpu_bwd(gpul, cuda_error)
    endif
 end subroutine free_lookup_gpu_bwd
 
-subroutine fwd_solve_gpu(child_ptr, child_list, n, invp, nnodes, nodes, &
+subroutine fwd_solve_gpu(posdef, child_ptr, child_list, n, invp, nnodes, nodes,&
       rptr, nstream, stream_handle, stream_data, top_data, x, st, cuda_error)
+   logical, intent(in) :: posdef
    integer, dimension(*), intent(in) :: child_ptr
    integer, dimension(*), intent(in) :: child_list
    integer, intent(in) :: n
@@ -244,10 +250,11 @@ subroutine fwd_solve_gpu(child_ptr, child_list, n, invp, nnodes, nodes, &
    ! (As they are independant, order of loop doesn't matter)
    ! FIXME: Should probably be an OpenMP do eventually
    do stream = 1, nstream
-      call subtree_fwd_solve_gpu_lvl(stream_data(stream)%num_levels, gpu_x,    &
-         stream_data(stream)%fwd_slv_lookup, stream_data(stream)%fwd_slv_lwork,&
-         stream_data(stream)%fwd_slv_nlocal, stream_data(stream)%fwd_slv_nsync,&
-         gpu_cvalues, cuda_error, stream_handle(stream))
+      call subtree_fwd_solve_gpu_lvl(posdef, stream_data(stream)%num_levels,   &
+         gpu_x, stream_data(stream)%fwd_slv_lookup,                            &
+         stream_data(stream)%fwd_slv_lwork, stream_data(stream)%fwd_slv_nlocal,&
+         stream_data(stream)%fwd_slv_nsync, gpu_cvalues, cuda_error,           &
+         stream_handle(stream))
       if(cuda_error.ne.0) return
    end do 
 
@@ -255,7 +262,7 @@ subroutine fwd_solve_gpu(child_ptr, child_list, n, invp, nnodes, nodes, &
    if(cuda_error.ne.0) return
 
    ! Forwards solve for top part of tree
-   call subtree_fwd_solve_gpu_lvl(top_data%num_levels, gpu_x,                  &
+   call subtree_fwd_solve_gpu_lvl(posdef, top_data%num_levels, gpu_x,          &
       top_data%fwd_slv_lookup, top_data%fwd_slv_lwork, top_data%fwd_slv_nlocal,&
       top_data%fwd_slv_nsync, gpu_cvalues, cuda_error, stream_handle(1))
    if(cuda_error.ne.0) return
@@ -281,8 +288,9 @@ subroutine fwd_solve_gpu(child_ptr, child_list, n, invp, nnodes, nodes, &
 end subroutine fwd_solve_gpu
 
 ! Note: we don't support non-unit diagonal [i.e. posdef]
-subroutine subtree_fwd_solve_gpu_lvl(num_levels, gpu_x, fwd_slv_lookup, lwork, &
-      nlocal, nsync, gpu_cvalues, cuda_error, stream)
+subroutine subtree_fwd_solve_gpu_lvl(posdef, num_levels, gpu_x, fwd_slv_lookup,&
+      lwork, nlocal, nsync, gpu_cvalues, cuda_error, stream)
+   logical, intent(in) :: posdef
    integer, intent(in) :: num_levels
    type(C_PTR), intent(inout) :: gpu_x
    type(lookups_gpu_fwd), dimension(*) :: fwd_slv_lookup
@@ -296,9 +304,12 @@ subroutine subtree_fwd_solve_gpu_lvl(num_levels, gpu_x, fwd_slv_lookup, lwork, &
    integer :: lvl
 
    type(C_PTR) :: gpu_work, gpu_sync, gpu_xlocal
+   logical(C_BOOL) :: cposdef
 
    integer(C_INT) :: dummy_int
    real(C_DOUBLE) :: dummy_real
+
+   cposdef = posdef ! convert from Fortran to C logical size
 
    ! Do actual work
    cuda_error = cudaMalloc(gpu_sync, 2*nsync*C_SIZEOF(dummy_int))
@@ -308,8 +319,8 @@ subroutine subtree_fwd_solve_gpu_lvl(num_levels, gpu_x, fwd_slv_lookup, lwork, &
    cuda_error = cudaMalloc(gpu_work, lwork*C_SIZEOF(dummy_real))
    if(cuda_error.ne.0) return
    do lvl = 1, num_levels
-      call run_fwd_solve_kernels(fwd_slv_lookup(lvl), gpu_xlocal, gpu_cvalues, &
-         gpu_x, gpu_cvalues, gpu_work, nsync, gpu_sync, stream)
+      call run_fwd_solve_kernels(cposdef, fwd_slv_lookup(lvl), gpu_xlocal, &
+         gpu_cvalues, gpu_x, gpu_cvalues, gpu_work, nsync, gpu_sync, stream)
    end do
    cuda_error = cudaFree(gpu_work)
    if(cuda_error.ne.0) return

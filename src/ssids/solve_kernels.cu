@@ -164,7 +164,7 @@ struct reducing_d_solve_lookup {
  *         P is a (partial) permutation matrix, given by the vector perm.
  * The result x_2-x_1 is returned replacing the first column of upd.
  */
-template <int threadsx>
+template <int threadsx, bool POSDEF>
 void __global__ reducing_d_solve(struct reducing_d_solve_lookup *lookup,
       double *upd, const double *x
       ) {
@@ -190,20 +190,25 @@ void __global__ reducing_d_solve(struct reducing_d_solve_lookup *lookup,
    val = -val;
 
    /* Task 2: D solve (note that D is actually stored as inverse already) */
-   int rp = perm[idx];
-   if(idx!=0 && d[2*idx-1] != 0) {
-      /* second part of 2x2 */
-      int rp2 = perm[idx-1];
-      val += d[2*idx-1] * x[rp2] +
-             d[2*idx]   * x[rp];
-   } else if (d[2*idx+1] != 0) {
-      /* first part of 2x2 */
-      int rp2 = perm[idx+1];
-      val += d[2*idx]   * x[rp] +
-             d[2*idx+1] * x[rp2];
+   if(!POSDEF) {
+      int rp = perm[idx];
+      if(idx!=0 && d[2*idx-1] != 0) {
+         /* second part of 2x2 */
+         int rp2 = perm[idx-1];
+         val += d[2*idx-1] * x[rp2] +
+                d[2*idx]   * x[rp];
+      } else if (d[2*idx+1] != 0) {
+         /* first part of 2x2 */
+         int rp2 = perm[idx+1];
+         val += d[2*idx]   * x[rp] +
+                d[2*idx+1] * x[rp2];
+      } else {
+         /* 1x1 */
+         val += x[rp]*d[2*idx];
+      }
    } else {
-      /* 1x1 */
-      val += x[rp]*d[2*idx];
+      int rp = perm[idx];
+      val += x[rp];
    }
 
    /* Store result as first column of upd */
@@ -509,10 +514,10 @@ using namespace spral::ssids;
 
 extern "C" {
 
-void spral_ssids_run_fwd_solve_kernels(struct lookups_gpu_fwd const* gpu, 
-      double *xlocal_gpu, double **xstack_gpu, double *x_gpu,
-      double ** cvalues_gpu, double *work_gpu, int nsync, int *sync,
-      const cudaStream_t *stream) {
+void spral_ssids_run_fwd_solve_kernels(bool posdef,
+      struct lookups_gpu_fwd const* gpu, double *xlocal_gpu,
+      double **xstack_gpu, double *x_gpu, double ** cvalues_gpu,
+      double *work_gpu, int nsync, int *sync, const cudaStream_t *stream) {
 
    if(nsync>0) trsv_init <<<nsync, 1, 0, *stream>>> (sync);
    assemble_lvl
@@ -520,10 +525,17 @@ void spral_ssids_run_fwd_solve_kernels(struct lookups_gpu_fwd const* gpu,
       (xlocal_gpu, xstack_gpu, x_gpu, cvalues_gpu, gpu->assemble);
    CudaCheckError();
    if(gpu->ntrsv>0) {
-      trsv_ln_exec
-         <double,TRSV_NB_TASK,THREADSX_TASK,THREADSY_TASK>
-         <<<gpu->ntrsv, dim3(THREADSX_TASK,THREADSY_TASK), 0, *stream>>>
-         (xlocal_gpu, sync, gpu->trsv);
+      if(posdef) {
+         trsv_ln_exec
+            <double,TRSV_NB_TASK,THREADSX_TASK,THREADSY_TASK,false>
+            <<<gpu->ntrsv, dim3(THREADSX_TASK,THREADSY_TASK), 0, *stream>>>
+            (xlocal_gpu, sync, gpu->trsv);
+      } else {
+         trsv_ln_exec
+            <double,TRSV_NB_TASK,THREADSX_TASK,THREADSY_TASK,true>
+            <<<gpu->ntrsv, dim3(THREADSX_TASK,THREADSY_TASK), 0, *stream>>>
+            (xlocal_gpu, sync, gpu->trsv);
+      }
       CudaCheckError();
    }
    if(gpu->ngemv>0) {
@@ -545,8 +557,8 @@ void spral_ssids_run_fwd_solve_kernels(struct lookups_gpu_fwd const* gpu,
    CudaCheckError();
 }
 
-void spral_ssids_run_bwd_solve_kernels(double *x_gpu, double *work_gpu,
-      int nsync, int *sync_gpu, struct lookups_gpu_bwd *gpu, 
+void spral_ssids_run_bwd_solve_kernels(bool posdef, double *x_gpu,
+      double *work_gpu, int nsync, int *sync_gpu, struct lookups_gpu_bwd *gpu, 
       const cudaStream_t *stream) {
 
    /* === Kernel Launches === */
@@ -555,34 +567,44 @@ void spral_ssids_run_bwd_solve_kernels(double *x_gpu, double *work_gpu,
       gemv_transpose_sps_rhs
          <TRSM_TR_THREADSX, TRSM_TR_THREADSY, TRSM_TR_NBX, TRSM_TR_NBY>
          <<<gpu->ngemv, dim3(TRSM_TR_THREADSX,TRSM_TR_THREADSY), 0, *stream>>>
-         (gpu->gemv, x_gpu, work_gpu
-          );
+         (gpu->gemv, x_gpu, work_gpu);
       CudaCheckError();
    }
 
    if(gpu->nrds>0) {
-      reducing_d_solve
-         <REDUCING_D_SOLVE_THREADS_PER_BLOCK>
-         <<<gpu->nrds, REDUCING_D_SOLVE_THREADS_PER_BLOCK, 0, *stream>>>
-         (gpu->rds, work_gpu, x_gpu
-          );
+      if(posdef) {
+         reducing_d_solve
+            <REDUCING_D_SOLVE_THREADS_PER_BLOCK, true>
+            <<<gpu->nrds, REDUCING_D_SOLVE_THREADS_PER_BLOCK, 0, *stream>>>
+            (gpu->rds, work_gpu, x_gpu);
+      } else {
+         reducing_d_solve
+            <REDUCING_D_SOLVE_THREADS_PER_BLOCK, false>
+            <<<gpu->nrds, REDUCING_D_SOLVE_THREADS_PER_BLOCK, 0, *stream>>>
+            (gpu->rds, work_gpu, x_gpu);
+      }
       CudaCheckError();
    }
 
    if(gpu->ntrsv>0) {
-      trsv_lt_exec
-         <double,TRSV_NB_TASK,THREADSX_TASK,THREADSY_TASK>
-         <<<gpu->ntrsv, dim3(THREADSX_TASK,THREADSY_TASK), 0, *stream>>>
-         (gpu->trsv, work_gpu, sync_gpu
-          );
+      if(posdef) {
+         trsv_lt_exec
+            <double,TRSV_NB_TASK,THREADSX_TASK,THREADSY_TASK,false>
+            <<<gpu->ntrsv, dim3(THREADSX_TASK,THREADSY_TASK), 0, *stream>>>
+            (gpu->trsv, work_gpu, sync_gpu);
+      } else {
+         trsv_lt_exec
+            <double,TRSV_NB_TASK,THREADSX_TASK,THREADSY_TASK,true>
+            <<<gpu->ntrsv, dim3(THREADSX_TASK,THREADSY_TASK), 0, *stream>>>
+            (gpu->trsv, work_gpu, sync_gpu);
+      }
       CudaCheckError();
    }
 
    if(gpu->nscatter>0) {
       scatter
          <<<gpu->nscatter, SCATTER_NB, 0, *stream>>>
-         (gpu->scatter, work_gpu, x_gpu
-          );
+         (gpu->scatter, work_gpu, x_gpu);
       CudaCheckError();
    }
 }

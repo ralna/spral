@@ -53,7 +53,7 @@ unsigned int __inline__ __device__ getSM(void) {
 /* Performs trsv on a blksz x blksz tile.
  * IMPORTANT blkSize <= warpSize
  */
-template <typename T_ELEM, int blkSize>
+template <typename T_ELEM, int blkSize, bool ISUNIT>
 void __device__ dblkSolve(const T_ELEM *minus_a, int lda, T_ELEM &val) {
 
    volatile T_ELEM __shared__ xs;
@@ -61,6 +61,7 @@ void __device__ dblkSolve(const T_ELEM *minus_a, int lda, T_ELEM &val) {
 #pragma unroll 16
    for(int i=0; i<blkSize; i++) {
       if(threadIdx.x==i) {
+         if(!ISUNIT) val *= minus_a[i*lda+i];
          xs = val;
       }
       if(threadIdx.x>i)
@@ -68,7 +69,7 @@ void __device__ dblkSolve(const T_ELEM *minus_a, int lda, T_ELEM &val) {
    }
 }
 
-template <typename T_ELEM, int blkSize>
+template <typename T_ELEM, int blkSize, bool ISUNIT>
 void __device__ dblkSolve_trans(const T_ELEM *minus_a, int lda, T_ELEM &val) {
 
    volatile T_ELEM __shared__ xs;
@@ -76,6 +77,7 @@ void __device__ dblkSolve_trans(const T_ELEM *minus_a, int lda, T_ELEM &val) {
 #pragma unroll 16
    for(int i=blkSize-1; i>=0; i--) {
       if(threadIdx.x==i) {
+         if(!ISUNIT) val *= minus_a[i*lda+i];
          xs = val;
       }
       if(threadIdx.x < i)
@@ -86,7 +88,7 @@ void __device__ dblkSolve_trans(const T_ELEM *minus_a, int lda, T_ELEM &val) {
 /* Copies a nbi x nbi block of a to provided cache.
  * Copies -a and only the half triangle
  */
-template <typename T_ELEM, unsigned int nbi, unsigned int ntid, bool TRANS>
+template <typename T_ELEM, unsigned int nbi, unsigned int ntid, bool TRANS, bool ISUNIT>
 void __device__ tocache(unsigned int tid, const T_ELEM *a, int lda,
       T_ELEM *cache) {
    int x = tid % nbi;
@@ -97,11 +99,13 @@ void __device__ tocache(unsigned int tid, const T_ELEM *a, int lda,
       for(int i=0; i<nbi; i+=ty) {
          if(x>(i+y)) cache[(i+y)*nbi+x] = -a[(i+y)*lda+x];
          else if((i+y)<nbi) cache[(i+y)*nbi+x] = 0.0;
+         if((!ISUNIT) && (x==(i+y)) ) cache[(i+y)*nbi+x] = 1 / a[(i+y)*lda+x];
       }
    } else {
       for(int i=0; i<nbi; i+=ty) {
          if(x>(i+y)) cache[(i+y)+nbi*x] = -a[(i+y)*lda+x];
          else if((i+y)<nbi) cache[(i+y)+nbi*x] = 0.0;
+         if((!ISUNIT) && (x==(i+y)) ) cache[(i+y)+nbi*x] = 1 / a[(i+y)*lda+x];
       }
    }
 }
@@ -110,7 +114,7 @@ void __device__ tocache(unsigned int tid, const T_ELEM *a, int lda,
  * If diag is true, then only copy lower triangle. 
  * ntid is the number of participating threads, tid is the thread id.
  */
-template <typename T_ELEM, unsigned int nbi, unsigned int ntid, bool TRANS>
+template <typename T_ELEM, unsigned int nbi, unsigned int ntid, bool TRANS, bool ISUNIT>
 void __device__ tocache_small(int n, unsigned int tid, const T_ELEM *a,
       int lda, T_ELEM *cache) {
    int x = tid % nbi;
@@ -121,12 +125,14 @@ void __device__ tocache_small(int n, unsigned int tid, const T_ELEM *a,
          if(i+y>=nbi) continue; // past end of cache array
          if((i+y)<n && (x>(i+y) && x<n)) cache[(i+y)*nbi+x] = -a[(i+y)*lda+x];
          else                            cache[(i+y)*nbi+x] = 0.0;
+         if((!ISUNIT) && x==(i+y) && x<n) cache[(i+y)*nbi+x] = 1 / a[(i+y)*lda+x];
       }
    } else {
       for(int i=0; i<nbi; i+=ty) {
          if(i+y>=nbi) continue; // past end of cache array
          if((i+y)<n && x>(i+y) && x<n) cache[(i+y)+nbi*x] = -a[(i+y)*lda+x];
          else                          cache[(i+y)+nbi*x] = 0.0;
+         if((!ISUNIT) && x==(i+y) && x<n) cache[(i+y)+nbi*x] = 1 / a[(i+y)*lda+x];
       }
    }
 }
@@ -159,7 +165,7 @@ int __device__ nextRow(int *address) {
       L_22 X_21 = - L_21 X_11
    for X_21.
 */
-template <typename T_ELEM, int n, int lda, int threadsx, int threadsy>
+template <typename T_ELEM, int n, int lda, int threadsx, int threadsy, bool ISUNIT>
 void __device__ slv21(const T_ELEM *x11, T_ELEM *a21, const T_ELEM *l22, volatile T_ELEM *xsarray) {
 
    const int tid = threadsx*threadIdx.y+threadIdx.x;
@@ -189,6 +195,7 @@ void __device__ slv21(const T_ELEM *x11, T_ELEM *a21, const T_ELEM *l22, volatil
 #pragma unroll 2
       for(int k=0; k<n; k++) { // Column of l22, must be done in order
          if(x==k) {
+            if(!ISUNIT) val *= l22[k*lda+k];
             xs[0] = val;
          }
          if(x>k)
@@ -217,26 +224,32 @@ void __device__ transpose(int n, const T_ELEM *a, T_ELEM *at) {
  * divide an conquer computation of triangular matrix in version in:
  * Stability of parallel triangular system solvers, Higham, 1995)
  */
-template <typename T_ELEM, int n, int lda, int threadsx, int threadsy, bool TRANS>
+template <typename T_ELEM, int n, int lda, int threadsx, int threadsy, bool ISUNIT, bool TRANS>
 void __device__ invert(T_ELEM *a, volatile T_ELEM /*__shared__*/ *xsarray) {
 
    if(n==2) {
       if(threadIdx.x==0 && threadIdx.y==0) {
-         a[0] = 1;
-         a[lda+1] = 1;
-         a[1] = a[1];
+         if(ISUNIT) {
+            a[0] = 1;
+            a[lda+1] = 1;
+            a[1] = a[1];
+         } else {
+            a[0] = a[0];
+            a[lda+1] = a[lda+1];
+            a[1] = a[1]*(a[0]*a[lda+1]);
+         }
          if(TRANS) a[lda] = a[1];
       }
    } else {
-      invert<T_ELEM, n/2, lda, threadsx, threadsy, TRANS>(a, xsarray); // A_11
+      invert<T_ELEM, n/2, lda, threadsx, threadsy, ISUNIT, TRANS>(a, xsarray); // A_11
       __syncthreads();
-      slv21<T_ELEM, n/2, lda, threadsx, threadsy>(a, &a[n/2], &a[(lda+1)*n/2], xsarray); // A_21
+      slv21<T_ELEM, n/2, lda, threadsx, threadsy, ISUNIT>(a, &a[n/2], &a[(lda+1)*n/2], xsarray); // A_21
       if(TRANS) {
          __syncthreads();
          transpose<T_ELEM, threadsy, lda> (n/2, &a[n/2], &a[(n/2)*lda]);
       }
       __syncthreads();
-      invert<T_ELEM, n/2, lda, threadsx, threadsy, TRANS>(&a[(lda+1)*n/2], xsarray); // A_22
+      invert<T_ELEM, n/2, lda, threadsx, threadsy, ISUNIT, TRANS>(&a[(lda+1)*n/2], xsarray); // A_22
    }
 }
 
@@ -331,7 +344,7 @@ struct trsv_times {
  * Requires trsv_init() to be called first to initialize sync[].
  */
 template <typename T_ELEM, unsigned int nb, unsigned int threadsx,
-   unsigned int threadsy>
+   unsigned int threadsy, bool ISUNIT>
 __launch_bounds__(threadsx*threadsy, 4)
 void __global__ trsv_lt_exec(const struct trsv_lookup *lookup, T_ELEM *xglobal,
       int *sync
@@ -381,30 +394,30 @@ void __global__ trsv_lt_exec(const struct trsv_lookup *lookup, T_ELEM *xglobal,
       /* on a block row of full size */
 #ifdef INV_AFTER
       if(nblk-1-row>=INV_AFTER) {
-         tocache <T_ELEM,nb,threadsx*threadsy,false> (tid, &a[row*nb*lda+row*nb], lda, cache);
+         tocache <T_ELEM,nb,threadsx*threadsy,false,ISUNIT> (tid, &a[row*nb*lda+row*nb], lda, cache);
       } else {
-         tocache <T_ELEM,nb,threadsx*threadsy,true> (tid, &a[row*nb*lda+row*nb], lda, cache);
+         tocache <T_ELEM,nb,threadsx*threadsy,true,ISUNIT> (tid, &a[row*nb*lda+row*nb], lda, cache);
       }
 #else /* INV_AFTER */
-      tocache <T_ELEM,nb,threadsx*threadsy,true> (tid, &a[row*nb*lda+row*nb], lda, cache);
+      tocache <T_ELEM,nb,threadsx*threadsy,true,ISUNIT> (tid, &a[row*nb*lda+row*nb], lda, cache);
 #endif /* INV_AFTER */
    } else {
       /* on last row, smaller than full blkSize */
 #ifdef INV_AFTER
       if(nblk-1-row>=INV_AFTER) {
-         tocache_small <T_ELEM,nb,threadsx*threadsy,false> (n%nb, tid, &a[row*nb*lda+row*nb], lda, cache);
+         tocache_small <T_ELEM,nb,threadsx*threadsy,false,ISUNIT> (n%nb, tid, &a[row*nb*lda+row*nb], lda, cache);
       } else {
-         tocache_small <T_ELEM,nb,threadsx*threadsy,true> (n%nb, tid, &a[row*nb*lda+row*nb], lda, cache);
+         tocache_small <T_ELEM,nb,threadsx*threadsy,true,ISUNIT> (n%nb, tid, &a[row*nb*lda+row*nb], lda, cache);
       }
 #else /* INV_AFTER */
-      tocache_small <T_ELEM,nb,threadsx*threadsy,true> (n%nb, tid, &a[row*nb*lda+row*nb], lda, cache);
+      tocache_small <T_ELEM,nb,threadsx*threadsy,true,ISUNIT> (n%nb, tid, &a[row*nb*lda+row*nb], lda, cache);
 #endif /* INV_AFTER */
    }
    __syncthreads();
 
 #ifdef INV_AFTER
    if(nblk-1-row>=INV_AFTER)
-      invert<T_ELEM, nb, nb, threadsx, threadsy, true>(cache, partSum);
+      invert<T_ELEM, nb, nb, threadsx, threadsy, ISUNIT, true>(cache, partSum);
 #endif /* INV_AFTER */
 
    /* Loop over blocks as they become available */
@@ -502,7 +515,7 @@ void __global__ trsv_lt_exec(const struct trsv_lookup *lookup, T_ELEM *xglobal,
          }
       } else {
          if(threadIdx.y==0) {
-            dblkSolve_trans<T_ELEM,nb>(cache, nb, val);
+            dblkSolve_trans<T_ELEM,nb,ISUNIT>(cache, nb, val);
             if(!short_row || threadIdx.x<n%nb) {
                xglobal[int(row*nb+tid)] = val;
             }
@@ -510,7 +523,7 @@ void __global__ trsv_lt_exec(const struct trsv_lookup *lookup, T_ELEM *xglobal,
       }
 #else /* INV_AFTER */
       if(threadIdx.y==0) {
-         dblkSolve_trans<T_ELEM,nb>(cache, nb, val);
+         dblkSolve_trans<T_ELEM,nb,ISUNIT>(cache, nb, val);
          if(!short_row || threadIdx.x<n%nb) {
             xglobal[int(row*nb+tid)] = val;
          }
@@ -537,7 +550,7 @@ void __global__ trsv_lt_exec(const struct trsv_lookup *lookup, T_ELEM *xglobal,
  * Requires trsv_init() to be called first to initialize sync[].
  */
 template <typename T_ELEM, unsigned int nb, unsigned int threadsx,
-   unsigned int threadsy>
+   unsigned int threadsy, bool ISUNIT>
 __launch_bounds__(threadsx*threadsy, 4)
 /* Note: setting above occupany to 5 causes random errors on large problems:
    suspect compiler bug */
@@ -581,16 +594,16 @@ void __global__ trsv_ln_exec(T_ELEM* __restrict__ xglobal,
    /* Copy diagonal block to shared memory */
    if(!short_row) {
       /* on a block row of full size */
-      tocache <T_ELEM,nb,threadsx*threadsy,false> (tid, &a[row*nb*lda+row*nb], lda, cache);
+      tocache <T_ELEM,nb,threadsx*threadsy,false,ISUNIT> (tid, &a[row*nb*lda+row*nb], lda, cache);
    } else {
       /* on last row, smaller than full blkSize */
-      tocache_small <T_ELEM,nb,threadsx*threadsy,false> (n%nb, tid, &a[row*nb*lda+row*nb], lda, cache);
+      tocache_small <T_ELEM,nb,threadsx*threadsy,false,ISUNIT> (n%nb, tid, &a[row*nb*lda+row*nb], lda, cache);
    }
    __syncthreads();
 
 #ifdef INV_AFTER
       if(row>=INV_AFTER)
-         invert<T_ELEM, nb, nb, threadsx, threadsy, false>(cache, partSum);
+         invert<T_ELEM, nb, nb, threadsx, threadsy, ISUNIT, false>(cache, partSum);
 #endif /* INV_AFTER */
 
    /* Loop over blocks as they become available */
@@ -653,7 +666,7 @@ void __global__ trsv_ln_exec(T_ELEM* __restrict__ xglobal,
          }
       } else {
          if(threadIdx.y==0) {
-            dblkSolve<T_ELEM,nb>(cache, nb, val);
+            dblkSolve<T_ELEM,nb,ISUNIT>(cache, nb, val);
             if(!short_row || threadIdx.x<n%nb) {
                xglobal[int(row*nb+tid)*incx] = val;
             }
@@ -661,7 +674,7 @@ void __global__ trsv_ln_exec(T_ELEM* __restrict__ xglobal,
       }
 #else /* INV_AFTER */
       if(threadIdx.y==0) {
-         dblkSolve<T_ELEM,nb>(cache, nb, val);
+         dblkSolve<T_ELEM,nb,ISUNIT>(cache, nb, val);
          if(!short_row || threadIdx.x<n%nb) {
             xglobal[int(row*nb+tid)*incx] = val;
          }

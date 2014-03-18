@@ -1471,17 +1471,8 @@ subroutine ssids_solve_mult_double(nrhs, x, ldx, akeep, fkeep, options, &
 
    ! Ensure we've got the functionality implemented
    if(options%use_gpu_solve .and. options%presolve.eq.0 .and. &
-         (local_job.eq.SSIDS_SOLVE_JOB_BWD .or. &
-         local_job.eq.SSIDS_SOLVE_JOB_DIAG)) then
+         local_job.eq.SSIDS_SOLVE_JOB_DIAG) then
       ! Non-presolve L^T and D solves not implemented on GPU
-      inform%flag = SSIDS_ERROR_JOB_INVALID
-      call ssids_print_flag(context,nout,inform%flag)
-      return
-   endif
-   if(options%use_gpu_solve .and. options%presolve.eq.0 .and. fkeep%pos_def &
-         .and. (local_job.eq.SSIDS_SOLVE_JOB_FWD .or. &
-         local_job.eq.SSIDS_SOLVE_JOB_ALL)) then
-      ! Non-presolve L solve doesn't support unit diagonal on GPU
       inform%flag = SSIDS_ERROR_JOB_INVALID
       call ssids_print_flag(context,nout,inform%flag)
       return
@@ -1565,16 +1556,16 @@ subroutine ssids_solve_mult_double(nrhs, x, ldx, akeep, fkeep, options, &
          stat=inform%stat)
       if(inform%stat.ne.0) goto 100
       if(options%presolve.eq.0) then
-        call fwd_solve_gpu(akeep%child_ptr, akeep%child_list, akeep%n,         &
-           akeep%invp, akeep%nnodes, fkeep%nodes, akeep%rptr, options%nstream, &
-           fkeep%stream_handle, fkeep%stream_data, fkeep%top_data, x,          &
-           inform%stat, cuda_error)
+        call fwd_solve_gpu(fkeep%pos_def, akeep%child_ptr, akeep%child_list,   &
+           akeep%n, akeep%invp, akeep%nnodes, fkeep%nodes, akeep%rptr,         &
+           options%nstream, fkeep%stream_handle, fkeep%stream_data,            &
+           fkeep%top_data, x, inform%stat, cuda_error)
         if(inform%stat.ne.0) goto 100
         if(cuda_error.ne.0) goto 200
       else
-        call fwd_multisolve_gpu( akeep%nnodes, fkeep%nodes, akeep%rptr,    &
+        call fwd_multisolve_gpu(akeep%nnodes, fkeep%nodes, akeep%rptr,     &
            options%nstream, fkeep%stream_handle, fkeep%stream_data,        &
-           fkeep%top_data, nrhs, gpu_x, cuda_error, inform%stat )
+           fkeep%top_data, nrhs, gpu_x, cuda_error, inform%stat)
         if(inform%stat.ne.0) goto 100
         if(cuda_error.ne.0) goto 200
       end if
@@ -1601,9 +1592,9 @@ subroutine ssids_solve_mult_double(nrhs, x, ldx, akeep, fkeep, options, &
          local_job.eq.SSIDS_SOLVE_JOB_ALL ) then
       if( options%use_gpu_solve ) then
         if ( options%presolve == 0 ) then
-           call bwd_solve_gpu(akeep%nnodes, akeep%sptr, options%nstream,       &
-              fkeep%stream_handle, fkeep%stream_data, fkeep%top_data, akeep%n, &
-              akeep%invp, x, inform%stat, cuda_error)
+           call bwd_solve_gpu(fkeep%pos_def, akeep%nnodes, akeep%sptr,  &
+              options%nstream, fkeep%stream_handle, fkeep%stream_data,  &
+              fkeep%top_data, akeep%n, akeep%invp, x, inform%stat, cuda_error)
            if(cuda_error.ne.0) goto 200
         else
            call bwd_multisolve_gpu( fkeep%pos_def, options%nstream,     &

@@ -384,10 +384,12 @@ module spral_ssids_cuda_interfaces
    public :: run_bwd_solve_kernels,    & ! execute prepared bwd solve
              run_fwd_solve_kernels       ! execute prepared fwd solve
    interface ! solve_kernels.cu
-      subroutine run_bwd_solve_kernels(x_gpu, work_gpu, nsync, sync_gpu, gpu, &
-            stream) bind(C, name="spral_ssids_run_bwd_solve_kernels")
+      subroutine run_bwd_solve_kernels(posdef, x_gpu, work_gpu, nsync, &
+            sync_gpu, gpu, stream) &
+            bind(C, name="spral_ssids_run_bwd_solve_kernels")
          use, intrinsic :: iso_c_binding
          use spral_ssids_cuda_datatypes
+         logical(C_BOOL), value :: posdef
          type(C_PTR), value :: x_gpu
          type(C_PTR), value :: work_gpu
          integer(C_INT), value :: nsync
@@ -395,11 +397,12 @@ module spral_ssids_cuda_interfaces
          type(lookups_gpu_bwd), intent(in) :: gpu
          type(C_PTR), value :: stream
       end subroutine run_bwd_solve_kernels
-      subroutine run_fwd_solve_kernels(gpu, xlocal_gpu, xstack_gpu, x_gpu, &
-            cvalues_gpu, work_gpu, nsync, sync_gpu, stream) &
+      subroutine run_fwd_solve_kernels(posdef, gpu, xlocal_gpu, xstack_gpu, &
+            x_gpu, cvalues_gpu, work_gpu, nsync, sync_gpu, stream) &
             bind(C, name="spral_ssids_run_fwd_solve_kernels")
          use, intrinsic :: iso_c_binding
          use spral_ssids_cuda_datatypes
+         logical(C_BOOL), value :: posdef
          type(lookups_gpu_fwd), intent(in) :: gpu
          type(C_PTR), value :: xlocal_gpu
          type(C_PTR), value :: xstack_gpu

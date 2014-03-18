@@ -617,18 +617,6 @@ subroutine test_errors
 !!!!!!
 
    call simple_mat(a)
-   posdef = .true.
-   write(*,"(a)",advance="no") " * Testing job invalid (presolve=0+gpu+L^T).."
-   call ssids_analyse(check, a%n, a%ptr, a%row, akeep, options, info, &
-      order=order)
-   call ssids_factor(posdef,a%val,akeep,fkeep,options,info)
-   call ssids_solve(x1,akeep,fkeep,options,info,job=3)
-   call print_result(info%flag, SSIDS_ERROR_JOB_INVALID)
-   call ssids_free(akeep,fkeep,cuda_error)
-
-!!!!!!
-
-   call simple_mat(a)
    posdef = .false.
    write(*,"(a)",advance="no") " * Testing job invalid (presolve=0+gpu+D)...."
    call ssids_analyse(check, a%n, a%ptr, a%row, akeep, options, info, &
@@ -641,36 +629,12 @@ subroutine test_errors
 !!!!!!
 
    call simple_mat(a)
-   posdef = .true.
-   write(*,"(a)",advance="no") " * Testing job invalid (presolve=0+psdef+L).."
-   call ssids_analyse(check, a%n, a%ptr, a%row, akeep, options, info, &
-      order=order)
-   call ssids_factor(posdef,a%val,akeep,fkeep,options,info)
-   call ssids_solve(x1,akeep,fkeep,options,info,job=1)
-   call print_result(info%flag, SSIDS_ERROR_JOB_INVALID)
-   call ssids_free(akeep,fkeep,cuda_error)
-
-!!!!!!
-
-   call simple_mat(a)
    posdef = .false.
    write(*,"(a)",advance="no") " * Testing job invalid (presolve=1+D)........"
    call ssids_analyse(check, a%n, a%ptr, a%row, akeep, options, info, &
       order=order)
    call ssids_factor(posdef,a%val,akeep,fkeep,options,info)
    call ssids_solve(x1,akeep,fkeep,options,info,job=2)
-   call print_result(info%flag, SSIDS_ERROR_JOB_INVALID)
-   call ssids_free(akeep,fkeep,cuda_error)
-
-!!!!!!
-
-   call simple_mat(a)
-   posdef = .false.
-   write(*,"(a)",advance="no") " * Testing job invalid (presolve=1+indef+L^T)"
-   call ssids_analyse(check, a%n, a%ptr, a%row, akeep, options, info, &
-      order=order)
-   call ssids_factor(posdef,a%val,akeep,fkeep,options,info)
-   call ssids_solve(x1,akeep,fkeep,options,info,job=3)
    call print_result(info%flag, SSIDS_ERROR_JOB_INVALID)
    call ssids_free(akeep,fkeep,cuda_error)
 
@@ -1986,13 +1950,8 @@ subroutine test_random
 
       options%ordering = random_integer(state, 2) - 1 ! user or metis
       options%presolve = random_integer(state, 2) - 1
-      n1 = random_integer(state, 3)
-      if(n1.eq.1 .and. options%presolve.eq.0) then
-         options%use_gpu_solve = .false.
-      else
-         !prefer GPU solve if supported
-         options%use_gpu_solve = .not.(options%presolve.eq.0 .and. posdef)
-      endif
+      options%use_gpu_solve = ( 1.ne.random_integer(state,3) .or. &
+                                options%presolve.eq.1 )
       
 
       if(random_logical(state)) then
