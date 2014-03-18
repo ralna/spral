@@ -161,7 +161,7 @@ program run_prob
    call internal_calc_norm(n, ptr, row, val, soln, rhs, nrhs, res)
    print *, "bwd error scaled = ", res
 
-   call ssids_finalise(akeep, fkeep, cuda_error)
+   call ssids_free(akeep, fkeep, cuda_error)
 
    print "(a6, a10)", "cmp:","SMFCT"
    print "(a6, f10.2)", "anal:", smanal

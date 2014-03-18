@@ -175,14 +175,14 @@ subroutine test_errors
    options%nemin = -1
    call ssids_analyse(check, a%n, a%ptr, a%row, akeep, options, info, order)
    call print_result(info%flag, SSIDS_SUCCESS)
-   call ssids_free(akeep)
+   call ssids_free(akeep, cuda_error)
    options%nemin = 8
 
    write(*,"(a)",advance="no") " * Testing order absent......................"
    options%ordering = 0
    call ssids_analyse(check, a%n, a%ptr, a%row, akeep, options, info)
    call print_result(info%flag, SSIDS_ERROR_ORDER)
-   call ssids_free(akeep)
+   call ssids_free(akeep, cuda_error)
 
    write(*,"(a)",advance="no") " * Testing order too short..................."
    if (allocated(order)) deallocate(order)
@@ -190,7 +190,7 @@ subroutine test_errors
    order(1:a%n-1) = 1
    call ssids_analyse(check, a%n, a%ptr, a%row, akeep, options, info, order)
    call print_result(info%flag, SSIDS_ERROR_ORDER)
-   call ssids_free(akeep)
+   call ssids_free(akeep, cuda_error)
    deallocate(order)
 
    call simple_mat(a)
@@ -295,7 +295,7 @@ subroutine test_errors
    options%ordering = 0
    call ssids_analyse_coord(a%n, a%ne, a%row, a%col, akeep, options, info)
    call print_result(info%flag, SSIDS_ERROR_ORDER)
-   call ssids_free(akeep)
+   call ssids_free(akeep, cuda_error)
 
    call simple_mat_lower(a)
    if (allocated(order)) deallocate(order)
@@ -335,7 +335,7 @@ subroutine test_errors
    write(*,"(a)",advance="no") " * Testing after analyse error..............."
    call ssids_factor(posdef,a%val,akeep,fkeep,options,info)
    call print_result(info%flag, SSIDS_ERROR_CALL_SEQUENCE)
-   call ssids_finalise(akeep,fkeep,cuda_error)
+   call ssids_free(akeep,fkeep,cuda_error)
 
 !!!!!!!!
    call simple_mat(a)
@@ -358,13 +358,13 @@ subroutine test_errors
       write(*, "(a,i4)") &
      "Unexpected error during analyse. flag = ", info%flag
       errors = errors + 1
-      call ssids_finalise(akeep,fkeep,cuda_error)
+      call ssids_free(akeep,fkeep,cuda_error)
       return
    endif
 
    call ssids_factor(posdef,a%val,akeep,fkeep,options,info,row=a%row)
    call print_result(info%flag, SSIDS_ERROR_PTR_ROW)
-   call ssids_finalise(akeep,fkeep,cuda_error)
+   call ssids_free(akeep,fkeep,cuda_error)
 
 !!!!!!!!!
 
@@ -381,13 +381,13 @@ subroutine test_errors
       write(*, "(a,i4)") &
      "Unexpected error during analyse. flag = ", info%flag
       errors = errors + 1
-      call ssids_finalise(akeep,fkeep,cuda_error)
+      call ssids_free(akeep,fkeep,cuda_error)
       return
    endif
 
    call ssids_factor(posdef,a%val,akeep,fkeep,options,info,ptr=a%ptr)
    call print_result(info%flag, SSIDS_ERROR_PTR_ROW)
-   call ssids_free(akeep)
+   call ssids_free(akeep, cuda_error)
    call ssids_free(fkeep, cuda_error)
 
 !!!!!!!!!
@@ -415,7 +415,7 @@ subroutine test_errors
    posdef = .false.
    call ssids_factor(posdef,a%val, akeep, fkeep, options, info)
    call print_result(info%flag, SSIDS_ERROR_SINGULAR)
-   call ssids_free(akeep)
+   call ssids_free(akeep, cuda_error)
    call ssids_free(fkeep, cuda_error)
 
 !!!!!!!!!
@@ -438,7 +438,7 @@ subroutine test_errors
    posdef = .false.
    call ssids_factor(posdef,a%val, akeep, fkeep, options, info)
    call print_result(info%flag, SSIDS_ERROR_SINGULAR)
-   call ssids_free(akeep)
+   call ssids_free(akeep, cuda_error)
    call ssids_free(fkeep, cuda_error)
 
 !!!!!!!!!
@@ -458,7 +458,7 @@ subroutine test_errors
    options%scaling = 0
    call ssids_factor(.true., a%val, akeep, fkeep, options, info)
    call print_result(info%flag, SSIDS_ERROR_NOT_POS_DEF)
-   call ssids_finalise(akeep, fkeep, cuda_error)
+   call ssids_free(akeep, fkeep, cuda_error)
 
    write(*,"(a)",advance="no") " * Testing factor psdef with indef, large..."
    call gen_bordered_block_diag(.false., (/ 15, 455, 10 /), 20, a%n, a%ptr, &
@@ -466,7 +466,7 @@ subroutine test_errors
    call ssids_analyse(check, a%n, a%ptr, a%row, akeep, options, info, val=a%val)
    call ssids_factor(.true., a%val, akeep, fkeep, options, info)
    call print_result(info%flag,SSIDS_ERROR_NOT_POS_DEF)
-   call ssids_finalise(akeep, fkeep, cuda_error)
+   call ssids_free(akeep, fkeep, cuda_error)
 
 !!!!!!!!!
    write(*,"(a)",advance="no") " * Testing u oor............................."
@@ -491,7 +491,7 @@ subroutine test_errors
    call ssids_factor(posdef,a%val,akeep,fkeep,options,info)
    options%u = 0.01
    call print_result(info%flag, SSIDS_SUCCESS)
-   call ssids_finalise(akeep, fkeep, cuda_error)
+   call ssids_free(akeep, fkeep, cuda_error)
 
 !!!!!!!!!
    write(*,"(a)",advance="no") " * Testing options%scaling=3 no matching....."
@@ -516,7 +516,7 @@ subroutine test_errors
    call ssids_factor(posdef,a%val,akeep,fkeep,options,info)
    options%scaling = 0
    call print_result(info%flag, SSIDS_ERROR_NO_SAVED_SCALING)
-   call ssids_finalise(akeep, fkeep, cuda_error)
+   call ssids_free(akeep, fkeep, cuda_error)
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -553,7 +553,7 @@ subroutine test_errors
    x1(1:a%n) = one
    call ssids_solve(x1,akeep,fkeep,options,info)
    call print_result(info%flag, SSIDS_ERROR_CALL_SEQUENCE)
-   call ssids_finalise(akeep,fkeep,cuda_error)
+   call ssids_free(akeep,fkeep,cuda_error)
 
 !!!!!!
    call simple_mat(a)
@@ -569,7 +569,7 @@ subroutine test_errors
 
    call ssids_solve(x1,akeep,fkeep,options,info)
    call print_result(info%flag, SSIDS_ERROR_CALL_SEQUENCE)
-   call ssids_finalise(akeep,fkeep,cuda_error)
+   call ssids_free(akeep,fkeep,cuda_error)
 
 !!!!!!
 
@@ -586,7 +586,7 @@ subroutine test_errors
    x1(1:a%n) = one
    call ssids_solve(x1,akeep,fkeep,options,info)
    call print_result(info%flag, SSIDS_ERROR_JOB_INVALID)
-   call ssids_finalise(akeep,fkeep,cuda_error)
+   call ssids_free(akeep,fkeep,cuda_error)
    options%use_gpu_solve = .true.
    options%presolve = 0
 
@@ -600,7 +600,7 @@ subroutine test_errors
    call ssids_factor(posdef,a%val,akeep,fkeep,options,info)
    call ssids_solve(x1,akeep,fkeep,options,info,job=-1)
    call print_result(info%flag, SSIDS_ERROR_JOB_OOR)
-   call ssids_finalise(akeep,fkeep,cuda_error)
+   call ssids_free(akeep,fkeep,cuda_error)
 
 !!!!!!
 
@@ -612,7 +612,7 @@ subroutine test_errors
    call ssids_factor(posdef,a%val,akeep,fkeep,options,info)
    call ssids_solve(x1,akeep,fkeep,options,info,job=5)
    call print_result(info%flag, SSIDS_ERROR_JOB_OOR)
-   call ssids_finalise(akeep,fkeep,cuda_error)
+   call ssids_free(akeep,fkeep,cuda_error)
 
 !!!!!!
 
@@ -624,7 +624,7 @@ subroutine test_errors
    call ssids_factor(posdef,a%val,akeep,fkeep,options,info)
    call ssids_solve(x1,akeep,fkeep,options,info,job=3)
    call print_result(info%flag, SSIDS_ERROR_JOB_INVALID)
-   call ssids_finalise(akeep,fkeep,cuda_error)
+   call ssids_free(akeep,fkeep,cuda_error)
 
 !!!!!!
 
@@ -636,7 +636,7 @@ subroutine test_errors
    call ssids_factor(posdef,a%val,akeep,fkeep,options,info)
    call ssids_solve(x1,akeep,fkeep,options,info,job=2)
    call print_result(info%flag, SSIDS_ERROR_JOB_INVALID)
-   call ssids_finalise(akeep,fkeep,cuda_error)
+   call ssids_free(akeep,fkeep,cuda_error)
 
 !!!!!!
 
@@ -648,7 +648,7 @@ subroutine test_errors
    call ssids_factor(posdef,a%val,akeep,fkeep,options,info)
    call ssids_solve(x1,akeep,fkeep,options,info,job=1)
    call print_result(info%flag, SSIDS_ERROR_JOB_INVALID)
-   call ssids_finalise(akeep,fkeep,cuda_error)
+   call ssids_free(akeep,fkeep,cuda_error)
 
 !!!!!!
 
@@ -660,7 +660,7 @@ subroutine test_errors
    call ssids_factor(posdef,a%val,akeep,fkeep,options,info)
    call ssids_solve(x1,akeep,fkeep,options,info,job=2)
    call print_result(info%flag, SSIDS_ERROR_JOB_INVALID)
-   call ssids_finalise(akeep,fkeep,cuda_error)
+   call ssids_free(akeep,fkeep,cuda_error)
 
 !!!!!!
 
@@ -672,7 +672,7 @@ subroutine test_errors
    call ssids_factor(posdef,a%val,akeep,fkeep,options,info)
    call ssids_solve(x1,akeep,fkeep,options,info,job=3)
    call print_result(info%flag, SSIDS_ERROR_JOB_INVALID)
-   call ssids_finalise(akeep,fkeep,cuda_error)
+   call ssids_free(akeep,fkeep,cuda_error)
 
 !!!!!!
 
@@ -686,7 +686,7 @@ subroutine test_errors
    allocate(x1(a%n-1))
    call ssids_solve(x1,akeep,fkeep,options,info,job=5)
    call print_result(info%flag, SSIDS_ERROR_X_SIZE)
-   call ssids_finalise(akeep,fkeep,cuda_error)
+   call ssids_free(akeep,fkeep,cuda_error)
 
 !!!!!!
 
@@ -700,7 +700,7 @@ subroutine test_errors
    allocate(x(a%n-1,1))
    call ssids_solve(1,x,a%n-1,akeep,fkeep,options,info)
    call print_result(info%flag, SSIDS_ERROR_X_SIZE)
-   call ssids_finalise(akeep,fkeep,cuda_error)
+   call ssids_free(akeep,fkeep,cuda_error)
 
 !!!!!!
 
@@ -715,7 +715,7 @@ subroutine test_errors
    allocate(x(a%n,1))
    call ssids_solve(nrhs,x,a%n,akeep,fkeep,options,info)
    call print_result(info%flag, SSIDS_ERROR_X_SIZE)
-   call ssids_finalise(akeep,fkeep,cuda_error)
+   call ssids_free(akeep,fkeep,cuda_error)
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
    ! tests on call to ssids_enquire_posdef
@@ -743,7 +743,7 @@ subroutine test_errors
    allocate(d1(a%n))
    call ssids_enquire_posdef(akeep,fkeep,options,info,d1)
    call print_result(info%flag, SSIDS_ERROR_CALL_SEQUENCE)
-   call ssids_finalise(akeep, fkeep, cuda_error)
+   call ssids_free(akeep, fkeep, cuda_error)
 
    write(*,"(a)",advance="no") " * Testing call to enquire out of seq........"
    call simple_mat(a)
@@ -762,7 +762,7 @@ subroutine test_errors
    allocate(d1(a%n))
    call ssids_enquire_posdef(akeep,fkeep,options,info,d1)
    call print_result(info%flag, SSIDS_ERROR_CALL_SEQUENCE)
-   call ssids_free(akeep)
+   call ssids_free(akeep, cuda_error)
 
    write(*,"(a)",advance="no") " * Testing call to enquire_posdef with indef."
    call simple_mat(a)
@@ -774,7 +774,7 @@ subroutine test_errors
    allocate(d1(a%n))
    call ssids_enquire_posdef(akeep,fkeep,options,info,d1)
    call print_result(info%flag, SSIDS_ERROR_NOT_LLT)
-   call ssids_finalise(akeep, fkeep, cuda_error)
+   call ssids_free(akeep, fkeep, cuda_error)
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
    ! tests on call to ssids_enquire_indef
@@ -802,7 +802,7 @@ subroutine test_errors
    allocate(d(2,a%n))
    call ssids_enquire_indef(akeep,fkeep,options,info,piv_order=order,d=d)
    call print_result(info%flag, SSIDS_ERROR_CALL_SEQUENCE)
-   call ssids_finalise(akeep, fkeep, cuda_error)
+   call ssids_free(akeep, fkeep, cuda_error)
 
    write(*,"(a)",advance="no") " * Testing call to enquire out of seq........"
    call simple_mat(a)
@@ -821,7 +821,7 @@ subroutine test_errors
    allocate(d(2,a%n))
    call ssids_enquire_indef(akeep,fkeep,options,info,piv_order=order,d=d)
    call print_result(info%flag, SSIDS_ERROR_CALL_SEQUENCE)
-   call ssids_free(akeep)
+   call ssids_free(akeep, cuda_error)
 
    write(*,"(a)",advance="no") " * Testing call to enquire_indef with posdef."
    call simple_mat(a)
@@ -834,7 +834,7 @@ subroutine test_errors
    allocate(d(2,a%n))
    call ssids_enquire_indef(akeep,fkeep,options,info,piv_order=order,d=d)
    call print_result(info%flag, SSIDS_ERROR_NOT_LDLT)
-   call ssids_finalise(akeep, fkeep, cuda_error)
+   call ssids_free(akeep, fkeep, cuda_error)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -862,7 +862,7 @@ subroutine test_errors
    allocate(d(2,a%n))
    call ssids_alter(d,akeep,fkeep,options,info)
    call print_result(info%flag, SSIDS_ERROR_CALL_SEQUENCE)
-   call ssids_finalise(akeep, fkeep, cuda_error)
+   call ssids_free(akeep, fkeep, cuda_error)
 
    write(*,"(a)",advance="no") " * Testing call to alter out of seq.........."
    call simple_mat(a)
@@ -881,7 +881,7 @@ subroutine test_errors
    allocate(d(2,a%n))
    call ssids_alter(d,akeep,fkeep,options,info)
    call print_result(info%flag, SSIDS_ERROR_CALL_SEQUENCE)
-   call ssids_free(akeep)
+   call ssids_free(akeep, cuda_error)
 
    write(*,"(a)",advance="no") " * Testing call to alter_indef with posdef..."
    call simple_mat(a)
@@ -893,7 +893,7 @@ subroutine test_errors
    allocate(d(2,a%n))
    call ssids_alter(d,akeep,fkeep,options,info)
    call print_result(info%flag, SSIDS_ERROR_NOT_LDLT)
-   call ssids_finalise(akeep, fkeep, cuda_error)
+   call ssids_free(akeep, fkeep, cuda_error)
 end subroutine test_errors
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -912,6 +912,7 @@ subroutine test_warnings
    real(wp), dimension(:,:), allocatable :: res
    real(wp), dimension(:,:), allocatable :: x
    real(wp), dimension(:), allocatable :: x1
+   integer :: cuda_error
 
    write(*,"(a)")
    write(*,"(a)") "================"
@@ -950,7 +951,7 @@ subroutine test_warnings
    call ssids_analyse(check, a%n, a%ptr, a%row, akeep, options, info, order)
    call print_result(info%flag,SSIDS_WARNING_IDX_OOR)
    call chk_answer(posdef, a, akeep, options, rhs, x, res, SSIDS_SUCCESS)
-   call ssids_free(akeep)
+   call ssids_free(akeep, cuda_error)
 
    write(*,"(a)",advance="no") " * Testing out of range below............"
    call simple_mat_lower(a,1)
@@ -968,7 +969,7 @@ subroutine test_warnings
    call ssids_analyse(check, a%n, a%ptr, a%row, akeep, options, info, order)
    call print_result(info%flag,SSIDS_WARNING_IDX_OOR)
    call chk_answer(posdef, a, akeep, options, rhs, x, res, SSIDS_SUCCESS)
-   call ssids_free(akeep)
+   call ssids_free(akeep, cuda_error)
 
    write(*,"(a)",advance="no") " * Testing duplicates...................."
    call simple_mat(a,2)
@@ -987,7 +988,7 @@ subroutine test_warnings
    call ssids_analyse(check, a%n, a%ptr, a%row, akeep, options, info, order)
    call print_result(info%flag,SSIDS_WARNING_DUP_IDX)
    call chk_answer(posdef, a, akeep, options, rhs, x, res, SSIDS_SUCCESS)
-   call ssids_free(akeep)
+   call ssids_free(akeep, cuda_error)
 
    write(*,"(a)",advance="no") " * Testing out of range and duplicates..."
    call simple_mat_lower(a,2)
@@ -1009,7 +1010,7 @@ subroutine test_warnings
    call print_result(info%flag,SSIDS_WARNING_DUP_AND_OOR)
    call chk_answer(posdef, a, akeep, options, rhs, x, res, SSIDS_SUCCESS, &
         fs=.true.)
-   call ssids_free(akeep)
+   call ssids_free(akeep, cuda_error)
 
    write(*,"(a)", advance="no") " * Testing missing diagonal entry (indef)....."
    a%ptr = (/ 1, 4, 5, 6, 7 /)
@@ -1029,7 +1030,7 @@ subroutine test_warnings
    call ssids_analyse(check, a%n, a%ptr, a%row, akeep, options, info, order)
    call print_result(info%flag, SSIDS_WARNING_MISSING_DIAGONAL)
    call chk_answer(posdef, a, akeep, options, rhs, x, res, SSIDS_SUCCESS)
-   call ssids_free(akeep)
+   call ssids_free(akeep, cuda_error)
 
 
    write(*,"(a)", advance="no") " * Testing missing diagonal and out of range.."
@@ -1050,7 +1051,7 @@ subroutine test_warnings
    call ssids_analyse(check, a%n, a%ptr, a%row, akeep, options, info, order)
    call print_result(info%flag, SSIDS_WARNING_MISS_DIAG_OORDUP)
    call chk_answer(posdef, a, akeep, options, rhs, x, res, SSIDS_SUCCESS)
-   call ssids_free(akeep)
+   call ssids_free(akeep, cuda_error)
 
    write(*,"(a)",advance="no") " * Testing arrays min size (zero diag)........"
    call simple_mat_zero_diag(a)
@@ -1059,7 +1060,7 @@ subroutine test_warnings
    call ssids_analyse(check, a%n, a%ptr, a%row, akeep, options, info, order)
    call print_result(info%flag, SSIDS_WARNING_MISSING_DIAGONAL)
    call chk_answer(posdef, a, akeep, options, rhs, x, res, SSIDS_SUCCESS)
-   call ssids_free(akeep)
+   call ssids_free(akeep, cuda_error)
 
    write(*,"(a)", advance="no") " * Testing missing diagonal and duplicate....."
    call simple_mat(a)
@@ -1080,7 +1081,7 @@ subroutine test_warnings
    call print_result(info%flag, SSIDS_WARNING_MISS_DIAG_OORDUP)
    call chk_answer(posdef, a, akeep, options, rhs, x, res, SSIDS_SUCCESS, &
         fs=.true.)
-   call ssids_free(akeep)
+   call ssids_free(akeep, cuda_error)
 
    write(*,"(a)", advance="no") " * Testing analyse with structurally singular."
    call simple_sing_mat2(a)
@@ -1114,7 +1115,7 @@ subroutine test_warnings
    a%ne = a%ptr(a%n+1) - 1
    call chk_answer(posdef, a, akeep, options, rhs, x, res, &
       SSIDS_WARNING_FACT_SINGULAR, fs=.true.)
-   call ssids_free(akeep)
+   call ssids_free(akeep, cuda_error)
 !!!!!!!!!
 
    posdef = .false.
@@ -1138,7 +1139,7 @@ subroutine test_warnings
    call gen_rhs(a, rhs, x1, x, res, 1)
    call chk_answer(posdef, a, akeep, options, rhs, x, res, &
         SSIDS_WARNING_FACT_SINGULAR, fs=.true.)
-   call ssids_free(akeep)
+   call ssids_free(akeep, cuda_error)
 
    posdef = .false.
    write(*,"(a)") " * Testing factor with match ord no scale...."
@@ -1155,7 +1156,7 @@ subroutine test_warnings
    call gen_rhs(a, rhs, x1, x, res, 1)
    call chk_answer(posdef, a, akeep, options, rhs, x, res, &
         SSIDS_WARNING_MATCH_ORD_NO_SCALE, fs=.true.)
-   call ssids_free(akeep)
+   call ssids_free(akeep, cuda_error)
    options%ordering = 0 ! restore
 
    write(*,"(/a/)") " * Testing warnings (coord)"
@@ -1192,7 +1193,7 @@ subroutine test_warnings
    a%ne = a%ptr(a%n+1) - 1
    call chk_answer(posdef, a, akeep, options, rhs, x, res, &
       SSIDS_WARNING_FACT_SINGULAR, fs=.true.)
-   call ssids_free(akeep)
+   call ssids_free(akeep, cuda_error)
 end subroutine test_warnings
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -1244,7 +1245,7 @@ subroutine test_special
             write(*, "(a,i4)") &
                "Unexpected error during analyse. flag = ", info%flag
             errors = errors + 1
-            call ssids_free(akeep)
+            call ssids_free(akeep, cuda_error)
             exit
          endif
       else
@@ -1263,7 +1264,7 @@ subroutine test_special
             write(*, "(a,i4)") &
                "Unexpected error during analyse_coord. flag = ", info%flag
             errors = errors + 1
-            call ssids_free(akeep)
+            call ssids_free(akeep, cuda_error)
             exit
          endif
       endif
@@ -1279,7 +1280,7 @@ subroutine test_special
          write(*, "(a,i4)") &
             "Unexpected error during factor. flag = ", info%flag
          errors = errors + 1
-         call ssids_free(akeep)
+         call ssids_free(akeep, cuda_error)
          call ssids_free(fkeep, cuda_error)
          exit
       endif
@@ -1291,13 +1292,13 @@ subroutine test_special
          write(*, "(a,i4)") &
             "Unexpected error during solve. flag = ", info%flag
          errors = errors + 1
-         call ssids_free(akeep)
+         call ssids_free(akeep, cuda_error)
          call ssids_free(fkeep, cuda_error)
          exit
       endif
 
       call print_result(info%flag,0)
-      call ssids_free(akeep)
+      call ssids_free(akeep, cuda_error)
       call ssids_free(fkeep, cuda_error)
    enddo
    deallocate(order, a%ptr, a%row, a%val)
@@ -1327,7 +1328,7 @@ subroutine test_special
    call gen_rhs(a, rhs, x1, x, res, 1)
    call chk_answer(.false., a, akeep, options, rhs, x, &
       res, SSIDS_WARNING_FACT_SINGULAR, fs=.true.)
-   call ssids_free(akeep)
+   call ssids_free(akeep, cuda_error)
 
    ! Trigger block factor-solve code with zeroes
    ! (   0.0         )
@@ -1380,7 +1381,7 @@ subroutine test_special
    options%ordering = 1
    call ssids_analyse(check, a%n, a%ptr, a%row, akeep, options, info)
    call print_result(info%flag,SSIDS_SUCCESS)
-   call ssids_free(akeep)
+   call ssids_free(akeep, cuda_error)
    
    write(*,"(a)",advance="no") &
       " * Testing n>1e5, ne>3.0*n, order=1......"
@@ -1389,7 +1390,7 @@ subroutine test_special
    options%ordering = 1
    call ssids_analyse(check, a%n, a%ptr, a%row, akeep, options, info)
    call print_result(info%flag,SSIDS_SUCCESS)
-   call ssids_free(akeep)
+   call ssids_free(akeep, cuda_error)
 
    write(*,"(a)",advance="no") &
       " * Testing n>1e5, ne>3.0*n, order=2......"
@@ -1398,7 +1399,7 @@ subroutine test_special
    options%ordering = 2
    call ssids_analyse(check, a%n, a%ptr, a%row, akeep, options, info, val=a%val)
    call print_result(info%flag,SSIDS_SUCCESS)
-   call ssids_free(akeep)
+   call ssids_free(akeep, cuda_error)
 
    ! (     1.0 )
    ! ( 1.0     )
@@ -1414,7 +1415,7 @@ subroutine test_special
    call gen_rhs(a, rhs, x1, x, res, 1)
    call chk_answer(.false., a, akeep, options, rhs, x, &
       res, SSIDS_SUCCESS, fs=.true.)
-   call ssids_free(akeep)
+   call ssids_free(akeep, cuda_error)
 
    ! (  x   x  1.0 )
    ! (  x   x  2.0 )
@@ -1431,7 +1432,7 @@ subroutine test_special
    call gen_rhs(a, rhs, x1, x, res, 1)
    call chk_answer(.false., a, akeep, options, rhs, x, &
       res, SSIDS_WARNING_FACT_SINGULAR, fs=.true.)
-   call ssids_free(akeep)
+   call ssids_free(akeep, cuda_error)
 
    ! (  x   x  1.0 )
    ! (  x   x  2.0 )
@@ -1448,7 +1449,7 @@ subroutine test_special
    call gen_rhs(a, rhs, x1, x, res, 1)
    call chk_answer(.false., a, akeep, options, rhs, x, &
       res, SSIDS_WARNING_FACT_SINGULAR, fs=.true.)
-   call ssids_free(akeep)
+   call ssids_free(akeep, cuda_error)
 
    ! Test posdef with node at least 384 and multiple nodes [for coverage]
    write(*,"(a)",advance="no") &
@@ -1461,7 +1462,7 @@ subroutine test_special
    call print_result(info%flag,SSIDS_SUCCESS)
    call gen_rhs(a, rhs, x1, x, res, 1)
    call chk_answer(.true., a, akeep, options, rhs, x, res, SSIDS_SUCCESS)
-   call ssids_free(akeep)
+   call ssids_free(akeep, cuda_error)
 
 end subroutine test_special
 
@@ -2041,7 +2042,7 @@ subroutine test_random
       num_flops = info%num_flops
       if(info%flag .ne. SSIDS_SUCCESS) then
          write(*, "(a,i3)") "fail on analyse", info%flag
-         call ssids_free(akeep)
+         call ssids_free(akeep, cuda_error)
          errors = errors + 1
          cycle
       endif
@@ -2081,7 +2082,7 @@ subroutine test_random
 
       if(info%flag .lt. SSIDS_SUCCESS) then
          write(*, "(a,i3)") "fail on factor", info%flag
-         call ssids_finalise(akeep, fkeep, cuda_error)
+         call ssids_free(akeep, fkeep, cuda_error)
          errors = errors + 1
          cycle
       endif
@@ -2096,7 +2097,7 @@ subroutine test_random
             if(info%flag .lt. SSIDS_SUCCESS) then
                write(*, "(a,i4)") " fail on 1d solve with job absent", &
                   info%flag
-               call ssids_finalise(akeep, fkeep, cuda_error)
+               call ssids_free(akeep, fkeep, cuda_error)
                errors = errors + 1
                cycle
             endif
@@ -2104,7 +2105,7 @@ subroutine test_random
             if(info%flag .lt. SSIDS_SUCCESS) then
                write(*, "(a,i4)") " fail on 1d solve with job absent", &
                   info%flag
-               call ssids_finalise(akeep, fkeep, cuda_error)
+               call ssids_free(akeep, fkeep, cuda_error)
                errors = errors + 1
                cycle
             endif
@@ -2114,7 +2115,7 @@ subroutine test_random
             if(info%flag .lt. SSIDS_SUCCESS) then
                write(*, "(a,i4)") " fail on 1d solve with job = 1", &
                   info%flag
-               call ssids_finalise(akeep, fkeep, cuda_error)
+               call ssids_free(akeep, fkeep, cuda_error)
                errors = errors + 1
                cycle
             endif
@@ -2122,7 +2123,7 @@ subroutine test_random
             if(info%flag .lt. SSIDS_SUCCESS) then
                write(*, "(a,i4)") " fail on 1d solve with job = 3", &
                   info%flag
-               call ssids_finalise(akeep, fkeep, cuda_error)
+               call ssids_free(akeep, fkeep, cuda_error)
                errors = errors + 1
                cycle
             endif
@@ -2137,7 +2138,7 @@ subroutine test_random
             if(info%flag .lt. SSIDS_SUCCESS) then
                write(*, "(a,i4)") " fail on 1d solve with job = 3", &
                   info%flag
-               call ssids_finalise(akeep, fkeep, cuda_error)
+               call ssids_free(akeep, fkeep, cuda_error)
                errors = errors + 1
                cycle
             endif
@@ -2155,7 +2156,7 @@ subroutine test_random
             if(info%flag .lt. SSIDS_SUCCESS) then
                write(*, "(a,i4)") " fail on 1d solve with job absent", &
                   info%flag
-               call ssids_finalise(akeep, fkeep, cuda_error)
+               call ssids_free(akeep, fkeep, cuda_error)
                errors = errors + 1
                cycle
             endif
@@ -2163,7 +2164,7 @@ subroutine test_random
             if(info%flag .lt. SSIDS_SUCCESS) then
                write(*, "(a,i4)") " fail on 1d solve with job absent", &
                   info%flag
-               call ssids_finalise(akeep, fkeep, cuda_error)
+               call ssids_free(akeep, fkeep, cuda_error)
                errors = errors + 1
                cycle
             endif
@@ -2173,7 +2174,7 @@ subroutine test_random
             if(info%flag .lt. SSIDS_SUCCESS) then
                write(*, "(a,i4)") " fail on 1d solve with job = 1", &
                   info%flag
-               call ssids_finalise(akeep, fkeep, cuda_error)
+               call ssids_free(akeep, fkeep, cuda_error)
                errors = errors + 1
                cycle
             endif
@@ -2181,7 +2182,7 @@ subroutine test_random
             if(info%flag .lt. SSIDS_SUCCESS) then
                write(*, "(a,i4)") " fail on 1d solve with job = 4", &
                   info%flag
-               call ssids_finalise(akeep, fkeep, cuda_error)
+               call ssids_free(akeep, fkeep, cuda_error)
                errors = errors + 1
                cycle
             endif
@@ -2196,7 +2197,7 @@ subroutine test_random
             if(info%flag .lt. SSIDS_SUCCESS) then
                write(*, "(a,i4)") " fail on 1d solve with job = 4", &
                   info%flag
-               call ssids_finalise(akeep, fkeep, cuda_error)
+               call ssids_free(akeep, fkeep, cuda_error)
                errors = errors + 1
                cycle
             endif
@@ -2206,7 +2207,7 @@ subroutine test_random
             if(info%flag .lt. SSIDS_SUCCESS) then
                write(*, "(a,i4)") " fail on 1d solve with job = 1", &
                   info%flag
-               call ssids_finalise(akeep, fkeep, cuda_error)
+               call ssids_free(akeep, fkeep, cuda_error)
                errors = errors + 1
                cycle
             endif
@@ -2221,7 +2222,7 @@ subroutine test_random
             if(info%flag .lt. SSIDS_SUCCESS) then
                write(*, "(a,i4)") " fail on 1d solve with job = 3", &
                   info%flag
-               call ssids_finalise(akeep, fkeep, cuda_error)
+               call ssids_free(akeep, fkeep, cuda_error)
                errors = errors + 1
                cycle
             endif
@@ -2229,7 +2230,7 @@ subroutine test_random
             if(info%flag .lt. SSIDS_SUCCESS) then
                write(*, "(a,i4)") " fail on 1d solve with job = 1", &
                   info%flag
-               call ssids_finalise(akeep, fkeep, cuda_error)
+               call ssids_free(akeep, fkeep, cuda_error)
                errors = errors + 1
                cycle
             endif
@@ -2237,7 +2238,7 @@ subroutine test_random
             if(info%flag .lt. SSIDS_SUCCESS) then
                write(*, "(a,i4)") " fail on 1d solve with job = 2", &
                   info%flag
-               call ssids_finalise(akeep, fkeep, cuda_error)
+               call ssids_free(akeep, fkeep, cuda_error)
                errors = errors + 1
                cycle
             endif
@@ -2245,7 +2246,7 @@ subroutine test_random
             if(info%flag .lt. SSIDS_SUCCESS) then
                write(*, "(a,i4)") " fail on 1d solve with job = 3", &
                   info%flag
-               call ssids_finalise(akeep, fkeep, cuda_error)
+               call ssids_free(akeep, fkeep, cuda_error)
                errors = errors + 1
                cycle
             endif
@@ -2282,7 +2283,7 @@ subroutine test_random
          write(*, "()")
        !  write (6,'(6es12.4)') x1(1:a%n)
          errors = errors + 1
-         call ssids_finalise(akeep, fkeep, cuda_error)
+         call ssids_free(akeep, fkeep, cuda_error)
          cycle
       endif
 
@@ -2291,7 +2292,7 @@ subroutine test_random
             d=d)
          if (info%flag < 0) then
            write (*,'(a)') ' Unexpected error from ssids_enquire_indef'
-           call ssids_finalise(akeep, fkeep, cuda_error)
+           call ssids_free(akeep, fkeep, cuda_error)
            errors = errors + 1
            cycle 
          endif
@@ -2299,7 +2300,7 @@ subroutine test_random
          call ssids_alter(d,akeep,fkeep,options,info)
          if (info%flag < 0) then
             write (*,'(a)') ' Unexpected error from ssids_alter'
-            call ssids_finalise(akeep, fkeep, cuda_error)
+            call ssids_free(akeep, fkeep, cuda_error)
             errors = errors + 1
             cycle 
          endif
@@ -2307,7 +2308,7 @@ subroutine test_random
          call ssids_enquire_posdef(akeep,fkeep,options,info,d1)
          if (info%flag < 0) then
            write (*,'(a)') ' Unexpected error from ssids_enquire_posdef'
-           call ssids_finalise(akeep, fkeep, cuda_error)
+           call ssids_free(akeep, fkeep, cuda_error)
            errors = errors + 1
            cycle 
          endif
@@ -2317,12 +2318,12 @@ subroutine test_random
       ! Cleanup ready for next iteration
       !
       if(random_logical(state)) &
-         call ssids_finalise(akeep, fkeep, cuda_error)
+         call ssids_free(akeep, fkeep, cuda_error)
 
    end do
 
    ! Ensure cleaned up at end
-   call ssids_finalise(akeep, fkeep, cuda_error)
+   call ssids_free(akeep, fkeep, cuda_error)
 
 end subroutine test_random
 
@@ -2373,7 +2374,7 @@ subroutine test_big
    call ssids_analyse(.false., a%n, a%ptr, a%row, akeep, options, info)
    if(info%flag .ne. SSIDS_SUCCESS) then
       write(*, "(a,i3)") "fail on analyse", info%flag
-      call ssids_free(akeep)
+      call ssids_free(akeep, cuda_error)
       errors = errors + 1
       return
    endif
@@ -2401,7 +2402,7 @@ subroutine test_big
          ptr=a%ptr, row=a%row)
    if(info%flag .lt. SSIDS_SUCCESS) then
       write(*, "(a,i3)") "fail on factor", info%flag
-      call ssids_finalise(akeep, fkeep, cuda_error)
+      call ssids_free(akeep, fkeep, cuda_error)
       errors = errors + 1
       return
    endif
@@ -2412,7 +2413,7 @@ subroutine test_big
    if(info%flag .lt. SSIDS_SUCCESS) then
       write(*, "(a,i4)") " fail on 1d solve with job absent", &
          info%flag
-      call ssids_finalise(akeep, fkeep, cuda_error)
+      call ssids_free(akeep, fkeep, cuda_error)
       errors = errors + 1
       return
    endif
@@ -2428,14 +2429,14 @@ subroutine test_big
       end do
       write(*, "()")
       errors = errors + 1
-      call ssids_finalise(akeep, fkeep, cuda_error)
+      call ssids_free(akeep, fkeep, cuda_error)
       return
    endif
 
    !
    ! Cleanup ready for next iteration
    !
-   call ssids_finalise(akeep, fkeep, cuda_error)
+   call ssids_free(akeep, fkeep, cuda_error)
 
 end subroutine test_big
 
@@ -2762,12 +2763,12 @@ subroutine test_random_scale
       !
       ! Cleanup for next iteration
       !
-      call ssids_finalise(akeep, fkeep, cuda_error)
+      call ssids_free(akeep, fkeep, cuda_error)
 
    end do
 
    ! Free any memory in the event of errors/singular systems on final itr
-   call ssids_finalise(akeep, fkeep, cuda_error)
+   call ssids_free(akeep, fkeep, cuda_error)
 
 end subroutine test_random_scale
 

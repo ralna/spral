@@ -41,8 +41,7 @@ module spral_ssids
              ssids_analyse_coord,   & ! Analyse phase, Coordinate input
              ssids_factor,          & ! Factorize phase
              ssids_solve,           & ! Solve phase
-             ssids_free,            & ! Free akeep or fkeep individually
-             ssids_finalise,        & ! Cleanup akeep and fkeep
+             ssids_free,            & ! Free akeep and/or fkeep
              ssids_enquire_posdef,  & ! Pivot information in posdef case
              ssids_enquire_indef,   & ! Pivot information in indef case
              ssids_alter,           & ! Alter diagonal
@@ -71,11 +70,8 @@ module spral_ssids
    interface ssids_free
       module procedure free_akeep_double
       module procedure free_fkeep_double
+      module procedure free_both_double
    end interface ssids_free
-
-   interface ssids_finalise
-      module procedure finalise_both_double
-   end interface ssids_finalise
 
    interface ssids_enquire_posdef
       module procedure ssids_enquire_posdef_double
@@ -154,7 +150,14 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
 
    ! Initialise
    context = 'ssids_analyse'
-   call ssids_free(akeep)
+   call ssids_free(akeep, inform%cuda_error)
+   if(inform%cuda_error.ne.0) then
+      inform%flag = SSIDS_ERROR_CUDA_UNKNOWN
+      akeep%flag = inform%flag
+      call ssids_print_flag(context,nout,inform%flag, &
+         cuda_error=inform%cuda_error)
+      return
+   endif
    inform%flag = 0
    inform%matrix_missing_diag = 0
    inform%matrix_outrange = 0
@@ -425,7 +428,14 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
 
    ! Initialise
    context = 'ssids_analyse_coord'
-   call ssids_free(akeep)
+   call ssids_free(akeep, inform%cuda_error)
+   if(inform%cuda_error.ne.0) then
+      inform%flag = SSIDS_ERROR_CUDA_UNKNOWN
+      akeep%flag = inform%flag
+      call ssids_print_flag(context,nout,inform%flag, &
+         cuda_error=inform%cuda_error)
+      return
+   endif
    inform%flag = 0
    inform%matrix_missing_diag = 0
    inform%matrix_outrange = 0
@@ -1310,8 +1320,8 @@ end subroutine copy_stream_data_to_host
 !
 ! Solve phase single x. 
 !
-subroutine ssids_solve_one_double(x, akeep, fkeep, options, inform, job)
-   real(wp), dimension(:), intent(inout) :: x ! On entry, x must
+subroutine ssids_solve_one_double(x1, akeep, fkeep, options, inform, job)
+   real(wp), dimension(:), intent(inout) :: x1 ! On entry, x must
       ! be set so that if i has been used to index a variable,
       ! x(i) is the corresponding component of the
       ! right-hand side.On exit, if i has been used to index a variable,
@@ -1324,8 +1334,8 @@ subroutine ssids_solve_one_double(x, akeep, fkeep, options, inform, job)
 
    integer :: ldx
 
-   ldx = size(x)
-   call ssids_solve_mult_double(1, x, ldx, akeep, fkeep, options, inform, &
+   ldx = size(x1)
+   call ssids_solve_mult_double(1, x1, ldx, akeep, fkeep, options, inform, &
       job=job)
 end subroutine ssids_solve_one_double
 
@@ -2055,10 +2065,11 @@ end subroutine ssids_alter_double
 
 !*************************************************************************
 
-subroutine free_akeep_double(akeep)
+subroutine free_akeep_double(akeep, cuda_error)
    type(ssids_akeep), intent(inout) :: akeep
+   integer, intent(out) :: cuda_error
 
-   integer :: cuda_error, st
+   integer :: st
 
    deallocate(akeep%child_ptr, stat=st)
    deallocate(akeep%child_list, stat=st)
@@ -2080,14 +2091,17 @@ subroutine free_akeep_double(akeep)
    if(C_ASSOCIATED(akeep%gpu_nlist)) then
       cuda_error = cudaFree(akeep%gpu_nlist)
       akeep%gpu_nlist = C_NULL_PTR
+      if(cuda_error.ne.0) return
    endif
    if(C_ASSOCIATED(akeep%gpu_rlist)) then
       cuda_error = cudaFree(akeep%gpu_rlist)
       akeep%gpu_rlist = C_NULL_PTR
+      if(cuda_error.ne.0) return
    endif
    if(C_ASSOCIATED(akeep%gpu_rlist_direct)) then
       cuda_error = cudaFree(akeep%gpu_rlist_direct)
       akeep%gpu_rlist_direct = C_NULL_PTR
+      if(cuda_error.ne.0) return
    endif
 end subroutine free_akeep_double
 
@@ -2229,13 +2243,15 @@ end subroutine free_gpu_type
 
 !*******************************
 
-subroutine finalise_both_double(akeep, fkeep, cuda_error)
+subroutine free_both_double(akeep, fkeep, cuda_error)
    type(ssids_akeep), intent(inout) :: akeep
    type(ssids_fkeep), intent(inout) :: fkeep
    integer, intent(out) :: cuda_error
 
-   call free_akeep_double(akeep)
+   call free_akeep_double(akeep, cuda_error)
+   if(cuda_error.ne.0) return
    call free_fkeep_double(fkeep, cuda_error)
-end subroutine finalise_both_double
+   if(cuda_error.ne.0) return
+end subroutine free_both_double
 
 end module spral_ssids
