@@ -100,7 +100,7 @@ program run_prob
    call ssids_analyse(.false., n, ptr, row, akeep, &
       options, inform)
    call system_clock(stop_t)
-   print *, "Used order ", inform%ordering
+   print *, "Used order ", options%ordering
    if (inform%flag < 0) then
       print *, "oops on analyse ", inform%flag
       stop

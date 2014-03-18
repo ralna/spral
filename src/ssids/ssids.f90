@@ -165,7 +165,6 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
    inform%matrix_rank = n
    inform%maxdepth = 0
    inform%num_sup = 0
-   inform%ordering = 0
    inform%stat = 0
 
    ! Set stream numbers
@@ -209,7 +208,6 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
       akeep%matrix_outrange = 0
       akeep%maxdepth = 0
       akeep%num_sup = 0
-      akeep%ordering = 0
       return
    end if
 
@@ -301,7 +299,6 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
       else
          call expand_pattern(n, nz, ptr, row, ptr2, row2)
       end if
-      inform%ordering = 0
    case(1)
       ! METIS ordering
       if (check) then
@@ -349,7 +346,6 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
          return
       end select
 
-      inform%ordering = options%ordering
       deallocate (val2,stat=st)
    end select
 
@@ -443,7 +439,6 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
    inform%matrix_rank = n
    inform%maxdepth = 0
    inform%num_sup = 0
-   inform%ordering = 0
    inform%stat = 0
 
    ! Set stream numbers
@@ -491,7 +486,6 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
       akeep%matrix_outrange = 0
       akeep%maxdepth = 0
       akeep%num_sup = 0
-      akeep%ordering = 0
       return
    end if
 
@@ -573,7 +567,6 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
       if (inform%flag < 0) go to 490
       order2(1:n) = order(1:n)
       call expand_pattern(n, nz, akeep%ptr, akeep%row, ptr2, row2)
-      inform%ordering = 0
 
    case(1)
       ! METIS ordering
@@ -611,7 +604,6 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
          return
       end select
 
-      inform%ordering = options%ordering
       deallocate (val2,stat=st)
    end select
 
@@ -761,7 +753,6 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
    inform%matrix_outrange = akeep%matrix_outrange
    inform%maxdepth = akeep%maxdepth
    inform%num_sup = akeep%num_sup
-   inform%ordering = akeep%ordering
    inform%maxfront = 0
    inform%num_neg = 0
    inform%num_delay = 0
@@ -928,6 +919,7 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
    ! Do an inital storage allocation:
    ! * options%multiplier * n             integers (for nodes(:)%perm)
    ! * options%multiplier * (nfactor+2*n) reals    (for nodes(:)%lcol)
+   ! FIXME: do we really need this memory????
    if(associated(fkeep%alloc)) then
       if(fkeep%alloc%imem_size.lt. &
             max(n+0_long, int(options%multiplier*n,kind=long))) then
@@ -1460,7 +1452,6 @@ subroutine ssids_solve_mult_double(nrhs, x, ldx, akeep, fkeep, options, &
    inform%num_neg = fkeep%num_neg
    inform%num_sup = akeep%num_sup
    inform%num_two = fkeep%num_two
-   inform%ordering = akeep%ordering
 
    ! Set local_job
    local_job = 0

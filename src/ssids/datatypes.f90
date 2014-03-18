@@ -28,20 +28,20 @@ module spral_ssids_datatypes
    integer, parameter, public :: SSIDS_ERROR_A_N_OOR         = -2
    integer, parameter, public :: SSIDS_ERROR_A_PTR           = -3
    integer, parameter, public :: SSIDS_ERROR_A_ALL_OOR       = -4
-   integer, parameter, public :: SSIDS_ERROR_SINGULAR        = -7
-   integer, parameter, public :: SSIDS_ERROR_NOT_POS_DEF     = -8
-   integer, parameter, public :: SSIDS_ERROR_PTR_ROW         = -10
-   integer, parameter, public :: SSIDS_ERROR_ORDER           = -11
-   integer, parameter, public :: SSIDS_ERROR_X_SIZE          = -12
-   integer, parameter, public :: SSIDS_ERROR_JOB_OOR         = -13
-   integer, parameter, public :: SSIDS_ERROR_NOT_LLT         = -14
-   integer, parameter, public :: SSIDS_ERROR_NOT_LDLT        = -15
-   integer, parameter, public :: SSIDS_ERROR_ALLOCATION      = -16
-   integer, parameter, public :: SSIDS_ERROR_VAL             = -20
-   integer, parameter, public :: SSIDS_ERROR_NO_SAVED_SCALING= -21
-   integer, parameter, public :: SSIDS_ERROR_JOB_INVALID     = -22
-   integer, parameter, public :: SSIDS_ERROR_CUDA_UNKNOWN    = -97
-   integer, parameter, public :: SSIDS_ERROR_CUBLAS_UNKNOWN  = -98
+   integer, parameter, public :: SSIDS_ERROR_SINGULAR        = -5
+   integer, parameter, public :: SSIDS_ERROR_NOT_POS_DEF     = -6
+   integer, parameter, public :: SSIDS_ERROR_PTR_ROW         = -7
+   integer, parameter, public :: SSIDS_ERROR_ORDER           = -8
+   integer, parameter, public :: SSIDS_ERROR_VAL             = -9
+   integer, parameter, public :: SSIDS_ERROR_X_SIZE          = -10
+   integer, parameter, public :: SSIDS_ERROR_JOB_OOR         = -11
+   integer, parameter, public :: SSIDS_ERROR_JOB_INVALID     = -12
+   integer, parameter, public :: SSIDS_ERROR_NOT_LLT         = -13
+   integer, parameter, public :: SSIDS_ERROR_NOT_LDLT        = -14
+   integer, parameter, public :: SSIDS_ERROR_NO_SAVED_SCALING= -15
+   integer, parameter, public :: SSIDS_ERROR_ALLOCATION      = -50
+   integer, parameter, public :: SSIDS_ERROR_CUDA_UNKNOWN    = -51
+   integer, parameter, public :: SSIDS_ERROR_CUBLAS_UNKNOWN  = -52
    integer, parameter, public :: SSIDS_ERROR_UNKNOWN         = -99
 
    ! warning flags
@@ -166,7 +166,6 @@ module spral_ssids_datatypes
       integer(long) :: num_flops ! not copied to inform in factor, but used to
          ! determine if parallelism should be used
       integer :: num_sup
-      integer :: ordering
 
       ! Scaling from matching-based ordering
       real(wp), dimension(:), allocatable :: scaling
@@ -349,33 +348,15 @@ module spral_ssids_datatypes
    ! Data type for control parameters
    !
    type ssids_options
-      logical :: action = .true. ! used in indefinite case only.
-         ! If true and the matrix is found to be
-         ! singular, computation continues with a warning.
-         ! Otherwise, terminates with error SSIDS_ERROR_SINGULAR.
-      integer :: nemin = nemin_default ! Min. number of eliminations at a tree
-         ! node for amalgamation not to be considered.
-      real(wp) :: multiplier = 1.1 ! size to multiply expected memory size by
-         ! when doing initial memory allocation to allow for delays.
-      integer :: ordering = 1 ! controls choice of ordering
-         ! 0 Order must be supplied by user
-         ! 1 METIS ordering with default settings is used.
-         ! 2 Matching with METIS on compressed matrix.
+      !
+      ! Printing options
+      !
       integer :: print_level = 0 ! Controls diagnostic printing.
          ! Possible values are:
          !  < 0: no printing.
          !  0: error and warning messages only.
          !  1: as 0 plus basic diagnostic printing.
          !  > 1: as 1 plus some more detailed diagnostic messages.
-      integer :: scaling = 0 ! controls use of scaling. 
-         !  <=0: user supplied (or no) scaling
-         !    1: Matching-based scaling by Hungarian Algorithm (MC64 algorithm)
-         !    2: Matching-based scaling by Auction Algorithm
-         !    3: Scaling generated during analyse phase for matching-based order
-         !  >=4: Norm equilibriation algorithm (MC77 algorithm)
-      real(wp) :: small = 1e-20_wp ! Minimum pivot size (absolute value of a
-         ! pivot must be of size at least small to be accepted).
-      real(wp) :: u = 0.01
       integer :: unit_diagnostics = 6 ! unit number for diagnostic printing.
          ! Printing is suppressed if unit_diagnostics  <  0.
       integer :: unit_error = 6 ! unit number for error messages.
@@ -383,26 +364,53 @@ module spral_ssids_datatypes
       integer :: unit_warning = 6 ! unit number for warning messages.
          ! Printing is suppressed if unit_warning  <  0.
 
-      ! Auction algorithm controls
-      type(auction_options) :: auction
+      !
+      ! Options used ssids_analyse() and ssids_analyse_coord()
+      !
+      integer :: ordering = 1 ! controls choice of ordering
+         ! 0 Order must be supplied by user
+         ! 1 METIS ordering with default settings is used.
+         ! 2 Matching with METIS on compressed matrix.
+      integer :: nemin = nemin_default ! Min. number of eliminations at a tree
+         ! node for amalgamation not to be considered.
+
+      !
+      ! Options used by ssids_factor() [both indef+posdef]
+      !
+      integer :: scaling = 0 ! controls use of scaling. 
+         !  <=0: user supplied (or no) scaling
+         !    1: Matching-based scaling by Hungarian Algorithm (MC64-like)
+         !    2: Matching-based scaling by Auction Algorithm
+         !    3: Scaling generated during analyse phase for matching-based order
+         !  >=4: Norm equilibriation algorithm (MC77-like)
+
+      !
+      ! Options used by ssids_factor() with posdef=.false.
+      !
+      logical :: action = .true. ! used in indefinite case only.
+         ! If true and the matrix is found to be
+         ! singular, computation continues with a warning.
+         ! Otherwise, terminates with error SSIDS_ERROR_SINGULAR.
+      real(wp) :: small = 1e-20_wp ! Minimum pivot size (absolute value of a
+         ! pivot must be of size at least small to be accepted).
+      real(wp) :: u = 0.01
+
+      !
+      ! Options used by ssids_factor() and ssids_solve()
+      !
+      logical :: use_gpu_solve = .true. ! Use GPU for solve phase if true
+         ! or CPU if false
+      integer :: presolve = 0 ! If set to a non-zero level, triggers L-factor
+         ! optimization for the sake of subsequent multiple solves.
+         ! Future releases may offer different levels of optimization.
 
       !
       ! Undocumented
       !
-      integer(long) :: min_subtree_work = int(1e5) ! Minimum amount of work
-         ! to aim for in each parallel task for subtree decomposition
-      integer :: min_ldsrk_work = int(1e4) ! Minimum amount of work to aim
-         ! for in an ldsrk subtask
-
-      !
-      ! New
-      !
-      logical :: use_gpu_solve = .true. ! Use GPU for solve phase if true
-         ! or CPU if false
       integer :: nstream = 1 ! Number of streams to use
-      integer :: presolve = 0 ! If set to a non-zero level, triggers L-factor
-         ! optimization for the sake of subsequent multiple solves.
-         ! Future releases may offer different levels of optimization.
+      real(wp) :: multiplier = 1.1 ! size to multiply expected memory size by
+         ! when doing initial memory allocation to allow for delays.
+      type(auction_options) :: auction ! Auction algorithm parameters
       real :: min_loadbalance = 0.8 ! Minimum load balance required when
          ! finding level set used for multiple streams
    end type ssids_options
@@ -417,20 +425,18 @@ module spral_ssids_datatypes
          ! SSIDS_SUCCESS
          ! SSIDS_ERROR_XXX
          ! SSIDS_WARNING_XXX
-      integer :: flag77 = 0 ! error flag from mc77
       integer :: matrix_dup = 0 ! Number of duplicated entries.
-      integer :: matrix_rank = 0 ! Rank of matrix (anal=structral, fact=actual)
-      integer :: matrix_outrange = 0 ! Number of out-of-range entries.
       integer :: matrix_missing_diag = 0 ! Number of missing diag. entries
+      integer :: matrix_outrange = 0 ! Number of out-of-range entries.
+      integer :: matrix_rank = 0 ! Rank of matrix (anal=structral, fact=actual)
       integer :: maxdepth ! Maximum depth of tree
       integer :: maxfront ! Maximum front size
+      integer :: num_delay = 0 ! Number of delayed variables
       integer(long) :: num_factor = 0_long ! Number of entries in factors
       integer(long) :: num_flops = 0_long ! Number of floating point operations
-      integer :: num_delay = 0 ! Number of delayed variables
       integer :: num_neg = 0 ! Number of negative pivots
       integer :: num_sup = 0 ! Number of supernodes
       integer :: num_two = 0 ! Number of 2x2 pivots used by factorization
-      integer :: ordering = 0 ! ordering actually used
       integer :: stat = 0 ! stat parameter
       integer :: cuda_error = 0 ! cuda error value
       integer :: cublas_error = 0 ! cublas error value

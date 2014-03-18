@@ -44,20 +44,20 @@ program main
    integer, parameter :: SSIDS_ERROR_A_N_OOR         = -2
    integer, parameter :: SSIDS_ERROR_A_PTR           = -3
    integer, parameter :: SSIDS_ERROR_A_ALL_OOR       = -4
-   integer, parameter :: SSIDS_ERROR_SINGULAR        = -7
-   integer, parameter :: SSIDS_ERROR_NOT_POS_DEF     = -8
-   integer, parameter :: SSIDS_ERROR_PTR_ROW         = -10
-   integer, parameter :: SSIDS_ERROR_ORDER           = -11
-   integer, parameter :: SSIDS_ERROR_X_SIZE          = -12
-   integer, parameter :: SSIDS_ERROR_JOB_OOR         = -13
-   integer, parameter :: SSIDS_ERROR_NOT_LLT         = -14
-   integer, parameter :: SSIDS_ERROR_NOT_LDLT        = -15
-   integer, parameter :: SSIDS_ERROR_ALLOCATION      = -16
-   integer, parameter :: SSIDS_ERROR_VAL             = -20
-   integer, parameter :: SSIDS_ERROR_NO_SAVED_SCALING= -21
-   integer, parameter :: SSIDS_ERROR_JOB_INVALID     = -22
-   integer, parameter :: SSIDS_ERROR_CUDA_UNKNOWN    = -97
-   integer, parameter :: SSIDS_ERROR_CUBLAS_UNKNOWN  = -98
+   integer, parameter :: SSIDS_ERROR_SINGULAR        = -5
+   integer, parameter :: SSIDS_ERROR_NOT_POS_DEF     = -6
+   integer, parameter :: SSIDS_ERROR_PTR_ROW         = -7
+   integer, parameter :: SSIDS_ERROR_ORDER           = -8
+   integer, parameter :: SSIDS_ERROR_VAL             = -9
+   integer, parameter :: SSIDS_ERROR_X_SIZE          = -10
+   integer, parameter :: SSIDS_ERROR_JOB_OOR         = -11
+   integer, parameter :: SSIDS_ERROR_JOB_INVALID     = -12
+   integer, parameter :: SSIDS_ERROR_NOT_LLT         = -13
+   integer, parameter :: SSIDS_ERROR_NOT_LDLT        = -14
+   integer, parameter :: SSIDS_ERROR_NO_SAVED_SCALING= -15
+   integer, parameter :: SSIDS_ERROR_ALLOCATION      = -50
+   integer, parameter :: SSIDS_ERROR_CUDA_UNKNOWN    = -51
+   integer, parameter :: SSIDS_ERROR_CUBLAS_UNKNOWN  = -52
    integer, parameter :: SSIDS_ERROR_UNKNOWN         = -99
 
    ! warning flags

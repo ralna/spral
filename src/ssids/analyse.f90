@@ -364,7 +364,6 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
    akeep%matrix_outrange = inform%matrix_outrange
    akeep%maxdepth = inform%maxdepth
    akeep%num_sup = inform%num_sup
-   akeep%ordering = inform%ordering
    akeep%num_flops = inform%num_flops
 
    return
