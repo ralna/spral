@@ -1,0 +1,154 @@
+\documentclass{spral}
+
+\newcommand{\packagename}{Installation}
+\newcommand{\version}{1.0.0}
+\newcommand{\versiondate}{6 March 2014}
+\newcommand{\purpose}{
+The Sparse Parallel Robust Algorithm Library (SPRAL) is an open-source library
+for sparse linear algebra and related algorithms.
+}
+
+\begin{document}
+
+\title{SPRAL \\Installation Instructions}
+\author{Jonathan Hogg (STFC Rutherford Appleton Laboratory)}
+% We don't use \maketitle as these instructions are somewhat special
+\makeatletter
+\pgfimage[height=1cm]{stfc}
+\hfill
+{\Huge \bfseries \textcolor{stfcblue}{\libraryname}}
+\vspace{0.1cm}
+\textcolor{stfcgrey}{\hrule}
+\vspace{0.5cm}
+
+\begin{center}
+   \LARGE \bfseries
+   \@title
+\end{center}
+\begin{quote}
+   \large
+   \purpose
+\end{quote}
+
+\begin{flushright}
+\noindent
+\@author
+\end{flushright}
+\vspace{-0.2cm}
+\textcolor{stfcgrey}{\hrule}
+\makeatother
+\thispagestyle{firststyle}
+
+\versionhistory
+\begin{description}
+\item[2014-03-19 Version 1.0.0] Initial release
+\end{description}
+
+%%%%%%%%%%%%%%%%%%%%%% HOW TO USE %%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Quick Start}
+
+Under Linux, or Mac OS X:
+
+\begin{verbatim}
+# Build and install library
+BUILDDIR=build; mkdir $BUILDDIR; cd $BUILDDIR
+../configure --with-metis="-L/path/to/metis -lmetis"
+make
+sudo make install # Optional
+
+# Link against library
+cd /path/to/your/code
+gfortran -o myprog myobj.o -lspral -lmetis -lblas
+\end{verbatim}
+
+\subsection*{Notes}
+\begin{itemize}
+   \item The above instructions perform an out-of-path build: we recommend you
+      change the value of \texttt{\$BUILDDIR} to reflect the compiler used, for
+      example \texttt{BUILDDIR=build-gfortran-4.8}.
+   \item The above will build the SPRAL library and a number of driver programs.
+      To build the example and test codes, use \texttt{make check}.
+   \item Installation is not required: in many cases it will be sufficient to
+      just link against the static library found in the \texttt{.libs}
+      subdirectory.
+   \item If you write a paper using SPRAL, please cite an appropriate paper
+      (a list can usually be found in the method section of the user
+      documentation). If none is listed, a citation of the library website
+      can be used.
+\end{itemize}
+
+\section{Third-party libraries}
+\subsection{METIS}
+Many of our solvers use the METIS graph partitioning library to find good
+orderings. You can obtain a copy of METIS from the following url:\\
+\url{http://www.cs.umn.edu/~metis}\\
+We support both version 4 and version 5 (the latter is available under the open source Apache Licence). At present we recommend version 4 as it is faster than
+version 5, though this may change in the future.\\
+If the metis library is not available on the default link path, the
+\texttt{--with-metis} option to \texttt{configure} should be used to specify
+how to link against METIS. For example, if \texttt{libmetis.a} is in the directory \texttt{/usr/local/metis-4.0}, use: \\
+\texttt{../configure --with-metis="-L/usr/local/metis-4.0 -lmetis"}
+
+\subsection{BLAS}
+Many of our solvers require a high performance BLAS library to efficiently
+perform dense linear algebra operations. For best performance, please use the
+library recommended by your computer manufacturer (normally the Intel MKL).
+If this is not available, use an optimized alternative, such as OpenBLAS.
+The reference BLAS from netlib are at least an order of magnitude slower than
+modern optimized BLAS, and should be avoided. \\
+
+If the BLAS library is not available on the default link path, or if
+\texttt{configure} detects the wrong BLAS library, the \texttt{--with-blas}
+option to \texttt{configure} should be used to specify how to link against
+the BLAS library. For example, to link against the Intel MKL using the GNU
+compiler suite, use: \\
+\begin{verbatim}
+../configure --with-blas="-L/opt/intel/mkl/lib/intel64 -lmkl_gf_lp64 -lmkl_gnu_thread \
+   -lmkl\_core"
+\end{verbatim}
+
+\section{Compilers and compiler options}
+If no compiler is specified, \texttt{configure} will pick a default
+compiler to use. If \texttt{configure} cannot find an appropriate compiler, or
+you wish to specify a different compiler you can do so by setting the following
+variables:
+\begin{description}
+   \item[CC] specifies the C compiler to use.
+   \item[FC] specifies the Fortran 90/95/2003/2008 compiler to use.
+   \item[NVCC] specifies the CUDA compiler to use.
+\end{description}
+\vspace{0.1cm}
+
+\noindent
+Additionally, compiler flags can be specified using the following variables:
+\begin{description}
+   \item[CFLAGS] specifies options passed to the C compiler.
+   \item[FCFLAGS] specifies options passed to the Fortran compiler
+   \item[NVCCFLAGS] specifies options passed to the CUDA compiler.
+\end{description}
+\vspace{0.1cm}
+
+\noindent
+For example, to compile with \texttt{ifort -g -O3 -ip} we could use:
+\begin{verbatim}
+../configure FC=ifort FCFLAGS="-g -O3 -ip"
+\end{verbatim}
+
+\section{Other options to \texttt{configure}}
+The \texttt{configure} script is generated by \texttt{autoconf}, and hence
+offers many standard options that can be listed using the command
+\texttt{configure --help}.
+
+\noindent
+In particular the following options may be of interest:
+\begin{description}
+   \item[\texttt{--prefix=PREFIX}] specifies the installation path prefix (by default \texttt{/usr/local/} under Linux).
+\end{description}
+
+\section{Support}
+Limited support is available by email to hsl@stfc.ac.uk.\\
+Bugs can be reported online via our bug tracking system: \\
+\url{http://ccpforge.cse.rl.ac.uk/gf/project/spral/tracker/?action=TrackerItemBrowse&tracker_id=498}.
+
+\end{document}
