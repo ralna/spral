@@ -164,7 +164,7 @@ struct reducing_d_solve_lookup {
  *         P is a (partial) permutation matrix, given by the vector perm.
  * The result x_2-x_1 is returned replacing the first column of upd.
  */
-template <int threadsx, bool POSDEF>
+template <int threadsx, bool DSOLVE>
 void __global__ reducing_d_solve(struct reducing_d_solve_lookup *lookup,
       double *upd, const double *x
       ) {
@@ -190,7 +190,7 @@ void __global__ reducing_d_solve(struct reducing_d_solve_lookup *lookup,
    val = -val;
 
    /* Task 2: D solve (note that D is actually stored as inverse already) */
-   if(!POSDEF) {
+   if(DSOLVE) {
       int rp = perm[idx];
       if(idx!=0 && d[2*idx-1] != 0) {
          /* second part of 2x2 */
@@ -214,6 +214,50 @@ void __global__ reducing_d_solve(struct reducing_d_solve_lookup *lookup,
    /* Store result as first column of upd */
    upd[idx] = val;
 
+}
+
+/* This subroutine only performs the solve with D. For best performance, use
+ * reducing_d_solve() instead.
+ * Peform the special matrix-vector multiplication D^-1 P x where
+ * D is a block diagonal matrix with 1x1 and 2x2 blocks, and
+ * P is a (partial) permutation matrix, given by the vector perm.
+ * The result is not returned in-place due to 2x2 pivots potentially
+ * split between blocks.
+ */
+template <int threadsx>
+void __global__ d_solve(struct reducing_d_solve_lookup *lookup,
+      const double *x, double *y) {
+
+   /* Read details from lookup */
+   lookup += blockIdx.x;
+   int idx = lookup->first_idx + threadIdx.x;
+   int m = lookup->m;
+   const double *d = lookup->d;
+   const int *perm = lookup->perm;
+
+   /* Don't do anything on threads past end of arrays */
+   if(threadIdx.x>=m) return;
+
+   /* D solve (note that D is actually stored as inverse already) */
+   int rp = perm[idx];
+   double val;
+   if(idx!=0 && d[2*idx-1] != 0) {
+      /* second part of 2x2 */
+      int rp2 = perm[idx-1];
+      val = d[2*idx-1] * x[rp2] +
+            d[2*idx]   * x[rp];
+   } else if (d[2*idx+1] != 0) {
+      /* first part of 2x2 */
+      int rp2 = perm[idx+1];
+      val = d[2*idx]   * x[rp] +
+            d[2*idx+1] * x[rp2];
+   } else {
+      /* 1x1 */
+      val = x[rp]*d[2*idx];
+   }
+
+   /* Store result in y[] */
+   y[rp] = val;
 }
 
 /***********************************************************************/
@@ -557,9 +601,21 @@ void spral_ssids_run_fwd_solve_kernels(bool posdef,
    CudaCheckError();
 }
 
-void spral_ssids_run_bwd_solve_kernels(bool posdef, double *x_gpu,
-      double *work_gpu, int nsync, int *sync_gpu, struct lookups_gpu_bwd *gpu, 
-      const cudaStream_t *stream) {
+void spral_ssids_run_d_solve_kernel(double *x_gpu, double *y_gpu,
+      struct lookups_gpu_bwd *gpu, const cudaStream_t *stream) {
+
+   if(gpu->nrds>0) {
+      d_solve
+         <REDUCING_D_SOLVE_THREADS_PER_BLOCK>
+         <<<gpu->nrds, REDUCING_D_SOLVE_THREADS_PER_BLOCK, 0, *stream>>>
+         (gpu->rds, x_gpu, y_gpu);
+      CudaCheckError();
+   }
+}
+
+void spral_ssids_run_bwd_solve_kernels(bool dsolve, bool unit_diagonal,
+      double *x_gpu, double *work_gpu, int nsync, int *sync_gpu,
+      struct lookups_gpu_bwd *gpu, const cudaStream_t *stream) {
 
    /* === Kernel Launches === */
    if(nsync>0) trsv_init <<<nsync, 1, 0, *stream>>> (sync_gpu);
@@ -572,7 +628,7 @@ void spral_ssids_run_bwd_solve_kernels(bool posdef, double *x_gpu,
    }
 
    if(gpu->nrds>0) {
-      if(posdef) {
+      if(dsolve) {
          reducing_d_solve
             <REDUCING_D_SOLVE_THREADS_PER_BLOCK, true>
             <<<gpu->nrds, REDUCING_D_SOLVE_THREADS_PER_BLOCK, 0, *stream>>>
@@ -587,14 +643,14 @@ void spral_ssids_run_bwd_solve_kernels(bool posdef, double *x_gpu,
    }
 
    if(gpu->ntrsv>0) {
-      if(posdef) {
+      if(unit_diagonal) {
          trsv_lt_exec
-            <double,TRSV_NB_TASK,THREADSX_TASK,THREADSY_TASK,false>
+            <double,TRSV_NB_TASK,THREADSX_TASK,THREADSY_TASK,true>
             <<<gpu->ntrsv, dim3(THREADSX_TASK,THREADSY_TASK), 0, *stream>>>
             (gpu->trsv, work_gpu, sync_gpu);
       } else {
          trsv_lt_exec
-            <double,TRSV_NB_TASK,THREADSX_TASK,THREADSY_TASK,true>
+            <double,TRSV_NB_TASK,THREADSX_TASK,THREADSY_TASK,false>
             <<<gpu->ntrsv, dim3(THREADSX_TASK,THREADSY_TASK), 0, *stream>>>
             (gpu->trsv, work_gpu, sync_gpu);
       }

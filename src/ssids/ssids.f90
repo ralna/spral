@@ -30,7 +30,7 @@ module spral_ssids
                                      subtree_bwd_solve
    use spral_ssids_solve_gpu, only : bwd_solve_gpu, fwd_solve_gpu, &
                                      fwd_multisolve_gpu, bwd_multisolve_gpu, &
-                                     free_lookup_gpu
+                                     d_solve_gpu, free_lookup_gpu
    implicit none
 
    private
@@ -1470,13 +1470,6 @@ subroutine ssids_solve_mult_double(nrhs, x, ldx, akeep, fkeep, options, &
    end if
 
    ! Ensure we've got the functionality implemented
-   if(options%use_gpu_solve .and. options%presolve.eq.0 .and. &
-         local_job.eq.SSIDS_SOLVE_JOB_DIAG) then
-      ! Non-presolve L^T and D solves not implemented on GPU
-      inform%flag = SSIDS_ERROR_JOB_INVALID
-      call ssids_print_flag(context,nout,inform%flag)
-      return
-   endif
    if(options%use_gpu_solve .and. options%presolve.eq.1 .and. &
          (local_job.eq.SSIDS_SOLVE_JOB_DIAG .or. &
          (.not.fkeep%pos_def .and. local_job.eq.SSIDS_SOLVE_JOB_BWD))) then
@@ -1581,6 +1574,15 @@ subroutine ssids_solve_mult_double(nrhs, x, ldx, akeep, fkeep, options, &
       end if
    endif
 
+   if(options%use_gpu_solve .and. local_job.eq.SSIDS_SOLVE_JOB_DIAG) then
+      call d_solve_gpu(akeep%nnodes, akeep%sptr, options%nstream, &
+         fkeep%stream_handle, fkeep%stream_data, fkeep%top_data, akeep%n, &
+         akeep%invp, x, inform%stat, cuda_error)
+      if(inform%stat.ne.0) goto 100
+      if(cuda_error.ne.0) goto 200
+      local_job = -1 ! done
+   endif
+
    ! Perform supernodal forward solve or diagonal solve (both in serial)
    call inner_solve(fkeep%pos_def, local_job, akeep%nnodes, &
       fkeep%nodes, akeep%sptr, akeep%rptr, akeep%rlist, akeep%invp, nrhs, &
@@ -1590,20 +1592,21 @@ subroutine ssids_solve_mult_double(nrhs, x, ldx, akeep, fkeep, options, &
    if( local_job.eq.SSIDS_SOLVE_JOB_DIAG_BWD .or. &
          local_job.eq.SSIDS_SOLVE_JOB_BWD .or. &
          local_job.eq.SSIDS_SOLVE_JOB_ALL ) then
-      if( options%use_gpu_solve ) then
-        if ( options%presolve == 0 ) then
-           call bwd_solve_gpu(fkeep%pos_def, akeep%nnodes, akeep%sptr,  &
-              options%nstream, fkeep%stream_handle, fkeep%stream_data,  &
-              fkeep%top_data, akeep%n, akeep%invp, x, inform%stat, cuda_error)
+      if(options%use_gpu_solve) then
+        if(options%presolve.eq.0) then
+           call bwd_solve_gpu(local_job, fkeep%pos_def, akeep%nnodes,      &
+              akeep%sptr, options%nstream, fkeep%stream_handle,            &
+              fkeep%stream_data, fkeep%top_data, akeep%n, akeep%invp, x,   &
+              inform%stat, cuda_error)
            if(cuda_error.ne.0) goto 200
         else
-           call bwd_multisolve_gpu( fkeep%pos_def, options%nstream,     &
+           call bwd_multisolve_gpu(fkeep%pos_def, options%nstream,      &
               fkeep%stream_handle, fkeep%stream_data, fkeep%top_data,   &
-              nrhs, gpu_x, cuda_error )
+              nrhs, gpu_x, cuda_error)
            if(cuda_error.ne.0) goto 200
         end if
       else
-         call subtree_bwd_solve(akeep%nnodes, 1, local_job, fkeep%pos_def, &
+         call subtree_bwd_solve(akeep%nnodes, 1, local_job, fkeep%pos_def,  &
             akeep%nnodes, fkeep%nodes, akeep%sptr, akeep%rptr, akeep%rlist, &
             akeep%invp, nrhs, x, ldx, inform%stat)
       endif

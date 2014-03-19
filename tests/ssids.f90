@@ -618,18 +618,8 @@ subroutine test_errors
 
    call simple_mat(a)
    posdef = .false.
-   write(*,"(a)",advance="no") " * Testing job invalid (presolve=0+gpu+D)...."
-   call ssids_analyse(check, a%n, a%ptr, a%row, akeep, options, info, &
-      order=order)
-   call ssids_factor(posdef,a%val,akeep,fkeep,options,info)
-   call ssids_solve(x1,akeep,fkeep,options,info,job=2)
-   call print_result(info%flag, SSIDS_ERROR_JOB_INVALID)
-   call ssids_free(akeep,fkeep,cuda_error)
-
-!!!!!!
-
-   call simple_mat(a)
-   posdef = .false.
+   options%use_gpu_solve = .true.
+   options%presolve = 1
    write(*,"(a)",advance="no") " * Testing job invalid (presolve=1+D)........"
    call ssids_analyse(check, a%n, a%ptr, a%row, akeep, options, info, &
       order=order)
@@ -637,6 +627,7 @@ subroutine test_errors
    call ssids_solve(x1,akeep,fkeep,options,info,job=2)
    call print_result(info%flag, SSIDS_ERROR_JOB_INVALID)
    call ssids_free(akeep,fkeep,cuda_error)
+   options%presolve = 0 ! restore
 
 !!!!!!
 
@@ -2103,7 +2094,7 @@ subroutine test_random
             endif
          end select
       else
-         if(.not.options%use_gpu_solve) then
+         if(.not.options%use_gpu_solve .or. options%presolve.eq.0) then
             i = mod(prblm, 3)
          else
             i = mod(prblm, 2)
@@ -2595,10 +2586,10 @@ subroutine test_random_scale
       write(*,'(a,f6.1,1x)',advance="no") ' num_flops:',num_flops*1e-6
 
       ! Perform solve
-      if(options%use_gpu_solve) then
+      if(options%use_gpu_solve .and. options%presolve.ne.0) then
+         ! presolve=1 Doesn't support seperate D solve??
          i = mod(prblm,2)
       else
-         ! Seperate L^T and D solves only supported on CPU
          i = mod(prblm,3)
       endif
       select case(i)
