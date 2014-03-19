@@ -1469,15 +1469,6 @@ subroutine ssids_solve_mult_double(nrhs, x, ldx, akeep, fkeep, options, &
       local_job = job
    end if
 
-   ! Ensure we've got the functionality implemented
-   if(options%use_gpu_solve .and. options%presolve.eq.1 .and. &
-         (local_job.eq.SSIDS_SOLVE_JOB_DIAG .or. &
-         (.not.fkeep%pos_def .and. local_job.eq.SSIDS_SOLVE_JOB_BWD))) then
-      ! GPU with presolve only support basic fwd and bwd solves [not L^T indef]
-      inform%flag = SSIDS_ERROR_JOB_INVALID
-      call ssids_print_flag(context,nout,inform%flag)
-      return
-   endif
    if(.not.options%use_gpu_solve .and. options%presolve.ne.0) then
       ! Presolve and CPU solve incompatible
       inform%flag = SSIDS_ERROR_JOB_INVALID
@@ -1575,10 +1566,16 @@ subroutine ssids_solve_mult_double(nrhs, x, ldx, akeep, fkeep, options, &
    endif
 
    if(options%use_gpu_solve .and. local_job.eq.SSIDS_SOLVE_JOB_DIAG) then
-      call d_solve_gpu(akeep%nnodes, akeep%sptr, options%nstream, &
-         fkeep%stream_handle, fkeep%stream_data, fkeep%top_data, akeep%n, &
-         akeep%invp, x, inform%stat, cuda_error)
-      if(inform%stat.ne.0) goto 100
+      if(options%presolve.eq.0) then
+         call d_solve_gpu(akeep%nnodes, akeep%sptr, options%nstream, &
+            fkeep%stream_handle, fkeep%stream_data, fkeep%top_data, akeep%n, &
+            akeep%invp, x, inform%stat, cuda_error)
+         if(inform%stat.ne.0) goto 100
+      else
+         call bwd_multisolve_gpu(fkeep%pos_def, local_job, options%nstream, &
+            fkeep%stream_handle, fkeep%stream_data, fkeep%top_data,   &
+            nrhs, gpu_x, cuda_error)
+      end if
       if(cuda_error.ne.0) goto 200
       local_job = -1 ! done
    endif
@@ -1600,7 +1597,7 @@ subroutine ssids_solve_mult_double(nrhs, x, ldx, akeep, fkeep, options, &
               inform%stat, cuda_error)
            if(cuda_error.ne.0) goto 200
         else
-           call bwd_multisolve_gpu(fkeep%pos_def, options%nstream,      &
+           call bwd_multisolve_gpu(fkeep%pos_def, local_job, options%nstream, &
               fkeep%stream_handle, fkeep%stream_data, fkeep%top_data,   &
               nrhs, gpu_x, cuda_error)
            if(cuda_error.ne.0) goto 200

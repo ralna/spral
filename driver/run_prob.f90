@@ -140,12 +140,14 @@ program run_prob
    do i = 1, nslv
       soln = rhs
       call ssids_solve(nrhs,soln,n,akeep,fkeep,options,inform)
-      !call ssids_solve(nrhs,soln,n,akeep,fkeep,options,inform,1)
-      !if ( pos_def ) then
-      !  call ssids_solve(nrhs,soln,n,akeep,fkeep,options,inform,3)
-      !else
-      !  call ssids_solve(nrhs,soln,n,akeep,fkeep,options,inform,4)
-      !end if
+!      call ssids_solve(nrhs,soln,n,akeep,fkeep,options,inform,1)
+!      if ( pos_def ) then
+!        call ssids_solve(nrhs,soln,n,akeep,fkeep,options,inform,3)
+!      else
+!        call ssids_solve(nrhs,soln,n,akeep,fkeep,options,inform,2)
+!        call ssids_solve(nrhs,soln,n,akeep,fkeep,options,inform,3)
+!        call ssids_solve(nrhs,soln,n,akeep,fkeep,options,inform,4)
+!      end if
    end do
    call system_clock(stop_t)
    if (inform%flag < 0) then

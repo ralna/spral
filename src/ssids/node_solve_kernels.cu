@@ -130,6 +130,31 @@ cu_gather_dx(
 
 template< typename ELEMENT_TYPE >
 __global__ void
+cu_apply_d( 
+  int nrows, int ncols,
+  ELEMENT_TYPE* d, 
+  ELEMENT_TYPE* u, int ldu,
+  ELEMENT_TYPE* v, int ldv,
+  int* urow
+){
+  for ( int x = threadIdx.x + blockIdx.x*blockDim.x; x < nrows; 
+             x += blockDim.x*gridDim.x ) {
+    int ur = urow[x];
+    int i = 2*x + 1;
+    for ( int y = threadIdx.y + blockIdx.y*blockDim.y; y < ncols; 
+              y += blockDim.y*gridDim.y ) {
+       ELEMENT_TYPE s = d[i]*u[ur - 1 + ldu*y];
+       if ( d[i - 1] )
+         s += d[i - 1]*u[urow[x - 1] - 1 + ldu*y];
+       if ( d[i + 1] )
+         s += d[i + 1]*u[urow[x + 1] - 1 + ldu*y];
+       v[x + ldv*y] = s;
+    }
+  }
+}
+
+template< typename ELEMENT_TYPE >
+__global__ void
 cu_gather(
   int nrows,
   int ncols, 
@@ -949,6 +974,25 @@ void spral_ssids_gather_dx(const cudaStream_t *stream, int nrows, int ncols,
   dim3 grid(nx, ny);
   cu_gather_dx< double ><<< grid, threads, 0, *stream >>>
     ( nrows, ncols, d, u, ldu, v, ldv, indd, indx );
+}
+
+// gathers <nrows> rows from rhs/solution matrix of the backward solve
+// multiplies by D and puts into a dense <nrows>-by-<ncols> matrix
+void spral_ssids_apply_d(const cudaStream_t *stream, int nrows, int ncols,
+      double* d, double* u, int ldu, double* v, int ldv, int* indx) {
+  int nt = ((nrows*ncols - 1)/32 + 1)*32;
+  if ( nt > 1024 )
+    nt = 1024;
+  int ty = ((ncols - 1)/4 + 1)*4;
+  if ( ty > nt/4 )
+    ty = nt/4;
+  int tx = nt/ty;
+  dim3 threads(tx, ty);
+  int nx = (nrows - 1)/tx + 1;
+  int ny = (ncols - 1)/ty + 1;
+  dim3 grid(nx, ny);
+  cu_apply_d< double ><<< grid, threads, 0, *stream >>>
+    ( nrows, ncols, d, u, ldu, v, ldv, indx );
 }
 
 // multiplies several matrices simultaneously

@@ -432,7 +432,8 @@ module spral_ssids_cuda_interfaces
    public :: &
              gather,              & ! gathers rows of a sparse matrix
              gather_diag,         & ! gathers D from nodes into an array
-             gather_dx,           & ! gathers with multiplication by D
+             gather_dx,           & ! gathers with partial multiplication by D
+             apply_d,             & ! gathers with multiplication by D
              multinode_dgemm_n,   & ! multiplies several matrices
              multinode_solve_n,   & ! forward-solves for several nodes
              multinode_solve_t,   & ! backward-solves for several nodes
@@ -476,6 +477,17 @@ module spral_ssids_cuda_interfaces
          type(C_PTR), value :: indd
          type(C_PTR), value :: indx
       end subroutine gather_dx
+      subroutine apply_d( stream, nr, nc, d, u, ldu, v, ldv, indx ) &
+            bind(C, name="spral_ssids_apply_d")
+         use iso_c_binding
+         implicit none
+         type(C_PTR), value :: stream
+         integer(C_INT), intent(in), value :: nr, nc, ldu, ldv
+         type(C_PTR), value :: d
+         type(C_PTR), value :: u
+         type(C_PTR), value :: v
+         type(C_PTR), value :: indx
+      end subroutine apply_d
       subroutine multinode_dgemm_n( stream, nblocks, solve_data, alpha ) &
             bind(C, name="spral_ssids_multinode_dgemm_n")
          use iso_c_binding

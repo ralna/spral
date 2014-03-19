@@ -1293,9 +1293,10 @@ subroutine subtree_fwd_multisolve_gpu(nnodes, nodes, rptr, stream_handle, &
 
 end subroutine subtree_fwd_multisolve_gpu
 
-subroutine bwd_multisolve_gpu(pos_def, nstream, stream_handle, stream_data, &
-      top_data, nrhs, gpu_x, cuda_error)
+subroutine bwd_multisolve_gpu(pos_def, job, nstream, stream_handle, &
+      stream_data, top_data, nrhs, gpu_x, cuda_error)
    logical, intent(in) :: pos_def
+   integer, intent(in) :: job
    integer, intent(in) :: nstream
    type(C_PTR), dimension(*), intent(in) :: stream_handle
    type(gpu_type), dimension(*), intent(in) :: stream_data
@@ -1306,12 +1307,12 @@ subroutine bwd_multisolve_gpu(pos_def, nstream, stream_handle, stream_data, &
    
    integer :: stream
 
-   call subtree_bwd_multisolve_gpu( pos_def, stream_handle(1), top_data, &
+   call subtree_bwd_multisolve_gpu( pos_def, job, stream_handle(1), top_data, &
       nrhs, gpu_x, cuda_error)
    if(cuda_error.ne.0) return
 
    do stream = 1, nstream
-      call subtree_bwd_multisolve_gpu(pos_def, stream_handle(stream), &
+      call subtree_bwd_multisolve_gpu(pos_def, job, stream_handle(stream), &
          stream_data(stream), nrhs, gpu_x, cuda_error)
       if(cuda_error.ne.0) return
    end do 
@@ -1321,9 +1322,10 @@ subroutine bwd_multisolve_gpu(pos_def, nstream, stream_handle, stream_data, &
 
 end subroutine bwd_multisolve_gpu
 
-subroutine subtree_bwd_multisolve_gpu(pos_def, stream_handle, fact_data, nrhs, &
-      gpu_x, cuda_error)
+subroutine subtree_bwd_multisolve_gpu(pos_def, job, stream_handle, fact_data, &
+      nrhs, gpu_x, cuda_error)
    logical, intent(in) :: pos_def
+   integer, intent(in) :: job
    type(C_PTR), intent(in) :: stream_handle
    type(gpu_type), intent(in) :: fact_data
    integer, intent(in) :: nrhs
@@ -1362,20 +1364,34 @@ subroutine subtree_bwd_multisolve_gpu(pos_def, stream_handle, fact_data, nrhs, &
    gpu_u = custack_alloc(gwork, lx_len*C_SIZEOF(dummy_real))
    gpu_v = custack_alloc(gwork, lx_len*C_SIZEOF(dummy_real))
    
-   ! Backwards solve DL^Tx = z or L^Tx = z
+   ! Backwards solve DL^Tx = z or L^Tx = z or Dx = z
    do lev = fact_data%num_levels, 1, -1
 
       ldln = fact_data%values_L(lev)%ln_size
 
       ldlx = fact_data%values_L(lev)%lx_size
 
-      sz = fact_data%values_L(lev)%off_row_ind * C_SIZEOF(dummy_int)
-      gpu_indx = c_ptr_plus(fact_data%gpu_row_ind, sz)
-      gpu_ind = c_ptr_plus(gpu_indx, fact_data%rd_size*C_SIZEOF(dummy_int))
+      if ( job == SSIDS_SOLVE_JOB_DIAG ) then
+         sz = fact_data%values_L(lev)%off_col_ind * C_SIZEOF(dummy_int)
+         gpu_indx = c_ptr_plus(fact_data%gpu_col_ind, sz)
+         gpu_ind = gpu_indx
+      else
+         sz = fact_data%values_L(lev)%off_row_ind * C_SIZEOF(dummy_int)
+         gpu_indx = c_ptr_plus(fact_data%gpu_row_ind, sz)
+         gpu_ind = c_ptr_plus(gpu_indx, fact_data%rd_size*C_SIZEOF(dummy_int))
+      end if
      
-      if ( pos_def ) then
+      if ( pos_def .or. job == SSIDS_SOLVE_JOB_BWD ) then
          call gather( stream_handle, ldln, nrhs, &
             gpu_x, n, gpu_ln, ldln, gpu_indx )
+      else if ( job == SSIDS_SOLVE_JOB_DIAG ) then
+         sz = (2*fact_data%values_L(lev)%off_col_ind) * C_SIZEOF(dummy_real)
+         gpu_v = c_ptr_plus(fact_data%gpu_diag, sz)
+         call apply_d( stream_handle, ldlx, nrhs, gpu_v, &
+            gpu_x, n, gpu_u, ldlx, gpu_indx )
+         call scatter( stream_handle, ldlx, nrhs, &
+            gpu_u, ldlx, gpu_x, n, gpu_indx )
+         cycle
       else
          call gather_dx( stream_handle, ldln, nrhs, fact_data%gpu_diag, &
             gpu_x, n, gpu_ln, ldln, gpu_ind, gpu_indx )

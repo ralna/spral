@@ -618,21 +618,6 @@ subroutine test_errors
 
    call simple_mat(a)
    posdef = .false.
-   options%use_gpu_solve = .true.
-   options%presolve = 1
-   write(*,"(a)",advance="no") " * Testing job invalid (presolve=1+D)........"
-   call ssids_analyse(check, a%n, a%ptr, a%row, akeep, options, info, &
-      order=order)
-   call ssids_factor(posdef,a%val,akeep,fkeep,options,info)
-   call ssids_solve(x1,akeep,fkeep,options,info,job=2)
-   call print_result(info%flag, SSIDS_ERROR_JOB_INVALID)
-   call ssids_free(akeep,fkeep,cuda_error)
-   options%presolve = 0 ! restore
-
-!!!!!!
-
-   call simple_mat(a)
-   posdef = .false.
    write(*,"(a)",advance="no") " * Testing error in x (one rhs).............."
    call ssids_analyse(check, a%n, a%ptr, a%row, akeep, options, info, &
       order=order)
@@ -2099,6 +2084,7 @@ subroutine test_random
          else
             i = mod(prblm, 2)
          endif
+         i = 2
          select case(i)
          case(0)
             ! Vanilla solve
