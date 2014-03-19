@@ -15,11 +15,6 @@ NVCCLINK = \
 LDADD = -L. -lspral $(METIS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FCLIBS) -lrt
 CUDA_LIBS = -lcublas
 
-# Specify test codes to run
-TESTS = \
-	ssids_test \
-	random_matrix_test
-
 # Compile code to library
 lib_LIBRARIES = libspral.a
 libspral_a_SOURCES = \
@@ -56,28 +51,30 @@ libspral_a_SOURCES = \
 	src/ssids/ssids.f90 \
 	src/ssids/syrk_kernels.cu
 
-# Build a driver program
-bin_PROGRAMS = \
-	run_prob
+# SSIDS
+bin_PROGRAMS = run_prob
 run_prob_SOURCES = \
 	driver/run_prob.f90
 run_prob_LINK = $(NVCCLINK)
 run_prob_LDADD = $(LDADD) $(CUDA_LIBS)
-
-# Test programs
-check_PROGRAMS = \
-	ssids_test \
-	random_matrix_test \
-	examples/Fortran/random_matrix \
-	examples/Fortran/ssids
+check_PROGRAMS = ssids_test examples/Fortran/ssids
 ssids_test_SOURCES = tests/ssids.f90
 ssids_test_LINK = $(NVCCLINK)
 ssids_test_LDADD = $(LDADD) $(CUDA_LIBS)
-random_matrix_test_SOURCES = tests/random_matrix.f90
-examples_Fortran_random_matrix_SOURCES = examples/Fortran/random_matrix.f90
 examples_Fortran_ssids_SOURCES = examples/Fortran/ssids.f90
 examples_Fortran_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
 examples_Fortran_ssids_LINK = $(NVCCLINK)
+tests/ssids.$(OBJEXT): libspral.a
+examples/Fortran/ssids.$(OBJEXT): libspral.a
+TESTS = ssids_test
+
+# Random matrix
+check_PROGRAMS += random_matrix_test examples/Fortran/random_matrix
+random_matrix_test_SOURCES = tests/random_matrix.f90
+examples_Fortran_random_matrix_SOURCES = examples/Fortran/random_matrix.f90
+tests/random_matrix.$(OBJEXT): libspral.a
+examples/Fortran/random_matrix.$(OBJEXT): libspral.a
+TESTS += random_matrix_test
 
 # Automake doesn't know much about modules, so get rid of them ourself
 clean-local:
@@ -130,8 +127,6 @@ src/ssids/solve_gpu.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
 								 	    src/ssids/cuda_datatypes.$(OBJEXT) \
 								 	    src/ssids/cuda_interfaces.$(OBJEXT) \
 								 		 src/ssids/datatypes.$(OBJEXT)
-tests/ssids.$(OBJEXT): libspral.a
-tests/random_matrix.$(OBJEXT): libspral.a
 
 # CUDA header deps
 src/ssids/solve_kernels.$(OBJEXT): src/ssids/dtrsv.h
