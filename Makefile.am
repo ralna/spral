@@ -52,11 +52,11 @@ libspral_a_SOURCES = \
 	src/ssids/syrk_kernels.cu
 
 # SSIDS
-bin_PROGRAMS = run_prob
-run_prob_SOURCES = \
-	driver/run_prob.f90
-run_prob_LINK = $(NVCCLINK)
-run_prob_LDADD = $(LDADD) $(CUDA_LIBS)
+bin_PROGRAMS = spral_ssids
+spral_ssids_SOURCES = \
+	driver/spral_ssids.f90
+spral_ssids_LINK = $(NVCCLINK)
+spral_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
 check_PROGRAMS = ssids_test examples/Fortran/ssids
 ssids_test_SOURCES = tests/ssids.f90
 ssids_test_LINK = $(NVCCLINK)
