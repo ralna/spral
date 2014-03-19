@@ -1,6 +1,7 @@
 \documentclass{spral}
 
 \usepackage{pifont}
+\usepackage{verbatim}
 \newcommand{\cmark}{\ding{51}}
 \newcommand{\xmark}{\ding{55}}
 
@@ -1109,9 +1110,8 @@ RAL Technical Report. RAL-TR-2011-024.
 
 %%%%%%%%%%%%%%%%%%%%%% EXAMPLE %%%%%%%%%%%%%%%%%%%%%%%%
 
-\section{Examples} \label{examples}
+\section{Example} \label{examples}
 
-\subsection{First example: sparse column entry}
 Suppose we wish to factorize the matrix
 \[ A = \left(
 \begin{array}{ccccc}
@@ -1127,236 +1127,23 @@ and then solve for the right-hand side
 \[ B = \left(
 \begin{array}{c}
 4. \\
-12. \\
-10. \\
-4. \\
-4.
+17. \\
+19. \\
+6. \\
+12.
 \end{array}
 \right).
 \]
-
-\noindent
 The following code may be used.
-\begin{verbatim}
-! Simple code to illustrate use of spral_ssids
-program ssidsds
-   use spral_ssids
-   implicit none
-
-   ! Derived types
-   type (ssids_akeep)   :: akeep
-   type (ssids_fkeep)   :: fkeep
-   type (ssids_options) :: options
-   type (ssids_inform)    :: info
-
-   ! Parameters
-   integer, parameter :: wp = kind(0.0d0)
-
-   integer, dimension (:),  allocatable :: ptr
-   integer, dimension (:),  allocatable :: piv_order
-   integer, dimension (:),  allocatable :: row
-   real(wp), dimension (:), allocatable :: val
-   real(wp), dimension (:), allocatable :: x
-   real(wp), dimension (:,:), allocatable :: d
-
-   integer :: matrix_type,n,ne
-   logical :: check
-
-   ! Read in the order n of the matrix and number of entries in lower triangle
-   read (*,*) n,ne
-
-   ! Allocate arrays for matrix data and arrays for ssids
-   allocate (ptr(n+1),row(ne),val(ne))
-   allocate (x(n),d(2,n))
-
-   read (*,*) ptr(1:n+1)
-   read (*,*) row(1:ne)
-   read (*,*) val(1:ne)
-
-   ! Perform analyse and factorise with data checking
-   check = .true.
-   call ssids_analyse(check,n,ptr,row,akeep,options,inform)
-   if (inform%flag < 0) go to 100
-   matrix_type = 4 ! Real, symmetric indefinite
-   call ssids_factor(matrix_type,val,akeep,fkeep,options,inform)
-   if (inform%flag < 0) go to 100
-
-   ! Read in the right-hand side and copy into resid.
-   read (*,*) x(1:n)
-
-   ! Solve
-   call ssids_solve(x,akeep,fkeep,options,inform)
-   if (inform%flag < 0) go to 100
-   write (*,'(/a,/,(3es18.10))') ' The computed solution is:', x(1:n)
-
-   ! Determine the pivot order used
-   allocate (piv_order(1:n))
-   call ssids_enquire_indef(piv_order, d, akeep, fkeep, options, inform)
-   write (6,*) 'piv_order', piv_order(1:n)
-
-   100 continue
-   call ssids_finalise(akeep, fkeep)
-
-end program ssidsds
-\end{verbatim}
-\noindent
-with the following data:
-\begin{verbatim}
-  5  8
-  1  3  6  8  8  9
-  1  2  2  5  3  4  3  5
-  2. 1. 4. 1. 1. 2. 3. 2.
-  4. 12. 10. 4. 4.
-\end{verbatim}
-\noindent
+\verbatiminput{../examples/Fortran/ssids.f90}
 This produces the following output:
 \begin{verbatim}
- The computed solution is:
-     1.000     2.000     2.000     1.000     1.000
-\end{verbatim}
-
-\subsection{Second example: coordinate entry, refactorization}
-{\bf FIXME: Remove factor\_solve}
-Suppose we wish to factorize the matrix
-\[ A = \left(
-\begin{array}{ccccc}
-1. & -3. & & 1. \\
--3. & -5. & 6. & & 4.\\
-& 6. & & 2. \\
-1. & & 2. & 3. \\
-& 4. & & & 1.
-\end{array}
-\right)
-\]
-and then solve for the right-hand sides
-\[ B = \left(
-\begin{array}{cc}
--1. & -5.\\
-25. & -40. \\
-20. & 8. \\
-19. & -8. \\
-13. & -1.
-\end{array}
-\right)
-\].
-Suppose we then wish to solve the following system with the same pattern in a
-single call:
-\[ \left(
-\begin{array}{ccccc}
-2. & 1. & & 7. \\
-1. & 1. & 8. & & 2.\\
-& 8. & & 1. \\
-7. & & 1. & 8. \\
-& 2. & & & 8.
-\end{array}
-\right) \mathbf{x} = \left(
-\begin{array}{c}
-8. \\
-89. \\
-40. \\
-37. \\
-42.
-\end{array}
-\right)
-\]
-
-\noindent
-The following code may be used.
-\begin{verbatim}
-! Simple code to illustrate use of spral_ssids
-program ssidsds1
-   use spral_ssids
-   implicit none
-
-   ! Derived types
-   type (ssids_akeep)   :: akeep
-   type (ssids_fkeep)   :: fkeep
-   type (ssids_options) :: options
-   type (ssids_inform)    :: info
-
-   ! Parameters
-   integer, parameter :: wp = kind(0.0d0)
-
-   integer, dimension (:),  allocatable :: row
-   integer, dimension (:),  allocatable :: col
-   real(wp), dimension (:), allocatable :: val
-   real(wp), dimension (:,:), allocatable :: x
-
-   integer :: matrix_type,n,ne,cuda_error
-
-   ! Read in the order n of the matrix and number of entries in lower triangle
-   read (*,*) n,ne
-
-   ! Allocate arrays for matrix data and arrays for ssids
-   allocate (row(ne),col(ne),val(ne))
-   allocate (x(n,2))
-
-   read (*,*) row(1:ne)
-   read (*,*) col(1:ne)
-   read (*,*) val(1:ne)
-
-   ! Perform analyse and factorise with coordinate input
-   call ssids_analyse_coord(n,ne,row,col,akeep,options,inform)
-   if (inform%flag < 0) go to 100
-   matrix_type = 4 ! Real, symmetric indefinite
-   call ssids_factor(matrix_type,val,akeep,fkeep,options,inform)
-   if (inform%flag < 0) go to 100
-
-   ! Read in the right-hand side
-   read (*,*) x(1:n,1:2)
-
-   ! Solve
-   call ssids_solve(2,x,n,akeep,fkeep,options,inform)
-   if (inform%flag < 0) go to 100
-   write (*,'(/a,/,(3es18.10))') ' The computed solution is:', x(1:n,1)
-   write (*,'(3es18.10)') x(1:n,2)
-
-   ! Read values of second matrix with same pattern
-   read (*,*) val(1:ne)
-
-   ! Read another right hand side
-   read (*,*) x(1:n,1)
-
-   ! Perform combined factor and solve
-   call ssids_factor_solve(matrix_type,val,x(1:n,1),akeep,fkeep,options,inform)
-   write (*,'(/a,/,(3es18.10))') ' Next solution is:', x(1:n,1)
-
-   100 continue
-   call ssids_finalise(akeep, fkeep, cuda_error)
-
-end program ssidsds1
-\end{verbatim}
-\noindent
-with the following data:
-\begin{verbatim}
-5 9
-1   2   1   2   3   5   4   4   5
-1   1   4   2   2   2   4   3   5
-1. -3.  1. -5.  6.  4.  3.  2.  1.
--1.  25.  20.  19.  13.
--5. -40.   8.  -8.  -1.
-2.  1.  7.  1.  8.  2.  8.  1.  8.
-16.5 89.0 40.5 41.0 42.0
-\end{verbatim}
-\noindent
-This produces the following output:
-\begin{verbatim}
-
- Warning from ssids_analyse_coord. Warning flag =   4
+ Warning from ssids_analyse. Warning flag =   4
  one or more diagonal entries is missing
 
- The computed solution is:
-  1.0000000000E+00  2.0000000000E+00  3.0000000000E+00
-  4.0000000000E+00  5.0000000000E+00
- -3.0000000000E+00  1.0000000000E+00 -4.0000000000E+00
-  1.0000000000E+00 -5.0000000000E+00
-
- Next solution is:
-  4.0000000000E+00  5.0000000000E+00  9.0000000000E+00
-  5.0000000000E-01  4.0000000000E+00
+ Warning from ssids_factor. Warning flag =   7
+ Matrix found to be singular
 \end{verbatim}
-Note that the warning is entirely innocous and is merely due to the absence of
-a non-zero in the diagonal $(3,3)$ position.
 
 \begin{funders}
    \funder{epsrc}{Funded by EPSRC grant EP/J010553/1}

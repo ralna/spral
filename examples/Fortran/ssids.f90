@@ -1,3 +1,4 @@
+! examples/Fortran/ssids.f90
 ! Simple code to illustrate use of SSIDS
 program ssids_example
    use spral_ssids
