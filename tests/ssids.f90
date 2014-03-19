@@ -2079,13 +2079,7 @@ subroutine test_random
             endif
          end select
       else
-         if(.not.options%use_gpu_solve .or. options%presolve.eq.0) then
-            i = mod(prblm, 3)
-         else
-            i = mod(prblm, 2)
-         endif
-         i = 2
-         select case(i)
+         select case(mod(prblm, 3))
          case(0)
             ! Vanilla solve
             call ssids_solve(x1, akeep, fkeep, options, info)
@@ -2572,13 +2566,7 @@ subroutine test_random_scale
       write(*,'(a,f6.1,1x)',advance="no") ' num_flops:',num_flops*1e-6
 
       ! Perform solve
-      if(options%use_gpu_solve .and. options%presolve.ne.0) then
-         ! presolve=1 Doesn't support seperate D solve??
-         i = mod(prblm,2)
-      else
-         i = mod(prblm,3)
-      endif
-      select case(i)
+      select case(mod(prblm,3))
       case(0)
          ! Vanilla solve
          call ssids_solve(x1, akeep, fkeep, options, info)
