@@ -68,12 +68,16 @@ run_prob_LDADD = $(LDADD) $(CUDA_LIBS)
 check_PROGRAMS = \
 	ssids_test \
 	random_matrix_test \
-	examples/Fortran/random_matrix
+	examples/Fortran/random_matrix \
+	examples/Fortran/ssids
 ssids_test_SOURCES = tests/ssids.f90
 ssids_test_LINK = $(NVCCLINK)
 ssids_test_LDADD = $(LDADD) $(CUDA_LIBS)
 random_matrix_test_SOURCES = tests/random_matrix.f90
 examples_Fortran_random_matrix_SOURCES = examples/Fortran/random_matrix.f90
+examples_Fortran_ssids_SOURCES = examples/Fortran/ssids.f90
+examples_Fortran_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
+examples_Fortran_ssids_LINK = $(NVCCLINK)
 
 # Automake doesn't know much about modules, so get rid of them ourself
 clean-local:
