@@ -5,7 +5,8 @@
 \newcommand{\versiondate}{6 March 2014}
 \newcommand{\purpose}{
 The Sparse Parallel Robust Algorithm Library (SPRAL) is an open-source library
-for sparse linear algebra and related algorithms.
+for sparse linear algebra and related algorithms. It is primarily developed and
+maintained by the Numerical Analysis Group at STFC's Rutherford Appleton Laboratory.
 }
 
 \begin{document}
@@ -72,31 +73,40 @@ gfortran -o myprog myobj.o -lspral -lmetis -lblas
    \item Installation is not required: in many cases it will be sufficient to
       just link against the static library found in the \texttt{.libs}
       subdirectory.
-   \item If you write a paper using SPRAL, please cite an appropriate paper
-      (a list can usually be found in the method section of the user
-      documentation). If none is listed, a citation of the library website
-      can be used.
+   \item If you write a paper using software from SPRAL, please cite an
+      appropriate paper (a list can usually be found in the method section of
+      the user documentation). If none is listed, a citation of the library
+      website should be used:
+      \begin{quote}
+         SPRAL: an open-source library for sparse linear algebra, Version 2014-03-20, \url{http://www.numerical.rl.ac.uk/spral}, March 2014.
+      \end{quote}
 \end{itemize}
+
+\section{Licence}
+At present, all code is covered by the 3-clause BSD licence given in the file
+LICENCE.
 
 \section{Third-party libraries}
 \subsection{METIS}
-Many of our solvers use the METIS graph partitioning library to find good
+Many of our packages use the METIS graph partitioning library to find good
 orderings. You can obtain a copy of METIS from the following url:\\
 \url{http://www.cs.umn.edu/~metis}\\
-We support both version 4 and version 5 (the latter is available under the open source Apache Licence). At present we recommend version 4 as it is faster than
+We support both version 4 and version 5 (the latter is available under the open
+source Apache Licence). At present, we recommend version 4 as it is faster than
 version 5, though this may change in the future.\\
-If the metis library is not available on the default link path, the
+If the METIS library is not available on the default link path, the
 \texttt{--with-metis} option to \texttt{configure} should be used to specify
 how to link against METIS. For example, if \texttt{libmetis.a} is in the directory \texttt{/usr/local/metis-4.0}, use: \\
 \texttt{../configure --with-metis="-L/usr/local/metis-4.0 -lmetis"}
 
 \subsection{BLAS}
-Many of our solvers require a high performance BLAS library to efficiently
+Many of our packages require a high performance BLAS library to efficiently
 perform dense linear algebra operations. For best performance, please use the
 library recommended by your computer manufacturer (normally the Intel MKL).
 If this is not available, use an optimized alternative, such as OpenBLAS.
 The reference BLAS from netlib are at least an order of magnitude slower than
-modern optimized BLAS, and should be avoided. \\
+modern optimized BLAS, and should be avoided. If bit-compatible results are
+desired, a bit-compatible BLAS library must be used.
 
 If the BLAS library is not available on the default link path, or if
 \texttt{configure} detects the wrong BLAS library, the \texttt{--with-blas}
@@ -141,14 +151,15 @@ offers many standard options that can be listed using the command
 \texttt{configure --help}.
 
 \noindent
-In particular the following options may be of interest:
+In particular, the following options may be of interest:
 \begin{description}
    \item[\texttt{--prefix=PREFIX}] specifies the installation path prefix (by default \texttt{/usr/local/} under Linux).
 \end{description}
 
 \section{Support}
-Limited support is available by email to hsl@stfc.ac.uk.\\
+Feeback may be sent to hsl@stfc.ac.uk.\\
 Bugs can be reported online via our bug tracking system: \\
-\url{http://ccpforge.cse.rl.ac.uk/gf/project/spral/tracker/?action=TrackerItemBrowse&tracker_id=498}.
+\url{http://ccpforge.cse.rl.ac.uk/gf/project/spral/tracker/?action=TrackerItemBrowse&tracker_id=498}. \\
+We will endeavour to fix all reported bugs.
 
 \end{document}
