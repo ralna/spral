@@ -81,7 +81,7 @@ clean-local:
 	-rm *.mod
 
 # Fortran 90 dependencies
-driver/run_prob.$(OBJEXT): libspral.a
+driver/ssids_spral.$(OBJEXT): libspral.a
 src/match_order.$(OBJEXT): src/metis$(METIS_VERSION)_wrapper.$(OBJEXT) \
 									src/scaling.$(OBJEXT)
 src/random_matrix.$(OBJEXT): src/random.$(OBJEXT)
