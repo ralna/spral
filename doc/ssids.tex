@@ -12,7 +12,7 @@
 This package solves one or more sets of $n\times n$
 sparse {\bf symmetric} equations  ${AX = B}$ using a multifrontal method on an
 \textbf{NVIDIA GPU}.
-The package covers the following cases:
+The following cases are covered:
 \begin{enumerate}
 \item $A$ is {\bf indefinite}.
 \texttt{SSIDS} computes the sparse factorization
@@ -38,7 +38,8 @@ An option exists to scale the matrix. In this case, the factorization of
 the scaled matrix  $ {\overline{A} = S A S}$ is computed,
 where ${S}$ is a diagonal scaling matrix.
 }
-
+\hyphenpenalty=10000
+\sloppy
 
 \begin{document}
 
@@ -121,7 +122,7 @@ are complete for a problem (including after an error
 return that does not allow the computation
 to continue). It frees memory referenced by components of
 the derived data types. This routine also allows created by either
-{\tt ssids\_analyse() or ssids\_factorize()} to be freed seperately.
+{\tt ssids\_analyse() or ssids\_factorize()} to be freed separately.
 \end{itemize}
 
 \noindent
@@ -162,8 +163,8 @@ The components of {\tt ssids\_akeep} and {\tt ssids\_fkeep} are used to pass
 data between the subroutines of the package and must not be altered by the user.
 
 \subsection{Achieving bit-compatibility} \label{bitcompat}
-Care has been taken to allow bit-compatibility to be achieved using this solver.
-That is to say consecutive runs with the same data should produce exactly
+Care has been taken to ensure bit-compatibility is achieved using this solver.
+That is, consecutive runs with the same data on the same machine  produces exactly
 the same solution.
 
 \subsection{Optional arguments}\label{Optional arguments}
@@ -213,18 +214,19 @@ Non-zero matrix entries are ordered by increasing column index and stored in
 the arrays \texttt{row(:)} and \texttt{val(:)} such that \texttt{row(k)} holds
 the row number and \texttt{val(k)} holds the value of the \texttt{k}-th entry.
 The \texttt{ptr(:)} array stores column pointers such that \texttt{ptr(i)} is
+the position in \texttt{row} and \texttt{val} of
 the first entry in the \texttt{i}-th column, and \texttt{ptr(n+1)} is one more
 than the total number of entries.
 Entries that are zero, including those on the diagonal, need not be specified.
 
-\texttt{SSIDS} requires that only the lower triangular entries of $A$ are
-supplied, and there should be no duplicate entries. If the \texttt{check}
+If this format is used, \texttt{SSIDS} requires only the lower triangular entries of $A$, and there 
+should be no duplicate entries. If the \texttt{check}
 argument to
 \texttt{ssids\_analyse()} is \texttt{.true.}, out of range entries (including
 those in the upper triangle) will be discarded and any duplicates will be
 summed.
 
-To illustrate the format, the following arrays describe the matrix shown in
+To illustrate the CSC format, the following arrays describe the matrix shown in
 Figure~\ref{format eg}.
 \begin{verbatim}
    n = 5
@@ -246,11 +248,12 @@ The arrays should be set such that the \texttt{k}-th entry is in row
 \texttt{row(k)} and column \texttt{col(k)} with value \texttt{val(k)}.
 Entries that are zero, including those on the diagonal, need not be specified.
 
-\texttt{SSIDS} requires that each entry should be present \textbf{only} in the
-lower \textit{or} upper triangle. Entries present in both will be summed, as
+If this format is used,
+\texttt{SSIDS} requires that each entry of $A$ should be present \textbf{only} in the
+lower \textit{or} upper triangular part. Entries present in both will be summed, as
 will any duplicate entries. Out-of-range entries are ignored.
 
-To illustrate the format, the following arrays describe the matrix shown in
+To illustrate the coordinate format, the following arrays describe the matrix shown in
 Figure~\ref{format eg}.
 \begin{verbatim}
    n = 5
@@ -271,7 +274,7 @@ Figure~\ref{format eg}.
 \textbf{
    To analyse the sparsity pattern and prepare for the factorization,
    \begin{itemize}
-      \item[] for Compessed Sparse Column (CSC) format:
+      \item[] for Compressed Sparse Column (CSC) format:
       \vspace*{0.1cm} \\
       \texttt{ \hspace*{0.2cm}
          call ssids\_analyse(check,n,ptr,row,akeep,options,inform[,order,val])
@@ -300,7 +303,8 @@ data is checked for errors and the cleaned matrix
 (duplicates are summed and out-of-range entries
 discarded) is stored in {\tt akeep}.
 Otherwise, for data in CSC format, no checking of the matrix data is carried out
-and {\tt ptr} and {\tt row} must be passed unchanged to the factorization routines. Checking is always performed for coordinate data.
+and {\tt ptr} and {\tt row} must be passed unchanged to the factorization routines. 
+Checking is always performed when the coordinate format is used.
 
 \item[\texttt{n}{\rm ,} \texttt{ptr(:)}{\rm ,} \texttt{row(:)}] are \intentin\ 
    variables of type {\tt INTEGER} specifying the lower triangular part of $A$
@@ -524,7 +528,7 @@ released.
 On exit, a non-zero value gives a CUDA error code. This may indicate either
 a failure to deallocate GPU memory, or a pre-existing CUDA error condition.
 Note that due to the asynchronous nature of GPU execution, the
-reported error may have a casue errors external to {\tt SSIDS}.
+reported error may have a cause errors external to {\tt SSIDS}.
 
 \end{description}
 
@@ -718,17 +722,20 @@ the use of scaling. If the optional {\tt scale} argument is supplied to
 options are:
 \begin{description}
    \item[\texttt{ $\le$ 0 }] No scaling.
-   \item[\texttt{ $=$ 1 }] Generate a scaling using a weighted bipartite matching using
+   \item[\texttt{ $=$ 1 }] Compute a scaling using a weighted bipartite matching 
+      that is computed using
       the Hungarian Algorithm (\texttt{MC64} algorithm).
-   \item[\texttt{ $=$ 2 }] Generate a scaling using a weighted bipartite matching using
-      the Auction Algorithm (normally lower quality than Hungarian Algorithm, but considerably faster).
+   \item[\texttt{ $=$ 2 }] Compute a scaling using a weighted bipartite matching 
+      that is computed using
+      the Auction Algorithm (may be lower quality than that computed using 
+      the Hungarian Algorithm, but can be considerably faster).
    \item[\texttt{ $=$ 3 }] A matching-based ordering has been generated during the
       analyse phase using {\tt options\%ordering $=$ 2}. Use the
       scaling generated as a side-effect of this process. The scaling will be
-      the same as that generated with {\tt options\%scaling $=$ 1} if matrix
+      the same as that generated with {\tt options\%scaling $=$ 1} if the matrix
       values have not changed. This option will generate an error if a
       matching-based ordering was not used.
-   \item[\texttt{ $\ge$ 4 }] Generate a scaling by applying the norm-equilibriation
+   \item[\texttt{ $\ge$ 4 }] Compute a scaling by applying the norm-equilibration
       algorithm of Ruiz.
 \end{description}
 The default is {\tt scaling}$=${\tt 0}.
@@ -883,7 +890,7 @@ holds the error code returned (and is {\tt 0} otherwise).
 \item[\texttt{cuda\_error}] is a scalar of type {\tt INTEGER}.
 In the event of a CUDA error, it holds the error code returned (and is {\tt 0}
 otherwise). Note that due to the asynchronous nature of GPU execution, the
-reported error may have a casue errors external to {\tt SSIDS}.
+reported error may have a cause errors external to {\tt SSIDS}.
 
 \end{description}
 
@@ -941,14 +948,14 @@ Possible negative values are:
             The user may reset {\tt job} and recall {\tt ssids\_solve()}.
 \item{$-$12} Returned by {\tt ssids\_solve()} if the selected combination of
             {\tt posdef{\rm ,} options\%use\_gpu\_solve{\rm ,}
-            options\%presolve} and {\tt job} are not compaitble.
+            options\%presolve} and {\tt job} are not compatible.
 \item{$-$13} Returned by {\tt ssids\_enquire\_posdef()} if
             {\tt posdef}$=${\tt .false.} on the last call
             to {\tt ssids\_factor()}.
 \item{$-$14} Returned by {\tt ssids\_enquire\_indef()} if
             {\tt posdef}$=${\tt .true.} on the last call to
             {\tt ssids\_factor()}.
-\item{$-$15} Returned by {\tt ssids\_factorise} if {\tt options\%scaling$=$3}
+\item{$-$15} Returned by {\tt ssids\_factor()} if {\tt options\%scaling$=$3}
             but a matching based ordering was not used during the call to
             {\tt ssids\_analyse} or {\tt ssids\_analyse\_coord} (i.e. was
             called with
@@ -1009,102 +1016,76 @@ a matching-based ordering was used) but the associated scaling was not (i.e. {\t
 \vspace{0.2in}
 \noindent {\tt ssids\_analyse} and {\tt ssids\_analyse\_coord} \\
 If {\tt check} is set to {\tt .true.} on the call to {\tt ssids\_analyse}
-or if {\tt ssids\_analyse\_coord} is called, the HSL package
-{\tt HSL\_MC69} is used to check the matrix data. The cleaned integer matrix data
+or if {\tt ssids\_analyse\_coord} is called, 
+the user-supplied matrix data is checked for errors. The cleaned integer matrix data
 (duplicates are summed and out-of-range indices discarded) is stored in
-{\tt akeep}.
+{\tt ssids\_akeep}.
 The use of checking is optional on a call to {\tt ssids\_analyse} as it
-incurs both time and memory overheads. Some form of checking is recommended
+incurs both time and memory overheads. However, it is recommended
 since the behaviour of the other routines in the package
 is unpredictable if duplicates and/or out-of-range variable indices are entered.
-Calling the \texttt{HSL\_MC69} routine \texttt{mc69\_verify} offers an
-alternative that can be used for debugging purposes.
 
-If the user has supplied a pivot order it is checked for errors. Otherwise,
-a pivot order is generated using {\tt HSL\_MC68}, or if a matching-based ordering is
-requested, {\tt HSL\_MC80}.
-The pivot order is used to construct the assembly tree
-using {\tt HSL\_MC78}.
+If the user has supplied an elimination order it is checked for errors. Otherwise,
+an elimination order is generated by the package. 
+The elimination order is used to construct an assembly tree.
+On exit from {\tt ssids\_analyse} (and {\tt ssids\_analyse\_coord}), 
+{\tt order(:)} is set so that {\tt order(i)} holds the position
+of variable $i$ in the elimination order. If an ordering was supplied by the user, this
+order may differ, but will be equivalent in terms of fill-in.
 
-On exit, {\tt order} is set so that {\tt order(i)} holds the position
-at which variable {\tt i} is eliminated. If a user order was supplied, this
-order may differ, but will be equivalent in terms of fill-in to that provided.
-
-
-If a matching-based ordering is requested and {\tt scale} is present, on exit,
-{\tt scale} contains scaling factors computed by {\tt MC64}.
-These may be passed unchanged to {\tt ssids\_factor}.
+If a matching-based elimination order is requested and {\tt scale} is present, on exit,
+{\tt scale} contains scaling factors that are computed as a bi-product of
+the ordering algorithm and these may be passed unchanged to {\tt ssids\_factor}.
 
 \vspace{0.2in}
 \noindent {\tt  ssids\_factor}\\
-{\tt ssids\_factor} optionally computes
-a scaling and then perform the numerical factorization.
+{\tt ssids\_factor} optionally computes a scaling and then performs the numerical factorization.
  The user must specify whether or not the matrix is
-positive definite. If {\tt posdef} is {\tt .true.}, no pivoting
-is performed. As a result the computation will terminate with an error if a
+positive definite. If {\tt posdef} is set to {\tt .true.}, no pivoting
+is performed and the computation will terminate with an error if a
 non-positive pivot is encountered.
 
 The factorization uses the assembly tree that was set up by the analyse phase.
-If running on a single thread (or if there is insufficient work available to
-justify running in parallel), the nodes of the tree are iterated over in a
-post-order.
+At each  node,  entries from $A$ and, if it is not a leaf node,
+the generated elements and any delayed pivots from its child nodes
+must be assembled. Separate kernels handle each of these.
 
-At a node, the contributions from the children relating to those columns
-that are fully summed at this node are first assembled. A dense partial
-factorization is then performed on these columns. In the positive-definite case,
-LAPACK's \texttt{\_potrf} (or \texttt{\_herk} for Hermitian matrices) is used.
-In the indefinite case, an algorithm based on the same pivoting algorithm as
-\texttt{HSL\_MA64} is used.
 
-The generated element is calculated by first forming the outer product of the
-fully summed columns' uneliminated rows. The contributions from the
-children are then added, and the stack memory used by the children is freed.
-As this involves copying from one stacked contribution to another,
-two separate stacks are used to do this.
+The kernel that performs the assembly from the child nodes considers one parent-child
+assembly at a time. Each  generated element from a child is divided into a number of
+tiles, and a thread block launched to assemble each tile into a 
+dense submatrix using a simple
+mapping array to determine the destination row and column of each entry.
+Bit-compatibility is achieved by ensuring the child entries are
+always assembled in the same order. 
 
-If a pivot candidate does not pass pivot tests at a given node, it is delayed
-to the parent node where additional eliminations may make the pivot feasible.
-This results in the generation of additional fill-in and floating-point
-operations, and may result in additional memory allocations being required.
+A dense partial factorization of the fully summed columns is then performed. The
+fully summed columns are split into a number
+of tiles that are each handled by an associated  block. Factorization
+proceeds one column of tiles at a time. Pivoting is incorporated to ensure
+growth in the size of the entries of the factor $L$
+is limited; the details are described in [1].
 
-In parallel computation, we exploit two levels of parallelism using OpenMP
-tasks.
-In tree-level parallelism, different subtrees are factorized in independent
-tasks. To ensure results are bit-compatible regardless of the number of threads
-used, the assembly order of the children is fixed at assembly time.
-In node-level parallelism, the operations forming the outer-product in both the
-dense factorization kernel and the calculation of the generated element are
-broken into multiple tasks. Bit-compatibility is ensured in this case by using
-a data-parallel approach so each individual sum is effectively calculated in
-serial.
+
+If a pivot candidate does not pass the pivot tests at a node, it is delayed
+to its parent node, where further elimination operations may make it accpetable.
+Delaying pivots leads to additional fill-in and floating-point
+operations beyond that predicted by {\tt ssids\_analyse}  (and {\tt ssids\_analyse\_coord}), 
+and may result in additional memory allocations being required.
+The number of delayed pivots can often be reduced by using appropriate scaling.
+
+At each non-root node, the majority of the floating-point operations  involve the formation
+of the generated element. 
+This is handled by a single dedicated kernel; again, see [1] for details.
 
 \vspace{0.2in}
 \noindent {\tt ssids\_solve}\\
-Having checked the user's data, {\tt ssids\_solve} performs a forward
-substitution followed by a combined diagonal solve and back substitution
-(unless only one of these is requested).
 
-In a supernodal solve updates are done directly into the right-hand side vector
-and do not readily admit bit-compatible parallelism in the forward substitution.
-In the multifrontal solve updates are passed up the tree utilising a stack. This
-allows parallelism to be implemented but can be slower than the supernodal
-solve on small problems.
-Regardless of whether a supernodal or multifrontal solve is chosen the same
-backwards solve is used that works directly on the right-hand side vectors. Due
-to the differing data dependencies from the forward substitution a
-bit-compatible parallel solve is possible.
-
-The matrix factor must be accessed once for the
-forward substitution and once for the back substitution. This is
-independent of the number of right-hand sides so that solving for
-several right-hand sides at once is significantly faster
-than repeatedly solving for a single right-hand side.
 
 \subsection*{References}
-[1] J.D. Hogg and J.A. Scott. (2011).
-{\tt HSL\_MA97}: a bit-compatible multifrontal code for sparse symmetric
-systems.
-RAL Technical Report. RAL-TR-2011-024.
+[1] J.D. Hogg, E. Ovtchinnikov and J.A. Scott. (2014).
+A sparse symmetric indefinite direct solver for GPU architectures.
+RAL Technical Report. RAL-P-2014-0xx, to appear.
 
 
 
