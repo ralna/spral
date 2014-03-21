@@ -52,7 +52,7 @@ program ssids_example
 
    ! Determine and print the pivot order
    call ssids_enquire_indef(akeep, fkeep, options, inform, piv_order=piv_order)
-   write(*,"(a,10i5)") 'piv_order', piv_order(1:n)
+   write(*,"(a,10i5)") ' Pivot order:', piv_order(1:n)
 
    100 continue
    call ssids_free(akeep, fkeep, cuda_error)

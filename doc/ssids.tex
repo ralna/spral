@@ -328,10 +328,10 @@ of the subroutine, as explained in Section~\ref{typeinform}.
 {\tt INTEGER} and size {\tt n}. If {\tt options\%ordering}$=${\tt 0},
 {\tt order(:)} must be present and {\tt order(i)} must hold the  position of
 variable $i$  in the elimination order. On exit, {\tt order(:)} contains the
-elimination order that {\tt ssids\_factor} will be given (it is passed to these
+elimination order that {\tt ssids\_factor()} will be given (it is passed to these
 routines as part of {\tt akeep}); this order may give slightly more fill-in
 than the user-supplied order and, in the indefinite case, may be modified by
-{\tt ssids\_factor} to maintain numerical stability. 
+{\tt ssids\_factor()} to maintain numerical stability. 
 
 \item[\texttt{val(:)}] is an optional \intentin\ array of package type that must
 hold the numerical values of the entries of the matrix, as described in
@@ -454,7 +454,7 @@ where $P$ is a permutation matrix, $L$ is unit lower triangular,
 and $D$ is block diagonal with blocks of order 1 and 2.
 $S$ is a diagonal scaling matrix ($S$ is equal to the identity,
 if \texttt{options\%scaling=0} and
-{\tt scale} is not present on the last call to {\tt ssids\_factor}).
+{\tt scale} is not present on the last call to {\tt ssids\_factor}()).
 A partial solution may be computed by setting {\tt job} to have
 one of the following values:
 \begin{description}
@@ -463,22 +463,6 @@ one of the following values:
 \item[\texttt{3}] for solving $({PL})^T{S^{-1}X} = {B}$
 \item[\texttt{4}] for solving $D({PL})^T{S^{-1}X} = {B}$ (indefinite case only)
 \end{description}
-{\bf Note:} Depending on the value of \texttt{options\%use\_gpu\_solve} and
-\texttt{options\%presolve}, some values of \texttt{job} are invalid, as shown
-in the below table.
-
-\begin{tabular}{ccc|ccccc}
-   \hline
-   & \texttt{options\%} & \texttt{options\%} & \texttt{job} & \multicolumn{4}{c}{\texttt{job}$=$} \\
-   \texttt{posdef} & \texttt{use\_gpu\_solve} & \texttt{presolve} & Absent & {\tt 1} & {\tt 2} & {\tt 3} & {\tt 4} \\
-   \hline
-   Either & \texttt{.false.} & 0 & \cmark & \cmark & \cmark & \cmark & \cmark \\
-   Either & \texttt{.false.} & 1 & \multicolumn{5}{c}{Invalid combination} \\
-   \texttt{.true.} & \texttt{.true.} & 0 & \xmark & \xmark & - & \xmark & - \\
-   \texttt{.true.} & \texttt{.true.} & 1 & \cmark & \cmark & - & \cmark & - \\
-   \texttt{.false.} & \texttt{.true.} & 0 or 1 & \cmark & \cmark & \xmark & \xmark & \cmark \\
-   \hline
-\end{tabular}
 
 \end{description}
 
@@ -591,7 +575,7 @@ of the subroutine, as explained in Section~\ref{typeinform}.
 
 \item[\texttt{piv\_order(:)}] is an optional \intentout\ array of type
 {\tt INTEGER} and size {\tt n}. If present, on exit
-$|\texttt{piv\_order(i)}|$ gives the position of variable $i$ in the pivot
+$|\,\texttt{piv\_order(i)}|$ gives the position of variable $i$ in the pivot
 order. The sign will be positive if $i$ is a $1\times1$ pivot, and negative
 if $i$ is part of a $2 \times 2$ pivot.
 
@@ -720,12 +704,10 @@ the use of scaling. If the optional {\tt scale} argument is supplied to
 options are:
 \begin{description}
    \item[\texttt{ $\le$ 0 }] No scaling.
-   \item[\texttt{ $=$ 1 }] Compute a scaling using a weighted bipartite matching 
-      that is computed using
-      the Hungarian Algorithm (\texttt{MC64} algorithm).
-   \item[\texttt{ $=$ 2 }] Compute a scaling using a weighted bipartite matching 
-      that is computed using
-      the Auction Algorithm (may be lower quality than that computed using 
+   \item[\texttt{ $=$ 1 }] Compute a scaling using a weighted bipartite matching
+      viathe Hungarian Algorithm (\texttt{MC64} algorithm).
+   \item[\texttt{ $=$ 2 }] Compute a scaling using a weighted bipartite matching
+      via the Auction Algorithm (may be lower quality than that computed using 
       the Hungarian Algorithm, but can be considerably faster).
    \item[\texttt{ $=$ 3 }] A matching-based ordering has been generated during the
       analyse phase using {\tt options\%ordering $=$ 2}. Use the
@@ -733,7 +715,7 @@ options are:
       the same as that generated with {\tt options\%scaling $=$ 1} if the matrix
       values have not changed. This option will generate an error if a
       matching-based ordering was not used.
-   \item[\texttt{ $\ge$ 4 }] Compute a scaling by applying the norm-equilibration
+   \item[\texttt{ $\ge$ 4 }] Compute a scaling using the norm-equilibration
       algorithm of Ruiz.
 \end{description}
 The default is {\tt scaling}$=${\tt 0}.
@@ -752,9 +734,9 @@ non-empty rows), the computation continues after issuing a warning if
 terminates with an error if it has the value {\tt .false.}
 The default is {\tt action}$=${\tt .true.}
 
-\item[\texttt{small}] is a scalar of type {\tt REAL}.
-Any pivot whose modulus is less than {\tt small} is treated as zero.
-The default is {\tt small}$ = {\tt 10^{-20}}$.
+%\item[\texttt{small}] is a scalar of type {\tt REAL}.
+%Any pivot whose modulus is less than {\tt small} is treated as zero.
+%The default is {\tt small}$ = {\tt 10^{-20}}$.
 
 \item[\texttt{u}] is a scalar of type {\tt REAL} that holds the relative pivot
 tolerance $u$.
@@ -785,6 +767,7 @@ Values outside the range $[0,0.5]$ are treated as the closest value in that rang
          the number of variables eliminated at that supernode). As the matrices
          $L$ and $D$ are altered, the routines {\tt ssids\_enquire\_posdef()},
          {\tt ssids\_enquire\_indef()}, and {\tt ssids\_alter()} cannot be used.
+         This option is not compatible with {\tt options\%use\_gpu\_solve}$=$\texttt{.false.}
    \end{description}
    The default option is \texttt{presolve}$=$\texttt{0}.
 \end{description}
@@ -815,29 +798,29 @@ or from {\tt ssids\_analyse\_coord}, it holds the number of diagonal
 entries without an explicitly provided value.
 
 \item[\texttt{matrix\_outrange}] is a scalar  of type  {\tt INTEGER}.
-On exit from {\tt ssids\_analyse}
+On exit from {\tt ssids\_analyse()}
 with {\tt check} set to {\tt .true.} or from \\
-{\tt ssids\_analyse\_coord}, it holds the
+{\tt ssids\_analyse\_coord()}, it holds the
 number of out-of-range entries that were   found and discarded.
 
 \item[\texttt{matrix\_rank}] is scalar of type  {\tt INTEGER}. On exit from
-{\tt ssids\_analyse} and {\tt ssids\_analyse\_coord}, it holds
+{\tt ssids\_analyse()} and {\tt ssids\_analyse\_coord()}, it holds
 the structural rank of $A$, if available (otherwise, it is set to {\tt n}).
 On exit from
-{\tt ssids\_factor}, it holds the computed rank of
+{\tt ssids\_factor()}, it holds the computed rank of
 the factorized matrix.
 
 \item[\texttt{maxdepth}] is a scalar of type  {\tt INTEGER}. On exit from
-{\tt ssids\_analyse}  or {\tt ssids\_analyse\_coord}, it holds the maximum depth of the assembly tree.
+{\tt ssids\_analyse()} or {\tt ssids\_analyse\_coord()}, it holds the maximum depth of the assembly tree.
 
 \item[\texttt{maxfront}] is a scalar of type  {\tt INTEGER}. On exit from
-{\tt ssids\_analyse}  or {\tt ssids\_analyse\_coord}, it holds the maximum front size
+{\tt ssids\_analyse()} or {\tt ssids\_analyse\_coord()}, it holds the maximum front size
 in the positive-definite case (or in the indefinite case with
 the same pivot sequence). On exit from
-{\tt ssids\_factor}, it holds the maximum front size.
+{\tt ssids\_factor()}, it holds the maximum front size.
 
 \item[\texttt{num\_delay}] is scalar of type  {\tt INTEGER}. On exit from
-{\tt ssids\_factor}, it holds the
+{\tt ssids\_factor()}, it holds the
 number of eliminations that were
 delayed, that is, the total number of fully-summed
 variables that were passed to the father node because
@@ -845,7 +828,7 @@ of stability considerations. If a variable is passed
 further up the tree, it will be counted again.
 
 \item[\texttt{num\_factor}] is scalar of type {\tt INTEGER(long)}. On exit from
-{\tt ssids\_analyse}  or {\tt ssids\_analyse\_coord}, it holds the number of entries that will be in the
+{\tt ssids\_analyse()}  or {\tt ssids\_analyse\_coord()}, it holds the number of entries that will be in the
 factor $L$ in the positive-definite case (or in the indefinite case with
 the same pivot sequence). On exit from
 {\tt ssids\_factor},
@@ -854,25 +837,25 @@ $L$. In the indefinite case, {\tt 2n} entries of ${D}^{-1}$ are
 also held.
 
 \item[\texttt{num\_flops}] is scalar of type {\tt INTEGER(long)}. On exit from
-{\tt ssids\_analyse}  or {\tt ssids\_analyse\_coord}, it holds the number of
+{\tt ssids\_analyse()}  or {\tt ssids\_analyse\_coord()}, it holds the number of
 floating-point operations that
 will be needed to perform the factorization
 in the positive-definite case (or in the indefinite case  with
-the same pivot sequence).  On exit from {\tt ssids\_factor}, it holds the
+the same pivot sequence).  On exit from {\tt ssids\_factor()}, it holds the
 number of floating-point operations performed.
 
 \item[\texttt{num\_neg}] is a scalar  of type  {\tt INTEGER}.
-On exit from {\tt ssids\_factor}, it holds
+On exit from {\tt ssids\_factor()}, it holds
 the number of negative eigenvalues of the matrix $D$.
 
 
 \item[\texttt{num\_sup}] is a scalar of type  {\tt INTEGER}.
-On exit from {\tt ssids\_analyse}  or {\tt ssids\_analyse\_coord}, it holds
+On exit from {\tt ssids\_analyse()}  or {\tt ssids\_analyse\_coord()}, it holds
 the number of supernodes in the problem.
 
 \item[\texttt{num\_two}] is scalar of type  {\tt INTEGER}.
 On exit from
-{\tt ssids\_factor}, it holds the number
+{\tt ssids\_factor()}, it holds the number
 of $2 \times 2$ pivots used by the factorization, that is,
 the number of $2 \times 2$ blocks in $D$.
 
@@ -1120,8 +1103,11 @@ This produces the following output:
  Warning from ssids_analyse. Warning flag =   4
  one or more diagonal entries is missing
 
- Warning from ssids_factor. Warning flag =   7
- Matrix found to be singular
+ The computed solution is:
+  1.0000000000E+00  2.0000000000E+00  3.0000000000E+00
+  4.0000000000E+00  5.0000000000E+00
+ Pivot order:   4    5   -2   -1    3
+
 \end{verbatim}
 
 \begin{funders}
