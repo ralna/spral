@@ -24,7 +24,7 @@
    \fancyhf{}
    %\lfoot{\texttt{module \MakeLowercase{\libraryname\_\packagename}}}
    \lfoot{\libraryurl}
-   \cfoot{Version \version}
+   \cfoot{\thepage}
    \rfoot{\versiondate}
    \renewcommand{\headrulewidth}{0pt}
 }
@@ -32,8 +32,9 @@
 {
    \lhead{\bfseries \textcolor{stfcblue}{\libraryname} \texttt{\packagename}}
    %\lfoot{\texttt{module \MakeLowercase{\libraryname\_\packagename}}}
+   \chead{Version \version}
    \lfoot{\libraryurl}
-   \cfoot{Version \version}
+   \cfoot{\thepage}
    \rfoot{\versiondate}
 }
 
@@ -82,10 +83,11 @@
    \pgfimage[height=1cm]{stfc}
    \hfill
    {\Huge \bfseries \textcolor{stfcblue}{\libraryname}}
-   %{\large \texttt{\textcolor{stfcblue}{\packagename}}}
    \vspace{0.1cm}
    \textcolor{stfcgrey}{\hrule}
-   \vspace{0.5cm}
+   \vspace{0.5mm}
+   \hfill \textcolor{stfcgrey}{\Large \packagename\ v\version}
+   \vspace{-0.3cm}
 
    \begin{center}
       {
@@ -124,5 +126,9 @@
    \vspace{0.1cm}
    \textcolor{stfcgrey}{\hrule}
 }
+
+% Avoid hyphenation
+\hyphenpenalty=10000
+%\sloppy
 
 \endinput
