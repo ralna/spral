@@ -542,7 +542,7 @@ explained in Section~\ref{typeoptions}.
 {\tt ssids\_inform}. Its components provide information about the execution
 of the subroutine, as explained in Section~\ref{typeinform}.
 
-\item[\texttt{d(:)}] is an  \intentout\ rarray of type {\tt  REAL} and
+\item[\texttt{d(:)}] is an  \intentout\ array of type {\tt  REAL} and
 size {\tt n}. The $i$-th diagonal entry of $D$ will be placed in {\tt d(i)}.
 
 \end{description}
@@ -705,7 +705,7 @@ options are:
 \begin{description}
    \item[\texttt{ $\le$ 0 }] No scaling.
    \item[\texttt{ $=$ 1 }] Compute a scaling using a weighted bipartite matching
-      viathe Hungarian Algorithm (\texttt{MC64} algorithm).
+      via the Hungarian Algorithm (\texttt{MC64} algorithm).
    \item[\texttt{ $=$ 2 }] Compute a scaling using a weighted bipartite matching
       via the Auction Algorithm (may be lower quality than that computed using 
       the Hungarian Algorithm, but can be considerably faster).
@@ -1043,10 +1043,10 @@ of tiles that are each handled by an associated  block. Factorization
 proceeds one column of tiles at a time. The pivoting condition is chosen to
 ensure that all entries of $L$ have absolute value less than $\texttt{u}^{-1}$.
 This limits the growth of the entries of the $D$ factor and ensures that any
-solves will be bacwards stable. The details are described in [1].
+solves will be backwards stable. The details are described in [1].
 
 If a pivot candidate does not pass the pivot tests at a node, it is delayed
-to its parent node, where further elimination operations may make it accpetable.
+to its parent node, where further elimination operations may make it acceptable.
 Delaying pivots leads to additional fill-in and floating-point
 operations beyond that predicted by {\tt ssids\_analyse()}  (and {\tt ssids\_analyse\_coord()}), 
 and may result in additional memory allocations being required.
