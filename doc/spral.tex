@@ -1,6 +1,26 @@
 \documentclass{spralweb}
 
 \begin{document}
+
+\let\oldthesection\thesection
+\renewcommand{\thesection}{}
+\section[About]{SPRAL: Sparse Parallel Robust Algorithms Library}
+The Sparse Parallel Robust Algorithm Library (SPRAL) is an open-source library
+for sparse linear algebra and related algorithms. It is primarily developed and
+maintained by the Numerical Analysis Group at STFC's Rutherford Appleton Laboratory.
+
+\noindent
+Further information can be found at the project website:
+\HCode{<a href="http://www.numerical.rl.ac.uk/spral" target="_top">http://www.numerical.rl.ac.uk/spral</a>}
+
+\section{Licence}
+At present, all code and documentation is covered by the following 3-clause BSD
+licence. Future additions may use a different licence.
+
+\verbatiminput{../LICENCE}
+
+\renewcommand{\thesection}{\oldthesection}
+
 \chapter{Installation}
 \include{install}
 \chapter{SSIDS: Sparse Symmetric Indefinite Direct Solver}
