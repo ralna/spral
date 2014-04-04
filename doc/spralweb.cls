@@ -2,7 +2,7 @@
 \ProvidesClass{spral}[2014/03/06 SPRAL Documentation Class]
 
 % Load base
-\LoadClass{article}
+\LoadClass{book}
 
 % Library name definition
 \RequirePackage{url}

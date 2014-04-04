@@ -1,14 +1,7 @@
-\documentclass{spral}
-
-\usepackage{pifont}
-\usepackage{verbatim}
-\newcommand{\cmark}{\ding{51}}
-\newcommand{\xmark}{\ding{55}}
-
-\newcommand{\packagename}{SSIDS}
-\newcommand{\version}{1.0.0}
-\newcommand{\versiondate}{17 March 2014}
-\newcommand{\purpose}{
+\packagename{SSIDS}
+\version{1.0.0}
+\versiondate{17 March 2014}
+\purpose{
 This package solves one or more sets of $n\times n$
 sparse {\bf symmetric} equations  ${AX = B}$ using a multifrontal method on an
 \textbf{NVIDIA GPU}.
@@ -38,8 +31,6 @@ An option exists to scale the matrix. In this case, the factorization of
 the scaled matrix  $ {\overline{A} = S A S}$ is computed,
 where ${S}$ is a diagonal scaling matrix.
 }
-
-\begin{document}
 
 \title{Sparse Symmetric Indefinite Direct Solver}
 \author{
@@ -1124,5 +1115,3 @@ This produces the following output:
 \begin{funders}
    \funder{epsrc}{Funded by EPSRC grant EP/J010553/1}
 \end{funders}
-
-\end{document}
