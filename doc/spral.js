@@ -12,13 +12,14 @@ function spralDocReady() {
    var lastId,
        tocMenu = $("#tocMasterUL"),
        menuItems = tocMenu.find("a"),
+       headerHeight = $("#pgHeader").outerHeight(),
        scrollItems = menuItems.map(function(){
           var hr = $(this).attr("href")
           var item = $(jqescape(hr));
           if(item.length) { return item; }
           });
    $(window).scroll(function(){
-      var fromTop = $(this).scrollTop();
+      var fromTop = $(this).scrollTop()+headerHeight;
 
       // Build list of items that are off top of page
       var cur = scrollItems.map(function() {
@@ -30,12 +31,8 @@ function spralDocReady() {
 
       if(lastId !== id) {
          lastId = id;
-         var mp = menuItems.parent();
-         var mp2 = mp.removeClass("active");
-         var mp3 = mp2.end();
-         var mp4 = mp3.filter("[href=#"+jqescape(id)+"]");
-         var mp5 = mp4.parent();
-         mp5.addClass("active");
+         menuItems.parent().removeClass("active")
+                  .end().filter("[href=#"+jqescape(id)+"]").parent().addClass("active");
       }
    });
 
