@@ -76,15 +76,9 @@
 % Support for specifying funders
 \RequirePackage{tikz}
 \newcommand{\funder}[2]{
-   \hfill
-   \begin{tikzpicture}
-      \node (img) {\pgfimage[height=1cm]{#1}};
-      \node[right,text width=3cm] at (img.east) {
-         \footnotesize
-         #2
-      };
-   \end{tikzpicture}
-   \hfill
+   \HCode{<div class="funder">\Hnewline}
+   \HCode{<img src="#1.png">\Hnewline<p>#2</p>\Hnewline}
+   \HCode{</div> <!-- funder -->\Hnewline}
 }
 
 % New command definitions
@@ -138,12 +132,9 @@
 \makeatother
 
 \newenvironment{funders}{
-   \vspace{1cm}
-   \textcolor{stfcgrey}{\hrule}
-   \vspace{0.1cm}
+   \HCode{\Hnewline<div class="funders">\Hnewline}
 }{
-   \vspace{0.1cm}
-   \textcolor{stfcgrey}{\hrule}
+   \HCode{\Hnewline</div> <!-- funders -->\Hnewline}
 }
 
 % Avoid hyphenation
