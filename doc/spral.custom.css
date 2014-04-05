@@ -1,0 +1,126 @@
+/* Layout */
+body, html {
+   padding: 0px;
+   margin: 0px;
+}
+#wrapper {
+   width: 100%;
+}
+div.TOC {
+   position: fixed;
+   left: 0px;
+   top: 80px;
+   bottom: 50px;
+   width: 20%;
+   z-index: 10;
+   overflow: auto;
+   background: linear-gradient(to bottom, rgba(20,41,72,1), rgba(20,41,72,0));
+   filter: progid:DXImageTransform.Microsoft.gradient( startColorstr=#FF3F698F, endColorstr=#003F698F, GradientType=0); /* For IE7-9 */
+}
+.TOC a {
+   color: black;
+}
+.TOC h1 {
+   color: white;
+   padding: 0px;
+   margin: 0px auto;
+   width: 245px;
+   font-size: 400%;
+}
+a.nounderline {
+   text-decoration: none;
+}
+div#pkgHeader {
+   position: fixed;
+   top: 0px;
+   left: 0px;
+   margin-left: 20%;
+   height: 85px;
+   text-align: center;
+   z-index: 10;
+   width: 80%;
+}
+div#pgHeader {
+   position: fixed;
+   top: 0px;
+   left: 0px;
+   width: 100%;
+   background-color: #00284d;
+   z-index: 10;
+   padding: 5px;
+}
+div#pkgHeader h1 {
+   color: white;
+   margin: auto;
+   position: absolute;
+   top: 0; bottom: 0; left: 0; right: 0;
+   height: 45px;
+}
+div#pgContent {
+   position: absolute;
+   top: 125px;
+   padding-top: 5px;
+   margin-left: 20%;
+   padding-left: 5px;
+   width: 78%;
+   z-index: 5;
+}
+
+/* Funders display */
+div.funders {
+   position: fixed;
+   bottom: 0px;
+   left: 0px;
+   width: 20%;
+   z-index: 15;
+   background-color: white;
+   height: 50px;
+}
+div.funder {
+   height: 40px;
+   margin-left: auto;
+   margin-right: auto;
+   padding-top: 5px;
+   padding-bottom: 5px;
+   width: 300px;
+   padding-left: 0px;
+   padding-right: 0px;
+}
+div.funder p {
+   padding-left: 5px;
+   margin: 0;
+   text-align: center;
+}
+.funders img {
+   height: 40px;
+   float: left;
+}
+
+/* Active section follow class */
+.active {
+   font-weight: bold;
+}
+
+/* Expandable uls in TOC */
+.TOC ul li {
+   list-style-type: none;
+}
+.TOC > ul {
+   padding-left: 0px;
+}
+span.toc_rArrow {
+   background:url('arrow_right16.png');
+   width:16px;
+   height:16px;
+   margin-top:2px;
+   display:block;
+   float:left;
+}
+span.toc_dArrow {
+   background:url('arrow_down16.png');
+   width:16px;
+   height:16px;
+   margin-top:2px;
+   display:block;
+   float:left;
+}
