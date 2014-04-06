@@ -14,6 +14,7 @@ function spralDocReady() {
    // Setup menu variables
    var tocMenu = $("#tocMasterUL"),
        menuItems = tocMenu.find("a");
+   var headerHeight = $("#pgHeader").outerHeight();
 
    // Unhide current "chapter"
    var chapterid = $('#pkgHeader h1 a').first().attr("id");
@@ -22,9 +23,18 @@ function spralDocReady() {
    chul.find('.toc_indicator').removeClass('toc_rArrow');
    chul.find("ul").show();
 
+   // Sort out scrolling for internal links
+   $("a[href^='#']").click( function(ev) {
+      var scrollto = $(jqescape($(this).attr("href"))).offset().top - headerHeight + 1;
+      $('html, body').stop().animate(
+         { scrollTop: scrollto },
+         300
+         );
+      ev.preventDefault();
+   });
+
    // Highlight current section with .active class as user scrolls.
    var lastId,
-       headerHeight = $("#pgHeader").outerHeight(),
        scrollItems = menuItems.map(function(){
           var hr = $(this).attr("href")
           var item = $(jqescape(hr));
