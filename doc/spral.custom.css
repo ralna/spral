@@ -109,19 +109,16 @@ div.funder p {
 .TOC > ul {
    padding-left: 0px;
 }
-span.toc_rArrow {
-   background:url('arrow_right16.png');
-   width:16px;
+span.toc_indicator {
+   padding-left:16px;
+   padding-right:2px;
    height:16px;
-   margin-top:2px;
    display:block;
    float:left;
 }
+span.toc_rArrow {
+   background:url('arrow_right16.png') no-repeat left;
+}
 span.toc_dArrow {
-   background:url('arrow_down16.png');
-   width:16px;
-   height:16px;
-   margin-top:2px;
-   display:block;
-   float:left;
+   background:url('arrow_down16.png') no-repeat left;
 }

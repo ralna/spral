@@ -5,10 +5,10 @@ function spralDocReady() {
    // Hide all entries below "chapter" in TOC, but allow user to toggle their
    // expansion
    $('.TOC ul ul').hide(); 
-   $('.toc_chapter').click(function() { 
-      $(this).find('ul').slideToggle(); 
-      $(this).find('.toc_indicator').toggleClass('toc_dArrow'); 
-      $(this).find('.toc_indicator').toggleClass('toc_rArrow'); 
+   $('.toc_indicator').click(function() { 
+      $(this).parent().find('ul').slideToggle(); 
+      $(this).parent().find('.toc_indicator').toggleClass('toc_dArrow'); 
+      $(this).parent().find('.toc_indicator').toggleClass('toc_rArrow'); 
    }); 
 
    // Setup menu variables
