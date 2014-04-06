@@ -36,32 +36,9 @@
 \newcommand{\purpose}[1]{
    \renewcommand{\thepurpose}{#1}
 }
-
-% headers and footerrs
-\fancypagestyle{firststyle}
-{
-   \fancyhf{}
-   %\lfoot{\texttt{module \MakeLowercase{\libraryname\_\packagename}}}
-   \lfoot{\libraryurl}
-   \cfoot{\thepage}
-   \rfoot{\theversiondate}
-   \renewcommand{\headrulewidth}{0pt}
-}
-\fancypagestyle{followstyle}
-{
-   \lhead{\bfseries \textcolor{stfcblue}{\libraryname} \texttt{\thepackagename}}
-   %\lfoot{\texttt{module \MakeLowercase{\libraryname\_\packagename}}}
-   \chead{Version \theversion}
-   \lfoot{\libraryurl}
-   \cfoot{\thepage}
-   \rfoot{\theversiondate}
-}
-
-
-% Beginning of document hooks
-\AtBeginDocument{
-   % Set headers
-   \pagestyle{followstyle}
+\newcommand{\thepkglang}{}
+\newcommand{\pkglang}[1]{
+   \renewcommand{\thepkglang}{#1}
 }
 
 % Package information headers
@@ -74,7 +51,11 @@
 }
 
 % Support for specifying funders
-\RequirePackage{tikz}
+\newenvironment{funders}{
+   \HCode{\Hnewline<div class="funders">\Hnewline}
+}{
+   \HCode{\Hnewline</div> <!-- funders -->\Hnewline}
+}
 \newcommand{\funder}[2]{
    \HCode{<div class="funder">\Hnewline}
    \HCode{<img src="#1.png">\Hnewline<p>#2</p>\Hnewline}
@@ -88,54 +69,19 @@
 
 % Redefine \maketitle
 \makeatletter
-\newcommand{\thepkglang}{}
-\newcommand{\pkglang}[1]{
-   \renewcommand{\thepkglang}{#1}
-}
-\def\@maketitle{
-   \pgfimage[height=1cm]{stfc}
-   \hfill
-   {\Huge \bfseries \textcolor{stfcblue}{\libraryname}}
-   \vspace{0.1cm}
-   \textcolor{stfcgrey}{\hrule}
-   \vspace{0.5mm}
-   \hfill \textcolor{stfcgrey}{\Large \thepackagename\ v\theversion}
-   \vspace{-0.3cm}
-
-   \begin{center}
-      {
-         \LARGE \bfseries
-         \texttt{\libraryname\_\thepackagename}\\
-         \vspace{0.5em}
-         \@title
-      }
-
-      \vspace*{0.5em}
-      {\LARGE \thepkglang\ User Guide}
-   \end{center}
+\renewcommand{\maketitle}{
+   {\LARGE \libraryname\_\thepackagename} v\theversion \\
+   {\LARGE \@title}
+   {\Large \thepkglang\ User Guide}
    \begin{quote}
       \large
       \thepurpose
    \end{quote}
-
    \begin{flushright}
-   %\noindent
-   %{\bfseries Authors:}
-   %\vspace{0.1cm}
-
-   \noindent
-   \@author
+      \@author
    \end{flushright}
-   \vspace{-0.2cm}
-   \textcolor{stfcgrey}{\hrule}
 }
 \makeatother
-
-\newenvironment{funders}{
-   \HCode{\Hnewline<div class="funders">\Hnewline}
-}{
-   \HCode{\Hnewline</div> <!-- funders -->\Hnewline}
-}
 
 % Avoid hyphenation
 \hyphenpenalty=10000

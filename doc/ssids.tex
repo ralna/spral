@@ -2,34 +2,34 @@
 \version{1.0.0}
 \versiondate{17 March 2014}
 \purpose{
-This package solves one or more sets of $n\times n$
-sparse {\bf symmetric} equations  ${AX = B}$ using a multifrontal method on an
-\textbf{NVIDIA GPU}.
-The following cases are covered:
-\begin{enumerate}
-\item $A$ is {\bf indefinite}.
-\texttt{SSIDS} computes the sparse factorization
-$$
-   A =  PLD(PL)^T
-$$
-where $P$ is a permutation matrix, $L$ is unit lower triangular,
-and $D$ is block diagonal with blocks of size $1 \times 1 $
-and $2 \times 2$.
-\item $A$ is {\bf positive definite}.
-\texttt{SSIDS} computes the {\bf sparse Cholesky factorization}
-$$
-   A =  PL(PL)^T
-$$
-where $P$ is a permutation matrix and $L$ is lower triangular.
-\textit{However, as \texttt{SSIDS} is designed primarily for indefinite
-systems, this may be slower than a dedicated Cholesky solver.}
-\end{enumerate}
+   This package solves one or more sets of $n\times n$
+   sparse {\bf symmetric} equations  ${AX = B}$ using a multifrontal method on an
+   \textbf{NVIDIA GPU}.
+   The following cases are covered:
+   \begin{enumerate}
+   \item $A$ is {\bf indefinite}.
+   \texttt{SSIDS} computes the sparse factorization
+   $$
+      A =  PLD(PL)^T
+   $$
+   where $P$ is a permutation matrix, $L$ is unit lower triangular,
+   and $D$ is block diagonal with blocks of size $1 \times 1 $
+   and $2 \times 2$.
+   \item $A$ is {\bf positive definite}.
+   \texttt{SSIDS} computes the {\bf sparse Cholesky factorization}
+   $$
+      A =  PL(PL)^T
+   $$
+   where $P$ is a permutation matrix and $L$ is lower triangular.
+   \textit{However, as \texttt{SSIDS} is designed primarily for indefinite
+   systems, this may be slower than a dedicated Cholesky solver.}
+   \end{enumerate}
 
-\texttt{SSIDS} returns bit-compatible results.
+   \texttt{SSIDS} returns bit-compatible results.
 
-An option exists to scale the matrix. In this case, the factorization of
-the scaled matrix  $ {\overline{A} = S A S}$ is computed,
-where ${S}$ is a diagonal scaling matrix.
+   An option exists to scale the matrix. In this case, the factorization of
+   the scaled matrix  $ {\overline{A} = S A S}$ is computed,
+   where ${S}$ is a diagonal scaling matrix.
 }
 
 \title{Sparse Symmetric Indefinite Direct Solver}
