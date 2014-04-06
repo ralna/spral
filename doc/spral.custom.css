@@ -11,10 +11,11 @@ div.TOC {
    left: 0px;
    top: 80px;
    bottom: 50px;
-   width: 20%;
+   width: calc(20% - 10px);
    z-index: 10;
    overflow: auto;
    background: linear-gradient(to bottom, rgba(20,41,72,1), rgba(20,41,72,0));
+   padding: 5px;
    filter: progid:DXImageTransform.Microsoft.gradient( startColorstr=#FF3F698F, endColorstr=#003F698F, GradientType=0); /* For IE7-9 */
 }
 .TOC a {
