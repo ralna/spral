@@ -2,6 +2,8 @@ function jqescape( arg ) {
    return arg.replace( /(:|\.|\[|\])/g, "\\$1" );
 }
 function spralDocReady() {
+   // Hide all entries below "chapter" in TOC, but allow user to toggle their
+   // expansion
    $('.TOC ul ul').hide(); 
    $('.toc_chapter').click(function() { 
       $(this).find('ul').slideToggle(); 
@@ -9,9 +11,19 @@ function spralDocReady() {
       $(this).find('.toc_indicator').toggleClass('toc_rArrow'); 
    }); 
 
+   // Setup menu variables
+   var tocMenu = $("#tocMasterUL"),
+       menuItems = tocMenu.find("a");
+
+   // Unhide current "chapter"
+   var chapterid = $('#pkgHeader h1 a').first().attr("id");
+   var chul = menuItems.filter("[href=#"+jqescape(chapterid)+"]").closest("li");
+   chul.find('.toc_indicator').addClass('toc_dArrow');
+   chul.find('.toc_indicator').removeClass('toc_rArrow');
+   chul.find("ul").show();
+
+   // Highlight current section with .active class as user scrolls.
    var lastId,
-       tocMenu = $("#tocMasterUL"),
-       menuItems = tocMenu.find("a"),
        headerHeight = $("#pgHeader").outerHeight(),
        scrollItems = menuItems.map(function(){
           var hr = $(this).attr("href")
