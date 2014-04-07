@@ -38,9 +38,10 @@ host_triplet = @host@
 bin_PROGRAMS = spral_ssids$(EXEEXT)
 check_PROGRAMS = ssids_test$(EXEEXT) examples/Fortran/ssids$(EXEEXT) \
 	random_matrix_test$(EXEEXT) \
-	examples/Fortran/random_matrix$(EXEEXT) \
+	examples/Fortran/random_matrix$(EXEEXT) random_test$(EXEEXT) \
 	examples/Fortran/random$(EXEEXT)
-TESTS = ssids_test$(EXEEXT) random_matrix_test$(EXEEXT)
+TESTS = ssids_test$(EXEEXT) random_matrix_test$(EXEEXT) \
+	random_test$(EXEEXT)
 subdir = .
 DIST_COMMON = $(am__configure_deps) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in $(top_srcdir)/configure config.guess \
@@ -141,6 +142,11 @@ random_matrix_test_LDADD = $(LDADD)
 random_matrix_test_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1)
+am_random_test_OBJECTS = tests/random.$(OBJEXT)
+random_test_OBJECTS = $(am_random_test_OBJECTS)
+random_test_LDADD = $(LDADD)
+random_test_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_spral_ssids_OBJECTS = driver/spral_ssids.$(OBJEXT)
 spral_ssids_OBJECTS = $(am_spral_ssids_OBJECTS)
 spral_ssids_DEPENDENCIES = $(am__DEPENDENCIES_2) $(am__DEPENDENCIES_1)
@@ -159,14 +165,14 @@ LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 SOURCES = $(libspral_a_SOURCES) $(examples_Fortran_random_SOURCES) \
 	$(examples_Fortran_random_matrix_SOURCES) \
 	$(examples_Fortran_ssids_SOURCES) \
-	$(random_matrix_test_SOURCES) $(spral_ssids_SOURCES) \
-	$(ssids_test_SOURCES)
+	$(random_matrix_test_SOURCES) $(random_test_SOURCES) \
+	$(spral_ssids_SOURCES) $(ssids_test_SOURCES)
 DIST_SOURCES = $(libspral_a_SOURCES) \
 	$(examples_Fortran_random_SOURCES) \
 	$(examples_Fortran_random_matrix_SOURCES) \
 	$(examples_Fortran_ssids_SOURCES) \
-	$(random_matrix_test_SOURCES) $(spral_ssids_SOURCES) \
-	$(ssids_test_SOURCES)
+	$(random_matrix_test_SOURCES) $(random_test_SOURCES) \
+	$(spral_ssids_SOURCES) $(ssids_test_SOURCES)
 ETAGS = etags
 CTAGS = ctags
 am__tty_colors = \
@@ -360,6 +366,7 @@ examples_Fortran_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
 examples_Fortran_ssids_LINK = $(NVCCLINK)
 random_matrix_test_SOURCES = tests/random_matrix.f90
 examples_Fortran_random_matrix_SOURCES = examples/Fortran/random_matrix.f90
+random_test_SOURCES = tests/random.f90
 examples_Fortran_random_SOURCES = examples/Fortran/random.f90
 all: all-am
 
@@ -578,6 +585,11 @@ tests/random_matrix.$(OBJEXT): tests/$(am__dirstamp) \
 random_matrix_test$(EXEEXT): $(random_matrix_test_OBJECTS) $(random_matrix_test_DEPENDENCIES) $(EXTRA_random_matrix_test_DEPENDENCIES) 
 	@rm -f random_matrix_test$(EXEEXT)
 	$(FCLINK) $(random_matrix_test_OBJECTS) $(random_matrix_test_LDADD) $(LIBS)
+tests/random.$(OBJEXT): tests/$(am__dirstamp) \
+	tests/$(DEPDIR)/$(am__dirstamp)
+random_test$(EXEEXT): $(random_test_OBJECTS) $(random_test_DEPENDENCIES) $(EXTRA_random_test_DEPENDENCIES) 
+	@rm -f random_test$(EXEEXT)
+	$(FCLINK) $(random_test_OBJECTS) $(random_test_LDADD) $(LIBS)
 driver/$(am__dirstamp):
 	@$(MKDIR_P) driver
 	@: > driver/$(am__dirstamp)
@@ -629,6 +641,7 @@ mostlyclean-compile:
 	-rm -f src/ssids/ssids.$(OBJEXT)
 	-rm -f src/ssids/syrk_kernels.$(OBJEXT)
 	-rm -f src/timer.$(OBJEXT)
+	-rm -f tests/random.$(OBJEXT)
 	-rm -f tests/random_matrix.$(OBJEXT)
 	-rm -f tests/ssids.$(OBJEXT)
 
@@ -1095,6 +1108,7 @@ tests/ssids.$(OBJEXT): libspral.a
 examples/Fortran/ssids.$(OBJEXT): libspral.a
 tests/random_matrix.$(OBJEXT): libspral.a
 examples/Fortran/random_matrix.$(OBJEXT): libspral.a
+tests/random.$(OBJEXT): libspral.a
 examples/Fortran/random.$(OBJEXT): libspral.a
 
 # Automake doesn't know much about modules, so get rid of them ourself

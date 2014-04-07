@@ -76,10 +76,13 @@ tests/random_matrix.$(OBJEXT): libspral.a
 examples/Fortran/random_matrix.$(OBJEXT): libspral.a
 TESTS += random_matrix_test
 
-# Random (no test code as too simple)
-check_PROGRAMS += examples/Fortran/random
+# Random
+check_PROGRAMS += random_test examples/Fortran/random
+random_test_SOURCES = tests/random.f90
 examples_Fortran_random_SOURCES = examples/Fortran/random.f90
+tests/random.$(OBJEXT): libspral.a
 examples/Fortran/random.$(OBJEXT): libspral.a
+TESTS += random_test
 
 # Automake doesn't know much about modules, so get rid of them ourself
 clean-local:
