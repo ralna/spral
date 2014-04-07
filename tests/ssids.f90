@@ -11,7 +11,7 @@ program main
       SPRAL_MATRIX_REAL_SYM_INDEF
    use spral_metis_wrapper, only : metis_order
    use spral_random
-   use spral_random_matrix, only : generate_random_matrix
+   use spral_random_matrix, only : random_matrix_generate
    use spral_scaling, only : hungarian_wrapper
    use spral_ssids
    implicit none
@@ -2707,9 +2707,9 @@ subroutine gen_random_indef_fred(a, nza, state)
    integer :: i, k, l, flag
 
    ! Generate a
-   call generate_random_matrix(state, SPRAL_MATRIX_REAL_SYM_INDEF, a%n, a%n, &
+   call random_matrix_generate(state, SPRAL_MATRIX_REAL_SYM_INDEF, a%n, a%n, &
       nza, a%ptr, a%row, flag, val=a%val, sort=.true.)
-   if(flag.ne.0) print *, "Bad flag from generate_random_matrix()"
+   if(flag.ne.0) print *, "Bad flag from random_matrix_generate()"
 
    if (a%n.gt.3) then
       ! Put some zeros on diagonal, observing first entry in column
@@ -2792,9 +2792,9 @@ subroutine gen_random_indef(a, nza, state, zr)
    integer :: i, k, l, flag
 
    ! Generate a
-   call generate_random_matrix(state, SPRAL_MATRIX_REAL_SYM_INDEF, a%n, a%n, &
+   call random_matrix_generate(state, SPRAL_MATRIX_REAL_SYM_INDEF, a%n, a%n, &
       nza, a%ptr, a%row, flag, val=a%val, nonsingular=.true., sort=.true.)
-   if(flag.ne.0) print *, "Bad flag from generate_random_matrix()"
+   if(flag.ne.0) print *, "Bad flag from random_matrix_generate()"
 
    if (present(zr)) then
       ! Scan along row
@@ -2836,9 +2836,9 @@ subroutine gen_random_posdef(a, nza, state)
    real(wp) :: tempv
 
    ! Generate matrix
-   call generate_random_matrix(state, SPRAL_MATRIX_REAL_SYM_PSDEF, a%n, a%n, &
+   call random_matrix_generate(state, SPRAL_MATRIX_REAL_SYM_PSDEF, a%n, a%n, &
       nza, a%ptr, a%row, flag, val=a%val, nonsingular=.true., sort=.true.)
-   if(flag.ne.0) print *, "Bad flag from generate_random_matrix()"
+   if(flag.ne.0) print *, "Bad flag from random_matrix_generate()"
 
    ! Make a diagonally dominant, observing first entry in column
    ! is always the diagonal after sorting

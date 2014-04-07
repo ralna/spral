@@ -6,7 +6,7 @@ program random_matrix
                                  SPRAL_MATRIX_REAL_SKEW,       &
                                  SPRAL_MATRIX_CPLX_RECT
    use spral_random, only : random_state, random_integer, random_logical
-   use spral_random_matrix, only : generate_random_matrix
+   use spral_random_matrix, only : random_matrix_generate
    implicit none
 
    integer, parameter :: wp = kind(0d0)
@@ -73,7 +73,7 @@ subroutine test_random_unsymmetric
          " * no. ", prblm, " m = ", m, " n = ", n, " nnz = ", nnz, " flags = ",&
          nonsingular, sort, " ..."
 
-      call generate_random_matrix(state, matrix_type, m, n, nnz, ptr, row, &
+      call random_matrix_generate(state, matrix_type, m, n, nnz, ptr, row, &
          flag, val=val, nonsingular=nonsingular, sort=sort)
       if(nonsingular .and. nnz<min(m,n)) then
          call print_result(flag, ERROR_SINGULAR)
@@ -205,7 +205,7 @@ subroutine test_random_symmetric
          " * no. ", prblm, " n = ", n, " nnz = ", nnz, " flags = ", &
          nonsingular, sort, " ..."
 
-      call generate_random_matrix(state, matrix_type, n, n, nnz, ptr, row, &
+      call random_matrix_generate(state, matrix_type, n, n, nnz, ptr, row, &
          flag, val=val, nonsingular=nonsingular, sort=sort)
       if(nonsingular .and. nnz<n) then
          call print_result(flag, ERROR_SINGULAR)
@@ -303,13 +303,13 @@ subroutine test_errors
    !
    write(*,"(a)",advance="no") " * Testing matrix_type = 100................."
    matrix_type = 100
-   call generate_random_matrix(state, matrix_type, m, n, nnz, ptr, row, flag)
+   call random_matrix_generate(state, matrix_type, m, n, nnz, ptr, row, flag)
    call print_result(flag, ERROR_MATRIX_TYPE)
    matrix_type = SPRAL_MATRIX_REAL_RECT ! restore
 
    write(*,"(a)",advance="no") " * Testing matrix_type = COMPLEX............."
    matrix_type = SPRAL_MATRIX_CPLX_RECT
-   call generate_random_matrix(state, matrix_type, m, n, nnz, ptr, row, flag)
+   call random_matrix_generate(state, matrix_type, m, n, nnz, ptr, row, flag)
    call print_result(flag, ERROR_MATRIX_TYPE)
    matrix_type = SPRAL_MATRIX_UNDEFINED ! restore
 
@@ -318,32 +318,32 @@ subroutine test_errors
    !
    write(*,"(a)",advance="no") " * Testing m < 1............................."
    m = 0
-   call generate_random_matrix(state, matrix_type, m, n, nnz, ptr, row, flag)
+   call random_matrix_generate(state, matrix_type, m, n, nnz, ptr, row, flag)
    call print_result(flag, ERROR_ARG)
    m = 100 ! restore
 
    write(*,"(a)",advance="no") " * Testing n < 1............................."
    n = 0
-   call generate_random_matrix(state, matrix_type, m, n, nnz, ptr, row, flag)
+   call random_matrix_generate(state, matrix_type, m, n, nnz, ptr, row, flag)
    call print_result(flag, ERROR_ARG)
    n = 100 ! restore
 
    write(*,"(a)",advance="no") " * Testing nnz < 1..........................."
    nnz = 0
-   call generate_random_matrix(state, matrix_type, m, n, nnz, ptr, row, flag)
+   call random_matrix_generate(state, matrix_type, m, n, nnz, ptr, row, flag)
    call print_result(flag, ERROR_ARG)
    nnz = 1000 ! restore
 
    write(*,"(a)",advance="no") " * Testing nnz < m*n (unsym)................."
    nnz = m*n+1
-   call generate_random_matrix(state, matrix_type, m, n, nnz, ptr, row, flag)
+   call random_matrix_generate(state, matrix_type, m, n, nnz, ptr, row, flag)
    call print_result(flag, ERROR_ARG)
    nnz = 1000 ! restore
 
    write(*,"(a)",advance="no") " * Testing nnz < n*(n+1)/2 (sym)............."
    matrix_type = SPRAL_MATRIX_REAL_SYM_INDEF
    nnz = n*(n+1)/2 + 1
-   call generate_random_matrix(state, matrix_type, m, n, nnz, ptr, row, flag)
+   call random_matrix_generate(state, matrix_type, m, n, nnz, ptr, row, flag)
    call print_result(flag, ERROR_ARG)
    matrix_type = SPRAL_MATRIX_UNDEFINED; nnz = 1000 ! restore
 
@@ -353,21 +353,21 @@ subroutine test_errors
    matrix_type = SPRAL_MATRIX_REAL_SYM_PSDEF
    m = n+1
    write(*,"(a)",advance="no") " * Testing non-square + SYM_PSDEF............"
-   call generate_random_matrix(state, matrix_type, m, n, nnz, ptr, row, flag)
+   call random_matrix_generate(state, matrix_type, m, n, nnz, ptr, row, flag)
    call print_result(flag, ERROR_NONSQUARE)
    matrix_type = SPRAL_MATRIX_UNDEFINED; m = 100 ! restore
 
    matrix_type = SPRAL_MATRIX_REAL_SYM_INDEF
    m = n+1
    write(*,"(a)",advance="no") " * Testing non-square + SYM_INDEF............"
-   call generate_random_matrix(state, matrix_type, m, n, nnz, ptr, row, flag)
+   call random_matrix_generate(state, matrix_type, m, n, nnz, ptr, row, flag)
    call print_result(flag, ERROR_NONSQUARE)
    matrix_type = SPRAL_MATRIX_UNDEFINED; m = 100 ! restore
 
    matrix_type = SPRAL_MATRIX_REAL_SKEW
    m = n+1
    write(*,"(a)",advance="no") " * Testing non-square + SKEW................."
-   call generate_random_matrix(state, matrix_type, m, n, nnz, ptr, row, flag)
+   call random_matrix_generate(state, matrix_type, m, n, nnz, ptr, row, flag)
    call print_result(flag, ERROR_NONSQUARE)
    matrix_type = SPRAL_MATRIX_UNDEFINED; m = 100 ! restore
 
@@ -376,7 +376,7 @@ subroutine test_errors
    !
    nnz = n-1
    write(*,"(a)",advance="no") " * Testing non-singular but nnz too small...."
-   call generate_random_matrix(state, matrix_type, m, n, nnz, ptr, row, flag, &
+   call random_matrix_generate(state, matrix_type, m, n, nnz, ptr, row, flag, &
       nonsingular=.true.)
    call print_result(flag, ERROR_SINGULAR)
    nnz = 1000

@@ -15,7 +15,7 @@ program random_matrix_example
    write(*, "(a,i3,a,i3,a,i3,a)") &
       "Generating a ", m, " x", n, " non-singular matrix with ", nnz, &
       " non-zeroes"
-   call generate_random_matrix(state, 0, m, n, nnz, ptr, row, flag, val=val, &
+   call random_matrix_generate(state, 0, m, n, nnz, ptr, row, flag, val=val, &
       nonsingular=.true.)
 
    write(*, "(a)") "Generated matrix:"

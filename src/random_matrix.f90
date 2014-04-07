@@ -12,7 +12,7 @@ module spral_random_matrix
    implicit none
 
    private
-   public :: generate_random_matrix
+   public :: random_matrix_generate
 
    integer, parameter :: wp = kind(0d0)
    integer, parameter :: long = selected_int_kind(18)
@@ -33,7 +33,7 @@ contains
 ! FIXME: This routine will be slow if we're asked for a (near) dense matrix
 ! In this case, we might be better served by finding holes or using the first
 ! part of random permutations
-subroutine generate_random_matrix(state, matrix_type, m, n, nnz, ptr, row, &
+subroutine random_matrix_generate(state, matrix_type, m, n, nnz, ptr, row, &
       flag, stat, val, nonsingular, sort)
    type(random_state), intent(inout) :: state ! random generator to use
    integer, intent(in) :: matrix_type ! ignored except for symmetric/unsymmetric
@@ -221,7 +221,7 @@ subroutine generate_random_matrix(state, matrix_type, m, n, nnz, ptr, row, &
    flag = ERROR_ALLOCATION
    if(present(stat)) stat = st
    return
-end subroutine generate_random_matrix
+end subroutine random_matrix_generate
 
 !
 ! Returns a random number in range [1,n] weighted by number of entries in
