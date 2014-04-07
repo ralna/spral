@@ -1,16 +1,16 @@
 \packagename{RANDOM}
 \version{1.0.0}
-\versiondate{7 Arpil 2014}
+\versiondate{7 April 2014}
 \purpose{
    This package generates pseudo-random numbers using a linear congruential
-   generator. It shuold generate the same random numbers using any standards
-   compliant Fortran compiler on any archictecture so long as the default
+   generator. It should generate the same random numbers using any standards
+   compliant Fortran compiler on any architecture so long as the default
    integer and real kinds are the same.
    
    The seed can optionally be observed or specified by the user.
 }
 
-\title{Pseudo-random number generator}
+\title{Pseudo-random Number Generator}
 \author{
    Jonathan Hogg (STFC Rutherford Appleton Laboratory) \\
 }
@@ -44,7 +44,7 @@ The following procedures are available to the user:
 \begin{itemize}
 \item {\tt random\_real()} generates a random number $\mathrm{Unif}(-1,1)$ or
    $\mathrm{Unif}(0,1)$.
-\item {\tt random\_integer()} generates a random integer in $\mathrm{Unif}(1,n)$.
+\item {\tt random\_integer()} generates a random integer $\mathrm{Unif}(1,\ldots,n)$.
 \item {\tt random\_logical()} generates a random boolean value.
 \item {\tt random\_get\_seed()} returns the current random seed to the user.
 \item {\tt random\_set\_seed()} sets the current random seed.
@@ -94,7 +94,7 @@ We also use the term {\bf package type} to mean the same.
 \subsection{\texttt{random\_real()}}
 
 \textbf{\noindent
-   To generate a random number uniformally at random from the interval $(-1,1)$ or $(0,1)$,
+   To generate a random number uniformly at random from the interval $(-1,1)$ or $(0,1)$,
    \vspace*{0.1cm} \\
    \texttt{ \hspace*{0.2cm}
       sample = random\_real(state[, positive])
@@ -123,7 +123,7 @@ generator, and need not be initialized by the user.
 \subsection{\texttt{random\_integer()}}
 
 \textbf{\noindent
-   To generate an integer uniformally at random from the interval $[1,n]$,
+   To generate an integer uniformly at random from the interval $[1,n]$,
    \vspace*{0.1cm} \\
    \texttt{ \hspace*{0.2cm}
       sample = random\_integer(state, n)
@@ -133,7 +133,7 @@ generator, and need not be initialized by the user.
 
 \noindent
 The function returns a scalar value {\tt sample} of type {\tt INTEGER} that is a
-sample from $\mathrm{Unif}{1, \ldots, n}$.
+sample from $\mathrm{Unif}(1, \ldots, n)$.
 
 \begin{description}
 
@@ -249,7 +249,7 @@ $$
 $$
 
 \subsection{\tt random\_int()}
-A random sample from the discrete distribution $\mathrm{Unif}{1, \ldots, n}$ is
+A random sample from the discrete distribution $\mathrm{Unif}(1, \ldots, n)$ is
 generated as
 $$
    \texttt{int}\left( X_n \frac{\texttt{real}(n)}{\texttt{real}(m)} \right) + 1.
