@@ -9,7 +9,7 @@ body, html {
 div.TOC {
    position: fixed;
    left: 0px;
-   top: 80px;
+   top: 84px;
    bottom: 50px;
    width: calc(20% - 10px);
    z-index: 10;
@@ -58,7 +58,6 @@ div#pkgHeader h1 {
    height: 45px;
 }
 div#pgContent {
-   position: absolute;
    top: 125px;
    padding-top: 5px;
    margin-left: 20%;
@@ -121,4 +120,37 @@ span.toc_rArrow {
 }
 span.toc_dArrow {
    background:url('arrow_down16.png') no-repeat left;
+}
+
+/* Package heading, purpose etc. */
+.maketitle .pkgVersion {
+   font-size: 80%;
+   padding-left: 0.25em;
+}
+.maketitle h2.pkgName {
+   margin-bottom: 3px;
+}
+.maketitle h2.titleHead {
+   margin-top: 3px;
+   margin-bottom: 3px;
+}
+.maketitle .pkgLang {
+   font-size: 150%;
+   font-weight: bold;
+}
+div.pkgPurpose {
+   border-top: 2px solid;
+   border-bottom: 2px solid;
+   text-align: justify;
+   width: 80%;
+   margin-left: auto;
+   margin-right: auto;
+   margin-top: 10px;
+}
+div.author {
+   text-align: right;
+   width: 80%;
+   margin-left: auto;
+   margin-right: auto;
+   margin-top: 5px;
 }

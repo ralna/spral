@@ -70,16 +70,15 @@
 % Redefine \maketitle
 \makeatletter
 \renewcommand{\maketitle}{
-   {\LARGE \libraryname\_\thepackagename} v\theversion \\
-   {\LARGE \@title}
-   {\Large \thepkglang\ User Guide}
-   \begin{quote}
-      \large
+   \HCode{\Hnewline<h2 class="pkgName">\libraryname_\thepackagename <span class="pkgVersion">v\theversion</span></h2>\Hnewline}
+   \@title
+   \HCode{<span class="pkgLang">}
+      \thepkglang\ User Guide
+   \HCode{</span> <br />\Hnewline}
+   \HCode{<div class="pkgPurpose">\Hnewline}
       \thepurpose
-   \end{quote}
-   \begin{flushright}
-      \@author
-   \end{flushright}
+   \HCode{\Hnewline</div> <!-- pkgPurpose -->\Hnewline}
+   \@author
 }
 \makeatother
 
