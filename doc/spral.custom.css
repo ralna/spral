@@ -58,7 +58,8 @@ div#pkgHeader h1 {
    height: 45px;
 }
 div#pgContent {
-   top: 125px;
+   position: absolute;
+   top: 85px;
    padding-top: 5px;
    margin-left: 20%;
    padding-left: 5px;

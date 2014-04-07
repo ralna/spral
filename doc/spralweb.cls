@@ -82,6 +82,25 @@
 }
 \makeatother
 
+% Installation instruction need special maketitle alternative
+% As not replacing \maketitle directly, need to manually add divs and classes
+% that are automatically there for \maketitle
+\makeatletter
+\newcommand{\makeinstalltitle}{
+   \HCode{<div class="maketitle">\Hnewline}
+   \HCode{<h2 class="titleHead">}
+      \@title
+   \HCode{</h2>\Hnewline}
+   \HCode{<div class="pkgPurpose">\Hnewline}
+      \thepurpose
+   \HCode{\Hnewline</div> <!-- pkgPurpose -->\Hnewline}
+   \HCode{<div class="author">}
+      \@author
+   \HCode{</div>\Hnewline}
+   \HCode{</div>\Hnewline}
+}
+\makeatother
+
 % Avoid hyphenation
 \hyphenpenalty=10000
 %\sloppy

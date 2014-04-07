@@ -137,6 +137,34 @@
 }
 \makeatother
 
+% Installation instruction need special maketitle alternative
+\makeatletter
+\newcommand{\makeinstalltitle}{
+   \pgfimage[height=1cm]{stfc}
+   \hfill
+   {\Huge \bfseries \textcolor{stfcblue}{\libraryname}}
+   \vspace{0.1cm}
+   \textcolor{stfcgrey}{\hrule}
+   \vspace{0.5cm}
+
+   \begin{center}
+      \LARGE \bfseries
+      \@title
+   \end{center}
+   \begin{quote}
+      \large
+      \thepurpose
+   \end{quote}
+
+   \begin{flushright}
+   \noindent
+   \@author
+   \end{flushright}
+   \vspace{-0.2cm}
+   \textcolor{stfcgrey}{\hrule}
+}
+\makeatother
+
 \newenvironment{funders}{
    \vspace{1cm}
    \textcolor{stfcgrey}{\hrule}
