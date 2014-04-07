@@ -1,0 +1,273 @@
+\packagename{RANDOM}
+\version{1.0.0}
+\versiondate{7 Arpil 2014}
+\purpose{
+   This package generates pseudo-random numbers using a linear congruential
+   generator. It shuold generate the same random numbers using any standards
+   compliant Fortran compiler on any archictecture so long as the default
+   integer and real kinds are the same.
+   
+   The seed can optionally be observed or specified by the user.
+}
+
+\title{Pseudo-random number generator}
+\author{
+   Jonathan Hogg (STFC Rutherford Appleton Laboratory) \\
+}
+\pkglang{Fortran}
+\spralmaketitle
+\thispagestyle{firststyle}
+
+\section*{Major version history}
+\begin{description}
+\item[2014-04-07 Version 1.0.0] Initial release
+\end{description}
+
+%%%%%%%%%%%%%%%%%%%%%% installation %%%%%%%%%%%%%%%%%%%%%%
+
+\section{Installation}
+Please see the SPRAL install documentation.
+
+%%%%%%%%%%%%%%%%%%%%%% how to use %%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Usage overview}
+
+\subsection{Calling sequences}
+
+Access to the package requires a {\tt USE} statement \\ \\
+\indent\hspace{8mm}{\tt use spral\_random} \\
+
+\medskip
+
+\noindent
+The following procedures are available to the user:
+\begin{itemize}
+\item {\tt random\_real()} generates a random number $\mathrm{Unif}(-1,1)$ or
+   $\mathrm{Unif}(0,1)$.
+\item {\tt random\_integer()} generates a random integer in $\mathrm{Unif}(1,n)$.
+\item {\tt random\_logical()} generates a random boolean value.
+\item {\tt random\_get\_seed()} returns the current random seed to the user.
+\item {\tt random\_set\_seed()} sets the current random seed.
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%% derived types %%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Derived types} \label{derived types}
+
+The user must employ the derived type {\tt random\_state} defined by the
+package to store the state. 
+The following pseudo-code illustrates how to declare a scalar of this type.
+\begin{verbatim}
+      use spral_random
+      ...
+      type (random_state) :: state
+      ...
+\end{verbatim}
+The components of {\tt random\_state} are not available to the user, but
+may be examined and altered through calls to {\tt random\_get\_seed()} and
+{\tt random\_set\_seed()} respectively.
+
+\subsection{Optional arguments}\label{Optional arguments}
+
+We use square brackets {\tt [ ]} to indicate {\it optional} arguments.
+In each
+call, optional arguments appear last in argument list.  Since we
+reserve the right to add additional optional arguments in future
+releases of the code, {\bf we strongly recommend that all optional
+arguments be called by keyword, not by position}.
+
+\subsection{Integer, real and package types}\label{Integer kinds}
+
+{\tt INTEGER} denotes default {\tt INTEGER} and
+{\tt INTEGER(long)} denotes {\tt INTEGER(kind=selected\_int\_kind(18))}.
+
+\noindent
+{\tt REAL} denotes double precision real.
+We also use the term {\bf package type} to mean the same.
+
+%%%%%%%%%%%%%%%%%%%%%% argument lists %%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Random Generation Subroutines}
+
+%%%%%%%%% analyse subroutine %%%%%%
+
+\subsection{\texttt{random\_real()}}
+
+\textbf{\noindent
+   To generate a random number uniformally at random from the interval $(-1,1)$ or $(0,1)$,
+   \vspace*{0.1cm} \\
+   \texttt{ \hspace*{0.2cm}
+      sample = random\_real(state[, positive])
+   }
+   \vspace{0.3cm}
+}
+
+\noindent
+The function returns a scalar value {\tt sample} of type {\tt REAL} that is a
+sample from $\mathrm{Unif}(0,1)$ if {\tt positive} is present with the value
+{\tt .true.} or from $\mathrm{Unif}(-1,1)$ otherwise.
+
+\begin{description}
+
+\item[\texttt{state}] is an \intentinout\ scalar of
+type  {\tt random\_state}. It contains the current state of the random number
+generator, and need not be initialized by the user.
+
+\item[\texttt{positive}] is an optional \intentin\ scalar of type {\tt LOGICAL}.
+   If present with the value {\tt .true.}, the sample will be returned from
+   the interval $(0,1)$. Otherwise, the sample will be returned from the
+   interval $(-1,1)$.
+
+\end{description}
+
+\subsection{\texttt{random\_integer()}}
+
+\textbf{\noindent
+   To generate an integer uniformally at random from the interval $[1,n]$,
+   \vspace*{0.1cm} \\
+   \texttt{ \hspace*{0.2cm}
+      sample = random\_integer(state, n)
+   }
+   \vspace{0.3cm}
+}
+
+\noindent
+The function returns a scalar value {\tt sample} of type {\tt INTEGER} that is a
+sample from $\mathrm{Unif}{1, \ldots, n}$.
+
+\begin{description}
+
+\item[\texttt{state}] is an \intentinout\ scalar of
+type  {\tt random\_state}. It contains the current state of the random number
+generator, and need not be initialized by the user.
+
+\item[\texttt{n}] is an optional \intentin\ scalar of type {\tt INTEGER}.
+   It specifies the maximum value that sample may take.
+
+\end{description}
+
+\subsection{\texttt{random\_logical()}}
+
+\textbf{\noindent
+   To generate a logical from $B(1,0.5)$,
+   \vspace*{0.1cm} \\
+   \texttt{ \hspace*{0.2cm}
+      sample = random\_logical(state)
+   }
+   \vspace{0.3cm}
+}
+
+\noindent
+The function returns a scalar value {\tt sample} of type {\tt LOGICAL} that is a
+sample from $B(1,0.5)$, i.e. has an equal probability of being {\tt .true.} or
+{\tt .false.}.
+
+\begin{description}
+
+\item[\texttt{state}] is an \intentinout\ scalar of
+type  {\tt random\_state}. It contains the current state of the random number
+generator, and need not be initialized by the user.
+
+\end{description}
+
+\section{Seed control subroutines}
+
+\subsection{\texttt{random\_get\_seed()}}
+
+\textbf{\noindent
+   To obtain the current random seed,
+   \vspace*{0.1cm} \\
+   \texttt{ \hspace*{0.2cm}
+      seed = random\_get\_seed(state)
+   }
+   \vspace{0.3cm}
+}
+
+\noindent
+The function returns a scalar value {\tt seed} of type {\tt INTEGER} that is the
+current seed stored in {\tt state}. The stream of random numbers generated after
+this call can be reproduced through the same sequence of calls after {\tt seed}
+has been passed to {\tt random\_set\_seed()}.
+
+\begin{description}
+
+\item[\texttt{state}] is an \intentin\ scalar of
+type  {\tt random\_state}. It contains the current state of the random number
+generator, and need not be initialized by the user.
+
+\end{description}
+
+\subsection{\texttt{random\_set\_seed()}}
+
+\textbf{\noindent
+   To set the current random seed,
+   \vspace*{0.1cm} \\
+   \texttt{ \hspace*{0.2cm}
+      call random\_get\_seed(state, seed)
+   }
+   \vspace{0.3cm}
+}
+
+\begin{description}
+
+\item[\texttt{state}] is an \intentinout\ scalar of type {\tt random\_state} to
+   be reinitialized with the specified seed.
+
+\item[\texttt{seed}] is an \intentin\ scalar of type {\tt INTEGER} that
+   specifies the new seed.
+
+\end{description}
+
+\section{Method} \label{method}
+
+\subsection{PRNG}
+We use a linear congruential generator of the following form:
+$$
+   X_{n+1} = (aX_n + c) \mathrm{mod} m
+$$
+with the following constants
+\begin{eqnarray*}
+   a &=& 1103515245, \\
+   c &=& 12345, \\
+   m &=& 2^{31}.
+\end{eqnarray*}
+According to Wikipedia, this is the same as used in glibc.
+
+The LCG is evolved before each sample is taken, and the sample is based on the
+new value.
+
+The routines {\tt random\_get\_seed()} and {\tt random\_set\_seed()} allow the user to get and set the current value of $X_n$. The default seed, $X_0 = 486502$.
+
+\subsection{\tt random\_real()}
+If {\tt positive} is present with value {\tt .true.}, a sample from $\mathrm{Unif}(0,1)$ is generated as
+$$
+   \frac{\texttt{real}(X_n)}{\texttt{real}(m)},
+$$
+otherwise, a sample from $\mathrm{Unif}(-1,1)$ is generated as
+$$
+   1 - \frac{\texttt{real}(2X_n)}{\texttt{real}(m)}.
+$$
+
+\subsection{\tt random\_int()}
+A random sample from the discrete distribution $\mathrm{Unif}{1, \ldots, n}$ is
+generated as
+$$
+   \texttt{int}\left( X_n \frac{\texttt{real}(n)}{\texttt{real}(m)} \right) + 1.
+$$
+
+\subsection{\tt random\_logical()}
+A random logical value is generated by evaluating the expression
+$$
+\tt \left(1\ .eq.\ random\_integer(state, 2)\right).
+$$
+
+
+%%%%%%%%%%%%%%%%%%%%%% EXAMPLE %%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Example} \label{examples}
+
+The following example code:
+\verbatiminput{../examples/Fortran/random.f90}
+Produces the following output:
+\begin{verbatim}
+\end{verbatim}

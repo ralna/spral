@@ -76,6 +76,11 @@ tests/random_matrix.$(OBJEXT): libspral.a
 examples/Fortran/random_matrix.$(OBJEXT): libspral.a
 TESTS += random_matrix_test
 
+# Random (no test code as too simple)
+check_PROGRAMS += examples/Fortran/random
+examples_Fortran_random_SOURCES = examples/Fortran/random.f90
+examples/Fortran/random.$(OBJEXT): libspral.a
+
 # Automake doesn't know much about modules, so get rid of them ourself
 clean-local:
 	-rm *.mod
