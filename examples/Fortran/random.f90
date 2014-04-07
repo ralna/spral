@@ -9,18 +9,22 @@ program random_example
    seed = random_get_seed(state)
 
    ! Generate some random values
-   print *, "Sample Unif(-1,1)       = ", random_real(state)
-   print *, "Sample Unif(0,1)        = ", random_real(state, positive=.true.)
-   print *, "Sample Unif(1, ..., 20) = ", random_integer(state, 20)
-   print *, "Sample B(1,0.5)         = ", random_logical(state)
+   write(*,"(a)") "Some random values"
+   write(*,"(a,f16.12)") "Sample Unif(-1,1)       = ", random_real(state)
+   write(*,"(a,f16.12)") "Sample Unif(0,1)        = ", &
+      random_real(state, positive=.true.)
+   write(*,"(a,i16)") "Sample Unif(1, ..., 20) = ", random_integer(state, 20)
+   write(*,"(a,l16)") "Sample B(1,0.5)         = ", random_logical(state)
 
    ! Restore initial seed
    call random_set_seed(state, seed)
 
    ! Generate the same random values
-   print *, "Sample Unif(-1,1)       = ", random_real(state)
-   print *, "Sample Unif(0,1)        = ", random_real(state, positive=.true.)
-   print *, "Sample Unif(1, ..., 20) = ", random_integer(state, 20)
-   print *, "Sample B(1,0.5)         = ", random_logical(state)
+   write(*,"(/a)") "The same random values again"
+   write(*,"(a,f16.12)") "Sample Unif(-1,1)       = ", random_real(state)
+   write(*,"(a,f16.12)") "Sample Unif(0,1)        = ", &
+      random_real(state, positive=.true.)
+   write(*,"(a,i16)") "Sample Unif(1, ..., 20) = ", random_integer(state, 20)
+   write(*,"(a,l16)") "Sample B(1,0.5)         = ", random_logical(state)
 
 end program random_example
