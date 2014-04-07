@@ -67,24 +67,28 @@
 \newcommand{\intentinout}{\texttt{INTENT(INOUT)}}
 \newcommand{\intentout}{\texttt{INTENT(OUT)}}
 
-% Redefine \maketitle
+% Define our own \maketitle to avoid multiple call issues
 \makeatletter
-\renewcommand{\maketitle}{
-   \HCode{\Hnewline<h2 class="pkgName">\libraryname_\thepackagename <span class="pkgVersion">v\theversion</span></h2>\Hnewline}
-   \@title
+\newcommand{\spralmaketitle}{
+   \HCode{<div class="maketitle">\Hnewline}
+   \HCode{\Hnewline<h2 class="pkgName">}\libraryname\_\thepackagename\HCode{<span class="pkgVersion">}v\theversion\HCode{</span></h2>\Hnewline}
+   \HCode{<h2 class="titleHead">}
+      \@title
+   \HCode{</h2>\Hnewline}
    \HCode{<span class="pkgLang">}
       \thepkglang\ User Guide
    \HCode{</span> <br />\Hnewline}
    \HCode{<div class="pkgPurpose">\Hnewline}
       \thepurpose
    \HCode{\Hnewline</div> <!-- pkgPurpose -->\Hnewline}
-   \@author
+   \HCode{<div class="author">}
+      \@author
+   \HCode{</div>\Hnewline}
+   \HCode{</div>\Hnewline}
 }
 \makeatother
 
 % Installation instruction need special maketitle alternative
-% As not replacing \maketitle directly, need to manually add divs and classes
-% that are automatically there for \maketitle
 \makeatletter
 \newcommand{\makeinstalltitle}{
    \HCode{<div class="maketitle">\Hnewline}

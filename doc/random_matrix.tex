@@ -12,7 +12,7 @@ row indices can be sorted within columns.
 \title{Generator of random sparse matrices}
 \author{Jonathan Hogg (STFC Rutherford Appleton Laboratory)}
 \pkglang{Fortran}
-\maketitle
+\spralmaketitle
 \thispagestyle{firststyle}
 
 \versionhistory
@@ -20,9 +20,14 @@ row indices can be sorted within columns.
 \item[2014-03-06 Version 1.0.0] Initial release
 \end{description}
 
-%%%%%%%%%%%%%%%%%%%%%% HOW TO USE %%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%% installation %%%%%%%%%%%%%%%%%%%%%%
 
-\section{How to use this package}
+\section{Installation}
+Please see the SPRAL install documentation.
+
+%%%%%%%%%%%%%%%%%%%%%% how to use %%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Usage overview}
 
 \subsection{Calling sequences}
 
@@ -34,8 +39,8 @@ Access to the package requires a {\tt USE} statement:
 \noindent
 The following procedure is available to the user:
 \begin{itemize}
-\item {\tt generate\_matrix} generates a random matrix to the supplied
-specification.
+   \item {\tt random\_matrix\_generate()} generates a random matrix to the
+      supplied specification.
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%% derived types %%%%%%%%%%%%%%%%%%%%%%%%
@@ -55,11 +60,7 @@ Further details are given in the documentation for the \texttt{spral\_random}
 module. The user may wish to use the routines \texttt{get\_random\_seed()} and
 \texttt{set\_random\_seed()} to control the matrix generated.
 
-%%%%%%%%%%%%%%%%%%%%%% argument lists %%%%%%%%%%%%%%%%%%%%%%%%
-
-\subsection{Argument lists}
-
-\subsubsection{Optional arguments}\label{Optional arguments}
+\subsection{Optional arguments}\label{Optional arguments}
 
 We use square brackets {\tt [ ]} to indicate {\it optional} arguments.
 In each
@@ -68,21 +69,24 @@ reserve the right to add additional optional arguments in future
 releases of the code, {\bf we strongly recommend that all optional
 arguments be called by keyword, not by position}.
 
-%%%%%%%%% generate_random_matrix() %%%%%%
+%%%%%%%%%%%%%%%%%%%%%% argument lists %%%%%%%%%%%%%%%%%%%%%%%%
 
-\subsubsection{To generate a random matrix}
+\section{Subroutines}
 
-The following routine generates an $\texttt{m}\times \texttt{n}$ random matrix
-with \texttt{nnz} non-zero entries. If \texttt{matrix\_type} specifies a
-symmetric or skew symmetric matrix, only the lower half matrix will be returned
-to the user.
+\subsection{\texttt{random\_matrix\_generate()}}
+\textbf{
+   To generate an $\texttt{m}\times \texttt{n}$ random matrix with \texttt{nnz}
+   non-zero entries,
+   \vspace*{0.1cm} \\
+   \texttt{ \hspace*{0.2cm}
+      call random\_matrix\_generate(state, matrix\_type, m, n, nnz, ptr, row, flag[, stat, val, nonsingular, sort])
+   }
+}
 
 \noindent
-A call of the following form should be made:
-\begin{verbatim}
-   call generate_random_matrix(state, matrix_type, m, n, nnz, ptr, row, flag[, stat, val,
-      nonsingular, sort])
-\end{verbatim}
+If \texttt{matrix\_type} specifies a
+symmetric or skew symmetric matrix, only the lower half matrix will be returned
+to the user.
 
 \vspace*{-3mm}
 \begin{description}
@@ -120,11 +124,11 @@ It is used as the state of the pseudo-random number generator used.
    specifies the number of non-zeroes in the matrix.
 {\bf Restriction:} {\tt nnz$\geq$0} (and \texttt{nnz}$\geq\min(\texttt{m},\texttt{n})$ if non-singularity requested, or positive-definite).
 
-\item[\texttt{ptr}] is an \intentout\ rank-1 array of type default {\tt INTEGER}
-   and size {\tt n+1}. On exit, {\tt ptr(j)} specifies the position in {\tt row}
+\item[\texttt{ptr(:)}] is an \intentout\ array of type default {\tt INTEGER}
+   and size {\tt n+1}. On exit, {\tt ptr(j)} specifies the position in {\tt row(:)}
    of the first entry in column {\tt j} and {\tt ptr(n+1)$=$nnz+1}.
 
-\item[\texttt{row}] is an \intentout\ rank-1 array of type default {\tt INTEGER}
+\item[\texttt{row(:)}] is an \intentout\ array of type default {\tt INTEGER}
    and size {\tt nnz}. On exit, {\tt row(j)} specifies the row to which the
    {\tt j}-th entry belongs.
 
@@ -138,7 +142,7 @@ It is used as the state of the pseudo-random number generator used.
    if \texttt{flag} indicates an allocation failure, it returns further
    information on the failure.
 
-\item[\texttt{val}] is an optional \intentout\ rank-1 array of type
+\item[\texttt{val(:)}] is an optional \intentout\ array of type
    {\tt REAL(wp)} and size \texttt{nnz}. On exit, \texttt{val(j)} gives
    the value of the \texttt{j}-th entry. Entries are generated from a uniform
    distribution on the interval $[-1,1]$. In the positive-definite case only,
@@ -235,7 +239,7 @@ program random_matrix_example
    write(*, "(a,i3,a,i3,a,i3,a)") &
       "Generating a ", m, " x", n, " non-singular matrix with ", nnz, &
       " non-zeroes"
-   call generate_random_matrix(state, 0, m, n, nnz, ptr, row, flag, val=val, &
+   call random_matrix_generate(state, 0, m, n, nnz, ptr, row, flag, val=val, &
       nonsingular=.true.)
 
    write(*, "(a)") "Generated matrix:"

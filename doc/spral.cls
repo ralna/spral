@@ -92,13 +92,13 @@
 \newcommand{\intentinout}{\texttt{INTENT(INOUT)}}
 \newcommand{\intentout}{\texttt{INTENT(OUT)}}
 
-% Redefine \maketitle
+% Define our own \maketitle to avoid multiple call issues
 \makeatletter
 \newcommand{\thepkglang}{}
 \newcommand{\pkglang}[1]{
    \renewcommand{\thepkglang}{#1}
 }
-\def\@maketitle{
+\newcommand{\spralmaketitle}{
    \pgfimage[height=1cm]{stfc}
    \hfill
    {\Huge \bfseries \textcolor{stfcblue}{\libraryname}}
