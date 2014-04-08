@@ -2,6 +2,7 @@ program run_prob
    use spral_rutherford_boeing
    use spral_ssids
    use spral_matrix_util, only : cscl_verify, SPRAL_MATRIX_REAL_SYM_INDEF
+   use spral_scaling
    use iso_c_binding
    implicit none
 
@@ -21,7 +22,7 @@ program run_prob
    type(ssids_options) :: options
    integer :: cuda_error
    double precision, dimension(:, :), allocatable :: rhs, soln
-   double precision, dimension(:), allocatable :: res
+   double precision, dimension(:), allocatable :: res, scaling
 
    integer :: i, j, k, r
 
@@ -42,21 +43,11 @@ program run_prob
    
    integer :: nrhs
    
-   logical :: pos_def
-
-   !options%u = 1e-8
-   !options%scaling = 1
-   !options%small = 1e-18
-   !options%nemin=1
-
-   !options%scaling = 1 ! MC64
-   !options%scaling = 2 ! Auction
-   options%ordering = 1 ! MeTiS
+   logical :: pos_def, time_scaling
 
    options%use_gpu_solve = .true.
-!   options%use_gpu_solve = .false.
 
-   call proc_args(options, pos_def, nrhs)
+   call proc_args(options, pos_def, nrhs, time_scaling)
    if ( nrhs < 1 ) stop
 
    ! Read in a matrix
@@ -68,9 +59,6 @@ program run_prob
       stop
    endif
    write(*, "(a)") "ok"
-   
-   !call writePGM("matrix.pgm", n, ptr, row, rperm=order, &
-   !   cperm=order)
 
    ! Make up a rhs
    allocate(rhs(n, nrhs), soln(n, nrhs))
@@ -114,13 +102,22 @@ program run_prob
    smaflop = real(inform%num_flops)
    smafact = real(inform%num_factor)
 
-   write(*, "(a)") "ok"
+   if(time_scaling .and. options%scaling.ne.0) then
+      allocate(scaling(n))
+      call do_timed_scaling(n, ptr, row, val, scaling)
+      options%scaling = 0 ! We will user-supply
+   endif
 
    write(*, "(a)") "Factorize..."
    call system_clock(start_t, rate_t)
    do i = 1, nfact
-      call ssids_factor(pos_def, val, akeep, fkeep, &
-         options, inform, ptr=ptr, row=row)
+      if(allocated(scaling)) then
+         call ssids_factor(pos_def, val, akeep, fkeep, &
+            options, inform, ptr=ptr, row=row, scale=scaling)
+      else
+         call ssids_factor(pos_def, val, akeep, fkeep, &
+            options, inform, ptr=ptr, row=row)
+      endif
    end do
    call system_clock(stop_t)
    if (inform%flag < 0) then
@@ -171,18 +168,22 @@ program run_prob
 
 contains
 
-   subroutine proc_args(options, pos_def, nrhs)
+   subroutine proc_args(options, pos_def, nrhs, time_scaling)
       type(ssids_options), intent(inout) :: options
       logical, intent(out) :: pos_def
       integer, intent(out) :: nrhs
+      logical, intent(out) :: time_scaling
 
       integer :: argnum, narg
       integer :: i
       character(len=200) :: argval
       
+      ! Defaults
       nrhs = 1
       pos_def = .false.
+      time_scaling = .false.
 
+      ! Process args
       narg = command_argument_count()
       argnum = 1
       do while(argnum <= narg)
@@ -203,6 +204,8 @@ contains
             print *, 'Matrix assumed positive definite'
          case("--presolve")
             options%presolve = 1
+         case("--time-scaling")
+            time_scaling = .true.
          case("--timing")
             call get_command_argument(argnum, argval)
             argnum = argnum + 1
@@ -223,6 +226,58 @@ contains
          end select
       end do
    end subroutine proc_args
+
+   subroutine do_timed_scaling(n, ptr, row, val, scaling)
+      integer, intent(in) :: n
+      integer, dimension(n+1), intent(in) :: ptr
+      integer, dimension(ptr(n+1)-1), intent(in) :: row
+      real(wp), dimension(ptr(n+1)-1), intent(in) :: val
+      real(wp), dimension(n), intent(out) :: scaling
+
+      integer :: i, st, flag
+      integer, dimension(:), allocatable :: invp
+      logical :: sing
+      type(auction_inform) :: ainform
+
+      write(*, "(a)") "Scaling..."
+
+      ! Set invp to be identity
+      allocate(invp(n))
+      do i = 1, n
+         invp(i) = i
+      end do
+
+      call system_clock(start_t, rate_t)
+      ! Note: we assume no checking required
+      select case(options%scaling)
+      case(1) ! Hungarian algorithm
+         call hungarian_scale(n, ptr, row, val, scaling, invp, st, .true., &
+            sing)
+         if(st.ne.0) then
+            print *, "Stat error from hungarian_scale()"
+            stop
+         endif
+      case(2) ! Auction algorithm
+         call auction_scale(n, ptr, row, val, invp, scaling, options%auction, &
+            ainform, flag, st)
+         if(flag.ne.0) then
+            print *, "Error from auction_scale() flag = ", flag
+            stop
+         endif
+      case(3) ! From ordering
+         print *, "--time-scaling not supported with matching-based ordering"
+         stop
+      case(4) ! MC77-like
+         call equilib_scale(n, invp, ptr, row, val, scaling, st)
+         if(st.ne.0) then
+            print *, "Stat error from equilib_scale()"
+            stop
+         endif
+      end select
+      call system_clock(stop_t)
+      write(*, "(a)") "ok"
+      print *, "Solve took ", (stop_t - start_t)/real(rate_t)
+   end subroutine do_timed_scaling
 
    subroutine internal_calc_norm(n, ptr, row, val, x_vec, b_vec, nrhs, res)
       integer, intent(in) :: n
