@@ -84,7 +84,10 @@ contains
    end subroutine copy_inform_out
 end module spral_ssids_ciface
 
-subroutine spral_ssids_default_options(coptions)
+subroutine spral_ssids_default_options(coptions) bind(C)
+   use spral_ssids_ciface
+   implicit none
+
    type(spral_ssids_options), intent(out) :: coptions
 
    type(ssids_options) :: default_options
@@ -117,7 +120,7 @@ subroutine spral_ssids_analyse(ccheck, n, corder, cptr, crow, cval, cakeep, &
    type(C_PTR), value :: cval
    type(C_PTR), intent(inout) :: cakeep
    type(spral_ssids_options), intent(in) :: coptions
-   type(spral_ssids_inform), intent(in) :: cinform
+   type(spral_ssids_inform), intent(out) :: cinform
 
    integer(C_INT), dimension(:), pointer :: fptr
    integer(C_INT), dimension(:), allocatable, target :: fptr_alloc
@@ -204,7 +207,7 @@ subroutine spral_ssids_analyse_coord(n, corder, ne, crow, ccol, cval, cakeep, &
    type(C_PTR), value :: cval
    type(C_PTR), intent(inout) :: cakeep
    type(spral_ssids_options), intent(in) :: coptions
-   type(spral_ssids_inform), intent(in) :: cinform
+   type(spral_ssids_inform), intent(out) :: cinform
 
    integer(C_INT), dimension(:), pointer :: frow
    integer(C_INT), dimension(:), allocatable, target :: frow_alloc
@@ -298,7 +301,7 @@ subroutine spral_ssids_factor(cposdef, cptr, crow, val, cscale, cakeep, cfkeep,&
    integer(C_INT), dimension(:), allocatable, target :: frow_alloc
    real(C_DOUBLE), dimension(:), pointer :: fscale
    type(ssids_akeep), pointer :: fakeep
-   type(ssids_akeep), pointer :: ffkeep
+   type(ssids_fkeep), pointer :: ffkeep
    type(ssids_options) :: foptions
    type(ssids_inform) :: finform
 
@@ -309,16 +312,17 @@ subroutine spral_ssids_factor(cposdef, cptr, crow, val, cscale, cakeep, cfkeep,&
 
    ! Translate arguments
    fposdef = cposdef
+   call C_F_POINTER(cakeep, fakeep) ! Pulled forward so we can use it
    if(C_ASSOCIATED(cptr) .and. C_ASSOCIATED(crow)) then
-      call C_F_POINTER(cptr, fptr, shape=(/ n+1 /))
+      call C_F_POINTER(cptr, fptr, shape=(/ fakeep%n+1 /))
       if(.not.cindexed) then
-         allocate(fptr_alloc(n+1))
+         allocate(fptr_alloc(fakeep%n+1))
          fptr_alloc(:) = fptr(:) + 1
          fptr => fptr_alloc
       endif
-      call C_F_POINTER(crow, frow, shape=(/ fptr(n+1)-1 /))
+      call C_F_POINTER(crow, frow, shape=(/ fptr(fakeep%n+1)-1 /))
       if(.not.cindexed) then
-         allocate(frow_alloc(n+1))
+         allocate(frow_alloc(fakeep%n+1))
          frow_alloc(:) = frow(:) + 1
          frow => frow_alloc
       endif
@@ -327,11 +331,10 @@ subroutine spral_ssids_factor(cposdef, cptr, crow, val, cscale, cakeep, cfkeep,&
       nullify(frow)
    endif
    if(C_ASSOCIATED(cscale)) then
-      call C_F_POINTER(cscale, fscale, shape=(/ n /))
+      call C_F_POINTER(cscale, fscale, shape=(/ fakeep%n /))
    else
       nullify(fscale)
    endif
-   call C_F_POINTER(cakeep, fakeep)
    if(C_ASSOCIATED(cfkeep)) then
       ! Reuse old pointer
       call C_F_POINTER(cfkeep, ffkeep)
@@ -363,22 +366,25 @@ subroutine spral_ssids_factor(cposdef, cptr, crow, val, cscale, cakeep, cfkeep,&
    call copy_inform_out(finform, cinform)
 end subroutine spral_ssids_factor
 
-subroutine spral_ssids_solve1(job, x1, cakeep, cfkeep, coptions, cinform) &
+subroutine spral_ssids_solve1(job, cx1, cakeep, cfkeep, coptions, cinform) &
       bind(C)
    use spral_ssids_ciface
    implicit none
 
    integer(C_INT), value :: job
-   real(C_DOUBLE), dimension(*), intent(in) :: x1
+   type(C_PTR), value :: cx1
    type(C_PTR), value :: cakeep
    type(C_PTR), value :: cfkeep
    type(spral_ssids_options), intent(in) :: coptions
    type(spral_ssids_inform), intent(out) :: cinform
 
+   real(C_DOUBLE), dimension(:), pointer :: fx1
    type(ssids_akeep), pointer :: fakeep
-   type(ssids_akeep), pointer :: ffkeep
+   type(ssids_fkeep), pointer :: ffkeep
    type(ssids_options) :: foptions
    type(ssids_inform) :: finform
+
+   logical :: cindexed
 
    ! Copy options in first to find out whether we use Fortran or C indexing
    call copy_options_in(coptions, foptions, cindexed)
@@ -386,42 +392,52 @@ subroutine spral_ssids_solve1(job, x1, cakeep, cfkeep, coptions, cinform) &
    ! Translate arguments
    call C_F_POINTER(cakeep, fakeep)
    call C_F_POINTER(cfkeep, ffkeep)
+   call C_F_POINTER(cx1, fx1, shape=(/ fakeep%n /))
 
    ! Call Fortran routine
-   call ssids_solve(x1, fakeep, ffkeep, foptions, finform, job=job)
+   if(job.eq.0) then
+      ! Note: job=0 is an out of range value (but is valid internally!)
+      call ssids_solve(fx1, fakeep, ffkeep, foptions, finform)
+   else
+      call ssids_solve(fx1, fakeep, ffkeep, foptions, finform, job=job)
+   endif
 
    ! Copy arguments out
    call copy_inform_out(finform, cinform)
 end subroutine spral_ssids_solve1
 
-subroutine spral_ssids_solve(job, nrhs, x, ldx, cakeep, cfkeep, coptions, &
+subroutine spral_ssids_solve(job, nrhs, cx, ldx, cakeep, cfkeep, coptions, &
       cinform) bind(C)
    use spral_ssids_ciface
    implicit none
 
    integer(C_INT), value :: job
    integer(C_INT), value :: nrhs
-   real(C_DOUBLE), dimension(*), intent(in) :: x
+   type(C_PTR), value :: cx
    integer(C_INT), value :: ldx
    type(C_PTR), value :: cakeep
    type(C_PTR), value :: cfkeep
    type(spral_ssids_options), intent(in) :: coptions
    type(spral_ssids_inform), intent(out) :: cinform
 
+   real(C_DOUBLE), dimension(:,:), pointer :: fx
    type(ssids_akeep), pointer :: fakeep
-   type(ssids_akeep), pointer :: ffkeep
+   type(ssids_fkeep), pointer :: ffkeep
    type(ssids_options) :: foptions
    type(ssids_inform) :: finform
+
+   logical :: cindexed
 
    ! Copy options in first to find out whether we use Fortran or C indexing
    call copy_options_in(coptions, foptions, cindexed)
 
    ! Translate arguments
+   call C_F_POINTER(cx, fx, shape=(/ ldx,nrhs /))
    call C_F_POINTER(cakeep, fakeep)
    call C_F_POINTER(cfkeep, ffkeep)
 
    ! Call Fortran routine
-   call ssids_solve(nrhs, x, ldx, fakeep, ffkeep, foptions, finform, job=job)
+   call ssids_solve(nrhs, fx, ldx, fakeep, ffkeep, foptions, finform, job=job)
 
    ! Copy arguments out
    call copy_inform_out(finform, cinform)
@@ -441,9 +457,9 @@ integer(C_INT) function spral_ssids_free_akeep(cakeep) bind(C)
       return
    endif
 
-   call C_F_POINTER(cakeep)
-   call ssids_free(cakeep, spral_ssids_free_akeep)
-   deallocate(cakeep)
+   call C_F_POINTER(cakeep, fakeep)
+   call ssids_free(fakeep, spral_ssids_free_akeep)
+   deallocate(fakeep)
    cakeep = C_NULL_PTR
 end function spral_ssids_free_akeep
 
@@ -461,9 +477,9 @@ integer(C_INT) function spral_ssids_free_fkeep(cfkeep) bind(C)
       return
    endif
 
-   call C_F_POINTER(cfkeep)
-   call ssids_free(cfkeep, spral_ssids_free_fkeep)
-   deallocate(cfkeep)
+   call C_F_POINTER(cfkeep, ffkeep)
+   call ssids_free(ffkeep, spral_ssids_free_fkeep)
+   deallocate(ffkeep)
    cfkeep = C_NULL_PTR
 end function spral_ssids_free_fkeep
 
@@ -474,10 +490,23 @@ integer(C_INT) function spral_ssids_free(cakeep, cfkeep) bind(C)
    type(C_PTR), intent(inout) :: cakeep
    type(C_PTR), intent(inout) :: cfkeep
 
+   interface
+      integer(C_INT) function spral_ssids_free_akeep(cakeep) bind(C)
+         use iso_c_binding
+         implicit none
+         type(C_PTR), intent(inout) :: cakeep
+      end function spral_ssids_free_akeep
+      integer(C_INT) function spral_ssids_free_fkeep(cfkeep) bind(C)
+         use iso_c_binding
+         implicit none
+         type(C_PTR), intent(inout) :: cfkeep
+      end function spral_ssids_free_fkeep
+   end interface
+
    spral_ssids_free = spral_ssids_free_akeep(cakeep)
    if(spral_ssids_free.ne.0) return
    spral_ssids_free = spral_ssids_free_fkeep(cfkeep)
-end function spral_ssids_free_fkeep
+end function spral_ssids_free
 
 subroutine spral_ssids_enquire_posdef() bind(C)
    use spral_ssids_ciface

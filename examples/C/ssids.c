@@ -1,6 +1,8 @@
 /* examples/C/ssids.c - simple code to illustrate use of SSIDS */
 
 #include "spral.h"
+#include <stdlib.h>
+#include <stdio.h>
 
 void main(void) {
    /* Derived types */
@@ -29,26 +31,27 @@ void main(void) {
 
    /* Perform analyse and factorise with data checking */
    bool check = true;
-   ssids_analyse(check, n, NULL, ptr, row, NULL, &akeep, &options, &inform);
-   if(inform.flag<0) {
-      ssids_free(&akeep, &fkeep);
-      exit(1);
-   }
-   ssids_factor(posdef, NULL, NULL, val, NULL, akeep, &fkeep, &options,
+   spral_ssids_analyse(check, n, NULL, ptr, row, NULL, &akeep, &options,
          &inform);
    if(inform.flag<0) {
-      ssids_free(&akeep, &fkeep);
+      spral_ssids_free(&akeep, &fkeep);
+      exit(1);
+   }
+   spral_ssids_factor(posdef, NULL, NULL, val, NULL, akeep, &fkeep, &options,
+         &inform);
+   if(inform.flag<0) {
+      spral_ssids_free(&akeep, &fkeep);
       exit(1);
    }
 
    /* Solve */
-   call ssids_solve(x,akeep,fkeep,options,inform)
+   spral_ssids_solve1(0, x, akeep, fkeep, &options, &inform);
    if(inform.flag<0) {
-      ssids_free(&akeep, &fkeep);
+      spral_ssids_free(&akeep, &fkeep);
       exit(1);
    }
    printf("The computed solution is:\n");
-   for(int i=0; i<n; i++) printf(" %18.10e") x[i];
+   for(int i=0; i<n; i++) printf(" %18.10e", x[i]);
    printf("\n");
 
    /* Determine and print the pivot order */
@@ -56,6 +59,6 @@ void main(void) {
    call ssids_enquire_indef(akeep, fkeep, options, inform, piv_order=piv_order)
    write(*,"(a,10i5)") ' Pivot order:', piv_order(1:n)*/
 
-   int cuda_error = ssids_free(akeep, fkeep);
+   int cuda_error = spral_ssids_free(akeep, fkeep);
    if(cuda_error!=0) exit(1);
 }

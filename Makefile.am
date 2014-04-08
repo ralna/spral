@@ -12,7 +12,7 @@ NVCCLINK = \
 	$(NVCC) $(NVCC_FLAGS) $(AM_NVCC_FLAGS) -dc -o $@ $<
 
 # Include directory for standard C
-AM_CFLAGS = -Iinclude
+AM_CFLAGS = -Iinclude -std=c99
 
 # FIXME: make below configurable
 LDADD = -L. -lspral $(METIS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FCLIBS) -lrt
@@ -122,15 +122,22 @@ spral_ssids_SOURCES = \
 	driver/spral_ssids.f90
 spral_ssids_LINK = $(NVCCLINK)
 spral_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
-check_PROGRAMS += ssids_test examples/Fortran/ssids
+check_PROGRAMS += \
+	ssids_test \
+	examples/Fortran/ssids \
+	examples/C/ssids
 ssids_test_SOURCES = tests/ssids.f90
 ssids_test_LINK = $(NVCCLINK)
 ssids_test_LDADD = $(LDADD) $(CUDA_LIBS)
 examples_Fortran_ssids_SOURCES = examples/Fortran/ssids.f90
 examples_Fortran_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
 examples_Fortran_ssids_LINK = $(NVCCLINK)
-tests/ssids.$(OBJEXT): libspral.a
 examples/Fortran/ssids.$(OBJEXT): libspral.a
+examples_C_ssids_SOURCES = examples/C/ssids.c
+examples_C_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
+examples_C_ssids_LINK = $(NVCCLINK)
+tests/ssids.$(OBJEXT): libspral.a
+examples/C/ssids.$(OBJEXT): libspral.a
 TESTS += ssids_test
 endif
 
