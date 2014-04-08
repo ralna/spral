@@ -55,10 +55,12 @@ void main(void) {
    printf("\n");
 
    /* Determine and print the pivot order */
-   /*int piv_order[5];
-   call ssids_enquire_indef(akeep, fkeep, options, inform, piv_order=piv_order)
-   write(*,"(a,10i5)") ' Pivot order:', piv_order(1:n)*/
+   int piv_order[5];
+   spral_ssids_enquire_indef(akeep, fkeep, &options, &inform, piv_order, NULL);
+   printf("Pivot order:");
+   for(int i=0; i<n; i++) printf(" %5d", piv_order[i]);
+   printf("\n");
 
-   int cuda_error = spral_ssids_free(akeep, fkeep);
+   int cuda_error = spral_ssids_free(&akeep, &fkeep);
    if(cuda_error!=0) exit(1);
 }

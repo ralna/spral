@@ -508,17 +508,127 @@ integer(C_INT) function spral_ssids_free(cakeep, cfkeep) bind(C)
    spral_ssids_free = spral_ssids_free_fkeep(cfkeep)
 end function spral_ssids_free
 
-subroutine spral_ssids_enquire_posdef() bind(C)
+subroutine spral_ssids_enquire_posdef(cakeep, cfkeep, coptions, cinform, d) &
+      bind(C)
    use spral_ssids_ciface
    implicit none
+
+   type(C_PTR), value :: cakeep
+   type(C_PTR), value :: cfkeep
+   type(spral_ssids_options), intent(in) :: coptions
+   type(spral_ssids_inform), intent(out) :: cinform
+   real(C_DOUBLE), dimension(*), intent(out) :: d
+
+   type(ssids_akeep), pointer :: fakeep
+   type(ssids_fkeep), pointer :: ffkeep
+   type(ssids_options) :: foptions
+   type(ssids_inform) :: finform
+
+   logical :: cindexed
+
+   ! Copy options in first to find out whether we use Fortran or C indexing
+   call copy_options_in(coptions, foptions, cindexed)
+
+   ! Translate arguments
+   call C_F_POINTER(cakeep, fakeep)
+   call C_F_POINTER(cfkeep, ffkeep)
+
+   ! Call Fortran routine
+   call ssids_enquire_posdef(fakeep, ffkeep, foptions, finform, d)
+
+   ! Copy arguments out
+   call copy_inform_out(finform, cinform)
 end subroutine spral_ssids_enquire_posdef
 
-subroutine spral_ssids_enquire_indef() bind(C)
+subroutine spral_ssids_enquire_indef(cakeep, cfkeep, coptions, cinform, &
+      cpiv_order, cd) bind(C)
    use spral_ssids_ciface
    implicit none
+
+   type(C_PTR), value :: cakeep
+   type(C_PTR), value :: cfkeep
+   type(spral_ssids_options), intent(in) :: coptions
+   type(spral_ssids_inform), intent(out) :: cinform
+   type(C_PTR), value :: cpiv_order
+   type(C_PTR), value :: cd
+
+   type(ssids_akeep), pointer :: fakeep
+   type(ssids_fkeep), pointer :: ffkeep
+   type(ssids_options) :: foptions
+   type(ssids_inform) :: finform
+   integer(C_INT), dimension(:), pointer :: fpiv_order
+   real(C_DOUBLE), dimension(:,:), pointer :: fd
+
+   logical :: cindexed
+
+   ! Copy options in first to find out whether we use Fortran or C indexing
+   call copy_options_in(coptions, foptions, cindexed)
+
+   ! Translate arguments
+   call C_F_POINTER(cakeep, fakeep)
+   call C_F_POINTER(cfkeep, ffkeep)
+   if(C_ASSOCIATED(cpiv_order)) then
+      call C_F_POINTER(cpiv_order, fpiv_order, shape=(/ fakeep%n /))
+   else
+      nullify(fpiv_order)
+   endif
+   if(C_ASSOCIATED(cd)) then
+      call C_F_POINTER(cd, fd, shape=(/ 2,fakeep%n /))
+   else
+      nullify(fd)
+   endif
+
+   ! Call Fortran routine
+   if(ASSOCIATED(fpiv_order)) then
+      if(ASSOCIATED(fd)) then
+         call ssids_enquire_indef(fakeep, ffkeep, foptions, finform, &
+            piv_order=fpiv_order, d=fd)
+      else
+         call ssids_enquire_indef(fakeep, ffkeep, foptions, finform, &
+            piv_order=fpiv_order)
+      endif
+   else
+      if(ASSOCIATED(fd)) then
+         call ssids_enquire_indef(fakeep, ffkeep, foptions, finform, d=fd)
+      else
+         call ssids_enquire_indef(fakeep, ffkeep, foptions, finform)
+      endif
+   endif
+
+   ! Copy arguments out
+   ! Note: we use abs value of piv_order in C indexing, as 0 and -0 are the same
+   if(ASSOCIATED(fpiv_order) .and. cindexed) &
+      fpiv_order(:) = abs(fpiv_order(:)) - 1
+   call copy_inform_out(finform, cinform)
 end subroutine spral_ssids_enquire_indef
 
-subroutine spral_ssids_alter() bind(C)
+subroutine spral_ssids_alter(d, cakeep, cfkeep, coptions, cinform) bind(C)
    use spral_ssids_ciface
    implicit none
+
+   real(C_DOUBLE), dimension(2,*), intent(in) :: d
+   type(C_PTR), value :: cakeep
+   type(C_PTR), value :: cfkeep
+   type(spral_ssids_options), intent(in) :: coptions
+   type(spral_ssids_inform), intent(out) :: cinform
+
+   type(ssids_akeep), pointer :: fakeep
+   type(ssids_fkeep), pointer :: ffkeep
+   type(ssids_options) :: foptions
+   type(ssids_inform) :: finform
+
+   logical :: cindexed
+
+   ! Copy options in first to find out whether we use Fortran or C indexing
+   call copy_options_in(coptions, foptions, cindexed)
+
+   ! Translate arguments
+   call C_F_POINTER(cakeep, fakeep)
+   call C_F_POINTER(cfkeep, ffkeep)
+
+   ! Call Fortran routine
+   call ssids_alter(d, fakeep, ffkeep, foptions, finform)
+
+   ! Copy arguments out
+   call copy_inform_out(finform, cinform)
 end subroutine spral_ssids_alter
