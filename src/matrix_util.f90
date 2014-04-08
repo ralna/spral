@@ -317,7 +317,7 @@ subroutine print_matrix_double(lp, lines, matrix_type, m, n, ptr, row, val, cbas
    integer, dimension(n+1), intent(in) :: ptr ! column pointers
    integer, dimension(ptr(n+1)-1), intent(in) :: row ! row indices
    real(wp), dimension(ptr(n+1)-1), optional, intent(in) :: val ! matrix vals
-   logical, optional, intent(in) :: cbase ! is true, rebase for C
+   logical, optional, intent(in) :: cbase ! if true, input uses C indexing
 
    integer :: col, j, k
    integer :: llines
@@ -328,7 +328,7 @@ subroutine print_matrix_double(lp, lines, matrix_type, m, n, ptr, row, val, cbas
 
    if(lp.lt.0) return ! invalid unit
 
-   ! Check if we need to rebase for C consistent output
+   ! Check if input is based for C
    rebase = 0
    if(present(cbase)) then
       if(cbase) rebase = 1
@@ -371,7 +371,7 @@ subroutine print_matrix_double(lp, lines, matrix_type, m, n, ptr, row, val, cbas
    write(lp, "(a)", advance="no") "x"
    write(lp, nfrmt, advance="no") n
    write(lp, "(a)", advance="no") " with "
-   write(lp, nefrmt, advance="no") ptr(n+1)-1
+   write(lp, nefrmt, advance="no") ptr(n+1)-1+rebase
    write(lp, "(a)") " entries."
 
    ! immediate return if m = 0 or n = 0
@@ -383,8 +383,8 @@ subroutine print_matrix_double(lp, lines, matrix_type, m, n, ptr, row, val, cbas
       allocate(dmat(m, n))
       dmat(:,:) = 0
       do col = 1, n
-         do j = ptr(col), ptr(col+1) - 1
-            k = row(j)
+         do j = ptr(col)+rebase, ptr(col+1)+rebase - 1
+            k = row(j)+rebase
             if(abs(matrix_type).ge.SPRAL_MATRIX_REAL_SYM_PSDEF) then
                dmat(col, k) = -j
             endif
@@ -461,9 +461,9 @@ subroutine print_matrix_double(lp, lines, matrix_type, m, n, ptr, row, val, cbas
          write(lp, "(a)", advance="no") "Col "
          write(lp, nfrmt, advance="no") col-rebase
          write(lp, "(':')", advance="no")
-         do j = ptr(col), min(ptr(col+1)-1, ptr(col)+3)
+         do j = ptr(col)+rebase, min(ptr(col+1)+rebase-1, ptr(col)+rebase+3)
             write(lp, "('  ')", advance="no")
-            write(lp, mfrmt, advance="no") row(j)-rebase
+            write(lp, mfrmt, advance="no") row(j)
             if(present(val)) then
                write(lp, "(' (',es12.4,')')", advance="no") val(j)
             endif

@@ -12,7 +12,7 @@ void main(void) {
 
    printf("Generating a %d x %d non-singular matrix with %d non-zeroes\n",
          m, n, nnz);
-   if(!spral_random_matrix_generate(&state, 0, m, n, nnz, ptr, row, val,
+   if(spral_random_matrix_generate(&state, 0, m, n, nnz, ptr, row, val,
             SPRAL_RANDOM_MATRIX_NONSINGULAR)) {
       printf("Error return from spral_random_matrix_generate()\n");
       exit(1);
