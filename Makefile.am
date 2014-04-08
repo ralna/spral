@@ -115,7 +115,8 @@ libspral_a_SOURCES += \
 	src/ssids/solve_gpu.f90 \
 	src/ssids/solve_kernels.cu \
 	src/ssids/ssids.f90 \
-	src/ssids/syrk_kernels.cu
+	src/ssids/syrk_kernels.cu \
+	interfaces/C/ssids.f90
 bin_PROGRAMS = spral_ssids
 spral_ssids_SOURCES = \
 	driver/spral_ssids.f90
