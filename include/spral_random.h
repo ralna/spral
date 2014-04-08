@@ -1,6 +1,8 @@
 #ifndef SPRAL_RANDOM_H
 #define SPRAL_RANDOM_H
 
+#include <stdbool.h>
+
 /* Generate a sample from Unif(-1,1) or Unif(0,1) */
 double spral_random_real(int *state, bool positive);
 /* Generate a sample from discrete Unif(1,...,n) */

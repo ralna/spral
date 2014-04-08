@@ -11,6 +11,9 @@ NVCCLINK = \
 .cu.o:
 	$(NVCC) $(NVCC_FLAGS) $(AM_NVCC_FLAGS) -dc -o $@ $<
 
+# Include directory for standard C
+AM_CFLAGS = -Iinclude
+
 # FIXME: make below configurable
 LDADD = -L. -lspral $(METIS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FCLIBS) -lrt
 CUDA_LIBS = -lcublas
@@ -62,11 +65,16 @@ libspral_a_SOURCES += \
 libspral_a_SOURCES += \
 	src/random.f90 \
 	interfaces/C/random.f90
-check_PROGRAMS = random_test examples/Fortran/random
+check_PROGRAMS = \
+	random_test \
+	examples/Fortran/random \
+	examples/C/random
 random_test_SOURCES = tests/random.f90
 examples_Fortran_random_SOURCES = examples/Fortran/random.f90
+examples_C_random_SOURCES = examples/C/random.c
 tests/random.$(OBJEXT): libspral.a
 examples/Fortran/random.$(OBJEXT): libspral.a
+examples/C/random.$(OBJEXT): libspral.a
 TESTS = random_test
 
 # RANDOM_MATRIX
