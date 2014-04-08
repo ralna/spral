@@ -39,7 +39,8 @@ libspral_a_SOURCES += \
 
 # MATRIX_UTIL
 libspral_a_SOURCES += \
-	src/matrix_util.f90
+	src/matrix_util.f90 \
+	interfaces/C/matrix_util.f90
 
 # METIS_WRAPPER
 libspral_a_SOURCES += \
@@ -79,12 +80,18 @@ TESTS = random_test
 
 # RANDOM_MATRIX
 libspral_a_SOURCES += \
-	src/random_matrix.f90
-check_PROGRAMS += random_matrix_test examples/Fortran/random_matrix
+	src/random_matrix.f90 \
+	interfaces/C/random_matrix.f90
+check_PROGRAMS += \
+	random_matrix_test \
+	examples/Fortran/random_matrix \
+	examples/C/random_matrix
 random_matrix_test_SOURCES = tests/random_matrix.f90
 examples_Fortran_random_matrix_SOURCES = examples/Fortran/random_matrix.f90
+examples_C_random_matrix_SOURCES = examples/C/random_matrix.f90
 tests/random_matrix.$(OBJEXT): libspral.a
 examples/Fortran/random_matrix.$(OBJEXT): libspral.a
+examples/C/random_matrix.$(OBJEXT): libspral.a
 TESTS += random_matrix_test
 
 # SSIDS
