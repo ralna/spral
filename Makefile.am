@@ -50,6 +50,8 @@ libspral_a_SOURCES = \
 	src/ssids/solve_kernels.cu \
 	src/ssids/ssids.f90 \
 	src/ssids/syrk_kernels.cu
+libspral_a_SOURCES += \
+	interfaces/C/random.f90
 
 # SSIDS
 bin_PROGRAMS = spral_ssids
