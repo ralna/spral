@@ -5,7 +5,7 @@
 #define bool2str(VAL) ( (VAL) ? "true" : "false" )
 
 void main(void) {
-   int state = 486502;
+   int state = SPRAL_RANDOM_INITIAL_SEED;
 
    // Store initial random seed so we can reuse it later
    int initial_seed = state;
