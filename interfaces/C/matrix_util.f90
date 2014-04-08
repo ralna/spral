@@ -23,10 +23,10 @@ subroutine spral_print_matrix(lines, matrix_type, m, n, ptr, row, cval, base) &
    endif
 
    if(ASSOCIATED(fval)) then
-      call spral_print_matrix(6, matrix_type, m, n, ptr, row, &
+      call print_matrix(6, lines, matrix_type, m, n, ptr, row, &
          cbase=(base.eq.0), val=fval)
    else
-      call spral_print_matrix(6, matrix_type, m, n, ptr, row, &
+      call print_matrix(6, lines, matrix_type, m, n, ptr, row, &
          cbase=(base.eq.0))
    endif
 end subroutine spral_print_matrix

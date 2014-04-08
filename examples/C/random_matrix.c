@@ -1,9 +1,10 @@
 /* random_matrix.c - Example code for SPRAL_RANDOM_MATRIX package */
 #include "spral.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 void main(void) {
-   int state = SPRAL_RANDOM_DEFAULT_SEED;
+   int state = SPRAL_RANDOM_INITIAL_SEED;
 
    int m=4, n=5, nnz=8;
    int ptr[n+1], row[nnz];
@@ -18,5 +19,5 @@ void main(void) {
    }
 
    printf("Generated matrix:\n");
-   spral_print_matrix(-1, 0, m, n, ptr, row, val, 0)
+   spral_print_matrix(-1, 0, m, n, ptr, row, val, 0);
 }
