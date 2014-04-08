@@ -43,7 +43,7 @@ host_triplet = @host@
 @HAVE_NVCC_TRUE@	src/cuda/cuda_check.h
 
 check_PROGRAMS = random_test$(EXEEXT) examples/Fortran/random$(EXEEXT) \
-	random_matrix_test$(EXEEXT) \
+	examples/C/random$(EXEEXT) random_matrix_test$(EXEEXT) \
 	examples/Fortran/random_matrix$(EXEEXT) $(am__EXEEXT_1)
 TESTS = random_test$(EXEEXT) random_matrix_test$(EXEEXT) \
 	$(am__EXEEXT_2)
@@ -167,12 +167,18 @@ libspral_a_OBJECTS = $(am_libspral_a_OBJECTS)
 @HAVE_NVCC_TRUE@am__EXEEXT_1 = ssids_test$(EXEEXT) \
 @HAVE_NVCC_TRUE@	examples/Fortran/ssids$(EXEEXT)
 PROGRAMS = $(bin_PROGRAMS)
+am_examples_C_random_OBJECTS = examples/C/random.$(OBJEXT)
+examples_C_random_OBJECTS = $(am_examples_C_random_OBJECTS)
+examples_C_random_LDADD = $(LDADD)
+am__DEPENDENCIES_1 =
+examples_C_random_DEPENDENCIES = $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 am_examples_Fortran_random_OBJECTS =  \
 	examples/Fortran/random.$(OBJEXT)
 examples_Fortran_random_OBJECTS =  \
 	$(am_examples_Fortran_random_OBJECTS)
 examples_Fortran_random_LDADD = $(LDADD)
-am__DEPENDENCIES_1 =
 examples_Fortran_random_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1)
@@ -214,20 +220,25 @@ ssids_test_OBJECTS = $(am_ssids_test_OBJECTS)
 @HAVE_NVCC_TRUE@ssids_test_DEPENDENCIES = $(am__DEPENDENCIES_2) \
 @HAVE_NVCC_TRUE@	$(am__DEPENDENCIES_1)
 DEFAULT_INCLUDES = -I.@am__isrc@
-FCCOMPILE = $(FC) $(AM_FCFLAGS) $(FCFLAGS)
-FCLD = $(FC)
-FCLINK = $(FCLD) $(AM_FCFLAGS) $(FCFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o \
-	$@
+depcomp = $(SHELL) $(top_srcdir)/depcomp
+am__depfiles_maybe = depfiles
+am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
-SOURCES = $(libspral_a_SOURCES) $(examples_Fortran_random_SOURCES) \
+FCCOMPILE = $(FC) $(AM_FCFLAGS) $(FCFLAGS)
+FCLD = $(FC)
+FCLINK = $(FCLD) $(AM_FCFLAGS) $(FCFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o \
+	$@
+SOURCES = $(libspral_a_SOURCES) $(examples_C_random_SOURCES) \
+	$(examples_Fortran_random_SOURCES) \
 	$(examples_Fortran_random_matrix_SOURCES) \
 	$(examples_Fortran_ssids_SOURCES) \
 	$(random_matrix_test_SOURCES) $(random_test_SOURCES) \
 	$(spral_ssids_SOURCES) $(ssids_test_SOURCES)
 DIST_SOURCES = $(am__libspral_a_SOURCES_DIST) \
+	$(examples_C_random_SOURCES) \
 	$(examples_Fortran_random_SOURCES) \
 	$(examples_Fortran_random_matrix_SOURCES) \
 	$(am__examples_Fortran_ssids_SOURCES_DIST) \
@@ -374,6 +385,9 @@ NVCCLINK = \
 	$(NVCC) $(NVCC_FLAGS) $(AM_NVCC_FLAGS) $(AM_LD_FLAGS) $(LDFLAGS) -o $@
 
 
+# Include directory for standard C
+AM_CFLAGS = -Iinclude
+
 # FIXME: make below configurable
 LDADD = -L. -lspral $(METIS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FCLIBS) -lrt
 CUDA_LIBS = -lcublas
@@ -407,6 +421,7 @@ libspral_a_SOURCES = src/core_analyse.f90 $(am__append_1) \
 	$(am__append_2)
 random_test_SOURCES = tests/random.f90
 examples_Fortran_random_SOURCES = examples/Fortran/random.f90
+examples_C_random_SOURCES = examples/C/random.c
 random_matrix_test_SOURCES = tests/random_matrix.f90
 examples_Fortran_random_matrix_SOURCES = examples/Fortran/random_matrix.f90
 @HAVE_NVCC_TRUE@spral_ssids_SOURCES = \
@@ -423,7 +438,7 @@ examples_Fortran_random_matrix_SOURCES = examples/Fortran/random_matrix.f90
 all: all-am
 
 .SUFFIXES:
-.SUFFIXES: .cu .f90 .o .obj
+.SUFFIXES: .cu .c .f90 .o .obj
 am--refresh: Makefile
 	@:
 $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
@@ -612,6 +627,17 @@ clean-binPROGRAMS:
 
 clean-checkPROGRAMS:
 	-test -z "$(check_PROGRAMS)" || rm -f $(check_PROGRAMS)
+examples/C/$(am__dirstamp):
+	@$(MKDIR_P) examples/C
+	@: > examples/C/$(am__dirstamp)
+examples/C/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) examples/C/$(DEPDIR)
+	@: > examples/C/$(DEPDIR)/$(am__dirstamp)
+examples/C/random.$(OBJEXT): examples/C/$(am__dirstamp) \
+	examples/C/$(DEPDIR)/$(am__dirstamp)
+examples/C/random$(EXEEXT): $(examples_C_random_OBJECTS) $(examples_C_random_DEPENDENCIES) $(EXTRA_examples_C_random_DEPENDENCIES) examples/C/$(am__dirstamp)
+	@rm -f examples/C/random$(EXEEXT)
+	$(LINK) $(examples_C_random_OBJECTS) $(examples_C_random_LDADD) $(LIBS)
 examples/Fortran/$(am__dirstamp):
 	@$(MKDIR_P) examples/Fortran
 	@: > examples/Fortran/$(am__dirstamp)
@@ -670,6 +696,7 @@ ssids_test$(EXEEXT): $(ssids_test_OBJECTS) $(ssids_test_DEPENDENCIES) $(EXTRA_ss
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
 	-rm -f driver/spral_ssids.$(OBJEXT)
+	-rm -f examples/C/random.$(OBJEXT)
 	-rm -f examples/Fortran/random.$(OBJEXT)
 	-rm -f examples/Fortran/random_matrix.$(OBJEXT)
 	-rm -f examples/Fortran/ssids.$(OBJEXT)
@@ -708,6 +735,24 @@ mostlyclean-compile:
 
 distclean-compile:
 	-rm -f *.tab.c
+
+@AMDEP_TRUE@@am__include@ @am__quote@examples/C/$(DEPDIR)/random.Po@am__quote@
+
+.c.o:
+@am__fastdepCC_TRUE@	depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
+@am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ $< &&\
+@am__fastdepCC_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(COMPILE) -c -o $@ $<
+
+.c.obj:
+@am__fastdepCC_TRUE@	depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.obj$$||'`;\
+@am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ `$(CYGPATH_W) '$<'` &&\
+@am__fastdepCC_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(COMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
 
 .f90.o:
 	$(FCCOMPILE) -c -o $@ $<
@@ -1059,6 +1104,8 @@ distclean-generic:
 	-test . = "$(srcdir)" || test -z "$(CONFIG_CLEAN_VPATH_FILES)" || rm -f $(CONFIG_CLEAN_VPATH_FILES)
 	-rm -f driver/$(DEPDIR)/$(am__dirstamp)
 	-rm -f driver/$(am__dirstamp)
+	-rm -f examples/C/$(DEPDIR)/$(am__dirstamp)
+	-rm -f examples/C/$(am__dirstamp)
 	-rm -f examples/Fortran/$(DEPDIR)/$(am__dirstamp)
 	-rm -f examples/Fortran/$(am__dirstamp)
 	-rm -f interfaces/C/$(DEPDIR)/$(am__dirstamp)
@@ -1082,6 +1129,7 @@ clean-am: clean-binPROGRAMS clean-checkPROGRAMS clean-generic \
 
 distclean: distclean-am
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
+	-rm -rf examples/C/$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -1129,6 +1177,7 @@ installcheck-am:
 maintainer-clean: maintainer-clean-am
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
 	-rm -rf $(top_srcdir)/autom4te.cache
+	-rm -rf examples/C/$(DEPDIR)
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 
@@ -1169,6 +1218,7 @@ uninstall-am: uninstall-binPROGRAMS uninstall-libLIBRARIES
 	$(NVCC) $(NVCC_FLAGS) $(AM_NVCC_FLAGS) -dc -o $@ $<
 tests/random.$(OBJEXT): libspral.a
 examples/Fortran/random.$(OBJEXT): libspral.a
+examples/C/random.$(OBJEXT): libspral.a
 tests/random_matrix.$(OBJEXT): libspral.a
 examples/Fortran/random_matrix.$(OBJEXT): libspral.a
 @HAVE_NVCC_TRUE@tests/ssids.$(OBJEXT): libspral.a
