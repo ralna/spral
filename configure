@@ -583,6 +583,8 @@ build_cpu
 build
 FLIBS
 FCLIBS
+HAVE_NVCC_FALSE
+HAVE_NVCC_TRUE
 NVCC
 RANLIB
 ac_ct_FC
@@ -4477,7 +4479,14 @@ fi
   test -n "$NVCC" && break
 done
 
-test -z "$NVCC" && as_fn_error $? "No CUDA compiler" "$LINENO" 5
+ if test -n "$NVCC"; then
+  HAVE_NVCC_TRUE=
+  HAVE_NVCC_FALSE='#'
+else
+  HAVE_NVCC_TRUE='#'
+  HAVE_NVCC_FALSE=
+fi
+
 
 # Establish linking flags C->Fortran
 
@@ -7305,6 +7314,10 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${am__fastdepCXX_TRUE}" && test -z "${am__fastdepCXX_FALSE}"; then
   as_fn_error $? "conditional \"am__fastdepCXX\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${HAVE_NVCC_TRUE}" && test -z "${HAVE_NVCC_FALSE}"; then
+  as_fn_error $? "conditional \"HAVE_NVCC\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 

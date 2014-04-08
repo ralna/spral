@@ -35,13 +35,44 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-bin_PROGRAMS = spral_ssids$(EXEEXT)
-check_PROGRAMS = ssids_test$(EXEEXT) examples/Fortran/ssids$(EXEEXT) \
+
+# CUDA
+@HAVE_NVCC_TRUE@am__append_1 = \
+@HAVE_NVCC_TRUE@	src/cuda/api_wrappers.cu \
+@HAVE_NVCC_TRUE@	src/cuda/cuda.f90 \
+@HAVE_NVCC_TRUE@	src/cuda/cuda_check.h
+
+check_PROGRAMS = random_test$(EXEEXT) examples/Fortran/random$(EXEEXT) \
 	random_matrix_test$(EXEEXT) \
-	examples/Fortran/random_matrix$(EXEEXT) random_test$(EXEEXT) \
-	examples/Fortran/random$(EXEEXT)
-TESTS = ssids_test$(EXEEXT) random_matrix_test$(EXEEXT) \
-	random_test$(EXEEXT)
+	examples/Fortran/random_matrix$(EXEEXT) $(am__EXEEXT_1)
+TESTS = random_test$(EXEEXT) random_matrix_test$(EXEEXT) \
+	$(am__EXEEXT_2)
+
+# SSIDS
+@HAVE_NVCC_TRUE@am__append_2 = \
+@HAVE_NVCC_TRUE@	src/ssids/alloc.f90 \
+@HAVE_NVCC_TRUE@	src/ssids/analyse.f90 \
+@HAVE_NVCC_TRUE@	src/ssids/assemble_kernels.cu \
+@HAVE_NVCC_TRUE@	src/ssids/cuda_datatypes.f90 \
+@HAVE_NVCC_TRUE@	src/ssids/cuda_interfaces.f90 \
+@HAVE_NVCC_TRUE@	src/ssids/datatypes.f90 \
+@HAVE_NVCC_TRUE@	src/ssids/dense_factor_gpu.f90 \
+@HAVE_NVCC_TRUE@	src/ssids/dense_factor_kernels.cu \
+@HAVE_NVCC_TRUE@	src/ssids/dtrsv.h \
+@HAVE_NVCC_TRUE@	src/ssids/factor_gpu.f90 \
+@HAVE_NVCC_TRUE@	src/ssids/kernel_datatypes.h \
+@HAVE_NVCC_TRUE@	src/ssids/node_solve_kernels.cu \
+@HAVE_NVCC_TRUE@	src/ssids/node_solve_kernels.h \
+@HAVE_NVCC_TRUE@	src/ssids/reorder_kernels.cu \
+@HAVE_NVCC_TRUE@	src/ssids/solve_cpu.f90 \
+@HAVE_NVCC_TRUE@	src/ssids/solve_gpu.f90 \
+@HAVE_NVCC_TRUE@	src/ssids/solve_kernels.cu \
+@HAVE_NVCC_TRUE@	src/ssids/ssids.f90 \
+@HAVE_NVCC_TRUE@	src/ssids/syrk_kernels.cu
+
+@HAVE_NVCC_TRUE@bin_PROGRAMS = spral_ssids$(EXEEXT)
+@HAVE_NVCC_TRUE@am__append_3 = ssids_test examples/Fortran/ssids
+@HAVE_NVCC_TRUE@am__append_4 = ssids_test
 subdir = .
 DIST_COMMON = $(am__configure_deps) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in $(top_srcdir)/configure config.guess \
@@ -90,28 +121,51 @@ AR = ar
 ARFLAGS = cru
 libspral_a_AR = $(AR) $(ARFLAGS)
 libspral_a_LIBADD =
+am__libspral_a_SOURCES_DIST = src/core_analyse.f90 \
+	src/cuda/api_wrappers.cu src/cuda/cuda.f90 \
+	src/cuda/cuda_check.h src/match_order.f90 src/matrix_util.f90 \
+	src/metis$(METIS_VERSION)_wrapper.f90 src/pgm.f90 \
+	src/rutherford_boeing.f90 src/scaling.f90 src/timer.f90 \
+	src/random.f90 interfaces/C/random.f90 src/random_matrix.f90 \
+	src/ssids/alloc.f90 src/ssids/analyse.f90 \
+	src/ssids/assemble_kernels.cu src/ssids/cuda_datatypes.f90 \
+	src/ssids/cuda_interfaces.f90 src/ssids/datatypes.f90 \
+	src/ssids/dense_factor_gpu.f90 \
+	src/ssids/dense_factor_kernels.cu src/ssids/dtrsv.h \
+	src/ssids/factor_gpu.f90 src/ssids/kernel_datatypes.h \
+	src/ssids/node_solve_kernels.cu src/ssids/node_solve_kernels.h \
+	src/ssids/reorder_kernels.cu src/ssids/solve_cpu.f90 \
+	src/ssids/solve_gpu.f90 src/ssids/solve_kernels.cu \
+	src/ssids/ssids.f90 src/ssids/syrk_kernels.cu
 am__dirstamp = $(am__leading_dot)dirstamp
-am_libspral_a_OBJECTS = src/core_analyse.$(OBJEXT) \
-	src/cuda/api_wrappers.$(OBJEXT) src/cuda/cuda.$(OBJEXT) \
+@HAVE_NVCC_TRUE@am__objects_1 = src/cuda/api_wrappers.$(OBJEXT) \
+@HAVE_NVCC_TRUE@	src/cuda/cuda.$(OBJEXT)
+@HAVE_NVCC_TRUE@am__objects_2 = src/ssids/alloc.$(OBJEXT) \
+@HAVE_NVCC_TRUE@	src/ssids/analyse.$(OBJEXT) \
+@HAVE_NVCC_TRUE@	src/ssids/assemble_kernels.$(OBJEXT) \
+@HAVE_NVCC_TRUE@	src/ssids/cuda_datatypes.$(OBJEXT) \
+@HAVE_NVCC_TRUE@	src/ssids/cuda_interfaces.$(OBJEXT) \
+@HAVE_NVCC_TRUE@	src/ssids/datatypes.$(OBJEXT) \
+@HAVE_NVCC_TRUE@	src/ssids/dense_factor_gpu.$(OBJEXT) \
+@HAVE_NVCC_TRUE@	src/ssids/dense_factor_kernels.$(OBJEXT) \
+@HAVE_NVCC_TRUE@	src/ssids/factor_gpu.$(OBJEXT) \
+@HAVE_NVCC_TRUE@	src/ssids/node_solve_kernels.$(OBJEXT) \
+@HAVE_NVCC_TRUE@	src/ssids/reorder_kernels.$(OBJEXT) \
+@HAVE_NVCC_TRUE@	src/ssids/solve_cpu.$(OBJEXT) \
+@HAVE_NVCC_TRUE@	src/ssids/solve_gpu.$(OBJEXT) \
+@HAVE_NVCC_TRUE@	src/ssids/solve_kernels.$(OBJEXT) \
+@HAVE_NVCC_TRUE@	src/ssids/ssids.$(OBJEXT) \
+@HAVE_NVCC_TRUE@	src/ssids/syrk_kernels.$(OBJEXT)
+am_libspral_a_OBJECTS = src/core_analyse.$(OBJEXT) $(am__objects_1) \
 	src/match_order.$(OBJEXT) src/matrix_util.$(OBJEXT) \
 	src/metis$(METIS_VERSION)_wrapper.$(OBJEXT) src/pgm.$(OBJEXT) \
-	src/random.$(OBJEXT) src/random_matrix.$(OBJEXT) \
 	src/rutherford_boeing.$(OBJEXT) src/scaling.$(OBJEXT) \
-	src/timer.$(OBJEXT) src/ssids/alloc.$(OBJEXT) \
-	src/ssids/analyse.$(OBJEXT) \
-	src/ssids/assemble_kernels.$(OBJEXT) \
-	src/ssids/cuda_datatypes.$(OBJEXT) \
-	src/ssids/cuda_interfaces.$(OBJEXT) \
-	src/ssids/datatypes.$(OBJEXT) \
-	src/ssids/dense_factor_gpu.$(OBJEXT) \
-	src/ssids/dense_factor_kernels.$(OBJEXT) \
-	src/ssids/factor_gpu.$(OBJEXT) \
-	src/ssids/node_solve_kernels.$(OBJEXT) \
-	src/ssids/reorder_kernels.$(OBJEXT) \
-	src/ssids/solve_cpu.$(OBJEXT) src/ssids/solve_gpu.$(OBJEXT) \
-	src/ssids/solve_kernels.$(OBJEXT) src/ssids/ssids.$(OBJEXT) \
-	src/ssids/syrk_kernels.$(OBJEXT)
+	src/timer.$(OBJEXT) src/random.$(OBJEXT) \
+	interfaces/C/random.$(OBJEXT) src/random_matrix.$(OBJEXT) \
+	$(am__objects_2)
 libspral_a_OBJECTS = $(am_libspral_a_OBJECTS)
+@HAVE_NVCC_TRUE@am__EXEEXT_1 = ssids_test$(EXEEXT) \
+@HAVE_NVCC_TRUE@	examples/Fortran/ssids$(EXEEXT)
 PROGRAMS = $(bin_PROGRAMS)
 am_examples_Fortran_random_OBJECTS =  \
 	examples/Fortran/random.$(OBJEXT)
@@ -130,12 +184,14 @@ examples_Fortran_random_matrix_LDADD = $(LDADD)
 examples_Fortran_random_matrix_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1)
-am_examples_Fortran_ssids_OBJECTS = examples/Fortran/ssids.$(OBJEXT)
+am__examples_Fortran_ssids_SOURCES_DIST = examples/Fortran/ssids.f90
+@HAVE_NVCC_TRUE@am_examples_Fortran_ssids_OBJECTS =  \
+@HAVE_NVCC_TRUE@	examples/Fortran/ssids.$(OBJEXT)
 examples_Fortran_ssids_OBJECTS = $(am_examples_Fortran_ssids_OBJECTS)
 am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
-examples_Fortran_ssids_DEPENDENCIES = $(am__DEPENDENCIES_2) \
-	$(am__DEPENDENCIES_1)
+@HAVE_NVCC_TRUE@examples_Fortran_ssids_DEPENDENCIES =  \
+@HAVE_NVCC_TRUE@	$(am__DEPENDENCIES_2) $(am__DEPENDENCIES_1)
 am_random_matrix_test_OBJECTS = tests/random_matrix.$(OBJEXT)
 random_matrix_test_OBJECTS = $(am_random_matrix_test_OBJECTS)
 random_matrix_test_LDADD = $(LDADD)
@@ -147,12 +203,16 @@ random_test_OBJECTS = $(am_random_test_OBJECTS)
 random_test_LDADD = $(LDADD)
 random_test_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
-am_spral_ssids_OBJECTS = driver/spral_ssids.$(OBJEXT)
+am__spral_ssids_SOURCES_DIST = driver/spral_ssids.f90
+@HAVE_NVCC_TRUE@am_spral_ssids_OBJECTS = driver/spral_ssids.$(OBJEXT)
 spral_ssids_OBJECTS = $(am_spral_ssids_OBJECTS)
-spral_ssids_DEPENDENCIES = $(am__DEPENDENCIES_2) $(am__DEPENDENCIES_1)
-am_ssids_test_OBJECTS = tests/ssids.$(OBJEXT)
+@HAVE_NVCC_TRUE@spral_ssids_DEPENDENCIES = $(am__DEPENDENCIES_2) \
+@HAVE_NVCC_TRUE@	$(am__DEPENDENCIES_1)
+am__ssids_test_SOURCES_DIST = tests/ssids.f90
+@HAVE_NVCC_TRUE@am_ssids_test_OBJECTS = tests/ssids.$(OBJEXT)
 ssids_test_OBJECTS = $(am_ssids_test_OBJECTS)
-ssids_test_DEPENDENCIES = $(am__DEPENDENCIES_2) $(am__DEPENDENCIES_1)
+@HAVE_NVCC_TRUE@ssids_test_DEPENDENCIES = $(am__DEPENDENCIES_2) \
+@HAVE_NVCC_TRUE@	$(am__DEPENDENCIES_1)
 DEFAULT_INCLUDES = -I.@am__isrc@
 FCCOMPILE = $(FC) $(AM_FCFLAGS) $(FCFLAGS)
 FCLD = $(FC)
@@ -167,16 +227,17 @@ SOURCES = $(libspral_a_SOURCES) $(examples_Fortran_random_SOURCES) \
 	$(examples_Fortran_ssids_SOURCES) \
 	$(random_matrix_test_SOURCES) $(random_test_SOURCES) \
 	$(spral_ssids_SOURCES) $(ssids_test_SOURCES)
-DIST_SOURCES = $(libspral_a_SOURCES) \
+DIST_SOURCES = $(am__libspral_a_SOURCES_DIST) \
 	$(examples_Fortran_random_SOURCES) \
 	$(examples_Fortran_random_matrix_SOURCES) \
-	$(examples_Fortran_ssids_SOURCES) \
+	$(am__examples_Fortran_ssids_SOURCES_DIST) \
 	$(random_matrix_test_SOURCES) $(random_test_SOURCES) \
-	$(spral_ssids_SOURCES) $(ssids_test_SOURCES)
+	$(am__spral_ssids_SOURCES_DIST) $(am__ssids_test_SOURCES_DIST)
 ETAGS = etags
 CTAGS = ctags
 am__tty_colors = \
 red=; grn=; lgn=; blu=; std=
+@HAVE_NVCC_TRUE@am__EXEEXT_2 = ssids_test$(EXEEXT)
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 distdir = $(PACKAGE)-$(VERSION)
 top_distdir = $(distdir)
@@ -316,58 +377,49 @@ NVCCLINK = \
 # FIXME: make below configurable
 LDADD = -L. -lspral $(METIS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FCLIBS) -lrt
 CUDA_LIBS = -lcublas
-
-# Compile code to library
 lib_LIBRARIES = libspral.a
-libspral_a_SOURCES = \
-	src/core_analyse.f90 \
-	src/cuda/api_wrappers.cu \
-	src/cuda/cuda.f90 \
-	src/cuda/cuda_check.h \
-	src/match_order.f90 \
-	src/matrix_util.f90 \
-	src/metis$(METIS_VERSION)_wrapper.f90 \
-	src/pgm.f90 \
-	src/random.f90 \
-	src/random_matrix.f90 \
-	src/rutherford_boeing.f90 \
-  	src/scaling.f90 \
-  	src/timer.f90 \
-	src/ssids/alloc.f90 \
-	src/ssids/analyse.f90 \
-	src/ssids/assemble_kernels.cu \
-	src/ssids/cuda_datatypes.f90 \
-	src/ssids/cuda_interfaces.f90 \
-	src/ssids/datatypes.f90 \
-	src/ssids/dense_factor_gpu.f90 \
-	src/ssids/dense_factor_kernels.cu \
-	src/ssids/dtrsv.h \
-	src/ssids/factor_gpu.f90 \
-	src/ssids/kernel_datatypes.h \
-	src/ssids/node_solve_kernels.cu \
-	src/ssids/node_solve_kernels.h \
-	src/ssids/reorder_kernels.cu \
-	src/ssids/solve_cpu.f90 \
-	src/ssids/solve_gpu.f90 \
-	src/ssids/solve_kernels.cu \
-	src/ssids/ssids.f90 \
-	src/ssids/syrk_kernels.cu
 
-spral_ssids_SOURCES = \
-	driver/spral_ssids.f90
+# CORE_ANALYSE
+# Note: first so not +=
 
-spral_ssids_LINK = $(NVCCLINK)
-spral_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
-ssids_test_SOURCES = tests/ssids.f90
-ssids_test_LINK = $(NVCCLINK)
-ssids_test_LDADD = $(LDADD) $(CUDA_LIBS)
-examples_Fortran_ssids_SOURCES = examples/Fortran/ssids.f90
-examples_Fortran_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
-examples_Fortran_ssids_LINK = $(NVCCLINK)
-random_matrix_test_SOURCES = tests/random_matrix.f90
-examples_Fortran_random_matrix_SOURCES = examples/Fortran/random_matrix.f90
+# MATCH_ORDER
+
+# MATRIX_UTIL
+
+# METIS_WRAPPER
+
+# PGM
+
+# RUTHERFORD_BOEING
+
+# SCALING
+
+# TIMER
+
+# RANDOM
+
+# RANDOM_MATRIX
+libspral_a_SOURCES = src/core_analyse.f90 $(am__append_1) \
+	src/match_order.f90 src/matrix_util.f90 \
+	src/metis$(METIS_VERSION)_wrapper.f90 src/pgm.f90 \
+	src/rutherford_boeing.f90 src/scaling.f90 src/timer.f90 \
+	src/random.f90 interfaces/C/random.f90 src/random_matrix.f90 \
+	$(am__append_2)
 random_test_SOURCES = tests/random.f90
 examples_Fortran_random_SOURCES = examples/Fortran/random.f90
+random_matrix_test_SOURCES = tests/random_matrix.f90
+examples_Fortran_random_matrix_SOURCES = examples/Fortran/random_matrix.f90
+@HAVE_NVCC_TRUE@spral_ssids_SOURCES = \
+@HAVE_NVCC_TRUE@	driver/spral_ssids.f90
+
+@HAVE_NVCC_TRUE@spral_ssids_LINK = $(NVCCLINK)
+@HAVE_NVCC_TRUE@spral_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
+@HAVE_NVCC_TRUE@ssids_test_SOURCES = tests/ssids.f90
+@HAVE_NVCC_TRUE@ssids_test_LINK = $(NVCCLINK)
+@HAVE_NVCC_TRUE@ssids_test_LDADD = $(LDADD) $(CUDA_LIBS)
+@HAVE_NVCC_TRUE@examples_Fortran_ssids_SOURCES = examples/Fortran/ssids.f90
+@HAVE_NVCC_TRUE@examples_Fortran_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
+@HAVE_NVCC_TRUE@examples_Fortran_ssids_LINK = $(NVCCLINK)
 all: all-am
 
 .SUFFIXES:
@@ -461,15 +513,23 @@ src/matrix_util.$(OBJEXT): src/$(am__dirstamp) \
 src/metis$(METIS_VERSION)_wrapper.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/pgm.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
-src/random.$(OBJEXT): src/$(am__dirstamp) \
-	src/$(DEPDIR)/$(am__dirstamp)
-src/random_matrix.$(OBJEXT): src/$(am__dirstamp) \
-	src/$(DEPDIR)/$(am__dirstamp)
 src/rutherford_boeing.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/scaling.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/timer.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
+src/random.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
+interfaces/C/$(am__dirstamp):
+	@$(MKDIR_P) interfaces/C
+	@: > interfaces/C/$(am__dirstamp)
+interfaces/C/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) interfaces/C/$(DEPDIR)
+	@: > interfaces/C/$(DEPDIR)/$(am__dirstamp)
+interfaces/C/random.$(OBJEXT): interfaces/C/$(am__dirstamp) \
+	interfaces/C/$(DEPDIR)/$(am__dirstamp)
+src/random_matrix.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
 src/ssids/$(am__dirstamp):
 	@$(MKDIR_P) src/ssids
 	@: > src/ssids/$(am__dirstamp)
@@ -613,6 +673,7 @@ mostlyclean-compile:
 	-rm -f examples/Fortran/random.$(OBJEXT)
 	-rm -f examples/Fortran/random_matrix.$(OBJEXT)
 	-rm -f examples/Fortran/ssids.$(OBJEXT)
+	-rm -f interfaces/C/random.$(OBJEXT)
 	-rm -f src/core_analyse.$(OBJEXT)
 	-rm -f src/cuda/api_wrappers.$(OBJEXT)
 	-rm -f src/cuda/cuda.$(OBJEXT)
@@ -1000,6 +1061,8 @@ distclean-generic:
 	-rm -f driver/$(am__dirstamp)
 	-rm -f examples/Fortran/$(DEPDIR)/$(am__dirstamp)
 	-rm -f examples/Fortran/$(am__dirstamp)
+	-rm -f interfaces/C/$(DEPDIR)/$(am__dirstamp)
+	-rm -f interfaces/C/$(am__dirstamp)
 	-rm -f src/$(DEPDIR)/$(am__dirstamp)
 	-rm -f src/$(am__dirstamp)
 	-rm -f src/cuda/$(DEPDIR)/$(am__dirstamp)
@@ -1104,12 +1167,12 @@ uninstall-am: uninstall-binPROGRAMS uninstall-libLIBRARIES
 
 .cu.o:
 	$(NVCC) $(NVCC_FLAGS) $(AM_NVCC_FLAGS) -dc -o $@ $<
-tests/ssids.$(OBJEXT): libspral.a
-examples/Fortran/ssids.$(OBJEXT): libspral.a
-tests/random_matrix.$(OBJEXT): libspral.a
-examples/Fortran/random_matrix.$(OBJEXT): libspral.a
 tests/random.$(OBJEXT): libspral.a
 examples/Fortran/random.$(OBJEXT): libspral.a
+tests/random_matrix.$(OBJEXT): libspral.a
+examples/Fortran/random_matrix.$(OBJEXT): libspral.a
+@HAVE_NVCC_TRUE@tests/ssids.$(OBJEXT): libspral.a
+@HAVE_NVCC_TRUE@examples/Fortran/ssids.$(OBJEXT): libspral.a
 
 # Automake doesn't know much about modules, so get rid of them ourself
 clean-local:
