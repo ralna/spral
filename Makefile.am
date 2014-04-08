@@ -195,3 +195,8 @@ src/ssids/solve_gpu.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
 
 # CUDA header deps
 src/ssids/solve_kernels.$(OBJEXT): src/ssids/dtrsv.h
+
+# C interface deps
+interfaces/C/random.$(OBJEXT): src/random.$(OBJEXT)
+interfaces/C/random_matrix.$(OBJEXT): src/random_matrix.$(OBJEXT)
+interfaces/C/ssids.$(OBJEXT): src/ssids/ssids.$(OBJEXT)
