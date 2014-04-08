@@ -149,7 +149,7 @@ generator, and need not be initialized by the user.
 \subsection{\texttt{random\_logical()}}
 
 \textbf{\noindent
-   To generate a logical from $B(1,0.5)$,
+   To generate a random logical with equal probability of being \texttt{.true.} or \texttt{.false.},
    \vspace*{0.1cm} \\
    \texttt{ \hspace*{0.2cm}
       sample = random\_logical(state)
@@ -220,7 +220,7 @@ generator, and need not be initialized by the user.
 
 \section{Method} \label{method}
 
-\subsection{PRNG}
+\subsection{Pseudo-random number generation}
 We use a linear congruential generator of the following form:
 $$
    X_{n+1} = (aX_n + c) \mathrm{mod} m
