@@ -276,7 +276,7 @@ contains
       end select
       call system_clock(stop_t)
       write(*, "(a)") "ok"
-      print *, "Solve took ", (stop_t - start_t)/real(rate_t)
+      print *, "Scaling took ", (stop_t - start_t)/real(rate_t)
    end subroutine do_timed_scaling
 
    subroutine internal_calc_norm(n, ptr, row, val, x_vec, b_vec, nrhs, res)
