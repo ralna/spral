@@ -1,11 +1,14 @@
 module spral_ssids_ciface
    use iso_c_binding
+   use spral_ssids
    implicit none
 
    type, bind(C) :: spral_ssids_options
-   end type spral_ssids_analyse
+      integer(C_INT) :: print_level
+   end type spral_ssids_options
 
    type, bind(C) :: spral_ssids_inform
+      integer(C_INT) :: flag
    end type spral_ssids_inform
 
 contains
@@ -21,7 +24,7 @@ contains
    end subroutine copy_inform_out
 end module spral_ssids_ciface
 
-subroutine spral_ssids_analyse(ccheck, n, corder, ptr, row, cval, cakeep, &
+subroutine spral_ssids_analyse(ccheck, n, corder, cptr, crow, cval, cakeep, &
       coptions, cinform) bind(C)
    use spral_ssids_ciface
    implicit none
@@ -29,17 +32,17 @@ subroutine spral_ssids_analyse(ccheck, n, corder, ptr, row, cval, cakeep, &
    logical(C_BOOL), value :: ccheck
    integer(C_INT), value :: n
    type(C_PTR), value :: corder
-   type(C_PTR), value :: ptr
-   type(C_PTR), value :: row
+   type(C_PTR), value :: cptr
+   type(C_PTR), value :: crow
    type(C_PTR), value :: cval
    type(C_PTR), intent(inout) :: cakeep
    type(spral_ssids_options), intent(in) :: coptions
    type(spral_ssids_inform), intent(in) :: cinform
 
-   integer(C_INT), dimension(:), pointer :: fptr_alloc
-   integer(C_INT), dimension(:), allocatable :: fptr_alloc
-   integer(C_INT), dimension(:), pointer :: frow_alloc
-   integer(C_INT), dimension(:), allocatable :: frow_alloc
+   integer(C_INT), dimension(:), pointer :: fptr
+   integer(C_INT), dimension(:), allocatable, target :: fptr_alloc
+   integer(C_INT), dimension(:), pointer :: frow
+   integer(C_INT), dimension(:), allocatable, target :: frow_alloc
    logical :: fcheck
    integer(C_INT), dimension(:), pointer :: forder
    real(C_DOUBLE), dimension(:), pointer :: fval
@@ -88,18 +91,18 @@ subroutine spral_ssids_analyse(ccheck, n, corder, ptr, row, cval, cakeep, &
    ! Call Fortran routine
    if(ASSOCIATED(forder)) then
       if(ASSOCIATED(fval)) then
-         call ssids_analyse(fcheck, n, ptr, row, fakeep, foptions, finform, &
+         call ssids_analyse(fcheck, n, fptr, frow, fakeep, foptions, finform, &
             order=forder, val=fval)
       else
-         call ssids_analyse(fcheck, n, ptr, row, fakeep, foptions, finform, &
+         call ssids_analyse(fcheck, n, fptr, frow, fakeep, foptions, finform, &
             order=forder)
       endif
    else
       if(ASSOCIATED(fval)) then
-         call ssids_analyse(fcheck, n, ptr, row, fakeep, foptions, finform, &
+         call ssids_analyse(fcheck, n, fptr, frow, fakeep, foptions, finform, &
             val=fval)
       else
-         call ssids_analyse(fcheck, n, ptr, row, fakeep, foptions, finform)
+         call ssids_analyse(fcheck, n, fptr, frow, fakeep, foptions, finform)
       endif
    endif
 
