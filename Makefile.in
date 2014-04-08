@@ -69,7 +69,8 @@ TESTS = random_test$(EXEEXT) random_matrix_test$(EXEEXT) \
 @HAVE_NVCC_TRUE@	src/ssids/solve_gpu.f90 \
 @HAVE_NVCC_TRUE@	src/ssids/solve_kernels.cu \
 @HAVE_NVCC_TRUE@	src/ssids/ssids.f90 \
-@HAVE_NVCC_TRUE@	src/ssids/syrk_kernels.cu
+@HAVE_NVCC_TRUE@	src/ssids/syrk_kernels.cu \
+@HAVE_NVCC_TRUE@	interfaces/C/ssids.f90
 
 @HAVE_NVCC_TRUE@bin_PROGRAMS = spral_ssids$(EXEEXT)
 @HAVE_NVCC_TRUE@am__append_3 = ssids_test examples/Fortran/ssids
@@ -138,7 +139,8 @@ am__libspral_a_SOURCES_DIST = src/core_analyse.f90 \
 	src/ssids/node_solve_kernels.cu src/ssids/node_solve_kernels.h \
 	src/ssids/reorder_kernels.cu src/ssids/solve_cpu.f90 \
 	src/ssids/solve_gpu.f90 src/ssids/solve_kernels.cu \
-	src/ssids/ssids.f90 src/ssids/syrk_kernels.cu
+	src/ssids/ssids.f90 src/ssids/syrk_kernels.cu \
+	interfaces/C/ssids.f90
 am__dirstamp = $(am__leading_dot)dirstamp
 @HAVE_NVCC_TRUE@am__objects_1 = src/cuda/api_wrappers.$(OBJEXT) \
 @HAVE_NVCC_TRUE@	src/cuda/cuda.$(OBJEXT)
@@ -157,7 +159,8 @@ am__dirstamp = $(am__leading_dot)dirstamp
 @HAVE_NVCC_TRUE@	src/ssids/solve_gpu.$(OBJEXT) \
 @HAVE_NVCC_TRUE@	src/ssids/solve_kernels.$(OBJEXT) \
 @HAVE_NVCC_TRUE@	src/ssids/ssids.$(OBJEXT) \
-@HAVE_NVCC_TRUE@	src/ssids/syrk_kernels.$(OBJEXT)
+@HAVE_NVCC_TRUE@	src/ssids/syrk_kernels.$(OBJEXT) \
+@HAVE_NVCC_TRUE@	interfaces/C/ssids.$(OBJEXT)
 am_libspral_a_OBJECTS = src/core_analyse.$(OBJEXT) $(am__objects_1) \
 	src/match_order.$(OBJEXT) src/matrix_util.$(OBJEXT) \
 	interfaces/C/matrix_util.$(OBJEXT) \
@@ -602,6 +605,8 @@ src/ssids/ssids.$(OBJEXT): src/ssids/$(am__dirstamp) \
 	src/ssids/$(DEPDIR)/$(am__dirstamp)
 src/ssids/syrk_kernels.$(OBJEXT): src/ssids/$(am__dirstamp) \
 	src/ssids/$(DEPDIR)/$(am__dirstamp)
+interfaces/C/ssids.$(OBJEXT): interfaces/C/$(am__dirstamp) \
+	interfaces/C/$(DEPDIR)/$(am__dirstamp)
 libspral.a: $(libspral_a_OBJECTS) $(libspral_a_DEPENDENCIES) $(EXTRA_libspral_a_DEPENDENCIES) 
 	-rm -f libspral.a
 	$(libspral_a_AR) libspral.a $(libspral_a_OBJECTS) $(libspral_a_LIBADD)
@@ -728,6 +733,7 @@ mostlyclean-compile:
 	-rm -f interfaces/C/matrix_util.$(OBJEXT)
 	-rm -f interfaces/C/random.$(OBJEXT)
 	-rm -f interfaces/C/random_matrix.$(OBJEXT)
+	-rm -f interfaces/C/ssids.$(OBJEXT)
 	-rm -f src/core_analyse.$(OBJEXT)
 	-rm -f src/cuda/api_wrappers.$(OBJEXT)
 	-rm -f src/cuda/cuda.$(OBJEXT)
