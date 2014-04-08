@@ -15,22 +15,73 @@ NVCCLINK = \
 LDADD = -L. -lspral $(METIS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FCLIBS) -lrt
 CUDA_LIBS = -lcublas
 
-# Compile code to library
 lib_LIBRARIES = libspral.a
+
+# CORE_ANALYSE
+# Note: first so not +=
 libspral_a_SOURCES = \
-	src/core_analyse.f90 \
+	src/core_analyse.f90
+
+# CUDA
+if HAVE_NVCC
+libspral_a_SOURCES += \
 	src/cuda/api_wrappers.cu \
 	src/cuda/cuda.f90 \
-	src/cuda/cuda_check.h \
-	src/match_order.f90 \
-	src/matrix_util.f90 \
-	src/metis$(METIS_VERSION)_wrapper.f90 \
-	src/pgm.f90 \
+	src/cuda/cuda_check.h
+endif
+
+# MATCH_ORDER
+libspral_a_SOURCES += \
+	src/match_order.f90
+
+# MATRIX_UTIL
+libspral_a_SOURCES += \
+	src/matrix_util.f90
+
+# METIS_WRAPPER
+libspral_a_SOURCES += \
+	src/metis$(METIS_VERSION)_wrapper.f90
+
+# PGM
+libspral_a_SOURCES += \
+	src/pgm.f90
+
+# RUTHERFORD_BOEING
+libspral_a_SOURCES += \
+	src/rutherford_boeing.f90
+
+# SCALING
+libspral_a_SOURCES += \
+  	src/scaling.f90
+
+# TIMER
+libspral_a_SOURCES += \
+  	src/timer.f90
+
+# RANDOM
+libspral_a_SOURCES += \
 	src/random.f90 \
-	src/random_matrix.f90 \
-	src/rutherford_boeing.f90 \
-  	src/scaling.f90 \
-  	src/timer.f90 \
+	interfaces/C/random.f90
+check_PROGRAMS = random_test examples/Fortran/random
+random_test_SOURCES = tests/random.f90
+examples_Fortran_random_SOURCES = examples/Fortran/random.f90
+tests/random.$(OBJEXT): libspral.a
+examples/Fortran/random.$(OBJEXT): libspral.a
+TESTS = random_test
+
+# RANDOM_MATRIX
+libspral_a_SOURCES += \
+	src/random_matrix.f90
+check_PROGRAMS += random_matrix_test examples/Fortran/random_matrix
+random_matrix_test_SOURCES = tests/random_matrix.f90
+examples_Fortran_random_matrix_SOURCES = examples/Fortran/random_matrix.f90
+tests/random_matrix.$(OBJEXT): libspral.a
+examples/Fortran/random_matrix.$(OBJEXT): libspral.a
+TESTS += random_matrix_test
+
+# SSIDS
+if HAVE_NVCC
+libspral_a_SOURCES += \
 	src/ssids/alloc.f90 \
 	src/ssids/analyse.f90 \
 	src/ssids/assemble_kernels.cu \
@@ -50,16 +101,12 @@ libspral_a_SOURCES = \
 	src/ssids/solve_kernels.cu \
 	src/ssids/ssids.f90 \
 	src/ssids/syrk_kernels.cu
-libspral_a_SOURCES += \
-	interfaces/C/random.f90
-
-# SSIDS
 bin_PROGRAMS = spral_ssids
 spral_ssids_SOURCES = \
 	driver/spral_ssids.f90
 spral_ssids_LINK = $(NVCCLINK)
 spral_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
-check_PROGRAMS = ssids_test examples/Fortran/ssids
+check_PROGRAMS += ssids_test examples/Fortran/ssids
 ssids_test_SOURCES = tests/ssids.f90
 ssids_test_LINK = $(NVCCLINK)
 ssids_test_LDADD = $(LDADD) $(CUDA_LIBS)
@@ -68,23 +115,8 @@ examples_Fortran_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
 examples_Fortran_ssids_LINK = $(NVCCLINK)
 tests/ssids.$(OBJEXT): libspral.a
 examples/Fortran/ssids.$(OBJEXT): libspral.a
-TESTS = ssids_test
-
-# Random matrix
-check_PROGRAMS += random_matrix_test examples/Fortran/random_matrix
-random_matrix_test_SOURCES = tests/random_matrix.f90
-examples_Fortran_random_matrix_SOURCES = examples/Fortran/random_matrix.f90
-tests/random_matrix.$(OBJEXT): libspral.a
-examples/Fortran/random_matrix.$(OBJEXT): libspral.a
-TESTS += random_matrix_test
-
-# Random
-check_PROGRAMS += random_test examples/Fortran/random
-random_test_SOURCES = tests/random.f90
-examples_Fortran_random_SOURCES = examples/Fortran/random.f90
-tests/random.$(OBJEXT): libspral.a
-examples/Fortran/random.$(OBJEXT): libspral.a
-TESTS += random_test
+TESTS += ssids_test
+endif
 
 # Automake doesn't know much about modules, so get rid of them ourself
 clean-local:

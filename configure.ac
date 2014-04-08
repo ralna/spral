@@ -10,7 +10,7 @@ AC_PROG_FC
 AC_PROG_RANLIB
 AC_ARG_VAR(NVCC,[CUDA compiler command])
 AC_CHECK_PROGS(NVCC,nvcc)
-test -z "$NVCC" && AC_MSG_ERROR([No CUDA compiler])
+AM_CONDITIONAL([HAVE_NVCC], [test -n "$NVCC"])
 
 # Establish linking flags C->Fortran
 AC_FC_LIBRARY_LDFLAGS
