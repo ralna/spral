@@ -17,7 +17,6 @@ struct spral_ssids_options {
    int nemin;
    int scaling;
    bool action;
-   double small;
    double u;
    bool use_gpu_solve;
    int presolve;

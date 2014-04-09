@@ -13,7 +13,6 @@ module spral_ssids_ciface
       integer(C_INT) :: nemin
       integer(C_INT) :: scaling
       logical(C_BOOL) :: action
-      real(C_DOUBLE) :: small
       real(C_DOUBLE) :: u
       logical(C_BOOL) :: use_gpu_solve
       integer(C_INT) :: presolve
@@ -55,7 +54,6 @@ contains
       foptions%nemin             = coptions%nemin
       foptions%scaling           = coptions%scaling
       foptions%action            = coptions%action
-      foptions%small             = coptions%small
       foptions%u                 = coptions%u
       foptions%use_gpu_solve     = coptions%use_gpu_solve
       foptions%presolve          = coptions%presolve
@@ -101,7 +99,6 @@ subroutine spral_ssids_default_options(coptions) bind(C)
    coptions%nemin             = default_options%nemin
    coptions%scaling           = default_options%scaling
    coptions%action            = default_options%action
-   coptions%small             = default_options%small
    coptions%u                 = default_options%u
    coptions%use_gpu_solve     = default_options%use_gpu_solve
    coptions%presolve          = default_options%presolve
