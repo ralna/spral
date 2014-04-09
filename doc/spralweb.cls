@@ -8,6 +8,7 @@
 \RequirePackage{url}
 \newcommand{\libraryname}{SPRAL}
 \newcommand{\libraryurl}{\url{http://www.numerical.rl.ac.uk/spral}}
+\newcommand{\spral}{\texttt{\libraryname}}
 
 % Colors
 \RequirePackage{pgf}
