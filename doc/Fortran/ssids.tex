@@ -203,7 +203,7 @@ Non-zero matrix entries are ordered by increasing column index and stored in
 the arrays \texttt{row(:)} and \texttt{val(:)} such that \texttt{row(k)} holds
 the row number and \texttt{val(k)} holds the value of the \texttt{k}-th entry.
 The \texttt{ptr(:)} array stores column pointers such that \texttt{ptr(i)} is
-the position in \texttt{row} and \texttt{val} of
+the position in \texttt{row(:)} and \texttt{val(:)} of
 the first entry in the \texttt{i}-th column, and \texttt{ptr(n+1)} is one more
 than the total number of entries.
 Entries that are zero, including those on the diagonal, need not be specified.
@@ -292,7 +292,7 @@ data is checked for errors and the cleaned matrix
 (duplicates are summed and out-of-range entries
 discarded) is stored in {\tt akeep}.
 Otherwise, for data in CSC format, no checking of the matrix data is carried out
-and {\tt ptr} and {\tt row} must be passed unchanged to the factorization routines. 
+and {\tt ptr(:)} and {\tt row(:)} must be passed unchanged to the factorization routines. 
 Checking is always performed when the coordinate format is used.
 
 \item[\texttt{n}{\rm ,} \texttt{ptr(:)}{\rm ,} \texttt{row(:)}] are \intentin\ 
@@ -410,13 +410,13 @@ solution for variable $i$.
 the number of right-hand sides.
 
 \item[\texttt{x(:,:)}] is an \intentinout\ array of package type with extents
-\texttt{ldx} and \texttt{rhs}. It must be set so that \texttt{x(i,j)} holds the
+\texttt{ldx} and \texttt{nrhs}. It must be set so that \texttt{x(i,j)} holds the
 component of the right-hand side for variable $i$ to the $j$-th
 system. On exit, \texttt{x(i,j)} holds the solution for variable $i$ to
 the $j$-th system.
 
 \item[\texttt{ldx}] is an \intentin\ scalar of type {\tt INTEGER} that must be
-set to the first extent of array \texttt{x}.
+   set to the first extent of array \texttt{x(:)}.
 
 \item[\texttt{akeep}]  is an \intentin\ scalar of type {\tt ssids\_akeep} that
 must be unchanged since the last call to {\tt ssids\_factor()}.
