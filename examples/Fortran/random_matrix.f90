@@ -1,3 +1,4 @@
+! examples/Fortran/random_matrix.f90 - Example code for SPRAL_RANDOM_MATRIX pkg
 program random_matrix_example
    use spral_matrix_util, only : print_matrix
    use spral_random, only : random_state

@@ -1,4 +1,4 @@
-/* random.c - Example code for SPRAL_RANDOM package */
+/* examples/C/random.c - Example code for SPRAL_RANDOM package */
 #include "spral.h"
 #include <stdio.h>
 

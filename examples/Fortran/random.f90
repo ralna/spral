@@ -1,3 +1,4 @@
+! examples/Fortran/random.f90 - Example code for SPRAL_RANDOM package
 program random_example
    use spral_random
    implicit none

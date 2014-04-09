@@ -1,5 +1,4 @@
-! examples/Fortran/ssids.f90
-! Simple code to illustrate use of SSIDS
+! examples/Fortran/ssids.f90 - Example code for SPRAL_SSIDS package
 program ssids_example
    use spral_ssids
    implicit none

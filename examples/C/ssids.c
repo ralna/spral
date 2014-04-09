@@ -1,5 +1,4 @@
-/* examples/C/ssids.c - simple code to illustrate use of SSIDS */
-
+/* examples/C/ssids.c - Example code for SPRAL_SSIDS package */
 #include "spral.h"
 #include <stdlib.h>
 #include <stdio.h>
