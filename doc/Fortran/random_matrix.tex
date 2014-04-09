@@ -114,15 +114,15 @@ It is used as the state of the pseudo-random number generator used.
 
 \item[\texttt{m}] is an \intentin\ scalar of type default {\tt INTEGER} that
    specifies the number of rows in the matrix.
-{\bf Restriction:} {\tt m$\geq$0}.
+{\bf Restriction:} {\tt m$\geq$1}.
 
 \item[\texttt{n}] is an \intentin\ scalar of type default {\tt INTEGER} that
    specifies the number of columns in the matrix.
-{\bf Restriction:} {\tt n$\geq$0}, and consistent with \texttt{matrix\_type}.
+{\bf Restriction:} {\tt n$\geq$1}, and consistent with \texttt{matrix\_type}.
 
 \item[\texttt{nnz}] is an \intentin\ scalar of type default {\tt INTEGER} that
    specifies the number of non-zeroes in the matrix.
-{\bf Restriction:} {\tt nnz$\geq$0} (and \texttt{nnz}$\geq\min(\texttt{m},\texttt{n})$ if non-singularity requested, or positive-definite).
+{\bf Restriction:} {\tt nnz$\geq$1} (and \texttt{nnz}$\geq\min(\texttt{m},\texttt{n})$ if non-singularity requested, or positive-definite).
 
 \item[\texttt{ptr(:)}] is an \intentout\ array of type default {\tt INTEGER}
    and size {\tt n+1}. On exit, {\tt ptr(j)} specifies the position in {\tt row(:)}
@@ -201,8 +201,8 @@ If structural non-singularity is requested, first $\min({\tt m}, {\tt n})$ entri
    \item[Symmetric] The diagonal is added to the matrix explicitly.
 \end{description}
 
-Remaining non-zero entries are then assigned to columns uniformally at
-random. In the symmetric case, a weighting is used proportional to the number of
+The remaining non-zero entries are then assigned to columns uniformally at
+random. In the symmetric case, a weighting is used in proportion to the number of
 entries below the diagonal. If the selected column for a given non-zero is 
 already full, a new random sample is drawn.
 
@@ -211,9 +211,9 @@ maximum transversal inserted, row indices are determined uniformally at random.
 Should a non-zero in that row already be present in the column, a new random
 sample is drawn.
 
-In all cases values are drawn uniformally at random from the range $[-1,1]$. In
+In all cases, values are drawn uniformally at random from the range $(-1,1)$. In
 the positive-definite case, a post-processing step sums the absolute values of
-all entries in each column and replaces the diagonal with this value.
+all the entries in each column and replaces the diagonal with this value.
 
 %%%%%%%%%%%%%%%%%%%%%% EXAMPLE %%%%%%%%%%%%%%%%%%%%%%%%
 

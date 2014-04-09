@@ -51,11 +51,11 @@ The random number generator's state is stored in the variable {\tt state}.
 Before its first use, {\tt state} should be initialized by the user to an
 initial seed value.
 
-For convenience the preprocessor macro \texttt{SPRAL\_RANDOM\_INITIAL\_SEED} has
-been defined, and seed may be declared and initialized using a statement of the
+For convenience, the preprocessor macro \texttt{SPRAL\_RANDOM\_INITIAL\_SEED} has
+been defined, and \texttt{state} may be declared and initialized using a statement of the
 following form:
 \begin{verbatim}
-   int seed = SPRAL_RANDOM_INITIAL_SEED;
+   int state = SPRAL_RANDOM_INITIAL_SEED;
 \end{verbatim}
 
 At any time the user may change the seed, for example to restore a previous
@@ -68,19 +68,34 @@ matrix.
 The \texttt{enum spral\_matrix\_type} is defined as follows:
 \begin{verbatim}
 enum spral_matrix_type {
-   SPRAL_MATRIX_UNDEFINED=0,
+   // User doesn't wish to specify, use default behaviour
+   SPRAL_MATRIX_UNSPECIFIED=0, 
+   // Rectangular matrix, m!=n
    SPRAL_MATRIX_REAL_RECT=1,        SPRAL_MATRIX_CPLX_RECT=-1,
+   // Square unsymmetric matrix m==n
    SPRAL_MATRIX_REAL_UNSYM=2,       SPRAL_MATRIX_CPLX_UNSYM=-2,
+   // Symmetric/Hermitian positive-definite matrix
    SPRAL_MATRIX_REAL_SYM_PSDEF=3,   SPRAL_MATRIX_CPLX_HERM_PSDEF=-3,
+   // Symmetric/Hermitian indefinite matrix
    SPRAL_MATRIX_REAL_SYM_INDEF=4,   SPRAL_MATRIX_CPLX_HERM_INDEF=-4,
+   // Complex symmetric matrix      
                                     SPRAL_MATRIX_CPLX_SYM=-5,
+   // Skew-symmetric matrix         
    SPRAL_MATRIX_REAL_SKEW=6,        SPRAL_MATRIX_CPLX_SKEW=-6
 };
 \end{verbatim}
 
-For the purposes of this package, the only differentiation made is between
-(skew-)symmetric matrices (for which only the lower triangle is stored) and
-unsymmetric/rectangular matrices (for which all entries are stored).
+For the purposes of this package, the behaviour is altered based on the matrix
+type as follows:
+\begin{itemize}
+   \item The matrix dimensions must be consistent with the matrix type.
+   \item For symmetric, Hermitian, and skew-symmetric matrices, only the
+      entries in the lower triangle are returned. Otherwise all entries are
+      returned.
+   \item For positive-definite matrices, generated values are such that the
+      matrix is diagonally dominant (and hence guarunteed to be
+      positive-definite).
+\end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%% argument lists %%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -119,13 +134,13 @@ to the user.
    described in Section~\ref{random_matrix: matrix types}.
 
 \item[\texttt{m}] specifies the number of rows in the matrix.
-{\bf Restriction:} {\tt m$\geq$0}.
+{\bf Restriction:} {\tt m$\geq$1}.
 
 \item[\texttt{n}] specifies the number of columns in the matrix.
-{\bf Restriction:} {\tt n$\geq$0}, and consistent with \texttt{matrix\_type}.
+{\bf Restriction:} {\tt n$\geq$1}, and consistent with \texttt{matrix\_type}.
 
 \item[\texttt{nnz}] specifies the number of non-zeroes in the matrix.
-{\bf Restriction:} {\tt nnz$\geq$0} (and \texttt{nnz}$\geq\min(\texttt{m},\texttt{n})$ if non-singularity requested, or positive-definite).
+{\bf Restriction:} {\tt nnz$\geq$1} (and \texttt{nnz}$\geq\min(\texttt{m},\texttt{n})$ if non-singularity requested, or positive-definite).
 
 \item[\texttt{ptr[]}] must have size at least {\tt n+1}. On exit, {\tt ptr[j]}
    specifies the position in {\tt row[]}
@@ -142,14 +157,15 @@ to the user.
    entries in the row plus a value chosen uniformally at random from the
    interval $(0,1]$.
 
-\item[\texttt{flags}] is the bitwise logical combination of the following
-   possible values:
+\item[\texttt{flags}] is the logical combination (i.e. bitwise-or) of
+   the following possible values:
    \begin{description}
-      \item[\texttt{SPRAL\_RANDOM\_MATRIX\_FINDEX}] if the returned matrix
-         should use Fortran indexing (i.e. 1-based). If this flag is not
-         set, the returned matrix will use C indexing (i.e. 0-based).
-      \item[\texttt{SPRAL\_RANDOM\_MATRIX\_NONSINGULAR}] if the returned matrix
-         should be non-singular. The generated matrix is guaranteed to have a
+      \item[\texttt{SPRAL\_RANDOM\_MATRIX\_FINDEX}] if the entries of the arrays
+         \texttt{ptr[]} and \texttt{row[]} should be numbered from should be
+         numbered from 1 (i.e.\ Fortran indexing). If this flag is not
+         set, these arrays will be numbered from 0 (i.e.\ C indexing).
+      \item[\texttt{SPRAL\_RANDOM\_MATRIX\_NONSINGULAR}] if the generated matrix
+         should be non-singular. The matrix is guaranteed to have a
          transversal of size $\min({\tt m}, {\tt n})$. In the symmetric or skew
          symmetric case this will be the natural diagonal. In the unsymmetric
          and rectangular cases a random matching is used. In the symmetric
@@ -157,7 +173,7 @@ to the user.
          In all other cases, if this flag is not set, a maximum transversal is
          not guaranteed and the generated matrix may be structurally rank
          deficient.
-      \item[\texttt{SPRAL\_RANDOM\_MATRIX\_SORT}] if the returned matrix should
+      \item[\texttt{SPRAL\_RANDOM\_MATRIX\_SORT}] if the generated matrix should
          have its entries sorted to ascending row number within each column. If
          this flag is not set, entries may be returned in a random order within
          each column.
@@ -196,8 +212,8 @@ If structural non-singularity is requested, first $\min({\tt m}, {\tt n})$ entri
    \item[Symmetric] The diagonal is added to the matrix explicitly.
 \end{description}
 
-Remaining non-zero entries are then assigned to columns uniformally at
-random. In the symmetric case, a weighting is used proportional to the number of
+The remaining non-zero entries are then assigned to columns uniformally at
+random. In the symmetric case, a weighting is used in proportion to the number of
 entries below the diagonal. If the selected column for a given non-zero is 
 already full, a new random sample is drawn.
 
@@ -206,9 +222,9 @@ maximum transversal inserted, row indices are determined uniformally at random.
 Should a non-zero in that row already be present in the column, a new random
 sample is drawn.
 
-In all cases values are drawn uniformally at random from the range $[-1,1]$. In
+In all cases, values are drawn uniformally at random from the interval $(-1,1)$. In
 the positive-definite case, a post-processing step sums the absolute values of
-all entries in each column and replaces the diagonal with this value.
+all the entries in each column and replaces the diagonal with this value.
 
 %%%%%%%%%%%%%%%%%%%%%% EXAMPLE %%%%%%%%%%%%%%%%%%%%%%%%
 

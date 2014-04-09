@@ -42,9 +42,8 @@ Access to the package requires a {\tt USE} statement \\ \\
 \noindent
 The following procedures are available to the user:
 \begin{itemize}
-\item {\tt random\_real()} generates a random number $\mathrm{Unif}(-1,1)$ or
-   $\mathrm{Unif}(0,1)$.
-\item {\tt random\_integer()} generates a random integer $\mathrm{Unif}(1,\ldots,n)$.
+\item {\tt random\_real()} generates a real uniformally at random from the interval $(-1,1)$ or $(0,1)$.
+\item {\tt random\_integer()} generates an integer unformally at random from the interval $[1,\ldots,n]$.
 \item {\tt random\_logical()} generates a random boolean value.
 \item {\tt random\_get\_seed()} returns the current random seed to the user.
 \item {\tt random\_set\_seed()} sets the current random seed.
@@ -94,7 +93,7 @@ We also use the term {\bf package type} to mean the same.
 \subsection{\texttt{random\_real()}}
 
 \textbf{\noindent
-   To generate a random number uniformly at random from the interval $(-1,1)$ or $(0,1)$,
+   To generate a real uniformly at random from the interval $(-1,1)$ or $(0,1)$,
    \vspace*{0.1cm} \\
    \texttt{ \hspace*{0.2cm}
       sample = random\_real(state[, positive])

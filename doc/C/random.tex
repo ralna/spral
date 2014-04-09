@@ -35,7 +35,7 @@ Please see the SPRAL install documentation.
 \subsection{Calling sequences}
 
 Access to the package requires inclusion of either \texttt{spral.h} (for the
-entire \spral library) or \texttt{spral\_random.h} (for just the relevant routines). i.e.
+entire \spral\ library) or \texttt{spral\_random.h} (for just the relevant routines). i.e.
 
 \begin{verbatim}
    #include "spral.h"
@@ -44,9 +44,8 @@ entire \spral library) or \texttt{spral\_random.h} (for just the relevant routin
 \noindent
 The following functions are available to the user:
 \begin{itemize}
-\item {\tt random\_real()} generates a random number $\mathrm{Unif}(-1,1)$ or
-   $\mathrm{Unif}(0,1)$.
-\item {\tt random\_integer()} generates a random integer $\mathrm{Unif}(1,\ldots,n)$.
+\item {\tt random\_real()} generates a real uniformally at random from the interval $(-1,1)$ or $(0,1)$.
+\item {\tt random\_integer()} generates an integer uniformally at random from the interval $[1,\ldots,n]$.
 \item {\tt random\_logical()} generates a random boolean value.
 \end{itemize}
 
@@ -56,11 +55,11 @@ The random number generator's state is stored in the variable {\tt state} that
 is common to all calls. Before its first use, {\tt state} should be initialized
 by the user to an initial seed value.
 
-For convenience the preprocessor macro \texttt{SPRAL\_RANDOM\_INITIAL\_SEED} has
-been defined, and seed may be declared and initialized using a statement of the
-following form:
+For convenience, the preprocessor macro \texttt{SPRAL\_RANDOM\_INITIAL\_SEED}
+has been defined, and \texttt{state} may be declared and initialized using a
+statement of the following form:
 \begin{verbatim}
-   int seed = SPRAL_RANDOM_INITIAL_SEED;
+   int state = SPRAL_RANDOM_INITIAL_SEED;
 \end{verbatim}
 
 At any time the user may change the seed, for example to restore a previous
@@ -76,7 +75,7 @@ the same value will produce the same pseudo-random values.
 \subsection{\texttt{random\_real()}}
 
 \textbf{\noindent
-   To generate a random number uniformly at random from the interval $(-1,1)$ or $(0,1)$, the following routine is provided.
+   To generate a real uniformly at random from the interval $(-1,1)$ or $(0,1)$, the following routine is provided.
    \vspace*{0.1cm} \\
    \texttt{ \hspace*{0.2cm}
       double spral\_random\_real(int *state, bool positive);
@@ -92,7 +91,7 @@ The return value is a sample from $\mathrm{Unif}(0,1)$ if {\tt positive} is
 
 \item[\texttt{*state}] is the current state of the random number generator.
    Before the first call (only) to a package routine, it must be initialized by
-   the user as per Section~\ref{random: seed initialization}.
+   the user as described in Section~\ref{random: seed initialization}.
 
 \item[\texttt{positive}] controls whether the return value is required to be
    positive. If \texttt{positive} is \texttt{true}, the sample will be returned
@@ -120,7 +119,7 @@ The return value is a sample from $\mathrm{Unif}(1, \ldots, n)$.
 
 \item[\texttt{*state}] is the current state of the random number generator.
    Before the first call (only) to a package routine, it must be initialized by
-   the user as per Section~\ref{random: seed initialization}.
+   the user as described in Section~\ref{random: seed initialization}.
 
 \item[\texttt{n}] specifies the upper bound of the range to be sampled.
 
@@ -129,7 +128,7 @@ The return value is a sample from $\mathrm{Unif}(1, \ldots, n)$.
 \subsection{\texttt{random\_logical()}}
 
 \textbf{\noindent
-   To generate a random logical with equal probability of being \texttt{.true.} or \texttt{.false.}, the following routine is provided.
+   To generate a logical with equal probability of being \texttt{.true.} or \texttt{.false.}, the following routine is provided.
    \vspace*{0.1cm} \\
    \texttt{ \hspace*{0.2cm}
       bool spral\_random\_logical(int *state);
@@ -138,21 +137,20 @@ The return value is a sample from $\mathrm{Unif}(1, \ldots, n)$.
 }
 
 \noindent
-The return value is a sample from $B(1,0.5)$, i.e. has an equal probability of
-being {\tt true} or {\tt false}.
+The return value has an equal probability of being {\tt true} or {\tt false}.
 
 \begin{description}
 
 \item[\texttt{*state}] is the current state of the random number generator.
    Before the first call (only) to a package routine, it must be initialized by
-   the user as per Section~\ref{random: seed initialization}.
+   the user as described in Section~\ref{random: seed initialization}.
 
 \end{description}
 
 \section{Method} \label{method}
 
 \subsection{Pseudo-random number generation}
-We use a linear congruential generator of the following form:
+We use a linear congruential generator (LCG) of the following form:
 $$
    X_{n+1} = (aX_n + c)\quad \mathrm{mod}\; m
 $$
