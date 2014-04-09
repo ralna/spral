@@ -368,8 +368,9 @@ explained in Section~\ref{typeoptions}.
 of the subroutine, as explained in Section~\ref{typeinform}.
 
 \item[\texttt{scale(:)}] is an optional \intentinout\ array of type {\tt REAL}
-and size {\tt n}. If present, it must contain  the diagonal
-entries of the scaling matrix ${S}$ and is unchanged on exit.
+and size {\tt n}. If present and \texttt{options\%scaling=0}, it must contain
+the diagonal entries of the scaling matrix ${S}$. On exit, \texttt{scale(i)}
+will contain the \texttt{i}-th diagonal entry of the scaling matrix $S$.
 
 \item[\texttt{ptr(:)}] and {\tt row(:)} are optional \intentin\ arrays of
 type {\tt INTEGER}. They are only accessed if {\tt ssids\_analyse()} was called
@@ -690,11 +691,11 @@ The default is used if {\tt nemin$<$1}.
 \noindent {\bf Options used by {\tt ssids\_factor()}}
 \begin{description}
 \item[\texttt{scaling}] is a scalar of type default {\tt INTEGER} that controls
-   the use of scaling. If the optional {\tt scale(:)} argument is supplied to
-{\tt ssids\_factor()}, the value of this parameter is ignored. The available
+   the use of scaling. The available
 options are:
 \begin{description}
-   \item[\texttt{ $\le$ 0 }] No scaling.
+   \item[\texttt{ $\le$ 0 }] No scaling (if \texttt{scale(:)} is not present),
+      or user-supplied scaling (if \texttt{scale(:)} is present).
    \item[\texttt{ $=$ 1 }] Compute a scaling using a weighted bipartite matching
       via the Hungarian Algorithm (\texttt{MC64} algorithm).
    \item[\texttt{ $=$ 2 }] Compute a scaling using a weighted bipartite matching

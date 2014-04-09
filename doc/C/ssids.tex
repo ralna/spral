@@ -377,9 +377,11 @@ disabled provides the most efficient interface.
 \item[\texttt{val[]}] must hold the numerical values of the entries of the
    matrix, as described in Section~\ref{ssids: dataformats}.
 
-\item[\texttt{scale[]}] may be \texttt{NULL}, if non-\texttt{NULL} it must have
-   size at least {\tt n}. If not \texttt{NULL}, it must contain the diagonal
-   entries of the scaling matrix ${S}$ and is unchanged on exit.
+\item[\texttt{scale[]}] may be \texttt{NULL}, or otherwise have size at least
+   \texttt{n}. If non-\texttt{NULL} and \texttt{options.scaling}$=$\texttt{0},
+   it must contain the diagonal entries of the scaling matrix ${S}$.
+   On exit, \texttt{scale[i]} will contain the \texttt{i}-th
+   diagonal entry of the scaling matrix $S$.
 
 \item[\texttt{akeep}] must be unchanged since the call to
    {\tt spral\_ssids\_analyse()} or {\tt spral\_ssids\_analyse\_coord()}.
@@ -430,7 +432,6 @@ disabled provides the most efficient interface.
    block diagonal with blocks of order 1 and 2. $S$ is a diagonal scaling
    matrix ($S$ is equal to the identity, if \texttt{options.scaling=0} and
    {\tt scale} is \texttt{NULL} on the last call to {\tt spral\_ssids\_factor}()).
-   % FIXME: Is the above description of scale correct?
    A partial solution may be computed by setting {\tt job} to have one of the
    following values:
    \begin{description}
@@ -722,11 +723,11 @@ The default is used if {\tt nemin$<$1}.
 \noindent {\bf Options used by {\tt spral\_ssids\_factor()}}
 \begin{description}
 \item[\texttt{int scaling}] controls
-the use of scaling. If the {\tt scale[]} argument to {\tt ssids\_factor()} is
-not \texttt{NULL}, the value of this parameter is ignored. The available
+the use of scaling. The available
 options are:
 \begin{description}
-   \item[\texttt{ $\le$ 0 }] No scaling.
+   \item[\texttt{ $\le$ 0 }] No scaling (if \texttt{scale} is \texttt{NULL}),
+      or user-supplied scaling (if \texttt{scale} is not \texttt{NULL}).
    \item[\texttt{ $=$ 1 }] Compute a scaling using a weighted bipartite matching
       via the Hungarian Algorithm (\texttt{MC64} algorithm).
    \item[\texttt{ $=$ 2 }] Compute a scaling using a weighted bipartite matching
