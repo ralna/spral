@@ -326,7 +326,7 @@ disabled provides the most efficient interface.
    (see Section~\ref{ssids: coordformat}).
 
 \item[\texttt{order[]}] may be \texttt{NULL}, and if non-\texttt{NULL} must
-   have size at least {\tt n}. If {\tt options\%ordering}$=${\tt 0},
+   have size at least {\tt n}. If {\tt options.ordering}$=${\tt 0},
    {\tt order(:)} must non-\texttt{NULL} and {\tt order[i]} must hold the
    position of variable $i$ in the elimination order. On exit, {\tt order[]}
    contains the elimination order that {\tt spral\_ssids\_factor()} will be given (it
@@ -339,7 +339,7 @@ disabled provides the most efficient interface.
    the numerical values of the entries of the matrix, as described in
    Section~\ref{ssids: dataformats}.
    {\tt val(:)} must not be \texttt{NULL} if a matching-based elimination
-   ordering is required ({\tt options\%ordering$=$2}), and is otherwise ignored.
+   ordering is required ({\tt options.ordering$=$2}), and is otherwise ignored.
 
 \item[\texttt{*akeep}] is allocated to hold data about the problem being
    solved and must be passed unchanged to the other subroutines.
@@ -428,8 +428,8 @@ disabled provides the most efficient interface.
    \[ {S AS} = ({PL}){D}({PL})^T \]
    where $P$ is a permutation matrix, $L$ is unit lower triangular, and $D$ is
    block diagonal with blocks of order 1 and 2. $S$ is a diagonal scaling
-   matrix ($S$ is equal to the identity, if \texttt{options\%scaling=0} and
-   {\tt scale} is not present on the last call to {\tt spral\_ssids\_factor}()).
+   matrix ($S$ is equal to the identity, if \texttt{options.scaling=0} and
+   {\tt scale} is \texttt{NULL} on the last call to {\tt spral\_ssids\_factor}()).
    % FIXME: Is the above description of scale correct?
    A partial solution may be computed by setting {\tt job} to have one of the
    following values:
@@ -635,17 +635,29 @@ On exit, associated memory and CUDA resources will have been released, and
 \subsection{\texttt{ssids\_options}}
 \label{ssids: typeoptions}
 
-The derived data type {\tt ssids\_options} is used to specify the options used
-within \texttt{SSIDS}. The components, that are automatically
-given default values in the definition of the type, are: \\
+The structure {\tt spral\_ssids\_options} is used to specify the options used
+within \texttt{SSIDS}. The components, that must be given default values through
+a call to \texttt{spral\_ssids\_default\_options()}, are: \\
 
 %%%%%%%%%%%%
+
+\noindent {\bf C specific options}
+
+\begin{description}
+\item[\texttt{int array\_base}] specifies the array indexing base. It must
+   have the value either \texttt{0} (C indexing) or \texttt{1} (Fortran
+   indexing). If \texttt{array\_base}$=$\texttt{1}, the arrays \texttt{ptr[]},
+   \texttt{row[]}, \texttt{col[]}, \texttt{order[]}, and \texttt{piv\_order[]}
+   are as described in the Fortran documentation.
+   The default value is \texttt{array\_base}$=$\texttt{0}.
+\end{description}
+
 \noindent {\bf Printing options}
 
 \begin{description}
 
-\item[\texttt{print\_level}] is a scalar of type  {\tt INTEGER}
-that is used to control the level of printing. The different levels are:
+\item[\texttt{int print\_level}]  is used to control the level of printing.
+   The different levels are:
 \begin{description}
 \item{\tt $<$ 0 } No printing.
 \item{\tt = 0 } Error and warning messages only.
@@ -654,19 +666,18 @@ that is used to control the level of printing. The different levels are:
 \end{description}
 The default is {\tt print\_level$=$\tt 0}.
 
-\item[\texttt{unit\_diagnostics}] is a scalar  of type
-{\tt INTEGER} that holds the
+\item[\texttt{int unit\_diagnostics}]  holds the
 unit number for diagnostic printing. Printing is suppressed if
 {\tt unit\_diagnostics$<0$}.
 The default is {\tt unit\_diagnostics$=$6}.
 
-\item[\texttt{unit\_error}] is a scalar of type  {\tt INTEGER} that holds the
+\item[\texttt{int unit\_error}] holds the
 unit number for error messages.
 Printing of error messages
 is suppressed if {\tt unit\_error$<$0}.
 The default is {\tt unit\_error$=$6}.
 
-\item[\texttt{unit\_warning}] is a scalar  of type  {\tt INTEGER} that holds the
+\item[\texttt{int unit\_warning}] holds the
 unit number for warning messages.
 Printing of warning messages is suppressed if {\tt unit\_warning$<$0}.
 The default is {\tt unit\_warning$=$6}.
@@ -681,11 +692,11 @@ The default is {\tt unit\_warning$=$6}.
 
 \begin{description}
 
-\item[\texttt{ordering}] is a scalar of
-type  {\tt INTEGER}. If set to {\tt 0}, the user
-must supply an elimination order in {\tt order}; otherwise
-an elimination order will be computed by {\tt ssids\_analyse}
-or {\tt ssids\_analyse\_coord}.
+\item[\texttt{int ordering}] controls the ordering algorithm used. 
+If set to {\tt 0}, the user
+must supply an elimination order in {\tt order[]}; otherwise
+an elimination order will be computed by {\tt ssids\_analyse()}
+or {\tt ssids\_analyse\_coord()}.
 The options are:
 \begin{description}
 \item{} {\tt 0} User-supplied ordering is used.
@@ -695,12 +706,12 @@ algorithm is used to identify large off-diagonal entries. A restricted METIS
 ordering is then used that forces these on to the subdiagonal).
 This option should only be chosen for indefinite systems.
 A scaling is also computed that may be used in {\tt spral\_ssids\_factor()}
-(see {\tt options\%scaling} below).
+(see {\tt options.scaling} below).
 \end{description}
 The default is {\tt ordering}$=${\tt 1}.
 {\bf Restriction:} {\tt ordering}$=${\tt 0}, {\tt 1}, {\tt 2}.
 
-\item[\texttt{nemin}] is a scalar of type  {\tt INTEGER} that controls
+\item[\texttt{int nemin}] controls
 node amalgamation. Two neighbours in the elimination tree are merged
 if they both involve fewer than {\tt nemin} eliminations.
 The default is {\tt nemin$=$8}.
@@ -710,9 +721,9 @@ The default is used if {\tt nemin$<$1}.
 %%%%%%%%%%%%
 \noindent {\bf Options used by {\tt spral\_ssids\_factor()}}
 \begin{description}
-\item[\texttt{scaling}] is a scalar of type default {\tt INTEGER} that controls
-the use of scaling. If the optional {\tt scale} argument is supplied to
-{\tt ssids\_factor}, the value of this parameter is ignored. The available
+\item[\texttt{int scaling}] controls
+the use of scaling. If the {\tt scale[]} argument to {\tt ssids\_factor()} is
+not \texttt{NULL}, the value of this parameter is ignored. The available
 options are:
 \begin{description}
    \item[\texttt{ $\le$ 0 }] No scaling.
@@ -722,9 +733,9 @@ options are:
       via the Auction Algorithm (may be lower quality than that computed using 
       the Hungarian Algorithm, but can be considerably faster).
    \item[\texttt{ $=$ 3 }] A matching-based ordering has been generated during the
-      analyse phase using {\tt options\%ordering $=$ 2}. Use the
+      analyse phase using {\tt options.ordering $=$ 2}. Use the
       scaling generated as a side-effect of this process. The scaling will be
-      the same as that generated with {\tt options\%scaling $=$ 1} if the matrix
+      the same as that generated with {\tt options.scaling $=$ 1} if the matrix
       values have not changed. This option will generate an error if a
       matching-based ordering was not used.
    \item[\texttt{ $\ge$ 4 }] Compute a scaling using the norm-equilibration
@@ -736,21 +747,21 @@ The default is {\tt scaling}$=${\tt 0}.
 
 %%%%%%%%%%%%
 \noindent {\bf Options used by {\tt spral\_ssids\_factor()} with
-{\tt posdef}$ =${\tt .false.}  ($A$ indefinite)}
+{\tt posdef}$ =${\tt false}  ($A$ indefinite)}
 
 \begin{description}
-\item[\texttt{action}] is a scalar of type default {\tt LOGICAL}.
+\item[\texttt{bool action}] controls the behaviour for singular matrices.
 If the matrix is found to be singular (has rank less than the number of
 non-empty rows), the computation continues after issuing a warning if
-{\tt action} has the value {\tt .true.} or
-terminates with an error if it has the value {\tt .false.}
-The default is {\tt action}$=${\tt .true.}
+{\tt action} has the value {\tt true} or
+terminates with an error if it has the value {\tt false}
+The default is {\tt action}$=${\tt true}
 
 %\item[\texttt{small}] is a scalar of type {\tt REAL}.
 %Any pivot whose modulus is less than {\tt small} is treated as zero.
 %The default is {\tt small}$ = {\tt 10^{-20}}$.
 
-\item[\texttt{u}] is a scalar of type {\tt REAL} that holds the relative pivot
+\item[double \texttt{u}] holds the relative pivot
 tolerance $u$.
 The default is {\tt u}$=${\tt 0.01}.
 Values outside the range $[0,0.5]$ are treated as the closest value in that range.
@@ -761,13 +772,13 @@ Values outside the range $[0,0.5]$ are treated as the closest value in that rang
 \noindent {\bf Options used by {\tt spral\_ssids\_factor()} and {\tt spral\_ssids\_solve()}}
 
 \begin{description}
-\item[\texttt{use\_gpu\_solve}] is a scalar of type {\tt LOGICAL} that specifies
+\item[\texttt{bool use\_gpu\_solve}] controls
    whether to use the CPU or GPU for the \texttt{spral\_ssids\_solve()}. If
-   \texttt{.true.}, the GPU is used, but some more advanced features are not
+   \texttt{true}, the GPU is used, but some more advanced features are not
    available (see the description of the \texttt{job} parameter in
    Section~\ref{ssids: solve}).
-   The default value is \texttt{use\_gpu\_solve}$=$\texttt{.true.}.
-\item[\texttt{presolve}] is a scalar of type {\tt INTEGER} that specifies the
+   The default value is \texttt{use\_gpu\_solve}$=$\texttt{true}.
+\item[\texttt{int presolve}] controls the
    amount of extra work performed during factorization to accelerate the solve.
    It can take the following values:
    \begin{description}
@@ -779,7 +790,7 @@ Values outside the range $[0,0.5]$ are treated as the closest value in that rang
          the number of variables eliminated at that supernode). As the matrices
          $L$ and $D$ are altered, the routines {\tt spral\_ssids\_enquire\_posdef()},
          {\tt spral\_ssids\_enquire\_indef()}, and {\tt spral\_ssids\_alter()} cannot be used.
-         This option is not compatible with {\tt options\%use\_gpu\_solve}$=$\texttt{.false.}
+         This option is not compatible with {\tt options.use\_gpu\_solve}$=$\texttt{.false.}
    \end{description}
    The default option is \texttt{presolve}$=$\texttt{0}.
 \end{description}
@@ -788,114 +799,110 @@ Values outside the range $[0,0.5]$ are treated as the closest value in that rang
 
 \subsection{The derived data type for holding information}
 \label{ssids: typeinform}
-The derived data type {\tt ssids\_inform}
+The structure {\tt spral\_ssids\_inform}
 is used to hold parameters that give information about the progress and needs
-of the algorithm. The components of {\tt ssids\_inform}
+of the algorithm. The components of {\tt struct spral\_ssids\_inform}
 (in alphabetical order) are:
 
 \begin{description}
 
-\item[\texttt{flag}] is a scalar of type  {\tt INTEGER}
-that gives the exit status of the algorithm (details in Section \ref{ssids: errors}).
+\item[\texttt{ing flag}] gives the exit status of the algorithm (details in Section \ref{ssids: errors}).
 
-\item[\texttt{matrix\_dup}] is a scalar  of type  {\tt INTEGER}.
-On exit from {\tt spral\_ssids\_analyse()}
-with {\tt check} set to {\tt .true.} or from \\
-{\tt spral\_ssids\_analyse\_coord()}, it holds the
+\item[\texttt{int matrix\_dup}] holds, on exit from
+{\tt spral\_ssids\_analyse()} with {\tt check} set to {\tt true} or exit from
+{\tt spral\_ssids\_analyse\_coord()}, the
 number of duplicate entries that were found and summed.
 
-\item[\texttt{matrix\_missing\_diag}] is a scalar of type {\tt INTEGER}.
-On exit from {\tt spral\_ssids\_analyse()} with {\tt check} set to {\tt .true.},
-or from {\tt ssids\_analyse\_coord}, it holds the number of diagonal
+\item[\texttt{int matrix\_missing\_diag}] holds, on exit from
+{\tt spral\_ssids\_analyse()} with {\tt check} set to {\tt true},
+or exit from {\tt ssids\_analyse\_coord()}, the number of diagonal
 entries without an explicitly provided value.
 
-\item[\texttt{matrix\_outrange}] is a scalar  of type  {\tt INTEGER}.
-On exit from {\tt spral\_ssids\_analyse()}
-with {\tt check} set to {\tt .true.} or from \\
-{\tt spral\_ssids\_analyse\_coord()}, it holds the
+\item[\texttt{int matrix\_outrange}] holds, on exit from
+{\tt spral\_ssids\_analyse()} with {\tt check} set to {\tt true} or exit from 
+{\tt spral\_ssids\_analyse\_coord()}, the
 number of out-of-range entries that were   found and discarded.
 
-\item[\texttt{matrix\_rank}] is scalar of type  {\tt INTEGER}. On exit from
-{\tt spral\_ssids\_analyse()} and {\tt spral\_ssids\_analyse\_coord()}, it holds
+\item[\texttt{int matrix\_rank}] holds, on exit from
+{\tt spral\_ssids\_analyse()} or {\tt spral\_ssids\_analyse\_coord()},
 the structural rank of $A$, if available (otherwise, it is set to {\tt n}).
 On exit from
 {\tt spral\_ssids\_factor()}, it holds the computed rank of
 the factorized matrix.
 
-\item[\texttt{maxdepth}] is a scalar of type  {\tt INTEGER}. On exit from
-{\tt spral\_ssids\_analyse()} or {\tt spral\_ssids\_analyse\_coord()}, it holds the maximum depth of the assembly tree.
+\item[\texttt{int maxdepth}] holds, on exit from
+{\tt spral\_ssids\_analyse()} or {\tt spral\_ssids\_analyse\_coord()},
+the maximum depth of the assembly tree.
 
-\item[\texttt{maxfront}] is a scalar of type  {\tt INTEGER}. On exit from
-{\tt spral\_ssids\_analyse()} or {\tt spral\_ssids\_analyse\_coord()}, it holds the maximum front size
+\item[\texttt{int maxfront}] holds, on exit from
+{\tt spral\_ssids\_analyse()} or {\tt spral\_ssids\_analyse\_coord()}, 
+the maximum front size
 in the positive-definite case (or in the indefinite case with
 the same pivot sequence). On exit from
 {\tt spral\_ssids\_factor()}, it holds the maximum front size.
 
-\item[\texttt{num\_delay}] is scalar of type  {\tt INTEGER}. On exit from
-{\tt spral\_ssids\_factor()}, it holds the
+\item[\texttt{int num\_delay}] holds, on exit from
+{\tt spral\_ssids\_factor()}, the
 number of eliminations that were
 delayed, that is, the total number of fully-summed
 variables that were passed to the father node because
 of stability considerations. If a variable is passed
 further up the tree, it will be counted again.
 
-\item[\texttt{num\_factor}] is scalar of type {\tt INTEGER(long)}. On exit from
-{\tt spral\_ssids\_analyse()}  or {\tt spral\_ssids\_analyse\_coord()}, it holds the number of entries that will be in the
+\item[\texttt{long num\_factor}] holds, on exit from
+{\tt spral\_ssids\_analyse()}  or {\tt spral\_ssids\_analyse\_coord()},
+the number of entries that will be in the
 factor $L$ in the positive-definite case (or in the indefinite case with
 the same pivot sequence). On exit from
-{\tt ssids\_factor},
+{\tt ssids\_factor()},
 it holds the actual number of entries in the factor
 $L$. In the indefinite case, {\tt 2n} entries of ${D}^{-1}$ are
 also held.
 
-\item[\texttt{num\_flops}] is scalar of type {\tt INTEGER(long)}. On exit from
-{\tt spral\_ssids\_analyse()}  or {\tt spral\_ssids\_analyse\_coord()}, it holds the number of
+\item[\texttt{long num\_flops}] holds, on exit from
+{\tt spral\_ssids\_analyse()}  or {\tt spral\_ssids\_analyse\_coord()},
+the number of
 floating-point operations that
 will be needed to perform the factorization
 in the positive-definite case (or in the indefinite case  with
 the same pivot sequence).  On exit from {\tt spral\_ssids\_factor()}, it holds the
 number of floating-point operations performed.
 
-\item[\texttt{num\_neg}] is a scalar  of type  {\tt INTEGER}.
-On exit from {\tt spral\_ssids\_factor()}, it holds
+\item[\texttt{int num\_neg}] holds, on exit from {\tt spral\_ssids\_factor()},
 the number of negative eigenvalues of the matrix $D$.
 
 
-\item[\texttt{num\_sup}] is a scalar of type  {\tt INTEGER}.
-On exit from {\tt spral\_ssids\_analyse()}  or {\tt spral\_ssids\_analyse\_coord()}, it holds
+\item[\texttt{int num\_sup}] holds, on exit from {\tt spral\_ssids\_analyse()}  or {\tt spral\_ssids\_analyse\_coord()},
 the number of supernodes in the problem.
 
-\item[\texttt{num\_two}] is scalar of type  {\tt INTEGER}.
-On exit from
-{\tt spral\_ssids\_factor()}, it holds the number
+\item[\texttt{int num\_two}] holds, on exit from
+{\tt spral\_ssids\_factor()}, the number
 of $2 \times 2$ pivots used by the factorization, that is,
 the number of $2 \times 2$ blocks in $D$.
 
-\item[\texttt{stat}] is a scalar of type  {\tt INTEGER}.
-In the event of an allocation or deallocation error, it
-holds the Fortran {\tt stat} parameter if it is available
+\item[\texttt{int stat}] holds, in the event of an allocation or deallocation
+error, the Fortran {\tt stat} parameter if it is available
 (and is set to {\tt 0} otherwise).
 
-\item[\texttt{cublas\_error}] is a scalar of type {\tt INTEGER}.
-In the event of an error return from the CUBLAS library, it
-holds the error code returned (and is {\tt 0} otherwise).
+\item[\texttt{int cublas\_error}] holds, in the event of an error return from
+the CUBLAS library, the error code returned (and is {\tt 0} otherwise).
 
-\item[\texttt{cuda\_error}] is a scalar of type {\tt INTEGER}.
-In the event of a CUDA error, it holds the error code returned (and is {\tt 0}
-otherwise). Note that due to the asynchronous nature of GPU execution, the
-reported error may have a cause errors external to {\tt SSIDS}.
+\item[\texttt{int cuda\_error}] holds, in the event of a CUDA error, the error code
+returned (and is {\tt 0} otherwise). Note that due to the asynchronous nature
+of GPU execution, the reported error may have a cause errors external to
+{\tt SSIDS}.
 
 \end{description}
 
 
 %%%%%%%%%%%%%%%%%%%%%% Warning and error messages %%%%%%%%%%%%%%%%%%%%%%%%
 
-\section{Return codes} \label{ssids: errors}
+\section{Error flags} \label{ssids: errors}
 
-A successful return from a subroutine in the package is indicated by
-{\tt inform\%flag} having the value zero.
+A successful return from a routine in the package is indicated by
+{\tt inform.flag} having the value zero.
 A negative value is associated with an error message that by default will
-be output on unit {\tt options\%unit\_error}.
+be output on unit {\tt options.unit\_error}.
 
 Possible negative values are:
 
@@ -906,63 +913,62 @@ Possible negative values are:
             if {\tt n$<$0}. Also returned by {\tt spral\_ssids\_analyse\_coord()} if
             {\tt ne$<$1}.
 \item{$-$3} Returned by {\tt spral\_ssids\_analyse()} if there is an error in
-            {\tt ptr(:)}.
+            {\tt ptr[]}.
 \item{$-$4} Returned by {\tt spral\_ssids\_analyse()} if all the variable indices in
             one or more columns  are out-of-range. Also returned by
             {\tt spral\_ssids\_analyse\_coord()} if all entries are out-of-range.
 \item{$-$5} Returned by {\tt spral\_ssids\_factor()} if
-            {\tt posdef}$=${\tt .false.} and
-            {\tt options\%action = .false.} when the matrix is found to be
-            singular. The user may reset the matrix values in {\tt val(:)}
+            {\tt posdef}$=${\tt false} and
+            {\tt options.action = false} when the matrix is found to be
+            singular. The user may reset the matrix values in {\tt val[]}
             and recall {\tt spral\_ssids\_factor()}.
 \item{$-$6} Returned by {\tt spral\_ssids\_factor()} if
-            {\tt posdef}$=${\tt .true.} and the matrix is found to
+            {\tt posdef}$=${\tt true} and the matrix is found to
             be not positive definite. This may be because the Hungarian scaling
             determined that the matrix was structurally singular. The user may
-            reset the matrix values in {\tt val(:)} and recall
+            reset the matrix values in {\tt val[]} and recall
             {\tt spral\_ssids\_factor()}.
 \item{$-$7} Returned by {\tt spral\_ssids\_factor()} if {\tt spral\_ssids\_analyse()} was
-            called with {\tt check} set to {\tt .false.} but {\tt ptr(:)}
-            and/or {\tt row(:)} is not present.
+            called with {\tt check} set to {\tt false} but {\tt ptr[]}
+            and/or {\tt row[]} was \texttt{NULL}.
 \item{$-$8} Returned by {\tt spral\_ssids\_analyse()}  and
-            {\tt spral\_ssids\_analyse\_coord()} if {\tt options\%ordering} is
-            out-of-range, or {\tt options\%ordering}$=${\tt 0} and the user
+            {\tt spral\_ssids\_analyse\_coord()} if {\tt options.ordering} is
+            out-of-range, or {\tt options.ordering}$=${\tt 0} and the user
             has either failed to provide an elimination order or an error has
             been found in the user-supplied elimination order (as supplied in
-            {\tt order(:)}).
+            {\tt order[]}).
 \item{$-$9} Returned by {\tt spral\_ssids\_analyse()} and
-            {\tt spral\_ssids\_analyse\_coord()} if {\tt options\%ordering}$=${\tt 2},
-            but {\tt val(:)} was not supplied.
+            {\tt spral\_ssids\_analyse\_coord()} if {\tt options.ordering}$=${\tt 2},
+            but {\tt val[]} was \texttt{NULL}.
 \item{$-$10} Returned by {\tt spral\_ssids\_solve()} if there is an error in the size
-            of array {\tt x(:,:)} (that is, {\tt ldx$<$n} or {\tt nrhs$<$1}).
+            of array {\tt x[][]} (that is, {\tt ldx$<$n} or {\tt nrhs$<$1}).
             The user may reset {\tt ldx} and/or {\tt nrhs} and recall
             {\tt spral\_ssids\_solve()}.
 \item{$-$11} Returned by {\tt spral\_ssids\_solve()} if {\tt job} is out-of-range.
-            The user may reset {\tt job} and recall {\tt spral\_ssids\_solve()}.
+            The user may reset {\tt job} and recall \\
+            {\tt spral\_ssids\_solve()}.
 \item{$-$12} Returned by {\tt spral\_ssids\_solve()} if the selected combination of
-            {\tt posdef{\rm ,} options\%use\_gpu\_solve{\rm ,}
-            options\%presolve} and {\tt job} are not compatible.
+            {\tt posdef{\rm ,} options.use\_gpu\_solve{\rm ,}
+            options.presolve} and {\tt job} are not compatible.
 \item{$-$13} Returned by {\tt spral\_ssids\_enquire\_posdef()} if
-            {\tt posdef}$=${\tt .false.} on the last call
+            {\tt posdef}$=${\tt false} on the last call
             to {\tt spral\_ssids\_factor()}.
 \item{$-$14} Returned by {\tt spral\_ssids\_enquire\_indef()} if
-            {\tt posdef}$=${\tt .true.} on the last call to
+            {\tt posdef}$=${\tt true} on the last call to
             {\tt spral\_ssids\_factor()}.
-\item{$-$15} Returned by {\tt spral\_ssids\_factor()} if {\tt options\%scaling$=$3}
+\item{$-$15} Returned by {\tt spral\_ssids\_factor()} if {\tt options.scaling$=$3}
             but a matching based ordering was not used during the call to
-            {\tt ssids\_analyse} or {\tt ssids\_analyse\_coord} (i.e. was
-            called with
-            {\tt options\%ordering}$\ne${\tt 2}).
-\item{$-$50} Allocation error. If available, the {\tt stat}
-            parameter is returned in {\tt inform\%stat}.
-            The user may wish to try the more memory conservative codes
-            {\tt HSL\_MA86} or {\tt HSL\_MA77}.
+            {\tt ssids\_analyse()} or {\tt ssids\_analyse\_coord()} (i.e. was
+            called with \\
+            {\tt options.ordering}$\ne${\tt 2}).
+\item{$-$50} Allocation error. If available, the Fortran {\tt stat}
+            parameter is returned in {\tt inform.stat}.
 \item{$-$51} CUDA error. The CUDA error return value is returned in
-            {\tt inform\%cuda\_error}.
+            {\tt inform.cuda\_error}.
 \item{$-$52} CUBLAS error. The CUBLAS error return value is returned in
-            {\tt inform\%cublas\_error}.
+            {\tt inform.cublas\_error}.
 \end{description}
-A positive value of {\tt inform\%flag}
+A positive value of {\tt inform.flag}
 is used to warn the user that the input matrix data may be faulty or that
 the subroutine cannot guarantee the solution obtained.
 Possible values are:
@@ -971,11 +977,11 @@ Possible values are:
 and {\tt spral\_ssids\_analyse\_coord()} if out-of-range variable
 indices found.
 Any such entries are ignored  and the computation continues.
-{\tt inform\%matrix\_outrange} is set to the number of such entries.
+{\tt inform.matrix\_outrange} is set to the number of such entries.
 
 \item{$+$2} Returned by {\tt spral\_ssids\_analyse()} and {\tt spral\_ssids\_analyse\_coord()}
 if duplicated indices found. Duplicates are recorded and the corresponding
-entries are summed. {\tt inform\%matrix\_dup} is set to the number of such entries.
+entries are summed. {\tt inform.matrix\_dup} is set to the number of such entries.
 
 \item{$+$3} Returned by {\tt spral\_ssids\_analyse()} and {\tt spral\_ssids\_analyse\_coord()} if both
 out-of-range and duplicated variable indices found.
@@ -992,13 +998,13 @@ out-of-range and/or duplicated variable indices have been found.
 \item{$+$6} Returned by {\tt spral\_ssids\_analyse()}  and {\tt spral\_ssids\_analyse\_coord()} if
 $A$ is found be (structurally) singular. This will overwrite any of the above warnings.
 
-\item{$+$7} Returned by {\tt spral\_ssids\_factor()} if {\tt options\%action} is set
-to {\tt .true.} and the matrix is found to be (structurally or numerically)
+\item{$+$7} Returned by {\tt spral\_ssids\_factor()} if {\tt options.action} is set
+to {\tt true} and the matrix is found to be (structurally or numerically)
 singular.
 
 \item{$+$8} Returned by {\tt spral\_ssids\_factor()} if
-{\tt options\%ordering}$=${\tt 2} (i.e.
-a matching-based ordering was used) but the associated scaling was not (i.e. {\tt options\%scaling}$\ne$
+{\tt options.ordering}$=${\tt 2} (i.e.
+a matching-based ordering was used) but the associated scaling was not (i.e. {\tt options.scaling}$\ne$
 {\tt 3}).
 
 \end{description}
@@ -1006,11 +1012,11 @@ a matching-based ordering was used) but the associated scaling was not (i.e. {\t
 \section{Method} \label{ssids: method}
 
 \subsection*{\texttt{spral\_ssids\_analyse()} and \texttt{spral\_ssids\_analyse\_coord()}}
-If {\tt check} is set to {\tt .true.} on the call to {\tt spral\_ssids\_analyse()}
+If {\tt check} is set to {\tt true} on the call to {\tt spral\_ssids\_analyse()}
 or if {\tt spral\_ssids\_analyse\_coord()} is called, 
 the user-supplied matrix data is checked for errors. The cleaned integer matrix data
 (duplicates are summed and out-of-range indices discarded) is stored in
-{\tt ssids\_akeep}.
+{\tt akeep}.
 The use of checking is optional on a call to {\tt spral\_ssids\_analyse()} as it
 incurs both time and memory overheads. However, it is recommended
 since the behaviour of the other routines in the package
@@ -1020,18 +1026,18 @@ If the user has supplied an elimination order it is checked for errors. Otherwis
 an elimination order is generated by the package. 
 The elimination order is used to construct an assembly tree.
 On exit from {\tt spral\_ssids\_analyse()} (and {\tt spral\_ssids\_analyse\_coord()}), 
-{\tt order(:)} is set so that {\tt order(i)} holds the position
+{\tt order[]} is set so that {\tt order[i]} holds the position
 of variable $i$ in the elimination order. If an ordering was supplied by the user, this
 order may differ, but will be equivalent in terms of fill-in.
 
-If a matching-based elimination order is requested and {\tt scale(:)} is present, on exit,
-{\tt scale(:)} contains scaling factors that are computed as a bi-product of
-the ordering algorithm and these may be passed unchanged to {\tt spral\_ssids\_factor()}.
+%If a matching-based elimination order is requested and {\tt scale[]} is not \texttt{NULL}, on exit,
+%{\tt scale[]} contains scaling factors that are computed as a bi-product of
+%the ordering algorithm and these may be passed unchanged to {\tt spral\_ssids\_factor()}.
 
 \subsection*{\texttt{spral\_ssids\_factor()}}
 {\tt spral\_ssids\_factor()} optionally computes a scaling and then performs the numerical factorization.
  The user must specify whether or not the matrix is
-positive definite. If {\tt posdef} is set to {\tt .true.}, no pivoting
+positive definite. If {\tt posdef} is set to {\tt true}, no pivoting
 is performed and the computation will terminate with an error if a
 non-positive pivot is encountered.
 
@@ -1069,20 +1075,20 @@ of the generated element.
 This is handled by a single dedicated kernel; again, see [1] for details.
 
 At the end of the factorization, data structures for use in future calls to
-\texttt{spral\_ssids\_solve()} are prepared. If \texttt{options\%presolve=1}, the
+\texttt{spral\_ssids\_solve()} are prepared. If \texttt{options.presolve=1}, the
 block of $L$ corresponding to the eliminated variables is explicitly inverted
 to accelerate future calls to \texttt{spral\_ssids\_solve()} at the cost of making
 \texttt{spral\_ssids\_factor()} slower.
 
 \subsection*{\texttt{spral\_ssids\_solve()}}
-If \texttt{options\%use\_gpu\_solve}$=$\texttt{.false.}, data is moved to the
+If \texttt{options.use\_gpu\_solve}$=$\texttt{false}, data is moved to the
 CPU if required and the BLAS calls are used to perform a solve using the
 assembly tree and factors generated on previous calls.
 
 Otherwise, the solve is conducted on the GPU in a similar fashion. If
-\texttt{options\%presolve=0}, custom GPU implementations of \texttt{\_trsv()}
+\texttt{options.presolve=0}, custom GPU implementations of \texttt{\_trsv()}
 and \texttt{\_gemv()} are used to handle multiple independent operations. If
-multiple right-hand sides are to be solved for, the single right-hand side solve is looped over. If \texttt{options\%presolve=1}, \texttt{\_trsv()} can be
+multiple right-hand sides are to be solved for, the single right-hand side solve is looped over. If \texttt{options.presolve=1}, \texttt{\_trsv()} can be
 replaced by the much more parallel (and hence faster) \texttt{\_gemv()}. In
 this case multiple right-hand sides are handled at the same time.
 
@@ -1125,12 +1131,9 @@ This produces the following output:
 \begin{verbatim}
  Warning from ssids_analyse. Warning flag =   4
  one or more diagonal entries is missing
-
- The computed solution is:
-  1.0000000000E+00  2.0000000000E+00  3.0000000000E+00
-  4.0000000000E+00  5.0000000000E+00
- Pivot order:   4    5   -2   -1    3
-
+The computed solution is:
+   1.0000000000e+00   2.0000000000e+00   3.0000000000e+00   4.0000000000e+00   5.0000000000e+00
+Pivot order:     3     4     1     0     2
 \end{verbatim}
 
 \begin{funders}
