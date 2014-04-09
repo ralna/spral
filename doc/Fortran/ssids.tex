@@ -662,9 +662,9 @@ The default is {\tt unit\_warning$=$6}.
 
 \item[\texttt{ordering}] is a scalar of
 type  {\tt INTEGER}. If set to {\tt 0}, the user
-must supply an elimination order in {\tt order}; otherwise
-an elimination order will be computed by {\tt ssids\_analyse}
-or {\tt ssids\_analyse\_coord}.
+must supply an elimination order in {\tt order(:)}; otherwise
+an elimination order will be computed by {\tt ssids\_analyse()}
+or {\tt ssids\_analyse\_coord()}.
 The options are:
 \begin{description}
 \item{} {\tt 0} User-supplied ordering is used.
@@ -690,8 +690,8 @@ The default is used if {\tt nemin$<$1}.
 \noindent {\bf Options used by {\tt ssids\_factor()}}
 \begin{description}
 \item[\texttt{scaling}] is a scalar of type default {\tt INTEGER} that controls
-the use of scaling. If the optional {\tt scale} argument is supplied to
-{\tt ssids\_factor}, the value of this parameter is ignored. The available
+   the use of scaling. If the optional {\tt scale(:)} argument is supplied to
+{\tt ssids\_factor()}, the value of this parameter is ignored. The available
 options are:
 \begin{description}
    \item[\texttt{ $\le$ 0 }] No scaling.
@@ -740,13 +740,13 @@ Values outside the range $[0,0.5]$ are treated as the closest value in that rang
 \noindent {\bf Options used by {\tt ssids\_factor()} and {\tt ssids\_solve()}}
 
 \begin{description}
-\item[\texttt{use\_gpu\_solve}] is a scalar of type {\tt LOGICAL} that specifies
+\item[\texttt{use\_gpu\_solve}] is a scalar of type {\tt LOGICAL} that controls
    whether to use the CPU or GPU for the \texttt{ssids\_solve()}. If
    \texttt{.true.}, the GPU is used, but some more advanced features are not
    available (see the description of the \texttt{job} parameter in
    Section~\ref{solve}).
    The default value is \texttt{use\_gpu\_solve}$=$\texttt{.true.}.
-\item[\texttt{presolve}] is a scalar of type {\tt INTEGER} that specifies the
+\item[\texttt{presolve}] is a scalar of type {\tt INTEGER} that controls the
    amount of extra work performed during factorization to accelerate the solve.
    It can take the following values:
    \begin{description}
@@ -785,7 +785,7 @@ number of duplicate entries that were found and summed.
 
 \item[\texttt{matrix\_missing\_diag}] is a scalar of type {\tt INTEGER}.
 On exit from {\tt ssids\_analyse()} with {\tt check} set to {\tt .true.},
-or from {\tt ssids\_analyse\_coord}, it holds the number of diagonal
+or from {\tt ssids\_analyse\_coord()}, it holds the number of diagonal
 entries without an explicitly provided value.
 
 \item[\texttt{matrix\_outrange}] is a scalar  of type  {\tt INTEGER}.
@@ -822,7 +822,7 @@ further up the tree, it will be counted again.
 {\tt ssids\_analyse()}  or {\tt ssids\_analyse\_coord()}, it holds the number of entries that will be in the
 factor $L$ in the positive-definite case (or in the indefinite case with
 the same pivot sequence). On exit from
-{\tt ssids\_factor},
+{\tt ssids\_factor()},
 it holds the actual number of entries in the factor
 $L$. In the indefinite case, {\tt 2n} entries of ${D}^{-1}$ are
 also held.
@@ -929,13 +929,11 @@ Possible negative values are:
             {\tt ssids\_factor()}.
 \item{$-$15} Returned by {\tt ssids\_factor()} if {\tt options\%scaling$=$3}
             but a matching based ordering was not used during the call to
-            {\tt ssids\_analyse} or {\tt ssids\_analyse\_coord} (i.e. was
+            {\tt ssids\_analyse()} or {\tt ssids\_analyse\_coord()} (i.e. was
             called with
             {\tt options\%ordering}$\ne${\tt 2}).
 \item{$-$50} Allocation error. If available, the {\tt stat}
             parameter is returned in {\tt inform\%stat}.
-            The user may wish to try the more memory conservative codes
-            {\tt HSL\_MA86} or {\tt HSL\_MA77}.
 \item{$-$51} CUDA error. The CUDA error return value is returned in
             {\tt inform\%cuda\_error}.
 \item{$-$52} CUBLAS error. The CUBLAS error return value is returned in
@@ -989,7 +987,7 @@ If {\tt check} is set to {\tt .true.} on the call to {\tt ssids\_analyse()}
 or if {\tt ssids\_analyse\_coord()} is called, 
 the user-supplied matrix data is checked for errors. The cleaned integer matrix data
 (duplicates are summed and out-of-range indices discarded) is stored in
-{\tt ssids\_akeep}.
+{\tt akeep}.
 The use of checking is optional on a call to {\tt ssids\_analyse()} as it
 incurs both time and memory overheads. However, it is recommended
 since the behaviour of the other routines in the package
@@ -1003,9 +1001,9 @@ On exit from {\tt ssids\_analyse()} (and {\tt ssids\_analyse\_coord()}),
 of variable $i$ in the elimination order. If an ordering was supplied by the user, this
 order may differ, but will be equivalent in terms of fill-in.
 
-If a matching-based elimination order is requested and {\tt scale(:)} is present, on exit,
-{\tt scale(:)} contains scaling factors that are computed as a bi-product of
-the ordering algorithm and these may be passed unchanged to {\tt ssids\_factor()}.
+%If a matching-based elimination order is requested and {\tt scale(:)} is present, on exit,
+%{\tt scale(:)} contains scaling factors that are computed as a bi-product of
+%the ordering algorithm and these may be passed unchanged to {\tt ssids\_factor()}.
 
 \subsection*{\texttt{ssids\_factor()}}
 {\tt ssids\_factor()} optionally computes a scaling and then performs the numerical factorization.
