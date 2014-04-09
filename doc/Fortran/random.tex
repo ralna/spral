@@ -223,7 +223,7 @@ generator, and need not be initialized by the user.
 \subsection{Pseudo-random number generation}
 We use a linear congruential generator of the following form:
 $$
-   X_{n+1} = (aX_n + c) \mathrm{mod} m
+   X_{n+1} = (aX_n + c)\quad \mathrm{mod}\; m
 $$
 with the following constants
 \begin{eqnarray*}
@@ -267,7 +267,7 @@ $$
 \section{Example} \label{examples}
 
 The following example code:
-\verbatiminput{../examples/Fortran/random.f90}
+\verbatiminput{examples/Fortran/random.f90}
 Produces the following output:
 \begin{verbatim}
 Some random values
