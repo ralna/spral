@@ -3,6 +3,7 @@
 ! This is a reimplementation of similar functionality to YM11 based on the
 ! description in the "Method" section of the YM11 documentation.
 !
+! FIXME: I don't think the positive definite case is implemented as per doc yet!
 module spral_random_matrix
    use spral_random, only : random_state, random_integer, random_real
    use spral_matrix_util, only : SPRAL_MATRIX_UNDEFINED,          &
