@@ -642,7 +642,6 @@ end function copy_to_gpu_non_target
 !
 ! Factorize phase
 !
-! FIXME: I don't think scale works as described in doc at present
 subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
       scale, ptr, row)
    logical, intent(in) :: posdef 
