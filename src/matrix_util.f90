@@ -8,7 +8,7 @@ module spral_matrix_util
 
    private
    ! Following are all types of matrix we may need to deal with
-   public :: SPRAL_MATRIX_UNDEFINED,                              &
+   public :: SPRAL_MATRIX_UNSPECIFIED,                              &
       SPRAL_MATRIX_REAL_RECT, SPRAL_MATRIX_CPLX_RECT,             &
       SPRAL_MATRIX_REAL_UNSYM, SPRAL_MATRIX_CPLX_UNSYM,           &
       SPRAL_MATRIX_REAL_SYM_PSDEF, SPRAL_MATRIX_CPLX_HERM_PSDEF,  &
@@ -27,7 +27,7 @@ module spral_matrix_util
    real(wp), parameter :: zero = 0.0_wp
 
    ! matrix types : real
-   integer, parameter :: SPRAL_MATRIX_UNDEFINED      =  0 ! undefined/unknown
+   integer, parameter :: SPRAL_MATRIX_UNSPECIFIED      =  0 ! undefined/unknown
    integer, parameter :: SPRAL_MATRIX_REAL_RECT      =  1 ! real rectangular
    integer, parameter :: SPRAL_MATRIX_REAL_UNSYM     =  2 ! real unsymmetric
    integer, parameter :: SPRAL_MATRIX_REAL_SYM_PSDEF =  3 ! real symmetric
@@ -219,7 +219,7 @@ subroutine cscl_verify_double(lp, matrix_type, m, n, ptr, row, flag, more, val)
    if(st.ne.0) goto 100
    ptr2(:) = 0
 
-   lwronly = (abs(matrix_type).ne.SPRAL_MATRIX_UNDEFINED) .and. &
+   lwronly = (abs(matrix_type).ne.SPRAL_MATRIX_UNSPECIFIED) .and. &
              (abs(matrix_type).ne.SPRAL_MATRIX_REAL_RECT) .and. &
              (abs(matrix_type).ne.SPRAL_MATRIX_REAL_UNSYM)
    do col = 1, n
@@ -344,7 +344,7 @@ subroutine print_matrix_double(lp, lines, matrix_type, m, n, ptr, row, val, cbas
    nefrmt = digit_format(ptr(n+1)-1)
 
    select case(matrix_type)
-   case(SPRAL_MATRIX_UNDEFINED)
+   case(SPRAL_MATRIX_UNSPECIFIED)
       write(lp, "(a)", advance="no") &
          "Matrix of undefined type, dimension "
    case(SPRAL_MATRIX_REAL_RECT)
