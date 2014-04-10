@@ -55,7 +55,7 @@ Please see the SPRAL install documentation. In particular note that:
    \item A CUDA compiler (\texttt{nvcc}) is required.
    \item A METIS library is required.
    \item A BLAS library is required (in addition to CUBLAS).
-   \item For multi-GPU or multi-stream work, OpenMP must be enabled
+   %\item For multi-GPU or multi-stream work, OpenMP must be enabled.
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%% how to use %%%%%%%%%%%%%%%%%%%%%%%%
@@ -116,16 +116,15 @@ An option is available to perform a partial solution.
 \item {\tt spral\_ssids\_free()} should be called after all other calls
 are complete for a problem (including after an error
 return that does not allow the computation
-to continue). It frees memory referenced by components of
-the derived data types. This routine also allows created by either
-{\tt spral\_ssids\_analyse() or spral\_ssids\_factorize()} to be freed separately.
+to continue). It frees memory and resources used by internal data structures.
 \end{itemize}
 
 \noindent
 In addition, the following routines may be called:
 \begin{itemize}
 \item {\tt spral\_ssids\_free\_akeep()} and {\tt spral\_ssids\_free\_fkeep()}
-may be called to free the memory associated with {\tt akeep} and {\tt fkeep}
+may be called to free the memory and resources allocated by 
+{\tt spral\_ssids\_analyse() or spral\_ssids\_factorize()} to be freed
 separately.
 \item {\tt spral\_ssids\_enquire\_posdef()} may be called
 in the  positive-definite case to obtain the pivots used.
@@ -210,7 +209,7 @@ Entries that are zero, including those on the diagonal, need not be specified.
 If this format is used, \texttt{SSIDS} requires only the lower triangular entries of $A$, and there 
 should be no duplicate entries. If the \texttt{check}
 argument to
-\texttt{ssids\_analyse()} is \texttt{true}, out of range entries (including
+\texttt{ssids\_analyse()} is \texttt{true}, out-of-range entries (including
 those in the upper triangle) will be discarded and any duplicates will be
 summed.
 
@@ -305,8 +304,6 @@ the package uses CSC format internally, \texttt{spral\_ssids\_analyse()} with ch
 disabled provides the most efficient interface.
 
 \noindent
-
-\vspace*{-3mm}
 \begin{description}
 
 \item[\texttt{check}] determines if the matrix is checked for errors
@@ -318,15 +315,14 @@ disabled provides the most efficient interface.
    factorization routines. 
    Checking is always performed when the coordinate format is used.
 
-\item[\texttt{n}{\rm ,} \texttt{ptr[]}{\rm ,} \texttt{row[]}] specify the lower
+\item[\texttt{n}{\rm ,} \texttt{ptr[n+1]}{\rm ,} \texttt{row[ptr[n]]}] specify the lower
    triangular part of $A$ in CSC format (see Section~\ref{ssids: cscformat}).
 
-\item[\texttt{n}{\rm ,} \texttt{ne}{\rm ,} \texttt{row[]}{\rm ,} \texttt{col[]}]
+\item[\texttt{n}{\rm ,} \texttt{ne}{\rm ,} \texttt{row[ne]}{\rm ,} \texttt{col[ne]}]
    specify the lower (or upper) triangular part of $A$ in coordinate format
    (see Section~\ref{ssids: coordformat}).
 
-\item[\texttt{order[]}] may be \texttt{NULL}, and if non-\texttt{NULL} must
-   have size at least {\tt n}. If {\tt options.ordering}$=${\tt 0},
+\item[\texttt{order[n]}] may be \texttt{NULL}. If {\tt options.ordering}$=${\tt 0},
    {\tt order(:)} must non-\texttt{NULL} and {\tt order[i]} must hold the
    position of variable $i$ in the elimination order. On exit, {\tt order[]}
    contains the elimination order that {\tt spral\_ssids\_factor()} will be given (it
@@ -335,10 +331,10 @@ disabled provides the most efficient interface.
    case, may be modified by {\tt spral\_ssids\_factor()} to maintain numerical
    stability. 
 
-\item[\texttt{val[]}] may be \texttt{NULL}, if not \texttt{NULL} it must hold
+\item[\texttt{val[ne]}] may be \texttt{NULL}, if non-\texttt{NULL} it must hold
    the numerical values of the entries of the matrix, as described in
    Section~\ref{ssids: dataformats}.
-   {\tt val(:)} must not be \texttt{NULL} if a matching-based elimination
+   {\tt val[]} must not be \texttt{NULL} if a matching-based elimination
    ordering is required ({\tt options.ordering$=$2}), and is otherwise ignored.
 
 \item[\texttt{*akeep}] is allocated to hold data about the problem being
@@ -369,16 +365,16 @@ disabled provides the most efficient interface.
 \item[\texttt{posdef}] must be {\tt true} if the matrix is positive-definite,
    and {\tt false} if it is indefinite.
 
-\item[\texttt{ptr[]}] and {\tt row[]} may both be \texttt{NULL} unless 
+\item[\texttt{ptr[n+1]}] and {\tt row[ptr[n]]} may both be \texttt{NULL} unless 
    {\tt spral\_ssids\_analyse()} was called with {\tt check} set to {\tt false}.
    In this case, they must both be non-\texttt{NULL} and must be unchanged
    since that call.
 
-\item[\texttt{val[]}] must hold the numerical values of the entries of the
+\item[\texttt{val[ptr[n]]}] must hold the numerical values of the entries of the
    matrix, as described in Section~\ref{ssids: dataformats}.
 
-\item[\texttt{scale[]}] may be \texttt{NULL}, or otherwise have size at least
-   \texttt{n}. If non-\texttt{NULL} and \texttt{options.scaling}$=$\texttt{0},
+\item[\texttt{scale[n]}] may be \texttt{NULL}. If non-\texttt{NULL} and
+   \texttt{options.scaling}$=$\texttt{0},
    it must contain the diagonal entries of the scaling matrix ${S}$.
    On exit, \texttt{scale[i]} will contain the \texttt{i}-th
    diagonal entry of the scaling matrix $S$.
@@ -442,15 +438,14 @@ disabled provides the most efficient interface.
    \item[\texttt{4}] for solving $D({PL})^T{S^{-1}X} = {B}$ (indefinite case only)
    \end{description}
 
-\item[\texttt{x1[]}] must be of size at least \texttt{n}. It must be set
+\item[\texttt{x1[n]}] must be set
    such that \texttt{x1[i]} holds the component of the right-hand side for
-   variables $i$. On exit, \texttt{x1[i]} holds the solution for variable
+   variable $i$. On exit, \texttt{x1[i]} holds the solution for variable
    $i$.
 
 \item[\texttt{nrhs}] holds the number of right-hand sides.
 
-\item[\texttt{x[][]}] must have leading dimension \texttt{ldx} and have size at
-   least \texttt{nrhs*ldx}. It must be set so that \texttt{x[j][i]} holds the
+\item[\texttt{x[nrhs][ldx]}] must be set so that \texttt{x[j][i]} holds the
    component of the right-hand side for variable $i$ to the $j$-th
    system. On exit, \texttt{x[j][i]} holds the solution for variable $i$ to
    the $j$-th system.
@@ -549,8 +544,7 @@ On exit, associated memory and CUDA resources will have been released, and
 \item[\texttt{*inform}] is used to return information about the execution
    of the subroutine, as explained in Section~\ref{ssids: typeinform}.
 
-\item[\texttt{d[]}] is of size at least {\tt n}. The $i$-th diagonal entry of
-   $D$ will be placed in {\tt d[i]}.
+\item[\texttt{d[n]}] holds, on exit, the diagonal entries of the matrix $D$.
 
 \end{description}
 %%%%%%% enquire subroutine %%%%%%
@@ -581,12 +575,11 @@ On exit, associated memory and CUDA resources will have been released, and
 \item[\texttt{*inform}] is used to return information about the execution
    of the subroutine, as explained in Section~\ref{ssids: typeinform}.
 
-\item[\texttt{piv\_order[]}] may be \texttt{NULL}. If it is not \texttt{NULL},
-   it must have size at least {\tt n} and, on exit, \texttt{piv\_order[i]}
-   gives the position of variable $i$ in the pivot order.
+\item[\texttt{piv\_order[n]}] may be \texttt{NULL}. If non-\texttt{NULL}
+   then, on exit, \texttt{piv\_order[i]}
+   holds the position of variable $i$ in the pivot order.
 
-\item[\texttt{d[][]}] may be \texttt{NULL}. If it is not \texttt{NULL},
-   it must have leading dimension \texttt{2} and size at least \texttt{2*nrhs}.
+\item[\texttt{d[n][2]}] may be \texttt{NULL}.
    If non-\texttt{NULL}, on exit diagonal entries of ${D}^{-1}$ will be placed
    in {\tt d[i][0]}, $i = 1,2,\ldots,n$, the off-diagonal entries of ${D}^{-1}$
    will be placed in {\tt d[i][1]}, $i = 1,2,\ldots,n-1$, and {\tt d[n][1]}
@@ -608,10 +601,14 @@ On exit, associated memory and CUDA resources will have been released, and
    }
 }
 
+\vspace{0.3cm}
+\noindent
+Note that this routine is not compatabile with the option \texttt{options.presolve}$=$\texttt{1}.
+
 \begin{description}
 
-\item[\texttt{d[][]}] must have leading dimension \texttt{2} and size at
-   least \texttt{2*n}. The diagonal entries of ${D}^{-1}$ will be altered to
+\item[\texttt{d[n][2]}] must hold the new entries of the matrix $D$.
+   The diagonal entries of ${D}^{-1}$ will be altered to
    {\tt d[i][0]}, $i = 1,2,\ldots,n$, and the off-diagonal entries will be
    altered to {\tt d[i][1]}, $i = 1,2,\ldots,n-1$ (and $PLD(PL)^T$ will no
    longer be a factorization of $A$).
@@ -642,18 +639,19 @@ a call to \texttt{spral\_ssids\_default\_options()}, are: \\
 
 %%%%%%%%%%%%
 
-\noindent {\bf C specific options}
-
+\subsubsection*{C specific options}
 \begin{description}
 \item[\texttt{int array\_base}] specifies the array indexing base. It must
    have the value either \texttt{0} (C indexing) or \texttt{1} (Fortran
-   indexing). If \texttt{array\_base}$=$\texttt{1}, the arrays \texttt{ptr[]},
-   \texttt{row[]}, \texttt{col[]}, \texttt{order[]}, and \texttt{piv\_order[]}
-   are as described in the Fortran documentation.
+   indexing). If \texttt{array\_base}$=$\texttt{1}, the entries of arrays
+   \texttt{ptr[]}, \texttt{row[]}, \texttt{col[]}, \texttt{order[]}, and
+   \texttt{piv\_order[]} start at 1, not 0. Further, entries of
+   \texttt{piv\_order[]} may also have negative sign to indicate they are
+   part of a $2\times2$ pivot.
    The default value is \texttt{array\_base}$=$\texttt{0}.
 \end{description}
 
-\noindent {\bf Printing options}
+\subsubsection*{Printing options}
 
 \begin{description}
 
@@ -667,18 +665,18 @@ a call to \texttt{spral\_ssids\_default\_options()}, are: \\
 \end{description}
 The default is {\tt print\_level$=$\tt 0}.
 
-\item[\texttt{int unit\_diagnostics}]  holds the
+\item[\texttt{int unit\_diagnostics}]  holds Fortran the
 unit number for diagnostic printing. Printing is suppressed if
 {\tt unit\_diagnostics$<0$}.
 The default is {\tt unit\_diagnostics$=$6}.
 
-\item[\texttt{int unit\_error}] holds the
+\item[\texttt{int unit\_error}] holds the Fortran
 unit number for error messages.
 Printing of error messages
 is suppressed if {\tt unit\_error$<$0}.
 The default is {\tt unit\_error$=$6}.
 
-\item[\texttt{int unit\_warning}] holds the
+\item[\texttt{int unit\_warning}] holds the Fortran
 unit number for warning messages.
 Printing of warning messages is suppressed if {\tt unit\_warning$<$0}.
 The default is {\tt unit\_warning$=$6}.
@@ -688,7 +686,7 @@ The default is {\tt unit\_warning$=$6}.
 
 
 %%%%%%%%%%%%
-\noindent {\bf Options used by {\tt spral\_ssids\_analyse()} and
+\subsubsection*{Options used by {\tt spral\_ssids\_analyse()} and
 {\tt spral\_ssids\_analyse\_coord()}}
 
 \begin{description}
@@ -696,8 +694,8 @@ The default is {\tt unit\_warning$=$6}.
 \item[\texttt{int ordering}] controls the ordering algorithm used. 
 If set to {\tt 0}, the user
 must supply an elimination order in {\tt order[]}; otherwise
-an elimination order will be computed by {\tt ssids\_analyse()}
-or {\tt ssids\_analyse\_coord()}.
+{\tt ssids\_analyse()} or {\tt ssids\_analyse\_coord()} will an compute an
+elimination order.
 The options are:
 \begin{description}
 \item{} {\tt 0} User-supplied ordering is used.
@@ -720,14 +718,14 @@ The default is used if {\tt nemin$<$1}.
 \end{description}
 
 %%%%%%%%%%%%
-\noindent {\bf Options used by {\tt spral\_ssids\_factor()}}
+\subsubsection*{Options used by {\tt spral\_ssids\_factor()}}
 \begin{description}
 \item[\texttt{int scaling}] controls
 the use of scaling. The available
 options are:
 \begin{description}
    \item[\texttt{ $\le$ 0 }] No scaling (if \texttt{scale} is \texttt{NULL}),
-      or user-supplied scaling (if \texttt{scale} is not \texttt{NULL}).
+      or user-supplied scaling (if \texttt{scale} is non-\texttt{NULL}).
    \item[\texttt{ $=$ 1 }] Compute a scaling using a weighted bipartite matching
       via the Hungarian Algorithm (\texttt{MC64} algorithm).
    \item[\texttt{ $=$ 2 }] Compute a scaling using a weighted bipartite matching
@@ -747,7 +745,7 @@ The default is {\tt scaling}$=${\tt 0}.
 \end{description}
 
 %%%%%%%%%%%%
-\noindent {\bf Options used by {\tt spral\_ssids\_factor()} with
+\subsubsection*{Options used by {\tt spral\_ssids\_factor()} with
 {\tt posdef}$ =${\tt false}  ($A$ indefinite)}
 
 \begin{description}
@@ -755,8 +753,8 @@ The default is {\tt scaling}$=${\tt 0}.
 If the matrix is found to be singular (has rank less than the number of
 non-empty rows), the computation continues after issuing a warning if
 {\tt action} has the value {\tt true} or
-terminates with an error if it has the value {\tt false}
-The default is {\tt action}$=${\tt true}
+terminates with an error if it has the value {\tt false}.
+The default is {\tt action}$=${\tt true}.
 
 %\item[\texttt{small}] is a scalar of type {\tt REAL}.
 %Any pivot whose modulus is less than {\tt small} is treated as zero.
@@ -770,7 +768,7 @@ Values outside the range $[0,0.5]$ are treated as the closest value in that rang
 \end{description}
 
 %%%%%%%%%%%%
-\noindent {\bf Options used by {\tt spral\_ssids\_factor()} and {\tt spral\_ssids\_solve()}}
+\subsubsection*{Options used by {\tt spral\_ssids\_factor()} and {\tt spral\_ssids\_solve()}}
 
 \begin{description}
 \item[\texttt{bool use\_gpu\_solve}] controls
@@ -782,13 +780,13 @@ Values outside the range $[0,0.5]$ are treated as the closest value in that rang
    \texttt{options.presolve}$=${\tt 0}.
    The default value is \texttt{use\_gpu\_solve}$=$\texttt{true}.
 \item[\texttt{int presolve}] controls the
-   amount of extra work performed during factorization to accelerate the solve.
+   amount of extra work performed during the factorization to accelerate the solve.
    It can take the following values:
    \begin{description}
       \item[\texttt{0}] Minimal work is performed during {\tt spral\_ssids\_factor()}
          to prepare for the solve.
       \item[\texttt{1}] The explicit inverse of the
-         \texttt{nelim}$\times$\texttt{nelim} block in each supernode is
+         \texttt{nelim}$\times$\texttt{nelim} diagonal block in each supernode is
          precalculated during {\tt spral\_ssids\_factor()} (where \texttt{nelim} is
          the number of variables eliminated at that supernode). As the matrix
          $L$ is overwritte, the routine {\tt spral\_ssids\_alter()} cannot be
@@ -812,7 +810,7 @@ of the algorithm. The components of {\tt struct spral\_ssids\_inform}
 \item[\texttt{ing flag}] gives the exit status of the algorithm (details in Section \ref{ssids: errors}).
 
 \item[\texttt{int matrix\_dup}] holds, on exit from
-{\tt spral\_ssids\_analyse()} with {\tt check} set to {\tt true} or exit from
+{\tt spral\_ssids\_analyse()} with {\tt check} set to {\tt true} or on exit from
 {\tt spral\_ssids\_analyse\_coord()}, the
 number of duplicate entries that were found and summed.
 
@@ -827,7 +825,7 @@ entries without an explicitly provided value.
 number of out-of-range entries that were   found and discarded.
 
 \item[\texttt{int matrix\_rank}] holds, on exit from
-{\tt spral\_ssids\_analyse()} or {\tt spral\_ssids\_analyse\_coord()},
+{\tt spral\_ssids\_analyse()} or on exit from {\tt spral\_ssids\_analyse\_coord()},
 the structural rank of $A$, if available (otherwise, it is set to {\tt n}).
 On exit from
 {\tt spral\_ssids\_factor()}, it holds the computed rank of

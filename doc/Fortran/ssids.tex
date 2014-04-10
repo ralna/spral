@@ -55,7 +55,7 @@ Please see the SPRAL install documentation. In particular note that:
    \item A CUDA compiler (\texttt{nvcc}) is required.
    \item A METIS library is required.
    \item A BLAS library is required (in addition to CUBLAS).
-   \item For multi-GPU or multi-stream work, OpenMP must be enabled
+   %\item For multi-GPU or multi-stream work, OpenMP must be enabled.
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%% how to use %%%%%%%%%%%%%%%%%%%%%%%%
@@ -110,7 +110,7 @@ An option is available to perform a partial solution.
 are complete for a problem (including after an error
 return that does not allow the computation
 to continue). It frees memory referenced by components of
-the derived data types. This routine also allows created by either
+the derived types. This routine also allows created by either
 {\tt ssids\_analyse() or ssids\_factorize()} to be freed separately.
 \end{itemize}
 
@@ -211,7 +211,7 @@ Entries that are zero, including those on the diagonal, need not be specified.
 If this format is used, \texttt{SSIDS} requires only the lower triangular entries of $A$, and there 
 should be no duplicate entries. If the \texttt{check}
 argument to
-\texttt{ssids\_analyse()} is \texttt{.true.}, out of range entries (including
+\texttt{ssids\_analyse()} is \texttt{.true.}, out-of-range entries (including
 those in the upper triangle) will be discarded and any duplicates will be
 summed.
 
@@ -282,8 +282,6 @@ the package uses CSC format internally, \texttt{ssids\_analyse()} with checking
 disabled provides the most efficient interface.
 
 \noindent
-
-\vspace*{-3mm}
 \begin{description}
 
 \item[\texttt{check}] is an \intentin\ scalar of
@@ -592,6 +590,10 @@ the off-diagonal entries  of ${D}^{-1}$ will be placed in
    }
 }
 
+\vspace{0.3cm}
+\noindent
+Note that this routine is not compatabile with the option \texttt{options.presolve}$=$\texttt{1}.
+
 \begin{description}
 
 \item[\texttt{d(:,:)}] is an \intentin\ array of package type with
@@ -620,7 +622,7 @@ within \texttt{SSIDS}. The components, that are automatically
 given default values in the definition of the type, are: \\
 
 %%%%%%%%%%%%
-\noindent {\bf Printing options}
+\subsubsection*{Printing options}
 
 \begin{description}
 
@@ -656,7 +658,7 @@ The default is {\tt unit\_warning$=$6}.
 
 
 %%%%%%%%%%%%
-\noindent {\bf Options used by {\tt ssids\_analyse()} and
+\subsubsection*{Options used by {\tt ssids\_analyse()} and
 {\tt ssids\_analyse\_coord()}}
 
 \begin{description}
@@ -688,7 +690,7 @@ The default is used if {\tt nemin$<$1}.
 \end{description}
 
 %%%%%%%%%%%%
-\noindent {\bf Options used by {\tt ssids\_factor()}}
+\subsubsection*{Options used by {\tt ssids\_factor()}}
 \begin{description}
 \item[\texttt{scaling}] is a scalar of type default {\tt INTEGER} that controls
    the use of scaling. The available
@@ -715,7 +717,7 @@ The default is {\tt scaling}$=${\tt 0}.
 \end{description}
 
 %%%%%%%%%%%%
-\noindent {\bf Options used by {\tt ssids\_factor()} with
+\subsubsection*{Options used by {\tt ssids\_factor()} with
 {\tt posdef}$ =${\tt .false.}  ($A$ indefinite)}
 
 \begin{description}
@@ -723,8 +725,8 @@ The default is {\tt scaling}$=${\tt 0}.
 If the matrix is found to be singular (has rank less than the number of
 non-empty rows), the computation continues after issuing a warning if
 {\tt action} has the value {\tt .true.} or
-terminates with an error if it has the value {\tt .false.}
-The default is {\tt action}$=${\tt .true.}
+terminates with an error if it has the value {\tt .false.}.
+The default is {\tt action}$=${\tt .true.}.
 
 %\item[\texttt{small}] is a scalar of type {\tt REAL}.
 %Any pivot whose modulus is less than {\tt small} is treated as zero.
@@ -738,7 +740,7 @@ Values outside the range $[0,0.5]$ are treated as the closest value in that rang
 \end{description}
 
 %%%%%%%%%%%%
-\noindent {\bf Options used by {\tt ssids\_factor()} and {\tt ssids\_solve()}}
+\subsubsection*{Options used by {\tt ssids\_factor()} and {\tt ssids\_solve()}}
 
 \begin{description}
 \item[\texttt{use\_gpu\_solve}] is a scalar of type {\tt LOGICAL} that controls
