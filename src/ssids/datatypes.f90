@@ -24,25 +24,25 @@ module spral_ssids_datatypes
    integer, parameter, public :: SSIDS_SUCCESS               = 0
 
    ! Error flags
-   integer, parameter, public :: SSIDS_ERROR_CALL_SEQUENCE   = -1
-   integer, parameter, public :: SSIDS_ERROR_A_N_OOR         = -2
-   integer, parameter, public :: SSIDS_ERROR_A_PTR           = -3
-   integer, parameter, public :: SSIDS_ERROR_A_ALL_OOR       = -4
-   integer, parameter, public :: SSIDS_ERROR_SINGULAR        = -5
-   integer, parameter, public :: SSIDS_ERROR_NOT_POS_DEF     = -6
-   integer, parameter, public :: SSIDS_ERROR_PTR_ROW         = -7
-   integer, parameter, public :: SSIDS_ERROR_ORDER           = -8
-   integer, parameter, public :: SSIDS_ERROR_VAL             = -9
-   integer, parameter, public :: SSIDS_ERROR_X_SIZE          = -10
-   integer, parameter, public :: SSIDS_ERROR_JOB_OOR         = -11
-   integer, parameter, public :: SSIDS_ERROR_JOB_INVALID     = -12
-   integer, parameter, public :: SSIDS_ERROR_NOT_LLT         = -13
-   integer, parameter, public :: SSIDS_ERROR_NOT_LDLT        = -14
-   integer, parameter, public :: SSIDS_ERROR_NO_SAVED_SCALING= -15
-   integer, parameter, public :: SSIDS_ERROR_ALLOCATION      = -50
-   integer, parameter, public :: SSIDS_ERROR_CUDA_UNKNOWN    = -51
-   integer, parameter, public :: SSIDS_ERROR_CUBLAS_UNKNOWN  = -52
-   integer, parameter, public :: SSIDS_ERROR_UNKNOWN         = -99
+   integer, parameter, public :: SSIDS_ERROR_CALL_SEQUENCE     = -1
+   integer, parameter, public :: SSIDS_ERROR_A_N_OOR           = -2
+   integer, parameter, public :: SSIDS_ERROR_A_PTR             = -3
+   integer, parameter, public :: SSIDS_ERROR_A_ALL_OOR         = -4
+   integer, parameter, public :: SSIDS_ERROR_SINGULAR          = -5
+   integer, parameter, public :: SSIDS_ERROR_NOT_POS_DEF       = -6
+   integer, parameter, public :: SSIDS_ERROR_PTR_ROW           = -7
+   integer, parameter, public :: SSIDS_ERROR_ORDER             = -8
+   integer, parameter, public :: SSIDS_ERROR_VAL               = -9
+   integer, parameter, public :: SSIDS_ERROR_X_SIZE            = -10
+   integer, parameter, public :: SSIDS_ERROR_JOB_OOR           = -11
+   integer, parameter, public :: SSIDS_ERROR_PRESOLVE_INCOMPAT = -12
+   integer, parameter, public :: SSIDS_ERROR_NOT_LLT           = -13
+   integer, parameter, public :: SSIDS_ERROR_NOT_LDLT          = -14
+   integer, parameter, public :: SSIDS_ERROR_NO_SAVED_SCALING  = -15
+   integer, parameter, public :: SSIDS_ERROR_ALLOCATION        = -50
+   integer, parameter, public :: SSIDS_ERROR_CUDA_UNKNOWN      = -51
+   integer, parameter, public :: SSIDS_ERROR_CUBLAS_UNKNOWN    = -52
+   integer, parameter, public :: SSIDS_ERROR_UNKNOWN           = -99
 
    ! warning flags
    integer, parameter, public :: SSIDS_WARNING_IDX_OOR          = 1
@@ -528,10 +528,10 @@ subroutine ssids_print_flag(context,nout,iflag,st,cuda_error)
          ' Requested use of scaling from matching-based &
          &ordering but matching-based ordering not used.'
 
-   case(SSIDS_ERROR_JOB_INVALID)
+   case(SSIDS_ERROR_PRESOLVE_INCOMPAT)
       write (nout,'(a)') &
          ' Invalid combination of options%presolve, options%use_gpu_solve and &
-         &job parameter - see documentation for legal combinations.'
+         &requested operation - see documentation for legal combinations.'
 
    case(SSIDS_ERROR_CUDA_UNKNOWN)
       if(present(cuda_error)) then

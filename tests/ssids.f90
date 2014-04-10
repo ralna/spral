@@ -39,26 +39,26 @@ program main
    end type matrix_type
 
    ! Error flags
-   integer, parameter :: SSIDS_SUCCESS               = 0
-   integer, parameter :: SSIDS_ERROR_CALL_SEQUENCE   = -1
-   integer, parameter :: SSIDS_ERROR_A_N_OOR         = -2
-   integer, parameter :: SSIDS_ERROR_A_PTR           = -3
-   integer, parameter :: SSIDS_ERROR_A_ALL_OOR       = -4
-   integer, parameter :: SSIDS_ERROR_SINGULAR        = -5
-   integer, parameter :: SSIDS_ERROR_NOT_POS_DEF     = -6
-   integer, parameter :: SSIDS_ERROR_PTR_ROW         = -7
-   integer, parameter :: SSIDS_ERROR_ORDER           = -8
-   integer, parameter :: SSIDS_ERROR_VAL             = -9
-   integer, parameter :: SSIDS_ERROR_X_SIZE          = -10
-   integer, parameter :: SSIDS_ERROR_JOB_OOR         = -11
-   integer, parameter :: SSIDS_ERROR_JOB_INVALID     = -12
-   integer, parameter :: SSIDS_ERROR_NOT_LLT         = -13
-   integer, parameter :: SSIDS_ERROR_NOT_LDLT        = -14
-   integer, parameter :: SSIDS_ERROR_NO_SAVED_SCALING= -15
-   integer, parameter :: SSIDS_ERROR_ALLOCATION      = -50
-   integer, parameter :: SSIDS_ERROR_CUDA_UNKNOWN    = -51
-   integer, parameter :: SSIDS_ERROR_CUBLAS_UNKNOWN  = -52
-   integer, parameter :: SSIDS_ERROR_UNKNOWN         = -99
+   integer, parameter :: SSIDS_SUCCESS                   = 0
+   integer, parameter :: SSIDS_ERROR_CALL_SEQUENCE       = -1
+   integer, parameter :: SSIDS_ERROR_A_N_OOR             = -2
+   integer, parameter :: SSIDS_ERROR_A_PTR               = -3
+   integer, parameter :: SSIDS_ERROR_A_ALL_OOR           = -4
+   integer, parameter :: SSIDS_ERROR_SINGULAR            = -5
+   integer, parameter :: SSIDS_ERROR_NOT_POS_DEF         = -6
+   integer, parameter :: SSIDS_ERROR_PTR_ROW             = -7
+   integer, parameter :: SSIDS_ERROR_ORDER               = -8
+   integer, parameter :: SSIDS_ERROR_VAL                 = -9
+   integer, parameter :: SSIDS_ERROR_X_SIZE              = -10
+   integer, parameter :: SSIDS_ERROR_JOB_OOR             = -11
+   integer, parameter :: SSIDS_ERROR_PRESOLVE_INCOMPAT   = -12
+   integer, parameter :: SSIDS_ERROR_NOT_LLT             = -13
+   integer, parameter :: SSIDS_ERROR_NOT_LDLT            = -14
+   integer, parameter :: SSIDS_ERROR_NO_SAVED_SCALING    = -15
+   integer, parameter :: SSIDS_ERROR_ALLOCATION          = -50
+   integer, parameter :: SSIDS_ERROR_CUDA_UNKNOWN        = -51
+   integer, parameter :: SSIDS_ERROR_CUBLAS_UNKNOWN      = -52
+   integer, parameter :: SSIDS_ERROR_UNKNOWN             = -99
 
    ! warning flags
    integer, parameter :: SSIDS_WARNING_IDX_OOR          = 1
@@ -585,7 +585,7 @@ subroutine test_errors
    allocate(x1(a%n))
    x1(1:a%n) = one
    call ssids_solve(x1,akeep,fkeep,options,info)
-   call print_result(info%flag, SSIDS_ERROR_JOB_INVALID)
+   call print_result(info%flag, SSIDS_ERROR_PRESOLVE_INCOMPAT)
    call ssids_free(akeep,fkeep,cuda_error)
    options%use_gpu_solve = .true.
    options%presolve = 0
@@ -834,6 +834,20 @@ subroutine test_errors
    call ssids_alter(d,akeep,fkeep,options,info)
    call print_result(info%flag, SSIDS_ERROR_NOT_LDLT)
    call ssids_free(akeep, fkeep, cuda_error)
+
+   write(*,"(a)",advance="no") " * Testing call to alter_indef presolved....."
+   call simple_mat(a)
+   posdef = .false.
+   call ssids_analyse(check, a%n, a%ptr, a%row, &
+      akeep, options, info, order=order)
+   options%presolve = 1
+   call ssids_factor(.false., a%val, akeep, fkeep, options, info)
+   if (allocated(d)) deallocate(d)
+   allocate(d(2,a%n))
+   call ssids_alter(d,akeep,fkeep,options,info)
+   call print_result(info%flag, SSIDS_ERROR_PRESOLVE_INCOMPAT)
+   call ssids_free(akeep, fkeep, cuda_error)
+   options%presolve = 0
 end subroutine test_errors
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -2227,12 +2241,14 @@ subroutine test_random
            cycle 
          endif
 
-         call ssids_alter(d,akeep,fkeep,options,info)
-         if (info%flag < 0) then
-            write (*,'(a)') ' Unexpected error from ssids_alter'
-            call ssids_free(akeep, fkeep, cuda_error)
-            errors = errors + 1
-            cycle 
+         if(options%presolve.eq.0) then
+            call ssids_alter(d,akeep,fkeep,options,info)
+            if (info%flag < 0) then
+               write (*,'(a)') ' Unexpected error from ssids_alter'
+               call ssids_free(akeep, fkeep, cuda_error)
+               errors = errors + 1
+               cycle 
+            endif
          endif
       else
          call ssids_enquire_posdef(akeep,fkeep,options,info,d1)

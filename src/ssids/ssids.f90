@@ -1472,7 +1472,7 @@ subroutine ssids_solve_mult_double(nrhs, x, ldx, akeep, fkeep, options, &
 
    if(.not.options%use_gpu_solve .and. options%presolve.ne.0) then
       ! Presolve and CPU solve incompatible
-      inform%flag = SSIDS_ERROR_JOB_INVALID
+      inform%flag = SSIDS_ERROR_PRESOLVE_INCOMPAT
       call ssids_print_flag(context,nout,inform%flag)
       return
    endif
@@ -1980,6 +1980,12 @@ subroutine ssids_alter_double(d, akeep, fkeep, options, inform)
       call ssids_print_flag(context,nout,inform%flag)
       return
    end if 
+
+   if (options%presolve.ne.0) then
+      inform%flag = SSIDS_ERROR_PRESOLVE_INCOMPAT
+      call ssids_print_flag(context,nout,inform%flag)
+      return
+   end if
    
    if(fkeep%host_factors) then
       piv = 1
