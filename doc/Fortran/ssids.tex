@@ -746,6 +746,8 @@ Values outside the range $[0,0.5]$ are treated as the closest value in that rang
    \texttt{.true.}, the GPU is used, but some more advanced features are not
    available (see the description of the \texttt{job} parameter in
    Section~\ref{solve}).
+   Setting \texttt{use\_gpu\_solve}$=${\tt .false.} is only compatible with
+   \texttt{options\%presolve}$=${\tt 0}.
    The default value is \texttt{use\_gpu\_solve}$=$\texttt{.true.}.
 \item[\texttt{presolve}] is a scalar of type {\tt INTEGER} that controls the
    amount of extra work performed during factorization to accelerate the solve.
@@ -756,10 +758,9 @@ Values outside the range $[0,0.5]$ are treated as the closest value in that rang
       \item[\texttt{1}] The explicit inverse of the
          \texttt{nelim}$\times$\texttt{nelim} block in each supernode is
          precalculated during {\tt ssids\_factor()} (where \texttt{nelim} is
-         the number of variables eliminated at that supernode). As the matrices
-         $L$ and $D$ are altered, the routines {\tt ssids\_enquire\_posdef()},
-         {\tt ssids\_enquire\_indef()}, and {\tt ssids\_alter()} cannot be used.
-         This option is not compatible with {\tt options\%use\_gpu\_solve}$=$\texttt{.false.}
+         the number of variables eliminated at that supernode). As the matrix
+         $L$ is overwritten, the routine {\tt ssids\_alter()} cannot be used.
+         This option is not compatible with {\tt options\%use\_gpu\_solve}$=$\texttt{.false.}.
    \end{description}
    The default option is \texttt{presolve}$=$\texttt{0}.
 \end{description}
@@ -919,9 +920,10 @@ Possible negative values are:
             {\tt ssids\_solve()}.
 \item{$-$11} Returned by {\tt ssids\_solve()} if {\tt job} is out-of-range.
             The user may reset {\tt job} and recall {\tt ssids\_solve()}.
-\item{$-$12} Returned by {\tt ssids\_solve()} if the selected combination of
-            {\tt posdef{\rm ,} options\%use\_gpu\_solve{\rm ,}
-            options\%presolve} and {\tt job} are not compatible.
+\item{$-$12} Returned by {\tt spral\_ssids\_solve()} and 
+            {\tt spral\_ssids\_alter()} if the selected combination of
+            {\tt options\%use\_gpu\_solve} and {\tt options\%presolve} are not 
+            compatible with the requested operation.
 \item{$-$13} Returned by {\tt ssids\_enquire\_posdef()} if
             {\tt posdef}$=${\tt .false.} on the last call
             to {\tt ssids\_factor()}.
