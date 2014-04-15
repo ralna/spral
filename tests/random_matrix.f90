@@ -1,5 +1,5 @@
 program random_matrix
-   use spral_matrix_util, only : SPRAL_MATRIX_UNDEFINED,       &
+   use spral_matrix_util, only : SPRAL_MATRIX_UNSPECIFIED,       &
                                  SPRAL_MATRIX_REAL_RECT,       &
                                  SPRAL_MATRIX_REAL_SYM_PSDEF,  &
                                  SPRAL_MATRIX_REAL_SYM_INDEF,  &
@@ -56,7 +56,7 @@ subroutine test_random_unsymmetric
 
    allocate(ptr(maxn+1), row(maxnnz_factor*maxn), val(maxnnz_factor*maxn))
 
-   matrix_type = SPRAL_MATRIX_UNDEFINED
+   matrix_type = SPRAL_MATRIX_UNSPECIFIED
    do prblm = 1, nprob
       if(prblm<10) then
          m = prblm
@@ -292,7 +292,7 @@ subroutine test_errors
    write(*,"(a)") "======================"
 
    ! Set default values
-   matrix_type = SPRAL_MATRIX_UNDEFINED
+   matrix_type = SPRAL_MATRIX_UNSPECIFIED
    m = 100
    n = 100
    nnz = 1000
@@ -311,7 +311,7 @@ subroutine test_errors
    matrix_type = SPRAL_MATRIX_CPLX_RECT
    call random_matrix_generate(state, matrix_type, m, n, nnz, ptr, row, flag)
    call print_result(flag, ERROR_MATRIX_TYPE)
-   matrix_type = SPRAL_MATRIX_UNDEFINED ! restore
+   matrix_type = SPRAL_MATRIX_UNSPECIFIED ! restore
 
    !
    ! Test bad args (i.e. m,n,nnz < 1)
@@ -345,7 +345,7 @@ subroutine test_errors
    nnz = n*(n+1)/2 + 1
    call random_matrix_generate(state, matrix_type, m, n, nnz, ptr, row, flag)
    call print_result(flag, ERROR_ARG)
-   matrix_type = SPRAL_MATRIX_UNDEFINED; nnz = 1000 ! restore
+   matrix_type = SPRAL_MATRIX_UNSPECIFIED; nnz = 1000 ! restore
 
    !
    ! Test non-square
@@ -355,21 +355,21 @@ subroutine test_errors
    write(*,"(a)",advance="no") " * Testing non-square + SYM_PSDEF............"
    call random_matrix_generate(state, matrix_type, m, n, nnz, ptr, row, flag)
    call print_result(flag, ERROR_NONSQUARE)
-   matrix_type = SPRAL_MATRIX_UNDEFINED; m = 100 ! restore
+   matrix_type = SPRAL_MATRIX_UNSPECIFIED; m = 100 ! restore
 
    matrix_type = SPRAL_MATRIX_REAL_SYM_INDEF
    m = n+1
    write(*,"(a)",advance="no") " * Testing non-square + SYM_INDEF............"
    call random_matrix_generate(state, matrix_type, m, n, nnz, ptr, row, flag)
    call print_result(flag, ERROR_NONSQUARE)
-   matrix_type = SPRAL_MATRIX_UNDEFINED; m = 100 ! restore
+   matrix_type = SPRAL_MATRIX_UNSPECIFIED; m = 100 ! restore
 
    matrix_type = SPRAL_MATRIX_REAL_SKEW
    m = n+1
    write(*,"(a)",advance="no") " * Testing non-square + SKEW................."
    call random_matrix_generate(state, matrix_type, m, n, nnz, ptr, row, flag)
    call print_result(flag, ERROR_NONSQUARE)
-   matrix_type = SPRAL_MATRIX_UNDEFINED; m = 100 ! restore
+   matrix_type = SPRAL_MATRIX_UNSPECIFIED; m = 100 ! restore
 
    !
    ! Test singular but insufficient nnz
