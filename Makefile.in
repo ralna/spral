@@ -404,9 +404,9 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = foreign subdir-objects
 ACLOCAL_AMFLAGS = -I m4
+SUFFIXES = .cu
 
 # NVCC setup
-SUFFIXES = .cu
 PTX_FLAGS = -v
 #NVCCFLAGS = -Iinclude -arch=sm_20 -g -Xptxas="${PTX_FLAGS}"
 AM_NVCC_FLAGS = -Iinclude

@@ -16,11 +16,6 @@ AC_DEFUN([ACX_PROG_NVCC], [
 AC_ARG_VAR(NVCC,[CUDA compiler command])
 AC_ARG_VAR(NVCCFLAGS,[CUDA compiler flags])
 
-if test "x$NVCC" = x; then
-   # User has not supplied a CUDA compiler, use nvcc as default
-   NVCC=nvcc
-fi
-
 test "x$NVCC" = x && AC_CHECK_PROGS(NVCC,nvcc)
 test "x$NVCCFLAGS" = x && NVCCFLAGS="-g -arch=compute_20 -code=compute_20,sm_20,sm_35"
 
