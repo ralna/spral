@@ -585,6 +585,7 @@ FLIBS
 FCLIBS
 HAVE_NVCC_FALSE
 HAVE_NVCC_TRUE
+NVCCFLAGS
 NVCC
 RANLIB
 ac_ct_FC
@@ -700,7 +701,8 @@ F77
 FFLAGS
 FC
 FCFLAGS
-NVCC'
+NVCC
+NVCCFLAGS'
 
 
 # Initialize some variables set by options.
@@ -1346,6 +1348,7 @@ Some influential environment variables:
   FC          Fortran compiler command
   FCFLAGS     Fortran compiler flags
   NVCC        CUDA compiler command
+  NVCCFLAGS   CUDA compiler flags
 
 Use these variables to override the choices made by `configure' or to help
 it to find libraries and programs with nonstandard names/locations.
@@ -4437,7 +4440,16 @@ else
 fi
 
 
-for ac_prog in nvcc
+
+
+
+
+if test "x$NVCC" = x; then
+   # User has not supplied a CUDA compiler, use nvcc as default
+   NVCC=nvcc
+fi
+
+test "x$NVCC" = x && for ac_prog in nvcc
 do
   # Extract the first word of "$ac_prog", so it can be a program name with args.
 set dummy $ac_prog; ac_word=$2
@@ -4478,6 +4490,9 @@ fi
 
   test -n "$NVCC" && break
 done
+
+test "x$NVCCFLAGS" = x && NVCCFLAGS="-g -arch=compute_20 -code=compute_20,sm_20,sm_35"
+
 
  if test -n "$NVCC"; then
   HAVE_NVCC_TRUE=

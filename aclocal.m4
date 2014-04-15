@@ -970,5 +970,6 @@ AC_SUBST([am__untar])
 ]) # _AM_PROG_TAR
 
 m4_include([m4/acx_lapack.m4])
+m4_include([m4/acx_prog_nvcc.m4])
 m4_include([m4/ax_blas.m4])
 m4_include([m4/spral_metis.m4])

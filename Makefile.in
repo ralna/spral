@@ -85,8 +85,8 @@ DIST_COMMON = $(am__configure_deps) $(srcdir)/Makefile.am \
 	config.sub depcomp install-sh missing
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/acx_lapack.m4 \
-	$(top_srcdir)/m4/ax_blas.m4 $(top_srcdir)/m4/spral_metis.m4 \
-	$(top_srcdir)/configure.ac
+	$(top_srcdir)/m4/acx_prog_nvcc.m4 $(top_srcdir)/m4/ax_blas.m4 \
+	$(top_srcdir)/m4/spral_metis.m4 $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
@@ -334,6 +334,7 @@ METIS_LIBS = @METIS_LIBS@
 METIS_VERSION = @METIS_VERSION@
 MKDIR_P = @MKDIR_P@
 NVCC = @NVCC@
+NVCCFLAGS = @NVCCFLAGS@
 OBJEXT = @OBJEXT@
 PACKAGE = @PACKAGE@
 PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
@@ -407,10 +408,11 @@ ACLOCAL_AMFLAGS = -I m4
 # NVCC setup
 SUFFIXES = .cu
 PTX_FLAGS = -v
-AM_NVCC_FLAGS = -Iinclude -arch=sm_20 -g -Xptxas="${PTX_FLAGS}"
+#NVCCFLAGS = -Iinclude -arch=sm_20 -g -Xptxas="${PTX_FLAGS}"
+AM_NVCC_FLAGS = -Iinclude
 AM_LD_FLAGS = -lcuda
 NVCCLINK = \
-	$(NVCC) $(NVCC_FLAGS) $(AM_NVCC_FLAGS) $(AM_LD_FLAGS) $(LDFLAGS) -o $@
+	$(NVCC) $(NVCCFLAGS) $(AM_NVCC_FLAGS) $(AM_LD_FLAGS) $(LDFLAGS) -o $@
 
 
 # Include directory for standard C
@@ -1270,7 +1272,7 @@ uninstall-am: uninstall-binPROGRAMS uninstall-libLIBRARIES
 	uninstall-am uninstall-binPROGRAMS uninstall-libLIBRARIES
 
 .cu.o:
-	$(NVCC) $(NVCC_FLAGS) $(AM_NVCC_FLAGS) -dc -o $@ $<
+	$(NVCC) $(NVCCFLAGS) $(AM_NVCC_FLAGS) -dc -o $@ $<
 tests/random.$(OBJEXT): libspral.a
 examples/Fortran/random.$(OBJEXT): libspral.a
 examples/C/random.$(OBJEXT): libspral.a

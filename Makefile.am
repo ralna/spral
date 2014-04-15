@@ -1,15 +1,17 @@
 AUTOMAKE_OPTIONS = foreign subdir-objects
 ACLOCAL_AMFLAGS = -I m4
 
-# NVCC setup
 SUFFIXES = .cu
+
+# NVCC setup
 PTX_FLAGS = -v
-AM_NVCC_FLAGS = -Iinclude -arch=sm_20 -g -Xptxas="${PTX_FLAGS}"
+#NVCCFLAGS = -Iinclude -arch=sm_20 -g -Xptxas="${PTX_FLAGS}"
+AM_NVCC_FLAGS = -Iinclude
 AM_LD_FLAGS = -lcuda
 NVCCLINK = \
-	$(NVCC) $(NVCC_FLAGS) $(AM_NVCC_FLAGS) $(AM_LD_FLAGS) $(LDFLAGS) -o $@
+	$(NVCC) $(NVCCFLAGS) $(AM_NVCC_FLAGS) $(AM_LD_FLAGS) $(LDFLAGS) -o $@
 .cu.o:
-	$(NVCC) $(NVCC_FLAGS) $(AM_NVCC_FLAGS) -dc -o $@ $<
+	$(NVCC) $(NVCCFLAGS) $(AM_NVCC_FLAGS) -dc -o $@ $<
 
 # Include directory for standard C
 AM_CFLAGS = -Iinclude -std=c99

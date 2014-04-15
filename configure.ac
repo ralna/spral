@@ -8,8 +8,7 @@ AC_PROG_CXX
 AC_PROG_F77
 AC_PROG_FC
 AC_PROG_RANLIB
-AC_ARG_VAR(NVCC,[CUDA compiler command])
-AC_CHECK_PROGS(NVCC,nvcc)
+ACX_PROG_NVCC
 AM_CONDITIONAL([HAVE_NVCC], [test -n "$NVCC"])
 
 # Establish linking flags C->Fortran
