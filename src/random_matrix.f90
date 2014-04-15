@@ -6,7 +6,7 @@
 ! FIXME: I don't think the positive definite case is implemented as per doc yet!
 module spral_random_matrix
    use spral_random, only : random_state, random_integer, random_real
-   use spral_matrix_util, only : SPRAL_MATRIX_UNDEFINED,          &
+   use spral_matrix_util, only : SPRAL_MATRIX_UNSPECIFIED,          &
       SPRAL_MATRIX_REAL_RECT, SPRAL_MATRIX_REAL_UNSYM,            &
       SPRAL_MATRIX_REAL_SYM_PSDEF, SPRAL_MATRIX_REAL_SYM_INDEF,   &
       SPRAL_MATRIX_REAL_SKEW
@@ -70,7 +70,7 @@ subroutine random_matrix_generate(state, matrix_type, m, n, nnz, ptr, row, &
 
    ! Handle matrix type
    select case(matrix_type)
-   case(SPRAL_MATRIX_UNDEFINED, SPRAL_MATRIX_REAL_RECT)
+   case(SPRAL_MATRIX_UNSPECIFIED, SPRAL_MATRIX_REAL_RECT)
       lsymmetric = .false.
    case(SPRAL_MATRIX_REAL_UNSYM)
       lsymmetric = .false.
