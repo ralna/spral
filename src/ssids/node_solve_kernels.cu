@@ -8,24 +8,27 @@
 
 typedef size_t ptr_t;
 
+// basic node matrix data
 template< typename ELEMENT_TYPE >
 struct node_data {
-  ELEMENT_TYPE* ptr_v;
-  int ld;
+  ELEMENT_TYPE* ptr_v; // matrix elements
+  int ld; // leading dimension
   int nrows;
   int ncols;
 };
 
+// tile data needed for tile presolve step
 template< typename ELEMENT_TYPE >
 struct tile_presolve_data {
-  ELEMENT_TYPE* ptr_diag;
-  ELEMENT_TYPE* ptr_offd;
-  int ldd;
-  int ldo;
+  ELEMENT_TYPE* ptr_diag; // diagonal tile elements' array pointer
+  ELEMENT_TYPE* ptr_offd; // off-diagonal tile elements' array pointer
+  int ldd; // leading dimension of the diagonal tile elements' array
+  int ldo; // leading dimension of the off-diagonal tile elements' array
   int nrows;
   int ncols;
 };
 
+// input data for cu_multinode_dgemm_n and cu_multinode_solve_n/t
 template< typename ELEMENT_TYPE >
 struct node_solve_data {
    // pointers are used by cu_multinode_dgemm_n
@@ -33,13 +36,16 @@ struct node_solve_data {
    ELEMENT_TYPE* ptr_b;
    ELEMENT_TYPE* ptr_u;
    ELEMENT_TYPE* ptr_v;
+   // leading dimensions
    int lda;
    int ldb;
    int ldu;
    int ldv;
+   // sizes
    int nrows;
    int ncols;
    int nrhs;
+   // this CUDA block data offset
    int offb;
    // array offsets are used by cu_node_solve_n/t
    long off_a;
@@ -52,19 +58,31 @@ struct node_solve_data {
 namespace spral { namespace ssids {
 ///////////////////////////////////
 
+// data for inverting the node matrix' diagonal block
 template< typename ELEMENT_TYPE >
 struct l_inv_data {
-  ELEMENT_TYPE* ptr_l;
-  ELEMENT_TYPE* ptr_i;
+  ELEMENT_TYPE* ptr_l; // elements of the diagonal block
+  ELEMENT_TYPE* ptr_i; // elements of its inverse
+  // leading dimensions
   int ldl;
   int ldi;
+  // size
   int n;
+  // CUDA block's local number
   int block;
+  // # CUDA blocks for this node matrix
   int nb;
 };
 
 extern __shared__ char SharedMemory[];
 
+/*
+ *
+ Auxiliary kernels used on solve phase.
+ *
+ */
+
+// scales indexed rows of a matrix
 template< typename ELEMENT_TYPE >
 __global__ void
 cu_scale( 
@@ -80,6 +98,7 @@ cu_scale(
       a[ind[x] - 1 + y*lda] *= s[x];
 }
 
+// gathers D**(-1) from nodes' data into a coniguous array
 template< typename ELEMENT_TYPE >
 __global__ void
 cu_gather_diag( int n, ELEMENT_TYPE* src, ELEMENT_TYPE* dst, long* ind )
@@ -94,6 +113,7 @@ cu_gather_diag( int n, ELEMENT_TYPE* src, ELEMENT_TYPE* dst, long* ind )
     dst[-1] = 0.0;
 }
 
+// gathers backward solve rhs/solution vector; rhs part is multiplied by D**(-1)
 template< typename ELEMENT_TYPE >
 __global__ void
 cu_gather_dx( 
@@ -128,6 +148,7 @@ cu_gather_dx(
   }
 }
 
+// applies D**(-1) for a partial solve
 template< typename ELEMENT_TYPE >
 __global__ void
 cu_apply_d( 
@@ -153,6 +174,7 @@ cu_apply_d(
   }
 }
 
+// gathers rows of a matrix
 template< typename ELEMENT_TYPE >
 __global__ void
 cu_gather(
@@ -171,6 +193,7 @@ cu_gather(
   }
 }
 
+// scatters rows of the sum of two matrices
 template< typename ELEMENT_TYPE >
 __global__ void
 cu_scatter_sum(
@@ -190,6 +213,7 @@ cu_scatter_sum(
   }
 }
 
+// scatters rows of a matrix
 template< typename ELEMENT_TYPE >
 __global__ void
 cu_scatter(
@@ -701,6 +725,22 @@ cu_multinode_solve_n_few_64(
   }
 }
 
+/*
+ *
+ This kernel simultaneously computes the products of several 
+ transposed-matrix-vector pairs. It is used for applying transposes of
+ pre-processed node matrices
+
+   |    L_d**(-1)   |
+   | -L_o L_d**(-1) |
+
+ during the backward solve for a sufficiently large number of rhs.
+
+ The kernel computes two parts u and v of each product, so that the
+ actual product is u + v.
+ *
+ */
+
 template< typename ELEMENT_TYPE >
 __global__ void
 cu_multinode_solve_t_mp_2x2x8( 
@@ -802,6 +842,22 @@ cu_multinode_solve_t_mp_2x2x8(
   }
 }
 
+/*
+ *
+ This kernel simultaneously computes the products of several 
+ transposed-matrix-vector pairs. It is used for applying transposes of
+ pre-processed node matrices
+
+   |    L_d**(-1)   |
+   | -L_o L_d**(-1) |
+
+ during the backward solve for one rhs.
+
+ The kernel computes two parts u and v of each product, so that the
+ actual product is u + v.
+ *
+ */
+
 template< typename ELEMENT_TYPE >
 __global__ void
 cu_multinode_solve_t_one_8x8( 
@@ -850,6 +906,22 @@ cu_multinode_solve_t_one_8x8(
   }
   __syncthreads();
 }
+
+/*
+ *
+ This kernel simultaneously computes the products of several 
+ transposed-matrix-vector pairs. It is used for applying transposes of
+ pre-processed node matrices
+
+   |    L_d**(-1)   |
+   | -L_o L_d**(-1) |
+
+ during the backward solve for a small number of rhs.
+
+ The kernel computes two parts u and v of each product, so that the
+ actual product is u + v.
+ *
+ */
 
 template< typename ELEMENT_TYPE, unsigned int NRHS >
 __global__ void
@@ -909,6 +981,7 @@ cu_multinode_solve_t_few_8x8(
   __syncthreads();
 }
 
+// C interface for cu_init_presolve
 void
 cuda_init_presolve( 
    const cudaStream_t *stream,
@@ -922,6 +995,7 @@ cuda_init_presolve(
   }
 }
 
+// C interface for cu_tile_presolve
 void
 cuda_tile_presolve( 
   const cudaStream_t *stream,
@@ -944,6 +1018,7 @@ cuda_tile_presolve(
   }
 }
 
+// C interface for cu_multi_l_inv
 void
 cuda_multi_l_inv( 
   const cudaStream_t *stream, 
@@ -961,6 +1036,7 @@ cuda_multi_l_inv(
   }
 }
 
+// C interface for cu_multi_l_inv_copy
 void
 cuda_multi_l_inv_copy( 
   const cudaStream_t *stream, 
@@ -977,6 +1053,8 @@ cuda_multi_l_inv_copy(
   }
 }
 
+// computes the number of tiles needed for performing the tile pre-solve step
+// on a nrows-by-ncols node matrix
 int
 tile_presolve_ntiles( int tile_size, int nrows, int ncols )
 {
@@ -984,6 +1062,8 @@ tile_presolve_ntiles( int tile_size, int nrows, int ncols )
   return ntcols + (ntcols*(ntcols - 1))/2;
 }
 
+// computes the number of CUDA blocks needed to invert the diagonal block
+// L_d of size n
 int
 l_inv_nblocks( int tile_size, int n )
 {
@@ -997,6 +1077,7 @@ l_inv_nblocks( int tile_size, int n )
   return nb;
 }
 
+// fills the input data structure for the tile pre-solve step
 int 
 tile_presolve_setup( int tile_size, 
                     int nrows, int ncols, 
@@ -1329,7 +1410,7 @@ void spral_ssids_scatter(const cudaStream_t *stream, int nrows, int ncols,
     ( nrows, ncols, src, lds, dst, ldd, ind );
 }
 
-// same as above but scatters the sum of the two backward solution parts
+// scatters the sum of the two backward solution parts
 // produced by spral_ssids_multinode_solve_t
 void spral_ssids_scatter_sum(const cudaStream_t *stream, int nrows, int ncols,
       double* u, int ldu, double* v, int ldv, double* dst, int ldd, int* ind) {
