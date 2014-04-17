@@ -208,8 +208,68 @@ cu_scatter(
   }
 }
 
+/*
+ *
+ Pre-solve kernels below do some post-processing with the L-factor
+ in order to accelerate the subsequent solve(s) with it.
+ Each node matrix
+
+   | L_d |
+   | L_o |,
+
+ where L_d is the square dense diagonal block and L_o is compactly stored
+ sparse off-diagonal block, is replaced by
+
+   |    L_d**(-1)   |
+   | -L_o L_d**(-1) |
+
+ so that the triangular solves are performed by gemm-like CUDA kernels
+ rather than trsv-like kernels.
+ 
+ Below I always stands for an identity of a size determined by the context.
+
+ In order to invert L_d's, we split them into square tiles of size <tile_size>
+ and perform block-backward solve for the systems
+
+   L_d**T X = I,
+   
+ by operations on tile-rows of the extended matrix L_e**T = | L_d**T I | or,
+ equivalently, on tile-columns of L_e.
+
+ At the first pre-solve step, we simultaneously apply the inverses of the
+ diagonal tiles to the respective tile-columns of all extended matrices L_e.
+ Note that this replaces the diagonal tiles T_d of the upper half of L_e with
+ identity tiles and the diagonal tiles of the lower half of L_e with T_d**(-1).
+
+ Next, we split L_e into same-tile-width groups (cf. presolve_lwork and
+ presolve_first in factor_gpu.f90) and, within each group, simultaneously apply
+ to each L_e tile-column operations that eliminate the off-diagonal tiles of 
+ the upper half of L_e, thus transforming it into the identity and the lower
+ half into L_d**(-1).
+
+ Once L_d**(-1) are computed, we simultaneously apply them to respective L_o.
+ *
+ */
+
+/*
+ *
+ The next two kernels are involved in 'tile pre-solve step', whereby the 
+ inverses of the diagonal tiles are computed and applied to the respective
+ tile-columns of L_e by solving simultaneously triangular systems
+ 
+   T_d**T X**T = | T_o**T I |,
+   
+ where each T_d is a diagonal tile of L_d and T_o is formed by respective
+ sub-diagonal ones. The solve is performed by operations on columns of
+ the extended matrix T_e, where T_e**T = | T_d**T T_o**T I |.
+
+ Each CUDA block is provided with T_d and either a tile from T_o or
+ an identity tile and computes the respective tile of X.
+ *
+ */
+
+// This kernel forms identities for the tile presolve step.
 // blockDim.x = blockDim.y = tile_size
-// shared memory size 2*tile_size*tile_size
 template< typename ELEMENT_TYPE >
 __global__ void
 cu_init_presolve( node_data< ELEMENT_TYPE >* data )
@@ -223,6 +283,9 @@ cu_init_presolve( node_data< ELEMENT_TYPE >* data )
       v[x + y*ld] = (x == y) ? 1.0 : 0.0;
 }
 
+// This kernel performs solve T_d**T Xi = Yi**T, where Yi is either
+// a tile from T_o or an identity tile, by operations on columns of
+// T_ei, where T_ei**T = | T_d**T Yi**T |
 // blockDim.x = tile_size*tile_size
 // shared memory size 2*tile_size*tile_size
 template< typename ELEMENT_TYPE, bool NONUNIT_DIAG > 
@@ -273,6 +336,8 @@ cu_tile_presolve(
     offd[x + ldo*y] = work[x + tile_size + LDW*y];
 }
 
+// This kernel replaces the diagonal block of each node matrix
+// with its inverse
 template< typename ELEMENT_TYPE >
 __global__ void
 cu_multi_l_inv_copy( l_inv_data< ELEMENT_TYPE >* data, int tile_size )
@@ -293,6 +358,14 @@ cu_multi_l_inv_copy( l_inv_data< ELEMENT_TYPE >* data, int tile_size )
   }
 }
 
+// This kernel computes (w - step + 1)-th tile-row of the inverse of L_d,
+// where w is L_d's width in tiles, by eliminating (w - step + 1)-th
+// tile row of the extended matrix L_e. This is done by subtracting from 
+// the first (w - step) tile columns of L_e the same columns of
+// the product of its (step)-th tile column by its (w - step + 1)-th
+// tile row, since the upper half of L_e has identity tiles on the
+// diagonal after the tile pre-solve step. Only non-zero tiles are
+// computed and subtracted.
 template< typename ELEMENT_TYPE >
 __global__ void
 cu_multi_l_inv( l_inv_data< ELEMENT_TYPE >* data, int tile_size, int step )
@@ -377,6 +450,9 @@ cu_multi_l_inv( l_inv_data< ELEMENT_TYPE >* data, int tile_size, int step )
     }
 }
 
+// This kernel simultaneously computes the products of several pairs of
+// non-transposed matrices multiplied by a scalar alpha. It is used for
+// computing -L_o L_d**(-1) on the last pre-solve step.
 template< typename ELEMENT_TYPE >
 __global__ void
 cu_multinode_dgemm_n( 
@@ -458,6 +534,28 @@ cu_multinode_dgemm_n(
         data->ptr_u[x + y*ldu] = alpha*s[ix + iy*4];
     }
 }
+
+/*
+ *
+ This kernel simultaneously computes the products of several pairs of
+ non-transposed matrices. It is used for applying pre-processed node
+ matrices
+
+   |    L_d**(-1)   |
+   | -L_o L_d**(-1) |
+
+ to corresponding gathered portions of the rhs matrix during the forward
+ solve for a sufficiently large number of rhs.
+ 
+ Each CUDA block computes a 64x8 tile of one product using 16x2 threads,
+ each one computing 4x4 elements of the product.
+ 
+ The upper and lower parts of the product, corresponding to the respective 
+ parts of the preprocessed node matrix, are stored separately, as they
+ are subsequently used in a different manner by the multi-frontal forward
+ solve.
+ *
+ */
 
 template< typename ELEMENT_TYPE >
 __global__ void
@@ -541,6 +639,22 @@ cu_multinode_solve_n_16x2(
           v[off_v + x - k + y*ldv] = s[ix + iy*4];
     }
 }
+
+/*
+ *
+ This kernel simultaneously computes the products of several matrix-vector pairs.
+ It is used for applying pre-processed node matrices
+
+   |    L_d**(-1)   |
+   | -L_o L_d**(-1) |
+
+ to corresponding gathered portions of the rhs matrix during the forward
+ solve for a small number of rhs.
+
+ The upper and lower parts of the product, corresponding to the respective
+ parts of the preprocessed node matrix, are stored separately.
+ *
+ */
 
 template< typename ELEMENT_TYPE, unsigned int NRHS >
 __global__ void
