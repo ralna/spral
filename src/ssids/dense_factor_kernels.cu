@@ -1548,7 +1548,7 @@ void spral_ssids_square_ldlt(
             int* stat
            )
 {
-  int nt = min(n, 1024);
+  int nt = min(n, 256);
   int sm = nt*sizeof(double) + (nt + 2)*sizeof(int);
   cu_square_ldlt< double ><<< 1, nt, sm, *stream >>>
     ( n, a, f, w, d, ld, delta, eps, index, stat );
