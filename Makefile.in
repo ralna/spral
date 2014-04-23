@@ -1334,6 +1334,7 @@ src/ssids/solve_gpu.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
 								 	    src/ssids/cuda_datatypes.$(OBJEXT) \
 								 	    src/ssids/cuda_interfaces.$(OBJEXT) \
 								 		 src/ssids/datatypes.$(OBJEXT)
+driver/spral_ssids.$(OBJEXT): libspral.a
 
 # CUDA header deps
 src/ssids/solve_kernels.$(OBJEXT): src/ssids/dtrsv.h
