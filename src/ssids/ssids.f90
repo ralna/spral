@@ -1593,7 +1593,7 @@ subroutine ssids_solve_mult_double(nrhs, x, ldx, akeep, fkeep, options, &
         if(options%presolve.eq.0) then
            call bwd_solve_gpu(local_job, fkeep%pos_def, akeep%nnodes,      &
               akeep%sptr, options%nstream, fkeep%stream_handle,            &
-              fkeep%stream_data, fkeep%top_data, akeep%n, akeep%invp, x,   &
+              fkeep%stream_data, fkeep%top_data, akeep%invp, x,            &
               inform%stat, cuda_error)
            if(cuda_error.ne.0) goto 200
         else

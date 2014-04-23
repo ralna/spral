@@ -25,7 +25,7 @@ module spral_ssids_solve_gpu
 contains
 
 subroutine bwd_solve_gpu(job, posdef, nnodes, sptr, nstream, stream_handle, &
-      stream_data, top_data, n, invp, x, st, cuda_error)
+      stream_data, top_data, invp, x, st, cuda_error)
    integer, intent(in) :: job
    logical, intent(in) :: posdef
    integer, intent(in) :: nnodes
@@ -34,13 +34,12 @@ subroutine bwd_solve_gpu(job, posdef, nnodes, sptr, nstream, stream_handle, &
    type(C_PTR), dimension(*), intent(in) :: stream_handle
    type(gpu_type), dimension(nstream), intent(in) :: stream_data
    type(gpu_type), intent(in) :: top_data
-   integer, intent(in) :: n
    integer, dimension(*), intent(in) :: invp
    real(wp), dimension(*), intent(inout) :: x
    integer, intent(out) :: cuda_error
    integer, intent(out) :: st  ! stat parameter
 
-   integer :: stream, i
+   integer :: stream, i, n
 
    real(C_DOUBLE), dimension(:), allocatable, target :: xlocal
    type(C_PTR) :: gpu_x
@@ -49,7 +48,8 @@ subroutine bwd_solve_gpu(job, posdef, nnodes, sptr, nstream, stream_handle, &
    cuda_error = 0
 
    ! Push x on to GPU
-   allocate(xlocal(sptr(nnodes+1)-1), stat=st)
+   n = sptr(nnodes+1)-1
+   allocate(xlocal(n), stat=st)
    if(st.ne.0) return
    do i = 1, n
       xlocal(i) = x(invp(i))
