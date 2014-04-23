@@ -109,11 +109,14 @@ cu_gather_diag( int n, ELEMENT_TYPE* src, ELEMENT_TYPE* dst, long* ind )
     dst[2*x] = src[i];
     dst[2*x + 1] = src[i + 1];
   }
+  // We add a dummy 0.0 value to left of d_11 that allows simpler application
+  // later: memory is offset on call so this is safe!
   if ( blockIdx.x == 0 && threadIdx.x == 0 )
     dst[-1] = 0.0;
 }
 
 // gathers backward solve rhs/solution vector; rhs part is multiplied by D**(-1)
+// v = D * u
 template< typename ELEMENT_TYPE >
 __global__ void
 cu_gather_dx( 
