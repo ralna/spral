@@ -628,7 +628,7 @@ subroutine subtree_factor_gpu(stream, pos_def, child_ptr, child_list, n,   &
       else
          call factor_indef(stream, lev, gpu%lvlptr, nodes, gpu%lvllist, &
             sparent, sptr, rptr, level_height, level_width, delta, eps, &
-            gpu_ldcol, gwork, cublas_handle, stats, gpu_custats)
+            gpu_ldcol, gwork, cublas_handle, options, stats, gpu_custats)
       endif
       if(stats%flag.lt.0) goto 20
       if(stats%st.ne.0) goto 100
@@ -1596,7 +1596,7 @@ end subroutine collect_stats_indef
 ! Factorize a nodal matrix (not contrib block)
 subroutine factor_indef( stream, lev, lvlptr, nodes, lvllist, sparent, sptr, &
       rptr, level_height, level_width, delta, eps, gpu_ldcol, gwork, &
-      cublas_handle, stats, gpu_custats )
+      cublas_handle, options, stats, gpu_custats )
    type(C_PTR), intent(in) :: stream
    integer, intent(in) :: lev
    integer, dimension(*), intent(in) :: lvlptr
@@ -1611,6 +1611,7 @@ subroutine factor_indef( stream, lev, lvlptr, nodes, lvllist, sparent, sptr, &
    type(C_PTR), dimension(:), intent(in) :: gpu_ldcol
    type(C_PTR), intent(in) :: cublas_handle
    type(cuda_stack_alloc_type), intent(inout) :: gwork
+   type(ssids_options), intent(in) :: options
    type(thread_stats), intent(inout) :: stats
    type(C_PTR), intent(in) :: gpu_custats
 
@@ -1812,8 +1813,12 @@ subroutine factor_indef( stream, lev, lvlptr, nodes, lvllist, sparent, sptr, &
          if(stats%cuda_error.ne.0 .or. stats%cublas_error.ne.0) return
 
          if(blkm.eq.blkn .and. nelim.lt.blkn) then
-            stats%flag = SSIDS_ERROR_SINGULAR
-            return
+            if(options%action) then
+               stats%flag = SSIDS_WARNING_FACT_SINGULAR
+            else
+               stats%flag = SSIDS_ERROR_SINGULAR
+               return
+            endif
          end if
 
          ! Record delays
