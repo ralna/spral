@@ -563,41 +563,52 @@ void spral_ssids_run_fwd_solve_kernels(bool posdef,
       double **xstack_gpu, double *x_gpu, double ** cvalues_gpu,
       double *work_gpu, int nsync, int *sync, const cudaStream_t *stream) {
 
-   if(nsync>0) trsv_init <<<nsync, 1, 0, *stream>>> (sync);
-   assemble_lvl
-      <<<gpu->nassemble, ASSEMBLE_NB, 0, *stream>>>
-      (xlocal_gpu, xstack_gpu, x_gpu, cvalues_gpu, gpu->assemble);
+   if(nsync>0) {
+      for(int i=0; i<nsync; i+=65535)
+         trsv_init <<<MIN(65535,nsync-i), 1, 0, *stream>>> (sync+2*i);
+      CudaCheckError();
+   }
+   for(int i=0; i<gpu->nassemble; i+=65535)
+      assemble_lvl
+         <<<MIN(65535,gpu->nassemble-i), ASSEMBLE_NB, 0, *stream>>>
+         (xlocal_gpu, xstack_gpu, x_gpu, cvalues_gpu, gpu->assemble+i);
    CudaCheckError();
    if(gpu->ntrsv>0) {
       if(posdef) {
-         trsv_ln_exec
-            <double,TRSV_NB_TASK,THREADSX_TASK,THREADSY_TASK,false>
-            <<<gpu->ntrsv, dim3(THREADSX_TASK,THREADSY_TASK), 0, *stream>>>
-            (xlocal_gpu, sync, gpu->trsv);
+         for(int i=0; i<gpu->ntrsv; i+=65535)
+            trsv_ln_exec
+               <double,TRSV_NB_TASK,THREADSX_TASK,THREADSY_TASK,false>
+               <<<MIN(65535,gpu->ntrsv-i), dim3(THREADSX_TASK,THREADSY_TASK), 0, *stream>>>
+               (xlocal_gpu, sync, gpu->trsv+i);
       } else {
-         trsv_ln_exec
-            <double,TRSV_NB_TASK,THREADSX_TASK,THREADSY_TASK,true>
-            <<<gpu->ntrsv, dim3(THREADSX_TASK,THREADSY_TASK), 0, *stream>>>
-            (xlocal_gpu, sync, gpu->trsv);
+         for(int i=0; i<gpu->ntrsv; i+=65535)
+            trsv_ln_exec
+               <double,TRSV_NB_TASK,THREADSX_TASK,THREADSY_TASK,true>
+               <<<MIN(65535,gpu->ntrsv-i), dim3(THREADSX_TASK,THREADSY_TASK), 0, *stream>>>
+               (xlocal_gpu, sync, gpu->trsv+i);
       }
       CudaCheckError();
    }
    if(gpu->ngemv>0) {
-      simple_gemv_lookup
-         <GEMV_THREADSX, GEMV_THREADSY, GEMV_NX, GEMV_NY>
-         <<<gpu->ngemv, dim3(GEMV_THREADSX,GEMV_THREADSY), 0, *stream>>>
-         (xlocal_gpu, work_gpu, gpu->gemv);
+      for(int i=0; i<gpu->ngemv; i+=65535)
+         simple_gemv_lookup
+            <GEMV_THREADSX, GEMV_THREADSY, GEMV_NX, GEMV_NY>
+            <<<MIN(65535,gpu->ngemv-i), dim3(GEMV_THREADSX,GEMV_THREADSY), 0, *stream>>>
+            (xlocal_gpu, work_gpu, gpu->gemv+i);
       CudaCheckError();
    }
    if(gpu->nreduce>0) {
+      if((gpu->nreduce + 4 - 1) / 4 > 65535)
+         printf("Unhandled error! fwd solve gemv_reduce_lookup()\n");
       gemv_reduce_lookup
          <<<dim3((gpu->nreduce + 4 - 1) / 4), dim3(GEMV_NX, 4), 0, *stream>>>
          (work_gpu, cvalues_gpu, gpu->nreduce, gpu->reduce);
       CudaCheckError();
    }
-   scatter
-      <<<gpu->nscatter, SCATTER_NB, 0, *stream>>>
-      (gpu->scatter, xlocal_gpu, x_gpu);
+   for(int i=0; i<gpu->nscatter; i+=65535)
+      scatter
+         <<<MIN(65535,gpu->nscatter-i), SCATTER_NB, 0, *stream>>>
+         (gpu->scatter+i, xlocal_gpu, x_gpu);
    CudaCheckError();
 }
 
@@ -618,49 +629,59 @@ void spral_ssids_run_bwd_solve_kernels(bool dsolve, bool unit_diagonal,
       struct lookups_gpu_bwd *gpu, const cudaStream_t *stream) {
 
    /* === Kernel Launches === */
-   if(nsync>0) trsv_init <<<nsync, 1, 0, *stream>>> (sync_gpu);
+   if(nsync>0) {
+      for(int i=0; i<nsync; i+=65535)
+         trsv_init <<<MIN(65535,nsync-i), 1, 0, *stream>>> (sync_gpu+2*i);
+      CudaCheckError();
+   }
    if(gpu->ngemv>0) {
-      gemv_transpose_sps_rhs
-         <TRSM_TR_THREADSX, TRSM_TR_THREADSY, TRSM_TR_NBX, TRSM_TR_NBY>
-         <<<gpu->ngemv, dim3(TRSM_TR_THREADSX,TRSM_TR_THREADSY), 0, *stream>>>
-         (gpu->gemv, x_gpu, work_gpu);
+      for(int i=0; i<gpu->ngemv; i+=65535)
+         gemv_transpose_sps_rhs
+            <TRSM_TR_THREADSX, TRSM_TR_THREADSY, TRSM_TR_NBX, TRSM_TR_NBY>
+            <<<MIN(65535,gpu->ngemv-i), dim3(TRSM_TR_THREADSX,TRSM_TR_THREADSY), 0, *stream>>>
+            (gpu->gemv+i, x_gpu, work_gpu);
       CudaCheckError();
    }
 
    if(gpu->nrds>0) {
       if(dsolve) {
-         reducing_d_solve
-            <REDUCING_D_SOLVE_THREADS_PER_BLOCK, true>
-            <<<gpu->nrds, REDUCING_D_SOLVE_THREADS_PER_BLOCK, 0, *stream>>>
-            (gpu->rds, work_gpu, x_gpu);
+         for(int i=0; i<gpu->nrds; i+=65535)
+            reducing_d_solve
+               <REDUCING_D_SOLVE_THREADS_PER_BLOCK, true>
+               <<<MIN(65535,gpu->nrds-i), REDUCING_D_SOLVE_THREADS_PER_BLOCK, 0, *stream>>>
+               (gpu->rds+i, work_gpu, x_gpu);
       } else {
-         reducing_d_solve
-            <REDUCING_D_SOLVE_THREADS_PER_BLOCK, false>
-            <<<gpu->nrds, REDUCING_D_SOLVE_THREADS_PER_BLOCK, 0, *stream>>>
-            (gpu->rds, work_gpu, x_gpu);
+         for(int i=0; i<gpu->nrds; i+=65535)
+            reducing_d_solve
+               <REDUCING_D_SOLVE_THREADS_PER_BLOCK, false>
+               <<<MIN(65535,gpu->nrds-i), REDUCING_D_SOLVE_THREADS_PER_BLOCK, 0, *stream>>>
+               (gpu->rds+i, work_gpu, x_gpu);
       }
       CudaCheckError();
    }
 
    if(gpu->ntrsv>0) {
       if(unit_diagonal) {
-         trsv_lt_exec
-            <double,TRSV_NB_TASK,THREADSX_TASK,THREADSY_TASK,true>
-            <<<gpu->ntrsv, dim3(THREADSX_TASK,THREADSY_TASK), 0, *stream>>>
-            (gpu->trsv, work_gpu, sync_gpu);
+         for(int i=0; i<gpu->ntrsv; i+=65535)
+            trsv_lt_exec
+               <double,TRSV_NB_TASK,THREADSX_TASK,THREADSY_TASK,true>
+               <<<MIN(65535,gpu->ntrsv-i), dim3(THREADSX_TASK,THREADSY_TASK), 0, *stream>>>
+               (gpu->trsv+i, work_gpu, sync_gpu);
       } else {
-         trsv_lt_exec
-            <double,TRSV_NB_TASK,THREADSX_TASK,THREADSY_TASK,false>
-            <<<gpu->ntrsv, dim3(THREADSX_TASK,THREADSY_TASK), 0, *stream>>>
-            (gpu->trsv, work_gpu, sync_gpu);
+         for(int i=0; i<gpu->ntrsv; i+=65535)
+            trsv_lt_exec
+               <double,TRSV_NB_TASK,THREADSX_TASK,THREADSY_TASK,false>
+               <<<MIN(65535,gpu->ntrsv-i), dim3(THREADSX_TASK,THREADSY_TASK), 0, *stream>>>
+               (gpu->trsv+i, work_gpu, sync_gpu);
       }
       CudaCheckError();
    }
 
    if(gpu->nscatter>0) {
-      scatter
-         <<<gpu->nscatter, SCATTER_NB, 0, *stream>>>
-         (gpu->scatter, work_gpu, x_gpu);
+      for(int i=0; i<gpu->nscatter; i+=65535)
+         scatter
+            <<<MIN(65535,gpu->nscatter-i), SCATTER_NB, 0, *stream>>>
+            (gpu->scatter+i, work_gpu, x_gpu);
       CudaCheckError();
    }
 }
