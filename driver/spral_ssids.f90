@@ -190,6 +190,9 @@ contains
          call get_command_argument(argnum, argval)
          argnum = argnum + 1
          select case(argval)
+         case("--scale=none")
+            options%scaling = 0 ! None
+            print *, "Set scaling to None"
          case("--scale=mc64")
             options%scaling = 1 ! MC64
             print *, "Set scaling to MC64"
