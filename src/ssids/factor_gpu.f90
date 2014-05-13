@@ -293,6 +293,37 @@ subroutine perform_presolve(pos_def, child_ptr, child_list, n, nnodes, nodes, &
    end select
 end subroutine perform_presolve
 
+! FIXME: remove post-paper
+subroutine print_flops(post, num_levels, lvlptr, nodes, lvllist, sptr, rptr, &
+      title)
+   logical, intent(in) :: post ! pre- or post-factor ie do we know delays?
+   integer, intent(in) :: num_levels
+   integer, dimension(*), intent(in) :: lvlptr
+   type(node_type), dimension(*), intent(in) :: nodes
+   integer, dimension(*), intent(in) :: lvllist
+   integer, dimension(*), intent(in) :: sptr
+   integer(long), dimension(*), intent(in) :: rptr
+   character(len=*), intent(in) :: title
+
+   integer :: lev
+   integer(long) :: factf, assemblef, contribf
+
+   factf = 0
+   assemblef = 0
+   contribf = 0
+   do lev = 1, num_levels
+      factf = factf + factor_flops(lev, lvlptr, nodes, lvllist, sptr, rptr, &
+         post)
+      assemblef = assemblef + assemble_flops(lev, lvlptr, nodes, lvllist, &
+         sptr, rptr, post)
+      contribf = contribf + form_contrib_flops(lev, lvlptr, nodes, lvllist, &
+         sptr, rptr, post)
+   end do
+
+   print *, title, factf, assemblef, contribf
+
+end subroutine print_flops
+
 !*******************************
 !
 ! This subroutine factorises the subtree(s) that include nodes sa through
@@ -476,6 +507,8 @@ subroutine subtree_factor_gpu(stream, pos_def, child_ptr, child_list, n,   &
          asminf(cnode)%offset = rptr(cnode) + cblkn - 1
       end do
    end do
+
+   call print_flops(.false., gpu%num_levels, gpu%lvlptr, nodes, gpu%lvllist, sptr, rptr, 'Flops predict')
    
    !
    ! Loop over levels doing work
@@ -674,6 +707,8 @@ subroutine subtree_factor_gpu(stream, pos_def, child_ptr, child_list, n,   &
       ptr_ccval = ptr_levLDLT
     
    end do ! lev
+
+   call print_flops(.true., gpu%num_levels, gpu%lvlptr, nodes, gpu%lvllist, sptr, rptr, 'Flops actual ')
 
    ! Free stack memory
    call custack_finalize(gwork, stats%cuda_error)
@@ -1288,14 +1323,46 @@ subroutine init_L_with_A(stream, lev, lvlptr, lvllist, nodes, ncb, level_size, &
    call custack_free(gwork, C_SIZEOF(lndata(:)))
 end subroutine init_L_with_A
 
-integer(long) function factor_flops(lev, lvlptr, nodes, lvllist, &
-      sptr, rptr)
+integer(long) function assemble_flops(lev, lvlptr, nodes, lvllist, &
+      sptr, rptr, post)
    integer, intent(in) :: lev
    integer, dimension(*), intent(in) :: lvlptr
    type(node_type), dimension(*), intent(in) :: nodes
    integer, dimension(*), intent(in) :: lvllist
    integer, dimension(*), intent(in) :: sptr
    integer(long), dimension(*), intent(in) :: rptr
+   logical, intent(in) :: post
+
+   integer :: llist, node, ndelay
+   integer :: m, n, blkn
+
+   assemble_flops = 0
+   do llist = lvlptr(lev), lvlptr(lev + 1) - 1
+      node = lvllist(llist)
+      ndelay = nodes(node)%ndelay
+      if(post) then
+         ndelay = nodes(node)%ndelay
+         n = nodes(node)%nelim
+         m = int(rptr(node + 1) - rptr(node)) + ndelay
+      else
+         n = sptr(node + 1) - sptr(node)
+         m = int(rptr(node + 1) - rptr(node))
+      endif
+      blkn = m-n
+      ! Calculate number of flops
+      assemble_flops = assemble_flops + blkn*(blkn+1_long)/2
+   end do
+end function assemble_flops
+
+integer(long) function factor_flops(lev, lvlptr, nodes, lvllist, &
+      sptr, rptr, post)
+   integer, intent(in) :: lev
+   integer, dimension(*), intent(in) :: lvlptr
+   type(node_type), dimension(*), intent(in) :: nodes
+   integer, dimension(*), intent(in) :: lvllist
+   integer, dimension(*), intent(in) :: sptr
+   integer(long), dimension(*), intent(in) :: rptr
+   logical, intent(in) :: post
 
    integer :: llist, node, ndelay
    integer :: m, n
@@ -1303,9 +1370,14 @@ integer(long) function factor_flops(lev, lvlptr, nodes, lvllist, &
    factor_flops = 0
    do llist = lvlptr(lev), lvlptr(lev + 1) - 1
       node = lvllist(llist)
-      ndelay = nodes(node)%ndelay
-      n = sptr(node + 1) - sptr(node) + ndelay
-      m = int(rptr(node + 1) - rptr(node)) + ndelay
+      if(post) then
+         ndelay = nodes(node)%ndelay
+         n = nodes(node)%nelim
+         m = int(rptr(node + 1) - rptr(node)) + ndelay
+      else
+         n = sptr(node + 1) - sptr(node)
+         m = int(rptr(node + 1) - rptr(node))
+      endif
       ! Calculate number of flops
       !factor_flops = factor_flops + &
       !   m*n*(2*n+1_long) - (2*m+2*n+1)*n*(n+1_long)/2 + n*(n+1_long)*(2*n+1)/3
@@ -1315,13 +1387,14 @@ integer(long) function factor_flops(lev, lvlptr, nodes, lvllist, &
 end function factor_flops
 
 integer(long) function form_contrib_flops(lev, lvlptr, nodes, lvllist, &
-      sptr, rptr)
+      sptr, rptr, post)
    integer, intent(in) :: lev
    integer, dimension(*), intent(in) :: lvlptr
    type(node_type), dimension(*), intent(in) :: nodes
    integer, dimension(*), intent(in) :: lvllist
    integer, dimension(*), intent(in) :: sptr
    integer(long), dimension(*), intent(in) :: rptr
+   logical, intent(in) :: post
 
    integer :: llist, node, ndelay, blkm, blkn
    integer :: m, n, k
@@ -1329,9 +1402,14 @@ integer(long) function form_contrib_flops(lev, lvlptr, nodes, lvllist, &
    form_contrib_flops = 0
    do llist = lvlptr(lev), lvlptr(lev + 1) - 1
       node = lvllist(llist)
-      ndelay = nodes(node)%ndelay
-      blkn = sptr(node + 1) - sptr(node) + ndelay
-      blkm = int(rptr(node + 1) - rptr(node)) + ndelay
+      if(post) then
+         ndelay = nodes(node)%ndelay
+         blkn = nodes(node)%nelim
+         blkm = int(rptr(node + 1) - rptr(node)) + ndelay
+      else
+         blkn = sptr(node + 1) - sptr(node)
+         blkm = int(rptr(node + 1) - rptr(node))
+      endif
       ! Calculate dgemm dimensions
       m = blkm - blkn
       n = blkm - blkn
