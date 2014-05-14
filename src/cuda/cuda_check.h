@@ -8,6 +8,8 @@
 #define CudaSafeCall( err )     __cudaSafeCall( err, __FILE__, __LINE__ )
 #define CudaCheckError()        __cudaCheckError( __FILE__, __LINE__ )
 
+#define CublasSafeCall( err )     __cublasSafeCall( err, __FILE__, __LINE__ )
+
 inline void __cudaSafeCall( cudaError err, const char *file, const int line )
 {
 #ifdef CUDA_CHECK_ERROR
@@ -53,6 +55,25 @@ inline void __cudaCheckError( const char *file, const int line )
     } while ( 0 );
 
 #endif // CUDA_CHECK_ERROR
+
+    return;
+}
+
+inline void __cublasSafeCall( cublasStatus_t err, const char *file, const int line )
+{
+#ifdef CUDA_CHECK_ERROR
+
+    do
+    {
+        if ( CUBLAS_STATUS_SUCCESS != err )
+        {
+            fprintf( stderr, "cudaSafeCall() failed at %s:%i : %d\n",
+                     file, line,  err );
+            exit( -1 );
+        }
+    } while ( 0 );
+
+#endif  // CUDA_CHECK_ERROR
 
     return;
 }

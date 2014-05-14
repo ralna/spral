@@ -202,7 +202,7 @@ contains
          case("--scale=mc77")
             options%scaling = 4 ! MC77 algorithm
             print *, "Set scaling to MC77"
-         case("--pos")
+         case("--posdef")
             pos_def = .true.
             print *, 'Matrix assumed positive definite'
          case("--presolve")
@@ -223,6 +223,10 @@ contains
             call get_command_argument(argnum, argval)
             argnum = argnum + 1
             read( argval, * ) options%nstream
+         case("--flops")
+            options%print_flops = .true.
+         case("--node-sizes")
+            options%record_sizes = .true.
          case default
             print *, "Unrecognised command line argument: ", argval
             stop

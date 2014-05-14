@@ -324,6 +324,37 @@ subroutine print_flops(post, num_levels, lvlptr, nodes, lvllist, sptr, rptr, &
 
 end subroutine print_flops
 
+subroutine output_node_sizes(fname, num_levels, lvlptr, nodes, lvllist, sptr, &
+      rptr)
+   character(len=*), intent(in) :: fname
+   integer, intent(in) :: num_levels
+   integer, dimension(*), intent(in) :: lvlptr
+   type(node_type), dimension(*), intent(in) :: nodes
+   integer, dimension(*), intent(in) :: lvllist
+   integer, dimension(*), intent(in) :: sptr
+   integer(long), dimension(*), intent(in) :: rptr
+
+   integer, parameter :: funit = 14
+
+   integer :: lev, llist, node, ndelay, m, n
+
+   open(file=fname, unit=funit, action="write", status="replace")
+
+   write(funit, *) "#      Node           level       m           n"
+   do lev = 1, num_levels
+      do llist = lvlptr(lev), lvlptr(lev + 1) - 1
+         node = lvllist(llist)
+         ndelay = nodes(node)%ndelay
+         n = nodes(node)%nelim
+         m = int(rptr(node + 1) - rptr(node)) + ndelay
+         write(funit, *) node, lev, m, n
+      end do
+   end do
+
+   close(funit)
+
+end subroutine output_node_sizes
+
 !*******************************
 !
 ! This subroutine factorises the subtree(s) that include nodes sa through
@@ -508,7 +539,9 @@ subroutine subtree_factor_gpu(stream, pos_def, child_ptr, child_list, n,   &
       end do
    end do
 
-   call print_flops(.false., gpu%num_levels, gpu%lvlptr, nodes, gpu%lvllist, sptr, rptr, 'Flops predict')
+   if(options%print_flops) &
+      call print_flops(.false., gpu%num_levels, gpu%lvlptr, nodes, gpu%lvllist,&
+         sptr, rptr, 'Flops predict')
    
    !
    ! Loop over levels doing work
@@ -708,7 +741,12 @@ subroutine subtree_factor_gpu(stream, pos_def, child_ptr, child_list, n,   &
     
    end do ! lev
 
-   call print_flops(.true., gpu%num_levels, gpu%lvlptr, nodes, gpu%lvllist, sptr, rptr, 'Flops actual ')
+   if(options%print_flops) &
+      call print_flops(.true., gpu%num_levels, gpu%lvlptr, nodes, gpu%lvllist, &
+         sptr, rptr, 'Flops actual ')
+   if(options%record_sizes) &
+      call output_node_sizes('node_sizes.dat', gpu%num_levels, gpu%lvlptr, &
+         nodes, gpu%lvllist, sptr, rptr)
 
    ! Free stack memory
    call custack_finalize(gwork, stats%cuda_error)

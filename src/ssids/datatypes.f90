@@ -413,6 +413,10 @@ module spral_ssids_datatypes
       type(auction_options) :: auction ! Auction algorithm parameters
       real :: min_loadbalance = 0.8 ! Minimum load balance required when
          ! finding level set used for multiple streams
+
+      ! Paper only
+      logical :: print_flops = .false.
+      logical :: record_sizes = .false.
    end type ssids_options
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
