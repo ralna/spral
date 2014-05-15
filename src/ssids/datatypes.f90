@@ -417,6 +417,7 @@ module spral_ssids_datatypes
       ! Paper only
       logical :: print_flops = .false.
       logical :: record_sizes = .false.
+      logical :: assembly_compare = .false.
    end type ssids_options
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

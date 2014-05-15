@@ -287,8 +287,9 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
       akeep%rlist, akeep%rlist_direct, st)
    if (st .ne. 0) go to 100
    ! FIXME: remove
-   !call check_hitrate(akeep%nnodes, akeep%sparent, akeep%sptr, &
-   !   akeep%rptr, akeep%rlist_direct)
+   if(options%assembly_compare) &
+      call check_hitrate(akeep%nnodes, akeep%sparent, akeep%sptr, &
+         akeep%rptr, akeep%rlist_direct)
 
    ! Find maxmn and setup levels
    allocate(akeep%level(akeep%nnodes+1), stat=st)
@@ -597,12 +598,13 @@ subroutine check_hitrate(nnodes, sparent, sptr, rptr, rlist_direct)
    integer :: lhitmat
    integer, dimension(:), allocatable :: hitmat
 
-   integer(long) :: lhitlist, nhit, nmiss, nmult, nfalse
+   integer(long) :: lhitlist, nhit, nmiss, nmult, nfalse, total
 
    nhit = 0
    nmiss = 0
    nmult = 0
    nfalse = 0
+   total = 0
    lhitmat = 100**2
    allocate(hitmat(lhitmat))
    lhitlist = 0 ! length of a notional "hitlist"
@@ -628,6 +630,7 @@ subroutine check_hitrate(nnodes, sparent, sptr, rptr, rlist_direct)
          end do
       end do
       if(nchild.eq.0) cycle
+      total = total + n**2
       lhitlist = lhitlist + 2*n
       nmiss = nmiss + n**2 - count(hitmat(1:n**2).ne.0)
       nhit = nhit + count(hitmat(1:n**2).ne.0)
@@ -641,9 +644,10 @@ subroutine check_hitrate(nnodes, sparent, sptr, rptr, rlist_direct)
    end do
    print *, "rlist_direct takes ", real(4*rptr(nnodes+1)-1)/1024**2, "MB"
    print *, "hitlist takes ", real(4*lhitlist)/1024**2, "MB"
-   print *, "miss =  ", real(nmiss)
-   print *, "hit =   ", real(nhit)
-   print *, "mult =  ", real(nmult)
+   print *, "total = ", real(total)
+   print *, "nchild=0 =  ", real(nmiss)
+   print *, "nchild=1 =   ", real(nhit)
+   print *, "nchild>1 =  ", real(nmult)
    print *, "false = ", real(nfalse)
 end subroutine check_hitrate
 
