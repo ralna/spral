@@ -227,6 +227,10 @@ contains
             options%print_flops = .true.
          case("--node-sizes")
             options%record_sizes = .true.
+         case("--assembly-compare")
+            options%assembly_compare = .true.
+         case("--pivot-stats")
+            options%pivot_stats = .true.
          case default
             print *, "Unrecognised command line argument: ", argval
             stop

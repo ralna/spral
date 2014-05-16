@@ -6,7 +6,7 @@ module spral_ssids_dense_factor_gpu
   use spral_ssids_cuda_datatypes, only : multinode_fact_type, &
      multiblock_fact_type, multireorder_data, multielm_data
   use spral_ssids_cuda_interfaces
-  use spral_ssids_datatypes, only : wp, one, &
+  use spral_ssids_datatypes, only : wp, one, long, &
      MNF_BLOCKS, SSIDS_ERROR_NOT_POS_DEF
   implicit none
 
@@ -27,7 +27,7 @@ contains
 !
 subroutine node_ldlt(stream, nrows, ncols, gpu_L, gpu_LD, ldL, gpu_D, gpu_B,  &
       gpu_ind, delta, eps, block_size, perm, ind, done, gwork, cublas_handle, &
-      cuda_error, cublas_error)
+      cuda_error, cublas_error, failpiv)
   type(C_PTR), intent(in) :: stream
   integer, intent(in) :: nrows ! A's n.o. rows
   integer, intent(in) :: ncols ! A's n.o. cols
@@ -47,6 +47,7 @@ subroutine node_ldlt(stream, nrows, ncols, gpu_L, gpu_LD, ldL, gpu_D, gpu_B,  &
   type(C_PTR), intent(in) :: cublas_handle ! CUBLAS handle
   integer, intent(out) :: cuda_error
   integer, intent(out) :: cublas_error
+  integer(long), intent(inout) :: failpiv(0:8)
   
   integer :: ib, jb ! first and last column of the pending column block
   integer :: rb, cb ! n.o. rows and cols in the pending block
@@ -198,6 +199,10 @@ subroutine node_ldlt(stream, nrows, ncols, gpu_L, gpu_LD, ldL, gpu_D, gpu_B,  &
     !
     if ( pivoted > 0 ) &
       call copy_mc( stream, rb, cb, gpu_B, rb, gpu_u, ldL, gpu_ind )
+
+    ! Record stats
+    if(pivoted > 8) print *, "oops", pivoted
+    failpiv(8-pivoted) = failpiv(8-pivoted) + 1
     
     if ( pivoted < 1 ) then ! complete failure
 
@@ -421,7 +426,7 @@ end subroutine node_ldlt
 !
 subroutine multinode_ldlt(stream, nlvlnodes, node_m, node_n, node_lcol, &
     node_ldcol, node_skip, gpu_B, gpu_ind, delta, eps, block_size,      &
-    perm, done, gwork, cublas_handle, st, cuda_error, cublas_error)
+    perm, done, gwork, cublas_handle, st, cuda_error, cublas_error, failpiv)
   type(C_PTR), intent(in) :: stream
   integer, intent(in) :: nlvlnodes ! number of nodes at this level
   integer, intent(in) :: node_m(nlvlnodes)
@@ -440,6 +445,7 @@ subroutine multinode_ldlt(stream, nlvlnodes, node_m, node_n, node_lcol, &
   integer, intent(out) :: st
   integer, intent(out) :: cuda_error
   integer, intent(out) :: cublas_error
+  integer(long), intent(inout) :: failpiv(0:8)
 
   integer :: nrows, ncols, rb, cb ! same as in node_ldlt
   integer :: ncb  ! n.o. CUDA blocks for block factorization
@@ -706,6 +712,7 @@ main_loop:&
       cb = jb(node) - ib(node) + 1
       if ( cb < 1 ) cycle
       pivoted = pstat(node)
+      failpiv(8-pivoted) = failpiv(8-pivoted)+1
       if ( pivoted < 1 ) cycle
       done(node) = done(node) + pivoted
       if ( jb(node) == right(node) ) jb(node) = done(node)

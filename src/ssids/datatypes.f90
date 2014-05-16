@@ -329,6 +329,7 @@ module spral_ssids_datatypes
       integer :: num_neg = 0 ! Number of negative pivots
       integer :: num_two = 0 ! Number of 2x2 pivots
       integer :: num_zero = 0 ! Number of zero pivots
+      integer(long) :: failpiv(0:8) = 0
    end type thread_stats
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -418,6 +419,7 @@ module spral_ssids_datatypes
       logical :: print_flops = .false.
       logical :: record_sizes = .false.
       logical :: assembly_compare = .false.
+      logical :: pivot_stats = .false.
    end type ssids_options
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

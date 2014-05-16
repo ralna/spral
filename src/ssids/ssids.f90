@@ -1075,6 +1075,12 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
    inform%num_two = sum(stats(:)%num_two)
    inform%matrix_rank = akeep%sptr(akeep%nnodes+1)-1 - sum(stats(:)%num_zero)
 
+   if(options%pivot_stats) then
+      do i = 0, 8
+         print *, "Failed on ", i, "pivot cols = ", sum(stats(:)%failpiv(i))
+      end do
+   endif
+
    if (inform%flag < 0) then
       call ssids_print_flag(context, nout, inform%flag, &
          cuda_error=inform%cuda_error, st=inform%stat)
