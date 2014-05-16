@@ -329,7 +329,8 @@ module spral_ssids_datatypes
       integer :: num_neg = 0 ! Number of negative pivots
       integer :: num_two = 0 ! Number of 2x2 pivots
       integer :: num_zero = 0 ! Number of zero pivots
-      integer(long) :: failpiv(0:8) = 0
+      integer(long) :: failpiv(0:8) = 0 ! number of blk cols with #failed
+      integer :: delayblk = 0 ! maximum delay block size
    end type thread_stats
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

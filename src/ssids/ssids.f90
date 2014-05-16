@@ -1079,6 +1079,7 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
       do i = 0, 8
          print *, "Failed on ", i, "pivot cols = ", sum(stats(:)%failpiv(i))
       end do
+      print *, "Maximum delay block size = ", maxval(stats(:)%delayblk)
    endif
 
    if (inform%flag < 0) then

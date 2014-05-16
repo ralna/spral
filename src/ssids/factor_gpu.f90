@@ -1927,7 +1927,7 @@ subroutine factor_indef( stream, lev, lvlptr, nodes, lvllist, sparent, sptr, &
          call node_ldlt(stream, blkm, blkn, ptr_L, ptr_LD, blkm, ptr_D, ptr_B, &
             ptr_ind, delta, eps, BLOCK_SIZE, lperm, iwork, nelim, gwork, &
             cublas_handle, stats%cuda_error, stats%cublas_error, &
-            stats%failpiv)
+            stats%failpiv, stats%delayblk)
          if(stats%cuda_error.ne.0 .or. stats%cublas_error.ne.0) return
 
          if(blkm.eq.blkn .and. nelim.lt.blkn) then

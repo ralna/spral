@@ -27,7 +27,7 @@ contains
 !
 subroutine node_ldlt(stream, nrows, ncols, gpu_L, gpu_LD, ldL, gpu_D, gpu_B,  &
       gpu_ind, delta, eps, block_size, perm, ind, done, gwork, cublas_handle, &
-      cuda_error, cublas_error, failpiv)
+      cuda_error, cublas_error, failpiv, delayblk)
   type(C_PTR), intent(in) :: stream
   integer, intent(in) :: nrows ! A's n.o. rows
   integer, intent(in) :: ncols ! A's n.o. cols
@@ -48,6 +48,7 @@ subroutine node_ldlt(stream, nrows, ncols, gpu_L, gpu_LD, ldL, gpu_D, gpu_B,  &
   integer, intent(out) :: cuda_error
   integer, intent(out) :: cublas_error
   integer(long), intent(inout) :: failpiv(0:8)
+  integer, intent(out) :: delayblk
   
   integer :: ib, jb ! first and last column of the pending column block
   integer :: rb, cb ! n.o. rows and cols in the pending block
@@ -377,6 +378,7 @@ subroutine node_ldlt(stream, nrows, ncols, gpu_L, gpu_LD, ldL, gpu_D, gpu_B,  &
     gpu_r = custack_alloc(gwork, r_size)
   end if
   
+  delayblk = max(delayblk, nrows-done)
   call square_ldlt(stream, nrows - done, gpu_u, gpu_v, gpu_r, gpu_w, ldL, &
                     delta, eps, gpu_ind, gpu_stat)
 
