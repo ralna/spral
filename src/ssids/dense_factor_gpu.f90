@@ -205,6 +205,7 @@ subroutine node_ldlt(stream, nrows, ncols, gpu_L, gpu_LD, ldL, gpu_D, gpu_B,  &
 
     ! Record stats
     fpiv = min(8,nrows,right)-pivoted
+    if(pivoted.eq.0) fpiv = 8
     if(fpiv < 0) print *, "oops", nrows, right, pivoted
     failpiv(fpiv) = failpiv(fpiv) + 1
     
@@ -720,6 +721,7 @@ main_loop:&
       if ( cb < 1 ) cycle
       pivoted = pstat(node)
       fpiv = min(8,right(node)) - pivoted
+      if(pivoted.eq.0) fpiv = 8
       if(fpiv < 0) print *, "doh"
       failpiv(fpiv) = failpiv(fpiv)+1
       if ( pivoted < 1 ) cycle
