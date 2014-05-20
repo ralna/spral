@@ -73,6 +73,8 @@ subroutine node_ldlt(stream, nrows, ncols, gpu_L, gpu_LD, ldL, gpu_D, gpu_B,  &
   integer(C_SIZE_T) :: r_size
 
   real(wp) :: dummy_real
+
+  integer :: fpiv
   
   cuda_error = 0
   
@@ -202,8 +204,9 @@ subroutine node_ldlt(stream, nrows, ncols, gpu_L, gpu_LD, ldL, gpu_D, gpu_B,  &
       call copy_mc( stream, rb, cb, gpu_B, rb, gpu_u, ldL, gpu_ind )
 
     ! Record stats
-    if(pivoted > 8) print *, "oops", pivoted
-    failpiv(8-pivoted) = failpiv(8-pivoted) + 1
+    fpiv = min(8,nrows,right)-pivoted
+    if(fpiv < 0) print *, "oops", nrows, right, pivoted
+    failpiv(fpiv) = failpiv(fpiv) + 1
     
     if ( pivoted < 1 ) then ! complete failure
 
@@ -497,6 +500,8 @@ subroutine multinode_ldlt(stream, nlvlnodes, node_m, node_n, node_lcol, &
   integer(C_INT) :: dummy_int
   real(wp) :: dummy_real
 
+  integer :: fpiv
+
   st = 0; cuda_error = 0; cublas_error = 0
   
   gpu_aux = custack_alloc(gwork, 8*C_SIZEOF(dummy_int))
@@ -714,7 +719,9 @@ main_loop:&
       cb = jb(node) - ib(node) + 1
       if ( cb < 1 ) cycle
       pivoted = pstat(node)
-      failpiv(8-pivoted) = failpiv(8-pivoted)+1
+      fpiv = min(8,right(node)) - pivoted
+      if(fpiv < 0) print *, "doh"
+      failpiv(fpiv) = failpiv(fpiv)+1
       if ( pivoted < 1 ) cycle
       done(node) = done(node) + pivoted
       if ( jb(node) == right(node) ) jb(node) = done(node)
