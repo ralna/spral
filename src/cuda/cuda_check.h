@@ -4,6 +4,7 @@
 #define SAFECALL_H
 
 #include<stdio.h>
+#include "cublas_v2.h"
 
 #define CudaSafeCall( err )     __cudaSafeCall( err, __FILE__, __LINE__ )
 #define CudaCheckError()        __cudaCheckError( __FILE__, __LINE__ )
