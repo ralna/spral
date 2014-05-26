@@ -139,6 +139,7 @@ module spral_ssids_cuda_datatypes
       integer(C_INT) :: nchild
       type(C_PTR) :: clen
       type(C_PTR) :: clists
+      type(C_PTR) :: clists_direct
       integer(C_INT) :: cvalues_offset
       integer(C_INT) :: first
    end type

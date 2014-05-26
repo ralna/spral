@@ -291,7 +291,9 @@ module spral_ssids_datatypes
       type(gpu_type), dimension(:), allocatable :: stream_data
       type(gpu_type) :: top_data
       type(C_PTR) :: gpu_rlist_with_delays = C_NULL_PTR
+      type(C_PTR) :: gpu_rlist_direct_with_delays = C_NULL_PTR
       type(C_PTR) :: gpu_clists = C_NULL_PTR
+      type(C_PTR) :: gpu_clists_direct = C_NULL_PTR
       type(C_PTR) :: gpu_clen = C_NULL_PTR
       logical :: host_factors = .false.
    end type ssids_fkeep

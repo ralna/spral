@@ -492,6 +492,7 @@ struct assemble_lookup {
    int nchild;
    int const* clen;
    int * const* clists;
+   int * const* clists_direct;
    int cvalues_offset;
    int first; // First index of node. Used to shortcut searching
 };

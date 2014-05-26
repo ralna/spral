@@ -37,8 +37,8 @@ contains
 subroutine parfactor(pos_def, child_ptr, child_list, n, nptr, gpu_nlist,      &
       ptr_val, nnodes, nodes, sptr, sparent, rptr, rlist, invp, rlist_direct, &
       gpu_rlist, gpu_rlist_direct, gpu_contribs, stream_handle, stream_data,  &
-      top_data, gpu_rlist_with_delays, gpu_clists, gpu_clen, alloc,&
-      options, stats, ptr_scale)
+      top_data, gpu_rlist_with_delays, gpu_rlist_direct_with_delays,          &
+      gpu_clists, gpu_clists_direct, gpu_clen, alloc, options, stats, ptr_scale)
    logical, intent(in) :: pos_def ! True if problem is supposedly pos-definite
    integer, dimension(*), intent(in) :: child_ptr
    integer, dimension(*), intent(in) :: child_list
@@ -62,7 +62,9 @@ subroutine parfactor(pos_def, child_ptr, child_list, n, nptr, gpu_nlist,      &
    type(gpu_type), dimension(:), intent(out) :: stream_data
    type(gpu_type), intent(out) :: top_data
    type(C_PTR), intent(out) :: gpu_rlist_with_delays
+   type(C_PTR), intent(out) :: gpu_rlist_direct_with_delays
    type(C_PTR), intent(out) :: gpu_clists
+   type(C_PTR), intent(out) :: gpu_clists_direct
    type(C_PTR), intent(out) :: gpu_clen
    type(smalloc_type), target, intent(inout) :: alloc ! Contains actual memory
       ! allocations for L. Everything else (within the subtree) is just a
@@ -202,8 +204,8 @@ subroutine parfactor(pos_def, child_ptr, child_list, n, nptr, gpu_nlist,      &
    ! Apply any presolve as required
    call perform_presolve(pos_def, child_ptr, child_list, n, nnodes, nodes,    &
       sptr, sparent, rptr, rlist, invp, stream_handle, stream_data, top_data, &
-      gpu_rlist_with_delays, gpu_clists, gpu_clen, options, stats(1)%st,      &
-      stats(1)%cuda_error)
+      gpu_rlist_with_delays, gpu_rlist_direct_with_delays, gpu_clists,        &
+      gpu_clists_direct, gpu_clen, options, stats(1)%st, stats(1)%cuda_error)
    if(stats(1)%st.ne.0) goto 100
    if(stats(1)%cuda_error.ne.0) goto 200
 
@@ -226,7 +228,8 @@ end subroutine parfactor
 
 subroutine perform_presolve(pos_def, child_ptr, child_list, n, nnodes, nodes, &
       sptr, sparent, rptr, rlist, invp, stream_handle, stream_data, top_data, &
-      gpu_rlist_with_delays, gpu_clists, gpu_clen, options, st, cuda_error)
+      gpu_rlist_with_delays, gpu_rlist_direct_with_delays, gpu_clists,        &
+      gpu_clists_direct, gpu_clen, options, st, cuda_error)
    logical, intent(in) :: pos_def
    integer, dimension(*), intent(in) :: child_ptr
    integer, dimension(*), intent(in) :: child_list
@@ -242,7 +245,9 @@ subroutine perform_presolve(pos_def, child_ptr, child_list, n, nnodes, nodes, &
    type(gpu_type), dimension(:), intent(inout) :: stream_data
    type(gpu_type), intent(inout) :: top_data
    type(C_PTR), intent(out) :: gpu_rlist_with_delays
+   type(C_PTR), intent(out) :: gpu_rlist_direct_with_delays
    type(C_PTR), intent(out) :: gpu_clists
+   type(C_PTR), intent(out) :: gpu_clists_direct
    type(C_PTR), intent(out) :: gpu_clen
    type(ssids_options), intent(in) :: options
    integer, intent(out) :: st
@@ -258,9 +263,10 @@ subroutine perform_presolve(pos_def, child_ptr, child_list, n, nnodes, nodes, &
    select case(options%presolve)
    case(0)
       ! Setup data-strctures for normal GPU solve
-      call setup_gpu_solve(child_ptr, child_list, nnodes, nodes, sptr, rptr,  &
-         rlist, options%nstream, stream_handle, stream_data, top_data,        &
-         gpu_rlist_with_delays, gpu_clists, gpu_clen, st, cuda_error)
+      call setup_gpu_solve(n, child_ptr, child_list, nnodes, nodes, sparent,  &
+         sptr, rptr, rlist, options%nstream, stream_handle, stream_data,      &
+         top_data, gpu_rlist_with_delays, gpu_clists, gpu_clists_direct,      &
+         gpu_clen, st, cuda_error, gpu_rlist_direct_with_delays)
       if(st.ne.0) return
       if(cuda_error.ne.0) return
    case(1:)

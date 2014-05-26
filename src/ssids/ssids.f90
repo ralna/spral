@@ -1037,8 +1037,10 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
          akeep%sptr, akeep%sparent, akeep%rptr, akeep%rlist, akeep%invp,   &
          akeep%rlist_direct, akeep%gpu_rlist, akeep%gpu_rlist_direct,      &
          gpu_contribs, fkeep%stream_handle, fkeep%stream_data,             &
-         fkeep%top_data, fkeep%gpu_rlist_with_delays, fkeep%gpu_clists,    &
-         fkeep%gpu_clen, fkeep%alloc, options, stats, ptr_scale=gpu_scaling)
+         fkeep%top_data, fkeep%gpu_rlist_with_delays,                      &
+         fkeep%gpu_rlist_direct_with_delays, fkeep%gpu_clists,             &
+         fkeep%gpu_clists_direct, fkeep%gpu_clen, fkeep%alloc, options, stats, &
+         ptr_scale=gpu_scaling)
       cuda_error = cudaFree(gpu_scaling)
       if(cuda_error.ne.0) goto 200
    else
@@ -1047,8 +1049,9 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
          akeep%sptr, akeep%sparent, akeep%rptr, akeep%rlist, akeep%invp,   &
          akeep%rlist_direct, akeep%gpu_rlist, akeep%gpu_rlist_direct,      &
          gpu_contribs, fkeep%stream_handle, fkeep%stream_data,             &
-         fkeep%top_data, fkeep%gpu_rlist_with_delays, fkeep%gpu_clists,    &
-         fkeep%gpu_clen, fkeep%alloc, options, stats)
+         fkeep%top_data, fkeep%gpu_rlist_with_delays,                      &
+         fkeep%gpu_rlist_direct_with_delays, fkeep%gpu_clists,             &
+         fkeep%gpu_clists_direct, fkeep%gpu_clen, fkeep%alloc, options, stats)
    end if
 
    cuda_error = cudaFree(gpu_val)
