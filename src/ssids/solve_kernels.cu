@@ -497,10 +497,61 @@ struct assemble_lookup {
    int first; // First index of node. Used to shortcut searching
 };
 
+struct assemble_lookup2 {
+   int m;
+   int nelim;
+   int x_offset;
+   int *const* list;
+   int cvparent;
+   int cvchild;
+   int sync_offset;
+   int sync_waitfor;
+};
+
+void __device__ wait_for_sync(int tid, volatile int *sync, int target) {
+   if(tid==0) {
+      while(*sync < target) {}
+   }
+   __syncthreads();
+}
+
+void __global__ assemble_lvl2(struct assemble_lookup2 *lookup, double *xlocal, int *sync, double * const* cvalues) {
+   lookup += blockIdx.x;
+
+   int m = lookup->m;
+   int nelim = lookup->nelim;
+   double *xparent = cvalues[lookup->cvparent];
+   const double *xchild = cvalues[lookup->cvchild];
+   const int * list = *(lookup->list);
+   xlocal += lookup->x_offset;
+
+   // Wait for previous children to complete
+   wait_for_sync(threadIdx.x, &sync[lookup->sync_offset], lookup->sync_waitfor);
+
+   // Perform actual assembly
+   if(threadIdx.x==0) {
+      for(int i=0; i<m; i++) {
+         int j = list[i];
+         if(j < nelim) {
+            //printf("Add x[%d] += %le (%d)\n", j, xchild[i], i);
+            xlocal[j] += xchild[i];
+         } else {
+            xparent[j] += xchild[i];
+         }
+      }
+   }
+
+   // Wait for all threads to complete, then increment sync object
+   __syncthreads();
+   if(threadIdx.x==0) {
+      sync[lookup->sync_offset]++;
+      __threadfence();
+   }
+}
+
 /* Each thread looks after exactly one entry of x only */
-void __global__ assemble_lvl(double *xlocal,
-      double **xstack, const double *x, double * const* cvalues,
-      struct assemble_lookup *lookup) {
+void __global__ assemble_lvl(double *xlocal, double **xstack,
+      double * const* cvalues, struct assemble_lookup *lookup) {
 
    lookup += blockIdx.x;
    if(threadIdx.x>=lookup->m) return;
@@ -532,17 +583,39 @@ void __global__ assemble_lvl(double *xlocal,
    }
 
    /* Add to x or xstack as appropriate */
-   if(threadIdx.x<xend) xlocal[threadIdx.x] = x[row] + val;
-   else                 contrib[threadIdx.x] = val;
+   if(threadIdx.x<xend) xlocal[threadIdx.x] += val;
+   else                 contrib[threadIdx.x] += val;
+
+}
+
+void __global__ grabx(double *xlocal, double **xstack, const double *x,
+      struct assemble_lookup *lookup) {
+
+   lookup += blockIdx.x;
+   if(threadIdx.x>=lookup->m) return;
+   int xend = lookup->xend;
+   double *contrib =
+      (threadIdx.x>=xend) ?
+         xstack[lookup->contrib_idx]+lookup->contrib_offset :
+         NULL;
+   xlocal += lookup->x_offset;
+
+   int row = lookup->list[threadIdx.x];
+
+   if(threadIdx.x<xend) xlocal[threadIdx.x] = x[row];
+   else                 contrib[threadIdx.x] = 0.0;
 }
 
 struct lookups_gpu_fwd {
    int nassemble;
+   int nasm_sync;
+   int nassemble2;
    int ntrsv;
    int ngemv;
    int nreduce;
    int nscatter;
    struct assemble_lookup *assemble;
+   struct assemble_lookup2 *assemble2;
    struct trsv_lookup *trsv;
    struct gemv_notrans_lookup *gemv;
    struct reduce_notrans_lookup *reduce;
@@ -562,7 +635,8 @@ extern "C" {
 void spral_ssids_run_fwd_solve_kernels(bool posdef,
       struct lookups_gpu_fwd const* gpu, double *xlocal_gpu,
       double **xstack_gpu, double *x_gpu, double ** cvalues_gpu,
-      double *work_gpu, int nsync, int *sync, const cudaStream_t *stream) {
+      double *work_gpu, int nsync, int *sync, int nasm_sync, int *asm_sync,
+      const cudaStream_t *stream) {
 
    if(nsync>0) {
       for(int i=0; i<nsync; i+=65535)
@@ -570,9 +644,21 @@ void spral_ssids_run_fwd_solve_kernels(bool posdef,
       CudaCheckError();
    }
    for(int i=0; i<gpu->nassemble; i+=65535)
+      grabx
+         <<<MIN(65535,gpu->nassemble-i), ASSEMBLE_NB, 0, *stream>>>
+         (xlocal_gpu, xstack_gpu, x_gpu, gpu->assemble+i);
+#if 0
+   for(int i=0; i<gpu->nassemble; i+=65535)
       assemble_lvl
          <<<MIN(65535,gpu->nassemble-i), ASSEMBLE_NB, 0, *stream>>>
-         (xlocal_gpu, xstack_gpu, x_gpu, cvalues_gpu, gpu->assemble+i);
+         (xlocal_gpu, xstack_gpu, cvalues_gpu, gpu->assemble+i);
+#else
+   cudaMemset(asm_sync, 0, gpu->nasm_sync*sizeof(int));
+   for(int i=0; i<gpu->nassemble2; i+=65535)
+      assemble_lvl2
+         <<<MIN(65535,gpu->nassemble2-i), ASSEMBLE_NB, 0, *stream>>>
+         (gpu->assemble2+i, xlocal_gpu, asm_sync, cvalues_gpu);
+#endif
    CudaCheckError();
    if(gpu->ntrsv>0) {
       if(posdef) {

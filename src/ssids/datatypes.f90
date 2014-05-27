@@ -260,6 +260,7 @@ module spral_ssids_datatypes
       integer :: fwd_slv_lwork
       integer :: fwd_slv_nlocal
       integer :: fwd_slv_nsync
+      integer :: fwd_slv_nasync
    end type gpu_type
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
