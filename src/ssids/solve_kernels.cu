@@ -529,14 +529,12 @@ void __global__ assemble_lvl2(struct assemble_lookup2 *lookup, double *xlocal, i
    wait_for_sync(threadIdx.x, &sync[lookup->sync_offset], lookup->sync_waitfor);
 
    // Perform actual assembly
-   if(threadIdx.x==0) {
-      for(int i=0; i<m; i++) {
-         int j = list[i];
-         if(j < nelim) {
-            xlocal[j] += xchild[i];
-         } else {
-            xparent[j-nelim] += xchild[i];
-         }
+   for(int i=threadIdx.x; i<m; i+=blockDim.x) {
+      int j = list[i];
+      if(j < nelim) {
+         xlocal[j] += xchild[i];
+      } else {
+         xparent[j-nelim] += xchild[i];
       }
    }
 
