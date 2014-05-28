@@ -420,6 +420,7 @@ subroutine subtree_fwd_solve_gpu_lvl(posdef, num_levels, gpu_x, fwd_slv_lookup,&
       call run_fwd_solve_kernels(cposdef, fwd_slv_lookup(lvl), gpu_xlocal, &
          gpu_cvalues, gpu_x, gpu_cvalues, gpu_work, nsync, gpu_sync,       &
          nasm_sync, gpu_asm_sync, stream)
+      cuda_error = cudaDeviceSynchronize()
    end do
    cuda_error = cudaFree(gpu_work)
    if(cuda_error.ne.0) return
@@ -598,7 +599,11 @@ subroutine create_gpu_lookup_fwd(nlvl, lvllist, nodes, child_ptr, child_list, &
          assemble_lookup2(nassemble2)%nelim = nelim
          assemble_lookup2(nassemble2)%list = &
             c_ptr_plus( gpu_clists_direct, (ci-1)*C_SIZEOF(ptdummy_int) )
-         assemble_lookup2(nassemble2)%cvparent = cvmap(node)
+         if(blkm > nelim) then
+            assemble_lookup2(nassemble2)%cvparent = cvmap(node)
+         else
+            assemble_lookup2(nassemble2)%cvparent = 0 ! Avoid OOB error
+         endif
          assemble_lookup2(nassemble2)%cvchild = cvmap(child)
          assemble_lookup2(nassemble2)%sync_offset = ni - 1
          assemble_lookup2(nassemble2)%sync_waitfor = ci - child_ptr(node)
@@ -672,15 +677,6 @@ subroutine create_gpu_lookup_fwd(nlvl, lvllist, nodes, child_ptr, child_list, &
       stream)
    if(cuda_error.ne.0) return
 
-   gpul%nassemble2 = nassemble2
-   gpul%nasm_sync = nasm_sync
-   sz = C_SIZEOF(assemble_lookup2(1:gpul%nassemble2))
-   gpul%assemble2 = pmem
-   pmem = c_ptr_plus_aligned(pmem, sz)
-   cuda_error = cudaMemcpyAsync_h2d(gpul%assemble2, C_LOC(assemble_lookup2), &
-      sz, stream)
-   if(cuda_error.ne.0) return
-
    gpul%ntrsv = ntrsv
    sz = C_SIZEOF(trsv_lookup(1:gpul%ntrsv))
    gpul%trsv = pmem
@@ -709,6 +705,15 @@ subroutine create_gpu_lookup_fwd(nlvl, lvllist, nodes, child_ptr, child_list, &
    pmem = c_ptr_plus_aligned(pmem, sz)
    cuda_error = cudaMemcpyAsync_h2d(gpul%scatter, C_LOC(scatter_lookup), sz, &
       stream)
+   if(cuda_error.ne.0) return
+
+   gpul%nassemble2 = nassemble2
+   gpul%nasm_sync = nasm_sync
+   sz = C_SIZEOF(assemble_lookup2(1:gpul%nassemble2))
+   gpul%assemble2 = pmem
+   pmem = c_ptr_plus_aligned(pmem, sz)
+   cuda_error = cudaMemcpyAsync_h2d(gpul%assemble2, C_LOC(assemble_lookup2), &
+      sz, stream)
    if(cuda_error.ne.0) return
 end subroutine create_gpu_lookup_fwd
 
