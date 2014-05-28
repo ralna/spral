@@ -533,10 +533,9 @@ void __global__ assemble_lvl2(struct assemble_lookup2 *lookup, double *xlocal, i
       for(int i=0; i<m; i++) {
          int j = list[i];
          if(j < nelim) {
-            //printf("Add x[%d] += %le (%d)\n", j, xchild[i], i);
             xlocal[j] += xchild[i];
          } else {
-            xparent[j] += xchild[i];
+            xparent[j-nelim] += xchild[i];
          }
       }
    }
@@ -585,7 +584,6 @@ void __global__ assemble_lvl(double *xlocal, double **xstack,
    /* Add to x or xstack as appropriate */
    if(threadIdx.x<xend) xlocal[threadIdx.x] += val;
    else                 contrib[threadIdx.x] += val;
-
 }
 
 void __global__ grabx(double *xlocal, double **xstack, const double *x,

@@ -3582,11 +3582,11 @@ subroutine solve_setup(stream, pos_def, sparent, child_ptr, child_list, n, &
 
       if ( ncb > 0 ) then
 
-         cuda_error = cudaMalloc(gpu_solve_data, C_SIZEOF(sdata(1:ncb)))
-         if(cuda_error.ne.0) return
-
          allocate (sdata(ncb), stat=st)
          if(st.ne.0) return
+
+         cuda_error = cudaMalloc(gpu_solve_data, C_SIZEOF(sdata(1:ncb)))
+         if(cuda_error.ne.0) return
 
          k = 0
          do li = fact_data%lvlptr(lev), fact_data%lvlptr(lev + 1) - 1
@@ -3636,11 +3636,11 @@ subroutine solve_setup(stream, pos_def, sparent, child_ptr, child_list, n, &
 
       if(ncb.gt.0) then
 
-         cuda_error = cudaMalloc(gpu_solve_data, C_SIZEOF(sdata(1:ncb)))
-         if(cuda_error.ne.0) return
-
          allocate(sdata(ncb), stat=st)
          if(st.ne.0) return
+
+         cuda_error = cudaMalloc(gpu_solve_data, C_SIZEOF(sdata(1:ncb)))
+         if(cuda_error.ne.0) return
 
          k = 0
          do li = fact_data%lvlptr(lev), fact_data%lvlptr(lev + 1) - 1

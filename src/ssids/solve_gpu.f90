@@ -167,14 +167,15 @@ subroutine d_solve_gpu(nnodes, sptr, nstream, stream_handle, &
    st = 0
    cuda_error = 0
 
+   allocate(xlocal(sptr(nnodes+1)-1), stat=st)
+   if(st.ne.0) return
+
    ! Allocate workspace on GPU (code doesn't work in place, so need in and out)
    cuda_error = cudaMalloc(gpu_x, 2*aligned_size(C_SIZEOF(xlocal(1:n))))
    if(cuda_error.ne.0) return
    gpu_y = c_ptr_plus_aligned(gpu_x, C_SIZEOF(xlocal(1:n)))
 
    ! Push x on to GPU
-   allocate(xlocal(sptr(nnodes+1)-1), stat=st)
-   if(st.ne.0) return
    do i = 1, n
       xlocal(i) = x(invp(i))
    end do
@@ -589,16 +590,16 @@ subroutine create_gpu_lookup_fwd(nlvl, lvllist, nodes, child_ptr, child_list, &
          child = child_list(ci)
          cndelay = nodes(child)%ndelay
          cnelim = nodes(child)%nelim
-         cblkn = sptr(child+1) - sptr(child) + ndelay
-         cblkm = int(rptr(child+1) - rptr(child)) + ndelay
+         cblkn = sptr(child+1) - sptr(child) + cndelay
+         cblkm = int(rptr(child+1) - rptr(child)) + cndelay
 
          nassemble2 = nassemble2 + 1
          assemble_lookup2(nassemble2)%m = cblkm-cnelim
          assemble_lookup2(nassemble2)%nelim = nelim
-         assemble_lookup2(nassemble2)%list =  &
+         assemble_lookup2(nassemble2)%list = &
             c_ptr_plus( gpu_clists_direct, (ci-1)*C_SIZEOF(ptdummy_int) )
-         assemble_lookup2(nassemble2)%cvparent = node-1
-         assemble_lookup2(nassemble2)%cvchild = child-1
+         assemble_lookup2(nassemble2)%cvparent = cvmap(node)
+         assemble_lookup2(nassemble2)%cvchild = cvmap(child)
          assemble_lookup2(nassemble2)%sync_offset = ni - 1
          assemble_lookup2(nassemble2)%sync_waitfor = ci - child_ptr(node)
          assemble_lookup2(nassemble2)%x_offset = nlocal
@@ -990,7 +991,7 @@ subroutine setup_gpu_solve(n, child_ptr, child_list, nnodes, nodes, sparent,  &
    ! Setup rlist_direct_with_delays
    !
    allocate(rlist_direct2(rptr_with_delays(nnodes+1)/C_SIZEOF(dummy_int)), &
-      rmap(n), stat=st)
+      rmap(0:n-1), stat=st)
    if(st.ne.0) return
    cuda_error = cudaMalloc(gpu_rlist_direct_with_delays, &
       rptr_with_delays(nnodes+1))
