@@ -424,9 +424,11 @@ subroutine subtree_fwd_solve_gpu_lvl(posdef, num_levels, gpu_x, fwd_slv_lookup,&
    end do
    cuda_error = cudaFree(gpu_work)
    if(cuda_error.ne.0) return
-   cuda_error = cudaFree(gpu_sync)
-   if(cuda_error.ne.0) return
    cuda_error = cudaFree(gpu_xlocal)
+   if(cuda_error.ne.0) return
+   cuda_error = cudaFree(gpu_asm_sync)
+   if(cuda_error.ne.0) return
+   cuda_error = cudaFree(gpu_sync)
    if(cuda_error.ne.0) return
 end subroutine subtree_fwd_solve_gpu_lvl
 
