@@ -2142,6 +2142,11 @@ subroutine free_fkeep_double(fkeep, cuda_error)
       fkeep%gpu_clists = C_NULL_PTR
       if(cuda_error.ne.0) return
    endif
+   if(C_ASSOCIATED(fkeep%gpu_clists_direct)) then
+      cuda_error = cudaFree(fkeep%gpu_clists)
+      fkeep%gpu_clists = C_NULL_PTR
+      if(cuda_error.ne.0) return
+   endif
    if(C_ASSOCIATED(fkeep%gpu_clen)) then
       cuda_error = cudaFree(fkeep%gpu_clen)
       fkeep%gpu_clen = C_NULL_PTR
