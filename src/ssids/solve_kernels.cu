@@ -482,6 +482,12 @@ void __global__ assemble(int m, int nelim, int const* list, double *xlocal,
    else           (*xstack)[idx-nelim] = val;
 }
 
+// FIXME: move to common header?
+struct assemble_blk_type {
+   int cp;
+   int blk;
+};
+
 struct assemble_lookup {
    int m;
    int xend;
@@ -515,9 +521,16 @@ void __device__ wait_for_sync(int tid, volatile int *sync, int target) {
    __syncthreads();
 }
 
-void __global__ assemble_lvl2(struct assemble_lookup2 *lookup, double *xlocal, int *sync, double * const* cvalues) {
-   lookup += blockIdx.x;
+void __global__ assemble_lvl2(struct assemble_lookup2 *lookup, struct assemble_blk_type *blkdata, double *xlocal, int *next_blk, int *sync, double * const* cvalues) {
+   unsigned int __shared__ thisblk;
+   if(threadIdx.x==0)
+      thisblk = atomicAdd(next_blk, 1);
+   __syncthreads();
 
+   blkdata += thisblk;
+   lookup += blkdata->cp;
+
+   int blk = blkdata->blk;
    int m = lookup->m;
    int nelim = lookup->nelim;
    double *xparent = cvalues[lookup->cvparent];
@@ -527,6 +540,11 @@ void __global__ assemble_lvl2(struct assemble_lookup2 *lookup, double *xlocal, i
 
    // Wait for previous children to complete
    wait_for_sync(threadIdx.x, &sync[lookup->sync_offset], lookup->sync_waitfor);
+
+   // Add block increments
+   m = MIN(ASSEMBLE_NB, m-blk*ASSEMBLE_NB);
+   list += blk*ASSEMBLE_NB;
+   xchild += blk*ASSEMBLE_NB;
 
    // Perform actual assembly
    for(int i=threadIdx.x; i<m; i+=blockDim.x) {
@@ -541,8 +559,7 @@ void __global__ assemble_lvl2(struct assemble_lookup2 *lookup, double *xlocal, i
    // Wait for all threads to complete, then increment sync object
    __syncthreads();
    if(threadIdx.x==0) {
-      sync[lookup->sync_offset]++;
-      __threadfence();
+      atomicAdd(&sync[lookup->sync_offset], 1);
    }
 }
 
@@ -606,12 +623,14 @@ struct lookups_gpu_fwd {
    int nassemble;
    int nasm_sync;
    int nassemble2;
+   int nasmblk;
    int ntrsv;
    int ngemv;
    int nreduce;
    int nscatter;
    struct assemble_lookup *assemble;
    struct assemble_lookup2 *assemble2;
+   struct assemble_blk_type *asmblk;
    struct trsv_lookup *trsv;
    struct gemv_notrans_lookup *gemv;
    struct reduce_notrans_lookup *reduce;
@@ -649,11 +668,11 @@ void spral_ssids_run_fwd_solve_kernels(bool posdef,
          <<<MIN(65535,gpu->nassemble-i), ASSEMBLE_NB, 0, *stream>>>
          (xlocal_gpu, xstack_gpu, cvalues_gpu, gpu->assemble+i);
 #else
-   cudaMemset(asm_sync, 0, gpu->nasm_sync*sizeof(int));
-   for(int i=0; i<gpu->nassemble2; i+=65535)
+   cudaMemset(asm_sync, 0, (1+gpu->nasm_sync)*sizeof(int));
+   for(int i=0; i<gpu->nasmblk; i+=65535)
       assemble_lvl2
-         <<<MIN(65535,gpu->nassemble2-i), ASSEMBLE_NB, 0, *stream>>>
-         (gpu->assemble2+i, xlocal_gpu, asm_sync, cvalues_gpu);
+         <<<MIN(65535,gpu->nasmblk-i), ASSEMBLE_NB, 0, *stream>>>
+         (gpu->assemble2, gpu->asmblk+i, xlocal_gpu, &asm_sync[0], &asm_sync[1], cvalues_gpu);
 #endif
    CudaCheckError();
    if(gpu->ntrsv>0) {

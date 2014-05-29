@@ -410,7 +410,7 @@ subroutine subtree_fwd_solve_gpu_lvl(posdef, num_levels, gpu_x, fwd_slv_lookup,&
    ! Do actual work
    cuda_error = cudaMalloc(gpu_sync, 2*nsync*C_SIZEOF(dummy_int))
    if(cuda_error.ne.0) return
-   cuda_error = cudaMalloc(gpu_asm_sync, nasm_sync*C_SIZEOF(dummy_int))
+   cuda_error = cudaMalloc(gpu_asm_sync, (1+nasm_sync)*C_SIZEOF(dummy_int))
    if(cuda_error.ne.0) return
    cuda_error = cudaMalloc(gpu_xlocal, nlocal*C_SIZEOF(dummy_real))
    if(cuda_error.ne.0) return
@@ -467,15 +467,16 @@ subroutine create_gpu_lookup_fwd(nlvl, lvllist, nodes, child_ptr, child_list, &
    integer, intent(out) :: cuda_error
 
    integer :: i, j, ci, ni
-   integer :: node, blkm, blkn, nelim, gldl, nchild, ndelay
+   integer :: node, blkm, blkn, nelim, gldl, nchild, ndelay, syncblk
    integer :: child, cnelim, cblkm, cblkn, cndelay
 
    integer :: nx, ny
-   integer :: nassemble, nassemble2, ntrsv, ngemv, nreduce, nscatter
+   integer :: nassemble, nassemble2, nasmblk, ntrsv, ngemv, nreduce, nscatter
    type(assemble_lookup_type), dimension(:), allocatable, target :: &
       assemble_lookup
    type(assemble_lookup2_type), dimension(:), allocatable, target :: &
       assemble_lookup2
+   type(assemble_blk_type), dimension(:), allocatable, target :: asmblkdata
    type(trsv_lookup_type), dimension(:), allocatable, target :: trsv_lookup
    type(gemv_notrans_lookup), dimension(:), allocatable, target :: gemv_lookup
    type(reduce_notrans_lookup), dimension(:), allocatable, target :: &
@@ -500,6 +501,7 @@ subroutine create_gpu_lookup_fwd(nlvl, lvllist, nodes, child_ptr, child_list, &
    nassemble = 0
    nasm_sync = 0
    nassemble2 = 0
+   nasmblk = 0
    ntrsv = 0
    ngemv = 0
    nreduce = 0
@@ -516,6 +518,14 @@ subroutine create_gpu_lookup_fwd(nlvl, lvllist, nodes, child_ptr, child_list, &
       nassemble = nassemble + (blkm-1) / SLV_ASSEMBLE_NB + 1
       nasm_sync = nasm_sync + 1
       nassemble2 = nassemble2 + nchild
+      do ci = child_ptr(node), child_ptr(node+1)-1
+         child = child_list(ci)
+         cndelay = nodes(child)%ndelay
+         cnelim = nodes(child)%nelim
+         cblkm = int(rptr(child+1) - rptr(child)) + cndelay
+
+         nasmblk = nasmblk + (cblkm-cnelim-1) / SLV_ASSEMBLE_NB + 1
+      end do
 
       if(nelim.gt.0) &
          ntrsv = ntrsv + (nelim-1)/SLV_TRSV_NB_TASK + 1
@@ -531,7 +541,7 @@ subroutine create_gpu_lookup_fwd(nlvl, lvllist, nodes, child_ptr, child_list, &
    end do
    allocate(assemble_lookup(nassemble), trsv_lookup(ntrsv), gemv_lookup(ngemv),&
       reduce_lookup(nreduce), scatter_lookup(nscatter), &
-      assemble_lookup2(nassemble2), stat=st)
+      assemble_lookup2(nassemble2), asmblkdata(nasmblk), stat=st)
    if(st.ne.0) return
 
    sz = aligned_size(C_SIZEOF(assemble_lookup(1:nassemble))) + &
@@ -539,7 +549,8 @@ subroutine create_gpu_lookup_fwd(nlvl, lvllist, nodes, child_ptr, child_list, &
       aligned_size(C_SIZEOF(gemv_lookup(1:ngemv))) + &
       aligned_size(C_SIZEOF(reduce_lookup(1:nreduce))) + &
       aligned_size(C_SIZEOF(scatter_lookup(1:nscatter))) + &
-      aligned_size(C_SIZEOF(assemble_lookup2(1:nassemble2)))
+      aligned_size(C_SIZEOF(assemble_lookup2(1:nassemble2))) + &
+      aligned_size(C_SIZEOF(asmblkdata(1:nasmblk)))
    cuda_error = cudaMalloc(pmem, sz)
    if(cuda_error.ne.0) return
 
@@ -549,6 +560,7 @@ subroutine create_gpu_lookup_fwd(nlvl, lvllist, nodes, child_ptr, child_list, &
    lwork = 0
    nassemble = 0
    nassemble2 = 0
+   nasmblk = 0
    ntrsv = 0
    ngemv = 0
    nreduce = 0
@@ -587,6 +599,7 @@ subroutine create_gpu_lookup_fwd(nlvl, lvllist, nodes, child_ptr, child_list, &
       end do
 
       ! Add contributions (new)
+      syncblk = 0
       do ci = child_ptr(node), child_ptr(node+1)-1
          child = child_list(ci)
          cndelay = nodes(child)%ndelay
@@ -606,8 +619,15 @@ subroutine create_gpu_lookup_fwd(nlvl, lvllist, nodes, child_ptr, child_list, &
          endif
          assemble_lookup2(nassemble2)%cvchild = cvmap(child)
          assemble_lookup2(nassemble2)%sync_offset = ni - 1
-         assemble_lookup2(nassemble2)%sync_waitfor = ci - child_ptr(node)
+         assemble_lookup2(nassemble2)%sync_waitfor = syncblk
          assemble_lookup2(nassemble2)%x_offset = nlocal
+
+         syncblk = syncblk + (cblkm-cnelim-1)/SLV_ASSEMBLE_NB + 1
+         do i = 1, (cblkm-cnelim-1)/SLV_ASSEMBLE_NB + 1
+            nasmblk = nasmblk + 1
+            asmblkdata(nasmblk)%cp = nassemble2-1
+            asmblkdata(nasmblk)%blk = i-1
+         end do
       end do
 
       ! Solve with diagonal block
@@ -713,6 +733,14 @@ subroutine create_gpu_lookup_fwd(nlvl, lvllist, nodes, child_ptr, child_list, &
    gpul%assemble2 = pmem
    pmem = c_ptr_plus_aligned(pmem, sz)
    cuda_error = cudaMemcpyAsync_h2d(gpul%assemble2, C_LOC(assemble_lookup2), &
+      sz, stream)
+   if(cuda_error.ne.0) return
+
+   gpul%nasmblk = nasmblk
+   sz = C_SIZEOF(asmblkdata(1:gpul%nasmblk))
+   gpul%asmblk = pmem
+   pmem = c_ptr_plus_aligned(pmem, sz)
+   cuda_error = cudaMemcpyAsync_h2d(gpul%asmblk, C_LOC(asmblkdata), &
       sz, stream)
    if(cuda_error.ne.0) return
 end subroutine create_gpu_lookup_fwd

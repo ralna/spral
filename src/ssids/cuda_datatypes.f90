@@ -160,12 +160,14 @@ module spral_ssids_cuda_datatypes
       integer(C_INT) :: nassemble
       integer(C_INT) :: nasm_sync
       integer(C_INT) :: nassemble2
+      integer(C_INT) :: nasmblk
       integer(C_INT) :: ntrsv
       integer(C_INT) :: ngemv
       integer(C_INT) :: nreduce
       integer(C_INT) :: nscatter
       type(C_PTR) :: assemble
       type(C_PTR) :: assemble2
+      type(C_PTR) :: asmblk
       type(C_PTR) :: trsv
       type(C_PTR) :: gemv
       type(C_PTR) :: reduce
