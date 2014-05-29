@@ -18,7 +18,8 @@ module spral_ssids_cuda_datatypes
       cuda_stats_type, cstat_data_type, multisymm_type, &
       multiswap_type, &
       multisyrk_type, &
-      node_data, node_solve_data, multireorder_data, multielm_data
+      node_data, node_solve_data, multireorder_data, multielm_data, &
+      assemble_lookup2_type
    ! Constants
    public :: SLV_ASSEMBLE_NB, SLV_GEMV_NX, SLV_GEMV_NY, SLV_TRSM_TR_NBX, &
       SLV_TRSM_TR_NBY, SLV_REDUCING_D_SOLVE_THREADS_PER_BLOCK, &
@@ -139,17 +140,34 @@ module spral_ssids_cuda_datatypes
       integer(C_INT) :: nchild
       type(C_PTR) :: clen
       type(C_PTR) :: clists
+      type(C_PTR) :: clists_direct
       integer(C_INT) :: cvalues_offset
       integer(C_INT) :: first
    end type
 
+   type, bind(C) :: assemble_lookup2_type
+      integer(C_INT) :: m
+      integer(C_INT) :: nelim
+      integer(C_INT) :: x_offset
+      type(C_PTR) :: list
+      integer(C_INT) :: cvparent
+      integer(C_INT) :: cvchild
+      integer(C_INT) :: sync_offset
+      integer(C_INT) :: sync_waitfor
+   end type
+
    type, bind(C) :: lookups_gpu_fwd ! for fwd slv
       integer(C_INT) :: nassemble
+      integer(C_INT) :: nasm_sync
+      integer(C_INT) :: nassemble2
+      integer(C_INT) :: nasmblk
       integer(C_INT) :: ntrsv
       integer(C_INT) :: ngemv
       integer(C_INT) :: nreduce
       integer(C_INT) :: nscatter
       type(C_PTR) :: assemble
+      type(C_PTR) :: assemble2
+      type(C_PTR) :: asmblk
       type(C_PTR) :: trsv
       type(C_PTR) :: gemv
       type(C_PTR) :: reduce

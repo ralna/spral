@@ -409,7 +409,8 @@ module spral_ssids_cuda_interfaces
          type(C_PTR), value :: stream
       end subroutine run_d_solve_kernel
       subroutine run_fwd_solve_kernels(posdef, gpu, xlocal_gpu, xstack_gpu, &
-            x_gpu, cvalues_gpu, work_gpu, nsync, sync_gpu, stream) &
+            x_gpu, cvalues_gpu, work_gpu, nsync, sync_gpu, nasm_sync,       &
+            asm_sync_gpu, stream) &
             bind(C, name="spral_ssids_run_fwd_solve_kernels")
          use, intrinsic :: iso_c_binding
          use spral_ssids_cuda_datatypes
@@ -422,6 +423,8 @@ module spral_ssids_cuda_interfaces
          type(C_PTR), value :: work_gpu
          integer(C_INT), value :: nsync
          type(C_PTR), value :: sync_gpu
+         integer(C_INT), value :: nasm_sync
+         type(C_PTR), value :: asm_sync_gpu
          type(C_PTR), value :: stream
       end subroutine run_fwd_solve_kernels
    end interface ! solve_kernels.cu

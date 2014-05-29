@@ -482,6 +482,12 @@ void __global__ assemble(int m, int nelim, int const* list, double *xlocal,
    else           (*xstack)[idx-nelim] = val;
 }
 
+// FIXME: move to common header?
+struct assemble_blk_type {
+   int cp;
+   int blk;
+};
+
 struct assemble_lookup {
    int m;
    int xend;
@@ -492,13 +498,72 @@ struct assemble_lookup {
    int nchild;
    int const* clen;
    int * const* clists;
+   int * const* clists_direct;
    int cvalues_offset;
    int first; // First index of node. Used to shortcut searching
 };
 
-/* Each thread looks after exactly one entry of x only */
-void __global__ assemble_lvl(double *xlocal,
-      double **xstack, const double *x, double * const* cvalues,
+struct assemble_lookup2 {
+   int m;
+   int nelim;
+   int x_offset;
+   int *const* list;
+   int cvparent;
+   int cvchild;
+   int sync_offset;
+   int sync_waitfor;
+};
+
+void __device__ wait_for_sync(int tid, volatile int *sync, int target) {
+   if(tid==0) {
+      while(*sync < target) {}
+   }
+   __syncthreads();
+}
+
+void __global__ assemble_lvl(struct assemble_lookup2 *lookup, struct assemble_blk_type *blkdata, double *xlocal, int *next_blk, int *sync, double * const* cvalues) {
+   unsigned int __shared__ thisblk;
+   if(threadIdx.x==0)
+      thisblk = atomicAdd(next_blk, 1);
+   __syncthreads();
+
+   blkdata += thisblk;
+   lookup += blkdata->cp;
+
+   int blk = blkdata->blk;
+   int m = lookup->m;
+   int nelim = lookup->nelim;
+   double *xparent = cvalues[lookup->cvparent];
+   const double *xchild = cvalues[lookup->cvchild];
+   const int * list = *(lookup->list);
+   xlocal += lookup->x_offset;
+
+   // Wait for previous children to complete
+   wait_for_sync(threadIdx.x, &sync[lookup->sync_offset], lookup->sync_waitfor);
+
+   // Add block increments
+   m = MIN(ASSEMBLE_NB, m-blk*ASSEMBLE_NB);
+   list += blk*ASSEMBLE_NB;
+   xchild += blk*ASSEMBLE_NB;
+
+   // Perform actual assembly
+   for(int i=threadIdx.x; i<m; i+=blockDim.x) {
+      int j = list[i];
+      if(j < nelim) {
+         xlocal[j] += xchild[i];
+      } else {
+         xparent[j-nelim] += xchild[i];
+      }
+   }
+
+   // Wait for all threads to complete, then increment sync object
+   __syncthreads();
+   if(threadIdx.x==0) {
+      atomicAdd(&sync[lookup->sync_offset], 1);
+   }
+}
+
+void __global__ grabx(double *xlocal, double **xstack, const double *x,
       struct assemble_lookup *lookup) {
 
    lookup += blockIdx.x;
@@ -509,39 +574,25 @@ void __global__ assemble_lvl(double *xlocal,
          xstack[lookup->contrib_idx]+lookup->contrib_offset :
          NULL;
    xlocal += lookup->x_offset;
-   int nchild = lookup->nchild;
-   int const* clen = lookup->clen;
-   int * const* clists = lookup->clists;
-   cvalues += lookup->cvalues_offset;
 
    int row = lookup->list[threadIdx.x];
 
-   /* Accumulate contribution */
-   double val=0;
-   for(int child=0; child<nchild; child++) {
-      const int *clist = clists[child];
-      const double *cval = cvalues[child];
-      /* Note: If we want to optimize this, try fixing the upper bound, but
-         beware: delays can cause the child rlist to be out of order! */
-      for(int i=0; i<clen[child]; i++) {
-         if(clist[i] == row) {
-            val += cval[i];
-         }
-      }
-   }
-
-   /* Add to x or xstack as appropriate */
-   if(threadIdx.x<xend) xlocal[threadIdx.x] = x[row] + val;
-   else                 contrib[threadIdx.x] = val;
+   if(threadIdx.x<xend) xlocal[threadIdx.x] = x[row];
+   else                 contrib[threadIdx.x] = 0.0;
 }
 
 struct lookups_gpu_fwd {
    int nassemble;
+   int nasm_sync;
+   int nassemble2;
+   int nasmblk;
    int ntrsv;
    int ngemv;
    int nreduce;
    int nscatter;
    struct assemble_lookup *assemble;
+   struct assemble_lookup2 *assemble2;
+   struct assemble_blk_type *asmblk;
    struct trsv_lookup *trsv;
    struct gemv_notrans_lookup *gemv;
    struct reduce_notrans_lookup *reduce;
@@ -561,7 +612,8 @@ extern "C" {
 void spral_ssids_run_fwd_solve_kernels(bool posdef,
       struct lookups_gpu_fwd const* gpu, double *xlocal_gpu,
       double **xstack_gpu, double *x_gpu, double ** cvalues_gpu,
-      double *work_gpu, int nsync, int *sync, const cudaStream_t *stream) {
+      double *work_gpu, int nsync, int *sync, int nasm_sync, int *asm_sync,
+      const cudaStream_t *stream) {
 
    if(nsync>0) {
       for(int i=0; i<nsync; i+=65535)
@@ -569,9 +621,14 @@ void spral_ssids_run_fwd_solve_kernels(bool posdef,
       CudaCheckError();
    }
    for(int i=0; i<gpu->nassemble; i+=65535)
-      assemble_lvl
+      grabx
          <<<MIN(65535,gpu->nassemble-i), ASSEMBLE_NB, 0, *stream>>>
-         (xlocal_gpu, xstack_gpu, x_gpu, cvalues_gpu, gpu->assemble+i);
+         (xlocal_gpu, xstack_gpu, x_gpu, gpu->assemble+i);
+   cudaMemset(asm_sync, 0, (1+gpu->nasm_sync)*sizeof(int));
+   for(int i=0; i<gpu->nasmblk; i+=65535)
+      assemble_lvl
+         <<<MIN(65535,gpu->nasmblk-i), ASSEMBLE_NB, 0, *stream>>>
+         (gpu->assemble2, gpu->asmblk+i, xlocal_gpu, &asm_sync[0], &asm_sync[1], cvalues_gpu);
    CudaCheckError();
    if(gpu->ntrsv>0) {
       if(posdef) {
