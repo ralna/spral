@@ -1037,7 +1037,7 @@ subroutine setup_gpu_solve(n, child_ptr, child_list, nnodes, nodes, sparent,  &
       if(parent<0 .or. parent>nnodes) cycle ! root
       ! drop parent locs into map
       do i = rptr_with_delays(parent)/C_SIZEOF(dummy_int), rptr_with_delays(parent+1)/C_SIZEOF(dummy_int) -1
-         rmap(rlist2(i+1)) = int(i) - rptr_with_delays(parent)/C_SIZEOF(dummy_int)
+         rmap(rlist2(i+1)) = int(i - rptr_with_delays(parent)/C_SIZEOF(dummy_int))
       end do
       ! build rlist_direct2
       do i = rptr_with_delays(node)/C_SIZEOF(dummy_int)+nelim, rptr_with_delays(node+1)/C_SIZEOF(dummy_int) -1

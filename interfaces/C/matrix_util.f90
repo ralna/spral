@@ -14,7 +14,6 @@ subroutine spral_print_matrix(lines, matrix_type, m, n, ptr, row, cval, base) &
    integer(C_INT), value :: base
 
    real(C_DOUBLE), dimension(:), pointer :: fval
-   logical :: fbase
 
    if(C_ASSOCIATED(cval)) then
       call C_F_POINTER(cval, fval, shape = (/ ptr(n+1)-1 /) )
