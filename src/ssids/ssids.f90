@@ -44,8 +44,7 @@ module spral_ssids
              ssids_free,            & ! Free akeep and/or fkeep
              ssids_enquire_posdef,  & ! Pivot information in posdef case
              ssids_enquire_indef,   & ! Pivot information in indef case
-             ssids_alter,           & ! Alter diagonal
-             ssids_move_data          ! Move data to/from GPU as approriate
+             ssids_alter              ! Alter diagonal
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -1150,27 +1149,6 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
    return
 
 end subroutine ssids_factor_double
-
-!
-! Copies all gpu to correct locations
-!
-! FIXME: Remove when done with paper
-subroutine ssids_move_data(akeep, fkeep, options, inform)
-   type(ssids_akeep), intent(in) :: akeep
-   type(ssids_fkeep), intent(inout) :: fkeep
-   type(ssids_options), intent(in) :: options
-   type(ssids_inform), intent(inout) :: inform
-
-   integer :: nout
-   character(len=50) :: context
-
-   context = 'ssids_move_data'
-   nout = options%unit_error
-   if (options%print_level < 0) nout = -1
-
-   call ssids_move_data_inner(akeep, fkeep, options, nout, context, inform)
-
-end subroutine ssids_move_data
 
 !
 ! Copies all gpu data back to host

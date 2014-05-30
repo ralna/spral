@@ -299,37 +299,6 @@ subroutine perform_presolve(pos_def, child_ptr, child_list, n, nnodes, nodes, &
    end select
 end subroutine perform_presolve
 
-! FIXME: remove post-paper
-subroutine print_flops(post, num_levels, lvlptr, nodes, lvllist, sptr, rptr, &
-      title)
-   logical, intent(in) :: post ! pre- or post-factor ie do we know delays?
-   integer, intent(in) :: num_levels
-   integer, dimension(*), intent(in) :: lvlptr
-   type(node_type), dimension(*), intent(in) :: nodes
-   integer, dimension(*), intent(in) :: lvllist
-   integer, dimension(*), intent(in) :: sptr
-   integer(long), dimension(*), intent(in) :: rptr
-   character(len=*), intent(in) :: title
-
-   integer :: lev
-   integer(long) :: factf, assemblef, contribf
-
-   factf = 0
-   assemblef = 0
-   contribf = 0
-   do lev = 1, num_levels
-      factf = factf + factor_flops(lev, lvlptr, nodes, lvllist, sptr, rptr, &
-         post)
-      assemblef = assemblef + assemble_flops(lev, lvlptr, nodes, lvllist, &
-         sptr, rptr, post)
-      contribf = contribf + form_contrib_flops(lev, lvlptr, nodes, lvllist, &
-         sptr, rptr, post)
-   end do
-
-   print *, title, factf, assemblef, contribf
-
-end subroutine print_flops
-
 !*******************************
 !
 ! This subroutine factorises the subtree(s) that include nodes sa through
@@ -514,8 +483,6 @@ subroutine subtree_factor_gpu(stream, pos_def, child_ptr, child_list, n,   &
       end do
    end do
 
-   call print_flops(.false., gpu%num_levels, gpu%lvlptr, nodes, gpu%lvllist, sptr, rptr, 'Flops predict')
-   
    !
    ! Loop over levels doing work
    !
@@ -713,8 +680,6 @@ subroutine subtree_factor_gpu(stream, pos_def, child_ptr, child_list, n,   &
       ptr_ccval = ptr_levLDLT
     
    end do ! lev
-
-   call print_flops(.true., gpu%num_levels, gpu%lvlptr, nodes, gpu%lvllist, sptr, rptr, 'Flops actual ')
 
    ! Free stack memory
    call custack_finalize(gwork, stats%cuda_error)
@@ -1329,102 +1294,6 @@ subroutine init_L_with_A(stream, lev, lvlptr, lvllist, nodes, ncb, level_size, &
    call custack_free(gwork, C_SIZEOF(lndata(:)))
 end subroutine init_L_with_A
 
-integer(long) function assemble_flops(lev, lvlptr, nodes, lvllist, &
-      sptr, rptr, post)
-   integer, intent(in) :: lev
-   integer, dimension(*), intent(in) :: lvlptr
-   type(node_type), dimension(*), intent(in) :: nodes
-   integer, dimension(*), intent(in) :: lvllist
-   integer, dimension(*), intent(in) :: sptr
-   integer(long), dimension(*), intent(in) :: rptr
-   logical, intent(in) :: post
-
-   integer :: llist, node, ndelay
-   integer :: m, n, blkn
-
-   assemble_flops = 0
-   do llist = lvlptr(lev), lvlptr(lev + 1) - 1
-      node = lvllist(llist)
-      ndelay = nodes(node)%ndelay
-      if(post) then
-         ndelay = nodes(node)%ndelay
-         n = nodes(node)%nelim
-         m = int(rptr(node + 1) - rptr(node)) + ndelay
-      else
-         n = sptr(node + 1) - sptr(node)
-         m = int(rptr(node + 1) - rptr(node))
-      endif
-      blkn = m-n
-      ! Calculate number of flops
-      assemble_flops = assemble_flops + blkn*(blkn+1_long)/2
-   end do
-end function assemble_flops
-
-integer(long) function factor_flops(lev, lvlptr, nodes, lvllist, &
-      sptr, rptr, post)
-   integer, intent(in) :: lev
-   integer, dimension(*), intent(in) :: lvlptr
-   type(node_type), dimension(*), intent(in) :: nodes
-   integer, dimension(*), intent(in) :: lvllist
-   integer, dimension(*), intent(in) :: sptr
-   integer(long), dimension(*), intent(in) :: rptr
-   logical, intent(in) :: post
-
-   integer :: llist, node, ndelay
-   integer :: m, n
-
-   factor_flops = 0
-   do llist = lvlptr(lev), lvlptr(lev + 1) - 1
-      node = lvllist(llist)
-      if(post) then
-         ndelay = nodes(node)%ndelay
-         n = nodes(node)%nelim
-         m = int(rptr(node + 1) - rptr(node)) + ndelay
-      else
-         n = sptr(node + 1) - sptr(node)
-         m = int(rptr(node + 1) - rptr(node))
-      endif
-      ! Calculate number of flops
-      !factor_flops = factor_flops + &
-      !   m*n*(2*n+1_long) - (2*m+2*n+1)*n*(n+1_long)/2 + n*(n+1_long)*(2*n+1)/3
-      factor_flops = factor_flops + &
-         2*(29*n/6 - 3*n**2_long/4 - n**3_long/3 + 2*m*(n+0_long) + m*n**2_long/2)
-   end do
-end function factor_flops
-
-integer(long) function form_contrib_flops(lev, lvlptr, nodes, lvllist, &
-      sptr, rptr, post)
-   integer, intent(in) :: lev
-   integer, dimension(*), intent(in) :: lvlptr
-   type(node_type), dimension(*), intent(in) :: nodes
-   integer, dimension(*), intent(in) :: lvllist
-   integer, dimension(*), intent(in) :: sptr
-   integer(long), dimension(*), intent(in) :: rptr
-   logical, intent(in) :: post
-
-   integer :: llist, node, ndelay, blkm, blkn
-   integer :: m, n, k
-
-   form_contrib_flops = 0
-   do llist = lvlptr(lev), lvlptr(lev + 1) - 1
-      node = lvllist(llist)
-      if(post) then
-         ndelay = nodes(node)%ndelay
-         blkn = nodes(node)%nelim
-         blkm = int(rptr(node + 1) - rptr(node)) + ndelay
-      else
-         blkn = sptr(node + 1) - sptr(node)
-         blkm = int(rptr(node + 1) - rptr(node))
-      endif
-      ! Calculate dgemm dimensions
-      m = blkm - blkn
-      n = blkm - blkn
-      k = blkn
-      ! Calculate number of flops, but recall by symmetry, only need half
-      form_contrib_flops = form_contrib_flops + (2*m*(n+0_long)*k) / 2
-   end do
-end function form_contrib_flops
-
 subroutine form_contrib(stream, lev, lvlptr, nodes, lvllist, off_LDLT,&
       sptr, rptr, ptr_levLDLT, gwork, st, cuda_error, gpu_ldcol)
    type(C_PTR), intent(in) :: stream
@@ -1928,104 +1797,6 @@ subroutine factor_indef( stream, lev, lvlptr, nodes, lvllist, sparent, sptr, &
       sptr, rptr, stats, gwork, gpu_custats)
 
 end subroutine factor_indef
-
-! Return number of (GPU) cache lines hit using assembly with rlist
-! FIXME: remove after paper
-integer function num_cache_line(n, rlist)
-   integer, intent(in) :: n
-   integer, dimension(n), intent(in) :: rlist
-
-   integer, parameter :: LINE_LENGTH = 16 ! 128B cache line @ 8 bytes per double
-
-   integer :: i, prev, curr, pline, cline
-
-   num_cache_line = 0
-   prev = -huge(prev)
-   do i = 1, n
-      curr = rlist(i)
-      if(curr < prev) print *, "Non-monotonic rlist!"
-      pline = (prev-1) / LINE_LENGTH
-      cline = (curr-1) / LINE_LENGTH
-      if(pline.ne.cline) num_cache_line = num_cache_line + 1
-   end do
-end function num_cache_line
-
-! fIXME: Remove below once paper done?
-subroutine get_bytes_assemble_contrib(lev, lvlptr, lvllist, child_ptr, &
-      child_list, asminf, sptr, rptr, rlist_direct, actual, optimal, st)
-   integer, intent(in) :: lev
-   integer, intent(in) :: lvlptr(*) ! Pointers into lvllist for level
-   integer, intent(in) :: lvllist(*) ! Nodes at level lev are given by:
-      ! lvllist(lvlptr(lev):lvlptr(lev+1)-1)
-   integer, intent(in) :: child_ptr(*) ! Pointers into child_list for node
-   integer, intent(in) :: child_list(*) ! Children of node node are given by:
-      ! child_list(child_ptr(node):child_ptr(node+1)-1)
-   type(asmtype), dimension(:), intent(in) :: asminf ! Assembly info
-   integer, intent(in) :: sptr(*)
-   integer(long), dimension(*), intent(in) :: rptr
-   integer, dimension(*), intent(in) :: rlist_direct
-   integer(long), intent(out) :: actual
-   integer(long), intent(out) :: optimal
-   integer, intent(out) :: st
-
-   integer, parameter :: LINE_LENGTH = 16 ! 128B cache line @ 8 bytes per double
-
-   integer :: j, child, m, npassl, blkm, blkn
-   integer :: llist, node, npassed, cnode
-   integer(long) :: ii, clines_parent
-
-   integer, dimension(:), allocatable :: pclines
-
-   ! Initialize counts (internally use cache lines, convert to bytes at end)
-   actual = 0 ! what we're doing
-   optimal = 0 ! if we only touched everything once
-
-   ! Iterate over parents and children
-   do llist = lvlptr(lev), lvlptr(lev + 1) - 1
-      node = lvllist(llist)
-      blkm = int(rptr(node + 1) - rptr(node))
-      blkn = sptr(node + 1) - sptr(node)
-      m = blkm - blkn
-      if ( m > 0 ) then
-         allocate(pclines(rptr(node+1)-rptr(node)), stat=st)
-         if(st.ne.0) return
-         pclines(:) = 0
-         do child = child_ptr(node), child_ptr(node+1)-1
-            cnode = child_list(child)
-            npassed = asminf(cnode)%npassed
-            npassl = asminf(cnode)%npassl
-            if ( npassed-npassl > 0 ) then
-               ! Account for read of child indices
-               actual = actual + ((npassed-npassl+1)*(npassed-npassl)/2) / &
-                  (2*LINE_LENGTH)
-               optimal = optimal + &
-                  ( npassed-npassl+1 ) / (2*LINE_LENGTH)
-               ! Account for read of child values
-               actual = actual + &
-                  ( (npassed-npassl+1)*(npassed-npassl)/2 ) / LINE_LENGTH
-               optimal = optimal + &
-                  ( (npassed-npassl+1)*(npassed-npassl)/2 ) / LINE_LENGTH
-               ! Account for read/write to parent
-               clines_parent = num_cache_line( &
-                  asminf(cnode)%npassl, rlist_direct(asminf(cnode)%offset+1) )
-               actual = actual + 2*clines_parent
-               do ii = asminf(cnode)%offset+1, &
-                     asminf(cnode)%offset+asminf(cnode)%npassl
-                  j = rlist_direct(ii)
-                  pclines((j-1)/LINE_LENGTH+1) = 1 ! Touch
-               end do
-            endif
-         end do
-         optimal = optimal + 2*count(pclines(:).ne.0)
-         deallocate(pclines, stat=st)
-         if(st.ne.0) return
-      end if
-   end do
-
-   ! Convert counts to bytes
-   optimal = optimal*128
-   actual = actual*128
-end subroutine get_bytes_assemble_contrib
 
 subroutine setup_assemble_contrib(stream, lev, lvlptr, lvllist, child_ptr, &
       child_list, sptr, rptr, asminf, gpu_ccval, gpu_contribs, ptr_levLDLT, &

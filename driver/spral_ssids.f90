@@ -128,9 +128,6 @@ program run_prob
    print *, "Factor took ", (stop_t - start_t)/real(rate_t)
    smfact = (stop_t - start_t)/real(rate_t)
 
-   ! Copy data from device to host
-   call ssids_move_data(akeep, fkeep, options, inform)
-
    ! Solve
    write(*, "(a)") "Solve..."
    call system_clock(start_t, rate_t)
