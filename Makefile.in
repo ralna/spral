@@ -15,6 +15,7 @@
 @SET_MAKE@
 
 
+
 VPATH = @srcdir@
 am__is_gnu_make = test -n '$(MAKEFILE_LIST)' && test -n '$(MAKELEVEL)'
 am__make_running_with_option = \
@@ -94,7 +95,8 @@ TESTS = random_test$(EXEEXT) random_matrix_test$(EXEEXT) \
 	$(am__EXEEXT_2)
 
 # SSIDS
-@HAVE_NVCC_TRUE@am__append_2 = \
+@HAVE_NVCC_TRUE@am__append_2 = include/spral_ssids.h
+@HAVE_NVCC_TRUE@am__append_3 = \
 @HAVE_NVCC_TRUE@	src/ssids/alloc.f90 \
 @HAVE_NVCC_TRUE@	src/ssids/analyse.f90 \
 @HAVE_NVCC_TRUE@	src/ssids/assemble_kernels.cu \
@@ -117,16 +119,17 @@ TESTS = random_test$(EXEEXT) random_matrix_test$(EXEEXT) \
 @HAVE_NVCC_TRUE@	interfaces/C/ssids.f90
 
 @HAVE_NVCC_TRUE@bin_PROGRAMS = spral_ssids$(EXEEXT)
-@HAVE_NVCC_TRUE@am__append_3 = \
+@HAVE_NVCC_TRUE@am__append_4 = \
 @HAVE_NVCC_TRUE@	ssids_test \
 @HAVE_NVCC_TRUE@	examples/Fortran/ssids \
 @HAVE_NVCC_TRUE@	examples/C/ssids
 
-@HAVE_NVCC_TRUE@am__append_4 = ssids_test
+@HAVE_NVCC_TRUE@am__append_5 = ssids_test
 subdir = .
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
 	$(top_srcdir)/configure $(am__configure_deps) depcomp \
-	test-driver compile config.guess config.sub install-sh missing
+	$(am__include_HEADERS_DIST) test-driver compile config.guess \
+	config.sub install-sh missing
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/acx_lapack.m4 \
 	$(top_srcdir)/m4/acx_prog_nvcc.m4 $(top_srcdir)/m4/ax_blas.m4 \
@@ -165,7 +168,8 @@ am__uninstall_files_from_dir = { \
     || { echo " ( cd '$$dir' && rm -f" $$files ")"; \
          $(am__cd) "$$dir" && rm -f $$files; }; \
   }
-am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(bindir)"
+am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(bindir)" \
+	"$(DESTDIR)$(includedir)"
 LIBRARIES = $(lib_LIBRARIES)
 AR = ar
 ARFLAGS = cru
@@ -353,6 +357,10 @@ am__can_run_installinfo = \
     n|no|NO) false;; \
     *) (install-info --version) >/dev/null 2>&1;; \
   esac
+am__include_HEADERS_DIST = include/spral.h include/spral_matrix_util.h \
+	include/spral_random.h include/spral_random_matrix.h \
+	include/spral_ssids.h
+HEADERS = $(include_HEADERS)
 am__tagged_files = $(HEADERS) $(SOURCES) $(TAGS_FILES) $(LISP)
 # Read a list of newline-separated strings from the standard input,
 # and print each of them once, without duplicates.  Input order is
@@ -700,12 +708,19 @@ LDADD = -L. -lspral $(METIS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FCLIBS) -lrt
 CUDA_LIBS = -lcublas
 lib_LIBRARIES = libspral.a
 
+# MATRIX_UTIL
+
+# RANDOM
+
+# RANDOM_MATRIX
+include_HEADERS = include/spral.h include/spral_matrix_util.h \
+	include/spral_random.h include/spral_random_matrix.h \
+	$(am__append_2)
+
 # CORE_ANALYSE
 # Note: first so not +=
 
 # MATCH_ORDER
-
-# MATRIX_UTIL
 
 # METIS_WRAPPER
 
@@ -716,23 +731,19 @@ lib_LIBRARIES = libspral.a
 # SCALING
 
 # TIMER
-
-# RANDOM
-
-# RANDOM_MATRIX
 libspral_a_SOURCES = src/core_analyse.f90 $(am__append_1) \
 	src/match_order.f90 src/matrix_util.f90 \
 	interfaces/C/matrix_util.f90 \
 	src/metis$(METIS_VERSION)_wrapper.f90 src/pgm.f90 \
 	src/rutherford_boeing.f90 src/scaling.f90 src/timer.f90 \
 	src/random.f90 interfaces/C/random.f90 src/random_matrix.f90 \
-	interfaces/C/random_matrix.f90 $(am__append_2)
+	interfaces/C/random_matrix.f90 $(am__append_3)
 random_test_SOURCES = tests/random.f90
 examples_Fortran_random_SOURCES = examples/Fortran/random.f90
 examples_C_random_SOURCES = examples/C/random.c
 random_matrix_test_SOURCES = tests/random_matrix.f90
 examples_Fortran_random_matrix_SOURCES = examples/Fortran/random_matrix.f90
-examples_C_random_matrix_SOURCES = examples/C/random_matrix.f90
+examples_C_random_matrix_SOURCES = examples/C/random_matrix.c
 @HAVE_NVCC_TRUE@spral_ssids_SOURCES = \
 @HAVE_NVCC_TRUE@	driver/spral_ssids.f90
 
@@ -969,7 +980,7 @@ examples/C/random_matrix.$(OBJEXT): examples/C/$(am__dirstamp) \
 
 examples/C/random_matrix$(EXEEXT): $(examples_C_random_matrix_OBJECTS) $(examples_C_random_matrix_DEPENDENCIES) $(EXTRA_examples_C_random_matrix_DEPENDENCIES) examples/C/$(am__dirstamp)
 	@rm -f examples/C/random_matrix$(EXEEXT)
-	$(AM_V_FCLD)$(FCLINK) $(examples_C_random_matrix_OBJECTS) $(examples_C_random_matrix_LDADD) $(LIBS)
+	$(AM_V_CCLD)$(LINK) $(examples_C_random_matrix_OBJECTS) $(examples_C_random_matrix_LDADD) $(LIBS)
 examples/C/ssids.$(OBJEXT): examples/C/$(am__dirstamp) \
 	examples/C/$(DEPDIR)/$(am__dirstamp)
 
@@ -1053,6 +1064,7 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/$(DEPDIR)/random.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@examples/C/$(DEPDIR)/random_matrix.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/$(DEPDIR)/ssids.Po@am__quote@
 
 .c.o:
@@ -1076,6 +1088,27 @@ distclean-compile:
 
 .f90.obj:
 	$(AM_V_FC)$(FCCOMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
+install-includeHEADERS: $(include_HEADERS)
+	@$(NORMAL_INSTALL)
+	@list='$(include_HEADERS)'; test -n "$(includedir)" || list=; \
+	if test -n "$$list"; then \
+	  echo " $(MKDIR_P) '$(DESTDIR)$(includedir)'"; \
+	  $(MKDIR_P) "$(DESTDIR)$(includedir)" || exit 1; \
+	fi; \
+	for p in $$list; do \
+	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
+	  echo "$$d$$p"; \
+	done | $(am__base_list) | \
+	while read files; do \
+	  echo " $(INSTALL_HEADER) $$files '$(DESTDIR)$(includedir)'"; \
+	  $(INSTALL_HEADER) $$files "$(DESTDIR)$(includedir)" || exit $$?; \
+	done
+
+uninstall-includeHEADERS:
+	@$(NORMAL_UNINSTALL)
+	@list='$(include_HEADERS)'; test -n "$(includedir)" || list=; \
+	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
+	dir='$(DESTDIR)$(includedir)'; $(am__uninstall_files_from_dir)
 
 ID: $(am__tagged_files)
 	$(am__define_uniq_tagged_files); mkid -fID $$unique
@@ -1480,9 +1513,9 @@ check-am: all-am
 	$(MAKE) $(AM_MAKEFLAGS) $(check_PROGRAMS)
 	$(MAKE) $(AM_MAKEFLAGS) check-TESTS
 check: check-am
-all-am: Makefile $(LIBRARIES) $(PROGRAMS)
+all-am: Makefile $(LIBRARIES) $(PROGRAMS) $(HEADERS)
 installdirs:
-	for dir in "$(DESTDIR)$(libdir)" "$(DESTDIR)$(bindir)"; do \
+	for dir in "$(DESTDIR)$(libdir)" "$(DESTDIR)$(bindir)" "$(DESTDIR)$(includedir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
 install: install-am
@@ -1558,7 +1591,7 @@ info: info-am
 
 info-am:
 
-install-data-am:
+install-data-am: install-includeHEADERS
 
 install-dvi: install-dvi-am
 
@@ -1605,7 +1638,8 @@ ps: ps-am
 
 ps-am:
 
-uninstall-am: uninstall-binPROGRAMS uninstall-libLIBRARIES
+uninstall-am: uninstall-binPROGRAMS uninstall-includeHEADERS \
+	uninstall-libLIBRARIES
 
 .MAKE: check-am install-am install-strip
 
@@ -1619,14 +1653,14 @@ uninstall-am: uninstall-binPROGRAMS uninstall-libLIBRARIES
 	dvi-am html html-am info info-am install install-am \
 	install-binPROGRAMS install-data install-data-am install-dvi \
 	install-dvi-am install-exec install-exec-am install-html \
-	install-html-am install-info install-info-am \
-	install-libLIBRARIES install-man install-pdf install-pdf-am \
-	install-ps install-ps-am install-strip installcheck \
-	installcheck-am installdirs maintainer-clean \
+	install-html-am install-includeHEADERS install-info \
+	install-info-am install-libLIBRARIES install-man install-pdf \
+	install-pdf-am install-ps install-ps-am install-strip \
+	installcheck installcheck-am installdirs maintainer-clean \
 	maintainer-clean-generic mostlyclean mostlyclean-compile \
 	mostlyclean-generic pdf pdf-am ps ps-am recheck tags tags-am \
 	uninstall uninstall-am uninstall-binPROGRAMS \
-	uninstall-libLIBRARIES
+	uninstall-includeHEADERS uninstall-libLIBRARIES
 
 .cu.o:
 	$(NVCC) $(NVCCFLAGS) $(AM_NVCC_FLAGS) -dc -o $@ $<

@@ -21,6 +21,7 @@ LDADD = -L. -lspral $(METIS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FCLIBS) -lrt
 CUDA_LIBS = -lcublas
 
 lib_LIBRARIES = libspral.a
+include_HEADERS = include/spral.h
 
 # CORE_ANALYSE
 # Note: first so not +=
@@ -40,6 +41,7 @@ libspral_a_SOURCES += \
 	src/match_order.f90
 
 # MATRIX_UTIL
+include_HEADERS += include/spral_matrix_util.h
 libspral_a_SOURCES += \
 	src/matrix_util.f90 \
 	interfaces/C/matrix_util.f90
@@ -65,6 +67,7 @@ libspral_a_SOURCES += \
   	src/timer.f90
 
 # RANDOM
+include_HEADERS += include/spral_random.h
 libspral_a_SOURCES += \
 	src/random.f90 \
 	interfaces/C/random.f90
@@ -81,6 +84,7 @@ examples/C/random.$(OBJEXT): libspral.a
 TESTS = random_test
 
 # RANDOM_MATRIX
+include_HEADERS += include/spral_random_matrix.h
 libspral_a_SOURCES += \
 	src/random_matrix.f90 \
 	interfaces/C/random_matrix.f90
@@ -90,7 +94,7 @@ check_PROGRAMS += \
 	examples/C/random_matrix
 random_matrix_test_SOURCES = tests/random_matrix.f90
 examples_Fortran_random_matrix_SOURCES = examples/Fortran/random_matrix.f90
-examples_C_random_matrix_SOURCES = examples/C/random_matrix.f90
+examples_C_random_matrix_SOURCES = examples/C/random_matrix.c
 tests/random_matrix.$(OBJEXT): libspral.a
 examples/Fortran/random_matrix.$(OBJEXT): libspral.a
 examples/C/random_matrix.$(OBJEXT): libspral.a
@@ -98,6 +102,7 @@ TESTS += random_matrix_test
 
 # SSIDS
 if HAVE_NVCC
+include_HEADERS += include/spral_ssids.h
 libspral_a_SOURCES += \
 	src/ssids/alloc.f90 \
 	src/ssids/analyse.f90 \
