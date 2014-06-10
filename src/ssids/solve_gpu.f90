@@ -420,7 +420,6 @@ subroutine subtree_fwd_solve_gpu_lvl(posdef, num_levels, gpu_x, fwd_slv_lookup,&
       call run_fwd_solve_kernels(cposdef, fwd_slv_lookup(lvl), gpu_xlocal, &
          gpu_cvalues, gpu_x, gpu_cvalues, gpu_work, nsync, gpu_sync,       &
          nasm_sync, gpu_asm_sync, stream)
-      cuda_error = cudaDeviceSynchronize()
    end do
    cuda_error = cudaFree(gpu_work)
    if(cuda_error.ne.0) return
