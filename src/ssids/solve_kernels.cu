@@ -522,7 +522,7 @@ void __device__ wait_for_sync(int tid, volatile int *sync, int target) {
 }
 
 void __global__ assemble_lvl(struct assemble_lookup2 *lookup, struct assemble_blk_type *blkdata, double *xlocal, int *next_blk, int *sync, double * const* cvalues) {
-   unsigned int __shared__ thisblk;
+   int __shared__ thisblk;
    if(threadIdx.x==0)
       thisblk = atomicAdd(next_blk, 1);
    __syncthreads();
@@ -534,7 +534,7 @@ void __global__ assemble_lvl(struct assemble_lookup2 *lookup, struct assemble_bl
    int m = lookup->m;
    int nelim = lookup->nelim;
    double *xparent = cvalues[lookup->cvparent];
-   const double *xchild = cvalues[lookup->cvchild];
+   volatile const double *xchild = cvalues[lookup->cvchild];
    const int * list = *(lookup->list);
    xlocal += lookup->x_offset;
 
@@ -557,6 +557,7 @@ void __global__ assemble_lvl(struct assemble_lookup2 *lookup, struct assemble_bl
    }
 
    // Wait for all threads to complete, then increment sync object
+   __threadfence();
    __syncthreads();
    if(threadIdx.x==0) {
       atomicAdd(&sync[lookup->sync_offset], 1);
@@ -628,7 +629,7 @@ void spral_ssids_run_fwd_solve_kernels(bool posdef,
    for(int i=0; i<gpu->nasmblk; i+=65535)
       assemble_lvl
          <<<MIN(65535,gpu->nasmblk-i), ASSEMBLE_NB, 0, *stream>>>
-         (gpu->assemble2, gpu->asmblk+i, xlocal_gpu, &asm_sync[0], &asm_sync[1], cvalues_gpu);
+         (gpu->assemble2, gpu->asmblk, xlocal_gpu, &asm_sync[0], &asm_sync[1], cvalues_gpu);
    CudaCheckError();
    if(gpu->ntrsv>0) {
       if(posdef) {
