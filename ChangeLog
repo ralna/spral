@@ -1,0 +1,9 @@
+2014-06-10  Jonathan Hogg <jonathan.hogg@stfc.ac.uk>
+1.0.0-RC2
+SPRAL: Add this ChangeLog
+SSIDS: Fix synchronization bug in default solve.
+SSIDS: Fix rare bug in default solve for large #blks on kernel launch.
+SSIDS: Remove unneeded cudaDeviceSynchonize() in default slv.
+
+2014-05-30  Jonathan Hogg <jonathan.hogg@stfc.ac.uk>
+First public release candidate 1.0.0-RC1
