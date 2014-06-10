@@ -128,8 +128,8 @@ TESTS = random_test$(EXEEXT) random_matrix_test$(EXEEXT) \
 subdir = .
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
 	$(top_srcdir)/configure $(am__configure_deps) depcomp \
-	$(am__include_HEADERS_DIST) test-driver compile config.guess \
-	config.sub install-sh missing
+	$(am__include_HEADERS_DIST) test-driver ChangeLog compile \
+	config.guess config.sub install-sh missing
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/acx_lapack.m4 \
 	$(top_srcdir)/m4/acx_prog_nvcc.m4 $(top_srcdir)/m4/ax_blas.m4 \
