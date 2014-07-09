@@ -216,6 +216,11 @@ contains
             argnum = argnum + 1
             read( argval, * ) nrhs
             print *, 'solving for', nrhs, 'right-hand sides'         
+         case("--u")
+            call get_command_argument(argnum, argval)
+            argnum = argnum + 1
+            read( argval, * ) options%u
+            print *, 'Pivoting threshold u = ', options%u
          case("--nstream")
             call get_command_argument(argnum, argval)
             argnum = argnum + 1
