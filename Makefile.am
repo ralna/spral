@@ -49,6 +49,7 @@ libspral_a_SOURCES += \
 # METIS_WRAPPER
 libspral_a_SOURCES += \
 	src/metis$(METIS_VERSION)_wrapper.f90
+EXTRA_DIST = src/metis4_wrapper.f90 src/metis5_wrapper.f90
 
 # PGM
 libspral_a_SOURCES += \

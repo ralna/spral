@@ -1,4 +1,4 @@
-AC_INIT(spral, 1.0.0-rc2, jonathan.hogg@stfc.ac.uk)
+AC_INIT(spral, 1.0.0, jonathan.hogg@stfc.ac.uk)
 AC_CONFIG_SRCDIR([src/ssids/ssids.f90])
 AM_INIT_AUTOMAKE
 
