@@ -6,7 +6,7 @@ SUFFIXES = .cu
 # NVCC setup
 PTX_FLAGS = -v
 #NVCCFLAGS = -Iinclude -arch=sm_20 -g -Xptxas="${PTX_FLAGS}"
-AM_NVCC_FLAGS = -Iinclude
+AM_NVCC_FLAGS = -I$(top_srcdir)/include
 AM_LD_FLAGS = -lcuda
 NVCCLINK = \
 	$(NVCC) $(NVCCFLAGS) $(AM_NVCC_FLAGS) $(AM_LD_FLAGS) $(LDFLAGS) -o $@
@@ -14,7 +14,7 @@ NVCCLINK = \
 	$(NVCC) $(NVCCFLAGS) $(AM_NVCC_FLAGS) -dc -o $@ $<
 
 # Include directory for standard C
-AM_CFLAGS = -Iinclude -std=c99
+AM_CFLAGS = -I$(top_srcdir)/include -std=c99
 
 # FIXME: make below configurable
 LDADD = -L. -lspral $(METIS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FCLIBS) -lrt

@@ -1,3 +1,8 @@
+2014-08-04  Jonathan Hogg <jonathan.hogg@stfc.ac.uk>
+1.0.1
+SPRAL: Fix Makefile.am to use $(top_srcdir) so out of path make check works
+SSIDS: Add "--ordering=mc64-metis" option to driver
+
 2014-08-01  Jonathan Hogg <jonathan.hogg@stfc.ac.uk>
 1.0.0
 SPRAL: Fix Makefile.am to ensure both metisX_wrapper.f90 files get distributed.

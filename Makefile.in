@@ -694,14 +694,14 @@ SUFFIXES = .cu
 # NVCC setup
 PTX_FLAGS = -v
 #NVCCFLAGS = -Iinclude -arch=sm_20 -g -Xptxas="${PTX_FLAGS}"
-AM_NVCC_FLAGS = -Iinclude
+AM_NVCC_FLAGS = -I$(top_srcdir)/include
 AM_LD_FLAGS = -lcuda
 NVCCLINK = \
 	$(NVCC) $(NVCCFLAGS) $(AM_NVCC_FLAGS) $(AM_LD_FLAGS) $(LDFLAGS) -o $@
 
 
 # Include directory for standard C
-AM_CFLAGS = -Iinclude -std=c99
+AM_CFLAGS = -I$(top_srcdir)/include -std=c99
 
 # FIXME: make below configurable
 LDADD = -L. -lspral $(METIS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FCLIBS) -lrt
@@ -738,6 +738,7 @@ libspral_a_SOURCES = src/core_analyse.f90 $(am__append_1) \
 	src/rutherford_boeing.f90 src/scaling.f90 src/timer.f90 \
 	src/random.f90 interfaces/C/random.f90 src/random_matrix.f90 \
 	interfaces/C/random_matrix.f90 $(am__append_3)
+EXTRA_DIST = src/metis4_wrapper.f90 src/metis5_wrapper.f90
 random_test_SOURCES = tests/random.f90
 examples_Fortran_random_SOURCES = examples/Fortran/random.f90
 examples_C_random_SOURCES = examples/C/random.c
