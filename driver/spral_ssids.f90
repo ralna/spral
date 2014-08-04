@@ -86,7 +86,7 @@ program run_prob
    ! Analyse and factor
    call system_clock(start_t, rate_t)
    call ssids_analyse(.false., n, ptr, row, akeep, &
-      options, inform)
+      options, inform, val=val)
    call system_clock(stop_t)
    print *, "Used order ", options%ordering
    if (inform%flag < 0) then
@@ -199,6 +199,10 @@ contains
          case("--scale=mc77")
             options%scaling = 4 ! MC77 algorithm
             print *, "Set scaling to MC77"
+         case("--ordering=mc64-metis")
+            options%ordering = 2 ! Matching-based ordering
+            options%scaling = 3 ! Scaling from matching ordering
+            print *, "Using matching-based ordering (scaling overwritten)"
          case("--pos")
             pos_def = .true.
             print *, 'Matrix assumed positive definite'
