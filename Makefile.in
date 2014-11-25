@@ -260,7 +260,9 @@ random_test_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_spral_ssids_OBJECTS = driver/spral_ssids.$(OBJEXT)
 spral_ssids_OBJECTS = $(am_spral_ssids_OBJECTS)
-spral_ssids_DEPENDENCIES = $(am__DEPENDENCIES_2) $(am__DEPENDENCIES_1)
+@HAVE_NVCC_FALSE@spral_ssids_DEPENDENCIES = $(am__DEPENDENCIES_2)
+@HAVE_NVCC_TRUE@spral_ssids_DEPENDENCIES = $(am__DEPENDENCIES_2) \
+@HAVE_NVCC_TRUE@	$(am__DEPENDENCIES_1)
 am_ssids_test_OBJECTS = tests/ssids.$(OBJEXT)
 ssids_test_OBJECTS = $(am_ssids_test_OBJECTS)
 @HAVE_NVCC_TRUE@ssids_test_DEPENDENCIES = $(am__DEPENDENCIES_2) \
@@ -666,6 +668,11 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = foreign subdir-objects
 ACLOCAL_AMFLAGS = -I m4
+
+# FIXME: Make autoconfable
+# NB: No libbub.a file to link against generated as BUB is a header library
+BUBDIR = /home/jhogg/src/ASEArch/bub
+AM_CXXFLAGS = -I$(BUBDIR)
 SUFFIXES = .cu
 
 # NVCC setup
@@ -736,11 +743,13 @@ examples_C_random_matrix_SOURCES = examples/C/random_matrix.c
 spral_ssids_SOURCES = \
 	driver/spral_ssids.f90
 
-spral_ssids_LINK = $(NVCCLINK)
-spral_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
 ssids_test_SOURCES = tests/ssids.f90
 examples_Fortran_ssids_SOURCES = examples/Fortran/ssids.f90
 examples_C_ssids_SOURCES = examples/C/ssids.c
+@HAVE_NVCC_FALSE@spral_ssids_LINK = $(CXXLINK)
+@HAVE_NVCC_TRUE@spral_ssids_LINK = $(NVCCLINK)
+@HAVE_NVCC_FALSE@spral_ssids_LDADD = $(LDADD)
+@HAVE_NVCC_TRUE@spral_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
 @HAVE_NVCC_TRUE@ssids_test_LINK = $(NVCCLINK)
 @HAVE_NVCC_TRUE@ssids_test_LDADD = $(LDADD) $(CUDA_LIBS)
 @HAVE_NVCC_TRUE@examples_Fortran_ssids_LDADD = $(LDADD) $(CUDA_LIBS)

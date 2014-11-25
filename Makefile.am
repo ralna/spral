@@ -1,6 +1,11 @@
 AUTOMAKE_OPTIONS = foreign subdir-objects
 ACLOCAL_AMFLAGS = -I m4
 
+# FIXME: Make autoconfable
+# NB: No libbub.a file to link against generated as BUB is a header library
+BUBDIR = /home/jhogg/src/ASEArch/bub
+AM_CXXFLAGS = -I$(BUBDIR)
+
 SUFFIXES = .cu
 
 # NVCC setup
@@ -133,8 +138,6 @@ libspral_a_SOURCES += \
 bin_PROGRAMS = spral_ssids
 spral_ssids_SOURCES = \
 	driver/spral_ssids.f90
-spral_ssids_LINK = $(NVCCLINK)
-spral_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
 check_PROGRAMS += \
 	ssids_test \
 	examples/Fortran/ssids \
@@ -147,12 +150,17 @@ tests/ssids.$(OBJEXT): libspral.a
 examples/C/ssids.$(OBJEXT): libspral.a
 TESTS += ssids_test
 if HAVE_NVCC
+spral_ssids_LINK = $(NVCCLINK)
+spral_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
 ssids_test_LINK = $(NVCCLINK)
 ssids_test_LDADD = $(LDADD) $(CUDA_LIBS)
 examples_Fortran_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
 examples_Fortran_ssids_LINK = $(NVCCLINK)
 examples_C_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
 examples_C_ssids_LINK = $(NVCCLINK)
+else
+spral_ssids_LINK = $(CXXLINK)
+spral_ssids_LDADD = $(LDADD)
 endif
 
 # Automake doesn't know much about modules, so get rid of them ourself
