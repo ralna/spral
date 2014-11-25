@@ -26,23 +26,28 @@ module factor_cpu_iface
       type(C_PTR) :: contrib
    end type cpu_node_data_double
 
+   type, bind(C) :: cpu_factor_options
+      real(C_DOUBLE) :: small
+      real(C_DOUBLE) :: u
+   end type cpu_factor_options
+
    type, bind(C) :: cpu_factor_stats
       integer(C_INT) :: flag
    end type cpu_factor_stats
 
    interface
-      subroutine factor_cpu_double(pos_def, nnodes, nodes, val, scaling, &
-            alloc, stats) &
+      subroutine factor_cpu_double(pos_def, nnodes, nodes, scaling, &
+            alloc, options, stats) &
             bind(C, name="spral_ssids_factor_cpu_dbl")
          use, intrinsic :: iso_c_binding
-         import :: cpu_node_data_double, cpu_factor_stats
+         import :: cpu_node_data_double, cpu_factor_options, cpu_factor_stats
          implicit none
          logical(C_BOOL), value :: pos_def
          integer(C_INT), value :: nnodes
          type(cpu_node_data_double), dimension(nnodes), intent(inout) :: nodes
-         real(C_DOUBLE), dimension(*), intent(in) :: val
          real(C_DOUBLE), dimension(*), intent(in) :: scaling
          type(C_PTR), value :: alloc
+         type(cpu_factor_options), intent(in) :: options
          type(cpu_factor_stats), intent(out) :: stats
       end subroutine factor_cpu_double
    end interface
