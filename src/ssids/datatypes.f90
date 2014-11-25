@@ -401,6 +401,8 @@ module spral_ssids_datatypes
       !
       ! Options used by ssids_factor() and ssids_solve()
       !
+      logical :: use_gpu_factor = .true. ! Use GPU for factor phase if true
+         ! or CPU if false
       logical :: use_gpu_solve = .true. ! Use GPU for solve phase if true
          ! or CPU if false
       integer :: presolve = 0 ! If set to a non-zero level, triggers L-factor

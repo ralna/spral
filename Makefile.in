@@ -90,46 +90,24 @@ host_triplet = @host@
 check_PROGRAMS = random_test$(EXEEXT) examples/Fortran/random$(EXEEXT) \
 	examples/C/random$(EXEEXT) random_matrix_test$(EXEEXT) \
 	examples/Fortran/random_matrix$(EXEEXT) \
-	examples/C/random_matrix$(EXEEXT) $(am__EXEEXT_1)
+	examples/C/random_matrix$(EXEEXT) ssids_test$(EXEEXT) \
+	examples/Fortran/ssids$(EXEEXT) examples/C/ssids$(EXEEXT)
 TESTS = random_test$(EXEEXT) random_matrix_test$(EXEEXT) \
-	$(am__EXEEXT_2)
-
-# SSIDS
-@HAVE_NVCC_TRUE@am__append_2 = include/spral_ssids.h
-@HAVE_NVCC_TRUE@am__append_3 = \
-@HAVE_NVCC_TRUE@	src/ssids/alloc.f90 \
-@HAVE_NVCC_TRUE@	src/ssids/analyse.f90 \
+	ssids_test$(EXEEXT)
+@HAVE_NVCC_TRUE@am__append_2 = \
 @HAVE_NVCC_TRUE@	src/ssids/assemble_kernels.cu \
-@HAVE_NVCC_TRUE@	src/ssids/cuda_datatypes.f90 \
-@HAVE_NVCC_TRUE@	src/ssids/cuda_interfaces.f90 \
-@HAVE_NVCC_TRUE@	src/ssids/datatypes.f90 \
-@HAVE_NVCC_TRUE@	src/ssids/dense_factor_gpu.f90 \
 @HAVE_NVCC_TRUE@	src/ssids/dense_factor_kernels.cu \
-@HAVE_NVCC_TRUE@	src/ssids/dtrsv.h \
-@HAVE_NVCC_TRUE@	src/ssids/factor_gpu.f90 \
-@HAVE_NVCC_TRUE@	src/ssids/kernel_datatypes.h \
 @HAVE_NVCC_TRUE@	src/ssids/node_solve_kernels.cu \
-@HAVE_NVCC_TRUE@	src/ssids/node_solve_kernels.h \
 @HAVE_NVCC_TRUE@	src/ssids/reorder_kernels.cu \
-@HAVE_NVCC_TRUE@	src/ssids/solve_cpu.f90 \
-@HAVE_NVCC_TRUE@	src/ssids/solve_gpu.f90 \
 @HAVE_NVCC_TRUE@	src/ssids/solve_kernels.cu \
-@HAVE_NVCC_TRUE@	src/ssids/ssids.f90 \
-@HAVE_NVCC_TRUE@	src/ssids/syrk_kernels.cu \
-@HAVE_NVCC_TRUE@	interfaces/C/ssids.f90
+@HAVE_NVCC_TRUE@	src/ssids/syrk_kernels.cu
 
-@HAVE_NVCC_TRUE@bin_PROGRAMS = spral_ssids$(EXEEXT)
-@HAVE_NVCC_TRUE@am__append_4 = \
-@HAVE_NVCC_TRUE@	ssids_test \
-@HAVE_NVCC_TRUE@	examples/Fortran/ssids \
-@HAVE_NVCC_TRUE@	examples/C/ssids
-
-@HAVE_NVCC_TRUE@am__append_5 = ssids_test
+bin_PROGRAMS = spral_ssids$(EXEEXT)
 subdir = .
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
 	$(top_srcdir)/configure $(am__configure_deps) depcomp \
-	$(am__include_HEADERS_DIST) test-driver ChangeLog compile \
-	config.guess config.sub install-sh missing
+	$(include_HEADERS) test-driver ChangeLog compile config.guess \
+	config.sub install-sh missing
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/acx_lapack.m4 \
 	$(top_srcdir)/m4/acx_prog_nvcc.m4 $(top_srcdir)/m4/ax_blas.m4 \
@@ -186,37 +164,28 @@ am__libspral_a_SOURCES_DIST = src/core_analyse.f90 \
 	src/metis$(METIS_VERSION)_wrapper.f90 src/pgm.f90 \
 	src/rutherford_boeing.f90 src/scaling.f90 src/timer.f90 \
 	src/random.f90 interfaces/C/random.f90 src/random_matrix.f90 \
-	interfaces/C/random_matrix.f90 src/ssids/alloc.f90 \
-	src/ssids/analyse.f90 src/ssids/assemble_kernels.cu \
+	interfaces/C/random_matrix.f90 src/ssids/assemble_kernels.cu \
+	src/ssids/dense_factor_kernels.cu \
+	src/ssids/node_solve_kernels.cu src/ssids/reorder_kernels.cu \
+	src/ssids/solve_kernels.cu src/ssids/syrk_kernels.cu \
+	src/ssids/alloc.f90 src/ssids/analyse.f90 \
 	src/ssids/cuda_datatypes.f90 src/ssids/cuda_interfaces.f90 \
 	src/ssids/datatypes.f90 src/ssids/dense_factor_gpu.f90 \
-	src/ssids/dense_factor_kernels.cu src/ssids/dtrsv.h \
+	src/ssids/dtrsv.h src/ssids/factor_cpu.cxx \
+	src/ssids/factor_cpu_iface.f90 src/ssids/factor_cpu_iface.h \
 	src/ssids/factor_gpu.f90 src/ssids/kernel_datatypes.h \
-	src/ssids/node_solve_kernels.cu src/ssids/node_solve_kernels.h \
-	src/ssids/reorder_kernels.cu src/ssids/solve_cpu.f90 \
-	src/ssids/solve_gpu.f90 src/ssids/solve_kernels.cu \
-	src/ssids/ssids.f90 src/ssids/syrk_kernels.cu \
+	src/ssids/node_solve_kernels.h src/ssids/solve_cpu.f90 \
+	src/ssids/solve_gpu.f90 src/ssids/ssids.f90 \
 	interfaces/C/ssids.f90
 am__dirstamp = $(am__leading_dot)dirstamp
 @HAVE_NVCC_TRUE@am__objects_1 = src/cuda/api_wrappers.$(OBJEXT) \
 @HAVE_NVCC_TRUE@	src/cuda/cuda.$(OBJEXT)
-@HAVE_NVCC_TRUE@am__objects_2 = src/ssids/alloc.$(OBJEXT) \
-@HAVE_NVCC_TRUE@	src/ssids/analyse.$(OBJEXT) \
-@HAVE_NVCC_TRUE@	src/ssids/assemble_kernels.$(OBJEXT) \
-@HAVE_NVCC_TRUE@	src/ssids/cuda_datatypes.$(OBJEXT) \
-@HAVE_NVCC_TRUE@	src/ssids/cuda_interfaces.$(OBJEXT) \
-@HAVE_NVCC_TRUE@	src/ssids/datatypes.$(OBJEXT) \
-@HAVE_NVCC_TRUE@	src/ssids/dense_factor_gpu.$(OBJEXT) \
+@HAVE_NVCC_TRUE@am__objects_2 = src/ssids/assemble_kernels.$(OBJEXT) \
 @HAVE_NVCC_TRUE@	src/ssids/dense_factor_kernels.$(OBJEXT) \
-@HAVE_NVCC_TRUE@	src/ssids/factor_gpu.$(OBJEXT) \
 @HAVE_NVCC_TRUE@	src/ssids/node_solve_kernels.$(OBJEXT) \
 @HAVE_NVCC_TRUE@	src/ssids/reorder_kernels.$(OBJEXT) \
-@HAVE_NVCC_TRUE@	src/ssids/solve_cpu.$(OBJEXT) \
-@HAVE_NVCC_TRUE@	src/ssids/solve_gpu.$(OBJEXT) \
 @HAVE_NVCC_TRUE@	src/ssids/solve_kernels.$(OBJEXT) \
-@HAVE_NVCC_TRUE@	src/ssids/ssids.$(OBJEXT) \
-@HAVE_NVCC_TRUE@	src/ssids/syrk_kernels.$(OBJEXT) \
-@HAVE_NVCC_TRUE@	interfaces/C/ssids.$(OBJEXT)
+@HAVE_NVCC_TRUE@	src/ssids/syrk_kernels.$(OBJEXT)
 am_libspral_a_OBJECTS = src/core_analyse.$(OBJEXT) $(am__objects_1) \
 	src/match_order.$(OBJEXT) src/matrix_util.$(OBJEXT) \
 	interfaces/C/matrix_util.$(OBJEXT) \
@@ -224,11 +193,18 @@ am_libspral_a_OBJECTS = src/core_analyse.$(OBJEXT) $(am__objects_1) \
 	src/rutherford_boeing.$(OBJEXT) src/scaling.$(OBJEXT) \
 	src/timer.$(OBJEXT) src/random.$(OBJEXT) \
 	interfaces/C/random.$(OBJEXT) src/random_matrix.$(OBJEXT) \
-	interfaces/C/random_matrix.$(OBJEXT) $(am__objects_2)
+	interfaces/C/random_matrix.$(OBJEXT) $(am__objects_2) \
+	src/ssids/alloc.$(OBJEXT) src/ssids/analyse.$(OBJEXT) \
+	src/ssids/cuda_datatypes.$(OBJEXT) \
+	src/ssids/cuda_interfaces.$(OBJEXT) \
+	src/ssids/datatypes.$(OBJEXT) \
+	src/ssids/dense_factor_gpu.$(OBJEXT) \
+	src/ssids/factor_cpu.$(OBJEXT) \
+	src/ssids/factor_cpu_iface.$(OBJEXT) \
+	src/ssids/factor_gpu.$(OBJEXT) src/ssids/solve_cpu.$(OBJEXT) \
+	src/ssids/solve_gpu.$(OBJEXT) src/ssids/ssids.$(OBJEXT) \
+	interfaces/C/ssids.$(OBJEXT)
 libspral_a_OBJECTS = $(am_libspral_a_OBJECTS)
-@HAVE_NVCC_TRUE@am__EXEEXT_1 = ssids_test$(EXEEXT) \
-@HAVE_NVCC_TRUE@	examples/Fortran/ssids$(EXEEXT) \
-@HAVE_NVCC_TRUE@	examples/C/ssids$(EXEEXT)
 PROGRAMS = $(bin_PROGRAMS)
 am_examples_C_random_OBJECTS = examples/C/random.$(OBJEXT)
 examples_C_random_OBJECTS = $(am_examples_C_random_OBJECTS)
@@ -245,9 +221,7 @@ examples_C_random_matrix_LDADD = $(LDADD)
 examples_C_random_matrix_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1)
-am__examples_C_ssids_SOURCES_DIST = examples/C/ssids.c
-@HAVE_NVCC_TRUE@am_examples_C_ssids_OBJECTS =  \
-@HAVE_NVCC_TRUE@	examples/C/ssids.$(OBJEXT)
+am_examples_C_ssids_OBJECTS = examples/C/ssids.$(OBJEXT)
 examples_C_ssids_OBJECTS = $(am_examples_C_ssids_OBJECTS)
 am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
@@ -269,9 +243,7 @@ examples_Fortran_random_matrix_LDADD = $(LDADD)
 examples_Fortran_random_matrix_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1)
-am__examples_Fortran_ssids_SOURCES_DIST = examples/Fortran/ssids.f90
-@HAVE_NVCC_TRUE@am_examples_Fortran_ssids_OBJECTS =  \
-@HAVE_NVCC_TRUE@	examples/Fortran/ssids.$(OBJEXT)
+am_examples_Fortran_ssids_OBJECTS = examples/Fortran/ssids.$(OBJEXT)
 examples_Fortran_ssids_OBJECTS = $(am_examples_Fortran_ssids_OBJECTS)
 @HAVE_NVCC_TRUE@examples_Fortran_ssids_DEPENDENCIES =  \
 @HAVE_NVCC_TRUE@	$(am__DEPENDENCIES_2) $(am__DEPENDENCIES_1)
@@ -286,13 +258,10 @@ random_test_OBJECTS = $(am_random_test_OBJECTS)
 random_test_LDADD = $(LDADD)
 random_test_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
-am__spral_ssids_SOURCES_DIST = driver/spral_ssids.f90
-@HAVE_NVCC_TRUE@am_spral_ssids_OBJECTS = driver/spral_ssids.$(OBJEXT)
+am_spral_ssids_OBJECTS = driver/spral_ssids.$(OBJEXT)
 spral_ssids_OBJECTS = $(am_spral_ssids_OBJECTS)
-@HAVE_NVCC_TRUE@spral_ssids_DEPENDENCIES = $(am__DEPENDENCIES_2) \
-@HAVE_NVCC_TRUE@	$(am__DEPENDENCIES_1)
-am__ssids_test_SOURCES_DIST = tests/ssids.f90
-@HAVE_NVCC_TRUE@am_ssids_test_OBJECTS = tests/ssids.$(OBJEXT)
+spral_ssids_DEPENDENCIES = $(am__DEPENDENCIES_2) $(am__DEPENDENCIES_1)
+am_ssids_test_OBJECTS = tests/ssids.$(OBJEXT)
 ssids_test_OBJECTS = $(am_ssids_test_OBJECTS)
 @HAVE_NVCC_TRUE@ssids_test_DEPENDENCIES = $(am__DEPENDENCIES_2) \
 @HAVE_NVCC_TRUE@	$(am__DEPENDENCIES_1)
@@ -324,6 +293,19 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
+CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+	$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)
+AM_V_CXX = $(am__v_CXX_@AM_V@)
+am__v_CXX_ = $(am__v_CXX_@AM_DEFAULT_V@)
+am__v_CXX_0 = @echo "  CXX     " $@;
+am__v_CXX_1 = 
+CXXLD = $(CXX)
+CXXLINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) \
+	-o $@
+AM_V_CXXLD = $(am__v_CXXLD_@AM_V@)
+am__v_CXXLD_ = $(am__v_CXXLD_@AM_DEFAULT_V@)
+am__v_CXXLD_0 = @echo "  CXXLD   " $@;
+am__v_CXXLD_1 = 
 FCCOMPILE = $(FC) $(AM_FCFLAGS) $(FCFLAGS)
 AM_V_FC = $(am__v_FC_@AM_V@)
 am__v_FC_ = $(am__v_FC_@AM_DEFAULT_V@)
@@ -346,20 +328,16 @@ SOURCES = $(libspral_a_SOURCES) $(examples_C_random_SOURCES) \
 DIST_SOURCES = $(am__libspral_a_SOURCES_DIST) \
 	$(examples_C_random_SOURCES) \
 	$(examples_C_random_matrix_SOURCES) \
-	$(am__examples_C_ssids_SOURCES_DIST) \
-	$(examples_Fortran_random_SOURCES) \
+	$(examples_C_ssids_SOURCES) $(examples_Fortran_random_SOURCES) \
 	$(examples_Fortran_random_matrix_SOURCES) \
-	$(am__examples_Fortran_ssids_SOURCES_DIST) \
+	$(examples_Fortran_ssids_SOURCES) \
 	$(random_matrix_test_SOURCES) $(random_test_SOURCES) \
-	$(am__spral_ssids_SOURCES_DIST) $(am__ssids_test_SOURCES_DIST)
+	$(spral_ssids_SOURCES) $(ssids_test_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
     *) (install-info --version) >/dev/null 2>&1;; \
   esac
-am__include_HEADERS_DIST = include/spral.h include/spral_matrix_util.h \
-	include/spral_random.h include/spral_random_matrix.h \
-	include/spral_ssids.h
 HEADERS = $(include_HEADERS)
 am__tagged_files = $(HEADERS) $(SOURCES) $(TAGS_FILES) $(LISP)
 # Read a list of newline-separated strings from the standard input,
@@ -538,7 +516,6 @@ am__set_TESTS_bases = \
   bases=`for i in $$bases; do echo $$i; done | sed 's/\.log$$//'`; \
   bases=`echo $$bases`
 RECHECK_LOGS = $(TEST_LOGS)
-@HAVE_NVCC_TRUE@am__EXEEXT_2 = ssids_test$(EXEEXT)
 TEST_SUITE_LOG = test-suite.log
 TEST_EXTENSIONS = @EXEEXT@ .test
 LOG_DRIVER = $(SHELL) $(top_srcdir)/test-driver
@@ -713,9 +690,11 @@ lib_LIBRARIES = libspral.a
 # RANDOM
 
 # RANDOM_MATRIX
+
+# SSIDS
 include_HEADERS = include/spral.h include/spral_matrix_util.h \
 	include/spral_random.h include/spral_random_matrix.h \
-	$(am__append_2)
+	include/spral_ssids.h
 
 # CORE_ANALYSE
 # Note: first so not +=
@@ -737,7 +716,16 @@ libspral_a_SOURCES = src/core_analyse.f90 $(am__append_1) \
 	src/metis$(METIS_VERSION)_wrapper.f90 src/pgm.f90 \
 	src/rutherford_boeing.f90 src/scaling.f90 src/timer.f90 \
 	src/random.f90 interfaces/C/random.f90 src/random_matrix.f90 \
-	interfaces/C/random_matrix.f90 $(am__append_3)
+	interfaces/C/random_matrix.f90 $(am__append_2) \
+	src/ssids/alloc.f90 src/ssids/analyse.f90 \
+	src/ssids/cuda_datatypes.f90 src/ssids/cuda_interfaces.f90 \
+	src/ssids/datatypes.f90 src/ssids/dense_factor_gpu.f90 \
+	src/ssids/dtrsv.h src/ssids/factor_cpu.cxx \
+	src/ssids/factor_cpu_iface.f90 src/ssids/factor_cpu_iface.h \
+	src/ssids/factor_gpu.f90 src/ssids/kernel_datatypes.h \
+	src/ssids/node_solve_kernels.h src/ssids/solve_cpu.f90 \
+	src/ssids/solve_gpu.f90 src/ssids/ssids.f90 \
+	interfaces/C/ssids.f90
 EXTRA_DIST = src/metis4_wrapper.f90 src/metis5_wrapper.f90
 random_test_SOURCES = tests/random.f90
 examples_Fortran_random_SOURCES = examples/Fortran/random.f90
@@ -745,24 +733,24 @@ examples_C_random_SOURCES = examples/C/random.c
 random_matrix_test_SOURCES = tests/random_matrix.f90
 examples_Fortran_random_matrix_SOURCES = examples/Fortran/random_matrix.f90
 examples_C_random_matrix_SOURCES = examples/C/random_matrix.c
-@HAVE_NVCC_TRUE@spral_ssids_SOURCES = \
-@HAVE_NVCC_TRUE@	driver/spral_ssids.f90
+spral_ssids_SOURCES = \
+	driver/spral_ssids.f90
 
-@HAVE_NVCC_TRUE@spral_ssids_LINK = $(NVCCLINK)
-@HAVE_NVCC_TRUE@spral_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
-@HAVE_NVCC_TRUE@ssids_test_SOURCES = tests/ssids.f90
+spral_ssids_LINK = $(NVCCLINK)
+spral_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
+ssids_test_SOURCES = tests/ssids.f90
+examples_Fortran_ssids_SOURCES = examples/Fortran/ssids.f90
+examples_C_ssids_SOURCES = examples/C/ssids.c
 @HAVE_NVCC_TRUE@ssids_test_LINK = $(NVCCLINK)
 @HAVE_NVCC_TRUE@ssids_test_LDADD = $(LDADD) $(CUDA_LIBS)
-@HAVE_NVCC_TRUE@examples_Fortran_ssids_SOURCES = examples/Fortran/ssids.f90
 @HAVE_NVCC_TRUE@examples_Fortran_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
 @HAVE_NVCC_TRUE@examples_Fortran_ssids_LINK = $(NVCCLINK)
-@HAVE_NVCC_TRUE@examples_C_ssids_SOURCES = examples/C/ssids.c
 @HAVE_NVCC_TRUE@examples_C_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
 @HAVE_NVCC_TRUE@examples_C_ssids_LINK = $(NVCCLINK)
 all: all-am
 
 .SUFFIXES:
-.SUFFIXES: .cu .c .f90 .log .o .obj .test .test$(EXEEXT) .trs
+.SUFFIXES: .cu .c .cxx .f90 .log .o .obj .test .test$(EXEEXT) .trs
 am--refresh: Makefile
 	@:
 $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
@@ -880,11 +868,21 @@ src/ssids/$(am__dirstamp):
 src/ssids/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) src/ssids/$(DEPDIR)
 	@: > src/ssids/$(DEPDIR)/$(am__dirstamp)
+src/ssids/assemble_kernels.$(OBJEXT): src/ssids/$(am__dirstamp) \
+	src/ssids/$(DEPDIR)/$(am__dirstamp)
+src/ssids/dense_factor_kernels.$(OBJEXT): src/ssids/$(am__dirstamp) \
+	src/ssids/$(DEPDIR)/$(am__dirstamp)
+src/ssids/node_solve_kernels.$(OBJEXT): src/ssids/$(am__dirstamp) \
+	src/ssids/$(DEPDIR)/$(am__dirstamp)
+src/ssids/reorder_kernels.$(OBJEXT): src/ssids/$(am__dirstamp) \
+	src/ssids/$(DEPDIR)/$(am__dirstamp)
+src/ssids/solve_kernels.$(OBJEXT): src/ssids/$(am__dirstamp) \
+	src/ssids/$(DEPDIR)/$(am__dirstamp)
+src/ssids/syrk_kernels.$(OBJEXT): src/ssids/$(am__dirstamp) \
+	src/ssids/$(DEPDIR)/$(am__dirstamp)
 src/ssids/alloc.$(OBJEXT): src/ssids/$(am__dirstamp) \
 	src/ssids/$(DEPDIR)/$(am__dirstamp)
 src/ssids/analyse.$(OBJEXT): src/ssids/$(am__dirstamp) \
-	src/ssids/$(DEPDIR)/$(am__dirstamp)
-src/ssids/assemble_kernels.$(OBJEXT): src/ssids/$(am__dirstamp) \
 	src/ssids/$(DEPDIR)/$(am__dirstamp)
 src/ssids/cuda_datatypes.$(OBJEXT): src/ssids/$(am__dirstamp) \
 	src/ssids/$(DEPDIR)/$(am__dirstamp)
@@ -894,23 +892,17 @@ src/ssids/datatypes.$(OBJEXT): src/ssids/$(am__dirstamp) \
 	src/ssids/$(DEPDIR)/$(am__dirstamp)
 src/ssids/dense_factor_gpu.$(OBJEXT): src/ssids/$(am__dirstamp) \
 	src/ssids/$(DEPDIR)/$(am__dirstamp)
-src/ssids/dense_factor_kernels.$(OBJEXT): src/ssids/$(am__dirstamp) \
+src/ssids/factor_cpu.$(OBJEXT): src/ssids/$(am__dirstamp) \
+	src/ssids/$(DEPDIR)/$(am__dirstamp)
+src/ssids/factor_cpu_iface.$(OBJEXT): src/ssids/$(am__dirstamp) \
 	src/ssids/$(DEPDIR)/$(am__dirstamp)
 src/ssids/factor_gpu.$(OBJEXT): src/ssids/$(am__dirstamp) \
-	src/ssids/$(DEPDIR)/$(am__dirstamp)
-src/ssids/node_solve_kernels.$(OBJEXT): src/ssids/$(am__dirstamp) \
-	src/ssids/$(DEPDIR)/$(am__dirstamp)
-src/ssids/reorder_kernels.$(OBJEXT): src/ssids/$(am__dirstamp) \
 	src/ssids/$(DEPDIR)/$(am__dirstamp)
 src/ssids/solve_cpu.$(OBJEXT): src/ssids/$(am__dirstamp) \
 	src/ssids/$(DEPDIR)/$(am__dirstamp)
 src/ssids/solve_gpu.$(OBJEXT): src/ssids/$(am__dirstamp) \
 	src/ssids/$(DEPDIR)/$(am__dirstamp)
-src/ssids/solve_kernels.$(OBJEXT): src/ssids/$(am__dirstamp) \
-	src/ssids/$(DEPDIR)/$(am__dirstamp)
 src/ssids/ssids.$(OBJEXT): src/ssids/$(am__dirstamp) \
-	src/ssids/$(DEPDIR)/$(am__dirstamp)
-src/ssids/syrk_kernels.$(OBJEXT): src/ssids/$(am__dirstamp) \
 	src/ssids/$(DEPDIR)/$(am__dirstamp)
 interfaces/C/ssids.$(OBJEXT): interfaces/C/$(am__dirstamp) \
 	interfaces/C/$(DEPDIR)/$(am__dirstamp)
@@ -1067,6 +1059,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/$(DEPDIR)/random.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/$(DEPDIR)/random_matrix.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/$(DEPDIR)/ssids.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/ssids/$(DEPDIR)/factor_cpu.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
@@ -1083,6 +1076,22 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(COMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
+
+.cxx.o:
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
+@am__fastdepCXX_TRUE@	$(CXXCOMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ $< &&\
+@am__fastdepCXX_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXXCOMPILE) -c -o $@ $<
+
+.cxx.obj:
+@am__fastdepCXX_TRUE@	$(AM_V_CXX)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.obj$$||'`;\
+@am__fastdepCXX_TRUE@	$(CXXCOMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ `$(CYGPATH_W) '$<'` &&\
+@am__fastdepCXX_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Po
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXXCOMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
 
 .f90.o:
 	$(AM_V_FC)$(FCCOMPILE) -c -o $@ $<
@@ -1575,7 +1584,7 @@ clean-am: clean-binPROGRAMS clean-checkPROGRAMS clean-generic \
 
 distclean: distclean-am
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
-	-rm -rf examples/C/$(DEPDIR)
+	-rm -rf examples/C/$(DEPDIR) src/ssids/$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -1623,7 +1632,7 @@ installcheck-am:
 maintainer-clean: maintainer-clean-am
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
 	-rm -rf $(top_srcdir)/autom4te.cache
-	-rm -rf examples/C/$(DEPDIR)
+	-rm -rf examples/C/$(DEPDIR) src/ssids/$(DEPDIR)
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 
@@ -1671,9 +1680,9 @@ examples/C/random.$(OBJEXT): libspral.a
 tests/random_matrix.$(OBJEXT): libspral.a
 examples/Fortran/random_matrix.$(OBJEXT): libspral.a
 examples/C/random_matrix.$(OBJEXT): libspral.a
-@HAVE_NVCC_TRUE@examples/Fortran/ssids.$(OBJEXT): libspral.a
-@HAVE_NVCC_TRUE@tests/ssids.$(OBJEXT): libspral.a
-@HAVE_NVCC_TRUE@examples/C/ssids.$(OBJEXT): libspral.a
+examples/Fortran/ssids.$(OBJEXT): libspral.a
+tests/ssids.$(OBJEXT): libspral.a
+examples/C/ssids.$(OBJEXT): libspral.a
 
 # Automake doesn't know much about modules, so get rid of them ourself
 clean-local:

@@ -102,28 +102,33 @@ examples/C/random_matrix.$(OBJEXT): libspral.a
 TESTS += random_matrix_test
 
 # SSIDS
-if HAVE_NVCC
 include_HEADERS += include/spral_ssids.h
+if HAVE_NVCC
+libspral_a_SOURCES += \
+	src/ssids/assemble_kernels.cu \
+	src/ssids/dense_factor_kernels.cu \
+	src/ssids/node_solve_kernels.cu \
+	src/ssids/reorder_kernels.cu \
+	src/ssids/solve_kernels.cu \
+	src/ssids/syrk_kernels.cu
+endif
 libspral_a_SOURCES += \
 	src/ssids/alloc.f90 \
 	src/ssids/analyse.f90 \
-	src/ssids/assemble_kernels.cu \
 	src/ssids/cuda_datatypes.f90 \
 	src/ssids/cuda_interfaces.f90 \
 	src/ssids/datatypes.f90 \
 	src/ssids/dense_factor_gpu.f90 \
-	src/ssids/dense_factor_kernels.cu \
 	src/ssids/dtrsv.h \
+	src/ssids/factor_cpu.cxx \
+	src/ssids/factor_cpu_iface.f90 \
+	src/ssids/factor_cpu_iface.h \
 	src/ssids/factor_gpu.f90 \
 	src/ssids/kernel_datatypes.h \
-	src/ssids/node_solve_kernels.cu \
 	src/ssids/node_solve_kernels.h \
-	src/ssids/reorder_kernels.cu \
 	src/ssids/solve_cpu.f90 \
 	src/ssids/solve_gpu.f90 \
-	src/ssids/solve_kernels.cu \
 	src/ssids/ssids.f90 \
-	src/ssids/syrk_kernels.cu \
 	interfaces/C/ssids.f90
 bin_PROGRAMS = spral_ssids
 spral_ssids_SOURCES = \
@@ -135,18 +140,19 @@ check_PROGRAMS += \
 	examples/Fortran/ssids \
 	examples/C/ssids
 ssids_test_SOURCES = tests/ssids.f90
-ssids_test_LINK = $(NVCCLINK)
-ssids_test_LDADD = $(LDADD) $(CUDA_LIBS)
 examples_Fortran_ssids_SOURCES = examples/Fortran/ssids.f90
-examples_Fortran_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
-examples_Fortran_ssids_LINK = $(NVCCLINK)
 examples/Fortran/ssids.$(OBJEXT): libspral.a
 examples_C_ssids_SOURCES = examples/C/ssids.c
-examples_C_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
-examples_C_ssids_LINK = $(NVCCLINK)
 tests/ssids.$(OBJEXT): libspral.a
 examples/C/ssids.$(OBJEXT): libspral.a
 TESTS += ssids_test
+if HAVE_NVCC
+ssids_test_LINK = $(NVCCLINK)
+ssids_test_LDADD = $(LDADD) $(CUDA_LIBS)
+examples_Fortran_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
+examples_Fortran_ssids_LINK = $(NVCCLINK)
+examples_C_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
+examples_C_ssids_LINK = $(NVCCLINK)
 endif
 
 # Automake doesn't know much about modules, so get rid of them ourself
