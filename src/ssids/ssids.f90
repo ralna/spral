@@ -27,12 +27,11 @@ module spral_ssids
                                    expand_pattern
    use spral_ssids_datatypes
    use spral_ssids_factor, only : ssids_fkeep
-   use spral_ssids_factor_gpu, only : parfactor
    use spral_ssids_solve_cpu, only : solve_calc_chunk, inner_solve, &
                                      subtree_bwd_solve
    use spral_ssids_solve_gpu, only : bwd_solve_gpu, fwd_solve_gpu, &
                                      fwd_multisolve_gpu, bwd_multisolve_gpu, &
-                                     d_solve_gpu, free_lookup_gpu
+                                     d_solve_gpu
    implicit none
 
    private
@@ -625,17 +624,6 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
     
 end subroutine ssids_analyse_coord_double
 
-!****************************************************************************
-
-! Following function used to get around target requirement of C_LOC()
-integer(C_INT) function copy_to_gpu_non_target(gpu_ptr, src, sz)
-   type(C_PTR) :: gpu_ptr
-   real(wp), dimension(*), target, intent(in) :: src
-   integer(C_SIZE_T), intent(in) :: sz
-
-   copy_to_gpu_non_target = cudaMemcpy_h2d(gpu_ptr, C_LOC(src), sz)
-end function copy_to_gpu_non_target
-
 
 !****************************************************************************
 !
@@ -646,9 +634,9 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
    logical, intent(in) :: posdef 
    real(wp), dimension(*), target, intent(in) :: val ! A values (lwr triangle)
    type(ssids_akeep), intent(in) :: akeep
-   type(ssids_fkeep), intent(inout) :: fkeep
+   class(ssids_fkeep), intent(inout) :: fkeep
    type(ssids_options), intent(in) :: options
-   type(ssids_inform), intent(out) :: inform
+   class(ssids_inform), intent(out) :: inform
    real(wp), dimension(:), optional, intent(inout) :: scale ! used to hold
       ! row and column scaling factors. Must be set on entry if
       ! options%scaling <= 0
@@ -661,10 +649,7 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
       ! on call to analyse phase, check = .false.. Must be unchanged 
       ! since that call.
 
-   integer(long) :: sz
    real(wp), dimension(:), allocatable, target :: val2
-   type(C_PTR), dimension(:), allocatable :: gpu_contribs
-   type(C_PTR) :: gpu_val, gpu_scaling
    character(len=50) :: context
 
    integer :: i
@@ -673,13 +658,6 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
    integer :: mp
    logical :: sing
    integer :: cuda_error, st
-   type(thread_stats), dimension(:), allocatable :: stats ! one copy
-      ! per thread, accumulates per thread statistics that are then summed to
-      ! obtain global stats in inform.
-   integer, dimension(:,:), allocatable :: map ! work array, one copy per
-      ! thread. Size (0:n, num_threads), with 0 index used to track which
-      ! node current map refers to.
-   integer :: num_threads
    ! Solve parameters. Tree is broken up into multiple chunks. Parent-child
    ! relations between chunks are stored in fwd_ptr and fwd (see solve routine
    ! comments)
@@ -954,129 +932,20 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
       if (st .ne. 0) go to 10
    end if
 
-   num_threads = 1
-!$ num_threads = omp_get_max_threads()
-
-   allocate(stats(num_threads), map(0:n, num_threads), stat=st)
-   if (st .ne. 0) go to 10
-   map(0, :) = -1 ! initally map unassociated with any node
-
    if(options%use_gpu_factor) then
       !
       ! GPU-based factorization
       !
 
-      ! Setup child contribution array
-      ! Note: only non-NULL where we're passing contributions between subtrees
-      allocate(gpu_contribs(akeep%nnodes), stat=st)
-      if(st.ne.0) goto 10
-      gpu_contribs(:) = C_NULL_PTR
-
-      ! Copy A values to GPU
-      sz = akeep%nptr(akeep%nnodes+1) - 1
       if (akeep%check) then
-         cuda_error = cudaMalloc(gpu_val, C_SIZEOF(val2(1:sz)))
-         if(cuda_error.ne.0) goto 200
-         cuda_error = cudaMemcpy_h2d(gpu_val, C_LOC(val2), C_SIZEOF(val2(1:sz)))
+         call fkeep%inner_factor(akeep, val2, options, inform)
       else
-         cuda_error = cudaMalloc(gpu_val, C_SIZEOF(val(1:sz)))
-         if(cuda_error.ne.0) goto 200
-         cuda_error = cudaMemcpy_h2d(gpu_val, C_LOC(val), C_SIZEOF(val(1:sz)))
+         call fkeep%inner_factor(akeep, val, options, inform)
       endif
-      if(cuda_error.ne.0) goto 200
-      
-      ! Allocate and initialize streams
-      if(allocated(fkeep%stream_handle)) then
-         if(size(fkeep%stream_handle).lt.options%nstream) then
-            do i = 1, size(fkeep%stream_handle)
-               if(C_ASSOCIATED(fkeep%stream_handle(i))) then
-                  cuda_error = cudaStreamDestroy(fkeep%stream_handle(i))
-                  if(cuda_error.ne.0) goto 200
-               endif
-            end do
-            deallocate(fkeep%stream_handle, stat=st)
-            if(st.ne.0) goto 10
-         endif
+      if(inform%flag .lt. 0) then
+         call ssids_print_flag(inform,nout,context)
+         return
       endif
-      if(.not.allocated(fkeep%stream_handle)) then
-         allocate(fkeep%stream_handle(options%nstream), stat=st)
-         if(st.ne.0) goto 10
-         do i = 1, options%nstream
-            cuda_error = cudaStreamCreate(fkeep%stream_handle(i))
-            if(cuda_error.ne.0) goto 200
-         end do
-      endif
-
-      ! Cleanup/allocate factor datastructures
-      ! FIXME: We should move node<->level assignment to analyze then we can
-      ! more easily reuse stream_data
-      call free_gpu_type(fkeep%top_data, cuda_error)
-      if(allocated(fkeep%stream_data)) then
-         do i = 1, size(fkeep%stream_data)
-            call free_gpu_type(fkeep%stream_data(i), cuda_error)
-            if(cuda_error.ne.0) goto 200
-         end do
-         deallocate(fkeep%stream_data, stat=st)
-         if(st.ne.0) goto 10
-      endif
-      allocate(fkeep%stream_data(options%nstream), stat=st)
-      if (st.ne.0) goto 10
-
-      ! Call main factorization routine
-      if (allocated(fkeep%scaling)) then
-         ! Copy scaling vector to GPU
-         cuda_error = cudaMalloc(gpu_scaling, C_SIZEOF(fkeep%scaling(1:n)))
-         if(cuda_error.ne.0) goto 200
-         cuda_error = copy_to_gpu_non_target(gpu_scaling, fkeep%scaling, &
-            C_SIZEOF(fkeep%scaling(1:n)))
-         if(cuda_error.ne.0) goto 200
-
-         ! Perform factorization
-         call parfactor(fkeep%pos_def, akeep%child_ptr, akeep%child_list, n,  &
-            akeep%nptr, akeep%gpu_nlist, gpu_val, akeep%nnodes, fkeep%nodes,  &
-            akeep%sptr, akeep%sparent, akeep%rptr, akeep%rlist, akeep%invp,   &
-            akeep%rlist_direct, akeep%gpu_rlist, akeep%gpu_rlist_direct,      &
-            gpu_contribs, fkeep%stream_handle, fkeep%stream_data,             &
-            fkeep%top_data, fkeep%gpu_rlist_with_delays,                      &
-            fkeep%gpu_rlist_direct_with_delays, fkeep%gpu_clists,             &
-            fkeep%gpu_clists_direct, fkeep%gpu_clen, fkeep%alloc, options, stats, &
-            ptr_scale=gpu_scaling)
-         cuda_error = cudaFree(gpu_scaling)
-         if(cuda_error.ne.0) goto 200
-      else
-         call parfactor(fkeep%pos_def, akeep%child_ptr, akeep%child_list, n,  &
-            akeep%nptr, akeep%gpu_nlist, gpu_val, akeep%nnodes, fkeep%nodes,  &
-            akeep%sptr, akeep%sparent, akeep%rptr, akeep%rlist, akeep%invp,   &
-            akeep%rlist_direct, akeep%gpu_rlist, akeep%gpu_rlist_direct,      &
-            gpu_contribs, fkeep%stream_handle, fkeep%stream_data,             &
-            fkeep%top_data, fkeep%gpu_rlist_with_delays,                      &
-            fkeep%gpu_rlist_direct_with_delays, fkeep%gpu_clists,             &
-            fkeep%gpu_clists_direct, fkeep%gpu_clen, fkeep%alloc, options, stats)
-      end if
-
-      cuda_error = cudaFree(gpu_val)
-      if(cuda_error.ne.0) goto 200
-      
-      ! Do reductions
-      i = minval(stats(:)%flag)
-      if(i.lt.0) then
-         inform%flag = i
-         inform%stat = maxval(stats(:)%st)
-         if(inform%stat.eq.0) inform%stat = minval(stats(:)%st)
-         ! Note: cuda_error and cublas_error are actually C enums, so are +ive
-         if(inform%cuda_error.eq.0) inform%cuda_error = maxval(stats(:)%cuda_error)
-         if(inform%cublas_error.eq.0) &
-            inform%cublas_error = maxval(stats(:)%cublas_error)
-         st = inform%stat
-      end if
-      i = max(inform%flag, maxval(stats(:)%flag))
-      inform%maxfront = maxval(stats(:)%maxfront)
-      inform%num_factor = sum(stats(:)%num_factor)
-      inform%num_flops = sum(stats(:)%num_flops)
-      inform%num_delay = sum(stats(:)%num_delay)
-      inform%num_neg = sum(stats(:)%num_neg)
-      inform%num_two = sum(stats(:)%num_two)
-      inform%matrix_rank = akeep%sptr(akeep%nnodes+1)-1 - sum(stats(:)%num_zero)
    else
       !
       ! CPU factorization
@@ -1143,12 +1012,6 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
    inform%flag = SSIDS_ERROR_ALLOCATION
    inform%stat = st
    fkeep%flag = inform%flag
-   call ssids_print_flag(inform,nout,context)
-   return
-
-   200 continue
-   inform%flag = SSIDS_ERROR_CUDA_UNKNOWN
-   inform%cuda_error = cuda_error
    call ssids_print_flag(inform,nout,context)
    return
 
@@ -2084,140 +1947,8 @@ subroutine free_fkeep_double(fkeep, cuda_error)
    type(ssids_fkeep), intent(inout) :: fkeep
    integer, intent(out) :: cuda_error
 
-   integer :: st, i
-
-   cuda_error = 0
-
-   if (.not.allocated(fkeep%nodes)) return
-
-   call smfreeall(fkeep%alloc)
-   deallocate(fkeep%alloc)
-   nullify(fkeep%alloc)
-
-   deallocate(fkeep%nodes, stat=st)
-   deallocate(fkeep%scaling, stat=st)
-
-   ! And clean up factors
-   call free_gpu_type(fkeep%top_data, cuda_error)
-   if(allocated(fkeep%stream_data)) then
-      do i = 1, size(fkeep%stream_data)
-         call free_gpu_type(fkeep%stream_data(i), cuda_error)
-      end do
-      deallocate(fkeep%stream_data, stat=st)
-   endif
-
-   ! Cleanup top-level presolve info
-   if(C_ASSOCIATED(fkeep%gpu_rlist_with_delays)) then
-      cuda_error = cudaFree(fkeep%gpu_rlist_with_delays)
-      fkeep%gpu_rlist_with_delays = C_NULL_PTR
-      if(cuda_error.ne.0) return
-   endif
-   if(C_ASSOCIATED(fkeep%gpu_clists)) then
-      cuda_error = cudaFree(fkeep%gpu_clists)
-      fkeep%gpu_clists = C_NULL_PTR
-      if(cuda_error.ne.0) return
-   endif
-   if(C_ASSOCIATED(fkeep%gpu_clists_direct)) then
-      cuda_error = cudaFree(fkeep%gpu_clists)
-      fkeep%gpu_clists = C_NULL_PTR
-      if(cuda_error.ne.0) return
-   endif
-   if(C_ASSOCIATED(fkeep%gpu_clen)) then
-      cuda_error = cudaFree(fkeep%gpu_clen)
-      fkeep%gpu_clen = C_NULL_PTR
-      if(cuda_error.ne.0) return
-   endif
-
-   ! Release streams
-   if(allocated(fkeep%stream_handle)) then
-      do i = 1, size(fkeep%stream_handle)
-         cuda_error = cudaStreamDestroy(fkeep%stream_handle(i))
-         if(cuda_error.ne.0) return
-      end do
-      deallocate(fkeep%stream_handle, stat=st)
-   endif
+   call fkeep%free(cuda_error)
 end subroutine free_fkeep_double
-
-subroutine free_gpu_type(sdata, cuda_error)
-   type(gpu_type), intent(inout) :: sdata
-   integer, intent(out) :: cuda_error
-
-   integer :: lev
-   integer :: st
-
-   if(allocated(sdata%values_L)) then
-      do lev = 1, sdata%num_levels
-         cuda_error = cudaFree(sdata%values_L(lev)%ptr_levL)
-         if(cuda_error.ne.0) return
-         if ( sdata%values_L(lev)%ncp_pre > 0 ) then
-            sdata%values_L(lev)%ncp_pre = 0
-            cuda_error = cudaFree(sdata%values_L(lev)%gpu_cpdata_pre)
-            if(cuda_error.ne.0) return
-            cuda_error = cudaFree(sdata%values_L(lev)%gpu_blkdata_pre)
-            if(cuda_error.ne.0) return
-         end if
-         if ( sdata%values_L(lev)%ncp_post > 0 ) then
-            sdata%values_L(lev)%ncp_post = 0
-            cuda_error = cudaFree(sdata%values_L(lev)%gpu_cpdata_post)
-            if(cuda_error.ne.0) return
-            cuda_error = cudaFree(sdata%values_L(lev)%gpu_blkdata_post)
-            if(cuda_error.ne.0) return
-         end if
-         if ( sdata%values_L(lev)%ncb_slv_n > 0 ) then
-            sdata%values_L(lev)%ncb_slv_n = 0
-            cuda_error = cudaFree(sdata%values_L(lev)%gpu_solve_n_data)
-            if(cuda_error.ne.0) return
-         end if
-         if ( sdata%values_L(lev)%ncb_slv_t > 0 ) then
-            sdata%values_L(lev)%ncb_slv_t = 0
-            cuda_error = cudaFree(sdata%values_L(lev)%gpu_solve_t_data)
-            if(cuda_error.ne.0) return
-         end if
-         if ( sdata%values_L(lev)%nexp > 0 ) then
-            sdata%values_L(lev)%nexp = 0
-            deallocate( sdata%values_L(lev)%export )
-         end if
-         if ( sdata%values_L(lev)%nimp > 0 ) then
-            sdata%values_L(lev)%nimp = 0
-            deallocate( sdata%values_L(lev)%import )
-         end if
-      end do
-      deallocate( sdata%values_L, stat=st )
-   endif
-   deallocate( sdata%lvlptr, stat=st )
-   deallocate( sdata%lvllist, stat=st )
-   deallocate( sdata%off_L, stat=st )
-   if(allocated(sdata%bwd_slv_lookup)) then
-      do lev = 1, sdata%num_levels
-         call free_lookup_gpu(sdata%bwd_slv_lookup(lev), cuda_error)
-         if(cuda_error.ne.0) return
-         call free_lookup_gpu(sdata%fwd_slv_lookup(lev), cuda_error)
-         if(cuda_error.ne.0) return
-      end do
-      deallocate(sdata%bwd_slv_lookup, stat=st)
-   endif
-   if(sdata%presolve.ne.0) then
-      deallocate( sdata%off_lx, stat=st )
-      deallocate( sdata%off_lc, stat=st )
-      deallocate( sdata%off_ln, stat=st )
-      cuda_error = cudaFree(sdata%gpu_rlist_direct)
-      sdata%gpu_rlist_direct = C_NULL_PTR
-      if(cuda_error.ne.0) return
-      cuda_error = cudaFree(sdata%gpu_sync)
-      sdata%gpu_sync = C_NULL_PTR
-      if(cuda_error.ne.0) return
-      cuda_error = cudaFree(sdata%gpu_row_ind)
-      sdata%gpu_row_ind = C_NULL_PTR
-      if(cuda_error.ne.0) return
-      cuda_error = cudaFree(sdata%gpu_col_ind)
-      sdata%gpu_col_ind = C_NULL_PTR
-      if(cuda_error.ne.0) return
-      cuda_error = cudaFree(sdata%gpu_diag)
-      sdata%gpu_diag = C_NULL_PTR
-      if(cuda_error.ne.0) return
-   end if
-   
-end subroutine free_gpu_type
 
 !*******************************
 

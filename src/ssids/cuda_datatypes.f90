@@ -5,7 +5,8 @@
 ! (Done as separate module from spral_ssids_cuda_interfaces so we can USE it
 !  in interface blocks)
 module spral_ssids_cuda_datatypes
-   use iso_c_binding
+   use spral_cuda, only : cudaFree
+   use, intrinsic :: iso_c_binding
    implicit none
 
    private
@@ -19,6 +20,9 @@ module spral_ssids_cuda_datatypes
       multiswap_type, multisyrk_type, &
       node_data, node_solve_data, multireorder_data, multielm_data, &
       assemble_lookup2_type, gpu_type, eltree_level
+   ! Procedures
+   public :: free_gpu_type,    &
+             free_lookup_gpu       ! Cleanup data structures
    ! Constants
    public :: SLV_ASSEMBLE_NB, SLV_GEMV_NX, SLV_GEMV_NY, SLV_TRSM_TR_NBX, &
       SLV_TRSM_TR_NBY, SLV_REDUCING_D_SOLVE_THREADS_PER_BLOCK, &
@@ -361,5 +365,114 @@ module spral_ssids_cuda_datatypes
    integer, parameter :: SLV_SCATTER_NB = 256 ! MUST be same as C #define
 
    integer, parameter :: GPU_ALIGN = 256 ! Align on this byte boundary
+
+   interface free_lookup_gpu
+      module procedure free_lookup_gpu_fwd, free_lookup_gpu_bwd
+   end interface free_lookup_gpu
+
+contains
+
+subroutine free_gpu_type(sdata, cuda_error)
+   type(gpu_type), intent(inout) :: sdata
+   integer, intent(out) :: cuda_error
+
+   integer :: lev
+   integer :: st
+
+   if(allocated(sdata%values_L)) then
+      do lev = 1, sdata%num_levels
+         cuda_error = cudaFree(sdata%values_L(lev)%ptr_levL)
+         if(cuda_error.ne.0) return
+         if ( sdata%values_L(lev)%ncp_pre > 0 ) then
+            sdata%values_L(lev)%ncp_pre = 0
+            cuda_error = cudaFree(sdata%values_L(lev)%gpu_cpdata_pre)
+            if(cuda_error.ne.0) return
+            cuda_error = cudaFree(sdata%values_L(lev)%gpu_blkdata_pre)
+            if(cuda_error.ne.0) return
+         end if
+         if ( sdata%values_L(lev)%ncp_post > 0 ) then
+            sdata%values_L(lev)%ncp_post = 0
+            cuda_error = cudaFree(sdata%values_L(lev)%gpu_cpdata_post)
+            if(cuda_error.ne.0) return
+            cuda_error = cudaFree(sdata%values_L(lev)%gpu_blkdata_post)
+            if(cuda_error.ne.0) return
+         end if
+         if ( sdata%values_L(lev)%ncb_slv_n > 0 ) then
+            sdata%values_L(lev)%ncb_slv_n = 0
+            cuda_error = cudaFree(sdata%values_L(lev)%gpu_solve_n_data)
+            if(cuda_error.ne.0) return
+         end if
+         if ( sdata%values_L(lev)%ncb_slv_t > 0 ) then
+            sdata%values_L(lev)%ncb_slv_t = 0
+            cuda_error = cudaFree(sdata%values_L(lev)%gpu_solve_t_data)
+            if(cuda_error.ne.0) return
+         end if
+         if ( sdata%values_L(lev)%nexp > 0 ) then
+            sdata%values_L(lev)%nexp = 0
+            deallocate( sdata%values_L(lev)%export )
+         end if
+         if ( sdata%values_L(lev)%nimp > 0 ) then
+            sdata%values_L(lev)%nimp = 0
+            deallocate( sdata%values_L(lev)%import )
+         end if
+      end do
+      deallocate( sdata%values_L, stat=st )
+   endif
+   deallocate( sdata%lvlptr, stat=st )
+   deallocate( sdata%lvllist, stat=st )
+   deallocate( sdata%off_L, stat=st )
+   if(allocated(sdata%bwd_slv_lookup)) then
+      do lev = 1, sdata%num_levels
+         call free_lookup_gpu(sdata%bwd_slv_lookup(lev), cuda_error)
+         if(cuda_error.ne.0) return
+         call free_lookup_gpu(sdata%fwd_slv_lookup(lev), cuda_error)
+         if(cuda_error.ne.0) return
+      end do
+      deallocate(sdata%bwd_slv_lookup, stat=st)
+   endif
+   if(sdata%presolve.ne.0) then
+      deallocate( sdata%off_lx, stat=st )
+      deallocate( sdata%off_lc, stat=st )
+      deallocate( sdata%off_ln, stat=st )
+      cuda_error = cudaFree(sdata%gpu_rlist_direct)
+      sdata%gpu_rlist_direct = C_NULL_PTR
+      if(cuda_error.ne.0) return
+      cuda_error = cudaFree(sdata%gpu_sync)
+      sdata%gpu_sync = C_NULL_PTR
+      if(cuda_error.ne.0) return
+      cuda_error = cudaFree(sdata%gpu_row_ind)
+      sdata%gpu_row_ind = C_NULL_PTR
+      if(cuda_error.ne.0) return
+      cuda_error = cudaFree(sdata%gpu_col_ind)
+      sdata%gpu_col_ind = C_NULL_PTR
+      if(cuda_error.ne.0) return
+      cuda_error = cudaFree(sdata%gpu_diag)
+      sdata%gpu_diag = C_NULL_PTR
+      if(cuda_error.ne.0) return
+   end if
+   
+end subroutine free_gpu_type
+
+subroutine free_lookup_gpu_bwd(gpul, cuda_error)
+   type(lookups_gpu_bwd), intent(inout) :: gpul
+   integer, intent(out) :: cuda_error
+
+   ! Note: only gpul%gemv is a cudaMalloc'd address, all others are just
+   ! pointer addition from that location
+   if(C_ASSOCIATED(gpul%gemv)) then
+      cuda_error = cudaFree(gpul%gemv); gpul%gemv = C_NULL_PTR
+      if(cuda_error.ne.0) return
+   endif
+end subroutine free_lookup_gpu_bwd
+
+subroutine free_lookup_gpu_fwd(gpu, cuda_error)
+   type(lookups_gpu_fwd), intent(inout) :: gpu
+   integer, intent(out) :: cuda_error
+
+   ! Note: only gpu%assemble is a cudaMalloc'd location, others are all
+   ! just pointer addition from that address
+   cuda_error = cudaFree(gpu%assemble)
+   if(cuda_error.ne.0) return
+end subroutine free_lookup_gpu_fwd
 
 end module spral_ssids_cuda_datatypes

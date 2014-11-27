@@ -15,12 +15,7 @@ module spral_ssids_solve_gpu
              fwd_solve_gpu,      & ! Forwards solve on GPU (presolve=0)
              fwd_multisolve_gpu, & ! Forwards solve on GPU (presolve=1)
              d_solve_gpu,        & ! D solve on GPU
-             setup_gpu_solve,    & ! Setup data strucutres prior to solve
-             free_lookup_gpu       ! Cleanup data structures
-
-   interface free_lookup_gpu
-      module procedure free_lookup_gpu_fwd, free_lookup_gpu_bwd
-   end interface free_lookup_gpu
+             setup_gpu_solve       ! Setup data strucutres prior to solve
 
 contains
 
@@ -229,18 +224,6 @@ subroutine subtree_d_solve_gpu(num_levels, bwd_slv_lookup, gpu_x, gpu_y, stream)
    end do
 end subroutine subtree_d_solve_gpu
 
-subroutine free_lookup_gpu_bwd(gpul, cuda_error)
-   type(lookups_gpu_bwd), intent(inout) :: gpul
-   integer, intent(out) :: cuda_error
-
-   ! Note: only gpul%gemv is a cudaMalloc'd address, all others are just
-   ! pointer addition from that location
-   if(C_ASSOCIATED(gpul%gemv)) then
-      cuda_error = cudaFree(gpul%gemv); gpul%gemv = C_NULL_PTR
-      if(cuda_error.ne.0) return
-   endif
-end subroutine free_lookup_gpu_bwd
-
 subroutine fwd_solve_gpu(posdef, child_ptr, child_list, n, invp, nnodes, nodes,&
       rptr, nstream, stream_handle, stream_data, top_data, x, st, cuda_error)
    logical, intent(in) :: posdef
@@ -430,16 +413,6 @@ subroutine subtree_fwd_solve_gpu_lvl(posdef, num_levels, gpu_x, fwd_slv_lookup,&
    cuda_error = cudaFree(gpu_sync)
    if(cuda_error.ne.0) return
 end subroutine subtree_fwd_solve_gpu_lvl
-
-subroutine free_lookup_gpu_fwd(gpu, cuda_error)
-   type(lookups_gpu_fwd), intent(inout) :: gpu
-   integer, intent(out) :: cuda_error
-
-   ! Note: only gpu%assemble is a cudaMalloc'd location, others are all
-   ! just pointer addition from that address
-   cuda_error = cudaFree(gpu%assemble)
-   if(cuda_error.ne.0) return
-end subroutine free_lookup_gpu_fwd
 
 subroutine create_gpu_lookup_fwd(nlvl, lvllist, nodes, child_ptr, child_list, &
       cvmap, sptr, rptr, rptr_with_delays, gpu_rlist_with_delays, gpu_clen,   &
