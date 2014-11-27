@@ -3,7 +3,7 @@ ACLOCAL_AMFLAGS = -I m4
 
 # FIXME: Make autoconfable
 # NB: No libbub.a file to link against generated as BUB is a header library
-BUBDIR = /home/jhogg/src/ASEArch/bub
+BUBDIR = /home/jhogg/src/ASEArch/bub_cpu
 AM_CXXFLAGS = -I$(BUBDIR)
 
 SUFFIXES = .cu
@@ -125,6 +125,7 @@ libspral_a_SOURCES += \
 	src/ssids/datatypes.f90 \
 	src/ssids/dense_factor_gpu.f90 \
 	src/ssids/dtrsv.h \
+	src/ssids/factor.f90 \
 	src/ssids/factor_cpu.cxx \
 	src/ssids/factor_cpu_iface.f90 \
 	src/ssids/factor_cpu_iface.h \
@@ -183,6 +184,7 @@ src/ssids/ssids.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
 									src/ssids/alloc.$(OBJEXT) \
 									src/ssids/analyse.$(OBJEXT) \
 									src/ssids/datatypes.$(OBJEXT) \
+									src/ssids/factor.$(OBJEXT) \
 									src/ssids/factor_gpu.$(OBJEXT) \
 									src/ssids/solve_cpu.$(OBJEXT) \
 									src/ssids/solve_gpu.$(OBJEXT)

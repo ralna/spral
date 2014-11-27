@@ -3,13 +3,12 @@ module spral_ssids_datatypes
    use, intrinsic :: iso_c_binding
    use spral_cuda, only : cudaGetErrorString
    use spral_scaling, only : auction_options, auction_inform
-   use spral_ssids_cuda_datatypes, only : lookups_gpu_bwd, lookups_gpu_fwd
    implicit none
 
    private
-   public :: smalloc_type, stack_mem_type, ssids_akeep, node_type, &
-      eltree_level, gpu_type, ssids_fkeep, stack_type, &
-      thread_stats, real_ptr_type, ssids_options, ssids_inform
+   public :: smalloc_type, stack_mem_type, ssids_akeep, &
+      stack_type, thread_stats, real_ptr_type, &
+      ssids_options, ssids_inform, node_type
    public :: ssids_print_flag
 
    integer, parameter, public :: wp = C_DOUBLE
@@ -99,6 +98,29 @@ module spral_ssids_datatypes
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+   ! Data type for storing each node of the factors
+   type node_type
+      integer :: nelim
+      integer :: ndelay
+      integer(long) :: rdptr ! entry into (rebuilt) rlist_direct
+      integer :: ncpdb ! #contrib. to parent's diag. block
+      type(C_PTR) :: gpu_lcol
+      real(wp), dimension(:), pointer :: lcol ! values in factors
+         ! (will also include unneeded data for any columns delayed from this
+         ! node)
+      integer, dimension(:), pointer :: perm ! permutation of columns at this
+         ! node: perm(i) is column index in expected global elimination order
+         ! that is actually eliminated at local elimination index i
+         ! Assuming no delays or permutation this will be
+         ! sptr(node):sptr(node+1)-1
+      ! Following components are used to index directly into contiguous arrays
+      ! lcol and perm without taking performance hit for passing pointers
+      type(smalloc_type), pointer :: rsmptr, ismptr
+      integer(long) :: rsmsa, ismsa
+   end type node_type
+
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
    !
    ! Data type for information generated in analyse phase
    !
@@ -175,129 +197,6 @@ module spral_ssids_datatypes
       type(C_PTR) :: gpu_rlist = C_NULL_PTR
       type(C_PTR) :: gpu_rlist_direct = C_NULL_PTR
    end type ssids_akeep
-
-   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-   ! Data type for storing each node of the factors
-   type node_type
-      integer :: nelim
-      integer :: ndelay
-      integer(long) :: rdptr ! entry into (rebuilt) rlist_direct
-      integer :: ncpdb ! #contrib. to parent's diag. block
-      type(C_PTR) :: gpu_lcol
-      real(wp), dimension(:), pointer :: lcol ! values in factors
-         ! (will also include unneeded data for any columns delayed from this
-         ! node)
-      integer, dimension(:), pointer :: perm ! permutation of columns at this
-         ! node: perm(i) is column index in expected global elimination order
-         ! that is actually eliminated at local elimination index i
-         ! Assuming no delays or permutation this will be
-         ! sptr(node):sptr(node+1)-1
-      ! Following components are used to index directly into contiguous arrays
-      ! lcol and perm without taking performance hit for passing pointers
-      type(smalloc_type), pointer :: rsmptr, ismptr
-      integer(long) :: rsmsa, ismsa
-   end type node_type
-
-   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  
-   type eltree_level
-      type(C_PTR) :: ptr_levL ! device pointer to L-factor level data
-      integer :: lx_size
-      integer :: lc_size
-      integer :: ln_size
-      integer :: lcc_size
-      integer :: total_nch
-      integer :: off_col_ind
-      integer :: off_row_ind
-      integer :: ncp_pre = 0
-      integer :: ncb_asm_pre
-      integer :: ncp_post = 0
-      integer :: ncb_asm_post
-      integer :: ncb_slv_n = 0
-      integer :: ncb_slv_t = 0
-      integer :: nimp = 0
-      integer :: nexp = 0
-      integer, allocatable :: import(:)
-      integer, allocatable :: export(:)
-      type(C_PTR) :: gpu_cpdata_pre
-      type(C_PTR) :: gpu_blkdata_pre
-      type(C_PTR) :: gpu_cpdata_post
-      type(C_PTR) :: gpu_blkdata_post
-      type(C_PTR) :: gpu_solve_n_data
-      type(C_PTR) :: gpu_solve_t_data
-   end type eltree_level
-
-   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-   type gpu_type
-      integer :: n = 0
-      integer :: nnodes = 0
-      integer :: num_levels = 0 ! number of levels
-      integer :: presolve = 0
-      integer, dimension(:), allocatable :: lvlptr ! pointers into lvllist
-      integer, dimension(:), allocatable :: lvllist ! list of nodes at level
-      integer(long), dimension(:), allocatable :: off_L ! offsets for each node
-      ! the following three are row offsets for independence from nrhs
-      integer, dimension(:), allocatable :: off_lx ! node offsets for fwd solve
-      integer, dimension(:), allocatable :: off_lc ! offsets for node contrib.
-      integer, dimension(:), allocatable :: off_ln ! node offsets for bwd solve
-      integer(long) :: rd_size = 0
-      integer :: max_lx_size = 0
-      integer :: max_lc_size = 0
-      type(eltree_level), dimension(:), allocatable :: values_L(:) ! data
-      type(C_PTR) :: gpu_rlist_direct = C_NULL_PTR
-      type(C_PTR) :: gpu_col_ind = C_NULL_PTR
-      type(C_PTR) :: gpu_row_ind = C_NULL_PTR
-      type(C_PTR) :: gpu_diag = C_NULL_PTR
-      type(C_PTR) :: gpu_sync = C_NULL_PTR
-
-      ! Solve data (non-presolve)
-      type(lookups_gpu_bwd), dimension(:), allocatable :: bwd_slv_lookup
-      integer :: bwd_slv_lwork
-      integer :: bwd_slv_nsync
-      type(lookups_gpu_fwd), dimension(:), allocatable :: fwd_slv_lookup
-      integer :: fwd_slv_lwork
-      integer :: fwd_slv_nlocal
-      integer :: fwd_slv_nsync
-      integer :: fwd_slv_nasync
-   end type gpu_type
-
-   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-   !
-   ! Data type for data generated in factorise phase
-   !
-   type ssids_fkeep
-      integer :: flag ! copy of error flag.
-      real(wp), dimension(:), allocatable :: scaling ! Stores scaling for
-         ! each entry (in original matrix order)
-      type(node_type), dimension(:), allocatable :: nodes ! Stores pointers
-         ! to information about nodes
-      type(smalloc_type), pointer :: alloc=>null() ! Linked list of memory pages
-         ! pointed to by nodes variable
-      logical :: pos_def ! set to true if user indicates matrix pos. definite
-
-      ! Info components to copy on solve
-      integer :: matrix_rank
-      integer :: maxfront
-      integer :: num_delay
-      integer(long) :: num_factor
-      integer(long) :: num_flops
-      integer :: num_neg
-      integer :: num_two
-
-      ! GPU info
-      type(C_PTR), dimension(:), allocatable :: stream_handle
-      type(gpu_type), dimension(:), allocatable :: stream_data
-      type(gpu_type) :: top_data
-      type(C_PTR) :: gpu_rlist_with_delays = C_NULL_PTR
-      type(C_PTR) :: gpu_rlist_direct_with_delays = C_NULL_PTR
-      type(C_PTR) :: gpu_clists = C_NULL_PTR
-      type(C_PTR) :: gpu_clists_direct = C_NULL_PTR
-      type(C_PTR) :: gpu_clen = C_NULL_PTR
-      logical :: host_factors = .false.
-   end type ssids_fkeep
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -425,7 +324,7 @@ module spral_ssids_datatypes
    !
    ! Data type for information returned by code
    !
-   type ssids_inform
+   type ssids_inform_base
       integer :: flag ! Takes one of the enumerated flag values:
          ! SSIDS_SUCCESS
          ! SSIDS_ERROR_XXX
@@ -443,9 +342,16 @@ module spral_ssids_datatypes
       integer :: num_sup = 0 ! Number of supernodes
       integer :: num_two = 0 ! Number of 2x2 pivots used by factorization
       integer :: stat = 0 ! stat parameter
+      type(auction_inform) :: auction
+   contains
+      procedure, pass(this) :: flagToCharacter
+   end type ssids_inform_base
+
+   type, extends(ssids_inform_base) :: ssids_inform
       integer :: cuda_error = 0 ! cuda error value
       integer :: cublas_error = 0 ! cublas error value
-      type(auction_inform) :: auction
+   contains
+      procedure, pass(this) :: flagToCharacter => flagToCharacter_gpu
    end type ssids_inform
 
    integer, parameter, public :: BLOCK_SIZE = 8
@@ -457,130 +363,134 @@ contains
 
 !*************************************************
 !
+! Returns a string representation
+! Member function inform%flagToCharacter
+!
+function flagToCharacter(this) result(msg)
+   class(ssids_inform_base), intent(in) :: this
+   character(len=200) :: msg ! return value
+
+   select case(this%flag)
+   !
+   ! Success
+   !
+   case(SSIDS_SUCCESS)
+      msg = 'Success'
+   !
+   ! Errors
+   !
+   case(SSIDS_ERROR_CALL_SEQUENCE)
+      msg = 'Error in sequence of calls.'
+   case(SSIDS_ERROR_A_N_OOR)
+      msg = 'n or ne is out of range (or has changed)'
+   case(SSIDS_ERROR_A_PTR)
+      msg = 'Error in ptr'
+   case(SSIDS_ERROR_A_ALL_OOR)
+      msg = 'All entries in a column out-of-range (ssids_analyse) &
+            &or all entries out-of-range (ssids_analyse_coord)'
+   case(SSIDS_ERROR_SINGULAR)
+      msg = 'Matrix found to be singular'
+   case(SSIDS_ERROR_NOT_POS_DEF)
+      msg = 'Matrix is not positive-definite'
+   case(SSIDS_ERROR_PTR_ROW)
+      msg = 'ptr and row should be present'
+   case(SSIDS_ERROR_ORDER)
+      msg = 'Either control%ordering out of range or error in user-supplied  &
+            &elimination order'
+   case(SSIDS_ERROR_X_SIZE)
+      msg = 'Error in size of x or nrhs'
+   case(SSIDS_ERROR_JOB_OOR)
+      msg = 'job out of range'
+   case(SSIDS_ERROR_NOT_LLT)
+      msg = 'Not a LL^T factorization of a positive-definite matrix'
+   case(SSIDS_ERROR_NOT_LDLT)
+      msg = 'Not a LDL^T factorization of an indefinite matrix'
+   case(SSIDS_ERROR_ALLOCATION)
+      write (msg,'(a,i6)') 'Allocation error. stat parameter = ', this%stat
+   case(SSIDS_ERROR_VAL)
+      msg = 'Optional argument val not present when expected'
+   case(SSIDS_ERROR_NO_SAVED_SCALING)
+      msg = 'Requested use of scaling from matching-based &
+            &ordering but matching-based ordering not used'
+   case(SSIDS_ERROR_PRESOLVE_INCOMPAT)
+      msg = 'Invalid combination of options%presolve, options%use_gpu_solve &
+         &and requested operation - see documentation for legal combinations'
+
+   !
+   ! Warnings
+   !
+   case(SSIDS_WARNING_IDX_OOR)
+      msg = 'out-of-range indices detected'
+   case(SSIDS_WARNING_DUP_IDX)
+      msg = 'duplicate entries detected'
+   case(SSIDS_WARNING_DUP_AND_OOR)
+      msg = 'out-of-range indices detected and duplicate entries detected'
+   case(SSIDS_WARNING_MISSING_DIAGONAL)
+      msg = 'one or more diagonal entries is missing'
+   case(SSIDS_WARNING_MISS_DIAG_OORDUP)
+      msg = 'one or more diagonal entries is missing and out-of-range and/or &
+            &duplicate entries detected'
+   case(SSIDS_WARNING_ANAL_SINGULAR)
+      msg = 'Matrix found to be structually singular'
+   case(SSIDS_WARNING_FACT_SINGULAR)
+      msg = 'Matrix found to be singular'
+   case(SSIDS_WARNING_MATCH_ORD_NO_SCALE)
+      msg = 'Matching-based ordering used but associated scaling ignored'
+   case default
+      msg = 'SSIDS Internal Error'
+   end select
+
+end function flagToCharacter
+
+!*************************************************
+!
+! Returns a string representation (gpu extension)
+! Member function inform%flagToCharacter
+!
+function flagToCharacter_gpu(this) result(msg)
+   class(ssids_inform), intent(in) :: this
+   character(len=200) :: msg ! return value
+
+   select case(this%flag)
+   !
+   ! Errors
+   !
+   case(SSIDS_ERROR_CUDA_UNKNOWN)
+      write(msg,'(2a)') ' Unhandled CUDA error: ', &
+         cudaGetErrorString(this%cuda_error)
+   case(SSIDS_ERROR_CUBLAS_UNKNOWN)
+      msg = 'Unhandled CUBLAS error:'
+      ! FIXME?
+   !
+   ! Fall back to base case
+   !
+   case default
+      msg = this%ssids_inform_base%flagToCharacter()
+   end select
+
+end function flagToCharacter_gpu
+
+!*************************************************
+!
 ! routine to print errors and warnings
 !
-subroutine ssids_print_flag(context,nout,iflag,st,cuda_error)
-   integer, intent(in) :: iflag, nout
-   integer, intent(in), optional :: st
-   integer, intent(in), optional :: cuda_error
+subroutine ssids_print_flag(inform,nout,context)
+   type(ssids_inform), intent(in) :: inform
+   integer, intent(in) :: nout
    character (len=*), optional, intent(in) :: context
 
+   character(len=200) :: msg
+
    if (nout < 0) return
-   if (iflag < 0) then
+   if (inform%flag < 0) then
       write (nout,'(/3a,i3)') ' Error return from ',trim(context),&
-         '. Error flag = ', iflag
+         '. Error flag = ', inform%flag
    else
       write (nout,'(/3a,i3)') ' Warning from ',trim(context),&
-         '. Warning flag = ', iflag
+         '. Warning flag = ', inform%flag
    end if
-
-   ! Errors
-   select case(iflag)
-   case(SSIDS_ERROR_CALL_SEQUENCE)
-      write (nout,'(a)') ' Error in sequence of calls.'
-
-   case(SSIDS_ERROR_A_N_OOR)
-      write (nout,'(a)') ' n or ne is out of range (or has changed)'
-
-   case(SSIDS_ERROR_A_PTR)
-      write (nout,'(a)') ' Error in ptr'
-
-   case(SSIDS_ERROR_A_ALL_OOR)
-      write (nout,'(a)') ' All entries in a column out-of-range (ssids_analyse)'
-      write (nout,'(a)') ' or all entries out-of-range (ssids_analyse_coord)'
-
-   case(SSIDS_ERROR_SINGULAR)
-      write (nout,'(a)') ' Matrix found to be singular'
-
-   case(SSIDS_ERROR_NOT_POS_DEF)
-       write (nout,'(a)') ' Matrix is not positive-definite'
-
-   case(SSIDS_ERROR_PTR_ROW)
-      write (nout,'(a)') ' ptr and row should be present'
-
-   case(SSIDS_ERROR_ORDER)
-      write (nout,'(a/a)') &
-         ' Either control%ordering out of range or error in user-supplied  &
-         &elimination order'
-
-   case(SSIDS_ERROR_X_SIZE)
-      write (nout,'(a)') ' Error in size of x or nrhs'
-
-   case(SSIDS_ERROR_JOB_OOR)
-      write (nout,'(a,i10)') ' job out of range.'
-
-   case(SSIDS_ERROR_NOT_LLT)
-      write (nout,'(a)')&
-         ' Not a LL^T factorization of a positive-definite matrix'
-
-   case(SSIDS_ERROR_NOT_LDLT)
-      write (nout,'(a)')&
-         ' Not a LDL^T factorization of an indefinite matrix'
-
-   case(SSIDS_ERROR_ALLOCATION)
-      if (present(st)) then
-         write (nout,'(a,i6)') ' Allocation error. stat parameter = ', st
-      else
-         write (nout,'(a)') ' Allocation error'
-      end if
-
-   case(SSIDS_ERROR_VAL)
-      write (nout,'(a)') &
-         ' Optional argument val not present when expected'
-
-   case(SSIDS_ERROR_NO_SAVED_SCALING)
-      write (nout,'(a)') &
-         ' Requested use of scaling from matching-based &
-         &ordering but matching-based ordering not used.'
-
-   case(SSIDS_ERROR_PRESOLVE_INCOMPAT)
-      write (nout,'(a)') &
-         ' Invalid combination of options%presolve, options%use_gpu_solve and &
-         &requested operation - see documentation for legal combinations.'
-
-   case(SSIDS_ERROR_CUDA_UNKNOWN)
-      if(present(cuda_error)) then
-         write (nout,'(2a)') ' Unhandled CUDA error: ', &
-            cudaGetErrorString(cuda_error)
-      else
-         write (nout,'(a)') ' Unhandled CUDA error. '
-      endif
-
-   case(SSIDS_ERROR_CUBLAS_UNKNOWN)
-      write (nout,'(a)') ' Unhandled CUBLAS error: '
-
-   ! Warnings
-   case(SSIDS_WARNING_IDX_OOR)
-      write (nout,'(a)') ' out-of-range indices detected'
-
-   case(SSIDS_WARNING_DUP_IDX)
-      write (nout,'(a)') ' duplicate entries detected'
-
-   case(SSIDS_WARNING_DUP_AND_OOR)
-      write (nout,'(a)') &
-         ' out-of-range indices detected and duplicate entries detected'
-
-   case(SSIDS_WARNING_MISSING_DIAGONAL)
-      write (nout,'(a)') ' one or more diagonal entries is missing'
-
-   case(SSIDS_WARNING_MISS_DIAG_OORDUP)
-      write (nout,'(a)') ' one or more diagonal entries is missing and'
-      write (nout,'(a)') ' out-of-range and/or duplicate entries detected'
-
-   case(SSIDS_WARNING_ANAL_SINGULAR)
-      write (nout,'(a)') ' Matrix found to be structually singular'
-
-   case(SSIDS_WARNING_FACT_SINGULAR)
-      write (nout,'(a)') ' Matrix found to be singular'
-
-   case(SSIDS_WARNING_MATCH_ORD_NO_SCALE)
-      write (nout,'(a)') &
-         ' Matching-based ordering used but associated scaling ignored'
-
-   case default
-      write (nout,'(a)') ' SSIDS Internal Error '
-
-   end select
+   msg = inform%flagToCharacter()
+   write(nout, '(a)') msg
 
 end subroutine ssids_print_flag
 

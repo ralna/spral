@@ -16,10 +16,9 @@ module spral_ssids_cuda_datatypes
       reduce_notrans_lookup, assemble_lookup_type, lookups_gpu_fwd, &
       lookups_gpu_bwd, multiblock_fact_type, multinode_fact_type, &
       cuda_stats_type, cstat_data_type, multisymm_type, &
-      multiswap_type, &
-      multisyrk_type, &
+      multiswap_type, multisyrk_type, &
       node_data, node_solve_data, multireorder_data, multielm_data, &
-      assemble_lookup2_type
+      assemble_lookup2_type, gpu_type, eltree_level
    ! Constants
    public :: SLV_ASSEMBLE_NB, SLV_GEMV_NX, SLV_GEMV_NY, SLV_TRSM_TR_NBX, &
       SLV_TRSM_TR_NBY, SLV_REDUCING_D_SOLVE_THREADS_PER_BLOCK, &
@@ -188,6 +187,66 @@ module spral_ssids_cuda_datatypes
       type(C_PTR) :: trsv_times
       type(C_PTR) :: scatter_times
    end type
+
+   type eltree_level
+      type(C_PTR) :: ptr_levL ! device pointer to L-factor level data
+      integer :: lx_size
+      integer :: lc_size
+      integer :: ln_size
+      integer :: lcc_size
+      integer :: total_nch
+      integer :: off_col_ind
+      integer :: off_row_ind
+      integer :: ncp_pre = 0
+      integer :: ncb_asm_pre
+      integer :: ncp_post = 0
+      integer :: ncb_asm_post
+      integer :: ncb_slv_n = 0
+      integer :: ncb_slv_t = 0
+      integer :: nimp = 0
+      integer :: nexp = 0
+      integer, allocatable :: import(:)
+      integer, allocatable :: export(:)
+      type(C_PTR) :: gpu_cpdata_pre
+      type(C_PTR) :: gpu_blkdata_pre
+      type(C_PTR) :: gpu_cpdata_post
+      type(C_PTR) :: gpu_blkdata_post
+      type(C_PTR) :: gpu_solve_n_data
+      type(C_PTR) :: gpu_solve_t_data
+   end type eltree_level
+
+   type gpu_type
+      integer :: n = 0
+      integer :: nnodes = 0
+      integer :: num_levels = 0 ! number of levels
+      integer :: presolve = 0
+      integer, dimension(:), allocatable :: lvlptr ! pointers into lvllist
+      integer, dimension(:), allocatable :: lvllist ! list of nodes at level
+      integer(C_LONG), dimension(:), allocatable :: off_L ! offsets for each node
+      ! the following three are row offsets for independence from nrhs
+      integer, dimension(:), allocatable :: off_lx ! node offsets for fwd solve
+      integer, dimension(:), allocatable :: off_lc ! offsets for node contrib.
+      integer, dimension(:), allocatable :: off_ln ! node offsets for bwd solve
+      integer(C_LONG) :: rd_size = 0
+      integer :: max_lx_size = 0
+      integer :: max_lc_size = 0
+      type(eltree_level), dimension(:), allocatable :: values_L(:) ! data
+      type(C_PTR) :: gpu_rlist_direct = C_NULL_PTR
+      type(C_PTR) :: gpu_col_ind = C_NULL_PTR
+      type(C_PTR) :: gpu_row_ind = C_NULL_PTR
+      type(C_PTR) :: gpu_diag = C_NULL_PTR
+      type(C_PTR) :: gpu_sync = C_NULL_PTR
+
+      ! Solve data (non-presolve)
+      type(lookups_gpu_bwd), dimension(:), allocatable :: bwd_slv_lookup
+      integer :: bwd_slv_lwork
+      integer :: bwd_slv_nsync
+      type(lookups_gpu_fwd), dimension(:), allocatable :: fwd_slv_lookup
+      integer :: fwd_slv_lwork
+      integer :: fwd_slv_nlocal
+      integer :: fwd_slv_nsync
+      integer :: fwd_slv_nasync
+   end type gpu_type
 
    type, bind(C) :: multiblock_fact_type
       integer(C_INT) :: nrows

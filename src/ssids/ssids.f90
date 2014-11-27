@@ -13,6 +13,7 @@ module spral_ssids
                           c_ptr_plus, cudaStreamCreate, cudaStreamDestroy, &
                           cudaMemcpy2d, cudaMemcpyHostToDevice, &
                           cudaMemcpyDeviceToHost
+   use spral_ssids_cuda_datatypes, only : gpu_type
    use spral_ssids_cuda_interfaces
    use spral_match_order, only : match_order_metis
    use spral_matrix_util, only : SPRAL_MATRIX_REAL_SYM_INDEF, &
@@ -25,6 +26,7 @@ module spral_ssids
    use spral_ssids_analyse, only : analyse_phase, check_order, expand_matrix, &
                                    expand_pattern
    use spral_ssids_datatypes
+   use spral_ssids_factor, only : ssids_fkeep
    use spral_ssids_factor_gpu, only : parfactor
    use spral_ssids_solve_cpu, only : solve_calc_chunk, inner_solve, &
                                      subtree_bwd_solve
@@ -153,8 +155,7 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
    if(inform%cuda_error.ne.0) then
       inform%flag = SSIDS_ERROR_CUDA_UNKNOWN
       akeep%flag = inform%flag
-      call ssids_print_flag(context,nout,inform%flag, &
-         cuda_error=inform%cuda_error)
+      call ssids_print_flag(inform,nout,context)
       return
    endif
    inform%flag = 0
@@ -193,7 +194,7 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
    ! Checking of matrix data
    if (n < 0) then
       inform%flag = SSIDS_ERROR_A_N_OOR
-      call ssids_print_flag(context,nout,inform%flag)
+      call ssids_print_flag(inform,nout,context)
       akeep%flag = inform%flag
       return
    end if
@@ -213,7 +214,7 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
    ! check options%ordering has a valid value
    if (options%ordering < 0 .or. options%ordering > 2) then
       inform%flag = SSIDS_ERROR_ORDER
-      call ssids_print_flag(context,nout,inform%flag)
+      call ssids_print_flag(inform,nout,context)
       akeep%flag = inform%flag
       return
    end if
@@ -222,7 +223,7 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
    if (options%ordering.eq.2) then
      if (.not.present(val)) then
         inform%flag = SSIDS_ERROR_VAL
-        call ssids_print_flag(context,nout,inform%flag)
+        call ssids_print_flag(inform,nout,context)
         akeep%flag = inform%flag
         return
      end if
@@ -252,7 +253,7 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
          if (mu_flag .eq. -5) inform%flag  = SSIDS_ERROR_A_PTR
          if (mu_flag .eq. -6) inform%flag  = SSIDS_ERROR_A_PTR
          if (mu_flag .eq. -10) inform%flag = SSIDS_ERROR_A_ALL_OOR
-         call ssids_print_flag(context,nout,inform%flag)
+         call ssids_print_flag(inform,nout,context)
          akeep%flag = inform%flag
          return
       end if
@@ -261,7 +262,7 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
       ! Note: same numbering of positive flags as in matrix_util
       if (mu_flag > 0) then
          inform%flag = mu_flag
-         call ssids_print_flag(context,nout1,inform%flag)
+         call ssids_print_flag(inform,nout1,context)
       end if
       nz = akeep%ptr(n+1) - 1
    else
@@ -287,7 +288,7 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
          ! we have an error since user should have supplied the order
          inform%flag = SSIDS_ERROR_ORDER
          akeep%flag = inform%flag
-         call ssids_print_flag(context,nout,inform%flag)
+         call ssids_print_flag(inform,nout,context)
          return
       end if
       call check_order(n,order,akeep%invp,akeep,options,inform)
@@ -332,15 +333,15 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
       case(1)
          ! singularity warning required
          inform%flag = SSIDS_WARNING_ANAL_SINGULAR
-         call ssids_print_flag(context,nout1,inform%flag)
+         call ssids_print_flag(inform,nout1,context)
       case(-1)
          inform%flag = SSIDS_ERROR_ALLOCATION
-         call ssids_print_flag(context,nout,inform%flag)
+         call ssids_print_flag(inform,nout,context)
          akeep%flag = inform%flag
          return
       case default
          inform%flag = SSIDS_ERROR_UNKNOWN
-         call ssids_print_flag(context,nout,inform%flag)
+         call ssids_print_flag(inform,nout,context)
          akeep%flag = inform%flag
          return
       end select
@@ -364,7 +365,7 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
    inform%stat = st
    if (inform%stat .ne. 0) then
       inform%flag = SSIDS_ERROR_ALLOCATION
-      call ssids_print_flag(context,nout,inform%flag,st=inform%stat)
+      call ssids_print_flag(inform,nout,context)
    end if
    akeep%flag = inform%flag
 
@@ -427,8 +428,7 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
    if(inform%cuda_error.ne.0) then
       inform%flag = SSIDS_ERROR_CUDA_UNKNOWN
       akeep%flag = inform%flag
-      call ssids_print_flag(context,nout,inform%flag, &
-         cuda_error=inform%cuda_error)
+      call ssids_print_flag(inform,nout,context)
       return
    endif
    inform%flag = 0
@@ -472,7 +472,7 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
    if (n < 0 .or. ne < 0) then
       inform%flag = SSIDS_ERROR_A_N_OOR
       akeep%flag = inform%flag
-      call ssids_print_flag(context,nout,inform%flag)
+      call ssids_print_flag(inform,nout,context)
       return
    end if
 
@@ -491,7 +491,7 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
    ! check options%ordering has a valid value
    if (options%ordering < 0 .or. options%ordering > 2) then
       inform%flag = SSIDS_ERROR_ORDER
-      call ssids_print_flag(context,nout,inform%flag)
+      call ssids_print_flag(inform,nout,context)
       akeep%flag = inform%flag
       return
    end if
@@ -500,7 +500,7 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
    if (options%ordering.eq.2) then
      if (.not.present(val)) then
         inform%flag = SSIDS_ERROR_VAL
-        call ssids_print_flag(context,nout,inform%flag)
+        call ssids_print_flag(inform,nout,context)
         akeep%flag = inform%flag
         return
      end if
@@ -526,7 +526,7 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
    if (mu_flag < 0) then
       if (mu_flag .eq. -1)  inform%flag = SSIDS_ERROR_ALLOCATION
       if (mu_flag .eq. -10) inform%flag = SSIDS_ERROR_A_ALL_OOR
-      call ssids_print_flag(context,nout,inform%flag)
+      call ssids_print_flag(inform,nout,context)
       akeep%flag = inform%flag
       return
    end if
@@ -535,7 +535,7 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
    ! Note: same numbering of positive flags as in matrix_util
    if (mu_flag > 0) then
       inform%flag = mu_flag
-      call ssids_print_flag(context,nout1,inform%flag)
+      call ssids_print_flag(inform,nout1,context)
       akeep%flag = inform%flag
    end if
 
@@ -559,7 +559,7 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
          ! we have an error since user should have supplied the order
          inform%flag = SSIDS_ERROR_ORDER
          akeep%flag = inform%flag
-         call ssids_print_flag(context,nout,inform%flag)
+         call ssids_print_flag(inform,nout,context)
          return
       end if
       call check_order(n,order,akeep%invp,akeep,options,inform)
@@ -590,15 +590,15 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
       case(1)
          ! singularity warning required
          inform%flag = SSIDS_WARNING_ANAL_SINGULAR
-         call ssids_print_flag(context,nout1,inform%flag)
+         call ssids_print_flag(inform,nout1,context)
       case(-1)
          inform%flag = SSIDS_ERROR_ALLOCATION
-         call ssids_print_flag(context,nout,inform%flag)
+         call ssids_print_flag(inform,nout,context)
          akeep%flag = inform%flag
          return
       case default
          inform%flag = SSIDS_ERROR_UNKNOWN
-         call ssids_print_flag(context,nout,inform%flag)
+         call ssids_print_flag(inform,nout,context)
          akeep%flag = inform%flag
          return
       end select
@@ -619,7 +619,7 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
    inform%stat = st
    if (inform%stat .ne. 0) then
       inform%flag = SSIDS_ERROR_ALLOCATION
-      call ssids_print_flag(context,nout,inform%flag,st=inform%stat)
+      call ssids_print_flag(inform,nout,context)
    end if
    akeep%flag = inform%flag
     
@@ -740,7 +740,7 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
    if (.not.allocated(akeep%sptr) .or. akeep%flag < 0) then
       ! Analyse cannot have been run
       inform%flag = SSIDS_ERROR_CALL_SEQUENCE
-      call ssids_print_flag(context,nout,inform%flag)
+      call ssids_print_flag(inform,nout,context)
       fkeep%flag = inform%flag
       return
    end if
@@ -793,7 +793,7 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
       if (.not.present(ptr)) inform%flag = SSIDS_ERROR_PTR_ROW
       if (.not.present(row)) inform%flag = SSIDS_ERROR_PTR_ROW
       if (inform%flag < 0) then
-         call ssids_print_flag(context,nout,inform%flag)
+         call ssids_print_flag(inform,nout,context)
          fkeep%flag = inform%flag
          return
       end if
@@ -823,7 +823,7 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
 
    if(allocated(akeep%scaling) .and. options%scaling.ne.3) then
       inform%flag = SSIDS_WARNING_MATCH_ORD_NO_SCALE
-      call ssids_print_flag(context,nout1,inform%flag)
+      call ssids_print_flag(inform,nout1,context)
    end if
 
    select case (options%scaling)
@@ -845,7 +845,7 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
 
       if (sing) then
          inform%flag = SSIDS_ERROR_SINGULAR
-         call ssids_print_flag(context,nout,inform%flag)
+         call ssids_print_flag(inform,nout,context)
          fkeep%flag = inform%flag
          return
       end if
@@ -875,7 +875,7 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
       if (.not.allocated(akeep%scaling)) then
          ! No scaling saved from analyse phase
          inform%flag = SSIDS_ERROR_NO_SAVED_SCALING
-         call ssids_print_flag(context,nout,inform%flag)
+         call ssids_print_flag(inform,nout,context)
          fkeep%flag = inform%flag
          return
       end if
@@ -1084,8 +1084,7 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
    endif
 
    if (inform%flag < 0) then
-      call ssids_print_flag(context, nout, inform%flag, &
-         cuda_error=inform%cuda_error, st=inform%stat)
+      call ssids_print_flag(inform,nout,context)
       fkeep%flag = inform%flag
       return
    end if
@@ -1098,7 +1097,7 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
       else
         inform%flag = SSIDS_ERROR_SINGULAR
       end if
-      call ssids_print_flag(context, nout1, inform%flag)
+      call ssids_print_flag(inform,nout,context)
    end if
 
    if (options%print_level >= 1 .and. options%unit_diagnostics >= 0) then
@@ -1144,14 +1143,13 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
    inform%flag = SSIDS_ERROR_ALLOCATION
    inform%stat = st
    fkeep%flag = inform%flag
-   call ssids_print_flag(context, nout, inform%flag, st=inform%stat)
+   call ssids_print_flag(inform,nout,context)
    return
 
    200 continue
    inform%flag = SSIDS_ERROR_CUDA_UNKNOWN
    inform%cuda_error = cuda_error
-   call ssids_print_flag(context, nout, inform%flag, &
-      cuda_error=inform%cuda_error)
+   call ssids_print_flag(inform,nout,context)
    return
 
 end subroutine ssids_factor_double
@@ -1189,13 +1187,13 @@ subroutine ssids_move_data_inner(akeep, fkeep, options, nout, context, inform)
 
    100 continue ! Fortran allocation error
    inform%flag = SSIDS_ERROR_ALLOCATION
-   call ssids_print_flag(context,nout,inform%flag,st=inform%stat)
+   call ssids_print_flag(inform,nout,context)
    return
 
    200 continue ! CUDA error
    inform%cuda_error = cuda_error
    inform%flag = SSIDS_ERROR_CUDA_UNKNOWN
-   call ssids_print_flag(context,nout,inform%flag,cuda_error=inform%cuda_error)
+   call ssids_print_flag(inform,nout,context)
    return
 end subroutine ssids_move_data_inner
 
@@ -1394,7 +1392,7 @@ subroutine ssids_solve_mult_double(nrhs, x, ldx, akeep, fkeep, options, &
    if (.not. allocated(fkeep%nodes)) then
       ! factorize phase has not been performed
       inform%flag = SSIDS_ERROR_CALL_SEQUENCE
-      call ssids_print_flag(context,nout,inform%flag)
+      call ssids_print_flag(inform,nout,context)
       return
    end if
 
@@ -1402,14 +1400,14 @@ subroutine ssids_solve_mult_double(nrhs, x, ldx, akeep, fkeep, options, &
    ! immediate return if already had an error
    if (akeep%flag .lt. 0 .or. fkeep%flag .lt. 0) then
       inform%flag = SSIDS_ERROR_CALL_SEQUENCE
-      call ssids_print_flag(context,nout,inform%flag)
+      call ssids_print_flag(inform,nout,context)
       return
    end if
 
    n = akeep%n
    if (ldx .lt. n) then
       inform%flag = SSIDS_ERROR_X_SIZE
-      call ssids_print_flag(context,nout,inform%flag)
+      call ssids_print_flag(inform,nout,context)
       if (nout .ge. 0) write (nout,'(a,i8,a,i8)') &
          ' Increase ldx from ', ldx, ' to at least ', n
       return
@@ -1417,7 +1415,7 @@ subroutine ssids_solve_mult_double(nrhs, x, ldx, akeep, fkeep, options, &
 
    if (nrhs .lt. 1) then
       inform%flag = SSIDS_ERROR_X_SIZE
-      call ssids_print_flag(context,nout,inform%flag)
+      call ssids_print_flag(inform,nout,context)
       if (nout .ge. 0) write (nout,'(a,i8,a,i8)') &
          ' nrhs must be at least 1. nrhs = ', nrhs
       return
@@ -1450,7 +1448,7 @@ subroutine ssids_solve_mult_double(nrhs, x, ldx, akeep, fkeep, options, &
       if (fkeep%pos_def .and. job.eq.SSIDS_SOLVE_JOB_DIAG_BWD) &
          inform%flag = SSIDS_ERROR_JOB_OOR
       if (inform%flag.eq.SSIDS_ERROR_JOB_OOR) then
-         call ssids_print_flag(context,nout,inform%flag)
+         call ssids_print_flag(inform,nout,context)
          return
       end if
       local_job = job
@@ -1459,7 +1457,7 @@ subroutine ssids_solve_mult_double(nrhs, x, ldx, akeep, fkeep, options, &
    if(.not.options%use_gpu_solve .and. options%presolve.ne.0) then
       ! Presolve and CPU solve incompatible
       inform%flag = SSIDS_ERROR_PRESOLVE_INCOMPAT
-      call ssids_print_flag(context,nout,inform%flag)
+      call ssids_print_flag(inform,nout,context)
       return
    endif
 
@@ -1649,14 +1647,14 @@ subroutine ssids_solve_mult_double(nrhs, x, ldx, akeep, fkeep, options, &
 
    100 continue
    inform%flag = SSIDS_ERROR_ALLOCATION
-   call ssids_print_flag(context,nout,inform%flag,st=inform%stat)
+   call ssids_print_flag(inform,nout,context)
    call pop_ssids_cuda_settings(user_settings, cuda_error)
    return
 
    200 continue ! CUDA error
    inform%cuda_error = cuda_error
    inform%flag = SSIDS_ERROR_CUDA_UNKNOWN
-   call ssids_print_flag(context,nout,inform%flag,cuda_error=inform%cuda_error)
+   call ssids_print_flag(inform,nout,context)
    call pop_ssids_cuda_settings(user_settings, cuda_error)
    return
 end subroutine ssids_solve_mult_double
@@ -1692,20 +1690,20 @@ subroutine ssids_enquire_posdef_double(akeep, fkeep, options, inform, d)
    if (.not. allocated(fkeep%nodes)) then
       ! factorize phase has not been performed
       inform%flag = SSIDS_ERROR_CALL_SEQUENCE
-      call ssids_print_flag(context,nout,inform%flag)
+      call ssids_print_flag(inform,nout,context)
       return
    end if
 
    if (akeep%flag .lt. 0 .or. fkeep%flag .lt. 0) then
       ! immediate return if had an error
       inform%flag = SSIDS_ERROR_CALL_SEQUENCE
-      call ssids_print_flag(context,nout,inform%flag)
+      call ssids_print_flag(inform,nout,context)
       return
    end if
 
    if (.not.fkeep%pos_def) then
       inform%flag = SSIDS_ERROR_NOT_LLT
-      call ssids_print_flag(context,nout,inform%flag)
+      call ssids_print_flag(inform,nout,context)
       return
    end if
 
@@ -1776,20 +1774,20 @@ subroutine ssids_enquire_indef_double(akeep, fkeep, options, inform, &
    if (.not. allocated(fkeep%nodes)) then
       ! factorize phase has not been performed
       inform%flag = SSIDS_ERROR_CALL_SEQUENCE
-      call ssids_print_flag(context,nout,inform%flag)
+      call ssids_print_flag(inform,nout,context)
       return
    end if
 
    if (akeep%flag .lt. 0 .or. fkeep%flag .lt. 0) then
       ! immediate return if had an error
       inform%flag = SSIDS_ERROR_CALL_SEQUENCE
-      call ssids_print_flag(context,nout,inform%flag)
+      call ssids_print_flag(inform,nout,context)
       return
    end if
 
    if (fkeep%pos_def) then
       inform%flag = SSIDS_ERROR_NOT_LDLT
-      call ssids_print_flag(context,nout,inform%flag)
+      call ssids_print_flag(inform,nout,context)
       return
    end if
 
@@ -1901,13 +1899,13 @@ subroutine ssids_enquire_indef_double(akeep, fkeep, options, inform, &
    100 continue ! Memory allocation error
    inform%stat = st
    inform%flag = SSIDS_ERROR_ALLOCATION
-   call ssids_print_flag(context,nout,inform%flag,st=inform%stat)
+   call ssids_print_flag(inform,nout,context)
    return
 
    200 continue ! CUDA error
    inform%cuda_error = cuda_error
    inform%flag = SSIDS_ERROR_CUDA_UNKNOWN
-   call ssids_print_flag(context,nout,inform%flag,cuda_error=inform%cuda_error)
+   call ssids_print_flag(inform,nout,context)
    return
 end subroutine ssids_enquire_indef_double
 
@@ -1950,26 +1948,26 @@ subroutine ssids_alter_double(d, akeep, fkeep, options, inform)
    if (.not. allocated(fkeep%nodes)) then
       ! factorize phase has not been performed
       inform%flag = SSIDS_ERROR_CALL_SEQUENCE
-      call ssids_print_flag(context,nout,inform%flag)
+      call ssids_print_flag(inform,nout,context)
       return
     end if
 
    ! immediate return if already had an error
    if (akeep%flag .lt. 0 .or. fkeep%flag .lt. 0) then
       inform%flag = SSIDS_ERROR_CALL_SEQUENCE
-      call ssids_print_flag(context,nout,inform%flag)
+      call ssids_print_flag(inform,nout,context)
       return
    end if
 
    if (fkeep%pos_def) then
       inform%flag = SSIDS_ERROR_NOT_LDLT
-      call ssids_print_flag(context,nout,inform%flag)
+      call ssids_print_flag(inform,nout,context)
       return
    end if 
 
    if (options%presolve.ne.0) then
       inform%flag = SSIDS_ERROR_PRESOLVE_INCOMPAT
-      call ssids_print_flag(context,nout,inform%flag)
+      call ssids_print_flag(inform,nout,context)
       return
    end if
    
@@ -2027,13 +2025,13 @@ subroutine ssids_alter_double(d, akeep, fkeep, options, inform)
    100 continue ! Memory allocation error
    inform%stat = st
    inform%flag = SSIDS_ERROR_ALLOCATION
-   call ssids_print_flag(context,nout,inform%flag,st=inform%stat)
+   call ssids_print_flag(inform,nout,context)
    return
 
    200 continue ! CUDA error
    inform%cuda_error = cuda_error
    inform%flag = SSIDS_ERROR_CUDA_UNKNOWN
-   call ssids_print_flag(context,nout,inform%flag,cuda_error=inform%cuda_error)
+   call ssids_print_flag(inform,nout,context)
    return
 
 end subroutine ssids_alter_double
