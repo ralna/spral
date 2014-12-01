@@ -185,11 +185,8 @@ src/ssids/ssids.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
 									src/ssids/alloc.$(OBJEXT) \
 									src/ssids/analyse.$(OBJEXT) \
 									src/ssids/datatypes.$(OBJEXT) \
-									src/ssids/factor_gpu.$(OBJEXT) \
 									src/ssids/fkeep.$(OBJEXT) \
-									src/ssids/fkeep_gpu.$(OBJEXT) \
-									src/ssids/solve_cpu.$(OBJEXT) \
-									src/ssids/solve_gpu.$(OBJEXT)
+									src/ssids/fkeep_gpu.$(OBJEXT)
 src/ssids/alloc.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
 									src/ssids/datatypes.$(OBJEXT)
 src/ssids/analyse.$(OBJEXT): src/ssids/datatypes.$(OBJEXT) \

@@ -9,12 +9,7 @@
 module spral_ssids
 !$ use omp_lib
    use, intrinsic :: iso_c_binding
-   use spral_cuda, only : cudaMemcpy_d2h, cudaMemcpy_h2d, cudaMalloc, cudaFree,&
-                          c_ptr_plus, cudaStreamCreate, cudaStreamDestroy, &
-                          cudaMemcpy2d, cudaMemcpyHostToDevice, &
-                          cudaMemcpyDeviceToHost
-   use spral_ssids_cuda_datatypes, only : gpu_type
-   use spral_ssids_cuda_interfaces
+   use spral_cuda, only : cudaMemcpy_h2d, cudaFree, c_ptr_plus
    use spral_match_order, only : match_order_metis
    use spral_matrix_util, only : SPRAL_MATRIX_REAL_SYM_INDEF, &
                                  SPRAL_MATRIX_REAL_SYM_PSDEF, &
@@ -22,7 +17,7 @@ module spral_ssids
                                  apply_conversion_map
    use spral_metis_wrapper, only : metis_order
    use spral_scaling, only : auction_scale, equilib_scale, hungarian_scale
-   use spral_ssids_alloc, only : smalloc_setup, smalloc, smfreeall
+   use spral_ssids_alloc, only : smalloc_setup
    use spral_ssids_analyse, only : analyse_phase, check_order, expand_matrix, &
                                    expand_pattern
    use spral_ssids_datatypes
