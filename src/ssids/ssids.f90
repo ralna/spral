@@ -26,7 +26,8 @@ module spral_ssids
    use spral_ssids_analyse, only : analyse_phase, check_order, expand_matrix, &
                                    expand_pattern
    use spral_ssids_datatypes
-   use spral_ssids_fkeep, only : ssids_fkeep, ssids_fkeep_gpu
+   use spral_ssids_fkeep, only : ssids_fkeep
+   use spral_ssids_fkeep_gpu, only : ssids_fkeep_gpu
    use spral_ssids_solve_cpu, only : solve_calc_chunk, inner_solve, &
                                      subtree_bwd_solve
    use spral_ssids_solve_gpu, only : bwd_solve_gpu, fwd_solve_gpu, &

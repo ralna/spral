@@ -174,9 +174,10 @@ am__libspral_a_SOURCES_DIST = src/core_analyse.f90 \
 	src/ssids/dtrsv.h src/ssids/factor_cpu.cxx \
 	src/ssids/factor_cpu_iface.f90 src/ssids/factor_cpu_iface.h \
 	src/ssids/factor_gpu.f90 src/ssids/fkeep.f90 \
-	src/ssids/kernel_datatypes.h src/ssids/node_solve_kernels.h \
-	src/ssids/solve_cpu.f90 src/ssids/solve_gpu.f90 \
-	src/ssids/ssids.f90 interfaces/C/ssids.f90
+	src/ssids/fkeep_gpu.f90 src/ssids/kernel_datatypes.h \
+	src/ssids/node_solve_kernels.h src/ssids/solve_cpu.f90 \
+	src/ssids/solve_gpu.f90 src/ssids/ssids.f90 \
+	interfaces/C/ssids.f90
 am__dirstamp = $(am__leading_dot)dirstamp
 @HAVE_NVCC_TRUE@am__objects_1 = src/cuda/api_wrappers.$(OBJEXT) \
 @HAVE_NVCC_TRUE@	src/cuda/cuda.$(OBJEXT)
@@ -202,8 +203,9 @@ am_libspral_a_OBJECTS = src/core_analyse.$(OBJEXT) $(am__objects_1) \
 	src/ssids/factor_cpu.$(OBJEXT) \
 	src/ssids/factor_cpu_iface.$(OBJEXT) \
 	src/ssids/factor_gpu.$(OBJEXT) src/ssids/fkeep.$(OBJEXT) \
-	src/ssids/solve_cpu.$(OBJEXT) src/ssids/solve_gpu.$(OBJEXT) \
-	src/ssids/ssids.$(OBJEXT) interfaces/C/ssids.$(OBJEXT)
+	src/ssids/fkeep_gpu.$(OBJEXT) src/ssids/solve_cpu.$(OBJEXT) \
+	src/ssids/solve_gpu.$(OBJEXT) src/ssids/ssids.$(OBJEXT) \
+	interfaces/C/ssids.$(OBJEXT)
 libspral_a_OBJECTS = $(am_libspral_a_OBJECTS)
 PROGRAMS = $(bin_PROGRAMS)
 am_examples_C_random_OBJECTS = examples/C/random.$(OBJEXT)
@@ -730,9 +732,10 @@ libspral_a_SOURCES = src/core_analyse.f90 $(am__append_1) \
 	src/ssids/dtrsv.h src/ssids/factor_cpu.cxx \
 	src/ssids/factor_cpu_iface.f90 src/ssids/factor_cpu_iface.h \
 	src/ssids/factor_gpu.f90 src/ssids/fkeep.f90 \
-	src/ssids/kernel_datatypes.h src/ssids/node_solve_kernels.h \
-	src/ssids/solve_cpu.f90 src/ssids/solve_gpu.f90 \
-	src/ssids/ssids.f90 interfaces/C/ssids.f90
+	src/ssids/fkeep_gpu.f90 src/ssids/kernel_datatypes.h \
+	src/ssids/node_solve_kernels.h src/ssids/solve_cpu.f90 \
+	src/ssids/solve_gpu.f90 src/ssids/ssids.f90 \
+	interfaces/C/ssids.f90
 EXTRA_DIST = src/metis4_wrapper.f90 src/metis5_wrapper.f90
 random_test_SOURCES = tests/random.f90
 examples_Fortran_random_SOURCES = examples/Fortran/random.f90
@@ -908,6 +911,8 @@ src/ssids/factor_cpu_iface.$(OBJEXT): src/ssids/$(am__dirstamp) \
 src/ssids/factor_gpu.$(OBJEXT): src/ssids/$(am__dirstamp) \
 	src/ssids/$(DEPDIR)/$(am__dirstamp)
 src/ssids/fkeep.$(OBJEXT): src/ssids/$(am__dirstamp) \
+	src/ssids/$(DEPDIR)/$(am__dirstamp)
+src/ssids/fkeep_gpu.$(OBJEXT): src/ssids/$(am__dirstamp) \
 	src/ssids/$(DEPDIR)/$(am__dirstamp)
 src/ssids/solve_cpu.$(OBJEXT): src/ssids/$(am__dirstamp) \
 	src/ssids/$(DEPDIR)/$(am__dirstamp)
@@ -1717,6 +1722,7 @@ src/ssids/ssids.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
 									src/ssids/datatypes.$(OBJEXT) \
 									src/ssids/factor_gpu.$(OBJEXT) \
 									src/ssids/fkeep.$(OBJEXT) \
+									src/ssids/fkeep_gpu.$(OBJEXT) \
 									src/ssids/solve_cpu.$(OBJEXT) \
 									src/ssids/solve_gpu.$(OBJEXT)
 src/ssids/alloc.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
@@ -1735,11 +1741,13 @@ src/ssids/dense_factor_gpu.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
 												  src/ssids/cuda_datatypes.$(OBJEXT) \
 												  src/ssids/cuda_interfaces.$(OBJEXT) \
 												  src/ssids/datatypes.$(OBJEXT)
-src/ssids/fkeep.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
-									src/ssids/alloc.$(OBJEXT) \
-								  	src/ssids/cuda_datatypes.$(OBJEXT) \
-									src/ssids/datatypes.$(OBJEXT) \
-									src/ssids/factor_gpu.$(OBJEXT)
+src/ssids/fkeep.$(OBJEXT): src/ssids/alloc.$(OBJEXT) \
+									src/ssids/datatypes.$(OBJEXT)
+src/ssids/fkeep_gpu.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
+								  	    src/ssids/cuda_datatypes.$(OBJEXT) \
+									    src/ssids/datatypes.$(OBJEXT) \
+									    src/ssids/factor_gpu.$(OBJEXT) \
+										 src/ssids/fkeep.$(OBJEXT)
 src/ssids/factor_gpu.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
 							 	  		  src/ssids/alloc.$(OBJEXT) \
 							 	  		  src/ssids/cuda_datatypes.$(OBJEXT) \
