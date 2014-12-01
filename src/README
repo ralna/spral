@@ -1,7 +1,11 @@
+blas_iface
+   Defines interface blocks for BLAS routines to allow type checking
 core_analyse
    Core analyse phase functionality for symmetric patterned matrices.
 cuda
    Explicit Fortran interface to CUDA API and some helper routines.
+lapack_iface
+   Defines interface blocks for LAPACK routines to allow type checking
 match_order
    Matching-based ordering for numerically difficult symmetric indefinite
    problems.
@@ -23,6 +27,8 @@ rutherford_boeing
 scaling
    Various routines for scaling sparse matrices.
 ssids
-   Sparse Symmetric Indefinite Solver for GPUs.
+   Sparse Symmetric Indefinite Solver (for GPUs).
+ssmfe
+   Sparse Symmetric Matrix-Free Eigensolver.
 timer
    Timing routines built on top of C's clock_gettime() function.
