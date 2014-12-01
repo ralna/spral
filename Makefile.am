@@ -166,7 +166,8 @@ libspral_a_SOURCES += \
 #	interfaces/C/random_matrix.f90
 check_PROGRAMS += \
 	examples/Fortran/ssmfe/example_precond \
-	examples/Fortran/ssmfe/example_shift_invert
+	examples/Fortran/ssmfe/example_shift_invert \
+	examples/Fortran/ssmfe/example_hermitian
 #	ssmfe_test \
 #	examples/C/ssmfe/ssmfe1 \
 #	examples/C/ssmfe/ssmfe2
@@ -178,6 +179,9 @@ examples_Fortran_ssmfe_example_shift_invert_SOURCES = \
 	examples/Fortran/ssmfe/example_shift_invert.f90 \
 	examples/Fortran/ssmfe/laplace.f90 \
 	examples/Fortran/ssmfe/ldlt.f90
+examples_Fortran_ssmfe_example_hermitian_SOURCES = \
+	examples/Fortran/ssmfe/example_hermitian.f90
+examples_Fortran_ssmfe_example_hermitian.$(OBJEXT): libspral.a
 #examples_C_random_matrix_SOURCES = examples/C/random_matrix.c
 #tests/random_matrix.$(OBJEXT): libspral.a
 examples/Fortran/ssmfe/example_precond.$(OBJEXT): libspral.a \
