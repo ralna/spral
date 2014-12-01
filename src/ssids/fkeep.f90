@@ -9,7 +9,7 @@ module spral_ssids_fkeep
                                      SSIDS_SOLVE_JOB_ALL, SSIDS_SOLVE_JOB_BWD, &
                                      SSIDS_SOLVE_JOB_DIAG, SSIDS_SOLVE_JOB_FWD,&
                                      SSIDS_SOLVE_JOB_DIAG_BWD
-   use spral_ssids_solve_cpu, only : inner_solve, subtree_bwd_solve
+   use spral_ssids_solve_cpu, only : fwd_diag_solve, subtree_bwd_solve
    use, intrinsic :: iso_c_binding
    implicit none
 
@@ -43,6 +43,7 @@ module spral_ssids_fkeep
    contains
       procedure, pass(fkeep) :: inner_factor => inner_factor_cpu ! Do actual factorization
       procedure, pass(fkeep) :: inner_solve => inner_solve_cpu ! Do actual solve
+      procedure, pass(fkeep) :: enquire_indef => enquire_indef_cpu
       procedure, pass(fkeep) :: free => free_fkeep ! Frees memory
    end type ssids_fkeep
 
@@ -87,7 +88,7 @@ subroutine inner_solve_cpu(local_job, nrhs, x, ldx, akeep, fkeep, options, infor
    end if
 
    ! Perform supernodal forward solve or diagonal solve (both in serial)
-   call inner_solve(fkeep%pos_def, local_job, akeep%nnodes, &
+   call fwd_diag_solve(fkeep%pos_def, local_job, akeep%nnodes, &
       fkeep%nodes, akeep%sptr, akeep%rptr, akeep%rlist, akeep%invp, nrhs, &
       x, ldx, inform%stat)
    if (inform%stat .ne. 0) goto 100
@@ -121,6 +122,80 @@ subroutine inner_solve_cpu(local_job, nrhs, x, ldx, akeep, fkeep, options, infor
    return
 
 end subroutine inner_solve_cpu
+
+!****************************************************************************
+
+subroutine enquire_indef_cpu(akeep, fkeep, inform, piv_order, d)
+   type(ssids_akeep), intent(in) :: akeep
+   class(ssids_fkeep), target, intent(in) :: fkeep
+   type(ssids_inform), intent(inout) :: inform
+   integer, dimension(*), optional, intent(out) :: piv_order
+      ! If i is used to index a variable, its position in the pivot sequence
+      ! will be placed in piv_order(i), with its sign negative if it is
+      ! part of a 2 x 2 pivot; otherwise, piv_order(i) will be set to zero.
+   real(wp), dimension(2,*), optional, intent(out) :: d ! The diagonal
+      ! entries of D^{-1} will be placed in d(1,:i) and the off-diagonal
+      ! entries will be placed in d(2,:). The entries are held in pivot order.
+
+   integer :: blkn, blkm
+   integer :: i, j, k
+   integer :: n
+   integer :: nd
+   integer :: node
+   integer(long) :: offset
+   integer :: piv
+   integer :: st
+
+   type(node_type), pointer :: nptr
+
+   n = akeep%n
+   if(present(d)) then
+      ! ensure d is not returned undefined
+      d(1:2,1:n) = 0.0
+   end if
+   
+   piv = 1
+   do node = 1, akeep%nnodes
+      nptr => fkeep%nodes(node)
+      j = 1
+      nd = nptr%ndelay
+      blkn = akeep%sptr(node+1) - akeep%sptr(node) + nd
+      blkm = int(akeep%rptr(node+1) - akeep%rptr(node)) + nd
+      offset = blkm*(blkn+0_long)
+      do while(j .le. nptr%nelim)
+         if (nptr%lcol(offset+2*j).ne.0) then
+            ! 2x2 pivot
+            if(present(piv_order))  then
+               k = akeep%invp( nptr%perm(j) )
+               piv_order(k) = -piv
+               k = akeep%invp( nptr%perm(j+1) )
+               piv_order(k) = -(piv+1)
+            end if
+            if(present(d)) then
+               d(1,piv) = nptr%lcol(offset+2*j-1)
+               d(2,piv) = nptr%lcol(offset+2*j)
+               d(1,piv+1) = nptr%lcol(offset+2*j+1)
+               d(2,piv+1) = 0
+            end if
+            piv = piv + 2
+            j = j + 2
+         else
+            ! 1x1 pivot
+            if(present(piv_order)) then
+               k = akeep%invp( nptr%perm(j) )
+               piv_order(k) = piv
+            end if
+            if(present(d)) then
+               d(1,piv) = nptr%lcol(offset+2*j-1)
+               d(2,piv) = 0
+            end if
+            piv = piv + 1
+            j = j + 1
+         end if
+      end do
+   end do
+
+end subroutine enquire_indef_cpu
 
 subroutine free_fkeep(fkeep, flag)
    class(ssids_fkeep), intent(inout) :: fkeep

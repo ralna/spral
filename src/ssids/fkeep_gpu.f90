@@ -47,6 +47,7 @@ module spral_ssids_fkeep_gpu
    contains
       procedure, pass(fkeep) :: inner_factor => inner_factor_gpu ! Do actual factorization
       procedure, pass(fkeep) :: inner_solve => inner_solve_gpu ! Do actual solve
+      procedure, pass(fkeep) :: enquire_indef => enquire_indef_gpu
       procedure, pass(fkeep) :: free => free_fkeep_gpu ! Frees memory
    end type ssids_fkeep_gpu
 
@@ -416,6 +417,119 @@ subroutine inner_solve_gpu(local_job, nrhs, x, ldx, akeep, fkeep, options, infor
    call pop_ssids_cuda_settings(user_settings, cuda_error)
    return
 end subroutine inner_solve_gpu
+
+!****************************************************************************
+
+subroutine enquire_indef_gpu(akeep, fkeep, inform, piv_order, d)
+   type(ssids_akeep), intent(in) :: akeep
+   class(ssids_fkeep_gpu), target, intent(in) :: fkeep
+   type(ssids_inform), intent(inout) :: inform
+   integer, dimension(*), optional, intent(out) :: piv_order
+      ! If i is used to index a variable, its position in the pivot sequence
+      ! will be placed in piv_order(i), with its sign negative if it is
+      ! part of a 2 x 2 pivot; otherwise, piv_order(i) will be set to zero.
+   real(wp), dimension(2,*), optional, intent(out) :: d ! The diagonal
+      ! entries of D^{-1} will be placed in d(1,:i) and the off-diagonal
+      ! entries will be placed in d(2,:). The entries are held in pivot order.
+
+   integer :: blkn, blkm
+   integer :: i, j, k
+   integer :: n
+   integer :: nd
+   integer :: node
+   integer(long) :: offset
+   integer :: piv
+   real(C_DOUBLE), dimension(:), allocatable, target :: d2
+   type(C_PTR) :: srcptr
+   integer, dimension(:), allocatable :: lvllookup
+   integer :: st, cuda_error
+   real(wp) :: real_dummy
+
+   type(node_type), pointer :: nptr
+
+   if(fkeep%host_factors) then
+      ! Call CPU version instead
+      call fkeep%ssids_fkeep%enquire_indef(akeep, inform, piv_order=piv_order, &
+         d=d)
+      return
+   endif
+
+   !
+   ! Otherwise extract information from GPU memory
+   !
+
+   n = akeep%n
+   if(present(d)) then
+      ! ensure d is not returned undefined
+      d(1:2,1:n) = 0.0
+   end if
+   
+   allocate(lvllookup(akeep%nnodes), d2(2*akeep%n), stat=st)
+   if(st.ne.0) goto 100
+   do i = 1, fkeep%top_data%num_levels
+      do j = fkeep%top_data%lvlptr(i), fkeep%top_data%lvlptr(i+1)-1
+         node = fkeep%top_data%lvllist(j)
+         lvllookup(node) = i
+      end do
+   end do
+
+   piv = 1
+   do node = 1, akeep%nnodes
+      nptr => fkeep%nodes(node)
+      j = 1
+      nd = nptr%ndelay
+      blkn = akeep%sptr(node+1) - akeep%sptr(node) + nd
+      blkm = int(akeep%rptr(node+1) - akeep%rptr(node)) + nd
+      offset = blkm*(blkn+0_long)
+      srcptr = c_ptr_plus(nptr%gpu_lcol, offset*C_SIZEOF(real_dummy))
+      cuda_error = cudaMemcpy_d2h(C_LOC(d2), srcptr, &
+         C_SIZEOF(d2(1:2*nptr%nelim)))
+      if(cuda_error.ne.0) goto 200
+      do while(j .le. nptr%nelim)
+         if (d2(2*j).ne.0) then
+            ! 2x2 pivot
+            if(present(piv_order))  then
+               k = akeep%invp( nptr%perm(j) )
+               piv_order(k) = -piv
+               k = akeep%invp( nptr%perm(j+1) )
+               piv_order(k) = -(piv+1)
+            end if
+            if(present(d)) then
+               d(1,piv) = d2(2*j-1)
+               d(2,piv) = d2(2*j)
+               d(1,piv+1) = d2(2*j+1)
+               d(2,piv+1) = 0
+            end if
+            piv = piv + 2
+            j = j + 2
+         else
+            ! 1x1 pivot
+            if(present(piv_order)) then
+               k = akeep%invp( nptr%perm(j) )
+               piv_order(k) = piv
+            end if
+            if(present(d)) then
+               d(1,piv) = d2(2*j-1)
+               d(2,piv) = 0
+            end if
+            piv = piv + 1
+            j = j + 1
+         end if
+      end do
+   end do
+
+   return ! Normal return
+
+   100 continue ! Memory allocation error
+   inform%stat = st
+   inform%flag = SSIDS_ERROR_ALLOCATION
+   return
+
+   200 continue ! CUDA error
+   inform%cuda_error = cuda_error
+   inform%flag = SSIDS_ERROR_CUDA_UNKNOWN
+   return
+end subroutine enquire_indef_gpu
 
 !****************************************************************************
 

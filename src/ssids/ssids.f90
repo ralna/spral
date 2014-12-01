@@ -1262,22 +1262,8 @@ subroutine ssids_enquire_indef_double(akeep, fkeep, options, inform, &
       ! entries of D^{-1} will be placed in d(1,:i) and the off-diagonal
       ! entries will be placed in d(2,:). The entries are held in pivot order.
 
-   integer :: blkn, blkm
-   character(50)  :: context      ! Procedure name (used when printing).
-   integer :: i, j, k
-   integer :: n
-   integer :: nd
-   integer :: node
    integer :: nout
-   integer(long) :: offset
-   integer :: piv
-   real(C_DOUBLE), dimension(:), allocatable, target :: d2
-   type(C_PTR) :: srcptr
-   integer, dimension(:), allocatable :: lvllookup
-   integer :: st, cuda_error
-   real(wp) :: real_dummy
-
-   type(node_type), pointer :: nptr
+   character(50)  :: context      ! Procedure name (used when printing).
 
    context = 'ssids_enquire_indef' 
    inform%flag = SSIDS_SUCCESS
@@ -1305,122 +1291,9 @@ subroutine ssids_enquire_indef_double(akeep, fkeep, options, inform, &
       return
    end if
 
-   n = akeep%n
-   if(present(d)) then
-      ! ensure d is not returned undefined
-      d(1:2,1:n) = zero
-   end if
-   
-   if(fkeep%host_factors) then
-      piv = 1
-      do node = 1, akeep%nnodes
-         nptr => fkeep%nodes(node)
-         j = 1
-         nd = nptr%ndelay
-         blkn = akeep%sptr(node+1) - akeep%sptr(node) + nd
-         blkm = int(akeep%rptr(node+1) - akeep%rptr(node)) + nd
-         offset = blkm*(blkn+0_long)
-         do while(j .le. nptr%nelim)
-            if (nptr%lcol(offset+2*j).ne.0) then
-               ! 2x2 pivot
-               if(present(piv_order))  then
-                  k = akeep%invp( nptr%perm(j) )
-                  piv_order(k) = -piv
-                  k = akeep%invp( nptr%perm(j+1) )
-                  piv_order(k) = -(piv+1)
-               end if
-               if(present(d)) then
-                  d(1,piv) = nptr%lcol(offset+2*j-1)
-                  d(2,piv) = nptr%lcol(offset+2*j)
-                  d(1,piv+1) = nptr%lcol(offset+2*j+1)
-                  d(2,piv+1) = 0
-               end if
-               piv = piv + 2
-               j = j + 2
-            else
-               ! 1x1 pivot
-               if(present(piv_order)) then
-                  k = akeep%invp( nptr%perm(j) )
-                  piv_order(k) = piv
-               end if
-               if(present(d)) then
-                  d(1,piv) = nptr%lcol(offset+2*j-1)
-                  d(2,piv) = 0
-               end if
-               piv = piv + 1
-               j = j + 1
-            end if
-         end do
-      end do
-   else
-      allocate(lvllookup(akeep%nnodes), d2(2*akeep%n), stat=st)
-      if(st.ne.0) goto 100
-      do i = 1, fkeep%top_data%num_levels
-         do j = fkeep%top_data%lvlptr(i), fkeep%top_data%lvlptr(i+1)-1
-            node = fkeep%top_data%lvllist(j)
-            lvllookup(node) = i
-         end do
-      end do
+   call fkeep%enquire_indef(akeep, inform, piv_order, d)
+   if(inform%flag.ne.0) call ssids_print_flag(inform,nout,context)
 
-      piv = 1
-      do node = 1, akeep%nnodes
-         nptr => fkeep%nodes(node)
-         j = 1
-         nd = nptr%ndelay
-         blkn = akeep%sptr(node+1) - akeep%sptr(node) + nd
-         blkm = int(akeep%rptr(node+1) - akeep%rptr(node)) + nd
-         offset = blkm*(blkn+0_long)
-         srcptr = c_ptr_plus(nptr%gpu_lcol, offset*C_SIZEOF(real_dummy))
-         cuda_error = cudaMemcpy_d2h(C_LOC(d2), srcptr, &
-            C_SIZEOF(d2(1:2*nptr%nelim)))
-         if(cuda_error.ne.0) goto 200
-         do while(j .le. nptr%nelim)
-            if (d2(2*j).ne.0) then
-               ! 2x2 pivot
-               if(present(piv_order))  then
-                  k = akeep%invp( nptr%perm(j) )
-                  piv_order(k) = -piv
-                  k = akeep%invp( nptr%perm(j+1) )
-                  piv_order(k) = -(piv+1)
-               end if
-               if(present(d)) then
-                  d(1,piv) = d2(2*j-1)
-                  d(2,piv) = d2(2*j)
-                  d(1,piv+1) = d2(2*j+1)
-                  d(2,piv+1) = 0
-               end if
-               piv = piv + 2
-               j = j + 2
-            else
-               ! 1x1 pivot
-               if(present(piv_order)) then
-                  k = akeep%invp( nptr%perm(j) )
-                  piv_order(k) = piv
-               end if
-               if(present(d)) then
-                  d(1,piv) = d2(2*j-1)
-                  d(2,piv) = 0
-               end if
-               piv = piv + 1
-               j = j + 1
-            end if
-         end do
-      end do
-   endif
-
-   return ! Normal return
-
-   100 continue ! Memory allocation error
-   inform%stat = st
-   inform%flag = SSIDS_ERROR_ALLOCATION
-   call ssids_print_flag(inform,nout,context)
-   return
-
-   200 continue ! CUDA error
-   inform%cuda_error = cuda_error
-   inform%flag = SSIDS_ERROR_CUDA_UNKNOWN
-   call ssids_print_flag(inform,nout,context)
-   return
 end subroutine ssids_enquire_indef_double
 
 !*************************************************************************

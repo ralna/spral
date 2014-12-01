@@ -5,7 +5,7 @@ module spral_ssids_solve_cpu
    implicit none
 
    private
-   public :: inner_solve,      & ! Performs forward solve (or diagonal only)
+   public :: fwd_diag_solve,   & ! Performs forward solve (or diagonal only)
              solve_calc_chunk, & ! Partition tree into chunks for parallel exec
              subtree_bwd_solve   ! Performs backwards solve for a subtree
 
@@ -214,7 +214,7 @@ end subroutine subtree_bwd_solve
 !
 ! Provides serial versions of Forward (s/n) and diagonal solves.
 !
-subroutine inner_solve(pos_def, job, nnodes, nodes, sptr, rptr, rlist, &
+subroutine fwd_diag_solve(pos_def, job, nnodes, nodes, sptr, rptr, rlist, &
       invp, nrhs, x, ldx, st)
    logical, intent(in) :: pos_def
    integer, intent(in) :: job ! controls whether we are doing forward
@@ -288,7 +288,7 @@ subroutine inner_solve(pos_def, job, nnodes, nodes, sptr, rptr, rlist, &
       end do
    end if
 
-end subroutine inner_solve
+end subroutine fwd_diag_solve
 
 !*************************************************************************
 !
