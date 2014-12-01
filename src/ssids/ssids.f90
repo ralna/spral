@@ -1304,21 +1304,8 @@ subroutine ssids_alter_double(d, akeep, fkeep, options, inform)
    type(ssids_options), intent(in) :: options
    type(ssids_inform), intent(out) :: inform
 
-   integer :: blkm, blkn
-   character(50)  :: context      ! Procedure name (used when printing).
-   integer(long) :: ip
-   integer :: i, j
-   integer :: nd
-   integer :: node
    integer :: nout
-   integer :: piv
-   real(wp), dimension(:), allocatable, target :: d2
-   integer, dimension(:), allocatable :: lvllookup
-   type(C_PTR) :: srcptr
-   integer :: st, cuda_error
-   real(wp) :: real_dummy
-
-   type(node_type), pointer :: nptr
+   character(50)  :: context      ! Procedure name (used when printing).
 
    inform%flag = SSIDS_SUCCESS
 
@@ -1352,70 +1339,10 @@ subroutine ssids_alter_double(d, akeep, fkeep, options, inform)
       call ssids_print_flag(inform,nout,context)
       return
    end if
+
+   call fkeep%alter(d, akeep, options, inform)
+   if(inform%flag.lt.0) call ssids_print_flag(inform,nout,context)
    
-   if(fkeep%host_factors) then
-      piv = 1
-      do node = 1, akeep%nnodes
-         nptr => fkeep%nodes(node)
-         nd = nptr%ndelay
-         blkn = akeep%sptr(node+1) - akeep%sptr(node) + nd
-         blkm = int(akeep%rptr(node+1) - akeep%rptr(node)) + nd
-         ip = blkm*(blkn+0_long) + 1
-         do j = 1, nptr%nelim
-            nptr%lcol(ip)   = d(1,piv)
-            nptr%lcol(ip+1) = d(2,piv)
-            ip = ip + 2
-            piv = piv + 1
-         end do
-      end do
-   endif
-
-   ! FIXME: Move to gpu_factors a la host_factors?
-   if(options%use_gpu_solve) then
-      allocate(lvllookup(akeep%nnodes), d2(2*akeep%n), stat=st)
-      if(st.ne.0) goto 100
-      do i = 1, fkeep%top_data%num_levels
-         do j = fkeep%top_data%lvlptr(i), fkeep%top_data%lvlptr(i+1)-1
-            node = fkeep%top_data%lvllist(j)
-            lvllookup(node) = i
-         end do
-      end do
-
-      piv = 1
-      do node = 1, akeep%nnodes
-         nptr => fkeep%nodes(node)
-         nd = nptr%ndelay
-         blkn = akeep%sptr(node+1) - akeep%sptr(node) + nd
-         blkm = int(akeep%rptr(node+1) - akeep%rptr(node)) + nd
-         ip = 1
-         do j = 1, nptr%nelim
-            d2(ip)   = d(1,piv)
-            d2(ip+1) = d(2,piv)
-            ip = ip + 2
-            piv = piv + 1
-         end do
-         srcptr = c_ptr_plus(fkeep%nodes(node)%gpu_lcol, &
-            blkm*(blkn+0_long)*C_SIZEOF(real_dummy))
-         cuda_error = cudaMemcpy_h2d(srcptr, C_LOC(d2), &
-            C_SIZEOF(d2(1:2*nptr%nelim)))
-         if(cuda_error.ne.0) goto 200
-      end do
-   endif
-
-   return ! Normal return
-
-   100 continue ! Memory allocation error
-   inform%stat = st
-   inform%flag = SSIDS_ERROR_ALLOCATION
-   call ssids_print_flag(inform,nout,context)
-   return
-
-   200 continue ! CUDA error
-   inform%cuda_error = cuda_error
-   inform%flag = SSIDS_ERROR_CUDA_UNKNOWN
-   call ssids_print_flag(inform,nout,context)
-   return
-
 end subroutine ssids_alter_double
 
 !*************************************************************************

@@ -44,6 +44,7 @@ module spral_ssids_fkeep
       procedure, pass(fkeep) :: inner_factor => inner_factor_cpu ! Do actual factorization
       procedure, pass(fkeep) :: inner_solve => inner_solve_cpu ! Do actual solve
       procedure, pass(fkeep) :: enquire_indef => enquire_indef_cpu
+      procedure, pass(fkeep) :: alter => alter_cpu ! Alter D values
       procedure, pass(fkeep) :: free => free_fkeep ! Frees memory
    end type ssids_fkeep
 
@@ -196,6 +197,43 @@ subroutine enquire_indef_cpu(akeep, fkeep, inform, piv_order, d)
    end do
 
 end subroutine enquire_indef_cpu
+
+! Alter D values
+subroutine alter_cpu(d, akeep, fkeep, options, inform)
+   real(wp), dimension(2,*), intent(in) :: d  ! The required diagonal entries
+     ! of D^{-1} must be placed in d(1,i) (i = 1,...n)
+     ! and the off-diagonal entries must be placed in d(2,i) (i = 1,...n-1).
+   type(ssids_akeep), intent(in) :: akeep
+   class(ssids_fkeep), target, intent(inout) :: fkeep
+   type(ssids_options), intent(in) :: options
+   type(ssids_inform), intent(inout) :: inform
+
+   integer :: blkm, blkn
+   integer(long) :: ip
+   integer :: i, j
+   integer :: nd
+   integer :: node
+   integer :: piv
+
+   type(node_type), pointer :: nptr
+
+   piv = 1
+   do node = 1, akeep%nnodes
+      nptr => fkeep%nodes(node)
+      nd = nptr%ndelay
+      blkn = akeep%sptr(node+1) - akeep%sptr(node) + nd
+      blkm = int(akeep%rptr(node+1) - akeep%rptr(node)) + nd
+      ip = blkm*(blkn+0_long) + 1
+      do j = 1, nptr%nelim
+         nptr%lcol(ip)   = d(1,piv)
+         nptr%lcol(ip+1) = d(2,piv)
+         ip = ip + 2
+         piv = piv + 1
+      end do
+   end do
+end subroutine alter_cpu
+
+!****************************************************************************
 
 subroutine free_fkeep(fkeep, flag)
    class(ssids_fkeep), intent(inout) :: fkeep
