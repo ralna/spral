@@ -21,8 +21,8 @@ program spec_test
   integer :: i                     ! index
   type(ssmfe_options) :: options ! eigensolver options
   type(ssmfe_inform ) :: inform  ! information
-  type(ssmfe_rci    ) :: rci     ! reverse communication data
-  type(ssmfe_keep   ) :: keep    ! private data
+  type(ssmfe_rcid   ) :: rci     ! reverse communication data
+  type(ssmfe_keepd  ) :: keep    ! private data
   call set_laplacian_matrix( nx, ny, A, n )
   ! perform LDLT factorization of the shifted matrix
   LDLT = A

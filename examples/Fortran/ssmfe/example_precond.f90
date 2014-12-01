@@ -7,9 +7,9 @@ program spec_test ! Laplacian on a square grid
   integer, parameter :: nep = 5     ! eigenpairs wanted
   double precision :: lambda(2*nep) ! eigenvalues
   double precision :: X(n, 2*nep)   ! eigenvectors
-  type(ssmfe_rci    ) :: rci        ! reverse communication data
+  type(ssmfe_rcid   ) :: rci        ! reverse communication data
   type(ssmfe_options) :: options    ! options
-  type(ssmfe_keep   ) :: keep       ! private data
+  type(ssmfe_keepd  ) :: keep       ! private data
   type(ssmfe_inform ) :: inform     ! information
   integer :: i                        ! loop index
   ! the gap between the last converged eigenvalue and the rest of the spectrum

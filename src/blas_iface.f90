@@ -4,7 +4,9 @@ module spral_blas_iface
 
   private
   public :: daxpy, dcopy, ddot, dnrm2, dscal
+  public :: zaxpy, zcopy, zdotc, dznrm2, zscal
   public :: dgemm, dtrsm
+  public :: zgemm, ztrsm
 
   ! Level 1 BLAS
   interface
@@ -38,6 +40,42 @@ module spral_blas_iface
       double precision, intent(in) :: a
       double precision, intent(in), dimension(*) :: x
     end subroutine dscal
+    subroutine zcopy( n, x, incx, y, incy )
+      implicit none
+      integer, parameter :: PRECISION = kind(1.0D0)
+      integer, intent(in) :: n, incx, incy
+      complex(PRECISION), intent(in ), dimension(*) :: x
+      complex(PRECISION), intent(out), dimension(*) :: y
+    end subroutine zcopy
+    double precision function dznrm2( n, x, incx )
+      implicit none
+      integer, parameter :: PRECISION = kind(1.0D0)
+      integer, intent(in) :: n, incx
+      complex(PRECISION), intent(in), dimension(*) :: x
+    end function dznrm2
+    function zdotc( n, x, incx, y, incy )
+      implicit none
+      integer, parameter :: PRECISION = kind(1.0D0)
+      integer, intent(in) :: n, incx, incy
+      complex(PRECISION), intent(in), dimension(*) :: x
+      complex(PRECISION), intent(in), dimension(*) :: y
+      complex(PRECISION) :: zdotc
+    end function zdotc
+    subroutine zscal( n, a, x, incx )
+      implicit none
+      integer, parameter :: PRECISION = kind(1.0D0)
+      integer, intent(in) :: n, incx
+      complex(PRECISION), intent(in) :: a
+      complex(PRECISION), intent(in), dimension(*) :: x
+    end subroutine zscal
+    subroutine zaxpy( n, a, x, incx, y, incy )
+      implicit none
+      integer, parameter :: PRECISION = kind(1.0D0)
+      integer, intent(in) :: n, incx, incy
+      complex(PRECISION), intent(in) :: a
+      complex(PRECISION), intent(in   ), dimension(*) :: x
+      complex(PRECISION), intent(inout), dimension(*) :: y
+    end subroutine zaxpy
   end interface
 
   ! Level 3 BLAS
@@ -60,6 +98,26 @@ module spral_blas_iface
       double precision, intent(in   ) :: a(lda, *)
       double precision, intent(inout) :: b(ldb, n)
     end subroutine dtrsm
+    subroutine zgemm( ta, tb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc )
+      implicit none
+      integer, parameter :: PRECISION = kind(1.0D0)
+      character, intent(in) :: ta, tb
+      integer, intent(in) :: m, n, k
+      integer, intent(in) :: lda, ldb, ldc
+      complex(PRECISION), intent(in) :: alpha, beta
+      complex(PRECISION), intent(in   ), dimension(lda, *) :: a
+      complex(PRECISION), intent(in   ), dimension(ldb, *) :: b
+      complex(PRECISION), intent(inout), dimension(ldc, *) :: c
+    end subroutine zgemm
+    subroutine ztrsm( side, uplo, trans, diag, m, n, alpha, a, lda, b, ldb )
+      implicit none
+      integer, parameter :: PRECISION = kind(1.0D0)
+      character, intent(in) :: side, uplo, trans, diag
+      integer, intent(in) :: m, n, lda, ldb
+      complex(PRECISION), intent(in   ) :: alpha
+      complex(PRECISION), intent(in   ) :: a(lda, *)
+      complex(PRECISION), intent(inout) :: b(ldb, n)
+    end subroutine ztrsm
   end interface
 
 end module spral_blas_iface
