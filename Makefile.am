@@ -209,10 +209,14 @@ src/ssids/dense_factor_gpu.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
 src/ssids/fkeep.$(OBJEXT): src/ssids/alloc.$(OBJEXT) \
 									src/ssids/datatypes.$(OBJEXT)
 src/ssids/fkeep_gpu.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
+							 	  		 src/ssids/alloc.$(OBJEXT) \
 								  	    src/ssids/cuda_datatypes.$(OBJEXT) \
+								  	    src/ssids/cuda_interfaces.$(OBJEXT) \
 									    src/ssids/datatypes.$(OBJEXT) \
 									    src/ssids/factor_gpu.$(OBJEXT) \
-										 src/ssids/fkeep.$(OBJEXT)
+										 src/ssids/fkeep.$(OBJEXT) \
+										 src/ssids/solve_cpu.$(OBJEXT) \
+										 src/ssids/solve_gpu.$(OBJEXT)
 src/ssids/factor_gpu.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
 							 	  		  src/ssids/alloc.$(OBJEXT) \
 							 	  		  src/ssids/cuda_datatypes.$(OBJEXT) \
