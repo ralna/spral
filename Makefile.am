@@ -23,9 +23,13 @@ CUDA_LIBS = -lcublas
 lib_LIBRARIES = libspral.a
 include_HEADERS = include/spral.h
 
-# CORE_ANALYSE
+# BLAS_IFACE
 # Note: first so not +=
 libspral_a_SOURCES = \
+	src/blas_iface.f90
+
+# CORE_ANALYSE
+libspral_a_SOURCES += \
 	src/core_analyse.f90
 
 # CUDA
@@ -35,6 +39,10 @@ libspral_a_SOURCES += \
 	src/cuda/cuda.f90 \
 	src/cuda/cuda_check.h
 endif
+
+# LAPACK_IFACE
+libspral_a_SOURCES += \
+	src/lapack_iface.f90
 
 # MATCH_ORDER
 libspral_a_SOURCES += \
@@ -231,6 +239,8 @@ src/ssids/solve_gpu.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
 								 	    src/ssids/cuda_datatypes.$(OBJEXT) \
 								 	    src/ssids/cuda_interfaces.$(OBJEXT) \
 								 		 src/ssids/datatypes.$(OBJEXT)
+src/ssmfe/core.$(OBJEXT): src/blas_iface.$(OBJEXT) \
+								  src/lapack_iface.$(OBJEXT)
 src/ssmfe/expert.$(OBJEXT): src/ssmfe/core.$(OBJEXT)
 src/ssmfe/ssmfe.$(OBJEXT): src/ssmfe/expert.$(OBJEXT)
 driver/spral_ssids.$(OBJEXT): libspral.a
