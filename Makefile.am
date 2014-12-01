@@ -125,11 +125,11 @@ libspral_a_SOURCES += \
 	src/ssids/datatypes.f90 \
 	src/ssids/dense_factor_gpu.f90 \
 	src/ssids/dtrsv.h \
-	src/ssids/factor.f90 \
 	src/ssids/factor_cpu.cxx \
 	src/ssids/factor_cpu_iface.f90 \
 	src/ssids/factor_cpu_iface.h \
 	src/ssids/factor_gpu.f90 \
+	src/ssids/fkeep.f90 \
 	src/ssids/kernel_datatypes.h \
 	src/ssids/node_solve_kernels.h \
 	src/ssids/solve_cpu.f90 \
@@ -184,8 +184,8 @@ src/ssids/ssids.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
 									src/ssids/alloc.$(OBJEXT) \
 									src/ssids/analyse.$(OBJEXT) \
 									src/ssids/datatypes.$(OBJEXT) \
-									src/ssids/factor.$(OBJEXT) \
 									src/ssids/factor_gpu.$(OBJEXT) \
+									src/ssids/fkeep.$(OBJEXT) \
 									src/ssids/solve_cpu.$(OBJEXT) \
 									src/ssids/solve_gpu.$(OBJEXT)
 src/ssids/alloc.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
@@ -204,11 +204,11 @@ src/ssids/dense_factor_gpu.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
 												  src/ssids/cuda_datatypes.$(OBJEXT) \
 												  src/ssids/cuda_interfaces.$(OBJEXT) \
 												  src/ssids/datatypes.$(OBJEXT)
-src/ssids/factor.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
-									 src/ssids/alloc.$(OBJEXT) \
-								  	 src/ssids/cuda_datatypes.$(OBJEXT) \
-									 src/ssids/datatypes.$(OBJEXT) \
-									 src/ssids/factor_gpu.$(OBJEXT)
+src/ssids/fkeep.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
+									src/ssids/alloc.$(OBJEXT) \
+								  	src/ssids/cuda_datatypes.$(OBJEXT) \
+									src/ssids/datatypes.$(OBJEXT) \
+									src/ssids/factor_gpu.$(OBJEXT)
 src/ssids/factor_gpu.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
 							 	  		  src/ssids/alloc.$(OBJEXT) \
 							 	  		  src/ssids/cuda_datatypes.$(OBJEXT) \

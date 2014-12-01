@@ -1,7 +1,7 @@
 !
 ! This module defines ssids_fkeep type and associated procedures (CPU version)
 !
-module spral_ssids_factor
+module spral_ssids_fkeep
    use spral_cuda, only : cudaMemcpy_d2h, cudaMemcpy_h2d, cudaMalloc, cudaFree,&
                           c_ptr_plus, cudaStreamCreate, cudaStreamDestroy, &
                           cudaMemcpy2d, cudaMemcpyHostToDevice, &
@@ -324,4 +324,4 @@ subroutine free_fkeep_gpu(fkeep, flag)
    endif
 end subroutine free_fkeep_gpu
 
-end module spral_ssids_factor
+end module spral_ssids_fkeep

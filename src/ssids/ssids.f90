@@ -26,7 +26,7 @@ module spral_ssids
    use spral_ssids_analyse, only : analyse_phase, check_order, expand_matrix, &
                                    expand_pattern
    use spral_ssids_datatypes
-   use spral_ssids_factor, only : ssids_fkeep, ssids_fkeep_gpu
+   use spral_ssids_fkeep, only : ssids_fkeep, ssids_fkeep_gpu
    use spral_ssids_solve_cpu, only : solve_calc_chunk, inner_solve, &
                                      subtree_bwd_solve
    use spral_ssids_solve_gpu, only : bwd_solve_gpu, fwd_solve_gpu, &
@@ -1284,9 +1284,6 @@ subroutine ssids_solve_mult_double(nrhs, x, ldx, akeep, fkeep, options, &
       return
    end if
 
-   call push_ssids_cuda_settings(user_settings, cuda_error)
-   if(cuda_error.ne.0) goto 200
-
    ! Copy previous phases' inform data from akeep and fkeep
    inform%matrix_dup = akeep%matrix_dup
    inform%matrix_missing_diag = akeep%matrix_missing_diag
@@ -1323,6 +1320,9 @@ subroutine ssids_solve_mult_double(nrhs, x, ldx, akeep, fkeep, options, &
       call ssids_print_flag(inform,nout,context)
       return
    endif
+
+   call push_ssids_cuda_settings(user_settings, cuda_error)
+   if(cuda_error.ne.0) goto 200
 
    if ( options%presolve == 0 ) then
 
