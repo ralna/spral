@@ -1051,7 +1051,7 @@ subroutine ssids_solve_mult_double(nrhs, x, ldx, akeep, fkeep, options, &
       ! On exit, if i has been used to index a variable,
       ! x(i,j) holds solution for variable i to system j
    ! For details of keep, options, inform : see derived type description
-   class(ssids_fkeep_gpu), intent(inout) :: fkeep !inout for moving data
+   class(ssids_fkeep), intent(inout) :: fkeep !inout for moving data
    type(ssids_options), intent(in) :: options
    type(ssids_inform), intent(out) :: inform
    integer, optional, intent(in) :: job ! used to indicate whether

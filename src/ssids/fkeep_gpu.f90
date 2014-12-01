@@ -21,8 +21,6 @@ module spral_ssids_fkeep_gpu
                                      SSIDS_SOLVE_JOB_DIAG_BWD
    use spral_ssids_factor_gpu, only : parfactor
    use spral_ssids_fkeep, only : ssids_fkeep
-   use spral_ssids_solve_cpu, only : solve_calc_chunk, inner_solve, &
-                                     subtree_bwd_solve
    use spral_ssids_solve_gpu, only : bwd_solve_gpu, fwd_solve_gpu, &
                                      fwd_multisolve_gpu, bwd_multisolve_gpu, &
                                      d_solve_gpu
@@ -48,8 +46,8 @@ module spral_ssids_fkeep_gpu
 
    contains
       procedure, pass(fkeep) :: inner_factor => inner_factor_gpu ! Do actual factorization
-      procedure, pass(fkeep) :: free => free_fkeep_gpu ! Frees memory
       procedure, pass(fkeep) :: inner_solve => inner_solve_gpu ! Do actual solve
+      procedure, pass(fkeep) :: free => free_fkeep_gpu ! Frees memory
    end type ssids_fkeep_gpu
 
 contains
@@ -228,18 +226,33 @@ subroutine inner_solve_gpu(local_job, nrhs, x, ldx, akeep, fkeep, options, infor
    integer :: cuda_error
    integer :: nchunk, num_threads
    integer, dimension(:,:), allocatable :: map
-   integer, dimension(:), allocatable :: chunk_sa, chunk_en, fwd_ptr, fwd
 
    type(C_PTR) :: gpu_x
    type(C_PTR) :: gpu_scale
    type(C_PTR) :: gpu_invp
 
+   ! Copy factor data to/from GPU as approriate (if required!)
+   call ssids_move_data_inner(akeep, fkeep, options, inform)
+   if(inform%flag.lt.0) then
+      call pop_ssids_cuda_settings(user_settings, cuda_error)
+      return
+   endif
+
+   ! Call CPU version if desired (or no GPU version for diag only)
+   if(.not. options%use_gpu_solve) then
+      call fkeep%ssids_fkeep%inner_solve(local_job, nrhs, x, ldx, akeep, &
+         options, inform)
+      return
+   endif
+
+   ! Otherwise get on with GPU version
    n = akeep%n
 
    call push_ssids_cuda_settings(user_settings, cuda_error)
    if(cuda_error.ne.0) goto 200
 
    if ( options%presolve == 0 ) then
+     ! Scale on CPU
 
      if (allocated(fkeep%scaling)) then
         if (local_job == SSIDS_SOLVE_JOB_ALL .or. &
@@ -254,6 +267,7 @@ subroutine inner_solve_gpu(local_job, nrhs, x, ldx, akeep, fkeep, options, infor
      end if
 
    else
+     ! Scale on GPU
 
      if (allocated(fkeep%scaling)) then
        cuda_error = cudaMalloc(gpu_scale, C_SIZEOF(fkeep%scaling(1:n)))
@@ -286,25 +300,12 @@ subroutine inner_solve_gpu(local_job, nrhs, x, ldx, akeep, fkeep, options, infor
      
    end if
 
-   ! Copy factor data to/from GPU as approriate (if required!)
-   call ssids_move_data_inner(akeep, fkeep, options, inform)
-   if(inform%flag.lt.0) then
-      call pop_ssids_cuda_settings(user_settings, cuda_error)
-      return
-   endif
-
-   ! We aim to have 4 chunks per thread to hopefully provide sufficient
-   ! tree-level parallelism.
    num_threads = 1
 !$ num_threads = omp_get_max_threads()
-   call solve_calc_chunk(akeep%nnodes, fkeep%nodes, akeep%sparent, akeep%rptr, &
-      4*num_threads, nchunk, chunk_sa, chunk_en, fwd_ptr, fwd, inform%stat)
-   if(inform%stat.ne.0) goto 100
 
-   if(options%use_gpu_solve .and. ( local_job.eq.SSIDS_SOLVE_JOB_FWD .or. &
-         local_job.eq.SSIDS_SOLVE_JOB_ALL)) then
-      allocate(map(0:akeep%n, num_threads), &
-         stat=inform%stat)
+   if(   local_job.eq.SSIDS_SOLVE_JOB_FWD .or. &
+         local_job.eq.SSIDS_SOLVE_JOB_ALL) then
+      allocate(map(0:akeep%n, num_threads), stat=inform%stat)
       if(inform%stat.ne.0) goto 100
       if(options%presolve.eq.0) then
         call fwd_solve_gpu(fkeep%pos_def, akeep%child_ptr, akeep%child_list,   &
@@ -320,19 +321,9 @@ subroutine inner_solve_gpu(local_job, nrhs, x, ldx, akeep, fkeep, options, infor
         if(inform%stat.ne.0) goto 100
         if(cuda_error.ne.0) goto 200
       end if
-      ! Fudge local_job if required to perform backwards solve
-      if(local_job.eq.SSIDS_SOLVE_JOB_ALL) then
-         if(fkeep%pos_def) then
-            local_job = SSIDS_SOLVE_JOB_BWD
-         else
-            local_job = SSIDS_SOLVE_JOB_DIAG_BWD
-         end if
-      elseif(local_job.eq.SSIDS_SOLVE_JOB_FWD) then
-         local_job = -1 ! done
-      end if
    endif
 
-   if(options%use_gpu_solve .and. local_job.eq.SSIDS_SOLVE_JOB_DIAG) then
+   if(local_job.eq.SSIDS_SOLVE_JOB_DIAG) then
       if(options%presolve.eq.0) then
          call d_solve_gpu(akeep%nnodes, akeep%sptr, options%nstream, &
             fkeep%stream_handle, fkeep%stream_data, fkeep%top_data, akeep%n, &
@@ -344,36 +335,23 @@ subroutine inner_solve_gpu(local_job, nrhs, x, ldx, akeep, fkeep, options, infor
             nrhs, gpu_x, cuda_error)
       end if
       if(cuda_error.ne.0) goto 200
-      local_job = -1 ! done
    endif
-
-   ! Perform supernodal forward solve or diagonal solve (both in serial)
-   call inner_solve(fkeep%pos_def, local_job, akeep%nnodes, &
-      fkeep%nodes, akeep%sptr, akeep%rptr, akeep%rlist, akeep%invp, nrhs, &
-      x, ldx, inform%stat)
-   if (inform%stat .ne. 0) goto 100
 
    if( local_job.eq.SSIDS_SOLVE_JOB_DIAG_BWD .or. &
          local_job.eq.SSIDS_SOLVE_JOB_BWD .or. &
          local_job.eq.SSIDS_SOLVE_JOB_ALL ) then
-      if(options%use_gpu_solve) then
-        if(options%presolve.eq.0) then
-           call bwd_solve_gpu(local_job, fkeep%pos_def, akeep%nnodes,      &
-              akeep%sptr, options%nstream, fkeep%stream_handle,            &
-              fkeep%stream_data, fkeep%top_data, akeep%invp, x,            &
-              inform%stat, cuda_error)
-           if(cuda_error.ne.0) goto 200
-        else
-           call bwd_multisolve_gpu(fkeep%pos_def, local_job, options%nstream, &
-              fkeep%stream_handle, fkeep%stream_data, fkeep%top_data,   &
-              nrhs, gpu_x, cuda_error)
-           if(cuda_error.ne.0) goto 200
-        end if
+      if(options%presolve.eq.0) then
+         call bwd_solve_gpu(local_job, fkeep%pos_def, akeep%nnodes,      &
+            akeep%sptr, options%nstream, fkeep%stream_handle,            &
+            fkeep%stream_data, fkeep%top_data, akeep%invp, x,            &
+            inform%stat, cuda_error)
+         if(cuda_error.ne.0) goto 200
       else
-         call subtree_bwd_solve(akeep%nnodes, 1, local_job, fkeep%pos_def,  &
-            akeep%nnodes, fkeep%nodes, akeep%sptr, akeep%rptr, akeep%rlist, &
-            akeep%invp, nrhs, x, ldx, inform%stat)
-      endif
+         call bwd_multisolve_gpu(fkeep%pos_def, local_job, options%nstream, &
+            fkeep%stream_handle, fkeep%stream_data, fkeep%top_data,   &
+            nrhs, gpu_x, cuda_error)
+         if(cuda_error.ne.0) goto 200
+      end if
    end if
    if (inform%stat .ne. 0) goto 100
 
