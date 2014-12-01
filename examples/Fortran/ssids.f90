@@ -5,7 +5,7 @@ program ssids_example
 
    ! Derived types
    type (ssids_akeep)   :: akeep
-   type (ssids_fkeep)   :: fkeep
+   type (ssids_fkeep_gpu)   :: fkeep
    type (ssids_options) :: options
    type (ssids_inform)  :: inform
 

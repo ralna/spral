@@ -7,22 +7,24 @@ module spral_ssids_factor
                           cudaMemcpy2d, cudaMemcpyHostToDevice, &
                           cudaMemcpyDeviceToHost
    use spral_ssids_alloc, only : smfreeall
-   use spral_ssids_datatypes, only : wp, long, smalloc_type, node_type, ssids_akeep, ssids_inform, ssids_options, thread_stats, &
-      SSIDS_ERROR_ALLOCATION, SSIDS_ERROR_CUDA_UNKNOWN
+   use spral_ssids_datatypes, only : long, node_type, smalloc_type, &
+                                     ssids_akeep, ssids_options, ssids_inform, &
+                                     thread_stats, wp, SSIDS_ERROR_ALLOCATION, &
+                                     SSIDS_ERROR_CUDA_UNKNOWN
    use spral_ssids_cuda_datatypes, only : gpu_type, free_gpu_type
    use spral_ssids_factor_gpu, only : parfactor
    use, intrinsic :: iso_c_binding
    implicit none
 
    private
-   public :: ssids_fkeep
+   public :: ssids_fkeep, ssids_fkeep_gpu
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
    !
    ! Data type for data generated in factorise phase
    !
-   type ssids_fkeep_base
+   type ssids_fkeep
       integer :: flag ! copy of error flag.
       real(wp), dimension(:), allocatable :: scaling ! Stores scaling for
          ! each entry (in original matrix order)
@@ -40,12 +42,16 @@ module spral_ssids_factor
       integer(long) :: num_flops
       integer :: num_neg
       integer :: num_two
-   end type ssids_fkeep_base
+
+   contains
+      procedure, pass(fkeep) :: inner_factor => inner_factor_cpu ! Do actual factorization
+      procedure, pass(fkeep) :: free => free_fkeep ! Frees memory
+   end type ssids_fkeep
 
    !
    ! Data type for data generated in factorise phase (gpu version)
    !
-   type, extends(ssids_fkeep_base) :: ssids_fkeep
+   type, extends(ssids_fkeep) :: ssids_fkeep_gpu
       type(C_PTR), dimension(:), allocatable :: stream_handle
       type(gpu_type), dimension(:), allocatable :: stream_data
       type(gpu_type) :: top_data
@@ -58,14 +64,25 @@ module spral_ssids_factor
 
    contains
       procedure, pass(fkeep) :: inner_factor => inner_factor_gpu ! Do actual factorization
-      procedure, pass(fkeep) :: free => free_fkeep ! Frees all associated memory
-   end type ssids_fkeep
+      procedure, pass(fkeep) :: free => free_fkeep_gpu ! Frees memory
+   end type ssids_fkeep_gpu
 
 contains
 
-subroutine inner_factor_gpu(fkeep, akeep, val, options, inform)
+subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
    class(ssids_akeep), intent(in) :: akeep
    class(ssids_fkeep), intent(inout) :: fkeep
+   real(wp), dimension(*), target, intent(in) :: val
+   class(ssids_options), intent(in) :: options
+   class(ssids_inform), intent(inout) :: inform
+
+   print *, "CPU Factor not implemented yet!"
+   stop
+end subroutine inner_factor_cpu
+
+subroutine inner_factor_gpu(fkeep, akeep, val, options, inform)
+   class(ssids_akeep), intent(in) :: akeep
+   class(ssids_fkeep_gpu), intent(inout) :: fkeep
    real(wp), dimension(*), target, intent(in) :: val
    class(ssids_options), intent(in) :: options
    class(ssids_inform), intent(inout) :: inform
@@ -86,6 +103,8 @@ subroutine inner_factor_gpu(fkeep, akeep, val, options, inform)
 
    num_threads = 1
 !$ num_threads = omp_get_max_threads()
+
+   fkeep%host_factors = .false.
 
    allocate(stats(num_threads), map(0:akeep%n, num_threads), stat=st)
    if (st .ne. 0) go to 10
@@ -229,16 +248,18 @@ end function copy_to_gpu_non_target
 
 !****************************************************************************
 
-subroutine free_fkeep(fkeep, cuda_error)
+subroutine free_fkeep(fkeep, flag)
    class(ssids_fkeep), intent(inout) :: fkeep
-   integer, intent(out) :: cuda_error
+   integer, intent(out) :: flag ! not actually used for cpu version, set to 0
 
    integer :: st, i
 
-   cuda_error = 0
+   flag = 0 ! Not used for basic SSIDS, just zet to zero
 
+   ! Skip if nothing intialized
    if (.not.allocated(fkeep%nodes)) return
 
+   ! Free memory
    call smfreeall(fkeep%alloc)
    deallocate(fkeep%alloc)
    nullify(fkeep%alloc)
@@ -246,45 +267,61 @@ subroutine free_fkeep(fkeep, cuda_error)
    deallocate(fkeep%nodes, stat=st)
    deallocate(fkeep%scaling, stat=st)
 
-   ! And clean up factors
-   call free_gpu_type(fkeep%top_data, cuda_error)
+end subroutine free_fkeep
+
+subroutine free_fkeep_gpu(fkeep, flag)
+   class(ssids_fkeep_gpu), intent(inout) :: fkeep
+   integer, intent(out) :: flag  ! Returns any cuda error value
+
+   integer :: st, i
+
+   ! Skip if nothing intialized
+   if (.not.allocated(fkeep%nodes)) return
+
+   ! Call superclass free first (sets flag to 0)
+   call fkeep%ssids_fkeep%free(flag)
+
+   !
+   ! Now cleanup GPU-specific stuff
+   !
+   call free_gpu_type(fkeep%top_data, flag)
    if(allocated(fkeep%stream_data)) then
       do i = 1, size(fkeep%stream_data)
-         call free_gpu_type(fkeep%stream_data(i), cuda_error)
+         call free_gpu_type(fkeep%stream_data(i), flag)
       end do
       deallocate(fkeep%stream_data, stat=st)
    endif
 
    ! Cleanup top-level presolve info
    if(C_ASSOCIATED(fkeep%gpu_rlist_with_delays)) then
-      cuda_error = cudaFree(fkeep%gpu_rlist_with_delays)
+      flag = cudaFree(fkeep%gpu_rlist_with_delays)
       fkeep%gpu_rlist_with_delays = C_NULL_PTR
-      if(cuda_error.ne.0) return
+      if(flag.ne.0) return
    endif
    if(C_ASSOCIATED(fkeep%gpu_clists)) then
-      cuda_error = cudaFree(fkeep%gpu_clists)
+      flag = cudaFree(fkeep%gpu_clists)
       fkeep%gpu_clists = C_NULL_PTR
-      if(cuda_error.ne.0) return
+      if(flag.ne.0) return
    endif
    if(C_ASSOCIATED(fkeep%gpu_clists_direct)) then
-      cuda_error = cudaFree(fkeep%gpu_clists)
+      flag = cudaFree(fkeep%gpu_clists)
       fkeep%gpu_clists = C_NULL_PTR
-      if(cuda_error.ne.0) return
+      if(flag.ne.0) return
    endif
    if(C_ASSOCIATED(fkeep%gpu_clen)) then
-      cuda_error = cudaFree(fkeep%gpu_clen)
+      flag = cudaFree(fkeep%gpu_clen)
       fkeep%gpu_clen = C_NULL_PTR
-      if(cuda_error.ne.0) return
+      if(flag.ne.0) return
    endif
 
    ! Release streams
    if(allocated(fkeep%stream_handle)) then
       do i = 1, size(fkeep%stream_handle)
-         cuda_error = cudaStreamDestroy(fkeep%stream_handle(i))
-         if(cuda_error.ne.0) return
+         flag = cudaStreamDestroy(fkeep%stream_handle(i))
+         if(flag.ne.0) return
       end do
       deallocate(fkeep%stream_handle, stat=st)
    endif
-end subroutine free_fkeep
+end subroutine free_fkeep_gpu
 
 end module spral_ssids_factor

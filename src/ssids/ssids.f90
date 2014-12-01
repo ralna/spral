@@ -26,7 +26,7 @@ module spral_ssids
    use spral_ssids_analyse, only : analyse_phase, check_order, expand_matrix, &
                                    expand_pattern
    use spral_ssids_datatypes
-   use spral_ssids_factor, only : ssids_fkeep
+   use spral_ssids_factor, only : ssids_fkeep, ssids_fkeep_gpu
    use spral_ssids_solve_cpu, only : solve_calc_chunk, inner_solve, &
                                      subtree_bwd_solve
    use spral_ssids_solve_gpu, only : bwd_solve_gpu, fwd_solve_gpu, &
@@ -37,6 +37,7 @@ module spral_ssids
    private
    ! Data types
    public :: ssids_akeep, ssids_fkeep, ssids_options, ssids_inform
+   public :: ssids_fkeep_gpu ! FIXME
    ! User interface routines
    public :: ssids_analyse,         & ! Analyse phase, CSC-lower input
              ssids_analyse_coord,   & ! Analyse phase, Coordinate input
@@ -740,7 +741,6 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
    inform%stat = 0
 
    fkeep%flag = 0
-   fkeep%host_factors = .false.
    st = 0
 
    n = akeep%n
@@ -1022,7 +1022,7 @@ end subroutine ssids_factor_double
 !
 subroutine ssids_move_data_inner(akeep, fkeep, options, nout, context, inform)
    type(ssids_akeep), intent(in) :: akeep
-   type(ssids_fkeep), intent(inout) :: fkeep
+   type(ssids_fkeep_gpu), intent(inout) :: fkeep
    type(ssids_options), intent(in) :: options
    integer, intent(in) :: nout
    character(len=*), intent(in) :: context
@@ -1167,7 +1167,7 @@ subroutine ssids_solve_one_double(x1, akeep, fkeep, options, inform, job)
       ! right-hand side.On exit, if i has been used to index a variable,
       ! x(i) holds solution for variable i
    type(ssids_akeep), intent(in) :: akeep
-   type(ssids_fkeep), intent(inout) :: fkeep
+   class(ssids_fkeep_gpu), intent(inout) :: fkeep
    type(ssids_options), intent(in) :: options
    type(ssids_inform), intent(out) :: inform
    integer, optional, intent(in) :: job
@@ -1194,7 +1194,7 @@ subroutine ssids_solve_mult_double(nrhs, x, ldx, akeep, fkeep, options, &
       ! On exit, if i has been used to index a variable,
       ! x(i,j) holds solution for variable i to system j
    ! For details of keep, options, inform : see derived type description
-   type(ssids_fkeep), intent(inout) :: fkeep !inout for moving data
+   class(ssids_fkeep_gpu), intent(inout) :: fkeep !inout for moving data
    type(ssids_options), intent(in) :: options
    type(ssids_inform), intent(out) :: inform
    integer, optional, intent(in) :: job ! used to indicate whether
@@ -1528,7 +1528,7 @@ end subroutine ssids_solve_mult_double
 !
 subroutine ssids_enquire_posdef_double(akeep, fkeep, options, inform, d)
    type(ssids_akeep), intent(in) :: akeep
-   type(ssids_fkeep), target, intent(in) :: fkeep
+   class(ssids_fkeep_gpu), target, intent(in) :: fkeep
    type(ssids_options), intent(in) :: options
    type(ssids_inform), intent(out) :: inform
    real(wp), dimension(*), intent(out) :: d
@@ -1600,7 +1600,7 @@ end subroutine ssids_enquire_posdef_double
 subroutine ssids_enquire_indef_double(akeep, fkeep, options, inform, &
       piv_order, d)
    type(ssids_akeep), intent(in) :: akeep
-   type(ssids_fkeep), target, intent(in) :: fkeep
+   class(ssids_fkeep_gpu), target, intent(in) :: fkeep
    type(ssids_options), intent(in) :: options
    type(ssids_inform), intent(out) :: inform
    integer, dimension(*), optional, intent(out) :: piv_order
@@ -1781,7 +1781,7 @@ subroutine ssids_alter_double(d, akeep, fkeep, options, inform)
      ! of D^{-1} must be placed in d(1,i) (i = 1,...n)
      ! and the off-diagonal entries must be placed in d(2,i) (i = 1,...n-1).
    type(ssids_akeep), intent(in) :: akeep
-   type(ssids_fkeep), target, intent(inout) :: fkeep
+   class(ssids_fkeep_gpu), target, intent(inout) :: fkeep
    type(ssids_options), intent(in) :: options
    type(ssids_inform), intent(out) :: inform
 
@@ -1944,7 +1944,7 @@ end subroutine free_akeep_double
 !*******************************
 
 subroutine free_fkeep_double(fkeep, cuda_error)
-   type(ssids_fkeep), intent(inout) :: fkeep
+   class(ssids_fkeep), intent(inout) :: fkeep
    integer, intent(out) :: cuda_error
 
    call fkeep%free(cuda_error)
@@ -1954,7 +1954,7 @@ end subroutine free_fkeep_double
 
 subroutine free_both_double(akeep, fkeep, cuda_error)
    type(ssids_akeep), intent(inout) :: akeep
-   type(ssids_fkeep), intent(inout) :: fkeep
+   class(ssids_fkeep), intent(inout) :: fkeep
    integer, intent(out) :: cuda_error
 
    call free_akeep_double(akeep, cuda_error)

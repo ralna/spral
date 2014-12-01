@@ -298,7 +298,7 @@ subroutine spral_ssids_factor(cposdef, cptr, crow, val, cscale, cakeep, cfkeep,&
    integer(C_INT), dimension(:), allocatable, target :: frow_alloc
    real(C_DOUBLE), dimension(:), pointer :: fscale
    type(ssids_akeep), pointer :: fakeep
-   type(ssids_fkeep), pointer :: ffkeep
+   type(ssids_fkeep_gpu), pointer :: ffkeep
    type(ssids_options) :: foptions
    type(ssids_inform) :: finform
 
@@ -377,7 +377,7 @@ subroutine spral_ssids_solve1(job, cx1, cakeep, cfkeep, coptions, cinform) &
 
    real(C_DOUBLE), dimension(:), pointer :: fx1
    type(ssids_akeep), pointer :: fakeep
-   type(ssids_fkeep), pointer :: ffkeep
+   type(ssids_fkeep_gpu), pointer :: ffkeep
    type(ssids_options) :: foptions
    type(ssids_inform) :: finform
 
@@ -419,7 +419,7 @@ subroutine spral_ssids_solve(job, nrhs, cx, ldx, cakeep, cfkeep, coptions, &
 
    real(C_DOUBLE), dimension(:,:), pointer :: fx
    type(ssids_akeep), pointer :: fakeep
-   type(ssids_fkeep), pointer :: ffkeep
+   type(ssids_fkeep_gpu), pointer :: ffkeep
    type(ssids_options) :: foptions
    type(ssids_inform) :: finform
 
@@ -466,7 +466,7 @@ integer(C_INT) function spral_ssids_free_fkeep(cfkeep) bind(C)
    
    type(C_PTR), intent(inout) :: cfkeep
 
-   type(ssids_fkeep), pointer :: ffkeep
+   type(ssids_fkeep_gpu), pointer :: ffkeep
 
    if(.not.C_ASSOCIATED(cfkeep)) then
       ! Nothing to free
@@ -517,7 +517,7 @@ subroutine spral_ssids_enquire_posdef(cakeep, cfkeep, coptions, cinform, d) &
    real(C_DOUBLE), dimension(*), intent(out) :: d
 
    type(ssids_akeep), pointer :: fakeep
-   type(ssids_fkeep), pointer :: ffkeep
+   type(ssids_fkeep_gpu), pointer :: ffkeep
    type(ssids_options) :: foptions
    type(ssids_inform) :: finform
 
@@ -550,7 +550,7 @@ subroutine spral_ssids_enquire_indef(cakeep, cfkeep, coptions, cinform, &
    type(C_PTR), value :: cd
 
    type(ssids_akeep), pointer :: fakeep
-   type(ssids_fkeep), pointer :: ffkeep
+   type(ssids_fkeep_gpu), pointer :: ffkeep
    type(ssids_options) :: foptions
    type(ssids_inform) :: finform
    integer(C_INT), dimension(:), pointer :: fpiv_order
@@ -610,7 +610,7 @@ subroutine spral_ssids_alter(d, cakeep, cfkeep, coptions, cinform) bind(C)
    type(spral_ssids_inform), intent(out) :: cinform
 
    type(ssids_akeep), pointer :: fakeep
-   type(ssids_fkeep), pointer :: ffkeep
+   type(ssids_fkeep_gpu), pointer :: ffkeep
    type(ssids_options) :: foptions
    type(ssids_inform) :: finform
 
