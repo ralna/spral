@@ -149,6 +149,37 @@ examples/C/ssids.$(OBJEXT): libspral.a
 TESTS += ssids_test
 endif
 
+# SSMFE
+#include_HEADERS += include/spral_random_matrix.h
+libspral_a_SOURCES += \
+	src/ssmfe/ssmfe.f90 \
+	src/ssmfe/core.f90 \
+	src/ssmfe/expert.f90
+#	interfaces/C/random_matrix.f90
+check_PROGRAMS += \
+	examples/Fortran/ssmfe/example_precond \
+	examples/Fortran/ssmfe/example_shift_invert
+#	ssmfe_test \
+#	examples/C/ssmfe/ssmfe1 \
+#	examples/C/ssmfe/ssmfe2
+#random_matrix_test_SOURCES = tests/random_matrix.f90
+examples_Fortran_ssmfe_example_precond_SOURCES = \
+	examples/Fortran/ssmfe/example_precond.f90 \
+	examples/Fortran/ssmfe/laplace.f90
+examples_Fortran_ssmfe_example_shift_invert_SOURCES = \
+	examples/Fortran/ssmfe/example_shift_invert.f90 \
+	examples/Fortran/ssmfe/laplace.f90 \
+	examples/Fortran/ssmfe/ldlt.f90
+#examples_C_random_matrix_SOURCES = examples/C/random_matrix.c
+#tests/random_matrix.$(OBJEXT): libspral.a
+examples/Fortran/ssmfe/example_precond.$(OBJEXT): libspral.a \
+	examples/Fortran/ssmfe/laplace.$(OBJEXT)
+examples/Fortran/ssmfe/example_shift_invert.$(OBJEXT): libspral.a \
+	examples/Fortran/ssmfe/laplace.$(OBJEXT) \
+	examples/Fortran/ssmfe/ldlt.$(OBJEXT)
+#examples/C/random_matrix.$(OBJEXT): libspral.a
+#TESTS += random_matrix_test
+
 # Automake doesn't know much about modules, so get rid of them ourself
 clean-local:
 	-rm *.mod
@@ -200,6 +231,8 @@ src/ssids/solve_gpu.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
 								 	    src/ssids/cuda_datatypes.$(OBJEXT) \
 								 	    src/ssids/cuda_interfaces.$(OBJEXT) \
 								 		 src/ssids/datatypes.$(OBJEXT)
+src/ssmfe/expert.$(OBJEXT): src/ssmfe/core.$(OBJEXT)
+src/ssmfe/ssmfe.$(OBJEXT): src/ssmfe/expert.$(OBJEXT)
 driver/spral_ssids.$(OBJEXT): libspral.a
 
 # CUDA header deps

@@ -90,7 +90,9 @@ host_triplet = @host@
 check_PROGRAMS = random_test$(EXEEXT) examples/Fortran/random$(EXEEXT) \
 	examples/C/random$(EXEEXT) random_matrix_test$(EXEEXT) \
 	examples/Fortran/random_matrix$(EXEEXT) \
-	examples/C/random_matrix$(EXEEXT) $(am__EXEEXT_1)
+	examples/C/random_matrix$(EXEEXT) $(am__EXEEXT_1) \
+	examples/Fortran/ssmfe/example_precond$(EXEEXT) \
+	examples/Fortran/ssmfe/example_shift_invert$(EXEEXT)
 TESTS = random_test$(EXEEXT) random_matrix_test$(EXEEXT) \
 	$(am__EXEEXT_2)
 
@@ -196,7 +198,8 @@ am__libspral_a_SOURCES_DIST = src/core_analyse.f90 \
 	src/ssids/reorder_kernels.cu src/ssids/solve_cpu.f90 \
 	src/ssids/solve_gpu.f90 src/ssids/solve_kernels.cu \
 	src/ssids/ssids.f90 src/ssids/syrk_kernels.cu \
-	interfaces/C/ssids.f90
+	interfaces/C/ssids.f90 src/ssmfe/ssmfe.f90 src/ssmfe/core.f90 \
+	src/ssmfe/expert.f90
 am__dirstamp = $(am__leading_dot)dirstamp
 @HAVE_NVCC_TRUE@am__objects_1 = src/cuda/api_wrappers.$(OBJEXT) \
 @HAVE_NVCC_TRUE@	src/cuda/cuda.$(OBJEXT)
@@ -224,7 +227,9 @@ am_libspral_a_OBJECTS = src/core_analyse.$(OBJEXT) $(am__objects_1) \
 	src/rutherford_boeing.$(OBJEXT) src/scaling.$(OBJEXT) \
 	src/timer.$(OBJEXT) src/random.$(OBJEXT) \
 	interfaces/C/random.$(OBJEXT) src/random_matrix.$(OBJEXT) \
-	interfaces/C/random_matrix.$(OBJEXT) $(am__objects_2)
+	interfaces/C/random_matrix.$(OBJEXT) $(am__objects_2) \
+	src/ssmfe/ssmfe.$(OBJEXT) src/ssmfe/core.$(OBJEXT) \
+	src/ssmfe/expert.$(OBJEXT)
 libspral_a_OBJECTS = $(am_libspral_a_OBJECTS)
 @HAVE_NVCC_TRUE@am__EXEEXT_1 = ssids_test$(EXEEXT) \
 @HAVE_NVCC_TRUE@	examples/Fortran/ssids$(EXEEXT) \
@@ -275,6 +280,25 @@ am__examples_Fortran_ssids_SOURCES_DIST = examples/Fortran/ssids.f90
 examples_Fortran_ssids_OBJECTS = $(am_examples_Fortran_ssids_OBJECTS)
 @HAVE_NVCC_TRUE@examples_Fortran_ssids_DEPENDENCIES =  \
 @HAVE_NVCC_TRUE@	$(am__DEPENDENCIES_2) $(am__DEPENDENCIES_1)
+am_examples_Fortran_ssmfe_example_precond_OBJECTS =  \
+	examples/Fortran/ssmfe/example_precond.$(OBJEXT) \
+	examples/Fortran/ssmfe/laplace.$(OBJEXT)
+examples_Fortran_ssmfe_example_precond_OBJECTS =  \
+	$(am_examples_Fortran_ssmfe_example_precond_OBJECTS)
+examples_Fortran_ssmfe_example_precond_LDADD = $(LDADD)
+examples_Fortran_ssmfe_example_precond_DEPENDENCIES =  \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+am_examples_Fortran_ssmfe_example_shift_invert_OBJECTS =  \
+	examples/Fortran/ssmfe/example_shift_invert.$(OBJEXT) \
+	examples/Fortran/ssmfe/laplace.$(OBJEXT) \
+	examples/Fortran/ssmfe/ldlt.$(OBJEXT)
+examples_Fortran_ssmfe_example_shift_invert_OBJECTS =  \
+	$(am_examples_Fortran_ssmfe_example_shift_invert_OBJECTS)
+examples_Fortran_ssmfe_example_shift_invert_LDADD = $(LDADD)
+examples_Fortran_ssmfe_example_shift_invert_DEPENDENCIES =  \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_random_matrix_test_OBJECTS = tests/random_matrix.$(OBJEXT)
 random_matrix_test_OBJECTS = $(am_random_matrix_test_OBJECTS)
 random_matrix_test_LDADD = $(LDADD)
@@ -341,6 +365,8 @@ SOURCES = $(libspral_a_SOURCES) $(examples_C_random_SOURCES) \
 	$(examples_C_ssids_SOURCES) $(examples_Fortran_random_SOURCES) \
 	$(examples_Fortran_random_matrix_SOURCES) \
 	$(examples_Fortran_ssids_SOURCES) \
+	$(examples_Fortran_ssmfe_example_precond_SOURCES) \
+	$(examples_Fortran_ssmfe_example_shift_invert_SOURCES) \
 	$(random_matrix_test_SOURCES) $(random_test_SOURCES) \
 	$(spral_ssids_SOURCES) $(ssids_test_SOURCES)
 DIST_SOURCES = $(am__libspral_a_SOURCES_DIST) \
@@ -350,6 +376,8 @@ DIST_SOURCES = $(am__libspral_a_SOURCES_DIST) \
 	$(examples_Fortran_random_SOURCES) \
 	$(examples_Fortran_random_matrix_SOURCES) \
 	$(am__examples_Fortran_ssids_SOURCES_DIST) \
+	$(examples_Fortran_ssmfe_example_precond_SOURCES) \
+	$(examples_Fortran_ssmfe_example_shift_invert_SOURCES) \
 	$(random_matrix_test_SOURCES) $(random_test_SOURCES) \
 	$(am__spral_ssids_SOURCES_DIST) $(am__ssids_test_SOURCES_DIST)
 am__can_run_installinfo = \
@@ -731,13 +759,17 @@ include_HEADERS = include/spral.h include/spral_matrix_util.h \
 # SCALING
 
 # TIMER
+
+# SSMFE
+#include_HEADERS += include/spral_random_matrix.h
 libspral_a_SOURCES = src/core_analyse.f90 $(am__append_1) \
 	src/match_order.f90 src/matrix_util.f90 \
 	interfaces/C/matrix_util.f90 \
 	src/metis$(METIS_VERSION)_wrapper.f90 src/pgm.f90 \
 	src/rutherford_boeing.f90 src/scaling.f90 src/timer.f90 \
 	src/random.f90 interfaces/C/random.f90 src/random_matrix.f90 \
-	interfaces/C/random_matrix.f90 $(am__append_3)
+	interfaces/C/random_matrix.f90 $(am__append_3) \
+	src/ssmfe/ssmfe.f90 src/ssmfe/core.f90 src/ssmfe/expert.f90
 EXTRA_DIST = src/metis4_wrapper.f90 src/metis5_wrapper.f90
 random_test_SOURCES = tests/random.f90
 examples_Fortran_random_SOURCES = examples/Fortran/random.f90
@@ -759,6 +791,19 @@ examples_C_random_matrix_SOURCES = examples/C/random_matrix.c
 @HAVE_NVCC_TRUE@examples_C_ssids_SOURCES = examples/C/ssids.c
 @HAVE_NVCC_TRUE@examples_C_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
 @HAVE_NVCC_TRUE@examples_C_ssids_LINK = $(NVCCLINK)
+#	ssmfe_test \
+#	examples/C/ssmfe/ssmfe1 \
+#	examples/C/ssmfe/ssmfe2
+#random_matrix_test_SOURCES = tests/random_matrix.f90
+examples_Fortran_ssmfe_example_precond_SOURCES = \
+	examples/Fortran/ssmfe/example_precond.f90 \
+	examples/Fortran/ssmfe/laplace.f90
+
+examples_Fortran_ssmfe_example_shift_invert_SOURCES = \
+	examples/Fortran/ssmfe/example_shift_invert.f90 \
+	examples/Fortran/ssmfe/laplace.f90 \
+	examples/Fortran/ssmfe/ldlt.f90
+
 all: all-am
 
 .SUFFIXES:
@@ -914,6 +959,18 @@ src/ssids/syrk_kernels.$(OBJEXT): src/ssids/$(am__dirstamp) \
 	src/ssids/$(DEPDIR)/$(am__dirstamp)
 interfaces/C/ssids.$(OBJEXT): interfaces/C/$(am__dirstamp) \
 	interfaces/C/$(DEPDIR)/$(am__dirstamp)
+src/ssmfe/$(am__dirstamp):
+	@$(MKDIR_P) src/ssmfe
+	@: > src/ssmfe/$(am__dirstamp)
+src/ssmfe/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) src/ssmfe/$(DEPDIR)
+	@: > src/ssmfe/$(DEPDIR)/$(am__dirstamp)
+src/ssmfe/ssmfe.$(OBJEXT): src/ssmfe/$(am__dirstamp) \
+	src/ssmfe/$(DEPDIR)/$(am__dirstamp)
+src/ssmfe/core.$(OBJEXT): src/ssmfe/$(am__dirstamp) \
+	src/ssmfe/$(DEPDIR)/$(am__dirstamp)
+src/ssmfe/expert.$(OBJEXT): src/ssmfe/$(am__dirstamp) \
+	src/ssmfe/$(DEPDIR)/$(am__dirstamp)
 
 libspral.a: $(libspral_a_OBJECTS) $(libspral_a_DEPENDENCIES) $(EXTRA_libspral_a_DEPENDENCIES) 
 	$(AM_V_at)-rm -f libspral.a
@@ -1013,6 +1070,32 @@ examples/Fortran/ssids.$(OBJEXT): examples/Fortran/$(am__dirstamp) \
 examples/Fortran/ssids$(EXEEXT): $(examples_Fortran_ssids_OBJECTS) $(examples_Fortran_ssids_DEPENDENCIES) $(EXTRA_examples_Fortran_ssids_DEPENDENCIES) examples/Fortran/$(am__dirstamp)
 	@rm -f examples/Fortran/ssids$(EXEEXT)
 	$(AM_V_GEN)$(examples_Fortran_ssids_LINK) $(examples_Fortran_ssids_OBJECTS) $(examples_Fortran_ssids_LDADD) $(LIBS)
+examples/Fortran/ssmfe/$(am__dirstamp):
+	@$(MKDIR_P) examples/Fortran/ssmfe
+	@: > examples/Fortran/ssmfe/$(am__dirstamp)
+examples/Fortran/ssmfe/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) examples/Fortran/ssmfe/$(DEPDIR)
+	@: > examples/Fortran/ssmfe/$(DEPDIR)/$(am__dirstamp)
+examples/Fortran/ssmfe/example_precond.$(OBJEXT):  \
+	examples/Fortran/ssmfe/$(am__dirstamp) \
+	examples/Fortran/ssmfe/$(DEPDIR)/$(am__dirstamp)
+examples/Fortran/ssmfe/laplace.$(OBJEXT):  \
+	examples/Fortran/ssmfe/$(am__dirstamp) \
+	examples/Fortran/ssmfe/$(DEPDIR)/$(am__dirstamp)
+
+examples/Fortran/ssmfe/example_precond$(EXEEXT): $(examples_Fortran_ssmfe_example_precond_OBJECTS) $(examples_Fortran_ssmfe_example_precond_DEPENDENCIES) $(EXTRA_examples_Fortran_ssmfe_example_precond_DEPENDENCIES) examples/Fortran/ssmfe/$(am__dirstamp)
+	@rm -f examples/Fortran/ssmfe/example_precond$(EXEEXT)
+	$(AM_V_FCLD)$(FCLINK) $(examples_Fortran_ssmfe_example_precond_OBJECTS) $(examples_Fortran_ssmfe_example_precond_LDADD) $(LIBS)
+examples/Fortran/ssmfe/example_shift_invert.$(OBJEXT):  \
+	examples/Fortran/ssmfe/$(am__dirstamp) \
+	examples/Fortran/ssmfe/$(DEPDIR)/$(am__dirstamp)
+examples/Fortran/ssmfe/ldlt.$(OBJEXT):  \
+	examples/Fortran/ssmfe/$(am__dirstamp) \
+	examples/Fortran/ssmfe/$(DEPDIR)/$(am__dirstamp)
+
+examples/Fortran/ssmfe/example_shift_invert$(EXEEXT): $(examples_Fortran_ssmfe_example_shift_invert_OBJECTS) $(examples_Fortran_ssmfe_example_shift_invert_DEPENDENCIES) $(EXTRA_examples_Fortran_ssmfe_example_shift_invert_DEPENDENCIES) examples/Fortran/ssmfe/$(am__dirstamp)
+	@rm -f examples/Fortran/ssmfe/example_shift_invert$(EXEEXT)
+	$(AM_V_FCLD)$(FCLINK) $(examples_Fortran_ssmfe_example_shift_invert_OBJECTS) $(examples_Fortran_ssmfe_example_shift_invert_LDADD) $(LIBS)
 tests/$(am__dirstamp):
 	@$(MKDIR_P) tests
 	@: > tests/$(am__dirstamp)
@@ -1055,10 +1138,12 @@ mostlyclean-compile:
 	-rm -f driver/*.$(OBJEXT)
 	-rm -f examples/C/*.$(OBJEXT)
 	-rm -f examples/Fortran/*.$(OBJEXT)
+	-rm -f examples/Fortran/ssmfe/*.$(OBJEXT)
 	-rm -f interfaces/C/*.$(OBJEXT)
 	-rm -f src/*.$(OBJEXT)
 	-rm -f src/cuda/*.$(OBJEXT)
 	-rm -f src/ssids/*.$(OBJEXT)
+	-rm -f src/ssmfe/*.$(OBJEXT)
 	-rm -f tests/*.$(OBJEXT)
 
 distclean-compile:
@@ -1554,6 +1639,8 @@ distclean-generic:
 	-rm -f examples/C/$(am__dirstamp)
 	-rm -f examples/Fortran/$(DEPDIR)/$(am__dirstamp)
 	-rm -f examples/Fortran/$(am__dirstamp)
+	-rm -f examples/Fortran/ssmfe/$(DEPDIR)/$(am__dirstamp)
+	-rm -f examples/Fortran/ssmfe/$(am__dirstamp)
 	-rm -f interfaces/C/$(DEPDIR)/$(am__dirstamp)
 	-rm -f interfaces/C/$(am__dirstamp)
 	-rm -f src/$(DEPDIR)/$(am__dirstamp)
@@ -1562,6 +1649,8 @@ distclean-generic:
 	-rm -f src/cuda/$(am__dirstamp)
 	-rm -f src/ssids/$(DEPDIR)/$(am__dirstamp)
 	-rm -f src/ssids/$(am__dirstamp)
+	-rm -f src/ssmfe/$(DEPDIR)/$(am__dirstamp)
+	-rm -f src/ssmfe/$(am__dirstamp)
 	-rm -f tests/$(DEPDIR)/$(am__dirstamp)
 	-rm -f tests/$(am__dirstamp)
 
@@ -1674,6 +1763,15 @@ examples/C/random_matrix.$(OBJEXT): libspral.a
 @HAVE_NVCC_TRUE@examples/Fortran/ssids.$(OBJEXT): libspral.a
 @HAVE_NVCC_TRUE@tests/ssids.$(OBJEXT): libspral.a
 @HAVE_NVCC_TRUE@examples/C/ssids.$(OBJEXT): libspral.a
+#examples_C_random_matrix_SOURCES = examples/C/random_matrix.c
+#tests/random_matrix.$(OBJEXT): libspral.a
+examples/Fortran/ssmfe/example_precond.$(OBJEXT): libspral.a \
+	examples/Fortran/ssmfe/laplace.$(OBJEXT)
+examples/Fortran/ssmfe/example_shift_invert.$(OBJEXT): libspral.a \
+	examples/Fortran/ssmfe/laplace.$(OBJEXT) \
+	examples/Fortran/ssmfe/ldlt.$(OBJEXT)
+#examples/C/random_matrix.$(OBJEXT): libspral.a
+#TESTS += random_matrix_test
 
 # Automake doesn't know much about modules, so get rid of them ourself
 clean-local:
@@ -1726,6 +1824,8 @@ src/ssids/solve_gpu.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
 								 	    src/ssids/cuda_datatypes.$(OBJEXT) \
 								 	    src/ssids/cuda_interfaces.$(OBJEXT) \
 								 		 src/ssids/datatypes.$(OBJEXT)
+src/ssmfe/expert.$(OBJEXT): src/ssmfe/core.$(OBJEXT)
+src/ssmfe/ssmfe.$(OBJEXT): src/ssmfe/expert.$(OBJEXT)
 driver/spral_ssids.$(OBJEXT): libspral.a
 
 # CUDA header deps
