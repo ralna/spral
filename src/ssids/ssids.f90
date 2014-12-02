@@ -99,7 +99,7 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
    integer, intent(in) :: ptr(:) ! col pointers for lower triangular part
    class(ssids_akeep_base), intent(out) :: akeep ! See derived-type declaration
    type(ssids_options), intent(in) :: options ! See derived-type declaration
-   type(ssids_inform_gpu), intent(out) :: inform  ! See derived-type declaration
+   class(ssids_inform_base), intent(out) :: inform  ! See derived-type declaration
    integer, optional, intent(inout) :: order(:)
      ! Must be present and set on entry if options%ordering = 0.
      ! If options%ordering = 0 and i is used to index a variable, |order(i)|
@@ -138,13 +138,18 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
      ! val is present.
 
    integer :: mo_flag
+   integer :: free_flag
 
    ! Initialise
    context = 'ssids_analyse'
-   call ssids_free(akeep, inform%cuda_error)
-   if(inform%cuda_error.ne.0) then
+   call ssids_free(akeep, free_flag)
+   if(free_flag.ne.0) then
       inform%flag = SSIDS_ERROR_CUDA_UNKNOWN
       akeep%flag = inform%flag
+      select type(inform)
+      type is (ssids_inform_gpu)
+         inform%cuda_error = free_flag
+      end select
       call ssids_print_flag(inform,nout,context)
       return
    endif
@@ -380,7 +385,7 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
    integer, intent(in) :: col(:) ! col indices
    class(ssids_akeep_base), intent(out) :: akeep ! See derived-type declaration
    type(ssids_options), intent(in) :: options ! See derived-type declaration
-   type(ssids_inform_gpu), intent(out) :: inform ! See derived-type declaration
+   class(ssids_inform_base), intent(out) :: inform ! See derived-type declaration
    integer, intent(inout), optional  :: order(:)
       ! Must be present and set on entry if options%ordering = 0 
       ! i is used to index a variable, order(i) must
@@ -411,13 +416,18 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
    integer :: nz           ! entries in expanded matrix
    integer :: flag         ! error flag for metis
    integer :: st           ! stat parameter
+   integer :: free_flag
 
    ! Initialise
    context = 'ssids_analyse_coord'
-   call ssids_free(akeep, inform%cuda_error)
-   if(inform%cuda_error.ne.0) then
+   call ssids_free(akeep, free_flag)
+   if(free_flag.ne.0) then
       inform%flag = SSIDS_ERROR_CUDA_UNKNOWN
       akeep%flag = inform%flag
+      select type(inform)
+      type is (ssids_inform_gpu)
+         inform%cuda_error = free_flag
+      end select
       call ssids_print_flag(inform,nout,context)
       return
    endif
