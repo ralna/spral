@@ -6,12 +6,13 @@ module spral_ssids_fkeep_gpu
                           c_ptr_plus, cudaStreamCreate, cudaStreamDestroy, &
                           cudaMemcpy2d, cudaMemcpyHostToDevice, &
                           cudaMemcpyDeviceToHost
+   use spral_ssids_akeep, only : ssids_akeep
    use spral_ssids_alloc, only : smalloc
    use spral_ssids_cuda_datatypes, only : gpu_type, free_gpu_type
    use spral_ssids_cuda_interfaces, only : push_ssids_cuda_settings, &
                           pop_ssids_cuda_settings, cuda_settings_type, scale
    use spral_ssids_datatypes, only : long, node_type, smalloc_type, &
-                                     ssids_akeep, ssids_options, &
+                                     ssids_options, &
                                      ssids_inform_base, ssids_inform_gpu, &
                                      thread_stats, wp, ssids_print_flag, &
                                      SSIDS_ERROR_ALLOCATION, &

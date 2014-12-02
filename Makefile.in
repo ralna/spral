@@ -168,7 +168,7 @@ am__libspral_a_SOURCES_DIST = src/core_analyse.f90 \
 	src/ssids/dense_factor_kernels.cu \
 	src/ssids/node_solve_kernels.cu src/ssids/reorder_kernels.cu \
 	src/ssids/solve_kernels.cu src/ssids/syrk_kernels.cu \
-	src/ssids/alloc.f90 src/ssids/analyse.f90 \
+	src/ssids/alloc.f90 src/ssids/akeep.f90 src/ssids/analyse.f90 \
 	src/ssids/cuda_datatypes.f90 src/ssids/cuda_interfaces.f90 \
 	src/ssids/datatypes.f90 src/ssids/dense_factor_gpu.f90 \
 	src/ssids/dtrsv.h src/ssids/factor_cpu.cxx \
@@ -195,8 +195,8 @@ am_libspral_a_OBJECTS = src/core_analyse.$(OBJEXT) $(am__objects_1) \
 	src/timer.$(OBJEXT) src/random.$(OBJEXT) \
 	interfaces/C/random.$(OBJEXT) src/random_matrix.$(OBJEXT) \
 	interfaces/C/random_matrix.$(OBJEXT) $(am__objects_2) \
-	src/ssids/alloc.$(OBJEXT) src/ssids/analyse.$(OBJEXT) \
-	src/ssids/cuda_datatypes.$(OBJEXT) \
+	src/ssids/alloc.$(OBJEXT) src/ssids/akeep.$(OBJEXT) \
+	src/ssids/analyse.$(OBJEXT) src/ssids/cuda_datatypes.$(OBJEXT) \
 	src/ssids/cuda_interfaces.$(OBJEXT) \
 	src/ssids/datatypes.$(OBJEXT) \
 	src/ssids/dense_factor_gpu.$(OBJEXT) \
@@ -727,7 +727,7 @@ libspral_a_SOURCES = src/core_analyse.f90 $(am__append_1) \
 	src/rutherford_boeing.f90 src/scaling.f90 src/timer.f90 \
 	src/random.f90 interfaces/C/random.f90 src/random_matrix.f90 \
 	interfaces/C/random_matrix.f90 $(am__append_2) \
-	src/ssids/alloc.f90 src/ssids/analyse.f90 \
+	src/ssids/alloc.f90 src/ssids/akeep.f90 src/ssids/analyse.f90 \
 	src/ssids/cuda_datatypes.f90 src/ssids/cuda_interfaces.f90 \
 	src/ssids/datatypes.f90 src/ssids/dense_factor_gpu.f90 \
 	src/ssids/dtrsv.h src/ssids/factor_cpu.cxx \
@@ -894,6 +894,8 @@ src/ssids/solve_kernels.$(OBJEXT): src/ssids/$(am__dirstamp) \
 src/ssids/syrk_kernels.$(OBJEXT): src/ssids/$(am__dirstamp) \
 	src/ssids/$(DEPDIR)/$(am__dirstamp)
 src/ssids/alloc.$(OBJEXT): src/ssids/$(am__dirstamp) \
+	src/ssids/$(DEPDIR)/$(am__dirstamp)
+src/ssids/akeep.$(OBJEXT): src/ssids/$(am__dirstamp) \
 	src/ssids/$(DEPDIR)/$(am__dirstamp)
 src/ssids/analyse.$(OBJEXT): src/ssids/$(am__dirstamp) \
 	src/ssids/$(DEPDIR)/$(am__dirstamp)
@@ -1715,23 +1717,13 @@ src/random_matrix.$(OBJEXT): src/random.$(OBJEXT)
 src/rutherford_boeing.$(OBJEXT): src/matrix_util.$(OBJEXT) \
 											src/random.$(OBJEXT)
 src/scaling.$(OBJEXT): src/matrix_util.$(OBJEXT)
-src/ssids/ssids.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
-				     	  		   src/match_order.$(OBJEXT) \
-									src/matrix_util.$(OBJEXT) \
-									src/metis$(METIS_VERSION)_wrapper.$(OBJEXT) \
-									src/scaling.$(OBJEXT) \
-									src/ssids/alloc.$(OBJEXT) \
-									src/ssids/analyse.$(OBJEXT) \
-									src/ssids/datatypes.$(OBJEXT) \
-									src/ssids/fkeep.$(OBJEXT) \
-									src/ssids/fkeep_gpu.$(OBJEXT) \
-									src/ssids/type_select_gpu.$(OBJEXT)
 src/ssids/alloc.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
 									src/ssids/datatypes.$(OBJEXT)
-src/ssids/analyse.$(OBJEXT): src/ssids/datatypes.$(OBJEXT) \
-									  src/core_analyse.$(OBJEXT) \
+src/ssids/analyse.$(OBJEXT): src/core_analyse.$(OBJEXT) \
 									  src/cuda/cuda.$(OBJEXT) \
-									  src/pgm.$(OBJEXT)
+									  src/pgm.$(OBJEXT) \
+									  src/ssids/akeep.$(OBJEXT) \
+									  src/ssids/datatypes.$(OBJEXT)
 src/ssids/cuda_datatypes.$(OBJEXT): src/cuda/cuda.$(OBJEXT)
 src/ssids/cuda_interfaces.$(OBJEXT): src/ssids/cuda_datatypes.$(OBJEXT)
 src/ssids/datatypes.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
@@ -1742,10 +1734,12 @@ src/ssids/dense_factor_gpu.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
 												  src/ssids/cuda_datatypes.$(OBJEXT) \
 												  src/ssids/cuda_interfaces.$(OBJEXT) \
 												  src/ssids/datatypes.$(OBJEXT)
-src/ssids/fkeep.$(OBJEXT): src/ssids/alloc.$(OBJEXT) \
+src/ssids/fkeep.$(OBJEXT): src/ssids/akeep.$(OBJEXT) \
+									src/ssids/alloc.$(OBJEXT) \
 									src/ssids/datatypes.$(OBJEXT) \
 									src/ssids/solve_cpu.$(OBJEXT)
 src/ssids/fkeep_gpu.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
+							 	  		 src/ssids/akeep.$(OBJEXT) \
 							 	  		 src/ssids/alloc.$(OBJEXT) \
 								  	    src/ssids/cuda_datatypes.$(OBJEXT) \
 								  	    src/ssids/cuda_interfaces.$(OBJEXT) \
@@ -1766,6 +1760,20 @@ src/ssids/solve_gpu.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
 								 	    src/ssids/cuda_datatypes.$(OBJEXT) \
 								 	    src/ssids/cuda_interfaces.$(OBJEXT) \
 								 		 src/ssids/datatypes.$(OBJEXT)
+src/ssids/ssids.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
+				     	  		   src/match_order.$(OBJEXT) \
+									src/matrix_util.$(OBJEXT) \
+									src/metis$(METIS_VERSION)_wrapper.$(OBJEXT) \
+									src/scaling.$(OBJEXT) \
+									src/ssids/akeep.$(OBJEXT) \
+									src/ssids/alloc.$(OBJEXT) \
+									src/ssids/analyse.$(OBJEXT) \
+									src/ssids/datatypes.$(OBJEXT) \
+									src/ssids/fkeep.$(OBJEXT) \
+									src/ssids/fkeep_gpu.$(OBJEXT) \
+									src/ssids/type_select_gpu.$(OBJEXT)
+src/ssids/type_select_gpu.$(OBJEXT): src/ssids/datatypes.$(OBJEXT) \
+												 src/ssids/fkeep_gpu.$(OBJEXT)
 driver/spral_ssids.$(OBJEXT): libspral.a
 
 # CUDA header deps

@@ -2,10 +2,11 @@
 ! This module defines ssids_fkeep type and associated procedures (CPU version)
 !
 module spral_ssids_fkeep
+   use spral_ssids_akeep, only : ssids_akeep
+   use spral_ssids_datatypes
    use spral_ssids_alloc, only : smfreeall
    use spral_ssids_datatypes, only : long, node_type, smalloc_type, &
-                                     ssids_akeep, ssids_options, &
-                                     ssids_inform_base, &
+                                     ssids_options, ssids_inform_base, &
                                      wp, SSIDS_ERROR_ALLOCATION, &
                                      SSIDS_SOLVE_JOB_ALL, SSIDS_SOLVE_JOB_BWD, &
                                      SSIDS_SOLVE_JOB_DIAG, SSIDS_SOLVE_JOB_FWD,&

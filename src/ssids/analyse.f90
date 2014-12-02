@@ -4,10 +4,11 @@
 ! Originally based on HSL_MA97 v2.2.0
 module spral_ssids_analyse
    use, intrinsic :: iso_c_binding
-   use spral_ssids_datatypes
    use spral_core_analyse, only : basic_analyse
    use spral_cuda, only : cudaMemcpy_h2d, cudaMalloc
    use spral_pgm, only : writePPM
+   use spral_ssids_akeep, only : ssids_akeep
+   use spral_ssids_datatypes
    implicit none
 
    private
