@@ -1814,8 +1814,10 @@ src/ssids/type_select_gpu.$(OBJEXT): src/ssids/datatypes.$(OBJEXT) \
 src/ssids/type_select_nogpu.$(OBJEXT): src/ssids/datatypes.$(OBJEXT) \
 												   src/ssids/akeep.$(OBJEXT) \
 												   src/ssids/fkeep.$(OBJEXT)
-driver/spral_ssids.$(OBJEXT): libspral.a \
-	driver/cuda_helper_gpu.$(OBJEXT)
+@HAVE_NVCC_TRUE@driver/spral_ssids.$(OBJEXT): libspral.a \
+@HAVE_NVCC_TRUE@	driver/cuda_helper_gpu.$(OBJEXT)
+@HAVE_NVCC_FALSE@driver/spral_ssids.$(OBJEXT): libspral.a \
+@HAVE_NVCC_FALSE@	driver/cuda_helper_nogpu.$(OBJEXT)
 
 # CUDA header deps
 src/ssids/solve_kernels.$(OBJEXT): src/ssids/dtrsv.h
