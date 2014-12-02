@@ -22,14 +22,12 @@ module spral_ssids
    use spral_ssids_datatypes
    use spral_ssids_akeep, only : ssids_akeep_base
    use spral_ssids_fkeep, only : ssids_fkeep_base
-   use spral_ssids_fkeep_gpu, only : ssids_fkeep_gpu
    use spral_ssids_type_select, only : ssids_akeep, ssids_fkeep, ssids_inform
    implicit none
 
    private
    ! Data types
    public :: ssids_akeep, ssids_fkeep, ssids_options, ssids_inform
-   public :: ssids_fkeep_gpu ! FIXME
    ! User interface routines
    public :: ssids_analyse,         & ! Analyse phase, CSC-lower input
              ssids_analyse_coord,   & ! Analyse phase, Coordinate input

@@ -1775,8 +1775,7 @@ src/ssids/solve_gpu.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
 								 	    src/ssids/cuda_datatypes.$(OBJEXT) \
 								 	    src/ssids/cuda_interfaces.$(OBJEXT) \
 								 		 src/ssids/datatypes.$(OBJEXT)
-src/ssids/ssids.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
-				     	  		   src/match_order.$(OBJEXT) \
+src/ssids/ssids.$(OBJEXT): src/match_order.$(OBJEXT) \
 									src/matrix_util.$(OBJEXT) \
 									src/metis$(METIS_VERSION)_wrapper.$(OBJEXT) \
 									src/scaling.$(OBJEXT) \
@@ -1785,7 +1784,6 @@ src/ssids/ssids.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
 									src/ssids/analyse.$(OBJEXT) \
 									src/ssids/datatypes.$(OBJEXT) \
 									src/ssids/fkeep.$(OBJEXT) \
-									src/ssids/fkeep_gpu.$(OBJEXT) \
 									src/ssids/type_select_gpu.$(OBJEXT)
 src/ssids/type_select_gpu.$(OBJEXT): src/ssids/datatypes.$(OBJEXT) \
 												 src/ssids/akeep_gpu.$(OBJEXT) \

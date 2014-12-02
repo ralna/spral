@@ -18,7 +18,7 @@ program run_prob
 
    type(ssids_inform) :: inform
    type(ssids_akeep) :: akeep
-   type(ssids_fkeep_gpu) :: fkeep
+   type(ssids_fkeep) :: fkeep
    type(ssids_options) :: options
    integer :: cuda_error
    double precision, dimension(:, :), allocatable :: rhs, soln

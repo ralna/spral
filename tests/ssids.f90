@@ -101,7 +101,7 @@ subroutine test_errors
    type(matrix_type) :: a
    type(ssids_options) :: options
    type(ssids_akeep) :: akeep
-   type(ssids_fkeep_gpu) :: fkeep
+   type(ssids_fkeep) :: fkeep
    type(ssids_inform) :: info
 
    logical :: check
@@ -1156,7 +1156,7 @@ subroutine test_special
    type(matrix_type) :: a
    type(ssids_options) :: options, default_options
    type(ssids_akeep) :: akeep
-   type(ssids_fkeep_gpu) :: fkeep
+   type(ssids_fkeep) :: fkeep
    type(ssids_inform) :: info
 
    integer :: i
@@ -1664,7 +1664,7 @@ subroutine chk_answer(posdef, a, akeep, options, rhs, x, res, &
    integer, intent(in) :: expected_flag
    logical, optional, intent(in) :: fs
 
-   type(ssids_fkeep_gpu) :: fkeep
+   type(ssids_fkeep) :: fkeep
    type(ssids_inform) :: info
    integer :: nrhs, cuda_error
 
@@ -1860,7 +1860,7 @@ end function inf_norm
 
 subroutine test_random
    type(ssids_akeep) :: akeep
-   type(ssids_fkeep_gpu) :: fkeep
+   type(ssids_fkeep) :: fkeep
    type(ssids_options) :: options
    type(ssids_inform) :: info
 
@@ -2279,7 +2279,7 @@ end subroutine test_random
 
 subroutine test_big
    type(ssids_akeep) :: akeep
-   type(ssids_fkeep_gpu) :: fkeep
+   type(ssids_fkeep) :: fkeep
    type(ssids_options) :: options
    type(ssids_inform) :: info
 
@@ -2392,7 +2392,7 @@ end subroutine test_big
 
 subroutine test_random_scale
    type(ssids_akeep) :: akeep
-   type(ssids_fkeep_gpu) :: fkeep
+   type(ssids_fkeep) :: fkeep
    type(ssids_options) :: options
    type(ssids_inform) :: info
 
