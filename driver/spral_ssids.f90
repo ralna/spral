@@ -1,4 +1,5 @@
 program run_prob
+   use cuda_helper
    use spral_rutherford_boeing
    use spral_ssids
    use spral_matrix_util, only : cscl_verify, SPRAL_MATRIX_REAL_SYM_INDEF
@@ -406,19 +407,4 @@ contains
 !            val2(ptr2(j):ptr2(j+1)-1)
 !      end do
 !   end subroutine perm_mat
-
-   ! Do some pointless CUDA operation to force an initialization
-   subroutine cuda_init()
-      use spral_cuda
-      type(C_PTR) :: ptr, cublas
-      integer :: cuda_error
-
-      cuda_error = cudaMalloc(ptr, 1_C_SIZE_T)
-      cuda_error = cudaFree(ptr)
-
-      cuda_error = cublasCreate(cublas)
-      cuda_error = cublasDestroy(cublas)
-
-      cuda_error = cudaDeviceSynchronize()
-   end subroutine cuda_init
 end program

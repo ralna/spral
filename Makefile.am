@@ -122,7 +122,11 @@ libspral_a_SOURCES += \
 	src/ssids/reorder_kernels.cu \
 	src/ssids/solve_gpu.f90 \
 	src/ssids/solve_kernels.cu \
-	src/ssids/syrk_kernels.cu
+	src/ssids/syrk_kernels.cu \
+	src/ssids/type_select_gpu.f90
+else
+libspral_a_SOURCES += \
+	src/ssids/type_select_nogpu.f90
 endif
 libspral_a_SOURCES += \
 	src/ssids/alloc.f90 \
@@ -138,11 +142,11 @@ libspral_a_SOURCES += \
 	src/ssids/node_solve_kernels.h \
 	src/ssids/solve_cpu.f90 \
 	src/ssids/ssids.f90 \
-	src/ssids/type_select_gpu.f90 \
 	interfaces/C/ssids.f90
 bin_PROGRAMS = spral_ssids
 spral_ssids_SOURCES = \
-	driver/spral_ssids.f90
+	driver/spral_ssids.f90 \
+	driver/cuda_helper_gpu.f90
 check_PROGRAMS += \
 	ssids_test \
 	examples/Fortran/ssids \
@@ -230,6 +234,7 @@ src/ssids/solve_gpu.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
 								 	    src/ssids/cuda_datatypes.$(OBJEXT) \
 								 	    src/ssids/cuda_interfaces.$(OBJEXT) \
 								 		 src/ssids/datatypes.$(OBJEXT)
+if HAVE_NVCC
 src/ssids/ssids.$(OBJEXT): src/match_order.$(OBJEXT) \
 									src/matrix_util.$(OBJEXT) \
 									src/metis$(METIS_VERSION)_wrapper.$(OBJEXT) \
@@ -240,10 +245,26 @@ src/ssids/ssids.$(OBJEXT): src/match_order.$(OBJEXT) \
 									src/ssids/datatypes.$(OBJEXT) \
 									src/ssids/fkeep.$(OBJEXT) \
 									src/ssids/type_select_gpu.$(OBJEXT)
+else
+src/ssids/ssids.$(OBJEXT): src/match_order.$(OBJEXT) \
+									src/matrix_util.$(OBJEXT) \
+									src/metis$(METIS_VERSION)_wrapper.$(OBJEXT) \
+									src/scaling.$(OBJEXT) \
+									src/ssids/akeep.$(OBJEXT) \
+									src/ssids/alloc.$(OBJEXT) \
+									src/ssids/analyse.$(OBJEXT) \
+									src/ssids/datatypes.$(OBJEXT) \
+									src/ssids/fkeep.$(OBJEXT) \
+									src/ssids/type_select_nogpu.$(OBJEXT)
+endif
 src/ssids/type_select_gpu.$(OBJEXT): src/ssids/datatypes.$(OBJEXT) \
 												 src/ssids/akeep_gpu.$(OBJEXT) \
 												 src/ssids/fkeep_gpu.$(OBJEXT)
-driver/spral_ssids.$(OBJEXT): libspral.a
+src/ssids/type_select_nogpu.$(OBJEXT): src/ssids/datatypes.$(OBJEXT) \
+												   src/ssids/akeep.$(OBJEXT) \
+												   src/ssids/fkeep.$(OBJEXT)
+driver/spral_ssids.$(OBJEXT): libspral.a \
+	driver/cuda_helper_gpu.$(OBJEXT)
 
 # CUDA header deps
 src/ssids/solve_kernels.$(OBJEXT): src/ssids/dtrsv.h
