@@ -1,15 +1,16 @@
 module spral_ssids_akeep
-   use spral_ssids_datatypes, only : long, wp
+   use spral_ssids_datatypes, only : long, wp, ssids_inform_base, &
+                                     SSIDS_ERROR_CUDA_UNKNOWN
    use, intrinsic :: iso_c_binding
    implicit none
 
    private
-   public :: ssids_akeep
+   public :: ssids_akeep_base
 
    !
    ! Data type for information generated in analyse phase
    !
-   type ssids_akeep
+   type ssids_akeep_base
       logical :: check ! copy of check as input to analyse phase
       integer :: flag ! copy of error flag.
       integer :: maxmn ! maximum value of blkm or blkn
@@ -76,11 +77,35 @@ module spral_ssids_akeep
 
       ! Scaling from matching-based ordering
       real(wp), dimension(:), allocatable :: scaling
+   contains
+      procedure, pass(akeep) :: free => free_akeep_base
+   end type ssids_akeep_base
 
-      ! GPU pointers (copies of the CPU arrays of same name)
-      type(C_PTR) :: gpu_nlist = C_NULL_PTR
-      type(C_PTR) :: gpu_rlist = C_NULL_PTR
-      type(C_PTR) :: gpu_rlist_direct = C_NULL_PTR
-   end type ssids_akeep
+contains
+
+subroutine free_akeep_base(akeep, flag)
+   class(ssids_akeep_base), intent(inout) :: akeep
+   integer, intent(out) :: flag
+
+   integer :: st
+
+   flag = 0
+
+   deallocate(akeep%child_ptr, stat=st)
+   deallocate(akeep%child_list, stat=st)
+   deallocate(akeep%invp, stat=st)
+   deallocate(akeep%level, stat=st)
+   deallocate(akeep%nlist, stat=st)
+   deallocate(akeep%nptr, stat=st)
+   deallocate(akeep%rlist, stat=st)
+   deallocate(akeep%rlist_direct, stat=st)
+   deallocate(akeep%rptr, stat=st)
+   deallocate(akeep%sparent, stat=st)
+   deallocate(akeep%sptr, stat=st)
+   deallocate(akeep%subtree_work, stat=st)
+   deallocate(akeep%ptr, stat=st)
+   deallocate(akeep%row, stat=st)
+   deallocate(akeep%map, stat=st)
+end subroutine free_akeep_base
 
 end module spral_ssids_akeep

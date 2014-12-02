@@ -6,7 +6,8 @@ module spral_ssids_fkeep_gpu
                           c_ptr_plus, cudaStreamCreate, cudaStreamDestroy, &
                           cudaMemcpy2d, cudaMemcpyHostToDevice, &
                           cudaMemcpyDeviceToHost
-   use spral_ssids_akeep, only : ssids_akeep
+   use spral_ssids_akeep, only : ssids_akeep_base
+   use spral_ssids_akeep_gpu, only : ssids_akeep_gpu
    use spral_ssids_alloc, only : smalloc
    use spral_ssids_cuda_datatypes, only : gpu_type, free_gpu_type
    use spral_ssids_cuda_interfaces, only : push_ssids_cuda_settings, &
@@ -18,6 +19,7 @@ module spral_ssids_fkeep_gpu
                                      SSIDS_ERROR_ALLOCATION, &
                                      SSIDS_ERROR_CUDA_UNKNOWN, &
                                      SSIDS_ERROR_UNIMPLEMENTED, &
+                                     SSIDS_ERROR_UNKNOWN, &
                                      SSIDS_SOLVE_JOB_ALL, SSIDS_SOLVE_JOB_BWD, &
                                      SSIDS_SOLVE_JOB_DIAG, SSIDS_SOLVE_JOB_FWD,&
                                      SSIDS_SOLVE_JOB_DIAG_BWD
@@ -58,7 +60,7 @@ module spral_ssids_fkeep_gpu
 contains
 
 subroutine inner_factor_gpu(fkeep, akeep, val, options, inform)
-   class(ssids_akeep), intent(in) :: akeep
+   class(ssids_akeep_base), intent(in) :: akeep
    class(ssids_fkeep_gpu), intent(inout) :: fkeep
    real(wp), dimension(*), target, intent(in) :: val
    class(ssids_options), intent(in) :: options
@@ -138,36 +140,43 @@ subroutine inner_factor_gpu(fkeep, akeep, val, options, inform)
    if (st.ne.0) goto 10
 
    ! Call main factorization routine
-   if (allocated(fkeep%scaling)) then
-      ! Copy scaling vector to GPU
-      cuda_error = cudaMalloc(gpu_scaling, C_SIZEOF(fkeep%scaling(1:akeep%n)))
-      if(cuda_error.ne.0) goto 200
-      cuda_error = copy_to_gpu_non_target(gpu_scaling, fkeep%scaling, &
-         C_SIZEOF(fkeep%scaling(1:akeep%n)))
-      if(cuda_error.ne.0) goto 200
+   select type(akeep)
+   type is (ssids_akeep_gpu)
+      if (allocated(fkeep%scaling)) then
+         ! Copy scaling vector to GPU
+         cuda_error = cudaMalloc(gpu_scaling, C_SIZEOF(fkeep%scaling(1:akeep%n)))
+         if(cuda_error.ne.0) goto 200
+         cuda_error = copy_to_gpu_non_target(gpu_scaling, fkeep%scaling, &
+            C_SIZEOF(fkeep%scaling(1:akeep%n)))
+         if(cuda_error.ne.0) goto 200
 
-      ! Perform factorization
-      call parfactor(fkeep%pos_def, akeep%child_ptr, akeep%child_list, akeep%n,&
-         akeep%nptr, akeep%gpu_nlist, gpu_val, akeep%nnodes, fkeep%nodes,      &
-         akeep%sptr, akeep%sparent, akeep%rptr, akeep%rlist, akeep%invp,       &
-         akeep%rlist_direct, akeep%gpu_rlist, akeep%gpu_rlist_direct,          &
-         gpu_contribs, fkeep%stream_handle, fkeep%stream_data,                 &
-         fkeep%top_data, fkeep%gpu_rlist_with_delays,                          &
-         fkeep%gpu_rlist_direct_with_delays, fkeep%gpu_clists,                 &
-         fkeep%gpu_clists_direct, fkeep%gpu_clen, fkeep%alloc, options, stats, &
-         ptr_scale=gpu_scaling)
-      cuda_error = cudaFree(gpu_scaling)
-      if(cuda_error.ne.0) goto 200
-   else
-      call parfactor(fkeep%pos_def, akeep%child_ptr, akeep%child_list, akeep%n,&
-         akeep%nptr, akeep%gpu_nlist, gpu_val, akeep%nnodes, fkeep%nodes,      &
-         akeep%sptr, akeep%sparent, akeep%rptr, akeep%rlist, akeep%invp,       &
-         akeep%rlist_direct, akeep%gpu_rlist, akeep%gpu_rlist_direct,          &
-         gpu_contribs, fkeep%stream_handle, fkeep%stream_data,                 &
-         fkeep%top_data, fkeep%gpu_rlist_with_delays,                          &
-         fkeep%gpu_rlist_direct_with_delays, fkeep%gpu_clists,                 &
-         fkeep%gpu_clists_direct, fkeep%gpu_clen, fkeep%alloc, options, stats)
-   end if
+         ! Perform factorization
+         call parfactor(fkeep%pos_def, akeep%child_ptr, akeep%child_list,     &
+            akeep%n, akeep%nptr, akeep%gpu_nlist, gpu_val, akeep%nnodes,      &
+            fkeep%nodes, akeep%sptr, akeep%sparent, akeep%rptr, akeep%rlist,  &
+            akeep%invp, akeep%rlist_direct, akeep%gpu_rlist,                  &
+            akeep%gpu_rlist_direct, gpu_contribs, fkeep%stream_handle,        &
+            fkeep%stream_data, fkeep%top_data, fkeep%gpu_rlist_with_delays,   &
+            fkeep%gpu_rlist_direct_with_delays, fkeep%gpu_clists,             &
+            fkeep%gpu_clists_direct, fkeep%gpu_clen, fkeep%alloc, options,    &
+            stats, ptr_scale=gpu_scaling)
+         cuda_error = cudaFree(gpu_scaling)
+         if(cuda_error.ne.0) goto 200
+      else
+         call parfactor(fkeep%pos_def, akeep%child_ptr, akeep%child_list,     &
+            akeep%n, akeep%nptr, akeep%gpu_nlist, gpu_val, akeep%nnodes,      &
+            fkeep%nodes, akeep%sptr, akeep%sparent, akeep%rptr, akeep%rlist,  &
+            akeep%invp, akeep%rlist_direct, akeep%gpu_rlist,                  &
+            akeep%gpu_rlist_direct, gpu_contribs, fkeep%stream_handle,        &
+            fkeep%stream_data, fkeep%top_data, fkeep%gpu_rlist_with_delays,   &
+            fkeep%gpu_rlist_direct_with_delays, fkeep%gpu_clists,             &
+            fkeep%gpu_clists_direct, fkeep%gpu_clen, fkeep%alloc, options,    &
+            stats)
+      end if
+   class default
+      inform%flag = SSIDS_ERROR_UNKNOWN
+      return
+   end select
 
    cuda_error = cudaFree(gpu_val)
    if(cuda_error.ne.0) goto 200
@@ -219,7 +228,7 @@ subroutine inner_factor_gpu(fkeep, akeep, val, options, inform)
 end subroutine inner_factor_gpu
 
 subroutine inner_solve_gpu(local_job, nrhs, x, ldx, akeep, fkeep, options, inform)
-   class(ssids_akeep), intent(in) :: akeep
+   class(ssids_akeep_base), intent(in) :: akeep
    class(ssids_fkeep_gpu), intent(inout) :: fkeep
    integer, intent(inout) :: local_job
    integer, intent(in) :: nrhs
@@ -437,7 +446,7 @@ end subroutine inner_solve_gpu
 !****************************************************************************
 
 subroutine enquire_posdef_gpu(akeep, fkeep, inform, d)
-   class(ssids_akeep), intent(in) :: akeep
+   class(ssids_akeep_base), intent(in) :: akeep
    class(ssids_fkeep_gpu), target, intent(in) :: fkeep
    class(ssids_inform_base), intent(inout) :: inform
    real(wp), dimension(*), intent(out) :: d
@@ -456,7 +465,7 @@ end subroutine enquire_posdef_gpu
 !****************************************************************************
 
 subroutine enquire_indef_gpu(akeep, fkeep, inform, piv_order, d)
-   class(ssids_akeep), intent(in) :: akeep
+   class(ssids_akeep_base), intent(in) :: akeep
    class(ssids_fkeep_gpu), target, intent(in) :: fkeep
    class(ssids_inform_base), intent(inout) :: inform
    integer, dimension(*), optional, intent(out) :: piv_order
@@ -576,7 +585,7 @@ subroutine alter_gpu(d, akeep, fkeep, options, inform)
    real(wp), dimension(2,*), intent(in) :: d  ! The required diagonal entries
      ! of D^{-1} must be placed in d(1,i) (i = 1,...n)
      ! and the off-diagonal entries must be placed in d(2,i) (i = 1,...n-1).
-   type(ssids_akeep), intent(in) :: akeep
+   type(ssids_akeep_base), intent(in) :: akeep
    class(ssids_fkeep_gpu), target, intent(inout) :: fkeep
    type(ssids_options), intent(in) :: options
    class(ssids_inform_base), intent(inout) :: inform
@@ -725,7 +734,7 @@ end subroutine free_fkeep_gpu
 ! Copies all gpu data back to host
 !
 subroutine ssids_move_data_inner(akeep, fkeep, options, inform)
-   type(ssids_akeep), intent(in) :: akeep
+   type(ssids_akeep_base), intent(in) :: akeep
    type(ssids_fkeep_gpu), intent(inout) :: fkeep
    type(ssids_options), intent(in) :: options
    type(ssids_inform_gpu), intent(inout) :: inform

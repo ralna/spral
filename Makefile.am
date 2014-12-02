@@ -110,10 +110,17 @@ TESTS += random_matrix_test
 include_HEADERS += include/spral_ssids.h
 if HAVE_NVCC
 libspral_a_SOURCES += \
+	src/ssids/akeep_gpu.f90 \
 	src/ssids/assemble_kernels.cu \
+	src/ssids/cuda_datatypes.f90 \
+	src/ssids/cuda_interfaces.f90 \
+	src/ssids/dense_factor_gpu.f90 \
 	src/ssids/dense_factor_kernels.cu \
+	src/ssids/factor_gpu.f90 \
+	src/ssids/fkeep_gpu.f90 \
 	src/ssids/node_solve_kernels.cu \
 	src/ssids/reorder_kernels.cu \
+	src/ssids/solve_gpu.f90 \
 	src/ssids/solve_kernels.cu \
 	src/ssids/syrk_kernels.cu
 endif
@@ -121,21 +128,15 @@ libspral_a_SOURCES += \
 	src/ssids/alloc.f90 \
 	src/ssids/akeep.f90 \
 	src/ssids/analyse.f90 \
-	src/ssids/cuda_datatypes.f90 \
-	src/ssids/cuda_interfaces.f90 \
 	src/ssids/datatypes.f90 \
-	src/ssids/dense_factor_gpu.f90 \
 	src/ssids/dtrsv.h \
 	src/ssids/factor_cpu.cxx \
 	src/ssids/factor_cpu_iface.f90 \
 	src/ssids/factor_cpu_iface.h \
-	src/ssids/factor_gpu.f90 \
 	src/ssids/fkeep.f90 \
-	src/ssids/fkeep_gpu.f90 \
 	src/ssids/kernel_datatypes.h \
 	src/ssids/node_solve_kernels.h \
 	src/ssids/solve_cpu.f90 \
-	src/ssids/solve_gpu.f90 \
 	src/ssids/ssids.f90 \
 	src/ssids/type_select_gpu.f90 \
 	interfaces/C/ssids.f90
@@ -180,11 +181,17 @@ src/rutherford_boeing.$(OBJEXT): src/matrix_util.$(OBJEXT) \
 											src/random.$(OBJEXT)
 src/scaling.$(OBJEXT): src/matrix_util.$(OBJEXT)
 src/ssids/alloc.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
+								   src/ssids/datatypes.$(OBJEXT)
+src/ssids/akeep.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
 									src/ssids/datatypes.$(OBJEXT)
+src/ssids/akeep_gpu.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
+									    src/ssids/akeep.$(OBJEXT) \
+									    src/ssids/datatypes.$(OBJEXT)
 src/ssids/analyse.$(OBJEXT): src/core_analyse.$(OBJEXT) \
 									  src/cuda/cuda.$(OBJEXT) \
 									  src/pgm.$(OBJEXT) \
 									  src/ssids/akeep.$(OBJEXT) \
+									  src/ssids/akeep_gpu.$(OBJEXT) \
 									  src/ssids/datatypes.$(OBJEXT)
 src/ssids/cuda_datatypes.$(OBJEXT): src/cuda/cuda.$(OBJEXT)
 src/ssids/cuda_interfaces.$(OBJEXT): src/ssids/cuda_datatypes.$(OBJEXT)
@@ -202,6 +209,7 @@ src/ssids/fkeep.$(OBJEXT): src/ssids/akeep.$(OBJEXT) \
 									src/ssids/solve_cpu.$(OBJEXT)
 src/ssids/fkeep_gpu.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
 							 	  		 src/ssids/akeep.$(OBJEXT) \
+							 	  		 src/ssids/akeep_gpu.$(OBJEXT) \
 							 	  		 src/ssids/alloc.$(OBJEXT) \
 								  	    src/ssids/cuda_datatypes.$(OBJEXT) \
 								  	    src/ssids/cuda_interfaces.$(OBJEXT) \
@@ -235,6 +243,7 @@ src/ssids/ssids.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
 									src/ssids/fkeep_gpu.$(OBJEXT) \
 									src/ssids/type_select_gpu.$(OBJEXT)
 src/ssids/type_select_gpu.$(OBJEXT): src/ssids/datatypes.$(OBJEXT) \
+												 src/ssids/akeep_gpu.$(OBJEXT) \
 												 src/ssids/fkeep_gpu.$(OBJEXT)
 driver/spral_ssids.$(OBJEXT): libspral.a
 

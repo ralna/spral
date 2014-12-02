@@ -9,7 +9,6 @@
 module spral_ssids
 !$ use omp_lib
    use, intrinsic :: iso_c_binding
-   use spral_cuda, only : cudaFree
    use spral_match_order, only : match_order_metis
    use spral_matrix_util, only : SPRAL_MATRIX_REAL_SYM_INDEF, &
                                  SPRAL_MATRIX_REAL_SYM_PSDEF, &
@@ -21,10 +20,10 @@ module spral_ssids
    use spral_ssids_analyse, only : analyse_phase, check_order, expand_matrix, &
                                    expand_pattern
    use spral_ssids_datatypes
-   use spral_ssids_akeep, only : ssids_akeep
+   use spral_ssids_akeep, only : ssids_akeep_base
    use spral_ssids_fkeep, only : ssids_fkeep_base
    use spral_ssids_fkeep_gpu, only : ssids_fkeep_gpu
-   use spral_ssids_type_select, only : ssids_fkeep, ssids_inform
+   use spral_ssids_type_select, only : ssids_akeep, ssids_fkeep, ssids_inform
    implicit none
 
    private
@@ -100,7 +99,7 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
    integer, intent(in) :: n ! order of A
    integer, intent(in) :: row(:) ! row indices of lower triangular part
    integer, intent(in) :: ptr(:) ! col pointers for lower triangular part
-   type(ssids_akeep), intent(out) :: akeep ! See derived-type declaration
+   class(ssids_akeep_base), intent(out) :: akeep ! See derived-type declaration
    type(ssids_options), intent(in) :: options ! See derived-type declaration
    type(ssids_inform_gpu), intent(out) :: inform  ! See derived-type declaration
    integer, optional, intent(inout) :: order(:)
@@ -381,7 +380,7 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
    integer, intent(in) :: ne ! entries to be input by user
    integer, intent(in) :: row(:) ! row indices
    integer, intent(in) :: col(:) ! col indices
-   type(ssids_akeep), intent(out) :: akeep ! See derived-type declaration
+   class(ssids_akeep_base), intent(out) :: akeep ! See derived-type declaration
    type(ssids_options), intent(in) :: options ! See derived-type declaration
    type(ssids_inform_gpu), intent(out) :: inform ! See derived-type declaration
    integer, intent(inout), optional  :: order(:)
@@ -627,7 +626,7 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
       scale, ptr, row)
    logical, intent(in) :: posdef 
    real(wp), dimension(*), target, intent(in) :: val ! A values (lwr triangle)
-   type(ssids_akeep), intent(in) :: akeep
+   class(ssids_akeep_base), intent(in) :: akeep
    class(ssids_fkeep_base), intent(inout) :: fkeep
    type(ssids_options), intent(in) :: options
    class(ssids_inform_base), intent(out) :: inform
@@ -1011,7 +1010,7 @@ subroutine ssids_solve_one_double(x1, akeep, fkeep, options, inform, job)
       ! x(i) is the corresponding component of the
       ! right-hand side.On exit, if i has been used to index a variable,
       ! x(i) holds solution for variable i
-   type(ssids_akeep), intent(in) :: akeep
+   class(ssids_akeep_base), intent(in) :: akeep
    class(ssids_fkeep_base), intent(inout) :: fkeep
    type(ssids_options), intent(in) :: options
    class(ssids_inform_base), intent(out) :: inform
@@ -1032,7 +1031,7 @@ subroutine ssids_solve_mult_double(nrhs, x, ldx, akeep, fkeep, options, &
    integer, intent(in) :: nrhs
    integer, intent(in) :: ldx
    real(wp), dimension(ldx,nrhs), intent(inout), target :: x
-   type(ssids_akeep), intent(in) :: akeep ! On entry, x must
+   class(ssids_akeep_base), intent(in) :: akeep ! On entry, x must
       ! be set so that if i has been used to index a variable,
       ! x(i,j) is the corresponding component of the
       ! right-hand side for the jth system (j = 1,2,..., nrhs).
@@ -1166,7 +1165,7 @@ end subroutine ssids_solve_mult_double
 ! Return diagonal entries to user
 !
 subroutine ssids_enquire_posdef_double(akeep, fkeep, options, inform, d)
-   class(ssids_akeep), intent(in) :: akeep
+   class(ssids_akeep_base), intent(in) :: akeep
    class(ssids_fkeep_base), target, intent(in) :: fkeep
    type(ssids_options), intent(in) :: options
    class(ssids_inform_base), intent(out) :: inform
@@ -1214,7 +1213,7 @@ end subroutine ssids_enquire_posdef_double
 !
 subroutine ssids_enquire_indef_double(akeep, fkeep, options, inform, &
       piv_order, d)
-   class(ssids_akeep), intent(in) :: akeep
+   class(ssids_akeep_base), intent(in) :: akeep
    class(ssids_fkeep_base), target, intent(in) :: fkeep
    type(ssids_options), intent(in) :: options
    class(ssids_inform_base), intent(out) :: inform
@@ -1268,7 +1267,7 @@ subroutine ssids_alter_double(d, akeep, fkeep, options, inform)
    real(wp), dimension(2,*), intent(in) :: d  ! The required diagonal entries
      ! of D^{-1} must be placed in d(1,i) (i = 1,...n)
      ! and the off-diagonal entries must be placed in d(2,i) (i = 1,...n-1).
-   class(ssids_akeep), intent(in) :: akeep
+   class(ssids_akeep_base), intent(in) :: akeep
    class(ssids_fkeep_base), target, intent(inout) :: fkeep
    type(ssids_options), intent(in) :: options
    class(ssids_inform_base), intent(out) :: inform
@@ -1316,44 +1315,12 @@ end subroutine ssids_alter_double
 
 !*************************************************************************
 
-subroutine free_akeep_double(akeep, cuda_error)
-   type(ssids_akeep), intent(inout) :: akeep
-   integer, intent(out) :: cuda_error
+subroutine free_akeep_double(akeep, flag)
+   class(ssids_akeep_base), intent(inout) :: akeep
+   integer, intent(out) :: flag
 
-   integer :: st
+   call akeep%free(flag)
 
-   deallocate(akeep%child_ptr, stat=st)
-   deallocate(akeep%child_list, stat=st)
-   deallocate(akeep%invp, stat=st)
-   deallocate(akeep%level, stat=st)
-   deallocate(akeep%nlist, stat=st)
-   deallocate(akeep%nptr, stat=st)
-   deallocate(akeep%rlist, stat=st)
-   deallocate(akeep%rlist_direct, stat=st)
-   deallocate(akeep%rptr, stat=st)
-   deallocate(akeep%sparent, stat=st)
-   deallocate(akeep%sptr, stat=st)
-   deallocate(akeep%subtree_work, stat=st)
-   deallocate(akeep%ptr, stat=st)
-   deallocate(akeep%row, stat=st)
-   deallocate(akeep%map, stat=st)
-
-   ! Free GPU arrays if needed
-   if(C_ASSOCIATED(akeep%gpu_nlist)) then
-      cuda_error = cudaFree(akeep%gpu_nlist)
-      akeep%gpu_nlist = C_NULL_PTR
-      if(cuda_error.ne.0) return
-   endif
-   if(C_ASSOCIATED(akeep%gpu_rlist)) then
-      cuda_error = cudaFree(akeep%gpu_rlist)
-      akeep%gpu_rlist = C_NULL_PTR
-      if(cuda_error.ne.0) return
-   endif
-   if(C_ASSOCIATED(akeep%gpu_rlist_direct)) then
-      cuda_error = cudaFree(akeep%gpu_rlist_direct)
-      akeep%gpu_rlist_direct = C_NULL_PTR
-      if(cuda_error.ne.0) return
-   endif
 end subroutine free_akeep_double
 
 !*******************************
@@ -1368,7 +1335,7 @@ end subroutine free_fkeep_double
 !*******************************
 
 subroutine free_both_double(akeep, fkeep, cuda_error)
-   type(ssids_akeep), intent(inout) :: akeep
+   class(ssids_akeep_base), intent(inout) :: akeep
    class(ssids_fkeep_base), intent(inout) :: fkeep
    integer, intent(out) :: cuda_error
 
