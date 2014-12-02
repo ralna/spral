@@ -4,7 +4,8 @@
 module spral_ssids_fkeep
    use spral_ssids_alloc, only : smfreeall
    use spral_ssids_datatypes, only : long, node_type, smalloc_type, &
-                                     ssids_akeep, ssids_options, ssids_inform, &
+                                     ssids_akeep, ssids_options, &
+                                     ssids_inform_base, &
                                      wp, SSIDS_ERROR_ALLOCATION, &
                                      SSIDS_SOLVE_JOB_ALL, SSIDS_SOLVE_JOB_BWD, &
                                      SSIDS_SOLVE_JOB_DIAG, SSIDS_SOLVE_JOB_FWD,&
@@ -14,14 +15,14 @@ module spral_ssids_fkeep
    implicit none
 
    private
-   public :: ssids_fkeep
+   public :: ssids_fkeep_base
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
    !
    ! Data type for data generated in factorise phase
    !
-   type ssids_fkeep
+   type ssids_fkeep_base
       integer :: flag ! copy of error flag.
       real(wp), dimension(:), allocatable :: scaling ! Stores scaling for
          ! each entry (in original matrix order)
@@ -47,16 +48,16 @@ module spral_ssids_fkeep
       procedure, pass(fkeep) :: enquire_indef => enquire_indef_cpu
       procedure, pass(fkeep) :: alter => alter_cpu ! Alter D values
       procedure, pass(fkeep) :: free => free_fkeep ! Frees memory
-   end type ssids_fkeep
+   end type ssids_fkeep_base
 
 contains
 
 subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
    class(ssids_akeep), intent(in) :: akeep
-   class(ssids_fkeep), intent(inout) :: fkeep
+   class(ssids_fkeep_base), intent(inout) :: fkeep
    real(wp), dimension(*), target, intent(in) :: val
    class(ssids_options), intent(in) :: options
-   class(ssids_inform), intent(inout) :: inform
+   class(ssids_inform_base), intent(inout) :: inform
 
    print *, "CPU Factor not implemented yet!"
    stop
@@ -64,13 +65,13 @@ end subroutine inner_factor_cpu
 
 subroutine inner_solve_cpu(local_job, nrhs, x, ldx, akeep, fkeep, options, inform)
    class(ssids_akeep), intent(in) :: akeep
-   class(ssids_fkeep), intent(inout) :: fkeep
+   class(ssids_fkeep_base), intent(inout) :: fkeep
    integer, intent(inout) :: local_job
    integer, intent(in) :: nrhs
    real(wp), dimension(ldx,nrhs), target, intent(inout) :: x
    integer, intent(in) :: ldx
    type(ssids_options), intent(in) :: options
-   type(ssids_inform), intent(inout) :: inform
+   class(ssids_inform_base), intent(inout) :: inform
 
    integer :: i, r
    integer :: n
@@ -128,9 +129,9 @@ end subroutine inner_solve_cpu
 !****************************************************************************
 
 subroutine enquire_posdef_cpu(akeep, fkeep, inform, d)
-   type(ssids_akeep), intent(in) :: akeep
-   class(ssids_fkeep), target, intent(in) :: fkeep
-   type(ssids_inform), intent(inout) :: inform
+   class(ssids_akeep), intent(in) :: akeep
+   class(ssids_fkeep_base), target, intent(in) :: fkeep
+   class(ssids_inform_base), intent(inout) :: inform
    real(wp), dimension(*), intent(out) :: d
 
    integer :: blkn, blkm
@@ -163,9 +164,9 @@ end subroutine enquire_posdef_cpu
 !****************************************************************************
 
 subroutine enquire_indef_cpu(akeep, fkeep, inform, piv_order, d)
-   type(ssids_akeep), intent(in) :: akeep
-   class(ssids_fkeep), target, intent(in) :: fkeep
-   type(ssids_inform), intent(inout) :: inform
+   class(ssids_akeep), intent(in) :: akeep
+   class(ssids_fkeep_base), target, intent(in) :: fkeep
+   class(ssids_inform_base), intent(inout) :: inform
    integer, dimension(*), optional, intent(out) :: piv_order
       ! If i is used to index a variable, its position in the pivot sequence
       ! will be placed in piv_order(i), with its sign negative if it is
@@ -240,9 +241,9 @@ subroutine alter_cpu(d, akeep, fkeep, options, inform)
      ! of D^{-1} must be placed in d(1,i) (i = 1,...n)
      ! and the off-diagonal entries must be placed in d(2,i) (i = 1,...n-1).
    type(ssids_akeep), intent(in) :: akeep
-   class(ssids_fkeep), target, intent(inout) :: fkeep
+   class(ssids_fkeep_base), target, intent(inout) :: fkeep
    type(ssids_options), intent(in) :: options
-   type(ssids_inform), intent(inout) :: inform
+   class(ssids_inform_base), intent(inout) :: inform
 
    integer :: blkm, blkn
    integer(long) :: ip
@@ -272,7 +273,7 @@ end subroutine alter_cpu
 !****************************************************************************
 
 subroutine free_fkeep(fkeep, flag)
-   class(ssids_fkeep), intent(inout) :: fkeep
+   class(ssids_fkeep_base), intent(inout) :: fkeep
    integer, intent(out) :: flag ! not actually used for cpu version, set to 0
 
    integer :: st, i

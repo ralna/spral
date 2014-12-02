@@ -8,7 +8,7 @@ module spral_ssids_datatypes
    private
    public :: smalloc_type, stack_mem_type, ssids_akeep, &
       stack_type, thread_stats, real_ptr_type, &
-      ssids_options, ssids_inform, node_type
+      ssids_options, ssids_inform_base, ssids_inform_gpu, node_type
    public :: ssids_print_flag
 
    integer, parameter, public :: wp = C_DOUBLE
@@ -348,12 +348,12 @@ module spral_ssids_datatypes
       procedure, pass(this) :: flagToCharacter
    end type ssids_inform_base
 
-   type, extends(ssids_inform_base) :: ssids_inform
+   type, extends(ssids_inform_base) :: ssids_inform_gpu
       integer :: cuda_error = 0 ! cuda error value
       integer :: cublas_error = 0 ! cublas error value
    contains
       procedure, pass(this) :: flagToCharacter => flagToCharacter_gpu
-   end type ssids_inform
+   end type ssids_inform_gpu
 
    integer, parameter, public :: BLOCK_SIZE = 8
    integer, parameter, public :: MNF_BLOCKS = 11
@@ -449,7 +449,7 @@ end function flagToCharacter
 ! Member function inform%flagToCharacter
 !
 function flagToCharacter_gpu(this) result(msg)
-   class(ssids_inform), intent(in) :: this
+   class(ssids_inform_gpu), intent(in) :: this
    character(len=200) :: msg ! return value
 
    select case(this%flag)
@@ -476,7 +476,7 @@ end function flagToCharacter_gpu
 ! routine to print errors and warnings
 !
 subroutine ssids_print_flag(inform,nout,context)
-   type(ssids_inform), intent(in) :: inform
+   class(ssids_inform_base), intent(in) :: inform
    integer, intent(in) :: nout
    character (len=*), optional, intent(in) :: context
 

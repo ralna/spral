@@ -136,6 +136,7 @@ libspral_a_SOURCES += \
 	src/ssids/solve_cpu.f90 \
 	src/ssids/solve_gpu.f90 \
 	src/ssids/ssids.f90 \
+	src/ssids/type_select_gpu.f90 \
 	interfaces/C/ssids.f90
 bin_PROGRAMS = spral_ssids
 spral_ssids_SOURCES = \
@@ -186,7 +187,8 @@ src/ssids/ssids.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
 									src/ssids/analyse.$(OBJEXT) \
 									src/ssids/datatypes.$(OBJEXT) \
 									src/ssids/fkeep.$(OBJEXT) \
-									src/ssids/fkeep_gpu.$(OBJEXT)
+									src/ssids/fkeep_gpu.$(OBJEXT) \
+									src/ssids/type_select_gpu.$(OBJEXT)
 src/ssids/alloc.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
 									src/ssids/datatypes.$(OBJEXT)
 src/ssids/analyse.$(OBJEXT): src/ssids/datatypes.$(OBJEXT) \

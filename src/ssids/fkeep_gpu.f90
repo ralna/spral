@@ -12,8 +12,8 @@ module spral_ssids_fkeep_gpu
                           pop_ssids_cuda_settings, cuda_settings_type, scale
    use spral_ssids_datatypes, only : long, node_type, smalloc_type, &
                                      ssids_akeep, ssids_options, &
-                                     ssids_inform, thread_stats, wp, &
-                                     ssids_print_flag, &
+                                     ssids_inform_base, ssids_inform_gpu, &
+                                     thread_stats, wp, ssids_print_flag, &
                                      SSIDS_ERROR_ALLOCATION, &
                                      SSIDS_ERROR_CUDA_UNKNOWN, &
                                      SSIDS_ERROR_UNIMPLEMENTED, &
@@ -21,7 +21,7 @@ module spral_ssids_fkeep_gpu
                                      SSIDS_SOLVE_JOB_DIAG, SSIDS_SOLVE_JOB_FWD,&
                                      SSIDS_SOLVE_JOB_DIAG_BWD
    use spral_ssids_factor_gpu, only : parfactor
-   use spral_ssids_fkeep, only : ssids_fkeep
+   use spral_ssids_fkeep, only : ssids_fkeep_base
    use spral_ssids_solve_gpu, only : bwd_solve_gpu, fwd_solve_gpu, &
                                      fwd_multisolve_gpu, bwd_multisolve_gpu, &
                                      d_solve_gpu
@@ -34,7 +34,7 @@ module spral_ssids_fkeep_gpu
    !
    ! Data type for data generated in factorise phase (gpu version)
    !
-   type, extends(ssids_fkeep) :: ssids_fkeep_gpu
+   type, extends(ssids_fkeep_base) :: ssids_fkeep_gpu
       type(C_PTR), dimension(:), allocatable :: stream_handle
       type(gpu_type), dimension(:), allocatable :: stream_data
       type(gpu_type) :: top_data
@@ -61,7 +61,7 @@ subroutine inner_factor_gpu(fkeep, akeep, val, options, inform)
    class(ssids_fkeep_gpu), intent(inout) :: fkeep
    real(wp), dimension(*), target, intent(in) :: val
    class(ssids_options), intent(in) :: options
-   class(ssids_inform), intent(inout) :: inform
+   class(ssids_inform_base), intent(inout) :: inform
 
    integer :: i
    type(C_PTR) :: gpu_val, gpu_scaling
@@ -178,9 +178,12 @@ subroutine inner_factor_gpu(fkeep, akeep, val, options, inform)
       inform%stat = maxval(stats(:)%st)
       if(inform%stat.eq.0) inform%stat = minval(stats(:)%st)
       ! Note: cuda_error and cublas_error are actually C enums, so are +ive
-      if(inform%cuda_error.eq.0) inform%cuda_error = maxval(stats(:)%cuda_error)
-      if(inform%cublas_error.eq.0) &
-         inform%cublas_error = maxval(stats(:)%cublas_error)
+      select type(inform)
+      type is (ssids_inform_gpu)
+         if(inform%cuda_error.eq.0) inform%cuda_error = maxval(stats(:)%cuda_error)
+         if(inform%cublas_error.eq.0) &
+            inform%cublas_error = maxval(stats(:)%cublas_error)
+      end select
       st = inform%stat
    end if
    i = max(inform%flag, maxval(stats(:)%flag))
@@ -206,7 +209,10 @@ subroutine inner_factor_gpu(fkeep, akeep, val, options, inform)
 
    200 continue
    inform%flag = SSIDS_ERROR_CUDA_UNKNOWN
-   inform%cuda_error = cuda_error
+   select type(inform)
+   type is (ssids_inform_gpu)
+      inform%cuda_error = cuda_error
+   end select
    fkeep%flag = inform%flag
    return
 end subroutine inner_factor_gpu
@@ -219,7 +225,7 @@ subroutine inner_solve_gpu(local_job, nrhs, x, ldx, akeep, fkeep, options, infor
    real(wp), dimension(ldx,nrhs), target, intent(inout) :: x
    integer, intent(in) :: ldx
    type(ssids_options), intent(in) :: options
-   type(ssids_inform), intent(inout) :: inform
+   class(ssids_inform_base), intent(inout) :: inform
 
    integer :: i, r
    integer :: n
@@ -236,7 +242,10 @@ subroutine inner_solve_gpu(local_job, nrhs, x, ldx, akeep, fkeep, options, infor
    type(C_PTR) :: gpu_invp
 
    ! Copy factor data to/from GPU as approriate (if required!)
-   call ssids_move_data_inner(akeep, fkeep, options, inform)
+   select type(inform)
+   type is (ssids_inform_gpu)
+      call ssids_move_data_inner(akeep, fkeep, options, inform)
+   end select
    if(inform%flag.lt.0) then
       call pop_ssids_cuda_settings(user_settings, cuda_error)
       return
@@ -244,7 +253,7 @@ subroutine inner_solve_gpu(local_job, nrhs, x, ldx, akeep, fkeep, options, infor
 
    ! Call CPU version if desired (or no GPU version for diag only)
    if(.not. options%use_gpu_solve) then
-      call fkeep%ssids_fkeep%inner_solve(local_job, nrhs, x, ldx, akeep, &
+      call fkeep%ssids_fkeep_base%inner_solve(local_job, nrhs, x, ldx, akeep, &
          options, inform)
       return
    endif
@@ -415,7 +424,10 @@ subroutine inner_solve_gpu(local_job, nrhs, x, ldx, akeep, fkeep, options, infor
    return
 
    200 continue ! CUDA error
-   inform%cuda_error = cuda_error
+   select type(inform)
+   type is (ssids_inform_gpu)
+      inform%cuda_error = cuda_error
+   end select
    inform%flag = SSIDS_ERROR_CUDA_UNKNOWN
    call pop_ssids_cuda_settings(user_settings, cuda_error)
    return
@@ -424,9 +436,9 @@ end subroutine inner_solve_gpu
 !****************************************************************************
 
 subroutine enquire_posdef_gpu(akeep, fkeep, inform, d)
-   type(ssids_akeep), intent(in) :: akeep
+   class(ssids_akeep), intent(in) :: akeep
    class(ssids_fkeep_gpu), target, intent(in) :: fkeep
-   type(ssids_inform), intent(inout) :: inform
+   class(ssids_inform_base), intent(inout) :: inform
    real(wp), dimension(*), intent(out) :: d
 
    if(.not. fkeep%host_factors) then
@@ -436,16 +448,16 @@ subroutine enquire_posdef_gpu(akeep, fkeep, inform, d)
    endif
 
    ! Just use upcall to base class to print factors
-   call fkeep%ssids_fkeep%enquire_posdef(akeep, inform, d)
+   call fkeep%ssids_fkeep_base%enquire_posdef(akeep, inform, d)
 end subroutine enquire_posdef_gpu
 
 
 !****************************************************************************
 
 subroutine enquire_indef_gpu(akeep, fkeep, inform, piv_order, d)
-   type(ssids_akeep), intent(in) :: akeep
+   class(ssids_akeep), intent(in) :: akeep
    class(ssids_fkeep_gpu), target, intent(in) :: fkeep
-   type(ssids_inform), intent(inout) :: inform
+   class(ssids_inform_base), intent(inout) :: inform
    integer, dimension(*), optional, intent(out) :: piv_order
       ! If i is used to index a variable, its position in the pivot sequence
       ! will be placed in piv_order(i), with its sign negative if it is
@@ -471,7 +483,7 @@ subroutine enquire_indef_gpu(akeep, fkeep, inform, piv_order, d)
 
    if(fkeep%host_factors) then
       ! Call CPU version instead
-      call fkeep%ssids_fkeep%enquire_indef(akeep, inform, piv_order=piv_order, &
+      call fkeep%ssids_fkeep_base%enquire_indef(akeep, inform, piv_order=piv_order, &
          d=d)
       return
    endif
@@ -548,7 +560,10 @@ subroutine enquire_indef_gpu(akeep, fkeep, inform, piv_order, d)
    return
 
    200 continue ! CUDA error
-   inform%cuda_error = cuda_error
+   select type(inform)
+   type is (ssids_inform_gpu)
+      inform%cuda_error = cuda_error
+   end select
    inform%flag = SSIDS_ERROR_CUDA_UNKNOWN
    return
 end subroutine enquire_indef_gpu
@@ -563,7 +578,7 @@ subroutine alter_gpu(d, akeep, fkeep, options, inform)
    type(ssids_akeep), intent(in) :: akeep
    class(ssids_fkeep_gpu), target, intent(inout) :: fkeep
    type(ssids_options), intent(in) :: options
-   type(ssids_inform), intent(inout) :: inform
+   class(ssids_inform_base), intent(inout) :: inform
 
    integer :: blkm, blkn
    integer(long) :: ip
@@ -581,7 +596,7 @@ subroutine alter_gpu(d, akeep, fkeep, options, inform)
 
    if(fkeep%host_factors) then
       ! Use base class call to alter factors on CPU
-      call fkeep%ssids_fkeep%alter(d, akeep, options, inform)
+      call fkeep%ssids_fkeep_base%alter(d, akeep, options, inform)
    endif
 
    !
@@ -628,7 +643,10 @@ subroutine alter_gpu(d, akeep, fkeep, options, inform)
    return
 
    200 continue ! CUDA error
-   inform%cuda_error = cuda_error
+   select type(inform)
+   type is (ssids_inform_gpu)
+      inform%cuda_error = cuda_error
+   end select
    inform%flag = SSIDS_ERROR_CUDA_UNKNOWN
    return
 
@@ -657,7 +675,7 @@ subroutine free_fkeep_gpu(fkeep, flag)
    if (.not.allocated(fkeep%nodes)) return
 
    ! Call superclass free first (sets flag to 0)
-   call fkeep%ssids_fkeep%free(flag)
+   call fkeep%ssids_fkeep_base%free(flag)
 
    !
    ! Now cleanup GPU-specific stuff
@@ -709,7 +727,7 @@ subroutine ssids_move_data_inner(akeep, fkeep, options, inform)
    type(ssids_akeep), intent(in) :: akeep
    type(ssids_fkeep_gpu), intent(inout) :: fkeep
    type(ssids_options), intent(in) :: options
-   type(ssids_inform), intent(inout) :: inform
+   type(ssids_inform_gpu), intent(inout) :: inform
 
    !integer :: lev
    integer :: cuda_error

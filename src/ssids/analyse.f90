@@ -150,7 +150,7 @@ subroutine check_order(n, order, invp, akeep, options, inform)
       ! Used to check order and then holds inverse of perm.
    type (ssids_akeep), intent(inout) :: akeep
    type (ssids_options), intent(in) :: options
-   type (ssids_inform), intent(inout) :: inform
+   class(ssids_inform_base), intent(inout) :: inform
 
    character(50)  :: context ! Procedure name (used when printing).
 
@@ -216,7 +216,7 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
       ! is NOT set to inverse for the final order that is returned.
    type (ssids_akeep), intent(inout) :: akeep
    type (ssids_options), intent(in) :: options
-   type (ssids_inform), intent(inout) :: inform
+   type (ssids_inform_gpu), intent(inout) :: inform
 
    character(50)  :: context ! Procedure name (used when printing).
    integer, dimension(:), allocatable :: child_next, child_head ! linked
