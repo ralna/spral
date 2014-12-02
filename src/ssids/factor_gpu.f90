@@ -6,7 +6,9 @@ module spral_ssids_factor_gpu
 !$ use omp_lib
    use, intrinsic :: iso_c_binding
    use spral_cuda
-   use spral_ssids_alloc
+   use spral_ssids_alloc, only : smalloc
+   use spral_ssids_alloc_gpu, only : cuda_stack_alloc_type, custack_alloc, &
+      custack_init, custack_finalize, custack_free
    use spral_ssids_cuda_datatypes
    use spral_ssids_cuda_interfaces
    use spral_ssids_datatypes

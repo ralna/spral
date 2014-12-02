@@ -1,28 +1,13 @@
 module spral_ssids_alloc
-   use iso_c_binding
 !$ use omp_lib
-   use spral_cuda, only : cudaMalloc, cudaFree, aligned_size, c_ptr_plus
    use spral_ssids_datatypes, only : smalloc_type, stack_mem_type, long, wp
    implicit none
 
    private
-   ! CUDA stack allocator
-   public :: cuda_stack_alloc_type, & ! Data type
-             custack_init,          & ! Initialize stack allocator
-             custack_alloc,         & ! Allocate from top of stack
-             custack_free,          & ! Free from top of stack
-             custack_finalize         ! Free memory associated with stack
    ! Small memory allocator (page based, assumes only deallocated all at once)
    public :: smalloc,      & ! Allocate a small amount of memory from pool
              smfreeall,    & ! Free all data associated with smallocator
              smalloc_setup   ! Initialize smallocator
-
-   type cuda_stack_alloc_type
-      private
-      type(C_PTR) :: stack = C_NULL_PTR ! GPU pointer to memory
-      integer(C_SIZE_T) :: stack_sz = 0 ! Size of stack
-      integer(C_SIZE_T) :: top = 0 ! Current top of stack
-   end type cuda_stack_alloc_type
 
    ! Make smalloc generic
    interface smalloc
@@ -32,85 +17,6 @@ module spral_ssids_alloc
    ! Assorted fixed parameters (could be made part of control)
    integer(long), parameter, public :: PAGE_SZ = 2**20 ! 8+4MB pages (real+int)
 contains
-
-subroutine custack_init(stack, bytes, cuda_error)
-   type(cuda_stack_alloc_type), intent(inout) :: stack
-   integer(C_SIZE_T), intent(in) :: bytes
-   integer, intent(out) :: cuda_error
-
-   cuda_error = 0 ! All is good
-
-   ! Check stack not still in use
-   if(stack%top.ne.0) then
-      ! We should never reach this point
-      print *, "Attempting to resize non-empty stack!"
-      stop
-   endif
-
-   ! If stack is already large enough, do nothing
-   if(bytes.le.stack%stack_sz) return
-
-   ! Free any preexisting stack
-   if(C_ASSOCIATED(stack%stack)) then
-      cuda_error = cudaFree(stack%stack)
-      if(cuda_error.ne.0) return
-   endif
-
-   ! Allocate stack to new size
-   cuda_error = cudaMalloc(stack%stack, bytes)
-   if(cuda_error.ne.0) return
-   stack%stack_sz = bytes
-end subroutine custack_init
-
-subroutine custack_finalize(stack, cuda_error)
-   type(cuda_stack_alloc_type), intent(inout) :: stack
-   integer, intent(out) :: cuda_error
-
-   cuda_error = 0 ! All is good
-
-   ! Reset information
-   stack%top = 0
-   stack%stack_sz = 0
-
-   ! Don't bother trying to free memory if none allocated
-   if(.not.C_ASSOCIATED(stack%stack)) return ! Not initialized
-
-   ! Free memory
-   cuda_error = cudaFree(stack%stack)
-   if(cuda_error.ne.0) return
-
-   ! Nullify pointer
-   stack%stack = C_NULL_PTR
-end subroutine custack_finalize
-
-type(C_PTR) function custack_alloc(stack, bytes)
-   type(cuda_stack_alloc_type), intent(inout) :: stack
-   integer(C_SIZE_T), intent(in) :: bytes
-
-   integer(C_SIZE_T) :: bytes_aligned ! Alloc size has to round up to nearest
-      ! multiple of 256 bytes
-
-   bytes_aligned = aligned_size(bytes)
-   if(stack%top+bytes_aligned .gt. stack%stack_sz) then
-      ! Insufficient space
-      custack_alloc = C_NULL_PTR
-      return
-   endif
-
-   custack_alloc = c_ptr_plus(stack%stack, stack%top)
-   stack%top = stack%top + bytes_aligned
-end function custack_alloc
-
-subroutine custack_free(stack, bytes)
-   type(cuda_stack_alloc_type), intent(inout) :: stack
-   integer(C_SIZE_T), intent(in) :: bytes
-
-   integer(C_SIZE_T) :: bytes_aligned ! Alloc size has to round up to nearest
-      ! multiple of 256 bytes
-
-   bytes_aligned = aligned_size(bytes)
-   stack%top = stack%top - bytes_aligned
-end subroutine custack_free
 
 !*************************************************
 !
