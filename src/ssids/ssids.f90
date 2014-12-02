@@ -22,6 +22,7 @@ module spral_ssids
    use spral_ssids_datatypes
    use spral_ssids_akeep, only : ssids_akeep_base
    use spral_ssids_fkeep, only : ssids_fkeep_base
+   use spral_ssids_inform, only : ssids_inform_base, ssids_print_flag
    use spral_ssids_type_select, only : ssids_akeep, ssids_fkeep, ssids_inform
    implicit none
 
@@ -144,12 +145,8 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
    context = 'ssids_analyse'
    call ssids_free(akeep, free_flag)
    if(free_flag.ne.0) then
-      inform%flag = SSIDS_ERROR_CUDA_UNKNOWN
+      call inform%set_cuda_error(free_flag)
       akeep%flag = inform%flag
-      select type(inform)
-      type is (ssids_inform_gpu)
-         inform%cuda_error = free_flag
-      end select
       call ssids_print_flag(inform,nout,context)
       return
    endif
@@ -422,12 +419,8 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
    context = 'ssids_analyse_coord'
    call ssids_free(akeep, free_flag)
    if(free_flag.ne.0) then
-      inform%flag = SSIDS_ERROR_CUDA_UNKNOWN
+      call inform%set_cuda_error(free_flag)
       akeep%flag = inform%flag
-      select type(inform)
-      type is (ssids_inform_gpu)
-         inform%cuda_error = free_flag
-      end select
       call ssids_print_flag(inform,nout,context)
       return
    endif

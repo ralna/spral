@@ -1,6 +1,6 @@
 module spral_ssids_akeep
-   use spral_ssids_datatypes, only : long, wp, ssids_inform_base, &
-                                     SSIDS_ERROR_CUDA_UNKNOWN
+   use spral_ssids_datatypes, only : long, wp, SSIDS_ERROR_CUDA_UNKNOWN
+   use spral_ssids_inform, only : ssids_inform_base
    use, intrinsic :: iso_c_binding
    implicit none
 

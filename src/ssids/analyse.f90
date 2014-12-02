@@ -9,6 +9,7 @@ module spral_ssids_analyse
    use spral_ssids_akeep, only : ssids_akeep_base
    use spral_ssids_akeep_gpu, only : ssids_akeep_gpu
    use spral_ssids_datatypes
+   use spral_ssids_inform, only : ssids_inform_base, ssids_print_flag
    implicit none
 
    private

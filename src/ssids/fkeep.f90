@@ -6,11 +6,11 @@ module spral_ssids_fkeep
    use spral_ssids_datatypes
    use spral_ssids_alloc, only : smfreeall
    use spral_ssids_datatypes, only : long, node_type, smalloc_type, &
-                                     ssids_options, ssids_inform_base, &
-                                     wp, SSIDS_ERROR_ALLOCATION, &
+                                     ssids_options, wp, SSIDS_ERROR_ALLOCATION,&
                                      SSIDS_SOLVE_JOB_ALL, SSIDS_SOLVE_JOB_BWD, &
                                      SSIDS_SOLVE_JOB_DIAG, SSIDS_SOLVE_JOB_FWD,&
                                      SSIDS_SOLVE_JOB_DIAG_BWD
+   use spral_ssids_inform, only : ssids_inform_base
    use spral_ssids_solve_cpu, only : fwd_diag_solve, subtree_bwd_solve
    use, intrinsic :: iso_c_binding
    implicit none

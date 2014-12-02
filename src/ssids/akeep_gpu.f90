@@ -1,9 +1,9 @@
 module spral_ssids_akeep_gpu
    use spral_cuda, only : cudaMemcpy_h2d, cudaMalloc, cudaFree
    use spral_ssids_akeep, only : ssids_akeep_base
-   use spral_ssids_datatypes, only : long, wp, ssids_inform_base, &
-                                     ssids_inform_gpu, &
-                                     SSIDS_ERROR_CUDA_UNKNOWN
+   use spral_ssids_datatypes, only : long, wp, SSIDS_ERROR_CUDA_UNKNOWN
+   use spral_ssids_inform, only : ssids_inform_base
+   use spral_ssids_inform_gpu, only : ssids_inform_gpu
    use, intrinsic :: iso_c_binding
    implicit none
 

@@ -13,9 +13,7 @@ module spral_ssids_fkeep_gpu
    use spral_ssids_cuda_interfaces, only : push_ssids_cuda_settings, &
                           pop_ssids_cuda_settings, cuda_settings_type, scale
    use spral_ssids_datatypes, only : long, node_type, smalloc_type, &
-                                     ssids_options, &
-                                     ssids_inform_base, ssids_inform_gpu, &
-                                     thread_stats, wp, ssids_print_flag, &
+                                     ssids_options, thread_stats, wp, &
                                      SSIDS_ERROR_ALLOCATION, &
                                      SSIDS_ERROR_CUDA_UNKNOWN, &
                                      SSIDS_ERROR_UNIMPLEMENTED, &
@@ -25,6 +23,8 @@ module spral_ssids_fkeep_gpu
                                      SSIDS_SOLVE_JOB_DIAG_BWD
    use spral_ssids_factor_gpu, only : parfactor
    use spral_ssids_fkeep, only : ssids_fkeep_base
+   use spral_ssids_inform, only : ssids_inform_base
+   use spral_ssids_inform_gpu, only : ssids_inform_gpu
    use spral_ssids_solve_gpu, only : bwd_solve_gpu, fwd_solve_gpu, &
                                      fwd_multisolve_gpu, bwd_multisolve_gpu, &
                                      d_solve_gpu
