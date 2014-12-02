@@ -41,6 +41,7 @@ module spral_ssids_datatypes
    integer, parameter, public :: SSIDS_ERROR_ALLOCATION        = -50
    integer, parameter, public :: SSIDS_ERROR_CUDA_UNKNOWN      = -51
    integer, parameter, public :: SSIDS_ERROR_CUBLAS_UNKNOWN    = -52
+   integer, parameter, public :: SSIDS_ERROR_UNIMPLEMENTED     = -98
    integer, parameter, public :: SSIDS_ERROR_UNKNOWN           = -99
 
    ! warning flags

@@ -16,6 +16,7 @@ module spral_ssids_fkeep_gpu
                                      ssids_print_flag, &
                                      SSIDS_ERROR_ALLOCATION, &
                                      SSIDS_ERROR_CUDA_UNKNOWN, &
+                                     SSIDS_ERROR_UNIMPLEMENTED, &
                                      SSIDS_SOLVE_JOB_ALL, SSIDS_SOLVE_JOB_BWD, &
                                      SSIDS_SOLVE_JOB_DIAG, SSIDS_SOLVE_JOB_FWD,&
                                      SSIDS_SOLVE_JOB_DIAG_BWD
@@ -47,6 +48,7 @@ module spral_ssids_fkeep_gpu
    contains
       procedure, pass(fkeep) :: inner_factor => inner_factor_gpu ! Do actual factorization
       procedure, pass(fkeep) :: inner_solve => inner_solve_gpu ! Do actual solve
+      procedure, pass(fkeep) :: enquire_posdef => enquire_posdef_gpu
       procedure, pass(fkeep) :: enquire_indef => enquire_indef_gpu
       procedure, pass(fkeep) :: alter => alter_gpu ! Alter D values
       procedure, pass(fkeep) :: free => free_fkeep_gpu ! Frees memory
@@ -418,6 +420,25 @@ subroutine inner_solve_gpu(local_job, nrhs, x, ldx, akeep, fkeep, options, infor
    call pop_ssids_cuda_settings(user_settings, cuda_error)
    return
 end subroutine inner_solve_gpu
+
+!****************************************************************************
+
+subroutine enquire_posdef_gpu(akeep, fkeep, inform, d)
+   type(ssids_akeep), intent(in) :: akeep
+   class(ssids_fkeep_gpu), target, intent(in) :: fkeep
+   type(ssids_inform), intent(inout) :: inform
+   real(wp), dimension(*), intent(out) :: d
+
+   if(.not. fkeep%host_factors) then
+      ! FIXME: Not implemented enquire_posdef for GPU without host factors yet!
+      inform%flag = SSIDS_ERROR_UNIMPLEMENTED
+      return
+   endif
+
+   ! Just use upcall to base class to print factors
+   call fkeep%ssids_fkeep%enquire_posdef(akeep, inform, d)
+end subroutine enquire_posdef_gpu
+
 
 !****************************************************************************
 

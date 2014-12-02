@@ -43,6 +43,7 @@ module spral_ssids_fkeep
    contains
       procedure, pass(fkeep) :: inner_factor => inner_factor_cpu ! Do actual factorization
       procedure, pass(fkeep) :: inner_solve => inner_solve_cpu ! Do actual solve
+      procedure, pass(fkeep) :: enquire_posdef => enquire_posdef_cpu
       procedure, pass(fkeep) :: enquire_indef => enquire_indef_cpu
       procedure, pass(fkeep) :: alter => alter_cpu ! Alter D values
       procedure, pass(fkeep) :: free => free_fkeep ! Frees memory
@@ -123,6 +124,41 @@ subroutine inner_solve_cpu(local_job, nrhs, x, ldx, akeep, fkeep, options, infor
    return
 
 end subroutine inner_solve_cpu
+
+!****************************************************************************
+
+subroutine enquire_posdef_cpu(akeep, fkeep, inform, d)
+   type(ssids_akeep), intent(in) :: akeep
+   class(ssids_fkeep), target, intent(in) :: fkeep
+   type(ssids_inform), intent(inout) :: inform
+   real(wp), dimension(*), intent(out) :: d
+
+   integer :: blkn, blkm
+   integer(long) :: i
+   integer :: j
+   integer :: n
+   integer :: node
+   integer :: piv
+
+   type(node_type), pointer :: nptr
+
+   n = akeep%n
+   ! ensure d is not returned undefined
+   d(1:n) = 0.0 ! ensure do not returned with this undefined
+   
+   piv = 1
+   do node = 1, akeep%nnodes
+      nptr => fkeep%nodes(node)
+      blkn = akeep%sptr(node+1) - akeep%sptr(node)
+      blkm = int(akeep%rptr(node+1) - akeep%rptr(node))
+      i = 1
+      do j = 1, blkn
+         d(piv) = nptr%lcol(i)
+         i = i + blkm + 1
+         piv = piv + 1
+      end do
+   end do
+end subroutine enquire_posdef_cpu
 
 !****************************************************************************
 

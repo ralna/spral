@@ -58,6 +58,7 @@ program main
    integer, parameter :: SSIDS_ERROR_ALLOCATION          = -50
    integer, parameter :: SSIDS_ERROR_CUDA_UNKNOWN        = -51
    integer, parameter :: SSIDS_ERROR_CUBLAS_UNKNOWN      = -52
+   integer, parameter :: SSIDS_ERROR_UNIMPLEMENTED       = -98
    integer, parameter :: SSIDS_ERROR_UNKNOWN             = -99
 
    ! warning flags
@@ -2252,7 +2253,8 @@ subroutine test_random
          endif
       else
          call ssids_enquire_posdef(akeep,fkeep,options,info,d1)
-         if (info%flag < 0) then
+         if (info%flag < 0 .and. info%flag.ne.SSIDS_ERROR_UNIMPLEMENTED) then
+           ! NB: unknown error return as not yet implemented with gpu factors
            write (*,'(a)') ' Unexpected error from ssids_enquire_posdef'
            call ssids_free(akeep, fkeep, cuda_error)
            errors = errors + 1

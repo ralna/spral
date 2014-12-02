@@ -9,7 +9,7 @@
 module spral_ssids
 !$ use omp_lib
    use, intrinsic :: iso_c_binding
-   use spral_cuda, only : cudaMemcpy_h2d, cudaFree, c_ptr_plus
+   use spral_cuda, only : cudaFree
    use spral_match_order, only : match_order_metis
    use spral_matrix_util, only : SPRAL_MATRIX_REAL_SYM_INDEF, &
                                  SPRAL_MATRIX_REAL_SYM_PSDEF, &
@@ -923,24 +923,15 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
       if (st .ne. 0) go to 10
    end if
 
-   if(options%use_gpu_factor) then
-      !
-      ! GPU-based factorization
-      !
-
-      if (akeep%check) then
-         call fkeep%inner_factor(akeep, val2, options, inform)
-      else
-         call fkeep%inner_factor(akeep, val, options, inform)
-      endif
-      if(inform%flag .lt. 0) then
-         call ssids_print_flag(inform,nout,context)
-         return
-      endif
+   ! Call main factorization routine
+   if (akeep%check) then
+      call fkeep%inner_factor(akeep, val2, options, inform)
    else
-      !
-      ! CPU factorization
-      !
+      call fkeep%inner_factor(akeep, val, options, inform)
+   endif
+   if(inform%flag .lt. 0) then
+      call ssids_print_flag(inform,nout,context)
+      return
    endif
 
    if (inform%flag < 0) then
@@ -1019,7 +1010,7 @@ subroutine ssids_solve_one_double(x1, akeep, fkeep, options, inform, job)
       ! right-hand side.On exit, if i has been used to index a variable,
       ! x(i) holds solution for variable i
    type(ssids_akeep), intent(in) :: akeep
-   class(ssids_fkeep_gpu), intent(inout) :: fkeep
+   class(ssids_fkeep), intent(inout) :: fkeep
    type(ssids_options), intent(in) :: options
    type(ssids_inform), intent(out) :: inform
    integer, optional, intent(in) :: job
@@ -1174,21 +1165,13 @@ end subroutine ssids_solve_mult_double
 !
 subroutine ssids_enquire_posdef_double(akeep, fkeep, options, inform, d)
    type(ssids_akeep), intent(in) :: akeep
-   class(ssids_fkeep_gpu), target, intent(in) :: fkeep
+   class(ssids_fkeep), target, intent(in) :: fkeep
    type(ssids_options), intent(in) :: options
    type(ssids_inform), intent(out) :: inform
    real(wp), dimension(*), intent(out) :: d
 
-   integer :: blkn, blkm
-   character(50)  :: context      ! Procedure name (used when printing).
-   integer(long) :: i
-   integer :: j
-   integer :: n
-   integer :: node
    integer :: nout
-   integer :: piv
-
-   type(node_type), pointer :: nptr
+   character(50)  :: context      ! Procedure name (used when printing).
 
    context = 'ssids_enquire_posdef' 
    inform%flag = SSIDS_SUCCESS
@@ -1216,23 +1199,7 @@ subroutine ssids_enquire_posdef_double(akeep, fkeep, options, inform, d)
       return
    end if
 
-   n = akeep%n
-   ! ensure d is not returned undefined
-   d(1:n) = zero ! ensure do not returned with this undefined
-   if ( .not. fkeep%host_factors ) return
-   
-   piv = 1
-   do node = 1, akeep%nnodes
-      nptr => fkeep%nodes(node)
-      blkn = akeep%sptr(node+1) - akeep%sptr(node)
-      blkm = int(akeep%rptr(node+1) - akeep%rptr(node))
-      i = 1
-      do j = 1, blkn
-         d(piv) = nptr%lcol(i)
-         i = i + blkm + 1
-         piv = piv + 1
-      end do
-   end do
+   call fkeep%enquire_posdef(akeep, inform, d)
 end subroutine ssids_enquire_posdef_double
 
 !*************************************************************************
@@ -1246,7 +1213,7 @@ end subroutine ssids_enquire_posdef_double
 subroutine ssids_enquire_indef_double(akeep, fkeep, options, inform, &
       piv_order, d)
    type(ssids_akeep), intent(in) :: akeep
-   class(ssids_fkeep_gpu), target, intent(in) :: fkeep
+   class(ssids_fkeep), target, intent(in) :: fkeep
    type(ssids_options), intent(in) :: options
    type(ssids_inform), intent(out) :: inform
    integer, dimension(*), optional, intent(out) :: piv_order
@@ -1300,7 +1267,7 @@ subroutine ssids_alter_double(d, akeep, fkeep, options, inform)
      ! of D^{-1} must be placed in d(1,i) (i = 1,...n)
      ! and the off-diagonal entries must be placed in d(2,i) (i = 1,...n-1).
    type(ssids_akeep), intent(in) :: akeep
-   class(ssids_fkeep_gpu), target, intent(inout) :: fkeep
+   class(ssids_fkeep), target, intent(inout) :: fkeep
    type(ssids_options), intent(in) :: options
    type(ssids_inform), intent(out) :: inform
 
