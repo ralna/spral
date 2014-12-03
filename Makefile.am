@@ -131,6 +131,7 @@ libspral_a_SOURCES += \
 	src/ssids/type_select_gpu.f90
 else
 libspral_a_SOURCES += \
+	src/ssids/inform_nogpu.f90 \
 	src/ssids/type_select_nogpu.f90
 endif
 libspral_a_SOURCES += \
@@ -299,5 +300,12 @@ src/ssids/solve_kernels.$(OBJEXT): src/ssids/dtrsv.h
 # C interface deps
 interfaces/C/random.$(OBJEXT): src/random.$(OBJEXT)
 interfaces/C/random_matrix.$(OBJEXT): src/random_matrix.$(OBJEXT)
+if HAVE_NVCC
 interfaces/C/ssids.$(OBJEXT): src/ssids/ssids.$(OBJEXT) \
-										src/ssids/inform.$(OBJEXT)
+										src/ssids/inform.$(OBJEXT) \
+										src/ssids/inform_gpu.$(OBJEXT)
+else
+interfaces/C/ssids.$(OBJEXT): src/ssids/ssids.$(OBJEXT) \
+										src/ssids/inform.$(OBJEXT) \
+										src/ssids/inform_nogpu.$(OBJEXT)
+endif
