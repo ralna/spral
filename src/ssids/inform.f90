@@ -89,6 +89,8 @@ function flagToCharacter(this) result(msg)
    case(SSIDS_ERROR_PRESOLVE_INCOMPAT)
       msg = 'Invalid combination of options%presolve, options%use_gpu_solve &
          &and requested operation - see documentation for legal combinations'
+   case(SSIDS_ERROR_UNIMPLEMENTED)
+      msg = 'Functionality not yet implemented'
 
    !
    ! Warnings

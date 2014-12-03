@@ -241,9 +241,13 @@ void spral_ssids_factor_cpu_dbl(
       const struct spral::ssids::internal::cpu_factor_options *const options, // Options in
       struct spral::ssids::internal::cpu_factor_stats *const stats // Info out
       ) {
+
+   // Initialize stats
+   stats->flag = 0;
+
+   // Call relevant routine
    if(pos_def) {
-      printf("Positive-definite factorization not (yet) supported on CPU!\n");
-      stats->flag = -99;
+      stats->flag = -98; // Unimplemented
       return;
    } else {
       spral::ssids::internal::factor_ldlt<double>

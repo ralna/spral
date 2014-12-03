@@ -57,7 +57,7 @@ contains
 
 subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
    class(ssids_akeep_base), intent(in) :: akeep
-   class(ssids_fkeep_base), intent(inout) :: fkeep
+   class(ssids_fkeep_base), target, intent(inout) :: fkeep
    real(wp), dimension(*), target, intent(in) :: val
    class(ssids_options), intent(in) :: options
    class(ssids_inform_base), intent(inout) :: inform
@@ -70,7 +70,7 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
    integer :: st
 
    ! Allocate cnodes and setup for main call
-   allocate(cnodes(akeep%nnodes), stat=st)
+   allocate(cnodes(akeep%nnodes+1), stat=st)
    if(st.ne.0) then
       inform%flag = SSIDS_ERROR_ALLOCATION
       inform%stat = st
@@ -80,8 +80,13 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
 
    ! Perform factorization in C++ code
    fposdef = fkeep%pos_def
-   call factor_cpu(fposdef, akeep%nnodes, cnodes, val, fkeep%scaling, &
-      C_LOC(fkeep%alloc), coptions, cstats)
+   if(allocated(fkeep%scaling)) then
+      call factor_cpu(fposdef, akeep%n, akeep%nnodes, cnodes, val, &
+         C_LOC(fkeep%scaling), C_LOC(fkeep%alloc), coptions, cstats)
+   else
+      call factor_cpu(fposdef, akeep%n, akeep%nnodes, cnodes, val, &
+         C_NULL_PTR, C_LOC(fkeep%alloc), coptions, cstats)
+   endif
 
    ! Gather information back to Fortran
    call extract_cpu_data(cstats, inform)
@@ -93,8 +98,8 @@ subroutine inner_solve_cpu(local_job, nrhs, x, ldx, akeep, fkeep, options, infor
    class(ssids_fkeep_base), intent(inout) :: fkeep
    integer, intent(inout) :: local_job
    integer, intent(in) :: nrhs
-   real(wp), dimension(ldx,nrhs), target, intent(inout) :: x
    integer, intent(in) :: ldx
+   real(wp), dimension(ldx,nrhs), target, intent(inout) :: x
    type(ssids_options), intent(in) :: options
    class(ssids_inform_base), intent(inout) :: inform
 
@@ -201,13 +206,12 @@ subroutine enquire_indef_cpu(akeep, fkeep, inform, piv_order, d)
       ! entries will be placed in d(2,:). The entries are held in pivot order.
 
    integer :: blkn, blkm
-   integer :: i, j, k
+   integer :: j, k
    integer :: n
    integer :: nd
    integer :: node
    integer(long) :: offset
    integer :: piv
-   integer :: st
 
    type(node_type), pointer :: nptr
 
@@ -272,7 +276,7 @@ subroutine alter_cpu(d, akeep, fkeep, options, inform)
 
    integer :: blkm, blkn
    integer(long) :: ip
-   integer :: i, j
+   integer :: j
    integer :: nd
    integer :: node
    integer :: piv
@@ -301,7 +305,7 @@ subroutine free_fkeep(fkeep, flag)
    class(ssids_fkeep_base), intent(inout) :: fkeep
    integer, intent(out) :: flag ! not actually used for cpu version, set to 0
 
-   integer :: st, i
+   integer :: st
 
    flag = 0 ! Not used for basic SSIDS, just zet to zero
 
