@@ -7,7 +7,6 @@ module spral_ssids_analyse
    use spral_core_analyse, only : basic_analyse
    use spral_pgm, only : writePPM
    use spral_ssids_akeep, only : ssids_akeep_base
-   use spral_ssids_akeep_gpu, only : ssids_akeep_gpu
    use spral_ssids_datatypes
    use spral_ssids_inform, only : ssids_inform_base, ssids_print_flag
    implicit none
@@ -344,15 +343,12 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
       end do
    end do
 
-   ! Copy GPU-relevent data to device if needed
-   select type(akeep)
-   type is (ssids_akeep_gpu)
-      call akeep%copy_to_device(inform)
-      if(inform%flag.lt.0) then
-         call ssids_print_flag(inform, nout, context)
-         return
-      endif
-   end select
+   ! Copy GPU-relevent data to device if needed (no-op if not)
+   call akeep%move_data(options, inform)
+   if(inform%flag.lt.0) then
+      call ssids_print_flag(inform, nout, context)
+      return
+   endif
 
    ! Info
    inform%matrix_rank = akeep%sptr(akeep%nnodes+1)-1

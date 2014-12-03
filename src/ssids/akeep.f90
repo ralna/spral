@@ -1,5 +1,6 @@
 module spral_ssids_akeep
-   use spral_ssids_datatypes, only : long, wp, SSIDS_ERROR_CUDA_UNKNOWN
+   use spral_ssids_datatypes, only : long, wp, SSIDS_ERROR_CUDA_UNKNOWN, &
+                                     ssids_options
    use spral_ssids_inform, only : ssids_inform_base
    use, intrinsic :: iso_c_binding
    implicit none
@@ -79,9 +80,18 @@ module spral_ssids_akeep
       real(wp), dimension(:), allocatable :: scaling
    contains
       procedure, pass(akeep) :: free => free_akeep_base
+      procedure, pass(akeep) :: move_data
    end type ssids_akeep_base
 
 contains
+
+subroutine move_data(akeep, options, inform)
+   class(ssids_akeep_base), intent(inout) :: akeep
+   type(ssids_options), intent(in) :: options
+   class(ssids_inform_base), intent(inout) :: inform
+
+   ! No-op
+end subroutine move_data
 
 subroutine free_akeep_base(akeep, flag)
    class(ssids_akeep_base), intent(inout) :: akeep

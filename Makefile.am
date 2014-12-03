@@ -207,7 +207,6 @@ src/ssids/analyse.$(OBJEXT): src/core_analyse.$(OBJEXT) \
 									  src/cuda/cuda.$(OBJEXT) \
 									  src/pgm.$(OBJEXT) \
 									  src/ssids/akeep.$(OBJEXT) \
-									  src/ssids/akeep_gpu.$(OBJEXT) \
 									  src/ssids/datatypes.$(OBJEXT) \
 									  src/ssids/inform.$(OBJEXT)
 src/ssids/cuda_datatypes.$(OBJEXT): src/cuda/cuda.$(OBJEXT)

@@ -1,7 +1,8 @@
 module spral_ssids_akeep_gpu
    use spral_cuda, only : cudaMemcpy_h2d, cudaMalloc, cudaFree
    use spral_ssids_akeep, only : ssids_akeep_base
-   use spral_ssids_datatypes, only : long, wp, SSIDS_ERROR_CUDA_UNKNOWN
+   use spral_ssids_datatypes, only : long, wp, SSIDS_ERROR_CUDA_UNKNOWN, &
+                                     ssids_options
    use spral_ssids_inform, only : ssids_inform_base
    use spral_ssids_inform_gpu, only : ssids_inform_gpu
    use, intrinsic :: iso_c_binding
@@ -16,7 +17,7 @@ module spral_ssids_akeep_gpu
       type(C_PTR) :: gpu_rlist = C_NULL_PTR
       type(C_PTR) :: gpu_rlist_direct = C_NULL_PTR
    contains
-      procedure, pass(akeep) :: copy_to_device
+      procedure, pass(akeep) :: move_data
       procedure, pass(akeep) :: free => free_akeep_gpu
    end type ssids_akeep_gpu
 
@@ -47,12 +48,20 @@ subroutine free_akeep_gpu(akeep, flag)
    endif
 end subroutine free_akeep_gpu
 
-subroutine copy_to_device(akeep, inform)
+subroutine move_data(akeep, options, inform)
    class(ssids_akeep_gpu), intent(inout) :: akeep
+   type(ssids_options), intent(in) :: options
    class(ssids_inform_base), intent(inout) :: inform
 
    integer :: cuda_error
 
+   ! First call base class version
+   call akeep%ssids_akeep_base%move_data(options, inform)
+
+   ! If we're not using the GPU, no need to copy data
+   if(.not.options%use_gpu_factor .and. .not.options%use_gpu_solve) return
+
+   ! Copy data to device
    cuda_error=0
    call copy_analyse_data_to_device(2*(akeep%nptr(akeep%nnodes+1)-1), &
       akeep%nlist, akeep%rptr(akeep%nnodes+1)-1, akeep%rlist, &
@@ -66,7 +75,7 @@ subroutine copy_to_device(akeep, inform)
       inform%flag = SSIDS_ERROR_CUDA_UNKNOWN
       return
    endif
-end subroutine copy_to_device
+end subroutine move_data
 
 !****************************************************************************
 !
