@@ -3,7 +3,7 @@ ACLOCAL_AMFLAGS = -I m4
 
 # FIXME: Make autoconfable
 # NB: No libbub.a file to link against generated as BUB is a header library
-BUBDIR = /home/jhogg/src/ASEArch/bub_cpu
+BUBDIR = /home/jhogg/src/ASEArch/bub
 AM_CXXFLAGS = -I$(BUBDIR)
 
 SUFFIXES = .cu
@@ -173,13 +173,19 @@ spral_ssids_LINK = $(NVCCLINK)
 spral_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
 ssids_test_LINK = $(NVCCLINK)
 ssids_test_LDADD = $(LDADD) $(CUDA_LIBS)
-examples_Fortran_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
 examples_Fortran_ssids_LINK = $(NVCCLINK)
-examples_C_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
+examples_Fortran_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
 examples_C_ssids_LINK = $(NVCCLINK)
+examples_C_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
 else
 spral_ssids_LINK = $(CXXLINK)
 spral_ssids_LDADD = $(LDADD)
+ssids_test_LINK = $(CXXLINK)
+ssids_test_LDADD = $(LDADD)
+examples_Fortran_ssids_LINK = $(CXXLINK)
+examples_Fortran_ssids_LDADD = $(LDADD)
+examples_C_ssids_LINK = $(CXXLINK)
+examples_C_ssids_LDADD = $(LDADD)
 endif
 
 # Automake doesn't know much about modules, so get rid of them ourself

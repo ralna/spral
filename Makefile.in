@@ -116,6 +116,7 @@ TESTS = random_test$(EXEEXT) random_matrix_test$(EXEEXT) \
 @HAVE_NVCC_TRUE@	src/ssids/type_select_gpu.f90
 
 @HAVE_NVCC_FALSE@am__append_3 = \
+@HAVE_NVCC_FALSE@	src/ssids/inform_nogpu.f90 \
 @HAVE_NVCC_FALSE@	src/ssids/type_select_nogpu.f90
 
 bin_PROGRAMS = spral_ssids$(EXEEXT)
@@ -196,8 +197,9 @@ am__libspral_a_SOURCES_DIST = src/core_analyse.f90 \
 	src/ssids/node_solve_kernels.cu src/ssids/node_solve_kernels.h \
 	src/ssids/reorder_kernels.cu src/ssids/solve_gpu.f90 \
 	src/ssids/solve_kernels.cu src/ssids/syrk_kernels.cu \
-	src/ssids/type_select_gpu.f90 src/ssids/type_select_nogpu.f90 \
-	src/ssids/alloc.f90 src/ssids/akeep.f90 src/ssids/analyse.f90 \
+	src/ssids/type_select_gpu.f90 src/ssids/inform_nogpu.f90 \
+	src/ssids/type_select_nogpu.f90 src/ssids/alloc.f90 \
+	src/ssids/akeep.f90 src/ssids/analyse.f90 \
 	src/ssids/datatypes.f90 src/ssids/factor_cpu.cxx \
 	src/ssids/factor_cpu_iface.f90 src/ssids/factor_cpu_iface.h \
 	src/ssids/fkeep.f90 src/ssids/inform.f90 \
@@ -222,7 +224,7 @@ am__dirstamp = $(am__leading_dot)dirstamp
 @HAVE_NVCC_TRUE@	src/ssids/solve_kernels.$(OBJEXT) \
 @HAVE_NVCC_TRUE@	src/ssids/syrk_kernels.$(OBJEXT) \
 @HAVE_NVCC_TRUE@	src/ssids/type_select_gpu.$(OBJEXT)
-@HAVE_NVCC_FALSE@am__objects_3 =  \
+@HAVE_NVCC_FALSE@am__objects_3 = src/ssids/inform_nogpu.$(OBJEXT) \
 @HAVE_NVCC_FALSE@	src/ssids/type_select_nogpu.$(OBJEXT)
 am_libspral_a_OBJECTS = src/core_analyse.$(OBJEXT) $(am__objects_1) \
 	src/match_order.$(OBJEXT) src/matrix_util.$(OBJEXT) \
@@ -259,6 +261,8 @@ am_examples_C_ssids_OBJECTS = examples/C/ssids.$(OBJEXT)
 examples_C_ssids_OBJECTS = $(am_examples_C_ssids_OBJECTS)
 am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+@HAVE_NVCC_FALSE@examples_C_ssids_DEPENDENCIES =  \
+@HAVE_NVCC_FALSE@	$(am__DEPENDENCIES_2)
 @HAVE_NVCC_TRUE@examples_C_ssids_DEPENDENCIES = $(am__DEPENDENCIES_2) \
 @HAVE_NVCC_TRUE@	$(am__DEPENDENCIES_1)
 am_examples_Fortran_random_OBJECTS =  \
@@ -279,6 +283,8 @@ examples_Fortran_random_matrix_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1)
 am_examples_Fortran_ssids_OBJECTS = examples/Fortran/ssids.$(OBJEXT)
 examples_Fortran_ssids_OBJECTS = $(am_examples_Fortran_ssids_OBJECTS)
+@HAVE_NVCC_FALSE@examples_Fortran_ssids_DEPENDENCIES =  \
+@HAVE_NVCC_FALSE@	$(am__DEPENDENCIES_2)
 @HAVE_NVCC_TRUE@examples_Fortran_ssids_DEPENDENCIES =  \
 @HAVE_NVCC_TRUE@	$(am__DEPENDENCIES_2) $(am__DEPENDENCIES_1)
 am_random_matrix_test_OBJECTS = tests/random_matrix.$(OBJEXT)
@@ -304,6 +310,7 @@ spral_ssids_OBJECTS = $(am_spral_ssids_OBJECTS)
 @HAVE_NVCC_TRUE@	$(am__DEPENDENCIES_1)
 am_ssids_test_OBJECTS = tests/ssids.$(OBJEXT)
 ssids_test_OBJECTS = $(am_ssids_test_OBJECTS)
+@HAVE_NVCC_FALSE@ssids_test_DEPENDENCIES = $(am__DEPENDENCIES_2)
 @HAVE_NVCC_TRUE@ssids_test_DEPENDENCIES = $(am__DEPENDENCIES_2) \
 @HAVE_NVCC_TRUE@	$(am__DEPENDENCIES_1)
 AM_V_P = $(am__v_P_@AM_V@)
@@ -710,7 +717,7 @@ ACLOCAL_AMFLAGS = -I m4
 
 # FIXME: Make autoconfable
 # NB: No libbub.a file to link against generated as BUB is a header library
-BUBDIR = /home/jhogg/src/ASEArch/bub_cpu
+BUBDIR = /home/jhogg/src/ASEArch/bub
 AM_CXXFLAGS = -I$(BUBDIR)
 SUFFIXES = .cu
 
@@ -785,12 +792,18 @@ examples_C_ssids_SOURCES = examples/C/ssids.c
 @HAVE_NVCC_TRUE@spral_ssids_LINK = $(NVCCLINK)
 @HAVE_NVCC_FALSE@spral_ssids_LDADD = $(LDADD)
 @HAVE_NVCC_TRUE@spral_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
+@HAVE_NVCC_FALSE@ssids_test_LINK = $(CXXLINK)
 @HAVE_NVCC_TRUE@ssids_test_LINK = $(NVCCLINK)
+@HAVE_NVCC_FALSE@ssids_test_LDADD = $(LDADD)
 @HAVE_NVCC_TRUE@ssids_test_LDADD = $(LDADD) $(CUDA_LIBS)
-@HAVE_NVCC_TRUE@examples_Fortran_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
+@HAVE_NVCC_FALSE@examples_Fortran_ssids_LINK = $(CXXLINK)
 @HAVE_NVCC_TRUE@examples_Fortran_ssids_LINK = $(NVCCLINK)
-@HAVE_NVCC_TRUE@examples_C_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
+@HAVE_NVCC_FALSE@examples_Fortran_ssids_LDADD = $(LDADD)
+@HAVE_NVCC_TRUE@examples_Fortran_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
+@HAVE_NVCC_FALSE@examples_C_ssids_LINK = $(CXXLINK)
 @HAVE_NVCC_TRUE@examples_C_ssids_LINK = $(NVCCLINK)
+@HAVE_NVCC_FALSE@examples_C_ssids_LDADD = $(LDADD)
+@HAVE_NVCC_TRUE@examples_C_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
 all: all-am
 
 .SUFFIXES:
@@ -943,6 +956,8 @@ src/ssids/solve_kernels.$(OBJEXT): src/ssids/$(am__dirstamp) \
 src/ssids/syrk_kernels.$(OBJEXT): src/ssids/$(am__dirstamp) \
 	src/ssids/$(DEPDIR)/$(am__dirstamp)
 src/ssids/type_select_gpu.$(OBJEXT): src/ssids/$(am__dirstamp) \
+	src/ssids/$(DEPDIR)/$(am__dirstamp)
+src/ssids/inform_nogpu.$(OBJEXT): src/ssids/$(am__dirstamp) \
 	src/ssids/$(DEPDIR)/$(am__dirstamp)
 src/ssids/type_select_nogpu.$(OBJEXT): src/ssids/$(am__dirstamp) \
 	src/ssids/$(DEPDIR)/$(am__dirstamp)
@@ -1862,8 +1877,12 @@ src/ssids/solve_kernels.$(OBJEXT): src/ssids/dtrsv.h
 # C interface deps
 interfaces/C/random.$(OBJEXT): src/random.$(OBJEXT)
 interfaces/C/random_matrix.$(OBJEXT): src/random_matrix.$(OBJEXT)
-interfaces/C/ssids.$(OBJEXT): src/ssids/ssids.$(OBJEXT) \
-										src/ssids/inform.$(OBJEXT)
+@HAVE_NVCC_TRUE@interfaces/C/ssids.$(OBJEXT): src/ssids/ssids.$(OBJEXT) \
+@HAVE_NVCC_TRUE@										src/ssids/inform.$(OBJEXT) \
+@HAVE_NVCC_TRUE@										src/ssids/inform_gpu.$(OBJEXT)
+@HAVE_NVCC_FALSE@interfaces/C/ssids.$(OBJEXT): src/ssids/ssids.$(OBJEXT) \
+@HAVE_NVCC_FALSE@										src/ssids/inform.$(OBJEXT) \
+@HAVE_NVCC_FALSE@										src/ssids/inform_nogpu.$(OBJEXT)
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
