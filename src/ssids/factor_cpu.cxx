@@ -45,8 +45,7 @@ struct cpu_node_data {
     * aval[i] goes into lcol[ amap[i] ] if there are no delays
     */
    int num_a; // Number of entries from A
-   const int *const amap; // Map from A to node (length num_a)
-   const T *const aval; // Values of a to which amap refers
+   const int *const amap; // Map from A to node (length 2*num_a)
 
    /* Data that changes during factorize */
    int ndelay_in; // Number of delays arising from children
@@ -71,6 +70,7 @@ void assemble_node(
       struct cpu_node_data<T> *const node,
       void *const alloc,
       int *const map,
+      const T *const aval,
       const T *const scaling
       ) {
    /* Count incoming delays and determine size of node */
@@ -92,22 +92,24 @@ void assemble_node(
    if(scaling) {
       /* Scaling to apply */
       for(int i=0; i<node->num_a; i++) {
-         long j = node->amap[i];
-         int c = j / node->nrow_expected;
-         int r = j % node->nrow_expected;
+         long src  = node->amap[2*i+0] - 1; // amap contains 1-based values
+         long dest = node->amap[2*i+1] - 1; // amap contains 1-based values
+         int c = dest / node->nrow_expected;
+         int r = dest % node->nrow_expected;
          long k = node->ndelay_in*(nrow+1) + c*nrow + r;
          T rscale = scaling[ node->rlist[r] ];
          T cscale = scaling[ node->rlist[c] ];
-         node->lcol[k] = rscale * node->aval[i] * cscale;
+         node->lcol[k] = rscale * aval[src] * cscale;
       }
    } else {
       /* No scaling to apply */
       for(int i=0; i<node->num_a; i++) {
-         long j = node->amap[i];
-         int c = j / node->nrow_expected;
-         int r = j % node->nrow_expected;
+         long src  = node->amap[2*i+0] - 1; // amap contains 1-based values
+         long dest = node->amap[2*i+1] - 1; // amap contains 1-based values
+         int c = dest / node->nrow_expected;
+         int r = dest % node->nrow_expected;
          long k = node->ndelay_in*(nrow+1) + c*nrow + r;
-         node->lcol[k] = node->aval[i];
+         node->lcol[k] = aval[src];
       }
    }
 
@@ -200,6 +202,7 @@ void factor_ldlt(
       int n,            // Maximum row index (+1)
       int nnodes,       // Number of nodes in assembly tree
       struct cpu_node_data<T> *const nodes, // Data structure for node information
+      const T *const aval, // Values of A
       const T *const scaling, // Scaling vector (NULL if no scaling)
       void *const alloc,      // Fortran allocator pointer
       const struct cpu_factor_options *const options, // Options in
@@ -211,7 +214,7 @@ void factor_ldlt(
    /* Main loop: Iterate over nodes in order */
    for(int ni=0; ni<nnodes; ni++) {
       // Assembly
-      assemble_node<T>(&nodes[ni], alloc, map, scaling);
+      assemble_node<T>(&nodes[ni], alloc, map, aval, scaling);
       // Factorization
       factor_node<T, 16>(&nodes[ni], options);
       // Form update
@@ -232,6 +235,7 @@ void spral_ssids_factor_cpu_dbl(
       int n,            // Maximum row index (+1)
       int nnodes,       // Number of nodes in assembly tree
       struct spral::ssids::internal::cpu_node_data<double> *const nodes, // Data structure for node information
+      const double *const aval, // Values of A
       const double *const scaling, // Scaling vector (NULL if none)
       void *const alloc,      // Pointer to Fortran allocator structure
       const struct spral::ssids::internal::cpu_factor_options *const options, // Options in
@@ -243,6 +247,6 @@ void spral_ssids_factor_cpu_dbl(
       return;
    } else {
       spral::ssids::internal::factor_ldlt<double>
-         (n, nnodes, nodes, scaling, alloc, options, stats);
+         (n, nnodes, nodes, aval, scaling, alloc, options, stats);
    }
 }

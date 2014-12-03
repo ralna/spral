@@ -1802,7 +1802,8 @@ src/ssids/dense_factor_gpu.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
 												  src/ssids/cuda_datatypes.$(OBJEXT) \
 												  src/ssids/cuda_interfaces.$(OBJEXT) \
 												  src/ssids/datatypes.$(OBJEXT)
-src/ssids/factor_cpu_iface.$(OBJEXT): src/ssids/datatypes.$(OBJEXT) \
+src/ssids/factor_cpu_iface.$(OBJEXT): src/ssids/akeep.$(OBJEXT) \
+												  src/ssids/datatypes.$(OBJEXT) \
 												  src/ssids/inform.$(OBJEXT)
 src/ssids/fkeep.$(OBJEXT): src/ssids/akeep.$(OBJEXT) \
 									src/ssids/alloc.$(OBJEXT) \

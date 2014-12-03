@@ -80,7 +80,7 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
 
    ! Perform factorization in C++ code
    fposdef = fkeep%pos_def
-   call factor_cpu(fposdef, akeep%nnodes, cnodes, fkeep%scaling, &
+   call factor_cpu(fposdef, akeep%nnodes, cnodes, val, fkeep%scaling, &
       C_LOC(fkeep%alloc), coptions, cstats)
 
    ! Gather information back to Fortran

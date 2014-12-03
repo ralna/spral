@@ -23,7 +23,6 @@ module spral_ssids_factor_cpu_iface
       ! Data about A
       integer(C_INT) :: num_a
       type(C_PTR) :: amap
-      type(C_PTR) :: aval
 
       ! Data that changes during factorize
       integer(C_INT) :: ndelay_in
@@ -50,7 +49,7 @@ module spral_ssids_factor_cpu_iface
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
    interface
-      subroutine factor_cpu(pos_def, nnodes, nodes, scaling, &
+      subroutine factor_cpu(pos_def, nnodes, nodes, aval, scaling, &
             alloc, options, stats) &
             bind(C, name="spral_ssids_factor_cpu_dbl")
          use, intrinsic :: iso_c_binding
@@ -59,6 +58,7 @@ module spral_ssids_factor_cpu_iface
          logical(C_BOOL), value :: pos_def
          integer(C_INT), value :: nnodes
          type(cpu_node_data), dimension(nnodes), intent(inout) :: nodes
+         real(C_DOUBLE), dimension(*), intent(in) :: aval
          real(C_DOUBLE), dimension(*), intent(in) :: scaling
          type(C_PTR), value :: alloc
          type(cpu_factor_options), intent(in) :: options
@@ -71,14 +71,39 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 subroutine setup_cpu_data(akeep, cnodes, foptions, coptions)
-   class(ssids_akeep_base), intent(in) :: akeep
-   type(cpu_node_data), dimension(akeep%nnodes), intent(out) :: cnodes
+   class(ssids_akeep_base), target, intent(in) :: akeep
+   type(cpu_node_data), dimension(akeep%nnodes), target, intent(out) :: cnodes
    type(ssids_options), intent(in) :: foptions
    type(cpu_factor_options), intent(out) :: coptions
 
-   ! Setup node data
+   integer :: node, parent
 
+   !
+   ! Setup node data
+   !
+   ! Basic data and initialize linked lists
+   do node = 1, akeep%nnodes
+      ! Data about factors
+      cnodes(node)%nrow_expected = akeep%rptr(node+1) - akeep%rptr(node)
+      cnodes(node)%ncol_expected = akeep%sptr(node+1) - akeep%sptr(node)
+      cnodes(node)%first_child = C_NULL_PTR
+      cnodes(node)%next_child = C_NULL_PTR
+      cnodes(node)%rlist = C_LOC(akeep%rlist(akeep%rptr(node)))
+
+      ! Data about A
+      cnodes(node)%num_a = akeep%nptr(node+1) - akeep%nptr(node)
+      cnodes(node)%amap = C_LOC(akeep%nlist(1,akeep%nptr(node)))
+   end do
+   ! Build linked lists of children
+   do node = 1, akeep%nnodes
+      parent = akeep%sparent(node)
+      cnodes(node)%next_child = cnodes(parent)%first_child
+      cnodes(parent)%first_child = C_LOC( cnodes(node) )
+   end do
+
+   !
    ! Setup options
+   !
    coptions%small = foptions%small
    coptions%u     = foptions%u
 end subroutine setup_cpu_data
