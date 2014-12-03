@@ -200,10 +200,8 @@ src/random_matrix.$(OBJEXT): src/random.$(OBJEXT)
 src/rutherford_boeing.$(OBJEXT): src/matrix_util.$(OBJEXT) \
 											src/random.$(OBJEXT)
 src/scaling.$(OBJEXT): src/matrix_util.$(OBJEXT)
-src/ssids/alloc.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
-								   src/ssids/datatypes.$(OBJEXT)
-src/ssids/akeep.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
-									src/ssids/datatypes.$(OBJEXT) \
+src/ssids/alloc.$(OBJEXT): src/ssids/datatypes.$(OBJEXT)
+src/ssids/akeep.$(OBJEXT): src/ssids/datatypes.$(OBJEXT) \
 									src/ssids/inform.$(OBJEXT)
 src/ssids/akeep_gpu.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
 									    src/ssids/akeep.$(OBJEXT) \
@@ -211,15 +209,13 @@ src/ssids/akeep_gpu.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
 										 src/ssids/inform.$(OBJEXT) \
 										 src/ssids/inform_gpu.$(OBJEXT)
 src/ssids/analyse.$(OBJEXT): src/core_analyse.$(OBJEXT) \
-									  src/cuda/cuda.$(OBJEXT) \
 									  src/pgm.$(OBJEXT) \
 									  src/ssids/akeep.$(OBJEXT) \
 									  src/ssids/datatypes.$(OBJEXT) \
 									  src/ssids/inform.$(OBJEXT)
 src/ssids/cuda_datatypes.$(OBJEXT): src/cuda/cuda.$(OBJEXT)
 src/ssids/cuda_interfaces.$(OBJEXT): src/ssids/cuda_datatypes.$(OBJEXT)
-src/ssids/datatypes.$(OBJEXT): src/scaling.$(OBJEXT)  \
-										 src/ssids/cuda_datatypes.$(OBJEXT)
+src/ssids/datatypes.$(OBJEXT): src/scaling.$(OBJEXT)
 src/ssids/dense_factor_gpu.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
 												  src/ssids/alloc_gpu.$(OBJEXT) \
 												  src/ssids/cuda_datatypes.$(OBJEXT) \
@@ -259,6 +255,8 @@ src/ssids/inform.$(OBJEXT): src/scaling.$(OBJEXT) \
 src/ssids/inform_gpu.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
 									     src/ssids/datatypes.$(OBJEXT) \
 									     src/ssids/inform.$(OBJEXT)
+src/ssids/inform_nogpu.$(OBJEXT): src/ssids/datatypes.$(OBJEXT) \
+									       src/ssids/inform.$(OBJEXT)
 src/ssids/solve_cpu.$(OBJEXT): src/ssids/datatypes.$(OBJEXT)
 src/ssids/solve_gpu.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
 										 src/ssids/alloc_gpu.$(OBJEXT) \
