@@ -12,6 +12,8 @@ module spral_ssids_fkeep
                                      SSIDS_SOLVE_JOB_DIAG_BWD
    use spral_ssids_inform, only : ssids_inform_base
    use spral_ssids_solve_cpu, only : fwd_diag_solve, subtree_bwd_solve
+   use spral_ssids_factor_cpu_iface, only : cpu_node_data, cpu_factor_options, &
+      cpu_factor_stats, setup_cpu_data, extract_cpu_data, factor_cpu
    use, intrinsic :: iso_c_binding
    implicit none
 
@@ -60,8 +62,30 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
    class(ssids_options), intent(in) :: options
    class(ssids_inform_base), intent(inout) :: inform
 
-   print *, "CPU Factor not implemented yet!"
-   stop
+   logical(C_BOOL) :: fposdef
+   type(cpu_node_data), dimension(:), allocatable :: cnodes
+   type(cpu_factor_options) :: coptions
+   type(cpu_factor_stats) :: cstats
+
+   integer :: st
+
+   ! Allocate cnodes and setup for main call
+   allocate(cnodes(akeep%nnodes), stat=st)
+   if(st.ne.0) then
+      inform%flag = SSIDS_ERROR_ALLOCATION
+      inform%stat = st
+      return
+   endif
+   call setup_cpu_data(akeep, cnodes, options, coptions)
+
+   ! Perform factorization in C++ code
+   fposdef = fkeep%pos_def
+   call factor_cpu(fposdef, akeep%nnodes, cnodes, fkeep%scaling, &
+      C_LOC(fkeep%alloc), coptions, cstats)
+
+   ! Gather information back to Fortran
+   call extract_cpu_data(cstats, inform)
+
 end subroutine inner_factor_cpu
 
 subroutine inner_solve_cpu(local_job, nrhs, x, ldx, akeep, fkeep, options, inform)
