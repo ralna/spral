@@ -20,7 +20,10 @@ module spral_ssids
                                  convert_coord_to_cscl, clean_cscl_oop, &
                                  apply_conversion_map
    use spral_metis_wrapper, only : metis_order
-   use spral_scaling, only : auction_scale, equilib_scale, hungarian_scale
+   use spral_scaling, only : auction_scale_sym, equilib_scale_sym, &
+                             hungarian_scale_sym, &
+                             equilib_options, equilib_inform, &
+                             hungarian_options, hungarian_inform
    use spral_ssids_alloc, only : smalloc_setup, smalloc, smfreeall
    use spral_ssids_analyse, only : analyse_phase, check_order, expand_matrix, &
                                    expand_pattern
@@ -685,6 +688,13 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
    ! comments)
    type(smalloc_type), pointer :: next_alloc
    integer :: matrix_type
+   real(wp), dimension(:), allocatable :: scaling
+
+   ! Types related to scaling routines
+   type(hungarian_options) :: hsoptions
+   type(hungarian_inform) :: hsinform
+   type(equilib_options) :: esoptions
+   type(equilib_inform) :: esinform
    
    integer :: flag
 
@@ -834,42 +844,68 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
          end do
       end if
    case(1) ! Matching-based scaling by Hungarian Algorithm (MC64 algorithm)
+      ! Allocate space for scaling
+      allocate(scaling(n), stat=st)
+      if(st.ne.0) goto 10
+      ! Run Hungarian algorithm
+      hsoptions%scale_if_singular = options%action
       if (akeep%check) then
-         call hungarian_scale(n, akeep%ptr, akeep%row, val2,  &
-            fkeep%scaling, akeep%invp, st, options%action, sing)
+         call hungarian_scale_sym(n, akeep%ptr, akeep%row, val2, scaling, &
+            hsoptions, hsinform)
       else
-         call hungarian_scale(n, ptr, row, val, fkeep%scaling, akeep%invp, &
-            st, options%action, sing)
+         call hungarian_scale_sym(n, ptr, row, val, scaling, &
+            hsoptions, hsinform)
       end if
-      if (st .ne. 0) go to 10
-
-      if (sing) then
+      select case(hsinform%flag)
+      case(-1)
+         ! Allocation error
+         st = hsinform%stat
+         go to 10
+      case(-2)
+         ! Structually singular matrix and control%action=.false.
          inform%flag = SSIDS_ERROR_SINGULAR
          call ssids_print_flag(context,nout,inform%flag)
          fkeep%flag = inform%flag
          return
-      end if
+      end select
+      ! Permute scaling to correct order
+      do i = 1, n
+         fkeep%scaling(i) = scaling(akeep%invp(i))
+      end do
+      ! Copy scaling(:) to user array scale(:) if present
       if (present(scale)) then
-         do i = 1, n
-            scale(akeep%invp(i)) = fkeep%scaling(i)
-         end do
+         scale(1:n) = scaling(1:n)
       end if
+      ! Cleanup memory
+      deallocate(scaling, stat=st)
 
    case(2) ! Matching-based scaling by Auction Algorithm
+      ! Allocate space for scaling
+      allocate(scaling(n), stat=st)
+      if(st.ne.0) goto 10
+      ! Run auction algorithm
       if (akeep%check) then
-         call auction_scale(n, akeep%ptr, akeep%row, val2, akeep%invp, &
-            fkeep%scaling, options%auction, inform%auction, flag, st)
+         call auction_scale_sym(n, akeep%ptr, akeep%row, val2, scaling, &
+            options%auction, inform%auction)
       else
-         call auction_scale(n, ptr, row, val, akeep%invp, &
-            fkeep%scaling, options%auction, inform%auction, flag, st)
+         call auction_scale_sym(n, ptr, row, val, scaling, &
+            options%auction, inform%auction)
       end if
-      if (flag .ne. 0) go to 10 ! only possible error is allocation failed
-
+      if (inform%auction%flag .ne. 0) then
+         ! only possible error is allocation failed
+         st = inform%auction%stat
+         go to 10 
+      endif
+      ! Permute scaling to correct order
+      do i = 1, n
+         fkeep%scaling(i) = scaling(akeep%invp(i))
+      end do
+      ! Copy scaling(:) to user array scale(:) if present
       if (present(scale)) then
-         do i = 1, n
-            scale(akeep%invp(i)) = fkeep%scaling(i)
-         end do
+         scale(1:n) = scaling(1:n)
       end if
+      ! Cleanup memory
+      deallocate(scaling, stat=st)
 
    case(3) ! Scaling generated during analyse phase for matching-based order
       if (.not.allocated(akeep%scaling)) then
@@ -884,18 +920,34 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
       end do
 
    case(4:) ! Norm equilibriation algorithm (MC77 algorithm)
+      ! Allocate space for scaling
+      allocate(scaling(n), stat=st)
+      if(st.ne.0) goto 10
+      ! Run equilibriation algorithm
       if (akeep%check) then
-         call equilib_scale(n, akeep%invp, akeep%ptr, akeep%row, val2, &
-            fkeep%scaling, st)
+         call equilib_scale_sym(n, akeep%ptr, akeep%row, val2, scaling, &
+            esoptions, esinform)
       else
-         call equilib_scale(n, akeep%invp, ptr, row, val, fkeep%scaling, st)
+         call equilib_scale_sym(n, ptr, row, val, scaling, &
+            esoptions, esinform)
       end if
-      if (st .ne. 0) go to 10
+      if (esinform%flag .ne. 0) then
+         ! Only possible error is memory allocation failure
+         st = esinform%stat
+         go to 10
+      endif
+      ! Permute scaling to correct order
+      do i = 1, n
+         fkeep%scaling(i) = scaling(akeep%invp(i))
+      end do
+      ! Copy scaling(:) to user array scale(:) if present
       if (present(scale)) then
          do i = 1, n
             scale(akeep%invp(i)) = fkeep%scaling(i)
          end do
       end if
+      ! Cleanup memory
+      deallocate(scaling, stat=st)
    end select
 
    !if(allocated(fkeep%scaling)) &

@@ -4,14 +4,16 @@ module spral_scaling
 
    private
    ! Top level routines
-   public :: hungarian_scale, & ! Scaling using Hungarian algorithm (MC64-like)
-             auction_scale,   & ! Scaling using Auction algorithm
-             equilib_scale      ! Scaling using Equilibriation (MC77-like)
+   public :: hungarian_scale_sym, & ! Scaling using Hungarian algorithm (MC64-like)
+             auction_scale_sym,   & ! Scaling using Auction algorithm
+             equilib_scale_sym      ! Scaling using Equilibriation (MC77-like)
    ! Inner routines that allow calling internals
    public :: hungarian_wrapper, & ! Find a matching (with pre/post-processing)
              hungarian_match      ! Find a matching (no pre/post-processing)
    ! Data types
-   public :: auction_options, auction_inform
+   public :: auction_options, auction_inform, &
+             equilib_options, equilib_inform, &
+             hungarian_options, hungarian_inform
 
    integer, parameter :: wp = kind(0d0)
    real(wp), parameter :: rinf = huge(rinf)
@@ -24,11 +26,35 @@ module spral_scaling
    end type auction_options
 
    type auction_inform
+      integer :: flag = 0 ! success or failure
+      integer :: stat = 0 ! Fortran stat value on memory allocation failure
       integer :: matched = 0 ! #matched rows/cols
       integer :: iterations = 0 ! #iterations
    end type auction_inform
 
+   type equilib_options
+      integer :: max_iterations = 10
+      real :: tol = 1e-8
+   end type equilib_options
+
+   type equilib_inform
+      integer :: flag
+      integer :: stat
+   end type equilib_inform
+
+   type hungarian_options
+      logical :: scale_if_singular = .false.
+   end type hungarian_options
+
+   type hungarian_inform
+      integer :: flag
+      integer :: stat
+   end type hungarian_inform
+
    integer, parameter :: ERROR_ALLOCATION = -1
+   integer, parameter :: ERROR_SINGULAR = -2
+
+   integer, parameter :: WARNING_SINGULAR = 1
 
 contains
 
@@ -40,112 +66,116 @@ contains
 !
 ! Use matching-based scaling obtained using Hungarian algorithm
 !
-subroutine hungarian_scale(n, ptr, row, val, scaling, invp, st, action, sing)
+subroutine hungarian_scale_sym(n, ptr, row, val, scaling, options, inform)
    integer, intent(in) :: n ! order of system
    integer, intent(in) :: ptr(n+1) ! column pointers of A
    integer, intent(in) :: row(*) ! row indices of A (lower triangle)
    real(wp), intent(in) :: val(*) ! entries of A (in same order as in row).
    real(wp), dimension(n), intent(out) :: scaling
-   integer, dimension(n), intent(in) :: invp
-   integer, intent(out) :: st ! stat parameter
-   logical, intent(in) :: action ! controls action if matrix found to be
-      ! singular
-   logical, intent(out) :: sing ! set to true if matrix found to be singular
+   type(hungarian_options), intent(in) :: options
+   type(hungarian_inform), intent(out) :: inform
 
-   integer :: flag
-
-   integer :: i
+   integer :: i, flag
    integer, dimension(:), allocatable :: perm
    real(wp), dimension(:), allocatable :: cscale
+
+   inform%flag = 0 ! Initialize to success
    
-   allocate(perm(2*n), cscale(n), stat=st)
-   if (st .ne. 0) return
-   sing = .false.
-   call hungarian_wrapper(n,ptr,row,val,perm,cscale,flag,st)
+   allocate(perm(2*n), cscale(n), stat=inform%stat)
+   if (inform%stat .ne. 0) then
+      inform%flag = ERROR_ALLOCATION
+      return
+   endif
+   call hungarian_wrapper(n,ptr,row,val,perm,cscale,flag,inform%stat)
    select case(flag)
    case(0)
       ! success; do nothing
    case(1)
       ! structually singular matrix
-      if(.not.action) then
-         ! abort
-         sing = .true.
+      if(.not.options%scale_if_singular) then
+         ! abort, set scaling to identity
+         inform%flag = ERROR_SINGULAR
+         scaling(:) = 1.0
          return
+      else
+         inform%flag = WARNING_SINGULAR
       end if
    case(ERROR_ALLOCATION)
       ! allocation error
+      inform%flag = ERROR_ALLOCATION
       return
    end select
 
    do i = 1, n
-      scaling(i) = exp(cscale(invp(i)))
+      scaling(i) = exp(cscale(i))
    end do
 
-end subroutine hungarian_scale
+end subroutine hungarian_scale_sym
 
 !**************************************************************
 !
 ! Call auction algorithm to get a scaling, then symmetrize it
 !
-subroutine auction_scale(n, ptr, row, val, invp, scaling, options, inform, &
-      flag, stat)
+subroutine auction_scale_sym(n, ptr, row, val, scaling, options, inform)
    integer, intent(in) :: n ! order of system
    integer, intent(in) :: ptr(n+1) ! column pointers of A
    integer, intent(in) :: row(*) ! row indices of A (lower triangle)
    real(wp), intent(in) :: val(*) ! entries of A (in same order as in row).
-   integer, dimension(n), intent(in) :: invp
    real(wp), dimension(n), intent(out) :: scaling
    type(auction_options), intent(in) :: options
    type(auction_inform), intent(inout) :: inform
-   integer, intent(out) :: flag
-   integer, intent(out) :: stat
 
    integer :: i
    real(wp), dimension(:), allocatable :: cscale
 
-   flag = 0
+   inform%flag = 0 ! Initialize to sucess
 
-   allocate(cscale(n), stat=stat)
-   if (stat .ne. 0) then
-      flag = ERROR_ALLOCATION
+   allocate(cscale(n), stat=inform%stat)
+   if (inform%stat .ne. 0) then
+      inform%flag = ERROR_ALLOCATION
       return
    endif
 
-   call auction_match(n, ptr, row, val, cscale, options, inform, flag, stat)
+   call auction_match(n, ptr, row, val, cscale, options, inform)
 
    do i = 1, n
-      scaling(i) = exp(cscale(invp(i)))
+      scaling(i) = exp(cscale(i))
    end do
 
-end subroutine auction_scale
+end subroutine auction_scale_sym
 
 !*******************************
 !
 ! Call the infinity-norm equilibriation algorithm
 !
-subroutine equilib_scale(n, invp, ptr, row, val, scaling, st)
+subroutine equilib_scale_sym(n, ptr, row, val, scaling, options, inform)
    integer, intent(in) :: n ! order of system
-   integer, dimension(n), intent(in) :: invp
    integer, intent(in) :: ptr(n+1) ! column pointers of A
    integer, intent(in) :: row(*) ! row indices of A (lower triangle)
    real(wp), intent(in) :: val(*) ! entries of A (in same order as in row).
    real(wp), dimension(n), intent(out) :: scaling
-   integer, intent(out) :: st
+   type(equilib_options), intent(in) :: options
+   type(equilib_inform), intent(out) :: inform
 
    integer :: i
 
    real(wp), allocatable, dimension(:) :: scale_orig
 
-   allocate(scale_orig(n), stat=st)
-   if(st.ne.0) return
+   inform%flag = 0 ! Initialize to sucess
 
-   call inf_norm_equilib(n, ptr, row, val, scale_orig, st)
+   allocate(scale_orig(n), stat=inform%stat)
+   if(inform%stat.ne.0) then
+      inform%flag = ERROR_ALLOCATION
+      return
+   endif
+
+   call inf_norm_equilib(n, ptr, row, val, scale_orig, options, inform)
 
    do i = 1, n
-      scaling(i) = scale_orig(invp(i))
+      scaling(i) = scale_orig(i)
    end do
    
-end subroutine equilib_scale
+end subroutine equilib_scale_sym
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Inf-norm Equilibriation Algorithm Implementation
@@ -160,26 +190,27 @@ end subroutine equilib_scale
 !  reimplementation from the above paper to ensure it is 100% STFC
 !  copyright and can be released as open source)
 !
-subroutine inf_norm_equilib(n, ptr, row, val, scaling, st)
+subroutine inf_norm_equilib(n, ptr, row, val, scaling, options, inform)
    integer, intent(in) :: n
    integer, dimension(n+1), intent(in) :: ptr
    integer, dimension(ptr(n+1)-1), intent(in) :: row
    real(wp), dimension(ptr(n+1)-1), intent(in) :: val
    real(wp), dimension(n), intent(out) :: scaling
-   integer, intent(out) :: st
-
-   integer, parameter :: maxitr = 10
-   real(wp), parameter :: tol = 1e-8
+   type(equilib_options), intent(in) :: options
+   type(equilib_inform), intent(inout) :: inform
 
    integer :: itr, r, c, j
    real(wp) :: v
    real(wp), dimension(:), allocatable :: maxentry
 
-   allocate(maxentry(n), stat=st)
-   if(st.ne.0) return
+   allocate(maxentry(n), stat=inform%stat)
+   if(inform%stat.ne.0) then
+      inform%flag = ERROR_ALLOCATION
+      return
+   endif
 
    scaling(1:n) = 1.0
-   do itr = 1, maxitr
+   do itr = 1, options%max_iterations
       ! Find maximum entry in each row and col
       ! Recall: matrix is symmetric, but we only have half
       maxentry(1:n) = 0.0
@@ -195,7 +226,7 @@ subroutine inf_norm_equilib(n, ptr, row, val, scaling, st)
       where(maxentry(1:n).gt.0) &
          scaling(1:n) = scaling(1:n) / sqrt(maxentry(1:n))
       ! Test convergence
-      if(maxval(abs(1-maxentry(1:n))) .lt. tol) exit
+      if(maxval(abs(1-maxentry(1:n))) .lt. options%tol) exit
    end do
 
 end subroutine inf_norm_equilib
@@ -899,7 +930,7 @@ end subroutine heap_delete
 ! through the matrix.
 !
 subroutine auction_match_core(n, ptr, row, val, match, dualu, dualv, options, &
-      inform, flag, stat)
+      inform)
    integer, intent(in) :: n
    integer, dimension(n+1), intent(in) :: ptr
    integer, dimension(ptr(n+1)-1), intent(in) :: row
@@ -910,8 +941,6 @@ subroutine auction_match_core(n, ptr, row, val, match, dualu, dualv, options, &
    real(wp), dimension(n), intent(inout) :: dualv ! col dual variables
    type(auction_options), intent(in) :: options
    type(auction_inform), intent(inout) :: inform
-   integer, intent(out) :: flag
-   integer, intent(out) :: stat
 
    integer, dimension(:), allocatable :: owner ! Inverse of match
    ! The list next(1:tail) is the search space of unmatched columns
@@ -932,12 +961,12 @@ subroutine auction_match_core(n, ptr, row, val, match, dualu, dualv, options, &
    integer :: nunchanged ! number of iterations where #unmatched cols has been
       ! constant
 
-   flag = 0
+   inform%flag = 0
 
    ! Allocate memory
-   allocate(owner(n), next(n), stat=stat)
-   if(stat.ne.0) then
-      flag = ERROR_ALLOCATION
+   allocate(owner(n), next(n), stat=inform%stat)
+   if(inform%stat.ne.0) then
+      inform%flag = ERROR_ALLOCATION
       return
    endif
 
@@ -1048,7 +1077,7 @@ end subroutine auction_match_core
 !
 ! Lower triangle only as input (log(half)+half->full faster than log(full))
 !
-subroutine auction_match(n,ptr,row,val,scale,options,inform,flag,stat)
+subroutine auction_match(n,ptr,row,val,scale,options,inform)
    integer, intent(in) :: n
    integer, dimension(n+1), intent(in) :: ptr
    integer, dimension(*), intent(in) :: row
@@ -1056,8 +1085,6 @@ subroutine auction_match(n,ptr,row,val,scale,options,inform,flag,stat)
    type(auction_options), intent(in) :: options
    type(auction_inform), intent(inout) :: inform
    real(wp), dimension(n), intent(out) :: scale
-   integer, intent(out) :: flag
-   integer, intent(out) :: stat
 
    integer, allocatable :: ptr2(:), row2(:), iw(:), perm(:)
    real(wp), allocatable :: val2(:), dualu(:), dualv(:), cmax(:)
@@ -1066,8 +1093,8 @@ subroutine auction_match(n,ptr,row,val,scale,options,inform,flag,stat)
    real(wp), parameter :: zero = 0.0
    real(wp) :: maxentry
 
-   flag = 0
-   stat = 0
+   inform%flag = 0
+   inform%stat = 0
 
    ! Reset ne for the expanded symmetric matrix
    ne = ptr(n+1)-1
@@ -1075,9 +1102,9 @@ subroutine auction_match(n,ptr,row,val,scale,options,inform,flag,stat)
 
    ! Expand matrix, drop explicit zeroes and take log absolute values
    allocate (ptr2(n+1), row2(ne), val2(ne), perm(n), &
-             iw(5*n), dualu(n), dualv(n), cmax(n), stat=stat)
-   if(stat.ne.0) then
-      flag = ERROR_ALLOCATION
+             iw(5*n), dualu(n), dualv(n), cmax(n), stat=inform%stat)
+   if(inform%stat.ne.0) then
+      inform%flag = ERROR_ALLOCATION
       return
    endif
 
@@ -1111,8 +1138,8 @@ subroutine auction_match(n,ptr,row,val,scale,options,inform,flag,stat)
    dualv(1:n) = maxentry - cmax(1:n) ! equivalent to scale=1.0 for unmatched
       ! cols that core algorithm doesn't visit
    call auction_match_core(n, ptr2, row2, val2, perm, dualu, dualv, &
-      options, inform, flag, stat)
-   if(flag.ne.0) return
+      options, inform)
+   if(inform%flag.ne.0) return
    inform%matched = count(perm.ne.0)
 
    scale(1:n) = (maxentry-dualu(1:n)-dualv(1:n)-cmax(1:n))/2
