@@ -67,18 +67,24 @@ check_PROGRAMS = \
 	scaling_test \
 	examples/Fortran/scaling/auction_sym \
 	examples/Fortran/scaling/equilib_sym \
-	examples/Fortran/scaling/hungarian_sym
-#	examples/C/random
+	examples/Fortran/scaling/hungarian_sym \
+	examples/C/scaling/auction_sym \
+	examples/C/scaling/equilib_sym \
+	examples/C/scaling/hungarian_sym
 scaling_test_SOURCES = tests/scaling.f90
 examples_Fortran_scaling_auction_sym_SOURCES = examples/Fortran/scaling/auction_sym.f90
 examples_Fortran_scaling_equilib_sym_SOURCES = examples/Fortran/scaling/equilib_sym.f90
 examples_Fortran_scaling_hungarian_sym_SOURCES = examples/Fortran/scaling/hungarian_sym.f90
-#examples_C_random_SOURCES = examples/C/random.c
+examples_C_scaling_auction_sym_SOURCES = examples/C/scaling/auction_sym.c
+examples_C_scaling_equilib_sym_SOURCES = examples/C/scaling/equilib_sym.c
+examples_C_scaling_hungarian_sym_SOURCES = examples/C/scaling/hungarian_sym.c
 tests/scaling.$(OBJEXT): libspral.a
 examples/Fortran/scaling/auction_sym.$(OBJEXT): libspral.a
 examples/Fortran/scaling/equilib_sym.$(OBJEXT): libspral.a
 examples/Fortran/scaling/hungarian_sym.$(OBJEXT): libspral.a
-#examples/C/random.$(OBJEXT): libspral.a
+examples/C/scaling/auction_sym.$(OBJEXT): libspral.a
+examples/C/scaling/equilib_sym.$(OBJEXT): libspral.a
+examples/C/scaling/hungarian_sym.$(OBJEXT): libspral.a
 TESTS = scaling_test
 
 # TIMER
