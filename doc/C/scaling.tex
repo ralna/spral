@@ -4,19 +4,19 @@
 \purpose{
    This package generates various scalings (and matchings) of sparse matrices.
 
-   Given a \textbf{symmetric} matrix $A$, it finds a digaonal matrix $D$ such
+   Given a real \textbf{symmetric} matrix $A$, it finds a digaonal matrix $D$ such
    that the scaled matrix
    $$
       \hat{A} = DAD
    $$
-   has improved numerical properties for the solution of linear systems.
+   has specific numerical properties.
 
-   Given an \textbf{unsymmetric} matrix $A$, it finds diagonal matrices $D_r$
+   Given a real \textbf{unsymmetric} matrix $A$, it finds diagonal matrices $D_r$
    and $D_c$ such that the scaled matrix
    $$
       \hat{A} = D_r A D_c
    $$
-   has improved numerical properties for the solution of linear systems.
+   has specific numerical properties.
 
    The exact nature of $\hat{A}$ in both cases depends on the algorithm used.
 }
@@ -67,7 +67,7 @@ The following functions are available to the user:
 
 \begin{figure}
    \caption{ \label{format eg}
-      Data format example matrix
+      Data format example matrix (symmetric)
    }
    $$
       \left( \begin{array}{ccccc}
@@ -174,9 +174,9 @@ Figure~\ref{format eg}.
 
 \item[\texttt{n}, \texttt{ptr[n+1]}, \texttt{row[ptr[n]]}, \texttt{val[ptr[n]]}] must hold the lower triangular part of $A$ in compressed sparse column format as described in Section~\ref{cscformat}.
 
-\item[\texttt{scaling[n]}] will hold, on exit, will hold the scaling such that
-\texttt{scaling[i]} is the \texttt{i}-th diagonal element of $D$,
-corresponding to the scaling for the \texttt{i}-th row and column.
+\item[\texttt{scaling[n]}] holds, on exit, the diagonal of $D$.
+\texttt{scaling[i]} will hold $D_{ii}$, the scaling corresponding to the
+\texttt{i}-th row and column.
 
 \item[\texttt{match[n]}] may be \texttt{NULL}. If it is non-\texttt{NULL},
 then on exit it specifies the matching of rows to columns.
@@ -207,9 +207,9 @@ Column \texttt{i} is matched to row \texttt{match[i]}.
 
 \item[\texttt{n}, \texttt{ptr[n+1]}, \texttt{row[ptr[n]]}, \texttt{val[ptr[n]]}] must hold the lower triangular part of $A$ in compressed sparse column format as described in Section~\ref{cscformat}.
 
-\item[\texttt{scaling[n]}] will hold, on exit, will hold the scaling such that
-\texttt{scaling[i]} is the \texttt{i}-th diagonal element of $D$,
-corresponding to the scaling for the \texttt{i}-th row and column.
+\item[\texttt{scaling[n]}] holds, on exit, the diagonal of $D$.
+\texttt{scaling[i]} will hold $D_{ii}$, the scaling corresponding to the
+\texttt{i}-th row and column.
 
 \item[\texttt{*options}] specifies the algorithmic options used by the subroutine, as explained in Section~\ref{type:hungarian_options}.
 
@@ -217,7 +217,6 @@ corresponding to the scaling for the \texttt{i}-th row and column.
 
 
 \end{description}
-
 
 %%%%%%%%% Hungarian %%%%%%
 
@@ -237,9 +236,9 @@ corresponding to the scaling for the \texttt{i}-th row and column.
 
 \item[\texttt{n}, \texttt{ptr[n+1]}, \texttt{row[ptr[n]]}, \texttt{val[ptr[n]]}] must hold the lower triangular part of $A$ in compressed sparse column format as described in Section~\ref{cscformat}.
 
-\item[\texttt{scaling[n]}] will hold, on exit, will hold the scaling such that
-\texttt{scaling[i]} is the \texttt{i}-th diagonal element of $D$,
-corresponding to the scaling for the \texttt{i}-th row and column.
+\item[\texttt{scaling[n]}] holds, on exit, the diagonal of $D$.
+\texttt{scaling[i]} will hold $D_{ii}$, the scaling corresponding to the
+\texttt{i}-th row and column.
 
 \item[\texttt{match[n]}] may be \texttt{NULL}. If it is non-\texttt{NULL},
 then on exit it specifies the matching of rows to columns.

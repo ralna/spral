@@ -4,7 +4,7 @@
 \purpose{
    This package generates various scalings (and matchings) of sparse matrices.
 
-   Given a \textbf{symmetric} matrix $A$, it finds a digaonal matrix $D$ such
+   Given a real \textbf{symmetric} matrix $A$, it finds a digaonal matrix $D$ such
    that the scaled matrix
    $$
       \hat{A} = DAD
@@ -51,16 +51,11 @@ Access to the package requires a {\tt USE} statement \\ \\
 \medskip
 
 \noindent
-The following high-level procedures are available to the user:
+The following procedures are available to the user:
 \begin{itemize}
 \item {\tt hungarian\_scale\_sym()} generates a matching-based scaling for a symmetric matrix using the Hungarian algorithm.
 \item {\tt auction\_scale\_sym()} generates a matching-based scaling for a symmetric matrix using an auction algorithm.
 \item {\tt equilb\_scale\_sym()} generates a norm equilibriation scaling for a symmetric matrix.
-\end{itemize}
-The following low-level procedures are available to the user:
-\begin{itemize}
-   \item {\tt hungarian\_wrapper()} finds a matching (with pre-/post-processing).
-   \item {\tt hungarian\_match()} finds a matching (without pre-/post-processing).
 \end{itemize}
 
 \subsection{Optional arguments}\label{Optional arguments}
@@ -85,7 +80,7 @@ We also use the term {\bf package type} to mean the same.
 
 \begin{figure}
    \caption{ \label{format eg}
-      Data format example matrix
+      Data format example matrix (symmetric)
    }
    $$
       \left( \begin{array}{ccccc}
@@ -133,7 +128,7 @@ Figure~\ref{format eg}.
 
 %%%%%%%%% Auction %%%%%%
 
-\subsection{\texttt{auction\_scale()}}
+\subsection{\texttt{auction\_scale\_sym()}}
 
 \textbf{\noindent
    To generate a scaling for a real symmetric matrix using an auction algorithm such that the entry of maxmimum absolute value in each row and column is 1.0,
@@ -149,7 +144,7 @@ Figure~\ref{format eg}.
 \item[\texttt{n}, \texttt{ptr(:)}, \texttt{row(:)}, \texttt{val(:)}] are \intentin\ variables that must hold the lower triangular part of $A$ in compressed sparse column format as described in Section~\ref{cscformat}.
 
 \item[\texttt{scaling}] is an \intentout\ array of package type. On exit,
-\texttt{scaling(invp(i))} will hold the scaling corresponding to the
+\texttt{scaling(i)} will hold $D_{ii}$, the scaling corresponding to the
 \texttt{i}-th row and column.
 
 \item[\texttt{options}] is an \intentin\ scalar of type \texttt{auction\_options}. Its components specify the algorithmic options used by the subroutine, as explained in Section~\ref{type:auction_options}.
@@ -164,13 +159,13 @@ Column \texttt{i} is matched to row \texttt{match(i)}.
 
 %%%%%%%%% Equlibriation %%%%%%
 
-\subsection{\texttt{equilib\_scale()}}
+\subsection{\texttt{equilib\_scale\_sym()}}
 
 \textbf{\noindent
    To generate a scaling for a real symmetric matrix using a norm equilibriation algorithm such that the infinity norm of each row and column is equal,
    \vspace*{0.1cm} \\
    \texttt{ \hspace*{0.2cm}
-      call equilib\_scale(n, invp, ptr, row, val, scaling, st)
+      call equilib\_scale\_sym(n, ptr, row, val, scaling, st)
    }
    \vspace{0.3cm}
 }
@@ -179,11 +174,8 @@ Column \texttt{i} is matched to row \texttt{match(i)}.
 
 \item[\texttt{n}, \texttt{ptr(:)}, \texttt{row(:)}, \texttt{val(:)}] are \intentin\ variables that must hold the lower triangular part of $A$ in compressed sparse column format as described in Section~\ref{cscformat}.
 
-\item[\texttt{invp}] is an \intentin\ array of type {\tt INTEGER}. It specifies
-a permutation applied to the scaling vector.
-
 \item[\texttt{scaling}] is an \intentout\ array of package type. On exit,
-\texttt{scaling(invp(i))} will hold the scaling corresponding to the
+\texttt{scaling(i)} will hold $D_{ii}$, the scaling corresponding to the
 \texttt{i}-th row and column.
 
 \item[\texttt{options}] is an \intentin\ scalar of type \texttt{equilib\_options}. Its components specify the algorithmic options used by the subroutine, as explained in Section~\ref{type:equilib_options}.
@@ -200,7 +192,7 @@ a permutation applied to the scaling vector.
    To generate a scaling for a real symmetric matrix using the Hungarian algorithm such that the entry of maxmimum absolute value in each row and column is 1.0,
    \vspace*{0.1cm} \\
    \texttt{ \hspace*{0.2cm}
-      call hungarian\_scale(n, ptr, row, val, scaling, options, inform[, match])
+      call hungarian\_scale\_sym(n, ptr, row, val, scaling, options, inform[, match])
    }
    \vspace{0.3cm}
 }
@@ -210,8 +202,8 @@ a permutation applied to the scaling vector.
 \item[\texttt{n}, \texttt{ptr(:)}, \texttt{row(:)}, \texttt{val(:)}] are \intentin\ variables that must hold the lower triangular part of $A$ in compressed sparse column format as described in Section~\ref{cscformat}.
 
 \item[\texttt{scaling}] is an \intentout\ array of package type. On exit,
-\texttt{scaling(i)} will hold the \texttt{i}-th diagonal element of $D$,
-corresponding to the scaling for the \texttt{i}-th row and column.
+\texttt{scaling(i)} will hold $D_{ii}$, the scaling corresponding to the
+\texttt{i}-th row and column.
 
 \item[\texttt{options}] is an \intentin\ scalar of type \texttt{hungarian\_options}. Its components specify the algorithmic options used by the subroutine, as explained in Section~\ref{type:hungarian_options}.
 
@@ -223,76 +215,6 @@ Column \texttt{i} is matched to row \texttt{match(i)}.
 
 \end{description}
 
-\section{Low-level subroutines}
-
-\subsection{\texttt{hungarian\_wrapper()}}
-
-
-\textbf{\noindent
-   To generate a log scaling for a real symmetric matrix using the Hungarian algorithm such that the entry of maxmimum absolute value in each row and column is 1.0,
-   \vspace*{0.1cm} \\
-   \texttt{ \hspace*{0.2cm}
-      call hungarian\_wrapper(n, ptr, row, val, perm, scale, flag, stat)
-   }
-   \vspace{0.3cm}
-}
-
-\begin{description}
-
-\item[\texttt{n}, \texttt{ptr(:)}, \texttt{row(:)}, \texttt{val(:)}] are \intentin\ variables that must hold the lower triangular part of $A$ in compressed sparse column format as described in Section~\ref{cscformat}.
-
-\item[\texttt{perm}] is an \intentout\ array of type {\tt INTEGER}. On exit it
-specifies the matching of rows to columns. Column \texttt{i} is matched to row
-\texttt{perm(i)}.
-
-\item[\texttt{scale}] is an \intentout\ array of package type. On exit,
-\texttt{scale(i)} will hold the logarithm of the scaling corresponding to the
-\texttt{i}-th row and column.
-
-\item[\texttt{flag}] is an \intentout\ scalar of type {\tt INTEGER}. On success it will have value 0, on failure a value less than 0. \textbf{FIXME: I think only alternative is -1 = ALLOCATION FAILURE}
-
-\item[\texttt{stat}] is an \intentout\ scalar of type {\tt INTEGER}. If memory allocations were successful, it will have the value 0, otherwise it will give the
-Fortran stat value on the failed allocation call.
-
-\end{description}
-
-\subsection{\texttt{hungarian\_match()}}
-
-\textbf{\noindent
-   To generate a matching of maxmimum sum using the Hungarian algorithm for a totally positive matrix $A$,
-   \vspace*{0.1cm} \\
-   \texttt{ \hspace*{0.2cm}
-      call hungarian\_match(n, ne, ptr, row, val, iperm, num, u, d, st)
-   }
-   \vspace{0.3cm}
-}
-
-\begin{description}
-
-\item[\texttt{n}, \texttt{ptr(:)}, \texttt{row(:)}, \texttt{val(:)}] are
-\intentin\ variables that must hold the full matrix (lower and upper parts)
-$A$ in compressed sparse column format as described in Section~\ref{cscformat}.
-
-\item[\texttt{ne}] is an \intentin\ scalar of type {\tt INTEGER} specifying the
-number of entries in the matrix.
-
-\item[\texttt{num}]
-
-\item[\texttt{perm}] is an \intentout\ array of type {\tt INTEGER}. On exit it
-specifies the matching of rows to columns. Column \texttt{i} is matched to row
-\texttt{perm(i)}.
-
-\item[\texttt{scale}] is an \intentout\ array of package type. On exit,
-\texttt{scale(i)} will hold the logarithm of the scaling corresponding to the
-\texttt{i}-th row and column.
-
-\item[\texttt{flag}] is an \intentout\ scalar of type {\tt INTEGER}. On success it will have value 0, on failure a value less than 0. \textbf{FIXME: I think only alternative is -1 = ALLOCATION FAILURE}
-
-\item[\texttt{stat}] is an \intentout\ scalar of type {\tt INTEGER}. If memory allocations were successful, it will have the value 0, otherwise it will give the
-Fortran stat value on the failed allocation call.
-
-\end{description}
-
 \section{Derived types}
 \subsection{\texttt{auction\_options}} \label{type:auction_options}
 
@@ -300,13 +222,13 @@ The derived data type \texttt{auction\_options} is used to specify the options u
 
 \begin{description}
 
+\item[\texttt{eps}] is a scalar of type default \texttt{REAL} that specifies the initial value of the minimum improvement parameter $\epsilon$ as described in Section~\ref{method:auction}.
+
 \item[\texttt{max\_iterations}] is a scalar of type \texttt{INTEGER} that specifies the maximum number of iterations the algorithm may perform. The default is \texttt{max\_iterations}=\texttt{30000}.
 
 \item[\texttt{max\_unchanged(3)}] is an array of type \texttt{INTEGER} that, together with \texttt{min\_proportion(:)} specifies termination conditions for the algorithm, as described in Section~\ref{method:auction}. The default is \texttt{max\_unchanged(:)} = \texttt{(/ 10, 100, 100 /)}.
 
 \item[\texttt{min\_proportion(3)}] is an array of type default \texttt{REAL} that, together with \texttt{max\_unchanged(:)} specifies termination conditions for the algorithm, as described in Section~\ref{method:auction}. The default is \texttt{max\_unchanged(:)} = \texttt{(/ 0.90, 0.0, 0.0 /)}.
-
-\item[\texttt{eps}] is a scalar of type default \texttt{REAL} that specifies the initial value of the minimum improvement parameter $\epsilon$ as described in Section~\ref{method:auction}.
 
 \end{description}
 
@@ -316,11 +238,32 @@ The derived data type \texttt{auction\_inform} is used to hold parameters that v
 
 \begin{description}
 
-\item[\texttt{matched}] is a scalar of type \texttt{INTEGER} that specifies the number of rows and columns that have been matched.
+\item[\texttt{flag}] gives the exit status of the algorithm (details in Section~\ref{error flags}).
 
 \item[\texttt{iteration}] is a scalar of type \texttt{INTEGER} that specifies the number of iterations performed.
 
+\item[\texttt{matched}] is a scalar of type \texttt{INTEGER} that specifies the number of rows and columns that have been matched.
+
+\item[\texttt{stat}] is a scalar of type \texttt{INTEGER}. In the event of an allocation or deallocation error, it holds the Fortran \texttt{stat} parameter if it is available (and is set to \texttt{0} otherwise).
 \end{description}
+
+%%%%%%%%%%%%%% ERROR FLAGS %%%%%%%%%%%%%%%%%%%%%%
+
+\section{Error Flags} \label{error flags}
+A successful return from a routine is indicated by inform\%flag having the value zero. A negative value is associated with an error message and a positive value with a warning.
+
+Possible negative (error) values are:
+\begin{description}
+\item[\texttt{-1}] Allocation error. If available, the Fortran \texttt{stat} parameter is returned in \texttt{inform\%stat}.
+\item[\texttt{-2}] Matrix $A$ is structurally rank-deficient. Only returned by \texttt{hungarian\_scale\_sym()} and only if \texttt{options\%scale\_if\_singular}$=$\texttt{.false.}. The scaling vector will be set to \texttt{1.0} and a matching of maximum cardinality returned in the optional argument \texttt{match(:)}, if present.
+\end{description}
+
+Possible positive (warning) values are:
+\begin{description}
+\item[\texttt{1}] Matrix $A$ is structurally rank-deficient. Only returned by \texttt{hungarian\_scale\_sym()} and only if \texttt{options\%scale\_if\_singular}$=$\texttt{.true.}.
+\end{description}
+
+%%%%%%%%%%%%%% METHOD %%%%%%%%%%%%%%%%%%%%%%
 
 \section{Method} \label{method}
 
