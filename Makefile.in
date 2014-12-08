@@ -87,9 +87,12 @@ host_triplet = @host@
 @HAVE_NVCC_TRUE@	src/cuda/cuda.f90 \
 @HAVE_NVCC_TRUE@	src/cuda/cuda_check.h
 
-check_PROGRAMS = scaling_test$(EXEEXT) random_test$(EXEEXT) \
-	examples/Fortran/random$(EXEEXT) examples/C/random$(EXEEXT) \
-	random_matrix_test$(EXEEXT) \
+check_PROGRAMS = scaling_test$(EXEEXT) \
+	examples/Fortran/scaling/auction_sym$(EXEEXT) \
+	examples/Fortran/scaling/equilib_sym$(EXEEXT) \
+	examples/Fortran/scaling/hungarian_sym$(EXEEXT) \
+	random_test$(EXEEXT) examples/Fortran/random$(EXEEXT) \
+	examples/C/random$(EXEEXT) random_matrix_test$(EXEEXT) \
 	examples/Fortran/random_matrix$(EXEEXT) \
 	examples/C/random_matrix$(EXEEXT) $(am__EXEEXT_1)
 TESTS = scaling_test$(EXEEXT) random_test$(EXEEXT) \
@@ -270,6 +273,30 @@ examples_Fortran_random_matrix_LDADD = $(LDADD)
 examples_Fortran_random_matrix_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1)
+am_examples_Fortran_scaling_auction_sym_OBJECTS =  \
+	examples/Fortran/scaling/auction_sym.$(OBJEXT)
+examples_Fortran_scaling_auction_sym_OBJECTS =  \
+	$(am_examples_Fortran_scaling_auction_sym_OBJECTS)
+examples_Fortran_scaling_auction_sym_LDADD = $(LDADD)
+examples_Fortran_scaling_auction_sym_DEPENDENCIES =  \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+am_examples_Fortran_scaling_equilib_sym_OBJECTS =  \
+	examples/Fortran/scaling/equilib_sym.$(OBJEXT)
+examples_Fortran_scaling_equilib_sym_OBJECTS =  \
+	$(am_examples_Fortran_scaling_equilib_sym_OBJECTS)
+examples_Fortran_scaling_equilib_sym_LDADD = $(LDADD)
+examples_Fortran_scaling_equilib_sym_DEPENDENCIES =  \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+am_examples_Fortran_scaling_hungarian_sym_OBJECTS =  \
+	examples/Fortran/scaling/hungarian_sym.$(OBJEXT)
+examples_Fortran_scaling_hungarian_sym_OBJECTS =  \
+	$(am_examples_Fortran_scaling_hungarian_sym_OBJECTS)
+examples_Fortran_scaling_hungarian_sym_LDADD = $(LDADD)
+examples_Fortran_scaling_hungarian_sym_DEPENDENCIES =  \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am__examples_Fortran_ssids_SOURCES_DIST = examples/Fortran/ssids.f90
 @HAVE_NVCC_TRUE@am_examples_Fortran_ssids_OBJECTS =  \
 @HAVE_NVCC_TRUE@	examples/Fortran/ssids.$(OBJEXT)
@@ -347,6 +374,9 @@ SOURCES = $(libspral_a_SOURCES) $(examples_C_random_SOURCES) \
 	$(examples_C_random_matrix_SOURCES) \
 	$(examples_C_ssids_SOURCES) $(examples_Fortran_random_SOURCES) \
 	$(examples_Fortran_random_matrix_SOURCES) \
+	$(examples_Fortran_scaling_auction_sym_SOURCES) \
+	$(examples_Fortran_scaling_equilib_sym_SOURCES) \
+	$(examples_Fortran_scaling_hungarian_sym_SOURCES) \
 	$(examples_Fortran_ssids_SOURCES) \
 	$(random_matrix_test_SOURCES) $(random_test_SOURCES) \
 	$(scaling_test_SOURCES) $(spral_ssids_SOURCES) \
@@ -357,6 +387,9 @@ DIST_SOURCES = $(am__libspral_a_SOURCES_DIST) \
 	$(am__examples_C_ssids_SOURCES_DIST) \
 	$(examples_Fortran_random_SOURCES) \
 	$(examples_Fortran_random_matrix_SOURCES) \
+	$(examples_Fortran_scaling_auction_sym_SOURCES) \
+	$(examples_Fortran_scaling_equilib_sym_SOURCES) \
+	$(examples_Fortran_scaling_hungarian_sym_SOURCES) \
 	$(am__examples_Fortran_ssids_SOURCES_DIST) \
 	$(random_matrix_test_SOURCES) $(random_test_SOURCES) \
 	$(scaling_test_SOURCES) $(am__spral_ssids_SOURCES_DIST) \
@@ -748,9 +781,11 @@ libspral_a_SOURCES = src/core_analyse.f90 $(am__append_1) \
 	src/random.f90 interfaces/C/random.f90 src/random_matrix.f90 \
 	interfaces/C/random_matrix.f90 $(am__append_3)
 EXTRA_DIST = src/metis4_wrapper.f90 src/metis5_wrapper.f90
-#	examples/Fortran/random \
 #	examples/C/random
 scaling_test_SOURCES = tests/scaling.f90
+examples_Fortran_scaling_auction_sym_SOURCES = examples/Fortran/scaling/auction_sym.f90
+examples_Fortran_scaling_equilib_sym_SOURCES = examples/Fortran/scaling/equilib_sym.f90
+examples_Fortran_scaling_hungarian_sym_SOURCES = examples/Fortran/scaling/hungarian_sym.f90
 random_test_SOURCES = tests/random.f90
 examples_Fortran_random_SOURCES = examples/Fortran/random.f90
 examples_C_random_SOURCES = examples/C/random.c
@@ -1019,6 +1054,33 @@ examples/Fortran/random_matrix.$(OBJEXT):  \
 examples/Fortran/random_matrix$(EXEEXT): $(examples_Fortran_random_matrix_OBJECTS) $(examples_Fortran_random_matrix_DEPENDENCIES) $(EXTRA_examples_Fortran_random_matrix_DEPENDENCIES) examples/Fortran/$(am__dirstamp)
 	@rm -f examples/Fortran/random_matrix$(EXEEXT)
 	$(AM_V_FCLD)$(FCLINK) $(examples_Fortran_random_matrix_OBJECTS) $(examples_Fortran_random_matrix_LDADD) $(LIBS)
+examples/Fortran/scaling/$(am__dirstamp):
+	@$(MKDIR_P) examples/Fortran/scaling
+	@: > examples/Fortran/scaling/$(am__dirstamp)
+examples/Fortran/scaling/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) examples/Fortran/scaling/$(DEPDIR)
+	@: > examples/Fortran/scaling/$(DEPDIR)/$(am__dirstamp)
+examples/Fortran/scaling/auction_sym.$(OBJEXT):  \
+	examples/Fortran/scaling/$(am__dirstamp) \
+	examples/Fortran/scaling/$(DEPDIR)/$(am__dirstamp)
+
+examples/Fortran/scaling/auction_sym$(EXEEXT): $(examples_Fortran_scaling_auction_sym_OBJECTS) $(examples_Fortran_scaling_auction_sym_DEPENDENCIES) $(EXTRA_examples_Fortran_scaling_auction_sym_DEPENDENCIES) examples/Fortran/scaling/$(am__dirstamp)
+	@rm -f examples/Fortran/scaling/auction_sym$(EXEEXT)
+	$(AM_V_FCLD)$(FCLINK) $(examples_Fortran_scaling_auction_sym_OBJECTS) $(examples_Fortran_scaling_auction_sym_LDADD) $(LIBS)
+examples/Fortran/scaling/equilib_sym.$(OBJEXT):  \
+	examples/Fortran/scaling/$(am__dirstamp) \
+	examples/Fortran/scaling/$(DEPDIR)/$(am__dirstamp)
+
+examples/Fortran/scaling/equilib_sym$(EXEEXT): $(examples_Fortran_scaling_equilib_sym_OBJECTS) $(examples_Fortran_scaling_equilib_sym_DEPENDENCIES) $(EXTRA_examples_Fortran_scaling_equilib_sym_DEPENDENCIES) examples/Fortran/scaling/$(am__dirstamp)
+	@rm -f examples/Fortran/scaling/equilib_sym$(EXEEXT)
+	$(AM_V_FCLD)$(FCLINK) $(examples_Fortran_scaling_equilib_sym_OBJECTS) $(examples_Fortran_scaling_equilib_sym_LDADD) $(LIBS)
+examples/Fortran/scaling/hungarian_sym.$(OBJEXT):  \
+	examples/Fortran/scaling/$(am__dirstamp) \
+	examples/Fortran/scaling/$(DEPDIR)/$(am__dirstamp)
+
+examples/Fortran/scaling/hungarian_sym$(EXEEXT): $(examples_Fortran_scaling_hungarian_sym_OBJECTS) $(examples_Fortran_scaling_hungarian_sym_DEPENDENCIES) $(EXTRA_examples_Fortran_scaling_hungarian_sym_DEPENDENCIES) examples/Fortran/scaling/$(am__dirstamp)
+	@rm -f examples/Fortran/scaling/hungarian_sym$(EXEEXT)
+	$(AM_V_FCLD)$(FCLINK) $(examples_Fortran_scaling_hungarian_sym_OBJECTS) $(examples_Fortran_scaling_hungarian_sym_LDADD) $(LIBS)
 examples/Fortran/ssids.$(OBJEXT): examples/Fortran/$(am__dirstamp) \
 	examples/Fortran/$(DEPDIR)/$(am__dirstamp)
 
@@ -1073,6 +1135,7 @@ mostlyclean-compile:
 	-rm -f driver/*.$(OBJEXT)
 	-rm -f examples/C/*.$(OBJEXT)
 	-rm -f examples/Fortran/*.$(OBJEXT)
+	-rm -f examples/Fortran/scaling/*.$(OBJEXT)
 	-rm -f interfaces/C/*.$(OBJEXT)
 	-rm -f src/*.$(OBJEXT)
 	-rm -f src/cuda/*.$(OBJEXT)
@@ -1579,6 +1642,8 @@ distclean-generic:
 	-rm -f examples/C/$(am__dirstamp)
 	-rm -f examples/Fortran/$(DEPDIR)/$(am__dirstamp)
 	-rm -f examples/Fortran/$(am__dirstamp)
+	-rm -f examples/Fortran/scaling/$(DEPDIR)/$(am__dirstamp)
+	-rm -f examples/Fortran/scaling/$(am__dirstamp)
 	-rm -f interfaces/C/$(DEPDIR)/$(am__dirstamp)
 	-rm -f interfaces/C/$(am__dirstamp)
 	-rm -f src/$(DEPDIR)/$(am__dirstamp)
@@ -1690,9 +1755,11 @@ uninstall-am: uninstall-binPROGRAMS uninstall-includeHEADERS \
 
 .cu.o:
 	$(NVCC) $(NVCCFLAGS) $(AM_NVCC_FLAGS) -dc -o $@ $<
-#examples_Fortran_random_SOURCES = examples/Fortran/random.f90
 #examples_C_random_SOURCES = examples/C/random.c
 tests/scaling.$(OBJEXT): libspral.a
+examples/Fortran/scaling/auction_sym.$(OBJEXT): libspral.a
+examples/Fortran/scaling/equilib_sym.$(OBJEXT): libspral.a
+examples/Fortran/scaling/hungarian_sym.$(OBJEXT): libspral.a
 tests/random.$(OBJEXT): libspral.a
 examples/Fortran/random.$(OBJEXT): libspral.a
 examples/C/random.$(OBJEXT): libspral.a

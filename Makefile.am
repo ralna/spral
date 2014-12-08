@@ -63,14 +63,20 @@ libspral_a_SOURCES += \
 libspral_a_SOURCES += \
   	src/scaling.f90
 check_PROGRAMS = \
-	scaling_test
-#	examples/Fortran/random \
+	scaling_test \
+	examples/Fortran/scaling/auction_sym \
+	examples/Fortran/scaling/equilib_sym \
+	examples/Fortran/scaling/hungarian_sym
 #	examples/C/random
 scaling_test_SOURCES = tests/scaling.f90
-#examples_Fortran_random_SOURCES = examples/Fortran/random.f90
+examples_Fortran_scaling_auction_sym_SOURCES = examples/Fortran/scaling/auction_sym.f90
+examples_Fortran_scaling_equilib_sym_SOURCES = examples/Fortran/scaling/equilib_sym.f90
+examples_Fortran_scaling_hungarian_sym_SOURCES = examples/Fortran/scaling/hungarian_sym.f90
 #examples_C_random_SOURCES = examples/C/random.c
 tests/scaling.$(OBJEXT): libspral.a
-#examples/Fortran/random.$(OBJEXT): libspral.a
+examples/Fortran/scaling/auction_sym.$(OBJEXT): libspral.a
+examples/Fortran/scaling/equilib_sym.$(OBJEXT): libspral.a
+examples/Fortran/scaling/hungarian_sym.$(OBJEXT): libspral.a
 #examples/C/random.$(OBJEXT): libspral.a
 TESTS = scaling_test
 
