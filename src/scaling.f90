@@ -1122,8 +1122,8 @@ subroutine auction_match(n,ptr,row,val,scale,options,inform,match)
    end do
 
    maxentry = maxval(val2(1:ptr2(n+1)-1))
-   ! Use 2*maxentry to prefer high cardinality matchings
-   maxentry = 2*maxentry
+   ! Use 2*maxentry+1 to prefer high cardinality matchings (+1 avoids 0 cols)
+   maxentry = 2*maxentry+1
    val2(1:ptr2(n+1)-1) = maxentry - val2(1:ptr2(n+1)-1)
    dualv(1:n) = maxentry - cmax(1:n) ! equivalent to scale=1.0 for unmatched
       ! cols that core algorithm doesn't visit
