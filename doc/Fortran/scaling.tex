@@ -131,37 +131,6 @@ Figure~\ref{format eg}.
 
 \section{High-level Subroutines}
 
-%%%%%%%%% Hungarian %%%%%%
-
-\subsection{\texttt{hungarian\_scale\_sym()}}
-
-\textbf{\noindent
-   To generate a scaling for a real symmetric matrix using the Hungarian algorithm such that the entry of maxmimum absolute value in each row and column is 1.0,
-   \vspace*{0.1cm} \\
-   \texttt{ \hspace*{0.2cm}
-      call hungarian\_scale(n, ptr, row, val, scaling, options, inform[, match])
-   }
-   \vspace{0.3cm}
-}
-
-\begin{description}
-
-\item[\texttt{n}, \texttt{ptr(:)}, \texttt{row(:)}, \texttt{val(:)}] are \intentin\ variables that must hold the lower triangular part of $A$ in compressed sparse column format as described in Section~\ref{cscformat}.
-
-\item[\texttt{scaling}] is an \intentout\ array of package type. On exit,
-\texttt{scaling(i)} will hold the \texttt{i}-th diagonal element of $D$,
-corresponding to the scaling for the \texttt{i}-th row and column.
-
-\item[\texttt{options}] is an \intentin\ scalar of type \texttt{hungarian\_options}. Its components specify the algorithmic options used by the subroutine, as explained in Section~\ref{type:hungarian_options}.
-
-\item[\texttt{inform}] is an \intentout\ scalar of type \texttt{hungarian\_inform}. On exit, its components provide information about the execution of the subroutine, as explained in Section~\ref{type:hungarian_inform}.
-
-\item[\texttt{match}] is an optional \intentout\ array of type {\tt INTEGER}.
-If present, then on exit it specifies the matching of rows to columns.
-Column \texttt{i} is matched to row \texttt{match(i)}.
-
-\end{description}
-
 %%%%%%%%% Auction %%%%%%
 
 \subsection{\texttt{auction\_scale()}}
@@ -220,6 +189,37 @@ a permutation applied to the scaling vector.
 \item[\texttt{options}] is an \intentin\ scalar of type \texttt{equilib\_options}. Its components specify the algorithmic options used by the subroutine, as explained in Section~\ref{type:equilib_options}.
 
 \item[\texttt{inform}] is an \intentout\ scalar of type \texttt{equilib\_inform}. On exit, its components provide information about the execution of the subroutine, as explained in Section~\ref{type:equilib_inform}.
+
+\end{description}
+
+%%%%%%%%% Hungarian %%%%%%
+
+\subsection{\texttt{hungarian\_scale\_sym()}}
+
+\textbf{\noindent
+   To generate a scaling for a real symmetric matrix using the Hungarian algorithm such that the entry of maxmimum absolute value in each row and column is 1.0,
+   \vspace*{0.1cm} \\
+   \texttt{ \hspace*{0.2cm}
+      call hungarian\_scale(n, ptr, row, val, scaling, options, inform[, match])
+   }
+   \vspace{0.3cm}
+}
+
+\begin{description}
+
+\item[\texttt{n}, \texttt{ptr(:)}, \texttt{row(:)}, \texttt{val(:)}] are \intentin\ variables that must hold the lower triangular part of $A$ in compressed sparse column format as described in Section~\ref{cscformat}.
+
+\item[\texttt{scaling}] is an \intentout\ array of package type. On exit,
+\texttt{scaling(i)} will hold the \texttt{i}-th diagonal element of $D$,
+corresponding to the scaling for the \texttt{i}-th row and column.
+
+\item[\texttt{options}] is an \intentin\ scalar of type \texttt{hungarian\_options}. Its components specify the algorithmic options used by the subroutine, as explained in Section~\ref{type:hungarian_options}.
+
+\item[\texttt{inform}] is an \intentout\ scalar of type \texttt{hungarian\_inform}. On exit, its components provide information about the execution of the subroutine, as explained in Section~\ref{type:hungarian_inform}.
+
+\item[\texttt{match}] is an optional \intentout\ array of type {\tt INTEGER}.
+If present, then on exit it specifies the matching of rows to columns.
+Column \texttt{i} is matched to row \texttt{match(i)}.
 
 \end{description}
 
