@@ -62,6 +62,17 @@ libspral_a_SOURCES += \
 # SCALING
 libspral_a_SOURCES += \
   	src/scaling.f90
+check_PROGRAMS = \
+	scaling_test
+#	examples/Fortran/random \
+#	examples/C/random
+scaling_test_SOURCES = tests/scaling.f90
+#examples_Fortran_random_SOURCES = examples/Fortran/random.f90
+#examples_C_random_SOURCES = examples/C/random.c
+tests/scaling.$(OBJEXT): libspral.a
+#examples/Fortran/random.$(OBJEXT): libspral.a
+#examples/C/random.$(OBJEXT): libspral.a
+TESTS = scaling_test
 
 # TIMER
 libspral_a_SOURCES += \
@@ -72,7 +83,7 @@ include_HEADERS += include/spral_random.h
 libspral_a_SOURCES += \
 	src/random.f90 \
 	interfaces/C/random.f90
-check_PROGRAMS = \
+check_PROGRAMS += \
 	random_test \
 	examples/Fortran/random \
 	examples/C/random
@@ -82,7 +93,7 @@ examples_C_random_SOURCES = examples/C/random.c
 tests/random.$(OBJEXT): libspral.a
 examples/Fortran/random.$(OBJEXT): libspral.a
 examples/C/random.$(OBJEXT): libspral.a
-TESTS = random_test
+TESTS += random_test
 
 # RANDOM_MATRIX
 include_HEADERS += include/spral_random_matrix.h

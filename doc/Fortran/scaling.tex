@@ -53,14 +53,14 @@ Access to the package requires a {\tt USE} statement \\ \\
 \noindent
 The following high-level procedures are available to the user:
 \begin{itemize}
-\item {\tt hungarian\_scale()} generates a matching-based scaling using the Hungarian algorithm.
-\item {\tt auction\_scale()} generates a matching-based scaling using an auction algorithm.
-\item {\tt equilb\_scale()} generates a norm equilibriation scaling.
+\item {\tt hungarian\_scale\_sym()} generates a matching-based scaling for a symmetric matrix using the Hungarian algorithm.
+\item {\tt auction\_scale\_sym()} generates a matching-based scaling for a symmetric matrix using an auction algorithm.
+\item {\tt equilb\_scale\_sym()} generates a norm equilibriation scaling for a symmetric matrix.
 \end{itemize}
 The following low-level procedures are available to the user:
 \begin{itemize}
    \item {\tt hungarian\_wrapper()} finds a matching (with pre-/post-processing).
-   \item {\tt hungarian\_match()} finds a matching (without pre-/post-porcessing).
+   \item {\tt hungarian\_match()} finds a matching (without pre-/post-processing).
 \end{itemize}
 
 \subsection{Optional arguments}\label{Optional arguments}
@@ -115,12 +115,8 @@ the first entry in the \texttt{i}-th column, and \texttt{ptr(n+1)} is one more
 than the total number of entries.
 Entries that are zero, including those on the diagonal, need not be specified.
 
-If this format is used, \texttt{SSIDS} requires only the lower triangular entries of $A$, and there 
-should be no duplicate entries. If the \texttt{check}
-argument to
-\texttt{ssids\_analyse()} is \texttt{.true.}, out-of-range entries (including
-those in the upper triangle) will be discarded and any duplicates will be
-summed.
+For symmetric matrices, only the lower triangular entries of $A$, should be
+supplied, and there must be no duplicate entries. 
 
 To illustrate the CSC format, the following arrays describe the matrix shown in
 Figure~\ref{format eg}.
@@ -137,13 +133,13 @@ Figure~\ref{format eg}.
 
 %%%%%%%%% Hungarian %%%%%%
 
-\subsection{\texttt{hungarian\_scale()}}
+\subsection{\texttt{hungarian\_scale\_sym()}}
 
 \textbf{\noindent
    To generate a scaling for a real symmetric matrix using the Hungarian algorithm such that the entry of maxmimum absolute value in each row and column is 1.0,
    \vspace*{0.1cm} \\
    \texttt{ \hspace*{0.2cm}
-      call hungarian\_scale(n, ptr, row, val, scaling, invp, st, action, sing)
+      call hungarian\_scale(n, ptr, row, val, scaling, options, inform[, match])
    }
    \vspace{0.3cm}
 }
@@ -153,23 +149,16 @@ Figure~\ref{format eg}.
 \item[\texttt{n}, \texttt{ptr(:)}, \texttt{row(:)}, \texttt{val(:)}] are \intentin\ variables that must hold the lower triangular part of $A$ in compressed sparse column format as described in Section~\ref{cscformat}.
 
 \item[\texttt{scaling}] is an \intentout\ array of package type. On exit,
-\texttt{scaling(invp(i))} will hold the scaling corresponding to the
-\texttt{i}-th row and column.
+\texttt{scaling(i)} will hold the \texttt{i}-th diagonal element of $D$,
+corresponding to the scaling for the \texttt{i}-th row and column.
 
-\item[\texttt{invp}] is an \intentin\ array of type {\tt INTEGER}. It specifies
-a permutation applied to the scaling vector.
+\item[\texttt{options}] is an \intentin\ scalar of type \texttt{hungarian\_options}. Its components specify the algorithmic options used by the subroutine, as explained in Section~\ref{type:hungarian_options}.
 
-\item[\texttt{st}] is an \intentout\ scalar of type {\tt INTEGER}. If memory allocations were successful, it will have the value 0, otherwise it will give the
-Fortran stat value on the failed allocation call.
+\item[\texttt{inform}] is an \intentout\ scalar of type \texttt{hungarian\_inform}. On exit, its components provide information about the execution of the subroutine, as explained in Section~\ref{type:hungarian_inform}.
 
-\item[\texttt{action}] is an \intentin\ scalar of type {\tt LOGICAL}. If
-\texttt{.false.} and the matrix is structually singular, then \texttt{sing}
-will be set to \texttt{.true.} and \texttt{scaling(:)} will not be altered.
-Otherwise \texttt{sing} is set to \texttt{.false.} and a scaling is returned.
-
-\item[\texttt{sing}] is an \intentout\ scalar of type {\tt LOGICAL}. If
-\texttt{action=.true.} it indicates whether the matrix is structually
-singular. Otherwise it is set to \texttt{.false.}.
+\item[\texttt{match}] is an optional \intentout\ array of type {\tt INTEGER}.
+If present, then on exit it specifies the matching of rows to columns.
+Column \texttt{i} is matched to row \texttt{match(i)}.
 
 \end{description}
 
@@ -181,7 +170,7 @@ singular. Otherwise it is set to \texttt{.false.}.
    To generate a scaling for a real symmetric matrix using an auction algorithm such that the entry of maxmimum absolute value in each row and column is 1.0,
    \vspace*{0.1cm} \\
    \texttt{ \hspace*{0.2cm}
-      call auction\_scale(n, ptr, row, val, invp, scaling, options, inform, flag, stat)
+      call auction\_scale\_sym(n, ptr, row, val, scaling, options, inform[, match])
    }
    \vspace{0.3cm}
 }
@@ -190,21 +179,17 @@ singular. Otherwise it is set to \texttt{.false.}.
 
 \item[\texttt{n}, \texttt{ptr(:)}, \texttt{row(:)}, \texttt{val(:)}] are \intentin\ variables that must hold the lower triangular part of $A$ in compressed sparse column format as described in Section~\ref{cscformat}.
 
-\item[\texttt{invp}] is an \intentin\ array of type {\tt INTEGER}. It specifies
-a permutation applied to the scaling vector.
-
 \item[\texttt{scaling}] is an \intentout\ array of package type. On exit,
 \texttt{scaling(invp(i))} will hold the scaling corresponding to the
 \texttt{i}-th row and column.
 
 \item[\texttt{options}] is an \intentin\ scalar of type \texttt{auction\_options}. Its components specify the algorithmic options used by the subroutine, as explained in Section~\ref{type:auction_options}.
 
-\item[\texttt{inform}] is an \intentinout\ scalar of type \texttt{auction\_inform}. On exit, its components provide information about the execution of the subroutine, as explained in Section~\ref{type:auction_inform}.
+\item[\texttt{inform}] is an \intentout\ scalar of type \texttt{auction\_inform}. On exit, its components provide information about the execution of the subroutine, as explained in Section~\ref{type:auction_inform}.
 
-\item[\texttt{flag}] is an \intentout\ scalar of type {\tt INTEGER}. On sucess it will have value 0, on failure a value less than 0. \textbf{FIXME: I think only alternative is -1 = ALLOCATION FAILURE}
-
-\item[\texttt{stat}] is an \intentout\ scalar of type {\tt INTEGER}. If memory allocations were successful, it will have the value 0, otherwise it will give the
-Fortran stat value on the failed allocation call.
+\item[\texttt{match}] is an optional \intentout\ array of type {\tt INTEGER}.
+If present, then on exit it specifies the matching of rows to columns.
+Column \texttt{i} is matched to row \texttt{match(i)}.
 
 \end{description}
 
@@ -232,8 +217,9 @@ a permutation applied to the scaling vector.
 \texttt{scaling(invp(i))} will hold the scaling corresponding to the
 \texttt{i}-th row and column.
 
-\item[\texttt{st}] is an \intentout\ scalar of type {\tt INTEGER}. If memory allocations were successful, it will have the value 0, otherwise it will give the
-Fortran stat value on the failed allocation call.
+\item[\texttt{options}] is an \intentin\ scalar of type \texttt{equilib\_options}. Its components specify the algorithmic options used by the subroutine, as explained in Section~\ref{type:equilib_options}.
+
+\item[\texttt{inform}] is an \intentout\ scalar of type \texttt{equilib\_inform}. On exit, its components provide information about the execution of the subroutine, as explained in Section~\ref{type:equilib_inform}.
 
 \end{description}
 
@@ -263,7 +249,7 @@ specifies the matching of rows to columns. Column \texttt{i} is matched to row
 \texttt{scale(i)} will hold the logarithm of the scaling corresponding to the
 \texttt{i}-th row and column.
 
-\item[\texttt{flag}] is an \intentout\ scalar of type {\tt INTEGER}. On sucess it will have value 0, on failure a value less than 0. \textbf{FIXME: I think only alternative is -1 = ALLOCATION FAILURE}
+\item[\texttt{flag}] is an \intentout\ scalar of type {\tt INTEGER}. On success it will have value 0, on failure a value less than 0. \textbf{FIXME: I think only alternative is -1 = ALLOCATION FAILURE}
 
 \item[\texttt{stat}] is an \intentout\ scalar of type {\tt INTEGER}. If memory allocations were successful, it will have the value 0, otherwise it will give the
 Fortran stat value on the failed allocation call.
@@ -300,7 +286,7 @@ specifies the matching of rows to columns. Column \texttt{i} is matched to row
 \texttt{scale(i)} will hold the logarithm of the scaling corresponding to the
 \texttt{i}-th row and column.
 
-\item[\texttt{flag}] is an \intentout\ scalar of type {\tt INTEGER}. On sucess it will have value 0, on failure a value less than 0. \textbf{FIXME: I think only alternative is -1 = ALLOCATION FAILURE}
+\item[\texttt{flag}] is an \intentout\ scalar of type {\tt INTEGER}. On success it will have value 0, on failure a value less than 0. \textbf{FIXME: I think only alternative is -1 = ALLOCATION FAILURE}
 
 \item[\texttt{stat}] is an \intentout\ scalar of type {\tt INTEGER}. If memory allocations were successful, it will have the value 0, otherwise it will give the
 Fortran stat value on the failed allocation call.
@@ -310,7 +296,7 @@ Fortran stat value on the failed allocation call.
 \section{Derived types}
 \subsection{\texttt{auction\_options}} \label{type:auction_options}
 
-The derived data type \texttt{auction\_options} is used to specify the options used by the routine \texttt{auction\_sclaing()}. The components, that are automatically given default values in the definition of the type, are:
+The derived data type \texttt{auction\_options} is used to specify the options used by the routine \texttt{auction\_scaling()}. The components, that are automatically given default values in the definition of the type, are:
 
 \begin{description}
 
@@ -320,13 +306,13 @@ The derived data type \texttt{auction\_options} is used to specify the options u
 
 \item[\texttt{min\_proportion(3)}] is an array of type default \texttt{REAL} that, together with \texttt{max\_unchanged(:)} specifies termination conditions for the algorithm, as described in Section~\ref{method:auction}. The default is \texttt{max\_unchanged(:)} = \texttt{(/ 0.90, 0.0, 0.0 /)}.
 
-\item[\texttt{eps}] is a scalar of type default \texttt{REAL} that specifies the initial value of the minimum improvement paramter $\epsilon$ as described in Section~\ref{method:auction}.
+\item[\texttt{eps}] is a scalar of type default \texttt{REAL} that specifies the initial value of the minimum improvement parameter $\epsilon$ as described in Section~\ref{method:auction}.
 
 \end{description}
 
 \subsection{\texttt{auction\_inform}} \label{type:auction_inform}
 
-The derived data type \texttt{auction\_inform} is used to hold parameters that vie information about the progress of the routine \texttt{auction\_sclaing()}. The components are:
+The derived data type \texttt{auction\_inform} is used to hold parameters that vie information about the progress of the routine \texttt{auction\_scaling()}. The components are:
 
 \begin{description}
 
@@ -371,7 +357,7 @@ If a symmetric scaling is required, we average these as
 $$
    d_i = \sqrt{d^r_id^c_i}.
 $$
-By the first order optimality conditions, these scaling matrices guaruntee that
+By the first order optimality conditions, these scaling matrices guarantee that
 \begin{eqnarray*}
    d^r_i|a_{ij}|d^c_j = 1, && \mbox{if } \sigma_{ij}=1, \\
    d^r_i|a_{ij}|d^c_j \le 1, && \mbox{if } \sigma_{ij}=0.
@@ -384,10 +370,10 @@ minimum sum problem.
 This is the same algorithm as used by the HSL routine MC64.
 The Hungarian algorithm works by maintaining an optimal matching on a subset of
 the rows and columns. It proceeds to grow this set by finding augmenting paths
-from an unmatched row to an unmatched column. The algorithm is guarunteed to
+from an unmatched row to an unmatched column. The algorithm is guaranteed to
 find the optimal solution in a fixed number of steps, but can be very slow as
 it may need to explore the full matrix a number of times equal to the dimension
-of the matrix. To minimize the solution time, a warmstarting heurisitc is used
+of the matrix. To minimize the solution time, a warmstarting heuristic is used
 to construct an initial optimal subset matching.
 
 \noindent
@@ -397,10 +383,10 @@ Further detail is given in the following paper:
 \end{itemize}
 
 \subsubsection{Auction algorithm} \label{method:auction}
-The auction algorithm is not guarunteed to find an optimal matching, however it
+The auction algorithm is not guaranteed to find an optimal matching, however it
 can find an approximate matching very quickly. A matching is maintained along
 with the row pricing vector $u$ (the other dual variable $v$ can be easily
-calulated from knowledge of $u$ and the $\sigma$ after completion of the
+calculated from knowledge of $u$ and the $\sigma$ after completion of the
 algorithm). In each major iteration we loop over each column in turn. If the
 column $j$ is unmatched we calculate the value $p_i = w_{ij} - u_i$ for each
 entry and find the maximum across the column. If this maximum is positive, the

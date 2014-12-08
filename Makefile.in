@@ -87,12 +87,13 @@ host_triplet = @host@
 @HAVE_NVCC_TRUE@	src/cuda/cuda.f90 \
 @HAVE_NVCC_TRUE@	src/cuda/cuda_check.h
 
-check_PROGRAMS = random_test$(EXEEXT) examples/Fortran/random$(EXEEXT) \
-	examples/C/random$(EXEEXT) random_matrix_test$(EXEEXT) \
+check_PROGRAMS = scaling_test$(EXEEXT) random_test$(EXEEXT) \
+	examples/Fortran/random$(EXEEXT) examples/C/random$(EXEEXT) \
+	random_matrix_test$(EXEEXT) \
 	examples/Fortran/random_matrix$(EXEEXT) \
 	examples/C/random_matrix$(EXEEXT) $(am__EXEEXT_1)
-TESTS = random_test$(EXEEXT) random_matrix_test$(EXEEXT) \
-	$(am__EXEEXT_2)
+TESTS = scaling_test$(EXEEXT) random_test$(EXEEXT) \
+	random_matrix_test$(EXEEXT) $(am__EXEEXT_2)
 
 # SSIDS
 @HAVE_NVCC_TRUE@am__append_2 = include/spral_ssids.h
@@ -286,6 +287,12 @@ random_test_OBJECTS = $(am_random_test_OBJECTS)
 random_test_LDADD = $(LDADD)
 random_test_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+am_scaling_test_OBJECTS = tests/scaling.$(OBJEXT)
+scaling_test_OBJECTS = $(am_scaling_test_OBJECTS)
+scaling_test_LDADD = $(LDADD)
+scaling_test_DEPENDENCIES = $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 am__spral_ssids_SOURCES_DIST = driver/spral_ssids.f90
 @HAVE_NVCC_TRUE@am_spral_ssids_OBJECTS = driver/spral_ssids.$(OBJEXT)
 spral_ssids_OBJECTS = $(am_spral_ssids_OBJECTS)
@@ -342,7 +349,8 @@ SOURCES = $(libspral_a_SOURCES) $(examples_C_random_SOURCES) \
 	$(examples_Fortran_random_matrix_SOURCES) \
 	$(examples_Fortran_ssids_SOURCES) \
 	$(random_matrix_test_SOURCES) $(random_test_SOURCES) \
-	$(spral_ssids_SOURCES) $(ssids_test_SOURCES)
+	$(scaling_test_SOURCES) $(spral_ssids_SOURCES) \
+	$(ssids_test_SOURCES)
 DIST_SOURCES = $(am__libspral_a_SOURCES_DIST) \
 	$(examples_C_random_SOURCES) \
 	$(examples_C_random_matrix_SOURCES) \
@@ -351,7 +359,8 @@ DIST_SOURCES = $(am__libspral_a_SOURCES_DIST) \
 	$(examples_Fortran_random_matrix_SOURCES) \
 	$(am__examples_Fortran_ssids_SOURCES_DIST) \
 	$(random_matrix_test_SOURCES) $(random_test_SOURCES) \
-	$(am__spral_ssids_SOURCES_DIST) $(am__ssids_test_SOURCES_DIST)
+	$(scaling_test_SOURCES) $(am__spral_ssids_SOURCES_DIST) \
+	$(am__ssids_test_SOURCES_DIST)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -739,6 +748,9 @@ libspral_a_SOURCES = src/core_analyse.f90 $(am__append_1) \
 	src/random.f90 interfaces/C/random.f90 src/random_matrix.f90 \
 	interfaces/C/random_matrix.f90 $(am__append_3)
 EXTRA_DIST = src/metis4_wrapper.f90 src/metis5_wrapper.f90
+#	examples/Fortran/random \
+#	examples/C/random
+scaling_test_SOURCES = tests/scaling.f90
 random_test_SOURCES = tests/random.f90
 examples_Fortran_random_SOURCES = examples/Fortran/random.f90
 examples_C_random_SOURCES = examples/C/random.c
@@ -1031,6 +1043,12 @@ tests/random.$(OBJEXT): tests/$(am__dirstamp) \
 random_test$(EXEEXT): $(random_test_OBJECTS) $(random_test_DEPENDENCIES) $(EXTRA_random_test_DEPENDENCIES) 
 	@rm -f random_test$(EXEEXT)
 	$(AM_V_FCLD)$(FCLINK) $(random_test_OBJECTS) $(random_test_LDADD) $(LIBS)
+tests/scaling.$(OBJEXT): tests/$(am__dirstamp) \
+	tests/$(DEPDIR)/$(am__dirstamp)
+
+scaling_test$(EXEEXT): $(scaling_test_OBJECTS) $(scaling_test_DEPENDENCIES) $(EXTRA_scaling_test_DEPENDENCIES) 
+	@rm -f scaling_test$(EXEEXT)
+	$(AM_V_FCLD)$(FCLINK) $(scaling_test_OBJECTS) $(scaling_test_LDADD) $(LIBS)
 driver/$(am__dirstamp):
 	@$(MKDIR_P) driver
 	@: > driver/$(am__dirstamp)
@@ -1311,6 +1329,13 @@ recheck: all $(check_PROGRAMS)
 	        am__force_recheck=am--force-recheck \
 	        TEST_LOGS="$$log_list"; \
 	exit $$?
+scaling_test.log: scaling_test$(EXEEXT)
+	@p='scaling_test$(EXEEXT)'; \
+	b='scaling_test'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 random_test.log: random_test$(EXEEXT)
 	@p='random_test$(EXEEXT)'; \
 	b='random_test'; \
@@ -1665,6 +1690,9 @@ uninstall-am: uninstall-binPROGRAMS uninstall-includeHEADERS \
 
 .cu.o:
 	$(NVCC) $(NVCCFLAGS) $(AM_NVCC_FLAGS) -dc -o $@ $<
+#examples_Fortran_random_SOURCES = examples/Fortran/random.f90
+#examples_C_random_SOURCES = examples/C/random.c
+tests/scaling.$(OBJEXT): libspral.a
 tests/random.$(OBJEXT): libspral.a
 examples/Fortran/random.$(OBJEXT): libspral.a
 examples/C/random.$(OBJEXT): libspral.a
