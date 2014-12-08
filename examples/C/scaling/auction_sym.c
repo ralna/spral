@@ -26,7 +26,7 @@ void main(void) {
    spral_print_matrix(-1, SPRAL_MATRIX_REAL_SYM_INDEF, n, n, ptr, row, val, 0);
 
    /* Perform symmetric scaling */
-   spral_scaling_hungarian_default_options(&options);
+   spral_scaling_auction_default_options(&options);
    spral_scaling_auction_sym(n, ptr, row, val, scaling, match, &options, &inform);
    if(inform.flag<0) {
       printf("spral_scaling_auction_sym() returned with error %5d", inform.flag);
