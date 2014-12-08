@@ -61,7 +61,8 @@ libspral_a_SOURCES += \
 
 # SCALING
 libspral_a_SOURCES += \
-  	src/scaling.f90
+  	src/scaling.f90 \
+	interfaces/C/scaling.f90
 check_PROGRAMS = \
 	scaling_test \
 	examples/Fortran/scaling/auction_sym \
@@ -225,4 +226,5 @@ src/ssids/solve_kernels.$(OBJEXT): src/ssids/dtrsv.h
 # C interface deps
 interfaces/C/random.$(OBJEXT): src/random.$(OBJEXT)
 interfaces/C/random_matrix.$(OBJEXT): src/random_matrix.$(OBJEXT)
+interfaces/C/scaling.$(OBJEXT): src/scaling.$(OBJEXT)
 interfaces/C/ssids.$(OBJEXT): src/ssids/ssids.$(OBJEXT)
