@@ -4,9 +4,10 @@ module spral_scaling
 
    private
    ! Top level routines
-   public :: hungarian_scale_sym, & ! Scaling using Hungarian algorithm (MC64-like)
-             auction_scale_sym,   & ! Scaling using Auction algorithm
-             equilib_scale_sym      ! Scaling using Equilibriation (MC77-like)
+   public :: auction_scale_sym,   & ! Symmetric scaling by Auction algorithm
+             auction_scale_unsym, & ! Unsymmetric scaling by Auction algorithm
+             equilib_scale_sym,   & ! Scaling by Equilibriation (MC77-like)
+             hungarian_scale_sym    ! Scaling by Hungarian algorithm (MC64-like)
    ! Inner routines that allow calling internals
    public :: hungarian_match      ! Find a matching (no pre/post-processing)
    ! Data types
@@ -128,13 +129,52 @@ subroutine auction_scale_sym(n, ptr, row, val, scaling, options, inform, match)
    type(auction_inform), intent(out) :: inform
    integer, dimension(n), optional, intent(out) :: match
 
+   real(wp), dimension(:), allocatable :: rscaling, cscaling
+
    inform%flag = 0 ! Initialize to sucess
 
-   call auction_match(n, ptr, row, val, scaling, options, inform, match)
+   ! Allocate memory
+   allocate(rscaling(n), cscaling(n), stat=inform%stat)
+   if(inform%stat.ne.0) then
+      inform%flag = ERROR_ALLOCATION
+      return
+   endif
 
-   scaling(1:n) = exp(scaling(1:n))
+   ! Call unsymmetric implementation with flag to expand half matrix
+   call auction_match(.true., n, n, ptr, row, val, rscaling, cscaling, &
+      options, inform, match)
+
+   ! Average rscaling and cscaling to get symmetric scaling
+   scaling(1:n) = exp( (rscaling(1:n)+cscaling(1:n))/2 )
 
 end subroutine auction_scale_sym
+
+!**************************************************************
+!
+! Call auction algorithm to get a scaling, then symmetrize it
+!
+subroutine auction_scale_unsym(m, n, ptr, row, val, rscaling, cscaling, &
+      options, inform, match)
+   integer, intent(in) :: m ! number of rows
+   integer, intent(in) :: n ! number of columns
+   integer, intent(in) :: ptr(n+1) ! column pointers of A
+   integer, intent(in) :: row(*) ! row indices of A (lower triangle)
+   real(wp), intent(in) :: val(*) ! entries of A (in same order as in row).
+   real(wp), dimension(m), intent(out) :: rscaling
+   real(wp), dimension(n), intent(out) :: cscaling
+   type(auction_options), intent(in) :: options
+   type(auction_inform), intent(out) :: inform
+   integer, dimension(n), optional, intent(out) :: match
+
+   inform%flag = 0 ! Initialize to sucess
+
+   call auction_match(.false., m, n, ptr, row, val, rscaling, cscaling, &
+      options, inform, match)
+
+   rscaling(1:m) = exp(rscaling(1:m))
+   cscaling(1:n) = exp(cscaling(1:n))
+
+end subroutine auction_scale_unsym
 
 !*******************************
 !
@@ -917,15 +957,16 @@ end subroutine heap_delete
 ! as the same row can move through multiple partners during a single pass
 ! through the matrix.
 !
-subroutine auction_match_core(n, ptr, row, val, match, dualu, dualv, options, &
-      inform)
+subroutine auction_match_core(m, n, ptr, row, val, match, dualu, dualv, &
+      options, inform)
+   integer, intent(in) :: m
    integer, intent(in) :: n
    integer, dimension(n+1), intent(in) :: ptr
    integer, dimension(ptr(n+1)-1), intent(in) :: row
    real(wp), dimension(ptr(n+1)-1), intent(in) :: val
    integer, dimension(n), intent(out) :: match
       ! match(j) = i => column j matched to row i
-   real(wp), dimension(n), intent(out) :: dualu ! row dual variables
+   real(wp), dimension(m), intent(out) :: dualu ! row dual variables
    real(wp), dimension(n), intent(inout) :: dualv ! col dual variables
    type(auction_options), intent(in) :: options
    type(auction_inform), intent(inout) :: inform
@@ -938,7 +979,7 @@ subroutine auction_match_core(n, ptr, row, val, match, dualu, dualv, options, &
    integer, dimension(:), allocatable :: next
    integer :: unmatched ! Current number of unmatched cols
 
-   integer :: itr
+   integer :: itr, minmn
    integer :: i, j, k
    integer :: col, cptr, bestr
    real(wp) :: u, bestu, bestv
@@ -952,23 +993,24 @@ subroutine auction_match_core(n, ptr, row, val, match, dualu, dualv, options, &
    inform%flag = 0
 
    ! Allocate memory
-   allocate(owner(n), next(n), stat=inform%stat)
+   allocate(owner(m), next(n), stat=inform%stat)
    if(inform%stat.ne.0) then
       inform%flag = ERROR_ALLOCATION
       return
    endif
 
    ! Set everything as unmatched
-   unmatched = n
+   minmn = min(m, n)
+   unmatched = minmn
    match(1:n) = 0 ! 0 = unmatched, -1 = unmatched+ineligible
-   owner(1:n) = 0
-   dualu(1:n) = 0
+   owner(1:m) = 0
+   dualu(1:m) = 0
    ! dualv is set for each column as it becomes matched, otherwise we use
    ! the value supplied on input (calculated as something sensible during
    ! preprocessing)
 
    ! Set up monitoring of progress
-   prev = n
+   prev = -1
    nunchanged = 0
 
    ! Initially all columns are unmatched
@@ -986,12 +1028,12 @@ subroutine auction_match_core(n, ptr, row, val, match, dualu, dualv, options, &
       prev = unmatched
       nunchanged = nunchanged + 1
       ! Test if we satisfy termination conditions
-      if(nunchanged          .ge. options%max_unchanged(1) .and. &
-         real(n-unmatched)/n .ge. options%min_proportion(1)) exit
-      if(nunchanged          .ge. options%max_unchanged(2) .and. &
-         real(n-unmatched)/n .ge. options%min_proportion(2)) exit
-      if(nunchanged          .ge. options%max_unchanged(3) .and. &
-         real(n-unmatched)/n .ge. options%min_proportion(3)) exit
+      if(nunchanged                  .ge. options%max_unchanged(1) .and. &
+         real(minmn-unmatched)/minmn .ge. options%min_proportion(1)) exit
+      if(nunchanged                  .ge. options%max_unchanged(2) .and. &
+         real(minmn-unmatched)/minmn .ge. options%min_proportion(2)) exit
+      if(nunchanged                  .ge. options%max_unchanged(3) .and. &
+         real(minmn-unmatched)/minmn .ge. options%min_proportion(3)) exit
       ! Update epsilon scaling
       eps = min(1.0_wp, eps+1.0_wp/(n+1))
       ! Now iterate over all unmatched entries listed in next(1:tail)
@@ -1065,18 +1107,22 @@ end subroutine auction_match_core
 !
 ! Lower triangle only as input (log(half)+half->full faster than log(full))
 !
-subroutine auction_match(n,ptr,row,val,scale,options,inform,match)
+subroutine auction_match(expand,m,n,ptr,row,val,rscaling,cscaling,options, &
+      inform,match)
+   logical, intent(in) :: expand
+   integer, intent(in) :: m
    integer, intent(in) :: n
    integer, dimension(n+1), intent(in) :: ptr
    integer, dimension(*), intent(in) :: row
    real(wp), dimension(*), intent(in) :: val
    type(auction_options), intent(in) :: options
    type(auction_inform), intent(inout) :: inform
-   real(wp), dimension(n), intent(out) :: scale
+   real(wp), dimension(m), intent(out) :: rscaling
+   real(wp), dimension(n), intent(out) :: cscaling
    integer, dimension(n), optional, intent(out) :: match
 
    integer, allocatable :: ptr2(:), row2(:), iw(:), perm(:)
-   real(wp), allocatable :: val2(:), dualu(:), dualv(:), cmax(:)
+   real(wp), allocatable :: val2(:), cmax(:)
    real(wp) :: colmax
    integer :: i,j,k,ne
    real(wp), parameter :: zero = 0.0
@@ -1090,8 +1136,7 @@ subroutine auction_match(n,ptr,row,val,scale,options,inform,match)
    ne = 2*ne
 
    ! Expand matrix, drop explicit zeroes and take log absolute values
-   allocate (ptr2(n+1), row2(ne), val2(ne), iw(5*n), dualu(n), dualv(n), &
-      cmax(n), stat=inform%stat)
+   allocate (ptr2(n+1), row2(ne), val2(ne), cmax(n), stat=inform%stat)
    if(inform%stat.ne.0) then
       inform%flag = ERROR_ALLOCATION
       return
@@ -1111,10 +1156,27 @@ subroutine auction_match(n,ptr,row,val,scale,options,inform,match)
       val2(ptr2(i):k-1) = log(val2(ptr2(i):k-1))
    end do
    ptr2(n+1) = k
-   call half_to_full(n, row2, ptr2, iw, a=val2)
+   if(expand) then
+      if(m.ne.n) then
+         ! Should never get this far with a non-square matrix
+         inform%flag = -99
+         return
+      endif
+      allocate (iw(5*n), cmax(n), stat=inform%stat)
+      if(inform%stat.ne.0) then
+         inform%flag = ERROR_ALLOCATION
+         return
+      endif
+      call half_to_full(n, row2, ptr2, iw, a=val2)
+   endif
 
    ! Compute column maximums
    do i = 1, n
+      if(ptr2(i+1).le.ptr2(i)) then
+         ! Empty col
+         cmax(i) = 0.0
+         cycle
+      endif
       colmax = maxval(val2(ptr2(i):ptr2(i+1)-1))
       cmax(i) = colmax
       val2(ptr2(i):ptr2(i+1)-1) = colmax - val2(ptr2(i):ptr2(i+1)-1)
@@ -1124,11 +1186,13 @@ subroutine auction_match(n,ptr,row,val,scale,options,inform,match)
    ! Use 2*maxentry+1 to prefer high cardinality matchings (+1 avoids 0 cols)
    maxentry = 2*maxentry+1
    val2(1:ptr2(n+1)-1) = maxentry - val2(1:ptr2(n+1)-1)
-   dualv(1:n) = maxentry - cmax(1:n) ! equivalent to scale=1.0 for unmatched
+   !cscaling(1:n) = maxentry - cmax(1:n) ! equivalent to scale=1.0 for unmatched
+   !   ! cols that core algorithm doesn't visit
+   cscaling(1:n) = - cmax(1:n) ! equivalent to scale=1.0 for unmatched
       ! cols that core algorithm doesn't visit
    if(present(match)) then
-      call auction_match_core(n, ptr2, row2, val2, match, dualu, dualv, &
-         options, inform)
+      call auction_match_core(m, n, ptr2, row2, val2, match, rscaling, &
+         cscaling, options, inform)
       inform%matched = count(match.ne.0)
    else
       allocate (perm(n), stat=inform%stat)
@@ -1136,13 +1200,120 @@ subroutine auction_match(n,ptr,row,val,scale,options,inform,match)
          inform%flag = ERROR_ALLOCATION
          return
       endif
-      call auction_match_core(n, ptr2, row2, val2, perm, dualu, dualv, &
-         options, inform)
+      call auction_match_core(m, n, ptr2, row2, val2, perm, rscaling, &
+         cscaling, options, inform)
       inform%matched = count(perm.ne.0)
    endif
    if(inform%flag.ne.0) return
 
-   scale(1:n) = (maxentry-dualu(1:n)-dualv(1:n)-cmax(1:n))/2
+   ! Calculate an adjustment so row and col scaling similar orders of magnitude
+   ! and undo pre processing
+   if(present(match)) then
+      call match_postproc(m, n, ptr, row, val, rscaling, cscaling, maxentry, &
+         cmax, inform%matched, match, inform%flag, inform%stat)
+   else
+      call match_postproc(m, n, ptr, row, val, rscaling, cscaling, maxentry, &
+         cmax, inform%matched, perm, inform%flag, inform%stat)
+   endif
 end subroutine auction_match
+
+subroutine match_postproc(m, n, ptr, row, val, rscaling, cscaling, maxentry, &
+      cmax, nmatch, match, flag, st)
+   integer, intent(in) :: m
+   integer, intent(in) :: n
+   integer, dimension(n+1), intent(in) :: ptr
+   integer, dimension(ptr(n+1)-1), intent(in) :: row
+   real(wp), dimension(ptr(n+1)-1), intent(in) :: val
+   real(wp), dimension(m), intent(inout) :: rscaling
+   real(wp), dimension(n), intent(inout) :: cscaling
+   real(wp), intent(in) :: maxentry
+   real(wp), dimension(n), intent(in) :: cmax
+   integer, intent(in) :: nmatch
+   integer, dimension(n), intent(in) :: match
+   integer, intent(inout) :: flag
+   integer, intent(inout) :: st
+
+   integer :: i, j
+   real(wp), dimension(:), allocatable :: rmax
+   real(wp) :: ravg, cavg, adjust, colmax, v
+
+   if(m.eq.n) then
+      ! Square
+      ! Just perform post-processing and magnitude adjustment
+      ravg = maxentry - sum(rscaling(1:m)) / m
+      cavg = (-sum(cmax(1:n)) - sum(cscaling(1:n))) /n
+      adjust = (ravg - cavg) / 2
+      rscaling(1:m) = -rscaling(1:m) + maxentry - adjust
+      cscaling(1:n) = -cscaling(1:n) - cmax(1:n) + adjust
+   elseif(m.lt.n) then
+      ! More columns than rows
+      ! First perform post-processing and magnitude adjustment based on match
+      ravg = maxentry - sum(rscaling(1:m)) / m
+      cavg = 0
+      do i = 1, n
+         if(match(i).eq.0) cycle
+         cavg = cavg + cmax(i) + cscaling(i)
+      end do
+      cavg = -cavg / nmatch
+      adjust = (ravg - cavg) / 2
+      rscaling(1:m) = -rscaling(1:m) + maxentry - adjust
+      cscaling(1:n) = -cscaling(1:n) - cmax(1:n) + adjust
+      ! For each unmatched col, scale max entry to 1.0
+      do i = 1, n
+         if(match(i).ne.0) cycle
+         colmax = 0.0
+         do j = ptr(i), ptr(i+1)-1
+            v = abs(val(j)) * exp( rscaling(row(j)) )
+            colmax = max(colmax, v)
+         end do
+         if(colmax.eq.0.0) then
+            cscaling(i) = 0.0
+         else
+            cscaling(i) = log(1/colmax)
+         endif
+      end do
+   elseif(n.lt.m) then
+      ! More rows than columns
+      ! Allocate some workspace
+      allocate (rmax(m), stat=st)
+      if(st.ne.0) then
+         flag = ERROR_ALLOCATION
+         return
+      endif
+      ! First perform post-processing and magnitude adjustment based on match
+      ! also record which rows have been matched
+      ravg = 0
+      do i = 1, n
+         if(match(i).eq.0) cycle
+         ravg = ravg + rscaling(match(i))
+      end do
+      ravg = maxentry - ravg / nmatch
+      cavg = (-sum(cmax(1:n)) - sum(cscaling(1:n))) /n
+      adjust = (ravg - cavg) / 2
+      rscaling(1:m) = -rscaling(1:m) + maxentry - adjust
+      cscaling(1:n) = -cscaling(1:n) - cmax(1:n) + adjust
+      ! Find max column-scaled value in each row from unmatched cols
+      rmax(:) = 0.0
+      do i = 1, n
+         if(match(i).ne.0) cycle
+         do j = ptr(i), ptr(i+1)-1
+            v = abs(val(j)) * exp( cscaling(i) )
+            rmax(row(j)) = max(rmax(row(j)), v)
+         end do
+      end do
+      ! Calculate scaling for each row, but overwrite with correct values for
+      ! matched rows, then copy entire array over rscaling(:)
+      where(rmax(1:m).eq.0.0)
+         rmax(1:m) = 0.0
+      elsewhere
+         rmax(1:m) = log( 1 / rmax(1:m) )
+      endwhere
+      do i = 1, n
+         if(match(i).eq.0) cycle
+         rmax(match(i)) = rscaling(match(i))
+      end do
+      rscaling(1:m) = rmax(1:m)
+   endif
+end subroutine match_postproc
 
 end module spral_scaling
