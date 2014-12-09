@@ -8,8 +8,7 @@ module spral_scaling
              auction_scale_sym,   & ! Scaling using Auction algorithm
              equilib_scale_sym      ! Scaling using Equilibriation (MC77-like)
    ! Inner routines that allow calling internals
-   public :: hungarian_wrapper, & ! Find a matching (with pre/post-processing)
-             hungarian_match      ! Find a matching (no pre/post-processing)
+   public :: hungarian_match      ! Find a matching (no pre/post-processing)
    ! Data types
    public :: auction_options, auction_inform, &
              equilib_options, equilib_inform, &
