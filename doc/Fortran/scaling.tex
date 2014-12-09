@@ -9,16 +9,26 @@
    $$
       \hat{A} = DAD
    $$
-   has improved numerical properties for the solution of linear systems.
+   has specific numerical properties.
 
-   Given an \textbf{unsymmetric} matrix $A$, it finds diagonal matrices $D_r$
+   Given a real \textbf{unsymmetric} matrix $A$, it finds diagonal matrices $D_r$
    and $D_c$ such that the scaled matrix
    $$
       \hat{A} = D_r A D_c
    $$
-   has improved numerical properties for the solution of linear systems.
+   has specific numerical properties.
 
-   The exact nature of $\hat{A}$ in both cases depends on the algorithm used.
+   The specific numerical properties delivered depends on the algorithm used:
+   \begin{description}
+      \item[Matching-based] algorithms scale $A$ such that the maximum
+         (absolute) value in each row and column of $\hat{A}$ is exactly 1.0,
+         where the entries of maximum value form a maximum cardinality matching.
+         The \textbf{Hungarian algorithm} delivers an optimal answer slowly,
+         whereas the \textbf{auction algorithm} delivers an approximate
+         answer quickly.
+      \item[Norm-equilibriation] algorithms scale $A$ such that the infinity
+         norm of each row and column of $\hat{A}$ is exactly 1.0.
+   \end{description}
 }
 
 \title{Sparse Matrix Scalings}
@@ -215,10 +225,14 @@ Column \texttt{i} is matched to row \texttt{match(i)}.
 
 \end{description}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 \section{Derived types}
 \subsection{\texttt{auction\_options}} \label{type:auction_options}
 
-The derived data type \texttt{auction\_options} is used to specify the options used by the routine \texttt{auction\_scaling()}. The components, that are automatically given default values in the definition of the type, are:
+The derived data type \texttt{auction\_options} is used to specify the options
+used by the routine \texttt{auction\_scale\_sym()}. The components, that
+are automatically given default values in the definition of the type, are:
 
 \begin{description}
 
@@ -234,15 +248,75 @@ The derived data type \texttt{auction\_options} is used to specify the options u
 
 \subsection{\texttt{auction\_inform}} \label{type:auction_inform}
 
-The derived data type \texttt{auction\_inform} is used to hold parameters that vie information about the progress of the routine \texttt{auction\_scaling()}. The components are:
+The derived data type \texttt{auction\_inform} is used to hold parameters that
+give information about the progress of the routine
+\texttt{auction\_scale\_sym()}. The components are:
 
 \begin{description}
 
 \item[\texttt{flag}] gives the exit status of the algorithm (details in Section~\ref{error flags}).
 
-\item[\texttt{iteration}] is a scalar of type \texttt{INTEGER} that specifies the number of iterations performed.
+\item[\texttt{iterations}] is a scalar of type \texttt{INTEGER} that holds the number of iterations performed.
 
-\item[\texttt{matched}] is a scalar of type \texttt{INTEGER} that specifies the number of rows and columns that have been matched.
+\item[\texttt{matched}] is a scalar of type \texttt{INTEGER} that holds the number of rows and columns that have been matched.
+
+\item[\texttt{stat}] is a scalar of type \texttt{INTEGER}. In the event of an allocation or deallocation error, it holds the Fortran \texttt{stat} parameter if it is available (and is set to \texttt{0} otherwise).
+
+\end{description}
+
+\subsection{\texttt{equilib\_options}} \label{type:equilib_options}
+
+The derived data type \texttt{equilib\_options} is used to specify the options
+used by the routine \texttt{equilib\_scale\_sym()}. The components, that are
+automatically given default values in the definition of the type, are:
+
+\begin{description}
+
+\item[\texttt{max\_iterations}] is a scalar of type \texttt{INTEGER} that specifies the maximum number of iterations the algorithm may perform. The default is \texttt{max\_iterations}=\texttt{10}.
+
+\item[\texttt{tol}] is a scalar of type default \texttt{REAL} that specifies the convergence tolerance for the algorithm (though often termination is based on \texttt{max\_iterations}). The default is \texttt{tol} = \texttt{1e-8}.
+
+\end{description}
+
+\subsection{\texttt{equilib\_inform}} \label{type:equilib_inform}
+
+The derived data type \texttt{equilib\_inform} is used to hold parameters that
+give information about the progress of the routine
+\texttt{equilib\_scale\_sym()}. The components are:
+
+\begin{description}
+
+\item[\texttt{flag}] gives the exit status of the algorithm (details in Section~\ref{error flags}).
+
+\item[\texttt{stat}] is a scalar of type \texttt{INTEGER}. In the event of an allocation or deallocation error, it holds the Fortran \texttt{stat} parameter if it is available (and is set to \texttt{0} otherwise).
+\end{description}
+
+\subsection{\texttt{hungarian\_options}} \label{type:hungarian_options}
+
+The derived data type \texttt{hungarian\_options} is used to specify the
+options used by the routine \texttt{hungarian\_scale\_sym()}. The components,
+that are automatically given default values in the definition of the type, are:
+
+\begin{description}
+
+\item[\texttt{scale\_if\_singular}] is a scalar of type default \texttt{LOGICAL}
+that specifies whether scaling shuold continue if the matrix $A$ is found to be
+structurally singular. If \texttt{scale\_if\_singular}$=$\texttt{.true.},
+and the $A$ is structurally singular, a partial scaling corresponding to a
+maximum cardinality matching will be returned and a warning issued. Otherwise
+an identity scaling will be returned and an error issued.
+
+\end{description}
+
+\subsection{\texttt{hungarian\_inform}} \label{type:hungarian_inform}
+
+The derived data type \texttt{hungarian\_inform} is used to hold parameters
+that give information about the progress of the routine
+\texttt{hungarian\_scale\_sym()}. The components are:
+
+\begin{description}
+
+\item[\texttt{flag}] gives the exit status of the algorithm (details in Section~\ref{error flags}).
 
 \item[\texttt{stat}] is a scalar of type \texttt{INTEGER}. In the event of an allocation or deallocation error, it holds the Fortran \texttt{stat} parameter if it is available (and is set to \texttt{0} otherwise).
 \end{description}
@@ -250,17 +324,23 @@ The derived data type \texttt{auction\_inform} is used to hold parameters that v
 %%%%%%%%%%%%%% ERROR FLAGS %%%%%%%%%%%%%%%%%%%%%%
 
 \section{Error Flags} \label{error flags}
-A successful return from a routine is indicated by inform\%flag having the value zero. A negative value is associated with an error message and a positive value with a warning.
+A successful return from a routine is indicated by \texttt{inform\%flag} having the value zero. A negative value is associated with an error message and a positive value with a warning.
 
 Possible negative (error) values are:
 \begin{description}
 \item[\texttt{-1}] Allocation error. If available, the Fortran \texttt{stat} parameter is returned in \texttt{inform\%stat}.
-\item[\texttt{-2}] Matrix $A$ is structurally rank-deficient. Only returned by \texttt{hungarian\_scale\_sym()} and only if \texttt{options\%scale\_if\_singular}$=$\texttt{.false.}. The scaling vector will be set to \texttt{1.0} and a matching of maximum cardinality returned in the optional argument \texttt{match(:)}, if present.
+\item[\texttt{-2}] Matrix $A$ is structurally rank-deficient. This error is only
+   returned by \texttt{hungarian\_scale\_sym()} and only if
+   \texttt{options\%scale\_if\_singular}$=$\texttt{.false.}. The scaling vector
+   will be set to \texttt{1.0} and a matching of maximum cardinality returned
+   in the optional argument \texttt{match(:)}, if present.
 \end{description}
 
 Possible positive (warning) values are:
 \begin{description}
-\item[\texttt{1}] Matrix $A$ is structurally rank-deficient. Only returned by \texttt{hungarian\_scale\_sym()} and only if \texttt{options\%scale\_if\_singular}$=$\texttt{.true.}.
+\item[\texttt{+1}] Matrix $A$ is structurally rank-deficient. This warning is
+   only returned by \texttt{hungarian\_scale\_sym()} and only if
+   \texttt{options\%scale\_if\_singular}$=$\texttt{.true.}.
 \end{description}
 
 %%%%%%%%%%%%%% METHOD %%%%%%%%%%%%%%%%%%%%%%
@@ -273,7 +353,7 @@ Matching-based scaling algorithms first solve the maximum product optimization
 problem
 \begin{eqnarray*}
    \max_{\sigma} & \prod_{i=1}^m\prod_{j=1}^n |a_{ij}|\sigma_{ij} & \\
-   \mathrm{s.t.} & \sum_{i=1}^n\sigma_{ij} = 1, & \forall j=1,n \\
+   \mathrm{s.t.} & \sum_{i=1}^m\sigma_{ij} = 1, & \forall j=1,n \\
                  & \sum_{j=1}^n\sigma_{ij} = 1, & \forall i=1,m \\
                  & \sigma_{ij} \in \{0,1\}.
 \end{eqnarray*}
