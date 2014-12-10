@@ -6,8 +6,9 @@ module spral_scaling
    ! Top level routines
    public :: auction_scale_sym,   & ! Symmetric scaling by Auction algorithm
              auction_scale_unsym, & ! Unsymmetric scaling by Auction algorithm
-             equilib_scale_sym,   & ! Scaling by Equilibriation (MC77-like)
-             hungarian_scale_sym    ! Scaling by Hungarian algorithm (MC64-like)
+             equilib_scale_sym,   & ! Sym scaling by Equilibriation (MC77)
+             equilib_scale_unsym, & ! Unsym scaling by Equilibriation (MC77)
+             hungarian_scale_sym    ! Sym scaling by Hungarian algorithm (MC64)
    ! Inner routines that allow calling internals
    public :: hungarian_match      ! Find a matching (no pre/post-processing)
    ! Data types
@@ -151,7 +152,7 @@ end subroutine auction_scale_sym
 
 !**************************************************************
 !
-! Call auction algorithm to get a scaling, then symmetrize it
+! Call auction algorithm to get a scaling (unsymmetric version)
 !
 subroutine auction_scale_unsym(m, n, ptr, row, val, rscaling, cscaling, &
       options, inform, match)
@@ -178,7 +179,7 @@ end subroutine auction_scale_unsym
 
 !*******************************
 !
-! Call the infinity-norm equilibriation algorithm
+! Call the infinity-norm equilibriation algorithm (symmetric version)
 !
 subroutine equilib_scale_sym(n, ptr, row, val, scaling, options, inform)
    integer, intent(in) :: n ! order of system
@@ -189,25 +190,34 @@ subroutine equilib_scale_sym(n, ptr, row, val, scaling, options, inform)
    type(equilib_options), intent(in) :: options
    type(equilib_inform), intent(out) :: inform
 
-   integer :: i
+   inform%flag = 0 ! Initialize to sucess
 
-   real(wp), allocatable, dimension(:) :: scale_orig
+   call inf_norm_equilib_sym(n, ptr, row, val, scaling, options, inform)
+   
+end subroutine equilib_scale_sym
+
+!*******************************
+!
+! Call the infinity-norm equilibriation algorithm (unsymmetric version)
+!
+subroutine equilib_scale_unsym(m, n, ptr, row, val, rscaling, cscaling, &
+      options, inform)
+   integer, intent(in) :: m ! number of rows
+   integer, intent(in) :: n ! number of cols
+   integer, intent(in) :: ptr(n+1) ! column pointers of A
+   integer, intent(in) :: row(*) ! row indices of A (lower triangle)
+   real(wp), intent(in) :: val(*) ! entries of A (in same order as in row).
+   real(wp), dimension(m), intent(out) :: rscaling
+   real(wp), dimension(n), intent(out) :: cscaling
+   type(equilib_options), intent(in) :: options
+   type(equilib_inform), intent(out) :: inform
 
    inform%flag = 0 ! Initialize to sucess
 
-   allocate(scale_orig(n), stat=inform%stat)
-   if(inform%stat.ne.0) then
-      inform%flag = ERROR_ALLOCATION
-      return
-   endif
+   call inf_norm_equilib_unsym(m, n, ptr, row, val, rscaling, cscaling, &
+      options, inform)
 
-   call inf_norm_equilib(n, ptr, row, val, scale_orig, options, inform)
-
-   do i = 1, n
-      scaling(i) = scale_orig(i)
-   end do
-   
-end subroutine equilib_scale_sym
+end subroutine equilib_scale_unsym
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Inf-norm Equilibriation Algorithm Implementation
@@ -222,7 +232,7 @@ end subroutine equilib_scale_sym
 !  reimplementation from the above paper to ensure it is 100% STFC
 !  copyright and can be released as open source)
 !
-subroutine inf_norm_equilib(n, ptr, row, val, scaling, options, inform)
+subroutine inf_norm_equilib_sym(n, ptr, row, val, scaling, options, inform)
    integer, intent(in) :: n
    integer, dimension(n+1), intent(in) :: ptr
    integer, dimension(ptr(n+1)-1), intent(in) :: row
@@ -261,7 +271,65 @@ subroutine inf_norm_equilib(n, ptr, row, val, scaling, options, inform)
       if(maxval(abs(1-maxentry(1:n))) .lt. options%tol) exit
    end do
 
-end subroutine inf_norm_equilib
+end subroutine inf_norm_equilib_sym
+
+!
+! We implement Algorithm 1 of:
+! A Symmetry Preserving Algorithm for Matrix Scaling
+! Philip Knight, Daniel Ruiz and Bora Ucar
+! INRIA Research Report 7552 (Novemeber 2012)
+! (This is similar to the algorithm used in MC77, but is a complete
+!  reimplementation from the above paper to ensure it is 100% STFC
+!  copyright and can be released as open source)
+!
+subroutine inf_norm_equilib_unsym(m, n, ptr, row, val, rscaling, cscaling, &
+      options, inform)
+   integer, intent(in) :: m
+   integer, intent(in) :: n
+   integer, dimension(n+1), intent(in) :: ptr
+   integer, dimension(ptr(n+1)-1), intent(in) :: row
+   real(wp), dimension(ptr(n+1)-1), intent(in) :: val
+   real(wp), dimension(m), intent(out) :: rscaling
+   real(wp), dimension(n), intent(out) :: cscaling
+   type(equilib_options), intent(in) :: options
+   type(equilib_inform), intent(inout) :: inform
+
+   integer :: itr, r, c, j
+   real(wp) :: v
+   real(wp), dimension(:), allocatable :: rmaxentry, cmaxentry
+
+   allocate(rmaxentry(m), cmaxentry(n), stat=inform%stat)
+   if(inform%stat.ne.0) then
+      inform%flag = ERROR_ALLOCATION
+      return
+   endif
+
+   rscaling(1:m) = 1.0
+   cscaling(1:n) = 1.0
+   do itr = 1, options%max_iterations
+      ! Find maximum entry in each row and col
+      ! Recall: matrix is symmetric, but we only have half
+      rmaxentry(1:m) = 0.0
+      cmaxentry(1:n) = 0.0
+      do c = 1, n
+         do j = ptr(c), ptr(c+1)-1
+            r = row(j)
+            v = abs(rscaling(r) * val(j) * cscaling(c))
+            rmaxentry(r) = max(rmaxentry(r), v)
+            cmaxentry(c) = max(cmaxentry(c), v)
+         end do
+      end do
+      ! Update scaling (but beware empty cols)
+      where(rmaxentry(1:m).gt.0) &
+         rscaling(1:m) = rscaling(1:m) / sqrt(rmaxentry(1:m))
+      where(cmaxentry(1:n).gt.0) &
+         cscaling(1:n) = cscaling(1:n) / sqrt(cmaxentry(1:n))
+      ! Test convergence
+      if(maxval(abs(1-rmaxentry(1:m))) .lt. options%tol .and. &
+         maxval(abs(1-cmaxentry(1:n))) .lt. options%tol) exit
+   end do
+
+end subroutine inf_norm_equilib_unsym
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Hungarian Algorithm implementation (MC64)

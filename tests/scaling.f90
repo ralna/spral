@@ -28,9 +28,11 @@ program main
    errors = 0
 
    !call test_auction_sym_random
-   call test_auction_unsym_random
-   !call test_equilib_sym_random
+   !call test_auction_unsym_random
+   call test_equilib_sym_random
+   call test_equilib_unsym_random
    !call test_hungarian_sym_random
+   !call test_hungarian_unsym_random
 
    write(*, "(/a)") "=========================="
    write(*, "(a,i4)") "Total number of errors = ", errors
@@ -433,6 +435,119 @@ subroutine test_equilib_sym_random
    end do prblm_loop
 
 end subroutine test_equilib_sym_random
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+subroutine test_equilib_unsym_random
+   integer :: maxn = 1000
+   integer :: maxnz =  1000000
+   integer, parameter :: nprob = 100
+   type(random_state) :: state
+
+   type(matrix_type) :: a
+   real(wp), allocatable, dimension(:) :: rscaling, cscaling, rinf
+
+   type(equilib_options) :: options
+   type(equilib_inform) :: inform
+
+   integer :: nza, prblm, i, j, k, rcnt
+   real(wp) :: cmax, v
+
+   write(*, "(a)")
+   write(*, "(a)") "===================================================="
+   write(*, "(a)") "Testing equilib_scaling_unsym() with random matrices"
+   write(*, "(a)") "===================================================="
+
+   allocate(a%ptr(maxn+1))
+   allocate(a%row(2*maxnz), a%val(2*maxnz))
+   allocate(rscaling(maxn), cscaling(maxn), rinf(maxn))
+
+   prblm_loop: &
+   do prblm = 1, nprob
+
+      ! Generate parameters
+      a%n = random_integer(state, maxn)
+      a%m = random_integer(state, maxn)
+      if(random_integer(state, 2).eq.1) a%m = a%n ! 50% chance of unsym vs rect
+      if (prblm < 21) then
+         a%n = prblm ! check very small problems
+         a%m = prblm ! check very small problems
+      endif
+      i = a%m*a%n/2 - max(a%m,a%n)
+      i = max(0,i)
+      nza = max(a%m,a%n) + random_integer(state, i)
+
+      write(*, "(a, i3, a, i5, a, i5, a, i7, a, i2, a)",advance="no") &
+         " - no. ", prblm,  " m = ", a%m, " n = ", a%n, " nza = ", nza, "..."
+
+      if(nza.gt.maxnz .or. a%n.gt.maxn .or. a%m.gt.maxn) then
+         write(*, "(a)") "bad random matrix."
+         write(*, "(a,i5,a,i5,a,i5)") "m = ", a%m, "n = ", a%n, &
+            " > maxn = ", maxn
+         write(*, "(a,i8,a,i8)") "or nza = ", nza, " > maxnz = ", maxnz
+         cycle
+      endif
+
+      call gen_random_unsym(a, nza, state)
+      !print *, "n = ", a%n
+      !do i = 1, a%n
+      !   print *, "col ", i, ":", a%row(a%ptr(i):a%ptr(i+1)-1)
+      !   print *, "                 :", a%val(a%ptr(i):a%ptr(i+1)-1)
+      !end do
+
+      !
+      ! Call scaling
+      !
+      call equilib_scale_unsym(a%m, a%n, a%ptr, a%row, a%val, rscaling, &
+         cscaling, options, inform)
+      if(inform%flag .lt. 0) then
+         write(*, "(a, i5)") "Returned inform%flag = ", inform%flag
+         errors = errors + 1
+         cycle prblm_loop
+      endif
+      !print *, "scal = ", scaling(1:a%n)
+
+      !
+      ! Ensure inf norm of all scaled rows  is close to 1.0
+      !
+      rinf(1:a%n) = 0.0
+      do i = 1, a%n
+         if(a%ptr(i).eq.a%ptr(i+1)) cycle ! Empty column
+         cmax = 0.0;
+         do j = a%ptr(i), a%ptr(i+1)-1
+            v = abs(cscaling(i) * a%val(j) * rscaling(a%row(j)))
+            cmax = max( cmax, v )
+            rinf(a%row(j)) = max( rinf(a%row(j)), v )
+         end do
+         if(1.0-cmax > 0.05) then
+            write(*, "(a, i4, a, es12.4)") "cinf(", i, ") = ", cmax
+            errors = errors + 1
+            cycle prblm_loop
+         endif
+      end do
+
+      do i = 1, a%n
+         if((1.0-rinf(i)) > 0.05) then
+            ! Check non-empty row before we complain
+            rcnt = 0
+            do j = 1, a%n
+               do k = a%ptr(j), a%ptr(j+1)-1
+                  if(a%row(k).eq.i) rcnt = rcnt + 1
+               end do
+            end do
+            if(rcnt > 0) then
+               write(*, "(a, i4, a, es12.4)") "rinf(", i, ") = ", rinf(i)
+               errors = errors + 1
+               cycle prblm_loop
+            endif
+         endif
+      end do
+
+      write(*, "(a)") "ok"
+
+   end do prblm_loop
+
+end subroutine test_equilib_unsym_random
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
