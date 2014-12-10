@@ -6,9 +6,10 @@ module spral_scaling
    ! Top level routines
    public :: auction_scale_sym,   & ! Symmetric scaling by Auction algorithm
              auction_scale_unsym, & ! Unsymmetric scaling by Auction algorithm
-             equilib_scale_sym,   & ! Sym scaling by Equilibriation (MC77)
-             equilib_scale_unsym, & ! Unsym scaling by Equilibriation (MC77)
-             hungarian_scale_sym    ! Sym scaling by Hungarian algorithm (MC64)
+             equilib_scale_sym,   & ! Sym scaling by Equilibriation (MC77-like)
+             equilib_scale_unsym, & ! Unsym scaling by Equilibriation (MC77-lik)
+             hungarian_scale_sym, & ! Sym scaling by Hungarian alg (MC64-like)
+             hungarian_scale_unsym  ! Unsym scaling by Hungarian alg (MC64-like)
    ! Inner routines that allow calling internals
    public :: hungarian_match      ! Find a matching (no pre/post-processing)
    ! Data types
@@ -65,7 +66,7 @@ contains
 
 !**************************************************************
 !
-! Use matching-based scaling obtained using Hungarian algorithm
+! Use matching-based scaling obtained using Hungarian algorithm (sym)
 !
 subroutine hungarian_scale_sym(n, ptr, row, val, scaling, options, inform, &
       match)
@@ -127,6 +128,52 @@ subroutine hungarian_scale_sym(n, ptr, row, val, scaling, options, inform, &
    scaling(1:n) = exp( (rscaling(1:n) + cscaling(1:n)) / 2 )
 
 end subroutine hungarian_scale_sym
+
+!**************************************************************
+!
+! Use matching-based scaling obtained using Hungarian algorithm (unsym)
+!
+subroutine hungarian_scale_unsym(m, n, ptr, row, val, rscaling, cscaling, &
+      options, inform, match)
+   integer, intent(in) :: m ! number of rows
+   integer, intent(in) :: n ! number of cols
+   integer, intent(in) :: ptr(n+1) ! column pointers of A
+   integer, intent(in) :: row(*) ! row indices of A (lower triangle)
+   real(wp), intent(in) :: val(*) ! entries of A (in same order as in row).
+   real(wp), dimension(m), intent(out) :: rscaling
+   real(wp), dimension(n), intent(out) :: cscaling
+   type(hungarian_options), intent(in) :: options
+   type(hungarian_inform), intent(out) :: inform
+   integer, dimension(n), optional, intent(out) :: match
+
+   integer :: i
+   integer, dimension(:), allocatable :: perm
+
+   inform%flag = 0 ! Initialize to success
+
+   ! NB: hungarian_wrapper's match argument is actually a matching of rows to
+   ! cols. We need to convert it to a col to row matching before returning
+   allocate(perm(m), stat=inform%stat)
+   if (inform%stat .ne. 0) then
+      inform%flag = ERROR_ALLOCATION
+      return
+   endif
+   
+   ! Call main routine
+   call hungarian_wrapper(.false., m, n, ptr, row, val, perm, rscaling, &
+      cscaling, options, inform)
+
+   ! Apply post processing
+   rscaling(1:m) = exp( rscaling(1:m) )
+   cscaling(1:n) = exp( cscaling(1:n) )
+   ! Convert row->col matching to col->row one
+   match(1:n) = 0
+   do i = 1, m
+      if(perm(i).eq.0) cycle ! unmatched row
+      match(perm(i)) = i
+   end do
+
+end subroutine hungarian_scale_unsym
 
 !**************************************************************
 !
@@ -562,12 +609,138 @@ end subroutine hungarian_wrapper
 
 !**********************************************************************
 !
+! Subroutine that initialize matching and (row) dual variable into a suitbale
+! state for main Hungarian algorithm.
+!
+! The heuristic guaruntees that the generated partial matching is optimal
+! on the restriction of the graph to the matched rows and columns.
+subroutine hungarian_init_heurisitic(m, n, ptr, row, val, num, iperm, jperm, &
+      dualu, d, l, search_from)
+   integer, intent(in) :: m
+   integer, intent(in) :: n
+   integer, dimension(n+1), intent(in) :: ptr
+   integer, dimension(ptr(n+1)-1), intent(in) :: row
+   real(wp), dimension(ptr(n+1)-1), intent(in) :: val
+   integer, intent(inout) :: num
+   integer, dimension(*), intent(inout) :: iperm
+   integer, dimension(*), intent(inout) :: jperm
+   real(wp), dimension(m), intent(out) :: dualu
+   real(wp), dimension(n), intent(out) :: d ! d(j) current improvement from
+      ! matching in col j
+   integer, dimension(m), intent(out) :: l ! position of smallest entry of row
+   integer, dimension(n), intent(inout) :: search_from ! position we have
+      ! reached in current search
+
+   integer :: i, i0, ii, j, jj, k, k0, kk
+   real(wp) :: di, vj
+
+   !
+   ! Set up initial matching on smallest entry in each row (as far as possible)
+   !
+   ! Find smallest entry in each col, and record it
+   dualu(1:m) = RINF
+   l(1:m) = 0
+   do j = 1,n
+      do k = ptr(j),ptr(j+1)-1
+         i = row(k)
+         if(val(k).gt.dualu(i)) cycle
+         dualu(i) = val(k) ! Initialize dual variables
+         iperm(i) = j      ! Record col
+         l(i) = k          ! Record posn in row(:)
+      end do
+   end do
+   ! Loop over rows in turn. If we can match on smallest entry in row (i.e.
+   ! column not already matched) then do so. Avoid matching on dense columns
+   ! as this makes Hungarian algorithm take longer.
+   do i = 1,m
+      j = iperm(i) ! Smallest entry in row i is (i,j)
+      if(j.eq.0) cycle ! skip empty rows
+      iperm(i) = 0
+      if(jperm(j).ne.0) cycle ! If we've already matched column j, skip this row
+      ! Don't choose cheap assignment from dense columns
+      if(ptr(j+1)-ptr(j) .gt. m/10 .and. m.gt.50) cycle
+      ! Assignment of column j to row i
+      num = num + 1
+      iperm(i) = j
+      jperm(j) = l(i)
+   end do
+   ! If we already have a complete matching, we're already done!
+   if(num.eq.min(m,n)) return
+
+   !
+   ! Scan unassigned columns; improve assignment
+   !
+   d(1:n) = 0.0
+   search_from(1:n) = ptr(1:n)
+   improve_assign: &
+   do j = 1, n
+      if(jperm(j).ne.0) cycle ! column j already matched
+      if(ptr(j).gt.ptr(j+1)-1) cycle ! column j is empty
+      ! Find smallest value of di = a_ij - u_i in column j
+      ! In case of a tie, prefer first unmatched, then first matched row.
+      i0 = row(ptr(j))
+      vj = val(ptr(j)) - dualu(i0)
+      k0 = ptr(j)
+      do k = ptr(j)+1, ptr(j+1)-1
+         i = row(k)
+         di = val(k) - dualu(i)
+         if(di.gt.vj) cycle
+         if(di.eq.vj .and. di.ne.RINF) then
+            if(iperm(i).ne.0 .or. iperm(i0).eq.0) cycle
+         endif
+         vj = di
+         i0 = i
+         k0 = k
+      end do
+      ! Record value of matching on (i0,j)
+      d(j) = vj
+      ! If row i is unmatched, then match on (i0,j) immediately
+      if(iperm(i0).eq.0) then
+         num = num + 1
+         jperm(j) = k0
+         iperm(i0) = j
+         search_from(j) = k0 + 1
+         cycle
+      endif
+      ! Otherwise, row i is matched. Consider all rows i in column j that tie
+      ! for this vj value. Such a row currently matches on (i,jj). Scan column
+      ! jj looking for an unmatched row ii that improves value of matching. If
+      ! one exists, then augment along length 2 path (i,j)->(ii,jj)
+      do k = k0, ptr(j+1)-1
+         i = row(k)
+         if(val(k)-dualu(i).gt.vj) cycle ! Not a tie for vj value
+         jj = iperm(i)
+         ! Scan remaining part of assigned column jj
+         do kk = search_from(jj), ptr(jj+1)-1
+            ii = row(kk)
+            if(iperm(ii).gt.0) cycle ! row ii already matched
+            if(val(kk)-dualu(ii).le.d(jj)) then
+               ! By matching on (i,j) and (ii,jj) we do better than existing
+               ! matching on (i,jj) alone.
+               jperm(jj) = kk
+               iperm(ii) = jj
+               search_from(jj) = kk + 1
+               num = num + 1
+               jperm(j) = k
+               iperm(i) = j
+               search_from(j) = k + 1
+               cycle improve_assign
+            endif
+         end do
+         search_from(jj) = ptr(jj+1)
+      end do
+      cycle
+   end do improve_assign
+end subroutine hungarian_init_heurisitic
+
+!**********************************************************************
+!
 ! Provides the core Hungarian Algorithm implementation for solving the
 ! minimum sum assignment problem as per Duff and Koster.
 !
 ! This code is adapted from MC64 v 1.6.0
 !
-subroutine hungarian_match(m,n,ptr,row,val,iperm,num,dualu,d,st)
+subroutine hungarian_match(m,n,ptr,row,val,iperm,num,dualu,dualv,st)
    integer, intent(in) :: m ! number of rows
    integer, intent(in) :: n ! number of cols
    integer, intent(out) :: num ! cardinality of the matching
@@ -577,9 +750,8 @@ subroutine hungarian_match(m,n,ptr,row,val,iperm,num,dualu,d,st)
       ! column iperm(i).
    real(wp), intent(in) :: val(ptr(n+1)-1) ! value of the entry that corresponds
       ! to row(k). All values val(k) must be non-negative.
-   real(wp), intent(out) :: dualu(m) ! u(i) is the reduced weight for row(i)
-   real(wp), intent(out) :: d(m) ! d(i) is current shortest distance to row i
-      ! from current column (d_i from Fig 4.1 of Duff and Koster paper)
+   real(wp), intent(out) :: dualu(m) ! dualu(i) is the reduced weight for row(i)
+   real(wp), intent(out) :: dualv(n) ! dualv(j) is the reduced weight for col(j)
    integer, intent(out) :: st
 
    integer, allocatable, dimension(:) :: jperm ! a(jperm(j)) is entry of A for
@@ -592,111 +764,25 @@ subroutine hungarian_match(m,n,ptr,row,val,iperm,num,dualu,d,st)
       ! data structure sorted by d(q(i)) value. q(low:up) is a list of rows
       ! with equal d(i) which is lower or equal to smallest in the heap.
       ! q(up:n) is a list of already visited rows.
-   integer, allocatable, dimension(:) :: L ! l(:) is an inverse of q(:)
+   integer, allocatable, dimension(:) :: l ! l(:) is an inverse of q(:)
+   real(wp), allocatable, dimension(:) :: d ! d(i) is current shortest distance
+      ! to row i from current column (d_i from Fig 4.1 of Duff and Koster paper)
 
-   integer :: i,i0,ii,j,jj,jord,q0,qlen,jdum,isp,jsp
-   integer :: k,k0,k1,k2,kk,kk1,kk2,up,low,lpos
+   integer :: i,j,jj,jord,q0,qlen,jdum,isp,jsp
+   integer :: k,kk,up,low,lpos
    real(wp) :: csp,di,dmin,dnew,dq0,vj
 
    !
    ! Initialization
    !
-   allocate(jperm(n), out(n), pr(n), q(m), l(m), stat=st)
+   allocate(jperm(n), out(n), pr(n), q(m), l(m), d(max(m,n)), stat=st)
    if(st.ne.0) return
    num = 0
-   d(1:n) = 0.0
    iperm(1:m) = 0
    jperm(1:n) = 0
-   pr(1:n) = ptr(1:n)
-   l(1:m) = 0
 
-   !
-   ! Initialize dualu(i) using heurisitic to get an intial guess.
-   ! Heuristic guaruntees that the generated partial matching is optimal
-   ! on the restriction of the graph to the matched rows and columns.
-   !
-   dualu(1:m) = RINF
-   do j = 1,n
-      do k = ptr(j),ptr(j+1)-1
-         i = row(k)
-         if(val(k).gt.dualu(i)) cycle
-         dualu(i) = val(k)
-         iperm(i) = j
-         l(i) = k
-      end do
-   end do
-   do i = 1,n
-      j = iperm(i)
-      if(j.eq.0) cycle
-      ! Row i is not empty
-      iperm(i) = 0
-      if(jperm(j).ne.0) cycle
-      ! Don't choose cheap assignment from dense columns
-      if(ptr(j+1)-ptr(j) .gt. m/10 .and. m.gt.50) cycle
-      ! Assignment of column j to row i
-      num = num + 1
-      iperm(i) = j
-      jperm(j) = l(i)
-   end do
-   if(num.eq.min(m,n)) GO TO 1000 ! If we've got a complete matching, then done
-   ! Scan unassigned columns; improve assignment
-   improve_assign: do j = 1,n
-      ! jperm(j) ne 0 iff column j is already assigned
-      if(jperm(j).ne.0) cycle
-      k1 = ptr(j)
-      k2 = ptr(j+1) - 1
-      ! Continue only if column j is not empty
-      if(k1.gt.k2) cycle
-      i0 = row(k1)
-      vj = val(k1) - dualu(i0)
-      k0 = k1
-      do k = k1+1,k2
-         i = row(k)
-         di = val(k) - dualu(i)
-         if(di.gt.vj) cycle
-         if(di.ge.vj .and. di.ne.RINF) then
-            if(iperm(i).ne.0 .or. iperm(i0).eq.0) cycle
-         endif
-         vj = di
-         i0 = i
-         k0 = k
-      end do
-      d(j) = vj
-      k = k0
-      i = i0
-      if(iperm(i).eq.0) then
-         num = num + 1
-         jperm(j) = k
-         iperm(i) = j
-         pr(j) = k + 1
-         cycle
-      endif
-      do k = k0,k2
-         i = row(k)
-         if(val(k)-dualu(i).gt.vj) cycle
-         jj = iperm(i)
-         ! Scan remaining part of assigned column jj
-         kk1 = pr(jj)
-         kk2 = ptr(jj+1) - 1
-         if(kk1.gt.kk2) cycle
-         do kk = kk1,kk2
-            ii = row(kk)
-            if(iperm(ii).gt.0) cycle
-            if(val(kk)-dualu(ii).le.d(jj)) then
-               jperm(jj) = kk
-               iperm(ii) = jj
-               pr(jj) = kk + 1
-               num = num + 1
-               jperm(j) = k
-               iperm(i) = j
-               pr(j) = k + 1
-               cycle improve_assign
-            endif
-         end do
-         pr(jj) = kk2 + 1
-      end do
-      cycle
-   end do improve_assign
+   call hungarian_init_heurisitic(m, n, ptr, row, val, num, iperm, jperm, &
+      dualu, d, l, pr)
    if(num.eq.min(m,n)) go to 1000 ! If we got a complete matching, we're done
 
    !
@@ -871,16 +957,18 @@ subroutine hungarian_match(m,n,ptr,row,val,iperm,num,dualu,d,st)
    end do ! End of main loop
 
 
-   ! Set dual column variable in d(1:n)
-1000 do j = 1,n
+   1000 continue
+   ! Set dual column variables
+   do j = 1,n
       k = jperm(j)
       if(k.ne.0) then
-         d(j) = val(k) - dualu(row(k))
+         dualv(j) = val(k) - dualu(row(k))
       else
-         d(j) = 0.0
+         dualv(j) = 0.0
       endif
-      if(iperm(j).eq.0) dualu(j) = 0.0
    end do
+   ! Zero dual row variables for unmatched rows
+   where(iperm(1:m).eq.0) dualu(1:m) = 0.0
 
    ! Return if matrix has full structural rank
    if(num.eq.min(m,n)) return
