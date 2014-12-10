@@ -80,18 +80,30 @@ subroutine hungarian_scale_sym(n, ptr, row, val, scaling, options, inform, &
 
    integer :: flag
    integer, dimension(:), allocatable :: perm
+   real(wp), dimension(:), allocatable :: rscaling, cscaling
 
    inform%flag = 0 ! Initialize to success
+
+   allocate(rscaling(n), cscaling(n), stat=inform%stat)
+   if (inform%stat .ne. 0) then
+      inform%flag = ERROR_ALLOCATION
+      return
+   endif
+
+   ! NB: hungarian_wrapper's match argument is actually a matching of rows to
+   ! cols. This doesn't matter here as we're dealing with a symmetric matrix.
    
    if(present(match)) then
-      call hungarian_wrapper(n,ptr,row,val,match,scaling,flag,inform%stat)
+      call hungarian_wrapper(.true., n, n, ptr, row, val, match, rscaling, &
+         cscaling, options, inform)
    else
       allocate(perm(n), stat=inform%stat)
       if (inform%stat .ne. 0) then
          inform%flag = ERROR_ALLOCATION
          return
       endif
-      call hungarian_wrapper(n,ptr,row,val,perm,scaling,flag,inform%stat)
+      call hungarian_wrapper(.true., n, n, ptr, row, val, perm, rscaling, &
+         cscaling, options, inform)
    endif
    select case(flag)
    case(0)
@@ -112,7 +124,7 @@ subroutine hungarian_scale_sym(n, ptr, row, val, scaling, options, inform, &
       return
    end select
 
-   scaling(1:n) = exp(scaling(1:n))
+   scaling(1:n) = exp( (rscaling(1:n) + cscaling(1:n)) / 2 )
 
 end subroutine hungarian_scale_sym
 
@@ -345,24 +357,29 @@ end subroutine inf_norm_equilib_unsym
 !
 ! This code is adapted from HSL_MC64 v2.3.1
 !
-subroutine hungarian_wrapper(n,ptr,row,val,perm,scale,flag,stat)
+subroutine hungarian_wrapper(sym, m, n, ptr, row, val, perm, rscaling, &
+      cscaling, options, inform)
+   logical, intent(in) :: sym
+   integer, intent(in) :: m
    integer, intent(in) :: n
    integer, dimension(n+1), intent(in) :: ptr
    integer, dimension(*), intent(in) :: row
    real(wp), dimension(*), intent(in) :: val
-   integer, dimension(n), intent(out) :: perm
-   real(wp), dimension(n), intent(out) :: scale
-   integer, intent(out) :: flag
-   integer, intent(out) :: stat
+   integer, dimension(m), intent(out) :: perm
+   real(wp), dimension(m), intent(out) :: rscaling
+   real(wp), dimension(n), intent(out) :: cscaling
+   type(hungarian_options), intent(in) :: options
+   type(hungarian_inform), intent(out) :: inform
 
    integer, allocatable :: ptr2(:), row2(:), iw(:), new_to_old(:), &
       old_to_new(:), cperm(:)
-   real(wp), allocatable :: val2(:), dw(:), cmax(:), cscale(:)
+   real(wp), allocatable :: val2(:), dualu(:), dualv(:), cmax(:), cscale(:)
    real(wp) :: colmax
    integer :: i,j,k,ne,num,nn,j1,j2,jj
    real(wp), parameter :: zero = 0.0
 
-   stat = 0
+   inform%flag = 0
+   inform%stat = 0
    ne = ptr(n+1)-1
 
    ! Reset ne for the expanded symmetric matrix
@@ -370,9 +387,9 @@ subroutine hungarian_wrapper(n,ptr,row,val,perm,scale,flag,stat)
 
    ! Expand matrix, drop explicit zeroes and take log absolute values
    allocate (ptr2(n+1), row2(ne), val2(ne), &
-             iw(5*n), dw(2*n), cmax(n), stat=stat)
-   if (stat/=0) then
-      flag = ERROR_ALLOCATION
+             iw(5*n), dualu(m), dualv(n), cmax(n), stat=inform%stat)
+   if (inform%stat.ne.0) then
+      inform%flag = ERROR_ALLOCATION
       return
    endif
 
@@ -390,7 +407,9 @@ subroutine hungarian_wrapper(n,ptr,row,val,perm,scale,flag,stat)
       val2(ptr2(i):k-1) = log(val2(ptr2(i):k-1))
    end do
    ptr2(n+1) = k
-   call half_to_full(n, row2, ptr2, iw, a=val2)
+   if(sym) then
+      call half_to_full(n, row2, ptr2, iw, a=val2)
+   endif
 
    ! Compute column maximums
    do i = 1, n
@@ -399,33 +418,46 @@ subroutine hungarian_wrapper(n,ptr,row,val,perm,scale,flag,stat)
       val2(ptr2(i):ptr2(i+1)-1) = colmax - val2(ptr2(i):ptr2(i+1)-1)
    end do
 
-   call hungarian_match(n,ne,ptr2,row2,val2,perm,num,dw(1),dw(n+1),stat)
-   if (stat.ne.0) then
-      flag = ERROR_ALLOCATION
+   call hungarian_match(m,n,ptr2,row2,val2,perm,num,dualu,dualv,inform%stat)
+   if (inform%stat.ne.0) then
+      inform%flag = ERROR_ALLOCATION
       return
    endif
 
-   flag = 0
+   if(num.ne.min(m,n)) then
+      ! Singular matrix
+      if(options%scale_if_singular) then
+         ! Just issue warning then continue
+         inform%flag = WARNING_SINGULAR
+      else
+         ! Issue error and return identity scaling
+         inform%flag = ERROR_SINGULAR
+         rscaling(1:m) = 0
+         cscaling(1:n) = 0
+      endif
+   endif
 
-   if(num.eq.n) then ! Full rank
+   if(.not.sym .or. num.eq.n) then ! Unsymmetric or symmetric and full rank
       ! Note that in this case m=n
-      scale(1:n) = (dw(1:n)+dw(n+1:2*n)-cmax(1:n))/2
+      rscaling(1:m) = dualu(1:m)
+      cscaling(1:n) = dualv(1:n) - cmax(1:n)
       return
    endif
 
-   ! If we reach this point then structually rank deficient:
-   ! Build a full rank submatrix and call matching on it.
-   flag = 1 ! structually singular warning
+   ! If we reach this point then structually rank deficient.
+   ! As matching may not involve full set of rows and columns, but we need
+   ! a symmetric matching/scaling, we can't just return the current matching.
+   ! Instead, we build a full rank submatrix and call matching on it.
 
-   allocate(old_to_new(n),new_to_old(n),cperm(n),stat=stat)
-   if (stat.ne.0) then
-      flag = ERROR_ALLOCATION
-      stat = stat
+   allocate(old_to_new(n),new_to_old(n),cperm(n),stat=inform%stat)
+   if (inform%stat.ne.0) then
+      inform%flag = ERROR_ALLOCATION
+      return
    end if
 
    j = num + 1
    k = 0
-   do i = 1,n
+   do i = 1,m
       if (perm(i) < 0) then
          ! row i is not part of the matching
          old_to_new(i) = -j
@@ -462,19 +494,20 @@ subroutine hungarian_wrapper(n,ptr,row,val,perm,scale,flag,stat)
    end do
    ! nn is order of non-singular part.
    nn = k
-   call hungarian_match(nn,ne,ptr2,row2,val2,cperm,num,dw(1),dw(nn+1),stat)
-   if (stat.ne.0) then
-      flag = ERROR_ALLOCATION
+   call hungarian_match(nn, nn, ptr2, row2, val2, cperm, num, dualu, dualv, &
+      inform%stat)
+   if (inform%stat.ne.0) then
+      inform%flag = ERROR_ALLOCATION
       return
    endif
 
    do i = 1,n
       j = old_to_new(i)
       if (j < 0) then
-         scale(i) = -huge(scale)
+         rscaling(i) = -huge(rscaling)
       else
          ! Note: we need to subtract col max using old matrix numbering
-         scale(i) = (dw(j)+dw(nn+j)-cmax(i))/2
+         rscaling(i) = (dualu(j)+dualv(j)-cmax(i))/2
       end if
    end do
 
@@ -491,37 +524,39 @@ subroutine hungarian_wrapper(n,ptr,row,val,perm,scale,flag,stat)
    end do
 
    ! Apply Duff and Pralet correction to unmatched row scalings
-   allocate(cscale(n), stat=stat)
-   if(stat/=0) then
-      flag = ERROR_ALLOCATION
-      stat = stat
+   allocate(cscale(n), stat=inform%stat)
+   if(inform%stat.ne.0) then
+      inform%flag = ERROR_ALLOCATION
       return
    endif
    ! For columns i not in the matched set I, set
    !     s_i = 1 / (max_{k in I} | a_ik s_k |)
    ! with convention that 1/0 = 1
-   cscale(1:n) = scale(1:n)
+   cscale(1:n) = rscaling(1:n)
    do i = 1,n
       do j = ptr(i), ptr(i+1)-1
          k = row(j)
-         if(cscale(i).eq.-huge(scale).and.cscale(k).ne.-huge(scale)) then
+         if(cscale(i).eq.-huge(rscaling).and.cscale(k).ne.-huge(rscaling)) then
             ! i not in I, k in I
-            scale(i) = max(scale(i), log(abs(val(j)))+scale(k))
+            rscaling(i) = max(rscaling(i), log(abs(val(j)))+rscaling(k))
          endif
-         if(cscale(k).eq.-huge(scale).and.cscale(i).ne.-huge(scale)) then
+         if(cscale(k).eq.-huge(rscaling).and.cscale(i).ne.-huge(rscaling)) then
             ! k not in I, i in I
-            scale(k) = max(scale(k), log(abs(val(j)))+scale(i))
+            rscaling(k) = max(rscaling(k), log(abs(val(j)))+rscaling(i))
          endif
       end do
    end do
    do i = 1,n
-      if(cscale(i).ne.-huge(scale)) cycle ! matched part
-      if(scale(i).eq.-huge(scale)) then
-         scale(i) = zero
+      if(cscale(i).ne.-huge(rscaling)) cycle ! matched part
+      if(rscaling(i).eq.-huge(rscaling)) then
+         rscaling(i) = 0.0
       else
-         scale(i) = -scale(i)
+         rscaling(i) = -rscaling(i)
       endif
    end do
+   ! As symmetric, scaling is averaged on return, but rscaling(:) is correct,
+   ! so just copy to cscaling to fix this
+   cscaling(1:n) = rscaling(1:n)
 
 end subroutine hungarian_wrapper
 
@@ -532,18 +567,18 @@ end subroutine hungarian_wrapper
 !
 ! This code is adapted from MC64 v 1.6.0
 !
-subroutine hungarian_match(n,ne,ptr,row,val,iperm,num,u,d,st)
-   integer, intent(in) :: n ! matrix dimension
-   integer, intent(in) :: ne ! number of entries in matrix
+subroutine hungarian_match(m,n,ptr,row,val,iperm,num,dualu,d,st)
+   integer, intent(in) :: m ! number of rows
+   integer, intent(in) :: n ! number of cols
    integer, intent(out) :: num ! cardinality of the matching
    integer, intent(in) :: ptr(n+1) ! column pointers
-   integer, intent(in) :: row(ne) ! row pointers
-   integer, intent(out) :: iperm(n) ! matching itself: row i is matched to
+   integer, intent(in) :: row(ptr(n+1)-1) ! row pointers
+   integer, intent(out) :: iperm(m) ! matching itself: row i is matched to
       ! column iperm(i).
-   real(wp), intent(in) :: val(ne) ! value of the entry that corresponds to
-      ! row(k). All values val(k) must be non-negative.
-   real(wp), intent(out) :: u(n) ! u(i) is the reduced weight for row(i)
-   real(wp), intent(out) :: d(n) ! d(i) is current shortest distance to row i
+   real(wp), intent(in) :: val(ptr(n+1)-1) ! value of the entry that corresponds
+      ! to row(k). All values val(k) must be non-negative.
+   real(wp), intent(out) :: dualu(m) ! u(i) is the reduced weight for row(i)
+   real(wp), intent(out) :: d(m) ! d(i) is current shortest distance to row i
       ! from current column (d_i from Fig 4.1 of Duff and Koster paper)
    integer, intent(out) :: st
 
@@ -566,26 +601,26 @@ subroutine hungarian_match(n,ne,ptr,row,val,iperm,num,u,d,st)
    !
    ! Initialization
    !
-   allocate(jperm(n), out(n), pr(n), q(n), l(n), stat=st)
+   allocate(jperm(n), out(n), pr(n), q(m), l(m), stat=st)
    if(st.ne.0) return
    num = 0
    d(1:n) = 0.0
-   iperm(1:n) = 0
+   iperm(1:m) = 0
    jperm(1:n) = 0
    pr(1:n) = ptr(1:n)
-   l(1:n) = 0
+   l(1:m) = 0
 
    !
-   ! Initialize u(i) using heurisitic to get an intial guess.
+   ! Initialize dualu(i) using heurisitic to get an intial guess.
    ! Heuristic guaruntees that the generated partial matching is optimal
    ! on the restriction of the graph to the matched rows and columns.
    !
-   u(1:n) = RINF
+   dualu(1:m) = RINF
    do j = 1,n
       do k = ptr(j),ptr(j+1)-1
          i = row(k)
-         if(val(k).gt.u(i)) cycle
-         u(i) = val(k)
+         if(val(k).gt.dualu(i)) cycle
+         dualu(i) = val(k)
          iperm(i) = j
          l(i) = k
       end do
@@ -597,13 +632,13 @@ subroutine hungarian_match(n,ne,ptr,row,val,iperm,num,u,d,st)
       iperm(i) = 0
       if(jperm(j).ne.0) cycle
       ! Don't choose cheap assignment from dense columns
-      if(ptr(j+1)-ptr(j) .gt. n/10 .and. n.gt.50) cycle
+      if(ptr(j+1)-ptr(j) .gt. m/10 .and. m.gt.50) cycle
       ! Assignment of column j to row i
       num = num + 1
       iperm(i) = j
       jperm(j) = l(i)
    end do
-   if(num.eq.n) GO TO 1000
+   if(num.eq.min(m,n)) GO TO 1000 ! If we've got a complete matching, then done
    ! Scan unassigned columns; improve assignment
    improve_assign: do j = 1,n
       ! jperm(j) ne 0 iff column j is already assigned
@@ -613,11 +648,11 @@ subroutine hungarian_match(n,ne,ptr,row,val,iperm,num,u,d,st)
       ! Continue only if column j is not empty
       if(k1.gt.k2) cycle
       i0 = row(k1)
-      vj = val(k1) - u(i0)
+      vj = val(k1) - dualu(i0)
       k0 = k1
       do k = k1+1,k2
          i = row(k)
-         di = val(k) - u(i)
+         di = val(k) - dualu(i)
          if(di.gt.vj) cycle
          if(di.ge.vj .and. di.ne.RINF) then
             if(iperm(i).ne.0 .or. iperm(i0).eq.0) cycle
@@ -638,7 +673,7 @@ subroutine hungarian_match(n,ne,ptr,row,val,iperm,num,u,d,st)
       endif
       do k = k0,k2
          i = row(k)
-         if(val(k)-u(i).gt.vj) cycle
+         if(val(k)-dualu(i).gt.vj) cycle
          jj = iperm(i)
          ! Scan remaining part of assigned column jj
          kk1 = pr(jj)
@@ -647,7 +682,7 @@ subroutine hungarian_match(n,ne,ptr,row,val,iperm,num,u,d,st)
          do kk = kk1,kk2
             ii = row(kk)
             if(iperm(ii).gt.0) cycle
-            if(val(kk)-u(ii).le.d(jj)) then
+            if(val(kk)-dualu(ii).le.d(jj)) then
                jperm(jj) = kk
                iperm(ii) = jj
                pr(jj) = kk + 1
@@ -662,7 +697,7 @@ subroutine hungarian_match(n,ne,ptr,row,val,iperm,num,u,d,st)
       end do
       cycle
    end do improve_assign
-   if(num.eq.n) go to 1000 ! If heurisitic got a complete matching, we're done
+   if(num.eq.min(m,n)) go to 1000 ! If we got a complete matching, we're done
 
    !
    ! Repeatedly find augmenting paths until all columns are included in the
@@ -672,8 +707,8 @@ subroutine hungarian_match(n,ne,ptr,row,val,iperm,num,u,d,st)
 
    ! Main loop ... each pass round this loop is similar to Dijkstra's
    ! algorithm for solving the single source shortest path problem
-   d(1:n) = RINF
-   l(1:n) = 0
+   d(1:m) = RINF
+   l(1:m) = 0
    isp=-1; jsp=-1 ! initalize to avoid "may be used unitialized" warning
    do jord = 1,n
 
@@ -682,8 +717,8 @@ subroutine hungarian_match(n,ne,ptr,row,val,iperm,num,u,d,st)
       ! dmin is the length of shortest path in the tree
       dmin = RINF
       qlen = 0
-      low = n + 1
-      up = n + 1
+      low = m + 1
+      up = m + 1
       ! csp is the cost of the shortest augmenting path to unassigned row
       ! row(isp). The corresponding column index is jsp.
       csp = RINF
@@ -694,7 +729,7 @@ subroutine hungarian_match(n,ne,ptr,row,val,iperm,num,u,d,st)
       ! Scan column j
       do k = ptr(j),ptr(j+1)-1
          i = row(k)
-         dnew = val(k) - u(i)
+         dnew = val(k) - dualu(i)
          if(dnew.ge.csp) cycle
          if(iperm(i).eq.0) then
             csp = dnew
@@ -724,7 +759,7 @@ subroutine hungarian_match(n,ne,ptr,row,val,iperm,num,u,d,st)
          else
             qlen = qlen + 1
             l(i) = qlen
-            call heap_update(i,n,Q,D,L)
+            call heap_update(i,m,Q,D,L)
          endif
          ! Update tree
          jj = iperm(i)
@@ -744,7 +779,7 @@ subroutine hungarian_match(n,ne,ptr,row,val,iperm,num,u,d,st)
             do while(qlen.gt.0)
                i = q(1) ! Peek at top of heap
                if(d(i).gt.dmin) exit
-               i = heap_pop(qlen,n,Q,D,L)
+               i = heap_pop(qlen,m,Q,D,L)
                low = low - 1
                q(low) = i
                l(i) = low
@@ -759,12 +794,12 @@ subroutine hungarian_match(n,ne,ptr,row,val,iperm,num,u,d,st)
 
          ! Scan column that matches with row q0
          j = iperm(q0)
-         vj = dq0 - val(jperm(j)) + u(q0)
+         vj = dq0 - val(jperm(j)) + dualu(q0)
          do k = ptr(j),ptr(j+1)-1
             i = row(k)
             if(l(i).ge.up) cycle
             ! dnew is new cost
-            dnew = vj + val(k)-u(i)
+            dnew = vj + val(k)-dualu(i)
             ! Do not update d(i) if dnew ge cost of shortest path
             if(dnew.ge.csp) cycle
             if(iperm(i).eq.0) then
@@ -780,7 +815,7 @@ subroutine hungarian_match(n,ne,ptr,row,val,iperm,num,u,d,st)
                d(i) = dnew
                if(dnew.le.dmin) then
                   lpos = l(i)
-                  if(lpos.ne.0) call heap_delete(lpos,qlen,n,Q,D,L)
+                  if(lpos.ne.0) call heap_delete(lpos,qlen,m,Q,D,L)
                   low = low - 1
                   q(low) = i
                   l(i) = low
@@ -789,7 +824,7 @@ subroutine hungarian_match(n,ne,ptr,row,val,iperm,num,u,d,st)
                      qlen = qlen + 1
                      l(i) = qlen
                   endif
-                  call heap_update(i,n,Q,D,L) ! d(i) has changed
+                  call heap_update(i,m,Q,D,L) ! d(i) has changed
                endif
                ! Update tree
                jj = iperm(i)
@@ -817,12 +852,12 @@ subroutine hungarian_match(n,ne,ptr,row,val,iperm,num,u,d,st)
          j = jj
       end do
 
-      ! Update U for rows in q(up:n)
-      do kk = up,n
+      ! Update U for rows in q(up:m)
+      do kk = up,m
          i = q(kk)
-         u(i) = u(i) + d(i) - csp
+         dualu(i) = dualu(i) + d(i) - csp
       end do
-190   do kk = low,n
+190   do kk = low,m
          i = q(kk)
          d(i) = RINF
          l(i) = 0
@@ -840,21 +875,21 @@ subroutine hungarian_match(n,ne,ptr,row,val,iperm,num,u,d,st)
 1000 do j = 1,n
       k = jperm(j)
       if(k.ne.0) then
-         d(j) = val(k) - u(row(k))
+         d(j) = val(k) - dualu(row(k))
       else
          d(j) = 0.0
       endif
-      if(iperm(j).eq.0) u(j) = 0.0
+      if(iperm(j).eq.0) dualu(j) = 0.0
    end do
 
    ! Return if matrix has full structural rank
-   if(num.eq.n) return
+   if(num.eq.min(m,n)) return
 
    ! Otherwise, matrix is structurally singular, complete iperm.
    ! jperm, out are work arrays
    jperm(1:n) = 0
    k = 0
-   do i = 1,n
+   do i = 1,m
       if(iperm(i).eq.0) then
          k = k + 1
          out(k) = i

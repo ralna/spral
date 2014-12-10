@@ -442,7 +442,7 @@ subroutine mo_match(n,row2,ptr2,val2,scale,flag,stat,perm)
    end do
 
    ne = ptr2(n+1)-1
-   call hungarian_match(n,ne,ptr2,row2,val2,cperm,rank,dw(1),dw(n+1),stat)
+   call hungarian_match(n,n,ptr2,row2,val2,cperm,rank,dw(1),dw(n+1),stat)
    if (stat.ne.0) then
       flag = ERROR_ALLOCATION
       return
@@ -504,7 +504,7 @@ subroutine mo_match(n,row2,ptr2,val2,scale,flag,stat,perm)
     end do
     ! nn is order of non-singular part.
     nn = k
-    call hungarian_match(nn,nne,ptr2,row2,val2,cperm,rank,dw(1),dw(nn+1),stat)
+    call hungarian_match(nn,nn,ptr2,row2,val2,cperm,rank,dw(1),dw(nn+1),stat)
     if (stat.ne.0) then
       flag = ERROR_ALLOCATION
       return
