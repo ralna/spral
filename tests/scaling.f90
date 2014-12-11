@@ -177,9 +177,9 @@ subroutine test_auction_unsym_random
    integer :: maxnz =  1000000
    integer, parameter :: nprob = 100
 
-   real, parameter :: scale_tol = 20.0 ! How much above 1.0 can scaled value be?
-   real, parameter :: max_tol = 0.75 ! How much less than 1.0 can col max be?
-   real, parameter :: max_except = 0.15 ! proportion of bad entries allowed
+   real, parameter :: scale_tol = 2.0 ! How much above 1.0 can scaled value be?
+   real, parameter :: max_tol = 0.01 ! How much less than 1.0 can col max be?
+   real, parameter :: max_except = 0.05 ! proportion of bad entries allowed
 
    type(random_state) :: state
 
@@ -323,12 +323,12 @@ subroutine test_auction_unsym_random
                   if(a%row(k).eq.i) rcnt = rcnt + 1
                end do
             end do
-            nexcept = nexcept + 1
-            !if(rcnt.ne.0) then
-            !   write(*, "(a, i4, a, es12.4)") "rmax(", i, ") = ", rmax(i)
-            !   errors = errors + 1
-            !   cycle prblm_loop
-            !endif
+            if(rcnt.ne.0) then
+               nexcept = nexcept + 1
+               !write(*, "(a, i4, a, es12.4)") "rmax(", i, ") = ", rmax(i)
+               !errors = errors + 1
+               !cycle prblm_loop
+            endif
          endif
       end do
       if(nexcept > max_except*(a%ptr(a%n+1)-1)) then
