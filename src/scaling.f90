@@ -79,7 +79,6 @@ subroutine hungarian_scale_sym(n, ptr, row, val, scaling, options, inform, &
    type(hungarian_inform), intent(out) :: inform
    integer, dimension(n), optional, intent(out) :: match
 
-   integer :: flag
    integer, dimension(:), allocatable :: perm
    real(wp), dimension(:), allocatable :: rscaling, cscaling
 
@@ -91,9 +90,6 @@ subroutine hungarian_scale_sym(n, ptr, row, val, scaling, options, inform, &
       return
    endif
 
-   ! NB: hungarian_wrapper's match argument is actually a matching of rows to
-   ! cols. This doesn't matter here as we're dealing with a symmetric matrix.
-   
    if(present(match)) then
       call hungarian_wrapper(.true., n, n, ptr, row, val, match, rscaling, &
          cscaling, options, inform)
@@ -106,25 +102,6 @@ subroutine hungarian_scale_sym(n, ptr, row, val, scaling, options, inform, &
       call hungarian_wrapper(.true., n, n, ptr, row, val, perm, rscaling, &
          cscaling, options, inform)
    endif
-   select case(flag)
-   case(0)
-      ! success; do nothing
-   case(1)
-      ! structually singular matrix
-      if(.not.options%scale_if_singular) then
-         ! abort, set scaling to identity
-         inform%flag = ERROR_SINGULAR
-         scaling(:) = 1.0
-         return
-      else
-         inform%flag = WARNING_SINGULAR
-      end if
-   case(ERROR_ALLOCATION)
-      ! allocation error
-      inform%flag = ERROR_ALLOCATION
-      return
-   end select
-
    scaling(1:n) = exp( (rscaling(1:n) + cscaling(1:n)) / 2 )
 
 end subroutine hungarian_scale_sym
@@ -146,32 +123,27 @@ subroutine hungarian_scale_unsym(m, n, ptr, row, val, rscaling, cscaling, &
    type(hungarian_inform), intent(out) :: inform
    integer, dimension(n), optional, intent(out) :: match
 
-   integer :: i
    integer, dimension(:), allocatable :: perm
 
    inform%flag = 0 ! Initialize to success
 
-   ! NB: hungarian_wrapper's match argument is actually a matching of rows to
-   ! cols. We need to convert it to a col to row matching before returning
-   allocate(perm(m), stat=inform%stat)
-   if (inform%stat .ne. 0) then
-      inform%flag = ERROR_ALLOCATION
-      return
-   endif
-   
    ! Call main routine
-   call hungarian_wrapper(.false., m, n, ptr, row, val, perm, rscaling, &
-      cscaling, options, inform)
+   if(present(match)) then
+      call hungarian_wrapper(.false., m, n, ptr, row, val, match, rscaling, &
+         cscaling, options, inform)
+   else
+      allocate(perm(m), stat=inform%stat)
+      if (inform%stat .ne. 0) then
+         inform%flag = ERROR_ALLOCATION
+         return
+      endif
+      call hungarian_wrapper(.false., m, n, ptr, row, val, perm, rscaling, &
+         cscaling, options, inform)
+   endif
 
    ! Apply post processing
    rscaling(1:m) = exp( rscaling(1:m) )
    cscaling(1:n) = exp( cscaling(1:n) )
-   ! Convert row->col matching to col->row one
-   match(1:n) = 0
-   do i = 1, m
-      if(perm(i).eq.0) cycle ! unmatched row
-      match(perm(i)) = i
-   end do
 
 end subroutine hungarian_scale_unsym
 
@@ -404,7 +376,7 @@ end subroutine inf_norm_equilib_unsym
 !
 ! This code is adapted from HSL_MC64 v2.3.1
 !
-subroutine hungarian_wrapper(sym, m, n, ptr, row, val, perm, rscaling, &
+subroutine hungarian_wrapper(sym, m, n, ptr, row, val, match, rscaling, &
       cscaling, options, inform)
    logical, intent(in) :: sym
    integer, intent(in) :: m
@@ -412,14 +384,14 @@ subroutine hungarian_wrapper(sym, m, n, ptr, row, val, perm, rscaling, &
    integer, dimension(n+1), intent(in) :: ptr
    integer, dimension(*), intent(in) :: row
    real(wp), dimension(*), intent(in) :: val
-   integer, dimension(m), intent(out) :: perm
+   integer, dimension(n), intent(out) :: match
    real(wp), dimension(m), intent(out) :: rscaling
    real(wp), dimension(n), intent(out) :: cscaling
    type(hungarian_options), intent(in) :: options
    type(hungarian_inform), intent(out) :: inform
 
    integer, allocatable :: ptr2(:), row2(:), iw(:), new_to_old(:), &
-      old_to_new(:), cperm(:)
+      old_to_new(:), cperm(:), perm(:)
    real(wp), allocatable :: val2(:), dualu(:), dualv(:), cmax(:), cscale(:)
    real(wp) :: colmax
    integer :: i,j,k,ne,num,nn,j1,j2,jj
@@ -433,7 +405,7 @@ subroutine hungarian_wrapper(sym, m, n, ptr, row, val, perm, rscaling, &
    ne = 2*ne
 
    ! Expand matrix, drop explicit zeroes and take log absolute values
-   allocate (ptr2(n+1), row2(ne), val2(ne), &
+   allocate (ptr2(n+1), row2(ne), val2(ne), perm(m), &
              iw(5*n), dualu(m), dualv(n), cmax(n), stat=inform%stat)
    if (inform%stat.ne.0) then
       inform%flag = ERROR_ALLOCATION
@@ -485,9 +457,17 @@ subroutine hungarian_wrapper(sym, m, n, ptr, row, val, perm, rscaling, &
    endif
 
    if(.not.sym .or. num.eq.n) then ! Unsymmetric or symmetric and full rank
+      ! Convert row->col matching into col->row one
+      match(1:n) = 0
+      do i = 1, m
+         if(perm(i).eq.0) cycle ! unmatched row
+         match(perm(i)) = i
+      end do
       ! Note that in this case m=n
       rscaling(1:m) = dualu(1:m)
       cscaling(1:n) = dualv(1:n) - cmax(1:n)
+      call match_postproc(m, n, ptr, row, val, rscaling, cscaling, num, &
+         match, inform%flag, inform%stat)
       return
    endif
 
@@ -1320,7 +1300,6 @@ subroutine auction_match(expand,m,n,ptr,row,val,rscaling,cscaling,options, &
    real(wp) :: maxentry
 
    inform%flag = 0
-   inform%stat = 0
 
    ! Reset ne for the expanded symmetric matrix
    ne = ptr(n+1)-1
@@ -1353,7 +1332,7 @@ subroutine auction_match(expand,m,n,ptr,row,val,rscaling,cscaling,options, &
          inform%flag = -99
          return
       endif
-      allocate (iw(5*n), cmax(n), stat=inform%stat)
+      allocate (iw(5*n), stat=inform%stat)
       if(inform%stat.ne.0) then
          inform%flag = ERROR_ALLOCATION
          return
@@ -1399,17 +1378,19 @@ subroutine auction_match(expand,m,n,ptr,row,val,rscaling,cscaling,options, &
 
    ! Calculate an adjustment so row and col scaling similar orders of magnitude
    ! and undo pre processing
+   rscaling(1:m) = -rscaling(1:m) + maxentry
+   cscaling(1:n) = -cscaling(1:n) - cmax(1:n)
    if(present(match)) then
-      call match_postproc(m, n, ptr, row, val, rscaling, cscaling, maxentry, &
-         cmax, inform%matched, match, inform%flag, inform%stat)
+      call match_postproc(m, n, ptr, row, val, rscaling, cscaling, &
+         inform%matched, match, inform%flag, inform%stat)
    else
-      call match_postproc(m, n, ptr, row, val, rscaling, cscaling, maxentry, &
-         cmax, inform%matched, perm, inform%flag, inform%stat)
+      call match_postproc(m, n, ptr, row, val, rscaling, cscaling, &
+         inform%matched, perm, inform%flag, inform%stat)
    endif
 end subroutine auction_match
 
-subroutine match_postproc(m, n, ptr, row, val, rscaling, cscaling, maxentry, &
-      cmax, nmatch, match, flag, st)
+subroutine match_postproc(m, n, ptr, row, val, rscaling, cscaling, nmatch, &
+      match, flag, st)
    integer, intent(in) :: m
    integer, intent(in) :: n
    integer, dimension(n+1), intent(in) :: ptr
@@ -1417,8 +1398,6 @@ subroutine match_postproc(m, n, ptr, row, val, rscaling, cscaling, maxentry, &
    real(wp), dimension(ptr(n+1)-1), intent(in) :: val
    real(wp), dimension(m), intent(inout) :: rscaling
    real(wp), dimension(n), intent(inout) :: cscaling
-   real(wp), intent(in) :: maxentry
-   real(wp), dimension(n), intent(in) :: cmax
    integer, intent(in) :: nmatch
    integer, dimension(n), intent(in) :: match
    integer, intent(inout) :: flag
@@ -1431,24 +1410,24 @@ subroutine match_postproc(m, n, ptr, row, val, rscaling, cscaling, maxentry, &
    if(m.eq.n) then
       ! Square
       ! Just perform post-processing and magnitude adjustment
-      ravg = maxentry - sum(rscaling(1:m)) / m
-      cavg = (-sum(cmax(1:n)) - sum(cscaling(1:n))) /n
+      ravg = sum(rscaling(1:m)) / m
+      cavg = sum(cscaling(1:n)) /n
       adjust = (ravg - cavg) / 2
-      rscaling(1:m) = -rscaling(1:m) + maxentry - adjust
-      cscaling(1:n) = -cscaling(1:n) - cmax(1:n) + adjust
+      rscaling(1:m) = rscaling(1:m) - adjust
+      cscaling(1:n) = cscaling(1:n) + adjust
    elseif(m.lt.n) then
       ! More columns than rows
       ! First perform post-processing and magnitude adjustment based on match
-      ravg = maxentry - sum(rscaling(1:m)) / m
+      ravg = sum(rscaling(1:m)) / m
       cavg = 0
       do i = 1, n
          if(match(i).eq.0) cycle
-         cavg = cavg + cmax(i) + cscaling(i)
+         cavg = cavg + cscaling(i)
       end do
-      cavg = -cavg / nmatch
+      cavg = cavg / nmatch
       adjust = (ravg - cavg) / 2
-      rscaling(1:m) = -rscaling(1:m) + maxentry - adjust
-      cscaling(1:n) = -cscaling(1:n) - cmax(1:n) + adjust
+      rscaling(1:m) = rscaling(1:m) - adjust
+      cscaling(1:n) = cscaling(1:n) + adjust
       ! For each unmatched col, scale max entry to 1.0
       do i = 1, n
          if(match(i).ne.0) cycle
@@ -1478,15 +1457,14 @@ subroutine match_postproc(m, n, ptr, row, val, rscaling, cscaling, maxentry, &
          if(match(i).eq.0) cycle
          ravg = ravg + rscaling(match(i))
       end do
-      ravg = maxentry - ravg / nmatch
-      cavg = (-sum(cmax(1:n)) - sum(cscaling(1:n))) /n
+      ravg = ravg / nmatch
+      cavg = sum(cscaling(1:n)) /n
       adjust = (ravg - cavg) / 2
-      rscaling(1:m) = -rscaling(1:m) + maxentry - adjust
-      cscaling(1:n) = -cscaling(1:n) - cmax(1:n) + adjust
+      rscaling(1:m) = rscaling(1:m) - adjust
+      cscaling(1:n) = cscaling(1:n) + adjust
       ! Find max column-scaled value in each row from unmatched cols
       rmax(:) = 0.0
       do i = 1, n
-         if(match(i).ne.0) cycle
          do j = ptr(i), ptr(i+1)-1
             v = abs(val(j)) * exp( cscaling(i) )
             rmax(row(j)) = max(rmax(row(j)), v)
