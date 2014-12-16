@@ -56,7 +56,7 @@ subroutine test_auction_sym_random
    type(auction_options) :: options
    type(auction_inform) :: inform
 
-   integer :: nza, prblm, i, j, nmatch
+   integer :: nza, prblm, i, j, k, nmatch
    real(wp) :: cmax, v
 
    write(*, "(a)")
@@ -113,6 +113,7 @@ subroutine test_auction_sym_random
       !
       nmatch = 0
       cnt(1:a%n) = 0
+      match_check: &
       do i = 1, a%n
          j = match(i)
          if(j.lt.0 .or. j.gt.a%n) then
@@ -123,8 +124,20 @@ subroutine test_auction_sym_random
          if(j.ne.0) then
             cnt(j) = cnt(j) + 1
             nmatch = nmatch + 1
+            do k = a%ptr(j), a%ptr(j+1)-1
+               if(a%row(k).eq.i) cycle match_check
+            end do
+            ! If we reach here, no entry in position (i,j)
+            do k = a%ptr(i), a%ptr(i+1)-1
+               if(a%row(k).eq.j) cycle match_check
+            end do
+            ! If we reach here, no entry in position (j,i) either
+            write(*, "(a, i5, a, i5, a)") &
+               "matched on (", i, ",", j, ") but no such entry"
+            errors = errors + 1
+            cycle prblm_loop
          endif
-      end do
+      end do match_check
       if(nmatch < 0.9*a%n) then
          write(*, "(a, i5, a, f4.1, a)") "Only matched ", nmatch, " pivots (", &
             (100.0*nmatch)/a%n, "%)"
@@ -259,6 +272,7 @@ subroutine test_auction_unsym_random
       !
       nmatch = 0
       cnt(1:a%n) = 0
+      match_check: &
       do i = 1, a%m
          j = match(i)
          if(j.lt.0 .or. j.gt.a%n) then
@@ -269,8 +283,16 @@ subroutine test_auction_unsym_random
          if(j.ne.0) then
             cnt(j) = cnt(j) + 1
             nmatch = nmatch + 1
+            do k = a%ptr(j), a%ptr(j+1)-1
+               if(a%row(k).eq.i) cycle match_check
+            end do
+            ! If we reach here, no entry in position (i,j)
+            write(*, "(a, i5, a, i5, a)") &
+               "matched on (", i, ",", j, ") but no such entry"
+            errors = errors + 1
+            cycle prblm_loop
          endif
-      end do
+      end do match_check
       if(nmatch < 0.9*min(a%m,a%n)) then
          write(*, "(a, i5, a, f4.1, a)") "Only matched ", nmatch, " pivots (", &
             (100.0*nmatch)/min(a%m,a%n), "%)"
@@ -564,7 +586,7 @@ subroutine test_hungarian_sym_random
    type(hungarian_options) :: options
    type(hungarian_inform) :: inform
 
-   integer :: nza, prblm, i, j
+   integer :: nza, prblm, i, j, k
    real(wp) :: cmax, v
 
    write(*, "(a)")
@@ -620,6 +642,7 @@ subroutine test_hungarian_sym_random
       ! Ensure each row and column are matched
       !
       cnt(1:a%n) = 0
+      match_check: &
       do i = 1, a%n
          j = match(i)
          if(j.lt.1 .or. j.gt.a%n) then
@@ -628,7 +651,19 @@ subroutine test_hungarian_sym_random
             cycle prblm_loop
          endif
          cnt(j) = cnt(j) + 1
-      end do
+         do k = a%ptr(j), a%ptr(j+1)-1
+            if(a%row(k).eq.i) cycle match_check
+         end do
+         ! If we reach here, no entry in position (i,j)
+         do k = a%ptr(i), a%ptr(i+1)-1
+            if(a%row(k).eq.j) cycle match_check
+         end do
+         ! If we reach here, no entry in position (j,i) either
+         write(*, "(a, i5, a, i5, a)") &
+            "matched on (", i, ",", j, ") but no such entry"
+         errors = errors + 1
+         cycle prblm_loop
+      end do match_check
       if(any(cnt(1:a%n).ne.1)) then
          write(*, "(a)") "Mismatched row"
          errors = errors + 1
@@ -743,10 +778,11 @@ subroutine test_hungarian_unsym_random
       !print *, "cscal = ", cscaling(1:a%n)
 
       !
-      ! Ensure each row and column are matched
+      ! Ensure each row and column are matched [and on an entry that exists]
       !
       nmatch = 0
       cnt(1:a%n) = 0
+      match_check: &
       do i = 1, a%m
          j = match(i)
          if(j.lt.0 .or. j.gt.a%n) then
@@ -757,8 +793,16 @@ subroutine test_hungarian_unsym_random
          if(j.ne.0) then
             cnt(j) = cnt(j) + 1
             nmatch = nmatch + 1
+            do k = a%ptr(j), a%ptr(j+1)-1
+               if(a%row(k).eq.i) cycle match_check
+            end do
+            ! If we reach here, no entry in position (i,j)
+            write(*, "(a, i5, a, i5, a)") &
+               "matched on (", i, ",", j, ") but no such entry"
+            errors = errors + 1
+            cycle prblm_loop
          endif
-      end do
+      end do match_check
       if(nmatch .ne. min(a%m,a%n)) then
          write(*, "(a,i5,a,i5,a,i5,a)") &
             "Only matched ", nmatch, " in ", a%m, "x", a%n, " matrix"
