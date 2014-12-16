@@ -245,7 +245,7 @@ subroutine test_auction_unsym_random
          errors = errors + 1
          cycle prblm_loop
       endif
-      !print *, "match = ", match(1:a%n)
+      !print *, "match = ", match(1:a%m)
       !print *, "rscal = ", rscaling(1:a%m)
       !print *, "cscal = ", cscaling(1:a%n)
       !print *
@@ -258,10 +258,10 @@ subroutine test_auction_unsym_random
       ! Ensure most rows and columns are matched, and none more than once
       !
       nmatch = 0
-      cnt(1:a%m) = 0
-      do i = 1, a%n
+      cnt(1:a%n) = 0
+      do i = 1, a%m
          j = match(i)
-         if(j.lt.0 .or. j.gt.a%m) then
+         if(j.lt.0 .or. j.gt.a%n) then
             write(*, "(a, i5, a, i5)") "match(", i, ") = ", j
             errors = errors + 1
             cycle prblm_loop
@@ -746,10 +746,10 @@ subroutine test_hungarian_unsym_random
       ! Ensure each row and column are matched
       !
       nmatch = 0
-      cnt(1:a%m) = 0
-      do i = 1, a%n
+      cnt(1:a%n) = 0
+      do i = 1, a%m
          j = match(i)
-         if(j.lt.0 .or. j.gt.a%m) then
+         if(j.lt.0 .or. j.gt.a%n) then
             write(*, "(a, i5, a, i5)") "match(", i, ") = ", j
             errors = errors + 1
             cycle prblm_loop
