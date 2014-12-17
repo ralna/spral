@@ -12,6 +12,7 @@ struct spral_scaling_auction_options {
    int max_iterations;
    int max_unchanged[3];
    float min_proportion[3];
+   float eps_initial;
    char unused[80]; // Allow for future expansion
 };
 struct spral_scaling_auction_inform {
@@ -19,6 +20,7 @@ struct spral_scaling_auction_inform {
    int stat;
    int matched;
    int iterations;
+   int unmatchable;
    char unused[80]; // Allow for future expansion
 };
 
@@ -31,6 +33,7 @@ struct spral_scaling_equilib_options {
 struct spral_scaling_equilib_inform {
    int flag;
    int stat;
+   int iterations;
    char unused[80]; // Allow for future expansion
 };
 
@@ -42,6 +45,7 @@ struct spral_scaling_hungarian_options {
 struct spral_scaling_hungarian_inform {
    int flag;
    int stat;
+   int matched;
    char unused[80]; // Allow for future expansion
 };
 
@@ -76,6 +80,26 @@ void spral_scaling_equilib_sym(int n, const int *ptr, const int *row,
 /* Scale a symmetric matrix using Hungarian algorithm */
 void spral_scaling_hungarian_sym(int n, const int *ptr, const int *row,
       const double *val, double *scaling, int *match,
+      const struct spral_scaling_hungarian_options *options,
+      struct spral_scaling_hungarian_inform *inform);
+
+/************************************
+ * Unsymmetric subroutines
+ ************************************/
+
+/* Scale a symmetric matrix using auction algorithm */
+void spral_scaling_auction_unsym(int m, int n, const int *ptr, const int *row,
+      const double *val, double *rscaling, double *cscaling, int *match,
+      const struct spral_scaling_auction_options *options,
+      struct spral_scaling_auction_inform *inform);
+/* Scale a symmetric matrix using norm equilibriation algorithm */
+void spral_scaling_equilib_unsym(int m, int n, const int *ptr, const int *row,
+      const double *val, double *rscaling, double *cscaling,
+      const struct spral_scaling_equilib_options *options,
+      struct spral_scaling_equilib_inform *inform);
+/* Scale a symmetric matrix using Hungarian algorithm */
+void spral_scaling_hungarian_unsym(int m, int n, const int *ptr, const int *row,
+      const double *val, double *rscaling, double *cscaling, int *match,
       const struct spral_scaling_hungarian_options *options,
       struct spral_scaling_hungarian_inform *inform);
 

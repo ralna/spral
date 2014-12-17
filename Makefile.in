@@ -95,10 +95,13 @@ check_PROGRAMS = scaling_test$(EXEEXT) \
 	examples/Fortran/scaling/hungarian_sym$(EXEEXT) \
 	examples/Fortran/scaling/hungarian_unsym$(EXEEXT) \
 	examples/C/scaling/auction_sym$(EXEEXT) \
+	examples/C/scaling/auction_unsym$(EXEEXT) \
 	examples/C/scaling/equilib_sym$(EXEEXT) \
-	examples/C/scaling/hungarian_sym$(EXEEXT) random_test$(EXEEXT) \
-	examples/Fortran/random$(EXEEXT) examples/C/random$(EXEEXT) \
-	random_matrix_test$(EXEEXT) \
+	examples/C/scaling/equilib_unsym$(EXEEXT) \
+	examples/C/scaling/hungarian_sym$(EXEEXT) \
+	examples/C/scaling/hungarian_unsym$(EXEEXT) \
+	random_test$(EXEEXT) examples/Fortran/random$(EXEEXT) \
+	examples/C/random$(EXEEXT) random_matrix_test$(EXEEXT) \
 	examples/Fortran/random_matrix$(EXEEXT) \
 	examples/C/random_matrix$(EXEEXT) $(am__EXEEXT_1)
 TESTS = scaling_test$(EXEEXT) random_test$(EXEEXT) \
@@ -265,12 +268,28 @@ examples_C_scaling_auction_sym_LDADD = $(LDADD)
 examples_C_scaling_auction_sym_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1)
+am_examples_C_scaling_auction_unsym_OBJECTS =  \
+	examples/C/scaling/auction_unsym.$(OBJEXT)
+examples_C_scaling_auction_unsym_OBJECTS =  \
+	$(am_examples_C_scaling_auction_unsym_OBJECTS)
+examples_C_scaling_auction_unsym_LDADD = $(LDADD)
+examples_C_scaling_auction_unsym_DEPENDENCIES = $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 am_examples_C_scaling_equilib_sym_OBJECTS =  \
 	examples/C/scaling/equilib_sym.$(OBJEXT)
 examples_C_scaling_equilib_sym_OBJECTS =  \
 	$(am_examples_C_scaling_equilib_sym_OBJECTS)
 examples_C_scaling_equilib_sym_LDADD = $(LDADD)
 examples_C_scaling_equilib_sym_DEPENDENCIES = $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
+am_examples_C_scaling_equilib_unsym_OBJECTS =  \
+	examples/C/scaling/equilib_unsym.$(OBJEXT)
+examples_C_scaling_equilib_unsym_OBJECTS =  \
+	$(am_examples_C_scaling_equilib_unsym_OBJECTS)
+examples_C_scaling_equilib_unsym_LDADD = $(LDADD)
+examples_C_scaling_equilib_unsym_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1)
 am_examples_C_scaling_hungarian_sym_OBJECTS =  \
@@ -281,6 +300,14 @@ examples_C_scaling_hungarian_sym_LDADD = $(LDADD)
 examples_C_scaling_hungarian_sym_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1)
+am_examples_C_scaling_hungarian_unsym_OBJECTS =  \
+	examples/C/scaling/hungarian_unsym.$(OBJEXT)
+examples_C_scaling_hungarian_unsym_OBJECTS =  \
+	$(am_examples_C_scaling_hungarian_unsym_OBJECTS)
+examples_C_scaling_hungarian_unsym_LDADD = $(LDADD)
+examples_C_scaling_hungarian_unsym_DEPENDENCIES =  \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am__examples_C_ssids_SOURCES_DIST = examples/C/ssids.c
 @HAVE_NVCC_TRUE@am_examples_C_ssids_OBJECTS =  \
 @HAVE_NVCC_TRUE@	examples/C/ssids.$(OBJEXT)
@@ -429,8 +456,11 @@ am__v_FCLD_1 =
 SOURCES = $(libspral_a_SOURCES) $(examples_C_random_SOURCES) \
 	$(examples_C_random_matrix_SOURCES) \
 	$(examples_C_scaling_auction_sym_SOURCES) \
+	$(examples_C_scaling_auction_unsym_SOURCES) \
 	$(examples_C_scaling_equilib_sym_SOURCES) \
+	$(examples_C_scaling_equilib_unsym_SOURCES) \
 	$(examples_C_scaling_hungarian_sym_SOURCES) \
+	$(examples_C_scaling_hungarian_unsym_SOURCES) \
 	$(examples_C_ssids_SOURCES) $(examples_Fortran_random_SOURCES) \
 	$(examples_Fortran_random_matrix_SOURCES) \
 	$(examples_Fortran_scaling_auction_sym_SOURCES) \
@@ -447,8 +477,11 @@ DIST_SOURCES = $(am__libspral_a_SOURCES_DIST) \
 	$(examples_C_random_SOURCES) \
 	$(examples_C_random_matrix_SOURCES) \
 	$(examples_C_scaling_auction_sym_SOURCES) \
+	$(examples_C_scaling_auction_unsym_SOURCES) \
 	$(examples_C_scaling_equilib_sym_SOURCES) \
+	$(examples_C_scaling_equilib_unsym_SOURCES) \
 	$(examples_C_scaling_hungarian_sym_SOURCES) \
+	$(examples_C_scaling_hungarian_unsym_SOURCES) \
 	$(am__examples_C_ssids_SOURCES_DIST) \
 	$(examples_Fortran_random_SOURCES) \
 	$(examples_Fortran_random_matrix_SOURCES) \
@@ -850,9 +883,6 @@ libspral_a_SOURCES = src/core_analyse.f90 $(am__append_1) \
 	interfaces/C/random.f90 src/random_matrix.f90 \
 	interfaces/C/random_matrix.f90 $(am__append_3)
 EXTRA_DIST = src/metis4_wrapper.f90 src/metis5_wrapper.f90
-#examples/C/scaling/auction_unsym \
-#examples/C/scaling/equilib_sym \
-#examples/C/scaling/hungarian_unsym
 scaling_test_SOURCES = tests/scaling.f90
 examples_Fortran_scaling_auction_sym_SOURCES = examples/Fortran/scaling/auction_sym.f90
 examples_Fortran_scaling_auction_unsym_SOURCES = examples/Fortran/scaling/auction_unsym.f90
@@ -861,10 +891,11 @@ examples_Fortran_scaling_equilib_unsym_SOURCES = examples/Fortran/scaling/equili
 examples_Fortran_scaling_hungarian_sym_SOURCES = examples/Fortran/scaling/hungarian_sym.f90
 examples_Fortran_scaling_hungarian_unsym_SOURCES = examples/Fortran/scaling/hungarian_unsym.f90
 examples_C_scaling_auction_sym_SOURCES = examples/C/scaling/auction_sym.c
-#examples_C_scaling_auction_unsym_SOURCES = examples/C/scaling/auction_unsym.c
+examples_C_scaling_auction_unsym_SOURCES = examples/C/scaling/auction_unsym.c
 examples_C_scaling_equilib_sym_SOURCES = examples/C/scaling/equilib_sym.c
-#examples_C_scaling_equilib_unsym_SOURCES = examples/C/scaling/equilib_unsym.c
+examples_C_scaling_equilib_unsym_SOURCES = examples/C/scaling/equilib_unsym.c
 examples_C_scaling_hungarian_sym_SOURCES = examples/C/scaling/hungarian_sym.c
+examples_C_scaling_hungarian_unsym_SOURCES = examples/C/scaling/hungarian_unsym.c
 random_test_SOURCES = tests/random.f90
 examples_Fortran_random_SOURCES = examples/Fortran/random.f90
 examples_C_random_SOURCES = examples/C/random.c
@@ -1123,6 +1154,13 @@ examples/C/scaling/auction_sym.$(OBJEXT):  \
 examples/C/scaling/auction_sym$(EXEEXT): $(examples_C_scaling_auction_sym_OBJECTS) $(examples_C_scaling_auction_sym_DEPENDENCIES) $(EXTRA_examples_C_scaling_auction_sym_DEPENDENCIES) examples/C/scaling/$(am__dirstamp)
 	@rm -f examples/C/scaling/auction_sym$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(examples_C_scaling_auction_sym_OBJECTS) $(examples_C_scaling_auction_sym_LDADD) $(LIBS)
+examples/C/scaling/auction_unsym.$(OBJEXT):  \
+	examples/C/scaling/$(am__dirstamp) \
+	examples/C/scaling/$(DEPDIR)/$(am__dirstamp)
+
+examples/C/scaling/auction_unsym$(EXEEXT): $(examples_C_scaling_auction_unsym_OBJECTS) $(examples_C_scaling_auction_unsym_DEPENDENCIES) $(EXTRA_examples_C_scaling_auction_unsym_DEPENDENCIES) examples/C/scaling/$(am__dirstamp)
+	@rm -f examples/C/scaling/auction_unsym$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(examples_C_scaling_auction_unsym_OBJECTS) $(examples_C_scaling_auction_unsym_LDADD) $(LIBS)
 examples/C/scaling/equilib_sym.$(OBJEXT):  \
 	examples/C/scaling/$(am__dirstamp) \
 	examples/C/scaling/$(DEPDIR)/$(am__dirstamp)
@@ -1130,6 +1168,13 @@ examples/C/scaling/equilib_sym.$(OBJEXT):  \
 examples/C/scaling/equilib_sym$(EXEEXT): $(examples_C_scaling_equilib_sym_OBJECTS) $(examples_C_scaling_equilib_sym_DEPENDENCIES) $(EXTRA_examples_C_scaling_equilib_sym_DEPENDENCIES) examples/C/scaling/$(am__dirstamp)
 	@rm -f examples/C/scaling/equilib_sym$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(examples_C_scaling_equilib_sym_OBJECTS) $(examples_C_scaling_equilib_sym_LDADD) $(LIBS)
+examples/C/scaling/equilib_unsym.$(OBJEXT):  \
+	examples/C/scaling/$(am__dirstamp) \
+	examples/C/scaling/$(DEPDIR)/$(am__dirstamp)
+
+examples/C/scaling/equilib_unsym$(EXEEXT): $(examples_C_scaling_equilib_unsym_OBJECTS) $(examples_C_scaling_equilib_unsym_DEPENDENCIES) $(EXTRA_examples_C_scaling_equilib_unsym_DEPENDENCIES) examples/C/scaling/$(am__dirstamp)
+	@rm -f examples/C/scaling/equilib_unsym$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(examples_C_scaling_equilib_unsym_OBJECTS) $(examples_C_scaling_equilib_unsym_LDADD) $(LIBS)
 examples/C/scaling/hungarian_sym.$(OBJEXT):  \
 	examples/C/scaling/$(am__dirstamp) \
 	examples/C/scaling/$(DEPDIR)/$(am__dirstamp)
@@ -1137,6 +1182,13 @@ examples/C/scaling/hungarian_sym.$(OBJEXT):  \
 examples/C/scaling/hungarian_sym$(EXEEXT): $(examples_C_scaling_hungarian_sym_OBJECTS) $(examples_C_scaling_hungarian_sym_DEPENDENCIES) $(EXTRA_examples_C_scaling_hungarian_sym_DEPENDENCIES) examples/C/scaling/$(am__dirstamp)
 	@rm -f examples/C/scaling/hungarian_sym$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(examples_C_scaling_hungarian_sym_OBJECTS) $(examples_C_scaling_hungarian_sym_LDADD) $(LIBS)
+examples/C/scaling/hungarian_unsym.$(OBJEXT):  \
+	examples/C/scaling/$(am__dirstamp) \
+	examples/C/scaling/$(DEPDIR)/$(am__dirstamp)
+
+examples/C/scaling/hungarian_unsym$(EXEEXT): $(examples_C_scaling_hungarian_unsym_OBJECTS) $(examples_C_scaling_hungarian_unsym_DEPENDENCIES) $(EXTRA_examples_C_scaling_hungarian_unsym_DEPENDENCIES) examples/C/scaling/$(am__dirstamp)
+	@rm -f examples/C/scaling/hungarian_unsym$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(examples_C_scaling_hungarian_unsym_OBJECTS) $(examples_C_scaling_hungarian_unsym_LDADD) $(LIBS)
 examples/C/ssids.$(OBJEXT): examples/C/$(am__dirstamp) \
 	examples/C/$(DEPDIR)/$(am__dirstamp)
 
@@ -1279,8 +1331,11 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/$(DEPDIR)/random_matrix.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/$(DEPDIR)/ssids.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/scaling/$(DEPDIR)/auction_sym.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@examples/C/scaling/$(DEPDIR)/auction_unsym.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/scaling/$(DEPDIR)/equilib_sym.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@examples/C/scaling/$(DEPDIR)/equilib_unsym.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/scaling/$(DEPDIR)/hungarian_sym.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@examples/C/scaling/$(DEPDIR)/hungarian_unsym.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
@@ -1890,7 +1945,6 @@ uninstall-am: uninstall-binPROGRAMS uninstall-includeHEADERS \
 
 .cu.o:
 	$(NVCC) $(NVCCFLAGS) $(AM_NVCC_FLAGS) -dc -o $@ $<
-#examples_C_scaling_hungarian_unsym_SOURCES = examples/C/scaling/hungarian_unsym.c
 tests/scaling.$(OBJEXT): libspral.a
 examples/Fortran/scaling/auction_sym.$(OBJEXT): libspral.a
 examples/Fortran/scaling/auction_unsym.$(OBJEXT): libspral.a

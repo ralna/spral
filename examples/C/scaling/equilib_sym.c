@@ -41,7 +41,7 @@ void main(void) {
    /* Calculate scaled matrix and print it */
    for(int i=0; i<n; i++) {
       for(int j=ptr[i]; j<ptr[i+1]; j++)
-         val[j] = scaling[i] * val[j] * scaling[row[j]];
+         val[j] = scaling[row[j]] * val[j] * scaling[i];
    }
    printf("Scaled matrix:\n");
    spral_print_matrix(-1, SPRAL_MATRIX_REAL_SYM_INDEF, n, n, ptr, row, val, 0);
