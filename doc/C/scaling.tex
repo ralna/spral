@@ -11,8 +11,8 @@
    $$
    has specific numerical properties.
 
-   Given a \textbf{unsymmetric} matrix $A$, it finds diagonal matrices $D_r$
-   and $D_c$ such that the scaled matrix
+   Given an \textbf{unsymmetric} or \textbf{rectangular} matrix $A$, it finds
+   diagonal matrices $D_r$ and $D_c$ such that the scaled matrix
    $$
       \hat{A} = D_r A D_c
    $$
@@ -23,9 +23,9 @@
       \item[Matching-based] algorithms scale $A$ such that the maximum
          (absolute) value in each row and column of $\hat{A}$ is exactly 1.0,
          where the entries of maximum value form a maximum cardinality matching.
-         The \textbf{Hungarian algorithm} delivers an optimal answer slowly,
+         The \textbf{Hungarian algorithm} delivers an optimal matching slowly,
          whereas the \textbf{auction algorithm} delivers an approximate
-         answer quickly.
+         matching quickly.
       \item[Norm-equilibration] algorithms scale $A$ such that the infinity
          norm of each row and column of $\hat{A}$ is $1.0\pm \tau$ (for some
          user specified tolerance $\tau$).
@@ -72,7 +72,7 @@ The following functions are available to the user:
 \item {\tt spral\_scaling\_default\_hungarian\_options()} initializes the options structure for the Hungarian algorithm.
 \item {\tt spral\_scaling\_auction\_sym()} and \texttt{spral\_scaling\_auction\_unsym()} generate approximate matching-based scalings for symmetric and unsymmetric/rectangular matrices respectively using an auction algorithm.
 \item {\tt spral\_scaling\_equilib\_sym()} and \texttt{spral\_scaling\_equilib\_unsym()} generate norm-equilibration scalings for symmetric and unsymmetric/rectangular matrices respectively.
-\item {\tt spral\_scaling\_hungarian\_sym()} and \texttt{spral\_scaling\_hungarian\_unsym()} generate matching-based scalings for a symmetric and unsymmetric matrices respectively using the Hungarian algorithm.
+\item {\tt spral\_scaling\_hungarian\_sym()} and \texttt{spral\_scaling\_hungarian\_unsym()} generate matching-based scalings for a symmetric and unsymmetric/rectangular matrices respectively using the Hungarian algorithm.
 \end{itemize}
 
 \subsection{Data formats} \label{dataformats}
@@ -112,7 +112,7 @@ than the total number of entries. There must be no duplicate or out of range
 entries.
 Entries that are zero, including those on the diagonal, need not be specified.
 
-For \textbf{symmetric matrices}, only the lower triangular entries of $A$,
+For \textbf{symmetric matrices}, only the lower triangular entries of $A$
 should be supplied. For \textbf{unsymmetric matrices}, all entries in the matrix
 should be supplied.
 
@@ -169,13 +169,13 @@ matrix shown in Figure~\ref{format eg}.
 \item[\texttt{n}, \texttt{ptr[n+1]}, \texttt{row[ptr[n]]}, \texttt{val[ptr[n]]}] must hold the lower triangular part of $A$ in compressed sparse column format as described in Section~\ref{dataformats}.
 
 \item[\texttt{scaling[n]}] holds, on exit, the diagonal of $D$.
-\texttt{scaling[i]} will hold $D_{ii}$, the scaling corresponding to the
+\texttt{scaling[i]} holds $d_i$, the scaling corresponding to the
 \texttt{i}-th row and column.
 
 \item[\texttt{match[m]}] may be \texttt{NULL}. If it is non-\texttt{NULL},
 then on exit it specifies the matching of rows to columns.
 Row \texttt{i} is matched to column \texttt{match[i]}, or is unmatched
-if \texttt{match(i)}$=$\texttt{-1}.
+if \texttt{match[i]}$=$\texttt{-1}.
 
 \item[\texttt{*options}] specifies the algorithmic options used by the subroutine, as explained in Section~\ref{type:auction_options}.
 
@@ -212,7 +212,7 @@ the \texttt{j}-th column.
 \item[\texttt{match[m]}] may be \texttt{NULL}. If it is non-\texttt{NULL},
 then on exit it specifies the matching of rows to columns.
 Row \texttt{i} is matched to column \texttt{match[i]}, or is unmatched
-if \texttt{match(i)}$=$\texttt{-1}.
+if \texttt{match[i]}$=$\texttt{-1}.
 
 \item[\texttt{*options}] specifies the algorithmic options used by the subroutine, as explained in Section~\ref{type:auction_options}.
 
@@ -263,7 +263,7 @@ give information about the progress of the routines
 
 \item[\texttt{int stat}] holds, in the event of an allocation error, the Fortran \texttt{stat} parameter if it is available (and is set to \texttt{0} otherwise).
 
-\item[\texttt{int unmatchable}] holds the number of columns designated as unmatchable. A column is designated as unmatchable if there is no way to match it that improves the quality of the matching. It hence gives an approximate lower bound to any structural rank deficiency.
+\item[\texttt{int unmatchable}] holds the number of columns designated as unmatchable. A column is designated as unmatchable if there is no way to match it that improves the quality of the matching. It provides an approximate lower bound on the structural rank deficiency.
 
 \end{description}
 
@@ -278,7 +278,7 @@ Possible negative (error) values are:
 \subsection{Algorithm description} \label{method:auction}
 
 This algorithm finds a fast approximation to the matching and scaling produced
-by the HSL package \texttt{MC64}. If an exact solution is required, use the
+by the HSL package \texttt{MC64}. If an optimal matching is required, use the
 Hungarian algorithm instead. The algorithm works by solving the following
 maximum product optimization problem using an auction algorithm. The scaling
 is derived from the dual variables associated with the solution.
@@ -335,7 +335,7 @@ adding a new column is at least a threshold value $\epsilon$ above zero, where
 $\epsilon$ is based on the last iteration in which row $i$ changed its match.
 This is done by adding $\epsilon$ to the price $u_i$, where $\epsilon = \texttt{options.eps\_initial} + \texttt{itr} / (n+1)$, where \texttt{itr} is the current iteration number.
 
-The algorithm terminates if:
+The algorithm terminates if any of the following are satisfied:
 \begin{itemize}
    \item All entries are matched.
    \item The number of major iterations exceeds \texttt{options.max\_iterations}.
@@ -362,6 +362,7 @@ Further details are given in the following paper:
 \subsection{Example of spral\_scaling\_auction\_sym()}
 The following code shows an example usage of \texttt{spral\_scaling\_auction\_sym()}.
 \verbatiminput{examples/C/scaling/auction_sym.c}
+\newpage
 The above code produces the following output.
 \begin{verbatim}
 Initial matrix:
@@ -420,7 +421,7 @@ Real symmetric indefinite matrix, dimension 5x5 with 8 entries.
 \item[\texttt{n}, \texttt{ptr[n+1]}, \texttt{row[ptr[n]]}, \texttt{val[ptr[n]]}] must hold the lower triangular part of $A$ in compressed sparse column format as described in Section~\ref{dataformats}.
 
 \item[\texttt{scaling[n]}] holds, on exit, the diagonal of $D$.
-\texttt{scaling[i]} will hold $d_i$, the scaling corresponding to the
+\texttt{scaling[i]} holds $d_i$, the scaling corresponding to the
 \texttt{i}-th row and column.
 
 \item[\texttt{*options}] specifies the algorithmic options used by the subroutine, as explained in Section~\ref{type:equilib_options}.
@@ -449,11 +450,11 @@ Real symmetric indefinite matrix, dimension 5x5 with 8 entries.
 \item[\texttt{m}, \texttt{n}, \texttt{ptr[n+1]}, \texttt{row[ptr[n]]}, \texttt{val[ptr[n]]}] must hold the lower triangular part of $A$ in compressed sparse column format as described in Section~\ref{dataformats}.
 
 \item[\texttt{rscaling[m]}] holds, on exit, the diagonal of $D_r$.
-\texttt{scaling[i]} will hold $d_i^r$, the scaling corresponding to the
+\texttt{scaling[i]} holds $d_i^r$, the scaling corresponding to the
 \texttt{i}-th row.
 
 \item[\texttt{cscaling[n]}] holds, on exit, the diagonal of $D_c$.
-\texttt{scaling[j]} will hold $d_j^c$, the scaling corresponding to the
+\texttt{scaling[j]} holds $d_j^c$, the scaling corresponding to the
 \texttt{j}-th column.
 
 \item[\texttt{*options}] specifies the algorithmic options used by the subroutine, as explained in Section~\ref{type:equilib_options}.
@@ -598,13 +599,13 @@ Real symmetric indefinite matrix, dimension 5x5 with 8 entries.
 \item[\texttt{n}, \texttt{ptr[n+1]}, \texttt{row[ptr[n]]}, \texttt{val[ptr[n]]}] must hold the lower triangular part of $A$ in compressed sparse column format as described in Section~\ref{dataformats}.
 
 \item[\texttt{scaling[n]}] holds, on exit, the diagonal of $D$.
-\texttt{scaling[i]} will hold $D_{ii}$, the scaling corresponding to the
+\texttt{scaling[i]} holds $D_{ii}$, the scaling corresponding to the
 \texttt{i}-th row and column.
 
 \item[\texttt{match[m]}] may be \texttt{NULL}. If it is non-\texttt{NULL},
 then on exit it specifies the matching of rows to columns.
 Row \texttt{i} is matched to column \texttt{match[i]}, or is unmatched
-if \texttt{match(i)}$=$\texttt{-1}.
+if \texttt{match[i]}$=$\texttt{-1}.
 
 \item[\texttt{*options}] specifies the algorithmic options used by the subroutine, as explained in Section~\ref{type:hungarian_options}.
 
@@ -631,17 +632,17 @@ if \texttt{match(i)}$=$\texttt{-1}.
 \item[\texttt{m}, \texttt{n}, \texttt{ptr[n+1]}, \texttt{row[ptr[n]]}, \texttt{val[ptr[n]]}] must hold the lower triangular part of $A$ in compressed sparse column format as described in Section~\ref{dataformats}.
 
 \item[\texttt{rscaling[m]}] holds, on exit, the diagonal of $D_r$.
-\texttt{rscaling[i]} will hold $d^r_i$, the scaling corresponding to the
+\texttt{rscaling[i]} holds $d^r_i$, the scaling corresponding to the
 \texttt{i}-th row.
 
 \item[\texttt{cscaling[n]}] holds, on exit, the diagonal of $D_c$.
-\texttt{cscaling[j]} will hold $d^c_j$, the scaling corresponding to the
+\texttt{cscaling[j]} holds $d^c_j$, the scaling corresponding to the
 \texttt{j}-th column.
 
 \item[\texttt{match[m]}] may be \texttt{NULL}. If it is non-\texttt{NULL},
 then on exit it specifies the matching of rows to columns.
 Row \texttt{i} is matched to column \texttt{match[i]}, or is unmatched
-if \texttt{match(i)}$=$\texttt{-1}.
+if \texttt{match[i]}$=$\texttt{-1}.
 
 \item[\texttt{*options}] specifies the algorithmic options used by the subroutine, as explained in Section~\ref{type:hungarian_options}.
 
@@ -701,7 +702,7 @@ Possible negative (error) values are:
 \item[\texttt{-2}] Matrix $A$ is structurally rank-deficient. This error is
    returned only if
    \texttt{options.scale\_if\_singular}$=$\texttt{false}. The scaling vector
-   will be set to \texttt{1.0} and a matching of maximum cardinality returned
+   is set to \texttt{1.0} and a matching of maximum cardinality returned
    in the optional argument \texttt{match[]}, if present.
 \end{description}
 
