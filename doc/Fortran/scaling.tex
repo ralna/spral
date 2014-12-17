@@ -142,9 +142,9 @@ matrix shown in Figure~\ref{format eg}.
 
 %%%%%%%%%%%%%%%%%%%%%% argument lists %%%%%%%%%%%%%%%%%%%%%%%%
 
-\section{Auction Algorithm}
-
 %%%%%%%%% Auction %%%%%%
+
+\section{Auction Algorithm}
 
 \subsection{\texttt{auction\_scale\_sym()}}
 
@@ -159,7 +159,7 @@ matrix shown in Figure~\ref{format eg}.
 
 \begin{description}
 
-\item[\texttt{n}, \texttt{ptr(:)}, \texttt{row(:)}, \texttt{val(:)}] are \intentin\ variables that must hold the lower triangular part of $A$ in compressed sparse column format as described in Section~\ref{cscformat}.
+\item[\texttt{n}, \texttt{ptr(:)}, \texttt{row(:)}, \texttt{val(:)}] are \intentin\ variables that must hold the lower triangular part of $A$ in compressed sparse column format as described in Section~\ref{dataformats}.
 
 \item[\texttt{scaling(n)}] is an \intentout\ array of package type. On exit,
 \texttt{scaling(i)} holds $d_i$, the scaling corresponding to the
@@ -178,7 +178,7 @@ if \texttt{match(i)}$=$\texttt{0}.
 \subsection{\texttt{auction\_scale\_unsym()}}
 
 \textbf{\noindent
-   To generate a scaling for a unsymmetric or rectangular matrix using an auction algorithm such that the entry of maximum absolute value in each row and column is approximately 1.0,
+   To generate a scaling for an unsymmetric or rectangular matrix using an auction algorithm such that the entry of maximum absolute value in each row and column is approximately 1.0,
    \vspace*{0.3cm} \\
    \texttt{ \hspace*{0.2cm}
       call auction\_scale\_unsym(m, n, ptr, row, val, rscaling, cscaling, options, inform[, match])
@@ -188,7 +188,7 @@ if \texttt{match(i)}$=$\texttt{0}.
 
 \begin{description}
 
-\item[\texttt{m}, \texttt{n}, \texttt{ptr(:)}, \texttt{row(:)}, \texttt{val(:)}] are \intentin\ variables that must hold $A$ in compressed sparse column format as described in Section~\ref{cscformat}.
+\item[\texttt{m}, \texttt{n}, \texttt{ptr(:)}, \texttt{row(:)}, \texttt{val(:)}] are \intentin\ variables that must hold $A$ in compressed sparse column format as described in Section~\ref{dataformats}.
 
 \item[\texttt{rscaling(m)}] is an \intentout\ array of package type. On exit,
 \texttt{rscaling(i)} holds $d^r_i$, the scaling corresponding to
@@ -209,10 +209,10 @@ if \texttt{match(i)}$=$\texttt{0}.
 
 \end{description}
 
-\subsection{\texttt{auction\_options}} \label{type:auction_options}
+\subsection{\texttt{type(auction\_options)}} \label{type:auction_options}
 
 The derived data type \texttt{auction\_options} is used to specify the options
-used by the routine \texttt{auction\_scale\_sym()}. The components, that
+used by the routines \texttt{auction\_scale\_sym()} and \texttt{auction\_scale\_unsym()}. The components, that
 are automatically given default values in the definition of the type, are:
 
 \begin{description}
@@ -227,14 +227,15 @@ are automatically given default values in the definition of the type, are:
 
 \end{description}
 
-\subsection{\texttt{auction\_inform}} \label{type:auction_inform}
+\subsection{\texttt{type(auction\_inform)}} \label{type:auction_inform}
 
 The derived data type \texttt{auction\_inform} is used to hold parameters that
-give information about the progress of the routines \texttt{auction\_scale\_sym()} and \texttt{auction\_scale\_unsym()}. The components are:
+give information about the progress of the routines
+\texttt{auction\_scale\_sym()} and \texttt{auction\_scale\_unsym()}. The components are:
 
 \begin{description}
 
-\item[\texttt{flag}] gives the exit status of the algorithm (details in Section~\ref{return:auction}).
+\item[\texttt{flag}] gives the exit status of the algorithm (details in Section~\ref{returns:auction}).
 
 \item[\texttt{iterations}] is a scalar of type \texttt{INTEGER} that holds the number of iterations performed.
 
@@ -254,7 +255,7 @@ Possible negative (error) values are:
 \item[\texttt{-1}] Allocation error. If available, the Fortran \texttt{stat} parameter is returned in \texttt{inform\%stat}.
 \end{description}
 
-\subsection{Algorithm description}
+\subsection{Algorithm description} \label{method:auction}
 
 This algorithm finds a fast approximation to the matching and scaling produced
 by the HSL package \texttt{MC64}. If an exact solution is required, use the
@@ -361,7 +362,7 @@ Real symmetric indefinite matrix, dimension 5x5 with 8 entries.
 5:                1.0000E+00                             1.1932E+00
 \end{verbatim}
 
-%%%%%%%%% Equlibriation %%%%%%
+%%%%%%%%% Equilibration %%%%%%
 
 \section{Norm-equilibration algorithm}
 
@@ -378,7 +379,7 @@ Real symmetric indefinite matrix, dimension 5x5 with 8 entries.
 
 \begin{description}
 
-\item[\texttt{n}, \texttt{ptr(:)}, \texttt{row(:)}, \texttt{val(:)}] are \intentin\ variables that must hold the lower triangular part of $A$ in compressed sparse column format as described in Section~\ref{cscformat}.
+\item[\texttt{n}, \texttt{ptr(:)}, \texttt{row(:)}, \texttt{val(:)}] are \intentin\ variables that must hold the lower triangular part of $A$ in compressed sparse column format as described in Section~\ref{dataformats}.
 
 \item[\texttt{scaling(n)}] is an \intentout\ array of package type. On exit,
 \texttt{scaling(i)} will hold $d_i$, the scaling corresponding to the
@@ -403,7 +404,7 @@ Real symmetric indefinite matrix, dimension 5x5 with 8 entries.
 
 \begin{description}
 
-\item[\texttt{m}, \texttt{n}, \texttt{ptr(:)}, \texttt{row(:)}, \texttt{val(:)}] are \intentin\ variables that must hold $A$ in compressed sparse column format as described in Section~\ref{cscformat}.
+\item[\texttt{m}, \texttt{n}, \texttt{ptr(:)}, \texttt{row(:)}, \texttt{val(:)}] are \intentin\ variables that must hold $A$ in compressed sparse column format as described in Section~\ref{dataformats}.
 
 \item[\texttt{rscaling(m)}] is an \intentout\ array of package type. On exit,
 \texttt{rscaling(i)} will hold $d^r_i$, the scaling corresponding to the
@@ -419,7 +420,7 @@ Real symmetric indefinite matrix, dimension 5x5 with 8 entries.
 
 \end{description}
 
-\subsection{\texttt{equilib\_options}} \label{type:equilib_options}
+\subsection{\texttt{type(equilib\_options)}} \label{type:equilib_options}
 
 The derived data type \texttt{equilib\_options} is used to specify the options
 used by the routine \texttt{equilib\_scale\_sym()}. The components, that are
@@ -433,11 +434,11 @@ automatically given default values in the definition of the type, are:
 
 \end{description}
 
-\subsection{\texttt{equilib\_inform}} \label{type:equilib_inform}
+\subsection{\texttt{type(equilib\_inform)}} \label{type:equilib_inform}
 
 The derived data type \texttt{equilib\_inform} is used to hold parameters that
-give information about the progress of the routine
-\texttt{equilib\_scale\_sym()}. The components are:
+give information about the progress of the routines
+\texttt{equilib\_scale\_sym()} and \texttt{equilib\_scale\_unsym()}. The components are:
 
 \begin{description}
 
@@ -527,7 +528,7 @@ Real symmetric indefinite matrix, dimension 5x5 with 8 entries.
 
 \begin{description}
 
-\item[\texttt{n}, \texttt{ptr(:)}, \texttt{row(:)}, \texttt{val(:)}] are \intentin\ variables that must hold the lower triangular part of $A$ in compressed sparse column format as described in Section~\ref{cscformat}.
+\item[\texttt{n}, \texttt{ptr(:)}, \texttt{row(:)}, \texttt{val(:)}] are \intentin\ variables that must hold the lower triangular part of $A$ in compressed sparse column format as described in Section~\ref{dataformats}.
 
 \item[\texttt{scaling(n)}] is an \intentout\ array of package type. On exit,
 \texttt{scaling(i)} will hold $d_i$, the scaling corresponding to the
@@ -557,7 +558,7 @@ if \texttt{match(i)}$=$\texttt{0}.
 
 \begin{description}
 
-\item[\texttt{m}, \texttt{n}, \texttt{ptr(:)}, \texttt{row(:)}, \texttt{val(:)}] are \intentin\ variables that must hold the lower triangular part of $A$ in compressed sparse column format as described in Section~\ref{cscformat}.
+\item[\texttt{m}, \texttt{n}, \texttt{ptr(:)}, \texttt{row(:)}, \texttt{val(:)}] are \intentin\ variables that must hold the lower triangular part of $A$ in compressed sparse column format as described in Section~\ref{dataformats}.
 
 \item[\texttt{rscaling(m)}] is an \intentout\ array of package type. On exit,
 \texttt{rscaling(i)} will hold $d^r_i$, the scaling corresponding to the
@@ -578,10 +579,10 @@ if \texttt{match(i)}$=$\texttt{0}.
 
 \end{description}
 
-\subsection{\texttt{hungarian\_options}} \label{type:hungarian_options}
+\subsection{\texttt{type(hungarian\_options)}} \label{type:hungarian_options}
 
 The derived data type \texttt{hungarian\_options} is used to specify the
-options used by the routine \texttt{hungarian\_scale\_sym()}. The components,
+options used by the routines \\\texttt{hungarian\_scale\_sym()} and \texttt{hungarian\_scale\_unsym()}. The components,
 that are automatically given default values in the definition of the type, are:
 
 \begin{description}
@@ -595,11 +596,11 @@ an identity scaling will be returned and an error issued.
 
 \end{description}
 
-\subsection{\texttt{hungarian\_inform}} \label{type:hungarian_inform}
+\subsection{\texttt{type(hungarian\_inform)}} \label{type:hungarian_inform}
 
 The derived data type \texttt{hungarian\_inform} is used to hold parameters
 that give information about the progress of the routine
-\texttt{hungarian\_scale\_sym()}. The components are:
+\texttt{hungarian\_scale\_sym()} and \texttt{hungarian\_scale\_unsym()}. The components are:
 
 \begin{description}
 
