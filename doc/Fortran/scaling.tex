@@ -686,25 +686,26 @@ Further details are given in the following paper:
    \item[{[3]}] I.S. Duff and J. Koster. (1997). The design and use of algorithms for permuting large entries to the diagonal of sparse matrices. SIAM J. Matrix Anal. Applics. 20(4), pp 889--901.
 \end{itemize}
 
-\subsection{Example usage of hungarian\_scale\_sym()}
-The following code shows an example usage of \texttt{hungarian\_scale\_sym()}.
-\verbatiminput{examples/Fortran/scaling/hungarian_sym.f90}
+\subsection{Example usage of hungarian\_scale\_unsym()}
+The following code shows an example usage of \texttt{hungarian\_scale\_unsym()}.
+\verbatiminput{examples/Fortran/scaling/hungarian_unsym.f90}
 The above code produces the following output.
 \begin{verbatim}
 Initial matrix:
-Real symmetric indefinite matrix, dimension 5x5 with 8 entries.
-1:   2.0000E+00   1.0000E+00                                       
-2:   1.0000E+00   4.0000E+00   1.0000E+00                8.0000E+00
-3:                1.0000E+00   3.0000E+00   2.0000E+00             
-4:                             2.0000E+00                          
+Real unsymmetric matrix, dimension 5x5 with 10 entries.
+1:   2.0000E+00   5.0000E+00                                       
+2:   1.0000E+00   4.0000E+00                             7.0000E+00
+3:                1.0000E+00                2.0000E+00             
+4:                             3.0000E+00                          
 5:                8.0000E+00                             2.0000E+00
 Matching:         1         5         4         3         2
-Scaling:   7.07E-01  3.54E-01  5.77E-01  8.66E-01  3.54E-01
+Row Scaling:   5.22E-01  5.22E-01  5.22E-01  5.22E-01  5.22E-01
+Col Scaling:   9.59E-01  2.40E-01  6.39E-01  9.59E-01  2.74E-01
 Scaled matrix:
-Real symmetric indefinite matrix, dimension 5x5 with 8 entries.
-1:   1.0000E+00   2.5000E-01                                       
-2:   2.5000E-01   5.0000E-01   2.0412E-01                1.0000E+00
-3:                2.0412E-01   1.0000E+00   1.0000E+00             
+Real unsymmetric matrix, dimension 5x5 with 10 entries.
+1:   1.0000E+00   6.2500E-01                                       
+2:   5.0000E-01   5.0000E-01                             1.0000E+00
+3:                1.2500E-01                1.0000E+00             
 4:                             1.0000E+00                          
-5:                1.0000E+00                             2.5000E-01
+5:                1.0000E+00                             2.8571E-01
 \end{verbatim}
