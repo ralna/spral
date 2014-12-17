@@ -7,6 +7,9 @@
 ! order that is suitable for use with a sparse direct solver. 
 ! It optionally computes scaling factors.
 
+! FIXME: At some stage replace call to mo_match() with call to
+! hungarian_scale_sym() from spral_scaling instead
+
 module spral_match_order
    use spral_metis_wrapper, only : metis_order
    use spral_scaling, only : hungarian_match
