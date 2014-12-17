@@ -24,7 +24,7 @@ module spral_scaling
       integer :: max_iterations = 30000
       integer :: max_unchanged(3) = (/ 10,   100, 100 /)
       real :: min_proportion(3) = (/ 0.90, 0.0, 0.0 /)
-      real :: eps = 0.01
+      real :: eps_initial = 0.01
    end type auction_options
 
    type auction_inform
@@ -32,6 +32,7 @@ module spral_scaling
       integer :: stat = 0 ! Fortran stat value on memory allocation failure
       integer :: matched = 0 ! #matched rows/cols
       integer :: iterations = 0 ! #iterations
+      integer :: unmatchable = 0 ! #classified as unmatchable
    end type auction_inform
 
    type equilib_options
@@ -42,6 +43,7 @@ module spral_scaling
    type equilib_inform
       integer :: flag
       integer :: stat
+      integer :: iterations
    end type equilib_inform
 
    type hungarian_options
@@ -51,6 +53,7 @@ module spral_scaling
    type hungarian_inform
       integer :: flag
       integer :: stat
+      integer :: matched
    end type hungarian_inform
 
    integer, parameter :: ERROR_ALLOCATION = -1
@@ -324,6 +327,7 @@ subroutine inf_norm_equilib_sym(n, ptr, row, val, scaling, options, inform)
       ! Test convergence
       if(maxval(abs(1-maxentry(1:n))) .lt. options%tol) exit
    end do
+   inform%iterations = itr-1
 
 end subroutine inf_norm_equilib_sym
 
@@ -382,6 +386,7 @@ subroutine inf_norm_equilib_unsym(m, n, ptr, row, val, rscaling, cscaling, &
       if(maxval(abs(1-rmaxentry(1:m))) .lt. options%tol .and. &
          maxval(abs(1-cmaxentry(1:n))) .lt. options%tol) exit
    end do
+   inform%iterations = itr-1
 
 end subroutine inf_norm_equilib_unsym
 
@@ -417,7 +422,7 @@ subroutine hungarian_wrapper(sym, m, n, ptr, row, val, match, rscaling, &
       old_to_new(:), cperm(:)
    real(wp), allocatable :: val2(:), dualu(:), dualv(:), cmax(:), cscale(:)
    real(wp) :: colmax
-   integer :: i,j,k,ne,num,nn,j1,j2,jj
+   integer :: i,j,k,ne,nn,j1,j2,jj
    real(wp), parameter :: zero = 0.0
 
    inform%flag = 0
@@ -460,13 +465,14 @@ subroutine hungarian_wrapper(sym, m, n, ptr, row, val, match, rscaling, &
       val2(ptr2(i):ptr2(i+1)-1) = colmax - val2(ptr2(i):ptr2(i+1)-1)
    end do
 
-   call hungarian_match(m,n,ptr2,row2,val2,match,num,dualu,dualv,inform%stat)
+   call hungarian_match(m, n, ptr2, row2, val2, match, inform%matched, dualu, &
+      dualv, inform%stat)
    if (inform%stat.ne.0) then
       inform%flag = ERROR_ALLOCATION
       return
    endif
 
-   if(num.ne.min(m,n)) then
+   if(inform%matched.ne.min(m,n)) then
       ! Singular matrix
       if(options%scale_if_singular) then
          ! Just issue warning then continue
@@ -479,12 +485,12 @@ subroutine hungarian_wrapper(sym, m, n, ptr, row, val, match, rscaling, &
       endif
    endif
 
-   if(.not.sym .or. num.eq.n) then ! Unsymmetric or symmetric and full rank
+   if(.not.sym .or. inform%matched.eq.n) then ! Unsymmetric or symmetric and full rank
       ! Note that in this case m=n
       rscaling(1:m) = dualu(1:m)
       cscaling(1:n) = dualv(1:n) - cmax(1:n)
-      call match_postproc(m, n, ptr, row, val, rscaling, cscaling, num, &
-         match, inform%flag, inform%stat)
+      call match_postproc(m, n, ptr, row, val, rscaling, cscaling, &
+         inform%matched, match, inform%flag, inform%stat)
       return
    endif
 
@@ -499,7 +505,7 @@ subroutine hungarian_wrapper(sym, m, n, ptr, row, val, match, rscaling, &
       return
    end if
 
-   j = num + 1
+   j = inform%matched + 1
    k = 0
    do i = 1,m
       if (match(i) < 0) then
@@ -538,8 +544,8 @@ subroutine hungarian_wrapper(sym, m, n, ptr, row, val, match, rscaling, &
    end do
    ! nn is order of non-singular part.
    nn = k
-   call hungarian_match(nn, nn, ptr2, row2, val2, cperm, num, dualu, dualv, &
-      inform%stat)
+   call hungarian_match(nn, nn, ptr2, row2, val2, cperm, inform%matched, &
+      dualu, dualv, inform%stat)
    if (inform%stat.ne.0) then
       inform%flag = ERROR_ALLOCATION
       return
@@ -1179,6 +1185,7 @@ subroutine auction_match_core(m, n, ptr, row, val, match, dualu, dualv, &
       ! constant
 
    inform%flag = 0
+   inform%unmatchable = 0
 
    ! Allocate memory
    allocate(owner(m), next(n), stat=inform%stat)
@@ -1208,7 +1215,7 @@ subroutine auction_match_core(m, n, ptr, row, val, match, dualu, dualv, &
    end do
 
    ! Iterate until we run out of unmatched buyers
-   eps = options%eps
+   eps = options%eps_initial
    do itr = 1, options%max_iterations
       if(unmatched.eq.0) exit ! nothing left to match
       ! Bookkeeping to determine number of iterations with no change
@@ -1271,6 +1278,7 @@ subroutine auction_match_core(m, n, ptr, row, val, match, dualu, dualv, &
             ! No net benefit, mark col as ineligible for future consideration
             match(col) = -1 ! ineligible
             unmatched = unmatched - 1
+            inform%unmatchable = inform%unmatchable + 1
          endif
       end do
       tail = insert
