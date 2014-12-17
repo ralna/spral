@@ -8,7 +8,9 @@
 ! It optionally computes scaling factors.
 
 ! FIXME: At some stage replace call to mo_match() with call to
-! hungarian_scale_sym() from spral_scaling instead
+! a higher level routine from spral_scaling instead (NB: have to cope with
+! fact we are currently expecting a full matrix, even if it means 2x more log
+! operations)
 
 module spral_match_order
    use spral_metis_wrapper, only : metis_order
