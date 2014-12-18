@@ -1,3 +1,11 @@
+! COPYRIGHT (c) 2014 The Science and Technology Facilities Council (STFC)
+! Original date 18 December 2014, Version 1.0.0
+!
+! Written by: Jonathan Hogg
+!
+! Hungarian code derives from HSL MC64 code, but has been substantially
+! altered for readability and to support rectangular matrices.
+! All other code is fresh for SPRAL.
 module spral_scaling
    use spral_matrix_util, only : half_to_full
    implicit none
