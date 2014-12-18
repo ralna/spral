@@ -19,6 +19,7 @@
 \RequirePackage{fancyhdr}
 \RequirePackage[top=2cm,left=2.5cm,right=2.5cm,bottom=2cm,headheight=12pt]{geometry}
 \RequirePackage{verbatim}
+\RequirePackage{algorithmic}
 
 % Metadata commands
 \newcommand{\thepackagename}{}

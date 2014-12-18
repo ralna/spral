@@ -12,7 +12,8 @@ program main
    use spral_metis_wrapper, only : metis_order
    use spral_random
    use spral_random_matrix, only : random_matrix_generate
-   use spral_scaling, only : hungarian_wrapper
+   use spral_scaling, only : hungarian_scale_sym, hungarian_options, &
+      hungarian_inform
    use spral_ssids
    implicit none
 
@@ -2411,9 +2412,12 @@ subroutine test_random_scale
 
    logical :: posdef
    integer :: nza, prblm, i, j, k, n1, nrhs, ne
-   integer, dimension(:), allocatable :: order, perm64
+   integer, dimension(:), allocatable :: order
    logical :: check
    real(wp) :: num_flops
+
+   type(hungarian_options) :: hoptions
+   type(hungarian_inform) :: hinform
 
    integer :: flag, st, cuda_error
 
@@ -2424,7 +2428,7 @@ subroutine test_random_scale
 
    allocate(a%ptr(maxn+1))
    allocate(a%row(2*maxnz), a%val(2*maxnz), a%col(2*maxnz))
-   allocate(order(maxn), perm64(2*maxn))
+   allocate(order(maxn))
    allocate(rhs(maxn,maxnrhs), res(maxn,maxnrhs), x(maxn,maxnrhs))
    allocate(x1(maxn),rhs1d(maxn),scale(2*maxn))
    allocate(bindex(maxn), xindex(maxn), lflag(maxn))
@@ -2560,9 +2564,8 @@ subroutine test_random_scale
       x1(1:a%n) = rhs1d(1:a%n)
 
       if (options%scaling.eq.0) then
-         call hungarian_wrapper(a%n, a%ptr, a%row, a%val, perm64, scale, &
-            flag, st)
-         scale(1:a%n) = exp(scale(1:a%n))
+         call hungarian_scale_sym(a%n, a%ptr, a%row, a%val, scale, &
+            hoptions, hinform)
          call ssids_factor(posdef, a%val, akeep, fkeep, options, info,  &
             ptr=a%ptr, row=a%row, scale=scale)
       else

@@ -315,8 +315,8 @@ subroutine print_matrix_double(lp, lines, matrix_type, m, n, ptr, row, val, cbas
    integer, intent(in) :: m ! number of rows in matrix
    integer, intent(in) :: n ! number of cols in matrix
    integer, dimension(n+1), intent(in) :: ptr ! column pointers
-   integer, dimension(ptr(n+1)-1), intent(in) :: row ! row indices
-   real(wp), dimension(ptr(n+1)-1), optional, intent(in) :: val ! matrix vals
+   integer, dimension(*), intent(in) :: row ! row indices
+   real(wp), dimension(*), optional, intent(in) :: val ! matrix vals
    logical, optional, intent(in) :: cbase ! if true, input uses C indexing
 
    integer :: col, j, k
