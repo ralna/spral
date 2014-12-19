@@ -1,17 +1,29 @@
+! COPYRIGHT (c) 2014 The Science and Technology Facilities Council (STFC)
+! Original date 18 December 2014, Version 1.0.0
+!
+! Written by: Jonathan Hogg
+!
+! Hungarian code derives from HSL MC64 code, but has been substantially
+! altered for readability and to support rectangular matrices.
+! All other code is fresh for SPRAL.
 module spral_scaling
    use spral_matrix_util, only : half_to_full
    implicit none
 
    private
    ! Top level routines
-   public :: hungarian_scale, & ! Scaling using Hungarian algorithm (MC64-like)
-             auction_scale,   & ! Scaling using Auction algorithm
-             equilib_scale      ! Scaling using Equilibriation (MC77-like)
+   public :: auction_scale_sym,   & ! Symmetric scaling by Auction algorithm
+             auction_scale_unsym, & ! Unsymmetric scaling by Auction algorithm
+             equilib_scale_sym,   & ! Sym scaling by Equilibriation (MC77-like)
+             equilib_scale_unsym, & ! Unsym scaling by Equilibriation (MC77-lik)
+             hungarian_scale_sym, & ! Sym scaling by Hungarian alg (MC64-like)
+             hungarian_scale_unsym  ! Unsym scaling by Hungarian alg (MC64-like)
    ! Inner routines that allow calling internals
-   public :: hungarian_wrapper, & ! Find a matching (with pre/post-processing)
-             hungarian_match      ! Find a matching (no pre/post-processing)
+   public :: hungarian_match      ! Find a matching (no pre/post-processing)
    ! Data types
-   public :: auction_options, auction_inform
+   public :: auction_options, auction_inform, &
+             equilib_options, equilib_inform, &
+             hungarian_options, hungarian_inform
 
    integer, parameter :: wp = kind(0d0)
    real(wp), parameter :: rinf = huge(rinf)
@@ -20,15 +32,42 @@ module spral_scaling
       integer :: max_iterations = 30000
       integer :: max_unchanged(3) = (/ 10,   100, 100 /)
       real :: min_proportion(3) = (/ 0.90, 0.0, 0.0 /)
-      real :: eps = 0.01
+      real :: eps_initial = 0.01
    end type auction_options
 
    type auction_inform
+      integer :: flag = 0 ! success or failure
+      integer :: stat = 0 ! Fortran stat value on memory allocation failure
       integer :: matched = 0 ! #matched rows/cols
       integer :: iterations = 0 ! #iterations
+      integer :: unmatchable = 0 ! #classified as unmatchable
    end type auction_inform
 
+   type equilib_options
+      integer :: max_iterations = 10
+      real :: tol = 1e-8
+   end type equilib_options
+
+   type equilib_inform
+      integer :: flag
+      integer :: stat
+      integer :: iterations
+   end type equilib_inform
+
+   type hungarian_options
+      logical :: scale_if_singular = .false.
+   end type hungarian_options
+
+   type hungarian_inform
+      integer :: flag
+      integer :: stat
+      integer :: matched
+   end type hungarian_inform
+
    integer, parameter :: ERROR_ALLOCATION = -1
+   integer, parameter :: ERROR_SINGULAR = -2
+
+   integer, parameter :: WARNING_SINGULAR = 1
 
 contains
 
@@ -38,114 +77,212 @@ contains
 
 !**************************************************************
 !
-! Use matching-based scaling obtained using Hungarian algorithm
+! Use matching-based scaling obtained using Hungarian algorithm (sym)
 !
-subroutine hungarian_scale(n, ptr, row, val, scaling, invp, st, action, sing)
+subroutine hungarian_scale_sym(n, ptr, row, val, scaling, options, inform, &
+      match)
    integer, intent(in) :: n ! order of system
    integer, intent(in) :: ptr(n+1) ! column pointers of A
    integer, intent(in) :: row(*) ! row indices of A (lower triangle)
    real(wp), intent(in) :: val(*) ! entries of A (in same order as in row).
    real(wp), dimension(n), intent(out) :: scaling
-   integer, dimension(n), intent(in) :: invp
-   integer, intent(out) :: st ! stat parameter
-   logical, intent(in) :: action ! controls action if matrix found to be
-      ! singular
-   logical, intent(out) :: sing ! set to true if matrix found to be singular
+   type(hungarian_options), intent(in) :: options
+   type(hungarian_inform), intent(out) :: inform
+   integer, dimension(n), optional, intent(out) :: match
 
-   integer :: flag
-
-   integer :: i
    integer, dimension(:), allocatable :: perm
-   real(wp), dimension(:), allocatable :: cscale
-   
-   allocate(perm(2*n), cscale(n), stat=st)
-   if (st .ne. 0) return
-   sing = .false.
-   call hungarian_wrapper(n,ptr,row,val,perm,cscale,flag,st)
-   select case(flag)
-   case(0)
-      ! success; do nothing
-   case(1)
-      ! structually singular matrix
-      if(.not.action) then
-         ! abort
-         sing = .true.
-         return
-      end if
-   case(ERROR_ALLOCATION)
-      ! allocation error
+   real(wp), dimension(:), allocatable :: rscaling, cscaling
+
+   inform%flag = 0 ! Initialize to success
+
+   allocate(rscaling(n), cscaling(n), stat=inform%stat)
+   if (inform%stat .ne. 0) then
+      inform%flag = ERROR_ALLOCATION
       return
-   end select
+   endif
 
-   do i = 1, n
-      scaling(i) = exp(cscale(invp(i)))
-   end do
+   if(present(match)) then
+      call hungarian_wrapper(.true., n, n, ptr, row, val, match, rscaling, &
+         cscaling, options, inform)
+   else
+      allocate(perm(n), stat=inform%stat)
+      if (inform%stat .ne. 0) then
+         inform%flag = ERROR_ALLOCATION
+         return
+      endif
+      call hungarian_wrapper(.true., n, n, ptr, row, val, perm, rscaling, &
+         cscaling, options, inform)
+   endif
+   scaling(1:n) = exp( (rscaling(1:n) + cscaling(1:n)) / 2 )
 
-end subroutine hungarian_scale
+end subroutine hungarian_scale_sym
+
+!**************************************************************
+!
+! Use matching-based scaling obtained using Hungarian algorithm (unsym)
+!
+subroutine hungarian_scale_unsym(m, n, ptr, row, val, rscaling, cscaling, &
+      options, inform, match)
+   integer, intent(in) :: m ! number of rows
+   integer, intent(in) :: n ! number of cols
+   integer, intent(in) :: ptr(n+1) ! column pointers of A
+   integer, intent(in) :: row(*) ! row indices of A (lower triangle)
+   real(wp), intent(in) :: val(*) ! entries of A (in same order as in row).
+   real(wp), dimension(m), intent(out) :: rscaling
+   real(wp), dimension(n), intent(out) :: cscaling
+   type(hungarian_options), intent(in) :: options
+   type(hungarian_inform), intent(out) :: inform
+   integer, dimension(m), optional, intent(out) :: match
+
+   integer, dimension(:), allocatable :: perm
+
+   inform%flag = 0 ! Initialize to success
+
+   ! Call main routine
+   if(present(match)) then
+      call hungarian_wrapper(.false., m, n, ptr, row, val, match, rscaling, &
+         cscaling, options, inform)
+   else
+      allocate(perm(m), stat=inform%stat)
+      if (inform%stat .ne. 0) then
+         inform%flag = ERROR_ALLOCATION
+         return
+      endif
+      call hungarian_wrapper(.false., m, n, ptr, row, val, perm, rscaling, &
+         cscaling, options, inform)
+   endif
+
+   ! Apply post processing
+   rscaling(1:m) = exp( rscaling(1:m) )
+   cscaling(1:n) = exp( cscaling(1:n) )
+
+end subroutine hungarian_scale_unsym
 
 !**************************************************************
 !
 ! Call auction algorithm to get a scaling, then symmetrize it
 !
-subroutine auction_scale(n, ptr, row, val, invp, scaling, options, inform, &
-      flag, stat)
+subroutine auction_scale_sym(n, ptr, row, val, scaling, options, inform, match)
    integer, intent(in) :: n ! order of system
    integer, intent(in) :: ptr(n+1) ! column pointers of A
    integer, intent(in) :: row(*) ! row indices of A (lower triangle)
    real(wp), intent(in) :: val(*) ! entries of A (in same order as in row).
-   integer, dimension(n), intent(in) :: invp
    real(wp), dimension(n), intent(out) :: scaling
    type(auction_options), intent(in) :: options
-   type(auction_inform), intent(inout) :: inform
-   integer, intent(out) :: flag
-   integer, intent(out) :: stat
+   type(auction_inform), intent(out) :: inform
+   integer, dimension(n), optional, intent(out) :: match
 
-   integer :: i
-   real(wp), dimension(:), allocatable :: cscale
+   integer, dimension(:), allocatable :: perm
+   real(wp), dimension(:), allocatable :: rscaling, cscaling
 
-   flag = 0
+   inform%flag = 0 ! Initialize to sucess
 
-   allocate(cscale(n), stat=stat)
-   if (stat .ne. 0) then
-      flag = ERROR_ALLOCATION
+   ! Allocate memory
+   allocate(rscaling(n), cscaling(n), stat=inform%stat)
+   if(inform%stat.ne.0) then
+      inform%flag = ERROR_ALLOCATION
       return
    endif
 
-   call auction_match(n, ptr, row, val, cscale, options, inform, flag, stat)
+   ! Call unsymmetric implementation with flag to expand half matrix
+   if(present(match)) then
+      call auction_match(.true., n, n, ptr, row, val, match, rscaling, &
+         cscaling, options, inform)
+   else
+      allocate(perm(n), stat=inform%stat)
+      if(inform%stat.ne.0) then
+         inform%flag = ERROR_ALLOCATION
+         return
+      endif
+      call auction_match(.true., n, n, ptr, row, val, perm, rscaling, &
+         cscaling, options, inform)
+   endif
 
-   do i = 1, n
-      scaling(i) = exp(cscale(invp(i)))
-   end do
+   ! Average rscaling and cscaling to get symmetric scaling
+   scaling(1:n) = exp( (rscaling(1:n)+cscaling(1:n))/2 )
 
-end subroutine auction_scale
+end subroutine auction_scale_sym
+
+!**************************************************************
+!
+! Call auction algorithm to get a scaling (unsymmetric version)
+!
+subroutine auction_scale_unsym(m, n, ptr, row, val, rscaling, cscaling, &
+      options, inform, match)
+   integer, intent(in) :: m ! number of rows
+   integer, intent(in) :: n ! number of columns
+   integer, intent(in) :: ptr(n+1) ! column pointers of A
+   integer, intent(in) :: row(*) ! row indices of A (lower triangle)
+   real(wp), intent(in) :: val(*) ! entries of A (in same order as in row).
+   real(wp), dimension(m), intent(out) :: rscaling
+   real(wp), dimension(n), intent(out) :: cscaling
+   type(auction_options), intent(in) :: options
+   type(auction_inform), intent(out) :: inform
+   integer, dimension(m), optional, intent(out) :: match
+
+   integer, dimension(:), allocatable :: perm
+
+   inform%flag = 0 ! Initialize to sucess
+
+   if(present(match)) then
+      call auction_match(.false., m, n, ptr, row, val, match, rscaling, &
+         cscaling, options, inform)
+   else
+      allocate(perm(m), stat=inform%stat)
+      if(inform%stat.ne.0) then
+         inform%flag = ERROR_ALLOCATION
+         return
+      endif
+      call auction_match(.false., m, n, ptr, row, val, perm, rscaling, &
+         cscaling, options, inform)
+   endif
+
+   rscaling(1:m) = exp(rscaling(1:m))
+   cscaling(1:n) = exp(cscaling(1:n))
+
+end subroutine auction_scale_unsym
 
 !*******************************
 !
-! Call the infinity-norm equilibriation algorithm
+! Call the infinity-norm equilibriation algorithm (symmetric version)
 !
-subroutine equilib_scale(n, invp, ptr, row, val, scaling, st)
+subroutine equilib_scale_sym(n, ptr, row, val, scaling, options, inform)
    integer, intent(in) :: n ! order of system
-   integer, dimension(n), intent(in) :: invp
    integer, intent(in) :: ptr(n+1) ! column pointers of A
    integer, intent(in) :: row(*) ! row indices of A (lower triangle)
    real(wp), intent(in) :: val(*) ! entries of A (in same order as in row).
    real(wp), dimension(n), intent(out) :: scaling
-   integer, intent(out) :: st
+   type(equilib_options), intent(in) :: options
+   type(equilib_inform), intent(out) :: inform
 
-   integer :: i
+   inform%flag = 0 ! Initialize to sucess
 
-   real(wp), allocatable, dimension(:) :: scale_orig
-
-   allocate(scale_orig(n), stat=st)
-   if(st.ne.0) return
-
-   call inf_norm_equilib(n, ptr, row, val, scale_orig, st)
-
-   do i = 1, n
-      scaling(i) = scale_orig(invp(i))
-   end do
+   call inf_norm_equilib_sym(n, ptr, row, val, scaling, options, inform)
    
-end subroutine equilib_scale
+end subroutine equilib_scale_sym
+
+!*******************************
+!
+! Call the infinity-norm equilibriation algorithm (unsymmetric version)
+!
+subroutine equilib_scale_unsym(m, n, ptr, row, val, rscaling, cscaling, &
+      options, inform)
+   integer, intent(in) :: m ! number of rows
+   integer, intent(in) :: n ! number of cols
+   integer, intent(in) :: ptr(n+1) ! column pointers of A
+   integer, intent(in) :: row(*) ! row indices of A (lower triangle)
+   real(wp), intent(in) :: val(*) ! entries of A (in same order as in row).
+   real(wp), dimension(m), intent(out) :: rscaling
+   real(wp), dimension(n), intent(out) :: cscaling
+   type(equilib_options), intent(in) :: options
+   type(equilib_inform), intent(out) :: inform
+
+   inform%flag = 0 ! Initialize to sucess
+
+   call inf_norm_equilib_unsym(m, n, ptr, row, val, rscaling, cscaling, &
+      options, inform)
+
+end subroutine equilib_scale_unsym
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Inf-norm Equilibriation Algorithm Implementation
@@ -160,26 +297,27 @@ end subroutine equilib_scale
 !  reimplementation from the above paper to ensure it is 100% STFC
 !  copyright and can be released as open source)
 !
-subroutine inf_norm_equilib(n, ptr, row, val, scaling, st)
+subroutine inf_norm_equilib_sym(n, ptr, row, val, scaling, options, inform)
    integer, intent(in) :: n
    integer, dimension(n+1), intent(in) :: ptr
    integer, dimension(ptr(n+1)-1), intent(in) :: row
    real(wp), dimension(ptr(n+1)-1), intent(in) :: val
    real(wp), dimension(n), intent(out) :: scaling
-   integer, intent(out) :: st
-
-   integer, parameter :: maxitr = 10
-   real(wp), parameter :: tol = 1e-8
+   type(equilib_options), intent(in) :: options
+   type(equilib_inform), intent(inout) :: inform
 
    integer :: itr, r, c, j
    real(wp) :: v
    real(wp), dimension(:), allocatable :: maxentry
 
-   allocate(maxentry(n), stat=st)
-   if(st.ne.0) return
+   allocate(maxentry(n), stat=inform%stat)
+   if(inform%stat.ne.0) then
+      inform%flag = ERROR_ALLOCATION
+      return
+   endif
 
    scaling(1:n) = 1.0
-   do itr = 1, maxitr
+   do itr = 1, options%max_iterations
       ! Find maximum entry in each row and col
       ! Recall: matrix is symmetric, but we only have half
       maxentry(1:n) = 0.0
@@ -195,10 +333,70 @@ subroutine inf_norm_equilib(n, ptr, row, val, scaling, st)
       where(maxentry(1:n).gt.0) &
          scaling(1:n) = scaling(1:n) / sqrt(maxentry(1:n))
       ! Test convergence
-      if(maxval(abs(1-maxentry(1:n))) .lt. tol) exit
+      if(maxval(abs(1-maxentry(1:n))) .lt. options%tol) exit
    end do
+   inform%iterations = itr-1
 
-end subroutine inf_norm_equilib
+end subroutine inf_norm_equilib_sym
+
+!
+! We implement Algorithm 1 of:
+! A Symmetry Preserving Algorithm for Matrix Scaling
+! Philip Knight, Daniel Ruiz and Bora Ucar
+! INRIA Research Report 7552 (Novemeber 2012)
+! (This is similar to the algorithm used in MC77, but is a complete
+!  reimplementation from the above paper to ensure it is 100% STFC
+!  copyright and can be released as open source)
+!
+subroutine inf_norm_equilib_unsym(m, n, ptr, row, val, rscaling, cscaling, &
+      options, inform)
+   integer, intent(in) :: m
+   integer, intent(in) :: n
+   integer, dimension(n+1), intent(in) :: ptr
+   integer, dimension(ptr(n+1)-1), intent(in) :: row
+   real(wp), dimension(ptr(n+1)-1), intent(in) :: val
+   real(wp), dimension(m), intent(out) :: rscaling
+   real(wp), dimension(n), intent(out) :: cscaling
+   type(equilib_options), intent(in) :: options
+   type(equilib_inform), intent(inout) :: inform
+
+   integer :: itr, r, c, j
+   real(wp) :: v
+   real(wp), dimension(:), allocatable :: rmaxentry, cmaxentry
+
+   allocate(rmaxentry(m), cmaxentry(n), stat=inform%stat)
+   if(inform%stat.ne.0) then
+      inform%flag = ERROR_ALLOCATION
+      return
+   endif
+
+   rscaling(1:m) = 1.0
+   cscaling(1:n) = 1.0
+   do itr = 1, options%max_iterations
+      ! Find maximum entry in each row and col
+      ! Recall: matrix is symmetric, but we only have half
+      rmaxentry(1:m) = 0.0
+      cmaxentry(1:n) = 0.0
+      do c = 1, n
+         do j = ptr(c), ptr(c+1)-1
+            r = row(j)
+            v = abs(rscaling(r) * val(j) * cscaling(c))
+            rmaxentry(r) = max(rmaxentry(r), v)
+            cmaxentry(c) = max(cmaxentry(c), v)
+         end do
+      end do
+      ! Update scaling (but beware empty cols)
+      where(rmaxentry(1:m).gt.0) &
+         rscaling(1:m) = rscaling(1:m) / sqrt(rmaxentry(1:m))
+      where(cmaxentry(1:n).gt.0) &
+         cscaling(1:n) = cscaling(1:n) / sqrt(cmaxentry(1:n))
+      ! Test convergence
+      if(maxval(abs(1-rmaxentry(1:m))) .lt. options%tol .and. &
+         maxval(abs(1-cmaxentry(1:n))) .lt. options%tol) exit
+   end do
+   inform%iterations = itr-1
+
+end subroutine inf_norm_equilib_unsym
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Hungarian Algorithm implementation (MC64)
@@ -214,24 +412,29 @@ end subroutine inf_norm_equilib
 !
 ! This code is adapted from HSL_MC64 v2.3.1
 !
-subroutine hungarian_wrapper(n,ptr,row,val,perm,scale,flag,stat)
+subroutine hungarian_wrapper(sym, m, n, ptr, row, val, match, rscaling, &
+      cscaling, options, inform)
+   logical, intent(in) :: sym
+   integer, intent(in) :: m
    integer, intent(in) :: n
    integer, dimension(n+1), intent(in) :: ptr
    integer, dimension(*), intent(in) :: row
    real(wp), dimension(*), intent(in) :: val
-   integer, dimension(2*n), intent(out) :: perm
-   real(wp), dimension(n), intent(out) :: scale
-   integer, intent(out) :: flag
-   integer, intent(out) :: stat
+   integer, dimension(m), intent(out) :: match
+   real(wp), dimension(m), intent(out) :: rscaling
+   real(wp), dimension(n), intent(out) :: cscaling
+   type(hungarian_options), intent(in) :: options
+   type(hungarian_inform), intent(out) :: inform
 
    integer, allocatable :: ptr2(:), row2(:), iw(:), new_to_old(:), &
       old_to_new(:), cperm(:)
-   real(wp), allocatable :: val2(:), dw(:), cmax(:), cscale(:)
+   real(wp), allocatable :: val2(:), dualu(:), dualv(:), cmax(:), cscale(:)
    real(wp) :: colmax
-   integer :: i,j,k,ne,num,nn,j1,j2,jj
+   integer :: i,j,k,ne,nn,j1,j2,jj
    real(wp), parameter :: zero = 0.0
 
-   stat = 0
+   inform%flag = 0
+   inform%stat = 0
    ne = ptr(n+1)-1
 
    ! Reset ne for the expanded symmetric matrix
@@ -239,9 +442,9 @@ subroutine hungarian_wrapper(n,ptr,row,val,perm,scale,flag,stat)
 
    ! Expand matrix, drop explicit zeroes and take log absolute values
    allocate (ptr2(n+1), row2(ne), val2(ne), &
-             iw(5*n), dw(2*n), cmax(n), stat=stat)
-   if (stat/=0) then
-      flag = ERROR_ALLOCATION
+             iw(5*n), dualu(m), dualv(n), cmax(n), stat=inform%stat)
+   if (inform%stat.ne.0) then
+      inform%flag = ERROR_ALLOCATION
       return
    endif
 
@@ -259,7 +462,9 @@ subroutine hungarian_wrapper(n,ptr,row,val,perm,scale,flag,stat)
       val2(ptr2(i):k-1) = log(val2(ptr2(i):k-1))
    end do
    ptr2(n+1) = k
-   call half_to_full(n, row2, ptr2, iw, a=val2)
+   if(sym) then
+      call half_to_full(n, row2, ptr2, iw, a=val2)
+   endif
 
    ! Compute column maximums
    do i = 1, n
@@ -268,36 +473,50 @@ subroutine hungarian_wrapper(n,ptr,row,val,perm,scale,flag,stat)
       val2(ptr2(i):ptr2(i+1)-1) = colmax - val2(ptr2(i):ptr2(i+1)-1)
    end do
 
-   call hungarian_match(n,ne,ptr2,row2,val2,perm,num,dw(1),dw(n+1),stat)
-   if (stat.ne.0) then
-      flag = ERROR_ALLOCATION
+   call hungarian_match(m, n, ptr2, row2, val2, match, inform%matched, dualu, &
+      dualv, inform%stat)
+   if (inform%stat.ne.0) then
+      inform%flag = ERROR_ALLOCATION
       return
    endif
 
-   flag = 0
+   if(inform%matched.ne.min(m,n)) then
+      ! Singular matrix
+      if(options%scale_if_singular) then
+         ! Just issue warning then continue
+         inform%flag = WARNING_SINGULAR
+      else
+         ! Issue error and return identity scaling
+         inform%flag = ERROR_SINGULAR
+         rscaling(1:m) = 0
+         cscaling(1:n) = 0
+      endif
+   endif
 
-   if(num.eq.n) then ! Full rank
+   if(.not.sym .or. inform%matched.eq.n) then ! Unsymmetric or symmetric and full rank
       ! Note that in this case m=n
-      ! Set column permutation and row permutation to be the same
-      perm(n+1:n+n) = perm(1:n)
-      scale(1:n) = (dw(1:n)+dw(n+1:2*n)-cmax(1:n))/2
+      rscaling(1:m) = dualu(1:m)
+      cscaling(1:n) = dualv(1:n) - cmax(1:n)
+      call match_postproc(m, n, ptr, row, val, rscaling, cscaling, &
+         inform%matched, match, inform%flag, inform%stat)
       return
    endif
 
-   ! If we reach this point then structually rank deficient:
-   ! Build a full rank submatrix and call matching on it.
-   flag = 1 ! structually singular warning
+   ! If we reach this point then structually rank deficient.
+   ! As matching may not involve full set of rows and columns, but we need
+   ! a symmetric matching/scaling, we can't just return the current matching.
+   ! Instead, we build a full rank submatrix and call matching on it.
 
-   allocate(old_to_new(n),new_to_old(n),cperm(n),stat=stat)
-   if (stat.ne.0) then
-      flag = ERROR_ALLOCATION
-      stat = stat
+   allocate(old_to_new(n),new_to_old(n),cperm(n),stat=inform%stat)
+   if (inform%stat.ne.0) then
+      inform%flag = ERROR_ALLOCATION
+      return
    end if
 
-   j = num + 1
+   j = inform%matched + 1
    k = 0
-   do i = 1,n
-      if (perm(i) < 0) then
+   do i = 1,m
+      if (match(i) < 0) then
          ! row i is not part of the matching
          old_to_new(i) = -j
          j = j + 1
@@ -320,11 +539,11 @@ subroutine hungarian_wrapper(n,ptr,row,val,perm,scale,flag,stat)
       j1 = j2
       j2 = ptr2(i+1)
       ! skip over unmatched entries
-      if (perm(i) < 0) cycle
+      if (match(i) < 0) cycle
       k = k + 1
       do j = j1,j2-1
          jj = row2(j)
-         if (perm(jj) < 0) cycle
+         if (match(jj) < 0) cycle
          ne = ne + 1
          row2(ne) = old_to_new(jj)
          val2(ne) = val2(j)
@@ -333,70 +552,197 @@ subroutine hungarian_wrapper(n,ptr,row,val,perm,scale,flag,stat)
    end do
    ! nn is order of non-singular part.
    nn = k
-   call hungarian_match(nn,ne,ptr2,row2,val2,cperm,num,dw(1),dw(nn+1),stat)
-   if (stat.ne.0) then
-      flag = ERROR_ALLOCATION
+   call hungarian_match(nn, nn, ptr2, row2, val2, cperm, inform%matched, &
+      dualu, dualv, inform%stat)
+   if (inform%stat.ne.0) then
+      inform%flag = ERROR_ALLOCATION
       return
    endif
 
    do i = 1,n
       j = old_to_new(i)
       if (j < 0) then
-         scale(i) = -huge(scale)
+         rscaling(i) = -huge(rscaling)
       else
          ! Note: we need to subtract col max using old matrix numbering
-         scale(i) = (dw(j)+dw(nn+j)-cmax(i))/2
+         rscaling(i) = (dualu(j)+dualv(j)-cmax(i))/2
       end if
    end do
 
-   perm(1:n) = -1
+   match(1:n) = -1
    do i = 1,nn
       j = cperm(i)
-      perm(new_to_old(i)) = j
+      match(new_to_old(i)) = j
    end do
 
    do i = 1, n
-      if(perm(i).eq.-1) then
-         perm(i) = old_to_new(i)
+      if(match(i).eq.-1) then
+         match(i) = old_to_new(i)
       endif
    end do
 
-   perm(n+1:n+n) = perm(1:n)
-
    ! Apply Duff and Pralet correction to unmatched row scalings
-   allocate(cscale(n), stat=stat)
-   if(stat/=0) then
-      flag = ERROR_ALLOCATION
-      stat = stat
+   allocate(cscale(n), stat=inform%stat)
+   if(inform%stat.ne.0) then
+      inform%flag = ERROR_ALLOCATION
       return
    endif
    ! For columns i not in the matched set I, set
    !     s_i = 1 / (max_{k in I} | a_ik s_k |)
    ! with convention that 1/0 = 1
-   cscale(1:n) = scale(1:n)
+   cscale(1:n) = rscaling(1:n)
    do i = 1,n
       do j = ptr(i), ptr(i+1)-1
          k = row(j)
-         if(cscale(i).eq.-huge(scale).and.cscale(k).ne.-huge(scale)) then
+         if(cscale(i).eq.-huge(rscaling).and.cscale(k).ne.-huge(rscaling)) then
             ! i not in I, k in I
-            scale(i) = max(scale(i), log(abs(val(j)))+scale(k))
+            rscaling(i) = max(rscaling(i), log(abs(val(j)))+rscaling(k))
          endif
-         if(cscale(k).eq.-huge(scale).and.cscale(i).ne.-huge(scale)) then
+         if(cscale(k).eq.-huge(rscaling).and.cscale(i).ne.-huge(rscaling)) then
             ! k not in I, i in I
-            scale(k) = max(scale(k), log(abs(val(j)))+scale(i))
+            rscaling(k) = max(rscaling(k), log(abs(val(j)))+rscaling(i))
          endif
       end do
    end do
    do i = 1,n
-      if(cscale(i).ne.-huge(scale)) cycle ! matched part
-      if(scale(i).eq.-huge(scale)) then
-         scale(i) = zero
+      if(cscale(i).ne.-huge(rscaling)) cycle ! matched part
+      if(rscaling(i).eq.-huge(rscaling)) then
+         rscaling(i) = 0.0
       else
-         scale(i) = -scale(i)
+         rscaling(i) = -rscaling(i)
       endif
    end do
+   ! As symmetric, scaling is averaged on return, but rscaling(:) is correct,
+   ! so just copy to cscaling to fix this
+   cscaling(1:n) = rscaling(1:n)
 
 end subroutine hungarian_wrapper
+
+!**********************************************************************
+!
+! Subroutine that initialize matching and (row) dual variable into a suitbale
+! state for main Hungarian algorithm.
+!
+! The heuristic guaruntees that the generated partial matching is optimal
+! on the restriction of the graph to the matched rows and columns.
+subroutine hungarian_init_heurisitic(m, n, ptr, row, val, num, iperm, jperm, &
+      dualu, d, l, search_from)
+   integer, intent(in) :: m
+   integer, intent(in) :: n
+   integer, dimension(n+1), intent(in) :: ptr
+   integer, dimension(ptr(n+1)-1), intent(in) :: row
+   real(wp), dimension(ptr(n+1)-1), intent(in) :: val
+   integer, intent(inout) :: num
+   integer, dimension(*), intent(inout) :: iperm
+   integer, dimension(*), intent(inout) :: jperm
+   real(wp), dimension(m), intent(out) :: dualu
+   real(wp), dimension(n), intent(out) :: d ! d(j) current improvement from
+      ! matching in col j
+   integer, dimension(m), intent(out) :: l ! position of smallest entry of row
+   integer, dimension(n), intent(inout) :: search_from ! position we have
+      ! reached in current search
+
+   integer :: i, i0, ii, j, jj, k, k0, kk
+   real(wp) :: di, vj
+
+   !
+   ! Set up initial matching on smallest entry in each row (as far as possible)
+   !
+   ! Find smallest entry in each col, and record it
+   dualu(1:m) = RINF
+   l(1:m) = 0
+   do j = 1,n
+      do k = ptr(j),ptr(j+1)-1
+         i = row(k)
+         if(val(k).gt.dualu(i)) cycle
+         dualu(i) = val(k) ! Initialize dual variables
+         iperm(i) = j      ! Record col
+         l(i) = k          ! Record posn in row(:)
+      end do
+   end do
+   ! Loop over rows in turn. If we can match on smallest entry in row (i.e.
+   ! column not already matched) then do so. Avoid matching on dense columns
+   ! as this makes Hungarian algorithm take longer.
+   do i = 1,m
+      j = iperm(i) ! Smallest entry in row i is (i,j)
+      if(j.eq.0) cycle ! skip empty rows
+      iperm(i) = 0
+      if(jperm(j).ne.0) cycle ! If we've already matched column j, skip this row
+      ! Don't choose cheap assignment from dense columns
+      if(ptr(j+1)-ptr(j) .gt. m/10 .and. m.gt.50) cycle
+      ! Assignment of column j to row i
+      num = num + 1
+      iperm(i) = j
+      jperm(j) = l(i)
+   end do
+   ! If we already have a complete matching, we're already done!
+   if(num.eq.min(m,n)) return
+
+   !
+   ! Scan unassigned columns; improve assignment
+   !
+   d(1:n) = 0.0
+   search_from(1:n) = ptr(1:n)
+   improve_assign: &
+   do j = 1, n
+      if(jperm(j).ne.0) cycle ! column j already matched
+      if(ptr(j).gt.ptr(j+1)-1) cycle ! column j is empty
+      ! Find smallest value of di = a_ij - u_i in column j
+      ! In case of a tie, prefer first unmatched, then first matched row.
+      i0 = row(ptr(j))
+      vj = val(ptr(j)) - dualu(i0)
+      k0 = ptr(j)
+      do k = ptr(j)+1, ptr(j+1)-1
+         i = row(k)
+         di = val(k) - dualu(i)
+         if(di.gt.vj) cycle
+         if(di.eq.vj .and. di.ne.RINF) then
+            if(iperm(i).ne.0 .or. iperm(i0).eq.0) cycle
+         endif
+         vj = di
+         i0 = i
+         k0 = k
+      end do
+      ! Record value of matching on (i0,j)
+      d(j) = vj
+      ! If row i is unmatched, then match on (i0,j) immediately
+      if(iperm(i0).eq.0) then
+         num = num + 1
+         jperm(j) = k0
+         iperm(i0) = j
+         search_from(j) = k0 + 1
+         cycle
+      endif
+      ! Otherwise, row i is matched. Consider all rows i in column j that tie
+      ! for this vj value. Such a row currently matches on (i,jj). Scan column
+      ! jj looking for an unmatched row ii that improves value of matching. If
+      ! one exists, then augment along length 2 path (i,j)->(ii,jj)
+      do k = k0, ptr(j+1)-1
+         i = row(k)
+         if(val(k)-dualu(i).gt.vj) cycle ! Not a tie for vj value
+         jj = iperm(i)
+         ! Scan remaining part of assigned column jj
+         do kk = search_from(jj), ptr(jj+1)-1
+            ii = row(kk)
+            if(iperm(ii).gt.0) cycle ! row ii already matched
+            if(val(kk)-dualu(ii).le.d(jj)) then
+               ! By matching on (i,j) and (ii,jj) we do better than existing
+               ! matching on (i,jj) alone.
+               jperm(jj) = kk
+               iperm(ii) = jj
+               search_from(jj) = kk + 1
+               num = num + 1
+               jperm(j) = k
+               iperm(i) = j
+               search_from(j) = k + 1
+               cycle improve_assign
+            endif
+         end do
+         search_from(jj) = ptr(jj+1)
+      end do
+      cycle
+   end do improve_assign
+end subroutine hungarian_init_heurisitic
 
 !**********************************************************************
 !
@@ -405,137 +751,50 @@ end subroutine hungarian_wrapper
 !
 ! This code is adapted from MC64 v 1.6.0
 !
-subroutine hungarian_match(n,ne,ptr,row,val,iperm,num,u,d,st)
-   integer, intent(in) :: n ! matrix dimension
-   integer, intent(in) :: ne ! number of entries in matrix
+subroutine hungarian_match(m,n,ptr,row,val,iperm,num,dualu,dualv,st)
+   integer, intent(in) :: m ! number of rows
+   integer, intent(in) :: n ! number of cols
    integer, intent(out) :: num ! cardinality of the matching
    integer, intent(in) :: ptr(n+1) ! column pointers
-   integer, intent(in) :: row(ne) ! row pointers
-   integer, intent(out) :: iperm(n) ! matching itself: row i is matched to
+   integer, intent(in) :: row(ptr(n+1)-1) ! row pointers
+   integer, intent(out) :: iperm(m) ! matching itself: row i is matched to
       ! column iperm(i).
-   real(wp), intent(in) :: val(ne) ! value of the entry that corresponds to
-      ! row(k). All values val(k) must be non-negative.
-   real(wp), intent(out) :: u(n) ! u(i) is the reduced weight for row(i)
-   real(wp), intent(out) :: d(n) ! d(i) is current shortest distance to row i
-      ! from current column (d_i from Fig 4.1 of Duff and Koster paper)
+   real(wp), intent(in) :: val(ptr(n+1)-1) ! value of the entry that corresponds
+      ! to row(k). All values val(k) must be non-negative.
+   real(wp), intent(out) :: dualu(m) ! dualu(i) is the reduced weight for row(i)
+   real(wp), intent(out) :: dualv(n) ! dualv(j) is the reduced weight for col(j)
    integer, intent(out) :: st
 
-   integer, allocatable, dimension(:) :: JPERM ! a(jperm(j)) is entry of A for
+   integer, allocatable, dimension(:) :: jperm ! a(jperm(j)) is entry of A for
       ! matching in column j.
-   integer, allocatable, dimension(:) :: OUT ! a(out(i)) is the new entry in a
+   integer, allocatable, dimension(:) :: out ! a(out(i)) is the new entry in a
       ! on which we match going along the short path back to original col.
-   integer, allocatable, dimension(:) :: PR ! pr(i) is a pointer to the next
+   integer, allocatable, dimension(:) :: pr ! pr(i) is a pointer to the next
       ! column along the shortest path back to the original column
    integer, allocatable, dimension(:) :: Q ! q(1:qlen) forms a binary heap
       ! data structure sorted by d(q(i)) value. q(low:up) is a list of rows
       ! with equal d(i) which is lower or equal to smallest in the heap.
       ! q(up:n) is a list of already visited rows.
-   integer, allocatable, dimension(:) :: L ! l(:) is an inverse of q(:)
+   integer, allocatable, dimension(:) :: l ! l(:) is an inverse of q(:)
+   real(wp), allocatable, dimension(:) :: d ! d(i) is current shortest distance
+      ! to row i from current column (d_i from Fig 4.1 of Duff and Koster paper)
 
-   integer :: I,I0,II,J,JJ,JORD,Q0,QLEN,JDUM,ISP,JSP
-   integer :: K,K0,K1,K2,KK,KK1,KK2,UP,LOW,LPOS
-   real(wp) :: CSP,DI,DMIN,DNEW,DQ0,VJ
+   integer :: i,j,jj,jord,q0,qlen,jdum,isp,jsp
+   integer :: k,kk,up,low,lpos
+   real(wp) :: csp,di,dmin,dnew,dq0,vj
 
    !
    ! Initialization
    !
-   allocate(jperm(n), out(n), pr(n), q(n), l(n), stat=st)
+   allocate(jperm(n), out(n), pr(n), q(m), l(m), d(max(m,n)), stat=st)
    if(st.ne.0) return
-   NUM = 0
-   D(1:N) = 0.0
-   IPERM(1:N) = 0
-   JPERM(1:N) = 0
-   PR(1:N) = ptr(1:N)
-   L(1:N) = 0
+   num = 0
+   iperm(1:m) = 0
+   jperm(1:n) = 0
 
-   !
-   ! Initialize U(I) using heurisitic to get an intial guess.
-   ! Heuristic guaruntees that the generated partial matching is optimal
-   ! on the restriction of the graph to the matched rows and columns.
-   !
-   U(1:N) = RINF
-   do J = 1,N
-      do K = ptr(J),ptr(J+1)-1
-         I = row(K)
-         if(val(K).gt.U(I)) cycle
-         U(I) = val(K)
-         IPERM(I) = J
-         L(I) = K
-      end do
-   end do
-   do I = 1,N
-      J = IPERM(I)
-      if(J.eq.0) cycle
-      ! Row I is not empty
-      IPERM(I) = 0
-      if(JPERM(J).ne.0) cycle
-      ! Don't choose cheap assignment from dense columns
-      if(ptr(J+1)-ptr(J) .gt. N/10 .and. N.gt.50) cycle
-      ! Assignment of column J to row I
-      NUM = NUM + 1
-      IPERM(I) = J
-      JPERM(J) = L(I)
-   end do
-   if(NUM.eq.N) GO TO 1000
-   ! Scan unassigned columns; improve assignment
-   improve_assign: do J = 1,N
-      ! JPERM(J) ne 0 iff column J is already assigned
-      if(JPERM(J).ne.0) cycle
-      K1 = ptr(J)
-      K2 = ptr(J+1) - 1
-      ! Continue only if column J is not empty
-      if(K1.gt.K2) cycle
-      I0 = row(K1)
-      VJ = val(K1) - U(I0)
-      K0 = K1
-      do K = K1+1,K2
-         I = row(K)
-         DI = val(K) - U(I)
-         if(DI.gt.VJ) cycle
-         if(DI.ge.VJ .and. DI.ne.RINF) then
-            if(IPERM(I).ne.0 .or. IPERM(I0).eq.0) cycle
-         endif
-         VJ = DI
-         I0 = I
-         K0 = K
-      end do
-      D(J) = VJ
-      K = K0
-      I = I0
-      if(IPERM(I).eq.0) then
-         NUM = NUM + 1
-         JPERM(J) = K
-         IPERM(I) = J
-         PR(J) = K + 1
-         cycle
-      endif
-      do K = K0,K2
-         I = row(K)
-         if(val(K)-U(I).gt.VJ) cycle
-         JJ = IPERM(I)
-         ! Scan remaining part of assigned column JJ
-         KK1 = PR(JJ)
-         KK2 = ptr(JJ+1) - 1
-         if(KK1.gt.KK2) cycle
-         do KK = KK1,KK2
-            II = row(KK)
-            if(IPERM(II).gt.0) cycle
-            if(val(KK)-U(II).le.D(JJ)) then
-               JPERM(JJ) = KK
-               IPERM(II) = JJ
-               PR(JJ) = KK + 1
-               NUM = NUM + 1
-               JPERM(J) = K
-               IPERM(I) = J
-               PR(J) = K + 1
-               cycle improve_assign
-            endif
-         end do
-         PR(JJ) = KK2 + 1
-      end do
-      cycle
-   end do improve_assign
-   if(NUM.eq.N) GO TO 1000 ! If heurisitic got a complete matching, we're done
+   call hungarian_init_heurisitic(m, n, ptr, row, val, num, iperm, jperm, &
+      dualu, d, l, pr)
+   if(num.eq.min(m,n)) go to 1000 ! If we got a complete matching, we're done
 
    !
    ! Repeatedly find augmenting paths until all columns are included in the
@@ -545,203 +804,205 @@ subroutine hungarian_match(n,ne,ptr,row,val,iperm,num,u,d,st)
 
    ! Main loop ... each pass round this loop is similar to Dijkstra's
    ! algorithm for solving the single source shortest path problem
-   D(1:N) = RINF
-   L(1:N) = 0
-   ISP=-1; JSP=-1 ! initalize to avoid "may be used unitialized" warning
-   do JORD = 1,N
+   d(1:m) = RINF
+   l(1:m) = 0
+   isp=-1; jsp=-1 ! initalize to avoid "may be used unitialized" warning
+   do jord = 1,n
 
-      if(JPERM(JORD).ne.0) cycle
-      ! JORD is next unmatched column
-      ! DMIN is the length of shortest path in the tree
-      DMIN = RINF
-      QLEN = 0
-      LOW = N + 1
-      UP = N + 1
-      ! CSP is the cost of the shortest augmenting path to unassigned row
-      ! row(ISP). The corresponding column index is JSP.
-      CSP = RINF
-      ! Build shortest path tree starting from unassigned column (root) JORD
-      J = JORD
-      PR(J) = -1
+      if(jperm(jord).ne.0) cycle
+      ! jord is next unmatched column
+      ! dmin is the length of shortest path in the tree
+      dmin = RINF
+      qlen = 0
+      low = m + 1
+      up = m + 1
+      ! csp is the cost of the shortest augmenting path to unassigned row
+      ! row(isp). The corresponding column index is jsp.
+      csp = RINF
+      ! Build shortest path tree starting from unassigned column (root) jord
+      j = jord
+      pr(j) = -1
 
-      ! Scan column J
-      do K = ptr(J),ptr(J+1)-1
-         I = row(K)
-         DNEW = val(K) - U(I)
-         if(DNEW.ge.CSP) cycle
-         if(IPERM(I).eq.0) then
-            CSP = DNEW
-            ISP = K
-            JSP = J
+      ! Scan column j
+      do k = ptr(j),ptr(j+1)-1
+         i = row(k)
+         dnew = val(k) - dualu(i)
+         if(dnew.ge.csp) cycle
+         if(iperm(i).eq.0) then
+            csp = dnew
+            isp = k
+            jsp = j
          else
-            if(DNEW.lt.DMIN) DMIN = DNEW
-            D(I) = DNEW
-            QLEN = QLEN + 1
-            Q(QLEN) = K
+            if(dnew.lt.dmin) dmin = dnew
+            d(i) = dnew
+            qlen = qlen + 1
+            q(qlen) = k
          endif
       end do
-      ! Initialize heap Q and Q2 with rows held in Q(1:QLEN)
-      Q0 = QLEN
-      QLEN = 0
-      do KK = 1,Q0
-         K = Q(KK)
-         I = row(K)
-         if(CSP.le.D(I)) then
-            D(I) = RINF
+      ! Initialize heap Q and Q2 with rows held in q(1:qlen)
+      q0 = qlen
+      qlen = 0
+      do kk = 1,q0
+         k = q(kk)
+         i = row(k)
+         if(csp.le.d(i)) then
+            d(i) = RINF
             cycle
          endif
-         if(D(I).le.DMIN) then
-            LOW = LOW - 1
-            Q(LOW) = I
-            L(I) = LOW
+         if(d(i).le.dmin) then
+            low = low - 1
+            q(low) = i
+            l(i) = low
          else
-            QLEN = QLEN + 1
-            L(I) = QLEN
-            call heap_update(I,N,Q,D,L)
+            qlen = qlen + 1
+            l(i) = qlen
+            call heap_update(i,m,Q,D,L)
          endif
          ! Update tree
-         JJ = IPERM(I)
-         OUT(JJ) = K
-         PR(JJ) = J
+         jj = iperm(i)
+         out(jj) = k
+         pr(jj) = j
       end do
 
-      do JDUM = 1,NUM
+      do jdum = 1,num
 
          ! If Q2 is empty, extract rows from Q
-         if(LOW.eq.UP) then
-            if(QLEN.eq.0) exit
-            I = Q(1) ! Peek at top of heap
-            if(D(I).ge.CSP) exit
-            DMIN = D(I)
-            ! Extract all paths that have length DMIN and store in q(low:up-1)
-            do while(QLEN.gt.0)
-               I = Q(1) ! Peek at top of heap
-               if(D(I).gt.DMIN) exit
-               i = heap_pop(QLEN,N,Q,D,L)
-               LOW = LOW - 1
-               Q(LOW) = I
-               L(I) = LOW
+         if(low.eq.up) then
+            if(qlen.eq.0) exit
+            i = q(1) ! Peek at top of heap
+            if(d(i).ge.csp) exit
+            dmin = d(i)
+            ! Extract all paths that have length dmin and store in q(low:up-1)
+            do while(qlen.gt.0)
+               i = q(1) ! Peek at top of heap
+               if(d(i).gt.dmin) exit
+               i = heap_pop(qlen,m,Q,D,L)
+               low = low - 1
+               q(low) = i
+               l(i) = low
             end do
          endif
-         ! Q0 is row whose distance D(Q0) to the root is smallest
-         Q0 = Q(UP-1)
-         DQ0 = D(Q0)
-         ! Exit loop if path to Q0 is longer than the shortest augmenting path
-         if(DQ0.ge.CSP) exit
-         UP = UP - 1
+         ! q0 is row whose distance d(q0) to the root is smallest
+         q0 = q(up-1)
+         dq0 = d(q0)
+         ! Exit loop if path to q0 is longer than the shortest augmenting path
+         if(dq0.ge.csp) exit
+         up = up - 1
 
-         ! Scan column that matches with row Q0
-         J = IPERM(Q0)
-         VJ = DQ0 - val(JPERM(J)) + U(Q0)
-         do K = ptr(J),ptr(J+1)-1
-            I = row(K)
-            if(L(I).ge.UP) cycle
-            ! DNEW is new cost
-            DNEW = VJ + val(K)-U(I)
-            ! Do not update D(I) if DNEW ge cost of shortest path
-            if(DNEW.ge.CSP) cycle
-            if(IPERM(I).eq.0) then
-               ! Row I is unmatched; update shortest path info
-               CSP = DNEW
-               ISP = K
-               JSP = J
+         ! Scan column that matches with row q0
+         j = iperm(q0)
+         vj = dq0 - val(jperm(j)) + dualu(q0)
+         do k = ptr(j),ptr(j+1)-1
+            i = row(k)
+            if(l(i).ge.up) cycle
+            ! dnew is new cost
+            dnew = vj + val(k)-dualu(i)
+            ! Do not update d(i) if dnew ge cost of shortest path
+            if(dnew.ge.csp) cycle
+            if(iperm(i).eq.0) then
+               ! Row i is unmatched; update shortest path info
+               csp = dnew
+               isp = k
+               jsp = j
             else
-               ! Row I is matched; do not update D(I) if DNEW is larger
-               DI = D(I)
-               if(DI.le.DNEW) cycle
-               if(L(I).ge.LOW) cycle
-               D(I) = DNEW
-               if(DNEW.le.DMIN) then
-                  LPOS = L(I)
-                  if(LPOS.ne.0) call heap_delete(LPOS,QLEN,N,Q,D,L)
-                  LOW = LOW - 1
-                  Q(LOW) = I
-                  L(I) = LOW
+               ! Row i is matched; do not update d(i) if dnew is larger
+               di = d(i)
+               if(di.le.dnew) cycle
+               if(l(i).ge.low) cycle
+               d(i) = dnew
+               if(dnew.le.dmin) then
+                  lpos = l(i)
+                  if(lpos.ne.0) call heap_delete(lpos,qlen,m,Q,D,L)
+                  low = low - 1
+                  q(low) = i
+                  l(i) = low
                else
-                  if(L(I).eq.0) then
-                     QLEN = QLEN + 1
-                     L(I) = QLEN
+                  if(l(i).eq.0) then
+                     qlen = qlen + 1
+                     l(i) = qlen
                   endif
-                  call heap_update(I,N,Q,D,L) ! D(I) has changed
+                  call heap_update(i,m,Q,D,L) ! d(i) has changed
                endif
                ! Update tree
-               JJ = IPERM(I)
-               OUT(JJ) = K
-               PR(JJ) = J
+               jj = iperm(i)
+               out(jj) = k
+               pr(jj) = j
             endif
          end do
       end do
 
-      ! If CSP = RINF, no augmenting path is found
-      if(CSP.eq.RINF) GO TO 190
-      ! Find augmenting path by tracing backward in PR; update IPERM,JPERM
-      NUM = NUM + 1
-      I = row(ISP)
-      IPERM(I) = JSP
-      JPERM(JSP) = ISP
-      J = JSP
-      do JDUM = 1,NUM
-         JJ = PR(J)
-         if(JJ.eq.-1) exit
-         K = OUT(J)
-         I = row(K)
-         IPERM(I) = JJ
-         JPERM(JJ) = K
-         J = JJ
+      ! If csp = RINF, no augmenting path is found
+      if(csp.eq.RINF) GO TO 190
+      ! Find augmenting path by tracing backward in pr; update iperm,jperm
+      num = num + 1
+      i = row(isp)
+      iperm(i) = jsp
+      jperm(jsp) = isp
+      j = jsp
+      do jdum = 1,num
+         jj = pr(j)
+         if(jj.eq.-1) exit
+         k = out(j)
+         i = row(k)
+         iperm(i) = jj
+         jperm(jj) = k
+         j = jj
       end do
 
-      ! Update U for rows in Q(UP:N)
-      do KK = UP,N
-         I = Q(KK)
-         U(I) = U(I) + D(I) - CSP
+      ! Update U for rows in q(up:m)
+      do kk = up,m
+         i = q(kk)
+         dualu(i) = dualu(i) + d(i) - csp
       end do
-190   do KK = LOW,N
-         I = Q(KK)
-         D(I) = RINF
-         L(I) = 0
+190   do kk = low,m
+         i = q(kk)
+         d(i) = RINF
+         l(i) = 0
       end do
-      do KK = 1,QLEN
-         I = Q(KK)
-         D(I) = RINF
-         L(I) = 0
+      do kk = 1,qlen
+         i = q(kk)
+         d(i) = RINF
+         l(i) = 0
       end do
 
    end do ! End of main loop
 
 
-   ! Set dual column variable in D(1:N)
-1000 do J = 1,N
-      K = JPERM(J)
-      if(K.ne.0) then
-         D(J) = val(K) - U(row(K))
+   1000 continue
+   ! Set dual column variables
+   do j = 1,n
+      k = jperm(j)
+      if(k.ne.0) then
+         dualv(j) = val(k) - dualu(row(k))
       else
-         D(J) = 0.0
+         dualv(j) = 0.0
       endif
-      if(IPERM(J).eq.0) U(J) = 0.0
    end do
+   ! Zero dual row variables for unmatched rows
+   where(iperm(1:m).eq.0) dualu(1:m) = 0.0
 
    ! Return if matrix has full structural rank
-   if(NUM.eq.N) return
+   if(num.eq.min(m,n)) return
 
-   ! Otherwise, matrix is structurally singular, complete IPERM.
-   ! JPERM, OUT are work arrays
-   JPERM(1:N) = 0
-   K = 0
-   do I = 1,N
-      if(IPERM(I).eq.0) then
-         K = K + 1
-         OUT(K) = I
+   ! Otherwise, matrix is structurally singular, complete iperm.
+   ! jperm, out are work arrays
+   jperm(1:n) = 0
+   k = 0
+   do i = 1,m
+      if(iperm(i).eq.0) then
+         k = k + 1
+         out(k) = i
       else
-         J = IPERM(I)
-         JPERM(J) = I
+         j = iperm(i)
+         jperm(j) = i
       endif
    end do
-   K = 0
-   do J = 1,N
-      if(JPERM(J).ne.0) cycle
-      K = K + 1
-      JDUM = OUT(K)
-      IPERM(JDUM) = -J
+   k = 0
+   do j = 1,n
+      if(jperm(j).ne.0) cycle
+      k = k + 1
+      jdum = out(k)
+      iperm(jdum) = -j
    end do
 end subroutine hungarian_match
 
@@ -898,20 +1159,19 @@ end subroutine heap_delete
 ! as the same row can move through multiple partners during a single pass
 ! through the matrix.
 !
-subroutine auction_match_core(n, ptr, row, val, match, dualu, dualv, options, &
-      inform, flag, stat)
+subroutine auction_match_core(m, n, ptr, row, val, match, dualu, dualv, &
+      options, inform)
+   integer, intent(in) :: m
    integer, intent(in) :: n
    integer, dimension(n+1), intent(in) :: ptr
    integer, dimension(ptr(n+1)-1), intent(in) :: row
    real(wp), dimension(ptr(n+1)-1), intent(in) :: val
    integer, dimension(n), intent(out) :: match
       ! match(j) = i => column j matched to row i
-   real(wp), dimension(n), intent(out) :: dualu ! row dual variables
+   real(wp), dimension(m), intent(out) :: dualu ! row dual variables
    real(wp), dimension(n), intent(inout) :: dualv ! col dual variables
    type(auction_options), intent(in) :: options
    type(auction_inform), intent(inout) :: inform
-   integer, intent(out) :: flag
-   integer, intent(out) :: stat
 
    integer, dimension(:), allocatable :: owner ! Inverse of match
    ! The list next(1:tail) is the search space of unmatched columns
@@ -921,7 +1181,7 @@ subroutine auction_match_core(n, ptr, row, val, match, dualu, dualv, options, &
    integer, dimension(:), allocatable :: next
    integer :: unmatched ! Current number of unmatched cols
 
-   integer :: itr
+   integer :: itr, minmn
    integer :: i, j, k
    integer :: col, cptr, bestr
    real(wp) :: u, bestu, bestv
@@ -932,26 +1192,28 @@ subroutine auction_match_core(n, ptr, row, val, match, dualu, dualv, options, &
    integer :: nunchanged ! number of iterations where #unmatched cols has been
       ! constant
 
-   flag = 0
+   inform%flag = 0
+   inform%unmatchable = 0
 
    ! Allocate memory
-   allocate(owner(n), next(n), stat=stat)
-   if(stat.ne.0) then
-      flag = ERROR_ALLOCATION
+   allocate(owner(m), next(n), stat=inform%stat)
+   if(inform%stat.ne.0) then
+      inform%flag = ERROR_ALLOCATION
       return
    endif
 
    ! Set everything as unmatched
-   unmatched = n
+   minmn = min(m, n)
+   unmatched = minmn
    match(1:n) = 0 ! 0 = unmatched, -1 = unmatched+ineligible
-   owner(1:n) = 0
-   dualu(1:n) = 0
+   owner(1:m) = 0
+   dualu(1:m) = 0
    ! dualv is set for each column as it becomes matched, otherwise we use
    ! the value supplied on input (calculated as something sensible during
    ! preprocessing)
 
    ! Set up monitoring of progress
-   prev = n
+   prev = -1
    nunchanged = 0
 
    ! Initially all columns are unmatched
@@ -961,7 +1223,7 @@ subroutine auction_match_core(n, ptr, row, val, match, dualu, dualv, options, &
    end do
 
    ! Iterate until we run out of unmatched buyers
-   eps = options%eps
+   eps = options%eps_initial
    do itr = 1, options%max_iterations
       if(unmatched.eq.0) exit ! nothing left to match
       ! Bookkeeping to determine number of iterations with no change
@@ -969,12 +1231,12 @@ subroutine auction_match_core(n, ptr, row, val, match, dualu, dualv, options, &
       prev = unmatched
       nunchanged = nunchanged + 1
       ! Test if we satisfy termination conditions
-      if(nunchanged          .ge. options%max_unchanged(1) .and. &
-         real(n-unmatched)/n .ge. options%min_proportion(1)) exit
-      if(nunchanged          .ge. options%max_unchanged(2) .and. &
-         real(n-unmatched)/n .ge. options%min_proportion(2)) exit
-      if(nunchanged          .ge. options%max_unchanged(3) .and. &
-         real(n-unmatched)/n .ge. options%min_proportion(3)) exit
+      if(nunchanged                  .ge. options%max_unchanged(1) .and. &
+         real(minmn-unmatched)/minmn .ge. options%min_proportion(1)) exit
+      if(nunchanged                  .ge. options%max_unchanged(2) .and. &
+         real(minmn-unmatched)/minmn .ge. options%min_proportion(2)) exit
+      if(nunchanged                  .ge. options%max_unchanged(3) .and. &
+         real(minmn-unmatched)/minmn .ge. options%min_proportion(3)) exit
       ! Update epsilon scaling
       eps = min(1.0_wp, eps+1.0_wp/(n+1))
       ! Now iterate over all unmatched entries listed in next(1:tail)
@@ -1024,6 +1286,7 @@ subroutine auction_match_core(n, ptr, row, val, match, dualu, dualv, options, &
             ! No net benefit, mark col as ineligible for future consideration
             match(col) = -1 ! ineligible
             unmatched = unmatched - 1
+            inform%unmatchable = inform%unmatchable + 1
          endif
       end do
       tail = insert
@@ -1048,36 +1311,38 @@ end subroutine auction_match_core
 !
 ! Lower triangle only as input (log(half)+half->full faster than log(full))
 !
-subroutine auction_match(n,ptr,row,val,scale,options,inform,flag,stat)
+subroutine auction_match(expand, m, n, ptr, row, val, match, rscaling, &
+      cscaling, options, inform)
+   logical, intent(in) :: expand
+   integer, intent(in) :: m
    integer, intent(in) :: n
    integer, dimension(n+1), intent(in) :: ptr
    integer, dimension(*), intent(in) :: row
    real(wp), dimension(*), intent(in) :: val
+   integer, dimension(m), intent(out) :: match
+   real(wp), dimension(m), intent(out) :: rscaling
+   real(wp), dimension(n), intent(out) :: cscaling
    type(auction_options), intent(in) :: options
    type(auction_inform), intent(inout) :: inform
-   real(wp), dimension(n), intent(out) :: scale
-   integer, intent(out) :: flag
-   integer, intent(out) :: stat
 
-   integer, allocatable :: ptr2(:), row2(:), iw(:), perm(:)
-   real(wp), allocatable :: val2(:), dualu(:), dualv(:), cmax(:)
+   integer, allocatable :: ptr2(:), row2(:), iw(:), cmatch(:)
+   real(wp), allocatable :: val2(:), cmax(:)
    real(wp) :: colmax
    integer :: i,j,k,ne
    real(wp), parameter :: zero = 0.0
    real(wp) :: maxentry
 
-   flag = 0
-   stat = 0
+   inform%flag = 0
 
    ! Reset ne for the expanded symmetric matrix
    ne = ptr(n+1)-1
    ne = 2*ne
 
    ! Expand matrix, drop explicit zeroes and take log absolute values
-   allocate (ptr2(n+1), row2(ne), val2(ne), perm(n), &
-             iw(5*n), dualu(n), dualv(n), cmax(n), stat=stat)
-   if(stat.ne.0) then
-      flag = ERROR_ALLOCATION
+   allocate (ptr2(n+1), row2(ne), val2(ne), cmax(n), cmatch(n), &
+      stat=inform%stat)
+   if(inform%stat.ne.0) then
+      inform%flag = ERROR_ALLOCATION
       return
    endif
 
@@ -1095,27 +1360,166 @@ subroutine auction_match(n,ptr,row,val,scale,options,inform,flag,stat)
       val2(ptr2(i):k-1) = log(val2(ptr2(i):k-1))
    end do
    ptr2(n+1) = k
-   call half_to_full(n, row2, ptr2, iw, a=val2)
+   if(expand) then
+      if(m.ne.n) then
+         ! Should never get this far with a non-square matrix
+         inform%flag = -99
+         return
+      endif
+      allocate (iw(5*n), stat=inform%stat)
+      if(inform%stat.ne.0) then
+         inform%flag = ERROR_ALLOCATION
+         return
+      endif
+      call half_to_full(n, row2, ptr2, iw, a=val2)
+   endif
 
    ! Compute column maximums
    do i = 1, n
+      if(ptr2(i+1).le.ptr2(i)) then
+         ! Empty col
+         cmax(i) = 0.0
+         cycle
+      endif
       colmax = maxval(val2(ptr2(i):ptr2(i+1)-1))
       cmax(i) = colmax
       val2(ptr2(i):ptr2(i+1)-1) = colmax - val2(ptr2(i):ptr2(i+1)-1)
    end do
 
    maxentry = maxval(val2(1:ptr2(n+1)-1))
-   ! Use 2*maxentry to prefer high cardinality matchings
-   maxentry = 2*maxentry
+   ! Use 2*maxentry+1 to prefer high cardinality matchings (+1 avoids 0 cols)
+   maxentry = 2*maxentry+1
    val2(1:ptr2(n+1)-1) = maxentry - val2(1:ptr2(n+1)-1)
-   dualv(1:n) = maxentry - cmax(1:n) ! equivalent to scale=1.0 for unmatched
+   !cscaling(1:n) = maxentry - cmax(1:n) ! equivalent to scale=1.0 for unmatched
+   !   ! cols that core algorithm doesn't visit
+   cscaling(1:n) = - cmax(1:n) ! equivalent to scale=1.0 for unmatched
       ! cols that core algorithm doesn't visit
-   call auction_match_core(n, ptr2, row2, val2, perm, dualu, dualv, &
-      options, inform, flag, stat)
-   if(flag.ne.0) return
-   inform%matched = count(perm.ne.0)
 
-   scale(1:n) = (maxentry-dualu(1:n)-dualv(1:n)-cmax(1:n))/2
+   call auction_match_core(m, n, ptr2, row2, val2, cmatch, rscaling, &
+      cscaling, options, inform)
+   inform%matched = count(cmatch.ne.0)
+
+   ! Calculate an adjustment so row and col scaling similar orders of magnitude
+   ! and undo pre processing
+   rscaling(1:m) = -rscaling(1:m) + maxentry
+   cscaling(1:n) = -cscaling(1:n) - cmax(1:n)
+
+   ! Convert row->col matching into col->row one
+   match(1:m) = 0
+   do i = 1, n
+      if(cmatch(i).eq.0) cycle ! unmatched row
+      match(cmatch(i)) = i
+   end do
+   call match_postproc(m, n, ptr, row, val, rscaling, cscaling, &
+      inform%matched, match, inform%flag, inform%stat)
 end subroutine auction_match
+
+subroutine match_postproc(m, n, ptr, row, val, rscaling, cscaling, nmatch, &
+      match, flag, st)
+   integer, intent(in) :: m
+   integer, intent(in) :: n
+   integer, dimension(n+1), intent(in) :: ptr
+   integer, dimension(ptr(n+1)-1), intent(in) :: row
+   real(wp), dimension(ptr(n+1)-1), intent(in) :: val
+   real(wp), dimension(m), intent(inout) :: rscaling
+   real(wp), dimension(n), intent(inout) :: cscaling
+   integer, intent(in) :: nmatch
+   integer, dimension(m), intent(in) :: match
+   integer, intent(inout) :: flag
+   integer, intent(inout) :: st
+
+   integer :: i, j
+   real(wp), dimension(:), allocatable :: rmax, cmax
+   real(wp) :: ravg, cavg, adjust, colmax, v
+
+   if(m.eq.n) then
+      ! Square
+      ! Just perform post-processing and magnitude adjustment
+      ravg = sum(rscaling(1:m)) / m
+      cavg = sum(cscaling(1:n)) /n
+      adjust = (ravg - cavg) / 2
+      rscaling(1:m) = rscaling(1:m) - adjust
+      cscaling(1:n) = cscaling(1:n) + adjust
+   elseif(m.lt.n) then
+      ! More columns than rows
+      ! Allocate some workspace
+      allocate (cmax(n), stat=st)
+      if(st.ne.0) then
+         flag = ERROR_ALLOCATION
+         return
+      endif
+      ! First perform post-processing and magnitude adjustment based on match
+      ravg = 0
+      cavg = 0
+      do i = 1, m
+         if(match(i).eq.0) cycle
+         ravg = ravg + rscaling(i)
+         cavg = cavg + cscaling(match(i))
+      end do
+      ravg = ravg / nmatch
+      cavg = cavg / nmatch
+      adjust = (ravg - cavg) / 2
+      rscaling(1:m) = rscaling(1:m) - adjust
+      cscaling(1:n) = cscaling(1:n) + adjust
+      ! For each unmatched col, scale max entry to 1.0
+      do i = 1, n
+         colmax = 0.0
+         do j = ptr(i), ptr(i+1)-1
+            v = abs(val(j)) * exp( rscaling(row(j)) )
+            colmax = max(colmax, v)
+         end do
+         if(colmax.eq.0.0) then
+            cmax(i) = 0.0
+         else
+            cmax(i) = log(1/colmax)
+         endif
+      end do
+      do i = 1, m
+         if(match(i).eq.0) cycle
+         cmax(match(i)) = cscaling(match(i))
+      end do
+      cscaling(1:n) = cmax(1:n)
+   elseif(n.lt.m) then
+      ! More rows than columns
+      ! Allocate some workspace
+      allocate (rmax(m), stat=st)
+      if(st.ne.0) then
+         flag = ERROR_ALLOCATION
+         return
+      endif
+      ! First perform post-processing and magnitude adjustment based on match
+      ! also record which rows have been matched
+      ravg = 0
+      cavg = 0
+      do i = 1, m
+         if(match(i).eq.0) cycle
+         ravg = ravg + rscaling(i)
+         cavg = cavg + cscaling(match(i))
+      end do
+      ravg = ravg / nmatch
+      cavg = cavg / nmatch
+      adjust = (ravg - cavg) / 2
+      rscaling(1:m) = rscaling(1:m) - adjust
+      cscaling(1:n) = cscaling(1:n) + adjust
+      ! Find max column-scaled value in each row from unmatched cols
+      rmax(:) = 0.0
+      do i = 1, n
+         do j = ptr(i), ptr(i+1)-1
+            v = abs(val(j)) * exp( cscaling(i) )
+            rmax(row(j)) = max(rmax(row(j)), v)
+         end do
+      end do
+      ! Calculate scaling for each row, but overwrite with correct values for
+      ! matched rows, then copy entire array over rscaling(:)
+      do i = 1, m
+         if(match(i).ne.0) cycle
+         if(rmax(i).eq.0.0) then
+            rscaling(i) = 0.0
+         else
+            rscaling(i) =  log( 1 / rmax(i) )
+         endif
+      end do
+   endif
+end subroutine match_postproc
 
 end module spral_scaling

@@ -244,43 +244,40 @@ contains
       real(wp), dimension(ptr(n+1)-1), intent(in) :: val
       real(wp), dimension(n), intent(out) :: scaling
 
-      integer :: i, st, flag
-      integer, dimension(:), allocatable :: invp
+      integer :: i
       logical :: sing
       type(auction_inform) :: ainform
+      type(equilib_options) :: eoptions
+      type(equilib_inform) :: einform
+      type(hungarian_options) :: hoptions
+      type(hungarian_inform) :: hinform
 
       write(*, "(a)") "Scaling..."
-
-      ! Set invp to be identity
-      allocate(invp(n))
-      do i = 1, n
-         invp(i) = i
-      end do
 
       call system_clock(start_t, rate_t)
       ! Note: we assume no checking required
       select case(options%scaling)
       case(1) ! Hungarian algorithm
-         call hungarian_scale(n, ptr, row, val, scaling, invp, st, .true., &
-            sing)
-         if(st.ne.0) then
-            print *, "Stat error from hungarian_scale()"
+         hoptions%scale_if_singular = .true.
+         call hungarian_scale_sym(n, ptr, row, val, scaling, hoptions, hinform)
+         if(hinform%flag.le.0) then
+            print *, "Error from hungarian_scale_sym()"
             stop
          endif
       case(2) ! Auction algorithm
-         call auction_scale(n, ptr, row, val, invp, scaling, options%auction, &
-            ainform, flag, st)
-         if(flag.ne.0) then
-            print *, "Error from auction_scale() flag = ", flag
+         call auction_scale_sym(n, ptr, row, val, scaling, &
+            options%auction, ainform)
+         if(ainform%flag.ne.0) then
+            print *, "Error from auction_scale_sym() flag = ", ainform%flag
             stop
          endif
       case(3) ! From ordering
          print *, "--time-scaling not supported with matching-based ordering"
          stop
       case(4) ! MC77-like
-         call equilib_scale(n, invp, ptr, row, val, scaling, st)
-         if(st.ne.0) then
-            print *, "Stat error from equilib_scale()"
+         call equilib_scale_sym(n, ptr, row, val, scaling, eoptions, einform)
+         if(einform%flag.ne.0) then
+            print *, "Error from equilib_scale_sym()"
             stop
          endif
       end select

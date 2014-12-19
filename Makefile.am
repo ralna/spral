@@ -66,7 +66,49 @@ libspral_a_SOURCES += \
 
 # SCALING
 libspral_a_SOURCES += \
-  	src/scaling.f90
+  	src/scaling.f90 \
+	interfaces/C/scaling.f90
+check_PROGRAMS = \
+	scaling_test \
+	examples/Fortran/scaling/auction_sym \
+	examples/Fortran/scaling/auction_unsym \
+	examples/Fortran/scaling/equilib_sym \
+	examples/Fortran/scaling/equilib_unsym \
+	examples/Fortran/scaling/hungarian_sym \
+	examples/Fortran/scaling/hungarian_unsym \
+	examples/C/scaling/auction_sym \
+	examples/C/scaling/auction_unsym \
+	examples/C/scaling/equilib_sym \
+	examples/C/scaling/equilib_unsym \
+	examples/C/scaling/hungarian_sym \
+	examples/C/scaling/hungarian_unsym
+scaling_test_SOURCES = tests/scaling.f90
+examples_Fortran_scaling_auction_sym_SOURCES = examples/Fortran/scaling/auction_sym.f90
+examples_Fortran_scaling_auction_unsym_SOURCES = examples/Fortran/scaling/auction_unsym.f90
+examples_Fortran_scaling_equilib_sym_SOURCES = examples/Fortran/scaling/equilib_sym.f90
+examples_Fortran_scaling_equilib_unsym_SOURCES = examples/Fortran/scaling/equilib_unsym.f90
+examples_Fortran_scaling_hungarian_sym_SOURCES = examples/Fortran/scaling/hungarian_sym.f90
+examples_Fortran_scaling_hungarian_unsym_SOURCES = examples/Fortran/scaling/hungarian_unsym.f90
+examples_C_scaling_auction_sym_SOURCES = examples/C/scaling/auction_sym.c
+examples_C_scaling_auction_unsym_SOURCES = examples/C/scaling/auction_unsym.c
+examples_C_scaling_equilib_sym_SOURCES = examples/C/scaling/equilib_sym.c
+examples_C_scaling_equilib_unsym_SOURCES = examples/C/scaling/equilib_unsym.c
+examples_C_scaling_hungarian_sym_SOURCES = examples/C/scaling/hungarian_sym.c
+examples_C_scaling_hungarian_unsym_SOURCES = examples/C/scaling/hungarian_unsym.c
+tests/scaling.$(OBJEXT): libspral.a
+examples/Fortran/scaling/auction_sym.$(OBJEXT): libspral.a
+examples/Fortran/scaling/auction_unsym.$(OBJEXT): libspral.a
+examples/Fortran/scaling/equilib_sym.$(OBJEXT): libspral.a
+examples/Fortran/scaling/equilib_unsym.$(OBJEXT): libspral.a
+examples/Fortran/scaling/hungarian_sym.$(OBJEXT): libspral.a
+examples/Fortran/scaling/hungarian_unsym.$(OBJEXT): libspral.a
+examples/C/scaling/auction_sym.$(OBJEXT): libspral.a
+examples/C/scaling/auction_unsym.$(OBJEXT): libspral.a
+examples/C/scaling/equilib_sym.$(OBJEXT): libspral.a
+examples/C/scaling/equilib_unsym.$(OBJEXT): libspral.a
+examples/C/scaling/hungarian_sym.$(OBJEXT): libspral.a
+examples/C/scaling/hungarian_unsym.$(OBJEXT): libspral.a
+TESTS = scaling_test
 
 # TIMER
 libspral_a_SOURCES += \
@@ -77,7 +119,7 @@ include_HEADERS += include/spral_random.h
 libspral_a_SOURCES += \
 	src/random.f90 \
 	interfaces/C/random.f90
-check_PROGRAMS = \
+check_PROGRAMS += \
 	random_test \
 	examples/Fortran/random \
 	examples/C/random
@@ -87,7 +129,7 @@ examples_C_random_SOURCES = examples/C/random.c
 tests/random.$(OBJEXT): libspral.a
 examples/Fortran/random.$(OBJEXT): libspral.a
 examples/C/random.$(OBJEXT): libspral.a
-TESTS = random_test
+TESTS += random_test
 
 # RANDOM_MATRIX
 include_HEADERS += include/spral_random_matrix.h
@@ -308,6 +350,7 @@ src/ssids/solve_kernels.$(OBJEXT): src/ssids/dtrsv.h
 # C interface deps
 interfaces/C/random.$(OBJEXT): src/random.$(OBJEXT)
 interfaces/C/random_matrix.$(OBJEXT): src/random_matrix.$(OBJEXT)
+interfaces/C/scaling.$(OBJEXT): src/scaling.$(OBJEXT)
 if HAVE_NVCC
 interfaces/C/ssids.$(OBJEXT): src/ssids/ssids.$(OBJEXT) \
 										src/ssids/inform.$(OBJEXT) \
