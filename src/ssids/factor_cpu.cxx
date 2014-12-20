@@ -12,6 +12,8 @@
 /* Standard headers */
 #include <cstring>
 #include <cstdio>
+#include <sstream>
+#include <stdexcept>
 /* External library headers */
 #include "bub/bub.hxx"
 /* SPRAL headers */
@@ -21,6 +23,7 @@
 // start of namespace spral::ssids::internal
 namespace spral { namespace ssids { namespace internal {
 
+/* Generic wrapper around Fortran-defined smalloc calls */
 template<typename T>
 T *smalloc(void *alloc, size_t len);
 template<>
@@ -31,6 +34,22 @@ template<>
 int *smalloc(void *alloc, size_t len) {
    return spral_ssids_smalloc_int(alloc, len);
 }
+
+/* Custom exceptions */
+class NotPosDefError: public std::runtime_error {
+private:
+   int posn;
+public:
+   NotPosDefError(int posn)
+      : runtime_error("Matrix not positive definite"), posn(posn)
+   {}
+
+   virtual const char* what() const throw() {
+      std::ostringstream cnvt;
+      cnvt << std::runtime_error::what() << " (failed at column " << posn << ")";
+      return cnvt.str().c_str();
+   }
+};
 
 template <typename T>
 struct cpu_node_data {
@@ -78,7 +97,7 @@ void assemble_node(
    for(struct cpu_node_data<T> *child=node->first_child; child!=NULL; child=child->next_child)
       node->ndelay_in += child->ndelay_out;
    int nrow = node->nrow_expected + node->ndelay_in;
-   int ncol = node->nrow_expected + node->ndelay_in;
+   int ncol = node->ncol_expected + node->ndelay_in;
 
    /* Get space for node now we know it size using Fortran allocator */
    size_t len = ((size_t) nrow+2) * ncol; // L is nrow x ncol and D is 2 x ncol
@@ -168,10 +187,9 @@ void assemble_node(
       }
    }
 }
-
-/* Factorize a node */
+/* Factorize a node (indef) */
 template <typename T, int BLOCK_SIZE>
-void factor_node(
+void factor_node_indef(
       struct cpu_node_data<T> *const node,
       const struct cpu_factor_options *const options
       ) {
@@ -189,16 +207,42 @@ void factor_node(
    /* Record information */
    node->ndelay_out = n - node->nelim;
 }
+/* Factorize a node (psdef) */
+template <typename T, int BLOCK_SIZE>
+void factor_node_posdef(
+      struct cpu_node_data<T> *const node,
+      const struct cpu_factor_options *const options
+      ) {
+   /* Extract useful information about node */
+   int m = node->nrow_expected;
+   int n = node->ncol_expected;
+   T *lcol = node->lcol;
 
-template <typename T>
+   /* Perform factorization */
+   typedef bub::CpuLLT<T, BLOCK_SIZE> CpuLLTSpec;
+   int flag = CpuLLTSpec().factor(m, n, lcol, m);
+   if(flag) throw NotPosDefError(flag);
+}
+/* Factorize a node (wrapper) */
+template <bool posdef, typename T, int BLOCK_SIZE>
+void factor_node(
+      struct cpu_node_data<T> *const node,
+      const struct cpu_factor_options *const options
+      ) {
+   if(posdef) factor_node_posdef<T, BLOCK_SIZE>(node, options);
+   else       factor_node_indef <T, BLOCK_SIZE>(node, options);
+}
+
+/* Calculate update */
+template <bool posdef, typename T>
 void calculate_update(
       struct cpu_node_data<T> *node
       ) {
 }
 
 /* Simplistic multifrontal factorization */
-template <typename T>
-void factor_ldlt(
+template <bool posdef, typename T>
+void factor(
       int n,            // Maximum row index (+1)
       int nnodes,       // Number of nodes in assembly tree
       struct cpu_node_data<T> *const nodes, // Data structure for node information
@@ -216,9 +260,9 @@ void factor_ldlt(
       // Assembly
       assemble_node<T>(&nodes[ni], alloc, map, aval, scaling);
       // Factorization
-      factor_node<T, 16>(&nodes[ni], options);
+      factor_node<posdef, T, 16>(&nodes[ni], options);
       // Form update
-      calculate_update(&nodes[ni]);
+      calculate_update<posdef>(&nodes[ni]);
    }
 
    /* Free memory */
@@ -231,7 +275,7 @@ void factor_ldlt(
 /* Double precision wrapper around templated routines */
 extern "C"
 void spral_ssids_factor_cpu_dbl(
-      bool pos_def,     // If true, performs A=LL^T, if false do pivoted A=LDL^T
+      bool posdef,     // If true, performs A=LL^T, if false do pivoted A=LDL^T
       int n,            // Maximum row index (+1)
       int nnodes,       // Number of nodes in assembly tree
       struct spral::ssids::internal::cpu_node_data<double> *const nodes, // Data structure for node information
@@ -246,11 +290,11 @@ void spral_ssids_factor_cpu_dbl(
    stats->flag = 0;
 
    // Call relevant routine
-   if(pos_def) {
-      stats->flag = -98; // Unimplemented
-      return;
+   if(posdef) {
+      spral::ssids::internal::factor<true, double>
+         (n, nnodes, nodes, aval, scaling, alloc, options, stats);
    } else {
-      spral::ssids::internal::factor_ldlt<double>
+      spral::ssids::internal::factor<false, double>
          (n, nnodes, nodes, aval, scaling, alloc, options, stats);
    }
 }

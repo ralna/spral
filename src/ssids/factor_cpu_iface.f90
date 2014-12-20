@@ -1,7 +1,7 @@
 module spral_ssids_factor_cpu_iface
    use, intrinsic :: iso_c_binding
    use spral_ssids_akeep, only : ssids_akeep_base
-   use spral_ssids_datatypes, only : ssids_options
+   use spral_ssids_datatypes, only : ssids_options, node_type, long
    use spral_ssids_inform, only : ssids_inform_base
    implicit none
 
@@ -110,10 +110,38 @@ subroutine setup_cpu_data(akeep, cnodes, foptions, coptions)
    coptions%u     = foptions%u
 end subroutine setup_cpu_data
 
-subroutine extract_cpu_data(cstats, finform)
+subroutine extract_cpu_data(nnodes, cnodes, fnodes, cstats, finform)
+   integer, intent(in) :: nnodes
+   type(cpu_node_data), dimension(nnodes+1), intent(in) :: cnodes
+   type(node_type), dimension(nnodes+1), intent(out) :: fnodes
    type(cpu_factor_stats), intent(in) :: cstats
    class(ssids_inform_base), intent(inout) :: finform
 
+   integer :: node, nrow, ncol
+
+   ! Copy factors (scalars and pointers)
+   do node = 1, nnodes
+      ! Components we copy from C version
+      nrow = cnodes(node)%nrow_expected + cnodes(node)%ndelay_in
+      ncol = cnodes(node)%ncol_expected + cnodes(node)%ndelay_in
+      fnodes(node)%nelim = cnodes(node)%nelim
+      fnodes(node)%nelim = cnodes(node)%ndelay_in
+      call C_F_POINTER(cnodes(node)%lcol, fnodes(node)%lcol, &
+         shape=(/ (2_long+nrow)*ncol /) )
+      call C_F_POINTER(cnodes(node)%perm, fnodes(node)%perm, &
+         shape=(/ ncol /) )
+
+      ! Components we abdicate
+      fnodes(node)%rdptr = -1
+      fnodes(node)%ncpdb = -1
+      fnodes(node)%gpu_lcol = C_NULL_PTR
+      nullify(fnodes(node)%rsmptr)
+      nullify(fnodes(node)%ismptr)
+      fnodes(node)%rsmsa = -1
+      fnodes(node)%ismsa = -1
+   end do
+
+   ! Copy stats
    finform%flag = cstats%flag
 end subroutine extract_cpu_data
 

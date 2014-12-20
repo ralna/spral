@@ -89,7 +89,7 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
    endif
 
    ! Gather information back to Fortran
-   call extract_cpu_data(cstats, inform)
+   call extract_cpu_data(akeep%nnodes, cnodes, fkeep%nodes, cstats, inform)
 
 end subroutine inner_factor_cpu
 
