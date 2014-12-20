@@ -23,6 +23,9 @@
 // start of namespace spral::ssids::internal
 namespace spral { namespace ssids { namespace internal {
 
+const int SSIDS_SUCCESS = 0;
+const int SSIDS_ERROR_NOT_POS_DEF = -6;
+
 /* Generic wrapper around Fortran-defined smalloc calls */
 template<typename T>
 T *smalloc(void *alloc, size_t len);
@@ -37,9 +40,9 @@ int *smalloc(void *alloc, size_t len) {
 
 /* Custom exceptions */
 class NotPosDefError: public std::runtime_error {
-private:
-   int posn;
 public:
+   int posn;
+
    NotPosDefError(int posn)
       : runtime_error("Matrix not positive definite"), posn(posn)
    {}
@@ -104,8 +107,16 @@ void assemble_node(
    node->lcol = smalloc<T>(alloc, len);
    node->perm = smalloc<int>(alloc, ncol); // ncol fully summed variables
 
+   /* Get space for contribution block */
+   long contrib_dimn = node->nrow_expected - node->ncol_expected;
+   node->contrib = (contrib_dimn > 0) ? new T[contrib_dimn*contrib_dimn] : NULL;
+
    /* Zero node L and D */
    memset(node->lcol, 0, len*sizeof(T));
+
+   /* Set perm for expected eliminations at this node */
+   for(int i=0; i<node->ncol_expected; i++)
+      node->perm[i] = node->rlist[i];
    
    /* Add A */
    if(scaling) {
@@ -116,8 +127,8 @@ void assemble_node(
          int c = dest / node->nrow_expected;
          int r = dest % node->nrow_expected;
          long k = node->ndelay_in*(nrow+1) + c*nrow + r;
-         T rscale = scaling[ node->rlist[r] ];
-         T cscale = scaling[ node->rlist[c] ];
+         T rscale = scaling[ node->rlist[r]-1 ];
+         T cscale = scaling[ node->rlist[c]-1 ];
          node->lcol[k] = rscale * aval[src] * cscale;
       }
    } else {
@@ -135,6 +146,8 @@ void assemble_node(
    /* Add children */
    if(node->first_child != NULL) {
       /* Build lookup vector, allowing for insertion of delayed vars */
+      /* Note that while rlist[] is 1-indexed this is fine so long as lookup
+       * is also 1-indexed (which it is as it is another node's rlist[] */
       for(int i=0; i<node->ncol_expected; i++)
          map[ node->rlist[i] ] = i;
       for(int i=node->ncol_expected; i<node->nrow_expected; i++)
@@ -171,7 +184,7 @@ void assemble_node(
                dest = &node->lcol[c*ldd];
                for(int j=child->ncol_expected; j<child->nrow_expected; j++) {
                   int r = map[ child->rlist[j] ];
-                  dest[r] = src[r];
+                  dest[r] += src[r];
                }
             } else {
                // Contribution added to contrib
@@ -184,6 +197,9 @@ void assemble_node(
                }
             }
          }
+         
+         /* Free memory from child contribution block */
+         delete[] child->contrib;
       }
    }
 }
@@ -221,6 +237,7 @@ void factor_node_posdef(
    /* Perform factorization */
    typedef bub::CpuLLT<T, BLOCK_SIZE> CpuLLTSpec;
    int flag = CpuLLTSpec().factor(m, n, lcol, m);
+   node->nelim = (flag) ? flag : n;
    if(flag) throw NotPosDefError(flag);
 }
 /* Factorize a node (wrapper) */
@@ -238,6 +255,16 @@ template <bool posdef, typename T>
 void calculate_update(
       struct cpu_node_data<T> *node
       ) {
+   if(posdef) {
+      int m = node->nrow_expected - node->ncol_expected;
+      if(m==0) return; // no-op
+      int k = node->nelim;
+      int ldl = node->nrow_expected;
+      host_syrk<T>(bub::FILL_MODE_LWR, bub::OP_N, m, k,
+            -1.0, &node->lcol[node->ncol_expected], ldl,
+            1.0, node->contrib, m);
+   } else {
+   }
 }
 
 /* Simplistic multifrontal factorization */
@@ -253,7 +280,7 @@ void factor(
       struct cpu_factor_stats *const stats // Info out
       ) {
 
-   int *map = new int[n];
+   int *map = new int[n+1]; // +1 to allow for indexing with 1-indexed array
 
    /* Main loop: Iterate over nodes in order */
    for(int ni=0; ni<nnodes; ni++) {
@@ -287,12 +314,16 @@ void spral_ssids_factor_cpu_dbl(
       ) {
 
    // Initialize stats
-   stats->flag = 0;
+   stats->flag = spral::ssids::internal::SSIDS_SUCCESS;
 
    // Call relevant routine
    if(posdef) {
-      spral::ssids::internal::factor<true, double>
-         (n, nnodes, nodes, aval, scaling, alloc, options, stats);
+      try {
+         spral::ssids::internal::factor<true, double>
+            (n, nnodes, nodes, aval, scaling, alloc, options, stats);
+      } catch(spral::ssids::internal::NotPosDefError npde) {
+         stats->flag = spral::ssids::internal::SSIDS_ERROR_NOT_POS_DEF;
+      }
    } else {
       spral::ssids::internal::factor<false, double>
          (n, nnodes, nodes, aval, scaling, alloc, options, stats);
