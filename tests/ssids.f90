@@ -2421,7 +2421,7 @@ subroutine test_random_scale
    type(hungarian_options) :: hoptions
    type(hungarian_inform) :: hinform
 
-   integer :: flag, st, cuda_error
+   integer :: cuda_error
 
    write(*, "(a)")
    write(*, "(a)") "================================"
