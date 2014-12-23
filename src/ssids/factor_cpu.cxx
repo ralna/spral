@@ -12,6 +12,7 @@
 /* Standard headers */
 #include <cstring>
 #include <cstdio>
+#include <limits> // FIXME: remove when done with debug if unneeded
 #include <sstream>
 #include <stdexcept>
 /* External library headers */
@@ -218,6 +219,7 @@ void factor_node_indef(
 
    /* Perform factorization */
    typedef bub::CpuLDLT<T, BLOCK_SIZE> CpuLDLTSpec;
+   //typedef bub::CpuLDLT<T, 5, true> CpuLDLTSpec; // FIXME: remove
    node->nelim = CpuLDLTSpec(options->u, options->small).factor(m, n, perm, lcol, m, d);
 
    /* Record information */
@@ -236,6 +238,7 @@ void factor_node_posdef(
 
    /* Perform factorization */
    typedef bub::CpuLLT<T, BLOCK_SIZE> CpuLLTSpec;
+   //typedef bub::CpuLLT<T, 4, true> CpuLLTSpec; //FIXME: remove
    int flag = CpuLLTSpec().factor(m, n, lcol, m);
    node->nelim = (flag) ? flag : n;
    if(flag) throw NotPosDefError(flag);
@@ -248,6 +251,29 @@ void factor_node(
       ) {
    if(posdef) factor_node_posdef<T, BLOCK_SIZE>(node, options);
    else       factor_node_indef <T, BLOCK_SIZE>(node, options);
+}
+
+/* FIXME: remove post debug */
+template<typename T>
+void print_node(int m, int n, const int *perm, const T *lcol, const T*d) {
+   for(int i=0; i<m; i++) {
+      printf("%d:", perm[i]);
+      for(int j=0; j<n; j++) printf(" %10.2e", lcol[j*m+i]);
+      printf("  d: %10.2e %10.2e\n", d[2*i+0], d[2*i+1]);
+   }
+}
+/* FIXME: remove post debug */
+template<typename T>
+void print_factors(
+      int nnodes,
+      struct cpu_node_data<T> *const nodes
+      ) {
+   for(int node=0; node<nnodes; node++) {
+      printf("== Node %d ==\n", node);
+      int m = nodes[node].nrow_expected + nodes[node].ndelay_in;
+      int n = nodes[node].ncol_expected + nodes[node].ndelay_in;
+      print_node(m, n, nodes[node].perm, nodes[node].lcol, &nodes[node].lcol[m*n]);
+   }
 }
 
 /* Calculate update */
@@ -292,6 +318,19 @@ void factor(
       calculate_update<posdef>(&nodes[ni]);
    }
 
+   // FIXME: gross hack for compat with bub (which needs to differentiate
+   // between a natural zero and a 2x2 factor's second entry without counting)
+   // SSIDS original data format [a11 a21 a22 xxx] seems more bizzare than
+   // bub one [a11 a21 inf a22]
+   for(int ni=0; ni<nnodes; ni++) {
+      int m = nodes[ni].nrow_expected + nodes[ni].ndelay_in;
+      int n = nodes[ni].ncol_expected + nodes[ni].ndelay_in;
+      T *d = nodes[ni].lcol + m*n;
+      for(int i=0; i<2*nodes[ni].nelim; i++)
+         if(d[i] == std::numeric_limits<T>::infinity())
+            d[i] = d[i+1];
+   }
+
    /* Free memory */
    delete[] map;
 }
@@ -313,6 +352,8 @@ void spral_ssids_factor_cpu_dbl(
       struct spral::ssids::internal::cpu_factor_stats *const stats // Info out
       ) {
 
+   const bool debug = false;
+
    // Initialize stats
    stats->flag = spral::ssids::internal::SSIDS_SUCCESS;
 
@@ -327,5 +368,11 @@ void spral_ssids_factor_cpu_dbl(
    } else {
       spral::ssids::internal::factor<false, double>
          (n, nnodes, nodes, aval, scaling, alloc, options, stats);
+   }
+
+   // FIXME: Remove when done with debug
+   if(debug) {
+      printf("Final factors:\n");
+      spral::ssids::internal::print_factors<double>(nnodes, nodes);
    }
 }

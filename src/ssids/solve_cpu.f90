@@ -182,7 +182,6 @@ subroutine subtree_bwd_solve(en, sa, job, pos_def, nnodes, nodes, sptr, &
    st = 0
    allocate(xlocal(nrhs*(sptr(nnodes+1)-1)), map(sptr(nnodes+1)-1), stat=st)
 
-
    ! Backwards solve DL^Tx = z or L^Tx = z
    do node = en, sa, -1
       nelim = nodes(node)%nelim
