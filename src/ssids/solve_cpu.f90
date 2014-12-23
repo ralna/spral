@@ -204,9 +204,12 @@ subroutine subtree_bwd_solve(en, sa, job, pos_def, nnodes, nodes, sptr, &
       else
          call solve_bwd_mult(pos_def, job, rlist(rptr(node)), invp, &
             nrhs, x, ldx, blkm, blkn, nelim, nd, &
-            nodes(node)%rsmptr%rmem(nodes(node)%rsmsa), & ! node%lcol
-            nodes(node)%rsmptr%rmem(nodes(node)%rsmsa+blkm*blkn), & ! node%d
-            nodes(node)%ismptr%imem(nodes(node)%ismsa), & ! node%perm
+            !nodes(node)%rsmptr%rmem(nodes(node)%rsmsa), & ! node%lcol
+            nodes(node)%lcol, &
+            !nodes(node)%rsmptr%rmem(nodes(node)%rsmsa+blkm*blkn), & ! node%d
+            nodes(node)%lcol(1+blkm*blkn:), & ! node%d
+            !nodes(node)%ismptr%imem(nodes(node)%ismsa), & ! node%perm
+            nodes(node)%perm, &
             xlocal, map)
       end if
    end do
