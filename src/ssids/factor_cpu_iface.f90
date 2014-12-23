@@ -91,6 +91,11 @@ subroutine setup_cpu_data(akeep, cnodes, foptions, coptions)
       cnodes(node)%next_child = C_NULL_PTR
       cnodes(node)%rlist = C_LOC(akeep%rlist(akeep%rptr(node)))
 
+      ! FIXME: Remove below when done
+      !print *, "node ", node, " parent ", akeep%sparent(node), &
+      !   int(akeep%rptr(node+1) - akeep%rptr(node)), "x", &
+      !   akeep%sptr(node+1) - akeep%sptr(node)
+
       ! Data about A
       cnodes(node)%num_a = akeep%nptr(node+1) - akeep%nptr(node)
       cnodes(node)%amap = C_LOC(akeep%nlist(1,akeep%nptr(node)))

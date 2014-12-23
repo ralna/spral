@@ -174,27 +174,27 @@ void assemble_node(
             }
          }
          /* Handle expected contributions */
-         for(int i=child->ncol_expected; i<child->nrow_expected; i++) {
-            int c = map[ child->rlist[i] ];
-            int lds = child->nrow_expected - child->ncol_expected;
-            T *src = &child->contrib[(i-child->ncol_expected)*(lds+1)];
-            T *dest; int ldd;
+         int cm = child->nrow_expected - child->ncol_expected;
+         for(int i=0; i<cm; i++) {
+            int c = map[ child->rlist[child->ncol_expected+i] ];
+            T *src = &child->contrib[i*cm];
             if(c < node->ncol_expected) {
                // Contribution added to lcol
-               ldd = nrow;
-               dest = &node->lcol[c*ldd];
-               for(int j=child->ncol_expected; j<child->nrow_expected; j++) {
-                  int r = map[ child->rlist[j] ];
-                  dest[r] += src[r];
+               int ldd = nrow;
+               T *dest = &node->lcol[c*ldd];
+               for(int j=i; j<cm; j++) {
+                  int r = map[ child->rlist[child->ncol_expected+j] ];
+                  dest[r] += src[j];
                }
             } else {
                // Contribution added to contrib
                // FIXME: Add after contribution block established?
-               ldd = node->nrow_expected - node->ncol_expected;
-               dest = &node->contrib[(c-node->ncol_expected)*lds];
-               for(int j=child->ncol_expected; j<child->nrow_expected; j++) {
-                  int r = map[ child->rlist[j] ] - child->ncol_expected;
-                  dest[r] = src[r];
+               int ldd = node->nrow_expected - node->ncol_expected;
+               T *dest = &node->contrib[(c-node->ncol_expected)*ldd];
+               for(int j=i; j<cm; j++) {
+                  int r = map[ child->rlist[child->ncol_expected+j] ] -
+                     node->ncol_expected;
+                  dest[r] = src[j];
                }
             }
          }
