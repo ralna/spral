@@ -125,7 +125,7 @@ subroutine extract_cpu_data(nnodes, cnodes, fnodes, cstats, finform)
       nrow = cnodes(node)%nrow_expected + cnodes(node)%ndelay_in
       ncol = cnodes(node)%ncol_expected + cnodes(node)%ndelay_in
       fnodes(node)%nelim = cnodes(node)%nelim
-      fnodes(node)%nelim = cnodes(node)%ndelay_in
+      fnodes(node)%ndelay = cnodes(node)%ndelay_in
       call C_F_POINTER(cnodes(node)%lcol, fnodes(node)%lcol, &
          shape=(/ (2_long+nrow)*ncol /) )
       call C_F_POINTER(cnodes(node)%perm, fnodes(node)%perm, &
