@@ -290,6 +290,58 @@ void calculate_update(
             -1.0, &node->lcol[node->ncol_expected], ldl,
             1.0, node->contrib, m);
    } else {
+      // Indefinte - need to recalculate LD before we can use it!
+      int m = node->nrow_expected - node->ncol_expected;
+      int n = node->nelim;
+      if(m==0 || n==0) return; // no-op
+
+      // Calculate LD
+      T *lcol = &node->lcol[node->ncol_expected+node->ndelay_in];
+      int ldl = node->nrow_expected + node->ndelay_in;
+      T *d = &node->lcol[ldl*(node->ncol_expected+node->ndelay_in)];
+      T *ld = new T[m*n];
+      for(int j=0; j<n;) {
+         if(d[2*j+1] == 0.0) {
+            // 1x1 pivot
+            // (Actually stored as D^-1 so need to invert it again)
+            if(d[2*j] == 0.0) {
+               // Handle zero pivots with care
+               for(int i=0; i<m; i++) {
+                  ld[j*m+i] = 0.0;
+               }
+            } else {
+               // Standard 1x1 pivot
+               T d11 = 1/d[2*j];
+               // And calulate ld
+               for(int i=0; i<m; i++) {
+                  ld[j*m+i] = d11*lcol[j*ldl+i];
+               }
+            }
+            // Increment j
+            j++;
+         } else {
+            // 2x2 pivot
+            // (Actually stored as D^-1 so need to invert it again)
+            T di11 = d[2*j]; T di21 = d[2*j+1]; T di22 = d[2*j+3];
+            T det = di11*di22 - di21*di21;
+            T d11 = di22 / det; T d21 = -di21 / det; T d22 = di11 / det;
+            // And calulate ld
+            for(int i=0; i<m; i++) {
+               ld[j*m+i]     = d11*lcol[j*ldl+i] + d21*lcol[(j+1)*ldl+i];
+               ld[(j+1)*m+i] = d21*lcol[j*ldl+i] + d22*lcol[(j+1)*ldl+i];
+            }
+            // Increment j
+            j += 2;
+         }
+      }
+
+      // Apply update to contrib block
+      host_gemm<T>(bub::OP_N, bub::OP_T, m, m, n,
+            -1.0, lcol, ldl, ld, m,
+            1.0, node->contrib, m);
+
+      // Free memory
+      delete[] ld;
    }
 }
 
