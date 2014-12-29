@@ -1,7 +1,8 @@
 module spral_ssids_factor_cpu_iface
    use, intrinsic :: iso_c_binding
    use spral_ssids_akeep, only : ssids_akeep_base
-   use spral_ssids_datatypes, only : ssids_options, node_type, long
+   use spral_ssids_datatypes, only : ssids_options, node_type, long, &
+                                     DEBUG_PRINT_LEVEL
    use spral_ssids_inform, only : ssids_inform_base
    implicit none
 
@@ -38,6 +39,7 @@ module spral_ssids_factor_cpu_iface
    type, bind(C) :: cpu_factor_options
       real(C_DOUBLE) :: small
       real(C_DOUBLE) :: u
+      integer(C_INT) :: print_level
    end type cpu_factor_options
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -91,10 +93,12 @@ subroutine setup_cpu_data(akeep, cnodes, foptions, coptions)
       cnodes(node)%next_child = C_NULL_PTR
       cnodes(node)%rlist = C_LOC(akeep%rlist(akeep%rptr(node)))
 
-      ! FIXME: Remove below when done
-      !print *, "node ", node, " parent ", akeep%sparent(node), &
-      !   int(akeep%rptr(node+1) - akeep%rptr(node)), "x", &
-      !   akeep%sptr(node+1) - akeep%sptr(node)
+      ! Print out debug info
+      if(foptions%print_level > DEBUG_PRINT_LEVEL) then
+         print *, "node ", node, " parent ", akeep%sparent(node), &
+            int(akeep%rptr(node+1) - akeep%rptr(node)), "x", &
+            akeep%sptr(node+1) - akeep%sptr(node)
+      endif
 
       ! Data about A
       cnodes(node)%num_a = akeep%nptr(node+1) - akeep%nptr(node)
@@ -111,8 +115,9 @@ subroutine setup_cpu_data(akeep, cnodes, foptions, coptions)
    !
    ! Setup options
    !
-   coptions%small = foptions%small
-   coptions%u     = foptions%u
+   coptions%small       = foptions%small
+   coptions%u           = foptions%u
+   coptions%print_level = foptions%print_level
 end subroutine setup_cpu_data
 
 subroutine extract_cpu_data(nnodes, cnodes, fnodes, cstats, finform)

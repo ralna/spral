@@ -178,6 +178,7 @@ module spral_ssids_datatypes
          !  0: error and warning messages only.
          !  1: as 0 plus basic diagnostic printing.
          !  > 1: as 1 plus some more detailed diagnostic messages.
+         !  > 9999: debug (absolutely everything - really don't use this)
       integer :: unit_diagnostics = 6 ! unit number for diagnostic printing.
          ! Printing is suppressed if unit_diagnostics  <  0.
       integer :: unit_error = 6 ! unit number for error messages.
@@ -244,5 +245,7 @@ module spral_ssids_datatypes
    integer, parameter, public :: MNF_BLOCKS = 11
    integer, parameter, public :: HOGG_ASSEMBLE_TX = 128
    integer, parameter, public :: HOGG_ASSEMBLE_TY = 8
+
+   integer, parameter, public :: DEBUG_PRINT_LEVEL = 9999 
 
 end module spral_ssids_datatypes

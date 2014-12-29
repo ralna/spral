@@ -355,6 +355,8 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
    end if
 
    if (present(order)) order(1:n) = abs(order2(1:n))
+   if(options%print_level > DEBUG_PRINT_LEVEL) &
+      print *, "order = ", order2(1:n)
 
    490 continue
    inform%stat = st
@@ -653,8 +655,7 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
    integer :: n, nz
    integer :: nout, nout1
    integer :: mp
-   logical :: sing
-   integer :: cuda_error, st
+   integer :: st
    ! Solve parameters. Tree is broken up into multiple chunks. Parent-child
    ! relations between chunks are stored in fwd_ptr and fwd (see solve routine
    ! comments)
@@ -668,8 +669,6 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
    type(equilib_options) :: esoptions
    type(equilib_inform) :: esinform
    
-   integer :: flag
-
    ! Setup for any printing we may require
    context = 'ssids_factor'
    mp = options%unit_diagnostics

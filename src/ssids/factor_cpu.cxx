@@ -82,6 +82,7 @@ struct cpu_node_data {
 struct cpu_factor_options {
    double small;
    double u;
+   int print_level;
 };
 
 struct cpu_factor_stats {
@@ -219,7 +220,7 @@ void factor_node_indef(
 
    /* Perform factorization */
    typedef bub::CpuLDLT<T, BLOCK_SIZE> CpuLDLTSpec;
-   //typedef bub::CpuLDLT<T, 5, true> CpuLDLTSpec; // FIXME: remove
+   typedef bub::CpuLDLT<T, 5, true> CpuLDLTSpecDebug; // FIXME: remove
    node->nelim = CpuLDLTSpec(options->u, options->small).factor(m, n, perm, lcol, m, d);
 
    /* Record information */
@@ -259,7 +260,8 @@ void print_node(int m, int n, const int *perm, const T *lcol, const T*d) {
    for(int i=0; i<m; i++) {
       printf("%d:", perm[i]);
       for(int j=0; j<n; j++) printf(" %10.2e", lcol[j*m+i]);
-      printf("  d: %10.2e %10.2e\n", d[2*i+0], d[2*i+1]);
+      if(i<n) printf("  d: %10.2e %10.2e\n", d[2*i+0], d[2*i+1]);
+      else printf("\n");
    }
 }
 /* FIXME: remove post debug */
@@ -404,8 +406,6 @@ void spral_ssids_factor_cpu_dbl(
       struct spral::ssids::internal::cpu_factor_stats *const stats // Info out
       ) {
 
-   const bool debug = false;
-
    // Initialize stats
    stats->flag = spral::ssids::internal::SSIDS_SUCCESS;
 
@@ -423,7 +423,7 @@ void spral_ssids_factor_cpu_dbl(
    }
 
    // FIXME: Remove when done with debug
-   if(debug) {
+   if(options->print_level > 9999) {
       printf("Final factors:\n");
       spral::ssids::internal::print_factors<double>(nnodes, nodes);
    }
