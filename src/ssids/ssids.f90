@@ -612,6 +612,8 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
    if (inform%flag < 0) go to 490
 
    if (present(order)) order(1:n) = abs(order2(1:n))
+   if(options%print_level > DEBUG_PRINT_LEVEL) &
+      print *, "order = ", order2(1:n)
 
    490 continue
    inform%stat = st

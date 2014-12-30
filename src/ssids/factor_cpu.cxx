@@ -128,7 +128,7 @@ void assemble_node(
          long dest = node->amap[2*i+1] - 1; // amap contains 1-based values
          int c = dest / node->nrow_expected;
          int r = dest % node->nrow_expected;
-         long k = node->ndelay_in*(nrow+1) + c*nrow + r;
+         long k = c*nrow + r;
          T rscale = scaling[ node->rlist[r]-1 ];
          T cscale = scaling[ node->rlist[c]-1 ];
          node->lcol[k] = rscale * aval[src] * cscale;
@@ -140,7 +140,7 @@ void assemble_node(
          long dest = node->amap[2*i+1] - 1; // amap contains 1-based values
          int c = dest / node->nrow_expected;
          int r = dest % node->nrow_expected;
-         long k = node->ndelay_in*(nrow+1) + c*nrow + r;
+         long k = c*nrow + r;
          node->lcol[k] = aval[src];
       }
    }
@@ -154,11 +154,12 @@ void assemble_node(
          map[ node->rlist[i] ] = i;
       for(int i=node->ncol_expected; i<node->nrow_expected; i++)
          map[ node->rlist[i] ] = i + node->ndelay_in;
-      /* Loop over children adding contrubutions */
+      /* Loop over children adding contributions */
       for(struct cpu_node_data<T> *child=node->first_child; child!=NULL; child=child->next_child) {
-         /* Handle delays - go to back of node */
+         /* Handle delays - go to back of node
+          * (i.e. become the last rows as in lower triangular format) */
          for(int i=0; i<child->ndelay_out; i++) {
-            // Add delayed rows (in delayed cols)
+            // Add delayed rows (from delayed cols)
             int delay_col = node->ncol_expected + i;
             T *dest = &node->lcol[delay_col*(nrow+1)];
             int lds = child->nrow_expected + child->ndelay_in;
@@ -166,36 +167,38 @@ void assemble_node(
             node->perm[delay_col] = child->perm[child->nelim+i];
             for(int j=i; j<child->ndelay_out; j++)
                dest[j] = src[i];
-            // Add child's non-fully summed rows (in delayed cols)
-            dest = &node->lcol[delay_col*nrow];
+            // Add child's non-fully summed rows (from delayed cols)
+            dest = &node->lcol[delay_col];
             src = &child->lcol[child->nelim*lds + child->ndelay_in];
             for(int j=child->ncol_expected; j<child->nrow_expected; j++) {
                int r = map[ child->rlist[j] ];
-               dest[r] = src[j];
+               dest[r*nrow] = src[j];
             }
          }
-         /* Handle expected contributions */
-         int cm = child->nrow_expected - child->ncol_expected;
-         for(int i=0; i<cm; i++) {
-            int c = map[ child->rlist[child->ncol_expected+i] ];
-            T *src = &child->contrib[i*cm];
-            if(c < node->ncol_expected) {
-               // Contribution added to lcol
-               int ldd = nrow;
-               T *dest = &node->lcol[c*ldd];
-               for(int j=i; j<cm; j++) {
-                  int r = map[ child->rlist[child->ncol_expected+j] ];
-                  dest[r] += src[j];
-               }
-            } else {
-               // Contribution added to contrib
-               // FIXME: Add after contribution block established?
-               int ldd = node->nrow_expected - node->ncol_expected;
-               T *dest = &node->contrib[(c-node->ncol_expected)*ldd];
-               for(int j=i; j<cm; j++) {
-                  int r = map[ child->rlist[child->ncol_expected+j] ] -
-                     node->ncol_expected;
-                  dest[r] = src[j];
+         /* Handle expected contributions (only if there were eliminations) */
+         if(child->nelim > 0) {
+            int cm = child->nrow_expected - child->ncol_expected;
+            for(int i=0; i<cm; i++) {
+               int c = map[ child->rlist[child->ncol_expected+i] ];
+               T *src = &child->contrib[i*cm];
+               if(c < node->ncol_expected) {
+                  // Contribution added to lcol
+                  int ldd = nrow;
+                  T *dest = &node->lcol[c*ldd];
+                  for(int j=i; j<cm; j++) {
+                     int r = map[ child->rlist[child->ncol_expected+j] ];
+                     dest[r] += src[j];
+                  }
+               } else {
+                  // Contribution added to contrib
+                  // FIXME: Add after contribution block established?
+                  int ldd = node->nrow_expected - node->ncol_expected;
+                  T *dest = &node->contrib[(c-node->ncol_expected)*ldd];
+                  for(int j=i; j<cm; j++) {
+                     int r = map[ child->rlist[child->ncol_expected+j] ] -
+                        node->ncol_expected;
+                     dest[r] = src[j];
+                  }
                }
             }
          }
@@ -220,7 +223,7 @@ void factor_node_indef(
 
    /* Perform factorization */
    typedef bub::CpuLDLT<T, BLOCK_SIZE> CpuLDLTSpec;
-   typedef bub::CpuLDLT<T, 5, true> CpuLDLTSpecDebug; // FIXME: remove
+   typedef bub::CpuLDLT<T, 5, true> CpuLDLTSpecDebug; // FIXME: debug remove
    node->nelim = CpuLDLTSpec(options->u, options->small).factor(m, n, perm, lcol, m, d);
 
    /* Record information */
@@ -256,9 +259,9 @@ void factor_node(
 
 /* FIXME: remove post debug */
 template<typename T>
-void print_node(int m, int n, const int *perm, const T *lcol, const T*d) {
+void print_node(int m, int n, int nelim, const int *perm, const T *lcol, const T*d) {
    for(int i=0; i<m; i++) {
-      printf("%d:", perm[i]);
+      printf("%d%s:", perm[i], (i<nelim)?"X":(i<n)?"D":" ");
       for(int j=0; j<n; j++) printf(" %10.2e", lcol[j*m+i]);
       if(i<n) printf("  d: %10.2e %10.2e\n", d[2*i+0], d[2*i+1]);
       else printf("\n");
@@ -274,7 +277,7 @@ void print_factors(
       printf("== Node %d ==\n", node);
       int m = nodes[node].nrow_expected + nodes[node].ndelay_in;
       int n = nodes[node].ncol_expected + nodes[node].ndelay_in;
-      print_node(m, n, nodes[node].perm, nodes[node].lcol, &nodes[node].lcol[m*n]);
+      print_node(m, n, nodes[node].nelim, nodes[node].perm, nodes[node].lcol, &nodes[node].lcol[m*n]);
    }
 }
 
