@@ -91,6 +91,7 @@ struct cpu_factor_stats {
 
 template <typename T>
 void assemble_node(
+      bool posdef,
       struct cpu_node_data<T> *const node,
       void *const alloc,
       int *const map,
@@ -105,7 +106,9 @@ void assemble_node(
    int ncol = node->ncol_expected + node->ndelay_in;
 
    /* Get space for node now we know it size using Fortran allocator */
-   size_t len = ((size_t) nrow+2) * ncol; // L is nrow x ncol and D is 2 x ncol
+   // NB L is  nrow x ncol and D is 2 x ncol (but no D if posdef)
+   size_t len = posdef ? ((size_t) nrow  ) * ncol  // posdef
+                       : ((size_t) nrow+2) * ncol; // indef (includes D)
    node->lcol = smalloc<T>(alloc, len);
    node->perm = smalloc<int>(alloc, ncol); // ncol fully summed variables
 
@@ -242,7 +245,7 @@ void factor_node_posdef(
 
    /* Perform factorization */
    typedef bub::CpuLLT<T, BLOCK_SIZE> CpuLLTSpec;
-   //typedef bub::CpuLLT<T, 4, true> CpuLLTSpec; //FIXME: remove
+   typedef bub::CpuLLT<T, 4, true> CpuLLTSpecDebug; //FIXME: remove
    int flag = CpuLLTSpec().factor(m, n, lcol, m);
    node->nelim = (flag) ? flag : n;
    if(flag) throw NotPosDefError(flag);
@@ -263,7 +266,7 @@ void print_node(bool posdef, int m, int n, int nelim, const int *perm, const T *
    for(int i=0; i<m; i++) {
       printf("%d%s:", perm[i], (i<nelim)?"X":(i<n)?"D":" ");
       for(int j=0; j<n; j++) printf(" %10.2e", lcol[j*m+i]);
-      if(!posdef && i<n) printf("  d: %10.2e %10.2e\n", d[2*i+0], d[2*i+1]);
+      if(!posdef && i<nelim) printf("  d: %10.2e %10.2e\n", d[2*i+0], d[2*i+1]);
       else printf("\n");
    }
 }
@@ -369,7 +372,7 @@ void factor(
    /* Main loop: Iterate over nodes in order */
    for(int ni=0; ni<nnodes; ni++) {
       // Assembly
-      assemble_node<T>(&nodes[ni], alloc, map, aval, scaling);
+      assemble_node<T>(posdef, &nodes[ni], alloc, map, aval, scaling);
       // Factorization
       factor_node<posdef, T, 16>(&nodes[ni], options);
       // Form update
