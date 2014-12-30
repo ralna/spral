@@ -259,17 +259,18 @@ void factor_node(
 
 /* FIXME: remove post debug */
 template<typename T>
-void print_node(int m, int n, int nelim, const int *perm, const T *lcol, const T*d) {
+void print_node(bool posdef, int m, int n, int nelim, const int *perm, const T *lcol, const T*d) {
    for(int i=0; i<m; i++) {
       printf("%d%s:", perm[i], (i<nelim)?"X":(i<n)?"D":" ");
       for(int j=0; j<n; j++) printf(" %10.2e", lcol[j*m+i]);
-      if(i<n) printf("  d: %10.2e %10.2e\n", d[2*i+0], d[2*i+1]);
+      if(!posdef && i<n) printf("  d: %10.2e %10.2e\n", d[2*i+0], d[2*i+1]);
       else printf("\n");
    }
 }
 /* FIXME: remove post debug */
 template<typename T>
 void print_factors(
+      bool posdef,
       int nnodes,
       struct cpu_node_data<T> *const nodes
       ) {
@@ -277,7 +278,7 @@ void print_factors(
       printf("== Node %d ==\n", node);
       int m = nodes[node].nrow_expected + nodes[node].ndelay_in;
       int n = nodes[node].ncol_expected + nodes[node].ndelay_in;
-      print_node(m, n, nodes[node].nelim, nodes[node].perm, nodes[node].lcol, &nodes[node].lcol[m*n]);
+      print_node(posdef, m, n, nodes[node].nelim, nodes[node].perm, nodes[node].lcol, &nodes[node].lcol[m*n]);
    }
 }
 
@@ -428,6 +429,6 @@ void spral_ssids_factor_cpu_dbl(
    // FIXME: Remove when done with debug
    if(options->print_level > 9999) {
       printf("Final factors:\n");
-      spral::ssids::internal::print_factors<double>(nnodes, nodes);
+      spral::ssids::internal::print_factors<double>(posdef, nnodes, nodes);
    }
 }
