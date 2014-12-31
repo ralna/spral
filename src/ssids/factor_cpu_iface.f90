@@ -197,6 +197,11 @@ type(C_PTR) function spral_ssids_smalloc_int(calloc, len) bind(C)
    integer(long) :: srchead
    integer :: st
 
+   if(len.lt.0) then
+      spral_ssids_smalloc_int = C_NULL_PTR
+      return
+   endif
+
    call c_f_pointer(calloc, falloc)
    call smalloc(falloc, ptr, len, srcptr, srchead, st)
    if(st.ne.0) then
