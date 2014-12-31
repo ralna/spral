@@ -100,26 +100,27 @@ void assemble_node(
       ) {
    /* Count incoming delays and determine size of node */
    node->ndelay_in = 0;
-   for(struct cpu_node_data<T> *child=node->first_child; child!=NULL; child=child->next_child)
+   for(struct cpu_node_data<T> *child=node->first_child; child!=NULL; child=child->next_child) {
       node->ndelay_in += child->ndelay_out;
+   }
    int nrow = node->nrow_expected + node->ndelay_in;
    int ncol = node->ncol_expected + node->ndelay_in;
 
-   /* Get space for node now we know it size using Fortran allocator */
+   /* Get space for node now we know it size using Fortran allocator + zero it*/
    // NB L is  nrow x ncol and D is 2 x ncol (but no D if posdef)
    size_t len = posdef ? ((size_t) nrow  ) * ncol  // posdef
                        : ((size_t) nrow+2) * ncol; // indef (includes D)
    node->lcol = smalloc<T>(alloc, len);
-   node->perm = smalloc<int>(alloc, ncol); // ncol fully summed variables
-
-   /* Get space for contribution block */
-   long contrib_dimn = node->nrow_expected - node->ncol_expected;
-   node->contrib = (contrib_dimn > 0) ? new T[contrib_dimn*contrib_dimn] : NULL;
-
-   /* Zero node L and D */
    memset(node->lcol, 0, len*sizeof(T));
 
-   /* Set perm for expected eliminations at this node */
+   /* Get space for contribution block + zero it */
+   long contrib_dimn = node->nrow_expected - node->ncol_expected;
+   node->contrib = (contrib_dimn > 0) ? new T[contrib_dimn*contrib_dimn] : NULL;
+   memset(node->contrib, 0, contrib_dimn*contrib_dimn*sizeof(T));
+
+   /* Alloc + set perm for expected eliminations at this node (delays are set
+    * when they are imported from children) */
+   node->perm = smalloc<int>(alloc, ncol); // ncol fully summed variables
    for(int i=0; i<node->ncol_expected; i++)
       node->perm[i] = node->rlist[i];
    
@@ -200,7 +201,7 @@ void assemble_node(
                   for(int j=i; j<cm; j++) {
                      int r = map[ child->rlist[child->ncol_expected+j] ] -
                         node->ncol_expected;
-                     dest[r] = src[j];
+                     dest[r] += src[j];
                   }
                }
             }
@@ -210,6 +211,14 @@ void assemble_node(
          delete[] child->contrib;
       }
    }
+
+   // FIXME: debug remove
+   /*printf("Post asm contrib:\n");
+   int ldd = node->nrow_expected - node->ncol_expected;
+   for(int i=0; i<ldd; i++) {
+      for(int j=0; j<ldd; j++) printf(" %e", node->contrib[j*ldd+i]);
+      printf("\n");
+   }*/
 }
 /* Factorize a node (indef) */
 template <typename T, int BLOCK_SIZE>
@@ -249,6 +258,9 @@ void factor_node_posdef(
    int flag = CpuLLTSpec().factor(m, n, lcol, m);
    node->nelim = (flag) ? flag : n;
    if(flag) throw NotPosDefError(flag);
+
+   /* Record information */
+   node->ndelay_out = 0;
 }
 /* Factorize a node (wrapper) */
 template <bool posdef, typename T, int BLOCK_SIZE>
@@ -298,6 +310,12 @@ void calculate_update(
       host_syrk<T>(bub::FILL_MODE_LWR, bub::OP_N, m, k,
             -1.0, &node->lcol[node->ncol_expected], ldl,
             1.0, node->contrib, m);
+      // FIXME: debug remove
+      /*printf("Contrib = \n");
+      for(int i=0; i<m; i++) {
+         for(int j=0; j<m; j++) printf(" %e", node->contrib[j*m+i]);
+         printf("\n");
+      }*/
    } else {
       // Indefinte - need to recalculate LD before we can use it!
       int m = node->nrow_expected - node->ncol_expected;

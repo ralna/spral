@@ -942,7 +942,8 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
    ! Do an inital storage allocation:
    ! * options%multiplier * n             integers (for nodes(:)%perm)
    ! * options%multiplier * (nfactor+2*n) reals    (for nodes(:)%lcol)
-   ! FIXME: do we really need this memory????
+   ! FIXME: do we really need this multiplier memory????
+   ! FIXME: In posdef case ints and reals not needed!
    if(associated(fkeep%alloc)) then
       if(fkeep%alloc%imem_size.lt. &
             max(n+0_long, int(options%multiplier*n,kind=long))) then
