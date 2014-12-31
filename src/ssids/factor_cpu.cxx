@@ -132,6 +132,7 @@ void assemble_node(
          long dest = node->amap[2*i+1] - 1; // amap contains 1-based values
          int c = dest / node->nrow_expected;
          int r = dest % node->nrow_expected;
+         if(r >= node->ncol_expected) r += node->ndelay_in;
          long k = c*nrow + r;
          T rscale = scaling[ node->rlist[r]-1 ];
          T cscale = scaling[ node->rlist[c]-1 ];
@@ -144,6 +145,7 @@ void assemble_node(
          long dest = node->amap[2*i+1] - 1; // amap contains 1-based values
          int c = dest / node->nrow_expected;
          int r = dest % node->nrow_expected;
+         if(r >= node->ncol_expected) r += node->ndelay_in;
          long k = c*nrow + r;
          node->lcol[k] = aval[src];
       }
@@ -159,26 +161,30 @@ void assemble_node(
       for(int i=node->ncol_expected; i<node->nrow_expected; i++)
          map[ node->rlist[i] ] = i + node->ndelay_in;
       /* Loop over children adding contributions */
+      int delay_col = node->ncol_expected;
       for(struct cpu_node_data<T> *child=node->first_child; child!=NULL; child=child->next_child) {
          /* Handle delays - go to back of node
           * (i.e. become the last rows as in lower triangular format) */
          for(int i=0; i<child->ndelay_out; i++) {
             // Add delayed rows (from delayed cols)
-            int delay_col = node->ncol_expected + i;
             T *dest = &node->lcol[delay_col*(nrow+1)];
             int lds = child->nrow_expected + child->ndelay_in;
-            T *src = &child->lcol[child->nelim*(lds+1)];
+            T *src = &child->lcol[(child->nelim+i)*(lds+1)];
             node->perm[delay_col] = child->perm[child->nelim+i];
-            for(int j=i; j<child->ndelay_out; j++)
-               dest[j] = src[i];
+            for(int j=0; j<child->ndelay_out-i; j++) {
+               dest[j] = src[j];
+            }
             // Add child's non-fully summed rows (from delayed cols)
-            dest = &node->lcol[delay_col];
-            src = &child->lcol[child->nelim*lds + child->ndelay_in];
+            dest = node->lcol;
+            src = &child->lcol[child->nelim*lds + child->ndelay_in +i*lds];
             for(int j=child->ncol_expected; j<child->nrow_expected; j++) {
                int r = map[ child->rlist[j] ];
-               dest[r*nrow] = src[j];
+               if(r < ncol) dest[r*nrow+delay_col] = src[j];
+               else         dest[delay_col*nrow+r] = src[j];
             }
+            delay_col++;
          }
+
          /* Handle expected contributions (only if there were eliminations) */
          if(child->nelim > 0) {
             int cm = child->nrow_expected - child->ncol_expected;
@@ -206,13 +212,17 @@ void assemble_node(
                }
             }
          }
-         
          /* Free memory from child contribution block */
          delete[] child->contrib;
       }
    }
 
    // FIXME: debug remove
+   /*printf("Post asm node:\n");
+   for(int i=0; i<nrow; i++) {
+      for(int j=0; j<ncol; j++) printf(" %e", node->lcol[j*nrow+i]);
+      printf("\n");
+   }*/
    /*printf("Post asm contrib:\n");
    int ldd = node->nrow_expected - node->ncol_expected;
    for(int i=0; i<ldd; i++) {
@@ -302,25 +312,18 @@ template <bool posdef, typename T>
 void calculate_update(
       struct cpu_node_data<T> *node
       ) {
+   // Check there is work to do
+   int m = node->nrow_expected - node->ncol_expected;
+   int n = node->nelim;
+   if(m==0 || n==0) return; // no-op
+
    if(posdef) {
-      int m = node->nrow_expected - node->ncol_expected;
-      if(m==0) return; // no-op
-      int k = node->nelim;
       int ldl = node->nrow_expected;
-      host_syrk<T>(bub::FILL_MODE_LWR, bub::OP_N, m, k,
+      host_syrk<T>(bub::FILL_MODE_LWR, bub::OP_N, m, n,
             -1.0, &node->lcol[node->ncol_expected], ldl,
             1.0, node->contrib, m);
-      // FIXME: debug remove
-      /*printf("Contrib = \n");
-      for(int i=0; i<m; i++) {
-         for(int j=0; j<m; j++) printf(" %e", node->contrib[j*m+i]);
-         printf("\n");
-      }*/
    } else {
       // Indefinte - need to recalculate LD before we can use it!
-      int m = node->nrow_expected - node->ncol_expected;
-      int n = node->nelim;
-      if(m==0 || n==0) return; // no-op
 
       // Calculate LD
       T *lcol = &node->lcol[node->ncol_expected+node->ndelay_in];
@@ -370,6 +373,13 @@ void calculate_update(
       // Free memory
       delete[] ld;
    }
+
+   // FIXME: debug remove
+   /*printf("Contrib = \n");
+   for(int i=0; i<m; i++) {
+      for(int j=0; j<m; j++) printf(" %e", node->contrib[j*m+i]);
+      printf("\n");
+   }*/
 }
 
 /* Simplistic multifrontal factorization */
