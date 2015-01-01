@@ -1865,14 +1865,14 @@ subroutine test_random
    type(ssids_options) :: options
    type(ssids_inform) :: info
 
-   !logical, parameter :: debug = .true.
-   logical, parameter :: debug = .false.
+   logical, parameter :: debug = .true.
+   !logical, parameter :: debug = .false.
 
    integer :: maxn = 1000
    integer :: maxnemin = 48
    integer :: maxnz =  1000000
    integer, parameter :: maxnrhs = 10
-   integer, parameter :: nprob = 20!100
+   integer, parameter :: nprob = 300!100
    type(random_state) :: state
 
    type(matrix_type) :: a
@@ -1910,7 +1910,11 @@ subroutine test_random
 
    options%multiplier = 1.0 ! Ensure we give reallocation a work out
 
-   do prblm = 1, nprob
+   if(debug) options%print_level = 10000
+
+   do prblm = 1, 1!nprob
+      call random_set_seed(state, 226717912)
+      print *, random_get_seed(state)
 
       ! decide whether pos. def. problem
       posdef = .false.
@@ -1924,13 +1928,14 @@ subroutine test_random
       ! Generate parameters
       a%n = random_integer(state, maxn)
       if (prblm < 21) a%n = prblm ! check very small problems
+      a%n = 7
       i = a%n**2/2 - a%n
       i = max(0,i)
       nza = random_integer(state, i)
       nza = nza + a%n
 
       options%nemin = random_integer(state,  maxnemin)
-      !options%nemin = 1
+      options%nemin = 1 ! FIXME: remove
 
       if(nza.gt.maxnz .or. a%n.gt.maxn) then
          write(*, "(a)") "bad random matrix."

@@ -185,8 +185,8 @@ void assemble_node(
             delay_col++;
          }
 
-         /* Handle expected contributions (only if there were eliminations) */
-         if(child->nelim > 0) {
+         /* Handle expected contributions (only if something there) */
+         if(child->contrib) {
             int cm = child->nrow_expected - child->ncol_expected;
             for(int i=0; i<cm; i++) {
                int c = map[ child->rlist[child->ncol_expected+i] ];
@@ -315,6 +315,14 @@ void calculate_update(
    // Check there is work to do
    int m = node->nrow_expected - node->ncol_expected;
    int n = node->nelim;
+   if(n==0 && !node->first_child) {
+      // If everything is delayed, and no contribution from children then
+      // free contrib memory and mark as no contribution for parent's assembly
+      // FIXME: actually loop over children and check one exists with contriub
+      //        rather than current approach of just looking for children.
+      delete[] node->contrib;
+      node->contrib = NULL;
+   }
    if(m==0 || n==0) return; // no-op
 
    if(posdef) {
