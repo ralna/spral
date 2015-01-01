@@ -116,7 +116,8 @@ void assemble_node(
    /* Get space for contribution block + zero it */
    long contrib_dimn = node->nrow_expected - node->ncol_expected;
    node->contrib = (contrib_dimn > 0) ? new T[contrib_dimn*contrib_dimn] : NULL;
-   memset(node->contrib, 0, contrib_dimn*contrib_dimn*sizeof(T));
+   if(node->contrib)
+      memset(node->contrib, 0, contrib_dimn*contrib_dimn*sizeof(T));
 
    /* Alloc + set perm for expected eliminations at this node (delays are set
     * when they are imported from children) */
@@ -203,10 +204,9 @@ void assemble_node(
                   // Contribution added to contrib
                   // FIXME: Add after contribution block established?
                   int ldd = node->nrow_expected - node->ncol_expected;
-                  T *dest = &node->contrib[(c-node->ncol_expected)*ldd];
+                  T *dest = &node->contrib[(c-ncol)*ldd];
                   for(int j=i; j<cm; j++) {
-                     int r = map[ child->rlist[child->ncol_expected+j] ] -
-                        node->ncol_expected;
+                     int r = map[ child->rlist[child->ncol_expected+j] ] - ncol;
                      dest[r] += src[j];
                   }
                }
@@ -284,9 +284,10 @@ void factor_node(
 
 /* FIXME: remove post debug */
 template<typename T>
-void print_node(bool posdef, int m, int n, int nelim, const int *perm, const T *lcol, const T*d) {
+void print_node(bool posdef, int m, int n, int nelim, const int *perm, const int *rlist, const T *lcol, const T*d) {
    for(int i=0; i<m; i++) {
-      printf("%d%s:", perm[i], (i<nelim)?"X":(i<n)?"D":" ");
+      if(i<n) printf("%d%s:", perm[i], (i<nelim)?"X":"D");
+      else    printf("%d:", rlist[i-n]);
       for(int j=0; j<n; j++) printf(" %10.2e", lcol[j*m+i]);
       if(!posdef && i<nelim) printf("  d: %10.2e %10.2e\n", d[2*i+0], d[2*i+1]);
       else printf("\n");
@@ -303,7 +304,9 @@ void print_factors(
       printf("== Node %d ==\n", node);
       int m = nodes[node].nrow_expected + nodes[node].ndelay_in;
       int n = nodes[node].ncol_expected + nodes[node].ndelay_in;
-      print_node(posdef, m, n, nodes[node].nelim, nodes[node].perm, nodes[node].lcol, &nodes[node].lcol[m*n]);
+      const int *rptr = &nodes[node].rlist[ nodes[node].ncol_expected ];
+      print_node(posdef, m, n, nodes[node].nelim, nodes[node].perm,
+            rptr, nodes[node].lcol, &nodes[node].lcol[m*n]);
    }
 }
 
@@ -322,6 +325,7 @@ void calculate_update(
       //        rather than current approach of just looking for children.
       delete[] node->contrib;
       node->contrib = NULL;
+      return;
    }
    if(m==0 || n==0) return; // no-op
 
