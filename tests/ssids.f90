@@ -1865,14 +1865,14 @@ subroutine test_random
    type(ssids_options) :: options
    type(ssids_inform) :: info
 
-   logical, parameter :: debug = .true.
-   !logical, parameter :: debug = .false.
+   !logical, parameter :: debug = .true.
+   logical, parameter :: debug = .false.
 
    integer :: maxn = 1000
    integer :: maxnemin = 48
    integer :: maxnz =  1000000
    integer, parameter :: maxnrhs = 10
-   integer, parameter :: nprob = 300!100
+   integer, parameter :: nprob = 100
    type(random_state) :: state
 
    type(matrix_type) :: a
@@ -1912,9 +1912,9 @@ subroutine test_random
 
    if(debug) options%print_level = 10000
 
-   do prblm = 1, 1!nprob
-      call random_set_seed(state, 226717912)
-      print *, random_get_seed(state)
+   do prblm = 1, nprob
+      !call random_set_seed(state, 226717912)
+      !print *, random_get_seed(state)
 
       ! decide whether pos. def. problem
       posdef = .false.
@@ -1928,7 +1928,6 @@ subroutine test_random
       ! Generate parameters
       a%n = random_integer(state, maxn)
       if (prblm < 21) a%n = prblm ! check very small problems
-      a%n = 7
       i = a%n**2/2 - a%n
       i = max(0,i)
       nza = random_integer(state, i)
@@ -1955,7 +1954,6 @@ subroutine test_random
       options%presolve = random_integer(state, 2) - 1
       options%use_gpu_solve = ( 1.ne.random_integer(state,3) .or. &
                                 options%presolve.eq.1 )
-      
 
       if(random_logical(state)) then
          options%nstream = random_integer(state, 4)
