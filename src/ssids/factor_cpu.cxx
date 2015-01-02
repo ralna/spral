@@ -87,6 +87,10 @@ struct cpu_factor_options {
 
 struct cpu_factor_stats {
    int flag;
+   int num_delay;
+   int num_neg;
+   int num_two;
+   int num_zero;
 };
 
 template <typename T>
@@ -234,7 +238,8 @@ void assemble_node(
 template <typename T, int BLOCK_SIZE>
 void factor_node_indef(
       struct cpu_node_data<T> *const node,
-      const struct cpu_factor_options *const options
+      const struct cpu_factor_options *const options,
+      struct cpu_factor_stats *const stats
       ) {
    /* Extract useful information about node */
    int m = node->nrow_expected + node->ndelay_in;
@@ -246,10 +251,15 @@ void factor_node_indef(
    /* Perform factorization */
    typedef bub::CpuLDLT<T, BLOCK_SIZE> CpuLDLTSpec;
    typedef bub::CpuLDLT<T, 5, true> CpuLDLTSpecDebug; // FIXME: debug remove
-   node->nelim = CpuLDLTSpec(options->u, options->small).factor(m, n, perm, lcol, m, d);
+   struct CpuLDLTSpec::stat_type bubstats;
+   node->nelim = CpuLDLTSpec(options->u, options->small).factor(m, n, perm, lcol, m, d, &bubstats);
+   /*printf("Node %dx%d delay %d nitr %d\n", m, n, n-node->nelim, bubstats.nitr);
+   for(int i=0; i<bubstats.nitr; i++)
+      printf("--> itr %d passes %d remain %d\n", i, bubstats.npass[i], bubstats.remain[i]);*/
 
    /* Record information */
    node->ndelay_out = n - node->nelim;
+   stats->num_delay += node->ndelay_out;
 }
 /* Factorize a node (psdef) */
 template <typename T, int BLOCK_SIZE>
@@ -276,10 +286,11 @@ void factor_node_posdef(
 template <bool posdef, typename T, int BLOCK_SIZE>
 void factor_node(
       struct cpu_node_data<T> *const node,
-      const struct cpu_factor_options *const options
+      const struct cpu_factor_options *const options,
+      struct cpu_factor_stats *const stats
       ) {
    if(posdef) factor_node_posdef<T, BLOCK_SIZE>(node, options);
-   else       factor_node_indef <T, BLOCK_SIZE>(node, options);
+   else       factor_node_indef <T, BLOCK_SIZE>(node, options, stats);
 }
 
 /* FIXME: remove post debug */
@@ -407,18 +418,26 @@ void factor(
       struct cpu_factor_stats *const stats // Info out
       ) {
 
+   // Allocate space for map array
    int *map = new int[n+1]; // +1 to allow for indexing with 1-indexed array
+
+   // Initialize statistics
+   stats->num_delay = 0;
+   stats->num_neg = 0;
+   stats->num_two = 0;
+   stats->num_zero = 0;
 
    /* Main loop: Iterate over nodes in order */
    for(int ni=0; ni<nnodes; ni++) {
       // Assembly
       assemble_node<T>(posdef, &nodes[ni], alloc, map, aval, scaling);
       // Factorization
-      factor_node<posdef, T, 16>(&nodes[ni], options);
+      factor_node<posdef, T, 16>(&nodes[ni], options, stats);
       // Form update
       calculate_update<posdef>(&nodes[ni]);
    }
 
+   // Count stats
    // FIXME: gross hack for compat with bub (which needs to differentiate
    // between a natural zero and a 2x2 factor's second entry without counting)
    // SSIDS original data format [a11 a21 a22 xxx] seems more bizzare than
@@ -427,9 +446,28 @@ void factor(
       int m = nodes[ni].nrow_expected + nodes[ni].ndelay_in;
       int n = nodes[ni].ncol_expected + nodes[ni].ndelay_in;
       T *d = nodes[ni].lcol + m*n;
-      for(int i=0; i<2*nodes[ni].nelim; i++)
-         if(d[i] == std::numeric_limits<T>::infinity())
-            d[i] = d[i+1];
+      for(int i=0; i<nodes[ni].nelim; i++)
+         if(d[2*i] == std::numeric_limits<T>::infinity())
+            d[2*i] = d[2*i+1];
+      for(int i=0; i<nodes[ni].nelim; ) {
+         T a11 = d[2*i];
+         T a21 = d[2*i+1];
+         if(a21 == 0.0) {
+            // 1x1 pivot (or zero)
+            if(a11 == 0.0) stats->num_zero++;
+            if(a11 < 0.0) stats->num_neg++;
+            i++;
+         } else {
+            // 2x2 pivot
+            T a22 = d[2*(i+1)];
+            stats->num_two++;
+            T det = a11*a22 - a21*a21; // product of evals
+            T trace = a11 + a22; // sum of evals
+            if(det < 0) stats->num_neg++;
+            else if(trace < 0) stats->num_neg+=2;
+            i+=2;
+         }
+      }
    }
 
    /* Free memory */

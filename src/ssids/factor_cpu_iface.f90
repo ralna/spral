@@ -46,6 +46,10 @@ module spral_ssids_factor_cpu_iface
 
    type, bind(C) :: cpu_factor_stats
       integer(C_INT) :: flag
+      integer(C_INT) :: num_delay
+      integer(C_INT) :: num_neg
+      integer(C_INT) :: num_two
+      integer(C_INT) :: num_zero
    end type cpu_factor_stats
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -128,10 +132,13 @@ subroutine extract_cpu_data(nnodes, cnodes, fnodes, cstats, finform)
    class(ssids_inform_base), intent(inout) :: finform
 
    integer :: node, nrow, ncol
+   integer :: rank
 
    ! Copy factors (scalars and pointers)
+   rank = 0
    do node = 1, nnodes
       ! Components we copy from C version
+      rank = rank + cnodes(node)%ncol_expected
       nrow = cnodes(node)%nrow_expected + cnodes(node)%ndelay_in
       ncol = cnodes(node)%ncol_expected + cnodes(node)%ndelay_in
       fnodes(node)%nelim = cnodes(node)%nelim
@@ -152,7 +159,11 @@ subroutine extract_cpu_data(nnodes, cnodes, fnodes, cstats, finform)
    end do
 
    ! Copy stats
-   finform%flag = cstats%flag
+   finform%flag         = cstats%flag
+   finform%num_delay    = cstats%num_delay
+   finform%num_neg      = cstats%num_neg
+   finform%num_two      = cstats%num_two
+   finform%matrix_rank  = rank - cstats%num_zero
 end subroutine extract_cpu_data
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
