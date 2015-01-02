@@ -457,7 +457,7 @@ subroutine print_matrix_double(lp, lines, matrix_type, m, n, ptr, row, val, cbas
       if(llines.le.2) return
       write(lp, "(a)") "First 4 entries in columns:"
       llines = llines - 1
-      do col = 1, llines
+      do col = 1, min(llines, n)
          write(lp, "(a)", advance="no") "Col "
          write(lp, nfrmt, advance="no") col-rebase
          write(lp, "(':')", advance="no")
