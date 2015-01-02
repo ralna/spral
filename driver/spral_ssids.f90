@@ -204,7 +204,7 @@ contains
             options%ordering = 2 ! Matching-based ordering
             options%scaling = 3 ! Scaling from matching ordering
             print *, "Using matching-based ordering (scaling overwritten)"
-         case("--pos")
+         case("--posdef")
             pos_def = .true.
             print *, 'Matrix assumed positive definite'
          case("--presolve")
@@ -244,8 +244,6 @@ contains
       real(wp), dimension(ptr(n+1)-1), intent(in) :: val
       real(wp), dimension(n), intent(out) :: scaling
 
-      integer :: i
-      logical :: sing
       type(auction_inform) :: ainform
       type(equilib_options) :: eoptions
       type(equilib_inform) :: einform
