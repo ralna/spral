@@ -20,6 +20,7 @@ module spral_ssids_factor_cpu_iface
       type(C_PTR) :: first_child
       type(C_PTR) :: next_child
       type(C_PTR) :: rlist
+      logical(C_BOOL) :: even
 
       ! Data about A
       integer(C_INT) :: num_a
@@ -114,6 +115,15 @@ subroutine setup_cpu_data(akeep, cnodes, foptions, coptions)
       parent = akeep%sparent(node)
       cnodes(node)%next_child = cnodes(parent)%first_child
       cnodes(parent)%first_child = C_LOC( cnodes(node) )
+   end do
+   ! Setup odd/even distance from root
+   do node = akeep%nnodes, 1, -1
+      parent = akeep%sparent(node)
+      if(parent > akeep%nnodes) then
+         cnodes(node)%even = .true.
+      else
+         cnodes(node)%even = .not.cnodes(parent)%even
+      endif
    end do
 
    !

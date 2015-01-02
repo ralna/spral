@@ -27,6 +27,89 @@ namespace spral { namespace ssids { namespace internal {
 const int SSIDS_SUCCESS = 0;
 const int SSIDS_ERROR_NOT_POS_DEF = -6;
 
+/** Class for stack-based allocation.
+ *
+ * Designed to make quick allocation and deallocation of fronts in a stack
+ * based fashion more efficient
+ */
+template<size_t PAGE_SIZE>
+class StackAllocator {
+private:
+   class Page {
+   private:
+      char mem[PAGE_SIZE];
+   public:
+      Page *prev, *next;
+      size_t top;
+      Page(Page *prev)
+         : prev(prev), next(NULL), top(0)
+         {}
+      void *alloc(size_t size) {
+         if(top+size > PAGE_SIZE) return NULL;
+         void *ptr = mem + top;
+         top += size;
+         return ptr;
+      }
+      int free(size_t size) {
+         top -= size;
+         return top;
+      }
+   };
+   Page *current, *last;
+public:
+   StackAllocator(void)
+      : current(new Page(NULL)), last(current)
+      {}
+   ~StackAllocator() {
+      // Work backwards freeing Pages
+      while(last) {
+         Page *prev = last->prev;
+         delete last;
+         last = prev;
+      }
+   }
+   
+   void *alloc(size_t size) {
+      if(size > PAGE_SIZE/2) {
+         // Requesting a large block, use standard allocator
+         return new char[size];
+      } else {
+         // Requesting a small block
+         void *ptr = current->alloc(size);
+         if(!ptr) {
+            // Ran out of space on page, find a new one
+            if(current->next) {
+               // Reuse existing page
+               current = current->next;
+            } else {
+               // Allocate a new one
+               last = new Page(current);
+               current->next = last;
+               current = last;
+            }
+            // Allocation will defintely work this time
+            ptr = current->alloc(size);
+         }
+         // Return allocation
+         return ptr;
+      }
+   }
+
+   void free(void *ptr, size_t size) {
+      if(size > PAGE_SIZE/2) {
+         // Was directly allocated
+         delete[] (char *) ptr;
+      } else {
+         // Call page's free function
+         int remain = current->free(size);
+         if(remain==0 && current->prev) {
+            // Page now clear (and not first page), iterate backwards
+            current = current->prev;
+         }
+      }
+   }
+};
+
 /* Generic wrapper around Fortran-defined smalloc calls */
 template<typename T>
 T *smalloc(void *alloc, size_t len);
@@ -63,6 +146,8 @@ struct cpu_node_data {
    struct cpu_node_data<T> *const first_child; // Pointer to our first child
    struct cpu_node_data<T> *const next_child; // Pointer to parent's next child
    const int *const rlist; // Pointer to row lists
+   const bool even; // Indicates which stack we're using (odd or even distance
+                    // from root)
 
    /* Data about A:
     * aval[i] goes into lcol[ amap[i] ] if there are no delays
@@ -93,11 +178,15 @@ struct cpu_factor_stats {
    int num_zero;
 };
 
-template <typename T>
+template <typename T,
+          size_t PAGE_SIZE>
 void assemble_node(
       bool posdef,
+      int ni, // FIXME: remove with debug
       struct cpu_node_data<T> *const node,
       void *const alloc,
+      StackAllocator<PAGE_SIZE> *stalloc_odd,
+      StackAllocator<PAGE_SIZE> *stalloc_even,
       int *const map,
       const T *const aval,
       const T *const scaling
@@ -119,7 +208,11 @@ void assemble_node(
 
    /* Get space for contribution block + zero it */
    long contrib_dimn = node->nrow_expected - node->ncol_expected;
-   node->contrib = (contrib_dimn > 0) ? new T[contrib_dimn*contrib_dimn] : NULL;
+   if(node->even) {
+      node->contrib = (contrib_dimn > 0) ? (T *) stalloc_even->alloc(contrib_dimn*contrib_dimn*sizeof(T)) : NULL;
+   } else {
+      node->contrib = (contrib_dimn > 0) ? (T *) stalloc_odd->alloc(contrib_dimn*contrib_dimn*sizeof(T)) : NULL;
+   }
    if(node->contrib)
       memset(node->contrib, 0, contrib_dimn*contrib_dimn*sizeof(T));
 
@@ -215,16 +308,20 @@ void assemble_node(
                   }
                }
             }
+            /* Free memory from child contribution block */
+            if(child->even) {
+               stalloc_even->free(child->contrib, cm*cm*sizeof(T));
+            } else {
+               stalloc_odd->free(child->contrib, cm*cm*sizeof(T));
+            }
          }
-         /* Free memory from child contribution block */
-         delete[] child->contrib;
       }
    }
 
    // FIXME: debug remove
    /*printf("Post asm node:\n");
    for(int i=0; i<nrow; i++) {
-      for(int j=0; j<ncol; j++) printf(" %e", node->lcol[j*nrow+i]);
+      for(int j=0; j<ncol; j++) printf(" %10.2e", node->lcol[j*nrow+i]);
       printf("\n");
    }*/
    /*printf("Post asm contrib:\n");
@@ -237,6 +334,7 @@ void assemble_node(
 /* Factorize a node (indef) */
 template <typename T, int BLOCK_SIZE>
 void factor_node_indef(
+      int ni, // FIXME: remove post debug
       struct cpu_node_data<T> *const node,
       const struct cpu_factor_options *const options,
       struct cpu_factor_stats *const stats
@@ -253,15 +351,24 @@ void factor_node_indef(
    typedef bub::CpuLDLT<T, 5, true> CpuLDLTSpecDebug; // FIXME: debug remove
    struct CpuLDLTSpec::stat_type bubstats;
    node->nelim = CpuLDLTSpec(options->u, options->small).factor(m, n, perm, lcol, m, d, &bubstats);
-   /*printf("Node %dx%d delay %d nitr %d\n", m, n, n-node->nelim, bubstats.nitr);
+   /*printf("Node %d: %dx%d delay %d nitr %d\n", ni, m, n, n-node->nelim, bubstats.nitr);
    for(int i=0; i<bubstats.nitr; i++)
       printf("--> itr %d passes %d remain %d\n", i, bubstats.npass[i], bubstats.remain[i]);*/
+
+   /*if(ni==399) {
+      for(int i=node->nelim; i<m; i++) {
+         printf("%d:", i);
+         for(int j=node->nelim; j<n; j++)
+            printf(" %10.2e", lcol[j*m+i]);
+         printf("\n");
+      }
+   }*/
 
    /* Record information */
    node->ndelay_out = n - node->nelim;
    stats->num_delay += node->ndelay_out;
 }
-/* Factorize a node (psdef) */
+/* Factorize a node (posdef) */
 template <typename T, int BLOCK_SIZE>
 void factor_node_posdef(
       struct cpu_node_data<T> *const node,
@@ -285,12 +392,13 @@ void factor_node_posdef(
 /* Factorize a node (wrapper) */
 template <bool posdef, typename T, int BLOCK_SIZE>
 void factor_node(
+      int ni,
       struct cpu_node_data<T> *const node,
       const struct cpu_factor_options *const options,
       struct cpu_factor_stats *const stats
       ) {
    if(posdef) factor_node_posdef<T, BLOCK_SIZE>(node, options);
-   else       factor_node_indef <T, BLOCK_SIZE>(node, options, stats);
+   else       factor_node_indef <T, BLOCK_SIZE>(ni, node, options, stats);
 }
 
 /* FIXME: remove post debug */
@@ -322,9 +430,11 @@ void print_factors(
 }
 
 /* Calculate update */
-template <bool posdef, typename T>
+template <bool posdef, typename T, size_t PAGE_SIZE>
 void calculate_update(
-      struct cpu_node_data<T> *node
+      struct cpu_node_data<T> *node,
+      StackAllocator<PAGE_SIZE> *stalloc_odd,
+      StackAllocator<PAGE_SIZE> *stalloc_even
       ) {
    // Check there is work to do
    int m = node->nrow_expected - node->ncol_expected;
@@ -334,7 +444,11 @@ void calculate_update(
       // free contrib memory and mark as no contribution for parent's assembly
       // FIXME: actually loop over children and check one exists with contriub
       //        rather than current approach of just looking for children.
-      delete[] node->contrib;
+      if(node->even) {
+         stalloc_even->free(node->contrib, m*m*sizeof(T));
+      } else {
+         stalloc_odd->free(node->contrib, m*m*sizeof(T));
+      }
       node->contrib = NULL;
       return;
    }
@@ -406,7 +520,11 @@ void calculate_update(
 }
 
 /* Simplistic multifrontal factorization */
-template <bool posdef, typename T>
+template <bool posdef,
+          typename T,
+          size_t BLOCK_SIZE,
+          size_t PAGE_SIZE
+          >
 void factor(
       int n,            // Maximum row index (+1)
       int nnodes,       // Number of nodes in assembly tree
@@ -418,7 +536,9 @@ void factor(
       struct cpu_factor_stats *const stats // Info out
       ) {
 
-   // Allocate space for map array
+   // Allocate workspaces
+   StackAllocator<PAGE_SIZE> stalloc_odd;
+   StackAllocator<PAGE_SIZE> stalloc_even;
    int *map = new int[n+1]; // +1 to allow for indexing with 1-indexed array
 
    // Initialize statistics
@@ -430,11 +550,12 @@ void factor(
    /* Main loop: Iterate over nodes in order */
    for(int ni=0; ni<nnodes; ni++) {
       // Assembly
-      assemble_node<T>(posdef, &nodes[ni], alloc, map, aval, scaling);
+      assemble_node<T, PAGE_SIZE>(posdef, ni, &nodes[ni], alloc, &stalloc_odd, &stalloc_even, map, aval, scaling);
       // Factorization
-      factor_node<posdef, T, 16>(&nodes[ni], options, stats);
+      factor_node<posdef, T, BLOCK_SIZE>(ni, &nodes[ni], options, stats);
       // Form update
-      calculate_update<posdef>(&nodes[ni]);
+      calculate_update<posdef, T, PAGE_SIZE>(&nodes[ni], &stalloc_odd, &stalloc_even);
+      //if(ni > 400) exit(1); // FIXME
    }
 
    // Count stats
@@ -442,30 +563,34 @@ void factor(
    // between a natural zero and a 2x2 factor's second entry without counting)
    // SSIDS original data format [a11 a21 a22 xxx] seems more bizzare than
    // bub one [a11 a21 inf a22]
-   for(int ni=0; ni<nnodes; ni++) {
-      int m = nodes[ni].nrow_expected + nodes[ni].ndelay_in;
-      int n = nodes[ni].ncol_expected + nodes[ni].ndelay_in;
-      T *d = nodes[ni].lcol + m*n;
-      for(int i=0; i<nodes[ni].nelim; i++)
-         if(d[2*i] == std::numeric_limits<T>::infinity())
-            d[2*i] = d[2*i+1];
-      for(int i=0; i<nodes[ni].nelim; ) {
-         T a11 = d[2*i];
-         T a21 = d[2*i+1];
-         if(a21 == 0.0) {
-            // 1x1 pivot (or zero)
-            if(a11 == 0.0) stats->num_zero++;
-            if(a11 < 0.0) stats->num_neg++;
-            i++;
-         } else {
-            // 2x2 pivot
-            T a22 = d[2*(i+1)];
-            stats->num_two++;
-            T det = a11*a22 - a21*a21; // product of evals
-            T trace = a11 + a22; // sum of evals
-            if(det < 0) stats->num_neg++;
-            else if(trace < 0) stats->num_neg+=2;
-            i+=2;
+   if(posdef) {
+      // no real changes to stats from zero initialization
+   } else { // indefinite
+      for(int ni=0; ni<nnodes; ni++) {
+         int m = nodes[ni].nrow_expected + nodes[ni].ndelay_in;
+         int n = nodes[ni].ncol_expected + nodes[ni].ndelay_in;
+         T *d = nodes[ni].lcol + m*n;
+         for(int i=0; i<nodes[ni].nelim; i++)
+            if(d[2*i] == std::numeric_limits<T>::infinity())
+               d[2*i] = d[2*i+1];
+         for(int i=0; i<nodes[ni].nelim; ) {
+            T a11 = d[2*i];
+            T a21 = d[2*i+1];
+            if(a21 == 0.0) {
+               // 1x1 pivot (or zero)
+               if(a11 == 0.0) stats->num_zero++;
+               if(a11 < 0.0) stats->num_neg++;
+               i++;
+            } else {
+               // 2x2 pivot
+               T a22 = d[2*(i+1)];
+               stats->num_two++;
+               T det = a11*a22 - a21*a21; // product of evals
+               T trace = a11 + a22; // sum of evals
+               if(det < 0) stats->num_neg++;
+               else if(trace < 0) stats->num_neg+=2;
+               i+=2;
+            }
          }
       }
    }
@@ -497,13 +622,13 @@ void spral_ssids_factor_cpu_dbl(
    // Call relevant routine
    if(posdef) {
       try {
-         spral::ssids::internal::factor<true, double>
+         spral::ssids::internal::factor<true, double, 16, 16384>
             (n, nnodes, nodes, aval, scaling, alloc, options, stats);
       } catch(spral::ssids::internal::NotPosDefError npde) {
          stats->flag = spral::ssids::internal::SSIDS_ERROR_NOT_POS_DEF;
       }
    } else {
-      spral::ssids::internal::factor<false, double>
+      spral::ssids::internal::factor<false, double, 16, 16384>
          (n, nnodes, nodes, aval, scaling, alloc, options, stats);
    }
 
