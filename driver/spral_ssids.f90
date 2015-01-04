@@ -163,6 +163,7 @@ program run_prob
    print "(a6, 3i10)", "inertia:", inform%num_neg, n-inform%matrix_rank,&
       inform%matrix_rank-inform%num_neg
    print "(a6, i10)", "2x2piv:", inform%num_two
+   print "(a6, i10)", "maxfront:", inform%maxfront
 
 contains
 
