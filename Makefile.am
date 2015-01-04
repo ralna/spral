@@ -221,13 +221,13 @@ examples_C_ssids_LINK = $(NVCCLINK)
 examples_C_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
 else
 spral_ssids_LINK = $(CXXLINK)
-spral_ssids_LDADD = $(LDADD)
+spral_ssids_LDADD = $(LDADD) $(HWLOC_LIBS)
 ssids_test_LINK = $(CXXLINK)
-ssids_test_LDADD = $(LDADD)
+ssids_test_LDADD = $(LDADD) $(HWLOC_LIBS)
 examples_Fortran_ssids_LINK = $(CXXLINK)
-examples_Fortran_ssids_LDADD = $(LDADD)
+examples_Fortran_ssids_LDADD = $(LDADD) $(HWLOC_LIBS)
 examples_C_ssids_LINK = $(CXXLINK)
-examples_C_ssids_LDADD = $(LDADD)
+examples_C_ssids_LDADD = $(LDADD) $(HWLOC_LIBS)
 endif
 
 # Automake doesn't know much about modules, so get rid of them ourself
