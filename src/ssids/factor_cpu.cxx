@@ -257,7 +257,8 @@ void assemble_node(
          long dest = node->amap[2*i+1] - 1; // amap contains 1-based values
          int c = dest / node->nrow_expected;
          int r = dest % node->nrow_expected;
-         long k = c*nrow + (r + node->ndelay_in);
+         long k = c*nrow + r;
+         if(r >= node->ncol_expected) k += node->ndelay_in;
          T rscale = scaling[ node->rlist[r]-1 ];
          T cscale = scaling[ node->rlist[c]-1 ];
          node->lcol[k] = rscale * aval[src] * cscale;
@@ -269,8 +270,8 @@ void assemble_node(
          long dest = node->amap[2*i+1] - 1; // amap contains 1-based values
          int c = dest / node->nrow_expected;
          int r = dest % node->nrow_expected;
-         if(r >= node->ncol_expected) r += node->ndelay_in;
          long k = c*nrow + r;
+         if(r >= node->ncol_expected) k += node->ndelay_in;
          node->lcol[k] = aval[src];
       }
    }
