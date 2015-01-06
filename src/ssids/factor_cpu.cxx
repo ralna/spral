@@ -13,6 +13,7 @@
 #include <atomic>
 #include <cstring>
 #include <cstdio>
+#include <fstream>
 #include <limits> // FIXME: remove when done with debug if unneeded
 #include <queue>
 #include <sstream>
@@ -247,7 +248,7 @@ void assemble_node(
    node->perm = smalloc<int>(alloc, ncol); // ncol fully summed variables
    for(int i=0; i<node->ncol_expected; i++)
       node->perm[i] = node->rlist[i];
-   
+
    /* Add A */
    if(scaling) {
       /* Scaling to apply */
@@ -256,8 +257,7 @@ void assemble_node(
          long dest = node->amap[2*i+1] - 1; // amap contains 1-based values
          int c = dest / node->nrow_expected;
          int r = dest % node->nrow_expected;
-         if(r >= node->ncol_expected) r += node->ndelay_in;
-         long k = c*nrow + r;
+         long k = c*nrow + (r + node->ndelay_in);
          T rscale = scaling[ node->rlist[r]-1 ];
          T cscale = scaling[ node->rlist[c]-1 ];
          node->lcol[k] = rscale * aval[src] * cscale;
@@ -374,20 +374,18 @@ void factor_node_indef(
 
    /* Perform factorization */
    typedef bub::CpuLDLT<T, BLOCK_SIZE> CpuLDLTSpec;
-   //typedef bub::CpuLDLT<T, 5, true> CpuLDLTSpecDebug; // FIXME: debug remove
-   struct CpuLDLTSpec::stat_type bubstats;
+   typedef bub::CpuLDLT<T, BLOCK_SIZE, 5, true> CpuLDLTSpecDebug; // FIXME: debug remove
+   struct CpuLDLTSpec::stat_type bubstats; // FIXME: not needed?
    node->nelim = CpuLDLTSpec(options->u, options->small).factor(m, n, perm, lcol, m, d, &bubstats);
    /*printf("Node %d: %dx%d delay %d nitr %d\n", ni, m, n, n-node->nelim, bubstats.nitr);
    for(int i=0; i<bubstats.nitr; i++)
       printf("--> itr %d passes %d remain %d\n", i, bubstats.npass[i], bubstats.remain[i]);*/
 
-   /*if(ni==399) {
-      for(int i=node->nelim; i<m; i++) {
-         printf("%d:", i);
-         for(int j=node->nelim; j<n; j++)
-            printf(" %10.2e", lcol[j*m+i]);
-         printf("\n");
-      }
+   /*for(int i=node->nelim; i<m; i++) {
+      printf("%d:", i);
+      for(int j=node->nelim; j<n; j++)
+         printf(" %10.2e", lcol[j*m+i]);
+      printf("\n");
    }*/
 
    /* Record information */
@@ -601,6 +599,15 @@ public:
       : index(index), data(data), options(options), alloc(alloc), aval(aval),
         scaling(scaling)
       {}
+   void check(int m, int n, int ndelay) {
+      int nrow = data->nrow_expected + data->ndelay_in;
+      int ncol = data->ncol_expected + data->ndelay_in;
+      int del = data->ndelay_out;
+      //if(nrow != m || ncol != n || del != ndelay)
+      //if(nrow == m && ncol == n && del != ndelay)
+      if(ndelay > 1.5*ndelay)
+         printf("Node %d differs from ma97\n   SSIDS %dx%d delay %d\n   ma97 %dx%d delay %d\n", index, nrow, ncol, del, m, n, ndelay);
+   }
    void setResource(
          int *const map,
          StackAllocator<PAGE_SIZE> *stalloc_odd,
@@ -660,6 +667,8 @@ void factor(
       struct cpu_factor_stats *const stats // Info out
       ) {
 
+   std::ifstream nodefile("ma97_nodes.dat");
+
    // Allocate workspaces
    StackAllocator<PAGE_SIZE> stalloc_odd;
    StackAllocator<PAGE_SIZE> stalloc_even;
@@ -692,7 +701,10 @@ void factor(
    for(auto itr=wUnits.begin(); itr!=wUnits.end(); itr++) {
       NodeWorkSpec *nwu = dynamic_cast<NodeWorkSpec*> (*itr);
       nwu->setResource(map, &stalloc_odd, &stalloc_even, &work, stats);
+      int idx, m, n, ndelay;
+      nodefile >> idx >> m >> n >> ndelay;
       nwu->exec();
+      nwu->check(m, n, ndelay);
    }
 
    // Count stats
@@ -959,7 +971,7 @@ void spral_ssids_factor_cpu_dbl(
    hwloc_topology_load(topology);
    //print_children(topology, hwloc_get_root_obj(topology), 0);
    spral::ssids::internal::ExecContext eContext(topology, hwloc_get_root_obj(topology));
-   eContext.launch_threads();
+   //eContext.launch_threads();
 
    // Initialize stats
    stats->flag = spral::ssids::internal::SSIDS_SUCCESS;
