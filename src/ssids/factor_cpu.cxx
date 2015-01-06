@@ -15,6 +15,7 @@
 #include <cstdio>
 #include <fstream>
 #include <limits> // FIXME: remove when done with debug if unneeded
+#include <new>
 #include <queue>
 #include <sstream>
 #include <stdexcept>
@@ -230,7 +231,8 @@ void assemble_node(
    // NB L is  nrow x ncol and D is 2 x ncol (but no D if posdef)
    size_t len = posdef ? ((size_t) nrow  ) * ncol  // posdef
                        : ((size_t) nrow+2) * ncol; // indef (includes D)
-   node->lcol = smalloc<T>(alloc, len);
+   if(!(node->lcol = smalloc<T>(alloc, len)))
+      throw std::bad_alloc();
    memset(node->lcol, 0, len*sizeof(T));
 
    /* Get space for contribution block + zero it */
