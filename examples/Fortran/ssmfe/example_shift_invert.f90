@@ -35,7 +35,7 @@ program spec_test
   right = 5
   rci%job = 0
   do
-    call ssmfe_shift &
+    call ssmfe_standard_shift &
       ( rci, sigma, left, right, n, lambda, n, X, n, keep, options, inform )
     select case ( rci%job )
     case ( 1 )

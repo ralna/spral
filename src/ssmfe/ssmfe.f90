@@ -49,19 +49,19 @@ module SPRAL_ssmfe
 
   end type ssmfe_keepz
   
-  interface ssmfe
-    module procedure ssmfe_double, ssmfe_double_complex
+  interface ssmfe_standard
+    module procedure ssmfe_std_double, ssmfe_std_double_complex
   end interface
   
-  interface ssmfe_gen
+  interface ssmfe_generalized
     module procedure ssmfe_gen_double, ssmfe_gen_double_complex
   end interface
   
-  interface ssmfe_shift
+  interface ssmfe_standard_shift
     module procedure ssmfe_shift_double, ssmfe_shift_double_complex
   end interface
   
-  interface ssmfe_gen_shift
+  interface ssmfe_generalized_shift
     module procedure ssmfe_gen_shift_double,  ssmfe_gen_shift_double_complex
   end interface
   
@@ -79,7 +79,7 @@ module SPRAL_ssmfe
 
 contains
 
-  subroutine ssmfe_double &
+  subroutine ssmfe_std_double &
       ( rci, left, mep, lambda, n, X, ldx, keep, options, inform )
 
     integer, intent(in) :: left
@@ -96,7 +96,7 @@ contains
     call ssmfe_direct_srci_double &
       ( 0, left, mep, lambda, n, X, ldX, rci, keep, options, inform )
 
-  end subroutine ssmfe_double
+  end subroutine ssmfe_std_double
 
   subroutine ssmfe_gen_double &
       ( rci, left, mep, lambda, n, X, ldx, keep, options, inform )
@@ -400,10 +400,11 @@ contains
     real(PRECISION), parameter :: ONE = 1.0D0
 
     integer :: nep
+    integer :: extra_left, extra_right
     integer :: kw
     integer :: ldV
     integer :: ldBX
-    integer :: i, j, k
+    integer :: i, j, k, m
     
     real(PRECISION) :: s
     
@@ -411,14 +412,32 @@ contains
       keep%step = 0
       keep%lcon = 0
       keep%rcon = 0
-      keep%block_size = left + right + max((left + right)/10, 10)
+      if ( options%extra_left < 0 ) then
+        extra_left = max(10, left/10)
+      else
+        extra_left = options%extra_left
+      end if
+      if ( options%max_left >= 0 ) &
+        extra_left = max(0, min(extra_left, options%max_left - left))
+      if ( options%extra_right < 0 ) then
+        extra_right = max(10, right/10)
+      else
+        extra_right = options%extra_right
+      end if
+      if ( options%max_right >= 0 ) &
+        extra_right = max(0, min(extra_right, options%max_right - right))
+      keep%block_size = left + right + extra_left + extra_right
       if ( allocated(keep%ind) ) deallocate ( keep%ind )
       if ( allocated(keep%U  ) ) deallocate ( keep%U   )
       if ( allocated(keep%V  ) ) deallocate ( keep%V   )
       if ( allocated(keep%W  ) ) deallocate ( keep%W   )
       allocate ( keep%ind(keep%block_size) )
-      allocate ( keep%U(max_nep, keep%block_size) )
+      allocate ( keep%U(max_nep, 2*keep%block_size + max_nep) )
       allocate ( keep%V(2*keep%block_size, 2*keep%block_size, 3) )
+      keep%U = ZERO
+      do i = 1, max_nep
+        keep%U(i, keep%block_size + i) = ONE
+      end do
       if ( problem == 0 ) then
         kw = 5
       else
@@ -456,6 +475,8 @@ contains
 
       case ( SSMFE_SAVE_CONVERGED )
     
+        if ( rci%nx < 1 ) return
+
         do i = 1, rci%nx
           k = (i - 1)*rci%i
           if ( rci%i > 0 ) then
@@ -463,10 +484,76 @@ contains
           else
             j = max_nep - keep%rcon - i + 1
           end if
-          call copy( n, keep%W(1, rci%jx + k, 0), 1, X(1,j), 1 )
+          call copy( n, keep%W(1, rci%jx + k, 0), 1, X(1, j), 1 )
           if ( problem /= 0 ) &
-            call copy( n, keep%W(1, rci%jy + k, rci%ky), 1, keep%BX(1,j), 1 )
+            call copy( n, keep%W(1, rci%jy + k, rci%ky), 1, keep%BX(1, j), 1 )
         end do
+
+        if ( rci%i > 0 ) then
+          k = keep%lcon + 1
+        else
+          k = max_nep - keep%rcon - rci%nx + 1
+        end if
+        m = keep%block_size
+        if ( keep%lcon > 0 ) then
+          if ( problem == 0 ) then
+            call gemm &
+              ( TR, 'N', keep%lcon, rci%nx, n, &
+                ONE, X, ldX, X(1, k), ldX, &
+                ZERO, keep%U(1, m + k), max_nep )
+          else
+            call gemm &
+              ( TR, 'N', keep%lcon, rci%nx, n, &
+                ONE, X, ldX, keep%BX(1, k), ldX, &
+                ZERO, keep%U(1, m + k), max_nep )
+          end if
+          do j = 1, rci%nx
+            do i = 1, keep%lcon
+              keep%U(k + j - 1, m + i) = keep%U(i, m + k + j - 1)
+            end do
+          end do
+        end if
+        if ( keep%rcon > 0 ) then
+          if ( problem == 0 ) then
+            call gemm &
+              ( TR, 'N', keep%rcon, rci%nx, n, &
+                ONE, X(1, max_nep - keep%rcon + 1), ldX, X(1, k), ldX, &
+                ZERO, keep%U(max_nep - keep%rcon + 1, m + k), max_nep )
+          else
+            call gemm &
+              ( TR, 'N', keep%rcon, rci%nx, n, &
+                ONE, X(1, max_nep - keep%rcon + 1), ldX, keep%BX(1, k), ldX, &
+                ZERO, keep%U(max_nep - keep%rcon + 1, m + k), max_nep )
+          end if
+          do j = 1, rci%nx
+            do i = 1, keep%rcon
+              keep%U(k + j - 1, m + max_nep - keep%rcon + i) = &
+                keep%U(max_nep - keep%rcon + i, m + k + j - 1)
+            end do
+          end do
+        end if
+        if ( problem == 0 ) then
+          call gemm &
+            ( TR, 'N', rci%nx, rci%nx, n, &
+              ONE, X(1, k), ldX, X(1, k), ldX, &
+              ZERO, keep%U(k, m + k), max_nep)
+        else
+          call gemm &
+            ( TR, 'N', rci%nx, rci%nx, n, &
+              ONE, X(1, k), ldX, keep%BX(1, k), ldX, &
+              ZERO, keep%U(k, m + k), max_nep)
+        end if
+        s = ZERO
+        do i = 1, max_nep
+          do j = 1, max_nep
+            if ( i == j ) then
+              s = max(s, abs(keep%U(i, m + i) - ONE))
+            else
+              s = max(s, abs(keep%U(i, m + j)))
+            end if
+          end do
+        end do
+
         if ( rci%i > 0 ) then
           keep%lcon = keep%lcon + rci%nx
         else
@@ -511,6 +598,8 @@ contains
 
       case ( SSMFE_APPLY_CONSTRAINTS )
 
+        if ( keep%lcon == 0 .and. keep%rcon == 0 ) return
+
         rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
         rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
 
@@ -518,6 +607,25 @@ contains
           call gemm &
             ( TR, 'N', keep%lcon, rci%nx, n, &
               ONE, X, ldX, rci%y, n, ZERO, keep%U, max_nep )
+        end if
+
+        if ( keep%rcon > 0 ) then
+          j = max_nep - keep%rcon + 1
+          call gemm &
+            ( TR, 'N', keep%rcon, rci%nx, n, &
+              ONE, X(1, j), ldX, rci%y, n, ZERO, keep%U(j, 1), max_nep )
+        end if
+
+        m = keep%block_size
+        k = m + max_nep + 1
+        call mxcopy &
+          ( 'A', max_nep, rci%nx, keep%U, max_nep, keep%U(1, k), max_nep )
+        call gemm &
+          ( 'N', 'N', max_nep, rci%nx, max_nep, &
+            -ONE, keep%U(1, m + 1), max_nep, keep%U(1, k), max_nep, &
+            2*ONE, keep%U, max_nep )
+
+        if ( keep%lcon > 0 ) then
           call gemm &
             ( 'N', 'N', n, rci%nx, keep%lcon, &
               -ONE, X, ldX, keep%U, max_nep, ONE, rci%x, n )
@@ -526,26 +634,24 @@ contains
               ( 'N', 'N', n, rci%nx, keep%lcon, &
                 -ONE, keep%BX, ldBX, keep%U, max_nep, ONE, rci%y, n )
         end if
-
         if ( keep%rcon > 0 ) then
           j = max_nep - keep%rcon + 1
           call gemm &
-            ( TR, 'N', keep%rcon, rci%nx, n, &
-              ONE, X(1, j), ldX, rci%y, n, ZERO, keep%U, max_nep )
-          call gemm &
             ( 'N', 'N', n, rci%nx, keep%rcon, &
-              -ONE, X(1, j), ldX, keep%U, max_nep, ONE, rci%x, n )
+              -ONE, X(1, j), ldX, keep%U(j, 1), max_nep, ONE, rci%x, n )
           if ( problem /= 0 ) &
             call gemm &
               ( 'N', 'N', n, rci%nx, keep%rcon, &
-                -ONE, keep%BX(1, j), ldBX, keep%U, max_nep, ONE, rci%y, n )
+                -ONE, keep%BX(1, j), ldBX, keep%U(j, 1), max_nep, &
+                ONE, rci%y, n )
         end if
 
-      case ( SSMFE_APPLY_A )
+!      case ( SSMFE_APPLY_A )
+      case ( SSMFE_DO_SHIFTED_SOLVE )
 
         rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
         rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
-        rci%job = SSMFE_DO_SHIFTED_SOLVE
+!        rci%job = SSMFE_DO_SHIFTED_SOLVE
 
       case ( SSMFE_APPLY_B )
 
@@ -730,7 +836,7 @@ contains
 
   end subroutine ssmfe_delete_keep_simple_double
 
-  subroutine ssmfe_double_complex &
+  subroutine ssmfe_std_double_complex &
       ( rci, left, mep, lambda, n, X, ldx, keep, options, inform )
 
     integer, intent(in) :: left
@@ -747,7 +853,7 @@ contains
     call ssmfe_direct_srci_double_complex &
       ( 0, left, mep, lambda, n, X, ldX, rci, keep, options, inform )
 
-  end subroutine ssmfe_double_complex
+  end subroutine ssmfe_std_double_complex
 
   subroutine ssmfe_gen_double_complex &
       ( rci, left, mep, lambda, n, X, ldx, keep, options, inform )

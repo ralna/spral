@@ -10,8 +10,12 @@ module spral_ssmfe_core
   character, parameter, private :: SSMFE_JOBZ = 'V'
   character, parameter, private :: SSMFE_UPLO = 'U'
   
-  interface ssmfe_solve 
-    module procedure ssmfe_engine_double, ssmfe_engine_double_complex
+  interface ssmfe
+    module procedure ssmfe_double, ssmfe_double_complex
+  end interface 
+
+  interface ssmfe_largest
+    module procedure ssmfe_largest_double, ssmfe_largest_double_complex
   end interface 
 
   interface ssmfe_terminate
@@ -28,7 +32,7 @@ module spral_ssmfe_core
   integer, parameter, private :: SSMFE_RESIDUAL  = 1
   integer, parameter, private :: SSMFE_KINEMATIC = 2
   
-  type ssmfe_cntl
+  type ssmfe_options
 
     integer :: extra_left  = 0
     integer :: extra_right = 0
@@ -39,7 +43,7 @@ module spral_ssmfe_core
     double precision :: min_gap = 0.0
     double precision :: cf_max = 1.0
 
-  end type ssmfe_cntl
+  end type ssmfe_options
   
   type ssmfe_rcid
   
@@ -95,14 +99,14 @@ module spral_ssmfe_core
 
     double precision :: next_left, next_right
 
-    double precision, dimension(:), allocatable :: res_norms
-    double precision, dimension(:), allocatable :: err_lmd, err_X
+    double precision, dimension(:), allocatable :: residual_norms
+    double precision, dimension(:), allocatable :: err_lambda, err_X
     
   end type ssmfe_inform
 
   ! private subroutines and types
 
-  type ssmfe_work
+  type ssmfe_keep
   
     private
     
@@ -134,12 +138,60 @@ module spral_ssmfe_core
     integer :: err_est
     logical :: minAprod, minBprod
     
-  end type ssmfe_work
+  end type ssmfe_keep
 
 contains
 
+  subroutine ssmfe_double &
+    ( rci, problem, left, right, m, lambda, rr_matrices, ind, &
+      keep, options, info )
+
+    implicit none
+    
+    integer, intent(in) :: problem
+    integer, intent(in) :: left
+    integer, intent(in) :: right
+    integer, intent(in) :: m
+    double precision, dimension(m), intent(inout) :: lambda
+    double precision, intent(inout) :: rr_matrices(2*m, 2*m, 3)
+    integer, intent(out), dimension(m) :: ind
+    type(ssmfe_rcid   ), intent(inout) :: rci
+    type(ssmfe_keep   ), intent(inout) :: keep
+    type(ssmfe_options), intent(in   ) :: options
+    type(ssmfe_inform ), intent(inout) :: info
+    
+    call ssmfe_engine_double &
+      ( problem, left, right, m, lambda, rr_matrices, ind, rci, keep, options, &
+        info )
+
+  end subroutine ssmfe_double
+
+  subroutine ssmfe_double_complex &
+    ( rci, problem, left, right, m, lambda, rr_matrices, ind, &
+      keep, options, info )
+
+    implicit none
+    
+    integer, intent(in) :: problem
+    integer, intent(in) :: left
+    integer, intent(in) :: right
+    integer, intent(in) :: m
+    double precision, dimension(m), intent(inout) :: lambda
+    double complex, intent(inout) :: rr_matrices(2*m, 2*m, 3)
+    integer, intent(out), dimension(m) :: ind
+    type(ssmfe_rciz   ), intent(inout) :: rci
+    type(ssmfe_keep   ), intent(inout) :: keep
+    type(ssmfe_options), intent(in   ) :: options
+    type(ssmfe_inform ), intent(inout) :: info
+    
+    call ssmfe_engine_double_complex &
+      ( problem, left, right, m, lambda, rr_matrices, ind, rci, keep, options, &
+        info )
+
+  end subroutine ssmfe_double_complex
+
   subroutine ssmfe_largest_double &
-    ( problem, nep, m, lambda, rr_matrices, ind, rci, keep, control, info )
+    ( rci, problem, nep, m, lambda, rr_matrices, ind, keep, control, info )
 
     implicit none
     
@@ -150,8 +202,8 @@ contains
     double precision, intent(inout) :: rr_matrices(2*m, 2*m, 3)
     integer, intent(out), dimension(m) :: ind
     type(ssmfe_rcid   ), intent(inout) :: rci
-    type(ssmfe_work   ), intent(inout) :: keep
-    type(ssmfe_cntl   ), intent(in   ) :: control
+    type(ssmfe_keep   ), intent(inout) :: keep
+    type(ssmfe_options), intent(in   ) :: control
     type(ssmfe_inform ), intent(inout) :: info
     
     call ssmfe_engine_double &
@@ -190,9 +242,9 @@ contains
     double precision, dimension(m), intent(inout) :: lambda
     double precision, intent(inout) :: rr_matrices(2*m, 2*m, *)
     integer, intent(inout), dimension(m) :: ind
-    type(ssmfe_work   ), intent(inout) :: keep
+    type(ssmfe_keep   ), intent(inout) :: keep
     type(ssmfe_rcid   ), intent(inout) :: rci
-    type(ssmfe_cntl   ), intent(in   ) :: control
+    type(ssmfe_options), intent(in   ) :: control
     type(ssmfe_inform ), intent(inout) :: info
     
     ! rci
@@ -403,20 +455,20 @@ if_rci: &
         return
       end select
 
-      if ( allocated(keep%ind      ) ) deallocate ( keep%ind       )
-      if ( allocated(keep%mask     ) ) deallocate ( keep%mask      )
-      if ( allocated(keep%lambda   ) ) deallocate ( keep%lambda    )
-      if ( allocated(keep%q        ) ) deallocate ( keep%q         )
-      if ( allocated(keep%dX       ) ) deallocate ( keep%dX        )
-      if ( allocated(keep%dwork    ) ) deallocate ( keep%dwork     )
-      if ( allocated(keep%zwork    ) ) deallocate ( keep%zwork     )
-      if ( allocated(info%res_norms) ) deallocate ( info%res_norms )
-      if ( allocated(info%err_lmd  ) ) deallocate ( info%err_lmd   )
-      if ( allocated(info%err_X    ) ) deallocate ( info%err_X     )
-      if ( allocated(info%converged) ) deallocate ( info%converged )
+      if ( allocated(keep%ind       ) ) deallocate ( keep%ind        )
+      if ( allocated(keep%mask      ) ) deallocate ( keep%mask       )
+      if ( allocated(keep%lambda    ) ) deallocate ( keep%lambda     )
+      if ( allocated(keep%q         ) ) deallocate ( keep%q          )
+      if ( allocated(keep%dX        ) ) deallocate ( keep%dX         )
+      if ( allocated(keep%dwork     ) ) deallocate ( keep%dwork      )
+      if ( allocated(keep%zwork     ) ) deallocate ( keep%zwork      )
+      if ( allocated(info%residual_norms) ) deallocate ( info%residual_norms )
+      if ( allocated(info%err_lambda) ) deallocate ( info%err_lambda )
+      if ( allocated(info%err_X     ) ) deallocate ( info%err_X      )
+      if ( allocated(info%converged ) ) deallocate ( info%converged  )
   
       allocate &
-        ( info%res_norms(m), info%err_lmd(mm), info%err_X(mm), &
+        ( info%residual_norms(m), info%err_lambda(mm), info%err_X(mm), &
           info%converged(m), stat = i )
       allocate ( keep%lambda(3*m), stat = i )
       allocate &
@@ -439,15 +491,15 @@ if_rci: &
         return
       end if
       
-      info%flag      = 0
-      info%data     = 0      
-      info%iteration = 0
-      info%res_norms = NO_VALUE
-      info%err_lmd   = NO_VALUE
-      info%err_X     = NO_VALUE
-      info%converged = 0
-      info%cc        = 0
-      info%dc        = 0
+      info%flag       = 0
+      info%data      = 0      
+      info%iteration  = 0
+      info%residual_norms = NO_VALUE
+      info%err_lambda = NO_VALUE
+      info%err_X      = NO_VALUE
+      info%converged  = 0
+      info%cc         = 0
+      info%dc         = 0
 
       keep%problem  = problem
       keep%err_est  = control%err_est
@@ -677,14 +729,11 @@ select_step: &
         call solve_gsevp &
           ( keep%sizeX, rr_matrices(1,1,2), mm, rr_matrices, mm, &
             lambda, keep%lwork, keep%dwork, i )
-!            lambda, keep%lwork, keep%work, keep%rwork, i )
                 
         if ( i /= 0 ) then
           info%flag = B_NOT_POSITIVE_DEFINITE
           info%data = i - keep%sizeX
           rci%job = SSMFE_ABORT
-          write ( 1, * ) 'initial RR failure'
-          write ( 1, * ) keep%sizeX, info%data
           return
         end if
 
@@ -976,7 +1025,7 @@ select_step: &
       case (ESTIMATE_ERRORS) select_step
 
         do iX = keep%firstX, keep%firstX + keep%sizeX - 1
-          info%res_norms(iX) = sqrt(abs(rr_matrices(iX, iX, 3)))
+          info%residual_norms(iX) = sqrt(abs(rr_matrices(iX, iX, 3)))
         end do
 
         keep%step = CHECK_CONVERGENCE
@@ -987,7 +1036,7 @@ select_step: &
 
           do iX = keep%firstX, keep%firstX + keep%sizeX - 1
           
-            if ( info%res_norms(iX) == ZERO ) then
+            if ( info%residual_norms(iX) == ZERO ) then
               keep%q(iX) = 0
               cycle
             end if
@@ -1022,7 +1071,7 @@ select_step: &
             
             theta = q/(ONE - q)
 
-            info%err_lmd(m + iX) = keep%dlmd(iX,l)*theta
+            info%err_lambda(m + iX) = keep%dlmd(iX,l)*theta
             i = 0
             do j = l - 1, 1, -1
               if ( keep%dlmd(iX,j) == ZERO ) then
@@ -1037,7 +1086,7 @@ select_step: &
             last = l - k
             theta = ZERO
             do j = last, first, -1
-              s = info%err_lmd(m + iX)
+              s = info%err_lambda(m + iX)
               do k = j + 1, l
                 s = s + keep%dlmd(iX,k)
               end do
@@ -1048,7 +1097,7 @@ select_step: &
 
             r = ZERO
             do j = last, first, -1
-              s = info%err_lmd(m + iX)
+              s = info%err_lambda(m + iX)
               do k = j + 1, l
                 s = s + keep%dlmd(iX,k)
               end do
@@ -1064,22 +1113,22 @@ select_step: &
         end if ! l > 3
           
         do iX = keep%firstX, keep%firstX + keep%sizeX - 1
-          if ( info%res_norms(iX) == ZERO ) then
+          if ( info%residual_norms(iX) == ZERO ) then
             ! zero-residual eigenpairs are exact
-            info%err_lmd(iX) = ZERO
+            info%err_lambda(iX) = ZERO
             cycle
           end if
           l = keep%rec
           q = keep%q(iX)
-          info%err_lmd(iX) = NO_VALUE
+          info%err_lambda(iX) = NO_VALUE
           if ( q < ONE .and. l > 0 ) then
             if ( keep%dlmd(iX,l) > ZERO ) &
-              info%err_lmd(iX) = keep%dlmd(iX,l)*q/(ONE - q)
+              info%err_lambda(iX) = keep%dlmd(iX,l)*q/(ONE - q)
           end if
         end do
 
         do iX = keep%firstX, keep%firstX + keep%sizeX - 1
-          if ( info%res_norms(iX) == ZERO ) then
+          if ( info%residual_norms(iX) == ZERO ) then
             ! zero-residual eigenpairs are exact
             info%err_X(iX) = ZERO
             cycle
@@ -1095,7 +1144,7 @@ select_step: &
         if ( err_est == SSMFE_RESIDUAL ) then
 
           do iX = keep%firstX, keep%firstX + keep%sizeX - 1
-            info%err_lmd(iX) = info%res_norms(iX) ! default: KW estimate
+            info%err_lambda(iX) = info%residual_norms(iX) ! default: KW estimate
           end do
 
           do go = 1, 2
@@ -1125,7 +1174,7 @@ select_step: &
 
               s = ZERO
               do iX = first, last - step, step
-                s = s + info%res_norms(iX)**2
+                s = s + info%residual_norms(iX)**2
               end do
             
               do while ( (k - first)*step > 0 )
@@ -1135,12 +1184,12 @@ select_step: &
                   r = lambda(k + minloc(lambda(k-step:m),1))
                 end if
                 if ( abs(lambda(k) - r) > &
-                      sqrt(s) + info%res_norms(k) ) then
-                  t = lambda(k) - step*info%res_norms(k)
+                      sqrt(s) + info%residual_norms(k) ) then
+                  t = lambda(k) - step*info%residual_norms(k)
                   exit
                 end if
                 k = k - step
-                s = max(ZERO, s - info%res_norms(k)**2)
+                s = max(ZERO, s - info%residual_norms(k)**2)
               end do
               if ( (k - first)*step <= 0 ) cycle
               k = k - step
@@ -1174,18 +1223,19 @@ select_step: &
 
             ! estimate errors
             do i = first, k, step
-              q = info%res_norms(i)
+              q = info%residual_norms(i)
               s = max(q, step*(t - lambda(i)))
               info%err_X(i) = min(ONE, q/s) ! Davis-Kahan estimate for the sine
                                           ! of the angle between the Ritz vector
                                           ! and the exact invariant subspace
-              info%err_lmd(i) = step*(lambda(i) - keep%lambda(mm + i)) ! Lehmann
+              ! Lehmann
+              info%err_lambda(i) = step*(lambda(i) - keep%lambda(mm + i))
               r = max(abs(lambda(first)), abs(lambda(k)))
-              if ( info%err_lmd(i) <= (keep%err_B + TOO_SMALL)*r ) then
+              if ( info%err_lambda(i) <= (keep%err_B + TOO_SMALL)*r ) then
                 ! Lehmann estimate too polluted by round-off errors to be used
                 q = q*q
-                info%err_lmd(i) = q/s ! asymptotic quadratic residual estimate
-                                      ! for the eigenvalue error
+                ! asymptotic quadratic residual estimate for the eigenvalue err
+                info%err_lambda(i) = q/s 
               end if
             end do
 
@@ -1195,16 +1245,16 @@ select_step: &
 
         do i = 1, m
           ! if error estimates not yet available, use rough ones for printing
-          info%err_lmd(m + i) = info%err_lmd(i)
-          if ( info%err_lmd(i) == NO_VALUE &
+          info%err_lambda(m + i) = info%err_lambda(i)
+          if ( info%err_lambda(i) == NO_VALUE &
               .and. keep%rec > 0  ) then
             if ( keep%dlmd(i, keep%rec) > 0 ) &
-              info%err_lmd(m + i) = keep%dlmd(i, keep%rec)
+              info%err_lambda(m + i) = keep%dlmd(i, keep%rec)
           end if
           if ( problem == 0 ) then
-            if ( info%err_lmd(m + i) == NO_VALUE &
-              .or. info%err_lmd(m + i) > info%res_norms(i) ) &
-              info%err_lmd(m + i) = info%res_norms(i)
+            if ( info%err_lambda(m + i) == NO_VALUE &
+              .or. info%err_lambda(m + i) > info%residual_norms(i) ) &
+              info%err_lambda(m + i) = info%residual_norms(i)
           end if
           if ( info%err_X(i) == NO_VALUE .and. keep%dX(i) > 0 ) then
             info%err_X(m + i) = keep%dX(i)
@@ -1237,17 +1287,22 @@ select_step: &
 
       case (CHECK_CONVERGENCE) select_step
 
+        first = 0
+        last = 0
+        left_cnv = 0
+        right_cnv = 0
+        r = 0
         s = keep%cond*epsilon(ONE)
         t = max(abs(keep%lambda(1)), abs(keep%lambda(keep%sizeX + keep%sizeZ)))
 
         do go = 1, -1, -2
 
           select case ( go )
-          case (1)
+          case ( 1 )
             skip = left == 0
             first = keep%firstX
             last = first + keep%leftX - 1
-          case (-1)
+          case ( -1 )
             skip = right == 0
             first = keep%firstX + keep%sizeX - 1
             last = first - keep%rightX + 1
@@ -1267,10 +1322,10 @@ select_step: &
                 .and. keep%sizeZ > 0 ) then
 
                 select case ( go )
-                case (1)
+                case ( 1 )
                   j = keep%left_cnv + i - first + 1
                   r = keep%lambda(keep%leftX + 1)
-                case (-1)
+                case ( -1 )
                   j = -(keep%right_cnv + first - i + 1)
                   r = keep%lambda(keep%leftX + keep%sizeZ)
                 end select
@@ -1280,11 +1335,6 @@ select_step: &
                     < 10*epsilon(ONE)*max(abs(lambda(i)), abs(lambda(l))) ) &
                     q = max(q, keep%dX(m + l))
                 end do
-!!                write ( 1, '(2i5, 6es11.1)' ) info%iteration, j, & 
-!!                  keep%dX(i), q, s*t/abs(r - lambda(i)), &
-!!                  (keep%err_A + abs(lambda(i))*keep%err_B)/abs(r - lambda(i)), &
-!!                  sqrt(keep%q(i)), &
-!!                  sqrt(keep%q(m + i))
 
                 if ( keep%rec >= 5 .and. keep%dX(i) <= A_SMALL_FRACTION &
                   .and. (keep%dX(i) > q_max * q &
@@ -1297,7 +1347,7 @@ select_step: &
                     q = keep%q(m + i)
                     if ( q < ONE ) then
                       if ( keep%dlmd(i, keep%rec) > ZERO ) &
-                        info%err_lmd(i) = keep%dlmd(i, keep%rec)*q/(ONE - q)
+                        info%err_lambda(i) = keep%dlmd(i, keep%rec)*q/(ONE - q)
                       if ( keep%dX(i) > ZERO ) &
                         info%err_X(i) = min(ONE, keep%dX(i)*q/(ONE - q))
                     end if
@@ -2125,8 +2175,8 @@ select_step: &
         if ( k > 0 ) then
           do j = 1, l - k
             lambda(j) = lambda(j + k)
-            info%res_norms(j) = info%res_norms(j + k)
-            info%err_lmd(j) = info%err_lmd(j + k)
+            info%residual_norms(j) = info%residual_norms(j + k)
+            info%err_lambda(j) = info%err_lambda(j + k)
             info%err_X(j) = info%err_X(j + k)
             info%converged(j) = info%converged(j + k)
             keep%q(j) = keep%q(j + k)
@@ -2138,7 +2188,7 @@ select_step: &
         end if
         if ( k >= 0 ) then
           do j = l - k + 1, keep%firstXn + keep%leftXn - 1
-            info%err_lmd(j) = NO_VALUE
+            info%err_lambda(j) = NO_VALUE
             info%err_X(j) = NO_VALUE
             info%converged(j) = 0
             keep%q(j) = ONE
@@ -2154,8 +2204,8 @@ select_step: &
         if ( k > 0 ) then
           do j = m, l + k, -1
             lambda(j) = lambda(j - k)
-            info%res_norms(j) = info%res_norms(j - k)
-            info%err_lmd(j) = info%err_lmd(j - k)
+            info%residual_norms(j) = info%residual_norms(j - k)
+            info%err_lambda(j) = info%err_lambda(j - k)
             info%err_X(j) = info%err_X(j - k)
             info%converged(j) = info%converged(j - k)
             keep%q(j) = keep%q(j - k)
@@ -2167,7 +2217,7 @@ select_step: &
         end if
         if ( k >= 0 ) then
           do j = keep%firstXn + keep%leftXn, l + k - 1
-            info%err_lmd(j) = NO_VALUE
+            info%err_lambda(j) = NO_VALUE
             info%err_X(j) = NO_VALUE
             info%converged(j) = 0
             keep%q(j) = ONE
@@ -2639,10 +2689,10 @@ select_step: &
     
     type(ssmfe_inform), intent(inout) :: info
 
-    if ( allocated(info%res_norms) ) deallocate( info%res_norms )
-    if ( allocated(info%err_lmd  ) ) deallocate( info%err_lmd   )
-    if ( allocated(info%err_X    ) ) deallocate( info%err_X     )
-    if ( allocated(info%converged) ) deallocate( info%converged )
+    if ( allocated(info%residual_norms) ) deallocate( info%residual_norms )
+    if ( allocated(info%err_lambda) ) deallocate( info%err_lambda )
+    if ( allocated(info%err_X) ) deallocate( info%err_X )
+    if ( allocated(info%converged ) ) deallocate( info%converged  )
     info%flag = 0
     info%data = 0
     info%iteration = 0
@@ -2657,7 +2707,7 @@ select_step: &
 
     implicit none
     
-    type(ssmfe_work), intent(inout) :: keep
+    type(ssmfe_keep), intent(inout) :: keep
 
     if ( allocated(keep%lambda) ) deallocate( keep%lambda )
     if ( allocated(keep%dlmd  ) ) deallocate( keep%dlmd   )
@@ -2674,7 +2724,7 @@ select_step: &
 
     implicit none
     
-    type(ssmfe_work), intent(inout) :: keep
+    type(ssmfe_keep  ), intent(inout) :: keep
     type(ssmfe_inform), intent(inout) :: info
     
     call ssmfe_delete_work_double( keep )
@@ -2742,8 +2792,8 @@ select_step: &
     complex(PRECISION), intent(inout) :: rr_matrices(2*m, 2*m, 3)
     integer, intent(out), dimension(m) :: ind
     type(ssmfe_rciz   ), intent(inout) :: rci
-    type(ssmfe_work   ), intent(inout) :: keep
-    type(ssmfe_cntl   ), intent(in   ) :: control
+    type(ssmfe_keep   ), intent(inout) :: keep
+    type(ssmfe_options), intent(in   ) :: control
     type(ssmfe_inform ), intent(inout) :: info
     
     call ssmfe_engine_double_complex &
@@ -2783,9 +2833,9 @@ select_step: &
     double precision, dimension(m), intent(inout) :: lambda
     complex(PRECISION), intent(inout) :: rr_matrices(2*m, 2*m, *)
     integer, intent(inout), dimension(m) :: ind
-    type(ssmfe_work   ), intent(inout) :: keep
+    type(ssmfe_keep   ), intent(inout) :: keep
     type(ssmfe_rciz   ), intent(inout) :: rci
-    type(ssmfe_cntl   ), intent(in   ) :: control
+    type(ssmfe_options), intent(in   ) :: control
     type(ssmfe_inform ), intent(inout) :: info
     
     ! rci
@@ -2997,20 +3047,20 @@ if_rci: &
         return
       end select
 
-      if ( allocated(keep%ind      ) ) deallocate ( keep%ind       )
-      if ( allocated(keep%mask     ) ) deallocate ( keep%mask      )
-      if ( allocated(keep%lambda   ) ) deallocate ( keep%lambda    )
-      if ( allocated(keep%q        ) ) deallocate ( keep%q         )
-      if ( allocated(keep%dX       ) ) deallocate ( keep%dX        )
-      if ( allocated(keep%dwork    ) ) deallocate ( keep%dwork     )
-      if ( allocated(keep%zwork    ) ) deallocate ( keep%zwork     )
-      if ( allocated(info%res_norms) ) deallocate ( info%res_norms )
-      if ( allocated(info%err_lmd  ) ) deallocate ( info%err_lmd   )
-      if ( allocated(info%err_X    ) ) deallocate ( info%err_X     )
-      if ( allocated(info%converged) ) deallocate ( info%converged )
+      if ( allocated(keep%ind       ) ) deallocate ( keep%ind        )
+      if ( allocated(keep%mask      ) ) deallocate ( keep%mask       )
+      if ( allocated(keep%lambda    ) ) deallocate ( keep%lambda     )
+      if ( allocated(keep%q         ) ) deallocate ( keep%q          )
+      if ( allocated(keep%dX        ) ) deallocate ( keep%dX         )
+      if ( allocated(keep%dwork     ) ) deallocate ( keep%dwork      )
+      if ( allocated(keep%zwork     ) ) deallocate ( keep%zwork      )
+      if ( allocated(info%residual_norms) ) deallocate ( info%residual_norms )
+      if ( allocated(info%err_lambda) ) deallocate ( info%err_lambda )
+      if ( allocated(info%err_X     ) ) deallocate ( info%err_X      )
+      if ( allocated(info%converged ) ) deallocate ( info%converged  )
   
       allocate &
-        ( info%res_norms(m), info%err_lmd(mm), info%err_X(mm), &
+        ( info%residual_norms(m), info%err_lambda(mm), info%err_X(mm), &
           info%converged(m), stat = i )
       allocate ( keep%lambda(3*m), stat = i )
       allocate &
@@ -3033,15 +3083,15 @@ if_rci: &
         return
       end if
       
-      info%flag      = 0
-      info%data     = 0      
-      info%iteration = 0
-      info%res_norms = NO_VALUE
-      info%err_lmd   = NO_VALUE
-      info%err_X     = NO_VALUE
-      info%converged = 0
-      info%cc        = 0
-      info%dc        = 0
+      info%flag       = 0
+      info%data       = 0      
+      info%iteration  = 0
+      info%residual_norms = NO_VALUE
+      info%err_lambda = NO_VALUE
+      info%err_X      = NO_VALUE
+      info%converged  = 0
+      info%cc         = 0
+      info%dc         = 0
 
       keep%problem  = problem
       keep%err_est  = control%err_est
@@ -3421,8 +3471,8 @@ select_step: &
             keep%err_B = max(keep%err_B, abs(rr_matrices(j, i, 1)))
           end do
           iX = keep%firstX + i - 1
-          s = rr_matrices(i, i, 1)
-          t = rr_matrices(i, i, 2)
+          s = real(rr_matrices(i, i, 1), PRECISION)
+          t = real(rr_matrices(i, i, 2), PRECISION)
           
           t = t/s
           if ( keep%rec > 0 ) then
@@ -3567,7 +3617,7 @@ select_step: &
       case (ESTIMATE_ERRORS) select_step
 
         do iX = keep%firstX, keep%firstX + keep%sizeX - 1
-          info%res_norms(iX) = sqrt(abs(rr_matrices(iX, iX, 3)))
+          info%residual_norms(iX) = sqrt(abs(rr_matrices(iX, iX, 3)))
         end do
 
         keep%step = CHECK_CONVERGENCE
@@ -3578,7 +3628,7 @@ select_step: &
 
           do iX = keep%firstX, keep%firstX + keep%sizeX - 1
           
-            if ( info%res_norms(iX) == ZERO ) then
+            if ( info%residual_norms(iX) == ZERO ) then
               keep%q(iX) = 0
               cycle
             end if
@@ -3613,7 +3663,7 @@ select_step: &
             
             theta = q/(ONE - q)
 
-            info%err_lmd(m + iX) = keep%dlmd(iX,l)*theta
+            info%err_lambda(m + iX) = keep%dlmd(iX,l)*theta
             i = 0
             do j = l - 1, 1, -1
               if ( keep%dlmd(iX,j) == ZERO ) then
@@ -3628,7 +3678,7 @@ select_step: &
             last = l - k
             theta = ZERO
             do j = last, first, -1
-              s = info%err_lmd(m + iX)
+              s = info%err_lambda(m + iX)
               do k = j + 1, l
                 s = s + keep%dlmd(iX,k)
               end do
@@ -3639,7 +3689,7 @@ select_step: &
 
             r = ZERO
             do j = last, first, -1
-              s = info%err_lmd(m + iX)
+              s = info%err_lambda(m + iX)
               do k = j + 1, l
                 s = s + keep%dlmd(iX,k)
               end do
@@ -3655,22 +3705,22 @@ select_step: &
         end if ! l > 3
           
         do iX = keep%firstX, keep%firstX + keep%sizeX - 1
-          if ( info%res_norms(iX) == ZERO ) then
+          if ( info%residual_norms(iX) == ZERO ) then
             ! zero-residual eigenpairs are exact
-            info%err_lmd(iX) = ZERO
+            info%err_lambda(iX) = ZERO
             cycle
           end if
           l = keep%rec
           q = keep%q(iX)
-          info%err_lmd(iX) = NO_VALUE
+          info%err_lambda(iX) = NO_VALUE
           if ( q < ONE .and. l > 0 ) then
             if ( keep%dlmd(iX,l) > ZERO ) &
-              info%err_lmd(iX) = keep%dlmd(iX,l)*q/(ONE - q)
+              info%err_lambda(iX) = keep%dlmd(iX,l)*q/(ONE - q)
           end if
         end do
 
         do iX = keep%firstX, keep%firstX + keep%sizeX - 1
-          if ( info%res_norms(iX) == ZERO ) then
+          if ( info%residual_norms(iX) == ZERO ) then
             ! zero-residual eigenpairs are exact
             info%err_X(iX) = ZERO
             cycle
@@ -3686,7 +3736,7 @@ select_step: &
         if ( err_est == SSMFE_RESIDUAL ) then
 
           do iX = keep%firstX, keep%firstX + keep%sizeX - 1
-            info%err_lmd(iX) = info%res_norms(iX) ! default: KW estimate
+            info%err_lambda(iX) = info%residual_norms(iX) ! default: KW estimate
           end do
 
           do go = 1, 2
@@ -3716,7 +3766,7 @@ select_step: &
 
               s = ZERO
               do iX = first, last - step, step
-                s = s + info%res_norms(iX)**2
+                s = s + info%residual_norms(iX)**2
               end do
             
               do while ( (k - first)*step > 0 )
@@ -3726,12 +3776,12 @@ select_step: &
                   r = lambda(k + minloc(lambda(k-step:m),1))
                 end if
                 if ( abs(lambda(k) - r) > &
-                      sqrt(s) + info%res_norms(k) ) then
-                  t = lambda(k) - step*info%res_norms(k)
+                      sqrt(s) + info%residual_norms(k) ) then
+                  t = lambda(k) - step*info%residual_norms(k)
                   exit
                 end if
                 k = k - step
-                s = max(ZERO, s - info%res_norms(k)**2)
+                s = max(ZERO, s - info%residual_norms(k)**2)
               end do
               if ( (k - first)*step <= 0 ) cycle
               k = k - step
@@ -3764,18 +3814,19 @@ select_step: &
 
             ! estimate errors
             do i = first, k, step
-              q = info%res_norms(i)
+              q = info%residual_norms(i)
               s = max(q, step*(t - lambda(i)))
               info%err_X(i) = min(ONE, q/s) ! Davis-Kahan estimate for the sine
                                           ! of the angle between the Ritz vector
                                           ! and the exact invariant subspace
-              info%err_lmd(i) = step*(lambda(i) - keep%lambda(mm + i)) ! Lehmann
+              ! Lehmann
+              info%err_lambda(i) = step*(lambda(i) - keep%lambda(mm + i))
               r = max(abs(lambda(first)), abs(lambda(k)))
-              if ( info%err_lmd(i) <= (keep%err_B + TOO_SMALL)*r ) then
+              if ( info%err_lambda(i) <= (keep%err_B + TOO_SMALL)*r ) then
                 ! Lehmann estimate too polluted by round-off errors to be used
                 q = q*q
-                info%err_lmd(i) = q/s ! asymptotic quadratic residual estimate
-                                      ! for the eigenvalue error
+                ! asymptotic quadratic residual estimate for the eigenvalue err
+                info%err_lambda(i) = q/s 
               end if
             end do
 
@@ -3785,16 +3836,16 @@ select_step: &
 
         do i = 1, m
           ! if error estimates not yet available, use rough ones for printing
-          info%err_lmd(m + i) = info%err_lmd(i)
-          if ( info%err_lmd(i) == NO_VALUE &
+          info%err_lambda(m + i) = info%err_lambda(i)
+          if ( info%err_lambda(i) == NO_VALUE &
               .and. keep%rec > 0  ) then
             if ( keep%dlmd(i, keep%rec) > 0 ) &
-              info%err_lmd(m + i) = keep%dlmd(i, keep%rec)
+              info%err_lambda(m + i) = keep%dlmd(i, keep%rec)
           end if
           if ( problem == 0 ) then
-            if ( info%err_lmd(m + i) == NO_VALUE &
-              .or. info%err_lmd(m + i) > info%res_norms(i) ) &
-              info%err_lmd(m + i) = info%res_norms(i)
+            if ( info%err_lambda(m + i) == NO_VALUE &
+              .or. info%err_lambda(m + i) > info%residual_norms(i) ) &
+              info%err_lambda(m + i) = info%residual_norms(i)
           end if
           if ( info%err_X(i) == NO_VALUE .and. keep%dX(i) > 0 ) then
             info%err_X(m + i) = keep%dX(i)
@@ -3827,17 +3878,23 @@ select_step: &
 
       case (CHECK_CONVERGENCE) select_step
 
+        skip = .false.
+        first = 0
+        last = 0
+        left_cnv = 0
+        right_cnv = 0
+        r = 0
         s = keep%cond*epsilon(ONE)
         t = max(abs(keep%lambda(1)), abs(keep%lambda(keep%sizeX + keep%sizeZ)))
 
         do go = 1, -1, -2
 
           select case ( go )
-          case (1)
+          case ( 1 )
             skip = left == 0
             first = keep%firstX
             last = first + keep%leftX - 1
-          case (-1)
+          case ( -1 )
             skip = right == 0
             first = keep%firstX + keep%sizeX - 1
             last = first - keep%rightX + 1
@@ -3869,11 +3926,6 @@ select_step: &
                     < 10*epsilon(ONE)*max(abs(lambda(i)), abs(lambda(l))) ) &
                     q = max(q, keep%dX(m + l))
                 end do
-!!                write ( 1, '(2i5, 6es11.1)' ) info%iteration, j, & 
-!!                  keep%dX(i), q, s*t/abs(r - lambda(i)), &
-!!                  (keep%err_A + abs(lambda(i))*keep%err_B)/abs(r - lambda(i)), &
-!!                  sqrt(keep%q(i)), &
-!!                  sqrt(keep%q(m + i))
 
                 if ( keep%rec >= 5 .and. keep%dX(i) <= A_SMALL_FRACTION &
                   .and. (keep%dX(i) > q_max * q &
@@ -3886,7 +3938,7 @@ select_step: &
                     q = keep%q(m + i)
                     if ( q < ONE ) then
                       if ( keep%dlmd(i, keep%rec) > ZERO ) &
-                        info%err_lmd(i) = keep%dlmd(i, keep%rec)*q/(ONE - q)
+                        info%err_lambda(i) = keep%dlmd(i, keep%rec)*q/(ONE - q)
                       if ( keep%dX(i) > ZERO ) &
                         info%err_X(i) = min(ONE, keep%dX(i)*q/(ONE - q))
                     end if
@@ -3907,9 +3959,9 @@ select_step: &
           end do
 
           select case ( go )
-          case (1)
+          case ( 1 )
             left_cnv = k
-          case (-1)
+          case ( -1 )
             right_cnv = k
           end select
 
@@ -4418,10 +4470,8 @@ select_step: &
               ind(l - keep%sizeX) = j
             end if
             s = norm(iX, rr_matrices(1,k,3), 1)**2
-            t = rr_matrices(k,k,3) - s
-            if ( t <= TOO_SMALL + keep%err_B ) then
-              exit
-            end if
+            t = real(rr_matrices(k,k,3), PRECISION) - s
+            if ( t <= TOO_SMALL + keep%err_B ) exit
             s = sqrt(t)
             rr_matrices(k,k,3) = s
             
@@ -4633,7 +4683,7 @@ select_step: &
 
         if ( control%externaL_eigsol ) then
           do i = 1, sizeXY
-            keep%lambda(i) = rr_matrices(i,i,3)
+            keep%lambda(i) = real(rr_matrices(i,i,3), PRECISION)
           end do
         end if
 
@@ -4713,8 +4763,8 @@ select_step: &
         if ( k > 0 ) then
           do j = 1, l - k
             lambda(j) = lambda(j + k)
-            info%res_norms(j) = info%res_norms(j + k)
-            info%err_lmd(j) = info%err_lmd(j + k)
+            info%residual_norms(j) = info%residual_norms(j + k)
+            info%err_lambda(j) = info%err_lambda(j + k)
             info%err_X(j) = info%err_X(j + k)
             info%converged(j) = info%converged(j + k)
             keep%q(j) = keep%q(j + k)
@@ -4726,7 +4776,7 @@ select_step: &
         end if
         if ( k >= 0 ) then
           do j = l - k + 1, keep%firstXn + keep%leftXn - 1
-            info%err_lmd(j) = NO_VALUE
+            info%err_lambda(j) = NO_VALUE
             info%err_X(j) = NO_VALUE
             info%converged(j) = 0
             keep%q(j) = ONE
@@ -4742,8 +4792,8 @@ select_step: &
         if ( k > 0 ) then
           do j = m, l + k, -1
             lambda(j) = lambda(j - k)
-            info%res_norms(j) = info%res_norms(j - k)
-            info%err_lmd(j) = info%err_lmd(j - k)
+            info%residual_norms(j) = info%residual_norms(j - k)
+            info%err_lambda(j) = info%err_lambda(j - k)
             info%err_X(j) = info%err_X(j - k)
             info%converged(j) = info%converged(j - k)
             keep%q(j) = keep%q(j - k)
@@ -4755,7 +4805,7 @@ select_step: &
         end if
         if ( k >= 0 ) then
           do j = keep%firstXn + keep%leftXn, l + k - 1
-            info%err_lmd(j) = NO_VALUE
+            info%err_lambda(j) = NO_VALUE
             info%err_X(j) = NO_VALUE
             info%converged(j) = 0
             keep%q(j) = ONE
@@ -5226,10 +5276,10 @@ select_step: &
     
     type(ssmfe_inform), intent(inout) :: info
 
-    if ( allocated(info%res_norms) ) deallocate( info%res_norms )
-    if ( allocated(info%err_lmd  ) ) deallocate( info%err_lmd   )
-    if ( allocated(info%err_X    ) ) deallocate( info%err_X     )
-    if ( allocated(info%converged) ) deallocate( info%converged )
+    if ( allocated(info%residual_norms) ) deallocate( info%residual_norms )
+    if ( allocated(info%err_lambda) ) deallocate( info%err_lambda )
+    if ( allocated(info%err_X) ) deallocate( info%err_X )
+    if ( allocated(info%converged ) ) deallocate( info%converged  )
     info%flag = 0
     info%data = 0
     info%iteration = 0
@@ -5244,7 +5294,7 @@ select_step: &
 
     implicit none
     
-    type(ssmfe_work), intent(inout) :: keep
+    type(ssmfe_keep), intent(inout) :: keep
 
     if ( allocated(keep%lambda) ) deallocate( keep%lambda )
     if ( allocated(keep%dlmd  ) ) deallocate( keep%dlmd   )
@@ -5261,7 +5311,7 @@ select_step: &
 
     implicit none
     
-    type(ssmfe_work), intent(inout) :: keep
+    type(ssmfe_keep  ), intent(inout) :: keep
     type(ssmfe_inform), intent(inout) :: info
     
     call ssmfe_delete_work_double_complex( keep )

@@ -17,7 +17,8 @@ program spec_test ! Laplacian on a square grid
   options%left_gap = -0.1
   rci%job = 0
   do ! reverse communication loop
-    call ssmfe( rci, nep, 2*nep, lambda, n, X, n, keep, options, inform )
+    call ssmfe_standard &
+      ( rci, nep, 2*nep, lambda, n, X, n, keep, options, inform )
     select case ( rci%job )
     case ( 1 )
       call apply_laplacian( m, m, rci%nx, rci%x, rci%y )

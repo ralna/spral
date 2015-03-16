@@ -12,7 +12,7 @@ program spec_test
   integer :: i                       ! loop index
   rci%job = 0
   do ! reverse communication loop
-    call ssmfe( rci, nep, nep, lambda, n, X, n, keep, options, inform )
+    call ssmfe_standard( rci, nep, nep, lambda, n, X, n, keep, options, inform )
     select case ( rci%job )
     case ( 1 )
       call apply_idx( n, rci%nx, rci%x, rci%y )

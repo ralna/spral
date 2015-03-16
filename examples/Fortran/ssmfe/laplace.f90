@@ -1,7 +1,7 @@
 module laplace2d_double
 
   interface apply_laplacian
-    module procedure apply_laplacian_double
+    module procedure apply_laplacian_double, apply_lap_double
   end interface
 
   interface set_laplacian_matrix
@@ -9,7 +9,7 @@ module laplace2d_double
   end interface
 
   interface apply_gauss_seidel_step
-    module procedure apply_gauss_seidel_step_double
+    module procedure apply_gauss_seidel_step_double, apply_gs_double
   end interface
 
 contains
