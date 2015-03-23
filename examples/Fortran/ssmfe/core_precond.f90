@@ -4,8 +4,8 @@ program spec_test ! Laplacian on a square grid
   implicit none
   integer, parameter :: l   = 10  ! grid points along each side
   integer, parameter :: n   = l*l ! problem size
-  integer, parameter :: nep = 25  ! eigenpairs wanted
-  integer, parameter :: m = 10    ! dimension of the iterated subspace
+  integer, parameter :: nep = 9   ! eigenpairs wanted
+  integer, parameter :: m = 3     ! dimension of the iterated subspace
   integer :: ncon                  ! number of converged eigenpairs
   integer :: i, j, k
   integer :: ind(m)                ! permutation index
@@ -22,7 +22,7 @@ program spec_test ! Laplacian on a square grid
   type(ssmfe_options) :: options ! options
   type(ssmfe_keep   ) :: keep    ! private data
   type(ssmfe_inform ) :: inform  ! information
-  tol = 1.e-4
+  tol = 1.e-6
   ncon = 0
   call random_number( W(:,:,0) )
   rci%job = 0
@@ -53,7 +53,7 @@ program spec_test ! Laplacian on a square grid
         call dcopy( n, W(1, rci%jx + k, 0), 1, X(1, j), 1 )
       end do
       ncon = ncon + rci%nx
-      if ( ncon >= nep .or. inform%iteration > 30 ) exit
+      if ( ncon >= nep .or. inform%iteration > 300 ) exit
     case ( 11 )
       if ( rci%i == 0 ) then
         if ( rci%kx /= rci%ky .or. rci%jx > rci%jy ) then
@@ -154,7 +154,7 @@ program spec_test ! Laplacian on a square grid
     end select
   end do
   print '(i3, 1x, a)', ncon, 'eigenpairs converged'
-  print '(1x, a, i3, a, es13.7)', &
+  print '(1x, a, i1, a, es13.7)', &
     ('lambda(', i, ') = ', lambda(i), i = 1, ncon)
   call ssmfe_terminate( keep, inform )
 end program spec_test

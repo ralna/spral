@@ -11,6 +11,27 @@ module SPRAL_ssmfe_expert
   integer, parameter, private :: SSMFE_ITYPE = 1
   character, parameter, private :: SSMFE_JOBZ = 'V', SSMFE_UPLO = 'U'
   
+  integer, parameter, private :: WRONG_RCI_JOB      = -1
+  integer, parameter, private :: WRONG_BLOCK_SIZE   = -2
+  integer, parameter, private :: WRONG_ERR_EST      = -3
+  integer, parameter, private :: WRONG_MINPROD      = -4
+  integer, parameter, private :: WRONG_EXTRAS       = -5
+  integer, parameter, private :: WRONG_MIN_GAP      = -6
+  integer, parameter, private :: WRONG_CF_MAX       = -7
+  integer, parameter, private :: WRONG_LEFT         = -11
+  integer, parameter, private :: WRONG_RIGHT        = -12
+  integer, parameter, private :: WRONG_STORAGE_SIZE = -13
+  integer, parameter, private :: WRONG_SIGMA        = -14
+  
+  integer, parameter, private :: OUT_OF_MEMORY           = -100
+  integer, parameter, private :: B_NOT_POSITIVE_DEFINITE = -200
+
+  integer, parameter, private :: NO_SEARCH_DIRECTIONS_LEFT = 1
+
+  integer, parameter, private :: SSMFE_DONE  = -1
+  integer, parameter, private :: SSMFE_QUIT  = -2
+  integer, parameter, private :: SSMFE_ABORT = -3
+
   interface ssmfe_standard
     module procedure &
       ssmfe_expert_double, &
@@ -55,12 +76,6 @@ module SPRAL_ssmfe_expert
       ssmfe_delete_keep_double
   end interface 
   
-  interface ssmfe_vec_ops
-    module procedure &
-      ssmfe_vec_ops_double, &
-      ssmfe_vec_ops_double_complex
-  end interface
-
   ! error estimation schemes
   integer, parameter, private :: SSMFE_RESIDUAL = 1
   integer, parameter, private :: SSMFE_KINEMATIC = 2
@@ -354,15 +369,6 @@ contains
     integer, parameter :: SSMFE_DO_SHIFTED_SOLVE  = 9
     integer, parameter :: SSMFE_RESTART           = 999
 
-    integer, parameter :: SSMFE_DONE = -1
-    integer, parameter :: SSMFE_QUIT = -2
-    integer, parameter :: SSMFE_ABORT = -3
-
-    integer, parameter :: WRONG_BLOCK_SIZE   = -1
-    integer, parameter :: WRONG_LEFT         = -11
-    integer, parameter :: WRONG_RIGHT        = -12
-    integer, parameter :: WRONG_STORAGE_SIZE = -13
-
     integer, parameter :: NONE = -1
 
     double precision, parameter :: ZERO = 0.0D0, ONE = 1.0D0
@@ -392,7 +398,7 @@ contains
     character(78) :: head, neck, form, line
     character(7) :: word
 
-    integer :: unit_diagnostic, unit_error, verb
+    integer :: u_diag, u_errr, verb
     integer :: m, mm, mep, new, ncon, first, last, step
     integer :: i, j, k, l
     
@@ -401,9 +407,9 @@ contains
     double precision :: delta
     double precision :: q, r, s, t
     
-    unit_diagnostic = options%unit_diagnostic
-    unit_error = options%unit_error
-    verb  = options%print_level
+    u_diag = options%unit_diagnostic
+    u_errr = options%unit_error
+    verb   = options%print_level
     
     left_gap  = options%left_gap
     right_gap = options%right_gap
@@ -413,8 +419,8 @@ contains
     if ( options%max_left >= 0 .and. options%max_left < left ) then
       info%flag = WRONG_LEFT
       rci%job = SSMFE_ABORT
-      if ( unit_error > NONE .and. verb > NONE ) &
-        write( unit_error, '(/a/)' ) &
+      if ( u_errr > NONE .and. verb > NONE ) &
+        write( u_errr, '(/a/)' ) &
           '??? Wrong number of left eigenpairs'
       return
     end if
@@ -422,8 +428,8 @@ contains
     if ( options%max_right >= 0 .and. options%max_right < right ) then
       info%flag = WRONG_RIGHT
       rci%job = SSMFE_ABORT
-      if ( unit_error > NONE .and. verb > NONE ) &
-        write( unit_error, '(/a/)' ) &
+      if ( u_errr > NONE .and. verb > NONE ) &
+        write( u_errr, '(/a/)' ) &
           '??? Wrong number of right eigenpairs'
       return
     end if
@@ -431,8 +437,8 @@ contains
     if ( left + right > max_nep ) then
       info%flag = WRONG_STORAGE_SIZE
       rci%job = SSMFE_ABORT
-      if ( unit_error > NONE .and. verb > NONE ) &
-        write( unit_error, '(/a/)' ) &
+      if ( u_errr > NONE .and. verb > NONE ) &
+        write( u_errr, '(/a/)' ) &
           '??? Wrong eigenvalue storage size'
       return
     end if
@@ -440,9 +446,18 @@ contains
     if ( block_size < 2 ) then
       info%flag = WRONG_BLOCK_SIZE
       rci%job = SSMFE_ABORT
-      if ( unit_error > NONE .and. verb > NONE ) &
-        write( unit_error, '(/a/)' ) &
-          '??? Wrong block size'
+      if ( u_errr > NONE .and. verb > NONE ) &
+        write( u_errr, '(/a, i5/)' ) &
+          '??? Wrong block size', block_size
+      return
+    end if
+    
+    if ( problem == 2 .and. sigma == ZERO ) then
+      info%flag = WRONG_SIGMA
+      rci%job = SSMFE_QUIT
+      if ( options%unit_error > NONE .and. options%print_level > NONE ) &
+        write( options%unit_error, '(/a, i9/)' ) &
+          '??? Zero sigma in buckling mode'
       return
     end if
     
@@ -638,7 +653,7 @@ contains
         if ( keep%left_converged .and. keep%right_converged ) then
           rci%job = SSMFE_DONE
         else
-          if ( block_size < keep%left + keep%right .and. &
+          if ( rci%i < 0 .and. & ! restart after printout
                (keep%left > 0 .and. keep%first > keep%left .or. &
                 keep%right > 0 .and. block_size - keep%last >= keep%right) &
               ) then
@@ -677,7 +692,7 @@ contains
       rci%job = SSMFE_DO_SHIFTED_SOLVE
     
     case (SSMFE_SAVE_CONVERGED)
-    
+
       ! the number of newly converged eigenpairs
       new = rci%nx
       ! number of eigenpairs converged previously
@@ -748,9 +763,9 @@ contains
         end if
         keep%last = j
       end if
-
+      
       ! report the convergence situation
-      if ( options%print_level == 2 ) then
+      if ( options%print_level == 2 .and. u_diag > NONE ) then
 
         if ( PRECISION == kind(1.0) ) then
           form = '(i7, i8, es18.6, 4x, a, 3es11.1)'
@@ -797,7 +812,7 @@ contains
           else
             j = (keep%rcon + first - i + 1)
           end if
-          write( unit_diagnostic, form ) &
+          write( u_diag, form ) &
             info%iteration, j, s, word, &
             keep%info%residual_norms(i), t, keep%info%err_X(block_size + i)
 
@@ -816,9 +831,9 @@ contains
       end if
       ncon = keep%lcon + keep%rcon
       
-      if ( options%print_level > 2 .and. rci%i < 0 ) then
+      if ( options%print_level > 2 .and. rci%i < 0 .and. u_diag > NONE ) then
 
-        write( unit_diagnostic, '(/a, i5, a, i4, i4)' ) &
+        write( u_diag, '(/a, i5, a, i4, i4)' ) &
           'Iteration: ', info%iteration, ', not converged: ', &
           max(0, left - keep%lcon), max(0, right - keep%rcon)
 
@@ -835,10 +850,10 @@ contains
           form = '(es22.14,a,1x,a,2x,a,es9.1,a,es10.1,a,es10.1)'
         end if
 
-        write( unit_diagnostic, '(a/a)' ) &
+        write( u_diag, '(a/a)' ) &
           trim(line), trim(head)
-        write( unit_diagnostic, '(a)' ) trim(neck) 
-        write( unit_diagnostic, '(a)' ) trim(line)
+        write( u_diag, '(a)' ) trim(neck) 
+        write( u_diag, '(a)' ) trim(line)
           
         do i = 1, block_size
         
@@ -853,13 +868,13 @@ contains
           if ( t >= ZERO ) t = si_map_err(problem, sigma, s, t)
           s = si_map(problem, sigma, keep%lmd(i))
 
-          write( unit_diagnostic, form ) &
+          write( u_diag, form ) &
             s, ' |', word, ' |', keep%info%residual_norms(i), '  |', &
             t, '  |', keep%info%err_X(block_size + i)
 
         end do ! i = 1, block_size
 
-        write( unit_diagnostic, '(a)' ) trim(line) 
+        write( u_diag, '(a)' ) trim(line) 
 
       end if ! print_level > 2
 
@@ -869,12 +884,6 @@ contains
 
         if ( keep%left == 0 ) then
 
-          keep%left_converged = .true.
-
-        else if ( keep%lcon >= keep%max_left ) then
-
-          info%left = keep%max_left
-          info%next_left = sigma
           keep%left_converged = .true.
 
         else if ( left_gap == ZERO ) then
@@ -898,7 +907,7 @@ contains
             q = GAP_REL_A
           end if
 
-          keep%left_converged = .false.
+          keep%left_converged = (keep%lcon >= keep%max_left)
           do i = keep%lcon, left + 1, -1
             j = minloc(lambda(1 : i - 1), 1)
             s = lambda(j) - lambda(i)
@@ -909,8 +918,8 @@ contains
               exit
             end if
           end do
-          if ( keep%first <= block_size ) then
-            if ( .not. keep%left_converged .and. keep%lcon >= left &
+          if ( .not. keep%left_converged .and. keep%first <= block_size ) then
+            if ( keep%lcon >= left &
               .and. si_map(problem, sigma, keep%lmd(keep%first)) < sigma ) then
               r = si_map_err &
                 (problem, sigma, keep%lmd(keep%first), &
@@ -934,12 +943,6 @@ contains
 
           keep%right_converged = .true.
 
-        else if ( keep%rcon >= keep%max_right ) then
-
-          info%right = keep%max_right
-          info%next_right = sigma
-          keep%right_converged = .true.
-
         else if ( right_gap == ZERO ) then
 
           keep%right_converged = keep%rcon >= right
@@ -951,6 +954,7 @@ contains
             end if
           end if
 
+
         else
           
           if ( right_gap > 0 ) then
@@ -961,7 +965,7 @@ contains
             q = GAP_REL_A
           end if
 
-          keep%right_converged = .false.
+          keep%right_converged = (keep%rcon >= keep%max_right)
           do i = mep - keep%rcon + 1, mep - right
             j = i + maxloc(lambda(i + 1 : mep), 1)
             s = lambda(i) - lambda(j)
@@ -972,8 +976,9 @@ contains
               exit
             end if
           end do
-          if ( keep%last >= 1 ) then
-            if ( .not. keep%right_converged .and. keep%rcon >= right &
+
+          if ( .not. keep%right_converged .and. keep%last >= 1 ) then
+            if ( keep%rcon >= right &
               .and. si_map(problem, sigma, keep%lmd(keep%last)) > sigma ) then
               r = si_map_err &
                 (problem, sigma, keep%lmd(keep%last), &
@@ -1162,13 +1167,6 @@ contains
     integer, parameter :: SSMFE_SAVE_CONVERGED    = 5
     integer, parameter :: SSMFE_RESTART           = 999
 
-    integer, parameter :: SSMFE_DONE  = -1
-    integer, parameter :: SSMFE_QUIT  = -2
-    integer, parameter :: SSMFE_ABORT = -3
-
-    integer, parameter :: WRONG_STORAGE_SIZE = -1
-    integer, parameter :: WRONG_BLOCK_SIZE   = -2
-
     integer, parameter :: NONE = -1
 
     double precision, parameter :: ZERO = 0.0D0, ONE = 1.0D0
@@ -1196,7 +1194,7 @@ contains
     character(78) :: head, neck, form, line
     character(7) :: word
 
-    integer :: unit_diagnostic, unit_error, verb
+    integer :: u_diag, u_errr, verb
     integer :: mm, first, last
     integer :: i, j, k, l
     
@@ -1204,9 +1202,9 @@ contains
     double precision :: delta
     double precision :: q, r, s, t
     
-    unit_diagnostic = options%unit_diagnostic
-    unit_error = options%unit_error
-    verb = options%print_level
+    u_diag = options%unit_diagnostic
+    u_errr = options%unit_error
+    verb   = options%print_level
     
     gap = options%left_gap
 
@@ -1215,18 +1213,18 @@ contains
     if ( nep > max_nep ) then
       info%flag = WRONG_STORAGE_SIZE
       rci%job = SSMFE_ABORT
-      if ( unit_error > NONE .and. verb > NONE ) &
-        write( unit_error, '(/a/)' ) &
-          '??? Error in ssmfe_inverse_solve: wrong eigenvalue storage size'
+      if ( u_errr > NONE .and. verb > NONE ) &
+        write( u_errr, '(/a/)' ) &
+          '??? Error in ssmfe_direct_solve: wrong eigenvalue storage size'
       return
     end if
     
-    if ( block_size < 2 ) then
+    if ( block_size < 1 ) then
       info%flag = WRONG_BLOCK_SIZE
       rci%job = SSMFE_ABORT
-      if ( unit_error > NONE .and. verb > NONE ) &
-        write( unit_error, '(/a/)' ) &
-          '??? Error in ssmfe_inverse_solve: wrong block size'
+      if ( u_errr > NONE .and. verb > NONE ) &
+        write( u_errr, '(/a, i5/)' ) &
+          '??? Error in ssmfe_direct_solve: wrong block size', block_size
       return
     end if
     
@@ -1396,7 +1394,7 @@ contains
       end if
       keep%first = j
 
-      if ( options%print_level == 2 ) then
+      if ( options%print_level == 2 .and. u_diag > NONE ) then
 
         if ( PRECISION == kind(1.0) ) then
           form = '(i7, i8, es18.6, 4x, a, 3es11.1)'
@@ -1415,7 +1413,7 @@ contains
           else
             word = '   no'
           end if
-          write( unit_diagnostic, form ) &
+          write( u_diag, form ) &
             info%iteration, keep%lcon + i - first + 1, &
             keep%lmd(i), word, &
             keep%info%residual_norms(i), &
@@ -1428,9 +1426,9 @@ contains
 
       keep%lcon = keep%lcon + rci%nx
 
-      if ( options%print_level > 2 ) then
+      if ( options%print_level > 2 .and. u_diag > NONE ) then
 
-        write( unit_diagnostic, '(/a, i5, a, i4)' ) &
+        write( u_diag, '(/a, i5, a, i4)' ) &
           'Iteration: ', info%iteration, ', not converged: ', &
           max(0, nep - keep%lcon)
 
@@ -1447,10 +1445,10 @@ contains
           form = '(es22.14,a,1x,a,2x,a,es9.1,a,es10.1,a,es10.1)'
         end if
 
-        write( unit_diagnostic, '(a/a)' ) &
+        write( u_diag, '(a/a)' ) &
           trim(line), trim(head)
-        write( unit_diagnostic, '(a)' ) trim(neck) 
-        write( unit_diagnostic, '(a)' ) trim(line)
+        write( u_diag, '(a)' ) trim(neck) 
+        write( u_diag, '(a)' ) trim(line)
           
         do i = 1, block_size        
           if ( keep%info%converged(i) /= 0 ) then
@@ -1458,24 +1456,18 @@ contains
           else
             word = '    no'
           end if          
-          write( unit_diagnostic, form ) &
+          write( u_diag, form ) &
             keep%lmd(i), ' |', word, ' |', keep%info%residual_norms(i), '  |', &
             keep%info%err_lambda(block_size + i), '  |', &
             keep%info%err_X(block_size + i)
         end do ! i = 1, block_size
 
-        write( unit_diagnostic, '(a)' ) trim(line) 
+        write( u_diag, '(a)' ) trim(line) 
 
       end if ! print_level > 2
 
       if ( keep%left == 0 ) then
 
-        keep%left_converged = .true.
-
-      else if ( keep%lcon >= keep%max_left ) then
-
-        info%left = keep%max_left
-        info%next_left = huge(ONE)
         keep%left_converged = .true.
 
       else if ( gap == ZERO ) then
@@ -1500,8 +1492,7 @@ contains
           q = GAP_REL_A
         end if
 
-        keep%left_converged = .false.
-!          do i = keep%lcon, nep + 1, -1
+        keep%left_converged = (keep%lcon >= keep%max_left)
         do i = nep + 1, keep%lcon
           j = maxloc(lambda(1 : i - 1), 1)
           r = lambda(i) - lambda(j)
@@ -1512,8 +1503,8 @@ contains
             exit
           end if
         end do
-        if ( keep%first <= block_size ) then
-          if ( .not. keep%left_converged .and. keep%lcon >= nep ) then
+        if ( .not. keep%left_converged .and. keep%first <= block_size ) then
+          if ( keep%lcon >= nep ) then
             s =  keep%lmd(keep%first) - lambda(keep%lcon)
             r = keep%info%err_lambda(keep%first)
             if ( r > ZERO .and. r < s*sqrt(epsilon(ONE)) .and. s >= t ) then
@@ -1652,222 +1643,6 @@ contains
 
   end subroutine ssmfe_terminate_double
 
-  subroutine ssmfe_vec_ops_double( n, m, X, ldX, W, ldW, V, rci, ind, U )
-
-    use SPRAL_blas_iface, &
-      copy => dcopy, &
-      norm => dnrm2, &
-      dot  => ddot,  &
-      scal => dscal, &
-      axpy => daxpy, &
-      gemm => dgemm
-
-    implicit none
-
-    integer :: n, m, ldX, ldW
-    double precision :: X(ldX, m), W(ldW, m, *), V(m + m, m + m, 3), U(m)
-    integer :: ind(m)
-    type(ssmfe_rcid) :: rci
-    intent(in) :: n, m, ldX, ldW, rci
-    intent(inout) :: X, W, V, U, ind
-    
-    integer, parameter :: SSMFE_COPY_VECTORS       = 11
-    integer, parameter :: SSMFE_COMPUTE_DOTS       = 12
-    integer, parameter :: SSMFE_SCALE_VECTORS      = 13
-    integer, parameter :: SSMFE_COMPUTE_YMXD       = 14
-    integer, parameter :: SSMFE_COMPUTE_XY         = 15
-    integer, parameter :: SSMFE_COMPUTE_XQ         = 16
-    integer, parameter :: SSMFE_TRANSFORM_X        = 17
-    
-    double precision, parameter :: ZERO = 0.0D0, ONE = 1.0D0
-    double precision, parameter :: NIL = ZERO
-    double precision, parameter :: UNIT = ONE
-
-    integer :: i, j, mm
-
-    double precision :: alpha, beta, s, t(1)
-    character, parameter :: TRANS = 'T'
-    
-    mm = m + m
-    
-    if ( rci%job == SSMFE_TRANSFORM_X ) then
-      alpha = UNIT
-      beta = NIL
-    else
-      alpha = rci%alpha
-      beta = rci%beta
-    end if
-
-    select case (rci%job)
-
-    case (SSMFE_COPY_VECTORS)
-    
-      if ( rci%nx < 1 ) return
-
-      if ( rci%i == 0 ) then
-
-        if ( rci%kx > 0 ) then
-          if ( rci%ky > 0 ) then
-            if ( rci%kx /= rci%ky .or. rci%jx > rci%jy ) then
-              call copy &
-                ( n*rci%nx, W(1, rci%jx, rci%kx), 1, W(1, rci%jy, rci%ky), 1 )
-            else if ( rci%jx < rci%jy ) then
-              do j = rci%nx - 1, 0, -1
-                call copy &
-                  ( n, W(1, rci%jx + j, rci%kx), 1, &
-                    W(1, rci%jy + j, rci%ky), 1 )
-              end do
-            end if
-          else
-            call copy( n * rci%nx, W(1, rci%jx, rci%kx), 1, X(1, rci%jy), 1 )
-          end if
-        else if ( rci%ky > 0 ) then
-          call copy( n * rci%nx, X(1, rci%jx), 1, W(1, rci%jy, rci%ky), 1 )
-        else 
-          if ( rci%jx > rci%jy ) then
-            call copy( n * rci%nx, X(1, rci%jx), 1, X(1, rci%jy), 1 )
-          else if ( rci%jx < rci%jy ) then
-            do j = rci%nx - 1, 0, -1
-              call copy( n, X(1, rci%jx + j), 1, X(1, rci%jy + j), 1 )
-            end do
-          end if
-        end if
-
-      else
-
-        do i = 1, n
-          do j = 1, rci%nx
-            U(j) = W(i, ind(j), rci%kx)
-          end do
-          do j = 1, rci%nx
-            W(i, j, rci%kx) = U(j)
-          end do
-          if ( rci%ky /= rci%kx ) then
-            do j = 1, rci%nx
-              U(j) = W(i, ind(j), rci%ky)
-            end do
-            do j = 1, rci%nx
-              W(i, j, rci%ky) = U(j)
-            end do
-          end if
-        end do
-
-      end if
-
-    case (SSMFE_COMPUTE_DOTS)
-
-      do i = 0, rci%nx - 1
-        if ( rci%kx > 0 ) then
-          if ( rci%ky > 0 ) then
-            V( rci%i + i, rci%j + i, rci%k ) = &
-              dot( n, W(1, rci%jx + i, rci%kx), 1, &
-              W(1, rci%jy + i, rci%ky), 1 )
-          else
-            V( rci%i + i, rci%j + i, rci%k ) = &
-              dot( n, W(1, rci%jx + i, rci%kx), 1, X(1, rci%jy + i), 1 )
-          end if
-        else if ( rci%ky > 0 ) then
-          V( rci%i + i, rci%j + i, rci%k ) = &
-            dot( n, X(1, rci%jx + i), 1, W(1, rci%jy + i, rci%ky), 1 )
-        else
-          V( rci%i + i, rci%j + i, rci%k ) = &
-            dot( n, X(1, rci%jx + i), 1, X(1, rci%jy + i), 1 )
-        end if
-      end do
-
-    case (SSMFE_SCALE_VECTORS)
-
-      do i = 0, rci%nx - 1
-        if ( rci%kx == rci%ky ) then
-          s = norm(n, W(1, rci%jx + i, rci%kx), 1)
-          if ( s > 0 ) &
-            call scal( n, ONE/s, W(1, rci%jx + i, rci%kx), 1 )
-        else
-          s = sqrt(abs(dot &
-            (n, W(1, rci%jx + i, rci%kx), 1, W(1, rci%jy + i, rci%ky), 1)))
-          if ( s > 0 ) then
-            call scal( n, ONE/s, W(1, rci%jx + i, rci%kx), 1 )
-            call scal( n, ONE/s, W(1, rci%jy + i, rci%ky), 1 )
-          else
-            t(1) = ZERO
-            call copy( n, t, 0, W(1, rci%jy + i, rci%ky), 1 )
-          end if
-        end if
-      end do
-
-    case (SSMFE_COMPUTE_YMXD)
-
-      do i = 0, rci%nx - 1
-        s = -V(rci%i + i, rci%j + i, rci%k)
-        if ( rci%kx == 0 ) then
-          call axpy( n, s, X(1, rci%jx + i), 1, W(1, rci%jy + i, rci%ky), 1 )
-        else
-          call axpy( n, s, W(1, rci%jx + i, rci%kx), 1, &
-                     W(1, rci%jy + i, rci%ky), 1 )
-        end if
-      end do ! i
-    
-    case (SSMFE_COMPUTE_XY)
-
-      if ( rci%nx < 1 .or. rci%ny < 1 ) return
-      if ( rci%kx > 0 ) then
-        if ( rci%ky > 0 ) then
-          call gemm( TRANS, 'N', rci%nx, rci%ny, n, &
-                     alpha, W(1, rci%jx, rci%kx), n, W(1, rci%jy, rci%ky), n, &
-                     beta, V(rci%i, rci%j, rci%k), mm )
-        else
-          call gemm( TRANS, 'N', rci%nx, rci%ny, n, &
-                     alpha, W(1, rci%jx, rci%kx), n, X(1, rci%jy), n, &
-                     beta, V(rci%i, rci%j, rci%k), mm )
-        end if
-      else
-        if ( rci%ky > 0 ) then
-          call gemm( TRANS, 'N', rci%nx, rci%ny, n, &
-                     alpha, X(1, rci%jx), n, W(1, rci%jy, rci%ky), n, &
-                     beta, V(rci%i, rci%j, rci%k), mm )
-        else
-          call gemm( TRANS, 'N', rci%nx, rci%ny, n, &
-                     alpha, X(1, rci%jx), n, X(1, rci%jy), n, &
-                     beta, V(rci%i, rci%j, rci%k), mm )
-        end if
-      end if
-
-    case (SSMFE_COMPUTE_XQ, SSMFE_TRANSFORM_X)
-    
-      if ( rci%ny < 1 ) return
-      if ( rci%nx < 1 ) then
-        if ( rci%job == SSMFE_TRANSFORM_X ) return
-        if ( beta == UNIT ) return
-        do j = rci%jy, rci%jy + rci%ny - 1
-          W(1:n,j,rci%ky) = beta*W(1:n,j,rci%ky)
-        end do
-        return
-      end if
-      if ( rci%kx == 0 ) then
-        call gemm( 'N', 'N', n, rci%ny, rci%nx, &
-                   alpha, X(1, rci%jx), n, V(rci%i, rci%j, rci%k), mm, &
-                   beta, W(1, rci%jy, rci%ky), n )
-        if ( rci%job == SSMFE_TRANSFORM_X ) &
-          call copy( n * rci%ny, W(1, rci%jy, rci%ky), 1, X(1, rci%jx), 1 )
-      else if ( rci%ky == 0 ) then
-        call gemm( 'N', 'N', n, rci%ny, rci%nx, &
-                   alpha, W(1, rci%jx, rci%kx), n, &
-                   V(rci%i, rci%j, rci%k), mm, &
-                   beta, X(1, rci%jy), n )
-      else
-        call gemm( 'N', 'N', n, rci%ny, rci%nx, &
-                   alpha, W(1, rci%jx, rci%kx), n, &
-                   V(rci%i, rci%j, rci%k), mm, &
-                   beta, W(1, rci%jy, rci%ky), n )
-        if ( rci%job == SSMFE_TRANSFORM_X ) &
-          call copy( n * rci%ny, W(1, rci%jy, rci%ky), 1, &
-                     W(1, rci%jx, rci%kx), 1 )
-      end if
-          
-    end select
-
-  end subroutine ssmfe_vec_ops_double
-  
   subroutine ssmfe_inverse_rci_double_complex &
     ( problem, sigma, left, right, &
       max_nep, lambda, block_size, rr_matrices, ind, &
@@ -1881,15 +1656,6 @@ contains
     integer, parameter :: SSMFE_SAVE_CONVERGED    = 5
     integer, parameter :: SSMFE_DO_SHIFTED_SOLVE  = 9
     integer, parameter :: SSMFE_RESTART           = 999
-
-    integer, parameter :: SSMFE_DONE = -1
-    integer, parameter :: SSMFE_QUIT = -2
-    integer, parameter :: SSMFE_ABORT = -3
-
-    integer, parameter :: WRONG_BLOCK_SIZE   = -1
-    integer, parameter :: WRONG_LEFT         = -11
-    integer, parameter :: WRONG_RIGHT        = -12
-    integer, parameter :: WRONG_STORAGE_SIZE = -13
 
     integer, parameter :: NONE = -1
 
@@ -1920,7 +1686,7 @@ contains
     character(78) :: head, neck, form, line
     character(7) :: word
 
-    integer :: unit_diagnostic, unit_error, verb
+    integer :: u_diag, u_errr, verb
     integer :: m, mm, mep, new, ncon, first, last, step
     integer :: i, j, k, l
     
@@ -1929,9 +1695,9 @@ contains
     double precision :: delta
     double precision :: q, r, s, t
     
-    unit_diagnostic = options%unit_diagnostic
-    unit_error = options%unit_error
-    verb = options%print_level
+    u_diag = options%unit_diagnostic
+    u_errr = options%unit_error
+    verb   = options%print_level
     
     left_gap = options%left_gap
     right_gap = options%right_gap
@@ -1941,8 +1707,8 @@ contains
     if ( options%max_left >= 0 .and. options%max_left < left ) then
       info%flag = WRONG_LEFT
       rci%job = SSMFE_ABORT
-      if ( unit_error > NONE .and. verb > NONE ) &
-        write( unit_error, '(/a/)' ) &
+      if ( u_errr > NONE .and. verb > NONE ) &
+        write( u_errr, '(/a/)' ) &
           '??? Error in ssmfe_solve: wrong number of left eigenpairs'
       return
     end if
@@ -1950,8 +1716,8 @@ contains
     if ( options%max_right >= 0 .and. options%max_right < right ) then
       info%flag = WRONG_RIGHT
       rci%job = SSMFE_ABORT
-      if ( unit_error > NONE .and. verb > NONE ) &
-        write( unit_error, '(/a/)' ) &
+      if ( u_errr > NONE .and. verb > NONE ) &
+        write( u_errr, '(/a/)' ) &
           '??? Error in ssmfe_solve: wrong number of right eigenpairs'
       return
     end if
@@ -1959,8 +1725,8 @@ contains
     if ( left + right > max_nep ) then
       info%flag = WRONG_STORAGE_SIZE
       rci%job = SSMFE_ABORT
-      if ( unit_error > NONE .and. verb > NONE ) &
-        write( unit_error, '(/a/)' ) &
+      if ( u_errr > NONE .and. verb > NONE ) &
+        write( u_errr, '(/a/)' ) &
           '??? Error in ssmfe_solve: wrong eigenvalue storage size'
       return
     end if
@@ -1968,9 +1734,18 @@ contains
     if ( block_size < 2 ) then
       info%flag = WRONG_BLOCK_SIZE
       rci%job = SSMFE_ABORT
-      if ( unit_error > NONE .and. verb > NONE ) &
-        write( unit_error, '(/a/)' ) &
+      if ( u_errr > NONE .and. verb > NONE ) &
+        write( u_errr, '(/a/)' ) &
           '??? Error in ssmfe_solve: wrong block size'
+      return
+    end if
+    
+    if ( problem == 2 .and. sigma == ZERO ) then
+      info%flag = WRONG_SIGMA
+      rci%job = SSMFE_QUIT
+      if ( options%unit_error > NONE .and. options%print_level > NONE ) &
+        write( options%unit_error, '(/a, i9/)' ) &
+          '??? Zero sigma in buckling mode'
       return
     end if
     
@@ -2181,7 +1956,7 @@ contains
         if ( keep%left_converged .and. keep%right_converged ) then
           rci%job = SSMFE_DONE
         else
-          if ( block_size < keep%left + keep%right .and. &
+          if ( & !block_size < keep%left + keep%right .and. &
                (keep%left > 0 .and. keep%first > keep%left .or. &
                 keep%right > 0 .and. block_size - keep%last >= keep%right) &
               ) then
@@ -2284,7 +2059,7 @@ contains
       end if
 
       ! report the convergence situation
-      if ( options%print_level == 2 ) then
+      if ( options%print_level == 2 .and. u_diag > NONE ) then
 
         if ( PRECISION == kind(1.0) ) then
           form = '(i7, i8, es18.6, 4x, a, 3es11.1)'
@@ -2331,7 +2106,7 @@ contains
           else
             j = (keep%rcon + first - i + 1)
           end if
-          write( unit_diagnostic, form ) &
+          write( u_diag, form ) &
             info%iteration, j, s, word, &
             keep%info%residual_norms(i), t, keep%info%err_X(block_size + i)
 
@@ -2350,9 +2125,9 @@ contains
       end if
       ncon = keep%lcon + keep%rcon
       
-      if ( options%print_level > 2 .and. rci%i < 0 ) then
+      if ( options%print_level > 2 .and. rci%i < 0 .and. u_diag > NONE ) then
 
-        write( unit_diagnostic, '(/a, i5, a, i4, i4)' ) &
+        write( u_diag, '(/a, i5, a, i4, i4)' ) &
           'Iteration: ', info%iteration, ', not converged: ', &
           max(0, left - keep%lcon), max(0, right - keep%rcon)
 
@@ -2369,10 +2144,10 @@ contains
           form = '(es22.14,a,1x,a,2x,a,es9.1,a,es10.1,a,es10.1)'
         end if
 
-        write( unit_diagnostic, '(a/a)' ) &
+        write( u_diag, '(a/a)' ) &
           trim(line), trim(head)
-        write( unit_diagnostic, '(a)' ) trim(neck) 
-        write( unit_diagnostic, '(a)' ) trim(line)
+        write( u_diag, '(a)' ) trim(neck) 
+        write( u_diag, '(a)' ) trim(line)
           
         do i = 1, block_size
         
@@ -2387,13 +2162,13 @@ contains
           if ( t >= ZERO ) t = si_map_err(problem, sigma, s, t)
           s = si_map(problem, sigma, keep%lmd(i))
 
-          write( unit_diagnostic, form ) &
+          write( u_diag, form ) &
             s, ' |', word, ' |', keep%info%residual_norms(i), '  |', &
             t, '  |', keep%info%err_X(block_size + i)
 
         end do ! i = 1, block_size
 
-        write( unit_diagnostic, '(a)' ) trim(line) 
+        write( u_diag, '(a)' ) trim(line) 
 
       end if ! print_level > 2
 
@@ -2696,13 +2471,6 @@ contains
     integer, parameter :: SSMFE_SAVE_CONVERGED    = 5
     integer, parameter :: SSMFE_RESTART           = 999
 
-    integer, parameter :: SSMFE_DONE  = -1
-    integer, parameter :: SSMFE_QUIT  = -2
-    integer, parameter :: SSMFE_ABORT = -3
-
-    integer, parameter :: WRONG_STORAGE_SIZE = -1
-    integer, parameter :: WRONG_BLOCK_SIZE   = -2
-
     integer, parameter :: NONE = -1
 
     double precision, parameter :: ZERO = 0.0D0, ONE = 1.0D0
@@ -2730,7 +2498,7 @@ contains
     character(78) :: head, neck, form, line
     character(7) :: word
 
-    integer :: unit_diagnostic, unit_error, verb
+    integer :: u_diag, u_errr, verb
     integer :: mm, first, last
     integer :: i, j, k, l
     
@@ -2738,9 +2506,9 @@ contains
     double precision :: delta
     double precision :: q, r, s, t
     
-    unit_diagnostic = options%unit_diagnostic
-    unit_error = options%unit_error
-    verb = options%print_level
+    u_diag = options%unit_diagnostic
+    u_errr = options%unit_error
+    verb   = options%print_level
     
     gap = options%left_gap
 
@@ -2749,8 +2517,8 @@ contains
     if ( nep > max_nep ) then
       info%flag = WRONG_STORAGE_SIZE
       rci%job = SSMFE_ABORT
-      if ( unit_error > NONE .and. verb > NONE ) &
-        write( unit_error, '(/a/)' ) &
+      if ( u_errr > NONE .and. verb > NONE ) &
+        write( u_errr, '(/a/)' ) &
           '??? Error in ssmfe_inverse_solve: wrong eigenvalue storage size'
       return
     end if
@@ -2758,8 +2526,8 @@ contains
     if ( block_size < 2 ) then
       info%flag = WRONG_BLOCK_SIZE
       rci%job = SSMFE_ABORT
-      if ( unit_error > NONE .and. verb > NONE ) &
-        write( unit_error, '(/a/)' ) &
+      if ( u_errr > NONE .and. verb > NONE ) &
+        write( u_errr, '(/a/)' ) &
           '??? Error in ssmfe_inverse_solve: wrong block size'
       return
     end if
@@ -2932,7 +2700,7 @@ contains
       end if
       keep%first = j
 
-      if ( options%print_level == 2 ) then
+      if ( options%print_level == 2 .and. u_diag > NONE ) then
 
         if ( PRECISION == kind(1.0) ) then
           form = '(i7, i8, es18.6, 4x, a, 3es11.1)'
@@ -2951,7 +2719,7 @@ contains
           else
             word = '   no'
           end if
-          write( unit_diagnostic, form ) &
+          write( u_diag, form ) &
             info%iteration, keep%lcon + i - first + 1, &
             keep%lmd(i), word, &
             keep%info%residual_norms(i), &
@@ -2964,9 +2732,9 @@ contains
 
       keep%lcon = keep%lcon + rci%nx
 
-      if ( options%print_level > 2 ) then
+      if ( options%print_level > 2 .and. u_diag > NONE ) then
 
-        write( unit_diagnostic, '(/a, i5, a, i4)' ) &
+        write( u_diag, '(/a, i5, a, i4)' ) &
           'Iteration: ', info%iteration, ', not converged: ', &
           max(0, nep - keep%lcon)
 
@@ -2983,10 +2751,10 @@ contains
           form = '(es22.14,a,1x,a,2x,a,es9.1,a,es10.1,a,es10.1)'
         end if
 
-        write( unit_diagnostic, '(a/a)' ) &
+        write( u_diag, '(a/a)' ) &
           trim(line), trim(head)
-        write( unit_diagnostic, '(a)' ) trim(neck) 
-        write( unit_diagnostic, '(a)' ) trim(line)
+        write( u_diag, '(a)' ) trim(neck) 
+        write( u_diag, '(a)' ) trim(line)
           
         do i = 1, block_size        
           if ( keep%info%converged(i) /= 0 ) then
@@ -2994,13 +2762,13 @@ contains
           else
             word = '    no'
           end if          
-          write( unit_diagnostic, form ) &
+          write( u_diag, form ) &
             keep%lmd(i), ' |', word, ' |', keep%info%residual_norms(i), '  |', &
             keep%info%err_lambda(block_size + i), '  |', &
             keep%info%err_X(block_size + i)
         end do ! i = 1, block_size
 
-        write( unit_diagnostic, '(a)' ) trim(line) 
+        write( u_diag, '(a)' ) trim(line) 
 
       end if ! print_level > 2
 
@@ -3164,227 +2932,6 @@ contains
       
   end subroutine ssmfe_direct_rci_double_complex
 
-  subroutine ssmfe_vec_ops_double_complex &
-      ( n, m, X, ldX, W, ldW, V, rci, ind, U )
-
-    use SPRAL_blas_iface, &
-      copy => zcopy, &
-      norm => dznrm2, &
-      dot  => zdotc, &
-      scal => zscal, &
-      axpy => zaxpy, &
-      gemm => zgemm
-
-    implicit none
-
-    integer :: n, m, ldX, ldW
-    complex(PRECISION) :: X(ldX, m), W(ldW, m, *), V(m + m, m + m, 3), U(m)
-    integer :: ind(m)
-    type(ssmfe_rciz) :: rci
-    intent(in) :: n, m, ldX, ldW, rci
-    intent(inout) :: X, W, V, U, ind
-    
-    character, parameter :: TRANS = 'C'
-    integer, parameter :: SSMFE_COPY_VECTORS       = 11
-    integer, parameter :: SSMFE_COMPUTE_DOTS       = 12
-    integer, parameter :: SSMFE_SCALE_VECTORS      = 13
-    integer, parameter :: SSMFE_COMPUTE_YMXD       = 14
-    integer, parameter :: SSMFE_COMPUTE_XY         = 15
-    integer, parameter :: SSMFE_COMPUTE_XQ         = 16
-    integer, parameter :: SSMFE_TRANSFORM_X        = 17
-    
-    double precision, parameter :: ZERO = 0.0D0, ONE = 1.0D0
-    complex(PRECISION), parameter :: NIL(1) = ZERO
-    complex(PRECISION), parameter :: UNIT = ONE
-
-    integer :: i, j, mm
-
-    double precision ::  s
-    complex(PRECISION) :: alpha, beta
-    
-    mm = m + m
-    
-    if ( rci%job == SSMFE_TRANSFORM_X ) then
-      alpha = UNIT
-      beta = NIL(1)
-    else
-      alpha = rci%alpha
-      beta = rci%beta
-    end if
-
-    select case (rci%job)
-
-    case (SSMFE_COPY_VECTORS)
-    
-      if ( rci%nx < 1 ) return
-
-      if ( rci%i == 0 ) then
-
-        if ( rci%kx > 0 ) then
-          if ( rci%ky > 0 ) then
-            if ( rci%kx /= rci%ky .or. rci%jx > rci%jy ) then
-              call copy &
-                ( n*rci%nx, W(1, rci%jx, rci%kx), 1, W(1, rci%jy, rci%ky), 1 )
-            else if ( rci%jx < rci%jy ) then
-              do j = rci%nx - 1, 0, -1
-                call copy &
-                  ( n, W(1, rci%jx + j, rci%kx), 1, &
-                    W(1, rci%jy + j, rci%ky), 1 )
-              end do
-            end if
-          else
-            call copy( n * rci%nx, W(1, rci%jx, rci%kx), 1, X(1, rci%jy), 1 )
-          end if
-        else if ( rci%ky > 0 ) then
-          call copy( n * rci%nx, X(1, rci%jx), 1, W(1, rci%jy, rci%ky), 1 )
-        else 
-          if ( rci%jx > rci%jy ) then
-            call copy( n * rci%nx, X(1, rci%jx), 1, X(1, rci%jy), 1 )
-          else if ( rci%jx < rci%jy ) then
-            do j = rci%nx - 1, 0, -1
-              call copy( n, X(1, rci%jx + j), 1, X(1, rci%jy + j), 1 )
-            end do
-          end if
-        end if
-
-      else
-
-        do i = 1, n
-          do j = 1, rci%nx
-            U(j) = W(i, ind(j), rci%kx)
-          end do
-          do j = 1, rci%nx
-            W(i, j, rci%kx) = U(j)
-          end do
-          if ( rci%ky /= rci%kx ) then
-            do j = 1, rci%nx
-              U(j) = W(i, ind(j), rci%ky)
-            end do
-            do j = 1, rci%nx
-              W(i, j, rci%ky) = U(j)
-            end do
-          end if
-        end do
-
-      end if
-
-    case (SSMFE_COMPUTE_DOTS)
-
-      do i = 0, rci%nx - 1
-        if ( rci%kx > 0 ) then
-          if ( rci%ky > 0 ) then
-            V( rci%i + i, rci%j + i, rci%k ) = &
-              dot( n, W(1, rci%jx + i, rci%kx), 1, &
-              W(1, rci%jy + i, rci%ky), 1 )
-          else
-            V( rci%i + i, rci%j + i, rci%k ) = &
-              dot( n, W(1, rci%jx + i, rci%kx), 1, X(1, rci%jy + i), 1 )
-          end if
-        else if ( rci%ky > 0 ) then
-          V( rci%i + i, rci%j + i, rci%k ) = &
-            dot( n, X(1, rci%jx + i), 1, W(1, rci%jy + i, rci%ky), 1 )
-        else
-          V( rci%i + i, rci%j + i, rci%k ) = &
-            dot( n, X(1, rci%jx + i), 1, X(1, rci%jy + i), 1 )
-        end if
-      end do
-
-    case (SSMFE_SCALE_VECTORS)
-
-      do i = 0, rci%nx - 1
-        if ( rci%kx == rci%ky ) then
-          s = norm(n, W(1, rci%jx + i, rci%kx), 1)
-          if ( s > 0 ) &
-            call scal( n, UNIT/s, W(1, rci%jx + i, rci%kx), 1 )
-        else
-          s = sqrt(abs(dot &
-            (n, W(1, rci%jx + i, rci%kx), 1, W(1, rci%jy + i, rci%ky), 1)))
-          if ( s > 0 ) then
-            call scal( n, UNIT/s, W(1, rci%jx + i, rci%kx), 1 )
-            call scal( n, UNIT/s, W(1, rci%jy + i, rci%ky), 1 )
-          else
-!            t(1) = ZERO
-            call copy( n, NIL, 0, W(1, rci%jy + i, rci%ky), 1 )
-          end if
-        end if
-      end do
-
-    case (SSMFE_COMPUTE_YMXD)
-
-      do i = 0, rci%nx - 1
-!        s = -V(rci%i + i, rci%j + i, rci%k)
-        if ( rci%kx == 0 ) then
-          call axpy &
-            ( n, -V(rci%i + i, rci%j + i, rci%k), &
-              X(1, rci%jx + i), 1, W(1, rci%jy + i, rci%ky), 1 )
-        else
-          call axpy &
-            ( n, -V(rci%i + i, rci%j + i, rci%k), &
-              W(1, rci%jx + i, rci%kx), 1, W(1, rci%jy + i, rci%ky), 1 )
-        end if
-      end do ! i
-    
-    case (SSMFE_COMPUTE_XY)
-
-      if ( rci%nx < 1 .or. rci%ny < 1 ) return
-      if ( rci%kx > 0 ) then
-        if ( rci%ky > 0 ) then
-          call gemm( TRANS, 'N', rci%nx, rci%ny, n, &
-                     alpha, W(1, rci%jx, rci%kx), n, W(1, rci%jy, rci%ky), n, &
-                     beta, V(rci%i, rci%j, rci%k), mm )
-        else
-          call gemm( TRANS, 'N', rci%nx, rci%ny, n, &
-                     alpha, W(1, rci%jx, rci%kx), n, X(1, rci%jy), n, &
-                     beta, V(rci%i, rci%j, rci%k), mm )
-        end if
-      else
-        if ( rci%ky > 0 ) then
-          call gemm( TRANS, 'N', rci%nx, rci%ny, n, &
-                     alpha, X(1, rci%jx), n, W(1, rci%jy, rci%ky), n, &
-                     beta, V(rci%i, rci%j, rci%k), mm )
-        else
-          call gemm( TRANS, 'N', rci%nx, rci%ny, n, &
-                     alpha, X(1, rci%jx), n, X(1, rci%jy), n, &
-                     beta, V(rci%i, rci%j, rci%k), mm )
-        end if
-      end if
-
-    case (SSMFE_COMPUTE_XQ, SSMFE_TRANSFORM_X)
-    
-      if ( rci%ny < 1 ) return
-      if ( rci%nx < 1 ) then
-        if ( rci%job == SSMFE_TRANSFORM_X ) return
-        if ( beta == UNIT ) return
-        do j = rci%jy, rci%jy + rci%ny - 1
-          W(1:n,j,rci%ky) = beta*W(1:n,j,rci%ky)
-        end do
-        return
-      end if
-      if ( rci%kx == 0 ) then
-        call gemm( 'N', 'N', n, rci%ny, rci%nx, &
-                   alpha, X(1, rci%jx), n, V(rci%i, rci%j, rci%k), mm, &
-                   beta, W(1, rci%jy, rci%ky), n )
-        if ( rci%job == SSMFE_TRANSFORM_X ) &
-          call copy( n * rci%ny, W(1, rci%jy, rci%ky), 1, X(1, rci%jx), 1 )
-      else if ( rci%ky == 0 ) then
-        call gemm( 'N', 'N', n, rci%ny, rci%nx, &
-                   alpha, W(1, rci%jx, rci%kx), n, &
-                   V(rci%i, rci%j, rci%k), mm, &
-                   beta, X(1, rci%jy), n )
-      else
-        call gemm( 'N', 'N', n, rci%ny, rci%nx, &
-                   alpha, W(1, rci%jx, rci%kx), n, &
-                   V(rci%i, rci%j, rci%k), mm, &
-                   beta, W(1, rci%jy, rci%ky), n )
-        if ( rci%job == SSMFE_TRANSFORM_X ) &
-          call copy( n * rci%ny, W(1, rci%jy, rci%ky), 1, &
-                     W(1, rci%jx, rci%kx), 1 )
-      end if
-          
-    end select
-
-  end subroutine ssmfe_vec_ops_double_complex
-  
   subroutine ssmfe_msg( problem, options, left, right, m, flag )
   
     implicit none
@@ -3393,31 +2940,18 @@ contains
     integer :: problem, left, right, m, flag
     intent(in) :: options, left, right, m, flag
     
-    integer, parameter :: WRONG_M = -1
-    integer, parameter :: WRONG_IDO = -2
-    integer, parameter :: WRONG_ERR_EST = -3
-    integer, parameter :: WRONG_MINPROD = -4
-    integer, parameter :: WRONG_EXTRAS = -5
-    integer, parameter :: WRONG_MIN_GAP = -6
-    integer, parameter :: WRONG_CF_MAX = -7
-    
-    integer, parameter :: OUT_OF_MEMORY = -100
-    integer, parameter :: B_NOT_POSITIVE_DEFINITE = -200
-
-    integer, parameter :: NO_SEARCH_DIRECTIONS_LEFT = 1
-
     integer, parameter :: NONE = -1
 
     logical :: minAprod, minBprod
-    integer :: print_lev, max_iterations, err_est
-    integer :: unit_error, unit_warning, unit_diagnostic
+    integer :: print_lev, max_it, err_est
+    integer :: u_errr, u_warn, u_diag
     real(kind = PRECISION) :: abs_tol, rel_tol, tol, abs_res, rel_res
 
-    print_lev       = options%print_level
-    unit_error      = options%unit_error
-    unit_warning    = options%unit_warning
-    unit_diagnostic = options%unit_diagnostic
-    max_iterations  = options%max_iterations
+    print_lev = options%print_level
+    u_errr    = options%unit_error
+    u_warn    = options%unit_warning
+    u_diag    = options%unit_diagnostic
+    max_it    = options%max_iterations
     err_est   = options%err_est
     abs_tol   = options%abs_tol_lambda
     rel_tol   = options%rel_tol_lambda
@@ -3427,8 +2961,12 @@ contains
     minAprod  = options%minAprod
     minBprod  = options%minBprod
 
-    if ( print_lev <= NONE ) unit_error = NONE
-    if ( unit_diagnostic <= NONE .and. print_lev > NONE ) print_lev = 0
+    if ( print_lev <= NONE ) then
+      u_errr = NONE
+      u_warn = NONE
+      u_diag = NONE
+    end if
+    if ( u_diag <= NONE .and. print_lev > NONE ) print_lev = 0
 
     select case ( flag )
     
@@ -3436,109 +2974,109 @@ contains
     
       if ( print_lev > 0 ) then
         if ( problem == 0 ) then
-          write( unit_diagnostic, '(/a)' ) &
+          write( u_diag, '(/a)' ) &
             'Solving the standard eigenvalue problem A x = lambda x'
         else
-          write( unit_diagnostic, '(/a)' ) &
+          write( u_diag, '(/a)' ) &
             'Solving the generalized eigenvalue problem A x = lambda B x'
         end if
         if ( left > 0 ) &
-          write ( unit_diagnostic, '(a, i4)' ) &
+          write ( u_diag, '(a, i4)' ) &
             'leftmost eigenpairs requested:', left
         if ( left >= 0 .and. right > 0  ) &
-          write ( unit_diagnostic, '(a, i4)' ) &
+          write ( u_diag, '(a, i4)' ) &
             'rightmost eigenpairs requested:', right
         if ( left < 0 ) &
-          write ( unit_diagnostic, '(a, i4)' ) &
+          write ( u_diag, '(a, i4)' ) &
             'extreme eigenpairs requested:', right
-        write( unit_diagnostic, '(a, i4 )' ) 'iterated subspace dimension:', m
+        write( u_diag, '(a, i4 )' ) 'iterated subspace dimension:', m
         if ( abs_res >= 0 .and. rel_res >= 0 .and. abs_res + rel_res > 0 ) &
-          write( unit_diagnostic, '(a, es8.0, a, es8.0 )' ) & 
+          write( u_diag, '(a, es8.0, a, es8.0 )' ) & 
             'residual tolerances: absolute =', abs_res, &
             ', relative = ', rel_res 
         if ( abs_tol >= 0 .and. rel_tol >= 0 .and. abs_tol + rel_tol > 0 ) &
-          write( unit_diagnostic, '(a, es8.0, a, es8.0 )' ) & 
+          write( u_diag, '(a, es8.0, a, es8.0 )' ) & 
             'eigenvalue error tolerances: absolute =', abs_tol, &
             ', relative = ', rel_tol 
         if ( tol > 0.0 ) then
-          write( unit_diagnostic, '(a, es8.0)' ) &
+          write( u_diag, '(a, es8.0)' ) &
             'eigenvector error tolerance:', tol
         else if ( tol < 0.0 ) then
-          write( unit_diagnostic, '(a, es8.0)' ) &
+          write( u_diag, '(a, es8.0)' ) &
             'eigenvector error tolerance:', sqrt(epsilon(1.0D0))
         end if
         if ( minAprod ) &
-          write ( unit_diagnostic, '(a)' ) &
+          write ( u_diag, '(a)' ) &
             'the number of multiplications by A is minimized'
         if ( minBprod .and. problem /= 0 ) &
-          write ( unit_diagnostic, '(a)' ) &
+          write ( u_diag, '(a)' ) &
             'the number of multiplications by B is minimized'
       end if
 
-      if ( print_lev == 2 .and. max_iterations > 0 ) &
-        write( unit_diagnostic, '(/60x,a/a,2x,a,7x,a,6x,a,2x,a,2x,a,1x,a/)' ) & 
+      if ( print_lev == 2 .and. max_it > 0 ) &
+        write( u_diag, '(/60x,a/a,2x,a,7x,a,6x,a,2x,a,2x,a,1x,a/)' ) & 
           'Estimated Errors', & 
           'Iteration', 'Index', 'Eigenvalue', 'Locked', 'Residual', &
           'Eigenvalue', 'Eigenvector'
 
-    case (WRONG_M)
+    case (WRONG_BLOCK_SIZE)
 
-      if ( unit_error > NONE ) &
-        write( unit_error, '(/a/)' ) &
+      if ( u_errr > NONE ) &
+        write( u_errr, '(/a/)' ) &
           '??? Wrong block size'
 
-    case (WRONG_IDO)
+    case (WRONG_RCI_JOB)
 
-      if ( unit_error > NONE ) &
-        write( unit_error, '(/a/)' ) &
+      if ( u_errr > NONE ) &
+        write( u_errr, '(/a/)' ) &
           '??? Wrong rci%job'
 
     case (WRONG_ERR_EST)
 
-      if ( unit_error > NONE ) &
-        write( unit_error, '(/a/)' ) &
+      if ( u_errr > NONE ) &
+        write( u_errr, '(/a/)' ) &
           '??? Wrong err_est'
 
     case (WRONG_EXTRAS)
 
-      if ( unit_error > NONE ) &
-        write( unit_error, '(/a/)' ) &
+      if ( u_errr > NONE ) &
+        write( u_errr, '(/a/)' ) &
           '??? Wrong extra_left or extra_right'
 
     case (WRONG_MINPROD)
 
-      if ( unit_error > NONE ) &
-        write( unit_error, '(/a,a/)' ) &
+      if ( u_errr > NONE ) &
+        write( u_errr, '(/a,a/)' ) &
           '??? Error: minAprod and minBprod must be true'
 
     case (WRONG_MIN_GAP)
 
-      if ( unit_error > NONE ) &
-        write( unit_error, '(/a,a/)' ) &
+      if ( u_errr > NONE ) &
+        write( u_errr, '(/a,a/)' ) &
           '??? Wrong value of min_gap'
 
     case (WRONG_CF_MAX)
 
-      if ( unit_error > NONE ) &
-        write( unit_error, '(/a,a/)' ) &
+      if ( u_errr > NONE ) &
+        write( u_errr, '(/a,a/)' ) &
           '??? Wrong value of cf_max'
 
     case (B_NOT_POSITIVE_DEFINITE)
 
-      if ( unit_error > NONE ) &
-        write( unit_error, '(/a/)' ) &
+      if ( u_errr > NONE ) &
+        write( u_errr, '(/a/)' ) &
           '??? Wrong B or linear depended initial vectors'
 
     case (OUT_OF_MEMORY)
 
-      if ( unit_error > NONE ) &
-        write( unit_error, '(/a/)' ) &
+      if ( u_errr > NONE ) &
+        write( u_errr, '(/a/)' ) &
           '??? Out of memory'
 
     case (NO_SEARCH_DIRECTIONS_LEFT)
     
-      if ( unit_warning > NONE ) &
-        write( unit_warning, '(/a,a/)' ) &
+      if ( u_warn > NONE ) &
+        write( u_warn, '(/a,a/)' ) &
           '??? WARNING: iterations terminated because no further progress ', &
           'is possible'
 

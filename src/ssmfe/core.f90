@@ -10,6 +10,21 @@ module spral_ssmfe_core
   character, parameter, private :: SSMFE_JOBZ = 'V'
   character, parameter, private :: SSMFE_UPLO = 'U'
   
+  ! error/warning codes
+
+  integer, parameter, private :: WRONG_RCI_JOB    = -1
+  integer, parameter, private :: WRONG_BLOCK_SIZE = -2
+  integer, parameter, private :: WRONG_ERR_EST    = -3
+  integer, parameter, private :: WRONG_MINPROD    = -4
+  integer, parameter, private :: WRONG_EXTRAS     = -5
+  integer, parameter, private :: WRONG_MIN_GAP    = -6
+  integer, parameter, private :: WRONG_CF_MAX     = -7
+  
+  integer, parameter, private :: OUT_OF_MEMORY           = -100
+  integer, parameter, private :: B_NOT_POSITIVE_DEFINITE = -200
+
+  integer, parameter, private :: NO_SEARCH_DIRECTIONS_LEFT = 1
+
   interface ssmfe
     module procedure ssmfe_double, ssmfe_double_complex
   end interface 
@@ -277,21 +292,6 @@ contains
     integer, parameter :: SSMFE_STOP   = -2
     integer, parameter :: SSMFE_ABORT  = -3
   
-    ! error/warning codes
-
-    integer, parameter :: WRONG_M       = -1
-    integer, parameter :: WRONG_IDO     = -2
-    integer, parameter :: WRONG_ERR_EST = -3
-    integer, parameter :: WRONG_MINPROD = -4
-    integer, parameter :: WRONG_EXTRAS  = -5
-    integer, parameter :: WRONG_MIN_GAP = -6
-    integer, parameter :: WRONG_CF_MAX  = -7
-    
-    integer, parameter :: OUT_OF_MEMORY           = -100
-    integer, parameter :: B_NOT_POSITIVE_DEFINITE = -200
-
-    integer, parameter :: NO_SEARCH_DIRECTIONS_LEFT = 1
-
     ! steps and stages
 
     integer, parameter :: INITIAL = 10
@@ -441,7 +441,7 @@ if_rci: &
     
       if ( m < 1 &
         .or. (left < 0 .or. left > 0 .and. right > 0) .and. m < 2 ) then
-        info%flag = WRONG_M
+        info%flag = WRONG_BLOCK_SIZE
         rci%job = SSMFE_ABORT
         return
       end if
@@ -1470,6 +1470,11 @@ select_step: &
 
         keep%sizeX = keep%leftX + keep%rightX
         
+        if ( keep%sizeX == 0 ) then
+          keep%step = QUIT
+          cycle
+        end if
+
         rci%job = SSMFE_APPLY_PREC
         rci%nx = keep%sizeY
         rci%jx = keep%firstXn
@@ -2083,7 +2088,8 @@ select_step: &
         call solve_sevp &
           ( 'V', sizeXY, rr_matrices(1,1,2), mm, keep%lambda, &
             keep%lwork, keep%dwork, i )
-!            keep%lwork, keep%work, keep%rwork, i )
+
+!        print *, 'evp ok', sizeXY, i
 
       case (ANALYSE_RR_RESULTS) select_step
 
@@ -2165,6 +2171,11 @@ select_step: &
           
         end if
         
+!        print *, keep%sizeX, keep%sizeXn
+!        print *, keep%firstX, keep%firstXn
+!        print *, keep%leftX, keep%leftXn
+!        print *, keep%rightX, keep%rightXn
+       
         if ( keep%sizeXn == 0 ) then
           keep%step = QUIT
           cycle
@@ -2648,6 +2659,7 @@ select_step: &
           rci%ky = keep%kZ
           rci%ny = keep%sizeZ
           rci%job = SSMFE_RESTART
+          rci%k = 1
           return
         end if
 
@@ -2868,21 +2880,6 @@ select_step: &
     integer, parameter :: SSMFE_STOP   = -2
     integer, parameter :: SSMFE_ABORT  = -3
   
-    ! error/warning codes
-
-    integer, parameter :: WRONG_M       = -1
-    integer, parameter :: WRONG_IDO     = -2
-    integer, parameter :: WRONG_ERR_EST = -3
-    integer, parameter :: WRONG_MINPROD = -4
-    integer, parameter :: WRONG_EXTRAS  = -5
-    integer, parameter :: WRONG_MIN_GAP = -6
-    integer, parameter :: WRONG_CF_MAX  = -7
-    
-    integer, parameter :: OUT_OF_MEMORY           = -100
-    integer, parameter :: B_NOT_POSITIVE_DEFINITE = -200
-
-    integer, parameter :: NO_SEARCH_DIRECTIONS_LEFT = 1
-
     ! steps and stages
 
     integer, parameter :: INITIAL = 10
@@ -3033,7 +3030,7 @@ if_rci: &
     
       if ( m < 1 &
         .or. (left < 0 .or. left > 0 .and. right > 0) .and. m < 2 ) then
-        info%flag = WRONG_M
+        info%flag = WRONG_BLOCK_SIZE
         rci%job = SSMFE_ABORT
         return
       end if

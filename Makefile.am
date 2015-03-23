@@ -165,11 +165,15 @@ libspral_a_SOURCES += \
 	src/ssmfe/expert.f90
 #	interfaces/C/random_matrix.f90
 check_PROGRAMS += \
+  ssmfe_test \
 	examples/Fortran/ssmfe/core_precond \
 	examples/Fortran/ssmfe/expert_precond \
 	examples/Fortran/ssmfe/example_precond \
 	examples/Fortran/ssmfe/example_shift_invert \
 	examples/Fortran/ssmfe/example_hermitian
+ssmfe_test_SOURCES = tests/ssmfe.f90
+tests/ssmfe.$(OBJEXT): libspral.a
+TESTS += ssmfe_test
 #	ssmfe_test \
 #	examples/C/ssmfe/ssmfe1 \
 #	examples/C/ssmfe/ssmfe2

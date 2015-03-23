@@ -4,8 +4,8 @@ program spec_test ! Laplacian on a square grid
   implicit none
   integer, parameter :: l   = 10  ! grid points along each side
   integer, parameter :: n   = l*l ! problem size
-  integer, parameter :: nep = 25  ! eigenpairs wanted
-  integer, parameter :: m = 10    ! dimension of the iterated subspace
+  integer, parameter :: nep = 9   ! eigenpairs wanted
+  integer, parameter :: m = 3     ! dimension of the iterated subspace
   integer :: ncon                  ! number of converged eigenpairs
   integer :: i, j, k
   integer :: ind(m)                ! permutation index
@@ -151,7 +151,7 @@ program spec_test ! Laplacian on a square grid
     end select
   end do
   print '(i3, 1x, a)', inform%left, 'eigenpairs converged'
-  print '(1x, a, i3, a, es13.7)', &
+  print '(1x, a, i2, a, es13.7)', &
     ('lambda(', i, ') = ', lambda(i), i = 1, inform%left)
   call ssmfe_terminate( keep, inform )
 end program spec_test

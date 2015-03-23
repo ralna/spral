@@ -91,13 +91,14 @@ check_PROGRAMS = random_test$(EXEEXT) examples/Fortran/random$(EXEEXT) \
 	examples/C/random$(EXEEXT) random_matrix_test$(EXEEXT) \
 	examples/Fortran/random_matrix$(EXEEXT) \
 	examples/C/random_matrix$(EXEEXT) $(am__EXEEXT_1) \
+	ssmfe_test$(EXEEXT) \
 	examples/Fortran/ssmfe/core_precond$(EXEEXT) \
 	examples/Fortran/ssmfe/expert_precond$(EXEEXT) \
 	examples/Fortran/ssmfe/example_precond$(EXEEXT) \
 	examples/Fortran/ssmfe/example_shift_invert$(EXEEXT) \
 	examples/Fortran/ssmfe/example_hermitian$(EXEEXT)
 TESTS = random_test$(EXEEXT) random_matrix_test$(EXEEXT) \
-	$(am__EXEEXT_2)
+	$(am__EXEEXT_2) ssmfe_test$(EXEEXT)
 
 # SSIDS
 @HAVE_NVCC_TRUE@am__append_2 = include/spral_ssids.h
@@ -350,6 +351,11 @@ am__ssids_test_SOURCES_DIST = tests/ssids.f90
 ssids_test_OBJECTS = $(am_ssids_test_OBJECTS)
 @HAVE_NVCC_TRUE@ssids_test_DEPENDENCIES = $(am__DEPENDENCIES_2) \
 @HAVE_NVCC_TRUE@	$(am__DEPENDENCIES_1)
+am_ssmfe_test_OBJECTS = tests/ssmfe.$(OBJEXT)
+ssmfe_test_OBJECTS = $(am_ssmfe_test_OBJECTS)
+ssmfe_test_LDADD = $(LDADD)
+ssmfe_test_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -401,7 +407,8 @@ SOURCES = $(libspral_a_SOURCES) $(examples_C_random_SOURCES) \
 	$(examples_Fortran_ssmfe_example_shift_invert_SOURCES) \
 	$(examples_Fortran_ssmfe_expert_precond_SOURCES) \
 	$(random_matrix_test_SOURCES) $(random_test_SOURCES) \
-	$(spral_ssids_SOURCES) $(ssids_test_SOURCES)
+	$(spral_ssids_SOURCES) $(ssids_test_SOURCES) \
+	$(ssmfe_test_SOURCES)
 DIST_SOURCES = $(am__libspral_a_SOURCES_DIST) \
 	$(examples_C_random_SOURCES) \
 	$(examples_C_random_matrix_SOURCES) \
@@ -415,7 +422,8 @@ DIST_SOURCES = $(am__libspral_a_SOURCES_DIST) \
 	$(examples_Fortran_ssmfe_example_shift_invert_SOURCES) \
 	$(examples_Fortran_ssmfe_expert_precond_SOURCES) \
 	$(random_matrix_test_SOURCES) $(random_test_SOURCES) \
-	$(am__spral_ssids_SOURCES_DIST) $(am__ssids_test_SOURCES_DIST)
+	$(am__spral_ssids_SOURCES_DIST) $(am__ssids_test_SOURCES_DIST) \
+	$(ssmfe_test_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -831,6 +839,7 @@ examples_C_random_matrix_SOURCES = examples/C/random_matrix.c
 @HAVE_NVCC_TRUE@examples_C_ssids_SOURCES = examples/C/ssids.c
 @HAVE_NVCC_TRUE@examples_C_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
 @HAVE_NVCC_TRUE@examples_C_ssids_LINK = $(NVCCLINK)
+ssmfe_test_SOURCES = tests/ssmfe.f90
 #	ssmfe_test \
 #	examples/C/ssmfe/ssmfe1 \
 #	examples/C/ssmfe/ssmfe2
@@ -1208,6 +1217,12 @@ tests/ssids.$(OBJEXT): tests/$(am__dirstamp) \
 ssids_test$(EXEEXT): $(ssids_test_OBJECTS) $(ssids_test_DEPENDENCIES) $(EXTRA_ssids_test_DEPENDENCIES) 
 	@rm -f ssids_test$(EXEEXT)
 	$(AM_V_GEN)$(ssids_test_LINK) $(ssids_test_OBJECTS) $(ssids_test_LDADD) $(LIBS)
+tests/ssmfe.$(OBJEXT): tests/$(am__dirstamp) \
+	tests/$(DEPDIR)/$(am__dirstamp)
+
+ssmfe_test$(EXEEXT): $(ssmfe_test_OBJECTS) $(ssmfe_test_DEPENDENCIES) $(EXTRA_ssmfe_test_DEPENDENCIES) 
+	@rm -f ssmfe_test$(EXEEXT)
+	$(AM_V_FCLD)$(FCLINK) $(ssmfe_test_OBJECTS) $(ssmfe_test_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -1489,6 +1504,13 @@ random_matrix_test.log: random_matrix_test$(EXEEXT)
 ssids_test.log: ssids_test$(EXEEXT)
 	@p='ssids_test$(EXEEXT)'; \
 	b='ssids_test'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+ssmfe_test.log: ssmfe_test$(EXEEXT)
+	@p='ssmfe_test$(EXEEXT)'; \
+	b='ssmfe_test'; \
 	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
@@ -1839,6 +1861,7 @@ examples/C/random_matrix.$(OBJEXT): libspral.a
 @HAVE_NVCC_TRUE@examples/Fortran/ssids.$(OBJEXT): libspral.a
 @HAVE_NVCC_TRUE@tests/ssids.$(OBJEXT): libspral.a
 @HAVE_NVCC_TRUE@examples/C/ssids.$(OBJEXT): libspral.a
+tests/ssmfe.$(OBJEXT): libspral.a
 examples_Fortran_ssmfe_example_hermitian.$(OBJEXT): libspral.a
 #examples_C_random_matrix_SOURCES = examples/C/random_matrix.c
 #tests/random_matrix.$(OBJEXT): libspral.a
