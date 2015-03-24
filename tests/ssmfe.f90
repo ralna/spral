@@ -104,7 +104,6 @@ subroutine test_expert_errors_d
   integer :: mep
   integer :: left, right
   integer :: ldx
-  integer :: i
   
   integer, allocatable :: ind(:)
   
@@ -267,7 +266,6 @@ subroutine test_expert_errors_z
   integer :: mep
   integer :: left, right
   integer :: ldx
-  integer :: i
   
   integer, allocatable :: ind(:)
   
@@ -425,6 +423,7 @@ subroutine test_expert_options_d
   use spral_ssmfe
 
   integer :: n
+!  integer :: m
   integer :: nep
   integer :: mep
   integer :: left, right
@@ -433,9 +432,10 @@ subroutine test_expert_options_d
   integer :: i
   
   integer, allocatable :: ipiv(:)
+!  integer, allocatable :: ind(:)
   
   real(wp) :: sigma
-  real(wp) :: eps
+!  real(wp) :: eps
 
   real(wp), allocatable :: lambda(:)
   real(wp), allocatable :: a(:,:)
@@ -443,6 +443,7 @@ subroutine test_expert_options_d
   real(wp), allocatable :: t(:,:)
   real(wp), allocatable :: x(:,:)
   real(wp), allocatable :: w(:,:)
+!  real(wp), allocatable :: rr(:,:,:)
 
   type(ssmfe_options) :: options
   type(ssmfe_inform ) :: inform
@@ -459,6 +460,7 @@ subroutine test_expert_options_d
   lwork = n*n
   allocate ( a(n, n), b(n, n), t(n, n), x(n, n), w(n, n) )
   allocate ( lambda(n), ipiv(n) )
+!  allocate ( rr(m + m, m + m, 3), ind(m) )
   
   a = ZERO
   forall ( i = 1 : n ) a(i, i) = i*10
@@ -476,7 +478,21 @@ subroutine test_expert_options_d
   call ssmfe_terminate( inform )
   options%err_est = 2
 
-  deallocate ( a, b, t, x, lambda )
+  write ( *, '(a)' ) ' * Testing shift-invert...'
+  left = 1
+  right = 1
+  
+  write(*,"(a)",advance="no") " * Testing residual-based error estimates...."
+  sigma = 355
+  options%err_est = 1
+  call run_std_si_d &
+    ( options, n, a, sigma, left, right, &
+      mep, lambda, x, t, ipiv, w, lwork, inform )
+  call print_result( inform%flag, 0 )
+  call ssmfe_terminate( inform )
+  options%err_est = 2
+
+  deallocate ( a, b, t, x, w, lambda, ipiv ) !, rr, ind )
 
 end subroutine test_expert_options_d
 
@@ -487,6 +503,7 @@ subroutine test_expert_options_z
   use spral_ssmfe
 
   integer :: n
+!  integer :: m
   integer :: nep
   integer :: mep
   integer :: left, right
@@ -495,9 +512,10 @@ subroutine test_expert_options_z
   integer :: i
   
   integer, allocatable :: ipiv(:)
+!  integer, allocatable :: ind(:)
   
   real(wp) :: sigma
-  real(wp) :: eps
+!  real(wp) :: eps
 
   real(wp), allocatable :: lambda(:)
   complex(wp), allocatable :: a(:,:)
@@ -505,6 +523,7 @@ subroutine test_expert_options_z
   complex(wp), allocatable :: t(:,:)
   complex(wp), allocatable :: x(:,:)
   complex(wp), allocatable :: w(:,:)
+!  complex(wp), allocatable :: rr(:,:,:)
 
   type(ssmfe_options) :: options
   type(ssmfe_inform ) :: inform
@@ -521,6 +540,7 @@ subroutine test_expert_options_z
   lwork = n*n
   allocate ( a(n, n), b(n, n), t(n, n), x(n, n), w(n, n) )
   allocate ( lambda(n), ipiv(n) )
+!  allocate ( rr(m + m, m + m, 3), ind(m) )
   
   a = ZERO
   forall ( i = 1 : n ) a(i, i) = i*10
@@ -538,7 +558,21 @@ subroutine test_expert_options_z
   call ssmfe_terminate( inform )
   options%err_est = 2
 
-  deallocate ( a, b, t, x, lambda )
+  write ( *, '(a)' ) ' * Testing shift-invert...'
+  left = 1
+  right = 1
+  
+  write(*,"(a)",advance="no") " * Testing residual-based error estimates...."
+  sigma = 355
+  options%err_est = 1
+  call run_std_si_z &
+    ( options, n, a, sigma, left, right, &
+      mep, lambda, x, t, ipiv, w, lwork, inform )
+  call print_result( inform%flag, 0 )
+  call ssmfe_terminate( inform )
+  options%err_est = 2
+
+  deallocate ( a, b, t, x, w, lambda, ipiv ) !, rr, ind )
 
 end subroutine test_expert_options_z
 

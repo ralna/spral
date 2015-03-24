@@ -27,6 +27,8 @@ module SPRAL_ssmfe_expert
   integer, parameter, private :: B_NOT_POSITIVE_DEFINITE = -200
 
   integer, parameter, private :: NO_SEARCH_DIRECTIONS_LEFT = 1
+  integer, parameter, private :: MAX_NUM_ITERATIONS_EXCEEDED = 2
+  integer, parameter, private :: OUT_OF_STORAGE = 3
 
   integer, parameter, private :: SSMFE_DONE  = -1
   integer, parameter, private :: SSMFE_QUIT  = -2
@@ -420,9 +422,8 @@ contains
         .or. options%max_left >= 0 .and. options%max_left < left ) then
       info%flag = WRONG_LEFT
       rci%job = SSMFE_ABORT
-      if ( u_errr > NONE .and. verb > NONE ) &
-        write( u_errr, '(/a/)' ) &
-          '??? Wrong number of left eigenpairs'
+      call ssmfe_msg &
+        ( problem, options, left, right, block_size, max_nep, info%flag )
       return
     end if
 
@@ -430,36 +431,32 @@ contains
         .or. options%max_right >= 0 .and. options%max_right < right ) then
       info%flag = WRONG_RIGHT
       rci%job = SSMFE_ABORT
-      if ( u_errr > NONE .and. verb > NONE ) &
-        write( u_errr, '(/a/)' ) &
-          '??? Wrong number of right eigenpairs'
+      call ssmfe_msg &
+        ( problem, options, left, right, block_size, max_nep, info%flag )
       return
     end if
 
     if ( left + right > max_nep ) then
       info%flag = WRONG_STORAGE_SIZE
       rci%job = SSMFE_ABORT
-      if ( u_errr > NONE .and. verb > NONE ) &
-        write( u_errr, '(/a/)' ) &
-          '??? Wrong eigenvalue storage size'
+      call ssmfe_msg &
+        ( problem, options, left, right, block_size, max_nep, info%flag )
       return
     end if
     
     if ( block_size < 2 ) then
       info%flag = WRONG_BLOCK_SIZE
       rci%job = SSMFE_ABORT
-      if ( u_errr > NONE .and. verb > NONE ) &
-        write( u_errr, '(/a, i5/)' ) &
-          '??? Wrong block size', block_size
+      call ssmfe_msg &
+        ( problem, options, left, right, block_size, max_nep, info%flag )
       return
     end if
     
     if ( problem == 2 .and. sigma == ZERO ) then
       info%flag = WRONG_SIGMA
       rci%job = SSMFE_QUIT
-      if ( options%unit_error > NONE .and. options%print_level > NONE ) &
-        write( options%unit_error, '(/a, i9/)' ) &
-          '??? Zero sigma in buckling mode'
+      call ssmfe_msg &
+        ( problem, options, left, right, block_size, max_nep, info%flag )
       return
     end if
     
@@ -517,8 +514,6 @@ contains
         if ( options%max_right >= 0 ) keep%options%extra_right = &
           min(keep%options%extra_right, options%max_right - right)
 
-!        keep%options%minAprod = .true.
-!        keep%options%minBprod = problem /= 0
         keep%options%minAprod = options%minAprod
         keep%options%minBprod = options%minBprod
         
@@ -622,12 +617,12 @@ contains
       ! keep%v: workspace for ssmfe solver matrices
       m = block_size
       mm = m + m
-      allocate ( keep%lmd(m) ) !, keep%ind(m), keep%v(mm, mm, 3) )
+      allocate ( keep%lmd(m) )
 
       keep%first = 1
       keep%last = m
 
-      call ssmfe_msg( problem, options, left, right, m, 0 )
+      call ssmfe_msg( problem, options, left, right, m, max_nep, 0 )
 
       if ( rci%job == SSMFE_RESTART .and. rci%k == 0 ) &
         rci%job = SSMFE_START
@@ -635,12 +630,13 @@ contains
     else if ( rci%job == SSMFE_SAVE_CONVERGED ) then
 
       mep = max_nep
+      m = block_size
       ncon = keep%lcon + keep%rcon
       
       if ( .not. (keep%left_converged .and. keep%right_converged) ) then
         if ( info%iteration >= options%max_iterations ) then
           rci%job = SSMFE_QUIT
-          info%flag = 2
+          info%flag = MAX_NUM_ITERATIONS_EXCEEDED
         else if ( ncon == mep &
           .or. .not. keep%left_converged &
                .and. keep%lcon >= mep - max(right, keep%rcon) &
@@ -648,7 +644,7 @@ contains
                .and. keep%rcon >= mep - max(left, keep%lcon) &
             ) then
           rci%job = SSMFE_QUIT
-          info%flag = 3
+          info%flag = OUT_OF_STORAGE
         end if
       end if
 
@@ -679,7 +675,7 @@ contains
         end if
         if ( info%flag /= 0 ) &
           call ssmfe_msg &
-            ( problem, options, keep%left, keep%right, m, info%flag )
+            ( problem, options, keep%left, keep%right, m, max_nep, info%flag )
         return
       end if
 
@@ -1133,7 +1129,7 @@ contains
 
       if ( info%flag /= 0 ) &
         call ssmfe_msg &
-          ( problem, options, keep%left, keep%right, m, info%flag )
+          ( problem, options, keep%left, keep%right, m, max_nep, info%flag )
 
     end if
 
@@ -1219,27 +1215,24 @@ contains
         .or. options%max_left >= 0 .and. options%max_left < nep ) then
       info%flag = WRONG_LEFT
       rci%job = SSMFE_ABORT
-      if ( u_errr > NONE .and. verb > NONE ) &
-        write( u_errr, '(/a, i5/)' ) &
-          '??? Wrong number of eigenpairs:', nep
+      call ssmfe_msg &
+        ( problem, options, nep, 0, block_size, max_nep, info%flag )
       return
     end if
 
     if ( nep > max_nep ) then
       info%flag = WRONG_STORAGE_SIZE
       rci%job = SSMFE_ABORT
-      if ( u_errr > NONE .and. verb > NONE ) &
-        write( u_errr, '(/a/)' ) &
-          '??? Error in ssmfe_direct_solve: wrong eigenvalue storage size'
+      call ssmfe_msg &
+        ( problem, options, nep, 0, block_size, max_nep, info%flag )
       return
     end if
     
     if ( block_size < 1 ) then
       info%flag = WRONG_BLOCK_SIZE
       rci%job = SSMFE_ABORT
-      if ( u_errr > NONE .and. verb > NONE ) &
-        write( u_errr, '(/a, i5/)' ) &
-          '??? Error in ssmfe_direct_solve: wrong block size', block_size
+      call ssmfe_msg &
+        ( problem, options, nep, 0, block_size, max_nep, info%flag )
       return
     end if
     
@@ -1328,7 +1321,7 @@ contains
       keep%first = 1
       keep%last = block_size
 
-      call ssmfe_msg( problem, options, nep, 0, block_size, 0 )
+      call ssmfe_msg( problem, options, nep, 0, block_size, max_nep, 0 )
 
       if ( rci%job == SSMFE_RESTART .and. rci%k == 0 ) rci%job = SSMFE_START
       
@@ -1337,10 +1330,10 @@ contains
       if ( .not. keep%left_converged ) then
         if ( info%iteration >= options%max_iterations ) then
           rci%job = SSMFE_QUIT
-          info%flag = 2
+          info%flag = MAX_NUM_ITERATIONS_EXCEEDED
         else if ( keep%lcon == max_nep ) then
           rci%job = SSMFE_QUIT
-          info%flag = 3
+          info%flag = OUT_OF_STORAGE
         end if
       end if
 
@@ -1365,7 +1358,7 @@ contains
         end if
         if ( info%flag /= 0 ) &
           call ssmfe_msg &
-            ( problem, options, keep%left, 0, block_size, info%flag )
+            ( problem, options, keep%left, 0, block_size, max_nep, info%flag )
         return
       end if
 
@@ -1629,7 +1622,7 @@ contains
 
       if ( info%flag /= 0 ) &
         call ssmfe_msg &
-          ( problem, options, keep%left, 0, block_size, info%flag )
+          ( problem, options, keep%left, 0, block_size, max_nep, info%flag )
 
     end if
       
@@ -1724,9 +1717,8 @@ contains
         .or. options%max_left >= 0 .and. options%max_left < left ) then
       info%flag = WRONG_LEFT
       rci%job = SSMFE_ABORT
-      if ( u_errr > NONE .and. verb > NONE ) &
-        write( u_errr, '(/a/)' ) &
-          '??? Error in ssmfe_solve: wrong number of left eigenpairs'
+      call ssmfe_msg &
+        ( problem, options, left, right, block_size, max_nep, info%flag )
       return
     end if
 
@@ -1734,36 +1726,32 @@ contains
         .or. options%max_right >= 0 .and. options%max_right < right ) then
       info%flag = WRONG_RIGHT
       rci%job = SSMFE_ABORT
-      if ( u_errr > NONE .and. verb > NONE ) &
-        write( u_errr, '(/a/)' ) &
-          '??? Error in ssmfe_solve: wrong number of right eigenpairs'
+      call ssmfe_msg &
+        ( problem, options, left, right, block_size, max_nep, info%flag )
       return
     end if
 
     if ( left + right > max_nep ) then
       info%flag = WRONG_STORAGE_SIZE
       rci%job = SSMFE_ABORT
-      if ( u_errr > NONE .and. verb > NONE ) &
-        write( u_errr, '(/a/)' ) &
-          '??? Error in ssmfe_solve: wrong eigenvalue storage size'
+      call ssmfe_msg &
+        ( problem, options, left, right, block_size, max_nep, info%flag )
       return
     end if
     
     if ( block_size < 2 ) then
       info%flag = WRONG_BLOCK_SIZE
       rci%job = SSMFE_ABORT
-      if ( u_errr > NONE .and. verb > NONE ) &
-        write( u_errr, '(/a/)' ) &
-          '??? Error in ssmfe_solve: wrong block size'
+      call ssmfe_msg &
+        ( problem, options, left, right, block_size, max_nep, info%flag )
       return
     end if
     
     if ( problem == 2 .and. sigma == ZERO ) then
       info%flag = WRONG_SIGMA
       rci%job = SSMFE_QUIT
-      if ( options%unit_error > NONE .and. options%print_level > NONE ) &
-        write( options%unit_error, '(/a, i9/)' ) &
-          '??? Zero sigma in buckling mode'
+      call ssmfe_msg &
+        ( problem, options, left, right, block_size, max_nep, info%flag )
       return
     end if
     
@@ -1821,8 +1809,6 @@ contains
         if ( options%max_right >= 0 ) keep%options%extra_right = &
           min(keep%options%extra_right, options%max_right - right)
 
-!        keep%options%minAprod = .true.
-!        keep%options%minBprod = problem /= 0
         keep%options%minAprod = options%minAprod
         keep%options%minBprod = options%minBprod
         
@@ -1926,12 +1912,12 @@ contains
       ! keep%v: workspace for ssmfe solver matrices
       m = block_size
       mm = m + m
-      allocate ( keep%lmd(m) ) !, keep%ind(m), keep%v(mm, mm, 3) )
+      allocate ( keep%lmd(m) )
 
       keep%first = 1
       keep%last = m
 
-      call ssmfe_msg( problem, options, left, right, m, 0 )
+      call ssmfe_msg( problem, options, left, right, m, max_nep, 0 )
 
       if ( rci%job == SSMFE_RESTART .and. rci%k == 0 ) &
         rci%job = SSMFE_START
@@ -1939,25 +1925,13 @@ contains
     else if ( rci%job == SSMFE_SAVE_CONVERGED ) then
 
       mep = max_nep
+      m = block_size
       ncon = keep%lcon + keep%rcon
       
-      if ( rci%job < 0 ) then
-        info%data = max(0, left - keep%lcon) + max(0, right - keep%rcon)
-        if ( rci%job /= SSMFE_DONE ) then
-          info%left = keep%lcon
-          info%right = keep%rcon
-        end if
-        info%flag = keep%info%flag
-        if ( info%flag /= 0 ) &
-          call ssmfe_msg &
-            ( problem, options, keep%left, keep%right, m, info%flag )
-        return
-      end if
-
       if ( .not. (keep%left_converged .and. keep%right_converged) ) then
         if ( info%iteration >= options%max_iterations ) then
           rci%job = SSMFE_QUIT
-          info%flag = 2
+          info%flag = MAX_NUM_ITERATIONS_EXCEEDED
         else if ( ncon == mep &
           .or. .not. keep%left_converged &
                .and. keep%lcon >= mep - max(right, keep%rcon) &
@@ -1965,7 +1939,7 @@ contains
                .and. keep%rcon >= mep - max(left, keep%lcon) &
             ) then
           rci%job = SSMFE_QUIT
-          info%flag = 3
+          info%flag = OUT_OF_STORAGE
         end if
       end if
 
@@ -1977,7 +1951,7 @@ contains
         if ( keep%left_converged .and. keep%right_converged ) then
           rci%job = SSMFE_DONE
         else
-          if ( & !block_size < keep%left + keep%right .and. &
+          if ( rci%i < 0 .and. &
                (keep%left > 0 .and. keep%first > keep%left .or. &
                 keep%right > 0 .and. block_size - keep%last >= keep%right) &
               ) then
@@ -1991,7 +1965,17 @@ contains
 
       end if
       
-      if ( rci%job < 0 ) return
+      if ( rci%job < 0 ) then
+        info%data = max(0, left - keep%lcon) + max(0, right - keep%rcon)
+        if ( rci%job /= SSMFE_DONE ) then
+          info%left = keep%lcon
+          info%right = keep%rcon
+        end if
+        if ( info%flag /= 0 ) &
+          call ssmfe_msg &
+            ( problem, options, keep%left, keep%right, m, max_nep, info%flag )
+        return
+      end if
 
     end if
     
@@ -2453,7 +2437,7 @@ contains
 
       if ( info%flag /= 0 ) &
         call ssmfe_msg &
-          ( problem, options, keep%left, keep%right, m, info%flag )
+          ( problem, options, keep%left, keep%right, m, max_nep, info%flag )
 
     end if
 
@@ -2539,27 +2523,24 @@ contains
         .or. options%max_left >= 0 .and. options%max_left < nep ) then
       info%flag = WRONG_LEFT
       rci%job = SSMFE_ABORT
-      if ( u_errr > NONE .and. verb > NONE ) &
-        write( u_errr, '(/a, i5/)' ) &
-          '??? Wrong number of eigenpairs:', nep
+      call ssmfe_msg &
+        ( problem, options, nep, 0, block_size, max_nep, info%flag )
       return
     end if
 
     if ( nep > max_nep ) then
       info%flag = WRONG_STORAGE_SIZE
       rci%job = SSMFE_ABORT
-      if ( u_errr > NONE .and. verb > NONE ) &
-        write( u_errr, '(/a/)' ) &
-          '??? Error in ssmfe_inverse_solve: wrong eigenvalue storage size'
+      call ssmfe_msg &
+        ( problem, options, nep, 0, block_size, max_nep, info%flag )
       return
     end if
     
     if ( block_size < 1 ) then
       info%flag = WRONG_BLOCK_SIZE
       rci%job = SSMFE_ABORT
-      if ( u_errr > NONE .and. verb > NONE ) &
-        write( u_errr, '(/a/)' ) &
-          '??? Error in ssmfe_inverse_solve: wrong block size'
+      call ssmfe_msg &
+        ( problem, options, nep, 0, block_size, max_nep, info%flag )
       return
     end if
     
@@ -2648,7 +2629,7 @@ contains
       keep%first = 1
       keep%last = block_size
 
-      call ssmfe_msg( problem, options, nep, 0, block_size, 0 )
+      call ssmfe_msg( problem, options, nep, 0, block_size, max_nep, 0 )
 
       if ( rci%job == SSMFE_RESTART .and. rci%k == 0 ) rci%job = SSMFE_START
       
@@ -2657,10 +2638,10 @@ contains
       if ( .not. keep%left_converged ) then
         if ( info%iteration >= options%max_iterations ) then
           rci%job = SSMFE_QUIT
-          info%flag = 2
+          info%flag = MAX_NUM_ITERATIONS_EXCEEDED
         else if ( keep%lcon == max_nep ) then
           rci%job = SSMFE_QUIT
-          info%flag = 3
+          info%flag = OUT_OF_STORAGE
         end if
       end if
 
@@ -2687,7 +2668,7 @@ contains
         end if
         if ( info%flag /= 0 ) &
           call ssmfe_msg &
-            ( problem, options, keep%left, 0, block_size, info%flag )
+            ( problem, options, keep%left, 0, block_size, max_nep, info%flag )
         return
       end if
 
@@ -2838,7 +2819,6 @@ contains
         
         keep%left_converged = .false.
         do i = keep%lcon, nep + 1, -1
-!!        do i = nep + 1, keep%lcon
           j = maxloc(lambda(1 : i - 1), 1)
           r = lambda(i) - lambda(j)
           if ( r >= t .and. r > q * abs(lambda(i)) ) then
@@ -2958,19 +2938,19 @@ contains
 
       if ( info%flag /= 0 ) &
         call ssmfe_msg &
-          ( problem, options, keep%left, 0, block_size, info%flag )
+          ( problem, options, keep%left, 0, block_size, max_nep, info%flag )
 
     end if
       
   end subroutine ssmfe_direct_rci_double_complex
 
-  subroutine ssmfe_msg( problem, options, left, right, m, flag )
+  subroutine ssmfe_msg( problem, options, left, right, m, mep, flag )
   
     implicit none
   
     type(ssmfe_options) :: options
-    integer :: problem, left, right, m, flag
-    intent(in) :: options, left, right, m, flag
+    integer :: problem, left, right, m, mep, flag
+    intent(in) :: options, left, right, m, mep, flag
     
     integer, parameter :: NONE = -1
 
@@ -3051,66 +3031,78 @@ contains
           'Iteration', 'Index', 'Eigenvalue', 'Locked', 'Residual', &
           'Eigenvalue', 'Eigenvector'
 
-    case (WRONG_BLOCK_SIZE)
+    case ( WRONG_LEFT )
+
+      if ( u_errr > NONE ) &
+        write( u_errr, '(/a, i9/)' ) &
+          '??? Wrong number of left eigenpairs', left
+
+    case ( WRONG_RIGHT )
+
+      if ( u_errr > NONE ) &
+        write( u_errr, '(/a, i9/)' ) &
+          '??? Wrong number of right eigenpairs', right
+
+    case ( WRONG_STORAGE_SIZE )
+
+      if ( u_errr > NONE ) &
+        write( u_errr, '(/a, i9/)' ) &
+          '??? Wrong eigenvalue storage size', mep
+
+    case ( WRONG_SIGMA )
 
       if ( u_errr > NONE ) &
         write( u_errr, '(/a/)' ) &
-          '??? Wrong block size'
+          '??? Zero sigma in buckling mode'
 
-    case (WRONG_RCI_JOB)
+    case ( WRONG_BLOCK_SIZE )
+
+      if ( u_errr > NONE ) &
+        write( u_errr, '(/a, i5/)' ) &
+          '??? Wrong block size', m
+
+    case ( WRONG_ERR_EST )
+
+      if ( u_errr > NONE ) &
+        write( u_errr, '(/a, i3/)' ) &
+          '??? Wrong err_est', options%err_est
+
+    case ( WRONG_MINPROD )
 
       if ( u_errr > NONE ) &
         write( u_errr, '(/a/)' ) &
-          '??? Wrong rci%job'
-
-    case (WRONG_ERR_EST)
-
-      if ( u_errr > NONE ) &
-        write( u_errr, '(/a/)' ) &
-          '??? Wrong err_est'
-
-    case (WRONG_EXTRAS)
-
-      if ( u_errr > NONE ) &
-        write( u_errr, '(/a/)' ) &
-          '??? Wrong extra_left or extra_right'
-
-    case (WRONG_MINPROD)
-
-      if ( u_errr > NONE ) &
-        write( u_errr, '(/a,a/)' ) &
           '??? Error: minAprod and minBprod must be true'
 
-    case (WRONG_MIN_GAP)
-
-      if ( u_errr > NONE ) &
-        write( u_errr, '(/a,a/)' ) &
-          '??? Wrong value of min_gap'
-
-    case (WRONG_CF_MAX)
-
-      if ( u_errr > NONE ) &
-        write( u_errr, '(/a,a/)' ) &
-          '??? Wrong value of cf_max'
-
-    case (B_NOT_POSITIVE_DEFINITE)
+    case ( B_NOT_POSITIVE_DEFINITE )
 
       if ( u_errr > NONE ) &
         write( u_errr, '(/a/)' ) &
           '??? Wrong B or linear depended initial vectors'
 
-    case (OUT_OF_MEMORY)
+    case ( OUT_OF_MEMORY )
 
       if ( u_errr > NONE ) &
         write( u_errr, '(/a/)' ) &
           '??? Out of memory'
 
-    case (NO_SEARCH_DIRECTIONS_LEFT)
+    case ( NO_SEARCH_DIRECTIONS_LEFT )
     
       if ( u_warn > NONE ) &
         write( u_warn, '(/a,a/)' ) &
           '??? WARNING: iterations terminated because no further progress ', &
           'is possible'
+
+    case ( MAX_NUM_ITERATIONS_EXCEEDED )
+
+      if ( u_warn > NONE ) &
+        write( u_warn, '(/a/)' ) &
+          '??? WARNING: maximum number of iterations exceeded'
+
+    case ( OUT_OF_STORAGE )
+
+      if ( u_warn > NONE ) &
+        write( u_warn, '(/a/)' ) &
+          '??? WARNING: out of storage for converged eigenpairs'
 
     end select
 
