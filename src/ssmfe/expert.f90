@@ -416,7 +416,8 @@ contains
 
     info%flag = 0
     
-    if ( options%max_left >= 0 .and. options%max_left < left ) then
+    if ( left < 0 &
+        .or. options%max_left >= 0 .and. options%max_left < left ) then
       info%flag = WRONG_LEFT
       rci%job = SSMFE_ABORT
       if ( u_errr > NONE .and. verb > NONE ) &
@@ -425,7 +426,8 @@ contains
       return
     end if
 
-    if ( options%max_right >= 0 .and. options%max_right < right ) then
+    if ( right < 0 &
+        .or. options%max_right >= 0 .and. options%max_right < right ) then
       info%flag = WRONG_RIGHT
       rci%job = SSMFE_ABORT
       if ( u_errr > NONE .and. verb > NONE ) &
@@ -466,7 +468,6 @@ contains
 
       if ( rci%job == SSMFE_START ) then
 
-        info%iteration = 0
         mep = max_nep
         if ( allocated(info%residual_norms) ) deallocate ( info%residual_norms )
         if ( allocated(info%err_lambda) ) deallocate ( info%err_lambda )
@@ -474,6 +475,8 @@ contains
         if ( allocated(info%converged) ) deallocate ( info%converged )
         allocate ( info%residual_norms(mep), info%err_lambda(mep), &
                    info%err_X(mep), info%converged(mep) )
+
+        info%iteration = 0
         info%residual_norms = ZERO
         info%err_lambda = -ONE
         info%err_X = -ONE
@@ -514,8 +517,10 @@ contains
         if ( options%max_right >= 0 ) keep%options%extra_right = &
           min(keep%options%extra_right, options%max_right - right)
 
-        keep%options%minAprod = .true.
-        keep%options%minBprod = problem /= 0
+!        keep%options%minAprod = .true.
+!        keep%options%minBprod = problem /= 0
+        keep%options%minAprod = options%minAprod
+        keep%options%minBprod = options%minBprod
         
       end if
 
@@ -1210,6 +1215,16 @@ contains
 
     info%flag = 0
 
+    if ( nep < 0 &
+        .or. options%max_left >= 0 .and. options%max_left < nep ) then
+      info%flag = WRONG_LEFT
+      rci%job = SSMFE_ABORT
+      if ( u_errr > NONE .and. verb > NONE ) &
+        write( u_errr, '(/a, i5/)' ) &
+          '??? Wrong number of eigenpairs:', nep
+      return
+    end if
+
     if ( nep > max_nep ) then
       info%flag = WRONG_STORAGE_SIZE
       rci%job = SSMFE_ABORT
@@ -1233,13 +1248,14 @@ contains
 
       if ( rci%job == SSMFE_START ) then
 
-        info%iteration = 0
         if ( allocated(info%residual_norms) ) deallocate ( info%residual_norms )
         if ( allocated(info%err_lambda) ) deallocate ( info%err_lambda )
         if ( allocated(info%err_X) ) deallocate ( info%err_X )
         if ( allocated(info%converged) ) deallocate ( info%converged )
         allocate ( info%residual_norms(max_nep), info%err_lambda(max_nep), &
                    info%err_X(max_nep), info%converged(max_nep) )
+
+        info%iteration = 0
         info%residual_norms = ZERO
         info%err_lambda = -ONE
         info%err_X = -ONE
@@ -1704,7 +1720,8 @@ contains
 
     info%flag = 0
     
-    if ( options%max_left >= 0 .and. options%max_left < left ) then
+    if ( left < 0 &
+        .or. options%max_left >= 0 .and. options%max_left < left ) then
       info%flag = WRONG_LEFT
       rci%job = SSMFE_ABORT
       if ( u_errr > NONE .and. verb > NONE ) &
@@ -1713,7 +1730,8 @@ contains
       return
     end if
 
-    if ( options%max_right >= 0 .and. options%max_right < right ) then
+    if ( right < 0 &
+        .or. options%max_right >= 0 .and. options%max_right < right ) then
       info%flag = WRONG_RIGHT
       rci%job = SSMFE_ABORT
       if ( u_errr > NONE .and. verb > NONE ) &
@@ -1754,7 +1772,6 @@ contains
 
       if ( rci%job == SSMFE_START ) then
 
-        info%iteration = 0
         mep = max_nep
         if ( allocated(info%residual_norms) ) deallocate ( info%residual_norms )
         if ( allocated(info%err_lambda) ) deallocate ( info%err_lambda )
@@ -1762,6 +1779,8 @@ contains
         if ( allocated(info%converged) ) deallocate ( info%converged )
         allocate ( info%residual_norms(mep), info%err_lambda(mep), &
                    info%err_X(mep), info%converged(mep) )
+
+        info%iteration = 0
         info%residual_norms = ZERO
         info%err_lambda = -ONE
         info%err_X = -ONE
@@ -1802,8 +1821,10 @@ contains
         if ( options%max_right >= 0 ) keep%options%extra_right = &
           min(keep%options%extra_right, options%max_right - right)
 
-        keep%options%minAprod = .true.
-        keep%options%minBprod = problem /= 0
+!        keep%options%minAprod = .true.
+!        keep%options%minBprod = problem /= 0
+        keep%options%minAprod = options%minAprod
+        keep%options%minBprod = options%minBprod
         
       end if
 
@@ -2514,6 +2535,16 @@ contains
 
     info%flag = 0
     
+    if ( nep < 0 &
+        .or. options%max_left >= 0 .and. options%max_left < nep ) then
+      info%flag = WRONG_LEFT
+      rci%job = SSMFE_ABORT
+      if ( u_errr > NONE .and. verb > NONE ) &
+        write( u_errr, '(/a, i5/)' ) &
+          '??? Wrong number of eigenpairs:', nep
+      return
+    end if
+
     if ( nep > max_nep ) then
       info%flag = WRONG_STORAGE_SIZE
       rci%job = SSMFE_ABORT
@@ -2523,7 +2554,7 @@ contains
       return
     end if
     
-    if ( block_size < 2 ) then
+    if ( block_size < 1 ) then
       info%flag = WRONG_BLOCK_SIZE
       rci%job = SSMFE_ABORT
       if ( u_errr > NONE .and. verb > NONE ) &
@@ -2537,13 +2568,14 @@ contains
 
       if ( rci%job == SSMFE_START ) then
 
-        info%iteration = 0
         if ( allocated(info%residual_norms) ) deallocate ( info%residual_norms )
         if ( allocated(info%err_lambda) ) deallocate ( info%err_lambda )
         if ( allocated(info%err_X) ) deallocate ( info%err_X )
         if ( allocated(info%converged) ) deallocate ( info%converged )
         allocate ( info%residual_norms(max_nep), info%err_lambda(max_nep), &
                    info%err_X(max_nep), info%converged(max_nep) )
+
+        info%iteration = 0
         info%residual_norms = ZERO
         info%err_lambda = -ONE
         info%err_X = -ONE

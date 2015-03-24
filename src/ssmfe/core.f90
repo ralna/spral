@@ -416,7 +416,7 @@ contains
     end if
     
     if ( control%cf_max < ONE/2 .or. control%cf_max > ONE ) then
-      info%flag = WRONG_MIN_GAP
+      info%flag = WRONG_CF_MAX
       rci%job = SSMFE_ABORT
       return
     end if
@@ -505,6 +505,7 @@ if_rci: &
       keep%err_est  = control%err_est
       keep%left     = left
       keep%right    = right
+      
       if ( keep%problem < 0 ) then
         if ( .not. (control%minAprod .and. control%minBprod) ) then
           info%flag = WRONG_MINPROD

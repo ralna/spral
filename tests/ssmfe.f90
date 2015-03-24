@@ -1,7 +1,5 @@
 program main
 
-   use spral_ssmfe
-
    implicit none
 
    integer, parameter :: wp = kind(0d0)
@@ -46,18 +44,10 @@ program main
 
    errors = 0
    
-   open ( 1, file = 'ssmfe_msg.txt' )
-   call test_errors_d
-   call test_errors_z
-   call test_warnings_d
-   call test_warnings_z
-   close ( 1 )
-   open ( 1, file = 'ssmfe_output.txt' )
-   call test_options_d
-   call test_options_z
-   call test_misc_d
-   close ( 1 )
-
+   call test_ssmfe
+   
+   call test_expert
+   
    write(*, "(/a)") "============================="
    write(*, "(a,i4)") "Total number of errors = ", errors
 
@@ -70,9 +60,493 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-subroutine test_errors_d
+subroutine test_ssmfe
 
-!  logical :: continued = .true.
+   write(*,"(/a)") "=============="
+   write(*,"(a)")  "Testing ssmfe:"
+   write(*,"(a)")  "=============="
+
+   call test_ssmfe_errors_d
+   call test_ssmfe_errors_z
+   call test_ssmfe_warnings_d
+   call test_ssmfe_warnings_z
+   call test_ssmfe_options_d
+   call test_ssmfe_options_z
+   call test_ssmfe_misc_d
+   call test_ssmfe_misc_z
+
+end subroutine test_ssmfe
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+subroutine test_expert
+
+   write(*,"(/a)") "====================="
+   write(*,"(a)")  "Testing ssmfe_expert:"
+   write(*,"(a)")  "====================="
+
+  call test_expert_errors_d
+  call test_expert_errors_z
+  call test_expert_options_d
+  call test_expert_options_z
+
+end subroutine test_expert
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+subroutine test_expert_errors_d
+
+  use spral_ssmfe_expert
+
+  integer :: n
+  integer :: m
+  integer :: nep
+  integer :: mep
+  integer :: left, right
+  integer :: ldx
+  integer :: i
+  
+  integer, allocatable :: ind(:)
+  
+  real(wp) :: sigma
+
+  real(wp), allocatable :: lambda(:)
+  real(wp), allocatable :: a(:,:)
+  real(wp), allocatable :: b(:,:)
+  real(wp), allocatable :: t(:,:)
+  real(wp), allocatable :: x(:,:)
+  real(wp), allocatable :: rr(:,:,:)
+
+  type(ssmfe_rcid   ) :: rci
+  type(ssmfe_options) :: options
+  type(ssmfe_keep   ) :: keep
+  type(ssmfe_inform ) :: inform
+  
+   write(*,"(/a)") "======================"
+   write(*,"(a)")  "Testing errors (real):"
+   write(*,"(a)")  "======================"
+
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  n = 6
+  m = 2
+  nep = 1
+  mep = n
+  ldx = n
+  allocate ( a(n, n), b(n, n), t(n, n), x(n, n), lambda(n) )
+  allocate ( rr(m + m, m + m, 3), ind(m) )
+  
+  options%print_level = 0
+  options%unit_error = we_unit
+  options%unit_warning = we_unit
+  options%unit_diagnostic = dl_unit
+  
+  write(*,"(a)",advance="no") " * Testing block_size < 1...................."
+  rci%job = 0
+  call ssmfe_standard &
+    ( rci, nep, mep, lambda, 0, rr, ind, keep, options, inform )
+  call print_result( inform%flag, WRONG_BLOCK_SIZE )
+  call ssmfe_terminate( keep, inform )
+
+  write(*,"(a)",advance="no") " * Testing left < 0.........................."
+  rci%job = 0
+  call ssmfe_standard &
+    ( rci, -1, mep, lambda, m, rr, ind, keep, options, inform )
+  call print_result( inform%flag, WRONG_LEFT )
+  call ssmfe_terminate( keep, inform )
+
+  write(*,"(a)",advance="no") " * Testing left > max_left..................."
+  options%max_left = 0
+  rci%job = 0
+  call ssmfe_standard &
+    ( rci, nep, mep, lambda, m, rr, ind, keep, options, inform )
+  call print_result( inform%flag, WRONG_LEFT )
+  call ssmfe_terminate( keep, inform )
+  options%max_left = -1
+
+  write(*,"(a)",advance="no") " * Testing mep < left........................"
+  rci%job = 0
+  call ssmfe_standard &
+    ( rci, nep, 0, lambda, m, rr, ind, keep, options, inform )
+  call print_result( inform%flag, WRONG_STORAGE_SIZE )
+  call ssmfe_terminate( keep, inform )
+
+  write(*,"(a)",advance="no") " * Testing wrong err_est....................."
+  options%err_est = 0
+  rci%job = 0
+  call ssmfe_generalized &
+    ( rci, nep, mep, lambda, m, rr, ind, keep, options, inform )
+  call print_result( inform%flag, WRONG_ERR_EST )
+  call ssmfe_terminate( keep, inform )
+  options%err_est = 2
+
+  write ( *, '(a)' ) ' * Testing shift-invert...'
+  sigma = ZERO
+  left = 1
+  right = 1
+  
+  write(*,"(a)",advance="no") " * Testing block_size < 2...................."
+  rci%job = 0
+  call ssmfe_standard_shift &
+    ( rci, sigma, left, right, mep, lambda, 0, rr, ind, keep, options, inform )
+  call print_result( inform%flag, WRONG_BLOCK_SIZE )
+  call ssmfe_terminate( keep, inform )
+
+  write(*,"(a)",advance="no") " * Testing left < 0.........................."
+  rci%job = 0
+  call ssmfe_standard_shift &
+    ( rci, sigma, -1, left, mep, lambda, 0, rr, ind, keep, options, inform )
+  call print_result( inform%flag, WRONG_LEFT )
+  call ssmfe_terminate( keep, inform )
+
+  write(*,"(a)",advance="no") " * Testing right < 0........................."
+  rci%job = 0
+  call ssmfe_standard_shift &
+    ( rci, sigma, left, -1, mep, lambda, 0, rr, ind, keep, options, inform )
+  call print_result( inform%flag, WRONG_RIGHT )
+  call ssmfe_terminate( keep, inform )
+
+  write(*,"(a)",advance="no") " * Testing right > max_right................."
+  options%max_right = 0
+  rci%job = 0
+  call ssmfe_generalized_shift &
+    ( rci, sigma, left, right, mep, lambda, 0, rr, ind, keep, options, inform )
+  call print_result( inform%flag, WRONG_RIGHT )
+  call ssmfe_terminate( keep, inform )
+  options%max_right = -1
+
+  write(*,"(a)",advance="no") " * Testing mep < left + right................"
+  rci%job = 0
+  call ssmfe_generalized_shift &
+    ( rci, sigma, left, right, 0, lambda, 0, rr, ind, keep, options, inform )
+  call print_result( inform%flag, WRONG_STORAGE_SIZE )
+  call ssmfe_terminate( keep, inform )
+
+  write ( *, '(a)' ) ' * Testing buckling...'
+
+  write(*,"(a)",advance="no") " * Testing zero sigma........................"
+  sigma = ZERO
+  rci%job = 0
+  call ssmfe_buckling &
+    ( rci, sigma, left, right, mep, lambda, m, rr, ind, keep, options, inform )
+  call print_result(inform%flag, WRONG_SIGMA)
+  call ssmfe_terminate( keep, inform )
+  sigma = ONE
+
+  write(*,"(a)",advance="no") " * Testing wrong minAprod...................."
+  options%minAprod = .false.
+  rci%job = 0
+  call ssmfe_buckling &
+    ( rci, sigma, left, right, mep, lambda, m, rr, ind, keep, options, inform )
+  call print_result(inform%flag, WRONG_MINPROD)
+  call ssmfe_terminate( keep, inform )
+  options%minAprod = .true.
+
+  write(*,"(a)",advance="no") " * Testing wrong minBprod...................."
+  options%minBprod = .false.
+  rci%job = 0
+  call ssmfe_buckling &
+    ( rci, sigma, left, right, mep, lambda, m, rr, ind, keep, options, inform )
+  call print_result(inform%flag, WRONG_MINPROD)
+  call ssmfe_terminate( keep, inform )
+  options%minBprod = .true.
+
+  deallocate ( a, b, t, x, lambda, rr, ind )
+
+end subroutine test_expert_errors_d
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+subroutine test_expert_errors_z
+
+  use spral_ssmfe_expert
+
+  integer :: n
+  integer :: m
+  integer :: nep
+  integer :: mep
+  integer :: left, right
+  integer :: ldx
+  integer :: i
+  
+  integer, allocatable :: ind(:)
+  
+  real(wp) :: sigma
+
+  real(wp), allocatable :: lambda(:)
+  complex(wp), allocatable :: a(:,:)
+  complex(wp), allocatable :: b(:,:)
+  complex(wp), allocatable :: t(:,:)
+  complex(wp), allocatable :: x(:,:)
+  complex(wp), allocatable :: rr(:,:,:)
+
+  type(ssmfe_rciz   ) :: rci
+  type(ssmfe_options) :: options
+  type(ssmfe_keep   ) :: keep
+  type(ssmfe_inform ) :: inform
+  
+   write(*,"(/a)") "========================="
+   write(*,"(a)")  "Testing errors (complex):"
+   write(*,"(a)")  "========================="
+
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  n = 6
+  m = 2
+  nep = 1
+  mep = n
+  ldx = n
+  allocate ( a(n, n), b(n, n), t(n, n), x(n, n), lambda(n) )
+  allocate ( rr(m + m, m + m, 3), ind(m) )
+  
+  options%print_level = 0
+  options%unit_error = we_unit
+  options%unit_warning = we_unit
+  options%unit_diagnostic = dl_unit
+  
+  write(*,"(a)",advance="no") " * Testing block_size < 1...................."
+  rci%job = 0
+  call ssmfe_standard &
+    ( rci, nep, mep, lambda, 0, rr, ind, keep, options, inform )
+  call print_result( inform%flag, WRONG_BLOCK_SIZE )
+  call ssmfe_terminate( keep, inform )
+
+  write(*,"(a)",advance="no") " * Testing left < 0.........................."
+  rci%job = 0
+  call ssmfe_standard &
+    ( rci, -1, mep, lambda, m, rr, ind, keep, options, inform )
+  call print_result( inform%flag, WRONG_LEFT )
+  call ssmfe_terminate( keep, inform )
+
+  write(*,"(a)",advance="no") " * Testing left > max_left..................."
+  options%max_left = 0
+  rci%job = 0
+  call ssmfe_standard &
+    ( rci, nep, mep, lambda, m, rr, ind, keep, options, inform )
+  call print_result( inform%flag, WRONG_LEFT )
+  call ssmfe_terminate( keep, inform )
+  options%max_left = -1
+
+  write(*,"(a)",advance="no") " * Testing mep < left........................"
+  rci%job = 0
+  call ssmfe_standard &
+    ( rci, nep, 0, lambda, m, rr, ind, keep, options, inform )
+  call print_result( inform%flag, WRONG_STORAGE_SIZE )
+  call ssmfe_terminate( keep, inform )
+
+  write(*,"(a)",advance="no") " * Testing wrong err_est....................."
+  options%err_est = 0
+  rci%job = 0
+  call ssmfe_generalized &
+    ( rci, nep, mep, lambda, m, rr, ind, keep, options, inform )
+  call print_result( inform%flag, WRONG_ERR_EST )
+  call ssmfe_terminate( keep, inform )
+  options%err_est = 2
+
+  write ( *, '(a)' ) ' * Testing shift-invert...'
+  sigma = ZERO
+  left = 1
+  right = 1
+  
+  write(*,"(a)",advance="no") " * Testing block_size < 2...................."
+  rci%job = 0
+  call ssmfe_standard_shift &
+    ( rci, sigma, left, right, mep, lambda, 0, rr, ind, keep, options, inform )
+  call print_result( inform%flag, WRONG_BLOCK_SIZE )
+  call ssmfe_terminate( keep, inform )
+
+  write(*,"(a)",advance="no") " * Testing left < 0.........................."
+  rci%job = 0
+  call ssmfe_standard_shift &
+    ( rci, sigma, -1, right, mep, lambda, 0, rr, ind, keep, options, inform )
+  call print_result( inform%flag, WRONG_LEFT )
+  call ssmfe_terminate( keep, inform )
+
+  write(*,"(a)",advance="no") " * Testing right < 0........................."
+  rci%job = 0
+  call ssmfe_standard_shift &
+    ( rci, sigma, left, -1, mep, lambda, 0, rr, ind, keep, options, inform )
+  call print_result( inform%flag, WRONG_RIGHT )
+  call ssmfe_terminate( keep, inform )
+
+  write(*,"(a)",advance="no") " * Testing right > max_right................."
+  options%max_right = 0
+  rci%job = 0
+  call ssmfe_generalized_shift &
+    ( rci, sigma, left, right, mep, lambda, 0, rr, ind, keep, options, inform )
+  call print_result( inform%flag, WRONG_RIGHT )
+  call ssmfe_terminate( keep, inform )
+  options%max_right = -1
+
+  write(*,"(a)",advance="no") " * Testing mep < left + right................"
+  rci%job = 0
+  call ssmfe_generalized_shift &
+    ( rci, sigma, left, right, 0, lambda, 0, rr, ind, keep, options, inform )
+  call print_result( inform%flag, WRONG_STORAGE_SIZE )
+  call ssmfe_terminate( keep, inform )
+
+  write ( *, '(a)' ) ' * Testing buckling...'
+
+  write(*,"(a)",advance="no") " * Testing zero sigma........................"
+  sigma = ZERO
+  rci%job = 0
+  call ssmfe_buckling &
+    ( rci, sigma, left, right, mep, lambda, m, rr, ind, keep, options, inform )
+  call print_result(inform%flag, WRONG_SIGMA)
+  call ssmfe_terminate( keep, inform )
+  sigma = ONE
+
+  write(*,"(a)",advance="no") " * Testing wrong minAprod...................."
+  options%minAprod = .false.
+  rci%job = 0
+  call ssmfe_buckling &
+    ( rci, sigma, left, right, mep, lambda, m, rr, ind, keep, options, inform )
+  call print_result(inform%flag, WRONG_MINPROD)
+  call ssmfe_terminate( keep, inform )
+  options%minAprod = .true.
+
+  write(*,"(a)",advance="no") " * Testing wrong minBprod...................."
+  options%minBprod = .false.
+  rci%job = 0
+  call ssmfe_buckling &
+    ( rci, sigma, left, right, mep, lambda, m, rr, ind, keep, options, inform )
+  call print_result(inform%flag, WRONG_MINPROD)
+  call ssmfe_terminate( keep, inform )
+  options%minBprod = .true.
+
+  deallocate ( a, b, t, x, lambda, rr, ind )
+
+end subroutine test_expert_errors_z
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+subroutine test_expert_options_d
+
+  use spral_ssmfe
+
+  integer :: n
+  integer :: nep
+  integer :: mep
+  integer :: left, right
+  integer :: ldx
+  integer :: lwork
+  integer :: i
+  
+  integer, allocatable :: ipiv(:)
+  
+  real(wp) :: sigma
+  real(wp) :: eps
+
+  real(wp), allocatable :: lambda(:)
+  real(wp), allocatable :: a(:,:)
+  real(wp), allocatable :: b(:,:)
+  real(wp), allocatable :: t(:,:)
+  real(wp), allocatable :: x(:,:)
+  real(wp), allocatable :: w(:,:)
+
+  type(ssmfe_options) :: options
+  type(ssmfe_inform ) :: inform
+  
+   write(*,"(a)")
+   write(*,"(a)") "======================"
+   write(*,"(a)") "Testing options (real)"
+   write(*,"(a)") "======================"
+
+  n = 50
+  nep = 5
+  mep = n
+  ldx = n
+  lwork = n*n
+  allocate ( a(n, n), b(n, n), t(n, n), x(n, n), w(n, n) )
+  allocate ( lambda(n), ipiv(n) )
+  
+  a = ZERO
+  forall ( i = 1 : n ) a(i, i) = i*10
+
+  b = ZERO
+  forall ( i = 1 : n ) b(i, i) = ONE
+
+  t = ZERO
+  forall ( i = 1 : n ) t(i, i) = ONE
+
+  write(*,"(a)",advance="no") " * Testing residual-based error estimates...."
+  options%err_est = 1
+  call run_std_d( n, a, t, nep, mep, lambda, x, options, inform )
+  call print_result( inform%flag, 0 )
+  call ssmfe_terminate( inform )
+  options%err_est = 2
+
+  deallocate ( a, b, t, x, lambda )
+
+end subroutine test_expert_options_d
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+subroutine test_expert_options_z
+
+  use spral_ssmfe
+
+  integer :: n
+  integer :: nep
+  integer :: mep
+  integer :: left, right
+  integer :: ldx
+  integer :: lwork
+  integer :: i
+  
+  integer, allocatable :: ipiv(:)
+  
+  real(wp) :: sigma
+  real(wp) :: eps
+
+  real(wp), allocatable :: lambda(:)
+  complex(wp), allocatable :: a(:,:)
+  complex(wp), allocatable :: b(:,:)
+  complex(wp), allocatable :: t(:,:)
+  complex(wp), allocatable :: x(:,:)
+  complex(wp), allocatable :: w(:,:)
+
+  type(ssmfe_options) :: options
+  type(ssmfe_inform ) :: inform
+  
+   write(*,"(a)")
+   write(*,"(a)") "========================="
+   write(*,"(a)") "Testing options (complex)"
+   write(*,"(a)") "========================="
+
+  n = 50
+  nep = 5
+  mep = n
+  ldx = n
+  lwork = n*n
+  allocate ( a(n, n), b(n, n), t(n, n), x(n, n), w(n, n) )
+  allocate ( lambda(n), ipiv(n) )
+  
+  a = ZERO
+  forall ( i = 1 : n ) a(i, i) = i*10
+
+  b = ZERO
+  forall ( i = 1 : n ) b(i, i) = ONE
+
+  t = ZERO
+  forall ( i = 1 : n ) t(i, i) = ONE
+
+  write(*,"(a)",advance="no") " * Testing residual-based error estimates...."
+  options%err_est = 1
+  call run_std_z( n, a, t, nep, mep, lambda, x, options, inform )
+  call print_result( inform%flag, 0 )
+  call ssmfe_terminate( inform )
+  options%err_est = 2
+
+  deallocate ( a, b, t, x, lambda )
+
+end subroutine test_expert_options_z
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+subroutine test_ssmfe_errors_d
+
+  use spral_ssmfe
 
   integer :: n
   integer :: nep
@@ -107,9 +581,9 @@ subroutine test_errors_d
   allocate ( a(n, n), b(n, n), t(n, n), x(n, n), lambda(n) )
   
   options%print_level = 0
-  options%unit_error = 1
-  options%unit_warning = 1
-  options%unit_diagnostic = 1
+  options%unit_error = we_unit
+  options%unit_warning = we_unit
+  options%unit_diagnostic = dl_unit
   
   write(*,"(a)",advance="no") " * Testing bad rci%job......................."
   rci%job = 1
@@ -237,11 +711,11 @@ subroutine test_errors_d
 
   deallocate ( a, b, t, x, lambda )
 
-end subroutine test_errors_d
+end subroutine test_ssmfe_errors_d
 
-subroutine test_errors_z
+subroutine test_ssmfe_errors_z
 
-!  logical :: continued = .true.
+  use spral_ssmfe
 
   integer :: n
   integer :: nep
@@ -274,9 +748,9 @@ subroutine test_errors_z
   allocate ( a(n, n), b(n, n), t(n, n), x(n, n), lambda(n) )
   
   options%print_level = 0
-  options%unit_error = 1
-  options%unit_warning = 1
-  options%unit_diagnostic = 1
+  options%unit_error = we_unit
+  options%unit_warning = we_unit
+  options%unit_diagnostic = dl_unit
   
   write(*,"(a)",advance="no") " * Testing bad rci%job......................."
   rci%job = 1
@@ -404,11 +878,13 @@ subroutine test_errors_z
 
   deallocate ( a, b, t, x, lambda )
 
-end subroutine test_errors_z
+end subroutine test_ssmfe_errors_z
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-subroutine test_warnings_d
+subroutine test_ssmfe_warnings_d
+
+  use spral_ssmfe
 
   integer :: n
   integer :: nep
@@ -437,7 +913,10 @@ subroutine test_warnings_d
    write(*,"(a)") "Testing warnings (real)"
    write(*,"(a)") "======================="
 
-  options%print_level = -1
+  options%print_level = 0
+  options%unit_error = we_unit
+  options%unit_warning = we_unit
+  options%unit_diagnostic = dl_unit
   
   n = 50
   nep = 2
@@ -513,11 +992,13 @@ subroutine test_warnings_d
 
   deallocate ( a, b, t, x, lambda )
 
-end subroutine test_warnings_d
+end subroutine test_ssmfe_warnings_d
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-subroutine test_warnings_z
+subroutine test_ssmfe_warnings_z
+
+  use spral_ssmfe
 
   integer :: n
   integer :: nep
@@ -546,7 +1027,10 @@ subroutine test_warnings_z
    write(*,"(a)") "Testing warnings (complex)"
    write(*,"(a)") "=========================="
 
-  options%print_level = -1
+  options%print_level = 0
+  options%unit_error = we_unit
+  options%unit_warning = we_unit
+  options%unit_diagnostic = dl_unit
   
   n = 50
   nep = 2
@@ -622,11 +1106,13 @@ subroutine test_warnings_z
 
   deallocate ( a, b, t, x, lambda )
 
-end subroutine test_warnings_z
+end subroutine test_ssmfe_warnings_z
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-subroutine test_options_d
+subroutine test_ssmfe_options_d
+
+  use spral_ssmfe
 
   integer :: n
   integer :: nep
@@ -696,9 +1182,9 @@ subroutine test_options_d
   call print_result(inform%flag, 0)
   call ssmfe_terminate( inform )
 
-  options%unit_error = 1
-  options%unit_warning = 1
-  options%unit_diagnostic = 1
+  options%unit_error = we_unit
+  options%unit_warning = we_unit
+  options%unit_diagnostic = dl_unit
 
   write(*,"(a)",advance="no") " * Testing printing level 0.................."
   options%print_level = 0
@@ -720,7 +1206,7 @@ subroutine test_options_d
   options%print_level = 2
   write ( 1, '(/x, a)' ) 'print level 2'
   call run_std_d( n, a, t, nep, mep, lambda, x, options, inform )
-  call print_result(inform%flag, 0)
+  call print_result( inform%flag, 0 )
   call ssmfe_terminate( inform )
 
   write(*,"(a)",advance="no") " * Testing printing level 3.................."
@@ -730,11 +1216,6 @@ subroutine test_options_d
   call print_result(inform%flag, 0)
   call ssmfe_terminate( inform )
 
-  options%unit_error = 6
-  options%unit_warning = 6
-  options%unit_diagnostic = 6
-  options%print_level = -1
-
   write(*,"(a)",advance="no") " * Testing zero tolerances..................."
   options%tol_x = 0
   call run_std_d( n, a, t, nep, mep, lambda, x, options, inform )
@@ -742,10 +1223,25 @@ subroutine test_options_d
   call ssmfe_terminate( inform )
   options%tol_x = -1
 
+  write(*,"(a)",advance="no") " * Testing all non-zero tolerances..........."
+  options%tol_x = 1
+  options%abs_tol_lambda = 1
+  options%rel_tol_lambda = 1
+  options%abs_tol_residual = 1
+  options%rel_tol_residual = 1
+  call run_std_d( n, a, t, nep, mep, lambda, x, options, inform )
+  call print_result(inform%flag, 0)
+  call ssmfe_terminate( inform )
+  options%tol_x = -1
+  options%abs_tol_lambda = 0
+  options%rel_tol_lambda = 0
+  options%abs_tol_residual = 0
+  options%rel_tol_residual = 0
+
   write(*,"(a)",advance="no") " * Testing minimal left eigenvalue gap......."
   eps = 1D-3
   nep = 3
-  options%tol_x = 1e-3
+!  options%tol_x = 1e-3
   options%left_gap = 10 + eps
   forall ( i = 5 : n ) a(i, i) = i*10 + 2*eps
   call run_std_d( n, a, t, nep, mep, lambda, x, options, inform )
@@ -755,12 +1251,53 @@ subroutine test_options_d
 
   write ( *, '(a)' ) ' * Testing shift-invert...'
 
+  write(*,"(a)",advance="no") " * Testing all non-zero tolerances..........."
+  options%tol_x = 1
+  options%abs_tol_lambda = 1
+  options%rel_tol_lambda = 1
+  options%abs_tol_residual = 1
+  options%rel_tol_residual = 1
+  sigma = 345
+  left = 3
+  right = 3
+  call run_gen_si_d &
+    ( options, n, a, b, sigma, left, right, &
+      mep, lambda, x, t, ipiv, w, lwork, inform )
+  call print_result(inform%flag, 0)
+  call ssmfe_terminate( inform )
+  options%tol_x = -1
+  options%abs_tol_lambda = 0
+  options%rel_tol_lambda = 0
+  options%abs_tol_residual = 0
+  options%rel_tol_residual = 0
+
+  write(*,"(a)",advance="no") " * Testing printing level 2.................."
+  options%print_level = 2
+  write ( 1, '(/x, a)' ) 'print level 2'
+  sigma = 345
+  left = 3
+  right = 3
+  call run_gen_si_d &
+    ( options, n, a, b, sigma, left, right, &
+      mep, lambda, x, t, ipiv, w, lwork, inform )
+  call print_result( inform%flag, 0 )
+  call ssmfe_terminate( inform )
+
+  write(*,"(a)",advance="no") " * Testing printing level 3.................."
+  options%print_level = 3
+  write ( 1, '(/x, a)' ) 'print level 3'
+  call run_gen_si_d &
+    ( options, n, a, b, sigma, left, right, &
+      mep, lambda, x, t, ipiv, w, lwork, inform )
+  call print_result( inform%flag, 0 )
+  call ssmfe_terminate( inform )
+
   write(*,"(a)",advance="no") " * Testing minimal left eigenvalue gap......."
   eps = 1D-3
   sigma = 440
   left = 3
   right = 0
-  options%tol_x = 1e-3
+!  options%tol_x = 1e-3
   options%left_gap = 10 + eps
   forall ( i = 1 : n - 11 ) a(i, i) = i*10
   forall ( i = n - 10 : n ) a(i, i) = i*10 + 2*eps
@@ -790,11 +1327,13 @@ subroutine test_options_d
 
   deallocate ( a, b, t, x, lambda )
 
-end subroutine test_options_d
+end subroutine test_ssmfe_options_d
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-subroutine test_options_z
+subroutine test_ssmfe_options_z
+
+  use spral_ssmfe
 
   integer :: n
   integer :: nep
@@ -849,6 +1388,12 @@ subroutine test_options_z
   call ssmfe_terminate( inform )
   n = 50
 
+  write(*,"(a)",advance="no") " * Testing printing suppresssion............."
+  options%print_level = 0
+  call run_std_z( n, a, t, nep, mep, lambda, x, options, inform )
+  call print_result(inform%flag, 0)
+  call ssmfe_terminate( inform )
+
   write(*,"(a)",advance="no") " * Testing printing units suppression........"
   options%print_level = 3
   options%unit_error = -1
@@ -858,9 +1403,9 @@ subroutine test_options_z
   call print_result(inform%flag, 0)
   call ssmfe_terminate( inform )
 
-  options%unit_error = 1
-  options%unit_warning = 1
-  options%unit_diagnostic = 1
+  options%unit_error = we_unit
+  options%unit_warning = we_unit
+  options%unit_diagnostic = dl_unit
 
   write(*,"(a)",advance="no") " * Testing printing level 0.................."
   options%print_level = 0
@@ -892,11 +1437,6 @@ subroutine test_options_z
   call print_result(inform%flag, 0)
   call ssmfe_terminate( inform )
 
-  options%unit_error = 6
-  options%unit_warning = 6
-  options%unit_diagnostic = 6
-  options%print_level = -1
-
   write(*,"(a)",advance="no") " * Testing zero tolerances..................."
   options%tol_x = 0
   call run_std_z( n, a, t, nep, mep, lambda, x, options, inform )
@@ -904,10 +1444,25 @@ subroutine test_options_z
   call ssmfe_terminate( inform )
   options%tol_x = -1
 
+  write(*,"(a)",advance="no") " * Testing all non-zero tolerances..........."
+  options%tol_x = 1
+  options%abs_tol_lambda = 1
+  options%rel_tol_lambda = 1
+  options%abs_tol_residual = 1
+  options%rel_tol_residual = 1
+  call run_std_z( n, a, t, nep, mep, lambda, x, options, inform )
+  call print_result(inform%flag, 0)
+  call ssmfe_terminate( inform )
+  options%tol_x = -1
+  options%abs_tol_lambda = 0
+  options%rel_tol_lambda = 0
+  options%abs_tol_residual = 0
+  options%rel_tol_residual = 0
+
   write(*,"(a)",advance="no") " * Testing minimal left eigenvalue gap......."
   eps = 1D-3
   nep = 3
-  options%tol_x = 1e-3
+!  options%tol_x = 1e-3
   options%left_gap = 10 + eps
   forall ( i = 5 : n ) a(i, i) = i*10 + 2*eps
   call run_std_z( n, a, t, nep, mep, lambda, x, options, inform )
@@ -917,12 +1472,53 @@ subroutine test_options_z
 
   write ( *, '(a)' ) ' * Testing shift-invert...'
 
+  write(*,"(a)",advance="no") " * Testing all non-zero tolerances..........."
+  options%tol_x = 1
+  options%abs_tol_lambda = 1
+  options%rel_tol_lambda = 1
+  options%abs_tol_residual = 1
+  options%rel_tol_residual = 1
+  sigma = 345
+  left = 3
+  right = 3
+  call run_gen_si_z &
+    ( options, n, a, b, sigma, left, right, &
+      mep, lambda, x, t, ipiv, w, lwork, inform )
+  call print_result(inform%flag, 0)
+  call ssmfe_terminate( inform )
+  options%tol_x = -1
+  options%abs_tol_lambda = 0
+  options%rel_tol_lambda = 0
+  options%abs_tol_residual = 0
+  options%rel_tol_residual = 0
+
+  write(*,"(a)",advance="no") " * Testing printing level 2.................."
+  options%print_level = 2
+  write ( 1, '(/x, a)' ) 'print level 2'
+  sigma = 345
+  left = 3
+  right = 3
+  call run_gen_si_z &
+    ( options, n, a, b, sigma, left, right, &
+      mep, lambda, x, t, ipiv, w, lwork, inform )
+  call print_result( inform%flag, 0 )
+  call ssmfe_terminate( inform )
+
+  write(*,"(a)",advance="no") " * Testing printing level 3.................."
+  options%print_level = 3
+  write ( 1, '(/x, a)' ) 'print level 3'
+  call run_gen_si_z &
+    ( options, n, a, b, sigma, left, right, &
+      mep, lambda, x, t, ipiv, w, lwork, inform )
+  call print_result( inform%flag, 0 )
+  call ssmfe_terminate( inform )
+
   write(*,"(a)",advance="no") " * Testing minimal left eigenvalue gap......."
   eps = 1D-3
   sigma = 440
   left = 3
   right = 0
-  options%tol_x = 1e-3
+!  options%tol_x = 1e-3
   options%left_gap = 10 + eps
   forall ( i = 1 : n - 11 ) a(i, i) = i*10
   forall ( i = n - 10 : n ) a(i, i) = i*10 + 2*eps
@@ -933,13 +1529,32 @@ subroutine test_options_z
   call ssmfe_terminate( inform )
   options%left_gap = 0
 
+  write(*,"(a)",advance="no") " * Testing minimal right eigenvalue gap......"
+  eps = 1D-3
+  sigma = 439
+  left = 0
+  right = 3
+  options%right_gap = 10 + eps
+  forall ( i = 1 : n - 3 ) a(i, i) = i*10
+  forall ( i = n - 2 : n ) a(i, i) = i*10 + 2*eps
+  call run_gen_si_z &
+    ( options, n, a, b, sigma, left, right, &
+      mep, lambda, x, t, ipiv, w, lwork, inform )
+  call print_result(inform%right, 4)
+  call ssmfe_terminate( inform )
+  options%tol_x = -1
+  options%right_gap = 0
+  options%print_level = -1
+
   deallocate ( a, b, t, x, lambda )
 
-end subroutine test_options_z
+end subroutine test_ssmfe_options_z
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-subroutine test_misc_d
+subroutine test_ssmfe_misc_d
+
+  use spral_ssmfe
 
   integer :: n
   integer :: nep
@@ -947,7 +1562,7 @@ subroutine test_misc_d
   integer :: left, right
   integer :: ldx
   integer :: lwork
-  integer :: i
+  integer :: i, j
   
   integer, allocatable :: ipiv(:)
   
@@ -965,9 +1580,9 @@ subroutine test_misc_d
   type(ssmfe_inform ) :: inform
   
    write(*,"(a)")
-   write(*,"(a)") "==================="
-   write(*,"(a)") "Miscellaneous tests"
-   write(*,"(a)") "==================="
+   write(*,"(a)") "=========================="
+   write(*,"(a)") "Miscellaneous tests (real)"
+   write(*,"(a)") "=========================="
 
   n = 50
   nep = 5
@@ -990,17 +1605,26 @@ subroutine test_misc_d
   forall ( i = 1 : 10 ) a(i, i) = i*10
   forall ( i = 11 : n ) a(i, i) = i*10 + 2*eps
 
+  options%print_level = 0
+  options%unit_error = we_unit
+  options%unit_warning = we_unit
+  options%unit_diagnostic = dl_unit
+
   write(*,"(a)",advance="no") " * Testing restart..........................."
   eps = 1D-3
   nep = 3
-!  options%tol_x = 1e-3
   options%left_gap = 10 + eps
+  options%user_X = mep
+  do i = 1, n
+    do j = 1, mep
+      x(i, j) = sin(i*j*ONE)
+    end do
+  end do
   call run_std_d( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result(inform%flag, 4)
   call ssmfe_terminate( inform )
   options%left_gap = 0
-
-  options%print_level = -1
+  options%user_X = 0
 
   write ( *, '(a)' ) ' * Testing shift-invert...'
 
@@ -1027,42 +1651,207 @@ subroutine test_misc_d
   call ssmfe_terminate( inform )
   options%user_x = 0
 
-  options%print_level = -1
+  write(*,"(a)",advance="no") " * Testing restart..........................."
+  sigma = 409
+  left = 0
+  right = 5
+  options%right_gap = 10 + eps
+  options%user_X = mep
+  do i = 1, n
+    do j = 1, mep
+      x(i, j) = sin(i*j*ONE)
+    end do
+  end do
+  call run_gen_si_d &
+    ( options, n, a, b, sigma, left, right, &
+      mep, lambda, x, t, ipiv, w, lwork, inform )
+  call print_result(inform%flag, 4)
+  call ssmfe_terminate( inform )
+  options%right_gap = 0
+  options%user_x = 0
+
+  write ( *, '(a)' ) ' * Testing buckling...'
+
+  write(*,"(a)",advance="no") " * Testing restart..........................."
+  forall ( i = 1 : 30 ) a(i, i) = i*10
+  a(n, n) = n*10 + 4*eps
+  sigma = 399
+  left = 6
+  right = 5
+  options%right_gap = 10 + eps
+  options%user_X = mep
+  do i = 1, n
+    do j = 1, mep
+      x(i, j) = sin(i*j*ONE)
+    end do
+  end do
+  call run_buckling_d &
+    ( options, n, a, b, sigma, left, right, &
+      mep, lambda, x, t, ipiv, w, lwork, inform )
+  call print_result(inform%flag, 4)
+  call ssmfe_terminate( inform )
+  options%right_gap = 0
+  options%user_x = 0
+
+  deallocate ( a, b, t, x, lambda )
+
+end subroutine test_ssmfe_misc_d
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+subroutine test_ssmfe_misc_z
+
+  use spral_ssmfe
+
+  integer :: n
+  integer :: nep
+  integer :: mep
+  integer :: left, right
+  integer :: ldx
+  integer :: lwork
+  integer :: i, j
+  
+  integer, allocatable :: ipiv(:)
+  
+  real(wp) :: sigma
+  real(wp) :: eps
+
+  real(wp), allocatable :: lambda(:)
+  complex(wp), allocatable :: a(:,:)
+  complex(wp), allocatable :: b(:,:)
+  complex(wp), allocatable :: t(:,:)
+  complex(wp), allocatable :: x(:,:)
+  complex(wp), allocatable :: w(:,:)
+
+  type(ssmfe_options) :: options
+  type(ssmfe_inform ) :: inform
+  
+   write(*,"(a)")
+   write(*,"(a)") "============================="
+   write(*,"(a)") "Miscellaneous tests (complex)"
+   write(*,"(a)") "============================="
+
+  n = 50
+  nep = 5
+  mep = n
+  ldx = n
+  lwork = n*n
+  allocate ( a(n, n), b(n, n), t(n, n), x(n, n), w(n, n) )
+  allocate ( lambda(n), ipiv(n) )
+  
+  a = ZERO
+  forall ( i = 1 : n ) a(i, i) = i*10
+
+  b = ZERO
+  forall ( i = 1 : n ) b(i, i) = ONE
+
+  t = ZERO
+  forall ( i = 1 : n ) t(i, i) = ONE
+
+  eps = 1D-3
+  forall ( i = 1 : 10 ) a(i, i) = i*10
+  forall ( i = 11 : n ) a(i, i) = i*10 + 2*eps
+
+  options%print_level = 0
+  options%unit_error = we_unit
+  options%unit_warning = we_unit
+  options%unit_diagnostic = dl_unit
+
+  write(*,"(a)",advance="no") " * Testing restart..........................."
+  eps = 1D-3
+  nep = 3
+  options%left_gap = 10 + eps
+  options%user_X = mep
+  do i = 1, n
+    do j = 1, mep
+      x(i, j) = sin(i*j*ONE)
+    end do
+  end do
+  call run_std_z( n, a, t, nep, mep, lambda, x, options, inform )
+  call print_result(inform%flag, 4)
+  call ssmfe_terminate( inform )
+  options%left_gap = 0
+  options%user_X = 0
+
+  write ( *, '(a)' ) ' * Testing shift-invert...'
+
+  write(*,"(a)",advance="no") " * Testing standard.........................."
+  sigma = 255
+  left = 5
+  right = 5
+  call run_std_si_z &
+    ( options, n, a, sigma, left, right, &
+      mep, lambda, x, t, ipiv, w, lwork, inform )
+  call print_result(inform%flag, 0)
+  call ssmfe_terminate( inform )
+
+  write(*,"(a)",advance="no") " * Testing generalized......................."
+  sigma = 255
+  left = 5
+  right = 5
+  options%user_x = 1
+  x = ONE
+  call run_gen_si_z &
+    ( options, n, a, b, sigma, left, right, &
+      mep, lambda, x, t, ipiv, w, lwork, inform )
+  call print_result(inform%flag, 0)
+  call ssmfe_terminate( inform )
+  options%user_x = 0
 
   write(*,"(a)",advance="no") " * Testing restart..........................."
   sigma = 409
   left = 0
   right = 5
   options%right_gap = 10 + eps
-  call run_gen_si_d &
+  options%user_X = mep
+  do i = 1, n
+    do j = 1, mep
+      x(i, j) = sin(i*j*ONE)
+    end do
+  end do
+  call run_gen_si_z &
     ( options, n, a, b, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result(inform%flag, 4)
   call ssmfe_terminate( inform )
+  options%right_gap = 0
+  options%user_x = 0
 
   write ( *, '(a)' ) ' * Testing buckling...'
-
-!  options%print_level = 3
+  
+  options%print_level = 3
 
   write(*,"(a)",advance="no") " * Testing restart..........................."
+  forall ( i = 1 : 30 ) a(i, i) = i*10
   a(n, n) = n*10 + 4*eps
   sigma = 399
-  left = 0
+  left = 6
   right = 5
+  options%left_gap = 10 + eps
   options%right_gap = 10 + eps
-  call run_buckling_d &
+  options%user_X = mep
+  do i = 1, n
+    do j = 1, mep
+      x(i, j) = sin(i*j*ONE)
+    end do
+  end do
+  call run_buckling_z &
     ( options, n, a, b, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result(inform%flag, 4)
   call ssmfe_terminate( inform )
+  options%right_gap = 0
+  options%user_x = 0
 
   deallocate ( a, b, t, x, lambda )
 
-end subroutine test_misc_d
+end subroutine test_ssmfe_misc_z
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 subroutine run_std_d( n, a, t, nep, mep, lambda, x, options, inform )
+
+  use spral_ssmfe
 
   integer, intent(in) :: n
   real(wp), intent(in) :: a(n, n)
@@ -1103,6 +1892,8 @@ end subroutine run_std_d
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 subroutine run_std_z( n, a, t, nep, mep, lambda, x, options, inform )
+
+  use spral_ssmfe
 
   integer, intent(in) :: n
   complex(wp), intent(in) :: a(n, n)
@@ -1147,6 +1938,8 @@ end subroutine run_std_z
 subroutine run_std_si_d &
     ( options, n, a, sigma, left, right, &
       mep, lambda, x, ldlt, ipiv, work, lwork, inform )
+
+  use spral_ssmfe
 
   type(ssmfe_options), intent(inout) :: options
   integer, intent(in) :: n
@@ -1202,6 +1995,8 @@ subroutine run_std_si_z &
     ( options, n, a, sigma, left, right, &
       mep, lambda, x, ldlt, ipiv, work, lwork, inform )
 
+  use spral_ssmfe
+
   type(ssmfe_options), intent(inout) :: options
   integer, intent(in) :: n
   complex(wp), intent(in) :: a(n, n)
@@ -1253,6 +2048,8 @@ end subroutine run_std_si_z
 
 subroutine run_gen_d( n, a, b, t, nep, mep, lambda, x, options, inform )
 
+  use spral_ssmfe
+
   integer, intent(in) :: n
   real(wp), intent(in) :: a(n, n)
   real(wp), intent(in) :: b(n, n)
@@ -1289,6 +2086,8 @@ end subroutine run_gen_d
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 subroutine run_gen_z( n, a, b, t, nep, mep, lambda, x, options, inform )
+
+  use spral_ssmfe
 
   integer, intent(in) :: n
   complex(wp), intent(in) :: a(n, n)
@@ -1331,6 +2130,8 @@ end subroutine run_gen_z
 subroutine run_gen_si_d &
     ( options, n, a, b, sigma, left, right, &
       mep, lambda, x, ldlt, ipiv, work, lwork, inform )
+
+  use spral_ssmfe
 
   type(ssmfe_options), intent(inout) :: options
   integer, intent(in) :: n
@@ -1397,6 +2198,8 @@ subroutine run_gen_si_z &
     ( options, n, a, b, sigma, left, right, &
       mep, lambda, x, ldlt, ipiv, work, lwork, inform )
 
+  use spral_ssmfe
+
   type(ssmfe_options), intent(inout) :: options
   integer, intent(in) :: n
   complex(wp), intent(in) :: a(n, n)
@@ -1462,6 +2265,8 @@ subroutine run_buckling_d &
     ( options, n, a, b, sigma, left, right, &
       mep, lambda, x, ldlt, ipiv, work, lwork, inform )
 
+  use spral_ssmfe
+
   type(ssmfe_options), intent(inout) :: options
   integer, intent(in) :: n
   real(wp), intent(in) :: a(n, n)
@@ -1517,7 +2322,7 @@ subroutine run_buckling_d &
   call ssmfe_terminate ( keep )
   options%max_left = -1
   options%max_right = -1
-  if ( restarted .and. inform%flag == 0 ) inform%flag = 4
+  if ( restarted .and. inform%flag >= 0 ) inform%flag = 4
 
 end subroutine run_buckling_d
 
@@ -1526,6 +2331,8 @@ end subroutine run_buckling_d
 subroutine run_buckling_z &
     ( options, n, a, b, sigma, left, right, &
       mep, lambda, x, ldlt, ipiv, work, lwork, inform )
+
+  use spral_ssmfe
 
   type(ssmfe_options), intent(inout) :: options
   integer, intent(in) :: n
@@ -1582,7 +2389,7 @@ subroutine run_buckling_z &
   call ssmfe_terminate ( keep )
   options%max_left = -1
   options%max_right = -1
-  if ( restarted .and. inform%flag == 0 ) inform%flag = 4
+  if ( restarted .and. inform%flag >= 0 ) inform%flag = 4
 
 end subroutine run_buckling_z
 

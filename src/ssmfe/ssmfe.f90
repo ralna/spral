@@ -568,6 +568,7 @@ contains
 
     ldV = 2*keep%block_size
     ldBX = n
+    nep = inform%left + inform%right
 
     select case ( keep%step )
     
@@ -1173,9 +1174,6 @@ contains
         call random_number( dwork )
         if ( rci%jx > 1 ) &
           keep%W(:, 1 : rci%jx - 1, 0) = 2*dwork(:, 1 : rci%jx - 1) - ONE
-        if ( rci%jx + rci%nx - 1 < keep%block_size ) &
-          keep%W(:, rci%jx + rci%nx : keep%block_size, 0) = &
-            2*dwork(:, rci%jx + rci%nx : keep%block_size) - ONE
         deallocate ( dwork )
       end if
         
@@ -1417,6 +1415,7 @@ contains
 
     ldV = 2*keep%block_size
     ldBX = n
+    nep = inform%left + inform%right
 
     select case ( keep%step )
     
@@ -1464,15 +1463,9 @@ contains
           call gemm &
             ( TR, 'N', keep%lcon, rci%nx, n, &
               UNIT, X, ldX, rci%x, n, NIL, keep%U, max_nep )
-          if ( problem == 0 ) then
-            call gemm &
-              ( 'N', 'N', n, rci%nx, keep%lcon, &
-                -UNIT, X, ldX, keep%U, max_nep, UNIT, rci%x, n )
-          else
-            call gemm &
-              ( 'N', 'N', n, rci%nx, keep%lcon, &
-                -UNIT, keep%BX, ldBX, keep%U, max_nep, UNIT, rci%x, n )
-          end if
+          call gemm &
+            ( 'N', 'N', n, rci%nx, keep%lcon, &
+              -UNIT, X, ldX, keep%U, max_nep, UNIT, rci%x, n )
         end if
 
         if ( keep%rcon > 0 ) then
@@ -1480,15 +1473,9 @@ contains
           call gemm &
             ( TR, 'N', keep%rcon, rci%nx, n, &
               UNIT, X(1, j), ldX, rci%x, n, NIL, keep%U, max_nep )
-          if ( problem == 0 ) then
-            call gemm &
-              ( 'N', 'N', n, rci%nx, keep%rcon, &
-                -UNIT, X(1,j), ldX, keep%U, max_nep, UNIT, rci%x, n )
-          else
-            call gemm &
-              ( 'N', 'N', n, rci%nx, keep%rcon, &
-                -UNIT, keep%BX(1,j), ldBX, keep%U, max_nep, UNIT, rci%x, n )
-          end if
+          call gemm &
+            ( 'N', 'N', n, rci%nx, keep%rcon, &
+              -UNIT, X(1,j), ldX, keep%U, max_nep, UNIT, rci%x, n )
         end if
 
       case ( SSMFE_APPLY_CONSTRAINTS )
@@ -1669,7 +1656,6 @@ contains
       call zhegv &
         ( 1, 'V', 'U', nep, keep%V, nep, keep%V(1,1,2), nep, lambda, &
           keep%V(1,1,3), k, keep%U, i )
-      if ( k < 0 ) write ( 1, * )
       call gemm &
         ( 'N', 'N', n, nep, nep, UNIT, keep%W, n, keep%V, nep, NIL, X, ldX )
 
@@ -1720,7 +1706,7 @@ contains
 
     integer :: i, j, mm
 
-    double precision :: alpha, beta, s, t(1)
+    double precision :: alpha, beta, s
     character, parameter :: TRANS = 'T'
     
     mm = m + m
@@ -1741,18 +1727,10 @@ contains
 
       if ( rci%i == 0 ) then
 
-        if ( rci%kx /= rci%ky .or. rci%jx > rci%jy ) then
-          call mxcopy &
-            ( 'A', n, rci%nx, &
-              W(1, rci%jx, rci%kx), ldW, &
-              W(1, rci%jy, rci%ky), ldW )
-        else if ( rci%jx < rci%jy ) then
-          do j = rci%nx - 1, 0, -1
-            call copy &
-              ( n, W(1, rci%jx + j, rci%kx), 1, &
-                W(1, rci%jy + j, rci%ky), 1 )
-          end do
-        end if
+        call mxcopy &
+          ( 'A', n, rci%nx, &
+            W(1, rci%jx, rci%kx), ldW, &
+            W(1, rci%jy, rci%ky), ldW )
 
       else
 
@@ -1796,9 +1774,6 @@ contains
           if ( s > 0 ) then
             call scal( n, ONE/s, W(1, rci%jx + i, rci%kx), 1 )
             call scal( n, ONE/s, W(1, rci%jy + i, rci%ky), 1 )
-          else
-            t(1) = ZERO
-            call copy( n, t, 0, W(1, rci%jy + i, rci%ky), 1 )
           end if
         end if
       end do
@@ -1821,14 +1796,6 @@ contains
     case (SSMFE_COMPUTE_XQ, SSMFE_TRANSFORM_X)
     
       if ( rci%ny < 1 ) return
-      if ( rci%nx < 1 ) then
-        if ( rci%job == SSMFE_TRANSFORM_X ) return
-        if ( beta == UNIT ) return
-        do j = rci%jy, rci%jy + rci%ny - 1
-          W(1:n,j,rci%ky) = beta*W(1:n,j,rci%ky)
-        end do
-        return
-      end if
       call gemm &
         ( 'N', 'N', n, rci%ny, rci%nx, &
           alpha, W(1, rci%jx, rci%kx), ldW, V(rci%i, rci%j), mm, &
@@ -1900,18 +1867,10 @@ contains
 
       if ( rci%i == 0 ) then
 
-        if ( rci%kx /= rci%ky .or. rci%jx > rci%jy ) then
-          call mxcopy &
-            ( 'A', n, rci%nx, &
-              W(1, rci%jx, rci%kx), ldW, &
-              W(1, rci%jy, rci%ky), ldW )
-        else if ( rci%jx < rci%jy ) then
-          do j = rci%nx - 1, 0, -1
-            call copy &
-              ( n, W(1, rci%jx + j, rci%kx), 1, &
-                W(1, rci%jy + j, rci%ky), 1 )
-          end do
-        end if
+        call mxcopy &
+          ( 'A', n, rci%nx, &
+            W(1, rci%jx, rci%kx), ldW, &
+            W(1, rci%jy, rci%ky), ldW )
 
       else
 
@@ -1955,8 +1914,6 @@ contains
           if ( s > 0 ) then
             call scal( n, UNIT/s, W(1, rci%jx + i, rci%kx), 1 )
             call scal( n, UNIT/s, W(1, rci%jy + i, rci%ky), 1 )
-          else
-            call copy( n, NIL, 0, W(1, rci%jy + i, rci%ky), 1 )
           end if
         end if
       end do
@@ -1980,14 +1937,6 @@ contains
     case (SSMFE_COMPUTE_XQ, SSMFE_TRANSFORM_X)
     
       if ( rci%ny < 1 ) return
-      if ( rci%nx < 1 ) then
-        if ( rci%job == SSMFE_TRANSFORM_X ) return
-        if ( beta == UNIT ) return
-        do j = rci%jy, rci%jy + rci%ny - 1
-          W(1 : n, j, rci%ky) = beta*W(1 : n, j, rci%ky)
-        end do
-        return
-      end if
       call gemm &
         ( 'N', 'N', n, rci%ny, rci%nx, &
           alpha, W(1, rci%jx, rci%kx), ldW, V(rci%i, rci%j), mm, &
