@@ -535,26 +535,23 @@ contains
           j = right + keep%options%extra_right
           ! workspace for eigenvectors corresponding to left eigenvalues
           l = m*i/(i + j) 
+          keep%left = left ! assumingly can be computed in one go
           if ( l < i .or. left_gap /= ZERO ) then ! not enough space
             keep%options%extra_left = min(keep%options%extra_left, l/2)
             keep%left = l - keep%options%extra_left ! portion size
             ! limiting extras number to l/2 ensures that the portion size
             ! is substantial thus reducing the number of restarts
-          else
-            keep%left = left ! can be computed in one go
           end if
+          keep%right = right ! assumingly can be computed in one go
           if ( m - l < j .or. right_gap /= ZERO ) then ! not enough space
             keep%options%extra_right = min(keep%options%extra_right, (m - l)/2)
             keep%right = m - l - keep%options%extra_right ! portion size
-          else
-            keep%right = right ! can be computed in one go
           end if
         else
+          keep%left = left
           if ( m < i .or. left_gap /= ZERO ) then
             keep%options%extra_left = min(keep%options%extra_left, m/2)
             keep%left = m - keep%options%extra_left
-          else
-            keep%left = left
           end if
           keep%options%extra_right = 0
           keep%right = 0
@@ -627,7 +624,7 @@ contains
       if ( rci%job == SSMFE_RESTART .and. rci%k == 0 ) &
         rci%job = SSMFE_START
       
-    else if ( rci%job == SSMFE_SAVE_CONVERGED ) then
+    else if ( rci%job == SSMFE_SAVE_CONVERGED .and. rci%i < 0 ) then
 
       mep = max_nep
       m = block_size
@@ -654,7 +651,7 @@ contains
         if ( keep%left_converged .and. keep%right_converged ) then
           rci%job = SSMFE_DONE
         else
-          if ( rci%i < 0 .and. & ! restart after printout
+          if ( & !rci%i < 0 .and. & ! restart after printout
                (keep%left > 0 .and. keep%first > keep%left .or. &
                 keep%right > 0 .and. block_size - keep%last >= keep%right) &
               ) then
@@ -743,9 +740,8 @@ contains
       if ( rci%i > 0 ) then
         j = rci%jx + new
         if ( .not. keep%left_converged ) then
-          if ( j > m ) then
-            info%next_left = sigma
-          else
+          info%next_left = sigma
+          if ( j <= m ) then
             if ( keep%lcon + new > 0 .and. keep%lmd(j)*keep%lmd(1) > 0 ) &
               info%next_left = si_map(problem, sigma, keep%lmd(j))
           end if
@@ -755,9 +751,8 @@ contains
         j = rci%jx - new
         m = block_size
         if ( .not. keep%right_converged ) then
-          if ( j < 1 ) then
-            info%next_right = sigma
-          else 
+          info%next_right = sigma
+          if ( j > 0 ) then
             if ( keep%rcon + new > 0 .and. keep%lmd(j)*keep%lmd(m) > 0 ) &
               info%next_right = si_map(problem, sigma, keep%lmd(j))
           end if
@@ -791,7 +786,7 @@ contains
 
         do i = first, last, step
 
-          if ( keep%info%converged(i) /= 0 ) then
+          if ( keep%info%converged(i) > 0 ) then
             word = '  yes'
           else
             word = '   no'
@@ -883,15 +878,12 @@ contains
       
       case ( 1 )
 
-        if ( keep%left == 0 ) then
-
-          keep%left_converged = .true.
-
-        else if ( left_gap == ZERO ) then
+        if ( left_gap == ZERO ) then
 
           keep%left_converged = keep%lcon >= left
           if ( keep%left_converged ) then
             info%left = keep%lcon
+            info%next_left = sigma
             if ( keep%first <= block_size ) then
               if ( keep%lmd(keep%first) < ZERO ) &
                 info%next_left = si_map(problem, sigma, keep%lmd(keep%first))
@@ -907,8 +899,8 @@ contains
             t = abs(left_gap) * keep%av_dist
             q = GAP_REL_A
           end if
-
-          keep%left_converged = (keep%lcon >= keep%max_left)
+          
+          keep%left_converged = keep%left == 0 .or. keep%lcon >= keep%max_left
           do i = keep%lcon, left + 1, -1
             j = minloc(lambda(1 : i - 1), 1)
             s = lambda(j) - lambda(i)
@@ -940,15 +932,12 @@ contains
 
       case ( -1 )
 
-        if ( keep%right == 0 ) then
-
-          keep%right_converged = .true.
-
-        else if ( right_gap == ZERO ) then
+        if ( right_gap == ZERO ) then
 
           keep%right_converged = keep%rcon >= right
           if ( keep%right_converged ) then
             info%right = keep%rcon
+            info%next_right = sigma
             if ( keep%last > 0 ) then
               if ( keep%lmd(keep%last) > ZERO ) &
                 info%next_right = si_map(problem, sigma, keep%lmd(keep%last))
@@ -966,7 +955,8 @@ contains
             q = GAP_REL_A
           end if
 
-          keep%right_converged = (keep%rcon >= keep%max_right)
+          keep%right_converged = &
+            keep%right == 0 .or. keep%rcon >= keep%max_right
           do i = mep - keep%rcon + 1, mep - right
             j = i + maxloc(lambda(i + 1 : mep), 1)
             s = lambda(i) - lambda(j)
@@ -1046,9 +1036,8 @@ contains
         end if
       end do
         
-      if ( k == 0 .and. l == 0 ) then
-        keep%av_dist = ZERO
-      else if ( k == 0 ) then
+      keep%av_dist = ZERO
+      if ( k == 0 ) then
         if ( keep%rcon > 0 ) then
           t = lambda(mep)
         else
@@ -1105,8 +1094,8 @@ contains
           .and. keep%info%err_X(i) >= ZERO &
           .and. keep%info%err_X(i) <= sqrt(epsilon(ONE)) 
         end if
-
-        converged = converged .and. abs(keep%info%err_X(m + i)) < 0.01
+        
+        converged = converged .and. abs(keep%info%err_X(m + i)) < 0.05
 
         if ( converged ) keep%info%converged(i) = 1
         
@@ -1118,12 +1107,11 @@ contains
 
     if ( rci%job < 0 ) then
 
-      info%left = keep%lcon
-      info%right = keep%rcon
+      info%data = 0
       if ( rci%job /= SSMFE_DONE ) then
         info%data = max(0, left - keep%lcon) + max(0, right - keep%rcon)
-      else
-        info%data = 0
+        info%left = keep%lcon
+        info%right = keep%rcon
       end if
       info%flag = keep%info%flag
 
@@ -1325,7 +1313,7 @@ contains
 
       if ( rci%job == SSMFE_RESTART .and. rci%k == 0 ) rci%job = SSMFE_START
       
-    else if ( rci%job == SSMFE_SAVE_CONVERGED ) then
+    else if ( rci%job == SSMFE_SAVE_CONVERGED .and. rci%i < 0 ) then
 
       if ( .not. keep%left_converged ) then
         if ( info%iteration >= options%max_iterations ) then
@@ -1396,11 +1384,8 @@ contains
         lambda(j) = keep%lmd(rci%jx + k)
       end do
       j = rci%jx + rci%nx
-      if ( j > block_size ) then
-        info%next_left = huge(ONE)
-      else 
-        info%next_left = keep%lmd(j)
-      end if
+      info%next_left = huge(ONE)
+      if ( j <= block_size ) info%next_left = keep%lmd(j)
       keep%first = j
 
       if ( options%print_level == 2 .and. u_diag > NONE ) then
@@ -1475,19 +1460,14 @@ contains
 
       end if ! print_level > 2
 
-      if ( keep%left == 0 ) then
-
-        keep%left_converged = .true.
-
-      else if ( gap == ZERO ) then
+      if ( gap == ZERO ) then
 
         keep%left_converged = keep%lcon >= nep
         if ( keep%left_converged ) then
           info%left = keep%lcon
+          info%next_left = huge(ONE)
           if ( keep%first <= block_size ) then
             info%next_left = keep%lmd(keep%first)
-          else
-            info%next_left = huge(ONE)
           end if
         end if
 
@@ -1501,7 +1481,7 @@ contains
           q = GAP_REL_A
         end if
 
-        keep%left_converged = (keep%lcon >= keep%max_left)
+        keep%left_converged = keep%left == 0 .or. keep%lcon >= keep%max_left
         do i = nep + 1, keep%lcon
           j = maxloc(lambda(1 : i - 1), 1)
           r = lambda(i) - lambda(j)
@@ -1546,16 +1526,12 @@ contains
         s = keep%lmd(i)
       end do
         
-      if ( l == 0 ) then
-        keep%av_dist = ZERO
+      if ( keep%lcon > 0 ) then
+        t = lambda(1)
       else
-        if ( keep%lcon > 0 ) then
-          t = lambda(1)
-        else
-          t = keep%lmd(1)
-        end if
-        keep%av_dist = (s - t)/l
+        t = keep%lmd(1)
       end if
+      keep%av_dist = (s - t)/l
       
       r = ZERO
       if ( keep%lcon > 0 ) r = abs(lambda(1))
@@ -1600,7 +1576,7 @@ contains
           .and. keep%info%err_X(i) <= sqrt(epsilon(ONE)) 
         end if
 
-        converged = converged .and. abs(keep%info%err_X(block_size + i)) < 0.01
+        converged = converged .and. abs(keep%info%err_X(block_size + i)) < 0.05
 
         if ( converged ) keep%info%converged(i) = 1
         
@@ -1612,11 +1588,10 @@ contains
 
     if ( rci%job < 0 ) then
 
+      info%data = 0
       if ( rci%job /= SSMFE_DONE ) then
         info%data = max(0, nep - keep%lcon)
         info%left = keep%lcon
-      else
-        info%data = 0
       end if
       info%flag = keep%info%flag
 
@@ -1830,26 +1805,23 @@ contains
           j = right + keep%options%extra_right
           ! workspace for eigenvectors corresponding to left eigenvalues
           l = m*i/(i + j) 
+          keep%left = left ! assumingly can be computed in one go
           if ( l < i .or. left_gap /= ZERO ) then ! not enough space
             keep%options%extra_left = min(keep%options%extra_left, l/2)
             keep%left = l - keep%options%extra_left ! portion size
             ! limiting extras number to l/2 ensures that the portion size
             ! is substantial thus reducing the number of restarts
-          else
-            keep%left = left ! can be computed in one go
           end if
+          keep%right = right ! assumingly can be computed in one go
           if ( m - l < j .or. right_gap /= ZERO ) then ! not enough space
             keep%options%extra_right = min(keep%options%extra_right, (m - l)/2)
             keep%right = m - l - keep%options%extra_right ! portion size
-          else
-            keep%right = right ! can be computed in one go
           end if
         else
+          keep%left = left
           if ( m < i .or. left_gap /= ZERO ) then
             keep%options%extra_left = min(keep%options%extra_left, m/2)
             keep%left = m - keep%options%extra_left
-          else
-            keep%left = left
           end if
           keep%options%extra_right = 0
           keep%right = 0
@@ -1922,7 +1894,7 @@ contains
       if ( rci%job == SSMFE_RESTART .and. rci%k == 0 ) &
         rci%job = SSMFE_START
       
-    else if ( rci%job == SSMFE_SAVE_CONVERGED ) then
+    else if ( rci%job == SSMFE_SAVE_CONVERGED .and. rci%i < 0 ) then
 
       mep = max_nep
       m = block_size
@@ -1951,7 +1923,7 @@ contains
         if ( keep%left_converged .and. keep%right_converged ) then
           rci%job = SSMFE_DONE
         else
-          if ( rci%i < 0 .and. &
+          if ( & !rci%i < 0 .and. &
                (keep%left > 0 .and. keep%first > keep%left .or. &
                 keep%right > 0 .and. block_size - keep%last >= keep%right) &
               ) then
@@ -2041,9 +2013,8 @@ contains
       if ( rci%i > 0 ) then
         j = rci%jx + new
         if ( .not. keep%left_converged ) then
-          if ( j > m ) then
-            info%next_left = sigma
-          else
+          info%next_left = sigma
+          if ( j <= m ) then
             if ( keep%lcon + new > 0 .and. keep%lmd(j)*keep%lmd(1) > 0 ) &
               info%next_left = si_map(problem, sigma, keep%lmd(j))
           end if
@@ -2053,9 +2024,8 @@ contains
         j = rci%jx - new
         m = block_size
         if ( .not. keep%right_converged ) then
-          if ( j < 1 ) then
-            info%next_right = sigma
-          else 
+          info%next_right = sigma
+          if ( j > 0 ) then
             if ( keep%rcon + new > 0 .and. keep%lmd(j)*keep%lmd(m) > 0 ) &
               info%next_right = si_map(problem, sigma, keep%lmd(j))
           end if
@@ -2181,21 +2151,12 @@ contains
       
       case ( 1 )
 
-        if ( keep%left == 0 ) then
-
-          keep%left_converged = .true.
-
-        else if ( keep%lcon >= keep%max_left ) then
-
-          info%left = keep%max_left
-          info%next_left = sigma
-          keep%left_converged = .true.
-
-        else if ( left_gap == ZERO ) then
+        if ( left_gap == ZERO ) then
 
           keep%left_converged = keep%lcon >= left
           if ( keep%left_converged ) then
             info%left = keep%lcon
+            info%next_left = sigma
             if ( keep%first <= block_size ) then
               if ( keep%lmd(keep%first) < ZERO ) &
                 info%next_left = si_map(problem, sigma, keep%lmd(keep%first))
@@ -2212,7 +2173,7 @@ contains
             q = GAP_REL_A
           end if
 
-          keep%left_converged = .false.
+          keep%left_converged = keep%left == 0 .or. keep%lcon >= keep%max_left
           do i = keep%lcon, left + 1, -1
             j = minloc(lambda(1 : i - 1), 1)
             s = lambda(j) - lambda(i)
@@ -2244,21 +2205,12 @@ contains
 
       case ( -1 )
 
-        if ( keep%right == 0 ) then
-
-          keep%right_converged = .true.
-
-        else if ( keep%rcon >= keep%max_right ) then
-
-          info%right = keep%max_right
-          info%next_right = sigma
-          keep%right_converged = .true.
-
-        else if ( right_gap == ZERO ) then
+        if ( right_gap == ZERO ) then
 
           keep%right_converged = keep%rcon >= right
           if ( keep%right_converged ) then
             info%right = keep%rcon
+            info%next_right = sigma
             if ( keep%last > 0 ) then
               if ( keep%lmd(keep%last) > ZERO ) &
                 info%next_right = si_map(problem, sigma, keep%lmd(keep%last))
@@ -2275,7 +2227,7 @@ contains
             q = GAP_REL_A
           end if
 
-          keep%right_converged = .false.
+          keep%right_converged = keep%right == 0 .or. keep%rcon >= keep%max_right
           do i = mep - keep%rcon + 1, mep - right
             j = i + maxloc(lambda(i + 1 : mep), 1)
             s = lambda(i) - lambda(j)
@@ -2354,9 +2306,8 @@ contains
         end if
       end do
         
-      if ( k == 0 .and. l == 0 ) then
-        keep%av_dist = ZERO
-      else if ( k == 0 ) then
+      keep%av_dist = ZERO
+      if ( k == 0 ) then
         if ( keep%rcon > 0 ) then
           t = lambda(mep)
         else
@@ -2414,7 +2365,7 @@ contains
           .and. keep%info%err_X(i) <= sqrt(epsilon(ONE)) 
         end if
 
-        converged = converged .and. abs(keep%info%err_X(m + i)) < 0.01
+        converged = converged .and. abs(keep%info%err_X(m + i)) < 0.05
 
         if ( converged ) keep%info%converged(i) = 1
         
@@ -2426,12 +2377,11 @@ contains
 
     if ( rci%job < 0 ) then
 
-      info%left = keep%lcon
-      info%right = keep%rcon
+      info%data = 0
       if ( rci%job /= SSMFE_DONE ) then
+        info%left = keep%lcon
+        info%right = keep%rcon
         info%data = max(0, left - keep%lcon) + max(0, right - keep%rcon)
-      else
-        info%data = 0
       end if
       info%flag = keep%info%flag
 
@@ -2633,7 +2583,7 @@ contains
 
       if ( rci%job == SSMFE_RESTART .and. rci%k == 0 ) rci%job = SSMFE_START
       
-    else if ( rci%job == SSMFE_SAVE_CONVERGED ) then
+    else if ( rci%job == SSMFE_SAVE_CONVERGED .and. rci%i < 0 ) then
 
       if ( .not. keep%left_converged ) then
         if ( info%iteration >= options%max_iterations ) then
@@ -2706,11 +2656,8 @@ contains
         lambda(j) = keep%lmd(rci%jx + k)
       end do
       j = rci%jx + rci%nx
-      if ( j > block_size ) then
-        info%next_left = huge(ONE)
-      else 
-        info%next_left = keep%lmd(j)
-      end if
+      info%next_left = huge(ONE)
+      if ( j <= block_size ) info%next_left = keep%lmd(j)
       keep%first = j
 
       if ( options%print_level == 2 .and. u_diag > NONE ) then
@@ -2785,25 +2732,14 @@ contains
 
       end if ! print_level > 2
 
-      if ( keep%left == 0 ) then
-
-        keep%left_converged = .true.
-
-      else if ( keep%lcon >= keep%max_left ) then
-
-        info%left = keep%max_left
-        info%next_left = huge(ONE)
-        keep%left_converged = .true.
-
-      else if ( gap == ZERO ) then
+      if ( gap == ZERO ) then
 
         keep%left_converged = keep%lcon >= nep
         if ( keep%left_converged ) then
           info%left = keep%lcon
+          info%next_left = huge(ONE)
           if ( keep%first <= block_size ) then
             info%next_left = keep%lmd(keep%first)
-          else
-            info%next_left = huge(ONE)
           end if
         end if
 
@@ -2817,7 +2753,7 @@ contains
           q = GAP_REL_A
         end if
         
-        keep%left_converged = .false.
+        keep%left_converged = keep%left == 0 .or. keep%lcon >= keep%max_left
         do i = keep%lcon, nep + 1, -1
           j = maxloc(lambda(1 : i - 1), 1)
           r = lambda(i) - lambda(j)
@@ -2862,16 +2798,12 @@ contains
         s = keep%lmd(i)
       end do
         
-      if ( l == 0 ) then
-        keep%av_dist = ZERO
+      if ( keep%lcon > 0 ) then
+        t = lambda(1)
       else
-        if ( keep%lcon > 0 ) then
-          t = lambda(1)
-        else
-          t = keep%lmd(1)
-        end if
-        keep%av_dist = (s - t)/l
+        t = keep%lmd(1)
       end if
+      keep%av_dist = (s - t)/l
       
       r = ZERO
       if ( keep%lcon > 0 ) r = abs(lambda(1))
@@ -2916,7 +2848,7 @@ contains
           .and. keep%info%err_X(i) <= sqrt(epsilon(ONE)) 
         end if
 
-        converged = converged .and. abs(keep%info%err_X(block_size + i)) < 0.01
+        converged = converged .and. abs(keep%info%err_X(block_size + i)) < 0.05
 
         if ( converged ) keep%info%converged(i) = 1
         
@@ -2928,11 +2860,10 @@ contains
 
     if ( rci%job < 0 ) then
 
+      info%data = 0
       if ( rci%job /= SSMFE_DONE ) then
         info%data = max(0, nep - keep%lcon)
         info%left = keep%lcon
-      else
-        info%data = 0
       end if
       info%flag = keep%info%flag
 

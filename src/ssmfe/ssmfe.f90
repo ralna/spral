@@ -187,7 +187,7 @@ contains
       else
         extra = max(left/10, 10)
       end if
-      keep%block_size = min(left + extra, max(1, n/2 - 1))
+      keep%block_size = min(max(1, left + extra), max(1, n/2 - 1))
       keep%lcon = 0
       if ( allocated(keep%ind) ) deallocate ( keep%ind )
       if ( allocated(keep%U  ) ) deallocate ( keep%U   )
@@ -237,7 +237,7 @@ contains
       return
     end if
     
-    if ( left < 1 .or. left > n/2 ) then
+    if ( left < 0 .or. left > n/2 ) then
       inform%flag = WRONG_LEFT
       rci%job = SSMFE_QUIT
       if ( options%unit_error > NONE .and. options%print_level > NONE ) &
@@ -486,7 +486,7 @@ contains
         total_left = min(total_left, options%max_left)
       if ( options%max_right >= 0 ) &
         total_right = min(total_right, options%max_right)
-      keep%block_size = total_left + total_right
+      keep%block_size = max(2, total_left + total_right)
       keep%block_size = min(keep%block_size, max(1, n/2 - 1))
       if ( allocated(keep%ind) ) deallocate ( keep%ind )
       if ( allocated(keep%U  ) ) deallocate ( keep%U   )
@@ -1023,7 +1023,7 @@ contains
       else
         extra = max(left/10, 10)
       end if
-      keep%block_size = min(left + extra, max(1, n/2 - 1))
+      keep%block_size = min(max(1, left + extra), max(1, n/2 - 1))
       keep%lcon = 0
       if ( allocated(keep%ind) ) deallocate ( keep%ind )
       if ( allocated(keep%U  ) ) deallocate ( keep%U   )
@@ -1075,7 +1075,7 @@ contains
       return
     end if
     
-    if ( left < 1 .or. left > n/2 ) then
+    if ( left < 0 .or. left > n/2 ) then
       inform%flag = WRONG_LEFT
       rci%job = SSMFE_QUIT
       if ( options%unit_error > NONE .and. options%print_level > NONE ) &
@@ -1334,7 +1334,7 @@ contains
         total_left = min(total_left, options%max_left)
       if ( options%max_right >= 0 ) &
         total_right = min(total_right, options%max_right)
-      keep%block_size = total_left + total_right
+      keep%block_size = max(2, total_left + total_right)
       keep%block_size = min(keep%block_size, max(1, n/2 - 1))
       if ( allocated(keep%ind) ) deallocate ( keep%ind )
       if ( allocated(keep%U  ) ) deallocate ( keep%U   )
