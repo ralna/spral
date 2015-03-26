@@ -1853,9 +1853,10 @@ subroutine test_ssmfe_options_z
   options%tol_x = -1
 
   write(*,"(a)",advance="no") " * Testing minimal left eigenvalue gap......."
+!  write ( 12, * ) " * Testing minimal left eigenvalue gap......."
   eps = 1D-3
-!  sigma = 440
-  sigma = 75
+  sigma = 440
+!  sigma = 75
   left = 3
   right = 0
 !  options%tol_x = 1e-3
@@ -1866,10 +1867,10 @@ subroutine test_ssmfe_options_z
       x(i, j) = sin(i*j*ONE)
     end do
   end do
-!  forall ( i = 1 : n - 11 ) a(i, i) = i*10
-!  forall ( i = n - 10 : n ) a(i, i) = i*10 + 2*eps
-  forall ( i = 1 : 3 ) a(i, i) = i*10
-  forall ( i = 4 : n ) a(i, i) = i*10 + 2*eps
+  forall ( i = 1 : n - 11 ) a(i, i) = i*10
+  forall ( i = n - 10 : n ) a(i, i) = i*10 + 2*eps
+!  forall ( i = 1 : 3 ) a(i, i) = i*10
+!  forall ( i = 4 : n ) a(i, i) = i*10 + 2*eps
   call run_gen_si_z &
     ( options, n, a, b, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
@@ -1878,6 +1879,7 @@ subroutine test_ssmfe_options_z
   options%left_gap = 0
 
   write(*,"(a)",advance="no") " * Testing minimal right eigenvalue gap......"
+!  write ( 12, * ) " * Testing minimal right eigenvalue gap......."
   eps = 1D-3
   sigma = 439
   left = 0
@@ -1996,6 +1998,7 @@ subroutine test_ssmfe_misc_d
   write(*,"(a)",advance="no") " * Testing restart..........................."
   eps = 1D-3
   nep = 3
+!  options%max_left = 6
   options%left_gap = 10 + eps
   options%user_X = mep
   do i = 1, n
@@ -2006,6 +2009,25 @@ subroutine test_ssmfe_misc_d
   call run_std_d( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result(inform%flag, 4)
   call ssmfe_terminate( inform )
+  options%max_left = -1
+  options%left_gap = 0
+  options%user_X = 0
+
+  write(*,"(a)",advance="no") " * Testing restart..........................."
+  eps = 1D-3
+  nep = 3
+  options%max_left = 6
+  options%left_gap = 10 + eps
+  options%user_X = mep
+  do i = 1, n
+    do j = 1, mep
+      x(i, j) = sin(i*j*ONE)
+    end do
+  end do
+  call run_std_d( n, a, t, nep, mep, lambda, x, options, inform )
+  call print_result(inform%flag, 4)
+  call ssmfe_terminate( inform )
+  options%max_left = -1
   options%left_gap = 0
   options%user_X = 0
 
@@ -2040,6 +2062,26 @@ subroutine test_ssmfe_misc_d
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result(inform%flag, 0)
   call ssmfe_terminate( inform )
+  options%user_x = 0
+
+  write(*,"(a)",advance="no") " * Testing restart..........................."
+!  write(12,"(a)") " * Testing restart..........................."
+  sigma = 101
+  left = 5
+  right = 0
+  options%left_gap = 10 + eps
+  options%user_X = mep
+  do i = 1, n
+    do j = 1, mep
+      x(i, j) = sin(i*j*ONE)
+    end do
+  end do
+  call run_gen_si_d &
+    ( options, n, a, b, sigma, left, right, &
+      mep, lambda, x, t, ipiv, w, lwork, inform )
+  call print_result(inform%flag, 4)
+  call ssmfe_terminate( inform )
+  options%left_gap = 0
   options%user_x = 0
 
   write(*,"(a)",advance="no") " * Testing restart..........................."
@@ -2156,6 +2198,7 @@ subroutine test_ssmfe_misc_z
   write(*,"(a)",advance="no") " * Testing restart..........................."
   eps = 1D-3
   nep = 3
+!  options%max_left = 6
   options%left_gap = 10 + eps
   options%user_X = mep
   do i = 1, n
@@ -2166,6 +2209,25 @@ subroutine test_ssmfe_misc_z
   call run_std_z( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result(inform%flag, 4)
   call ssmfe_terminate( inform )
+  options%max_left = -1
+  options%left_gap = 0
+  options%user_X = 0
+
+  write(*,"(a)",advance="no") " * Testing restart..........................."
+  eps = 1D-3
+  nep = 3
+  options%max_left = 6
+  options%left_gap = 10 + eps
+  options%user_X = mep
+  do i = 1, n
+    do j = 1, mep
+      x(i, j) = sin(i*j*ONE)
+    end do
+  end do
+  call run_std_z( n, a, t, nep, mep, lambda, x, options, inform )
+  call print_result(inform%flag, 4)
+  call ssmfe_terminate( inform )
+  options%max_left = -1
   options%left_gap = 0
   options%user_X = 0
 
@@ -2200,6 +2262,25 @@ subroutine test_ssmfe_misc_z
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result(inform%flag, 0)
   call ssmfe_terminate( inform )
+  options%user_x = 0
+
+  write(*,"(a)",advance="no") " * Testing restart..........................."
+  sigma = 101
+  left = 5
+  right = 0
+  options%left_gap = 10 + eps
+  options%user_X = mep
+  do i = 1, n
+    do j = 1, mep
+      x(i, j) = sin(i*j*ONE)
+    end do
+  end do
+  call run_gen_si_z &
+    ( options, n, a, b, sigma, left, right, &
+      mep, lambda, x, t, ipiv, w, lwork, inform )
+  call print_result(inform%flag, 4)
+  call ssmfe_terminate( inform )
+  options%left_gap = 0
   options%user_x = 0
 
   write(*,"(a)",advance="no") " * Testing restart..........................."

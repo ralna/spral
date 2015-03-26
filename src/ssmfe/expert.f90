@@ -422,8 +422,7 @@ contains
         .or. options%max_left >= 0 .and. options%max_left < left ) then
       info%flag = WRONG_LEFT
       rci%job = SSMFE_ABORT
-      call ssmfe_msg &
-        ( problem, options, left, right, block_size, max_nep, info%flag )
+      call ssmfe_errmsg( options, info )
       return
     end if
 
@@ -431,32 +430,28 @@ contains
         .or. options%max_right >= 0 .and. options%max_right < right ) then
       info%flag = WRONG_RIGHT
       rci%job = SSMFE_ABORT
-      call ssmfe_msg &
-        ( problem, options, left, right, block_size, max_nep, info%flag )
+      call ssmfe_errmsg( options, info )
       return
     end if
 
     if ( left + right > max_nep ) then
       info%flag = WRONG_STORAGE_SIZE
       rci%job = SSMFE_ABORT
-      call ssmfe_msg &
-        ( problem, options, left, right, block_size, max_nep, info%flag )
+      call ssmfe_errmsg( options, info )
       return
     end if
     
     if ( block_size < 2 ) then
       info%flag = WRONG_BLOCK_SIZE
       rci%job = SSMFE_ABORT
-      call ssmfe_msg &
-        ( problem, options, left, right, block_size, max_nep, info%flag )
+      call ssmfe_errmsg( options, info )
       return
     end if
     
     if ( problem == 2 .and. sigma == ZERO ) then
       info%flag = WRONG_SIGMA
       rci%job = SSMFE_QUIT
-      call ssmfe_msg &
-        ( problem, options, left, right, block_size, max_nep, info%flag )
+      call ssmfe_errmsg( options, info )
       return
     end if
     
@@ -467,11 +462,16 @@ contains
 
         mep = max_nep
         if ( allocated(info%residual_norms) ) deallocate ( info%residual_norms )
-        if ( allocated(info%err_lambda) ) deallocate ( info%err_lambda )
-        if ( allocated(info%err_X) ) deallocate ( info%err_X )
-        if ( allocated(info%converged) ) deallocate ( info%converged )
-        allocate ( info%residual_norms(mep), info%err_lambda(mep), &
-                   info%err_X(mep), info%converged(mep) )
+        if ( allocated(info%err_lambda    ) ) deallocate ( info%err_lambda     )
+        if ( allocated(info%err_X         ) ) deallocate ( info%err_X          )
+        if ( allocated(info%converged     ) ) deallocate ( info%converged      )
+        allocate &
+          ( info%residual_norms(mep), info%err_lambda(mep), &
+            info%err_X(mep), info%converged(mep), stat = info%stat )
+        if ( info%stat /= 0 ) info%flag = OUT_OF_MEMORY
+        if ( info%stat /= 0 ) rci%job = SSMFE_ABORT
+        if ( info%stat /= 0 ) call ssmfe_errmsg( options, info )
+        if ( info%stat /= 0 ) return
 
         info%iteration = 0
         info%residual_norms = ZERO
@@ -605,7 +605,7 @@ contains
         
       else
 
-        deallocate ( keep%lmd )
+        if ( allocated(keep%lmd) ) deallocate ( keep%lmd )
 
       end if
 
@@ -614,12 +614,16 @@ contains
       ! keep%v: workspace for ssmfe solver matrices
       m = block_size
       mm = m + m
-      allocate ( keep%lmd(m) )
+      allocate ( keep%lmd(m), stat = info%stat )
+      if ( info%stat /= 0 ) info%flag = OUT_OF_MEMORY
+      if ( info%stat /= 0 ) rci%job = SSMFE_ABORT
+      if ( info%stat /= 0 ) call ssmfe_errmsg( options, info )
+      if ( info%stat /= 0 ) return
 
       keep%first = 1
       keep%last = m
 
-      call ssmfe_msg( problem, options, left, right, m, max_nep, 0 )
+      call ssmfe_msg( problem, options, left, right, m )
 
       if ( rci%job == SSMFE_RESTART .and. rci%k == 0 ) &
         rci%job = SSMFE_START
@@ -651,8 +655,7 @@ contains
         if ( keep%left_converged .and. keep%right_converged ) then
           rci%job = SSMFE_DONE
         else
-          if ( & !rci%i < 0 .and. & ! restart after printout
-               (keep%left > 0 .and. keep%first > keep%left .or. &
+          if ( (keep%left > 0 .and. keep%first > keep%left .or. &
                 keep%right > 0 .and. block_size - keep%last >= keep%right) &
               ) then
             rci%job = SSMFE_RESTART
@@ -665,14 +668,13 @@ contains
       end if
       
       if ( rci%job < 0 ) then
-        info%data = max(0, left - keep%lcon) + max(0, right - keep%rcon)
+        info%non_converged = &
+          max(0, left - keep%lcon) + max(0, right - keep%rcon)
         if ( rci%job /= SSMFE_DONE ) then
           info%left = keep%lcon
           info%right = keep%rcon
         end if
-        if ( info%flag /= 0 ) &
-          call ssmfe_msg &
-            ( problem, options, keep%left, keep%right, m, max_nep, info%flag )
+        if ( info%flag /= 0 ) call ssmfe_errmsg( options, info )
         return
       end if
 
@@ -1107,17 +1109,16 @@ contains
 
     if ( rci%job < 0 ) then
 
-      info%data = 0
+      info%non_converged = 0
       if ( rci%job /= SSMFE_DONE ) then
-        info%data = max(0, left - keep%lcon) + max(0, right - keep%rcon)
+        info%non_converged = &
+          max(0, left - keep%lcon) + max(0, right - keep%rcon)
         info%left = keep%lcon
         info%right = keep%rcon
       end if
       info%flag = keep%info%flag
 
-      if ( info%flag /= 0 ) &
-        call ssmfe_msg &
-          ( problem, options, keep%left, keep%right, m, max_nep, info%flag )
+      if ( info%flag /= 0 ) call ssmfe_errmsg( options, info )
 
     end if
 
@@ -1203,24 +1204,21 @@ contains
         .or. options%max_left >= 0 .and. options%max_left < nep ) then
       info%flag = WRONG_LEFT
       rci%job = SSMFE_ABORT
-      call ssmfe_msg &
-        ( problem, options, nep, 0, block_size, max_nep, info%flag )
+      call ssmfe_errmsg( options, info )
       return
     end if
 
     if ( nep > max_nep ) then
       info%flag = WRONG_STORAGE_SIZE
       rci%job = SSMFE_ABORT
-      call ssmfe_msg &
-        ( problem, options, nep, 0, block_size, max_nep, info%flag )
+      call ssmfe_errmsg( options, info )
       return
     end if
     
     if ( block_size < 1 ) then
       info%flag = WRONG_BLOCK_SIZE
       rci%job = SSMFE_ABORT
-      call ssmfe_msg &
-        ( problem, options, nep, 0, block_size, max_nep, info%flag )
+      call ssmfe_errmsg( options, info )
       return
     end if
     
@@ -1230,11 +1228,16 @@ contains
       if ( rci%job == SSMFE_START ) then
 
         if ( allocated(info%residual_norms) ) deallocate ( info%residual_norms )
-        if ( allocated(info%err_lambda) ) deallocate ( info%err_lambda )
-        if ( allocated(info%err_X) ) deallocate ( info%err_X )
-        if ( allocated(info%converged) ) deallocate ( info%converged )
-        allocate ( info%residual_norms(max_nep), info%err_lambda(max_nep), &
-                   info%err_X(max_nep), info%converged(max_nep) )
+        if ( allocated(info%err_lambda    ) ) deallocate ( info%err_lambda     )
+        if ( allocated(info%err_X         ) ) deallocate ( info%err_X          )
+        if ( allocated(info%converged     ) ) deallocate ( info%converged      )
+        allocate &
+          ( info%residual_norms(max_nep), info%err_lambda(max_nep), &
+            info%err_X(max_nep), info%converged(max_nep), stat = info%stat )
+        if ( info%stat /= 0 ) info%flag = OUT_OF_MEMORY
+        if ( info%stat /= 0 ) rci%job = SSMFE_ABORT
+        if ( info%stat /= 0 ) call ssmfe_errmsg( options, info )
+        if ( info%stat /= 0 ) return
 
         info%iteration = 0
         info%residual_norms = ZERO
@@ -1304,12 +1307,16 @@ contains
 
       if ( allocated(keep%lmd) ) deallocate ( keep%lmd )
       mm = 2*block_size
-      allocate ( keep%lmd(block_size) )
+      allocate ( keep%lmd(block_size), stat = info%stat )
+      if ( info%stat /= 0 ) info%flag = OUT_OF_MEMORY
+      if ( info%stat /= 0 ) rci%job = SSMFE_ABORT
+      if ( info%stat /= 0 ) call ssmfe_errmsg( options, info )
+      if ( info%stat /= 0 ) return
 
       keep%first = 1
       keep%last = block_size
 
-      call ssmfe_msg( problem, options, nep, 0, block_size, max_nep, 0 )
+      call ssmfe_msg( problem, options, nep, 0, block_size )
 
       if ( rci%job == SSMFE_RESTART .and. rci%k == 0 ) rci%job = SSMFE_START
       
@@ -1340,13 +1347,11 @@ contains
       end if
       
       if ( rci%job < 0 ) then
-        info%data = max(0, nep - keep%lcon)
+        info%non_converged = max(0, nep - keep%lcon)
         if ( rci%job /= SSMFE_DONE ) then
           info%left = keep%lcon
         end if
-        if ( info%flag /= 0 ) &
-          call ssmfe_msg &
-            ( problem, options, keep%left, 0, block_size, max_nep, info%flag )
+        if ( info%flag /= 0 ) call ssmfe_errmsg( options, info )
         return
       end if
 
@@ -1588,16 +1593,14 @@ contains
 
     if ( rci%job < 0 ) then
 
-      info%data = 0
+      info%non_converged = 0
       if ( rci%job /= SSMFE_DONE ) then
-        info%data = max(0, nep - keep%lcon)
+        info%non_converged = max(0, nep - keep%lcon)
         info%left = keep%lcon
       end if
       info%flag = keep%info%flag
 
-      if ( info%flag /= 0 ) &
-        call ssmfe_msg &
-          ( problem, options, keep%left, 0, block_size, max_nep, info%flag )
+      if ( info%flag /= 0 ) call ssmfe_errmsg( options, info )
 
     end if
       
@@ -1692,8 +1695,7 @@ contains
         .or. options%max_left >= 0 .and. options%max_left < left ) then
       info%flag = WRONG_LEFT
       rci%job = SSMFE_ABORT
-      call ssmfe_msg &
-        ( problem, options, left, right, block_size, max_nep, info%flag )
+      call ssmfe_errmsg( options, info )
       return
     end if
 
@@ -1701,32 +1703,28 @@ contains
         .or. options%max_right >= 0 .and. options%max_right < right ) then
       info%flag = WRONG_RIGHT
       rci%job = SSMFE_ABORT
-      call ssmfe_msg &
-        ( problem, options, left, right, block_size, max_nep, info%flag )
+      call ssmfe_errmsg( options, info )
       return
     end if
 
     if ( left + right > max_nep ) then
       info%flag = WRONG_STORAGE_SIZE
       rci%job = SSMFE_ABORT
-      call ssmfe_msg &
-        ( problem, options, left, right, block_size, max_nep, info%flag )
+      call ssmfe_errmsg( options, info )
       return
     end if
     
     if ( block_size < 2 ) then
       info%flag = WRONG_BLOCK_SIZE
       rci%job = SSMFE_ABORT
-      call ssmfe_msg &
-        ( problem, options, left, right, block_size, max_nep, info%flag )
+      call ssmfe_errmsg( options, info )
       return
     end if
     
     if ( problem == 2 .and. sigma == ZERO ) then
       info%flag = WRONG_SIGMA
       rci%job = SSMFE_QUIT
-      call ssmfe_msg &
-        ( problem, options, left, right, block_size, max_nep, info%flag )
+      call ssmfe_errmsg( options, info )
       return
     end if
     
@@ -1737,11 +1735,16 @@ contains
 
         mep = max_nep
         if ( allocated(info%residual_norms) ) deallocate ( info%residual_norms )
-        if ( allocated(info%err_lambda) ) deallocate ( info%err_lambda )
-        if ( allocated(info%err_X) ) deallocate ( info%err_X )
-        if ( allocated(info%converged) ) deallocate ( info%converged )
-        allocate ( info%residual_norms(mep), info%err_lambda(mep), &
-                   info%err_X(mep), info%converged(mep) )
+        if ( allocated(info%err_lambda    ) ) deallocate ( info%err_lambda     )
+        if ( allocated(info%err_X         ) ) deallocate ( info%err_X          )
+        if ( allocated(info%converged     ) ) deallocate ( info%converged      )
+        allocate &
+          ( info%residual_norms(mep), info%err_lambda(mep), &
+            info%err_X(mep), info%converged(mep), stat = info%stat )
+        if ( info%stat /= 0 ) info%flag = OUT_OF_MEMORY
+        if ( info%stat /= 0 ) rci%job = SSMFE_ABORT
+        if ( info%stat /= 0 ) call ssmfe_errmsg( options, info )
+        if ( info%stat /= 0 ) return
 
         info%iteration = 0
         info%residual_norms = ZERO
@@ -1875,7 +1878,7 @@ contains
         
       else
 
-        deallocate ( keep%lmd )
+        if ( allocated(keep%lmd) ) deallocate ( keep%lmd )
 
       end if
 
@@ -1884,12 +1887,16 @@ contains
       ! keep%v: workspace for ssmfe solver matrices
       m = block_size
       mm = m + m
-      allocate ( keep%lmd(m) )
+      allocate ( keep%lmd(m), stat = info%stat )
+      if ( info%stat /= 0 ) info%flag = OUT_OF_MEMORY
+      if ( info%stat /= 0 ) rci%job = SSMFE_ABORT
+      if ( info%stat /= 0 ) call ssmfe_errmsg( options, info )
+      if ( info%stat /= 0 ) return
 
       keep%first = 1
       keep%last = m
 
-      call ssmfe_msg( problem, options, left, right, m, max_nep, 0 )
+      call ssmfe_msg( problem, options, left, right, m )
 
       if ( rci%job == SSMFE_RESTART .and. rci%k == 0 ) &
         rci%job = SSMFE_START
@@ -1923,8 +1930,7 @@ contains
         if ( keep%left_converged .and. keep%right_converged ) then
           rci%job = SSMFE_DONE
         else
-          if ( & !rci%i < 0 .and. &
-               (keep%left > 0 .and. keep%first > keep%left .or. &
+          if ( (keep%left > 0 .and. keep%first > keep%left .or. &
                 keep%right > 0 .and. block_size - keep%last >= keep%right) &
               ) then
             rci%job = SSMFE_RESTART
@@ -1938,14 +1944,13 @@ contains
       end if
       
       if ( rci%job < 0 ) then
-        info%data = max(0, left - keep%lcon) + max(0, right - keep%rcon)
+        info%non_converged = &
+          max(0, left - keep%lcon) + max(0, right - keep%rcon)
         if ( rci%job /= SSMFE_DONE ) then
           info%left = keep%lcon
           info%right = keep%rcon
         end if
-        if ( info%flag /= 0 ) &
-          call ssmfe_msg &
-            ( problem, options, keep%left, keep%right, m, max_nep, info%flag )
+        if ( info%flag /= 0 ) call ssmfe_errmsg( options, info )
         return
       end if
 
@@ -2377,17 +2382,16 @@ contains
 
     if ( rci%job < 0 ) then
 
-      info%data = 0
+      info%non_converged = 0
       if ( rci%job /= SSMFE_DONE ) then
         info%left = keep%lcon
         info%right = keep%rcon
-        info%data = max(0, left - keep%lcon) + max(0, right - keep%rcon)
+        info%non_converged = &
+          max(0, left - keep%lcon) + max(0, right - keep%rcon)
       end if
       info%flag = keep%info%flag
 
-      if ( info%flag /= 0 ) &
-        call ssmfe_msg &
-          ( problem, options, keep%left, keep%right, m, max_nep, info%flag )
+      if ( info%flag /= 0 ) call ssmfe_errmsg( options, info )
 
     end if
 
@@ -2473,24 +2477,21 @@ contains
         .or. options%max_left >= 0 .and. options%max_left < nep ) then
       info%flag = WRONG_LEFT
       rci%job = SSMFE_ABORT
-      call ssmfe_msg &
-        ( problem, options, nep, 0, block_size, max_nep, info%flag )
+      call ssmfe_errmsg( options, info )
       return
     end if
 
     if ( nep > max_nep ) then
       info%flag = WRONG_STORAGE_SIZE
       rci%job = SSMFE_ABORT
-      call ssmfe_msg &
-        ( problem, options, nep, 0, block_size, max_nep, info%flag )
+      call ssmfe_errmsg( options, info )
       return
     end if
     
     if ( block_size < 1 ) then
       info%flag = WRONG_BLOCK_SIZE
       rci%job = SSMFE_ABORT
-      call ssmfe_msg &
-        ( problem, options, nep, 0, block_size, max_nep, info%flag )
+      call ssmfe_errmsg( options, info )
       return
     end if
     
@@ -2500,11 +2501,16 @@ contains
       if ( rci%job == SSMFE_START ) then
 
         if ( allocated(info%residual_norms) ) deallocate ( info%residual_norms )
-        if ( allocated(info%err_lambda) ) deallocate ( info%err_lambda )
-        if ( allocated(info%err_X) ) deallocate ( info%err_X )
-        if ( allocated(info%converged) ) deallocate ( info%converged )
-        allocate ( info%residual_norms(max_nep), info%err_lambda(max_nep), &
-                   info%err_X(max_nep), info%converged(max_nep) )
+        if ( allocated(info%err_lambda    ) ) deallocate ( info%err_lambda     )
+        if ( allocated(info%err_X         ) ) deallocate ( info%err_X          )
+        if ( allocated(info%converged     ) ) deallocate ( info%converged      )
+        allocate &
+          ( info%residual_norms(max_nep), info%err_lambda(max_nep), &
+            info%err_X(max_nep), info%converged(max_nep), stat = info%stat )
+        if ( info%stat /= 0 ) info%flag = OUT_OF_MEMORY
+        if ( info%stat /= 0 ) rci%job = SSMFE_ABORT
+        if ( info%stat /= 0 ) call ssmfe_errmsg( options, info )
+        if ( info%stat /= 0 ) return
 
         info%iteration = 0
         info%residual_norms = ZERO
@@ -2574,12 +2580,16 @@ contains
 
       if ( allocated(keep%lmd) ) deallocate ( keep%lmd )
       mm = 2*block_size
-      allocate ( keep%lmd(mm) )
+      allocate ( keep%lmd(mm), stat = info%stat )
+      if ( info%stat /= 0 ) info%flag = OUT_OF_MEMORY
+      if ( info%stat /= 0 ) rci%job = SSMFE_ABORT
+      if ( info%stat /= 0 ) call ssmfe_errmsg( options, info )
+      if ( info%stat /= 0 ) return
 
       keep%first = 1
       keep%last = block_size
 
-      call ssmfe_msg( problem, options, nep, 0, block_size, max_nep, 0 )
+      call ssmfe_msg( problem, options, nep, 0, block_size )
 
       if ( rci%job == SSMFE_RESTART .and. rci%k == 0 ) rci%job = SSMFE_START
       
@@ -2612,13 +2622,11 @@ contains
       end if
       
       if ( rci%job < 0 ) then
-        info%data = max(0, nep - keep%lcon)
+        info%non_converged = max(0, nep - keep%lcon)
         if ( rci%job /= SSMFE_DONE ) then
           info%left = keep%lcon
         end if
-        if ( info%flag /= 0 ) &
-          call ssmfe_msg &
-            ( problem, options, keep%left, 0, block_size, max_nep, info%flag )
+        if ( info%flag /= 0 ) call ssmfe_errmsg( options, info )
         return
       end if
 
@@ -2860,125 +2868,60 @@ contains
 
     if ( rci%job < 0 ) then
 
-      info%data = 0
+      info%non_converged = 0
       if ( rci%job /= SSMFE_DONE ) then
-        info%data = max(0, nep - keep%lcon)
+        info%non_converged = max(0, nep - keep%lcon)
         info%left = keep%lcon
       end if
       info%flag = keep%info%flag
 
-      if ( info%flag /= 0 ) &
-        call ssmfe_msg &
-          ( problem, options, keep%left, 0, block_size, max_nep, info%flag )
+      if ( info%flag /= 0 ) call ssmfe_errmsg( options, info )
 
     end if
       
   end subroutine ssmfe_direct_rci_double_complex
+  
+  subroutine ssmfe_errmsg( options, inform )
 
-  subroutine ssmfe_msg( problem, options, left, right, m, mep, flag )
-  
     implicit none
-  
-    type(ssmfe_options) :: options
-    integer :: problem, left, right, m, mep, flag
-    intent(in) :: options, left, right, m, mep, flag
     
     integer, parameter :: NONE = -1
 
-    logical :: minAprod, minBprod
-    integer :: print_lev, max_it, err_est
+    type(ssmfe_options) :: options
+    type(ssmfe_inform) :: inform
+    
+    logical :: oom
+  
+    integer :: print_lev
     integer :: u_errr, u_warn, u_diag
-    real(kind = PRECISION) :: abs_tol, rel_tol, tol, abs_res, rel_res
 
     print_lev = options%print_level
     u_errr    = options%unit_error
     u_warn    = options%unit_warning
     u_diag    = options%unit_diagnostic
-    max_it    = options%max_iterations
-    err_est   = options%err_est
-    abs_tol   = options%abs_tol_lambda
-    rel_tol   = options%rel_tol_lambda
-    abs_res   = options%abs_tol_residual
-    rel_res   = options%rel_tol_residual
-    tol       = options%tol_X
-    minAprod  = options%minAprod
-    minBprod  = options%minBprod
-
-    if ( print_lev <= NONE ) then
-      u_errr = NONE
-      u_warn = NONE
-      u_diag = NONE
-    end if
-    if ( u_diag <= NONE .and. print_lev > NONE ) print_lev = 0
-
-    select case ( flag )
     
-    case (0)
+    oom = inform%flag == OUT_OF_MEMORY .and. u_errr > NONE
+    if ( oom ) write( u_errr, '(/a/)' ) '??? Out of memory'
+
+    select case ( inform%flag )
     
-      if ( print_lev > 0 ) then
-        if ( problem == 0 ) then
-          write( u_diag, '(/a)' ) &
-            'Solving the standard eigenvalue problem A x = lambda x'
-        else
-          write( u_diag, '(/a)' ) &
-            'Solving the generalized eigenvalue problem A x = lambda B x'
-        end if
-        if ( left > 0 ) &
-          write ( u_diag, '(a, i4)' ) &
-            'leftmost eigenpairs requested:', left
-        if ( left >= 0 .and. right > 0  ) &
-          write ( u_diag, '(a, i4)' ) &
-            'rightmost eigenpairs requested:', right
-        if ( left < 0 ) &
-          write ( u_diag, '(a, i4)' ) &
-            'extreme eigenpairs requested:', right
-        write( u_diag, '(a, i4 )' ) 'iterated subspace dimension:', m
-        if ( abs_res >= 0 .and. rel_res >= 0 .and. abs_res + rel_res > 0 ) &
-          write( u_diag, '(a, es8.0, a, es8.0 )' ) & 
-            'residual tolerances: absolute =', abs_res, &
-            ', relative = ', rel_res 
-        if ( abs_tol >= 0 .and. rel_tol >= 0 .and. abs_tol + rel_tol > 0 ) &
-          write( u_diag, '(a, es8.0, a, es8.0 )' ) & 
-            'eigenvalue error tolerances: absolute =', abs_tol, &
-            ', relative = ', rel_tol 
-        if ( tol > 0.0 ) then
-          write( u_diag, '(a, es8.0)' ) &
-            'eigenvector error tolerance:', tol
-        else if ( tol < 0.0 ) then
-          write( u_diag, '(a, es8.0)' ) &
-            'eigenvector error tolerance:', sqrt(epsilon(1.0D0))
-        end if
-        if ( minAprod ) &
-          write ( u_diag, '(a)' ) &
-            'the number of multiplications by A is minimized'
-        if ( minBprod .and. problem /= 0 ) &
-          write ( u_diag, '(a)' ) &
-            'the number of multiplications by B is minimized'
-      end if
-
-      if ( print_lev == 2 .and. max_it > 0 ) &
-        write( u_diag, '(/60x,a/a,2x,a,7x,a,6x,a,2x,a,2x,a,1x,a/)' ) & 
-          'Estimated Errors', & 
-          'Iteration', 'Index', 'Eigenvalue', 'Locked', 'Residual', &
-          'Eigenvalue', 'Eigenvector'
-
     case ( WRONG_LEFT )
 
       if ( u_errr > NONE ) &
-        write( u_errr, '(/a, i9/)' ) &
-          '??? Wrong number of left eigenpairs', left
+        write( u_errr, '(/a/)' ) &
+          '??? Wrong number of left eigenpairs'
 
     case ( WRONG_RIGHT )
 
       if ( u_errr > NONE ) &
-        write( u_errr, '(/a, i9/)' ) &
-          '??? Wrong number of right eigenpairs', right
+        write( u_errr, '(/a/)' ) &
+          '??? Wrong number of right eigenpairs'
 
     case ( WRONG_STORAGE_SIZE )
 
       if ( u_errr > NONE ) &
-        write( u_errr, '(/a, i9/)' ) &
-          '??? Wrong eigenvalue storage size', mep
+        write( u_errr, '(/a/)' ) &
+          '??? Wrong eigenvalue storage size'
 
     case ( WRONG_SIGMA )
 
@@ -2989,14 +2932,14 @@ contains
     case ( WRONG_BLOCK_SIZE )
 
       if ( u_errr > NONE ) &
-        write( u_errr, '(/a, i5/)' ) &
-          '??? Wrong block size', m
+        write( u_errr, '(/a/)' ) &
+          '??? Wrong block size'
 
     case ( WRONG_ERR_EST )
 
       if ( u_errr > NONE ) &
-        write( u_errr, '(/a, i3/)' ) &
-          '??? Wrong err_est', options%err_est
+        write( u_errr, '(/a/)' ) &
+          '??? Wrong err_est'
 
     case ( WRONG_MINPROD )
 
@@ -3009,12 +2952,6 @@ contains
       if ( u_errr > NONE ) &
         write( u_errr, '(/a/)' ) &
           '??? Wrong B or linear depended initial vectors'
-
-    case ( OUT_OF_MEMORY )
-
-      if ( u_errr > NONE ) &
-        write( u_errr, '(/a/)' ) &
-          '??? Out of memory'
 
     case ( NO_SEARCH_DIRECTIONS_LEFT )
     
@@ -3036,6 +2973,87 @@ contains
           '??? WARNING: out of storage for converged eigenpairs'
 
     end select
+
+  end subroutine ssmfe_errmsg
+
+  subroutine ssmfe_msg( problem, options, left, right, m )
+  
+    implicit none
+  
+    type(ssmfe_options) :: options
+    integer :: problem, left, right, m
+    intent(in) :: options, left, right, m
+    
+    integer, parameter :: NONE = -1
+
+    logical :: minAprod, minBprod
+    integer :: print_lev, max_it
+    integer :: u_errr, u_warn, u_diag
+    real(kind = PRECISION) :: abs_tol, rel_tol, tol, abs_res, rel_res
+
+    print_lev = options%print_level
+    u_errr    = options%unit_error
+    u_warn    = options%unit_warning
+    u_diag    = options%unit_diagnostic
+    max_it    = options%max_iterations
+    abs_tol   = options%abs_tol_lambda
+    rel_tol   = options%rel_tol_lambda
+    abs_res   = options%abs_tol_residual
+    rel_res   = options%rel_tol_residual
+    tol       = options%tol_X
+    minAprod  = options%minAprod
+    minBprod  = options%minBprod
+
+    if ( print_lev <= NONE ) then
+      u_errr = NONE
+      u_warn = NONE
+      u_diag = NONE
+    end if
+    if ( u_diag <= NONE .and. print_lev > NONE ) print_lev = 0
+
+    if ( print_lev > 0 ) then
+      if ( problem == 0 ) then
+        write( u_diag, '(/a)' ) &
+          'Solving the standard eigenvalue problem A x = lambda x'
+      else
+        write( u_diag, '(/a)' ) &
+          'Solving the generalized eigenvalue problem A x = lambda B x'
+      end if
+      if ( left > 0 ) &
+        write ( u_diag, '(a, i4)' ) &
+          'leftmost eigenpairs requested:', left
+      if ( left >= 0 .and. right > 0  ) &
+        write ( u_diag, '(a, i4)' ) &
+          'rightmost eigenpairs requested:', right
+      write( u_diag, '(a, i4 )' ) 'iterated subspace dimension:', m
+      if ( abs_res >= 0 .and. rel_res >= 0 .and. abs_res + rel_res > 0 ) &
+        write( u_diag, '(a, es8.0, a, es8.0 )' ) & 
+          'residual tolerances: absolute =', abs_res, &
+          ', relative = ', rel_res 
+      if ( abs_tol >= 0 .and. rel_tol >= 0 .and. abs_tol + rel_tol > 0 ) &
+        write( u_diag, '(a, es8.0, a, es8.0 )' ) & 
+          'eigenvalue error tolerances: absolute =', abs_tol, &
+          ', relative = ', rel_tol 
+      if ( tol > 0.0 ) then
+        write( u_diag, '(a, es8.0)' ) &
+          'eigenvector error tolerance:', tol
+      else if ( tol < 0.0 ) then
+        write( u_diag, '(a, es8.0)' ) &
+          'eigenvector error tolerance:', sqrt(epsilon(1.0D0))
+      end if
+      if ( minAprod ) &
+        write ( u_diag, '(a)' ) &
+          'the number of multiplications by A is minimized'
+      if ( minBprod .and. problem /= 0 ) &
+        write ( u_diag, '(a)' ) &
+          'the number of multiplications by B is minimized'
+    end if
+
+    if ( print_lev == 2 .and. max_it > 0 ) &
+      write( u_diag, '(/60x,a/a,2x,a,7x,a,6x,a,2x,a,2x,a,1x,a/)' ) & 
+        'Estimated Errors', & 
+        'Iteration', 'Index', 'Eigenvalue', 'Locked', 'Residual', &
+        'Eigenvalue', 'Eigenvector'
 
   end subroutine ssmfe_msg
 

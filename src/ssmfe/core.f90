@@ -72,7 +72,7 @@ module spral_ssmfe_core
     integer :: i = 0
     integer :: j = 0
     integer :: k = 0
-    integer :: op = 0
+!    integer :: op = 0
 
     double precision :: alpha, beta
     
@@ -93,7 +93,7 @@ module spral_ssmfe_core
     integer :: i = 0
     integer :: j = 0
     integer :: k = 0
-    integer :: op = 0
+!    integer :: op = 0
 
     complex(PRECISION) :: alpha, beta
     
@@ -104,9 +104,11 @@ module spral_ssmfe_core
   
   type ssmfe_inform
 
-    integer :: flag      = 0
-    integer :: data      = 0
-    integer :: iteration  = 0
+    integer :: flag          = 0
+    integer :: data          = 0
+    integer :: stat          = 0
+    integer :: non_converged = 0
+    integer :: iteration     = 0
     integer :: cc = 0, dc = 0
 
     integer :: left = 0, right = 0

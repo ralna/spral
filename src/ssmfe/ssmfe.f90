@@ -16,7 +16,11 @@ module SPRAL_ssmfe
   integer, parameter, private :: WRONG_RIGHT        = -12
   integer, parameter, private :: WRONG_STORAGE_SIZE = -13
 
+  integer, parameter, private :: OUT_OF_MEMORY = -100
+
+  integer, parameter, private :: SSMFE_DONE  = -1
   integer, parameter, private :: SSMFE_QUIT  = -2
+  integer, parameter, private :: SSMFE_ABORT = -3
 
   type ssmfe_keepd
   
@@ -176,9 +180,10 @@ contains
     type(ssmfe_inform ), intent(inout) :: inform
     type(ssmfe_keepd  ), intent(inout), target :: keep
 
+    integer :: extra
+    integer :: total
     integer :: kw
     integer :: ldBX
-    integer :: extra
     integer :: i, j, k
     
     if ( rci%job == 0 ) then
@@ -187,23 +192,38 @@ contains
       else
         extra = max(left/10, 10)
       end if
-      keep%block_size = min(max(1, left + extra), max(1, n/2 - 1))
+      total = min(max(1, left + extra), max(1, n/2 - 1))
+      if ( options%max_left >= 0 ) &
+        total = min(total, options%max_left)
+      keep%block_size = total
       keep%lcon = 0
       if ( allocated(keep%ind) ) deallocate ( keep%ind )
       if ( allocated(keep%U  ) ) deallocate ( keep%U   )
       if ( allocated(keep%V  ) ) deallocate ( keep%V   )
       if ( allocated(keep%W  ) ) deallocate ( keep%W   )
-      allocate ( keep%ind(keep%block_size) )
-      allocate ( keep%U(max_nep, keep%block_size) )
-      allocate ( keep%V(2*keep%block_size, 2*keep%block_size, 3) )
+      allocate &
+        ( keep%ind(keep%block_size), keep%U(max_nep, keep%block_size), &
+          keep%V(2*keep%block_size, 2*keep%block_size, 3), stat = inform%stat )
+      if ( inform%stat /= 0 ) inform%flag = OUT_OF_MEMORY
+      if ( inform%stat /= 0 ) rci%job = SSMFE_ABORT
+      if ( inform%stat /= 0 ) call ssmfe_errmsg( options, inform )
+      if ( inform%stat /= 0 ) return
       if ( problem == 0 ) then
         kw = 5
       else
         if ( allocated(keep%BX) ) deallocate ( keep%BX )
-        allocate ( keep%BX(n, max_nep) )
+        allocate ( keep%BX(n, max_nep), stat = inform%stat )
+        if ( inform%stat /= 0 ) inform%flag = OUT_OF_MEMORY
+        if ( inform%stat /= 0 ) rci%job = SSMFE_ABORT
+        if ( inform%stat /= 0 ) call ssmfe_errmsg( options, inform )
+        if ( inform%stat /= 0 ) return
         kw = 7
       end if
-      allocate ( keep%W(n, keep%block_size, 0:kw) )
+      allocate ( keep%W(n, keep%block_size, 0:kw), stat = inform%stat )
+      if ( inform%stat /= 0 ) inform%flag = OUT_OF_MEMORY
+      if ( inform%stat /= 0 ) rci%job = SSMFE_ABORT
+      if ( inform%stat /= 0 ) call ssmfe_errmsg( options, inform )
+      if ( inform%stat /= 0 ) return
       call random_number( keep%W(:,:,0) )
       if ( options%user_X > 0 ) &
         call mxcopy &
@@ -237,7 +257,7 @@ contains
       return
     end if
     
-    if ( left < 0 .or. left > n/2 ) then
+    if ( left < 0 .or. left >= n/2 ) then
       inform%flag = WRONG_LEFT
       rci%job = SSMFE_QUIT
       if ( options%unit_error > NONE .and. options%print_level > NONE ) &
@@ -492,9 +512,14 @@ contains
       if ( allocated(keep%U  ) ) deallocate ( keep%U   )
       if ( allocated(keep%V  ) ) deallocate ( keep%V   )
       if ( allocated(keep%W  ) ) deallocate ( keep%W   )
-      allocate ( keep%ind(keep%block_size) )
-      allocate ( keep%U(max_nep, 2*keep%block_size + max_nep) )
-      allocate ( keep%V(2*keep%block_size, 2*keep%block_size, 3) )
+      allocate &
+        ( keep%ind(keep%block_size), &
+          keep%U(max_nep, 2*keep%block_size + max_nep), &
+          keep%V(2*keep%block_size, 2*keep%block_size, 3), stat = inform%stat )
+      if ( inform%stat /= 0 ) inform%flag = OUT_OF_MEMORY
+      if ( inform%stat /= 0 ) rci%job = SSMFE_ABORT
+      if ( inform%stat /= 0 ) call ssmfe_errmsg( options, inform )
+      if ( inform%stat /= 0 ) return
       keep%U = ZERO
       do i = 1, max_nep
         keep%U(i, keep%block_size + i) = ONE
@@ -503,13 +528,22 @@ contains
         kw = 5
       else
         if ( allocated(keep%BX) ) deallocate ( keep%BX )
-        allocate ( keep%BX(n, max_nep) )
+        allocate ( keep%BX(n, max_nep), stat = inform%stat )
+        if ( inform%stat /= 0 ) inform%flag = OUT_OF_MEMORY
+        if ( inform%stat /= 0 ) rci%job = SSMFE_ABORT
+        if ( inform%stat /= 0 ) call ssmfe_errmsg( options, inform )
+        if ( inform%stat /= 0 ) return
         kw = 7
       end if
-      allocate ( keep%W(n, keep%block_size, 0:kw) )
+      allocate ( keep%W(n, keep%block_size, 0:kw), stat = inform%stat )
+      if ( inform%stat /= 0 ) inform%flag = OUT_OF_MEMORY
+      if ( inform%stat /= 0 ) rci%job = SSMFE_ABORT
+      if ( inform%stat /= 0 ) call ssmfe_errmsg( options, inform )
+      if ( inform%stat /= 0 ) return
       call random_number( keep%W(:,:,0) )
       if ( options%user_X > 0 ) &
-        call mxcopy( 'A', n, options%user_X, X, ldx, keep%W, n )
+        call mxcopy &
+          ( 'A', n, min(keep%block_size, options%user_X), X, ldx, keep%W, n )
     else
       if ( .not. allocated(keep%ind) ) then
         inform%flag = WRONG_RCI_JOB
@@ -795,7 +829,11 @@ contains
         end if
 
         deallocate ( keep%W, keep%V )
-        allocate ( keep%W(n, nep, 3), keep%V(nep, nep, 3) )
+        allocate ( keep%W(n, nep, 3), keep%V(nep, nep, 3), stat = inform%stat )
+        if ( inform%stat /= 0 ) inform%flag = OUT_OF_MEMORY
+        if ( inform%stat /= 0 ) rci%job = SSMFE_ABORT
+        if ( inform%stat /= 0 ) call ssmfe_errmsg( options, inform )
+        if ( inform%stat /= 0 ) return
 
         if ( problem == 0 ) then
           call mxcopy( 'A', n, nep, X, ldX, keep%W, n )
@@ -1010,9 +1048,10 @@ contains
     type(ssmfe_inform ), intent(inout) :: inform
     type(ssmfe_keepz  ), intent(inout), target :: keep
 
+    integer :: extra
+    integer :: total
     integer :: kw
     integer :: ldBX
-    integer :: extra
     integer :: i, j, k
     
     real(PRECISION), allocatable :: dwork(:,:)
@@ -1023,29 +1062,47 @@ contains
       else
         extra = max(left/10, 10)
       end if
-      keep%block_size = min(max(1, left + extra), max(1, n/2 - 1))
+      total = min(max(1, left + extra), max(1, n/2 - 1))
+      if ( options%max_left >= 0 ) &
+        total = min(total, options%max_left)
+      keep%block_size = total
+!      keep%block_size = min(max(1, left + extra), max(1, n/2 - 1))
       keep%lcon = 0
       if ( allocated(keep%ind) ) deallocate ( keep%ind )
       if ( allocated(keep%U  ) ) deallocate ( keep%U   )
       if ( allocated(keep%V  ) ) deallocate ( keep%V   )
       if ( allocated(keep%W  ) ) deallocate ( keep%W   )
-      allocate ( keep%ind(keep%block_size) )
-      allocate ( keep%U(max_nep, keep%block_size) )
-      allocate ( keep%V(2*keep%block_size, 2*keep%block_size, 3) )
+      allocate &
+        ( keep%ind(keep%block_size), keep%U(max_nep, keep%block_size), &
+          keep%V(2*keep%block_size, 2*keep%block_size, 3), stat = inform%stat )
+      if ( inform%stat /= 0 ) inform%flag = OUT_OF_MEMORY
+      if ( inform%stat /= 0 ) rci%job = SSMFE_ABORT
+      if ( inform%stat /= 0 ) call ssmfe_errmsg( options, inform )
+      if ( inform%stat /= 0 ) return
       if ( problem == 0 ) then
         kw = 5
       else
         if ( allocated(keep%BX) ) deallocate ( keep%BX )
-        allocate ( keep%BX(n, max_nep) )
+        allocate ( keep%BX(n, max_nep), stat = inform%stat )
+        if ( inform%stat /= 0 ) inform%flag = OUT_OF_MEMORY
+        if ( inform%stat /= 0 ) rci%job = SSMFE_ABORT
+        if ( inform%stat /= 0 ) call ssmfe_errmsg( options, inform )
+        if ( inform%stat /= 0 ) return
         kw = 7
       end if
-      allocate ( keep%W(n, keep%block_size, 0:kw) )
-      allocate ( dwork(n, keep%block_size) )
+      allocate &
+        ( keep%W(n, keep%block_size, 0:kw), dwork(n, keep%block_size), &
+          stat = inform%stat )
+      if ( inform%stat /= 0 ) inform%flag = OUT_OF_MEMORY
+      if ( inform%stat /= 0 ) rci%job = SSMFE_ABORT
+      if ( inform%stat /= 0 ) call ssmfe_errmsg( options, inform )
+      if ( inform%stat /= 0 ) return
       call random_number( dwork )
       keep%W(:,:,0) = 2*dwork - ONE
       deallocate ( dwork )
       if ( options%user_X > 0 ) &
-        call mxcopy( 'A', n, options%user_X, X, ldx, keep%W, n )
+        call mxcopy &
+          ( 'A', n, min(keep%block_size, options%user_X), X, ldx, keep%W, n )
     else
       if ( .not. allocated(keep%ind) ) then
         inform%flag = WRONG_RCI_JOB
@@ -1170,7 +1227,11 @@ contains
     case ( SSMFE_RESTART )
     
       if ( rci%k == 0 ) then
-        allocate ( dwork(n, keep%block_size) )
+        allocate ( dwork(n, keep%block_size), stat = inform%stat )
+        if ( inform%stat /= 0 ) inform%flag = OUT_OF_MEMORY
+        if ( inform%stat /= 0 ) rci%job = SSMFE_ABORT
+        if ( inform%stat /= 0 ) call ssmfe_errmsg( options, inform )
+        if ( inform%stat /= 0 ) return
         call random_number( dwork )
         if ( rci%jx > 1 ) &
           keep%W(:, 1 : rci%jx - 1, 0) = 2*dwork(:, 1 : rci%jx - 1) - ONE
@@ -1340,23 +1401,37 @@ contains
       if ( allocated(keep%U  ) ) deallocate ( keep%U   )
       if ( allocated(keep%V  ) ) deallocate ( keep%V   )
       if ( allocated(keep%W  ) ) deallocate ( keep%W   )
-      allocate ( keep%ind(keep%block_size) )
-      allocate ( keep%U(max_nep, keep%block_size) )
-      allocate ( keep%V(2*keep%block_size, 2*keep%block_size, 3) )
+      allocate &
+        ( keep%ind(keep%block_size), keep%U(max_nep, keep%block_size), &
+          keep%V(2*keep%block_size, 2*keep%block_size, 3), stat = inform%stat )
+      if ( inform%stat /= 0 ) inform%flag = OUT_OF_MEMORY
+      if ( inform%stat /= 0 ) rci%job = SSMFE_ABORT
+      if ( inform%stat /= 0 ) call ssmfe_errmsg( options, inform )
+      if ( inform%stat /= 0 ) return
       if ( problem == 0 ) then
         kw = 5
       else
         if ( allocated(keep%BX) ) deallocate ( keep%BX )
-        allocate ( keep%BX(n, max_nep) )
+        allocate ( keep%BX(n, max_nep), stat = inform%stat )
+        if ( inform%stat /= 0 ) inform%flag = OUT_OF_MEMORY
+        if ( inform%stat /= 0 ) rci%job = SSMFE_ABORT
+        if ( inform%stat /= 0 ) call ssmfe_errmsg( options, inform )
+        if ( inform%stat /= 0 ) return
         kw = 7
       end if
-      allocate ( keep%W(n, keep%block_size, 0:kw) )
-      allocate ( dwork(n, keep%block_size) )
+      allocate &
+        ( keep%W(n, keep%block_size, 0:kw), dwork(n, keep%block_size), &
+          stat = inform%stat )
+      if ( inform%stat /= 0 ) inform%flag = OUT_OF_MEMORY
+      if ( inform%stat /= 0 ) rci%job = SSMFE_ABORT
+      if ( inform%stat /= 0 ) call ssmfe_errmsg( options, inform )
+      if ( inform%stat /= 0 ) return
       call random_number( dwork )
       keep%W(:,:,0) = 2*dwork - ONE
       deallocate ( dwork )
       if ( options%user_X > 0 ) &
-        call mxcopy( 'A', n, options%user_X, X, ldx, keep%W, n )
+        call mxcopy &
+          ( 'A', n, min(keep%block_size, options%user_X), X, ldx, keep%W, n )
     else
       if ( .not. allocated(keep%ind) ) then
         inform%flag = WRONG_RCI_JOB
@@ -1525,7 +1600,11 @@ contains
       case ( SSMFE_RESTART )
     
         if ( rci%k == 0 ) then
-          allocate ( dwork(n, keep%block_size) )
+          allocate ( dwork(n, keep%block_size), stat = inform%stat )
+          if ( inform%stat /= 0 ) inform%flag = OUT_OF_MEMORY
+          if ( inform%stat /= 0 ) rci%job = SSMFE_ABORT
+          if ( inform%stat /= 0 ) call ssmfe_errmsg( options, inform )
+          if ( inform%stat /= 0 ) return
           call random_number( dwork )
           if ( rci%jx > 1 ) &
             keep%W(:, 1 : rci%jx - 1, 0) = 2*dwork(:, 1 : rci%jx - 1) - ONE
@@ -1569,7 +1648,11 @@ contains
         end if
 
         deallocate ( keep%W, keep%V )
-        allocate ( keep%W(n, nep, 3), keep%V(nep, nep, 3) )
+        allocate ( keep%W(n, nep, 3), keep%V(nep, nep, 3), stat = inform%stat )
+        if ( inform%stat /= 0 ) inform%flag = OUT_OF_MEMORY
+        if ( inform%stat /= 0 ) rci%job = SSMFE_ABORT
+        if ( inform%stat /= 0 ) call ssmfe_errmsg( options, inform )
+        if ( inform%stat /= 0 ) return
 
         if ( problem == 0 ) then
           call mxcopy( 'A', n, nep, X, ldX, keep%W, n )
