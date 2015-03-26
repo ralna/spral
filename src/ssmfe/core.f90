@@ -54,7 +54,6 @@ module spral_ssmfe_core
     integer :: err_est = SSMFE_KINEMATIC
     logical :: minAprod = .true.
     logical :: minBprod = .true.
-    logical :: external_eigsol = .false.
     double precision :: min_gap = 0.0
     double precision :: cf_max = 1.0
 
@@ -72,7 +71,6 @@ module spral_ssmfe_core
     integer :: i = 0
     integer :: j = 0
     integer :: k = 0
-!    integer :: op = 0
 
     double precision :: alpha, beta
     
@@ -93,7 +91,6 @@ module spral_ssmfe_core
     integer :: i = 0
     integer :: j = 0
     integer :: k = 0
-!    integer :: op = 0
 
     complex(PRECISION) :: alpha, beta
     
@@ -105,11 +102,10 @@ module spral_ssmfe_core
   type ssmfe_inform
 
     integer :: flag          = 0
-    integer :: data          = 0
     integer :: stat          = 0
     integer :: non_converged = 0
     integer :: iteration     = 0
-    integer :: cc = 0, dc = 0
+!    integer :: cc = 0, dc = 0
 
     integer :: left = 0, right = 0
     integer, dimension(:), allocatable :: converged
@@ -457,51 +453,35 @@ if_rci: &
         return
       end select
 
-      if ( allocated(keep%ind       ) ) deallocate ( keep%ind        )
-      if ( allocated(keep%mask      ) ) deallocate ( keep%mask       )
-      if ( allocated(keep%lambda    ) ) deallocate ( keep%lambda     )
-      if ( allocated(keep%q         ) ) deallocate ( keep%q          )
-      if ( allocated(keep%dX        ) ) deallocate ( keep%dX         )
-      if ( allocated(keep%dwork     ) ) deallocate ( keep%dwork      )
-      if ( allocated(keep%zwork     ) ) deallocate ( keep%zwork      )
+      if ( allocated(keep%ind           ) ) deallocate ( keep%ind            )
+      if ( allocated(keep%mask          ) ) deallocate ( keep%mask           )
+      if ( allocated(keep%lambda        ) ) deallocate ( keep%lambda         )
+      if ( allocated(keep%q             ) ) deallocate ( keep%q              )
+      if ( allocated(keep%dX            ) ) deallocate ( keep%dX             )
+      if ( allocated(keep%dlmd          ) ) deallocate ( keep%dlmd           )
+      if ( allocated(keep%dwork         ) ) deallocate ( keep%dwork          )
+      if ( allocated(info%err_lambda    ) ) deallocate ( info%err_lambda     )
+      if ( allocated(info%err_X         ) ) deallocate ( info%err_X          )
+      if ( allocated(info%converged     ) ) deallocate ( info%converged      )
       if ( allocated(info%residual_norms) ) deallocate ( info%residual_norms )
-      if ( allocated(info%err_lambda) ) deallocate ( info%err_lambda )
-      if ( allocated(info%err_X     ) ) deallocate ( info%err_X      )
-      if ( allocated(info%converged ) ) deallocate ( info%converged  )
-  
+
+      keep%lwork = lwork_sevp( mm )
       allocate &
         ( info%residual_norms(m), info%err_lambda(mm), info%err_X(mm), &
-          info%converged(m), stat = i )
-      allocate ( keep%lambda(3*m), stat = i )
-      allocate &
-        ( keep%ind(2*m), keep%mask(m), keep%q(mm), keep%dX(mm), stat = i )
-      keep%lwork = lwork_sevp( mm )
-      allocate( keep%dwork(keep%lwork), stat = i )
-      if ( i /= 0 ) then
-        info%flag = OUT_OF_MEMORY
-        info%data = i
-        rci%job = SSMFE_ABORT
-        return
-      end if
-
-      if ( allocated(keep%dlmd) ) deallocate ( keep%dlmd )
-      allocate( keep%dlmd(m, keep%RECORDS), stat = i )
-      if ( i /= 0 ) then
-        info%flag = OUT_OF_MEMORY
-        info%data = i
-        rci%job = SSMFE_ABORT
-        return
-      end if
+          info%converged(m), keep%lambda(3*m), &
+          keep%ind(2*m), keep%mask(m), keep%q(mm), keep%dX(mm), &
+          keep%dwork(keep%lwork), &
+          keep%dlmd(m, keep%RECORDS), stat = info%stat )
+      if ( info%stat /= 0 ) info%flag = OUT_OF_MEMORY
+      if ( info%stat /= 0 ) rci%job = SSMFE_ABORT
+      if ( info%stat /= 0 ) return
       
       info%flag       = 0
-      info%data      = 0      
       info%iteration  = 0
       info%residual_norms = NO_VALUE
       info%err_lambda = NO_VALUE
       info%err_X      = NO_VALUE
       info%converged  = 0
-      info%cc         = 0
-      info%dc         = 0
 
       keep%problem  = problem
       keep%err_est  = control%err_est
@@ -735,7 +715,7 @@ select_step: &
                 
         if ( i /= 0 ) then
           info%flag = B_NOT_POSITIVE_DEFINITE
-          info%data = i - keep%sizeX
+!          info%data = i - keep%sizeX
           rci%job = SSMFE_ABORT
           return
         end if
@@ -1818,7 +1798,7 @@ select_step: &
 
         if ( i /= 0 .and. i <= keep%sizeX ) then
           info%flag = B_NOT_POSITIVE_DEFINITE
-          info%data = i
+!          info%data = i
           rci%job = SSMFE_ABORT
           return
         end if
@@ -1846,8 +1826,6 @@ select_step: &
 
         if ( nsmall > 0 ) then
         
-          info%cc = info%cc + 1
-
           call copy &
             ( mm * keep%sizeY, rr_matrices(1, keep%sizeX + 1, 1), 1, &
               rr_matrices(1, keep%sizeX + 1, 3), 1 )
@@ -1930,7 +1908,7 @@ select_step: &
 
           if ( k < 1 ) then
             info%flag = NO_SEARCH_DIRECTIONS_LEFT
-            info%data = left - keep%left_cnv
+!            info%non_converged = left - keep%left_cnv
             keep%step = QUIT
             cycle do_select_step
           end if
@@ -2081,18 +2059,9 @@ select_step: &
 
         keep%step = ANALYSE_RR_RESULTS
         
-        if ( control%externaL_eigsol ) then
-          rci%job = SSMFE_SOLVE_EIGENPROBLEM
-          rci%nx = keep%sizeX
-          rci%ny = keep%sizeY
-          return
-        end if
-
         call solve_sevp &
           ( 'V', sizeXY, rr_matrices(1,1,2), mm, keep%lambda, &
             keep%lwork, keep%dwork, i )
-
-!        print *, 'evp ok', sizeXY, i
 
       case (ANALYSE_RR_RESULTS) select_step
 
@@ -2101,12 +2070,6 @@ select_step: &
         iY = jX + 1
         jY = jX + keep%sizeY
         sizeXY = jY
-
-        if ( control%externaL_eigsol ) then
-          do i = 1, sizeXY
-            keep%lambda(i) = rr_matrices(i,i,3)
-          end do
-        end if
 
         if ( left < 0 ) then
         
@@ -2687,7 +2650,6 @@ select_step: &
       implicit none
       
       double precision, intent(in) :: z
-!      double precision :: conjugate
       
       conjugate = z
 
@@ -2705,11 +2667,12 @@ select_step: &
     type(ssmfe_inform), intent(inout) :: info
 
     if ( allocated(info%residual_norms) ) deallocate( info%residual_norms )
-    if ( allocated(info%err_lambda) ) deallocate( info%err_lambda )
-    if ( allocated(info%err_X) ) deallocate( info%err_X )
-    if ( allocated(info%converged ) ) deallocate( info%converged  )
+    if ( allocated(info%err_lambda    ) ) deallocate( info%err_lambda     )
+    if ( allocated(info%err_X         ) ) deallocate( info%err_X          )
+    if ( allocated(info%converged     ) ) deallocate( info%converged      )
     info%flag = 0
-    info%data = 0
+    info%stat = 0
+    info%non_converged = 0
     info%iteration = 0
     info%left = 0
     info%right = 0
@@ -3008,7 +2971,7 @@ select_step: &
     end if
     
     if ( control%cf_max < ONE/2 .or. control%cf_max > ONE ) then
-      info%flag = WRONG_MIN_GAP
+      info%flag = WRONG_CF_MAX
       rci%job = SSMFE_ABORT
       return
     end if
@@ -3047,51 +3010,36 @@ if_rci: &
         return
       end select
 
-      if ( allocated(keep%ind       ) ) deallocate ( keep%ind        )
-      if ( allocated(keep%mask      ) ) deallocate ( keep%mask       )
-      if ( allocated(keep%lambda    ) ) deallocate ( keep%lambda     )
-      if ( allocated(keep%q         ) ) deallocate ( keep%q          )
-      if ( allocated(keep%dX        ) ) deallocate ( keep%dX         )
-      if ( allocated(keep%dwork     ) ) deallocate ( keep%dwork      )
-      if ( allocated(keep%zwork     ) ) deallocate ( keep%zwork      )
+      if ( allocated(keep%ind           ) ) deallocate ( keep%ind            )
+      if ( allocated(keep%mask          ) ) deallocate ( keep%mask           )
+      if ( allocated(keep%lambda        ) ) deallocate ( keep%lambda         )
+      if ( allocated(keep%q             ) ) deallocate ( keep%q              )
+      if ( allocated(keep%dX            ) ) deallocate ( keep%dX             )
+      if ( allocated(keep%dlmd          ) ) deallocate ( keep%dlmd           )
+      if ( allocated(keep%dwork         ) ) deallocate ( keep%dwork          )
+      if ( allocated(keep%zwork         ) ) deallocate ( keep%zwork          )
+      if ( allocated(info%err_lambda    ) ) deallocate ( info%err_lambda     )
+      if ( allocated(info%err_X         ) ) deallocate ( info%err_X          )
+      if ( allocated(info%converged     ) ) deallocate ( info%converged      )
       if ( allocated(info%residual_norms) ) deallocate ( info%residual_norms )
-      if ( allocated(info%err_lambda) ) deallocate ( info%err_lambda )
-      if ( allocated(info%err_X     ) ) deallocate ( info%err_X      )
-      if ( allocated(info%converged ) ) deallocate ( info%converged  )
   
+      keep%lwork = lwork_hevp( mm )
       allocate &
         ( info%residual_norms(m), info%err_lambda(mm), info%err_X(mm), &
-          info%converged(m), stat = i )
-      allocate ( keep%lambda(3*m), stat = i )
-      allocate &
-        ( keep%ind(2*m), keep%mask(m), keep%q(mm), keep%dX(mm), stat = i )
-      keep%lwork = lwork_hevp( mm )
-      allocate( keep%zwork(keep%lwork), keep%dwork(3*mm - 2), stat = i )
-      if ( i /= 0 ) then
-        info%flag = OUT_OF_MEMORY
-        info%data = i
-        rci%job = SSMFE_ABORT
-        return
-      end if
+          info%converged(m), keep%lambda(3*m), &
+          keep%ind(2*m), keep%mask(m), keep%q(mm), keep%dX(mm), &
+          keep%zwork(keep%lwork), keep%dwork(3*mm - 2), &
+          keep%dlmd(m, keep%RECORDS), stat = info%stat )
+      if ( info%stat /= 0 ) info%flag = OUT_OF_MEMORY
+      if ( info%stat /= 0 ) rci%job = SSMFE_ABORT
+      if ( info%stat /= 0 ) return
 
-      if ( allocated(keep%dlmd) ) deallocate ( keep%dlmd )
-      allocate( keep%dlmd(m, keep%RECORDS), stat = i )
-      if ( i /= 0 ) then
-        info%flag = OUT_OF_MEMORY
-        info%data = i
-        rci%job = SSMFE_ABORT
-        return
-      end if
-      
       info%flag       = 0
-      info%data       = 0      
       info%iteration  = 0
       info%residual_norms = NO_VALUE
       info%err_lambda = NO_VALUE
       info%err_X      = NO_VALUE
       info%converged  = 0
-      info%cc         = 0
-      info%dc         = 0
 
       keep%problem  = problem
       keep%err_est  = control%err_est
@@ -3324,7 +3272,7 @@ select_step: &
                 
         if ( i /= 0 ) then
           info%flag = B_NOT_POSITIVE_DEFINITE
-          info%data = i - keep%sizeX
+!          info%data = i - keep%sizeX
           rci%job = SSMFE_ABORT
           return
         end if
@@ -4401,7 +4349,7 @@ select_step: &
 
         if ( i /= 0 .and. i <= keep%sizeX ) then
           info%flag = B_NOT_POSITIVE_DEFINITE
-          info%data = i
+!          info%data = i
           rci%job = SSMFE_ABORT
           return
         end if
@@ -4429,8 +4377,6 @@ select_step: &
 
         if ( nsmall > 0 ) then
         
-          info%cc = info%cc + 1
-
           call copy &
             ( mm * keep%sizeY, rr_matrices(1, keep%sizeX + 1, 1), 1, &
               rr_matrices(1, keep%sizeX + 1, 3), 1 )
@@ -4511,7 +4457,7 @@ select_step: &
 
           if ( k < 1 ) then
             info%flag = NO_SEARCH_DIRECTIONS_LEFT
-            info%data = left - keep%left_cnv
+!            info%non_converged = left - keep%left_cnv
             keep%step = QUIT
             cycle do_select_step
           end if
@@ -4662,13 +4608,6 @@ select_step: &
 
         keep%step = ANALYSE_RR_RESULTS
         
-        if ( control%externaL_eigsol ) then
-          rci%job = SSMFE_SOLVE_EIGENPROBLEM
-          rci%nx = keep%sizeX
-          rci%ny = keep%sizeY
-          return
-        end if
-
         call solve_hevp &
           ( 'V', sizeXY, rr_matrices(1,1,2), mm, keep%lambda, &
             keep%lwork, keep%zwork, keep%dwork, i )
@@ -4680,12 +4619,6 @@ select_step: &
         iY = jX + 1
         jY = jX + keep%sizeY
         sizeXY = jY
-
-        if ( control%externaL_eigsol ) then
-          do i = 1, sizeXY
-            keep%lambda(i) = real(rr_matrices(i,i,3), PRECISION)
-          end do
-        end if
 
         if ( left < 0 ) then
         
@@ -5260,7 +5193,6 @@ select_step: &
       implicit none
       
       complex(PRECISION), intent(in) :: z
-!      complex(PRECISION) :: conjugate
       
       conjugate = conjg(z)
 
@@ -5277,11 +5209,12 @@ select_step: &
     type(ssmfe_inform), intent(inout) :: info
 
     if ( allocated(info%residual_norms) ) deallocate( info%residual_norms )
-    if ( allocated(info%err_lambda) ) deallocate( info%err_lambda )
-    if ( allocated(info%err_X) ) deallocate( info%err_X )
-    if ( allocated(info%converged ) ) deallocate( info%converged  )
+    if ( allocated(info%err_lambda    ) ) deallocate( info%err_lambda     )
+    if ( allocated(info%err_X         ) ) deallocate( info%err_X          )
+    if ( allocated(info%converged     ) ) deallocate( info%converged      )
     info%flag = 0
-    info%data = 0
+    info%stat = 0
+    info%non_converged = 0
     info%iteration = 0
     info%left = 0
     info%right = 0

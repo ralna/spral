@@ -45,8 +45,8 @@ program main
    errors = 0
    
    call test_ssmfe
-   
    call test_expert
+   call test_core
    
    write(*, "(/a)") "============================="
    write(*, "(a,i4)") "Total number of errors = ", errors
@@ -76,6 +76,285 @@ subroutine test_ssmfe
    call test_ssmfe_misc_z
 
 end subroutine test_ssmfe
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+subroutine test_core
+
+   write(*,"(/a)") "==================="
+   write(*,"(a)")  "Testing ssmfe_core:"
+   write(*,"(a)")  "==================="
+
+  call test_core_errors_d
+  call test_core_errors_z
+!  call test_core_options_d
+!  call test_core_options_z
+
+end subroutine test_core
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+subroutine test_core_errors_d
+
+  use spral_ssmfe_core
+
+  integer :: n
+  integer :: m
+  integer :: nep
+  integer :: left, right
+  
+  integer, allocatable :: ind(:)
+  
+  real(wp), allocatable :: lambda(:)
+  real(wp), allocatable :: a(:,:)
+  real(wp), allocatable :: b(:,:)
+  real(wp), allocatable :: t(:,:)
+  real(wp), allocatable :: x(:,:)
+  real(wp), allocatable :: rr(:,:,:)
+
+  type(ssmfe_rcid   ) :: rci
+  type(ssmfe_options) :: options
+  type(ssmfe_keep   ) :: keep
+  type(ssmfe_inform ) :: inform
+  
+   write(*,"(/a)") "======================"
+   write(*,"(a)")  "Testing errors (real):"
+   write(*,"(a)")  "======================"
+
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  n = 6
+  m = 2
+  nep = 1
+  left = 1
+  right = 1
+  allocate ( a(n, n), b(n, n), t(n, n), x(n, n), lambda(n) )
+  allocate ( rr(m + m, m + m, 3), ind(m) )
+  
+  write(*,"(a)",advance="no") " * Testing extra_left < 0...................."
+  rci%job = 0
+  options%extra_left = -1
+  call ssmfe &
+    ( rci, 0, left, right, m, lambda, rr, ind, keep, options, inform )
+  call print_result( inform%flag, WRONG_EXTRAS )
+  call ssmfe_terminate( keep, inform )
+  options%extra_left = 0
+
+  write(*,"(a)",advance="no") " * Testing min_gap < 0......................."
+  rci%job = 0
+  options%min_gap = -1
+  call ssmfe &
+    ( rci, 0, left, right, m, lambda, rr, ind, keep, options, inform )
+  call print_result( inform%flag, WRONG_MIN_GAP )
+  call ssmfe_terminate( keep, inform )
+  options%min_gap = 0
+
+  write(*,"(a)",advance="no") " * Testing min_gap > 1......................."
+  rci%job = 0
+  options%min_gap = 2
+  call ssmfe &
+    ( rci, 0, left, right, m, lambda, rr, ind, keep, options, inform )
+  call print_result( inform%flag, WRONG_MIN_GAP )
+  call ssmfe_terminate( keep, inform )
+  options%min_gap = 0
+
+  write(*,"(a)",advance="no") " * Testing cf_max < 0.5......................"
+  rci%job = 0
+  options%cf_max = 0.49999
+  call ssmfe &
+    ( rci, 0, left, right, m, lambda, rr, ind, keep, options, inform )
+  call print_result( inform%flag, WRONG_CF_MAX )
+  call ssmfe_terminate( keep, inform )
+  options%cf_max = ONE
+
+  write(*,"(a)",advance="no") " * Testing cf_max > 1........................"
+  rci%job = 0
+  options%cf_max = 1.00001
+  call ssmfe &
+    ( rci, 0, left, right, m, lambda, rr, ind, keep, options, inform )
+  call print_result( inform%flag, WRONG_CF_MAX )
+  call ssmfe_terminate( keep, inform )
+  options%cf_max = ONE
+
+  write(*,"(a)",advance="no") " * Testing wrong block size.................."
+  rci%job = 0
+  call ssmfe &
+    ( rci, 0, left, 0, 0, lambda, rr, ind, keep, options, inform )
+  call print_result( inform%flag, WRONG_BLOCK_SIZE, .true. )
+  call ssmfe_terminate( keep, inform )
+  rci%job = 0
+  call ssmfe &
+    ( rci, 0, left, right, 1, lambda, rr, ind, keep, options, inform )
+  call print_result( inform%flag, WRONG_BLOCK_SIZE, .true. )
+  call ssmfe_terminate( keep, inform )
+  rci%job = 0
+  call ssmfe &
+    ( rci, 0, -1, right, 1, lambda, rr, ind, keep, options, inform )
+  call print_result( inform%flag, WRONG_BLOCK_SIZE )
+  call ssmfe_terminate( keep, inform )
+
+  write(*,"(a)",advance="no") " * Testing wrong error estimation flag......."
+  rci%job = 0
+  options%err_est = 0
+  call ssmfe &
+    ( rci, 0, left, right, m, lambda, rr, ind, keep, options, inform )
+  call print_result( inform%flag, WRONG_ERR_EST )
+  call ssmfe_terminate( keep, inform )
+  options%err_est = 2
+
+  write(*,"(a)",advance="no") " * Testing wrong minAprod...................."
+  rci%job = 0
+  options%minAprod = .false.
+  call ssmfe &
+    ( rci, -1, left, right, m, lambda, rr, ind, keep, options, inform )
+  call print_result( inform%flag, WRONG_MINPROD )
+  call ssmfe_terminate( keep, inform )
+  options%minAprod = .true.
+
+  write(*,"(a)",advance="no") " * Testing wrong minBprod...................."
+  rci%job = 0
+  options%minBprod = .false.
+  call ssmfe &
+    ( rci, -1, left, right, m, lambda, rr, ind, keep, options, inform )
+  call print_result( inform%flag, WRONG_MINPROD )
+  call ssmfe_terminate( keep, inform )
+  options%minBprod = .true.
+
+  deallocate ( a, b, t, x, lambda, rr, ind )
+
+end subroutine test_core_errors_d
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+subroutine test_core_errors_z
+
+  use spral_ssmfe_core
+
+  integer :: n
+  integer :: m
+  integer :: nep
+  integer :: left, right
+  
+  integer, allocatable :: ind(:)
+  
+  real(wp), allocatable :: lambda(:)
+  complex(wp), allocatable :: a(:,:)
+  complex(wp), allocatable :: b(:,:)
+  complex(wp), allocatable :: t(:,:)
+  complex(wp), allocatable :: x(:,:)
+  complex(wp), allocatable :: rr(:,:,:)
+
+  type(ssmfe_rciz   ) :: rci
+  type(ssmfe_options) :: options
+  type(ssmfe_keep   ) :: keep
+  type(ssmfe_inform ) :: inform
+  
+   write(*,"(/a)") "========================="
+   write(*,"(a)")  "Testing errors (complex):"
+   write(*,"(a)")  "========================="
+
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  n = 6
+  m = 2
+  nep = 1
+  left = 1
+  right = 1
+  allocate ( a(n, n), b(n, n), t(n, n), x(n, n), lambda(n) )
+  allocate ( rr(m + m, m + m, 3), ind(m) )
+  
+  write(*,"(a)",advance="no") " * Testing extra_left < 0...................."
+  rci%job = 0
+  options%extra_left = -1
+  call ssmfe &
+    ( rci, 0, left, right, m, lambda, rr, ind, keep, options, inform )
+  call print_result( inform%flag, WRONG_EXTRAS )
+  call ssmfe_terminate( keep, inform )
+  options%extra_left = 0
+
+  write(*,"(a)",advance="no") " * Testing min_gap < 0......................."
+  rci%job = 0
+  options%min_gap = -1
+  call ssmfe &
+    ( rci, 0, left, right, m, lambda, rr, ind, keep, options, inform )
+  call print_result( inform%flag, WRONG_MIN_GAP )
+  call ssmfe_terminate( keep, inform )
+  options%min_gap = 0
+
+  write(*,"(a)",advance="no") " * Testing min_gap > 1......................."
+  rci%job = 0
+  options%min_gap = 2
+  call ssmfe &
+    ( rci, 0, left, right, m, lambda, rr, ind, keep, options, inform )
+  call print_result( inform%flag, WRONG_MIN_GAP )
+  call ssmfe_terminate( keep, inform )
+  options%min_gap = 0
+
+  write(*,"(a)",advance="no") " * Testing cf_max < 0.5......................"
+  rci%job = 0
+  options%cf_max = 0.49999
+  call ssmfe &
+    ( rci, 0, left, right, m, lambda, rr, ind, keep, options, inform )
+  call print_result( inform%flag, WRONG_CF_MAX )
+  call ssmfe_terminate( keep, inform )
+  options%cf_max = ONE
+
+  write(*,"(a)",advance="no") " * Testing cf_max > 1........................"
+  rci%job = 0
+  options%cf_max = 1.00001
+  call ssmfe &
+    ( rci, 0, left, right, m, lambda, rr, ind, keep, options, inform )
+  call print_result( inform%flag, WRONG_CF_MAX )
+  call ssmfe_terminate( keep, inform )
+  options%cf_max = ONE
+
+  write(*,"(a)",advance="no") " * Testing wrong block size.................."
+  rci%job = 0
+  call ssmfe &
+    ( rci, 0, left, 0, 0, lambda, rr, ind, keep, options, inform )
+  call print_result( inform%flag, WRONG_BLOCK_SIZE, .true. )
+  call ssmfe_terminate( keep, inform )
+  rci%job = 0
+  call ssmfe &
+    ( rci, 0, left, right, 1, lambda, rr, ind, keep, options, inform )
+  call print_result( inform%flag, WRONG_BLOCK_SIZE, .true. )
+  call ssmfe_terminate( keep, inform )
+  rci%job = 0
+  call ssmfe &
+    ( rci, 0, -1, right, 1, lambda, rr, ind, keep, options, inform )
+  call print_result( inform%flag, WRONG_BLOCK_SIZE )
+  call ssmfe_terminate( keep, inform )
+
+  write(*,"(a)",advance="no") " * Testing wrong error estimation flag......."
+  rci%job = 0
+  options%err_est = 0
+  call ssmfe &
+    ( rci, 0, left, right, m, lambda, rr, ind, keep, options, inform )
+  call print_result( inform%flag, WRONG_ERR_EST )
+  call ssmfe_terminate( keep, inform )
+  options%err_est = 2
+
+  write(*,"(a)",advance="no") " * Testing wrong minAprod...................."
+  rci%job = 0
+  options%minAprod = .false.
+  call ssmfe &
+    ( rci, -1, left, right, m, lambda, rr, ind, keep, options, inform )
+  call print_result( inform%flag, WRONG_MINPROD )
+  call ssmfe_terminate( keep, inform )
+  options%minAprod = .true.
+
+  write(*,"(a)",advance="no") " * Testing wrong minBprod...................."
+  rci%job = 0
+  options%minBprod = .false.
+  call ssmfe &
+    ( rci, -1, left, right, m, lambda, rr, ind, keep, options, inform )
+  call print_result( inform%flag, WRONG_MINPROD )
+  call ssmfe_terminate( keep, inform )
+  options%minBprod = .true.
+
+  deallocate ( a, b, t, x, lambda, rr, ind )
+
+end subroutine test_core_errors_z
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -2877,6 +3156,237 @@ subroutine run_buckling_z &
   if ( restarted .and. inform%flag >= 0 ) inform%flag = 4
 
 end subroutine run_buckling_z
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+subroutine run_ssmfe_d &
+    ( options, problem, n, a, b, t, left, right, tol, maxit, m, &
+      mep, lambda, x, inform )
+
+  use spral_ssmfe_core
+
+  implicit none
+  
+  type(ssmfe_options), intent(in) :: options
+  integer, intent(in) :: problem
+  integer, intent(in) :: n
+  real(wp), intent(in) :: a(n, n)
+  real(wp), intent(in) :: b(n, n)
+  real(wp), intent(in) :: t(n, n)
+  integer, intent(in) :: left
+  integer, intent(in) :: right
+  real(wp), intent(in) :: tol
+  integer, intent(in) :: maxit
+  integer, intent(in) :: m
+  integer, intent(in) :: mep
+  real(wp), intent(out) :: lambda(mep)
+  real(wp), intent(out) :: x(n, mep)
+  type(ssmfe_inform), intent(out) :: inform
+  
+  integer, allocatable :: ind(:)
+  
+  integer :: lcon
+  integer :: rcon
+  
+  integer :: i, j, k
+  
+  real(wp) :: s
+  real(wp) :: dnrm2, ddot
+
+  real(wp), allocatable :: lmd(:)
+  real(wp), allocatable :: w(:, :, :)
+  real(wp), allocatable :: rr(:, :, :)
+  real(wp), allocatable :: u(:, :)
+  real(wp), allocatable :: bx(:, :)
+  
+  type(ssmfe_rcid) :: rci     ! reverse communication data
+  type(ssmfe_keep) :: keep    ! private data
+
+  allocate ( ind(m), lmd(m), w(n, m, 0:7), rr(m + m, m + m, 3), u(mep, m) )
+  if ( problem /= 0 ) allocate ( bx(n, mep) )
+  
+  call dcopy( n*m, x, 1, w, 1 )
+
+  lcon = 0
+  rcon = 0
+  rci%job = 0
+  do ! reverse communication loop
+    call ssmfe &
+      ( rci, problem, left, right, m, lmd, rr, ind, keep, options, inform )
+    select case ( rci%job )
+    case ( 1 )
+      call dgemm &
+        ( 'N', 'N', n, rci%nx, n, ONE, a, n, w(1, rci%jx, rci%kx), n, &
+          ZERO, w(1, rci%jy, rci%ky), n )
+    case ( 2 )
+      call dgemm &
+        ( 'N', 'N', n, rci%nx, n, ONE, t, n, w(1, rci%jx, rci%kx), n, &
+          ZERO, w(1, rci%jy, rci%ky), n )
+    case ( 3 )
+      call dgemm &
+        ( 'N', 'N', n, rci%nx, n, ONE, b, n, w(1, rci%jx, rci%kx), n, &
+          ZERO, w(1, rci%jy, rci%ky), n )
+    case ( 4 )
+      do j = 1, m
+        if ( inform%converged(j) /= 0 ) then
+          cycle
+        else if ( inform%err_x(j) > 0 .and. inform%err_x(j) < tol ) then
+          inform%converged(j) = 1
+        end if
+      end do
+    case ( 5 )
+      do i = 1, rci%nx
+        k = (i - 1)*rci%i
+        if ( rci%i > 0 ) then
+          j = lcon + i
+        else
+          j = mep - rcon - i + 1
+        end if
+        lambda(j) = lmd(rci%jx + k)
+        call dcopy( n, w(1, rci%jx + k, 0), 1, x(1, j), 1 )
+        if ( problem /= 0 ) &
+          call copy( n, w(1, rci%jy + k, rci%ky), 1, bx(1, j), 1 )
+      end do
+      if ( rci%i > 0 ) then
+        lcon = lcon + rci%nx
+      else
+        rcon = rcon + rci%nx
+      end if
+      if ( lcon >= left .and. rcon >= right .or. inform%iteration > maxit ) exit
+    case ( 11 )
+      if ( rci%i == 0 ) then
+        call dcopy &
+          ( n * rci%nx, w(1, rci%jx, rci%kx), 1, w(1, rci%jy, rci%ky), 1 )
+      else
+        do i = 1, n
+          do j = 1, rci%nx
+            u(i, j) = w(i, ind(j), rci%kx)
+          end do
+          do j = 1, rci%nx
+            w(i, j, rci%kx) = u(i, j)
+          end do
+          if ( rci%ky /= rci%kx ) then
+            do j = 1, rci%nx
+              u(i, j) = w(i, ind(j), rci%ky)
+            end do
+            do j = 1, rci%nx
+              w(i, j, rci%ky) = u(i, j)
+            end do
+          end if
+        end do
+      end if
+    case ( 12 )
+      do i = 0, rci%nx - 1
+        rr(rci%i + i, rci%j + i, rci%k) = &
+          ddot(n, w(1, rci%jx + i, rci%kx), 1, w(1, rci%jy + i, rci%ky), 1)
+      end do
+    case ( 13 )
+      do i = 0, rci%nx - 1
+        if ( rci%kx == rci%ky ) then
+          s = dnrm2(n, w(1, rci%jx + i, rci%kx), 1)
+          if ( s > 0 ) &
+            call dscal( n, 1/s, w(1, rci%jx + i, rci%kx), 1 )
+        else
+          s = sqrt(abs(ddot &
+            (n, w(1, rci%jx + i, rci%kx), 1, w(1, rci%jy + i, rci%ky), 1)))
+          if ( s > 0 ) then
+            call dscal( n, 1/s, w(1, rci%jx + i, rci%kx), 1 )
+            call dscal( n, 1/s, w(1, rci%jy + i, rci%ky), 1 )
+          end if
+        end if
+      end do
+    case ( 14 )
+      do i = 0, rci%nx - 1
+        s = -rr(rci%i + i, rci%j + i, rci%k)
+        call daxpy&
+          ( n, s, w(1, rci%jx + i, rci%kx), 1, w(1, rci%jy + i, rci%ky), 1 )
+      end do    
+    case ( 15 )
+      if ( rci%nx > 0 .and. rci%ny > 0 ) &
+        call dgemm &
+          ( 'T', 'N', rci%nx, rci%ny, n, &
+            rci%alpha, w(1, rci%jx, rci%kx), n, w(1, rci%jy, rci%ky), n, &
+            rci%beta, rr(rci%i, rci%j, rci%k), 2*m )
+    case ( 16, 17 )    
+      if ( rci%ny < 1 ) cycle
+      if ( rci%job == 17 ) then
+        call dgemm &
+          ( 'N', 'N', n, rci%ny, rci%nx, &
+            1.0D0, w(1, rci%jx, rci%kx), n, rr(rci%i, rci%j, rci%k), 2*m, &
+            0.0D0, w(1, rci%jy, rci%ky), n )
+        call dcopy &
+          ( n * rci%ny, w(1, rci%jy, rci%ky), 1, w(1, rci%jx, rci%kx), 1 )
+      else
+        call dgemm &
+          ( 'N', 'N', n, rci%ny, rci%nx, &
+            rci%alpha, w(1, rci%jx, rci%kx), n, rr(rci%i, rci%j, rci%k), 2*m, &
+            rci%beta, w(1, rci%jy, rci%ky), n )
+      end if
+    case ( 21 )
+      if ( lcon > 0 ) then
+        call dgemm &
+          ( 'T', 'N', lcon, rci%nx, n, &
+            ONE, x, n, w(1, rci%jy, rci%ky), n, ZERO, u, mep )
+        call dgemm &
+          ( 'N', 'N', n, rci%nx, lcon, -ONE, x, n, u, mep, &
+            w(1, rci%jx, rci%kx), n )
+        if ( problem /= 0 ) &
+          call dgemm &
+            ( 'N', 'N', n, rci%nx, lcon, &
+              -ONE, bx, n, u, mep, ONE, w(1, rci%jy, rci%ky), n )
+      end if
+      if ( rcon > 0 ) then
+        j = mep - rcon + 1
+        call dgemm &
+          ( 'T', 'N', rcon, rci%nx, n, &
+            ONE, x(1, j), n, w(1, rci%jy, rci%ky), n, ZERO, u(j, 1), mep )
+        call dgemm &
+          ( 'N', 'N', n, rci%nx, rcon, &
+            -ONE, x(1, j), n, u(j, 1), mep, ONE, rci%x, n )
+        if ( problem /= 0 ) &
+          call dgemm &
+            ( 'N', 'N', n, rci%nx, rcon, &
+              -ONE, bx(1, j), n, u(j, 1), mep, ONE, w(1, rci%jy, rci%ky), n )
+      end if
+    case ( 22 )
+      if ( lcon > 0 ) then
+        call dgemm &
+          ( 'T', 'N', lcon, rci%nx, n, &
+            ONE, x, n, w(1, rci%jx, rci%kx), n, ZERO, u, mep )
+        if ( problem /= 0 ) then
+          call dgemm &
+            ( 'N', 'N', n, rci%nx, lcon, &
+              -ONE, bx, n, u, mep, ONE, w(1, rci%jx, rci%kx), n )
+        else
+          call dgemm &
+            ( 'N', 'N', n, rci%nx, lcon, &
+              -ONE, x, n, u, mep, ONE, w(1, rci%jx, rci%kx), n )
+        end if
+      end if
+      if ( rcon > 0 ) then
+        j = mep - rcon + 1
+        call dgemm &
+          ( 'T', 'N', rcon, rci%nx, n, &
+            ONE, x(1, j), n, w(1, rci%jx, rci%kx), n, ZERO, u, mep )
+        if ( problem /= 0 ) then
+          call dgemm &
+            ( 'N', 'N', n, rci%nx, rcon, &
+              -ONE, bx(1, j), n, u, mep, ONE, w(1, rci%jx, rci%kx), n )
+        else
+          call dgemm &
+            ( 'N', 'N', n, rci%nx, rcon, &
+              -ONE, x(1, j), n, u, mep, ONE, w(1, rci%jx, rci%kx), n )
+        end if
+      end if
+    case ( :-1 )
+      exit
+    end select
+  end do
+
+  deallocate ( ind, lmd, w, rr, u )
+  if ( problem /= 0 ) deallocate ( bx )
+
+end subroutine run_ssmfe_d
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
