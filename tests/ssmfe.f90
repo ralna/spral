@@ -383,9 +383,7 @@ subroutine test_core_misc_d
   real(wp), allocatable :: x(:,:)
   real(wp), allocatable :: rr(:,:,:)
 
-  type(ssmfe_rcid   ) :: rci
   type(ssmfe_options) :: options
-  type(ssmfe_keep   ) :: keep
   type(ssmfe_inform ) :: inform
   
    write(*,"(/a)") "==========================="
@@ -394,7 +392,7 @@ subroutine test_core_misc_d
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  n = 100
+  n = 50
   m = 2
   nep = 1
   left = 1
@@ -416,7 +414,6 @@ subroutine test_core_misc_d
   forall ( i = 1 : n ) t(i, i) = ONE
 
   write(*,"(a)",advance="no") " * Testing left = 1, right = 0, m = 1........"
-  rci%job = 0
   do i = 1, n
     do j = 1, n
       x(i, j) = sin(i*j*ONE)
@@ -426,23 +423,21 @@ subroutine test_core_misc_d
     ( options, 0, n, a, b, t, 1, 0, tol, maxit, verb, 1, &
       n, lambda, x, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_terminate( inform )
 
   write(*,"(a)",advance="no") " * Testing left = 2, right = 0, m = 1........"
-  rci%job = 0
   do i = 1, n
     do j = 1, n
       x(i, j) = sin(i*j*ONE)
     end do
   end do
   call run_ssmfe_d &
-    ( options, 0, n, a, b, t, 2, 0, tol, maxit, 1, 1, &
+    ( options, 0, n, a, b, t, 2, 0, tol, maxit, verb, 1, &
       n, lambda, x, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_terminate( inform )
 
   write(*,"(a)",advance="no") " * Testing left = 0, right = 1, m = 1........"
-  rci%job = 0
   do i = 1, n
     do j = 1, n
       x(i, j) = sin(i*j*ONE)
@@ -452,10 +447,9 @@ subroutine test_core_misc_d
     ( options, 0, n, a, b, t, 0, 1, tol, maxit, verb, 1, &
       n, lambda, x, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_terminate( inform )
 
   write(*,"(a)",advance="no") " * Testing left = 1, right = 1, m = 2........"
-  rci%job = 0
   do i = 1, n
     do j = 1, n
       x(i, j) = sin(i*j*ONE)
@@ -465,10 +459,9 @@ subroutine test_core_misc_d
     ( options, 0, n, a, b, t, 1, 1, tol, maxit, verb, 2, &
       n, lambda, x, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_terminate( inform )
 
   write(*,"(a)",advance="no") " * Testing left = 2, right = 1, m = 2........"
-  rci%job = 0
   do i = 1, n
     do j = 1, n
       x(i, j) = sin(i*j*ONE)
@@ -478,23 +471,25 @@ subroutine test_core_misc_d
     ( options, 0, n, a, b, t, 2, 1, tol, maxit, verb, 2, &
       n, lambda, x, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_terminate( inform )
 
   write(*,"(a)",advance="no") " * Testing left = 10, right = 10, m = 10....."
-  rci%job = 0
   do i = 1, n
     do j = 1, n
       x(i, j) = sin(i*j*ONE)
     end do
   end do
+  do i = 2, n
+    x(i, 1) = ZERO
+    x(1, i ) = ZERO
+  end do
   call run_ssmfe_d &
     ( options, 0, n, a, b, t, 10, 10, tol, maxit, verb, 10, &
       n, lambda, x, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_terminate( inform )
 
   write(*,"(a)",advance="no") " * Testing largest = 1, m = 2................"
-  rci%job = 0
   do i = 1, n
     do j = 1, n
       x(i, j) = sin(i*j*ONE)
@@ -504,10 +499,9 @@ subroutine test_core_misc_d
     ( options, 0, n, a, b, t, 1, tol, maxit, verb, 2, &
       n, lambda, x, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_terminate( inform )
 
   write(*,"(a)",advance="no") " * Testing largest = 10, m = 5..............."
-  rci%job = 0
   do i = 1, n
     do j = 1, n
       x(i, j) = sin(i*j*ONE)
@@ -517,7 +511,7 @@ subroutine test_core_misc_d
     ( options, 0, n, a, b, t, 10, tol, maxit, verb, 5, &
       n, lambda, x, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_terminate( inform )
 
   deallocate ( a, b, t, x, lambda, rr, ind )
 
@@ -601,7 +595,7 @@ subroutine test_core_misc_z
     end do
   end do
   call run_ssmfe_z &
-    ( options, 0, n, a, b, t, 2, 0, tol, maxit, 1, 1, &
+    ( options, 0, n, a, b, t, 2, 0, tol, maxit, verb, 1, &
       n, lambda, x, inform )
   call print_result( inform%flag, 0 )
   call ssmfe_terminate( keep, inform )
@@ -651,6 +645,10 @@ subroutine test_core_misc_z
     do j = 1, n
       x(i, j) = sin(i*j*ONE)
     end do
+  end do
+  do i = 2, n
+    x(i, 1) = ZERO
+    x(1, i ) = ZERO
   end do
   call run_ssmfe_z &
     ( options, 0, n, a, b, t, 10, 10, tol, maxit, verb, 10, &
@@ -725,8 +723,8 @@ subroutine test_core_options_d
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   n = 100
-  m = 2
-  nep = 1
+  m = 10
+  nep = 3
   left = 1
   right = 1
   maxit = 300
@@ -737,7 +735,7 @@ subroutine test_core_options_d
   allocate ( rr(m + m, m + m, 3), ind(m) )
   
   a = ZERO
-  forall ( i = 1 : n ) a(i, i) = i*10
+  forall ( i = 1 : n ) a(i, i) = i*10 - 5*n
 
   b = ZERO
   forall ( i = 1 : n ) b(i, i) = ONE
@@ -746,6 +744,7 @@ subroutine test_core_options_d
   forall ( i = 1 : n ) t(i, i) = ONE
 
   write(*,"(a)",advance="no") " * Testing residual error estimation........."
+!  write(dl_unit,"(a)") " * Testing residual error estimation........."
   do i = 1, n
     do j = 1, n
       x(i, j) = sin(i*j*ONE)
@@ -753,8 +752,8 @@ subroutine test_core_options_d
   end do
   options%err_est = 1
   rci%job = 0
-  call run_ssmfe_d &
-    ( options, 0, n, a, b, t, 1, 0, tol, maxit, verb, m, &
+  call run_ssmfe_largest_d &
+    ( options, 0, n, a, b, t, nep, tol, maxit, verb, m, &
       n, lambda, x, inform )
   call print_result( inform%flag, 0 )
   call ssmfe_terminate( keep, inform )
@@ -801,8 +800,8 @@ subroutine test_core_options_z
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   n = 100
-  m = 2
-  nep = 1
+  m = 10
+  nep = 3
   left = 1
   right = 1
   maxit = 300
@@ -813,7 +812,7 @@ subroutine test_core_options_z
   allocate ( rr(m + m, m + m, 3), ind(m) )
   
   a = ZERO
-  forall ( i = 1 : n ) a(i, i) = i*10
+  forall ( i = 1 : n ) a(i, i) = i*10 - 5*n
 
   b = ZERO
   forall ( i = 1 : n ) b(i, i) = ONE
@@ -822,6 +821,7 @@ subroutine test_core_options_z
   forall ( i = 1 : n ) t(i, i) = ONE
 
   write(*,"(a)",advance="no") " * Testing residual error estimation........."
+!  write(dl_unit,"(a)") " * Testing residual error estimation........."
   do i = 1, n
     do j = 1, n
       x(i, j) = sin(i*j*ONE)
@@ -829,8 +829,8 @@ subroutine test_core_options_z
   end do
   options%err_est = 1
   rci%job = 0
-  call run_ssmfe_z &
-    ( options, 0, n, a, b, t, 1, 0, tol, maxit, verb, m, &
+  call run_ssmfe_largest_z &
+    ( options, 0, n, a, b, t, nep, tol, maxit, verb, m, &
       n, lambda, x, inform )
   call print_result( inform%flag, 0 )
   call ssmfe_terminate( keep, inform )
@@ -1243,7 +1243,7 @@ subroutine test_expert_options_d
 
   write(*,"(a)",advance="no") " * Testing minAprod = .false. ..............."
   options%minAprod = .false.
-  call run_std_d( n, a, t, nep, mep, lambda, x, options, inform )
+  call run_gen_d( n, a, b, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, 0 )
   call ssmfe_terminate( inform )
   options%minAprod = .true.
@@ -1253,6 +1253,15 @@ subroutine test_expert_options_d
   call run_gen_d( n, a, b, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, 0 )
   call ssmfe_terminate( inform )
+  options%minBprod = .true.
+
+  write(*,"(a)",advance="no") " * Testing minAprod and minBprod = .false. .."
+  options%minAprod = .false.
+  options%minBprod = .false.
+  call run_gen_d( n, a, b, t, nep, mep, lambda, x, options, inform )
+  call print_result( inform%flag, 0 )
+  call ssmfe_terminate( inform )
+  options%minAprod = .true.
   options%minBprod = .true.
 
   write(*,"(a)",advance="no") " * Testing zero extra_left..................."
@@ -1389,7 +1398,7 @@ subroutine test_expert_options_z
 
   write(*,"(a)",advance="no") " * Testing minAprod = .false. ..............."
   options%minAprod = .false.
-  call run_std_z( n, a, t, nep, mep, lambda, x, options, inform )
+  call run_gen_z( n, a, b, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, 0 )
   call ssmfe_terminate( inform )
   options%minAprod = .true.
@@ -1399,6 +1408,15 @@ subroutine test_expert_options_z
   call run_gen_z( n, a, b, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, 0 )
   call ssmfe_terminate( inform )
+  options%minBprod = .true.
+
+  write(*,"(a)",advance="no") " * Testing minAprod and minBprod = .false. .."
+  options%minAprod = .false.
+  options%minBprod = .false.
+  call run_gen_z( n, a, b, t, nep, mep, lambda, x, options, inform )
+  call print_result( inform%flag, 0 )
+  call ssmfe_terminate( inform )
+  options%minAprod = .true.
   options%minBprod = .true.
 
   write ( *, '(a)' ) ' * Testing shift-invert...'
@@ -1889,6 +1907,17 @@ subroutine test_ssmfe_warnings_d
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result(inform%flag, OUT_OF_STORAGE)
   call ssmfe_terminate( inform )
+  write(*,"(a)",advance="no") " * Testing warning flag 3...................."
+  mep = 4
+  options%left_gap = -2
+  options%right_gap = -2
+  a = -a
+  sigma = -sigma
+  call run_std_si_d &
+    ( options, n, a, sigma, left, right, &
+      mep, lambda, x, t, ipiv, w, lwork, inform )
+  call print_result(inform%flag, OUT_OF_STORAGE)
+  call ssmfe_terminate( inform )
   mep = n
   options%left_gap = 0
   options%right_gap = 0
@@ -2000,6 +2029,17 @@ subroutine test_ssmfe_warnings_z
   mep = 4
   options%left_gap = -2
   options%right_gap = -2
+  call run_std_si_z &
+    ( options, n, a, sigma, left, right, &
+      mep, lambda, x, t, ipiv, w, lwork, inform )
+  call print_result(inform%flag, OUT_OF_STORAGE)
+  call ssmfe_terminate( inform )
+  write(*,"(a)",advance="no") " * Testing warning flag 3...................."
+  mep = 4
+  options%left_gap = -2
+  options%right_gap = -2
+  a = -a
+  sigma = -sigma
   call run_std_si_z &
     ( options, n, a, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
@@ -3729,7 +3769,7 @@ subroutine run_ssmfe_d &
       do j = 1, m
         if ( inform%converged(j) /= 0 ) then
           cycle
-        else if ( inform%err_x(j) > 0 .and. inform%err_x(j) < tol ) then
+        else if ( inform%err_x(j) >= 0 .and. inform%err_x(j) <= tol ) then
           inform%converged(j) = 1
         end if
       end do
@@ -4007,7 +4047,7 @@ subroutine run_ssmfe_z &
       do j = 1, m
         if ( inform%converged(j) /= 0 ) then
           cycle
-        else if ( inform%err_x(j) > 0 .and. inform%err_x(j) < tol ) then
+        else if ( inform%err_x(j) >= 0 .and. inform%err_x(j) <= tol ) then
           inform%converged(j) = 1
         end if
       end do
@@ -4287,7 +4327,7 @@ subroutine run_ssmfe_largest_d &
       do j = 1, m
         if ( inform%converged(j) /= 0 ) then
           cycle
-        else if ( inform%err_x(j) > 0 .and. inform%err_x(j) < tol ) then
+        else if ( inform%err_x(j) >= 0 .and. inform%err_x(j) <= tol ) then
           inform%converged(j) = 1
         end if
       end do
@@ -4564,7 +4604,7 @@ subroutine run_ssmfe_largest_z &
       do j = 1, m
         if ( inform%converged(j) /= 0 ) then
           cycle
-        else if ( inform%err_x(j) > 0 .and. inform%err_x(j) < tol ) then
+        else if ( inform%err_x(j) >= 0 .and. inform%err_x(j) <= tol ) then
           inform%converged(j) = 1
         end if
       end do

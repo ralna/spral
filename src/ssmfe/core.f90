@@ -302,8 +302,8 @@ contains
     integer, parameter :: SSMFE_APPLY_CONSTRAINTS  = 21
     integer, parameter :: SSMFE_APPLY_ADJ_CONSTRS  = 22
 
-    integer, parameter :: SSMFE_SOLVE_EIGENPROBLEM = 30
-    integer, parameter :: SSMFE_COLLECT_Q_FOR_XQ   = 31
+!    integer, parameter :: SSMFE_SOLVE_EIGENPROBLEM = 30
+!    integer, parameter :: SSMFE_COLLECT_Q_FOR_XQ   = 31
 
     integer, parameter :: SSMFE_RESTART = 999
 
@@ -595,6 +595,8 @@ if_rci: &
       keep%step = BEGIN
       keep%iteration = 0
       
+      rci%k = 1
+      
     end if if_rci
 
     minAprod = keep%minAprod
@@ -751,13 +753,13 @@ select_step: &
 
         keep%lambda(1 : keep%sizeX) = lambda(1 : keep%sizeX)
 
-        rci%job = SSMFE_COLLECT_Q_FOR_XQ
-        rci%nx = keep%sizeX
-        rci%ny = keep%sizeX
-        rci%i = 0
-        rci%k = 2
+!        rci%job = SSMFE_COLLECT_Q_FOR_XQ
+!        rci%nx = keep%sizeX
+!        rci%ny = keep%sizeX
+!        rci%i = 0
+!        rci%k = 2
         keep%step = TRANSFORM_X
-        return
+!        return
 
       case (TRANSFORM_X) select_step
 
@@ -1038,11 +1040,6 @@ select_step: &
 
           do iX = keep%firstX, keep%firstX + keep%sizeX - 1
           
-            if ( info%residual_norms(iX) == ZERO ) then
-              keep%q(iX) = 0
-              cycle
-            end if
-
             ! decrement not available, hence neither is the error estimate
             if ( keep%dlmd(iX,l) == ZERO ) then
               keep%q(iX) = ONE
@@ -1169,6 +1166,13 @@ select_step: &
             ! choose Lehmann pole
             k = last
             
+            t = ZERO
+            do while ( (k - first)*step >= 0 )
+              if ( step*lambda(k) < ZERO ) exit
+              k = k - step
+            end do
+            if ( (k - first)*step < 0 ) cycle
+
             doit = left >= 0 .or. last + step > m .or. last + step < 1
             if ( .not. doit ) doit = step*lambda(last + step) < ZERO
 
@@ -1195,15 +1199,6 @@ select_step: &
               end do
               if ( (k - first)*step <= 0 ) cycle
               k = k - step
-
-            else
-
-              t = ZERO
-              do while ( (k - first)*step >= 0 )
-                if ( step*lambda(k) < ZERO ) exit
-                k = k - step
-              end do
-              if ( (k - first)*step < 0 ) cycle
 
             end if
 
@@ -1409,6 +1404,11 @@ select_step: &
           end do
         end if
         
+        rci%k = 0
+        do iX = keep%firstX, keep%firstX + keep%sizeX - 1
+          if ( info%residual_norms(iX) == 0 ) rci%k = -1
+        end do
+        
         keep%left_cnv = keep%left_cnv + left_cnv
         keep%right_cnv = keep%right_cnv + right_cnv
         keep%leftX = keep%leftX - left_cnv
@@ -1453,6 +1453,16 @@ select_step: &
 
       case (APPLY_PRECONDITIONER) select_step
       
+        if ( rci%k == -1 ) then
+          rci%job = SSMFE_RESTART
+          rci%jx = keep%firstX
+          rci%nx = keep%sizeX
+          rci%i = 0
+          rci%j = 0
+          rci%k = 0
+          return
+        end if
+      
         if ( left == 0 .and. keep%leftX > 0 ) then
           keep%firstX = keep%firstX + keep%leftX
           keep%sizeX = keep%rightX
@@ -1472,8 +1482,6 @@ select_step: &
         keep%sizeX = keep%leftX + keep%rightX
         
         if ( keep%sizeX == 0 ) then
-!          keep%step = QUIT
-!          cycle
           rci%job = SSMFE_RESTART
           rci%jx = m + 1
           rci%nx = 0
@@ -1763,11 +1771,7 @@ select_step: &
         rci%k = 1
         rci%alpha = UNIT
         rci%beta = NIL
-        if ( keep%sizeX > 0 ) then
-          keep%step = COMPUTE_XBY
-        else
-          keep%step = CLEANUP_Y
-        end if
+        keep%step = COMPUTE_XBY
         return
 
       case (COMPUTE_XBY) select_step
@@ -1815,13 +1819,10 @@ select_step: &
         
         call chol( 'U', sizeXY, rr_matrices(1,1,3), mm, i )
 
-        if ( i /= 0 .and. i <= keep%sizeX ) then
-          info%flag = B_NOT_POSITIVE_DEFINITE
-!          info%data = i
-          rci%job = SSMFE_ABORT
-          return
-        end if
-        
+        if ( i /= 0 .and. i <= keep%sizeX ) info%flag = B_NOT_POSITIVE_DEFINITE
+        if ( info%flag /= 0 ) rci%job = SSMFE_ABORT
+        if ( rci%job < 0 ) return
+
         if ( i /= 0 ) then
           nsmall = 1
         else
@@ -1992,11 +1993,7 @@ select_step: &
         rci%k = 2
         rci%alpha = UNIT
         rci%beta = NIL
-        if ( keep%sizeX > 0 ) then
-          keep%step = COMPUTE_XAY
-        else
-          keep%step = PREPARE_MATRICES
-        end if
+        keep%step = COMPUTE_XAY
         return
         
       case (COMPUTE_XAY) select_step
@@ -2154,17 +2151,8 @@ select_step: &
           
         end if
         
-!        print *, keep%sizeX, keep%sizeXn
-!        print *, keep%firstX, keep%firstXn
-!        print *, keep%leftX, keep%leftXn
-!        print *, keep%rightX, keep%rightXn
-       
         if ( keep%sizeXn == 0 ) keep%step = QUIT
         if ( keep%step == QUIT ) cycle
-!        if ( keep%sizeXn == 0 ) then
-!          keep%step = QUIT
-!          cycle
-!        end if
 
         k = keep%firstX - keep%firstXn
         l = keep%firstX + keep%leftX - 1
@@ -2301,14 +2289,14 @@ select_step: &
           keep%step = PUT_YQ_IN_Z
         end if
         
-        rci%job = SSMFE_COLLECT_Q_FOR_XQ
-        rci%nx = keep%sizeX
-        rci%ny = keep%sizeY
-        rci%jx = keep%firstXn
-        rci%i = 1
-        rci%j = keep%sizeXn
-        rci%k = 2
-        return
+!        rci%job = SSMFE_COLLECT_Q_FOR_XQ
+!        rci%nx = keep%sizeX
+!        rci%ny = keep%sizeY
+!        rci%jx = keep%firstXn
+!        rci%i = 1
+!        rci%j = keep%sizeXn
+!        rci%k = 2
+!        return
 
       case (PUT_AZQ_IN_Z) select_step
 
@@ -2650,11 +2638,8 @@ select_step: &
 
       case (QUIT) select_step
 
-        if ( info%flag == 0 ) then
-          rci%job = SSMFE_FINISH
-        else
-          rci%job = SSMFE_STOP
-        end if
+        rci%job = SSMFE_FINISH
+        if ( info%flag /= 0 ) rci%job = SSMFE_STOP
 
         return
 
@@ -2834,8 +2819,8 @@ select_step: &
     integer, parameter :: SSMFE_APPLY_CONSTRAINTS  = 21
     integer, parameter :: SSMFE_APPLY_ADJ_CONSTRS  = 22
 
-    integer, parameter :: SSMFE_SOLVE_EIGENPROBLEM = 30
-    integer, parameter :: SSMFE_COLLECT_Q_FOR_XQ   = 31
+!    integer, parameter :: SSMFE_SOLVE_EIGENPROBLEM = 30
+!    integer, parameter :: SSMFE_COLLECT_Q_FOR_XQ   = 31
 
     integer, parameter :: SSMFE_RESTART = 999
 
@@ -3128,6 +3113,8 @@ if_rci: &
       keep%step = BEGIN
       keep%iteration = 0
       
+      rci%k = 1
+      
     end if if_rci
 
     minAprod = keep%minAprod
@@ -3269,7 +3256,6 @@ select_step: &
                 
         if ( i /= 0 ) then
           info%flag = B_NOT_POSITIVE_DEFINITE
-!          info%data = i - keep%sizeX
           rci%job = SSMFE_ABORT
           return
         end if
@@ -3286,13 +3272,13 @@ select_step: &
 
         keep%lambda(1 : keep%sizeX) = lambda(1 : keep%sizeX)
 
-        rci%job = SSMFE_COLLECT_Q_FOR_XQ
-        rci%nx = keep%sizeX
-        rci%ny = keep%sizeX
-        rci%i = 0
-        rci%k = 2
+!        rci%job = SSMFE_COLLECT_Q_FOR_XQ
+!        rci%nx = keep%sizeX
+!        rci%ny = keep%sizeX
+!        rci%i = 0
+!        rci%k = 2
         keep%step = TRANSFORM_X
-        return
+!        return
 
       case (TRANSFORM_X) select_step
 
@@ -3573,11 +3559,6 @@ select_step: &
 
           do iX = keep%firstX, keep%firstX + keep%sizeX - 1
           
-            if ( info%residual_norms(iX) == ZERO ) then
-              keep%q(iX) = 0
-              cycle
-            end if
-
             ! decrement not available, hence neither is the error estimate
             if ( keep%dlmd(iX,l) == ZERO ) then
               keep%q(iX) = ONE
@@ -3704,6 +3685,13 @@ select_step: &
             ! choose Lehmann pole
             k = last
             
+            t = ZERO
+            do while ( (k - first)*step >= 0 )
+              if ( step*lambda(k) < ZERO ) exit
+              k = k - step
+            end do
+            if ( (k - first)*step < 0 ) cycle
+
             doit = left >= 0 .or. last + step > m .or. last + step < 1
             if ( .not. doit ) doit = step*lambda(last + step) < ZERO
 
@@ -3730,15 +3718,6 @@ select_step: &
               end do
               if ( (k - first)*step <= 0 ) cycle
               k = k - step
-
-            else
-
-              t = ZERO
-              do while ( (k - first)*step >= 0 )
-                if ( step*lambda(k) < ZERO ) exit
-                k = k - step
-              end do
-              if ( (k - first)*step < 0 ) cycle
 
             end if
 
@@ -3944,6 +3923,11 @@ select_step: &
           end do
         end if
         
+        rci%k = 0
+        do iX = keep%firstX, keep%firstX + keep%sizeX - 1
+          if ( info%residual_norms(iX) == 0 ) rci%k = -1
+        end do
+        
         keep%left_cnv = keep%left_cnv + left_cnv
         keep%right_cnv = keep%right_cnv + right_cnv
         keep%leftX = keep%leftX - left_cnv
@@ -3987,6 +3971,16 @@ select_step: &
         return
 
       case (APPLY_PRECONDITIONER) select_step
+      
+        if ( rci%k == -1 ) then
+          rci%job = SSMFE_RESTART
+          rci%jx = keep%firstX
+          rci%nx = keep%sizeX
+          rci%i = 0
+          rci%j = 0
+          rci%k = 0
+          return
+        end if
       
         if ( left == 0 .and. keep%leftX > 0 ) then
           keep%firstX = keep%firstX + keep%leftX
@@ -4166,7 +4160,6 @@ select_step: &
               rr_matrices(m + j, m + i, 2) = z
               t = sqrt(max(t*t - abs(z)**2, ZERO))
             else
-!              r = rr_matrices(m + j, m + i, 2)/s
               skip = .true.
               exit
             end if
@@ -4296,11 +4289,7 @@ select_step: &
         rci%k = 1
         rci%alpha = UNIT
         rci%beta = NIL
-        if ( keep%sizeX > 0 ) then
-          keep%step = COMPUTE_XBY
-        else
-          keep%step = CLEANUP_Y
-        end if
+        keep%step = COMPUTE_XBY
         return
 
       case (COMPUTE_XBY) select_step
@@ -4348,13 +4337,10 @@ select_step: &
         
         call chol( 'U', sizeXY, rr_matrices(1,1,3), mm, i )
 
-        if ( i /= 0 .and. i <= keep%sizeX ) then
-          info%flag = B_NOT_POSITIVE_DEFINITE
-!          info%data = i
-          rci%job = SSMFE_ABORT
-          return
-        end if
-        
+        if ( i /= 0 .and. i <= keep%sizeX ) info%flag = B_NOT_POSITIVE_DEFINITE
+        if ( info%flag /= 0 ) rci%job = SSMFE_ABORT
+        if ( rci%job < 0 ) return
+
         if ( i /= 0 ) then
           nsmall = 1
         else
@@ -4458,7 +4444,6 @@ select_step: &
 
           if ( k < 1 ) then
             info%flag = NO_SEARCH_DIRECTIONS_LEFT
-!            info%non_converged = left - keep%left_cnv
             keep%step = QUIT
             cycle do_select_step
           end if
@@ -4524,11 +4509,7 @@ select_step: &
         rci%k = 2
         rci%alpha = UNIT
         rci%beta = NIL
-        if ( keep%sizeX > 0 ) then
-          keep%step = COMPUTE_XAY
-        else
-          keep%step = PREPARE_MATRICES
-        end if
+        keep%step = COMPUTE_XAY
         return
         
       case (COMPUTE_XAY) select_step
@@ -4688,10 +4669,6 @@ select_step: &
         
         if ( keep%sizeXn == 0 ) keep%step = QUIT
         if ( keep%step == QUIT ) cycle
-!        if ( keep%sizeXn == 0 ) then
-!          keep%step = QUIT
-!          cycle
-!        end if
 
         k = keep%firstX - keep%firstXn
         l = keep%firstX + keep%leftX - 1
@@ -4828,14 +4805,14 @@ select_step: &
           keep%step = PUT_YQ_IN_Z
         end if
         
-        rci%job = SSMFE_COLLECT_Q_FOR_XQ
-        rci%nx = keep%sizeX
-        rci%ny = keep%sizeY
-        rci%jx = keep%firstXn
-        rci%i = 1
-        rci%j = keep%sizeXn
-        rci%k = 2
-        return
+!        rci%job = SSMFE_COLLECT_Q_FOR_XQ
+!        rci%nx = keep%sizeX
+!        rci%ny = keep%sizeY
+!        rci%jx = keep%firstXn
+!        rci%i = 1
+!        rci%j = keep%sizeXn
+!        rci%k = 2
+!        return
 
       case (PUT_AZQ_IN_Z) select_step
 
@@ -5176,11 +5153,8 @@ select_step: &
 
       case (QUIT) select_step
 
-        if ( info%flag == 0 ) then
-          rci%job = SSMFE_FINISH
-        else
-          rci%job = SSMFE_STOP
-        end if
+        rci%job = SSMFE_FINISH
+        if ( info%flag /= 0 ) rci%job = SSMFE_STOP
 
         return
 
@@ -5203,56 +5177,6 @@ select_step: &
   end subroutine ssmfe_engine_double_complex
 
 ! deallocate auxiliary arrays
-
-  subroutine ssmfe_delete_info_double_complex( info )
-
-    implicit none
-    
-    type(ssmfe_inform), intent(inout) :: info
-
-    if ( allocated(info%residual_norms) ) deallocate( info%residual_norms )
-    if ( allocated(info%err_lambda    ) ) deallocate( info%err_lambda     )
-    if ( allocated(info%err_X         ) ) deallocate( info%err_X          )
-    if ( allocated(info%converged     ) ) deallocate( info%converged      )
-    info%flag = 0
-    info%stat = 0
-    info%non_converged = 0
-    info%iteration = 0
-    info%left = 0
-    info%right = 0
-    info%next_left = 1
-    info%next_right = -1
-
-  end subroutine ssmfe_delete_info_double_complex
-
-  subroutine ssmfe_delete_work_double_complex( keep )
-
-    implicit none
-    
-    type(ssmfe_keep), intent(inout) :: keep
-
-    if ( allocated(keep%lambda) ) deallocate( keep%lambda )
-    if ( allocated(keep%dlmd  ) ) deallocate( keep%dlmd   )
-    if ( allocated(keep%q     ) ) deallocate( keep%q      )
-    if ( allocated(keep%dX    ) ) deallocate( keep%dX     )
-    if ( allocated(keep%dwork ) ) deallocate( keep%dwork  )
-    if ( allocated(keep%zwork ) ) deallocate( keep%zwork  )
-    if ( allocated(keep%ind   ) ) deallocate( keep%ind    )
-    if ( allocated(keep%mask  ) ) deallocate( keep%mask   )
-
-  end subroutine ssmfe_delete_work_double_complex
-
-  subroutine ssmfe_terminate_core_double_complex( keep, info )
-
-    implicit none
-    
-    type(ssmfe_keep  ), intent(inout) :: keep
-    type(ssmfe_inform), intent(inout) :: info
-    
-    call ssmfe_delete_work_double_complex( keep )
-    call ssmfe_delete_info_double_complex( info )
-
-  end subroutine ssmfe_terminate_core_double_complex
 
   integer function lwork_hevp( n )
   

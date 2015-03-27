@@ -286,8 +286,9 @@ contains
     case ( 11:19 )
 
       ! apply some standard vector operations to vectors in W
+      k = max(1, rci%k)
       call ssmfe_vector_operations_double &
-        ( rci, n, keep%block_size, keep%W, n, keep%V(1, 1, rci%k), &
+        ( rci, n, keep%block_size, keep%W, n, keep%V(1, 1, k), &
           keep%ind, keep%U )
 
     case ( SSMFE_SAVE_CONVERGED )
@@ -618,10 +619,11 @@ contains
       select case ( rci%job )
 
       case ( 11:19 )
-
+      
         ! apply some standard vector operations to vectors in W
+        k = max(1, rci%k)
         call ssmfe_vector_operations_double &
-          ( rci, n, keep%block_size, keep%W, n, keep%V(1, 1, rci%k), &
+          ( rci, n, keep%block_size, keep%W, n, keep%V(1, 1, k), &
             keep%ind, keep%U )
 
       case ( SSMFE_SAVE_CONVERGED )
@@ -1169,8 +1171,9 @@ contains
     case ( 11:19 )
 
       ! apply some standard vector operations to vectors in W
+      k = max(1, rci%k)
       call ssmfe_vector_operations_double_complex &
-        ( rci, n, keep%block_size, keep%W, n, keep%V(1, 1, rci%k), &
+        ( rci, n, keep%block_size, keep%W, n, keep%V(1, 1, k), &
           keep%ind, keep%U )
 
     case ( SSMFE_SAVE_CONVERGED )
@@ -1514,8 +1517,9 @@ contains
       case ( 11:19 )
 
         ! apply some standard vector operations to vectors in W
+        k = max(1, rci%k)
         call ssmfe_vector_operations_double_complex &
-          ( rci, n, keep%block_size, keep%W, n, keep%V(1, 1, rci%k), &
+          ( rci, n, keep%block_size, keep%W, n, keep%V(1, 1, k), &
             keep%ind, keep%U )
 
       case ( SSMFE_SAVE_CONVERGED )
