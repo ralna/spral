@@ -397,7 +397,7 @@ contains
     logical :: converged
     logical :: check_res, check_lmd
 
-    character(78) :: head, neck, form, line
+    character(78) :: head, neck, frmt, line
     character(7) :: word
 
     integer :: u_diag, u_errr, verb
@@ -765,11 +765,7 @@ contains
       ! report the convergence situation
       if ( options%print_level == 2 .and. u_diag > NONE ) then
 
-        if ( PRECISION == kind(1.0) ) then
-          form = '(i7, i8, es18.6, 4x, a, 3es11.1)'
-        else
-          form = '(i7, i8, es23.14, a, es10.1, 2es11.1)'
-        end if
+        frmt = '(i7, i8, es23.14, a, es10.1, 2es11.1)'
 
         ! the first and last converged eigenpair
         first = rci%jx
@@ -810,7 +806,7 @@ contains
           else
             j = (keep%rcon + first - i + 1)
           end if
-          write( u_diag, form ) &
+          write( u_diag, frmt ) &
             info%iteration, j, s, word, &
             keep%info%residual_norms(i), t, keep%info%err_X(block_size + i)
 
@@ -842,11 +838,7 @@ contains
         line = &
  '-------------------------------------------------------------------------'
 
-        if ( PRECISION == kind(1.0) ) then
-          form = '(es17.6,5x,a,1x,a,2x,a,es9.1,a,es10.1,a,es10.1)'
-        else
-          form = '(es22.14,a,1x,a,2x,a,es9.1,a,es10.1,a,es10.1)'
-        end if
+        frmt = '(es22.14,a,1x,a,2x,a,es9.1,a,es10.1,a,es10.1)'
 
         write( u_diag, '(a/a)' ) &
           trim(line), trim(head)
@@ -866,7 +858,7 @@ contains
           if ( t >= ZERO ) t = si_map_err(problem, sigma, s, t)
           s = si_map(problem, sigma, keep%lmd(i))
 
-          write( u_diag, form ) &
+          write( u_diag, frmt ) &
             s, ' |', word, ' |', keep%info%residual_norms(i), '  |', &
             t, '  |', keep%info%err_X(block_size + i)
 
@@ -1181,7 +1173,7 @@ contains
     logical :: converged
     logical :: check_res, check_lmd
 
-    character(78) :: head, neck, form, line
+    character(78) :: head, neck, frmt, line
     character(7) :: word
 
     integer :: u_diag, u_errr, verb
@@ -1395,11 +1387,7 @@ contains
 
       if ( options%print_level == 2 .and. u_diag > NONE ) then
 
-        if ( PRECISION == kind(1.0) ) then
-          form = '(i7, i8, es18.6, 4x, a, 3es11.1)'
-        else
-          form = '(i7, i8, es23.14, a, es10.1, 2es11.1)'
-        end if
+        frmt = '(i7, i8, es23.14, a, es10.1, 2es11.1)'
 
         first = rci%jx
         last = rci%jx + rci%nx - 1
@@ -1412,7 +1400,7 @@ contains
           else
             word = '   no'
           end if
-          write( u_diag, form ) &
+          write( u_diag, frmt ) &
             info%iteration, keep%lcon + i - first + 1, &
             keep%lmd(i), word, &
             keep%info%residual_norms(i), &
@@ -1438,11 +1426,7 @@ contains
         line = &
  '-------------------------------------------------------------------------'
 
-        if ( PRECISION == kind(1.0) ) then
-          form = '(es17.6,5x,a,1x,a,2x,a,es9.1,a,es10.1,a,es10.1)'
-        else
-          form = '(es22.14,a,1x,a,2x,a,es9.1,a,es10.1,a,es10.1)'
-        end if
+        frmt = '(es22.14,a,1x,a,2x,a,es9.1,a,es10.1,a,es10.1)'
 
         write( u_diag, '(a/a)' ) &
           trim(line), trim(head)
@@ -1455,7 +1439,7 @@ contains
           else
             word = '    no'
           end if          
-          write( u_diag, form ) &
+          write( u_diag, frmt ) &
             keep%lmd(i), ' |', word, ' |', keep%info%residual_norms(i), '  |', &
             keep%info%err_lambda(block_size + i), '  |', &
             keep%info%err_X(block_size + i)
@@ -1670,7 +1654,7 @@ contains
     logical :: converged
     logical :: check_res, check_lmd
 
-    character(78) :: head, neck, form, line
+    character(78) :: head, neck, frmt, line
     character(7) :: word
 
     integer :: u_diag, u_errr, verb
@@ -2041,11 +2025,7 @@ contains
       ! report the convergence situation
       if ( options%print_level == 2 .and. u_diag > NONE ) then
 
-        if ( PRECISION == kind(1.0) ) then
-          form = '(i7, i8, es18.6, 4x, a, 3es11.1)'
-        else
-          form = '(i7, i8, es23.14, a, es10.1, 2es11.1)'
-        end if
+        frmt = '(i7, i8, es23.14, a, es10.1, 2es11.1)'
 
         ! the first and last converged eigenpair
         first = rci%jx
@@ -2086,7 +2066,7 @@ contains
           else
             j = (keep%rcon + first - i + 1)
           end if
-          write( u_diag, form ) &
+          write( u_diag, frmt ) &
             info%iteration, j, s, word, &
             keep%info%residual_norms(i), t, keep%info%err_X(block_size + i)
 
@@ -2118,11 +2098,7 @@ contains
         line = &
  '-------------------------------------------------------------------------'
 
-        if ( PRECISION == kind(1.0) ) then
-          form = '(es17.6,5x,a,1x,a,2x,a,es9.1,a,es10.1,a,es10.1)'
-        else
-          form = '(es22.14,a,1x,a,2x,a,es9.1,a,es10.1,a,es10.1)'
-        end if
+        frmt = '(es22.14,a,1x,a,2x,a,es9.1,a,es10.1,a,es10.1)'
 
         write( u_diag, '(a/a)' ) &
           trim(line), trim(head)
@@ -2142,7 +2118,7 @@ contains
           if ( t >= ZERO ) t = si_map_err(problem, sigma, s, t)
           s = si_map(problem, sigma, keep%lmd(i))
 
-          write( u_diag, form ) &
+          write( u_diag, frmt ) &
             s, ' |', word, ' |', keep%info%residual_norms(i), '  |', &
             t, '  |', keep%info%err_X(block_size + i)
 
@@ -2454,7 +2430,7 @@ contains
     logical :: converged
     logical :: check_res, check_lmd
 
-    character(78) :: head, neck, form, line
+    character(78) :: head, neck, frmt, line
     character(7) :: word
 
     integer :: u_diag, u_errr, verb
@@ -2670,11 +2646,7 @@ contains
 
       if ( options%print_level == 2 .and. u_diag > NONE ) then
 
-        if ( PRECISION == kind(1.0) ) then
-          form = '(i7, i8, es18.6, 4x, a, 3es11.1)'
-        else
-          form = '(i7, i8, es23.14, a, es10.1, 2es11.1)'
-        end if
+        frmt = '(i7, i8, es23.14, a, es10.1, 2es11.1)'
 
         first = rci%jx
         last = rci%jx + rci%nx - 1
@@ -2687,7 +2659,7 @@ contains
           else
             word = '   no'
           end if
-          write( u_diag, form ) &
+          write( u_diag, frmt ) &
             info%iteration, keep%lcon + i - first + 1, &
             keep%lmd(i), word, &
             keep%info%residual_norms(i), &
@@ -2713,11 +2685,7 @@ contains
         line = &
  '-------------------------------------------------------------------------'
 
-        if ( PRECISION == kind(1.0) ) then
-          form = '(es17.6,5x,a,1x,a,2x,a,es9.1,a,es10.1,a,es10.1)'
-        else
-          form = '(es22.14,a,1x,a,2x,a,es9.1,a,es10.1,a,es10.1)'
-        end if
+        frmt = '(es22.14,a,1x,a,2x,a,es9.1,a,es10.1,a,es10.1)'
 
         write( u_diag, '(a/a)' ) &
           trim(line), trim(head)
@@ -2730,7 +2698,7 @@ contains
           else
             word = '    no'
           end if          
-          write( u_diag, form ) &
+          write( u_diag, frmt ) &
             keep%lmd(i), ' |', word, ' |', keep%info%residual_norms(i), '  |', &
             keep%info%err_lambda(block_size + i), '  |', &
             keep%info%err_X(block_size + i)

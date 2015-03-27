@@ -105,7 +105,6 @@ module spral_ssmfe_core
     integer :: stat          = 0
     integer :: non_converged = 0
     integer :: iteration     = 0
-!    integer :: cc = 0, dc = 0
 
     integer :: left = 0, right = 0
     integer, dimension(:), allocatable :: converged
@@ -224,6 +223,28 @@ contains
         info )
 
   end subroutine ssmfe_largest_double
+
+  subroutine ssmfe_largest_double_complex &
+    ( rci, problem, nep, m, lambda, rr_matrices, ind, keep, control, info )
+
+    implicit none
+    
+    integer, intent(in) :: problem
+    integer, intent(in) :: nep
+    integer, intent(in) :: m
+    double precision, dimension(m), intent(inout) :: lambda
+    complex(PRECISION), intent(inout) :: rr_matrices(2*m, 2*m, 3)
+    integer, intent(out), dimension(m) :: ind
+    type(ssmfe_rciz   ), intent(inout) :: rci
+    type(ssmfe_keep   ), intent(inout) :: keep
+    type(ssmfe_options), intent(in   ) :: control
+    type(ssmfe_inform ), intent(inout) :: info
+    
+    call ssmfe_engine_double_complex &
+      ( problem, -1, nep, m, lambda, rr_matrices, ind, rci, keep, control, &
+        info )
+
+  end subroutine ssmfe_largest_double_complex
 
   ! double precision real solver engine
 
@@ -712,14 +733,12 @@ select_step: &
         call solve_gsevp &
           ( keep%sizeX, rr_matrices(1,1,2), mm, rr_matrices, mm, &
             lambda, keep%lwork, keep%dwork, i )
-                
         if ( i /= 0 ) then
           info%flag = B_NOT_POSITIVE_DEFINITE
-!          info%data = i - keep%sizeX
           rci%job = SSMFE_ABORT
           return
         end if
-
+        
         if ( left < 0 ) then
           j = 1
           do while ( j < m )
@@ -1202,7 +1221,6 @@ select_step: &
             call solve_sevp &
               ( 'N', l, rr_matrices(i,i,3), mm, keep%lambda(mm + i), &
                 keep%lwork, keep%dwork, j )
-!                keep%lwork, keep%work, keep%rwork, j )
 
             ! estimate errors
             do i = first, k, step
@@ -1454,8 +1472,15 @@ select_step: &
         keep%sizeX = keep%leftX + keep%rightX
         
         if ( keep%sizeX == 0 ) then
-          keep%step = QUIT
-          cycle
+!          keep%step = QUIT
+!          cycle
+          rci%job = SSMFE_RESTART
+          rci%jx = m + 1
+          rci%nx = 0
+          rci%i = 0
+          rci%j = 0
+          rci%k = 0
+          return
         end if
 
         rci%job = SSMFE_APPLY_PREC
@@ -1472,13 +1497,7 @@ select_step: &
           keep%step = COMPUTE_AZ
         else
           if ( problem < 0 ) then
-            if ( minBprod ) then
-              keep%step = COPY_W_TO_BYZ
-            else
-              keep%step = APPLY_CONSTRAINTS
-              kBYZ = kW
-              keep%kBYZ = kW
-            end if
+            keep%step = COPY_W_TO_BYZ
           else
             keep%step = RECOMPUTE_BY
           end if
@@ -1908,7 +1927,6 @@ select_step: &
 
           if ( k < 1 ) then
             info%flag = NO_SEARCH_DIRECTIONS_LEFT
-!            info%non_converged = left - keep%left_cnv
             keep%step = QUIT
             cycle do_select_step
           end if
@@ -2113,7 +2131,6 @@ select_step: &
             keep%leftXn = 0
             keep%new_left = 0
           else
-
             j = control%extra_left + left - keep%left_cnv
             keep%leftXn = min(j, k, l)
             keep%leftXn = max(keep%leftXn, keep%leftX)
@@ -2142,10 +2159,12 @@ select_step: &
 !        print *, keep%leftX, keep%leftXn
 !        print *, keep%rightX, keep%rightXn
        
-        if ( keep%sizeXn == 0 ) then
-          keep%step = QUIT
-          cycle
-        end if
+        if ( keep%sizeXn == 0 ) keep%step = QUIT
+        if ( keep%step == QUIT ) cycle
+!        if ( keep%sizeXn == 0 ) then
+!          keep%step = QUIT
+!          cycle
+!        end if
 
         k = keep%firstX - keep%firstXn
         l = keep%firstX + keep%leftX - 1
@@ -2758,29 +2777,7 @@ select_step: &
 
   end subroutine solve_gsevp
   
-  subroutine ssmfe_largest_double_complex &
-    ( problem, nep, m, lambda, rr_matrices, ind, rci, keep, control, info )
-
-    implicit none
-    
-    integer, intent(in) :: problem
-    integer, intent(in) :: nep
-    integer, intent(in) :: m
-    double precision, dimension(m), intent(inout) :: lambda
-    complex(PRECISION), intent(inout) :: rr_matrices(2*m, 2*m, 3)
-    integer, intent(out), dimension(m) :: ind
-    type(ssmfe_rciz   ), intent(inout) :: rci
-    type(ssmfe_keep   ), intent(inout) :: keep
-    type(ssmfe_options), intent(in   ) :: control
-    type(ssmfe_inform ), intent(inout) :: info
-    
-    call ssmfe_engine_double_complex &
-      ( problem, -1, nep, m, lambda, rr_matrices, ind, rci, keep, control, &
-        info )
-
-  end subroutine ssmfe_largest_double_complex
-
-  ! double complex real solver engine
+  ! double complex solver engine
 
   subroutine ssmfe_engine_double_complex &
       ( problem, left, right, m, lambda, rr_matrices, ind, rci, keep, control, &
@@ -4009,6 +4006,16 @@ select_step: &
 
         keep%sizeX = keep%leftX + keep%rightX
         
+        if ( keep%sizeX == 0 ) then
+          rci%job = SSMFE_RESTART
+          rci%jx = m + 1
+          rci%nx = 0
+          rci%i = 0
+          rci%j = 0
+          rci%k = 0
+          return
+        end if
+
         rci%job = SSMFE_APPLY_PREC
         rci%nx = keep%sizeY
         rci%jx = keep%firstXn
@@ -4023,13 +4030,7 @@ select_step: &
           keep%step = COMPUTE_AZ
         else
           if ( problem < 0 ) then
-            if ( minBprod ) then
-              keep%step = COPY_W_TO_BYZ
-            else
-              keep%step = APPLY_CONSTRAINTS
-              kBYZ = kW
-              keep%kBYZ = kW
-            end if
+            keep%step = COPY_W_TO_BYZ
           else
             keep%step = RECOMPUTE_BY
           end if
@@ -4662,7 +4663,6 @@ select_step: &
             keep%leftXn = 0
             keep%new_left = 0
           else
-
             j = control%extra_left + left - keep%left_cnv
             keep%leftXn = min(j, k, l)
             keep%leftXn = max(keep%leftXn, keep%leftX)
@@ -4686,10 +4686,12 @@ select_step: &
           
         end if
         
-        if ( keep%sizeXn == 0 ) then
-          keep%step = QUIT
-          cycle
-        end if
+        if ( keep%sizeXn == 0 ) keep%step = QUIT
+        if ( keep%step == QUIT ) cycle
+!        if ( keep%sizeXn == 0 ) then
+!          keep%step = QUIT
+!          cycle
+!        end if
 
         k = keep%firstX - keep%firstXn
         l = keep%firstX + keep%leftX - 1

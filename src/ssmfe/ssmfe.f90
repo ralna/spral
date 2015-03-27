@@ -351,8 +351,10 @@ contains
 
     case ( SSMFE_RESTART )
     
-      if ( rci%k == 0 ) then
-        if ( rci%jx > 1 ) call random_number( keep%W(:, 1 : rci%jx - 1, 0) )
+      if ( rci%k == 0 .and. rci%jx > 1 ) then
+!        if ( rci%jx > 1 ) call random_number( keep%W(:, 1 : rci%jx - 1, 0) )
+        call random_number( keep%W(:, 1 : rci%jx - 1, 0) )
+        keep%W(:, 1 : rci%jx - 1, 0) = 2*keep%W(:, 1 : rci%jx - 1, 0) - ONE
       end if
         
     end select
@@ -788,10 +790,16 @@ contains
       case ( SSMFE_RESTART )
     
         if ( rci%k == 0 ) then
-          if ( rci%jx > 1 ) call random_number( keep%W(:, 1 : rci%jx - 1, 0) )
-          if ( rci%jx + rci%nx - 1 < keep%block_size ) &
+          if ( rci%jx > 1 ) then
+            call random_number( keep%W(:, 1 : rci%jx - 1, 0) )
+            keep%W(:, 1 : rci%jx - 1, 0) = 2*keep%W(:, 1 : rci%jx - 1, 0) - ONE
+          end if
+          if ( rci%jx + rci%nx - 1 < keep%block_size ) then
             call random_number &
               ( keep%W(:, rci%jx + rci%nx : keep%block_size, 0) )
+            keep%W(:, rci%jx + rci%nx : keep%block_size, 0) = &
+              2*keep%W(:, rci%jx + rci%nx : keep%block_size, 0) - ONE
+          end if
         end if
         
       case ( :-1 )
