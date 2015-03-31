@@ -154,6 +154,11 @@ module spral_ssmfe_core
 
 contains
 
+!**************************************************************************
+! real RCI for computing specified numbers of eigenvalues on both sides of 
+! the spectrum and corresponding eigenvectors,
+! see ssmfe spec for the arguments
+!
   subroutine ssmfe_double &
     ( rci, problem, left, right, m, lambda, rr_matrices, ind, &
       keep, options, info )
@@ -178,6 +183,11 @@ contains
 
   end subroutine ssmfe_double
 
+!**************************************************************************
+! complex RCI for computing specified numbers of eigenvalues on both sides 
+! of the spectrum and corresponding eigenvectors,
+! see ssmfe spec for the arguments
+!
   subroutine ssmfe_double_complex &
     ( rci, problem, left, right, m, lambda, rr_matrices, ind, &
       keep, options, info )
@@ -202,6 +212,11 @@ contains
 
   end subroutine ssmfe_double_complex
 
+!**************************************************************************
+! real RCI for computing a specified number of largest eigenvalues and 
+! corresponding eigenvectors,
+! see ssmfe spec for the arguments
+!
   subroutine ssmfe_largest_double &
     ( rci, problem, nep, m, lambda, rr_matrices, ind, keep, control, info )
 
@@ -224,6 +239,11 @@ contains
 
   end subroutine ssmfe_largest_double
 
+!**************************************************************************
+! complex RCI for computing a specified number of largest eigenvalues and 
+! corresponding eigenvectors,
+! see ssmfe spec for the arguments
+!
   subroutine ssmfe_largest_double_complex &
     ( rci, problem, nep, m, lambda, rr_matrices, ind, keep, control, info )
 
@@ -246,8 +266,9 @@ contains
 
   end subroutine ssmfe_largest_double_complex
 
-  ! double precision real solver engine
-
+!**************************************************************************
+! real core solver RCI
+!
   subroutine ssmfe_engine_double &
       ( problem, left, right, m, lambda, rr_matrices, ind, rci, keep, control, &
         info )
@@ -270,27 +291,46 @@ contains
     
     ! arguments
 
+    ! problem type
+    !   0: A x = lambda x
+    ! > 0: A x = lambda B x
+    ! < 0: A B x = lambda x
+    ! A = A', B = B' > 0
     integer, intent(in) :: problem
-    integer, intent(in) :: left, right
+
+    ! >= 0: number of wanted eigenvalues left of sigma
+    !  < 0: indicates that largest eigenvalues are wanted (see <right>)
+    integer, intent(in) :: left
+
+    ! left >= 0: number of wanted eigenvalues right of sigma
+    ! left  < 0: number of wanted largest eigenvalues
+    integer, intent(in) :: right
+
+    ! BJCG block size
     integer, intent(in) :: m
+
+    ! eigenvalues array
     double precision, dimension(m), intent(inout) :: lambda
+
+    ! matrices for the Rayleigh-Ritz procedure
     double precision, intent(inout) :: rr_matrices(2*m, 2*m, *)
+
+    ! work matrix column reordering index
     integer, intent(inout), dimension(m) :: ind
+
+    ! ssmfe_core types - see the spec
     type(ssmfe_keep   ), intent(inout) :: keep
     type(ssmfe_rcid   ), intent(inout) :: rci
     type(ssmfe_options), intent(in   ) :: control
     type(ssmfe_inform ), intent(inout) :: info
     
-    ! rci
-
-    integer, parameter :: SSMFE_START = 0
-
+    ! rci jobs
+    integer, parameter :: SSMFE_START              = 0
     integer, parameter :: SSMFE_APPLY_A            = 1
     integer, parameter :: SSMFE_APPLY_PREC         = 2
     integer, parameter :: SSMFE_APPLY_B            = 3
     integer, parameter :: SSMFE_CHECK_CONVERGENCE  = 4
     integer, parameter :: SSMFE_SAVE_CONVERGED     = 5
-
     integer, parameter :: SSMFE_COPY_VECTORS       = 11
     integer, parameter :: SSMFE_COMPUTE_DOTS       = 12
     integer, parameter :: SSMFE_SCALE_VECTORS      = 13
@@ -298,27 +338,19 @@ contains
     integer, parameter :: SSMFE_COMPUTE_XY         = 15
     integer, parameter :: SSMFE_COMPUTE_XQ         = 16
     integer, parameter :: SSMFE_TRANSFORM_X        = 17
-
     integer, parameter :: SSMFE_APPLY_CONSTRAINTS  = 21
     integer, parameter :: SSMFE_APPLY_ADJ_CONSTRS  = 22
-
-!    integer, parameter :: SSMFE_SOLVE_EIGENPROBLEM = 30
-!    integer, parameter :: SSMFE_COLLECT_Q_FOR_XQ   = 31
-
-    integer, parameter :: SSMFE_RESTART = 999
-
-    integer, parameter :: SSMFE_FINISH = -1
-    integer, parameter :: SSMFE_STOP   = -2
-    integer, parameter :: SSMFE_ABORT  = -3
+    integer, parameter :: SSMFE_RESTART            = 999
+    integer, parameter :: SSMFE_FINISH             = -1
+    integer, parameter :: SSMFE_STOP               = -2
+    integer, parameter :: SSMFE_ABORT              = -3
   
-    ! steps and stages
-
+    ! computation stages
     integer, parameter :: INITIAL = 10
     integer, parameter :: CG_LOOP = 20
-
-    integer, parameter :: BEGIN = 0
-    integer, parameter :: QUIT  = -1
-    
+    integer, parameter :: BEGIN   = 0
+    integer, parameter :: QUIT    = -1
+    ! computation steps
     integer, parameter :: COMPUTE_BX           = 100
     integer, parameter :: ORTHOG_X_TO_Xc       = 150
     integer, parameter :: COMPUTE_AX           = 200
@@ -347,7 +379,6 @@ contains
     integer, parameter :: COMPUTE_BY           = 920
     integer, parameter :: COMPUTE_ZBY          = 930
     integer, parameter :: COMPUTE_YBY_DIAG     = 950
-
     integer, parameter :: CONJUGATE_Y          = 1000
     integer, parameter :: RECOMPUTE_BY         = 1100
     integer, parameter :: UPDATE_BY            = 1110
@@ -365,32 +396,27 @@ contains
     integer, parameter :: COLLECT_Y            = 1510
     integer, parameter :: COLLECT_BY           = 1520
     integer, parameter :: COMPUTE_AY           = 1600
-
     integer, parameter :: RR_IN_XY             = 2000
     integer, parameter :: COMPUTE_XAY          = 2100
     integer, parameter :: PREPARE_MATRICES     = 2200
     integer, parameter :: ANALYSE_RR_RESULTS   = 2300
-
     integer, parameter :: PUT_AZQ_IN_Z         = 3100
     integer, parameter :: ADD_AXQ_TO_Z         = 3200
     integer, parameter :: PUT_AXQ_IN_W         = 3300
     integer, parameter :: ADD_AZQ_TO_W         = 3400
     integer, parameter :: PUT_W_IN_AX          = 3500
     integer, parameter :: PUT_Z_IN_AZ          = 3600
-
     integer, parameter :: PUT_BZQ_IN_Z         = 4100
     integer, parameter :: ADD_BXQ_TO_Z         = 4200
     integer, parameter :: PUT_BXQ_IN_W         = 4300
     integer, parameter :: ADD_BZQ_TO_W         = 4400
     integer, parameter :: PUT_W_IN_BX          = 4500
     integer, parameter :: PUT_Z_IN_BZ          = 4600
-
     integer, parameter :: PUT_YQ_IN_Z          = 5100
     integer, parameter :: ADD_XQ_TO_Z          = 5200
     integer, parameter :: PUT_XQ_IN_W          = 5300
     integer, parameter :: ADD_YQ_TO_W          = 5400
     integer, parameter :: PUT_W_IN_X           = 5500
-
     integer, parameter :: CHECK_THE_GAP        = 6000
     
     ! round-off error level
@@ -402,25 +428,28 @@ contains
     ! heuristic constants
     double precision :: A_SMALL_FRACTION, A_FRACTION, A_MULTIPLE
     double precision :: REL_GAP, MAX_BETA, Q_MAX
+
     ! maximal admissible condition number of the B-gram matrix
     double precision :: GRAM_RCOND_MIN
     
-    ! flags
+    ! flags for 'not available yet'
     integer, parameter :: NONE = -1
     double precision, parameter :: NO_VALUE = -1.0
 
     ! locals
+    logical :: skip, doit
     integer :: kY, kZ, kW, kAX, kAYZ, kBX, kBYZ
     integer :: mm, left_cnv, right_cnv, first, last, step, go, nsmall
     integer :: iX, jX, iY, jY, sizeXY
     integer :: i, j, k, l
     double precision :: delta, theta
     double precision :: q, r, s, t
-    logical :: skip, doit
 
-    ! shortcuts for the parameters
+    ! shortcuts for the options
     logical :: minAprod, minBprod
     integer :: err_est
+    
+    ! check for the input data errors
     
     if ( control%extra_left < 0 .or. control%extra_right < 0 ) then
       info%flag = WRONG_EXTRAS
@@ -440,6 +469,30 @@ contains
       return
     end if
 
+    if ( m < 1 &
+      .or. (left < 0 .or. left > 0 .and. right > 0) .and. m < 2 ) then
+      info%flag = WRONG_BLOCK_SIZE
+      rci%job = SSMFE_ABORT
+      return
+    end if
+
+    err_est = control%err_est
+    select case ( err_est )
+    case ( SSMFE_RESIDUAL, SSMFE_KINEMATIC )
+    case default
+      info%flag = WRONG_ERR_EST
+      rci%job = SSMFE_ABORT
+      return
+    end select
+
+    if ( problem < 0 ) then
+      if ( .not. (control%minAprod .and. control%minBprod) ) then
+        info%flag = WRONG_MINPROD
+        rci%job   = SSMFE_ABORT
+        return
+      end if
+    end if
+
     A_FRACTION = 0.1D0
     A_SMALL_FRACTION = 0.01D0
     A_MULTIPLE = 100
@@ -457,23 +510,9 @@ if_rci: &
     if ( rci%job == SSMFE_START .or. rci%job == SSMFE_RESTART &
       .and. rci%i == 0 .and. rci%j == 0 &
       ) then
+      ! things to do on (re)start
     
-      if ( m < 1 &
-        .or. (left < 0 .or. left > 0 .and. right > 0) .and. m < 2 ) then
-        info%flag = WRONG_BLOCK_SIZE
-        rci%job = SSMFE_ABORT
-        return
-      end if
-
-      err_est = control%err_est
-      select case ( err_est )
-      case ( SSMFE_RESIDUAL, SSMFE_KINEMATIC )
-      case default
-        info%flag = WRONG_ERR_EST
-        rci%job = SSMFE_ABORT
-        return
-      end select
-
+      ! reallocate the inform and keep arrays
       if ( allocated(keep%ind           ) ) deallocate ( keep%ind            )
       if ( allocated(keep%mask          ) ) deallocate ( keep%mask           )
       if ( allocated(keep%lambda        ) ) deallocate ( keep%lambda         )
@@ -497,6 +536,7 @@ if_rci: &
       if ( info%stat /= 0 ) rci%job = SSMFE_ABORT
       if ( info%stat /= 0 ) return
       
+      ! initialize the execution information
       info%flag       = 0
       info%iteration  = 0
       info%residual_norms = NO_VALUE
@@ -504,38 +544,32 @@ if_rci: &
       info%err_X      = NO_VALUE
       info%converged  = 0
 
+      ! save the input data in keep
       keep%problem  = problem
       keep%err_est  = control%err_est
       keep%left     = left
       keep%right    = right
-      
-      if ( keep%problem < 0 ) then
-        if ( .not. (control%minAprod .and. control%minBprod) ) then
-          info%flag = WRONG_MINPROD
-          rci%job   = SSMFE_ABORT
-          return
-        end if
-        keep%minAprod = .true.
-        keep%minBprod = .true.
-      else
-        keep%minAprod = control%minAprod
-        keep%minBprod = control%minBprod .and. keep%problem > 0
-      end if
+      keep%minAprod = control%minAprod
+      keep%minBprod = control%minBprod .and. keep%problem /= 0
 
-      keep%kY = 1
-      keep%kZ = 2
-      keep%kW = 3
+      ! mark workspace blocks
+      ! zero block stores approximate eigenvectors (X)
+      keep%kY = 1 ! new search directions block (Y)
+      keep%kZ = 2 ! previous search directions block (Z)
+      keep%kW = 3 ! auxiliary block
       if ( keep%minAprod ) then
-        keep%kAX  = keep%kW + 1
-        keep%kAYZ = keep%kAX + 1
+        keep%kAX  = keep%kW + 1  ! block for A*X
+        keep%kAYZ = keep%kAX + 1 ! block for A*Y and A*Z
       else
+        ! no permanent storage for A*X, A*Y and A*Z, store in auxiliary block
         keep%kAX  = keep%kW
         keep%kAYZ = keep%kW
       end if
       if ( keep%minBprod ) then
-        keep%kBX  = keep%kAYZ + 1
-        keep%kBYZ = keep%kBX + 1
+        keep%kBX  = keep%kAYZ + 1 ! block for B*X
+        keep%kBYZ = keep%kBX + 1  ! block for B*Y and B*Z
       else
+        ! no permanent storage for A*X, A*Y and A*Z, store in other blocks
         if ( keep%problem == 0 ) then
           keep%kBX = 0
         else
@@ -544,8 +578,13 @@ if_rci: &
         keep%kBYZ = keep%kY
       end if
       
-      ! divide the workspace into left and right parts
+      ! divide the workspace into parts for storing eigenvectors 
+      ! corresponding to left and right margin of the spectrum
+      ! (referred below to as left and right eigenvectors)
+      
+      ! determine keep%leftX, the size of the part for left eigenvectors
       if ( left >= 0 ) then
+        ! divide proportionally to <left> and <right>
         if ( left == 0 ) then
           keep%leftX = 0
         else if ( right == 0 ) then
@@ -562,8 +601,10 @@ if_rci: &
           keep%leftX = min(keep%leftX, m - 1)
         end if
       else
+        ! divide evenly
         keep%leftX = m/2
       end if
+      ! the size of the part for the right eigenvectors
       keep%rightX = m - keep%leftX
 
       keep%firstX = 1 ! first non-converged eigenpair index
@@ -571,46 +612,53 @@ if_rci: &
       keep%sizeY  = 0 ! # of current search directions
       keep%sizeZ  = 0 ! # of previous search directions
 
-      keep%firstXn   = 1
-      keep%leftXn    = keep%leftX
-      keep%rightXn   = keep%rightX
-      keep%sizeXn    = m
-      keep%new_left  = 0
-      keep%new_right = 0
+      keep%firstXn   = 1            ! keep%firstX after update
+      keep%leftXn    = keep%leftX   ! keep%leftX after update
+      keep%rightXn   = keep%rightX  ! keep%rightX after update
+      keep%sizeXn    = m            ! keep%sizeX after update
+      keep%new_left  = 0            ! keep%leftX update increment
+      keep%new_right = 0            ! keep%rightX update increment
       if ( rci%job == SSMFE_START ) then
-        keep%left_cnv  = 0
-        keep%right_cnv = 0
+        keep%left_cnv  = 0 ! number of converged left eigenvectors
+        keep%right_cnv = 0 ! number of converged right eigenvectors
       end if
       
-      keep%cond  = ONE
-      keep%err_A = ZERO
-      keep%err_B = ZERO
+      keep%cond  = ONE  ! estimate for the condition number of X'*B*X
+      keep%err_A = ZERO ! estimated error of multiplication by A
+      keep%err_B = ZERO ! estimated error of multiplication by B
       
-      keep%rec  = 0
+      keep%rec  = 0    ! record number in eigenvalue decrement history
       keep%dlmd = ZERO ! eigenvalue decrements history
       keep%q    = ONE  ! eigenvalue convergence factors
       keep%dX   = ONE  ! eigenvector shifts
 
+      ! initial stage of computation consists in the orthogonalization 
+      ! of the initial approximate eigenvectors X to constraints
+      ! and the Rayleigh-Ritz procedure in the trial subspace spanned
+      ! by the orthogonalized initial vectors
       keep%stage = INITIAL
+
+      ! the first step of the initial stage
       keep%step = BEGIN
+
       keep%iteration = 0
       
-      rci%k = 1
-      
     end if if_rci
+
+    ! short names for elements of keep
 
     minAprod = keep%minAprod
     minBprod = keep%minBprod
     err_est  = keep%err_est
 
-    ! indices of blocks of the work array W
+    ! indices of blocks of the workspace array
     kY   = keep%kY    ! current search directions Y
     kZ   = keep%kZ    ! previous search directions Z
     kW   = keep%kW    ! general purpose workspace
-    kAX  = keep%kAX   ! A X
-    kAYZ = keep%kAYZ  ! A Y or A Z
-    kBX  = keep%kBX   ! B X
-    kBYZ = keep%kBYZ  ! B Y or B Z
+    kAX  = keep%kAX   ! A*X
+    kAYZ = keep%kAYZ  ! A*Y or A*Z
+    kBX  = keep%kBX   ! B*X
+    kBYZ = keep%kBYZ  ! B*Y or B*Z
     
 do_select_step: &
     do ! This do loop immediately surrounds the select case construct and
@@ -623,26 +671,38 @@ select_step: &
       select case ( keep%step )
 
       case (BEGIN) select_step
+      
+        ! computation starts with the orthogonalization of the initial 
+        ! approximate eigenvectors X to constraints, which, if B is not
+        ! identity, requires multiplying these vectors by B
             
         keep%step = COMPUTE_BX
 
       case (COMPUTE_BX) select_step
 
+        ! select next step
         if ( keep%stage == CG_LOOP ) then
+          ! compute A*X to form residual vectors
           keep%step = COMPUTE_AX
         else
+          ! orthogonalize X to constraints
           keep%step = ORTHOG_X_TO_Xc
         end if
 
+        ! check whether the multiplication by B is actually needed:
+        ! it is skipped if B*X is computed implicitly or B is identity,
+        ! but is enforced every 20 iterations to eliminate posiible 
+        ! accumulation of errors caused by implicit computation of B*X
         if ( .not. (minBprod .and. keep%stage == CG_LOOP &
                     .and. mod(keep%iteration, 20) > 0) &
               .and. problem /= 0 ) then
-          rci%job = SSMFE_APPLY_B
-          rci%nx = keep%sizeX
-          rci%jx = keep%firstX
-          rci%kx = 0
-          rci%jy = keep%firstX
-          rci%ky = kBX
+          ! multiplication needed
+          rci%job = SSMFE_APPLY_B ! instruct the user to apply B
+          rci%nx = keep%sizeX     ! number of vectors to be multiplied
+          rci%kx = 0              ! block index
+          rci%jx = keep%firstX    ! position of the first vector in the block
+          rci%ky = kBX            ! product receiving block index
+          rci%jy = keep%firstX    ! pos. of the first product in receiving block
           return
         end if
 
@@ -654,12 +714,14 @@ select_step: &
         rci%kx = 0
         rci%jy = keep%firstX
         rci%ky = kBX
+        
+        ! next step is to compute A*X or A*B*X
         keep%step = COMPUTE_AX
         return
         
       case (COMPUTE_AX) select_step
 
-        ! arranging the next step
+        ! select next step
         if ( keep%stage /= INITIAL ) then
           keep%step = COMPUTE_XBX
         else
@@ -674,8 +736,12 @@ select_step: &
           rci%jx = keep%firstX
 
           if ( problem < 0 ) then
+            ! in the case of the problem A B x = lambda x
+            ! the Rayleigh-Ritx procedure requires the computation of
+            ! X'*B*A*B*X instead of X'*A*X, hence compute A*(B*X)
             rci%kx = kBX
           else
+            ! compute A*X
             rci%kx = 0
           end if
 
@@ -686,15 +752,17 @@ select_step: &
         
       case (COMPUTE_INIT_XAX) select_step
       
-        ! compute X^T A X
+        ! compute H = X'*(A*X) or H = (B*X)'*(A*(B*X))
 
         rci%job = SSMFE_COMPUTE_XY
         rci%nx = keep%sizeX
         rci%jx = keep%firstX
 
         if ( problem < 0 ) then
+          ! multiply (B*X)' and (A*(B*X))
           rci%kx = kBX
         else
+          ! multiply X' and A*X
           rci%kx = 0
         end if
 
@@ -717,8 +785,10 @@ select_step: &
         rci%kx = 0
         rci%jy = keep%firstX
         if ( problem == 0 ) then
+          ! compute G = X'*X
           rci%ky = 0
         else
+          ! compute G = X'*(B*X)
           rci%ky = kBX
         end if
         rci%ny = keep%sizeX
@@ -732,6 +802,7 @@ select_step: &
 
       case (RR_IN_X) select_step ! Rayleigh-Ritz procedure in span(X)
 
+        ! solve the eigenvalue problem H q = lambda G q
         call solve_gsevp &
           ( keep%sizeX, rr_matrices(1,1,2), mm, rr_matrices, mm, &
             lambda, keep%lwork, keep%dwork, i )
@@ -742,6 +813,10 @@ select_step: &
         end if
         
         if ( left < 0 ) then
+          ! largest eigenvalues are computed:
+          ! redistribute work space for left and right eigenvectors
+          ! (in this case, left eigenvalues are negative and right
+          ! eigenvalues positive)
           j = 1
           do while ( j < m )
             if ( lambda(j) > 0 ) exit
@@ -753,16 +828,12 @@ select_step: &
 
         keep%lambda(1 : keep%sizeX) = lambda(1 : keep%sizeX)
 
-!        rci%job = SSMFE_COLLECT_Q_FOR_XQ
-!        rci%nx = keep%sizeX
-!        rci%ny = keep%sizeX
-!        rci%i = 0
-!        rci%k = 2
         keep%step = TRANSFORM_X
-!        return
 
       case (TRANSFORM_X) select_step
 
+        ! update X := X*Q, where the columns of Q are the eigenvectors of
+        ! H q = lambda G q
         rci%job = SSMFE_TRANSFORM_X
         rci%nx = keep%sizeX
         rci%jx = keep%firstX
@@ -778,7 +849,8 @@ select_step: &
 
       case (COMPUTE_INIT_AX) select_step
         
-        ! compute A X
+        ! update A*X := (A*X)*Q as a cheaper alternative to A*X := A*(X*Q)
+        ! (BLAS level 3 can be used)
         
         rci%job = SSMFE_TRANSFORM_X
         rci%nx = keep%sizeX
@@ -795,10 +867,12 @@ select_step: &
 
       case (COMPUTE_INIT_BX) select_step
 
+        ! this is the last step of the initial stage
         if ( keep%stage == INITIAL ) keep%stage = CG_LOOP        
         keep%step = COMPUTE_XBX
 
         if ( problem /= 0 ) then
+          ! update B*X := (B*X)*Q as a cheaper alternative to B*X := B*(X*Q)
           rci%job = SSMFE_TRANSFORM_X
           rci%nx = keep%sizeX
           rci%jx = keep%firstX
@@ -814,7 +888,8 @@ select_step: &
 
       case (COMPUTE_XBX) select_step
 
-        ! compute X^T B X
+        ! compute X'*B*X to be used later in the Rayleigh-Ritz procedure
+        ! in the trial subspace spanned by X and new search directions Y
 
         rci%job = SSMFE_COMPUTE_XY
         rci%nx = keep%sizeX
@@ -823,8 +898,10 @@ select_step: &
         rci%ny = keep%sizeX
         rci%jy = keep%firstX
         if ( problem == 0 ) then
+          ! compute X'*X
           rci%ky = 0
         else
+          ! compute X'*(B*X)
           rci%ky = kBX
         end if
         rci%i = 1
@@ -832,6 +909,8 @@ select_step: &
         rci%k = 1
         rci%alpha = UNIT
         rci%beta = NIL
+        
+        ! next, start computing residual vectors
         keep%step = COPY_AX_TO_W
         return
         
@@ -851,7 +930,7 @@ select_step: &
         
       case (COMPUTE_XAX) select_step
 
-        ! compute X^T A X and new lambda
+        ! compute X'*(A*X) or (B*X)'*A*(B*X)
 
         rci%job = SSMFE_COMPUTE_XY
         rci%nx = keep%sizeX
@@ -859,8 +938,10 @@ select_step: &
         rci%kx = 0
 
         if ( problem < 0 ) then
+          ! compute (B*X)'*A*(B*X)
           rci%kx = kBX
         else
+          ! compute X'*(A*X)
           rci%kx = 0
         end if
 
@@ -878,6 +959,11 @@ select_step: &
       case (COMPUTE_RESIDUALS) select_step
 
         do i = 1, keep%sizeX
+          ! X'*(B*X) stored in rr(:,:,1) must be identity,
+          ! the deviation from identity is caused mainly by the 
+          ! error of the Rayleigh-Ritz procedure and the error
+          ! in computing B*X, and hence can be used to estimate
+          ! these errors
           keep%err_B = max(keep%err_B, abs(rr_matrices(i, i, 1) - ONE))
           do j = 1, i - 1
             keep%err_B = max(keep%err_B, abs(rr_matrices(j, i, 1)))
@@ -886,26 +972,42 @@ select_step: &
           s = rr_matrices(i, i, 1)
           t = rr_matrices(i, i, 2)
           
+          ! the Rayleigh quotient for the approximate eigenvector X(:,iX)
+          ! is to be used as the corresponding approximate eigenvalue
           t = t/s
+
           if ( keep%rec > 0 ) then
+            ! try to compute the eigenvalue decrement
             if ( i > keep%leftXn - keep%new_left &
               .and. i <= keep%leftXn + keep%new_right &
               .or. left < 0 .and. t*lambda(iX) < ZERO &
               ) then
+              ! previous approximate eigenvalue not available,
+              ! decrement cannot be computed
               keep%dlmd(iX, keep%rec) = ZERO
             else
+              ! directly computed decrement
               s = abs(lambda(iX) - t)
               r = ZERO
               do j = 1, keep%sizeX
                 r = r + (rr_matrices(j, i, 2) - t*rr_matrices(j, i, 1))**2
               end do
+              ! sqrt(r) is the Frobenius norm of the ressidual H q - t G q
+              ! and it gives an idea of the error in t
               r = max(sqrt(r), abs(t)*epsilon(ONE))
+              ! directly decrement must be sufficiently larger than the error
+              ! in t to be relied upon
               if ( s > A_MULTIPLE*r ) keep%dlmd(iX, keep%rec) = s
+              ! if it is small enough, Jacobi estimate is used instead
+              ! (see below)
             end if
           end if
           lambda(iX) = t
         end do
         if ( keep%rec > 0 ) then
+          ! in the presence of tight eigenvalue clusters, decrements may be
+          ! mixed up, so replace decrements for eigenvalues in a cluster
+          ! with their maximum over this cluster
           do i = 1, keep%sizeX
             iX = keep%firstX + i - 1
             s = keep%dlmd(iX, keep%rec)
@@ -918,7 +1020,9 @@ select_step: &
             keep%dlmd(iX, keep%rec) = s
           end do
         end if
-        
+
+        ! the number of search directions is normally equal to the number
+        ! of currently iterated approximate eigenvectors (both may change later)
         keep%sizeY = keep%sizeX
               
         ! compute residuals
@@ -930,8 +1034,10 @@ select_step: &
         rci%nx = keep%sizeX
         rci%jx = keep%firstX
         if ( problem <= 0 ) then
+          ! compute A x - lambda x or A B x - lambda x
           rci%kx = 0
         else
+          ! compute A x - lambda B x
           rci%kx = kBX
         end if
         rci%jy = keep%firstX
@@ -940,9 +1046,15 @@ select_step: &
         rci%j = m + keep%firstX
         rci%k = 1
 
+        ! next step is to orthogonalize residual vectors
+        ! to constraints Xc for correct error estimation
         if ( problem < 0 ) then
+          ! residuals r = A B x - lambda x are made B-orthogonal to Xc by
+          ! update r := r - Xc*Xc'*B*r
           keep%step = COPY_W_TO_Y
         else
+          ! residuals r = A x - lambda B x (B may be identity) are made
+          ! orthogonal to Xc by update r := r - B*Xc*Xc'*r
           keep%step = ORTHOG_R_TO_Xc
         end if
 
@@ -982,6 +1094,7 @@ select_step: &
         rci%i = 1
         rci%j = 1
         rci%k = 3
+        ! next, compute Gram matrix R'*(B*R) for residuals A B x - lambda x
         keep%step = COMPUTE_RR
         return
         
@@ -994,6 +1107,7 @@ select_step: &
         rci%i = 1
         rci%j = 1
         rci%k = 3
+        ! next, compute Gram matrix R'*R for residuals A x - lambda B x 
         keep%step = COMPUTE_RR
         return
         
@@ -1017,10 +1131,12 @@ select_step: &
         rci%j = keep%firstX
         rci%k = 3
         if ( err_est == SSMFE_RESIDUAL ) then
+          ! residual error estimation requires Gram matrix for residuals
           rci%alpha = UNIT
           rci%beta = NIL
           rci%job = SSMFE_COMPUTE_XY
         else
+          ! otherwise, residual norms suffice
           rci%job = SSMFE_COMPUTE_DOTS
         end if
         keep%step = ESTIMATE_ERRORS
@@ -1032,10 +1148,17 @@ select_step: &
           info%residual_norms(iX) = sqrt(abs(rr_matrices(iX, iX, 3)))
         end do
 
+        ! next step
         keep%step = CHECK_CONVERGENCE
+        
+        ! estimate convergence factors for eigenvalues
+        ! (the ratio of the eigenvalue errors before and after
+        ! an iteration)
 
-        l = keep%rec
+        l = keep%rec ! current record number in eigenvalue decrements history
 
+        ! sufficient number of records needed for estimation
+        ! based on the decrement history
         if ( l > 3 ) then
 
           do iX = keep%firstX, keep%firstX + keep%sizeX - 1
@@ -1053,24 +1176,32 @@ select_step: &
               cycle
             end if
 
-            ! estimate the asymptotic convergence factor (q)
+            ! estimate the asymptotic convergence factor (a.c.f.) 
+            ! for this eigenvalue,
+            ! geometrical average of convergence factors over iterations 
+            ! performed so far
             s = ZERO
             k = 0
+            ! trust region is the last 1/3 of the history
             do j = l, l - l/3, -1
               q = keep%dlmd(iX,j)
               if ( q == ZERO ) exit
               s = s + q
               k = k + 1
             end do
+            ! history too short or decrements not available
             if ( k < 2 .or. s == ZERO ) cycle
             q = keep%dlmd(iX,l)/s
             q = q**(ONE/(k - 1))
-            keep%q(m + iX) = q
+            keep%q(m + iX) = q ! asymptotic convergence factor approximation
+            ! if q is too close to 1, skip refinement
             if ( q > ONE - TOO_SMALL ) cycle
             
+            ! estimate error based on a.c.f.
             theta = q/(ONE - q)
-
             info%err_lambda(m + iX) = keep%dlmd(iX,l)*theta
+
+            ! find first available decrement
             i = 0
             do j = l - 1, 1, -1
               if ( keep%dlmd(iX,j) == ZERO ) then
@@ -1080,20 +1211,32 @@ select_step: &
             end do
 
             k = (l - i)/3
-            if ( k < 1 ) cycle
+            if ( k < 1 ) cycle ! useful history too short
+            
+            ! set trust region to the middle 1/3 of history
             first = l - 2*k + 1
             last = l - k
+
+            ! compute the average of theta_j = log(q_j/(1 - q_j)) 
+            ! where q_j is the ratio of the error on (j+1)-th iteration 
+            ! to that on j-th
             theta = ZERO
             do j = last, first, -1
               s = info%err_lambda(m + iX)
               do k = j + 1, l
                 s = s + keep%dlmd(iX,k)
               end do
+              ! s approximates the eigenvalue error at iteration j + 1
+              ! hence s/keep%dlmd(iX,j) = q_j/(1 - q_j)
               theta = theta + log(s) - log(keep%dlmd(iX,j))
             end do
             k = last - first + 1
             theta = theta/k
-
+            
+            ! the range of theta_j is (-Inf, Inf), and
+            ! the deviations of theta_j from theta are essentially random
+            
+            ! compute the standard deviation for theta_j
             r = ZERO
             do j = last, first, -1
               s = info%err_lambda(m + iX)
@@ -1104,6 +1247,11 @@ select_step: &
             end do
             r = sqrt(r/(last - first + 1))
 
+            ! assuming theta_j to be normally distributed,
+            ! apply 3-sigma rule to obtain the upper bound for theta_j, 
+            ! and thus for the convergence factor keep%q(iX),
+            ! that discards outliers 
+            
             theta = exp(theta + 3*r)
             keep%q(iX) = theta/(ONE + theta)
             
@@ -1111,6 +1259,8 @@ select_step: &
 
         end if ! l > 3
           
+        ! using eigenvalue convergence factors,
+        ! estimate eigenvalue errors
         do iX = keep%firstX, keep%firstX + keep%sizeX - 1
           if ( info%residual_norms(iX) == ZERO ) then
             ! zero-residual eigenpairs are exact
@@ -1126,12 +1276,17 @@ select_step: &
           end if
         end do
 
+        ! using eigenvalue convergence factors,
+        ! estimate eigenvector errors
         do iX = keep%firstX, keep%firstX + keep%sizeX - 1
           if ( info%residual_norms(iX) == ZERO ) then
             ! zero-residual eigenpairs are exact
             info%err_X(iX) = ZERO
             cycle
           end if
+          ! the eigenvector error is roughly the square root
+          ! of the eigenvalue error, hence use the same relationship
+          ! for respective convergence factors
           q = sqrt(keep%q(iX))
           if ( q < ONE .and. keep%dX(iX) > ZERO ) then
             info%err_X(iX) = min(ONE, keep%dX(iX)*q/(ONE - q))
@@ -1143,12 +1298,16 @@ select_step: &
         if ( err_est == SSMFE_RESIDUAL ) then
 
           do iX = keep%firstX, keep%firstX + keep%sizeX - 1
-            info%err_lambda(iX) = info%residual_norms(iX) ! default: KW estimate
+            ! default: Krylov-Weinstein estimate
+            info%err_lambda(iX) = info%residual_norms(iX) 
           end do
 
-          do go = 1, 2
+          ! use Lehmann bounds for eigenvalues and Davis-Kahan bounds
+          ! for eigenvectors
+
+          do go = 1, 2 ! treat each margin of the spectrum separately
           
-            if ( keep%sizeX < 2 ) exit
+            if ( keep%sizeX < 2 ) exit ! not enough data
 
             select case ( go )
             case (1)
@@ -1240,7 +1399,9 @@ select_step: &
         end if
 
         do i = 1, m
-          ! if error estimates not yet available, use rough ones for printing
+          ! if error estimates not yet available, use 
+          ! eigenvalue decrements keep%dlmd and eigenvector shifts keep%dX 
+          ! as 'rough' ones for printing
           info%err_lambda(m + i) = info%err_lambda(i)
           if ( info%err_lambda(i) == NO_VALUE &
               .and. keep%rec > 0  ) then
@@ -2958,6 +3119,23 @@ select_step: &
       return
     end if
 
+    err_est = control%err_est
+    select case ( err_est )
+    case ( SSMFE_RESIDUAL, SSMFE_KINEMATIC )
+    case default
+      info%flag = WRONG_ERR_EST
+      rci%job = SSMFE_ABORT
+      return
+    end select
+
+    if ( problem < 0 ) then
+      if ( .not. (control%minAprod .and. control%minBprod) ) then
+        info%flag = WRONG_MINPROD
+        rci%job   = SSMFE_ABORT
+        return
+      end if
+    end if
+
     A_FRACTION = 0.1D0
     A_SMALL_FRACTION = 0.01D0
     A_MULTIPLE = 100
@@ -2982,15 +3160,6 @@ if_rci: &
         rci%job = SSMFE_ABORT
         return
       end if
-
-      err_est = control%err_est
-      select case ( err_est )
-      case ( SSMFE_RESIDUAL, SSMFE_KINEMATIC )
-      case default
-        info%flag = WRONG_ERR_EST
-        rci%job = SSMFE_ABORT
-        return
-      end select
 
       if ( allocated(keep%ind           ) ) deallocate ( keep%ind            )
       if ( allocated(keep%mask          ) ) deallocate ( keep%mask           )
@@ -3027,18 +3196,8 @@ if_rci: &
       keep%err_est  = control%err_est
       keep%left     = left
       keep%right    = right
-      if ( keep%problem < 0 ) then
-        if ( .not. (control%minAprod .and. control%minBprod) ) then
-          info%flag = WRONG_MINPROD
-          rci%job   = SSMFE_ABORT
-          return
-        end if
-        keep%minAprod = .true.
-        keep%minBprod = .true.
-      else
-        keep%minAprod = control%minAprod
-        keep%minBprod = control%minBprod .and. keep%problem > 0
-      end if
+      keep%minAprod = control%minAprod
+      keep%minBprod = control%minBprod .and. keep%problem /= 0
 
       keep%kY = 1
       keep%kZ = 2
@@ -3113,7 +3272,7 @@ if_rci: &
       keep%step = BEGIN
       keep%iteration = 0
       
-      rci%k = 1
+!      rci%k = 1
       
     end if if_rci
 
@@ -5106,6 +5265,7 @@ select_step: &
             do i = 1, keep%sizeZ
               if ( keep%lambda(keep%leftX + i) <= t ) then
                 rci%i = rci%i + 1
+!                print *, 'rci%i (1):', rci%i
               else
                 exit
               end if
@@ -5115,6 +5275,7 @@ select_step: &
             .and. keep%lambda(keep%leftX) - keep%lambda(1) <= q*REL_GAP/10 &
             ) then
             rci%i = 1
+!            print *, 'rci%i (2):', rci%i
           end if
         end if
         if ( keep%rightX > 0 ) then
@@ -5127,6 +5288,7 @@ select_step: &
             do i = keep%sizeZ, rci%i + 1, -1
               if ( keep%lambda(keep%leftX + i) >= t ) then
                 rci%j = rci%j + 1
+!                print *, 'rci%j (1):', rci%j
               else
                 exit
               end if
@@ -5135,7 +5297,10 @@ select_step: &
           i = keep%leftX + keep%sizeZ
           if ( rci%j == 0 .and. keep%rightX > 1 .and. keep%sizeZ > 0 &
             .and. keep%lambda(sizeXY) - keep%lambda(i) <= q*REL_GAP/10 &
-            ) rci%j = 1
+            ) then
+            rci%j = 1
+!            print *, 'rci%j (2):', rci%j
+          end if
         end if
         
         keep%step = COMPUTE_BX

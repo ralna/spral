@@ -437,7 +437,7 @@ contains
     ! number of wanted eigenvalues left of sigma
     integer, intent(in) :: left
 
-    ! number of wanted eigenvalues left of sigma
+    ! number of wanted eigenvalues right of sigma
     integer, intent(in) :: right
 
     ! eigenpairs storage size

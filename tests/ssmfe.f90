@@ -1811,7 +1811,7 @@ subroutine test_ssmfe_warnings_d
   integer :: left, right
   integer :: ldx
   integer :: lwork
-  integer :: i
+  integer :: i, j
   
   integer, allocatable :: ipiv(:)
   
@@ -1902,6 +1902,12 @@ subroutine test_ssmfe_warnings_d
   mep = 4
   options%left_gap = -2
   options%right_gap = -2
+  options%user_x = mep
+  do i = 1, n
+    do j = 1, mep
+      x(i, j) = sin(i*j*ONE)
+    end do
+  end do
   call run_std_si_d &
     ( options, n, a, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
@@ -1911,6 +1917,12 @@ subroutine test_ssmfe_warnings_d
   mep = 4
   options%left_gap = -2
   options%right_gap = -2
+  options%user_x = mep
+  do i = 1, n
+    do j = 1, mep
+      x(i, j) = sin(i*j*ONE)
+    end do
+  end do
   a = -a
   sigma = -sigma
   call run_std_si_d &
@@ -1921,6 +1933,7 @@ subroutine test_ssmfe_warnings_d
   mep = n
   options%left_gap = 0
   options%right_gap = 0
+  options%user_x = 0
 
   deallocate ( a, b, t, x, lambda )
 
@@ -1938,7 +1951,7 @@ subroutine test_ssmfe_warnings_z
   integer :: left, right
   integer :: ldx
   integer :: lwork
-  integer :: i
+  integer :: i, j
   
   integer, allocatable :: ipiv(:)
   
@@ -2029,6 +2042,12 @@ subroutine test_ssmfe_warnings_z
   mep = 4
   options%left_gap = -2
   options%right_gap = -2
+  options%user_x = mep
+  do i = 1, n
+    do j = 1, mep
+      x(i, j) = sin(i*j*ONE)
+    end do
+  end do
   call run_std_si_z &
     ( options, n, a, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
@@ -2038,6 +2057,12 @@ subroutine test_ssmfe_warnings_z
   mep = 4
   options%left_gap = -2
   options%right_gap = -2
+  options%user_x = mep
+  do i = 1, n
+    do j = 1, mep
+      x(i, j) = sin(i*j*ONE)
+    end do
+  end do
   a = -a
   sigma = -sigma
   call run_std_si_z &
@@ -2048,6 +2073,7 @@ subroutine test_ssmfe_warnings_z
   mep = n
   options%left_gap = 0
   options%right_gap = 0
+  options%user_x = 0
 
   deallocate ( a, b, t, x, lambda )
 
