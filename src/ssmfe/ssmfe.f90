@@ -425,6 +425,7 @@ contains
 
     integer :: extra
     integer :: total
+    integer :: m
     integer :: kw
     integer :: ldBX
     integer :: i, j, k
@@ -451,7 +452,8 @@ contains
       if ( allocated(keep%V  ) ) deallocate ( keep%V   )
       if ( allocated(keep%W  ) ) deallocate ( keep%W   )
       allocate &
-        ( keep%ind(keep%block_size), keep%U(max_nep, keep%block_size), &
+        ( keep%ind(keep%block_size), &
+          keep%U(max_nep, 2*keep%block_size + max_nep), &
           keep%V(2*keep%block_size, 2*keep%block_size, 3), stat = inform%stat )
       if ( inform%stat /= 0 ) inform%flag = OUT_OF_MEMORY
       if ( inform%stat /= 0 ) rci%job = SSMFE_ABORT
@@ -557,6 +559,8 @@ contains
 
     case ( SSMFE_SAVE_CONVERGED )
     
+      if ( rci%nx < 1 ) return
+
       ! only leftmost eigenpairs computed (cf. ssmfe_expert solver)
       if ( rci%i < 0 ) return
 
@@ -570,6 +574,43 @@ contains
           call copy( n, keep%W(1, rci%jy + k, rci%ky), 1, keep%BX(1,j), 1 )
       end do
       
+      ! update the Gram matrix for the converged eigenvectors
+
+      ! newly converged eigenvectors are in columns
+      ! k, ..., k + rci%nx - 1 of X
+      k = keep%lcon + 1
+
+      m = keep%block_size
+      if ( keep%lcon > 0 ) then
+        if ( problem == 0 ) then
+          call gemm &
+            ( TR, 'N', keep%lcon, rci%nx, n, &
+              ONE, X, ldX, X(1, k), ldX, &
+              ZERO, keep%U(1, m + k), max_nep )
+        else
+          call gemm &
+            ( TR, 'N', keep%lcon, rci%nx, n, &
+              ONE, X, ldX, keep%BX(1, k), ldX, &
+              ZERO, keep%U(1, m + k), max_nep )
+        end if
+        do j = 1, rci%nx
+          do i = 1, keep%lcon
+            keep%U(k + j - 1, m + i) = keep%U(i, m + k + j - 1)
+          end do
+        end do
+      end if
+      if ( problem == 0 ) then
+        call gemm &
+          ( TR, 'N', rci%nx, rci%nx, n, &
+            ONE, X(1, k), ldX, X(1, k), ldX, &
+            ZERO, keep%U(k, m + k), max_nep)
+      else
+        call gemm &
+          ( TR, 'N', rci%nx, rci%nx, n, &
+            ONE, X(1, k), ldX, keep%BX(1, k), ldX, &
+            ZERO, keep%U(k, m + k), max_nep)
+      end if
+
       ! update the number of converged eigenpairs
       keep%lcon = keep%lcon + rci%nx
 
@@ -596,20 +637,45 @@ contains
 
     case ( SSMFE_APPLY_CONSTRAINTS )
 
-      ! apply I - X X'B to columns of keep%W specified by rci
+      ! apply I - Y H Y'B to W, where W holds the columns of keep%W 
+      ! specified by rci%jx, rci%kx and rci%nx,
+      ! Y is the left part of X containing the converged eigenvectors
+      ! and H is the inverse of the gram matrix G = Y' B Y
+
+      ! rci%x points to W
       rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
+      ! rci%y points to B W
       rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
+
       if ( keep%lcon > 0 ) then
+
+        ! compute Y'B W
         call gemm &
           ( TR, 'N', keep%lcon, rci%nx, n, &
             ONE, X, ldX, rci%y, n, ZERO, keep%U, max_nep )
+
+        ! since the Gram matrix G is close to identity, its inverse H
+        ! is close to 2I - G, the difference between the two matrices
+        ! being of the order (I - G)^2
+        m = keep%block_size
+        k = m + max_nep + 1
+        call mxcopy &
+          ( 'A', keep%lcon, rci%nx, keep%U, max_nep, keep%U(1, k), max_nep )
+        call gemm &
+          ( 'N', 'N', keep%lcon, rci%nx, keep%lcon, &
+            -ONE, keep%U(1, m + 1), max_nep, keep%U(1, k), max_nep, &
+            2*ONE, keep%U, max_nep )
+
+        ! update W
         call gemm &
           ( 'N', 'N', n, rci%nx, keep%lcon, &
             -ONE, X, ldX, keep%U, max_nep, ONE, rci%x, n )
         if ( problem /= 0 ) &
+          ! update B W
           call gemm &
             ( 'N', 'N', n, rci%nx, keep%lcon, &
               -ONE, keep%BX, ldBX, keep%U, max_nep, ONE, rci%y, n )
+
       end if
 
     case ( SSMFE_APPLY_A, SSMFE_APPLY_B )
@@ -861,7 +927,6 @@ contains
 
       case ( SSMFE_SAVE_CONVERGED )
     
-        ! only leftmost eigenpairs computed (cf. ssmfe_expert solver)
         if ( rci%nx < 1 ) return
 
         ! save the converged eigenvectors in X
@@ -878,10 +943,19 @@ contains
             call copy( n, keep%W(1, rci%jy + k, rci%ky), 1, keep%BX(1, j), 1 )
         end do
 
-        ! update the Gram matrix for the converged eigenvectors;
-        ! columns and rows in the middle corresponding to non-converged 
-        ! eigenvectors remain unchanged, i.e. columns and rows of the 
-        ! identity matrix of size max_nep
+        ! update the Gram matrix for the converged eigenvectors
+        ! stored as four blocks (two diagonal and two off-diagonal)
+        ! of a matrix G_X of size max_nep in the array keep%U:
+        
+        !       | G_l  0   F  |
+        ! G_X = |  0   I   0  |
+        !       !  F'  0  G_r |
+
+        ! where
+        
+        ! G_l = X(:, 1:keep%lcon)' B X(:, 1:keep%lcon)
+        ! G_r = X(:, 1:keep%rcon)' B X(:, 1:keep%rcon)
+        ! F   = X(:, 1:keep%lcon)' B X(:, 1:keep%rcon)
 
         ! newly converged eigenvectors are in columns
         ! k, ..., k + rci%nx - 1 of X
@@ -950,9 +1024,13 @@ contains
 
       case ( SSMFE_APPLY_ADJ_CONSTRS )
     
-        ! apply I - B X X' to columns of keep%W specified by rci
+        ! apply I - B Y Y' to W, where W holds the  columns of keep%W 
+        ! specified by rci%jx, rci%kx and rci%nx, and Y is holds 
+        ! the columns of X containing the converged eigenvectors
 
+        ! rci%x points to W
         rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
+        ! rci%y points to B W
         rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
 
         if ( keep%lcon > 0 ) then
@@ -978,50 +1056,17 @@ contains
 
         if ( keep%lcon == 0 .and. keep%rcon == 0 ) return
         
-        ! B-orthogonalize these columns of keep%W to the converged
-        ! eigenvectors in X
+        ! apply I - Y H Y'B to W, where W holds the  columns of keep%W 
+        ! specified by rci%jx, rci%kx and rci%nx, Y holds columns on the
+        ! left and right margins of X containing the converged eigenvectors,
+        ! and H is the inverse of the Gram matrix G = Y' B Y
+
+        ! rci%x points to W
         rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
-        ! using these columns that hold the above columns multiplied by B
+        ! rci%y points to B W
         rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
-        
-        ! to cover for the case of ill-conditioned B, which may cause
-        ! the accumulation of the orthogonalization errors in the course
-        ! of iterations, the orthogonalization involves the gram matrix
-        ! G for the converged eigenvectors
-        
-        ! as specified above, G is initialized to the identity matrix of
-        ! size max_nep, the number of columns in X, and is updated every
-        ! time one or more eigenvectors converge
-        
-        ! the update of G does not change the rows and columns corresponding
-        ! to the vacant columns of X, which may therefore be viewed as 
-        ! holding some virtual vectors orthogonal to the converged
-        ! eigenvectors stored in the few first and last columns of X
-        
-        ! the B-orthogonalization of a vector v to X is performed
-        ! by solving the system G u = f = X'B v and updating
-        ! v := v - X u
-        
-        ! if we only need to orthogonalize to the converged eigenvectors,
-        ! we need the corresponding compunents of u, i.e. first keep%lcon
-        ! and last keep%rcon
-        
-        ! owing to the block structure of G, the computation of these
-        ! components only involves respective components of f, the remaining
-        ! components can be set to zero
 
-        ! the needed components of f are computed by multiplying B v by 
-        ! the transposes of the converged eigenvectors in X
-        
-        ! since the Gram matrix G is close to identity, its inverse H
-        ! is close to 2I - G, the defference between the two matrices
-        ! being of the order (I - G)^2, i.e. u can be computed as 
-        ! u = (2 - G)f
-        
-        ! the described B-orthogonalization algorithm is implemented below
-        ! with the vectors u, v, and f replaced by matrices with rci%nx columns
-
-        ! we compute the first keep%lcon and the last keep%rcon rows of f
+        ! compute Y'B W
         if ( keep%lcon > 0 ) then
           call gemm &
             ( TR, 'N', keep%lcon, rci%nx, n, &
@@ -1034,7 +1079,25 @@ contains
               ONE, X(1, j), ldX, rci%y, n, ZERO, keep%U(j, 1), max_nep )
         end if
 
-        ! we compute u = (2 - G)f
+        ! since the Gram matrix G is close to identity, its inverse H
+        ! is close to 2I - G, the difference between the two matrices
+        ! being of the order (I - G)^2
+
+        ! H is applied to
+
+        ! | U_l |
+        ! | U_r |
+        
+        ! where U_l is keep%lcon by rci%nx and U_r is keep%rcon by rci%nx,
+        ! which is equivalent to applying H_X = 2I - G_X to
+        
+        ! | U_l |
+        ! !  0  |
+        ! | U_r |
+        
+        ! and collecting the first keep%lcon and last keep%rcon rows
+        ! of the result
+
         m = keep%block_size
         k = m + max_nep + 1
         call mxcopy &
@@ -1044,8 +1107,7 @@ contains
             -ONE, keep%U(1, m + 1), max_nep, keep%U(1, k), max_nep, &
             2*ONE, keep%U, max_nep )
 
-        ! we update v using only the first keep%lcon and the last keep%rcon
-        ! rows of u
+        ! update W and, if B is not the identtity, B W
         if ( keep%lcon > 0 ) then
           call gemm &
             ( 'N', 'N', n, rci%nx, keep%lcon, &
@@ -1131,6 +1193,7 @@ contains
         if ( inform%stat /= 0 ) return
 
         if ( problem == 0 ) then
+          ! compute Y = (A - sigma I)^{-1} X
           call mxcopy( 'A', n, nep, X, ldX, keep%W, n )
           rci%job = SSMFE_DO_SHIFTED_SOLVE
           rci%nx = nep
@@ -1142,6 +1205,7 @@ contains
           rci%y => keep%W(:,:,2)
           keep%step = 2
         else
+          ! compute B X
           call mxcopy( 'A', n, nep, X, ldX, keep%W(1,1,2), n )
           rci%job = SSMFE_APPLY_B
           rci%nx = nep
@@ -1158,6 +1222,8 @@ contains
       
     case ( 1 )
 
+      ! compute Y = (A - sigma B)^{-1} B X 
+      ! (or Y = (B - sigma A)^{-1} B X in the buckling case)
       rci%job = SSMFE_DO_SHIFTED_SOLVE
       rci%nx = nep
       rci%jx = 1
@@ -1170,6 +1236,7 @@ contains
 
     case ( 2 )
 
+      ! compute A Y
       call mxcopy( 'A', n, nep, keep%W(1,1,2), n, keep%W, n )
       rci%job = SSMFE_APPLY_A
       rci%nx = nep
@@ -1187,6 +1254,7 @@ contains
         call mxcopy( 'A', n, nep, keep%W, n, keep%W(1,1,3), n )
         rci%job = 100
       else
+        ! compute B Y
         rci%job = SSMFE_APPLY_B
         rci%nx = nep
         rci%jx = 1
@@ -1199,9 +1267,14 @@ contains
       keep%step = 4
       
     case ( 4 )
+    
+      ! perform the Rayleigh-Ritz procedure in the subspace spanned by
+      ! the columns of Y to obtain better approximations to eigenvectors
 
       ldV = nep
       if ( problem == 2 ) then
+        ! in the buckling case, A and B are swapped, so reverse the order
+        ! of eigenvalues by multiplying Y'A Y by -1
         s = -ONE
       else
         s = ONE
@@ -1220,6 +1293,7 @@ contains
         ( 'N', 'N', n, nep, nep, ONE, keep%W, n, keep%V, ldV, ZERO, X, ldX )
 
       if ( problem == 2 ) then
+        ! recover buckling eigenvalues in the correct (ascending) order
         do i = 1, nep
           lambda(i) = -ONE/lambda(i)
         end do
@@ -1307,6 +1381,7 @@ contains
 
     integer :: extra
     integer :: total
+    integer :: m
     integer :: kw
     integer :: ldBX
     integer :: i, j, k
@@ -1330,7 +1405,9 @@ contains
       if ( allocated(keep%V  ) ) deallocate ( keep%V   )
       if ( allocated(keep%W  ) ) deallocate ( keep%W   )
       allocate &
-        ( keep%ind(keep%block_size), keep%U(max_nep, keep%block_size), &
+        ( keep%ind(keep%block_size), &
+          keep%U(max_nep, 2*keep%block_size + max_nep), &
+!          keep%U(max_nep, keep%block_size), &
           keep%V(2*keep%block_size, 2*keep%block_size, 3), stat = inform%stat )
       if ( inform%stat /= 0 ) inform%flag = OUT_OF_MEMORY
       if ( inform%stat /= 0 ) rci%job = SSMFE_ABORT
@@ -1360,6 +1437,10 @@ contains
       if ( options%user_X > 0 ) &
         call mxcopy &
           ( 'A', n, min(keep%block_size, options%user_X), X, ldx, keep%W, n )
+!      keep%U = ZERO
+!      do i = 1, max_nep
+!        keep%U(i, keep%block_size + i) = ONE
+!      end do
     else
       if ( .not. allocated(keep%ind) ) then
         inform%flag = WRONG_RCI_JOB
@@ -1425,6 +1506,7 @@ contains
 
     case ( SSMFE_SAVE_CONVERGED )
     
+      if ( rci%nx < 1 ) return
       if ( rci%i < 0 ) return
       do i = 1, rci%nx
         k = (i - 1)*rci%i
@@ -1433,6 +1515,37 @@ contains
         if ( problem /= 0 ) &
           call copy( n, keep%W(1, rci%jy + k, rci%ky), 1, keep%BX(1,j), 1 )
       end do
+      k = keep%lcon + 1
+      m = keep%block_size
+      if ( keep%lcon > 0 ) then
+        if ( problem == 0 ) then
+          call gemm &
+            ( TR, 'N', keep%lcon, rci%nx, n, &
+              UNIT, X, ldX, X(1, k), ldX, &
+              NIL, keep%U(1, m + k), max_nep )
+        else
+          call gemm &
+            ( TR, 'N', keep%lcon, rci%nx, n, &
+              UNIT, X, ldX, keep%BX(1, k), ldX, &
+              NIL, keep%U(1, m + k), max_nep )
+        end if
+        do j = 1, rci%nx
+          do i = 1, keep%lcon
+            keep%U(k + j - 1, m + i) = keep%U(i, m + k + j - 1)
+          end do
+        end do
+      end if
+      if ( problem == 0 ) then
+        call gemm &
+          ( TR, 'N', rci%nx, rci%nx, n, &
+            UNIT, X(1, k), ldX, X(1, k), ldX, &
+            NIL, keep%U(k, m + k), max_nep)
+      else
+        call gemm &
+          ( TR, 'N', rci%nx, rci%nx, n, &
+            UNIT, X(1, k), ldX, keep%BX(1, k), ldX, &
+            NIL, keep%U(k, m + k), max_nep)
+      end if
       keep%lcon = keep%lcon + rci%nx
 
     case ( SSMFE_APPLY_ADJ_CONSTRS )
@@ -1462,6 +1575,16 @@ contains
         call gemm &
           ( TR, 'N', keep%lcon, rci%nx, n, &
             UNIT, X, ldX, rci%y, n, NIL, keep%U, max_nep )
+        m = keep%block_size
+        k = m + max_nep + 1
+        call mxcopy &
+          ( 'A', keep%lcon, rci%nx, keep%U, max_nep, keep%U(1, k), max_nep )
+!          ( 'A', max_nep, rci%nx, keep%U, max_nep, keep%U(1, k), max_nep )
+        call gemm &
+!          ( 'N', 'N', max_nep, rci%nx, max_nep, &
+          ( 'N', 'N', keep%lcon, rci%nx, keep%lcon, &
+            -UNIT, keep%U(1, m + 1), max_nep, keep%U(1, k), max_nep, &
+            2*UNIT, keep%U, max_nep )
         call gemm &
           ( 'N', 'N', n, rci%nx, keep%lcon, &
             -UNIT, X, ldX, keep%U, max_nep, UNIT, rci%x, n )
