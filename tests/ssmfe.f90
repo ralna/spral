@@ -511,6 +511,19 @@ subroutine test_core_misc_d
   call print_result( inform%flag, 0 )
   call ssmfe_terminate( inform )
 
+  write(*,"(a)",advance="no") " * Testing left = 20, right = 20, m = 20....."
+  forall ( i = 1 : n ) b(i, i) = 2**i
+  do i = 1, n
+    do j = 1, n
+      x(i, j) = sin(i*j*ONE)
+    end do
+  end do
+  call run_ssmfe_d &
+    ( options, 0, n, a, b, t, 20, 20, tol, maxit, verb, 20, &
+      n, lambda, x, inform )
+  call print_result( inform%flag, 0 )
+  call ssmfe_terminate( inform )
+
   deallocate ( a, b, t, x, lambda, rr, ind )
 
 end subroutine test_core_misc_d
@@ -4179,7 +4192,7 @@ subroutine run_ssmfe_largest_d &
         lambda(j) = lmd(rci%jx + k)
         call dcopy( n, w(1, rci%jx + k, 0), 1, x(1, j), 1 )
         if ( problem /= 0 ) &
-          call copy( n, w(1, rci%jy + k, rci%ky), 1, bx(1, j), 1 )
+          call dcopy( n, w(1, rci%jy + k, rci%ky), 1, bx(1, j), 1 )
       end do
       if ( rci%i > 0 ) then
         lcon = lcon + rci%nx
