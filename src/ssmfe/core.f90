@@ -5,12 +5,15 @@
 !
 module spral_ssmfe_core
 
+  ! double precision to be used
   integer, parameter, private :: PRECISION = kind(1.0D0)
-  integer, parameter, private :: SSMFE_ITYPE = 1
+
+  ! BLAS/LAPACK flags
   character, parameter, private :: SSMFE_JOBZ = 'V'
   character, parameter, private :: SSMFE_UPLO = 'U'
+  integer, parameter, private :: SSMFE_ITYPE = 1
   
-  ! error codes
+  ! input error flags
   integer, parameter, private :: WRONG_RCI_JOB    = -1
   integer, parameter, private :: WRONG_BLOCK_SIZE = -2
   integer, parameter, private :: WRONG_ERR_EST    = -3
@@ -18,10 +21,12 @@ module spral_ssmfe_core
   integer, parameter, private :: WRONG_EXTRAS     = -5
   integer, parameter, private :: WRONG_MIN_GAP    = -6
   integer, parameter, private :: WRONG_CF_MAX     = -7
+
+  ! execution error flags
   integer, parameter, private :: OUT_OF_MEMORY    = -100
   integer, parameter, private :: INDEFINITE_B     = -200
 
-  ! warning codes
+  ! warning flag
   integer, parameter, private :: NO_SEARCH_DIRECTIONS_LEFT = 1
 
   ! error estimation schemes
@@ -46,7 +51,7 @@ module spral_ssmfe_core
   private :: lwork_sevp, solve_sevp, solve_gsevp
   private :: lwork_hevp, solve_hevp, solve_ghevp
   
-  type ssmfe_options
+  type ssmfe_options ! see the spec
 
     integer :: extra_left  = 0
     integer :: extra_right = 0
@@ -58,7 +63,7 @@ module spral_ssmfe_core
 
   end type ssmfe_options
   
-  type ssmfe_rcid
+  type ssmfe_rcid ! see the spec
   
     integer :: job = 0
     integer :: nx = 0
@@ -78,7 +83,7 @@ module spral_ssmfe_core
   
   end type ssmfe_rcid
   
-  type ssmfe_rciz
+  type ssmfe_rciz ! see the spec
   
     integer :: job = 0
     integer :: nx = 0
@@ -91,27 +96,31 @@ module spral_ssmfe_core
     integer :: j = 0
     integer :: k = 0
 
-    complex(PRECISION) :: alpha, beta
+    complex(PRECISION) :: alpha = 0
+    complex(PRECISION) :: beta = 0
     
     complex(PRECISION), dimension(:,:), pointer :: x => null()
     complex(PRECISION), dimension(:,:), pointer :: y => null()
   
   end type ssmfe_rciz
   
-  type ssmfe_inform
+  type ssmfe_inform ! see the spec
 
     integer :: flag          = 0
     integer :: stat          = 0
     integer :: non_converged = 0
     integer :: iteration     = 0
+    integer :: left = 0
+    integer :: right = 0
 
-    integer :: left = 0, right = 0
     integer, dimension(:), allocatable :: converged
 
-    double precision :: next_left, next_right
+    double precision :: next_left  = 1
+    double precision :: next_right = -1
 
     double precision, dimension(:), allocatable :: residual_norms
-    double precision, dimension(:), allocatable :: err_lambda, err_X
+    double precision, dimension(:), allocatable :: err_lambda
+    double precision, dimension(:), allocatable :: err_x
     
   end type ssmfe_inform
 
@@ -119,31 +128,74 @@ module spral_ssmfe_core
   
     private
     
+    ! problem type 
+    !  0: A x = lambda x
+    ! >0: A x = lambda B x
+    ! <0: A B x = lambda x
     integer :: problem = 0
 
-    integer :: step, stage, iteration
-    integer :: left, right
-    integer :: sizeX, sizeY, sizeZ, sizeXn, firstX, firstXn
-    integer :: leftX, rightX, leftXn, rightXn, new_left, new_right
-    integer :: left_cnv, right_cnv
-    integer :: kY, kZ, kW
-    integer :: kAX, kAYZ
-    integer :: kBX, kBYZ
-    integer :: lwork
-    integer :: rec = 0, RECORDS = 30
-    
-    double precision :: cond, err_A, err_B
+    integer :: step = 0 ! computational step
+    integer :: stage = 0 ! computational stage
+    integer :: iteration = 0 ! iteration number
 
+    integer :: sizeX = 0 ! no. currently iterated vectors
+    integer :: sizeY = 0 ! no. current search directions
+    integer :: sizeZ = 0 ! no. previous search directions
+    integer :: sizeXn = 0 ! updated sizeX
+
+    integer :: firstX  = 1 ! first iterated vector position in workspace block 0
+    integer :: firstXn = 1 ! updated firstXn
+    integer :: leftX  = 0 ! no. currently iterated left vectors
+    integer :: rightX = 0 ! no. currently iterated right vectors
+    integer :: leftXn  = 0 ! updated leftX
+    integer :: rightXn = 0 ! updated rightX
+
+    integer :: left_cnv  = 0 ! no. converged left eigenpairs
+    integer :: right_cnv = 0 ! no. converged right eigenpairs
+    integer :: new_left  = 0 ! no. newly converged left eigenpairs
+    integer :: new_right = 0 ! no. newly converged right eigenpairs
+
+    ! indices of blocks of the workspace array
+    ! zero block holds eigenvector iterates X
+    integer :: kY = 1 ! current search directions Y
+    integer :: kZ = 2 ! previous search directions Z
+    integer :: kW = 3 ! auxiliary block W
+    integer :: kAX  = 4 ! A*X
+    integer :: kAYZ = 5 ! A*Y or A*Z
+    integer :: kBX  = 6 ! B*X
+    integer :: kBYZ = 7! B*Y or B*Z
+
+    integer :: lwork = 0 ! LAPACK dsyev/zheev workspace size 
+
+    integer :: rec = 0 ! record number in eigenvalue decrements history
+    integer :: RECORDS = 30 ! max number of records
+    
+    ! estimate for the condition number of [X Y]'*B*[X, Y]
+    double precision :: cond = 1
+    ! estimate for the error of multiplying by A
+    double precision :: err_A = 0
+    ! estimate for the error of multiplying by B
+    double precision :: err_B = 0
+
+    ! eigenvalues decrements history
     double precision, dimension(:,:), allocatable :: dlmd
-    double precision, dimension(:), allocatable :: q, dX
+    ! estimates for eigenvalues convergence factors
+    double precision, dimension(:), allocatable :: q
+    ! approximate eigenvectors shifts after an iteration
+    double precision, dimension(:), allocatable :: dX
+    ! eigenvalues array
     double precision, dimension(:), allocatable :: lambda
+    ! real work array for LAPACK dsyev/zheev
     double precision, dimension(:), allocatable :: dwork
+    ! complex work array for LAPACK zheev
     complex(PRECISION), dimension(:), allocatable :: zwork
     
-    integer, dimension(:), allocatable :: ind, mask
+    ! search directions reordering index
+    integer, dimension(:), allocatable :: ind
     
-    integer :: err_est
-    logical :: minAprod, minBprod
+    integer :: err_est = 2 ! error estimation scheme
+    logical :: minAprod = .true. ! A-multiplications minimization flag
+    logical :: minBprod = .true. ! B-multiplications minimization flag
     
   end type ssmfe_keep
 
@@ -511,7 +563,6 @@ if_rci: &
     
       ! reallocate the inform and keep arrays
       if ( allocated(keep%ind           ) ) deallocate ( keep%ind            )
-      if ( allocated(keep%mask          ) ) deallocate ( keep%mask           )
       if ( allocated(keep%lambda        ) ) deallocate ( keep%lambda         )
       if ( allocated(keep%q             ) ) deallocate ( keep%q              )
       if ( allocated(keep%dX            ) ) deallocate ( keep%dX             )
@@ -526,7 +577,7 @@ if_rci: &
       allocate &
         ( info%residual_norms(m), info%err_lambda(mm), info%err_X(mm), &
           info%converged(m), keep%lambda(3*m), &
-          keep%ind(2*m), keep%mask(m), keep%q(mm), keep%dX(mm), &
+          keep%ind(2*m), keep%q(mm), keep%dX(mm), &
           keep%dwork(keep%lwork), &
           keep%dlmd(m, keep%RECORDS), stat = info%stat )
       if ( info%stat /= 0 ) info%flag = OUT_OF_MEMORY
@@ -544,8 +595,6 @@ if_rci: &
       ! save the input data in keep
       keep%problem  = problem
       keep%err_est  = control%err_est
-      keep%left     = left
-      keep%right    = right
       keep%minAprod = control%minAprod
       keep%minBprod = control%minBprod .and. keep%problem /= 0
 
@@ -2075,7 +2124,7 @@ select_step: &
 
         delta = GRAM_RCOND_MIN
         
-        ! check if the Gram matrix [X Y]'*B*[X Y] has eigenvalues that are
+        ! check if the Gram matrix G =[X Y]'*B*[X Y] has eigenvalues that are
         ! too small (less than delta)
 
         ! perform Cholesky factorization of the Gram matrix
@@ -2100,17 +2149,23 @@ select_step: &
               ( 'L', 'U', 'T', 'N', sizeXY, 1, UNIT, &
                 rr_matrices(1,1,3), mm, rr_matrices(1,mm,2), mm )
             t = norm(sizeXY, rr_matrices(1,mm,2), 1)
-            q = s**2/t**2 ! a Rayleigh quotient for the inverse of Gram matrix
+            q = s**2/t**2 ! a Rayleigh quotient for the inverse of G
             if ( q <= delta ) exit ! small eigenvalue detected
             call trsm &
               ( 'L', 'U', 'N', 'N', sizeXY, 1, UNIT, &
                 rr_matrices(1,1,3), mm, rr_matrices(1,mm,2), mm )
             s = norm(sizeXY, rr_matrices(1,mm,2), 1)
           end do
+          ! order of magnitude of the condition number of G
+          keep%cond = ONE/q 
           if ( q <= delta ) nsmall = 1
         end if
 
         if ( nsmall > 0 ) then
+
+          ! initial guess for the condition number of G
+          keep%cond = ONE/delta
+
           ! discard some search directions
         
           call copy &
@@ -2211,6 +2266,8 @@ select_step: &
               call dscal(k, ONE/t, rr_matrices(1, mm, 2), 1)
               if ( q > 0.9*r ) exit ! iterations stagnated
             end do
+            ! order of magnitude of the condition number of G
+            keep%cond = ONE/q
             
             ! q approximates an upper bound for the smallest eigenvalue of
             ! [S v]'*B*[S v]
@@ -3115,7 +3172,6 @@ select_step: &
     if ( allocated(keep%dwork ) ) deallocate( keep%dwork   )
     if ( allocated(keep%zwork ) ) deallocate( keep%zwork  )
     if ( allocated(keep%ind   ) ) deallocate( keep%ind    )
-    if ( allocated(keep%mask  ) ) deallocate( keep%mask   )
 
   end subroutine ssmfe_delete_work_double
 
@@ -3402,7 +3458,6 @@ if_rci: &
       end if
 
       if ( allocated(keep%ind           ) ) deallocate ( keep%ind            )
-      if ( allocated(keep%mask          ) ) deallocate ( keep%mask           )
       if ( allocated(keep%lambda        ) ) deallocate ( keep%lambda         )
       if ( allocated(keep%q             ) ) deallocate ( keep%q              )
       if ( allocated(keep%dX            ) ) deallocate ( keep%dX             )
@@ -3418,7 +3473,7 @@ if_rci: &
       allocate &
         ( info%residual_norms(m), info%err_lambda(mm), info%err_X(mm), &
           info%converged(m), keep%lambda(3*m), &
-          keep%ind(2*m), keep%mask(m), keep%q(mm), keep%dX(mm), &
+          keep%ind(2*m), keep%q(mm), keep%dX(mm), &
           keep%zwork(keep%lwork), keep%dwork(3*mm - 2), &
           keep%dlmd(m, keep%RECORDS), stat = info%stat )
       if ( info%stat /= 0 ) info%flag = OUT_OF_MEMORY
@@ -3434,8 +3489,6 @@ if_rci: &
 
       keep%problem  = problem
       keep%err_est  = control%err_est
-      keep%left     = left
-      keep%right    = right
       keep%minAprod = control%minAprod
       keep%minBprod = control%minBprod .and. keep%problem /= 0
 
@@ -4685,11 +4738,14 @@ select_step: &
                 rr_matrices(1,1,3), mm, rr_matrices(1,mm,2), mm )
             s = norm(sizeXY, rr_matrices(1,mm,2), 1)
           end do
+          keep%cond = ONE/q 
           if ( q <= delta ) nsmall = 1
         end if
 
         if ( nsmall > 0 ) then
         
+          keep%cond = ONE/delta
+
           call copy &
             ( mm * keep%sizeY, rr_matrices(1, keep%sizeX + 1, 1), 1, &
               rr_matrices(1, keep%sizeX + 1, 3), 1 )
@@ -4751,6 +4807,7 @@ select_step: &
               call scal(k, UNIT/t, rr_matrices(1, mm, 2), 1)
               if ( q > 0.9*r ) exit
             end do
+            keep%cond = ONE/q 
             if ( q <= delta ) exit
 
             if ( iY > 1 ) &

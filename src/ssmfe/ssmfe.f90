@@ -7,41 +7,60 @@ module SPRAL_ssmfe
 
   use SPRAL_ssmfe_expert
   
+  ! double precision to be used
   integer, parameter, private :: PRECISION = kind(1.0D0)
 
-  integer, parameter, private :: WRONG_RCI_JOB      = -1
-  integer, parameter, private :: WRONG_PROBLEM_SIZE = -9
+  ! input error flags
+  integer, parameter, private :: WRONG_RCI_JOB      =  -1
+  integer, parameter, private :: WRONG_PROBLEM_SIZE =  -9
   integer, parameter, private :: WRONG_LDX          = -10
   integer, parameter, private :: WRONG_LEFT         = -11
   integer, parameter, private :: WRONG_RIGHT        = -12
   integer, parameter, private :: WRONG_STORAGE_SIZE = -13
 
+  ! fatal execution error flags
   integer, parameter, private :: OUT_OF_MEMORY = -100
 
-  integer, parameter, private :: SSMFE_DONE  = -1
-  integer, parameter, private :: SSMFE_QUIT  = -2
-  integer, parameter, private :: SSMFE_ABORT = -3
+  ! termination status
+  integer, parameter, private :: SSMFE_DONE  = -1 ! success
+  integer, parameter, private :: SSMFE_QUIT  = -2 ! non-fatal error
+  integer, parameter, private :: SSMFE_ABORT = -3 ! fatal error
 
+  !
+  ! data type to hold information between calls to solver procedures
+  ! in RCI loop, real version
+  !
   type ssmfe_keepd
   
     private
     
-    integer :: block_size = 0
+    integer :: block_size = 0 ! BJCG block size
+    ! no. converged leftmost/left-of-the-shift eigenvalues
     integer :: lcon = 0
-    integer :: rcon = 0
-    integer :: step = 0
+    integer :: rcon = 0 ! no. converged eigenvalues right of the shift
+    integer :: step = 0 ! main computational step number
     
+    ! integer work array for reordering work vectors
     integer, dimension(:), allocatable :: ind
 
+    ! array for B*X
     real(PRECISION), dimension(:,:  ), allocatable :: BX
+    ! work array for orthogonalization to converged eigenvectors
     real(PRECISION), dimension(:,:  ), allocatable :: U
+    ! work array for the Rayleig-Ritz matrices
     real(PRECISION), dimension(:,:,:), allocatable :: V
+    ! array of approximate eigenvectors and work vectors
     real(PRECISION), dimension(:,:,:), allocatable :: W
 
+    ! expert interface keep (see expert.f90)
     type(ssmfe_keep) :: keep
 
   end type ssmfe_keepd
   
+  !
+  ! data type to hold information between calls to solver procedures
+  ! in RCI loop, complex version
+  !
   type ssmfe_keepz
   
     private
@@ -765,6 +784,7 @@ contains
     real(PRECISION) :: s
     
     if ( rci%job == SSMFE_START ) then
+
       keep%step = 0 ! solve step
       keep%lcon = 0 ! number of converged eigenvalues left of sigma
       keep%rcon = 0 ! number of converged eigenvalues right of sigma
@@ -1164,12 +1184,14 @@ contains
           end if
         end if
         
-      case ( :-1 )
+      case ( -2, -1 )
       
         ! total number of converged eigenpairs
         nep = inform%left + inform%right
 
         if ( nep < 1 ) return
+        
+        rci%k = rci%job
         
         if ( inform%right > 0 ) then
           ! bring the eigenpairs together
@@ -1298,8 +1320,8 @@ contains
           lambda(i) = -ONE/lambda(i)
         end do
       end if
-
-      rci%job = -1
+      
+      rci%job = rci%k
 
     end select
 
@@ -2007,10 +2029,12 @@ contains
           deallocate ( dwork )
         end if
         
-      case ( :-1 )
+      case ( -2, -1 )
 
         nep = inform%left + inform%right
         if ( nep < 1 ) return
+        
+        rci%k = rci%job
     
         if ( inform%left > 0 ) then
           do j = 1, inform%left/2
@@ -2141,7 +2165,7 @@ contains
         end do
       end if
 
-      rci%job = -1
+      rci%job = rci%k
 
     end select
 

@@ -7,33 +7,44 @@ module SPRAL_ssmfe_expert
 
   use SPRAL_ssmfe_core, ssmfe_work => ssmfe_keep, ssmfe_opts => ssmfe_options
 
+  ! double precision to be used
   integer, parameter, private :: PRECISION = kind(1.0D0)
-  integer, parameter, private :: SSMFE_ITYPE = 1
-  character, parameter, private :: SSMFE_JOBZ = 'V', SSMFE_UPLO = 'U'
   
-  integer, parameter, private :: WRONG_RCI_JOB      = -1
-  integer, parameter, private :: WRONG_BLOCK_SIZE   = -2
-  integer, parameter, private :: WRONG_ERR_EST      = -3
-  integer, parameter, private :: WRONG_MINPROD      = -4
-  integer, parameter, private :: WRONG_EXTRAS       = -5
-  integer, parameter, private :: WRONG_MIN_GAP      = -6
-  integer, parameter, private :: WRONG_CF_MAX       = -7
+  ! BLAS/LAPACK flags
+  character, parameter, private :: SSMFE_JOBZ = 'V', SSMFE_UPLO = 'U'
+  integer, parameter, private :: SSMFE_ITYPE = 1
+
+  ! input error flags
+  integer, parameter, private :: WRONG_RCI_JOB      =  -1
+  integer, parameter, private :: WRONG_BLOCK_SIZE   =  -2
+  integer, parameter, private :: WRONG_ERR_EST      =  -3
+  integer, parameter, private :: WRONG_MINPROD      =  -4
+  integer, parameter, private :: WRONG_EXTRAS       =  -5
+  integer, parameter, private :: WRONG_MIN_GAP      =  -6
+  integer, parameter, private :: WRONG_CF_MAX       =  -7
   integer, parameter, private :: WRONG_LEFT         = -11
   integer, parameter, private :: WRONG_RIGHT        = -12
   integer, parameter, private :: WRONG_STORAGE_SIZE = -13
   integer, parameter, private :: WRONG_SIGMA        = -14
   
+  ! fatal execution error flags
   integer, parameter, private :: OUT_OF_MEMORY           = -100
   integer, parameter, private :: B_NOT_POSITIVE_DEFINITE = -200
 
-  integer, parameter, private :: NO_SEARCH_DIRECTIONS_LEFT = 1
+  ! warning flags
+  integer, parameter, private :: NO_SEARCH_DIRECTIONS_LEFT   = 1
   integer, parameter, private :: MAX_NUM_ITERATIONS_EXCEEDED = 2
-  integer, parameter, private :: OUT_OF_STORAGE = 3
+  integer, parameter, private :: OUT_OF_STORAGE              = 3
 
-  integer, parameter, private :: SSMFE_DONE  = -1
-  integer, parameter, private :: SSMFE_QUIT  = -2
-  integer, parameter, private :: SSMFE_ABORT = -3
+  ! termination status
+  integer, parameter, private :: SSMFE_DONE  = -1 ! success
+  integer, parameter, private :: SSMFE_QUIT  = -2 ! non-fatal error
+  integer, parameter, private :: SSMFE_ABORT = -3 ! fatal error
 
+  ! error estimation schemes, see the spec
+  integer, parameter, private :: SSMFE_RESIDUAL  = 1
+  integer, parameter, private :: SSMFE_KINEMATIC = 2
+  
   interface ssmfe_standard
     module procedure &
       ssmfe_expert_double, &
@@ -78,26 +89,25 @@ module SPRAL_ssmfe_expert
       ssmfe_delete_keep_double
   end interface 
   
-  ! error estimation schemes
-  integer, parameter, private :: SSMFE_RESIDUAL = 1
-  integer, parameter, private :: SSMFE_KINEMATIC = 2
-  
-  type ssmfe_options
+  type ssmfe_options ! see the spec
   
     integer :: print_level = 0
-    integer :: unit_error = 6
-    integer :: unit_warning = 6 
+
+    integer :: unit_error      = 6
+    integer :: unit_warning    = 6 
     integer :: unit_diagnostic = 6
         
     integer :: max_iterations = 100
+
     integer :: user_x = 0
+
     integer :: err_est = SSMFE_KINEMATIC
 
     double precision :: abs_tol_lambda   =  0.0
     double precision :: rel_tol_lambda   =  0.0
     double precision :: abs_tol_residual =  0.0
     double precision :: rel_tol_residual =  0.0
-    double precision :: tol_x = -1.0
+    double precision :: tol_x            = -1.0
     
     double precision :: left_gap  = 0.0
     double precision :: right_gap = 0.0
@@ -119,25 +129,40 @@ module SPRAL_ssmfe_expert
   
     private
     
-    logical :: left_converged = .false.
-    logical :: right_converged = .false.
+    ! convergence flags for eigenvalues
+    logical :: left_converged  = .false. ! leftmost/left-of-the-shift
+    logical :: right_converged = .false. ! right of the shift
 
+    ! problem type (0: standard, 1: generalized, 2: buckling)
     integer :: problem = 0
-    integer :: left = 0
-    integer :: right = 0
-    integer :: max_left  = -1
-    integer :: max_right = -1
-    integer :: lcon = 0
-    integer :: rcon = 0
+
+    ! numbers of wanted eigenvalues
+    integer :: left  = 0 ! leftmost/left-of-the-shift
+    integer :: right = 0 ! right of the shift
+
+    ! total actual numbers of eigenvalues
+    integer :: max_left  = -1 ! left of the shift
+    integer :: max_right = -1 ! right of the shift
+
+    ! numbers of converged eigenvalues
+    integer :: lcon = 0 ! leftmost/left-of-the-shift
+    integer :: rcon = 0 ! right of the shift
+
+    ! positions of the first and last non-converged eigenvector
+    ! in block 0 of the vector workspace
     integer :: first = 1
-    integer :: last = 0
+    integer :: last  = 0
     
-    double precision :: av_dist
+    ! estimated average distance between eigenvalues
+    double precision :: av_dist = 0
+
+    ! work array for eigenvalues: converged eigenvalues are copied from
+    ! this array to the eigenvalue storage
     double precision, allocatable :: lmd(:)
 
-    type(ssmfe_inform) :: info
-    type(ssmfe_work  ) :: keep
-    type(ssmfe_opts  ) :: options
+    type(ssmfe_inform) :: info ! information about execution - see the spec
+    type(ssmfe_work  ) :: keep ! core interface keep - see core.f90
+    type(ssmfe_opts  ) :: options ! core interface options - see the core spec
 
   end type ssmfe_keep
 
