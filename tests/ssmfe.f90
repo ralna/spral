@@ -1963,7 +1963,7 @@ subroutine test_ssmfe_options_d
 
   write(*,"(a)",advance="no") " * Testing printing level 0.................."
   options%print_level = 0
-  write ( dl_unit, '(/x, a)' ) 'print level 0'
+  write ( dl_unit, '(/1x, a)' ) 'print level 0'
   t = ZERO
   call run_std_d( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, NO_SEARCH_DIRECTIONS_LEFT )
@@ -1972,21 +1972,21 @@ subroutine test_ssmfe_options_d
 
   write(*,"(a)",advance="no") " * Testing printing level 1.................."
   options%print_level = 1
-  write ( dl_unit, '(/x, a)' ) 'print level 1'
+  write ( dl_unit, '(/1x, a)' ) 'print level 1'
   call run_gen_d( n, a, b, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, 0 )
   call ssmfe_terminate( inform )
 
   write(*,"(a)",advance="no") " * Testing printing level 2.................."
   options%print_level = 2
-  write ( dl_unit, '(/x, a)' ) 'print level 2'
+  write ( dl_unit, '(/1x, a)' ) 'print level 2'
   call run_std_d( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, 0 )
   call ssmfe_terminate( inform )
 
   write(*,"(a)",advance="no") " * Testing printing level 3.................."
   options%print_level = 3
-  write ( dl_unit, '(/x, a)' ) 'print level 3'
+  write ( dl_unit, '(/1x, a)' ) 'print level 3'
   call run_std_d( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, 0 )
   call ssmfe_terminate( inform )
@@ -2060,6 +2060,8 @@ subroutine test_ssmfe_options_d
   write ( *, '(a)' ) ' * Testing shift-invert...'
 
   write(*,"(a)",advance="no") " * Testing zero tolerances..................."
+  left = 5
+  right = 5
   sigma = 255
   options%tol_x = 0
   call run_gen_si_d &
@@ -2103,7 +2105,7 @@ subroutine test_ssmfe_options_d
 
   write(*,"(a)",advance="no") " * Testing printing level 2.................."
   options%print_level = 2
-  write ( dl_unit, '(/x, a)' ) 'print level 2'
+  write ( dl_unit, '(/1x, a)' ) 'print level 2'
   sigma = 345
   left = 3
   right = 3
@@ -2115,7 +2117,7 @@ subroutine test_ssmfe_options_d
 
   write(*,"(a)",advance="no") " * Testing printing level 3.................."
   options%print_level = 3
-  write ( dl_unit, '(/x, a)' ) 'print level 3'
+  write ( dl_unit, '(/1x, a)' ) 'print level 3'
   call run_gen_si_d &
     ( options, n, a, b, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
@@ -2296,7 +2298,7 @@ subroutine test_ssmfe_options_z
 
   write(*,"(a)",advance="no") " * Testing printing level 0.................."
   options%print_level = 0
-  write ( dl_unit, '(/x, a)' ) 'print level 0'
+  write ( dl_unit, '(/1x, a)' ) 'print level 0'
   t = ZERO
   call run_std_z( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, NO_SEARCH_DIRECTIONS_LEFT )
@@ -2305,21 +2307,21 @@ subroutine test_ssmfe_options_z
 
   write(*,"(a)",advance="no") " * Testing printing level 1.................."
   options%print_level = 1
-  write ( dl_unit, '(/x, a)' ) 'print level 1'
+  write ( dl_unit, '(/1x, a)' ) 'print level 1'
   call run_gen_z( n, a, b, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, 0 )
   call ssmfe_terminate( inform )
 
   write(*,"(a)",advance="no") " * Testing printing level 2.................."
   options%print_level = 2
-  write ( dl_unit, '(/x, a)' ) 'print level 2'
+  write ( dl_unit, '(/1x, a)' ) 'print level 2'
   call run_std_z( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, 0 )
   call ssmfe_terminate( inform )
 
   write(*,"(a)",advance="no") " * Testing printing level 3.................."
   options%print_level = 3
-  write ( dl_unit, '(/x, a)' ) 'print level 3'
+  write ( dl_unit, '(/1x, a)' ) 'print level 3'
   call run_std_z( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, 0 )
   call ssmfe_terminate( inform )
@@ -2439,7 +2441,7 @@ subroutine test_ssmfe_options_z
 
   write(*,"(a)",advance="no") " * Testing printing level 2.................."
   options%print_level = 2
-  write ( dl_unit, '(/x, a)' ) 'print level 2'
+  write ( dl_unit, '(/1x, a)' ) 'print level 2'
   sigma = 345
   left = 3
   right = 3
@@ -2451,7 +2453,7 @@ subroutine test_ssmfe_options_z
 
   write(*,"(a)",advance="no") " * Testing printing level 3.................."
   options%print_level = 3
-  write ( dl_unit, '(/x, a)' ) 'print level 3'
+  write ( dl_unit, '(/1x, a)' ) 'print level 3'
   call run_gen_si_z &
     ( options, n, a, b, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
@@ -3099,8 +3101,8 @@ subroutine run_std_si_d &
   real(wp), intent(out) :: x(n, mep)
   real(wp), intent(out) :: ldlt(n, n)
   integer, intent(out) :: ipiv(n)
-  real(wp), intent(out) :: work(lwork)
   integer, intent(in) :: lwork
+  real(wp), intent(out) :: work(lwork)
   type(ssmfe_inform), intent(out) :: inform
   
   type(ssmfe_rcid) :: rci
@@ -3131,6 +3133,8 @@ subroutine run_std_si_d &
     end select
   end do
   call ssmfe_terminate ( keep )
+  options%max_left = -1
+  options%max_right = -1
 
 end subroutine run_std_si_d
 
@@ -3153,8 +3157,8 @@ subroutine run_std_si_z &
   complex(wp), intent(out) :: x(n, mep)
   complex(wp), intent(out) :: ldlt(n, n)
   integer, intent(out) :: ipiv(n)
-  complex(wp), intent(out) :: work(lwork)
   integer, intent(in) :: lwork
+  complex(wp), intent(out) :: work(lwork)
   type(ssmfe_inform), intent(out) :: inform
   
   type(ssmfe_rciz) :: rci
@@ -3185,6 +3189,8 @@ subroutine run_std_si_z &
     end select
   end do
   call ssmfe_terminate ( keep )
+  options%max_left = -1
+  options%max_right = -1
 
 end subroutine run_std_si_z
 
@@ -3289,8 +3295,8 @@ subroutine run_gen_si_d &
   real(wp), intent(out) :: x(n, mep)
   real(wp), intent(out) :: ldlt(n, n)
   integer, intent(out) :: ipiv(n)
-  real(wp), intent(out) :: work(lwork)
   integer, intent(in) :: lwork
+  real(wp), intent(out) :: work(lwork)
   type(ssmfe_inform), intent(out) :: inform
   
   type(ssmfe_rcid) :: rci
@@ -3355,8 +3361,8 @@ subroutine run_gen_si_z &
   complex(wp), intent(out) :: x(n, mep)
   complex(wp), intent(out) :: ldlt(n, n)
   integer, intent(out) :: ipiv(n)
-  complex(wp), intent(out) :: work(lwork)
   integer, intent(in) :: lwork
+  complex(wp), intent(out) :: work(lwork)
   type(ssmfe_inform), intent(out) :: inform
   
   type(ssmfe_rciz) :: rci
@@ -3421,8 +3427,8 @@ subroutine run_buckling_d &
   real(wp), intent(out) :: x(n, mep)
   real(wp), intent(out) :: ldlt(n, n)
   integer, intent(out) :: ipiv(n)
-  real(wp), intent(out) :: work(lwork)
   integer, intent(in) :: lwork
+  real(wp), intent(out) :: work(lwork)
   type(ssmfe_inform), intent(out) :: inform
   
   type(ssmfe_rcid) :: rci
@@ -3487,8 +3493,8 @@ subroutine run_buckling_z &
   complex(wp), intent(out) :: x(n, mep)
   complex(wp), intent(out) :: ldlt(n, n)
   integer, intent(out) :: ipiv(n)
-  complex(wp), intent(out) :: work(lwork)
   integer, intent(in) :: lwork
+  complex(wp), intent(out) :: work(lwork)
   type(ssmfe_inform), intent(out) :: inform
   
   type(ssmfe_rciz) :: rci

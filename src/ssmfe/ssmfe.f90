@@ -7,24 +7,26 @@ module SPRAL_ssmfe
 
   use SPRAL_ssmfe_expert
   
+  private
+  
   ! double precision to be used
-  integer, parameter, private :: PRECISION = kind(1.0D0)
+  integer, parameter :: PRECISION = kind(1.0D0)
 
   ! input error flags
-  integer, parameter, private :: WRONG_RCI_JOB      =  -1
-  integer, parameter, private :: WRONG_PROBLEM_SIZE =  -9
-  integer, parameter, private :: WRONG_LDX          = -10
-  integer, parameter, private :: WRONG_LEFT         = -11
-  integer, parameter, private :: WRONG_RIGHT        = -12
-  integer, parameter, private :: WRONG_STORAGE_SIZE = -13
+  integer, parameter :: WRONG_RCI_JOB      =  -1
+  integer, parameter :: WRONG_PROBLEM_SIZE =  -9
+  integer, parameter :: WRONG_LDX          = -10
+  integer, parameter :: WRONG_LEFT         = -11
+  integer, parameter :: WRONG_RIGHT        = -12
+  integer, parameter :: WRONG_STORAGE_SIZE = -13
 
   ! fatal execution error flags
-  integer, parameter, private :: OUT_OF_MEMORY = -100
+  integer, parameter :: OUT_OF_MEMORY = -100
 
   ! termination status
-  integer, parameter, private :: SSMFE_DONE  = -1 ! success
-  integer, parameter, private :: SSMFE_QUIT  = -2 ! non-fatal error
-  integer, parameter, private :: SSMFE_ABORT = -3 ! fatal error
+  integer, parameter :: SSMFE_DONE  = -1 ! success
+  integer, parameter :: SSMFE_QUIT  = -2 ! non-fatal error
+  integer, parameter :: SSMFE_ABORT = -3 ! fatal error
 
   !
   ! data type to hold information between calls to solver procedures
@@ -113,7 +115,14 @@ module SPRAL_ssmfe
       ssmfe_delete_keep_simple_double, &
       ssmfe_terminate_simple_double_complex, &
       ssmfe_delete_keep_simple_double_complex
-  end interface 
+  end interface
+  
+  public :: ssmfe_standard, ssmfe_standard_shift
+  public :: ssmfe_generalized, ssmfe_generalized_shift
+  public :: ssmfe_buckling
+  public :: ssmfe_terminate
+  public :: ssmfe_options, ssmfe_keepd, ssmfe_keepz
+  public :: ssmfe_rcid, ssmfe_rciz, ssmfe_inform
 
 contains
 
@@ -430,12 +439,12 @@ contains
     ! problem size
     integer, intent(in) :: n
 
-    ! eigenvector storage
-    real(PRECISION), intent(inout) :: X(ldX, max_nep)
-    
     ! leading dimension of X
     integer, intent(in) :: ldX
 
+    ! eigenvector storage
+    real(PRECISION), intent(inout) :: X(ldX, max_nep)
+    
     ! ssmfe types - see the spec
     type(ssmfe_rcid   ), intent(inout) :: rci
     type(ssmfe_options), intent(in   ) :: options
@@ -448,6 +457,8 @@ contains
     integer :: kw
     integer :: ldBX
     integer :: i, j, k
+    
+    if ( inform%flag < 0 ) print *, 'inform%flag:', inform%flag
     
     if ( rci%job == 0 ) then
 
@@ -1335,7 +1346,7 @@ contains
     type(ssmfe_inform), intent(inout) :: inform
     
     call ssmfe_delete_keep_simple_double( keep )
-    call ssmfe_delete_info_double( inform )
+    call ssmfe_terminate( inform )
 
   end subroutine ssmfe_terminate_simple_double
 
@@ -1350,7 +1361,7 @@ contains
     if ( allocated(keep%W  ) ) deallocate ( keep%W   )
     if ( allocated(keep%U  ) ) deallocate ( keep%U   )
     if ( allocated(keep%BX ) ) deallocate ( keep%BX  )
-    call ssmfe_delete_keep_double( keep%keep )
+    call ssmfe_terminate( keep%keep )
 
   end subroutine ssmfe_delete_keep_simple_double
 
@@ -1420,7 +1431,6 @@ contains
       if ( options%max_left >= 0 ) &
         total = min(total, options%max_left)
       keep%block_size = total
-!      keep%block_size = min(max(1, left + extra), max(1, n/2 - 1))
       keep%lcon = 0
       if ( allocated(keep%ind) ) deallocate ( keep%ind )
       if ( allocated(keep%U  ) ) deallocate ( keep%U   )
@@ -1429,7 +1439,6 @@ contains
       allocate &
         ( keep%ind(keep%block_size), &
           keep%U(max_nep, 2*keep%block_size + max_nep), &
-!          keep%U(max_nep, keep%block_size), &
           keep%V(2*keep%block_size, 2*keep%block_size, 3), stat = inform%stat )
       if ( inform%stat /= 0 ) inform%flag = OUT_OF_MEMORY
       if ( inform%stat /= 0 ) rci%job = SSMFE_ABORT
@@ -1459,10 +1468,6 @@ contains
       if ( options%user_X > 0 ) &
         call mxcopy &
           ( 'A', n, min(keep%block_size, options%user_X), X, ldx, keep%W, n )
-!      keep%U = ZERO
-!      do i = 1, max_nep
-!        keep%U(i, keep%block_size + i) = ONE
-!      end do
     else
       if ( .not. allocated(keep%ind) ) then
         inform%flag = WRONG_RCI_JOB
@@ -1601,9 +1606,7 @@ contains
         k = m + max_nep + 1
         call mxcopy &
           ( 'A', keep%lcon, rci%nx, keep%U, max_nep, keep%U(1, k), max_nep )
-!          ( 'A', max_nep, rci%nx, keep%U, max_nep, keep%U(1, k), max_nep )
         call gemm &
-!          ( 'N', 'N', max_nep, rci%nx, max_nep, &
           ( 'N', 'N', keep%lcon, rci%nx, keep%lcon, &
             -UNIT, keep%U(1, m + 1), max_nep, keep%U(1, k), max_nep, &
             2*UNIT, keep%U, max_nep )
@@ -1736,7 +1739,6 @@ contains
       allocate &
         ( keep%ind(keep%block_size), &
           keep%U(max_nep, 2*keep%block_size + max_nep), &
-!          keep%U(max_nep, keep%block_size), &
           keep%V(2*keep%block_size, 2*keep%block_size, 3), stat = inform%stat )
       if ( inform%stat /= 0 ) inform%flag = OUT_OF_MEMORY
       if ( inform%stat /= 0 ) rci%job = SSMFE_ABORT
@@ -2186,7 +2188,7 @@ contains
     implicit none
 
     integer :: n, m, ldW
-    double precision :: W(ldW, m, 0:7), V(m + m, m + m), U(m)
+    real(PRECISION) :: W(ldW, m, 0:7), V(m + m, m + m), U(m)
     integer :: ind(m)
     type(ssmfe_rcid) :: rci
     intent(in) :: n, m, ldW, rci
@@ -2200,13 +2202,13 @@ contains
     integer, parameter :: SSMFE_COMPUTE_XQ         = 16
     integer, parameter :: SSMFE_TRANSFORM_X        = 17
     
-    double precision, parameter :: ZERO = 0.0D0, ONE = 1.0D0
-    double precision, parameter :: NIL = ZERO
-    double precision, parameter :: UNIT = ONE
+    real(PRECISION), parameter :: ZERO = 0.0D0, ONE = 1.0D0
+    real(PRECISION), parameter :: NIL = ZERO
+    real(PRECISION), parameter :: UNIT = ONE
 
     integer :: i, j, mm
 
-    double precision :: alpha, beta, s
+    real(PRECISION) :: alpha, beta, s
     character, parameter :: TRANS = 'T'
     
     mm = m + m
@@ -2340,13 +2342,13 @@ contains
     integer, parameter :: SSMFE_COMPUTE_XQ         = 16
     integer, parameter :: SSMFE_TRANSFORM_X        = 17
     
-    double precision, parameter :: ZERO = 0.0D0, ONE = 1.0D0
+    real(PRECISION), parameter :: ZERO = 0.0D0, ONE = 1.0D0
     complex(PRECISION), parameter :: NIL(1) = ZERO
     complex(PRECISION), parameter :: UNIT = ONE
 
     integer :: i, j, mm
 
-    double precision ::  s
+    real(PRECISION) ::  s
     complex(PRECISION) :: alpha, beta
     
     mm = m + m
@@ -2458,7 +2460,7 @@ contains
     type(ssmfe_inform), intent(inout) :: inform
     
     call ssmfe_delete_keep_simple_double_complex( keep )
-    call ssmfe_delete_info_double( inform )
+    call ssmfe_terminate( inform )
 
   end subroutine ssmfe_terminate_simple_double_complex
 
@@ -2473,7 +2475,7 @@ contains
     if ( allocated(keep%U  ) ) deallocate ( keep%U   )
     if ( allocated(keep%V  ) ) deallocate ( keep%V   )
     if ( allocated(keep%W  ) ) deallocate ( keep%W   )
-    call ssmfe_delete_keep_double( keep%keep )
+    call ssmfe_terminate( keep%keep )
 
   end subroutine ssmfe_delete_keep_simple_double_complex
 

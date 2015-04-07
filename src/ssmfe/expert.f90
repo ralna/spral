@@ -6,44 +6,55 @@
 module SPRAL_ssmfe_expert
 
   use SPRAL_ssmfe_core, ssmfe_work => ssmfe_keep, ssmfe_opts => ssmfe_options
+  
+  private
 
   ! double precision to be used
-  integer, parameter, private :: PRECISION = kind(1.0D0)
+  integer, parameter :: PRECISION = kind(1.0D0)
   
   ! BLAS/LAPACK flags
-  character, parameter, private :: SSMFE_JOBZ = 'V', SSMFE_UPLO = 'U'
-  integer, parameter, private :: SSMFE_ITYPE = 1
+  character, parameter :: SSMFE_JOBZ = 'V', SSMFE_UPLO = 'U'
+  integer, parameter :: SSMFE_ITYPE = 1
 
   ! input error flags
-  integer, parameter, private :: WRONG_RCI_JOB      =  -1
-  integer, parameter, private :: WRONG_BLOCK_SIZE   =  -2
-  integer, parameter, private :: WRONG_ERR_EST      =  -3
-  integer, parameter, private :: WRONG_MINPROD      =  -4
-  integer, parameter, private :: WRONG_EXTRAS       =  -5
-  integer, parameter, private :: WRONG_MIN_GAP      =  -6
-  integer, parameter, private :: WRONG_CF_MAX       =  -7
-  integer, parameter, private :: WRONG_LEFT         = -11
-  integer, parameter, private :: WRONG_RIGHT        = -12
-  integer, parameter, private :: WRONG_STORAGE_SIZE = -13
-  integer, parameter, private :: WRONG_SIGMA        = -14
+  integer, parameter :: WRONG_RCI_JOB      =  -1
+  integer, parameter :: WRONG_BLOCK_SIZE   =  -2
+  integer, parameter :: WRONG_ERR_EST      =  -3
+  integer, parameter :: WRONG_MINPROD      =  -4
+  integer, parameter :: WRONG_EXTRAS       =  -5
+  integer, parameter :: WRONG_MIN_GAP      =  -6
+  integer, parameter :: WRONG_CF_MAX       =  -7
+  integer, parameter :: WRONG_LEFT         = -11
+  integer, parameter :: WRONG_RIGHT        = -12
+  integer, parameter :: WRONG_STORAGE_SIZE = -13
+  integer, parameter :: WRONG_SIGMA        = -14
   
   ! fatal execution error flags
-  integer, parameter, private :: OUT_OF_MEMORY           = -100
-  integer, parameter, private :: B_NOT_POSITIVE_DEFINITE = -200
+  integer, parameter :: OUT_OF_MEMORY           = -100
+  integer, parameter :: B_NOT_POSITIVE_DEFINITE = -200
 
   ! warning flags
-  integer, parameter, private :: NO_SEARCH_DIRECTIONS_LEFT   = 1
-  integer, parameter, private :: MAX_NUM_ITERATIONS_EXCEEDED = 2
-  integer, parameter, private :: OUT_OF_STORAGE              = 3
+  integer, parameter :: NO_SEARCH_DIRECTIONS_LEFT   = 1
+  integer, parameter :: MAX_NUM_ITERATIONS_EXCEEDED = 2
+  integer, parameter :: OUT_OF_STORAGE              = 3
 
   ! termination status
-  integer, parameter, private :: SSMFE_DONE  = -1 ! success
-  integer, parameter, private :: SSMFE_QUIT  = -2 ! non-fatal error
-  integer, parameter, private :: SSMFE_ABORT = -3 ! fatal error
+  integer, parameter :: SSMFE_DONE  = -1 ! success
+  integer, parameter :: SSMFE_QUIT  = -2 ! non-fatal error
+  integer, parameter :: SSMFE_ABORT = -3 ! fatal error
 
   ! error estimation schemes, see the spec
-  integer, parameter, private :: SSMFE_RESIDUAL  = 1
-  integer, parameter, private :: SSMFE_KINEMATIC = 2
+  integer, parameter :: SSMFE_RESIDUAL  = 1
+  integer, parameter :: SSMFE_KINEMATIC = 2
+  
+  public :: ssmfe_standard, ssmfe_standard_shift
+  public :: ssmfe_generalized, ssmfe_generalized_shift
+  public :: ssmfe_buckling
+  public :: ssmfe_solve
+  public :: ssmfe_terminate
+  public :: ssmfe_errmsg
+  public :: ssmfe_options, ssmfe_keep
+  public :: ssmfe_rcid, ssmfe_rciz, ssmfe_inform
   
   interface ssmfe_standard
     module procedure &
@@ -103,14 +114,14 @@ module SPRAL_ssmfe_expert
 
     integer :: err_est = SSMFE_KINEMATIC
 
-    double precision :: abs_tol_lambda   =  0.0
-    double precision :: rel_tol_lambda   =  0.0
-    double precision :: abs_tol_residual =  0.0
-    double precision :: rel_tol_residual =  0.0
-    double precision :: tol_x            = -1.0
+    real(PRECISION) :: abs_tol_lambda   =  0.0
+    real(PRECISION) :: rel_tol_lambda   =  0.0
+    real(PRECISION) :: abs_tol_residual =  0.0
+    real(PRECISION) :: rel_tol_residual =  0.0
+    real(PRECISION) :: tol_x            = -1.0
     
-    double precision :: left_gap  = 0.0
-    double precision :: right_gap = 0.0
+    real(PRECISION) :: left_gap  = 0.0
+    real(PRECISION) :: right_gap = 0.0
 
     integer :: extra_left  = -1
     integer :: extra_right = -1    
@@ -154,11 +165,11 @@ module SPRAL_ssmfe_expert
     integer :: last  = 0
     
     ! estimated average distance between eigenvalues
-    double precision :: av_dist = 0
+    real(PRECISION) :: av_dist = 0
 
     ! work array for eigenvalues: converged eigenvalues are copied from
     ! this array to the eigenvalue storage
-    double precision, allocatable :: lmd(:)
+    real(PRECISION), allocatable :: lmd(:)
 
     type(ssmfe_inform) :: info ! information about execution - see the spec
     type(ssmfe_work  ) :: keep ! core interface keep - see core.f90
@@ -443,9 +454,9 @@ contains
 
     integer, parameter :: NONE = -1
 
-    double precision, parameter :: ZERO = 0.0D0, ONE = 1.0D0
-    double precision, parameter :: NIL = ZERO
-    double precision, parameter :: UNIT = ONE
+    real(PRECISION), parameter :: ZERO = 0.0D0, ONE = 1.0D0
+    real(PRECISION), parameter :: NIL = ZERO
+    real(PRECISION), parameter :: UNIT = ONE
     
     real(kind = PRECISION), parameter :: MIN_REL_GAP = 1E-3
 
@@ -457,7 +468,7 @@ contains
     integer, intent(in) :: problem
 
     ! shift
-    double precision, intent(in) :: sigma
+    real(PRECISION), intent(in) :: sigma
 
     ! number of wanted eigenvalues left of sigma
     integer, intent(in) :: left
@@ -469,13 +480,13 @@ contains
     integer, intent(in) :: max_nep
 
     ! storage for eigenvalues
-    double precision, intent(inout) :: lambda(max_nep)
+    real(PRECISION), intent(inout) :: lambda(max_nep)
 
     ! BJCG block size
     integer, intent(in) :: block_size
 
     ! matrices for the Rayleigh-Ritz procedure
-    double precision, intent(inout) :: &
+    real(PRECISION), intent(inout) :: &
       rr_matrices(2*block_size, 2*block_size, 3)
 
     ! work matrix column reordering index
@@ -497,10 +508,10 @@ contains
     integer :: m, mep, new, ncon, first, last, step
     integer :: i, j, k, l
     
-    double precision :: left_gap
-    double precision :: right_gap
-    double precision :: delta
-    double precision :: q, r, s, t
+    real(PRECISION) :: left_gap
+    real(PRECISION) :: right_gap
+    real(PRECISION) :: delta
+    real(PRECISION) :: q, r, s, t
     
     ! short names for options
 
@@ -848,6 +859,7 @@ contains
       end do
       if ( rci%i > 0 ) then
         j = rci%jx + new
+        m = block_size
         ! find, if possible, where is the next left eigenvalue
         if ( .not. keep%left_converged ) then
           info%next_left = sigma ! assume not available yet
@@ -1282,9 +1294,9 @@ contains
     ! or (B - sigma A)^{-1} B (problem = 2)
     ! returns the corresponding eigenvalue lambda of
     ! A x = lambda B x
-    double precision function si_map( problem, sigma, mu )
+    real(PRECISION) function si_map( problem, sigma, mu )
       integer, intent(in) :: problem
-      double precision, intent(in) :: sigma, mu
+      real(PRECISION), intent(in) :: sigma, mu
       if ( problem == 2 ) then
         si_map = sigma*mu/(mu - 1)
       else
@@ -1293,9 +1305,9 @@ contains
     end function si_map
 
     ! same for the eigenvalue error
-    double precision function si_map_err( problem, sigma, mu, delta )
+    real(PRECISION) function si_map_err( problem, sigma, mu, delta )
       integer, intent(in) :: problem
-      double precision, intent(in) :: sigma, mu, delta
+      real(PRECISION), intent(in) :: sigma, mu, delta
       if ( problem == 2 ) then
         si_map_err = sigma*delta/(mu - 1)**2
       else
@@ -1321,9 +1333,9 @@ contains
 
     integer, parameter :: NONE = -1
 
-    double precision, parameter :: ZERO = 0.0D0, ONE = 1.0D0
-    double precision, parameter :: NIL = ZERO
-    double precision, parameter :: UNIT = ONE
+    real(PRECISION), parameter :: ZERO = 0.0D0, ONE = 1.0D0
+    real(PRECISION), parameter :: NIL = ZERO
+    real(PRECISION), parameter :: UNIT = ONE
     
     real(kind = PRECISION), parameter :: MIN_REL_GAP = 1E-3
 
@@ -1340,13 +1352,13 @@ contains
     integer, intent(in) :: max_nep
 
     ! eigenvalue storage
-    double precision, intent(inout) :: lambda(max_nep)
+    real(PRECISION), intent(inout) :: lambda(max_nep)
 
     ! BJCG block size
     integer, intent(in) :: block_size
 
     ! matrices for the Rayleigh-Ritz procedure
-    double precision, intent(inout) :: &
+    real(PRECISION), intent(inout) :: &
       rr_matrices(2*block_size, 2*block_size, 3)
 
     ! work matrix column reordering index
@@ -1368,9 +1380,9 @@ contains
     integer :: first, last
     integer :: i, j, k, l
     
-    double precision :: gap
-    double precision :: delta
-    double precision :: q, r, s, t
+    real(PRECISION) :: gap
+    real(PRECISION) :: delta
+    real(PRECISION) :: q, r, s, t
     
     ! short names for options
 
@@ -1804,8 +1816,7 @@ contains
     type(ssmfe_keep), intent(inout) :: keep
 
     if ( allocated(keep%lmd) ) deallocate( keep%lmd )
-    call ssmfe_delete_work_double( keep%keep )
-    call ssmfe_delete_info_double( keep%info )
+    call ssmfe_terminate( keep%keep, keep%info )
 
   end subroutine ssmfe_delete_keep_double
 
@@ -1817,7 +1828,7 @@ contains
     type(ssmfe_inform), intent(inout) :: info
     
     call ssmfe_delete_keep_double( keep )
-    call ssmfe_delete_info_double( info )
+    call ssmfe_terminate( info )
 
   end subroutine ssmfe_terminate_double
 
@@ -1837,18 +1848,18 @@ contains
 
     integer, parameter :: NONE = -1
 
-    double precision, parameter :: ZERO = 0.0D0, ONE = 1.0D0
+    real(PRECISION), parameter :: ZERO = 0.0D0, ONE = 1.0D0
     complex(PRECISION), parameter :: NIL = ZERO
     complex(PRECISION), parameter :: UNIT = ONE
     
     real(kind = PRECISION), parameter :: MIN_REL_GAP = 1E-3
 
     integer, intent(in) :: problem
-    double precision, intent(in) :: sigma
+    real(PRECISION), intent(in) :: sigma
     integer, intent(in) :: left
     integer, intent(in) :: right
     integer, intent(in) :: max_nep
-    double precision, intent(inout) :: lambda(max_nep)
+    real(PRECISION), intent(inout) :: lambda(max_nep)
     integer, intent(in) :: block_size
     complex(PRECISION), intent(inout) :: &
       rr_matrices(2*block_size, 2*block_size, 3)
@@ -1868,10 +1879,10 @@ contains
     integer :: m, mep, new, ncon, first, last, step
     integer :: i, j, k, l
     
-    double precision :: left_gap
-    double precision :: right_gap
-    double precision :: delta
-    double precision :: q, r, s, t
+    real(PRECISION) :: left_gap
+    real(PRECISION) :: right_gap
+    real(PRECISION) :: delta
+    real(PRECISION) :: q, r, s, t
     
     u_diag = options%unit_diagnostic
     u_errr = options%unit_error
@@ -2042,7 +2053,6 @@ contains
 
       if ( rci%job == SSMFE_START ) then
 
-!        keep%user_X = options%user_X
         keep%options%min_gap = 0.05
 
         keep%lcon = 0
@@ -2203,6 +2213,7 @@ contains
       end do
       if ( rci%i > 0 ) then
         j = rci%jx + new
+        m = block_size
         if ( .not. keep%left_converged ) then
           info%next_left = sigma
           if ( j <= m ) then
@@ -2575,9 +2586,9 @@ contains
 
   contains
 
-    double precision function si_map( problem, sigma, mu )
+    real(PRECISION) function si_map( problem, sigma, mu )
       integer, intent(in) :: problem
-      double precision, intent(in) :: sigma, mu
+      real(PRECISION), intent(in) :: sigma, mu
       if ( problem == 2 ) then
         si_map = sigma*mu/(mu - 1)
       else
@@ -2585,9 +2596,9 @@ contains
       end if
     end function si_map
 
-    double precision function si_map_err( problem, sigma, mu, delta )
+    real(PRECISION) function si_map_err( problem, sigma, mu, delta )
       integer, intent(in) :: problem
-      double precision, intent(in) :: sigma, mu, delta
+      real(PRECISION), intent(in) :: sigma, mu, delta
       if ( problem == 2 ) then
         si_map_err = sigma*delta/(mu - 1)**2
       else
@@ -2610,7 +2621,7 @@ contains
 
     integer, parameter :: NONE = -1
 
-    double precision, parameter :: ZERO = 0.0D0, ONE = 1.0D0
+    real(PRECISION), parameter :: ZERO = 0.0D0, ONE = 1.0D0
     complex(PRECISION), parameter :: NIL = ZERO
     complex(PRECISION), parameter :: UNIT = ONE
     
@@ -2621,7 +2632,7 @@ contains
     integer, intent(in) :: nep
     integer, intent(in) :: max_nep
     integer, intent(in) :: block_size
-    double precision, intent(inout) :: lambda(max_nep)
+    real(PRECISION), intent(inout) :: lambda(max_nep)
     complex(PRECISION), intent(inout) :: &
       rr_matrices(2*block_size, 2*block_size, 3)
     integer, intent(inout) :: ind(block_size)
@@ -2639,9 +2650,9 @@ contains
     integer :: first, last
     integer :: i, j, k, l
     
-    double precision :: gap
-    double precision :: delta
-    double precision :: q, r, s, t
+    real(PRECISION) :: gap
+    real(PRECISION) :: delta
+    real(PRECISION) :: q, r, s, t
     
     u_diag = options%unit_diagnostic
     u_errr = options%unit_error
@@ -2743,7 +2754,6 @@ contains
 
       if ( rci%job == SSMFE_START ) then
 
-!        keep%user_X = options%user_X
         keep%options%min_gap = 0.05
         keep%lcon = 0
         ! initialize the convergence flags

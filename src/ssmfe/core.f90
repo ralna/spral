@@ -5,33 +5,35 @@
 !
 module spral_ssmfe_core
 
+  private
+
   ! double precision to be used
-  integer, parameter, private :: PRECISION = kind(1.0D0)
+  integer, parameter :: PRECISION = kind(1.0D0)
 
   ! BLAS/LAPACK flags
-  character, parameter, private :: SSMFE_JOBZ = 'V'
-  character, parameter, private :: SSMFE_UPLO = 'U'
-  integer, parameter, private :: SSMFE_ITYPE = 1
+  character, parameter :: SSMFE_JOBZ = 'V'
+  character, parameter :: SSMFE_UPLO = 'U'
+  integer, parameter :: SSMFE_ITYPE = 1
   
   ! input error flags
-  integer, parameter, private :: WRONG_RCI_JOB    = -1
-  integer, parameter, private :: WRONG_BLOCK_SIZE = -2
-  integer, parameter, private :: WRONG_ERR_EST    = -3
-  integer, parameter, private :: WRONG_MINPROD    = -4
-  integer, parameter, private :: WRONG_EXTRAS     = -5
-  integer, parameter, private :: WRONG_MIN_GAP    = -6
-  integer, parameter, private :: WRONG_CF_MAX     = -7
+  integer, parameter :: WRONG_RCI_JOB    = -1
+  integer, parameter :: WRONG_BLOCK_SIZE = -2
+  integer, parameter :: WRONG_ERR_EST    = -3
+  integer, parameter :: WRONG_MINPROD    = -4
+  integer, parameter :: WRONG_EXTRAS     = -5
+  integer, parameter :: WRONG_MIN_GAP    = -6
+  integer, parameter :: WRONG_CF_MAX     = -7
 
   ! execution error flags
-  integer, parameter, private :: OUT_OF_MEMORY    = -100
-  integer, parameter, private :: INDEFINITE_B     = -200
+  integer, parameter :: OUT_OF_MEMORY    = -100
+  integer, parameter :: INDEFINITE_B     = -200
 
   ! warning flag
-  integer, parameter, private :: NO_SEARCH_DIRECTIONS_LEFT = 1
+  integer, parameter :: NO_SEARCH_DIRECTIONS_LEFT = 1
 
   ! error estimation schemes
-  integer, parameter, private :: SSMFE_RESIDUAL  = 1
-  integer, parameter, private :: SSMFE_KINEMATIC = 2
+  integer, parameter :: SSMFE_RESIDUAL  = 1
+  integer, parameter :: SSMFE_KINEMATIC = 2
   
   interface ssmfe
     module procedure ssmfe_double, ssmfe_double_complex
@@ -48,8 +50,8 @@ module spral_ssmfe_core
       ssmfe_delete_info_double
   end interface 
 
-  private :: lwork_sevp, solve_sevp, solve_gsevp
-  private :: lwork_hevp, solve_hevp, solve_ghevp
+!  private :: lwork_sevp, solve_sevp, solve_gsevp
+!  private :: lwork_hevp, solve_hevp, solve_ghevp
   
   type ssmfe_options ! see the spec
 
@@ -58,8 +60,8 @@ module spral_ssmfe_core
     integer :: err_est = SSMFE_KINEMATIC
     logical :: minAprod = .true.
     logical :: minBprod = .true.
-    double precision :: min_gap = 0.0
-    double precision :: cf_max = 1.0
+    real(PRECISION) :: min_gap = 0.0
+    real(PRECISION) :: cf_max = 1.0
 
   end type ssmfe_options
   
@@ -76,10 +78,10 @@ module spral_ssmfe_core
     integer :: j = 0
     integer :: k = 0
 
-    double precision :: alpha, beta
+    real(PRECISION) :: alpha, beta
     
-    double precision, dimension(:,:), pointer :: x => null()
-    double precision, dimension(:,:), pointer :: y => null()
+    real(PRECISION), dimension(:,:), pointer :: x => null()
+    real(PRECISION), dimension(:,:), pointer :: y => null()
   
   end type ssmfe_rcid
   
@@ -115,12 +117,12 @@ module spral_ssmfe_core
 
     integer, dimension(:), allocatable :: converged
 
-    double precision :: next_left  = 1
-    double precision :: next_right = -1
+    real(PRECISION) :: next_left  = 1
+    real(PRECISION) :: next_right = -1
 
-    double precision, dimension(:), allocatable :: residual_norms
-    double precision, dimension(:), allocatable :: err_lambda
-    double precision, dimension(:), allocatable :: err_x
+    real(PRECISION), dimension(:), allocatable :: residual_norms
+    real(PRECISION), dimension(:), allocatable :: err_lambda
+    real(PRECISION), dimension(:), allocatable :: err_x
     
   end type ssmfe_inform
 
@@ -171,22 +173,22 @@ module spral_ssmfe_core
     integer :: RECORDS = 30 ! max number of records
     
     ! estimate for the condition number of [X Y]'*B*[X, Y]
-    double precision :: cond = 1
+    real(PRECISION) :: cond = 1
     ! estimate for the error of multiplying by A
-    double precision :: err_A = 0
+    real(PRECISION) :: err_A = 0
     ! estimate for the error of multiplying by B
-    double precision :: err_B = 0
+    real(PRECISION) :: err_B = 0
 
     ! eigenvalues decrements history
-    double precision, dimension(:,:), allocatable :: dlmd
+    real(PRECISION), dimension(:,:), allocatable :: dlmd
     ! estimates for eigenvalues convergence factors
-    double precision, dimension(:), allocatable :: q
+    real(PRECISION), dimension(:), allocatable :: q
     ! approximate eigenvectors shifts after an iteration
-    double precision, dimension(:), allocatable :: dX
+    real(PRECISION), dimension(:), allocatable :: dX
     ! eigenvalues array
-    double precision, dimension(:), allocatable :: lambda
+    real(PRECISION), dimension(:), allocatable :: lambda
     ! real work array for LAPACK dsyev/zheev
-    double precision, dimension(:), allocatable :: dwork
+    real(PRECISION), dimension(:), allocatable :: dwork
     ! complex work array for LAPACK zheev
     complex(PRECISION), dimension(:), allocatable :: zwork
     
@@ -198,6 +200,9 @@ module spral_ssmfe_core
     logical :: minBprod = .true. ! B-multiplications minimization flag
     
   end type ssmfe_keep
+  
+  public :: ssmfe_options, ssmfe_rcid, ssmfe_rciz, ssmfe_inform, ssmfe_keep
+  public :: ssmfe, ssmfe_largest, ssmfe_terminate
 
 contains
 
@@ -216,8 +221,8 @@ contains
     integer, intent(in) :: left
     integer, intent(in) :: right
     integer, intent(in) :: m
-    double precision, dimension(m), intent(inout) :: lambda
-    double precision, intent(inout) :: rr_matrices(2*m, 2*m, 3)
+    real(PRECISION), dimension(m), intent(inout) :: lambda
+    real(PRECISION), intent(inout) :: rr_matrices(2*m, 2*m, 3)
     integer, intent(out), dimension(m) :: ind
     type(ssmfe_rcid   ), intent(inout) :: rci
     type(ssmfe_keep   ), intent(inout) :: keep
@@ -245,8 +250,8 @@ contains
     integer, intent(in) :: left
     integer, intent(in) :: right
     integer, intent(in) :: m
-    double precision, dimension(m), intent(inout) :: lambda
-    double complex, intent(inout) :: rr_matrices(2*m, 2*m, 3)
+    real(PRECISION), dimension(m), intent(inout) :: lambda
+    complex(PRECISION), intent(inout) :: rr_matrices(2*m, 2*m, 3)
     integer, intent(out), dimension(m) :: ind
     type(ssmfe_rciz   ), intent(inout) :: rci
     type(ssmfe_keep   ), intent(inout) :: keep
@@ -272,8 +277,8 @@ contains
     integer, intent(in) :: problem
     integer, intent(in) :: nep
     integer, intent(in) :: m
-    double precision, dimension(m), intent(inout) :: lambda
-    double precision, intent(inout) :: rr_matrices(2*m, 2*m, 3)
+    real(PRECISION), dimension(m), intent(inout) :: lambda
+    real(PRECISION), intent(inout) :: rr_matrices(2*m, 2*m, 3)
     integer, intent(out), dimension(m) :: ind
     type(ssmfe_rcid   ), intent(inout) :: rci
     type(ssmfe_keep   ), intent(inout) :: keep
@@ -299,7 +304,7 @@ contains
     integer, intent(in) :: problem
     integer, intent(in) :: nep
     integer, intent(in) :: m
-    double precision, dimension(m), intent(inout) :: lambda
+    real(PRECISION), dimension(m), intent(inout) :: lambda
     complex(PRECISION), intent(inout) :: rr_matrices(2*m, 2*m, 3)
     integer, intent(out), dimension(m) :: ind
     type(ssmfe_rciz   ), intent(inout) :: rci
@@ -331,9 +336,9 @@ contains
 
     implicit none
     
-    double precision, parameter :: ZERO = 0.0D0, ONE = 1.0D0
-    double precision, parameter :: NIL = ZERO
-    double precision, parameter :: UNIT = ONE
+    real(PRECISION), parameter :: ZERO = 0.0D0, ONE = 1.0D0
+    real(PRECISION), parameter :: NIL = ZERO
+    real(PRECISION), parameter :: UNIT = ONE
     character, parameter :: TRANS = 'T'
     
     ! arguments
@@ -357,10 +362,10 @@ contains
     integer, intent(in) :: m
 
     ! eigenvalues array
-    double precision, dimension(m), intent(inout) :: lambda
+    real(PRECISION), dimension(m), intent(inout) :: lambda
 
     ! matrices for the Rayleigh-Ritz procedure
-    double precision, intent(inout) :: rr_matrices(2*m, 2*m, *)
+    real(PRECISION), intent(inout) :: rr_matrices(2*m, 2*m, *)
 
     ! work matrix column reordering index
     integer, intent(inout), dimension(m) :: ind
@@ -469,21 +474,21 @@ contains
     integer, parameter :: CHECK_THE_GAP        = 6000
     
     ! round-off error level
-    double precision :: TOO_SMALL
+    real(PRECISION) :: TOO_SMALL
 
     ! a precaution against overflow
-    double precision :: TOO_LARGE
+    real(PRECISION) :: TOO_LARGE
 
     ! heuristic constants
-    double precision :: A_SMALL_FRACTION, A_FRACTION, A_MULTIPLE
-    double precision :: REL_GAP, MAX_BETA, Q_MAX
+    real(PRECISION) :: A_SMALL_FRACTION, A_FRACTION, A_MULTIPLE
+    real(PRECISION) :: REL_GAP, MAX_BETA, Q_MAX
 
     ! maximal admissible condition number of the B-gram matrix
-    double precision :: GRAM_RCOND_MIN
+    real(PRECISION) :: GRAM_RCOND_MIN
     
     ! flags for 'not available yet'
     integer, parameter :: NONE = -1
-    double precision, parameter :: NO_VALUE = -1.0
+    real(PRECISION), parameter :: NO_VALUE = -1.0
 
     ! locals
     logical :: skip, doit
@@ -491,8 +496,8 @@ contains
     integer :: mm, left_cnv, right_cnv, first, last, step, go, nsmall
     integer :: iX, jX, iY, jY, sizeXY
     integer :: i, j, k, l
-    double precision :: delta, theta
-    double precision :: q, r, s, t
+    real(PRECISION) :: delta, theta
+    real(PRECISION) :: q, r, s, t
 
     ! shortcuts for the options
     logical :: minAprod, minBprod
@@ -3118,11 +3123,11 @@ select_step: &
     
   contains
   
-    double precision function conjugate( z )
+    real(PRECISION) function conjugate( z )
     
       implicit none
       
-      double precision, intent(in) :: z
+      real(PRECISION), intent(in) :: z
       
       conjugate = z
 
@@ -3215,8 +3220,8 @@ select_step: &
 
     character, intent(in) :: job
     integer, intent(in) :: n, lda, lwork
-    double precision, intent(inout) :: a(lda, n), work(*)
-    double precision, intent(out) :: lambda(n)
+    real(PRECISION), intent(inout) :: a(lda, n), work(*)
+    real(PRECISION), intent(out) :: lambda(n)
     integer, intent(out) :: info
 
     call dsyev( job, SSMFE_UPLO, n, a, lda, lambda, work, lwork, info )
@@ -3234,8 +3239,8 @@ select_step: &
     implicit none
 
     integer, intent(in) :: n, lda, ldb, lwork
-    double precision, intent(inout) :: a(lda, n), b(ldb, n), work(*)
-    double precision, intent(out) :: lambda(n)
+    real(PRECISION), intent(inout) :: a(lda, n), b(ldb, n), work(*)
+    real(PRECISION), intent(out) :: lambda(n)
     integer, intent(out) :: info
 
     call dsygv &
@@ -3263,7 +3268,7 @@ select_step: &
 
     implicit none
     
-    double precision, parameter :: ZERO = 0.0D0, ONE = 1.0D0
+    real(PRECISION), parameter :: ZERO = 0.0D0, ONE = 1.0D0
     complex(PRECISION), parameter :: NIL = ZERO
     complex(PRECISION), parameter :: UNIT = ONE
     character, parameter :: TRANS = 'C'
@@ -3271,7 +3276,7 @@ select_step: &
     integer, intent(in) :: problem
     integer, intent(in) :: left, right
     integer, intent(in) :: m
-    double precision, dimension(m), intent(inout) :: lambda
+    real(PRECISION), dimension(m), intent(inout) :: lambda
     complex(PRECISION), intent(inout) :: rr_matrices(2*m, 2*m, *)
     integer, intent(inout), dimension(m) :: ind
     type(ssmfe_keep   ), intent(inout) :: keep
@@ -3374,24 +3379,24 @@ select_step: &
     integer, parameter :: PUT_W_IN_X           = 5500
     integer, parameter :: CHECK_THE_GAP        = 6000
     
-    double precision :: TOO_SMALL
+    real(PRECISION) :: TOO_SMALL
 
-    double precision :: TOO_LARGE
+    real(PRECISION) :: TOO_LARGE
 
-    double precision :: A_SMALL_FRACTION, A_FRACTION, A_MULTIPLE
-    double precision :: REL_GAP, MAX_BETA, Q_MAX
-    double precision :: GRAM_RCOND_MIN
+    real(PRECISION) :: A_SMALL_FRACTION, A_FRACTION, A_MULTIPLE
+    real(PRECISION) :: REL_GAP, MAX_BETA, Q_MAX
+    real(PRECISION) :: GRAM_RCOND_MIN
     
     integer, parameter :: NONE = -1
-    double precision, parameter :: NO_VALUE = -1.0
+    real(PRECISION), parameter :: NO_VALUE = -1.0
 
     logical :: skip, doit
     integer :: kY, kZ, kW, kAX, kAYZ, kBX, kBYZ
     integer :: mm, left_cnv, right_cnv, first, last, step, go, nsmall
     integer :: iX, jX, iY, jY, sizeXY
     integer :: i, j, k, l
-    double precision :: delta, theta
-    double precision :: q, r, s, t
+    real(PRECISION) :: delta, theta
+    real(PRECISION) :: q, r, s, t
     complex(PRECISION) :: z
 
     logical :: minAprod, minBprod
@@ -5565,7 +5570,7 @@ select_step: &
     character, intent(in) :: job
     integer, intent(in) :: n, lda, lwork
     complex(PRECISION), intent(inout) :: a(lda, n), work(*)
-    double precision, intent(out) :: lambda(n), rwork(*)
+    real(PRECISION), intent(out) :: lambda(n), rwork(*)
     integer, intent(out) :: info
 
     call zheev( job, SSMFE_UPLO, n, a, lda, lambda, work, lwork, rwork, info )
@@ -5579,7 +5584,7 @@ select_step: &
 
     integer, intent(in) :: n, lda, ldb, lwork
     complex(PRECISION), intent(inout) :: a(lda, n), b(ldb, n), work(*)
-    double precision, intent(out) :: rwork(*), lambda(n)
+    real(PRECISION), intent(out) :: rwork(*), lambda(n)
     integer, intent(out) :: info
 
     call zhegv &
