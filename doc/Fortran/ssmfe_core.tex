@@ -1329,7 +1329,7 @@ are used for preconditioning,
 which halves the number of iterations
 compared with solving the same problem without preconditioning.
 The module {\tt laplace2d} (\texttt{examples/Fortran/ssmfe/laplace2d.f90})
-supplies the subroutine {\tt apply\_2d\_laplacian()}
+supplies the subroutine {\tt apply\_laplacian()}
 that multiplies a block of vectors by $A$,
 and a subroutine 
 {\tt apply\_gauss\_seidel\_step()}
@@ -1350,7 +1350,3 @@ The code generates the following output:
  lambda(8) = 1.0077715E+00
  lambda(9) = 1.2501840E+00
 \end{verbatim}
-
-\end{document}
-
-
