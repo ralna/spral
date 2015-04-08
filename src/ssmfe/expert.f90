@@ -5,7 +5,7 @@
 !
 module SPRAL_ssmfe_expert
 
-  use SPRAL_ssmfe_core, ssmfe_work => ssmfe_keep, ssmfe_opts => ssmfe_options
+  use SPRAL_ssmfe_core !, ssmfe_work => ssmfe_keep !, ssmfe_opts => ssmfe_options
   
   private
 
@@ -1191,8 +1191,10 @@ contains
         end if
       end do
         
-      keep%av_dist = ZERO ! assume not available yet
-      if ( k == 0 ) then
+!      keep%av_dist = ZERO ! assume not available yet
+      if ( k == 0 .and. l == 0 ) then
+        keep%av_dist = ZERO ! assume not available yet      
+      else if ( k == 0 ) then
         ! no 'trusted' eigenvalues left of sigma, use those to the right
         ! t is the 'trusted' eigenvalue closest to sigma
         if ( keep%rcon > 0 ) then
@@ -2500,8 +2502,9 @@ contains
         end if
       end do
         
-      keep%av_dist = ZERO
-      if ( k == 0 ) then
+      if ( k == 0 .and. l == 0 ) then
+        keep%av_dist = ZERO
+      else if ( k == 0 ) then
         if ( keep%rcon > 0 ) then
           t = lambda(mep)
         else

@@ -225,17 +225,17 @@ For each problem, the user must employ the derived types defined by the
 module to declare scalars of the types 
 {\tt \solver\_rcid} (real version) or 
 {\tt \solver\_rciz} (complex version), 
-{\tt \solver\_keep},
-{\tt \solver\_options} and 
+{\tt \solver\_work},
+{\tt \solver\_opts} and 
 {\tt \solver\_inform}.
 The following pseudocode illustrates this.
 \begin{verbatim}
       use SPRAL_SSMFE_CORE
       ...
-      type (ssmfe_rcid   ) :: rcid
-      type (ssmfe_keep   ) :: keep
-      type (ssmfe_options) :: options
-      type (ssmfe_inform ) :: inform
+      type (ssmfe_rcid  ) :: rcid
+      type (ssmfe_work  ) :: keep
+      type (ssmfe_opts  ) :: options
+      type (ssmfe_inform) :: inform
       ...
 \end{verbatim}
 
@@ -668,9 +668,9 @@ It must not be changed by the user.
 It is used for reordering the columns of some blocks of {\tt W}.
 %
 \itt{keep} is an \intentinout\ scalar of type 
-{\tt \solver\_keep} that holds private data. 
+{\tt \solver\_work} that holds private data. 
 %
-\itt{options} is an \intentin\  scalar  of type {\tt \solver\_options}.
+\itt{options} is an \intentin\  scalar  of type {\tt \solver\_opts}.
 Its components offer the user a range of options,
 see Section~\ref{sec:options}.
 It must not be changed by the user between calls.
@@ -698,7 +698,7 @@ by making the following subroutine call:
 \begin{description}
 %
 \itt{keep} is an \intentinout\ scalar of type 
-{\tt \solver\_keep}, optional. 
+{\tt \solver\_work}, optional. 
 On exit, its components that are allocatable arrays will have been deallocated. 
 %
 \itt{inform} is an \intentinout\ scalar of type {\tt \solver\_inform}, 
@@ -712,7 +712,7 @@ On exit, its components that are allocatable arrays will have been deallocated.
 \label{sec:options}
 
 The derived data type
-{\tt \solver\_options}
+{\tt \solver\_opts}
 has the following components.
 
 \begin{description}
@@ -1344,14 +1344,10 @@ of the Gauss-Seidel method to the system $A y = x$.
 \verbatiminput{examples/Fortran/ssmfe/precond_core.f90}
 The code generates the following output:
 \begin{verbatim}
-  9 eigenpairs converged
- lambda(1) = 1.6202811E-01
- lambda(2) = 3.9850699E-01
- lambda(3) = 3.9850699E-01
- lambda(4) = 6.3498587E-01
- lambda(5) = 7.7129258E-01
- lambda(6) = 7.7129258E-01
- lambda(7) = 1.0077715E+00
- lambda(8) = 1.0077715E+00
- lambda(9) = 1.2501840E+00
+  5 eigenpairs converged
+ lambda(1) = 4.4676695E-02
+ lambda(2) = 1.1119274E-01
+ lambda(3) = 1.1119274E-01
+ lambda(4) = 1.7770878E-01
+ lambda(5) = 2.2040061E-01
 \end{verbatim}

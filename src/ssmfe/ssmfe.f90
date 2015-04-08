@@ -6,6 +6,10 @@
 module SPRAL_ssmfe
 
   use SPRAL_ssmfe_expert
+!  use SPRAL_ssmfe_expert, ssmfe_xkeep => ssmfe_keep
+!  use SPRAL_ssmfe_expert, only: &
+!    ssmfe_solve, ssmfe_terminate, &
+!    ssmfe_keep, ssmfe_options, ssmfe_rcid, ssmfe_rciz, ssmfe_inform
   
   private
   
@@ -55,6 +59,7 @@ module SPRAL_ssmfe
     real(PRECISION), dimension(:,:,:), allocatable :: W
 
     ! expert interface keep (see expert.f90)
+!    type(ssmfe_xkeep) :: keep
     type(ssmfe_keep) :: keep
 
   end type ssmfe_keepd
@@ -79,6 +84,7 @@ module SPRAL_ssmfe
     complex(PRECISION), dimension(:,:,:), allocatable :: V
     complex(PRECISION), dimension(:,:,:), allocatable :: W
 
+!    type(ssmfe_xkeep) :: keep
     type(ssmfe_keep) :: keep
 
   end type ssmfe_keepz
@@ -137,8 +143,8 @@ contains
     integer, intent(in) :: mep
     real(PRECISION), intent(inout) :: lambda(mep)
     integer, intent(in) :: n
-    real(PRECISION), intent(inout) :: X(ldX, mep)
     integer, intent(in) :: ldX
+    real(PRECISION), intent(inout) :: X(ldX, mep)
     type(ssmfe_rcid   ), intent(inout) :: rci
     type(ssmfe_keepd  ), intent(inout) :: keep
     type(ssmfe_options), intent(in   ) :: options
@@ -160,8 +166,8 @@ contains
     integer, intent(in) :: mep
     real(PRECISION), intent(inout) :: lambda(mep)
     integer, intent(in) :: n
-    real(PRECISION), intent(inout) :: X(ldX, mep)
     integer, intent(in) :: ldX
+    real(PRECISION), intent(inout) :: X(ldX, mep)
     type(ssmfe_rcid   ), intent(inout) :: rci
     type(ssmfe_keepd  ), intent(inout) :: keep
     type(ssmfe_options), intent(in   ) :: options
@@ -267,8 +273,8 @@ contains
     integer, intent(in) :: mep
     real(PRECISION), intent(inout) :: lambda(mep)
     integer, intent(in) :: n
-    complex(PRECISION), intent(inout) :: X(ldX, mep)
     integer, intent(in) :: ldX
+    complex(PRECISION), intent(inout) :: X(ldX, mep)
     type(ssmfe_rciz   ), intent(inout) :: rci
     type(ssmfe_keepz  ), intent(inout) :: keep
     type(ssmfe_options), intent(in   ) :: options
@@ -290,8 +296,8 @@ contains
     integer, intent(in) :: mep
     real(PRECISION), intent(inout) :: lambda(mep)
     integer, intent(in) :: n
-    complex(PRECISION), intent(inout) :: X(ldX, mep)
     integer, intent(in) :: ldX
+    complex(PRECISION), intent(inout) :: X(ldX, mep)
     type(ssmfe_rciz   ), intent(inout) :: rci
     type(ssmfe_keepz  ), intent(inout) :: keep
     type(ssmfe_options), intent(in   ) :: options
@@ -1969,7 +1975,7 @@ contains
           j = max_nep - keep%rcon + 1
           call gemm &
             ( TR, 'N', keep%rcon, rci%nx, n, &
-              UNIT, X(1, j), ldX, rci%y, n, NIL, keep%U, max_nep )
+              UNIT, X(1, j), ldX, rci%y, n, NIL, keep%U(j, 1), max_nep )
         end if
 
         m = keep%block_size
@@ -1995,11 +2001,12 @@ contains
           j = max_nep - keep%rcon + 1
           call gemm &
             ( 'N', 'N', n, rci%nx, keep%rcon, &
-              -UNIT, X(1, j), ldX, keep%U, max_nep, UNIT, rci%x, n )
+              -UNIT, X(1, j), ldX, keep%U(j, 1), max_nep, UNIT, rci%x, n )
           if ( problem /= 0 ) &
             call gemm &
               ( 'N', 'N', n, rci%nx, keep%rcon, &
-                -UNIT, keep%BX(1, j), ldBX, keep%U, max_nep, UNIT, rci%y, n )
+                -UNIT, keep%BX(1, j), ldBX, keep%U(j, 1), max_nep, &
+                UNIT, rci%y, n )
         end if
 
       case ( SSMFE_DO_SHIFTED_SOLVE, SSMFE_APPLY_B )

@@ -4679,7 +4679,7 @@ done
 test "x$NVCCFLAGS" = x && NVCCFLAGS="-g -arch=compute_20 -code=compute_20,sm_20,sm_35"
 
 
- if test -n "$NVCC"; then
+ if test -n "$NVCC_ALT"; then
   HAVE_NVCC_TRUE=
   HAVE_NVCC_FALSE='#'
 else

@@ -7,10 +7,10 @@ program ssmfe_expert_precond_example
 
   integer, parameter :: wp = kind(0d0) ! Working precision is double
 
-  integer, parameter :: l   = 10  ! grid points along each side
+  integer, parameter :: l   = 20  ! grid points along each side
   integer, parameter :: n   = l*l ! problem size
-  integer, parameter :: nep = 9   ! eigenpairs wanted
-  integer, parameter :: m = 3     ! dimension of the iterated subspace
+  integer, parameter :: nep = 5   ! eigenpairs wanted
+  integer, parameter :: m   = 3   ! dimension of the iterated subspace
 
   real(wp), external :: dnrm2, ddot ! BLAS functions
 
@@ -31,6 +31,8 @@ program ssmfe_expert_precond_example
   ! the gap between the last converged eigenvalue and the rest of the spectrum
   ! must be at least 0.1 times average gap between computed eigenvalues
   options%left_gap = -0.1
+  ! block size is small, convergence may be slow, allow more iterations
+  options%max_iterations = 200
   ncon = 0
   call random_number( W(:,:,0) )
   rci%job = 0

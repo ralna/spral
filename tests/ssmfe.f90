@@ -96,7 +96,7 @@ end subroutine test_core
 
 subroutine test_core_errors_d
 
-  use spral_ssmfe_core
+  use spral_ssmfe_core !, ssmfe_work => ssmfe_keep !, ssmfe_opts => ssmfe_options
 
   integer :: n
   integer :: m
@@ -113,8 +113,10 @@ subroutine test_core_errors_d
   real(wp), allocatable :: rr(:,:,:)
 
   type(ssmfe_rcid   ) :: rci
-  type(ssmfe_options) :: options
-  type(ssmfe_keep   ) :: keep
+  type(ssmfe_opts   ) :: options
+  type(ssmfe_work   ) :: keep
+!  type(ssmfe_options) :: options
+!  type(ssmfe_keep   ) :: keep
   type(ssmfe_inform ) :: inform
   
    write(*,"(/a)") "======================"
@@ -228,7 +230,7 @@ end subroutine test_core_errors_d
 
 subroutine test_core_errors_z
 
-  use spral_ssmfe_core
+  use spral_ssmfe_core !, ssmfe_work => ssmfe_keep !, ssmfe_opts => ssmfe_options
 
   integer :: n
   integer :: m
@@ -245,8 +247,10 @@ subroutine test_core_errors_z
   complex(wp), allocatable :: rr(:,:,:)
 
   type(ssmfe_rciz   ) :: rci
-  type(ssmfe_options) :: options
-  type(ssmfe_keep   ) :: keep
+  type(ssmfe_opts   ) :: options
+  type(ssmfe_work   ) :: keep
+!  type(ssmfe_options) :: options
+!  type(ssmfe_keep   ) :: keep
   type(ssmfe_inform ) :: inform
   
    write(*,"(/a)") "========================="
@@ -360,7 +364,7 @@ end subroutine test_core_errors_z
 
 subroutine test_core_misc_d
 
-  use spral_ssmfe_core
+  use spral_ssmfe_core !, ssmfe_work => ssmfe_keep !, ssmfe_opts => ssmfe_options
 
   integer :: n
   integer :: m
@@ -381,7 +385,8 @@ subroutine test_core_misc_d
   real(wp), allocatable :: x(:,:)
   real(wp), allocatable :: rr(:,:,:)
 
-  type(ssmfe_options) :: options
+  type(ssmfe_opts   ) :: options
+!  type(ssmfe_options) :: options
   type(ssmfe_inform ) :: inform
   
    write(*,"(/a)") "==========================="
@@ -511,7 +516,7 @@ subroutine test_core_misc_d
   call print_result( inform%flag, 0 )
   call ssmfe_terminate( inform )
 
-  write(*,"(a)",advance="no") " * Testing left = 20, right = 20, m = 20....."
+  write(*,"(a)",advance="no") " * Testing left = 10, right = 10, m = 10....."
   forall ( i = 1 : n ) b(i, i) = 2**i
   do i = 1, n
     do j = 1, n
@@ -519,7 +524,7 @@ subroutine test_core_misc_d
     end do
   end do
   call run_ssmfe_d &
-    ( options, 0, n, a, b, t, 20, 20, tol, maxit, verb, 20, &
+    ( options, 0, n, a, b, t, 10, 10, tol, maxit, verb, 10, &
       n, lambda, x, inform )
   call print_result( inform%flag, 0 )
   call ssmfe_terminate( inform )
@@ -532,7 +537,7 @@ end subroutine test_core_misc_d
 
 subroutine test_core_misc_z
 
-  use spral_ssmfe_core
+  use spral_ssmfe_core !, ssmfe_work => ssmfe_keep !, ssmfe_opts => ssmfe_options
 
   integer :: n
   integer :: m
@@ -554,8 +559,10 @@ subroutine test_core_misc_z
   complex(wp), allocatable :: rr(:,:,:)
 
   type(ssmfe_rciz   ) :: rci
-  type(ssmfe_options) :: options
-  type(ssmfe_keep   ) :: keep
+  type(ssmfe_opts   ) :: options
+  type(ssmfe_work   ) :: keep
+!  type(ssmfe_options) :: options
+!  type(ssmfe_keep   ) :: keep
   type(ssmfe_inform ) :: inform
   
    write(*,"(/a)") "=============================="
@@ -692,6 +699,19 @@ subroutine test_core_misc_z
       n, lambda, x, inform )
   call print_result( inform%flag, 0 )
   call ssmfe_terminate( keep, inform )
+
+  write(*,"(a)",advance="no") " * Testing left = 10, right = 10, m = 10....."
+  forall ( i = 1 : n ) b(i, i) = 2**i
+  do i = 1, n
+    do j = 1, n
+      x(i, j) = sin(i*j*ONE)
+    end do
+  end do
+  call run_ssmfe_z &
+    ( options, 0, n, a, b, t, 10, 10, tol, maxit, verb, 10, &
+      n, lambda, x, inform )
+  call print_result( inform%flag, 0 )
+  call ssmfe_terminate( inform )
 
   deallocate ( a, b, t, x, lambda, rr, ind )
 
@@ -1564,7 +1584,7 @@ subroutine test_ssmfe_errors_z
   t = ZERO
   forall ( i = 1 : n ) a(i, i) = ONE*i
   forall ( i = 1 : n ) t(i, i) = ONE
-
+!if ( .false. ) then
   write(*,"(a)",advance="no") " * Testing bad initial x....................."
   x = ZERO
   options%user_x = 1
@@ -1578,6 +1598,7 @@ subroutine test_ssmfe_errors_z
   call run_gen_z( n, a, b, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, INDEFINITE_B_OR_XBX )
   call ssmfe_terminate( inform )
+!end if
 
   write ( *, '(a)' ) ' * Testing shift-invert...'
   sigma = ZERO
@@ -2063,13 +2084,22 @@ subroutine test_ssmfe_options_d
   left = 5
   right = 5
   sigma = 255
+  options%print_level = 3
   options%tol_x = 0
+  options%user_x = mep
+  do i = 1, n
+    do j = 1, mep
+      x(i, j) = sin(i*j*ONE)
+    end do
+  end do
   call run_gen_si_d &
     ( options, n, a, b, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%flag, 0 )
   call ssmfe_terminate( inform )
   options%tol_x = -1
+  options%user_x = 0
+  options%print_level = -1
 
   write(*,"(a)",advance="no") " * Testing absolute residual tolerance......."
   options%tol_x = 0
@@ -2269,6 +2299,7 @@ subroutine test_ssmfe_options_z
   t = ZERO
   forall ( i = 1 : n ) t(i, i) = ONE
 
+if ( .true. ) then
   write(*,"(a)",advance="no") " * Testing error printing suppresssion......."
   options%print_level = -1
   n = 0
@@ -2390,21 +2421,37 @@ subroutine test_ssmfe_options_z
   call print_result( inform%flag, 0 )
   call ssmfe_terminate( inform )
   options%max_left = -1
+else
+  eps = 1D-3
+  forall ( i = 5 : n ) a(i, i) = i*10 + 2*eps
+end if
 
   write ( *, '(a)' ) ' * Testing shift-invert...'
 
   write(*,"(a)",advance="no") " * Testing zero tolerances..................."
   sigma = 255
-  left = 3
-  right = 3
+  left = 2 !3
+  right = 7 !3
+!  options%print_level = 3
+!  options%unit_diagnostic = dl_unit
   options%tol_x = 0
+  options%user_x = mep
+  do i = 1, n
+    do j = 1, mep
+      x(i, j) = sin(i*j*ONE)
+    end do
+  end do
   call run_gen_si_z &
     ( options, n, a, b, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%flag, 0 )
   call ssmfe_terminate( inform )
   options%tol_x = -1
+  options%user_x = 0
+  options%print_level = -1
+!  options%unit_diagnostic = 6
 
+!if ( .false. ) then
   write(*,"(a)",advance="no") " * Testing absolute residual tolerance......."
   options%tol_x = 0
   options%abs_tol_residual = 1
@@ -2549,6 +2596,7 @@ subroutine test_ssmfe_options_z
   options%tol_x = -1
   options%right_gap = 0
   options%print_level = -1
+!end if
 
   deallocate ( a, b, t, x, lambda )
 
@@ -3549,7 +3597,8 @@ subroutine run_ssmfe_d &
 
   implicit none
   
-  type(ssmfe_options), intent(in) :: options
+!  type(ssmfe_options), intent(in) :: options
+  type(ssmfe_opts), intent(in) :: options
   integer, intent(in) :: problem
   integer, intent(in) :: n
   real(wp), intent(in) :: a(n, n)
@@ -3586,7 +3635,8 @@ subroutine run_ssmfe_d &
   real(wp), allocatable :: bx(:, :)
   
   type(ssmfe_rcid) :: rci
-  type(ssmfe_keep) :: keep
+  type(ssmfe_work) :: keep
+!  type(ssmfe_keep) :: keep
 
   head = &
  '      eigenvalues      |   locked  | residuals | eigenvalue | eigenvector'
@@ -3822,7 +3872,8 @@ subroutine run_ssmfe_z &
 
   implicit none
   
-  type(ssmfe_options), intent(in) :: options
+!  type(ssmfe_options), intent(in) :: options
+  type(ssmfe_opts), intent(in) :: options
   integer, intent(in) :: problem
   integer, intent(in) :: n
   complex(wp), intent(in) :: a(n, n)
@@ -3864,7 +3915,8 @@ subroutine run_ssmfe_z &
   complex(wp), allocatable :: bx(:, :)
   
   type(ssmfe_rciz) :: rci
-  type(ssmfe_keep) :: keep
+  type(ssmfe_work) :: keep
+!  type(ssmfe_keep) :: keep
 
   head = &
  '      eigenvalues      |   locked  | residuals | eigenvalue | eigenvector'
@@ -4108,7 +4160,8 @@ subroutine run_ssmfe_largest_d &
 
   implicit none
   
-  type(ssmfe_options), intent(in) :: options
+!  type(ssmfe_options), intent(in) :: options
+  type(ssmfe_opts), intent(in) :: options
   integer, intent(in) :: problem
   integer, intent(in) :: n
   real(wp), intent(in) :: a(n, n)
@@ -4144,7 +4197,8 @@ subroutine run_ssmfe_largest_d &
   real(wp), allocatable :: bx(:, :)
   
   type(ssmfe_rcid) :: rci
-  type(ssmfe_keep) :: keep
+  type(ssmfe_work) :: keep
+!  type(ssmfe_keep) :: keep
 
   head = &
  '      eigenvalues      |   locked  | residuals | eigenvalue | eigenvector'
@@ -4380,7 +4434,8 @@ subroutine run_ssmfe_largest_z &
 
   implicit none
   
-  type(ssmfe_options), intent(in) :: options
+!  type(ssmfe_options), intent(in) :: options
+  type(ssmfe_opts), intent(in) :: options
   integer, intent(in) :: problem
   integer, intent(in) :: n
   complex(wp), intent(in) :: a(n, n)
@@ -4421,7 +4476,8 @@ subroutine run_ssmfe_largest_z &
   complex(wp), allocatable :: bx(:, :)
   
   type(ssmfe_rciz) :: rci
-  type(ssmfe_keep) :: keep
+  type(ssmfe_work) :: keep
+!  type(ssmfe_keep) :: keep
 
   head = &
  '      eigenvalues      |   locked  | residuals | eigenvalue | eigenvector'

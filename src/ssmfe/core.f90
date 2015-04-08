@@ -50,10 +50,7 @@ module spral_ssmfe_core
       ssmfe_delete_info_double
   end interface 
 
-!  private :: lwork_sevp, solve_sevp, solve_gsevp
-!  private :: lwork_hevp, solve_hevp, solve_ghevp
-  
-  type ssmfe_options ! see the spec
+  type ssmfe_opts ! see the spec
 
     integer :: extra_left  = 0
     integer :: extra_right = 0
@@ -63,7 +60,7 @@ module spral_ssmfe_core
     real(PRECISION) :: min_gap = 0.0
     real(PRECISION) :: cf_max = 1.0
 
-  end type ssmfe_options
+  end type ssmfe_opts
   
   type ssmfe_rcid ! see the spec
   
@@ -126,7 +123,7 @@ module spral_ssmfe_core
     
   end type ssmfe_inform
 
-  type ssmfe_keep
+  type ssmfe_work
   
     private
     
@@ -199,9 +196,9 @@ module spral_ssmfe_core
     logical :: minAprod = .true. ! A-multiplications minimization flag
     logical :: minBprod = .true. ! B-multiplications minimization flag
     
-  end type ssmfe_keep
+  end type ssmfe_work
   
-  public :: ssmfe_options, ssmfe_rcid, ssmfe_rciz, ssmfe_inform, ssmfe_keep
+  public :: ssmfe_opts, ssmfe_rcid, ssmfe_rciz, ssmfe_inform, ssmfe_work
   public :: ssmfe, ssmfe_largest, ssmfe_terminate
 
 contains
@@ -225,8 +222,8 @@ contains
     real(PRECISION), intent(inout) :: rr_matrices(2*m, 2*m, 3)
     integer, intent(out), dimension(m) :: ind
     type(ssmfe_rcid   ), intent(inout) :: rci
-    type(ssmfe_keep   ), intent(inout) :: keep
-    type(ssmfe_options), intent(in   ) :: options
+    type(ssmfe_work   ), intent(inout) :: keep
+    type(ssmfe_opts), intent(in   ) :: options
     type(ssmfe_inform ), intent(inout) :: info
     
     call ssmfe_engine_double &
@@ -254,8 +251,8 @@ contains
     complex(PRECISION), intent(inout) :: rr_matrices(2*m, 2*m, 3)
     integer, intent(out), dimension(m) :: ind
     type(ssmfe_rciz   ), intent(inout) :: rci
-    type(ssmfe_keep   ), intent(inout) :: keep
-    type(ssmfe_options), intent(in   ) :: options
+    type(ssmfe_work   ), intent(inout) :: keep
+    type(ssmfe_opts), intent(in   ) :: options
     type(ssmfe_inform ), intent(inout) :: info
     
     call ssmfe_engine_double_complex &
@@ -281,8 +278,8 @@ contains
     real(PRECISION), intent(inout) :: rr_matrices(2*m, 2*m, 3)
     integer, intent(out), dimension(m) :: ind
     type(ssmfe_rcid   ), intent(inout) :: rci
-    type(ssmfe_keep   ), intent(inout) :: keep
-    type(ssmfe_options), intent(in   ) :: control
+    type(ssmfe_work   ), intent(inout) :: keep
+    type(ssmfe_opts), intent(in   ) :: control
     type(ssmfe_inform ), intent(inout) :: info
     
     call ssmfe_engine_double &
@@ -308,8 +305,8 @@ contains
     complex(PRECISION), intent(inout) :: rr_matrices(2*m, 2*m, 3)
     integer, intent(out), dimension(m) :: ind
     type(ssmfe_rciz   ), intent(inout) :: rci
-    type(ssmfe_keep   ), intent(inout) :: keep
-    type(ssmfe_options), intent(in   ) :: control
+    type(ssmfe_work   ), intent(inout) :: keep
+    type(ssmfe_opts), intent(in   ) :: control
     type(ssmfe_inform ), intent(inout) :: info
     
     call ssmfe_engine_double_complex &
@@ -371,9 +368,9 @@ contains
     integer, intent(inout), dimension(m) :: ind
 
     ! ssmfe_core types - see the spec
-    type(ssmfe_keep   ), intent(inout) :: keep
+    type(ssmfe_work   ), intent(inout) :: keep
     type(ssmfe_rcid   ), intent(inout) :: rci
-    type(ssmfe_options), intent(in   ) :: control
+    type(ssmfe_opts), intent(in   ) :: control
     type(ssmfe_inform ), intent(inout) :: info
     
     ! rci jobs
@@ -3168,7 +3165,7 @@ select_step: &
 
     implicit none
     
-    type(ssmfe_keep), intent(inout) :: keep
+    type(ssmfe_work), intent(inout) :: keep
 
     if ( allocated(keep%lambda) ) deallocate( keep%lambda )
     if ( allocated(keep%dlmd  ) ) deallocate( keep%dlmd   )
@@ -3184,7 +3181,7 @@ select_step: &
 
     implicit none
     
-    type(ssmfe_keep  ), intent(inout) :: keep
+    type(ssmfe_work  ), intent(inout) :: keep
     type(ssmfe_inform), intent(inout) :: info
     
     call ssmfe_delete_work_double( keep )
@@ -3279,9 +3276,9 @@ select_step: &
     real(PRECISION), dimension(m), intent(inout) :: lambda
     complex(PRECISION), intent(inout) :: rr_matrices(2*m, 2*m, *)
     integer, intent(inout), dimension(m) :: ind
-    type(ssmfe_keep   ), intent(inout) :: keep
+    type(ssmfe_work   ), intent(inout) :: keep
     type(ssmfe_rciz   ), intent(inout) :: rci
-    type(ssmfe_options), intent(in   ) :: control
+    type(ssmfe_opts), intent(in   ) :: control
     type(ssmfe_inform ), intent(inout) :: info
     
     integer, parameter :: SSMFE_START              = 0
@@ -5584,9 +5581,9 @@ select_step: &
 
     integer, intent(in) :: n, lda, ldb, lwork
     complex(PRECISION), intent(inout) :: a(lda, n), b(ldb, n), work(*)
-    real(PRECISION), intent(out) :: rwork(*), lambda(n)
+    real(PRECISION), intent(out) :: rwork(*), lambda(*)
     integer, intent(out) :: info
-
+    
     call zhegv &
       ( SSMFE_ITYPE, SSMFE_JOBZ, SSMFE_UPLO, &
         n, a, lda, b, ldb, lambda, work, lwork, rwork, info )
