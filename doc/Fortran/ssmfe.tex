@@ -963,15 +963,11 @@ One forward and one backward Gauss-Seidel update
 are used for preconditioning,
 which halves the number of iterations
 compared with solving the same problem without preconditioning.
-A Fortran90 module {\tt laplace2d}, supplied with the package,
-contains a subroutine {\tt apply\_2d\_laplacian}
+The module {\tt laplace2d} (\texttt{examples/Fortran/ssmfe/laplace2d.f90})
+supplies a subroutine {\tt apply\_2d\_laplacian()}
 that multiplies a block of vectors by $A$,
-%A Fortran90 module {\tt gauss\_seidel\_preconditioner}, 
-%supplied with the package,
-%contains 
 and a subroutine 
-%{\tt apply\_preconditioner}
-{\tt apply\_gauss\_seidel\_step}
+{\tt apply\_gauss\_seidel\_step()}
 that computes $y = T x$ for a block of vectors $x$
 by applying one forward and one backward update
 of the Gauss-Seidel method to the system $A y = x$.
@@ -1005,11 +1001,10 @@ For the shifted solve, LAPACK subroutines {\tt DSYTRS} and
 which perform the LDLT-factorization and
 the solution of the factorized system respectively.
 The matrix of the discretized Laplacian is computed
-by the subroutine {\tt compute\_2d\_laplacian matrix}
-from the Fortran90 module {\tt laplace2d}
-supplied with the package.
-A Fortran90 module {\tt ldlt} supplied with the package
-contains a Fortran90 function {\tt num\_neg\_D}
+by the subroutine {\tt set\_2d\_laplacian\_matrix()}
+from the {\tt laplace2d} module (\texttt{examples/Fortran/ssmfe/laplace2d.f90}).
+The module {\tt ldltf} (\texttt{examples/Fortran/ssmfe/ldltf.f90}) supplies
+the function {\tt num\_neg\_D()}
 that counts the number of negative eigenvalues of
 the D-factor.
 \verbatiminput{examples/Fortran/ssmfe/shift_invert.f90}
