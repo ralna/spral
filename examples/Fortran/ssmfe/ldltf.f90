@@ -44,9 +44,5 @@ contains
 end module ldltf_double
 
 module ldltf
-
   use ldltf_double
-
 end module ldltf
-
-

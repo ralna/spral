@@ -1,6 +1,6 @@
-\documentclass{spral}
-
-\begin{document}
+\packagename{SSMFE}
+\version{1.0.0}
+\versiondate{8 April 2015}
 
 \newcommand{\solver}{ssmfe}
 \newcommand{\Solver}{SSMFE}
@@ -21,44 +21,27 @@
 \newcommand{\Ref}[1]{{\rm (\ref{#1})}}
 
 
-\packagename{SSMFE}
-\version{1.0.0}
-\versiondate{17 March 2014}
 \purpose{
-\fullpackagename\ 
-computes extreme (leftmost and/or rightmost)
-eigenpairs $\{\lambda_i, x_i\}$ of the following eigenvalue problems:
+   This package computes extreme (leftmost and/or rightmost)
+   eigenpairs $\{\lambda_i, x_i\}$ of the following eigenvalue problems:
 %
-\begin{itemize}
-\item 
-the standard eigenvalue problem
+   \begin{itemize}
+      \item the standard eigenvalue problem
+         \begin{eqnarray} \label{evp}
+               A x = \lambda x,
+         \end{eqnarray}
 %
-\begin{eqnarray}
-\label{evp}
-A x = \lambda x,
-\end{eqnarray}
-%
-\item
-the generalized eigenvalue problem
-%
-\begin{eqnarray}
-\label{evp.g}
-A x = \lambda B x,
-\end{eqnarray}
-%
-\item
-the buckling problem
-%
-\begin{eqnarray}
-\label{evp.b}
-B x = \lambda A x,
-\end{eqnarray}
-%
-\end{itemize}
-%
-where 
-$A$ and $B$ are {\bf real symmetric} (or {\bf Hermitian}) matrices
-and $B$ is {\bf positive definite}.
+      \item the generalized eigenvalue problem
+         \begin{eqnarray} \label{evp.g}
+            A x = \lambda B x,
+         \end{eqnarray}
+      \item the buckling problem
+         \begin{eqnarray} \label{evp.b}
+            B x = \lambda A x,
+         \end{eqnarray}
+   \end{itemize}
+   where  $A$ and $B$ are {\bf real symmetric} (or {\bf Hermitian}) matrices
+   and $B$ is {\bf positive definite}.
 }
 
 \title{Sparse Symmetric Matrix-Free Eigensolver}
@@ -980,7 +963,7 @@ One forward and one backward Gauss-Seidel update
 are used for preconditioning,
 which halves the number of iterations
 compared with solving the same problem without preconditioning.
-A Fortran90 module {\tt laplace}, supplied with the package,
+A Fortran90 module {\tt laplace2d}, supplied with the package,
 contains a subroutine {\tt apply\_2d\_laplacian}
 that multiplies a block of vectors by $A$,
 %A Fortran90 module {\tt gauss\_seidel\_preconditioner}, 
@@ -992,47 +975,8 @@ and a subroutine
 that computes $y = T x$ for a block of vectors $x$
 by applying one forward and one backward update
 of the Gauss-Seidel method to the system $A y = x$.
-
-\begin{verbatim}
-program spec_test ! Laplacian on a square grid
-  use spral_ssmfe
-  use laplace2d
-  implicit none
-  integer, parameter :: m   = 20    ! grid points along each side
-  integer, parameter :: n   = m*m   ! problem size
-  integer, parameter :: nep = 5     ! eigenpairs wanted
-  double precision :: lambda(2*nep) ! eigenvalues
-  double precision :: X(n, 2*nep)   ! eigenvectors
-  type(ssmfe_rcid   ) :: rci        ! reverse communication data
-  type(ssmfe_options) :: options    ! options
-  type(ssmfe_keepd  ) :: keep       ! private data
-  type(ssmfe_inform ) :: inform     ! information
-  integer :: i                      ! loop index
-  ! the gap between the last converged eigenvalue and the rest of the spectrum
-  ! must be at least 0.1 times average gap between computed eigenvalues
-  options%left_gap = -0.1
-  rci%job = 0
-  do ! reverse communication loop
-    call ssmfe_standard &
-      ( rci, nep, 2*nep, lambda, n, X, n, keep, options, inform )
-    select case ( rci%job )
-    case ( 1 )
-      call apply_laplacian( m, m, rci%nx, rci%x, rci%y )
-    case ( 2 )
-      call apply_gauss_seidel_step( m, m, rci%nx, rci%x, rci%y )
-    case ( :-1 )
-      exit
-    end select
-  end do
-  print '(i3, 1x, a)', inform%left, 'eigenpairs converged'
-  print '(1x, a, i2, a, es13.7)', &
-    ('lambda(', i, ') = ', lambda(i), i = 1, inform%left)
-  call ssmfe_terminate( keep, inform )
-end program spec_test
-\end{verbatim}
-
+\verbatiminput{examples/Fortran/ssmfe/precond_ssmfe.f90}
 This code produces the following output:
-
 \begin{verbatim}
   6 eigenpairs converged
  lambda( 1) = 4.4676695E-02
@@ -1062,75 +1006,14 @@ which perform the LDLT-factorization and
 the solution of the factorized system respectively.
 The matrix of the discretized Laplacian is computed
 by the subroutine {\tt compute\_2d\_laplacian matrix}
-from the Fortran90 module {\tt laplacian}
+from the Fortran90 module {\tt laplace2d}
 supplied with the package.
 A Fortran90 module {\tt ldlt} supplied with the package
 contains a Fortran90 function {\tt num\_neg\_D}
 that counts the number of negative eigenvalues of
 the D-factor.
-
-\begin{verbatim}
-program spec_test 
-! Laplacian on a rectangular grid by shift-invert via LDLT factorization
-  use spral_ssmfe
-  use laplace2d
-  use ldltf
-  implicit none
-  double precision, parameter :: ZERO = 0.0D0
-  double precision, parameter :: ONE = 1.0D0
-  integer, parameter :: nx = 8               ! grid points along x
-  integer, parameter :: ny = 8               ! grid points along y
-  integer, parameter :: n = nx*ny            ! problem size
-  double precision, allocatable :: a(:,:)    ! matrix
-  double precision, allocatable :: ldlt(:,:) ! L and D factors
-  integer :: ipiv(n)                         ! LDLT pivot index
-  double precision :: sigma = 1.0            ! shift
-  double precision :: lambda(n)              ! eigenvalues
-  double precision, allocatable :: x(:,:)    ! eigenvectors
-  double precision, allocatable :: work(:)   ! work array for dsytrf
-  integer :: lwork = n*n                     ! size of work
-  integer :: left, right          ! wanted eigenvalues left and right of sigma
-  integer :: i                    ! loop index
-  type(ssmfe_options) :: options  ! eigensolver options
-  type(ssmfe_inform ) :: inform   ! information
-  type(ssmfe_rcid   ) :: rci      ! reverse communication data
-  type(ssmfe_keepd  ) :: keep     ! private data
-  allocate ( a(n, n), ldlt(n, n), x(n, n), work(lwork) )
-  call set_laplacian_matrix( nx, ny, a, n )
-  ! perform LDLT factorization of the shifted matrix
-  ldlt = a
-  forall ( i = 1 : n ) ldlt(i, i) = a(i, i) - sigma
-  lwork = n*n
-  call dsytrf( 'L', n, ldlt, n, ipiv, work, lwork, i )
-  ! all eigenvalues to the left from sigma are wanted
-  left = num_neg_D(n, ldlt, n, ipiv)
-  ! and 5 eigenvalues to the right from sigma are wanted
-  right = 5
-  rci%job = 0
-  do
-    call ssmfe_standard_shift &
-      ( rci, sigma, left, right, n, lambda, n, x, n, keep, options, inform )
-    select case ( rci%job )
-    case ( 1 )
-      call dgemm &
-        ( 'N', 'N', n, rci%nx, n, ONE, a, n, rci%x, n, ZERO, rci%y, n )
-    case ( 9 )
-      call dcopy( n * rci%nx, rci%x, 1, rci%y, 1 )
-      call dsytrs( 'L', n, rci%nx, ldlt, n, ipiv, rci%y, n, i )
-    case ( :-1 )
-      exit
-    end select
-  end do
-  print '(1x, a, es10.2)', 'Eigenvalues near', sigma
-  print '(1x, a, i2, a, es13.7)', &
-    ('lambda(', i, ') = ', lambda(i), i = 1, inform%left + inform%right)
-  call ssmfe_terminate( keep, inform )
-  deallocate ( a, ldlt, work, x )
-end program spec_test ! Laplacian on a square grid
-\end{verbatim}
-
+\verbatiminput{examples/Fortran/ssmfe/shift_invert.f90}
 This code produces the following output:
-
 \begin{verbatim}
  Eigenvalues near  1.00E+00
  lambda( 1) = 2.4122952E-01
@@ -1154,64 +1037,8 @@ the differential operator $i \frac{d}{dx}$
 acting in the space of periodic functions
 discretized by central differences on a uniform mesh
 of 80 steps.
-
-\begin{verbatim}
-program spec_test
-  use spral_ssmfe
-  implicit none
-  integer, parameter :: n   = 80     ! problem size
-  integer, parameter :: nep = 5      ! eigenpairs wanted
-  double precision :: lambda(nep)    ! eigenvalues
-  double complex :: X(n, nep)        ! eigenvectors
-  type(ssmfe_rciz   ) :: rci         ! reverse communication data
-  type(ssmfe_options) :: options     ! options
-  type(ssmfe_keepz  ) :: keep        ! private data
-  type(ssmfe_inform ) :: inform      ! information
-  integer :: i                       ! loop index
-  rci%job = 0
-  do ! reverse communication loop
-    call ssmfe_standard &
-      ( rci, nep, nep, lambda, n, X, n, keep, options, inform )
-    select case ( rci%job )
-    case ( 1 )
-      call apply_idx( n, rci%nx, rci%x, rci%y )
-    case ( :-1 )
-      exit
-    end select
-  end do
-  print '(i3, 1x, a)', inform%left, 'eigenpairs converged'
-  print '(1x, a, i2, a, es14.7)', &
-    ('lambda(', i, ') = ', lambda(i), i = 1, inform%left)
-  call ssmfe_terminate( keep, inform )
-contains
-subroutine apply_idx( n, m, x, y ) ! central differences for i d/dx
-  implicit none
-  double complex, parameter :: IM_ONE = (0.0D0, 1.0D0)
-  integer, intent(in) :: n, m
-  double complex, intent(in) :: x(n, m)
-  double complex, intent(out) :: y(n, m)
-  integer :: i, j, il, ir
-  do j = 1, m
-    do i = 1, n
-      if ( i == 1 ) then
-        il = n
-      else
-        il = i - 1
-      end if
-      if ( i == n ) then
-        ir = 1
-      else
-        ir = i + 1
-      end if
-      y(i, j) = IM_ONE*(x(ir, j) - x(il, j))
-    end do
-  end do
-end subroutine apply_idx
-end program spec_test
-\end{verbatim}
-
+\verbatiminput{examples/Fortran/ssmfe/hermitian.f90}
 This code produces the following output:
-
 \begin{verbatim}
   5 eigenpairs converged
  lambda( 1) = -2.0000000E+00

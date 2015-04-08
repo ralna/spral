@@ -1,17 +1,24 @@
-program spec_test ! Laplacian on a square grid
+! examples/Fortran/ssmfe/precond_ssmfe.f90
+! Laplacian on a square grid (using SPRAL_SSMFE routines)
+program ssmfe_precond_example
   use spral_ssmfe
-  use laplace2d
+  use laplace2d ! implement Lapalacian and preconditioners
   implicit none
+
+  integer, parameter :: wp = kind(0d0) ! Working precision is double
+
   integer, parameter :: m   = 20    ! grid points along each side
   integer, parameter :: n   = m*m   ! problem size
   integer, parameter :: nep = 5     ! eigenpairs wanted
-  double precision :: lambda(2*nep) ! eigenvalues
-  double precision :: X(n, 2*nep)   ! eigenvectors
+
+  real(wp) :: lambda(2*nep)         ! eigenvalues
+  real(wp) :: X(n, 2*nep)           ! eigenvectors
   type(ssmfe_rcid   ) :: rci        ! reverse communication data
   type(ssmfe_options) :: options    ! options
   type(ssmfe_keepd  ) :: keep       ! private data
   type(ssmfe_inform ) :: inform     ! information
-  integer :: i                        ! loop index
+  integer :: i                      ! loop index
+
   ! the gap between the last converged eigenvalue and the rest of the spectrum
   ! must be at least 0.1 times average gap between computed eigenvalues
   options%left_gap = -0.1
@@ -32,6 +39,4 @@ program spec_test ! Laplacian on a square grid
   print '(1x, a, i2, a, es13.7)', &
     ('lambda(', i, ') = ', lambda(i), i = 1, inform%left)
   call ssmfe_terminate( keep, inform )
-end program spec_test
-
-
+end program ssmfe_precond_example

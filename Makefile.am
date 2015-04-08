@@ -166,47 +166,39 @@ libspral_a_SOURCES += \
 #	interfaces/C/random_matrix.f90
 check_PROGRAMS += \
   ssmfe_test \
-	examples/Fortran/ssmfe/core_precond \
-	examples/Fortran/ssmfe/expert_precond \
-	examples/Fortran/ssmfe/example_precond \
-	examples/Fortran/ssmfe/example_shift_invert \
-	examples/Fortran/ssmfe/example_hermitian
+	examples/Fortran/ssmfe/hermitian \
+	examples/Fortran/ssmfe/precond_core \
+	examples/Fortran/ssmfe/precond_expert \
+	examples/Fortran/ssmfe/precond_ssmfe \
+	examples/Fortran/ssmfe/shift_invert
 ssmfe_test_SOURCES = tests/ssmfe.f90
 tests/ssmfe.$(OBJEXT): libspral.a
 TESTS += ssmfe_test
-#	ssmfe_test \
-#	examples/C/ssmfe/ssmfe1 \
-#	examples/C/ssmfe/ssmfe2
-#random_matrix_test_SOURCES = tests/random_matrix.f90
-examples_Fortran_ssmfe_example_precond_SOURCES = \
-	examples/Fortran/ssmfe/example_precond.f90 \
-	examples/Fortran/ssmfe/laplace.f90
-examples_Fortran_ssmfe_expert_precond_SOURCES = \
-	examples/Fortran/ssmfe/expert_precond.f90 \
-	examples/Fortran/ssmfe/laplace.f90
-examples_Fortran_ssmfe_core_precond_SOURCES = \
-	examples/Fortran/ssmfe/core_precond.f90 \
-	examples/Fortran/ssmfe/laplace.f90
-examples_Fortran_ssmfe_example_shift_invert_SOURCES = \
-	examples/Fortran/ssmfe/example_shift_invert.f90 \
-	examples/Fortran/ssmfe/laplace.f90 \
-	examples/Fortran/ssmfe/ldlt.f90
-examples_Fortran_ssmfe_example_hermitian_SOURCES = \
-	examples/Fortran/ssmfe/example_hermitian.f90
-examples_Fortran_ssmfe_example_hermitian.$(OBJEXT): libspral.a
-#examples_C_random_matrix_SOURCES = examples/C/random_matrix.c
-#tests/random_matrix.$(OBJEXT): libspral.a
-examples/Fortran/ssmfe/core_precond.$(OBJEXT): libspral.a \
-	examples/Fortran/ssmfe/laplace.$(OBJEXT)
-examples/Fortran/ssmfe/expert_precond.$(OBJEXT): libspral.a \
-	examples/Fortran/ssmfe/laplace.$(OBJEXT)
-examples/Fortran/ssmfe/example_precond.$(OBJEXT): libspral.a \
-	examples/Fortran/ssmfe/laplace.$(OBJEXT)
-examples/Fortran/ssmfe/example_shift_invert.$(OBJEXT): libspral.a \
-	examples/Fortran/ssmfe/laplace.$(OBJEXT) \
-	examples/Fortran/ssmfe/ldlt.$(OBJEXT)
-#examples/C/random_matrix.$(OBJEXT): libspral.a
-#TESTS += random_matrix_test
+examples_Fortran_ssmfe_hermitian_SOURCES = \
+	examples/Fortran/ssmfe/hermitian.f90
+examples_Fortran_ssmfe_precond_ssmfe_SOURCES = \
+	examples/Fortran/ssmfe/precond_ssmfe.f90 \
+	examples/Fortran/ssmfe/laplace2d.f90
+examples_Fortran_ssmfe_precond_expert_SOURCES = \
+	examples/Fortran/ssmfe/precond_expert.f90 \
+	examples/Fortran/ssmfe/laplace2d.f90
+examples_Fortran_ssmfe_precond_core_SOURCES = \
+	examples/Fortran/ssmfe/precond_core.f90 \
+	examples/Fortran/ssmfe/laplace2d.f90
+examples_Fortran_ssmfe_shift_invert_SOURCES = \
+	examples/Fortran/ssmfe/shift_invert.f90 \
+	examples/Fortran/ssmfe/laplace2d.f90 \
+	examples/Fortran/ssmfe/ldltf.f90
+examples_Fortran_ssmfe_hermitian.$(OBJEXT): libspral.a
+examples/Fortran/ssmfe/precond_core.$(OBJEXT): libspral.a \
+	examples/Fortran/ssmfe/laplace2d.$(OBJEXT)
+examples/Fortran/ssmfe/precond_expert.$(OBJEXT): libspral.a \
+	examples/Fortran/ssmfe/laplace2d.$(OBJEXT)
+examples/Fortran/ssmfe/precond_ssmfe.$(OBJEXT): libspral.a \
+	examples/Fortran/ssmfe/laplace2d.$(OBJEXT)
+examples/Fortran/ssmfe/shift_invert.$(OBJEXT): libspral.a \
+	examples/Fortran/ssmfe/laplace2d.$(OBJEXT) \
+	examples/Fortran/ssmfe/ldltf.$(OBJEXT)
 
 # Automake doesn't know much about modules, so get rid of them ourself
 clean-local:
