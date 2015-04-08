@@ -62,8 +62,8 @@ $A$ and $B$ are {\bf real symmetric} (or {\bf Hermitian}) matrices
 and $B$ is {\bf positive definite}.
 
 \fullpackagename\ 
-relegates 
-a considerable part of the computation to the user's code,
+delegates 
+a considerable part of the computation to the user,
 which makes its solver procedures rather difficult to use.
 The user is advised to consider first using
 the package \simple, which
@@ -147,8 +147,8 @@ and in \report.
 %Compared to the package \simple, which is built upon 
 \fullpackagename,
 %the latter 
-relegates 
-a considerable part of the computation to the user's code.
+delegates 
+a considerable part of the computation to the user.
 The user's code stores all  vectors  of size equal to the problem size $n$.
 \fullpackagename\
 is not ``aware'' of $n$ or how these vectors are stored; 
@@ -355,7 +355,7 @@ the user must fill this block with
 {\tt m} linearly independent vectors before the first call
 to a solver procedure.
 
-The number of wanted eigenpairs may exceed {\tt m}:
+The number of desired eigenpairs may exceed {\tt m}:
 whenever converged eigenpairs have been detected,
 a solver procedure reports the indices of these eigenpairs
 and they must be moved by the user
@@ -403,7 +403,7 @@ and the appropriate action taken:
 \itt{-3}: fatal error return, the computation must be terminated;
 %
 \itt{-2}: 
-not all wanted eigenpairs converged to required accuracy,
+not all desired eigenpairs converged to required accuracy,
 see Section~\ref{sec:err}; 
 %
 \itt{-1}: the computation is complete and successful.
@@ -692,11 +692,11 @@ The other two can only be done if
 and {\tt \solver\_buckling} only)
 is an \intentin\ scalar of type \REALDP\
 that holds the shift, 
-a value around which the wanted eigenvalues %of interest 
+a value around which the desired eigenvalues %of interest 
 are situated.
 %
 \itt{left} is an \intentin\ scalar of type default \Integer\ 
-that holds the number of wanted eigenvalues to the left of {\tt sigma}.
+that holds the number of desired eigenvalues to the left of {\tt sigma}.
 {\bf Restriction:} {\tt $0 < $ left + right $\le$ min(mep, n/2)},
 where {\tt right} is zero for {\tt\solver\_standard}\ and 
 {\tt\solver\_generalized}.
@@ -705,7 +705,7 @@ where {\tt right} is zero for {\tt\solver\_standard}\ and
 ({\tt \solver\_standard\_shift}, {\tt \solver\_generalized\_shift}
 and {\tt \solver\_buckling} only)
 is an \intentin\ scalar of type default \Integer\ 
-that holds the number of wanted eigenvalues to the right of {\tt sigma}.
+that holds the number of desired eigenvalues to the right of {\tt sigma}.
 {\bf Restriction:} {\tt $0 < $ left + right $\le$ min(mep, n/2)}.
 %
 \itt{mep} is an \intentin\ scalar of type default \Integer\ 
@@ -713,7 +713,7 @@ that holds the size of the array {\tt lambda}.
 See Section~\ref{sec:method} for guidance on
 setting {\tt mep}.
 {\bf Restriction:} 
-{\tt mep} is not less than the number of wanted eigenpairs.
+{\tt mep} is not less than the number of desired eigenpairs.
 %
 \itt{lambda(:)} is an \intentinout\
 array of type \REALDP\
@@ -1038,8 +1038,8 @@ must be linearly independent.
 
 \label{sec:inform}
 
-The derived data type {\tt \packagename\_inform} is used
-to hold information from the execution of %{\tt \packagename\_solve}.
+The derived data type {\tt ssmfe\_inform} is used
+to hold information from the execution of
 the solver procedures.
 The components are:
 
@@ -1130,7 +1130,7 @@ that holds the allocation status
 
 \label{sec:err}
 
-A successful return from %{\tt \packagename\_solve} 
+A successful return from
 a solver procedure
 is indicated 
 by {\tt inform\%flag$=$0}.
@@ -1187,7 +1187,7 @@ Incorrect value of
 \item{~-13}
 \hskip 7pt
 {\tt mep} is less than 
-the number of wanted eigenpairs.
+the number of desired eigenpairs.
 %{\tt left} + {\tt right}.
 %
 \item{-100}
@@ -1334,7 +1334,7 @@ plus $k - 1$.
 \label{sec:si}
 
 When using the solver procedures that employ the shift-and-invert technique,
-it is very important to ensure that the numbers of wanted eigenvalues
+it is very important to ensure that the numbers of desired eigenvalues
 each side of the shift do not exceed the actual numbers of these eigenvalues,
 as the eigenpairs `approximating' non-existing eigenpairs of the problem
 will not converge.

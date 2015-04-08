@@ -380,11 +380,11 @@ For problem \Ref{evp.b}, the shifted matrix is $B - \sigma A$.
 and {\tt \solver\_buckling}\ only)
 is an \intentin\ scalar of type \REALDP\
 that holds the shift, 
-a value around which the wanted eigenvalues %of interest 
+a value around which the desired eigenvalues %of interest 
 are situated.
 %
 \itt{left} is an \intentin\ scalar of type default \Integer\ 
-that holds the number of wanted leftmost eigenpairs.
+that holds the number of desired leftmost eigenpairs.
 {\bf Restriction:} {$0 <$ \tt left + right $\le$ min(mep, n/2)},
 where {\tt right} is zero for 
 {\tt\solver\_standard}\ and {\tt\solver\_generalized}.
@@ -393,7 +393,7 @@ where {\tt right} is zero for
 ({\tt \solver\_standard\_shift}, {\tt \solver\_generalized\_shift}\
 and {\tt \solver\_buckling}\ only)
 is an \intentin\ scalar of type default \Integer\ 
-that holds the number of wanted eigenvalues to the right of {\tt sigma}.
+that holds the number of desired eigenvalues to the right of {\tt sigma}.
 {\bf Restriction:} {\tt $0 < $ left + right $\le$ min(mep, n/2)}.
 %
 \itt{mep} is an \intentin\ scalar of type default \Integer\ 
@@ -401,7 +401,7 @@ that holds the size of the array {\tt lambda}.
 See Section~\ref{sec:method} for guidance on
 setting {\tt mep}.
 {\bf Restriction:} 
-{\tt mep} is not less than the number of wanted eigenpairs
+{\tt mep} is not less than the number of desired eigenpairs
 (cf. {\tt left} and {\tt right}.
 %
 \itt{lambda(:)} is an \intentinout\ %rank-1 
@@ -753,7 +753,7 @@ are as follows:
 \item{~-13}
 \hskip 7pt
 {\tt mep} is less than 
-the number of wanted eigenpairs.
+the number of desired eigenpairs.
 %{\tt left} + {\tt right}.
 %
 \item{-100}
@@ -806,7 +806,7 @@ and restart the reverse communication loop.
 An alternative option is to use
 one of the advanced solver procedures
 from {\tt \advanced} or {\tt \engine}
-that relegate the storage of computed eigenpairs and
+that delegate the storage of computed eigenpairs and
 the termination of the computation to the user.
 
 \section{Method}
@@ -902,7 +902,7 @@ it is sufficient to set {\tt mep} to the number of desired eigenpairs
 plus $k - 1$.
 
 When using the solver procedures that employ the shift-and-invert technique,
-it is very important to ensure that the numbers of wanted eigenvalues
+it is very important to ensure that the numbers of desired eigenvalues
 each side of the shift do not exceed the actual numbers of these eigenvalues,
 as the eigenpairs `approximating' non-existing eigenpairs of the problem
 will not converge.
