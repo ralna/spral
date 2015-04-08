@@ -62,8 +62,8 @@ $A$ and $B$ are {\bf real symmetric} (or {\bf Hermitian}) matrices
 and $B$ is {\bf positive definite}.
 
 \fullpackagename\ 
-relegates 
-a considerable part of the computation to the user's code,
+delegates 
+a considerable part of the computation to the user,
 which makes its solver procedures rather difficult to use.
 For solving problems \Ref{evp} and \Ref{evp.g},
 the user is advised to consider %first 
@@ -72,7 +72,7 @@ the package \simple, which
 offers a simple interface
 to \fullpackagename,
 or the package \advanced,
-which relegates less work to the user.
+which delegates less work to the user.
 }
 
 \title{Sparse Symmetric Matrix-Free Eigensolver, \\[2pt]
@@ -113,7 +113,7 @@ to benefit from highly optimized linear algebra subroutines
 and from the ubiquitous multicore architecture
 of modern computers.
 It also makes this algorithm more reliable
-than Krylov-based algorithms employed e.g. by ARPACK
+than Krylov-based algorithms employed by e.g. ARPACK
 in the presence of clustered eigenvalues.
 However, convergence of the iterations may be slow
 if the density of the spectrum is high.
@@ -123,7 +123,7 @@ Thus, good performance
 is contingent on the following two factors:
 (i) the number of desired
 eigenpairs must be substantial
-(e.g. not less than the number of CPU cores),
+(i.e. not less than the number of CPU cores),
 and
 (ii) the employment of a convergence acceleration technique.
 \fullpackagename\ allows the user to benefit
@@ -152,16 +152,18 @@ of the system $A u = f$.
 This technique is more sophisticated
 and is likely to be of interest only to experienced users.
 
-Further information on the algorithm used by
-\fullpackagename\ can be found in 
-\report.
+For futher detail on the algorithm, see the outline in Section~\ref{sec:method}
+and associated references.
+%Further information on the algorithm used by
+%\fullpackagename\ can be found in 
+%\report.
 
-\fullpackagename\ relegates 
-more computational tasks to the user's code than the packages
+\fullpackagename\ delegates 
+more computation to the user than the packages
 \simple\ and \advanced, which are built upon it.
 Not only are the storage and operations on all vectors of size $n$
 %the problem size, 
-user's code responsibility, but also
+user's responsibility, but also
 the decision on 
 whether a sufficient number of eigenpairs have been computed
 to sufficient accuracy.
@@ -182,20 +184,21 @@ Access to the package requires a {\tt USE} statement \\ \\
 
 \noindent The following procedures are available to the user:
 %
-\begin{description}
 \vspace{-0.1cm}
-\item (a) {\tt \solver()} 
+\begin{description}
+\item[(a)] {\tt \solver()} 
 (for computing specified numbers %amounts 
 of leftmost and right-most
 eigenvalues and the corresponding eigen\-vec\-tors)
-\item (b) {\tt \solver\_largest()} 
+\item[(b)] {\tt \solver\_largest()} 
 (for computing a specified number %amount 
 of eigenvalues of largest magnitude
 and the cor\-res\-pon\-ding eigenvectors)
-\item (c) {\tt \solver\_terminate()} 
+\item[(c)] {\tt \solver\_terminate()} 
 %
 \end{description}
 
+\noindent
 The solver procedures (a) and (b)
 must be called repeatedly using
 a reverse communication interface.
@@ -209,11 +212,11 @@ the solver procedure.
 
 \subsection{Package types} 
 
-We use the term {\bf package type} to mean
-default double precision real for the double precision real version,
-and default double precision complex
-for the double precision complex version. 
-\REALDP\ denotes double precision real.
+\Integer\ denotes default \Integer, and \REALDP\ denotes
+\texttt{REAL(kind=kind(0d0))}. We use the term {\bf package type} to mean
+\texttt{REAL(kind=kind(0d0))} for calls to the double precision real valued
+interface, and to mean \texttt{COMPLEX(kind=kind(0d0))} for calls to the double
+precision complex valued interface.
 
 \subsection{Derived types}
 \label{sec:derived}
@@ -267,9 +270,10 @@ the following call must be made repeatedly:
 }
 
 \medskip
+\noindent
 To use the solver procedures,
 the user needs to maintain a workspace {\tt W} containing
-{\tt kw + 1} blocks of {\tt m} vectors of size $n$.
+{\tt kw + 1} blocks of {\tt m} vectors of size {\tt n}.
 A value {\tt kw = 7} is always sufficient. 
 However, if {\tt options\%minAprod} $=$ {\tt .false.}
 and either {\tt options\%minBprod} $=$ {\tt .false.} or 
@@ -290,7 +294,7 @@ the user must fill this block with
 {\tt m} linearly independent vectors before the first call
 to a solver procedure.
 
-The number of wanted eigenpairs may exceed {\tt m}:
+The number of desired eigenpairs may exceed {\tt m}:
 whenever converged eigenpairs have been detected,
 a solver procedure reports the indices of these eigenpairs
 and they must be moved by the user
@@ -306,17 +310,18 @@ i.e. {\tt BX = B*X}.
 To simplify the description of the %advanced RCI's,
 reverse communication interface,
 below we assume that an array
-{\tt W(n,m,0:kw)} of package type
+{\tt W(n,~m,~0:kw)} of package type
 is used as a workspace,
 and that arrays {\tt X(n, mep)} and {\tt BX(n, mep)} of package type
 are used for storing the computed eigenvectors
 and their $B$-images,
-where {\tt mep} is not less than the number of wanted eigenpairs.
+where {\tt mep} is not less than the number of desired eigenpairs.
 The transpose (real or complex, depending on the package type)
 of a matrix {\tt H} 
 is denoted by {\tt H}$^\prime$.
 
 \medskip
+\noindent
 The meaning of the arguments of the solver procedures is as follows.
 
 \begin{description}
@@ -339,7 +344,7 @@ and the appropriate action taken:
 \itt{-3}: fatal error return, the computation must be terminated;
 %
 \itt{-2}: 
-not all wanted eigenpairs converged to required accuracy,
+not all desired eigenpairs converged to required accuracy,
 %non-fatal error return, the computation may be restarted,
 see Section~\ref{sec:err}; %for the guidance;
 %
@@ -369,7 +374,7 @@ the user must compute $V = B U$,
 where $U$ and $V$ are as for {\tt rci\%job = 1}.
 %
 \itt{~4}:
-for each {\tt i = 1, \ldots, m}
+for each {\tt i = 1,\ldots,m}
 such that {\tt inform\%converged(i)} is zero,
 the user must set {\tt inform\%converged(i)}
 to a positive value if the residual norm
@@ -405,7 +410,7 @@ and {\tt W(:,:,rci\%ky)}
 must be reordered using
 the index array {\tt ind} so that %, i.e.
 the column {\tt ind(j)} becomes column {\tt j}
-for {\tt j = 1, \ldots, rci\%nx}.
+for {\tt j = 1,\ldots,rci\%nx}.
 %
 \itt{12}:
 for each
@@ -621,17 +626,17 @@ if it is positive then \Ref{evp.g} is solved,
 otherwise \Ref{evp.p} is solved.
 %
 \itt{left} is an \intentin\ scalar of type default \Integer\ 
-that holds the number of wanted leftmost eigenvalues.
+that holds the number of desired leftmost eigenvalues.
 On return with {\tt rci\%job = 5}, can be set to zero if
 sufficient number of leftmost eigenvalues have been computed.
 %
 \itt{right} is an \intentin\ scalar of type default \Integer\ 
-that holds the number of wanted rightmost eigenvalues.
+that holds the number of desired rightmost eigenvalues.
 On return with {\tt rci\%job = 5}, can be set to zero if
 sufficient number of rightmost eigenvalues have been computed.
 %
 \itt{nep} is an \intentin\ scalar of type default \Integer\ 
-that holds the number of wanted largest eigenvalues.
+that holds the number of desired largest eigenvalues.
 %
 \itt{lambda(:)} is an \intentinout\
 array of type \REALDP\
@@ -815,8 +820,8 @@ is not used for stagnation detection.
 
 \label{sec:inform}
 
-The derived data type {\tt \packagename\_inform} is used
-to hold information from the execution of %{\tt \packagename\_solve}.
+The derived data type {\tt ssmfe\_inform} is used
+to hold information from the execution of
 the solver procedures.
 The components are:
 
@@ -970,7 +975,7 @@ errors make them essentially random).
 
 \subsection{The algorithm}
 
-The algorithm implemented by {\tt \packagename\_solve}
+The algorithm implemented by {\tt ssmfe()} and {\tt ssmfe\_largest()}
 is based on the Jacobi-conjugate preconditioned gradients (JCPG) method.
 The outline of the algorithm,
 assuming for simplicity
@@ -1188,7 +1193,7 @@ and select the maximal $k \le m$ for which
 the distance between $\tilde\lambda_{k-1}$ and $\tilde\lambda_k$
 exceeds the sum of the absolute error tolerance for eigenvalues
 and the Frobenius norm of the matrix formed by the residuals
-$r_j, j = 1, \ldots, k-1$.
+$r_j, j = 1,\ldots,k-1$.
 If  $\tilde\lambda_j - \hat\lambda_j$
 is close to the machine accuracy, it may be too polluted
 by round-off errors to rely upon.
