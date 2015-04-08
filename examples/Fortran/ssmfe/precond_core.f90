@@ -1,27 +1,35 @@
-program spec_test ! Laplacian on a square grid
+! examples/Fortran/ssmfe/precond_core.f90
+! Laplacian on a square grid (using SPRAL_SSMFE_CORE routines)
+program ssmfe_core_precond_example
   use spral_ssmfe_core
-  use laplace2d
+  use laplace2d ! implement Lapalacian and preconditioners
   implicit none
+
+  integer, parameter :: wp = kind(0d0) ! working precision is double
+
   integer, parameter :: l   = 10  ! grid points along each side
   integer, parameter :: n   = l*l ! problem size
   integer, parameter :: nep = 9   ! eigenpairs wanted
   integer, parameter :: m = 3     ! dimension of the iterated subspace
-  integer :: ncon                  ! number of converged eigenpairs
+
+  real(wp), external :: dnrm2, ddot ! BLAS functions
+
+  integer :: ncon                 ! number of converged eigenpairs
   integer :: i, j, k
-  integer :: ind(m)                ! permutation index
-  double precision :: tol         ! eigenvector tolerance
-  double precision :: s
-  double precision :: dnrm2, ddot
-  double precision :: lambda(n)       ! eigenvalues
-  double precision :: X(n, n)         ! eigenvectors
-  double precision :: lmd(m)          ! work array
-  double precision :: rr(2*m, 2*m, 3) ! work array
-  double precision :: W(n, m, 0:5)    ! work array
-  double precision :: U(n, m)         ! work array
-  type(ssmfe_rcid   ) :: rci     ! reverse communication data
-  type(ssmfe_options) :: options ! options
-  type(ssmfe_keep   ) :: keep    ! private data
-  type(ssmfe_inform ) :: inform  ! information
+  integer :: ind(m)               ! permutation index
+  real(wp) :: tol                 ! eigenvector tolerance
+  real(wp) :: s
+  real(wp) :: lambda(n)           ! eigenvalues
+  real(wp) :: X(n, n)             ! eigenvectors
+  real(wp) :: lmd(m)              ! work array
+  real(wp) :: rr(2*m, 2*m, 3)     ! work array
+  real(wp) :: W(n, m, 0:5)        ! work array
+  real(wp) :: U(n, m)             ! work array
+  type(ssmfe_rcid   ) :: rci      ! reverse communication data
+  type(ssmfe_options) :: options  ! options
+  type(ssmfe_keep   ) :: keep     ! private data
+  type(ssmfe_inform ) :: inform   ! information
+
   tol = 1.e-6
   ncon = 0
   call random_number( W(:,:,0) )
@@ -157,6 +165,4 @@ program spec_test ! Laplacian on a square grid
   print '(1x, a, i1, a, es13.7)', &
     ('lambda(', i, ') = ', lambda(i), i = 1, ncon)
   call ssmfe_terminate( keep, inform )
-end program spec_test
-
-
+end program ssmfe_core_precond_example

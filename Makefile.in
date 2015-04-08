@@ -91,12 +91,11 @@ check_PROGRAMS = random_test$(EXEEXT) examples/Fortran/random$(EXEEXT) \
 	examples/C/random$(EXEEXT) random_matrix_test$(EXEEXT) \
 	examples/Fortran/random_matrix$(EXEEXT) \
 	examples/C/random_matrix$(EXEEXT) $(am__EXEEXT_1) \
-	ssmfe_test$(EXEEXT) \
+	ssmfe_test$(EXEEXT) examples/Fortran/ssmfe/hermitian$(EXEEXT) \
 	examples/Fortran/ssmfe/precond_core$(EXEEXT) \
 	examples/Fortran/ssmfe/precond_expert$(EXEEXT) \
 	examples/Fortran/ssmfe/precond_ssmfe$(EXEEXT) \
-	examples/Fortran/ssmfe/shift_invert$(EXEEXT) \
-	examples/Fortran/ssmfe/hermitian$(EXEEXT)
+	examples/Fortran/ssmfe/shift_invert$(EXEEXT)
 TESTS = random_test$(EXEEXT) random_matrix_test$(EXEEXT) \
 	$(am__EXEEXT_2) ssmfe_test$(EXEEXT)
 
@@ -840,10 +839,9 @@ examples_C_random_matrix_SOURCES = examples/C/random_matrix.c
 @HAVE_NVCC_TRUE@examples_C_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
 @HAVE_NVCC_TRUE@examples_C_ssids_LINK = $(NVCCLINK)
 ssmfe_test_SOURCES = tests/ssmfe.f90
-#	ssmfe_test \
-#	examples/C/ssmfe/ssmfe1 \
-#	examples/C/ssmfe/ssmfe2
-#random_matrix_test_SOURCES = tests/random_matrix.f90
+examples_Fortran_ssmfe_hermitian_SOURCES = \
+	examples/Fortran/ssmfe/hermitian.f90
+
 examples_Fortran_ssmfe_precond_ssmfe_SOURCES = \
 	examples/Fortran/ssmfe/precond_ssmfe.f90 \
 	examples/Fortran/ssmfe/laplace2d.f90
@@ -860,9 +858,6 @@ examples_Fortran_ssmfe_shift_invert_SOURCES = \
 	examples/Fortran/ssmfe/shift_invert.f90 \
 	examples/Fortran/ssmfe/laplace2d.f90 \
 	examples/Fortran/ssmfe/ldltf.f90
-
-examples_Fortran_ssmfe_hermitian_SOURCES = \
-	examples/Fortran/ssmfe/hermitian.f90
 
 all: all-am
 
@@ -1863,8 +1858,6 @@ examples/C/random_matrix.$(OBJEXT): libspral.a
 @HAVE_NVCC_TRUE@examples/C/ssids.$(OBJEXT): libspral.a
 tests/ssmfe.$(OBJEXT): libspral.a
 examples_Fortran_ssmfe_hermitian.$(OBJEXT): libspral.a
-#examples_C_random_matrix_SOURCES = examples/C/random_matrix.c
-#tests/random_matrix.$(OBJEXT): libspral.a
 examples/Fortran/ssmfe/precond_core.$(OBJEXT): libspral.a \
 	examples/Fortran/ssmfe/laplace2d.$(OBJEXT)
 examples/Fortran/ssmfe/precond_expert.$(OBJEXT): libspral.a \
@@ -1874,8 +1867,6 @@ examples/Fortran/ssmfe/precond_ssmfe.$(OBJEXT): libspral.a \
 examples/Fortran/ssmfe/shift_invert.$(OBJEXT): libspral.a \
 	examples/Fortran/ssmfe/laplace2d.$(OBJEXT) \
 	examples/Fortran/ssmfe/ldltf.$(OBJEXT)
-#examples/C/random_matrix.$(OBJEXT): libspral.a
-#TESTS += random_matrix_test
 
 # Automake doesn't know much about modules, so get rid of them ourself
 clean-local:
