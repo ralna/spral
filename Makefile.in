@@ -202,7 +202,7 @@ am__libspral_a_SOURCES_DIST = src/blas_iface.f90 src/core_analyse.f90 \
 	src/ssids/solve_gpu.f90 src/ssids/solve_kernels.cu \
 	src/ssids/ssids.f90 src/ssids/syrk_kernels.cu \
 	interfaces/C/ssids.f90 src/ssmfe/ssmfe.f90 src/ssmfe/core.f90 \
-	src/ssmfe/expert.f90
+	src/ssmfe/expert.f90 interfaces/C/ssmfe_core.f90
 am__dirstamp = $(am__leading_dot)dirstamp
 @HAVE_NVCC_TRUE@am__objects_1 = src/cuda/api_wrappers.$(OBJEXT) \
 @HAVE_NVCC_TRUE@	src/cuda/cuda.$(OBJEXT)
@@ -233,7 +233,7 @@ am_libspral_a_OBJECTS = src/blas_iface.$(OBJEXT) \
 	interfaces/C/random.$(OBJEXT) src/random_matrix.$(OBJEXT) \
 	interfaces/C/random_matrix.$(OBJEXT) $(am__objects_2) \
 	src/ssmfe/ssmfe.$(OBJEXT) src/ssmfe/core.$(OBJEXT) \
-	src/ssmfe/expert.$(OBJEXT)
+	src/ssmfe/expert.$(OBJEXT) interfaces/C/ssmfe_core.$(OBJEXT)
 libspral_a_OBJECTS = $(am_libspral_a_OBJECTS)
 @HAVE_NVCC_TRUE@am__EXEEXT_1 = ssids_test$(EXEEXT) \
 @HAVE_NVCC_TRUE@	examples/Fortran/ssids$(EXEEXT) \
@@ -430,7 +430,7 @@ am__can_run_installinfo = \
   esac
 am__include_HEADERS_DIST = include/spral.h include/spral_matrix_util.h \
 	include/spral_random.h include/spral_random_matrix.h \
-	include/spral_ssids.h
+	include/spral_ssids.h include/spral_ssmfe.h
 HEADERS = $(include_HEADERS)
 am__tagged_files = $(HEADERS) $(SOURCES) $(TAGS_FILES) $(LISP)
 # Read a list of newline-separated strings from the standard input,
@@ -784,9 +784,11 @@ lib_LIBRARIES = libspral.a
 # RANDOM
 
 # RANDOM_MATRIX
+
+# SSMFE
 include_HEADERS = include/spral.h include/spral_matrix_util.h \
 	include/spral_random.h include/spral_random_matrix.h \
-	$(am__append_2)
+	$(am__append_2) include/spral_ssmfe.h
 
 # BLAS_IFACE
 # Note: first so not +=
@@ -806,9 +808,6 @@ include_HEADERS = include/spral.h include/spral_matrix_util.h \
 # SCALING
 
 # TIMER
-
-# SSMFE
-#include_HEADERS += include/spral_random_matrix.h
 libspral_a_SOURCES = src/blas_iface.f90 src/core_analyse.f90 \
 	$(am__append_1) src/lapack_iface.f90 src/match_order.f90 \
 	src/matrix_util.f90 interfaces/C/matrix_util.f90 \
@@ -816,7 +815,8 @@ libspral_a_SOURCES = src/blas_iface.f90 src/core_analyse.f90 \
 	src/rutherford_boeing.f90 src/scaling.f90 src/timer.f90 \
 	src/random.f90 interfaces/C/random.f90 src/random_matrix.f90 \
 	interfaces/C/random_matrix.f90 $(am__append_3) \
-	src/ssmfe/ssmfe.f90 src/ssmfe/core.f90 src/ssmfe/expert.f90
+	src/ssmfe/ssmfe.f90 src/ssmfe/core.f90 src/ssmfe/expert.f90 \
+	interfaces/C/ssmfe_core.f90
 EXTRA_DIST = src/metis4_wrapper.f90 src/metis5_wrapper.f90
 random_test_SOURCES = tests/random.f90
 examples_Fortran_random_SOURCES = examples/Fortran/random.f90
@@ -1030,6 +1030,8 @@ src/ssmfe/core.$(OBJEXT): src/ssmfe/$(am__dirstamp) \
 	src/ssmfe/$(DEPDIR)/$(am__dirstamp)
 src/ssmfe/expert.$(OBJEXT): src/ssmfe/$(am__dirstamp) \
 	src/ssmfe/$(DEPDIR)/$(am__dirstamp)
+interfaces/C/ssmfe_core.$(OBJEXT): interfaces/C/$(am__dirstamp) \
+	interfaces/C/$(DEPDIR)/$(am__dirstamp)
 
 libspral.a: $(libspral_a_OBJECTS) $(libspral_a_DEPENDENCIES) $(EXTRA_libspral_a_DEPENDENCIES) 
 	$(AM_V_at)-rm -f libspral.a
@@ -1932,6 +1934,7 @@ src/ssids/solve_kernels.$(OBJEXT): src/ssids/dtrsv.h
 interfaces/C/random.$(OBJEXT): src/random.$(OBJEXT)
 interfaces/C/random_matrix.$(OBJEXT): src/random_matrix.$(OBJEXT)
 interfaces/C/ssids.$(OBJEXT): src/ssids/ssids.$(OBJEXT)
+interfaces/C/ssmfe_core.$(OBJEXT): src/ssmfe/core.$(OBJEXT)
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

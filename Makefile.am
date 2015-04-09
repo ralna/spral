@@ -158,14 +158,14 @@ TESTS += ssids_test
 endif
 
 # SSMFE
-#include_HEADERS += include/spral_random_matrix.h
+include_HEADERS += include/spral_ssmfe.h
 libspral_a_SOURCES += \
 	src/ssmfe/ssmfe.f90 \
 	src/ssmfe/core.f90 \
-	src/ssmfe/expert.f90
-#	interfaces/C/random_matrix.f90
+	src/ssmfe/expert.f90 \
+	interfaces/C/ssmfe_core.f90
 check_PROGRAMS += \
-  ssmfe_test \
+   ssmfe_test \
 	examples/Fortran/ssmfe/hermitian \
 	examples/Fortran/ssmfe/precond_core \
 	examples/Fortran/ssmfe/precond_expert \
@@ -264,3 +264,4 @@ src/ssids/solve_kernels.$(OBJEXT): src/ssids/dtrsv.h
 interfaces/C/random.$(OBJEXT): src/random.$(OBJEXT)
 interfaces/C/random_matrix.$(OBJEXT): src/random_matrix.$(OBJEXT)
 interfaces/C/ssids.$(OBJEXT): src/ssids/ssids.$(OBJEXT)
+interfaces/C/ssmfe_core.$(OBJEXT): src/ssmfe/core.$(OBJEXT)

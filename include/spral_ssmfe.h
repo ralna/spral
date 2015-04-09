@@ -1,0 +1,98 @@
+#ifndef SPRAL_SSMFE_H
+#define SPRAL_SSMFE_H
+
+#include <stdbool.h>
+#include <complex.h>
+
+/************************************
+ * Derived types
+ ************************************/
+
+struct spral_ssmfe_rcid {
+   int job;
+   int nx;
+   int jx;
+   int kx;
+   int ny;
+   int jy;
+   int ky;
+   int i;
+   int j;
+   int k;
+   double alpha;
+   double beta;
+   double *x;
+   double *y;
+   char unused[80]; // Allow for future expansion
+};
+
+struct spral_ssmfe_rciz {
+   int job;
+   int nx;
+   int jx;
+   int kx;
+   int ny;
+   int jy;
+   int ky;
+   int i;
+   int j;
+   int k;
+   double complex alpha;
+   double complex beta;
+   double complex *x;
+   double complex *y;
+   char unused[80]; // Allow for future expansion
+};
+
+struct spral_ssmfe_core_options {
+   int array_base; // Not in Fortran type
+   double cf_max;
+   int err_est;
+   int extra_left;
+   int extra_right;
+   double min_gap;
+   bool minAprod;
+   bool minBprod;
+   char unused[80]; // Allow for future expansion
+};
+
+struct spral_ssmfe_inform {
+   int flag;
+   int stat;
+   int non_converged;
+   int iteration;
+   int left;
+   int right;
+   int *converged;
+   double next_left;
+   double next_right;
+   double *residual_norms;
+   double *err_lambda;
+   double *err_x;
+   char unused[80]; // Allow for future expansion
+};
+
+/************************************
+ * SSMFE subroutines 
+ ************************************/
+
+/* Initialize options to defaults */
+void spral_ssmfe_default_options(struct spral_ssmfe_options *options);
+/* Free memory */
+int spral_ssmfe_terminate(void **keep, struct spral_ssmfe_inform *inform);
+
+/************************************
+ * SSMFE_EXPERT (additional) subroutines 
+ ************************************/
+
+/************************************
+ * SSMFE_CORE (additional) subroutines 
+ ************************************/
+
+/* Core driver routine for (real) standard and generalized eigenproblems */
+void spral_ssmfe_ssmfe_double(struct spral_ssmfe_rci_double *rci, int problem,
+      int left, int right, int m, double *lambda, double *rr, int *ind,
+      void **keep, const struct spral_ssmfe_options *options,
+      struct spral_ssmfe_inform *inform);
+
+#endif // SPRAL_SSMFE_H
