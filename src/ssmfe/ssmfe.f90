@@ -25,8 +25,7 @@ module SPRAL_ssmfe
   ! fatal execution error flags
   integer, parameter :: OUT_OF_MEMORY = -100
 
-  ! termination status
-  integer, parameter :: SSMFE_DONE  = -1 ! success
+  ! abnormal termination status
   integer, parameter :: SSMFE_QUIT  = -2 ! non-fatal error
   integer, parameter :: SSMFE_ABORT = -3 ! fatal error
 
@@ -377,21 +376,14 @@ contains
       ( problem, left, max_nep, lambda, n, X, ldX, &
         rci, keep, options, inform )
 
-    use SPRAL_blas_iface, &
-      copy => dcopy, &
-      norm => dnrm2, &
-      dot  => ddot , &
-      axpy => daxpy, &
-      gemm => dgemm
-
+    use SPRAL_blas_iface, copy => dcopy, gemm => dgemm
     use SPRAL_lapack_iface, mxcopy => dlacpy
+
     character, parameter :: TR = 'T'
 
-    integer, parameter :: SSMFE_START              = 0
     integer, parameter :: SSMFE_APPLY_A            = 1
     integer, parameter :: SSMFE_APPLY_PREC         = 2
     integer, parameter :: SSMFE_APPLY_B            = 3
-    integer, parameter :: SSMFE_CHECK_CONVERGENCE  = 4
     integer, parameter :: SSMFE_SAVE_CONVERGED     = 5
     integer, parameter :: SSMFE_APPLY_CONSTRAINTS  = 21
     integer, parameter :: SSMFE_APPLY_ADJ_CONSTRS  = 22
@@ -438,8 +430,6 @@ contains
     integer :: kw
     integer :: ldBX
     integer :: i, j, k
-    
-    if ( inform%flag < 0 ) print *, 'inform%flag:', inform%flag
     
     if ( rci%job == 0 ) then
 
@@ -552,7 +542,7 @@ contains
     end if
 
     ldBX = n
-
+    
     ! call ssmfe_expert solver
     call ssmfe_solve &
       ( problem, left, max_nep, lambda, keep%block_size, keep%V, keep%ind, &
@@ -724,18 +714,12 @@ contains
       ( problem, sigma, left, right, max_nep, lambda, n, X, ldX, &
         rci, keep, options, inform )
 
-    use SPRAL_blas_iface, &
-      copy => dcopy, &
-      norm => dnrm2, &
-      dot  => ddot, &
-      axpy => daxpy, &
-      gemm => dgemm
+    use SPRAL_blas_iface, copy => dcopy, gemm => dgemm
     use SPRAL_lapack_iface, mxcopy => dlacpy
-    integer, parameter :: SSMFE_START              = 0
+
     integer, parameter :: SSMFE_APPLY_A            = 1
     integer, parameter :: SSMFE_APPLY_PREC         = 2
     integer, parameter :: SSMFE_APPLY_B            = 3
-    integer, parameter :: SSMFE_CHECK_CONVERGENCE  = 4
     integer, parameter :: SSMFE_SAVE_CONVERGED     = 5
     integer, parameter :: SSMFE_DO_SHIFTED_SOLVE   = 9
     integer, parameter :: SSMFE_APPLY_CONSTRAINTS  = 21
@@ -766,13 +750,12 @@ contains
     integer :: extra_left, extra_right
     integer :: total_left, total_right
     integer :: kw
-    integer :: ldV
     integer :: ldBX
     integer :: i, j, k, m
     
     real(PRECISION) :: s
     
-    if ( rci%job == SSMFE_START ) then
+    if ( rci%job == 0 ) then
 
       keep%step = 0 ! solve step
       keep%lcon = 0 ! number of converged eigenvalues left of sigma
@@ -910,7 +893,6 @@ contains
       return
     end if
 
-    ldV = 2*keep%block_size
     ldBX = n
     nep = inform%left + inform%right
 
@@ -1282,7 +1264,6 @@ contains
       ! perform the Rayleigh-Ritz procedure in the subspace spanned by
       ! the columns of Y to obtain better approximations to eigenvectors
 
-      ldV = nep
       if ( problem == 2 ) then
         ! in the buckling case, A and B are swapped, so reverse the order
         ! of eigenvalues by multiplying Y'A Y by -1
@@ -1292,16 +1273,16 @@ contains
       end if
       call gemm &
         ( TR, 'N', nep, nep, n, s, keep%W, n, keep%W(1,1,2), n, &
-          ZERO, keep%V, ldV )
+          ZERO, keep%V, nep )
       call gemm &
         ( TR, 'N', nep, nep, n, ONE, keep%W, n, keep%W(1,1,3), n, &
-          ZERO, keep%V(1,1,2), ldV )
+          ZERO, keep%V(1,1,2), nep )
       k = 4*keep%block_size**2
       call dsygv &
-        ( 1, 'V', 'U', nep, keep%V, ldV, keep%V(1,1,2), ldV, lambda, &
+        ( 1, 'V', 'U', nep, keep%V, nep, keep%V(1,1,2), nep, lambda, &
           keep%V(1,1,3), k, i )
       call gemm &
-        ( 'N', 'N', n, nep, nep, ONE, keep%W, n, keep%V, ldV, ZERO, X, ldX )
+        ( 'N', 'N', n, nep, nep, ONE, keep%W, n, keep%V, nep, ZERO, X, ldX )
 
       if ( problem == 2 ) then
         ! recover buckling eigenvalues in the correct (ascending) order
@@ -1341,21 +1322,14 @@ contains
       ( problem, left, max_nep, lambda, n, X, ldX, &
         rci, keep, options, inform )
 
-    use SPRAL_blas_iface, &
-      copy => zcopy, &
-      norm => dznrm2, &
-      dot  => zdotc, &
-      axpy => zaxpy, &
-      gemm => zgemm
-
+    use SPRAL_blas_iface, copy => zcopy, gemm => zgemm
     use SPRAL_lapack_iface, mxcopy => zlacpy
+
     character, parameter :: TR = 'C'
 
-    integer, parameter :: SSMFE_START              = 0
     integer, parameter :: SSMFE_APPLY_A            = 1
     integer, parameter :: SSMFE_APPLY_PREC         = 2
     integer, parameter :: SSMFE_APPLY_B            = 3
-    integer, parameter :: SSMFE_CHECK_CONVERGENCE  = 4
     integer, parameter :: SSMFE_SAVE_CONVERGED     = 5
     integer, parameter :: SSMFE_APPLY_CONSTRAINTS  = 21
     integer, parameter :: SSMFE_APPLY_ADJ_CONSTRS  = 22
@@ -1621,18 +1595,12 @@ contains
       ( problem, sigma, left, right, max_nep, lambda, n, X, ldX, &
         rci, keep, options, inform )
 
-    use SPRAL_blas_iface, &
-      copy => zcopy, &
-      norm => dznrm2, &
-      dot  => zdotc, &
-      axpy => zaxpy, &
-      gemm => zgemm
+    use SPRAL_blas_iface, copy => zcopy, gemm => zgemm
     use SPRAL_lapack_iface, mxcopy => zlacpy
-    integer, parameter :: SSMFE_START              = 0
+
     integer, parameter :: SSMFE_APPLY_A            = 1
     integer, parameter :: SSMFE_APPLY_PREC         = 2
     integer, parameter :: SSMFE_APPLY_B            = 3
-    integer, parameter :: SSMFE_CHECK_CONVERGENCE  = 4
     integer, parameter :: SSMFE_SAVE_CONVERGED     = 5
     integer, parameter :: SSMFE_DO_SHIFTED_SOLVE   = 9
     integer, parameter :: SSMFE_APPLY_CONSTRAINTS  = 21
@@ -1666,7 +1634,6 @@ contains
     integer :: total_left, total_right
     integer :: m
     integer :: kw
-    integer :: ldV
     integer :: ldBX
     integer :: i, j, k
     
@@ -1676,7 +1643,7 @@ contains
     
     complex(PRECISION) :: z
     
-    if ( rci%job == SSMFE_START ) then
+    if ( rci%job == 0 ) then
       keep%step = 0
       keep%lcon = 0
       keep%rcon = 0
@@ -1794,7 +1761,6 @@ contains
       return
     end if
 
-    ldV = 2*keep%block_size
     ldBX = n
     nep = inform%left + inform%right
 
@@ -2143,7 +2109,6 @@ contains
   subroutine ssmfe_vector_operations_double( rci, n, m, W, ldW, V, ind, U )
 
     use SPRAL_blas_iface, &
-      copy => dcopy, &
       norm => dnrm2, &
       dot  => ddot,  &
       scal => dscal, &
@@ -2279,7 +2244,6 @@ contains
       ( rci, n, m, W, ldW, V, ind, U )
 
     use SPRAL_blas_iface, &
-      copy => zcopy, &
       norm => dznrm2, &
       dot  => zdotc, &
       scal => zscal, &

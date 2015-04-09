@@ -14,18 +14,10 @@ module SPRAL_ssmfe_expert
   ! double precision to be used
   integer, parameter :: PRECISION = kind(1.0D0)
   
-  ! BLAS/LAPACK flags
-  character, parameter :: SSMFE_JOBZ = 'V', SSMFE_UPLO = 'U'
-  integer, parameter :: SSMFE_ITYPE = 1
-
   ! input error flags
-  integer, parameter :: WRONG_RCI_JOB      =  -1
   integer, parameter :: WRONG_BLOCK_SIZE   =  -2
   integer, parameter :: WRONG_ERR_EST      =  -3
   integer, parameter :: WRONG_MINPROD      =  -4
-  integer, parameter :: WRONG_EXTRAS       =  -5
-  integer, parameter :: WRONG_MIN_GAP      =  -6
-  integer, parameter :: WRONG_CF_MAX       =  -7
   integer, parameter :: WRONG_LEFT         = -11
   integer, parameter :: WRONG_RIGHT        = -12
   integer, parameter :: WRONG_STORAGE_SIZE = -13
@@ -45,8 +37,7 @@ module SPRAL_ssmfe_expert
   integer, parameter :: SSMFE_QUIT  = -2 ! non-fatal error
   integer, parameter :: SSMFE_ABORT = -3 ! fatal error
 
-  ! error estimation schemes, see the spec
-  integer, parameter :: SSMFE_RESIDUAL  = 1
+  ! default error estimation scheme, see the spec
   integer, parameter :: SSMFE_KINEMATIC = 2
   
   public :: ssmfe_standard, ssmfe_standard_shift
@@ -454,8 +445,6 @@ contains
     integer, parameter :: NONE = -1
 
     real(PRECISION), parameter :: ZERO = 0.0D0, ONE = 1.0D0
-    real(PRECISION), parameter :: NIL = ZERO
-    real(PRECISION), parameter :: UNIT = ONE
     
     real(kind = PRECISION), parameter :: MIN_REL_GAP = 1E-3
 
@@ -503,7 +492,7 @@ contains
     character(78) :: head, neck, frmt, line
     character(7) :: word
 
-    integer :: u_diag, u_errr, verb
+    integer :: u_diag
     integer :: m, mep, new, ncon, first, last, step
     integer :: i, j, k, l
     
@@ -515,8 +504,6 @@ contains
     ! short names for options
 
     u_diag    = options%unit_diagnostic
-    u_errr    = options%unit_error
-    verb      = options%print_level
     left_gap  = options%left_gap
     right_gap = options%right_gap
 
@@ -1332,8 +1319,6 @@ contains
     integer, parameter :: NONE = -1
 
     real(PRECISION), parameter :: ZERO = 0.0D0, ONE = 1.0D0
-    real(PRECISION), parameter :: NIL = ZERO
-    real(PRECISION), parameter :: UNIT = ONE
     
     real(kind = PRECISION), parameter :: MIN_REL_GAP = 1E-3
 
@@ -1374,7 +1359,7 @@ contains
     character(78) :: head, neck, frmt, line
     character(7) :: word
 
-    integer :: u_diag, u_errr, verb
+    integer :: u_diag
     integer :: first, last
     integer :: i, j, k, l
     
@@ -1385,8 +1370,6 @@ contains
     ! short names for options
 
     u_diag = options%unit_diagnostic
-    u_errr = options%unit_error
-    verb   = options%print_level
     gap    = options%left_gap
 
     info%flag = 0
@@ -1838,8 +1821,6 @@ contains
     integer, parameter :: NONE = -1
 
     real(PRECISION), parameter :: ZERO = 0.0D0, ONE = 1.0D0
-    complex(PRECISION), parameter :: NIL = ZERO
-    complex(PRECISION), parameter :: UNIT = ONE
     
     real(kind = PRECISION), parameter :: MIN_REL_GAP = 1E-3
 
@@ -1864,7 +1845,7 @@ contains
     character(78) :: head, neck, frmt, line
     character(7) :: word
 
-    integer :: u_diag, u_errr, verb
+    integer :: u_diag
     integer :: m, mep, new, ncon, first, last, step
     integer :: i, j, k, l
     
@@ -1874,8 +1855,6 @@ contains
     real(PRECISION) :: q, r, s, t
     
     u_diag = options%unit_diagnostic
-    u_errr = options%unit_error
-    verb   = options%print_level
     
     left_gap = options%left_gap
     right_gap = options%right_gap
@@ -2609,8 +2588,6 @@ contains
     integer, parameter :: NONE = -1
 
     real(PRECISION), parameter :: ZERO = 0.0D0, ONE = 1.0D0
-    complex(PRECISION), parameter :: NIL = ZERO
-    complex(PRECISION), parameter :: UNIT = ONE
     
     real(kind = PRECISION), parameter :: MIN_REL_GAP = 1E-3
 
@@ -2633,7 +2610,7 @@ contains
     character(78) :: head, neck, frmt, line
     character(7) :: word
 
-    integer :: u_diag, u_errr, verb
+    integer :: u_diag
     integer :: first, last
     integer :: i, j, k, l
     
@@ -2642,8 +2619,6 @@ contains
     real(PRECISION) :: q, r, s, t
     
     u_diag = options%unit_diagnostic
-    u_errr = options%unit_error
-    verb   = options%print_level
     
     gap = options%left_gap
 
@@ -3055,13 +3030,10 @@ contains
     
     logical :: oom
   
-    integer :: print_lev
-    integer :: u_errr, u_warn, u_diag
+    integer :: u_errr, u_warn
 
-    print_lev = options%print_level
     u_errr    = options%unit_error
     u_warn    = options%unit_warning
-    u_diag    = options%unit_diagnostic
     
     oom = inform%flag == OUT_OF_MEMORY .and. u_errr > NONE
     if ( oom ) write( u_errr, '(/a/)' ) '??? Out of memory'
@@ -3148,12 +3120,10 @@ contains
 
     logical :: minAprod, minBprod
     integer :: print_lev, max_it
-    integer :: u_errr, u_warn, u_diag
+    integer :: u_diag
     real(kind = PRECISION) :: abs_tol, rel_tol, tol, abs_res, rel_res
 
     print_lev = options%print_level
-    u_errr    = options%unit_error
-    u_warn    = options%unit_warning
     u_diag    = options%unit_diagnostic
     max_it    = options%max_iterations
     abs_tol   = options%abs_tol_lambda
@@ -3164,11 +3134,7 @@ contains
     minAprod  = options%minAprod
     minBprod  = options%minBprod
 
-    if ( print_lev <= NONE ) then
-      u_errr = NONE
-      u_warn = NONE
-      u_diag = NONE
-    end if
+    if ( print_lev <= NONE ) u_diag = NONE
     if ( u_diag <= NONE .and. print_lev > NONE ) print_lev = 0
 
     if ( print_lev > 0 ) then

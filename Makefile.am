@@ -162,8 +162,8 @@ include_HEADERS += include/spral_ssmfe.h
 libspral_a_SOURCES += \
 	src/ssmfe/ssmfe.f90 \
 	src/ssmfe/core.f90 \
-	src/ssmfe/expert.f90 \
-	interfaces/C/ssmfe_core.f90
+	src/ssmfe/expert.f90
+#	interfaces/C/ssmfe_core.f90
 check_PROGRAMS += \
    ssmfe_test \
 	examples/Fortran/ssmfe/hermitian \

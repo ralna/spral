@@ -4,6 +4,7 @@
 ! Written by: Evgueni Ovtchinnikov
 !
 module spral_ssmfe_core
+
   implicit none
 
   private
@@ -17,7 +18,6 @@ module spral_ssmfe_core
   integer, parameter :: SSMFE_ITYPE = 1
   
   ! input error flags
-  integer, parameter :: WRONG_RCI_JOB    = -1
   integer, parameter :: WRONG_BLOCK_SIZE = -2
   integer, parameter :: WRONG_ERR_EST    = -3
   integer, parameter :: WRONG_MINPROD    = -4
@@ -398,7 +398,6 @@ contains
     integer, parameter :: COMPUTE_INIT_AX      = 310
     integer, parameter :: COMPUTE_INIT_BX      = 320
     integer, parameter :: COMPUTE_XBX          = 330
-    integer, parameter :: COMPUTE_BX_NORMS     = 340
     integer, parameter :: COPY_AX_TO_W         = 350
     integer, parameter :: COMPUTE_XAX          = 360
     integer, parameter :: COMPUTE_RESIDUALS    = 400
@@ -422,16 +421,9 @@ contains
     integer, parameter :: COPY_W_TO_BYZ        = 1120
     integer, parameter :: APPLY_CONSTRAINTS    = 1200
     integer, parameter :: COMPUTE_YBY          = 1300
-    integer, parameter :: START_SCALING_Y      = 1310
     integer, parameter :: SCALE_Y              = 1320
-    integer, parameter :: SCALE_BY             = 1330
-    integer, parameter :: COPY_Y               = 1340
-    integer, parameter :: COPY_BY              = 1350
-    integer, parameter :: STOP_SCALING_Y       = 1360
     integer, parameter :: COMPUTE_XBY          = 1400
     integer, parameter :: CLEANUP_Y            = 1500
-    integer, parameter :: COLLECT_Y            = 1510
-    integer, parameter :: COLLECT_BY           = 1520
     integer, parameter :: COMPUTE_AY           = 1600
     integer, parameter :: RR_IN_XY             = 2000
     integer, parameter :: COMPUTE_XAY          = 2100
@@ -459,18 +451,14 @@ contains
     ! round-off error level
     real(PRECISION) :: TOO_SMALL
 
-    ! a precaution against overflow
-    real(PRECISION) :: TOO_LARGE
-
     ! heuristic constants
-    real(PRECISION) :: A_SMALL_FRACTION, A_FRACTION, A_MULTIPLE
+    real(PRECISION) :: A_SMALL_FRACTION, A_MULTIPLE
     real(PRECISION) :: REL_GAP, MAX_BETA, Q_MAX
 
     ! maximal admissible condition number of the B-gram matrix
     real(PRECISION) :: GRAM_RCOND_MIN
     
-    ! flags for 'not available yet'
-    integer, parameter :: NONE = -1
+    ! flag for 'not available yet'
     real(PRECISION), parameter :: NO_VALUE = -1.0
 
     ! locals
@@ -530,19 +518,17 @@ contains
       end if
     end if
 
-    A_FRACTION = 0.1D0
     A_SMALL_FRACTION = 0.01D0
     A_MULTIPLE = 100
     GRAM_RCOND_MIN = 1D-4
     MAX_BETA = 100    
     TOO_SMALL = A_MULTIPLE*epsilon(ONE)
-    TOO_LARGE = sqrt(huge(ONE))
     
     REL_GAP = control%min_gap
     q_max = control%cf_max
     
     mm = 2*m
-
+    
 if_rci: &
     if ( rci%job == SSMFE_START .or. rci%job == SSMFE_RESTART &
       .and. (rci%i == 0 .and. rci%j == 0 .or. rci%k == 0) &
@@ -562,6 +548,7 @@ if_rci: &
       if ( allocated(info%residual_norms) ) deallocate ( info%residual_norms )
 
       keep%lwork = lwork_sevp( mm )
+
       allocate &
         ( info%residual_norms(m), info%err_lambda(mm), info%err_X(mm), &
           info%converged(m), keep%lambda(3*m), &
@@ -700,7 +687,7 @@ do_select_step: &
        ! case to execute next.
 
       if ( left <= 0 .and. right <= 0 ) keep%step = QUIT
-
+      
 select_step: &
       select case ( keep%step )
 
@@ -3169,7 +3156,7 @@ select_step: &
     integer, intent(in) :: n
     
     integer :: nb, ilaenv
-
+    
     nb = ilaenv(1, 'DSYTRD', SSMFE_UPLO, n, -1, -1, -1)
     lwork_sevp = max(3*n - 1, (nb + 2)*n)
     
@@ -3279,7 +3266,6 @@ select_step: &
     integer, parameter :: COMPUTE_INIT_AX      = 310
     integer, parameter :: COMPUTE_INIT_BX      = 320
     integer, parameter :: COMPUTE_XBX          = 330
-    integer, parameter :: COMPUTE_BX_NORMS     = 340
     integer, parameter :: COPY_AX_TO_W         = 350
     integer, parameter :: COMPUTE_XAX          = 360
     integer, parameter :: COMPUTE_RESIDUALS    = 400
@@ -3303,16 +3289,9 @@ select_step: &
     integer, parameter :: COPY_W_TO_BYZ        = 1120
     integer, parameter :: APPLY_CONSTRAINTS    = 1200
     integer, parameter :: COMPUTE_YBY          = 1300
-    integer, parameter :: START_SCALING_Y      = 1310
     integer, parameter :: SCALE_Y              = 1320
-    integer, parameter :: SCALE_BY             = 1330
-    integer, parameter :: COPY_Y               = 1340
-    integer, parameter :: COPY_BY              = 1350
-    integer, parameter :: STOP_SCALING_Y       = 1360
     integer, parameter :: COMPUTE_XBY          = 1400
     integer, parameter :: CLEANUP_Y            = 1500
-    integer, parameter :: COLLECT_Y            = 1510
-    integer, parameter :: COLLECT_BY           = 1520
     integer, parameter :: COMPUTE_AY           = 1600
     integer, parameter :: RR_IN_XY             = 2000
     integer, parameter :: COMPUTE_XAY          = 2100
@@ -3339,13 +3318,10 @@ select_step: &
     
     real(PRECISION) :: TOO_SMALL
 
-    real(PRECISION) :: TOO_LARGE
-
-    real(PRECISION) :: A_SMALL_FRACTION, A_FRACTION, A_MULTIPLE
+    real(PRECISION) :: A_SMALL_FRACTION, A_MULTIPLE
     real(PRECISION) :: REL_GAP, MAX_BETA, Q_MAX
     real(PRECISION) :: GRAM_RCOND_MIN
     
-    integer, parameter :: NONE = -1
     real(PRECISION), parameter :: NO_VALUE = -1.0
 
     logical :: skip, doit
@@ -3395,13 +3371,11 @@ select_step: &
       end if
     end if
 
-    A_FRACTION = 0.1D0
     A_SMALL_FRACTION = 0.01D0
     A_MULTIPLE = 100
     GRAM_RCOND_MIN = 1D-4
     MAX_BETA = 100    
     TOO_SMALL = A_MULTIPLE*epsilon(ONE)
-    TOO_LARGE = sqrt(huge(ONE))
     
     REL_GAP = control%min_gap
     q_max = control%cf_max

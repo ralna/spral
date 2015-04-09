@@ -8,7 +8,7 @@ program main
    complex(wp), parameter :: ZZERO = (ZERO, ZERO)
    complex(wp), parameter :: ZONE = (ONE, ZERO)
 
-   real(wp), parameter :: err_tol = 5e-11
+!   real(wp), parameter :: err_tol = 5e-11
 
   integer, parameter :: WRONG_RCI_JOB      = -1
   integer, parameter :: WRONG_BLOCK_SIZE   = -2
@@ -100,7 +100,7 @@ subroutine test_core_errors_d
 
   integer :: n
   integer :: m
-  integer :: nep
+!  integer :: nep
   integer :: left, right
   
   integer, allocatable :: ind(:)
@@ -125,7 +125,7 @@ subroutine test_core_errors_d
 
   n = 6
   m = 2
-  nep = 1
+!  nep = 1
   left = 1
   right = 1
   allocate ( a(n, n), b(n, n), t(n, n), x(n, n), lambda(n) )
@@ -232,7 +232,7 @@ subroutine test_core_errors_z
 
   integer :: n
   integer :: m
-  integer :: nep
+!  integer :: nep
   integer :: left, right
   
   integer, allocatable :: ind(:)
@@ -257,7 +257,7 @@ subroutine test_core_errors_z
 
   n = 6
   m = 2
-  nep = 1
+!  nep = 1
   left = 1
   right = 1
   allocate ( a(n, n), b(n, n), t(n, n), x(n, n), lambda(n) )
@@ -364,8 +364,8 @@ subroutine test_core_misc_d
 
   integer :: n
   integer :: m
-  integer :: nep
-  integer :: left, right
+!  integer :: nep
+!  integer :: left, right
   integer :: maxit
   integer :: verb
   integer :: i, j
@@ -392,9 +392,9 @@ subroutine test_core_misc_d
 
   n = 50
   m = 2
-  nep = 1
-  left = 1
-  right = 1
+!  nep = 1
+!  left = 1
+!  right = 1
   maxit = 300
   verb = 0
   tol = 1e-3
@@ -536,8 +536,8 @@ subroutine test_core_misc_z
 
   integer :: n
   integer :: m
-  integer :: nep
-  integer :: left, right
+!  integer :: nep
+!  integer :: left, right
   integer :: maxit
   integer :: verb
   integer :: i, j
@@ -553,7 +553,7 @@ subroutine test_core_misc_z
   complex(wp), allocatable :: x(:,:)
   complex(wp), allocatable :: rr(:,:,:)
 
-  type(ssmfe_rciz        ) :: rci
+!  type(ssmfe_rciz        ) :: rci
   type(ssmfe_core_options) :: options
   type(ssmfe_core_keep   ) :: keep
   type(ssmfe_inform      ) :: inform
@@ -566,9 +566,9 @@ subroutine test_core_misc_z
 
   n = 100
   m = 2
-  nep = 1
-  left = 1
-  right = 1
+!  nep = 1
+!  left = 1
+!  right = 1
   maxit = 300
   verb = 0
   tol = 1e-3
@@ -586,7 +586,7 @@ subroutine test_core_misc_z
   forall ( i = 1 : n ) t(i, i) = ONE
 
   write(*,"(a)",advance="no") " * Testing left = 1, right = 0, m = 1........"
-  rci%job = 0
+!  rci%job = 0
   do i = 1, n
     do j = 1, n
       x(i, j) = sin(i*j*ONE)
@@ -599,7 +599,7 @@ subroutine test_core_misc_z
   call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing left = 2, right = 0, m = 1........"
-  rci%job = 0
+!  rci%job = 0
   do i = 1, n
     do j = 1, n
       x(i, j) = sin(i*j*ONE)
@@ -612,7 +612,7 @@ subroutine test_core_misc_z
   call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing left = 0, right = 1, m = 1........"
-  rci%job = 0
+!  rci%job = 0
   do i = 1, n
     do j = 1, n
       x(i, j) = sin(i*j*ONE)
@@ -625,7 +625,7 @@ subroutine test_core_misc_z
   call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing left = 1, right = 1, m = 2........"
-  rci%job = 0
+!  rci%job = 0
   do i = 1, n
     do j = 1, n
       x(i, j) = sin(i*j*ONE)
@@ -638,7 +638,7 @@ subroutine test_core_misc_z
   call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing left = 2, right = 1, m = 2........"
-  rci%job = 0
+!  rci%job = 0
   do i = 1, n
     do j = 1, n
       x(i, j) = sin(i*j*ONE)
@@ -651,7 +651,7 @@ subroutine test_core_misc_z
   call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing left = 10, right = 10, m = 10....."
-  rci%job = 0
+!  rci%job = 0
   do i = 1, n
     do j = 1, n
       x(i, j) = sin(i*j*ONE)
@@ -668,7 +668,7 @@ subroutine test_core_misc_z
   call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing largest = 1, m = 2................"
-  rci%job = 0
+!  rci%job = 0
   do i = 1, n
     do j = 1, n
       x(i, j) = sin(i*j*ONE)
@@ -681,7 +681,7 @@ subroutine test_core_misc_z
   call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing largest = 10, m = 5..............."
-  rci%job = 0
+!  rci%job = 0
   do i = 1, n
     do j = 1, n
       x(i, j) = sin(i*j*ONE)
@@ -736,7 +736,7 @@ subroutine test_expert_errors_d
   integer :: nep
   integer :: mep
   integer :: left, right
-  integer :: ldx
+!  integer :: ldx
   
   integer, allocatable :: ind(:)
   
@@ -764,7 +764,7 @@ subroutine test_expert_errors_d
   m = 2
   nep = 1
   mep = n
-  ldx = n
+!  ldx = n
   allocate ( a(n, n), b(n, n), t(n, n), x(n, n), lambda(n) )
   allocate ( rr(m + m, m + m, 3), ind(m) )
   
@@ -898,7 +898,7 @@ subroutine test_expert_errors_z
   integer :: nep
   integer :: mep
   integer :: left, right
-  integer :: ldx
+!  integer :: ldx
   
   integer, allocatable :: ind(:)
   
@@ -926,7 +926,7 @@ subroutine test_expert_errors_z
   m = 2
   nep = 1
   mep = n
-  ldx = n
+!  ldx = n
   allocate ( a(n, n), b(n, n), t(n, n), x(n, n), lambda(n) )
   allocate ( rr(m + m, m + m, 3), ind(m) )
   
@@ -1059,7 +1059,7 @@ subroutine test_expert_options_d
   integer :: nep
   integer :: mep
   integer :: left, right
-  integer :: ldx
+!  integer :: ldx
   integer :: lwork
   integer :: i
   
@@ -1085,7 +1085,7 @@ subroutine test_expert_options_d
   n = 50
   nep = 5
   mep = n
-  ldx = n
+!  ldx = n
   lwork = n*n
   allocate ( a(n, n), b(n, n), t(n, n), x(n, n), w(n, n) )
   allocate ( lambda(n), ipiv(n) )
@@ -1195,7 +1195,7 @@ subroutine test_expert_options_z
   integer :: nep
   integer :: mep
   integer :: left, right
-  integer :: ldx
+!  integer :: ldx
   integer :: lwork
   integer :: i
   
@@ -1221,7 +1221,7 @@ subroutine test_expert_options_z
   n = 50
   nep = 5
   mep = n
-  ldx = n
+!  ldx = n
   lwork = n*n
   allocate ( a(n, n), b(n, n), t(n, n), x(n, n), w(n, n) )
   allocate ( lambda(n), ipiv(n) )
@@ -1410,13 +1410,24 @@ subroutine test_ssmfe_errors_d
   t = ZERO
   forall ( i = 1 : n ) a(i, i) = ONE*i
   forall ( i = 1 : n ) t(i, i) = ONE
+!  do i = 1, n
+!    print *, i
+!    t(i, i) = ONE
+!  end do
+!  b = ZERO
+!  print *, 'trying blas...'
+!  call daxpy( n*n, ONE, a, 1, b, 1 )
 
   write(*,"(a)",advance="no") " * Testing bad initial x....................."
   x = ZERO
+  options%print_level = 3
+  options%unit_diagnostic = 6
   options%user_x = 1
   call run_std_d( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, INDEFINITE_B_OR_XBX )
   options%user_x = 0
+  options%print_level = 0
+  options%unit_diagnostic = dl_unit
   call ssmfe_free( inform )
 
   write(*,"(a)",advance="no") " * Testing indefinite b......................"
@@ -1670,7 +1681,7 @@ subroutine test_ssmfe_warnings_d
   integer :: nep
   integer :: mep
   integer :: left, right
-  integer :: ldx
+!  integer :: ldx
   integer :: lwork
   integer :: i, j
   
@@ -1701,7 +1712,7 @@ subroutine test_ssmfe_warnings_d
   n = 50
   nep = 2
   mep = n
-  ldx = n
+!  ldx = n
   allocate ( a(n, n), b(n, n), t(n, n), x(n, n), w(n, n) )
   allocate ( lambda(n), ipiv(n) )
   
@@ -1789,7 +1800,7 @@ subroutine test_ssmfe_warnings_z
   integer :: nep
   integer :: mep
   integer :: left, right
-  integer :: ldx
+!  integer :: ldx
   integer :: lwork
   integer :: i, j
   
@@ -1820,7 +1831,7 @@ subroutine test_ssmfe_warnings_z
   n = 50
   nep = 2
   mep = n
-  ldx = n
+!  ldx = n
   allocate ( a(n, n), b(n, n), t(n, n), x(n, n), w(n, n) )
   allocate ( lambda(n), ipiv(n) )
   
@@ -1908,7 +1919,7 @@ subroutine test_ssmfe_options_d
   integer :: nep
   integer :: mep
   integer :: left, right
-  integer :: ldx
+!  integer :: ldx
   integer :: lwork
   integer :: i, j
   
@@ -1935,7 +1946,7 @@ subroutine test_ssmfe_options_d
   n = 50
   nep = 5
   mep = n
-  ldx = n
+!  ldx = n
   lwork = n*n
   allocate ( a(n, n), b(n, n), t(n, n), x(n, n), w(n, n) )
   allocate ( lambda(n), ipiv(n) )
@@ -2251,7 +2262,7 @@ subroutine test_ssmfe_options_z
   integer :: nep
   integer :: mep
   integer :: left, right
-  integer :: ldx
+!  integer :: ldx
   integer :: lwork
   integer :: i, j
   
@@ -2278,7 +2289,7 @@ subroutine test_ssmfe_options_z
   n = 50
   nep = 5
   mep = n
-  ldx = n
+!  ldx = n
   lwork = n*n
   allocate ( a(n, n), b(n, n), t(n, n), x(n, n), w(n, n) )
   allocate ( lambda(n), ipiv(n) )
@@ -2605,7 +2616,7 @@ subroutine test_ssmfe_misc_d
   integer :: nep
   integer :: mep
   integer :: left, right
-  integer :: ldx
+!  integer :: ldx
   integer :: lwork
   integer :: i, j
   
@@ -2632,7 +2643,7 @@ subroutine test_ssmfe_misc_d
   n = 50
   nep = 5
   mep = n
-  ldx = n
+!  ldx = n
   lwork = n*n
   allocate ( a(n, n), b(n, n), t(n, n), x(n, n), w(n, n) )
   allocate ( lambda(n), ipiv(n) )
@@ -2827,7 +2838,7 @@ subroutine test_ssmfe_misc_z
   integer :: nep
   integer :: mep
   integer :: left, right
-  integer :: ldx
+!  integer :: ldx
   integer :: lwork
   integer :: i, j
   
@@ -2854,7 +2865,7 @@ subroutine test_ssmfe_misc_z
   n = 50
   nep = 5
   mep = n
-  ldx = n
+!  ldx = n
   lwork = n*n
   allocate ( a(n, n), b(n, n), t(n, n), x(n, n), w(n, n) )
   allocate ( lambda(n), ipiv(n) )
@@ -3049,7 +3060,7 @@ subroutine run_std_d( n, a, t, nep, mep, lambda, x, options, inform )
   integer, intent(in) :: nep
   integer, intent(in) :: mep
   real(wp), intent(out) :: lambda(n)
-  real(wp), intent(out) :: x(n, n)
+  real(wp), intent(inout) :: x(n, n)
   type(ssmfe_options), intent(in ) :: options
   type(ssmfe_inform ), intent(out) :: inform
   
@@ -3091,7 +3102,7 @@ subroutine run_std_z( n, a, t, nep, mep, lambda, x, options, inform )
   integer, intent(in) :: nep
   integer, intent(in) :: mep
   real(wp), intent(out) :: lambda(n)
-  complex(wp), intent(out) :: x(n, n)
+  complex(wp), intent(inout) :: x(n, n)
   type(ssmfe_options), intent(in ) :: options
   type(ssmfe_inform ), intent(out) :: inform
   
@@ -3139,7 +3150,7 @@ subroutine run_std_si_d &
   integer, intent(in) :: right
   integer, intent(in) :: mep
   real(wp), intent(out) :: lambda(mep)
-  real(wp), intent(out) :: x(n, mep)
+  real(wp), intent(inout) :: x(n, mep)
   real(wp), intent(out) :: ldlt(n, n)
   integer, intent(out) :: ipiv(n)
   integer, intent(in) :: lwork
@@ -3195,7 +3206,7 @@ subroutine run_std_si_z &
   integer, intent(in) :: right
   integer, intent(in) :: mep
   real(wp), intent(out) :: lambda(mep)
-  complex(wp), intent(out) :: x(n, mep)
+  complex(wp), intent(inout) :: x(n, mep)
   complex(wp), intent(out) :: ldlt(n, n)
   integer, intent(out) :: ipiv(n)
   integer, intent(in) :: lwork
@@ -3248,7 +3259,7 @@ subroutine run_gen_d( n, a, b, t, nep, mep, lambda, x, options, inform )
   integer, intent(in) :: nep
   integer, intent(in) :: mep
   real(wp), intent(out) :: lambda(n)
-  real(wp), intent(out) :: x(n, n)
+  real(wp), intent(inout) :: x(n, n)
   type(ssmfe_options), intent(in ) :: options
   type(ssmfe_inform ), intent(out) :: inform
   
@@ -3287,7 +3298,7 @@ subroutine run_gen_z( n, a, b, t, nep, mep, lambda, x, options, inform )
   integer, intent(in) :: nep
   integer, intent(in) :: mep
   real(wp), intent(out) :: lambda(n)
-  complex(wp), intent(out) :: x(n, n)
+  complex(wp), intent(inout) :: x(n, n)
   type(ssmfe_options), intent(in ) :: options
   type(ssmfe_inform ), intent(out) :: inform
   
@@ -3333,7 +3344,7 @@ subroutine run_gen_si_d &
   integer, intent(in) :: right
   integer, intent(in) :: mep
   real(wp), intent(out) :: lambda(mep)
-  real(wp), intent(out) :: x(n, mep)
+  real(wp), intent(inout) :: x(n, mep)
   real(wp), intent(out) :: ldlt(n, n)
   integer, intent(out) :: ipiv(n)
   integer, intent(in) :: lwork
@@ -3399,7 +3410,7 @@ subroutine run_gen_si_z &
   integer, intent(in) :: right
   integer, intent(in) :: mep
   real(wp), intent(out) :: lambda(mep)
-  complex(wp), intent(out) :: x(n, mep)
+  complex(wp), intent(inout) :: x(n, mep)
   complex(wp), intent(out) :: ldlt(n, n)
   integer, intent(out) :: ipiv(n)
   integer, intent(in) :: lwork
@@ -3465,7 +3476,7 @@ subroutine run_buckling_d &
   integer, intent(in) :: right
   integer, intent(in) :: mep
   real(wp), intent(out) :: lambda(mep)
-  real(wp), intent(out) :: x(n, mep)
+  real(wp), intent(inout) :: x(n, mep)
   real(wp), intent(out) :: ldlt(n, n)
   integer, intent(out) :: ipiv(n)
   integer, intent(in) :: lwork
@@ -3531,7 +3542,7 @@ subroutine run_buckling_z &
   integer, intent(in) :: right
   integer, intent(in) :: mep
   real(wp), intent(out) :: lambda(mep)
-  complex(wp), intent(out) :: x(n, mep)
+  complex(wp), intent(inout) :: x(n, mep)
   complex(wp), intent(out) :: ldlt(n, n)
   integer, intent(out) :: ipiv(n)
   integer, intent(in) :: lwork
@@ -3604,7 +3615,7 @@ subroutine run_ssmfe_d &
   integer, intent(in) :: m
   integer, intent(in) :: mep
   real(wp), intent(out) :: lambda(mep)
-  real(wp), intent(out) :: x(n, mep)
+  real(wp), intent(inout) :: x(n, mep)
   type(ssmfe_inform), intent(out) :: inform
 
   character(7) :: word
@@ -3877,7 +3888,7 @@ subroutine run_ssmfe_z &
   integer, intent(in) :: m
   integer, intent(in) :: mep
   real(wp), intent(out) :: lambda(mep)
-  complex(wp), intent(out) :: x(n, mep)
+  complex(wp), intent(inout) :: x(n, mep)
   type(ssmfe_inform), intent(out) :: inform
 
   character(7) :: word
@@ -3938,7 +3949,7 @@ subroutine run_ssmfe_z &
           ZZERO, w(1, rci%jy, rci%ky), n )
     case ( 3 )
       call zgemm &
-        ( 'N', 'N', n, rci%nx, n, ONE, b, n, w(1, rci%jx, rci%kx), n, &
+        ( 'N', 'N', n, rci%nx, n, ZONE, b, n, w(1, rci%jx, rci%kx), n, &
           ZZERO, w(1, rci%jy, rci%ky), n )
     case ( 4 )
       do j = 1, m
@@ -4162,7 +4173,7 @@ subroutine run_ssmfe_largest_d &
   integer, intent(in) :: m
   integer, intent(in) :: mep
   real(wp), intent(out) :: lambda(mep)
-  real(wp), intent(out) :: x(n, mep)
+  real(wp), intent(inout) :: x(n, mep)
   type(ssmfe_inform), intent(out) :: inform
 
   character(7) :: word
@@ -4434,7 +4445,7 @@ subroutine run_ssmfe_largest_z &
   integer, intent(in) :: m
   integer, intent(in) :: mep
   real(wp), intent(out) :: lambda(mep)
-  complex(wp), intent(out) :: x(n, mep)
+  complex(wp), intent(inout) :: x(n, mep)
   type(ssmfe_inform), intent(out) :: inform
 
   character(7) :: word
@@ -4495,7 +4506,7 @@ subroutine run_ssmfe_largest_z &
           ZZERO, w(1, rci%jy, rci%ky), n )
     case ( 3 )
       call zgemm &
-        ( 'N', 'N', n, rci%nx, n, ONE, b, n, w(1, rci%jx, rci%kx), n, &
+        ( 'N', 'N', n, rci%nx, n, ZONE, b, n, w(1, rci%jx, rci%kx), n, &
           ZZERO, w(1, rci%jy, rci%ky), n )
     case ( 4 )
       do j = 1, m
