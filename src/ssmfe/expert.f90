@@ -4,8 +4,10 @@
 ! Written by: Evgueni Ovtchinnikov
 !
 module SPRAL_ssmfe_expert
-
-  use SPRAL_ssmfe_core !, ssmfe_work => ssmfe_keep !, ssmfe_opts => ssmfe_options
+  use SPRAL_ssmfe_core , only: &
+    ssmfe, ssmfe_terminate, &
+    ssmfe_core_keep, ssmfe_core_options, ssmfe_inform, ssmfe_rcid, ssmfe_rciz
+  implicit none
   
   private
 
@@ -53,7 +55,7 @@ module SPRAL_ssmfe_expert
   public :: ssmfe_solve
   public :: ssmfe_terminate
   public :: ssmfe_errmsg
-  public :: ssmfe_options, ssmfe_keep
+  public :: ssmfe_options, ssmfe_expert_keep
   public :: ssmfe_rcid, ssmfe_rciz, ssmfe_inform
   
   interface ssmfe_standard
@@ -136,7 +138,7 @@ module SPRAL_ssmfe_expert
   
   ! private subroutines and types
 
-  type ssmfe_keep
+  type ssmfe_expert_keep
   
     private
     
@@ -171,11 +173,11 @@ module SPRAL_ssmfe_expert
     ! this array to the eigenvalue storage
     real(PRECISION), allocatable :: lmd(:)
 
-    type(ssmfe_inform) :: info ! information about execution - see the spec
-    type(ssmfe_work  ) :: keep ! core interface keep - see core.f90
-    type(ssmfe_opts  ) :: options ! core interface options - see the core spec
+    type(ssmfe_inform      ) :: info ! information about execution - see spec
+    type(ssmfe_core_keep   ) :: keep ! core interface keep - see core.f90
+    type(ssmfe_core_options) :: options ! core interface options - see core spec
 
-  end type ssmfe_keep
+  end type ssmfe_expert_keep
 
 contains
 
@@ -194,7 +196,7 @@ contains
     real(PRECISION), intent(inout) :: rr(2*m, 2*m, 3)
     integer, intent(inout) :: ind(m)
     type(ssmfe_rcid   ), intent(inout) :: rci
-    type(ssmfe_keep   ), intent(inout) :: keep
+    type(ssmfe_expert_keep   ), intent(inout) :: keep
     type(ssmfe_options), intent(in   ) :: options
     type(ssmfe_inform ), intent(inout) :: inform
     
@@ -216,10 +218,10 @@ contains
     integer, intent(in) :: m
     complex(PRECISION), intent(inout) :: rr(2*m, 2*m, 3)
     integer, intent(inout) :: ind(m)
-    type(ssmfe_rciz   ), intent(inout) :: rci
-    type(ssmfe_keep   ), intent(inout) :: keep
-    type(ssmfe_options), intent(in   ) :: options
-    type(ssmfe_inform ), intent(inout) :: inform
+    type(ssmfe_rciz       ), intent(inout) :: rci
+    type(ssmfe_expert_keep), intent(inout) :: keep
+    type(ssmfe_options    ), intent(in   ) :: options
+    type(ssmfe_inform     ), intent(inout) :: inform
     
     call ssmfe_direct_rci_double_complex &
       ( 0, left, mep, lambda, m, rr, ind, rci, keep, options, inform )
@@ -240,10 +242,10 @@ contains
     integer, intent(in) :: m
     real(PRECISION), intent(inout) :: rr(2*m, 2*m, 3)
     integer, intent(inout) :: ind(m)
-    type(ssmfe_rcid   ), intent(inout) :: rci
-    type(ssmfe_keep   ), intent(inout) :: keep
-    type(ssmfe_options), intent(in   ) :: options
-    type(ssmfe_inform ), intent(inout) :: inform
+    type(ssmfe_rcid       ), intent(inout) :: rci
+    type(ssmfe_expert_keep), intent(inout) :: keep
+    type(ssmfe_options    ), intent(in   ) :: options
+    type(ssmfe_inform     ), intent(inout) :: inform
     
     call ssmfe_direct_rci_double &
       ( 1, left, mep, lambda, m, rr, ind, rci, keep, options, inform )
@@ -263,10 +265,10 @@ contains
     integer, intent(in) :: m
     complex(PRECISION), intent(inout) :: rr(2*m, 2*m, 3)
     integer, intent(inout) :: ind(m)
-    type(ssmfe_rciz   ), intent(inout) :: rci
-    type(ssmfe_keep   ), intent(inout) :: keep
-    type(ssmfe_options), intent(in   ) :: options
-    type(ssmfe_inform ), intent(inout) :: inform
+    type(ssmfe_rciz       ), intent(inout) :: rci
+    type(ssmfe_expert_keep), intent(inout) :: keep
+    type(ssmfe_options    ), intent(in   ) :: options
+    type(ssmfe_inform     ), intent(inout) :: inform
     
     call ssmfe_direct_rci_double_complex &
       ( 1, left, mep, lambda, m, rr, ind, rci, keep, options, inform )
@@ -290,9 +292,9 @@ contains
     integer, intent(in) :: m
     real(PRECISION), intent(inout) :: rr(2*m, 2*m, 3)
     integer, intent(inout) :: ind(m)
-    type(ssmfe_keep   ), intent(inout) :: keep
-    type(ssmfe_options), intent(in   ) :: options
-    type(ssmfe_inform ), intent(inout) :: inform
+    type(ssmfe_expert_keep), intent(inout) :: keep
+    type(ssmfe_options    ), intent(in   ) :: options
+    type(ssmfe_inform     ), intent(inout) :: inform
     
     call ssmfe_inverse_rci_double &
       ( 0, sigma, left, right, mep, lambda, m, rr, ind, &
@@ -317,9 +319,9 @@ contains
     integer, intent(in) :: m
     complex(PRECISION), intent(inout) :: rr(2*m, 2*m, 3)
     integer, intent(inout) :: ind(m)
-    type(ssmfe_keep   ), intent(inout) :: keep
-    type(ssmfe_options), intent(in   ) :: options
-    type(ssmfe_inform ), intent(inout) :: inform
+    type(ssmfe_expert_keep), intent(inout) :: keep
+    type(ssmfe_options    ), intent(in   ) :: options
+    type(ssmfe_inform     ), intent(inout) :: inform
     
     call ssmfe_inverse_rci_double_complex &
       ( 0, sigma, left, right, mep, lambda, m, rr, ind, &
@@ -344,9 +346,9 @@ contains
     integer, intent(in) :: m
     real(PRECISION), intent(inout) :: rr(2*m, 2*m, 3)
     integer, intent(inout) :: ind(m)
-    type(ssmfe_keep   ), intent(inout) :: keep
-    type(ssmfe_options), intent(in   ) :: options
-    type(ssmfe_inform ), intent(inout) :: inform
+    type(ssmfe_expert_keep), intent(inout) :: keep
+    type(ssmfe_options    ), intent(in   ) :: options
+    type(ssmfe_inform     ), intent(inout) :: inform
     
     call ssmfe_inverse_rci_double &
       ( 1, sigma, left, right, mep, lambda, m, rr, ind, &
@@ -371,9 +373,9 @@ contains
     integer, intent(in) :: m
     complex(PRECISION), intent(inout) :: rr(2*m, 2*m, 3)
     integer, intent(inout) :: ind(m)
-    type(ssmfe_keep   ), intent(inout) :: keep
-    type(ssmfe_options), intent(in   ) :: options
-    type(ssmfe_inform ), intent(inout) :: inform
+    type(ssmfe_expert_keep), intent(inout) :: keep
+    type(ssmfe_options    ), intent(in   ) :: options
+    type(ssmfe_inform     ), intent(inout) :: inform
     
     call ssmfe_inverse_rci_double_complex &
       ( 1, sigma, left, right, mep, lambda, m, rr, ind, &
@@ -398,9 +400,9 @@ contains
     integer, intent(in) :: m
     real(PRECISION), intent(inout) :: rr(2*m, 2*m, 3)
     integer, intent(inout) :: ind(m)
-    type(ssmfe_keep   ), intent(inout) :: keep
-    type(ssmfe_options), intent(in   ) :: options
-    type(ssmfe_inform ), intent(inout) :: inform
+    type(ssmfe_expert_keep), intent(inout) :: keep
+    type(ssmfe_options    ), intent(in   ) :: options
+    type(ssmfe_inform     ), intent(inout) :: inform
     
     call ssmfe_inverse_rci_double &
       ( 2, sigma, left, right, mep, lambda, m, rr, ind, &
@@ -425,9 +427,9 @@ contains
     integer, intent(in) :: m
     complex(PRECISION), intent(inout) :: rr(2*m, 2*m, 3)
     integer, intent(inout) :: ind(m)
-    type(ssmfe_keep   ), intent(inout) :: keep
-    type(ssmfe_options), intent(in   ) :: options
-    type(ssmfe_inform ), intent(inout) :: inform
+    type(ssmfe_expert_keep), intent(inout) :: keep
+    type(ssmfe_options    ), intent(in   ) :: options
+    type(ssmfe_inform     ), intent(inout) :: inform
     
     call ssmfe_inverse_rci_double_complex &
       ( 2, sigma, left, right, mep, lambda, m, rr, ind, &
@@ -442,9 +444,6 @@ contains
     ( problem, sigma, left, right, &
       max_nep, lambda, block_size, rr_matrices, ind, &
       rci, keep, options, info )
-
-    implicit none
-    
     integer, parameter :: SSMFE_START             = 0
     integer, parameter :: SSMFE_APPLY_A           = 1
     integer, parameter :: SSMFE_CHECK_CONVERGENCE = 4
@@ -493,10 +492,10 @@ contains
     integer, intent(inout) :: ind(block_size)
 
     ! ssmfe_expert types - see the spec
-    type(ssmfe_rcid   ), intent(inout) :: rci
-    type(ssmfe_keep   ), intent(inout) :: keep
-    type(ssmfe_options), intent(in   ) :: options
-    type(ssmfe_inform ), intent(inout) :: info
+    type(ssmfe_rcid       ), intent(inout) :: rci
+    type(ssmfe_expert_keep), intent(inout) :: keep
+    type(ssmfe_options    ), intent(in   ) :: options
+    type(ssmfe_inform     ), intent(inout) :: info
 
     logical :: converged
     logical :: check_res, check_lmd
@@ -1325,9 +1324,6 @@ contains
   subroutine ssmfe_direct_rci_double &
     ( problem, nep, max_nep, lambda, block_size, rr_matrices, ind, &
       rci, keep, options, info )
-
-    implicit none
-    
     integer, parameter :: SSMFE_START             = 0
     integer, parameter :: SSMFE_CHECK_CONVERGENCE = 4
     integer, parameter :: SSMFE_SAVE_CONVERGED    = 5
@@ -1367,10 +1363,10 @@ contains
     integer, intent(inout) :: ind(block_size)
 
     ! ssmfe_expert types - see the spec
-    type(ssmfe_rcid), intent(inout) :: rci
-    type(ssmfe_options), intent(in) :: options
-    type(ssmfe_keep), intent(inout) :: keep
-    type(ssmfe_inform), intent(inout) :: info
+    type(ssmfe_rcid       ), intent(inout) :: rci
+    type(ssmfe_options    ), intent(in) :: options
+    type(ssmfe_expert_keep), intent(inout) :: keep
+    type(ssmfe_inform     ), intent(inout) :: info
 
     logical :: converged
     logical :: check_res, check_lmd
@@ -1812,10 +1808,7 @@ contains
   end subroutine ssmfe_direct_rci_double
 
   subroutine ssmfe_delete_keep_double( keep )
-
-    implicit none
-    
-    type(ssmfe_keep), intent(inout) :: keep
+    type(ssmfe_expert_keep), intent(inout) :: keep
 
     if ( allocated(keep%lmd) ) deallocate( keep%lmd )
     call ssmfe_terminate( keep%keep, keep%info )
@@ -1823,10 +1816,7 @@ contains
   end subroutine ssmfe_delete_keep_double
 
   subroutine ssmfe_terminate_double( keep, info )
-
-    implicit none
-    
-    type(ssmfe_keep), intent(inout) :: keep
+    type(ssmfe_expert_keep), intent(inout) :: keep
     type(ssmfe_inform), intent(inout) :: info
     
     call ssmfe_delete_keep_double( keep )
@@ -1838,9 +1828,6 @@ contains
     ( problem, sigma, left, right, &
       max_nep, lambda, block_size, rr_matrices, ind, &
       rci, keep, options, info )
-
-    implicit none
-    
     integer, parameter :: SSMFE_START             = 0
     integer, parameter :: SSMFE_APPLY_A           = 1
     integer, parameter :: SSMFE_CHECK_CONVERGENCE = 4
@@ -1866,10 +1853,10 @@ contains
     complex(PRECISION), intent(inout) :: &
       rr_matrices(2*block_size, 2*block_size, 3)
     integer, intent(inout) :: ind(block_size)
-    type(ssmfe_rciz   ), intent(inout) :: rci
-    type(ssmfe_keep   ), intent(inout) :: keep
-    type(ssmfe_options), intent(in   ) :: options
-    type(ssmfe_inform ), intent(inout) :: info
+    type(ssmfe_rciz       ), intent(inout) :: rci
+    type(ssmfe_expert_keep), intent(inout) :: keep
+    type(ssmfe_options    ), intent(in   ) :: options
+    type(ssmfe_inform     ), intent(inout) :: info
 
     logical :: converged
     logical :: check_res, check_lmd
@@ -2614,9 +2601,6 @@ contains
   subroutine ssmfe_direct_rci_double_complex &
     ( problem, nep, max_nep, lambda, block_size, rr_matrices, ind, &
       rci, keep, options, info )
-
-    implicit none
-    
     integer, parameter :: SSMFE_START             = 0
     integer, parameter :: SSMFE_CHECK_CONVERGENCE = 4
     integer, parameter :: SSMFE_SAVE_CONVERGED    = 5
@@ -2639,9 +2623,9 @@ contains
     complex(PRECISION), intent(inout) :: &
       rr_matrices(2*block_size, 2*block_size, 3)
     integer, intent(inout) :: ind(block_size)
-    type(ssmfe_options), intent(in) :: options
-    type(ssmfe_keep), intent(inout) :: keep
-    type(ssmfe_inform), intent(inout) :: info
+    type(ssmfe_options    ), intent(in) :: options
+    type(ssmfe_expert_keep), intent(inout) :: keep
+    type(ssmfe_inform     ), intent(inout) :: info
 
     logical :: converged
     logical :: check_res, check_lmd
@@ -3064,9 +3048,6 @@ contains
   end subroutine ssmfe_direct_rci_double_complex
   
   subroutine ssmfe_errmsg( options, inform )
-
-    implicit none
-    
     integer, parameter :: NONE = -1
 
     type(ssmfe_options) :: options
@@ -3159,9 +3140,6 @@ contains
   end subroutine ssmfe_errmsg
 
   subroutine ssmfe_msg( problem, options, left, right, m )
-  
-    implicit none
-  
     type(ssmfe_options) :: options
     integer :: problem, left, right, m
     intent(in) :: options, left, right, m

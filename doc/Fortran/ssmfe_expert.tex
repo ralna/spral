@@ -233,17 +233,17 @@ For each problem, the user must employ the derived types defined by the
 module to declare scalars of the types 
 {\tt \solver\_rcid} (real version) or 
 {\tt \solver\_rciz} (complex version), 
-{\tt \solver\_keep},
+{\tt \solver\_expert\_keep},
 {\tt \solver\_options} and 
 {\tt \solver\_inform}.
 The following pseudocode illustrates this.
 \begin{verbatim}
       use SPRAL_SSMFE_EXPERT
       ...
-      type (ssmfe_rcid   ) :: rcid
-      type (ssmfe_keep   ) :: keep
-      type (ssmfe_options) :: options
-      type (ssmfe_inform ) :: inform
+      type (ssmfe_rcid       ) :: rcid
+      type (ssmfe_expert_keep) :: keep
+      type (ssmfe_options    ) :: options
+      type (ssmfe_inform     ) :: inform
       ...
 \end{verbatim}
 
@@ -741,7 +741,7 @@ It must not be changed by the user.
 It is used for reordering the columns of some blocks of {\tt W}.
 %
 \itt{keep} is an \intentinout\ scalar of type 
-{\tt \solver\_keep} 
+{\tt \solver\_expert\_keep} 
 that holds private data. 
 %
 \itt{options} is an \intentin\  scalar  of type {\tt \solver\_options}.
@@ -773,7 +773,7 @@ by making the following subroutine call:
 \begin{description}
 %
 \itt{keep} is an \intentinout\ scalar of type 
-{\tt \solver\_keep}, optional. 
+{\tt \solver\_expert\_keep}, optional. 
 On exit, its components that are allocatable arrays will have been deallocated. 
 %
 \itt{inform} is an \intentinout\ scalar of type {\tt \solver\_inform}, 

@@ -4,6 +4,7 @@
 ! Written by: Evgueni Ovtchinnikov
 !
 module spral_ssmfe_core
+  implicit none
 
   private
 
@@ -50,7 +51,7 @@ module spral_ssmfe_core
       ssmfe_delete_info_double
   end interface 
 
-  type ssmfe_opts ! see the spec
+  type ssmfe_core_options ! see the spec
 
     integer :: extra_left  = 0
     integer :: extra_right = 0
@@ -60,7 +61,7 @@ module spral_ssmfe_core
     real(PRECISION) :: min_gap = 0.0
     real(PRECISION) :: cf_max = 1.0
 
-  end type ssmfe_opts
+  end type ssmfe_core_options
   
   type ssmfe_rcid ! see the spec
   
@@ -123,7 +124,7 @@ module spral_ssmfe_core
     
   end type ssmfe_inform
 
-  type ssmfe_work
+  type ssmfe_core_keep
   
     private
     
@@ -196,9 +197,10 @@ module spral_ssmfe_core
     logical :: minAprod = .true. ! A-multiplications minimization flag
     logical :: minBprod = .true. ! B-multiplications minimization flag
     
-  end type ssmfe_work
+  end type ssmfe_core_keep
   
-  public :: ssmfe_opts, ssmfe_rcid, ssmfe_rciz, ssmfe_inform, ssmfe_work
+  public :: ssmfe_core_options, ssmfe_rcid, ssmfe_rciz, ssmfe_inform, &
+            ssmfe_core_keep
   public :: ssmfe, ssmfe_largest, ssmfe_terminate
 
 contains
@@ -211,9 +213,6 @@ contains
   subroutine ssmfe_double &
     ( rci, problem, left, right, m, lambda, rr_matrices, ind, &
       keep, options, info )
-
-    implicit none
-    
     integer, intent(in) :: problem
     integer, intent(in) :: left
     integer, intent(in) :: right
@@ -221,10 +220,10 @@ contains
     real(PRECISION), dimension(m), intent(inout) :: lambda
     real(PRECISION), intent(inout) :: rr_matrices(2*m, 2*m, 3)
     integer, intent(out), dimension(m) :: ind
-    type(ssmfe_rcid   ), intent(inout) :: rci
-    type(ssmfe_work   ), intent(inout) :: keep
-    type(ssmfe_opts), intent(in   ) :: options
-    type(ssmfe_inform ), intent(inout) :: info
+    type(ssmfe_rcid        ), intent(inout) :: rci
+    type(ssmfe_core_keep   ), intent(inout) :: keep
+    type(ssmfe_core_options), intent(in   ) :: options
+    type(ssmfe_inform   ), intent(inout) :: info
     
     call ssmfe_engine_double &
       ( problem, left, right, m, lambda, rr_matrices, ind, rci, keep, options, &
@@ -240,9 +239,6 @@ contains
   subroutine ssmfe_double_complex &
     ( rci, problem, left, right, m, lambda, rr_matrices, ind, &
       keep, options, info )
-
-    implicit none
-    
     integer, intent(in) :: problem
     integer, intent(in) :: left
     integer, intent(in) :: right
@@ -250,10 +246,10 @@ contains
     real(PRECISION), dimension(m), intent(inout) :: lambda
     complex(PRECISION), intent(inout) :: rr_matrices(2*m, 2*m, 3)
     integer, intent(out), dimension(m) :: ind
-    type(ssmfe_rciz   ), intent(inout) :: rci
-    type(ssmfe_work   ), intent(inout) :: keep
-    type(ssmfe_opts), intent(in   ) :: options
-    type(ssmfe_inform ), intent(inout) :: info
+    type(ssmfe_rciz        ), intent(inout) :: rci
+    type(ssmfe_core_keep   ), intent(inout) :: keep
+    type(ssmfe_core_options), intent(in   ) :: options
+    type(ssmfe_inform      ), intent(inout) :: info
     
     call ssmfe_engine_double_complex &
       ( problem, left, right, m, lambda, rr_matrices, ind, rci, keep, options, &
@@ -268,19 +264,16 @@ contains
 !
   subroutine ssmfe_largest_double &
     ( rci, problem, nep, m, lambda, rr_matrices, ind, keep, control, info )
-
-    implicit none
-    
     integer, intent(in) :: problem
     integer, intent(in) :: nep
     integer, intent(in) :: m
     real(PRECISION), dimension(m), intent(inout) :: lambda
     real(PRECISION), intent(inout) :: rr_matrices(2*m, 2*m, 3)
     integer, intent(out), dimension(m) :: ind
-    type(ssmfe_rcid   ), intent(inout) :: rci
-    type(ssmfe_work   ), intent(inout) :: keep
-    type(ssmfe_opts), intent(in   ) :: control
-    type(ssmfe_inform ), intent(inout) :: info
+    type(ssmfe_rcid        ), intent(inout) :: rci
+    type(ssmfe_core_keep   ), intent(inout) :: keep
+    type(ssmfe_core_options), intent(in   ) :: control
+    type(ssmfe_inform      ), intent(inout) :: info
     
     call ssmfe_engine_double &
       ( problem, -1, nep, m, lambda, rr_matrices, ind, rci, keep, control, &
@@ -295,19 +288,16 @@ contains
 !
   subroutine ssmfe_largest_double_complex &
     ( rci, problem, nep, m, lambda, rr_matrices, ind, keep, control, info )
-
-    implicit none
-    
     integer, intent(in) :: problem
     integer, intent(in) :: nep
     integer, intent(in) :: m
     real(PRECISION), dimension(m), intent(inout) :: lambda
     complex(PRECISION), intent(inout) :: rr_matrices(2*m, 2*m, 3)
     integer, intent(out), dimension(m) :: ind
-    type(ssmfe_rciz   ), intent(inout) :: rci
-    type(ssmfe_work   ), intent(inout) :: keep
-    type(ssmfe_opts), intent(in   ) :: control
-    type(ssmfe_inform ), intent(inout) :: info
+    type(ssmfe_rciz        ), intent(inout) :: rci
+    type(ssmfe_core_keep   ), intent(inout) :: keep
+    type(ssmfe_core_options), intent(in   ) :: control
+    type(ssmfe_inform      ), intent(inout) :: info
     
     call ssmfe_engine_double_complex &
       ( problem, -1, nep, m, lambda, rr_matrices, ind, rci, keep, control, &
@@ -321,7 +311,6 @@ contains
   subroutine ssmfe_engine_double &
       ( problem, left, right, m, lambda, rr_matrices, ind, rci, keep, control, &
         info )
-
     use spral_blas_iface, &
       copy => dcopy, &
       norm => dnrm2, &
@@ -330,9 +319,6 @@ contains
       gemm => dgemm, &
       trsm => dtrsm
     use spral_lapack_iface, chol => dpotrf
-
-    implicit none
-    
     real(PRECISION), parameter :: ZERO = 0.0D0, ONE = 1.0D0
     real(PRECISION), parameter :: NIL = ZERO
     real(PRECISION), parameter :: UNIT = ONE
@@ -368,10 +354,10 @@ contains
     integer, intent(inout), dimension(m) :: ind
 
     ! ssmfe_core types - see the spec
-    type(ssmfe_work   ), intent(inout) :: keep
-    type(ssmfe_rcid   ), intent(inout) :: rci
-    type(ssmfe_opts), intent(in   ) :: control
-    type(ssmfe_inform ), intent(inout) :: info
+    type(ssmfe_core_keep   ), intent(inout) :: keep
+    type(ssmfe_rcid        ), intent(inout) :: rci
+    type(ssmfe_core_options), intent(in   ) :: control
+    type(ssmfe_inform      ), intent(inout) :: info
     
     ! rci jobs
     integer, parameter :: SSMFE_START              = 0
@@ -3121,9 +3107,6 @@ select_step: &
   contains
   
     real(PRECISION) function conjugate( z )
-    
-      implicit none
-      
       real(PRECISION), intent(in) :: z
       
       conjugate = z
@@ -3137,10 +3120,6 @@ select_step: &
 ! its scalar elements
 !
   subroutine ssmfe_delete_info_double( info )
-
-
-    implicit none
-    
     type(ssmfe_inform), intent(inout) :: info
 
     if ( allocated(info%residual_norms) ) deallocate( info%residual_norms )
@@ -3162,10 +3141,7 @@ select_step: &
 ! deallocates allocated arrays in keep
 !
   subroutine ssmfe_delete_work_double( keep )
-
-    implicit none
-    
-    type(ssmfe_work), intent(inout) :: keep
+    type(ssmfe_core_keep), intent(inout) :: keep
 
     if ( allocated(keep%lambda) ) deallocate( keep%lambda )
     if ( allocated(keep%dlmd  ) ) deallocate( keep%dlmd   )
@@ -3178,10 +3154,7 @@ select_step: &
   end subroutine ssmfe_delete_work_double
 
   subroutine ssmfe_terminate_core_double( keep, info )
-
-    implicit none
-    
-    type(ssmfe_work  ), intent(inout) :: keep
+    type(ssmfe_core_keep), intent(inout) :: keep
     type(ssmfe_inform), intent(inout) :: info
     
     call ssmfe_delete_work_double( keep )
@@ -3193,9 +3166,6 @@ select_step: &
 ! returns the size of workspace for dsyev and dsygv
 !
   integer function lwork_sevp( n )
-  
-    implicit none
-    
     integer, intent(in) :: n
     
     integer :: nb, ilaenv
@@ -3212,9 +3182,6 @@ select_step: &
 
     ! solves real symmetric eigenvalue problem
     ! A x = lambda x in double precision
-
-    implicit none
-
     character, intent(in) :: job
     integer, intent(in) :: n, lda, lwork
     real(PRECISION), intent(inout) :: a(lda, n), work(*)
@@ -3232,9 +3199,6 @@ select_step: &
 
     ! solves generalized real symmetric eigenvalue problem
     ! A x = lambda B x in double precision
-
-    implicit none
-
     integer, intent(in) :: n, lda, ldb, lwork
     real(PRECISION), intent(inout) :: a(lda, n), b(ldb, n), work(*)
     real(PRECISION), intent(out) :: lambda(n)
@@ -3252,7 +3216,6 @@ select_step: &
   subroutine ssmfe_engine_double_complex &
       ( problem, left, right, m, lambda, rr_matrices, ind, rci, keep, control, &
         info )
-
     use spral_blas_iface, &
       copy => zcopy, &
       norm => dznrm2, &
@@ -3263,8 +3226,6 @@ select_step: &
       trsm => ztrsm
     use spral_lapack_iface, chol => zpotrf
 
-    implicit none
-    
     real(PRECISION), parameter :: ZERO = 0.0D0, ONE = 1.0D0
     complex(PRECISION), parameter :: NIL = ZERO
     complex(PRECISION), parameter :: UNIT = ONE
@@ -3276,10 +3237,10 @@ select_step: &
     real(PRECISION), dimension(m), intent(inout) :: lambda
     complex(PRECISION), intent(inout) :: rr_matrices(2*m, 2*m, *)
     integer, intent(inout), dimension(m) :: ind
-    type(ssmfe_work   ), intent(inout) :: keep
-    type(ssmfe_rciz   ), intent(inout) :: rci
-    type(ssmfe_opts), intent(in   ) :: control
-    type(ssmfe_inform ), intent(inout) :: info
+    type(ssmfe_core_keep   ), intent(inout) :: keep
+    type(ssmfe_rciz        ), intent(inout) :: rci
+    type(ssmfe_core_options), intent(in   ) :: control
+    type(ssmfe_inform      ), intent(inout) :: info
     
     integer, parameter :: SSMFE_START              = 0
     integer, parameter :: SSMFE_APPLY_A            = 1
@@ -5535,9 +5496,6 @@ select_step: &
   contains
   
     complex(PRECISION) function conjugate( z )
-    
-      implicit none
-      
       complex(PRECISION), intent(in) :: z
       
       conjugate = conjg(z)
@@ -5547,9 +5505,6 @@ select_step: &
   end subroutine ssmfe_engine_double_complex
 
   integer function lwork_hevp( n )
-  
-    implicit none
-    
     integer, intent(in) :: n
     
     integer :: nb, ilaenv
@@ -5561,9 +5516,6 @@ select_step: &
 
   subroutine solve_hevp( job, n, a, lda, lambda, &
                          lwork, work, rwork, info )
-
-    implicit none
-
     character, intent(in) :: job
     integer, intent(in) :: n, lda, lwork
     complex(PRECISION), intent(inout) :: a(lda, n), work(*)
@@ -5576,9 +5528,6 @@ select_step: &
 
   subroutine solve_ghevp &
     ( n, a, lda, b, ldb, lambda, lwork, work, rwork, info )
-
-    implicit none
-
     integer, intent(in) :: n, lda, ldb, lwork
     complex(PRECISION), intent(inout) :: a(lda, n), b(ldb, n), work(*)
     real(PRECISION), intent(out) :: rwork(*), lambda(*)

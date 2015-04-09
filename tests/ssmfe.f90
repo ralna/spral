@@ -112,12 +112,10 @@ subroutine test_core_errors_d
   real(wp), allocatable :: x(:,:)
   real(wp), allocatable :: rr(:,:,:)
 
-  type(ssmfe_rcid   ) :: rci
-  type(ssmfe_opts   ) :: options
-  type(ssmfe_work   ) :: keep
-!  type(ssmfe_options) :: options
-!  type(ssmfe_keep   ) :: keep
-  type(ssmfe_inform ) :: inform
+  type(ssmfe_rcid        ) :: rci
+  type(ssmfe_core_options) :: options
+  type(ssmfe_core_keep   ) :: keep
+  type(ssmfe_inform      ) :: inform
   
    write(*,"(/a)") "======================"
    write(*,"(a)")  "Testing errors (real):"
@@ -246,12 +244,10 @@ subroutine test_core_errors_z
   complex(wp), allocatable :: x(:,:)
   complex(wp), allocatable :: rr(:,:,:)
 
-  type(ssmfe_rciz   ) :: rci
-  type(ssmfe_opts   ) :: options
-  type(ssmfe_work   ) :: keep
-!  type(ssmfe_options) :: options
-!  type(ssmfe_keep   ) :: keep
-  type(ssmfe_inform ) :: inform
+  type(ssmfe_rciz        ) :: rci
+  type(ssmfe_core_options) :: options
+  type(ssmfe_core_keep   ) :: keep
+  type(ssmfe_inform      ) :: inform
   
    write(*,"(/a)") "========================="
    write(*,"(a)")  "Testing errors (complex):"
@@ -385,9 +381,8 @@ subroutine test_core_misc_d
   real(wp), allocatable :: x(:,:)
   real(wp), allocatable :: rr(:,:,:)
 
-  type(ssmfe_opts   ) :: options
-!  type(ssmfe_options) :: options
-  type(ssmfe_inform ) :: inform
+  type(ssmfe_core_options) :: options
+  type(ssmfe_inform      ) :: inform
   
    write(*,"(/a)") "==========================="
    write(*,"(a)")  "Miscellaneous tests (real):"
@@ -558,12 +553,10 @@ subroutine test_core_misc_z
   complex(wp), allocatable :: x(:,:)
   complex(wp), allocatable :: rr(:,:,:)
 
-  type(ssmfe_rciz   ) :: rci
-  type(ssmfe_opts   ) :: options
-  type(ssmfe_work   ) :: keep
-!  type(ssmfe_options) :: options
-!  type(ssmfe_keep   ) :: keep
-  type(ssmfe_inform ) :: inform
+  type(ssmfe_rciz        ) :: rci
+  type(ssmfe_core_options) :: options
+  type(ssmfe_core_keep   ) :: keep
+  type(ssmfe_inform      ) :: inform
   
    write(*,"(/a)") "=============================="
    write(*,"(a)")  "Miscellaneous tests (complex):"
@@ -756,10 +749,10 @@ subroutine test_expert_errors_d
   real(wp), allocatable :: x(:,:)
   real(wp), allocatable :: rr(:,:,:)
 
-  type(ssmfe_rcid   ) :: rci
-  type(ssmfe_options) :: options
-  type(ssmfe_keep   ) :: keep
-  type(ssmfe_inform ) :: inform
+  type(ssmfe_rcid       ) :: rci
+  type(ssmfe_options    ) :: options
+  type(ssmfe_expert_keep) :: keep
+  type(ssmfe_inform     ) :: inform
   
    write(*,"(/a)") "======================"
    write(*,"(a)")  "Testing errors (real):"
@@ -918,10 +911,10 @@ subroutine test_expert_errors_z
   complex(wp), allocatable :: x(:,:)
   complex(wp), allocatable :: rr(:,:,:)
 
-  type(ssmfe_rciz   ) :: rci
-  type(ssmfe_options) :: options
-  type(ssmfe_keep   ) :: keep
-  type(ssmfe_inform ) :: inform
+  type(ssmfe_rciz       ) :: rci
+  type(ssmfe_options    ) :: options
+  type(ssmfe_expert_keep) :: keep
+  type(ssmfe_inform     ) :: inform
   
    write(*,"(/a)") "========================="
    write(*,"(a)")  "Testing errors (complex):"
@@ -3597,8 +3590,7 @@ subroutine run_ssmfe_d &
 
   implicit none
   
-!  type(ssmfe_options), intent(in) :: options
-  type(ssmfe_opts), intent(in) :: options
+  type(ssmfe_core_options), intent(in) :: options
   integer, intent(in) :: problem
   integer, intent(in) :: n
   real(wp), intent(in) :: a(n, n)
@@ -3634,9 +3626,8 @@ subroutine run_ssmfe_d &
   real(wp), allocatable :: u(:, :)
   real(wp), allocatable :: bx(:, :)
   
-  type(ssmfe_rcid) :: rci
-  type(ssmfe_work) :: keep
-!  type(ssmfe_keep) :: keep
+  type(ssmfe_rcid     ) :: rci
+  type(ssmfe_core_keep) :: keep
 
   head = &
  '      eigenvalues      |   locked  | residuals | eigenvalue | eigenvector'
@@ -3872,8 +3863,7 @@ subroutine run_ssmfe_z &
 
   implicit none
   
-!  type(ssmfe_options), intent(in) :: options
-  type(ssmfe_opts), intent(in) :: options
+  type(ssmfe_core_options), intent(in) :: options
   integer, intent(in) :: problem
   integer, intent(in) :: n
   complex(wp), intent(in) :: a(n, n)
@@ -3914,9 +3904,8 @@ subroutine run_ssmfe_z &
   complex(wp), allocatable :: u(:, :)
   complex(wp), allocatable :: bx(:, :)
   
-  type(ssmfe_rciz) :: rci
-  type(ssmfe_work) :: keep
-!  type(ssmfe_keep) :: keep
+  type(ssmfe_rciz     ) :: rci
+  type(ssmfe_core_keep) :: keep
 
   head = &
  '      eigenvalues      |   locked  | residuals | eigenvalue | eigenvector'
@@ -4160,8 +4149,7 @@ subroutine run_ssmfe_largest_d &
 
   implicit none
   
-!  type(ssmfe_options), intent(in) :: options
-  type(ssmfe_opts), intent(in) :: options
+  type(ssmfe_core_options), intent(in) :: options
   integer, intent(in) :: problem
   integer, intent(in) :: n
   real(wp), intent(in) :: a(n, n)
@@ -4196,9 +4184,8 @@ subroutine run_ssmfe_largest_d &
   real(wp), allocatable :: u(:, :)
   real(wp), allocatable :: bx(:, :)
   
-  type(ssmfe_rcid) :: rci
-  type(ssmfe_work) :: keep
-!  type(ssmfe_keep) :: keep
+  type(ssmfe_rcid     ) :: rci
+  type(ssmfe_core_keep) :: keep
 
   head = &
  '      eigenvalues      |   locked  | residuals | eigenvalue | eigenvector'
@@ -4434,8 +4421,7 @@ subroutine run_ssmfe_largest_z &
 
   implicit none
   
-!  type(ssmfe_options), intent(in) :: options
-  type(ssmfe_opts), intent(in) :: options
+  type(ssmfe_core_options), intent(in) :: options
   integer, intent(in) :: problem
   integer, intent(in) :: n
   complex(wp), intent(in) :: a(n, n)
@@ -4475,9 +4461,8 @@ subroutine run_ssmfe_largest_z &
   complex(wp), allocatable :: u(:, :)
   complex(wp), allocatable :: bx(:, :)
   
-  type(ssmfe_rciz) :: rci
-  type(ssmfe_work) :: keep
-!  type(ssmfe_keep) :: keep
+  type(ssmfe_rciz     ) :: rci
+  type(ssmfe_core_keep) :: keep
 
   head = &
  '      eigenvalues      |   locked  | residuals | eigenvalue | eigenvector'

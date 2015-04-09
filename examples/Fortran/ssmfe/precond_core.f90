@@ -25,10 +25,10 @@ program ssmfe_core_precond_example
   real(wp) :: rr(2*m, 2*m, 3)     ! work array
   real(wp) :: W(n, m, 0:5)        ! work array
   real(wp) :: U(n, m)             ! work array
-  type(ssmfe_rcid  ) :: rci       ! reverse communication data
-  type(ssmfe_opts  ) :: options   ! options
-  type(ssmfe_work  ) :: keep      ! private data
-  type(ssmfe_inform) :: inform    ! information
+  type(ssmfe_rcid        ) :: rci       ! reverse communication data
+  type(ssmfe_core_options) :: options   ! options
+  type(ssmfe_core_keep   ) :: keep      ! private data
+  type(ssmfe_inform      ) :: inform    ! information
 
   tol = 1.e-6
   ncon = 0

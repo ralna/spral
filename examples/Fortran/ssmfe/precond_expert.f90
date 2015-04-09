@@ -23,10 +23,10 @@ program ssmfe_expert_precond_example
   real(wp) :: rr(2*m, 2*m, 3)     ! work array
   real(wp) :: W(n, m, 0:5)        ! work array
   real(wp) :: U(n, m)             ! work array
-  type(ssmfe_rcid   ) :: rci      ! reverse communication data
-  type(ssmfe_options) :: options  ! options
-  type(ssmfe_keep   ) :: keep     ! private data
-  type(ssmfe_inform ) :: inform   ! information
+  type(ssmfe_rcid       ) :: rci      ! reverse communication data
+  type(ssmfe_options    ) :: options  ! options
+  type(ssmfe_expert_keep) :: keep     ! private data
+  type(ssmfe_inform     ) :: inform   ! information
 
   ! the gap between the last converged eigenvalue and the rest of the spectrum
   ! must be at least 0.1 times average gap between computed eigenvalues

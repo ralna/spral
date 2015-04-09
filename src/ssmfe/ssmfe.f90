@@ -4,12 +4,10 @@
 ! Written by: Evgueni Ovtchinnikov
 !
 module SPRAL_ssmfe
-
-  use SPRAL_ssmfe_expert
-!  use SPRAL_ssmfe_expert, ssmfe_xkeep => ssmfe_keep
-!  use SPRAL_ssmfe_expert, only: &
-!    ssmfe_solve, ssmfe_terminate, &
-!    ssmfe_keep, ssmfe_options, ssmfe_rcid, ssmfe_rciz, ssmfe_inform
+  use SPRAL_ssmfe_expert, only: &
+    ssmfe_errmsg, ssmfe_solve, ssmfe_terminate, &
+    ssmfe_inform, ssmfe_expert_keep, ssmfe_options, ssmfe_rcid, ssmfe_rciz
+  implicit none
   
   private
   
@@ -59,8 +57,7 @@ module SPRAL_ssmfe
     real(PRECISION), dimension(:,:,:), allocatable :: W
 
     ! expert interface keep (see expert.f90)
-!    type(ssmfe_xkeep) :: keep
-    type(ssmfe_keep) :: keep
+    type(ssmfe_expert_keep) :: keep
 
   end type ssmfe_keepd
   
@@ -84,8 +81,7 @@ module SPRAL_ssmfe
     complex(PRECISION), dimension(:,:,:), allocatable :: V
     complex(PRECISION), dimension(:,:,:), allocatable :: W
 
-!    type(ssmfe_xkeep) :: keep
-    type(ssmfe_keep) :: keep
+    type(ssmfe_expert_keep) :: keep
 
   end type ssmfe_keepz
   
@@ -184,9 +180,6 @@ contains
 !
   subroutine ssmfe_shift_double &
       ( rci, sigma, left, right, mep, lambda, n, X, ldx, keep, options, inform )
-
-    implicit none
-
     real(PRECISION), intent(in) :: sigma
     integer, intent(in) :: left
     integer, intent(in) :: right
@@ -212,9 +205,6 @@ contains
 !
   subroutine ssmfe_gen_shift_double &
       ( rci, sigma, left, right, mep, lambda, n, X, ldx, keep, options, inform )
-
-    implicit none
-
     real(PRECISION), intent(in) :: sigma
     integer, intent(in) :: left
     integer, intent(in) :: right
@@ -240,9 +230,6 @@ contains
 !
   subroutine ssmfe_buckling_double &
       ( rci, sigma, left, right, mep, lambda, n, X, ldx, keep, options, inform )
-
-    implicit none
-
     real(PRECISION), intent(in) :: sigma
     integer, intent(in) :: left
     integer, intent(in) :: right
@@ -314,9 +301,6 @@ contains
 !
   subroutine ssmfe_shift_double_complex &
       ( rci, sigma, left, right, mep, lambda, n, X, ldx, keep, options, inform )
-
-    implicit none
-
     real(PRECISION), intent(in) :: sigma
     integer, intent(in) :: left
     integer, intent(in) :: right
@@ -342,9 +326,6 @@ contains
 !
   subroutine ssmfe_gen_shift_double_complex &
       ( rci, sigma, left, right, mep, lambda, n, X, ldx, keep, options, inform )
-
-    implicit none
-
     real(PRECISION), intent(in) :: sigma
     integer, intent(in) :: left
     integer, intent(in) :: right
@@ -370,9 +351,6 @@ contains
 !
   subroutine ssmfe_buckling_double_complex &
       ( rci, sigma, left, right, mep, lambda, n, X, ldx, keep, options, inform )
-
-    implicit none
-
     real(PRECISION), intent(in) :: sigma
     integer, intent(in) :: left
     integer, intent(in) :: right
@@ -407,9 +385,6 @@ contains
       gemm => dgemm
 
     use SPRAL_lapack_iface, mxcopy => dlacpy
-
-    implicit none
-
     character, parameter :: TR = 'T'
 
     integer, parameter :: SSMFE_START              = 0
@@ -756,9 +731,6 @@ contains
       axpy => daxpy, &
       gemm => dgemm
     use SPRAL_lapack_iface, mxcopy => dlacpy
-
-    implicit none
-
     integer, parameter :: SSMFE_START              = 0
     integer, parameter :: SSMFE_APPLY_A            = 1
     integer, parameter :: SSMFE_APPLY_PREC         = 2
@@ -1345,9 +1317,6 @@ contains
   end subroutine ssmfe_inverse_srci_double
 
   subroutine ssmfe_terminate_simple_double( keep, inform )
-
-    implicit none
-    
     type(ssmfe_keepd), intent(inout) :: keep
     type(ssmfe_inform), intent(inout) :: inform
     
@@ -1357,9 +1326,6 @@ contains
   end subroutine ssmfe_terminate_simple_double
 
   subroutine ssmfe_delete_keep_simple_double( keep )
-
-    implicit none
-    
     type(ssmfe_keepd), intent(inout) :: keep
     
     if ( allocated(keep%ind) ) deallocate ( keep%ind )
@@ -1383,9 +1349,6 @@ contains
       gemm => zgemm
 
     use SPRAL_lapack_iface, mxcopy => zlacpy
-
-    implicit none
-
     character, parameter :: TR = 'C'
 
     integer, parameter :: SSMFE_START              = 0
@@ -1665,9 +1628,6 @@ contains
       axpy => zaxpy, &
       gemm => zgemm
     use SPRAL_lapack_iface, mxcopy => zlacpy
-
-    implicit none
-
     integer, parameter :: SSMFE_START              = 0
     integer, parameter :: SSMFE_APPLY_A            = 1
     integer, parameter :: SSMFE_APPLY_PREC         = 2
@@ -2191,9 +2151,6 @@ contains
       gemm => dgemm
       
     use SPRAL_lapack_iface, mxcopy => dlacpy
-
-    implicit none
-
     integer :: n, m, ldW
     real(PRECISION) :: W(ldW, m, 0:7), V(m + m, m + m), U(m)
     integer :: ind(m)
@@ -2330,9 +2287,6 @@ contains
       gemm => zgemm
 
     use SPRAL_lapack_iface, mxcopy => zlacpy
-
-    implicit none
-
     integer :: n, m, ldW
     complex(PRECISION) :: W(ldW, m, 0:7), V(m + m, m + m), U(m)
     integer :: ind(m)
@@ -2460,9 +2414,6 @@ contains
   end subroutine ssmfe_vector_operations_double_complex
   
   subroutine ssmfe_terminate_simple_double_complex( keep, inform )
-
-    implicit none
-    
     type(ssmfe_keepz), intent(inout) :: keep
     type(ssmfe_inform), intent(inout) :: inform
     
@@ -2472,9 +2423,6 @@ contains
   end subroutine ssmfe_terminate_simple_double_complex
 
   subroutine ssmfe_delete_keep_simple_double_complex( keep )
-
-    implicit none
-    
     type(ssmfe_keepz), intent(inout) :: keep
     
     if ( allocated(keep%ind) ) deallocate ( keep%ind )
