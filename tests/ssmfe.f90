@@ -137,7 +137,7 @@ subroutine test_core_errors_d
   call ssmfe &
     ( rci, 0, left, right, m, lambda, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_EXTRAS )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
   options%extra_left = 0
 
   write(*,"(a)",advance="no") " * Testing min_gap < 0......................."
@@ -146,7 +146,7 @@ subroutine test_core_errors_d
   call ssmfe &
     ( rci, 0, left, right, m, lambda, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_MIN_GAP )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
   options%min_gap = 0
 
   write(*,"(a)",advance="no") " * Testing min_gap > 1......................."
@@ -155,7 +155,7 @@ subroutine test_core_errors_d
   call ssmfe &
     ( rci, 0, left, right, m, lambda, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_MIN_GAP )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
   options%min_gap = 0
 
   write(*,"(a)",advance="no") " * Testing cf_max < 0.5......................"
@@ -164,7 +164,7 @@ subroutine test_core_errors_d
   call ssmfe &
     ( rci, 0, left, right, m, lambda, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_CF_MAX )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
   options%cf_max = ONE
 
   write(*,"(a)",advance="no") " * Testing cf_max > 1........................"
@@ -173,7 +173,7 @@ subroutine test_core_errors_d
   call ssmfe &
     ( rci, 0, left, right, m, lambda, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_CF_MAX )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
   options%cf_max = ONE
 
   write(*,"(a)",advance="no") " * Testing wrong block size.................."
@@ -181,17 +181,17 @@ subroutine test_core_errors_d
   call ssmfe &
     ( rci, 0, left, 0, 0, lambda, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_BLOCK_SIZE, .true. )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
   rci%job = 0
   call ssmfe &
     ( rci, 0, left, right, 1, lambda, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_BLOCK_SIZE, .true. )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
   rci%job = 0
   call ssmfe &
     ( rci, 0, -1, right, 1, lambda, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_BLOCK_SIZE )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing wrong error estimation flag......."
   rci%job = 0
@@ -199,7 +199,7 @@ subroutine test_core_errors_d
   call ssmfe &
     ( rci, 0, left, right, m, lambda, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_ERR_EST )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
   options%err_est = 2
 
   write(*,"(a)",advance="no") " * Testing wrong minAprod...................."
@@ -208,7 +208,7 @@ subroutine test_core_errors_d
   call ssmfe &
     ( rci, -1, left, right, m, lambda, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_MINPROD )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
   options%minAprod = .true.
 
   write(*,"(a)",advance="no") " * Testing wrong minBprod...................."
@@ -217,7 +217,7 @@ subroutine test_core_errors_d
   call ssmfe &
     ( rci, -1, left, right, m, lambda, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_MINPROD )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
   options%minBprod = .true.
 
   deallocate ( a, b, t, x, lambda, rr, ind )
@@ -269,7 +269,7 @@ subroutine test_core_errors_z
   call ssmfe &
     ( rci, 0, left, right, m, lambda, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_EXTRAS )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
   options%extra_left = 0
 
   write(*,"(a)",advance="no") " * Testing min_gap < 0......................."
@@ -278,7 +278,7 @@ subroutine test_core_errors_z
   call ssmfe &
     ( rci, 0, left, right, m, lambda, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_MIN_GAP )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
   options%min_gap = 0
 
   write(*,"(a)",advance="no") " * Testing min_gap > 1......................."
@@ -287,7 +287,7 @@ subroutine test_core_errors_z
   call ssmfe &
     ( rci, 0, left, right, m, lambda, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_MIN_GAP )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
   options%min_gap = 0
 
   write(*,"(a)",advance="no") " * Testing cf_max < 0.5......................"
@@ -296,7 +296,7 @@ subroutine test_core_errors_z
   call ssmfe &
     ( rci, 0, left, right, m, lambda, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_CF_MAX )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
   options%cf_max = ONE
 
   write(*,"(a)",advance="no") " * Testing cf_max > 1........................"
@@ -305,7 +305,7 @@ subroutine test_core_errors_z
   call ssmfe &
     ( rci, 0, left, right, m, lambda, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_CF_MAX )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
   options%cf_max = ONE
 
   write(*,"(a)",advance="no") " * Testing wrong block size.................."
@@ -313,17 +313,17 @@ subroutine test_core_errors_z
   call ssmfe &
     ( rci, 0, left, 0, 0, lambda, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_BLOCK_SIZE, .true. )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
   rci%job = 0
   call ssmfe &
     ( rci, 0, left, right, 1, lambda, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_BLOCK_SIZE, .true. )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
   rci%job = 0
   call ssmfe &
     ( rci, 0, -1, right, 1, lambda, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_BLOCK_SIZE )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing wrong error estimation flag......."
   rci%job = 0
@@ -331,7 +331,7 @@ subroutine test_core_errors_z
   call ssmfe &
     ( rci, 0, left, right, m, lambda, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_ERR_EST )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
   options%err_est = 2
 
   write(*,"(a)",advance="no") " * Testing wrong minAprod...................."
@@ -340,7 +340,7 @@ subroutine test_core_errors_z
   call ssmfe &
     ( rci, -1, left, right, m, lambda, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_MINPROD )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
   options%minAprod = .true.
 
   write(*,"(a)",advance="no") " * Testing wrong minBprod...................."
@@ -349,7 +349,7 @@ subroutine test_core_errors_z
   call ssmfe &
     ( rci, -1, left, right, m, lambda, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_MINPROD )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
   options%minBprod = .true.
 
   deallocate ( a, b, t, x, lambda, rr, ind )
@@ -421,7 +421,7 @@ subroutine test_core_misc_d
     ( options, 0, n, a, b, t, 1, 0, tol, maxit, verb, 1, &
       n, lambda, x, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
 
   write(*,"(a)",advance="no") " * Testing left = 2, right = 0, m = 1........"
   do i = 1, n
@@ -433,7 +433,7 @@ subroutine test_core_misc_d
     ( options, 0, n, a, b, t, 2, 0, tol, maxit, verb, 1, &
       n, lambda, x, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
 
   write(*,"(a)",advance="no") " * Testing left = 0, right = 1, m = 1........"
   do i = 1, n
@@ -445,7 +445,7 @@ subroutine test_core_misc_d
     ( options, 0, n, a, b, t, 0, 1, tol, maxit, verb, 1, &
       n, lambda, x, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
 
   write(*,"(a)",advance="no") " * Testing left = 1, right = 1, m = 2........"
   do i = 1, n
@@ -457,7 +457,7 @@ subroutine test_core_misc_d
     ( options, 0, n, a, b, t, 1, 1, tol, maxit, verb, 2, &
       n, lambda, x, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
 
   write(*,"(a)",advance="no") " * Testing left = 2, right = 1, m = 2........"
   do i = 1, n
@@ -469,7 +469,7 @@ subroutine test_core_misc_d
     ( options, 0, n, a, b, t, 2, 1, tol, maxit, verb, 2, &
       n, lambda, x, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
 
   write(*,"(a)",advance="no") " * Testing left = 10, right = 10, m = 10....."
   do i = 1, n
@@ -485,7 +485,7 @@ subroutine test_core_misc_d
     ( options, 0, n, a, b, t, 10, 10, tol, maxit, verb, 10, &
       n, lambda, x, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
 
   write(*,"(a)",advance="no") " * Testing largest = 1, m = 2................"
   do i = 1, n
@@ -497,7 +497,7 @@ subroutine test_core_misc_d
     ( options, 0, n, a, b, t, 1, tol, maxit, verb, 2, &
       n, lambda, x, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
 
   write(*,"(a)",advance="no") " * Testing largest = 10, m = 5..............."
   do i = 1, n
@@ -509,7 +509,7 @@ subroutine test_core_misc_d
     ( options, 0, n, a, b, t, 10, tol, maxit, verb, 5, &
       n, lambda, x, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
 
   write(*,"(a)",advance="no") " * Testing left = 10, right = 10, m = 10....."
   forall ( i = 1 : n ) b(i, i) = 2**i
@@ -522,7 +522,7 @@ subroutine test_core_misc_d
     ( options, 0, n, a, b, t, 10, 10, tol, maxit, verb, 10, &
       n, lambda, x, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
 
   deallocate ( a, b, t, x, lambda, rr, ind )
 
@@ -596,7 +596,7 @@ subroutine test_core_misc_z
     ( options, 0, n, a, b, t, 1, 0, tol, maxit, verb, 1, &
       n, lambda, x, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing left = 2, right = 0, m = 1........"
   rci%job = 0
@@ -609,7 +609,7 @@ subroutine test_core_misc_z
     ( options, 0, n, a, b, t, 2, 0, tol, maxit, verb, 1, &
       n, lambda, x, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing left = 0, right = 1, m = 1........"
   rci%job = 0
@@ -622,7 +622,7 @@ subroutine test_core_misc_z
     ( options, 0, n, a, b, t, 0, 1, tol, maxit, verb, 1, &
       n, lambda, x, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing left = 1, right = 1, m = 2........"
   rci%job = 0
@@ -635,7 +635,7 @@ subroutine test_core_misc_z
     ( options, 0, n, a, b, t, 1, 1, tol, maxit, verb, 2, &
       n, lambda, x, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing left = 2, right = 1, m = 2........"
   rci%job = 0
@@ -648,7 +648,7 @@ subroutine test_core_misc_z
     ( options, 0, n, a, b, t, 2, 1, tol, maxit, verb, 2, &
       n, lambda, x, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing left = 10, right = 10, m = 10....."
   rci%job = 0
@@ -665,7 +665,7 @@ subroutine test_core_misc_z
     ( options, 0, n, a, b, t, 10, 10, tol, maxit, verb, 10, &
       n, lambda, x, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing largest = 1, m = 2................"
   rci%job = 0
@@ -678,7 +678,7 @@ subroutine test_core_misc_z
     ( options, 0, n, a, b, t, 1, tol, maxit, verb, 2, &
       n, lambda, x, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing largest = 10, m = 5..............."
   rci%job = 0
@@ -691,7 +691,7 @@ subroutine test_core_misc_z
     ( options, 0, n, a, b, t, 10, tol, maxit, verb, 5, &
       n, lambda, x, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing left = 10, right = 10, m = 10....."
   forall ( i = 1 : n ) b(i, i) = 2**i
@@ -704,7 +704,7 @@ subroutine test_core_misc_z
     ( options, 0, n, a, b, t, 10, 10, tol, maxit, verb, 10, &
       n, lambda, x, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
 
   deallocate ( a, b, t, x, lambda, rr, ind )
 
@@ -778,14 +778,14 @@ subroutine test_expert_errors_d
   call ssmfe_standard &
     ( rci, nep, mep, lambda, 0, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_BLOCK_SIZE )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing left < 0.........................."
   rci%job = 0
   call ssmfe_standard &
     ( rci, -1, mep, lambda, m, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_LEFT )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing left > max_left..................."
   options%max_left = 0
@@ -793,7 +793,7 @@ subroutine test_expert_errors_d
   call ssmfe_standard &
     ( rci, nep, mep, lambda, m, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_LEFT )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
   options%max_left = -1
 
   write(*,"(a)",advance="no") " * Testing mep < left........................"
@@ -801,7 +801,7 @@ subroutine test_expert_errors_d
   call ssmfe_standard &
     ( rci, nep, 0, lambda, m, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_STORAGE_SIZE )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing wrong err_est....................."
   options%err_est = 0
@@ -809,7 +809,7 @@ subroutine test_expert_errors_d
   call ssmfe_generalized &
     ( rci, nep, mep, lambda, m, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_ERR_EST )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
   options%err_est = 2
 
   write ( *, '(a)' ) ' * Testing shift-invert...'
@@ -822,21 +822,21 @@ subroutine test_expert_errors_d
   call ssmfe_standard_shift &
     ( rci, sigma, left, right, mep, lambda, 0, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_BLOCK_SIZE )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing left < 0.........................."
   rci%job = 0
   call ssmfe_standard_shift &
     ( rci, sigma, -1, left, mep, lambda, 0, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_LEFT )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing right < 0........................."
   rci%job = 0
   call ssmfe_standard_shift &
     ( rci, sigma, left, -1, mep, lambda, 0, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_RIGHT )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing right > max_right................."
   options%max_right = 0
@@ -844,7 +844,7 @@ subroutine test_expert_errors_d
   call ssmfe_generalized_shift &
     ( rci, sigma, left, right, mep, lambda, 0, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_RIGHT )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
   options%max_right = -1
 
   write(*,"(a)",advance="no") " * Testing mep < left + right................"
@@ -852,7 +852,7 @@ subroutine test_expert_errors_d
   call ssmfe_generalized_shift &
     ( rci, sigma, left, right, 0, lambda, 0, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_STORAGE_SIZE )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write ( *, '(a)' ) ' * Testing buckling...'
 
@@ -862,7 +862,7 @@ subroutine test_expert_errors_d
   call ssmfe_buckling &
     ( rci, sigma, left, right, mep, lambda, m, rr, ind, keep, options, inform )
   call print_result(inform%flag, WRONG_SIGMA)
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
   sigma = ONE
 
   write(*,"(a)",advance="no") " * Testing wrong minAprod...................."
@@ -871,7 +871,7 @@ subroutine test_expert_errors_d
   call ssmfe_buckling &
     ( rci, sigma, left, right, mep, lambda, m, rr, ind, keep, options, inform )
   call print_result(inform%flag, WRONG_MINPROD)
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
   options%minAprod = .true.
 
   write(*,"(a)",advance="no") " * Testing wrong minBprod...................."
@@ -880,7 +880,7 @@ subroutine test_expert_errors_d
   call ssmfe_buckling &
     ( rci, sigma, left, right, mep, lambda, m, rr, ind, keep, options, inform )
   call print_result(inform%flag, WRONG_MINPROD)
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
   options%minBprod = .true.
 
   deallocate ( a, b, t, x, lambda, rr, ind )
@@ -940,14 +940,14 @@ subroutine test_expert_errors_z
   call ssmfe_standard &
     ( rci, nep, mep, lambda, 0, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_BLOCK_SIZE )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing left < 0.........................."
   rci%job = 0
   call ssmfe_standard &
     ( rci, -1, mep, lambda, m, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_LEFT )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing left > max_left..................."
   options%max_left = 0
@@ -955,7 +955,7 @@ subroutine test_expert_errors_z
   call ssmfe_standard &
     ( rci, nep, mep, lambda, m, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_LEFT )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
   options%max_left = -1
 
   write(*,"(a)",advance="no") " * Testing mep < left........................"
@@ -963,7 +963,7 @@ subroutine test_expert_errors_z
   call ssmfe_standard &
     ( rci, nep, 0, lambda, m, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_STORAGE_SIZE )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing wrong err_est....................."
   options%err_est = 0
@@ -971,7 +971,7 @@ subroutine test_expert_errors_z
   call ssmfe_generalized &
     ( rci, nep, mep, lambda, m, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_ERR_EST )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
   options%err_est = 2
 
   write ( *, '(a)' ) ' * Testing shift-invert...'
@@ -984,21 +984,21 @@ subroutine test_expert_errors_z
   call ssmfe_standard_shift &
     ( rci, sigma, left, right, mep, lambda, 0, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_BLOCK_SIZE )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing left < 0.........................."
   rci%job = 0
   call ssmfe_standard_shift &
     ( rci, sigma, -1, right, mep, lambda, 0, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_LEFT )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing right < 0........................."
   rci%job = 0
   call ssmfe_standard_shift &
     ( rci, sigma, left, -1, mep, lambda, 0, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_RIGHT )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing right > max_right................."
   options%max_right = 0
@@ -1006,7 +1006,7 @@ subroutine test_expert_errors_z
   call ssmfe_generalized_shift &
     ( rci, sigma, left, right, mep, lambda, 0, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_RIGHT )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
   options%max_right = -1
 
   write(*,"(a)",advance="no") " * Testing mep < left + right................"
@@ -1014,7 +1014,7 @@ subroutine test_expert_errors_z
   call ssmfe_generalized_shift &
     ( rci, sigma, left, right, 0, lambda, 0, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_STORAGE_SIZE )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write ( *, '(a)' ) ' * Testing buckling...'
 
@@ -1024,7 +1024,7 @@ subroutine test_expert_errors_z
   call ssmfe_buckling &
     ( rci, sigma, left, right, mep, lambda, m, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_SIGMA )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
   sigma = ONE
 
   write(*,"(a)",advance="no") " * Testing wrong minAprod...................."
@@ -1033,7 +1033,7 @@ subroutine test_expert_errors_z
   call ssmfe_buckling &
     ( rci, sigma, left, right, mep, lambda, m, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_MINPROD )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
   options%minAprod = .true.
 
   write(*,"(a)",advance="no") " * Testing wrong minBprod...................."
@@ -1042,7 +1042,7 @@ subroutine test_expert_errors_z
   call ssmfe_buckling &
     ( rci, sigma, left, right, mep, lambda, m, rr, ind, keep, options, inform )
   call print_result( inform%flag, WRONG_MINPROD )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
   options%minBprod = .true.
 
   deallocate ( a, b, t, x, lambda, rr, ind )
@@ -1103,21 +1103,21 @@ subroutine test_expert_options_d
   options%err_est = 1
   call run_std_d( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%err_est = 2
 
   write(*,"(a)",advance="no") " * Testing minAprod = .false. ..............."
   options%minAprod = .false.
   call run_gen_d( n, a, b, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%minAprod = .true.
 
   write(*,"(a)",advance="no") " * Testing minBprod = .false. ..............."
   options%minBprod = .false.
   call run_gen_d( n, a, b, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%minBprod = .true.
 
   write(*,"(a)",advance="no") " * Testing minAprod and minBprod = .false. .."
@@ -1125,7 +1125,7 @@ subroutine test_expert_options_d
   options%minBprod = .false.
   call run_gen_d( n, a, b, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%minAprod = .true.
   options%minBprod = .true.
 
@@ -1133,14 +1133,14 @@ subroutine test_expert_options_d
   options%extra_left = 0
   call run_gen_d( n, a, b, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%extra_left = -1
 
   write(*,"(a)",advance="no") " * Testing nonzero extra_left................"
   options%extra_left = 5
   call run_gen_d( n, a, b, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%extra_left = -1
 
   write ( *, '(a)' ) ' * Testing shift-invert...'
@@ -1155,7 +1155,7 @@ subroutine test_expert_options_d
     ( options, n, a, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%extra_left = -1
   options%extra_right = -1
 
@@ -1167,7 +1167,7 @@ subroutine test_expert_options_d
     ( options, n, a, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%extra_left = -1
   options%extra_right = -1
 
@@ -1178,7 +1178,7 @@ subroutine test_expert_options_d
     ( options, n, a, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%err_est = 2
 
   deallocate ( a, b, t, x, w, lambda, ipiv ) !, rr, ind )
@@ -1239,35 +1239,35 @@ subroutine test_expert_options_z
   options%extra_left = 0
   call run_gen_z( n, a, b, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%extra_left = -1
 
   write(*,"(a)",advance="no") " * Testing nonzero extra_left................"
   options%extra_left = 5
   call run_gen_z( n, a, b, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%extra_left = -1
 
   write(*,"(a)",advance="no") " * Testing residual-based error estimates...."
   options%err_est = 1
   call run_std_z( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%err_est = 2
 
   write(*,"(a)",advance="no") " * Testing minAprod = .false. ..............."
   options%minAprod = .false.
   call run_gen_z( n, a, b, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%minAprod = .true.
 
   write(*,"(a)",advance="no") " * Testing minBprod = .false. ..............."
   options%minBprod = .false.
   call run_gen_z( n, a, b, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%minBprod = .true.
 
   write(*,"(a)",advance="no") " * Testing minAprod and minBprod = .false. .."
@@ -1275,7 +1275,7 @@ subroutine test_expert_options_z
   options%minBprod = .false.
   call run_gen_z( n, a, b, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%minAprod = .true.
   options%minBprod = .true.
 
@@ -1291,7 +1291,7 @@ subroutine test_expert_options_z
     ( options, n, a, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%extra_left = -1
   options%extra_right = -1
 
@@ -1303,7 +1303,7 @@ subroutine test_expert_options_z
     ( options, n, a, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%extra_left = -1
   options%extra_right = -1
 
@@ -1314,7 +1314,7 @@ subroutine test_expert_options_z
     ( options, n, a, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%err_est = 2
 
   deallocate ( a, b, t, x, w, lambda, ipiv ) !, rr, ind )
@@ -1369,42 +1369,42 @@ subroutine test_ssmfe_errors_d
   call ssmfe_standard &
     ( rci, nep, mep, lambda, n, x, ldx, keep, options, inform )
   call print_result( inform%flag, WRONG_RCI_JOB )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing n < 1............................."
   rci%job = 0
   call ssmfe_standard &
     ( rci, nep, mep, lambda, 0, x, ldx, keep, options, inform )
   call print_result( inform%flag, WRONG_PROBLEM_SIZE )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing ldx < n..........................."
   rci%job = 0
   call ssmfe_standard &
     ( rci, nep, mep, lambda, n, x, 1, keep, options, inform )
   call print_result( inform%flag, WRONG_LDX )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing left < 0.........................."
   rci%job = 0
   call ssmfe_standard &
     ( rci, -1, mep, lambda, n, x, ldx, keep, options, inform )
   call print_result( inform%flag, WRONG_LEFT )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing left > n/2........................"
   rci%job = 0
   call ssmfe_standard &
     ( rci, n, mep, lambda, n, x, ldx, keep, options, inform )
   call print_result( inform%flag, WRONG_LEFT )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing mep < left........................"
   rci%job = 0
   call ssmfe_standard &
     ( rci, nep, 0, lambda, n, x, ldx, keep, options, inform )
   call print_result( inform%flag, WRONG_STORAGE_SIZE )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
   
   a = ZERO
   t = ZERO
@@ -1417,13 +1417,13 @@ subroutine test_ssmfe_errors_d
   call run_std_d( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, INDEFINITE_B_OR_XBX )
   options%user_x = 0
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
 
   write(*,"(a)",advance="no") " * Testing indefinite b......................"
   b = ZERO
   call run_gen_d( n, a, b, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, INDEFINITE_B_OR_XBX )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
 
   write ( *, '(a)' ) ' * Testing shift-invert...'
   sigma = ZERO
@@ -1435,49 +1435,49 @@ subroutine test_ssmfe_errors_d
   call ssmfe_standard_shift &
     ( rci, sigma, left, right, mep, lambda, n, x, ldx, keep, options, inform )
   call print_result( inform%flag, WRONG_RCI_JOB )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing n < 1............................."
   rci%job = 0
   call ssmfe_standard_shift &
     ( rci, sigma, left, right, mep, lambda, 0, x, ldx, keep, options, inform )
   call print_result( inform%flag, WRONG_PROBLEM_SIZE )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing ldx < n..........................."
   rci%job = 0
   call ssmfe_standard_shift &
     ( rci, sigma, left, right, mep, lambda, n, x, 1, keep, options, inform )
   call print_result( inform%flag, WRONG_LDX )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing left < 0.........................."
   rci%job = 0
   call ssmfe_standard_shift &
     ( rci, sigma, -1, right, mep, lambda, n, x, ldx, keep, options, inform )
   call print_result( inform%flag, WRONG_LEFT )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing right < 0........................."
   rci%job = 0
   call ssmfe_standard_shift &
     ( rci, sigma, left, -1, mep, lambda, n, x, ldx, keep, options, inform )
   call print_result( inform%flag, WRONG_RIGHT )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing left + right > n/2................"
   rci%job = 0
   call ssmfe_standard_shift &
     ( rci, sigma, 2, 2, mep, lambda, n, x, ldx, keep, options, inform )
   call print_result( inform%flag, WRONG_LEFT )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing left + right > mep................"
   rci%job = 0
   call ssmfe_standard_shift &
     ( rci, sigma, left, right, 1, lambda, n, x, ldx, keep, options, inform )
   call print_result( inform%flag, WRONG_STORAGE_SIZE )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write ( *, '(a)' ) ' * Testing buckling...'
   sigma = ZERO
@@ -1486,7 +1486,7 @@ subroutine test_ssmfe_errors_d
   call ssmfe_buckling &
     ( rci, sigma, left, right, mep, lambda, n, x, ldx, keep, options, inform )
   call print_result( inform%flag, WRONG_SIGMA )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   deallocate ( a, b, t, x, lambda )
 
@@ -1536,42 +1536,42 @@ subroutine test_ssmfe_errors_z
   call ssmfe_standard &
     ( rci, nep, mep, lambda, n, x, ldx, keep, options, inform )
   call print_result( inform%flag, WRONG_RCI_JOB )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing n < 1............................."
   rci%job = 0
   call ssmfe_standard &
     ( rci, nep, mep, lambda, 0, x, ldx, keep, options, inform )
   call print_result( inform%flag, WRONG_PROBLEM_SIZE )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing ldx < n..........................."
   rci%job = 0
   call ssmfe_standard &
     ( rci, nep, mep, lambda, n, x, 1, keep, options, inform )
   call print_result( inform%flag, WRONG_LDX )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing left < 0.........................."
   rci%job = 0
   call ssmfe_standard &
     ( rci, -1, mep, lambda, n, x, ldx, keep, options, inform )
   call print_result( inform%flag, WRONG_LEFT )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing left > n/2........................"
   rci%job = 0
   call ssmfe_standard &
     ( rci, n, mep, lambda, n, x, ldx, keep, options, inform )
   call print_result( inform%flag, WRONG_LEFT )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing mep < left........................"
   rci%job = 0
   call ssmfe_standard &
     ( rci, nep, 0, lambda, n, x, ldx, keep, options, inform )
   call print_result( inform%flag, WRONG_STORAGE_SIZE )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
   
   a = ZERO
   t = ZERO
@@ -1584,13 +1584,13 @@ subroutine test_ssmfe_errors_z
   call run_std_z( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, INDEFINITE_B_OR_XBX )
   options%user_x = 0
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
 
   write(*,"(a)",advance="no") " * Testing indefinite b......................"
   b = ZERO
   call run_gen_z( n, a, b, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, INDEFINITE_B_OR_XBX )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
 !end if
 
   write ( *, '(a)' ) ' * Testing shift-invert...'
@@ -1603,49 +1603,49 @@ subroutine test_ssmfe_errors_z
   call ssmfe_standard_shift &
     ( rci, sigma, left, right, mep, lambda, n, x, ldx, keep, options, inform )
   call print_result( inform%flag, WRONG_RCI_JOB )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing n < 1............................."
   rci%job = 0
   call ssmfe_standard_shift &
     ( rci, sigma, left, right, mep, lambda, 0, x, ldx, keep, options, inform )
   call print_result( inform%flag, WRONG_PROBLEM_SIZE )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing ldx < n..........................."
   rci%job = 0
   call ssmfe_standard_shift &
     ( rci, sigma, left, right, mep, lambda, n, x, 1, keep, options, inform )
   call print_result( inform%flag, WRONG_LDX )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing left < 0.........................."
   rci%job = 0
   call ssmfe_standard_shift &
     ( rci, sigma, -1, right, mep, lambda, n, x, ldx, keep, options, inform )
   call print_result( inform%flag, WRONG_LEFT )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing right < 0........................."
   rci%job = 0
   call ssmfe_standard_shift &
     ( rci, sigma, left, -1, mep, lambda, n, x, ldx, keep, options, inform )
   call print_result( inform%flag, WRONG_RIGHT )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing left + right > n/2................"
   rci%job = 0
   call ssmfe_standard_shift &
     ( rci, sigma, 2, 2, mep, lambda, n, x, ldx, keep, options, inform )
   call print_result( inform%flag, WRONG_LEFT )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing left + right > mep................"
   rci%job = 0
   call ssmfe_standard_shift &
     ( rci, sigma, left, right, 1, lambda, n, x, ldx, keep, options, inform )
   call print_result( inform%flag, WRONG_STORAGE_SIZE )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   write ( *, '(a)' ) ' * Testing buckling...'
   sigma = ZERO
@@ -1654,7 +1654,7 @@ subroutine test_ssmfe_errors_z
   call ssmfe_buckling &
     ( rci, sigma, left, right, mep, lambda, n, x, ldx, keep, options, inform )
   call print_result( inform%flag, WRONG_SIGMA )
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
   deallocate ( a, b, t, x, lambda )
 
@@ -1716,14 +1716,14 @@ subroutine test_ssmfe_warnings_d
   write(*,"(a)",advance="no") " * Testing warning flag 1...................."
   call run_std_d( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, NO_SEARCH_DIRECTIONS_LEFT )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   forall ( i = 1 : n ) t(i, i) = ONE
 
   write(*,"(a)",advance="no") " * Testing warning flag 2...................."
   options%max_iterations = 1
   call run_std_d( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, MAX_ITERATIONS_EXCEEDED )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%max_iterations = 100
 
   write(*,"(a)",advance="no") " * Testing warning flag 3...................."
@@ -1731,7 +1731,7 @@ subroutine test_ssmfe_warnings_d
   options%left_gap = -2
   call run_std_d( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, OUT_OF_STORAGE )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   mep = n
   options%left_gap = 0
 
@@ -1747,7 +1747,7 @@ subroutine test_ssmfe_warnings_d
     ( options, n, a, b, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%flag, NO_SEARCH_DIRECTIONS_LEFT )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   b(1,1) = ONE
 
   write(*,"(a)",advance="no") " * Testing warning flag 2...................."
@@ -1756,7 +1756,7 @@ subroutine test_ssmfe_warnings_d
     ( options, n, a, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%flag, MAX_ITERATIONS_EXCEEDED )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%max_iterations = 100
 
   write(*,"(a)",advance="no") " * Testing warning flag 3...................."
@@ -1773,7 +1773,7 @@ subroutine test_ssmfe_warnings_d
     ( options, n, a, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%flag, OUT_OF_STORAGE )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
 
   deallocate ( a, b, t, x, lambda )
 
@@ -1835,14 +1835,14 @@ subroutine test_ssmfe_warnings_z
   write(*,"(a)",advance="no") " * Testing warning flag 1...................."
   call run_std_z( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, NO_SEARCH_DIRECTIONS_LEFT )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   forall ( i = 1 : n ) t(i, i) = ONE
 
   write(*,"(a)",advance="no") " * Testing warning flag 2...................."
   options%max_iterations = 1
   call run_std_z( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, MAX_ITERATIONS_EXCEEDED )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%max_iterations = 100
 
   write(*,"(a)",advance="no") " * Testing warning flag 3...................."
@@ -1850,7 +1850,7 @@ subroutine test_ssmfe_warnings_z
   options%left_gap = -2
   call run_std_z( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, OUT_OF_STORAGE )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   mep = n
   options%left_gap = 0
 
@@ -1866,7 +1866,7 @@ subroutine test_ssmfe_warnings_z
     ( options, n, a, b, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%flag, NO_SEARCH_DIRECTIONS_LEFT )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   b(1,1) = ONE
 
   write(*,"(a)",advance="no") " * Testing warning flag 2...................."
@@ -1875,7 +1875,7 @@ subroutine test_ssmfe_warnings_z
     ( options, n, a, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%flag, MAX_ITERATIONS_EXCEEDED )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%max_iterations = 100
 
   write(*,"(a)",advance="no") " * Testing warning flag 3...................."
@@ -1892,7 +1892,7 @@ subroutine test_ssmfe_warnings_z
     ( options, n, a, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%flag, OUT_OF_STORAGE )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
 
   deallocate ( a, b, t, x, lambda )
 
@@ -1953,7 +1953,7 @@ subroutine test_ssmfe_options_d
   options%print_level = -1
   call run_std_d( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
 
   write(*,"(a)",advance="no") " * Testing printing units suppression........"
   options%print_level = 3
@@ -1962,7 +1962,7 @@ subroutine test_ssmfe_options_d
   options%unit_diagnostic = -1
   call run_std_d( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%unit_error = we_unit
   options%unit_warning = we_unit
   options%unit_diagnostic = dl_unit
@@ -1972,7 +1972,7 @@ subroutine test_ssmfe_options_d
   n = 0
   call run_std_d( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, WRONG_PROBLEM_SIZE )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   n = 50
 
   write(*,"(a)",advance="no") " * Testing printing level 0.................."
@@ -1981,7 +1981,7 @@ subroutine test_ssmfe_options_d
   t = ZERO
   call run_std_d( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, NO_SEARCH_DIRECTIONS_LEFT )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   forall ( i = 1 : n ) t(i, i) = ONE
 
   write(*,"(a)",advance="no") " * Testing printing level 1.................."
@@ -1989,28 +1989,28 @@ subroutine test_ssmfe_options_d
   write ( dl_unit, '(/1x, a)' ) 'print level 1'
   call run_gen_d( n, a, b, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
 
   write(*,"(a)",advance="no") " * Testing printing level 2.................."
   options%print_level = 2
   write ( dl_unit, '(/1x, a)' ) 'print level 2'
   call run_std_d( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
 
   write(*,"(a)",advance="no") " * Testing printing level 3.................."
   options%print_level = 3
   write ( dl_unit, '(/1x, a)' ) 'print level 3'
   call run_std_d( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%print_level = 1
 
   write(*,"(a)",advance="no") " * Testing zero tolerances..................."
   options%tol_x = 0
   call run_gen_d( n, a, b, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%tol_x = -1
 
   write(*,"(a)",advance="no") " * Testing all non-zero tolerances..........."
@@ -2021,7 +2021,7 @@ subroutine test_ssmfe_options_d
   options%rel_tol_residual = 1
   call run_gen_d( n, a, b, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%tol_x = -1
   options%abs_tol_lambda = 0
   options%rel_tol_lambda = 0
@@ -2043,7 +2043,7 @@ subroutine test_ssmfe_options_d
   end do
   call run_std_d( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%left, 3, .true. )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%left_gap = 0
   options%tol_x = -1
   options%user_x = 0
@@ -2060,7 +2060,7 @@ subroutine test_ssmfe_options_d
   end do
   call run_std_d( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%left, 4 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%left_gap = 0
   options%user_x = 0
 
@@ -2068,7 +2068,7 @@ subroutine test_ssmfe_options_d
   options%max_left = n
   call run_std_d( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%max_left = -1
 
   write ( *, '(a)' ) ' * Testing shift-invert...'
@@ -2089,7 +2089,7 @@ subroutine test_ssmfe_options_d
     ( options, n, a, b, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%tol_x = -1
   options%user_x = 0
   options%print_level = -1
@@ -2102,7 +2102,7 @@ subroutine test_ssmfe_options_d
     ( options, n, a, b, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%tol_x = -1
   options%abs_tol_residual = 0
 
@@ -2119,7 +2119,7 @@ subroutine test_ssmfe_options_d
     ( options, n, a, b, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%tol_x = -1
   options%abs_tol_lambda = 0
   options%rel_tol_lambda = 0
@@ -2136,7 +2136,7 @@ subroutine test_ssmfe_options_d
     ( options, n, a, b, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
 
   write(*,"(a)",advance="no") " * Testing printing level 3.................."
   options%print_level = 3
@@ -2145,7 +2145,7 @@ subroutine test_ssmfe_options_d
     ( options, n, a, b, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%print_level = -1
 
   write(*,"(a)",advance="no") " * Testing minimal left eigenvalue gap......."
@@ -2167,7 +2167,7 @@ subroutine test_ssmfe_options_d
     ( options, n, a, b, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%left, 3, .true. )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%left_gap = 0
   options%tol_x = -1
 
@@ -2188,7 +2188,7 @@ subroutine test_ssmfe_options_d
     ( options, n, a, b, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%left, 4 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%left_gap = 0
 
   write(*,"(a)",advance="no") " * Testing minimal right eigenvalue gap......"
@@ -2210,7 +2210,7 @@ subroutine test_ssmfe_options_d
     ( options, n, a, b, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%right, 3, .true. )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%tol_x = -1
   options%right_gap = 0
   options%print_level = -1
@@ -2232,7 +2232,7 @@ subroutine test_ssmfe_options_d
     ( options, n, a, b, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%right, 4 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%tol_x = -1
   options%right_gap = 0
   options%print_level = -1
@@ -2298,14 +2298,14 @@ if ( .true. ) then
   n = 0
   call run_std_z( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, WRONG_PROBLEM_SIZE )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   n = 50
 
   write(*,"(a)",advance="no") " * Testing printing suppresssion............."
   options%print_level = 0
   call run_std_z( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
 
   write(*,"(a)",advance="no") " * Testing printing units suppression........"
   options%print_level = 3
@@ -2314,7 +2314,7 @@ if ( .true. ) then
   options%unit_diagnostic = -1
   call run_std_z( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
 
   options%unit_error = we_unit
   options%unit_warning = we_unit
@@ -2326,7 +2326,7 @@ if ( .true. ) then
   t = ZERO
   call run_std_z( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, NO_SEARCH_DIRECTIONS_LEFT )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   forall ( i = 1 : n ) t(i, i) = ONE
 
   write(*,"(a)",advance="no") " * Testing printing level 1.................."
@@ -2334,28 +2334,28 @@ if ( .true. ) then
   write ( dl_unit, '(/1x, a)' ) 'print level 1'
   call run_gen_z( n, a, b, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
 
   write(*,"(a)",advance="no") " * Testing printing level 2.................."
   options%print_level = 2
   write ( dl_unit, '(/1x, a)' ) 'print level 2'
   call run_std_z( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
 
   write(*,"(a)",advance="no") " * Testing printing level 3.................."
   options%print_level = 3
   write ( dl_unit, '(/1x, a)' ) 'print level 3'
   call run_std_z( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%print_level = -1
 
   write(*,"(a)",advance="no") " * Testing zero tolerances..................."
   options%tol_x = 0
   call run_std_z( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%tol_x = -1
 
   write(*,"(a)",advance="no") " * Testing all non-zero tolerances..........."
@@ -2366,7 +2366,7 @@ if ( .true. ) then
   options%rel_tol_residual = 1
   call run_std_z( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%tol_x = -1
   options%abs_tol_lambda = 0
   options%rel_tol_lambda = 0
@@ -2387,7 +2387,7 @@ if ( .true. ) then
   end do
   call run_std_z( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%left, 3, .true. )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%left_gap = 0
   options%tol_x = -1
   options%user_x = 0
@@ -2404,7 +2404,7 @@ if ( .true. ) then
   end do
   call run_std_z( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%left, 4 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%left_gap = 0
   options%user_x = 0
 
@@ -2412,7 +2412,7 @@ if ( .true. ) then
   options%max_left = n
   call run_std_z( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%max_left = -1
 else
   eps = 1D-3
@@ -2438,7 +2438,7 @@ end if
     ( options, n, a, b, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%tol_x = -1
   options%user_x = 0
   options%print_level = -1
@@ -2455,7 +2455,7 @@ end if
     ( options, n, a, b, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%tol_x = -1
   options%abs_tol_residual = 0
 
@@ -2472,7 +2472,7 @@ end if
     ( options, n, a, b, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%tol_x = -1
   options%abs_tol_lambda = 0
   options%rel_tol_lambda = 0
@@ -2489,7 +2489,7 @@ end if
     ( options, n, a, b, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
 
   write(*,"(a)",advance="no") " * Testing printing level 3.................."
   options%print_level = 3
@@ -2498,7 +2498,7 @@ end if
     ( options, n, a, b, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%print_level = -1
 
   write(*,"(a)",advance="no") " * Testing minimal left eigenvalue gap......."
@@ -2520,7 +2520,7 @@ end if
     ( options, n, a, b, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%left, 3, .true. )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%left_gap = 0
   options%tol_x = -1
 
@@ -2541,7 +2541,7 @@ end if
     ( options, n, a, b, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%left, 4 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%left_gap = 0
 
   write(*,"(a)",advance="no") " * Testing minimal right eigenvalue gap......"
@@ -2563,7 +2563,7 @@ end if
     ( options, n, a, b, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%right, 3,  .true. )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%tol_x = -1
   options%right_gap = 0
   options%print_level = -1
@@ -2585,7 +2585,7 @@ end if
     ( options, n, a, b, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%right, 4 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%tol_x = -1
   options%right_gap = 0
   options%print_level = -1
@@ -2656,7 +2656,7 @@ subroutine test_ssmfe_misc_d
   write(*,"(a)",advance="no") " * Testing zero nep.........................."
   call run_std_d( n, a, t, 0, mep, lambda, x, options, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
 
   write(*,"(a)",advance="no") " * Testing restart..........................."
   eps = 1D-3
@@ -2670,7 +2670,7 @@ subroutine test_ssmfe_misc_d
   end do
   call run_std_d( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, 4 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%max_left = -1
   options%left_gap = 0
   options%user_X = 0
@@ -2688,7 +2688,7 @@ subroutine test_ssmfe_misc_d
   end do
   call run_std_d( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, 4 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%max_left = -1
   options%left_gap = 0
   options%user_X = 0
@@ -2701,7 +2701,7 @@ subroutine test_ssmfe_misc_d
     ( options, n, a, sigma, 0, 0, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result(inform%flag, 0)
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
 
   write(*,"(a)",advance="no") " * Testing standard.........................."
   sigma = 255
@@ -2711,7 +2711,7 @@ subroutine test_ssmfe_misc_d
     ( options, n, a, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
 
   write(*,"(a)",advance="no") " * Testing generalized......................."
   sigma = 255
@@ -2723,7 +2723,7 @@ subroutine test_ssmfe_misc_d
     ( options, n, a, b, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%user_x = 0
 
   write(*,"(a)",advance="no") " * Testing restart..........................."
@@ -2741,7 +2741,7 @@ subroutine test_ssmfe_misc_d
     ( options, n, a, b, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%flag, 4, .true. )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%left_gap = 0
   options%user_x = 0
 
@@ -2759,7 +2759,7 @@ subroutine test_ssmfe_misc_d
     ( options, n, a, b, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%flag, 4, .true. )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%right_gap = 0
   options%user_x = 0
 
@@ -2781,7 +2781,7 @@ subroutine test_ssmfe_misc_d
     ( options, n, a, sigma, 1, 1, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%flag, OUT_OF_STORAGE )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   mep = n
   a = -a
   sigma = -sigma
@@ -2809,7 +2809,7 @@ subroutine test_ssmfe_misc_d
     ( options, n, a, b, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%flag, 4 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%right_gap = 0
   options%user_x = 0
 
@@ -2878,7 +2878,7 @@ subroutine test_ssmfe_misc_z
   write(*,"(a)",advance="no") " * Testing zero nep.........................."
   call run_std_z( n, a, t, 0, mep, lambda, x, options, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
 
   write(*,"(a)",advance="no") " * Testing restart..........................."
   eps = 1D-3
@@ -2892,7 +2892,7 @@ subroutine test_ssmfe_misc_z
   end do
   call run_std_z( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, 4 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%max_left = -1
   options%left_gap = 0
   options%user_X = 0
@@ -2910,7 +2910,7 @@ subroutine test_ssmfe_misc_z
   end do
   call run_std_z( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, 4 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%max_left = -1
   options%left_gap = 0
   options%user_X = 0
@@ -2923,7 +2923,7 @@ subroutine test_ssmfe_misc_z
     ( options, n, a, sigma, 0, 0, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
 
   write(*,"(a)",advance="no") " * Testing standard.........................."
   sigma = 255
@@ -2933,7 +2933,7 @@ subroutine test_ssmfe_misc_z
     ( options, n, a, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
 
   write(*,"(a)",advance="no") " * Testing generalized......................."
   sigma = 255
@@ -2945,7 +2945,7 @@ subroutine test_ssmfe_misc_z
     ( options, n, a, b, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%flag, 0 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%user_x = 0
 
   write(*,"(a)",advance="no") " * Testing restart..........................."
@@ -2963,7 +2963,7 @@ subroutine test_ssmfe_misc_z
     ( options, n, a, b, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%flag, 4, .true. )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%left_gap = 0
   options%user_x = 0
 
@@ -2981,7 +2981,7 @@ subroutine test_ssmfe_misc_z
     ( options, n, a, b, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%flag, 4, .true. )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%right_gap = 0
   options%user_x = 0
 
@@ -3001,7 +3001,7 @@ subroutine test_ssmfe_misc_z
     ( options, n, a, -2.0D0, 1, 1, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%flag, OUT_OF_STORAGE )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   mep = n
   a = -a
   options%left_gap = 0
@@ -3029,7 +3029,7 @@ subroutine test_ssmfe_misc_z
     ( options, n, a, b, sigma, left, right, &
       mep, lambda, x, t, ipiv, w, lwork, inform )
   call print_result( inform%flag, 4 )
-  call ssmfe_terminate( inform )
+  call ssmfe_free( inform )
   options%right_gap = 0
   options%user_x = 0
 
@@ -3074,7 +3074,7 @@ subroutine run_std_d( n, a, t, nep, mep, lambda, x, options, inform )
       exit
     end select
   end do
-  call ssmfe_terminate ( keep )
+  call ssmfe_free ( keep )
   if ( restarted .and. inform%flag == 0 ) inform%flag = 4
 
 end subroutine run_std_d
@@ -3118,7 +3118,7 @@ subroutine run_std_z( n, a, t, nep, mep, lambda, x, options, inform )
       exit
     end select
   end do
-  call ssmfe_terminate ( keep )
+  call ssmfe_free ( keep )
   if ( restarted .and. inform%flag == 0 ) inform%flag = 4
 
 end subroutine run_std_z
@@ -3173,7 +3173,7 @@ subroutine run_std_si_d &
       exit
     end select
   end do
-  call ssmfe_terminate ( keep )
+  call ssmfe_free ( keep )
   options%max_left = -1
   options%max_right = -1
 
@@ -3229,7 +3229,7 @@ subroutine run_std_si_z &
       exit
     end select
   end do
-  call ssmfe_terminate ( keep )
+  call ssmfe_free ( keep )
   options%max_left = -1
   options%max_right = -1
 
@@ -3270,7 +3270,7 @@ subroutine run_gen_d( n, a, b, t, nep, mep, lambda, x, options, inform )
       exit
     end select
   end do
-  call ssmfe_terminate ( keep )
+  call ssmfe_free ( keep )
 
 end subroutine run_gen_d
 
@@ -3312,7 +3312,7 @@ subroutine run_gen_z( n, a, b, t, nep, mep, lambda, x, options, inform )
       exit
     end select
   end do
-  call ssmfe_terminate ( keep )
+  call ssmfe_free ( keep )
 
 end subroutine run_gen_z
 
@@ -3375,7 +3375,7 @@ subroutine run_gen_si_d &
       exit
     end select
   end do
-  call ssmfe_terminate ( keep )
+  call ssmfe_free ( keep )
   options%max_left = -1
   options%max_right = -1
   if ( restarted .and. inform%flag == 0 ) inform%flag = 4
@@ -3441,7 +3441,7 @@ subroutine run_gen_si_z &
       exit
     end select
   end do
-  call ssmfe_terminate ( keep )
+  call ssmfe_free ( keep )
   options%max_left = -1
   options%max_right = -1
   if ( restarted .and. inform%flag == 0 ) inform%flag = 4
@@ -3507,7 +3507,7 @@ subroutine run_buckling_d &
       exit
     end select
   end do
-  call ssmfe_terminate ( keep )
+  call ssmfe_free ( keep )
   options%max_left = -1
   options%max_right = -1
   if ( restarted .and. inform%flag >= 0 ) inform%flag = 4
@@ -3573,7 +3573,7 @@ subroutine run_buckling_z &
       exit
     end select
   end do
-  call ssmfe_terminate ( keep )
+  call ssmfe_free ( keep )
   options%max_left = -1
   options%max_right = -1
   if ( restarted .and. inform%flag >= 0 ) inform%flag = 4

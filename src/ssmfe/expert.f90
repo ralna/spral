@@ -5,7 +5,7 @@
 !
 module SPRAL_ssmfe_expert
   use SPRAL_ssmfe_core , only: &
-    ssmfe, ssmfe_terminate, &
+    ssmfe, ssmfe_free, &
     ssmfe_core_keep, ssmfe_core_options, ssmfe_inform, ssmfe_rcid, ssmfe_rciz
   implicit none
   
@@ -53,7 +53,7 @@ module SPRAL_ssmfe_expert
   public :: ssmfe_generalized, ssmfe_generalized_shift
   public :: ssmfe_buckling
   public :: ssmfe_solve
-  public :: ssmfe_terminate
+  public :: ssmfe_free
   public :: ssmfe_errmsg
   public :: ssmfe_options, ssmfe_expert_keep
   public :: ssmfe_rcid, ssmfe_rciz, ssmfe_inform
@@ -96,10 +96,10 @@ module SPRAL_ssmfe_expert
       ssmfe_direct_rci_double_complex
   end interface 
 
-  interface ssmfe_terminate
+  interface ssmfe_free
     module procedure &
-      ssmfe_terminate_double, &
-      ssmfe_delete_keep_double
+      ssmfe_expert_free_double, &
+      ssmfe_expert_free_keep_double
   end interface 
   
   type ssmfe_options ! see the spec
@@ -1807,22 +1807,22 @@ contains
       
   end subroutine ssmfe_direct_rci_double
 
-  subroutine ssmfe_delete_keep_double( keep )
+  subroutine ssmfe_expert_free_keep_double( keep )
     type(ssmfe_expert_keep), intent(inout) :: keep
 
     if ( allocated(keep%lmd) ) deallocate( keep%lmd )
-    call ssmfe_terminate( keep%keep, keep%info )
+    call ssmfe_free( keep%keep, keep%info )
 
-  end subroutine ssmfe_delete_keep_double
+  end subroutine ssmfe_expert_free_keep_double
 
-  subroutine ssmfe_terminate_double( keep, info )
+  subroutine ssmfe_expert_free_double( keep, info )
     type(ssmfe_expert_keep), intent(inout) :: keep
     type(ssmfe_inform), intent(inout) :: info
     
-    call ssmfe_delete_keep_double( keep )
-    call ssmfe_terminate( info )
+    call ssmfe_free( keep )
+    call ssmfe_free( info )
 
-  end subroutine ssmfe_terminate_double
+  end subroutine ssmfe_expert_free_double
 
   subroutine ssmfe_inverse_rci_double_complex &
     ( problem, sigma, left, right, &

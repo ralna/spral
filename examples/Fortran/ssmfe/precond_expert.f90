@@ -163,5 +163,5 @@ program ssmfe_expert_precond_example
   print '(i3, 1x, a)', inform%left, 'eigenpairs converged'
   print '(1x, a, i2, a, es13.7)', &
     ('lambda(', i, ') = ', lambda(i), i = 1, inform%left)
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 end program ssmfe_expert_precond_example

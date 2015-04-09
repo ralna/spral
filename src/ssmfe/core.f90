@@ -44,11 +44,11 @@ module spral_ssmfe_core
     module procedure ssmfe_largest_double, ssmfe_largest_double_complex
   end interface 
 
-  interface ssmfe_terminate
+  interface ssmfe_free
     module procedure &
-      ssmfe_terminate_core_double, &
-      ssmfe_delete_work_double, &
-      ssmfe_delete_info_double
+      ssmfe_core_free_double, &
+      ssmfe_core_free_keep_double, &
+      ssmfe_free_info_double
   end interface 
 
   type ssmfe_core_options ! see the spec
@@ -201,7 +201,7 @@ module spral_ssmfe_core
   
   public :: ssmfe_core_options, ssmfe_rcid, ssmfe_rciz, ssmfe_inform, &
             ssmfe_core_keep
-  public :: ssmfe, ssmfe_largest, ssmfe_terminate
+  public :: ssmfe, ssmfe_largest, ssmfe_free
 
 contains
 
@@ -3119,7 +3119,7 @@ select_step: &
 ! deallocates allocated arrays in inform, and restores default values of
 ! its scalar elements
 !
-  subroutine ssmfe_delete_info_double( info )
+  subroutine ssmfe_free_info_double( info )
     type(ssmfe_inform), intent(inout) :: info
 
     if ( allocated(info%residual_norms) ) deallocate( info%residual_norms )
@@ -3135,12 +3135,12 @@ select_step: &
     info%next_left = 1
     info%next_right = -1
 
-  end subroutine ssmfe_delete_info_double
+  end subroutine ssmfe_free_info_double
 
 !**************************************************************************
 ! deallocates allocated arrays in keep
 !
-  subroutine ssmfe_delete_work_double( keep )
+  subroutine ssmfe_core_free_keep_double( keep )
     type(ssmfe_core_keep), intent(inout) :: keep
 
     if ( allocated(keep%lambda) ) deallocate( keep%lambda )
@@ -3151,16 +3151,16 @@ select_step: &
     if ( allocated(keep%zwork ) ) deallocate( keep%zwork  )
     if ( allocated(keep%ind   ) ) deallocate( keep%ind    )
 
-  end subroutine ssmfe_delete_work_double
+  end subroutine ssmfe_core_free_keep_double
 
-  subroutine ssmfe_terminate_core_double( keep, info )
+  subroutine ssmfe_core_free_double( keep, info )
     type(ssmfe_core_keep), intent(inout) :: keep
     type(ssmfe_inform), intent(inout) :: info
     
-    call ssmfe_delete_work_double( keep )
-    call ssmfe_delete_info_double( info )
+    call ssmfe_core_free_keep_double( keep )
+    call ssmfe_free_info_double( info )
 
-  end subroutine ssmfe_terminate_core_double
+  end subroutine ssmfe_core_free_double
 
 !**************************************************************************
 ! returns the size of workspace for dsyev and dsygv

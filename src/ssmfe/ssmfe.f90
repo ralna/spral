@@ -5,7 +5,7 @@
 !
 module SPRAL_ssmfe
   use SPRAL_ssmfe_expert, only: &
-    ssmfe_errmsg, ssmfe_solve, ssmfe_terminate, &
+    ssmfe_errmsg, ssmfe_solve, ssmfe_free, &
     ssmfe_inform, ssmfe_expert_keep, ssmfe_options, ssmfe_rcid, ssmfe_rciz
   implicit none
   
@@ -111,18 +111,18 @@ module SPRAL_ssmfe
       ssmfe_vector_operations_double_complex
   end interface
 
-  interface ssmfe_terminate
+  interface ssmfe_free
     module procedure &
-      ssmfe_terminate_simple_double, &
-      ssmfe_delete_keep_simple_double, &
-      ssmfe_terminate_simple_double_complex, &
-      ssmfe_delete_keep_simple_double_complex
+      ssmfe_free_double, &
+      ssmfe_free_double_complex, &
+      ssmfe_free_keep_double, &
+      ssmfe_free_keep_double_complex
   end interface
   
   public :: ssmfe_standard, ssmfe_standard_shift
   public :: ssmfe_generalized, ssmfe_generalized_shift
   public :: ssmfe_buckling
-  public :: ssmfe_terminate
+  public :: ssmfe_free
   public :: ssmfe_options, ssmfe_keepd, ssmfe_keepz
   public :: ssmfe_rcid, ssmfe_rciz, ssmfe_inform
 
@@ -1316,16 +1316,16 @@ contains
 
   end subroutine ssmfe_inverse_srci_double
 
-  subroutine ssmfe_terminate_simple_double( keep, inform )
+  subroutine ssmfe_free_double( keep, inform )
     type(ssmfe_keepd), intent(inout) :: keep
     type(ssmfe_inform), intent(inout) :: inform
     
-    call ssmfe_delete_keep_simple_double( keep )
-    call ssmfe_terminate( inform )
+    call ssmfe_free( keep )
+    call ssmfe_free( inform )
 
-  end subroutine ssmfe_terminate_simple_double
+  end subroutine ssmfe_free_double
 
-  subroutine ssmfe_delete_keep_simple_double( keep )
+  subroutine ssmfe_free_keep_double( keep )
     type(ssmfe_keepd), intent(inout) :: keep
     
     if ( allocated(keep%ind) ) deallocate ( keep%ind )
@@ -1333,9 +1333,9 @@ contains
     if ( allocated(keep%W  ) ) deallocate ( keep%W   )
     if ( allocated(keep%U  ) ) deallocate ( keep%U   )
     if ( allocated(keep%BX ) ) deallocate ( keep%BX  )
-    call ssmfe_terminate( keep%keep )
+    call ssmfe_free( keep%keep )
 
-  end subroutine ssmfe_delete_keep_simple_double
+  end subroutine ssmfe_free_keep_double
 
   subroutine ssmfe_direct_srci_double_complex &
       ( problem, left, max_nep, lambda, n, X, ldX, &
@@ -2413,16 +2413,16 @@ contains
 
   end subroutine ssmfe_vector_operations_double_complex
   
-  subroutine ssmfe_terminate_simple_double_complex( keep, inform )
+  subroutine ssmfe_free_double_complex( keep, inform )
     type(ssmfe_keepz), intent(inout) :: keep
     type(ssmfe_inform), intent(inout) :: inform
     
-    call ssmfe_delete_keep_simple_double_complex( keep )
-    call ssmfe_terminate( inform )
+    call ssmfe_free( keep )
+    call ssmfe_free( inform )
 
-  end subroutine ssmfe_terminate_simple_double_complex
+  end subroutine ssmfe_free_double_complex
 
-  subroutine ssmfe_delete_keep_simple_double_complex( keep )
+  subroutine ssmfe_free_keep_double_complex( keep )
     type(ssmfe_keepz), intent(inout) :: keep
     
     if ( allocated(keep%ind) ) deallocate ( keep%ind )
@@ -2430,9 +2430,9 @@ contains
     if ( allocated(keep%U  ) ) deallocate ( keep%U   )
     if ( allocated(keep%V  ) ) deallocate ( keep%V   )
     if ( allocated(keep%W  ) ) deallocate ( keep%W   )
-    call ssmfe_terminate( keep%keep )
+    call ssmfe_free( keep%keep )
 
-  end subroutine ssmfe_delete_keep_simple_double_complex
+  end subroutine ssmfe_free_keep_double_complex
 
 end module SPRAL_ssmfe
 

@@ -218,7 +218,7 @@ subroutine spral_ssmfe_ssmfe_double(crci, problem, left, right, m, lambda, rr, &
    call copy_inform_out(fcikeep%inform, cinform)
 end subroutine spral_ssmfe_ssmfe_double
 
-subroutine spral_ssmfe_terminate(ckeep, cinform) bind(C)
+subroutine spral_ssmfe_core_free(ckeep, cinform) bind(C)
    use spral_ssmfe_core_ciface
    implicit none
 
@@ -240,9 +240,9 @@ subroutine spral_ssmfe_terminate(ckeep, cinform) bind(C)
    call c_f_pointer(ckeep, fcikeep)
 
    ! Call Fortran cleanup
-   call ssmfe_terminate(fcikeep%keep, fcikeep%inform)
+   call ssmfe_free(fcikeep%keep, fcikeep%inform)
 
    ! Free fcikeep
    deallocate(fcikeep)
    ckeep = C_NULL_PTR
-end subroutine spral_ssmfe_terminate
+end subroutine spral_ssmfe_core_free

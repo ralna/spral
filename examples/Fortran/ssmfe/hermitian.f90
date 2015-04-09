@@ -30,7 +30,7 @@ program ssmfe_hermitian_example
   print '(i3, 1x, a)', inform%left, 'eigenpairs converged'
   print '(1x, a, i2, a, es14.7)', &
     ('lambda(', i, ') = ', lambda(i), i = 1, inform%left)
-  call ssmfe_terminate( keep, inform )
+  call ssmfe_free( keep, inform )
 
 contains
 

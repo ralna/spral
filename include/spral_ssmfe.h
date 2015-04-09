@@ -76,11 +76,6 @@ struct spral_ssmfe_inform {
  * SSMFE subroutines 
  ************************************/
 
-/* Initialize options to defaults */
-void spral_ssmfe_default_options(struct spral_ssmfe_options *options);
-/* Free memory */
-int spral_ssmfe_terminate(void **keep, struct spral_ssmfe_inform *inform);
-
 /************************************
  * SSMFE_EXPERT (additional) subroutines 
  ************************************/
@@ -89,10 +84,14 @@ int spral_ssmfe_terminate(void **keep, struct spral_ssmfe_inform *inform);
  * SSMFE_CORE (additional) subroutines 
  ************************************/
 
+/* Initialize options to defaults */
+void spral_ssmfe_core_default_options(struct spral_ssmfe_options *options);
 /* Core driver routine for (real) standard and generalized eigenproblems */
 void spral_ssmfe_ssmfe_double(struct spral_ssmfe_rci_double *rci, int problem,
       int left, int right, int m, double *lambda, double *rr, int *ind,
       void **keep, const struct spral_ssmfe_options *options,
       struct spral_ssmfe_inform *inform);
+/* Free memory */
+int spral_ssmfe_core_free(void **keep, struct spral_ssmfe_inform *inform);
 
 #endif // SPRAL_SSMFE_H
