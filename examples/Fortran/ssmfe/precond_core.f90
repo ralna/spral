@@ -2,7 +2,7 @@
 ! Laplacian on a square grid (using SPRAL_SSMFE_CORE routines)
 program ssmfe_core_precond_example
   use spral_ssmfe_core
-  use laplace2d ! implement Lapalacian and preconditioners
+  use laplace2d ! implement Laplacian and preconditioners
   implicit none
 
   integer, parameter :: wp = kind(0d0) ! working precision is double

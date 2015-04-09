@@ -68,7 +68,7 @@ struct spral_ssmfe_inform {
    double next_right;
    double *residual_norms;
    double *err_lambda;
-   double *err_x;
+   double *err_X;
    char unused[80]; // Allow for future expansion
 };
 
@@ -85,11 +85,11 @@ struct spral_ssmfe_inform {
  ************************************/
 
 /* Initialize options to defaults */
-void spral_ssmfe_core_default_options(struct spral_ssmfe_options *options);
+void spral_ssmfe_core_default_options(struct spral_ssmfe_core_options *options);
 /* Core driver routine for (real) standard and generalized eigenproblems */
-void spral_ssmfe_ssmfe_double(struct spral_ssmfe_rci_double *rci, int problem,
+void spral_ssmfe_ssmfe_double(struct spral_ssmfe_rcid *rci, int problem,
       int left, int right, int m, double *lambda, double *rr, int *ind,
-      void **keep, const struct spral_ssmfe_options *options,
+      void **keep, const struct spral_ssmfe_core_options *options,
       struct spral_ssmfe_inform *inform);
 /* Free memory */
 int spral_ssmfe_core_free(void **keep, struct spral_ssmfe_inform *inform);

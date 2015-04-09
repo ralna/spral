@@ -63,7 +63,7 @@ module spral_ssmfe_core_ciface
       real(C_DOUBLE) :: next_right
       type(C_PTR) :: residual_norms
       type(C_PTR) :: err_lambda
-      type(C_PTR) :: err_x
+      type(C_PTR) :: err_X
       character(C_CHAR) :: unused(80)
    end type spral_ssmfe_inform
 
@@ -91,7 +91,7 @@ contains
    end subroutine copy_options_in
 
    subroutine copy_rci_out(frci, crci, cindexed)
-      type(ssmfe_rcid), intent(in) :: frci
+      type(ssmfe_rcid), target, intent(in) :: frci
       type(spral_ssmfe_rcid), intent(inout) :: crci
       logical, intent(in) :: cindexed
 
@@ -121,8 +121,8 @@ contains
       end select
       crci%alpha = frci%alpha ! floating point, not an array index
       crci%beta = frci%beta ! floating point, not an array index
-      crci%x = c_loc(frci%x)
-      crci%x = c_loc(frci%y)
+      crci%x = c_loc(frci%x(1,1))
+      crci%y = c_loc(frci%y(1,1))
    end subroutine copy_rci_out
 
    ! NB: Note that as we take address of components of finform, finform must
@@ -132,9 +132,6 @@ contains
       type(ssmfe_inform), target, intent(in) :: finform
       type(spral_ssmfe_inform), intent(out) :: cinform
 
-      integer(C_INT), dimension(:), pointer :: iptr
-      real(C_DOUBLE), dimension(:), pointer :: rptr
-
       cinform%flag            = finform%flag
       cinform%stat            = finform%stat
       cinform%non_converged   = finform%non_converged
@@ -142,15 +139,15 @@ contains
       cinform%left            = finform%left
       cinform%right           = finform%right
       if(allocated(finform%converged)) &
-         cinform%converged = c_loc(finform%converged)
+         cinform%converged = c_loc(finform%converged(1))
       cinform%next_left       = finform%next_left
       cinform%next_right      = finform%next_right
       if(allocated(finform%residual_norms))  &
-         cinform%residual_norms = c_loc(finform%residual_norms)
+         cinform%residual_norms = c_loc(finform%residual_norms(1))
       if(allocated(finform%err_lambda)) &
-         cinform%err_lambda = c_loc(finform%err_lambda)
+         cinform%err_lambda = c_loc(finform%err_lambda(1))
       if(allocated(finform%err_x)) &
-         cinform%err_x = c_loc(finform%err_x)
+         cinform%err_x = c_loc(finform%err_x(1))
    end subroutine copy_inform_out
 end module spral_ssmfe_core_ciface
 

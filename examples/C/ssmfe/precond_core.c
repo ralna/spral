@@ -1,0 +1,207 @@
+/* examples/Fortran/ssmfe/precond_core.f90 */
+/* Laplacian on a square grid (using SPRAL_SSMFE_CORE routines) */
+#include "spral.h"
+#include <math.h>
+#include <stdlib.h>
+#include <stdio.h>
+
+/* Header that implements Laplacian and preconditioners */
+#include "laplace2d.h"
+
+/* BLAS routine wrappers */
+void daxpy_(int *n, double *alpha, const double *x, int *incx, double *y, int *incy);
+void DAXPY(int n, double alpha, const double *x, int incx, double *y, int incy) {
+   daxpy_(&n, &alpha, x, &incx, y, &incy);
+}
+void dcopy_(int *n, const double *x, int *incx, double *y, int *incy);
+void DCOPY(int n, const double *x, int incx, double *y, int incy) {
+   dcopy_(&n, x, &incx, y, &incy);
+}
+double ddot_(int *n, const double *x, int *incx, const double *y, int *incy);
+double DDOT(int n, const double *x, int incx, const double *y, int incy) {
+   return ddot_(&n, x, &incx, y, &incy);
+}
+void dgemm_(char *transa, char *transb, int *m, int *n, int *k, double *alpha, const double *a, int *lda, const double *b, int *ldb, double *beta, double *c, int *ldc);
+void DGEMM(char transa, char transb, int m, int n, int k, double alpha, const double *a, int lda, const double *b, int ldb, double beta, double *c, int ldc) {
+   dgemm_(&transa, &transb, &m, &n, &k, &alpha, a, &lda, b, &ldb, &beta, c, &ldc);
+}
+double dnrm2_(int *n, const double *x, int *incx);
+double DNRM2(int n, const double *x, int incx) {
+   return dnrm2_(&n, x, &incx);
+}
+void dscal_(int *n, double *alpha, double *x, int *incx);
+void DSCAL(int n, double alpha, double *x, int incx) {
+   dscal_(&n, &alpha, x, &incx);
+}
+
+void main(void) {
+   const int l = 20;          /* grid points along each side */
+   const int n = l*l;         /* problem size */
+   const int nep = 5;         /* eigenpairs wanted */
+   const int m = 3;           /* dimension of the iterated subspace */
+   const double tol = 1.e-6;  /* eigenvector tolerance */
+
+   int i, j, k;
+   int ind[m];                   /* permutation index */
+   double lambda[n];             /* eigenvalues */
+   double X[n][n];               /* eigenvectors */
+   /* Work arrays */
+   double lmd[m];
+   double rr[3][2*m][2*m];
+   double W[7][m][n];
+   double U[m][n];
+
+   /* Derived types */
+   struct spral_ssmfe_rcid rci;              /* reverse communication data */
+   struct spral_ssmfe_core_options options;  /* options */
+   void *keep;                               /* private data */
+   struct spral_ssmfe_inform inform;         /* information */
+
+   /* Initialize W to lin indep vectors by randomizing */
+   for(int i=0; i<n; i++)
+   for(int j=0; j<m; j++)
+   for(int k=0; k<7; k++)
+      W[k][j][i] = (0.0+rand()) / RAND_MAX;
+
+   int ncon = 0;        /* number of converged eigenpairs */
+   rci.job = 0;
+   while(true) { /* reverse communication loop */
+      spral_ssmfe_ssmfe_double(&rci, 0, nep, 0, m, lmd, rr, ind, &keep, &options, &inform);
+      switch ( rci.job ) {
+      case 1:
+         apply_laplacian(
+            l, l, rci.nx, &W[rci.kx][rci.jx][0], &W[rci.ky][rci.jy][0]
+            );
+         break;
+      case 2:
+         apply_gauss_seidel_step (
+            l, l, rci.nx, &W[rci.kx][rci.jx][0], &W[rci.ky][rci.jy][0]
+            );
+         break;
+      case 4:
+         for(int j=0; j<m; j++) {
+            if ( inform.converged[j] != 0 ) continue;
+            if ( inform.err_X[j] > 0 && inform.err_X[j] < tol )
+               inform.converged[j] = 1;
+         }
+         break;
+      case 5:
+         if ( rci.i < 0 ) continue;
+         for(int k=0; k<rci.nx; k++) {
+           int j = ncon + k;
+           lambda[j] = lmd[rci.jx + k];
+           DCOPY( n, &W[0][rci.jx+k][0], 1, &X[j][0], 1 );
+         }
+         ncon += rci.nx;
+         if ( ncon >= nep || inform.iteration > 300 ) goto finished;
+         break;
+      case 11:
+         if ( rci.i == 0 ) {
+            if ( rci.kx != rci.ky || rci.jx > rci.jy ) {
+               DCOPY(n*rci.nx, &W[rci.kx][rci.jx][0], 1, &W[rci.ky][rci.jy][0], 1);
+            } else if ( rci.jx < rci.jy ) {
+               for(int j=rci.nx-1; j>=0; j--)
+                  DCOPY(n, &W[rci.kx][rci.jx+j][0], 1, &W[rci.ky][rci.jy+j][0], 1);
+            }
+         } else {
+            for(int i=0; i<n; i++) {
+               for(int j=0; j<rci.nx; j++)
+                  U[j][i] = W[rci.kx][ind[j]][i];
+               for(int j=0; j<rci.nx; j++)
+                  W[rci.kx][j][i] = U[j][i];
+               if(rci.ky != rci.kx) {
+                  for(int j=0; j<rci.nx; j++)
+                    U[j][i] = W[rci.ky][ind[j]][i];
+                  for(int j=0; j<rci.nx; j++)
+                    W[rci.ky][j][i] = U[j][i];
+               }
+            }
+         }
+         break;
+      case 12:
+         for(int i=0; i<rci.nx; i++)
+           rr[rci.k][rci.j+i][rci.i+i] =
+             DDOT(n, &W[rci.kx][rci.jx+i][0], 1, &W[rci.ky][rci.jy+i][0], 1);
+         break;
+      case 13:
+         for(int i=0; i<rci.nx; i++) {
+            if( rci.kx == rci.ky ) {
+               double s = DNRM2(n, &W[rci.kx][rci.jx+i][0], 1);
+               if( s > 0 )
+                  DSCAL(n, 1/s, &W[rci.kx][rci.jx+i][0], 1);
+               } else {
+                  double s = sqrt(abs(DDOT(
+                     n, &W[rci.kx][rci.jx+i][0], 1, &W[rci.ky][rci.jy+i][0], 1)
+                     ));
+             if ( s > 0 ) {
+               DSCAL(n, 1/s, &W[rci.kx][rci.jx+i][0], 1);
+               DSCAL(n, 1/s, &W[rci.ky][rci.jy+i][0], 1);
+             } else {
+               for(int j=0; j<n; j++)
+                  W[rci.ky][rci.jy+i][j] = 0.0;
+             }
+           }
+         }
+         break;
+      case 14:
+         for(int i=0; i<rci.nx; i++) {
+           double s = -rr[rci.k][rci.j+i][rci.i+i];
+           DAXPY(n, s, &W[rci.kx][rci.jx+i][0], 1, &W[rci.ky][rci.jy+i][0], 1);
+         }
+         break;
+      case 15:
+         if ( rci.nx > 0 && rci.ny > 0 )
+            DGEMM(
+               'T', 'N', rci.nx, rci.ny, n,
+               rci.alpha, &W[rci.kx][rci.jx][0], n, &W[rci.ky][rci.jy][0], n,
+               rci.beta, &rr[rci.k][rci.j][rci.i], 2*m
+               );
+         break;
+      case 16: // Fall through to 17
+      case 17:
+         if( rci.ny < 1 ) continue;
+         if( rci.nx < 1 ) {
+            if( rci.job == 17 ) continue;
+            if( rci.beta == 1.0 ) continue;
+            for(int j=rci.jy; j<rci.jy+rci.ny; j++)
+               DSCAL(n, rci.beta, &W[rci.ky][j][0], 1);
+            continue;
+         }
+         if( rci.job == 17 ) {
+            DGEMM(
+               'N', 'N', n, rci.ny, rci.nx,
+               1.0, &W[rci.kx][rci.jx][0], n, &rr[rci.i][rci.j][rci.k], 2*m,
+               0.0, &W[rci.ky][rci.jy][0], n
+               );
+            DCOPY(n*rci.ny, &W[rci.ky][rci.jy][0], 1, &W[rci.kx][rci.jx][0], 1);
+         } else {
+            DGEMM(
+               'N', 'N', n, rci.ny, rci.nx,
+               rci.alpha, &W[rci.kx][rci.jx][0], n, &rr[rci.k][rci.j][rci.i],
+               2*m, rci.beta, &W[rci.ky][rci.jy][0], n
+               );
+         }
+         break;
+      case 21: // Fall through to 22
+      case 22:
+         if( ncon > 0 ) {
+            DGEMM(
+               'T', 'N', ncon, rci.nx, n,
+               1.0, X, n, &W[rci.ky][rci.jy][0], n, 0.0, U, n
+               );
+            DGEMM(
+               'N', 'N', n, rci.nx, ncon,
+               -1.0, X, n, U, n, 1.0, &W[rci.kx][rci.jx][0], n
+               );
+         }
+         break;
+      default:
+         goto finished;
+      }
+   }
+finished:
+   printf("%3d eigenpairs converged\n", ncon);
+   for(int i=0; i<ncon; i++)
+      printf(" lambda[%1d] = %13.7e\n", i, lambda[i]);
+   spral_ssmfe_core_free(&keep, &inform);
+}

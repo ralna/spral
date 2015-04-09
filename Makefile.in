@@ -91,7 +91,8 @@ check_PROGRAMS = random_test$(EXEEXT) examples/Fortran/random$(EXEEXT) \
 	examples/C/random$(EXEEXT) random_matrix_test$(EXEEXT) \
 	examples/Fortran/random_matrix$(EXEEXT) \
 	examples/C/random_matrix$(EXEEXT) $(am__EXEEXT_1) \
-	ssmfe_test$(EXEEXT) examples/Fortran/ssmfe/hermitian$(EXEEXT) \
+	ssmfe_test$(EXEEXT) examples/C/ssmfe/precond_core$(EXEEXT) \
+	examples/Fortran/ssmfe/hermitian$(EXEEXT) \
 	examples/Fortran/ssmfe/precond_core$(EXEEXT) \
 	examples/Fortran/ssmfe/precond_expert$(EXEEXT) \
 	examples/Fortran/ssmfe/precond_ssmfe$(EXEEXT) \
@@ -202,7 +203,7 @@ am__libspral_a_SOURCES_DIST = src/blas_iface.f90 src/core_analyse.f90 \
 	src/ssids/solve_gpu.f90 src/ssids/solve_kernels.cu \
 	src/ssids/ssids.f90 src/ssids/syrk_kernels.cu \
 	interfaces/C/ssids.f90 src/ssmfe/ssmfe.f90 src/ssmfe/core.f90 \
-	src/ssmfe/expert.f90
+	src/ssmfe/expert.f90 interfaces/C/ssmfe_core.f90
 am__dirstamp = $(am__leading_dot)dirstamp
 @HAVE_NVCC_TRUE@am__objects_1 = src/cuda/api_wrappers.$(OBJEXT) \
 @HAVE_NVCC_TRUE@	src/cuda/cuda.$(OBJEXT)
@@ -233,7 +234,7 @@ am_libspral_a_OBJECTS = src/blas_iface.$(OBJEXT) \
 	interfaces/C/random.$(OBJEXT) src/random_matrix.$(OBJEXT) \
 	interfaces/C/random_matrix.$(OBJEXT) $(am__objects_2) \
 	src/ssmfe/ssmfe.$(OBJEXT) src/ssmfe/core.$(OBJEXT) \
-	src/ssmfe/expert.$(OBJEXT)
+	src/ssmfe/expert.$(OBJEXT) interfaces/C/ssmfe_core.$(OBJEXT)
 libspral_a_OBJECTS = $(am_libspral_a_OBJECTS)
 @HAVE_NVCC_TRUE@am__EXEEXT_1 = ssids_test$(EXEEXT) \
 @HAVE_NVCC_TRUE@	examples/Fortran/ssids$(EXEEXT) \
@@ -262,6 +263,14 @@ am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 @HAVE_NVCC_TRUE@examples_C_ssids_DEPENDENCIES = $(am__DEPENDENCIES_2) \
 @HAVE_NVCC_TRUE@	$(am__DEPENDENCIES_1)
+am_examples_C_ssmfe_precond_core_OBJECTS =  \
+	examples/C/ssmfe/precond_core.$(OBJEXT)
+examples_C_ssmfe_precond_core_OBJECTS =  \
+	$(am_examples_C_ssmfe_precond_core_OBJECTS)
+examples_C_ssmfe_precond_core_LDADD = $(LDADD)
+examples_C_ssmfe_precond_core_DEPENDENCIES = $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 am_examples_Fortran_random_OBJECTS =  \
 	examples/Fortran/random.$(OBJEXT)
 examples_Fortran_random_OBJECTS =  \
@@ -397,7 +406,9 @@ am__v_FCLD_0 = @echo "  FCLD    " $@;
 am__v_FCLD_1 = 
 SOURCES = $(libspral_a_SOURCES) $(examples_C_random_SOURCES) \
 	$(examples_C_random_matrix_SOURCES) \
-	$(examples_C_ssids_SOURCES) $(examples_Fortran_random_SOURCES) \
+	$(examples_C_ssids_SOURCES) \
+	$(examples_C_ssmfe_precond_core_SOURCES) \
+	$(examples_Fortran_random_SOURCES) \
 	$(examples_Fortran_random_matrix_SOURCES) \
 	$(examples_Fortran_ssids_SOURCES) \
 	$(examples_Fortran_ssmfe_hermitian_SOURCES) \
@@ -412,6 +423,7 @@ DIST_SOURCES = $(am__libspral_a_SOURCES_DIST) \
 	$(examples_C_random_SOURCES) \
 	$(examples_C_random_matrix_SOURCES) \
 	$(am__examples_C_ssids_SOURCES_DIST) \
+	$(examples_C_ssmfe_precond_core_SOURCES) \
 	$(examples_Fortran_random_SOURCES) \
 	$(examples_Fortran_random_matrix_SOURCES) \
 	$(am__examples_Fortran_ssids_SOURCES_DIST) \
@@ -815,7 +827,8 @@ libspral_a_SOURCES = src/blas_iface.f90 src/core_analyse.f90 \
 	src/rutherford_boeing.f90 src/scaling.f90 src/timer.f90 \
 	src/random.f90 interfaces/C/random.f90 src/random_matrix.f90 \
 	interfaces/C/random_matrix.f90 $(am__append_3) \
-	src/ssmfe/ssmfe.f90 src/ssmfe/core.f90 src/ssmfe/expert.f90
+	src/ssmfe/ssmfe.f90 src/ssmfe/core.f90 src/ssmfe/expert.f90 \
+	interfaces/C/ssmfe_core.f90
 EXTRA_DIST = src/metis4_wrapper.f90 src/metis5_wrapper.f90
 random_test_SOURCES = tests/random.f90
 examples_Fortran_random_SOURCES = examples/Fortran/random.f90
@@ -838,6 +851,10 @@ examples_C_random_matrix_SOURCES = examples/C/random_matrix.c
 @HAVE_NVCC_TRUE@examples_C_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
 @HAVE_NVCC_TRUE@examples_C_ssids_LINK = $(NVCCLINK)
 ssmfe_test_SOURCES = tests/ssmfe.f90
+examples_C_ssmfe_precond_core_SOURCES = \
+	examples/C/ssmfe/precond_core.c \
+	examples/C/ssmfe/laplace2d.h
+
 examples_Fortran_ssmfe_hermitian_SOURCES = \
 	examples/Fortran/ssmfe/hermitian.f90
 
@@ -1029,6 +1046,8 @@ src/ssmfe/core.$(OBJEXT): src/ssmfe/$(am__dirstamp) \
 	src/ssmfe/$(DEPDIR)/$(am__dirstamp)
 src/ssmfe/expert.$(OBJEXT): src/ssmfe/$(am__dirstamp) \
 	src/ssmfe/$(DEPDIR)/$(am__dirstamp)
+interfaces/C/ssmfe_core.$(OBJEXT): interfaces/C/$(am__dirstamp) \
+	interfaces/C/$(DEPDIR)/$(am__dirstamp)
 
 libspral.a: $(libspral_a_OBJECTS) $(libspral_a_DEPENDENCIES) $(EXTRA_libspral_a_DEPENDENCIES) 
 	$(AM_V_at)-rm -f libspral.a
@@ -1103,6 +1122,19 @@ examples/C/ssids.$(OBJEXT): examples/C/$(am__dirstamp) \
 examples/C/ssids$(EXEEXT): $(examples_C_ssids_OBJECTS) $(examples_C_ssids_DEPENDENCIES) $(EXTRA_examples_C_ssids_DEPENDENCIES) examples/C/$(am__dirstamp)
 	@rm -f examples/C/ssids$(EXEEXT)
 	$(AM_V_GEN)$(examples_C_ssids_LINK) $(examples_C_ssids_OBJECTS) $(examples_C_ssids_LDADD) $(LIBS)
+examples/C/ssmfe/$(am__dirstamp):
+	@$(MKDIR_P) examples/C/ssmfe
+	@: > examples/C/ssmfe/$(am__dirstamp)
+examples/C/ssmfe/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) examples/C/ssmfe/$(DEPDIR)
+	@: > examples/C/ssmfe/$(DEPDIR)/$(am__dirstamp)
+examples/C/ssmfe/precond_core.$(OBJEXT):  \
+	examples/C/ssmfe/$(am__dirstamp) \
+	examples/C/ssmfe/$(DEPDIR)/$(am__dirstamp)
+
+examples/C/ssmfe/precond_core$(EXEEXT): $(examples_C_ssmfe_precond_core_OBJECTS) $(examples_C_ssmfe_precond_core_DEPENDENCIES) $(EXTRA_examples_C_ssmfe_precond_core_DEPENDENCIES) examples/C/ssmfe/$(am__dirstamp)
+	@rm -f examples/C/ssmfe/precond_core$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(examples_C_ssmfe_precond_core_OBJECTS) $(examples_C_ssmfe_precond_core_LDADD) $(LIBS)
 examples/Fortran/$(am__dirstamp):
 	@$(MKDIR_P) examples/Fortran
 	@: > examples/Fortran/$(am__dirstamp)
@@ -1222,6 +1254,7 @@ mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
 	-rm -f driver/*.$(OBJEXT)
 	-rm -f examples/C/*.$(OBJEXT)
+	-rm -f examples/C/ssmfe/*.$(OBJEXT)
 	-rm -f examples/Fortran/*.$(OBJEXT)
 	-rm -f examples/Fortran/ssmfe/*.$(OBJEXT)
 	-rm -f interfaces/C/*.$(OBJEXT)
@@ -1237,6 +1270,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/$(DEPDIR)/random.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/$(DEPDIR)/random_matrix.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/$(DEPDIR)/ssids.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@examples/C/ssmfe/$(DEPDIR)/precond_core.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
@@ -1729,6 +1763,8 @@ distclean-generic:
 	-rm -f driver/$(am__dirstamp)
 	-rm -f examples/C/$(DEPDIR)/$(am__dirstamp)
 	-rm -f examples/C/$(am__dirstamp)
+	-rm -f examples/C/ssmfe/$(DEPDIR)/$(am__dirstamp)
+	-rm -f examples/C/ssmfe/$(am__dirstamp)
 	-rm -f examples/Fortran/$(DEPDIR)/$(am__dirstamp)
 	-rm -f examples/Fortran/$(am__dirstamp)
 	-rm -f examples/Fortran/ssmfe/$(DEPDIR)/$(am__dirstamp)
@@ -1756,7 +1792,7 @@ clean-am: clean-binPROGRAMS clean-checkPROGRAMS clean-generic \
 
 distclean: distclean-am
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
-	-rm -rf examples/C/$(DEPDIR)
+	-rm -rf examples/C/$(DEPDIR) examples/C/ssmfe/$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -1804,7 +1840,7 @@ installcheck-am:
 maintainer-clean: maintainer-clean-am
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
 	-rm -rf $(top_srcdir)/autom4te.cache
-	-rm -rf examples/C/$(DEPDIR)
+	-rm -rf examples/C/$(DEPDIR) examples/C/ssmfe/$(DEPDIR)
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 
@@ -1856,6 +1892,7 @@ examples/C/random_matrix.$(OBJEXT): libspral.a
 @HAVE_NVCC_TRUE@tests/ssids.$(OBJEXT): libspral.a
 @HAVE_NVCC_TRUE@examples/C/ssids.$(OBJEXT): libspral.a
 tests/ssmfe.$(OBJEXT): libspral.a
+examples/C/ssmfe/precond_core.$(OBJEXT): libspral.a
 examples_Fortran_ssmfe_hermitian.$(OBJEXT): libspral.a
 examples/Fortran/ssmfe/precond_core.$(OBJEXT): libspral.a \
 	examples/Fortran/ssmfe/laplace2d.$(OBJEXT)
