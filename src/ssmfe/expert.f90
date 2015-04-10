@@ -783,7 +783,7 @@ contains
     end if
     
     ! call the core solver
-    call ssmfe &
+1   call ssmfe &
       ( rci, keep%problem, keep%left, keep%right, block_size, &
         keep%lmd, rr_matrices, ind, keep%keep, keep%options, keep%info )
 
@@ -1176,8 +1176,7 @@ contains
           last = first + 1
         end if
       end do
-        
-!      keep%av_dist = ZERO ! assume not available yet
+
       if ( k == 0 .and. l == 0 ) then
         keep%av_dist = ZERO ! assume not available yet      
       else if ( k == 0 ) then
@@ -1258,6 +1257,8 @@ contains
       end do ! i = 1, m
 
       if ( keep%info%iteration > 0 ) info%iteration = info%iteration + 1
+      
+      go to 1
         
     end select
 
@@ -1550,11 +1551,11 @@ contains
     end if
     
     ! call the core solver
-    call ssmfe &
+1   call ssmfe &
       ( rci, problem, keep%left, keep%right, &
         block_size, keep%lmd, rr_matrices, ind, &
         keep%keep, keep%options, keep%info )
-    
+
     select case (rci%job)
     
     case (SSMFE_SAVE_CONVERGED)
@@ -1772,6 +1773,8 @@ contains
       end do ! i = 1, block_size
 
       if ( keep%info%iteration > 0 ) info%iteration = info%iteration + 1
+      
+      go to 1
         
     end select
 
@@ -2121,7 +2124,7 @@ contains
     end if
     
     ! call the engine
-    call ssmfe &
+1   call ssmfe &
       ( rci, keep%problem, keep%left, keep%right, block_size, &
         keep%lmd, rr_matrices, ind, keep%keep, keep%options, keep%info )
 
@@ -2535,6 +2538,8 @@ contains
       end do ! i = 1, m
 
       if ( keep%info%iteration > 0 ) info%iteration = info%iteration + 1
+      
+      go to 1
         
     end select
 
@@ -2782,7 +2787,7 @@ contains
     end if
     
     ! call the engine
-    call ssmfe &
+1   call ssmfe &
       ( rci, problem, keep%left, keep%right, &
         block_size, keep%lmd, rr_matrices, ind, &
         keep%keep, keep%options, keep%info )
@@ -3004,6 +3009,8 @@ contains
       end do ! i = 1, block_size
 
       if ( keep%info%iteration > 0 ) info%iteration = info%iteration + 1
+      
+      go to 1
         
     end select
 
