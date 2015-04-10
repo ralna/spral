@@ -79,7 +79,7 @@ module spral_ssmfe_core_ciface
    end interface copy_rci_out
 
 contains
-   subroutine copy_options_in(coptions, foptions, cindexed)
+   subroutine copy_core_options_in(coptions, foptions, cindexed)
       type(spral_ssmfe_core_options), intent(in) :: coptions
       type(ssmfe_core_options), intent(inout) :: foptions ! inherits defaults!
       logical, intent(out) :: cindexed
@@ -92,7 +92,7 @@ contains
       foptions%min_gap     = coptions%min_gap
       foptions%minAprod    = coptions%minAprod
       foptions%minBprod    = coptions%minBprod
-   end subroutine copy_options_in
+   end subroutine copy_core_options_in
 
    subroutine copy_rci_out_double_complex(frci, crci, cindexed)
       type(ssmfe_rciz), target, intent(in) :: frci
@@ -234,7 +234,7 @@ subroutine spral_ssmfe_double(crci, problem, left, right, m, lambda, rr, &
    type(ssmfe_core_options) :: foptions
 
    ! Copy options in first to find out whether we use Fortran or C indexing
-   call copy_options_in(coptions, foptions, cindexed)
+   call copy_core_options_in(coptions, foptions, cindexed)
 
    ! Translate arguments
    if(c_associated(ckeep)) then
@@ -282,7 +282,7 @@ subroutine spral_ssmfe_double_complex(crci, problem, left, right, m, &
    type(ssmfe_core_options) :: foptions
 
    ! Copy options in first to find out whether we use Fortran or C indexing
-   call copy_options_in(coptions, foptions, cindexed)
+   call copy_core_options_in(coptions, foptions, cindexed)
 
    ! Translate arguments
    if(c_associated(ckeep)) then
@@ -329,7 +329,7 @@ subroutine spral_ssmfe_largest_double(crci, problem, nep, m, lambda, rr, &
    type(ssmfe_core_options) :: foptions
 
    ! Copy options in first to find out whether we use Fortran or C indexing
-   call copy_options_in(coptions, foptions, cindexed)
+   call copy_core_options_in(coptions, foptions, cindexed)
 
    ! Translate arguments
    if(c_associated(ckeep)) then
@@ -376,7 +376,7 @@ subroutine spral_ssmfe_largest_double_complex(crci, problem, nep, m, lambda, &
    type(ssmfe_core_options) :: foptions
 
    ! Copy options in first to find out whether we use Fortran or C indexing
-   call copy_options_in(coptions, foptions, cindexed)
+   call copy_core_options_in(coptions, foptions, cindexed)
 
    ! Translate arguments
    if(c_associated(ckeep)) then

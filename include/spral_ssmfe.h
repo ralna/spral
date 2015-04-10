@@ -56,6 +56,30 @@ struct spral_ssmfe_core_options {
    char unused[80]; // Allow for future expansion
 };
 
+struct spral_ssmfe_options {
+   int array_base;
+   int print_level;
+   int unit_error;
+   int unit_warning;
+   int unit_diagnostic;
+   int max_iterations;
+   int user_x;
+   int err_est;
+   double abs_tol_lambda;
+   double rel_tol_lambda;
+   double abs_tol_residual;
+   double rel_tol_residual;
+   double tol_x;
+   double left_gap;
+   double right_gap;
+   int extra_left;
+   int extra_right;
+   int max_left;
+   int max_right;
+   bool minAprod;
+   bool minBprod;
+};
+
 struct spral_ssmfe_inform {
    int flag;
    int stat;
@@ -76,12 +100,23 @@ struct spral_ssmfe_inform {
  * SSMFE subroutines 
  ************************************/
 
-/************************************
- * SSMFE_EXPERT (additional) subroutines 
- ************************************/
+/* Initialize options to defaults */
+void spral_ssmfe_default_options(struct spral_ssmfe_options *options);
 
 /************************************
- * SSMFE_CORE (additional) subroutines 
+ * SSMFE_EXPERT subroutines (additional to those shared with SSMFE)
+ ************************************/
+
+/* Find leftmost eigenpairs of std eigenvalue problem, optional precond */
+void spral_ssmfe_standard_double(struct spral_ssmfe_rcid *rci, int left,
+      int mep, double *lambda, int m, double *rr, int *ind,
+      void **keep, const struct spral_ssmfe_options *optoins,
+      struct spral_ssmfe_inform *inform);
+/* Free memory */
+void spral_ssmfe_expert_free(void **keep, struct spral_ssmfe_inform *inform);
+
+/************************************
+ * SSMFE_CORE subroutines 
  ************************************/
 
 /* Initialize options to defaults */

@@ -1,5 +1,5 @@
-/* examples/C/ssmfe/precond_core.f90 */
-/* Laplacian on a square grid (using SPRAL_SSMFE_CORE routines) */
+/* examples/C/ssmfe/precond_expert.c */
+/* Laplacian on a square grid (using SPRAL_SSMFE_EXPERT routines) */
 #include "spral.h"
 #include <math.h>
 #include <stdlib.h>
@@ -10,42 +10,45 @@
 #include "laplace2d.h"
 
 void main(void) {
-   const int ngrid = 20;         /* grid points along each side */
-   const int n = ngrid*ngrid;    /* problem size */
-   const int nep = 5;            /* eigenpairs wanted */
-   const int m = 3;              /* dimension of the iterated subspace */
-   const double tol = 1.e-6;     /* eigenvector tolerance */
+   const int ngrid = 20;          /* grid points along each side */
+   const int n     = ngrid*ngrid; /* problem size */
+   const int nep   = 5;           /* eigenpairs wanted */
+   const int m     = 3;           /* dimension of the iterated subspace */
 
    int state = SPRAL_RANDOM_INITIAL_SEED; /* PRNG state */
 
-   int ind[m];                   /* permutation index */
-   double lambda[n];             /* eigenvalues */
-   double X[n][n];               /* eigenvectors */
+   int ind[m];                    /* permutation index */
+   double lambda[n];              /* eigenvalues */
+   double X[n][n];                /* eigenvectors */
    /* Work arrays */
-   double lmd[m];
    double rr[3][2*m][2*m];
-   double W[7][m][n];
+   double W[6][m][n];
    double U[m][n];
 
    /* Derived types */
-   struct spral_ssmfe_rcid rci;              /* reverse communication data */
-   struct spral_ssmfe_core_options options;  /* options */
-   void *keep;                               /* private data */
-   struct spral_ssmfe_inform inform;         /* information */
+   struct spral_ssmfe_rcid rci;            /* reverse communication data */
+   struct spral_ssmfe_options options;     /* options */
+   void *keep;                             /* private data */
+   struct spral_ssmfe_inform inform;       /* information */
 
    /* Initialize options to default values */
-   spral_ssmfe_core_default_options(&options);
+   spral_ssmfe_default_options(&options);
+   /* gap between the last converged eigenvalue and the rest of the spectrum
+    * must be at least 0.1 times average gap between computed eigenvalues */
+   options.left_gap = -0.1;
+   /* block size is small, convergence may be slow, allow more iterations */
+   options.max_iterations = 200;
 
    /* Initialize W to lin indep vectors by randomizing */
    for(int i=0; i<n; i++)
    for(int j=0; j<m; j++)
       W[0][j][i] = spral_random_real(&state, true);
 
-   int ncon = 0;        /* number of converged eigenpairs */
+   int ncon = 0;   /* number of converged eigenpairs */
    rci.job = 0; keep = NULL;
    while(true) { /* reverse communication loop */
-      spral_ssmfe_double(&rci, 0, nep, 0, m, lmd, &rr[0][0][0], ind,
-         &keep, &options, &inform);
+      spral_ssmfe_standard_double(&rci, nep, n, lambda, m, &rr[0][0][0], ind,
+          &keep, &options, &inform);
       switch ( rci.job ) {
       case 1:
          apply_laplacian(
@@ -57,22 +60,13 @@ void main(void) {
             ngrid, ngrid, rci.nx, &W[rci.kx][rci.jx][0], &W[rci.ky][rci.jy][0]
             );
          break;
-      case 4:
-         for(int j=0; j<m; j++) {
-            if ( inform.converged[j] != 0 ) continue;
-            if ( inform.err_X[j] > 0 && inform.err_X[j] < tol )
-               inform.converged[j] = 1;
-         }
-         break;
       case 5:
          if ( rci.i < 0 ) continue;
          for(int k=0; k<rci.nx; k++) {
            int j = ncon + k;
-           lambda[j] = lmd[rci.jx + k];
            cblas_dcopy( n, &W[0][rci.jx+k][0], 1, &X[j][0], 1 );
          }
          ncon += rci.nx;
-         if ( ncon >= nep || inform.iteration > 300 ) goto finished;
          break;
       case 11:
          if ( rci.i == 0 ) {
@@ -174,6 +168,20 @@ void main(void) {
                );
          }
          break;
+      case 999:
+         if( rci.k == 0 ) {
+            if( rci.jx > 1 ) {
+               for(int j=0; j<rci.jx-1; j++)
+               for(int i=0; i<n; i++)
+                  W[0][j][i] = spral_random_real(&state, true);
+            }
+            if( rci.jx + rci.nx - 1 < m ) {
+               for(int j=rci.jx+rci.nx; j<m; j++)
+               for(int i=0; i<n; i++)
+                  W[0][j][i] = spral_random_real(&state, true);
+            }
+         }
+         break;
       default:
          goto finished;
       }
@@ -183,5 +191,5 @@ finished:
    printf("%3d eigenpairs converged in %d iterations\n", ncon, inform.iteration);
    for(int i=0; i<ncon; i++)
       printf(" lambda[%1d] = %13.7e\n", i, lambda[i]);
-   spral_ssmfe_core_free(&keep, &inform);
+   spral_ssmfe_expert_free(&keep, &inform);
 }
