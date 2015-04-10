@@ -103,10 +103,10 @@ contains
       crci%job = frci%job ! enum, not an array index
       crci%nx = frci%nx ! count, not an array index
       crci%jx = frci%jx + coffset
-      crci%kx = frci%kx + coffset
+      crci%kx = frci%kx ! is an array index, but expected to start at 0 anyway
       crci%ny = frci%ny ! count, not an array index
       crci%jy = frci%jy + coffset
-      crci%ky = frci%ky + coffset
+      crci%ky = frci%ky ! is an array index, but expected to start at 0 anyway
       select case(crci%job)
       case(5,11,999)
          ! i, j, k are NOT array indices
@@ -121,8 +121,10 @@ contains
       end select
       crci%alpha = frci%alpha ! floating point, not an array index
       crci%beta = frci%beta ! floating point, not an array index
-      crci%x = c_loc(frci%x(1,1))
-      crci%y = c_loc(frci%y(1,1))
+      if(associated(frci%x)) &
+         crci%x = c_loc(frci%x(1,1))
+      if(associated(frci%y)) &
+         crci%y = c_loc(frci%y(1,1))
    end subroutine copy_rci_out
 
    ! NB: Note that as we take address of components of finform, finform must

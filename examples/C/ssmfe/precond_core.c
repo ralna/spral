@@ -35,13 +35,14 @@ void DSCAL(int n, double alpha, double *x, int incx) {
 }
 
 void main(void) {
-   const int l = 20;          /* grid points along each side */
-   const int n = l*l;         /* problem size */
-   const int nep = 5;         /* eigenpairs wanted */
-   const int m = 3;           /* dimension of the iterated subspace */
-   const double tol = 1.e-6;  /* eigenvector tolerance */
+   const int ngrid = 20;         /* grid points along each side */
+   const int n = ngrid*ngrid;    /* problem size */
+   const int nep = 5;            /* eigenpairs wanted */
+   const int m = 3;              /* dimension of the iterated subspace */
+   const double tol = 1.e-6;     /* eigenvector tolerance */
 
-   int i, j, k;
+   int state = SPRAL_RANDOM_INITIAL_SEED; /* PRNG state */
+
    int ind[m];                   /* permutation index */
    double lambda[n];             /* eigenvalues */
    double X[n][n];               /* eigenvectors */
@@ -57,25 +58,28 @@ void main(void) {
    void *keep;                               /* private data */
    struct spral_ssmfe_inform inform;         /* information */
 
+   /* Initialize options to default values */
+   spral_ssmfe_core_default_options(&options);
+
    /* Initialize W to lin indep vectors by randomizing */
    for(int i=0; i<n; i++)
    for(int j=0; j<m; j++)
-   for(int k=0; k<7; k++)
-      W[k][j][i] = (0.0+rand()) / RAND_MAX;
+      W[0][j][i] = spral_random_real(&state, true);
 
    int ncon = 0;        /* number of converged eigenpairs */
-   rci.job = 0;
+   rci.job = 0; keep = NULL;
    while(true) { /* reverse communication loop */
-      spral_ssmfe_ssmfe_double(&rci, 0, nep, 0, m, lmd, rr, ind, &keep, &options, &inform);
+      spral_ssmfe_ssmfe_double(&rci, 0, nep, 0, m, lmd, &rr[0][0], ind, &keep,
+         &options, &inform);
       switch ( rci.job ) {
       case 1:
          apply_laplacian(
-            l, l, rci.nx, &W[rci.kx][rci.jx][0], &W[rci.ky][rci.jy][0]
+            ngrid, ngrid, rci.nx, &W[rci.kx][rci.jx][0], &W[rci.ky][rci.jy][0]
             );
          break;
       case 2:
          apply_gauss_seidel_step (
-            l, l, rci.nx, &W[rci.kx][rci.jx][0], &W[rci.ky][rci.jy][0]
+            ngrid, ngrid, rci.nx, &W[rci.kx][rci.jx][0], &W[rci.ky][rci.jy][0]
             );
          break;
       case 4:
@@ -170,7 +174,7 @@ void main(void) {
          if( rci.job == 17 ) {
             DGEMM(
                'N', 'N', n, rci.ny, rci.nx,
-               1.0, &W[rci.kx][rci.jx][0], n, &rr[rci.i][rci.j][rci.k], 2*m,
+               1.0, &W[rci.kx][rci.jx][0], n, &rr[rci.k][rci.j][rci.i], 2*m,
                0.0, &W[rci.ky][rci.jy][0], n
                );
             DCOPY(n*rci.ny, &W[rci.ky][rci.jy][0], 1, &W[rci.kx][rci.jx][0], 1);
@@ -187,11 +191,11 @@ void main(void) {
          if( ncon > 0 ) {
             DGEMM(
                'T', 'N', ncon, rci.nx, n,
-               1.0, X, n, &W[rci.ky][rci.jy][0], n, 0.0, U, n
+               1.0, &X[0][0], n, &W[rci.ky][rci.jy][0], n, 0.0, &U[0][0], n
                );
             DGEMM(
                'N', 'N', n, rci.nx, ncon,
-               -1.0, X, n, U, n, 1.0, &W[rci.kx][rci.jx][0], n
+               -1.0, &X[0][0], n, &U[0][0], n, 1.0, &W[rci.kx][rci.jx][0], n
                );
          }
          break;
@@ -200,6 +204,7 @@ void main(void) {
       }
    }
 finished:
+   if(inform.flag != 0) printf("inform.flag = %d\n", inform.flag);
    printf("%3d eigenpairs converged\n", ncon);
    for(int i=0; i<ncon; i++)
       printf(" lambda[%1d] = %13.7e\n", i, lambda[i]);

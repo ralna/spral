@@ -1,23 +1,26 @@
 ! examples/Fortran/ssmfe/precond_core.f90
 ! Laplacian on a square grid (using SPRAL_SSMFE_CORE routines)
 program ssmfe_core_precond_example
+  use spral_random
   use spral_ssmfe_core
   use laplace2d ! implement Laplacian and preconditioners
   implicit none
 
   integer, parameter :: wp = kind(0d0) ! working precision is double
 
-  integer, parameter :: l   = 20  ! grid points along each side
-  integer, parameter :: n   = l*l ! problem size
-  integer, parameter :: nep = 5   ! eigenpairs wanted
-  integer, parameter :: m = 3     ! dimension of the iterated subspace
+  integer, parameter :: l   = 20    ! grid points along each side
+  integer, parameter :: n   = l*l   ! problem size
+  integer, parameter :: nep = 5     ! eigenpairs wanted
+  integer, parameter :: m = 3       ! dimension of the iterated subspace
+  real(wp), parameter :: tol = 1e-6 ! eigenvector tolerance
+
+  type(random_state) :: state       ! PRNG state
 
   real(wp), external :: dnrm2, ddot ! BLAS functions
 
   integer :: ncon                 ! number of converged eigenpairs
   integer :: i, j, k
   integer :: ind(m)               ! permutation index
-  real(wp) :: tol                 ! eigenvector tolerance
   real(wp) :: s
   real(wp) :: lambda(n)           ! eigenvalues
   real(wp) :: X(n, n)             ! eigenvectors
@@ -30,9 +33,14 @@ program ssmfe_core_precond_example
   type(ssmfe_core_keep   ) :: keep      ! private data
   type(ssmfe_inform      ) :: inform    ! information
 
-  tol = 1.e-6
+  ! Initialize W to lin indep vectors by randomizing
+  do i=1,n
+    do j=1,m
+      W(i,j,0) = random_real(state, positive=.true.)
+    end do
+  end do
+
   ncon = 0
-  call random_number( W(:,:,0) )
   rci%job = 0
   do ! reverse communication loop
     call ssmfe( rci, 0, nep, 0, m, lmd, rr, ind, keep, options, inform )

@@ -8,10 +8,10 @@ void apply_laplacian(
       for(int i=0; i<mx; i++) {
          for(int j=0; j<my; j++) {
             double z = 4*x[k][j][i];
-            if( i > 1  ) z -= x[k][j][i-1];
-            if( j > 1  ) z -= x[k][j-1][i];
-            if( i < mx ) z -= x[k][j][i+1];
-            if( j < my ) z -= x[k][j+1][i];
+            if( i > 0    ) z -= x[k][j][i-1];
+            if( j > 0    ) z -= x[k][j-1][i];
+            if( i < mx-1 ) z -= x[k][j][i+1];
+            if( j < my-1 ) z -= x[k][j+1][i];
             Ax[k][j][i] = z;
          }
       }
@@ -29,10 +29,10 @@ void set_laplacian_matrix(
       for(int iy=0; iy<ny; iy++) {
         int i = ix + (iy - 1)*nx;
         a[i][i] = 4;
-        if( ix >  1 ) a[i -  1][i] = -1;
-        if( ix < nx ) a[i +  1][i] = -1;
-        if( iy > 1  ) a[i - nx][i] = -1;
-        if( iy < ny ) a[i + nx][i] = -1;
+        if( ix >  0   ) a[i -  1][i] = -1;
+        if( ix < nx-1 ) a[i +  1][i] = -1;
+        if( iy > 0    ) a[i - nx][i] = -1;
+        if( iy < ny-1 ) a[i + nx][i] = -1;
       }
    }
 }
@@ -50,21 +50,21 @@ void apply_gauss_seidel_step(
       for(int i=0; i<mx; i++) {
          for(int j=0; j<my; j++) {
             double z = 0.0;
-            if( i > 1  ) z += Tx[k][j][i-1];
-            if( j > 1  ) z += Tx[k][j-1][i];
-            if( i < mx ) z += Tx[k][j][i+1];
-            if( j < my ) z += Tx[k][j+1][i];
+            if( i > 0    ) z += Tx[k][j][i-1];
+            if( j > 0    ) z += Tx[k][j-1][i];
+            if( i < mx-1 ) z += Tx[k][j][i+1];
+            if( j < my-1 ) z += Tx[k][j+1][i];
             Tx[k][j][i] = (Tx[k][j][i] + z/4)/4;
          }
       }
       /* backward update */
-      for(int i=0; i<mx; i++) {
-         for(int j=0; j<my; j++) {
+      for(int i=mx-1; i>=0; i--) {
+         for(int j=my-1; j>=0; j--) {
             double z = 0.0;
-            if( i > 1  ) z += Tx[k][j][i-1];
-            if( j > 1  ) z += Tx[k][j-1][i];
-            if( i < mx ) z += Tx[k][j][i+1];
-            if( j < my ) z += Tx[k][j+1][i];
+            if( i > 0    ) z += Tx[k][j][i-1];
+            if( j > 0    ) z += Tx[k][j-1][i];
+            if( i < mx-1 ) z += Tx[k][j][i+1];
+            if( j < my-1 ) z += Tx[k][j+1][i];
             Tx[k][j][i] = (Tx[k][j][i] + z/4)/4;
          }
       }
