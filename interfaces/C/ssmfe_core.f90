@@ -215,6 +215,8 @@ subroutine spral_ssmfe_ssmfe_double(crci, problem, left, right, m, lambda, rr, &
    ! Copy arguments out
    call copy_rci_out(fcikeep%rcid, crci, cindexed)
    call copy_inform_out(fcikeep%inform, cinform)
+   if(crci%job.eq.11 .and. cindexed) &
+      ind(1:crci%nx) = ind(1:crci%nx) - 1
 end subroutine spral_ssmfe_ssmfe_double
 
 subroutine spral_ssmfe_core_free(ckeep, cinform) bind(C)
