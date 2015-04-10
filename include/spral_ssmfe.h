@@ -91,6 +91,10 @@ void spral_ssmfe_ssmfe_double(struct spral_ssmfe_rcid *rci, int problem,
       int left, int right, int m, double *lambda, double *rr, int *ind,
       void **keep, const struct spral_ssmfe_core_options *options,
       struct spral_ssmfe_inform *inform);
+void spral_ssmfe_ssmfe_double_complex(struct spral_ssmfe_rciz *rci, int problem,
+      int left, int right, int m, double *lambda, double complex *rr, int *ind,
+      void **keep, const struct spral_ssmfe_core_options *options,
+      struct spral_ssmfe_inform *inform);
 /* Free memory */
 int spral_ssmfe_core_free(void **keep, struct spral_ssmfe_inform *inform);
 
