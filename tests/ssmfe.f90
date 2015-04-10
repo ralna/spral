@@ -1,14 +1,12 @@
 program main
 
-   implicit none
+  implicit none
 
-   integer, parameter :: wp = kind(0d0)
-   real(wp), parameter :: ONE = 1.0_wp
-   real(wp), parameter :: ZERO = 0.0_wp
-   complex(wp), parameter :: ZZERO = (ZERO, ZERO)
-   complex(wp), parameter :: ZONE = (ONE, ZERO)
-
-!   real(wp), parameter :: err_tol = 5e-11
+  integer, parameter :: wp = kind(0d0)
+  real(wp), parameter :: ONE = 1.0_wp
+  real(wp), parameter :: ZERO = 0.0_wp
+  complex(wp), parameter :: ZZERO = (ZERO, ZERO)
+  complex(wp), parameter :: ZONE = (ONE, ZERO)
 
   integer, parameter :: WRONG_RCI_JOB      = -1
   integer, parameter :: WRONG_BLOCK_SIZE   = -2
@@ -31,30 +29,30 @@ program main
   integer, parameter :: MAX_ITERATIONS_EXCEEDED   = 2
   integer, parameter :: OUT_OF_STORAGE            = 3
 
-   integer, parameter :: we_unit = 11
-   integer, parameter :: dl_unit = 12
+  integer, parameter :: we_unit = 11
+  integer, parameter :: dl_unit = 12
 
-   character(len=6) :: we_file = "we.out"
-   character(len=6) :: dl_file = "dl.out"
+  character(len=6) :: we_file = "we.out"
+  character(len=6) :: dl_file = "dl.out"
 
-   integer :: errors
+  integer :: errors
 
-   if(we_unit.gt.6) open(unit=we_unit,file=we_file,status="replace")
-   if(dl_unit.gt.6) open(unit=dl_unit,file=dl_file,status="replace")
+  if(we_unit.gt.6) open(unit=we_unit,file=we_file,status="replace")
+  if(dl_unit.gt.6) open(unit=dl_unit,file=dl_file,status="replace")
 
-   errors = 0
+  errors = 0
    
-   call test_ssmfe
-   call test_expert
-   call test_core
+  call test_ssmfe
+  call test_expert
+  call test_core
    
-   write(*, "(/a)") "============================="
-   write(*, "(a,i4)") "Total number of errors = ", errors
+  write(*, "(/a)") "============================="
+  write(*, "(a,i4)") "Total number of errors = ", errors
 
-   if(we_unit.gt.6) close(we_unit)
-   if(dl_unit.gt.6) close(dl_unit)
+  if(we_unit.gt.6) close(we_unit)
+  if(dl_unit.gt.6) close(dl_unit)
 
-   if(errors.ne.0) stop 1 ! ERROR CODE for make check script
+  if(errors.ne.0) stop 1 ! ERROR CODE for make check script
 
 contains
 
@@ -62,18 +60,18 @@ contains
 
 subroutine test_ssmfe
 
-   write(*,"(/a)") "=============="
-   write(*,"(a)")  "Testing ssmfe:"
-   write(*,"(a)")  "=============="
+  write(*,"(/a)") "=============="
+  write(*,"(a)")  "Testing ssmfe:"
+  write(*,"(a)")  "=============="
 
-   call test_ssmfe_errors_d
-   call test_ssmfe_errors_z
-   call test_ssmfe_warnings_d
-   call test_ssmfe_warnings_z
-   call test_ssmfe_options_d
-   call test_ssmfe_options_z
-   call test_ssmfe_misc_d
-   call test_ssmfe_misc_z
+  call test_ssmfe_errors_d
+  call test_ssmfe_errors_z
+  call test_ssmfe_warnings_d
+  call test_ssmfe_warnings_z
+  call test_ssmfe_options_d
+  call test_ssmfe_options_z
+  call test_ssmfe_misc_d
+  call test_ssmfe_misc_z
 
 end subroutine test_ssmfe
 
@@ -81,9 +79,9 @@ end subroutine test_ssmfe
 
 subroutine test_core
 
-   write(*,"(/a)") "==================="
-   write(*,"(a)")  "Testing ssmfe_core:"
-   write(*,"(a)")  "==================="
+  write(*,"(/a)") "==================="
+  write(*,"(a)")  "Testing ssmfe_core:"
+  write(*,"(a)")  "==================="
 
   call test_core_errors_d
   call test_core_errors_z
@@ -100,7 +98,6 @@ subroutine test_core_errors_d
 
   integer :: n
   integer :: m
-!  integer :: nep
   integer :: left, right
   
   integer, allocatable :: ind(:)
@@ -117,15 +114,14 @@ subroutine test_core_errors_d
   type(ssmfe_core_keep   ) :: keep
   type(ssmfe_inform      ) :: inform
   
-   write(*,"(/a)") "======================"
-   write(*,"(a)")  "Testing errors (real):"
-   write(*,"(a)")  "======================"
+  write(*,"(/a)") "======================"
+  write(*,"(a)")  "Testing errors (real):"
+  write(*,"(a)")  "======================"
 
-   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   n = 6
   m = 2
-!  nep = 1
   left = 1
   right = 1
   allocate ( a(n, n), b(n, n), t(n, n), x(n, n), lambda(n) )
@@ -232,7 +228,6 @@ subroutine test_core_errors_z
 
   integer :: n
   integer :: m
-!  integer :: nep
   integer :: left, right
   
   integer, allocatable :: ind(:)
@@ -249,15 +244,14 @@ subroutine test_core_errors_z
   type(ssmfe_core_keep   ) :: keep
   type(ssmfe_inform      ) :: inform
   
-   write(*,"(/a)") "========================="
-   write(*,"(a)")  "Testing errors (complex):"
-   write(*,"(a)")  "========================="
+  write(*,"(/a)") "========================="
+  write(*,"(a)")  "Testing errors (complex):"
+  write(*,"(a)")  "========================="
 
-   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   n = 6
   m = 2
-!  nep = 1
   left = 1
   right = 1
   allocate ( a(n, n), b(n, n), t(n, n), x(n, n), lambda(n) )
@@ -364,8 +358,6 @@ subroutine test_core_misc_d
 
   integer :: n
   integer :: m
-!  integer :: nep
-!  integer :: left, right
   integer :: maxit
   integer :: verb
   integer :: i, j
@@ -384,17 +376,14 @@ subroutine test_core_misc_d
   type(ssmfe_core_options) :: options
   type(ssmfe_inform      ) :: inform
   
-   write(*,"(/a)") "==========================="
-   write(*,"(a)")  "Miscellaneous tests (real):"
-   write(*,"(a)")  "==========================="
+  write(*,"(/a)") "==========================="
+  write(*,"(a)")  "Miscellaneous tests (real):"
+  write(*,"(a)")  "==========================="
 
-   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   n = 50
   m = 2
-!  nep = 1
-!  left = 1
-!  right = 1
   maxit = 300
   verb = 0
   tol = 1e-3
@@ -536,8 +525,6 @@ subroutine test_core_misc_z
 
   integer :: n
   integer :: m
-!  integer :: nep
-!  integer :: left, right
   integer :: maxit
   integer :: verb
   integer :: i, j
@@ -553,22 +540,18 @@ subroutine test_core_misc_z
   complex(wp), allocatable :: x(:,:)
   complex(wp), allocatable :: rr(:,:,:)
 
-!  type(ssmfe_rciz        ) :: rci
   type(ssmfe_core_options) :: options
   type(ssmfe_core_keep   ) :: keep
   type(ssmfe_inform      ) :: inform
   
-   write(*,"(/a)") "=============================="
-   write(*,"(a)")  "Miscellaneous tests (complex):"
-   write(*,"(a)")  "=============================="
+  write(*,"(/a)") "=============================="
+  write(*,"(a)")  "Miscellaneous tests (complex):"
+  write(*,"(a)")  "=============================="
 
-   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   n = 100
   m = 2
-!  nep = 1
-!  left = 1
-!  right = 1
   maxit = 300
   verb = 0
   tol = 1e-3
@@ -586,7 +569,6 @@ subroutine test_core_misc_z
   forall ( i = 1 : n ) t(i, i) = ONE
 
   write(*,"(a)",advance="no") " * Testing left = 1, right = 0, m = 1........"
-!  rci%job = 0
   do i = 1, n
     do j = 1, n
       x(i, j) = sin(i*j*ONE)
@@ -599,7 +581,6 @@ subroutine test_core_misc_z
   call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing left = 2, right = 0, m = 1........"
-!  rci%job = 0
   do i = 1, n
     do j = 1, n
       x(i, j) = sin(i*j*ONE)
@@ -612,7 +593,6 @@ subroutine test_core_misc_z
   call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing left = 0, right = 1, m = 1........"
-!  rci%job = 0
   do i = 1, n
     do j = 1, n
       x(i, j) = sin(i*j*ONE)
@@ -625,7 +605,6 @@ subroutine test_core_misc_z
   call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing left = 1, right = 1, m = 2........"
-!  rci%job = 0
   do i = 1, n
     do j = 1, n
       x(i, j) = sin(i*j*ONE)
@@ -638,7 +617,6 @@ subroutine test_core_misc_z
   call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing left = 2, right = 1, m = 2........"
-!  rci%job = 0
   do i = 1, n
     do j = 1, n
       x(i, j) = sin(i*j*ONE)
@@ -651,7 +629,6 @@ subroutine test_core_misc_z
   call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing left = 10, right = 10, m = 10....."
-!  rci%job = 0
   do i = 1, n
     do j = 1, n
       x(i, j) = sin(i*j*ONE)
@@ -668,7 +645,6 @@ subroutine test_core_misc_z
   call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing largest = 1, m = 2................"
-!  rci%job = 0
   do i = 1, n
     do j = 1, n
       x(i, j) = sin(i*j*ONE)
@@ -681,7 +657,6 @@ subroutine test_core_misc_z
   call ssmfe_free( keep, inform )
 
   write(*,"(a)",advance="no") " * Testing largest = 10, m = 5..............."
-!  rci%job = 0
   do i = 1, n
     do j = 1, n
       x(i, j) = sin(i*j*ONE)
@@ -714,9 +689,9 @@ end subroutine test_core_misc_z
 
 subroutine test_expert
 
-   write(*,"(/a)") "====================="
-   write(*,"(a)")  "Testing ssmfe_expert:"
-   write(*,"(a)")  "====================="
+  write(*,"(/a)") "====================="
+  write(*,"(a)")  "Testing ssmfe_expert:"
+  write(*,"(a)")  "====================="
 
   call test_expert_errors_d
   call test_expert_errors_z
@@ -736,7 +711,6 @@ subroutine test_expert_errors_d
   integer :: nep
   integer :: mep
   integer :: left, right
-!  integer :: ldx
   
   integer, allocatable :: ind(:)
   
@@ -754,17 +728,16 @@ subroutine test_expert_errors_d
   type(ssmfe_expert_keep) :: keep
   type(ssmfe_inform     ) :: inform
   
-   write(*,"(/a)") "======================"
-   write(*,"(a)")  "Testing errors (real):"
-   write(*,"(a)")  "======================"
+  write(*,"(/a)") "======================"
+  write(*,"(a)")  "Testing errors (real):"
+  write(*,"(a)")  "======================"
 
-   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   n = 6
   m = 2
   nep = 1
   mep = n
-!  ldx = n
   allocate ( a(n, n), b(n, n), t(n, n), x(n, n), lambda(n) )
   allocate ( rr(m + m, m + m, 3), ind(m) )
   
@@ -898,7 +871,6 @@ subroutine test_expert_errors_z
   integer :: nep
   integer :: mep
   integer :: left, right
-!  integer :: ldx
   
   integer, allocatable :: ind(:)
   
@@ -916,17 +888,16 @@ subroutine test_expert_errors_z
   type(ssmfe_expert_keep) :: keep
   type(ssmfe_inform     ) :: inform
   
-   write(*,"(/a)") "========================="
-   write(*,"(a)")  "Testing errors (complex):"
-   write(*,"(a)")  "========================="
+  write(*,"(/a)") "========================="
+  write(*,"(a)")  "Testing errors (complex):"
+  write(*,"(a)")  "========================="
 
-   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   n = 6
   m = 2
   nep = 1
   mep = n
-!  ldx = n
   allocate ( a(n, n), b(n, n), t(n, n), x(n, n), lambda(n) )
   allocate ( rr(m + m, m + m, 3), ind(m) )
   
@@ -1059,7 +1030,6 @@ subroutine test_expert_options_d
   integer :: nep
   integer :: mep
   integer :: left, right
-!  integer :: ldx
   integer :: lwork
   integer :: i
   
@@ -1077,15 +1047,14 @@ subroutine test_expert_options_d
   type(ssmfe_options) :: options
   type(ssmfe_inform ) :: inform
   
-   write(*,"(a)")
-   write(*,"(a)") "======================"
-   write(*,"(a)") "Testing options (real)"
-   write(*,"(a)") "======================"
+  write(*,"(a)")
+  write(*,"(a)") "======================"
+  write(*,"(a)") "Testing options (real)"
+  write(*,"(a)") "======================"
 
   n = 50
   nep = 5
   mep = n
-!  ldx = n
   lwork = n*n
   allocate ( a(n, n), b(n, n), t(n, n), x(n, n), w(n, n) )
   allocate ( lambda(n), ipiv(n) )
@@ -1195,7 +1164,6 @@ subroutine test_expert_options_z
   integer :: nep
   integer :: mep
   integer :: left, right
-!  integer :: ldx
   integer :: lwork
   integer :: i
   
@@ -1213,15 +1181,14 @@ subroutine test_expert_options_z
   type(ssmfe_options) :: options
   type(ssmfe_inform ) :: inform
   
-   write(*,"(a)")
-   write(*,"(a)") "========================="
-   write(*,"(a)") "Testing options (complex)"
-   write(*,"(a)") "========================="
+  write(*,"(a)")
+  write(*,"(a)") "========================="
+  write(*,"(a)") "Testing options (complex)"
+  write(*,"(a)") "========================="
 
   n = 50
   nep = 5
   mep = n
-!  ldx = n
   lwork = n*n
   allocate ( a(n, n), b(n, n), t(n, n), x(n, n), w(n, n) )
   allocate ( lambda(n), ipiv(n) )
@@ -1347,11 +1314,11 @@ subroutine test_ssmfe_errors_d
   type(ssmfe_keepd  ) :: keep
   type(ssmfe_inform ) :: inform
   
-   write(*,"(/a)") "======================"
-   write(*,"(a)")  "Testing errors (real):"
-   write(*,"(a)")  "======================"
+  write(*,"(/a)") "======================"
+  write(*,"(a)")  "Testing errors (real):"
+  write(*,"(a)")  "======================"
 
-   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   n = 6
   nep = 1
@@ -1410,24 +1377,13 @@ subroutine test_ssmfe_errors_d
   t = ZERO
   forall ( i = 1 : n ) a(i, i) = ONE*i
   forall ( i = 1 : n ) t(i, i) = ONE
-!  do i = 1, n
-!    print *, i
-!    t(i, i) = ONE
-!  end do
-!  b = ZERO
-!  print *, 'trying blas...'
-!  call daxpy( n*n, ONE, a, 1, b, 1 )
 
   write(*,"(a)",advance="no") " * Testing bad initial x....................."
   x = ZERO
-  options%print_level = 3
-  options%unit_diagnostic = 6
   options%user_x = 1
   call run_std_d( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, INDEFINITE_B_OR_XBX )
   options%user_x = 0
-  options%print_level = 0
-  options%unit_diagnostic = dl_unit
   call ssmfe_free( inform )
 
   write(*,"(a)",advance="no") " * Testing indefinite b......................"
@@ -1527,9 +1483,9 @@ subroutine test_ssmfe_errors_z
   type(ssmfe_keepz  ) :: keep
   type(ssmfe_inform ) :: inform
   
-   write(*,"(/a)") "========================="
-   write(*,"(a)")  "Testing errors (complex):"
-   write(*,"(a)")  "========================="
+  write(*,"(/a)") "========================="
+  write(*,"(a)")  "Testing errors (complex):"
+  write(*,"(a)")  "========================="
 
   n = 6
   nep = 1
@@ -1588,7 +1544,6 @@ subroutine test_ssmfe_errors_z
   t = ZERO
   forall ( i = 1 : n ) a(i, i) = ONE*i
   forall ( i = 1 : n ) t(i, i) = ONE
-!if ( .false. ) then
   write(*,"(a)",advance="no") " * Testing bad initial x....................."
   x = ZERO
   options%user_x = 1
@@ -1602,7 +1557,6 @@ subroutine test_ssmfe_errors_z
   call run_gen_z( n, a, b, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, INDEFINITE_B_OR_XBX )
   call ssmfe_free( inform )
-!end if
 
   write ( *, '(a)' ) ' * Testing shift-invert...'
   sigma = ZERO
@@ -1681,7 +1635,6 @@ subroutine test_ssmfe_warnings_d
   integer :: nep
   integer :: mep
   integer :: left, right
-!  integer :: ldx
   integer :: lwork
   integer :: i, j
   
@@ -1699,10 +1652,10 @@ subroutine test_ssmfe_warnings_d
   type(ssmfe_options) :: options
   type(ssmfe_inform ) :: inform
   
-   write(*,"(a)")
-   write(*,"(a)") "======================="
-   write(*,"(a)") "Testing warnings (real)"
-   write(*,"(a)") "======================="
+  write(*,"(a)")
+  write(*,"(a)") "======================="
+  write(*,"(a)") "Testing warnings (real)"
+  write(*,"(a)") "======================="
 
   options%print_level = 0
   options%unit_error = we_unit
@@ -1712,7 +1665,6 @@ subroutine test_ssmfe_warnings_d
   n = 50
   nep = 2
   mep = n
-!  ldx = n
   allocate ( a(n, n), b(n, n), t(n, n), x(n, n), w(n, n) )
   allocate ( lambda(n), ipiv(n) )
   
@@ -1800,7 +1752,6 @@ subroutine test_ssmfe_warnings_z
   integer :: nep
   integer :: mep
   integer :: left, right
-!  integer :: ldx
   integer :: lwork
   integer :: i, j
   
@@ -1809,6 +1760,7 @@ subroutine test_ssmfe_warnings_z
   real(wp) :: sigma
 
   real(wp), allocatable :: lambda(:)
+
   complex(wp), allocatable :: a(:,:)
   complex(wp), allocatable :: b(:,:)
   complex(wp), allocatable :: t(:,:)
@@ -1818,10 +1770,10 @@ subroutine test_ssmfe_warnings_z
   type(ssmfe_options) :: options
   type(ssmfe_inform ) :: inform
   
-   write(*,"(a)")
-   write(*,"(a)") "=========================="
-   write(*,"(a)") "Testing warnings (complex)"
-   write(*,"(a)") "=========================="
+  write(*,"(a)")
+  write(*,"(a)") "=========================="
+  write(*,"(a)") "Testing warnings (complex)"
+  write(*,"(a)") "=========================="
 
   options%print_level = 0
   options%unit_error = we_unit
@@ -1831,7 +1783,6 @@ subroutine test_ssmfe_warnings_z
   n = 50
   nep = 2
   mep = n
-!  ldx = n
   allocate ( a(n, n), b(n, n), t(n, n), x(n, n), w(n, n) )
   allocate ( lambda(n), ipiv(n) )
   
@@ -1842,8 +1793,8 @@ subroutine test_ssmfe_warnings_z
   b = ZERO
   forall ( i = 1 : n ) b(i, i) = ONE
 
-  t = ZERO
   write(*,"(a)",advance="no") " * Testing warning flag 1...................."
+  t = ZERO
   call run_std_z( n, a, t, nep, mep, lambda, x, options, inform )
   call print_result( inform%flag, NO_SEARCH_DIRECTIONS_LEFT )
   call ssmfe_free( inform )
@@ -1919,7 +1870,6 @@ subroutine test_ssmfe_options_d
   integer :: nep
   integer :: mep
   integer :: left, right
-!  integer :: ldx
   integer :: lwork
   integer :: i, j
   
@@ -1938,15 +1888,14 @@ subroutine test_ssmfe_options_d
   type(ssmfe_options) :: options
   type(ssmfe_inform ) :: inform
   
-   write(*,"(a)")
-   write(*,"(a)") "======================"
-   write(*,"(a)") "Testing options (real)"
-   write(*,"(a)") "======================"
+  write(*,"(a)")
+  write(*,"(a)") "======================"
+  write(*,"(a)") "Testing options (real)"
+  write(*,"(a)") "======================"
 
   n = 50
   nep = 5
   mep = n
-!  ldx = n
   lwork = n*n
   allocate ( a(n, n), b(n, n), t(n, n), x(n, n), w(n, n) )
   allocate ( lambda(n), ipiv(n) )
@@ -2262,7 +2211,6 @@ subroutine test_ssmfe_options_z
   integer :: nep
   integer :: mep
   integer :: left, right
-!  integer :: ldx
   integer :: lwork
   integer :: i, j
   
@@ -2281,15 +2229,14 @@ subroutine test_ssmfe_options_z
   type(ssmfe_options) :: options
   type(ssmfe_inform ) :: inform
   
-   write(*,"(a)")
-   write(*,"(a)") "========================="
-   write(*,"(a)") "Testing options (complex)"
-   write(*,"(a)") "========================="
+  write(*,"(a)")
+  write(*,"(a)") "========================="
+  write(*,"(a)") "Testing options (complex)"
+  write(*,"(a)") "========================="
 
   n = 50
   nep = 5
   mep = n
-!  ldx = n
   lwork = n*n
   allocate ( a(n, n), b(n, n), t(n, n), x(n, n), w(n, n) )
   allocate ( lambda(n), ipiv(n) )
@@ -2303,7 +2250,6 @@ subroutine test_ssmfe_options_z
   t = ZERO
   forall ( i = 1 : n ) t(i, i) = ONE
 
-if ( .true. ) then
   write(*,"(a)",advance="no") " * Testing error printing suppresssion......."
   options%print_level = -1
   n = 0
@@ -2425,19 +2371,13 @@ if ( .true. ) then
   call print_result( inform%flag, 0 )
   call ssmfe_free( inform )
   options%max_left = -1
-else
-  eps = 1D-3
-  forall ( i = 5 : n ) a(i, i) = i*10 + 2*eps
-end if
 
   write ( *, '(a)' ) ' * Testing shift-invert...'
 
   write(*,"(a)",advance="no") " * Testing zero tolerances..................."
   sigma = 255
-  left = 2 !3
-  right = 7 !3
-!  options%print_level = 3
-!  options%unit_diagnostic = dl_unit
+  left = 2
+  right = 7
   options%tol_x = 0
   options%user_x = mep
   do i = 1, n
@@ -2453,9 +2393,7 @@ end if
   options%tol_x = -1
   options%user_x = 0
   options%print_level = -1
-!  options%unit_diagnostic = 6
 
-!if ( .false. ) then
   write(*,"(a)",advance="no") " * Testing absolute residual tolerance......."
   options%tol_x = 0
   options%abs_tol_residual = 1
@@ -2600,7 +2538,6 @@ end if
   options%tol_x = -1
   options%right_gap = 0
   options%print_level = -1
-!end if
 
   deallocate ( a, b, t, x, lambda )
 
@@ -2616,7 +2553,6 @@ subroutine test_ssmfe_misc_d
   integer :: nep
   integer :: mep
   integer :: left, right
-!  integer :: ldx
   integer :: lwork
   integer :: i, j
   
@@ -2635,15 +2571,14 @@ subroutine test_ssmfe_misc_d
   type(ssmfe_options) :: options
   type(ssmfe_inform ) :: inform
   
-   write(*,"(a)")
-   write(*,"(a)") "=========================="
-   write(*,"(a)") "Miscellaneous tests (real)"
-   write(*,"(a)") "=========================="
+  write(*,"(a)")
+  write(*,"(a)") "=========================="
+  write(*,"(a)") "Miscellaneous tests (real)"
+  write(*,"(a)") "=========================="
 
   n = 50
   nep = 5
   mep = n
-!  ldx = n
   lwork = n*n
   allocate ( a(n, n), b(n, n), t(n, n), x(n, n), w(n, n) )
   allocate ( lambda(n), ipiv(n) )
@@ -2838,7 +2773,6 @@ subroutine test_ssmfe_misc_z
   integer :: nep
   integer :: mep
   integer :: left, right
-!  integer :: ldx
   integer :: lwork
   integer :: i, j
   
@@ -2857,15 +2791,14 @@ subroutine test_ssmfe_misc_z
   type(ssmfe_options) :: options
   type(ssmfe_inform ) :: inform
   
-   write(*,"(a)")
-   write(*,"(a)") "============================="
-   write(*,"(a)") "Miscellaneous tests (complex)"
-   write(*,"(a)") "============================="
+  write(*,"(a)")
+  write(*,"(a)") "============================="
+  write(*,"(a)") "Miscellaneous tests (complex)"
+  write(*,"(a)") "============================="
 
   n = 50
   nep = 5
   mep = n
-!  ldx = n
   lwork = n*n
   allocate ( a(n, n), b(n, n), t(n, n), x(n, n), w(n, n) )
   allocate ( lambda(n), ipiv(n) )
@@ -3599,8 +3532,6 @@ subroutine run_ssmfe_d &
 
   use spral_ssmfe_core
 
-  implicit none
-  
   type(ssmfe_core_options), intent(in) :: options
   integer, intent(in) :: problem
   integer, intent(in) :: n
@@ -3872,8 +3803,6 @@ subroutine run_ssmfe_z &
 
   use spral_ssmfe_core
 
-  implicit none
-  
   type(ssmfe_core_options), intent(in) :: options
   integer, intent(in) :: problem
   integer, intent(in) :: n
@@ -4158,8 +4087,6 @@ subroutine run_ssmfe_largest_d &
 
   use spral_ssmfe_core
 
-  implicit none
-  
   type(ssmfe_core_options), intent(in) :: options
   integer, intent(in) :: problem
   integer, intent(in) :: n
@@ -4430,8 +4357,6 @@ subroutine run_ssmfe_largest_z &
 
   use spral_ssmfe_core
 
-  implicit none
-  
   type(ssmfe_core_options), intent(in) :: options
   integer, intent(in) :: problem
   integer, intent(in) :: n
@@ -4733,77 +4658,73 @@ subroutine print_result(actual, expected, continued)
    errors = errors + 1
 end subroutine print_result
 
-  integer function num_neg_D( n, LDLT, ld, ipiv )
+integer function num_neg_D( n, LDLT, ld, ipiv )
 ! Counts negative eigenvalues of factor D
 
-    implicit none
+  double precision, parameter :: ZERO = 0.0D0
 
-    double precision, parameter :: ZERO = 0.0D0
+  integer, intent(in) :: n, ld
+  real(wp), intent(in) :: LDLT(ld, n)
+  integer, intent(in) :: ipiv(n)
+  integer :: nneg
+  integer :: i
+  double precision :: r, s, t
 
-    integer, intent(in) :: n, ld
-    real(wp), intent(in) :: LDLT(ld, n)
-    integer, intent(in) :: ipiv(n)
-    integer :: nneg
-    integer :: i
-    double precision :: r, s, t
-
-    i = 1
-    nneg = 0
-    do while ( i <= n )
-      s = LDLT(i, i)
-      if ( ipiv(i) < 0 ) then
-        t = LDLT(i + 1, i)
-        r = LDLT(i + 1, i + 1)
-        if ( s*r - t*t < ZERO ) then
-          nneg = nneg + 1
-        else if ( s*r - t*t > ZERO .and. s + r < ZERO ) then
-          nneg = nneg + 2
-        end if
-        i = i + 2
-      else
-        if ( s < ZERO ) nneg = nneg + 1
-        i = i + 1
+  i = 1
+  nneg = 0
+  do while ( i <= n )
+    s = LDLT(i, i)
+    if ( ipiv(i) < 0 ) then
+      t = LDLT(i + 1, i)
+      r = LDLT(i + 1, i + 1)
+      if ( s*r - t*t < ZERO ) then
+        nneg = nneg + 1
+      else if ( s*r - t*t > ZERO .and. s + r < ZERO ) then
+        nneg = nneg + 2
       end if
-    end do
-    num_neg_D = nneg
+      i = i + 2
+    else
+      if ( s < ZERO ) nneg = nneg + 1
+      i = i + 1
+    end if
+  end do
+  num_neg_D = nneg
 
-  end function num_neg_D
+end function num_neg_D
 
-  integer function num_neg_Dz( n, LDLT, ld, ipiv )
+integer function num_neg_Dz( n, LDLT, ld, ipiv )
 ! Counts negative eigenvalues of factor D
 
-    implicit none
+  double precision, parameter :: ZERO = 0.0D0
 
-    double precision, parameter :: ZERO = 0.0D0
+  integer, intent(in) :: n, ld
+  complex(wp), intent(in) :: LDLT(ld, n)
+  integer, intent(in) :: ipiv(n)
+  integer :: nneg
+  integer :: i
+  double precision :: r, s, t
 
-    integer, intent(in) :: n, ld
-    complex(wp), intent(in) :: LDLT(ld, n)
-    integer, intent(in) :: ipiv(n)
-    integer :: nneg
-    integer :: i
-    double precision :: r, s, t
-
-    i = 1
-    nneg = 0
-    do while ( i <= n )
-      s = real(LDLT(i, i))
-      if ( ipiv(i) < 0 ) then
-        t = abs(LDLT(i + 1, i))
-        r = real(LDLT(i + 1, i + 1))
-        if ( s*r - t*t < ZERO ) then
-          nneg = nneg + 1
-        else if ( s*r - t*t > ZERO .and. s + r < ZERO ) then
-          nneg = nneg + 2
-        end if
-        i = i + 2
-      else
-        if ( s < ZERO ) nneg = nneg + 1
-        i = i + 1
+  i = 1
+  nneg = 0
+  do while ( i <= n )
+    s = real(LDLT(i, i))
+    if ( ipiv(i) < 0 ) then
+      t = abs(LDLT(i + 1, i))
+      r = real(LDLT(i + 1, i + 1))
+      if ( s*r - t*t < ZERO ) then
+        nneg = nneg + 1
+      else if ( s*r - t*t > ZERO .and. s + r < ZERO ) then
+        nneg = nneg + 2
       end if
-    end do
-    num_neg_Dz = nneg
+      i = i + 2
+    else
+      if ( s < ZERO ) nneg = nneg + 1
+      i = i + 1
+    end if
+  end do
+  num_neg_Dz = nneg
 
-  end function num_neg_Dz
+end function num_neg_Dz
 
 end program
 
