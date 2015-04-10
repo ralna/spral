@@ -4,35 +4,10 @@
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <cblas.h>
 
 /* Header that implements Laplacian and preconditioners */
 #include "laplace2d.h"
-
-/* BLAS routine wrappers */
-void daxpy_(int *n, double *alpha, const double *x, int *incx, double *y, int *incy);
-void DAXPY(int n, double alpha, const double *x, int incx, double *y, int incy) {
-   daxpy_(&n, &alpha, x, &incx, y, &incy);
-}
-void dcopy_(int *n, const double *x, int *incx, double *y, int *incy);
-void DCOPY(int n, const double *x, int incx, double *y, int incy) {
-   dcopy_(&n, x, &incx, y, &incy);
-}
-double ddot_(int *n, const double *x, int *incx, const double *y, int *incy);
-double DDOT(int n, const double *x, int incx, const double *y, int incy) {
-   return ddot_(&n, x, &incx, y, &incy);
-}
-void dgemm_(char *transa, char *transb, int *m, int *n, int *k, double *alpha, const double *a, int *lda, const double *b, int *ldb, double *beta, double *c, int *ldc);
-void DGEMM(char transa, char transb, int m, int n, int k, double alpha, const double *a, int lda, const double *b, int ldb, double beta, double *c, int ldc) {
-   dgemm_(&transa, &transb, &m, &n, &k, &alpha, a, &lda, b, &ldb, &beta, c, &ldc);
-}
-double dnrm2_(int *n, const double *x, int *incx);
-double DNRM2(int n, const double *x, int incx) {
-   return dnrm2_(&n, x, &incx);
-}
-void dscal_(int *n, double *alpha, double *x, int *incx);
-void DSCAL(int n, double alpha, double *x, int incx) {
-   dscal_(&n, &alpha, x, &incx);
-}
 
 void main(void) {
    const int ngrid = 20;         /* grid points along each side */
@@ -94,7 +69,7 @@ void main(void) {
          for(int k=0; k<rci.nx; k++) {
            int j = ncon + k;
            lambda[j] = lmd[rci.jx + k];
-           DCOPY( n, &W[0][rci.jx+k][0], 1, &X[j][0], 1 );
+           cblas_dcopy( n, &W[0][rci.jx+k][0], 1, &X[j][0], 1 );
          }
          ncon += rci.nx;
          if ( ncon >= nep || inform.iteration > 300 ) goto finished;
@@ -102,10 +77,10 @@ void main(void) {
       case 11:
          if ( rci.i == 0 ) {
             if ( rci.kx != rci.ky || rci.jx > rci.jy ) {
-               DCOPY(n*rci.nx, &W[rci.kx][rci.jx][0], 1, &W[rci.ky][rci.jy][0], 1);
+               cblas_dcopy(n*rci.nx, &W[rci.kx][rci.jx][0], 1, &W[rci.ky][rci.jy][0], 1);
             } else if ( rci.jx < rci.jy ) {
                for(int j=rci.nx-1; j>=0; j--)
-                  DCOPY(n, &W[rci.kx][rci.jx+j][0], 1, &W[rci.ky][rci.jy+j][0], 1);
+                  cblas_dcopy(n, &W[rci.kx][rci.jx+j][0], 1, &W[rci.ky][rci.jy+j][0], 1);
             }
          } else {
             for(int i=0; i<n; i++) {
@@ -125,21 +100,21 @@ void main(void) {
       case 12:
          for(int i=0; i<rci.nx; i++)
            rr[rci.k][rci.j+i][rci.i+i] =
-             DDOT(n, &W[rci.kx][rci.jx+i][0], 1, &W[rci.ky][rci.jy+i][0], 1);
+             cblas_ddot(n, &W[rci.kx][rci.jx+i][0], 1, &W[rci.ky][rci.jy+i][0], 1);
          break;
       case 13:
          for(int i=0; i<rci.nx; i++) {
             if( rci.kx == rci.ky ) {
-               double s = DNRM2(n, &W[rci.kx][rci.jx+i][0], 1);
+               double s = cblas_dnrm2(n, &W[rci.kx][rci.jx+i][0], 1);
                if( s > 0 )
-                  DSCAL(n, 1/s, &W[rci.kx][rci.jx+i][0], 1);
+                  cblas_dscal(n, 1/s, &W[rci.kx][rci.jx+i][0], 1);
                } else {
-                  double s = sqrt(abs(DDOT(
+                  double s = sqrt(abs(cblas_ddot(
                      n, &W[rci.kx][rci.jx+i][0], 1, &W[rci.ky][rci.jy+i][0], 1)
                      ));
              if ( s > 0 ) {
-               DSCAL(n, 1/s, &W[rci.kx][rci.jx+i][0], 1);
-               DSCAL(n, 1/s, &W[rci.ky][rci.jy+i][0], 1);
+               cblas_dscal(n, 1/s, &W[rci.kx][rci.jx+i][0], 1);
+               cblas_dscal(n, 1/s, &W[rci.ky][rci.jy+i][0], 1);
              } else {
                for(int j=0; j<n; j++)
                   W[rci.ky][rci.jy+i][j] = 0.0;
@@ -150,13 +125,13 @@ void main(void) {
       case 14:
          for(int i=0; i<rci.nx; i++) {
            double s = -rr[rci.k][rci.j+i][rci.i+i];
-           DAXPY(n, s, &W[rci.kx][rci.jx+i][0], 1, &W[rci.ky][rci.jy+i][0], 1);
+           cblas_daxpy(n, s, &W[rci.kx][rci.jx+i][0], 1, &W[rci.ky][rci.jy+i][0], 1);
          }
          break;
       case 15:
          if ( rci.nx > 0 && rci.ny > 0 )
-            DGEMM(
-               'T', 'N', rci.nx, rci.ny, n,
+            cblas_dgemm(
+               CblasColMajor, CblasTrans, CblasNoTrans, rci.nx, rci.ny, n,
                rci.alpha, &W[rci.kx][rci.jx][0], n, &W[rci.ky][rci.jy][0], n,
                rci.beta, &rr[rci.k][rci.j][rci.i], 2*m
                );
@@ -168,19 +143,19 @@ void main(void) {
             if( rci.job == 17 ) continue;
             if( rci.beta == 1.0 ) continue;
             for(int j=rci.jy; j<rci.jy+rci.ny; j++)
-               DSCAL(n, rci.beta, &W[rci.ky][j][0], 1);
+               cblas_dscal(n, rci.beta, &W[rci.ky][j][0], 1);
             continue;
          }
          if( rci.job == 17 ) {
-            DGEMM(
-               'N', 'N', n, rci.ny, rci.nx,
+            cblas_dgemm(
+               CblasColMajor, CblasNoTrans, CblasNoTrans, n, rci.ny, rci.nx,
                1.0, &W[rci.kx][rci.jx][0], n, &rr[rci.k][rci.j][rci.i], 2*m,
                0.0, &W[rci.ky][rci.jy][0], n
                );
-            DCOPY(n*rci.ny, &W[rci.ky][rci.jy][0], 1, &W[rci.kx][rci.jx][0], 1);
+            cblas_dcopy(n*rci.ny, &W[rci.ky][rci.jy][0], 1, &W[rci.kx][rci.jx][0], 1);
          } else {
-            DGEMM(
-               'N', 'N', n, rci.ny, rci.nx,
+            cblas_dgemm(
+               CblasColMajor, CblasNoTrans, CblasNoTrans, n, rci.ny, rci.nx,
                rci.alpha, &W[rci.kx][rci.jx][0], n, &rr[rci.k][rci.j][rci.i],
                2*m, rci.beta, &W[rci.ky][rci.jy][0], n
                );
@@ -189,12 +164,12 @@ void main(void) {
       case 21: // Fall through to 22
       case 22:
          if( ncon > 0 ) {
-            DGEMM(
-               'T', 'N', ncon, rci.nx, n,
+            cblas_dgemm(
+               CblasColMajor, CblasTrans, CblasNoTrans, ncon, rci.nx, n,
                1.0, &X[0][0], n, &W[rci.ky][rci.jy][0], n, 0.0, &U[0][0], n
                );
-            DGEMM(
-               'N', 'N', n, rci.nx, ncon,
+            cblas_dgemm(
+               CblasColMajor, CblasNoTrans, CblasNoTrans, n, rci.nx, ncon,
                -1.0, &X[0][0], n, &U[0][0], n, 1.0, &W[rci.kx][rci.jx][0], n
                );
          }
