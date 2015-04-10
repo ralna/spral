@@ -25,7 +25,8 @@ module SPRAL_ssmfe
   ! fatal execution error flags
   integer, parameter :: OUT_OF_MEMORY = -100
 
-  ! abnormal termination status
+  ! termination status
+  integer, parameter :: SSMFE_DONE  = -1 ! success
   integer, parameter :: SSMFE_QUIT  = -2 ! non-fatal error
   integer, parameter :: SSMFE_ABORT = -3 ! fatal error
 
@@ -543,170 +544,183 @@ contains
 
     ldBX = n
     
-    ! call ssmfe_expert solver
-    call ssmfe_solve &
-      ( problem, left, max_nep, lambda, keep%block_size, keep%V, keep%ind, &
-        rci, keep%keep, options, inform )
+    do
+      ! call ssmfe_expert solver
+      call ssmfe_solve &
+        ( problem, left, max_nep, lambda, keep%block_size, keep%V, keep%ind, &
+          rci, keep%keep, options, inform )
 
-    select case ( rci%job )
+      select case ( rci%job )
 
-    case ( 11:19 )
+      case ( 11:19 )
 
-      ! apply some standard operations to vectors in W
-      k = max(1, rci%k) ! cover for the case rci%k = 0
-      call ssmfe_vector_operations_double &
-        ( rci, n, keep%block_size, keep%W, n, keep%V(1, 1, k), &
-          keep%ind, keep%U )
+        ! apply some standard operations to vectors in W
+        k = max(1, rci%k) ! cover for the case rci%k = 0
+        call ssmfe_vector_operations_double &
+          ( rci, n, keep%block_size, keep%W, n, keep%V(1, 1, k), &
+            keep%ind, keep%U )
 
-    case ( SSMFE_SAVE_CONVERGED )
-    
-      if ( rci%nx < 1 ) return
-
-      ! only leftmost eigenpairs computed (cf. ssmfe_expert solver)
-      if ( rci%i < 0 ) return
-
-      ! save the converged eigenvectors in X
-      do i = 1, rci%nx
-        k = (i - 1)*rci%i
-        j = keep%lcon + i
-        call copy( n, keep%W(1, rci%jx + k, 0), 1, X(1,j), 1 )
-        if ( problem /= 0 ) &
-          ! save their products with the matrix B in keep%BX
-          call copy( n, keep%W(1, rci%jy + k, rci%ky), 1, keep%BX(1,j), 1 )
-      end do
+      case ( SSMFE_SAVE_CONVERGED )
       
-      ! update the Gram matrix for the converged eigenvectors
+        if ( rci%nx < 1 ) cycle
 
-      ! newly converged eigenvectors are in columns
-      ! k, ..., k + rci%nx - 1 of X
-      k = keep%lcon + 1
+        ! only leftmost eigenpairs computed (cf. ssmfe_expert solver)
+        if ( rci%i < 0 ) cycle
 
-      m = keep%block_size
-      if ( keep%lcon > 0 ) then
+        ! save the converged eigenvectors in X
+        do i = 1, rci%nx
+          k = (i - 1)*rci%i
+          j = keep%lcon + i
+          call copy( n, keep%W(1, rci%jx + k, 0), 1, X(1,j), 1 )
+          if ( problem /= 0 ) &
+            ! save their products with the matrix B in keep%BX
+            call copy( n, keep%W(1, rci%jy + k, rci%ky), 1, keep%BX(1,j), 1 )
+        end do
+        
+        ! update the Gram matrix for the converged eigenvectors
+
+        ! newly converged eigenvectors are in columns
+        ! k, ..., k + rci%nx - 1 of X
+        k = keep%lcon + 1
+
+        m = keep%block_size
+        if ( keep%lcon > 0 ) then
+          if ( problem == 0 ) then
+            call gemm &
+              ( TR, 'N', keep%lcon, rci%nx, n, &
+                ONE, X, ldX, X(1, k), ldX, &
+                ZERO, keep%U(1, m + k), max_nep )
+          else
+            call gemm &
+              ( TR, 'N', keep%lcon, rci%nx, n, &
+                ONE, X, ldX, keep%BX(1, k), ldX, &
+                ZERO, keep%U(1, m + k), max_nep )
+          end if
+          do j = 1, rci%nx
+            do i = 1, keep%lcon
+              keep%U(k + j - 1, m + i) = keep%U(i, m + k + j - 1)
+            end do
+          end do
+        end if
         if ( problem == 0 ) then
           call gemm &
-            ( TR, 'N', keep%lcon, rci%nx, n, &
-              ONE, X, ldX, X(1, k), ldX, &
-              ZERO, keep%U(1, m + k), max_nep )
+            ( TR, 'N', rci%nx, rci%nx, n, &
+              ONE, X(1, k), ldX, X(1, k), ldX, &
+              ZERO, keep%U(k, m + k), max_nep)
         else
           call gemm &
-            ( TR, 'N', keep%lcon, rci%nx, n, &
-              ONE, X, ldX, keep%BX(1, k), ldX, &
-              ZERO, keep%U(1, m + k), max_nep )
+            ( TR, 'N', rci%nx, rci%nx, n, &
+              ONE, X(1, k), ldX, keep%BX(1, k), ldX, &
+              ZERO, keep%U(k, m + k), max_nep)
         end if
-        do j = 1, rci%nx
-          do i = 1, keep%lcon
-            keep%U(k + j - 1, m + i) = keep%U(i, m + k + j - 1)
-          end do
-        end do
-      end if
-      if ( problem == 0 ) then
-        call gemm &
-          ( TR, 'N', rci%nx, rci%nx, n, &
-            ONE, X(1, k), ldX, X(1, k), ldX, &
-            ZERO, keep%U(k, m + k), max_nep)
-      else
-        call gemm &
-          ( TR, 'N', rci%nx, rci%nx, n, &
-            ONE, X(1, k), ldX, keep%BX(1, k), ldX, &
-            ZERO, keep%U(k, m + k), max_nep)
-      end if
 
-      ! update the number of converged eigenpairs
-      keep%lcon = keep%lcon + rci%nx
+        ! update the number of converged eigenpairs
+        keep%lcon = keep%lcon + rci%nx
 
-    case ( SSMFE_APPLY_ADJ_CONSTRS )
+      case ( SSMFE_APPLY_ADJ_CONSTRS )
 
-      ! apply I - B X X' to columns of keep%W specified by rci
+        ! apply I - B X X' to columns of keep%W specified by rci
 
-      rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
-      rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
-      if ( keep%lcon > 0 ) then
-        call gemm &
-          ( TR, 'N', keep%lcon, rci%nx, n, &
-            ONE, X, ldX, rci%x, n, ZERO, keep%U, max_nep )
-        if ( problem == 0 ) then
+        rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
+        rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
+        if ( keep%lcon > 0 ) then
+          call gemm &
+            ( TR, 'N', keep%lcon, rci%nx, n, &
+              ONE, X, ldX, rci%x, n, ZERO, keep%U, max_nep )
+          if ( problem == 0 ) then
+            call gemm &
+              ( 'N', 'N', n, rci%nx, keep%lcon, &
+                -ONE, X, ldX, keep%U, max_nep, ONE, rci%x, n )
+          else
+            call gemm &
+              ( 'N', 'N', n, rci%nx, keep%lcon, &
+                -ONE, keep%BX, ldBX, keep%U, max_nep, ONE, rci%x, n )
+          end if
+        end if
+
+      case ( SSMFE_APPLY_CONSTRAINTS )
+
+        ! apply I - Y H Y'B to W, where W holds the columns of keep%W 
+        ! specified by rci%jx, rci%kx and rci%nx,
+        ! Y is the left part of X containing the converged eigenvectors
+        ! and H is the inverse of the gram matrix G = Y' B Y
+
+        ! rci%x points to W
+        rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
+        ! rci%y points to B W
+        rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
+
+        if ( keep%lcon > 0 ) then
+
+          ! compute Y'B W
+          call gemm &
+            ( TR, 'N', keep%lcon, rci%nx, n, &
+              ONE, X, ldX, rci%y, n, ZERO, keep%U, max_nep )
+
+          ! since the Gram matrix G is close to identity, its inverse H
+          ! is close to 2I - G, the difference between the two matrices
+          ! being of the order (I - G)^2
+          m = keep%block_size
+          k = m + max_nep + 1
+          call mxcopy &
+            ( 'A', keep%lcon, rci%nx, keep%U, max_nep, keep%U(1, k), max_nep )
+          call gemm &
+            ( 'N', 'N', keep%lcon, rci%nx, keep%lcon, &
+              -ONE, keep%U(1, m + 1), max_nep, keep%U(1, k), max_nep, &
+              2*ONE, keep%U, max_nep )
+
+          ! update W
           call gemm &
             ( 'N', 'N', n, rci%nx, keep%lcon, &
               -ONE, X, ldX, keep%U, max_nep, ONE, rci%x, n )
-        else
-          call gemm &
-            ( 'N', 'N', n, rci%nx, keep%lcon, &
-              -ONE, keep%BX, ldBX, keep%U, max_nep, ONE, rci%x, n )
+          if ( problem /= 0 ) &
+            ! update B W
+            call gemm &
+              ( 'N', 'N', n, rci%nx, keep%lcon, &
+                -ONE, keep%BX, ldBX, keep%U, max_nep, ONE, rci%y, n )
+
         end if
-      end if
 
-    case ( SSMFE_APPLY_CONSTRAINTS )
+      case ( SSMFE_APPLY_A, SSMFE_APPLY_B )
+      
+        ! pass pointers to columns of keep%W to the user for
+        ! multiplying by A or B
 
-      ! apply I - Y H Y'B to W, where W holds the columns of keep%W 
-      ! specified by rci%jx, rci%kx and rci%nx,
-      ! Y is the left part of X containing the converged eigenvectors
-      ! and H is the inverse of the gram matrix G = Y' B Y
-
-      ! rci%x points to W
-      rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
-      ! rci%y points to B W
-      rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
-
-      if ( keep%lcon > 0 ) then
-
-        ! compute Y'B W
-        call gemm &
-          ( TR, 'N', keep%lcon, rci%nx, n, &
-            ONE, X, ldX, rci%y, n, ZERO, keep%U, max_nep )
-
-        ! since the Gram matrix G is close to identity, its inverse H
-        ! is close to 2I - G, the difference between the two matrices
-        ! being of the order (I - G)^2
-        m = keep%block_size
-        k = m + max_nep + 1
-        call mxcopy &
-          ( 'A', keep%lcon, rci%nx, keep%U, max_nep, keep%U(1, k), max_nep )
-        call gemm &
-          ( 'N', 'N', keep%lcon, rci%nx, keep%lcon, &
-            -ONE, keep%U(1, m + 1), max_nep, keep%U(1, k), max_nep, &
-            2*ONE, keep%U, max_nep )
-
-        ! update W
-        call gemm &
-          ( 'N', 'N', n, rci%nx, keep%lcon, &
-            -ONE, X, ldX, keep%U, max_nep, ONE, rci%x, n )
-        if ( problem /= 0 ) &
-          ! update B W
-          call gemm &
-            ( 'N', 'N', n, rci%nx, keep%lcon, &
-              -ONE, keep%BX, ldBX, keep%U, max_nep, ONE, rci%y, n )
-
-      end if
-
-    case ( SSMFE_APPLY_A, SSMFE_APPLY_B )
-    
-      ! pass pointers to columns of keep%W to the user for
-      ! multiplying by A or B
-
-      rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
-      rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
-
-    case ( SSMFE_APPLY_PREC )
-
-      ! pass pointers to columns of keep%W to the user for
-      ! applying the preconditioner
-
-      rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
-      rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
-
-      ! no action needs to be taken by the user if no preconditioning is used
-      call copy( n*rci%nx, rci%x, 1, rci%y, 1 )
-
-    case ( SSMFE_RESTART )
-    
-      if ( rci%k == 0 .and. rci%jx > 1 ) then
-        ! fill the columns specified by rci%jx with random numbers
-        call random_number( keep%W(:, 1 : rci%jx - 1, 0) )
-        keep%W(:, 1 : rci%jx - 1, 0) = 2*keep%W(:, 1 : rci%jx - 1, 0) - ONE
-      end if
+        rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
+        rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
         
-    end select
+        return
+
+      case ( SSMFE_APPLY_PREC )
+
+        ! pass pointers to columns of keep%W to the user for
+        ! applying the preconditioner
+
+        rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
+        rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
+
+        ! no action needs to be taken by the user if no preconditioning is used
+        call copy( n*rci%nx, rci%x, 1, rci%y, 1 )
+
+        return
+
+      case ( SSMFE_RESTART )
+      
+        if ( rci%k == 0 .and. rci%jx > 1 ) then
+          ! fill the columns specified by rci%jx with random numbers
+          call random_number( keep%W(:, 1 : rci%jx - 1, 0) )
+          keep%W(:, 1 : rci%jx - 1, 0) = 2*keep%W(:, 1 : rci%jx - 1, 0) - ONE
+        end if
+          
+        return
+        
+      case ( : SSMFE_DONE )
+      
+        return
+
+      end select
+    
+    end do
       
   end subroutine ssmfe_direct_srci_double
   
@@ -900,318 +914,336 @@ contains
     
     case ( 0 )
 
-      ! call ssmfe_expert solver
-      call ssmfe_solve &
-        ( problem, sigma, left, right, &
-          max_nep, lambda, keep%block_size, keep%V, keep%ind, &
-          rci, keep%keep, options, inform )
+      do
+        ! call ssmfe_expert solver
+        call ssmfe_solve &
+          ( problem, sigma, left, right, &
+            max_nep, lambda, keep%block_size, keep%V, keep%ind, &
+            rci, keep%keep, options, inform )
 
-      select case ( rci%job )
+        select case ( rci%job )
 
-      case ( 11:19 )
+        case ( 11:19 )
+        
+          ! apply some standard operations to vectors in W
+          k = max(1, rci%k) ! cover for the case rci%k = 0
+          call ssmfe_vector_operations_double &
+            ( rci, n, keep%block_size, keep%W, n, keep%V(1, 1, k), &
+              keep%ind, keep%U )
+
+        case ( SSMFE_SAVE_CONVERGED )
       
-        ! apply some standard operations to vectors in W
-        k = max(1, rci%k) ! cover for the case rci%k = 0
-        call ssmfe_vector_operations_double &
-          ( rci, n, keep%block_size, keep%W, n, keep%V(1, 1, k), &
-            keep%ind, keep%U )
+          if ( rci%nx < 1 ) cycle
 
-      case ( SSMFE_SAVE_CONVERGED )
-    
-        if ( rci%nx < 1 ) return
+          ! save the converged eigenvectors in X
+          do i = 1, rci%nx
+            k = (i - 1)*rci%i
+            if ( rci%i > 0 ) then
+              j = keep%lcon + i ! left eigenvectors are saved on the left
+            else
+              j = max_nep - keep%rcon - i + 1 ! and right on the right
+            end if
+            call copy( n, keep%W(1, rci%jx + k, 0), 1, X(1, j), 1 )
+            if ( problem /= 0 ) &
+              ! save their products with the matrix B in keep%BX
+              call copy( n, keep%W(1, rci%jy + k, rci%ky), 1, keep%BX(1, j), 1 )
+          end do
 
-        ! save the converged eigenvectors in X
-        do i = 1, rci%nx
-          k = (i - 1)*rci%i
+          ! update the Gram matrix for the converged eigenvectors
+          ! stored as four blocks (two diagonal and two off-diagonal)
+          ! of a matrix G_X of size max_nep in the array keep%U:
+          
+          !       | G_l  0   F  |
+          ! G_X = |  0   I   0  |
+          !       !  F'  0  G_r |
+
+          ! where
+          
+          ! G_l = X(:, 1:keep%lcon)' B X(:, 1:keep%lcon)
+          ! G_r = X(:, 1:keep%rcon)' B X(:, 1:keep%rcon)
+          ! F   = X(:, 1:keep%lcon)' B X(:, 1:keep%rcon)
+
+          ! newly converged eigenvectors are in columns
+          ! k, ..., k + rci%nx - 1 of X
           if ( rci%i > 0 ) then
-            j = keep%lcon + i ! left eigenvectors are saved on the left
+            k = keep%lcon + 1
           else
-            j = max_nep - keep%rcon - i + 1 ! and right on the right
+            k = max_nep - keep%rcon - rci%nx + 1
           end if
-          call copy( n, keep%W(1, rci%jx + k, 0), 1, X(1, j), 1 )
-          if ( problem /= 0 ) &
-            ! save their products with the matrix B in keep%BX
-            call copy( n, keep%W(1, rci%jy + k, rci%ky), 1, keep%BX(1, j), 1 )
-        end do
 
-        ! update the Gram matrix for the converged eigenvectors
-        ! stored as four blocks (two diagonal and two off-diagonal)
-        ! of a matrix G_X of size max_nep in the array keep%U:
-        
-        !       | G_l  0   F  |
-        ! G_X = |  0   I   0  |
-        !       !  F'  0  G_r |
-
-        ! where
-        
-        ! G_l = X(:, 1:keep%lcon)' B X(:, 1:keep%lcon)
-        ! G_r = X(:, 1:keep%rcon)' B X(:, 1:keep%rcon)
-        ! F   = X(:, 1:keep%lcon)' B X(:, 1:keep%rcon)
-
-        ! newly converged eigenvectors are in columns
-        ! k, ..., k + rci%nx - 1 of X
-        if ( rci%i > 0 ) then
-          k = keep%lcon + 1
-        else
-          k = max_nep - keep%rcon - rci%nx + 1
-        end if
-
-        m = keep%block_size
-        if ( keep%lcon > 0 ) then
+          m = keep%block_size
+          if ( keep%lcon > 0 ) then
+            if ( problem == 0 ) then
+              call gemm &
+                ( TR, 'N', keep%lcon, rci%nx, n, &
+                  ONE, X, ldX, X(1, k), ldX, &
+                  ZERO, keep%U(1, m + k), max_nep )
+            else
+              call gemm &
+                ( TR, 'N', keep%lcon, rci%nx, n, &
+                  ONE, X, ldX, keep%BX(1, k), ldX, &
+                  ZERO, keep%U(1, m + k), max_nep )
+            end if
+            do j = 1, rci%nx
+              do i = 1, keep%lcon
+                keep%U(k + j - 1, m + i) = keep%U(i, m + k + j - 1)
+              end do
+            end do
+          end if
+          if ( keep%rcon > 0 ) then
+            if ( problem == 0 ) then
+              call gemm &
+                ( TR, 'N', keep%rcon, rci%nx, n, &
+                  ONE, X(1, max_nep - keep%rcon + 1), ldX, X(1, k), ldX, &
+                  ZERO, keep%U(max_nep - keep%rcon + 1, m + k), max_nep )
+            else
+              call gemm &
+                ( TR, 'N', keep%rcon, rci%nx, n, &
+                  ONE, X(1, max_nep - keep%rcon + 1), ldX, keep%BX(1, k), ldX, &
+                  ZERO, keep%U(max_nep - keep%rcon + 1, m + k), max_nep )
+            end if
+            do j = 1, rci%nx
+              do i = 1, keep%rcon
+                keep%U(k + j - 1, m + max_nep - keep%rcon + i) = &
+                  keep%U(max_nep - keep%rcon + i, m + k + j - 1)
+              end do
+            end do
+          end if
           if ( problem == 0 ) then
             call gemm &
-              ( TR, 'N', keep%lcon, rci%nx, n, &
-                ONE, X, ldX, X(1, k), ldX, &
-                ZERO, keep%U(1, m + k), max_nep )
+              ( TR, 'N', rci%nx, rci%nx, n, &
+                ONE, X(1, k), ldX, X(1, k), ldX, &
+                ZERO, keep%U(k, m + k), max_nep)
           else
             call gemm &
-              ( TR, 'N', keep%lcon, rci%nx, n, &
-                ONE, X, ldX, keep%BX(1, k), ldX, &
-                ZERO, keep%U(1, m + k), max_nep )
+              ( TR, 'N', rci%nx, rci%nx, n, &
+                ONE, X(1, k), ldX, keep%BX(1, k), ldX, &
+                ZERO, keep%U(k, m + k), max_nep)
           end if
-          do j = 1, rci%nx
-            do i = 1, keep%lcon
-              keep%U(k + j - 1, m + i) = keep%U(i, m + k + j - 1)
-            end do
-          end do
-        end if
-        if ( keep%rcon > 0 ) then
-          if ( problem == 0 ) then
-            call gemm &
-              ( TR, 'N', keep%rcon, rci%nx, n, &
-                ONE, X(1, max_nep - keep%rcon + 1), ldX, X(1, k), ldX, &
-                ZERO, keep%U(max_nep - keep%rcon + 1, m + k), max_nep )
+
+          ! update the numbers of converged eigenpairs
+          if ( rci%i > 0 ) then
+            keep%lcon = keep%lcon + rci%nx
           else
-            call gemm &
-              ( TR, 'N', keep%rcon, rci%nx, n, &
-                ONE, X(1, max_nep - keep%rcon + 1), ldX, keep%BX(1, k), ldX, &
-                ZERO, keep%U(max_nep - keep%rcon + 1, m + k), max_nep )
+            keep%rcon = keep%rcon + rci%nx
           end if
-          do j = 1, rci%nx
-            do i = 1, keep%rcon
-              keep%U(k + j - 1, m + max_nep - keep%rcon + i) = &
-                keep%U(max_nep - keep%rcon + i, m + k + j - 1)
-            end do
-          end do
-        end if
-        if ( problem == 0 ) then
-          call gemm &
-            ( TR, 'N', rci%nx, rci%nx, n, &
-              ONE, X(1, k), ldX, X(1, k), ldX, &
-              ZERO, keep%U(k, m + k), max_nep)
-        else
-          call gemm &
-            ( TR, 'N', rci%nx, rci%nx, n, &
-              ONE, X(1, k), ldX, keep%BX(1, k), ldX, &
-              ZERO, keep%U(k, m + k), max_nep)
-        end if
 
-        ! update the numbers of converged eigenpairs
-        if ( rci%i > 0 ) then
-          keep%lcon = keep%lcon + rci%nx
-        else
-          keep%rcon = keep%rcon + rci%nx
-        end if
+        case ( SSMFE_APPLY_ADJ_CONSTRS )
+      
+          ! apply I - B Y Y' to W, where W holds the  columns of keep%W 
+          ! specified by rci%jx, rci%kx and rci%nx, and Y is holds 
+          ! the columns of X containing the converged eigenvectors
 
-      case ( SSMFE_APPLY_ADJ_CONSTRS )
-    
-        ! apply I - B Y Y' to W, where W holds the  columns of keep%W 
-        ! specified by rci%jx, rci%kx and rci%nx, and Y is holds 
-        ! the columns of X containing the converged eigenvectors
+          ! rci%x points to W
+          rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
+          ! rci%y points to B W
+          rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
 
-        ! rci%x points to W
-        rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
-        ! rci%y points to B W
-        rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
-
-        if ( keep%lcon > 0 ) then
-          call gemm &
-            ( TR, 'N', keep%lcon, rci%nx, n, &
-              ONE, X, ldX, rci%x, n, ZERO, keep%U, max_nep )
-          call gemm &
-            ( 'N', 'N', n, rci%nx, keep%lcon, &
-              -ONE, X, ldX, keep%U, max_nep, ONE, rci%x, n )
-        end if
-
-        if ( keep%rcon > 0 ) then
-          j = max_nep - keep%rcon + 1
-          call gemm &
-            ( TR, 'N', keep%rcon, rci%nx, n, &
-              ONE, X(1, j), ldX, rci%x, n, ZERO, keep%U, max_nep )
+          if ( keep%lcon > 0 ) then
             call gemm &
-              ( 'N', 'N', n, rci%nx, keep%rcon, &
-                -ONE, X(1,j), ldX, keep%U, max_nep, ONE, rci%x, n )
-        end if
-
-      case ( SSMFE_APPLY_CONSTRAINTS )
-
-        if ( keep%lcon == 0 .and. keep%rcon == 0 ) return
-        
-        ! apply I - Y H Y'B to W, where W holds the  columns of keep%W 
-        ! specified by rci%jx, rci%kx and rci%nx, Y holds columns on the
-        ! left and right margins of X containing the converged eigenvectors,
-        ! and H is the inverse of the Gram matrix G = Y' B Y
-
-        ! rci%x points to W
-        rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
-        ! rci%y points to B W
-        rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
-
-        ! compute Y'B W
-        if ( keep%lcon > 0 ) then
-          call gemm &
-            ( TR, 'N', keep%lcon, rci%nx, n, &
-              ONE, X, ldX, rci%y, n, ZERO, keep%U, max_nep )
-        end if
-        if ( keep%rcon > 0 ) then
-          j = max_nep - keep%rcon + 1
-          call gemm &
-            ( TR, 'N', keep%rcon, rci%nx, n, &
-              ONE, X(1, j), ldX, rci%y, n, ZERO, keep%U(j, 1), max_nep )
-        end if
-
-        ! since the Gram matrix G is close to identity, its inverse H
-        ! is close to 2I - G, the difference between the two matrices
-        ! being of the order (I - G)^2
-
-        ! H is applied to
-
-        ! | U_l |
-        ! | U_r |
-        
-        ! where U_l is keep%lcon by rci%nx and U_r is keep%rcon by rci%nx,
-        ! which is equivalent to applying H_X = 2I - G_X to
-        
-        ! | U_l |
-        ! !  0  |
-        ! | U_r |
-        
-        ! and collecting the first keep%lcon and last keep%rcon rows
-        ! of the result
-
-        m = keep%block_size
-        k = m + max_nep + 1
-        call mxcopy &
-          ( 'A', max_nep, rci%nx, keep%U, max_nep, keep%U(1, k), max_nep )
-        call gemm &
-          ( 'N', 'N', max_nep, rci%nx, max_nep, &
-            -ONE, keep%U(1, m + 1), max_nep, keep%U(1, k), max_nep, &
-            2*ONE, keep%U, max_nep )
-
-        ! update W and, if B is not the identtity, B W
-        if ( keep%lcon > 0 ) then
-          call gemm &
-            ( 'N', 'N', n, rci%nx, keep%lcon, &
-              -ONE, X, ldX, keep%U, max_nep, ONE, rci%x, n )
-          if ( problem /= 0 ) &
+              ( TR, 'N', keep%lcon, rci%nx, n, &
+                ONE, X, ldX, rci%x, n, ZERO, keep%U, max_nep )
             call gemm &
               ( 'N', 'N', n, rci%nx, keep%lcon, &
-                -ONE, keep%BX, ldBX, keep%U, max_nep, ONE, rci%y, n )
-        end if
-        if ( keep%rcon > 0 ) then
-          j = max_nep - keep%rcon + 1
+                -ONE, X, ldX, keep%U, max_nep, ONE, rci%x, n )
+          end if
+
+          if ( keep%rcon > 0 ) then
+            j = max_nep - keep%rcon + 1
+            call gemm &
+              ( TR, 'N', keep%rcon, rci%nx, n, &
+                ONE, X(1, j), ldX, rci%x, n, ZERO, keep%U, max_nep )
+              call gemm &
+                ( 'N', 'N', n, rci%nx, keep%rcon, &
+                  -ONE, X(1,j), ldX, keep%U, max_nep, ONE, rci%x, n )
+          end if
+
+        case ( SSMFE_APPLY_CONSTRAINTS )
+
+          if ( keep%lcon == 0 .and. keep%rcon == 0 ) cycle
+          
+          ! apply I - Y H Y'B to W, where W holds the  columns of keep%W 
+          ! specified by rci%jx, rci%kx and rci%nx, Y holds columns on the
+          ! left and right margins of X containing the converged eigenvectors,
+          ! and H is the inverse of the Gram matrix G = Y' B Y
+
+          ! rci%x points to W
+          rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
+          ! rci%y points to B W
+          rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
+
+          ! compute Y'B W
+          if ( keep%lcon > 0 ) then
+            call gemm &
+              ( TR, 'N', keep%lcon, rci%nx, n, &
+                ONE, X, ldX, rci%y, n, ZERO, keep%U, max_nep )
+          end if
+          if ( keep%rcon > 0 ) then
+            j = max_nep - keep%rcon + 1
+            call gemm &
+              ( TR, 'N', keep%rcon, rci%nx, n, &
+                ONE, X(1, j), ldX, rci%y, n, ZERO, keep%U(j, 1), max_nep )
+          end if
+
+          ! since the Gram matrix G is close to identity, its inverse H
+          ! is close to 2I - G, the difference between the two matrices
+          ! being of the order (I - G)^2
+
+          ! H is applied to
+
+          ! | U_l |
+          ! | U_r |
+          
+          ! where U_l is keep%lcon by rci%nx and U_r is keep%rcon by rci%nx,
+          ! which is equivalent to applying H_X = 2I - G_X to
+          
+          ! | U_l |
+          ! !  0  |
+          ! | U_r |
+          
+          ! and collecting the first keep%lcon and last keep%rcon rows
+          ! of the result
+
+          m = keep%block_size
+          k = m + max_nep + 1
+          call mxcopy &
+            ( 'A', max_nep, rci%nx, keep%U, max_nep, keep%U(1, k), max_nep )
           call gemm &
-            ( 'N', 'N', n, rci%nx, keep%rcon, &
-              -ONE, X(1, j), ldX, keep%U(j, 1), max_nep, ONE, rci%x, n )
-          if ( problem /= 0 ) &
+            ( 'N', 'N', max_nep, rci%nx, max_nep, &
+              -ONE, keep%U(1, m + 1), max_nep, keep%U(1, k), max_nep, &
+              2*ONE, keep%U, max_nep )
+
+          ! update W and, if B is not the identtity, B W
+          if ( keep%lcon > 0 ) then
+            call gemm &
+              ( 'N', 'N', n, rci%nx, keep%lcon, &
+                -ONE, X, ldX, keep%U, max_nep, ONE, rci%x, n )
+            if ( problem /= 0 ) &
+              call gemm &
+                ( 'N', 'N', n, rci%nx, keep%lcon, &
+                  -ONE, keep%BX, ldBX, keep%U, max_nep, ONE, rci%y, n )
+          end if
+          if ( keep%rcon > 0 ) then
+            j = max_nep - keep%rcon + 1
             call gemm &
               ( 'N', 'N', n, rci%nx, keep%rcon, &
-                -ONE, keep%BX(1, j), ldBX, keep%U(j, 1), max_nep, &
-                ONE, rci%y, n )
-        end if
-
-      case ( SSMFE_DO_SHIFTED_SOLVE, SSMFE_APPLY_B )
-
-        ! pass pointers to columns of keep%W to the user for
-        ! multiplying by A or B
-
-        rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
-        rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
-
-      case ( SSMFE_APPLY_PREC )
-
-        ! pass pointers to columns of keep%W to the user for
-        ! applying the preconditioner
-
-        rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
-        rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
-
-        ! no action is to be taken by the user if no preconditioning is used
-        call copy( n*rci%nx, rci%x, 1, rci%y, 1 )
-
-      case ( SSMFE_RESTART )
-    
-        if ( rci%k == 0 ) then
-          ! fill the columns specified by rci with random numbers
-          if ( rci%jx > 1 ) then
-            call random_number( keep%W(:, 1 : rci%jx - 1, 0) )
-            keep%W(:, 1 : rci%jx - 1, 0) = 2*keep%W(:, 1 : rci%jx - 1, 0) - ONE
+                -ONE, X(1, j), ldX, keep%U(j, 1), max_nep, ONE, rci%x, n )
+            if ( problem /= 0 ) &
+              call gemm &
+                ( 'N', 'N', n, rci%nx, keep%rcon, &
+                  -ONE, keep%BX(1, j), ldBX, keep%U(j, 1), max_nep, &
+                  ONE, rci%y, n )
           end if
-          if ( rci%jx + rci%nx - 1 < keep%block_size ) then
-            call random_number &
-              ( keep%W(:, rci%jx + rci%nx : keep%block_size, 0) )
-            keep%W(:, rci%jx + rci%nx : keep%block_size, 0) = &
-              2*keep%W(:, rci%jx + rci%nx : keep%block_size, 0) - ONE
-          end if
-        end if
-        
-      case ( -2, -1 )
+
+        case ( SSMFE_DO_SHIFTED_SOLVE, SSMFE_APPLY_B )
+
+          ! pass pointers to columns of keep%W to the user for
+          ! multiplying by A or B
+
+          rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
+          rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
+          
+          return
+
+        case ( SSMFE_APPLY_PREC )
+
+          ! pass pointers to columns of keep%W to the user for
+          ! applying the preconditioner
+
+          rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
+          rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
+
+          ! no action is to be taken by the user if no preconditioning is used
+          call copy( n*rci%nx, rci%x, 1, rci%y, 1 )
+
+          return
+
+        case ( SSMFE_RESTART )
       
-        ! total number of converged eigenpairs
-        nep = inform%left + inform%right
+          if ( rci%k == 0 ) then
+            ! fill the columns specified by rci with random numbers
+            if ( rci%jx > 1 ) then
+              call random_number( keep%W(:, 1 : rci%jx - 1, 0) )
+              keep%W(:, 1 : rci%jx - 1, 0) = &
+                2*keep%W(:, 1 : rci%jx - 1, 0) - ONE
+            end if
+            if ( rci%jx + rci%nx - 1 < keep%block_size ) then
+              call random_number &
+                ( keep%W(:, rci%jx + rci%nx : keep%block_size, 0) )
+              keep%W(:, rci%jx + rci%nx : keep%block_size, 0) = &
+                2*keep%W(:, rci%jx + rci%nx : keep%block_size, 0) - ONE
+            end if
+          end if
+          
+          return
 
-        if ( nep < 1 ) return
+        case ( SSMFE_QUIT, SSMFE_DONE )
         
-        rci%k = rci%job
-        
-        if ( inform%right > 0 ) then
-          ! bring the eigenpairs together
-          do j = 1, inform%right
-            lambda(inform%left + j) = lambda(max_nep - j + 1)
-          end do
-          call mxcopy &
-            ( 'A', n, inform%right, X(1, max_nep - inform%right + 1), ldX, &
-              X(1, inform%left + 1), ldX )
-        end if
+          ! total number of converged eigenpairs
+          nep = inform%left + inform%right
 
-        ! apply one more block shifted solve to the converged eigenvectors
-        ! and the Rayleigh-Ritz procedure in the trial subspace spanned by them
-    
-        ! reallocate the work arrays
-        deallocate ( keep%W, keep%V )
-        allocate ( keep%W(n, nep, 3), keep%V(nep, nep, 3), stat = inform%stat )
-        if ( inform%stat /= 0 ) inform%flag = OUT_OF_MEMORY
-        if ( inform%stat /= 0 ) rci%job = SSMFE_ABORT
-        if ( inform%stat /= 0 ) call ssmfe_errmsg( options, inform )
-        if ( inform%stat /= 0 ) return
+          if ( nep < 1 ) return
+          
+          rci%k = rci%job
+          
+          if ( inform%right > 0 ) then
+            ! bring the eigenpairs together
+            do j = 1, inform%right
+              lambda(inform%left + j) = lambda(max_nep - j + 1)
+            end do
+            call mxcopy &
+              ( 'A', n, inform%right, X(1, max_nep - inform%right + 1), ldX, &
+                X(1, inform%left + 1), ldX )
+          end if
 
-        if ( problem == 0 ) then
-          ! compute Y = (A - sigma I)^{-1} X
-          call mxcopy( 'A', n, nep, X, ldX, keep%W, n )
-          rci%job = SSMFE_DO_SHIFTED_SOLVE
-          rci%nx = nep
-          rci%jx = 1
-          rci%kx = 0
-          rci%jy = 1
-          rci%ky = 2
-          rci%x => keep%W(:,:,1)
-          rci%y => keep%W(:,:,2)
-          keep%step = 2
-        else
-          ! compute B X
-          call mxcopy( 'A', n, nep, X, ldX, keep%W(1,1,2), n )
-          rci%job = SSMFE_APPLY_B
-          rci%nx = nep
-          rci%jx = 1
-          rci%kx = 2
-          rci%jy = 1
-          rci%ky = 0
-          rci%x => keep%W(:,:,2)
-          rci%y => keep%W(:,:,1)
-          keep%step = 1
-        end if
-        
-      end select
+          ! apply one more block shifted solve to the converged eigenvectors
+          ! and the Rayleigh-Ritz procedure in the trial subspace spanned by 
+          ! them
+      
+          ! reallocate the work arrays
+          deallocate ( keep%W, keep%V )
+          allocate &
+            ( keep%W(n, nep, 3), keep%V(nep, nep, 3), stat = inform%stat )
+          if ( inform%stat /= 0 ) inform%flag = OUT_OF_MEMORY
+          if ( inform%stat /= 0 ) rci%job = SSMFE_ABORT
+          if ( inform%stat /= 0 ) call ssmfe_errmsg( options, inform )
+          if ( inform%stat /= 0 ) return
+
+          if ( problem == 0 ) then
+            ! compute Y = (A - sigma I)^{-1} X
+            call mxcopy( 'A', n, nep, X, ldX, keep%W, n )
+            rci%job = SSMFE_DO_SHIFTED_SOLVE
+            rci%nx = nep
+            rci%jx = 1
+            rci%kx = 0
+            rci%jy = 1
+            rci%ky = 2
+            rci%x => keep%W(:,:,1)
+            rci%y => keep%W(:,:,2)
+            keep%step = 2
+          else
+            ! compute B X
+            call mxcopy( 'A', n, nep, X, ldX, keep%W(1,1,2), n )
+            rci%job = SSMFE_APPLY_B
+            rci%nx = nep
+            rci%jx = 1
+            rci%kx = 2
+            rci%jy = 1
+            rci%ky = 0
+            rci%x => keep%W(:,:,2)
+            rci%y => keep%W(:,:,1)
+            keep%step = 1
+          end if
+          
+          return
+          
+        case ( SSMFE_ABORT )
+
+          return
+
+        end select
+      
+      end do
       
     case ( 1 )
 
@@ -1460,134 +1492,148 @@ contains
 
     ldBX = n
     
-    call ssmfe_solve &
-      ( problem, left, max_nep, lambda, keep%block_size, keep%V, keep%ind, &
-        rci, keep%keep, options, inform )
-
-    select case ( rci%job )
-
-    case ( 11:19 )
-
-      ! apply some standard vector operations to vectors in W
-      k = max(1, rci%k)
-      call ssmfe_vector_operations_double_complex &
-        ( rci, n, keep%block_size, keep%W, n, keep%V(1, 1, k), &
-          keep%ind, keep%U )
-
-    case ( SSMFE_SAVE_CONVERGED )
+    do
     
-      if ( rci%nx < 1 ) return
-      if ( rci%i < 0 ) return
-      do i = 1, rci%nx
-        k = (i - 1)*rci%i
-        j = keep%lcon + i
-        call copy( n, keep%W(1, rci%jx + k, 0), 1, X(1,j), 1 )
-        if ( problem /= 0 ) &
-          call copy( n, keep%W(1, rci%jy + k, rci%ky), 1, keep%BX(1,j), 1 )
-      end do
-      k = keep%lcon + 1
-      m = keep%block_size
-      if ( keep%lcon > 0 ) then
+      call ssmfe_solve &
+        ( problem, left, max_nep, lambda, keep%block_size, keep%V, keep%ind, &
+          rci, keep%keep, options, inform )
+
+      select case ( rci%job )
+
+      case ( 11:19 )
+
+        ! apply some standard vector operations to vectors in W
+        k = max(1, rci%k)
+        call ssmfe_vector_operations_double_complex &
+          ( rci, n, keep%block_size, keep%W, n, keep%V(1, 1, k), &
+            keep%ind, keep%U )
+
+      case ( SSMFE_SAVE_CONVERGED )
+      
+        if ( rci%nx < 1 ) cycle
+        if ( rci%i < 0 ) cycle
+        do i = 1, rci%nx
+          k = (i - 1)*rci%i
+          j = keep%lcon + i
+          call copy( n, keep%W(1, rci%jx + k, 0), 1, X(1,j), 1 )
+          if ( problem /= 0 ) &
+            call copy( n, keep%W(1, rci%jy + k, rci%ky), 1, keep%BX(1,j), 1 )
+        end do
+        k = keep%lcon + 1
+        m = keep%block_size
+        if ( keep%lcon > 0 ) then
+          if ( problem == 0 ) then
+            call gemm &
+              ( TR, 'N', keep%lcon, rci%nx, n, &
+                UNIT, X, ldX, X(1, k), ldX, &
+                NIL, keep%U(1, m + k), max_nep )
+          else
+            call gemm &
+              ( TR, 'N', keep%lcon, rci%nx, n, &
+                UNIT, X, ldX, keep%BX(1, k), ldX, &
+                NIL, keep%U(1, m + k), max_nep )
+          end if
+          do j = 1, rci%nx
+            do i = 1, keep%lcon
+              keep%U(k + j - 1, m + i) = keep%U(i, m + k + j - 1)
+            end do
+          end do
+        end if
         if ( problem == 0 ) then
           call gemm &
-            ( TR, 'N', keep%lcon, rci%nx, n, &
-              UNIT, X, ldX, X(1, k), ldX, &
-              NIL, keep%U(1, m + k), max_nep )
+            ( TR, 'N', rci%nx, rci%nx, n, &
+              UNIT, X(1, k), ldX, X(1, k), ldX, &
+              NIL, keep%U(k, m + k), max_nep)
         else
           call gemm &
-            ( TR, 'N', keep%lcon, rci%nx, n, &
-              UNIT, X, ldX, keep%BX(1, k), ldX, &
-              NIL, keep%U(1, m + k), max_nep )
+            ( TR, 'N', rci%nx, rci%nx, n, &
+              UNIT, X(1, k), ldX, keep%BX(1, k), ldX, &
+              NIL, keep%U(k, m + k), max_nep)
         end if
-        do j = 1, rci%nx
-          do i = 1, keep%lcon
-            keep%U(k + j - 1, m + i) = keep%U(i, m + k + j - 1)
-          end do
-        end do
-      end if
-      if ( problem == 0 ) then
-        call gemm &
-          ( TR, 'N', rci%nx, rci%nx, n, &
-            UNIT, X(1, k), ldX, X(1, k), ldX, &
-            NIL, keep%U(k, m + k), max_nep)
-      else
-        call gemm &
-          ( TR, 'N', rci%nx, rci%nx, n, &
-            UNIT, X(1, k), ldX, keep%BX(1, k), ldX, &
-            NIL, keep%U(k, m + k), max_nep)
-      end if
-      keep%lcon = keep%lcon + rci%nx
+        keep%lcon = keep%lcon + rci%nx
 
-    case ( SSMFE_APPLY_ADJ_CONSTRS )
-    
-      rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
-      rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
-      if ( keep%lcon > 0 ) then
-        call gemm &
-          ( TR, 'N', keep%lcon, rci%nx, n, &
-            UNIT, X, ldX, rci%x, n, NIL, keep%U, max_nep )
-        if ( problem == 0 ) then
+      case ( SSMFE_APPLY_ADJ_CONSTRS )
+      
+        rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
+        rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
+        if ( keep%lcon > 0 ) then
+          call gemm &
+            ( TR, 'N', keep%lcon, rci%nx, n, &
+              UNIT, X, ldX, rci%x, n, NIL, keep%U, max_nep )
+          if ( problem == 0 ) then
+            call gemm &
+              ( 'N', 'N', n, rci%nx, keep%lcon, &
+                -UNIT, X, ldX, keep%U, max_nep, UNIT, rci%x, n )
+          else
+            call gemm &
+              ( 'N', 'N', n, rci%nx, keep%lcon, &
+                -UNIT, keep%BX, ldBX, keep%U, max_nep, UNIT, rci%x, n )
+          end if
+        end if
+
+      case ( SSMFE_APPLY_CONSTRAINTS )
+
+        rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
+        rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
+        if ( keep%lcon > 0 ) then
+          call gemm &
+            ( TR, 'N', keep%lcon, rci%nx, n, &
+              UNIT, X, ldX, rci%y, n, NIL, keep%U, max_nep )
+          m = keep%block_size
+          k = m + max_nep + 1
+          call mxcopy &
+            ( 'A', keep%lcon, rci%nx, keep%U, max_nep, keep%U(1, k), max_nep )
+          call gemm &
+            ( 'N', 'N', keep%lcon, rci%nx, keep%lcon, &
+              -UNIT, keep%U(1, m + 1), max_nep, keep%U(1, k), max_nep, &
+              2*UNIT, keep%U, max_nep )
           call gemm &
             ( 'N', 'N', n, rci%nx, keep%lcon, &
               -UNIT, X, ldX, keep%U, max_nep, UNIT, rci%x, n )
-        else
-          call gemm &
-            ( 'N', 'N', n, rci%nx, keep%lcon, &
-              -UNIT, keep%BX, ldBX, keep%U, max_nep, UNIT, rci%x, n )
+          if ( problem /= 0 ) &
+            call gemm &
+              ( 'N', 'N', n, rci%nx, keep%lcon, &
+                -UNIT, keep%BX, ldBX, keep%U, max_nep, UNIT, rci%y, n )
         end if
-      end if
 
-    case ( SSMFE_APPLY_CONSTRAINTS )
+      case ( SSMFE_APPLY_A, SSMFE_APPLY_B )
 
-      rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
-      rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
-      if ( keep%lcon > 0 ) then
-        call gemm &
-          ( TR, 'N', keep%lcon, rci%nx, n, &
-            UNIT, X, ldX, rci%y, n, NIL, keep%U, max_nep )
-        m = keep%block_size
-        k = m + max_nep + 1
-        call mxcopy &
-          ( 'A', keep%lcon, rci%nx, keep%U, max_nep, keep%U(1, k), max_nep )
-        call gemm &
-          ( 'N', 'N', keep%lcon, rci%nx, keep%lcon, &
-            -UNIT, keep%U(1, m + 1), max_nep, keep%U(1, k), max_nep, &
-            2*UNIT, keep%U, max_nep )
-        call gemm &
-          ( 'N', 'N', n, rci%nx, keep%lcon, &
-            -UNIT, X, ldX, keep%U, max_nep, UNIT, rci%x, n )
-        if ( problem /= 0 ) &
-          call gemm &
-            ( 'N', 'N', n, rci%nx, keep%lcon, &
-              -UNIT, keep%BX, ldBX, keep%U, max_nep, UNIT, rci%y, n )
-      end if
-
-    case ( SSMFE_APPLY_A, SSMFE_APPLY_B )
-
-      rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
-      rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
-
-    case ( SSMFE_APPLY_PREC )
-
-      rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
-      rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
-      call copy( n*rci%nx, rci%x, 1, rci%y, 1 )
-
-    case ( SSMFE_RESTART )
-    
-      if ( rci%k == 0 ) then
-        allocate ( dwork(n, keep%block_size), stat = inform%stat )
-        if ( inform%stat /= 0 ) inform%flag = OUT_OF_MEMORY
-        if ( inform%stat /= 0 ) rci%job = SSMFE_ABORT
-        if ( inform%stat /= 0 ) call ssmfe_errmsg( options, inform )
-        if ( inform%stat /= 0 ) return
-        call random_number( dwork )
-        if ( rci%jx > 1 ) &
-          keep%W(:, 1 : rci%jx - 1, 0) = 2*dwork(:, 1 : rci%jx - 1) - ONE
-        deallocate ( dwork )
-      end if
+        rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
+        rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
         
-    end select
+        return
+
+      case ( SSMFE_APPLY_PREC )
+
+        rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
+        rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
+        call copy( n*rci%nx, rci%x, 1, rci%y, 1 )
+
+        return
+
+      case ( SSMFE_RESTART )
+      
+        if ( rci%k == 0 ) then
+          allocate ( dwork(n, keep%block_size), stat = inform%stat )
+          if ( inform%stat /= 0 ) inform%flag = OUT_OF_MEMORY
+          if ( inform%stat /= 0 ) rci%job = SSMFE_ABORT
+          if ( inform%stat /= 0 ) call ssmfe_errmsg( options, inform )
+          if ( inform%stat /= 0 ) return
+          call random_number( dwork )
+          if ( rci%jx > 1 ) &
+            keep%W(:, 1 : rci%jx - 1, 0) = 2*dwork(:, 1 : rci%jx - 1) - ONE
+          deallocate ( dwork )
+        end if
+          
+        return
+        
+      case ( : SSMFE_DONE )
+
+        return
+
+      end select
+    
+    end do
       
   end subroutine ssmfe_direct_srci_double_complex
   
@@ -1768,269 +1814,287 @@ contains
     
     case ( 0 )
 
-      call ssmfe_solve &
-        ( problem, sigma, left, right, &
-          max_nep, lambda, keep%block_size, keep%V, keep%ind, &
-          rci, keep%keep, options, inform )
+      do
 
-      select case ( rci%job )
+        call ssmfe_solve &
+          ( problem, sigma, left, right, &
+            max_nep, lambda, keep%block_size, keep%V, keep%ind, &
+            rci, keep%keep, options, inform )
 
-      case ( 11:19 )
+        select case ( rci%job )
 
-        ! apply some standard vector operations to vectors in W
-        k = max(1, rci%k)
-        call ssmfe_vector_operations_double_complex &
-          ( rci, n, keep%block_size, keep%W, n, keep%V(1, 1, k), &
-            keep%ind, keep%U )
+        case ( 11:19 )
 
-      case ( SSMFE_SAVE_CONVERGED )
-    
-        if ( rci%nx < 1 ) return
+          ! apply some standard vector operations to vectors in W
+          k = max(1, rci%k)
+          call ssmfe_vector_operations_double_complex &
+            ( rci, n, keep%block_size, keep%W, n, keep%V(1, 1, k), &
+              keep%ind, keep%U )
 
-        do i = 1, rci%nx
-          k = (i - 1)*rci%i
+        case ( SSMFE_SAVE_CONVERGED )
+      
+          if ( rci%nx < 1 ) cycle
+
+          do i = 1, rci%nx
+            k = (i - 1)*rci%i
+            if ( rci%i > 0 ) then
+              j = keep%lcon + i
+            else
+              j = max_nep - keep%rcon - i + 1
+            end if
+            call copy( n, keep%W(1, rci%jx + k, 0), 1, X(1,j), 1 )
+            if ( problem /= 0 ) &
+              call copy( n, keep%W(1, rci%jy + k, rci%ky), 1, keep%BX(1,j), 1 )
+          end do
+
           if ( rci%i > 0 ) then
-            j = keep%lcon + i
+            k = keep%lcon + 1
           else
-            j = max_nep - keep%rcon - i + 1
+            k = max_nep - keep%rcon - rci%nx + 1
           end if
-          call copy( n, keep%W(1, rci%jx + k, 0), 1, X(1,j), 1 )
-          if ( problem /= 0 ) &
-            call copy( n, keep%W(1, rci%jy + k, rci%ky), 1, keep%BX(1,j), 1 )
-        end do
-
-        if ( rci%i > 0 ) then
-          k = keep%lcon + 1
-        else
-          k = max_nep - keep%rcon - rci%nx + 1
-        end if
-        m = keep%block_size
-        if ( keep%lcon > 0 ) then
+          m = keep%block_size
+          if ( keep%lcon > 0 ) then
+            if ( problem == 0 ) then
+              call gemm &
+                ( TR, 'N', keep%lcon, rci%nx, n, &
+                  UNIT, X, ldX, X(1, k), ldX, &
+                  NIL, keep%U(1, m + k), max_nep )
+            else
+              call gemm &
+                ( TR, 'N', keep%lcon, rci%nx, n, &
+                  UNIT, X, ldX, keep%BX(1, k), ldX, &
+                  NIL, keep%U(1, m + k), max_nep )
+            end if
+            do j = 1, rci%nx
+              do i = 1, keep%lcon
+                keep%U(k + j - 1, m + i) = keep%U(i, m + k + j - 1)
+              end do
+            end do
+          end if
+          if ( keep%rcon > 0 ) then
+            if ( problem == 0 ) then
+              call gemm &
+                ( TR, 'N', keep%rcon, rci%nx, n, &
+                  UNIT, X(1, max_nep - keep%rcon + 1), ldX, X(1, k), ldX, &
+                  NIL, keep%U(max_nep - keep%rcon + 1, m + k), max_nep )
+            else
+              call gemm &
+                ( TR, 'N', keep%rcon, rci%nx, n, &
+                  UNIT, X(1, max_nep - keep%rcon + 1), ldX, &
+                  keep%BX(1, k), ldX, &
+                  NIL, keep%U(max_nep - keep%rcon + 1, m + k), max_nep )
+            end if
+            do j = 1, rci%nx
+              do i = 1, keep%rcon
+                keep%U(k + j - 1, m + max_nep - keep%rcon + i) = &
+                  keep%U(max_nep - keep%rcon + i, m + k + j - 1)
+              end do
+            end do
+          end if
           if ( problem == 0 ) then
             call gemm &
-              ( TR, 'N', keep%lcon, rci%nx, n, &
-                UNIT, X, ldX, X(1, k), ldX, &
-                NIL, keep%U(1, m + k), max_nep )
+              ( TR, 'N', rci%nx, rci%nx, n, &
+                UNIT, X(1, k), ldX, X(1, k), ldX, &
+                NIL, keep%U(k, m + k), max_nep)
           else
             call gemm &
-              ( TR, 'N', keep%lcon, rci%nx, n, &
-                UNIT, X, ldX, keep%BX(1, k), ldX, &
-                NIL, keep%U(1, m + k), max_nep )
+              ( TR, 'N', rci%nx, rci%nx, n, &
+                UNIT, X(1, k), ldX, keep%BX(1, k), ldX, &
+                NIL, keep%U(k, m + k), max_nep)
           end if
-          do j = 1, rci%nx
-            do i = 1, keep%lcon
-              keep%U(k + j - 1, m + i) = keep%U(i, m + k + j - 1)
-            end do
-          end do
-        end if
-        if ( keep%rcon > 0 ) then
-          if ( problem == 0 ) then
-            call gemm &
-              ( TR, 'N', keep%rcon, rci%nx, n, &
-                UNIT, X(1, max_nep - keep%rcon + 1), ldX, X(1, k), ldX, &
-                NIL, keep%U(max_nep - keep%rcon + 1, m + k), max_nep )
+
+          if ( rci%i > 0 ) then
+            keep%lcon = keep%lcon + rci%nx
           else
-            call gemm &
-              ( TR, 'N', keep%rcon, rci%nx, n, &
-                UNIT, X(1, max_nep - keep%rcon + 1), ldX, keep%BX(1, k), ldX, &
-                NIL, keep%U(max_nep - keep%rcon + 1, m + k), max_nep )
+            keep%rcon = keep%rcon + rci%nx
           end if
-          do j = 1, rci%nx
-            do i = 1, keep%rcon
-              keep%U(k + j - 1, m + max_nep - keep%rcon + i) = &
-                keep%U(max_nep - keep%rcon + i, m + k + j - 1)
-            end do
-          end do
-        end if
-        if ( problem == 0 ) then
-          call gemm &
-            ( TR, 'N', rci%nx, rci%nx, n, &
-              UNIT, X(1, k), ldX, X(1, k), ldX, &
-              NIL, keep%U(k, m + k), max_nep)
-        else
-          call gemm &
-            ( TR, 'N', rci%nx, rci%nx, n, &
-              UNIT, X(1, k), ldX, keep%BX(1, k), ldX, &
-              NIL, keep%U(k, m + k), max_nep)
-        end if
 
-        if ( rci%i > 0 ) then
-          keep%lcon = keep%lcon + rci%nx
-        else
-          keep%rcon = keep%rcon + rci%nx
-        end if
+        case ( SSMFE_APPLY_ADJ_CONSTRS )
+      
+          rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
+          rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
 
-      case ( SSMFE_APPLY_ADJ_CONSTRS )
-    
-        rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
-        rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
-
-        if ( keep%lcon > 0 ) then
-          call gemm &
-            ( TR, 'N', keep%lcon, rci%nx, n, &
-              UNIT, X, ldX, rci%x, n, NIL, keep%U, max_nep )
-          call gemm &
-            ( 'N', 'N', n, rci%nx, keep%lcon, &
-              -UNIT, X, ldX, keep%U, max_nep, UNIT, rci%x, n )
-        end if
-
-        if ( keep%rcon > 0 ) then
-          j = max_nep - keep%rcon + 1
-          call gemm &
-            ( TR, 'N', keep%rcon, rci%nx, n, &
-              UNIT, X(1, j), ldX, rci%x, n, NIL, keep%U, max_nep )
-          call gemm &
-            ( 'N', 'N', n, rci%nx, keep%rcon, &
-              -UNIT, X(1,j), ldX, keep%U, max_nep, UNIT, rci%x, n )
-        end if
-
-      case ( SSMFE_APPLY_CONSTRAINTS )
-
-        if ( keep%lcon == 0 .and. keep%rcon == 0 ) return
-        
-        rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
-        rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
-
-        if ( keep%lcon > 0 ) then
-          call gemm &
-            ( TR, 'N', keep%lcon, rci%nx, n, &
-              UNIT, X, ldX, rci%y, n, NIL, keep%U, max_nep )
-        end if
-
-        if ( keep%rcon > 0 ) then
-          j = max_nep - keep%rcon + 1
-          call gemm &
-            ( TR, 'N', keep%rcon, rci%nx, n, &
-              UNIT, X(1, j), ldX, rci%y, n, NIL, keep%U(j, 1), max_nep )
-        end if
-
-        m = keep%block_size
-        k = m + max_nep + 1
-        call mxcopy &
-          ( 'A', max_nep, rci%nx, keep%U, max_nep, keep%U(1, k), max_nep )
-        call gemm &
-          ( 'N', 'N', max_nep, rci%nx, max_nep, &
-            -UNIT, keep%U(1, m + 1), max_nep, keep%U(1, k), max_nep, &
-            2*UNIT, keep%U, max_nep )
-
-        if ( keep%lcon > 0 ) then
-          call gemm &
-            ( 'N', 'N', n, rci%nx, keep%lcon, &
-              -UNIT, X, ldX, keep%U, max_nep, UNIT, rci%x, n )
-          if ( problem /= 0 ) &
+          if ( keep%lcon > 0 ) then
+            call gemm &
+              ( TR, 'N', keep%lcon, rci%nx, n, &
+                UNIT, X, ldX, rci%x, n, NIL, keep%U, max_nep )
             call gemm &
               ( 'N', 'N', n, rci%nx, keep%lcon, &
-                -UNIT, keep%BX, ldBX, keep%U, max_nep, UNIT, rci%y, n )
-        end if
+                -UNIT, X, ldX, keep%U, max_nep, UNIT, rci%x, n )
+          end if
 
-        if ( keep%rcon > 0 ) then
-          j = max_nep - keep%rcon + 1
-          call gemm &
-            ( 'N', 'N', n, rci%nx, keep%rcon, &
-              -UNIT, X(1, j), ldX, keep%U(j, 1), max_nep, UNIT, rci%x, n )
-          if ( problem /= 0 ) &
+          if ( keep%rcon > 0 ) then
+            j = max_nep - keep%rcon + 1
+            call gemm &
+              ( TR, 'N', keep%rcon, rci%nx, n, &
+                UNIT, X(1, j), ldX, rci%x, n, NIL, keep%U, max_nep )
             call gemm &
               ( 'N', 'N', n, rci%nx, keep%rcon, &
-                -UNIT, keep%BX(1, j), ldBX, keep%U(j, 1), max_nep, &
-                UNIT, rci%y, n )
-        end if
+                -UNIT, X(1,j), ldX, keep%U, max_nep, UNIT, rci%x, n )
+          end if
 
-      case ( SSMFE_DO_SHIFTED_SOLVE, SSMFE_APPLY_B )
+        case ( SSMFE_APPLY_CONSTRAINTS )
 
-        rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
-        rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
+          if ( keep%lcon == 0 .and. keep%rcon == 0 ) cycle
+          
+          rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
+          rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
 
-      case ( SSMFE_APPLY_PREC )
+          if ( keep%lcon > 0 ) then
+            call gemm &
+              ( TR, 'N', keep%lcon, rci%nx, n, &
+                UNIT, X, ldX, rci%y, n, NIL, keep%U, max_nep )
+          end if
 
-        rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
-        rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
+          if ( keep%rcon > 0 ) then
+            j = max_nep - keep%rcon + 1
+            call gemm &
+              ( TR, 'N', keep%rcon, rci%nx, n, &
+                UNIT, X(1, j), ldX, rci%y, n, NIL, keep%U(j, 1), max_nep )
+          end if
 
-        call copy( n*rci%nx, rci%x, 1, rci%y, 1 )
+          m = keep%block_size
+          k = m + max_nep + 1
+          call mxcopy &
+            ( 'A', max_nep, rci%nx, keep%U, max_nep, keep%U(1, k), max_nep )
+          call gemm &
+            ( 'N', 'N', max_nep, rci%nx, max_nep, &
+              -UNIT, keep%U(1, m + 1), max_nep, keep%U(1, k), max_nep, &
+              2*UNIT, keep%U, max_nep )
 
-      case ( SSMFE_RESTART )
-    
-        if ( rci%k == 0 ) then
-          allocate ( dwork(n, keep%block_size), stat = inform%stat )
+          if ( keep%lcon > 0 ) then
+            call gemm &
+              ( 'N', 'N', n, rci%nx, keep%lcon, &
+                -UNIT, X, ldX, keep%U, max_nep, UNIT, rci%x, n )
+            if ( problem /= 0 ) &
+              call gemm &
+                ( 'N', 'N', n, rci%nx, keep%lcon, &
+                  -UNIT, keep%BX, ldBX, keep%U, max_nep, UNIT, rci%y, n )
+          end if
+
+          if ( keep%rcon > 0 ) then
+            j = max_nep - keep%rcon + 1
+            call gemm &
+              ( 'N', 'N', n, rci%nx, keep%rcon, &
+                -UNIT, X(1, j), ldX, keep%U(j, 1), max_nep, UNIT, rci%x, n )
+            if ( problem /= 0 ) &
+              call gemm &
+                ( 'N', 'N', n, rci%nx, keep%rcon, &
+                  -UNIT, keep%BX(1, j), ldBX, keep%U(j, 1), max_nep, &
+                  UNIT, rci%y, n )
+          end if
+
+        case ( SSMFE_DO_SHIFTED_SOLVE, SSMFE_APPLY_B )
+
+          rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
+          rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
+          
+          return
+
+        case ( SSMFE_APPLY_PREC )
+
+          rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
+          rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
+
+          call copy( n*rci%nx, rci%x, 1, rci%y, 1 )
+
+          return
+
+        case ( SSMFE_RESTART )
+      
+          if ( rci%k == 0 ) then
+            allocate ( dwork(n, keep%block_size), stat = inform%stat )
+            if ( inform%stat /= 0 ) inform%flag = OUT_OF_MEMORY
+            if ( inform%stat /= 0 ) rci%job = SSMFE_ABORT
+            if ( inform%stat /= 0 ) call ssmfe_errmsg( options, inform )
+            if ( inform%stat /= 0 ) return
+            call random_number( dwork )
+            if ( rci%jx > 1 ) &
+              keep%W(:, 1 : rci%jx - 1, 0) = 2*dwork(:, 1 : rci%jx - 1) - ONE
+            if ( rci%jx + rci%nx - 1 < keep%block_size ) &
+              keep%W(:, rci%jx + rci%nx : keep%block_size, 0) = &
+                2*dwork(:, rci%jx + rci%nx : keep%block_size) - ONE
+            deallocate ( dwork )
+          end if
+          
+          return
+
+        case ( SSMFE_DONE, SSMFE_QUIT )
+
+          nep = inform%left + inform%right
+          if ( nep < 1 ) return
+          
+          rci%k = rci%job
+      
+          if ( inform%left > 0 ) then
+            do j = 1, inform%left/2
+              s = lambda(j)
+              lambda(j) = lambda(inform%left - j + 1)
+              lambda(inform%left - j + 1) = s
+              do i = 1, n
+                z = X(i, j)
+                X(i, j) = X(i, inform%left - j + 1)
+                X(i, inform%left - j + 1) = z
+              end do
+            end do
+          end if
+          if ( inform%right > 0 ) then
+            do j = 1, inform%right
+              lambda(inform%left + j) = lambda(max_nep - j + 1)
+            end do
+            call mxcopy &
+              ( 'A', n, inform%right, X(1, max_nep - inform%right + 1), ldX, &
+                X(1, inform%left + 1), ldX )
+            do j = 1, inform%right/2
+              do i = 1, n
+                z = X(i, inform%left + j)
+                X(i, inform%left + j) = X(i, nep - j + 1)
+                X(i, nep - j + 1) = z
+              end do
+            end do
+          end if
+
+          deallocate ( keep%W, keep%V )
+          allocate &
+            ( keep%W(n, nep, 3), keep%V(nep, nep, 3), stat = inform%stat )
           if ( inform%stat /= 0 ) inform%flag = OUT_OF_MEMORY
           if ( inform%stat /= 0 ) rci%job = SSMFE_ABORT
           if ( inform%stat /= 0 ) call ssmfe_errmsg( options, inform )
           if ( inform%stat /= 0 ) return
-          call random_number( dwork )
-          if ( rci%jx > 1 ) &
-            keep%W(:, 1 : rci%jx - 1, 0) = 2*dwork(:, 1 : rci%jx - 1) - ONE
-          if ( rci%jx + rci%nx - 1 < keep%block_size ) &
-            keep%W(:, rci%jx + rci%nx : keep%block_size, 0) = &
-              2*dwork(:, rci%jx + rci%nx : keep%block_size) - ONE
-          deallocate ( dwork )
-        end if
-        
-      case ( -2, -1 )
 
-        nep = inform%left + inform%right
-        if ( nep < 1 ) return
-        
-        rci%k = rci%job
-    
-        if ( inform%left > 0 ) then
-          do j = 1, inform%left/2
-            s = lambda(j)
-            lambda(j) = lambda(inform%left - j + 1)
-            lambda(inform%left - j + 1) = s
-            do i = 1, n
-              z = X(i, j)
-              X(i, j) = X(i, inform%left - j + 1)
-              X(i, inform%left - j + 1) = z
-            end do
-          end do
-        end if
-        if ( inform%right > 0 ) then
-          do j = 1, inform%right
-            lambda(inform%left + j) = lambda(max_nep - j + 1)
-          end do
-          call mxcopy &
-            ( 'A', n, inform%right, X(1, max_nep - inform%right + 1), ldX, &
-              X(1, inform%left + 1), ldX )
-          do j = 1, inform%right/2
-            do i = 1, n
-              z = X(i, inform%left + j)
-              X(i, inform%left + j) = X(i, nep - j + 1)
-              X(i, nep - j + 1) = z
-            end do
-          end do
-        end if
+          if ( problem == 0 ) then
+            call mxcopy( 'A', n, nep, X, ldX, keep%W, n )
+            rci%job = SSMFE_DO_SHIFTED_SOLVE
+            rci%nx = nep
+            rci%jx = 1
+            rci%kx = 0
+            rci%jy = 1
+            rci%ky = 2
+            rci%x => keep%W(:,:,1)
+            rci%y => keep%W(:,:,2)
+            keep%step = 2
+          else
+            call mxcopy( 'A', n, nep, X, ldX, keep%W(1,1,2), n )
+            rci%job = SSMFE_APPLY_B
+            rci%nx = nep
+            rci%jx = 1
+            rci%kx = 2
+            rci%jy = 1
+            rci%ky = 0
+            rci%x => keep%W(:,:,2)
+            rci%y => keep%W(:,:,1)
+            keep%step = 1
+          end if
 
-        deallocate ( keep%W, keep%V )
-        allocate ( keep%W(n, nep, 3), keep%V(nep, nep, 3), stat = inform%stat )
-        if ( inform%stat /= 0 ) inform%flag = OUT_OF_MEMORY
-        if ( inform%stat /= 0 ) rci%job = SSMFE_ABORT
-        if ( inform%stat /= 0 ) call ssmfe_errmsg( options, inform )
-        if ( inform%stat /= 0 ) return
+          return
+          
+        case ( SSMFE_ABORT )
 
-        if ( problem == 0 ) then
-          call mxcopy( 'A', n, nep, X, ldX, keep%W, n )
-          rci%job = SSMFE_DO_SHIFTED_SOLVE
-          rci%nx = nep
-          rci%jx = 1
-          rci%kx = 0
-          rci%jy = 1
-          rci%ky = 2
-          rci%x => keep%W(:,:,1)
-          rci%y => keep%W(:,:,2)
-          keep%step = 2
-        else
-          call mxcopy( 'A', n, nep, X, ldX, keep%W(1,1,2), n )
-          rci%job = SSMFE_APPLY_B
-          rci%nx = nep
-          rci%jx = 1
-          rci%kx = 2
-          rci%jy = 1
-          rci%ky = 0
-          rci%x => keep%W(:,:,2)
-          rci%y => keep%W(:,:,1)
-          keep%step = 1
-        end if
+          return
 
-      end select
+        end select
+      
+      end do
       
     case ( 1 )
 
