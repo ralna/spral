@@ -11,7 +11,6 @@
 
 \newcommand{\report}{Technical Report RAL-TR-2010-19}
 
-\newcommand{\Double}{{\tt DOUBLE PRECISION}}
 \newcommand{\Integer}{{\tt INTEGER}}
 \newcommand{\Character}{{\tt CHARACTER}}
 \newcommand{\Logical}{{\tt LOGICAL}}
@@ -220,11 +219,11 @@ after another  to reduce  memory requirements.
 
 \subsection{Package types} 
 
-We use the term {\bf package type} to mean
-default double precision real for the double precision real version,
-and default double precision complex
-for the double precision complex version. 
-\REALDP\ denotes double precision real.
+\Integer\ denotes default \Integer, and \REALDP\ denotes
+\texttt{REAL(kind=kind(0d0))}. We use the term {\bf package type} to mean
+\texttt{REAL(kind=kind(0d0))} for calls to the double precision real valued
+interface, and to mean \texttt{COMPLEX(kind=kind(0d0))} for calls to the double
+precision complex valued interface.
 
 \subsection{Derived types}
 \label{derived types}
@@ -1054,7 +1053,7 @@ then {\tt converged(j) = i}; if the convergence stagnated
 then {\tt converged(j) = -i}; otherwise {\tt converged(j) = 0}.
 %
 \itt{err\_lambda} is a rank-1 allocatable array of type 
-default \Double\ that is allocated to have size {\tt mep} 
+{\tt REAL} that is allocated to have size {\tt mep} 
 on a call with {\tt rci\%job = 0} or {\tt 999}.
 {\tt err\_lmd(i)} contains 
 the estimated eigenvalue error
@@ -1062,7 +1061,7 @@ for the approximate eigenvalue {\tt lambda(i)}
 if {\tt info\%converged(i)} is non-zero,
 and {\tt -1.0} otherwise.
 %
-\itt{err\_x} is a rank-1 allocatable array of type default \Double.
+\itt{err\_x} is a rank-1 allocatable array of type {\tt REAL}.
 This array is allocated to have size {\tt mep} 
 on a call with {\tt rci\%job = 0} or {\tt 999},
 and is used for storing the eigenvector errors
@@ -1088,12 +1087,12 @@ of \Ref{evp.g} or \Ref{evp.b}
 to the left of {\tt sigma}. 
 %
 \itt{next\_left}
-is a scalar of type default \Double\ that holds
+is a scalar of type default {\tt REAL} that holds
 the non-converged eigenvalue next to the last converged on the left
 (cf. {\tt options\%left\_gap}).
 %
 \itt{next\_right}
-is a scalar of type default \Double\ that holds
+is a scalar of type default {\tt REAL} that holds
 the non-converged eigenvalue next to the last converged on the right
 (cf. {\tt options\%right\_gap}).
 %
@@ -1104,7 +1103,7 @@ that holds the number of non-converged eigenpairs
 (see Section~\ref{sec:err.solve}).
 %
 \itt{residual\_norms} is a rank-1 allocatable array of type
-default \Double\ that is allocated to have size {\tt mep} 
+default {\tt REAL} that is allocated to have size {\tt mep} 
 on a call with {\tt rci\%job = 0} or {\tt 999}.
 On returns with 
 {\tt rci\%job = 5},

@@ -11,7 +11,6 @@
 
 \newcommand{\report}{Technical Report RAL-TR-2010-19}
 
-\newcommand{\Double}{{\tt DOUBLE PRECISION}}
 \newcommand{\Integer}{{\tt INTEGER}}
 \newcommand{\Character}{{\tt CHARACTER}}
 \newcommand{\Logical}{{\tt LOGICAL}}
@@ -179,13 +178,11 @@ after another  to reduce  memory requirements.
 
 \subsection{Package types} 
 
-We use the term {\bf package type} to mean
-default double precision real for the double precision real version,
-and default double precision complex
-for the double precision complex version. 
-%{\tt REAL} 
-\REALDP\
-denotes double precision real.
+\Integer\ denotes default \Integer, and \REALDP\ denotes
+\texttt{REAL(kind=kind(0d0))}. We use the term {\bf package type} to mean
+\texttt{REAL(kind=kind(0d0))} for calls to the double precision real valued
+interface, and to mean \texttt{COMPLEX(kind=kind(0d0))} for calls to the double
+precision complex valued interface.
 
 \subsection{Derived types}
 \label{derived types}

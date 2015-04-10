@@ -11,7 +11,6 @@
 
 \newcommand{\report}{Technical Report RAL-TR-2010-19}
 
-\newcommand{\Double}{{\tt DOUBLE PRECISION}}
 \newcommand{\Integer}{{\tt INTEGER}}
 \newcommand{\Character}{{\tt CHARACTER}}
 \newcommand{\Logical}{{\tt LOGICAL}}
@@ -781,7 +780,7 @@ The default is {\tt minBprod = .true.}.
 {\bf Restriction:} {\tt minBprod = .true.} if {\tt problem < 0}.
 %
 \itt{min\_gap} 
-is a scalar of type default \Double\ that
+is a scalar of type {\tt REAL}\ that
 controls the restart.
 If the relative distance between the last eigenvalue of interest
 on either margin of the spectrum and the rest of the spectrum
@@ -800,7 +799,7 @@ by default no restart is ever suggested.
 {\bf Restriction:} {\tt $0 \le$ min\_gap $\le 1$}.
 %
 \itt{cf\_max}:
-is a scalar of type default \Double\ that
+is a scalar of type {\tt REAL} that
 is used to detect the convergence stagnation
 based on 
 the estimated asymptotic convergence factor 
@@ -841,7 +840,7 @@ otherwise {\tt converged(j) = 0}.
 %(see Section~\ref{sec:err.solve}).
 %
 \itt{err\_lambda} is a rank-1 allocatable array of type 
-default \Double\ that is allocated to have size {\tt m} 
+{\tt REAL} that is allocated to have size {\tt m} 
 on a call with {\tt rci\%job = 0} or {\tt 999}.
 {\tt err\_lmd(i)} contains 
 the estimated eigenvalue error
@@ -849,7 +848,7 @@ for the approximate eigenvalue {\tt lambda(i)}
 if {\tt info\%converged(i)} is non-zero,
 and {\tt -1.0} otherwise.
 %
-\itt{err\_x} is a rank-1 allocatable array of type default \Double.
+\itt{err\_x} is a rank-1 allocatable array of type {\tt REAL}.
 This array is allocated to have size {\tt m} 
 on a call with {\tt rci\%job = 0} or {\tt 999},
 and is used for storing the eigenvector errors
@@ -867,7 +866,7 @@ that holds the number of iterations
 since the previous {\tt rci\%job = 0} or {\tt rci\%job = 999} call.
 %
 \itt{residual\_norms} is a rank-1 allocatable array of type
-default \Double\ that is allocated to have size {\tt m} 
+{\tt REAL} that is allocated to have size {\tt m} 
 on a call with {\tt rci\%job = 0} or {\tt 999}.
 On returns with 
 {\tt rci\%job = 4} or {\tt 5}, {\tt res\_norms(i)} 
