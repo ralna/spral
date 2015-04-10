@@ -169,7 +169,7 @@ program ssmfe_core_precond_example
       exit
     end select
   end do
-  print '(i3, 1x, a)', ncon, 'eigenpairs converged'
+  print '(i3, 1x, a, 1x, i3, 1x, a)', ncon, 'eigenpairs converged in', inform%iteration, 'iterations'
   print '(1x, a, i1, a, es13.7)', &
     ('lambda(', i, ') = ', lambda(i), i = 1, ncon)
   call ssmfe_free( keep, inform )

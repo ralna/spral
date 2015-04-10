@@ -205,7 +205,7 @@ void main(void) {
    }
 finished:
    if(inform.flag != 0) printf("inform.flag = %d\n", inform.flag);
-   printf("%3d eigenpairs converged\n", ncon);
+   printf("%3d eigenpairs converged in %d iterations\n", ncon, inform.iteration);
    for(int i=0; i<ncon; i++)
       printf(" lambda[%1d] = %13.7e\n", i, lambda[i]);
    spral_ssmfe_core_free(&keep, &inform);
