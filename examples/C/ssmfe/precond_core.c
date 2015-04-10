@@ -69,7 +69,7 @@ void main(void) {
    int ncon = 0;        /* number of converged eigenpairs */
    rci.job = 0; keep = NULL;
    while(true) { /* reverse communication loop */
-      spral_ssmfe_ssmfe_double(&rci, 0, nep, 0, m, lmd, &rr[0][0][0], ind,
+      spral_ssmfe_double(&rci, 0, nep, 0, m, lmd, &rr[0][0][0], ind,
          &keep, &options, &inform);
       switch ( rci.job ) {
       case 1:

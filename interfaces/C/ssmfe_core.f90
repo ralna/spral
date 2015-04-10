@@ -212,7 +212,7 @@ subroutine spral_ssmfe_core_default_options(coptions) bind(C)
    coptions%minBprod    = default_options%minBprod
 end subroutine spral_ssmfe_core_default_options
 
-subroutine spral_ssmfe_ssmfe_double(crci, problem, left, right, m, lambda, rr, &
+subroutine spral_ssmfe_double(crci, problem, left, right, m, lambda, rr, &
       ind, ckeep, coptions, cinform) bind(C)
    use spral_ssmfe_core_ciface
    implicit none
@@ -258,9 +258,9 @@ subroutine spral_ssmfe_ssmfe_double(crci, problem, left, right, m, lambda, rr, &
    call copy_inform_out(fcikeep%inform, cinform)
    if(crci%job.eq.11 .and. cindexed) &
       ind(1:crci%nx) = ind(1:crci%nx) - 1
-end subroutine spral_ssmfe_ssmfe_double
+end subroutine spral_ssmfe_double
 
-subroutine spral_ssmfe_ssmfe_double_complex(crci, problem, left, right, m, &
+subroutine spral_ssmfe_double_complex(crci, problem, left, right, m, &
       lambda, rr, ind, ckeep, coptions, cinform) bind(C)
    use spral_ssmfe_core_ciface
    implicit none
@@ -271,7 +271,7 @@ subroutine spral_ssmfe_ssmfe_double_complex(crci, problem, left, right, m, &
    integer(C_INT), value :: right
    integer(C_INT), value :: m
    real(C_DOUBLE), dimension(m), intent(inout) :: lambda
-   complex(C_DOUBLE), dimension(2*m, 2*m, 3), intent(inout) :: rr
+   complex(C_DOUBLE_COMPLEX), dimension(2*m, 2*m, 3), intent(inout) :: rr
    integer(C_INT), dimension(m), intent(out) :: ind
    type(C_PTR), intent(inout) :: ckeep
    type(spral_ssmfe_core_options), intent(in) :: coptions
@@ -306,7 +306,101 @@ subroutine spral_ssmfe_ssmfe_double_complex(crci, problem, left, right, m, &
    call copy_inform_out(fcikeep%inform, cinform)
    if(crci%job.eq.11 .and. cindexed) &
       ind(1:crci%nx) = ind(1:crci%nx) - 1
-end subroutine spral_ssmfe_ssmfe_double_complex
+end subroutine spral_ssmfe_double_complex
+
+subroutine spral_ssmfe_largest_double(crci, problem, nep, m, lambda, rr, &
+      ind, ckeep, coptions, cinform) bind(C)
+   use spral_ssmfe_core_ciface
+   implicit none
+
+   type(spral_ssmfe_rcid), intent(inout) :: crci
+   integer(C_INT), value :: problem
+   integer(C_INT), value :: nep
+   integer(C_INT), value :: m
+   real(C_DOUBLE), dimension(m), intent(inout) :: lambda
+   real(C_DOUBLE), dimension(2*m, 2*m, 3), intent(inout) :: rr
+   integer(C_INT), dimension(m), intent(out) :: ind
+   type(C_PTR), intent(inout) :: ckeep
+   type(spral_ssmfe_core_options), intent(in) :: coptions
+   type(spral_ssmfe_inform), intent(inout) :: cinform
+
+   logical :: cindexed
+   type(ssmfe_core_ciface_keep), pointer :: fcikeep
+   type(ssmfe_core_options) :: foptions
+
+   ! Copy options in first to find out whether we use Fortran or C indexing
+   call copy_options_in(coptions, foptions, cindexed)
+
+   ! Translate arguments
+   if(c_associated(ckeep)) then
+      call c_f_pointer(ckeep, fcikeep)
+   else
+      allocate(fcikeep)
+      ckeep = c_loc(fcikeep)
+   endif
+   if(crci%job.eq.0) fcikeep%rcid%job = 0
+   if(fcikeep%rcid%job.eq.999 .and. fcikeep%rcid%k>0) then
+      fcikeep%rcid%i = crci%i
+      fcikeep%rcid%j = crci%j
+   endif
+
+   ! Call Fortran routine
+   call ssmfe_largest(fcikeep%rcid, problem, nep, m, lambda, rr, ind, &
+      fcikeep%keep, foptions, fcikeep%inform)
+
+   ! Copy arguments out
+   call copy_rci_out(fcikeep%rcid, crci, cindexed)
+   call copy_inform_out(fcikeep%inform, cinform)
+   if(crci%job.eq.11 .and. cindexed) &
+      ind(1:crci%nx) = ind(1:crci%nx) - 1
+end subroutine spral_ssmfe_largest_double
+
+subroutine spral_ssmfe_largest_double_complex(crci, problem, nep, m, lambda, &
+      rr, ind, ckeep, coptions, cinform) bind(C)
+   use spral_ssmfe_core_ciface
+   implicit none
+
+   type(spral_ssmfe_rciz), intent(inout) :: crci
+   integer(C_INT), value :: problem
+   integer(C_INT), value :: nep
+   integer(C_INT), value :: m
+   real(C_DOUBLE), dimension(m), intent(inout) :: lambda
+   complex(C_DOUBLE_COMPLEX), dimension(2*m, 2*m, 3), intent(inout) :: rr
+   integer(C_INT), dimension(m), intent(out) :: ind
+   type(C_PTR), intent(inout) :: ckeep
+   type(spral_ssmfe_core_options), intent(in) :: coptions
+   type(spral_ssmfe_inform), intent(inout) :: cinform
+
+   logical :: cindexed
+   type(ssmfe_core_ciface_keep), pointer :: fcikeep
+   type(ssmfe_core_options) :: foptions
+
+   ! Copy options in first to find out whether we use Fortran or C indexing
+   call copy_options_in(coptions, foptions, cindexed)
+
+   ! Translate arguments
+   if(c_associated(ckeep)) then
+      call c_f_pointer(ckeep, fcikeep)
+   else
+      allocate(fcikeep)
+      ckeep = c_loc(fcikeep)
+   endif
+   if(crci%job.eq.0) fcikeep%rcid%job = 0
+   if(fcikeep%rcid%job.eq.999 .and. fcikeep%rcid%k>0) then
+      fcikeep%rcid%i = crci%i
+      fcikeep%rcid%j = crci%j
+   endif
+
+   ! Call Fortran routine
+   call ssmfe_largest(fcikeep%rciz, problem, nep, m, lambda, rr, ind, &
+      fcikeep%keep, foptions, fcikeep%inform)
+
+   ! Copy arguments out
+   call copy_rci_out(fcikeep%rciz, crci, cindexed)
+   call copy_inform_out(fcikeep%inform, cinform)
+   if(crci%job.eq.11 .and. cindexed) &
+      ind(1:crci%nx) = ind(1:crci%nx) - 1
+end subroutine spral_ssmfe_largest_double_complex
 
 subroutine spral_ssmfe_core_free(ckeep, cinform) bind(C)
    use spral_ssmfe_core_ciface

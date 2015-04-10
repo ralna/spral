@@ -86,13 +86,24 @@ struct spral_ssmfe_inform {
 
 /* Initialize options to defaults */
 void spral_ssmfe_core_default_options(struct spral_ssmfe_core_options *options);
-/* Core driver routine for (real) standard and generalized eigenproblems */
-void spral_ssmfe_ssmfe_double(struct spral_ssmfe_rcid *rci, int problem,
+/* Core driver routine for left and right values of (real) eigenproblems */
+void spral_ssmfe_double(struct spral_ssmfe_rcid *rci, int problem,
       int left, int right, int m, double *lambda, double *rr, int *ind,
       void **keep, const struct spral_ssmfe_core_options *options,
       struct spral_ssmfe_inform *inform);
-void spral_ssmfe_ssmfe_double_complex(struct spral_ssmfe_rciz *rci, int problem,
+/* Core driver routine for left and right values of (complex) eigenproblems */
+void spral_ssmfe_double_complex(struct spral_ssmfe_rciz *rci, int problem,
       int left, int right, int m, double *lambda, double complex *rr, int *ind,
+      void **keep, const struct spral_ssmfe_core_options *options,
+      struct spral_ssmfe_inform *inform);
+/* Core driver routine for largest values of (real) eigenproblems */
+void spral_ssmfe_largest_double(struct spral_ssmfe_rcid *rci, int problem,
+      int nep, int m, double *lambda, double *rr, int *ind,
+      void **keep, const struct spral_ssmfe_core_options *options,
+      struct spral_ssmfe_inform *inform);
+/* Core driver routine for largest values of (complex) eigenproblems */
+void spral_ssmfe_largest_double_complex(struct spral_ssmfe_rciz *rci,
+      int problem, int nep, int m, double *lambda, double complex *rr, int *ind,
       void **keep, const struct spral_ssmfe_core_options *options,
       struct spral_ssmfe_inform *inform);
 /* Free memory */
