@@ -107,6 +107,6 @@ void spral_ssmfe_largest_double_complex(struct spral_ssmfe_rciz *rci,
       void **keep, const struct spral_ssmfe_core_options *options,
       struct spral_ssmfe_inform *inform);
 /* Free memory */
-int spral_ssmfe_core_free(void **keep, struct spral_ssmfe_inform *inform);
+void spral_ssmfe_core_free(void **keep, struct spral_ssmfe_inform *inform);
 
 #endif // SPRAL_SSMFE_H

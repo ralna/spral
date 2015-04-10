@@ -79,7 +79,7 @@ core interface}
 \author{
    Evgueni Ovtchinnikov (STFC Rutherford Appleton Laboratory)
 }
-\pkglang{Fortran}
+\pkglang{C}
 \spralmaketitle
 \thispagestyle{firststyle}
 
@@ -175,28 +175,32 @@ for shared-memory, out-of-core and hybrid computation.
 
 \label{sec:call}
 
-Access to the package requires a {\tt USE} statement \\ \\
-\indent\hspace{8mm}{\tt use \fullpackagename} \\
+Access to the package requires inclusion of either \texttt{spral.h} (for the
+entire \spral library) or \texttt{spral\_ssmfe.h} (for just the SSMFE routines), i.e.
 
-\medskip
+\begin{verbatim}
+   #include "spral.h"
+\end{verbatim}
 
 \noindent The following procedures are available to the user:
 %
 \vspace{-0.1cm}
 \begin{itemize}
-\item {\tt ssmfe()} 
-computes specified numbers of left- and right-most
-eigenvalues and the corresponding eigen\-vec\-tors)
-\item {\tt ssmfe\_largest()} 
+\item {\tt spral\_ssmfe\_core\_default\_options()} initializes the \texttt{options} structure to default values
+\item {\tt spral\_ssmfe\_double()} and {\tt spral\_ssmfe\_double\_complex()}
+computues specified numbers of left- and right-most
+eigenvalues and the corresponding eigen\-vec\-tors
+\item {\tt spral\_ssmfe\_largest\_double()} and
+{\tt spral\_ssmfe\_largest\_double\_complex()}
 computes a specified number
 of eigenvalues of largest magnitude
 and the cor\-res\-pon\-ding eigenvectors
-\item {\tt ssmfe\_free()}  should be called after all other calls
+\item {\tt spral\_ssmfe\_core\_free()} should be called after all other calls
 are complete. It frees memory referenced by \texttt{keep} and \texttt{inform}.
 \end{itemize}
 
 \noindent
-The solver procedures \texttt{ssmfe()} and \texttt{ssmfe\_largest()}
+The solver procedures \texttt{spral\_ssmfe\_\textit{type}()} and \texttt{spral\_ssmfe\_largest\_\textit{type}()}
 must be called repeatedly using
 a reverse communication interface.
 The procedure \texttt{ssmfe\_free()}
@@ -207,70 +211,99 @@ to free all memory that has been internally
 allocated by
 the solver procedure.
 
-\subsection{Package types} 
-
-\Integer\ denotes default \Integer, and \REALDP\ denotes
-\texttt{REAL(kind=kind(0d0))}. We use the term {\bf package type} to mean
-\texttt{REAL(kind=kind(0d0))} for calls to the double precision real valued
-interface, and to mean \texttt{COMPLEX(kind=kind(0d0))} for calls to the double
-precision complex valued interface.
-
 \subsection{Derived types}
 \label{sec:derived}
 
 For each problem, the user must employ the derived types defined by the
 module to declare scalars of the types 
-{\tt ssmfe\_rcid} (real version) or 
-{\tt ssmfe\_rciz} (complex version), 
-{\tt ssmfe\_core\_keep},
-{\tt ssmfe\_core\_options} and 
-{\tt ssmfe\_inform}.
+{\tt struct spral\_ssmfe\_rcid} (real version) or 
+{\tt struct spral\_ssmfe\_rciz} (complex version), 
+{\tt struct spral\_ssmfe\_core\_options} and 
+{\tt struct spral\_ssmfe\_inform}. The user must also declare a \texttt{void *}
+pointer \texttt{keep} for the package's private data structure. The options
+data structure \textbf{must} be initalized using \texttt{spral\_ssmfe\_core\_default\_options()},
+and the pointer \texttt{keep} must be initialized to \texttt{NULL}.
 The following pseudocode illustrates this.
 \begin{verbatim}
-      use SPRAL_SSMFE_CORE
+      #include "spral.h"
       ...
-      type (ssmfe_rcid        ) :: rcid
-      type (ssmfe_core_keep   ) :: keep
-      type (ssmfe_core_options) :: options
-      type (ssmfe_inform      ) :: inform
+      struct spral_ssmfe_rcid rcid;
+      struct spral_ssmfe_core_options options;
+      struct spral_ssmfe_inform  inform;
+      void *keep = NULL;
       ...
+      spral_ssmfe_core_default_options(&options);
 \end{verbatim}
-The components of {\tt ssmfe\_options} and {\tt ssmfe\_inform} are explained
+The components of {\tt spral\_ssmfe\_options} and {\tt spral\_ssmfe\_inform} are explained
 in Sections~\ref{ssmfe:type:options} and \ref{ssmfe:type:inform}. Components
-of \texttt{ssmfe\_rcid} are used for the reverse communication interface and
+of \texttt{spral\_ssmfe\_rcid} are used for the reverse communication interface and
 are explained in Section~\ref{ssmfe:routine:ssmfe}.
-The components of \texttt{keep} are used to pass data between repeated calls to
-the subroutines and must not be altered by the user.
+The \texttt{void~*} pointer \texttt{keep} is allocated using Fortran, and
+must be passed to \texttt{spral\_ssmfe\_core\_free()} to free the associated
+memory.
 
 \section{Argument lists}
 
-\subsection{\texttt{ssmfe()} and \texttt{ssmfe\_largest()}} \label{ssmfe:routine:ssmfe}
+\subsection{\texttt{spral\_ssmfe\_core\_default\_options()}}
+
+\textbf{To initialize a variable of type \texttt{struct spral\_ssmfe\_core\_options}
+the following routine is provided.}
+
+\medskip
+\noindent
+\textbf{\texttt{
+      \hspace*{0.3cm} void spral\_ssmfe\_core\_default\_options(struct spral\_ssmfe\_core\_options *options);
+}}
+
+\noindent
+\begin{description}
+   \item[\texttt{*options}] is the instance to be initialized.
+\end{description}
+
+\subsection{\texttt{spral\_ssmfe\_\textit{type}()} and \texttt{spral\_ssmfe\_largest\_\textit{type}()}} \label{ssmfe:routine:ssmfe}
 
 {\bf
 To compute specified numbers
 of leftmost and rightmost eigenvalues 
 and corresponding eigenvectors,
-the following call must be made repeatedly:
+one of the following routines must be called repeatedly:
 }
 
-\medskip
-{\tt call
-ssmfe( rci, problem, left, right, m, lambda, rr, ind, keep, options, inform )
-}
+\begin{verbatim}
+   void spral_ssmfe_double(struct spral_ssmfe_rcid *rci, int problem,
+      int left, int right, int m, double *lambda, double *rr, int *ind,
+      void **keep, const struct spral_ssmfe_core_options *options,
+      struct spral_ssmfe_inform *inform);
+\end{verbatim}
+\begin{verbatim}
+   void spral_ssmfe_double_complex(struct spral_ssmfe_rciz *rci, int problem,
+      int left, int right, int m, double *lambda, double complex *rr, int *ind,
+      void **keep, const struct spral_ssmfe_core_options *options,
+      struct spral_ssmfe_inform *inform);
+\end{verbatim}
+
 
 \medskip
 \noindent
 {\bf
-To compute a specified number %amount 
+To compute a specified number
 of eigenvalues of largest magnitude 
 and corresponding eigenvectors,
-the following call must be made repeatedly:
+one of the following routine must be called repeatedly:
 }
 
-\medskip
-{\tt call
-ssmfe\_largest( rci, problem, nep, m, lambda, rr, ind, keep, options, inform )
-}
+\begin{verbatim}
+   void spral_ssmfe_largest_double(struct spral_ssmfe_rcid *rci, int problem,
+      int nep, int m, double *lambda, double *rr, int *ind,
+      void **keep, const struct spral_ssmfe_core_options *options,
+      struct spral_ssmfe_inform *inform);
+\end{verbatim}
+\begin{verbatim}
+   void spral_ssmfe_largest_double_complex(struct spral_ssmfe_rciz *rci,
+      int problem, int nep, int m, double *lambda, double complex *rr, int *ind,
+      void **keep, const struct spral_ssmfe_core_options *options,
+      struct spral_ssmfe_inform *inform);
+\end{verbatim}
 
 \medskip
 \noindent
@@ -278,17 +311,17 @@ To use the solver procedures,
 the user needs to maintain a workspace {\tt W} containing
 {\tt kw + 1} blocks of {\tt m} vectors of size {\tt n}.
 A value {\tt kw = 7} is always sufficient. 
-However, if {\tt options\%minAprod} $=$ {\tt .false.}
-and either {\tt options\%minBprod} $=$ {\tt .false.} or 
+However, if {\tt options.minAprod} $=$ {\tt false}
+and either {\tt options.minBprod} $=$ {\tt false} or 
 the standard eigenvalue problem \Ref{evp} is solved,
 then {\tt kw = 3} is sufficient; 
 if 
-{\tt options\%minAprod} $=$ {\tt .true.} and
-{\tt options\%minBprod} $=$ {\tt .true.},
+{\tt options.minAprod} $=$ {\tt true} and
+{\tt options.minBprod} $=$ {\tt true},
 then {\tt kw} must be at least {\tt 7};
 otherwise {\tt kw = 5} is sufficient.
 Solver procedures
-use indices {\tt 1} to {\tt m} 
+use indices {\tt 0} to {\tt m-1} 
 to refer to vectors inside each block
 and indices {\tt 0} to {\tt kw} 
 to refer to particular blocks.
@@ -305,20 +338,22 @@ to a separate eigenvectors' storage {\tt X}.
 
 When $B \ne I$,
 it is expedient to 
-have %another 
+have
 storage {\tt BX}
 for the $B$-images of the converged eigenvectors,
 i.e. {\tt BX = B*X}.
 
-To simplify the description of the %advanced RCI's,
+To simplify the description of the
 reverse communication interface,
 below we assume that an array
-{\tt W(n,~m,~0:kw)} of package type
+{\tt W[kw+1][m][n]} of package type
 is used as a workspace,
-and that arrays {\tt X(n, mep)} and {\tt BX(n, mep)} of package type
+and that arrays {\tt X[mep][n]} and {\tt BX[mep][n]} of package type
 are used for storing the computed eigenvectors
 and their $B$-images,
 where {\tt mep} is not less than the number of desired eigenpairs.
+For convienence of notation we use the convention that \texttt{x[i:j]}
+denotes indices {\tt i} through {\tt j} (inclusive) of the vector {\tt x}.
 The transpose (real or complex, depending on the package type)
 of a matrix {\tt H} 
 is denoted by {\tt H}$^\prime$.
@@ -329,19 +364,12 @@ The meaning of the arguments of the solver procedures is as follows.
 
 \begin{description}
 %
-\itt{rci} is is an \intentinout\ scalar  of type
-{\tt ssmfe\_rcid} in real version and
-{\tt ssmfe\_rciz} in complex version.
-Before the first call, {\tt rci\%job} must be set to {\tt 0}.
-No other values may be assigned to {\tt rci\%job} by the user.
+\itt{rci} is used for the reverse communication interface.
+Before the first call, {\tt rci.job} must be set to {\tt 0}.
+No other values may be assigned to {\tt rci.job} by the user.
 After each call,
-the value of {\tt rci\%job} must be inspected by the user's code
+the value of {\tt rci.job} must be inspected by the user's code
 and the appropriate action taken: 
-%(see below for details).
-%The following values of {\tt rci\%job}
-%are common to all solver procedures 
-%and require the same action: 
-%
 \begin{description}
 %
 \itt{-3}: fatal error return, the computation must be terminated;
@@ -355,35 +383,35 @@ see Section~\ref{sec:err};
 \itt{~1}: the user must compute $V = A U$, where
 
 \hspace{8mm}
-$U=$ {\tt W(:, ix:jx, rci\%kx)}, 
-~with~ {\tt ix} $=$ {\tt rci\%jx} 
+$U=$ {\tt W[rci.kx][ix:jx][:]}, 
+~with~ {\tt ix} $=$ {\tt rci.jx} 
 ~and~
-{\tt jx} $=$ {\tt ix + rci\%nx - 1},
+{\tt jx} $=$ {\tt ix + rci.nx - 1},
 
 \hspace{8mm}
-$V=$ {\tt W(:, iy:jy, rci\%ky)},
-~with~ {\tt iy} $=$ {\tt rci\%jy} 
+$V=$ {\tt W[rci.kx][iy:jy][:]},
+~with~ {\tt iy} $=$ {\tt rci.jy} 
 ~and~
-{\tt jy} $=$ {\tt iy + rci\%nx - 1}.
+{\tt jy} $=$ {\tt iy + rci.nx - 1}.
 %
 \itt{~2}: the user must
 compute $V = T U$ if preconditioning is used
 or copy $U$ to $V$ otherwise,
-where $U$ and $V$ are as for {\tt rci\%job = 1}.
+where $U$ and $V$ are as for {\tt rci.job = 1}.
 %
 \itt{~3}:
 the user must compute $V = B U$,
-where $U$ and $V$ are as for {\tt rci\%job = 1}.
+where $U$ and $V$ are as for {\tt rci.job = 1}.
 %
 \itt{~4}:
-for each {\tt i = 1,\ldots,m}
-such that {\tt inform\%converged(i)} is zero,
-the user must set {\tt inform\%converged(i)}
+for each {\tt i = 0,\ldots,m-1}
+such that {\tt inform.converged[i]} is zero,
+the user must set {\tt inform.converged[i]}
 to a positive value if the residual norm
-{\tt inform\%res\_norms(i)} and
+{\tt inform.res\_norms[i]} and
 the estimated eigenvalue and eigenvector errors
-{\tt inform\%err\_lambda(i)} and
-{\tt inform\%err\_x(i)} are small enough
+{\tt inform.err\_lambda[i]} and
+{\tt inform.err\_x[i]} are small enough
 for this eigenpair to be deemed as converged.
 %
 \itt{~5}: the user must save the converged eigenvectors
@@ -392,104 +420,104 @@ and, optionally,
 for problems \Ref{evp.g} and \Ref{evp.p},
 save their $B$-images.
 The converged eigenvectors are columns of the $n\times m$ matrix
-{\tt W(:,:,rci\%kx)} and their $B$-images are respective columns of
-{\tt W(:,:,rci\%ky)}
+{\tt W[rci.kx][:][:]} and their $B$-images are respective columns of
+{\tt W[rci.ky][:][:]}
 that are identified by
-{\tt rci\%i, rci\%jx} and {\tt rci\%nx}
+{\tt rci.i, rci.jx} and {\tt rci.nx}
 as follows:
-if {\tt rci\%i > 0}, then the column numbers
-run from {\tt rci\%jx} to {\tt rci\%jx + rci\%nx - 1},
-and if {\tt rci\%i < 0}, then they run
-from {\tt rci\%jx - rci\%nx + 1} to {\tt rci\%jx}.
+if {\tt rci.i > 0}, then the column numbers
+run from {\tt rci.jx} to {\tt rci.jx + rci.nx - 1},
+and if {\tt rci.i < 0}, then they run
+from {\tt rci.jx - rci.nx + 1} to {\tt rci.jx}.
 %
 \itt{11}:
-if {\tt rci\%i = 0}, then
+if {\tt rci.i = 0}, then
 the user  must perform a copy $V \leftarrow U$, 
-where $U$ and $V$ are as for {\tt rci\%job = 1},
-otherwise the columns of {\tt W(:,:,rci\%kx)}
-and {\tt W(:,:,rci\%ky)}
-(if {\tt rci\%kx} $\not=$ {\tt rci\%ky}) 
+where $U$ and $V$ are as for {\tt rci.job = 1},
+otherwise the columns of {\tt W[rci.kx][:][:]}
+and {\tt W[rci.ky][:][:]}
+(if {\tt rci.kx} $\not=$ {\tt rci.ky}) 
 must be reordered using
-the index array {\tt ind(:)} so that
-the column {\tt ind(j)} becomes column {\tt j}
-for {\tt j = 1,\ldots,rci\%nx}.
+the index array {\tt ind[]} so that
+the column {\tt ind[j]} becomes column {\tt j}
+for {\tt j = 0,\ldots,rci.nx-1}.
 %
 \itt{12}:
 for each
-{\tt i = 0, 1,..., rci\%nx - 1}, 
+{\tt i = 0, 1,..., rci.nx - 1}, 
 the user must compute the dot product of
 the columns 
 
 \hspace{8mm}
-{\tt W(:, rci\%jx + i, rci\%kx)} 
+{\tt W[rci.kx][rci.jx+i][:]} 
 
 and
 
 \hspace{8mm}
-{\tt W(:, rci\%jy + i, rci\%ky)}
+{\tt W[rci.ky][rci.jy+i][:]}
 
 and place it in 
 
 \hspace{8mm}
-{\tt rr(rci\%i + i, rci\%j + i, rci\%k)}.
+{\tt rr[rci.k][rci.j+i][rci.i+i]}.
 %
 \itt{13}: 
-if {\tt rci\%kx} $=$ {\tt rci\%ky}, then
+if {\tt rci.kx} $=$ {\tt rci.ky}, then
 for each
-{\tt i = 0, 1,..., rci\%nx - 1}, 
+{\tt i = 0, 1,..., rci.nx - 1}, 
 the user must perform the scaling
 
 \hspace{8mm}
-{\tt W(:, rci\%jx + i, rci\%kx) = W(:, rci\%jx + i, rci\%kx)$/s_i$},
+{\tt W[rci.kx][rci.jx+i][:] = W[rci.kx][rci.jx+i][:]$/s_i$},
 
 where $s_i$ is the 2-norm of the column 
-{\tt W(:, rci\%jx + i, rci\%kx)},
+{\tt W[rci.kx][rci.jx+i][:]},
 otherwise the user must perform the scalings
 
 \hspace{8mm}
-{\tt W(:, rci\%jx + i, rci\%kx) = W(:, rci\%jx + i, rci\%kx)$/s_i$}
+{\tt W[rci.kx][rci.jx+i][:] = W[rci.kx][rci.jx+i][:]$/s_i$}
 
 \hspace{8mm}
-{\tt W(:, rci\%jy + i, rci\%ky) = W(:, rci\%jy + i, rci\%ky)$/s_i$},
+{\tt W[rci.ky][rci.jy+i][:] = W[rci.ky][rci.jy+i][:]$/s_i$},
 
 where $s_i$ is the square root of the dot product of 
 the columns 
-{\tt W(:, rci\%jx + i, rci\%kx)} and
-{\tt W(:, rci\%jy + i, rci\%ky)}.
+{\tt W[rci.kx][rci.jx+i][:]} and
+{\tt W[rci.ky][rci.jy+i][:]}.
 No scaling is to be applied to zero columns.
 %
 \item
 {\tt 14}: 
-for each {\tt i = 0, 1,..., rci\%nx - 1}, 
+for each {\tt i = 0, 1,..., rci.nx - 1}, 
 the user must perform axpy-updates:
 
 \hspace{8mm}
 {\tt 
-W(:, rci\%jy + i, rci\%ky) = 
-W(:, rci\%jy + i, rci\%ky) + 
+W[rci.ky][rci.jy+i][:] = 
+W[rci.ky][rci.jy+i][:] + 
 }
 
 \hspace{12mm}
 {\tt
-rr(rci\%i + i, rci\%j + i, rci\%k) * W(:, rci\%jx + i, rci\%kx)}.
+rr[rci.k][rci.j+i][rci.i+i] * W[rci.kx][rci.jx+i][:]}.
 %
 \item
 {\tt 15}: the user must perform the matrix multiplication:
 
 \hspace{8mm}
-{\tt rr(rci\%i $:$ rci\%i + rci\%nx - 1, rci\%j $:$ rci\%j + rci\%ny-1, rci\%k) =}
+{\tt rr[rci.k][rci.j $:$ rci.j+rci.ny-1][rci.i $:$ rci.i+rci.nx-1] =}
 
 \hspace{12mm}
-{\tt rci\%alpha *
-W(:, rci\%jx $:$ rci\%jx + rci\%nx - 1, rci\%kx)' *}
+{\tt rci.alpha *
+   W[rci.kx][rci.jx $:$ rci.jx+rci.nx-1][:]' *}
 
 \hspace{16mm}
-{\tt W(:, rci\%jy $:$ rci\%jy + rci\%ny - 1, rci\%ky) +}
+{\tt W[rci.ky][rci.jy $:$ rci.jy+rci.ny-1][:] +}
 
 \hspace{12mm}
 {\tt 
-rci\%beta *
-rr(rci\%i $:$ rci\%i + rci\%nx - 1, rci\%j $:$ rci\%j + rci\%ny - 1, rci\%k)}.
+rci.beta *
+rr[rci.k][rci.j $:$ rci.j+rci.ny-1][rci.i $:$ rci.i+rci.nx-1]}.
 
 %where {\tt W'} denotes the transpose of {\tt W};
 %
@@ -497,67 +525,65 @@ rr(rci\%i $:$ rci\%i + rci\%nx - 1, rci\%j $:$ rci\%j + rci\%ny - 1, rci\%k)}.
 {\tt 16}: the user must perform the matrix multiplication:
 
 \hspace{8mm}
-{\tt W(:, rci\%jy $:$ rci\%jy + rci\%ny - 1, rci\%ky) =}
+{\tt W[rci.ky][rci.jy $:$ rci.jy+rci.ny-1][:] =}
 
 \hspace{12mm}
-{\tt rci\%alpha *
-W(:, rci\%jx $:$ rci\%jx + rci\%nx - 1, rci\%kx) *}
+{\tt rci.alpha *
+W[rci.kx][rci.jx $:$ rci.jx+rci.nx-1][:] *}
 
 \hspace{16mm}
-{\tt rr(rci\%i $:$ rci\%i + rci\%nx - 1, 
-rci\%j $:$ rci\%j + rci\%ny - 1, rci\%k) + }
+{\tt rr[rci.k][rci.j $:$ rci.j+rci.ny-1][rci.i $:$ rci.i+rci.nx-1] + }
 
 \hspace{12mm}
-{\tt rci\%beta * W(:, rci\%jy $:$ rci\%jy + rci\%ny - 1, rci\%ky)}.
+{\tt rci.beta * W[rci.ky][rci.jy $:$ rci.jy+rci.ny-1][:]}.
 %
 \item
 {\tt 17}: the user must perform the multiplication:
 
 
 \hspace{8mm}
-{\tt W(:, rci\%jx $:$ rci\%jx + rci\%ny - 1, rci\%kx) =}
+{\tt W[rci.kx][rci.jx $:$ rci.jx+rci.ny-1][:] =}
 
 \hspace{12mm}
-{\tt W(:, rci\%jx $:$ rci\%jx + rci\%nx - 1, rci\%kx) *}
+{\tt W[rci.kx][rci.jx $:$ rci.jx+rci.nx-1][:] *}
 
 \hspace{16mm}
-{\tt rr(rci\%i $:$ rci\%i + rci\%nx - 1, 
-rci\%j $:$ rci\%j + rci\%ny - 1, rci\%k)}.
+{\tt rr[rci.k][rci.j $:$ rci.j+rci.ny-1][rci.i $:$ rci.i+rci.nx-1]}.
 
-{\tt W(:, rci\%jy $:$ rci\%jy + rci\%ny - 1, rci\%ky)}
+{\tt W[rci.ky][rci.jy $:$ rci.jy+rci.ny-1][:]}
 can be used as a workspace.
 %
 \item
 {\tt 21}: 
 the user must $B$-orthogonalize
 the columns of {\tt W} specified by
-{\tt rci\%nx}, {\tt rci\%jx} and {\tt rci\%kx} 
+{\tt rci.nx}, {\tt rci.jx} and {\tt rci.kx} 
 to all vectors stored in {\tt X}
 by solving the system
 
 \hspace{8mm}
-{\tt (X' * BX) Q = X' * W(:, rci\%jy $:$ rci\%jy + rci\%nx - 1, rci\%ky)}
+{\tt (X' * BX) Q = X' * W[rci.ky][rci.jy $:$ rci.jy+rci.nx-1][:]}
 
 for {\tt Q} and updating
 
 \hspace{8mm}
-{\tt W(:, rci\%jx $:$ rci\%jx + rci\%nx - 1, rci\%kx) =}
+{\tt W[rci.kx][rci.jx $:$ rci.jx+rci.nx-1][:] =}
 
 \hspace{12mm}
-{\tt W(:, rci\%jx $:$ rci\%jx + rci\%nx - 1, rci\%kx) - X * Q}.
+{\tt W[rci.kx][rci.jx $:$ rci.jx+rci.nx-1][:] - X * Q}.
 
 For problems \Ref{evp.g} and \Ref{evp.p},
-the respective columns of {\tt W(:,:,rci\%ky)},
-which store $B$-images of the respective columns of {\tt W(:,:,rci\%kx)},
+the respective columns of {\tt W[rci.ky][:][:]},
+which store $B$-images of the respective columns of {\tt W[rci.kx][:][:]},
 must be updated
 accordingly, either by applying {\tt B} to these vectors
 or using the columns of {\tt BX}, i.e.
 
 \hspace{8mm}
-{\tt W(:, rci\%jy $:$ rci\%jy + rci\%nx - 1, rci\%ky) =}
+{\tt W[rci.ky][rci.jy $:$ rci.jy+rci.nx-1][:] =}
 
 \hspace{12mm}
-{\tt W(:, rci\%jy $:$ rci\%jy + rci\%nx - 1, rci\%ky) - BX * Q};
+{\tt W[rci.ky][rci.jy $:$ rci.jy+rci.nx-1][:] - BX * Q};
 %
 \item
 {\tt 22}: 
@@ -565,43 +591,43 @@ the user must solve the system
 
 \hspace{8mm}
 {\tt (X' * BX) Q = 
-X' * W(:, rci\%jx $:$ rci\%jx + rci\%nx - 1, rci\%kx)}
+X' * W[rci.kx][rci.jx $:$ rci.jx+rci.nx-1][:]}
 
 for {\tt Q}  and perform the update
 
 \hspace{8mm}
-{\tt W(:, rci\%jx $:$ rci\%jx + rci\%nx - 1, rci\%kx) =}
+{\tt W[rci.kx][rci.jx $:$ rci.jx+rci.nx-1][:] =}
 
 \hspace{12mm}
-{\tt W(:, rci\%jx $:$ rci\%jx + rci\%nx - 1, rci\%kx) - BX * Q},
+{\tt W[rci.kx][rci.jx $:$ rci.jx+rci.nx-1][:] - BX * Q},
 
 where {\tt X} and {\tt BX} are same as in 
-the case {\tt rci\%job = 21}
+the case {\tt rci.job = 21}
 (in the case of problem \Ref{evp},
-{\tt rci\%job = 21} and {\tt 22} 
+{\tt rci.job = 21} and {\tt 22} 
 require exactly the same computation).
 %
 \item
 {\tt 999}: 
-If {\tt rci\%k > 0}, then
+If {\tt rci.k > 0}, then
 a restart, normally with a larger block size {\tt m},
 is suggested with the aim of achieving better convergence.
 If the suggestion is accepted, the user must compute
-the new block size as {\tt m = rci\%nx + k + l},
-where {\tt k $\ge$ rci\%i} and {\tt l $\ge$ rci\%j},
+the new block size as {\tt m = rci.nx + k + l},
+where {\tt k $\ge$ rci.i} and {\tt l $\ge$ rci.j},
 reallocate the workspace array {\tt W}
 if the new block size is different from the old one,
-and set {\tt rci\%i = 0} and {\tt rci\%j = 0}.
-The first block {\tt W(:,:,0)} of the new
+and set {\tt rci.i = 0} and {\tt rci.j = 0}.
+The first block {\tt W[0][:][:]} of the new
 workspace should retain the vectors 
-{\tt W(:,i:j,0)},
-where {\tt i = rci\%jx} and {\tt j = i + rci\%nx - 1},
+{\tt W[0][i:j][:])},
+where {\tt i = rci.jx} and {\tt j = i + rci.nx - 1},
 from the old workspace.
-The remaining {\tt m - rci\%nx} columns of {\tt W(:,:,0)}
+The remaining {\tt m - rci.nx} columns of {\tt W[0][:][:]}
 must be filled
 with arbitrary vectors that are linearly independent from 
 the converged eigenvectors and such that
-the entire set of the columns of {\tt W(:,:,0)}
+the entire set of the columns of {\tt W[0][:][:]}
 is linearly independent.
 If the restart is not acceptable
 (e.g. the new block size exceeds a certain limit set by the user), 
@@ -610,115 +636,111 @@ then nothing needs to be done.
 \end{description}
 %
 {\bf Restriction:} 
-{\tt rci\%job = 0}, 
-{\tt rci\%i = 0} and
-{\tt rci\%j = 0} 
+{\tt rci.job = 0}, 
+{\tt rci.i = 0} and
+{\tt rci.j = 0} 
 are the only %values that can be assigned 
 assignments to the components of {\tt rci}
 that can be done
 by the user.
 The first one can only be done before the first call.
 The other two can only be done if
-{\tt rci\%job = 999} and {\tt rci\%k > 0}.
+{\tt rci.job = 999} and {\tt rci.k > 0}.
 %
-\itt{problem} is an \intentin\ scalar of type {\tt INTEGER} that
-specifies the problem to be solved:
+\itt{problem} specifies the problem to be solved:
 if {\tt problem} is zero, then \Ref{evp} is solved,
 if it is positive then \Ref{evp.g} is solved,
 otherwise \Ref{evp.p} is solved.
 %
-\itt{left} is an \intentin\ scalar of type default \Integer\ 
-that specifies the number of desired leftmost eigenvalues.
-On return with {\tt rci\%job = 5}, can be set to zero if a
+\itt{left} specifies the number of desired leftmost eigenvalues.
+On return with {\tt rci.job = 5}, can be set to zero if a
 sufficient number of leftmost eigenvalues have been computed.
 %
-\itt{right} is an \intentin\ scalar of type default \Integer\ 
-that specifies the number of desired rightmost eigenvalues.
-On return with {\tt rci\%job = 5}, can be set to zero if
+\itt{right} specifies the number of desired rightmost eigenvalues.
+On return with {\tt rci.job = 5}, can be set to zero if
 sufficient number of rightmost eigenvalues have been computed.
 %
-\itt{nep} is an \intentin\ scalar of type default \Integer\ 
-that specifies the number of desired largest eigenvalues.
+\itt{nep} specifies the number of desired largest eigenvalues.
 %
-\itt{lambda(:)} is an \intentinout\
-array of type \REALDP\
-and size {\tt m} 
-that is
+\itt{lambda[m]} is
 used to return the computed eigenvalues.
 After a successful completion of the computation
 it contains eigenvalues in ascending order.
 This array must not be changed by the user.
 %
-\itt{m} is an \intentin\ scalar of type {\tt INTEGER} that
+\itt{m}
 holds the block size of the user's workspace {\tt W}. 
 {\bf Restriction:} %\\{\tt m $<$ n},
 if both {\tt left} and {\tt right} are non-zero
-or \texttt{ssmfe\_largest()} is called then {\tt m $>1$},
+or \texttt{spral\_ssmfe\_largest\_\texttt{type}()} is called then {\tt m $>1$},
 otherwise {\tt m $>0$}.
 %
-\itt{rr(:,:,:)} is an \intentinout\
-work array of package type,
-and dimensions {\tt 2*m}, {\tt 2*m} and {\tt 3}.
+\itt{rr[3][2*m][2*m]} is a work array used as part of the reverse communication
+interface.
 It must only be changed by the user when
 instructed to do so by 
-{\tt rci\%job}.
+{\tt rci.job}.
 %
-\itt{ind(:)} is an \intentinout\ 
-array of default integer type, and size at least {\tt m}. 
+\itt{ind[m]} is a work array used as part of the reverse communication
+interface. 
 It must not be changed by the user.
 It is used for reordering the columns of some blocks of {\tt W}.
 %
-\itt{keep} is an \intentinout\ scalar of type 
-{\tt ssmfe\_core\_keep} that holds private data. 
+\itt{*keep} must be initialized to \texttt{NULL} before the first call.
+It holds private data and must not be modified by the user.
 %
-\itt{options} is an \intentin\  scalar  of type {\tt ssmfe\_core\_options}.
-Its components offer the user a range of options,
-see Section~\ref{ssmfe:type:options}.
+\itt{*options} specifies the algorithmic options used by the routines,
+as explained in Section~\ref{ssmfe:type:options}.
 It must not be changed by the user between calls.
 %
-\itt{inform} is an \intentinout\ scalar of type 
-{\tt ssmfe\_inform}. Its components provide information about the execution
-of the subroutine, see Section~\ref{ssmfe:type:inform}.
+\itt{*inform} is used to return information about the execution of the
+routine, as explained in Section~\ref{ssmfe:type:inform}.
 It must not be changed by the user.
 %
 \end{description}
 
-\subsection{ssmfe\_free()}
+\subsection{\texttt{spral\_ssmfe\_core\_free()}}
 
 {\bf
 At the end of the computation, the memory 
 allocated by the solver procedures
 should be released
-by making the following subroutine call:
+by making a call to the following subroutine:
 }
 
-\medskip
-
-\hspace{8mm} {\tt ssmfe\_free( keep, inform )}
+\begin{verbatim}
+   void spral_ssmfe_core_free(void **keep, struct spral_ssmfe_inform *inform);
+\end{verbatim}
 
 \begin{description}
 %
-\itt{keep} is an \intentinout\ scalar of type 
-{\tt ssmfe\_core\_keepk}, optional. 
-On exit, its components that are allocatable arrays will have been deallocated. 
+\itt{*keep} must be unchanged since the last call to
+\texttt{spral\_ssmfe\_\textit{type}()} or
+\texttt{spral\_ssmfe\_largest\_\textit{type}()}.
 %
-\itt{inform} is an \intentinout\ scalar of type {\tt ssmfe\_inform}, 
-optional.
-On exit, its components that are allocatable arrays will have been deallocated. 
+\itt{*inform}  must be unchanged since the last call to
+\texttt{spral\_ssmfe\_\textit{type}()} or
+\texttt{spral\_ssmfe\_largest\_\textit{type}()}.
 %
 \end{description}
 
 \section{Derived types}
-\subsection{\texttt{ssmfe\_core\_options}} \label{ssmfe:type:options}
+\subsection{\texttt{struct spral\_ssmfe\_core\_options}} \label{ssmfe:type:options}
 
-The derived data type {\tt ssmfe\_core\_options} is used to specify
-the options used within {\tt SSMFE\_CORE}. The components, that are
-automatically given default values in the definition of the type, are:
+The structure {\tt struct spral\_ssmfe\_core\_options} is used to specify
+the options used within {\tt SSMFE\_CORE}. The components, that must be given
+default values through a call to \texttt{spral\_ssmfe\_default\_options()}, are:
 
 \begin{description}
 %
-\itt{err\_est} 
-is a scalar of type default \Integer\ that
+\itt{int array\_base} specifies the array indexing base. It must
+   have the value either \texttt{0} (C indexing) or \texttt{1} (Fortran
+   indexing). If \texttt{array\_base}$=$\texttt{1}, the entries of the array
+   \texttt{ind[]}, and the array indices given in the reverse communication
+   interface (e.g. \texttt{rci.jx}) will start at 1, not 0.
+   The default value is \texttt{array\_base}$=$\texttt{0}.
+%
+\itt{int err\_est} 
 defines which error estimation scheme 
 for eigenvalues and eigenvectors
 is to be used by the stopping criterion.
@@ -736,8 +758,7 @@ for the eigenvalues (see Section~\ref{sec:err.est}).
 The default is {\tt err\_est = 2}.
 {\bf Restriction:} {\tt err\_est = 1 {\rm or} 2}.
 %
-\itt{extra\_left}
-is a scalar of type default \Integer\ that
+\itt{int extra\_left}
 holds the number of extra approximate eigenvectors
 corresponding to leftmost eigenvalues
 that are of no interest to the user
@@ -745,8 +766,7 @@ and are iterated solely to enhance convergence.
 The default is {\tt extra\_left = 0}.
 {\bf Restriction:} {\tt extra\_left $\ge$ 0}.
 %
-\itt{extra\_right}
-is a scalar of type default \Integer\ that
+\itt{int extra\_right}
 holds the number of extra approximate eigenvectors
 corresponding to rightmost eigenvalues
 that are of no interest to the user
@@ -754,44 +774,43 @@ and are iterated solely to enhance convergence.
 The default is {\tt extra\_right = 0}.
 {\bf Restriction:} {\tt extra\_right $\ge$ 0}.
 %
-\itt{minAprod} is a scalar of type default \Logical\ that
+\itt{bool minAprod}
 determines whether the number of multiplications by $A$ 
 is to be reduced at the expense of memory. 
-If ${\tt minAprod = .false.}$, 
+If ${\tt minAprod = false}$, 
 on each iteration three returns to the user
-with {\tt rci\%job = 1} are
-made for multiplications of {\tt rci\%nx} vectors by $A$.
+with {\tt rci.job = 1} are
+made for multiplications of {\tt rci.nx} vectors by $A$.
 Otherwise,  only one such return is made at each iteration but 
 the number {\tt kw} of blocks in the user's work array {\tt W} 
 must be increased by {\tt 2}.
-The default is {\tt minAprod = .true.}.
-{\bf Restriction:} {\tt minAprod = .true.} if {\tt problem < 0}.
+The default is {\tt minAprod = true}.
+{\bf Restriction:} {\tt minAprod = true} if {\tt problem < 0}.
 %
-\itt{minBprod} is a scalar of type default \Logical\ that
+\itt{bool minBprod}
 determines whether the number of multiplications by $B$ 
 is to be reduced at the expense of memory. 
-If ${\tt minBprod = .false.}$, 
+If ${\tt minBprod = false}$, 
 on each iteration at least three returns to the user
-with {\tt rci\%job = 3} are
-made for multiplications of {\tt rci\%nx} vectors by $B$.
+with {\tt rci.job = 3} are
+made for multiplications of {\tt rci.nx} vectors by $B$.
 Otherwise,  only one such return is made at each iteration but 
 the number {\tt kw} of blocks in the user's work array {\tt W} 
 must be increased by {\tt 2}.
-The default is {\tt minBprod = .true.}.
-{\bf Restriction:} {\tt minBprod = .true.} if {\tt problem < 0}.
+The default is {\tt minBprod = true}.
+{\bf Restriction:} {\tt minBprod = true} if {\tt problem < 0}.
 %
-\itt{min\_gap} 
-is a scalar of type {\tt REAL}\ that
+\itt{double min\_gap} 
 controls the restart.
 If the relative distance between the last eigenvalue of interest
 on either margin of the spectrum and the rest of the spectrum
 is smaller than {\tt min\_gap},
 the solver procedure suggests restart
-(cf. {\tt rci\%job $= 999$}).
+(cf. {\tt rci.job $= 999$}).
 The values 
-{\tt rci\%i}
+{\tt rci.i}
 and
-{\tt rci\%j}
+{\tt rci.j}
 are set to the numbers of eigenvalues on the left and right
 margin of the spectrum that are too close to the eigenvalues
 of interest, causing slow convergence.
@@ -799,16 +818,15 @@ The default is {\tt min\_gap = 0}, i.e.
 by default no restart is ever suggested.
 {\bf Restriction:} {\tt $0 \le$ min\_gap $\le 1$}.
 %
-\itt{cf\_max}
-is a scalar of type {\tt REAL} that
+\itt{double cf\_max}
 is used to detect the convergence stagnation
 based on 
 the estimated asymptotic convergence factor 
 $q_{ij}$ given by \Ref{acf}
-(see \S\ref{sec:err.est}).
+(see Section~\ref{sec:err.est}).
 If $q_{ij}$ is greater than {\tt cf\_max} for $i > 5$,
 the eigenpair is marked as stagnated by setting
-{\tt inform\%converged(j)} to a negative value.
+{\tt inform.converged(j)} to a negative value.
 The default is {\tt cf\_max = 1}, i.e.
 the estimated asymptotic convergence factor
 is not used for stagnation detection.
@@ -816,60 +834,46 @@ is not used for stagnation detection.
 %
 \end{description}
 
-\subsection{\texttt{ssmfe\_infrom}} \label{ssmfe:type:inform}
+\subsection{\texttt{struct spral\_ssmfe\_inform}} \label{ssmfe:type:inform}
 
-The derived data type {\tt ssmfe\_inform} is used
+The structure {\tt spral\_ssmfe\_inform} is used
 to hold information from the execution of
 the solver procedures.
 The components are:
 
 \begin{description}
 %
-\itt{converged} is a rank-1 allocatable array of type 
-default \Integer\ that is allocated to have size {\tt m} 
-on a call with {\tt rci\%job = 0} or {\tt 999}.
-If, on some iteration {\tt i}, an eigenpair ({\tt lambda(j), X(j)})
-has been accepted as converged, then {\tt converged(j) = i}; 
-if the convergence stagnated, then {\tt converged(j) = -i}; 
-otherwise {\tt converged(j) = 0}.
+\itt{int converged[m]} stores convergence information.
+If, on some iteration {\tt i}, an eigenpair ({\tt lambda[j], X[j]})
+has been accepted as converged, then {\tt converged[j] = i}; 
+if the convergence stagnated, then {\tt converged[j] = -i}; 
+otherwise {\tt converged[j] = 0}.
 %
-\itt{err\_lambda} is a rank-1 allocatable array of type 
-{\tt REAL} that is allocated to have size {\tt m} 
-on a call with {\tt rci\%job = 0} or {\tt 999}.
-{\tt err\_lambda(i)} contains 
+\itt{double err\_lambda[m]} contains 
 the estimated eigenvalue error
-for the approximate eigenvalue {\tt lambda(i)}
-if {\tt info\%converged(i)} is non-zero,
+for the approximate eigenvalue {\tt lambda[i]}
+if {\tt info.converged[i]} is non-zero,
 and {\tt -1.0} otherwise.
 %
-\itt{err\_x} is a rank-1 allocatable array of type {\tt REAL}.
-This array is allocated to have size {\tt m} 
-on a call with {\tt rci\%job = 0} or {\tt 999},
-and is used for storing the eigenvector errors
-in the same way as {\tt err\_lambda(:)} is used
+\itt{double err\_X[m]} is used for storing the eigenvector errors
+in the same way as {\tt err\_lambda[]} is used
 for storing the eigenvalue errors.
 %
-\itt{flag} is a scalar of type default \Integer\ 
-that is used as an error flag.
+\itt{int flag} is used as an error flag.
 If a call is successful, {\tt flag} has value {\tt 0}.
 A nonzero value of {\tt flag} indicates an error or a warning
 (see Section~\ref{sec:err.solve}).
 %
-\itt{iteration} is a scalar of type default \Integer\
-that holds the number of iterations 
-since the previous {\tt rci\%job = 0} or {\tt rci\%job = 999} call.
+\itt{int iteration} holds the number of iterations 
+since the previous {\tt rci.job = 0} or {\tt rci.job = 999} call.
 %
-\itt{residual\_norms} is a rank-1 allocatable array of type
-{\tt REAL} that is allocated to have size {\tt m} 
-on a call with {\tt rci\%job = 0} or {\tt 999}.
-On returns with 
-{\tt rci\%job = 4} or {\tt 5}, {\tt res\_norms(i)} 
-contains the Euclidean norm of the residual
-for {\tt lambda(i), X(i)}.
+\itt{double residual\_norms[m]} holds, on return with
+{\tt rci.job=4} or {\tt 5}, 
+the Euclidean norm of the residual. The norm
+for {\tt lambda[i], X[i]} is returned as \texttt{residual\_norms[i]}.
 %
-\itt{stat}
-is a scalar of type default \Integer\ 
-that holds the allocation status
+\itt{int stat}
+holds the allocation status
 (see Section~\ref{sec:err.solve}).
 %
 \end{description}
@@ -882,14 +886,14 @@ A successful return from
 ssmfe\ and
 ssmfe\_largest\
 is indicated 
-by {\tt inform\%flag$=$0}.
+by {\tt inform.flag$=$0}.
 A negative value indicates an error, a positive value indicates a warning.
-%{\tt info\%data} provides further information
+%{\tt info.data} provides further information
 %about some errors and warnings. 
 
 \label{sec:err.solve}
 
-Possible negative values of {\tt inform\%flag}
+Possible negative values of {\tt inform.flag}
 are as follows:
 %
 \begin{description}
@@ -900,30 +904,30 @@ Block size {\tt m} is out-of-range.
 %
 \item{~~-2}
 \hskip 9pt
-Incorrect value of {\tt rci\%job}. 
+Incorrect value of {\tt rci.job}. 
 %
 \item{~~-3}
 \hskip 9pt
-Incorrect value of {\tt options\%err\_est}. 
+Incorrect value of {\tt options.err\_est}. 
 %
 \item{~~-4}
 \hskip 9pt
 Incorrect value of 
-{\tt options\%minAprod} or {\tt options\%minBprod}.
+{\tt options.minAprod} or {\tt options.minBprod}.
 %
 \item{~~-5}
 \hskip 9pt
 Incorrect value of 
-{\tt options\%extra\_left} or
-{\tt options\%extra\_right}.
+{\tt options.extra\_left} or
+{\tt options.extra\_right}.
 %
 \item{~~-6}
 \hskip 9pt
-Incorrect value of {\tt options\%min\_gap}. 
+Incorrect value of {\tt options.min\_gap}. 
 %
 \item{~~-7}
 \hskip 9pt
-Incorrect value of {\tt options\%cf\_max}. 
+Incorrect value of {\tt options.cf\_max}. 
 %
 \item{~-11}
 \hskip 7pt
@@ -937,7 +941,7 @@ Incorrect value of {\tt right}.
 \item{-100}
 \hskip 4pt
 Not enough memory;
-{\tt inform\%stat} contains the value of the Fortran {\tt stat} parameter.
+{\tt inform.stat} contains the value of the Fortran {\tt stat} parameter.
 %
 \item{-200}
 \hskip 4pt
@@ -953,7 +957,7 @@ $B$ is not positive definite or initial eigenvectors are linearly dependent.
 %\item{1}
 %\hskip 9pt
 %A positive value 
-The value {\tt inform\%flag = 1}
+The value {\tt inform.flag = 1}
 indicates that
 the iterations have been terminated because no further improvement
 in accuracy is possible (this may happen if $B$ or the preconditioner is
@@ -968,7 +972,8 @@ errors make them essentially random).
 
 \subsection{The algorithm}
 
-The algorithm implemented by {\tt ssmfe()} and {\tt ssmfe\_largest()}
+The algorithm implemented by {\tt spral\_ssmfe\_\textit{type}()} and
+{\tt spral\_ssmfe\_largest\_\textit{type}()}
 is based on the Jacobi-conjugate preconditioned gradients (JCPG) method.
 The outline of the algorithm,
 assuming for simplicity
@@ -1036,7 +1041,7 @@ to constraints {\tt C} by updating
 %
 \item
 \label{step:do.save}
-If {\tt options\%err\_est $= $1},  compute {\tt R'*B*R}
+If {\tt options.err\_est $= $1},  compute {\tt R'*B*R}
 and use it to compute error bounds;
 otherwise only compute the diagonal of this matrix
 and use to compute error bounds.
@@ -1158,7 +1163,7 @@ moved to {\tt C} are replaced with vectors from {\tt Z}.
 
 \subsubsection{Standard problem}
 
-If {\tt options\%err\_est} {\tt =} {\tt 1}, 
+If {\tt options.err\_est} {\tt =} {\tt 1}, 
 the error estimates for the eigenvalues are based on 
 the eigenvalues of a matrix of the form
 %
@@ -1212,7 +1217,7 @@ the Davis-Kahan inequality:
 where $\cX_{k-1}$ is the invariant subspace 
 corresponding to $k-1$ leftmost eigenvalues.
 
-If {\tt options\%err\_est$=$2}
+If {\tt options.err\_est$=$2}
 the errors are estimated
 based on the eigenvalue decrements history,
 which produces an estimate for 
@@ -1280,7 +1285,7 @@ must be multiplied by $\beta_1$ and $\sqrt{\beta_1}$
 respectively. If no estimate for $\|\cdot\|_{B^{-1}}$-norm
 is available, then the use of
 non-zero residual tolerances and
-{\tt options\%err\_est$=$1}
+{\tt options.err\_est$=$1}
 is not recommended.
 In the case of problem \Ref{evp.p},
 the residuals are computed as
@@ -1326,7 +1331,7 @@ One forward and one backward Gauss-Seidel update
 are used for preconditioning,
 which halves the number of iterations
 compared with solving the same problem without preconditioning.
-The module {\tt laplace2d} (\texttt{examples/Fortran/ssmfe/laplace2d.f90})
+The header {\tt laplace2d.h} (\texttt{examples/C/ssmfe/laplace2d.h})
 supplies the subroutine {\tt apply\_laplacian()}
 that multiplies a block of vectors by $A$,
 and a subroutine 
@@ -1334,7 +1339,7 @@ and a subroutine
 that computes $y = T x$ for a block of vectors $x$
 by applying one forward and one backward update
 of the Gauss-Seidel method to the system $A y = x$.
-\verbatiminput{examples/Fortran/ssmfe/precond_core.f90}
+\verbatiminput{examples/C/ssmfe/precond_core.c}
 The code generates the following output:
 \begin{verbatim}
   5 eigenpairs converged in  72 iterations
