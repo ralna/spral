@@ -2,8 +2,10 @@
 
 /* Multiply x by Laplacian matrix for a square of size mx by my */
 void apply_laplacian(
-      int mx, int my, int nx, const double x[nx][my][mx], double Ax[nx][my][mx]
+      int mx, int my, int nx, const double *x_ptr, double *Ax_ptr
       ) {
+   const double (*x)[my][mx] = (const double (*)[my][mx]) x_ptr;
+   double (*Ax)[my][mx] = (double (*)[my][mx]) Ax_ptr;
    for(int k=0; k<nx; k++) {
       for(int i=0; i<mx; i++) {
          for(int j=0; j<my; j++) {
@@ -39,8 +41,10 @@ void set_laplacian_matrix(
 
 /* Apply one Gauss-Seidel step for preconditioning */
 void apply_gauss_seidel_step(
-      int mx, int my, int nx, const double x[nx][my][mx], double Tx[nx][my][mx]
+      int mx, int my, int nx, const double *x_ptr, double *Tx_ptr
       ) {
+   const double (*x)[my][mx] = (const double (*)[my][mx]) x_ptr;
+   double (*Tx)[my][mx] = (double (*)[my][mx]) Tx_ptr;
    for(int i=0; i<mx; i++)
       for(int j=0; j<my; j++)
          for(int k=0; k<nx; k++)
