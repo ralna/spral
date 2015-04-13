@@ -143,6 +143,441 @@ subroutine spral_ssmfe_standard_double(crci, left, mep, lambda, m, rr, &
       ind(1:crci%nx) = ind(1:crci%nx) - 1
 end subroutine spral_ssmfe_standard_double
 
+subroutine spral_ssmfe_standard_double_complex(crci, left, mep, lambda, m, rr, &
+      ind, ckeep, coptions, cinform) bind(C)
+   use spral_ssmfe_expert_ciface
+   implicit none
+
+   type(spral_ssmfe_rciz), intent(inout) :: crci
+   integer(C_INT), value :: left
+   integer(C_INT), value :: mep
+   real(C_DOUBLE), dimension(mep), intent(inout) :: lambda
+   integer(C_INT), value :: m
+   complex(C_DOUBLE_COMPLEX), dimension(2*m, 2*m, 3), intent(inout) :: rr
+   integer(C_INT), dimension(m), intent(out) :: ind
+   type(C_PTR), intent(inout) :: ckeep
+   type(spral_ssmfe_options), intent(in) :: coptions
+   type(spral_ssmfe_inform), intent(inout) :: cinform
+
+   logical :: cindexed
+   type(ssmfe_expert_ciface_keep), pointer :: fcikeep
+   type(ssmfe_options) :: foptions
+
+   ! Copy options in first to find out whether we use Fortran or C indexing
+   call copy_options_in(coptions, foptions, cindexed)
+
+   ! Translate arguments
+   if(c_associated(ckeep)) then
+      call c_f_pointer(ckeep, fcikeep)
+   else
+      allocate(fcikeep)
+      ckeep = c_loc(fcikeep)
+   endif
+   if(crci%job.eq.0) fcikeep%rciz%job = 0
+   if(fcikeep%rciz%job.eq.999 .and. fcikeep%rciz%k>0) then
+      fcikeep%rciz%i = crci%i
+      fcikeep%rciz%j = crci%j
+   endif
+
+   ! Call Fortran routine
+   call ssmfe_standard(fcikeep%rciz, left, mep, lambda, m, rr, ind, &
+      fcikeep%keep, foptions, fcikeep%inform)
+
+   ! Copy arguments out
+   call copy_rci_out(fcikeep%rciz, crci, cindexed)
+   call copy_inform_out(fcikeep%inform, cinform)
+   if(crci%job.eq.11 .and. cindexed) &
+      ind(1:crci%nx) = ind(1:crci%nx) - 1
+end subroutine spral_ssmfe_standard_double_complex
+
+subroutine spral_ssmfe_standard_shift_double(crci, sigma, left, right, mep, &
+      lambda, m, rr, ind, ckeep, coptions, cinform) bind(C)
+   use spral_ssmfe_expert_ciface
+   implicit none
+
+   type(spral_ssmfe_rcid), intent(inout) :: crci
+   real(C_DOUBLE), value :: sigma
+   integer(C_INT), value :: left
+   integer(C_INT), value :: right
+   integer(C_INT), value :: mep
+   real(C_DOUBLE), dimension(mep), intent(inout) :: lambda
+   integer(C_INT), value :: m
+   real(C_DOUBLE), dimension(2*m, 2*m, 3), intent(inout) :: rr
+   integer(C_INT), dimension(m), intent(out) :: ind
+   type(C_PTR), intent(inout) :: ckeep
+   type(spral_ssmfe_options), intent(in) :: coptions
+   type(spral_ssmfe_inform), intent(inout) :: cinform
+
+   logical :: cindexed
+   type(ssmfe_expert_ciface_keep), pointer :: fcikeep
+   type(ssmfe_options) :: foptions
+
+   ! Copy options in first to find out whether we use Fortran or C indexing
+   call copy_options_in(coptions, foptions, cindexed)
+
+   ! Translate arguments
+   if(c_associated(ckeep)) then
+      call c_f_pointer(ckeep, fcikeep)
+   else
+      allocate(fcikeep)
+      ckeep = c_loc(fcikeep)
+   endif
+   if(crci%job.eq.0) fcikeep%rcid%job = 0
+   if(fcikeep%rcid%job.eq.999 .and. fcikeep%rcid%k>0) then
+      fcikeep%rcid%i = crci%i
+      fcikeep%rcid%j = crci%j
+   endif
+
+   ! Call Fortran routine
+   call ssmfe_standard_shift(fcikeep%rcid, sigma, left, right, mep, lambda, &
+      m, rr, ind, fcikeep%keep, foptions, fcikeep%inform)
+
+   ! Copy arguments out
+   call copy_rci_out(fcikeep%rcid, crci, cindexed)
+   call copy_inform_out(fcikeep%inform, cinform)
+   if(crci%job.eq.11 .and. cindexed) &
+      ind(1:crci%nx) = ind(1:crci%nx) - 1
+end subroutine spral_ssmfe_standard_shift_double
+
+subroutine spral_ssmfe_standard_shift_double_complex(crci, sigma, left, right, &
+      mep, lambda, m, rr, ind, ckeep, coptions, cinform) bind(C)
+   use spral_ssmfe_expert_ciface
+   implicit none
+
+   type(spral_ssmfe_rciz), intent(inout) :: crci
+   real(C_DOUBLE), value :: sigma
+   integer(C_INT), value :: left
+   integer(C_INT), value :: right
+   integer(C_INT), value :: mep
+   real(C_DOUBLE), dimension(mep), intent(inout) :: lambda
+   integer(C_INT), value :: m
+   complex(C_DOUBLE_COMPLEX), dimension(2*m, 2*m, 3), intent(inout) :: rr
+   integer(C_INT), dimension(m), intent(out) :: ind
+   type(C_PTR), intent(inout) :: ckeep
+   type(spral_ssmfe_options), intent(in) :: coptions
+   type(spral_ssmfe_inform), intent(inout) :: cinform
+
+   logical :: cindexed
+   type(ssmfe_expert_ciface_keep), pointer :: fcikeep
+   type(ssmfe_options) :: foptions
+
+   ! Copy options in first to find out whether we use Fortran or C indexing
+   call copy_options_in(coptions, foptions, cindexed)
+
+   ! Translate arguments
+   if(c_associated(ckeep)) then
+      call c_f_pointer(ckeep, fcikeep)
+   else
+      allocate(fcikeep)
+      ckeep = c_loc(fcikeep)
+   endif
+   if(crci%job.eq.0) fcikeep%rciz%job = 0
+   if(fcikeep%rciz%job.eq.999 .and. fcikeep%rciz%k>0) then
+      fcikeep%rciz%i = crci%i
+      fcikeep%rciz%j = crci%j
+   endif
+
+   ! Call Fortran routine
+   call ssmfe_standard_shift(fcikeep%rciz, sigma, left, right, mep, lambda, &
+      m, rr, ind, fcikeep%keep, foptions, fcikeep%inform)
+
+   ! Copy arguments out
+   call copy_rci_out(fcikeep%rciz, crci, cindexed)
+   call copy_inform_out(fcikeep%inform, cinform)
+   if(crci%job.eq.11 .and. cindexed) &
+      ind(1:crci%nx) = ind(1:crci%nx) - 1
+end subroutine spral_ssmfe_standard_shift_double_complex
+
+subroutine spral_ssmfe_generalized_double(crci, left, mep, lambda, m, rr, &
+      ind, ckeep, coptions, cinform) bind(C)
+   use spral_ssmfe_expert_ciface
+   implicit none
+
+   type(spral_ssmfe_rcid), intent(inout) :: crci
+   integer(C_INT), value :: left
+   integer(C_INT), value :: mep
+   real(C_DOUBLE), dimension(mep), intent(inout) :: lambda
+   integer(C_INT), value :: m
+   real(C_DOUBLE), dimension(2*m, 2*m, 3), intent(inout) :: rr
+   integer(C_INT), dimension(m), intent(out) :: ind
+   type(C_PTR), intent(inout) :: ckeep
+   type(spral_ssmfe_options), intent(in) :: coptions
+   type(spral_ssmfe_inform), intent(inout) :: cinform
+
+   logical :: cindexed
+   type(ssmfe_expert_ciface_keep), pointer :: fcikeep
+   type(ssmfe_options) :: foptions
+
+   ! Copy options in first to find out whether we use Fortran or C indexing
+   call copy_options_in(coptions, foptions, cindexed)
+
+   ! Translate arguments
+   if(c_associated(ckeep)) then
+      call c_f_pointer(ckeep, fcikeep)
+   else
+      allocate(fcikeep)
+      ckeep = c_loc(fcikeep)
+   endif
+   if(crci%job.eq.0) fcikeep%rcid%job = 0
+   if(fcikeep%rcid%job.eq.999 .and. fcikeep%rcid%k>0) then
+      fcikeep%rcid%i = crci%i
+      fcikeep%rcid%j = crci%j
+   endif
+
+   ! Call Fortran routine
+   call ssmfe_generalized(fcikeep%rcid, left, mep, lambda, m, rr, ind, &
+      fcikeep%keep, foptions, fcikeep%inform)
+
+   ! Copy arguments out
+   call copy_rci_out(fcikeep%rcid, crci, cindexed)
+   call copy_inform_out(fcikeep%inform, cinform)
+   if(crci%job.eq.11 .and. cindexed) &
+      ind(1:crci%nx) = ind(1:crci%nx) - 1
+end subroutine spral_ssmfe_generalized_double
+
+subroutine spral_ssmfe_generalized_double_complex(crci, left, mep, lambda, m, &
+      rr, ind, ckeep, coptions, cinform) bind(C)
+   use spral_ssmfe_expert_ciface
+   implicit none
+
+   type(spral_ssmfe_rciz), intent(inout) :: crci
+   integer(C_INT), value :: left
+   integer(C_INT), value :: mep
+   real(C_DOUBLE), dimension(mep), intent(inout) :: lambda
+   integer(C_INT), value :: m
+   complex(C_DOUBLE_COMPLEX), dimension(2*m, 2*m, 3), intent(inout) :: rr
+   integer(C_INT), dimension(m), intent(out) :: ind
+   type(C_PTR), intent(inout) :: ckeep
+   type(spral_ssmfe_options), intent(in) :: coptions
+   type(spral_ssmfe_inform), intent(inout) :: cinform
+
+   logical :: cindexed
+   type(ssmfe_expert_ciface_keep), pointer :: fcikeep
+   type(ssmfe_options) :: foptions
+
+   ! Copy options in first to find out whether we use Fortran or C indexing
+   call copy_options_in(coptions, foptions, cindexed)
+
+   ! Translate arguments
+   if(c_associated(ckeep)) then
+      call c_f_pointer(ckeep, fcikeep)
+   else
+      allocate(fcikeep)
+      ckeep = c_loc(fcikeep)
+   endif
+   if(crci%job.eq.0) fcikeep%rciz%job = 0
+   if(fcikeep%rciz%job.eq.999 .and. fcikeep%rciz%k>0) then
+      fcikeep%rciz%i = crci%i
+      fcikeep%rciz%j = crci%j
+   endif
+
+   ! Call Fortran routine
+   call ssmfe_generalized(fcikeep%rciz, left, mep, lambda, m, rr, ind, &
+      fcikeep%keep, foptions, fcikeep%inform)
+
+   ! Copy arguments out
+   call copy_rci_out(fcikeep%rciz, crci, cindexed)
+   call copy_inform_out(fcikeep%inform, cinform)
+   if(crci%job.eq.11 .and. cindexed) &
+      ind(1:crci%nx) = ind(1:crci%nx) - 1
+end subroutine spral_ssmfe_generalized_double_complex
+
+subroutine spral_ssmfe_generalized_shift_double(crci, sigma, left, right, mep, &
+      lambda, m, rr, ind, ckeep, coptions, cinform) bind(C)
+   use spral_ssmfe_expert_ciface
+   implicit none
+
+   type(spral_ssmfe_rcid), intent(inout) :: crci
+   real(C_DOUBLE), value :: sigma
+   integer(C_INT), value :: left
+   integer(C_INT), value :: right
+   integer(C_INT), value :: mep
+   real(C_DOUBLE), dimension(mep), intent(inout) :: lambda
+   integer(C_INT), value :: m
+   real(C_DOUBLE), dimension(2*m, 2*m, 3), intent(inout) :: rr
+   integer(C_INT), dimension(m), intent(out) :: ind
+   type(C_PTR), intent(inout) :: ckeep
+   type(spral_ssmfe_options), intent(in) :: coptions
+   type(spral_ssmfe_inform), intent(inout) :: cinform
+
+   logical :: cindexed
+   type(ssmfe_expert_ciface_keep), pointer :: fcikeep
+   type(ssmfe_options) :: foptions
+
+   ! Copy options in first to find out whether we use Fortran or C indexing
+   call copy_options_in(coptions, foptions, cindexed)
+
+   ! Translate arguments
+   if(c_associated(ckeep)) then
+      call c_f_pointer(ckeep, fcikeep)
+   else
+      allocate(fcikeep)
+      ckeep = c_loc(fcikeep)
+   endif
+   if(crci%job.eq.0) fcikeep%rcid%job = 0
+   if(fcikeep%rcid%job.eq.999 .and. fcikeep%rcid%k>0) then
+      fcikeep%rcid%i = crci%i
+      fcikeep%rcid%j = crci%j
+   endif
+
+   ! Call Fortran routine
+   call ssmfe_generalized_shift(fcikeep%rcid, sigma, left, right, mep, lambda, &
+      m, rr, ind, fcikeep%keep, foptions, fcikeep%inform)
+
+   ! Copy arguments out
+   call copy_rci_out(fcikeep%rcid, crci, cindexed)
+   call copy_inform_out(fcikeep%inform, cinform)
+   if(crci%job.eq.11 .and. cindexed) &
+      ind(1:crci%nx) = ind(1:crci%nx) - 1
+end subroutine spral_ssmfe_generalized_shift_double
+
+subroutine spral_ssmfe_generalized_shift_double_complex(crci, sigma, left, &
+      right, mep, lambda, m, rr, ind, ckeep, coptions, cinform) bind(C)
+   use spral_ssmfe_expert_ciface
+   implicit none
+
+   type(spral_ssmfe_rciz), intent(inout) :: crci
+   real(C_DOUBLE), value :: sigma
+   integer(C_INT), value :: left
+   integer(C_INT), value :: right
+   integer(C_INT), value :: mep
+   real(C_DOUBLE), dimension(mep), intent(inout) :: lambda
+   integer(C_INT), value :: m
+   complex(C_DOUBLE_COMPLEX), dimension(2*m, 2*m, 3), intent(inout) :: rr
+   integer(C_INT), dimension(m), intent(out) :: ind
+   type(C_PTR), intent(inout) :: ckeep
+   type(spral_ssmfe_options), intent(in) :: coptions
+   type(spral_ssmfe_inform), intent(inout) :: cinform
+
+   logical :: cindexed
+   type(ssmfe_expert_ciface_keep), pointer :: fcikeep
+   type(ssmfe_options) :: foptions
+
+   ! Copy options in first to find out whether we use Fortran or C indexing
+   call copy_options_in(coptions, foptions, cindexed)
+
+   ! Translate arguments
+   if(c_associated(ckeep)) then
+      call c_f_pointer(ckeep, fcikeep)
+   else
+      allocate(fcikeep)
+      ckeep = c_loc(fcikeep)
+   endif
+   if(crci%job.eq.0) fcikeep%rciz%job = 0
+   if(fcikeep%rciz%job.eq.999 .and. fcikeep%rciz%k>0) then
+      fcikeep%rciz%i = crci%i
+      fcikeep%rciz%j = crci%j
+   endif
+
+   ! Call Fortran routine
+   call ssmfe_generalized_shift(fcikeep%rciz, sigma, left, right, mep, lambda, &
+      m, rr, ind, fcikeep%keep, foptions, fcikeep%inform)
+
+   ! Copy arguments out
+   call copy_rci_out(fcikeep%rciz, crci, cindexed)
+   call copy_inform_out(fcikeep%inform, cinform)
+   if(crci%job.eq.11 .and. cindexed) &
+      ind(1:crci%nx) = ind(1:crci%nx) - 1
+end subroutine spral_ssmfe_generalized_shift_double_complex
+
+subroutine spral_ssmfe_buckling_double(crci, sigma, left, right, mep, &
+      lambda, m, rr, ind, ckeep, coptions, cinform) bind(C)
+   use spral_ssmfe_expert_ciface
+   implicit none
+
+   type(spral_ssmfe_rcid), intent(inout) :: crci
+   real(C_DOUBLE), value :: sigma
+   integer(C_INT), value :: left
+   integer(C_INT), value :: right
+   integer(C_INT), value :: mep
+   real(C_DOUBLE), dimension(mep), intent(inout) :: lambda
+   integer(C_INT), value :: m
+   real(C_DOUBLE), dimension(2*m, 2*m, 3), intent(inout) :: rr
+   integer(C_INT), dimension(m), intent(out) :: ind
+   type(C_PTR), intent(inout) :: ckeep
+   type(spral_ssmfe_options), intent(in) :: coptions
+   type(spral_ssmfe_inform), intent(inout) :: cinform
+
+   logical :: cindexed
+   type(ssmfe_expert_ciface_keep), pointer :: fcikeep
+   type(ssmfe_options) :: foptions
+
+   ! Copy options in first to find out whether we use Fortran or C indexing
+   call copy_options_in(coptions, foptions, cindexed)
+
+   ! Translate arguments
+   if(c_associated(ckeep)) then
+      call c_f_pointer(ckeep, fcikeep)
+   else
+      allocate(fcikeep)
+      ckeep = c_loc(fcikeep)
+   endif
+   if(crci%job.eq.0) fcikeep%rcid%job = 0
+   if(fcikeep%rcid%job.eq.999 .and. fcikeep%rcid%k>0) then
+      fcikeep%rcid%i = crci%i
+      fcikeep%rcid%j = crci%j
+   endif
+
+   ! Call Fortran routine
+   call ssmfe_buckling(fcikeep%rcid, sigma, left, right, mep, lambda, &
+      m, rr, ind, fcikeep%keep, foptions, fcikeep%inform)
+
+   ! Copy arguments out
+   call copy_rci_out(fcikeep%rcid, crci, cindexed)
+   call copy_inform_out(fcikeep%inform, cinform)
+   if(crci%job.eq.11 .and. cindexed) &
+      ind(1:crci%nx) = ind(1:crci%nx) - 1
+end subroutine spral_ssmfe_buckling_double
+
+subroutine spral_ssmfe_buckling_double_complex(crci, sigma, left, right, mep, &
+      lambda, m, rr, ind, ckeep, coptions, cinform) bind(C)
+   use spral_ssmfe_expert_ciface
+   implicit none
+
+   type(spral_ssmfe_rciz), intent(inout) :: crci
+   real(C_DOUBLE), value :: sigma
+   integer(C_INT), value :: left
+   integer(C_INT), value :: right
+   integer(C_INT), value :: mep
+   real(C_DOUBLE), dimension(mep), intent(inout) :: lambda
+   integer(C_INT), value :: m
+   complex(C_DOUBLE_COMPLEX), dimension(2*m, 2*m, 3), intent(inout) :: rr
+   integer(C_INT), dimension(m), intent(out) :: ind
+   type(C_PTR), intent(inout) :: ckeep
+   type(spral_ssmfe_options), intent(in) :: coptions
+   type(spral_ssmfe_inform), intent(inout) :: cinform
+
+   logical :: cindexed
+   type(ssmfe_expert_ciface_keep), pointer :: fcikeep
+   type(ssmfe_options) :: foptions
+
+   ! Copy options in first to find out whether we use Fortran or C indexing
+   call copy_options_in(coptions, foptions, cindexed)
+
+   ! Translate arguments
+   if(c_associated(ckeep)) then
+      call c_f_pointer(ckeep, fcikeep)
+   else
+      allocate(fcikeep)
+      ckeep = c_loc(fcikeep)
+   endif
+   if(crci%job.eq.0) fcikeep%rciz%job = 0
+   if(fcikeep%rciz%job.eq.999 .and. fcikeep%rciz%k>0) then
+      fcikeep%rciz%i = crci%i
+      fcikeep%rciz%j = crci%j
+   endif
+
+   ! Call Fortran routine
+   call ssmfe_buckling(fcikeep%rciz, sigma, left, right, mep, lambda, &
+      m, rr, ind, fcikeep%keep, foptions, fcikeep%inform)
+
+   ! Copy arguments out
+   call copy_rci_out(fcikeep%rciz, crci, cindexed)
+   call copy_inform_out(fcikeep%inform, cinform)
+   if(crci%job.eq.11 .and. cindexed) &
+      ind(1:crci%nx) = ind(1:crci%nx) - 1
+end subroutine spral_ssmfe_buckling_double_complex
+
 subroutine spral_ssmfe_expert_free(ckeep, cinform) bind(C)
    use spral_ssmfe_expert_ciface
    implicit none
