@@ -102,7 +102,7 @@ check_PROGRAMS = random_test$(EXEEXT) examples/Fortran/random$(EXEEXT) \
 	examples/Fortran/ssmfe/precond_ssmfe$(EXEEXT) \
 	examples/Fortran/ssmfe/shift_invert$(EXEEXT)
 TESTS = random_test$(EXEEXT) random_matrix_test$(EXEEXT) \
-	$(am__EXEEXT_2) ssmfe_test$(EXEEXT)
+	$(am__EXEEXT_2) ssmfe_test$(EXEEXT) ssmfe_ciface_test$(EXEEXT)
 
 # SSIDS
 @HAVE_NVCC_TRUE@am__append_2 = include/spral_ssids.h
@@ -398,6 +398,12 @@ am__ssids_test_SOURCES_DIST = tests/ssids.f90
 ssids_test_OBJECTS = $(am_ssids_test_OBJECTS)
 @HAVE_NVCC_TRUE@ssids_test_DEPENDENCIES = $(am__DEPENDENCIES_2) \
 @HAVE_NVCC_TRUE@	$(am__DEPENDENCIES_1)
+am_ssmfe_ciface_test_OBJECTS = tests/ssmfe_ciface.$(OBJEXT)
+ssmfe_ciface_test_OBJECTS = $(am_ssmfe_ciface_test_OBJECTS)
+ssmfe_ciface_test_LDADD = $(LDADD)
+ssmfe_ciface_test_DEPENDENCIES = $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 am_ssmfe_test_OBJECTS = tests/ssmfe.$(OBJEXT)
 ssmfe_test_OBJECTS = $(am_ssmfe_test_OBJECTS)
 ssmfe_test_LDADD = $(LDADD)
@@ -461,7 +467,7 @@ SOURCES = $(libspral_a_SOURCES) $(examples_C_random_SOURCES) \
 	$(examples_Fortran_ssmfe_shift_invert_SOURCES) \
 	$(random_matrix_test_SOURCES) $(random_test_SOURCES) \
 	$(spral_ssids_SOURCES) $(ssids_test_SOURCES) \
-	$(ssmfe_test_SOURCES)
+	$(ssmfe_ciface_test_SOURCES) $(ssmfe_test_SOURCES)
 DIST_SOURCES = $(am__libspral_a_SOURCES_DIST) \
 	$(examples_C_random_SOURCES) \
 	$(examples_C_random_matrix_SOURCES) \
@@ -481,7 +487,7 @@ DIST_SOURCES = $(am__libspral_a_SOURCES_DIST) \
 	$(examples_Fortran_ssmfe_shift_invert_SOURCES) \
 	$(random_matrix_test_SOURCES) $(random_test_SOURCES) \
 	$(am__spral_ssids_SOURCES_DIST) $(am__ssids_test_SOURCES_DIST) \
-	$(ssmfe_test_SOURCES)
+	$(ssmfe_ciface_test_SOURCES) $(ssmfe_test_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -1339,6 +1345,12 @@ tests/ssids.$(OBJEXT): tests/$(am__dirstamp) \
 ssids_test$(EXEEXT): $(ssids_test_OBJECTS) $(ssids_test_DEPENDENCIES) $(EXTRA_ssids_test_DEPENDENCIES) 
 	@rm -f ssids_test$(EXEEXT)
 	$(AM_V_GEN)$(ssids_test_LINK) $(ssids_test_OBJECTS) $(ssids_test_LDADD) $(LIBS)
+tests/ssmfe_ciface.$(OBJEXT): tests/$(am__dirstamp) \
+	tests/$(DEPDIR)/$(am__dirstamp)
+
+ssmfe_ciface_test$(EXEEXT): $(ssmfe_ciface_test_OBJECTS) $(ssmfe_ciface_test_DEPENDENCIES) $(EXTRA_ssmfe_ciface_test_DEPENDENCIES) 
+	@rm -f ssmfe_ciface_test$(EXEEXT)
+	$(AM_V_FCLD)$(FCLINK) $(ssmfe_ciface_test_OBJECTS) $(ssmfe_ciface_test_LDADD) $(LIBS)
 tests/ssmfe.$(OBJEXT): tests/$(am__dirstamp) \
 	tests/$(DEPDIR)/$(am__dirstamp)
 
@@ -1638,6 +1650,13 @@ ssids_test.log: ssids_test$(EXEEXT)
 ssmfe_test.log: ssmfe_test$(EXEEXT)
 	@p='ssmfe_test$(EXEEXT)'; \
 	b='ssmfe_test'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+ssmfe_ciface_test.log: ssmfe_ciface_test$(EXEEXT)
+	@p='ssmfe_ciface_test$(EXEEXT)'; \
+	b='ssmfe_ciface_test'; \
 	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \

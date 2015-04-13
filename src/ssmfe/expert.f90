@@ -1635,7 +1635,7 @@ contains
         write( u_diag, '(a)' ) trim(line)
           
         do i = 1, block_size        
-          if ( keep%info%converged(i) /= 0 ) then
+          if ( keep%info%converged(i) > 0 ) then
             word = '   yes'
           else
             word = '    no'

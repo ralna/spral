@@ -24,13 +24,13 @@ program ssmfe_expert_precond_example
   real(wp) :: lambda(n)           ! eigenvalues
   real(wp) :: X(n, n)             ! eigenvectors
   real(wp) :: rr(2*m, 2*m, 3)     ! work array
-  real(wp) :: W(n, m, 0:5)        ! work array
+  real(wp) :: W(n, m, 0:7)        ! work array
   real(wp) :: U(n, m)             ! work array
   type(ssmfe_rcid       ) :: rci      ! reverse communication data
   type(ssmfe_options    ) :: options  ! options
   type(ssmfe_expert_keep) :: keep     ! private data
   type(ssmfe_inform     ) :: inform   ! information
-
+  
   ! the gap between the last converged eigenvalue and the rest of the spectrum
   ! must be at least 0.1 times average gap between computed eigenvalues
   options%left_gap = -0.1
@@ -43,11 +43,12 @@ program ssmfe_expert_precond_example
       W(i,j,0) = random_real(state, positive=.true.)
     end do
   end do
-
+  
   ncon = 0
   rci%job = 0
   do ! reverse communication loop
-    call ssmfe_standard &
+!    call ssmfe_standard &
+    call ssmfe_generalized &
       ( rci, nep, n, lambda, m, rr, ind, keep, options, inform )
     select case ( rci%job )
     case ( 1 )
@@ -58,6 +59,8 @@ program ssmfe_expert_precond_example
       call apply_gauss_seidel_step &
         ( ngrid, ngrid, rci%nx, W(1 : n, rci%jx : rci%jx + rci%nx - 1, rci%kx),&
           W(1 : n, rci%jy : rci%jy + rci%nx - 1, rci%ky ) )
+    case ( 3 )
+      call dcopy( n*rci%nx, W(1, rci%jx, rci%kx), 1, W(1, rci%jy, rci%ky), 1 )
     case ( 5 )
       if ( rci%i < 0 ) cycle
       do k = 0, rci%nx - 1
@@ -159,6 +162,9 @@ program ssmfe_expert_precond_example
         call dgemm &
           ( 'N', 'N', n, rci%nx, ncon, &
             -1.0D0, X, n, U, n, 1.0D0, W(1, rci%jx, rci%kx), n )
+        call dgemm &
+          ( 'N', 'N', n, rci%nx, ncon, &
+            -1.0D0, X, n, U, n, 1.0D0, W(1, rci%jy, rci%ky), n )
       end if
     case ( 999 )
       if ( rci%k == 0 ) then
@@ -174,7 +180,8 @@ program ssmfe_expert_precond_example
       exit
     end select
   end do
-  print '(i3, 1x, a, i4, 1x, a)', inform%left, 'eigenpairs converged in', inform%iteration, 'iterations'
+  print '(i3, 1x, a, i4, 1x, a)', &
+    inform%left, 'eigenpairs converged in', inform%iteration, 'iterations'
   print '(1x, a, i2, a, es13.7)', &
     ('lambda(', i, ') = ', lambda(i), i = 1, inform%left)
   call ssmfe_free( keep, inform )

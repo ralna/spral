@@ -179,6 +179,7 @@ check_PROGRAMS += \
 	examples/Fortran/ssmfe/precond_ssmfe \
 	examples/Fortran/ssmfe/shift_invert
 ssmfe_test_SOURCES = tests/ssmfe.f90
+ssmfe_ciface_test_SOURCES = tests/ssmfe_ciface.f90
 tests/ssmfe.$(OBJEXT): libspral.a
 TESTS += ssmfe_test
 examples_C_ssmfe_hermitian_SOURCES = \

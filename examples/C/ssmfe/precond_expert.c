@@ -103,7 +103,7 @@ void main(void) {
                if( s > 0 )
                   cblas_dscal(n, 1/s, &W[rci.kx][rci.jx+i][0], 1);
             } else {
-               double s = sqrt(abs(cblas_ddot(
+               double s = sqrt(fabs(cblas_ddot(
                   n, &W[rci.kx][rci.jx+i][0], 1, &W[rci.ky][rci.jy+i][0], 1)
                   ));
                if ( s > 0 ) {

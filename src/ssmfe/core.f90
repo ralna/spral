@@ -709,13 +709,13 @@ select_step: &
           ! orthogonalize X to constraints
           keep%step = ORTHOG_X_TO_Xc
         end if
-
+        
         ! check whether the multiplication by B is actually needed:
         ! it is skipped if B*X is computed implicitly or B is identity,
         ! but is enforced every 20 iterations to eliminate posiible 
         ! accumulation of errors caused by implicit computation of B*X
         if ( .not. (minBprod .and. keep%stage == CG_LOOP &
-                    .and. mod(keep%iteration, 20) > 0) &
+                    .and. mod(keep%iteration, 20) > 0 ) &
               .and. problem /= 0 ) then
           ! multiplication needed
           rci%job = SSMFE_APPLY_B ! instruct the user to apply B
@@ -4141,7 +4141,7 @@ select_step: &
         r = 0
         s = keep%cond*epsilon(ONE)
         t = max(abs(keep%lambda(1)), abs(keep%lambda(keep%sizeX + keep%sizeZ)))
-
+        
         do go = 1, -1, -2
 
           select case ( go )
