@@ -91,7 +91,8 @@ check_PROGRAMS = random_test$(EXEEXT) examples/Fortran/random$(EXEEXT) \
 	examples/C/random$(EXEEXT) random_matrix_test$(EXEEXT) \
 	examples/Fortran/random_matrix$(EXEEXT) \
 	examples/C/random_matrix$(EXEEXT) $(am__EXEEXT_1) \
-	ssmfe_test$(EXEEXT) examples/C/ssmfe/hermitian$(EXEEXT) \
+	ssmfe_test$(EXEEXT) ssmfe_ciface_test$(EXEEXT) \
+	examples/C/ssmfe/hermitian$(EXEEXT) \
 	examples/C/ssmfe/precond_core$(EXEEXT) \
 	examples/C/ssmfe/precond_expert$(EXEEXT) \
 	examples/C/ssmfe/precond_ssmfe$(EXEEXT) \
@@ -398,13 +399,13 @@ am__ssids_test_SOURCES_DIST = tests/ssids.f90
 ssids_test_OBJECTS = $(am_ssids_test_OBJECTS)
 @HAVE_NVCC_TRUE@ssids_test_DEPENDENCIES = $(am__DEPENDENCIES_2) \
 @HAVE_NVCC_TRUE@	$(am__DEPENDENCIES_1)
-am_ssmfe_ciface_test_OBJECTS = tests/ssmfe_ciface.$(OBJEXT)
+am_ssmfe_ciface_test_OBJECTS = tests/ssmfe/ssmfe_ciface.$(OBJEXT)
 ssmfe_ciface_test_OBJECTS = $(am_ssmfe_ciface_test_OBJECTS)
 ssmfe_ciface_test_LDADD = $(LDADD)
 ssmfe_ciface_test_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1)
-am_ssmfe_test_OBJECTS = tests/ssmfe.$(OBJEXT)
+am_ssmfe_test_OBJECTS = tests/ssmfe/ssmfe.$(OBJEXT)
 ssmfe_test_OBJECTS = $(am_ssmfe_test_OBJECTS)
 ssmfe_test_LDADD = $(LDADD)
 ssmfe_test_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
@@ -904,7 +905,10 @@ examples_C_random_matrix_SOURCES = examples/C/random_matrix.c
 @HAVE_NVCC_TRUE@examples_C_ssids_SOURCES = examples/C/ssids.c
 @HAVE_NVCC_TRUE@examples_C_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
 @HAVE_NVCC_TRUE@examples_C_ssids_LINK = $(NVCCLINK)
-ssmfe_test_SOURCES = tests/ssmfe.f90
+ssmfe_test_SOURCES = tests/ssmfe/ssmfe.f90
+ssmfe_ciface_test_SOURCES = tests/ssmfe/ssmfe_ciface.c \
+									 tests/ssmfe/laplace2d.h
+
 examples_C_ssmfe_hermitian_SOURCES = \
 	examples/C/ssmfe/hermitian.c
 
@@ -1345,14 +1349,20 @@ tests/ssids.$(OBJEXT): tests/$(am__dirstamp) \
 ssids_test$(EXEEXT): $(ssids_test_OBJECTS) $(ssids_test_DEPENDENCIES) $(EXTRA_ssids_test_DEPENDENCIES) 
 	@rm -f ssids_test$(EXEEXT)
 	$(AM_V_GEN)$(ssids_test_LINK) $(ssids_test_OBJECTS) $(ssids_test_LDADD) $(LIBS)
-tests/ssmfe_ciface.$(OBJEXT): tests/$(am__dirstamp) \
-	tests/$(DEPDIR)/$(am__dirstamp)
+tests/ssmfe/$(am__dirstamp):
+	@$(MKDIR_P) tests/ssmfe
+	@: > tests/ssmfe/$(am__dirstamp)
+tests/ssmfe/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) tests/ssmfe/$(DEPDIR)
+	@: > tests/ssmfe/$(DEPDIR)/$(am__dirstamp)
+tests/ssmfe/ssmfe_ciface.$(OBJEXT): tests/ssmfe/$(am__dirstamp) \
+	tests/ssmfe/$(DEPDIR)/$(am__dirstamp)
 
 ssmfe_ciface_test$(EXEEXT): $(ssmfe_ciface_test_OBJECTS) $(ssmfe_ciface_test_DEPENDENCIES) $(EXTRA_ssmfe_ciface_test_DEPENDENCIES) 
 	@rm -f ssmfe_ciface_test$(EXEEXT)
-	$(AM_V_FCLD)$(FCLINK) $(ssmfe_ciface_test_OBJECTS) $(ssmfe_ciface_test_LDADD) $(LIBS)
-tests/ssmfe.$(OBJEXT): tests/$(am__dirstamp) \
-	tests/$(DEPDIR)/$(am__dirstamp)
+	$(AM_V_CCLD)$(LINK) $(ssmfe_ciface_test_OBJECTS) $(ssmfe_ciface_test_LDADD) $(LIBS)
+tests/ssmfe/ssmfe.$(OBJEXT): tests/ssmfe/$(am__dirstamp) \
+	tests/ssmfe/$(DEPDIR)/$(am__dirstamp)
 
 ssmfe_test$(EXEEXT): $(ssmfe_test_OBJECTS) $(ssmfe_test_DEPENDENCIES) $(EXTRA_ssmfe_test_DEPENDENCIES) 
 	@rm -f ssmfe_test$(EXEEXT)
@@ -1371,6 +1381,7 @@ mostlyclean-compile:
 	-rm -f src/ssids/*.$(OBJEXT)
 	-rm -f src/ssmfe/*.$(OBJEXT)
 	-rm -f tests/*.$(OBJEXT)
+	-rm -f tests/ssmfe/*.$(OBJEXT)
 
 distclean-compile:
 	-rm -f *.tab.c
@@ -1382,6 +1393,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/ssmfe/$(DEPDIR)/precond_core.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/ssmfe/$(DEPDIR)/precond_expert.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/ssmfe/$(DEPDIR)/precond_ssmfe.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@tests/ssmfe/$(DEPDIR)/ssmfe_ciface.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
@@ -1899,6 +1911,8 @@ distclean-generic:
 	-rm -f src/ssmfe/$(am__dirstamp)
 	-rm -f tests/$(DEPDIR)/$(am__dirstamp)
 	-rm -f tests/$(am__dirstamp)
+	-rm -f tests/ssmfe/$(DEPDIR)/$(am__dirstamp)
+	-rm -f tests/ssmfe/$(am__dirstamp)
 
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
@@ -1910,7 +1924,7 @@ clean-am: clean-binPROGRAMS clean-checkPROGRAMS clean-generic \
 
 distclean: distclean-am
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
-	-rm -rf examples/C/$(DEPDIR) examples/C/ssmfe/$(DEPDIR)
+	-rm -rf examples/C/$(DEPDIR) examples/C/ssmfe/$(DEPDIR) tests/ssmfe/$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -1958,7 +1972,7 @@ installcheck-am:
 maintainer-clean: maintainer-clean-am
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
 	-rm -rf $(top_srcdir)/autom4te.cache
-	-rm -rf examples/C/$(DEPDIR) examples/C/ssmfe/$(DEPDIR)
+	-rm -rf examples/C/$(DEPDIR) examples/C/ssmfe/$(DEPDIR) tests/ssmfe/$(DEPDIR)
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 
@@ -2009,7 +2023,8 @@ examples/C/random_matrix.$(OBJEXT): libspral.a
 @HAVE_NVCC_TRUE@examples/Fortran/ssids.$(OBJEXT): libspral.a
 @HAVE_NVCC_TRUE@tests/ssids.$(OBJEXT): libspral.a
 @HAVE_NVCC_TRUE@examples/C/ssids.$(OBJEXT): libspral.a
-tests/ssmfe.$(OBJEXT): libspral.a
+tests/ssmfe/ssmfe.$(OBJEXT): libspral.a
+tests/ssmfe/ssmfe_ciface.$(OBJEXT): libspral.a
 examples/C/ssmfe/hermitian.$(OBJEXT): libspral.a
 examples/C/ssmfe/precond_core.$(OBJEXT): libspral.a
 examples/C/ssmfe/precond_expert.$(OBJEXT): libspral.a
