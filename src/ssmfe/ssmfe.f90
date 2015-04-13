@@ -1181,7 +1181,7 @@ contains
         
           ! total number of converged eigenpairs
           nep = inform%left + inform%right
-
+          
           if ( nep < 1 ) return
           
           rci%k = rci%job
@@ -1263,6 +1263,8 @@ contains
 
       ! compute A Y
       call mxcopy( 'A', n, nep, keep%W(1,1,2), n, keep%W, n )
+      if ( problem == 0 ) &
+        call mxcopy( 'A', n, nep, keep%W, n, keep%W(1,1,3), n )
       rci%job = SSMFE_APPLY_A
       rci%nx = nep
       rci%jx = 1
@@ -1271,24 +1273,23 @@ contains
       rci%ky = 2
       rci%x => keep%W(:,:,1)
       rci%y => keep%W(:,:,2)
-      keep%step = 3
+      if ( problem == 0 ) then
+        keep%step = 4
+      else
+        keep%step = 3
+      end if
 
     case ( 3 )
     
-      if ( problem == 0 ) then
-        call mxcopy( 'A', n, nep, keep%W, n, keep%W(1,1,3), n )
-        rci%job = 100
-      else
-        ! compute B Y
-        rci%job = SSMFE_APPLY_B
-        rci%nx = nep
-        rci%jx = 1
-        rci%kx = 0
-        rci%jy = 1
-        rci%ky = 4
-        rci%x => keep%W(:,:,1)
-        rci%y => keep%W(:,:,3)
-      end if
+      ! compute B Y
+      rci%job = SSMFE_APPLY_B
+      rci%nx = nep
+      rci%jx = 1
+      rci%kx = 0
+      rci%jy = 1
+      rci%ky = 4
+      rci%x => keep%W(:,:,1)
+      rci%y => keep%W(:,:,3)
       keep%step = 4
       
     case ( 4 )
@@ -2111,6 +2112,8 @@ contains
     case ( 2 )
 
       call mxcopy( 'A', n, nep, keep%W(1,1,2), n, keep%W, n )
+      if ( problem == 0 ) &
+        call mxcopy( 'A', n, nep, keep%W, n, keep%W(1,1,3), n )
       rci%job = SSMFE_APPLY_A
       rci%nx = nep
       rci%jx = 1
@@ -2119,23 +2122,22 @@ contains
       rci%ky = 2
       rci%x => keep%W(:,:,1)
       rci%y => keep%W(:,:,2)
-      keep%step = 3
+      if ( problem == 0 ) then
+        keep%step = 4
+      else
+        keep%step = 3
+      end if
 
     case ( 3 )
     
-      if ( problem == 0 ) then
-        call mxcopy( 'A', n, nep, keep%W, n, keep%W(1,1,3), n )
-        rci%job = 100
-      else
-        rci%job = SSMFE_APPLY_B
-        rci%nx = nep
-        rci%jx = 1
-        rci%kx = 0
-        rci%jy = 1
-        rci%ky = 4
-        rci%x => keep%W(:,:,1)
-        rci%y => keep%W(:,:,3)
-      end if
+      rci%job = SSMFE_APPLY_B
+      rci%nx = nep
+      rci%jx = 1
+      rci%kx = 0
+      rci%jy = 1
+      rci%ky = 4
+      rci%x => keep%W(:,:,1)
+      rci%y => keep%W(:,:,3)
       keep%step = 4
       
     case ( 4 )
