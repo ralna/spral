@@ -96,7 +96,7 @@ subroutine spral_ssmfe_default_options(coptions) bind(C)
    coptions%minBprod          = default_options%minBprod
 end subroutine spral_ssmfe_default_options
 
-subroutine spral_ssmfe_standard_double(crci, left, mep, lambda, m, rr, &
+subroutine spral_ssmfe_expert_standard_double(crci, left, mep, lambda, m, rr, &
       ind, ckeep, coptions, cinform) bind(C)
    use spral_ssmfe_expert_ciface
    implicit none
@@ -141,10 +141,10 @@ subroutine spral_ssmfe_standard_double(crci, left, mep, lambda, m, rr, &
    call copy_inform_out(fcikeep%inform, cinform)
    if(crci%job.eq.11 .and. cindexed) &
       ind(1:crci%nx) = ind(1:crci%nx) - 1
-end subroutine spral_ssmfe_standard_double
+end subroutine spral_ssmfe_expert_standard_double
 
-subroutine spral_ssmfe_standard_double_complex(crci, left, mep, lambda, m, rr, &
-      ind, ckeep, coptions, cinform) bind(C)
+subroutine spral_ssmfe_expert_standard_double_complex(crci, left, mep, lambda, &
+      m, rr, ind, ckeep, coptions, cinform) bind(C)
    use spral_ssmfe_expert_ciface
    implicit none
 
@@ -188,10 +188,10 @@ subroutine spral_ssmfe_standard_double_complex(crci, left, mep, lambda, m, rr, &
    call copy_inform_out(fcikeep%inform, cinform)
    if(crci%job.eq.11 .and. cindexed) &
       ind(1:crci%nx) = ind(1:crci%nx) - 1
-end subroutine spral_ssmfe_standard_double_complex
+end subroutine spral_ssmfe_expert_standard_double_complex
 
-subroutine spral_ssmfe_standard_shift_double(crci, sigma, left, right, mep, &
-      lambda, m, rr, ind, ckeep, coptions, cinform) bind(C)
+subroutine spral_ssmfe_expert_standard_shift_double(crci, sigma, left, right, &
+      mep, lambda, m, rr, ind, ckeep, coptions, cinform) bind(C)
    use spral_ssmfe_expert_ciface
    implicit none
 
@@ -237,10 +237,10 @@ subroutine spral_ssmfe_standard_shift_double(crci, sigma, left, right, mep, &
    call copy_inform_out(fcikeep%inform, cinform)
    if(crci%job.eq.11 .and. cindexed) &
       ind(1:crci%nx) = ind(1:crci%nx) - 1
-end subroutine spral_ssmfe_standard_shift_double
+end subroutine spral_ssmfe_expert_standard_shift_double
 
-subroutine spral_ssmfe_standard_shift_double_complex(crci, sigma, left, right, &
-      mep, lambda, m, rr, ind, ckeep, coptions, cinform) bind(C)
+subroutine spral_ssmfe_expert_standard_shift_double_complex(crci, sigma, left, &
+      right, mep, lambda, m, rr, ind, ckeep, coptions, cinform) bind(C)
    use spral_ssmfe_expert_ciface
    implicit none
 
@@ -286,10 +286,10 @@ subroutine spral_ssmfe_standard_shift_double_complex(crci, sigma, left, right, &
    call copy_inform_out(fcikeep%inform, cinform)
    if(crci%job.eq.11 .and. cindexed) &
       ind(1:crci%nx) = ind(1:crci%nx) - 1
-end subroutine spral_ssmfe_standard_shift_double_complex
+end subroutine spral_ssmfe_expert_standard_shift_double_complex
 
-subroutine spral_ssmfe_generalized_double(crci, left, mep, lambda, m, rr, &
-      ind, ckeep, coptions, cinform) bind(C)
+subroutine spral_ssmfe_expert_generalized_double(crci, left, mep, lambda, m, &
+      rr, ind, ckeep, coptions, cinform) bind(C)
    use spral_ssmfe_expert_ciface
    implicit none
 
@@ -333,10 +333,10 @@ subroutine spral_ssmfe_generalized_double(crci, left, mep, lambda, m, rr, &
    call copy_inform_out(fcikeep%inform, cinform)
    if(crci%job.eq.11 .and. cindexed) &
       ind(1:crci%nx) = ind(1:crci%nx) - 1
-end subroutine spral_ssmfe_generalized_double
+end subroutine spral_ssmfe_expert_generalized_double
 
-subroutine spral_ssmfe_generalized_double_complex(crci, left, mep, lambda, m, &
-      rr, ind, ckeep, coptions, cinform) bind(C)
+subroutine spral_ssmfe_expert_generalized_double_complex(crci, left, mep, &
+      lambda, m, rr, ind, ckeep, coptions, cinform) bind(C)
    use spral_ssmfe_expert_ciface
    implicit none
 
@@ -380,10 +380,10 @@ subroutine spral_ssmfe_generalized_double_complex(crci, left, mep, lambda, m, &
    call copy_inform_out(fcikeep%inform, cinform)
    if(crci%job.eq.11 .and. cindexed) &
       ind(1:crci%nx) = ind(1:crci%nx) - 1
-end subroutine spral_ssmfe_generalized_double_complex
+end subroutine spral_ssmfe_expert_generalized_double_complex
 
-subroutine spral_ssmfe_generalized_shift_double(crci, sigma, left, right, mep, &
-      lambda, m, rr, ind, ckeep, coptions, cinform) bind(C)
+subroutine spral_ssmfe_expert_generalized_shift_double(crci, sigma, left, &
+      right, mep, lambda, m, rr, ind, ckeep, coptions, cinform) bind(C)
    use spral_ssmfe_expert_ciface
    implicit none
 
@@ -429,10 +429,10 @@ subroutine spral_ssmfe_generalized_shift_double(crci, sigma, left, right, mep, &
    call copy_inform_out(fcikeep%inform, cinform)
    if(crci%job.eq.11 .and. cindexed) &
       ind(1:crci%nx) = ind(1:crci%nx) - 1
-end subroutine spral_ssmfe_generalized_shift_double
+end subroutine spral_ssmfe_expert_generalized_shift_double
 
-subroutine spral_ssmfe_generalized_shift_double_complex(crci, sigma, left, &
-      right, mep, lambda, m, rr, ind, ckeep, coptions, cinform) bind(C)
+subroutine spral_ssmfe_expert_generalized_shift_double_complex(crci, sigma, &
+      left, right, mep, lambda, m, rr, ind, ckeep, coptions, cinform) bind(C)
    use spral_ssmfe_expert_ciface
    implicit none
 
@@ -478,9 +478,9 @@ subroutine spral_ssmfe_generalized_shift_double_complex(crci, sigma, left, &
    call copy_inform_out(fcikeep%inform, cinform)
    if(crci%job.eq.11 .and. cindexed) &
       ind(1:crci%nx) = ind(1:crci%nx) - 1
-end subroutine spral_ssmfe_generalized_shift_double_complex
+end subroutine spral_ssmfe_expert_generalized_shift_double_complex
 
-subroutine spral_ssmfe_buckling_double(crci, sigma, left, right, mep, &
+subroutine spral_ssmfe_expert_buckling_double(crci, sigma, left, right, mep, &
       lambda, m, rr, ind, ckeep, coptions, cinform) bind(C)
    use spral_ssmfe_expert_ciface
    implicit none
@@ -527,10 +527,10 @@ subroutine spral_ssmfe_buckling_double(crci, sigma, left, right, mep, &
    call copy_inform_out(fcikeep%inform, cinform)
    if(crci%job.eq.11 .and. cindexed) &
       ind(1:crci%nx) = ind(1:crci%nx) - 1
-end subroutine spral_ssmfe_buckling_double
+end subroutine spral_ssmfe_expert_buckling_double
 
-subroutine spral_ssmfe_buckling_double_complex(crci, sigma, left, right, mep, &
-      lambda, m, rr, ind, ckeep, coptions, cinform) bind(C)
+subroutine spral_ssmfe_expert_buckling_double_complex(crci, sigma, left, &
+      right, mep, lambda, m, rr, ind, ckeep, coptions, cinform) bind(C)
    use spral_ssmfe_expert_ciface
    implicit none
 
@@ -576,7 +576,7 @@ subroutine spral_ssmfe_buckling_double_complex(crci, sigma, left, right, mep, &
    call copy_inform_out(fcikeep%inform, cinform)
    if(crci%job.eq.11 .and. cindexed) &
       ind(1:crci%nx) = ind(1:crci%nx) - 1
-end subroutine spral_ssmfe_buckling_double_complex
+end subroutine spral_ssmfe_expert_buckling_double_complex
 
 subroutine spral_ssmfe_expert_free(ckeep, cinform) bind(C)
    use spral_ssmfe_expert_ciface

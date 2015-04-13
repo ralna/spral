@@ -47,8 +47,8 @@ void main(void) {
    int ncon = 0;   /* number of converged eigenpairs */
    rci.job = 0; keep = NULL;
    while(true) { /* reverse communication loop */
-      spral_ssmfe_standard_double(&rci, nep, n, lambda, m, &rr[0][0][0], ind,
-          &keep, &options, &inform);
+      spral_ssmfe_expert_standard_double(&rci, nep, n, lambda, m, &rr[0][0][0],
+         ind, &keep, &options, &inform);
       switch ( rci.job ) {
       case 1:
          apply_laplacian(
