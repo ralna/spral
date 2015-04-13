@@ -27,7 +27,8 @@ program ssmfe_hermitian_example
       exit
     end select
   end do
-  print '(i3, 1x, a)', inform%left, 'eigenpairs converged'
+  print '(i3, 1x, a, i3, 1x, a)', inform%left, 'eigenpairs converged in', &
+     inform%iteration, 'iterations'
   print '(1x, a, i2, a, es14.7)', &
     ('lambda(', i, ') = ', lambda(i), i = 1, inform%left)
   call ssmfe_free( keep, inform )

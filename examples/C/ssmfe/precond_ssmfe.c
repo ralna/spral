@@ -46,5 +46,5 @@ finished:
    printf("%d eigenpairs converged in %d iterations\n", inform.left, inform.iteration);
    for(int i=0; i<inform.left; i++)
       printf(" lambda[%1d] = %13.7e\n", i, lambda[i]);
-   spral_ssmfe_free(&keep, &inform);
+   spral_ssmfe_free_double(&keep, &inform);
 }

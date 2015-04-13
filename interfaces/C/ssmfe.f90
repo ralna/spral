@@ -439,7 +439,7 @@ subroutine spral_ssmfe_buckling_double_complex(crci, sigma, left, right, mep, &
    call copy_inform_out(fcikeep%inform, cinform)
 end subroutine spral_ssmfe_buckling_double_complex
 
-subroutine spral_ssmfe_free(ckeep, cinform) bind(C)
+subroutine spral_ssmfe_free_double(ckeep, cinform) bind(C)
    use spral_ssmfe_ciface
    implicit none
 
@@ -466,4 +466,33 @@ subroutine spral_ssmfe_free(ckeep, cinform) bind(C)
    ! Free fcikeep
    deallocate(fcikeep)
    ckeep = C_NULL_PTR
-end subroutine spral_ssmfe_free
+end subroutine spral_ssmfe_free_double
+
+subroutine spral_ssmfe_free_double_complex(ckeep, cinform) bind(C)
+   use spral_ssmfe_ciface
+   implicit none
+
+   type(C_PTR), intent(inout) :: ckeep
+   type(spral_ssmfe_inform), intent(inout) :: cinform
+
+   type(ssmfe_ciface_keepz), pointer :: fcikeep
+
+   ! Nullify pointer components of cinform
+   cinform%converged       = C_NULL_PTR
+   cinform%residual_norms  = C_NULL_PTR
+   cinform%err_lambda      = C_NULL_PTR
+   cinform%err_x           = C_NULL_PTR
+
+   ! Check ckeep is not null
+   if(.not.c_associated(ckeep)) return
+
+   ! Associate fkeep
+   call c_f_pointer(ckeep, fcikeep)
+
+   ! Call Fortran cleanup
+   call ssmfe_free(fcikeep%keep, fcikeep%inform)
+
+   ! Free fcikeep
+   deallocate(fcikeep)
+   ckeep = C_NULL_PTR
+end subroutine spral_ssmfe_free_double_complex

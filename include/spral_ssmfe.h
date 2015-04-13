@@ -158,8 +158,10 @@ void spral_ssmfe_buckling_double_complex(struct spral_ssmfe_rciz *rci,
       double complex *x, int ldx, void **keep,
       const struct spral_ssmfe_options *options,
       struct spral_ssmfe_inform *inform);
-/* Free memory */
-void spral_ssmfe_free(void **keep, struct spral_ssmfe_inform *inform);
+/* Free memory (real) */
+void spral_ssmfe_free_double(void **keep, struct spral_ssmfe_inform *inform);
+/* Free memory (complex) */
+void spral_ssmfe_free_double_complex(void **keep, struct spral_ssmfe_inform *inform);
 
 /************************************
  * SSMFE_EXPERT subroutines (additional to those shared with SSMFE)

@@ -168,6 +168,7 @@ libspral_a_SOURCES += \
 	interfaces/C/ssmfe_expert.f90
 check_PROGRAMS += \
    ssmfe_test \
+	examples/C/ssmfe/hermitian \
 	examples/C/ssmfe/precond_core \
 	examples/C/ssmfe/precond_expert \
 	examples/C/ssmfe/precond_ssmfe \
@@ -179,6 +180,8 @@ check_PROGRAMS += \
 ssmfe_test_SOURCES = tests/ssmfe.f90
 tests/ssmfe.$(OBJEXT): libspral.a
 TESTS += ssmfe_test
+examples_C_ssmfe_hermitian_SOURCES = \
+	examples/C/ssmfe/hermitian.c
 examples_C_ssmfe_precond_core_SOURCES = \
 	examples/C/ssmfe/precond_core.c \
 	examples/C/ssmfe/laplace2d.h
@@ -203,10 +206,11 @@ examples_Fortran_ssmfe_shift_invert_SOURCES = \
 	examples/Fortran/ssmfe/shift_invert.f90 \
 	examples/Fortran/ssmfe/laplace2d.f90 \
 	examples/Fortran/ssmfe/ldltf.f90
+examples/C/ssmfe/hermitian.$(OBJEXT): libspral.a
 examples/C/ssmfe/precond_core.$(OBJEXT): libspral.a
 examples/C/ssmfe/precond_expert.$(OBJEXT): libspral.a
 examples/C/ssmfe/precond_ssmfe.$(OBJEXT): libspral.a
-examples_Fortran_ssmfe_hermitian.$(OBJEXT): libspral.a
+examples/Fortran/ssmfe/hermitian.$(OBJEXT): libspral.a
 examples/Fortran/ssmfe/precond_core.$(OBJEXT): libspral.a \
 	examples/Fortran/ssmfe/laplace2d.$(OBJEXT)
 examples/Fortran/ssmfe/precond_expert.$(OBJEXT): libspral.a \

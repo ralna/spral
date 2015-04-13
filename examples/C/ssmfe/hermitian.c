@@ -31,6 +31,9 @@ void main(void) {
    void *keep;                         /* private data */
    struct spral_ssmfe_inform inform;   /* information */
 
+   /* Initialize options to default values */
+   spral_ssmfe_default_options(&options);
+
    rci.job = 0; keep = NULL;
    while(true) { /* reverse communication loop */
       spral_ssmfe_standard_double_complex(&rci, nep, nep, lambda, n,
@@ -39,13 +42,16 @@ void main(void) {
       case 1:
          apply_idx(n, rci.nx, rci.x, rci.y);
          break;
+      case 2:
+         // No preconditioning
+         break;
       default:
          goto finished;
       }
    }
 finished:
-   printf("%d eigenpairs converged in %d iterations", inform.left, inform.iteration);
+   printf("%d eigenpairs converged in %d iterations\n", inform.left, inform.iteration);
    for(int i=0; i<inform.left; i++)
       printf(" lambda[%1d] = %13.7e\n", i, lambda[i]);
-   spral_ssmfe_free(&keep, &inform);
+   spral_ssmfe_free_double_complex(&keep, &inform);
 }

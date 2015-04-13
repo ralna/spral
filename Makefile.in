@@ -91,7 +91,8 @@ check_PROGRAMS = random_test$(EXEEXT) examples/Fortran/random$(EXEEXT) \
 	examples/C/random$(EXEEXT) random_matrix_test$(EXEEXT) \
 	examples/Fortran/random_matrix$(EXEEXT) \
 	examples/C/random_matrix$(EXEEXT) $(am__EXEEXT_1) \
-	ssmfe_test$(EXEEXT) examples/C/ssmfe/precond_core$(EXEEXT) \
+	ssmfe_test$(EXEEXT) examples/C/ssmfe/hermitian$(EXEEXT) \
+	examples/C/ssmfe/precond_core$(EXEEXT) \
 	examples/C/ssmfe/precond_expert$(EXEEXT) \
 	examples/C/ssmfe/precond_ssmfe$(EXEEXT) \
 	examples/Fortran/ssmfe/hermitian$(EXEEXT) \
@@ -268,6 +269,14 @@ am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 @HAVE_NVCC_TRUE@examples_C_ssids_DEPENDENCIES = $(am__DEPENDENCIES_2) \
 @HAVE_NVCC_TRUE@	$(am__DEPENDENCIES_1)
+am_examples_C_ssmfe_hermitian_OBJECTS =  \
+	examples/C/ssmfe/hermitian.$(OBJEXT)
+examples_C_ssmfe_hermitian_OBJECTS =  \
+	$(am_examples_C_ssmfe_hermitian_OBJECTS)
+examples_C_ssmfe_hermitian_LDADD = $(LDADD)
+examples_C_ssmfe_hermitian_DEPENDENCIES = $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 am_examples_C_ssmfe_precond_core_OBJECTS =  \
 	examples/C/ssmfe/precond_core.$(OBJEXT)
 examples_C_ssmfe_precond_core_OBJECTS =  \
@@ -428,6 +437,7 @@ am__v_FCLD_1 =
 SOURCES = $(libspral_a_SOURCES) $(examples_C_random_SOURCES) \
 	$(examples_C_random_matrix_SOURCES) \
 	$(examples_C_ssids_SOURCES) \
+	$(examples_C_ssmfe_hermitian_SOURCES) \
 	$(examples_C_ssmfe_precond_core_SOURCES) \
 	$(examples_C_ssmfe_precond_expert_SOURCES) \
 	$(examples_C_ssmfe_precond_ssmfe_SOURCES) \
@@ -446,6 +456,7 @@ DIST_SOURCES = $(am__libspral_a_SOURCES_DIST) \
 	$(examples_C_random_SOURCES) \
 	$(examples_C_random_matrix_SOURCES) \
 	$(am__examples_C_ssids_SOURCES_DIST) \
+	$(examples_C_ssmfe_hermitian_SOURCES) \
 	$(examples_C_ssmfe_precond_core_SOURCES) \
 	$(examples_C_ssmfe_precond_expert_SOURCES) \
 	$(examples_C_ssmfe_precond_ssmfe_SOURCES) \
@@ -877,6 +888,9 @@ examples_C_random_matrix_SOURCES = examples/C/random_matrix.c
 @HAVE_NVCC_TRUE@examples_C_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
 @HAVE_NVCC_TRUE@examples_C_ssids_LINK = $(NVCCLINK)
 ssmfe_test_SOURCES = tests/ssmfe.f90
+examples_C_ssmfe_hermitian_SOURCES = \
+	examples/C/ssmfe/hermitian.c
+
 examples_C_ssmfe_precond_core_SOURCES = \
 	examples/C/ssmfe/precond_core.c \
 	examples/C/ssmfe/laplace2d.h
@@ -1166,6 +1180,13 @@ examples/C/ssmfe/$(am__dirstamp):
 examples/C/ssmfe/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) examples/C/ssmfe/$(DEPDIR)
 	@: > examples/C/ssmfe/$(DEPDIR)/$(am__dirstamp)
+examples/C/ssmfe/hermitian.$(OBJEXT):  \
+	examples/C/ssmfe/$(am__dirstamp) \
+	examples/C/ssmfe/$(DEPDIR)/$(am__dirstamp)
+
+examples/C/ssmfe/hermitian$(EXEEXT): $(examples_C_ssmfe_hermitian_OBJECTS) $(examples_C_ssmfe_hermitian_DEPENDENCIES) $(EXTRA_examples_C_ssmfe_hermitian_DEPENDENCIES) examples/C/ssmfe/$(am__dirstamp)
+	@rm -f examples/C/ssmfe/hermitian$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(examples_C_ssmfe_hermitian_OBJECTS) $(examples_C_ssmfe_hermitian_LDADD) $(LIBS)
 examples/C/ssmfe/precond_core.$(OBJEXT):  \
 	examples/C/ssmfe/$(am__dirstamp) \
 	examples/C/ssmfe/$(DEPDIR)/$(am__dirstamp)
@@ -1322,6 +1343,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/$(DEPDIR)/random.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/$(DEPDIR)/random_matrix.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/$(DEPDIR)/ssids.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@examples/C/ssmfe/$(DEPDIR)/hermitian.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/ssmfe/$(DEPDIR)/precond_core.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/ssmfe/$(DEPDIR)/precond_expert.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/ssmfe/$(DEPDIR)/precond_ssmfe.Po@am__quote@
@@ -1946,10 +1968,11 @@ examples/C/random_matrix.$(OBJEXT): libspral.a
 @HAVE_NVCC_TRUE@tests/ssids.$(OBJEXT): libspral.a
 @HAVE_NVCC_TRUE@examples/C/ssids.$(OBJEXT): libspral.a
 tests/ssmfe.$(OBJEXT): libspral.a
+examples/C/ssmfe/hermitian.$(OBJEXT): libspral.a
 examples/C/ssmfe/precond_core.$(OBJEXT): libspral.a
 examples/C/ssmfe/precond_expert.$(OBJEXT): libspral.a
 examples/C/ssmfe/precond_ssmfe.$(OBJEXT): libspral.a
-examples_Fortran_ssmfe_hermitian.$(OBJEXT): libspral.a
+examples/Fortran/ssmfe/hermitian.$(OBJEXT): libspral.a
 examples/Fortran/ssmfe/precond_core.$(OBJEXT): libspral.a \
 	examples/Fortran/ssmfe/laplace2d.$(OBJEXT)
 examples/Fortran/ssmfe/precond_expert.$(OBJEXT): libspral.a \
