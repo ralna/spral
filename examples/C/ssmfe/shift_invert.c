@@ -6,16 +6,9 @@
 #include <stdio.h>
 #include <cblas.h>
 
-/* Header that implements Laplacian and preconditioners */
+/* Headers that implements Laplacian and preconditioners and LDLT support */
 #include "laplace2d.h"
-
-/* C Wrappers for LAPACK routines */
-void dsytrf_(char *uplo, int *n, double *a, int *lda, int *ipiv, double *work, int *lwork, int *info);
-int cwrap_dsytrf(char uplo, int n, double *a, int lda, int *ipiv, double *work, int lwork) {
-   int info;
-   dsytrf_(&uplo, &n, a, &lda, ipiv, work, &lwork, &info);
-   return info;
-}
+#include "ldltf.h"
 
 void main(void) {
    const int nx = 8;          /* grid points along x */
@@ -29,7 +22,6 @@ void main(void) {
    double A[n][n];            /* matrix */
    double LDLT[n][n];         /* factors */
    double work[n][n];         /* work array for dsytrf */
-   integer :: left, right           /* wanted eigenvalues left and right of sigma */
    struct spral_ssmfe_options options;    /* eigensolver options */
    struct spral_ssmfe_inform inform;      /* information */
    struct spral_ssmfe_rcid rci;           /* reverse communication data */
@@ -38,18 +30,18 @@ void main(void) {
    /* Initialize options to default values */
    spral_ssmfe_default_options(&options);
 
+   /* Set up then perform LDLT factorization of the shifted matrix */
    set_laplacian_matrix(nx, ny, A, n);
-
-   /* perform LDLT factorization of the shifted matrix */
    for(int j=0; j<n; j++)
    for(int i=0; i<n; i++)
       LDLT[j][i] = (i==j) ? A[j][i] - sigma
                           : A[j][i];
    cwrap_dsytrf('L', n, &LDLT[0][0], n, ipiv, &work[0][0], n*n);
 
-   int left = num_neg_D(n, LDLT, n, ipiv);   /* all evalues to left of sigma */
+   /* Main loop */
+   int left = num_neg_D(n, n, LDLT, ipiv);   /* all evalues to left of sigma */
    int right = 5;                            /* 5 evalues to right of sigma */
-   rci.job = 0
+   rci.job = 0; keep = NULL;
    while(true) {
       spral_ssmfe_standard_shift_double(&rci, sigma, left, right, n, lambda,
             n, &X[0][0], n, &keep, &options, &inform);
@@ -63,7 +55,7 @@ void main(void) {
          break;
       case 9:
          cblas_dcopy(n*rci.nx, rci.x, 1, rci.y, 1);
-         cwrap_dsytrs('L', n, rci.nx, LDLT, n, ipiv, rci.y, n, i);
+         cwrap_dsytrs('L', n, rci.nx, LDLT, n, ipiv, rci.y, n);
          break;
       default:
          goto finished;

@@ -95,6 +95,7 @@ check_PROGRAMS = random_test$(EXEEXT) examples/Fortran/random$(EXEEXT) \
 	examples/C/ssmfe/precond_core$(EXEEXT) \
 	examples/C/ssmfe/precond_expert$(EXEEXT) \
 	examples/C/ssmfe/precond_ssmfe$(EXEEXT) \
+	examples/C/ssmfe/shift_invert$(EXEEXT) \
 	examples/Fortran/ssmfe/hermitian$(EXEEXT) \
 	examples/Fortran/ssmfe/precond_core$(EXEEXT) \
 	examples/Fortran/ssmfe/precond_expert$(EXEEXT) \
@@ -301,6 +302,14 @@ examples_C_ssmfe_precond_ssmfe_LDADD = $(LDADD)
 examples_C_ssmfe_precond_ssmfe_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1)
+am_examples_C_ssmfe_shift_invert_OBJECTS =  \
+	examples/C/ssmfe/shift_invert.$(OBJEXT)
+examples_C_ssmfe_shift_invert_OBJECTS =  \
+	$(am_examples_C_ssmfe_shift_invert_OBJECTS)
+examples_C_ssmfe_shift_invert_LDADD = $(LDADD)
+examples_C_ssmfe_shift_invert_DEPENDENCIES = $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 am_examples_Fortran_random_OBJECTS =  \
 	examples/Fortran/random.$(OBJEXT)
 examples_Fortran_random_OBJECTS =  \
@@ -441,6 +450,7 @@ SOURCES = $(libspral_a_SOURCES) $(examples_C_random_SOURCES) \
 	$(examples_C_ssmfe_precond_core_SOURCES) \
 	$(examples_C_ssmfe_precond_expert_SOURCES) \
 	$(examples_C_ssmfe_precond_ssmfe_SOURCES) \
+	$(examples_C_ssmfe_shift_invert_SOURCES) \
 	$(examples_Fortran_random_SOURCES) \
 	$(examples_Fortran_random_matrix_SOURCES) \
 	$(examples_Fortran_ssids_SOURCES) \
@@ -460,6 +470,7 @@ DIST_SOURCES = $(am__libspral_a_SOURCES_DIST) \
 	$(examples_C_ssmfe_precond_core_SOURCES) \
 	$(examples_C_ssmfe_precond_expert_SOURCES) \
 	$(examples_C_ssmfe_precond_ssmfe_SOURCES) \
+	$(examples_C_ssmfe_shift_invert_SOURCES) \
 	$(examples_Fortran_random_SOURCES) \
 	$(examples_Fortran_random_matrix_SOURCES) \
 	$(am__examples_Fortran_ssids_SOURCES_DIST) \
@@ -903,6 +914,11 @@ examples_C_ssmfe_precond_ssmfe_SOURCES = \
 	examples/C/ssmfe/precond_ssmfe.c \
 	examples/C/ssmfe/laplace2d.h
 
+examples_C_ssmfe_shift_invert_SOURCES = \
+	examples/C/ssmfe/shift_invert.f90 \
+	examples/C/ssmfe/laplace2d.h \
+	examples/C/ssmfe/ldltf.h
+
 examples_Fortran_ssmfe_hermitian_SOURCES = \
 	examples/Fortran/ssmfe/hermitian.f90
 
@@ -1208,6 +1224,13 @@ examples/C/ssmfe/precond_ssmfe.$(OBJEXT):  \
 examples/C/ssmfe/precond_ssmfe$(EXEEXT): $(examples_C_ssmfe_precond_ssmfe_OBJECTS) $(examples_C_ssmfe_precond_ssmfe_DEPENDENCIES) $(EXTRA_examples_C_ssmfe_precond_ssmfe_DEPENDENCIES) examples/C/ssmfe/$(am__dirstamp)
 	@rm -f examples/C/ssmfe/precond_ssmfe$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(examples_C_ssmfe_precond_ssmfe_OBJECTS) $(examples_C_ssmfe_precond_ssmfe_LDADD) $(LIBS)
+examples/C/ssmfe/shift_invert.$(OBJEXT):  \
+	examples/C/ssmfe/$(am__dirstamp) \
+	examples/C/ssmfe/$(DEPDIR)/$(am__dirstamp)
+
+examples/C/ssmfe/shift_invert$(EXEEXT): $(examples_C_ssmfe_shift_invert_OBJECTS) $(examples_C_ssmfe_shift_invert_DEPENDENCIES) $(EXTRA_examples_C_ssmfe_shift_invert_DEPENDENCIES) examples/C/ssmfe/$(am__dirstamp)
+	@rm -f examples/C/ssmfe/shift_invert$(EXEEXT)
+	$(AM_V_FCLD)$(FCLINK) $(examples_C_ssmfe_shift_invert_OBJECTS) $(examples_C_ssmfe_shift_invert_LDADD) $(LIBS)
 examples/Fortran/$(am__dirstamp):
 	@$(MKDIR_P) examples/Fortran
 	@: > examples/Fortran/$(am__dirstamp)
@@ -1972,6 +1995,7 @@ examples/C/ssmfe/hermitian.$(OBJEXT): libspral.a
 examples/C/ssmfe/precond_core.$(OBJEXT): libspral.a
 examples/C/ssmfe/precond_expert.$(OBJEXT): libspral.a
 examples/C/ssmfe/precond_ssmfe.$(OBJEXT): libspral.a
+examples/C/ssmfe/shift_invert.$(OBJEXT): libspral.a
 examples/Fortran/ssmfe/hermitian.$(OBJEXT): libspral.a
 examples/Fortran/ssmfe/precond_core.$(OBJEXT): libspral.a \
 	examples/Fortran/ssmfe/laplace2d.$(OBJEXT)
