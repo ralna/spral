@@ -171,12 +171,7 @@ void main(void) {
       case 999:
          if( rci.k == 0 ) {
             if( rci.jx > 1 ) {
-               for(int j=0; j<rci.jx-1; j++)
-               for(int i=0; i<n; i++)
-                  W[0][j][i] = spral_random_real(&state, true);
-            }
-            if( rci.jx + rci.nx - 1 < m ) {
-               for(int j=rci.jx+rci.nx; j<m; j++)
+               for(int j=0; j<rci.jx; j++)
                for(int i=0; i<n; i++)
                   W[0][j][i] = spral_random_real(&state, true);
             }

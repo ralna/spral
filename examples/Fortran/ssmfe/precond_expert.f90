@@ -169,13 +169,6 @@ program ssmfe_expert_precond_example
             end do
           end do
         endif
-        if ( rci%jx + rci%nx - 1 < m ) then
-          do j = rci%jx+rci%nx, m
-            do i = 1, n
-              W(i, j, 0) = random_real(state, positive=.true.)
-            end do
-          end do
-        endif
       end if        
     case ( :-1 )
       exit
