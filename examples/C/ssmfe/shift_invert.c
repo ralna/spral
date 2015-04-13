@@ -31,7 +31,7 @@ void main(void) {
    spral_ssmfe_default_options(&options);
 
    /* Set up then perform LDLT factorization of the shifted matrix */
-   set_laplacian_matrix(nx, ny, A, n);
+   set_laplacian_matrix(nx, ny, n, A);
    for(int j=0; j<n; j++)
    for(int i=0; i<n; i++)
       LDLT[j][i] = (i==j) ? A[j][i] - sigma
@@ -55,7 +55,7 @@ void main(void) {
          break;
       case 9:
          cblas_dcopy(n*rci.nx, rci.x, 1, rci.y, 1);
-         cwrap_dsytrs('L', n, rci.nx, LDLT, n, ipiv, rci.y, n);
+         cwrap_dsytrs('L', n, rci.nx, &LDLT[0][0], n, ipiv, rci.y, n);
          break;
       default:
          goto finished;

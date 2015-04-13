@@ -52,7 +52,8 @@ program ssmfe_shift_invert_example
       exit
     end select
   end do
-  print '(1x, a, es10.2)', 'Eigenvalues near', sigma
+  print '(1x, a, es10.2, 1x, a, i3, 1x, a)', 'Eigenvalues near', sigma, &
+     '(took', inform%iteration, 'iterations)'
   print '(1x, a, i2, a, es13.7)', &
     ('lambda(', i, ') = ', lambda(i), i = 1, inform%left + inform%right)
   call ssmfe_free( keep, inform )
