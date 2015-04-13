@@ -29,7 +29,7 @@ void set_laplacian_matrix(
       a[j][i] = 0.0;
    for(int ix=0; ix<nx; ix++) {
       for(int iy=0; iy<ny; iy++) {
-        int i = ix + (iy - 1)*nx;
+        int i = ix + iy*nx;
         a[i][i] = 4;
         if( ix >  0   ) a[i -  1][i] = -1;
         if( ix < nx-1 ) a[i +  1][i] = -1;
