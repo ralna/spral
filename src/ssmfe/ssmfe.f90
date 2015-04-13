@@ -687,7 +687,7 @@ contains
         ! multiplying by A or B
 
         rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
-        rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
+        rci%y => keep%W(:, rci%jy : rci%jy + rci%nx - 1, rci%ky)
         
         return
 
@@ -697,7 +697,7 @@ contains
         ! applying the preconditioner
 
         rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
-        rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
+        rci%y => keep%W(:, rci%jy : rci%jy + rci%nx - 1, rci%ky)
 
         ! no action needs to be taken by the user if no preconditioning is used
         call copy( n*rci%nx, rci%x, 1, rci%y, 1 )
@@ -1141,7 +1141,7 @@ contains
           ! multiplying by A or B
 
           rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
-          rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
+          rci%y => keep%W(:, rci%jy : rci%jy + rci%nx - 1, rci%ky)
           
           return
 
@@ -1151,7 +1151,7 @@ contains
           ! applying the preconditioner
 
           rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
-          rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
+          rci%y => keep%W(:, rci%jy : rci%jy + rci%nx - 1, rci%ky)
 
           ! no action is to be taken by the user if no preconditioning is used
           call copy( n*rci%nx, rci%x, 1, rci%y, 1 )
@@ -1599,14 +1599,14 @@ contains
       case ( SSMFE_APPLY_A, SSMFE_APPLY_B )
 
         rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
-        rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
+        rci%y => keep%W(:, rci%jy : rci%jy + rci%nx - 1, rci%ky)
         
         return
 
       case ( SSMFE_APPLY_PREC )
 
         rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
-        rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
+        rci%y => keep%W(:, rci%jy : rci%jy + rci%nx - 1, rci%ky)
         call copy( n*rci%nx, rci%x, 1, rci%y, 1 )
 
         return
@@ -1987,14 +1987,14 @@ contains
         case ( SSMFE_DO_SHIFTED_SOLVE, SSMFE_APPLY_B )
 
           rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
-          rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
+          rci%y => keep%W(:, rci%jy : rci%jy + rci%nx - 1, rci%ky)
           
           return
 
         case ( SSMFE_APPLY_PREC )
 
           rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
-          rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
+          rci%y => keep%W(:, rci%jy : rci%jy + rci%nx - 1, rci%ky)
 
           call copy( n*rci%nx, rci%x, 1, rci%y, 1 )
 
