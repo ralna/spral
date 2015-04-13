@@ -12,7 +12,7 @@
 int test_expert(void);
 int test_expert_d(int);
 
-void main(void) {
+int main(void) {
 
   int errors = 0;
   int err;
@@ -23,6 +23,8 @@ void main(void) {
   fprintf(stdout, "%d errors\n", err);
   fprintf(stdout, "=============================\n");
   fprintf(stdout, "Total number of errors = %d\n", errors);
+
+  return errors;
 }
 
 int test_expert(void) {
