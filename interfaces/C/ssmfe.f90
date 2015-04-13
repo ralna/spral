@@ -65,7 +65,7 @@ subroutine spral_ssmfe_free(ckeep, cinform) bind(C)
    type(C_PTR), intent(inout) :: ckeep
    type(spral_ssmfe_inform), intent(inout) :: cinform
 
-   type(ssmfe_expert_ciface_keep), pointer :: fcikeep
+   type(ssmfe_ciface_keepd), pointer :: fcikeep
 
    ! Nullify pointer components of cinform
    cinform%converged       = C_NULL_PTR

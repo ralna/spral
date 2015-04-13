@@ -39,9 +39,10 @@ void main(void) {
          apply_gauss_seidel_step(m, m, rci.nx, rci.x, rci.y);
          break;
       default:
-         break;
+         goto finished;
       }
    }
+finished:
    printf("%d eigenpairs converged in %d iterations\n", inform.left, inform.iteration);
    for(int i=0; i<inform.left; i++)
       printf(" lambda[%1d] = %13.7e\n", i, lambda[i]);
