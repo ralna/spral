@@ -1,18 +1,21 @@
 ! examples/Fortran/ssmfe/precond_expert.f90
 ! Laplacian on a square grid (using SPRAL_SSMFE_EXPERT routines)
 program ssmfe_expert_precond_example
+  use spral_random
   use spral_ssmfe_expert
   use laplace2d ! implement Lapalacian and preconditioners
   implicit none
 
   integer, parameter :: wp = kind(0d0) ! Working precision is double
 
-  integer, parameter :: l   = 20  ! grid points along each side
-  integer, parameter :: n   = l*l ! problem size
-  integer, parameter :: nep = 5   ! eigenpairs wanted
-  integer, parameter :: m   = 3   ! dimension of the iterated subspace
+  integer, parameter :: ngrid = 20           ! grid points along each side
+  integer, parameter :: n     = ngrid*ngrid  ! problem size
+  integer, parameter :: nep   = 5            ! eigenpairs wanted
+  integer, parameter :: m     = 3            ! dimn of the iterated subspace
 
-  real(wp), external :: dnrm2, ddot ! BLAS functions
+  type(random_state) :: state                ! PRNG state
+
+  real(wp), external :: dnrm2, ddot          ! BLAS functions
 
   integer :: ncon                 ! number of converged eigenpairs
   integer :: i, j, k
@@ -33,8 +36,15 @@ program ssmfe_expert_precond_example
   options%left_gap = -0.1
   ! block size is small, convergence may be slow, allow more iterations
   options%max_iterations = 200
+
+  ! Initialize W to lin indep vectors by randomizing
+  do i=1,n
+    do j=1,m
+      W(i,j,0) = random_real(state, positive=.true.)
+    end do
+  end do
+
   ncon = 0
-  call random_number( W(:,:,0) )
   rci%job = 0
   do ! reverse communication loop
     call ssmfe_standard &
@@ -42,11 +52,11 @@ program ssmfe_expert_precond_example
     select case ( rci%job )
     case ( 1 )
       call apply_laplacian &
-        ( l, l, rci%nx, W(1 : n, rci%jx : rci%jx + rci%nx - 1, rci%kx), &
+        ( ngrid, ngrid, rci%nx, W(1 : n, rci%jx : rci%jx + rci%nx - 1, rci%kx),&
           W(1 : n, rci%jy : rci%jy + rci%nx - 1, rci%ky ) )
     case ( 2 )
       call apply_gauss_seidel_step &
-        ( l, l, rci%nx, W(1 : n, rci%jx : rci%jx + rci%nx - 1, rci%kx), &
+        ( ngrid, ngrid, rci%nx, W(1 : n, rci%jx : rci%jx + rci%nx - 1, rci%kx),&
           W(1 : n, rci%jy : rci%jy + rci%nx - 1, rci%ky ) )
     case ( 5 )
       if ( rci%i < 0 ) cycle
@@ -152,15 +162,26 @@ program ssmfe_expert_precond_example
       end if
     case ( 999 )
       if ( rci%k == 0 ) then
-        if ( rci%jx > 1 ) call random_number( W(:, 1 : rci%jx - 1, 0) )
-        if ( rci%jx + rci%nx - 1 < m ) &
-          call random_number( W(:, rci%jx + rci%nx : m, 0) )
+        if ( rci%jx > 1 ) then
+          do j = 1, rci%jx-1
+            do i = 1, n
+              W(i, j, 0) = random_real(state, positive=.true.)
+            end do
+          end do
+        endif
+        if ( rci%jx + rci%nx - 1 < m ) then
+          do j = rci%jx+rci%nx, m
+            do i = 1, n
+              W(i, j, 0) = random_real(state, positive=.true.)
+            end do
+          end do
+        endif
       end if        
     case ( :-1 )
       exit
     end select
   end do
-  print '(i3, 1x, a)', inform%left, 'eigenpairs converged'
+  print '(i3, 1x, a, i4, 1x, a)', inform%left, 'eigenpairs converged in', inform%iteration, 'iterations'
   print '(1x, a, i2, a, es13.7)', &
     ('lambda(', i, ') = ', lambda(i), i = 1, inform%left)
   call ssmfe_free( keep, inform )
