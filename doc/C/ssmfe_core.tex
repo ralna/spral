@@ -203,7 +203,7 @@ are complete. It frees memory referenced by \texttt{keep} and \texttt{inform}.
 The solver procedures \texttt{spral\_ssmfe\_\textit{type}()} and \texttt{spral\_ssmfe\_largest\_\textit{type}()}
 must be called repeatedly using
 a reverse communication interface.
-The procedure \texttt{ssmfe\_free()}
+The procedure \texttt{ssmfe\_core\_free()}
 should be called once after the
 final call to 
 a solver procedure
@@ -234,7 +234,7 @@ The following pseudocode illustrates this.
       ...
       spral_ssmfe_core_default_options(&options);
 \end{verbatim}
-The components of {\tt spral\_ssmfe\_options} and {\tt spral\_ssmfe\_inform} are explained
+The components of {\tt struct spral\_ssmfe\_core\_options} and {\tt struct spral\_ssmfe\_inform} are explained
 in Sections~\ref{ssmfe:type:options} and \ref{ssmfe:type:inform}. Components
 of \texttt{spral\_ssmfe\_rcid} are used for the reverse communication interface and
 are explained in Section~\ref{ssmfe:routine:ssmfe}.
@@ -729,7 +729,7 @@ by making a call to the following subroutine:
 
 The structure {\tt struct spral\_ssmfe\_core\_options} is used to specify
 the options used within {\tt SSMFE\_CORE}. The components, that must be given
-default values through a call to \texttt{spral\_ssmfe\_default\_options()}, are:
+default values through a call to \texttt{spral\_ssmfe\_core\_default\_options()}, are:
 
 \begin{description}
 %
