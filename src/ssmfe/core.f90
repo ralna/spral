@@ -5453,6 +5453,7 @@ select_step: &
           rci%kx = 0
           rci%nx = keep%sizeX
           rci%job = SSMFE_RESTART
+          rci%k = 1
           return
         end if
 

@@ -43,18 +43,27 @@ program ssmfe_core_precond_example
   ncon = 0
   rci%job = 0
   do ! reverse communication loop
-    call ssmfe( rci, 0, nep, 0, m, lmd, rr, ind, keep, options, inform )
+!    call ssmfe( rci, 0, nep, 0, m, lmd, rr, ind, keep, options, inform )
+!    call ssmfe( rci, 0, 0, nep, m, lmd, rr, ind, keep, options, inform )
+    call ssmfe_largest( rci, 0, nep, m, lmd, rr, ind, keep, options, inform )
     select case ( rci%job )
     case ( 1 )
       call apply_laplacian &
         ( l, l, rci%nx, W(1 : n, rci%jx : rci%jx + rci%nx - 1, rci%kx), &
           W(1 : n, rci%jy : rci%jy + rci%nx - 1, rci%ky ) )
+      call dscal( n*rci%nx, -1.0D0, W(1, rci%jy, rci%ky), 1 )
     case ( 2 )
-      call apply_gauss_seidel_step &
-        ( l, l, rci%nx, W(1 : n, rci%jx : rci%jx + rci%nx - 1, rci%kx), &
-          W(1 : n, rci%jy : rci%jy + rci%nx - 1, rci%ky ) )
+      call dcopy( n*rci%nx, W(1, rci%jx, rci%kx), 1, W(1, rci%jy, rci%ky), 1 ) 
+!      call apply_gauss_seidel_step &
+!        ( l, l, rci%nx, W(1 : n, rci%jx : rci%jx + rci%nx - 1, rci%kx), &
+!          W(1 : n, rci%jy : rci%jy + rci%nx - 1, rci%ky ) )
+    case ( 999 )
+      print *, rci%i, rci%j, rci%k
+      exit
     case ( 4 )
+      print *, 'iteration', inform%iteration
       do j = 1, m
+        print '(e14.7, 2e10.1)', lmd(j), inform%residual_norms(j), inform%err_X(j)
         if ( inform%converged(j) /= 0 ) then
           cycle
         else if ( inform%err_X(j) > 0 .and. inform%err_X(j) < tol ) then
@@ -69,7 +78,8 @@ program ssmfe_core_precond_example
         call dcopy( n, W(1, rci%jx + k, 0), 1, X(1, j), 1 )
       end do
       ncon = ncon + rci%nx
-      if ( ncon >= nep .or. inform%iteration > 300 ) exit
+!      if ( ncon > 0 .or. inform%iteration > 250 ) exit
+      if ( ncon >= nep .or. inform%iteration > 10 ) exit
     case ( 11 )
       if ( rci%i == 0 ) then
         if ( rci%kx /= rci%ky .or. rci%jx > rci%jy ) then
@@ -170,7 +180,7 @@ program ssmfe_core_precond_example
     end select
   end do
   print '(i3, 1x, a, 1x, i3, 1x, a)', ncon, 'eigenpairs converged in', inform%iteration, 'iterations'
-  print '(1x, a, i1, a, es13.7)', &
+  print '(1x, a, i1, a, es14.7)', &
     ('lambda(', i, ') = ', lambda(i), i = 1, ncon)
   call ssmfe_free( keep, inform )
 end program ssmfe_core_precond_example
