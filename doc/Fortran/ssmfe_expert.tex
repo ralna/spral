@@ -220,10 +220,10 @@ after another  to reduce  memory requirements.
 \subsection{Package types} 
 
 \Integer\ denotes default \Integer, and \REALDP\ denotes
-\texttt{REAL(kind=kind(0d0))}. We use the term {\bf call type} to mean
-\texttt{REAL(kind=kind(0d0))} for calls to the double precision real valued
-interface, and to mean \texttt{COMPLEX(kind=kind(0d0))} for calls to the double
-precision complex valued interface.
+\texttt{REAL(kind=kind(0d0))}. The term {\bf call type} means
+\texttt{REAL(kind=kind(0d0))} for calls to the double precision real
+interface, and \texttt{COMPLEX(kind=kind(0d0))} for calls to the double
+precision complex interface.
 
 \subsection{Derived types}
 \label{derived types}
@@ -253,7 +253,7 @@ The following pseudocode illustrates this.
 \subsection{%
    \texttt{ssmfe\_standard()},
    \texttt{ssmfe\_standard\_shift()},
-   \texttt{ssmfe\_generalized()},
+   \texttt{ssmfe\_generalized()},\\
    \texttt{ssmfe\_generalized\_shift()}, and
    \texttt{ssmfe\_buckling()}
 }
@@ -696,8 +696,8 @@ are situated.
 \itt{left} is an \intentin\ scalar of type default \Integer\ 
 that holds the number of desired eigenvalues to the left of {\tt sigma}.
 {\bf Restriction:} {\tt $0 < $ left + right $\le$ min(mep, n/2)},
-where {\tt right} is zero for {\ttssmfe\_standard}\ and 
-{\ttssmfe\_generalized}.
+where {\tt right} is zero for {\tt ssmfe\_standard()}\ and 
+{\tt ssmfe\_generalized()}.
 %
 \itt{right} 
 is an \intentin\ scalar of type default \Integer\ 
@@ -752,7 +752,7 @@ It must not be changed by the user.
 %
 \end{description}
 
-\subsection{\texttt{ssmfe\_free()}
+\subsection{\texttt{ssmfe\_free()}}
 
 {\bf
 At the end of the computation, the memory 
@@ -850,24 +850,18 @@ The default value is -1.0.
 determines the amount of printing.
 Possible values are:\\
 %
-\begin{tabular}{rcl}
-$<0$ &:& no printing;\\
-$0$ &:& error and warning messages only;\\
-$1$ &:& the type (standard or generalized) and the size of the problem,
-the number of eigenpairs \\ 
-& & requested, the error tolerances and
-the size of the subspace are printed before the iterations start;\\
-$2$ &:& as $1$ but, for each eigenpair tested for convergence
-(see Section~\ref{sec:method}), the iteration number,
-the index of \\
-& & 
-the eigenpair, the
-eigenvalue, whether it has converged, the residual norm, and the error
-estimates \\
-& & are printed;\\
-$>2$ &:& as $1$ but with all eigenvalues, whether converged, residual norms
-and eigenvalue/eigenvector\\ 
-& & error estimates printed on each iteration. 
+\begin{tabular}{r@{ : }p{0.85\textwidth}}
+$<0$ & no printing;\\
+$0$ & error and warning messages only;\\
+$1$ & the type (standard or generalized) and the size of the problem,
+   the number of eigenpairs requested, the error tolerances and
+   the size of the subspace are printed before the iterations start;\\
+$2$ & as $1$ but, for each eigenpair tested for convergence
+   (see Section~\ref{sec:method}), the iteration number, the index of 
+   the eigenpair, the eigenvalue, whether it has converged, the residual norm,
+   and the error estimates are printed;\\
+$>2$ & as $1$ but with all eigenvalues, whether converged, residual norms
+   and eigenvalue/eigenvector error estimates printed on each iteration. 
 \end{tabular}
 
 \noindent
@@ -1001,7 +995,7 @@ the number {\tt kw} of blocks in the user's work array {\tt W}
 must be increased by {\tt 2}.
 The default is {\tt minBprod = .true.}.
 {\bf Restriction:} {\tt minBprod = .true.} %if {\tt problem < 0}.
-for {\tt ssmfe\_standard\_shift()}, {\ttssmfe\_generalized\_shift()}
+for {\tt ssmfe\_standard\_shift()}, {\tt ssmfe\_generalized\_shift()}
 and  {\tt ssmfe\_buckling()}.
 %
 \itt{right\_gap}

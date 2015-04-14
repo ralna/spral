@@ -230,7 +230,7 @@ module to declare scalars of the types
 {\tt struct spral\_ssmfe\_options} and 
 {\tt struct spral\_ssmfe\_inform}. The user must also declare a \texttt{void *}
 pointer \texttt{keep} for the package's private data structure. The options
-data structure \textbf{must} be initalized using \texttt{spral\_ssmfe\_default\_options()},
+data structure \textbf{must} be initalized through a call to \texttt{spral\_ssmfe\_default\_options()},
 and the pointer \texttt{keep} must be initialized to \texttt{NULL}.
 The following pseudocode illustrates this.
 \begin{verbatim}
@@ -244,7 +244,7 @@ The following pseudocode illustrates this.
       spral_ssmfe_default_options(&options);
 \end{verbatim}
 The components of {\tt struct spral\_ssmfe\_options} and {\tt struct spral\_ssmfe\_inform} are explained
-in Sections~\ref{sec:options} and \ref{sec:inform}. Components
+in Sections \ref{sec:options} and \ref{sec:inform}. Components
 of \texttt{struct spral\_ssmfe\_rcid} are used for the reverse communication interface and
 are explained in Section~\ref{ssmfe_expert:routine:solver}.
 The \texttt{void~*} pointer \texttt{keep} is allocated using Fortran, and
@@ -726,7 +726,7 @@ are situated.
 %
 \itt{left} holds the number of desired eigenvalues to the left of {\tt sigma}.
 {\bf Restriction:} {\tt $0 < $ left + right $\le$ min(mep, n/2)},
-where {\tt right} is zero for {\tt spral\_ssmfe\_standard\_\textit{type}()}\ and 
+with {\tt right}$=${\tt 0} for {\tt spral\_ssmfe\_standard\_\textit{type}()} and
 {\tt spral\_ssmfe\_generalized\_\textit{type}()}.
 %
 \itt{right} holds the number of desired eigenvalues to the right of {\tt sigma}.
@@ -857,24 +857,18 @@ The default value is -1.0.
 determines the amount of printing.
 Possible values are:\\
 %
-\begin{tabular}{rcl}
-$<0$ &:& no printing;\\
-$0$ &:& error and warning messages only;\\
-$1$ &:& the type (standard or generalized) and the size of the problem,
-the number of eigenpairs \\ 
-& & requested, the error tolerances and
-the size of the subspace are printed before the iterations start;\\
-$2$ &:& as $1$ but, for each eigenpair tested for convergence
-(see Section~\ref{sec:method}), the iteration number,
-the index of \\
-& & 
-the eigenpair, the
-eigenvalue, whether it has converged, the residual norm, and the error
-estimates \\
-& & are printed;\\
-$>2$ &:& as $1$ but with all eigenvalues, whether converged, residual norms
-and eigenvalue/eigenvector\\ 
-& & error estimates printed on each iteration. 
+\begin{tabular}{r@{ : }p{0.85\textwidth}}
+$<0$ & no printing;\\
+$0$ & error and warning messages only;\\
+$1$ & the type (standard or generalized) and the size of the problem,
+   the number of eigenpairs requested, the error tolerances and the size of
+   the subspace are printed before the iterations start;\\
+$2$ & as $1$ but, for each eigenpair tested for convergence (see
+   Section~\ref{sec:method}), the iteration number, the index of the
+   eigenpair, the eigenvalue, whether it has converged, the residual norm, and
+   the error estimates are printed;\\
+$>2$ & as $1$ but with all eigenvalues, whether converged, residual norms
+   and eigenvalue/eigenvector error estimates printed on each iteration. 
 \end{tabular}
 
 \noindent
@@ -1007,13 +1001,10 @@ for {\tt spral\_ssmfe\_standard\_shift\_\textit{type}()},\\
 {\tt spral\_ssmfe\_generalized\_shift\_\textit{type}()}
 and  {\tt spral\_ssmfe\_buckling\_\textit{type}()}.
 %
-\itt{double right\_gap}
-is only used by 
+\itt{double right\_gap} has the same meaning as {\tt left\_gap} but for the rightmost eigenvalue. It is only used by the routines
 {\tt spral\_ssmfe\_standard\_shift\_\textit{type}()}, {\tt spral\_ssmfe\_generalized\_shift\_\textit{type}()}
 and {\tt spral\_ssmfe\_buckling\_\textit{type}()}
-with a non-zero {\tt right}, and
-has the same meaning as {\tt options.left\_gap}
-but for the rightmost computed eigenvalue.
+and only when {\tt right}$\ne${\tt 0}.
 The default value is 0.
 %
 \itt{int user\_x} specifies whether an initial guess for the eigenvectors is supplied.
@@ -1073,12 +1064,12 @@ of \Ref{evp.g} or \Ref{evp.b}
 to the left of {\tt sigma}. 
 %
 \itt{double next\_left} holds
-the non-converged eigenvalue next to the last converged on the left
-(cf. {\tt options.left\_gap}).
+the non-converged eigenvalue next to the last converged on the left\\
+(see {\tt options.left\_gap}).
 %
 \itt{double next\_right} holds
-the non-converged eigenvalue next to the last converged on the right
-(cf. {\tt options.right\_gap}).
+the non-converged eigenvalue next to the last converged on the right\\
+(see {\tt options.right\_gap}).
 %
 \itt{int non\_converged} holds the number of non-converged eigenpairs
 (see Section~\ref{sec:err.solve}).
