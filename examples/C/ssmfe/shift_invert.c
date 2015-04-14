@@ -1,4 +1,4 @@
-/* examples/C/ssmfe/shift_invert.f90 */
+/* examples/C/ssmfe/shift_invert.c */
 /* Laplacian on a rectangular grid by shift-invert via LDLT factorization */
 #include "spral.h"
 #include <math.h>

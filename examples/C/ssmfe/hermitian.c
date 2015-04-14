@@ -1,4 +1,4 @@
-/* examples/C/ssmfe/hermitian.f90 - Example code for SPRAL_SSMFE package */
+/* examples/C/ssmfe/hermitian.c - Example code for SPRAL_SSMFE package */
 /* Hermitian operator example */
 #include "spral.h"
 #include <math.h>
