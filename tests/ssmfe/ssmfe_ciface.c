@@ -491,6 +491,30 @@ int test_expert(void) {
     fprintf(stdout, "ok\n");
   errors += err;
 
+  fprintf(stdout, "testing standard_shift_double_complex...");
+  err = test_expert_z(2);
+  if ( err != 0 )
+    fprintf(stdout, "%d errors\n", err);
+  else
+    fprintf(stdout, "ok\n");
+  errors += err;
+
+  fprintf(stdout, "testing generalized_shift_double_complex...");
+  err = test_expert_z(3);
+  if ( err != 0 )
+    fprintf(stdout, "%d errors\n", err);
+  else
+    fprintf(stdout, "ok\n");
+  errors += err;
+
+  fprintf(stdout, "testing buckling_double_complex...");
+  err = test_expert_z(4);
+  if ( err != 0 )
+    fprintf(stdout, "%d errors\n", err);
+  else
+    fprintf(stdout, "ok\n");
+  errors += err;
+
   return errors;
 }
 
@@ -666,7 +690,8 @@ int test_expert_d(int problem) {
                  );
             else if ( problem == 4 )
                apply_laplacian(
-                  ngrid, ngrid, rci.nx, &W[rci.kx][rci.jx][0], &W[rci.ky][rci.jy][0]
+                  ngrid, ngrid, rci.nx, &W[rci.kx][rci.jx][0], 
+                  &W[rci.ky][rci.jy][0]
                   );
          }
          break;
@@ -729,8 +754,8 @@ int test_expert_z(int problem) {
    const double complex NONE = -1.0;
    
    int errors;
-   
    int nep = 5;
+   int lwork;
 
    int state = SPRAL_RANDOM_INITIAL_SEED; /* PRNG state */
 
@@ -741,6 +766,9 @@ int test_expert_z(int problem) {
    double lambda[n];              /* eigenvalues */
    double complex X[n][n];        /* eigenvectors */
    /* Work arrays */
+   double B[n][n];
+   double LDLT[n][n];
+   double work[n][n];
    double complex rr[3][2*m][2*m];
    double complex W[8][m][n];
    double complex U[m][n];
@@ -753,6 +781,19 @@ int test_expert_z(int problem) {
    struct spral_ssmfe_inform inform;       /* information */
    
    double complex z;
+
+   if ( problem > 1 ) {
+     sigma = 1.0;
+//     set_laplacian_matrix_z(ngrid, ngrid, n, A);
+     set_laplacian_matrix(ngrid, ngrid, n, B);
+     for(int j=0; j<n; j++)
+     for(int i=0; i<n; i++)
+        LDLT[j][i] = (i==j) ? B[j][i] - sigma
+                            : B[j][i];
+//        LDLT[j][i] = (i==j) ? A[j][i] - sigma
+//                            : A[j][i];
+     cwrap_dsytrf('L', n, &LDLT[0][0], n, ipiv, &work[0][0], n*n);
+   }
 
    /* Initialize options to default values */
    spral_ssmfe_default_options(&options);
@@ -779,12 +820,31 @@ int test_expert_z(int problem) {
         spral_ssmfe_expert_generalized_double_complex(&rci, nep, n, lambda,
            m, &rr[0][0][0], ind, &keep, &options, &inform);
         break;
+      case 2:
+        spral_ssmfe_expert_standard_shift_double_complex(
+           &rci, sigma, nep, 0, n, lambda,
+           m, &rr[0][0][0], ind, &keep, &options, &inform);
+        break;
+      case 3:
+        spral_ssmfe_expert_generalized_shift_double_complex(
+           &rci, sigma, nep, 0, n, lambda,
+           m, &rr[0][0][0], ind, &keep, &options, &inform);
+        break;
+      case 4:
+        spral_ssmfe_expert_buckling_double_complex(
+           &rci, sigma, nep, 0, n, lambda,
+           m, &rr[0][0][0], ind, &keep, &options, &inform);
+        break;
       }
       switch ( rci.job ) {
       case 1:
-         apply_laplacian_z(
-            ngrid, ngrid, rci.nx, &W[rci.kx][rci.jx][0], &W[rci.ky][rci.jy][0]
-            );
+         if ( problem < 4 )
+           apply_laplacian_z(
+              ngrid, ngrid, rci.nx, &W[rci.kx][rci.jx][0], &W[rci.ky][rci.jy][0]
+              );
+         else
+            cblas_zcopy
+               ( n*rci.nx, &W[rci.kx][rci.jx][0], 1, &W[rci.ky][rci.jy][0], 1 );
          break;
       case 2:
          if ( problem < 2 )
@@ -796,8 +856,13 @@ int test_expert_z(int problem) {
                ( n*rci.nx, &W[rci.kx][rci.jx][0], 1, &W[rci.ky][rci.jy][0], 1 );
          break;
       case 3:
-         cblas_zcopy
-            ( n*rci.nx, &W[rci.kx][rci.jx][0], 1, &W[rci.ky][rci.jy][0], 1 );
+         if ( problem < 4 )
+           cblas_zcopy
+              ( n*rci.nx, &W[rci.kx][rci.jx][0], 1, &W[rci.ky][rci.jy][0], 1 );
+         else
+           apply_laplacian_z(
+              ngrid, ngrid, rci.nx, &W[rci.kx][rci.jx][0], &W[rci.ky][rci.jy][0]
+              );
          break;
       case 5:
          if ( rci.i < 0 ) continue;
@@ -806,6 +871,17 @@ int test_expert_z(int problem) {
            cblas_zcopy( n, &W[0][rci.jx+k][0], 1, &X[j][0], 1 );
          }
          ncon += rci.nx;
+         break;
+      case 9:
+         for(int i=0; i<n; i++)
+           for(int j=0; j<rci.nx; j++)
+              work[j][i] = W[rci.kx][rci.jx + j][i];
+         cwrap_dsytrs(
+            'L', n, rci.nx, &LDLT[0][0], n, ipiv, &work[0][0], n
+            );
+         for(int i=0; i<n; i++)
+           for(int j=0; j<rci.nx; j++)
+              W[rci.ky][rci.jy + j][i] = work[j][i];
          break;
       case 11:
       case 12:
@@ -827,11 +903,16 @@ int test_expert_z(int problem) {
                CblasColMajor, CblasNoTrans, CblasNoTrans, n, rci.nx, ncon,
                &NONE, &X[0][0], n, &U[0][0], n, &ONE, &W[rci.kx][rci.jx][0], n
                );
-            if ( problem != 0 )
+            if ( problem == 1 || problem == 3 )
               cblas_zgemm(
                  CblasColMajor, CblasNoTrans, CblasNoTrans, n, rci.nx, ncon,
                  &NONE, &X[0][0], n, &U[0][0], n, &ONE, &W[rci.ky][rci.jy][0], n
                  );
+            else if ( problem == 4 )
+               apply_laplacian_z(
+                  ngrid, ngrid, rci.nx, &W[rci.kx][rci.jx][0], 
+                  &W[rci.ky][rci.jy][0]
+                  );
          }
          break;
       case 999:
@@ -851,8 +932,14 @@ finished:
    errors = 0;
    if ( inform.flag != 0 ) errors++;
    if ( ncon != ncon_x ) errors++;
-   for ( int i = 0; i < ncon && i < ncon_x; i++ )
-      if ( fabs(lambda[i] - lambda_x[i]) > 1e-6 ) errors++;
+   if ( problem < 2 ) {
+     for ( int i = 0; i < ncon && i < ncon_x; i++ )
+        if ( fabs(lambda[i] - lambda_x[i]) > 1e-6 ) errors++;
+   }
+   else {
+     for ( int i = 0; i < ncon && i < ncon_x; i++ )
+        if ( fabs(lambda[i] - lambda_six[i]) > 1e-6 ) errors++;
+   }
    spral_ssmfe_expert_free(&keep, &inform);
 
    return errors;
