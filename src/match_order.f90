@@ -7,6 +7,11 @@
 ! order that is suitable for use with a sparse direct solver. 
 ! It optionally computes scaling factors.
 
+! FIXME: At some stage replace call to mo_match() with call to
+! a higher level routine from spral_scaling instead (NB: have to cope with
+! fact we are currently expecting a full matrix, even if it means 2x more log
+! operations)
+
 module spral_match_order
    use spral_metis_wrapper, only : metis_order
    use spral_scaling, only : hungarian_match
@@ -442,7 +447,7 @@ subroutine mo_match(n,row2,ptr2,val2,scale,flag,stat,perm)
    end do
 
    ne = ptr2(n+1)-1
-   call hungarian_match(n,ne,ptr2,row2,val2,cperm,rank,dw(1),dw(n+1),stat)
+   call hungarian_match(n,n,ptr2,row2,val2,cperm,rank,dw(1),dw(n+1),stat)
    if (stat.ne.0) then
       flag = ERROR_ALLOCATION
       return
@@ -504,7 +509,7 @@ subroutine mo_match(n,row2,ptr2,val2,scale,flag,stat,perm)
     end do
     ! nn is order of non-singular part.
     nn = k
-    call hungarian_match(nn,nne,ptr2,row2,val2,cperm,rank,dw(1),dw(nn+1),stat)
+    call hungarian_match(nn,nn,ptr2,row2,val2,cperm,rank,dw(1),dw(nn+1),stat)
     if (stat.ne.0) then
       flag = ERROR_ALLOCATION
       return
