@@ -1065,7 +1065,8 @@ examples_C_random_matrix_SOURCES = examples/C/random_matrix.c
 @HAVE_NVCC_TRUE@examples_C_ssids_LINK = $(NVCCLINK)
 ssmfe_test_SOURCES = tests/ssmfe/ssmfe.f90
 ssmfe_ciface_test_SOURCES = tests/ssmfe/ssmfe_ciface.c \
-									 tests/ssmfe/laplace2d.h
+									 tests/ssmfe/laplace2d.h \
+									 tests/ssmfe/ldltf.h
 
 examples_C_ssmfe_hermitian_SOURCES = \
 	examples/C/ssmfe/hermitian.c

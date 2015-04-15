@@ -223,7 +223,8 @@ check_PROGRAMS += \
 	examples/Fortran/ssmfe/shift_invert
 ssmfe_test_SOURCES = tests/ssmfe/ssmfe.f90
 ssmfe_ciface_test_SOURCES = tests/ssmfe/ssmfe_ciface.c \
-									 tests/ssmfe/laplace2d.h
+									 tests/ssmfe/laplace2d.h \
+									 tests/ssmfe/ldltf.h
 tests/ssmfe/ssmfe.$(OBJEXT): libspral.a
 tests/ssmfe/ssmfe_ciface.$(OBJEXT): libspral.a
 TESTS += ssmfe_test \
