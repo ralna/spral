@@ -16,7 +16,12 @@ int test_core_z(int, int);
 int test_expert(void);
 int test_expert_d(int);
 int test_expert_z(int);
+int test_ssmfe(void);
+int test_ssmfe_d(int);
+int test_ssmfe_z(int);
 
+void zdcopy( int n, double complex* x, double* y );
+void dzcopy( int n, double* y, double complex* x );
 void vector_operations_d
   ( struct spral_ssmfe_rcid rci, 
     int n, int m, int kw, int ind[m],
@@ -43,6 +48,11 @@ int main(void) {
 
   fprintf(stdout, "testing ssmfe_expert...\n");
   err = test_expert();
+  errors += err;
+  fprintf(stdout, "%d errors\n", err);
+
+  fprintf(stdout, "testing ssmfe...\n");
+  err = test_ssmfe();
   errors += err;
   fprintf(stdout, "%d errors\n", err);
 
@@ -943,6 +953,355 @@ finished:
    spral_ssmfe_expert_free(&keep, &inform);
 
    return errors;
+}
+
+int test_ssmfe(void) {
+
+  int errors = 0;
+  int err;
+
+  fprintf(stdout, "testing standard_double...");
+  err = test_ssmfe_d(0);
+  if ( err != 0 )
+    fprintf(stdout, "%d errors\n", err);
+  else
+    fprintf(stdout, "ok\n");
+  errors += err;
+
+  fprintf(stdout, "testing generalized_double...");
+  err = test_ssmfe_d(1);
+  if ( err != 0 )
+    fprintf(stdout, "%d errors\n", err);
+  else
+    fprintf(stdout, "ok\n");
+  errors += err;
+
+  fprintf(stdout, "testing standard_shift_double...");
+  err = test_ssmfe_d(2);
+  if ( err != 0 )
+    fprintf(stdout, "%d errors\n", err);
+  else
+    fprintf(stdout, "ok\n");
+  errors += err;
+
+  fprintf(stdout, "testing generalized_shift_double...");
+  err = test_ssmfe_d(3);
+  if ( err != 0 )
+    fprintf(stdout, "%d errors\n", err);
+  else
+    fprintf(stdout, "ok\n");
+  errors += err;
+
+  fprintf(stdout, "testing buckling_double...");
+  err = test_ssmfe_d(4);
+  if ( err != 0 )
+    fprintf(stdout, "%d errors\n", err);
+  else
+    fprintf(stdout, "ok\n");
+  errors += err;
+
+  fprintf(stdout, "testing standard_double_complex...");
+  err = test_ssmfe_z(0);
+  if ( err != 0 )
+    fprintf(stdout, "%d errors\n", err);
+  else
+    fprintf(stdout, "ok\n");
+  errors += err;
+
+  fprintf(stdout, "testing generalized_double_complex...");
+  err = test_ssmfe_z(1);
+  if ( err != 0 )
+    fprintf(stdout, "%d errors\n", err);
+  else
+    fprintf(stdout, "ok\n");
+  errors += err;
+
+  fprintf(stdout, "testing standard_shift_double_complex...");
+  err = test_ssmfe_z(2);
+  if ( err != 0 )
+    fprintf(stdout, "%d errors\n", err);
+  else
+    fprintf(stdout, "ok\n");
+  errors += err;
+
+  fprintf(stdout, "testing generalized_shift_double_complex...");
+  err = test_ssmfe_z(3);
+  if ( err != 0 )
+    fprintf(stdout, "%d errors\n", err);
+  else
+    fprintf(stdout, "ok\n");
+  errors += err;
+
+  fprintf(stdout, "testing buckling_double_complex...");
+  err = test_ssmfe_z(4);
+  if ( err != 0 )
+    fprintf(stdout, "%d errors\n", err);
+  else
+    fprintf(stdout, "ok\n");
+  errors += err;
+
+  return errors;
+}
+  
+int test_ssmfe_d(int problem) {
+
+   const int m   = 20;     /* grid points along each side */
+   const int n   = m*m;    /* problem size */
+   
+   const int ncon_x = 6;
+   const double sigma = 1.0;  /* shift */
+   const double lambda_x[] = {
+      4.4676695e-02, 
+      1.1119274e-01, 
+      1.1119274e-01,
+      1.7770878e-01,
+      2.2040061e-01,
+      2.2040061e-01
+   };
+   const double lambda_six[] = {
+      8.4187478e-01,
+      8.4187478e-01,
+      8.8141871e-01,
+      8.8141871e-01,
+      9.5108266e-01,
+      9.5108266e-01
+   };
+
+   int errors;
+   int nep = 5;
+
+   int ipiv[n];                           /* LDLT pivot index */
+
+   double lambda[n];                  /* eigenvalues */
+   double X[n][n];                    /* eigenvectors */
+   double A[n][n];                        /* matrix */
+   double LDLT[n][n];                     /* factors */
+   double work[n][n];                     /* work array for dsytrf */
+
+   struct spral_ssmfe_rcid rci;           /* reverse communication data */
+   struct spral_ssmfe_options options;    /* options */
+   void *keep;                            /* private data */
+   struct spral_ssmfe_inform inform;      /* information */
+
+   if ( problem > 1 ) {
+     set_laplacian_matrix( m, m, n, A );
+     for(int j=0; j<n; j++)
+     for(int i=0; i<n; i++)
+        LDLT[j][i] = (i==j) ? A[j][i] - sigma
+                            : A[j][i];
+     cwrap_dsytrf( 'L', n, &LDLT[0][0], n, ipiv, &work[0][0], n*n );
+   }
+
+   /* Initialize options to default values */
+   spral_ssmfe_default_options(&options);
+   /* gap between the last converged eigenvalue and the rest of the spectrum
+    * must be at least 0.1 times average gap between computed eigenvalues */
+   options.left_gap = -0.1;
+
+   rci.job = 0; keep = NULL;
+   while(true) { /* reverse communication loop */
+      switch ( problem ) {
+      case 0:
+         spral_ssmfe_standard_double( &rci, nep, 2*nep, lambda, n, &X[0][0], n,
+            &keep, &options, &inform );
+         break;
+      case 1:
+         spral_ssmfe_standard_double( &rci, nep, 2*nep, lambda, n, &X[0][0], n,
+            &keep, &options, &inform );
+         break;
+      case 2:
+         spral_ssmfe_standard_shift_double( &rci, sigma, nep, 0, n, lambda,
+            n, &X[0][0], n, &keep, &options, &inform );
+         break;
+      case 3:
+         spral_ssmfe_generalized_shift_double( &rci, sigma, nep, 0, n, lambda,
+            n, &X[0][0], n, &keep, &options, &inform );
+         break;
+      case 4:
+         spral_ssmfe_buckling_double( &rci, sigma, nep, 0, n, lambda,
+            n, &X[0][0], n, &keep, &options, &inform );
+         break;
+      }
+      switch ( rci.job ) {
+      case 1:
+         if ( problem < 4 )
+            apply_laplacian(m, m, rci.nx, rci.x, rci.y);
+         else
+            cblas_dcopy( n*rci.nx, rci.x, 1, rci.y, 1 );
+         break;
+      case 2:
+         if ( problem < 2 )
+            apply_gauss_seidel_step(m, m, rci.nx, rci.x, rci.y);
+         break;
+      case 3:
+         if ( problem < 4 )
+            cblas_dcopy( n*rci.nx, rci.x, 1, rci.y, 1 );
+         else
+            apply_laplacian(m, m, rci.nx, rci.x, rci.y);
+         break;
+      case 9:
+         cblas_dcopy( n*rci.nx, rci.x, 1, rci.y, 1 );
+         cwrap_dsytrs( 'L', n, rci.nx, &LDLT[0][0], n, ipiv, rci.y, n );
+         break;
+      default:
+         goto finished;
+      }
+   }
+finished:
+   errors = 0;
+   if ( inform.flag != 0 ) errors++;
+   if ( inform.left != ncon_x ) errors++;
+   if ( problem < 2 ) {
+     for ( int i = 0; i < inform.left && i < ncon_x; i++ )
+        if ( fabs(lambda[i] - lambda_x[i]) > 1e-6 ) errors++;
+   }
+   else {
+     for ( int i = 0; i < inform.left && i < ncon_x; i++ )
+        if ( fabs(lambda[i] - lambda_six[i]) > 1e-6 ) errors++;
+   }
+   spral_ssmfe_free_double(&keep, &inform);
+   return errors;
+}
+
+int test_ssmfe_z(int problem) {
+
+   const int m   = 20;     /* grid points along each side */
+   const int n   = m*m;    /* problem size */
+   
+   const int ncon_x = 6;
+   const double sigma = 1.0;  /* shift */
+   const double lambda_x[] = {
+      4.4676695e-02, 
+      1.1119274e-01, 
+      1.1119274e-01,
+      1.7770878e-01,
+      2.2040061e-01,
+      2.2040061e-01
+   };
+   const double lambda_six[] = {
+      8.4187478e-01,
+      8.4187478e-01,
+      8.8141871e-01,
+      8.8141871e-01,
+      9.5108266e-01,
+      9.5108266e-01
+   };
+
+   int errors;
+   int nep = 5;
+
+   int ipiv[n];                           /* LDLT pivot index */
+
+   double lambda[n];                  /* eigenvalues */
+   double complex X[n][n];                    /* eigenvectors */
+   double A[n][n];                        /* matrix */
+   double LDLT[n][n];                     /* factors */
+   double work[n][n];                     /* work array for dsytrf */
+
+   struct spral_ssmfe_rciz rci;           /* reverse communication data */
+   struct spral_ssmfe_options options;    /* options */
+   void *keep;                            /* private data */
+   struct spral_ssmfe_inform inform;      /* information */
+
+   if ( problem > 1 ) {
+     set_laplacian_matrix( m, m, n, A );
+     for(int j=0; j<n; j++)
+     for(int i=0; i<n; i++)
+        LDLT[j][i] = (i==j) ? A[j][i] - sigma
+                            : A[j][i];
+     cwrap_dsytrf( 'L', n, &LDLT[0][0], n, ipiv, &work[0][0], n*n );
+   }
+
+   /* Initialize options to default values */
+   spral_ssmfe_default_options(&options);
+   /* gap between the last converged eigenvalue and the rest of the spectrum
+    * must be at least 0.1 times average gap between computed eigenvalues */
+   options.left_gap = -0.1;
+
+   rci.job = 0; keep = NULL;
+   while(true) { /* reverse communication loop */
+      switch ( problem ) {
+      case 0:
+         spral_ssmfe_standard_double_complex( 
+            &rci, nep, 2*nep, lambda, n, &X[0][0], n,
+            &keep, &options, &inform );
+         break;
+      case 1:
+         spral_ssmfe_standard_double_complex( 
+            &rci, nep, 2*nep, lambda, n, &X[0][0], n,
+            &keep, &options, &inform );
+         break;
+      case 2:
+         spral_ssmfe_standard_shift_double_complex( 
+            &rci, sigma, nep, 0, n, lambda,
+            n, &X[0][0], n, &keep, &options, &inform );
+         break;
+      case 3:
+         spral_ssmfe_generalized_shift_double_complex( 
+            &rci, sigma, nep, 0, n, lambda,
+            n, &X[0][0], n, &keep, &options, &inform );
+         break;
+      case 4:
+         spral_ssmfe_buckling_double_complex( 
+            &rci, sigma, nep, 0, n, lambda,
+            n, &X[0][0], n, &keep, &options, &inform );
+         break;
+      }
+      switch ( rci.job ) {
+      case 1:
+         if ( problem < 4 )
+            apply_laplacian_z( m, m, rci.nx, rci.x, rci.y );
+         else
+            cblas_zcopy( n*rci.nx, rci.x, 1, rci.y, 1 );
+         break;
+      case 2:
+         if ( problem < 2 )
+            apply_gauss_seidel_step_z( m, m, rci.nx, rci.x, rci.y );
+         break;
+      case 3:
+         if ( problem < 4 )
+            cblas_zcopy( n*rci.nx, rci.x, 1, rci.y, 1 );
+         else
+            apply_laplacian_z( m, m, rci.nx, rci.x, rci.y );
+         break;
+      case 9:
+         zdcopy( n*rci.nx, rci.x, &work[0][0] );
+         cwrap_dsytrs( 'L', n, rci.nx, &LDLT[0][0], n, ipiv, &work[0][0], n );
+         dzcopy( n*rci.nx, &work[0][0], rci.y );
+         break;
+      default:
+         goto finished;
+      }
+   }
+finished:
+   errors = 0;
+   if ( inform.flag != 0 ) errors++;
+   if ( inform.left != ncon_x ) errors++;
+   if ( problem < 2 ) {
+     for ( int i = 0; i < inform.left && i < ncon_x; i++ )
+        if ( fabs(lambda[i] - lambda_x[i]) > 1e-6 ) errors++;
+   }
+   else {
+     for ( int i = 0; i < inform.left && i < ncon_x; i++ )
+        if ( fabs(lambda[i] - lambda_six[i]) > 1e-6 ) errors++;
+   }
+   if ( problem == -2 ) {
+   printf("%d eigenpairs converged in %d iterations\n", inform.left, inform.iteration);
+   for(int i=0; i<inform.left; i++)
+      printf(" lambda[%1d] = %13.7e\n", i, lambda[i]);
+   }
+   spral_ssmfe_free_double_complex(&keep, &inform);
+   return errors;
+}
+
+void zdcopy( int n, double complex* x, double* y ) {
+   for ( int i = 0; i < n; i++ )
+      y[i] = x[i];
+}
+
+void dzcopy( int n, double* x, double complex* y ) {
+   for ( int i = 0; i < n; i++ )
+      y[i] = x[i];
 }
 
 void vector_operations_d
