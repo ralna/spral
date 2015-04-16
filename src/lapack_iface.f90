@@ -23,7 +23,6 @@ module spral_lapack_iface
     end subroutine dlacpy
   end interface
 
-  integer, parameter, private :: PRECISION = kind(1.0D0)
   interface
     subroutine zpotrf( uplo, n, a, lda, info )
       implicit none

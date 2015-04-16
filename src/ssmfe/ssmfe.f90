@@ -432,6 +432,44 @@ contains
     integer :: ldBX
     integer :: i, j, k
     
+    ! check for the input data errors
+    
+    if ( n < 1 ) then
+      inform%flag = WRONG_PROBLEM_SIZE
+      rci%job = SSMFE_QUIT
+      if ( options%unit_error > NONE .and. options%print_level > NONE ) &
+        write( options%unit_error, '(/a, i9/)' ) &
+          '??? Wrong problem size', n
+      return
+    end if
+    
+    if ( ldx < n ) then
+      inform%flag = WRONG_LDX
+      rci%job = SSMFE_QUIT
+      if ( options%unit_error > NONE .and. options%print_level > NONE ) &
+        write( options%unit_error, '(/a, i9/)' ) &
+          '??? Wrong leading dimension of x', ldx
+      return
+    end if
+    
+    if ( left < 0 .or. left >= n/2 ) then
+      inform%flag = WRONG_LEFT
+      rci%job = SSMFE_QUIT
+      if ( options%unit_error > NONE .and. options%print_level > NONE ) &
+        write( options%unit_error, '(/a, i9/)' ) &
+          '??? Wrong number of eigenpairs', left
+      return
+    end if
+
+    if ( left > max_nep ) then
+      inform%flag = WRONG_STORAGE_SIZE
+      rci%job = SSMFE_QUIT
+      if ( options%unit_error > NONE .and. options%print_level > NONE ) &
+        write( options%unit_error, '(/a, i9/)' ) &
+          '??? Wrong eigenpairs storage size', max_nep
+      return
+    end if
+
     if ( rci%job == 0 ) then
 
       ! set the number of extra vectors iterated for better convergence
@@ -504,44 +542,6 @@ contains
 
     end if
     
-    ! check for the input data errors
-    
-    if ( n < 1 ) then
-      inform%flag = WRONG_PROBLEM_SIZE
-      rci%job = SSMFE_QUIT
-      if ( options%unit_error > NONE .and. options%print_level > NONE ) &
-        write( options%unit_error, '(/a, i9/)' ) &
-          '??? Wrong problem size', n
-      return
-    end if
-    
-    if ( ldx < n ) then
-      inform%flag = WRONG_LDX
-      rci%job = SSMFE_QUIT
-      if ( options%unit_error > NONE .and. options%print_level > NONE ) &
-        write( options%unit_error, '(/a, i9/)' ) &
-          '??? Wrong leading dimension of x', ldx
-      return
-    end if
-    
-    if ( left < 0 .or. left >= n/2 ) then
-      inform%flag = WRONG_LEFT
-      rci%job = SSMFE_QUIT
-      if ( options%unit_error > NONE .and. options%print_level > NONE ) &
-        write( options%unit_error, '(/a, i9/)' ) &
-          '??? Wrong number of eigenpairs', left
-      return
-    end if
-
-    if ( left > max_nep ) then
-      inform%flag = WRONG_STORAGE_SIZE
-      rci%job = SSMFE_QUIT
-      if ( options%unit_error > NONE .and. options%print_level > NONE ) &
-        write( options%unit_error, '(/a, i9/)' ) &
-          '??? Wrong eigenpairs storage size', max_nep
-      return
-    end if
-
     ldBX = n
     
     do
@@ -769,6 +769,53 @@ contains
     
     real(PRECISION) :: s
     
+    ! check for the input data errors
+    
+    if ( n < 1 ) then
+      inform%flag = WRONG_PROBLEM_SIZE
+      rci%job = SSMFE_QUIT
+      if ( options%unit_error > NONE .and. options%print_level > NONE ) &
+        write( options%unit_error, '(/a, i9/)' ) &
+          '??? Wrong problem size', n
+      return
+    end if
+    
+    if ( ldx < n ) then
+      inform%flag = WRONG_LDX
+      rci%job = SSMFE_QUIT
+      if ( options%unit_error > NONE .and. options%print_level > NONE ) &
+        write( options%unit_error, '(/a, i9/)' ) &
+          '??? Wrong leading dimension of x', ldx
+      return
+    end if
+    
+    if ( left < 0 .or. left >= right .and. left + right > n/2 ) then
+      inform%flag = WRONG_LEFT
+      rci%job = SSMFE_QUIT
+      if ( options%unit_error > NONE .and. options%print_level > NONE ) &
+        write( options%unit_error, '(/a, i9/)' ) &
+          '??? Wrong number of eigenpairs on the left', left
+      return
+    end if
+
+    if ( right < 0 .or. right > left .and. left + right > n/2 ) then
+      inform%flag = WRONG_RIGHT
+      rci%job = SSMFE_QUIT
+      if ( options%unit_error > NONE .and. options%print_level > NONE ) &
+        write( options%unit_error, '(/a, i9/)' ) &
+          '??? Wrong number of eigenpairs on the right', right
+      return
+    end if
+
+    if ( left + right > max_nep ) then
+      inform%flag = WRONG_STORAGE_SIZE
+      rci%job = SSMFE_QUIT
+      if ( options%unit_error > NONE .and. options%print_level > NONE ) &
+        write( options%unit_error, '(/a, i9/)' ) &
+          '??? Wrong eigenpairs storage size', max_nep
+      return
+    end if
+
     if ( rci%job == 0 ) then
 
       keep%step = 0 ! solve step
@@ -860,53 +907,6 @@ contains
 
     end if
     
-    ! check for the input data errors
-    
-    if ( n < 1 ) then
-      inform%flag = WRONG_PROBLEM_SIZE
-      rci%job = SSMFE_QUIT
-      if ( options%unit_error > NONE .and. options%print_level > NONE ) &
-        write( options%unit_error, '(/a, i9/)' ) &
-          '??? Wrong problem size', n
-      return
-    end if
-    
-    if ( ldx < n ) then
-      inform%flag = WRONG_LDX
-      rci%job = SSMFE_QUIT
-      if ( options%unit_error > NONE .and. options%print_level > NONE ) &
-        write( options%unit_error, '(/a, i9/)' ) &
-          '??? Wrong leading dimension of x', ldx
-      return
-    end if
-    
-    if ( left < 0 .or. left >= right .and. left + right > n/2 ) then
-      inform%flag = WRONG_LEFT
-      rci%job = SSMFE_QUIT
-      if ( options%unit_error > NONE .and. options%print_level > NONE ) &
-        write( options%unit_error, '(/a, i9/)' ) &
-          '??? Wrong number of eigenpairs on the left', left
-      return
-    end if
-
-    if ( right < 0 .or. right > left .and. left + right > n/2 ) then
-      inform%flag = WRONG_RIGHT
-      rci%job = SSMFE_QUIT
-      if ( options%unit_error > NONE .and. options%print_level > NONE ) &
-        write( options%unit_error, '(/a, i9/)' ) &
-          '??? Wrong number of eigenpairs on the right', right
-      return
-    end if
-
-    if ( left + right > max_nep ) then
-      inform%flag = WRONG_STORAGE_SIZE
-      rci%job = SSMFE_QUIT
-      if ( options%unit_error > NONE .and. options%print_level > NONE ) &
-        write( options%unit_error, '(/a, i9/)' ) &
-          '??? Wrong eigenpairs storage size', max_nep
-      return
-    end if
-
     ldBX = n
     nep = inform%left + inform%right
 
@@ -1397,6 +1397,42 @@ contains
     
     real(PRECISION), allocatable :: dwork(:,:)
     
+    if ( n < 1 ) then
+      inform%flag = WRONG_PROBLEM_SIZE
+      rci%job = SSMFE_QUIT
+      if ( options%unit_error > NONE .and. options%print_level > NONE ) &
+        write( options%unit_error, '(/a, i9/)' ) &
+          '??? Wrong problem size', n
+      return
+    end if
+    
+    if ( ldx < n ) then
+      inform%flag = WRONG_LDX
+      rci%job = SSMFE_QUIT
+      if ( options%unit_error > NONE .and. options%print_level > NONE ) &
+        write( options%unit_error, '(/a, i9/)' ) &
+          '??? Wrong leading dimension of x', ldx
+      return
+    end if
+    
+    if ( left < 0 .or. left > n/2 ) then
+      inform%flag = WRONG_LEFT
+      rci%job = SSMFE_QUIT
+      if ( options%unit_error > NONE .and. options%print_level > NONE ) &
+        write( options%unit_error, '(/a, i9/)' ) &
+          '??? Wrong number of eigenpairs', left
+      return
+    end if
+
+    if ( left > max_nep ) then
+      inform%flag = WRONG_STORAGE_SIZE
+      rci%job = SSMFE_QUIT
+      if ( options%unit_error > NONE .and. options%print_level > NONE ) &
+        write( options%unit_error, '(/a, i9/)' ) &
+          '??? Wrong eigenpairs storage size', max_nep
+      return
+    end if
+
     if ( rci%job == 0 ) then
       if ( left == 1 ) then
         extra = 7
@@ -1453,42 +1489,6 @@ contains
             '??? Wrong rci%job', rci%job
         return
       end if
-    end if
-
-    if ( n < 1 ) then
-      inform%flag = WRONG_PROBLEM_SIZE
-      rci%job = SSMFE_QUIT
-      if ( options%unit_error > NONE .and. options%print_level > NONE ) &
-        write( options%unit_error, '(/a, i9/)' ) &
-          '??? Wrong problem size', n
-      return
-    end if
-    
-    if ( ldx < n ) then
-      inform%flag = WRONG_LDX
-      rci%job = SSMFE_QUIT
-      if ( options%unit_error > NONE .and. options%print_level > NONE ) &
-        write( options%unit_error, '(/a, i9/)' ) &
-          '??? Wrong leading dimension of x', ldx
-      return
-    end if
-    
-    if ( left < 0 .or. left > n/2 ) then
-      inform%flag = WRONG_LEFT
-      rci%job = SSMFE_QUIT
-      if ( options%unit_error > NONE .and. options%print_level > NONE ) &
-        write( options%unit_error, '(/a, i9/)' ) &
-          '??? Wrong number of eigenpairs', left
-      return
-    end if
-
-    if ( left > max_nep ) then
-      inform%flag = WRONG_STORAGE_SIZE
-      rci%job = SSMFE_QUIT
-      if ( options%unit_error > NONE .and. options%print_level > NONE ) &
-        write( options%unit_error, '(/a, i9/)' ) &
-          '??? Wrong eigenpairs storage size', max_nep
-      return
     end if
 
     ldBX = n
@@ -1690,6 +1690,51 @@ contains
     
     complex(PRECISION) :: z
     
+    if ( n < 1 ) then
+      inform%flag = WRONG_PROBLEM_SIZE
+      rci%job = SSMFE_QUIT
+      if ( options%unit_error > NONE .and. options%print_level > NONE ) &
+        write( options%unit_error, '(/a, i9/)' ) &
+          '??? Wrong problem size', n
+      return
+    end if
+    
+    if ( ldx < n ) then
+      inform%flag = WRONG_LDX
+      rci%job = SSMFE_QUIT
+      if ( options%unit_error > NONE .and. options%print_level > NONE ) &
+        write( options%unit_error, '(/a, i9/)' ) &
+          '??? Wrong leading dimension of x', ldx
+      return
+    end if
+    
+    if ( left < 0 .or. left >= right .and. left + right > n/2 ) then
+      inform%flag = WRONG_LEFT
+      rci%job = SSMFE_QUIT
+      if ( options%unit_error > NONE .and. options%print_level > NONE ) &
+        write( options%unit_error, '(/a, i9/)' ) &
+          '??? Wrong number of eigenpairs on the left', left
+      return
+    end if
+
+    if ( right < 0 .or. right > left .and. left + right > n/2 ) then
+      inform%flag = WRONG_RIGHT
+      rci%job = SSMFE_QUIT
+      if ( options%unit_error > NONE .and. options%print_level > NONE ) &
+        write( options%unit_error, '(/a, i9/)' ) &
+          '??? Wrong number of eigenpairs on the right', right
+      return
+    end if
+
+    if ( left + right > max_nep ) then
+      inform%flag = WRONG_STORAGE_SIZE
+      rci%job = SSMFE_QUIT
+      if ( options%unit_error > NONE .and. options%print_level > NONE ) &
+        write( options%unit_error, '(/a, i9/)' ) &
+          '??? Wrong eigenpairs storage size', max_nep
+      return
+    end if
+
     if ( rci%job == 0 ) then
       keep%step = 0
       keep%lcon = 0
@@ -1763,51 +1808,6 @@ contains
       end if
     end if
     
-    if ( n < 1 ) then
-      inform%flag = WRONG_PROBLEM_SIZE
-      rci%job = SSMFE_QUIT
-      if ( options%unit_error > NONE .and. options%print_level > NONE ) &
-        write( options%unit_error, '(/a, i9/)' ) &
-          '??? Wrong problem size', n
-      return
-    end if
-    
-    if ( ldx < n ) then
-      inform%flag = WRONG_LDX
-      rci%job = SSMFE_QUIT
-      if ( options%unit_error > NONE .and. options%print_level > NONE ) &
-        write( options%unit_error, '(/a, i9/)' ) &
-          '??? Wrong leading dimension of x', ldx
-      return
-    end if
-    
-    if ( left < 0 .or. left >= right .and. left + right > n/2 ) then
-      inform%flag = WRONG_LEFT
-      rci%job = SSMFE_QUIT
-      if ( options%unit_error > NONE .and. options%print_level > NONE ) &
-        write( options%unit_error, '(/a, i9/)' ) &
-          '??? Wrong number of eigenpairs on the left', left
-      return
-    end if
-
-    if ( right < 0 .or. right > left .and. left + right > n/2 ) then
-      inform%flag = WRONG_RIGHT
-      rci%job = SSMFE_QUIT
-      if ( options%unit_error > NONE .and. options%print_level > NONE ) &
-        write( options%unit_error, '(/a, i9/)' ) &
-          '??? Wrong number of eigenpairs on the right', right
-      return
-    end if
-
-    if ( left + right > max_nep ) then
-      inform%flag = WRONG_STORAGE_SIZE
-      rci%job = SSMFE_QUIT
-      if ( options%unit_error > NONE .and. options%print_level > NONE ) &
-        write( options%unit_error, '(/a, i9/)' ) &
-          '??? Wrong eigenpairs storage size', max_nep
-      return
-    end if
-
     ldBX = n
     nep = inform%left + inform%right
 
@@ -2183,7 +2183,7 @@ contains
       
     use SPRAL_lapack_iface, mxcopy => dlacpy
     integer :: n, m, ldW
-    real(PRECISION) :: W(ldW, m, 0:7), V(m + m, m + m), U(m)
+    real(PRECISION) :: W(ldW, m, 0:*), V(m + m, m + m), U(m)
     integer :: ind(m)
     type(ssmfe_rcid) :: rci
     intent(in) :: n, m, ldW, rci
@@ -2318,7 +2318,7 @@ contains
 
     use SPRAL_lapack_iface, mxcopy => zlacpy
     integer :: n, m, ldW
-    complex(PRECISION) :: W(ldW, m, 0:7), V(m + m, m + m), U(m)
+    complex(PRECISION) :: W(ldW, m, 0:*), V(m + m, m + m), U(m)
     integer :: ind(m)
     type(ssmfe_rciz) :: rci
     intent(in) :: n, m, ldW, rci
