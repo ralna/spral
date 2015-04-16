@@ -767,6 +767,8 @@ contains
     integer :: ldBX
     integer :: i, j, k, m
     
+    integer :: ilaenv
+    
     real(PRECISION) :: s
     
     ! check for the input data errors
@@ -1200,10 +1202,14 @@ contains
           ! and the Rayleigh-Ritz procedure in the trial subspace spanned by 
           ! them
       
+          k = ilaenv(1, 'DSYTRD', 'U', nep, -1, -1, -1)
+          k = max(3*nep - 1, (k + 2)*nep)
+    
           ! reallocate the work arrays
-          deallocate ( keep%W, keep%V )
+          deallocate ( keep%W, keep%V, keep%U )
           allocate &
-            ( keep%W(n, nep, 3), keep%V(nep, nep, 3), stat = inform%stat )
+            ( keep%W(n, nep, 3), keep%V(nep, nep, 3), keep%U(k, 1), &
+              stat = inform%stat )
           if ( inform%stat /= 0 ) inform%flag = OUT_OF_MEMORY
           if ( inform%stat /= 0 ) rci%job = SSMFE_ABORT
           if ( inform%stat /= 0 ) call ssmfe_errmsg( options, inform )
@@ -1310,10 +1316,11 @@ contains
       call gemm &
         ( TR, 'N', nep, nep, n, ONE, keep%W, n, keep%W(1,1,3), n, &
           ZERO, keep%V(1,1,2), nep )
-      k = 4*keep%block_size**2
+      k = ilaenv(1, 'DSYTRD', 'U', nep, -1, -1, -1)
+      k = max(3*nep - 1, (k + 2)*nep)
       call dsygv &
         ( 1, 'V', 'U', nep, keep%V, nep, keep%V(1,1,2), nep, lambda, &
-          keep%V(1,1,3), k, i )
+          keep%U, k, i )
       call gemm &
         ( 'N', 'N', n, nep, nep, ONE, keep%W, n, keep%V, nep, ZERO, X, ldX )
 
@@ -1683,6 +1690,8 @@ contains
     integer :: kw
     integer :: ldBX
     integer :: i, j, k
+    
+    integer :: ilaenv
     
     real(PRECISION) :: s
     
@@ -2055,9 +2064,13 @@ contains
             end do
           end if
 
-          deallocate ( keep%W, keep%V )
+          k = ilaenv(1, 'ZHETRD', 'U', nep, -1, -1, -1)
+          k = max(2*nep - 1, (k + 2)*nep) + 3*nep - 1
+    
+          deallocate ( keep%W, keep%V, keep%U )
           allocate &
-            ( keep%W(n, nep, 3), keep%V(nep, nep, 3), stat = inform%stat )
+            ( keep%W(n, nep, 3), keep%V(nep, nep, 3), keep%U(k, 1), &
+              stat = inform%stat )
           if ( inform%stat /= 0 ) inform%flag = OUT_OF_MEMORY
           if ( inform%stat /= 0 ) rci%job = SSMFE_ABORT
           if ( inform%stat /= 0 ) call ssmfe_errmsg( options, inform )
@@ -2153,10 +2166,12 @@ contains
       call gemm &
         ( TR, 'N', nep, nep, n, UNIT, keep%W, n, keep%W(1,1,3), n, &
           NIL, keep%V(1,1,2), nep )
-      k = 4*keep%block_size**2
+
+      k = ilaenv(1, 'ZHETRD', 'U', nep, -1, -1, -1)
+      k = max(2*nep - 1, (k + 2)*nep) + 3*nep - 1    
       call zhegv &
         ( 1, 'V', 'U', nep, keep%V, nep, keep%V(1,1,2), nep, lambda, &
-          keep%V(1,1,3), k, keep%U, i )
+          keep%U(3*nep, 1), k, keep%U, i )
       call gemm &
         ( 'N', 'N', n, nep, nep, UNIT, keep%W, n, keep%V, nep, NIL, X, ldX )
 
