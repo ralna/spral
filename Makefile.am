@@ -23,9 +23,13 @@ CUDA_LIBS = -lcublas
 lib_LIBRARIES = libspral.a
 include_HEADERS = include/spral.h
 
-# CORE_ANALYSE
+# BLAS_IFACE
 # Note: first so not +=
 libspral_a_SOURCES = \
+	src/blas_iface.f90
+
+# CORE_ANALYSE
+libspral_a_SOURCES += \
 	src/core_analyse.f90
 
 # CUDA
@@ -35,6 +39,10 @@ libspral_a_SOURCES += \
 	src/cuda/cuda.f90 \
 	src/cuda/cuda_check.h
 endif
+
+# LAPACK_IFACE
+libspral_a_SOURCES += \
+	src/lapack_iface.f90
 
 # MATCH_ORDER
 libspral_a_SOURCES += \
@@ -191,6 +199,82 @@ examples/C/ssids.$(OBJEXT): libspral.a
 TESTS += ssids_test
 endif
 
+# SSMFE
+include_HEADERS += include/spral_ssmfe.h
+libspral_a_SOURCES += \
+	src/ssmfe/ssmfe.f90 \
+	src/ssmfe/core.f90 \
+	src/ssmfe/expert.f90 \
+	interfaces/C/ssmfe.f90 \
+	interfaces/C/ssmfe_core.f90 \
+	interfaces/C/ssmfe_expert.f90
+check_PROGRAMS += \
+   ssmfe_test \
+	ssmfe_ciface_test \
+	examples/C/ssmfe/hermitian \
+	examples/C/ssmfe/precond_core \
+	examples/C/ssmfe/precond_expert \
+	examples/C/ssmfe/precond_ssmfe \
+	examples/C/ssmfe/shift_invert \
+	examples/Fortran/ssmfe/hermitian \
+	examples/Fortran/ssmfe/precond_core \
+	examples/Fortran/ssmfe/precond_expert \
+	examples/Fortran/ssmfe/precond_ssmfe \
+	examples/Fortran/ssmfe/shift_invert
+ssmfe_test_SOURCES = tests/ssmfe/ssmfe.f90
+ssmfe_ciface_test_SOURCES = tests/ssmfe/ssmfe_ciface.c \
+									 tests/ssmfe/laplace2d.h \
+									 tests/ssmfe/ldltf.h
+tests/ssmfe/ssmfe.$(OBJEXT): libspral.a
+tests/ssmfe/ssmfe_ciface.$(OBJEXT): libspral.a
+TESTS += ssmfe_test \
+			ssmfe_ciface_test
+examples_C_ssmfe_hermitian_SOURCES = \
+	examples/C/ssmfe/hermitian.c
+examples_C_ssmfe_precond_core_SOURCES = \
+	examples/C/ssmfe/precond_core.c \
+	examples/C/ssmfe/laplace2d.h
+examples_C_ssmfe_precond_expert_SOURCES = \
+	examples/C/ssmfe/precond_expert.c \
+	examples/C/ssmfe/laplace2d.h
+examples_C_ssmfe_precond_ssmfe_SOURCES = \
+	examples/C/ssmfe/precond_ssmfe.c \
+	examples/C/ssmfe/laplace2d.h
+examples_C_ssmfe_shift_invert_SOURCES = \
+	examples/C/ssmfe/shift_invert.f90 \
+	examples/C/ssmfe/laplace2d.h \
+	examples/C/ssmfe/ldltf.h
+examples_Fortran_ssmfe_hermitian_SOURCES = \
+	examples/Fortran/ssmfe/hermitian.f90
+examples_Fortran_ssmfe_precond_ssmfe_SOURCES = \
+	examples/Fortran/ssmfe/precond_ssmfe.f90 \
+	examples/Fortran/ssmfe/laplace2d.f90
+examples_Fortran_ssmfe_precond_expert_SOURCES = \
+	examples/Fortran/ssmfe/precond_expert.f90 \
+	examples/Fortran/ssmfe/laplace2d.f90
+examples_Fortran_ssmfe_precond_core_SOURCES = \
+	examples/Fortran/ssmfe/precond_core.f90 \
+	examples/Fortran/ssmfe/laplace2d.f90
+examples_Fortran_ssmfe_shift_invert_SOURCES = \
+	examples/Fortran/ssmfe/shift_invert.f90 \
+	examples/Fortran/ssmfe/laplace2d.f90 \
+	examples/Fortran/ssmfe/ldltf.f90
+examples/C/ssmfe/hermitian.$(OBJEXT): libspral.a
+examples/C/ssmfe/precond_core.$(OBJEXT): libspral.a
+examples/C/ssmfe/precond_expert.$(OBJEXT): libspral.a
+examples/C/ssmfe/precond_ssmfe.$(OBJEXT): libspral.a
+examples/C/ssmfe/shift_invert.$(OBJEXT): libspral.a
+examples/Fortran/ssmfe/hermitian.$(OBJEXT): libspral.a
+examples/Fortran/ssmfe/precond_core.$(OBJEXT): libspral.a \
+	examples/Fortran/ssmfe/laplace2d.$(OBJEXT)
+examples/Fortran/ssmfe/precond_expert.$(OBJEXT): libspral.a \
+	examples/Fortran/ssmfe/laplace2d.$(OBJEXT)
+examples/Fortran/ssmfe/precond_ssmfe.$(OBJEXT): libspral.a \
+	examples/Fortran/ssmfe/laplace2d.$(OBJEXT)
+examples/Fortran/ssmfe/shift_invert.$(OBJEXT): libspral.a \
+	examples/Fortran/ssmfe/laplace2d.$(OBJEXT) \
+	examples/Fortran/ssmfe/ldltf.$(OBJEXT)
+
 # Automake doesn't know much about modules, so get rid of them ourself
 clean-local:
 	-rm *.mod
@@ -242,6 +326,10 @@ src/ssids/solve_gpu.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
 								 	    src/ssids/cuda_datatypes.$(OBJEXT) \
 								 	    src/ssids/cuda_interfaces.$(OBJEXT) \
 								 		 src/ssids/datatypes.$(OBJEXT)
+src/ssmfe/core.$(OBJEXT): src/blas_iface.$(OBJEXT) \
+								  src/lapack_iface.$(OBJEXT)
+src/ssmfe/expert.$(OBJEXT): src/ssmfe/core.$(OBJEXT)
+src/ssmfe/ssmfe.$(OBJEXT): src/ssmfe/expert.$(OBJEXT)
 driver/spral_ssids.$(OBJEXT): libspral.a
 
 # CUDA header deps
@@ -252,3 +340,8 @@ interfaces/C/random.$(OBJEXT): src/random.$(OBJEXT)
 interfaces/C/random_matrix.$(OBJEXT): src/random_matrix.$(OBJEXT)
 interfaces/C/scaling.$(OBJEXT): src/scaling.$(OBJEXT)
 interfaces/C/ssids.$(OBJEXT): src/ssids/ssids.$(OBJEXT)
+interfaces/C/ssmfe.$(OBJEXT): src/ssmfe/ssmfe.$(OBJEXT) \
+										interfaces/C/ssmfe_expert.$(OBJEXT)
+interfaces/C/ssmfe_core.$(OBJEXT): src/ssmfe/core.$(OBJEXT)
+interfaces/C/ssmfe_expert.$(OBJEXT): src/ssmfe/core.$(OBJEXT) \
+												 interfaces/C/ssmfe_core.$(OBJEXT)
