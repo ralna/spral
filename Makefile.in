@@ -639,8 +639,9 @@ am__can_run_installinfo = \
     *) (install-info --version) >/dev/null 2>&1;; \
   esac
 am__include_HEADERS_DIST = include/spral.h include/spral_matrix_util.h \
-	include/spral_random.h include/spral_random_matrix.h \
-	include/spral_ssids.h include/spral_ssmfe.h
+	include/spral_scaling.h include/spral_random.h \
+	include/spral_random_matrix.h include/spral_ssids.h \
+	include/spral_ssmfe.h
 HEADERS = $(include_HEADERS)
 am__tagged_files = $(HEADERS) $(SOURCES) $(TAGS_FILES) $(LISP)
 # Read a list of newline-separated strings from the standard input,
@@ -991,14 +992,17 @@ lib_LIBRARIES = libspral.a
 
 # MATRIX_UTIL
 
+# SCALING
+
 # RANDOM
 
 # RANDOM_MATRIX
 
 # SSMFE
 include_HEADERS = include/spral.h include/spral_matrix_util.h \
-	include/spral_random.h include/spral_random_matrix.h \
-	$(am__append_2) include/spral_ssmfe.h
+	include/spral_scaling.h include/spral_random.h \
+	include/spral_random_matrix.h $(am__append_2) \
+	include/spral_ssmfe.h
 
 # BLAS_IFACE
 # Note: first so not +=
@@ -1014,8 +1018,6 @@ include_HEADERS = include/spral.h include/spral_matrix_util.h \
 # PGM
 
 # RUTHERFORD_BOEING
-
-# SCALING
 
 # TIMER
 libspral_a_SOURCES = src/blas_iface.f90 src/core_analyse.f90 \
@@ -1084,7 +1086,7 @@ examples_C_ssmfe_precond_ssmfe_SOURCES = \
 	examples/C/ssmfe/laplace2d.h
 
 examples_C_ssmfe_shift_invert_SOURCES = \
-	examples/C/ssmfe/shift_invert.f90 \
+	examples/C/ssmfe/shift_invert.c \
 	examples/C/ssmfe/laplace2d.h \
 	examples/C/ssmfe/ldltf.h
 
@@ -1449,7 +1451,7 @@ examples/C/ssmfe/shift_invert.$(OBJEXT):  \
 
 examples/C/ssmfe/shift_invert$(EXEEXT): $(examples_C_ssmfe_shift_invert_OBJECTS) $(examples_C_ssmfe_shift_invert_DEPENDENCIES) $(EXTRA_examples_C_ssmfe_shift_invert_DEPENDENCIES) examples/C/ssmfe/$(am__dirstamp)
 	@rm -f examples/C/ssmfe/shift_invert$(EXEEXT)
-	$(AM_V_FCLD)$(FCLINK) $(examples_C_ssmfe_shift_invert_OBJECTS) $(examples_C_ssmfe_shift_invert_LDADD) $(LIBS)
+	$(AM_V_CCLD)$(LINK) $(examples_C_ssmfe_shift_invert_OBJECTS) $(examples_C_ssmfe_shift_invert_LDADD) $(LIBS)
 examples/Fortran/$(am__dirstamp):
 	@$(MKDIR_P) examples/Fortran
 	@: > examples/Fortran/$(am__dirstamp)
@@ -1664,6 +1666,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/ssmfe/$(DEPDIR)/precond_core.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/ssmfe/$(DEPDIR)/precond_expert.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/ssmfe/$(DEPDIR)/precond_ssmfe.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@examples/C/ssmfe/$(DEPDIR)/shift_invert.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@tests/ssmfe/$(DEPDIR)/ssmfe_ciface.Po@am__quote@
 
 .c.o:

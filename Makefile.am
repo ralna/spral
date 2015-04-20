@@ -68,6 +68,7 @@ libspral_a_SOURCES += \
 	src/rutherford_boeing.f90
 
 # SCALING
+include_HEADERS += include/spral_scaling.h
 libspral_a_SOURCES += \
   	src/scaling.f90 \
 	interfaces/C/scaling.f90
@@ -241,7 +242,7 @@ examples_C_ssmfe_precond_ssmfe_SOURCES = \
 	examples/C/ssmfe/precond_ssmfe.c \
 	examples/C/ssmfe/laplace2d.h
 examples_C_ssmfe_shift_invert_SOURCES = \
-	examples/C/ssmfe/shift_invert.f90 \
+	examples/C/ssmfe/shift_invert.c \
 	examples/C/ssmfe/laplace2d.h \
 	examples/C/ssmfe/ldltf.h
 examples_Fortran_ssmfe_hermitian_SOURCES = \
