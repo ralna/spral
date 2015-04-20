@@ -1,5 +1,5 @@
 \NeedsTeXFormat{LaTeX2e}
-\ProvidesClass{spral}[2014/03/06 SPRAL Documentation Class]
+\ProvidesClass{spralweb}[2014/03/06 SPRAL Documentation Class]
 
 % Load base
 \LoadClass{book}
@@ -19,6 +19,7 @@
 \RequirePackage{fancyhdr}
 \RequirePackage[top=2cm,left=2.5cm,right=2.5cm,bottom=2cm,headheight=12pt]{geometry}
 \RequirePackage{verbatim}
+\RequirePackage{algorithmic}
 
 % Metadata commands
 \newcommand{\thepackagename}{}
@@ -67,6 +68,7 @@
 \newcommand{\intentin}{\texttt{INTENT(IN)}}
 \newcommand{\intentinout}{\texttt{INTENT(INOUT)}}
 \newcommand{\intentout}{\texttt{INTENT(OUT)}}
+\newcommand{\EqnRef}[1]{(\ref{#1})}
 
 % Define our own \maketitle to avoid multiple call issues
 \makeatletter
