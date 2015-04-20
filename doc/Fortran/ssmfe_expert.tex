@@ -313,7 +313,8 @@ the standard eigenvalue problem \EqnRef{ssmfe_expert:eqn:evp} is solved,
 then {\tt kw = 3} is sufficient; 
 if 
 {\tt options\%minAprod} $=$ {\tt .true.} and
-{\tt options\%minBprod} $=$ {\tt .true.},
+either {\tt options\%minBprod} $=$ {\tt .true.} or
+{\tt ssmfe\_generalized\_shift} or {\tt ssmfe\_buckling} are used,
 then {\tt kw} must be at least {\tt 7};
 otherwise {\tt kw = 5} is sufficient.
 Solver procedures
@@ -959,9 +960,6 @@ Otherwise,  only one such return is made at each iteration but
 the number {\tt kw} of blocks in the user's work array {\tt W} 
 must be increased by {\tt 2}.
 The default is {\tt minBprod = .true.}.
-{\bf Restriction:} {\tt minBprod = .true.} %if {\tt problem < 0}.
-for {\tt ssmfe\_standard\_shift()}, {\tt ssmfe\_generalized\_shift()}
-and  {\tt ssmfe\_buckling()}.
 %
 \item[\texttt{right\_gap}]
 is a scalar of type \texttt{REAL}
@@ -1110,8 +1108,7 @@ Incorrect value of
 %
 \item{~~-4}
 \hskip 9pt
-Incorrect value of 
-{\tt options\%minAprod} or {\tt options\%minBprod}.
+Incorrect value of {\tt options\%minAprod}.
 %
 \item{~~-5}
 \hskip 9pt

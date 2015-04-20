@@ -286,7 +286,8 @@ the standard eigenvalue problem \EqnRef{ssmfe_core:eqn:evp} is solved,
 then {\tt kw = 3} is sufficient; 
 if 
 {\tt options.minAprod} $=$ {\tt true} and
-{\tt options.minBprod} $=$ {\tt true},
+either {\tt options.minBprod} $=$ {\tt true} or
+\EqnRef{ssmfe_core:eqn:evp.p} is solved,
 then {\tt kw} must be at least {\tt 7};
 otherwise {\tt kw = 5} is sufficient.
 Solver procedures

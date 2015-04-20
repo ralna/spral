@@ -347,7 +347,8 @@ the standard eigenvalue problem \EqnRef{ssmfe_expert:eqn:evp} is solved,
 then {\tt kw = 3} is sufficient; 
 if 
 {\tt options.minAprod} $=$ {\tt true} and
-{\tt options.minBprod} $=$ {\tt true},
+either {\tt options.minBprod} $=$ {\tt true} or
+{\tt ssmfe\_generalized\_shift} or {\tt ssmfe\_buckling} are used,
 then {\tt kw} must be at least {\tt 7};
 otherwise {\tt kw = 5} is sufficient.
 Solver procedures
@@ -964,10 +965,6 @@ Otherwise,  only one such return is made at each iteration but
 the number {\tt kw} of blocks in the user's work array {\tt W} 
 must be increased by {\tt 2}.
 The default is {\tt minBprod = true}.
-{\bf Restriction:} {\tt minBprod = true}
-for {\tt spral\_ssmfe\_standard\_shift\_\textit{type}()},\\
-{\tt spral\_ssmfe\_generalized\_shift\_\textit{type}()}
-and  {\tt spral\_ssmfe\_buckling\_\textit{type}()}.
 %
 \item[\texttt{double right\_gap}] has the same meaning as {\tt left\_gap} but for the rightmost eigenvalue. It is only used by the routines
 {\tt spral\_ssmfe\_standard\_shift\_\textit{type}()}, {\tt spral\_ssmfe\_generalized\_shift\_\textit{type}()}
@@ -1089,8 +1086,7 @@ Incorrect value of
 %
 \item{~~-4}
 \hskip 9pt
-Incorrect value of 
-{\tt options.minAprod} or {\tt options.minBprod}.
+Incorrect value of {\tt options.minAprod}.
 %
 \item{~~-5}
 \hskip 9pt

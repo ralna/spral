@@ -512,7 +512,7 @@ contains
     end select
 
     if ( problem < 0 ) then
-      if ( .not. (control%minAprod .and. control%minBprod) ) then
+      if ( .not. control%minAprod ) then
         info%flag = WRONG_MINPROD
         rci%job   = SSMFE_ABORT
         return
@@ -587,7 +587,7 @@ if_rci: &
         keep%kAX  = keep%kW
         keep%kAYZ = keep%kW
       end if
-      if ( keep%minBprod ) then
+      if ( keep%minBprod .or. keep%problem < 0 ) then
         keep%kBX  = keep%kAYZ + 1 ! block for B*X
         keep%kBYZ = keep%kBX + 1  ! block for B*Y and B*Z
       else
@@ -1534,7 +1534,7 @@ select_step: &
                   ! matrix X'*B*X (s*t) and errors in computing Rayleigh-Ritz
                   ! matrices (keep%err_A and keep%err_B)
                   min(keep%dX(i), keep%dX(m + i))*abs(r - lambda(i)) < &
-                    s*t + keep%err_A + abs(lambda(i))*keep%err_B &
+                    10*(s*t + keep%err_A + abs(lambda(i))*keep%err_B) &
                     ) &
                   ) then
                   ! no further improvement in accuracy is to be expected,
@@ -3365,7 +3365,7 @@ select_step: &
     end select
 
     if ( problem < 0 ) then
-      if ( .not. (control%minAprod .and. control%minBprod) ) then
+      if ( .not. control%minAprod ) then
         info%flag = WRONG_MINPROD
         rci%job   = SSMFE_ABORT
         return
@@ -3440,7 +3440,7 @@ if_rci: &
         keep%kAX  = keep%kW
         keep%kAYZ = keep%kW
       end if
-      if ( keep%minBprod ) then
+      if ( keep%minBprod .or. keep%problem < 0 ) then
         keep%kBX  = keep%kAYZ + 1
         keep%kBYZ = keep%kBX + 1
       else
@@ -4184,7 +4184,7 @@ select_step: &
                 if ( keep%rec >= 5 .and. keep%dX(i) <= A_SMALL_FRACTION &
                   .and. (keep%dX(i) > q_max * q &
                   .and. min(keep%dX(i), keep%dX(m + i))*abs(r - lambda(i)) < &
-                    s*t + keep%err_A + abs(lambda(i))*keep%err_B &
+                    10*(s*t + keep%err_A + abs(lambda(i))*keep%err_B) &
                     ) &
                   ) then
                   info%converged(i) = -info%iteration

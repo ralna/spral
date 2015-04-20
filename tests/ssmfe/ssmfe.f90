@@ -207,15 +207,6 @@ subroutine test_core_errors_d
   call ssmfe_free( keep, inform )
   options%minAprod = .true.
 
-  write(*,"(a)",advance="no") " * Testing wrong minBprod...................."
-  rci%job = 0
-  options%minBprod = .false.
-  call ssmfe &
-    ( rci, -1, left, right, m, lambda, rr, ind, keep, options, inform )
-  call print_result( inform%flag, WRONG_MINPROD )
-  call ssmfe_free( keep, inform )
-  options%minBprod = .true.
-
   deallocate ( a, b, t, x, lambda, rr, ind )
 
 end subroutine test_core_errors_d
@@ -336,15 +327,6 @@ subroutine test_core_errors_z
   call print_result( inform%flag, WRONG_MINPROD )
   call ssmfe_free( keep, inform )
   options%minAprod = .true.
-
-  write(*,"(a)",advance="no") " * Testing wrong minBprod...................."
-  rci%job = 0
-  options%minBprod = .false.
-  call ssmfe &
-    ( rci, -1, left, right, m, lambda, rr, ind, keep, options, inform )
-  call print_result( inform%flag, WRONG_MINPROD )
-  call ssmfe_free( keep, inform )
-  options%minBprod = .true.
 
   deallocate ( a, b, t, x, lambda, rr, ind )
 
@@ -847,15 +829,6 @@ subroutine test_expert_errors_d
   call ssmfe_free( keep, inform )
   options%minAprod = .true.
 
-  write(*,"(a)",advance="no") " * Testing wrong minBprod...................."
-  options%minBprod = .false.
-  rci%job = 0
-  call ssmfe_buckling &
-    ( rci, sigma, left, right, mep, lambda, m, rr, ind, keep, options, inform )
-  call print_result(inform%flag, WRONG_MINPROD)
-  call ssmfe_free( keep, inform )
-  options%minBprod = .true.
-
   deallocate ( a, b, t, x, lambda, rr, ind )
 
 end subroutine test_expert_errors_d
@@ -1006,15 +979,6 @@ subroutine test_expert_errors_z
   call print_result( inform%flag, WRONG_MINPROD )
   call ssmfe_free( keep, inform )
   options%minAprod = .true.
-
-  write(*,"(a)",advance="no") " * Testing wrong minBprod...................."
-  options%minBprod = .false.
-  rci%job = 0
-  call ssmfe_buckling &
-    ( rci, sigma, left, right, mep, lambda, m, rr, ind, keep, options, inform )
-  call print_result( inform%flag, WRONG_MINPROD )
-  call ssmfe_free( keep, inform )
-  options%minBprod = .true.
 
   deallocate ( a, b, t, x, lambda, rr, ind )
 
