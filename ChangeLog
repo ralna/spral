@@ -1,7 +1,13 @@
-2014-08-04  Jonathan Hogg <jonathan.hogg@stfc.ac.uk>
-1.0.1
-SPRAL: Fix Makefile.am to use $(top_srcdir) so out of path make check works
-SSIDS: Add "--ordering=mc64-metis" option to driver
+2015-04-20  Jonathan Hogg <jonathan.hogg@stfc.ac.uk>
+Move to using date as library version number.
+SPRAL   : Assorted minor fixes to documentation.
+        : Fix Makefile.am to use $(top_srcdir) so out of path make check works.
+        : Add option --disable-gpu to prevent GPU builds if not desired.
+SSIDS   : Add "--ordering=mc64-metis" option to driver.
+        : Modify to use new SCALING package interface.
+        : Fix C-interop complaints from gfortran-4.9
+SCALING : NEW PACKAGE for matrix scalings. (Actually cleanup of existing code).
+SSMFE   : NEW PACKAGE for symmetric eigenvalue problems.
 
 2014-08-01  Jonathan Hogg <jonathan.hogg@stfc.ac.uk>
 1.0.0
