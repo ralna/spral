@@ -1026,13 +1026,13 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
    ! Copy A values to GPU
    sz = akeep%nptr(akeep%nnodes+1) - 1
    if (akeep%check) then
-      cuda_error = cudaMalloc(gpu_val, C_SIZEOF(val2(1:sz)))
+      cuda_error = cudaMalloc(gpu_val, sz*C_SIZEOF(val2(1)))
       if(cuda_error.ne.0) goto 200
-      cuda_error = cudaMemcpy_h2d(gpu_val, C_LOC(val2), C_SIZEOF(val2(1:sz)))
+      cuda_error = cudaMemcpy_h2d(gpu_val, C_LOC(val2), sz*C_SIZEOF(val2(1)))
    else
-      cuda_error = cudaMalloc(gpu_val, C_SIZEOF(val(1:sz)))
+      cuda_error = cudaMalloc(gpu_val, sz*C_SIZEOF(val(1)))
       if(cuda_error.ne.0) goto 200
-      cuda_error = cudaMemcpy_h2d(gpu_val, C_LOC(val), C_SIZEOF(val(1:sz)))
+      cuda_error = cudaMemcpy_h2d(gpu_val, C_LOC(val), sz*C_SIZEOF(val(1)))
    endif
    if(cuda_error.ne.0) goto 200
    
@@ -1076,10 +1076,10 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
    ! Call main factorization routine
    if (allocated(fkeep%scaling)) then
       ! Copy scaling vector to GPU
-      cuda_error = cudaMalloc(gpu_scaling, C_SIZEOF(fkeep%scaling(1:n)))
+      cuda_error = cudaMalloc(gpu_scaling, n*C_SIZEOF(fkeep%scaling(1)))
       if(cuda_error.ne.0) goto 200
       cuda_error = copy_to_gpu_non_target(gpu_scaling, fkeep%scaling, &
-         C_SIZEOF(fkeep%scaling(1:n)))
+         n*C_SIZEOF(fkeep%scaling(1)))
       if(cuda_error.ne.0) goto 200
 
       ! Perform factorization
@@ -1323,7 +1323,7 @@ subroutine copy_stream_data_to_host(stream_data, &
       
       ptr_levL = c_ptr_plus( stream_data%values_L(lev)%ptr_levL, 0_C_SIZE_T )
       cuda_error = cudaMemcpy_d2h(C_LOC(work), ptr_levL, &
-         C_SIZEOF(work(1:level_size)))
+         level_size*C_SIZEOF(work(1)))
       if(cuda_error.ne.0) return
 
       do llist = stream_data%lvlptr(lev), stream_data%lvlptr(lev + 1) - 1
@@ -1526,24 +1526,24 @@ subroutine ssids_solve_mult_double(nrhs, x, ldx, akeep, fkeep, options, &
    else
 
      if (allocated(fkeep%scaling)) then
-       cuda_error = cudaMalloc(gpu_scale, C_SIZEOF(fkeep%scaling(1:n)))
+       cuda_error = cudaMalloc(gpu_scale, n*C_SIZEOF(fkeep%scaling(1)))
        if(cuda_error.ne.0) goto 200
        cuda_error = cudaMemcpy_h2d(gpu_scale, n, fkeep%scaling)
        if(cuda_error.ne.0) goto 200
-       cuda_error = cudaMalloc(gpu_invp, C_SIZEOF(akeep%invp(1:n)))
+       cuda_error = cudaMalloc(gpu_invp, n*C_SIZEOF(akeep%invp(1)))
        if(cuda_error.ne.0) goto 200
        cuda_error = cudaMemcpy_h2d(gpu_invp, n, akeep%invp)
        if(cuda_error.ne.0) goto 200
      end if
 
-     cuda_error = cudaMalloc(gpu_x, nrhs*C_SIZEOF(x(1:n,1)))
+     cuda_error = cudaMalloc(gpu_x, nrhs*n*C_SIZEOF(x(1,1)))
      if(cuda_error.ne.0) goto 200
      if(n.eq.ldx) then
-       cuda_error = cudaMemcpy_h2d(gpu_x, C_LOC(x), C_SIZEOF(x(1:n,1:nrhs)))
+       cuda_error = cudaMemcpy_h2d(gpu_x, C_LOC(x), nrhs*n*C_SIZEOF(x(1,1)))
        if(cuda_error.ne.0) goto 200
      else
-       cuda_error = cudaMemcpy2d(gpu_x, C_SIZEOF(x(1:n,1)), C_LOC(x), &
-         C_SIZEOF(x(1:ldx,1)), C_SIZEOF(x(1:n,1)), int(nrhs, C_SIZE_T), &
+       cuda_error = cudaMemcpy2d(gpu_x, n*C_SIZEOF(x(1,1)), C_LOC(x), &
+         ldx*C_SIZEOF(x(1,1)), n*C_SIZEOF(x(1,1)), int(nrhs, C_SIZE_T), &
          cudaMemcpyHostToDevice)
        if(cuda_error.ne.0) goto 200
      end if
@@ -1675,11 +1675,11 @@ subroutine ssids_solve_mult_double(nrhs, x, ldx, akeep, fkeep, options, &
       end if
 
       if(n.eq.ldx) then
-        cuda_error = cudaMemcpy_d2h(C_LOC(x), gpu_x, nrhs*C_SIZEOF(x(1:n,1)))
+        cuda_error = cudaMemcpy_d2h(C_LOC(x), gpu_x, nrhs*n*C_SIZEOF(x(1,1)))
         if(cuda_error.ne.0) goto 200
       else
-        cuda_error = cudaMemcpy2d(C_LOC(x), C_SIZEOF(x(1:ldx,1)), gpu_x, &
-          C_SIZEOF(x(1:n,1)), C_SIZEOF(x(1:n,1)), int(nrhs, C_SIZE_T), &
+        cuda_error = cudaMemcpy2d(C_LOC(x), ldx*C_SIZEOF(x(1,1)), gpu_x, &
+          n*C_SIZEOF(x(1,1)), n*C_SIZEOF(x(1,1)), int(nrhs, C_SIZE_T), &
           cudaMemcpyDeviceToHost)
         if(cuda_error.ne.0) goto 200
       end if
@@ -1906,7 +1906,7 @@ subroutine ssids_enquire_indef_double(akeep, fkeep, options, inform, &
          offset = blkm*(blkn+0_long)
          srcptr = c_ptr_plus(nptr%gpu_lcol, offset*C_SIZEOF(real_dummy))
          cuda_error = cudaMemcpy_d2h(C_LOC(d2), srcptr, &
-            C_SIZEOF(d2(1:2*nptr%nelim)))
+            2*nptr%nelim*C_SIZEOF(d2(1)))
          if(cuda_error.ne.0) goto 200
          do while(j .le. nptr%nelim)
             if (d2(2*j).ne.0) then
@@ -2063,7 +2063,7 @@ subroutine ssids_alter_double(d, akeep, fkeep, options, inform)
          srcptr = c_ptr_plus(fkeep%nodes(node)%gpu_lcol, &
             blkm*(blkn+0_long)*C_SIZEOF(real_dummy))
          cuda_error = cudaMemcpy_h2d(srcptr, C_LOC(d2), &
-            C_SIZEOF(d2(1:2*nptr%nelim)))
+            2*nptr%nelim*C_SIZEOF(d2(1)))
          if(cuda_error.ne.0) goto 200
       end do
    endif

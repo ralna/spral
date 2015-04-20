@@ -54,9 +54,9 @@ subroutine bwd_solve_gpu(job, posdef, nnodes, sptr, nstream, stream_handle, &
    do i = 1, n
       xlocal(i) = x(invp(i))
    end do
-   cuda_error = cudaMalloc(gpu_x, C_SIZEOF(xlocal(1:n)))
+   cuda_error = cudaMalloc(gpu_x, n*C_SIZEOF(xlocal(1)))
    if(cuda_error.ne.0) return
-   cuda_error = cudaMemcpy_h2d(gpu_x, C_LOC(xlocal), C_SIZEOF(xlocal(1:n)))
+   cuda_error = cudaMemcpy_h2d(gpu_x, C_LOC(xlocal), n*C_SIZEOF(xlocal(1)))
    if(cuda_error.ne.0) return
 
    ! Backwards solve for top part of tree
@@ -79,7 +79,7 @@ subroutine bwd_solve_gpu(job, posdef, nnodes, sptr, nstream, stream_handle, &
    if(cuda_error.ne.0) return
 
    ! Bring x back from GPU
-   cuda_error = cudaMemcpy_d2h(C_LOC(xlocal), gpu_x, C_SIZEOF(xlocal(1:n)))
+   cuda_error = cudaMemcpy_d2h(C_LOC(xlocal), gpu_x, n*C_SIZEOF(xlocal(1)))
    if(cuda_error.ne.0) return
    cuda_error = cudaFree(gpu_x)
    if(cuda_error.ne.0) return
@@ -171,15 +171,15 @@ subroutine d_solve_gpu(nnodes, sptr, nstream, stream_handle, &
    if(st.ne.0) return
 
    ! Allocate workspace on GPU (code doesn't work in place, so need in and out)
-   cuda_error = cudaMalloc(gpu_x, 2*aligned_size(C_SIZEOF(xlocal(1:n))))
+   cuda_error = cudaMalloc(gpu_x, 2*aligned_size(n*C_SIZEOF(xlocal(n))))
    if(cuda_error.ne.0) return
-   gpu_y = c_ptr_plus_aligned(gpu_x, C_SIZEOF(xlocal(1:n)))
+   gpu_y = c_ptr_plus_aligned(gpu_x, n*C_SIZEOF(xlocal(n)))
 
    ! Push x on to GPU
    do i = 1, n
       xlocal(i) = x(invp(i))
    end do
-   cuda_error = cudaMemcpy_h2d(gpu_x, C_LOC(xlocal), C_SIZEOF(xlocal(1:n)))
+   cuda_error = cudaMemcpy_h2d(gpu_x, C_LOC(xlocal), n*C_SIZEOF(xlocal(1)))
    if(cuda_error.ne.0) return
 
    ! Backwards solve for top part of tree
@@ -199,7 +199,7 @@ subroutine d_solve_gpu(nnodes, sptr, nstream, stream_handle, &
    if(cuda_error.ne.0) return
 
    ! Bring x back from GPU
-   cuda_error = cudaMemcpy_d2h(C_LOC(xlocal), gpu_y, C_SIZEOF(xlocal(1:n)))
+   cuda_error = cudaMemcpy_d2h(C_LOC(xlocal), gpu_y, n*C_SIZEOF(xlocal(1)))
    if(cuda_error.ne.0) return
    ! Free GPU memory
    cuda_error = cudaFree(gpu_x)
@@ -293,9 +293,9 @@ subroutine fwd_solve_gpu(posdef, child_ptr, child_list, n, invp, nnodes, nodes,&
    do i = 1, n
       xlocal(i) = x(invp(i))
    end do
-   cuda_error = cudaMalloc(gpu_x, C_SIZEOF(xlocal(1:n)))
+   cuda_error = cudaMalloc(gpu_x, n*C_SIZEOF(xlocal(1)))
    if(cuda_error.ne.0) return
-   cuda_error = cudaMemcpy_h2d(gpu_x, C_LOC(xlocal), C_SIZEOF(xlocal(1:n)))
+   cuda_error = cudaMemcpy_h2d(gpu_x, C_LOC(xlocal), n*C_SIZEOF(xlocal(1)))
    if(cuda_error.ne.0) return
    x(1:n) = xlocal(:)
 
@@ -324,7 +324,7 @@ subroutine fwd_solve_gpu(posdef, child_ptr, child_list, n, invp, nnodes, nodes,&
    ! Build index map for use of "stack" and copy to GPU
    allocate(cvalues(nnodes), stat=st)
    if(st.ne.0) return
-   cuda_error = cudaMalloc(gpu_cvalues, C_SIZEOF(cvalues(1:nnodes)))
+   cuda_error = cudaMalloc(gpu_cvalues, nnodes*C_SIZEOF(cvalues(1)))
    if(cuda_error.ne.0) return
    stack_ptr = 0
    do node = 1, nnodes
@@ -336,7 +336,7 @@ subroutine fwd_solve_gpu(posdef, child_ptr, child_list, n, invp, nnodes, nodes,&
       stack_ptr = stack_ptr + blkm-nelim
    end do
    cuda_error = cudaMemcpy_h2d(gpu_cvalues, C_LOC(cvalues), &
-      C_SIZEOF(cvalues(1:nnodes)))
+      nnodes*C_SIZEOF(cvalues(1)))
    if(cuda_error.ne.0) return
    deallocate(cvalues, stat=st)
    if(st.ne.0) return
@@ -545,13 +545,13 @@ subroutine create_gpu_lookup_fwd(nlvl, lvllist, nodes, child_ptr, child_list, &
       assemble_lookup2(nassemble2), asmblkdata(nasmblk), stat=st)
    if(st.ne.0) return
 
-   sz = aligned_size(C_SIZEOF(assemble_lookup(1:nassemble))) + &
-      aligned_size(C_SIZEOF(trsv_lookup(1:ntrsv))) + &
-      aligned_size(C_SIZEOF(gemv_lookup(1:ngemv))) + &
-      aligned_size(C_SIZEOF(reduce_lookup(1:nreduce))) + &
-      aligned_size(C_SIZEOF(scatter_lookup(1:nscatter))) + &
-      aligned_size(C_SIZEOF(assemble_lookup2(1:nassemble2))) + &
-      aligned_size(C_SIZEOF(asmblkdata(1:nasmblk)))
+   sz = aligned_size(nassemble*C_SIZEOF(assemble_lookup(1))) + &
+      aligned_size(ntrsv*C_SIZEOF(trsv_lookup(1))) + &
+      aligned_size(ngemv*C_SIZEOF(gemv_lookup(1))) + &
+      aligned_size(nreduce*C_SIZEOF(reduce_lookup(1))) + &
+      aligned_size(nscatter*C_SIZEOF(scatter_lookup(1))) + &
+      aligned_size(nassemble2*C_SIZEOF(assemble_lookup2(1))) + &
+      aligned_size(nasmblk*C_SIZEOF(asmblkdata(1)))
    cuda_error = cudaMalloc(pmem, sz)
    if(cuda_error.ne.0) return
 
@@ -691,7 +691,7 @@ subroutine create_gpu_lookup_fwd(nlvl, lvllist, nodes, child_ptr, child_list, &
    end do
 
    gpul%nassemble = nassemble
-   sz = C_SIZEOF(assemble_lookup(1:gpul%nassemble))
+   sz = gpul%nassemble*C_SIZEOF(assemble_lookup(1))
    gpul%assemble = pmem
    pmem = c_ptr_plus_aligned(pmem, sz)
    cuda_error = cudaMemcpyAsync_h2d(gpul%assemble, C_LOC(assemble_lookup), sz, &
@@ -699,21 +699,21 @@ subroutine create_gpu_lookup_fwd(nlvl, lvllist, nodes, child_ptr, child_list, &
    if(cuda_error.ne.0) return
 
    gpul%ntrsv = ntrsv
-   sz = C_SIZEOF(trsv_lookup(1:gpul%ntrsv))
+   sz = gpul%ntrsv*C_SIZEOF(trsv_lookup(1))
    gpul%trsv = pmem
    pmem = c_ptr_plus_aligned(pmem, sz)
    cuda_error = cudaMemcpyAsync_h2d(gpul%trsv, C_LOC(trsv_lookup), sz, stream)
    if(cuda_error.ne.0) return
 
    gpul%ngemv = ngemv
-   sz = C_SIZEOF(gemv_lookup(1:gpul%ngemv))
+   sz = gpul%ngemv*C_SIZEOF(gemv_lookup(1))
    gpul%gemv = pmem
    pmem = c_ptr_plus_aligned(pmem, sz)
    cuda_error = cudaMemcpyAsync_h2d(gpul%gemv, C_LOC(gemv_lookup), sz, stream)
    if(cuda_error.ne.0) return
 
    gpul%nreduce = nreduce
-   sz = C_SIZEOF(reduce_lookup(1:gpul%nreduce))
+   sz = gpul%nreduce*C_SIZEOF(reduce_lookup(1))
    gpul%reduce = pmem
    pmem = c_ptr_plus_aligned(pmem, sz)
    cuda_error = cudaMemcpyAsync_h2d(gpul%reduce, C_LOC(reduce_lookup), sz, &
@@ -721,7 +721,7 @@ subroutine create_gpu_lookup_fwd(nlvl, lvllist, nodes, child_ptr, child_list, &
    if(cuda_error.ne.0) return
 
    gpul%nscatter = nscatter
-   sz = C_SIZEOF(scatter_lookup(1:gpul%nscatter))
+   sz = gpul%nscatter*C_SIZEOF(scatter_lookup(1))
    gpul%scatter = pmem
    pmem = c_ptr_plus_aligned(pmem, sz)
    cuda_error = cudaMemcpyAsync_h2d(gpul%scatter, C_LOC(scatter_lookup), sz, &
@@ -730,7 +730,7 @@ subroutine create_gpu_lookup_fwd(nlvl, lvllist, nodes, child_ptr, child_list, &
 
    gpul%nassemble2 = nassemble2
    gpul%nasm_sync = nasm_sync
-   sz = C_SIZEOF(assemble_lookup2(1:gpul%nassemble2))
+   sz = gpul%nassemble2*C_SIZEOF(assemble_lookup2(1))
    gpul%assemble2 = pmem
    pmem = c_ptr_plus_aligned(pmem, sz)
    cuda_error = cudaMemcpyAsync_h2d(gpul%assemble2, C_LOC(assemble_lookup2), &
@@ -738,7 +738,7 @@ subroutine create_gpu_lookup_fwd(nlvl, lvllist, nodes, child_ptr, child_list, &
    if(cuda_error.ne.0) return
 
    gpul%nasmblk = nasmblk
-   sz = C_SIZEOF(asmblkdata(1:gpul%nasmblk))
+   sz = gpul%nasmblk*C_SIZEOF(asmblkdata(1))
    gpul%asmblk = pmem
    pmem = c_ptr_plus_aligned(pmem, sz)
    cuda_error = cudaMemcpyAsync_h2d(gpul%asmblk, C_LOC(asmblkdata), &
@@ -815,10 +815,10 @@ subroutine create_gpu_lookup_bwd(nlvl, lvllist, nodes, sptr, rptr,         &
       scatter_lookup(blk_scatter), stat=st)
    if(st.ne.0) return
 
-   sz = aligned_size(C_SIZEOF(gemv_lookup(1:blk_gemv))) + &
-      aligned_size(C_SIZEOF(rds_lookup(1:blk_rds))) + &
-      aligned_size(C_SIZEOF(trsv_lookup(1:blk_trsv))) + &
-      aligned_size(C_SIZEOF(scatter_lookup(1:blk_scatter)))
+   sz = aligned_size(blk_gemv*C_SIZEOF(gemv_lookup(1))) + &
+      aligned_size(blk_rds*C_SIZEOF(rds_lookup(1))) + &
+      aligned_size(blk_trsv*C_SIZEOF(trsv_lookup(1))) + &
+      aligned_size(blk_scatter*C_SIZEOF(scatter_lookup(1)))
    cuda_error = cudaMalloc(pmem, sz)
    if(cuda_error.ne.0) return
 
@@ -911,25 +911,25 @@ subroutine create_gpu_lookup_bwd(nlvl, lvllist, nodes, sptr, rptr,         &
    gpul%ntrsv = blk_trsv-1
    gpul%nscatter = blk_scatter-1
 
-   sz = C_SIZEOF(gemv_lookup(1:gpul%ngemv))
+   sz = gpul%ngemv*C_SIZEOF(gemv_lookup(1))
    gpul%gemv = pmem
    pmem = c_ptr_plus_aligned(pmem, sz)
    cuda_error = cudaMemcpyAsync_h2d(gpul%gemv, C_LOC(gemv_lookup), sz, stream)
    if(cuda_error.ne.0) return
 
-   sz = C_SIZEOF(rds_lookup(1:gpul%nrds))
+   sz = gpul%nrds*C_SIZEOF(rds_lookup(1))
    gpul%rds = pmem
    pmem = c_ptr_plus_aligned(pmem, sz)
    cuda_error = cudaMemcpyAsync_h2d(gpul%rds, C_LOC(rds_lookup), sz, stream)
    if(cuda_error.ne.0) return
 
-   sz = C_SIZEOF(trsv_lookup(1:gpul%ntrsv))
+   sz = gpul%ntrsv*C_SIZEOF(trsv_lookup(1))
    gpul%trsv = pmem
    pmem = c_ptr_plus_aligned(pmem, sz)
    cuda_error = cudaMemcpyAsync_h2d(gpul%trsv, C_LOC(trsv_lookup), sz, stream)
    if(cuda_error.ne.0) return
 
-   sz = C_SIZEOF(scatter_lookup(1:gpul%nscatter))
+   sz = gpul%nscatter*C_SIZEOF(scatter_lookup(1))
    gpul%scatter = pmem
    pmem = c_ptr_plus_aligned(pmem, sz)
    cuda_error = cudaMemcpyAsync_h2d(gpul%scatter, C_LOC(scatter_lookup), sz, &
@@ -1053,9 +1053,9 @@ subroutine setup_gpu_solve(n, child_ptr, child_list, nnodes, nodes, sparent,  &
    allocate(clists(nnodes), clists_direct(nnodes), cvmap(nnodes), &
       clen(nnodes), stat=st)
    if(st.ne.0) return
-   cuda_error = cudaMalloc(gpu_clists, C_SIZEOF(clists(1:nnodes)))
+   cuda_error = cudaMalloc(gpu_clists, nnodes*C_SIZEOF(clists(1)))
    if(cuda_error.ne.0) return
-   cuda_error = cudaMalloc(gpu_clists_direct, C_SIZEOF(clists_direct(1:nnodes)))
+   cuda_error = cudaMalloc(gpu_clists_direct, nnodes*C_SIZEOF(clists_direct(1)))
    if(cuda_error.ne.0) return
    cuda_error = cudaMalloc(gpu_clen, nnodes*C_SIZEOF(dummy_int))
    if(cuda_error.ne.0) return
@@ -1074,12 +1074,12 @@ subroutine setup_gpu_solve(n, child_ptr, child_list, nnodes, nodes, sparent,  &
       end do
    end do
    cuda_error = cudaMemcpy_h2d(gpu_clists, C_LOC(clists), &
-      C_SIZEOF(clists(1:nnodes)))
+      nnodes*C_SIZEOF(clists(1)))
    if(cuda_error.ne.0) return
    cuda_error = cudaMemcpy_h2d(gpu_clists_direct, C_LOC(clists_direct), &
-      C_SIZEOF(clists_direct(1:nnodes)))
+      nnodes*C_SIZEOF(clists_direct(1)))
    if(cuda_error.ne.0) return
-   cuda_error = cudaMemcpy_h2d(gpu_clen, C_LOC(clen), C_SIZEOF(clen(1:nnodes)))
+   cuda_error = cudaMemcpy_h2d(gpu_clen, C_LOC(clen), nnodes*C_SIZEOF(clen(1)))
    if(cuda_error.ne.0) return
 
    !

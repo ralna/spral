@@ -186,7 +186,7 @@ subroutine node_ldlt(stream, nrows, ncols, gpu_L, gpu_LD, ldL, gpu_D, gpu_B,  &
        cudaMemcpyAsync_D2H(C_LOC(pstat), gpu_stat, C_SIZEOF(pstat), stream)
     if(cuda_error.ne.0) return
     cuda_error = &
-       cudaMemcpyAsync_D2H(C_LOC(ind), gpu_ind, C_SIZEOF(ind(1:cb)), stream)
+       cudaMemcpyAsync_D2H(C_LOC(ind), gpu_ind, cb*C_SIZEOF(ind(1)), stream)
     if(cuda_error.ne.0) return
 
     cuda_error = cudaStreamSynchronize(stream) ! Wait for pstat, ind
@@ -294,7 +294,7 @@ subroutine node_ldlt(stream, nrows, ncols, gpu_L, gpu_LD, ldL, gpu_D, gpu_B,  &
       ! copy to GPU
       !
       cuda_error = cudaMemcpyAsync_H2D(gpu_ind, C_LOC(ind), &
-         C_SIZEOF(ind(1:cb+delayed)), stream)
+         (cb+delayed)*C_SIZEOF(ind(1)), stream)
       if(cuda_error.ne.0) return
 
       !
@@ -379,7 +379,7 @@ subroutine node_ldlt(stream, nrows, ncols, gpu_L, gpu_LD, ldL, gpu_D, gpu_B,  &
      C_SIZEOF(pstat), stream)
   if(cuda_error.ne.0) return
   cuda_error = cudaMemcpyAsync_D2H(C_LOC(ind), gpu_ind, &
-     C_SIZEOF(ind(1:nrows - done)), stream)
+     (nrows-done)*C_SIZEOF(ind(1)), stream)
   if(cuda_error.ne.0) return
 
   cuda_error = cudaStreamSynchronize(stream) ! Wait for pstat, ind
@@ -511,16 +511,16 @@ subroutine multinode_ldlt(stream, nlvlnodes, node_m, node_n, node_lcol, &
   !
   ! copy perm to GPU
   !
-  gpu_perm = custack_alloc(gwork, C_SIZEOF(perm(1:width)))
+  gpu_perm = custack_alloc(gwork, width*C_SIZEOF(perm(1)))
   cuda_error = cudaMemcpyAsync_H2D(gpu_perm, C_LOC(perm), &
-    C_SIZEOF(perm(1:width)), stream);
+    width*C_SIZEOF(perm(1)), stream);
   if(cuda_error.ne.0) return
   !
   ! prepare data for reordering
   !
   allocate(mrdata(ncbr), stat=st)
   if(st.ne.0) return
-  mrdata_size = C_SIZEOF(mrdata(1 : ncbr))
+  mrdata_size = ncbr*C_SIZEOF(mrdata(1))
   gpu_mrdata = custack_alloc(gwork, mrdata_size)
 
   !  Put heavier workload blocks earlier
@@ -570,7 +570,7 @@ subroutine multinode_ldlt(stream, nlvlnodes, node_m, node_n, node_lcol, &
   !
   allocate(medata(ncbe), stat=st)
   if(st.ne.0) return
-  medata_size = C_SIZEOF(medata(1 : ncbe))
+  medata_size = ncbe*C_SIZEOF(medata(1))
   gpu_medata = custack_alloc(gwork, medata_size)
   ncbe = 0
   do node = 1, nlvlnodes
@@ -593,7 +593,7 @@ subroutine multinode_ldlt(stream, nlvlnodes, node_m, node_n, node_lcol, &
   !
   allocate(mnfdata(nlvlnodes), stat=st)
   if(st.ne.0) return
-  gpu_mnfdata = custack_alloc(gwork, C_SIZEOF(mnfdata(1:nlvlnodes)))
+  gpu_mnfdata = custack_alloc(gwork, nlvlnodes*C_SIZEOF(mnfdata(1)))
 
   step = 24*block_size
 
@@ -630,7 +630,7 @@ subroutine multinode_ldlt(stream, nlvlnodes, node_m, node_n, node_lcol, &
     l = l + nrows*block_size
   end do
   cuda_error = cudaMemcpyAsync_H2D(gpu_mnfdata, C_LOC(mnfdata), &
-     C_SIZEOF(mnfdata(1:nlvlnodes)), stream)
+     nlvlnodes*C_SIZEOF(mnfdata(1)), stream)
   if(cuda_error.ne.0) return
   gpu_stat = custack_alloc(gwork, nlvlnodes*C_SIZEOF(dummy_int))
   cuda_error = cudaMemsetAsync(gpu_stat, 0, nlvlnodes*C_SIZEOF(dummy_int), &
@@ -689,7 +689,7 @@ main_loop:&
        gpu_stat )
 
     cuda_error = cudaMemcpyAsync_D2H(C_LOC(pstat), gpu_stat, &
-       C_SIZEOF(pstat(1:nlvlnodes)), stream)
+       nlvlnodes*C_SIZEOF(pstat(1)), stream)
     if(cuda_error.ne.0) return
     cuda_error = cudaEventRecord(pstat_event, stream)
     if(cuda_error.ne.0) return
@@ -718,14 +718,14 @@ main_loop:&
   if(cuda_error.ne.0) return
   
   cuda_error = cudaMemcpyAsync_D2H(C_LOC(perm), gpu_perm, &
-    C_SIZEOF(perm(1:width)), stream);
+    width*C_SIZEOF(perm(1)), stream);
   if(cuda_error.ne.0) return
   cuda_error = cudaStreamSynchronize(stream) ! Wait for perm before custack_free
   if(cuda_error.ne.0) return
 
   call custack_free(gwork, mbfdata_size) ! gpu_mbfdata
   call custack_free(gwork, nlvlnodes*C_SIZEOF(dummy_int)) ! gpu_stat
-  call custack_free(gwork, C_SIZEOF(mnfdata(1:nlvlnodes))) ! gpu_mnfdata
+  call custack_free(gwork, nlvlnodes*C_SIZEOF(mnfdata(1))) ! gpu_mnfdata
   call custack_free(gwork, medata_size) ! gpu_mdata
   call custack_free(gwork, mrdata_size) ! gpu_rdata
   call custack_free(gwork, width*C_SIZEOF(dummy_int)) ! gpu_perm
@@ -917,7 +917,7 @@ subroutine multinode_llt(stream, nlvlnodes, node_m, node_n, node_lcol, cublas, &
   end do
   allocate(mrdata(ncbr), stat=st)
   if(st.ne.0) return
-  mrdata_size = C_SIZEOF(mrdata(1 : ncbr))
+  mrdata_size = ncbr*C_SIZEOF(mrdata(1))
   gpu_mrdata = custack_alloc(gwork, mrdata_size)
   ncbr = 0
   l = 0
@@ -947,7 +947,7 @@ subroutine multinode_llt(stream, nlvlnodes, node_m, node_n, node_lcol, cublas, &
   end do
   allocate(medata(ncbe), stat=st)
   if(st.ne.0) return
-  medata_size = C_SIZEOF(medata(1 : ncbe))
+  medata_size = ncbe*C_SIZEOF(medata(1))
   gpu_medata = custack_alloc(gwork, medata_size)
   ncbe = 0
   do node = 1, nlvlnodes
@@ -967,7 +967,7 @@ subroutine multinode_llt(stream, nlvlnodes, node_m, node_n, node_lcol, cublas, &
 
   allocate(mnfdata(nlvlnodes), stat=st)
   if(st.ne.0) return
-  gpu_mnfdata = custack_alloc(gwork, C_SIZEOF(mnfdata(1:nlvlnodes)))
+  gpu_mnfdata = custack_alloc(gwork, nlvlnodes*C_SIZEOF(mnfdata(1)))
 
   done = 0  ! last processed column
   ib = 1    ! first column to be processed
@@ -998,7 +998,7 @@ subroutine multinode_llt(stream, nlvlnodes, node_m, node_n, node_lcol, cublas, &
     l = l + nrows*block_size
   end do
   cuda_error = cudaMemcpyAsync_h2d(gpu_mnfdata, C_LOC(mnfdata), &
-    C_SIZEOF(mnfdata(1:nlvlnodes)), stream)
+    nlvlnodes*C_SIZEOF(mnfdata(1)), stream)
   if(cuda_error.ne.0) return
   gpu_stat = custack_alloc(gwork, nlvlnodes*C_SIZEOF(dummy_int))
   cuda_error = cudaMemsetAsync(gpu_stat, 0, nlvlnodes*C_SIZEOF(dummy_int), &
@@ -1050,7 +1050,7 @@ main_loop:&
     
     call multiblock_llt( stream, ncb, gpu_mbfdata, gpu_B, gpu_stat )
     cuda_error = cudaMemcpyAsync_d2h(C_LOC(pstat), gpu_stat, &
-       C_SIZEOF(pstat(1:nlvlnodes)), stream)
+       nlvlnodes*C_SIZEOF(pstat(1)), stream)
     if(cuda_error.ne.0) return
     
     do node = 1, nlvlnodes
@@ -1077,7 +1077,7 @@ main_loop:&
 
   call custack_free(gwork, mbfdata_size) ! gpu_mbfdata
   call custack_free(gwork, nlvlnodes*C_SIZEOF(dummy_int)) ! gpu_stat
-  call custack_free(gwork, C_SIZEOF(mnfdata(1:nlvlnodes))) ! gpu_mnfdata
+  call custack_free(gwork, nlvlnodes*C_SIZEOF(mnfdata(1))) ! gpu_mnfdata
   call custack_free(gwork, medata_size) ! gpu_medata
   call custack_free(gwork, mrdata_size) ! gpu_mrdata
   call custack_free(gwork, 8*C_SIZEOF(dummy_int)) ! gpu_aux
