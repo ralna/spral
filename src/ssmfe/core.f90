@@ -1,5 +1,6 @@
-! COPYRIGHT (c) 2014 The Science and Technology Facilities Council (STFC)
-! Original date 1 December 2014, Version 1.0.0
+! COPYRIGHT (c) 2013      Evgueni Ovtchinnikov
+! COPYRIGHT (c) 2014,2015 The Science and Technology Facilities Council (STFC)
+! Version 1.0.0
 !
 ! Written by: Evgueni Ovtchinnikov
 !
