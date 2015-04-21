@@ -894,7 +894,7 @@ contains
 
         do i = first, last, step
 
-          if ( keep%info%converged(i) > 0 ) then
+          if ( keep%info%converged(i) .ne. 0 ) then
             word = '  yes'
           else
             word = '   no'
