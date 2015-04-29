@@ -78,6 +78,14 @@ module spral_scaling
       module procedure auction_scale_unsym_int32
       module procedure auction_scale_unsym_int64
    end interface auction_scale_unsym
+   interface equilib_scale_sym
+      module procedure equilib_scale_sym_int32
+      module procedure equilib_scale_sym_int64
+   end interface equilib_scale_sym
+   interface equilib_scale_unsym
+      module procedure equilib_scale_unsym_int32
+      module procedure equilib_scale_unsym_int64
+   end interface equilib_scale_unsym
    interface hungarian_scale_sym
       module procedure hungarian_scale_sym_int32
       module procedure hungarian_scale_sym_int64
@@ -362,9 +370,30 @@ end subroutine auction_scale_unsym_int64
 !
 ! Call the infinity-norm equilibriation algorithm (symmetric version)
 !
-subroutine equilib_scale_sym(n, ptr, row, val, scaling, options, inform)
+subroutine equilib_scale_sym_int32(n, ptr, row, val, scaling, options, inform)
    integer, intent(in) :: n ! order of system
    integer, intent(in) :: ptr(n+1) ! column pointers of A
+   integer, intent(in) :: row(*) ! row indices of A (lower triangle)
+   real(wp), intent(in) :: val(*) ! entries of A (in same order as in row).
+   real(wp), dimension(n), intent(out) :: scaling
+   type(equilib_options), intent(in) :: options
+   type(equilib_inform), intent(out) :: inform
+
+   integer(long), dimension(:), allocatable :: ptr64
+
+   allocate(ptr64(n+1), stat=inform%stat)
+   if(inform%stat.ne.0) then
+      inform%flag = ERROR_ALLOCATION
+      return
+   endif
+   ptr64(1:n+1) = ptr(1:n+1)
+
+   call equilib_scale_sym_int64(n, ptr64, row, val, scaling, options, inform)
+   
+end subroutine equilib_scale_sym_int32
+subroutine equilib_scale_sym_int64(n, ptr, row, val, scaling, options, inform)
+   integer, intent(in) :: n ! order of system
+   integer(long), intent(in) :: ptr(n+1) ! column pointers of A
    integer, intent(in) :: row(*) ! row indices of A (lower triangle)
    real(wp), intent(in) :: val(*) ! entries of A (in same order as in row).
    real(wp), dimension(n), intent(out) :: scaling
@@ -375,17 +404,42 @@ subroutine equilib_scale_sym(n, ptr, row, val, scaling, options, inform)
 
    call inf_norm_equilib_sym(n, ptr, row, val, scaling, options, inform)
    
-end subroutine equilib_scale_sym
+end subroutine equilib_scale_sym_int64
 
 !*******************************
 !
 ! Call the infinity-norm equilibriation algorithm (unsymmetric version)
 !
-subroutine equilib_scale_unsym(m, n, ptr, row, val, rscaling, cscaling, &
+subroutine equilib_scale_unsym_int32(m, n, ptr, row, val, rscaling, cscaling, &
       options, inform)
    integer, intent(in) :: m ! number of rows
    integer, intent(in) :: n ! number of cols
    integer, intent(in) :: ptr(n+1) ! column pointers of A
+   integer, intent(in) :: row(*) ! row indices of A (lower triangle)
+   real(wp), intent(in) :: val(*) ! entries of A (in same order as in row).
+   real(wp), dimension(m), intent(out) :: rscaling
+   real(wp), dimension(n), intent(out) :: cscaling
+   type(equilib_options), intent(in) :: options
+   type(equilib_inform), intent(out) :: inform
+
+   integer(long), dimension(:), allocatable :: ptr64
+
+   allocate(ptr64(n+1), stat=inform%stat)
+   if(inform%stat.ne.0) then
+      inform%flag = ERROR_ALLOCATION
+      return
+   endif
+   ptr64(1:n+1) = ptr(1:n+1)
+
+   call equilib_scale_unsym_int64(m, n, ptr64, row, val, rscaling, cscaling, &
+      options, inform)
+
+end subroutine equilib_scale_unsym_int32
+subroutine equilib_scale_unsym_int64(m, n, ptr, row, val, rscaling, cscaling, &
+      options, inform)
+   integer, intent(in) :: m ! number of rows
+   integer, intent(in) :: n ! number of cols
+   integer(long), intent(in) :: ptr(n+1) ! column pointers of A
    integer, intent(in) :: row(*) ! row indices of A (lower triangle)
    real(wp), intent(in) :: val(*) ! entries of A (in same order as in row).
    real(wp), dimension(m), intent(out) :: rscaling
@@ -398,7 +452,7 @@ subroutine equilib_scale_unsym(m, n, ptr, row, val, rscaling, cscaling, &
    call inf_norm_equilib_unsym(m, n, ptr, row, val, rscaling, cscaling, &
       options, inform)
 
-end subroutine equilib_scale_unsym
+end subroutine equilib_scale_unsym_int64
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Inf-norm Equilibriation Algorithm Implementation
@@ -415,14 +469,15 @@ end subroutine equilib_scale_unsym
 !
 subroutine inf_norm_equilib_sym(n, ptr, row, val, scaling, options, inform)
    integer, intent(in) :: n
-   integer, dimension(n+1), intent(in) :: ptr
+   integer(long), dimension(n+1), intent(in) :: ptr
    integer, dimension(ptr(n+1)-1), intent(in) :: row
    real(wp), dimension(ptr(n+1)-1), intent(in) :: val
    real(wp), dimension(n), intent(out) :: scaling
    type(equilib_options), intent(in) :: options
    type(equilib_inform), intent(inout) :: inform
 
-   integer :: itr, r, c, j
+   integer :: itr, r, c
+   integer(long) :: j
    real(wp) :: v
    real(wp), dimension(:), allocatable :: maxentry
 
@@ -468,7 +523,7 @@ subroutine inf_norm_equilib_unsym(m, n, ptr, row, val, rscaling, cscaling, &
       options, inform)
    integer, intent(in) :: m
    integer, intent(in) :: n
-   integer, dimension(n+1), intent(in) :: ptr
+   integer(long), dimension(n+1), intent(in) :: ptr
    integer, dimension(ptr(n+1)-1), intent(in) :: row
    real(wp), dimension(ptr(n+1)-1), intent(in) :: val
    real(wp), dimension(m), intent(out) :: rscaling
@@ -476,7 +531,8 @@ subroutine inf_norm_equilib_unsym(m, n, ptr, row, val, rscaling, cscaling, &
    type(equilib_options), intent(in) :: options
    type(equilib_inform), intent(inout) :: inform
 
-   integer :: itr, r, c, j
+   integer :: itr, r, c
+   integer(long) :: j
    real(wp) :: v
    real(wp), dimension(:), allocatable :: rmaxentry, cmaxentry
 
