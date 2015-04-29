@@ -24,6 +24,7 @@ module spral_matrix_util
       print_matrix              ! Pretty-print a CSC-lower matrix (summary)
 
    integer, parameter :: wp = kind(0d0)
+   integer, parameter :: long = selected_int_kind(18)
    real(wp), parameter :: zero = 0.0_wp
 
    ! matrix types : real
@@ -125,6 +126,9 @@ end interface clean_cscl_oop
 interface convert_coord_to_cscl
    module procedure convert_coord_to_cscl_double
 end interface convert_coord_to_cscl
+interface half_to_full
+   module procedure half_to_full_int32, half_to_full_int64
+end interface half_to_full
 
 contains
 
@@ -1774,7 +1778,7 @@ end subroutine cleanup_dup
 ! Diagonal entries need not be present.
 !
 ! Note: this is a modified version of mc34_expand from hsl_mc34
-subroutine half_to_full(n,row,ptr,iw,a)
+subroutine half_to_full_int32(n,row,ptr,iw,a)
    integer, intent(in) :: n  ! holds the order of a.
    integer, intent(inout) :: row(*) ! must be set by the user to
       ! hold the row indices of the lower triangular part of a.
@@ -1900,6 +1904,135 @@ subroutine half_to_full(n,row,ptr,iw,a)
    end do
    ptr(n+1) = newtau + 1
 
-end subroutine half_to_full
+end subroutine half_to_full_int32
+subroutine half_to_full_int64(n,row,ptr,iw,a)
+   integer, intent(in) :: n  ! holds the order of a.
+   integer, intent(inout) :: row(*) ! must be set by the user to
+      ! hold the row indices of the lower triangular part of a.
+      ! the entries of a single column must be
+      ! contiguous. the entries of column j must precede those of column
+      ! j+1, and there must be no wasted space between
+      ! columns. row indices within a column may be in any order.  on
+      ! exit, it will have the same meaning but will be changed to hold
+      ! the row indices of the entries in the expanded structure.  diagonal
+      ! entries need not be present. the new row indices added in the
+      ! upper triangular part will be in order for each column and will
+      ! precede the row indices for the lower triangular part which will
+      ! remain in the input order.
+   integer(long), intent(inout) ::ptr(n+1)  !  must be set
+      ! by the user so that ptr(j) is the position in row
+      ! of the first entry in column j and
+      ! ptr(n+1) must be set to one more than the total number of
+      ! entries.  on exit, ptr(j) will have the same meaning but
+      ! will be changed to point to the position of the first entry of
+      ! column j in the expanded structure. the new value of
+      ! ptr(n+1) will be one greater than the number of entries in
+      ! the expanded structure.
+   integer :: iw(n) ! workspace
+   real(wp), optional, intent(inout) :: a(*) 
+      ! if present, a(1:ptr(n+1)-1) must be set by the user so that
+      ! a(k) holds the value of the entry in row(k). 
+      ! on exit, a will hold the values of the entries in the expanded 
+      ! structure corresponding to the output values of row.
+
+   integer(long) :: ckp1 ! used as running pointer
+   integer :: i
+   integer(long) :: i1,i2,ii,ipkp1,ipos
+   integer :: j
+   integer(long) :: jstart 
+   integer :: lenk ! number of entries in col. j of original structure
+   integer :: ndiag ! number diagonal entries present
+   integer(long) :: newtau ! number of entries in expanded storage
+   integer(long) :: oldtau ! number of entries in symmetric storage
+
+   oldtau = ptr(n+1) - 1
+   iw(1:n) = 0
+
+   ! iw(j) set to total number entries in col. j of expanded mx.
+   ndiag = 0
+   do j = 1,n
+      i1 = ptr(j)
+      i2 = ptr(j+1) - 1
+      iw(j) = iw(j) + int(i2-i1) + 1
+      do ii = i1,i2
+         i = row(ii)
+         if (i /= j) then
+            iw(i) = iw(i) + 1
+         else
+            ndiag = ndiag + 1
+         end if
+      end do
+   end do
+
+   newtau = 2*oldtau - ndiag
+   ! ipkp1 points to position  after end of column being currently processed
+   ipkp1 = oldtau + 1
+   ! ckp1 points to position  after end of same column in expanded structure
+   ckp1 = newtau + 1
+   ! go through the array in the reverse order placing lower triangular
+   ! elements in  appropriate slots.
+   do j = n,1,-1
+      i1 = ptr(j)
+      i2 = ipkp1
+      lenk = int(i2 - i1)
+      ! jstart is running pointer to position in new structure
+      jstart = ckp1
+      ! set ikp1 for next column
+      ipkp1 = i1
+      i2 = i2 - 1
+      ! run through columns in reverse order
+      ! lower triangular part of col. moved to end of same column in expanded
+      ! form
+      if (present(a)) then
+         do ii = i2,i1,-1
+            jstart = jstart - 1
+            a(jstart) = a(ii)
+            row(jstart) = row(ii)
+         end do
+      else
+         do ii = i2,i1,-1
+            jstart = jstart - 1
+            row(jstart) = row(ii)
+         end do
+      end if
+      ! ptr is set to position of first entry in lower triangular part of
+      ! column j in expanded form
+      ptr(j) = jstart
+      ! set ckp1 for next column
+      ckp1 = ckp1 - iw(j)
+      ! reset iw(j) to number of entries in lower triangle of column.
+      iw(j) = lenk
+   end do
+
+   ! again sweep through the columns in the reverse order, this
+   ! time when one is handling column j the upper triangular
+   ! elements a(j,i) are put in position.
+   do j = n,1,-1
+      i1 = ptr(j)
+      i2 = ptr(j) + iw(j) - 1
+      ! run down column in order
+      ! note that i is always greater than or equal to j
+      if (present(a)) then
+         do ii = i1,i2
+            i = row(ii)
+            if (i == j) cycle
+            ptr(i) = ptr(i) - 1
+            ipos = ptr(i)
+            a(ipos) = a(ii)
+            row(ipos) = j
+         end do
+      else
+         do ii = i1,i2
+            i = row(ii)
+            if (i == j) cycle
+            ptr(i) = ptr(i) - 1
+            ipos = ptr(i)
+            row(ipos) = j
+         end do
+      end if
+   end do
+   ptr(n+1) = newtau + 1
+
+end subroutine half_to_full_int64
 
 end module spral_matrix_util
