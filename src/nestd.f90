@@ -1420,7 +1420,7 @@
         ! nd_switch
         IF (level>=control%amd_switch2 .OR. a_n<=max(2,control%amd_switch1)) &
           GO TO 30
-        lwork = 9*a_n + max(sumweight,4*a_n+a_ne)
+        lwork = 12*a_n + sumweight+a_ne
         CALL nestd_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,level, &
           a_n1,a_n2,a_ne1,a_ne2,iperm,work(1:lwork),control,info, &
           use_multilevel,grid)
@@ -6427,7 +6427,6 @@ INNER:    DO inn = 1, n
 
         IF ( .NOT. associated(grid%graph)) ALLOCATE (grid%graph)
 
-
         CALL nestd_matrix_construct(grid%graph,a_n,a_n,a_ne,info1)
         IF (info1<0) THEN
           IF (lerr) CALL nestd_print_message(info1,err, &
@@ -7354,6 +7353,7 @@ INNER:    DO inn = 1, n
           info = nestd_err_memory_dealloc
           RETURN
         END IF
+        NULLIFY (grid%graph,grid%coarse)
 
       END SUBROUTINE multigrid_deallocate
 
@@ -7386,6 +7386,7 @@ INNER:    DO inn = 1, n
           info = nestd_err_memory_dealloc
           RETURN
         END IF
+        NULLIFY (grid%graph,grid%coarse)
 
       END SUBROUTINE multigrid_deallocate_last
       ! *****************************************************************
@@ -7612,6 +7613,8 @@ INNER:    DO inn = 1, n
 
         INTEGER :: st
 
+        info = 0
+
         IF (allocated(v)) THEN
           IF (size(v)<n) THEN
             DEALLOCATE (v,STAT=st)
@@ -7644,6 +7647,7 @@ INNER:    DO inn = 1, n
         INTEGER, INTENT (INOUT) :: info1
 
         INTEGER :: st
+        info1 = 0
 
         IF (associated(arr)) THEN
           IF (size(arr)<sz) THEN
@@ -9662,25 +9666,27 @@ INNER:    DO inn = 1, n
         REAL (kind=myreal_nestd), INTENT (IN) :: ratio
         LOGICAL, INTENT (IN) :: imbal ! Use penalty function?
         REAL (kind=myreal_nestd), INTENT (OUT) :: tau
-        REAL (kind=myreal_nestd) :: beta
+        REAL (kind=myreal_nestd) :: beta, a_wgt1, a_wgt2
 
         beta = 0.5
+        a_wgt1 = max(1,a_weight_1)
+        a_wgt2 = max(1,a_weight_2)
 
         IF (.TRUE.) THEN
-          tau = ((real(a_weight_sep)**1.0)/real(a_weight_1))/real(a_weight_2)
-          IF (imbal .AND. real(max(a_weight_1,a_weight_2))/real(min(a_weight_1 &
-              ,a_weight_2))>=ratio) THEN
+          tau = ((real(a_weight_sep)**1.0)/real(a_wgt1))/real(a_wgt2)
+          IF (imbal .AND. real(max(a_wgt1,a_wgt2))/real(min(a_wgt1 &
+              ,a_wgt2))>=ratio) THEN
             tau = real(sumweight-2) + tau
           END IF
         ELSE
-          IF (imbal .AND. real(max(a_weight_1,a_weight_2))/real(min(a_weight_1 &
-              ,a_weight_2))>=ratio) THEN
+          IF (imbal .AND. real(max(a_wgt1,a_wgt2))/real(min(a_wgt1 &
+              ,a_wgt2))>=ratio) THEN
             tau = real(sumweight)*(1.0+beta) + real(a_weight_sep)*( &
-              1.0_myreal_nestd+beta*real(abs(a_weight_1- &
-              a_weight_2))/real(sumweight))
+              1.0_myreal_nestd+beta*real(abs(a_wgt1- &
+              a_wgt2))/real(sumweight))
           ELSE
             tau = real(a_weight_sep)*(1.0_myreal_nestd+beta*real(abs( &
-              a_weight_1-a_weight_2))/real(sumweight))
+              a_wgt1-a_wgt2))/real(sumweight))
           END IF
 
         END IF
