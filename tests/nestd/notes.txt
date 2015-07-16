@@ -1,0 +1,32 @@
+
+If growth method for forming partition kept, need to add to spec.
+
+Need to finish last bits of coverage testing
+
+kb07 - called by hamd_replace. If not able to use AMD in code, might use a 
+ method similar to hamd_replace but kb07 will be replaced with a SPRAL sorting
+ routine
+
+hamd_replace  - trial subroutine for possible use if not able to use AMD. Not
+ currently checked in nestd_test.f90
+
+BUG in code when used with mip1 and options
+           nested_control%remove_dense_rows = .TRUE. 
+           nested_control%unit_diagnostics = 6 
+           nested_control%unit_error = 6 
+
+           nested_control%coarse_partition_method = 1 
+           nested_control%amd_switch1 = 50
+           nested_control%amd_switch2 = 20 
+           nested_control%print_level = 0 
+           nested_control%refinement_band = n
+           nested_control%refinement = 7
+           nested_control%balance = 4.0
+           nested_control%max_improve_cycles = 2 
+
+           nested_control%matching = 0
+           nested_control%partition_method = 1 
+           nested_control%stop_coarsening1 = 100
+           nested_control%stop_coarsening1 = 20
+           nested_control%amd_call = 50
+           nested_control%max_reduction = 0.9
