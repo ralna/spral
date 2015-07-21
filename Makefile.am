@@ -59,6 +59,18 @@ libspral_a_SOURCES += \
 	src/metis$(METIS_VERSION)_wrapper.f90
 EXTRA_DIST = src/metis4_wrapper.f90 src/metis5_wrapper.f90
 
+# ND
+libspral_a_SOURCES += \
+	src/nestd.f90
+check_PROGRAMS = \
+	nestd_test \
+	examples/Fortran/nestd/nestd
+nestd_test_SOURCES = tests/nestd/nestd.f90
+examples_Fortran_nestd_nestd_SOURCES = examples/Fortran/nestd/nestd.f90
+tests/nestd/nestd.$(OBJEXT): libspral.a
+examples/Fortran/nestd/nestd.$(OBJEXT): libspral.a
+TESTS = nestd_test
+
 # PGM
 libspral_a_SOURCES += \
 	src/pgm.f90
@@ -72,7 +84,7 @@ include_HEADERS += include/spral_scaling.h
 libspral_a_SOURCES += \
   	src/scaling.f90 \
 	interfaces/C/scaling.f90
-check_PROGRAMS = \
+check_PROGRAMS += \
 	scaling_test \
 	examples/Fortran/scaling/auction_sym \
 	examples/Fortran/scaling/auction_unsym \
@@ -112,7 +124,7 @@ examples/C/scaling/equilib_sym.$(OBJEXT): libspral.a
 examples/C/scaling/equilib_unsym.$(OBJEXT): libspral.a
 examples/C/scaling/hungarian_sym.$(OBJEXT): libspral.a
 examples/C/scaling/hungarian_unsym.$(OBJEXT): libspral.a
-TESTS = scaling_test
+TESTS += scaling_test
 
 # TIMER
 libspral_a_SOURCES += \

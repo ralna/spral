@@ -1,0 +1,35 @@
+OUTSTANDING
+===========
+* Rename module to spral_nd
+* Split AMD into its own module spral_amd (assuming permission from Amestoy: Iain to chase)
+* Sanitize function names - eg get rid of _old _new and other such confusions
+* Check all subroutines are well commented
+* Cull dead code in all files (do we still want cost2?)
+* Maybe split main nd code into multiple files if a sensible split exists (eg hold maxflow and FM in
+  separate files to aid code maintenance?)
+* Comment where code came from if it is not 100% new - eg mc78 routines, coarsening etc
+* See if internal subroutines would be better consildated eg remove_from_list()
+  (remove use of contains within a contained subroutine and look at where some subroutines
+   have same name but slightly different arguments)
+* After results for report complete, check ifthere any methods we can cut completely?
+* Change myreal_nested to wp (global)
+* Remove kind(1.0D) .... replace with wp (the code should just need one change to
+  make it single precision ie just change kind of wp). Use of real typecasting.
+* Remove realval
+
+* Fix example - remove need for data file, update to more consistent look and feel
+* Fix test so it compiles without HSL dependencies (eg mc69) .. use SPRAL equivalents
+* Fix test to remove need for data file
+* Split test code into subroutines (see eg SSIDS for new style)
+* Fix test to have meaningful output (ie print what is being tested!)
+
+
+Jonathan actions:
+* Review supervariable identification and possibly use other SPRAL code
+* C interface (to consider: are we going to develop matlab interfaces for SPRAL?)
+* Add use of ND as an option in SSIDS
+
+DONE
+====
+Add to Makefile.am
+Rename example and test to match other packages
