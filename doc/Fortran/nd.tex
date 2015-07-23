@@ -1,4 +1,4 @@
-\packagename{NESTD}
+\packagename{ND}
 \version{1.0.0}
 \versiondate{?? July 2015}
 \purpose{
@@ -520,12 +520,13 @@ supervariables and, if found, it is compressed to give a symmetric matrix
 $\widetilde{A}$ with order $\tilde{n}.$ If $\tilde{n}$ is less than or equal to 
 {\tt amd\_call}, the matrix an elimination ordering is computed using the 
 approximate minimum degree (AMD) method; otherwise $\widetilde{A}$ is passed to the 
-recursive nested dissection algorithm, Algorithm~\ref{alg:nd}. Having formed a 
+recursive nested dissection algorithm, \textit{neested\_dissection($A,P$)}, below. Having formed a 
 nested dissection ordering for $\widetilde{A},$ the 
 ordering is mapped to give an ordering for $\overline{A}.$ The dense rows are 
 appended to the end of the ordering. 
 
-\begin{algorithm}\caption{Nested dissection algorithm}\label{alg:nd}
+\noindent\hrulefill\\
+\vspace{-1.0em}
 \begin{algorithmic}
 \STATE {\bf recursive subroutine nested\_dissection}($A,P$)
 \STATE Input: symmetric matrix $A$ of order $n$
@@ -543,14 +544,14 @@ has the form (\ref{eqn:partition})
 \ENDIF
 
 \end{algorithmic}
-\end{algorithm}
+\noindent\hrulefill\\
 
 At each recursive level of the nested dissection procedure, the matrix is 
 partitioned using either 
 \begin{itemize}
 \item the half-level set method (see [1]), which is then refined to improve its 
 quality, or 
-\item a recursive multilevel procedure, as described in Algorithm~\ref{alg:ml}, 
+\item a recursive multilevel procedure, detailed below \textit{multilevel\_paritition($A$,$P$)}, 
 is performed, where \texttt{options\%matching} determines the strategy used to form 
 the coarsening matrix.
 \end{itemize}
@@ -558,7 +559,9 @@ The user may choose which partitioning method to use or {\tt NESTD} can analyse
 $\widetilde{A}$ and automatically choose how to partition the matrix, see 
 \texttt{options\%partition\_method}.
 
-\begin{algorithm}\caption{Multilevel partitioning algorithm}\label{alg:ml}
+\vspace{0.5cm}
+\noindent\hrulefill\\
+\vspace{-1.0em}
 \begin{algorithmic}
 \STATE {\bf recursive subroutine multilevel\_partition}($A,P$)
 \STATE Input: symmetric matrix $A$ of order $n$
@@ -574,7 +577,7 @@ $\widetilde{A}$ and automatically choose how to partition the matrix, see
 \ENDIF
 
 \end{algorithmic}
-\end{algorithm}
+\noindent\hrulefill
 
 
 \section*{References}
