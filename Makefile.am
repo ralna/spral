@@ -60,8 +60,10 @@ libspral_a_SOURCES += \
 EXTRA_DIST = src/metis4_wrapper.f90 src/metis5_wrapper.f90
 
 # ND
+include_HEADERS += include/nd.h
 libspral_a_SOURCES += \
-	src/nestd.f90
+	src/nestd.f90 \
+	interfaces/C/nd.f90
 check_PROGRAMS = \
 	nestd_test \
 	examples/Fortran/nestd/nestd
