@@ -49,15 +49,15 @@ Please see the SPRAL install documentation.
 \subsection{Calling sequences}
 
 Access to the package requires a {\tt USE} statement \\ \\
-\indent\hspace{8mm}{\tt use spral\_nestd} \\
+\indent\hspace{8mm}{\tt use spral\_nd} \\
 
 \medskip
 
 \noindent
 The following procedure is available to the user:
 \begin{itemize}
-\item {\tt nestd\_order()} accepts the  
-matrix in compressed sparse column format and generates an elimination ordering 
+\item {\tt nd\_order()} accepts the  pattern of the 
+matrix $A$ in compressed sparse column format and generates an elimination ordering 
 using a nested dissection strategy.
 
 
@@ -70,17 +70,17 @@ using a nested dissection strategy.
 
 For each problem, the user must employ the derived types defined by the
 package to declare scalars of the types
-{\tt nestd\_options} and {\tt nestd\_inform}.
+{\tt nd\_options} and {\tt nd\_inform}.
 The following pseudo-code illustrates this.
 \begin{verbatim}
-      use spral_nestd
+      use spral_nd
       ...
-      type (nestd_options) :: options
-      type (nestd_inform) :: inform
+      type (nd_options) :: options
+      type (nd_inform) :: inform
       ...
 \end{verbatim}
-The components of {\tt nestd\_options} and {\tt nestd\_inform} are explained
-in Sections~\ref{nestd:type:options} and \ref{nestd:type:inform}.
+The components of {\tt nd\_options} and {\tt nd\_inform} are explained
+in Sections~\ref{nd:type:options} and \ref{nd:type:inform}.
 
 %\subsection{Achieving bit-compatibility}
 %Care has been taken to ensure bit-compatibility is achieved using this solver.
@@ -101,27 +101,26 @@ in Sections~\ref{nestd:type:options} and \ref{nestd:type:inform}.
 {\tt INTEGER} denotes default {\tt INTEGER}.% and
 %{\tt INTEGER(long)} denotes {\tt INTEGER(kind=selected\_int\_kind(18))}.
 
-%\noindent
-%{\tt REAL} denotes double precision real.
+\noindent
+{\tt REAL} denotes double precision real.
 
-\subsection{Data formats} \label{nestd:dataformats}
 
 \begin{figure}
-   \caption{ \label{nestd:format eg}
+   \caption{ \label{nd:format_eg}
       Data format example matrix
    }
    $$
       \left( \begin{array}{ccccc}
-         1.1 & 2.2 &     & 3.3 &     \\
-         2.2 &     & 4.4 &     &     \\
-             & 4.4 & 5.5 &     & 6.6 \\
-         3.3 &     &     & 7.7 & 8.8 \\
-             &     & 6.6 & 8.8 & 9.9
+         \times & \times &     & \times &     \\
+         \times &     & \times &     &     \\
+             & \times & \times &     & \times \\
+         \times &     &     & \times & \times \\
+             &     & \times & \times & \times
       \end{array} \right)
    $$
 \end{figure}
 
-\subsubsection{Compressed Sparse Column (CSC) Format} \label{nestd:cscformat}
+\subsection{Data formats: compressed sparse column (CSC) format} \label{nd:cscformat}
 This standard data format consists of the following data:
 \begin{verbatim}
    integer                   :: n      ! order of matrix
@@ -136,14 +135,14 @@ the position in \texttt{row(:)}  of
 the first entry in the \texttt{i}-th column, and \texttt{ptr(n+1)} is one more
 than the total number of entries.
 Entries that are zero, including those on the diagonal, need not be specified. 
-\texttt{nestd\_order} does not require the user to 
+\texttt{nd\_order} does not require the user to 
 input the values of the non-zero entries.
-\texttt{nestd\_order} allows the user to input just the lower triangular 
-entries of $A$  or both the upper and lower triangular etries of $A.$
+\texttt{nd\_order} allows the user to input just the lower triangular 
+entries of $A$  or both the upper and lower triangular entries of $A.$
 
 To illustrate the CSC format applied to the lower triangular part of a matrix, 
-the following arrays describe the matrix shown in
-Figure~\ref{nestd:format eg}.
+the following arrays describe the pattern of the matrix shown in
+Figure~\ref{nd:format_eg}.
 \begin{verbatim}
    n = 5
    ptr(1:6) = (/ 1,             4,   5,        7,        9,    10 /)
@@ -151,8 +150,8 @@ Figure~\ref{nestd:format eg}.
 \end{verbatim}
 
 To illustrate the CSC format applied to the lower and upper triangular parts of 
-a matrix, the following arrays describe the matrix shown in
-Figure~\ref{nestd:format eg}.
+a matrix, the following arrays describe the pattern of the matrix shown in
+Figure~\ref{nd:format eg}.
 \begin{verbatim}
    n = 5
    ptr(1:6) = (/ 1,          4,      6,          9,         12,       15 /)
@@ -162,8 +161,7 @@ Figure~\ref{nestd:format eg}.
 
 It is important to note
 that {\bf no checks} are made on the user's data and any out-of-range entries 
-or duplicates may cause {\tt nestd\_lower} and 
-\texttt{nestd\_full} to fail in an unpredictable way. 
+or duplicates may cause {\tt nd\_order} to fail in an unpredictable way. 
 
 
 %%%%%%%%%%%%%%%%%%%%%% argument lists %%%%%%%%%%%%%%%%%%%%%%%%
@@ -172,21 +170,21 @@ or duplicates may cause {\tt nestd\_lower} and
 
 %%%%%%%%% analyse subroutine %%%%%%
 
-\subsection{{\tt nestd\_order()}}
+\subsection{{\tt nd\_order()}}
 
 {\bf To compute the nested dissection ordering,}
    \vspace*{0.3cm} \\
-\texttt{\hspace*{0.2cm} call nestd\_order(mtx,n,ptr,row,perm,options,inform)}
+\texttt{\hspace*{0.2cm} call nd\_order(mtx,n,ptr,row,perm,options,inform)}
 \vspace{0.3em}
 
 \noindent
-Matrix data should be supplied as described in Section~\ref{nestd:dataformats}. 
+Matrix data should be supplied as described in Section~\ref{nd:dataformats}. 
 
 \noindent
 \begin{description}
 
-\item[\texttt{mtx}] is an {\tt INTEGER} scalar with {\tt INTENT(OUT)} that 
-determines whether $A$ has been input using only the lower triangular entries 
+\item[\texttt{mtx}] is an {\tt INTEGER} scalar with {\tt INTENT(IN)} that 
+determines whether $A$ is input using only the lower triangular entries 
 of $A$ or both the upper and lower triangular entries. The different options are 
 \begin{description}
 \item{\tt = 0 } Lower triangular entries provided.
@@ -195,9 +193,9 @@ of $A$ or both the upper and lower triangular entries. The different options are
 
 \item[\texttt{n}, \texttt{ptr(:)} and \texttt{row(:)}] are \intentin\ variables. 
 If {\tt mtx=0}, they must hold the \textbf{lower triangular part} of 
-$A$ in compressed sparse column format;  if {\tt mtx=1}, they 
-must hold the \textbf{lower and upper triangular parts} of $A$ in compressed sparse 
-column format. See Section~\ref{nestd:cscformat} for further details.
+$A$ in CSC format;  if {\tt mtx=1}, they 
+must hold the \textbf{lower and upper triangular parts} of $A$ in CSC format. 
+See Section~\ref{nd:dataformats} for further details.
 
 %\item[\texttt{n}] is an {\tt INTEGER} scalar with {\tt INTENT(IN)}.  On entry it
 %must hold the order $n$ of $A$.
@@ -205,17 +203,17 @@ column format. See Section~\ref{nestd:cscformat} for further details.
 
 %\item[\texttt{ptr(:)}] is an {\tt INTEGER(long)} array of rank one with {\tt INTENT(IN)}
 %and size {\tt n+1}. \texttt{n}, \texttt{ptr(:)} and \texttt{row(:)} are used 
-%to hold matrix data in CSC format (see Section~\ref{nestd:cscformat}).
+%to hold matrix data in CSC format (see Section~\ref{nd:dataformats}).
 
 %\item[\texttt{row(:)}] is an {\tt INTEGER} array of rank one with {\tt INTENT(IN)}
-%and size  {\tt ptr(n+1)-1}. On a call to {\tt nestd\_lower}, it must be 
+%and size  {\tt ptr(n+1)-1}. On a call to {\tt nd\_lower}, it must be 
 %set by the user so that {\tt row(1:ptr(n+1)-1)} holds the row indices of the 
 %entries in the {\bf lower triangular part} of $A$; on a call to 
 %{\tt mc70\_order\_full}, it must be set by the user so that 
 %{\tt row(1:ptr(n+1)-1)} holds the row indices of the entries in 
 %the {\bf lower and upper triangular parts} of $A.$ \texttt{n}, \texttt{ptr(:)} 
 %and \texttt{row(:)} are used to hold matrix data in CSC format (see 
-%Section~\ref{nestd:cscformat}).
+%Section~\ref{nd:dataformats}).
 
 \item[\texttt{perm(:)}] is an {\tt INTEGER} array with {\tt INTENT(OUT)} and size
 {\tt n}.  On exit, {\tt perm(:)} holds the nested dissection elimination ordering. 
@@ -223,13 +221,13 @@ The position of variable {\tt i} in the ordering is  {\tt perm(i)},
 {\tt i=1,2,\ldots,n}.
 
 
-\item[\texttt{options}] is an \intentin\ scalar of type {\tt nestd\_options}.
+\item[\texttt{options}] is an \intentin\ scalar of type {\tt nd\_options}.
 Its components specify the algorithmic options used by the subroutine, as
-explained in Section~\ref{nestd:type:options}.
+explained in Section~\ref{nd:type:options}.
 
 \item[\texttt{inform}] is an \intentout\ scalar of type
-{\tt nestd\_inform}. Its components provide information about the execution
-of the subroutine, as explained in Section~\ref{nestd:type:inform}.
+{\tt nd\_inform}. Its components provide information about the execution
+of the subroutine, as explained in Section~\ref{nd:type:inform}.
 
 
 \end{description}
@@ -239,11 +237,11 @@ of the subroutine, as explained in Section~\ref{nestd:type:inform}.
 %%%%%%%%%%% options type %%%%%%%%%%%
 
 \section{Derived types}
-\subsection{\texttt{nestd\_options}}
-\label{nestd:type:options}
+\subsection{\texttt{nd\_options}}
+\label{nd:type:options}
 
-The derived data type {\tt nestd\_options} is used to specify the options used
-within \texttt{NESTD}. The components, that are automatically
+The derived data type {\tt nd\_options} is used to specify the options used
+within \texttt{ND}. The components, that are automatically
 given default values in the definition of the type, are: \\
 
 %%%%%%%%%%%%
@@ -278,13 +276,15 @@ The default is {\tt unit\_error$=$6}.
 
 
 %%%%%%%%%%%%
-\subsubsection*{Other options}
+\subsubsection*{Other options (in alphabetical order)}
 
 \begin{description}
-\item[\texttt{amd\_call}] is an {\tt INTEGER} scalar that is used in the criteria for 
-determining what happens to the input matrix. If 
-the matrix order after (optional) removal dense rows and (optional) compression using supervariables is greater than {\tt amd\_call}, the matrix will be 
-ordered using the nested dissection algorithm; otherwise, it will be ordered using an approximate minimum 
+\item[\texttt{amd\_call}] is an {\tt INTEGER} scalar that controls the use of 
+the approximate minimum degree algorithm. If order of the matrix after the 
+(optional) removal dense rows (see {\tt remove\_dense\_rows}) and (optional) 
+compression using supervariables (see {\tt find\_supervariables}) is greater 
+than {\tt amd\_call}, the matrix will be ordered using the nested dissection 
+algorithm; otherwise, it will be ordered using an approximate minimum 
 degree algorithm. Note, the approximate minimum degree algorithm will always be used if {\tt amd\_call=n}. The 
 default is {\tt amd\_call=?????}.
 
@@ -295,8 +295,7 @@ than or equal to {\tt amd\_switch1} or the current number of
 bisections performed is equal to {\tt amd\_switch2}.  The 
 defaults are {\tt amd\_switch1=50} and {\tt amd\_switch2=20}.
 
-\item[\texttt{balance}] is a {\tt DOUBLE PRECISION} scalar. If {\tt balance $\ge$ 1.0}, 
-the partitioning and refinement
+\item[\texttt{balance}] is a {\tt REAL} scalar. The partitioning and refinement
 methods aim to find partitions (\ref{eqn:partition}) such that the larger 
 partition is at most {\tt balance} times the order of the smaller partition. 
 Decreasing {\tt balance} will, in
@@ -317,8 +316,8 @@ default is {\tt balance=???}.
 % $A_1$ and $A_2,$ respectively, and $n_s$ is the sum of the weights of the 
 % rows/columns forming $S.$ The default is {\tt cost\_function=1}.
 
-\item[\texttt{coarse\_partition\_method}] is an {\tt INTEGER} scalar that determines the method 
-used to partition the coarsest matrix. The different options are:
+\item[\texttt{coarse\_partition\_method}] is an {\tt INTEGER} scalar that 
+controls partitioning of the coarsest matrix. The different options are:
 \begin{description}
 \item{\tt $=$ 1 } Partition using the half-level set method.
 \item{\tt $=$ 2 } Partition using the level-set method.
@@ -354,7 +353,7 @@ subsequently refined. Increasing the value of {\tt max\_improve\_cycles} normall
 the quality of the nested dissection ordering but at the cost of increasing the 
 time to form the ordering. The default is {\tt max\_improve\_cycles=?????}.
 
-%\item[\texttt{ml\_bandwidth}] is a {\tt DOUBLE PRECISION} scalar and is only used if 
+%\item[\texttt{ml\_bandwidth}] is a {\tt REAL} scalar and is only used if 
 %{\tt ml$>$1}. Let $A$ be the matrix for which we wish to find a nested 
 %dissection ordering, $\widetilde{A}$ be the matrix that results from 
 %(optionally) removing any dense rows and compressing the matrix, and 
@@ -374,7 +373,7 @@ The default is {\tt matching=1}.
 
 
 
-\item[\texttt{max\_reduction}] and {\tt min\_reduction} are {\tt DOUBLE PRECISION} scalars that hold the maximum and minimum reduction factors within the multilevel partitioning scheme. Suppose that the current coarse matrix has order $n_f$ and 
+\item[\texttt{max\_reduction}] and {\tt min\_reduction} are {\tt REAL} scalars that hold the maximum and minimum reduction factors within the multilevel partitioning scheme. Suppose that the current coarse matrix has order $n_f$ and 
 the subsequently coarsened matrix would have order $n_c,$ coarsening continues while $n_c<n_f\times{\tt max\_reduction}$ and 
 $n_c>n_f\times{\tt min\_reduction}.$ {\tt max\_reduction} must be at least {\tt min\_reduction} and values greater than 
 {\tt 1.0} are treated as {\tt 1.0}. {\tt min\_reduction} must be at least {\tt 0.5} and values less than 
@@ -434,14 +433,13 @@ Fiduccia-Mattheyses refinement. The variables in the refined separator must be
 at most distance {\tt refinement\_band} from a variable that was in the input 
 separator. See [1] for further details. In general, small 
 values of {\tt refinement\_band} result in a faster method but the quality of 
-the ordering may be compromised. The default is {\tt refinement\_band=????}.
+the ordering may be compromised. The default is {\tt refinement\_band=4}.
 
 \item[\texttt{remove\_dense\_rows}] is a {\tt LOGICAL} scalar. If {\tt remove\_dense\_rows = .true.}, 
 then the matrix $A$ is searched for dense (or nearly dense) rows and columns, 
 and the nested dissection algorithm is applied to the matrix that results when 
 these rows and columns are removed. Dense rows/columns are placed at the end of 
-the ordering. If {\tt remove\_dense\_rows = .false.}, then the matrix $A$ is not 
-searched for dense rows and columns. The default is {\tt remove\_dense\_rows=.true.}.
+the ordering. The default is {\tt remove\_dense\_rows=.true.}.
 
 
 
@@ -449,8 +447,7 @@ searched for dense rows and columns. The default is {\tt remove\_dense\_rows=.tr
 The default is {\tt stop\_coarsening1=50}.
 
 \item[\texttt{stop\_coarsening2}] is an {\tt INTEGER} scalar that holds the maximum number
-of multilevel recursions.  If 
-{\tt stop\_coarsening2} $\le$ {\tt 0}, the multilevel partitioning scheme is not used. 
+of multilevel recursions.  
 The default is {\tt stop\_coarsening2=20}.
 
 \end{description}
@@ -459,25 +456,25 @@ The default is {\tt stop\_coarsening2=20}.
 
 %%%%%%%%%%% inform type %%%%%%%%%%%
 
-\subsection{\texttt{nestd\_inform}}
-\label{nestd:type:inform}
-The derived data type {\tt nestd\_inform}
+\subsection{\texttt{nd\_inform}}
+\label{nd:type:inform}
+The derived data type {\tt nd\_inform}
 is used to hold parameters that give information about the algorithm. The 
-components of {\tt nestd\_inform}
+components of {\tt nd\_inform}
 (in alphabetical order) are:
 
 \begin{description}
 
 \item[\texttt{flag}] is a scalar of type  {\tt INTEGER}
-that gives the exit status of the algorithm (details in Section \ref{nestd:errors}).
+that gives the exit status of the algorithm (details in Section \ref{nd:errors}).
 
 \item[\texttt{dense}] is a scalar of type {\tt INTEGER} that holds 
 the number of rows/columns in the matrix $A$ that were determined to be dense. 
 If {\tt options\%remove\_dense = .false.}, the input matrix is not checked for 
 dense rows and {\tt dense = 0}.
 
-\item[\texttt{nsuper}] is a scalar of type {\tt INTEGER} that holds the number of 
-rows/columns in the matrix $A$ after dense rows have been (optionally) removed and 
+\item[\texttt{nsuper}] is a scalar of type {\tt INTEGER} that holds the order 
+of the matrix after dense rows have been (optionally) removed and 
 the resulting matrix has been (optionally) compressed using supervariables. 
 
 \item[\texttt{nzsuper}] is a scalar of type {\tt INTEGER} that holds the number of 
@@ -494,9 +491,9 @@ that holds the Fortran {\tt stat} parameter.
 
 %%%%%%%%%%%%%%%%%%%%%% Warning and error messages %%%%%%%%%%%%%%%%%%%%%%%%
 
-\section{Return codes} \label{nestd:errors}
+\section{Return codes} \label{nd:errors}
 
-A successful return from a subroutine in the package is indicated by
+A successful return is indicated by
 {\tt inform\%flag} having the value zero.
 A negative value is associated with an error message that by default will
 be output on unit {\tt options\%unit\_error}.
@@ -513,14 +510,14 @@ Possible negative values are:
 
 \section{Method} \label{method}
 
-Given a symmetric matrix $A$ of order $n,$ {\tt NESTD} preprocesses 
+Given a matrix $A$ with a symmetric sparsity pattern of order $n,$ {\tt nd} preprocesses 
 the matrix to (optionally) remove dense or almost dense rows/columns, returning 
 $\overline{A}.$ The matrix $\overline{A}$ is then (optionally) searched for 
 supervariables and, if found, it is compressed to give a symmetric matrix 
 $\widetilde{A}$ with order $\tilde{n}.$ If $\tilde{n}$ is less than or equal to 
-{\tt amd\_call}, the matrix an elimination ordering is computed using the 
+{\tt amd\_call}, an elimination ordering is computed using the 
 approximate minimum degree (AMD) method; otherwise $\widetilde{A}$ is passed to the 
-recursive nested dissection algorithm, \textit{neested\_dissection($A,P$)}, below. Having formed a 
+recursive nested dissection algorithm, \textbf{nested\_dissection($A,P$)}, below. Having formed a 
 nested dissection ordering for $\widetilde{A},$ the 
 ordering is mapped to give an ordering for $\overline{A}.$ The dense rows are 
 appended to the end of the ordering. 
@@ -528,7 +525,7 @@ appended to the end of the ordering.
 \noindent\hrulefill\\
 \vspace{-1.0em}
 \begin{algorithmic}
-\STATE {\bf recursive subroutine nested\_dissection}($A,P$)
+\STATE {\bf recursive subroutine nested\_dissection}($n,A,P$)
 \STATE Input: symmetric matrix $A$ of order $n$
 \STATE Output: permutation matrix $P$
 
@@ -538,8 +535,8 @@ permutation matrix $P$
 \ELSE
 \STATE partition $A$: compute $P,$ a permutation matrix, such that $P^T A P$ 
 has the form (\ref{eqn:partition})
-\STATE call {\bf nested\_dissection}($A_1,P_1$)
-\STATE call {\bf nested\_dissection}($A_2,P_2$)
+\STATE call {\bf nested\_dissection}($n_1,A_1,P_1$)
+\STATE call {\bf nested\_dissection}($n_2,A_2,P_2$)
 \STATE set $P \leftarrow PQ,$ where $$Q = \left( \begin{array}{ccc} P_1 & & \\ & P_2 & \\ & & I  \end{array} \right)$$
 \ENDIF
 
@@ -549,13 +546,13 @@ has the form (\ref{eqn:partition})
 At each recursive level of the nested dissection procedure, the matrix is 
 partitioned using either 
 \begin{itemize}
-\item the half-level set method (see [1]), which is then refined to improve its 
+\item the {\tt options\%coarse\_partition\_method} (see [1]), which is then refined to improve its 
 quality, or 
-\item a recursive multilevel procedure, detailed below \textit{multilevel\_paritition($A$,$P$)}, 
+\item a recursive multilevel procedure,  \textbf{multilevel\_partition($A$,$P$)} (see below), 
 is performed, where \texttt{options\%matching} determines the strategy used to form 
 the coarsening matrix.
 \end{itemize}
-The user may choose which partitioning method to use or {\tt NESTD} can analyse 
+The user may choose which partitioning method to use or {\tt ND} can analyse 
 $\widetilde{A}$ and automatically choose how to partition the matrix, see 
 \texttt{options\%partition\_method}.
 
@@ -563,7 +560,7 @@ $\widetilde{A}$ and automatically choose how to partition the matrix, see
 \noindent\hrulefill\\
 \vspace{-1.0em}
 \begin{algorithmic}
-\STATE {\bf recursive subroutine multilevel\_partition}($A,P$)
+\STATE {\bf recursive subroutine multilevel\_partition}($n,A,P$)
 \STATE Input: symmetric matrix $A$ of order $n$
 \STATE Output: permutation matrix $P$
 
@@ -589,7 +586,7 @@ $\widetilde{A}$ and automatically choose how to partition the matrix, see
 
 \section{Example}
 
-We illustrate the use of {\tt NESTD} on the following matrix: 
+We illustrate the use of {\tt ND} on the following matrix: 
 
 $$
 	\left(\begin{array}{cccccccc}
@@ -611,7 +608,7 @@ $$
 {\small \begin{verbatim}
 
     PROGRAM example
-      USE spral_nestd
+      USE spral_nd
       IMPLICIT NONE
 
       ! Local variables
@@ -643,7 +640,7 @@ $$
       options%amd_switch1 = 4
       options%amd_call = 3
       mtx = 0
-      CALL nestd_order(mtx,n,ptr,row,perm,options,inform)
+      CALL nd_order(mtx,n,ptr,row,perm,options,inform)
 
       ! Print out nested dissection ordering
       WRITE (6,'(a)') ' Permutation : '
