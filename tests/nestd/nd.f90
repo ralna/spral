@@ -1,5 +1,5 @@
     PROGRAM main
-      USE spral_nestd
+      USE spral_nd
       USE hsl_mc69_double
       IMPLICIT NONE
 
@@ -27,9 +27,9 @@
       REAL (kind=wp) :: aa1(maxnz), w(maxn,maxrhs)
       LOGICAL :: def, llcase, ltest, undef, corr
       CHARACTER (len=8) :: key1
-      TYPE (nestd_options) :: control
-      TYPE (nestd_options) :: control_orig
-      TYPE (nestd_inform) :: info
+      TYPE (nd_options) :: control
+      TYPE (nd_options) :: control_orig
+      TYPE (nd_inform) :: info
 
       ! .. External Functions ..
       REAL (kind=wp) fa14ad, fd15ad
@@ -53,9 +53,9 @@
       err_count = 0
       DO i = 0, 1
         control%print_level = i
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag==-3) err_count = err_count + 1
-        CALL nestd_order(1,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(1,n,ptr,row,perm,control,info,seps)
         IF (info%flag==-3) err_count = err_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -88,13 +88,13 @@
       control%amd_switch1 = 2
       DO i = 0, 0
         control%print_level = i
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         corr = .TRUE.
         DO j = 1, n
           corr = corr .AND. (perm(j)==j)
         END DO
         IF (info%flag>=0 .AND. corr) testi_count = testi_count + 1
-        CALL nestd_order(1,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(1,n,ptr,row,perm,control,info,seps)
         corr = .TRUE.
         DO j = 1, n
           corr = corr .AND. (perm(j)==j)
@@ -136,7 +136,7 @@
       control%amd_call = 2
       DO i = 0, 0
         control%print_level = i
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0 .AND. info%nzsuper==16) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -170,7 +170,7 @@
       control%amd_call = 2
       DO i = 0, 2
         control%print_level = i
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0 .AND. info%nzsuper==18) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -207,7 +207,7 @@
       control%amd_call = 2
       DO i = 0, 0
         control%print_level = i
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0 .AND. info%nzsuper==18) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -248,7 +248,7 @@
       control%amd_call = 2
       DO i = 2, 2
         control%print_level = i
-        CALL nestd_order(1,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(1,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0 .AND. info%nzsuper==18) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -291,7 +291,7 @@
       control%amd_call = 2
       DO i = 0, 2
         control%print_level = i
-        CALL nestd_order(1,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(1,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0 .AND. info%nzsuper==18) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -326,11 +326,11 @@
       DO i = 0, 2
         control%print_level = i
         control%remove_dense_rows = .TRUE.
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0 .AND. info%nsuper==799 .AND. info%nzsuper==0) &
           testi_count = testi_count + 1
         control%remove_dense_rows = .FALSE.
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0 .AND. info%nsuper==800 .AND. info%nzsuper==1598) &
           testi_count = testi_count + 1
         WRITE (*,*) 'i', i
@@ -368,7 +368,7 @@
       control%amd_call = 20
       DO i = 0, 0
         control%print_level = i
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0 .AND. info%nsuper==799 .AND. info%nzsuper==1596) &
           testi_count = testi_count + 1
       END DO
@@ -403,7 +403,7 @@
       control%amd_call = 20
       DO i = 0, 0
         control%print_level = i
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0 .AND. info%nsuper==799 .AND. info%nzsuper==0) &
           testi_count = testi_count + 1
       END DO
@@ -440,7 +440,7 @@
       control%amd_call = 20
       DO i = 0, 0
         control%print_level = i
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0 .AND. info%nsuper==798 .AND. info%nzsuper==0) &
           testi_count = testi_count + 1
       END DO
@@ -475,15 +475,15 @@
       DO i = 0, 2
         control%print_level = i
         control%coarse_partition_method = 2
-        CALL nestd_order(1,n,ptr,row,perm,control,info)
+        CALL nd_order(1,n,ptr,row,perm,control,info)
         IF (info%flag>=0) testi_count = testi_count + 1
 
         control%coarse_partition_method = 1
-        CALL nestd_order(1,n,ptr,row,perm,control,info)
+        CALL nd_order(1,n,ptr,row,perm,control,info)
         IF (info%flag>=0) testi_count = testi_count + 1
 
         control%coarse_partition_method = 3
-        CALL nestd_order(1,n,ptr,row,perm,control,info)
+        CALL nd_order(1,n,ptr,row,perm,control,info)
         IF (info%flag>=0) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -519,7 +519,7 @@
       control%amd_call = 2
       DO i = 0, 2
         control%print_level = i
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -555,7 +555,7 @@
       control%amd_call = 2
       DO i = 0, 0
         control%print_level = i
-        CALL nestd_order(0,n,ptr,row,perm,control,info)
+        CALL nd_order(0,n,ptr,row,perm,control,info)
         IF (info%flag>=0) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -591,7 +591,7 @@
       control%amd_call = 2
       DO i = 0, 0
         control%print_level = i
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -628,7 +628,7 @@
       control%balance = 20.0
       DO i = 0, 0
         control%print_level = i
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -665,7 +665,7 @@
       control%balance = 20.0
       DO i = 0, 2
         control%print_level = i
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -702,7 +702,7 @@
       control%amd_call = 2
       DO i = 0, 0
         control%print_level = i
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -739,17 +739,17 @@
       DO i = 2, 2
         control%print_level = i
         control%refinement = 2
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0) testi_count = testi_count + 1
         control%refinement = 5
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0) testi_count = testi_count + 1
         control%print_level = i
         control%refinement = 2
-        CALL nestd_order(0,n,ptr,row,perm,control,info)
+        CALL nd_order(0,n,ptr,row,perm,control,info)
         IF (info%flag>=0) testi_count = testi_count + 1
         control%refinement = 5
-        CALL nestd_order(0,n,ptr,row,perm,control,info)
+        CALL nd_order(0,n,ptr,row,perm,control,info)
         IF (info%flag>=0) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -789,7 +789,7 @@
       control%amd_call = 2
       DO i = 0, 0
         control%print_level = i
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -830,7 +830,7 @@
       control%balance = 33.0
       DO i = 0, 0
         control%print_level = i
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -868,7 +868,7 @@
       control%balance = 12.0
       DO i = 0, 0
         control%print_level = i
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -906,7 +906,7 @@
       control%balance = 12.0
       DO i = 0, 0
         control%print_level = i
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -948,7 +948,7 @@
       control%amd_call = 2
       DO i = 0, 2
         control%print_level = i
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -989,7 +989,7 @@
       control%amd_call = 2
       DO i = 0, 0
         control%print_level = i
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -1031,7 +1031,7 @@
       control%amd_call = 2
       DO i = 0, 0
         control%print_level = i
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -1071,7 +1071,7 @@
       control%amd_call = 2
       DO i = 0, 0
         control%print_level = i
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -1111,7 +1111,7 @@
       control%amd_call = 2
       DO i = 0, 0
         control%print_level = i
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -1152,7 +1152,7 @@
       control%stop_coarsening1 = 5
       DO i = 0, 2
         control%print_level = i
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -1196,7 +1196,7 @@
         DO j = 0, 2
           control%print_level = i
           control%matching = j
-          CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+          CALL nd_order(0,n,ptr,row,perm,control,info,seps)
           IF (info%flag>=0) testi_count = testi_count + 1
         END DO
       END DO
@@ -1234,7 +1234,7 @@
       control%amd_call = 40
       DO i = 2, 2
         control%print_level = i
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -1268,7 +1268,7 @@
       control%amd_call = 40
       DO i = 2, 2
         control%print_level = i
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -1327,7 +1327,7 @@
           IF (allocated(seps)) DEALLOCATE (seps)
           ALLOCATE (perm(n),seps(n))
           control%amd_switch1 = n - 1
-          CALL nestd_order(0,n,ptr_out,row_out(1:ptr_out(n+ &
+          CALL nd_order(0,n,ptr_out,row_out(1:ptr_out(n+ &
             1)-1),perm,control,info,seps)
           CALL reset_control(control_orig,control)
           CALL testpr(n,perm)
@@ -1384,7 +1384,7 @@
           IF (allocated(seps)) DEALLOCATE (seps)
           ALLOCATE (perm(n),seps(n))
           control%amd_switch1 = n - 1
-          CALL nestd_order(0,n,ptr_out,row_out(1:ptr_out(n+ &
+          CALL nd_order(0,n,ptr_out,row_out(1:ptr_out(n+ &
             1)-1),perm,control,info,seps)
           CALL reset_control(control_orig,control)
           CALL testpr(n,perm)
@@ -1442,7 +1442,7 @@
           IF (allocated(seps)) DEALLOCATE (seps)
           ALLOCATE (perm(n),seps(n))
           control%amd_switch1 = n - 1
-          CALL nestd_order(0,n,ptr_out,row_out(1:ptr_out(n+ &
+          CALL nd_order(0,n,ptr_out,row_out(1:ptr_out(n+ &
             1)-1),perm,control,info,seps)
           CALL reset_control(control_orig,control)
           CALL testpr(n,perm)
@@ -1487,7 +1487,7 @@
         IF (allocated(seps)) DEALLOCATE (seps)
         ALLOCATE (perm(n),seps(n))
         control%amd_switch1 = n - 1
-        CALL nestd_order(0,n,ptr_out,row_out(1:ptr_out(n+ &
+        CALL nd_order(0,n,ptr_out,row_out(1:ptr_out(n+ &
           1)-1),perm,control,info,seps)
         CALL reset_control(control_orig,control)
         CALL testpr(n,perm)
@@ -1541,7 +1541,7 @@
 
 
           control%amd_switch1 = n - 1
-          CALL nestd_order(0,n,ptr_out,row_out(1:ptr_out(n+ &
+          CALL nd_order(0,n,ptr_out,row_out(1:ptr_out(n+ &
             1)-1),perm,control,info,seps)
           CALL reset_control(control_orig,control)
           CALL testpr(n,perm)
@@ -1668,7 +1668,7 @@
             ALLOCATE (perm(n),seps(n))
             IF (ncase>10) control%amd_switch1 = max(50,n/4)
             control%print_level = 0
-            CALL nestd_order(0,n,jcolst(1:n+1),irn1(1:jcolst(n+ &
+            CALL nd_order(0,n,jcolst(1:n+1),irn1(1:jcolst(n+ &
               1)-1),perm,control,info,seps)
             control%print_level = 0
             IF (ncase>20) control%amd_switch1 = 50
@@ -1699,7 +1699,7 @@
                   IF (allocated(seps)) DEALLOCATE (seps)
                   ALLOCATE (perm(n),seps(n))
                   control%print_level = 0
-                  CALL nestd_order(0,n,jcolst(1:n+1),irn1(1:jcolst(n+ &
+                  CALL nd_order(0,n,jcolst(1:n+1),irn1(1:jcolst(n+ &
                     1)-1),perm,control,info,seps)
                   control%print_level = 0
                   CALL testpr(n,perm)
@@ -1755,7 +1755,7 @@
       control%find_supervariables = .FALSE.
       DO i = 0, 0
         control%print_level = i
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0 .AND. info%nzsuper==18) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -1801,7 +1801,7 @@
       control%find_supervariables = .FALSE.
       DO i = 2, 2
         control%print_level = i
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0 .AND. info%nzsuper==90) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -1840,7 +1840,7 @@
       control%partition_method = 0
       DO i = 2, 2
         control%print_level = i
-        CALL nestd_order(0,n,ptr,row,perm,control,info)
+        CALL nd_order(0,n,ptr,row,perm,control,info)
         IF (info%flag>=0 .AND. info%nzsuper==32) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -1877,7 +1877,7 @@
       control%refinement = 0
       DO i = 0, 0
         control%print_level = i
-        CALL nestd_order(0,n,ptr,row,perm,control,info)
+        CALL nd_order(0,n,ptr,row,perm,control,info)
         IF (info%flag>=0 .AND. info%nzsuper==32) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -1916,7 +1916,7 @@
         control%print_level = i
         DO j = 1, 7
           control%refinement = j
-          CALL nestd_order(0,n,ptr,row,perm,control,info)
+          CALL nd_order(0,n,ptr,row,perm,control,info)
           IF (info%flag>=0 .AND. info%nzsuper==32) testi_count = testi_count + &
             1
         END DO
@@ -1959,7 +1959,7 @@
       control%stop_coarsening1 = 5
       DO i = 0, 2
         control%print_level = i
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -2003,7 +2003,7 @@
         DO j = 0, 2
           control%print_level = i
           control%matching = j
-          CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+          CALL nd_order(0,n,ptr,row,perm,control,info,seps)
           IF (info%flag>=0) testi_count = testi_count + 1
         END DO
       END DO
@@ -2047,7 +2047,7 @@
       DO i = 0, 2
         control%print_level = i
         control%matching = j
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -2090,7 +2090,7 @@
         DO j = 0, 2
           control%refinement = i
           control%matching = j
-          CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+          CALL nd_order(0,n,ptr,row,perm,control,info,seps)
           IF (info%flag>=0) testi_count = testi_count + 1
         END DO
       END DO
@@ -2134,7 +2134,7 @@
         DO j = 0, 2
           control%refinement = 3
           control%matching = j
-          CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+          CALL nd_order(0,n,ptr,row,perm,control,info,seps)
           IF (info%flag>=0) testi_count = testi_count + 1
         END DO
       END DO
@@ -2176,7 +2176,7 @@
         DO j = 0, 2
           control%refinement = i
           control%matching = j
-          CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+          CALL nd_order(0,n,ptr,row,perm,control,info,seps)
           IF (info%flag>=0) testi_count = testi_count + 1
         END DO
       END DO
@@ -2219,7 +2219,7 @@
       control%max_improve_cycles = 2
       DO i = 0, 7
         control%refinement = i
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -2260,7 +2260,7 @@
       control%max_improve_cycles = 2
       DO i = 0, 7
         control%refinement = i
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -2299,7 +2299,7 @@
       control%max_improve_cycles = 2
       DO i = 0, 7
         control%refinement = i
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -2340,7 +2340,7 @@
       control%max_improve_cycles = 2
       DO i = 0, 7
         control%refinement = i
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -2380,7 +2380,7 @@
       control%max_improve_cycles = 2
       control%refinement = 7
       DO i = 0, 0
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -2423,7 +2423,7 @@
       control%refinement_band = -1
       DO i = 0, 7
         control%refinement = i
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -2462,7 +2462,7 @@
       control%max_improve_cycles = 2
       DO i = 0, 7
         control%refinement = i
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -2505,7 +2505,7 @@
       control%print_level = 2
       DO i = 0, 7
         control%refinement = i
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -2551,7 +2551,7 @@
       control%print_level = 2
       DO i = 0, 0
         control%refinement = 7
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -2596,7 +2596,7 @@
       control%print_level = 2
       DO i = 0, 0
         control%refinement = 7
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -2667,7 +2667,7 @@
       control%print_level = 0
       DO i = 0, 0
         control%refinement = 1
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -2710,7 +2710,7 @@
         DO j = 0, 2
           control%print_level = i
           control%matching = j
-          CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+          CALL nd_order(0,n,ptr,row,perm,control,info,seps)
           IF (info%flag>=0) testi_count = testi_count + 1
         END DO
       END DO
@@ -2754,7 +2754,7 @@
       control%print_level = 0
       DO i = 0, 0
         control%refinement = 1
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -2798,7 +2798,7 @@
       control%print_level = 2
       DO i = 0, 0
         control%refinement = 1
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -2843,7 +2843,7 @@
       control%print_level = 2
       DO i = 0, 0
         control%refinement = 1
-        CALL nestd_order(0,n,ptr,row,perm,control,info,seps)
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
@@ -2876,9 +2876,9 @@
       SUBROUTINE reset_control(control_orig,control_reset)
 
 
-        TYPE (nestd_options), INTENT (IN) :: control_orig
+        TYPE (nd_options), INTENT (IN) :: control_orig
 
-        TYPE (nestd_options), INTENT (OUT) :: control_reset
+        TYPE (nd_options), INTENT (OUT) :: control_reset
 
         control_reset%print_level = control_orig%print_level
         control_reset%unit_diagnostics = control_orig%unit_diagnostics
