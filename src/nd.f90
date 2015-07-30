@@ -3953,6 +3953,8 @@
         REAL (kind=wp) :: ratio
         LOGICAL :: imbal ! Should we check for imbalance?
 
+        IF (control%refinement_band .LT. 1) RETURN
+
         ratio = MAX(REAL(1.0,wp),control%balance)
         IF (ratio>REAL(sumweight-2)) THEN
           imbal = .FALSE.
@@ -3982,11 +3984,7 @@
         ! mult = sumweight/2-1
         fm_distance = fm_head + icut + mult + 1
 
-        IF (control%refinement_band>0) THEN
-          band = MIN(control%refinement_band,a_n)
-        ELSE
-          band = a_n
-        END IF
+        band = MIN(control%refinement_band,a_n)
 
         CALL nd_fm_refinement(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,icut, &
           mult,a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep,band,ratio, &

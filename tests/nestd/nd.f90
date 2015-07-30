@@ -25,7 +25,7 @@
       INTEGER, DIMENSION (:), ALLOCATABLE :: irn, row_out, ptr_out, jcn
       REAL (kind=wp) :: eps, resmax
       REAL (kind=wp) :: aa1(maxnz), w(maxn,maxrhs)
-      LOGICAL :: def, llcase, ltest, undef, corr
+      LOGICAL :: def, llcase, ltest, undef, corr, ok
       CHARACTER (len=8) :: key1
       TYPE (nd_options) :: control
       TYPE (nd_options) :: control_orig
@@ -36,37 +36,10 @@
       EXTERNAL fa14ad, fd15ad
 
 
-      ! --------------------------------------
-      ! Test error flag n<1
-      ! --------------------------------------
-      test = 1
-      WRITE (6,'(a1)') ' '
-      WRITE (6,'(a20,i5,a4)') '****Test section = ', test, '****'
-      n = 0
-      ne = 0
-      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-      IF (st/=0) GO TO 10
+      CALL test_errors(ok)
+      IF (.NOT. ok) GO TO 80
 
-      ptr(1) = 1
 
-      control%amd_switch1 = 2
-      err_count = 0
-      DO i = 0, 1
-        control%print_level = i
-        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
-        IF (info%flag==-3) err_count = err_count + 1
-        CALL nd_order(1,n,ptr,row,perm,control,info,seps)
-        IF (info%flag==-3) err_count = err_count + 1
-      END DO
-      CALL reset_control(control_orig,control)
-
-      DEALLOCATE (ptr,row,perm,seps,STAT=st)
-      IF (st/=0) GO TO 20
-
-      IF (err_count/=4) THEN
-        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
-        GO TO 80
-      END IF
 
       ! ******** Basic tests ********
 
@@ -3084,6 +3057,56 @@
 90000   FORMAT (' NO DIAGONAL ENTRY IN COLUMN ',I8,/, &
           ' SO CANNOT MAKE MATRIX DIAGONALLY DOMINANT')
       END SUBROUTINE pdef
+
+
+     SUBROUTINE test_errors(ok)
+      LOGICAL, INTENT(OUT) :: ok
+
+      INTEGER :: n, ne, st, err_count
+      INTEGER, ALLOCATABLE, DIMENSION(:) :: ptr, row, perm, seps
+      TYPE (nd_options) :: control
+      TYPE (nd_inform) :: info
+
+      ok = .TRUE.
+
+      ! --------------------------------------
+      ! Test error flag n<1
+      ! --------------------------------------
+      WRITE (6,'(a1)') ' '
+      WRITE (6,'(a)') '****Test n<1 error ****'
+      n = 0
+      ne = 0
+      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
+      IF (st/=0) GO TO 10
+
+      ptr(1) = 1
+
+      control%amd_switch1 = 2
+      err_count = 0
+      DO i = 0, 1
+        control%print_level = i
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
+        IF (info%flag==-3) err_count = err_count + 1
+        CALL nd_order(1,n,ptr,row,perm,control,info,seps)
+        IF (info%flag==-3) err_count = err_count + 1
+      END DO
+
+      DEALLOCATE (ptr,row,perm,seps,STAT=st)
+      IF (st/=0) GO TO 20
+
+      IF (err_count/=4) THEN
+        WRITE (6,'(a)') 'Code failure in test section'
+        ok = .FALSE.
+      END IF
+      RETURN
+
+10    WRITE (*,'(a,i4)') 'Allocation error during test section ', test
+      RETURN
+
+20    WRITE (*,'(a,i4)') 'Deallocation error during test section ', test
+
+
+     END SUBROUTINE
 
     END PROGRAM main
 
