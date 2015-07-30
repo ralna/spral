@@ -1,0 +1,562 @@
+\packagename{ND}
+\version{1.0.0}
+\versiondate{?? July 2015}
+\purpose{
+Let $A$ be an $n \times n$ matrix with a symmetric sparsity pattern.
+This package computes a {\bf nested dissection ordering} of $A$
+that is suitable for use with a sparse direct solver. 
+
+The algorithm starts by partitioning the rows/columns of $A$ into 3 sets such that 
+reordering the rows/columns to respect their partitions yields a symmetric 
+matrix of the form
+\begin{equation}\label{eqn:partition}
+\left(\begin{array}{c|c|c} A_1 & 0 & S_1^T \\\hline 0 & A_2 & S_2^T \\\hline S_1 & S_2 & S \end{array}   \right).
+\end{equation}
+The term {\it separator} is used to refer to the set of rows forming $S.$ 
+If the dimension of submatrix $A_1$ ($A_2$) is smaller than some predefined value, the rows 
+of $A_1$ ($A_2$) are ordered using an approximate minimum degree algorithm; 
+otherwise,  $A_1$ ($A_2$) is partitioned to form 
+another matrix with the above structure and the bisection algorithm  
+applied in a recursive manner. A multilevel method or a level set-based method is used 
+to compute the three sets that partition the matrix into the form (\ref{eqn:partition}). The 
+algorithm allows for some dense or nearly dense rows and columns in $A$.
+}
+
+\title{Nested Dissection Ordering}
+\author{
+   Iain Duff (STFC Rutherford Appleton Laboratory) \\
+   Jennifer Scott (STFC Rutherford Appleton Laboratory)\\
+   Sue Thorne (STFC Rutherford Appleton Laboratory)
+}
+\pkglang{Fortran}
+\spralmaketitle
+\thispagestyle{firststyle}
+
+\section*{Major version history}
+\begin{description}
+\item[2015-xx-xx Version 1.0.0] Initial release
+\end{description}
+
+%%%%%%%%%%%%%%%%%%%%%% installation %%%%%%%%%%%%%%%%%%%%%%
+
+\section{Installation}
+Please see the SPRAL install documentation.
+
+%%%%%%%%%%%%%%%%%%%%%% how to use %%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Usage overview}
+
+\subsection{Calling sequences}
+
+Access to the package requires inclusion of either \texttt{spral.h} (for the
+entire \spral library) or \texttt{spral\_nd.h} (for just the relevant routines). i.e.
+
+\begin{verbatim}
+   #include "spral.h"
+\end{verbatim}
+
+\noindent
+The following functions are available to the user:
+\begin{itemize}
+\item {\tt spral\_nd\_default\_options()} initializes the \texttt{options}
+   structure to default values.
+
+\item {\tt spral\_nd\_order()} accepts the  pattern of the 
+matrix $A$ in compressed sparse column format and generates an elimination ordering 
+using a nested dissection strategy.
+
+\end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%% derived types %%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Derived types}
+
+For each problem, the user must employ the derived types defined by the
+package to declare scalars of the types {\tt struct nd\_options} and
+{\tt struct nd\_inform}. The options data structure \textbf{must} be
+initialized using \texttt{spral\_nd\_default\_options()}.
+The following pseudo-code illustrates this.
+\begin{verbatim}
+      #include "spral.h"
+      ...
+      struct spral_nd_options) options;
+      struct spral_nd_inform) inform;
+      ...
+      spral_nd_default_options(&options);
+      ...
+\end{verbatim}
+The components of {\tt spral\_nd\_options} and {\tt spral\_nd\_inform} are explained
+in Sections~\ref{nd:type:options} and \ref{nd:type:inform}.
+
+%\subsection{Achieving bit-compatibility}
+%Care has been taken to ensure bit-compatibility is achieved using this solver.
+%That is, consecutive runs with the same data on the same machine  produces exactly
+%the same solution.
+
+%\subsection{Optional arguments}
+
+%We use square brackets {\tt [ ]} to indicate {\it optional} arguments.
+%In each
+%call, optional arguments follow the argument {\tt inform}.  Since we
+%reserve the right to add additional optional arguments in future
+%releases of the code, {\bf we strongly recommend that all optional
+%arguments be called by keyword, not by position}.
+
+\subsection{Data formats: compressed sparse column (CSC) format} \label{nd:cscformat} \label{nd:dataformats}
+
+\begin{figure}
+   \caption{ \label{nd:format eg}
+      Data format example matrix
+   }
+   $$
+      \left( \begin{array}{ccccc}
+         \times & \times &     & \times &     \\
+         \times &     & \times &     &     \\
+             & \times & \times &     & \times \\
+         \times &     &     & \times & \times \\
+             &     & \times & \times & \times
+      \end{array} \right)
+   $$
+\end{figure}
+
+This standard data format consists of the following data:
+\begin{verbatim}
+   int :: n;                  /* order of matrix */
+   int :: ptr[n+1];           /* column pointers */
+   int :: row[ ptr[n]-1 ];    /* row indices */
+\end{verbatim}
+Non-zero matrix entries are  stored in
+the array \texttt{row[]}  such that \texttt{row[k]} holds
+the row number of the \texttt{k}-th entry.
+The \texttt{ptr[]} array stores column pointers such that \texttt{ptr[i]} is
+the position in \texttt{row[]}  of
+the first entry in the \texttt{i}-th column, and \texttt{ptr[n]} is
+the total number of entries.
+Entries that are zero, including those on the diagonal, need not be specified. 
+\texttt{spral\_nd\_order()} does not require the user to 
+input the values of the non-zero entries.
+\texttt{spral\_nd\_order()} allows the user to input just the lower triangular 
+entries of $A$  or both the upper and lower triangular entries of $A.$
+
+To illustrate the CSC format applied to the lower triangular part of a matrix, 
+the following arrays describe the pattern of the matrix shown in
+Figure~\ref{nd:format eg}.
+\begin{verbatim}
+   int n = 5;
+   int ptr[] = { 1,             4,   5,        7,        9,    10 };
+   int row[] = { 1,   2,   4,   3,   3,   5,   4,   5,   5 };
+\end{verbatim}
+
+To illustrate the CSC format applied to the lower and upper triangular parts of
+a matrix, the following arrays describe the pattern of the matrix shown in
+Figure~\ref{nd:format eg}.
+\begin{verbatim}
+   int n = 5;
+   int ptr[] = { 1,          4,      6,          9,         12,       15 };
+   int row[] = { 1,  2,  4,  1,  3,  2,  3,  5,  1,  4,  5,  3, 4, 5 };
+\end{verbatim}
+
+
+It is important to note
+that {\bf no checks} are made on the user's data and any out-of-range entries 
+or duplicates may cause {\tt nd\_order} to fail in an unpredictable way. 
+
+
+%%%%%%%%%%%%%%%%%%%%%% argument lists %%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Subroutines}
+
+%%%%%%%%% options initialization subroutine %%%%%%
+\subsection{\texttt{spral\_nd\_default\_options()}}
+
+\textbf{To initialize a variable of type \texttt{struct spral\_nd\_options},
+   the following routine is provided.}
+
+\vspace*{0.1cm}
+\noindent
+\textbf{\texttt{
+      \hspace*{0.3cm} void spral\_nd\_default\_options(struct spral\_ssids\_options *options);
+}}
+
+\noindent
+\begin{description}
+   \item[\texttt{*options}] is the instance to be initialized.
+\end{description}
+
+%%%%%%%%% ordering subroutine %%%%%%
+\subsection{{\tt spral\_nd\_order()}}
+
+{\bf To compute the nested dissection ordering, the following routine is provided.}
+   \vspace*{0.3cm} \\
+\texttt{\hspace*{0.2cm} void spral\_nd\_order(int mtx, int n, const int *ptr, const int *row, int *perm, const struct spral\_nd\_options *options, struct spral\_nd\_inform *inform);}
+\vspace{0.3em}
+
+\noindent
+Matrix data should be supplied as described in Section~\ref{nd:dataformats}. 
+
+\noindent
+\begin{description}
+
+\item[\texttt{mtx}]
+determines whether $A$ is input using only the lower triangular entries 
+of $A$ or both the upper and lower triangular entries. The different options are 
+\begin{description}
+\item{\tt = 0 } Lower triangular entries provided.
+\item{\tt = 1 } Upper and lower triangular entries provided.
+\end{description}
+
+\item[\texttt{n}, \texttt{ptr[]} and \texttt{row[]}] specify the matrix to be
+   ordered.
+If {\tt mtx=0}, they must hold the \textbf{lower triangular part} of 
+$A$ in CSC format;  if {\tt mtx=1}, they 
+must hold the \textbf{lower and upper triangular parts} of $A$ in CSC format. 
+See Section~\ref{nd:dataformats} for further details.
+
+\item[\texttt{perm[n]}] holds, on exit, the nested dissection elimination ordering. 
+The position of variable {\tt i} in the ordering is  {\tt perm[i]},
+{\tt i=0,1,\ldots,n-1}.
+
+\item[\texttt{options}] specifies the algorithmic options used by the routine,
+   as explained in Section~\ref{nd:type:options}.
+
+\item[\texttt{inform}] is used to return information about the execution
+   of the subroutine, as explained in Section~\ref{nd:type:inform}.
+
+\end{description}
+
+
+
+%%%%%%%%%%% options type %%%%%%%%%%%
+
+\section{Derived types}
+\subsection{\texttt{struct spral\_nd\_options}}
+\label{nd:type:options}
+
+The structure {\tt spral\_nd\_options} is used to specify the options used
+within \texttt{ND}. The components, that must be given default values through a
+call to \texttt{spral\_nd\_default\_options()}, are: \\
+
+%%%%%%%%%%%%
+
+\subsubsection*{C specific options}
+\begin{description}
+\item[\texttt{int array\_base}] specifies the array indexing base. It must
+   have the value either \texttt{0} (C indexing) or \texttt{1} (Fortran
+   indexing). If \texttt{array\_base}$=$\texttt{1}, the entries of arrays
+   \texttt{ptr[]}, \texttt{row[]} and \texttt{order[]} start at 1, not 0.
+   The default value is \texttt{array\_base}$=$\texttt{0}.
+\end{description}
+
+\subsubsection*{Printing options}
+
+\begin{description}
+
+\item[\texttt{int print\_level}] is used to control the level of printing.
+The different levels are:
+\begin{description}
+\item{\tt $<$ 0 } No printing.
+\item{\tt = 0 } Error  messages only.
+\item{\tt = 1 } As 0, plus basic diagnostic printing.
+\item{\tt $>$ 1 } As 1, plus some additional diagnostic printing.
+\end{description}
+The default is {\tt print\_level$=$\tt 0}.
+
+\item[\texttt{int unit\_diagnostics}] holds the Fortran
+unit number for diagnostic printing. Printing is suppressed if
+{\tt unit\_diagnostics$<0$}.
+The default is {\tt unit\_diagnostics$=$6}.
+
+\item[\texttt{int unit\_error}] holds the Fortran
+unit number for error messages.
+Printing of error messages
+is suppressed if {\tt unit\_error$<$0}.
+The default is {\tt unit\_error$=$6}.
+
+\end{description}
+
+
+
+%%%%%%%%%%%%
+\subsubsection*{Other options (in alphabetical order)}
+
+\begin{description}
+\item[\texttt{int amd\_call}] controls the use of 
+the approximate minimum degree algorithm. If order of the matrix after the 
+(optional) removal dense rows (see {\tt remove\_dense\_rows}) and (optional) 
+compression using supervariables (see {\tt find\_supervariables}) is greater 
+than {\tt amd\_call}, the matrix will be ordered using the nested dissection 
+algorithm; otherwise, it will be ordered using an approximate minimum 
+degree algorithm. Note, the approximate minimum degree algorithm will always be used if {\tt amd\_call=n}. The 
+default is {\tt amd\_call=?????}.
+
+\item[\texttt{int amd\_switch1}] and {\tt int amd\_switch2} control
+when the nested dissection algorithm switches to using an approximated minimum 
+degree algorithm. The switch is made when the order of the submatrix is less 
+than or equal to {\tt amd\_switch1} or the current number of 
+bisections performed is equal to {\tt amd\_switch2}.  The 
+defaults are {\tt amd\_switch1=50} and {\tt amd\_switch2=20}.
+
+\item[\texttt{double balance}] specifies how balanced partitions must be.
+The partitioning and refinement
+methods aim to find partitions (\ref{eqn:partition}) such that the larger 
+partition is at most {\tt balance} times the order of the smaller partition. 
+Decreasing {\tt balance} will, in
+general, result in an ordering that is more amenable to
+parallel direct solvers; increasing {\tt balance} will, in general, reduce the
+number of nonzeros in the Cholesky factorization of the reordered matrix. 
+Values less than {\tt 1.0} are treated as {\tt 1.0}. The
+default is {\tt balance=???}.
+
+\item[\texttt{int coarse\_partition\_method}]
+controls partitioning of the coarsest matrix. The different options are:
+\begin{description}
+\item{\tt $=$ 1 } Partition using the half-level set method.
+\item{\tt $=$ 2 } Partition using the level-set method.
+\end{description}
+See [1] for further details. The default is {\tt
+coarse\_partition\_method=1}. 
+
+
+\item[\texttt{bool find\_supervariables}] specifies whether supervariables are
+exploited. If 
+{\tt find\_supervariables=true}, the matrix $A$ (with any dense rows 
+optionally removed, see {\tt remove\_dense\_rows}) is searched for 
+supervariables and, if found, the matrix is compressed before applying the 
+nested dissection algorithm; if {\tt find\_supervariables=false}, the matrix 
+is not searched for supervariables. If supervariables exist and the matrix is 
+compressed, the speed-up in the nested dissection algorithm normally 
+compensates for the time spent searching for supervariables and compressing the
+matrix. The default is {\tt find\_supervariables=true}.
+
+
+\item[\texttt{int max\_improve\_cycles}] controls the number of improvement
+cycles performed. Given a partition of the 
+form (\ref{eqn:partition}), at most {\tt max\_improve\_cycles} cycles are 
+performed to improve the quality of the partition. During each cycle, the 
+separator is expanded to form a new partition and this new partition is 
+subsequently refined. Increasing the value of {\tt max\_improve\_cycles} normally improves 
+the quality of the nested dissection ordering but at the cost of increasing the 
+time to form the ordering. The default is {\tt max\_improve\_cycles=?????}.
+
+\item[\texttt{int matching}] determines the matching used during the multilevel partitioning scheme. The different options are: 
+\begin{description}
+\item{\tt $=$ 0 } Use common neighbours matching method.
+\item{\tt $=$ 1 } Use heavy-edge matching method.
+\end{description}
+The default is {\tt matching=1}.
+
+\item[\texttt{double max\_reduction}] and {\tt double min\_reduction} hold the maximum and minimum reduction factors within the multilevel partitioning scheme. Suppose that the current coarse matrix has order $n_f$ and 
+the subsequently coarsened matrix would have order $n_c,$ coarsening continues while $n_c<n_f\times{\tt max\_reduction}$ and 
+$n_c>n_f\times{\tt min\_reduction}.$ {\tt max\_reduction} must be at least {\tt min\_reduction} and values greater than 
+{\tt 1.0} are treated as {\tt 1.0}. {\tt min\_reduction} must be at least {\tt 0.5} and values less than 
+{\tt 0.5} are treated as {\tt 0.5}. The defaults are {\tt max\_reduction=0.9} and {\tt min\_reduction=0.5}.
+
+\item[\texttt{int partition\_method}] determines whether a multilevel 
+partitioning scheme is used. The different options are
+\begin{description}
+\item{\tt $=$ 0 } Multilevel partitioning scheme is {\bf not} used,
+\item{\tt $=$ 1 } Multilevel partitioning scheme is  used,
+\item{\tt $=$ 2 } Automatic choice of whether the multilevel partitioning scheme is used.
+\end{description}
+See Section~\ref{method} for further details. The default is {\tt partition\_method=2}.
+
+\item[\texttt{int refinement\_band}] is used within the 
+Fiduccia-Mattheyses refinement. The variables in the refined separator must be 
+at most distance {\tt refinement\_band} from a variable that was in the input 
+separator. See [1] for further details. In general, small 
+values of {\tt refinement\_band} result in a faster method but the quality of 
+the ordering may be compromised. The default is {\tt refinement\_band=4}.
+
+\item[\texttt{bool remove\_dense\_rows}] controls dense row handling.
+If {\tt remove\_dense\_rows = true}, 
+then the matrix $A$ is searched for dense (or nearly dense) rows and columns, 
+and the nested dissection algorithm is applied to the matrix that results when 
+these rows and columns are removed. Dense rows/columns are placed at the end of
+the ordering. The default is {\tt remove\_dense\_rows=true}.
+
+\item[\texttt{int stop\_coarsening1}] holds the problem size in the multilevel hierarchy after which no further coarsening is performed.
+The default is {\tt stop\_coarsening1=50}.
+
+\item[\texttt{int stop\_coarsening2}] holds the maximum number
+of multilevel recursions.  
+The default is {\tt stop\_coarsening2=20}.
+
+\end{description}
+
+
+
+%%%%%%%%%%% inform type %%%%%%%%%%%
+
+\subsection{\texttt{struct spral\_nd\_inform}}
+\label{nd:type:inform}
+The strucutre {\tt spral\_nd\_inform}
+is used to hold parameters that give information about the algorithm. The 
+components of {\tt spral\_nd\_inform}
+(in alphabetical order) are:
+
+\begin{description}
+
+\item[\texttt{int flag}]
+gives the exit status of the algorithm (details in Section \ref{nd:errors}).
+
+\item[\texttt{int dense}] holds 
+the number of rows/columns in the matrix $A$ that were determined to be dense. 
+If {\tt options.remove\_dense = false}, the input matrix is not checked for 
+dense rows and {\tt dense = 0}.
+
+\item[\texttt{int nsuper}] holds the order 
+of the matrix after dense rows have been (optionally) removed and 
+the resulting matrix has been (optionally) compressed using supervariables. 
+
+\item[\texttt{int nzsuper}] holds the number of 
+off-diagonal nonzero entries in the matrix after dense rows have been 
+(optionally) removed and the resulting matrix has been (optionally) compressed 
+using supervariables. 
+
+\item[\texttt{int stat}] holds the Fortran {\tt stat} parameter. 
+
+\end{description}
+
+
+%%%%%%%%%%%%%%%%%%%%%% Warning and error messages %%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Return codes} \label{nd:errors}
+
+A successful return is indicated by
+{\tt inform.flag} having the value zero.
+A negative value is associated with an error message that by default will
+be output on unit {\tt options.unit\_error}.
+
+Possible negative values are:
+
+\begin{description}
+
+\item{} {\tt -1} memory allocation failed.
+\item{} {\tt -2} memory deallocation failed.
+\item{} {\tt -3} {\tt n} $\le$ 0.
+\end{description}
+
+
+\section{Method} \label{method}
+
+Given a matrix $A$ with a symmetric sparsity pattern of order $n,$ {\tt nd} preprocesses 
+the matrix to (optionally) remove dense or almost dense rows/columns, returning 
+$\overline{A}.$ The matrix $\overline{A}$ is then (optionally) searched for 
+supervariables and, if found, it is compressed to give a symmetric matrix 
+$\widetilde{A}$ with order $\tilde{n}.$ If $\tilde{n}$ is less than or equal to 
+{\tt amd\_call}, an elimination ordering is computed using the 
+approximate minimum degree (AMD) method; otherwise $\widetilde{A}$ is passed to the 
+recursive nested dissection algorithm, \textbf{nested\_dissection($A,P$)}, below. Having formed a 
+nested dissection ordering for $\widetilde{A},$ the 
+ordering is mapped to give an ordering for $\overline{A}.$ The dense rows are 
+appended to the end of the ordering. 
+
+\noindent\hrulefill\\
+\vspace{-1.0em}
+\begin{algorithmic}
+\STATE {\bf recursive subroutine nested\_dissection}($n,A,P$)
+\STATE Input: symmetric matrix $A$ of order $n$
+\STATE Output: permutation matrix $P$
+
+\IF{$n<${\tt amd\_switch}}
+\STATE compute an AMD elimination ordering for $A$ and return its equivalent 
+permutation matrix $P$ 
+\ELSE
+\STATE partition $A$: compute $P,$ a permutation matrix, such that $P^T A P$ 
+has the form (\ref{eqn:partition})
+\STATE call {\bf nested\_dissection}($n_1,A_1,P_1$)
+\STATE call {\bf nested\_dissection}($n_2,A_2,P_2$)
+\STATE set $P \leftarrow PQ,$ where $$Q = \left( \begin{array}{ccc} P_1 & & \\ & P_2 & \\ & & I  \end{array} \right)$$
+\ENDIF
+
+\end{algorithmic}
+\noindent\hrulefill\\
+
+At each recursive level of the nested dissection procedure, the matrix is 
+partitioned using either 
+\begin{itemize}
+\item the {\tt options.coarse\_partition\_method} (see [1]), which is then refined to improve its 
+quality, or 
+\item a recursive multilevel procedure,  \textbf{multilevel\_partition($A$,$P$)} (see below), 
+is performed, where \texttt{options.matching} determines the strategy used to form 
+the coarsening matrix.
+\end{itemize}
+The user may choose which partitioning method to use or {\tt ND} can analyse 
+$\widetilde{A}$ and automatically choose how to partition the matrix, see 
+\texttt{options\%partition\_method}.
+
+\vspace{0.5cm}
+\noindent\hrulefill\\
+\vspace{-1.0em}
+\begin{algorithmic}
+\STATE {\bf recursive subroutine multilevel\_partition}($n,A,P$)
+\STATE Input: symmetric matrix $A$ of order $n$
+\STATE Output: permutation matrix $P$
+
+\IF{$n<${\tt stop\_coarsening1}}
+\STATE partition $A$ using the half-level set method and return its equivalent permutation matrix $P$ 
+\ELSE
+\STATE form coarsening matrix $R$ and set $A_c = R^T A R$
+\STATE call {\bf multilevel\_partition}($A_c,P_c$)
+\STATE set $P = RP_c$
+\STATE refine $P$ to improve the partition of $A$
+\ENDIF
+
+\end{algorithmic}
+\noindent\hrulefill
+
+
+\section*{References}
+[1] **Paper details **
+
+
+
+%%%%%%%%%%%%%%%%%%%%%% EXAMPLE %%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Example}
+
+We illustrate the use of {\tt ND} on the following matrix: 
+
+$$
+	\left(\begin{array}{cccccccc}
+   \times &  \times  &         &  \times  &  \times  & \times &          &           \\
+   \times &  \times  &         &  \times  &          & \times &  \times  &           \\ 
+          &          & \times  &          &  \times  & \times &          &           \\
+   \times &  \times  &         &          &          &        &  \times  &           \\ 
+   \times &          & \times  &          &  \times  & \times &          &   \times  \\ 
+   \times &  \times  & \times  &          &  \times  &        &  \times  &   \times  \\ 
+          &  \times  &         &  \times  &          & \times &          &           \\ 
+          &          &         &          &  \times  & \times &          &   \times  \\ 
+	\end{array}\right)
+$$
+
+
+\noindent{\bf Program}
+\verbatiminput{examples/C/nd.c}
+This produces the following output
+\begin{verbatim}
+ Permutation :  
+       7       1       5       2       6       8       3       4
+
+\end{verbatim}
+
+\noindent
+{\rm The permuted matrix is}
+
+$$
+	\left(\begin{array}{cccccccc}
+    \times &  \times   &  \times  &          &          &        &   \times &   \times \\
+    \times &           &  \times  &          &          &        &   \times &          \\ 
+    \times &  \times   &          &          &          &        &          &   \times \\
+           &           &          &   \times &          & \times &          &   \times \\ 
+           &           &          &          &  \times  & \times &          &   \times \\ 
+           &           &          &   \times &  \times  & \times &   \times &   \times \\ 
+    \times &  \times   &          &          &          & \times &   \times &   \times \\ 
+    \times &           &  \times  &   \times &  \times  & \times &   \times &          \\ 
+	\end{array}\right)
+$$
+
+\begin{funders}
+   \funder{epsrc}{Funded by EPSRC grant xxxxxxx}
+\end{funders}
