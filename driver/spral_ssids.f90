@@ -223,6 +223,11 @@ contains
             call get_command_argument(argnum, argval)
             argnum = argnum + 1
             read( argval, * ) options%nstream
+         case("--nemin")
+            call get_command_argument(argnum, argval)
+            argnum = argnum + 1
+            read( argval, * ) options%nemin
+            print *, 'Setting nemin to', options%nemin
          case("--flops")
             options%print_flops = .true.
          case("--node-sizes")
