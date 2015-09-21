@@ -115,7 +115,7 @@ interface cscl_verify
    module procedure cscl_verify_double
 end interface cscl_verify
 interface print_matrix
-   module procedure print_matrix_double
+   module procedure print_matrix_int_double, print_matrix_long_double
 end interface
 interface apply_conversion_map
    module procedure apply_conversion_map_double
@@ -312,7 +312,28 @@ end subroutine cscl_verify_double
 !
 ! Pretty prints a matrix as best it can
 !
-subroutine print_matrix_double(lp, lines, matrix_type, m, n, ptr, row, val, cbase)
+subroutine print_matrix_long_double(lp, lines, matrix_type, m, n, ptr, row, &
+      val, cbase)
+   integer, intent(in) :: lp ! unit to print on
+   integer, intent(in) :: lines ! max number of lines to use (ignored if -ive)
+   integer, intent(in) :: matrix_type ! type of matrix
+   integer, intent(in) :: m ! number of rows in matrix
+   integer, intent(in) :: n ! number of cols in matrix
+   integer(long), dimension(n+1), intent(in) :: ptr ! column pointers
+   integer, dimension(*), intent(in) :: row ! row indices
+   real(wp), dimension(*), optional, intent(in) :: val ! matrix vals
+   logical, optional, intent(in) :: cbase ! if true, input uses C indexing
+
+   integer, dimension(:), allocatable :: ptr32
+
+   allocate(ptr32(n+1))
+   ptr32(1:n+1) = int(ptr(1:n+1)) ! Assume we're not printing anything huge
+
+   call print_matrix_int_double(lp, lines, matrix_type, m, n, ptr32, row, val, &
+      cbase=cbase)
+end subroutine print_matrix_long_double
+subroutine print_matrix_int_double(lp, lines, matrix_type, m, n, ptr, row, &
+      val, cbase)
    integer, intent(in) :: lp ! unit to print on
    integer, intent(in) :: lines ! max number of lines to use (ignored if -ive)
    integer, intent(in) :: matrix_type ! type of matrix
@@ -461,7 +482,7 @@ subroutine print_matrix_double(lp, lines, matrix_type, m, n, ptr, row, val, cbas
       if(llines.le.2) return
       write(lp, "(a)") "First 4 entries in columns:"
       llines = llines - 1
-      do col = 1, llines
+      do col = 1, min(n,llines)
          write(lp, "(a)", advance="no") "Col "
          write(lp, nfrmt, advance="no") col-rebase
          write(lp, "(':')", advance="no")
@@ -475,7 +496,7 @@ subroutine print_matrix_double(lp, lines, matrix_type, m, n, ptr, row, val, cbas
          write(lp, "()")
       end do
    endif
-end subroutine print_matrix_double
+end subroutine print_matrix_int_double
 
 !****************************************
 
@@ -1778,7 +1799,7 @@ end subroutine cleanup_dup
 ! Diagonal entries need not be present.
 !
 ! Note: this is a modified version of mc34_expand from hsl_mc34
-subroutine half_to_full_int32(n,row,ptr,iw,a)
+subroutine half_to_full_int32(n,row,ptr,iw,a,cbase)
    integer, intent(in) :: n  ! holds the order of a.
    integer, intent(inout) :: row(*) ! must be set by the user to
       ! hold the row indices of the lower triangular part of a.
@@ -1807,6 +1828,7 @@ subroutine half_to_full_int32(n,row,ptr,iw,a)
       ! a(k) holds the value of the entry in row(k). 
       ! on exit, a will hold the values of the entries in the expanded 
       ! structure corresponding to the output values of row.
+   logical, optional, intent(in) :: cbase
 
    integer :: ckp1 ! used as running pointer
    integer :: i,i1,i2,ii,ipkp1,ipos
@@ -1815,18 +1837,24 @@ subroutine half_to_full_int32(n,row,ptr,iw,a)
    integer :: ndiag ! number diagonal entries present
    integer :: newtau ! number of entries in expanded storage
    integer :: oldtau ! number of entries in symmetric storage
+   integer :: rebase ! Added to ptr and row to get Fortran base
 
-   oldtau = ptr(n+1) - 1
+   rebase = 0
+   if(present(cbase)) then
+      if(cbase) rebase = 1
+   endif
+
+   oldtau = ptr(n+1) - 1 + rebase
    iw(1:n) = 0
 
    ! iw(j) set to total number entries in col. j of expanded mx.
    ndiag = 0
    do j = 1,n
-      i1 = ptr(j)
-      i2 = ptr(j+1) - 1
+      i1 = ptr(j) + rebase
+      i2 = ptr(j+1) - 1 + rebase
       iw(j) = iw(j) + i2 - i1 + 1
       do ii = i1,i2
-         i = row(ii)
+         i = row(ii) + rebase
          if (i /= j) then
             iw(i) = iw(i) + 1
          else
@@ -1843,7 +1871,7 @@ subroutine half_to_full_int32(n,row,ptr,iw,a)
    ! go through the array in the reverse order placing lower triangular
    ! elements in  appropriate slots.
    do j = n,1,-1
-      i1 = ptr(j)
+      i1 = ptr(j) + rebase
       i2 = ipkp1
       lenk = i2 - i1
       ! jstart is running pointer to position in new structure
@@ -1858,17 +1886,17 @@ subroutine half_to_full_int32(n,row,ptr,iw,a)
          do ii = i2,i1,-1
             jstart = jstart - 1
             a(jstart) = a(ii)
-            row(jstart) = row(ii)
+            row(jstart) = row(ii) ! rebase cancels
          end do
       else
          do ii = i2,i1,-1
             jstart = jstart - 1
-            row(jstart) = row(ii)
+            row(jstart) = row(ii) ! rebase cancels
          end do
       end if
       ! ptr is set to position of first entry in lower triangular part of
       ! column j in expanded form
-      ptr(j) = jstart
+      ptr(j) = jstart - rebase
       ! set ckp1 for next column
       ckp1 = ckp1 - iw(j)
       ! reset iw(j) to number of entries in lower triangle of column.
@@ -1879,33 +1907,33 @@ subroutine half_to_full_int32(n,row,ptr,iw,a)
    ! time when one is handling column j the upper triangular
    ! elements a(j,i) are put in position.
    do j = n,1,-1
-      i1 = ptr(j)
-      i2 = ptr(j) + iw(j) - 1
+      i1 = ptr(j) + rebase
+      i2 = ptr(j) + iw(j) - 1 + rebase
       ! run down column in order
       ! note that i is always greater than or equal to j
       if (present(a)) then
          do ii = i1,i2
-            i = row(ii)
+            i = row(ii) + rebase
             if (i == j) cycle
-            ptr(i) = ptr(i) - 1
+            ptr(i) = ptr(i) - 1 ! rebase cancels
             ipos = ptr(i)
             a(ipos) = a(ii)
-            row(ipos) = j
+            row(ipos) = j - rebase
          end do
       else
          do ii = i1,i2
-            i = row(ii)
+            i = row(ii) + rebase
             if (i == j) cycle
-            ptr(i) = ptr(i) - 1
+            ptr(i) = ptr(i) - 1 ! rebase cancels
             ipos = ptr(i)
-            row(ipos) = j
+            row(ipos) = j - rebase
          end do
       end if
    end do
-   ptr(n+1) = newtau + 1
+   ptr(n+1) = newtau + 1 - rebase
 
 end subroutine half_to_full_int32
-subroutine half_to_full_int64(n,row,ptr,iw,a)
+subroutine half_to_full_int64(n,row,ptr,iw,a,cbase)
    integer, intent(in) :: n  ! holds the order of a.
    integer, intent(inout) :: row(*) ! must be set by the user to
       ! hold the row indices of the lower triangular part of a.
@@ -1934,6 +1962,7 @@ subroutine half_to_full_int64(n,row,ptr,iw,a)
       ! a(k) holds the value of the entry in row(k). 
       ! on exit, a will hold the values of the entries in the expanded 
       ! structure corresponding to the output values of row.
+   logical, optional, intent(in) :: cbase
 
    integer(long) :: ckp1 ! used as running pointer
    integer :: i
@@ -1944,18 +1973,24 @@ subroutine half_to_full_int64(n,row,ptr,iw,a)
    integer :: ndiag ! number diagonal entries present
    integer(long) :: newtau ! number of entries in expanded storage
    integer(long) :: oldtau ! number of entries in symmetric storage
+   integer :: rebase ! Added to ptr and row to get Fortran base
 
-   oldtau = ptr(n+1) - 1
+   rebase = 0
+   if(present(cbase)) then
+      if(cbase) rebase = 1
+   endif
+
+   oldtau = ptr(n+1) - 1 + rebase
    iw(1:n) = 0
 
    ! iw(j) set to total number entries in col. j of expanded mx.
    ndiag = 0
    do j = 1,n
-      i1 = ptr(j)
-      i2 = ptr(j+1) - 1
+      i1 = ptr(j) + rebase
+      i2 = ptr(j+1) - 1 + rebase
       iw(j) = iw(j) + int(i2-i1) + 1
       do ii = i1,i2
-         i = row(ii)
+         i = row(ii) + rebase
          if (i /= j) then
             iw(i) = iw(i) + 1
          else
@@ -1972,7 +2007,7 @@ subroutine half_to_full_int64(n,row,ptr,iw,a)
    ! go through the array in the reverse order placing lower triangular
    ! elements in  appropriate slots.
    do j = n,1,-1
-      i1 = ptr(j)
+      i1 = ptr(j) + rebase
       i2 = ipkp1
       lenk = int(i2 - i1)
       ! jstart is running pointer to position in new structure
@@ -1987,17 +2022,17 @@ subroutine half_to_full_int64(n,row,ptr,iw,a)
          do ii = i2,i1,-1
             jstart = jstart - 1
             a(jstart) = a(ii)
-            row(jstart) = row(ii)
+            row(jstart) = row(ii) ! rebase cancels
          end do
       else
          do ii = i2,i1,-1
             jstart = jstart - 1
-            row(jstart) = row(ii)
+            row(jstart) = row(ii) ! rebase cancels
          end do
       end if
       ! ptr is set to position of first entry in lower triangular part of
       ! column j in expanded form
-      ptr(j) = jstart
+      ptr(j) = jstart - rebase
       ! set ckp1 for next column
       ckp1 = ckp1 - iw(j)
       ! reset iw(j) to number of entries in lower triangle of column.
@@ -2008,30 +2043,30 @@ subroutine half_to_full_int64(n,row,ptr,iw,a)
    ! time when one is handling column j the upper triangular
    ! elements a(j,i) are put in position.
    do j = n,1,-1
-      i1 = ptr(j)
-      i2 = ptr(j) + iw(j) - 1
+      i1 = ptr(j) + rebase
+      i2 = ptr(j) + iw(j) - 1 + rebase
       ! run down column in order
       ! note that i is always greater than or equal to j
       if (present(a)) then
          do ii = i1,i2
-            i = row(ii)
+            i = row(ii) + rebase
             if (i == j) cycle
-            ptr(i) = ptr(i) - 1
-            ipos = ptr(i)
+            ptr(i) = ptr(i) - 1 ! rebase cancels
+            ipos = ptr(i) + rebase
             a(ipos) = a(ii)
-            row(ipos) = j
+            row(ipos) = j - rebase
          end do
       else
          do ii = i1,i2
-            i = row(ii)
+            i = row(ii) + rebase
             if (i == j) cycle
-            ptr(i) = ptr(i) - 1
-            ipos = ptr(i)
-            row(ipos) = j
+            ptr(i) = ptr(i) - 1 ! rebase cancels
+            ipos = ptr(i) + rebase
+            row(ipos) = j - rebase
          end do
       end if
    end do
-   ptr(n+1) = newtau + 1
+   ptr(n+1) = newtau + 1 - rebase
 
 end subroutine half_to_full_int64
 
