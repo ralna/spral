@@ -209,9 +209,9 @@ am__libspral_a_SOURCES_DIST = src/blas_iface.f90 src/core_analyse.f90 \
 	src/cuda/cuda_check.h src/lapack_iface.f90 src/match_order.f90 \
 	src/matrix_util.f90 interfaces/C/matrix_util.f90 \
 	src/metis$(METIS_VERSION)_wrapper.f90 src/pgm.f90 \
-	src/rutherford_boeing.f90 src/scaling.f90 \
-	interfaces/C/scaling.f90 src/timer.f90 src/random.f90 \
-	interfaces/C/random.f90 src/random_matrix.f90 \
+	src/rutherford_boeing.f90 interfaces/C/rutherford_boeing.f90 \
+	src/scaling.f90 interfaces/C/scaling.f90 src/timer.f90 \
+	src/random.f90 interfaces/C/random.f90 src/random_matrix.f90 \
 	interfaces/C/random_matrix.f90 src/ssids/alloc.f90 \
 	src/ssids/analyse.f90 src/ssids/assemble_kernels.cu \
 	src/ssids/cuda_datatypes.f90 src/ssids/cuda_interfaces.f90 \
@@ -250,7 +250,8 @@ am_libspral_a_OBJECTS = src/blas_iface.$(OBJEXT) \
 	src/lapack_iface.$(OBJEXT) src/match_order.$(OBJEXT) \
 	src/matrix_util.$(OBJEXT) interfaces/C/matrix_util.$(OBJEXT) \
 	src/metis$(METIS_VERSION)_wrapper.$(OBJEXT) src/pgm.$(OBJEXT) \
-	src/rutherford_boeing.$(OBJEXT) src/scaling.$(OBJEXT) \
+	src/rutherford_boeing.$(OBJEXT) \
+	interfaces/C/rutherford_boeing.$(OBJEXT) src/scaling.$(OBJEXT) \
 	interfaces/C/scaling.$(OBJEXT) src/timer.$(OBJEXT) \
 	src/random.$(OBJEXT) interfaces/C/random.$(OBJEXT) \
 	src/random_matrix.$(OBJEXT) \
@@ -639,9 +640,9 @@ am__can_run_installinfo = \
     *) (install-info --version) >/dev/null 2>&1;; \
   esac
 am__include_HEADERS_DIST = include/spral.h include/spral_matrix_util.h \
-	include/spral_scaling.h include/spral_random.h \
-	include/spral_random_matrix.h include/spral_ssids.h \
-	include/spral_ssmfe.h
+	include/spral_rutherford_boeing.h include/spral_scaling.h \
+	include/spral_random.h include/spral_random_matrix.h \
+	include/spral_ssids.h include/spral_ssmfe.h
 HEADERS = $(include_HEADERS)
 am__tagged_files = $(HEADERS) $(SOURCES) $(TAGS_FILES) $(LISP)
 # Read a list of newline-separated strings from the standard input,
@@ -992,6 +993,8 @@ lib_LIBRARIES = libspral.a
 
 # MATRIX_UTIL
 
+# RUTHERFORD_BOEING
+
 # SCALING
 
 # RANDOM
@@ -1000,9 +1003,9 @@ lib_LIBRARIES = libspral.a
 
 # SSMFE
 include_HEADERS = include/spral.h include/spral_matrix_util.h \
-	include/spral_scaling.h include/spral_random.h \
-	include/spral_random_matrix.h $(am__append_2) \
-	include/spral_ssmfe.h
+	include/spral_rutherford_boeing.h include/spral_scaling.h \
+	include/spral_random.h include/spral_random_matrix.h \
+	$(am__append_2) include/spral_ssmfe.h
 
 # BLAS_IFACE
 # Note: first so not +=
@@ -1017,16 +1020,14 @@ include_HEADERS = include/spral.h include/spral_matrix_util.h \
 
 # PGM
 
-# RUTHERFORD_BOEING
-
 # TIMER
 libspral_a_SOURCES = src/blas_iface.f90 src/core_analyse.f90 \
 	$(am__append_1) src/lapack_iface.f90 src/match_order.f90 \
 	src/matrix_util.f90 interfaces/C/matrix_util.f90 \
 	src/metis$(METIS_VERSION)_wrapper.f90 src/pgm.f90 \
-	src/rutherford_boeing.f90 src/scaling.f90 \
-	interfaces/C/scaling.f90 src/timer.f90 src/random.f90 \
-	interfaces/C/random.f90 src/random_matrix.f90 \
+	src/rutherford_boeing.f90 interfaces/C/rutherford_boeing.f90 \
+	src/scaling.f90 interfaces/C/scaling.f90 src/timer.f90 \
+	src/random.f90 interfaces/C/random.f90 src/random_matrix.f90 \
 	interfaces/C/random_matrix.f90 $(am__append_3) \
 	src/ssmfe/ssmfe.f90 src/ssmfe/core.f90 src/ssmfe/expert.f90 \
 	interfaces/C/ssmfe.f90 interfaces/C/ssmfe_core.f90 \
@@ -1218,6 +1219,9 @@ src/metis$(METIS_VERSION)_wrapper.$(OBJEXT): src/$(am__dirstamp) \
 src/pgm.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 src/rutherford_boeing.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
+interfaces/C/rutherford_boeing.$(OBJEXT):  \
+	interfaces/C/$(am__dirstamp) \
+	interfaces/C/$(DEPDIR)/$(am__dirstamp)
 src/scaling.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 interfaces/C/scaling.$(OBJEXT): interfaces/C/$(am__dirstamp) \
@@ -2402,6 +2406,7 @@ src/ssids/solve_kernels.$(OBJEXT): src/ssids/dtrsv.h
 # C interface deps
 interfaces/C/random.$(OBJEXT): src/random.$(OBJEXT)
 interfaces/C/random_matrix.$(OBJEXT): src/random_matrix.$(OBJEXT)
+interfaces/C/rutherford_boeing.$(OBJEXT): src/rutherford_boeing.$(OBJEXT)
 interfaces/C/scaling.$(OBJEXT): src/scaling.$(OBJEXT)
 interfaces/C/ssids.$(OBJEXT): src/ssids/ssids.$(OBJEXT)
 interfaces/C/ssmfe.$(OBJEXT): src/ssmfe/ssmfe.$(OBJEXT) \

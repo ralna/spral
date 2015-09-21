@@ -64,8 +64,10 @@ libspral_a_SOURCES += \
 	src/pgm.f90
 
 # RUTHERFORD_BOEING
+include_HEADERS += include/spral_rutherford_boeing.h
 libspral_a_SOURCES += \
-	src/rutherford_boeing.f90
+	src/rutherford_boeing.f90 \
+	interfaces/C/rutherford_boeing.f90
 
 # SCALING
 include_HEADERS += include/spral_scaling.h
@@ -339,6 +341,7 @@ src/ssids/solve_kernels.$(OBJEXT): src/ssids/dtrsv.h
 # C interface deps
 interfaces/C/random.$(OBJEXT): src/random.$(OBJEXT)
 interfaces/C/random_matrix.$(OBJEXT): src/random_matrix.$(OBJEXT)
+interfaces/C/rutherford_boeing.$(OBJEXT): src/rutherford_boeing.$(OBJEXT)
 interfaces/C/scaling.$(OBJEXT): src/scaling.$(OBJEXT)
 interfaces/C/ssids.$(OBJEXT): src/ssids/ssids.$(OBJEXT)
 interfaces/C/ssmfe.$(OBJEXT): src/ssmfe/ssmfe.$(OBJEXT) \

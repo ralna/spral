@@ -1,3 +1,8 @@
+2015-09-21  Jonathan Hogg <jonathan.hogg@stfc.ac.uk>
+Add support for 64-bit integer ptr(:) arrays in scaling and matrix_util modules
+Add appropriate extern "C" {} stuff to header files to allow for C++ inclusion
+Add prototype C interface for Rutherford-Boeing module. API subject to change!
+
 2015-04-20  Jonathan Hogg <jonathan.hogg@stfc.ac.uk>
 Move to using date as library version number.
 SPRAL   : Assorted minor fixes to documentation.

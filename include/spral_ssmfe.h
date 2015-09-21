@@ -2,7 +2,13 @@
 #define SPRAL_SSMFE_H
 
 #include <stdbool.h>
-#include <complex.h>
+
+// Define complex types that work with both C and C++
+#include "spral_complex.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /************************************
  * Derived types
@@ -37,10 +43,10 @@ struct spral_ssmfe_rciz {
    int i;
    int j;
    int k;
-   double complex alpha;
-   double complex beta;
-   double complex *x;
-   double complex *y;
+   spral_double_complex alpha;
+   spral_double_complex beta;
+   spral_double_complex *x;
+   spral_double_complex *y;
    char unused[80]; // Allow for future expansion
 };
 
@@ -109,8 +115,8 @@ void spral_ssmfe_standard_double(struct spral_ssmfe_rcid *rci, int left,
       struct spral_ssmfe_inform *inform);
 /* Leftmost complex eigenpairs of std eigenvalue problem */
 void spral_ssmfe_standard_double_complex(struct spral_ssmfe_rciz *rci,
-      int left, int mep, double *lambda, int n, double complex *x, int ldx,
-      void **keep, const struct spral_ssmfe_options *options,
+      int left, int mep, double *lambda, int n, spral_double_complex *x,
+      int ldx, void **keep, const struct spral_ssmfe_options *options,
       struct spral_ssmfe_inform *inform);
 /* Real eigenpairs around shift for std eigenvalue problem */
 void spral_ssmfe_standard_shift_double(struct spral_ssmfe_rcid *rci,
@@ -121,7 +127,7 @@ void spral_ssmfe_standard_shift_double(struct spral_ssmfe_rcid *rci,
 /* Complex eigenpairs around shift for std eigenvalue problem */
 void spral_ssmfe_standard_shift_double_complex(
       struct spral_ssmfe_rciz *rci, double sigma, int left, int right, int mep,
-      double *lambda, int n, double complex *x, int ldx, void **keep,
+      double *lambda, int n, spral_double_complex *x, int ldx, void **keep,
       const struct spral_ssmfe_options *options,
       struct spral_ssmfe_inform *inform);
 /* Leftmost real eigenpairs of generalized eigenvalue problem */
@@ -131,8 +137,8 @@ void spral_ssmfe_generalized_double(struct spral_ssmfe_rcid *rci,
       struct spral_ssmfe_inform *inform);
 /* Leftmost complex eigenpairs of generalized eigenvalue problem */
 void spral_ssmfe_generalized_double_complex(struct spral_ssmfe_rciz *rci,
-      int left, int mep, double *lambda, int n, double complex *x, int ldx,
-      void **keep, const struct spral_ssmfe_options *options,
+      int left, int mep, double *lambda, int n, spral_double_complex *x,
+      int ldx, void **keep, const struct spral_ssmfe_options *options,
       struct spral_ssmfe_inform *inform);
 /* Real eigenpairs around shift for generalized eigenvalue problem */
 void spral_ssmfe_generalized_shift_double(struct spral_ssmfe_rcid *rci,
@@ -143,7 +149,7 @@ void spral_ssmfe_generalized_shift_double(struct spral_ssmfe_rcid *rci,
 /* Complex eigenpairs around shift for generalized eigenvalue problem */
 void spral_ssmfe_generalized_shift_double_complex(
       struct spral_ssmfe_rciz *rci, double sigma, int left, int right, int mep,
-      double *lambda, int n, double complex *x, int ldx, void **keep,
+      double *lambda, int n, spral_double_complex *x, int ldx, void **keep,
       const struct spral_ssmfe_options *options,
       struct spral_ssmfe_inform *inform);
 /* Real eigenpairs around shift for buckling problem */
@@ -155,7 +161,7 @@ void spral_ssmfe_buckling_double(struct spral_ssmfe_rcid *rci,
 /* Complex eigenpairs around shift for buckling problem */
 void spral_ssmfe_buckling_double_complex(struct spral_ssmfe_rciz *rci,
       double sigma, int left, int right, int mep, double *lambda, int n,
-      double complex *x, int ldx, void **keep,
+      spral_double_complex *x, int ldx, void **keep,
       const struct spral_ssmfe_options *options,
       struct spral_ssmfe_inform *inform);
 /* Free memory (real) */
@@ -174,8 +180,8 @@ void spral_ssmfe_expert_standard_double(struct spral_ssmfe_rcid *rci, int left,
       struct spral_ssmfe_inform *inform);
 /* Leftmost complex eigenpairs of std eigenvalue problem */
 void spral_ssmfe_expert_standard_double_complex(struct spral_ssmfe_rciz *rci,
-      int left, int mep, double *lambda, int m, double complex *rr, int *ind,
-      void **keep, const struct spral_ssmfe_options *options,
+      int left, int mep, double *lambda, int m, spral_double_complex *rr,
+      int *ind, void **keep, const struct spral_ssmfe_options *options,
       struct spral_ssmfe_inform *inform);
 /* Real eigenpairs around shift for std eigenvalue problem */
 void spral_ssmfe_expert_standard_shift_double(struct spral_ssmfe_rcid *rci,
@@ -186,7 +192,7 @@ void spral_ssmfe_expert_standard_shift_double(struct spral_ssmfe_rcid *rci,
 /* Complex eigenpairs around shift for std eigenvalue problem */
 void spral_ssmfe_expert_standard_shift_double_complex(
       struct spral_ssmfe_rciz *rci, double sigma, int left, int right, int mep,
-      double *lambda, int m, double complex *rr, int *ind, void **keep,
+      double *lambda, int m, spral_double_complex *rr, int *ind, void **keep,
       const struct spral_ssmfe_options *options,
       struct spral_ssmfe_inform *inform);
 /* Leftmost real eigenpairs of generalized eigenvalue problem */
@@ -196,8 +202,8 @@ void spral_ssmfe_expert_generalized_double(struct spral_ssmfe_rcid *rci,
       struct spral_ssmfe_inform *inform);
 /* Leftmost complex eigenpairs of generalized eigenvalue problem */
 void spral_ssmfe_expert_generalized_double_complex(struct spral_ssmfe_rciz *rci,
-      int left, int mep, double *lambda, int m, double complex *rr, int *ind,
-      void **keep, const struct spral_ssmfe_options *options,
+      int left, int mep, double *lambda, int m, spral_double_complex *rr,
+      int *ind, void **keep, const struct spral_ssmfe_options *options,
       struct spral_ssmfe_inform *inform);
 /* Real eigenpairs around shift for generalized eigenvalue problem */
 void spral_ssmfe_expert_generalized_shift_double(struct spral_ssmfe_rcid *rci,
@@ -208,7 +214,7 @@ void spral_ssmfe_expert_generalized_shift_double(struct spral_ssmfe_rcid *rci,
 /* Complex eigenpairs around shift for generalized eigenvalue problem */
 void spral_ssmfe_expert_generalized_shift_double_complex(
       struct spral_ssmfe_rciz *rci, double sigma, int left, int right, int mep,
-      double *lambda, int m, double complex *rr, int *ind, void **keep,
+      double *lambda, int m, spral_double_complex *rr, int *ind, void **keep,
       const struct spral_ssmfe_options *options,
       struct spral_ssmfe_inform *inform);
 /* Real eigenpairs around shift for buckling problem */
@@ -220,7 +226,7 @@ void spral_ssmfe_expert_buckling_double(struct spral_ssmfe_rcid *rci,
 /* Complex eigenpairs around shift for buckling problem */
 void spral_ssmfe_expert_buckling_double_complex(struct spral_ssmfe_rciz *rci,
       double sigma, int left, int right, int mep, double *lambda, int m,
-      double complex *rr, int *ind, void **keep,
+      spral_double_complex *rr, int *ind, void **keep,
       const struct spral_ssmfe_options *options,
       struct spral_ssmfe_inform *inform);
 /* Free memory */
@@ -239,8 +245,8 @@ void spral_ssmfe_double(struct spral_ssmfe_rcid *rci, int problem,
       struct spral_ssmfe_inform *inform);
 /* Core driver routine for left and right values of (complex) eigenproblems */
 void spral_ssmfe_double_complex(struct spral_ssmfe_rciz *rci, int problem,
-      int left, int right, int m, double *lambda, double complex *rr, int *ind,
-      void **keep, const struct spral_ssmfe_core_options *options,
+      int left, int right, int m, double *lambda, spral_double_complex *rr,
+      int *ind, void **keep, const struct spral_ssmfe_core_options *options,
       struct spral_ssmfe_inform *inform);
 /* Core driver routine for largest values of (real) eigenproblems */
 void spral_ssmfe_largest_double(struct spral_ssmfe_rcid *rci, int problem,
@@ -249,10 +255,14 @@ void spral_ssmfe_largest_double(struct spral_ssmfe_rcid *rci, int problem,
       struct spral_ssmfe_inform *inform);
 /* Core driver routine for largest values of (complex) eigenproblems */
 void spral_ssmfe_largest_double_complex(struct spral_ssmfe_rciz *rci,
-      int problem, int nep, int m, double *lambda, double complex *rr, int *ind,
-      void **keep, const struct spral_ssmfe_core_options *options,
+      int problem, int nep, int m, double *lambda, spral_double_complex *rr,
+      int *ind, void **keep, const struct spral_ssmfe_core_options *options,
       struct spral_ssmfe_inform *inform);
 /* Free memory */
 void spral_ssmfe_core_free(void **keep, struct spral_ssmfe_inform *inform);
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif
 
 #endif // SPRAL_SSMFE_H

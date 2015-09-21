@@ -110,7 +110,7 @@ This standard data format consists of the following data:
 \begin{verbatim}
    integer                   :: m      ! number of rows (unsymmetric only)
    integer                   :: n      ! number of columns
-   integer, size(n+1)        :: ptr    ! column pointers
+   integer, size(n+1)        :: ptr    ! column pointers (may have type long)
    integer, size(ptr(n+1)-1) :: row    ! row indices
    real,    size(ptr(n+1)-1) :: val    ! numerical values
 \end{verbatim}
@@ -120,7 +120,7 @@ the row number and \texttt{val(k)} holds the value of the \texttt{k}-th entry.
 The \texttt{ptr(:)} array stores column pointers such that \texttt{ptr(i)} is
 the position in \texttt{row(:)} and \texttt{val(:)} of
 the first entry in the \texttt{i}-th column, and \texttt{ptr(n+1)} is one more
-than the total number of entries. There must be no duplicate or out of range
+than the total number of entries. \texttt{ptr(:)} may be either default \texttt{INTEGER} or \texttt{INTEGER(long)}. There must be no duplicate or out of range
 entries.
 Entries that are zero, including those on the diagonal, need not be specified.
 

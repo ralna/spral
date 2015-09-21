@@ -22,6 +22,7 @@ module spral_match_order
       ! Hungarian algorithm for matching and METIS for ordering.
 
    integer, parameter :: wp = kind(0d0)
+   integer, parameter :: long = selected_int_kind(18)
 
    ! Error flags
    integer, parameter :: SUCCESS               = 0
@@ -56,12 +57,13 @@ subroutine match_order_metis(n, ptr, row, val, order, scale, &
    integer, intent(out) :: stat ! stat value returned on failed allocation
 
    integer, dimension(:), allocatable :: cperm ! used to hold matching
-   integer, dimension(:), allocatable :: ptr2 ! column pointers for expanded 
-      ! matrix. 
+   integer(long), dimension(:), allocatable :: ptr2 ! column pointers for
+      ! expanded matrix. 
    integer, dimension(:), allocatable :: row2 ! row indices for expanded matrix 
    real(wp), dimension(:), allocatable :: val2 ! entries of expanded matrix.
 
-   integer :: i, j, k, ne
+   integer :: i, j, ne
+   integer(long) :: k
 
    flag = 0
    stat = 0
@@ -128,7 +130,7 @@ end subroutine match_order_metis
 !
 subroutine mo_split(n,row2,ptr2,order,cperm,flag,stat)
    integer, intent(in) :: n
-   integer, dimension(:), intent(in) :: ptr2 
+   integer(long), dimension(:), intent(in) :: ptr2 
    integer, dimension(:), intent(in) :: row2 
    integer, dimension(n), intent(out) :: order ! used to hold ordering
    integer, dimension(n), intent(inout) :: cperm ! used to hold matching 
@@ -147,10 +149,11 @@ subroutine mo_split(n,row2,ptr2,order,cperm,flag,stat)
 
    integer :: csz ! current cycle length
    integer :: i, j, j1, j2, jj, k, krow, metis_flag
+   integer(long) :: klong
    integer :: max_csz ! maximum cycle length
    integer :: ncomp ! order of compressed matrix
    integer :: ncomp_matched ! order of compressed matrix (matched entries only)
-   integer :: ne ! number of non zeros
+   integer(long) :: ne ! number of non zeros
    integer, dimension(:), allocatable :: invp
 
    ! Use iwork to track what has been matched:
@@ -222,8 +225,8 @@ subroutine mo_split(n,row2,ptr2,order,cperm,flag,stat)
    do i = 1, n
       j = cperm(i)
       if (j<i .and. j.gt.0) cycle ! already seen
-      do k = ptr2(i), ptr2(i+1)-1
-         krow = old_to_new(row2(k))
+      do klong = ptr2(i), ptr2(i+1)-1
+         krow = old_to_new(row2(klong))
          if (iwork(krow).eq.i) cycle ! already added to column
          if (krow>ncomp_matched) cycle ! unmatched row not participating
          row3(jj) = krow
@@ -232,8 +235,8 @@ subroutine mo_split(n,row2,ptr2,order,cperm,flag,stat)
       end do
       if (j.gt.0) then
          ! Also check column cperm(i)
-         do k = ptr2(j), ptr2(j+1)-1
-            krow = old_to_new(row2(k))
+         do klong = ptr2(j), ptr2(j+1)-1
+            krow = old_to_new(row2(klong))
             if (iwork(krow).eq.i) cycle ! already added to column
             if (krow>ncomp_matched) cycle ! unmatched row not participating
             row3(jj) = krow
@@ -314,7 +317,7 @@ end subroutine mo_split
 !
 subroutine mo_scale(n, ptr, row, val, scale, flag, stat, perm)
    integer, intent(in) :: n
-   integer, dimension(:), intent(in) :: ptr
+   integer(long), dimension(:), intent(in) :: ptr
    integer, dimension(:), intent(in) :: row
    real(wp), dimension(:), intent(in) :: val
    real(wp), dimension(n), intent(out) :: scale ! returns the symmetric scaling
@@ -323,7 +326,7 @@ subroutine mo_scale(n, ptr, row, val, scale, flag, stat, perm)
    integer, dimension(n), intent(out), optional :: perm ! if present, returns
       ! the matching
 
-   integer, dimension(:), allocatable :: ptr2 ! column pointers after 
+   integer(long), dimension(:), allocatable :: ptr2 ! column pointers after 
       ! zeros removed.
    integer, dimension(:), allocatable :: row2 ! row indices after zeros
       !  removed. 
@@ -333,7 +336,8 @@ subroutine mo_scale(n, ptr, row, val, scale, flag, stat, perm)
       ! factors. Only needed if A rank deficient. allocated to have size n.
 
    integer :: struct_rank
-   integer :: i, j, k, ne
+   integer :: i
+   integer(long) :: j, k, ne
 
    struct_rank = n
 
@@ -402,8 +406,8 @@ end subroutine mo_scale
 !
 subroutine mo_match(n,row2,ptr2,val2,scale,flag,stat,perm)
    integer, intent(in) :: n
-   integer, dimension(:), intent(inout) :: ptr2 ! In singular case, overwritten
-      ! by column pointers for non singular part of matrix.
+   integer(long), dimension(:), intent(inout) :: ptr2 ! In singular case,
+      ! overwritten by column pointers for non singular part of matrix.
    integer, dimension(:), intent(inout) :: row2 ! In singular case, overwritten
       ! by row indices for non singular part of matrix.
    real(wp), dimension(:), intent(inout) :: val2 ! In singular case, overwritten
@@ -421,8 +425,9 @@ subroutine mo_match(n,row2,ptr2,val2,scale,flag,stat,perm)
    real(wp), dimension(:), allocatable :: cmax ! (log) column maximum
    real(wp), dimension(:), allocatable :: dw ! array used by mc64
 
-   integer :: i, j, j1, j2, jj, k
-   integer :: ne ! number of non zeros
+   integer :: i, j, jj, k
+   integer(long) :: jlong, j1, j2
+   integer(long) :: ne ! number of non zeros
    integer :: nn ! Holds number of rows/cols in non singular part of matrix
    integer :: nne ! Only used in singular case. Holds number of non zeros
      ! in non-singular part of matrix.
@@ -498,12 +503,12 @@ subroutine mo_match(n,row2,ptr2,val2,scale,flag,stat,perm)
       ! skip over unmatched entries
       if (cperm(i) < 0) cycle
       k = k + 1
-      do j = j1,j2-1
-         jj = row2(j)
+      do jlong = j1,j2-1
+         jj = row2(jlong)
          if (cperm(jj) < 0) cycle
          nne = nne + 1
          row2(nne) = old_to_new(jj)
-         val2(nne) = val2(j)
+         val2(nne) = val2(jlong)
       end do
       ptr2(k+1) = nne + 1
     end do
