@@ -1,6 +1,10 @@
 #ifndef SPRAL_SCALING_H
 #define SPRAL_SCALING_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdbool.h>
 
 /************************************
@@ -126,5 +130,9 @@ void spral_scaling_hungarian_unsym_long(int m, int n, const long *ptr,
       const int *row, const double *val, double *rscaling, double *cscaling,
       int *match, const struct spral_scaling_hungarian_options *options,
       struct spral_scaling_hungarian_inform *inform);
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif
 
 #endif // SPRAL_SCALING_H
