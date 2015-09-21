@@ -55,7 +55,7 @@ module spral_rutherford_boeing
       real     :: extra_space = 1.0             ! Array sizes are mult by this
       integer  :: format = FORMAT_CSC      ! Format to manipulate to
       integer  :: lwr_upr_full = TRI_LWR   ! Ensure entries in lwr/upr tri
-      integer  :: values = VALUES_FILE     ! Generate random values for pat
+      integer  :: values = VALUES_FILE     ! As per file
    end type rb_reader_options
 
    interface rb_peek
