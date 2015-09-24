@@ -7,8 +7,8 @@
       ! --------------------------------------
       ! Parameters
       ! --------------------------------------
-      INTEGER, PARAMETER :: myint1 = kind(1), wp = kind(1.0D+0), &
-        myint = kind(1), leniw = 1000000, lena = 1000000, maxn = 10000, &
+      INTEGER, PARAMETER :: wp = kind(1.0D+0), &
+        leniw = 1000000, lena = 1000000, maxn = 10000, &
         maxnz = 1000000, lenirn = 1000000, maxrhs = 5
       REAL (kind=wp), PARAMETER :: zero = 0.0_wp
       ! --------------------------------------
@@ -17,7 +17,7 @@
       INTEGER :: i, n, ne, st, test, jj, k, netot, nf, mc69flag
       INTEGER :: j, kase, lcase, lfact, liw, lkeep, lp, lrhs, ncase, ne1, &
         nres, numed0, numed1, tour, ix, iy
-      INTEGER :: err_count, test_count, testi_count
+      INTEGER :: test_count, testi_count
       INTEGER :: irn1(lenirn), iw(leniw), jcn1(lenirn), jcolst(maxn+1), &
         keep(5*maxn+2*maxnz+42), ym11_icntl(10)
 
@@ -38,57 +38,26 @@
 
       CALL test_errors(ok)
       IF (.NOT. ok) GO TO 80
+      CALL test_input(ok)
+      IF (.NOT. ok) GO TO 80
+      CALL test_dense(ok)
+      IF (.NOT. ok) GO TO 80
+      CALL test_ashcraft(ok)
+      IF (.NOT. ok) GO TO 80
+      CALL test_levelset(ok)
+      IF (.NOT. ok) GO TO 80
+      CALL test_shift(ok)
+      IF (.NOT. ok) GO TO 80
 
-
+      test_count = 0
+      testi_count = 0
 
       ! ******** Basic tests ********
 
-      test_count = 0
-      ! --------------------------------------
-      ! Test diagonal matrix
-      ! --------------------------------------
-      test = 2
-      testi_count = 0
-      WRITE (6,'(a1)') ' '
-      WRITE (6,'(a20,i5,a4)') '****Test section = ', test, '****'
-      n = 10
-      ne = 0
-      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-      IF (st/=0) GO TO 10
-
-      ptr(1:n+1) = 1
-
-      control%amd_switch1 = 2
-      DO i = 0, 0
-        control%print_level = i
-        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
-        corr = .TRUE.
-        DO j = 1, n
-          corr = corr .AND. (perm(j)==j)
-        END DO
-        IF (info%flag>=0 .AND. corr) testi_count = testi_count + 1
-        CALL nd_order(1,n,ptr,row,perm,control,info,seps)
-        corr = .TRUE.
-        DO j = 1, n
-          corr = corr .AND. (perm(j)==j)
-        END DO
-        IF (info%flag>=0 .AND. corr) testi_count = testi_count + 1
-      END DO
-      CALL reset_control(control_orig,control)
-
-      DEALLOCATE (ptr,row,perm,seps,STAT=st)
-      IF (st/=0) GO TO 20
-
-      IF (testi_count/=2) THEN
-        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
-        GO TO 80
-      ELSE
-        test_count = test_count + 1
-        testi_count = 0
-      END IF
+      
 
       ! --------------------------------------
-      ! Test diagonal submatrix
+      ! Test diagonal submatrix - not diag!!!!
       ! --------------------------------------
       test = 3
       WRITE (6,'(a1)') ' '
@@ -107,7 +76,7 @@
 
       control%amd_switch1 = 2
       control%amd_call = 2
-      DO i = 0, 0
+      DO i = 1, 1
         control%print_level = i
         CALL nd_order(0,n,ptr,row,perm,control,info,seps)
         IF (info%flag>=0 .AND. info%nzsuper==16) testi_count = testi_count + 1
@@ -124,310 +93,8 @@
         testi_count = 0
       END IF
 
-      ! --------------------------------------
-      ! Test expansion of matrix from lower triangle input
-      ! --------------------------------------
-      test = 4
-      WRITE (6,'(a1)') ' '
-      WRITE (6,'(a20,i5,a4)') '****Test section = ', test, '****'
-      n = 10
-      ne = 9
-      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-      IF (st/=0) GO TO 10
-
-      ptr(1:n-1) = (/ (i,i=1,n-1) /)
-      ptr(n:n+1) = n
-      row(1:ne) = (/ (i,i=2,n) /)
-
-      control%amd_switch1 = 2
-      control%amd_call = 2
-      DO i = 0, 2
-        control%print_level = i
-        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
-        IF (info%flag>=0 .AND. info%nzsuper==18) testi_count = testi_count + 1
-      END DO
-      CALL reset_control(control_orig,control)
-
-      DEALLOCATE (ptr,row,perm,seps,STAT=st)
-      IF (st/=0) GO TO 20
-      IF (testi_count/=3) THEN
-        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
-        GO TO 80
-      ELSE
-        test_count = test_count + 1
-        testi_count = 0
-      END IF
-
-      ! --------------------------------------
-      ! Test expansion of matrix from lower triangle format and that diags are
-      ! removed
-      ! --------------------------------------
-
-      test = 5
-      WRITE (6,'(a1)') ' '
-      WRITE (6,'(a20,i5,a4)') '****Test section = ', test, '****'
-      n = 10
-      ne = 19
-      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-      IF (st/=0) GO TO 10
-
-      ptr(1:n) = (/ (2*i-1,i=1,n) /)
-      ptr(n+1) = ne + 1
-      row(1:ne) = (/ 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, &
-        10 /)
-
-      control%amd_switch1 = 2
-      control%amd_call = 2
-      DO i = 0, 0
-        control%print_level = i
-        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
-        IF (info%flag>=0 .AND. info%nzsuper==18) testi_count = testi_count + 1
-      END DO
-      CALL reset_control(control_orig,control)
-
-      DEALLOCATE (ptr,row,perm,seps,STAT=st)
-      IF (st/=0) GO TO 20
-      IF (testi_count/=1) THEN
-        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
-        GO TO 80
-      ELSE
-        test_count = test_count + 1
-        testi_count = 0
-      END IF
-
-      ! --------------------------------------
-      ! Test expansion of matrix from lower and upper triangle input with no
-      ! diags
-      ! --------------------------------------
-      test = 6
-      WRITE (6,'(a1)') ' '
-      WRITE (6,'(a20,i5,a4)') '****Test section = ', test, '****'
-      n = 10
-      ne = 18
-      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-      IF (st/=0) GO TO 10
-
-      ptr(1) = 1
-      ptr(2:n) = (/ (2*(i-1),i=2,n) /)
-      ptr(n+1) = ne + 1
-      row(1) = 2
-      DO i = 2, n - 1
-        row(ptr(i)) = i - 1
-        row(ptr(i)+1) = i + 1
-      END DO
-      row(ptr(n)) = n - 1
-
-      control%amd_switch1 = 2
-      control%amd_call = 2
-      DO i = 2, 2
-        control%print_level = i
-        CALL nd_order(1,n,ptr,row,perm,control,info,seps)
-        IF (info%flag>=0 .AND. info%nzsuper==18) testi_count = testi_count + 1
-      END DO
-      CALL reset_control(control_orig,control)
-
-      DEALLOCATE (ptr,row,perm,seps,STAT=st)
-      IF (st/=0) GO TO 20
-      IF (testi_count/=1) THEN
-        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
-        GO TO 80
-      ELSE
-        test_count = test_count + 1
-        testi_count = 0
-      END IF
 
 
-      ! --------------------------------------
-      ! Test expansion of matrix from lower and upper triangle input with diag
-      ! entry
-      ! --------------------------------------
-      test = 7
-      WRITE (6,'(a1)') ' '
-      WRITE (6,'(a20,i5,a4)') '****Test section = ', test, '****'
-      n = 10
-      ne = 19
-      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-      IF (st/=0) GO TO 10
-
-      ptr(1) = 1
-      ptr(2:n) = (/ (2*(i-1),i=2,n) /)
-      ptr(n+1) = ne + 1
-      row(1) = 2
-      DO i = 2, n - 1
-        row(ptr(i)) = i - 1
-        row(ptr(i)+1) = i + 1
-      END DO
-      row(ptr(n)) = n - 1
-      row(ne) = n
-
-      control%amd_switch1 = 2
-      control%amd_call = 2
-      DO i = 0, 2
-        control%print_level = i
-        CALL nd_order(1,n,ptr,row,perm,control,info,seps)
-        IF (info%flag>=0 .AND. info%nzsuper==18) testi_count = testi_count + 1
-      END DO
-      CALL reset_control(control_orig,control)
-
-      DEALLOCATE (ptr,row,perm,seps,STAT=st)
-      IF (st/=0) GO TO 20
-      IF (testi_count/=3) THEN
-        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
-        GO TO 80
-      ELSE
-        test_count = test_count + 1
-        testi_count = 0
-      END IF
-
-      ! --------------------------------------
-      ! Test dense row removal - row 1 dense
-      ! --------------------------------------
-      test = 8
-      WRITE (6,'(a1)') ' '
-      WRITE (6,'(a20,i5,a4)') '****Test section = ', test, '****'
-      n = 800
-      ne = n
-      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-      IF (st/=0) GO TO 10
-
-      ptr(1) = 1
-      ptr(2:n+1) = ne + 1
-      row(1:ne) = (/ (i,i=1,n) /)
-
-      control%amd_switch1 = 2
-      control%amd_call = 20
-      DO i = 0, 2
-        control%print_level = i
-        control%remove_dense_rows = .TRUE.
-        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
-        IF (info%flag>=0 .AND. info%nsuper==799 .AND. info%nzsuper==0) &
-          testi_count = testi_count + 1
-        control%remove_dense_rows = .FALSE.
-        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
-        IF (info%flag>=0 .AND. info%nsuper==800 .AND. info%nzsuper==1598) &
-          testi_count = testi_count + 1
-        WRITE (*,*) 'i', i
-      END DO
-      CALL reset_control(control_orig,control)
-
-      DEALLOCATE (ptr,row,perm,seps,STAT=st)
-      IF (st/=0) GO TO 20
-      IF (testi_count/=6) THEN
-        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
-        GO TO 80
-      ELSE
-        test_count = test_count + 1
-        testi_count = 0
-      END IF
-
-      ! --------------------------------------
-      ! Test dense row removal - first row dense
-      ! --------------------------------------
-      test = 9
-      WRITE (6,'(a1)') ' '
-      WRITE (6,'(a20,i5,a4)') '****Test section = ', test, ' ****'
-      n = 800
-      ne = 2*n - 3
-      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-      IF (st/=0) GO TO 10
-
-      ptr(1) = 1
-      ptr(2:n) = (/ (n+i-2,i=2,n) /)
-      ptr(n+1) = ne + 1
-      row(1:ptr(2)-1) = (/ (i,i=2,n) /)
-      row(ptr(2):ptr(n)-1) = (/ (i+1,i=2,n-1) /)
-
-      control%amd_switch1 = 2
-      control%amd_call = 20
-      DO i = 0, 0
-        control%print_level = i
-        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
-        IF (info%flag>=0 .AND. info%nsuper==799 .AND. info%nzsuper==1596) &
-          testi_count = testi_count + 1
-      END DO
-      CALL reset_control(control_orig,control)
-
-      DEALLOCATE (ptr,row,perm,seps,STAT=st)
-      IF (st/=0) GO TO 20
-      IF (testi_count/=1) THEN
-        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
-        GO TO 80
-      ELSE
-        test_count = test_count + 1
-        testi_count = 0
-      END IF
-
-      ! --------------------------------------
-      ! Test dense row removal - last row dense
-      ! --------------------------------------
-      test = 10
-      WRITE (6,'(a1)') ' '
-      WRITE (6,'(a20,i5,a4)') '****Test section = ', test, '****'
-      n = 800
-      ne = n - 1
-      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-      IF (st/=0) GO TO 10
-
-      ptr(1:n-1) = (/ (i,i=1,n-1) /)
-      ptr(n:n+1) = ne + 1
-      row(1:ne) = n
-
-      control%amd_switch1 = 2
-      control%amd_call = 20
-      DO i = 0, 0
-        control%print_level = i
-        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
-        IF (info%flag>=0 .AND. info%nsuper==799 .AND. info%nzsuper==0) &
-          testi_count = testi_count + 1
-      END DO
-      CALL reset_control(control_orig,control)
-
-      DEALLOCATE (ptr,row,perm,seps,STAT=st)
-      IF (st/=0) GO TO 20
-      IF (testi_count/=1) THEN
-        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
-        GO TO 80
-      ELSE
-        test_count = test_count + 1
-        testi_count = 0
-      END IF
-
-      ! --------------------------------------
-      ! Test dense row removal - first two rows dense but row 2 has max degree
-      ! --------------------------------------
-      test = 11
-      WRITE (6,'(a1)') ' '
-      WRITE (6,'(a20,i5,a4)') '****Test section = ', test, '****'
-      n = 800
-      ne = n - 3 + n - 2
-      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-      IF (st/=0) GO TO 10
-
-      ptr(1) = 1
-      ptr(2) = n - 2
-      ptr(3:n+1) = ne + 1
-      row(ptr(1):ptr(2)-1) = (/ (i+3,i=1,n-3) /)
-      row(ptr(2):ne) = (/ (i+2,i=1,n-2) /)
-
-      control%amd_switch1 = 2
-      control%amd_call = 20
-      DO i = 0, 0
-        control%print_level = i
-        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
-        IF (info%flag>=0 .AND. info%nsuper==798 .AND. info%nzsuper==0) &
-          testi_count = testi_count + 1
-      END DO
-      CALL reset_control(control_orig,control)
-
-      DEALLOCATE (ptr,row,perm,seps,STAT=st)
-      IF (st/=0) GO TO 20
-      IF (testi_count/=1) THEN
-        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
-        GO TO 80
-      ELSE
-        test_count = test_count + 1
-        testi_count = 0
-      END IF
 
       ! --------------------------------------
       ! Test independent component detection
@@ -455,438 +122,12 @@
         CALL nd_order(1,n,ptr,row,perm,control,info)
         IF (info%flag>=0) testi_count = testi_count + 1
 
-        control%coarse_partition_method = 3
-        CALL nd_order(1,n,ptr,row,perm,control,info)
-        IF (info%flag>=0) testi_count = testi_count + 1
       END DO
       CALL reset_control(control_orig,control)
 
       DEALLOCATE (ptr,row,perm,seps,STAT=st)
       IF (st/=0) GO TO 20
-      IF (testi_count/=9) THEN
-        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
-        GO TO 80
-      ELSE
-        test_count = test_count + 1
-        testi_count = 0
-      END IF
-
-      ! --------------------------------------
-      ! Test Ashcraft method
-      ! --------------------------------------
-
-      test = 13
-      WRITE (6,'(a1)') ' '
-      WRITE (6,'(a20,i5,a4)') '****Test section = ', test, '****'
-      n = 10
-      ne = 14
-      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-      IF (st/=0) GO TO 10
-
-      ptr(1:n+1) = (/ 1, 3, 5, 7, 9, 11, 12, 13, 14, 15, 15 /)
-      row(1:ne) = (/ 2, 7, 7, 3, 4, 8, 5, 9, 6, 10, 10, 8, 9, 10 /)
-
-      control%amd_switch1 = 5
-      control%partition_method = 0
-      control%coarse_partition_method = 1
-      control%amd_call = 2
-      DO i = 0, 2
-        control%print_level = i
-        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
-        IF (info%flag>=0) testi_count = testi_count + 1
-      END DO
-      CALL reset_control(control_orig,control)
-
-      DEALLOCATE (ptr,row,perm,seps,STAT=st)
-      IF (st/=0) GO TO 20
-      IF (testi_count/=3) THEN
-        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
-        GO TO 80
-      ELSE
-        test_count = test_count + 1
-        testi_count = 0
-      END IF
-
-      ! --------------------------------------
-      ! Test Ashcraft method
-      ! --------------------------------------
-
-      test = 14
-      WRITE (6,'(a1)') ' '
-      WRITE (6,'(a20,i5,a4)') '****Test section = ', test, '****'
-      n = 10
-      ne = 15
-      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-      IF (st/=0) GO TO 10
-
-      ptr(1:n+1) = (/ 1, 4, 6, 8, 9, 10, 11, 13, 15, 16, 16 /)
-      row(1:ne) = (/ 2, 3, 4, 3, 5, 4, 8, 6, 7, 9, 8, 10, 9, 10, 10 /)
-
-      control%amd_switch1 = 2
-      control%partition_method = 0
-      control%coarse_partition_method = 1
-      control%amd_call = 2
-      DO i = 0, 0
-        control%print_level = i
-        CALL nd_order(0,n,ptr,row,perm,control,info)
-        IF (info%flag>=0) testi_count = testi_count + 1
-      END DO
-      CALL reset_control(control_orig,control)
-
-      DEALLOCATE (ptr,row,perm,seps,STAT=st)
-      IF (st/=0) GO TO 20
-      IF (testi_count/=1) THEN
-        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
-        GO TO 80
-      ELSE
-        test_count = test_count + 1
-        testi_count = 0
-      END IF
-
-      ! --------------------------------------
-      ! Test Ashcraft method
-      ! --------------------------------------
-
-      test = 15
-      WRITE (6,'(a1)') ' '
-      WRITE (6,'(a20,i5,a4)') '****Test section = ', test, '****'
-      n = 13
-      ne = 16
-      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-      IF (st/=0) GO TO 10
-
-      ptr(1:n+1) = (/ 1, 2, 4, 6, 8, 10, 12, 13, 13, 14, 14, 16, 17, 17 /)
-      row(1:ne) = (/ 2, 3, 4, 4, 11, 5, 6, 7, 8, 9, 10, 8, 10, 12, 13, 13 /)
-
-      control%amd_switch1 = 2
-      control%partition_method = 0
-      control%coarse_partition_method = 1
-      control%amd_call = 2
-      DO i = 0, 0
-        control%print_level = i
-        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
-        IF (info%flag>=0) testi_count = testi_count + 1
-      END DO
-      CALL reset_control(control_orig,control)
-
-      DEALLOCATE (ptr,row,perm,seps,STAT=st)
-      IF (st/=0) GO TO 20
-      IF (testi_count/=1) THEN
-        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
-        GO TO 80
-      ELSE
-        test_count = test_count + 1
-        testi_count = 0
-      END IF
-
-      ! --------------------------------------
-      ! Test Ashcraft method
-      ! --------------------------------------
-
-      test = 16
-      WRITE (6,'(a1)') ' '
-      WRITE (6,'(a20,i5,a4)') '****Test section = ', test, '****'
-      n = 13
-      ne = 16
-      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-      IF (st/=0) GO TO 10
-
-      ptr(1:n+1) = (/ 1, 2, 4, 6, 8, 10, 12, 13, 13, 14, 14, 16, 17, 17 /)
-      row(1:ne) = (/ 2, 3, 4, 4, 11, 5, 6, 7, 8, 9, 10, 8, 10, 12, 13, 13 /)
-
-      control%amd_switch1 = 2
-      control%partition_method = 0
-      control%coarse_partition_method = 1
-      control%amd_call = 2
-      control%balance = 20.0
-      DO i = 0, 0
-        control%print_level = i
-        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
-        IF (info%flag>=0) testi_count = testi_count + 1
-      END DO
-      CALL reset_control(control_orig,control)
-
-      DEALLOCATE (ptr,row,perm,seps,STAT=st)
-      IF (st/=0) GO TO 20
-      IF (testi_count/=1) THEN
-        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
-        GO TO 80
-      ELSE
-        test_count = test_count + 1
-        testi_count = 0
-      END IF
-
-      ! --------------------------------------
-      ! Test one-sided levelset method
-      ! --------------------------------------
-
-      test = 17
-      WRITE (6,'(a1)') ' '
-      WRITE (6,'(a20,i5,a4)') '****Test section = ', test, '****'
-      n = 10
-      ne = 14
-      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-      IF (st/=0) GO TO 10
-
-      ptr(1:n+1) = (/ 1, 3, 5, 7, 9, 11, 12, 13, 14, 15, 15 /)
-      row(1:ne) = (/ 2, 7, 7, 3, 4, 8, 5, 9, 6, 10, 10, 8, 9, 10 /)
-
-      control%amd_switch1 = 5
-      control%partition_method = 0
-      control%coarse_partition_method = 2
-      control%amd_call = 2
-      control%balance = 20.0
-      DO i = 0, 2
-        control%print_level = i
-        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
-        IF (info%flag>=0) testi_count = testi_count + 1
-      END DO
-      CALL reset_control(control_orig,control)
-
-      DEALLOCATE (ptr,row,perm,seps,STAT=st)
-      IF (st/=0) GO TO 20
-      IF (testi_count/=3) THEN
-        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
-        GO TO 80
-      ELSE
-        test_count = test_count + 1
-        testi_count = 0
-      END IF
-
-      ! --------------------------------------
-      ! Test one-sided levelset method
-      ! --------------------------------------
-
-      test = 18
-      WRITE (6,'(a1)') ' '
-      WRITE (6,'(a20,i5,a4)') '****Test section = ', test, '****'
-      n = 10
-      ne = 14
-      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-      IF (st/=0) GO TO 10
-
-      ptr(1:n+1) = (/ 1, 3, 5, 7, 9, 11, 12, 13, 14, 15, 15 /)
-      row(1:ne) = (/ 2, 7, 7, 3, 4, 8, 5, 9, 6, 10, 10, 8, 9, 10 /)
-
-      control%amd_switch1 = 5
-      control%partition_method = 0
-      control%coarse_partition_method = 2
-      control%balance = 1.5
-      control%amd_call = 2
-      DO i = 0, 0
-        control%print_level = i
-        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
-        IF (info%flag>=0) testi_count = testi_count + 1
-      END DO
-      CALL reset_control(control_orig,control)
-
-      DEALLOCATE (ptr,row,perm,seps,STAT=st)
-      IF (st/=0) GO TO 20
-      IF (testi_count/=1) THEN
-        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
-        GO TO 80
-      ELSE
-        test_count = test_count + 1
-        testi_count = 0
-      END IF
-
-      ! --------------------------------------
-      ! Test DM-style refinement with 2-sided partition
-      ! --------------------------------------
-
-      test = 19
-      WRITE (6,'(a1)') ' '
-      WRITE (6,'(a20,i5,a4)') '****Test section = ', test, '****'
-      n = 8
-      ne = 11
-      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-      IF (st/=0) GO TO 10
-
-      ptr(1:n+1) = (/ 1, 4, 5, 6, 8, 9, 11, 12, 12 /)
-      row(1:ne) = (/ 2, 3, 4, 4, 4, 5, 6, 6, 7, 8, 8 /)
-
-      control%amd_switch1 = 5
-      control%partition_method = 0
-      control%coarse_partition_method = 1
-      control%amd_call = 2
-      DO i = 2, 2
-        control%print_level = i
-        control%refinement = 2
-        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
-        IF (info%flag>=0) testi_count = testi_count + 1
-        control%refinement = 5
-        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
-        IF (info%flag>=0) testi_count = testi_count + 1
-        control%print_level = i
-        control%refinement = 2
-        CALL nd_order(0,n,ptr,row,perm,control,info)
-        IF (info%flag>=0) testi_count = testi_count + 1
-        control%refinement = 5
-        CALL nd_order(0,n,ptr,row,perm,control,info)
-        IF (info%flag>=0) testi_count = testi_count + 1
-      END DO
-      CALL reset_control(control_orig,control)
-
-      DEALLOCATE (ptr,row,perm,seps,STAT=st)
-      IF (st/=0) GO TO 20
-      IF (testi_count/=4) THEN
-        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
-        GO TO 80
-      ELSE
-        test_count = test_count + 1
-        testi_count = 0
-      END IF
-
-      ! --------------------------------------
-      ! Test DM refinement with 2-sided partition
-      ! --------------------------------------
-
-      test = 20
-      WRITE (6,'(a1)') ' '
-      WRITE (6,'(a20,i5,a4)') '****Test section = ', test, '****'
-      n = 21
-      ne = 37
-      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-      IF (st/=0) GO TO 10
-
-      ptr(1:n+1) = (/ 1, 3, 5, 7, 9, 11, 13, 15, 16, 20, 22, 24, 26, 28, 29, &
-        29, 32, 33, 35, 37, 38, 38 /)
-      row(1:ne) = (/ 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 11, 16, &
-        17, 11, 13, 12, 13, 13, 15, 14, 15, 15, 17, 18, 19, 18, 19, 20, 20, &
-        21, 21 /)
-
-      control%amd_switch1 = 5
-      control%partition_method = 0
-      control%coarse_partition_method = 1
-      control%refinement = 2
-      control%amd_call = 2
-      DO i = 0, 0
-        control%print_level = i
-        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
-        IF (info%flag>=0) testi_count = testi_count + 1
-      END DO
-      CALL reset_control(control_orig,control)
-
-      DEALLOCATE (ptr,row,perm,seps,STAT=st)
-      IF (st/=0) GO TO 20
-      IF (testi_count/=1) THEN
-        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
-        GO TO 80
-      ELSE
-        test_count = test_count + 1
-        testi_count = 0
-      END IF
-
-      ! --------------------------------------
-      ! Test DM refinement with 1-sided partition
-      ! --------------------------------------
-
-      test = 21
-      WRITE (6,'(a1)') ' '
-      WRITE (6,'(a20,i5,a4)') '****Test section = ', test, '****'
-      n = 31
-      ne = 49
-      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-      IF (st/=0) GO TO 10
-
-      ptr(1:n+1) = (/ 1, 4, 6, 8, 10, 12, 13, 15, 16, 18, 20, 21, 22, 25, 26, &
-        27, 29, 31, 32, 34, 36, 38, 39, 40, 42, 44, 45, 47, 48, 49, 50, 50 /)
-      row(1:ne) = (/ 2, 3, 4, 4, 5, 6, 7, 7, 8, 8, 9, 10, 10, 11, 11, 11, 12, &
-        13, 14, 14, 14, 15, 17, 18, 18, 16, 17, 19, 20, 21, 21, 20, 22, 23, &
-        24, 24, 25, 23, 26, 26, 27, 27, 28, 29, 29, 30, 30, 31, 31 /)
-
-      control%amd_switch1 = 5
-      control%partition_method = 0
-      control%coarse_partition_method = 2
-      control%refinement = 2
-      control%amd_call = 2
-      control%balance = 33.0
-      DO i = 0, 0
-        control%print_level = i
-        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
-        IF (info%flag>=0) testi_count = testi_count + 1
-      END DO
-      CALL reset_control(control_orig,control)
-
-      DEALLOCATE (ptr,row,perm,seps,STAT=st)
-      IF (st/=0) GO TO 20
-      IF (testi_count/=1) THEN
-        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
-        GO TO 80
-      ELSE
-        test_count = test_count + 1
-        testi_count = 0
-      END IF
-
-      ! --------------------------------------
-      ! Test DM refinement with 2-sided partition
-      ! --------------------------------------
-
-      test = 22
-      WRITE (6,'(a1)') ' '
-      WRITE (6,'(a20,i5,a4)') '****Test section = ', test, '****'
-      n = 7
-      ne = 6
-      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-      IF (st/=0) GO TO 10
-
-      ptr(1:n+1) = (/ 1, 2, 3, 4, 5, 6, 7, 7 /)
-      row(1:ne) = (/ 7, 7, 7, 7, 7, 7 /)
-
-      control%amd_switch1 = 5
-      control%partition_method = 0
-      control%coarse_partition_method = 2
-      control%refinement = 2
-      control%amd_call = 2
-      control%balance = 12.0
-      DO i = 0, 0
-        control%print_level = i
-        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
-        IF (info%flag>=0) testi_count = testi_count + 1
-      END DO
-      CALL reset_control(control_orig,control)
-
-      DEALLOCATE (ptr,row,perm,seps,STAT=st)
-      IF (st/=0) GO TO 20
-      IF (testi_count/=1) THEN
-        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
-        GO TO 80
-      ELSE
-        test_count = test_count + 1
-        testi_count = 0
-      END IF
-
-      ! --------------------------------------
-      ! Test DM refinement with 1-sided partition
-      ! --------------------------------------
-
-      test = 23
-      WRITE (6,'(a1)') ' '
-      WRITE (6,'(a20,i5,a4)') '****Test section = ', test, '****'
-      n = 7
-      ne = 6
-      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-      IF (st/=0) GO TO 10
-
-      ptr(1:n+1) = (/ 1, 2, 3, 4, 5, 6, 7, 7 /)
-      row(1:ne) = (/ 7, 7, 7, 7, 7, 7 /)
-
-      control%amd_switch1 = 5
-      control%partition_method = 0
-      control%coarse_partition_method = 2
-      control%refinement = 5
-      control%amd_call = 2
-      control%balance = 12.0
-      DO i = 0, 0
-        control%print_level = i
-        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
-        IF (info%flag>=0) testi_count = testi_count + 1
-      END DO
-      CALL reset_control(control_orig,control)
-
-      DEALLOCATE (ptr,row,perm,seps,STAT=st)
-      IF (st/=0) GO TO 20
-      IF (testi_count/=1) THEN
+      IF (testi_count/=6) THEN
         WRITE (6,'(a29,i5)') 'Code failure in test section ', test
         GO TO 80
       ELSE
@@ -895,210 +136,9 @@
       END IF
 
 
-      ! --------------------------------------
-      ! Test DM refinement with 1-sided partition with balanced partition
-      ! --------------------------------------
-
-      test = 24
-      WRITE (6,'(a1)') ' '
-      WRITE (6,'(a20,i5,a4)') '****Test section = ', test, '****'
-      n = 31
-      ne = 49
-      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-      IF (st/=0) GO TO 10
-
-      ptr(1:n+1) = (/ 1, 4, 6, 8, 10, 12, 13, 15, 16, 18, 20, 21, 22, 25, 26, &
-        27, 29, 31, 32, 34, 36, 38, 39, 40, 42, 44, 45, 47, 48, 49, 50, 50 /)
-      row(1:ne) = (/ 2, 3, 4, 4, 5, 6, 7, 7, 8, 8, 9, 10, 10, 11, 11, 11, 12, &
-        13, 14, 14, 14, 15, 17, 18, 18, 16, 17, 19, 20, 21, 21, 20, 22, 23, &
-        24, 24, 25, 23, 26, 26, 27, 27, 28, 29, 29, 30, 30, 31, 31 /)
-
-      control%amd_switch1 = 5
-      control%partition_method = 0
-      control%coarse_partition_method = 2
-      control%refinement = 5
-      control%balance = 2.0
-      control%amd_call = 2
-      DO i = 0, 2
-        control%print_level = i
-        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
-        IF (info%flag>=0) testi_count = testi_count + 1
-      END DO
-      CALL reset_control(control_orig,control)
-
-      DEALLOCATE (ptr,row,perm,seps,STAT=st)
-      IF (st/=0) GO TO 20
-      IF (testi_count/=3) THEN
-        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
-        GO TO 80
-      ELSE
-        test_count = test_count + 1
-        testi_count = 0
-      END IF
-
-      ! --------------------------------------
-      ! Test DM refinement with 2-sided partition with balanced partition
-      ! --------------------------------------
-
-      test = 25
-      WRITE (6,'(a1)') ' '
-      WRITE (6,'(a20,i5,a4)') '****Test section = ', test, '****'
-      n = 31
-      ne = 49
-      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-      IF (st/=0) GO TO 10
-
-      ptr(1:n+1) = (/ 1, 4, 6, 8, 10, 12, 13, 15, 16, 18, 20, 21, 22, 25, 26, &
-        27, 29, 31, 32, 34, 36, 38, 39, 40, 42, 44, 45, 47, 48, 49, 50, 50 /)
-      row(1:ne) = (/ 2, 3, 4, 4, 5, 6, 7, 7, 8, 8, 9, 10, 10, 11, 11, 11, 12, &
-        13, 14, 14, 14, 15, 17, 18, 18, 16, 17, 19, 20, 21, 21, 20, 22, 23, &
-        24, 24, 25, 23, 26, 26, 27, 27, 28, 29, 29, 30, 30, 31, 31 /)
-
-      control%amd_switch1 = 5
-      control%partition_method = 0
-      control%coarse_partition_method = 1
-      control%refinement = 5
-      control%balance = 2.0
-      control%amd_call = 2
-      DO i = 0, 0
-        control%print_level = i
-        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
-        IF (info%flag>=0) testi_count = testi_count + 1
-      END DO
-      CALL reset_control(control_orig,control)
-
-      DEALLOCATE (ptr,row,perm,seps,STAT=st)
-      IF (st/=0) GO TO 20
-      IF (testi_count/=1) THEN
-        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
-        GO TO 80
-      ELSE
-        test_count = test_count + 1
-        testi_count = 0
-      END IF
-
-      ! --------------------------------------
-      ! Test DM refinement with 2-sided partition with balanced partition
-      ! --------------------------------------
-
-      test = 26
-      WRITE (6,'(a1)') ' '
-      WRITE (6,'(a20,i5,a4)') '****Test section = ', test, '****'
-      n = 31
-      ne = 49
-      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-      IF (st/=0) GO TO 10
-
-      ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
-        27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
-      row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
-        14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
-        24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
-
-      control%amd_switch1 = 5
-      control%partition_method = 0
-      control%coarse_partition_method = 1
-      control%refinement = 2
-      control%balance = 1.05
-      control%refinement_band = n
-      control%amd_call = 2
-      DO i = 0, 0
-        control%print_level = i
-        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
-        IF (info%flag>=0) testi_count = testi_count + 1
-      END DO
-      CALL reset_control(control_orig,control)
-
-      DEALLOCATE (ptr,row,perm,seps,STAT=st)
-      IF (st/=0) GO TO 20
-      IF (testi_count/=1) THEN
-        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
-        GO TO 80
-      ELSE
-        test_count = test_count + 1
-        testi_count = 0
-      END IF
 
 
-      ! --------------------------------------
-      ! Test DM refinement with 2-sided partition with balanced partition
-      ! --------------------------------------
-
-      test = 27
-      WRITE (6,'(a1)') ' '
-      WRITE (6,'(a20,i5,a4)') '****Test section = ', test, '****'
-      n = 13
-      ne = 15
-      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-      IF (st/=0) GO TO 10
-
-      ptr(1:n+1) = (/ 1, 2, 3, 6, 7, 8, 9, 11, 11, 13, 14, 15, 16, 16 /)
-      row(1:ne) = (/ 2, 3, 4, 5, 6, 6, 6, 7, 8, 9, 10, 11, 12, 12, 13 /)
-
-      control%amd_switch1 = 5
-      control%partition_method = 0
-      control%coarse_partition_method = 1
-      control%refinement = 2
-      control%balance = 1.30
-      control%refinement_band = n
-      control%amd_call = 2
-      DO i = 0, 0
-        control%print_level = i
-        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
-        IF (info%flag>=0) testi_count = testi_count + 1
-      END DO
-      CALL reset_control(control_orig,control)
-
-      DEALLOCATE (ptr,row,perm,seps,STAT=st)
-      IF (st/=0) GO TO 20
-      IF (testi_count/=1) THEN
-        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
-        GO TO 80
-      ELSE
-        test_count = test_count + 1
-        testi_count = 0
-      END IF
-
-
-      ! --------------------------------------
-      ! Test DM refinement with 2-sided partition with balanced partition
-      ! --------------------------------------
-
-      test = 28
-      WRITE (6,'(a1)') ' '
-      WRITE (6,'(a20,i5,a4)') '****Test section = ', test, '****'
-      n = 13
-      ne = 15
-      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-      IF (st/=0) GO TO 10
-
-      ptr(1:n+1) = (/ 1, 2, 4, 5, 6, 7, 8, 9, 12, 13, 14, 15, 16, 16 /)
-      row(1:ne) = (/ 2, 3, 4, 5, 5, 7, 7, 8, 9, 10, 11, 11, 11, 12, 13 /)
-
-      control%amd_switch1 = 5
-      control%partition_method = 0
-      control%coarse_partition_method = 1
-      control%refinement = 2
-      control%balance = 1.30
-      control%refinement_band = n
-      control%amd_call = 2
-      DO i = 0, 0
-        control%print_level = i
-        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
-        IF (info%flag>=0) testi_count = testi_count + 1
-      END DO
-      CALL reset_control(control_orig,control)
-
-      DEALLOCATE (ptr,row,perm,seps,STAT=st)
-      IF (st/=0) GO TO 20
-      IF (testi_count/=1) THEN
-        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
-        GO TO 80
-      ELSE
-        test_count = test_count + 1
-        testi_count = 0
-      END IF
-
+ 
       ! --------------------------------------
       ! Test multigrid, 2-sided partitioning
       ! --------------------------------------
@@ -1119,7 +159,8 @@
 
       control%amd_switch1 = 5
       control%balance = 1.05
-      control%partition_method = 2
+      control%partition_method = 1
+      control%ml_call = 4
       control%coarse_partition_method = 2
       control%amd_call = 2
       control%stop_coarsening1 = 5
@@ -1161,7 +202,8 @@
 
       control%amd_switch1 = 5
       control%balance = 1.05
-      control%partition_method = 2
+      control%partition_method = 1
+      control%ml_call = 4
       control%coarse_partition_method = 1
       control%amd_call = 2
       control%stop_coarsening1 = 5
@@ -1927,6 +969,7 @@
       control%amd_switch1 = 5
       control%balance = 1.05
       control%partition_method = 1
+      control%ml_call = 4
       control%coarse_partition_method = 2
       control%amd_call = 2
       control%stop_coarsening1 = 5
@@ -1969,6 +1012,7 @@
       control%amd_switch1 = 5
       control%balance = 1.05
       control%partition_method = 1
+      control%ml_call = 4
       control%coarse_partition_method = 1
       control%amd_call = 2
       control%stop_coarsening1 = 5
@@ -2012,6 +1056,7 @@
       control%amd_switch1 = 5
       control%balance = 1.05
       control%partition_method = 1
+      control%ml_call = 4
       control%coarse_partition_method = 1
       control%amd_call = 2
       control%stop_coarsening1 = 5
@@ -2056,6 +1101,7 @@
       control%amd_switch1 = 5
       control%balance = 1.05
       control%partition_method = 1
+      control%ml_call = 4
       control%coarse_partition_method = 1
       control%amd_call = 2
       control%stop_coarsening1 = 5
@@ -2142,6 +1188,7 @@
       control%amd_switch1 = 4
       control%balance = 1.0
       control%partition_method = 1
+      control%ml_call = 4
       control%coarse_partition_method = 1
       control%amd_call = 2
       control%stop_coarsening1 = 2
@@ -2472,6 +1519,7 @@
       control%min_reduction = 0.5
       control%balance = 1.0
       control%partition_method = 1
+      control%ml_call = 4
       control%coarse_partition_method = 1
       control%amd_call = 2
       control%max_improve_cycles = 2
@@ -2634,6 +1682,7 @@
       control%min_reduction = 0.5
       control%balance = 1.0
       control%partition_method = 1
+      control%ml_call = 4
       control%coarse_partition_method = 1
       control%amd_call = 2
       control%max_improve_cycles = 1
@@ -2648,50 +1697,6 @@
       DEALLOCATE (ptr,row,perm,seps,STAT=st)
       IF (st/=0) GO TO 20
       IF (testi_count/=1) THEN
-        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
-        GO TO 80
-      ELSE
-        test_count = test_count + 1
-        testi_count = 0
-      END IF
-
-      ! --------------------------------------
-      ! Test multigrid, growth partitioning
-      ! --------------------------------------
-
-      test = 53
-      WRITE (6,'(a1)') ' '
-      WRITE (6,'(a20,i5,a4)') '****Test section = ', test, '****'
-      n = 31
-      ne = 49
-      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-      IF (st/=0) GO TO 10
-
-      ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
-        27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
-      row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
-        14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
-        24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
-
-      control%amd_switch1 = 5
-      control%balance = 1.05
-      control%partition_method = 2
-      control%coarse_partition_method = 3
-      control%amd_call = 2
-      control%stop_coarsening1 = 5
-      DO i = 0, 2
-        DO j = 0, 2
-          control%print_level = i
-          control%matching = j
-          CALL nd_order(0,n,ptr,row,perm,control,info,seps)
-          IF (info%flag>=0) testi_count = testi_count + 1
-        END DO
-      END DO
-      CALL reset_control(control_orig,control)
-
-      DEALLOCATE (ptr,row,perm,seps,STAT=st)
-      IF (st/=0) GO TO 20
-      IF (testi_count/=9) THEN
         WRITE (6,'(a29,i5)') 'Code failure in test section ', test
         GO TO 80
       ELSE
@@ -2859,8 +1864,8 @@
         control_reset%amd_call = control_orig%amd_call
         control_reset%amd_switch1 = control_orig%amd_switch1
         control_reset%amd_switch2 = control_orig%amd_switch2
-        control_reset%coarse_partition_method = control_orig% &
-          coarse_partition_method
+        control_reset%cost_function = control_orig%cost_function
+        control_reset%partition_method = control_orig%partition_method
         control_reset%matching = control_orig%matching
         control_reset%coarse_partition_method = control_orig% &
           coarse_partition_method
@@ -2869,6 +1874,7 @@
         control_reset%remove_dense_rows = control_orig%remove_dense_rows
         control_reset%stop_coarsening2 = control_orig%stop_coarsening2
         control_reset%stop_coarsening1 = control_orig%stop_coarsening1
+        control_reset%ml_call = control_orig%ml_call
         control_reset%min_reduction = control_orig%min_reduction
         control_reset%max_reduction = control_orig%max_reduction
         control_reset%balance = control_orig%balance
@@ -3106,7 +2112,1128 @@
 20    WRITE (*,'(a,i4)') 'Deallocation error during test section ', test
 
 
-     END SUBROUTINE
+     END SUBROUTINE test_errors
+
+! *****************************************************************
+
+     SUBROUTINE test_input(ok)
+      LOGICAL, INTENT(OUT) :: ok
+
+      INTEGER :: test_count, testi_count
+      INTEGER :: n, ne, st, i, j
+      INTEGER, ALLOCATABLE, DIMENSION(:) :: ptr, row, perm, seps
+      LOGICAL :: corr
+      TYPE (nd_options) :: control, control_orig
+      TYPE (nd_inform) :: info
+
+
+      ok = .TRUE.
+
+      test_count = 0
+      ! --------------------------------------
+      ! Test diagonal matrix
+      ! --------------------------------------
+      testi_count = 0
+      WRITE (6,'(a1)') ' '
+      WRITE (6,'(a)') '**** Test inputs: diagonal matrix ****'
+      n = 10
+      ne = 0
+      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
+      IF (st/=0) GO TO 10
+
+      ptr(1:n+1) = 1
+
+      control%amd_switch1 = 2
+      DO i = 0, 0
+        control%print_level = i
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
+        corr = .TRUE.
+        DO j = 1, n
+          corr = (corr .AND. (perm(j)==j))
+        END DO
+        IF (info%flag>=0 .AND. corr) testi_count = testi_count + 1
+        CALL nd_order(1,n,ptr,row,perm,control,info,seps)
+        corr = .TRUE.
+        DO j = 1, n
+          corr = (corr .AND. (perm(j)==j))
+        END DO
+        IF (info%flag>=0 .AND. corr) testi_count = testi_count + 1
+      END DO
+      CALL reset_control(control_orig,control)
+
+      DEALLOCATE (ptr,row,perm,seps,STAT=st)
+      IF (st/=0) GO TO 20
+
+      IF (testi_count/=2) THEN
+        WRITE (6,'(a29)') 'Code failure in test section '
+        ok = .FALSE.
+        RETURN
+      ELSE
+        test_count = test_count + 1
+        testi_count = 0
+      END IF
+
+
+      ! --------------------------------------
+      ! Test expansion of matrix from lower triangle input
+      ! --------------------------------------
+      test = 1
+      WRITE (6,'(a1)') ' '
+      WRITE (6,'(a34,i5,a4)') '****Test inputs: matrix expansion ', test, ' ***'
+      n = 10
+      ne = 9
+      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
+      IF (st/=0) GO TO 10
+
+      ptr(1:n-1) = (/ (i,i=1,n-1) /)
+      ptr(n:n+1) = n
+      row(1:ne) = (/ (i,i=2,n) /)
+
+      control%amd_switch1 = 2
+      control%amd_call = 2
+      DO i = 0, 2
+        control%print_level = i
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
+        IF (info%flag>=0 .AND. info%nzsuper==18) testi_count = testi_count + 1
+      END DO
+      CALL reset_control(control_orig,control)
+
+      DEALLOCATE (ptr,row,perm,seps,STAT=st)
+      IF (st/=0) GO TO 20
+      IF (testi_count/=3) THEN
+        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
+        ok = .FALSE.
+      ELSE
+        test_count = test_count + 1
+        testi_count = 0
+      END IF
+
+      ! --------------------------------------
+      ! Test expansion of matrix from lower triangle format and that diags are
+      ! removed
+      ! --------------------------------------
+
+      test = 2
+      WRITE (6,'(a1)') ' '
+      WRITE (6,'(a34,i5,a4)') '****Test inputs: matrix expansion ', test, ' ***'
+      n = 10
+      ne = 19
+      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
+      IF (st/=0) GO TO 10
+
+      ptr(1:n) = (/ (2*i-1,i=1,n) /)
+      ptr(n+1) = ne + 1
+      row(1:ne) = (/ 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, &
+        10 /)
+
+      control%amd_switch1 = 2
+      control%amd_call = 2
+      DO i = 0, 0
+        control%print_level = i
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
+        IF (info%flag>=0 .AND. info%nzsuper==18) testi_count = testi_count + 1
+      END DO
+      CALL reset_control(control_orig,control)
+
+      DEALLOCATE (ptr,row,perm,seps,STAT=st)
+      IF (st/=0) GO TO 20
+      IF (testi_count/=1) THEN
+        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
+        ok = .FALSE.
+      ELSE
+        test_count = test_count + 1
+        testi_count = 0
+      END IF
+
+      ! --------------------------------------
+      ! Test expansion of matrix from lower and upper triangle input with no
+      ! diags
+      ! --------------------------------------
+      test = 3
+      WRITE (6,'(a1)') ' '
+      WRITE (6,'(a34,i5,a4)') '****Test inputs: matrix expansion ', test, ' ***'
+      n = 10
+      ne = 18
+      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
+      IF (st/=0) GO TO 10
+
+      ptr(1) = 1
+      ptr(2:n) = (/ (2*(i-1),i=2,n) /)
+      ptr(n+1) = ne + 1
+      row(1) = 2
+      DO i = 2, n - 1
+        row(ptr(i)) = i - 1
+        row(ptr(i)+1) = i + 1
+      END DO
+      row(ptr(n)) = n - 1
+
+      control%amd_switch1 = 2
+      control%amd_call = 2
+      DO i = 2, 2
+        control%print_level = i
+        CALL nd_order(1,n,ptr,row,perm,control,info,seps)
+        IF (info%flag>=0 .AND. info%nzsuper==18) testi_count = testi_count + 1
+      END DO
+      CALL reset_control(control_orig,control)
+
+      DEALLOCATE (ptr,row,perm,seps,STAT=st)
+      IF (st/=0) GO TO 20
+      IF (testi_count/=1) THEN
+        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
+        ok = .FALSE.
+      ELSE
+        test_count = test_count + 1
+        testi_count = 0
+      END IF
+
+
+      ! --------------------------------------
+      ! Test expansion of matrix from lower and upper triangle input with diag
+      ! entry
+      ! --------------------------------------
+      test = 4
+      WRITE (6,'(a1)') ' '
+      WRITE (6,'(a34,i5,a4)') '****Test inputs: matrix expansion ', test, ' ***'
+      n = 10
+      ne = 19
+      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
+      IF (st/=0) GO TO 10
+
+      ptr(1) = 1
+      ptr(2:n) = (/ (2*(i-1),i=2,n) /)
+      ptr(n+1) = ne + 1
+      row(1) = 2
+      DO i = 2, n - 1
+        row(ptr(i)) = i - 1
+        row(ptr(i)+1) = i + 1
+      END DO
+      row(ptr(n)) = n - 1
+      row(ne) = n
+
+      control%amd_switch1 = 2
+      control%amd_call = 2
+      DO i = 0, 2
+        control%print_level = i
+        CALL nd_order(1,n,ptr,row,perm,control,info,seps)
+        IF (info%flag>=0 .AND. info%nzsuper==18) testi_count = testi_count + 1
+      END DO
+      CALL reset_control(control_orig,control)
+
+      DEALLOCATE (ptr,row,perm,seps,STAT=st)
+      IF (st/=0) GO TO 20
+      IF (testi_count/=3) THEN
+        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
+        ok = .FALSE.
+      ELSE
+        test_count = test_count + 1
+        testi_count = 0
+      END IF
+
+
+
+
+
+      RETURN
+
+10    WRITE (*,'(a,i4)') 'Allocation error during test section ', test
+      RETURN
+
+20    WRITE (*,'(a,i4)') 'Deallocation error during test section ', test
+
+     END SUBROUTINE test_input
+
+
+! *****************************************************************
+
+
+     SUBROUTINE test_dense(ok)
+      LOGICAL, INTENT(OUT) :: ok
+
+      INTEGER :: test_count, testi_count
+      INTEGER :: n, ne, st, i, j
+      INTEGER, ALLOCATABLE, DIMENSION(:) :: ptr, row, perm, seps
+      LOGICAL :: corr
+      TYPE (nd_options) :: control, control_orig
+      TYPE (nd_inform) :: info
+
+      ok = .TRUE.
+      testi_count = 0
+      test_count = 0
+      ! --------------------------------------
+      ! Test dense row removal - row 1 dense
+      ! --------------------------------------
+      test = 1
+      WRITE (6,'(a1)') ' '
+      WRITE (6,'(a26,i5,a4)') '****Dense row removal test', test, ' ***'
+      n = 800
+      ne = n
+      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
+      IF (st/=0) GO TO 10
+
+      ptr(1) = 1
+      ptr(2:n+1) = ne + 1
+      row(1:ne) = (/ (i,i=1,n) /)
+
+      control%amd_switch1 = 2
+      control%amd_call = 20
+      DO i = 0, 2
+        control%print_level = i
+        control%remove_dense_rows = .TRUE.
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
+        IF (info%flag>=0 .AND. info%nsuper==799 .AND. info%nzsuper==0) &
+          testi_count = testi_count + 1
+        control%remove_dense_rows = .FALSE.
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
+        IF (info%flag>=0 .AND. info%nsuper==800 .AND. info%nzsuper==1598) &
+          testi_count = testi_count + 1
+      END DO
+      CALL reset_control(control_orig,control)
+
+      DEALLOCATE (ptr,row,perm,seps,STAT=st)
+      IF (st/=0) GO TO 20
+      IF (testi_count/=6) THEN
+        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
+        ok = .FALSE.
+      ELSE
+        test_count = test_count + 1
+        testi_count = 0
+      END IF
+
+      ! --------------------------------------
+      ! Test dense row removal - first row dense
+      ! --------------------------------------
+      test = 2
+      WRITE (6,'(a1)') ' '
+      WRITE (6,'(a26,i5,a4)') '****Dense row removal test', test, ' ***'
+      n = 800
+      ne = 2*n - 3
+      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
+      IF (st/=0) GO TO 10
+
+      ptr(1) = 1
+      ptr(2:n) = (/ (n+i-2,i=2,n) /)
+      ptr(n+1) = ne + 1
+      row(1:ptr(2)-1) = (/ (i,i=2,n) /)
+      row(ptr(2):ptr(n)-1) = (/ (i+1,i=2,n-1) /)
+
+      control%amd_switch1 = 2
+      control%amd_call = 20
+      DO i = 0, 0
+        control%print_level = i
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
+        IF (info%flag>=0 .AND. info%nsuper==799 .AND. info%nzsuper==1596) &
+          testi_count = testi_count + 1
+      END DO
+      CALL reset_control(control_orig,control)
+
+      DEALLOCATE (ptr,row,perm,seps,STAT=st)
+      IF (st/=0) GO TO 20
+      IF (testi_count/=1) THEN
+        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
+        ok = .FALSE.
+      ELSE
+        test_count = test_count + 1
+        testi_count = 0
+      END IF
+
+      ! --------------------------------------
+      ! Test dense row removal - last row dense
+      ! --------------------------------------
+      test = 3
+      WRITE (6,'(a1)') ' '
+      WRITE (6,'(a26,i5,a4)') '****Dense row removal test', test, ' ***'
+      n = 800
+      ne = n - 1
+      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
+      IF (st/=0) GO TO 10
+
+      ptr(1:n-1) = (/ (i,i=1,n-1) /)
+      ptr(n:n+1) = ne + 1
+      row(1:ne) = n
+
+      control%amd_switch1 = 2
+      control%amd_call = 20
+      DO i = 0, 0
+        control%print_level = i
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
+        IF (info%flag>=0 .AND. info%nsuper==799 .AND. info%nzsuper==0) &
+          testi_count = testi_count + 1
+      END DO
+      CALL reset_control(control_orig,control)
+
+      DEALLOCATE (ptr,row,perm,seps,STAT=st)
+      IF (st/=0) GO TO 20
+      IF (testi_count/=1) THEN
+        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
+        ok = .FALSE.
+      ELSE
+        test_count = test_count + 1
+        testi_count = 0
+      END IF
+
+      ! --------------------------------------
+      ! Test dense row removal - first two rows dense but row 2 has max degree
+      ! --------------------------------------
+      test = 4
+      WRITE (6,'(a1)') ' '
+      WRITE (6,'(a26,i5,a4)') '****Dense row removal test', test, ' ***'
+      n = 800
+      ne = n - 3 + n - 2
+      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
+      IF (st/=0) GO TO 10
+
+      ptr(1) = 1
+      ptr(2) = n - 2
+      ptr(3:n+1) = ne + 1
+      row(ptr(1):ptr(2)-1) = (/ (i+3,i=1,n-3) /)
+      row(ptr(2):ne) = (/ (i+2,i=1,n-2) /)
+
+      control%amd_switch1 = 2
+      control%amd_call = 20
+      DO i = 0, 0
+        control%print_level = i
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
+        IF (info%flag>=0 .AND. info%nsuper==798 .AND. info%nzsuper==0) &
+          testi_count = testi_count + 1
+      END DO
+      CALL reset_control(control_orig,control)
+
+      DEALLOCATE (ptr,row,perm,seps,STAT=st)
+      IF (st/=0) GO TO 20
+      IF (testi_count/=1) THEN
+        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
+        ok = .FALSE.
+      ELSE
+        test_count = test_count + 1
+        testi_count = 0
+      END IF
+
+
+      RETURN
+
+10    WRITE (*,'(a,i4)') 'Allocation error during test section ', test
+      RETURN
+
+20    WRITE (*,'(a,i4)') 'Deallocation error during test section ', test
+
+    END SUBROUTINE test_dense
+
+
+! *****************************************************************
+
+
+     SUBROUTINE test_ashcraft(ok)
+      LOGICAL, INTENT(OUT) :: ok
+
+      INTEGER :: test_count, testi_count
+      INTEGER :: n, ne, st, i, j
+      INTEGER, ALLOCATABLE, DIMENSION(:) :: ptr, row, perm, seps
+      LOGICAL :: corr
+      TYPE (nd_options) :: control, control_orig
+      TYPE (nd_inform) :: info
+
+      ok = .TRUE.
+      testi_count = 0
+      test_count = 0
+
+
+      ! --------------------------------------
+      ! Test Ashcraft method
+      ! --------------------------------------
+
+      test = 1
+      WRITE (6,'(a1)') ' '
+      WRITE (6,'(a20,i5,a4)') '****Ashcraft test ', test, ' ***'
+      n = 10
+      ne = 14
+      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
+      IF (st/=0) GO TO 10
+
+      ptr(1:n+1) = (/ 1, 3, 5, 7, 9, 11, 12, 13, 14, 15, 15 /)
+      row(1:ne) = (/ 2, 7, 7, 3, 4, 8, 5, 9, 6, 10, 10, 8, 9, 10 /)
+
+      control%amd_switch1 = 5
+      control%partition_method = 0
+      control%coarse_partition_method = 1
+      control%amd_call = 2
+      DO i = 0, 2
+        control%print_level = i
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
+        IF (info%flag>=0) testi_count = testi_count + 1
+      END DO
+      CALL reset_control(control_orig,control)
+
+      DEALLOCATE (ptr,row,perm,seps,STAT=st)
+      IF (st/=0) GO TO 20
+      IF (testi_count/=3) THEN
+        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
+        ok = .FALSE.
+      ELSE
+        test_count = test_count + 1
+        testi_count = 0
+      END IF
+
+      ! --------------------------------------
+      ! Test Ashcraft method
+      ! --------------------------------------
+
+      test = 2
+      WRITE (6,'(a1)') ' '
+      WRITE (6,'(a20,i5,a4)') '****Ashcraft test ', test, ' ***'
+      n = 10
+      ne = 15
+      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
+      IF (st/=0) GO TO 10
+
+      ptr(1:n+1) = (/ 1, 4, 6, 8, 9, 10, 11, 13, 15, 16, 16 /)
+      row(1:ne) = (/ 2, 3, 4, 3, 5, 4, 8, 6, 7, 9, 8, 10, 9, 10, 10 /)
+
+      control%amd_switch1 = 2
+      control%partition_method = 0
+      control%coarse_partition_method = 1
+      control%amd_call = 2
+      DO i = 0, 0
+        control%print_level = i
+        CALL nd_order(0,n,ptr,row,perm,control,info)
+        IF (info%flag>=0) testi_count = testi_count + 1
+      END DO
+      CALL reset_control(control_orig,control)
+
+      DEALLOCATE (ptr,row,perm,seps,STAT=st)
+      IF (st/=0) GO TO 20
+      IF (testi_count/=1) THEN
+        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
+        ok = .FALSE.
+      ELSE
+        test_count = test_count + 1
+        testi_count = 0
+      END IF
+
+      ! --------------------------------------
+      ! Test Ashcraft method
+      ! --------------------------------------
+
+      test = 3
+      WRITE (6,'(a1)') ' '
+      WRITE (6,'(a20,i5,a4)') '****Ashcraft test ', test, ' ***'
+      n = 13
+      ne = 16
+      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
+      IF (st/=0) GO TO 10
+
+      ptr(1:n+1) = (/ 1, 2, 4, 6, 8, 10, 12, 13, 13, 14, 14, 16, 17, 17 /)
+      row(1:ne) = (/ 2, 3, 4, 4, 11, 5, 6, 7, 8, 9, 10, 8, 10, 12, 13, 13 /)
+
+      control%amd_switch1 = 2
+      control%partition_method = 0
+      control%coarse_partition_method = 1
+      control%amd_call = 2
+      DO i = 0, 0
+        control%print_level = i
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
+        IF (info%flag>=0) testi_count = testi_count + 1
+      END DO
+      CALL reset_control(control_orig,control)
+
+      DEALLOCATE (ptr,row,perm,seps,STAT=st)
+      IF (st/=0) GO TO 20
+      IF (testi_count/=1) THEN
+        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
+        ok = .FALSE.
+      ELSE
+        test_count = test_count + 1
+        testi_count = 0
+      END IF
+
+      ! --------------------------------------
+      ! Test Ashcraft method
+      ! --------------------------------------
+
+      test = 4
+      WRITE (6,'(a1)') ' '
+      WRITE (6,'(a20,i5,a4)') '****Ashcraft test ', test, ' ***'
+      n = 13
+      ne = 16
+      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
+      IF (st/=0) GO TO 10
+
+      ptr(1:n+1) = (/ 1, 2, 4, 6, 8, 10, 12, 13, 13, 14, 14, 16, 17, 17 /)
+      row(1:ne) = (/ 2, 3, 4, 4, 11, 5, 6, 7, 8, 9, 10, 8, 10, 12, 13, 13 /)
+
+      control%amd_switch1 = 2
+      control%partition_method = 0
+      control%coarse_partition_method = 1
+      control%amd_call = 2
+      control%balance = 20.0
+      DO i = 0, 0
+        control%print_level = i
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
+        IF (info%flag>=0) testi_count = testi_count + 1
+      END DO
+      CALL reset_control(control_orig,control)
+
+      DEALLOCATE (ptr,row,perm,seps,STAT=st)
+      IF (st/=0) GO TO 20
+      IF (testi_count/=1) THEN
+        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
+        ok = .FALSE.
+      ELSE
+        test_count = test_count + 1
+        testi_count = 0
+      END IF
+
+      RETURN
+
+10    WRITE (*,'(a,i4)') 'Allocation error during test section ', test
+      RETURN
+
+20    WRITE (*,'(a,i4)') 'Deallocation error during test section ', test
+
+    END SUBROUTINE test_ashcraft
+
+
+! *****************************************************************
+
+
+     SUBROUTINE test_levelset(ok)
+      LOGICAL, INTENT(OUT) :: ok
+
+      INTEGER :: test_count, testi_count
+      INTEGER :: n, ne, st, i, j
+      INTEGER, ALLOCATABLE, DIMENSION(:) :: ptr, row, perm, seps
+      LOGICAL :: corr
+      TYPE (nd_options) :: control, control_orig
+      TYPE (nd_inform) :: info
+
+      ok = .TRUE.
+      testi_count = 0
+      test_count = 0
+
+
+      ! --------------------------------------
+      ! Test one-sided levelset method
+      ! --------------------------------------
+
+      test = 1
+      WRITE (6,'(a1)') ' '
+      WRITE (6,'(a20,i5,a4)') '****Level set test ', test, ' ***'
+      n = 10
+      ne = 14
+      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
+      IF (st/=0) GO TO 10
+
+      ptr(1:n+1) = (/ 1, 3, 5, 7, 9, 11, 12, 13, 14, 15, 15 /)
+      row(1:ne) = (/ 2, 7, 7, 3, 4, 8, 5, 9, 6, 10, 10, 8, 9, 10 /)
+
+      control%amd_switch1 = 5
+      control%partition_method = 0
+      control%coarse_partition_method = 2
+      control%amd_call = 2
+      control%balance = 20.0
+      DO i = 0, 2
+        control%print_level = i
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
+        IF (info%flag>=0) testi_count = testi_count + 1
+      END DO
+      CALL reset_control(control_orig,control)
+
+      DEALLOCATE (ptr,row,perm,seps,STAT=st)
+      IF (st/=0) GO TO 20
+      IF (testi_count/=3) THEN
+        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
+        ok = .FALSE.
+      ELSE
+        test_count = test_count + 1
+        testi_count = 0
+      END IF
+
+      ! --------------------------------------
+      ! Test one-sided levelset method
+      ! --------------------------------------
+
+      test = 2
+      WRITE (6,'(a1)') ' '
+      WRITE (6,'(a20,i5,a4)') '****Level set test ', test, ' ***'
+      n = 10
+      ne = 14
+      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
+      IF (st/=0) GO TO 10
+
+      ptr(1:n+1) = (/ 1, 3, 5, 7, 9, 11, 12, 13, 14, 15, 15 /)
+      row(1:ne) = (/ 2, 7, 7, 3, 4, 8, 5, 9, 6, 10, 10, 8, 9, 10 /)
+
+      control%amd_switch1 = 5
+      control%partition_method = 0
+      control%coarse_partition_method = 2
+      control%balance = 1.5
+      control%amd_call = 2
+      DO i = 0, 0
+        control%print_level = i
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
+        IF (info%flag>=0) testi_count = testi_count + 1
+      END DO
+      CALL reset_control(control_orig,control)
+
+      DEALLOCATE (ptr,row,perm,seps,STAT=st)
+      IF (st/=0) GO TO 20
+      IF (testi_count/=1) THEN
+        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
+        ok = .FALSE.
+      ELSE
+        test_count = test_count + 1
+        testi_count = 0
+      END IF
+
+
+      RETURN
+
+10    WRITE (*,'(a,i4)') 'Allocation error during test section ', test
+      RETURN
+
+20    WRITE (*,'(a,i4)') 'Deallocation error during test section ', test
+
+    END SUBROUTINE test_levelset
+
+! *****************************************************************
+
+
+     SUBROUTINE test_shift(ok)
+      LOGICAL, INTENT(OUT) :: ok
+
+      INTEGER :: test_count, testi_count
+      INTEGER :: n, ne, st, i, j
+      INTEGER, ALLOCATABLE, DIMENSION(:) :: ptr, row, perm, seps
+      LOGICAL :: corr
+      TYPE (nd_options) :: control, control_orig
+      TYPE (nd_inform) :: info
+
+      ok = .TRUE.
+      testi_count = 0
+      test_count = 0
+
+     ! --------------------------------------
+      ! Test DM-style refinement with 2-sided partition
+      ! --------------------------------------
+
+      test = 1
+      WRITE (6,'(a1)') ' '
+      WRITE (6,'(a26,i5,a4)') '****Shift refinement test ', test, ' ***'
+      n = 8
+      ne = 11
+      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
+      IF (st/=0) GO TO 10
+
+      ptr(1:n+1) = (/ 1, 4, 5, 6, 8, 9, 11, 12, 12 /)
+      row(1:ne) = (/ 2, 3, 4, 4, 4, 5, 6, 6, 7, 8, 8 /)
+
+      control%amd_switch1 = 5
+      control%partition_method = 0
+      control%coarse_partition_method = 1
+      control%amd_call = 2
+      DO i = 2, 2
+        control%print_level = i
+        control%refinement = 2
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
+        IF (info%flag>=0) testi_count = testi_count + 1
+        control%refinement = 5
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
+        IF (info%flag>=0) testi_count = testi_count + 1
+        control%print_level = i
+        control%refinement = 2
+        CALL nd_order(0,n,ptr,row,perm,control,info)
+        IF (info%flag>=0) testi_count = testi_count + 1
+        control%refinement = 5
+        CALL nd_order(0,n,ptr,row,perm,control,info)
+        IF (info%flag>=0) testi_count = testi_count + 1
+      END DO
+      CALL reset_control(control_orig,control)
+
+      DEALLOCATE (ptr,row,perm,seps,STAT=st)
+      IF (st/=0) GO TO 20
+      IF (testi_count/=4) THEN
+        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
+        ok = .FALSE.
+      ELSE
+        test_count = test_count + 1
+        testi_count = 0
+      END IF
+
+      ! --------------------------------------
+      ! Test DM refinement with 2-sided partition
+      ! --------------------------------------
+
+      test = 2
+      WRITE (6,'(a1)') ' '
+      WRITE (6,'(a26,i5,a4)') '****Shift refinement test ', test, ' ***'
+      n = 21
+      ne = 37
+      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
+      IF (st/=0) GO TO 10
+
+      ptr(1:n+1) = (/ 1, 3, 5, 7, 9, 11, 13, 15, 16, 20, 22, 24, 26, 28, 29, &
+        29, 32, 33, 35, 37, 38, 38 /)
+      row(1:ne) = (/ 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 11, 16, &
+        17, 11, 13, 12, 13, 13, 15, 14, 15, 15, 17, 18, 19, 18, 19, 20, 20, &
+        21, 21 /)
+
+      control%amd_switch1 = 5
+      control%partition_method = 0
+      control%coarse_partition_method = 1
+      control%refinement = 2
+      control%amd_call = 2
+      DO i = 0, 0
+        control%print_level = i
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
+        IF (info%flag>=0) testi_count = testi_count + 1
+      END DO
+      CALL reset_control(control_orig,control)
+
+      DEALLOCATE (ptr,row,perm,seps,STAT=st)
+      IF (st/=0) GO TO 20
+      IF (testi_count/=1) THEN
+        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
+        ok = .FALSE.
+      ELSE
+        test_count = test_count + 1
+        testi_count = 0
+      END IF
+
+      ! --------------------------------------
+      ! Test DM refinement with 1-sided partition
+      ! --------------------------------------
+
+      test = 3
+      WRITE (6,'(a1)') ' '
+      WRITE (6,'(a26,i5,a4)') '****Shift refinement test ', test, ' ***'
+      n = 31
+      ne = 49
+      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
+      IF (st/=0) GO TO 10
+
+      ptr(1:n+1) = (/ 1, 4, 6, 8, 10, 12, 13, 15, 16, 18, 20, 21, 22, 25, 26, &
+        27, 29, 31, 32, 34, 36, 38, 39, 40, 42, 44, 45, 47, 48, 49, 50, 50 /)
+      row(1:ne) = (/ 2, 3, 4, 4, 5, 6, 7, 7, 8, 8, 9, 10, 10, 11, 11, 11, 12, &
+        13, 14, 14, 14, 15, 17, 18, 18, 16, 17, 19, 20, 21, 21, 20, 22, 23, &
+        24, 24, 25, 23, 26, 26, 27, 27, 28, 29, 29, 30, 30, 31, 31 /)
+
+      control%amd_switch1 = 5
+      control%partition_method = 0
+      control%coarse_partition_method = 2
+      control%refinement = 2
+      control%amd_call = 2
+      control%balance = 33.0
+      DO i = 0, 0
+        control%print_level = i
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
+        IF (info%flag>=0) testi_count = testi_count + 1
+      END DO
+      CALL reset_control(control_orig,control)
+
+      DEALLOCATE (ptr,row,perm,seps,STAT=st)
+      IF (st/=0) GO TO 20
+      IF (testi_count/=1) THEN
+        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
+        ok = .FALSE.
+      ELSE
+        test_count = test_count + 1
+        testi_count = 0
+      END IF
+
+      ! --------------------------------------
+      ! Test DM refinement with 2-sided partition
+      ! --------------------------------------
+
+      test = 4
+      WRITE (6,'(a1)') ' '
+      WRITE (6,'(a26,i5,a4)') '****Shift refinement test ', test, ' ***'
+      n = 7
+      ne = 6
+      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
+      IF (st/=0) GO TO 10
+
+      ptr(1:n+1) = (/ 1, 2, 3, 4, 5, 6, 7, 7 /)
+      row(1:ne) = (/ 7, 7, 7, 7, 7, 7 /)
+
+      control%amd_switch1 = 5
+      control%partition_method = 0
+      control%coarse_partition_method = 2
+      control%refinement = 2
+      control%amd_call = 2
+      control%balance = 12.0
+      DO i = 0, 0
+        control%print_level = i
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
+        IF (info%flag>=0) testi_count = testi_count + 1
+      END DO
+      CALL reset_control(control_orig,control)
+
+      DEALLOCATE (ptr,row,perm,seps,STAT=st)
+      IF (st/=0) GO TO 20
+      IF (testi_count/=1) THEN
+        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
+        ok = .FALSE.
+      ELSE
+        test_count = test_count + 1
+        testi_count = 0
+      END IF
+
+      ! --------------------------------------
+      ! Test DM refinement with 1-sided partition
+      ! --------------------------------------
+
+      test = 5
+      WRITE (6,'(a1)') ' '
+      WRITE (6,'(a26,i5,a4)') '****Shift refinement test ', test, ' ***'
+      n = 7
+      ne = 6
+      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
+      IF (st/=0) GO TO 10
+
+      ptr(1:n+1) = (/ 1, 2, 3, 4, 5, 6, 7, 7 /)
+      row(1:ne) = (/ 7, 7, 7, 7, 7, 7 /)
+
+      control%amd_switch1 = 5
+      control%partition_method = 0
+      control%coarse_partition_method = 2
+      control%refinement = 5
+      control%amd_call = 2
+      control%balance = 12.0
+      DO i = 0, 0
+        control%print_level = i
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
+        IF (info%flag>=0) testi_count = testi_count + 1
+      END DO
+      CALL reset_control(control_orig,control)
+
+      DEALLOCATE (ptr,row,perm,seps,STAT=st)
+      IF (st/=0) GO TO 20
+      IF (testi_count/=1) THEN
+        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
+        ok = .FALSE.
+      ELSE
+        test_count = test_count + 1
+        testi_count = 0
+      END IF
+
+
+      ! --------------------------------------
+      ! Test DM refinement with 1-sided partition with balanced partition
+      ! --------------------------------------
+
+      test = 6
+      WRITE (6,'(a1)') ' '
+      WRITE (6,'(a26,i5,a4)') '****Shift refinement test ', test, ' ***'
+      n = 31
+      ne = 49
+      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
+      IF (st/=0) GO TO 10
+
+      ptr(1:n+1) = (/ 1, 4, 6, 8, 10, 12, 13, 15, 16, 18, 20, 21, 22, 25, 26, &
+        27, 29, 31, 32, 34, 36, 38, 39, 40, 42, 44, 45, 47, 48, 49, 50, 50 /)
+      row(1:ne) = (/ 2, 3, 4, 4, 5, 6, 7, 7, 8, 8, 9, 10, 10, 11, 11, 11, 12, &
+        13, 14, 14, 14, 15, 17, 18, 18, 16, 17, 19, 20, 21, 21, 20, 22, 23, &
+        24, 24, 25, 23, 26, 26, 27, 27, 28, 29, 29, 30, 30, 31, 31 /)
+
+      control%amd_switch1 = 5
+      control%partition_method = 0
+      control%coarse_partition_method = 2
+      control%refinement = 5
+      control%balance = 2.0
+      control%amd_call = 2
+      DO i = 0, 2
+        control%print_level = i
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
+        IF (info%flag>=0) testi_count = testi_count + 1
+      END DO
+      CALL reset_control(control_orig,control)
+
+      DEALLOCATE (ptr,row,perm,seps,STAT=st)
+      IF (st/=0) GO TO 20
+      IF (testi_count/=3) THEN
+        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
+        ok = .FALSE.
+      ELSE
+        test_count = test_count + 1
+        testi_count = 0
+      END IF
+
+      ! --------------------------------------
+      ! Test DM refinement with 2-sided partition with balanced partition
+      ! --------------------------------------
+
+      test = 7
+      WRITE (6,'(a1)') ' '
+      WRITE (6,'(a26,i5,a4)') '****Shift refinement test ', test, ' ***'
+      n = 31
+      ne = 49
+      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
+      IF (st/=0) GO TO 10
+
+      ptr(1:n+1) = (/ 1, 4, 6, 8, 10, 12, 13, 15, 16, 18, 20, 21, 22, 25, 26, &
+        27, 29, 31, 32, 34, 36, 38, 39, 40, 42, 44, 45, 47, 48, 49, 50, 50 /)
+      row(1:ne) = (/ 2, 3, 4, 4, 5, 6, 7, 7, 8, 8, 9, 10, 10, 11, 11, 11, 12, &
+        13, 14, 14, 14, 15, 17, 18, 18, 16, 17, 19, 20, 21, 21, 20, 22, 23, &
+        24, 24, 25, 23, 26, 26, 27, 27, 28, 29, 29, 30, 30, 31, 31 /)
+
+      control%amd_switch1 = 5
+      control%partition_method = 0
+      control%coarse_partition_method = 1
+      control%refinement = 5
+      control%balance = 2.0
+      control%amd_call = 2
+      DO i = 0, 0
+        control%print_level = i
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
+        IF (info%flag>=0) testi_count = testi_count + 1
+      END DO
+      CALL reset_control(control_orig,control)
+
+      DEALLOCATE (ptr,row,perm,seps,STAT=st)
+      IF (st/=0) GO TO 20
+      IF (testi_count/=1) THEN
+        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
+        ok = .FALSE.
+      ELSE
+        test_count = test_count + 1
+        testi_count = 0
+      END IF
+
+      ! --------------------------------------
+      ! Test DM refinement with 2-sided partition with balanced partition
+      ! --------------------------------------
+
+      test = 8
+      WRITE (6,'(a1)') ' '
+      WRITE (6,'(a26,i5,a4)') '****Shift refinement test ', test, ' ***'
+      n = 31
+      ne = 49
+      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
+      IF (st/=0) GO TO 10
+
+      ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
+        27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
+      row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
+        14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
+        24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
+
+      control%amd_switch1 = 5
+      control%partition_method = 0
+      control%coarse_partition_method = 1
+      control%refinement = 2
+      control%balance = 1.05
+      control%refinement_band = n
+      control%amd_call = 2
+      DO i = 0, 0
+        control%print_level = i
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
+        IF (info%flag>=0) testi_count = testi_count + 1
+      END DO
+      CALL reset_control(control_orig,control)
+
+      DEALLOCATE (ptr,row,perm,seps,STAT=st)
+      IF (st/=0) GO TO 20
+      IF (testi_count/=1) THEN
+        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
+        ok = .FALSE.
+      ELSE
+        test_count = test_count + 1
+        testi_count = 0
+      END IF
+
+
+      ! --------------------------------------
+      ! Test DM refinement with 2-sided partition with balanced partition
+      ! --------------------------------------
+
+      test = 9
+      WRITE (6,'(a1)') ' '
+      WRITE (6,'(a26,i5,a4)') '****Shift refinement test ', test, ' ***'
+      n = 13
+      ne = 15
+      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
+      IF (st/=0) GO TO 10
+
+      ptr(1:n+1) = (/ 1, 2, 3, 6, 7, 8, 9, 11, 11, 13, 14, 15, 16, 16 /)
+      row(1:ne) = (/ 2, 3, 4, 5, 6, 6, 6, 7, 8, 9, 10, 11, 12, 12, 13 /)
+
+      control%amd_switch1 = 5
+      control%partition_method = 0
+      control%coarse_partition_method = 1
+      control%refinement = 2
+      control%balance = 1.30
+      control%refinement_band = n
+      control%amd_call = 2
+      DO i = 0, 0
+        control%print_level = i
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
+        IF (info%flag>=0) testi_count = testi_count + 1
+      END DO
+      CALL reset_control(control_orig,control)
+
+      DEALLOCATE (ptr,row,perm,seps,STAT=st)
+      IF (st/=0) GO TO 20
+      IF (testi_count/=1) THEN
+        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
+        ok = .FALSE.
+      ELSE
+        test_count = test_count + 1
+        testi_count = 0
+      END IF
+
+
+      ! --------------------------------------
+      ! Test DM refinement with 2-sided partition with balanced partition
+      ! --------------------------------------
+
+      test = 10
+      WRITE (6,'(a1)') ' '
+      WRITE (6,'(a26,i5,a4)') '****Shift refinement test ', test, ' ***'
+      n = 13
+      ne = 15
+      ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
+      IF (st/=0) GO TO 10
+
+      ptr(1:n+1) = (/ 1, 2, 4, 5, 6, 7, 8, 9, 12, 13, 14, 15, 16, 16 /)
+      row(1:ne) = (/ 2, 3, 4, 5, 5, 7, 7, 8, 9, 10, 11, 11, 11, 12, 13 /)
+
+      control%amd_switch1 = 5
+      control%partition_method = 0
+      control%coarse_partition_method = 1
+      control%refinement = 2
+      control%balance = 1.30
+      control%refinement_band = n
+      control%amd_call = 2
+      DO i = 0, 0
+        control%print_level = i
+        CALL nd_order(0,n,ptr,row,perm,control,info,seps)
+        IF (info%flag>=0) testi_count = testi_count + 1
+      END DO
+      CALL reset_control(control_orig,control)
+
+      DEALLOCATE (ptr,row,perm,seps,STAT=st)
+      IF (st/=0) GO TO 20
+      IF (testi_count/=1) THEN
+        WRITE (6,'(a29,i5)') 'Code failure in test section ', test
+        ok = .FALSE.
+      ELSE
+        test_count = test_count + 1
+        testi_count = 0
+      END IF
+
+
+
+
+
+      RETURN
+
+10    WRITE (*,'(a,i4)') 'Allocation error during test section ', test
+      RETURN
+
+20    WRITE (*,'(a,i4)') 'Deallocation error during test section ', test
+
+    END SUBROUTINE test_shift
+
+
 
     END PROGRAM main
 

@@ -36,18 +36,22 @@
         ! messages
         INTEGER :: unit_error = 6 ! stream number for error messages
 
-        INTEGER :: amd_call = 50000 ! call AMD if number of supervariables is
-        ! less than or equal to amd_call
+        INTEGER :: amd_call = 5 ! call AMD if number of supervariables is
+        ! less than or equal to amd_call  *UPDATE*
         INTEGER :: amd_switch1 = 50 ! switch to (halo)AMD if matrix size is
         ! less
         ! than or equal to nd_switch
         INTEGER :: amd_switch2 = 20 ! maximum number of ND levels allowed
+        INTEGER :: cost_function = 1 ! selects the cost function used for 
+        ! evaluating a partition
+        ! <=1 : |P1||P2|/|S| + penalty for imbalance
+        ! >=2 : |S|(1 +  0.5||P1|-|P2||)
         INTEGER :: partition_method = 2 ! Are we allowed to use a multilevel
         ! strategy
         ! <= 0 : do not use multilevel
         ! == 1 : use multilevel
         ! >= 2 : automatic choice based on size of levelsets
-        INTEGER :: matching = 1 ! Which coarsening method to use
+        INTEGER :: matching = 0 ! Which coarsening method to use
         ! > 0 : heavy-edge
         ! <= 0 : common neighbours
         INTEGER :: coarse_partition_method = 1 ! Which partition method to use
@@ -72,6 +76,8 @@
         ! multilevel grid
         INTEGER :: stop_coarsening1 = 100 ! Stop coarsening once matrix has
         ! order at most stop_coarsening1
+        INTEGER :: ml_call = 12000 ! Stop coarsening once matrix has
+        ! order at most stop_coarsening1
 
         ! minimum and maximum grid reduction factors that must be achieved
         ! during coarsening. If cgrid%size is greater than
@@ -85,10 +91,10 @@
         ! multigrid
         ! matrix must be less than max_reduction*(size of current multigrid
         ! matrix)
-        REAL (kind=wp) :: balance = 4.0 ! Try to make sure that
+        REAL (kind=wp) :: balance = 2.0 ! Try to make sure that
         ! max(P1,P2)/min(P1/P2) <= balance
 
-        INTEGER :: max_improve_cycles = 0 ! Having computed a minimal
+        INTEGER :: max_improve_cycles = 2 ! Having computed a minimal
         ! partition,
         ! expand and refine it at most max_improve_cycles times to improve
         ! the quality of the partition.
@@ -1867,11 +1873,7 @@
         IF (control%coarse_partition_method<=1) THEN
           partition_method = 1
         ELSE
-          IF (control%coarse_partition_method==2) THEN
-            partition_method = 2
-          ELSE
-            partition_method = 3
-          END IF
+          partition_method = 2
         END IF
 
 
@@ -1888,20 +1890,11 @@
             work(work_ptr+1:work_ptr+9*a_n+sumweight),control,info%flag,band, &
             depth,use_multilevel,grid)
         ELSE
-          IF (partition_method==2) THEN
-            ! Level set method
-            CALL nd_level_set(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
-              level,a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep, &
-              work(partition_ptr+1:partition_ptr+a_n), &
-              work(work_ptr+1:work_ptr+9*a_n+sumweight),control,info%flag, &
-              band,depth,use_multilevel,grid)
-          ELSE
-            CALL nd_grow(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,level, &
-              a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep, &
-              work(partition_ptr+1:partition_ptr+a_n), &
-              work(work_ptr+1:work_ptr+9*a_n+sumweight),control,info%flag, &
-              band,depth,use_multilevel,grid)
-          END IF
+          CALL nd_level_set(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
+            level,a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep, &
+            work(partition_ptr+1:partition_ptr+a_n), &
+            work(work_ptr+1:work_ptr+9*a_n+sumweight),control,info%flag, &
+            band,depth,use_multilevel,grid)
 
         END IF
 
@@ -2021,7 +2014,7 @@
                 imbal = .TRUE.
               END IF
               CALL cost_function(a_weight_1,a_weight_2,a_weight_sep,sumweight, &
-                ratio,imbal,tau_best)
+                ratio,imbal,control%cost_function,tau_best)
               a_n1_new = a_n1
               a_n2_new = a_n2
               a_weight_1_new = a_weight_1
@@ -2131,7 +2124,7 @@
 
 
               CALL cost_function(a_weight_1_new,a_weight_2_new, &
-                a_weight_sep_new,sumweight,ratio,imbal,tau)
+                a_weight_sep_new,sumweight,ratio,imbal,control%cost_function,tau)
               IF (tau<tau_best) THEN
                 tau_best = tau
                 work(partition_ptr+1:partition_ptr+a_n) &
@@ -2409,7 +2402,8 @@
           ! IF (real(lwidth,wp) .LE. 2.0* &
           ! real(sumweight,wp)/real(num_levels_nend,wp) )
           ! THEN
-          IF (100.0*REAL(lwidth,wp)/REAL(sumweight,wp)<=1.0) &
+          IF (100.0*REAL(lwidth,wp)/REAL(sumweight,wp)<=3.0 .OR. &
+             a_n.LT. control%ml_call) &
               THEN
             use_multilevel = .FALSE.
           ELSE
@@ -2483,7 +2477,8 @@
         a_weight_1 = p1sz
         a_weight_2 = p2sz
         a_weight_sep = sepsz
-        CALL cost_function(p1sz,p2sz,sepsz,sumweight,ratio,imbal,bestval)
+        CALL cost_function(p1sz,p2sz,sepsz,sumweight,ratio,imbal,&
+            control%cost_function,bestval)
 
         ! Search for best separator using tau
 
@@ -2495,7 +2490,8 @@
           END DO
           p2sz = sumweight - sepsz - p1sz
           IF (p2sz==0) EXIT
-          CALL cost_function(p1sz,p2sz,sepsz,sumweight,ratio,imbal,val)
+          CALL cost_function(p1sz,p2sz,sepsz,sumweight,ratio,imbal,&
+             control%cost_function,val)
           IF (val<bestval) THEN
             bestval = val
             best_sep_start = j + 1
@@ -2712,7 +2708,8 @@
           use_multilevel = .FALSE.
         END IF
         IF (control%partition_method>=2 .AND. use_multilevel) THEN
-          IF (100.0*REAL(lwidth,wp)/REAL(sumweight,wp)<=1.0) &
+          IF (100.0*REAL(lwidth,wp)/REAL(sumweight,wp)<=3.0 .OR. &
+             a_n.LT. control%ml_call) &
               THEN
             use_multilevel = .FALSE.
           ELSE
@@ -2764,14 +2761,16 @@
         best_sep_start = 2
         a_n1 = work(level_ptr_p+2) - 1
         a_n2 = a_n - work(level_ptr_p+3) + 1
-        CALL cost_function(p1sz,p2sz,sepsz,sumweight,ratio,imbal,bestval)
+        CALL cost_function(p1sz,p2sz,sepsz,sumweight,ratio,imbal,&
+         control%cost_function,bestval)
 
         ! Search for best separator using tau
         DO j = 2, num_levels_nend - 4
           p1sz = p1sz + work(work_p+j)
           sepsz = work(work_p+j+1)
           p2sz = p2sz - work(work_p+j+1)
-          CALL cost_function(p1sz,p2sz,sepsz,sumweight,ratio,imbal,val)
+          CALL cost_function(p1sz,p2sz,sepsz,sumweight,ratio,imbal,&
+             control%cost_function,val)
           IF (val<bestval) THEN
             bestval = val
             best_sep_start = j + 1
@@ -2812,501 +2811,6 @@
         RETURN
 
       END SUBROUTINE nd_level_set
-
-      ! ---------------------------------------------------
-      ! nd_grow
-      ! ---------------------------------------------------
-      ! Partition the matrix
-      RECURSIVE SUBROUTINE nd_grow(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
-          level,a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep,partition,work, &
-          control,info,band,depth,use_multilevel,grid)
-
-        INTEGER, INTENT (IN) :: a_n ! dimension of subproblem ND is applied to
-        INTEGER, INTENT (IN) :: a_ne ! no. nonzeros of subproblem
-        INTEGER, INTENT (IN) :: a_ptr(a_n) ! On input a_ptr(i) contains
-        ! position in a_row that entries for column i start.
-        INTEGER, INTENT (IN) :: a_row(a_ne) ! On input a_row contains row
-        ! indices of the non-zero rows. Diagonal entries have been removed
-        ! and the matrix expanded.
-        INTEGER, INTENT (IN) :: a_weight(a_n) ! On input a_weight(i) contains
-        ! the weight of column i.
-        INTEGER, INTENT (IN) :: sumweight ! sum of entries in a_weight
-        INTEGER, INTENT (IN) :: level ! current level of nested dissection
-        INTEGER, INTENT (OUT) :: a_n1, a_n2 ! size of the two submatrices
-        INTEGER, INTENT (OUT) :: a_weight_1, a_weight_2, a_weight_sep ! Weight
-        ! ed
-        ! size of partitions and separator
-        INTEGER, INTENT (OUT) :: partition(a_n) ! First a_n1 entries will
-        ! contain
-        ! list of (local) indices in partition 1; next a_n2 entries will
-        ! contain list of (local) entries in partition 2; entries in
-        ! separator are listed at the end
-        INTEGER, INTENT (OUT) :: work(9*a_n+sumweight) ! used as work array
-        TYPE (nd_options), INTENT (IN) :: control
-        INTEGER, INTENT (INOUT) :: info
-        REAL (kind=wp), INTENT (OUT) :: band ! If level = 0, then on
-        ! output band = 100*L/a_n, where L is the size of the
-        ! largest levelset
-        REAL (kind=wp), INTENT (OUT) :: depth ! If level = 0, then
-        ! on
-        ! output band = num_levels_nend
-        LOGICAL, INTENT (INOUT) :: use_multilevel ! are we allowed to use a
-        ! multilevel
-        ! partitioning strategy
-        TYPE (nd_multigrid), INTENT (INOUT) :: grid
-
-        ! ---------------------------------------------
-        ! Local variables
-        INTEGER :: nstrt, nend
-        INTEGER :: i, j, p1sz, p2sz, sepsz, lwork, k
-        INTEGER :: unit_diagnostics ! unit on which to print diagnostics
-        INTEGER :: level_p, level_ptr_p, level2_p, level2_ptr_p, work_p
-        INTEGER :: part_ptr, best_p1_ptr, best_a_n1, bkt_ptr, bkt_offset, &
-          gain_ptr, next_ptr, prev_ptr, curr_bkt, best_a_n2, best_a_weight_1, &
-          best_a_weight_2
-        INTEGER :: num_levels_nend ! no. levels in structure rooted at nend
-        INTEGER :: num_entries ! no. entries in level set structure
-        INTEGER :: gain, gll, ii, kk, l, ll, lwgt, maxbkt, minbkt
-        INTEGER :: inext, ilast
-        INTEGER :: lwidth, mindeg, degree, max_search
-        INTEGER :: stop_coarsening2 ! max no. multigrid levels
-        REAL (kind=wp) :: bestval
-        REAL (kind=wp) :: val
-        REAL (kind=wp) :: ratio
-        LOGICAL :: printi, printd
-        LOGICAL :: imbal, use_multilevel_copy
-
-        ! ---------------------------------------------
-        ! Printing levels
-        unit_diagnostics = control%unit_diagnostics
-        printi = (control%print_level==1 .AND. unit_diagnostics>=0)
-        printd = (control%print_level>=2 .AND. unit_diagnostics>=0)
-
-        IF (printi .OR. printd) THEN
-          WRITE (unit_diagnostics,'(a)') ' '
-          WRITE (unit_diagnostics,'(a)') 'Use two-sided level set method'
-        END IF
-        ratio = MAX(REAL(1.0,wp),control%balance)
-        IF (ratio>REAL(sumweight-2)) THEN
-          imbal = .FALSE.
-        ELSE
-          imbal = .TRUE.
-        END IF
-        band = -1
-        depth = -1
-        p2sz = 0
-        sepsz = 0
-        use_multilevel_copy = use_multilevel
-        ! if (a_n .LT. 80) THEN
-        ! write(*,*) 'a_n', a_n
-        ! write(*,*) 'a_ne', a_ne
-        ! write(*,*) 'a_ptr'
-        ! write(*,'(10i5)') a_ptr
-        ! write(*,*) 'a_row'
-        ! write(*,'(10i5)') a_row
-        ! write(*,*) 'a_weight'
-        ! write(*,'(10i5)') a_weight
-        ! end if
-        ! write(*,*) control%partition_method, use_multilevel, level, a_n
-
-        IF (control%partition_method==1 .AND. use_multilevel) GO TO 10
-
-        IF (control%partition_method>1 .AND. level>0 .AND. use_multilevel) &
-          GO TO 10
-
-        ! Find pseudoperipheral nodes nstart and nend, and the level structure
-        ! rooted at nend
-        level_ptr_p = 0 ! size a_n
-        level_p = level_ptr_p + a_n ! size a_n
-        level2_ptr_p = level_p + a_n ! size a_n
-        level2_p = level2_ptr_p + a_n ! size a_n
-        work_p = level2_p + a_n ! size 2*a_n
-
-        nend = -1
-
-        ! Choose nstrt
-        ! node with minimum degree
-        mindeg = sumweight + 1
-        DO i = 1, a_n
-          IF (i<a_n) THEN
-            k = a_ptr(i+1) - 1
-          ELSE
-            k = a_ne
-          END IF
-          degree = 0
-          DO j = a_ptr(i), k
-            degree = degree + a_weight(a_row(j))
-          END DO
-          IF (degree<mindeg) THEN
-            mindeg = degree
-            nstrt = i
-          END IF
-        END DO
-
-        max_search = 5
-
-        CALL nd_find_pseudo(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
-          work(level_ptr_p+1:level_ptr_p+a_n),work(level_p+1:level_p+a_n), &
-          nstrt,nend,max_search,work(work_p+1:work_p+2*a_n),num_levels_nend, &
-          num_entries,lwidth)
-
-        IF (num_entries<a_n) THEN
-          ! matrix is separable
-          a_n1 = num_entries
-          a_n2 = a_n - a_n1
-          a_weight_sep = 0
-          a_weight_1 = 0
-          work(work_p+1:work_p+a_n) = 0
-          DO i = 1, num_entries
-            j = work(level_p+i)
-            partition(i) = j
-            work(work_p+j) = 1
-            a_weight_1 = a_weight_1 + a_weight(j)
-          END DO
-          a_weight_2 = sumweight - a_weight_1
-          j = num_entries + 1
-          DO i = 1, a_n
-            IF (work(work_p+i)==0) THEN
-              partition(j) = i
-              j = j + 1
-            END IF
-
-          END DO
-          IF (level==0) THEN
-            band = -REAL(lwidth,wp)
-          END IF
-
-          RETURN
-        END IF
-
-        ! ********************************************************************
-        ! ***
-        IF (level==0) THEN
-          band = 100.0*REAL(lwidth,wp)/REAL(a_n,wp)
-          depth = 100.0*REAL(num_levels_nend,wp)/ &
-            REAL(a_n,wp)
-          ! band = max(band,real(lwidth,wp))
-          ! write(*,*) sqrt(real(lwidth))/real(num_levels_nend), lwidth, &
-          ! real(sumweight)/real(num_levels_nend), &
-          ! real(num_levels_nend)*(real(lwidth)/real(sumweight))
-        END IF
-        IF (control%stop_coarsening2<=0 .OR. control%partition_method<1) THEN
-          use_multilevel = .FALSE.
-        END IF
-        IF (control%partition_method>=2 .AND. use_multilevel) THEN
-          ! IF (real(lwidth,wp) .LE. 2.0* &
-          ! real(sumweight,wp)/real(num_levels_nend,wp) )
-          ! THEN
-          IF (100.0*REAL(lwidth,wp)/REAL(sumweight,wp)<=1.0) &
-              THEN
-            use_multilevel = .FALSE.
-          ELSE
-            use_multilevel = .TRUE.
-          END IF
-        END IF
-
-        IF (use_multilevel) GO TO 10
-
-        ! Initialised partition with just nstrt in partition 1
-        a_n1 = 1
-        p1sz = a_weight(nstrt)
-
-        ! write(*,*) (real(a_ne)/real(a_n)), (real(sumweight)/real(a_n)), a_n
-        maxbkt = MIN(sumweight/2,5*INT((REAL(a_ne)/REAL(a_n))*(REAL(sumweight) &
-          /REAL(a_n))))
-        minbkt = -MIN(2*INT((REAL(a_ne)/REAL(a_n))*(REAL(sumweight)/REAL(a_n)) &
-          ),sumweight-maxbkt)
-
-        part_ptr = 0
-        best_p1_ptr = part_ptr + a_n
-        bkt_ptr = best_p1_ptr + a_n
-        bkt_offset = 1 - minbkt
-        gain_ptr = bkt_ptr + maxbkt - minbkt + 1
-        next_ptr = gain_ptr + a_n
-        prev_ptr = next_ptr + a_n
-
-        work(bkt_ptr+1:bkt_ptr+maxbkt-minbkt+1) = 0
-        work(gain_ptr+1:gain_ptr+a_n) = 10*maxbkt
-        work(next_ptr+1:next_ptr+a_n) = 0
-        work(prev_ptr+1:prev_ptr+a_n) = 0
-        work(best_p1_ptr+a_n1) = nstrt
-
-        work(part_ptr+1:part_ptr+a_n) = nd_part2_flag
-        work(part_ptr+nstrt) = nd_part1_flag
-        IF (nstrt==a_n) THEN
-          k = a_ne
-        ELSE
-          k = a_ptr(nstrt+1) - 1
-        END IF
-        sepsz = 0
-        DO i = a_ptr(nstrt), k
-          j = a_row(i)
-          sepsz = sepsz + a_weight(j)
-          work(part_ptr+j) = nd_sep_flag
-        END DO
-
-        curr_bkt = maxbkt
-        DO i = a_ptr(nstrt), k
-          j = a_row(i)
-          CALL compute_gain(j,work(part_ptr+1:part_ptr+a_n),work(gain_ptr+j))
-          ! write(*,*) 'g', work(gain_ptr+j)
-          gain = MIN(maxbkt,MAX(minbkt,work(gain_ptr+j)))
-          curr_bkt = MIN(curr_bkt,gain)
-          CALL add_bkt(j,gain+bkt_offset,work(bkt_ptr+1:bkt_ptr+maxbkt-minbkt+ &
-            1),work(next_ptr+1:next_ptr+a_n),work(prev_ptr+1:prev_ptr+a_n))
-        END DO
-        ! write(*,*) 'ff', curr_bkt
-
-        a_n2 = a_n - 1 - (k+1-a_ptr(nstrt))
-        p2sz = sumweight - p1sz - sepsz
-
-        work(best_p1_ptr+a_n1) = nstrt
-        best_a_n1 = 1
-        best_a_n2 = a_n2
-        best_a_weight_1 = p1sz
-        best_a_weight_2 = p2sz
-
-        CALL cost_function(p1sz,p2sz,sepsz,sumweight,ratio,imbal,val)
-
-        bestval = val
-        ! write(*,*) minval(work(bkt_ptr+1:bkt_ptr+maxbkt-minbkt+1))
-
-        DO WHILE ((p1sz<p2sz) .OR. (REAL(MAX(p1sz,p2sz))/REAL( &
-            MAX(1,MIN(p1sz,p2sz)))<ratio))
-
-
-          DO WHILE (work(bkt_ptr+bkt_offset+curr_bkt)==0)
-            curr_bkt = curr_bkt + 1
-          END DO
-          ! write(*,'(10i5)') work(bkt_ptr+1:bkt_ptr+maxbkt-minbkt+1)
-          j = work(bkt_ptr+bkt_offset+curr_bkt)
-          ! write(*,'(10i5)') work(next_ptr+1:next_ptr+a_n)
-          ! write(*,'(10i5)') work(prev_ptr+1:prev_ptr+a_n)
-          ! write(*,*) a_n1, a_n2, p1sz, p2sz, sepsz, val, curr_bkt, j
-          ! write(*,*)
-          ! minval(work(bkt_ptr+1:bkt_ptr+maxbkt-minbkt+1)),curr_bkt,&
-          ! minbkt,maxbkt, work(bkt_ptr+bkt_offset+curr_bkt)
-          ! Add j to partition 1
-          work(part_ptr+j) = nd_part1_flag
-          a_n1 = a_n1 + 1
-          work(best_p1_ptr+a_n1) = j
-          p1sz = p1sz + a_weight(j)
-          sepsz = sepsz + work(gain_ptr+j)
-          p2sz = p2sz - work(gain_ptr+j) - a_weight(j)
-          ! write(*,*) 'remove', j, curr_bkt+bkt_offset
-          CALL remove_from_bkt(j,curr_bkt+bkt_offset, &
-            work(bkt_ptr+1:bkt_ptr+maxbkt-minbkt+1), &
-            work(next_ptr+1:next_ptr+a_n),work(prev_ptr+1:prev_ptr+a_n))
-          ! write(*,'(10i5)') work(bkt_ptr+1:bkt_ptr+maxbkt-minbkt+1)
-          ! write(*,'(10i5)') work(next_ptr+1:next_ptr+a_n)
-          ! write(*,'(10i5)') work(prev_ptr+1:prev_ptr+a_n)
-
-          ! Search neighbours of j for vertices that need moving from
-          ! partition 2 into sep
-          IF (j==a_n) THEN
-            k = a_ne
-          ELSE
-            k = a_ptr(j+1) - 1
-          END IF
-          DO i = a_ptr(j), k
-            l = a_row(i)
-            lwgt = a_weight(l)
-            IF (work(part_ptr+l)==nd_part2_flag) THEN
-              ! Search neighbours and update gains of neighbours in sep
-              IF (l==a_n) THEN
-                kk = a_ne
-              ELSE
-                kk = a_ptr(l+1) - 1
-              END IF
-              DO ii = a_ptr(l), kk
-                ll = a_row(ii)
-                IF (work(part_ptr+ll)==nd_sep_flag) THEN
-                  gll = MIN(maxbkt,MAX(minbkt,work(gain_ptr+ll)))
-                  work(gain_ptr+ll) = work(gain_ptr+ll) - lwgt
-                  gain = MIN(maxbkt,MAX(minbkt,work(gain_ptr+ll)))
-                  IF (gll/=gain) THEN
-                    ! write(*,*) 'removev', ll, gll+bkt_offset
-                    CALL remove_from_bkt(ll,gll+bkt_offset, &
-                      work(bkt_ptr+1:bkt_ptr+maxbkt-minbkt+1), &
-                      work(next_ptr+1:next_ptr+a_n), &
-                      work(prev_ptr+1:prev_ptr+a_n))
-                    ! write(*,'(10i5)')
-                    ! work(bkt_ptr+1:bkt_ptr+maxbkt-minbkt+1)
-                    ! write(*,'(10i5)') work(next_ptr+1:next_ptr+a_n)
-                    ! write(*,'(10i5)') work(prev_ptr+1:prev_ptr+a_n)
-                    ! write(*,*) 'addv', ll, gain+bkt_offset,work(gain_ptr+ll)
-                    CALL add_bkt(ll,gain+bkt_offset, &
-                      work(bkt_ptr+1:bkt_ptr+maxbkt-minbkt+1), &
-                      work(next_ptr+1:next_ptr+a_n), &
-                      work(prev_ptr+1:prev_ptr+a_n))
-                    ! write(*,'(10i5)')
-                    ! work(bkt_ptr+1:bkt_ptr+maxbkt-minbkt+1)
-                    ! write(*,'(10i5)') work(next_ptr+1:next_ptr+a_n)
-                    ! write(*,'(10i5)') work(prev_ptr+1:prev_ptr+a_n)
-                    curr_bkt = MIN(curr_bkt,gain)
-                  END IF
-                END IF
-              END DO
-              ! Add l to separator
-              work(part_ptr+l) = nd_sep_flag
-              a_n2 = a_n2 - 1
-
-              CALL compute_gain(l,work(part_ptr+1:part_ptr+a_n), &
-                work(gain_ptr+l))
-              gain = MIN(maxbkt,MAX(minbkt,work(gain_ptr+l)))
-              curr_bkt = MIN(curr_bkt,gain)
-
-              ! write(*,*) 'adde', l, gain+bkt_offset
-              CALL add_bkt(l,gain+bkt_offset,work(bkt_ptr+1:bkt_ptr+maxbkt- &
-                minbkt+1),work(next_ptr+1:next_ptr+a_n), &
-                work(prev_ptr+1:prev_ptr+a_n))
-              ! write(*,'(10i5)') work(bkt_ptr+1:bkt_ptr+maxbkt-minbkt+1)
-              ! write(*,'(10i5)') work(next_ptr+1:next_ptr+a_n)
-              ! write(*,'(10i5)') work(prev_ptr+1:prev_ptr+a_n)
-
-            END IF
-          END DO
-
-          IF (p2sz<1) EXIT
-
-
-          CALL cost_function(p1sz,p2sz,sepsz,sumweight,ratio,imbal,val)
-
-          IF (bestval>val) THEN
-            bestval = val
-            best_a_n1 = a_n1
-            best_a_n2 = a_n2
-            best_a_weight_1 = p1sz
-            best_a_weight_2 = p2sz
-
-          END IF
-
-
-        END DO
-
-
-        work(part_ptr+1:part_ptr+a_n) = nd_part2_flag
-
-        a_n1 = best_a_n1
-        a_weight_1 = best_a_weight_1
-        a_n2 = best_a_n2
-        a_weight_2 = best_a_weight_2
-        a_weight_sep = sumweight - a_weight_1 - a_weight_2
-
-        DO i = 1, best_a_n1
-          j = work(best_p1_ptr+i)
-          work(part_ptr+j) = nd_part1_flag
-        END DO
-
-
-        DO i = 1, best_a_n1
-          j = work(best_p1_ptr+i)
-          ! Search neighbours of j for vertices in separator
-          IF (j==a_n) THEN
-            k = a_ne
-          ELSE
-            k = a_ptr(j+1) - 1
-          END IF
-          DO ii = a_ptr(j), k
-            l = a_row(ii)
-            IF (work(part_ptr+l)==nd_part2_flag) THEN
-              work(part_ptr+l) = nd_sep_flag
-            END IF
-          END DO
-        END DO
-        ! write(*,*) a_n,a_n1,a_n2
-        ! write(*,'(10i5)') work(part_ptr+1:part_ptr+a_n)
-
-        CALL nd_convert_flags_partition(a_n,a_n1,a_n2, &
-          work(part_ptr+1:part_ptr+a_n),nd_part1_flag,nd_part2_flag, &
-          partition)
-
-
-        IF (imbal .AND. use_multilevel_copy .AND. control%partition_method>=2) &
-            THEN
-          IF (REAL(MAX(a_weight_1,a_weight_2))/REAL(MIN(a_weight_1, &
-              a_weight_2))>ratio) THEN
-            use_multilevel = .TRUE.
-            GO TO 10
-
-          END IF
-        END IF
-
-        GO TO 20
-
-10      CONTINUE
-
-        IF (use_multilevel) THEN
-          stop_coarsening2 = control%stop_coarsening2
-          lwork = 9*a_n + sumweight
-          CALL multilevel_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
-            partition,a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep,control, &
-            info,lwork,work(1:lwork),stop_coarsening2,grid)
-          RETURN
-        END IF
-
-
-20      info = 0
-        IF (printi .OR. printd) THEN
-          CALL nd_print_message(info,unit_diagnostics,'nd_grow')
-        END IF
-        RETURN
-
-
-      CONTAINS
-        SUBROUTINE remove_from_bkt(irm,ig,bkt,next,prev)
-          INTEGER :: irm, ig, bkt(:), next(:), prev(:)
-
-          inext = next(irm)
-          ilast = prev(irm)
-          ! write(*,*) inext,ilast
-          IF (ilast==0) THEN
-            bkt(ig) = inext
-            IF (inext/=0) prev(inext) = 0
-          ELSE
-            next(ilast) = inext
-            IF (inext/=0) prev(inext) = ilast
-          END IF
-          next(irm) = 0
-          prev(irm) = 0
-        END SUBROUTINE remove_from_bkt
-
-        SUBROUTINE add_bkt(irm,ig,bkt,next,prev)
-          INTEGER :: irm, ig, bkt(:), next(:), prev(:)
-
-          inext = bkt(ig)
-          bkt(ig) = irm
-          next(irm) = inext
-          IF (inext/=0) prev(inext) = irm
-          prev(irm) = 0
-        END SUBROUTINE add_bkt
-
-        SUBROUTINE compute_gain(i,partit,gain)
-          INTEGER :: i, partit(:), gain
-          INTEGER :: j, jj, l
-          ! Initialize gain ... knowing node i will be removed from cutset
-          ! The +1 is to give identical result to previous code when unit
-          ! weights
-          gain = -a_weight(i)
-          IF (i==a_n) THEN
-            l = a_ne
-          ELSE
-            l = a_ptr(i+1) - 1
-          END IF
-          DO jj = a_ptr(i), l
-            j = a_row(jj)
-            ! Check which partition node j is in and adjust gain array
-            ! appropriately
-            IF (partit(j)==nd_part2_flag) THEN
-              gain = gain + a_weight(j)
-            END IF
-          END DO
-        END SUBROUTINE compute_gain
-
-
-      END SUBROUTINE nd_grow
-
-
 
       ! ---------------------------------------------------
       ! nd_find_pseudo
@@ -4014,7 +3518,8 @@
         band = MIN(control%refinement_band,a_n)
 
         CALL nd_fm_refinement(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,icut, &
-          mult,a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep,band,ratio, &
+          mult,control%cost_function,a_n1,a_n2,a_weight_1,a_weight_2,&
+          a_weight_sep,band,ratio, &
           work(fm_flags+1:fm_flags+a_n),work(fm_ipart+1:fm_ipart+a_n), &
           work(fm_next+1:fm_next+a_n),work(fm_last+1:fm_last+a_n), &
           work(fm_gain1+1:fm_gain1+a_n),work(fm_gain2+1:fm_gain2+a_n), &
@@ -4046,7 +3551,7 @@
       ! input separator can be moved into the new separator
 
       SUBROUTINE nd_fm_refinement(n,a_ne,ptr,col,weight,sumweight,icut, &
-          mult,a_n1,a_n2,wnv1,wnv2,wns,band,ratio,flags,ipart,next,last,gain1, &
+          mult,costf,a_n1,a_n2,wnv1,wnv2,wns,band,ratio,flags,ipart,next,last,gain1, &
           gain2,done,head,dist)
 
         ! Matrix is held in matrix using compressed column scheme
@@ -4062,6 +3567,7 @@
         INTEGER, INTENT (IN) :: sumweight
         INTEGER, INTENT (IN) :: icut ! Used to limit search
         INTEGER, INTENT (IN) :: mult ! Used to bound search
+        INTEGER, INTENT (IN) :: costf ! Determines which cost function used
         INTEGER, INTENT (INOUT) :: a_n1 ! No. vertices partition 1
         INTEGER, INTENT (INOUT) :: a_n2 ! No. vertices partition 2
         INTEGER, INTENT (INOUT) :: wnv1 ! Weighted sum of vertices partition 1
@@ -4191,7 +3697,7 @@
 
         ! Compute evaluation function for current partitioning
 
-        CALL cost_function(wnv1+1,wnv2+1,wns,sumweight,ratio,imbal,evalc)
+        CALL cost_function(wnv1+1,wnv2+1,wns,sumweight,ratio,imbal,costf,evalc)
 
         ! icut is set to limit search in inner loop .. may later be a
         ! parameter
@@ -4297,10 +3803,10 @@ INNER:    DO inn = 1, n
 
             ELSE
               CALL cost_function(winv1+weight(i),winv2+1-gain1(i)-weight(i), &
-                wins+gain1(i)-1,sumweight,ratio,imbal,eval1)
+                wins+gain1(i)-1,sumweight,ratio,imbal,costf,eval1)
 
               CALL cost_function(winv1+1-gain2(i)-weight(i),winv2+weight(i), &
-                wins+gain2(i)-1,sumweight,ratio,imbal,eval2)
+                wins+gain2(i)-1,sumweight,ratio,imbal,costf,eval2)
               IF ((eval1<eval2) .OR. ((eval1==eval2) .AND. (wnv1<wnv2))) THEN
                 ! Move node i to partition 1
                 move = nd_part1_flag
@@ -4444,7 +3950,7 @@ INNER:    DO inn = 1, n
 
             ! Evaluate new partition
             CALL cost_function(winv1+1,winv2+1,wins,sumweight,ratio,imbal, &
-              eval)
+              costf,eval)
             ! Compare this with best so far in inner loop and store partition
             ! information if it is the best
             IF (inv1*inv2>0 .AND. nv1*nv2==0) THEN
@@ -5030,12 +4536,10 @@ INNER:    DO inn = 1, n
           ! rows_sub with first a_n1 entries that will form new a_weight
           ! no longer need info in a_ptr
           ! no longer need info in a_ptr
-          DO i = 1, a_n_1
+          DO i = 1, a_n1
             j = work(amd_order_perm+i)
-            IF (j<=a_n1) THEN
-              work(a_ptr_sub+i) = iperm(j)
-              work(rows_sub+i) = a_weight(j)
-            END IF
+            work(a_ptr_sub+i) = iperm(j)
+            work(rows_sub+i) = a_weight(j)
           END DO
           ! work(amd_order_perm+1:amd_order_perm+a_n1) =
           ! work(a_ptr_sub+1:a_ptr_sub+a_n1)
@@ -5604,7 +5108,7 @@ INNER:    DO inn = 1, n
               imbal = .TRUE.
             END IF
             CALL cost_function(a_weight_1,a_weight_2,a_weight_sep,sumweight, &
-              ratio,imbal,tau_best)
+              ratio,imbal,control%cost_function,tau_best)
             a_n1_new = grid%part_div(1)
             a_n2_new = grid%part_div(2)
             a_weight_1_new = a_weight_1
@@ -5697,7 +5201,7 @@ INNER:    DO inn = 1, n
 
 
             CALL cost_function(a_weight_1_new,a_weight_2_new,a_weight_sep_new, &
-              sumweight,ratio,imbal,tau)
+              sumweight,ratio,imbal,control%cost_function,tau)
             IF (tau<tau_best) THEN
               tau_best = tau
               work(partition_ptr+1:partition_ptr+grid%graph%n) &
@@ -5813,11 +5317,7 @@ INNER:    DO inn = 1, n
         IF (control%coarse_partition_method<=1) THEN
           partition_method = 1
         ELSE
-          IF (control%coarse_partition_method==2) THEN
-            partition_method = 2
-          ELSE
-            partition_method = 3
-          END IF
+          partition_method = 2
         END IF
 
         partition_ptr = 0 ! length a_n
@@ -5839,7 +5339,7 @@ INNER:    DO inn = 1, n
             work1(partition_ptr+1:partition_ptr+a_n),work(1:9*a_n+sumweight), &
             control,info,dummy,dummy1,use_multilevel,gridtemp)
 
-          IF (printi .OR. printd .OR. .FALSE.) THEN
+          IF (printi .OR. printd) THEN
             WRITE (unit_diagnostics,'(a)') ' '
             WRITE (unit_diagnostics,'(a)') 'Initial half-level set partition'
             WRITE (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_n1 =', a_n1, &
@@ -5858,7 +5358,7 @@ INNER:    DO inn = 1, n
             control,info,dummy,dummy1,use_multilevel,gridtemp)
 
 
-          IF (printi .OR. printd .OR. .FALSE.) THEN
+          IF (printi .OR. printd) THEN
             WRITE (unit_diagnostics,'(a)') ' '
             WRITE (unit_diagnostics,'(a)') 'Initial level set partition'
             WRITE (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_n1 =', a_n1, &
@@ -5868,25 +5368,6 @@ INNER:    DO inn = 1, n
               sumweight - a_weight_1 - a_weight_2
           END IF
 
-
-        CASE (3)
-          ! Grow method
-          use_multilevel = .FALSE.
-
-          CALL nd_grow(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,2,a_n1,a_n2, &
-            a_weight_1,a_weight_2,a_weight_sep,work1(partition_ptr+1: &
-            partition_ptr+a_n),work(1:9*a_n+sumweight),control,info,dummy, &
-            dummy1,use_multilevel,gridtemp)
-
-          IF (printi .OR. printd .OR. .FALSE.) THEN
-            WRITE (unit_diagnostics,'(a)') ' '
-            WRITE (unit_diagnostics,'(a)') 'Initial level set partition'
-            WRITE (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_n1 =', a_n1, &
-              ', a_n2=', a_n2, ', a_n_sep=', a_n - a_n1 - a_n2
-            WRITE (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_weight_1 =', &
-              a_weight_1, ', a_weight_2=', a_weight_2, ', a_weight_sep=', &
-              sumweight - a_weight_1 - a_weight_2
-          END IF
         END SELECT
 
 
@@ -7403,9 +6884,9 @@ INNER:    DO inn = 1, n
             w1 = a_weight(head1)
             w2 = a_weight(head2)
             CALL cost_function(a_weight_1+w1,a_weight_2,a_weight_sep-w1, &
-              sumweight,ratio,imbal,t1)
+              sumweight,ratio,imbal,control%cost_function,t1)
             CALL cost_function(a_weight_1,a_weight_2+w2,a_weight_sep-w2, &
-              sumweight,ratio,imbal,t2)
+              sumweight,ratio,imbal,control%cost_function,t2)
 
             IF (t1<t2) THEN
               GO TO 10
@@ -7833,7 +7314,7 @@ INNER:    DO inn = 1, n
               CYCLE
             ELSE
               CALL cost_function(a_weight_1+w1,a_weight_2,a_weight_sep-w1, &
-                sumweight,ratio,imbal,t1)
+                sumweight,ratio,imbal,control%cost_function,t1)
             END IF
           END IF
 
@@ -7855,7 +7336,7 @@ INNER:    DO inn = 1, n
               CYCLE
             ELSE
               CALL cost_function(a_weight_1,a_weight_2+w2,a_weight_sep-w2, &
-                sumweight,ratio,imbal,t2)
+                sumweight,ratio,imbal,control%cost_function,t2)
             END IF
           END IF
 
@@ -7954,7 +7435,8 @@ INNER:    DO inn = 1, n
 
         IF (a_n-a_n1-a_n2>1) THEN
           ratio = MAX(REAL(1.0,wp),control%balance)
-          CALL nd_maxflow(a_n,a_ne,a_ptr,a_row,a_weight,a_n1,a_n2, &
+          CALL nd_maxflow(a_n,a_ne,a_ptr,a_row,a_weight,control%cost_function,&
+            a_n1,a_n2, &
             a_weight_1,a_weight_2,a_weight_sep,partition,ratio,msglvl, &
             work(1:8),cost)
         END IF
@@ -8140,265 +7622,8 @@ INNER:    DO inn = 1, n
       END SUBROUTINE expand_partition
 
 
-      ! SUBROUTINE expand_partition_kinks(a_n,a_ne,a_ptr,a_row,a_weight,&
-      ! radius,upper,ratio,a_n1,&
-      ! a_n2,a_weight_1,a_weight_2,a_weight_sep,partition,work)
-
-      ! INTEGER, INTENT(IN) :: a_n ! order of matrix
-      ! INTEGER, INTENT(IN) :: a_ne ! number of entries in matrix
-      ! INTEGER, INTENT(IN) :: a_ptr(a_n) ! On input a_ptr(i) contains
-      ! position in a_row that entries for column i start.
-      ! INTEGER, INTENT(IN) :: a_row(a_ne) ! On input a_row contains row
-      ! indices of the non-zero rows. Diagonal entries have been removed
-      ! and the matrix expanded.
-      ! INTEGER, INTENT(IN) :: a_weight(a_n) ! On input a_weight(i) contains
-      ! the weight of column i
-      ! INTEGER, INTENT(IN) :: radius ! Check nodes at most distance radius
-      ! from current node. Ball = these nodes
-      ! REAL (wp) :: upper ! Weight of expanded separator must not
-      ! exceed upper*(weight of initial separator)
-      ! REAL (wp) :: ratio ! Current node in partition i.
-      ! If |Ball \cap (P_j \cup S)|/|Ball \cap P_i| > ratio, current node
-      ! will be moved into expanded separator
-      ! INTEGER, INTENT(INOUT) :: a_n1 ! Size of partition 1
-      ! INTEGER, INTENT(INOUT) :: a_n2 ! Size of partition 2
-      ! INTEGER, INTENT(INOUT) :: a_weight_1,a_weight_2,a_weight_sep !
-      ! Weighted
-      ! size of partitions and separator
-      ! INTEGER, INTENT(INOUT) :: partition(a_n) !First a_n1 entries contain
-      ! list of (local) indices in partition 1; next a_n2 entries
-      ! contain list of (local) entries in partition 2; entries in
-      ! separator are listed at the end. This is updated to the new
-      ! partition
-      ! INTEGER, INTENT(OUT) :: work(5*a_n) ! Work array
-
-      ! Local variables
-      ! INTEGER :: i,j,jj,head,tail,headb,tailb,k,l,t,s
-      ! INTEGER :: no_part1,no_part2,no_sep,w_sep_orig
-      ! INTEGER :: work_part,work_next,work_mask,work_dist,work_nextb
-      ! LOGICAL :: move
-
-      ! Divide up workspace
-      ! work_part = 0
-      ! work_next = work_part + a_n
-      ! work_mask = work_next + a_n
-      ! work_dist = work_mask + a_n
-      ! work_nextb = work_dist + a_n
-
-      ! Set work(work_part+1:work_part+a_n) to hold flags to indicate what
-      ! part of the partition the nodes are in
-      ! work_part = 0
-      ! DO i = 1, a_n1
-      ! j = partition(i)
-      ! work(work_part+j) = nd_part1_flag
-      ! END DO
-      ! DO i = a_n1+1, a_n1+a_n2
-      ! j = partition(i)
-      ! work(work_part+j) = nd_part2_flag
-      ! END DO
-      ! DO i = a_n1+a_n2+1, a_n
-      ! j = partition(i)
-      ! work(work_part+j) = nd_sep_flag
-      ! END DO
-      ! w_sep_orig = a_weight_sep
-
-      ! Work through separator adding adjacent entries to list
-      ! head = 0
-      ! tail = 0
-      ! work(work_next+1:work_next+a_n) = 0
-      ! work(work_mask+1:work_mask+a_n) = 0
-      ! s=0
-      ! DO i = a_n1+a_n2+1, a_n
-      ! j = partition(i)
-      ! IF (j.EQ. a_n) THEN
-      ! t = a_ne
-      ! ELSE
-      ! t = a_ptr(j+1)-1
-      ! END IF
-      ! DO k = a_ptr(j),t
-      ! l = a_row(k)
-      ! IF ((work(work_part+l).NE.nd_sep_flag) .AND. &
-      ! (work(work_mask+l).EQ.0)) THEN
-      ! Add l to list
-      ! s=s+1
-      ! work(work_mask+l) = 1
-      ! IF (tail.EQ.0) THEN
-      ! head = l
-      ! tail = l
-      ! ELSE
-      ! work(work_next+tail) = l
-      ! tail = l
-      ! END IF
-      ! END IF
-      ! END DO
-      ! END DO
-      ! work(work_nextb+1:work_nextb+a_n) = 0
-      ! work(work_dist+1:work_dist+a_n) = -1
-      ! DO WHILE (head.NE.0)
-      ! i = head
-      ! IF ((work(work_part+i).EQ.nd_part1_flag) .AND. a_n1.EQ.1) THEN
-      ! GOTO 100
-      ! END IF
-      ! IF ((work(work_part+i).EQ.nd_part2_flag) .AND. a_n2.EQ.1) THEN
-      ! GOTO 100
-      ! END IF
-      ! IF ( real(a_weight_sep + a_weight(i)) .GT. upper*real(w_sep_orig) )
-      ! THEN
-      ! GOTO 100
-      ! END IF
-
-      ! work(work_dist+i) = 0
-      ! headb = 0
-      ! tailb = 0
-      ! create list with all entries in Ball
-      ! IF (i.EQ.a_n) THEN
-      ! jj = a_ne
-      ! ELSE
-      ! jj = a_ptr(i+1)-1
-      ! END IF
-
-      ! DO j = a_ptr(i),jj
-      ! l = a_row(j)
-      ! Add l to Ball list
-      ! IF (tailb.EQ.0) THEN
-      ! headb = l
-      ! tailb = l
-      ! ELSE
-      ! work(work_nextb+tailb) = l
-      ! tailb = l
-      ! END IF
-      ! work(work_dist+l) = 1
-      ! END DO
-
-      ! k = headb
-      ! DO WHILE (k.NE.0 .AND. work(work_dist+k).LT.radius)
-      ! IF (k.EQ.a_n) THEN
-      ! jj = a_ne
-      ! ELSE
-      ! jj = a_ptr(k+1)-1
-      ! END IF
-      ! DO j = a_ptr(i),jj
-      ! l = a_row(j)
-      ! IF (work(work_dist+l).EQ.-1) THEN
-      ! Add l to Ball list (ball list is always non-empty)
-      ! work(work_nextb+tailb) = l
-      ! tailb = l
-      ! work(work_dist+l) = work(work_dist+k)+1
-      ! END IF
-      ! END DO
-      ! k = work(work_nextb+k)
-      ! END DO
-
-
-      ! count entries in ball that are in partition 1 and partition 2
-      ! empty list as proceed
-      ! no_part1=0
-      ! no_part2=0
-      ! no_sep = 0
-      ! DO WHILE (headb.NE.0)
-      ! k = headb
-      ! IF (work(work_part+k).GE.nd_part2_flag) THEN
-      ! no_part2=no_part2+a_weight(k)
-      ! ELSE
-      ! IF (work(work_part+k).LE.nd_part1_flag) THEN
-      ! no_part1=no_part1+a_weight(k)
-      ! ELSE
-      ! no_sep = no_sep + a_weight(k)
-      ! END IF
-      ! END IF
-      ! headb = work(work_nextb+k)
-      ! work(work_dist+k) = -1
-      ! work(work_nextb+k) = 0
-      ! k = headb
-      ! END DO
-
-      ! move = .FALSE.
-      ! IF (work(work_part+i).EQ.nd_part2_flag) THEN
-      ! If |Ball \cap (P_1 \cup S)|/|Ball \cap P_2| > ratio
-      ! IF (no_part2.EQ.0) THEN
-      ! move = .TRUE.
-      ! a_n2 = a_n2 - 1
-      ! a_weight_2 = a_weight_2 - a_weight(i)
-      ! a_weight_sep = a_weight_sep + a_weight(i)
-      ! ELSE
-      ! IF (real(no_part1+no_sep)/real(no_part2).GT.ratio) THEN
-      ! move = .TRUE.
-      ! a_n2 = a_n2 - 1
-      ! a_weight_2 = a_weight_2 - a_weight(i)
-      ! a_weight_sep = a_weight_sep + a_weight(i)
-      ! END IF
-      ! END IF
-      ! ELSE
-      ! If |Ball \cap (P_2 \cup S)|/|Ball \cap P_1| > ratio
-      ! IF (no_part1.EQ.0) THEN
-      ! move = .TRUE.
-      ! a_n1 = a_n1 - 1
-      ! a_weight_1 = a_weight_1 - a_weight(i)
-      ! a_weight_sep = a_weight_sep + a_weight(i)
-      ! ELSE
-      ! IF (real(no_part2+no_sep)/real(no_part1).GT.ratio) THEN
-      ! move = .TRUE.
-      ! a_n1 = a_n1 - 1
-      ! a_weight_1 = a_weight_1 - a_weight(i)
-      ! a_weight_sep = a_weight_sep + a_weight(i)
-      ! END IF
-      ! END IF
-      ! END IF
-      ! IF (move) THEN
-      ! work(work_part+i) = nd_sep_flag
-      ! j = i
-      ! IF (j.EQ. a_n) THEN
-      ! t = a_ne
-      ! ELSE
-      ! t = a_ptr(j+1)-1
-      ! END IF
-      ! DO k = a_ptr(j),t
-      ! l = a_row(k)
-      ! IF ((work(work_part+l).NE.nd_sep_flag) .AND. &
-      ! work(work_mask+l).EQ.0) THEN
-      ! ! Add l to list (note: list is non-empty)
-      ! work(work_next+tail) = l
-      ! work(work_mask+l) = 1
-      ! tail = l
-      ! END IF
-      ! END DO
-      ! END IF
-
-      ! remove i from list
-      ! 100       head = work(work_next+i)
-      ! work(work_next+i) = 0
-      ! IF (head.EQ.0) THEN
-      ! tail = 0
-      ! END IF
-      ! work(work_dist+i) = -1
-      ! work(work_mask+i) = 0
-      ! END DO
-
-      ! j =1
-      ! k = 1 + a_n1
-      ! l = 1 + a_n1 + a_n2
-      ! DO i=1,a_n
-      ! jj = work(work_part+i)
-      ! IF (jj .EQ. nd_part1_flag) THEN
-      ! partition(j) =i
-      ! j = j+1
-      ! ELSE  IF (jj .EQ. nd_part2_flag) THEN
-      ! partition(k) =i
-      ! k = k+1
-      ! ELSE
-      ! partition(l) =i
-      ! l = l+1
-      ! END IF
-      ! END DO
-
-      ! END SUBROUTINE expand_partition_kinks
-
-
-
-
-
       SUBROUTINE cost_function(a_weight_1,a_weight_2,a_weight_sep,sumweight, &
-          ratio,imbal,tau)
+          ratio,imbal,costf,tau)
 
         INTEGER, INTENT (IN) :: a_weight_1, a_weight_2, a_weight_sep ! Weighte
         ! d
@@ -8406,6 +7631,7 @@ INNER:    DO inn = 1, n
         INTEGER, INTENT (IN) :: sumweight
         REAL (kind=wp), INTENT (IN) :: ratio
         LOGICAL, INTENT (IN) :: imbal ! Use penalty function?
+        INTEGER, INTENT (IN) :: costf
         REAL (kind=wp), INTENT (OUT) :: tau
         REAL (kind=wp) :: beta, a_wgt1, a_wgt2
 
@@ -8413,7 +7639,7 @@ INNER:    DO inn = 1, n
         a_wgt1 = MAX(1,a_weight_1)
         a_wgt2 = MAX(1,a_weight_2)
 
-        IF (.TRUE.) THEN
+        IF (costf.LE.1) THEN
           tau = ((REAL(a_weight_sep)**1.0)/REAL(a_wgt1))/REAL(a_wgt2)
           IF (imbal .AND. REAL(MAX(a_wgt1,a_wgt2))/REAL(MIN(a_wgt1, &
               a_wgt2))>=ratio) THEN
@@ -8437,7 +7663,7 @@ INNER:    DO inn = 1, n
       ! nd_maxflow
       ! ---------------------------------------------------
       ! Given a partition, get better partition using maxflow algorithm
-      SUBROUTINE nd_maxflow(a_n,a_ne,a_ptr,a_row,a_weight,a_n1,a_n2, &
+      SUBROUTINE nd_maxflow(a_n,a_ne,a_ptr,a_row,a_weight,costf,a_n1,a_n2, &
           a_weight_1,a_weight_2,a_weight_sep,partition,alpha,msglvl,stats, &
           cost)
         IMPLICIT NONE
@@ -8454,7 +7680,7 @@ INNER:    DO inn = 1, n
         ! At the moment weights are not used at all
         INTEGER, INTENT (IN) :: a_weight(a_n) ! On input, a_weight(i) contains
         ! the weight of column i
-
+        INTEGER, INTENT (IN) :: costf ! Determines which cost function is used
         ! Data on partition a_n1, a_n2, partition ... will be updated
         INTEGER, INTENT (INOUT) :: a_n1 ! Size of partition 1 (ie B)
         INTEGER, INTENT (INOUT) :: a_n2 ! Size of partition 2 (ie W)
@@ -8599,8 +7825,8 @@ INNER:    DO inn = 1, n
         ! Use evaluation function to choose best partition from among these
         ! two
         ! Use Sue's weighted code
-        CALL evalbsw(a_n,a_ne,a_ptr,a_row,a_weight,mapl,alpha,statsl,costl)
-        CALL evalbsw(a_n,a_ne,a_ptr,a_row,a_weight,mapr,alpha,statsr,costr)
+        CALL evalbsw(a_n,a_ne,a_ptr,a_row,a_weight,mapl,alpha,costf,statsl,costl)
+        CALL evalbsw(a_n,a_ne,a_ptr,a_row,a_weight,mapr,alpha,costf,statsr,costr)
 
 
         ! Find the better of the two partitions
@@ -9766,7 +8992,7 @@ INNER:    DO inn = 1, n
 
       END SUBROUTINE findaugpath
 
-      SUBROUTINE evalbsw(a_n,a_ne,a_ptr,a_row,a_weight,map,alpha,stats, &
+      SUBROUTINE evalbsw(a_n,a_ne,a_ptr,a_row,a_weight,map,alpha,costf,stats, &
           stats10)
         ! Matlab call
         ! function stats = evalBSW ( A, map, alpha, beta, msglvl )
@@ -9802,11 +9028,13 @@ INNER:    DO inn = 1, n
         INTEGER, INTENT (IN) :: a_ne
         INTEGER, INTENT (IN) :: map(:), a_ptr(:), a_row(:), a_weight(:)
         REAL (kind=wp), INTENT (IN) :: alpha
+        INTEGER, INTENT (IN) :: costf
         INTEGER, INTENT (OUT) :: stats(9)
         REAL (kind=wp), INTENT (OUT) :: stats10
         INTEGER minbw, maxbw, nss, nsb, nsw, nbb, nww, nvtx, ns, nb, nw
         INTEGER j, j1, j2, jj, u, v
         REAL (kind=wp) diffbw, beta
+        LOGICAL :: imbal
 
         beta = 0.5_wp
         nvtx = a_n
@@ -9875,28 +9103,22 @@ INNER:    DO inn = 1, n
         END IF
         ! stats[9] -- 1 if acceptable, 0 if not
         ! acceptable --> alpha*min(|B|,|W|) >= max(|B|,|W|)
-        ! stats[10] -- cost of partition
-        ! cost = |S|*(1 + (beta*| |B| - |W| |)/(|B|+|S|+|W|)) ;
-        ! or
-        ! cost = |S|/(|B||W|)
+        ! stats10 -- cost of partition
         IF (alpha*minbw>=maxbw) THEN
           stats(9) = 1
         ELSE
           stats(9) = 0
         END IF
-        ! write(lp,'(A)') 'eval routine'
-        ! write(lp,'(A,I4)') 'ns',nS
-        ! write(lp,'(A,D12.4)') 'diffBW',diffBW
-        ! write(lp,'(A,D12.4)') 'beta',beta
+
+        IF (alpha > nb+nw+ns-2) THEN
+            imbal = .FALSE.
+        ELSE
+            imbal = .TRUE.
+        END IF
 
         CALL cost_function(nb,nw,ns,nb+nw+ns, &
-          2.0_wp,.FALSE.,stats10)
-        
-      !  IF (.FALSE.) THEN
-      !    stats10 = REAL(ns)*(1.0D0+beta*diffbw)
-      !  ELSE
-      !    stats10 = (REAL(ns)/REAL(nw))/REAL(nb)
-      !  END IF
+          alpha,imbal,costf,stats10)
+
       END SUBROUTINE evalbsw
 
       SUBROUTINE nd_supervars(n,ptr,row,perm,invp,nsvar,svar,info,st)
