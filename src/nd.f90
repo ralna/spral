@@ -69,7 +69,7 @@
         ! =6 : Automatically choose between options 4 and 5
         ! >6 : Automatically choose between options 1 and 5
         INTEGER :: refinement_band = 4 ! band width for FM refinement. Values
-        ! less than 1 mean that full FM refinement is done
+        ! less than 1 mean that no FM refinement is done
         LOGICAL :: remove_dense_rows = .TRUE. ! test the input for dense rows
         ! and place them at the end of the ordering
         INTEGER :: stop_coarsening2 = 20 ! Max number of levels in the
@@ -217,7 +217,7 @@
         MODULE PROCEDURE nd_nested_order
       END INTERFACE
 
-      PUBLIC nd_order
+      PUBLIC nd_order, nd_refine_fm
 
       ! ---------------------------------------------------
       ! The main code
@@ -1171,7 +1171,8 @@
           work(dense+i) = degree
           IF (degree/=0) THEN
             max_deg = MAX(max_deg,degree)
-            CALL add_to_list(i,degree)
+            CALL dense_add_to_list(a_n_in,work(next+1:next+a_n_in),&
+                work(prev+1:prev+a_n_in),work(deg+1:deg+a_n_in),i,degree)
           END IF
         END DO
         degree = max_deg
@@ -1186,7 +1187,8 @@
           i = work(deg+degree)
           ndense = ndense + 1
           work(dense+i) = -ndense
-          CALL remove_from_list(i,degree)
+          CALL dense_remove_from_list(a_n_in,work(next+1:next+a_n_in),&
+                work(prev+1:prev+a_n_in),work(deg+1:deg+a_n_in),i,degree)
           ! update degrees of adjacent vertices
           IF (i<a_n_in) THEN
             l = a_ptr(i+1) - 1
@@ -1196,10 +1198,12 @@
           DO k = a_ptr(i), l
             j = a_row(k)
             IF (work(dense+j)>0) THEN
-              CALL remove_from_list(j,work(dense+j))
+              CALL dense_remove_from_list(a_n_in,work(next+1:next+a_n_in),&
+                work(prev+1:prev+a_n_in),work(deg+1:deg+a_n_in),j,work(dense+j))
               work(dense+j) = work(dense+j) - 1
               IF (work(dense+j)>0) THEN
-                CALL add_to_list(j,work(dense+j))
+                CALL dense_add_to_list(a_n_in,work(next+1:next+a_n_in),&
+                work(prev+1:prev+a_n_in),work(deg+1:deg+a_n_in),j,work(dense+j))
               END IF
             END IF
           END DO
@@ -1309,32 +1313,37 @@
             'nd_dense_rows')
         END IF
 
-      CONTAINS
-        SUBROUTINE remove_from_list(irm,ig)
-          INTEGER :: irm, ig
-
-          inext = work(next+irm)
-          ilast = work(prev+irm)
-          IF (ilast==0) THEN
-            work(deg+ig) = inext
-            IF (inext/=0) work(prev+inext) = 0
-          ELSE
-            work(next+ilast) = inext
-            IF (inext/=0) work(prev+inext) = ilast
-          END IF
-        END SUBROUTINE remove_from_list
-
-        SUBROUTINE add_to_list(irm,ig)
-          INTEGER :: irm, ig
-
-          inext = work(deg+ig)
-          work(deg+ig) = irm
-          work(next+irm) = inext
-          IF (inext/=0) work(prev+inext) = irm
-          work(prev+irm) = 0
-        END SUBROUTINE add_to_list
-
       END SUBROUTINE nd_dense_rows
+
+        SUBROUTINE dense_remove_from_list(n,next,prev,deg,irm,ig)
+          INTEGER, INTENT(IN) :: n ! order matrix
+          INTEGER, INTENT(INOUT) :: next(n),prev(n),deg(n)
+          INTEGER, INTENT(IN) :: irm, ig
+          INTEGER :: inext, ilast
+
+          inext = next(irm)
+          ilast = prev(irm)
+          IF (ilast==0) THEN
+            deg(ig) = inext
+            IF (inext/=0) prev(inext) = 0
+          ELSE
+            next(ilast) = inext
+            IF (inext/=0) prev(inext) = ilast
+          END IF
+        END SUBROUTINE dense_remove_from_list
+
+        SUBROUTINE dense_add_to_list(n,next,prev,deg,irm,ig)
+          INTEGER, INTENT(IN) :: n ! order matrix
+          INTEGER, INTENT(INOUT) :: next(n),prev(n),deg(n)
+          INTEGER, INTENT(IN) :: irm, ig
+          INTEGER :: inext
+
+          inext = deg(ig)
+          deg(ig) = irm
+          next(irm) = inext
+          IF (inext/=0) prev(inext) = irm
+          prev(irm) = 0
+        END SUBROUTINE dense_add_to_list
 
       ! ---------------------------------------------------
       ! nd_nested_internal
@@ -1995,11 +2004,6 @@
             END SELECT
 
 
-  !          CALL nd_refine_fm(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,a_n1, &
-  !            a_n2,a_weight_1,a_weight_2,a_weight_sep, &
-  !            work(partition_ptr+1:partition_ptr+a_n), &
-  !            work(work_ptr+1:work_ptr+8*a_n+sumweight),control)
-
             IF (printd) THEN
               WRITE (unit_diagnostics,'(a)') 'Partition after refinement'
               WRITE (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_n1=', a_n1, &
@@ -2028,14 +2032,6 @@
 
             k = control%max_improve_cycles
             DO i = 1, k
-
-
-              ! CALL expand_partition_kinks(a_n,a_ne,a_ptr,a_row,a_weight,&
-              ! 2,5.0_wp,ratio,a_n1_new,a_n2_new,&
-              ! a_weight_1_new,a_weight_2_new,&
-              ! a_weight_sep_new,work(part_ptr+1:part_ptr+a_n),&
-              ! work(work_ptr+1:work_ptr+5*a_n))
-
 
               CALL expand_partition(a_n,a_ne,a_ptr,a_row,a_weight,a_n1_new, &
                 a_n2_new,a_weight_1_new,a_weight_2_new,a_weight_sep_new, &
@@ -2108,11 +2104,6 @@
 
               END SELECT
 
-
-    !          CALL nd_refine_fm(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
-    !              a_n1_new,a_n2_new,a_weight_1_new,a_weight_2_new, &
-    !              a_weight_sep_new,work(part_ptr+1:part_ptr+a_n), &
-    !              work(work_ptr+1:work_ptr+8*a_n+sumweight),control)
 
               IF (printd) THEN
                 WRITE (unit_diagnostics,'(a)') &
@@ -2722,6 +2713,7 @@
         IF (use_multilevel) THEN
           stop_coarsening2 = control%stop_coarsening2
           lwork = 9*a_n + sumweight
+          
           CALL multilevel_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
             partition,a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep,control, &
             info,lwork,work(1:lwork),stop_coarsening2,grid)
@@ -3722,13 +3714,13 @@
             ! node
             ! i is moved
 
-            CALL compute_gain(i,flags)
+            CALL compute_gain(n,a_ne,ptr,col,gain1,gain2,weight,i,flags)
             gain = MAX(-mult,MIN(gain1(i),gain2(i)))
 
             IF (gain<ming) ming = gain
             IF (gain>icut) CYCLE
             ! New node is put at head of list
-            CALL add_to_list(i,gain)
+            CALL add_to_list(n,mult,icut,next,last,head,i,gain)
           END IF
         END DO
 
@@ -3780,7 +3772,7 @@ INNER:    DO inn = 1, n
             ! Set flag so only considered once in this pass
 20          done(i) = outer
             ! As i will not be chosen again in this pass, remove from list
-            CALL remove_from_list(i,gain)
+            CALL remove_from_list(n,mult,icut,next,last,head,i,gain)
             ! Move the node to the appropriate partition and reset partition
             ! information
             ! We will try both weighted and unweighted
@@ -3852,14 +3844,14 @@ INNER:    DO inn = 1, n
                 IF (old_gain==gain) CYCLE
                 ! Remove from old list
                 IF (old_gain<=icut) THEN
-                  CALL remove_from_list(j,old_gain)
+                  CALL remove_from_list(n,mult,icut,next,last,head,j,old_gain)
                 END IF
                 ! gain has changed so move to new linked list if less than
                 ! icut
                 IF (gain<=icut) THEN
                   ! Reset ming if necessary
                   IF (gain<ming) ming = gain
-                  CALL add_to_list(j,gain)
+                  CALL add_to_list(n,mult,icut,next,last,head,j,gain)
                 END IF
               END IF
               IF (ipart(j)==2-move) THEN
@@ -3875,14 +3867,14 @@ INNER:    DO inn = 1, n
                 ! First check that it was not earlier moved from cutset
                 IF (done(j)/=outer .AND. dist(j)/=-2) THEN
                   ! Compute gain
-                  CALL compute_gain(j,ipart)
+                  CALL compute_gain(n,a_ne,ptr,col,gain1,gain2,weight,j,ipart)
                   gain = MAX(-mult,MIN(gain1(j),gain2(j)))
                   ! gain = min(gain1(j),gain2(j))
                   ! !! Just added this
                   IF (gain<ming) ming = gain
                   ! Add to  list
                   IF (gain<=icut) THEN
-                    CALL add_to_list(j,gain)
+                    CALL add_to_list(n,mult,icut,next,last,head,j,gain)
                   END IF
                 END IF
                 ! Update partition and gain of any nodes in cutset connected
@@ -3928,14 +3920,14 @@ INNER:    DO inn = 1, n
                   IF (old_gain==gain) CYCLE
                   ! Remove from old list
                   IF (old_gain<=icut) THEN
-                    CALL remove_from_list(eye,old_gain)
+                    CALL remove_from_list(n,mult,icut,next,last,head,eye,old_gain)
                   END IF
                   ! gain has changed so move to new linked list if less than
                   ! icut
                   IF (gain<=icut) THEN
                     ! Reset ming if necessary
                     IF (gain<ming) ming = gain
-                    CALL add_to_list(eye,gain)
+                    CALL add_to_list(n,mult,icut,next,last,head,eye,gain)
                   END IF
                 END DO
               END IF
@@ -3997,7 +3989,7 @@ INNER:    DO inn = 1, n
             ! Run through all neighbours of node i to see what loss/gain is if
             ! node
             ! i is moved
-            CALL compute_gain(i,flags)
+            CALL compute_gain(n,a_ne,ptr,col,gain1,gain2,weight,i,flags)
             ! Recalculate doubly linked list linking nodes with same gain and
             ! headers
             ! to starts (up to cut off value icut)
@@ -4009,7 +4001,7 @@ INNER:    DO inn = 1, n
             IF (gain>icut) CYCLE
             IF (gain<ming) ming = gain
             ! New node is put at head of list
-            CALL add_to_list(i,gain)
+            CALL add_to_list(n,mult,icut,next,last,head,i,gain)
           END DO
           ! End of outer loop
         END DO
@@ -4017,9 +4009,14 @@ INNER:    DO inn = 1, n
         a_n2 = nv2
         RETURN
 
-      CONTAINS
-        SUBROUTINE remove_from_list(irm,ig)
-          INTEGER :: irm, ig
+      END SUBROUTINE nd_fm_refinement
+
+
+        SUBROUTINE remove_from_list(n,mult,icut,next,last,head,irm,ig)
+          INTEGER, INTENT(IN) :: n,mult,icut ! order matrix
+          INTEGER, INTENT(INOUT) :: next(n),last(n),head(-mult:icut)
+          INTEGER, INTENT(IN) :: irm, ig
+          INTEGER :: inext, ilast
 
           inext = next(irm)
           ilast = last(irm)
@@ -4032,8 +4029,12 @@ INNER:    DO inn = 1, n
           END IF
         END SUBROUTINE remove_from_list
 
-        SUBROUTINE add_to_list(irm,ig)
-          INTEGER :: irm, ig
+
+        SUBROUTINE add_to_list(n,mult,icut,next,last,head,irm,ig)
+          INTEGER, INTENT(IN) :: n,mult,icut ! order matrix
+          INTEGER, INTENT(INOUT) :: next(n),last(n),head(-mult:icut)
+          INTEGER, INTENT(IN) :: irm, ig
+          INTEGER :: inext, ilast
 
           inext = head(ig)
           head(ig) = irm
@@ -4042,8 +4043,11 @@ INNER:    DO inn = 1, n
           last(irm) = 0
         END SUBROUTINE add_to_list
 
-        SUBROUTINE compute_gain(i,partit)
-          INTEGER :: i, partit(:)
+
+        SUBROUTINE compute_gain(n,a_ne,ptr,col,gain1,gain2,weight,i,partit)
+          INTEGER, INTENT(IN) :: n,a_ne,ptr(n),col(a_ne),weight(n)
+          INTEGER, INTENT(INOUT) :: gain1(n), gain2(n)  
+          INTEGER, INTENT(IN) :: i, partit(:)
           INTEGER :: j, jj, l
           ! Initialize gain ... knowing node i will be removed from cutset
           ! The +1 is to give identical result to previous code when unit
@@ -4067,10 +4071,6 @@ INNER:    DO inn = 1, n
             END IF
           END DO
         END SUBROUTINE compute_gain
-      END SUBROUTINE nd_fm_refinement
-
-
-
 
       SUBROUTINE amd_order_both(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition, &
           iperm,a_weight,work)
@@ -4715,7 +4715,6 @@ INNER:    DO inn = 1, n
         ! initialise mglevel_cur to the maximum number of levels
         ! allowed for this bisection
         mglevel_cur = stop_coarsening2
-
         CALL multilevel(grid,control,sumweight,mglevel_cur,mp,print_level, &
           lwork,work,info1)
 
@@ -4844,7 +4843,7 @@ INNER:    DO inn = 1, n
         one1 = 1.0
 
         stop_coarsening1 = MAX(2,control%stop_coarsening1)
-        IF (print_level==2) CALL level_print(mp,'size of grid on level ', &
+        IF (print_level.GE.2) CALL level_print(mp,'size of grid on level ', &
           grid%level,' is ',REAL(grid%size,wp))
 
         grid_rdc_fac_min = MAX(0.01_wp,control%min_reduction)
@@ -4855,7 +4854,7 @@ INNER:    DO inn = 1, n
         ! Test to see if this is either the last level or
         ! if the matrix size too small
         IF (grid%level>=mglevel_cur .OR. grid%size<=stop_coarsening1) THEN
-          IF (print_level==2) CALL level_print(mp,'end of level ',grid%level)
+          IF (print_level.GE.2) CALL level_print(mp,'end of level ',grid%level)
 
           ! coarsest level in multilevel so compute separator
           a_ne = grid%graph%ptr(grid%graph%n+1) - 1
@@ -4901,7 +4900,7 @@ INNER:    DO inn = 1, n
             REAL(cgrid%size)/REAL(grid%size)<grid_rdc_fac_min .OR. &
             cgrid%size<4) THEN
 
-          IF (print_level==2) THEN
+          IF (print_level.GE.2) THEN
             ! IF (.true.) THEN
             WRITE (mp,'(a,i10,a,f12.4,i4)') 'at level ', grid%level, &
               ' further coarsening gives reduction factor', &
@@ -4936,7 +4935,7 @@ INNER:    DO inn = 1, n
         ! check if matrix is full
         IF (REAL(cgrid%graph%ptr(cgrid%graph%n+1)-1)/REAL(cgrid%graph%n)>=REAL &
             (cgrid%graph%n-1)) THEN
-          IF (print_level==2) THEN
+          IF (print_level.GE.2) THEN
             WRITE (mp,'(a,i10,a)') 'at level ', grid%level, &
               ' further coarsening gives full matrix'
           END IF
@@ -4961,7 +4960,9 @@ INNER:    DO inn = 1, n
 
         ! check if partition is returned
         IF (cgrid%part_div(1)==0 .OR. cgrid%part_div(2)==0) THEN
-          IF (print_level==2) THEN
+          ! Unlikely to be called because 99.999% of cases caught in full 
+          ! matrix check above. Follows same procedure as when full matrix found
+          IF (print_level.GE.2) THEN
             WRITE (mp,'(a,i10,a)') 'at level ', grid%level, &
               ' no partition found'
           END IF
@@ -5122,16 +5123,6 @@ INNER:    DO inn = 1, n
 
           k = control%max_improve_cycles
           DO i = 1, k
-
-
-            ! CALL
-            ! expand_partition_kinks(a_n,a_ne,a_ptr,grid%graph%col,grid%row_wg
-            ! t,&
-            ! 2,5.0_wp,ratio,a_n1_new,a_n2_new,&
-            ! a_weight_1_new,a_weight_2_new,&
-            ! a_weight_sep_new,work(part_ptr+1:part_ptr+a_n),&
-            ! work(work_ptr+1:work_ptr+5*a_n))
-
 
             CALL expand_partition(grid%graph%n,a_ne,grid%graph%ptr, &
               grid%graph%col,grid%row_wgt,a_n1_new,a_n2_new,a_weight_1_new, &
@@ -5447,7 +5438,7 @@ INNER:    DO inn = 1, n
 
             END SELECT
 
-            IF (printi .OR. printd .OR. .FALSE.) THEN
+            IF (printi .OR. printd) THEN
               WRITE (unit_diagnostics,'(a)') ' '
               WRITE (unit_diagnostics,'(a)') 'Trimmed partition found'
               WRITE (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_n1 =', a_n1, &
@@ -7429,9 +7420,7 @@ INNER:    DO inn = 1, n
           msglvl = 1
         IF (control%print_level>=2 .AND. control%unit_diagnostics>=0) &
           msglvl = 3
-        ! call check_partition1(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition)
 
-        ! msglvl = 10
 
         IF (a_n-a_n1-a_n2>1) THEN
           ratio = MAX(REAL(1.0,wp),control%balance)
@@ -7441,83 +7430,8 @@ INNER:    DO inn = 1, n
             work(1:8),cost)
         END IF
 
-        ! call check_partition1(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition)
 
       END SUBROUTINE nd_refine_max_flow
-
-      ! SUBROUTINE check_partition1(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition)
-      ! INTEGER, INTENT(IN) :: a_n ! order of matrix
-      ! INTEGER, INTENT(IN) :: a_ne ! number of entries in matrix
-      ! INTEGER, INTENT(IN) :: a_ptr(a_n) ! On input a_ptr(i) contains
-      ! position in a_row that entries for column i start.
-      ! INTEGER, INTENT(IN) :: a_row(a_ne) ! On input a_row contains row
-      ! indices of the non-zero rows. Diagonal entries have been removed
-      ! and the matrix expanded.
-      ! INTEGER, INTENT(IN) :: a_n1
-      ! INTEGER, INTENT(IN) :: a_n2
-      ! INTEGER, INTENT (IN) :: partition(a_n)
-
-      ! INTEGER :: i, j, flag, c1, c2, k
-      ! INTEGER, ALLOCATABLE :: flags(:)
-
-      ! ALLOCATE(flags(a_n))
-      ! flags(:) = -1
-
-      ! DO i=1,a_n
-      ! IF (flags(partition(i)) .NE. -1 ) THEN
-      ! write(*,*) 'ERROR', partition(i), ' already appeared', a_n
-      ! ELSE
-      ! flags(partition(i)) = 0
-      ! END IF
-      ! END DO
-
-      ! flags(:) = -1
-      ! DO i=1,a_n1
-      ! flags(partition(i)) = nd_part1_flag
-      ! END DO
-      ! DO i=a_n1+1,a_n1+a_n2
-      ! flags(partition(i)) = nd_part2_flag
-      ! END DO
-      ! DO i=a_n1+a_n2+1,a_n
-      ! flags(partition(i)) = nd_sep_flag
-      ! END DO
-      ! c1 = 0
-      ! c2 = 0
-      ! DO i = 1, a_n
-      ! flag = flags(i)
-      ! SELECT CASE (flag)
-      ! CASE (nd_part1_flag)
-      ! c1 = c1+1
-      ! CASE (nd_part2_flag)
-      ! c2 = c2+1
-      ! END SELECT
-      ! IF ( .NOT. (flag==nd_sep_flag)) THEN
-      ! IF (i .EQ. a_n) THEN
-      ! k = a_ne
-      ! ELSE
-      ! k =  a_ptr(i+1) - 1
-      ! END IF
-      ! DO j = a_ptr(i), k
-      ! IF ( .NOT. ((flags(a_row(j))== &
-      ! flag) .OR. (flags(a_row(j))==nd_sep_flag))) THEN
-      ! WRITE (*,*) 'ERROR IN PARTITION!', flag, &
-      ! flags(a_row(j)),partition(a_row(j)),i
-      ! END IF
-      ! IF (i==a_row(j)) THEN
-      ! WRITE (*,*) 'ERROR, diagonal entry present'
-      ! END IF
-
-      ! END DO
-      ! END IF
-
-
-      ! END DO
-      ! IF (c1.NE.a_n1.OR.c2.NE.a_n2) THEN
-      ! WRITE (*,*) 'ERROR IN PARTITION! components wrong'
-      ! END IF
-      ! DEALLOCATE(flags)
-
-      ! END SUBROUTINE check_partition1
 
       SUBROUTINE expand_partition(a_n,a_ne,a_ptr,a_row,a_weight,a_n1,a_n2, &
           a_weight_1,a_weight_2,a_weight_sep,partition,work)
@@ -9122,6 +9036,7 @@ INNER:    DO inn = 1, n
       END SUBROUTINE evalbsw
 
       SUBROUTINE nd_supervars(n,ptr,row,perm,invp,nsvar,svar,info,st)
+        ! Detects supervariables - modified version of subroutine from hsl_mc78
         INTEGER, INTENT (INOUT) :: n ! Dimension of system
         INTEGER, DIMENSION (n+1), INTENT (IN) :: ptr ! Column pointers
         INTEGER, DIMENSION (ptr(n+1)-1), INTENT (IN) :: row ! Row indices

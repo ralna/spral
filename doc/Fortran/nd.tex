@@ -286,7 +286,7 @@ compression using supervariables (see {\tt find\_supervariables}) is greater
 than {\tt amd\_call}, the matrix will be ordered using the nested dissection 
 algorithm; otherwise, it will be ordered using an approximate minimum 
 degree algorithm. Note, the approximate minimum degree algorithm will always be used if {\tt amd\_call=n}. The 
-default is {\tt amd\_call=?????}.
+default is {\tt amd\_call=5}.
 
 \item[\texttt{amd\_switch1}] and {\tt amd\_switch2} are {\tt INTEGER} scalars 
 that control when the nested dissection algorithm switches to using an approximated minimum 
@@ -303,18 +303,8 @@ general, result in an ordering that is more amenable to
 parallel direct solvers; increasing {\tt balance} will, in general, reduce the
 number of nonzeros in the Cholesky factorization of the reordered matrix. 
 Values less than {\tt 1.0} are treated as {\tt 1.0}. The
-default is {\tt balance=???}.
+default is {\tt balance=2.0}.
 
-%\item[\texttt{cost\_function}] is an {\tt INTEGER} scalar. The quality of a candidate 
-% partition is measured using a cost function, see {\tt balance}. Two possible 
-% cost functions are provided. The different options are 
-%\begin{description}
-%\item{\tt $\le$ 1 } $\frac{n_s}{n_1 n_2};$
-%\item{\tt $\ge$ 2 } $n_s \left( 1 + \frac{\left|n_1 - n_2\right|}{2\left(n_1 + n_2 + n_s\right)} \right);$
-%\end{description}
-% where $n_1$ and $n_2$ are the sum of the weights of the rows/columns forming 
-% $A_1$ and $A_2,$ respectively, and $n_s$ is the sum of the weights of the 
-% rows/columns forming $S.$ The default is {\tt cost\_function=1}.
 
 \item[\texttt{coarse\_partition\_method}] is an {\tt INTEGER} scalar that 
 controls partitioning of the coarsest matrix. The different options are:
@@ -325,6 +315,18 @@ controls partitioning of the coarsest matrix. The different options are:
 See [1] for further details. The default is {\tt
 coarse\_partition\_method=1}. 
 
+
+\item[\texttt{cost\_function}] is an {\tt INTEGER} scalar. The quality of a candidate 
+ partition is measured using a cost function. Two possible 
+ cost functions are provided. The different options are 
+\begin{description}
+\item{\tt $=$ 1 } $\frac{n_s}{n_1 n_2};$
+\item{\tt $=$ 2 } $n_s \left( 1 + \frac{\left|n_1 - n_2\right|}{2\left(n_1 + n_2 + n_s\right)} \right);$
+\end{description}
+ where $n_1$ and $n_2$ are the sum of the weights of the rows/columns forming 
+ $A_1$ and $A_2,$ respectively, and $n_s$ is the sum of the weights of the 
+ rows/columns forming $S.$ A large penalty value is added to the cost function if the 
+partition is not well-enough balanced, see {\tt balance}. The default is {\tt cost\_function=1}.
 
 \item[\texttt{find\_supervariables}] is a {\tt LOGICAL} scalar. If 
 {\tt find\_supervariables=.true.}, the matrix $A$ (with any dense rows 
@@ -382,7 +384,8 @@ $n_c>n_f\times{\tt min\_reduction}.$ {\tt max\_reduction} must be at least {\tt 
 
 
 
-
+\item[\texttt{ml\_call}] is an {\tt INTEGER} scalar that holds the problem size in the nested dissection hierarchy below which the multilevel method will not be called.
+The default is {\tt stop\_coarsening1=12000}.
 
 
 

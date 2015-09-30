@@ -1,18 +1,6 @@
 
-If growth method for forming partition kept, need to add to spec.
-
-Need to finish last bits of coverage testing and swap hsl calls to equivalent 
-spral calls
-
 ERRORS with nagfor compiler:
 Some pointers in multigrid hierarchy have problems - need to sort this
-
-kb07 - called by hamd_replace. If not able to use AMD in code, might use a 
- method similar to hamd_replace but kb07 will be replaced with a SPRAL sorting
- routine
-
-hamd_replace  - trial subroutine for possible use if not able to use AMD. Not
- currently checked in nestd_test.f90
 
 BUG in code when used with mip1 and options
            nested_control%remove_dense_rows = .TRUE. 
