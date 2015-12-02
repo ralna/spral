@@ -73,7 +73,7 @@ check_PROGRAMS = \
 	examples/Fortran/nd
 nd_test_SOURCES = tests/nd.f90
 examples_Fortran_nd_SOURCES = examples/Fortran/nd.f90
-tests/nd/nd.$(OBJEXT): libspral.a
+tests/nd.$(OBJEXT): libspral.a
 examples/Fortran/nd.$(OBJEXT): libspral.a
 TESTS = nd_test
 
