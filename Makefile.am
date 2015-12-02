@@ -68,6 +68,9 @@ include_HEADERS += include/spral_nd.h
 libspral_a_SOURCES += \
 	src/nd.f90 \
 	interfaces/C/nd.f90
+bin_PROGRAMS = spral_nd
+spral_nd_SOURCES = \
+	driver/spral_nd.f90
 check_PROGRAMS = \
 	nd_test \
 	examples/C/nd \

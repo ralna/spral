@@ -12,6 +12,7 @@ module spral_core_analyse
 
    private
    public :: basic_analyse ! Perform a full analysis for a given matrix ordering
+   public :: find_etree, find_postorder, find_col_counts, calc_stats
 
    integer, parameter :: long = selected_int_kind(18)
    integer, parameter :: ptr_kind = kind(0) ! integer kind used for user's

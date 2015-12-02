@@ -87,6 +87,8 @@ host_triplet = @host@
 @HAVE_NVCC_TRUE@	src/cuda/cuda.f90 \
 @HAVE_NVCC_TRUE@	src/cuda/cuda_check.h
 
+@HAVE_NVCC_FALSE@bin_PROGRAMS = spral_nd$(EXEEXT)
+@HAVE_NVCC_TRUE@bin_PROGRAMS = spral_ssids$(EXEEXT) spral_nd$(EXEEXT)
 check_PROGRAMS = nd_test$(EXEEXT) examples/C/nd$(EXEEXT) \
 	examples/Fortran/nd$(EXEEXT) scaling_test$(EXEEXT) \
 	examples/Fortran/scaling/auction_sym$(EXEEXT) \
@@ -144,7 +146,6 @@ TESTS = nd_test$(EXEEXT) scaling_test$(EXEEXT) random_test$(EXEEXT) \
 @HAVE_NVCC_TRUE@	src/ssids/syrk_kernels.cu \
 @HAVE_NVCC_TRUE@	interfaces/C/ssids.f90
 
-@HAVE_NVCC_TRUE@bin_PROGRAMS = spral_ssids$(EXEEXT)
 @HAVE_NVCC_TRUE@am__append_4 = \
 @HAVE_NVCC_TRUE@	ssids_test \
 @HAVE_NVCC_TRUE@	examples/Fortran/ssids \
@@ -529,6 +530,11 @@ scaling_test_LDADD = $(LDADD)
 scaling_test_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1)
+am_spral_nd_OBJECTS = driver/spral_nd.$(OBJEXT)
+spral_nd_OBJECTS = $(am_spral_nd_OBJECTS)
+spral_nd_LDADD = $(LDADD)
+spral_nd_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am__spral_ssids_SOURCES_DIST = driver/spral_ssids.f90
 @HAVE_NVCC_TRUE@am_spral_ssids_OBJECTS = driver/spral_ssids.$(OBJEXT)
 spral_ssids_OBJECTS = $(am_spral_ssids_OBJECTS)
@@ -622,8 +628,9 @@ SOURCES = $(libspral_a_SOURCES) $(examples_C_nd_SOURCES) \
 	$(examples_Fortran_ssmfe_shift_invert_SOURCES) \
 	$(nd_test_SOURCES) $(random_matrix_test_SOURCES) \
 	$(random_test_SOURCES) $(scaling_test_SOURCES) \
-	$(spral_ssids_SOURCES) $(ssids_test_SOURCES) \
-	$(ssmfe_ciface_test_SOURCES) $(ssmfe_test_SOURCES)
+	$(spral_nd_SOURCES) $(spral_ssids_SOURCES) \
+	$(ssids_test_SOURCES) $(ssmfe_ciface_test_SOURCES) \
+	$(ssmfe_test_SOURCES)
 DIST_SOURCES = $(am__libspral_a_SOURCES_DIST) $(examples_C_nd_SOURCES) \
 	$(examples_C_random_SOURCES) \
 	$(examples_C_random_matrix_SOURCES) \
@@ -656,8 +663,9 @@ DIST_SOURCES = $(am__libspral_a_SOURCES_DIST) $(examples_C_nd_SOURCES) \
 	$(examples_Fortran_ssmfe_shift_invert_SOURCES) \
 	$(nd_test_SOURCES) $(random_matrix_test_SOURCES) \
 	$(random_test_SOURCES) $(scaling_test_SOURCES) \
-	$(am__spral_ssids_SOURCES_DIST) $(am__ssids_test_SOURCES_DIST) \
-	$(ssmfe_ciface_test_SOURCES) $(ssmfe_test_SOURCES)
+	$(spral_nd_SOURCES) $(am__spral_ssids_SOURCES_DIST) \
+	$(am__ssids_test_SOURCES_DIST) $(ssmfe_ciface_test_SOURCES) \
+	$(ssmfe_test_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -1065,6 +1073,9 @@ libspral_a_SOURCES = src/amd.f90 src/blas_iface.f90 \
 	interfaces/C/ssmfe.f90 interfaces/C/ssmfe_core.f90 \
 	interfaces/C/ssmfe_expert.f90
 EXTRA_DIST = src/metis4_wrapper.f90 src/metis5_wrapper.f90
+spral_nd_SOURCES = \
+	driver/spral_nd.f90
+
 nd_test_SOURCES = tests/nd.f90
 examples_C_nd_SOURCES = examples/C/nd.c
 examples_Fortran_nd_SOURCES = examples/Fortran/nd.f90
@@ -1663,6 +1674,12 @@ driver/$(am__dirstamp):
 driver/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) driver/$(DEPDIR)
 	@: > driver/$(DEPDIR)/$(am__dirstamp)
+driver/spral_nd.$(OBJEXT): driver/$(am__dirstamp) \
+	driver/$(DEPDIR)/$(am__dirstamp)
+
+spral_nd$(EXEEXT): $(spral_nd_OBJECTS) $(spral_nd_DEPENDENCIES) $(EXTRA_spral_nd_DEPENDENCIES) 
+	@rm -f spral_nd$(EXEEXT)
+	$(AM_V_FCLD)$(FCLINK) $(spral_nd_OBJECTS) $(spral_nd_LDADD) $(LIBS)
 driver/spral_ssids.$(OBJEXT): driver/$(am__dirstamp) \
 	driver/$(DEPDIR)/$(am__dirstamp)
 
