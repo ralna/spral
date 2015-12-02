@@ -1445,7 +1445,7 @@
       LOGICAL, INTENT(OUT) :: ok
 
       INTEGER :: test_count, testi_count, test
-      INTEGER :: n, ne, st, i, j
+      INTEGER :: n, ne, st, i, j, k
       INTEGER, ALLOCATABLE, DIMENSION(:) :: ptr, row, perm, seps
       TYPE (nd_options) :: control, control_orig
       TYPE (nd_inform) :: info
@@ -1872,60 +1872,15 @@
       ALLOCATE (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
       IF (st/=0) GO TO 10
 
-
-      ptr(1:n-6) = (/ (1+7*(i-1),i=1,n-6) /)
-
-      ptr(n-5) = 1 + 6*(n-6) + 6
-      ptr(n-4) = 1 + 6*(n-6) + 11
-      ptr(n-3) = 1 + 6*(n-6) + 15
-      ptr(n-2) = 1 + 6*(n-6) + 18
-      ptr(n-1) = 1 + 6*(n-6) + 20
-      ptr(n) = 1 + 6*(n-6) + 21
-      ptr(n+1) = ne + 1
       j = 1
-      DO i = 1,n-7
-       row(j) = (i+1)
-       row(j+1) = (i+2)
-       row(j+2) = (i+3)
-       row(j+3) = (i+4)
-       row(j+4) = (i+5)
-       row(j+5) = (i+6)
-       row(j+6) = (i+7)
-       j= j+7
+      DO i = 1,n
+       ptr(i) = j
+       DO k = i+1, min(i+7,n)
+         row(j) = k
+         j = j + 1
+       END DO
       END DO
-      
-      i = n-6
-      row(j) = (i+1)
-      row(j+1) = (i+2)
-      row(j+2) = (i+3)
-      row(j+3) = (i+4)
-      row(j+4) = (i+5)
-      row(j+4) = (i+6)
-      j = j+6
-      i = n-5
-      row(j) = (i+1)
-      row(j+1) = (i+2)
-      row(j+2) = (i+3)
-      row(j+3) = (i+4)
-      row(j+4) = (i+5)
-      j = j+5
-      i = n-4
-      row(j) = (i+1)
-      row(j+1) = (i+2)
-      row(j+2) = (i+3)
-      row(j+3) = (i+4)
-      j = j+4
-      i = n-3
-      row(j) = (i+1)
-      row(j+1) = (i+2)
-      row(j+2) = (i+3)
-      j = j+3
-      i = n-2
-      row(j) = (i+1)
-      row(j+1) = (i+2)
-      j = j+2
-      i = n-1
-      row(j) = (i+1)
+      ptr(n+1) = j
 
       control%amd_switch1 = 4
       control%stop_coarsening1 = 3

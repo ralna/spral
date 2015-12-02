@@ -87,8 +87,8 @@ host_triplet = @host@
 @HAVE_NVCC_TRUE@	src/cuda/cuda.f90 \
 @HAVE_NVCC_TRUE@	src/cuda/cuda_check.h
 
-check_PROGRAMS = nd_test$(EXEEXT) examples/Fortran/nd$(EXEEXT) \
-	scaling_test$(EXEEXT) \
+check_PROGRAMS = nd_test$(EXEEXT) examples/C/nd$(EXEEXT) \
+	examples/Fortran/nd$(EXEEXT) scaling_test$(EXEEXT) \
 	examples/Fortran/scaling/auction_sym$(EXEEXT) \
 	examples/Fortran/scaling/auction_unsym$(EXEEXT) \
 	examples/Fortran/scaling/equilib_sym$(EXEEXT) \
@@ -267,10 +267,16 @@ libspral_a_OBJECTS = $(am_libspral_a_OBJECTS)
 @HAVE_NVCC_TRUE@	examples/Fortran/ssids$(EXEEXT) \
 @HAVE_NVCC_TRUE@	examples/C/ssids$(EXEEXT)
 PROGRAMS = $(bin_PROGRAMS)
+am_examples_C_nd_OBJECTS = examples/C/nd.$(OBJEXT)
+examples_C_nd_OBJECTS = $(am_examples_C_nd_OBJECTS)
+examples_C_nd_LDADD = $(LDADD)
+am__DEPENDENCIES_1 =
+examples_C_nd_DEPENDENCIES = $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 am_examples_C_random_OBJECTS = examples/C/random.$(OBJEXT)
 examples_C_random_OBJECTS = $(am_examples_C_random_OBJECTS)
 examples_C_random_LDADD = $(LDADD)
-am__DEPENDENCIES_1 =
 examples_C_random_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1)
@@ -582,7 +588,8 @@ AM_V_FCLD = $(am__v_FCLD_@AM_V@)
 am__v_FCLD_ = $(am__v_FCLD_@AM_DEFAULT_V@)
 am__v_FCLD_0 = @echo "  FCLD    " $@;
 am__v_FCLD_1 = 
-SOURCES = $(libspral_a_SOURCES) $(examples_C_random_SOURCES) \
+SOURCES = $(libspral_a_SOURCES) $(examples_C_nd_SOURCES) \
+	$(examples_C_random_SOURCES) \
 	$(examples_C_random_matrix_SOURCES) \
 	$(examples_C_scaling_auction_sym_SOURCES) \
 	$(examples_C_scaling_auction_unsym_SOURCES) \
@@ -615,7 +622,7 @@ SOURCES = $(libspral_a_SOURCES) $(examples_C_random_SOURCES) \
 	$(random_test_SOURCES) $(scaling_test_SOURCES) \
 	$(spral_ssids_SOURCES) $(ssids_test_SOURCES) \
 	$(ssmfe_ciface_test_SOURCES) $(ssmfe_test_SOURCES)
-DIST_SOURCES = $(am__libspral_a_SOURCES_DIST) \
+DIST_SOURCES = $(am__libspral_a_SOURCES_DIST) $(examples_C_nd_SOURCES) \
 	$(examples_C_random_SOURCES) \
 	$(examples_C_random_matrix_SOURCES) \
 	$(examples_C_scaling_auction_sym_SOURCES) \
@@ -1054,6 +1061,7 @@ libspral_a_SOURCES = src/amd.f90 src/blas_iface.f90 \
 	interfaces/C/ssmfe_expert.f90
 EXTRA_DIST = src/metis4_wrapper.f90 src/metis5_wrapper.f90
 nd_test_SOURCES = tests/nd.f90
+examples_C_nd_SOURCES = examples/C/nd.c
 examples_Fortran_nd_SOURCES = examples/Fortran/nd.f90
 scaling_test_SOURCES = tests/scaling.f90
 examples_Fortran_scaling_auction_sym_SOURCES = examples/Fortran/scaling/auction_sym.f90
@@ -1372,6 +1380,12 @@ examples/C/$(am__dirstamp):
 examples/C/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) examples/C/$(DEPDIR)
 	@: > examples/C/$(DEPDIR)/$(am__dirstamp)
+examples/C/nd.$(OBJEXT): examples/C/$(am__dirstamp) \
+	examples/C/$(DEPDIR)/$(am__dirstamp)
+
+examples/C/nd$(EXEEXT): $(examples_C_nd_OBJECTS) $(examples_C_nd_DEPENDENCIES) $(EXTRA_examples_C_nd_DEPENDENCIES) examples/C/$(am__dirstamp)
+	@rm -f examples/C/nd$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(examples_C_nd_OBJECTS) $(examples_C_nd_LDADD) $(LIBS)
 examples/C/random.$(OBJEXT): examples/C/$(am__dirstamp) \
 	examples/C/$(DEPDIR)/$(am__dirstamp)
 
@@ -1692,6 +1706,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@examples/C/$(DEPDIR)/nd.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/$(DEPDIR)/random.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/$(DEPDIR)/random_matrix.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/$(DEPDIR)/ssids.Po@am__quote@

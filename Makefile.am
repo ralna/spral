@@ -70,8 +70,10 @@ libspral_a_SOURCES += \
 	interfaces/C/nd.f90
 check_PROGRAMS = \
 	nd_test \
+	examples/C/nd \
 	examples/Fortran/nd
 nd_test_SOURCES = tests/nd.f90
+examples_C_nd_SOURCES = examples/C/nd.c
 examples_Fortran_nd_SOURCES = examples/Fortran/nd.f90
 tests/nd.$(OBJEXT): libspral.a
 examples/Fortran/nd.$(OBJEXT): libspral.a

@@ -1,32 +1,32 @@
-    PROGRAM example
-      USE spral_nd
-      IMPLICIT NONE
+! examples/Fortran/nd.f90 - Example code for SPRAL_ND package
+program example
+   use spral_nd
+   implicit none
 
-      ! Local variables
-      INTEGER :: mtx, n, ne
-      INTEGER :: row(14), ptr(9), perm(8)
+   ! Derived types
+   type (nd_options) :: options
+   type (nd_inform) :: inform
 
-      TYPE (nd_options) :: options
-      TYPE (nd_inform) :: inform
+   ! Matrix data
+   integer :: n, row(14), ptr(9), perm(8)
 
-      ! Set order n of the matrix and the number
-      ! of non-zeros in its lower triangular part.
-      n = 8 
-      ne = 14
+   ! Data for matrix:
+   !     1  2  3  4  5  6  7  8
+   ! 1 (    X     X  X  X       )
+   ! 2 ( X        X     X  X    )
+   ! 3 (             X  X       )
+   ! 4 ( X  X              X    )
+   ! 5 ( X     X        X     X )
+   ! 6 ( X  X  X     X     X  X )
+   ! 7 (    X     X     X       )
+   ! 8 (             X  X       )
+   n = 8 
+   ptr(1:n+1)        = (/ 1,          5,       8,   10, 11,  13,   15, 15, 15 /)
+   row(1:ptr(n+1)-1) = (/ 2, 4, 5, 6, 4, 6, 7, 5, 6, 7, 6, 8, 7, 8 /)
 
-      ! Matrix data
-      ptr(1:n+1) = (/ 1,5,8,10,11,13,15,15,15 /)
-      row(1:ne) = (/ 2,4,5,6,4,6,7,5,6,7,6,8,7,8 /)
+   ! Find nested dissection ordering
+   call nd_order(0, n, ptr, row, perm, options, inform)
 
-      ! Call nested dissection and switch to approximate minimum degree when
-      ! sub matrix has order less than or equal to 4
-      options%amd_switch1 = 4
-      options%amd_call = 3
-      mtx = 0
-      CALL nd_order(mtx,n,ptr,row,perm,options,inform)
-
-      ! Print out nested dissection ordering
-      WRITE (6,'(a)') ' Permutation : '
-      WRITE (6,'(8i8)') perm
-
-    END PROGRAM example
+   ! Print out nested dissection ordering
+   write(*,"(a, 8i8)") ' Permutation : ', perm(:)
+end program example

@@ -609,66 +609,14 @@ $$
 
 \noindent{\bf Program}\smallskip
 
-\def\baselinestretch{0.8}
-{\small \begin{verbatim}
-    PROGRAM example
-      USE spral_nd
-      IMPLICIT NONE
-
-      ! Local variables
-      INTEGER :: mtx, n, ne
-      INTEGER :: row(14), ptr(9), perm(8)
-
-      TYPE (nd_options) :: options
-      TYPE (nd_inform) :: inform
-
-      ! Set order n of the matrix and the number
-      ! of non-zeros in its lower triangular part.
-      n = 8 
-      ne = 14
-
-      ! Matrix data
-      ptr(1:n+1) = (/ 1,5,8,10,11,13,15,15,15 /)
-      row(1:ne) = (/ 2,4,5,6,4,6,7,5,6,7,6,8,7,8 /)
-
-      ! Call nested dissection and switch to approximate minimum degree when
-      ! sub matrix has order less than or equal to 4
-      options%amd_switch1 = 4
-      options%amd_call = 3
-      mtx = 0
-      CALL nd_order(mtx,n,ptr,row,perm,options,inform)
-
-      ! Print out nested dissection ordering
-      WRITE (6,'(a)') ' Permutation : '
-      WRITE (6,'(8i8)') perm
-
-    END PROGRAM example
-\end{verbatim}  }
-\def\baselinestretch{1.0}
-\medskip
-
-\noindent
-{ The input data is}
-
-\def\baselinestretch{0.8}
-{\small  \begin{verbatim}
-8 14
-1 5 8 10 11 13 15 15 15
-2 4 5 6 4 6 7 5 6 7 6 8 7 8
-
-\end{verbatim}  }
-\medskip
+\verbatiminput{examples/Fortran/nd.f90}
 
 \noindent
 {This produces the following output}
 
-\def\baselinestretch{0.8}
-{\small { \begin{verbatim}
- Permutation :  
-       7       1       5       2       6       8       3       4
-
-\end{verbatim} } }
-\medskip
+\begin{verbatim}
+ Permutation :        4       5       2       8       3       6       7       1
+\end{verbatim}
 
 \noindent
 {\rm The permuted matrix is}
