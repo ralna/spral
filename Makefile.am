@@ -23,9 +23,13 @@ CUDA_LIBS = -lcublas
 lib_LIBRARIES = libspral.a
 include_HEADERS = include/spral.h
 
-# BLAS_IFACE
+# AMD
 # Note: first so not +=
 libspral_a_SOURCES = \
+   src/amd.f90
+
+# BLAS_IFACE
+libspral_a_SOURCES += \
 	src/blas_iface.f90
 
 # CORE_ANALYSE
@@ -60,18 +64,18 @@ libspral_a_SOURCES += \
 EXTRA_DIST = src/metis4_wrapper.f90 src/metis5_wrapper.f90
 
 # ND
-include_HEADERS += include/nd.h
+include_HEADERS += include/spral_nd.h
 libspral_a_SOURCES += \
-	src/nestd.f90 \
+	src/nd.f90 \
 	interfaces/C/nd.f90
 check_PROGRAMS = \
-	nestd_test \
-	examples/Fortran/nestd/nestd
-nestd_test_SOURCES = tests/nestd/nestd.f90
-examples_Fortran_nestd_nestd_SOURCES = examples/Fortran/nestd/nestd.f90
-tests/nestd/nestd.$(OBJEXT): libspral.a
-examples/Fortran/nestd/nestd.$(OBJEXT): libspral.a
-TESTS = nestd_test
+	nd_test \
+	examples/Fortran/nd
+nd_test_SOURCES = tests/nd.f90
+examples_Fortran_nd_SOURCES = examples/Fortran/nd.f90
+tests/nd/nd.$(OBJEXT): libspral.a
+examples/Fortran/nd.$(OBJEXT): libspral.a
+TESTS = nd_test
 
 # PGM
 libspral_a_SOURCES += \

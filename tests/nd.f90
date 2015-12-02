@@ -1,6 +1,5 @@
     PROGRAM main
       USE spral_nd
-      USE hsl_mc69_double
       IMPLICIT NONE
 
       LOGICAL :: ok

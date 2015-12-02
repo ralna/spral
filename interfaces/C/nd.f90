@@ -1,8 +1,6 @@
 module spral_nd_ciface
    use, intrinsic :: iso_c_binding
-   use spral_nestd, nd_options => nestd_options, &
-                    nd_inform => nestd_inform, &
-                    nd_order => nestd_order
+   use spral_nd
    implicit none
 
    type, bind(C) :: spral_nd_options
