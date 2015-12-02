@@ -1,6 +1,10 @@
 #ifndef SPRAL_RANDOM_H
 #define SPRAL_RANDOM_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdbool.h>
 
 #define SPRAL_RANDOM_INITIAL_SEED 486502
@@ -11,5 +15,9 @@ double spral_random_real(int *state, bool positive);
 int spral_random_integer(int *state, int n);
 /* Generate a sample with equal probability of true or false */
 bool spral_random_logical(int *state);
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif
 
 #endif // SPRAL_RANDOM_H

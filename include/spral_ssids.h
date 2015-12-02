@@ -1,6 +1,10 @@
 #ifndef SPRAL_SSIDS_H
 #define SPRAL_SSIDS_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdbool.h>
 
 /************************************
@@ -93,5 +97,9 @@ void spral_ssids_enquire_indef(const void *akeep, const void *fkeep,
 void spral_ssids_alter(const double *d, const void *akeep, void *fkeep,
       const struct spral_ssids_options *options,
       struct spral_ssids_inform *inform);
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif
 
 #endif // SPRAL_SSIDS_H
