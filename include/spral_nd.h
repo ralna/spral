@@ -1,10 +1,18 @@
 #ifndef SPRAL_ND_H
 #define SPRAL_ND_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdbool.h>
 
+/************************************
+ * Derived types
+ ************************************/
+
 struct spral_nd_options {
-   int array_base;
+   int array_base; // Not in Fortran type
    int print_level;
    int unit_diagnostics;
    int unit_error;
@@ -32,7 +40,18 @@ struct spral_nd_inform {
    int stat;
 };
 
+/************************************
+ * Subroutines 
+ ************************************/
+
+/* Initialize options to defaults */
 void spral_nd_default_options(struct spral_nd_options *nd);
-void spral_nd_order(int mtx, int n, const int *ptr, const int *row, int *perm, const struct spral_nd_options *options, struct spral_nd_inform *inform);
+/* Perform Ordering */
+void spral_nd_order(int mtx, int n, const int *ptr, const int *row, int *perm,
+      const struct spral_nd_options *options, struct spral_nd_inform *inform);
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif
 
 #endif // SPRAL_ND_H
