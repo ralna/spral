@@ -863,12 +863,12 @@ subroutine calc_stats(nnodes, sptr, scc, nfact, nflops)
       m = scc(node) - nelim
 
       ! number of entries
-      r_nfact = r_nfact + (nelim * (nelim+1)) / 2 ! triangular block
-      r_nfact = r_nfact + nelim * m ! below triangular block
+      r_nfact = r_nfact + (nelim * (nelim+1_long)) / 2 ! triangular block
+      r_nfact = r_nfact + nelim * (m+0_long) ! below triangular block
 
       ! flops
       do j = 1, nelim
-         r_nflops = r_nflops + (m+j)**2
+         r_nflops = r_nflops + (m+j)**2_long
       end do
    end do
 
