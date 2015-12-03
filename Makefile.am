@@ -201,7 +201,7 @@ libspral_a_SOURCES += \
 	src/ssids/ssids.f90 \
 	src/ssids/syrk_kernels.cu \
 	interfaces/C/ssids.f90
-bin_PROGRAMS = spral_ssids
+bin_PROGRAMS += spral_ssids
 spral_ssids_SOURCES = \
 	driver/spral_ssids.f90
 spral_ssids_LINK = $(NVCCLINK)

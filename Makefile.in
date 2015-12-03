@@ -87,8 +87,7 @@ host_triplet = @host@
 @HAVE_NVCC_TRUE@	src/cuda/cuda.f90 \
 @HAVE_NVCC_TRUE@	src/cuda/cuda_check.h
 
-@HAVE_NVCC_FALSE@bin_PROGRAMS = spral_nd$(EXEEXT)
-@HAVE_NVCC_TRUE@bin_PROGRAMS = spral_ssids$(EXEEXT) spral_nd$(EXEEXT)
+bin_PROGRAMS = spral_nd$(EXEEXT) $(am__EXEEXT_1)
 check_PROGRAMS = nd_test$(EXEEXT) examples/C/nd$(EXEEXT) \
 	examples/Fortran/nd$(EXEEXT) scaling_test$(EXEEXT) \
 	examples/Fortran/scaling/auction_sym$(EXEEXT) \
@@ -106,7 +105,7 @@ check_PROGRAMS = nd_test$(EXEEXT) examples/C/nd$(EXEEXT) \
 	random_test$(EXEEXT) examples/Fortran/random$(EXEEXT) \
 	examples/C/random$(EXEEXT) random_matrix_test$(EXEEXT) \
 	examples/Fortran/random_matrix$(EXEEXT) \
-	examples/C/random_matrix$(EXEEXT) $(am__EXEEXT_1) \
+	examples/C/random_matrix$(EXEEXT) $(am__EXEEXT_2) \
 	ssmfe_test$(EXEEXT) ssmfe_ciface_test$(EXEEXT) \
 	examples/C/ssmfe/hermitian$(EXEEXT) \
 	examples/C/ssmfe/precond_core$(EXEEXT) \
@@ -119,7 +118,7 @@ check_PROGRAMS = nd_test$(EXEEXT) examples/C/nd$(EXEEXT) \
 	examples/Fortran/ssmfe/precond_ssmfe$(EXEEXT) \
 	examples/Fortran/ssmfe/shift_invert$(EXEEXT)
 TESTS = nd_test$(EXEEXT) scaling_test$(EXEEXT) random_test$(EXEEXT) \
-	random_matrix_test$(EXEEXT) $(am__EXEEXT_2) \
+	random_matrix_test$(EXEEXT) $(am__EXEEXT_3) \
 	ssmfe_test$(EXEEXT) ssmfe_ciface_test$(EXEEXT)
 
 # SSIDS
@@ -146,12 +145,13 @@ TESTS = nd_test$(EXEEXT) scaling_test$(EXEEXT) random_test$(EXEEXT) \
 @HAVE_NVCC_TRUE@	src/ssids/syrk_kernels.cu \
 @HAVE_NVCC_TRUE@	interfaces/C/ssids.f90
 
-@HAVE_NVCC_TRUE@am__append_4 = \
+@HAVE_NVCC_TRUE@am__append_4 = spral_ssids
+@HAVE_NVCC_TRUE@am__append_5 = \
 @HAVE_NVCC_TRUE@	ssids_test \
 @HAVE_NVCC_TRUE@	examples/Fortran/ssids \
 @HAVE_NVCC_TRUE@	examples/C/ssids
 
-@HAVE_NVCC_TRUE@am__append_5 = ssids_test
+@HAVE_NVCC_TRUE@am__append_6 = ssids_test
 subdir = .
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
 	$(top_srcdir)/configure $(am__configure_deps) depcomp \
@@ -266,7 +266,8 @@ am_libspral_a_OBJECTS = src/amd.$(OBJEXT) src/blas_iface.$(OBJEXT) \
 	interfaces/C/ssmfe_core.$(OBJEXT) \
 	interfaces/C/ssmfe_expert.$(OBJEXT)
 libspral_a_OBJECTS = $(am_libspral_a_OBJECTS)
-@HAVE_NVCC_TRUE@am__EXEEXT_1 = ssids_test$(EXEEXT) \
+@HAVE_NVCC_TRUE@am__EXEEXT_1 = spral_ssids$(EXEEXT)
+@HAVE_NVCC_TRUE@am__EXEEXT_2 = ssids_test$(EXEEXT) \
 @HAVE_NVCC_TRUE@	examples/Fortran/ssids$(EXEEXT) \
 @HAVE_NVCC_TRUE@	examples/C/ssids$(EXEEXT)
 PROGRAMS = $(bin_PROGRAMS)
@@ -854,7 +855,7 @@ am__set_TESTS_bases = \
   bases=`for i in $$bases; do echo $$i; done | sed 's/\.log$$//'`; \
   bases=`echo $$bases`
 RECHECK_LOGS = $(TEST_LOGS)
-@HAVE_NVCC_TRUE@am__EXEEXT_2 = ssids_test$(EXEEXT)
+@HAVE_NVCC_TRUE@am__EXEEXT_3 = ssids_test$(EXEEXT)
 TEST_SUITE_LOG = test-suite.log
 TEST_EXTENSIONS = @EXEEXT@ .test
 LOG_DRIVER = $(SHELL) $(top_srcdir)/test-driver
