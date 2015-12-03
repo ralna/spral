@@ -141,10 +141,10 @@ contains
 
       integer :: i, realn, st
       integer, dimension(:), allocatable :: perm2, invp, parent, cc
-      integer, dimension(:), allocatable :: ptr2, row2, iw
+      integer, dimension(:), allocatable :: sptr, ptr2, row2, iw
 
       ! Expand to a full matrix
-      allocate(ptr2(n+1), row2(2*ptr(n+1)), iw(n))
+      allocate(ptr2(n+1), row2(2*ptr(n+1)), iw(n), sptr(n+1))
       ptr2(1:n+1) = ptr(1:n+1)
       row2(1:ptr(n+1)-1) = row(1:ptr(n+1)-1)
       call half_to_full(n, row2, ptr2, iw)
@@ -154,14 +154,16 @@ contains
       perm2(:) = perm(:)
       do i = 1, n
          invp(perm(i)) = i
+         sptr(i) = i
       end do
+      sptr(n+1) = n+1
       call find_etree(n, ptr2, row2, perm2, invp, parent, st)
       if(st.ne.0) goto 10
       call find_postorder(n, realn, ptr2, perm2, invp, parent, st)
       if(st.ne.0) goto 10
       call find_col_counts(n, ptr2, row2, perm2, invp, parent, cc, st)
       if(st.ne.0) goto 10
-      call calc_stats(n, ptr2, cc, nfact=nfact, nflops=nflops)
+      call calc_stats(n, sptr, cc, nfact=nfact, nflops=nflops)
 
       return
 
