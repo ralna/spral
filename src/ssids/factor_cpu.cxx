@@ -204,6 +204,8 @@ struct cpu_factor_stats {
    int num_two;
    int num_zero;
    int maxfront;
+   int elim_at_pass[5];
+   int elim_at_itr[5];
 };
 
 template <typename T,
@@ -380,9 +382,19 @@ void factor_node_indef(
    typedef bub::CpuLDLT<T, BLOCK_SIZE, 5, true> CpuLDLTSpecDebug; // FIXME: debug remove
    struct CpuLDLTSpec::stat_type bubstats; // FIXME: not needed?
    node->nelim = CpuLDLTSpec(options->u, options->small).factor(m, n, perm, lcol, m, d, &bubstats);
-   /*printf("Node %d: %dx%d delay %d nitr %d\n", ni, m, n, n-node->nelim, bubstats.nitr);
-   for(int i=0; i<bubstats.nitr; i++)
-      printf("--> itr %d passes %d remain %d\n", i, bubstats.npass[i], bubstats.remain[i]);*/
+   for(int i=0; i<5; i++) {
+      stats->elim_at_pass[i] += bubstats.elim_at_pass[i];
+   }
+   int last_remain = n;
+   for(int i=0; i<bubstats.nitr; i++) {
+      stats->elim_at_itr[i] += last_remain - bubstats.remain[i];
+      last_remain = bubstats.remain[i];
+   }
+   /*if(bubstats.nitr > 2) {
+      printf("Node %d: %dx%d delay %d nitr %d\n", ni, m, n, n-node->nelim, bubstats.nitr);
+      for(int i=0; i<bubstats.nitr; i++)
+         printf("--> itr %d passes %d remain %d\n", i, bubstats.npass[i], bubstats.remain[i]);
+   }*/
 
    /*for(int i=node->nelim; i<m; i++) {
       printf("%d:", i);
@@ -684,6 +696,8 @@ void factor(
    stats->num_two = 0;
    stats->num_zero = 0;
    stats->maxfront = 0;
+   for(int i=0; i<5; i++) stats->elim_at_pass[i] = 0;
+   for(int i=0; i<5; i++) stats->elim_at_itr[i] = 0;
 
    if(timing) {
       if(PAPI_library_init(PAPI_VER_CURRENT) != PAPI_VER_CURRENT)

@@ -52,6 +52,8 @@ module spral_ssids_factor_cpu_iface
       integer(C_INT) :: num_two
       integer(C_INT) :: num_zero
       integer(C_INT) :: maxfront
+      integer(C_INT) :: elim_at_pass(5)
+      integer(C_INT) :: elim_at_itr(5)
    end type cpu_factor_stats
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -176,6 +178,8 @@ subroutine extract_cpu_data(nnodes, cnodes, fnodes, cstats, finform)
    finform%num_two      = cstats%num_two
    finform%matrix_rank  = rank - cstats%num_zero
    finform%maxfront     = cstats%maxfront
+   print *, "Elim at (pass) = ", cstats%elim_at_pass(:)
+   print *, "Elim at (itr) = ", cstats%elim_at_itr(:)
 end subroutine extract_cpu_data
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
