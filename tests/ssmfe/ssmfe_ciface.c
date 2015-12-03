@@ -300,7 +300,7 @@ int test_core_z(int problem, int largest) {
 
    const double complex ZERO = 0.0;
    const double complex ONE = 1.0;
-   const double complex NONE = -1.0;
+   const double complex MINUS_ONE = -1.0;
    
    int errors;
 
@@ -322,8 +322,6 @@ int test_core_z(int problem, int largest) {
    void *keep;                             /* private data */
    struct spral_ssmfe_inform inform;       /* information */
    
-   double complex z;
-
    /* Initialize options to default values */
    spral_ssmfe_core_default_options(&options);
 
@@ -347,7 +345,7 @@ int test_core_z(int problem, int largest) {
             ngrid, ngrid, rci.nx, &W[rci.kx][rci.jx][0], &W[rci.ky][rci.jy][0]
             );
          if ( largest != 0 )
-            cblas_zscal( n*rci.nx, &NONE, &W[rci.ky][rci.jy][0], 1 );
+            cblas_zscal( n*rci.nx, &MINUS_ONE, &W[rci.ky][rci.jy][0], 1 );
          break;
       case 2:
          if ( largest != 0 )
@@ -401,12 +399,14 @@ int test_core_z(int problem, int largest) {
                );
             cblas_zgemm(
                CblasColMajor, CblasNoTrans, CblasNoTrans, n, rci.nx, ncon,
-               &NONE, &X[0][0], n, &U[0][0], n, &ONE, &W[rci.kx][rci.jx][0], n
+               &MINUS_ONE, &X[0][0], n, &U[0][0], n, &ONE,
+               &W[rci.kx][rci.jx][0], n
                );
             if ( problem != 0 )
               cblas_zgemm(
                  CblasColMajor, CblasNoTrans, CblasNoTrans, n, rci.nx, ncon,
-                 &NONE, &X[0][0], n, &U[0][0], n, &ONE, &W[rci.ky][rci.jy][0], n
+                 &MINUS_ONE, &X[0][0], n, &U[0][0], n, &ONE,
+                 &W[rci.ky][rci.jy][0], n
                  );
          }
          break;
@@ -765,14 +765,12 @@ int test_expert_z(int problem) {
    
    int errors;
    int nep = 5;
-   int lwork;
 
    int state = SPRAL_RANDOM_INITIAL_SEED; /* PRNG state */
 
    int ind[m];                    /* permutation index */
    int ipiv[n];                   /* LDLT pivot index */
    double sigma;                  /* shift */
-   double complex A[n][n];        /* matrix */
    double lambda[n];              /* eigenvalues */
    double complex X[n][n];        /* eigenvectors */
    /* Work arrays */
@@ -790,8 +788,6 @@ int test_expert_z(int problem) {
    void *keep;                             /* private data */
    struct spral_ssmfe_inform inform;       /* information */
    
-   double complex z;
-
    if ( problem > 1 ) {
      sigma = 1.0;
 //     set_laplacian_matrix_z(ngrid, ngrid, n, A);
@@ -1311,7 +1307,6 @@ void vector_operations_d
     double rr[3][2*m][2*m],
     double U[m]) {
 
-   int i, j;
    switch ( rci.job ) {
       case 11:
          if ( rci.i == 0 ) {
@@ -1414,9 +1409,7 @@ void vector_operations_z
     
    const double complex ZERO = 0.0;
    const double complex ONE = 1.0;
-   const double complex NONE = -1.0;
    
-   int i, j;
    double complex z;
    
     switch ( rci.job ) {
