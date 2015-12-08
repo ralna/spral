@@ -1,6 +1,6 @@
 \packagename{ND}
 \version{1.0.0}
-\versiondate{?? July 2015}
+\versiondate{8 December 2015}
 \purpose{
 Let $A$ be an $n \times n$ matrix with a symmetric sparsity pattern.
 This package computes a {\bf nested dissection ordering} of $A$
@@ -9,7 +9,7 @@ that is suitable for use with a sparse direct solver.
 The algorithm starts by partitioning the rows/columns of $A$ into 3 sets such that 
 reordering the rows/columns to respect their partitions yields a symmetric 
 matrix of the form
-\begin{equation}\label{eqn:partition}
+\begin{equation}\label{nd:eqn:partition}
 \left(\begin{array}{c|c|c} A_1 & 0 & S_1^T \\\hline 0 & A_2 & S_2^T \\\hline S_1 & S_2 & S \end{array}   \right).
 \end{equation}
 The term {\it separator} is used to refer to the set of rows forming $S.$ 
@@ -18,7 +18,7 @@ of $A_1$ ($A_2$) are ordered using an approximate minimum degree algorithm;
 otherwise,  $A_1$ ($A_2$) is partitioned to form 
 another matrix with the above structure and the bisection algorithm  
 applied in a recursive manner. A multilevel method or a level set-based method is used 
-to compute the three sets that partition the matrix into the form (\ref{eqn:partition}). The 
+to compute the three sets that partition the matrix into the form (\ref{nd:eqn:partition}). The 
 algorithm allows for some dense or nearly dense rows and columns in $A$.
 }
 
@@ -82,24 +82,18 @@ The following pseudo-code illustrates this.
 The components of {\tt nd\_options} and {\tt nd\_inform} are explained
 in Sections~\ref{nd:type:options} and \ref{nd:type:inform}.
 
-%\subsection{Achieving bit-compatibility}
-%Care has been taken to ensure bit-compatibility is achieved using this solver.
-%That is, consecutive runs with the same data on the same machine  produces exactly
-%the same solution.
+\subsection{Optional arguments}
 
-%\subsection{Optional arguments}
-
-%We use square brackets {\tt [ ]} to indicate {\it optional} arguments.
-%In each
-%call, optional arguments follow the argument {\tt inform}.  Since we
-%reserve the right to add additional optional arguments in future
-%releases of the code, {\bf we strongly recommend that all optional
-%arguments be called by keyword, not by position}.
+We use square brackets {\tt [ ]} to indicate {\it optional} arguments.
+In each
+call, optional arguments follow the argument {\tt inform}.  Since we
+reserve the right to add additional optional arguments in future
+releases of the code, {\bf we strongly recommend that all optional
+arguments be called by keyword, not by position}.
 
 \subsection{Integer, real and package types}
 
-{\tt INTEGER} denotes default {\tt INTEGER}.% and
-%{\tt INTEGER(long)} denotes {\tt INTEGER(kind=selected\_int\_kind(18))}.
+{\tt INTEGER} denotes default {\tt INTEGER}.
 
 \noindent
 {\tt REAL} denotes double precision real.
@@ -151,7 +145,7 @@ Figure~\ref{nd:format_eg}.
 
 To illustrate the CSC format applied to the lower and upper triangular parts of 
 a matrix, the following arrays describe the pattern of the matrix shown in
-Figure~\ref{nd:format eg}.
+Figure~\ref{nd:format_eg}.
 \begin{verbatim}
    n = 5
    ptr(1:6) = (/ 1,          4,      6,          9,         12,       15 /)
@@ -174,11 +168,11 @@ or duplicates may cause {\tt nd\_order} to fail in an unpredictable way.
 
 {\bf To compute the nested dissection ordering,}
    \vspace*{0.3cm} \\
-\texttt{\hspace*{0.2cm} call nd\_order(mtx,n,ptr,row,perm,options,inform)}
+   \texttt{\hspace*{0.2cm} call nd\_order(mtx,n,ptr,row,perm,options,inform[,seps])}
 \vspace{0.3em}
 
 \noindent
-Matrix data should be supplied as described in Section~\ref{nd:dataformats}. 
+Matrix data should be supplied as described in Section~\ref{nd:cscformat}. 
 
 \noindent
 \begin{description}
@@ -195,31 +189,12 @@ of $A$ or both the upper and lower triangular entries. The different options are
 If {\tt mtx=0}, they must hold the \textbf{lower triangular part} of 
 $A$ in CSC format;  if {\tt mtx=1}, they 
 must hold the \textbf{lower and upper triangular parts} of $A$ in CSC format. 
-See Section~\ref{nd:dataformats} for further details.
-
-%\item[\texttt{n}] is an {\tt INTEGER} scalar with {\tt INTENT(IN)}.  On entry it
-%must hold the order $n$ of $A$.
-%{\bf  Restriction:} {\tt n $\ge$ \tt 1}.
-
-%\item[\texttt{ptr(:)}] is an {\tt INTEGER(long)} array of rank one with {\tt INTENT(IN)}
-%and size {\tt n+1}. \texttt{n}, \texttt{ptr(:)} and \texttt{row(:)} are used 
-%to hold matrix data in CSC format (see Section~\ref{nd:dataformats}).
-
-%\item[\texttt{row(:)}] is an {\tt INTEGER} array of rank one with {\tt INTENT(IN)}
-%and size  {\tt ptr(n+1)-1}. On a call to {\tt nd\_lower}, it must be 
-%set by the user so that {\tt row(1:ptr(n+1)-1)} holds the row indices of the 
-%entries in the {\bf lower triangular part} of $A$; on a call to 
-%{\tt mc70\_order\_full}, it must be set by the user so that 
-%{\tt row(1:ptr(n+1)-1)} holds the row indices of the entries in 
-%the {\bf lower and upper triangular parts} of $A.$ \texttt{n}, \texttt{ptr(:)} 
-%and \texttt{row(:)} are used to hold matrix data in CSC format (see 
-%Section~\ref{nd:dataformats}).
+See Section~\ref{nd:cscformat} for further details.
 
 \item[\texttt{perm(:)}] is an {\tt INTEGER} array with {\tt INTENT(OUT)} and size
 {\tt n}.  On exit, {\tt perm(:)} holds the nested dissection elimination ordering. 
 The position of variable {\tt i} in the ordering is  {\tt perm(i)},
 {\tt i=1,2,\ldots,n}.
-
 
 \item[\texttt{options}] is an \intentin\ scalar of type {\tt nd\_options}.
 Its components specify the algorithmic options used by the subroutine, as
@@ -228,6 +203,11 @@ explained in Section~\ref{nd:type:options}.
 \item[\texttt{inform}] is an \intentout\ scalar of type
 {\tt nd\_inform}. Its components provide information about the execution
 of the subroutine, as explained in Section~\ref{nd:type:inform}.
+
+\item[\texttt{seps}] is an optional \intentout\ array of size \texttt{n}. If
+present, on output \texttt{seps(i)} indicates the level at which variable
+\texttt{i} entered the seperator. A value of \texttt{-1} indicates the variable
+is not in any seperator.
 
 
 \end{description}
@@ -296,7 +276,7 @@ bisections performed is equal to {\tt amd\_switch2}.  The
 defaults are {\tt amd\_switch1=50} and {\tt amd\_switch2=20}.
 
 \item[\texttt{balance}] is a {\tt REAL} scalar. The partitioning and refinement
-methods aim to find partitions (\ref{eqn:partition}) such that the larger 
+methods aim to find partitions (\ref{nd:eqn:partition}) such that the larger 
 partition is at most {\tt balance} times the order of the smaller partition. 
 Decreasing {\tt balance} will, in
 general, result in an ordering that is more amenable to
@@ -338,33 +318,13 @@ compressed, the speed-up in the nested dissection algorithm normally
 compensates for the time spent searching for supervariables and compressing the 
 matrix. The default is {\tt find\_supervariables=.true.}.
 
-
-%\item[\texttt{max\_bisection\_depth}] is an {\tt INTEGER} scalar that holds the maximum number
-%of nested dissection bisections. If the maximum number of bisections 
-%is reached, the corresponding matrix in the nested dissection hierarchy 
-%will be ordered using an approximate minimum degree algorithm. If 
-%{\tt max\_bisection\_depth = 0}, the ordering of the input matrix is computed 
-%using an approximate minimum degree algorithm.  Values less
-%than {\tt 0} are treated as {\tt 0}.  The default is {\tt max\_bisection\_depth=20}.
-
 \item[\texttt{max\_improve\_cycles}] is an {\tt INTEGER} scalar. Given a partition of the 
-form (\ref{eqn:partition}), at most {\tt max\_improve\_cycles} cycles are 
+form (\ref{nd:eqn:partition}), at most {\tt max\_improve\_cycles} cycles are 
 performed to improve the quality of the partition. During each cycle, the 
 separator is expanded to form a new partition and this new partition is 
 subsequently refined. Increasing the value of {\tt max\_improve\_cycles} normally improves 
 the quality of the nested dissection ordering but at the cost of increasing the 
 time to form the ordering. The default is {\tt max\_improve\_cycles=?????}.
-
-%\item[\texttt{ml\_bandwidth}] is a {\tt REAL} scalar and is only used if 
-%{\tt ml$>$1}. Let $A$ be the matrix for which we wish to find a nested 
-%dissection ordering, $\widetilde{A}$ be the matrix that results from 
-%(optionally) removing any dense rows and compressing the matrix, and 
-%{\tt ml$>$1}. Suppose that the Reverse Cuthill-McKee algorithm applied to 
-%$\widetilde{A}$  yields a matrix with bandwidth $w.$ If 
-%$w\ge 0.01\tilde{n}\times{\tt ml\_bandwidth},$ the multilevel partitioning 
-%method is used within the nested dissection algorithm; otherwise, the 
-%multilevel partitioning method is not used. The default is 
-%{\tt ml\_bandwidth=0.01}.
 
 \item[\texttt{matching}] is an {\tt INTEGER} scalar that determines the matching used during the multilevel partitioning scheme. The different options are: 
 \begin{description}
@@ -399,37 +359,7 @@ partitioning scheme is used.  The different options are
 \item{\tt $=$ 1 } Multilevel partitioning scheme is  used,
 \item{\tt $=$ 2 } Automatic choice of whether the multilevel partitioning scheme is used.
 \end{description}
-See Section~\ref{method} for further details. The default is {\tt partition\_method=2}.
-%The multilevel partitioning scheme coarsens the matrix (reduces its order 
-%whilst trying to maintain some of the structural properties) recursively. Once 
-%the coarsened matrix is of order at most {\tt ml\_switch} or the maximum 
-%number of multilevel recursions {\tt ml\_max\_levels} has been reached, the coarsened 
-%matrix is partitioned (the partitioning method used is determined by 
-%{\tt ml\_partition\_method}. This partition is projected (and refined) 
-%up through the hierarchy of multilevel matrices. 
-%The recursive multilevel partitioning method will 
-%also stop coarsening if the next coarse matrix would be too small or too large 
-%relative to the current coarse matrix, see {\tt ml\_max\_reduction} and 
-%{\tt ml\_min\_reduction}. If the multilevel partitioning scheme is not 
-%used, the matrix is partitioned using the method defined by 
-%{\tt ml\_partition\_method}. See **PAPER** for further details 
-%about multilevel partitioning. The default is {\tt partition\_method=2}. 
-
-
-%\item[\texttt{refinement}] is an {\tt INTEGER} scalar that determines the method used to
-%refine a partition. Given a matrix partition of the form (\ref{eqn:partition}),
-%the partition is modified with the aim of reducing the size of $S$ and
-%balancing the orders of $A_1$ and $A_2.$  The different options are
-%\begin{description}
-%\item{\tt $=$ 1 } Use trimming to reduce the order of $S$ and increase the orders of $A_1$ and $A_2.$ The new separator will be a subset of the old separator; 
-%\item{\tt $=$ 2 } Use trimming to reduce the order of $S,$ increase the order of $A_i$ and reduce the order of $A_j,$ where $i,j\in\{1,2\}$ and $A_i$ is assumed to be smaller than $A_j.$ The new separator will be formed from a subset of the old separator and the rows that form $A_j;$ 
-%\item{\tt $=$ 3 } Automatically choose between options {\tt 1} and {\tt 2} every time a partition is refined;
-%\item{\tt $=$ 4 } Use the maximum flow algorithm to reduce the order of $S$ and increase the orders of $A_1$ and $A_2.$ The new separator will be a subset of the old separator; 
-%\item{\tt $=$ 5 } Use the maximum flow algorithm to reduce the order of $S,$ increase the order of $A_i$ and reduce the order of $A_j,$ where $i,j\in\{1,2\}$ and $A_i$ is assumed to be smaller than $A_j.$ The new separator will be formed from a subset of the old separator and the rows that form $A_j;$
-%\item{\tt $=$ 6 } Automatically choose between options {\tt 4} and {\tt 5} every time a partition is refined.
-%\end{description}
-%Values less than {\tt 1} are treated as {\tt 1} and values greater than {\tt 6} are treated as {\tt 6}.
-% The default is {\tt refinement=6}. 
+See Section~\ref{nd:method} for further details. The default is {\tt partition\_method=2}.
 
 \item[\texttt{refinement\_band}] is an {\tt INTEGER} scalar used within the 
 Fiduccia-Mattheyses refinement. The variables in the refined separator must be 
@@ -513,7 +443,7 @@ Possible negative values are:
 \end{description}
 
 
-\section{Method} \label{method}
+\section{Method} \label{nd:method}
 
 Given a matrix $A$ with a symmetric sparsity pattern of order $n,$ {\tt nd} preprocesses 
 the matrix to (optionally) remove dense or almost dense rows/columns, returning 
@@ -539,7 +469,7 @@ appended to the end of the ordering.
 permutation matrix $P$ 
 \ELSE
 \STATE partition $A$: compute $P,$ a permutation matrix, such that $P^T A P$ 
-has the form (\ref{eqn:partition})
+has the form (\ref{nd:eqn:partition})
 \STATE call {\bf nested\_dissection}($n_1,A_1,P_1$)
 \STATE call {\bf nested\_dissection}($n_2,A_2,P_2$)
 \STATE set $P \leftarrow PQ,$ where $$Q = \left( \begin{array}{ccc} P_1 & & \\ & P_2 & \\ & & I  \end{array} \right)$$
