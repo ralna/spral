@@ -14,17 +14,17 @@
       ! ---------------------------------------------------
       ! Error flags
       ! ---------------------------------------------------
-      INTEGER, PARAMETER :: nd_err_memory_alloc = -1, & ! memory alloc
+      INTEGER, PARAMETER :: ND_ERR_MEMORY_ALLOC = -1, & ! memory alloc
       ! error
-        nd_err_memory_dealloc = -2, & ! memory dealloc error
-        nd_err_n = -3 ! n<1
+        ND_ERR_MEMORY_DEALLOC = -2, & ! memory dealloc error
+        ND_ERR_N = -3 ! n<1
 
       ! ---------------------------------------------------
       ! Partition flags
       ! ---------------------------------------------------
-      INTEGER, PARAMETER :: nd_part1_flag = 0, & ! node in partition 1
-        nd_part2_flag = 2, & ! node in partition 2
-        nd_sep_flag = 1 ! node in separator
+      INTEGER, PARAMETER :: ND_PART1_FLAG = 0, & ! node in partition 1
+        ND_PART2_FLAG = 2, & ! node in partition 2
+        ND_SEP_FLAG = 1 ! node in separator
 
       ! ---------------------------------------------------
       ! Derived type definitions
@@ -261,13 +261,13 @@
         CASE (0)
           WRITE (p_unit,'(A)') ' successful completion'
 
-        CASE (nd_err_memory_alloc)
+        CASE (ND_ERR_MEMORY_ALLOC)
           WRITE (p_unit,'(A)') ' memory allocation failure'
 
-        CASE (nd_err_memory_dealloc)
+        CASE (ND_ERR_MEMORY_DEALLOC)
           WRITE (p_unit,'(A)') ' memory deallocation failure'
 
-        CASE (nd_err_n)
+        CASE (ND_ERR_N)
           WRITE (p_unit,'(A)') ' n<1'
         END SELECT
         RETURN
@@ -371,7 +371,7 @@
           WRITE (unit_diagnostics,'(a,i10)') 'n = ', n
         END IF
         IF (n<1) THEN
-          info%flag = nd_err_n
+          info%flag = ND_ERR_N
           IF (printe) CALL nd_print_message(info%flag,unit_error, &
             'nd_nested_lower')
           RETURN
@@ -472,12 +472,12 @@
         END IF
         RETURN
 
-10      info%flag = nd_err_memory_alloc
+10      info%flag = ND_ERR_MEMORY_ALLOC
         IF (printe) CALL nd_print_message(info%flag,unit_error, &
           'nd_nested_lower')
         RETURN
 
-20      info%flag = nd_err_memory_dealloc
+20      info%flag = ND_ERR_MEMORY_DEALLOC
         IF (printe) CALL nd_print_message(info%flag,unit_error, &
           'nd_nested_lower')
         RETURN
@@ -547,7 +547,7 @@
           WRITE (unit_diagnostics,'(a,i10)') 'n = ', n
         END IF
         IF (n<1) THEN
-          info%flag = nd_err_n
+          info%flag = ND_ERR_N
           IF (printe) CALL nd_print_message(info%flag,unit_error, &
             'nd_nested_full')
           RETURN
@@ -633,12 +633,12 @@
         END IF
         RETURN
 
-10      info%flag = nd_err_memory_alloc
+10      info%flag = ND_ERR_MEMORY_ALLOC
         IF (printe) CALL nd_print_message(info%flag,unit_error, &
           'nd_nested_full')
         RETURN
 
-20      info%flag = nd_err_memory_dealloc
+20      info%flag = ND_ERR_MEMORY_DEALLOC
         IF (printe) CALL nd_print_message(info%flag,unit_error, &
           'nd_nested_full')
         RETURN
@@ -787,8 +787,8 @@
             a_row(1:a_ne_new),svwork(sv_perm+1:sv_perm+a_n_new), &
             svwork(sv_invp+1:sv_invp+a_n_new),nsvar, &
             svwork(sv_svar+1:sv_svar+a_n_new),svinfo,st)
-          IF (svinfo==nd_err_memory_alloc) GO TO 10
-          IF (svinfo==nd_err_memory_dealloc) GO TO 20
+          IF (svinfo==ND_ERR_MEMORY_ALLOC) GO TO 10
+          IF (svinfo==ND_ERR_MEMORY_DEALLOC) GO TO 20
 
           num_zero_row = a_n_new - i
           IF (printd) THEN
@@ -812,8 +812,8 @@
               svwork(sv_invp+1:sv_invp+a_n_new),nsvar, &
               svwork(sv_svar+1:sv_svar+a_n_new),svwork(sv_ptr2+1:sv_ptr2+ &
               a_n_new+1),svwork(sv_row2+1:sv_row2+a_ne_new),svinfo,st)
-            IF (svinfo==nd_err_memory_alloc) GO TO 10
-            IF (svinfo==nd_err_memory_dealloc) GO TO 20
+            IF (svinfo==ND_ERR_MEMORY_ALLOC) GO TO 10
+            IF (svinfo==ND_ERR_MEMORY_DEALLOC) GO TO 20
 
             a_n_curr = nsvar
             ! Fill a_ptr removing any diagonal entries
@@ -918,7 +918,7 @@
           work(amd_order_irn+1:amd_order_irn+a_ne_curr) = a_row(1:a_ne_curr)
           work(amd_order_irn+a_ne_curr+1:amd_order_irn+lirn) = 0
           work(amd_order_ip+1:amd_order_ip+a_n_curr) = a_ptr(1:a_n_curr)
-          work(amd_order_sep+1:amd_order_sep+a_n_curr) = nd_sep_flag - 1
+          work(amd_order_sep+1:amd_order_sep+a_n_curr) = ND_SEP_FLAG - 1
           CALL amd_order(a_n_curr,a_ne_curr,lirn,work(amd_order_irn+1:amd_order_irn+lirn), &
             work(amd_order_ip+1:amd_order_ip+a_n_curr),work(amd_order_sep+1:amd_order_sep+a_n_curr &
             ),work(amd_order_perm+1:amd_order_perm+a_n_curr),work(amd_order_work+1:amd_order_work+ &
@@ -1085,12 +1085,12 @@
         END IF
         RETURN
 
-10      info%flag = nd_err_memory_alloc
+10      info%flag = ND_ERR_MEMORY_ALLOC
         IF (printe) CALL nd_print_message(info%flag,unit_error, &
           'nd_nested_both')
         RETURN
 
-20      info%flag = nd_err_memory_dealloc
+20      info%flag = ND_ERR_MEMORY_DEALLOC
         IF (printe) CALL nd_print_message(info%flag,unit_error, &
           'nd_nested_both')
         RETURN
@@ -1599,7 +1599,7 @@
         work(amd_order_irn+1:amd_order_irn+a_ne) = a_row(1:a_ne)
         work(amd_order_irn+a_ne+1:amd_order_irn+lirn) = 0
         work(amd_order_ip+1:amd_order_ip+a_n) = a_ptr(1:a_n)
-        work(amd_order_sep+1:amd_order_sep+a_n) = nd_sep_flag - 1
+        work(amd_order_sep+1:amd_order_sep+a_n) = ND_SEP_FLAG - 1
         CALL amd_order(a_n,a_ne,lirn,work(amd_order_irn+1:amd_order_irn+lirn), &
           work(amd_order_ip+1:amd_order_ip+a_n),work(amd_order_sep+1:amd_order_sep+a_n), &
           work(amd_order_perm+1:amd_order_perm+a_n),work(amd_order_work+1:amd_order_work+7*a_n))
@@ -3399,19 +3399,19 @@
 
         ! Initialise work(fm_flags+1:fm_flags+a_n)
         CALL nd_convert_partition_flags(a_n,a_n1,a_n2,partition, &
-          nd_part1_flag,nd_part2_flag,nd_sep_flag, &
+          ND_PART1_FLAG,ND_PART2_FLAG,ND_SEP_FLAG, &
           work(fm_flags+1:fm_flags+a_n))
 
         ! Create new separator by forming edge separator between input
         ! separator and largest of P1 and P2
 
         CALL nd_move_partition(a_n,a_ne,a_ptr,a_row,a_weight,a_n1,a_n2, &
-          a_weight_1,a_weight_2,a_weight_sep,nd_part1_flag, &
-          nd_part2_flag,nd_sep_flag,work(fm_flags+1:fm_flags+a_n))
+          a_weight_1,a_weight_2,a_weight_sep,ND_PART1_FLAG, &
+          ND_PART2_FLAG,ND_SEP_FLAG,work(fm_flags+1:fm_flags+a_n))
 
         ! Update partition
         CALL nd_convert_flags_partition(a_n,a_n1,a_n2, &
-          work(fm_flags+1:fm_flags+a_n),nd_part1_flag,nd_part2_flag, &
+          work(fm_flags+1:fm_flags+a_n),ND_PART1_FLAG,ND_PART2_FLAG, &
           partition(1:a_n))
 
         IF (control%refinement>3) THEN
@@ -3494,7 +3494,7 @@
 
         ! Initialise work(fm_flags+1:fm_flags+a_n)
         CALL nd_convert_partition_flags(a_n,a_n1,a_n2,partition, &
-          nd_part1_flag,nd_part2_flag,nd_sep_flag, &
+          ND_PART1_FLAG,ND_PART2_FLAG,ND_SEP_FLAG, &
           work(fm_flags+1:fm_flags+a_n))
 
         fm_ipart = fm_flags + a_n ! length a_n
@@ -3526,7 +3526,7 @@
 
         ! Update partition
         CALL nd_convert_flags_partition(a_n,a_n1,a_n2, &
-          work(fm_flags+1:fm_flags+a_n),nd_part1_flag,nd_part2_flag, &
+          work(fm_flags+1:fm_flags+a_n),ND_PART1_FLAG,ND_PART2_FLAG, &
           partition(1:a_n))
 
       END SUBROUTINE nd_refine_fm
@@ -3582,9 +3582,9 @@
         ! with better properties.  Normally less nodes in the cutset while
         ! maintaining
         ! a balance between the number of nodes in the two components.
-        ! flags(i) == nd_part1_flag : i is in partition 1
-        ! flags(i) == nd_part2_flag : i is in partition 2
-        ! flags(i) == nd_sep_flag   : i is in separator/cutset
+        ! flags(i) == ND_PART1_FLAG : i is in partition 1
+        ! flags(i) == ND_PART2_FLAG : i is in partition 2
+        ! flags(i) == ND_SEP_FLAG   : i is in separator/cutset
         INTEGER, INTENT (INOUT) :: flags(n)
         ! info holds parameters giving information about the performance of
         ! the
@@ -3617,7 +3617,7 @@
         first = 0
         tail = 0
         DO i = 1, n
-          IF (flags(i)==nd_sep_flag) THEN
+          IF (flags(i)==ND_SEP_FLAG) THEN
             dist(i) = 0
             IF (first==0) THEN
               first = i
@@ -3710,7 +3710,7 @@
         ming = sumweight
         DO i = 1, n
 
-          IF (flags(i)==nd_sep_flag) THEN
+          IF (flags(i)==ND_SEP_FLAG) THEN
             ! Node i is in cutset
             ! gain1(i) is change to cutset size if node i is moved to
             ! partition 1.
@@ -3786,14 +3786,14 @@ INNER:    DO inn = 1, n
             IF (wnv1==0 .AND. wnv2>0) THEN
 
               ! Move node i to partition 1
-              move = nd_part1_flag
+              move = ND_PART1_FLAG
               inv1 = inv1 + 1
               winv1 = winv1 + weight(i)
               ins = ins - 1
               wins = wins - weight(i)
             ELSE IF (wnv2==0 .AND. wnv1>0) THEN
               ! Move node i to partition 2
-              move = nd_part2_flag
+              move = ND_PART2_FLAG
               inv2 = inv2 + 1
               winv2 = winv2 + weight(i)
               ins = ins - 1
@@ -3807,14 +3807,14 @@ INNER:    DO inn = 1, n
                 wins+gain2(i)-1,sumweight,ratio,imbal,costf,eval2)
               IF ((eval1<eval2) .OR. ((eval1==eval2) .AND. (wnv1<wnv2))) THEN
                 ! Move node i to partition 1
-                move = nd_part1_flag
+                move = ND_PART1_FLAG
                 inv1 = inv1 + 1
                 winv1 = winv1 + weight(i)
                 ins = ins - 1
                 wins = wins - weight(i)
               ELSE
                 ! Move node i to partition 2
-                move = nd_part2_flag
+                move = ND_PART2_FLAG
                 inv2 = inv2 + 1
                 winv2 = winv2 + weight(i)
                 ins = ins - 1
@@ -3834,7 +3834,7 @@ INNER:    DO inn = 1, n
               ! Check which partition node j is in and take appropriate action
               IF (ipart(j)==move) CYCLE
               ! If node j is in cutset, update its gain value
-              IF (ipart(j)==nd_sep_flag) THEN
+              IF (ipart(j)==ND_SEP_FLAG) THEN
                 ! If it has already been chosen in this pass just skip it
                 IF (done(j)==outer .OR. dist(j)==-2) CYCLE
                 ! old_gain is present gain
@@ -3842,8 +3842,8 @@ INNER:    DO inn = 1, n
                 old_gain = MAX(-mult,MIN(gain1(j),gain2(j)))
                 ! old_gain = min(gain1(j),gain2(j))
 
-                IF (move==nd_part1_flag) gain2(j) = gain2(j) + weight(i)
-                IF (move==nd_part2_flag) gain1(j) = gain1(j) + weight(i)
+                IF (move==ND_PART1_FLAG) gain2(j) = gain2(j) + weight(i)
+                IF (move==ND_PART2_FLAG) gain1(j) = gain1(j) + weight(i)
                 gain = MAX(-mult,MIN(gain1(j),gain2(j)))
                 ! gain = min(gain1(j),gain2(j))
 
@@ -3862,7 +3862,7 @@ INNER:    DO inn = 1, n
               END IF
               IF (ipart(j)==2-move) THEN
                 ! We have a new node in the cutset.
-                ipart(j) = nd_sep_flag
+                ipart(j) = ND_SEP_FLAG
                 ! Compute gains for this new node in the cutset and place in
                 ! linked list
                 ! We intentionally did not do this earlier but we do now
@@ -3887,11 +3887,11 @@ INNER:    DO inn = 1, n
                 ! to node j
                 ins = ins + 1
                 wins = wins + weight(j)
-                IF (move==nd_part1_flag) THEN
+                IF (move==ND_PART1_FLAG) THEN
                   inv2 = inv2 - 1
                   winv2 = winv2 - weight(j)
                 END IF
-                IF (move==nd_part2_flag) THEN
+                IF (move==ND_PART2_FLAG) THEN
                   inv1 = inv1 - 1
                   winv1 = winv1 - weight(j)
                 END IF
@@ -3904,7 +3904,7 @@ INNER:    DO inn = 1, n
                 END IF
                 DO ii = ptr(j), l
                   eye = col(ii)
-                  IF (ipart(eye)/=nd_sep_flag) CYCLE
+                  IF (ipart(eye)/=ND_SEP_FLAG) CYCLE
                   IF (dist(eye)==-2) CYCLE
                   ! Neighbour is in cutset. Recompute gain and insert in
                   ! linked list.
@@ -3914,10 +3914,10 @@ INNER:    DO inn = 1, n
                   ! old_gain = min(gain1(eye),gain2(eye))
 
 
-                  IF (move==nd_part1_flag) THEN
+                  IF (move==ND_PART1_FLAG) THEN
                     gain1(eye) = gain1(eye) - weight(j)
                   END IF
-                  IF (move==nd_part2_flag) THEN
+                  IF (move==ND_PART2_FLAG) THEN
                     gain2(eye) = gain2(eye) - weight(j)
                   END IF
                   ! gain is new gain
@@ -3985,7 +3985,7 @@ INNER:    DO inn = 1, n
           head(-mult:icut) = 0
           ming = icut + 1
           DO i = 1, n
-            IF (flags(i)/=nd_sep_flag) CYCLE
+            IF (flags(i)/=ND_SEP_FLAG) CYCLE
             IF (dist(i)==-2) CYCLE
             ! Node i is in cutset
             ! gain1(i) is change to cutset size if node i is moved to
@@ -4069,10 +4069,10 @@ INNER:    DO inn = 1, n
             j = col(jj)
             ! Check which partition node j is in and adjust gain array
             ! appropriately
-            IF (partit(j)==nd_part1_flag) THEN
+            IF (partit(j)==ND_PART1_FLAG) THEN
               gain2(i) = gain2(i) + weight(j)
             END IF
-            IF (partit(j)==nd_part2_flag) THEN
+            IF (partit(j)==ND_PART2_FLAG) THEN
               gain1(i) = gain1(i) + weight(j)
             END IF
           END DO
@@ -4142,7 +4142,7 @@ INNER:    DO inn = 1, n
           work(extract_work+1:extract_work+a_n))
 
         ! Apply amd_order
-        work(rows_sub+1:rows_sub+a_n1) = nd_part1_flag
+        work(rows_sub+1:rows_sub+a_n1) = ND_PART1_FLAG
         CALL amd_order(a_n_1,a_ne_sub,a_lirn_sub,work(a_irn_sub+1:a_irn_sub+ &
           a_lirn_sub),work(a_ptr_sub+1:a_ptr_sub+a_n_1), &
           work(rows_sub+1:rows_sub+a_n_1),work(amd_order_perm+1:amd_order_perm+a_n_1), &
@@ -4170,7 +4170,7 @@ INNER:    DO inn = 1, n
           work(a_irn_sub+1:a_irn_sub+a_ne),work(extract_work+1:extract_work+ &
           a_n))
         ! Apply amd_order
-        work(rows_sub+a_n1+1:rows_sub+a_n1+a_n2) = nd_part1_flag
+        work(rows_sub+a_n1+1:rows_sub+a_n1+a_n2) = ND_PART1_FLAG
         CALL amd_order(a_n_2,a_ne_sub,a_lirn_sub,work(a_irn_sub+1:a_irn_sub+ &
           a_lirn_sub),work(a_ptr_sub+1:a_ptr_sub+a_n_2), &
           work(rows_sub+a_n1+1:rows_sub+a_n1+a_n_2), &
@@ -4529,8 +4529,8 @@ INNER:    DO inn = 1, n
 
 
           ! Apply amd_order
-          work(rows_sub+1:rows_sub+a_n1) = nd_part1_flag
-          work(rows_sub+a_n1+1:rows_sub+a_n_1) = nd_sep_flag
+          work(rows_sub+1:rows_sub+a_n1) = ND_PART1_FLAG
+          work(rows_sub+a_n1+1:rows_sub+a_n_1) = ND_SEP_FLAG
           CALL amd_order(a_n_1,a_ne_sub,a_lirn_sub,work(a_irn_sub+1:a_irn_sub+ &
             a_lirn_sub),work(a_ptr_sub+1:a_ptr_sub+a_n_1), &
             work(rows_sub+1:rows_sub+a_n_1),work(amd_order_perm+1:amd_order_perm+a_n_1), &
@@ -4580,8 +4580,8 @@ INNER:    DO inn = 1, n
             a_n))
 
           ! Apply amd_order
-          work(rows_sub+1:rows_sub+a_n2) = nd_part2_flag
-          work(rows_sub+a_n2+1:rows_sub+a_n_2) = nd_sep_flag
+          work(rows_sub+1:rows_sub+a_n2) = ND_PART2_FLAG
+          work(rows_sub+a_n2+1:rows_sub+a_n_2) = ND_SEP_FLAG
           CALL amd_order(a_n_2,a_ne_sub,a_lirn_sub,work(a_irn_sub+1:a_irn_sub+ &
             a_lirn_sub),work(a_ptr_sub+1:a_ptr_sub+a_n_2), &
             work(rows_sub+1:rows_sub+a_n_2),work(amd_order_perm+a_n1+1:amd_order_perm+ &
@@ -4739,11 +4739,11 @@ INNER:    DO inn = 1, n
         a_weight_sep = 0
         DO i = 1, a_n
           SELECT CASE (grid%where(i))
-          CASE (nd_part1_flag)
+          CASE (ND_PART1_FLAG)
             partition(inv1) = i
             inv1 = inv1 + 1
             a_weight_1 = a_weight_1 + a_weight(i)
-          CASE (nd_part2_flag)
+          CASE (ND_PART2_FLAG)
             partition(inv2) = i
             inv2 = inv2 + 1
             a_weight_2 = a_weight_2 + a_weight(i)
@@ -4776,7 +4776,7 @@ INNER:    DO inn = 1, n
         END IF
 
         ! DEALLOCATE (matrix%ptr,matrix%col,matrix%val,STAT=st)
-        ! IF (st/=0) info1 = nd_err_memory_dealloc
+        ! IF (st/=0) info1 = ND_ERR_MEMORY_DEALLOC
         IF (info1<0) THEN
           IF (lerr) CALL nd_print_message(info1,err, &
             ' multilevel_partition')
@@ -4996,10 +4996,10 @@ INNER:    DO inn = 1, n
         CALL nd_matrix_multiply_vec(p,cwhere,fwhere)
 
         DO i = 1, grid%size
-          IF (fwhere(i)==nd_part1_flag) THEN
+          IF (fwhere(i)==ND_PART1_FLAG) THEN
             grid%part_div(1) = grid%part_div(1) + 1
           ELSE
-            IF (fwhere(i)==nd_part2_flag) THEN
+            IF (fwhere(i)==ND_PART2_FLAG) THEN
               grid%part_div(2) = grid%part_div(2) + 1
             END IF
           END IF
@@ -5016,15 +5016,15 @@ INNER:    DO inn = 1, n
         k = grid%part_div(1) + grid%part_div(2) + 1
         DO l = 1, grid%size
           SELECT CASE (grid%where(l))
-          CASE (nd_part1_flag)
+          CASE (ND_PART1_FLAG)
             work(partition_ptr+i) = l
             a_weight_1 = a_weight_1 + grid%row_wgt(l)
             i = i + 1
-          CASE (nd_part2_flag)
+          CASE (ND_PART2_FLAG)
             work(partition_ptr+j) = l
             a_weight_2 = a_weight_2 + grid%row_wgt(l)
             j = j + 1
-          CASE (nd_sep_flag)
+          CASE (ND_SEP_FLAG)
             work(partition_ptr+k) = l
             a_weight_sep = a_weight_sep + grid%row_wgt(l)
             k = k + 1
@@ -5228,15 +5228,15 @@ INNER:    DO inn = 1, n
 
         DO i = 1, grid%part_div(1)
           j = work(partition_ptr+i)
-          grid%where(j) = nd_part1_flag
+          grid%where(j) = ND_PART1_FLAG
         END DO
         DO i = grid%part_div(1) + 1, grid%part_div(1) + grid%part_div(2)
           j = work(partition_ptr+i)
-          grid%where(j) = nd_part2_flag
+          grid%where(j) = ND_PART2_FLAG
         END DO
         DO i = grid%part_div(1) + grid%part_div(2) + 1, grid%graph%n
           j = work(partition_ptr+i)
-          grid%where(j) = nd_sep_flag
+          grid%where(j) = ND_SEP_FLAG
         END DO
 
         IF (info<0) RETURN
@@ -5322,7 +5322,7 @@ INNER:    DO inn = 1, n
 
         ALLOCATE (work1(a_n),STAT=st)
         IF (st/=0) THEN
-          info = nd_err_memory_alloc
+          info = ND_ERR_MEMORY_ALLOC
           RETURN
         END IF
 
@@ -5466,12 +5466,12 @@ INNER:    DO inn = 1, n
 
 
         CALL nd_convert_partition_flags(a_n,a_n1,a_n2, &
-          work1(partition_ptr+1:partition_ptr+a_n),nd_part1_flag, &
-          nd_part2_flag,nd_sep_flag,where1(1:a_n))
+          work1(partition_ptr+1:partition_ptr+a_n),ND_PART1_FLAG, &
+          ND_PART2_FLAG,ND_SEP_FLAG,where1(1:a_n))
 
         DEALLOCATE (work1,STAT=st)
         IF (st/=0) THEN
-          info = nd_err_memory_alloc
+          info = ND_ERR_MEMORY_ALLOC
           RETURN
         END IF
 
@@ -5566,7 +5566,7 @@ INNER:    DO inn = 1, n
 
         DEALLOCATE (grid%graph,grid%p,grid%r,grid%where,grid%row_wgt,STAT=st)
         IF (st/=0) THEN
-          info = nd_err_memory_dealloc
+          info = ND_ERR_MEMORY_DEALLOC
           RETURN
         END IF
         NULLIFY (grid%graph,grid%coarse)
@@ -5587,19 +5587,19 @@ INNER:    DO inn = 1, n
 
         CALL nd_matrix_destruct(grid%p,ierr)
         IF (ierr/=0) THEN
-          info = nd_err_memory_dealloc
+          info = ND_ERR_MEMORY_DEALLOC
           RETURN
         END IF
 
         CALL nd_matrix_destruct(grid%r,ierr)
         IF (ierr/=0) THEN
-          info = nd_err_memory_dealloc
+          info = ND_ERR_MEMORY_DEALLOC
           RETURN
         END IF
         DEALLOCATE (grid%graph,grid%p,grid%r,grid%where,grid%row_wgt, &
           STAT=ierr)
         IF (ierr/=0) THEN
-          info = nd_err_memory_dealloc
+          info = ND_ERR_MEMORY_DEALLOC
           RETURN
         END IF
         NULLIFY (grid%graph,grid%coarse)
@@ -5617,7 +5617,7 @@ INNER:    DO inn = 1, n
         IF (ASSOCIATED(grid%graph)) THEN
           CALL nd_matrix_destruct(grid%graph,ierr)
           IF (ierr/=0) THEN
-            info = nd_err_memory_dealloc
+            info = ND_ERR_MEMORY_DEALLOC
             RETURN
           END IF
         END IF
@@ -5627,7 +5627,7 @@ INNER:    DO inn = 1, n
         ! finest level graph. so no need to deallocate
         NULLIFY (grid%graph)
         DEALLOCATE (grid%where,grid%row_wgt,STAT=ierr)
-        IF (ierr/=0) info = nd_err_memory_dealloc
+        IF (ierr/=0) info = ND_ERR_MEMORY_DEALLOC
 
       END SUBROUTINE multigrid_deallocate_first
 
@@ -5766,14 +5766,14 @@ INNER:    DO inn = 1, n
         DEALLOCATE (matrix%col,matrix%ptr,STAT=ierr)
         IF (PRESENT(stat)) stat = ierr
         IF (ierr/=0) THEN
-          info = nd_err_memory_dealloc
+          info = ND_ERR_MEMORY_DEALLOC
           RETURN
         END IF
 
         DEALLOCATE (matrix%val,STAT=ierr)
         IF (PRESENT(stat)) stat = ierr
         IF (ierr/=0) THEN
-          info = nd_err_memory_dealloc
+          info = ND_ERR_MEMORY_DEALLOC
           RETURN
         END IF
 
@@ -5835,7 +5835,7 @@ INNER:    DO inn = 1, n
           IF (SIZE(v)<n) THEN
             DEALLOCATE (v,STAT=st)
             IF (st<0) THEN
-              info = nd_err_memory_alloc
+              info = ND_ERR_MEMORY_ALLOC
               RETURN
             END IF
           ELSE
@@ -5845,7 +5845,7 @@ INNER:    DO inn = 1, n
 
         ALLOCATE (v(n),STAT=st)
         IF (st<0) THEN
-          info = nd_err_memory_dealloc
+          info = ND_ERR_MEMORY_DEALLOC
         END IF
 
 
@@ -5870,7 +5870,7 @@ INNER:    DO inn = 1, n
           IF (SIZE(arr)<sz) THEN
             DEALLOCATE (arr,STAT=st)
             IF (st/=0) THEN
-              info1 = nd_err_memory_dealloc
+              info1 = ND_ERR_MEMORY_DEALLOC
               RETURN
             END IF
           END IF
@@ -5878,7 +5878,7 @@ INNER:    DO inn = 1, n
 
         IF ( .NOT. ASSOCIATED(arr)) THEN
           ALLOCATE (arr(sz),STAT=st)
-          IF (st/=0) info1 = nd_err_memory_alloc
+          IF (st/=0) info1 = ND_ERR_MEMORY_ALLOC
         END IF
 
       END SUBROUTINE nd_assoc
@@ -6808,7 +6808,7 @@ INNER:    DO inn = 1, n
         ! part of the partition the nodes are in
         work_part = 0
         CALL nd_convert_partition_flags(a_n,a_n1,a_n2,partition, &
-          nd_part1_flag,nd_part2_flag,nd_sep_flag, &
+          ND_PART1_FLAG,ND_PART2_FLAG,ND_SEP_FLAG, &
           work(work_part+1:work_part+a_n))
 
         a_n1_orig = a_n1
@@ -6833,9 +6833,9 @@ INNER:    DO inn = 1, n
           END IF
           DO l = a_ptr(j), k
             m = a_row(l)
-            IF (work(work_part+m)==nd_part1_flag) THEN
+            IF (work(work_part+m)==ND_PART1_FLAG) THEN
               next1 = .TRUE.
-            ELSE IF (work(work_part+m)==nd_part2_flag) THEN
+            ELSE IF (work(work_part+m)==ND_PART2_FLAG) THEN
               next2 = .TRUE.
             END IF
           END DO
@@ -6900,7 +6900,7 @@ INNER:    DO inn = 1, n
 
           ! move entry from separator to partition1
 10        i = head1
-          work(work_part+i) = nd_part1_flag
+          work(work_part+i) = ND_PART1_FLAG
           head1 = work(work_next+i)
           work(work_next+i) = 0
           a_n1 = a_n1 + 1
@@ -6916,7 +6916,7 @@ INNER:    DO inn = 1, n
             j = a_row(l)
             m = work(work_part+j)
             SELECT CASE (m)
-            CASE (nd_sep_flag)
+            CASE (ND_SEP_FLAG)
               ! Add to list 1
               work(work_next+tail1) = j
               work(work_prev+j) = tail1
@@ -6958,7 +6958,7 @@ INNER:    DO inn = 1, n
 
           ! move entry from separator to partition 2
 20        i = head2
-          work(work_part+i) = nd_part2_flag
+          work(work_part+i) = ND_PART2_FLAG
           head2 = work(work_next+i)
           work(work_next+i) = 0
           a_n2 = a_n2 + 1
@@ -6974,7 +6974,7 @@ INNER:    DO inn = 1, n
             j = a_row(l)
             m = work(work_part+j)
             SELECT CASE (m)
-            CASE (nd_sep_flag)
+            CASE (ND_SEP_FLAG)
               ! Add to list 2
               work(work_next+tail2) = j
               work(work_prev+j) = tail2
@@ -7021,11 +7021,11 @@ INNER:    DO inn = 1, n
         work(work_next+a_n1_orig+a_n2_orig+1:work_next+a_n) = 0
         DO i = a_n1_orig + a_n2_orig + 1, a_n
           j = partition(i)
-          IF (work(work_part+j)==nd_sep_flag) THEN
+          IF (work(work_part+j)==ND_SEP_FLAG) THEN
             ! j is not on the boundary
             IF (a_weight_1<a_weight_2) THEN
               ! Move j into partition 1
-              work(work_part+j) = nd_part1_flag
+              work(work_part+j) = ND_PART1_FLAG
               a_n1 = a_n1 + 1
               a_weight_1 = a_weight_1 + a_weight(j)
               a_weight_sep = a_weight_sep - a_weight(j)
@@ -7041,8 +7041,8 @@ INNER:    DO inn = 1, n
                 END IF
                 DO l = a_ptr(q), k
                   p = a_row(l)
-                  IF (work(work_part+p)==nd_sep_flag) THEN
-                    work(work_part+p) = nd_part1_flag
+                  IF (work(work_part+p)==ND_SEP_FLAG) THEN
+                    work(work_part+p) = ND_PART1_FLAG
                     a_n1 = a_n1 + 1
                     a_weight_1 = a_weight_1 + a_weight(p)
                     a_weight_sep = a_weight_sep - a_weight(p)
@@ -7062,7 +7062,7 @@ INNER:    DO inn = 1, n
 
             ELSE
               ! Move j into partition 2
-              work(work_part+j) = nd_part2_flag
+              work(work_part+j) = ND_PART2_FLAG
               a_n2 = a_n2 + 1
               a_weight_2 = a_weight_2 + a_weight(j)
               a_weight_sep = a_weight_sep - a_weight(j)
@@ -7078,8 +7078,8 @@ INNER:    DO inn = 1, n
                 END IF
                 DO l = a_ptr(q), k
                   p = a_row(l)
-                  IF (work(work_part+p)==nd_sep_flag) THEN
-                    work(work_part+p) = nd_part2_flag
+                  IF (work(work_part+p)==ND_SEP_FLAG) THEN
+                    work(work_part+p) = ND_PART2_FLAG
                     a_n2 = a_n2 + 1
                     a_weight_2 = a_weight_2 + a_weight(p)
                     a_weight_sep = a_weight_sep - a_weight(p)
@@ -7103,7 +7103,7 @@ INNER:    DO inn = 1, n
 
         ! Reset partition matrix
         CALL nd_convert_flags_partition(a_n,a_n1,a_n2, &
-          work(work_part+1:work_part+a_n),nd_part1_flag,nd_part2_flag, &
+          work(work_part+1:work_part+a_n),ND_PART1_FLAG,ND_PART2_FLAG, &
           partition(1:a_n))
 
         ! call
@@ -7165,7 +7165,7 @@ INNER:    DO inn = 1, n
         ! part of the partition the nodes are in
         work_part = 0
         CALL nd_convert_partition_flags(a_n,a_n1,a_n2,partition, &
-          nd_part1_flag,nd_part2_flag,nd_sep_flag, &
+          ND_PART1_FLAG,ND_PART2_FLAG,ND_SEP_FLAG, &
           work(work_part+1:work_part+a_n))
         a_n1_orig = a_n1
         a_n2_orig = a_n2
@@ -7201,9 +7201,9 @@ INNER:    DO inn = 1, n
           END IF
           DO l = a_ptr(j), k
             m = a_row(l)
-            IF (work(work_part+m)==nd_part1_flag) THEN
+            IF (work(work_part+m)==ND_PART1_FLAG) THEN
               next1 = .TRUE.
-            ELSE IF (work(work_part+m)==nd_part2_flag) THEN
+            ELSE IF (work(work_part+m)==ND_PART2_FLAG) THEN
               next2 = .TRUE.
             END IF
           END DO
@@ -7240,7 +7240,7 @@ INNER:    DO inn = 1, n
           END IF
           DO l = a_ptr(l1), k
             m = a_row(l)
-            IF (work(work_part+m)==nd_sep_flag .AND. &
+            IF (work(work_part+m)==ND_SEP_FLAG .AND. &
                 work(work_level1+m)==0) THEN
               ! Add to list (note list is non-empty)
               work(work_next1+tail1) = m
@@ -7263,7 +7263,7 @@ INNER:    DO inn = 1, n
           END IF
           DO l = a_ptr(l1), k
             m = a_row(l)
-            IF (work(work_part+m)==nd_sep_flag .AND. &
+            IF (work(work_part+m)==ND_SEP_FLAG .AND. &
                 work(work_level2+m)==0) THEN
               ! Add to list (note list is non-empty)
               work(work_next2+tail2) = m
@@ -7342,7 +7342,7 @@ INNER:    DO inn = 1, n
             j = l1
             DO WHILE (work(work_level1+j)==currlevel1)
               IF (work(work_level2+j)>currlevel2) THEN
-                work(work_part+j) = nd_part1_flag
+                work(work_part+j) = ND_PART1_FLAG
                 a_n1 = a_n1 + 1
               END IF
               j = work(work_next1+j)
@@ -7361,7 +7361,7 @@ INNER:    DO inn = 1, n
             j = l2
             DO WHILE (work(work_level2+j)==currlevel2)
               IF (work(work_level1+j)>currlevel1) THEN
-                work(work_part+j) = nd_part2_flag
+                work(work_part+j) = ND_PART2_FLAG
                 a_n2 = a_n2 + 1
               END IF
               j = work(work_next2+j)
@@ -7380,7 +7380,7 @@ INNER:    DO inn = 1, n
 
         ! Reset partition matrix
         CALL nd_convert_flags_partition(a_n,a_n1,a_n2, &
-          work(work_part+1:work_part+a_n),nd_part1_flag,nd_part2_flag, &
+          work(work_part+1:work_part+a_n),ND_PART1_FLAG,ND_PART2_FLAG, &
           partition(1:a_n))
         a_weight_sep = sumweight - a_weight_1 - a_weight_2
         ! call check_partition1(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition)
@@ -7470,23 +7470,23 @@ INNER:    DO inn = 1, n
         work_part = 0
         DO i = 1, a_n1
           j = partition(i)
-          work(work_part+j) = nd_part1_flag
+          work(work_part+j) = ND_PART1_FLAG
         END DO
         DO i = a_n1 + 1, a_n1 + a_n2
           j = partition(i)
-          work(work_part+j) = nd_part2_flag
+          work(work_part+j) = ND_PART2_FLAG
         END DO
         DO i = a_n1 + a_n2 + 1, a_n
           j = partition(i)
-          work(work_part+j) = nd_sep_flag
+          work(work_part+j) = ND_SEP_FLAG
         END DO
 
         ! IF (a_weight_1 .LT. a_weight_2) THEN
-        ! side = nd_part2_flag
+        ! side = ND_PART2_FLAG
         ! ELSE IF (a_weight_1 .GT. a_weight_2) THEN
-        ! side = nd_part1_flag
+        ! side = ND_PART1_FLAG
         ! ELSE
-        ! side = nd_sep_flag
+        ! side = ND_SEP_FLAG
         ! END IF
         a_weight_sep_orig = a_weight_sep
 
@@ -7500,19 +7500,19 @@ INNER:    DO inn = 1, n
           END IF
           DO l = a_ptr(j), k
             m = a_row(l)
-            IF (work(work_part+m)==nd_part1_flag .AND. a_n1>1) THEN
-              ! IF (side .EQ. nd_part1_flag .OR. side .EQ. nd_sep_flag)
+            IF (work(work_part+m)==ND_PART1_FLAG .AND. a_n1>1) THEN
+              ! IF (side .EQ. ND_PART1_FLAG .OR. side .EQ. ND_SEP_FLAG)
               ! THEN
-              work(work_part+m) = nd_sep_flag
+              work(work_part+m) = ND_SEP_FLAG
               a_n1 = a_n1 - 1
               w = a_weight(m)
               a_weight_1 = a_weight_1 - w
               a_weight_sep = a_weight_sep + w
               ! END IF
-            ELSE IF (work(work_part+m)==nd_part2_flag .AND. a_n2>1) THEN
-              ! IF (side .EQ. nd_part2_flag .OR. side .EQ. nd_sep_flag)
+            ELSE IF (work(work_part+m)==ND_PART2_FLAG .AND. a_n2>1) THEN
+              ! IF (side .EQ. ND_PART2_FLAG .OR. side .EQ. ND_SEP_FLAG)
               ! THEN
-              work(work_part+m) = nd_sep_flag
+              work(work_part+m) = ND_SEP_FLAG
               a_n2 = a_n2 - 1
               w = a_weight(m)
               a_weight_2 = a_weight_2 - w
@@ -7527,10 +7527,10 @@ INNER:    DO inn = 1, n
         DO i = 1, a_n
           m = work(work_part+i)
           SELECT CASE (m)
-          CASE (nd_part1_flag)
+          CASE (ND_PART1_FLAG)
             partition(j) = i
             j = j + 1
-          CASE (nd_part2_flag)
+          CASE (ND_PART2_FLAG)
             partition(k) = i
             k = k + 1
           CASE DEFAULT
@@ -9085,7 +9085,7 @@ INNER:    DO inn = 1, n
 
         ALLOCATE (sv_new(n+1),sv_seen(n+1),sv_count(n+1),STAT=st)
         IF (st/=0) THEN
-          info = nd_err_memory_alloc
+          info = ND_ERR_MEMORY_ALLOC
           RETURN
         END IF
 
@@ -9240,7 +9240,7 @@ INNER:    DO inn = 1, n
 
         DEALLOCATE (sv_new,sv_seen,sv_count,STAT=st)
         IF (st/=0) THEN
-          info = nd_err_memory_dealloc
+          info = ND_ERR_MEMORY_DEALLOC
           RETURN
         END IF
       END SUBROUTINE nd_supervars
@@ -9272,7 +9272,7 @@ INNER:    DO inn = 1, n
 
         ALLOCATE (flag(nsvar),sv_map(n),STAT=st)
         IF (st/=0) THEN
-          info = nd_err_memory_alloc
+          info = ND_ERR_MEMORY_ALLOC
           RETURN
         END IF
         flag(:) = 0
@@ -9304,7 +9304,7 @@ INNER:    DO inn = 1, n
 
         DEALLOCATE (flag,sv_map,STAT=st)
         IF (st/=0) THEN
-          info = nd_err_memory_dealloc
+          info = ND_ERR_MEMORY_DEALLOC
           RETURN
         END IF
       END SUBROUTINE nd_compress_by_svar
