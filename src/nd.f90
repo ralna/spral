@@ -540,205 +540,207 @@ contains
          call compress_by_svar(a_n, a_ne, a_ptr, a_row, a_weight, a_n_curr, &
             a_ne_curr, nsvar, svar, sinvp, num_zero_row, control, info%stat)
          if (info%stat.ne.0) go to 10
-     else
-       a_n_curr = a_n
-       a_ne_curr = a_ne
-       nsvar = a_n
-       num_zero_row = 0
+      else
+         ! Otherwise, set things up for consistency with lack of supervariables
+         a_n_curr = a_n
+         a_ne_curr = a_ne
+         nsvar = a_n
+         num_zero_row = 0
+         a_weight(1:a_n_curr) = 1
+      end if
 
-       ! Initialise a_weight
-       a_weight(1:a_n_curr) = 1
-     end if
+      ! Proceed to main ordering now preprocessing is complete
+      info%nzsuper = a_ne_curr
+      info%nsuper = a_n_curr
 
-     ! Carryout nested dissection on matrix once dense rows removed
-     info%nzsuper = a_ne_curr
-     info%nsuper = a_n_curr
+      if (control%amd_switch2<=0 .or. a_n_curr<=max(2,max(control%amd_call, &
+            control%amd_switch1))) then
+         ! Apply AMD to matrix
+         ! Allocate work to have length 5*a_n_curr+a_ne_curr
+         if (printd) &
+            write (unit_diagnostics,'(a)') ' Form AMD ordering'
+         allocate (work(11*a_n_curr+a_ne_curr+a_n),stat=info%stat)
+         if (info%stat/=0) go to 10
+         lirn = a_ne_curr + a_n_curr
+         amd_order_irn = 0
+         amd_order_ip = amd_order_irn + lirn
+         amd_order_sep = amd_order_ip + a_n_curr
+         amd_order_perm = amd_order_sep + a_n_curr
+         amd_order_work = amd_order_perm + a_n_curr
+         amd_order_iperm = amd_order_work + 7*a_n_curr
 
-     if (control%amd_switch2<=0 .or. a_n_curr<=max(2,max(control%amd_call, &
-         control%amd_switch1))) then
-       ! Apply AMD to matrix
-       ! Allocate work to have length 5*a_n_curr+a_ne_curr
-       if (printd) then
-         write (unit_diagnostics,'(a)') ' Form AMD ordering'
-       end if
-       allocate (work(11*a_n_curr+a_ne_curr+a_n),stat=info%stat)
-       if (info%stat/=0) go to 10
-       lirn = a_ne_curr + a_n_curr
-       amd_order_irn = 0
-       amd_order_ip = amd_order_irn + lirn
-       amd_order_sep = amd_order_ip + a_n_curr
-       amd_order_perm = amd_order_sep + a_n_curr
-       amd_order_work = amd_order_perm + a_n_curr
-       amd_order_iperm = amd_order_work + 7*a_n_curr
+         work(amd_order_irn+1:amd_order_irn+a_ne_curr) = a_row(1:a_ne_curr)
+         work(amd_order_irn+a_ne_curr+1:amd_order_irn+lirn) = 0
+         work(amd_order_ip+1:amd_order_ip+a_n_curr) = a_ptr(1:a_n_curr)
+         work(amd_order_sep+1:amd_order_sep+a_n_curr) = ND_SEP_FLAG - 1
+         call amd_order(a_n_curr, a_ne_curr, lirn,             &
+            work(amd_order_irn+1:amd_order_irn+lirn),          &
+            work(amd_order_ip+1:amd_order_ip+a_n_curr),        &
+            work(amd_order_sep+1:amd_order_sep+a_n_curr),      &
+            work(amd_order_perm+1:amd_order_perm+a_n_curr),    &
+            work(amd_order_work+1:amd_order_work+7*a_n_curr))
 
-       work(amd_order_irn+1:amd_order_irn+a_ne_curr) = a_row(1:a_ne_curr)
-       work(amd_order_irn+a_ne_curr+1:amd_order_irn+lirn) = 0
-       work(amd_order_ip+1:amd_order_ip+a_n_curr) = a_ptr(1:a_n_curr)
-       work(amd_order_sep+1:amd_order_sep+a_n_curr) = ND_SEP_FLAG - 1
-       call amd_order(a_n_curr,a_ne_curr,lirn,work(amd_order_irn+1:amd_order_irn+lirn), &
-         work(amd_order_ip+1:amd_order_ip+a_n_curr),work(amd_order_sep+1:amd_order_sep+a_n_curr &
-         ),work(amd_order_perm+1:amd_order_perm+a_n_curr),work(amd_order_work+1:amd_order_work+ &
-         7*a_n_curr))
-
-       ! Extract perm from amd_order to apply to iperm
-       if (nsvar+num_zero_row==a_n) then
-         do i = 1, a_n_curr
-           j = work(amd_order_perm+i)
-           work(amd_order_work+i) = iperm(j)
-         end do
-         iperm(1:a_n_curr) = work(amd_order_work+1:amd_order_work+a_n_curr)
-       else
-         do i = 1, a_n_curr
-           j = work(amd_order_perm+i)
-           work(amd_order_work+i) = j
-         end do
-         ! Expand to matrix before supervariables detected
-         k = 1
-         do i = 1, a_n_curr
-           j = work(amd_order_work+i)
-           if (j==1) then
-             ll = 1
-           else
-             ll = svar(j-1) + 1
-           end if
-           do l = ll, svar(j)
-             work(amd_order_iperm+k) = iperm(sinvp(l))
-             k = k + 1
-           end do
-         end do
-
-         iperm(1:a_n) = work(amd_order_iperm+1:amd_order_iperm+a_n)
-       end if
-
-     else
-       ! Apply ND to matrix
-
-       if (printd) then
-         write (unit_diagnostics,'(a)') ' Form ND ordering'
-       end if
-
-       if (nsvar+num_zero_row==a_n) then
-         ! Allocate work to have length 14*a_n_curr+a_ne_curr
-         allocate (work(a_n+14*a_n_curr+a_ne_curr),stat=info%stat)
-       else
-         ! Allocate work to have length a_n+14*a_n_curr+a_ne_curr
-         allocate (work(3*a_n+14*a_n_curr+a_ne_curr),stat=info%stat)
-         work_iperm = 14*a_n_curr + a_ne_curr + a_n
-         work(work_iperm+1:work_iperm+a_n_curr) = (/ (i,i=1,a_n_curr) /)
-         if (present(seps)) then
-           work_seps = work_iperm + a_n_curr
-           work(work_seps+1:work_seps+a_n_curr) = -1
-         end if
-       end if
-       if (info%stat/=0) go to 10
-
-       use_multilevel = .true.
-       if (nsvar+num_zero_row==a_n) then
-         sumweight = SUM(a_weight(1:a_n_curr))
-         lwork = 12*a_n_curr + sumweight + a_ne_curr
-         if (present(seps)) then
-           call nd_nested_internal(a_n_curr,a_ne_curr,a_ptr(1:a_n_curr), &
-             a_row(1:a_ne_curr),a_weight(1:a_n_curr),sumweight, &
-             iperm(1:a_n_curr),work(1:lwork),work(lwork+1:lwork+a_n_curr), &
-             work(lwork+a_n_curr+1:lwork+2*a_n_curr),0,control,info, &
-             .false.,use_multilevel,grid,seps(1:a_n_curr))
+         ! Extract perm from amd_order to apply to iperm
+         if (nsvar+num_zero_row==a_n) then
+            do i = 1, a_n_curr
+               j = work(amd_order_perm+i)
+               work(amd_order_work+i) = iperm(j)
+            end do
+            iperm(1:a_n_curr) = work(amd_order_work+1:amd_order_work+a_n_curr)
          else
-           call nd_nested_internal(a_n_curr,a_ne_curr,a_ptr(1:a_n_curr), &
-             a_row(1:a_ne_curr),a_weight(1:a_n_curr),sumweight, &
-             iperm(1:a_n_curr),work(1:lwork),work(lwork+1:lwork+a_n_curr), &
-             work(lwork+a_n_curr+1:lwork+2*a_n_curr),0,control,info, &
-             .false.,use_multilevel,grid)
+            do i = 1, a_n_curr
+               j = work(amd_order_perm+i)
+               work(amd_order_work+i) = j
+            end do
+            ! Expand to matrix before supervariables detected
+            k = 1
+            do i = 1, a_n_curr
+               j = work(amd_order_work+i)
+               if (j==1) then
+                  ll = 1
+               else
+                  ll = svar(j-1) + 1
+               end if
+               do l = ll, svar(j)
+                  work(amd_order_iperm+k) = iperm(sinvp(l))
+                  k = k + 1
+               end do
+            end do
 
+            iperm(1:a_n) = work(amd_order_iperm+1:amd_order_iperm+a_n)
          end if
-       else
-         sumweight = SUM(a_weight(1:a_n_curr))
-         lwork = 12*a_n_curr + sumweight + a_ne_curr
-         if (present(seps)) then
-           call nd_nested_internal(a_n_curr,a_ne_curr,a_ptr(1:a_n_curr), &
-             a_row(1:a_ne_curr),a_weight(1:a_n_curr),sumweight, &
-             work(work_iperm+1:work_iperm+a_n_curr),work(1:lwork), &
-             work(lwork+1:lwork+a_n_curr),work(lwork+a_n_curr+1:lwork+2* &
-             a_n_curr),0,control,info,.false.,use_multilevel,grid, &
-             work(work_seps+1:work_seps+a_n_curr))
+
+      else
+         ! Apply ND to matrix
+
+         if (printd) then
+            write (unit_diagnostics,'(a)') ' Form ND ordering'
+         end if
+
+         if (nsvar+num_zero_row==a_n) then
+            ! Allocate work to have length 14*a_n_curr+a_ne_curr
+            allocate (work(a_n+14*a_n_curr+a_ne_curr), stat=info%stat)
          else
-           call nd_nested_internal(a_n_curr,a_ne_curr,a_ptr(1:a_n_curr), &
-             a_row(1:a_ne_curr),a_weight(1:a_n_curr),sumweight, &
-             work(work_iperm+1:work_iperm+a_n_curr),work(1:lwork), &
-             work(lwork+1:lwork+a_n_curr),work(lwork+a_n_curr+1:lwork+2* &
-             a_n_curr),0,control,info,.false.,use_multilevel,grid)
-
+            ! Allocate work to have length a_n+14*a_n_curr+a_ne_curr
+            allocate (work(3*a_n+14*a_n_curr+a_ne_curr), stat=info%stat)
+            work_iperm = 14*a_n_curr + a_ne_curr + a_n
+            work(work_iperm+1:work_iperm+a_n_curr) = (/ (i,i=1,a_n_curr) /)
+            if (present(seps)) then
+               work_seps = work_iperm + a_n_curr
+               work(work_seps+1:work_seps+a_n_curr) = -1
+            end if
          end if
-       end if
+         if (info%stat/=0) go to 10
 
-       if (grid%level==1) call mg_grid_destroy(grid,info%flag)
+         use_multilevel = .true.
+         if (nsvar+num_zero_row==a_n) then
+            sumweight = SUM(a_weight(1:a_n_curr))
+            lwork = 12*a_n_curr + sumweight + a_ne_curr
+            if (present(seps)) then
+               call nd_nested_internal(a_n_curr, a_ne_curr, a_ptr(1:a_n_curr), &
+                  a_row(1:a_ne_curr), a_weight(1:a_n_curr), sumweight,         &
+                  iperm(1:a_n_curr), work(1:lwork),                            &
+                  work(lwork+1:lwork+a_n_curr),                                &
+                  work(lwork+a_n_curr+1:lwork+2*a_n_curr), 0, control, info,   &
+                  .false., use_multilevel, grid, seps=seps(1:a_n_curr))
+            else
+               call nd_nested_internal(a_n_curr, a_ne_curr, a_ptr(1:a_n_curr), &
+                  a_row(1:a_ne_curr), a_weight(1:a_n_curr), sumweight,         &
+                  iperm(1:a_n_curr), work(1:lwork),                            &
+                  work(lwork+1:lwork+a_n_curr),                                &
+                  work(lwork+a_n_curr+1:lwork+2*a_n_curr), 0, control, info,   &
+                  .false.,use_multilevel,grid)
 
-       if (nsvar+num_zero_row<a_n) then
-         if (present(seps)) then
-           ! Expand and reorder seps
-           do i = 1, a_n_curr
-             j = work(work_iperm+i)
-             if (j==1) then
-               ll = 1
-             else
-               ll = svar(j-1) + 1
-             end if
-             do l = ll, svar(j)
-               seps(sinvp(l)) = work(work_seps+i)
-             end do
-           end do
+            end if
+         else
+            sumweight = SUM(a_weight(1:a_n_curr))
+            lwork = 12*a_n_curr + sumweight + a_ne_curr
+            if (present(seps)) then
+               call nd_nested_internal(a_n_curr, a_ne_curr, a_ptr(1:a_n_curr), &
+                  a_row(1:a_ne_curr), a_weight(1:a_n_curr), sumweight,         &
+                  work(work_iperm+1:work_iperm+a_n_curr), work(1:lwork),       &
+                  work(lwork+1:lwork+a_n_curr),                                &
+                  work(lwork+a_n_curr+1:lwork+2*a_n_curr), 0, control, info,   &
+                  .false., use_multilevel, grid,                               &
+                  seps=work(work_seps+1:work_seps+a_n_curr))
+            else
+               call nd_nested_internal(a_n_curr, a_ne_curr, a_ptr(1:a_n_curr), &
+                  a_row(1:a_ne_curr), a_weight(1:a_n_curr), sumweight,         &
+                  work(work_iperm+1:work_iperm+a_n_curr), work(1:lwork),       &
+                  work(lwork+1:lwork+a_n_curr),                                &
+                  work(lwork+a_n_curr+1:lwork+2*a_n_curr), 0, control, info,   &
+                  .false., use_multilevel, grid)
+            end if
          end if
 
-         ! Expand iperm to matrix before supervariables detected
-         k = a_n
-         do i = a_n_curr, 1, -1
-           j = work(work_iperm+i)
-           if (j==1) then
-             ll = 1
-           else
-             ll = svar(j-1) + 1
-           end if
-           do l = ll, svar(j)
-             work(work_iperm+k) = iperm(sinvp(l))
-             k = k - 1
-           end do
-         end do
+         if (grid%level==1) call mg_grid_destroy(grid,info%flag)
 
-         iperm(1:a_n) = work(work_iperm+1:work_iperm+a_n)
+         if (nsvar+num_zero_row<a_n) then
+            if (present(seps)) then
+               ! Expand and reorder seps
+               do i = 1, a_n_curr
+                  j = work(work_iperm+i)
+                  if (j==1) then
+                     ll = 1
+                  else
+                     ll = svar(j-1) + 1
+                  end if
+                  do l = ll, svar(j)
+                     seps(sinvp(l)) = work(work_seps+i)
+                  end do
+               end do
+            end if
 
-       else
-         if (present(seps)) then
-           ! reorder seps!
-           do i = 1, a_n_curr
-             j = iperm(i)
-             work(j) = seps(i)
-           end do
-           seps(1:a_n_curr) = work(1:a_n_curr)
+            ! Expand iperm to matrix before supervariables detected
+            k = a_n
+            do i = a_n_curr, 1, -1
+               j = work(work_iperm+i)
+               if (j==1) then
+                  ll = 1
+               else
+                  ll = svar(j-1) + 1
+               end if
+               do l = ll, svar(j)
+                  work(work_iperm+k) = iperm(sinvp(l))
+                  k = k - 1
+               end do
+            end do
+
+            iperm(1:a_n) = work(work_iperm+1:work_iperm+a_n)
+
+         else
+            if (present(seps)) then
+               ! reorder seps
+               do i = 1, a_n_curr
+                  j = iperm(i)
+                  work(j) = seps(i)
+               end do
+               seps(1:a_n_curr) = work(1:a_n_curr)
+            end if
          end if
-       end if
-     end if
-     ! Create perm from iperm
-     do i = 1, a_n
-       j = iperm(i)
-       perm(j) = i
-     end do
+      end if
+      ! Create perm from iperm
+      do i = 1, a_n
+         j = iperm(i)
+         perm(j) = i
+      end do
 
-     info%flag = 0
-     if (printi .or. printd) then
-       call nd_print_message(info%flag,unit_diagnostics, &
-         'nd_nested_both')
-     end if
-     return
+      info%flag = 0
+      if (printi .or. printd) &
+         call nd_print_message(info%flag, unit_diagnostics, 'nd_nested_both')
+      return
 
-10      info%flag = ND_ERR_MEMORY_ALLOC
-     if (printe) call nd_print_message(info%flag,unit_error, &
-       'nd_nested_both')
-     return
+      10 continue
+      info%flag = ND_ERR_MEMORY_ALLOC
+      if (printe) &
+         call nd_print_message(info%flag, unit_error, 'nd_nested_both')
+      return
 
-20      info%flag = ND_ERR_MEMORY_DEALLOC
-     if (printe) call nd_print_message(info%flag,unit_error, &
-       'nd_nested_both')
-     return
-
+      20 continue
+      info%flag = ND_ERR_MEMORY_DEALLOC
+      if (printe) &
+         call nd_print_message(info%flag, unit_error, 'nd_nested_both')
+      return
    end subroutine nd_nested_both
 
    subroutine compress_by_svar(a_n, a_ne, a_ptr, a_row, a_weight, a_n_curr, &
