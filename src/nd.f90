@@ -181,96 +181,57 @@ module spral_nd
       integer, allocatable :: nextout(:) ! for each arc e next outgoing arc
    end type network
 
-
-   ! ---------------------------------------------------
-   ! Interfaces
-   ! ---------------------------------------------------
-   interface nd_order
-     module procedure nd_nested_order
-  end interface
-
 contains
+   !
+   ! Main user callable routine
+   !
+   subroutine nd_order(mtx,n,ptr,row,perm,control,info,seps)
+      integer, intent (in) :: mtx ! 0 if lower triangular part matrix input,
+         ! 1 if both upper and lower parts input
+      integer, intent (in) :: n ! number of rows in the matrix
+      integer, intent (in) :: ptr(n+1) ! column pointers
+      integer, intent (in) :: row(ptr(n+1)-1) ! row indices
+      integer, intent (out) :: perm(n) ! permutation: row i becomes row
+         ! perm(i)
+      type (nd_options), intent (in) :: control
+      type (nd_inform), intent (inout) :: info
+      integer, dimension(n), optional, intent (out) :: seps
+         ! seps(i) is -1 if vertex is not in a separator; otherwise it
+         ! is equal to lev, where lev is the nested dissection level at
+         ! which it became part of the separator
 
-   ! ---------------------------------------------------
-   ! nd_print_message
-   ! ---------------------------------------------------
+      if (mtx<1) then
+         call nd_nested_lower(n,ptr,row,perm,control,info,seps)
+      else
+         call nd_nested_full(n,ptr,row,perm,control,info,seps)
+      end if
+   end subroutine nd_order
+
+   !
+   ! Prints out errors and warnings according to value of flag
+   !
    subroutine nd_print_message(flag,unit,context)
-     ! Prints out errors and warnings according to value of flag
+     integer, intent (in) :: flag ! Error flag to print message for
+     integer, intent (in) :: unit ! Fortran unit to print message to
+     character (len=*), intent (in) :: context ! context to print with message
 
-     ! flag: is an integer scaler of intent(in). It is the information flag
-     ! whose corresponding error message is printed
-     integer, intent (in) :: flag
+     if (unit.lt.0) return ! No output
 
-     ! unit: is an optional integer scaler of intent(in). It is the unit
-     ! number the
-     ! error/warning message should be printed on
-     integer, intent (in) :: unit
-
-     ! context: is an optional assumed size character array of intent(in).
-     ! It describes the context under which the error occured
-     character (len=*), intent (in) :: context
-     integer :: length, p_unit
-
-     p_unit = unit
-
-     if (p_unit<=0) return
-
-     if (flag<0) then
-       write (p_unit,advance='yes',fmt='('' ERROR: '')')
-     end if
-
-     length = len_trim(context)
-     write (p_unit,advance='no',fmt='('' '', a,'':'')') context(1:length)
+     if (flag<0) write (unit,fmt='('' ERROR: '')')
+     write (unit,advance='no',fmt='('' '', a,'':'')') &
+        context(1:len_trim(context))
 
      select case (flag)
      case (0)
-       write (p_unit,'(A)') ' successful completion'
-
+       write (unit,'(A)') ' successful completion'
      case (ND_ERR_MEMORY_ALLOC)
-       write (p_unit,'(A)') ' memory allocation failure'
-
+       write (unit,'(A)') ' memory allocation failure'
      case (ND_ERR_MEMORY_DEALLOC)
-       write (p_unit,'(A)') ' memory deallocation failure'
-
+       write (unit,'(A)') ' memory deallocation failure'
      case (ND_ERR_N)
-       write (p_unit,'(A)') ' n<1'
+       write (unit,'(A)') ' n<1'
      end select
-     return
-
    end subroutine nd_print_message
-
-
-   subroutine nd_nested_order(mtx,n,ptr,row,perm,control,info,seps)
-     integer, intent (in) :: mtx ! 0 if lower triangular part matrix input,
-     ! 1
-     ! if both upper and lower parts input
-     integer, intent (in) :: n ! number of rows in the matrix
-     integer, intent (in) :: ptr(n+1) ! column pointers
-     integer, intent (in) :: row(ptr(n+1)-1) ! row indices (lower triangle)
-     integer, intent (out) :: perm(n) ! permutation: row i becomes row
-     ! perm(i)
-     type (nd_options), intent (in) :: control
-     type (nd_inform), intent (inout) :: info
-     integer, intent (out), optional :: seps(n)
-     ! seps(i) is -1 if vertex is not in a separator; otherwise it
-     ! is equal to l, where l is the nested dissection level at
-     ! which it became part of the separator
-
-     if (mtx<1) then
-       if (present(seps)) then
-         call nd_nested_lower(n,ptr,row,perm,control,info,seps)
-       else
-         call nd_nested_lower(n,ptr,row,perm,control,info)
-       end if
-     else
-       if (present(seps)) then
-         call nd_nested_full(n,ptr,row,perm,control,info,seps)
-       else
-         call nd_nested_full(n,ptr,row,perm,control,info)
-       end if
-     end if
-
-   end subroutine nd_nested_order
 
    ! ---------------------------------------------------
    ! nd_nested_lower
