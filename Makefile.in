@@ -2386,6 +2386,7 @@ uninstall-am: uninstall-binPROGRAMS uninstall-includeHEADERS \
 
 .cu.o:
 	$(NVCC) $(NVCCFLAGS) $(AM_NVCC_FLAGS) -dc -o $@ $<
+spral_nd.$(OBJEXT): libspral.a
 tests/nd.$(OBJEXT): libspral.a
 examples/Fortran/nd.$(OBJEXT): libspral.a
 tests/scaling.$(OBJEXT): libspral.a
