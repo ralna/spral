@@ -624,7 +624,7 @@ contains
 
          use_multilevel = .true.
          if (nsvar+num_zero_row==a_n) then
-            sumweight = SUM(a_weight(1:a_n_curr))
+            sumweight = sum(a_weight(1:a_n_curr))
             lwork = 12*a_n_curr + sumweight + a_ne_curr
             if (present(seps)) then
                call nd_nested_internal(a_n_curr, a_ne_curr, a_ptr(1:a_n_curr), &
@@ -643,7 +643,7 @@ contains
 
             end if
          else
-            sumweight = SUM(a_weight(1:a_n_curr))
+            sumweight = sum(a_weight(1:a_n_curr))
             lwork = 12*a_n_curr + sumweight + a_ne_curr
             if (present(seps)) then
                call nd_nested_internal(a_n_curr, a_ne_curr, a_ptr(1:a_n_curr), &
@@ -1249,7 +1249,7 @@ contains
             use_amdi = .false.
          end if
          m = work_comp_nz(i)
-         s = SUM(a_weight(offset_ptr-l:offset_ptr-1))
+         s = sum(a_weight(offset_ptr-l:offset_ptr-1))
          if (m>0) then
            ! Matrix not diagonal
            if (present(seps)) then
@@ -1288,7 +1288,7 @@ contains
        seps(a_n1+a_n2+1:a_n) = level
      end if
      if (a_n1>max(2,control%amd_switch1)) then
-       sumweight_sub = SUM(a_weight(1:a_n1))
+       sumweight_sub = sum(a_weight(1:a_n1))
        if (present(seps)) then
          call nd_nested_internal(a_n1,a_ne1,a_ptr(1:a_n1), &
            a_row(1:a_ne1),a_weight(1:a_n1),sumweight_sub,iperm(1:a_n1), &
@@ -1308,7 +1308,7 @@ contains
 
      if (a_n2>max(2,control%amd_switch1)) then
        if (a_n1>max(2,control%amd_switch1)) then
-         sumweight_sub = SUM(a_weight(a_n1+1:a_n1+a_n2))
+         sumweight_sub = sum(a_weight(a_n1+1:a_n1+a_n2))
          if (present(seps)) then
            call nd_nested_internal(a_n2,a_ne2,a_ptr(a_n1+1:a_n1+a_n2), &
              a_row(a_ne1+1:a_ne1+a_ne2),a_weight(a_n1+1:a_n1+a_n2), &
@@ -1326,7 +1326,7 @@ contains
              use_multilevel,grid)
          end if
        else
-         sumweight_sub = SUM(a_weight(a_n1+1:a_n1+a_n2))
+         sumweight_sub = sum(a_weight(a_n1+1:a_n1+a_n2))
          if (present(seps)) then
            call nd_nested_internal(a_n2,a_ne2,a_ptr(1:a_n2), &
              a_row(1:a_ne2),a_weight(a_n1+1:a_n1+a_n2),sumweight_sub, &
@@ -2514,7 +2514,7 @@ contains
      ! First possible separator contains all of the nodes in level 2
      p1sz = work(work_p+1)
      sepsz = work(work_p+2)
-     p2sz = SUM(work(work_p+3:work_p+num_levels_nend))
+     p2sz = sum(work(work_p+3:work_p+num_levels_nend))
      a_weight_1 = p1sz
      a_weight_2 = p2sz
      a_weight_sep = sepsz
@@ -5492,7 +5492,7 @@ inNER:    do inn = 1, n
      do i = 1, m
        l1 = matrix%ptr(i)
        l2 = matrix%ptr(i+1) - 1
-       y(i) = SUM(x(matrix%col(l1:l2)))
+       y(i) = sum(x(matrix%col(l1:l2)))
      end do
    end subroutine nd_matrix_multiply_vec
 
