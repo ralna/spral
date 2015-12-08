@@ -23,8 +23,8 @@ MODULE spral_amd
 
       ! -------------------------------------------------------------------
       ! hamd is an implementation of the halo_amd method by Pellegrini, Roman
-      ! and
-      ! Amestoy. This is a modified version of AMD given to us by Tim Davis
+      ! and Amestoy. This is a modified version of AMD given to us by Tim Davis
+      ! under the terms of the BSD licence.
 
       ! We use the term Le to denote the set of all supervariables in element
       ! E.

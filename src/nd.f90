@@ -461,8 +461,8 @@ contains
 
       integer :: i, j, k, l, ll, lwork, lirn
       integer :: a_n_curr, a_ne_curr, num_zero_row
-      integer :: amd_order_irn, amd_order_ip, amd_order_sep, amd_order_perm, &
-         amd_order_work, amd_order_iperm
+      integer, dimension(:), allocatable :: amd_order_row, amd_order_ptr, &
+         amd_order_sep, amd_order_perm, amd_order_work, amd_order_iperm
       integer :: work_iperm, work_seps
       integer :: unit_error
       integer :: unit_diagnostics
@@ -553,61 +553,53 @@ contains
       info%nzsuper = a_ne_curr
       info%nsuper = a_n_curr
 
-      if (control%amd_switch2<=0 .or. a_n_curr<=max(2,max(control%amd_call, &
-            control%amd_switch1))) then
+      if (control%amd_switch2.le.0 .or. &
+            a_n_curr.le.max(2,max(control%amd_call,control%amd_switch1)) ) then
          ! Apply AMD to matrix
          ! Allocate work to have length 5*a_n_curr+a_ne_curr
          if (printd) &
             write (unit_diagnostics,'(a)') ' Form AMD ordering'
-         allocate (work(11*a_n_curr+a_ne_curr+a_n),stat=info%stat)
-         if (info%stat/=0) go to 10
          lirn = a_ne_curr + a_n_curr
-         amd_order_irn = 0
-         amd_order_ip = amd_order_irn + lirn
-         amd_order_sep = amd_order_ip + a_n_curr
-         amd_order_perm = amd_order_sep + a_n_curr
-         amd_order_work = amd_order_perm + a_n_curr
-         amd_order_iperm = amd_order_work + 7*a_n_curr
+         allocate(amd_order_ptr(a_n_curr), amd_order_row(lirn), &
+            amd_order_sep(a_n_curr), amd_order_perm(a_n_curr), &
+            amd_order_work(7*a_n_curr), amd_order_iperm(a_n))
+         if (info%stat/=0) go to 10
 
-         work(amd_order_irn+1:amd_order_irn+a_ne_curr) = a_row(1:a_ne_curr)
-         work(amd_order_irn+a_ne_curr+1:amd_order_irn+lirn) = 0
-         work(amd_order_ip+1:amd_order_ip+a_n_curr) = a_ptr(1:a_n_curr)
-         work(amd_order_sep+1:amd_order_sep+a_n_curr) = ND_SEP_FLAG - 1
-         call amd_order(a_n_curr, a_ne_curr, lirn,             &
-            work(amd_order_ip+1:amd_order_ip+a_n_curr),        &
-            work(amd_order_irn+1:amd_order_irn+lirn),          &
-            work(amd_order_sep+1:amd_order_sep+a_n_curr),      &
-            work(amd_order_perm+1:amd_order_perm+a_n_curr),    &
-            work(amd_order_work+1:amd_order_work+7*a_n_curr))
+         amd_order_ptr(1:a_n_curr) = a_ptr(1:a_n_curr)
+         amd_order_row(1:a_ne_curr) = a_row(1:a_ne_curr)
+         amd_order_row(a_ne_curr+1:lirn) = 0
+         amd_order_sep(:) = ND_SEP_FLAG - 1
+         call amd_order(a_n_curr, a_ne_curr, lirn, amd_order_ptr, &
+            amd_order_row, amd_order_sep, amd_order_perm, amd_order_work)
 
          ! Extract perm from amd_order to apply to iperm
-         if (nsvar+num_zero_row==a_n) then
+         if (nsvar+num_zero_row.eq.a_n) then
             do i = 1, a_n_curr
-               j = work(amd_order_perm+i)
-               work(amd_order_work+i) = iperm(j)
+               j = amd_order_perm(i)
+               amd_order_work(i) = iperm(j)
             end do
-            iperm(1:a_n_curr) = work(amd_order_work+1:amd_order_work+a_n_curr)
+            iperm(1:a_n_curr) = amd_order_work(1:a_n_curr)
          else
             do i = 1, a_n_curr
-               j = work(amd_order_perm+i)
-               work(amd_order_work+i) = j
+               j = amd_order_perm(i)
+               amd_order_work(i) = j
             end do
             ! Expand to matrix before supervariables detected
             k = 1
             do i = 1, a_n_curr
-               j = work(amd_order_work+i)
-               if (j==1) then
+               j = amd_order_work(i)
+               if (j.eq.1) then
                   ll = 1
                else
                   ll = svar(j-1) + 1
                end if
                do l = ll, svar(j)
-                  work(amd_order_iperm+k) = iperm(sinvp(l))
+                  amd_order_iperm(k) = iperm(sinvp(l))
                   k = k + 1
                end do
             end do
 
-            iperm(1:a_n) = work(amd_order_iperm+1:amd_order_iperm+a_n)
+            iperm(1:a_n) = amd_order_iperm(1:a_n)
          end if
 
       else
