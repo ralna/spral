@@ -1,28 +1,28 @@
-MODULE spral_nd
-   USE spral_amd
-   IMPLICIT NONE
+module spral_nd
+   use spral_amd
+   implicit none
 
-   PRIVATE
-   PUBLIC :: nd_order, nd_refine_fm
-   PUBLIC :: nd_options, nd_inform
+   private
+   public :: nd_order, nd_refine_fm
+   public :: nd_options, nd_inform
 
    ! ---------------------------------------------------
    ! Precision
    ! ---------------------------------------------------
-   INTEGER, PARAMETER :: wp = KIND(1.0D0)
-   INTEGER, PARAMETER :: long = SELECTED_INT_KIND(18)
+   integer, parameter :: wp = kind(1.0D0)
+   integer, parameter :: long = selected_int_kind(18)
 
    ! ---------------------------------------------------
    ! Error flags
    ! ---------------------------------------------------
-   INTEGER, PARAMETER :: ND_ERR_MEMORY_ALLOC = -1,   &
+   integer, parameter :: ND_ERR_MEMORY_ALLOC = -1,   &
                          ND_ERR_MEMORY_DEALLOC = -2, &
                          ND_ERR_N = -3                 ! n<1
 
    ! ---------------------------------------------------
    ! Partition flags
    ! ---------------------------------------------------
-   INTEGER, PARAMETER :: ND_PART1_FLAG = 0, &
+   integer, parameter :: ND_PART1_FLAG = 0, &
                          ND_PART2_FLAG = 2, &
                          ND_SEP_FLAG = 1
 
@@ -30,34 +30,34 @@ MODULE spral_nd
    ! Derived type definitions
    ! ---------------------------------------------------
 
-   TYPE :: nd_options
-      INTEGER :: print_level = 0 ! amount of informational output required
-      INTEGER :: unit_diagnostics = 6 ! stream number for diagnostic
+   type :: nd_options
+      integer :: print_level = 0 ! amount of informational output required
+      integer :: unit_diagnostics = 6 ! stream number for diagnostic
          ! messages
-      INTEGER :: unit_error = 6 ! stream number for error messages
+      integer :: unit_error = 6 ! stream number for error messages
 
-      INTEGER :: amd_call = 5 ! call AMD if number of supervariables is
+      integer :: amd_call = 5 ! call AMD if number of supervariables is
          ! less than or equal to amd_call  *UPDATE*
-      INTEGER :: amd_switch1 = 50 ! switch to (halo)AMD if matrix size is
+      integer :: amd_switch1 = 50 ! switch to (halo)AMD if matrix size is
          ! less than or equal to nd_switch
-      INTEGER :: amd_switch2 = 20 ! maximum number of ND levels allowed
-      INTEGER :: cost_function = 1 ! selects the cost function used for 
+      integer :: amd_switch2 = 20 ! maximum number of ND levels allowed
+      integer :: cost_function = 1 ! selects the cost function used for 
          ! evaluating a partition
          ! <=1 : |P1||P2|/|S| + penalty for imbalance
          ! >=2 : |S|(1 +  0.5||P1|-|P2||)
-      INTEGER :: partition_method = 2 ! Are we allowed to use a multilevel
+      integer :: partition_method = 2 ! Are we allowed to use a multilevel
          ! strategy
          ! <= 0 : do not use multilevel
          ! == 1 : use multilevel
          ! >= 2 : automatic choice based on size of levelsets
-      INTEGER :: matching = 0 ! Which coarsening method to use
+      integer :: matching = 0 ! Which coarsening method to use
          ! > 0 : heavy-edge
          ! <= 0 : common neighbours
-      INTEGER :: coarse_partition_method = 1 ! Which partition method to use
+      integer :: coarse_partition_method = 1 ! Which partition method to use
          ! at coarsest level
          ! <=1 : Ashcraft method (half-level set)
          ! >=2 : Level-set method
-      INTEGER :: refinement = 7 ! Which sort of refinement to use
+      integer :: refinement = 7 ! Which sort of refinement to use
          ! <2 : trim + fm to increase weights of A1 and A2
          ! =2 : trim + fm to increase weight of smaller partition and
          !      decrease weight of larger partition
@@ -67,251 +67,251 @@ MODULE spral_nd
          !      decrease weight of larger partition
          ! =6 : Automatically choose between options 4 and 5
          ! >6 : Automatically choose between options 1 and 5
-      INTEGER :: refinement_band = 4 ! band width for FM refinement. Values
+      integer :: refinement_band = 4 ! band width for FM refinement. Values
          ! less than 1 mean that no FM refinement is done
-      LOGICAL :: remove_dense_rows = .TRUE. ! test the input for dense rows
+      logical :: remove_dense_rows = .true. ! test the input for dense rows
          ! and place them at the end of the ordering
-      INTEGER :: stop_coarsening2 = 20 ! Max number of levels in the
+      integer :: stop_coarsening2 = 20 ! Max number of levels in the
          ! multilevel grid
-      INTEGER :: stop_coarsening1 = 100 ! Stop coarsening once matrix has
+      integer :: stop_coarsening1 = 100 ! Stop coarsening once matrix has
          ! order at most stop_coarsening1
-      INTEGER :: ml_call = 12000 ! Stop coarsening once matrix has
+      integer :: ml_call = 12000 ! Stop coarsening once matrix has
          ! order at most stop_coarsening1
 
       ! minimum and maximum grid reduction factors that must be achieved
       ! during coarsening. If cgrid%size is greater than
       ! max_reduction*grid%size or cgrid%size is less than
       ! min_reduction*grid%size then carry on coarsening
-      REAL (wp) :: min_reduction = 0.5 ! size of next multigrid
+      real (wp) :: min_reduction = 0.5 ! size of next multigrid
          ! matrix must be greater than min_reduction*(size of current
          ! multigrid matrix)
-      REAL (wp) :: max_reduction = 0.9 ! size of next multigrid
+      real (wp) :: max_reduction = 0.9 ! size of next multigrid
          ! matrix must be less than max_reduction*(size of current multigrid
          ! matrix)
-      REAL (wp) :: balance = 2.0 ! Try to make sure that
+      real (wp) :: balance = 2.0 ! Try to make sure that
          ! max(P1,P2)/min(P1/P2) <= balance
 
-      INTEGER :: max_improve_cycles = 2 ! Having computed a minimal partition,
+      integer :: max_improve_cycles = 2 ! Having computed a minimal partition,
          ! expand and refine it at most max_improve_cycles times to improve
          ! the quality of the partition.
-      LOGICAL :: find_supervariables = .TRUE. ! If .TRUE., after dense rows
+      logical :: find_supervariables = .true. ! If .true., after dense rows
          ! have been (optionally) removed, check for supervariables and
          ! compress matrix if supervariables found.
-   END TYPE nd_options
+   end type nd_options
 
    ! *****************************************************************
 
-   TYPE :: nd_inform
-      INTEGER :: flag = 0 ! error/warning flag
-      INTEGER :: dense = 0 ! holds number of dense rows
-      INTEGER :: stat = 0 ! holds Fortran stat parameter
-      INTEGER :: nsuper = 0 ! holds number of supervariables + number of zero
+   type :: nd_inform
+      integer :: flag = 0 ! error/warning flag
+      integer :: dense = 0 ! holds number of dense rows
+      integer :: stat = 0 ! holds Fortran stat parameter
+      integer :: nsuper = 0 ! holds number of supervariables + number of zero
          ! rows after dense rows removed
-      INTEGER :: nzsuper = 0 ! holds number of nonzeros in compressed graph
-      INTEGER :: num_components = 1 ! Number of independent components after
+      integer :: nzsuper = 0 ! holds number of nonzeros in compressed graph
+      integer :: num_components = 1 ! Number of independent components after
          ! dense rows (optionally) removed
-      INTEGER :: n_max_component = -1 ! holds number rows in largest indep
+      integer :: n_max_component = -1 ! holds number rows in largest indep
          ! component after dense rows removed and supervariables (optionally)
          ! compressed
-      INTEGER :: nz_max_component = -1 ! holds number nonzeros in largest indep
+      integer :: nz_max_component = -1 ! holds number nonzeros in largest indep
          ! component after dense rows removed and supervariables (optionally)
          ! compressed
-      INTEGER :: maxdeg_max_component = -1 ! holds number nonzeros in largest
+      integer :: maxdeg_max_component = -1 ! holds number nonzeros in largest
          ! indep component after dense rows removed and supervariables
          ! (optionally) compressed
-      REAL (wp) :: band = -1 ! holds L, where L is the size
+      real (wp) :: band = -1 ! holds L, where L is the size
          ! of the largest level set at the top level of nested dissection. If
          ! the matrix is reducible, then it holds the value for the largest
          ! of the irreducible components.
          ! Not returned if control%partition_method==1.
-      REAL (wp) :: depth = -1 ! holds number of levels in level set structure
+      real (wp) :: depth = -1 ! holds number of levels in level set structure
          ! at the top level of nested dissection. If the matrix is reducible,
          ! then it holds the value for the largest of the irreducible
          ! components.
          ! Not returned if control%partition_method==1.
-   END TYPE nd_inform
+   end type nd_inform
 
    ! *****************************************************************
 
-   TYPE nd_multigrid
-      INTEGER :: size ! size of this level (number of rows)
-      TYPE (nd_matrix), POINTER :: graph => NULL() ! this level of matrix
-      INTEGER, POINTER, DIMENSION (:) :: where => NULL() ! where each row of
+   type nd_multigrid
+      integer :: size ! size of this level (number of rows)
+      type (nd_matrix), pointer :: graph => null() ! this level of matrix
+      integer, pointer, dimension (:) :: where => null() ! where each row of
          ! this level of matrix will go (ie ordering for this level)
-      INTEGER, POINTER, DIMENSION (:) :: row_wgt => NULL() ! number of
+      integer, pointer, dimension (:) :: row_wgt => null() ! number of
          ! vertices this vertex of the coarse graph matrix represents
-      INTEGER :: level = 0 ! the level
-      INTEGER :: part_div(2) ! number of vertices in each part
-      TYPE (nd_multigrid), POINTER :: coarse => NULL() ! pointer to the
+      integer :: level = 0 ! the level
+      integer :: part_div(2) ! number of vertices in each part
+      type (nd_multigrid), pointer :: coarse => null() ! pointer to the
          ! coarse grid
-      TYPE (nd_multigrid), POINTER :: fine => NULL() ! pointer to the fine grid
-      TYPE (nd_matrix), POINTER :: p => NULL() ! the prolongation operator
-      TYPE (nd_matrix), POINTER :: r => NULL() ! the restriction operator
-   END TYPE nd_multigrid
+      type (nd_multigrid), pointer :: fine => null() ! pointer to the fine grid
+      type (nd_matrix), pointer :: p => null() ! the prolongation operator
+      type (nd_matrix), pointer :: r => null() ! the restriction operator
+   end type nd_multigrid
 
    ! *****************************************************************
 
-   TYPE nd_matrix
-      INTEGER :: m ! number rows
-      INTEGER :: n ! number columns
-      INTEGER :: ne ! number entries in matrix
-      INTEGER, ALLOCATABLE, DIMENSION (:) :: ptr ! pointer into col array
-      INTEGER, ALLOCATABLE, DIMENSION (:) :: col ! column indices
-      INTEGER, ALLOCATABLE, DIMENSION (:) :: val ! values
-   END TYPE nd_matrix
+   type nd_matrix
+      integer :: m ! number rows
+      integer :: n ! number columns
+      integer :: ne ! number entries in matrix
+      integer, allocatable, dimension (:) :: ptr ! pointer into col array
+      integer, allocatable, dimension (:) :: col ! column indices
+      integer, allocatable, dimension (:) :: val ! values
+   end type nd_matrix
 
    ! *****************************************************************
 
    ! This is a version of maxflow with no bandgraph and assumption that
    ! there are no duplicated edges.
-   TYPE network
-      INTEGER :: nnode ! number of nodes in the network
-      INTEGER :: narc ! number of arcs in the network
-      INTEGER :: source ! source node = 1
-      INTEGER :: sink ! sink node = nnode
-      INTEGER, ALLOCATABLE :: inheads(:) ! for each node u first incoming arc
+   type network
+      integer :: nnode ! number of nodes in the network
+      integer :: narc ! number of arcs in the network
+      integer :: source ! source node = 1
+      integer :: sink ! sink node = nnode
+      integer, allocatable :: inheads(:) ! for each node u first incoming arc
          ! for u
-      INTEGER, ALLOCATABLE :: outheads(:) ! for each node u first outgoing arc
+      integer, allocatable :: outheads(:) ! for each node u first outgoing arc
          ! for u
-      INTEGER, ALLOCATABLE :: firsts(:) ! for each arc e first node for arc e
-      INTEGER, ALLOCATABLE :: seconds(:) ! for each arc e second node for arc e
-      INTEGER, ALLOCATABLE :: capacities(:) ! for each arc e capacity of arc e
-      INTEGER, ALLOCATABLE :: flows(:) ! for each arc e flow through arc e
-      INTEGER, ALLOCATABLE :: nextin(:) ! for each arc e next incoming arc
-      INTEGER, ALLOCATABLE :: nextout(:) ! for each arc e next outgoing arc
-   END TYPE network
+      integer, allocatable :: firsts(:) ! for each arc e first node for arc e
+      integer, allocatable :: seconds(:) ! for each arc e second node for arc e
+      integer, allocatable :: capacities(:) ! for each arc e capacity of arc e
+      integer, allocatable :: flows(:) ! for each arc e flow through arc e
+      integer, allocatable :: nextin(:) ! for each arc e next incoming arc
+      integer, allocatable :: nextout(:) ! for each arc e next outgoing arc
+   end type network
 
 
    ! ---------------------------------------------------
    ! Interfaces
    ! ---------------------------------------------------
-   INTERFACE nd_order
-     MODULE PROCEDURE nd_nested_order
-   END INTERFACE
+   interface nd_order
+     module procedure nd_nested_order
+  end interface
 
-CONTAINS
+contains
 
    ! ---------------------------------------------------
    ! nd_print_message
    ! ---------------------------------------------------
-   SUBROUTINE nd_print_message(flag,unit,context)
+   subroutine nd_print_message(flag,unit,context)
      ! Prints out errors and warnings according to value of flag
 
      ! flag: is an integer scaler of intent(in). It is the information flag
      ! whose corresponding error message is printed
-     INTEGER, INTENT (IN) :: flag
+     integer, intent (in) :: flag
 
      ! unit: is an optional integer scaler of intent(in). It is the unit
      ! number the
      ! error/warning message should be printed on
-     INTEGER, INTENT (IN) :: unit
+     integer, intent (in) :: unit
 
      ! context: is an optional assumed size character array of intent(in).
      ! It describes the context under which the error occured
-     CHARACTER (len=*), INTENT (IN) :: context
-     INTEGER :: length, p_unit
+     character (len=*), intent (in) :: context
+     integer :: length, p_unit
 
      p_unit = unit
 
-     IF (p_unit<=0) RETURN
+     if (p_unit<=0) return
 
-     IF (flag<0) THEN
-       WRITE (p_unit,advance='yes',fmt='('' ERROR: '')')
-     END IF
+     if (flag<0) then
+       write (p_unit,advance='yes',fmt='('' ERROR: '')')
+     end if
 
-     length = LEN_TRIM(context)
-     WRITE (p_unit,advance='no',fmt='('' '', a,'':'')') context(1:length)
+     length = len_trim(context)
+     write (p_unit,advance='no',fmt='('' '', a,'':'')') context(1:length)
 
-     SELECT CASE (flag)
-     CASE (0)
-       WRITE (p_unit,'(A)') ' successful completion'
+     select case (flag)
+     case (0)
+       write (p_unit,'(A)') ' successful completion'
 
-     CASE (ND_ERR_MEMORY_ALLOC)
-       WRITE (p_unit,'(A)') ' memory allocation failure'
+     case (ND_ERR_MEMORY_ALLOC)
+       write (p_unit,'(A)') ' memory allocation failure'
 
-     CASE (ND_ERR_MEMORY_DEALLOC)
-       WRITE (p_unit,'(A)') ' memory deallocation failure'
+     case (ND_ERR_MEMORY_DEALLOC)
+       write (p_unit,'(A)') ' memory deallocation failure'
 
-     CASE (ND_ERR_N)
-       WRITE (p_unit,'(A)') ' n<1'
-     END SELECT
-     RETURN
+     case (ND_ERR_N)
+       write (p_unit,'(A)') ' n<1'
+     end select
+     return
 
-   END SUBROUTINE nd_print_message
+   end subroutine nd_print_message
 
 
-   SUBROUTINE nd_nested_order(mtx,n,ptr,row,perm,control,info,seps)
-     INTEGER, INTENT (IN) :: mtx ! 0 if lower triangular part matrix input,
+   subroutine nd_nested_order(mtx,n,ptr,row,perm,control,info,seps)
+     integer, intent (in) :: mtx ! 0 if lower triangular part matrix input,
      ! 1
      ! if both upper and lower parts input
-     INTEGER, INTENT (IN) :: n ! number of rows in the matrix
-     INTEGER, INTENT (IN) :: ptr(n+1) ! column pointers
-     INTEGER, INTENT (IN) :: row(ptr(n+1)-1) ! row indices (lower triangle)
-     INTEGER, INTENT (OUT) :: perm(n) ! permutation: row i becomes row
+     integer, intent (in) :: n ! number of rows in the matrix
+     integer, intent (in) :: ptr(n+1) ! column pointers
+     integer, intent (in) :: row(ptr(n+1)-1) ! row indices (lower triangle)
+     integer, intent (out) :: perm(n) ! permutation: row i becomes row
      ! perm(i)
-     TYPE (nd_options), INTENT (IN) :: control
-     TYPE (nd_inform), INTENT (INOUT) :: info
-     INTEGER, INTENT (OUT), OPTIONAL :: seps(n)
+     type (nd_options), intent (in) :: control
+     type (nd_inform), intent (inout) :: info
+     integer, intent (out), optional :: seps(n)
      ! seps(i) is -1 if vertex is not in a separator; otherwise it
      ! is equal to l, where l is the nested dissection level at
      ! which it became part of the separator
 
-     IF (mtx<1) THEN
-       IF (PRESENT(seps)) THEN
-         CALL nd_nested_lower(n,ptr,row,perm,control,info,seps)
-       ELSE
-         CALL nd_nested_lower(n,ptr,row,perm,control,info)
-       END IF
-     ELSE
-       IF (PRESENT(seps)) THEN
-         CALL nd_nested_full(n,ptr,row,perm,control,info,seps)
-       ELSE
-         CALL nd_nested_full(n,ptr,row,perm,control,info)
-       END IF
-     END IF
+     if (mtx<1) then
+       if (present(seps)) then
+         call nd_nested_lower(n,ptr,row,perm,control,info,seps)
+       else
+         call nd_nested_lower(n,ptr,row,perm,control,info)
+       end if
+     else
+       if (present(seps)) then
+         call nd_nested_full(n,ptr,row,perm,control,info,seps)
+       else
+         call nd_nested_full(n,ptr,row,perm,control,info)
+       end if
+     end if
 
-   END SUBROUTINE nd_nested_order
+   end subroutine nd_nested_order
 
    ! ---------------------------------------------------
    ! nd_nested_lower
    ! ---------------------------------------------------
-   SUBROUTINE nd_nested_lower(n,ptr,row,perm,control,info,seps)
-     INTEGER, INTENT (IN) :: n ! number of rows in the matrix
-     INTEGER, INTENT (IN) :: ptr(n+1) ! column pointers
-     INTEGER, INTENT (IN) :: row(ptr(n+1)-1) ! row indices (lower triangle)
-     INTEGER, INTENT (OUT) :: perm(n) ! permutation: row i becomes row
+   subroutine nd_nested_lower(n,ptr,row,perm,control,info,seps)
+     integer, intent (in) :: n ! number of rows in the matrix
+     integer, intent (in) :: ptr(n+1) ! column pointers
+     integer, intent (in) :: row(ptr(n+1)-1) ! row indices (lower triangle)
+     integer, intent (out) :: perm(n) ! permutation: row i becomes row
      ! perm(i)
-     TYPE (nd_options), INTENT (IN) :: control
-     TYPE (nd_inform), INTENT (INOUT) :: info
-     INTEGER, INTENT (OUT), OPTIONAL :: seps(n)
+     type (nd_options), intent (in) :: control
+     type (nd_inform), intent (inout) :: info
+     integer, intent (out), optional :: seps(n)
      ! seps(i) is -1 if vertex is not in a separator; otherwise it
      ! is equal to l, where l is the nested dissection level at
      ! which it became part of the separator
 
      ! ---------------------------------------------------
      ! LOCAL VARIABLES
-     INTEGER :: a_n ! dimension of the expanded matrix
-     INTEGER :: a_ne ! number off-diagonal entries stored in
+     integer :: a_n ! dimension of the expanded matrix
+     integer :: a_ne ! number off-diagonal entries stored in
      ! expanded matrix
-     INTEGER :: i, j, k
-     INTEGER :: unit_error ! unit on which to print errors
-     INTEGER :: unit_diagnostics ! unit on which to print diagnostics
-     INTEGER, ALLOCATABLE, DIMENSION (:) :: a_ptr ! a_ptr(i) will contain
+     integer :: i, j, k
+     integer :: unit_error ! unit on which to print errors
+     integer :: unit_diagnostics ! unit on which to print diagnostics
+     integer, allocatable, dimension (:) :: a_ptr ! a_ptr(i) will contain
      ! the
      ! position in a_row that column i ends for the expanded matrix
-     INTEGER, ALLOCATABLE, DIMENSION (:) :: a_row ! contains for row
+     integer, allocatable, dimension (:) :: a_row ! contains for row
      ! indices
      ! for the pattern of the expanded matrix. The row indices of
      ! column j are stored before those of column j+1, j=1,..,n-1.
-     LOGICAL :: printe, printi, printd
+     logical :: printe, printi, printd
 
      ! ---------------------------------------------
      ! Printing levels
      unit_diagnostics = control%unit_diagnostics
      unit_error = control%unit_error
-     printe = (control%print_level>=0 .AND. unit_error>=0)
-     printi = (control%print_level==1 .AND. unit_diagnostics>=0)
-     printd = (control%print_level>=2 .AND. unit_diagnostics>=0)
+     printe = (control%print_level>=0 .and. unit_error>=0)
+     printi = (control%print_level==1 .and. unit_diagnostics>=0)
+     printd = (control%print_level>=2 .and. unit_diagnostics>=0)
      ! ---------------------------------------------------
 
      ! Expand the matrix to hold all of its pattern
@@ -323,173 +323,173 @@ CONTAINS
      ! algorithm. a_ne
      ! contains the number of entries stored for the expanded matrix.
 
-     IF (printi .OR. printd) THEN
-       WRITE (unit_diagnostics,'(a)') ' '
-       WRITE (unit_diagnostics,'(a)') 'nd_nested_lower:'
-     END IF
+     if (printi .or. printd) then
+       write (unit_diagnostics,'(a)') ' '
+       write (unit_diagnostics,'(a)') 'nd_nested_lower:'
+     end if
 
 
 
      ! Set the dimension of the expanded matrix
      a_n = n
-     IF (printi .OR. printd) THEN
-       WRITE (unit_diagnostics,'(a,i10)') 'n = ', n
-     END IF
-     IF (n<1) THEN
+     if (printi .or. printd) then
+       write (unit_diagnostics,'(a,i10)') 'n = ', n
+     end if
+     if (n<1) then
        info%flag = ND_ERR_N
-       IF (printe) CALL nd_print_message(info%flag,unit_error, &
+       if (printe) call nd_print_message(info%flag,unit_error, &
          'nd_nested_lower')
-       RETURN
-     END IF
+       return
+     end if
 
 
      ! Allocate space to store pointers for expanded matrix
-     ALLOCATE (a_ptr(a_n),STAT=info%stat)
-     IF (info%stat/=0) GO TO 10
+     allocate (a_ptr(a_n),stat=info%stat)
+     if (info%stat/=0) go to 10
 
      ! Fill a_col and a_ptr removing any diagonal entries
      a_ptr(:) = 0
 
      ! Set a_ptr(j) to hold no. nonzeros in column j
-     DO j = 1, n
-       DO k = ptr(j), ptr(j+1) - 1
+     do j = 1, n
+       do k = ptr(j), ptr(j+1) - 1
          i = row(k)
-         IF (j/=i) THEN
+         if (j/=i) then
            a_ptr(i) = a_ptr(i) + 1
            a_ptr(j) = a_ptr(j) + 1
-         END IF
-       END DO
-     END DO
+         end if
+       end do
+     end do
 
      ! Set a_ptr(j) to point to where row indices will end in a_row
-     DO j = 2, n
+     do j = 2, n
        a_ptr(j) = a_ptr(j-1) + a_ptr(j)
-     END DO
+     end do
      a_ne = a_ptr(a_n)
-     IF (printi .OR. printd) THEN
-       WRITE (unit_diagnostics,'(a,i10)') &
+     if (printi .or. printd) then
+       write (unit_diagnostics,'(a,i10)') &
          'entries in expanded matrix with diags removed = ', a_ne
-     END IF
+     end if
 
      ! Allocate space to store row indices of expanded matrix
-     ALLOCATE (a_row(a_ne),STAT=info%stat)
-     IF (info%stat/=0) GO TO 10
+     allocate (a_row(a_ne),stat=info%stat)
+     if (info%stat/=0) go to 10
 
      ! Initialise all of a_row to 0
      a_row(:) = 0
 
      ! Fill a_row and a_ptr
-     DO j = 1, n
-       DO k = ptr(j), ptr(j+1) - 1
+     do j = 1, n
+       do k = ptr(j), ptr(j+1) - 1
          i = row(k)
-         IF (j/=i) THEN
+         if (j/=i) then
            a_row(a_ptr(i)) = j
            a_row(a_ptr(j)) = i
            a_ptr(i) = a_ptr(i) - 1
            a_ptr(j) = a_ptr(j) - 1
-         END IF
-       END DO
-     END DO
+         end if
+       end do
+     end do
 
      ! Reset a_ptr to point to where column starts
-     DO j = 1, a_n
+     do j = 1, a_n
        a_ptr(j) = a_ptr(j) + 1
-     END DO
+     end do
 
-     IF (printd) THEN
+     if (printd) then
        ! Print out a_ptr and a_row
-       WRITE (unit_diagnostics,'(a8)') 'a_ptr = '
-       WRITE (unit_diagnostics,'(5i15)') (a_ptr(i),i=1,a_n)
-       WRITE (unit_diagnostics,'(a8)') 'a_row = '
-       WRITE (unit_diagnostics,'(5i15)') (a_row(i),i=1,a_ne)
-     ELSE IF (printi) THEN
+       write (unit_diagnostics,'(a8)') 'a_ptr = '
+       write (unit_diagnostics,'(5i15)') (a_ptr(i),i=1,a_n)
+       write (unit_diagnostics,'(a8)') 'a_row = '
+       write (unit_diagnostics,'(5i15)') (a_row(i),i=1,a_ne)
+     else if (printi) then
        ! Print out first few entries of a_ptr and a_row
-       WRITE (unit_diagnostics,'(a21)') 'a_ptr(1:min(5,a_n)) = '
-       WRITE (unit_diagnostics,'(5i15)') (a_ptr(i),i=1,MIN(5,a_n))
-       WRITE (unit_diagnostics,'(a21)') 'a_row(1:min(5,a_ne)) = '
-       WRITE (unit_diagnostics,'(5i15)') (a_row(i),i=1,MIN(5,a_ne))
-     END IF
-     IF (PRESENT(seps)) THEN
-       CALL nd_nested_both(a_n,a_ne,a_ptr,a_row,perm,control,info,seps)
-     ELSE
-       CALL nd_nested_both(a_n,a_ne,a_ptr,a_row,perm,control,info)
-     END IF
+       write (unit_diagnostics,'(a21)') 'a_ptr(1:min(5,a_n)) = '
+       write (unit_diagnostics,'(5i15)') (a_ptr(i),i=1,min(5,a_n))
+       write (unit_diagnostics,'(a21)') 'a_row(1:min(5,a_ne)) = '
+       write (unit_diagnostics,'(5i15)') (a_row(i),i=1,min(5,a_ne))
+     end if
+     if (present(seps)) then
+       call nd_nested_both(a_n,a_ne,a_ptr,a_row,perm,control,info,seps)
+     else
+       call nd_nested_both(a_n,a_ne,a_ptr,a_row,perm,control,info)
+     end if
 
-     IF (printd) THEN
+     if (printd) then
        ! Print out perm
-       WRITE (unit_diagnostics,'(a8)') 'perm = '
-       WRITE (unit_diagnostics,'(5i15)') (perm(i),i=1,a_n)
-     ELSE IF (printi) THEN
+       write (unit_diagnostics,'(a8)') 'perm = '
+       write (unit_diagnostics,'(5i15)') (perm(i),i=1,a_n)
+     else if (printi) then
        ! Print out first few entries of perm
-       WRITE (unit_diagnostics,'(a21)') 'perm(1:min(5,a_n)) = '
-       WRITE (unit_diagnostics,'(5i15)') (perm(i),i=1,MIN(5,a_n))
-     END IF
+       write (unit_diagnostics,'(a21)') 'perm(1:min(5,a_n)) = '
+       write (unit_diagnostics,'(5i15)') (perm(i),i=1,min(5,a_n))
+     end if
 
      ! Deallocate arrays
-     DEALLOCATE (a_ptr,STAT=info%stat)
-     IF (info%stat/=0) GO TO 20
-     DEALLOCATE (a_row,STAT=info%stat)
-     IF (info%stat/=0) GO TO 20
+     deallocate (a_ptr,stat=info%stat)
+     if (info%stat/=0) go to 20
+     deallocate (a_row,stat=info%stat)
+     if (info%stat/=0) go to 20
 
      info%flag = 0
-     IF (printi .OR. printd) THEN
-       CALL nd_print_message(info%flag,unit_diagnostics,'nd_nested_lower')
-     END IF
-     RETURN
+     if (printi .or. printd) then
+       call nd_print_message(info%flag,unit_diagnostics,'nd_nested_lower')
+     end if
+     return
 
 10      info%flag = ND_ERR_MEMORY_ALLOC
-     IF (printe) CALL nd_print_message(info%flag,unit_error, &
+     if (printe) call nd_print_message(info%flag,unit_error, &
        'nd_nested_lower')
-     RETURN
+     return
 
 20      info%flag = ND_ERR_MEMORY_DEALLOC
-     IF (printe) CALL nd_print_message(info%flag,unit_error, &
+     if (printe) call nd_print_message(info%flag,unit_error, &
        'nd_nested_lower')
-     RETURN
+     return
 
-   END SUBROUTINE nd_nested_lower
+   end subroutine nd_nested_lower
 
 
    ! ---------------------------------------------------
    ! nd_nested
    ! ---------------------------------------------------
-   SUBROUTINE nd_nested_full(n,ptr,row,perm,control,info,seps)
-     INTEGER, INTENT (IN) :: n ! number of rows in the matrix
-     INTEGER, INTENT (IN) :: ptr(n+1) ! column pointers
-     INTEGER, INTENT (IN) :: row(ptr(n+1)-1) ! row indices (lower triangle)
-     INTEGER, INTENT (OUT) :: perm(n) ! permutation: row i becomes row
+   subroutine nd_nested_full(n,ptr,row,perm,control,info,seps)
+     integer, intent (in) :: n ! number of rows in the matrix
+     integer, intent (in) :: ptr(n+1) ! column pointers
+     integer, intent (in) :: row(ptr(n+1)-1) ! row indices (lower triangle)
+     integer, intent (out) :: perm(n) ! permutation: row i becomes row
      ! perm(i)
-     TYPE (nd_options), INTENT (IN) :: control
-     TYPE (nd_inform), INTENT (INOUT) :: info
-     INTEGER, INTENT (OUT), OPTIONAL :: seps(n)
+     type (nd_options), intent (in) :: control
+     type (nd_inform), intent (inout) :: info
+     integer, intent (out), optional :: seps(n)
      ! seps(i) is -1 if vertex is not in a separator; otherwise it
      ! is equal to l, where l is the nested dissection level at
      ! which it became part of the separator
 
      ! ---------------------------------------------------
      ! LOCAL VARIABLES
-     INTEGER :: a_n ! dimension of the expanded matrix
-     INTEGER :: a_ne ! number off-diagonal entries stored in
+     integer :: a_n ! dimension of the expanded matrix
+     integer :: a_ne ! number off-diagonal entries stored in
      ! expanded matrix
-     INTEGER :: i, j, k, l, ndiags
-     INTEGER :: unit_error ! unit on which to print errors
-     INTEGER :: unit_diagnostics ! unit on which to print diagnostics
-     INTEGER, ALLOCATABLE, DIMENSION (:) :: a_ptr ! a_ptr(i) will contain
+     integer :: i, j, k, l, ndiags
+     integer :: unit_error ! unit on which to print errors
+     integer :: unit_diagnostics ! unit on which to print diagnostics
+     integer, allocatable, dimension (:) :: a_ptr ! a_ptr(i) will contain
      ! the
      ! position in a_row that column i ends for the expanded matrix
-     INTEGER, ALLOCATABLE, DIMENSION (:) :: a_row ! contains for row
+     integer, allocatable, dimension (:) :: a_row ! contains for row
      ! indices
      ! for the pattern of the expanded matrix. The row indices of
      ! column j are stored before those of column j+1, j=1,..,n-1.
-     LOGICAL :: printe, printi, printd
+     logical :: printe, printi, printd
 
      ! ---------------------------------------------
      ! Printing levels
      unit_diagnostics = control%unit_diagnostics
      unit_error = control%unit_error
-     printe = (control%print_level>=0 .AND. unit_error>=0)
-     printi = (control%print_level==1 .AND. unit_diagnostics>=0)
-     printd = (control%print_level>=2 .AND. unit_diagnostics>=0)
+     printe = (control%print_level>=0 .and. unit_error>=0)
+     printi = (control%print_level==1 .and. unit_diagnostics>=0)
+     printd = (control%print_level>=2 .and. unit_diagnostics>=0)
      ! ---------------------------------------------------
 
      ! Expand the matrix to hold all of its pattern
@@ -501,164 +501,164 @@ CONTAINS
      ! algorithm. a_ne
      ! contains the number of entries stored for the expanded matrix.
 
-     IF (printi .OR. printd) THEN
-       WRITE (unit_diagnostics,'(a)') ' '
-       WRITE (unit_diagnostics,'(a)') 'nd_nested_full:'
-     END IF
+     if (printi .or. printd) then
+       write (unit_diagnostics,'(a)') ' '
+       write (unit_diagnostics,'(a)') 'nd_nested_full:'
+     end if
 
      ! Set the dimension of the expanded matrix
      a_n = n
-     IF (printi .OR. printd) THEN
-       WRITE (unit_diagnostics,'(a,i10)') 'n = ', n
-     END IF
-     IF (n<1) THEN
+     if (printi .or. printd) then
+       write (unit_diagnostics,'(a,i10)') 'n = ', n
+     end if
+     if (n<1) then
        info%flag = ND_ERR_N
-       IF (printe) CALL nd_print_message(info%flag,unit_error, &
+       if (printe) call nd_print_message(info%flag,unit_error, &
          'nd_nested_full')
-       RETURN
-     END IF
+       return
+     end if
 
 
      ! Work out how many diagonal entries need removing
      ndiags = 0
-     DO j = 1, n
-       DO l = ptr(j), ptr(j+1) - 1
+     do j = 1, n
+       do l = ptr(j), ptr(j+1) - 1
          i = row(l)
-         IF (i==j) ndiags = ndiags + 1
-       END DO
-     END DO
+         if (i==j) ndiags = ndiags + 1
+       end do
+     end do
      a_ne = ptr(n+1) - 1 - ndiags
 
      ! Allocate space to store pointers and rows for expanded matrix
-     ALLOCATE (a_ptr(a_n),STAT=info%stat)
-     IF (info%stat/=0) GO TO 10
-     ALLOCATE (a_row(a_ne),STAT=info%stat)
-     IF (info%stat/=0) GO TO 10
+     allocate (a_ptr(a_n),stat=info%stat)
+     if (info%stat/=0) go to 10
+     allocate (a_row(a_ne),stat=info%stat)
+     if (info%stat/=0) go to 10
 
-     IF (ndiags==0) THEN
+     if (ndiags==0) then
        ! No diagonal entries so do direct copy
        a_ptr(1:a_n) = ptr(1:n)
        a_row(1:a_ne) = row(1:a_ne)
 
-     ELSE
+     else
        ! Diagonal entries present
        k = 1
-       DO i = 1, n
+       do i = 1, n
          a_ptr(i) = k
-         DO l = ptr(i), ptr(i+1) - 1
+         do l = ptr(i), ptr(i+1) - 1
            j = row(l)
-           IF (i/=j) THEN
+           if (i/=j) then
              a_row(k) = j
              k = k + 1
-           END IF
-         END DO
-       END DO
-     END IF
+           end if
+         end do
+       end do
+     end if
 
 
-     IF (printd) THEN
+     if (printd) then
        ! Print out a_ptr and a_row
-       WRITE (unit_diagnostics,'(a8)') 'a_ptr = '
-       WRITE (unit_diagnostics,'(5i15)') (a_ptr(i),i=1,a_n)
-       WRITE (unit_diagnostics,'(a8)') 'a_row = '
-       WRITE (unit_diagnostics,'(5i15)') (a_row(i),i=1,a_ne)
-     ELSE IF (printi) THEN
+       write (unit_diagnostics,'(a8)') 'a_ptr = '
+       write (unit_diagnostics,'(5i15)') (a_ptr(i),i=1,a_n)
+       write (unit_diagnostics,'(a8)') 'a_row = '
+       write (unit_diagnostics,'(5i15)') (a_row(i),i=1,a_ne)
+     else if (printi) then
        ! Print out first few entries of a_ptr and a_row
-       WRITE (unit_diagnostics,'(a21)') 'a_ptr(1:min(5,a_n)) = '
-       WRITE (unit_diagnostics,'(5i15)') (a_ptr(i),i=1,MIN(5,a_n))
-       WRITE (unit_diagnostics,'(a21)') 'a_row(1:min(5,a_ne)) = '
-       WRITE (unit_diagnostics,'(5i15)') (a_row(i),i=1,MIN(5,a_ne))
-     END IF
-     IF (PRESENT(seps)) THEN
-       CALL nd_nested_both(a_n,a_ne,a_ptr,a_row,perm,control,info,seps)
-     ELSE
-       CALL nd_nested_both(a_n,a_ne,a_ptr,a_row,perm,control,info)
-     END IF
+       write (unit_diagnostics,'(a21)') 'a_ptr(1:min(5,a_n)) = '
+       write (unit_diagnostics,'(5i15)') (a_ptr(i),i=1,min(5,a_n))
+       write (unit_diagnostics,'(a21)') 'a_row(1:min(5,a_ne)) = '
+       write (unit_diagnostics,'(5i15)') (a_row(i),i=1,min(5,a_ne))
+     end if
+     if (present(seps)) then
+       call nd_nested_both(a_n,a_ne,a_ptr,a_row,perm,control,info,seps)
+     else
+       call nd_nested_both(a_n,a_ne,a_ptr,a_row,perm,control,info)
+     end if
 
-     IF (printd) THEN
+     if (printd) then
        ! Print out perm
-       WRITE (unit_diagnostics,'(a8)') 'perm = '
-       WRITE (unit_diagnostics,'(5i15)') (perm(i),i=1,a_n)
-     ELSE IF (printi) THEN
+       write (unit_diagnostics,'(a8)') 'perm = '
+       write (unit_diagnostics,'(5i15)') (perm(i),i=1,a_n)
+     else if (printi) then
        ! Print out first few entries of perm
-       WRITE (unit_diagnostics,'(a21)') 'perm(1:min(5,a_n)) = '
-       WRITE (unit_diagnostics,'(5i15)') (perm(i),i=1,MIN(5,a_n))
-     END IF
+       write (unit_diagnostics,'(a21)') 'perm(1:min(5,a_n)) = '
+       write (unit_diagnostics,'(5i15)') (perm(i),i=1,min(5,a_n))
+     end if
 
      ! Deallocate arrays
-     DEALLOCATE (a_ptr,STAT=info%stat)
-     IF (info%stat/=0) GO TO 20
-     DEALLOCATE (a_row,STAT=info%stat)
-     IF (info%stat/=0) GO TO 20
+     deallocate (a_ptr,stat=info%stat)
+     if (info%stat/=0) go to 20
+     deallocate (a_row,stat=info%stat)
+     if (info%stat/=0) go to 20
 
      info%flag = 0
-     IF (printi .OR. printd) THEN
-       CALL nd_print_message(info%flag,unit_diagnostics, &
+     if (printi .or. printd) then
+       call nd_print_message(info%flag,unit_diagnostics, &
          'nd_nested_full')
-     END IF
-     RETURN
+     end if
+     return
 
 10      info%flag = ND_ERR_MEMORY_ALLOC
-     IF (printe) CALL nd_print_message(info%flag,unit_error, &
+     if (printe) call nd_print_message(info%flag,unit_error, &
        'nd_nested_full')
-     RETURN
+     return
 
 20      info%flag = ND_ERR_MEMORY_DEALLOC
-     IF (printe) CALL nd_print_message(info%flag,unit_error, &
+     if (printe) call nd_print_message(info%flag,unit_error, &
        'nd_nested_full')
-     RETURN
+     return
 
-   END SUBROUTINE nd_nested_full
+   end subroutine nd_nested_full
 
    ! ---------------------------------------------------
    ! nd_nested
    ! ---------------------------------------------------
-   SUBROUTINE nd_nested_both(a_n,a_ne,a_ptr,a_row,perm,control,info, &
+   subroutine nd_nested_both(a_n,a_ne,a_ptr,a_row,perm,control,info, &
        seps)
-     INTEGER, INTENT (IN) :: a_n ! number of rows in the matrix
-     INTEGER, INTENT (IN) :: a_ne ! number of entries in the matrix
-     INTEGER, INTENT (INOUT) :: a_ptr(a_n) ! column pointers
-     INTEGER, INTENT (INOUT) :: a_row(a_ne) ! row indices (lower and upper)
-     INTEGER, INTENT (OUT) :: perm(a_n) ! permutation: row i becomes row
+     integer, intent (in) :: a_n ! number of rows in the matrix
+     integer, intent (in) :: a_ne ! number of entries in the matrix
+     integer, intent (inout) :: a_ptr(a_n) ! column pointers
+     integer, intent (inout) :: a_row(a_ne) ! row indices (lower and upper)
+     integer, intent (out) :: perm(a_n) ! permutation: row i becomes row
      ! perm(i)
-     TYPE (nd_options), INTENT (IN) :: control
-     TYPE (nd_inform), INTENT (INOUT) :: info
-     INTEGER, INTENT (OUT), OPTIONAL :: seps(a_n)
+     type (nd_options), intent (in) :: control
+     type (nd_inform), intent (inout) :: info
+     integer, intent (out), optional :: seps(a_n)
      ! seps(i) is -1 if vertex is not in a separator; otherwise it
      ! is equal to l, where l is the nested dissection level at
      ! which it became part of the separator
 
      ! ---------------------------------------------------
      ! LOCAL VARIABLES
-     INTEGER :: i, j, k, l, ll, a_ne_new, a_n_new, lwork, lirn
-     INTEGER :: a_n_curr, a_ne_curr, num_zero_row
-     INTEGER :: amd_order_irn, amd_order_ip, amd_order_sep, amd_order_perm, amd_order_work, &
+     integer :: i, j, k, l, ll, a_ne_new, a_n_new, lwork, lirn
+     integer :: a_n_curr, a_ne_curr, num_zero_row
+     integer :: amd_order_irn, amd_order_ip, amd_order_sep, amd_order_perm, amd_order_work, &
        amd_order_iperm
-     INTEGER :: work_iperm, work_seps
-     INTEGER :: unit_error ! unit on which to print errors
-     INTEGER :: unit_diagnostics ! unit on which to print diagnostics
-     INTEGER :: st, nsvar, svinfo
-     INTEGER :: sv_ptr, sv_perm, sv_invp, sv_svar, sv_ptr2, sv_row2, &
+     integer :: work_iperm, work_seps
+     integer :: unit_error ! unit on which to print errors
+     integer :: unit_diagnostics ! unit on which to print diagnostics
+     integer :: st, nsvar, svinfo
+     integer :: sv_ptr, sv_perm, sv_invp, sv_svar, sv_ptr2, sv_row2, &
        sumweight
-     INTEGER, ALLOCATABLE, DIMENSION (:) :: a_weight ! a_weight(i) will
+     integer, allocatable, dimension (:) :: a_weight ! a_weight(i) will
      ! contain the weight of variable (column) i ends for the
      ! expanded matrix
-     INTEGER, ALLOCATABLE, DIMENSION (:) :: iperm ! row iperm(i) will
+     integer, allocatable, dimension (:) :: iperm ! row iperm(i) will
      ! become row i when matrix reordered
-     INTEGER, ALLOCATABLE, DIMENSION (:) :: work ! space for doing work
-     INTEGER, ALLOCATABLE, DIMENSION (:) :: svwork ! supervariable work
+     integer, allocatable, dimension (:) :: work ! space for doing work
+     integer, allocatable, dimension (:) :: svwork ! supervariable work
      ! space
-     LOGICAL :: printe, printi, printd
-     LOGICAL :: use_multilevel
-     TYPE (nd_multigrid) :: grid
+     logical :: printe, printi, printd
+     logical :: use_multilevel
+     type (nd_multigrid) :: grid
 
      ! ---------------------------------------------
      ! Printing levels
      unit_diagnostics = control%unit_diagnostics
      unit_error = control%unit_error
-     printe = (control%print_level>=0 .AND. unit_error>=0)
-     printi = (control%print_level==1 .AND. unit_diagnostics>=0)
-     printd = (control%print_level>=2 .AND. unit_diagnostics>=0)
+     printe = (control%print_level>=0 .and. unit_error>=0)
+     printi = (control%print_level==1 .and. unit_diagnostics>=0)
+     printd = (control%print_level>=2 .and. unit_diagnostics>=0)
      ! ---------------------------------------------------
 
      ! Expand the matrix to hold all of its pattern
@@ -670,71 +670,71 @@ CONTAINS
      ! algorithm. a_ne
      ! contains the number of entries stored for the expanded matrix.
 
-     IF (printi .OR. printd) THEN
-       WRITE (unit_diagnostics,'(a)') ' '
-       WRITE (unit_diagnostics,'(a)') 'nd_nested_both:'
-     END IF
+     if (printi .or. printd) then
+       write (unit_diagnostics,'(a)') ' '
+       write (unit_diagnostics,'(a)') 'nd_nested_both:'
+     end if
      work_seps = 0
      work_iperm = 0
 
      ! Allocate iperm to have length n
-     ALLOCATE (iperm(a_n),STAT=info%stat)
-     IF (info%stat/=0) GO TO 10
+     allocate (iperm(a_n),stat=info%stat)
+     if (info%stat/=0) go to 10
 
      ! Initialise iperm to identity permutation
      iperm(:) = (/ (i,i=1,a_n) /)
-     IF (PRESENT(seps)) THEN
+     if (present(seps)) then
        seps(:) = -1
-     END IF
+     end if
 
      ! Check for dense rows
-     IF (control%remove_dense_rows) THEN
+     if (control%remove_dense_rows) then
        ! Initially allocate work to have length 4*a_n
-       ALLOCATE (work(4*a_n),STAT=info%stat)
-       IF (info%stat/=0) GO TO 10
+       allocate (work(4*a_n),stat=info%stat)
+       if (info%stat/=0) go to 10
 
-       CALL nd_dense_rows(a_n,a_ne,a_ptr,a_row,i,j,iperm,work(1:4*a_n), &
+       call nd_dense_rows(a_n,a_ne,a_ptr,a_row,i,j,iperm,work(1:4*a_n), &
          control,info)
        a_n_new = i
        a_ne_new = j
 
-       IF (printd) THEN
-         WRITE (unit_diagnostics,'(a,i10)') ' No. dense rows removed: ', &
+       if (printd) then
+         write (unit_diagnostics,'(a,i10)') ' No. dense rows removed: ', &
            a_n - a_n_new
-       END IF
+       end if
 
-       DEALLOCATE (work,STAT=info%stat)
-       IF (info%stat/=0) GO TO 20
+       deallocate (work,stat=info%stat)
+       if (info%stat/=0) go to 20
 
-     ELSE
+     else
        a_n_new = a_n
        a_ne_new = a_ne
 
-     END IF
+     end if
 
      ! Check whether matrix is diagonal
-     IF (a_ne_new==0) THEN
+     if (a_ne_new==0) then
 
-       IF (printi .OR. printd) THEN
-         WRITE (unit_diagnostics,'(a)') ' '
-         WRITE (unit_diagnostics,'(a)') 'Matrix is diagonal'
-       END IF
+       if (printi .or. printd) then
+         write (unit_diagnostics,'(a)') ' '
+         write (unit_diagnostics,'(a)') 'Matrix is diagonal'
+       end if
 
        info%nsuper = a_n_new
        info%nzsuper = 0
        ! Create perm from iperm
-       DO i = 1, a_n
+       do i = 1, a_n
          j = iperm(i)
          perm(j) = i
-       END DO
+       end do
 
-       RETURN
-     END IF
+       return
+     end if
 
-     IF (control%find_supervariables) THEN
+     if (control%find_supervariables) then
        ! Check for supervariables
-       ALLOCATE (svwork(5*a_n_new+a_ne_new+2),STAT=info%stat)
-       IF (info%stat/=0) GO TO 10
+       allocate (svwork(5*a_n_new+a_ne_new+2),stat=info%stat)
+       if (info%stat/=0) go to 10
        sv_ptr = 0
        sv_perm = sv_ptr + a_n_new + 1
        sv_invp = sv_perm + a_n_new
@@ -748,81 +748,81 @@ CONTAINS
        svwork(sv_perm+1:sv_perm+a_n_new) = (/ (i,i=1,a_n_new) /)
        svwork(sv_invp+1:sv_invp+a_n_new) = (/ (i,i=1,a_n_new) /)
        i = a_n_new
-       CALL nd_supervars(i,svwork(sv_ptr+1:sv_ptr+a_n_new+1), &
+       call nd_supervars(i,svwork(sv_ptr+1:sv_ptr+a_n_new+1), &
          a_row(1:a_ne_new),svwork(sv_perm+1:sv_perm+a_n_new), &
          svwork(sv_invp+1:sv_invp+a_n_new),nsvar, &
          svwork(sv_svar+1:sv_svar+a_n_new),svinfo,st)
-       IF (svinfo==ND_ERR_MEMORY_ALLOC) GO TO 10
-       IF (svinfo==ND_ERR_MEMORY_DEALLOC) GO TO 20
+       if (svinfo==ND_ERR_MEMORY_ALLOC) go to 10
+       if (svinfo==ND_ERR_MEMORY_DEALLOC) go to 20
 
        num_zero_row = a_n_new - i
-       IF (printd) THEN
-         WRITE (unit_diagnostics,'(a,i10)') 'Number supervariables: ', &
+       if (printd) then
+         write (unit_diagnostics,'(a,i10)') 'Number supervariables: ', &
            nsvar + num_zero_row
-       END IF
-       IF (nsvar+num_zero_row==a_n_new) THEN
-         DEALLOCATE (svwork,STAT=info%stat)
-         IF (info%stat/=0) GO TO 20
+       end if
+       if (nsvar+num_zero_row==a_n_new) then
+         deallocate (svwork,stat=info%stat)
+         if (info%stat/=0) go to 20
          a_n_curr = a_n_new
          a_ne_curr = a_ne_new
-         ALLOCATE (a_weight(a_n_curr),STAT=info%stat)
-         IF (info%stat/=0) GO TO 10
+         allocate (a_weight(a_n_curr),stat=info%stat)
+         if (info%stat/=0) go to 10
 
          ! Initialise a_weight
          a_weight(:) = 1
 
-       ELSE
-         CALL nd_compress_by_svar(a_n_new,a_ne_new, &
+       else
+         call nd_compress_by_svar(a_n_new,a_ne_new, &
            svwork(sv_ptr+1:sv_ptr+a_n_new+1),a_row(1:a_ne_new), &
            svwork(sv_invp+1:sv_invp+a_n_new),nsvar, &
            svwork(sv_svar+1:sv_svar+a_n_new),svwork(sv_ptr2+1:sv_ptr2+ &
            a_n_new+1),svwork(sv_row2+1:sv_row2+a_ne_new),svinfo,st)
-         IF (svinfo==ND_ERR_MEMORY_ALLOC) GO TO 10
-         IF (svinfo==ND_ERR_MEMORY_DEALLOC) GO TO 20
+         if (svinfo==ND_ERR_MEMORY_ALLOC) go to 10
+         if (svinfo==ND_ERR_MEMORY_DEALLOC) go to 20
 
          a_n_curr = nsvar
          ! Fill a_ptr removing any diagonal entries
          a_ptr(:) = 0
 
          ! Set a_ptr(j) to hold no. nonzeros in column j
-         DO j = 1, a_n_curr
-           DO k = svwork(sv_ptr2+j), svwork(sv_ptr2+j+1) - 1
+         do j = 1, a_n_curr
+           do k = svwork(sv_ptr2+j), svwork(sv_ptr2+j+1) - 1
              i = svwork(sv_row2+k)
-             IF (j<i) THEN
+             if (j<i) then
                a_ptr(i) = a_ptr(i) + 1
                a_ptr(j) = a_ptr(j) + 1
-             END IF
-           END DO
-         END DO
+             end if
+           end do
+         end do
 
          ! Set a_ptr(j) to point to where row indices will end in a_row
-         DO j = 2, a_n_curr
+         do j = 2, a_n_curr
            a_ptr(j) = a_ptr(j-1) + a_ptr(j)
-         END DO
+         end do
          a_ne_curr = a_ptr(a_n_curr)
          ! Initialise all of a_row to 0
          a_row(1:a_ne_curr) = 0
 
          ! Fill a_row and a_ptr
-         DO j = 1, a_n_curr
-           DO k = svwork(sv_ptr2+j), svwork(sv_ptr2+j+1) - 1
+         do j = 1, a_n_curr
+           do k = svwork(sv_ptr2+j), svwork(sv_ptr2+j+1) - 1
              i = svwork(sv_row2+k)
-             IF (j<i) THEN
+             if (j<i) then
                a_row(a_ptr(i)) = j
                a_row(a_ptr(j)) = i
                a_ptr(i) = a_ptr(i) - 1
                a_ptr(j) = a_ptr(j) - 1
-             END IF
-           END DO
-         END DO
+             end if
+           end do
+         end do
 
          ! Reset a_ptr to point to where column starts
-         DO j = 1, a_n_curr
+         do j = 1, a_n_curr
            a_ptr(j) = a_ptr(j) + 1
-         END DO
+         end do
 
-         ALLOCATE (a_weight(a_n_curr+num_zero_row),STAT=info%stat)
-         IF (info%stat/=0) GO TO 10
+         allocate (a_weight(a_n_curr+num_zero_row),stat=info%stat)
+         if (info%stat/=0) go to 10
 
          ! Initialise a_weight
          a_weight(1:a_n_curr) = svwork(sv_svar+1:sv_svar+a_n_curr)
@@ -836,42 +836,42 @@ CONTAINS
          ! svwork(sv_svar+i)
          ! points to the end of the list of variables in sv_invp for
          ! supervariable i
-         DO i = 2, nsvar
+         do i = 2, nsvar
            svwork(sv_svar+i) = svwork(sv_svar+i) + svwork(sv_svar+i-1)
-         END DO
+         end do
          j = svwork(sv_svar+nsvar)
-         DO i = 1, num_zero_row
+         do i = 1, num_zero_row
            svwork(sv_svar+nsvar+i) = j + 1
            j = j + 1
-         END DO
+         end do
 
-       END IF
+       end if
 
-     ELSE
+     else
        a_n_curr = a_n_new
        a_ne_curr = a_ne_new
        nsvar = a_n_new
        num_zero_row = 0
-       ALLOCATE (a_weight(a_n_curr+num_zero_row),STAT=info%stat)
-       IF (info%stat/=0) GO TO 10
+       allocate (a_weight(a_n_curr+num_zero_row),stat=info%stat)
+       if (info%stat/=0) go to 10
 
        ! Initialise a_weight
        a_weight(:) = 1
-     END IF
+     end if
 
      ! Carryout nested dissection on matrix once dense rows removed
      info%nzsuper = a_ne_curr
      info%nsuper = a_n_curr
 
-     IF (control%amd_switch2<=0 .OR. a_n_curr<=MAX(2,MAX(control%amd_call, &
-         control%amd_switch1))) THEN
+     if (control%amd_switch2<=0 .or. a_n_curr<=max(2,max(control%amd_call, &
+         control%amd_switch1))) then
        ! Apply AMD to matrix
        ! Allocate work to have length 5*a_n_curr+a_ne_curr
-       IF (printd) THEN
-         WRITE (unit_diagnostics,'(a)') ' Form AMD ordering'
-       END IF
-       ALLOCATE (work(11*a_n_curr+a_ne_curr+a_n_new),STAT=info%stat)
-       IF (info%stat/=0) GO TO 10
+       if (printd) then
+         write (unit_diagnostics,'(a)') ' Form AMD ordering'
+       end if
+       allocate (work(11*a_n_curr+a_ne_curr+a_n_new),stat=info%stat)
+       if (info%stat/=0) go to 10
        lirn = a_ne_curr + a_n_curr
        amd_order_irn = 0
        amd_order_ip = amd_order_irn + lirn
@@ -884,233 +884,233 @@ CONTAINS
        work(amd_order_irn+a_ne_curr+1:amd_order_irn+lirn) = 0
        work(amd_order_ip+1:amd_order_ip+a_n_curr) = a_ptr(1:a_n_curr)
        work(amd_order_sep+1:amd_order_sep+a_n_curr) = ND_SEP_FLAG - 1
-       CALL amd_order(a_n_curr,a_ne_curr,lirn,work(amd_order_irn+1:amd_order_irn+lirn), &
+       call amd_order(a_n_curr,a_ne_curr,lirn,work(amd_order_irn+1:amd_order_irn+lirn), &
          work(amd_order_ip+1:amd_order_ip+a_n_curr),work(amd_order_sep+1:amd_order_sep+a_n_curr &
          ),work(amd_order_perm+1:amd_order_perm+a_n_curr),work(amd_order_work+1:amd_order_work+ &
          7*a_n_curr))
 
        ! Extract perm from amd_order to apply to iperm
-       IF (nsvar+num_zero_row==a_n_new) THEN
-         DO i = 1, a_n_curr
+       if (nsvar+num_zero_row==a_n_new) then
+         do i = 1, a_n_curr
            j = work(amd_order_perm+i)
            work(amd_order_work+i) = iperm(j)
-         END DO
+         end do
          iperm(1:a_n_curr) = work(amd_order_work+1:amd_order_work+a_n_curr)
-       ELSE
-         DO i = 1, a_n_curr
+       else
+         do i = 1, a_n_curr
            j = work(amd_order_perm+i)
            work(amd_order_work+i) = j
-         END DO
+         end do
          ! Expand to matrix before supervariables detected
          k = 1
-         DO i = 1, a_n_curr
+         do i = 1, a_n_curr
            j = work(amd_order_work+i)
-           IF (j==1) THEN
+           if (j==1) then
              ll = 1
-           ELSE
+           else
              ll = svwork(sv_svar+j-1) + 1
-           END IF
-           DO l = ll, svwork(sv_svar+j)
+           end if
+           do l = ll, svwork(sv_svar+j)
              work(amd_order_iperm+k) = iperm(svwork(sv_invp+l))
              k = k + 1
-           END DO
-         END DO
+           end do
+         end do
 
          iperm(1:a_n_new) = work(amd_order_iperm+1:amd_order_iperm+a_n_new)
-       END IF
+       end if
 
-     ELSE
+     else
        ! Apply ND to matrix
 
-       IF (printd) THEN
-         WRITE (unit_diagnostics,'(a)') ' Form ND ordering'
-       END IF
+       if (printd) then
+         write (unit_diagnostics,'(a)') ' Form ND ordering'
+       end if
 
-       IF (nsvar+num_zero_row==a_n_new) THEN
+       if (nsvar+num_zero_row==a_n_new) then
          ! Allocate work to have length 14*a_n_curr+a_ne_curr
-         ALLOCATE (work(a_n_new+14*a_n_curr+a_ne_curr),STAT=info%stat)
-       ELSE
+         allocate (work(a_n_new+14*a_n_curr+a_ne_curr),stat=info%stat)
+       else
          ! Allocate work to have length a_n_new+14*a_n_curr+a_ne_curr
-         ALLOCATE (work(3*a_n_new+14*a_n_curr+a_ne_curr),STAT=info%stat)
+         allocate (work(3*a_n_new+14*a_n_curr+a_ne_curr),stat=info%stat)
          work_iperm = 14*a_n_curr + a_ne_curr + a_n_new
          work(work_iperm+1:work_iperm+a_n_curr) = (/ (i,i=1,a_n_curr) /)
-         IF (PRESENT(seps)) THEN
+         if (present(seps)) then
            work_seps = work_iperm + a_n_curr
            work(work_seps+1:work_seps+a_n_curr) = -1
-         END IF
-       END IF
-       IF (info%stat/=0) GO TO 10
+         end if
+       end if
+       if (info%stat/=0) go to 10
 
-       use_multilevel = .TRUE.
-       IF (nsvar+num_zero_row==a_n_new) THEN
+       use_multilevel = .true.
+       if (nsvar+num_zero_row==a_n_new) then
          sumweight = SUM(a_weight(1:a_n_curr))
          lwork = 12*a_n_curr + sumweight + a_ne_curr
-         IF (PRESENT(seps)) THEN
-           CALL nd_nested_internal(a_n_curr,a_ne_curr,a_ptr(1:a_n_curr), &
+         if (present(seps)) then
+           call nd_nested_internal(a_n_curr,a_ne_curr,a_ptr(1:a_n_curr), &
              a_row(1:a_ne_curr),a_weight(1:a_n_curr),sumweight, &
              iperm(1:a_n_curr),work(1:lwork),work(lwork+1:lwork+a_n_curr), &
              work(lwork+a_n_curr+1:lwork+2*a_n_curr),0,control,info, &
-             .FALSE.,use_multilevel,grid,seps(1:a_n_curr))
-         ELSE
-           CALL nd_nested_internal(a_n_curr,a_ne_curr,a_ptr(1:a_n_curr), &
+             .false.,use_multilevel,grid,seps(1:a_n_curr))
+         else
+           call nd_nested_internal(a_n_curr,a_ne_curr,a_ptr(1:a_n_curr), &
              a_row(1:a_ne_curr),a_weight(1:a_n_curr),sumweight, &
              iperm(1:a_n_curr),work(1:lwork),work(lwork+1:lwork+a_n_curr), &
              work(lwork+a_n_curr+1:lwork+2*a_n_curr),0,control,info, &
-             .FALSE.,use_multilevel,grid)
+             .false.,use_multilevel,grid)
 
-         END IF
-       ELSE
+         end if
+       else
          sumweight = SUM(a_weight(1:a_n_curr))
          lwork = 12*a_n_curr + sumweight + a_ne_curr
-         IF (PRESENT(seps)) THEN
-           CALL nd_nested_internal(a_n_curr,a_ne_curr,a_ptr(1:a_n_curr), &
+         if (present(seps)) then
+           call nd_nested_internal(a_n_curr,a_ne_curr,a_ptr(1:a_n_curr), &
              a_row(1:a_ne_curr),a_weight(1:a_n_curr),sumweight, &
              work(work_iperm+1:work_iperm+a_n_curr),work(1:lwork), &
              work(lwork+1:lwork+a_n_curr),work(lwork+a_n_curr+1:lwork+2* &
-             a_n_curr),0,control,info,.FALSE.,use_multilevel,grid, &
+             a_n_curr),0,control,info,.false.,use_multilevel,grid, &
              work(work_seps+1:work_seps+a_n_curr))
-         ELSE
-           CALL nd_nested_internal(a_n_curr,a_ne_curr,a_ptr(1:a_n_curr), &
+         else
+           call nd_nested_internal(a_n_curr,a_ne_curr,a_ptr(1:a_n_curr), &
              a_row(1:a_ne_curr),a_weight(1:a_n_curr),sumweight, &
              work(work_iperm+1:work_iperm+a_n_curr),work(1:lwork), &
              work(lwork+1:lwork+a_n_curr),work(lwork+a_n_curr+1:lwork+2* &
-             a_n_curr),0,control,info,.FALSE.,use_multilevel,grid)
+             a_n_curr),0,control,info,.false.,use_multilevel,grid)
 
-         END IF
-       END IF
+         end if
+       end if
 
-       IF (grid%level==1) CALL mg_grid_destroy(grid,info%flag)
+       if (grid%level==1) call mg_grid_destroy(grid,info%flag)
 
-       IF (nsvar+num_zero_row<a_n_new) THEN
-         IF (PRESENT(seps)) THEN
+       if (nsvar+num_zero_row<a_n_new) then
+         if (present(seps)) then
            ! Expand and reorder seps
-           DO i = 1, a_n_curr
+           do i = 1, a_n_curr
              j = work(work_iperm+i)
-             IF (j==1) THEN
+             if (j==1) then
                ll = 1
-             ELSE
+             else
                ll = svwork(sv_svar+j-1) + 1
-             END IF
-             DO l = ll, svwork(sv_svar+j)
+             end if
+             do l = ll, svwork(sv_svar+j)
                seps(svwork(sv_invp+l)) = work(work_seps+i)
-             END DO
-           END DO
-         END IF
+             end do
+           end do
+         end if
 
          ! Expand iperm to matrix before supervariables detected
          k = a_n_new
-         DO i = a_n_curr, 1, -1
+         do i = a_n_curr, 1, -1
            j = work(work_iperm+i)
-           IF (j==1) THEN
+           if (j==1) then
              ll = 1
-           ELSE
+           else
              ll = svwork(sv_svar+j-1) + 1
-           END IF
-           DO l = ll, svwork(sv_svar+j)
+           end if
+           do l = ll, svwork(sv_svar+j)
              work(work_iperm+k) = iperm(svwork(sv_invp+l))
              k = k - 1
-           END DO
-         END DO
+           end do
+         end do
 
          iperm(1:a_n_new) = work(work_iperm+1:work_iperm+a_n_new)
 
-       ELSE
-         IF (PRESENT(seps)) THEN
+       else
+         if (present(seps)) then
            ! reorder seps!
-           DO i = 1, a_n_curr
+           do i = 1, a_n_curr
              j = iperm(i)
              work(j) = seps(i)
-           END DO
+           end do
            seps(1:a_n_curr) = work(1:a_n_curr)
-         END IF
-       END IF
-     END IF
+         end if
+       end if
+     end if
      ! Create perm from iperm
-     DO i = 1, a_n
+     do i = 1, a_n
        j = iperm(i)
        perm(j) = i
-     END DO
+     end do
 
      ! Deallocate arrays
-     IF (nsvar+num_zero_row<a_n_new) THEN
-       DEALLOCATE (svwork,STAT=info%stat)
-       IF (info%stat/=0) GO TO 20
-     END IF
-     DEALLOCATE (a_weight,STAT=info%stat)
-     IF (info%stat/=0) GO TO 20
-     DEALLOCATE (iperm,STAT=info%stat)
-     IF (info%stat/=0) GO TO 20
-     DEALLOCATE (work,STAT=info%stat)
-     IF (info%stat/=0) GO TO 20
+     if (nsvar+num_zero_row<a_n_new) then
+       deallocate (svwork,stat=info%stat)
+       if (info%stat/=0) go to 20
+     end if
+     deallocate (a_weight,stat=info%stat)
+     if (info%stat/=0) go to 20
+     deallocate (iperm,stat=info%stat)
+     if (info%stat/=0) go to 20
+     deallocate (work,stat=info%stat)
+     if (info%stat/=0) go to 20
 
      info%flag = 0
-     IF (printi .OR. printd) THEN
-       CALL nd_print_message(info%flag,unit_diagnostics, &
+     if (printi .or. printd) then
+       call nd_print_message(info%flag,unit_diagnostics, &
          'nd_nested_both')
-     END IF
-     RETURN
+     end if
+     return
 
 10      info%flag = ND_ERR_MEMORY_ALLOC
-     IF (printe) CALL nd_print_message(info%flag,unit_error, &
+     if (printe) call nd_print_message(info%flag,unit_error, &
        'nd_nested_both')
-     RETURN
+     return
 
 20      info%flag = ND_ERR_MEMORY_DEALLOC
-     IF (printe) CALL nd_print_message(info%flag,unit_error, &
+     if (printe) call nd_print_message(info%flag,unit_error, &
        'nd_nested_both')
-     RETURN
+     return
 
-   END SUBROUTINE nd_nested_both
+   end subroutine nd_nested_both
 
    ! ---------------------------------------------------
    ! nd_dense_rows
    ! ---------------------------------------------------
    ! Identifies and removes dense rows
-   SUBROUTINE nd_dense_rows(a_n_in,a_ne_in,a_ptr,a_row,a_n_out,a_ne_out, &
+   subroutine nd_dense_rows(a_n_in,a_ne_in,a_ptr,a_row,a_n_out,a_ne_out, &
        iperm,work,control,info)
-     INTEGER, INTENT (IN) :: a_n_in ! dimension of subproblem before dense
+     integer, intent (in) :: a_n_in ! dimension of subproblem before dense
      ! rows removed
-     INTEGER, INTENT (IN) :: a_ne_in ! no. nonzeros of subproblem before
+     integer, intent (in) :: a_ne_in ! no. nonzeros of subproblem before
      ! dense rows removed
-     INTEGER, INTENT (INOUT) :: a_ptr(a_n_in) ! On input a_ptr(i) contains
+     integer, intent (inout) :: a_ptr(a_n_in) ! On input a_ptr(i) contains
      ! position in a_row that entries for column i start. This is then
      ! used to hold positions for submatrices after dense row removed
-     INTEGER, INTENT (INOUT) :: a_row(a_ne_in) ! On input a_row contains
+     integer, intent (inout) :: a_row(a_ne_in) ! On input a_row contains
      ! row
      ! indices of the non-zero rows. Diagonal entries have been removed
      ! and the matrix expanded.This is then used to hold row indices for
      ! submatrices after partitioning
-     INTEGER, INTENT (INOUT) :: iperm(a_n_in) ! On input, iperm(i) contains
+     integer, intent (inout) :: iperm(a_n_in) ! On input, iperm(i) contains
      ! the row in the original matrix (when nd_nested was called) that
      ! row i in this sub problem maps to. On output, this is updated to
      ! reflect the computed permutation.
-     INTEGER, INTENT (OUT) :: a_n_out ! dimension of subproblem after dense
+     integer, intent (out) :: a_n_out ! dimension of subproblem after dense
      ! rows removed
-     INTEGER, INTENT (OUT) :: a_ne_out ! no. nonzeros of subproblem after
+     integer, intent (out) :: a_ne_out ! no. nonzeros of subproblem after
      ! dense rows removed
-     INTEGER, INTENT (OUT) :: work(4*a_n_in) ! Used during the algorithm to
+     integer, intent (out) :: work(4*a_n_in) ! Used during the algorithm to
      ! reduce need for allocations. The output is garbage.
-     TYPE (nd_options), INTENT (IN) :: control
-     TYPE (nd_inform), INTENT (INOUT) :: info
+     type (nd_options), intent (in) :: control
+     type (nd_inform), intent (inout) :: info
 
      ! ---------------------------------------------
-     INTEGER :: unit_diagnostics ! unit on which to print diagnostics
-     INTEGER :: deg, prev, next, dense ! pointers into work array
-     INTEGER :: ndense ! number of dense rows found
-     INTEGER :: max_deg ! maximum degree
-     INTEGER :: degree, i, j, k, l, inext, ilast, l1, l2, m, m1
-     LOGICAL :: printi, printd
+     integer :: unit_diagnostics ! unit on which to print diagnostics
+     integer :: deg, prev, next, dense ! pointers into work array
+     integer :: ndense ! number of dense rows found
+     integer :: max_deg ! maximum degree
+     integer :: degree, i, j, k, l, inext, ilast, l1, l2, m, m1
+     logical :: printi, printd
 
      ! ---------------------------------------------
      ! Printing levels
      unit_diagnostics = control%unit_diagnostics
-     printi = (control%print_level==1 .AND. unit_diagnostics>=0)
-     printd = (control%print_level>=2 .AND. unit_diagnostics>=0)
+     printi = (control%print_level==1 .and. unit_diagnostics>=0)
+     printd = (control%print_level>=2 .and. unit_diagnostics>=0)
      ! ---------------------------------------------------
-     IF (printi .OR. printd) THEN
-       WRITE (unit_diagnostics,'(a)') ' '
-       WRITE (unit_diagnostics,'(a)') 'Find and remove dense rows'
-     END IF
+     if (printi .or. printd) then
+       write (unit_diagnostics,'(a)') ' '
+       write (unit_diagnostics,'(a)') 'Find and remove dense rows'
+     end if
 
      ! Set pointers into work array
      deg = 0
@@ -1127,64 +1127,64 @@ CONTAINS
      work(deg+1:deg+a_n_in) = 0
 
      ! Calculate degree of each row before anything removed
-     DO i = 1, a_n_in
+     do i = 1, a_n_in
        k = a_ptr(i)
-       IF (i<a_n_in) THEN
+       if (i<a_n_in) then
          degree = a_ptr(i+1) - k
-       ELSE
+       else
          degree = a_ne_in - a_ptr(a_n_in) + 1
-       END IF
+       end if
        work(dense+i) = degree
-       IF (degree/=0) THEN
-         max_deg = MAX(max_deg,degree)
-         CALL dense_add_to_list(a_n_in,work(next+1:next+a_n_in),&
+       if (degree/=0) then
+         max_deg = max(max_deg,degree)
+         call dense_add_to_list(a_n_in,work(next+1:next+a_n_in),&
              work(prev+1:prev+a_n_in),work(deg+1:deg+a_n_in),i,degree)
-       END IF
-     END DO
+       end if
+     end do
      degree = max_deg
      a_n_out = a_n_in
      a_ne_out = a_ne_in
 
-     DO WHILE (REAL(degree)-REAL(a_ne_out)/REAL(a_n_out)>=40*(REAL(a_n_out- &
-         1)/REAL(a_n_out))*LOG(REAL(a_n_out)) .AND. degree>0)
-       ! DO WHILE (real(degree) - real(a_ne_out)/real(a_n_out)>= &
+     do while (real(degree)-real(a_ne_out)/real(a_n_out)>=40*(real(a_n_out- &
+         1)/real(a_n_out))*LOG(real(a_n_out)) .and. degree>0)
+       ! do while (real(degree) - real(a_ne_out)/real(a_n_out)>= &
        ! 300*(real(a_n_out-1)/real(a_n_out)) &
-       ! .AND. degree>0)
+       ! .and. degree>0)
        i = work(deg+degree)
        ndense = ndense + 1
        work(dense+i) = -ndense
-       CALL dense_remove_from_list(a_n_in,work(next+1:next+a_n_in),&
+       call dense_remove_from_list(a_n_in,work(next+1:next+a_n_in),&
              work(prev+1:prev+a_n_in),work(deg+1:deg+a_n_in),i,degree)
        ! update degrees of adjacent vertices
-       IF (i<a_n_in) THEN
+       if (i<a_n_in) then
          l = a_ptr(i+1) - 1
-       ELSE
+       else
          l = a_ne_in
-       END IF
-       DO k = a_ptr(i), l
+       end if
+       do k = a_ptr(i), l
          j = a_row(k)
-         IF (work(dense+j)>0) THEN
-           CALL dense_remove_from_list(a_n_in,work(next+1:next+a_n_in),&
+         if (work(dense+j)>0) then
+           call dense_remove_from_list(a_n_in,work(next+1:next+a_n_in),&
              work(prev+1:prev+a_n_in),work(deg+1:deg+a_n_in),j,work(dense+j))
            work(dense+j) = work(dense+j) - 1
-           IF (work(dense+j)>0) THEN
-             CALL dense_add_to_list(a_n_in,work(next+1:next+a_n_in),&
+           if (work(dense+j)>0) then
+             call dense_add_to_list(a_n_in,work(next+1:next+a_n_in),&
              work(prev+1:prev+a_n_in),work(deg+1:deg+a_n_in),j,work(dense+j))
-           END IF
-         END IF
-       END DO
+           end if
+         end if
+       end do
        a_n_out = a_n_out - 1
        a_ne_out = a_ne_out - 2*degree
-       IF (work(deg+degree)==0) THEN
+       if (work(deg+degree)==0) then
          ! Find next largest degree
          degree = degree - 1
-         DO
-           IF (degree==0) EXIT
-           IF (work(deg+degree)>0) EXIT
+         do
+           if (degree==0) exit
+           if (work(deg+degree)>0) exit
            degree = degree - 1
-         END DO
-       END IF
-     END DO
+         end do
+       end if
+     end do
 
      ! By the end of this loop work(dense+i) will be
      ! >=0 if row is not dense
@@ -1192,248 +1192,248 @@ CONTAINS
      ! was determined to be dense.
      ! !!!!
 
-     IF (ndense>0) THEN
-       IF (printi .OR. printd) THEN
-         WRITE (unit_diagnostics,'(a)') ' '
-         WRITE (unit_diagnostics,'(i10,a)') ndense, ' dense rows detected'
-       END IF
+     if (ndense>0) then
+       if (printi .or. printd) then
+         write (unit_diagnostics,'(a)') ' '
+         write (unit_diagnostics,'(i10,a)') ndense, ' dense rows detected'
+       end if
        info%dense = ndense
 
        a_n_out = 0
        l = a_n_in + 1
-       DO i = 1, a_n_in
+       do i = 1, a_n_in
          k = work(dense+i)
-         IF (k>=0) THEN
+         if (k>=0) then
            a_n_out = a_n_out + 1
            work(dense+i) = a_n_out
            work(next+a_n_out) = i
-         ELSE
+         else
            work(next+l+k) = i
-         END IF
-       END DO
+         end if
+       end do
 
        k = 1
        j = 1
 
-       DO i = 1, a_n_in
+       do i = 1, a_n_in
          l1 = a_ptr(i)
-         IF (i<a_n_in) THEN
+         if (i<a_n_in) then
            l2 = a_ptr(i+1) - 1
-         ELSE
+         else
            l2 = a_ne_in
-         END IF
-         IF (work(dense+i)>=0) THEN
+         end if
+         if (work(dense+i)>=0) then
            a_ptr(j) = k
-           DO l = l1, l2
+           do l = l1, l2
              m = a_row(l)
              m1 = work(dense+m)
-             IF (m1>=0) THEN
+             if (m1>=0) then
                a_row(k) = m1
                k = k + 1
-             END IF
-           END DO
+             end if
+           end do
            j = j + 1
-         END IF
-       END DO
+         end if
+       end do
        a_ptr(j) = k
-       IF (printd) THEN
+       if (printd) then
          ! Print out a_ptr and a_row
-         WRITE (unit_diagnostics,'(a11)') 'a_n_out = '
-         WRITE (unit_diagnostics,'(i15)') a_n_out
-         WRITE (unit_diagnostics,'(a11)') 'a_ne_out = '
-         WRITE (unit_diagnostics,'(i15)') a_ne_out
-         WRITE (unit_diagnostics,'(a8)') 'a_ptr = '
-         WRITE (unit_diagnostics,'(5i15)') (a_ptr(i),i=1,a_n_out)
-         WRITE (unit_diagnostics,'(a8)') 'a_row = '
-         WRITE (unit_diagnostics,'(5i15)') (a_row(i),i=1,a_ne_out)
-       ELSE IF (printi) THEN
+         write (unit_diagnostics,'(a11)') 'a_n_out = '
+         write (unit_diagnostics,'(i15)') a_n_out
+         write (unit_diagnostics,'(a11)') 'a_ne_out = '
+         write (unit_diagnostics,'(i15)') a_ne_out
+         write (unit_diagnostics,'(a8)') 'a_ptr = '
+         write (unit_diagnostics,'(5i15)') (a_ptr(i),i=1,a_n_out)
+         write (unit_diagnostics,'(a8)') 'a_row = '
+         write (unit_diagnostics,'(5i15)') (a_row(i),i=1,a_ne_out)
+       else if (printi) then
          ! Print out first few entries of a_ptr and a_row
-         WRITE (unit_diagnostics,'(a11)') 'a_n_out = '
-         WRITE (unit_diagnostics,'(i15)') a_n_out
-         WRITE (unit_diagnostics,'(a11)') 'a_ne_out = '
-         WRITE (unit_diagnostics,'(i15)') a_ne_out
-         WRITE (unit_diagnostics,'(a21)') 'a_ptr(1:min(5,a_n_out)) = '
-         WRITE (unit_diagnostics,'(5i15)') (a_ptr(i),i=1,MIN(5,a_n_out))
-         WRITE (unit_diagnostics,'(a21)') 'a_row(1:min(5,a_ne_out)) = '
-         WRITE (unit_diagnostics,'(5i15)') (a_row(i),i=1,MIN(5,a_ne_out))
-       END IF
-     ELSE
+         write (unit_diagnostics,'(a11)') 'a_n_out = '
+         write (unit_diagnostics,'(i15)') a_n_out
+         write (unit_diagnostics,'(a11)') 'a_ne_out = '
+         write (unit_diagnostics,'(i15)') a_ne_out
+         write (unit_diagnostics,'(a21)') 'a_ptr(1:min(5,a_n_out)) = '
+         write (unit_diagnostics,'(5i15)') (a_ptr(i),i=1,min(5,a_n_out))
+         write (unit_diagnostics,'(a21)') 'a_row(1:min(5,a_ne_out)) = '
+         write (unit_diagnostics,'(5i15)') (a_row(i),i=1,min(5,a_ne_out))
+       end if
+     else
 
        a_n_out = a_n_in
        a_ne_out = a_ne_in
        work(next+1:next+a_n_in) = (/ (i,i=1,a_n_in) /)
-     END IF
+     end if
 
-     DO i = 1, a_n_in
+     do i = 1, a_n_in
        j = work(next+i)
        work(next+i) = iperm(j)
-     END DO
+     end do
 
-     DO i = 1, a_n_in
+     do i = 1, a_n_in
        iperm(i) = work(next+i)
-     END DO
+     end do
 
      info%flag = 0
-     IF (printi .OR. printd) THEN
-       CALL nd_print_message(info%flag,unit_diagnostics, &
+     if (printi .or. printd) then
+       call nd_print_message(info%flag,unit_diagnostics, &
          'nd_dense_rows')
-     END IF
+     end if
 
-   END SUBROUTINE nd_dense_rows
+   end subroutine nd_dense_rows
 
-     SUBROUTINE dense_remove_from_list(n,next,prev,deg,irm,ig)
-       INTEGER, INTENT(IN) :: n ! order matrix
-       INTEGER, INTENT(INOUT) :: next(n),prev(n),deg(n)
-       INTEGER, INTENT(IN) :: irm, ig
-       INTEGER :: inext, ilast
+     subroutine dense_remove_from_list(n,next,prev,deg,irm,ig)
+       integer, intent(in) :: n ! order matrix
+       integer, intent(inout) :: next(n),prev(n),deg(n)
+       integer, intent(in) :: irm, ig
+       integer :: inext, ilast
 
        inext = next(irm)
        ilast = prev(irm)
-       IF (ilast==0) THEN
+       if (ilast==0) then
          deg(ig) = inext
-         IF (inext/=0) prev(inext) = 0
-       ELSE
+         if (inext/=0) prev(inext) = 0
+       else
          next(ilast) = inext
-         IF (inext/=0) prev(inext) = ilast
-       END IF
-     END SUBROUTINE dense_remove_from_list
+         if (inext/=0) prev(inext) = ilast
+       end if
+     end subroutine dense_remove_from_list
 
-     SUBROUTINE dense_add_to_list(n,next,prev,deg,irm,ig)
-       INTEGER, INTENT(IN) :: n ! order matrix
-       INTEGER, INTENT(INOUT) :: next(n),prev(n),deg(n)
-       INTEGER, INTENT(IN) :: irm, ig
-       INTEGER :: inext
+     subroutine dense_add_to_list(n,next,prev,deg,irm,ig)
+       integer, intent(in) :: n ! order matrix
+       integer, intent(inout) :: next(n),prev(n),deg(n)
+       integer, intent(in) :: irm, ig
+       integer :: inext
 
        inext = deg(ig)
        deg(ig) = irm
        next(irm) = inext
-       IF (inext/=0) prev(inext) = irm
+       if (inext/=0) prev(inext) = irm
        prev(irm) = 0
-     END SUBROUTINE dense_add_to_list
+     end subroutine dense_add_to_list
 
    ! ---------------------------------------------------
    ! nd_nested_internal
    ! ---------------------------------------------------
    ! Does the recursive nested dissection
 
-   RECURSIVE SUBROUTINE nd_nested_internal(a_n,a_ne,a_ptr,a_row, &
+   RECURSIVE subroutine nd_nested_internal(a_n,a_ne,a_ptr,a_row, &
        a_weight,sumweight,iperm,work,work_comp_n,work_comp_nz,level, &
        control,info,use_amd,use_multilevel,grid,seps)
 
-     INTEGER, INTENT (IN) :: a_n ! dimension of subproblem ND is applied to
-     INTEGER, INTENT (IN) :: a_ne ! no. nonzeros of subproblem
-     INTEGER, INTENT (INOUT) :: a_ptr(a_n) ! On input a_ptr(i) contains
+     integer, intent (in) :: a_n ! dimension of subproblem ND is applied to
+     integer, intent (in) :: a_ne ! no. nonzeros of subproblem
+     integer, intent (inout) :: a_ptr(a_n) ! On input a_ptr(i) contains
      ! position in a_row that entries for column i start. This is then
      ! used to hold positions for submatrices after partitioning
-     INTEGER, INTENT (INOUT) :: a_row(a_ne) ! On input a_row contains row
+     integer, intent (inout) :: a_row(a_ne) ! On input a_row contains row
      ! indices of the non-zero rows. Diagonal entries have been removed
      ! and the matrix expanded.This is then used to hold row indices for
      ! submatrices after partitioning
-     INTEGER, INTENT (INOUT) :: a_weight(a_n) ! On input a_weight(i)
+     integer, intent (inout) :: a_weight(a_n) ! On input a_weight(i)
      ! contains
      ! weight of column i. This is then
      ! used to hold the weights for submatrices after partitioning
-     INTEGER, INTENT (IN) :: sumweight ! sum entries in a_weight
+     integer, intent (in) :: sumweight ! sum entries in a_weight
      ! (unchanged)
-     INTEGER, INTENT (INOUT) :: iperm(a_n) ! On input, iperm(i) contains
+     integer, intent (inout) :: iperm(a_n) ! On input, iperm(i) contains
      ! the
      ! row in the original matrix (when nd_nested was called) that
      ! row i in this sub problem maps to. On output, this is updated to
      ! reflect the computed permutation.
-     INTEGER, INTENT (OUT) :: work_comp_n(a_n)
-     INTEGER, INTENT (OUT) :: work_comp_nz(a_n)
-     INTEGER, INTENT (OUT) :: work(12*a_n+sumweight+a_ne) ! Used during the
+     integer, intent (out) :: work_comp_n(a_n)
+     integer, intent (out) :: work_comp_nz(a_n)
+     integer, intent (out) :: work(12*a_n+sumweight+a_ne) ! Used during the
      ! algorithm to reduce need for allocations. The output is garbage.
-     INTEGER, INTENT (IN) :: level ! which level of nested dissection is
+     integer, intent (in) :: level ! which level of nested dissection is
      ! this
-     TYPE (nd_options), INTENT (IN) :: control
-     TYPE (nd_inform), INTENT (INOUT) :: info
-     LOGICAL, INTENT (IN) :: use_amd
-     LOGICAL, INTENT (INOUT) :: use_multilevel
-     INTEGER, INTENT (INOUT), OPTIONAL :: seps(a_n)
+     type (nd_options), intent (in) :: control
+     type (nd_inform), intent (inout) :: info
+     logical, intent (in) :: use_amd
+     logical, intent (inout) :: use_multilevel
+     integer, intent (inout), optional :: seps(a_n)
      ! seps(i) is -1 if vertex i of permuted submatrix is not in a
      ! separator; otherwise it is equal to l, where l is the nested
      ! dissection level at which it became part of the separator
-     TYPE (nd_multigrid), INTENT (INOUT) :: grid
+     type (nd_multigrid), intent (inout) :: grid
 
      ! ---------------------------------------------
      ! Local variables
-     INTEGER :: i, j, k, l, m, s
-     INTEGER :: unit_diagnostics ! unit on which to print diagnostics
-     INTEGER :: num_components ! Number of independent components found
-     INTEGER :: compwork, lwork
-     INTEGER :: sumweight_sub, maxdeg_max_component
-     INTEGER :: offset_ptr, offset_row
-     INTEGER :: a_n1, a_n2, a_ne1, a_ne2
-     INTEGER :: amd_order_irn, amd_order_ip, amd_order_sep, amd_order_perm, amd_order_work, lirn
-     LOGICAL :: printi, printd, use_amdi
+     integer :: i, j, k, l, m, s
+     integer :: unit_diagnostics ! unit on which to print diagnostics
+     integer :: num_components ! Number of independent components found
+     integer :: compwork, lwork
+     integer :: sumweight_sub, maxdeg_max_component
+     integer :: offset_ptr, offset_row
+     integer :: a_n1, a_n2, a_ne1, a_ne2
+     integer :: amd_order_irn, amd_order_ip, amd_order_sep, amd_order_perm, amd_order_work, lirn
+     logical :: printi, printd, use_amdi
 
      ! ---------------------------------------------
      ! Printing levels
      unit_diagnostics = control%unit_diagnostics
-     printi = (control%print_level==1 .AND. unit_diagnostics>=0)
-     printd = (control%print_level>=2 .AND. unit_diagnostics>=0)
-     use_amdi = .FALSE.
+     printi = (control%print_level==1 .and. unit_diagnostics>=0)
+     printd = (control%print_level>=2 .and. unit_diagnostics>=0)
+     use_amdi = .false.
 
-     IF (printi .OR. printd) THEN
-       WRITE (unit_diagnostics,'(a)') ' '
-       WRITE (unit_diagnostics,'(a,i6)') 'Nested dissection level ', level
-     END IF
+     if (printi .or. printd) then
+       write (unit_diagnostics,'(a)') ' '
+       write (unit_diagnostics,'(a,i6)') 'Nested dissection level ', level
+     end if
 
      ! Check whether matrix is diagonal and act accordingly
-     IF (a_ne==0) THEN
-       IF (printi .OR. printd) THEN
-         WRITE (unit_diagnostics,'(a)') ' '
-         WRITE (unit_diagnostics,'(a)') 'Submatrix is diagonal'
-       END IF
-       RETURN
-     END IF
+     if (a_ne==0) then
+       if (printi .or. printd) then
+         write (unit_diagnostics,'(a)') ' '
+         write (unit_diagnostics,'(a)') 'Submatrix is diagonal'
+       end if
+       return
+     end if
 
-     IF (level==0) THEN
+     if (level==0) then
        maxdeg_max_component = a_ne + 1 - a_ptr(a_n)
-       DO i = 1, a_n - 1
-         IF (maxdeg_max_component<a_ptr(i+1)-a_ptr(i)) &
+       do i = 1, a_n - 1
+         if (maxdeg_max_component<a_ptr(i+1)-a_ptr(i)) &
            maxdeg_max_component = a_ptr(i+1) - a_ptr(i)
-       END DO
+       end do
 
-     END IF
+     end if
 
 
      ! Check whether max number of levels has been reached or if matrix
      ! size is below
      ! nd_switch
-     IF (level>=control%amd_switch2 .OR. a_n<=MAX(2,control%amd_switch1) &
-       .OR. use_amd) &
-       GO TO 10
+     if (level>=control%amd_switch2 .or. a_n<=max(2,control%amd_switch1) &
+       .or. use_amd) &
+       go to 10
      lwork = 12*a_n + sumweight + a_ne
-     CALL nd_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,level, &
+     call nd_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,level, &
        a_n1,a_n2,a_ne1,a_ne2,iperm,work(1:lwork),control,info, &
        use_multilevel,grid)
 
 
-     IF (a_n1==a_n) THEN
-       GO TO 10
-     END IF
+     if (a_n1==a_n) then
+       go to 10
+     end if
 
 
-     IF (a_n1/=0 .AND. a_n2/=0 .AND. a_n1+a_n2==a_n) THEN
+     if (a_n1/=0 .and. a_n2/=0 .and. a_n1+a_n2==a_n) then
        ! matrix is reducible
-       IF (printi .OR. printd) THEN
-         WRITE (unit_diagnostics,'(a)') ' '
-         WRITE (unit_diagnostics,'(a)') 'Matrix is reducible'
-       END IF
+       if (printi .or. printd) then
+         write (unit_diagnostics,'(a)') ' '
+         write (unit_diagnostics,'(a)') 'Matrix is reducible'
+       end if
        compwork = 0
        ! work array needs to be total length 5*a_n+a_ne
-       CALL nd_find_indep_comps(a_n,a_ne,a_ptr,a_row,a_weight,iperm, &
+       call nd_find_indep_comps(a_n,a_ne,a_ptr,a_row,a_weight,iperm, &
          num_components,work_comp_n(1:a_n),work_comp_nz(1:a_n), &
          work(compwork+1:compwork+3*a_n+a_ne),control,info)
-       IF (num_components==1) THEN
+       if (num_components==1) then
          k = control%amd_switch2 ! Should never be reached - indep. comps.
          ! only found if it has been detected that they exist
-       ELSE
+       else
          k = level
-         IF (k==0) info%num_components = num_components
-       END IF
+         if (k==0) info%num_components = num_components
+       end if
 
        ! Apply the ND to each component - do not test for indep comps
        offset_ptr = a_n + 1
@@ -1443,116 +1443,116 @@ CONTAINS
        ! work_comp_nz can be reused without worrying about overwriting
        ! important data
        j = a_n
-       DO WHILE (i>=1)
-         IF (level==0) use_multilevel = .TRUE.
+       do while (i>=1)
+         if (level==0) use_multilevel = .true.
          l = work_comp_n(i)
-         IF (level==0 .AND. l .LE. control%amd_call) THEN
-            use_amdi = .TRUE.
-         ELSE
-            use_amdi = .FALSE.
-         END IF
+         if (level==0 .and. l .le. control%amd_call) then
+            use_amdi = .true.
+         else
+            use_amdi = .false.
+         end if
          m = work_comp_nz(i)
          s = SUM(a_weight(offset_ptr-l:offset_ptr-1))
-         IF (m>0) THEN
+         if (m>0) then
            ! Matrix not diagonal
-           IF (PRESENT(seps)) THEN
-             CALL nd_nested_internal(l,m,a_ptr(offset_ptr-l:offset_ptr-1 &
+           if (present(seps)) then
+             call nd_nested_internal(l,m,a_ptr(offset_ptr-l:offset_ptr-1 &
                ),a_row(offset_row-m:offset_row-1), &
                a_weight(offset_ptr-l:offset_ptr-1),s, &
                iperm(offset_ptr-l:offset_ptr-1),work(compwork+1:compwork+12 &
                *l+s+m),work_comp_n(j-l+1:j),work_comp_nz(j-l+1:j),k, &
                control,info,use_amdi,use_multilevel,grid,seps(offset_ptr-l: &
                offset_ptr-1))
-           ELSE
-             CALL nd_nested_internal(l,m,a_ptr(offset_ptr-l:offset_ptr-1 &
+           else
+             call nd_nested_internal(l,m,a_ptr(offset_ptr-l:offset_ptr-1 &
                ),a_row(offset_row-m:offset_row-1), &
                a_weight(offset_ptr-l:offset_ptr-1),s, &
                iperm(offset_ptr-l:offset_ptr-1),work(compwork+1:compwork+12 &
                *l+s+m),work_comp_n(j-l+1:j),work_comp_nz(j-l+1:j),k, &
                control,info,use_amdi,use_multilevel,grid)
 
-           END IF
-         END IF
+           end if
+         end if
          offset_ptr = offset_ptr - l
          offset_row = offset_row - m
          j = j - l
          i = i - 1
-       END DO
-       RETURN
-     ELSE
-       IF (level==0 .AND. a_n>info%n_max_component) THEN
+       end do
+       return
+     else
+       if (level==0 .and. a_n>info%n_max_component) then
          info%n_max_component = a_n
          info%nz_max_component = a_ne
          info%maxdeg_max_component = maxdeg_max_component
-       END IF
-     END IF
+       end if
+     end if
 
-     IF (PRESENT(seps)) THEN
+     if (present(seps)) then
        seps(a_n1+a_n2+1:a_n) = level
-     END IF
-     IF (a_n1>MAX(2,control%amd_switch1)) THEN
+     end if
+     if (a_n1>max(2,control%amd_switch1)) then
        sumweight_sub = SUM(a_weight(1:a_n1))
-       IF (PRESENT(seps)) THEN
-         CALL nd_nested_internal(a_n1,a_ne1,a_ptr(1:a_n1), &
+       if (present(seps)) then
+         call nd_nested_internal(a_n1,a_ne1,a_ptr(1:a_n1), &
            a_row(1:a_ne1),a_weight(1:a_n1),sumweight_sub,iperm(1:a_n1), &
            work(1:12*a_n1+sumweight_sub+a_ne1),work_comp_n(1:a_n1), &
            work_comp_nz(1:a_n1),level+1,control,info,use_amdi,&
            use_multilevel,grid, &
            seps(1:a_n1))
-       ELSE
-         CALL nd_nested_internal(a_n1,a_ne1,a_ptr(1:a_n1), &
+       else
+         call nd_nested_internal(a_n1,a_ne1,a_ptr(1:a_n1), &
            a_row(1:a_ne1),a_weight(1:a_n1),sumweight_sub,iperm(1:a_n1), &
            work(1:12*a_n1+sumweight_sub+a_ne1),work_comp_n(1:a_n1), &
            work_comp_nz(1:a_n1),level+1,control,info,use_amdi,&
            use_multilevel,grid)
-       END IF
+       end if
 
-     END IF
+     end if
 
-     IF (a_n2>MAX(2,control%amd_switch1)) THEN
-       IF (a_n1>MAX(2,control%amd_switch1)) THEN
+     if (a_n2>max(2,control%amd_switch1)) then
+       if (a_n1>max(2,control%amd_switch1)) then
          sumweight_sub = SUM(a_weight(a_n1+1:a_n1+a_n2))
-         IF (PRESENT(seps)) THEN
-           CALL nd_nested_internal(a_n2,a_ne2,a_ptr(a_n1+1:a_n1+a_n2), &
+         if (present(seps)) then
+           call nd_nested_internal(a_n2,a_ne2,a_ptr(a_n1+1:a_n1+a_n2), &
              a_row(a_ne1+1:a_ne1+a_ne2),a_weight(a_n1+1:a_n1+a_n2), &
              sumweight_sub,iperm(a_n1+1:a_n1+a_n2), &
              work(1:12*a_n2+sumweight_sub+a_ne2),work_comp_n(1:a_n2), &
              work_comp_nz(1:a_n2),level+1,control,info,use_amdi,&
              use_multilevel,grid, &
              seps(a_n1+1:a_n1+a_n2))
-         ELSE
-           CALL nd_nested_internal(a_n2,a_ne2,a_ptr(a_n1+1:a_n1+a_n2), &
+         else
+           call nd_nested_internal(a_n2,a_ne2,a_ptr(a_n1+1:a_n1+a_n2), &
              a_row(a_ne1+1:a_ne1+a_ne2),a_weight(a_n1+1:a_n1+a_n2), &
              sumweight_sub,iperm(a_n1+1:a_n1+a_n2), &
              work(1:12*a_n2+sumweight_sub+a_ne2),work_comp_n(1:a_n2), &
              work_comp_nz(1:a_n2),level+1,control,info,use_amdi,&
              use_multilevel,grid)
-         END IF
-       ELSE
+         end if
+       else
          sumweight_sub = SUM(a_weight(a_n1+1:a_n1+a_n2))
-         IF (PRESENT(seps)) THEN
-           CALL nd_nested_internal(a_n2,a_ne2,a_ptr(1:a_n2), &
+         if (present(seps)) then
+           call nd_nested_internal(a_n2,a_ne2,a_ptr(1:a_n2), &
              a_row(1:a_ne2),a_weight(a_n1+1:a_n1+a_n2),sumweight_sub, &
              iperm(a_n1+1:a_n1+a_n2),work(1:12*a_n2+sumweight_sub+a_ne2), &
              work_comp_n(1:a_n2),work_comp_nz(1:a_n2),level+1,control,info, &
              use_amdi,use_multilevel,grid,seps(a_n1+1:a_n1+a_n2))
-         ELSE
-           CALL nd_nested_internal(a_n2,a_ne2,a_ptr(1:a_n2), &
+         else
+           call nd_nested_internal(a_n2,a_ne2,a_ptr(1:a_n2), &
              a_row(1:a_ne2),a_weight(a_n1+1:a_n1+a_n2),sumweight_sub, &
              iperm(a_n1+1:a_n1+a_n2),work(1:12*a_n2+sumweight_sub+a_ne2), &
              work_comp_n(1:a_n2),work_comp_nz(1:a_n2),level+1,control,info, &
              use_amdi,use_multilevel,grid)
 
-         END IF
+         end if
 
-       END IF
+       end if
 
-     END IF
-     GO TO 20
-     RETURN
+     end if
+     go to 20
+     return
 
      ! No partition found or max number of levels have been reached
-10      CONTINUE
+10      continue
      ! Apply AMD to matrix (note: a_n always greater than 1)
      lirn = a_ne + a_n
      amd_order_irn = 0
@@ -1565,94 +1565,94 @@ CONTAINS
      work(amd_order_irn+a_ne+1:amd_order_irn+lirn) = 0
      work(amd_order_ip+1:amd_order_ip+a_n) = a_ptr(1:a_n)
      work(amd_order_sep+1:amd_order_sep+a_n) = ND_SEP_FLAG - 1
-     CALL amd_order(a_n,a_ne,lirn,work(amd_order_irn+1:amd_order_irn+lirn), &
+     call amd_order(a_n,a_ne,lirn,work(amd_order_irn+1:amd_order_irn+lirn), &
        work(amd_order_ip+1:amd_order_ip+a_n),work(amd_order_sep+1:amd_order_sep+a_n), &
        work(amd_order_perm+1:amd_order_perm+a_n),work(amd_order_work+1:amd_order_work+7*a_n))
 
      ! Extract perm from amd_order to apply to iperm
-     DO i = 1, a_n
+     do i = 1, a_n
        j = work(amd_order_perm+i)
        work(amd_order_work+i) = iperm(j)
-     END DO
+     end do
      iperm(1:a_n) = work(amd_order_work+1:amd_order_work+a_n)
 
 20      info%flag = 0
-     IF (printi .OR. printd) THEN
-       CALL nd_print_message(info%flag,unit_diagnostics, &
+     if (printi .or. printd) then
+       call nd_print_message(info%flag,unit_diagnostics, &
          'nd_nested_internal')
-     END IF
-     RETURN
+     end if
+     return
 
-   END SUBROUTINE nd_nested_internal
+   end subroutine nd_nested_internal
 
    ! ---------------------------------------------------
    ! nd_find_indep_comps
    ! ---------------------------------------------------
    ! Finds and forms independent components in a matrix
-   SUBROUTINE nd_find_indep_comps(a_n,a_ne,a_ptr,a_row,a_weight,iperm, &
+   subroutine nd_find_indep_comps(a_n,a_ne,a_ptr,a_row,a_weight,iperm, &
        comp_num,compsizes,compnzs,work,control,info)
-     INTEGER, INTENT (IN) :: a_n ! size of matrix
-     INTEGER, INTENT (IN) :: a_ne ! no. nonzeros in matrix
-     INTEGER, INTENT (INOUT) :: a_ptr(a_n) ! On entry, column ptrs for
+     integer, intent (in) :: a_n ! size of matrix
+     integer, intent (in) :: a_ne ! no. nonzeros in matrix
+     integer, intent (inout) :: a_ptr(a_n) ! On entry, column ptrs for
      ! input
      ! matrix.
      ! On exit, a_ptr(1:compsizes(1)) contains column ptrs for compontent
      ! 1;
      ! a_ptr(compsizes(1)+1:compsizes(1)+compsizes(2)) contains column ptrs
      ! for compontent 2; etc.
-     INTEGER, INTENT (INOUT) :: a_row(a_ne) ! On entry, row indices for
+     integer, intent (inout) :: a_row(a_ne) ! On entry, row indices for
      ! input
      ! matrix.
      ! On exit, a_row(1:compnzs(1)) contains row indices for compontent 1;
      ! a_ptr(compnzs(1)+1:compnzs(1)+compnzs(2)) contains row indices
      ! for compontent 2; etc.
-     INTEGER, INTENT (INOUT) :: a_weight(a_n) ! On entry, a_weight(i)
+     integer, intent (inout) :: a_weight(a_n) ! On entry, a_weight(i)
      ! contains
      ! weight of column i for input matrix.
      ! On exit, a_weight(1:compsizes(1)) contains column weights for
      ! compontent 1;
      ! a_weight(compsizes(1)+1:compsizes(1)+compsizes(2)) contains column
      ! weights or compontent 2; etc.
-     INTEGER, INTENT (INOUT) :: iperm(a_n) ! On input, iperm(i) contains
+     integer, intent (inout) :: iperm(a_n) ! On input, iperm(i) contains
      ! the
      ! row in the original matrix (when nd_nested was called) that
      ! row i in this sub problem maps to. On output, this is updated to
      ! reflect the computed permutation.
-     INTEGER, INTENT (OUT) :: comp_num ! number independent components
+     integer, intent (out) :: comp_num ! number independent components
      ! found
-     INTEGER, INTENT (OUT) :: compsizes(a_n) ! compsizes(i) will contain
+     integer, intent (out) :: compsizes(a_n) ! compsizes(i) will contain
      ! the
      ! size of compontent i
-     INTEGER, INTENT (OUT) :: compnzs(a_n) ! compnzs(i) will contain the
+     integer, intent (out) :: compnzs(a_n) ! compnzs(i) will contain the
      ! number of nonzeros in compontent i
-     INTEGER, INTENT (OUT) :: work(3*a_n+a_ne) ! used as work arrays during
+     integer, intent (out) :: work(3*a_n+a_ne) ! used as work arrays during
      ! computation
-     TYPE (nd_options), INTENT (IN) :: control
-     TYPE (nd_inform), INTENT (INOUT) :: info
+     type (nd_options), intent (in) :: control
+     type (nd_inform), intent (inout) :: info
 
      ! ---------------------------------------------
      ! Local variables
-     INTEGER :: unit_diagnostics ! unit on which to print diagnostics
-     INTEGER :: mask, ptr_temp, row_temp, front ! pointers into work array
-     INTEGER :: root
-     INTEGER :: front_sta, front_sto ! start and end of front list
-     INTEGER :: num_assigned ! number of cols that have been assigned to
+     integer :: unit_diagnostics ! unit on which to print diagnostics
+     integer :: mask, ptr_temp, row_temp, front ! pointers into work array
+     integer :: root
+     integer :: front_sta, front_sto ! start and end of front list
+     integer :: num_assigned ! number of cols that have been assigned to
      ! a
      ! component
-     INTEGER :: i, j, l, u, v, p
-     INTEGER :: ptr_temp_pos, row_temp_pos, front_pos
-     LOGICAL :: printi, printd
+     integer :: i, j, l, u, v, p
+     integer :: ptr_temp_pos, row_temp_pos, front_pos
+     logical :: printi, printd
 
      ! ---------------------------------------------
      ! Printing levels
      unit_diagnostics = control%unit_diagnostics
-     printi = (control%print_level==1 .AND. unit_diagnostics>=0)
-     printd = (control%print_level>=2 .AND. unit_diagnostics>=0)
+     printi = (control%print_level==1 .and. unit_diagnostics>=0)
+     printd = (control%print_level>=2 .and. unit_diagnostics>=0)
 
-     IF (printi .OR. printd) THEN
-       WRITE (unit_diagnostics,'(a)') ' '
-       WRITE (unit_diagnostics,'(a)') 'Start independent component search'
-     END IF
+     if (printi .or. printd) then
+       write (unit_diagnostics,'(a)') ' '
+       write (unit_diagnostics,'(a)') 'Start independent component search'
+     end if
 
      mask = 0
      front = mask + a_n
@@ -1667,8 +1667,8 @@ CONTAINS
      ! Check from all possible roots
      num_assigned = 0
      comp_num = 0
-     DO root = 1, a_n
-       IF (work(mask+root)==0) THEN
+     do root = 1, a_n
+       if (work(mask+root)==0) then
          comp_num = comp_num + 1
          front_sta = num_assigned + 1
          front_sto = front_sta
@@ -1678,21 +1678,21 @@ CONTAINS
          work(mask+root) = compsizes(comp_num)
          num_assigned = num_assigned + 1
 
-         DO WHILE (front_sto-front_sta>=0)
-           DO i = front_sta, front_sto
+         do while (front_sto-front_sta>=0)
+           do i = front_sta, front_sto
              ! pick vertex from front
              v = work(front+i)
              ! update compnzs
-             IF (v<a_n) THEN
+             if (v<a_n) then
                l = a_ptr(v+1)
-             ELSE
+             else
                l = a_ne + 1
-             END IF
+             end if
              compnzs(comp_num) = compnzs(comp_num) + l - a_ptr(v)
-             DO j = a_ptr(v), l - 1
+             do j = a_ptr(v), l - 1
                ! pick a neighbour
                u = a_row(j)
-               IF (work(mask+u)/=0) CYCLE
+               if (work(mask+u)/=0) cycle
                ! found unmasked vertex
                compsizes(comp_num) = compsizes(comp_num) + 1
                num_assigned = num_assigned + 1
@@ -1700,69 +1700,69 @@ CONTAINS
                work(mask+u) = compsizes(comp_num)
                ! add vertex to component
                work(front+num_assigned) = u
-             END DO
-           END DO
+             end do
+           end do
            front_sta = front_sto + 1
            front_sto = num_assigned
-         END DO
-       END IF
-     END DO
+         end do
+       end if
+     end do
 
-     IF (printi .OR. printd) THEN
-       WRITE (unit_diagnostics,'(a)') ' '
-       WRITE (unit_diagnostics,'(i5,a)') comp_num, ' components found'
-     END IF
+     if (printi .or. printd) then
+       write (unit_diagnostics,'(a)') ' '
+       write (unit_diagnostics,'(i5,a)') comp_num, ' components found'
+     end if
 
-     IF (comp_num>1) THEN
+     if (comp_num>1) then
        ! Reorder matrix into block diagonal form
        ! Indexing will be local to each block
        ptr_temp_pos = 1
        row_temp_pos = 1
        front_pos = 1
-       DO l = 1, comp_num ! for each component
+       do l = 1, comp_num ! for each component
          work(ptr_temp+ptr_temp_pos) = 1
          ptr_temp_pos = ptr_temp_pos + 1
-         DO u = 1, compsizes(l)
+         do u = 1, compsizes(l)
            v = work(front+front_pos) ! for each column in the component
            front_pos = front_pos + 1
-           IF (v==a_n) THEN
+           if (v==a_n) then
              p = a_ne
-           ELSE
+           else
              p = a_ptr(v+1) - 1
-           END IF
-           DO i = a_ptr(v), p ! for each nonzero in the column
+           end if
+           do i = a_ptr(v), p ! for each nonzero in the column
              work(row_temp+row_temp_pos) = work(mask+a_row(i))
              row_temp_pos = row_temp_pos + 1
-           END DO
-           IF (u<compsizes(l)) THEN
+           end do
+           if (u<compsizes(l)) then
              work(ptr_temp+ptr_temp_pos) = work(ptr_temp+ptr_temp_pos-1) + &
                p + 1 - a_ptr(v)
              ptr_temp_pos = ptr_temp_pos + 1
-           END IF
-         END DO
-       END DO
+           end if
+         end do
+       end do
 
        a_ptr(1:a_n) = work(ptr_temp+1:ptr_temp+a_n)
        a_row(1:a_ne) = work(row_temp+1:row_temp+a_ne)
 
        ! Reorder iperm and a_weight
-       DO front_pos = 1, a_n
+       do front_pos = 1, a_n
          j = work(front+front_pos)
          work(front+front_pos) = iperm(j)
          work(mask+front_pos) = a_weight(j)
-       END DO
+       end do
        iperm(1:a_n) = work(front+1:front+a_n)
        a_weight(1:a_n) = work(mask+1:mask+a_n)
-     END IF
+     end if
 
      info%flag = 0
-     IF (printi .OR. printd) THEN
-       CALL nd_print_message(info%flag,unit_diagnostics, &
+     if (printi .or. printd) then
+       call nd_print_message(info%flag,unit_diagnostics, &
          'nd_find_indep_comps')
-     END IF
-     RETURN
+     end if
+     return
 
-   END SUBROUTINE nd_find_indep_comps
+   end subroutine nd_find_indep_comps
 
    ! ---------------------------------------------------
    ! nd_partition matrix
@@ -1771,318 +1771,318 @@ CONTAINS
    ! is
    ! small enough, apply halo amd
 
-   SUBROUTINE nd_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
+   subroutine nd_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
        level,a_n1,a_n2,a_ne1,a_ne2,iperm,work,control,info,use_multilevel, &
        grid)
 
-     INTEGER, INTENT (IN) :: a_n ! dimension of subproblem ND is applied to
-     INTEGER, INTENT (IN) :: a_ne ! no. nonzeros of subproblem
-     INTEGER, INTENT (INOUT) :: a_ptr(a_n) ! On input a_ptr(i) contains
+     integer, intent (in) :: a_n ! dimension of subproblem ND is applied to
+     integer, intent (in) :: a_ne ! no. nonzeros of subproblem
+     integer, intent (inout) :: a_ptr(a_n) ! On input a_ptr(i) contains
      ! position in a_row that entries for column i start. This is then
      ! used to hold positions for submatrices after partitioning
-     INTEGER, INTENT (INOUT) :: a_row(a_ne) ! On input a_row contains row
+     integer, intent (inout) :: a_row(a_ne) ! On input a_row contains row
      ! indices of the non-zero rows. Diagonal entries have been removed
      ! and the matrix expanded.This is then used to hold row indices for
      ! submatrices after partitioning
-     INTEGER, INTENT (INOUT) :: a_weight(a_n) ! On input a_weight(i)
+     integer, intent (inout) :: a_weight(a_n) ! On input a_weight(i)
      ! contains
      ! the weight of column i. This is then used to hold the weights for
      ! the submatrices after partitioning.
-     INTEGER, INTENT (IN) :: sumweight ! Sum entries in a_weight.
+     integer, intent (in) :: sumweight ! Sum entries in a_weight.
      ! Unchanged.
-     INTEGER, INTENT (IN) :: level ! Current nested dissection level
-     INTEGER, INTENT (OUT) :: a_n1, a_n2 ! size of the two submatrices
-     INTEGER, INTENT (OUT) :: a_ne1, a_ne2 ! no. nonzeros in two
+     integer, intent (in) :: level ! Current nested dissection level
+     integer, intent (out) :: a_n1, a_n2 ! size of the two submatrices
+     integer, intent (out) :: a_ne1, a_ne2 ! no. nonzeros in two
      ! submatrices
-     INTEGER, INTENT (INOUT) :: iperm(a_n) ! On input, iperm(i) contains
+     integer, intent (inout) :: iperm(a_n) ! On input, iperm(i) contains
      ! the
      ! row in the original matrix (when nd_nested was called) that
      ! row i in this sub problem maps to. On output, this is updated to
      ! reflect the computed permutation.
-     LOGICAL, INTENT (INOUT) :: use_multilevel
-     INTEGER, INTENT (OUT) :: work(12*a_n+sumweight+a_ne)
-     TYPE (nd_options), INTENT (IN) :: control
-     TYPE (nd_inform), INTENT (INOUT) :: info
-     TYPE (nd_multigrid), INTENT (INOUT) :: grid
+     logical, intent (inout) :: use_multilevel
+     integer, intent (out) :: work(12*a_n+sumweight+a_ne)
+     type (nd_options), intent (in) :: control
+     type (nd_inform), intent (inout) :: info
+     type (nd_multigrid), intent (inout) :: grid
 
      ! ---------------------------------------------
      ! Local variables
-     INTEGER :: unit_diagnostics ! unit on which to print diagnostics
-     LOGICAL :: printi, printd
-     INTEGER :: partition_ptr ! pointer into work array
-     INTEGER :: work_ptr ! pointer into work array
-     INTEGER :: part_ptr ! pointer into work array
-     INTEGER :: a_ptr_sub_ptr ! pointer into work array
-     INTEGER :: a_row_sub_ptr ! pointer into work array
-     INTEGER :: partition_method
-     INTEGER :: i, j, k
-     INTEGER :: a_weight_1, a_weight_2, a_weight_sep
-     INTEGER :: ref_method, ref_control
-     INTEGER :: a_n1_new, a_n2_new, a_weight_1_new, a_weight_2_new, &
+     integer :: unit_diagnostics ! unit on which to print diagnostics
+     logical :: printi, printd
+     integer :: partition_ptr ! pointer into work array
+     integer :: work_ptr ! pointer into work array
+     integer :: part_ptr ! pointer into work array
+     integer :: a_ptr_sub_ptr ! pointer into work array
+     integer :: a_row_sub_ptr ! pointer into work array
+     integer :: partition_method
+     integer :: i, j, k
+     integer :: a_weight_1, a_weight_2, a_weight_sep
+     integer :: ref_method, ref_control
+     integer :: a_n1_new, a_n2_new, a_weight_1_new, a_weight_2_new, &
        a_weight_sep_new
-     REAL (wp) :: ratio, tau_best, tau, band, depth
-     LOGICAL :: imbal
+     real (wp) :: ratio, tau_best, tau, band, depth
+     logical :: imbal
 
 
      ! ---------------------------------------------
      ! Printing levels
      unit_diagnostics = control%unit_diagnostics
-     printi = (control%print_level==1 .AND. unit_diagnostics>=0)
-     printd = (control%print_level>=2 .AND. unit_diagnostics>=0)
+     printi = (control%print_level==1 .and. unit_diagnostics>=0)
+     printd = (control%print_level>=2 .and. unit_diagnostics>=0)
 
-     IF (printi .OR. printd) THEN
-       WRITE (unit_diagnostics,'(a)') ' '
-       WRITE (unit_diagnostics,'(a)') 'Start finding a partition'
-     END IF
+     if (printi .or. printd) then
+       write (unit_diagnostics,'(a)') ' '
+       write (unit_diagnostics,'(a)') 'Start finding a partition'
+     end if
 
      ! If matrix is full, then don't partition
-     IF (a_ne==a_n*(a_n-1)) THEN
+     if (a_ne==a_n*(a_n-1)) then
        a_n1 = a_n
        a_n2 = 0
        a_ne1 = a_ne
        a_ne2 = 0
-       GO TO 10
-     END IF
+       go to 10
+     end if
 
      ! Find the partition
-     IF (control%coarse_partition_method<=1) THEN
+     if (control%coarse_partition_method<=1) then
        partition_method = 1
-     ELSE
+     else
        partition_method = 2
-     END IF
+     end if
 
 
      partition_ptr = 0 ! length a_n
      work_ptr = partition_ptr + a_n ! max length 9*a_n+sumweight+a_ne/2
-     ! DO p = 1,a_n
-     ! DO q = p+1,a_n
-     ! IF (control%partition_method .GE. 2) use_multilevel = .TRUE.
-     IF (partition_method==1) THEN
+     ! do p = 1,a_n
+     ! do q = p+1,a_n
+     ! if (control%partition_method .ge. 2) use_multilevel = .true.
+     if (partition_method==1) then
        ! Ashcraft method
-       CALL nd_ashcraft(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,level, &
+       call nd_ashcraft(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,level, &
          a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep, &
          work(partition_ptr+1:partition_ptr+a_n), &
          work(work_ptr+1:work_ptr+9*a_n+sumweight),control,info%flag,band, &
          depth,use_multilevel,grid)
-     ELSE
-       CALL nd_level_set(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
+     else
+       call nd_level_set(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
          level,a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep, &
          work(partition_ptr+1:partition_ptr+a_n), &
          work(work_ptr+1:work_ptr+9*a_n+sumweight),control,info%flag, &
          band,depth,use_multilevel,grid)
 
-     END IF
+     end if
 
-     IF (a_n1+a_n2==a_n) THEN
-       RETURN
-     END IF
+     if (a_n1+a_n2==a_n) then
+       return
+     end if
 
-     IF (level==0) THEN
-       IF (a_n>info%n_max_component .OR. (a_n==info%n_max_component .AND. &
-           band>info%band)) THEN
+     if (level==0) then
+       if (a_n>info%n_max_component .or. (a_n==info%n_max_component .and. &
+           band>info%band)) then
          info%band = band
          info%depth = depth
-       END IF
+       end if
 
-     END IF
+     end if
 
-     IF (a_n1/=0 .AND. a_n2/=0 .AND. a_n>=3) THEN
-       IF ( .NOT. use_multilevel) THEN
+     if (a_n1/=0 .and. a_n2/=0 .and. a_n>=3) then
+       if ( .not. use_multilevel) then
 
-         IF (control%refinement>6) THEN
+         if (control%refinement>6) then
            ref_control = 3
-         ELSE
-           IF (control%refinement<1) THEN
+         else
+           if (control%refinement<1) then
              ref_control = 1
-           ELSE
+           else
              ref_control = control%refinement
-           END IF
-         END IF
+           end if
+         end if
 
-         SELECT CASE (ref_control)
-         CASE (1)
+         select case (ref_control)
+         case (1)
            ref_method = 1
 
-         CASE (2)
+         case (2)
            ref_method = 2
 
-         CASE (3)
-           IF (REAL(MAX(a_weight_1,a_weight_2))/REAL(MIN(a_weight_1, &
-               a_weight_2)+a_weight_sep)>=MAX(REAL(1.0, &
-               wp),control%balance)) THEN
+         case (3)
+           if (real(max(a_weight_1,a_weight_2))/real(min(a_weight_1, &
+               a_weight_2)+a_weight_sep)>=max(real(1.0, &
+               wp),control%balance)) then
              ref_method = 2
-           ELSE
+           else
              ref_method = 1
-           END IF
+           end if
 
-         CASE (4)
+         case (4)
            ref_method = 0
 
-         CASE (5)
+         case (5)
            ref_method = 2
 
-         CASE (6)
-           IF (REAL(MAX(a_weight_1,a_weight_2))/REAL(MIN(a_weight_1, &
-               a_weight_2)+a_weight_sep)>=MAX(REAL(1.0, &
-               wp),control%balance)) THEN
+         case (6)
+           if (real(max(a_weight_1,a_weight_2))/real(min(a_weight_1, &
+               a_weight_2)+a_weight_sep)>=max(real(1.0, &
+               wp),control%balance)) then
              ref_method = 2
-           ELSE
+           else
              ref_method = 0
-           END IF
+           end if
 
-         END SELECT
-         IF (printd) THEN
-           WRITE (unit_diagnostics,'(a)') 'Partition before refinement'
-           WRITE (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_n1=', a_n1, &
+         end select
+         if (printd) then
+           write (unit_diagnostics,'(a)') 'Partition before refinement'
+           write (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_n1=', a_n1, &
              ',  a_n2=', a_n2, ',  a_n_sep=', a_n - a_n1 - a_n2
-         END IF
+         end if
 
-         SELECT CASE (ref_method)
+         select case (ref_method)
 
-         CASE (0)
-           CALL nd_refine_max_flow(a_n,a_ne,a_ptr,a_row,a_weight,a_n1, &
+         case (0)
+           call nd_refine_max_flow(a_n,a_ne,a_ptr,a_row,a_weight,a_n1, &
              a_n2,a_weight_1,a_weight_2,a_weight_sep, &
              work(partition_ptr+1:partition_ptr+a_n), &
              work(work_ptr+1:work_ptr+8),control)
 
-         CASE (1)
-           IF (MIN(a_weight_1,a_weight_2)+a_weight_sep< &
-               MAX(a_weight_1,a_weight_2)) THEN
-             CALL nd_refine_block_trim(a_n,a_ne,a_ptr,a_row, &
+         case (1)
+           if (min(a_weight_1,a_weight_2)+a_weight_sep< &
+               max(a_weight_1,a_weight_2)) then
+             call nd_refine_block_trim(a_n,a_ne,a_ptr,a_row, &
                a_weight,sumweight,a_n1,a_n2,a_weight_1,a_weight_2, &
                a_weight_sep,work(partition_ptr+1:partition_ptr+a_n), &
                work(work_ptr+1:work_ptr+5*a_n),control)
-           ELSE
-             CALL nd_refine_trim(a_n,a_ne,a_ptr,a_row,a_weight, &
+           else
+             call nd_refine_trim(a_n,a_ne,a_ptr,a_row,a_weight, &
                sumweight,a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep, &
                work(partition_ptr+1:partition_ptr+a_n), &
                work(work_ptr+1:work_ptr+3*a_n),control)
-           END IF
+           end if
 
 
-         CASE (2)
-           CALL nd_refine_edge(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
+         case (2)
+           call nd_refine_edge(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
              a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep, &
              work(partition_ptr+1:partition_ptr+a_n), &
              work(work_ptr+1:work_ptr+3*a_n),control)
 
 
-         END SELECT
+         end select
 
 
-         IF (printd) THEN
-           WRITE (unit_diagnostics,'(a)') 'Partition after refinement'
-           WRITE (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_n1=', a_n1, &
+         if (printd) then
+           write (unit_diagnostics,'(a)') 'Partition after refinement'
+           write (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_n1=', a_n1, &
              ',  a_n2=', a_n2, ',  a_n_sep=', a_n - a_n1 - a_n2
-         END IF
+         end if
 
-         IF (control%max_improve_cycles>0) THEN
-           ratio = MAX(REAL(1.0,wp),control%balance)
-           IF (ratio>REAL(sumweight-2)) THEN
-             imbal = .FALSE.
-           ELSE
-             imbal = .TRUE.
-           END IF
-           CALL cost_function(a_weight_1,a_weight_2,a_weight_sep,sumweight, &
+         if (control%max_improve_cycles>0) then
+           ratio = max(real(1.0,wp),control%balance)
+           if (ratio>real(sumweight-2)) then
+             imbal = .false.
+           else
+             imbal = .true.
+           end if
+           call cost_function(a_weight_1,a_weight_2,a_weight_sep,sumweight, &
              ratio,imbal,control%cost_function,tau_best)
            a_n1_new = a_n1
            a_n2_new = a_n2
            a_weight_1_new = a_weight_1
            a_weight_2_new = a_weight_2
            a_weight_sep_new = a_weight_sep
-         END IF
+         end if
 
          part_ptr = work_ptr + 5*a_n
          work(part_ptr+1:part_ptr+a_n) = work(partition_ptr+1:partition_ptr &
            +a_n)
 
          k = control%max_improve_cycles
-         DO i = 1, k
+         do i = 1, k
 
-           CALL expand_partition(a_n,a_ne,a_ptr,a_row,a_weight,a_n1_new, &
+           call expand_partition(a_n,a_ne,a_ptr,a_row,a_weight,a_n1_new, &
              a_n2_new,a_weight_1_new,a_weight_2_new,a_weight_sep_new, &
              work(part_ptr+1:part_ptr+a_n),work(work_ptr+1:work_ptr+5*a_n))
 
 
-           IF (printd) THEN
-             WRITE (unit_diagnostics,'(a)') &
+           if (printd) then
+             write (unit_diagnostics,'(a)') &
                'Partition sizes after expansion'
-             WRITE (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_n1=', &
+             write (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_n1=', &
                a_n1_new, ',  a_n2=', a_n2_new, ',  a_n_sep=', &
                a_n - a_n1_new - a_n2_new
-           END IF
+           end if
 
            ! call
            ! check_partition1(a_n,a_ne,a_ptr,a_row,a_n1_new,a_n2_new,work(p
            ! art_ptr+1:part_ptr+a_n))
 
-           SELECT CASE (ref_control)
+           select case (ref_control)
 
-           CASE (3)
-             IF (REAL(MAX(a_weight_1_new,a_weight_2_new))/REAL(MIN( &
-                 a_weight_1_new,a_weight_2_new)+a_weight_sep_new)>MAX(REAL( &
-                 1.0,wp),control%balance)) THEN
+           case (3)
+             if (real(max(a_weight_1_new,a_weight_2_new))/real(min( &
+                 a_weight_1_new,a_weight_2_new)+a_weight_sep_new)>max(real( &
+                 1.0,wp),control%balance)) then
                ref_method = 2
-             ELSE
+             else
                ref_method = 1
-             END IF
+             end if
 
-           CASE (6)
-             IF (REAL(MAX(a_weight_1_new,a_weight_2_new))/REAL(MIN( &
-                 a_weight_1_new,a_weight_2_new)+a_weight_sep_new)>MAX(REAL( &
-                 1.0,wp),control%balance)) THEN
+           case (6)
+             if (real(max(a_weight_1_new,a_weight_2_new))/real(min( &
+                 a_weight_1_new,a_weight_2_new)+a_weight_sep_new)>max(real( &
+                 1.0,wp),control%balance)) then
                ref_method = 2
-             ELSE
+             else
                ref_method = 0
-             END IF
-           END SELECT
+             end if
+           end select
 
 
-           SELECT CASE (ref_method)
+           select case (ref_method)
 
-           CASE (0)
-             CALL nd_refine_max_flow(a_n,a_ne,a_ptr,a_row,a_weight, &
+           case (0)
+             call nd_refine_max_flow(a_n,a_ne,a_ptr,a_row,a_weight, &
                a_n1_new,a_n2_new,a_weight_1_new,a_weight_2_new, &
                a_weight_sep_new,work(part_ptr+1:part_ptr+a_n), &
                work(work_ptr+1:work_ptr+8),control)
 
-           CASE (1)
-             IF (MIN(a_weight_1,a_weight_2)+a_weight_sep< &
-                 MAX(a_weight_1,a_weight_2)) THEN
-               CALL nd_refine_block_trim(a_n,a_ne,a_ptr,a_row, &
+           case (1)
+             if (min(a_weight_1,a_weight_2)+a_weight_sep< &
+                 max(a_weight_1,a_weight_2)) then
+               call nd_refine_block_trim(a_n,a_ne,a_ptr,a_row, &
                  a_weight,sumweight,a_n1_new,a_n2_new,a_weight_1_new, &
                  a_weight_2_new,a_weight_sep_new, &
                  work(part_ptr+1:part_ptr+a_n),work(work_ptr+1:work_ptr+5* &
                  a_n),control)
-             ELSE
-               CALL nd_refine_trim(a_n,a_ne,a_ptr,a_row,a_weight, &
+             else
+               call nd_refine_trim(a_n,a_ne,a_ptr,a_row,a_weight, &
                  sumweight,a_n1_new,a_n2_new,a_weight_1_new,a_weight_2_new, &
                  a_weight_sep_new,work(part_ptr+1:part_ptr+a_n), &
                  work(work_ptr+1:work_ptr+3*a_n),control)
-             END IF
+             end if
 
 
-           CASE (2)
-             CALL nd_refine_edge(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
+           case (2)
+             call nd_refine_edge(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
                a_n1_new,a_n2_new,a_weight_1_new,a_weight_2_new, &
                a_weight_sep_new,work(part_ptr+1:part_ptr+a_n), &
                work(work_ptr+1:work_ptr+3*a_n),control)
 
-           END SELECT
+           end select
 
 
-           IF (printd) THEN
-             WRITE (unit_diagnostics,'(a)') &
+           if (printd) then
+             write (unit_diagnostics,'(a)') &
                'Partition sizes after refinement'
-             WRITE (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_n1=', &
+             write (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_n1=', &
                a_n1_new, ',  a_n2=', a_n2_new, ',  a_n_sep=', &
                a_n - a_n1_new - a_n2_new
-           END IF
+           end if
 
 
-           CALL cost_function(a_weight_1_new,a_weight_2_new, &
+           call cost_function(a_weight_1_new,a_weight_2_new, &
              a_weight_sep_new,sumweight,ratio,imbal,control%cost_function,tau)
-           IF (tau<tau_best) THEN
+           if (tau<tau_best) then
              tau_best = tau
              work(partition_ptr+1:partition_ptr+a_n) &
                = work(part_ptr+1:part_ptr+a_n)
@@ -2091,60 +2091,60 @@ CONTAINS
              a_weight_1 = a_weight_1_new
              a_weight_2 = a_weight_2_new
              a_weight_sep = a_weight_sep_new
-           ELSE
-             EXIT
-           END IF
-         END DO
+           else
+             exit
+           end if
+         end do
 
-         CALL nd_refine_fm(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,a_n1, &
+         call nd_refine_fm(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,a_n1, &
            a_n2,a_weight_1,a_weight_2,a_weight_sep, &
            work(partition_ptr+1:partition_ptr+a_n), &
            work(work_ptr+1:work_ptr+8*a_n+sumweight),control)
 
 
-       END IF
-     ELSE
-       GO TO 10
-     END IF
+       end if
+     else
+       go to 10
+     end if
 
-     IF (printi .OR. printd) THEN
-       WRITE (unit_diagnostics,'(a)') 'Partition found:'
-       WRITE (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_n1=', a_n1, &
+     if (printi .or. printd) then
+       write (unit_diagnostics,'(a)') 'Partition found:'
+       write (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_n1=', a_n1, &
          ', a_n2=', a_n2, ', a_nsep=', a_n - a_n1 - a_n2
-     END IF
+     end if
 
-     IF ((a_n1<=MAX(2,control%amd_switch1) .AND. a_n2<=MAX(2, &
-         control%amd_switch1))) THEN
+     if ((a_n1<=max(2,control%amd_switch1) .and. a_n2<=max(2, &
+         control%amd_switch1))) then
        ! apply halo amd to submatrics
-       CALL amd_order_both(a_n,a_ne,a_ptr,a_row,a_n1,a_n2, &
+       call amd_order_both(a_n,a_ne,a_ptr,a_row,a_n1,a_n2, &
          work(partition_ptr+1:partition_ptr+a_n),iperm,a_weight, &
          work(work_ptr+1:work_ptr+12*a_n+a_ne))
        a_ne1 = 0
        a_ne2 = 0
 
-     ELSE IF (a_n1<=MAX(2,control%amd_switch1)) THEN
+     else if (a_n1<=max(2,control%amd_switch1)) then
        ! apply halo amd to [A1, B1'; B1, I] using two levels
        ! return A2 and apply ND to it
-       CALL amd_order_one(a_n,a_ne,a_ptr,a_row,a_n1,a_n2, &
+       call amd_order_one(a_n,a_ne,a_ptr,a_row,a_n1,a_n2, &
          work(partition_ptr+1:partition_ptr+a_n),iperm,a_weight,a_ne2, &
          work(work_ptr+1:work_ptr+12*a_n+a_ne))
        a_ne1 = 0
 
 
-     ELSE IF (a_n2<=MAX(2,control%amd_switch1)) THEN
+     else if (a_n2<=max(2,control%amd_switch1)) then
        ! apply halo amd to [A2, B2'; B2, I] using two levels
        ! return A1 and apply ND to it
-       CALL amd_order_one(a_n,a_ne,a_ptr,a_row,a_n1,a_n2, &
+       call amd_order_one(a_n,a_ne,a_ptr,a_row,a_n1,a_n2, &
          work(partition_ptr+1:partition_ptr+a_n),iperm,a_weight,a_ne1, &
          work(work_ptr+1:work_ptr+12*a_n+a_ne))
        a_ne2 = 0
 
-     ELSE
+     else
        ! return A1 and A2 and apply ND to them
        a_ptr_sub_ptr = work_ptr + a_n ! length a_n
        a_row_sub_ptr = a_ptr_sub_ptr + a_n ! length a_ne
 
-       CALL extract_both_matrices(a_n,a_ne,a_ptr,a_row,a_n1,a_n2, &
+       call extract_both_matrices(a_n,a_ne,a_ptr,a_row,a_n1,a_n2, &
          work(partition_ptr+1:partition_ptr+a_n1+a_n2),a_ne1,a_ne2, &
          work(a_ptr_sub_ptr+1:a_ptr_sub_ptr+a_n1+a_n2),a_ne, &
          work(a_row_sub_ptr+1:a_row_sub_ptr+a_ne), &
@@ -2156,112 +2156,112 @@ CONTAINS
          a_ne2)
 
        ! Update iperm and a_weight
-       DO i = 1, a_n
+       do i = 1, a_n
          j = work(partition_ptr+i)
          work(a_ptr_sub_ptr+i) = iperm(j)
          work(work_ptr+i) = a_weight(j)
-       END DO
-       DO i = 1, a_n
+       end do
+       do i = 1, a_n
          iperm(i) = work(a_ptr_sub_ptr+i)
          a_weight(i) = work(work_ptr+i)
-       END DO
+       end do
 
-     END IF
-     GO TO 20
+     end if
+     go to 20
 
-10      IF (printi .OR. printd) THEN
-       WRITE (unit_diagnostics,'(a)') 'No partition found'
-     END IF
+10      if (printi .or. printd) then
+       write (unit_diagnostics,'(a)') 'No partition found'
+     end if
 
 20      info%flag = 0
-     IF (printi .OR. printd) THEN
-       CALL nd_print_message(info%flag,unit_diagnostics, &
+     if (printi .or. printd) then
+       call nd_print_message(info%flag,unit_diagnostics, &
          'nd_partition')
-     END IF
-     RETURN
+     end if
+     return
 
-   END SUBROUTINE nd_partition
+   end subroutine nd_partition
 
    ! ---------------------------------------------------
    ! nd_ashcraft
    ! ---------------------------------------------------
    ! Partition the matrix using the Ashcraft method
-   RECURSIVE SUBROUTINE nd_ashcraft(a_n,a_ne,a_ptr,a_row,a_weight, &
+   RECURSIVE subroutine nd_ashcraft(a_n,a_ne,a_ptr,a_row,a_weight, &
        sumweight,level,a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep, &
        partition,work,control,info,band,depth,use_multilevel,grid)
 
-     INTEGER, INTENT (IN) :: a_n ! dimension of subproblem ND is applied to
-     INTEGER, INTENT (IN) :: a_ne ! no. nonzeros of subproblem
-     INTEGER, INTENT (IN) :: a_ptr(a_n) ! On input a_ptr(i) contains
+     integer, intent (in) :: a_n ! dimension of subproblem ND is applied to
+     integer, intent (in) :: a_ne ! no. nonzeros of subproblem
+     integer, intent (in) :: a_ptr(a_n) ! On input a_ptr(i) contains
      ! position in a_row that entries for column i start.
-     INTEGER, INTENT (IN) :: a_row(a_ne) ! On input a_row contains row
+     integer, intent (in) :: a_row(a_ne) ! On input a_row contains row
      ! indices of the non-zero rows. Diagonal entries have been removed
      ! and the matrix expanded.
-     INTEGER, INTENT (IN) :: a_weight(a_n) ! On input a_weight(i) contains
+     integer, intent (in) :: a_weight(a_n) ! On input a_weight(i) contains
      ! the weight of column i.
-     INTEGER, INTENT (IN) :: sumweight ! sum of entries in a_weight
-     INTEGER, INTENT (IN) :: level ! current level of nested dissection
-     INTEGER, INTENT (OUT) :: a_n1, a_n2 ! size of the two submatrices
-     INTEGER, INTENT (OUT) :: a_weight_1, a_weight_2, a_weight_sep ! Weight
+     integer, intent (in) :: sumweight ! sum of entries in a_weight
+     integer, intent (in) :: level ! current level of nested dissection
+     integer, intent (out) :: a_n1, a_n2 ! size of the two submatrices
+     integer, intent (out) :: a_weight_1, a_weight_2, a_weight_sep ! Weight
      ! ed
      ! size of partitions and separator
-     INTEGER, INTENT (OUT) :: partition(a_n) ! First a_n1 entries will
+     integer, intent (out) :: partition(a_n) ! First a_n1 entries will
      ! contain
      ! list of (local) indices in partition 1; next a_n2 entries will
      ! contain list of (local) entries in partition 2; entries in
      ! separator are listed at the end
-     INTEGER, INTENT (OUT) :: work(9*a_n+sumweight) ! used as work array
-     TYPE (nd_options), INTENT (IN) :: control
-     INTEGER, INTENT (INOUT) :: info
-     REAL (wp), INTENT (OUT) :: band ! If level = 0, then on
+     integer, intent (out) :: work(9*a_n+sumweight) ! used as work array
+     type (nd_options), intent (in) :: control
+     integer, intent (inout) :: info
+     real (wp), intent (out) :: band ! If level = 0, then on
      ! output band = 100*L/a_n, where L is the size of the
      ! largest levelset
-     REAL (wp), INTENT (OUT) :: depth ! If level = 0, then
+     real (wp), intent (out) :: depth ! If level = 0, then
      ! on
      ! output depth = num_levels_nend
-     LOGICAL, INTENT (INOUT) :: use_multilevel ! are we allowed to use a
+     logical, intent (inout) :: use_multilevel ! are we allowed to use a
      ! multilevel
      ! partitioning strategy
-     TYPE (nd_multigrid), INTENT (INOUT) :: grid
+     type (nd_multigrid), intent (inout) :: grid
 
      ! ---------------------------------------------
      ! Local variables
-     INTEGER :: nstrt, nend
-     INTEGER :: i, j, dptr, p1sz, p2sz, sepsz, lwork, k
-     INTEGER :: unit_diagnostics ! unit on which to print diagnostics
-     INTEGER :: mask_p, level_p, level_ptr_p, level2_p, level2_ptr_p, &
+     integer :: nstrt, nend
+     integer :: i, j, dptr, p1sz, p2sz, sepsz, lwork, k
+     integer :: unit_diagnostics ! unit on which to print diagnostics
+     integer :: mask_p, level_p, level_ptr_p, level2_p, level2_ptr_p, &
        work_p
-     INTEGER :: num_levels_nend ! no. levels in structure rooted at nend
-     INTEGER :: num_levels_nstrt ! no. levels in structure rooted at nstrt
-     INTEGER :: num_entries ! no. entries in level set structure
-     INTEGER :: best_sep_start
-     INTEGER :: distance
-     INTEGER :: distance_ptr
-     INTEGER :: lwidth, mindeg, degree, max_search
-     INTEGER :: ww
-     INTEGER :: stop_coarsening2 ! max no. multigrid levels
-     REAL (wp) :: bestval
-     REAL (wp) :: val
-     REAL (wp) :: ratio
-     LOGICAL :: printi, printd
-     LOGICAL :: imbal, use_multilevel_copy
+     integer :: num_levels_nend ! no. levels in structure rooted at nend
+     integer :: num_levels_nstrt ! no. levels in structure rooted at nstrt
+     integer :: num_entries ! no. entries in level set structure
+     integer :: best_sep_start
+     integer :: distance
+     integer :: distance_ptr
+     integer :: lwidth, mindeg, degree, max_search
+     integer :: ww
+     integer :: stop_coarsening2 ! max no. multigrid levels
+     real (wp) :: bestval
+     real (wp) :: val
+     real (wp) :: ratio
+     logical :: printi, printd
+     logical :: imbal, use_multilevel_copy
 
      ! ---------------------------------------------
      ! Printing levels
      unit_diagnostics = control%unit_diagnostics
-     printi = (control%print_level==1 .AND. unit_diagnostics>=0)
-     printd = (control%print_level>=2 .AND. unit_diagnostics>=0)
+     printi = (control%print_level==1 .and. unit_diagnostics>=0)
+     printd = (control%print_level>=2 .and. unit_diagnostics>=0)
 
-     IF (printi .OR. printd) THEN
-       WRITE (unit_diagnostics,'(a)') ' '
-       WRITE (unit_diagnostics,'(a)') 'Use two-sided level set method'
-     END IF
-     ratio = MAX(REAL(1.0,wp),control%balance)
-     IF (ratio>REAL(sumweight-2)) THEN
-       imbal = .FALSE.
-     ELSE
-       imbal = .TRUE.
-     END IF
+     if (printi .or. printd) then
+       write (unit_diagnostics,'(a)') ' '
+       write (unit_diagnostics,'(a)') 'Use two-sided level set method'
+     end if
+     ratio = max(real(1.0,wp),control%balance)
+     if (ratio>real(sumweight-2)) then
+       imbal = .false.
+     else
+       imbal = .true.
+     end if
      p2sz = 0
      sepsz = 0
      use_multilevel_copy = use_multilevel
@@ -2270,10 +2270,10 @@ CONTAINS
      band = -1
      depth = -1
 
-     IF (control%partition_method==1 .AND. use_multilevel) GO TO 10
+     if (control%partition_method==1 .and. use_multilevel) go to 10
 
-     IF (control%partition_method>1 .AND. level>0 .AND. use_multilevel) &
-       GO TO 10
+     if (control%partition_method>1 .and. level>0 .and. use_multilevel) &
+       go to 10
 
      ! Find pseudoperipheral nodes nstart and nend, and the level structure
      ! rooted at nend
@@ -2289,91 +2289,91 @@ CONTAINS
      ! Choose nstrt
      ! node with minimum degree
      mindeg = sumweight + 1
-     DO i = 1, a_n
-       IF (i<a_n) THEN
+     do i = 1, a_n
+       if (i<a_n) then
          k = a_ptr(i+1) - 1
-       ELSE
+       else
          k = a_ne
-       END IF
+       end if
        degree = 0
-       DO j = a_ptr(i), k
+       do j = a_ptr(i), k
          degree = degree + a_weight(a_row(j))
-       END DO
-       IF (degree<mindeg) THEN
+       end do
+       if (degree<mindeg) then
          mindeg = degree
          nstrt = i
-       END IF
-     END DO
+       end if
+     end do
 
      max_search = 5
 
-     CALL nd_find_pseudo(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
+     call nd_find_pseudo(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
        work(level_ptr_p+1:level_ptr_p+a_n),work(level_p+1:level_p+a_n), &
        nstrt,nend,max_search,work(work_p+1:work_p+2*a_n),num_levels_nend, &
        num_entries,lwidth)
 
-     IF (num_entries<a_n) THEN
+     if (num_entries<a_n) then
        ! matrix is separable
        a_n1 = num_entries
        a_n2 = a_n - a_n1
        a_weight_sep = 0
        a_weight_1 = 0
        work(work_p+1:work_p+a_n) = 0
-       DO i = 1, num_entries
+       do i = 1, num_entries
          j = work(level_p+i)
          partition(i) = j
          work(work_p+j) = 1
          a_weight_1 = a_weight_1 + a_weight(j)
-       END DO
+       end do
        a_weight_2 = sumweight - a_weight_1
        j = num_entries + 1
-       DO i = 1, a_n
-         IF (work(work_p+i)==0) THEN
+       do i = 1, a_n
+         if (work(work_p+i)==0) then
            partition(j) = i
            j = j + 1
-         END IF
+         end if
 
-       END DO
-       IF (level==0) THEN
-         band = -REAL(lwidth,wp)
-       END IF
+       end do
+       if (level==0) then
+         band = -real(lwidth,wp)
+       end if
 
-       RETURN
-     END IF
+       return
+     end if
 
      ! ********************************************************************
      ! ***
-     IF (level==0) THEN
-       band = 100.0*REAL(lwidth,wp)/REAL(a_n,wp)
+     if (level==0) then
+       band = 100.0*real(lwidth,wp)/real(a_n,wp)
        ! band = max(band,real(lwidth,wp))
        ! write(*,*) sqrt(real(lwidth))/real(num_levels_nend), lwidth, &
        ! real(sumweight)/real(num_levels_nend), &
        ! real(num_levels_nend)*(real(lwidth)/real(sumweight))
-       depth = 100.0*REAL(num_levels_nend,wp)/ &
-         REAL(a_n,wp)
-     END IF
-     IF (control%stop_coarsening2<=0 .OR. control%partition_method<1) THEN
-       use_multilevel = .FALSE.
-     END IF
-     IF (control%partition_method>=2 .AND. use_multilevel) THEN
-       ! IF (real(lwidth,wp) .LE. 2.0* &
+       depth = 100.0*real(num_levels_nend,wp)/ &
+         real(a_n,wp)
+     end if
+     if (control%stop_coarsening2<=0 .or. control%partition_method<1) then
+       use_multilevel = .false.
+     end if
+     if (control%partition_method>=2 .and. use_multilevel) then
+       ! if (real(lwidth,wp) .le. 2.0* &
        ! real(sumweight,wp)/real(num_levels_nend,wp) )
-       ! THEN
-       IF (100.0*REAL(lwidth,wp)/REAL(sumweight,wp)<=3.0 .OR. &
-          a_n.LT. control%ml_call) &
-           THEN
-         use_multilevel = .FALSE.
-       ELSE
-         use_multilevel = .TRUE.
-       END IF
-     END IF
+       ! then
+       if (100.0*real(lwidth,wp)/real(sumweight,wp)<=3.0 .or. &
+          a_n.lt. control%ml_call) &
+           then
+         use_multilevel = .false.
+       else
+         use_multilevel = .true.
+       end if
+     end if
 
-     IF (use_multilevel) GO TO 10
+     if (use_multilevel) go to 10
 
 
      ! Find level structure rooted at nstrt
      work(mask_p+1:mask_p+a_n) = 1
-     CALL nd_level_struct(nstrt,a_n,a_ne,a_ptr,a_row, &
+     call nd_level_struct(nstrt,a_n,a_ne,a_ptr,a_row, &
        work(mask_p+1:mask_p+a_n),work(level2_ptr_p+1:level2_ptr_p+a_n), &
        work(level2_p+1:level2_p+a_n),num_levels_nstrt,lwidth,num_entries)
 
@@ -2381,7 +2381,7 @@ CONTAINS
      ! lists D_i of nodes with same distance
      distance_ptr = work_p
      distance = mask_p
-     CALL nd_distance(a_n,num_levels_nend,work(level_ptr_p+1:level_ptr_p &
+     call nd_distance(a_n,num_levels_nend,work(level_ptr_p+1:level_ptr_p &
        +a_n),work(level_p+1:level_p+a_n),num_levels_nstrt, &
        work(level2_ptr_p+1:level2_ptr_p+a_n),work(level2_p+1:level2_p+a_n), &
        work(distance_ptr+1:distance_ptr+2*a_n-1), &
@@ -2391,32 +2391,32 @@ CONTAINS
      ! Calculate total weight in each distance level
      dptr = level_ptr_p + a_n
      work(dptr+1-a_n:dptr+a_n-1) = 0
-     DO i = 1 - num_levels_nstrt, num_levels_nend - 2
-       DO j = work(distance_ptr+a_n+i), work(distance_ptr+a_n+i+1) - 1
+     do i = 1 - num_levels_nstrt, num_levels_nend - 2
+       do j = work(distance_ptr+a_n+i), work(distance_ptr+a_n+i+1) - 1
          work(dptr+i) = work(dptr+i) + a_weight(work(distance+j))
-       END DO
-     END DO
+       end do
+     end do
      i = num_levels_nend - 1
-     DO j = work(distance_ptr+a_n+i), a_n
+     do j = work(distance_ptr+a_n+i), a_n
        work(dptr+i) = work(dptr+i) + a_weight(work(distance+j))
-     END DO
+     end do
 
      ! Find first possible separator
      ww = 2
      p1sz = 0
-     DO i = 1 - num_levels_nstrt, num_levels_nend - ww - 2
+     do i = 1 - num_levels_nstrt, num_levels_nend - ww - 2
        p1sz = p1sz + work(dptr+i)
        sepsz = work(dptr+i+1)
-       DO j = 1, ww - 1
+       do j = 1, ww - 1
          sepsz = sepsz + work(dptr+i+1+j)
-       END DO
+       end do
        p2sz = sumweight - p1sz - sepsz
-       IF (p1sz>0 .AND. sepsz>0) THEN
-         EXIT
-       END IF
-     END DO
+       if (p1sz>0 .and. sepsz>0) then
+         exit
+       end if
+     end do
 
-     IF (i+ww>=num_levels_nend-1 .OR. p2sz==0) THEN
+     if (i+ww>=num_levels_nend-1 .or. p2sz==0) then
        ! Not possible to find separator
        ! This can only be invoked for a fully connected graph. The
        ! partition
@@ -2424,8 +2424,8 @@ CONTAINS
        a_n1 = a_n
        a_n2 = 0
        partition(1:a_n) = (/ (i,i=1,a_n) /)
-       RETURN
-     END IF
+       return
+     end if
 
      ! Entries in level i will form first possible partition
      best_sep_start = i + 1
@@ -2434,22 +2434,22 @@ CONTAINS
      a_weight_1 = p1sz
      a_weight_2 = p2sz
      a_weight_sep = sepsz
-     CALL cost_function(p1sz,p2sz,sepsz,sumweight,ratio,imbal,&
+     call cost_function(p1sz,p2sz,sepsz,sumweight,ratio,imbal,&
          control%cost_function,bestval)
 
      ! Search for best separator using tau
 
-     DO j = i + 1, num_levels_nend - ww - 2
+     do j = i + 1, num_levels_nend - ww - 2
        p1sz = p1sz + work(dptr+j)
        sepsz = work(dptr+j+1)
-       DO k = 1, ww - 1
+       do k = 1, ww - 1
          sepsz = sepsz + work(dptr+j+1+k)
-       END DO
+       end do
        p2sz = sumweight - sepsz - p1sz
-       IF (p2sz==0) EXIT
-       CALL cost_function(p1sz,p2sz,sepsz,sumweight,ratio,imbal,&
+       if (p2sz==0) exit
+       call cost_function(p1sz,p2sz,sepsz,sumweight,ratio,imbal,&
           control%cost_function,val)
-       IF (val<bestval) THEN
+       if (val<bestval) then
          bestval = val
          best_sep_start = j + 1
          a_n1 = work(distance_ptr+a_n+j+1) - 1
@@ -2457,150 +2457,150 @@ CONTAINS
          a_weight_1 = p1sz
          a_weight_2 = p2sz
          a_weight_sep = sepsz
-       END IF
-     END DO
+       end if
+     end do
 
-     IF (imbal .AND. use_multilevel_copy .AND. control%partition_method>=2) &
-         THEN
-       IF (REAL(MAX(a_weight_1,a_weight_2))/REAL(MIN(a_weight_1, &
-           a_weight_2))>ratio) THEN
-         use_multilevel = .TRUE.
-         GO TO 10
+     if (imbal .and. use_multilevel_copy .and. control%partition_method>=2) &
+         then
+       if (real(max(a_weight_1,a_weight_2))/real(min(a_weight_1, &
+           a_weight_2))>ratio) then
+         use_multilevel = .true.
+         go to 10
 
-       END IF
-     END IF
+       end if
+     end if
 
      ! Rearrange partition
      ! Entries in partition 1
      j = 1
-     DO i = 1, work(distance_ptr+a_n+best_sep_start) - 1
+     do i = 1, work(distance_ptr+a_n+best_sep_start) - 1
        partition(j) = work(distance+i)
        j = j + 1
-     END DO
+     end do
 
      ! Entries in partition 2
-     DO i = work(distance_ptr+a_n+best_sep_start+ww), a_n
+     do i = work(distance_ptr+a_n+best_sep_start+ww), a_n
        partition(j) = work(distance+i)
        j = j + 1
-     END DO
+     end do
 
      ! Entries in separator
-     DO i = work(distance_ptr+a_n+best_sep_start), &
+     do i = work(distance_ptr+a_n+best_sep_start), &
          work(distance_ptr+a_n+best_sep_start+ww) - 1
        partition(j) = work(distance+i)
        j = j + 1
-     END DO
-     GO TO 20
+     end do
+     go to 20
 
-10      CONTINUE
+10      continue
 
-     IF (use_multilevel) THEN
+     if (use_multilevel) then
        stop_coarsening2 = control%stop_coarsening2
        lwork = 9*a_n + sumweight
-       CALL multilevel_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
+       call multilevel_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
          partition,a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep,control, &
          info,lwork,work(1:lwork),stop_coarsening2,grid)
-       RETURN
-     END IF
+       return
+     end if
 
 
 20      info = 0
-     IF (printi .OR. printd) THEN
-       CALL nd_print_message(info,unit_diagnostics,'nd_ashcraft')
-     END IF
-     RETURN
+     if (printi .or. printd) then
+       call nd_print_message(info,unit_diagnostics,'nd_ashcraft')
+     end if
+     return
 
-   END SUBROUTINE nd_ashcraft
+   end subroutine nd_ashcraft
 
 
    ! ---------------------------------------------------
    ! nd_level_set
    ! ---------------------------------------------------
    ! Partition the matrix using the level set method
-   RECURSIVE SUBROUTINE nd_level_set(a_n,a_ne,a_ptr,a_row,a_weight, &
+   RECURSIVE subroutine nd_level_set(a_n,a_ne,a_ptr,a_row,a_weight, &
        sumweight,level,a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep, &
        partition,work,control,info,band,depth,use_multilevel,grid)
 
-     INTEGER, INTENT (IN) :: a_n ! dimension of subproblem ND is applied to
-     INTEGER, INTENT (IN) :: a_ne ! no. nonzeros of subproblem
-     INTEGER, INTENT (IN) :: a_ptr(a_n) ! On input a_ptr(i) contains
+     integer, intent (in) :: a_n ! dimension of subproblem ND is applied to
+     integer, intent (in) :: a_ne ! no. nonzeros of subproblem
+     integer, intent (in) :: a_ptr(a_n) ! On input a_ptr(i) contains
      ! position in a_row that entries for column i start.
-     INTEGER, INTENT (IN) :: a_row(a_ne) ! On input a_row contains row
+     integer, intent (in) :: a_row(a_ne) ! On input a_row contains row
      ! indices of the non-zero rows. Diagonal entries have been removed
      ! and the matrix expanded.
-     INTEGER, INTENT (IN) :: a_weight(a_n) ! On input a_weight(i) contains
+     integer, intent (in) :: a_weight(a_n) ! On input a_weight(i) contains
      ! the weight of column i.
-     INTEGER, INTENT (IN) :: sumweight ! sum of entries in a_weight
-     INTEGER, INTENT (IN) :: level ! current nested dissection level
-     INTEGER, INTENT (OUT) :: a_n1, a_n2 ! size of the two submatrices
-     INTEGER, INTENT (OUT) :: a_weight_1, a_weight_2, a_weight_sep ! Weight
+     integer, intent (in) :: sumweight ! sum of entries in a_weight
+     integer, intent (in) :: level ! current nested dissection level
+     integer, intent (out) :: a_n1, a_n2 ! size of the two submatrices
+     integer, intent (out) :: a_weight_1, a_weight_2, a_weight_sep ! Weight
      ! ed
      ! size of partitions and separator
-     INTEGER, INTENT (OUT) :: partition(a_n) ! First a_n1 entries will
+     integer, intent (out) :: partition(a_n) ! First a_n1 entries will
      ! contain
      ! list of (local) indices in partition 1; next a_n2 entries will
      ! contain list of (local) entries in partition 2; entries in
      ! separator are listed at the end
-     INTEGER, INTENT (OUT) :: work(9*a_n+sumweight)
-     TYPE (nd_options), INTENT (IN) :: control
-     INTEGER, INTENT (INOUT) :: info
-     REAL (wp), INTENT (OUT) :: band ! If level = 0, then on
+     integer, intent (out) :: work(9*a_n+sumweight)
+     type (nd_options), intent (in) :: control
+     integer, intent (inout) :: info
+     real (wp), intent (out) :: band ! If level = 0, then on
      ! output band = 100*L/a_n, where L is the size of the
      ! largest levelset
-     REAL (wp), INTENT (OUT) :: depth ! If level = 0, then
+     real (wp), intent (out) :: depth ! If level = 0, then
      ! on
      ! output band = num_levels_nend
-     LOGICAL, INTENT (INOUT) :: use_multilevel ! are we allowed to use a
+     logical, intent (inout) :: use_multilevel ! are we allowed to use a
      ! multilevel
      ! partitioning strategy
-     TYPE (nd_multigrid), INTENT (INOUT) :: grid
+     type (nd_multigrid), intent (inout) :: grid
 
      ! ---------------------------------------------
      ! Local variables
-     INTEGER :: unit_diagnostics ! unit on which to print diagnostics
-     INTEGER :: nstrt, nend
-     LOGICAL :: printi, printd
-     INTEGER :: level_p, level_ptr_p, work_p
-     INTEGER :: num_levels_nend ! no. levels in structure rooted at nend
-     INTEGER :: num_entries ! no. entries in level structure rooted at
+     integer :: unit_diagnostics ! unit on which to print diagnostics
+     integer :: nstrt, nend
+     logical :: printi, printd
+     integer :: level_p, level_ptr_p, work_p
+     integer :: num_levels_nend ! no. levels in structure rooted at nend
+     integer :: num_entries ! no. entries in level structure rooted at
      ! nend
-     INTEGER :: best_sep_start
-     INTEGER :: i, j, k, p1sz, p2sz, sepsz, lwidth
-     INTEGER :: stop_coarsening2, lwork
-     INTEGER :: mindeg, degree, max_search
-     REAL (wp) :: bestval
-     REAL (wp) :: val
-     REAL (wp) :: ratio
-     LOGICAL :: imbal
+     integer :: best_sep_start
+     integer :: i, j, k, p1sz, p2sz, sepsz, lwidth
+     integer :: stop_coarsening2, lwork
+     integer :: mindeg, degree, max_search
+     real (wp) :: bestval
+     real (wp) :: val
+     real (wp) :: ratio
+     logical :: imbal
 
      ! ---------------------------------------------
      ! Printing levels
      unit_diagnostics = control%unit_diagnostics
-     printi = (control%print_level==1 .AND. unit_diagnostics>=0)
-     printd = (control%print_level>=2 .AND. unit_diagnostics>=0)
+     printi = (control%print_level==1 .and. unit_diagnostics>=0)
+     printd = (control%print_level>=2 .and. unit_diagnostics>=0)
 
-     IF (printi .OR. printd) THEN
-       WRITE (unit_diagnostics,'(a)') ' '
-       WRITE (unit_diagnostics,'(a)') 'Use one-sided level set method'
-     END IF
+     if (printi .or. printd) then
+       write (unit_diagnostics,'(a)') ' '
+       write (unit_diagnostics,'(a)') 'Use one-sided level set method'
+     end if
 
-     ratio = MAX(REAL(1.0,wp),control%balance)
-     IF (ratio>REAL(sumweight-2)) THEN
-       imbal = .FALSE.
-     ELSE
-       imbal = .TRUE.
-     END IF
+     ratio = max(real(1.0,wp),control%balance)
+     if (ratio>real(sumweight-2)) then
+       imbal = .false.
+     else
+       imbal = .true.
+     end if
 
      band = -1
      depth = -1
 
-     IF (control%partition_method==1 .AND. use_multilevel) THEN
-       use_multilevel = .TRUE.
-       GO TO 10
-     END IF
+     if (control%partition_method==1 .and. use_multilevel) then
+       use_multilevel = .true.
+       go to 10
+     end if
 
-     IF (control%partition_method>1 .AND. level>0 .AND. use_multilevel) &
-       GO TO 10
+     if (control%partition_method>1 .and. level>0 .and. use_multilevel) &
+       go to 10
 
      ! Find pseudoperipheral nodes nstart and nend, and the level structure
      ! rooted at nend
@@ -2608,110 +2608,110 @@ CONTAINS
      level_p = level_ptr_p + a_n ! size a_n
      work_p = level_p + a_n ! size 2*a_n
      mindeg = sumweight + 1
-     DO i = 1, a_n
-       IF (i<a_n) THEN
+     do i = 1, a_n
+       if (i<a_n) then
          k = a_ptr(i+1) - 1
-       ELSE
+       else
          k = a_ne
-       END IF
+       end if
        degree = 0
-       DO j = a_ptr(i), k
+       do j = a_ptr(i), k
          degree = degree + a_weight(a_row(j))
-       END DO
-       IF (degree<mindeg) THEN
+       end do
+       if (degree<mindeg) then
          mindeg = degree
          nstrt = i
-       END IF
-     END DO
+       end if
+     end do
      max_search = 5
 
-     CALL nd_find_pseudo(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
+     call nd_find_pseudo(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
        work(level_ptr_p+1:level_ptr_p+a_n),work(level_p+1:level_p+a_n), &
        nstrt,nend,max_search,work(work_p+1:work_p+2*a_n),num_levels_nend, &
        num_entries,lwidth)
 
-     IF (num_entries<a_n) THEN
+     if (num_entries<a_n) then
        ! matrix is separable
        a_n1 = num_entries
        a_n2 = a_n - a_n1
        work(work_p+1:work_p+a_n) = 0
        a_weight_1 = 0
-       DO i = 1, num_entries
+       do i = 1, num_entries
          j = work(level_p+i)
          partition(i) = j
          work(work_p+j) = 1
          a_weight_1 = a_weight_1 + a_weight(j)
-       END DO
+       end do
        j = num_entries + 1
        a_weight_2 = 0
-       DO i = 1, a_n
-         IF (work(work_p+i)==0) THEN
+       do i = 1, a_n
+         if (work(work_p+i)==0) then
            partition(j) = i
            a_weight_2 = a_weight_2 + a_weight(j)
            j = j + 1
-         END IF
-       END DO
+         end if
+       end do
        a_weight_sep = 0
-       IF (level==0) THEN
-         band = -REAL(lwidth,wp)
-       END IF
-       RETURN
-     END IF
+       if (level==0) then
+         band = -real(lwidth,wp)
+       end if
+       return
+     end if
 
-     IF (level==0) THEN
-       band = 100.0*REAL(lwidth,wp)/REAL(sumweight,wp)
-       depth = 100.0*REAL(num_levels_nend,wp)/ &
-         REAL(sumweight,wp)
+     if (level==0) then
+       band = 100.0*real(lwidth,wp)/real(sumweight,wp)
+       depth = 100.0*real(num_levels_nend,wp)/ &
+         real(sumweight,wp)
        ! band = max(band,real(lwidth,wp))
-     END IF
+     end if
 
-     IF ((control%partition_method<=0) .OR. (use_multilevel .AND. control% &
-         stop_coarsening2<=0)) THEN
-       use_multilevel = .FALSE.
-     END IF
-     IF (control%partition_method>=2 .AND. use_multilevel) THEN
-       IF (100.0*REAL(lwidth,wp)/REAL(sumweight,wp)<=3.0 .OR. &
-          a_n.LT. control%ml_call) &
-           THEN
-         use_multilevel = .FALSE.
-       ELSE
-         use_multilevel = .TRUE.
-       END IF
-     END IF
+     if ((control%partition_method<=0) .or. (use_multilevel .and. control% &
+         stop_coarsening2<=0)) then
+       use_multilevel = .false.
+     end if
+     if (control%partition_method>=2 .and. use_multilevel) then
+       if (100.0*real(lwidth,wp)/real(sumweight,wp)<=3.0 .or. &
+          a_n.lt. control%ml_call) &
+           then
+         use_multilevel = .false.
+       else
+         use_multilevel = .true.
+       end if
+     end if
 
-10      CONTINUE
+10      continue
 
-     IF (use_multilevel) THEN
+     if (use_multilevel) then
        stop_coarsening2 = control%stop_coarsening2
        lwork = 9*a_n + sumweight
        
-       CALL multilevel_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
+       call multilevel_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
          partition,a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep,control, &
          info,lwork,work(1:lwork),stop_coarsening2,grid)
-       RETURN
-     END IF
+       return
+     end if
 
-     IF (num_levels_nend<=2) THEN
+     if (num_levels_nend<=2) then
        ! Not possible to find separator
        ! This can only be invoked for a full connected graph. The partition
        ! subroutine checks for this case so it should never be called
        a_n1 = a_n
        a_n2 = 0
        partition(1:a_n) = (/ (i,i=1,a_n) /)
-       RETURN
-     END IF
+       return
+     end if
 
      ! Calculate total weight in each level set
      work(work_p+1:work_p+num_levels_nend) = 0
-     DO i = 1, num_levels_nend - 1
-       DO j = work(level_ptr_p+i), work(level_ptr_p+i+1) - 1
+     do i = 1, num_levels_nend - 1
+       do j = work(level_ptr_p+i), work(level_ptr_p+i+1) - 1
          work(work_p+i) = work(work_p+i) + a_weight(work(level_p+j))
-       END DO
-     END DO
+       end do
+     end do
      i = num_levels_nend
-     DO j = work(level_ptr_p+i), a_n
+     do j = work(level_ptr_p+i), a_n
        work(work_p+i) = work(work_p+i) + a_weight(work(level_p+j))
-     END DO
+     end do
 
 
      ! First possible separator contains all of the nodes in level 2
@@ -2724,17 +2724,17 @@ CONTAINS
      best_sep_start = 2
      a_n1 = work(level_ptr_p+2) - 1
      a_n2 = a_n - work(level_ptr_p+3) + 1
-     CALL cost_function(p1sz,p2sz,sepsz,sumweight,ratio,imbal,&
+     call cost_function(p1sz,p2sz,sepsz,sumweight,ratio,imbal,&
       control%cost_function,bestval)
 
      ! Search for best separator using tau
-     DO j = 2, num_levels_nend - 4
+     do j = 2, num_levels_nend - 4
        p1sz = p1sz + work(work_p+j)
        sepsz = work(work_p+j+1)
        p2sz = p2sz - work(work_p+j+1)
-       CALL cost_function(p1sz,p2sz,sepsz,sumweight,ratio,imbal,&
+       call cost_function(p1sz,p2sz,sepsz,sumweight,ratio,imbal,&
           control%cost_function,val)
-       IF (val<bestval) THEN
+       if (val<bestval) then
          bestval = val
          best_sep_start = j + 1
          a_n1 = work(level_ptr_p+j+1) - 1
@@ -2742,85 +2742,85 @@ CONTAINS
          a_weight_1 = p1sz
          a_weight_2 = p2sz
          a_weight_sep = sepsz
-       END IF
-     END DO
+       end if
+     end do
 
 
      ! Rearrange partition
      ! Entries in partition 1
      j = 1
-     DO i = 1, work(level_ptr_p+best_sep_start) - 1
+     do i = 1, work(level_ptr_p+best_sep_start) - 1
        partition(j) = work(level_p+i)
        j = j + 1
-     END DO
+     end do
 
      ! Entries in partition 2
-     DO i = work(level_ptr_p+best_sep_start+1), a_n
+     do i = work(level_ptr_p+best_sep_start+1), a_n
        partition(j) = work(level_p+i)
        j = j + 1
-     END DO
+     end do
 
      ! Entries in separator
-     DO i = work(level_ptr_p+best_sep_start), work(level_ptr_p+ &
+     do i = work(level_ptr_p+best_sep_start), work(level_ptr_p+ &
          best_sep_start+1) - 1
        partition(j) = work(level_p+i)
        j = j + 1
-     END DO
+     end do
 
      info = 0
-     IF (printi .OR. printd) THEN
-       CALL nd_print_message(info,unit_diagnostics,'nd_level_set')
-     END IF
-     RETURN
+     if (printi .or. printd) then
+       call nd_print_message(info,unit_diagnostics,'nd_level_set')
+     end if
+     return
 
-   END SUBROUTINE nd_level_set
+   end subroutine nd_level_set
 
    ! ---------------------------------------------------
    ! nd_find_pseudo
    ! ---------------------------------------------------
    ! Find pseudoperipheral pairs of nodes for irreducible graph
-   SUBROUTINE nd_find_pseudo(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
+   subroutine nd_find_pseudo(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
        level_ptr,level,nstrt,nend,max_search,work,num_levels,num_entries, &
        lwidth)
-     INTEGER, INTENT (IN) :: a_n ! dimension of subproblem ND is applied to
-     INTEGER, INTENT (IN) :: a_ne ! no. nonzeros of subproblem
-     INTEGER, INTENT (IN) :: a_ptr(a_n) ! On input a_ptr(i) contains
+     integer, intent (in) :: a_n ! dimension of subproblem ND is applied to
+     integer, intent (in) :: a_ne ! no. nonzeros of subproblem
+     integer, intent (in) :: a_ptr(a_n) ! On input a_ptr(i) contains
      ! position in a_row that entries for column i start.
-     INTEGER, INTENT (IN) :: a_row(a_ne) ! On input a_row contains row
+     integer, intent (in) :: a_row(a_ne) ! On input a_row contains row
      ! indices of the non-zero rows. Diagonal entries have been removed
      ! and the matrix expanded.
-     INTEGER, INTENT (IN) :: a_weight(a_n) ! On input a_weight(i) contains
+     integer, intent (in) :: a_weight(a_n) ! On input a_weight(i) contains
      ! weight of vertex i
-     INTEGER, INTENT (IN) :: sumweight ! sum of entries in a_weight
-     INTEGER, INTENT (OUT) :: level_ptr(a_n) ! On output level_ptr(i)
+     integer, intent (in) :: sumweight ! sum of entries in a_weight
+     integer, intent (out) :: level_ptr(a_n) ! On output level_ptr(i)
      ! contains
      ! position in level that entries for level i start.
-     INTEGER, INTENT (OUT) :: level(a_n) ! On output level contains lists
+     integer, intent (out) :: level(a_n) ! On output level contains lists
      ! of
      ! rows according to the level set that they are in
-     INTEGER, INTENT (INOUT) :: nstrt ! Starting pseudoperipheral node
-     INTEGER, INTENT (OUT) :: nend ! End pseudoperipheral node
-     INTEGER, INTENT (IN) :: max_search
-     INTEGER, INTENT (OUT) :: work(2*a_n)
-     INTEGER, INTENT (OUT) :: num_levels
-     INTEGER, INTENT (OUT) :: num_entries ! number of entries in level
+     integer, intent (inout) :: nstrt ! Starting pseudoperipheral node
+     integer, intent (out) :: nend ! End pseudoperipheral node
+     integer, intent (in) :: max_search
+     integer, intent (out) :: work(2*a_n)
+     integer, intent (out) :: num_levels
+     integer, intent (out) :: num_entries ! number of entries in level
      ! structure
-     INTEGER, INTENT (OUT) :: lwidth
+     integer, intent (out) :: lwidth
      ! Based on MC60HD
 
      ! ---------------------------------------------
      ! Local variables
-     INTEGER :: i, j, k, l, ll
-     INTEGER :: mindeg, maxdep, main, lwidth1
-     INTEGER :: mask, list
-     INTEGER :: nstop ! ending pseudoperipheral node
-     INTEGER :: node ! Index of graph node
-     INTEGER :: lsize ! size of final levelset
-     INTEGER :: nlsize ! no. nodes of differing degrees in final
+     integer :: i, j, k, l, ll
+     integer :: mindeg, maxdep, main, lwidth1
+     integer :: mask, list
+     integer :: nstop ! ending pseudoperipheral node
+     integer :: node ! Index of graph node
+     integer :: lsize ! size of final levelset
+     integer :: nlsize ! no. nodes of differing degrees in final
      ! level set
-     INTEGER :: minwid ! Minimum levelset width
-     INTEGER :: nlvl ! number of levels in level structure
-     INTEGER :: minwid1
+     integer :: minwid ! minimum levelset width
+     integer :: nlvl ! number of levels in level structure
+     integer :: minwid1
 
      j = 0
      mask = 0
@@ -2834,116 +2834,116 @@ CONTAINS
      ! First guess for starting node is input nstrt
 
      ! Generate level structure for node nstrt
-     CALL nd_level_struct(nstrt,a_n,a_ne,a_ptr,a_row, &
+     call nd_level_struct(nstrt,a_n,a_ne,a_ptr,a_row, &
        work(mask+1:mask+a_n),level_ptr,level,maxdep,lwidth,num_entries)
-     IF (num_entries<a_n) THEN
+     if (num_entries<a_n) then
        ! matrix is separable
        num_levels = maxdep
-       RETURN
+       return
 
-     END IF
+     end if
 
      nstop = level(a_n)
-     DO main = 1, MIN(a_n,10)
+     do main = 1, min(a_n,10)
        ! Store nodes in the final level set and their (weighted) degrees
        lsize = 0
        j = level_ptr(maxdep)
-       DO i = j, a_n
+       do i = j, a_n
          node = level(i)
          lsize = lsize + 1
          work(list+lsize) = node
          level_ptr(node) = 0
-         IF (node==a_n) THEN
+         if (node==a_n) then
            k = a_ne
-         ELSE
+         else
            k = a_ptr(node+1) - 1
-         END IF
-         DO l = a_ptr(node), k
+         end if
+         do l = a_ptr(node), k
            level_ptr(node) = level_ptr(node) + a_weight(a_row(l))
-         END DO
-       END DO
+         end do
+       end do
 
        ! Choose at most max_search nodes
-       DO nlsize = 1, max_search
+       do nlsize = 1, max_search
          ! Look for candiate with least degree
          mindeg = sumweight + 1
          ! mindeg = -1
-         DO i = nlsize, lsize
-           IF (level_ptr(work(list+i))<mindeg) THEN
+         do i = nlsize, lsize
+           if (level_ptr(work(list+i))<mindeg) then
              j = i
              mindeg = level_ptr(work(list+i))
-           END IF
-         END DO
+           end if
+         end do
          ! Jump out of loop if no candidates left
-         IF (mindeg==sumweight+1) GO TO 10
-         ! IF (mindeg .EQ. -1) GO TO 55
+         if (mindeg==sumweight+1) go to 10
+         ! if (mindeg .eq. -1) go to 55
          ! Swap chose candidate to next position
          node = work(list+j)
          work(list+j) = work(list+nlsize)
          work(list+nlsize) = node
          ! Rule out the neighbours of the chosen node
-         IF (node==a_n) THEN
+         if (node==a_n) then
            k = a_ne
-         ELSE
+         else
            k = a_ptr(node+1) - 1
-         END IF
-         DO i = a_ptr(node), k
+         end if
+         do i = a_ptr(node), k
            level_ptr(a_row(i)) = sumweight + 1
-         END DO
-       END DO
+         end do
+       end do
 10        nlsize = nlsize - 1
 
        ! Loop over nodes in list
-       minwid = HUGE(a_n)
-       minwid1 = HUGE(a_n)
+       minwid = huge(a_n)
+       minwid1 = huge(a_n)
 
-       DO i = 1, nlsize
+       do i = 1, nlsize
          node = work(list+i)
 
          ! Form rooted level structures for node
-         CALL nd_level_struct(node,a_n,a_ne,a_ptr,a_row, &
+         call nd_level_struct(node,a_n,a_ne,a_ptr,a_row, &
            work(mask+1:mask+a_n),level_ptr,level,nlvl,lwidth,num_entries)
-         ! IF (lwidth .LE. minwid) THEN
+         ! if (lwidth .le. minwid) then
          lwidth1 = 0
-         DO k = 1, nlvl - 1
-           DO l = level_ptr(k), level_ptr(k+1) - 1
+         do k = 1, nlvl - 1
+           do l = level_ptr(k), level_ptr(k+1) - 1
              ll = level(l)
              lwidth1 = lwidth1 + k*a_weight(ll)
-           END DO
-         END DO
-         DO l = level_ptr(nlvl), a_n
+           end do
+         end do
+         do l = level_ptr(nlvl), a_n
            ll = level(l)
            lwidth1 = lwidth1 + nlvl*a_weight(ll)
-         END DO
+         end do
 
-         IF (nlvl>maxdep) THEN
+         if (nlvl>maxdep) then
            ! Level structure of greater depth. Begin a new iteration.
            nstrt = node
            maxdep = nlvl
 
-           GO TO 20
-         ELSE
-           IF (lwidth1<minwid1) THEN
+           go to 20
+         else
+           if (lwidth1<minwid1) then
 
              nstop = node
              minwid = lwidth
              minwid1 = lwidth1
-           END IF
-         END IF
-         ! END IF
-       END DO
-       GO TO 30
-20        CONTINUE
-     END DO
-30      IF (nstop/=node) THEN
-       CALL nd_level_struct(node,a_n,a_ne,a_ptr,a_row, &
+           end if
+         end if
+         ! end if
+       end do
+       go to 30
+20        continue
+     end do
+30      if (nstop/=node) then
+       call nd_level_struct(node,a_n,a_ne,a_ptr,a_row, &
          work(mask+1:mask+a_n),level_ptr,level,nlvl,lwidth,num_entries)
-     END IF
+     end if
      num_levels = maxdep
      nend = nstop
 
-     RETURN
-   END SUBROUTINE nd_find_pseudo
+     return
+   end subroutine nd_find_pseudo
 
 
    ! ---------------------------------------------------
@@ -2952,44 +2952,44 @@ CONTAINS
    ! Given a root, calculate the level structure of a given graph from that
    ! root
 
-   SUBROUTINE nd_level_struct(root,a_n,a_ne,a_ptr,a_row,mask,level_ptr, &
+   subroutine nd_level_struct(root,a_n,a_ne,a_ptr,a_row,mask,level_ptr, &
        level,num_levels,lwidth,num_entries)
 
-     INTEGER, INTENT (IN) :: root ! Root node for level structure
-     INTEGER, INTENT (IN) :: a_n ! dimension of subproblem ND is applied to
-     INTEGER, INTENT (IN) :: a_ne ! no. nonzeros of subproblem
-     INTEGER, INTENT (IN) :: a_ptr(a_n) ! On input a_ptr(i) contains
+     integer, intent (in) :: root ! Root node for level structure
+     integer, intent (in) :: a_n ! dimension of subproblem ND is applied to
+     integer, intent (in) :: a_ne ! no. nonzeros of subproblem
+     integer, intent (in) :: a_ptr(a_n) ! On input a_ptr(i) contains
      ! position in a_row that entries for column i start.
-     INTEGER, INTENT (IN) :: a_row(a_ne) ! On input a_row contains row
+     integer, intent (in) :: a_row(a_ne) ! On input a_row contains row
      ! indices of the non-zero rows. Diagonal entries have been removed
      ! and the matrix expanded.
-     INTEGER, INTENT (INOUT) :: mask(a_n) ! Always restored to input value
+     integer, intent (inout) :: mask(a_n) ! Always restored to input value
      ! at
      ! end of the call. mask(node) > 0 for all visible nodes
-     INTEGER, INTENT (OUT) :: level_ptr(a_n) ! On output level_ptr(i)
+     integer, intent (out) :: level_ptr(a_n) ! On output level_ptr(i)
      ! contains
      ! position in level that entries for level i start.
-     INTEGER, INTENT (OUT) :: level(a_n) ! On output level contains lists
+     integer, intent (out) :: level(a_n) ! On output level contains lists
      ! of
      ! rows according to the level set that they are in
-     INTEGER, INTENT (OUT) :: num_levels ! On output num_levels contains
+     integer, intent (out) :: num_levels ! On output num_levels contains
      ! the
      ! number of levels
-     INTEGER, INTENT (OUT) :: lwidth ! On output, contains the width of the
+     integer, intent (out) :: lwidth ! On output, contains the width of the
      ! structure
-     INTEGER, INTENT (OUT) :: num_entries ! On output, contains number of
+     integer, intent (out) :: num_entries ! On output, contains number of
      ! entries in the tree structure containing root
 
      ! ---------------------------------------------
      ! Local variables
-     INTEGER :: lvlend ! End of previous level in level
-     INTEGER :: lnbr ! Next position in level
-     INTEGER :: lbegin ! Beginning of present level in level
-     INTEGER :: lw ! Level width
-     INTEGER :: nbr ! neighbour node
-     INTEGER :: node ! current node
-     INTEGER :: nvars
-     INTEGER :: i, j, k
+     integer :: lvlend ! End of previous level in level
+     integer :: lnbr ! Next position in level
+     integer :: lbegin ! Beginning of present level in level
+     integer :: lw ! Level width
+     integer :: nbr ! neighbour node
+     integer :: node ! current node
+     integer :: nvars
+     integer :: i, j, k
 
      ! Based on mc60ld
      ! Establish level 1
@@ -3000,45 +3000,45 @@ CONTAINS
      nvars = 0
      lnbr = 1
      lwidth = 1
-     DO num_levels = 1, a_n
+     do num_levels = 1, a_n
        ! Generate next level by finding all unmasked neighbours of nodes in
        ! present level
        lbegin = lvlend + 1
        lvlend = lnbr
        level_ptr(num_levels) = lbegin
        lw = 0
-       DO i = lbegin, lvlend
+       do i = lbegin, lvlend
          node = level(i)
-         IF (node==a_n) THEN
+         if (node==a_n) then
            k = a_ne
-         ELSE
+         else
            k = a_ptr(node+1) - 1
-         END IF
-         DO j = a_ptr(node), k
+         end if
+         do j = a_ptr(node), k
            nbr = a_row(j)
-           IF (mask(nbr)>0) THEN
+           if (mask(nbr)>0) then
              lnbr = lnbr + 1
              level(lnbr) = nbr
              mask(nbr) = -mask(nbr)
              ! lw = lw + a_weight(nbr)
              lw = lw + 1
-           END IF
-         END DO
-       END DO
-       lwidth = MAX(lwidth,lw)
+           end if
+         end do
+       end do
+       lwidth = max(lwidth,lw)
        nvars = nvars + lw
        ! If no neighbours found, we are done
-       IF (lnbr==lvlend) EXIT
+       if (lnbr==lvlend) exit
        ! Abort construnction if level structure too wide
-       ! IF (lwidth .GT. maxwid) EXIT
-     END DO
+       ! if (lwidth .gt. maxwid) exit
+     end do
      ! Reset mask
-     DO i = 1, lnbr
-       mask(level(i)) = ABS(mask(level(i)))
-     END DO
+     do i = 1, lnbr
+       mask(level(i)) = abs(mask(level(i)))
+     end do
      num_entries = lnbr
 
-   END SUBROUTINE nd_level_struct
+   end subroutine nd_level_struct
 
 
    ! ---------------------------------------------------
@@ -3047,34 +3047,34 @@ CONTAINS
    ! Given two level structures, calculate the difference in each nodes
    ! distance
    ! from the start and end node
-   SUBROUTINE nd_distance(a_n,num_levels_nend,level_ptr_nend,level_nend, &
+   subroutine nd_distance(a_n,num_levels_nend,level_ptr_nend,level_nend, &
        num_levels_nstrt,level_ptr_nstrt,level_nstrt,distance_ptr,distance)
-     INTEGER, INTENT (IN) :: a_n ! order of matrix
-     INTEGER, INTENT (IN) :: num_levels_nend ! number of levels with root
+     integer, intent (in) :: a_n ! order of matrix
+     integer, intent (in) :: num_levels_nend ! number of levels with root
      ! nend
-     INTEGER, INTENT (IN) :: level_ptr_nend(a_n) ! level_ptr(i) contains
+     integer, intent (in) :: level_ptr_nend(a_n) ! level_ptr(i) contains
      ! position in level that entries for level i start (root = nend)
-     INTEGER, INTENT (IN) :: level_nend(a_n) ! Contains lists of rows
+     integer, intent (in) :: level_nend(a_n) ! Contains lists of rows
      ! according to the level set that they are in (root = nend)
-     INTEGER, INTENT (IN) :: num_levels_nstrt ! no. of levels with root
+     integer, intent (in) :: num_levels_nstrt ! no. of levels with root
      ! nstrt
-     INTEGER, INTENT (INOUT) :: level_ptr_nstrt(a_n) ! level_ptr(i)
+     integer, intent (inout) :: level_ptr_nstrt(a_n) ! level_ptr(i)
      ! contains
      ! position in level that entries for level i start (root = nstrt)
      ! Reused during subroutine
-     INTEGER, INTENT (IN) :: level_nstrt(a_n) ! Contains lists of rows
+     integer, intent (in) :: level_nstrt(a_n) ! Contains lists of rows
      ! according to the level set that they are in (root = nstrt)
-     INTEGER, INTENT (OUT) :: distance_ptr(2*a_n-1) ! distance(i) contains
+     integer, intent (out) :: distance_ptr(2*a_n-1) ! distance(i) contains
      ! position in distance where entries with distance i-a_n
-     INTEGER, INTENT (OUT) :: distance(a_n) ! Contains lists of rows
+     integer, intent (out) :: distance(a_n) ! Contains lists of rows
      ! ordered
      ! according to their distance
 
      ! ---------------------------------------------
      ! Local variables
-     INTEGER :: j, k
-     INTEGER :: dptr ! used as offset into distance_ptr
-     INTEGER :: lev ! stores current level
+     integer :: j, k
+     integer :: dptr ! used as offset into distance_ptr
+     integer :: lev ! stores current level
 
      dptr = a_n
      distance_ptr(dptr+1-a_n:dptr+a_n-1) = 0
@@ -3082,177 +3082,177 @@ CONTAINS
 
      ! set distance(i) to hold the level that i belongs to in the structure
      ! rooted at nend (= distance from end node + 1)
-     DO lev = 1, num_levels_nend - 1
-       DO j = level_ptr_nend(lev), level_ptr_nend(lev+1) - 1
+     do lev = 1, num_levels_nend - 1
+       do j = level_ptr_nend(lev), level_ptr_nend(lev+1) - 1
          distance(level_nend(j)) = lev
-       END DO
-     END DO
-     DO j = level_ptr_nend(num_levels_nend), a_n
+       end do
+     end do
+     do j = level_ptr_nend(num_levels_nend), a_n
        distance(level_nend(j)) = num_levels_nend
-     END DO
+     end do
 
      ! now consider level structure rooted at start node
-     DO lev = 1, num_levels_nstrt - 1
-       DO j = level_ptr_nstrt(lev), level_ptr_nstrt(lev+1) - 1
+     do lev = 1, num_levels_nstrt - 1
+       do j = level_ptr_nstrt(lev), level_ptr_nstrt(lev+1) - 1
          distance(level_nstrt(j)) = distance(level_nstrt(j)) - lev
          k = distance(level_nstrt(j))
          distance_ptr(dptr+k) = distance_ptr(dptr+k) + 1
-       END DO
-     END DO
-     DO j = level_ptr_nstrt(num_levels_nstrt), a_n
+       end do
+     end do
+     do j = level_ptr_nstrt(num_levels_nstrt), a_n
        distance(level_nstrt(j)) = distance(level_nstrt(j)) - lev
        k = distance(level_nstrt(j))
        distance_ptr(dptr+k) = distance_ptr(dptr+k) + 1
-     END DO
+     end do
 
      ! Copy distance into level_ptr_nstrt to save memory
      level_ptr_nstrt(1:a_n) = distance(1:a_n)
 
      ! Set distance_ptr(i) to point one place to the right of where entries
      ! with distance i will be
-     DO j = 1 - a_n, a_n - 1
-       IF (distance_ptr(dptr+j)>0) THEN
-         EXIT
-       ELSE
+     do j = 1 - a_n, a_n - 1
+       if (distance_ptr(dptr+j)>0) then
+         exit
+       else
          distance_ptr(dptr+j) = 1
-       END IF
-     END DO
+       end if
+     end do
      distance_ptr(dptr+j) = distance_ptr(dptr+j) + 1
-     DO k = j + 1, a_n - 1
+     do k = j + 1, a_n - 1
        distance_ptr(dptr+k) = distance_ptr(dptr+k) + distance_ptr(dptr+k-1)
-     END DO
+     end do
 
      ! Set up lists of rows with same value of distance
-     DO j = 1, a_n
+     do j = 1, a_n
        k = level_ptr_nstrt(j)
        distance_ptr(dptr+k) = distance_ptr(dptr+k) - 1
        distance(distance_ptr(dptr+k)) = j
-     END DO
+     end do
 
 
-   END SUBROUTINE nd_distance
+   end subroutine nd_distance
 
    ! ---------------------------------------------------
    ! nd_convert_partition_flags
    ! ---------------------------------------------------
    ! Given a partition array, convert the partition into a flag array
-   SUBROUTINE nd_convert_partition_flags(a_n,a_n1,a_n2,partition,flag_1, &
+   subroutine nd_convert_partition_flags(a_n,a_n1,a_n2,partition,flag_1, &
        flag_2,flag_sep,flags)
-     INTEGER, INTENT (IN) :: a_n ! order of matrix
-     INTEGER, INTENT (IN) :: a_n1 ! Size of partition 1
-     INTEGER, INTENT (IN) :: a_n2 ! Size of partition 2
-     INTEGER, INTENT (IN) :: partition(a_n) ! First a_n1 entries contain
+     integer, intent (in) :: a_n ! order of matrix
+     integer, intent (in) :: a_n1 ! Size of partition 1
+     integer, intent (in) :: a_n2 ! Size of partition 2
+     integer, intent (in) :: partition(a_n) ! First a_n1 entries contain
      ! list of (local) indices in partition 1; next a_n2 entries
      ! contain list of (local) entries in partition 2; entries in
      ! separator are listed at the end.
-     INTEGER, INTENT (IN) :: flag_1 ! flag for rows in partition 1
-     INTEGER, INTENT (IN) :: flag_2 ! flag for rows in partition 2
-     INTEGER, INTENT (IN) :: flag_sep ! flag for rows in separator
-     INTEGER, INTENT (OUT) :: flags(a_n) ! flags(i) contains flag for row i
+     integer, intent (in) :: flag_1 ! flag for rows in partition 1
+     integer, intent (in) :: flag_2 ! flag for rows in partition 2
+     integer, intent (in) :: flag_sep ! flag for rows in separator
+     integer, intent (out) :: flags(a_n) ! flags(i) contains flag for row i
      ! and indicates which partition it is in
 
-     INTEGER :: j, k
+     integer :: j, k
 
-     DO j = 1, a_n1
+     do j = 1, a_n1
        k = partition(j)
        flags(k) = flag_1
-     END DO
-     DO j = a_n1 + 1, a_n1 + a_n2
+     end do
+     do j = a_n1 + 1, a_n1 + a_n2
        k = partition(j)
        flags(k) = flag_2
-     END DO
-     DO j = a_n1 + a_n2 + 1, a_n
+     end do
+     do j = a_n1 + a_n2 + 1, a_n
        k = partition(j)
        flags(k) = flag_sep
-     END DO
+     end do
 
-   END SUBROUTINE nd_convert_partition_flags
+   end subroutine nd_convert_partition_flags
 
 
    ! ---------------------------------------------------
    ! nd_flags_partition
    ! ---------------------------------------------------
    ! Given a partition array, convert the partition into a flag array
-   SUBROUTINE nd_convert_flags_partition(a_n,a_n1,a_n2,flags,flag_1, &
+   subroutine nd_convert_flags_partition(a_n,a_n1,a_n2,flags,flag_1, &
        flag_2,partition)
-     INTEGER, INTENT (IN) :: a_n ! order of matrix
-     INTEGER, INTENT (IN) :: a_n1 ! Size of partition 1
-     INTEGER, INTENT (IN) :: a_n2 ! Size of partition 2
-     INTEGER, INTENT (IN) :: flags(a_n) ! flags(i) contains flag for row i
+     integer, intent (in) :: a_n ! order of matrix
+     integer, intent (in) :: a_n1 ! Size of partition 1
+     integer, intent (in) :: a_n2 ! Size of partition 2
+     integer, intent (in) :: flags(a_n) ! flags(i) contains flag for row i
      ! and indicates which partition it is in
-     INTEGER, INTENT (IN) :: flag_1 ! flag for rows in partition 1
-     INTEGER, INTENT (IN) :: flag_2 ! flag for rows in partition 2
-     INTEGER, INTENT (OUT) :: partition(a_n) ! First a_n1 entries contain
+     integer, intent (in) :: flag_1 ! flag for rows in partition 1
+     integer, intent (in) :: flag_2 ! flag for rows in partition 2
+     integer, intent (out) :: partition(a_n) ! First a_n1 entries contain
      ! list of (local) indices in partition 1; next a_n2 entries
      ! contain list of (local) entries in partition 2; entries in
      ! separator are listed at the end.
 
-     INTEGER :: i, j, k, l
+     integer :: i, j, k, l
 
      i = 1
      j = a_n1 + 1
      k = a_n1 + a_n2 + 1
-     DO l = 1, a_n
-       IF (flags(l)==flag_1) THEN
+     do l = 1, a_n
+       if (flags(l)==flag_1) then
          partition(i) = l
          i = i + 1
-       ELSE
-         IF (flags(l)==flag_2) THEN
+       else
+         if (flags(l)==flag_2) then
            partition(j) = l
            j = j + 1
-         ELSE
+         else
            partition(k) = l
            k = k + 1
-         END IF
-       END IF
-     END DO
+         end if
+       end if
+     end do
 
-   END SUBROUTINE nd_convert_flags_partition
+   end subroutine nd_convert_flags_partition
 
    ! ---------------------------------------------------
    ! nd_move_partition
    ! ---------------------------------------------------
    ! Given a flag array, move the separator by forming an edge separator
    ! between the input separator and the larger of P1 and P2
-   SUBROUTINE nd_move_partition(a_n,a_ne,a_ptr,a_row,a_weight,a_n1,a_n2, &
+   subroutine nd_move_partition(a_n,a_ne,a_ptr,a_row,a_weight,a_n1,a_n2, &
        a_weight_1,a_weight_2,a_weight_sep,flag_1,flag_2,flag_sep,flags)
-     INTEGER, INTENT (IN) :: a_n ! order of matrix
-     INTEGER, INTENT (IN) :: a_ne ! number of entries in matrix
-     INTEGER, INTENT (IN) :: a_ptr(a_n) ! On input a_ptr(i) contains
+     integer, intent (in) :: a_n ! order of matrix
+     integer, intent (in) :: a_ne ! number of entries in matrix
+     integer, intent (in) :: a_ptr(a_n) ! On input a_ptr(i) contains
      ! position in a_row that entries for column i start.
-     INTEGER, INTENT (IN) :: a_row(a_ne) ! On input a_row contains row
+     integer, intent (in) :: a_row(a_ne) ! On input a_row contains row
      ! indices of the non-zero rows. Diagonal entries have been removed
      ! and the matrix expanded.
-     INTEGER, INTENT (IN) :: a_weight(a_n) ! On input a_weight(i) contains
+     integer, intent (in) :: a_weight(a_n) ! On input a_weight(i) contains
      ! the weight of column i
-     INTEGER, INTENT (INOUT) :: a_n1 ! Size of partition 1
-     INTEGER, INTENT (INOUT) :: a_n2 ! Size of partition 2
-     INTEGER, INTENT (INOUT) :: a_weight_1, a_weight_2, a_weight_sep ! Weig
+     integer, intent (inout) :: a_n1 ! Size of partition 1
+     integer, intent (inout) :: a_n2 ! Size of partition 2
+     integer, intent (inout) :: a_weight_1, a_weight_2, a_weight_sep ! Weig
      ! hted
      ! size of partitions and separator
-     INTEGER, INTENT (IN) :: flag_1 ! flag for rows in partition 1
-     INTEGER, INTENT (IN) :: flag_2 ! flag for rows in partition 2
-     INTEGER, INTENT (IN) :: flag_sep ! flag for rows in separator
-     INTEGER, INTENT (INOUT) :: flags(a_n) ! flags(i) contains flag for row
+     integer, intent (in) :: flag_1 ! flag for rows in partition 1
+     integer, intent (in) :: flag_2 ! flag for rows in partition 2
+     integer, intent (in) :: flag_sep ! flag for rows in separator
+     integer, intent (inout) :: flags(a_n) ! flags(i) contains flag for row
      ! i
      ! and indicates which partition it is in. This is updated
 
-     INTEGER :: part_no, a_n1_temp, a_n2_temp
-     INTEGER :: a_weight_1_temp, a_weight_2_temp, a_weight_sep_temp
-     INTEGER :: j, k, l
-     LOGICAL :: stay_sep
+     integer :: part_no, a_n1_temp, a_n2_temp
+     integer :: a_weight_1_temp, a_weight_2_temp, a_weight_sep_temp
+     integer :: j, k, l
+     logical :: stay_sep
 
      ! Decide whether new (large) separator is formed from
      ! intersection of the separator with partition 1 or the intersection
      ! of
      ! the separator with partition 2
-     IF (a_weight_1>a_weight_2) THEN
+     if (a_weight_1>a_weight_2) then
        ! Apply to partition 1
        part_no = flag_1
-     ELSE
+     else
        ! Apply to partition 2
        part_no = flag_2
-     END IF
+     end if
 
      a_n1_temp = a_n1
      a_n2_temp = a_n2
@@ -3260,59 +3260,59 @@ CONTAINS
      a_weight_2_temp = a_weight_2
      a_weight_sep_temp = a_weight_sep
 
-     DO j = 1, a_n
-       IF (flags(j)/=flag_sep) CYCLE
+     do j = 1, a_n
+       if (flags(j)/=flag_sep) cycle
        ! j is in initial separator
-       IF (j==a_n) THEN
+       if (j==a_n) then
          k = a_ne
-       ELSE
+       else
          k = a_ptr(j+1) - 1
-       END IF
-       stay_sep = .FALSE.
-       DO l = a_ptr(j), k
-         IF (flags(a_row(l))==part_no) THEN
-           stay_sep = .TRUE.
-           IF (part_no==flag_1) THEN
-             IF (a_n1_temp>1) THEN
+       end if
+       stay_sep = .false.
+       do l = a_ptr(j), k
+         if (flags(a_row(l))==part_no) then
+           stay_sep = .true.
+           if (part_no==flag_1) then
+             if (a_n1_temp>1) then
                a_n1_temp = a_n1_temp - 1
                flags(a_row(l)) = -1
                a_weight_sep_temp = a_weight_sep_temp + a_weight(a_row(l))
                a_weight_1_temp = a_weight_1_temp - a_weight(a_row(l))
-             END IF
-           ELSE
-             IF (a_n2_temp>1) THEN
+             end if
+           else
+             if (a_n2_temp>1) then
                a_n2_temp = a_n2_temp - 1
                flags(a_row(l)) = -1
                a_weight_sep_temp = a_weight_sep_temp + a_weight(a_row(l))
                a_weight_2_temp = a_weight_2_temp - a_weight(a_row(l))
-             END IF
-           END IF
-         ELSE IF (flags(a_row(l))==-1) THEN
-           stay_sep = .TRUE.
-         END IF
-       END DO
-       IF ( .NOT. stay_sep) THEN
-         IF (part_no==flag_1) THEN
+             end if
+           end if
+         else if (flags(a_row(l))==-1) then
+           stay_sep = .true.
+         end if
+       end do
+       if ( .not. stay_sep) then
+         if (part_no==flag_1) then
            flags(j) = flag_2
-         ELSE
+         else
            flags(j) = flag_1
-         END IF
+         end if
          a_weight_sep_temp = a_weight_sep_temp - a_weight(j)
-         IF (part_no==flag_1) THEN
+         if (part_no==flag_1) then
            a_n2_temp = a_n2_temp + 1
            a_weight_2_temp = a_weight_2_temp + a_weight(j)
-         ELSE
+         else
            a_n1_temp = a_n1_temp + 1
            a_weight_1_temp = a_weight_1_temp + a_weight(j)
-         END IF
-       END IF
-     END DO
+         end if
+       end if
+     end do
 
-     DO j = 1, a_n
-       IF (flags(j)==-1) THEN
+     do j = 1, a_n
+       if (flags(j)==-1) then
          flags(j) = flag_sep
-       END IF
-     END DO
+       end if
+     end do
 
      a_n1 = a_n1_temp
      a_n2 = a_n2_temp
@@ -3320,7 +3320,7 @@ CONTAINS
      a_weight_2 = a_weight_2_temp
      a_weight_sep = a_weight_sep_temp
 
-   END SUBROUTINE nd_move_partition
+   end subroutine nd_move_partition
 
 
    ! ---------------------------------------------------
@@ -3330,135 +3330,135 @@ CONTAINS
    ! of the cost function. An edge separator is formed between the input 
    ! separator and the larger partition, and this is then minimal using 
    ! trimming or max flow
-   SUBROUTINE nd_refine_edge(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
+   subroutine nd_refine_edge(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
        a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep,partition,work,control)
-     INTEGER, INTENT (IN) :: a_n ! order of matrix
-     INTEGER, INTENT (IN) :: a_ne ! number of entries in matrix
-     INTEGER, INTENT (IN) :: a_ptr(a_n) ! On input a_ptr(i) contains
+     integer, intent (in) :: a_n ! order of matrix
+     integer, intent (in) :: a_ne ! number of entries in matrix
+     integer, intent (in) :: a_ptr(a_n) ! On input a_ptr(i) contains
      ! position in a_row that entries for column i start.
-     INTEGER, INTENT (IN) :: a_row(a_ne) ! On input a_row contains row
+     integer, intent (in) :: a_row(a_ne) ! On input a_row contains row
      ! indices of the non-zero rows. Diagonal entries have been removed
      ! and the matrix expanded.
-     INTEGER, INTENT (IN) :: a_weight(a_n) ! On input a_weight(i) contains
+     integer, intent (in) :: a_weight(a_n) ! On input a_weight(i) contains
      ! the weight of column i
-     INTEGER, INTENT (IN) :: sumweight ! Sum of weights in a_weight
-     INTEGER, INTENT (INOUT) :: a_n1 ! Size of partition 1
-     INTEGER, INTENT (INOUT) :: a_n2 ! Size of partition 2
-     INTEGER, INTENT (INOUT) :: a_weight_1, a_weight_2, a_weight_sep ! Weig
+     integer, intent (in) :: sumweight ! Sum of weights in a_weight
+     integer, intent (inout) :: a_n1 ! Size of partition 1
+     integer, intent (inout) :: a_n2 ! Size of partition 2
+     integer, intent (inout) :: a_weight_1, a_weight_2, a_weight_sep ! Weig
      ! hted
      ! size of partitions and separator
-     INTEGER, INTENT (INOUT) :: partition(a_n) ! First a_n1 entries contain
+     integer, intent (inout) :: partition(a_n) ! First a_n1 entries contain
      ! list of (local) indices in partition 1; next a_n2 entries
      ! contain list of (local) entries in partition 2; entries in
      ! separator are listed at the end. This is updated to the new
      ! partition
-     INTEGER, INTENT (OUT) :: work(3*a_n) ! Work array
-     TYPE (nd_options), INTENT (IN) :: control
+     integer, intent (out) :: work(3*a_n) ! Work array
+     type (nd_options), intent (in) :: control
 
      ! ---------------------------------------------
      ! Local variables
-     INTEGER :: fm_flags ! pointer into work array for start of
+     integer :: fm_flags ! pointer into work array for start of
      ! flags from FM
 
      fm_flags = 0 ! length a_n
 
      ! Initialise work(fm_flags+1:fm_flags+a_n)
-     CALL nd_convert_partition_flags(a_n,a_n1,a_n2,partition, &
+     call nd_convert_partition_flags(a_n,a_n1,a_n2,partition, &
        ND_PART1_FLAG,ND_PART2_FLAG,ND_SEP_FLAG, &
        work(fm_flags+1:fm_flags+a_n))
 
      ! Create new separator by forming edge separator between input
      ! separator and largest of P1 and P2
 
-     CALL nd_move_partition(a_n,a_ne,a_ptr,a_row,a_weight,a_n1,a_n2, &
+     call nd_move_partition(a_n,a_ne,a_ptr,a_row,a_weight,a_n1,a_n2, &
        a_weight_1,a_weight_2,a_weight_sep,ND_PART1_FLAG, &
        ND_PART2_FLAG,ND_SEP_FLAG,work(fm_flags+1:fm_flags+a_n))
 
      ! Update partition
-     CALL nd_convert_flags_partition(a_n,a_n1,a_n2, &
+     call nd_convert_flags_partition(a_n,a_n1,a_n2, &
        work(fm_flags+1:fm_flags+a_n),ND_PART1_FLAG,ND_PART2_FLAG, &
        partition(1:a_n))
 
-     IF (control%refinement>3) THEN
-       CALL nd_refine_max_flow(a_n,a_ne,a_ptr,a_row,a_weight,a_n1,a_n2, &
+     if (control%refinement>3) then
+       call nd_refine_max_flow(a_n,a_ne,a_ptr,a_row,a_weight,a_n1,a_n2, &
          a_weight_1,a_weight_2,a_weight_sep,partition,work(1:8),control)
-     ELSE
-       CALL nd_refine_trim(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,a_n1, &
+     else
+       call nd_refine_trim(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,a_n1, &
          a_n2,a_weight_1,a_weight_2,a_weight_sep,partition,work(1:3*a_n), &
          control)
-     END IF
+     end if
 
 
 
-   END SUBROUTINE nd_refine_edge
+   end subroutine nd_refine_edge
 
    ! ---------------------------------------------------
    ! nd_refine_fm
    ! ---------------------------------------------------
    ! Given a partition, refine the partition using FM refinement. Wrapper
    ! for code
-   SUBROUTINE nd_refine_fm(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,a_n1, &
+   subroutine nd_refine_fm(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,a_n1, &
        a_n2,a_weight_1,a_weight_2,a_weight_sep,partition,work,control)
-     INTEGER, INTENT (IN) :: a_n ! order of matrix
-     INTEGER, INTENT (IN) :: a_ne ! number of entries in matrix
-     INTEGER, INTENT (IN) :: a_ptr(a_n) ! On input a_ptr(i) contains
+     integer, intent (in) :: a_n ! order of matrix
+     integer, intent (in) :: a_ne ! number of entries in matrix
+     integer, intent (in) :: a_ptr(a_n) ! On input a_ptr(i) contains
      ! position in a_row that entries for column i start.
-     INTEGER, INTENT (IN) :: a_row(a_ne) ! On input a_row contains row
+     integer, intent (in) :: a_row(a_ne) ! On input a_row contains row
      ! indices of the non-zero rows. Diagonal entries have been removed
      ! and the matrix expanded.
-     INTEGER, INTENT (IN) :: a_weight(a_n) ! On input a_weight(i) contains
+     integer, intent (in) :: a_weight(a_n) ! On input a_weight(i) contains
      ! the weight of column i
-     INTEGER, INTENT (IN) :: sumweight ! Sum of weights in a_weight
-     INTEGER, INTENT (INOUT) :: a_n1 ! Size of partition 1
-     INTEGER, INTENT (INOUT) :: a_n2 ! Size of partition 2
-     INTEGER, INTENT (INOUT) :: a_weight_1, a_weight_2, a_weight_sep ! Weig
+     integer, intent (in) :: sumweight ! Sum of weights in a_weight
+     integer, intent (inout) :: a_n1 ! Size of partition 1
+     integer, intent (inout) :: a_n2 ! Size of partition 2
+     integer, intent (inout) :: a_weight_1, a_weight_2, a_weight_sep ! Weig
      ! hted
      ! size of partitions and separator
-     INTEGER, INTENT (INOUT) :: partition(a_n) ! First a_n1 entries contain
+     integer, intent (inout) :: partition(a_n) ! First a_n1 entries contain
      ! list of (local) indices in partition 1; next a_n2 entries
      ! contain list of (local) entries in partition 2; entries in
      ! separator are listed at the end. This is updated to the new
      ! partition
-     INTEGER, INTENT (OUT) :: work(8*a_n+sumweight) ! Work array
-     TYPE (nd_options), INTENT (IN) :: control
+     integer, intent (out) :: work(8*a_n+sumweight) ! Work array
+     type (nd_options), intent (in) :: control
 
      ! ---------------------------------------------
      ! Local variables
-     INTEGER :: fm_flags ! pointer into work array for start of
+     integer :: fm_flags ! pointer into work array for start of
      ! flags from FM
-     INTEGER :: fm_ipart ! pointer into work array for start of
+     integer :: fm_ipart ! pointer into work array for start of
      ! ipart from FM
-     INTEGER :: fm_next ! pointer into work array for start of next
+     integer :: fm_next ! pointer into work array for start of next
      ! from FM
-     INTEGER :: fm_last ! pointer into work array for start of last
+     integer :: fm_last ! pointer into work array for start of last
      ! from FM
-     INTEGER :: fm_gain1 ! pointer into work array for start of
+     integer :: fm_gain1 ! pointer into work array for start of
      ! gain1 from FM
-     INTEGER :: fm_gain2 ! pointer into work array for start of
+     integer :: fm_gain2 ! pointer into work array for start of
      ! gain2 from FM
-     INTEGER :: fm_done ! pointer into work array for start of done
+     integer :: fm_done ! pointer into work array for start of done
      ! from FM
-     INTEGER :: fm_head ! pointer into work array for start of head
+     integer :: fm_head ! pointer into work array for start of head
      ! from FM
-     INTEGER :: fm_distance ! pointer into work array for start of head
+     integer :: fm_distance ! pointer into work array for start of head
      ! from FM
-     INTEGER :: icut, mult ! Used within FM refinement
-     INTEGER :: band
-     REAL (wp) :: ratio
-     LOGICAL :: imbal ! Should we check for imbalance?
+     integer :: icut, mult ! Used within FM refinement
+     integer :: band
+     real (wp) :: ratio
+     logical :: imbal ! Should we check for imbalance?
 
-     IF (control%refinement_band .LT. 1) RETURN
+     if (control%refinement_band .lt. 1) return
 
-     ratio = MAX(REAL(1.0,wp),control%balance)
-     IF (ratio>REAL(sumweight-2)) THEN
-       imbal = .FALSE.
-     ELSE
-       imbal = .TRUE.
-     END IF
+     ratio = max(real(1.0,wp),control%balance)
+     if (ratio>real(sumweight-2)) then
+       imbal = .false.
+     else
+       imbal = .true.
+     end if
      fm_flags = 0 ! length a_n
 
      ! Initialise work(fm_flags+1:fm_flags+a_n)
-     CALL nd_convert_partition_flags(a_n,a_n1,a_n2,partition, &
+     call nd_convert_partition_flags(a_n,a_n1,a_n2,partition, &
        ND_PART1_FLAG,ND_PART2_FLAG,ND_SEP_FLAG, &
        work(fm_flags+1:fm_flags+a_n))
 
@@ -3469,18 +3469,18 @@ CONTAINS
      fm_gain2 = fm_gain1 + a_n ! length a_n
      fm_done = fm_gain2 + a_n ! length a_n
      fm_head = fm_done + a_n ! length icut+mult+1
-     icut = MIN(sumweight-1,3*(sumweight/a_n))
-     icut = MIN(icut,5*MAXVAL(a_weight))
+     icut = min(sumweight-1,3*(sumweight/a_n))
+     icut = min(icut,5*maxVAL(a_weight))
      ! icut = sumweight/2
      ! mult = min(sumweight/20,10*sumweight/a_n) - 1
      mult = sumweight - icut - 1
-     mult = MIN(mult,icut)
+     mult = min(mult,icut)
      ! mult = sumweight/2-1
      fm_distance = fm_head + icut + mult + 1
 
-     band = MIN(control%refinement_band,a_n)
+     band = min(control%refinement_band,a_n)
 
-     CALL nd_fm_refinement(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,icut, &
+     call nd_fm_refinement(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,icut, &
        mult,control%cost_function,a_n1,a_n2,a_weight_1,a_weight_2,&
        a_weight_sep,band,ratio, &
        work(fm_flags+1:fm_flags+a_n),work(fm_ipart+1:fm_ipart+a_n), &
@@ -3490,11 +3490,11 @@ CONTAINS
        work(fm_distance+1:fm_distance+a_n))
 
      ! Update partition
-     CALL nd_convert_flags_partition(a_n,a_n1,a_n2, &
+     call nd_convert_flags_partition(a_n,a_n1,a_n2, &
        work(fm_flags+1:fm_flags+a_n),ND_PART1_FLAG,ND_PART2_FLAG, &
        partition(1:a_n))
 
-   END SUBROUTINE nd_refine_fm
+   end subroutine nd_refine_fm
 
 
 
@@ -3513,32 +3513,32 @@ CONTAINS
    ! the
    ! input separator can be moved into the new separator
 
-   SUBROUTINE nd_fm_refinement(n,a_ne,ptr,col,weight,sumweight,icut, &
+   subroutine nd_fm_refinement(n,a_ne,ptr,col,weight,sumweight,icut, &
        mult,costf,a_n1,a_n2,wnv1,wnv2,wns,band,ratio,flags,ipart,next,last,gain1, &
        gain2,done,head,dist)
 
      ! Matrix is held in matrix using compressed column scheme
-     INTEGER, INTENT (IN) :: n ! size of matrix
-     INTEGER, INTENT (IN) :: a_ne ! no. nonzeros in matrix
-     INTEGER, INTENT (IN) :: ptr(n) ! row pointers
-     INTEGER, INTENT (IN) :: col(a_ne) ! column indices
-     ! TYPE (nd_matrix), INTENT (INOUT) :: matrix
+     integer, intent (in) :: n ! size of matrix
+     integer, intent (in) :: a_ne ! no. nonzeros in matrix
+     integer, intent (in) :: ptr(n) ! row pointers
+     integer, intent (in) :: col(a_ne) ! column indices
+     ! type (nd_matrix), intent (inout) :: matrix
      ! The array weight is used to hold a weight on the vertices indicating
      ! how many vertices from the finer graphs have been combined into the
      ! current coarse graph vertex.
-     INTEGER, INTENT (IN) :: weight(n)
-     INTEGER, INTENT (IN) :: sumweight
-     INTEGER, INTENT (IN) :: icut ! Used to limit search
-     INTEGER, INTENT (IN) :: mult ! Used to bound search
-     INTEGER, INTENT (IN) :: costf ! Determines which cost function used
-     INTEGER, INTENT (INOUT) :: a_n1 ! No. vertices partition 1
-     INTEGER, INTENT (INOUT) :: a_n2 ! No. vertices partition 2
-     INTEGER, INTENT (INOUT) :: wnv1 ! Weighted sum of vertices partition 1
-     INTEGER, INTENT (INOUT) :: wnv2 ! Weighted sum of vertices partition 2
-     INTEGER, INTENT (INOUT) :: wns ! Weighted sum of vertices separator
-     INTEGER, INTENT (IN) :: band ! width of band around initial separator
+     integer, intent (in) :: weight(n)
+     integer, intent (in) :: sumweight
+     integer, intent (in) :: icut ! Used to limit search
+     integer, intent (in) :: mult ! Used to bound search
+     integer, intent (in) :: costf ! Determines which cost function used
+     integer, intent (inout) :: a_n1 ! No. vertices partition 1
+     integer, intent (inout) :: a_n2 ! No. vertices partition 2
+     integer, intent (inout) :: wnv1 ! Weighted sum of vertices partition 1
+     integer, intent (inout) :: wnv2 ! Weighted sum of vertices partition 2
+     integer, intent (inout) :: wns ! Weighted sum of vertices separator
+     integer, intent (in) :: band ! width of band around initial separator
      ! that the separator can lie in
-     REAL (wp), INTENT (IN) :: ratio ! ratio to determine
+     real (wp), intent (in) :: ratio ! ratio to determine
      ! whether
      ! partition is balanced
 
@@ -3550,90 +3550,90 @@ CONTAINS
      ! flags(i) == ND_PART1_FLAG : i is in partition 1
      ! flags(i) == ND_PART2_FLAG : i is in partition 2
      ! flags(i) == ND_SEP_FLAG   : i is in separator/cutset
-     INTEGER, INTENT (INOUT) :: flags(n)
+     integer, intent (inout) :: flags(n)
      ! info holds parameters giving information about the performance of
      ! the
      ! subroutine
-     INTEGER, INTENT (OUT) :: ipart(n), next(n), last(n)
-     INTEGER, INTENT (OUT) :: gain1(n), gain2(n), done(n), head(-mult:icut)
-     INTEGER, INTENT (OUT) :: dist(n)
+     integer, intent (out) :: ipart(n), next(n), last(n)
+     integer, intent (out) :: gain1(n), gain2(n), done(n), head(-mult:icut)
+     integer, intent (out) :: dist(n)
 
      ! Number nodes in each partition
-     INTEGER :: nv1, ns, nv2, inv1, inv2, ins
+     integer :: nv1, ns, nv2, inv1, inv2, ins
      ! Weighted nodes in each partition
-     INTEGER :: winv1, winv2, wins
-     INTEGER :: i, j, ii, jj, eye, k, l
-     INTEGER :: inn, outer
-     INTEGER :: move, ming, gain, old_gain, inext, ilast, idummy
-     INTEGER :: first, tail
-     REAL (wp) :: eval, evalc, evalo, eval1, eval2
-     LOGICAL :: imbal
+     integer :: winv1, winv2, wins
+     integer :: i, j, ii, jj, eye, k, l
+     integer :: inn, outer
+     integer :: move, ming, gain, old_gain, inext, ilast, idummy
+     integer :: first, tail
+     real (wp) :: eval, evalc, evalo, eval1, eval2
+     logical :: imbal
 
 
-     IF (ratio>REAL(sumweight-2)) THEN
-       imbal = .FALSE.
-     ELSE
-       imbal = .TRUE.
-     END IF
+     if (ratio>real(sumweight-2)) then
+       imbal = .false.
+     else
+       imbal = .true.
+     end if
 
      ! Set-up distance to hold (min) distance of node from separator. Only
      ! find
      ! distance for nodes within band distance from separator
      first = 0
      tail = 0
-     DO i = 1, n
-       IF (flags(i)==ND_SEP_FLAG) THEN
+     do i = 1, n
+       if (flags(i)==ND_SEP_FLAG) then
          dist(i) = 0
-         IF (first==0) THEN
+         if (first==0) then
            first = i
            tail = i
-         ELSE
+         else
            next(tail) = i
            tail = i
-         END IF
-       ELSE
+         end if
+       else
          dist(i) = -2
-       END IF
-     END DO
+       end if
+     end do
 
-     DO WHILE (first/=0)
+     do while (first/=0)
        j = dist(first)
-       IF (j==band-1) THEN
-         IF (first==n) THEN
+       if (j==band-1) then
+         if (first==n) then
            l = a_ne
-         ELSE
+         else
            l = ptr(first+1) - 1
-         END IF
-         DO i = ptr(first), l
-           IF (dist(col(i))==-2) THEN
+         end if
+         do i = ptr(first), l
+           if (dist(col(i))==-2) then
              k = col(i)
              dist(k) = j + 1
-           END IF
-         END DO
+           end if
+         end do
 
-       ELSE
-         IF (first==n) THEN
+       else
+         if (first==n) then
            l = a_ne
-         ELSE
+         else
            l = ptr(first+1) - 1
-         END IF
-         DO i = ptr(first), l
-           IF (dist(col(i))==-2) THEN
+         end if
+         do i = ptr(first), l
+           if (dist(col(i))==-2) then
              k = col(i)
              dist(k) = j + 1
              next(tail) = k
              tail = k
-           END IF
-         END DO
+           end if
+         end do
 
-       END IF
-       IF (first==tail) THEN
+       end if
+       if (first==tail) then
          first = 0
-       ELSE
+       else
          k = next(first)
          first = k
-       END IF
-     END DO
+       end if
+     end do
      next(1:n) = 0
 
      ! nv1,nv2,ns are the number of nodes in partitions 1, 2 and the cutset
@@ -3660,7 +3660,7 @@ CONTAINS
 
      ! Compute evaluation function for current partitioning
 
-     CALL cost_function(wnv1+1,wnv2+1,wns,sumweight,ratio,imbal,costf,evalc)
+     call cost_function(wnv1+1,wnv2+1,wns,sumweight,ratio,imbal,costf,evalc)
 
      ! icut is set to limit search in inner loop .. may later be a
      ! parameter
@@ -3673,9 +3673,9 @@ CONTAINS
 
      ! Compute gains for nodes in cutset
      ming = sumweight
-     DO i = 1, n
+     do i = 1, n
 
-       IF (flags(i)==ND_SEP_FLAG) THEN
+       if (flags(i)==ND_SEP_FLAG) then
          ! Node i is in cutset
          ! gain1(i) is change to cutset size if node i is moved to
          ! partition 1.
@@ -3685,15 +3685,15 @@ CONTAINS
          ! node
          ! i is moved
 
-         CALL compute_gain(n,a_ne,ptr,col,gain1,gain2,weight,i,flags)
-         gain = MAX(-mult,MIN(gain1(i),gain2(i)))
+         call compute_gain(n,a_ne,ptr,col,gain1,gain2,weight,i,flags)
+         gain = max(-mult,min(gain1(i),gain2(i)))
 
-         IF (gain<ming) ming = gain
-         IF (gain>icut) CYCLE
+         if (gain<ming) ming = gain
+         if (gain>icut) cycle
          ! New node is put at head of list
-         CALL add_to_list(n,mult,icut,next,last,head,i,gain)
-       END IF
-     END DO
+         call add_to_list(n,mult,icut,next,last,head,i,gain)
+       end if
+     end do
 
      ! Initilialization finished.  Now perform F-M algorithm in two loops.
      ! In each inner loop we choose the best obtained and if the evaluation
@@ -3701,7 +3701,7 @@ CONTAINS
      ! inner
      ! loop; otherwise we terminate.
      evalo = evalc
-     DO outer = 1, n
+     do outer = 1, n
        ! Set partition that will be altered in inner loop
        inv1 = nv1
        inv2 = nv2
@@ -3710,45 +3710,45 @@ CONTAINS
        winv2 = wnv2
        wins = wns
        ipart(1:n) = flags(1:n)
-INNER:    DO inn = 1, n
+inNER:    do inn = 1, n
 
          ! Choose best eligible move
-         DO idummy = 1, n
+         do idummy = 1, n
 
-           DO gain = ming, icut
-             IF (head(gain)/=0) EXIT
-           END DO
-           IF (gain>icut) EXIT INNER
+           do gain = ming, icut
+             if (head(gain)/=0) exit
+           end do
+           if (gain>icut) exit inNER
 
            ! Now cycle through nodes of least gain
            ! Currently inefficient because of re-searching linked list
            inext = head(gain)
            k = 0
 10            i = inext
-           IF (i==0) CYCLE
+           if (i==0) cycle
            ! Use node if it has not been considered already
-           IF (done(i)<outer) GO TO 20
+           if (done(i)<outer) go to 20
            inext = next(i)
            ! !! Extra statements to trap infinite loop
            k = k + 1
-           IF (k>ins) THEN
-             ! WRITE (*,*) 'Bug in code because of infinite loop'
+           if (k>ins) then
+             ! write (*,*) 'Bug in code because of infinite loop'
              ! !! You may wish to change this to a stop
-             EXIT
-           END IF
-           GO TO 10
-         END DO
-         EXIT INNER
+             exit
+           end if
+           go to 10
+         end do
+         exit inNER
          ! Node i has been selected as the best eligible node
          ! Set flag so only considered once in this pass
 20          done(i) = outer
          ! As i will not be chosen again in this pass, remove from list
-         CALL remove_from_list(n,mult,icut,next,last,head,i,gain)
+         call remove_from_list(n,mult,icut,next,last,head,i,gain)
          ! Move the node to the appropriate partition and reset partition
          ! information
          ! We will try both weighted and unweighted
 
-         IF (wnv1==0 .AND. wnv2>0) THEN
+         if (wnv1==0 .and. wnv2>0) then
 
            ! Move node i to partition 1
            move = ND_PART1_FLAG
@@ -3756,7 +3756,7 @@ INNER:    DO inn = 1, n
            winv1 = winv1 + weight(i)
            ins = ins - 1
            wins = wins - weight(i)
-         ELSE IF (wnv2==0 .AND. wnv1>0) THEN
+         else if (wnv2==0 .and. wnv1>0) then
            ! Move node i to partition 2
            move = ND_PART2_FLAG
            inv2 = inv2 + 1
@@ -3764,68 +3764,68 @@ INNER:    DO inn = 1, n
            ins = ins - 1
            wins = wins - weight(i)
 
-         ELSE
-           CALL cost_function(winv1+weight(i),winv2+1-gain1(i)-weight(i), &
+         else
+           call cost_function(winv1+weight(i),winv2+1-gain1(i)-weight(i), &
              wins+gain1(i)-1,sumweight,ratio,imbal,costf,eval1)
 
-           CALL cost_function(winv1+1-gain2(i)-weight(i),winv2+weight(i), &
+           call cost_function(winv1+1-gain2(i)-weight(i),winv2+weight(i), &
              wins+gain2(i)-1,sumweight,ratio,imbal,costf,eval2)
-           IF ((eval1<eval2) .OR. ((eval1==eval2) .AND. (wnv1<wnv2))) THEN
+           if ((eval1<eval2) .or. ((eval1==eval2) .and. (wnv1<wnv2))) then
              ! Move node i to partition 1
              move = ND_PART1_FLAG
              inv1 = inv1 + 1
              winv1 = winv1 + weight(i)
              ins = ins - 1
              wins = wins - weight(i)
-           ELSE
+           else
              ! Move node i to partition 2
              move = ND_PART2_FLAG
              inv2 = inv2 + 1
              winv2 = winv2 + weight(i)
              ins = ins - 1
              wins = wins - weight(i)
-           END IF
-         END IF
+           end if
+         end if
          ! Set new partition for node i
          ipart(i) = move
          ! Run through neigbours of node i to update data
-         IF (i==n) THEN
+         if (i==n) then
            l = a_ne
-         ELSE
+         else
            l = ptr(i+1) - 1
-         END IF
-         DO jj = ptr(i), l
+         end if
+         do jj = ptr(i), l
            j = col(jj)
            ! Check which partition node j is in and take appropriate action
-           IF (ipart(j)==move) CYCLE
+           if (ipart(j)==move) cycle
            ! If node j is in cutset, update its gain value
-           IF (ipart(j)==ND_SEP_FLAG) THEN
+           if (ipart(j)==ND_SEP_FLAG) then
              ! If it has already been chosen in this pass just skip it
-             IF (done(j)==outer .OR. dist(j)==-2) CYCLE
+             if (done(j)==outer .or. dist(j)==-2) cycle
              ! old_gain is present gain
 
-             old_gain = MAX(-mult,MIN(gain1(j),gain2(j)))
+             old_gain = max(-mult,min(gain1(j),gain2(j)))
              ! old_gain = min(gain1(j),gain2(j))
 
-             IF (move==ND_PART1_FLAG) gain2(j) = gain2(j) + weight(i)
-             IF (move==ND_PART2_FLAG) gain1(j) = gain1(j) + weight(i)
-             gain = MAX(-mult,MIN(gain1(j),gain2(j)))
+             if (move==ND_PART1_FLAG) gain2(j) = gain2(j) + weight(i)
+             if (move==ND_PART2_FLAG) gain1(j) = gain1(j) + weight(i)
+             gain = max(-mult,min(gain1(j),gain2(j)))
              ! gain = min(gain1(j),gain2(j))
 
-             IF (old_gain==gain) CYCLE
+             if (old_gain==gain) cycle
              ! Remove from old list
-             IF (old_gain<=icut) THEN
-               CALL remove_from_list(n,mult,icut,next,last,head,j,old_gain)
-             END IF
+             if (old_gain<=icut) then
+               call remove_from_list(n,mult,icut,next,last,head,j,old_gain)
+             end if
              ! gain has changed so move to new linked list if less than
              ! icut
-             IF (gain<=icut) THEN
+             if (gain<=icut) then
                ! Reset ming if necessary
-               IF (gain<ming) ming = gain
-               CALL add_to_list(n,mult,icut,next,last,head,j,gain)
-             END IF
-           END IF
-           IF (ipart(j)==2-move) THEN
+               if (gain<ming) ming = gain
+               call add_to_list(n,mult,icut,next,last,head,j,gain)
+             end if
+           end if
+           if (ipart(j)==2-move) then
              ! We have a new node in the cutset.
              ipart(j) = ND_SEP_FLAG
              ! Compute gains for this new node in the cutset and place in
@@ -3836,74 +3836,74 @@ INNER:    DO inn = 1, n
              ! as not put
              ! in head linked list so won't be accessed
              ! First check that it was not earlier moved from cutset
-             IF (done(j)/=outer .AND. dist(j)/=-2) THEN
+             if (done(j)/=outer .and. dist(j)/=-2) then
                ! Compute gain
-               CALL compute_gain(n,a_ne,ptr,col,gain1,gain2,weight,j,ipart)
-               gain = MAX(-mult,MIN(gain1(j),gain2(j)))
+               call compute_gain(n,a_ne,ptr,col,gain1,gain2,weight,j,ipart)
+               gain = max(-mult,min(gain1(j),gain2(j)))
                ! gain = min(gain1(j),gain2(j))
                ! !! Just added this
-               IF (gain<ming) ming = gain
+               if (gain<ming) ming = gain
                ! Add to  list
-               IF (gain<=icut) THEN
-                 CALL add_to_list(n,mult,icut,next,last,head,j,gain)
-               END IF
-             END IF
+               if (gain<=icut) then
+                 call add_to_list(n,mult,icut,next,last,head,j,gain)
+               end if
+             end if
              ! Update partition and gain of any nodes in cutset connected
              ! to node j
              ins = ins + 1
              wins = wins + weight(j)
-             IF (move==ND_PART1_FLAG) THEN
+             if (move==ND_PART1_FLAG) then
                inv2 = inv2 - 1
                winv2 = winv2 - weight(j)
-             END IF
-             IF (move==ND_PART2_FLAG) THEN
+             end if
+             if (move==ND_PART2_FLAG) then
                inv1 = inv1 - 1
                winv1 = winv1 - weight(j)
-             END IF
+             end if
              ! Check neighbours of j since any in cut set will have gain
              ! changed
-             IF (j==n) THEN
+             if (j==n) then
                l = a_ne
-             ELSE
+             else
                l = ptr(j+1) - 1
-             END IF
-             DO ii = ptr(j), l
+             end if
+             do ii = ptr(j), l
                eye = col(ii)
-               IF (ipart(eye)/=ND_SEP_FLAG) CYCLE
-               IF (dist(eye)==-2) CYCLE
+               if (ipart(eye)/=ND_SEP_FLAG) cycle
+               if (dist(eye)==-2) cycle
                ! Neighbour is in cutset. Recompute gain and insert in
                ! linked list.
-               IF (done(eye)==outer) CYCLE
+               if (done(eye)==outer) cycle
                ! old_gain is present gain
-               old_gain = MAX(-mult,MIN(gain1(eye),gain2(eye)))
+               old_gain = max(-mult,min(gain1(eye),gain2(eye)))
                ! old_gain = min(gain1(eye),gain2(eye))
 
 
-               IF (move==ND_PART1_FLAG) THEN
+               if (move==ND_PART1_FLAG) then
                  gain1(eye) = gain1(eye) - weight(j)
-               END IF
-               IF (move==ND_PART2_FLAG) THEN
+               end if
+               if (move==ND_PART2_FLAG) then
                  gain2(eye) = gain2(eye) - weight(j)
-               END IF
+               end if
                ! gain is new gain
-               gain = MAX(-mult,MIN(gain1(eye),gain2(eye)))
+               gain = max(-mult,min(gain1(eye),gain2(eye)))
                ! gain = min(gain1(eye),gain2(eye))
-               IF (old_gain==gain) CYCLE
+               if (old_gain==gain) cycle
                ! Remove from old list
-               IF (old_gain<=icut) THEN
-                 CALL remove_from_list(n,mult,icut,next,last,head,eye,old_gain)
-               END IF
+               if (old_gain<=icut) then
+                 call remove_from_list(n,mult,icut,next,last,head,eye,old_gain)
+               end if
                ! gain has changed so move to new linked list if less than
                ! icut
-               IF (gain<=icut) THEN
+               if (gain<=icut) then
                  ! Reset ming if necessary
-                 IF (gain<ming) ming = gain
-                 CALL add_to_list(n,mult,icut,next,last,head,eye,gain)
-               END IF
-             END DO
-           END IF
+                 if (gain<ming) ming = gain
+                 call add_to_list(n,mult,icut,next,last,head,eye,gain)
+               end if
+             end do
+           end if
            ! end of neighbours loop
-         END DO
+         end do
 
          ! ii = 0
          ! do i = 1,n
@@ -3912,11 +3912,11 @@ INNER:    DO inn = 1, n
          ! if (ii .ne. inv2) write(6,*) 'problem in partition',ii,inv2
 
          ! Evaluate new partition
-         CALL cost_function(winv1+1,winv2+1,wins,sumweight,ratio,imbal, &
+         call cost_function(winv1+1,winv2+1,wins,sumweight,ratio,imbal, &
            costf,eval)
          ! Compare this with best so far in inner loop and store partition
          ! information if it is the best
-         IF (inv1*inv2>0 .AND. nv1*nv2==0) THEN
+         if (inv1*inv2>0 .and. nv1*nv2==0) then
            ! Might have to store gains and who is in the cutset
            evalc = eval
            nv1 = inv1
@@ -3927,7 +3927,7 @@ INNER:    DO inn = 1, n
            wns = wins
            flags = ipart
 
-         ELSE IF (eval<evalc .AND. (inv1*inv2>0)) THEN
+         else if (eval<evalc .and. (inv1*inv2>0)) then
            ! Might have to store gains and who is in the cutset
            evalc = eval
            nv1 = inv1
@@ -3937,11 +3937,11 @@ INNER:    DO inn = 1, n
            wnv2 = winv2
            wns = wins
            flags(1:n) = ipart(1:n)
-         END IF
+         end if
          ! End inner loop
-       END DO INNER
+       end do inNER
        ! Leave loop if inner loop has not found better partition
-       IF (evalc>=(1.0-1.0/(LOG(REAL(sumweight))**2.3))*evalo) EXIT
+       if (evalc>=(1.0-1.0/(LOG(real(sumweight))**2.3))*evalo) exit
        ! Otherwise we reset evalo and go back to inner loop
        evalo = evalc
        ! Recompute gains for this new partition
@@ -3949,9 +3949,9 @@ INNER:    DO inn = 1, n
        ! This is very inefficient but is in now to test functionality
        head(-mult:icut) = 0
        ming = icut + 1
-       DO i = 1, n
-         IF (flags(i)/=ND_SEP_FLAG) CYCLE
-         IF (dist(i)==-2) CYCLE
+       do i = 1, n
+         if (flags(i)/=ND_SEP_FLAG) cycle
+         if (dist(i)==-2) cycle
          ! Node i is in cutset
          ! gain1(i) is change to cutset size if node i is moved to
          ! partition 1.
@@ -3960,124 +3960,124 @@ INNER:    DO inn = 1, n
          ! Run through all neighbours of node i to see what loss/gain is if
          ! node
          ! i is moved
-         CALL compute_gain(n,a_ne,ptr,col,gain1,gain2,weight,i,flags)
+         call compute_gain(n,a_ne,ptr,col,gain1,gain2,weight,i,flags)
          ! Recalculate doubly linked list linking nodes with same gain and
          ! headers
          ! to starts (up to cut off value icut)
          ! Initialize array done that flags that a node has been considered
          ! in
          ! an inner loop pass
-         gain = MAX(-mult,MIN(gain1(i),gain2(i)))
+         gain = max(-mult,min(gain1(i),gain2(i)))
          ! gain = min(gain1(i),gain2(i))
-         IF (gain>icut) CYCLE
-         IF (gain<ming) ming = gain
+         if (gain>icut) cycle
+         if (gain<ming) ming = gain
          ! New node is put at head of list
-         CALL add_to_list(n,mult,icut,next,last,head,i,gain)
-       END DO
+         call add_to_list(n,mult,icut,next,last,head,i,gain)
+       end do
        ! End of outer loop
-     END DO
+     end do
      a_n1 = nv1
      a_n2 = nv2
-     RETURN
+     return
 
-   END SUBROUTINE nd_fm_refinement
+   end subroutine nd_fm_refinement
 
 
-     SUBROUTINE remove_from_list(n,mult,icut,next,last,head,irm,ig)
-       INTEGER, INTENT(IN) :: n,mult,icut ! order matrix
-       INTEGER, INTENT(INOUT) :: next(n),last(n),head(-mult:icut)
-       INTEGER, INTENT(IN) :: irm, ig
-       INTEGER :: inext, ilast
+     subroutine remove_from_list(n,mult,icut,next,last,head,irm,ig)
+       integer, intent(in) :: n,mult,icut ! order matrix
+       integer, intent(inout) :: next(n),last(n),head(-mult:icut)
+       integer, intent(in) :: irm, ig
+       integer :: inext, ilast
 
        inext = next(irm)
        ilast = last(irm)
-       IF (ilast==0) THEN
+       if (ilast==0) then
          head(ig) = inext
-         IF (inext/=0) last(inext) = 0
-       ELSE
+         if (inext/=0) last(inext) = 0
+       else
          next(ilast) = inext
-         IF (inext/=0) last(inext) = ilast
-       END IF
-     END SUBROUTINE remove_from_list
+         if (inext/=0) last(inext) = ilast
+       end if
+     end subroutine remove_from_list
 
 
-     SUBROUTINE add_to_list(n,mult,icut,next,last,head,irm,ig)
-       INTEGER, INTENT(IN) :: n,mult,icut ! order matrix
-       INTEGER, INTENT(INOUT) :: next(n),last(n),head(-mult:icut)
-       INTEGER, INTENT(IN) :: irm, ig
-       INTEGER :: inext, ilast
+     subroutine add_to_list(n,mult,icut,next,last,head,irm,ig)
+       integer, intent(in) :: n,mult,icut ! order matrix
+       integer, intent(inout) :: next(n),last(n),head(-mult:icut)
+       integer, intent(in) :: irm, ig
+       integer :: inext, ilast
 
        inext = head(ig)
        head(ig) = irm
        next(irm) = inext
-       IF (inext/=0) last(inext) = irm
+       if (inext/=0) last(inext) = irm
        last(irm) = 0
-     END SUBROUTINE add_to_list
+     end subroutine add_to_list
 
 
-     SUBROUTINE compute_gain(n,a_ne,ptr,col,gain1,gain2,weight,i,partit)
-       INTEGER, INTENT(IN) :: n,a_ne,ptr(n),col(a_ne),weight(n)
-       INTEGER, INTENT(INOUT) :: gain1(n), gain2(n)  
-       INTEGER, INTENT(IN) :: i, partit(:)
-       INTEGER :: j, jj, l
+     subroutine compute_gain(n,a_ne,ptr,col,gain1,gain2,weight,i,partit)
+       integer, intent(in) :: n,a_ne,ptr(n),col(a_ne),weight(n)
+       integer, intent(inout) :: gain1(n), gain2(n)  
+       integer, intent(in) :: i, partit(:)
+       integer :: j, jj, l
        ! Initialize gain ... knowing node i will be removed from cutset
        ! The +1 is to give identical result to previous code when unit
        ! weights
        gain1(i) = -weight(i) + 1
        gain2(i) = -weight(i) + 1
-       IF (i==n) THEN
+       if (i==n) then
          l = a_ne
-       ELSE
+       else
          l = ptr(i+1) - 1
-       END IF
-       DO jj = ptr(i), l
+       end if
+       do jj = ptr(i), l
          j = col(jj)
          ! Check which partition node j is in and adjust gain array
          ! appropriately
-         IF (partit(j)==ND_PART1_FLAG) THEN
+         if (partit(j)==ND_PART1_FLAG) then
            gain2(i) = gain2(i) + weight(j)
-         END IF
-         IF (partit(j)==ND_PART2_FLAG) THEN
+         end if
+         if (partit(j)==ND_PART2_FLAG) then
            gain1(i) = gain1(i) + weight(j)
-         END IF
-       END DO
-     END SUBROUTINE compute_gain
+         end if
+       end do
+     end subroutine compute_gain
 
-   SUBROUTINE amd_order_both(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition, &
+   subroutine amd_order_both(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition, &
        iperm,a_weight,work)
-     INTEGER, INTENT (IN) :: a_n ! order of matrix being partitioned
-     INTEGER, INTENT (IN) :: a_ne ! no. entries in matrix being partitioned
-     INTEGER, INTENT (IN) :: a_ptr(a_n) ! col ptrs for matrix being
+     integer, intent (in) :: a_n ! order of matrix being partitioned
+     integer, intent (in) :: a_ne ! no. entries in matrix being partitioned
+     integer, intent (in) :: a_ptr(a_n) ! col ptrs for matrix being
      ! partitioned
-     INTEGER, INTENT (IN) :: a_row(a_ne) ! row indices for matrix
+     integer, intent (in) :: a_row(a_ne) ! row indices for matrix
      ! being partitioned.
-     INTEGER, INTENT (IN) :: a_n1 ! no. rows in partition 1
-     INTEGER, INTENT (IN) :: a_n2 ! no. rows in partition 2
-     INTEGER, INTENT (IN) :: partition(a_n) ! the partitions
-     INTEGER, INTENT (INOUT) :: iperm(a_n) ! maps current permutation to
+     integer, intent (in) :: a_n1 ! no. rows in partition 1
+     integer, intent (in) :: a_n2 ! no. rows in partition 2
+     integer, intent (in) :: partition(a_n) ! the partitions
+     integer, intent (inout) :: iperm(a_n) ! maps current permutation to
      ! the
      ! column indices of the matrix whose ordering is being computed
-     INTEGER, INTENT (INOUT) :: a_weight(a_n) ! weights of vertices
-     INTEGER, INTENT (OUT) :: work(12*a_n+a_ne)
+     integer, intent (inout) :: a_weight(a_n) ! weights of vertices
+     integer, intent (out) :: work(12*a_n+a_ne)
 
 
      ! Local variables
-     INTEGER :: i, j
-     INTEGER :: extract_work ! pointers into work array for mask arrays
-     INTEGER :: amd_order_perm ! pointer into work array for perm array
-     INTEGER :: amd_order_work ! pointer into work array for amd_order work
+     integer :: i, j
+     integer :: extract_work ! pointers into work array for mask arrays
+     integer :: amd_order_perm ! pointer into work array for perm array
+     integer :: amd_order_work ! pointer into work array for amd_order work
      ! array
-     INTEGER :: a_ptr_sub ! pointer into work for col ptrs of
+     integer :: a_ptr_sub ! pointer into work for col ptrs of
      ! submatrix
-     INTEGER :: a_irn_sub ! pointer into work for irn array of
+     integer :: a_irn_sub ! pointer into work for irn array of
      ! submatrix
-     INTEGER :: rows_sub ! pointer into work for rows_sub array
-     INTEGER :: a_lirn_sub ! length of irn array of submatrix
-     INTEGER :: a_n_1 ! order of submatrix 1
-     INTEGER :: a_n_2 ! order of submatrix 2
-     INTEGER :: a_n_sep ! number entries in separator
-     INTEGER :: a_ne_sub ! number entries in submatrix
-     INTEGER :: len_a_row_sub ! used when extracting submatrices
+     integer :: rows_sub ! pointer into work for rows_sub array
+     integer :: a_lirn_sub ! length of irn array of submatrix
+     integer :: a_n_1 ! order of submatrix 1
+     integer :: a_n_2 ! order of submatrix 2
+     integer :: a_n_sep ! number entries in separator
+     integer :: a_ne_sub ! number entries in submatrix
+     integer :: len_a_row_sub ! used when extracting submatrices
 
 
      ! Set orders of submatrices
@@ -4089,7 +4089,7 @@ INNER:    DO inn = 1, n
      ! Set pointers into work array
      amd_order_perm = 0 ! length a_n
      a_ptr_sub = amd_order_perm + a_n ! length a_n
-     a_lirn_sub = a_ne + MAX(a_n_1,a_n_2) + 1
+     a_lirn_sub = a_ne + max(a_n_1,a_n_2) + 1
      ! max(a_n_1,a_n_2) + 1 .le. a_n
      a_irn_sub = a_ptr_sub + a_n ! length a_lirn_sub
      rows_sub = a_irn_sub + a_lirn_sub ! length a_n
@@ -4098,17 +4098,17 @@ INNER:    DO inn = 1, n
 
 
      ! Form submatrix 1
-     ! IF (a_n1 .NE. 1) THEN
+     ! if (a_n1 .ne. 1) then
      work(rows_sub+1:rows_sub+a_n1) = partition(1:a_n1)
      len_a_row_sub = a_ne
-     CALL extract_matrix(a_n,a_ne,a_ptr,a_row,a_n1,a_n_sep, &
+     call extract_matrix(a_n,a_ne,a_ptr,a_row,a_n1,a_n_sep, &
        work(rows_sub+1:rows_sub+a_n_1),a_ne_sub,work(a_ptr_sub+1:a_ptr_sub+ &
        a_n_1),len_a_row_sub,work(a_irn_sub+1:a_irn_sub+a_ne), &
        work(extract_work+1:extract_work+a_n))
 
      ! Apply amd_order
      work(rows_sub+1:rows_sub+a_n1) = ND_PART1_FLAG
-     CALL amd_order(a_n_1,a_ne_sub,a_lirn_sub,work(a_irn_sub+1:a_irn_sub+ &
+     call amd_order(a_n_1,a_ne_sub,a_lirn_sub,work(a_irn_sub+1:a_irn_sub+ &
        a_lirn_sub),work(a_ptr_sub+1:a_ptr_sub+a_n_1), &
        work(rows_sub+1:rows_sub+a_n_1),work(amd_order_perm+1:amd_order_perm+a_n_1), &
        work(amd_order_work+1:amd_order_work+7*a_n_1))
@@ -4117,79 +4117,79 @@ INNER:    DO inn = 1, n
      ! that will form new iperm. Similarly, overwrite first a_n1 entries of
      ! rows_sub with first a_n1 entries that will form new a_weight
      ! no longer need info in a_ptr
-     DO i = 1, a_n1
+     do i = 1, a_n1
        j = work(amd_order_perm+i)
        work(a_ptr_sub+i) = iperm(partition(j))
        work(rows_sub+i) = a_weight(partition(j))
-     END DO
+     end do
      work(amd_order_perm+1:amd_order_perm+a_n1) = work(a_ptr_sub+1:a_ptr_sub+a_n1)
 
      ! Build second submatrix
-     ! IF (a_n2 .NE. 1) THEN
+     ! if (a_n2 .ne. 1) then
      work(rows_sub+a_n1+1:rows_sub+a_n1+a_n_2) = partition(a_n1+1:a_n1+a_n2 &
        )
      len_a_row_sub = a_ne
-     CALL extract_matrix(a_n,a_ne,a_ptr,a_row,a_n2,a_n_sep, &
+     call extract_matrix(a_n,a_ne,a_ptr,a_row,a_n2,a_n_sep, &
        work(rows_sub+a_n1+1:rows_sub+a_n1+a_n_2),a_ne_sub, &
        work(a_ptr_sub+1:a_ptr_sub+a_n_2),len_a_row_sub, &
        work(a_irn_sub+1:a_irn_sub+a_ne),work(extract_work+1:extract_work+ &
        a_n))
      ! Apply amd_order
      work(rows_sub+a_n1+1:rows_sub+a_n1+a_n2) = ND_PART1_FLAG
-     CALL amd_order(a_n_2,a_ne_sub,a_lirn_sub,work(a_irn_sub+1:a_irn_sub+ &
+     call amd_order(a_n_2,a_ne_sub,a_lirn_sub,work(a_irn_sub+1:a_irn_sub+ &
        a_lirn_sub),work(a_ptr_sub+1:a_ptr_sub+a_n_2), &
        work(rows_sub+a_n1+1:rows_sub+a_n1+a_n_2), &
        work(amd_order_perm+a_n1+1:amd_order_perm+a_n),work(amd_order_work+1:amd_order_work+7* &
        a_n_2))
-     ! ELSE
+     ! else
      ! work(amd_order_perm+a_n1+1) = 1
-     ! END IF
-     DO i = 1, a_n_2
+     ! end if
+     do i = 1, a_n_2
        j = work(amd_order_perm+a_n1+i)
        work(a_ptr_sub+i+a_n1) = iperm(partition(a_n1+j))
        work(rows_sub+i+a_n1) = a_weight(partition(a_n1+j))
-     END DO
-     DO i = a_n_2 + 1, a_n_2 + (a_n-a_n1-a_n2)
+     end do
+     do i = a_n_2 + 1, a_n_2 + (a_n-a_n1-a_n2)
        j = i
        work(a_ptr_sub+i+a_n1) = iperm(partition(a_n1+j))
        work(rows_sub+i+a_n1) = a_weight(partition(a_n1+j))
 
-     END DO
+     end do
      iperm(a_n1+1:a_n) = work(a_ptr_sub+1+a_n1:a_ptr_sub+a_n)
      iperm(1:a_n1) = work(amd_order_perm+1:amd_order_perm+a_n1)
      a_weight(1:a_n) = work(rows_sub+1:rows_sub+a_n)
 
-   END SUBROUTINE amd_order_both
+   end subroutine amd_order_both
 
 
-   SUBROUTINE extract_matrix(a_n,a_ne,a_ptr,a_row,a_n_part,a_n_sep, &
+   subroutine extract_matrix(a_n,a_ne,a_ptr,a_row,a_n_part,a_n_sep, &
        rows_sub,a_ne_sub,a_ptr_sub,len_a_row_sub,a_row_sub,work)
-     INTEGER, INTENT (IN) :: a_n ! order of matrix being partitioned
-     INTEGER, INTENT (IN) :: a_ne ! no. entries in matrix being partitioned
-     INTEGER, INTENT (IN) :: a_ptr(a_n) ! col ptrs for matrix being
+     integer, intent (in) :: a_n ! order of matrix being partitioned
+     integer, intent (in) :: a_ne ! no. entries in matrix being partitioned
+     integer, intent (in) :: a_ptr(a_n) ! col ptrs for matrix being
      ! partitioned
-     INTEGER, INTENT (IN) :: a_row(a_ne) ! row indices for matrix
+     integer, intent (in) :: a_row(a_ne) ! row indices for matrix
      ! being partitioned.
-     INTEGER, INTENT (IN) :: a_n_part ! no. rows in partition
-     INTEGER, INTENT (IN) :: a_n_sep ! no. rows in partition
-     INTEGER, INTENT (IN) :: rows_sub(a_n_part+a_n_sep) ! rows/cols of
+     integer, intent (in) :: a_n_part ! no. rows in partition
+     integer, intent (in) :: a_n_sep ! no. rows in partition
+     integer, intent (in) :: rows_sub(a_n_part+a_n_sep) ! rows/cols of
      ! matrix
      ! to be extracted. Intersecting rows/cols of separator will be
      ! replaced
      ! by matrix of all zeros
-     INTEGER, INTENT (OUT) :: a_ne_sub ! no. entries stored in extracted
+     integer, intent (out) :: a_ne_sub ! no. entries stored in extracted
      ! matrix
-     INTEGER, INTENT (OUT) :: a_ptr_sub(a_n_part+a_n_sep) ! col ptrs for
+     integer, intent (out) :: a_ptr_sub(a_n_part+a_n_sep) ! col ptrs for
      ! extracted matrix
-     INTEGER, INTENT (IN) :: len_a_row_sub ! length of a_row_sub
-     INTEGER, INTENT (OUT) :: a_row_sub(len_a_row_sub) ! row indices for
+     integer, intent (in) :: len_a_row_sub ! length of a_row_sub
+     integer, intent (out) :: a_row_sub(len_a_row_sub) ! row indices for
      ! extracted matrix
-     INTEGER, INTENT (OUT) :: work(a_n)
+     integer, intent (out) :: work(a_n)
 
      ! Local variables
-     INTEGER :: i, j, k, l, m, p
-     INTEGER :: a_n_sub ! Order of extracted matrix
-     INTEGER :: mask ! pointer into work array for mask arrays
+     integer :: i, j, k, l, m, p
+     integer :: a_n_sub ! Order of extracted matrix
+     integer :: mask ! pointer into work array for mask arrays
 
      ! Set pointers into work array
      mask = 0 ! length a_n
@@ -4197,115 +4197,115 @@ INNER:    DO inn = 1, n
      ! Set mask
      a_n_sub = a_n_part + a_n_sep
      work(mask+1:mask+a_n) = 0
-     DO i = 1, a_n_part
+     do i = 1, a_n_part
        j = rows_sub(i)
        work(mask+j) = i
-     END DO
-     DO i = a_n_part + 1, a_n_sub
+     end do
+     do i = a_n_part + 1, a_n_sub
        j = rows_sub(i)
        work(mask+j) = -i
-     END DO
+     end do
      a_row_sub(:) = 0
 
      ! Count number of entries in  submatrix and set-up column ptrs
      a_ptr_sub(1:a_n_sub) = 0
-     DO j = 1, a_n_part
+     do j = 1, a_n_part
        a_ptr_sub(j) = 0
        i = rows_sub(j)
-       IF (i==a_n) THEN
+       if (i==a_n) then
          l = a_ne
-       ELSE
+       else
          l = a_ptr(i+1) - 1
-       END IF
-       DO k = a_ptr(i), l
+       end if
+       do k = a_ptr(i), l
          m = a_row(k)
-         IF (work(mask+m)/=0) THEN
+         if (work(mask+m)/=0) then
            a_ptr_sub(j) = a_ptr_sub(j) + 1
 
-         END IF
-       END DO
-     END DO
-     DO j = a_n_part + 1, a_n_sub
+         end if
+       end do
+     end do
+     do j = a_n_part + 1, a_n_sub
        a_ptr_sub(j) = 0
        i = rows_sub(j)
-       IF (i==a_n) THEN
+       if (i==a_n) then
          l = a_ne
-       ELSE
+       else
          l = a_ptr(i+1) - 1
-       END IF
-       DO k = a_ptr(i), l
+       end if
+       do k = a_ptr(i), l
          m = a_row(k)
-         IF (work(mask+m)>0) a_ptr_sub(j) = a_ptr_sub(j) + 1
-       END DO
-     END DO
+         if (work(mask+m)>0) a_ptr_sub(j) = a_ptr_sub(j) + 1
+       end do
+     end do
      a_ptr_sub(1) = a_ptr_sub(1) + 1
-     DO j = 2, a_n_sub
+     do j = 2, a_n_sub
        a_ptr_sub(j) = a_ptr_sub(j) + a_ptr_sub(j-1)
-     END DO
+     end do
      a_ne_sub = a_ptr_sub(a_n_sub) - 1
 
      ! Form a_row_sub
-     DO j = 1, a_n_part
+     do j = 1, a_n_part
        i = rows_sub(j)
-       IF (i==a_n) THEN
+       if (i==a_n) then
          l = a_ne
-       ELSE
+       else
          l = a_ptr(i+1) - 1
-       END IF
-       DO k = a_ptr(i), l
+       end if
+       do k = a_ptr(i), l
          m = a_row(k)
-         IF (work(mask+m)/=0) THEN
+         if (work(mask+m)/=0) then
            a_ptr_sub(j) = a_ptr_sub(j) - 1
            p = a_ptr_sub(j)
-           a_row_sub(p) = ABS(work(mask+m))
-         END IF
-       END DO
-     END DO
-     DO j = a_n_part + 1, a_n_sub
+           a_row_sub(p) = abs(work(mask+m))
+         end if
+       end do
+     end do
+     do j = a_n_part + 1, a_n_sub
        i = rows_sub(j)
-       IF (i==a_n) THEN
+       if (i==a_n) then
          l = a_ne
-       ELSE
+       else
          l = a_ptr(i+1) - 1
-       END IF
-       DO k = a_ptr(i), l
+       end if
+       do k = a_ptr(i), l
          m = a_row(k)
-         IF (work(mask+m)>0) THEN
+         if (work(mask+m)>0) then
            a_ptr_sub(j) = a_ptr_sub(j) - 1
            p = a_ptr_sub(j)
            a_row_sub(p) = work(mask+m)
-         END IF
-       END DO
-     END DO
-   END SUBROUTINE extract_matrix
+         end if
+       end do
+     end do
+   end subroutine extract_matrix
 
-   SUBROUTINE extract_both_matrices(a_n,a_ne,a_ptr,a_row,a_n_part1, &
+   subroutine extract_both_matrices(a_n,a_ne,a_ptr,a_row,a_n_part1, &
        a_n_part2,rows_sub,a_ne_sub1,a_ne_sub2,a_ptr_sub,len_a_row_sub, &
        a_row_sub,work)
-     INTEGER, INTENT (IN) :: a_n ! order of matrix being partitioned
-     INTEGER, INTENT (IN) :: a_ne ! no. entries in matrix being partitioned
-     INTEGER, INTENT (IN) :: a_ptr(a_n) ! col ptrs for matrix being
+     integer, intent (in) :: a_n ! order of matrix being partitioned
+     integer, intent (in) :: a_ne ! no. entries in matrix being partitioned
+     integer, intent (in) :: a_ptr(a_n) ! col ptrs for matrix being
      ! partitioned
-     INTEGER, INTENT (IN) :: a_row(a_ne) ! row indices for matrix
+     integer, intent (in) :: a_row(a_ne) ! row indices for matrix
      ! being partitioned.
-     INTEGER, INTENT (IN) :: a_n_part1 ! no. rows in partition 1
-     INTEGER, INTENT (IN) :: a_n_part2 ! no. rows in partition 2
-     INTEGER, INTENT (IN) :: rows_sub(a_n_part1+a_n_part2) ! rows/cols of
+     integer, intent (in) :: a_n_part1 ! no. rows in partition 1
+     integer, intent (in) :: a_n_part2 ! no. rows in partition 2
+     integer, intent (in) :: rows_sub(a_n_part1+a_n_part2) ! rows/cols of
      ! matrices to be extracted. First a_n_part1 entries contain the
      ! rows/cols forming the first matrix to be extracted.
-     INTEGER, INTENT (OUT) :: a_ne_sub1 ! no. entries in extracted matrix 1
-     INTEGER, INTENT (OUT) :: a_ne_sub2 ! no. entries in extracted matrix 2
-     INTEGER, INTENT (OUT) :: a_ptr_sub(a_n_part1+a_n_part2) ! col ptrs for
+     integer, intent (out) :: a_ne_sub1 ! no. entries in extracted matrix 1
+     integer, intent (out) :: a_ne_sub2 ! no. entries in extracted matrix 2
+     integer, intent (out) :: a_ptr_sub(a_n_part1+a_n_part2) ! col ptrs for
      ! extracted matrices. First a_n_part1 are for first matrix, etc
-     INTEGER, INTENT (IN) :: len_a_row_sub ! length of a_row_sub
-     INTEGER, INTENT (OUT) :: a_row_sub(len_a_row_sub) ! row indices for
+     integer, intent (in) :: len_a_row_sub ! length of a_row_sub
+     integer, intent (out) :: a_row_sub(len_a_row_sub) ! row indices for
      ! extracted matrices. First a_ne_part1 entries are for first matrix;
      ! the immediately following a_ne_part2 entries are for second matrix
-     INTEGER, INTENT (OUT) :: work(a_n)
+     integer, intent (out) :: work(a_n)
 
      ! Local variables
-     INTEGER :: i, j, k, l, m, p
-     INTEGER :: mask ! pointer into work array for mask arrays
+     integer :: i, j, k, l, m, p
+     integer :: mask ! pointer into work array for mask arrays
 
 
      ! Set pointers into work array
@@ -4313,158 +4313,158 @@ INNER:    DO inn = 1, n
 
      ! Set mask
      work(mask+1:mask+a_n) = 0
-     DO i = 1, a_n_part1
+     do i = 1, a_n_part1
        j = rows_sub(i)
        work(mask+j) = i
-     END DO
-     DO i = a_n_part1 + 1, a_n_part1 + a_n_part2
+     end do
+     do i = a_n_part1 + 1, a_n_part1 + a_n_part2
        j = rows_sub(i)
        work(mask+j) = -i + a_n_part1
-     END DO
+     end do
      a_row_sub(:) = 0
 
      ! Count number of entries in each submatrix and set-up column ptrs
      a_ptr_sub(1:a_n_part1+a_n_part2) = 0
-     DO j = 1, a_n_part1
+     do j = 1, a_n_part1
        a_ptr_sub(j) = 0
        i = rows_sub(j)
-       IF (i==a_n) THEN
+       if (i==a_n) then
          l = a_ne
-       ELSE
+       else
          l = a_ptr(i+1) - 1
-       END IF
-       DO k = a_ptr(i), l
+       end if
+       do k = a_ptr(i), l
          m = a_row(k)
-         IF (work(mask+m)>0) THEN
+         if (work(mask+m)>0) then
            a_ptr_sub(j) = a_ptr_sub(j) + 1
 
-         END IF
-       END DO
-     END DO
+         end if
+       end do
+     end do
 
-     DO j = a_n_part1 + 1, a_n_part1 + a_n_part2
+     do j = a_n_part1 + 1, a_n_part1 + a_n_part2
        a_ptr_sub(j) = 0
        i = rows_sub(j)
-       IF (i==a_n) THEN
+       if (i==a_n) then
          l = a_ne
-       ELSE
+       else
          l = a_ptr(i+1) - 1
-       END IF
-       DO k = a_ptr(i), l
+       end if
+       do k = a_ptr(i), l
          m = a_row(k)
-         IF (work(mask+m)<0) a_ptr_sub(j) = a_ptr_sub(j) + 1
-       END DO
-     END DO
+         if (work(mask+m)<0) a_ptr_sub(j) = a_ptr_sub(j) + 1
+       end do
+     end do
 
      a_ptr_sub(1) = a_ptr_sub(1) + 1
-     DO j = 2, a_n_part1
+     do j = 2, a_n_part1
        a_ptr_sub(j) = a_ptr_sub(j) + a_ptr_sub(j-1)
-     END DO
+     end do
      a_ne_sub1 = a_ptr_sub(a_n_part1) - 1
 
      a_ptr_sub(a_n_part1+1) = a_ptr_sub(a_n_part1+1) + 1
-     DO j = a_n_part1 + 2, a_n_part1 + a_n_part2
+     do j = a_n_part1 + 2, a_n_part1 + a_n_part2
        a_ptr_sub(j) = a_ptr_sub(j) + a_ptr_sub(j-1)
-     END DO
+     end do
      a_ne_sub2 = a_ptr_sub(a_n_part1+a_n_part2) - 1
 
      ! Form a_row_sub
-     DO j = 1, a_n_part1
+     do j = 1, a_n_part1
        i = rows_sub(j)
-       IF (i==a_n) THEN
+       if (i==a_n) then
          l = a_ne
-       ELSE
+       else
          l = a_ptr(i+1) - 1
-       END IF
-       DO k = a_ptr(i), l
+       end if
+       do k = a_ptr(i), l
          m = a_row(k)
-         IF (work(mask+m)>0) THEN
+         if (work(mask+m)>0) then
            a_ptr_sub(j) = a_ptr_sub(j) - 1
            p = a_ptr_sub(j)
-           a_row_sub(p) = ABS(work(mask+m))
-         END IF
-       END DO
-     END DO
+           a_row_sub(p) = abs(work(mask+m))
+         end if
+       end do
+     end do
 
-     DO j = a_n_part1 + 1, a_n_part1 + a_n_part2
+     do j = a_n_part1 + 1, a_n_part1 + a_n_part2
        i = rows_sub(j)
-       IF (i==a_n) THEN
+       if (i==a_n) then
          l = a_ne
-       ELSE
+       else
          l = a_ptr(i+1) - 1
-       END IF
-       DO k = a_ptr(i), l
+       end if
+       do k = a_ptr(i), l
          m = a_row(k)
-         IF (work(mask+m)<0) THEN
+         if (work(mask+m)<0) then
            a_ptr_sub(j) = a_ptr_sub(j) - 1
            p = a_ptr_sub(j)
            a_row_sub(p+a_ne_sub1) = -work(mask+m)
-         END IF
-       END DO
-     END DO
-   END SUBROUTINE extract_both_matrices
+         end if
+       end do
+     end do
+   end subroutine extract_both_matrices
 
-   SUBROUTINE amd_order_one(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition,iperm, &
+   subroutine amd_order_one(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition,iperm, &
        a_weight,a_ne_sub,work)
      ! Apply amd_order to the smaller partition and extract the other matrix
      ! into
      ! a_ptr and a_row
-     INTEGER, INTENT (IN) :: a_n ! order of matrix being partitioned
-     INTEGER, INTENT (IN) :: a_ne ! no. entries in matrix being partitioned
-     INTEGER, INTENT (INOUT) :: a_ptr(a_n) ! col ptrs for matrix being
+     integer, intent (in) :: a_n ! order of matrix being partitioned
+     integer, intent (in) :: a_ne ! no. entries in matrix being partitioned
+     integer, intent (inout) :: a_ptr(a_n) ! col ptrs for matrix being
      ! partitioned and, on return, for the extracted submatrix
-     INTEGER, INTENT (INOUT) :: a_row(a_ne) ! row indices for matrix
+     integer, intent (inout) :: a_row(a_ne) ! row indices for matrix
      ! being partitioned and, on return, for the extracted submatrix
-     INTEGER, INTENT (IN) :: a_n1 ! no. rows in partition 1
-     INTEGER, INTENT (IN) :: a_n2 ! no. rows in partition 2
-     INTEGER, INTENT (IN) :: partition(a_n) ! the partitions
-     INTEGER, INTENT (INOUT) :: iperm(a_n) ! maps current permuation to the
+     integer, intent (in) :: a_n1 ! no. rows in partition 1
+     integer, intent (in) :: a_n2 ! no. rows in partition 2
+     integer, intent (in) :: partition(a_n) ! the partitions
+     integer, intent (inout) :: iperm(a_n) ! maps current permuation to the
      ! column indices of the matrix whose ordering is being computed
-     INTEGER, INTENT (INOUT) :: a_weight(a_n) ! weights of vertices
-     INTEGER, INTENT (OUT) :: a_ne_sub ! number entries in returned
+     integer, intent (inout) :: a_weight(a_n) ! weights of vertices
+     integer, intent (out) :: a_ne_sub ! number entries in returned
      ! submatrix
-     INTEGER, INTENT (OUT) :: work(12*a_n+a_ne)
+     integer, intent (out) :: work(12*a_n+a_ne)
 
      ! Local variables
-     INTEGER :: i, j
-     INTEGER :: extract_work ! pointers into work array for mask arrays
-     INTEGER :: amd_order_perm ! pointer into work array for perm array
-     INTEGER :: amd_order_work ! pointer into work array for amd_order work
+     integer :: i, j
+     integer :: extract_work ! pointers into work array for mask arrays
+     integer :: amd_order_perm ! pointer into work array for perm array
+     integer :: amd_order_work ! pointer into work array for amd_order work
      ! array
-     INTEGER :: a_ptr_sub ! pointer into work for col ptrs of
+     integer :: a_ptr_sub ! pointer into work for col ptrs of
      ! submatrix
-     INTEGER :: a_irn_sub ! pointer into work for irn array of
+     integer :: a_irn_sub ! pointer into work for irn array of
      ! submatrix
-     INTEGER :: rows_sub ! pointer into work for rows_sub array
-     INTEGER :: a_lirn_sub ! length of irn array of submatrix
-     INTEGER :: a_n_1 ! order of submatrix 1
-     INTEGER :: a_n_2 ! order of submatrix 2
-     INTEGER :: a_n_sep ! number entries in separator
-     INTEGER :: len_a_row_sub ! used when extracting submatrices
+     integer :: rows_sub ! pointer into work for rows_sub array
+     integer :: a_lirn_sub ! length of irn array of submatrix
+     integer :: a_n_1 ! order of submatrix 1
+     integer :: a_n_2 ! order of submatrix 2
+     integer :: a_n_sep ! number entries in separator
+     integer :: len_a_row_sub ! used when extracting submatrices
 
      ! Set orders of submatrices
-     IF (a_n1<a_n2) THEN
+     if (a_n1<a_n2) then
        ! Applying amd_order to first partition
        a_n_1 = a_n - a_n2
        a_n_2 = a_n2
        a_n_sep = a_n - a_n1 - a_n2
-     ELSE
+     else
        ! Applying amd_order to second partition
        a_n_2 = a_n - a_n1
        a_n_1 = a_n1
        a_n_sep = a_n - a_n1 - a_n2
 
-     END IF
+     end if
 
 
      ! Set pointers into work array
      amd_order_perm = 0 ! length a_n
      a_ptr_sub = amd_order_perm + a_n ! length a_n
-     IF (a_n1<a_n2) THEN
+     if (a_n1<a_n2) then
        a_lirn_sub = a_ne + a_n_1 + 1
-     ELSE
+     else
        a_lirn_sub = a_ne + a_n_2 + 1
-     END IF
+     end if
      ! max(a_n_1,a_n_2) + 1 .le. a_n
      a_irn_sub = a_ptr_sub + a_n ! length a_lirn_sub
      rows_sub = a_irn_sub + a_lirn_sub ! length a_n
@@ -4472,13 +4472,13 @@ INNER:    DO inn = 1, n
      amd_order_work = rows_sub + a_n ! length 7*a_n
 
      ! Extract matrix that amd_order is applied to
-     IF (a_n1<a_n2) THEN
+     if (a_n1<a_n2) then
 
        ! Start by updating iperm and a_weight
-       DO i = 1, a_n
+       do i = 1, a_n
          work(amd_order_perm+i) = iperm(partition(i))
          work(rows_sub+i) = a_weight(partition(i))
-       END DO
+       end do
        iperm(1:a_n) = work(amd_order_perm+1:amd_order_perm+a_n)
        a_weight(1:a_n) = work(rows_sub+1:rows_sub+a_n)
 
@@ -4486,7 +4486,7 @@ INNER:    DO inn = 1, n
        work(rows_sub+1:rows_sub+a_n1) = partition(1:a_n1)
        work(rows_sub+a_n1+1:rows_sub+a_n_1) = partition(a_n1+a_n2+1:a_n)
        len_a_row_sub = a_ne
-       CALL extract_matrix(a_n,a_ne,a_ptr,a_row,a_n1,a_n_sep, &
+       call extract_matrix(a_n,a_ne,a_ptr,a_row,a_n1,a_n_sep, &
          work(rows_sub+1:rows_sub+a_n_1),a_ne_sub, &
          work(a_ptr_sub+1:a_ptr_sub+a_n_1),len_a_row_sub, &
          work(a_irn_sub+1:a_irn_sub+a_ne),work(extract_work+1:extract_work+ &
@@ -4496,7 +4496,7 @@ INNER:    DO inn = 1, n
        ! Apply amd_order
        work(rows_sub+1:rows_sub+a_n1) = ND_PART1_FLAG
        work(rows_sub+a_n1+1:rows_sub+a_n_1) = ND_SEP_FLAG
-       CALL amd_order(a_n_1,a_ne_sub,a_lirn_sub,work(a_irn_sub+1:a_irn_sub+ &
+       call amd_order(a_n_1,a_ne_sub,a_lirn_sub,work(a_irn_sub+1:a_irn_sub+ &
          a_lirn_sub),work(a_ptr_sub+1:a_ptr_sub+a_n_1), &
          work(rows_sub+1:rows_sub+a_n_1),work(amd_order_perm+1:amd_order_perm+a_n_1), &
          work(amd_order_work+1:amd_order_work+7*a_n_1))
@@ -4507,11 +4507,11 @@ INNER:    DO inn = 1, n
        ! rows_sub with first a_n1 entries that will form new a_weight
        ! no longer need info in a_ptr
        ! no longer need info in a_ptr
-       DO i = 1, a_n1
+       do i = 1, a_n1
          j = work(amd_order_perm+i)
          work(a_ptr_sub+i) = iperm(j)
          work(rows_sub+i) = a_weight(j)
-       END DO
+       end do
        ! work(amd_order_perm+1:amd_order_perm+a_n1) =
        ! work(a_ptr_sub+1:a_ptr_sub+a_n1)
 
@@ -4522,7 +4522,7 @@ INNER:    DO inn = 1, n
        ! Build second submatrix
        work(rows_sub+1:rows_sub+a_n_2) = partition(a_n1+1:a_n1+a_n2)
        len_a_row_sub = a_ne
-       CALL extract_matrix(a_n,a_ne,a_ptr,a_row,a_n2,0, &
+       call extract_matrix(a_n,a_ne,a_ptr,a_row,a_n2,0, &
          work(rows_sub+1:rows_sub+a_n_2),a_ne_sub, &
          work(a_ptr_sub+1:a_ptr_sub+a_n_2),len_a_row_sub, &
          work(a_irn_sub+1:a_irn_sub+a_ne),work(extract_work+1:extract_work+ &
@@ -4532,13 +4532,13 @@ INNER:    DO inn = 1, n
        a_ptr(1:a_n_2) = work(a_ptr_sub+1:a_ptr_sub+a_n_2)
        a_row(1:a_ne_sub) = work(a_irn_sub+1:a_irn_sub+a_ne_sub)
 
-     ELSE
+     else
 
 
        ! Form submatrix 2
        work(rows_sub+1:rows_sub+a_n_2) = partition(a_n1+1:a_n)
        len_a_row_sub = a_ne
-       CALL extract_matrix(a_n,a_ne,a_ptr,a_row,a_n2,a_n_sep, &
+       call extract_matrix(a_n,a_ne,a_ptr,a_row,a_n2,a_n_sep, &
          work(rows_sub+1:rows_sub+a_n_2),a_ne_sub, &
          work(a_ptr_sub+1:a_ptr_sub+a_n_2),len_a_row_sub, &
          work(a_irn_sub+1:a_irn_sub+a_ne),work(extract_work+1:extract_work+ &
@@ -4547,28 +4547,28 @@ INNER:    DO inn = 1, n
        ! Apply amd_order
        work(rows_sub+1:rows_sub+a_n2) = ND_PART2_FLAG
        work(rows_sub+a_n2+1:rows_sub+a_n_2) = ND_SEP_FLAG
-       CALL amd_order(a_n_2,a_ne_sub,a_lirn_sub,work(a_irn_sub+1:a_irn_sub+ &
+       call amd_order(a_n_2,a_ne_sub,a_lirn_sub,work(a_irn_sub+1:a_irn_sub+ &
          a_lirn_sub),work(a_ptr_sub+1:a_ptr_sub+a_n_2), &
          work(rows_sub+1:rows_sub+a_n_2),work(amd_order_perm+a_n1+1:amd_order_perm+ &
          a_n),work(amd_order_work+1:amd_order_work+7*a_n_2))
 
-       DO i = 1, a_n_2
+       do i = 1, a_n_2
          j = work(amd_order_perm+a_n1+i)
          work(a_ptr_sub+i+a_n1) = iperm(partition(a_n1+j))
          work(rows_sub+i+a_n1) = a_weight(partition(a_n1+j))
-       END DO
+       end do
 
-       DO i = 1, a_n_1
+       do i = 1, a_n_1
          work(a_ptr_sub+i) = iperm(partition(i))
          work(rows_sub+i) = a_weight(partition(i))
-       END DO
+       end do
        iperm(1:a_n) = work(a_ptr_sub+1:a_ptr_sub+a_n)
        a_weight(1:a_n) = work(rows_sub+1:rows_sub+a_n)
 
        ! Form submatrix 1
        work(rows_sub+1:rows_sub+a_n1) = partition(1:a_n1)
        len_a_row_sub = a_ne
-       CALL extract_matrix(a_n,a_ne,a_ptr,a_row,a_n1,0, &
+       call extract_matrix(a_n,a_ne,a_ptr,a_row,a_n1,0, &
          work(rows_sub+1:rows_sub+a_n_1),a_ne_sub, &
          work(a_ptr_sub+1:a_ptr_sub+a_n_1),len_a_row_sub, &
          work(a_irn_sub+1:a_irn_sub+a_ne),work(extract_work+1:extract_work+ &
@@ -4578,107 +4578,107 @@ INNER:    DO inn = 1, n
        a_ptr(1:a_n_1) = work(a_ptr_sub+1:a_ptr_sub+a_n_1)
        a_row(1:a_ne_sub) = work(a_irn_sub+1:a_irn_sub+a_ne_sub)
 
-     END IF
+     end if
 
-   END SUBROUTINE amd_order_one
+   end subroutine amd_order_one
 
-   SUBROUTINE multilevel_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
+   subroutine multilevel_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
        partition,a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep,control, &
        info1,lwork,work,stop_coarsening2,grid)
 
-     INTEGER, INTENT (IN) :: a_n ! order of matrix being partitioned
-     INTEGER, INTENT (IN) :: a_ne ! no. entries in matrix being partitioned
-     INTEGER, INTENT (IN) :: a_ptr(a_n) ! col ptrs for matrix being
+     integer, intent (in) :: a_n ! order of matrix being partitioned
+     integer, intent (in) :: a_ne ! no. entries in matrix being partitioned
+     integer, intent (in) :: a_ptr(a_n) ! col ptrs for matrix being
      ! partitioned and, on return, for the extracted submatrix
-     INTEGER, INTENT (IN) :: a_row(a_ne) ! row indices for matrix
-     INTEGER, INTENT (IN) :: a_weight(a_n) ! weights associated with rows
+     integer, intent (in) :: a_row(a_ne) ! row indices for matrix
+     integer, intent (in) :: a_weight(a_n) ! weights associated with rows
      ! of matrix (useful if matrix has already been compressed)
-     INTEGER, INTENT (IN) :: sumweight ! sum of entries in a_weight
-     INTEGER, INTENT (OUT) :: partition(a_n) ! computed partition
-     INTEGER, INTENT (OUT) :: a_n1 ! number of entries in partition 1
-     INTEGER, INTENT (OUT) :: a_n2 ! number of entries in partition 2
-     INTEGER, INTENT (OUT) :: a_weight_1, a_weight_2, a_weight_sep ! Weight
+     integer, intent (in) :: sumweight ! sum of entries in a_weight
+     integer, intent (out) :: partition(a_n) ! computed partition
+     integer, intent (out) :: a_n1 ! number of entries in partition 1
+     integer, intent (out) :: a_n2 ! number of entries in partition 2
+     integer, intent (out) :: a_weight_1, a_weight_2, a_weight_sep ! Weight
      ! ed
      ! size of partitions and separator
-     TYPE (nd_options), INTENT (IN) :: control
-     INTEGER, INTENT (IN) :: lwork ! length of work array: must be atleast
+     type (nd_options), intent (in) :: control
+     integer, intent (in) :: lwork ! length of work array: must be atleast
      ! 9a_n + sumweight
-     INTEGER, INTENT (OUT) :: work(lwork) ! work array
-     INTEGER, INTENT (INOUT) :: info1
-     INTEGER, INTENT (IN) :: stop_coarsening2 ! no. levels in the
+     integer, intent (out) :: work(lwork) ! work array
+     integer, intent (inout) :: info1
+     integer, intent (in) :: stop_coarsening2 ! no. levels in the
      ! multilevel grid (default
      ! 10)
 
-     TYPE (nd_multigrid), INTENT (INOUT) :: grid ! the multilevel of
+     type (nd_multigrid), intent (inout) :: grid ! the multilevel of
      ! graphs (matrices)
 
-     INTEGER :: i, j, k, inv1, inv2, ins
-     INTEGER :: mp
-     INTEGER :: mglevel_cur ! current level
-     INTEGER :: err, print_level ! printing
-     LOGICAL :: lerr
+     integer :: i, j, k, inv1, inv2, ins
+     integer :: mp
+     integer :: mglevel_cur ! current level
+     integer :: err, print_level ! printing
+     logical :: lerr
 
      info1 = 0
      ! Set up printing
-     IF (control%print_level<0) print_level = 0
+     if (control%print_level<0) print_level = 0
      ! The default is control%print_level = 0
-     IF (control%print_level==0) print_level = 1
-     IF (control%print_level==1) print_level = 2
-     IF (control%print_level>1) print_level = 3
+     if (control%print_level==0) print_level = 1
+     if (control%print_level==1) print_level = 2
+     if (control%print_level>1) print_level = 3
      mp = control%unit_diagnostics
-     IF (mp<0) print_level = 0
+     if (mp<0) print_level = 0
      ! Set error controls
-     lerr = control%unit_error >= 0 .AND. print_level > 0
+     lerr = control%unit_error >= 0 .and. print_level > 0
      err = control%unit_error
 
 
-     IF (print_level>1) THEN
-       WRITE (mp,'(a)') 'Start multilevel_partition:'
-     END IF
+     if (print_level>1) then
+       write (mp,'(a)') 'Start multilevel_partition:'
+     end if
 
      ! construct the multigrid at this level
 
-     IF ( .NOT. ASSOCIATED(grid%graph)) ALLOCATE (grid%graph)
+     if ( .not. associated(grid%graph)) allocate (grid%graph)
 
-     CALL nd_matrix_construct(grid%graph,a_n,a_n,a_ne,info1)
-     IF (info1<0) THEN
-       IF (lerr) CALL nd_print_message(info1,err, &
+     call nd_matrix_construct(grid%graph,a_n,a_n,a_ne,info1)
+     if (info1<0) then
+       if (lerr) call nd_print_message(info1,err, &
          ' multilevel_partition')
-       RETURN
-     END IF
+       return
+     end if
 
      grid%graph%ptr(1:a_n) = a_ptr(1:a_n)
      grid%graph%ptr(a_n+1) = a_ne + 1
      grid%graph%col(1:a_ne) = a_row(1:a_ne)
 
-     DO i = 1, a_n - 1
-       DO j = a_ptr(i), a_ptr(i+1) - 1
+     do i = 1, a_n - 1
+       do j = a_ptr(i), a_ptr(i+1) - 1
          k = a_row(j)
          grid%graph%val(j) = a_weight(i)*a_weight(k)
-       END DO
-     END DO
-     DO j = a_ptr(a_n), a_ne
+       end do
+     end do
+     do j = a_ptr(a_n), a_ne
        k = a_row(j)
        grid%graph%val(j) = a_weight(a_n)*a_weight(k)
-     END DO
+     end do
 
      grid%size = a_n
      grid%level = 1
-     ! NULLIFY (grid%p)
+     ! nullify (grid%p)
 
-     CALL nd_assoc(grid%where,a_n,info1)
-     IF (info1<0) THEN
-       IF (lerr) CALL nd_print_message(info1,err, &
+     call nd_assoc(grid%where,a_n,info1)
+     if (info1<0) then
+       if (lerr) call nd_print_message(info1,err, &
          ' multilevel_partition')
-       RETURN
-     END IF
+       return
+     end if
 
-     CALL nd_assoc(grid%row_wgt,a_n,info1)
-     IF (info1<0) THEN
-       IF (lerr) CALL nd_print_message(info1,err, &
+     call nd_assoc(grid%row_wgt,a_n,info1)
+     if (info1<0) then
+       if (lerr) call nd_print_message(info1,err, &
          ' multilevel_partition')
-       RETURN
-     END IF
+       return
+     end if
 
      ! Initialise row weights
      grid%row_wgt(1:a_n) = a_weight(1:a_n)
@@ -4686,14 +4686,14 @@ INNER:    DO inn = 1, n
      ! initialise mglevel_cur to the maximum number of levels
      ! allowed for this bisection
      mglevel_cur = stop_coarsening2
-     CALL multilevel(grid,control,sumweight,mglevel_cur,mp,print_level, &
+     call multilevel(grid,control,sumweight,mglevel_cur,mp,print_level, &
        lwork,work,info1)
 
-     IF (info1/=0) THEN
-       IF (lerr) CALL nd_print_message(info1,err, &
+     if (info1/=0) then
+       if (lerr) call nd_print_message(info1,err, &
          ' multilevel_partition')
-       RETURN
-     END IF
+       return
+     end if
 
      inv1 = 1
      inv2 = grid%part_div(1) + 1
@@ -4702,57 +4702,57 @@ INNER:    DO inn = 1, n
      a_weight_1 = 0
      a_weight_2 = 0
      a_weight_sep = 0
-     DO i = 1, a_n
-       SELECT CASE (grid%where(i))
-       CASE (ND_PART1_FLAG)
+     do i = 1, a_n
+       select case (grid%where(i))
+       case (ND_PART1_FLAG)
          partition(inv1) = i
          inv1 = inv1 + 1
          a_weight_1 = a_weight_1 + a_weight(i)
-       CASE (ND_PART2_FLAG)
+       case (ND_PART2_FLAG)
          partition(inv2) = i
          inv2 = inv2 + 1
          a_weight_2 = a_weight_2 + a_weight(i)
-       CASE DEFAULT
+       case default
          partition(ins) = i
          ins = ins + 1
          a_weight_sep = a_weight_sep + a_weight(i)
-       END SELECT
-     END DO
+       end select
+     end do
 
      a_n1 = grid%part_div(1)
      a_n2 = grid%part_div(2)
 
-     IF (.FALSE.) THEN
-       WRITE (*,'(a)') ' '
-       WRITE (*,'(a)') 'Multilevel partition found'
-       WRITE (*,'(a,i10,a,i10,a,i10)') 'a_n1 =', a_n1, ', a_n2=', a_n2, &
+     if (.false.) then
+       write (*,'(a)') ' '
+       write (*,'(a)') 'Multilevel partition found'
+       write (*,'(a,i10,a,i10,a,i10)') 'a_n1 =', a_n1, ', a_n2=', a_n2, &
          ', a_n_sep=', a_n - a_n1 - a_n2
-       WRITE (*,'(a,i10,a,i10,a,i10)') 'a_weight_1 =', a_weight_1, &
+       write (*,'(a,i10,a,i10,a,i10)') 'a_weight_1 =', a_weight_1, &
          ', a_weight_2=', a_weight_2, ', a_weight_sep=', &
          sumweight - a_weight_1 - a_weight_2
-     END IF
+     end if
 
      ! deallocate the finest level
-     ! CALL multigrid_deallocate_first(a_n,a_n,grid,info1)
-     IF (info1/=0) THEN
-       IF (lerr) CALL nd_print_message(info1,err, &
+     ! call multigrid_deallocate_first(a_n,a_n,grid,info1)
+     if (info1/=0) then
+       if (lerr) call nd_print_message(info1,err, &
          ' multilevel_partition')
-       RETURN
-     END IF
+       return
+     end if
 
-     ! DEALLOCATE (matrix%ptr,matrix%col,matrix%val,STAT=st)
-     ! IF (st/=0) info1 = ND_ERR_MEMORY_DEALLOC
-     IF (info1<0) THEN
-       IF (lerr) CALL nd_print_message(info1,err, &
+     ! deallocate (matrix%ptr,matrix%col,matrix%val,stat=st)
+     ! if (st/=0) info1 = ND_ERR_MEMORY_DEALLOC
+     if (info1<0) then
+       if (lerr) call nd_print_message(info1,err, &
          ' multilevel_partition')
-       RETURN
-     END IF
+       return
+     end if
 
-     IF (print_level>2) THEN
-       WRITE (mp,'(a)') 'multilevel_partition: successful completion'
-     END IF
+     if (print_level>2) then
+       write (mp,'(a)') 'multilevel_partition: successful completion'
+     end if
 
-   END SUBROUTINE multilevel_partition
+   end subroutine multilevel_partition
 
    ! ********************************************************
 
@@ -4761,133 +4761,133 @@ INNER:    DO inn = 1, n
    ! set for coarsening. We will need to test out to see
    ! which is better.
 
-   RECURSIVE SUBROUTINE multilevel(grid,control,sumweight,mglevel_cur,mp, &
+   RECURSIVE subroutine multilevel(grid,control,sumweight,mglevel_cur,mp, &
        print_level,lwork,work,info)
 
-     REAL (wp), PARAMETER :: half = 0.5_wp
-     REAL (wp), PARAMETER :: one = 1.0_wp
+     real (wp), parameter :: half = 0.5_wp
+     real (wp), parameter :: one = 1.0_wp
 
      ! Arguments
-     TYPE (nd_multigrid), INTENT (INOUT), TARGET :: grid ! this level
+     type (nd_multigrid), intent (inout), TARGET :: grid ! this level
      ! of matrix (grid)
-     TYPE (nd_options), INTENT (IN) :: control
-     INTEGER, INTENT (IN) :: sumweight ! sum of weights (unchanged between
+     type (nd_options), intent (in) :: control
+     integer, intent (in) :: sumweight ! sum of weights (unchanged between
      ! coarse and fine grid
-     INTEGER, INTENT (INOUT) :: mglevel_cur ! current grid level
-     INTEGER, INTENT (IN) :: mp, print_level ! diagnostic printing
-     INTEGER, INTENT (IN) :: lwork ! length of work array
-     ! (.GE.9*grid%graph%n +sumweight)
-     INTEGER, INTENT (OUT) :: work(lwork) ! work array
-     INTEGER, INTENT (INOUT) :: info ! Error flag
+     integer, intent (inout) :: mglevel_cur ! current grid level
+     integer, intent (in) :: mp, print_level ! diagnostic printing
+     integer, intent (in) :: lwork ! length of work array
+     ! (.ge.9*grid%graph%n +sumweight)
+     integer, intent (out) :: work(lwork) ! work array
+     integer, intent (inout) :: info ! Error flag
 
      ! Local variables
-     TYPE (nd_multigrid), POINTER :: cgrid ! the coarse level grid
-     INTEGER :: cnvtx ! number of vertices (rows) in the coarse
+     type (nd_multigrid), pointer :: cgrid ! the coarse level grid
+     integer :: cnvtx ! number of vertices (rows) in the coarse
      ! matrix
-     TYPE (nd_matrix), POINTER :: p ! the coarse grid prolongator
-     TYPE (nd_matrix), POINTER :: r ! the coarse grid restrictor (= p')
+     type (nd_matrix), pointer :: p ! the coarse grid prolongator
+     type (nd_matrix), pointer :: r ! the coarse grid restrictor (= p')
 
-     INTEGER, DIMENSION (:), POINTER :: fwhere ! partition on fine grid
-     INTEGER, DIMENSION (:), POINTER :: cwhere ! partition on coarse grid
-     TYPE (nd_matrix), POINTER :: cgraph ! the coarse graph
-     TYPE (nd_matrix), POINTER :: graph ! the fine graph
-     INTEGER, DIMENSION (:), POINTER :: row_wgt ! fine
+     integer, dimension (:), pointer :: fwhere ! partition on fine grid
+     integer, dimension (:), pointer :: cwhere ! partition on coarse grid
+     type (nd_matrix), pointer :: cgraph ! the coarse graph
+     type (nd_matrix), pointer :: graph ! the fine graph
+     integer, dimension (:), pointer :: row_wgt ! fine
      ! graph vertex weights
-     INTEGER, DIMENSION (:), POINTER :: crow_wgt ! coarse
+     integer, dimension (:), pointer :: crow_wgt ! coarse
      ! graph vertex weights
-     REAL (wp) :: grid_rdc_fac_min ! min grid reduction
+     real (wp) :: grid_rdc_fac_min ! min grid reduction
      ! factor
-     REAL (wp) :: grid_rdc_fac_max ! max grid reduction
+     real (wp) :: grid_rdc_fac_max ! max grid reduction
      ! factor
-     REAL (wp) :: one1
-     INTEGER :: stop_coarsening1 ! controls when to stop coarsening
-     INTEGER :: partition_ptr, part_ptr, work_ptr, a_ne, ref_control, &
+     real (wp) :: one1
+     integer :: stop_coarsening1 ! controls when to stop coarsening
+     integer :: partition_ptr, part_ptr, work_ptr, a_ne, ref_control, &
        clwork
-     INTEGER :: i, j, k, l, a_weight_1, a_weight_2, a_weight_sep, &
+     integer :: i, j, k, l, a_weight_1, a_weight_2, a_weight_sep, &
        ref_method, lwk
-     INTEGER :: a_n1_new, a_n2_new, a_weight_1_new, a_weight_2_new, &
+     integer :: a_n1_new, a_n2_new, a_weight_1_new, a_weight_2_new, &
        a_weight_sep_new
-     LOGICAL :: imbal
-     REAL (wp) :: tau, ratio, tau_best
+     logical :: imbal
+     real (wp) :: tau, ratio, tau_best
      ! !!!!!!!!!!!!!!!!!!!!!!!!!!
      info = 0
      one1 = 1.0
 
-     stop_coarsening1 = MAX(2,control%stop_coarsening1)
-     IF (print_level.GE.2) CALL level_print(mp,'size of grid on level ', &
-       grid%level,' is ',REAL(grid%size,wp))
+     stop_coarsening1 = max(2,control%stop_coarsening1)
+     if (print_level.ge.2) call level_print(mp,'size of grid on level ', &
+       grid%level,' is ',real(grid%size,wp))
 
-     grid_rdc_fac_min = MAX(0.01_wp,control%min_reduction)
+     grid_rdc_fac_min = max(0.01_wp,control%min_reduction)
      ! max grid reduction factor must be at least half and at most one
-     grid_rdc_fac_max = MAX(half,control%max_reduction)
-     grid_rdc_fac_max = MIN(one,grid_rdc_fac_max)
+     grid_rdc_fac_max = max(half,control%max_reduction)
+     grid_rdc_fac_max = min(one,grid_rdc_fac_max)
 
      ! Test to see if this is either the last level or
      ! if the matrix size too small
-     IF (grid%level>=mglevel_cur .OR. grid%size<=stop_coarsening1) THEN
-       IF (print_level.GE.2) CALL level_print(mp,'end of level ',grid%level)
+     if (grid%level>=mglevel_cur .or. grid%size<=stop_coarsening1) then
+       if (print_level.ge.2) call level_print(mp,'end of level ',grid%level)
 
        ! coarsest level in multilevel so compute separator
        a_ne = grid%graph%ptr(grid%graph%n+1) - 1
-       CALL nd_coarse_partition(grid%graph%n,a_ne,grid%graph%ptr, &
+       call nd_coarse_partition(grid%graph%n,a_ne,grid%graph%ptr, &
          grid%graph%col,grid%row_wgt,sumweight,grid%part_div(1), &
          grid%part_div(2),grid%where,lwork,work,control,info)
-       RETURN
-     END IF
+       return
+     end if
 
      ! Coarsest level not yet reached so carry on coarsening
-     IF (control%matching==1) THEN
+     if (control%matching==1) then
        lwk = grid%size
-       CALL coarsen_hec(grid,lwk,work(1:lwk),info)
-     ELSE
-       IF (control%matching>1) THEN
+       call coarsen_hec(grid,lwk,work(1:lwk),info)
+     else
+       if (control%matching>1) then
          lwk = 3*grid%size
-         CALL coarsen_best(grid,lwk,work(1:lwk),info)
-       ELSE
+         call coarsen_best(grid,lwk,work(1:lwk),info)
+       else
          lwk = 2*grid%size
-         CALL coarsen_cn(grid,lwk,work(1:lwk))
-       END IF
-     END IF
-     IF (info<0) RETURN
+         call coarsen_cn(grid,lwk,work(1:lwk))
+       end if
+     end if
+     if (info<0) return
 
      cgrid => grid%coarse
      cnvtx = cgrid%size
      ! allocate coarse grid quantities
-     CALL nd_assoc(cgrid%where,cnvtx,info)
-     IF (info/=0) THEN
-       RETURN
-     END IF
+     call nd_assoc(cgrid%where,cnvtx,info)
+     if (info/=0) then
+       return
+     end if
 
-     CALL nd_assoc(cgrid%row_wgt,cnvtx,info)
-     IF (info/=0) THEN
-       RETURN
-     END IF
+     call nd_assoc(cgrid%row_wgt,cnvtx,info)
+     if (info/=0) then
+       return
+     end if
 
      ! see if the grid reduction is achieved, if not, set the allowed
      ! maximum level to current level and partition this level
      ! deallocate the coarse grid quantities that haves been allocated so
      ! far
-     IF (REAL(cgrid%size)/REAL(grid%size)>grid_rdc_fac_max .OR. &
-         REAL(cgrid%size)/REAL(grid%size)<grid_rdc_fac_min .OR. &
-         cgrid%size<4) THEN
+     if (real(cgrid%size)/real(grid%size)>grid_rdc_fac_max .or. &
+         real(cgrid%size)/real(grid%size)<grid_rdc_fac_min .or. &
+         cgrid%size<4) then
 
-       IF (print_level.GE.2) THEN
-         ! IF (.true.) THEN
-         WRITE (mp,'(a,i10,a,f12.4,i4)') 'at level ', grid%level, &
+       if (print_level.ge.2) then
+         ! if (.true.) then
+         write (mp,'(a,i10,a,f12.4,i4)') 'at level ', grid%level, &
            ' further coarsening gives reduction factor', &
-           cgrid%size/REAL(grid%size)
-         WRITE (mp,'(a,i10)') 'current size = ', grid%size
-       END IF
+           cgrid%size/real(grid%size)
+         write (mp,'(a,i10)') 'current size = ', grid%size
+       end if
 
        ! set current grid level and recurse
        mglevel_cur = grid%level
 
-       CALL multilevel(grid,control,sumweight,mglevel_cur,mp,print_level, &
+       call multilevel(grid,control,sumweight,mglevel_cur,mp,print_level, &
          lwork,work,info)
-       IF (info<0) RETURN
+       if (info<0) return
 
-       RETURN
-     END IF
+       return
+     end if
 
      ! restriction ================
 
@@ -4900,52 +4900,52 @@ INNER:    DO inn = 1, n
 
      ! get the coarse matrix
      lwk = 3*grid%size
-     CALL galerkin_graph(graph,p,r,cgraph,info,lwk,work(1:lwk))
-     IF (info<0) RETURN
+     call galerkin_graph(graph,p,r,cgraph,info,lwk,work(1:lwk))
+     if (info<0) return
 
      ! check if matrix is full
-     IF (REAL(cgrid%graph%ptr(cgrid%graph%n+1)-1)/REAL(cgrid%graph%n)>=REAL &
-         (cgrid%graph%n-1)) THEN
-       IF (print_level.GE.2) THEN
-         WRITE (mp,'(a,i10,a)') 'at level ', grid%level, &
+     if (real(cgrid%graph%ptr(cgrid%graph%n+1)-1)/real(cgrid%graph%n)>=real &
+         (cgrid%graph%n-1)) then
+       if (print_level.ge.2) then
+         write (mp,'(a,i10,a)') 'at level ', grid%level, &
            ' further coarsening gives full matrix'
-       END IF
+       end if
 
        ! set current grid level and recurse
        mglevel_cur = grid%level - 1
-       CALL multilevel(grid,control,sumweight,mglevel_cur,mp,print_level, &
+       call multilevel(grid,control,sumweight,mglevel_cur,mp,print_level, &
          lwork,work,info)
-       IF (info<0) RETURN
+       if (info<0) return
 
-       RETURN
-     END IF
+       return
+     end if
 
      ! row weight cw = R*w
      row_wgt => grid%row_wgt(1:grid%size)
      crow_wgt => cgrid%row_wgt(1:cgrid%size)
-     CALL nd_matrix_multiply_vec(r,row_wgt,crow_wgt)
+     call nd_matrix_multiply_vec(r,row_wgt,crow_wgt)
      clwork = 9*cgrid%graph%n + sumweight
-     CALL multilevel(cgrid,control,sumweight,mglevel_cur,mp,print_level, &
+     call multilevel(cgrid,control,sumweight,mglevel_cur,mp,print_level, &
        clwork,work(1:clwork),info)
 
 
      ! check if partition is returned
-     IF (cgrid%part_div(1)==0 .OR. cgrid%part_div(2)==0) THEN
+     if (cgrid%part_div(1)==0 .or. cgrid%part_div(2)==0) then
        ! Unlikely to be called because 99.999% of cases caught in full 
        ! matrix check above. Follows same procedure as when full matrix found
-       IF (print_level.GE.2) THEN
-         WRITE (mp,'(a,i10,a)') 'at level ', grid%level, &
+       if (print_level.ge.2) then
+         write (mp,'(a,i10,a)') 'at level ', grid%level, &
            ' no partition found'
-       END IF
+       end if
 
        ! set current grid level and recurse
        mglevel_cur = grid%level - 1
-       CALL multilevel(grid,control,sumweight,mglevel_cur,mp,print_level, &
+       call multilevel(grid,control,sumweight,mglevel_cur,mp,print_level, &
          lwork,work,info)
-       IF (info<0) RETURN
+       if (info<0) return
 
-       RETURN
-     END IF
+       return
+     end if
 
      ! prolongation ================
 
@@ -4958,17 +4958,17 @@ INNER:    DO inn = 1, n
      fwhere => grid%where(1:grid%size)
      cwhere => cgrid%where(1:cgrid%size)
      grid%part_div(1:2) = 0
-     CALL nd_matrix_multiply_vec(p,cwhere,fwhere)
+     call nd_matrix_multiply_vec(p,cwhere,fwhere)
 
-     DO i = 1, grid%size
-       IF (fwhere(i)==ND_PART1_FLAG) THEN
+     do i = 1, grid%size
+       if (fwhere(i)==ND_PART1_FLAG) then
          grid%part_div(1) = grid%part_div(1) + 1
-       ELSE
-         IF (fwhere(i)==ND_PART2_FLAG) THEN
+       else
+         if (fwhere(i)==ND_PART2_FLAG) then
            grid%part_div(2) = grid%part_div(2) + 1
-         END IF
-       END IF
-     END DO
+         end if
+       end if
+     end do
      a_weight_1 = 0
      a_weight_2 = 0
      a_weight_sep = 0
@@ -4979,123 +4979,123 @@ INNER:    DO inn = 1, n
      i = 1
      j = grid%part_div(1) + 1
      k = grid%part_div(1) + grid%part_div(2) + 1
-     DO l = 1, grid%size
-       SELECT CASE (grid%where(l))
-       CASE (ND_PART1_FLAG)
+     do l = 1, grid%size
+       select case (grid%where(l))
+       case (ND_PART1_FLAG)
          work(partition_ptr+i) = l
          a_weight_1 = a_weight_1 + grid%row_wgt(l)
          i = i + 1
-       CASE (ND_PART2_FLAG)
+       case (ND_PART2_FLAG)
          work(partition_ptr+j) = l
          a_weight_2 = a_weight_2 + grid%row_wgt(l)
          j = j + 1
-       CASE (ND_SEP_FLAG)
+       case (ND_SEP_FLAG)
          work(partition_ptr+k) = l
          a_weight_sep = a_weight_sep + grid%row_wgt(l)
          k = k + 1
-       END SELECT
-     END DO
+       end select
+     end do
      a_ne = grid%graph%ptr(grid%graph%n+1) - 1
 
-     IF (a_weight_sep>0) THEN
+     if (a_weight_sep>0) then
        ! Do not refine if separable graph
 
-       IF (control%refinement>6) THEN
+       if (control%refinement>6) then
          ref_control = 3
-       ELSE
-         IF (control%refinement<1) THEN
+       else
+         if (control%refinement<1) then
            ref_control = 1
-         ELSE
+         else
            ref_control = control%refinement
-         END IF
-       END IF
+         end if
+       end if
 
-       SELECT CASE (ref_control)
-       CASE (1)
+       select case (ref_control)
+       case (1)
          ref_method = 1
 
-       CASE (2)
+       case (2)
          ref_method = 2
 
-       CASE (3)
-         IF (REAL(MAX(a_weight_1,a_weight_2))/REAL(MIN(a_weight_1, &
-             a_weight_2)+a_weight_sep)>MAX(REAL(1.0, &
-             wp),control%balance)) THEN
+       case (3)
+         if (real(max(a_weight_1,a_weight_2))/real(min(a_weight_1, &
+             a_weight_2)+a_weight_sep)>max(real(1.0, &
+             wp),control%balance)) then
            ref_method = 2
-         ELSE
+         else
            ref_method = 1
-         END IF
+         end if
 
-       CASE (4)
+       case (4)
          ref_method = 0
 
-       CASE (5)
+       case (5)
          ref_method = 2
 
-       CASE (6)
-         IF (REAL(MAX(a_weight_1,a_weight_2))/REAL(MIN(a_weight_1, &
-             a_weight_2)+a_weight_sep)>MAX(REAL(1.0, &
-             wp),control%balance)) THEN
+       case (6)
+         if (real(max(a_weight_1,a_weight_2))/real(min(a_weight_1, &
+             a_weight_2)+a_weight_sep)>max(real(1.0, &
+             wp),control%balance)) then
            ref_method = 2
-         ELSE
+         else
            ref_method = 0
-         END IF
-       END SELECT
+         end if
+       end select
 
-       SELECT CASE (ref_method)
-       CASE (0)
-         CALL nd_refine_max_flow(grid%graph%n,a_ne,grid%graph%ptr, &
+       select case (ref_method)
+       case (0)
+         call nd_refine_max_flow(grid%graph%n,a_ne,grid%graph%ptr, &
            grid%graph%col,grid%row_wgt,grid%part_div(1),grid%part_div(2), &
            a_weight_1,a_weight_2,a_weight_sep,work(partition_ptr+1: &
            partition_ptr+grid%graph%n),work(work_ptr+1:work_ptr+8),control)
-       CASE (1)
-         IF (MIN(a_weight_1,a_weight_2)+a_weight_sep< &
-             MAX(a_weight_1,a_weight_2)) THEN
-           CALL nd_refine_block_trim(grid%graph%n,a_ne, &
+       case (1)
+         if (min(a_weight_1,a_weight_2)+a_weight_sep< &
+             max(a_weight_1,a_weight_2)) then
+           call nd_refine_block_trim(grid%graph%n,a_ne, &
              grid%graph%ptr,grid%graph%col,grid%row_wgt,sumweight, &
              grid%part_div(1),grid%part_div(2),a_weight_1,a_weight_2, &
              a_weight_sep,work(partition_ptr+1:partition_ptr+grid%graph%n), &
              work(work_ptr+1:work_ptr+5*grid%graph%n),control)
-         ELSE
-           CALL nd_refine_trim(grid%graph%n,a_ne,grid%graph%ptr, &
+         else
+           call nd_refine_trim(grid%graph%n,a_ne,grid%graph%ptr, &
              grid%graph%col,grid%row_wgt,sumweight,grid%part_div(1), &
              grid%part_div(2),a_weight_1,a_weight_2,a_weight_sep, &
              work(partition_ptr+1:partition_ptr+grid%graph%n), &
              work(work_ptr+1:work_ptr+3*grid%graph%n),control)
 
-         END IF
-       CASE (2)
-         CALL nd_refine_edge(grid%graph%n,a_ne,grid%graph%ptr, &
+         end if
+       case (2)
+         call nd_refine_edge(grid%graph%n,a_ne,grid%graph%ptr, &
            grid%graph%col,grid%row_wgt,sumweight,grid%part_div(1), &
            grid%part_div(2),a_weight_1,a_weight_2,a_weight_sep, &
            work(partition_ptr+1:partition_ptr+grid%graph%n), &
            work(work_ptr+1:work_ptr+3*grid%graph%n),control)
-       END SELECT
+       end select
 
-       IF (control%max_improve_cycles>0) THEN
-         ratio = MAX(REAL(1.0,wp),control%balance)
-         IF (ratio>REAL(sumweight-2)) THEN
-           imbal = .FALSE.
-         ELSE
-           imbal = .TRUE.
-         END IF
-         CALL cost_function(a_weight_1,a_weight_2,a_weight_sep,sumweight, &
+       if (control%max_improve_cycles>0) then
+         ratio = max(real(1.0,wp),control%balance)
+         if (ratio>real(sumweight-2)) then
+           imbal = .false.
+         else
+           imbal = .true.
+         end if
+         call cost_function(a_weight_1,a_weight_2,a_weight_sep,sumweight, &
            ratio,imbal,control%cost_function,tau_best)
          a_n1_new = grid%part_div(1)
          a_n2_new = grid%part_div(2)
          a_weight_1_new = a_weight_1
          a_weight_2_new = a_weight_2
          a_weight_sep_new = a_weight_sep
-       END IF
+       end if
 
        part_ptr = work_ptr + 5*grid%graph%n
        work(part_ptr+1:part_ptr+grid%graph%n) = work(partition_ptr+1: &
          partition_ptr+grid%graph%n)
 
        k = control%max_improve_cycles
-       DO i = 1, k
+       do i = 1, k
 
-         CALL expand_partition(grid%graph%n,a_ne,grid%graph%ptr, &
+         call expand_partition(grid%graph%n,a_ne,grid%graph%ptr, &
            grid%graph%col,grid%row_wgt,a_n1_new,a_n2_new,a_weight_1_new, &
            a_weight_2_new,a_weight_sep_new,work(part_ptr+1:part_ptr+grid% &
            graph%n),work(work_ptr+1:work_ptr+5*grid%graph%n))
@@ -5105,66 +5105,66 @@ INNER:    DO inn = 1, n
          ! check_partition1(a_n,a_ne,a_ptr,a_row,a_n1_new,a_n2_new,work(par
          ! t_ptr+1:part_ptr+a_n))
 
-         SELECT CASE (ref_control)
+         select case (ref_control)
 
-         CASE (3)
-           IF (REAL(MAX(a_weight_1_new,a_weight_2_new))/REAL(MIN( &
-               a_weight_1_new,a_weight_2_new)+a_weight_sep_new)>MAX(REAL( &
-               1.0,wp),control%balance)) THEN
+         case (3)
+           if (real(max(a_weight_1_new,a_weight_2_new))/real(min( &
+               a_weight_1_new,a_weight_2_new)+a_weight_sep_new)>max(real( &
+               1.0,wp),control%balance)) then
              ref_method = 2
-           ELSE
+           else
              ref_method = 1
-           END IF
+           end if
 
-         CASE (6)
-           IF (REAL(MAX(a_weight_1_new,a_weight_2_new))/REAL(MIN( &
-               a_weight_1_new,a_weight_2_new)+a_weight_sep_new)>MAX(REAL( &
-               1.0,wp),control%balance)) THEN
+         case (6)
+           if (real(max(a_weight_1_new,a_weight_2_new))/real(min( &
+               a_weight_1_new,a_weight_2_new)+a_weight_sep_new)>max(real( &
+               1.0,wp),control%balance)) then
              ref_method = 2
-           ELSE
+           else
              ref_method = 0
-           END IF
-         END SELECT
+           end if
+         end select
 
 
-         SELECT CASE (ref_method)
+         select case (ref_method)
 
-         CASE (0)
-           CALL nd_refine_max_flow(grid%graph%n,a_ne,grid%graph%ptr, &
+         case (0)
+           call nd_refine_max_flow(grid%graph%n,a_ne,grid%graph%ptr, &
              grid%graph%col,grid%row_wgt,a_n1_new,a_n2_new,a_weight_1_new, &
              a_weight_2_new,a_weight_sep_new,work(part_ptr+1:part_ptr+grid% &
              graph%n),work(work_ptr+1:work_ptr+8),control)
 
-         CASE (1)
-           IF (MIN(a_weight_1,a_weight_2)+a_weight_sep< &
-               MAX(a_weight_1,a_weight_2)) THEN
-             CALL nd_refine_block_trim(grid%graph%n,a_ne, &
+         case (1)
+           if (min(a_weight_1,a_weight_2)+a_weight_sep< &
+               max(a_weight_1,a_weight_2)) then
+             call nd_refine_block_trim(grid%graph%n,a_ne, &
                grid%graph%ptr,grid%graph%col,grid%row_wgt,sumweight, &
                a_n1_new,a_n2_new,a_weight_1_new,a_weight_2_new, &
                a_weight_sep_new,work(part_ptr+1:part_ptr+grid%graph%n), &
                work(work_ptr+1:work_ptr+5*grid%graph%n),control)
-           ELSE
-             CALL nd_refine_trim(grid%graph%n,a_ne,grid%graph%ptr, &
+           else
+             call nd_refine_trim(grid%graph%n,a_ne,grid%graph%ptr, &
                grid%graph%col,grid%row_wgt,sumweight,a_n1_new,a_n2_new, &
                a_weight_1_new,a_weight_2_new,a_weight_sep_new, &
                work(part_ptr+1:part_ptr+grid%graph%n), &
                work(work_ptr+1:work_ptr+3*grid%graph%n),control)
-           END IF
+           end if
 
 
-         CASE (2)
-           CALL nd_refine_edge(grid%graph%n,a_ne,grid%graph%ptr, &
+         case (2)
+           call nd_refine_edge(grid%graph%n,a_ne,grid%graph%ptr, &
              grid%graph%col,grid%row_wgt,sumweight,a_n1_new,a_n2_new, &
              a_weight_1_new,a_weight_2_new,a_weight_sep_new, &
              work(part_ptr+1:part_ptr+grid%graph%n), &
              work(work_ptr+1:work_ptr+3*grid%graph%n),control)
 
-         END SELECT
+         end select
 
 
-         CALL cost_function(a_weight_1_new,a_weight_2_new,a_weight_sep_new, &
+         call cost_function(a_weight_1_new,a_weight_2_new,a_weight_sep_new, &
            sumweight,ratio,imbal,control%cost_function,tau)
-         IF (tau<tau_best) THEN
+         if (tau<tau_best) then
            tau_best = tau
            work(partition_ptr+1:partition_ptr+grid%graph%n) &
              = work(part_ptr+1:part_ptr+grid%graph%n)
@@ -5173,46 +5173,46 @@ INNER:    DO inn = 1, n
            a_weight_1 = a_weight_1_new
            a_weight_2 = a_weight_2_new
            a_weight_sep = a_weight_sep_new
-         ELSE
-           EXIT
-         END IF
-       END DO
+         else
+           exit
+         end if
+       end do
 
 
 
 
-       ! IF (grid%level .LE.2) THEN
-       CALL nd_refine_fm(grid%graph%n,a_ne,grid%graph%ptr, &
+       ! if (grid%level .le.2) then
+       call nd_refine_fm(grid%graph%n,a_ne,grid%graph%ptr, &
          grid%graph%col,grid%row_wgt,sumweight,grid%part_div(1), &
          grid%part_div(2),a_weight_1,a_weight_2,a_weight_sep, &
          work(partition_ptr+1:partition_ptr+grid%graph%n), &
          work(work_ptr+1:work_ptr+8*grid%graph%n+sumweight),control)
-       ! END IF
+       ! end if
 
-     END IF
+     end if
 
-     DO i = 1, grid%part_div(1)
+     do i = 1, grid%part_div(1)
        j = work(partition_ptr+i)
        grid%where(j) = ND_PART1_FLAG
-     END DO
-     DO i = grid%part_div(1) + 1, grid%part_div(1) + grid%part_div(2)
+     end do
+     do i = grid%part_div(1) + 1, grid%part_div(1) + grid%part_div(2)
        j = work(partition_ptr+i)
        grid%where(j) = ND_PART2_FLAG
-     END DO
-     DO i = grid%part_div(1) + grid%part_div(2) + 1, grid%graph%n
+     end do
+     do i = grid%part_div(1) + grid%part_div(2) + 1, grid%graph%n
        j = work(partition_ptr+i)
        grid%where(j) = ND_SEP_FLAG
-     END DO
+     end do
 
-     IF (info<0) RETURN
+     if (info<0) return
 
-     IF (print_level==3) CALL level_print(mp,' after post smoothing ', &
+     if (print_level==3) call level_print(mp,' after post smoothing ', &
        grid%level)
 
      ! deallocate the previous level
-     ! CALL multigrid_deallocate(cgrid,info)
+     ! call multigrid_deallocate(cgrid,info)
 
-   END SUBROUTINE multilevel
+   end subroutine multilevel
 
    ! ***************************************************************
    ! ---------------------------------------------------
@@ -5222,451 +5222,451 @@ INNER:    DO inn = 1, n
    ! is
    ! small enough, apply halo amd
 
-   SUBROUTINE nd_coarse_partition(a_n,a_ne,a_ptr,a_row,a_weight, &
+   subroutine nd_coarse_partition(a_n,a_ne,a_ptr,a_row,a_weight, &
        sumweight,a_n1,a_n2,where1,lwork,work,control,info)
 
-     INTEGER, INTENT (IN) :: a_n ! dimension of subproblem ND is applied to
-     INTEGER, INTENT (IN) :: a_ne ! no. nonzeros of subproblem
-     INTEGER, INTENT (INOUT) :: a_ptr(a_n) ! On input a_ptr(i) contains
+     integer, intent (in) :: a_n ! dimension of subproblem ND is applied to
+     integer, intent (in) :: a_ne ! no. nonzeros of subproblem
+     integer, intent (inout) :: a_ptr(a_n) ! On input a_ptr(i) contains
      ! position in a_row that entries for column i start. This is then
      ! used to hold positions for submatrices after partitioning
-     INTEGER, INTENT (INOUT) :: a_row(a_ne) ! On input a_row contains row
+     integer, intent (inout) :: a_row(a_ne) ! On input a_row contains row
      ! indices of the non-zero rows. Diagonal entries have been removed
      ! and the matrix expanded.This is then used to hold row indices for
      ! submatrices after partitioning
-     INTEGER, INTENT (INOUT) :: a_weight(a_n) ! On input a_weight(i)
+     integer, intent (inout) :: a_weight(a_n) ! On input a_weight(i)
      ! contains
      ! the weight of column i. This is then used to hold the weights for
      ! the submatrices after partitioning.
-     INTEGER, INTENT (IN) :: sumweight ! Sum entries in a_weight.
+     integer, intent (in) :: sumweight ! Sum entries in a_weight.
      ! Unchanged.
-     INTEGER, INTENT (OUT) :: a_n1, a_n2 ! size of the two submatrices
-     INTEGER, INTENT (OUT) :: where1(a_n) ! Computed partition
-     INTEGER, INTENT (IN) :: lwork ! .GE. 9*a_n+sumweight
-     INTEGER, INTENT (OUT) :: work(lwork)
-     TYPE (nd_options), INTENT (IN) :: control
-     INTEGER, INTENT (INOUT) :: info
-     ! REAL (wp), OPTIONAL, INTENT(OUT) :: real_work(a_n)
+     integer, intent (out) :: a_n1, a_n2 ! size of the two submatrices
+     integer, intent (out) :: where1(a_n) ! Computed partition
+     integer, intent (in) :: lwork ! .ge. 9*a_n+sumweight
+     integer, intent (out) :: work(lwork)
+     type (nd_options), intent (in) :: control
+     integer, intent (inout) :: info
+     ! real (wp), optional, intent(out) :: real_work(a_n)
 
      ! ---------------------------------------------
      ! Local variables
-     INTEGER :: unit_diagnostics ! unit on which to print diagnostics
-     LOGICAL :: printi, printd, use_multilevel
-     INTEGER :: partition_ptr ! pointer into work array
-     INTEGER :: work_ptr ! pointer into work array
-     INTEGER :: partition_method
-     INTEGER :: st
-     INTEGER :: a_weight_1, a_weight_2, a_weight_sep, ref_method, &
+     integer :: unit_diagnostics ! unit on which to print diagnostics
+     logical :: printi, printd, use_multilevel
+     integer :: partition_ptr ! pointer into work array
+     integer :: work_ptr ! pointer into work array
+     integer :: partition_method
+     integer :: st
+     integer :: a_weight_1, a_weight_2, a_weight_sep, ref_method, &
        ref_control
-     INTEGER, ALLOCATABLE :: work1(:)
-     REAL (wp) :: dummy, dummy1
-     TYPE (nd_multigrid) :: gridtemp
+     integer, allocatable :: work1(:)
+     real (wp) :: dummy, dummy1
+     type (nd_multigrid) :: gridtemp
 
      ! ---------------------------------------------
      ! Printing levels
      unit_diagnostics = control%unit_diagnostics
-     printi = (control%print_level==1 .AND. unit_diagnostics>=0)
-     printd = (control%print_level>=2 .AND. unit_diagnostics>=0)
+     printi = (control%print_level==1 .and. unit_diagnostics>=0)
+     printd = (control%print_level>=2 .and. unit_diagnostics>=0)
 
-     IF (printi .OR. printd) THEN
-       WRITE (unit_diagnostics,'(a)') ' '
-       WRITE (unit_diagnostics,'(a)') 'Start finding a coarse partition'
-       WRITE (unit_diagnostics,'(a,i10,a,i10)') 'a_n=', a_n, ', a_ne=', &
+     if (printi .or. printd) then
+       write (unit_diagnostics,'(a)') ' '
+       write (unit_diagnostics,'(a)') 'Start finding a coarse partition'
+       write (unit_diagnostics,'(a,i10,a,i10)') 'a_n=', a_n, ', a_ne=', &
          a_ne
-     END IF
+     end if
 
      ! Find the partition
-     IF (control%coarse_partition_method<=1) THEN
+     if (control%coarse_partition_method<=1) then
        partition_method = 1
-     ELSE
+     else
        partition_method = 2
-     END IF
+     end if
 
      partition_ptr = 0 ! length a_n
      work_ptr = partition_ptr + a_n ! max length needed 9*a_n+a_ne
 
-     ALLOCATE (work1(a_n),STAT=st)
-     IF (st/=0) THEN
+     allocate (work1(a_n),stat=st)
+     if (st/=0) then
        info = ND_ERR_MEMORY_ALLOC
-       RETURN
-     END IF
+       return
+     end if
 
 
-     SELECT CASE (partition_method)
-     CASE (1)
+     select case (partition_method)
+     case (1)
        ! Ashcraft method
-       use_multilevel = .FALSE.
-       CALL nd_ashcraft(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,2,a_n1, &
+       use_multilevel = .false.
+       call nd_ashcraft(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,2,a_n1, &
          a_n2,a_weight_1,a_weight_2,a_weight_sep, &
          work1(partition_ptr+1:partition_ptr+a_n),work(1:9*a_n+sumweight), &
          control,info,dummy,dummy1,use_multilevel,gridtemp)
 
-       IF (printi .OR. printd) THEN
-         WRITE (unit_diagnostics,'(a)') ' '
-         WRITE (unit_diagnostics,'(a)') 'Initial half-level set partition'
-         WRITE (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_n1 =', a_n1, &
+       if (printi .or. printd) then
+         write (unit_diagnostics,'(a)') ' '
+         write (unit_diagnostics,'(a)') 'Initial half-level set partition'
+         write (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_n1 =', a_n1, &
            ', a_n2=', a_n2, ', a_n_sep=', a_n - a_n1 - a_n2
-         WRITE (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_weight_1 =', &
+         write (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_weight_1 =', &
            a_weight_1, ', a_weight_2=', a_weight_2, ', a_weight_sep=', &
            sumweight - a_weight_1 - a_weight_2
-       END IF
+       end if
 
-     CASE (2)
+     case (2)
        ! Level set method
-       use_multilevel = .FALSE.
-       CALL nd_level_set(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,2,a_n1, &
+       use_multilevel = .false.
+       call nd_level_set(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,2,a_n1, &
          a_n2,a_weight_1,a_weight_2,a_weight_sep, &
          work1(partition_ptr+1:partition_ptr+a_n),work(1:9*a_n+sumweight), &
          control,info,dummy,dummy1,use_multilevel,gridtemp)
 
 
-       IF (printi .OR. printd) THEN
-         WRITE (unit_diagnostics,'(a)') ' '
-         WRITE (unit_diagnostics,'(a)') 'Initial level set partition'
-         WRITE (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_n1 =', a_n1, &
+       if (printi .or. printd) then
+         write (unit_diagnostics,'(a)') ' '
+         write (unit_diagnostics,'(a)') 'Initial level set partition'
+         write (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_n1 =', a_n1, &
            ', a_n2=', a_n2, ', a_n_sep=', a_n - a_n1 - a_n2
-         WRITE (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_weight_1 =', &
+         write (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_weight_1 =', &
            a_weight_1, ', a_weight_2=', a_weight_2, ', a_weight_sep=', &
            sumweight - a_weight_1 - a_weight_2
-       END IF
+       end if
 
-     END SELECT
+     end select
 
 
 
-     IF (a_n1/=0 .AND. a_n2/=0 .AND. a_n>=3) THEN
-       IF (a_n1+a_n2<a_n) THEN
+     if (a_n1/=0 .and. a_n2/=0 .and. a_n>=3) then
+       if (a_n1+a_n2<a_n) then
          ! Refine the partition
-         IF (control%refinement>6) THEN
+         if (control%refinement>6) then
            ref_control = 3
-         ELSE
-           IF (control%refinement<1) THEN
+         else
+           if (control%refinement<1) then
              ref_control = 1
-           ELSE
+           else
              ref_control = control%refinement
-           END IF
-         END IF
+           end if
+         end if
 
-         SELECT CASE (ref_control)
-         CASE (1)
+         select case (ref_control)
+         case (1)
            ref_method = 1
 
-         CASE (2)
+         case (2)
            ref_method = 2
 
-         CASE (3)
-           IF (REAL(MAX(a_weight_1,a_weight_2))/REAL(MIN(a_weight_1, &
-               a_weight_2)+a_weight_sep)>MAX(REAL(1.0, &
-               wp),control%balance)) THEN
+         case (3)
+           if (real(max(a_weight_1,a_weight_2))/real(min(a_weight_1, &
+               a_weight_2)+a_weight_sep)>max(real(1.0, &
+               wp),control%balance)) then
              ref_method = 2
-           ELSE
+           else
              ref_method = 1
-           END IF
+           end if
 
-         CASE (4)
+         case (4)
            ref_method = 0
 
-         CASE (5)
+         case (5)
            ref_method = 2
 
-         CASE (6)
-           IF (REAL(MAX(a_weight_1,a_weight_2))/REAL(MIN(a_weight_1, &
-               a_weight_2)+a_weight_sep)>MAX(REAL(1.0, &
-               wp),control%balance)) THEN
+         case (6)
+           if (real(max(a_weight_1,a_weight_2))/real(min(a_weight_1, &
+               a_weight_2)+a_weight_sep)>max(real(1.0, &
+               wp),control%balance)) then
              ref_method = 2
-           ELSE
+           else
              ref_method = 0
-           END IF
-         END SELECT
+           end if
+         end select
 
-         SELECT CASE (ref_method)
+         select case (ref_method)
 
-         CASE (0)
-           CALL nd_refine_max_flow(a_n,a_ne,a_ptr,a_row,a_weight,a_n1, &
+         case (0)
+           call nd_refine_max_flow(a_n,a_ne,a_ptr,a_row,a_weight,a_n1, &
              a_n2,a_weight_1,a_weight_2,a_weight_sep, &
              work1(partition_ptr+1:partition_ptr+a_n),work(1:8),control)
 
-         CASE (1)
-           IF (MIN(a_weight_1,a_weight_2)+a_weight_sep< &
-               MAX(a_weight_1,a_weight_2)) THEN
-             CALL nd_refine_block_trim(a_n,a_ne,a_ptr,a_row, &
+         case (1)
+           if (min(a_weight_1,a_weight_2)+a_weight_sep< &
+               max(a_weight_1,a_weight_2)) then
+             call nd_refine_block_trim(a_n,a_ne,a_ptr,a_row, &
                a_weight,sumweight,a_n1,a_n2,a_weight_1,a_weight_2, &
                a_weight_sep,work1(partition_ptr+1:partition_ptr+a_n), &
                work(1:5*a_n),control)
-           ELSE
-             CALL nd_refine_trim(a_n,a_ne,a_ptr,a_row,a_weight, &
+           else
+             call nd_refine_trim(a_n,a_ne,a_ptr,a_row,a_weight, &
                sumweight,a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep, &
                work1(partition_ptr+1:partition_ptr+a_n),work(1:3*a_n), &
                control)
-           END IF
+           end if
 
-         CASE (2)
-           CALL nd_refine_edge(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
+         case (2)
+           call nd_refine_edge(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
              a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep, &
              work1(partition_ptr+1:partition_ptr+a_n),work(1:3*a_n), &
              control)
 
 
-         END SELECT
+         end select
 
-         IF (printi .OR. printd) THEN
-           WRITE (unit_diagnostics,'(a)') ' '
-           WRITE (unit_diagnostics,'(a)') 'Trimmed partition found'
-           WRITE (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_n1 =', a_n1, &
+         if (printi .or. printd) then
+           write (unit_diagnostics,'(a)') ' '
+           write (unit_diagnostics,'(a)') 'Trimmed partition found'
+           write (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_n1 =', a_n1, &
              ', a_n2=', a_n2, ', a_n_sep=', a_n - a_n1 - a_n2
-           WRITE (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_weight_1 =', &
+           write (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_weight_1 =', &
              a_weight_1, ', a_weight_2=', a_weight_2, ', a_weight_sep=', &
              sumweight - a_weight_1 - a_weight_2
-         END IF
+         end if
 
-         CALL nd_refine_fm(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,a_n1, &
+         call nd_refine_fm(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,a_n1, &
            a_n2,a_weight_1,a_weight_2,a_weight_sep, &
            work1(partition_ptr+1:partition_ptr+a_n), &
            work(1:8*a_n+sumweight),control)
 
-       END IF
-     ELSE
-       GO TO 10
-     END IF
+       end if
+     else
+       go to 10
+     end if
 
 
-     CALL nd_convert_partition_flags(a_n,a_n1,a_n2, &
+     call nd_convert_partition_flags(a_n,a_n1,a_n2, &
        work1(partition_ptr+1:partition_ptr+a_n),ND_PART1_FLAG, &
        ND_PART2_FLAG,ND_SEP_FLAG,where1(1:a_n))
 
-     DEALLOCATE (work1,STAT=st)
-     IF (st/=0) THEN
+     deallocate (work1,stat=st)
+     if (st/=0) then
        info = ND_ERR_MEMORY_ALLOC
-       RETURN
-     END IF
+       return
+     end if
 
 
 
-     IF (printi .OR. printd .OR. .FALSE.) THEN
-       WRITE (unit_diagnostics,'(a)') ' '
-       WRITE (unit_diagnostics,'(a)') 'Initial coarse partition found'
-       WRITE (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_n1 =', a_n1, &
+     if (printi .or. printd .or. .false.) then
+       write (unit_diagnostics,'(a)') ' '
+       write (unit_diagnostics,'(a)') 'Initial coarse partition found'
+       write (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_n1 =', a_n1, &
          ', a_n2=', a_n2, ', a_n_sep=', a_n - a_n1 - a_n2
-       WRITE (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_weight_1 =', &
+       write (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_weight_1 =', &
          a_weight_1, ', a_weight_2=', a_weight_2, ', a_weight_sep=', &
          sumweight - a_weight_1 - a_weight_2
-     END IF
-     GO TO 20
+     end if
+     go to 20
 
-10      IF (printi .OR. printd) THEN
-       WRITE (unit_diagnostics,'(a)') ' '
-       WRITE (unit_diagnostics,'(a)') 'No partition found'
-     END IF
+10      if (printi .or. printd) then
+       write (unit_diagnostics,'(a)') ' '
+       write (unit_diagnostics,'(a)') 'No partition found'
+     end if
 
 20      info = 0
-     IF (printi .OR. printd) THEN
-       CALL nd_print_message(info,unit_diagnostics, &
+     if (printi .or. printd) then
+       call nd_print_message(info,unit_diagnostics, &
          'nd_coarse_partition')
-     END IF
-     RETURN
+     end if
+     return
 
-   END SUBROUTINE nd_coarse_partition
+   end subroutine nd_coarse_partition
 
 
    ! *****************************************************************
 
-   RECURSIVE SUBROUTINE mg_grid_destroy(grid,info)
+   RECURSIVE subroutine mg_grid_destroy(grid,info)
      ! deallocate a grid structure
-     TYPE (nd_multigrid) :: grid
-     INTEGER :: info
+     type (nd_multigrid) :: grid
+     integer :: info
 
-     IF (ASSOCIATED(grid%coarse)) THEN
+     if (associated(grid%coarse)) then
 
-       CALL mg_grid_destroy(grid%coarse,info)
+       call mg_grid_destroy(grid%coarse,info)
 
-       IF (grid%level/=1) THEN
+       if (grid%level/=1) then
 
-         CALL multigrid_deallocate(grid,info)
+         call multigrid_deallocate(grid,info)
 
-       ELSE
+       else
 
-         CALL multigrid_deallocate_first(grid,info)
+         call multigrid_deallocate_first(grid,info)
 
-       END IF
+       end if
 
-     ELSE
+     else
 
-       IF (grid%level/=1) THEN
+       if (grid%level/=1) then
 
-         CALL multigrid_deallocate_last(grid,info)
+         call multigrid_deallocate_last(grid,info)
 
-       ELSE
+       else
 
-         CALL multigrid_deallocate_first(grid,info)
+         call multigrid_deallocate_first(grid,info)
 
-       END IF
+       end if
 
-     END IF
+     end if
 
-   END SUBROUTINE mg_grid_destroy
+   end subroutine mg_grid_destroy
 
 
    ! *****************************************************************
-   SUBROUTINE multigrid_deallocate(grid,info)
+   subroutine multigrid_deallocate(grid,info)
      ! deallocate a grid (at given level between last and first)
-     TYPE (nd_multigrid) :: grid
-     INTEGER :: st, info
+     type (nd_multigrid) :: grid
+     integer :: st, info
 
-     CALL nd_matrix_destruct(grid%graph,info)
-     IF (info/=0) THEN
-       RETURN
-     END IF
+     call nd_matrix_destruct(grid%graph,info)
+     if (info/=0) then
+       return
+     end if
 
-     CALL nd_matrix_destruct(grid%p,info)
-     IF (info/=0) THEN
-       RETURN
-     END IF
+     call nd_matrix_destruct(grid%p,info)
+     if (info/=0) then
+       return
+     end if
 
 
 
-     CALL nd_matrix_destruct(grid%r,info)
-     IF (info/=0) THEN
-       RETURN
-     END IF
+     call nd_matrix_destruct(grid%r,info)
+     if (info/=0) then
+       return
+     end if
 
-     DEALLOCATE (grid%graph,grid%p,grid%r,grid%where,grid%row_wgt,STAT=st)
-     IF (st/=0) THEN
+     deallocate (grid%graph,grid%p,grid%r,grid%where,grid%row_wgt,stat=st)
+     if (st/=0) then
        info = ND_ERR_MEMORY_DEALLOC
-       RETURN
-     END IF
-     NULLIFY (grid%graph,grid%coarse)
+       return
+     end if
+     nullify (grid%graph,grid%coarse)
 
-   END SUBROUTINE multigrid_deallocate
+   end subroutine multigrid_deallocate
 
    ! *****************************************************************
-   SUBROUTINE multigrid_deallocate_last(grid,info)
+   subroutine multigrid_deallocate_last(grid,info)
 
      ! deallocate a grid (at the last level). In this case the matrix
      ! grid%graph
      ! has not been formed yet
-     TYPE (nd_multigrid) :: grid
-     INTEGER, INTENT (INOUT) :: info
+     type (nd_multigrid) :: grid
+     integer, intent (inout) :: info
 
 
-     INTEGER :: ierr
+     integer :: ierr
 
-     CALL nd_matrix_destruct(grid%p,ierr)
-     IF (ierr/=0) THEN
+     call nd_matrix_destruct(grid%p,ierr)
+     if (ierr/=0) then
        info = ND_ERR_MEMORY_DEALLOC
-       RETURN
-     END IF
+       return
+     end if
 
-     CALL nd_matrix_destruct(grid%r,ierr)
-     IF (ierr/=0) THEN
+     call nd_matrix_destruct(grid%r,ierr)
+     if (ierr/=0) then
        info = ND_ERR_MEMORY_DEALLOC
-       RETURN
-     END IF
-     DEALLOCATE (grid%graph,grid%p,grid%r,grid%where,grid%row_wgt, &
-       STAT=ierr)
-     IF (ierr/=0) THEN
+       return
+     end if
+     deallocate (grid%graph,grid%p,grid%r,grid%where,grid%row_wgt, &
+       stat=ierr)
+     if (ierr/=0) then
        info = ND_ERR_MEMORY_DEALLOC
-       RETURN
-     END IF
-     NULLIFY (grid%graph,grid%coarse)
+       return
+     end if
+     nullify (grid%graph,grid%coarse)
 
-   END SUBROUTINE multigrid_deallocate_last
+   end subroutine multigrid_deallocate_last
    ! *****************************************************************
-   SUBROUTINE multigrid_deallocate_first(grid,info)
+   subroutine multigrid_deallocate_first(grid,info)
      ! deallocate a grid (at the first level). In this case the matrix
      ! grid%p
      ! does not exist
-     TYPE (nd_multigrid) :: grid
-     INTEGER, INTENT (INOUT) :: info
-     INTEGER :: ierr
+     type (nd_multigrid) :: grid
+     integer, intent (inout) :: info
+     integer :: ierr
 
-     IF (ASSOCIATED(grid%graph)) THEN
-       CALL nd_matrix_destruct(grid%graph,ierr)
-       IF (ierr/=0) THEN
+     if (associated(grid%graph)) then
+       call nd_matrix_destruct(grid%graph,ierr)
+       if (ierr/=0) then
          info = ND_ERR_MEMORY_DEALLOC
-         RETURN
-       END IF
-     END IF
+         return
+       end if
+     end if
 
      ! in subroutine front, grid%graph is not allocated but is pointed to
      ! the
      ! finest level graph. so no need to deallocate
-     NULLIFY (grid%graph)
-     DEALLOCATE (grid%where,grid%row_wgt,STAT=ierr)
-     IF (ierr/=0) info = ND_ERR_MEMORY_DEALLOC
+     nullify (grid%graph)
+     deallocate (grid%where,grid%row_wgt,stat=ierr)
+     if (ierr/=0) info = ND_ERR_MEMORY_DEALLOC
 
-   END SUBROUTINE multigrid_deallocate_first
+   end subroutine multigrid_deallocate_first
 
    ! ***************************************************************
-   SUBROUTINE coarsen_hec(grid,lwork,work,info)
+   subroutine coarsen_hec(grid,lwork,work,info)
      ! coarsen the grid using heavy-edge collapsing and set up the
      ! coarse grid equation, the prolongator and restrictor
 
-     TYPE (nd_multigrid), INTENT (INOUT), TARGET :: grid
-     INTEGER, INTENT (IN) :: lwork
-     INTEGER, INTENT (OUT) :: work(lwork)
-     INTEGER, INTENT (INOUT) :: info
+     type (nd_multigrid), intent (inout), TARGET :: grid
+     integer, intent (in) :: lwork
+     integer, intent (out) :: work(lwork)
+     integer, intent (inout) :: info
 
 
-     IF ( .NOT. ASSOCIATED(grid%coarse)) ALLOCATE (grid%coarse)
+     if ( .not. associated(grid%coarse)) allocate (grid%coarse)
 
      grid%coarse%fine => grid
 
      ! find the prolongator
-     CALL prolng_heavy_edge(grid,lwork,work,info)
+     call prolng_heavy_edge(grid,lwork,work,info)
 
 
      grid%coarse%level = grid%level + 1
 
-   END SUBROUTINE coarsen_hec
+   end subroutine coarsen_hec
 
 
    ! ***************************************************************
-   SUBROUTINE coarsen_cn(grid,lwork,work)
+   subroutine coarsen_cn(grid,lwork,work)
      ! coarsen the grid using common neighbours collapsing and set up the
      ! coarse grid equation, the prolongator and restrictor
 
-     TYPE (nd_multigrid), INTENT (INOUT), TARGET :: grid
+     type (nd_multigrid), intent (inout), TARGET :: grid
 
-     INTEGER, INTENT (IN) :: lwork
-     INTEGER, INTENT (OUT) :: work(lwork)
+     integer, intent (in) :: lwork
+     integer, intent (out) :: work(lwork)
 
-     IF ( .NOT. ASSOCIATED(grid%coarse)) ALLOCATE (grid%coarse)
+     if ( .not. associated(grid%coarse)) allocate (grid%coarse)
 
      grid%coarse%fine => grid
 
      ! find the prolongator
 
-     CALL prolng_common_neigh(grid,lwork,work)
+     call prolng_common_neigh(grid,lwork,work)
 
      grid%coarse%level = grid%level + 1
 
-   END SUBROUTINE coarsen_cn
+   end subroutine coarsen_cn
 
    ! ***************************************************************
-   SUBROUTINE coarsen_best(grid,lwork,work,info)
+   subroutine coarsen_best(grid,lwork,work,info)
      ! coarsen the grid using common neighbours collapsing and set up the
      ! coarse grid equation, the prolongator and restrictor
 
-     INTEGER, INTENT (INOUT) :: info
-     TYPE (nd_multigrid), INTENT (INOUT), TARGET :: grid
+     integer, intent (inout) :: info
+     type (nd_multigrid), intent (inout), TARGET :: grid
 
-     INTEGER, INTENT (IN) :: lwork
-     INTEGER, INTENT (OUT) :: work(lwork)
+     integer, intent (in) :: lwork
+     integer, intent (out) :: work(lwork)
 
-     IF ( .NOT. ASSOCIATED(grid%coarse)) ALLOCATE (grid%coarse)
+     if ( .not. associated(grid%coarse)) allocate (grid%coarse)
 
      grid%coarse%fine => grid
 
      ! find the prolongator
 
-     CALL prolng_best(grid,lwork,work,info)
+     call prolng_best(grid,lwork,work,info)
 
      grid%coarse%level = grid%level + 1
 
-   END SUBROUTINE coarsen_best
+   end subroutine coarsen_best
 
    ! ***************************************************************
-   SUBROUTINE nd_matrix_multiply_vec(matrix,x,y)
+   subroutine nd_matrix_multiply_vec(matrix,x,y)
      ! subroutine nd_matrix_multiply_vec(matrix,x,y)
 
      ! y = matrix*x where x and y are integer vectors. Entries of
@@ -5674,34 +5674,34 @@ INNER:    DO inn = 1, n
      ! is checked and returned if it is smaller than the row dimension
      ! of x    !
 
-     ! matrix: of the derived type nd_matrix, INTENT (IN),
+     ! matrix: of the derived type nd_matrix, intent (in),
      ! the sparse matrix in compressed sparse row format
-     TYPE (nd_matrix), INTENT (IN) :: matrix
+     type (nd_matrix), intent (in) :: matrix
 
-     ! x: integer array of intent (IN), a vector to be
+     ! x: integer array of intent (in), a vector to be
      ! multiplied with the matrix
-     INTEGER, INTENT (IN), DIMENSION (*) :: x
+     integer, intent (in), dimension (*) :: x
 
-     ! y: integer array of intent (OUT), the result of
+     ! y: integer array of intent (out), the result of
      ! matrix*x or matrix^T*x
-     INTEGER, INTENT (OUT), DIMENSION (*) :: y
+     integer, intent (out), dimension (*) :: y
 
      ! local ==========
-     INTEGER :: m, n, i, l1, l2
+     integer :: m, n, i, l1, l2
 
      m = matrix%m
      n = matrix%n
 
-     DO i = 1, m
+     do i = 1, m
        l1 = matrix%ptr(i)
        l2 = matrix%ptr(i+1) - 1
        y(i) = SUM(x(matrix%col(l1:l2)))
-     END DO
-   END SUBROUTINE nd_matrix_multiply_vec
+     end do
+   end subroutine nd_matrix_multiply_vec
 
 
    ! ***************************************************************
-   SUBROUTINE nd_matrix_destruct(matrix,info,stat)
+   subroutine nd_matrix_destruct(matrix,info,stat)
      ! subroutine nd_matrix_destruct(matrix,info):
 
      ! destruct the matrix object by deallocating all
@@ -5709,45 +5709,45 @@ INNER:    DO inn = 1, n
      ! matrix. including matrix%ptr, matrix%col and matrix%val.
 
      ! matrix: is of the derived type nd_matrix,
-     ! with INTENT (INOUT). It
+     ! with intent (inout). It
      ! the sparse matrix object to be destroyed.
-     TYPE (nd_matrix), INTENT (INOUT) :: matrix
+     type (nd_matrix), intent (inout) :: matrix
 
-     ! info: is an integer scaler of INTENT (OUT).
+     ! info: is an integer scaler of intent (out).
      ! = 0 if successful
      ! = nd_ERR_MEMORY_DEALLOC if memory deallocation failed
-     INTEGER, INTENT (OUT) :: info
+     integer, intent (out) :: info
 
-     ! stat: is an integer scaler of INTENT (OUT). If supplied,
+     ! stat: is an integer scaler of intent (out). If supplied,
      ! on exit it holds the error tag for memory allocation
-     INTEGER, OPTIONAL, INTENT (OUT) :: stat
+     integer, optional, intent (out) :: stat
 
      ! ===================== local variables =============
      ! ierr: error tag for deallocation
-     INTEGER :: ierr
+     integer :: ierr
 
      info = 0
-     IF (PRESENT(stat)) stat = 0
-     DEALLOCATE (matrix%col,matrix%ptr,STAT=ierr)
-     IF (PRESENT(stat)) stat = ierr
-     IF (ierr/=0) THEN
+     if (present(stat)) stat = 0
+     deallocate (matrix%col,matrix%ptr,stat=ierr)
+     if (present(stat)) stat = ierr
+     if (ierr/=0) then
        info = ND_ERR_MEMORY_DEALLOC
-       RETURN
-     END IF
+       return
+     end if
 
-     DEALLOCATE (matrix%val,STAT=ierr)
-     IF (PRESENT(stat)) stat = ierr
-     IF (ierr/=0) THEN
+     deallocate (matrix%val,stat=ierr)
+     if (present(stat)) stat = ierr
+     if (ierr/=0) then
        info = ND_ERR_MEMORY_DEALLOC
-       RETURN
-     END IF
+       return
+     end if
 
-   END SUBROUTINE nd_matrix_destruct
+   end subroutine nd_matrix_destruct
 
 
    ! ***************************************************************
 
-   SUBROUTINE nd_matrix_construct(p,m,n,ne,info)
+   subroutine nd_matrix_construct(p,m,n,ne,info)
      ! Construct data structure for storing sparse matrix
      ! Arrays in nd_matrix will only be (re)allocated if they are not
      ! long
@@ -5755,12 +5755,12 @@ INNER:    DO inn = 1, n
      ! size(p%val) <-  max(ne, size(p%val)
      ! size(p%col) <-  max(ne, size(p%col)
      ! size(p%ptr) <-  max(m+1, size(p%ptr)
-     TYPE (nd_matrix), INTENT (INOUT) :: p ! matrix being formed using
+     type (nd_matrix), intent (inout) :: p ! matrix being formed using
      ! CSR
-     INTEGER, INTENT (IN) :: m ! number of rows
-     INTEGER, INTENT (IN) :: n ! number of columns
-     INTEGER, INTENT (IN) :: ne ! number entries
-     INTEGER, INTENT (OUT) :: info
+     integer, intent (in) :: m ! number of rows
+     integer, intent (in) :: n ! number of columns
+     integer, intent (in) :: ne ! number entries
+     integer, intent (out) :: info
 
      info = 0
 
@@ -5768,126 +5768,126 @@ INNER:    DO inn = 1, n
      p%n = n
      p%ne = ne
 
-     CALL nd_alloc(p%ptr,m+1,info)
-     IF (info<0) THEN
-       RETURN
-     END IF
+     call nd_alloc(p%ptr,m+1,info)
+     if (info<0) then
+       return
+     end if
 
-     CALL nd_alloc(p%col,ne,info)
-     IF (info<0) THEN
-       RETURN
-     END IF
+     call nd_alloc(p%col,ne,info)
+     if (info<0) then
+       return
+     end if
 
-     CALL nd_alloc(p%val,ne,info)
-     IF (info<0) THEN
-       RETURN
-     END IF
+     call nd_alloc(p%val,ne,info)
+     if (info<0) then
+       return
+     end if
 
-   END SUBROUTINE nd_matrix_construct
+   end subroutine nd_matrix_construct
 
    ! ***************************************************************
 
-   SUBROUTINE nd_alloc(v,n,info)
-     INTEGER, INTENT (INOUT), ALLOCATABLE :: v(:)
-     INTEGER, INTENT (IN) :: n
-     INTEGER, INTENT (OUT) :: info
+   subroutine nd_alloc(v,n,info)
+     integer, intent (inout), allocatable :: v(:)
+     integer, intent (in) :: n
+     integer, intent (out) :: info
 
-     INTEGER :: st
+     integer :: st
 
      info = 0
 
-     IF (ALLOCATED(v)) THEN
-       IF (SIZE(v)<n) THEN
-         DEALLOCATE (v,STAT=st)
-         IF (st<0) THEN
+     if (allocateD(v)) then
+       if (SIZE(v)<n) then
+         deallocate (v,stat=st)
+         if (st<0) then
            info = ND_ERR_MEMORY_ALLOC
-           RETURN
-         END IF
-       ELSE
-         RETURN
-       END IF
-     END IF
+           return
+         end if
+       else
+         return
+       end if
+     end if
 
-     ALLOCATE (v(n),STAT=st)
-     IF (st<0) THEN
+     allocate (v(n),stat=st)
+     if (st<0) then
        info = ND_ERR_MEMORY_DEALLOC
-     END IF
+     end if
 
 
-   END SUBROUTINE nd_alloc
+   end subroutine nd_alloc
 
 
    ! ********************************************************
 
-   SUBROUTINE nd_assoc(arr,sz,info1)
+   subroutine nd_assoc(arr,sz,info1)
      ! If arr has size at least sz, do nothing. Otherwise, create array arr
      ! of size
      ! sz.
-     INTEGER, POINTER, INTENT (INOUT) :: arr(:)
-     INTEGER, INTENT (IN) :: sz
-     INTEGER, INTENT (INOUT) :: info1
+     integer, pointer, intent (inout) :: arr(:)
+     integer, intent (in) :: sz
+     integer, intent (inout) :: info1
 
-     INTEGER :: st
+     integer :: st
 
      info1 = 0
 
-     IF (ASSOCIATED(arr)) THEN
-       IF (SIZE(arr)<sz) THEN
-         DEALLOCATE (arr,STAT=st)
-         IF (st/=0) THEN
+     if (associated(arr)) then
+       if (SIZE(arr)<sz) then
+         deallocate (arr,stat=st)
+         if (st/=0) then
            info1 = ND_ERR_MEMORY_DEALLOC
-           RETURN
-         END IF
-       END IF
-     END IF
+           return
+         end if
+       end if
+     end if
 
-     IF ( .NOT. ASSOCIATED(arr)) THEN
-       ALLOCATE (arr(sz),STAT=st)
-       IF (st/=0) info1 = ND_ERR_MEMORY_ALLOC
-     END IF
+     if ( .not. associated(arr)) then
+       allocate (arr(sz),stat=st)
+       if (st/=0) info1 = ND_ERR_MEMORY_ALLOC
+     end if
 
-   END SUBROUTINE nd_assoc
+   end subroutine nd_assoc
 
    ! ********************************************
-   SUBROUTINE prolng_heavy_edge(grid,lwork,work,info)
+   subroutine prolng_heavy_edge(grid,lwork,work,info)
 
      ! calculate the prolongator for heavy-edge collapsing:
      ! match the vertices of the heaviest edges
 
-     INTEGER, INTENT (INOUT) :: info
+     integer, intent (inout) :: info
      ! input fine grid
-     TYPE (nd_multigrid), INTENT (INOUT) :: grid
-     INTEGER, INTENT (IN) :: lwork
-     INTEGER, INTENT (OUT) :: work(lwork)
+     type (nd_multigrid), intent (inout) :: grid
+     integer, intent (in) :: lwork
+     integer, intent (out) :: work(lwork)
 
      ! coarse grid based on the fine grid
-     TYPE (nd_multigrid), POINTER :: cgrid
+     type (nd_multigrid), pointer :: cgrid
 
      ! the fine grid row connectivity graph
-     TYPE (nd_matrix), POINTER :: graph
+     type (nd_matrix), pointer :: graph
 
      ! the coarse grid prolongator
-     TYPE (nd_matrix), POINTER :: p
+     type (nd_matrix), pointer :: p
 
      ! the coarse grid restrictor
-     TYPE (nd_matrix), POINTER :: r
+     type (nd_matrix), pointer :: r
 
      ! the number of fine and coarse grid vertices
-     INTEGER :: nvtx, cnvtx
+     integer :: nvtx, cnvtx
 
      ! working variables
-     INTEGER :: v, u, j, i, k
-     INTEGER :: nz
+     integer :: v, u, j, i, k
+     integer :: nz
 
      ! whether a vertex is matched already
-     INTEGER, PARAMETER :: unmatched = -1
+     integer, parameter :: unmatched = -1
 
      ! matching status of each vertex
-     INTEGER :: ptr_match
+     integer :: ptr_match
 
      ! maximum weight and index of edges connected to the current vertex
-     INTEGER :: maxwgt
-     INTEGER :: maxind
+     integer :: maxwgt
+     integer :: maxind
 
      ! allocate the prolongation matrix pointers
      cgrid => grid%coarse
@@ -5895,7 +5895,7 @@ INNER:    DO inn = 1, n
 
      ! allocate the graph and matrix pointer and the mincut pointer
      ! so that everything is defined
-     IF ( .NOT. ASSOCIATED(cgrid%graph)) ALLOCATE (cgrid%graph)
+     if ( .not. associated(cgrid%graph)) allocate (cgrid%graph)
 
      nvtx = graph%n
 
@@ -5909,27 +5909,27 @@ INNER:    DO inn = 1, n
      ! loop over each vertex and match along the heaviest edge
      cnvtx = 0
      nz = 0
-     DO i = 1, nvtx
+     do i = 1, nvtx
        v = i
        ! If already matched, next vertex please
-       IF (work(ptr_match+v)/=unmatched) CYCLE
-       maxwgt = -HUGE(0)
+       if (work(ptr_match+v)/=unmatched) cycle
+       maxwgt = -huge(0)
        ! in the case no match is found then match itself
        maxind = v
        ! Loop over entries in row v
-       DO j = graph%ptr(v), graph%ptr(v+1) - 1
+       do j = graph%ptr(v), graph%ptr(v+1) - 1
          ! u is col index of en entry in row v (so u is neighbor of v)
          u = graph%col(j)
          ! heavy edge matching
          ! if u is unmatched and value of the entry in col. u is greater
          ! than maxwgt, select u as the matching.
-         IF (work(ptr_match+u)==unmatched .AND. maxwgt<ABS(graph%val(j))) &
-             THEN
-           maxwgt = ABS(graph%val(j))
+         if (work(ptr_match+u)==unmatched .and. maxwgt<abs(graph%val(j))) &
+             then
+           maxwgt = abs(graph%val(j))
            maxind = u
-         END IF
-       END DO
-       ! NOTE: maxind .GE. v
+         end if
+       end do
+       ! notE: maxind .ge. v
        ! the neighbor with heaviest weight
        work(ptr_match+v) = maxind
        ! mark maxind as having been matched
@@ -5940,33 +5940,33 @@ INNER:    DO inn = 1, n
        ! linked
        ! with the coarse grid vertex cnvtx
        nz = nz + 1
-       IF (maxind/=v) THEN
+       if (maxind/=v) then
          nz = nz + 1
-       END IF
-     END DO
+       end if
+     end do
 
      ! storage allocation for col. indices and values of prolongation
      ! matrix P (nvtx * cnvtx)
-     IF ( .NOT. ASSOCIATED(cgrid%p)) THEN
-       ALLOCATE (cgrid%p)
+     if ( .not. associated(cgrid%p)) then
+       allocate (cgrid%p)
        p => cgrid%p
-       CALL nd_matrix_construct(p,nvtx,cnvtx,nz,info)
-     ELSE
+       call nd_matrix_construct(p,nvtx,cnvtx,nz,info)
+     else
        p => cgrid%p
-       CALL nd_matrix_construct(p,nvtx,cnvtx,nz,info)
-     END IF
+       call nd_matrix_construct(p,nvtx,cnvtx,nz,info)
+     end if
 
 
      ! storage allocation for col. indices and values of restiction
      ! matrix R (cnvtx * nvtx)
-     IF ( .NOT. ASSOCIATED(cgrid%r)) THEN
-       ALLOCATE (cgrid%r)
+     if ( .not. associated(cgrid%r)) then
+       allocate (cgrid%r)
        r => cgrid%r
-       CALL nd_matrix_construct(r,cnvtx,nvtx,nz,info)
-     ELSE
+       call nd_matrix_construct(r,cnvtx,nvtx,nz,info)
+     else
        r => cgrid%r
-       CALL nd_matrix_construct(r,cnvtx,nvtx,nz,info)
-     END IF
+       call nd_matrix_construct(r,cnvtx,nvtx,nz,info)
+     end if
 
      r%val(1:nz) = 1
 
@@ -5975,96 +5975,96 @@ INNER:    DO inn = 1, n
 
      j = 1
      k = 1
-     DO i = 1, nvtx
-       IF (work(ptr_match+i)==i) THEN
+     do i = 1, nvtx
+       if (work(ptr_match+i)==i) then
          r%ptr(k) = j
          r%col(j) = i
          j = j + 1
          k = k + 1
-       ELSE
-         IF (work(ptr_match+i)>i) THEN
+       else
+         if (work(ptr_match+i)>i) then
            r%ptr(k) = j
            r%col(j) = i
            r%col(j+1) = work(ptr_match+i)
            j = j + 2
            k = k + 1
-         END IF
-       END IF
-     END DO
+         end if
+       end if
+     end do
 
      ! store prolongation matrix
 
      p%ptr(1) = 1
-     DO i = 1, nvtx
+     do i = 1, nvtx
        p%ptr(i+1) = p%ptr(i) + 1
-     END DO
+     end do
 
      p%val(1:nz) = 1
 
      j = 1
-     DO i = 1, nvtx
+     do i = 1, nvtx
        k = work(ptr_match+i)
-       IF (k==i) THEN
+       if (k==i) then
          p%col(p%ptr(i)) = j
          j = j + 1
-       ELSE
-         IF (k>i) THEN
+       else
+         if (k>i) then
            p%col(p%ptr(i)) = j
            p%col(p%ptr(k)) = j
            j = j + 1
-         END IF
-       END IF
-     END DO
+         end if
+       end if
+     end do
 
      ! size of coarse grid
      cgrid%size = cnvtx
 
-   END SUBROUTINE prolng_heavy_edge
+   end subroutine prolng_heavy_edge
 
    ! *******************************************************************
 
-   SUBROUTINE prolng_common_neigh(grid,lwork,work)
+   subroutine prolng_common_neigh(grid,lwork,work)
 
      ! calculate the prolongator:
      ! match the vertices of with most neighbours in common
 
      ! input fine grid
-     INTEGER, INTENT (IN) :: lwork
-     INTEGER, INTENT (OUT) :: work(lwork)
-     TYPE (nd_multigrid), INTENT (INOUT) :: grid
+     integer, intent (in) :: lwork
+     integer, intent (out) :: work(lwork)
+     type (nd_multigrid), intent (inout) :: grid
 
      ! coarse grid based on the fine grid
-     TYPE (nd_multigrid), POINTER :: cgrid
+     type (nd_multigrid), pointer :: cgrid
 
      ! the fine grid row connectivity graph
-     TYPE (nd_matrix), POINTER :: graph
+     type (nd_matrix), pointer :: graph
 
      ! the coarse grid prolongator
-     TYPE (nd_matrix), POINTER :: p
+     type (nd_matrix), pointer :: p
 
      ! the fine grid restrictor
-     TYPE (nd_matrix), POINTER :: r
+     type (nd_matrix), pointer :: r
 
      ! the number of fine and coarse grid vertices
-     INTEGER :: nvtx, cnvtx
+     integer :: nvtx, cnvtx
 
      ! working variables
-     INTEGER :: v, u, w, j, i, k
+     integer :: v, u, w, j, i, k
 
      ! whether a vertex is matched already
-     INTEGER, PARAMETER :: unmatched = -1
+     integer, parameter :: unmatched = -1
 
      ! matching status of each vertex
-     INTEGER :: ptr_match
+     integer :: ptr_match
      ! flag array to flag up neighbours of a  node
-     INTEGER :: ptr_flag
+     integer :: ptr_flag
 
      ! maximum no. neighbours and index of edges connected to the current
      ! vertex
-     INTEGER :: max_neigh, maxind, num
+     integer :: max_neigh, maxind, num
 
-     INTEGER :: info
-     INTEGER :: nz
+     integer :: info
+     integer :: nz
 
      ! allocate the prolongation matrix pointers
      cgrid => grid%coarse
@@ -6072,7 +6072,7 @@ INNER:    DO inn = 1, n
 
      ! allocate the graph and matrix pointer and the mincut pointer
      ! so that everything is defined
-     IF ( .NOT. ASSOCIATED(cgrid%graph)) ALLOCATE (cgrid%graph)
+     if ( .not. associated(cgrid%graph)) allocate (cgrid%graph)
 
      nvtx = graph%n
 
@@ -6090,38 +6090,38 @@ INNER:    DO inn = 1, n
      ! common
      cnvtx = 0
      nz = 0
-     DO i = 1, nvtx
+     do i = 1, nvtx
        v = i
        ! If already matched, next vertex please
-       IF (work(ptr_match+v)/=unmatched) CYCLE
+       if (work(ptr_match+v)/=unmatched) cycle
        ! access the col. indices of row v
 
        ! in the case no match is found then match itself
        maxind = v
        ! Loop over entries in row v and set flag for each entry
        work(ptr_flag+v) = i
-       DO j = grid%graph%ptr(v), grid%graph%ptr(v+1) - 1
+       do j = grid%graph%ptr(v), grid%graph%ptr(v+1) - 1
          ! u is col index of en entry in row v (so u is neighbor of v)
          u = grid%graph%col(j)
          work(ptr_flag+u) = i
-       END DO
+       end do
        ! For each unmatched neighbour of v, count the number of
        ! neighbours it has in common with v
        max_neigh = 0
-       DO j = grid%graph%ptr(v), grid%graph%ptr(v+1) - 1
+       do j = grid%graph%ptr(v), grid%graph%ptr(v+1) - 1
          u = grid%graph%col(j)
          ! cycle is u is already matched
-         IF (work(ptr_match+u)/=unmatched) CYCLE
+         if (work(ptr_match+u)/=unmatched) cycle
          num = 0
-         DO k = grid%graph%ptr(u), grid%graph%ptr(u+1) - 1
+         do k = grid%graph%ptr(u), grid%graph%ptr(u+1) - 1
            w = grid%graph%col(k)
-           IF (work(ptr_flag+w)==i) num = num + 1
-         END DO
-         IF (num>max_neigh) THEN
+           if (work(ptr_flag+w)==i) num = num + 1
+         end do
+         if (num>max_neigh) then
            max_neigh = num
            maxind = u
-         END IF
-       END DO
+         end if
+       end do
 
        ! the neighbor with largest number of neighbours in common with v
        work(ptr_match+v) = maxind
@@ -6133,33 +6133,33 @@ INNER:    DO inn = 1, n
        ! linked
        ! with the coarse grid vertex cnvtx
        nz = nz + 1
-       IF (maxind/=v) THEN
+       if (maxind/=v) then
          nz = nz + 1
-       END IF
-     END DO
+       end if
+     end do
 
      ! storage allocation for col. indices and values of prolongation
      ! matrix P (order nvtx * cnvtx)
-     IF ( .NOT. ASSOCIATED(cgrid%p)) THEN
-       ALLOCATE (cgrid%p)
+     if ( .not. associated(cgrid%p)) then
+       allocate (cgrid%p)
        p => cgrid%p
-       CALL nd_matrix_construct(p,nvtx,cnvtx,nz,info)
-     ELSE
+       call nd_matrix_construct(p,nvtx,cnvtx,nz,info)
+     else
        p => cgrid%p
-       CALL nd_matrix_construct(p,nvtx,cnvtx,nz,info)
-     END IF
+       call nd_matrix_construct(p,nvtx,cnvtx,nz,info)
+     end if
      p%val(1:nz) = 0
 
      ! storage allocation for col. indices and values of restiction
      ! matrix R (cnvtx * nvtx)
-     IF ( .NOT. ASSOCIATED(cgrid%r)) THEN
-       ALLOCATE (cgrid%r)
+     if ( .not. associated(cgrid%r)) then
+       allocate (cgrid%r)
        r => cgrid%r
-       CALL nd_matrix_construct(r,cnvtx,nvtx,nz,info)
-     ELSE
+       call nd_matrix_construct(r,cnvtx,nvtx,nz,info)
+     else
        r => cgrid%r
-       CALL nd_matrix_construct(r,cnvtx,nvtx,nz,info)
-     END IF
+       call nd_matrix_construct(r,cnvtx,nvtx,nz,info)
+     end if
 
      r%val(1:nz) = 1
 
@@ -6168,96 +6168,96 @@ INNER:    DO inn = 1, n
 
      j = 1
      k = 1
-     DO i = 1, nvtx
-       IF (work(ptr_match+i)==i) THEN
+     do i = 1, nvtx
+       if (work(ptr_match+i)==i) then
          r%ptr(k) = j
          r%col(j) = i
          j = j + 1
          k = k + 1
-       ELSE
-         IF (work(ptr_match+i)>i) THEN
+       else
+         if (work(ptr_match+i)>i) then
            r%ptr(k) = j
            r%col(j) = i
            r%col(j+1) = work(ptr_match+i)
            j = j + 2
            k = k + 1
-         END IF
-       END IF
-     END DO
+         end if
+       end if
+     end do
 
 
      ! store prolongation matrix
 
      p%ptr(1) = 1
-     DO i = 1, nvtx
+     do i = 1, nvtx
        p%ptr(i+1) = p%ptr(i) + 1
-     END DO
+     end do
 
      p%val(1:nz) = 1
 
      j = 1
-     DO i = 1, nvtx
+     do i = 1, nvtx
        k = work(ptr_match+i)
-       IF (k==i) THEN
+       if (k==i) then
          p%col(p%ptr(i)) = j
          j = j + 1
-       ELSE
-         IF (k>i) THEN
+       else
+         if (k>i) then
            p%col(p%ptr(i)) = j
            p%col(p%ptr(k)) = j
            j = j + 1
-         END IF
-       END IF
-     END DO
+         end if
+       end if
+     end do
 
 
      ! size of coarse grid
      cgrid%size = cnvtx
 
-   END SUBROUTINE prolng_common_neigh
+   end subroutine prolng_common_neigh
 
    ! ********************************************
-   SUBROUTINE prolng_best(grid,lwork,work,info)
+   subroutine prolng_best(grid,lwork,work,info)
 
      ! calculate the prolongator for heavy-edge collapsing:
      ! match the vertices of the heaviest edges
 
-     INTEGER, INTENT (INOUT) :: info
+     integer, intent (inout) :: info
      ! input fine grid
-     TYPE (nd_multigrid), INTENT (INOUT) :: grid
-     INTEGER, INTENT (IN) :: lwork
-     INTEGER, INTENT (OUT), TARGET :: work(lwork)
+     type (nd_multigrid), intent (inout) :: grid
+     integer, intent (in) :: lwork
+     integer, intent (out), TARGET :: work(lwork)
 
      ! coarse grid based on the fine grid
-     TYPE (nd_multigrid), POINTER :: cgrid
+     type (nd_multigrid), pointer :: cgrid
 
      ! the fine grid row connectivity graph
-     TYPE (nd_matrix), POINTER :: graph
+     type (nd_matrix), pointer :: graph
 
      ! the coarse grid prolongator
-     TYPE (nd_matrix), POINTER :: p
+     type (nd_matrix), pointer :: p
 
      ! the coarse grid restrictor
-     TYPE (nd_matrix), POINTER :: r
+     type (nd_matrix), pointer :: r
 
      ! the number of fine and coarse grid vertices
-     INTEGER :: nvtx, cnvtx, cnvtx1
+     integer :: nvtx, cnvtx, cnvtx1
 
      ! working variables
-     INTEGER :: v, u, j, i, k
-     INTEGER :: nz
+     integer :: v, u, j, i, k
+     integer :: nz
 
      ! whether a vertex is matched already
-     INTEGER, PARAMETER :: unmatched = -1
+     integer, parameter :: unmatched = -1
 
      ! matching status of each vertex
-     INTEGER :: ptr_match, ptr_match1, ptr_flag, max_neigh, num, w
+     integer :: ptr_match, ptr_match1, ptr_flag, max_neigh, num, w
 
      ! maximum weight and index of edges connected to the current vertex
-     INTEGER :: maxwgt
-     INTEGER :: maxind
+     integer :: maxwgt
+     integer :: maxind
 
-     INTEGER, POINTER, DIMENSION (:) :: matching
+     integer, pointer, dimension (:) :: matching
 
      ! allocate the prolongation matrix pointers
      cgrid => grid%coarse
@@ -6265,7 +6265,7 @@ INNER:    DO inn = 1, n
 
      ! allocate the graph and matrix pointer and the mincut pointer
      ! so that everything is defined
-     IF ( .NOT. ASSOCIATED(cgrid%graph)) ALLOCATE (cgrid%graph)
+     if ( .not. associated(cgrid%graph)) allocate (cgrid%graph)
 
      nvtx = graph%n
 
@@ -6281,27 +6281,27 @@ INNER:    DO inn = 1, n
 
      ! loop over each vertex and match along the heaviest edge
      cnvtx = 0
-     DO i = 1, nvtx
+     do i = 1, nvtx
        v = i
        ! If already matched, next vertex please
-       IF (work(ptr_match+v)/=unmatched) CYCLE
-       maxwgt = -HUGE(0)
+       if (work(ptr_match+v)/=unmatched) cycle
+       maxwgt = -huge(0)
        ! in the case no match is found then match itself
        maxind = v
        ! Loop over entries in row v
-       DO j = graph%ptr(v), graph%ptr(v+1) - 1
+       do j = graph%ptr(v), graph%ptr(v+1) - 1
          ! u is col index of en entry in row v (so u is neighbor of v)
          u = graph%col(j)
          ! heavy edge matching
          ! if u is unmatched and value of the entry in col. u is greater
          ! than maxwgt, select u as the matching.
-         IF (work(ptr_match+u)==unmatched .AND. maxwgt<ABS(graph%val(j))) &
-             THEN
-           maxwgt = ABS(graph%val(j))
+         if (work(ptr_match+u)==unmatched .and. maxwgt<abs(graph%val(j))) &
+             then
+           maxwgt = abs(graph%val(j))
            maxind = u
-         END IF
-       END DO
-       ! NOTE: maxind .GE. v
+         end if
+       end do
+       ! notE: maxind .ge. v
        ! the neighbor with heaviest weight
        work(ptr_match+v) = maxind
        ! mark maxind as having been matched
@@ -6311,7 +6311,7 @@ INNER:    DO inn = 1, n
        ! construct the prolongation matrix: find vertex v and maxind is
        ! linked
        ! with the coarse grid vertex cnvtx
-     END DO
+     end do
      nz = nvtx
 
      ! -----------------------------------------------------------------
@@ -6329,38 +6329,38 @@ INNER:    DO inn = 1, n
      ! common
      cnvtx1 = 0
      nz = 0
-     DO i = 1, nvtx
+     do i = 1, nvtx
        v = i
        ! If already matched, next vertex please
-       IF (work(ptr_match1+v)/=unmatched) CYCLE
+       if (work(ptr_match1+v)/=unmatched) cycle
        ! access the col. indices of row v
 
        ! in the case no match is found then match itself
        maxind = v
        ! Loop over entries in row v and set flag for each entry
        work(ptr_flag+v) = i
-       DO j = grid%graph%ptr(v), grid%graph%ptr(v+1) - 1
+       do j = grid%graph%ptr(v), grid%graph%ptr(v+1) - 1
          ! u is col index of en entry in row v (so u is neighbor of v)
          u = grid%graph%col(j)
          work(ptr_flag+u) = i
-       END DO
+       end do
        ! For each unmatched neighbour of v, count the number of
        ! neighbours it has in common with v
        max_neigh = 0
-       DO j = grid%graph%ptr(v), grid%graph%ptr(v+1) - 1
+       do j = grid%graph%ptr(v), grid%graph%ptr(v+1) - 1
          u = grid%graph%col(j)
          ! cycle is u is already matched
-         IF (work(ptr_match1+u)/=unmatched) CYCLE
+         if (work(ptr_match1+u)/=unmatched) cycle
          num = 0
-         DO k = grid%graph%ptr(u), grid%graph%ptr(u+1) - 1
+         do k = grid%graph%ptr(u), grid%graph%ptr(u+1) - 1
            w = grid%graph%col(k)
-           IF (work(ptr_flag+w)==i) num = num + 1
-         END DO
-         IF (num>max_neigh) THEN
+           if (work(ptr_flag+w)==i) num = num + 1
+         end do
+         if (num>max_neigh) then
            max_neigh = num
            maxind = u
-         END IF
-       END DO
+         end if
+       end do
 
        ! the neighbor with largest number of neighbours in common with v
        work(ptr_match1+v) = maxind
@@ -6372,45 +6372,45 @@ INNER:    DO inn = 1, n
        ! linked
        ! with the coarse grid vertex cnvtx1
        nz = nz + 1
-       IF (maxind/=v) THEN
+       if (maxind/=v) then
          nz = nz + 1
-       END IF
-     END DO
+       end if
+     end do
 
      ! --------------------------------------------------------------------
      ! -
-     IF (cnvtx<=cnvtx1) THEN
+     if (cnvtx<=cnvtx1) then
        ! use heavy-edge matching
        matching => work(ptr_match+1:ptr_match+nvtx)
-     ELSE
+     else
        ! use common neighbours matching
        matching => work(ptr_match1+1:ptr_match1+nvtx)
        cnvtx = cnvtx1
-     END IF
+     end if
 
 
      ! storage allocation for col. indices and values of prolongation
      ! matrix P (nvtx * cnvtx)
-     IF ( .NOT. ASSOCIATED(cgrid%p)) THEN
-       ALLOCATE (cgrid%p)
+     if ( .not. associated(cgrid%p)) then
+       allocate (cgrid%p)
        p => cgrid%p
-       CALL nd_matrix_construct(p,nvtx,cnvtx,nz,info)
-     ELSE
+       call nd_matrix_construct(p,nvtx,cnvtx,nz,info)
+     else
        p => cgrid%p
-       CALL nd_matrix_construct(p,nvtx,cnvtx,nz,info)
-     END IF
+       call nd_matrix_construct(p,nvtx,cnvtx,nz,info)
+     end if
 
 
      ! storage allocation for col. indices and values of restiction
      ! matrix R (cnvtx * nvtx)
-     IF ( .NOT. ASSOCIATED(cgrid%r)) THEN
-       ALLOCATE (cgrid%r)
+     if ( .not. associated(cgrid%r)) then
+       allocate (cgrid%r)
        r => cgrid%r
-       CALL nd_matrix_construct(r,cnvtx,nvtx,nz,info)
-     ELSE
+       call nd_matrix_construct(r,cnvtx,nvtx,nz,info)
+     else
        r => cgrid%r
-       CALL nd_matrix_construct(r,cnvtx,nvtx,nz,info)
-     END IF
+       call nd_matrix_construct(r,cnvtx,nvtx,nz,info)
+     end if
 
      r%val(1:nz) = 1
 
@@ -6419,245 +6419,245 @@ INNER:    DO inn = 1, n
 
      j = 1
      k = 1
-     DO i = 1, nvtx
-       IF (matching(i)==i) THEN
+     do i = 1, nvtx
+       if (matching(i)==i) then
          r%ptr(k) = j
          r%col(j) = i
          j = j + 1
          k = k + 1
-       ELSE
-         IF (matching(i)>i) THEN
+       else
+         if (matching(i)>i) then
            r%ptr(k) = j
            r%col(j) = i
            r%col(j+1) = matching(i)
            j = j + 2
            k = k + 1
-         END IF
-       END IF
-     END DO
+         end if
+       end if
+     end do
 
      ! store prolongation matrix
 
      p%ptr(1) = 1
-     DO i = 1, nvtx
+     do i = 1, nvtx
        p%ptr(i+1) = p%ptr(i) + 1
-     END DO
+     end do
 
      p%val(1:nz) = 1
 
      j = 1
-     DO i = 1, nvtx
+     do i = 1, nvtx
        k = matching(i)
-       IF (k==i) THEN
+       if (k==i) then
          p%col(p%ptr(i)) = j
          j = j + 1
-       ELSE
-         IF (k>i) THEN
+       else
+         if (k>i) then
            p%col(p%ptr(i)) = j
            p%col(p%ptr(k)) = j
            j = j + 1
-         END IF
-       END IF
-     END DO
+         end if
+       end if
+     end do
 
      ! size of coarse grid
      cgrid%size = cnvtx
-     NULLIFY (matching)
+     nullify (matching)
 
-   END SUBROUTINE prolng_best
+   end subroutine prolng_best
 
 
    ! *******************************************************************
-   SUBROUTINE level_print(mp,title1,level,title2,res)
+   subroutine level_print(mp,title1,level,title2,res)
 
-     CHARACTER (len=*), INTENT (IN) :: title1
-     INTEGER, INTENT (IN) :: mp, level
-     REAL (wp), OPTIONAL, INTENT (IN) :: res
-     CHARACTER (len=*), OPTIONAL, INTENT (IN) :: title2
-     INTEGER :: char_len1, char_len2
+     character (len=*), intent (in) :: title1
+     integer, intent (in) :: mp, level
+     real (wp), optional, intent (in) :: res
+     character (len=*), optional, intent (in) :: title2
+     integer :: char_len1, char_len2
 
-     char_len1 = LEN_TRIM(title1)
+     char_len1 = len_trim(title1)
 
-     IF (PRESENT(res) .AND. PRESENT(title2)) THEN
-       char_len2 = LEN_TRIM(title2)
-       WRITE (mp,'(a,i4,a,g14.3)') title1, level, title2, res
-     ELSE
-       WRITE (mp,'(a,i4)') title1, level
-     END IF
+     if (present(res) .and. present(title2)) then
+       char_len2 = len_trim(title2)
+       write (mp,'(a,i4,a,g14.3)') title1, level, title2, res
+     else
+       write (mp,'(a,i4)') title1, level
+     end if
 
-   END SUBROUTINE level_print
+   end subroutine level_print
 
 
 
    ! *************************************************
-   SUBROUTINE galerkin_graph(matrix,p,r,cmatrix,info,lwork,work)
+   subroutine galerkin_graph(matrix,p,r,cmatrix,info,lwork,work)
 
      ! Given matrix on fine grid and a prolongation operator p,
      ! find the coarse matrix R*A*P
 
      ! matrix: fine grid matrix
-     TYPE (nd_matrix), INTENT (IN) :: matrix
+     type (nd_matrix), intent (in) :: matrix
      ! p: prolongation operator
-     TYPE (nd_matrix), INTENT (IN) :: p
+     type (nd_matrix), intent (in) :: p
      ! r: restriction operator
-     TYPE (nd_matrix), INTENT (IN) :: r
+     type (nd_matrix), intent (in) :: r
      ! cmatrix: coarse grid matrix
-     TYPE (nd_matrix), INTENT (INOUT) :: cmatrix
-     INTEGER, INTENT (IN) :: lwork
-     INTEGER, INTENT (OUT) :: work(lwork)
+     type (nd_matrix), intent (inout) :: cmatrix
+     integer, intent (in) :: lwork
+     integer, intent (out) :: work(lwork)
 
      ! nvtx,cnvtx: size of fine and coarse grid
-     INTEGER :: nvtx, cnvtx
-     INTEGER :: nz
+     integer :: nvtx, cnvtx
+     integer :: nz
 
-     INTEGER, INTENT (INOUT) :: info
+     integer, intent (inout) :: info
 
-     ! CALL mc65_matrix_transpose(p,r,info65)
-     ! IF (info65<0) THEN
+     ! call mc65_matrix_transpose(p,r,info65)
+     ! if (info65<0) then
      ! info = info65
-     ! RETURN
-     ! END IF
+     ! return
+     ! end if
      nvtx = matrix%n
      cnvtx = p%n
 
      ! get the size of the coarse matrix first
-     CALL galerkin_graph_rap_size(nvtx,cnvtx,nz,p%ptr(nvtx+1)-1,p%col, &
+     call galerkin_graph_rap_size(nvtx,cnvtx,nz,p%ptr(nvtx+1)-1,p%col, &
        p%ptr,matrix%ptr(nvtx+1)-1,matrix%col,matrix%ptr,r%ptr(cnvtx+1)-1, &
        r%col,r%ptr,lwork,work(1:lwork))
-     IF (info<0) RETURN
+     if (info<0) return
 
-     CALL nd_matrix_construct(cmatrix,cnvtx,cnvtx,nz,info)
-     IF (info<0) THEN
-       RETURN
-     END IF
+     call nd_matrix_construct(cmatrix,cnvtx,cnvtx,nz,info)
+     if (info<0) then
+       return
+     end if
 
-     CALL galerkin_graph_rap(nvtx,cnvtx,p%ptr(nvtx+1)-1,p%val,p%col,p%ptr, &
+     call galerkin_graph_rap(nvtx,cnvtx,p%ptr(nvtx+1)-1,p%val,p%col,p%ptr, &
        matrix%ptr(nvtx+1)-1,matrix%val,matrix%col,matrix%ptr, &
        r%ptr(cnvtx+1)-1,r%val,r%col,r%ptr,nz,cmatrix%val,cmatrix%col, &
        cmatrix%ptr,lwork,work(1:lwork))
-     IF (info<0) RETURN
+     if (info<0) return
 
-   END SUBROUTINE galerkin_graph
+   end subroutine galerkin_graph
 
    ! *************************************************
 
-   SUBROUTINE galerkin_graph_rap_size(nvtx,cnvtx,nz,nzp,pcol,pptr,nzaa, &
+   subroutine galerkin_graph_rap_size(nvtx,cnvtx,nz,nzp,pcol,pptr,nzaa, &
        acol,aptr,nzr,rcol,rptr,lwork,work)
      ! get the number of nonzeros in R*A*P
      ! nvtx: size of aa matrix
      ! cnvtx: size of ca matrix
-     INTEGER, INTENT (IN) :: nvtx, cnvtx
+     integer, intent (in) :: nvtx, cnvtx
      ! nz: number of nonzeros in R*A*P
-     INTEGER, INTENT (OUT) :: nz
+     integer, intent (out) :: nz
 
      ! P: matrix
-     INTEGER, INTENT (IN) :: nzp
-     INTEGER, INTENT (IN), DIMENSION (nzp) :: pcol
-     INTEGER, INTENT (IN), DIMENSION (nvtx+1) :: pptr
+     integer, intent (in) :: nzp
+     integer, intent (in), dimension (nzp) :: pcol
+     integer, intent (in), dimension (nvtx+1) :: pptr
      ! aa: matrix
-     INTEGER, INTENT (IN) :: nzaa
-     INTEGER, INTENT (IN), DIMENSION (nzaa) :: acol
-     INTEGER, INTENT (IN), DIMENSION (nvtx+1) :: aptr
+     integer, intent (in) :: nzaa
+     integer, intent (in), dimension (nzaa) :: acol
+     integer, intent (in), dimension (nvtx+1) :: aptr
      ! R: matrix
-     INTEGER, INTENT (IN) :: nzr
-     INTEGER, INTENT (IN), DIMENSION (nzr) :: rcol
-     INTEGER, INTENT (IN), DIMENSION (cnvtx+1) :: rptr
+     integer, intent (in) :: nzr
+     integer, intent (in), dimension (nzr) :: rcol
+     integer, intent (in), dimension (cnvtx+1) :: rptr
 
-     INTEGER, INTENT (IN) :: lwork
-     INTEGER, INTENT (OUT) :: work(lwork)
+     integer, intent (in) :: lwork
+     integer, intent (out) :: work(lwork)
 
      ! mask: masking array to see if an entry has been seen before
-     INTEGER :: ptr_mask
+     integer :: ptr_mask
      ! i,j,k: loop index
-     INTEGER :: i, j, k
+     integer :: i, j, k
      ! nz: number of nonzeros so far in ca
-     INTEGER :: nz1
+     integer :: nz1
      ! various neighbors
-     INTEGER :: neigh, neighneigh
+     integer :: neigh, neighneigh
 
      ! col: column index of a row of r*matrix
-     INTEGER :: ptr_col
+     integer :: ptr_col
 
      ptr_mask = 0
      ptr_col = ptr_mask + nvtx
      work(ptr_mask+1:ptr_mask+nvtx) = 0
      nz = 0
      ! loop over coarse grid points
-     DO i = 1, cnvtx
+     do i = 1, cnvtx
        ! first form row i of (r*matrix)
        nz1 = 0
        ! for each vertex D that restricts to C (including itself).
-       DO j = rptr(i), rptr(i+1) - 1
+       do j = rptr(i), rptr(i+1) - 1
          neigh = rcol(j)
          ! find D's neighbor
-         DO k = aptr(neigh), aptr(neigh+1) - 1
+         do k = aptr(neigh), aptr(neigh+1) - 1
            neighneigh = acol(k)
-           IF (work(ptr_mask+neighneigh)/=i) THEN
+           if (work(ptr_mask+neighneigh)/=i) then
              nz1 = nz1 + 1
              work(ptr_col+nz1) = neighneigh
              work(ptr_mask+neighneigh) = i
-           END IF
-         END DO
-       END DO
+           end if
+         end do
+       end do
        ! form row i of (r*matrix)*p
-       DO j = 1, nz1
+       do j = 1, nz1
          neigh = work(ptr_col+j)
-         DO k = pptr(neigh), pptr(neigh+1) - 1
+         do k = pptr(neigh), pptr(neigh+1) - 1
            neighneigh = pcol(k)
-           IF (work(ptr_mask+neighneigh)/=-i .AND. neighneigh/=i) THEN
+           if (work(ptr_mask+neighneigh)/=-i .and. neighneigh/=i) then
              nz = nz + 1
              work(ptr_mask+neighneigh) = -i
-           END IF
-         END DO
-       END DO
-     END DO
+           end if
+         end do
+       end do
+     end do
 
-   END SUBROUTINE galerkin_graph_rap_size
+   end subroutine galerkin_graph_rap_size
    ! ******************************************************
-   SUBROUTINE galerkin_graph_rap(nvtx,cnvtx,nzp,pa,pcol,pptr,nzaa,aa,acol, &
+   subroutine galerkin_graph_rap(nvtx,cnvtx,nzp,pa,pcol,pptr,nzaa,aa,acol, &
        aptr,nzr,ra,rcol,rptr,nzca,ca,ccol,cptr,lwork,work)
      ! multiply R*A*P to get CA
      ! nvtx: size of aa matrix
      ! cnvtx: size of ca matrix
-     INTEGER, INTENT (IN) :: nvtx, cnvtx
+     integer, intent (in) :: nvtx, cnvtx
      ! p: matrix
-     INTEGER, INTENT (IN) :: nzp
-     INTEGER, INTENT (IN), DIMENSION (nzp) :: pa
-     INTEGER, INTENT (IN), DIMENSION (nzp) :: pcol
-     INTEGER, INTENT (IN), DIMENSION (nvtx+1) :: pptr
+     integer, intent (in) :: nzp
+     integer, intent (in), dimension (nzp) :: pa
+     integer, intent (in), dimension (nzp) :: pcol
+     integer, intent (in), dimension (nvtx+1) :: pptr
      ! aa: matrix
-     INTEGER, INTENT (IN) :: nzaa
-     INTEGER, INTENT (IN), DIMENSION (:) :: aa
-     INTEGER, INTENT (IN), DIMENSION (nzaa) :: acol
-     INTEGER, INTENT (IN), DIMENSION (:) :: aptr
+     integer, intent (in) :: nzaa
+     integer, intent (in), dimension (:) :: aa
+     integer, intent (in), dimension (nzaa) :: acol
+     integer, intent (in), dimension (:) :: aptr
      ! r: matrix
-     INTEGER, INTENT (IN) :: nzr
-     INTEGER, INTENT (IN), DIMENSION (nzr) :: ra
-     INTEGER, INTENT (IN), DIMENSION (nzr) :: rcol
-     INTEGER, INTENT (IN), DIMENSION (cnvtx+1) :: rptr
+     integer, intent (in) :: nzr
+     integer, intent (in), dimension (nzr) :: ra
+     integer, intent (in), dimension (nzr) :: rcol
+     integer, intent (in), dimension (cnvtx+1) :: rptr
      ! ca: matrix
-     INTEGER, INTENT (IN) :: nzca
-     INTEGER, INTENT (INOUT), DIMENSION (nzca) :: ca
-     INTEGER, INTENT (INOUT), DIMENSION (nzca) :: ccol
-     INTEGER, INTENT (INOUT), DIMENSION (cnvtx+1) :: cptr
+     integer, intent (in) :: nzca
+     integer, intent (inout), dimension (nzca) :: ca
+     integer, intent (inout), dimension (nzca) :: ccol
+     integer, intent (inout), dimension (cnvtx+1) :: cptr
 
-     INTEGER, INTENT (IN) :: lwork
-     INTEGER, INTENT (OUT) :: work(lwork)
+     integer, intent (in) :: lwork
+     integer, intent (out) :: work(lwork)
 
 
      ! mask: masking array to see if an entry has been seen before
-     INTEGER :: ptr_mask
+     integer :: ptr_mask
      ! i,j,k,l: loop index
-     INTEGER :: i, j, k
+     integer :: i, j, k
      ! nz: number of nonzeros so far in ca
-     INTEGER :: nz, nzz, nz1
+     integer :: nz, nzz, nz1
      ! various neighbors
-     INTEGER :: neigh, neighneigh
+     integer :: neigh, neighneigh
      ! r_ij: (i,j) element of r
-     INTEGER :: r_ij
+     integer :: r_ij
      ! col: column index of a row of r*matrix
      ! a: values of a row of r*matrix
-     INTEGER :: ptr_col, ptr_a
+     integer :: ptr_col, ptr_a
 
      ptr_mask = 0
      ptr_col = ptr_mask + nvtx
@@ -6667,112 +6667,112 @@ INNER:    DO inn = 1, n
      work(ptr_mask+1:ptr_mask+nvtx) = 0
      nz = 0
      ! loop over every coarse grid point
-     DO i = 1, cnvtx
+     do i = 1, cnvtx
        ! first form row i of (r*matrix)
        nz1 = 0
        ! foreach each vertex D that restricts to C (including itself).
-       DO j = rptr(i), rptr(i+1) - 1
+       do j = rptr(i), rptr(i+1) - 1
          neigh = rcol(j)
          r_ij = ra(j)
          ! find D's neighbor
-         DO k = aptr(neigh), aptr(neigh+1) - 1
+         do k = aptr(neigh), aptr(neigh+1) - 1
            neighneigh = acol(k)
            nzz = work(ptr_mask+neighneigh)
-           IF (nzz==0) THEN
+           if (nzz==0) then
              nz1 = nz1 + 1
              work(ptr_col+nz1) = neighneigh
              work(ptr_a+nz1) = r_ij*aa(k)
              work(ptr_mask+neighneigh) = nz1
-           ELSE
+           else
              work(ptr_a+nzz) = work(ptr_a+nzz) + r_ij*aa(k)
-           END IF
-         END DO
-       END DO
-       DO j = 1, nz1
+           end if
+         end do
+       end do
+       do j = 1, nz1
          work(ptr_mask+work(ptr_col+j)) = 0
-       END DO
+       end do
 
        ! form row i of (r*matrix)*p
-       DO j = 1, nz1
+       do j = 1, nz1
          neigh = work(ptr_col+j)
          r_ij = work(ptr_a+j)
-         DO k = pptr(neigh), pptr(neigh+1) - 1
+         do k = pptr(neigh), pptr(neigh+1) - 1
            neighneigh = pcol(k)
-           IF (neighneigh==i) CYCLE
+           if (neighneigh==i) cycle
            nzz = work(ptr_mask+neighneigh)
-           IF (nzz==0) THEN
+           if (nzz==0) then
              nz = nz + 1
              work(ptr_mask+neighneigh) = nz
              ca(nz) = r_ij*pa(k)
              ccol(nz) = neighneigh
-           ELSE
+           else
              ca(nzz) = ca(nzz) + r_ij*pa(k)
-           END IF
-         END DO
-       END DO
+           end if
+         end do
+       end do
 
-       DO j = cptr(i), nz
+       do j = cptr(i), nz
          work(ptr_mask+ccol(j)) = 0
-       END DO
+       end do
        cptr(i+1) = nz + 1
-     END DO
+     end do
 
 
-   END SUBROUTINE galerkin_graph_rap
+   end subroutine galerkin_graph_rap
 
    ! ---------------------------------------------------
    ! nd_refine_trim
    ! ---------------------------------------------------
    ! Given a partition, trim the partition to make it minimal
-   SUBROUTINE nd_refine_trim(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
+   subroutine nd_refine_trim(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
        a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep,partition,work,control)
-     INTEGER, INTENT (IN) :: a_n ! order of matrix
-     INTEGER, INTENT (IN) :: a_ne ! number of entries in matrix
-     INTEGER, INTENT (IN) :: a_ptr(a_n) ! On input a_ptr(i) contains
+     integer, intent (in) :: a_n ! order of matrix
+     integer, intent (in) :: a_ne ! number of entries in matrix
+     integer, intent (in) :: a_ptr(a_n) ! On input a_ptr(i) contains
      ! position in a_row that entries for column i start.
-     INTEGER, INTENT (IN) :: a_row(a_ne) ! On input a_row contains row
+     integer, intent (in) :: a_row(a_ne) ! On input a_row contains row
      ! indices of the non-zero rows. Diagonal entries have been removed
      ! and the matrix expanded.
-     INTEGER, INTENT (IN) :: a_weight(a_n) ! On input a_weight(i) contains
+     integer, intent (in) :: a_weight(a_n) ! On input a_weight(i) contains
      ! the weight of column i
-     INTEGER, INTENT (IN) :: sumweight ! Sum of weights in a_weight
-     INTEGER, INTENT (INOUT) :: a_n1 ! Size of partition 1
-     INTEGER, INTENT (INOUT) :: a_n2 ! Size of partition 2
-     INTEGER, INTENT (INOUT) :: a_weight_1, a_weight_2, a_weight_sep ! Weig
+     integer, intent (in) :: sumweight ! Sum of weights in a_weight
+     integer, intent (inout) :: a_n1 ! Size of partition 1
+     integer, intent (inout) :: a_n2 ! Size of partition 2
+     integer, intent (inout) :: a_weight_1, a_weight_2, a_weight_sep ! Weig
      ! hted
      ! size of partitions and separator
-     INTEGER, INTENT (INOUT) :: partition(a_n) ! First a_n1 entries contain
+     integer, intent (inout) :: partition(a_n) ! First a_n1 entries contain
      ! list of (local) indices in partition 1; next a_n2 entries
      ! contain list of (local) entries in partition 2; entries in
      ! separator are listed at the end. This is updated to the new
      ! partition
-     INTEGER, INTENT (OUT) :: work(3*a_n) ! Work array
-     TYPE (nd_options), INTENT (IN) :: control
+     integer, intent (out) :: work(3*a_n) ! Work array
+     type (nd_options), intent (in) :: control
 
      ! ---------------------------------------------
      ! Local variables
      ! ---------------------------------------------
-     INTEGER :: work_part, work_next, work_prev, a_n1_orig, a_n2_orig
-     INTEGER :: head1, head2, tail1, tail2
-     INTEGER, PARAMETER :: sep1 = -1
-     INTEGER, PARAMETER :: sep2 = -2
-     INTEGER, PARAMETER :: sep3 = -3
-     INTEGER :: i, j, k, l, m, p, q, w1, w2
-     LOGICAL :: next1, next2, imbal
-     REAL (wp) :: t1, t2
-     REAL (wp) :: ratio
+     integer :: work_part, work_next, work_prev, a_n1_orig, a_n2_orig
+     integer :: head1, head2, tail1, tail2
+     integer, parameter :: sep1 = -1
+     integer, parameter :: sep2 = -2
+     integer, parameter :: sep3 = -3
+     integer :: i, j, k, l, m, p, q, w1, w2
+     logical :: next1, next2, imbal
+     real (wp) :: t1, t2
+     real (wp) :: ratio
 
-     ratio = MAX(REAL(1.0,wp),control%balance)
-     IF (ratio>REAL(sumweight-2)) THEN
-       imbal = .FALSE.
-     ELSE
-       imbal = .TRUE.
-     END IF
+     ratio = max(real(1.0,wp),control%balance)
+     if (ratio>real(sumweight-2)) then
+       imbal = .false.
+     else
+       imbal = .true.
+     end if
 
      ! Set work(work_part+1:work_part+a_n) to hold flags to indicate what
      ! part of the partition the nodes are in
      work_part = 0
-     CALL nd_convert_partition_flags(a_n,a_n1,a_n2,partition, &
+     call nd_convert_partition_flags(a_n,a_n1,a_n2,partition, &
        ND_PART1_FLAG,ND_PART2_FLAG,ND_SEP_FLAG, &
        work(work_part+1:work_part+a_n))
 
@@ -6787,80 +6787,80 @@ INNER:    DO inn = 1, n
      head2 = 0
      tail1 = 0
      tail2 = 0
-     DO i = a_n1 + a_n2 + 1, a_n
-       next1 = .FALSE.
-       next2 = .FALSE.
+     do i = a_n1 + a_n2 + 1, a_n
+       next1 = .false.
+       next2 = .false.
        j = partition(i)
-       IF (j<a_n) THEN
+       if (j<a_n) then
          k = a_ptr(j+1) - 1
-       ELSE
+       else
          k = a_ne
-       END IF
-       DO l = a_ptr(j), k
+       end if
+       do l = a_ptr(j), k
          m = a_row(l)
-         IF (work(work_part+m)==ND_PART1_FLAG) THEN
-           next1 = .TRUE.
-         ELSE IF (work(work_part+m)==ND_PART2_FLAG) THEN
-           next2 = .TRUE.
-         END IF
-       END DO
-       IF ((next1 .AND. .NOT. next2) .OR. ( .NOT. next1 .AND. .NOT. next2 &
-           .AND. a_n1==0)) THEN
+         if (work(work_part+m)==ND_PART1_FLAG) then
+           next1 = .true.
+         else if (work(work_part+m)==ND_PART2_FLAG) then
+           next2 = .true.
+         end if
+       end do
+       if ((next1 .and. .not. next2) .or. ( .not. next1 .and. .not. next2 &
+           .and. a_n1==0)) then
          ! Add to list 1
-         IF (head1==0) THEN
+         if (head1==0) then
            head1 = j
            work(work_next+j) = 0
            work(work_prev+j) = 0
            tail1 = j
-         ELSE
+         else
            work(work_next+tail1) = j
            work(work_prev+j) = tail1
            work(work_next+j) = 0
            tail1 = j
-         END IF
+         end if
          work(work_part+j) = sep1
-       ELSE IF ((next2 .AND. .NOT. next1) .OR. ( .NOT. next1 .AND. .NOT. &
-           next2 .AND. a_n2==0)) THEN
+       else if ((next2 .and. .not. next1) .or. ( .not. next1 .and. .not. &
+           next2 .and. a_n2==0)) then
          ! Add to list 2
-         IF (head2==0) THEN
+         if (head2==0) then
            head2 = j
            work(work_next+j) = 0
            work(work_prev+j) = 0
            tail2 = j
-         ELSE
+         else
            work(work_next+tail2) = j
            work(work_prev+j) = tail2
            work(work_next+j) = 0
            tail2 = j
-         END IF
+         end if
          work(work_part+j) = sep2
-       ELSE IF (next1 .AND. next2) THEN
+       else if (next1 .and. next2) then
          work(work_part+j) = sep3
-       ELSE
-         CONTINUE
-       END IF
-     END DO
+       else
+         continue
+       end if
+     end do
 
-     DO WHILE (head1>0 .OR. head2>0)
-       IF (head1>0 .AND. head2>0) THEN
+     do while (head1>0 .or. head2>0)
+       if (head1>0 .and. head2>0) then
          w1 = a_weight(head1)
          w2 = a_weight(head2)
-         CALL cost_function(a_weight_1+w1,a_weight_2,a_weight_sep-w1, &
+         call cost_function(a_weight_1+w1,a_weight_2,a_weight_sep-w1, &
            sumweight,ratio,imbal,control%cost_function,t1)
-         CALL cost_function(a_weight_1,a_weight_2+w2,a_weight_sep-w2, &
+         call cost_function(a_weight_1,a_weight_2+w2,a_weight_sep-w2, &
            sumweight,ratio,imbal,control%cost_function,t2)
 
-         IF (t1<t2) THEN
-           GO TO 10
-         ELSE
-           GO TO 20
-         END IF
+         if (t1<t2) then
+           go to 10
+         else
+           go to 20
+         end if
 
-       ELSE IF (head1>0) THEN
-         GO TO 10
-       ELSE
-         GO TO 20
-       END IF
+       else if (head1>0) then
+         go to 10
+       else
+         go to 20
+       end if
 
 
        ! move entry from separator to partition1
@@ -6872,54 +6872,54 @@ INNER:    DO inn = 1, n
        a_weight_1 = a_weight_1 + a_weight(i)
        a_weight_sep = a_weight_sep - a_weight(i)
        ! update list
-       IF (i<a_n) THEN
+       if (i<a_n) then
          k = a_ptr(i+1) - 1
-       ELSE
+       else
          k = a_ne
-       END IF
-       DO l = a_ptr(i), k
+       end if
+       do l = a_ptr(i), k
          j = a_row(l)
          m = work(work_part+j)
-         SELECT CASE (m)
-         CASE (ND_SEP_FLAG)
+         select case (m)
+         case (ND_SEP_FLAG)
            ! Add to list 1
            work(work_next+tail1) = j
            work(work_prev+j) = tail1
            work(work_next+j) = 0
            tail1 = j
            work(work_part+j) = sep1
-           IF (head1==0) THEN
+           if (head1==0) then
              head1 = j
-           END IF
+           end if
 
-         CASE (sep2)
+         case (sep2)
            ! Remove from list 2
            p = work(work_prev+j)
            q = work(work_next+j)
 
-           IF (j/=head2 .AND. j/=tail2) THEN
+           if (j/=head2 .and. j/=tail2) then
              work(work_prev+q) = p
              work(work_next+p) = q
              work(work_prev+j) = 0
              work(work_next+j) = 0
-           ELSE IF (j/=head2 .AND. j==tail2) THEN
+           else if (j/=head2 .and. j==tail2) then
              work(work_next+p) = 0
              work(work_prev+j) = 0
              tail2 = p
-           ELSE IF (j/=tail2 .AND. j==head2) THEN
+           else if (j/=tail2 .and. j==head2) then
              work(work_prev+q) = p
              work(work_next+j) = 0
              head2 = q
-           ELSE
+           else
              head2 = 0
              tail2 = 0
 
-           END IF
+           end if
            work(work_part+j) = sep3
 
-         END SELECT
-       END DO
-       GO TO 30
+         end select
+       end do
+       go to 30
 
        ! move entry from separator to partition 2
 20        i = head2
@@ -6930,65 +6930,65 @@ INNER:    DO inn = 1, n
        a_weight_2 = a_weight_2 + a_weight(i)
        a_weight_sep = a_weight_sep - a_weight(i)
        ! update list
-       IF (i<a_n) THEN
+       if (i<a_n) then
          k = a_ptr(i+1) - 1
-       ELSE
+       else
          k = a_ne
-       END IF
-       DO l = a_ptr(i), k
+       end if
+       do l = a_ptr(i), k
          j = a_row(l)
          m = work(work_part+j)
-         SELECT CASE (m)
-         CASE (ND_SEP_FLAG)
+         select case (m)
+         case (ND_SEP_FLAG)
            ! Add to list 2
            work(work_next+tail2) = j
            work(work_prev+j) = tail2
            work(work_next+j) = 0
            tail2 = j
            work(work_part+j) = sep2
-           IF (head2==0) THEN
+           if (head2==0) then
              head2 = j
-           END IF
+           end if
 
-         CASE (sep1)
+         case (sep1)
            ! Remove from list 1
            p = work(work_prev+j)
            q = work(work_next+j)
 
-           IF (j/=head1 .AND. j/=tail1) THEN
+           if (j/=head1 .and. j/=tail1) then
              work(work_prev+q) = p
              work(work_next+p) = q
              work(work_prev+j) = 0
              work(work_next+j) = 0
-           ELSE IF (j/=head1 .AND. j==tail1) THEN
+           else if (j/=head1 .and. j==tail1) then
              work(work_next+p) = 0
              work(work_prev+j) = 0
              tail1 = p
-           ELSE IF (j/=tail1 .AND. j==head1) THEN
+           else if (j/=tail1 .and. j==head1) then
              work(work_prev+q) = p
              work(work_next+j) = 0
              head1 = q
-           ELSE
+           else
              head1 = 0
              tail1 = 0
-           END IF
+           end if
            work(work_part+j) = sep3
-         END SELECT
-       END DO
+         end select
+       end do
 
-30        CONTINUE
+30        continue
 
-     END DO
+     end do
 
      ! Check for any entries in separator that are still inside boundary
      ! and
      ! move into a partition
      work(work_next+a_n1_orig+a_n2_orig+1:work_next+a_n) = 0
-     DO i = a_n1_orig + a_n2_orig + 1, a_n
+     do i = a_n1_orig + a_n2_orig + 1, a_n
        j = partition(i)
-       IF (work(work_part+j)==ND_SEP_FLAG) THEN
+       if (work(work_part+j)==ND_SEP_FLAG) then
          ! j is not on the boundary
-         IF (a_weight_1<a_weight_2) THEN
+         if (a_weight_1<a_weight_2) then
            ! Move j into partition 1
            work(work_part+j) = ND_PART1_FLAG
            a_n1 = a_n1 + 1
@@ -6997,35 +6997,35 @@ INNER:    DO inn = 1, n
 
            head1 = j
            tail1 = j
-           DO WHILE (head1>0)
+           do while (head1>0)
              q = head1
-             IF (q<a_n) THEN
+             if (q<a_n) then
                k = a_ptr(q+1) - 1
-             ELSE
+             else
                k = a_ne
-             END IF
-             DO l = a_ptr(q), k
+             end if
+             do l = a_ptr(q), k
                p = a_row(l)
-               IF (work(work_part+p)==ND_SEP_FLAG) THEN
+               if (work(work_part+p)==ND_SEP_FLAG) then
                  work(work_part+p) = ND_PART1_FLAG
                  a_n1 = a_n1 + 1
                  a_weight_1 = a_weight_1 + a_weight(p)
                  a_weight_sep = a_weight_sep - a_weight(p)
                  work(work_next+tail1) = p
                  tail1 = p
-               END IF
-             END DO
-             IF (head1==tail1) THEN
+               end if
+             end do
+             if (head1==tail1) then
                head1 = 0
                tail1 = 0
-             ELSE
+             else
                head1 = work(work_next+q)
                work(work_next+q) = 0
-             END IF
+             end if
 
-           END DO
+           end do
 
-         ELSE
+         else
            ! Move j into partition 2
            work(work_part+j) = ND_PART2_FLAG
            a_n2 = a_n2 + 1
@@ -7034,40 +7034,40 @@ INNER:    DO inn = 1, n
            head2 = j
            tail2 = j
 
-           DO WHILE (head2>0)
+           do while (head2>0)
              q = head2
-             IF (q<a_n) THEN
+             if (q<a_n) then
                k = a_ptr(q+1) - 1
-             ELSE
+             else
                k = a_ne
-             END IF
-             DO l = a_ptr(q), k
+             end if
+             do l = a_ptr(q), k
                p = a_row(l)
-               IF (work(work_part+p)==ND_SEP_FLAG) THEN
+               if (work(work_part+p)==ND_SEP_FLAG) then
                  work(work_part+p) = ND_PART2_FLAG
                  a_n2 = a_n2 + 1
                  a_weight_2 = a_weight_2 + a_weight(p)
                  a_weight_sep = a_weight_sep - a_weight(p)
                  work(work_next+tail2) = p
                  tail2 = p
-               END IF
-             END DO
-             IF (head2==tail2) THEN
+               end if
+             end do
+             if (head2==tail2) then
                head2 = 0
                tail2 = 0
-             ELSE
+             else
                head2 = work(work_next+q)
                work(work_next+q) = 0
-             END IF
-           END DO
-         END IF
-       END IF
-     END DO
+             end if
+           end do
+         end if
+       end if
+     end do
 
      a_weight_sep = sumweight - a_weight_1 - a_weight_2
 
      ! Reset partition matrix
-     CALL nd_convert_flags_partition(a_n,a_n1,a_n2, &
+     call nd_convert_flags_partition(a_n,a_n1,a_n2, &
        work(work_part+1:work_part+a_n),ND_PART1_FLAG,ND_PART2_FLAG, &
        partition(1:a_n))
 
@@ -7075,61 +7075,61 @@ INNER:    DO inn = 1, n
      ! check_partition1(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,work(work_part+1:wor
      ! k_part+a_n),a_weight_1,a_weight_2,a_weight)
 
-   END SUBROUTINE nd_refine_trim
+   end subroutine nd_refine_trim
 
 
    ! ---------------------------------------------------
    ! nd_refine_block_trim
    ! ---------------------------------------------------
    ! Given a partition, trim the partition using blocks to make it minimal
-   SUBROUTINE nd_refine_block_trim(a_n,a_ne,a_ptr,a_row,a_weight, &
+   subroutine nd_refine_block_trim(a_n,a_ne,a_ptr,a_row,a_weight, &
        sumweight,a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep,partition, &
        work,control)
-     INTEGER, INTENT (IN) :: a_n ! order of matrix
-     INTEGER, INTENT (IN) :: a_ne ! number of entries in matrix
-     INTEGER, INTENT (IN) :: a_ptr(a_n) ! On input a_ptr(i) contains
+     integer, intent (in) :: a_n ! order of matrix
+     integer, intent (in) :: a_ne ! number of entries in matrix
+     integer, intent (in) :: a_ptr(a_n) ! On input a_ptr(i) contains
      ! position in a_row that entries for column i start.
-     INTEGER, INTENT (IN) :: a_row(a_ne) ! On input a_row contains row
+     integer, intent (in) :: a_row(a_ne) ! On input a_row contains row
      ! indices of the non-zero rows. Diagonal entries have been removed
      ! and the matrix expanded.
-     INTEGER, INTENT (IN) :: a_weight(a_n) ! On input a_weight(i) contains
+     integer, intent (in) :: a_weight(a_n) ! On input a_weight(i) contains
      ! the weight of column i
-     INTEGER, INTENT (IN) :: sumweight ! Sum of weights in a_weight
-     INTEGER, INTENT (INOUT) :: a_n1 ! Size of partition 1
-     INTEGER, INTENT (INOUT) :: a_n2 ! Size of partition 2
-     INTEGER, INTENT (INOUT) :: a_weight_1, a_weight_2, a_weight_sep ! Weig
+     integer, intent (in) :: sumweight ! Sum of weights in a_weight
+     integer, intent (inout) :: a_n1 ! Size of partition 1
+     integer, intent (inout) :: a_n2 ! Size of partition 2
+     integer, intent (inout) :: a_weight_1, a_weight_2, a_weight_sep ! Weig
      ! hted
      ! size of partitions and separator
-     INTEGER, INTENT (INOUT) :: partition(a_n) ! First a_n1 entries contain
+     integer, intent (inout) :: partition(a_n) ! First a_n1 entries contain
      ! list of (local) indices in partition 1; next a_n2 entries
      ! contain list of (local) entries in partition 2; entries in
      ! separator are listed at the end. This is updated to the new
      ! partition
-     INTEGER, INTENT (OUT) :: work(5*a_n) ! Work array
-     TYPE (nd_options), INTENT (IN) :: control
+     integer, intent (out) :: work(5*a_n) ! Work array
+     type (nd_options), intent (in) :: control
 
      ! ---------------------------------------------
      ! Local variables
-     INTEGER :: work_part, work_next1, work_next2, work_level1, work_level2
-     INTEGER :: a_n1_orig, a_n2_orig
-     INTEGER :: head1, head2, tail1, tail2, maxlevel1, maxlevel2
-     INTEGER :: currlevel1, currlevel2
-     INTEGER :: i, j, k, l, m, w1, w2, l1, l2
-     LOGICAL :: next1, next2, imbal
-     REAL (wp) :: t1, t2
-     REAL (wp) :: ratio
+     integer :: work_part, work_next1, work_next2, work_level1, work_level2
+     integer :: a_n1_orig, a_n2_orig
+     integer :: head1, head2, tail1, tail2, maxlevel1, maxlevel2
+     integer :: currlevel1, currlevel2
+     integer :: i, j, k, l, m, w1, w2, l1, l2
+     logical :: next1, next2, imbal
+     real (wp) :: t1, t2
+     real (wp) :: ratio
 
-     ratio = MAX(REAL(1.0,wp),control%balance)
-     IF (ratio>REAL(sumweight-2)) THEN
-       imbal = .FALSE.
-     ELSE
-       imbal = .TRUE.
-     END IF
+     ratio = max(real(1.0,wp),control%balance)
+     if (ratio>real(sumweight-2)) then
+       imbal = .false.
+     else
+       imbal = .true.
+     end if
 
      ! Set work(work_part+1:work_part+a_n) to hold flags to indicate what
      ! part of the partition the nodes are in
      work_part = 0
-     CALL nd_convert_partition_flags(a_n,a_n1,a_n2,partition, &
+     call nd_convert_partition_flags(a_n,a_n1,a_n2,partition, &
        ND_PART1_FLAG,ND_PART2_FLAG,ND_SEP_FLAG, &
        work(work_part+1:work_part+a_n))
      a_n1_orig = a_n1
@@ -7155,432 +7155,431 @@ INNER:    DO inn = 1, n
      ! Create two lists
      head1 = 0
      head2 = 0
-     DO i = a_n1 + a_n2 + 1, a_n
-       next1 = .FALSE.
-       next2 = .FALSE.
+     do i = a_n1 + a_n2 + 1, a_n
+       next1 = .false.
+       next2 = .false.
        j = partition(i)
-       IF (j<a_n) THEN
+       if (j<a_n) then
          k = a_ptr(j+1) - 1
-       ELSE
+       else
          k = a_ne
-       END IF
-       DO l = a_ptr(j), k
+       end if
+       do l = a_ptr(j), k
          m = a_row(l)
-         IF (work(work_part+m)==ND_PART1_FLAG) THEN
-           next1 = .TRUE.
-         ELSE IF (work(work_part+m)==ND_PART2_FLAG) THEN
-           next2 = .TRUE.
-         END IF
-       END DO
-       IF (next1) THEN
+         if (work(work_part+m)==ND_PART1_FLAG) then
+           next1 = .true.
+         else if (work(work_part+m)==ND_PART2_FLAG) then
+           next2 = .true.
+         end if
+       end do
+       if (next1) then
          ! Add to list 1
-         IF (head1==0) THEN
+         if (head1==0) then
            head1 = j
-         ELSE
+         else
            work(work_next1+tail1) = j
-         END IF
+         end if
          tail1 = j
          work(work_level1+j) = 1
-       END IF
-       IF (next2) THEN
+       end if
+       if (next2) then
          ! Add to list 2
-         IF (head2==0) THEN
+         if (head2==0) then
            head2 = j
-         ELSE
+         else
            work(work_next2+tail2) = j
-         END IF
+         end if
          tail2 = j
          work(work_level2+j) = 1
-       END IF
-     END DO
+       end if
+     end do
 
      ! Breadth first search of separator from entries adjacent to partition
      ! 1
      l1 = head1
-     DO WHILE (l1>0)
-       IF (l1<a_n) THEN
+     do while (l1>0)
+       if (l1<a_n) then
          k = a_ptr(l1+1) - 1
-       ELSE
+       else
          k = a_ne
-       END IF
-       DO l = a_ptr(l1), k
+       end if
+       do l = a_ptr(l1), k
          m = a_row(l)
-         IF (work(work_part+m)==ND_SEP_FLAG .AND. &
-             work(work_level1+m)==0) THEN
+         if (work(work_part+m)==ND_SEP_FLAG .and. &
+             work(work_level1+m)==0) then
            ! Add to list (note list is non-empty)
            work(work_next1+tail1) = m
            tail1 = m
            work(work_level1+m) = work(work_level1+l1) + 1
-         END IF
-       END DO
+         end if
+       end do
        l1 = work(work_next1+l1)
-     END DO
+     end do
      maxlevel1 = work(work_level1+tail1)
 
      ! Breadth first search of separator from entries adjacent to partition
      ! 2
      l1 = head2
-     DO WHILE (l1>0)
-       IF (l1<a_n) THEN
+     do while (l1>0)
+       if (l1<a_n) then
          k = a_ptr(l1+1) - 1
-       ELSE
+       else
          k = a_ne
-       END IF
-       DO l = a_ptr(l1), k
+       end if
+       do l = a_ptr(l1), k
          m = a_row(l)
-         IF (work(work_part+m)==ND_SEP_FLAG .AND. &
-             work(work_level2+m)==0) THEN
+         if (work(work_part+m)==ND_SEP_FLAG .and. &
+             work(work_level2+m)==0) then
            ! Add to list (note list is non-empty)
            work(work_next2+tail2) = m
            tail2 = m
            work(work_level2+m) = work(work_level2+l1) + 1
-         END IF
-       END DO
+         end if
+       end do
        l1 = work(work_next2+l1)
-     END DO
+     end do
      maxlevel2 = work(work_level2+tail2)
 
      ! Check for any entries in separator only reachable from one partition
-     DO i = a_n1 + a_n2 + 1, a_n
+     do i = a_n1 + a_n2 + 1, a_n
        j = partition(i)
-       IF (work(work_level2+j)==0) THEN
+       if (work(work_level2+j)==0) then
          work(work_level2+j) = maxlevel2 + 1
-       ELSE
-         IF (work(work_level1+j)==0) THEN
+       else
+         if (work(work_level1+j)==0) then
            work(work_level1+j) = maxlevel1 + 1
-         END IF
-       END IF
-     END DO
+         end if
+       end if
+     end do
 
      ! Trim the separator
      currlevel1 = 1
      currlevel2 = 1
      l1 = head1
      l2 = head2
-     DO WHILE (currlevel1<=maxlevel1 .OR. currlevel2<=maxlevel2)
-       IF (currlevel1>maxlevel1) THEN
-         t1 = HUGE(1.0_wp)
-       ELSE
+     do while (currlevel1<=maxlevel1 .or. currlevel2<=maxlevel2)
+       if (currlevel1>maxlevel1) then
+         t1 = huge(1.0_wp)
+       else
          w1 = 0
          j = l1
-         DO WHILE (work(work_level1+j)==currlevel1)
-           IF (work(work_level2+j)>currlevel2) THEN
+         do while (work(work_level1+j)==currlevel1)
+           if (work(work_level2+j)>currlevel2) then
              w1 = w1 + a_weight(j)
-           END IF
+           end if
            j = work(work_next1+j)
-           IF (j==0) EXIT
-         END DO
-         IF (w1==0) THEN
+           if (j==0) exit
+         end do
+         if (w1==0) then
            currlevel1 = currlevel1 + 1
            l1 = j
-           CYCLE
-         ELSE
-           CALL cost_function(a_weight_1+w1,a_weight_2,a_weight_sep-w1, &
+           cycle
+         else
+           call cost_function(a_weight_1+w1,a_weight_2,a_weight_sep-w1, &
              sumweight,ratio,imbal,control%cost_function,t1)
-         END IF
-       END IF
+         end if
+       end if
 
-       IF (currlevel2>maxlevel2) THEN
-         t2 = HUGE(1.0_wp)
-       ELSE
+       if (currlevel2>maxlevel2) then
+         t2 = huge(1.0_wp)
+       else
          w2 = 0
          j = l2
-         DO WHILE (work(work_level2+j)==currlevel2)
-           IF (work(work_level1+j)>currlevel1) THEN
+         do while (work(work_level2+j)==currlevel2)
+           if (work(work_level1+j)>currlevel1) then
              w2 = w2 + a_weight(j)
-           END IF
+           end if
            j = work(work_next2+j)
-           IF (j==0) EXIT
-         END DO
-         IF (w2==0) THEN
+           if (j==0) exit
+         end do
+         if (w2==0) then
            currlevel2 = currlevel2 + 1
            l2 = j
-           CYCLE
-         ELSE
-           CALL cost_function(a_weight_1,a_weight_2+w2,a_weight_sep-w2, &
+           cycle
+         else
+           call cost_function(a_weight_1,a_weight_2+w2,a_weight_sep-w2, &
              sumweight,ratio,imbal,control%cost_function,t2)
-         END IF
-       END IF
+         end if
+       end if
 
        ! Add entries to relevant partition and update a_n1, a_n2 etc
-       IF (t1<t2) THEN
+       if (t1<t2) then
          j = l1
-         DO WHILE (work(work_level1+j)==currlevel1)
-           IF (work(work_level2+j)>currlevel2) THEN
+         do while (work(work_level1+j)==currlevel1)
+           if (work(work_level2+j)>currlevel2) then
              work(work_part+j) = ND_PART1_FLAG
              a_n1 = a_n1 + 1
-           END IF
+           end if
            j = work(work_next1+j)
-           IF (j==0) EXIT
-         END DO
+           if (j==0) exit
+         end do
          a_weight_1 = a_weight_1 + w1
          a_weight_sep = a_weight_sep - w1
          l1 = j
-         IF (j==0) THEN
+         if (j==0) then
            currlevel1 = maxlevel1 + 1
-         ELSE
+         else
            currlevel1 = (work(work_level1+l1))
-         END IF
+         end if
 
-       ELSE
+       else
          j = l2
-         DO WHILE (work(work_level2+j)==currlevel2)
-           IF (work(work_level1+j)>currlevel1) THEN
+         do while (work(work_level2+j)==currlevel2)
+           if (work(work_level1+j)>currlevel1) then
              work(work_part+j) = ND_PART2_FLAG
              a_n2 = a_n2 + 1
-           END IF
+           end if
            j = work(work_next2+j)
-           IF (j==0) EXIT
-         END DO
+           if (j==0) exit
+         end do
          a_weight_2 = a_weight_2 + w2
          a_weight_sep = a_weight_sep - w2
          l2 = j
-         IF (j==0) THEN
+         if (j==0) then
            currlevel2 = maxlevel2 + 1
-         ELSE
+         else
            currlevel2 = (work(work_level2+l2))
-         END IF
-       END IF
-     END DO
+         end if
+       end if
+     end do
 
      ! Reset partition matrix
-     CALL nd_convert_flags_partition(a_n,a_n1,a_n2, &
+     call nd_convert_flags_partition(a_n,a_n1,a_n2, &
        work(work_part+1:work_part+a_n),ND_PART1_FLAG,ND_PART2_FLAG, &
        partition(1:a_n))
      a_weight_sep = sumweight - a_weight_1 - a_weight_2
      ! call check_partition1(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition)
 
-   END SUBROUTINE nd_refine_block_trim
+   end subroutine nd_refine_block_trim
 
 
    ! ---------------------------------------------------
    ! nd_refine_max_flow
    ! ---------------------------------------------------
    ! Given a partition, trim the partition using blocks to make it minimal
-   SUBROUTINE nd_refine_max_flow(a_n,a_ne,a_ptr,a_row,a_weight,a_n1, &
+   subroutine nd_refine_max_flow(a_n,a_ne,a_ptr,a_row,a_weight,a_n1, &
        a_n2,a_weight_1,a_weight_2,a_weight_sep,partition,work,control)
-     INTEGER, INTENT (IN) :: a_n ! order of matrix
-     INTEGER, INTENT (IN) :: a_ne ! number of entries in matrix
-     INTEGER, INTENT (IN) :: a_ptr(a_n) ! On input a_ptr(i) contains
+     integer, intent (in) :: a_n ! order of matrix
+     integer, intent (in) :: a_ne ! number of entries in matrix
+     integer, intent (in) :: a_ptr(a_n) ! On input a_ptr(i) contains
      ! position in a_row that entries for column i start.
-     INTEGER, INTENT (IN) :: a_row(a_ne) ! On input a_row contains row
+     integer, intent (in) :: a_row(a_ne) ! On input a_row contains row
      ! indices of the non-zero rows. Diagonal entries have been removed
      ! and the matrix expanded.
-     INTEGER, INTENT (IN) :: a_weight(a_n) ! On input a_weight(i) contains
+     integer, intent (in) :: a_weight(a_n) ! On input a_weight(i) contains
      ! the weight of column i
-     INTEGER, INTENT (INOUT) :: a_n1 ! Size of partition 1
-     INTEGER, INTENT (INOUT) :: a_n2 ! Size of partition 2
-     INTEGER, INTENT (INOUT) :: a_weight_1, a_weight_2, a_weight_sep ! Weig
+     integer, intent (inout) :: a_n1 ! Size of partition 1
+     integer, intent (inout) :: a_n2 ! Size of partition 2
+     integer, intent (inout) :: a_weight_1, a_weight_2, a_weight_sep ! Weig
      ! hted
      ! size of partitions and separator
-     INTEGER, INTENT (INOUT) :: partition(a_n) ! First a_n1 entries contain
+     integer, intent (inout) :: partition(a_n) ! First a_n1 entries contain
      ! list of (local) indices in partition 1; next a_n2 entries
      ! contain list of (local) entries in partition 2; entries in
      ! separator are listed at the end. This is updated to the new
      ! partition
-     INTEGER, INTENT (OUT) :: work(8) ! Work array
-     TYPE (nd_options), INTENT (IN) :: control
+     integer, intent (out) :: work(8) ! Work array
+     type (nd_options), intent (in) :: control
 
      ! ---------------------------------------------
      ! Local variables
-     INTEGER :: msglvl
-     REAL (wp) :: cost, ratio
+     integer :: msglvl
+     real (wp) :: cost, ratio
 
      msglvl = 0
-     IF (control%print_level==1 .AND. control%unit_diagnostics>=0) &
+     if (control%print_level==1 .and. control%unit_diagnostics>=0) &
        msglvl = 1
-     IF (control%print_level>=2 .AND. control%unit_diagnostics>=0) &
+     if (control%print_level>=2 .and. control%unit_diagnostics>=0) &
        msglvl = 3
 
 
-     IF (a_n-a_n1-a_n2>1) THEN
-       ratio = MAX(REAL(1.0,wp),control%balance)
-       CALL nd_maxflow(a_n,a_ne,a_ptr,a_row,a_weight,control%cost_function,&
+     if (a_n-a_n1-a_n2>1) then
+       ratio = max(real(1.0,wp),control%balance)
+       call nd_maxflow(a_n,a_ne,a_ptr,a_row,a_weight,control%cost_function,&
          a_n1,a_n2, &
          a_weight_1,a_weight_2,a_weight_sep,partition,ratio,msglvl, &
          work(1:8),cost)
-     END IF
+     end if
 
 
-   END SUBROUTINE nd_refine_max_flow
+   end subroutine nd_refine_max_flow
 
-   SUBROUTINE expand_partition(a_n,a_ne,a_ptr,a_row,a_weight,a_n1,a_n2, &
+   subroutine expand_partition(a_n,a_ne,a_ptr,a_row,a_weight,a_n1,a_n2, &
        a_weight_1,a_weight_2,a_weight_sep,partition,work)
-     INTEGER, INTENT (IN) :: a_n ! order of matrix
-     INTEGER, INTENT (IN) :: a_ne ! number of entries in matrix
-     INTEGER, INTENT (IN) :: a_ptr(a_n) ! On input a_ptr(i) contains
+     integer, intent (in) :: a_n ! order of matrix
+     integer, intent (in) :: a_ne ! number of entries in matrix
+     integer, intent (in) :: a_ptr(a_n) ! On input a_ptr(i) contains
      ! position in a_row that entries for column i start.
-     INTEGER, INTENT (IN) :: a_row(a_ne) ! On input a_row contains row
+     integer, intent (in) :: a_row(a_ne) ! On input a_row contains row
      ! indices of the non-zero rows. Diagonal entries have been removed
      ! and the matrix expanded.
-     INTEGER, INTENT (IN) :: a_weight(a_n) ! On input a_weight(i) contains
+     integer, intent (in) :: a_weight(a_n) ! On input a_weight(i) contains
      ! the weight of column i
-     INTEGER, INTENT (INOUT) :: a_n1 ! Size of partition 1
-     INTEGER, INTENT (INOUT) :: a_n2 ! Size of partition 2
-     INTEGER, INTENT (INOUT) :: a_weight_1, a_weight_2, a_weight_sep ! Weig
+     integer, intent (inout) :: a_n1 ! Size of partition 1
+     integer, intent (inout) :: a_n2 ! Size of partition 2
+     integer, intent (inout) :: a_weight_1, a_weight_2, a_weight_sep ! Weig
      ! hted
      ! size of partitions and separator
-     INTEGER, INTENT (INOUT) :: partition(a_n) ! First a_n1 entries contain
+     integer, intent (inout) :: partition(a_n) ! First a_n1 entries contain
      ! list of (local) indices in partition 1; next a_n2 entries
      ! contain list of (local) entries in partition 2; entries in
      ! separator are listed at the end. This is updated to the new
      ! partition
-     INTEGER, INTENT (OUT) :: work(a_n) ! Work array
+     integer, intent (out) :: work(a_n) ! Work array
 
      ! Local variables
-     INTEGER :: i, j, k, l, m, w
-     INTEGER :: work_part, a_weight_sep_orig
+     integer :: i, j, k, l, m, w
+     integer :: work_part, a_weight_sep_orig
      ! Set work(work_part+1:work_part+a_n) to hold flags to indicate what
      ! part of the partition the nodes are in
      work_part = 0
-     DO i = 1, a_n1
+     do i = 1, a_n1
        j = partition(i)
        work(work_part+j) = ND_PART1_FLAG
-     END DO
-     DO i = a_n1 + 1, a_n1 + a_n2
+     end do
+     do i = a_n1 + 1, a_n1 + a_n2
        j = partition(i)
        work(work_part+j) = ND_PART2_FLAG
-     END DO
-     DO i = a_n1 + a_n2 + 1, a_n
+     end do
+     do i = a_n1 + a_n2 + 1, a_n
        j = partition(i)
        work(work_part+j) = ND_SEP_FLAG
-     END DO
+     end do
 
-     ! IF (a_weight_1 .LT. a_weight_2) THEN
+     ! if (a_weight_1 .lt. a_weight_2) then
      ! side = ND_PART2_FLAG
-     ! ELSE IF (a_weight_1 .GT. a_weight_2) THEN
+     ! else if (a_weight_1 .gt. a_weight_2) then
      ! side = ND_PART1_FLAG
-     ! ELSE
+     ! else
      ! side = ND_SEP_FLAG
-     ! END IF
+     ! end if
      a_weight_sep_orig = a_weight_sep
 
-     DO i = a_n1 + a_n2 + 1, a_n
+     do i = a_n1 + a_n2 + 1, a_n
        j = partition(i)
        ! search neighbours of j and add to separator
-       IF (j==a_n) THEN
+       if (j==a_n) then
          k = a_ne
-       ELSE
+       else
          k = a_ptr(j+1) - 1
-       END IF
-       DO l = a_ptr(j), k
+       end if
+       do l = a_ptr(j), k
          m = a_row(l)
-         IF (work(work_part+m)==ND_PART1_FLAG .AND. a_n1>1) THEN
-           ! IF (side .EQ. ND_PART1_FLAG .OR. side .EQ. ND_SEP_FLAG)
-           ! THEN
+         if (work(work_part+m)==ND_PART1_FLAG .and. a_n1>1) then
+           ! if (side .eq. ND_PART1_FLAG .or. side .eq. ND_SEP_FLAG)
+           ! then
            work(work_part+m) = ND_SEP_FLAG
            a_n1 = a_n1 - 1
            w = a_weight(m)
            a_weight_1 = a_weight_1 - w
            a_weight_sep = a_weight_sep + w
-           ! END IF
-         ELSE IF (work(work_part+m)==ND_PART2_FLAG .AND. a_n2>1) THEN
-           ! IF (side .EQ. ND_PART2_FLAG .OR. side .EQ. ND_SEP_FLAG)
-           ! THEN
+           ! end if
+         else if (work(work_part+m)==ND_PART2_FLAG .and. a_n2>1) then
+           ! if (side .eq. ND_PART2_FLAG .or. side .eq. ND_SEP_FLAG)
+           ! then
            work(work_part+m) = ND_SEP_FLAG
            a_n2 = a_n2 - 1
            w = a_weight(m)
            a_weight_2 = a_weight_2 - w
            a_weight_sep = a_weight_sep + w
-           ! END IF
-         END IF
-       END DO
-     END DO
+           ! end if
+         end if
+       end do
+     end do
      j = 1
      k = j + a_n1
      l = k + a_n2
-     DO i = 1, a_n
+     do i = 1, a_n
        m = work(work_part+i)
-       SELECT CASE (m)
-       CASE (ND_PART1_FLAG)
+       select case (m)
+       case (ND_PART1_FLAG)
          partition(j) = i
          j = j + 1
-       CASE (ND_PART2_FLAG)
+       case (ND_PART2_FLAG)
          partition(k) = i
          k = k + 1
-       CASE DEFAULT
+       case default
          partition(l) = i
          l = l + 1
-       END SELECT
-     END DO
+       end select
+     end do
 
-   END SUBROUTINE expand_partition
+   end subroutine expand_partition
 
 
-   SUBROUTINE cost_function(a_weight_1,a_weight_2,a_weight_sep,sumweight, &
+   subroutine cost_function(a_weight_1,a_weight_2,a_weight_sep,sumweight, &
        ratio,imbal,costf,tau)
 
-     INTEGER, INTENT (IN) :: a_weight_1, a_weight_2, a_weight_sep ! Weighte
+     integer, intent (in) :: a_weight_1, a_weight_2, a_weight_sep ! Weighte
      ! d
      ! size of partitions and separator
-     INTEGER, INTENT (IN) :: sumweight
-     REAL (wp), INTENT (IN) :: ratio
-     LOGICAL, INTENT (IN) :: imbal ! Use penalty function?
-     INTEGER, INTENT (IN) :: costf
-     REAL (wp), INTENT (OUT) :: tau
-     REAL (wp) :: beta, a_wgt1, a_wgt2
+     integer, intent (in) :: sumweight
+     real (wp), intent (in) :: ratio
+     logical, intent (in) :: imbal ! Use penalty function?
+     integer, intent (in) :: costf
+     real (wp), intent (out) :: tau
+     real (wp) :: beta, a_wgt1, a_wgt2
 
      beta = 0.5
-     a_wgt1 = MAX(1,a_weight_1)
-     a_wgt2 = MAX(1,a_weight_2)
+     a_wgt1 = max(1,a_weight_1)
+     a_wgt2 = max(1,a_weight_2)
 
-     IF (costf.LE.1) THEN
-       tau = ((REAL(a_weight_sep)**1.0)/REAL(a_wgt1))/REAL(a_wgt2)
-       IF (imbal .AND. REAL(MAX(a_wgt1,a_wgt2))/REAL(MIN(a_wgt1, &
-           a_wgt2))>=ratio) THEN
-         tau = REAL(sumweight-2) + tau
-       END IF
-     ELSE
-       IF (imbal .AND. REAL(MAX(a_wgt1,a_wgt2))/REAL(MIN(a_wgt1, &
-           a_wgt2))>=ratio) THEN
-         tau = REAL(sumweight)*(1.0+beta) + REAL(a_weight_sep)*( &
-           1.0_wp+beta*REAL(ABS(a_wgt1-a_wgt2))/REAL(sumweight))
-       ELSE
-         tau = REAL(a_weight_sep)*(1.0_wp+beta*REAL(ABS(a_wgt1- &
-           a_wgt2))/REAL(sumweight))
-       END IF
+     if (costf.le.1) then
+       tau = ((real(a_weight_sep)**1.0)/real(a_wgt1))/real(a_wgt2)
+       if (imbal .and. real(max(a_wgt1,a_wgt2))/real(min(a_wgt1, &
+           a_wgt2))>=ratio) then
+         tau = real(sumweight-2) + tau
+       end if
+     else
+       if (imbal .and. real(max(a_wgt1,a_wgt2))/real(min(a_wgt1, &
+           a_wgt2))>=ratio) then
+         tau = real(sumweight)*(1.0+beta) + real(a_weight_sep)*( &
+           1.0_wp+beta*real(abs(a_wgt1-a_wgt2))/real(sumweight))
+       else
+         tau = real(a_weight_sep)*(1.0_wp+beta*real(abs(a_wgt1- &
+           a_wgt2))/real(sumweight))
+       end if
 
-     END IF
+     end if
 
-   END SUBROUTINE cost_function
+   end subroutine cost_function
 
    ! ---------------------------------------------------
    ! nd_maxflow
    ! ---------------------------------------------------
    ! Given a partition, get better partition using maxflow algorithm
-   SUBROUTINE nd_maxflow(a_n,a_ne,a_ptr,a_row,a_weight,costf,a_n1,a_n2, &
+   subroutine nd_maxflow(a_n,a_ne,a_ptr,a_row,a_weight,costf,a_n1,a_n2, &
        a_weight_1,a_weight_2,a_weight_sep,partition,alpha,msglvl,stats, &
        cost)
-     IMPLICIT NONE
 
      ! Input matrix: a_n, a_ne, a_ptr, a_row
-     INTEGER, INTENT (IN) :: a_n ! order of matrix
-     INTEGER, INTENT (IN) :: a_ne ! number of entries in matrix (lower and
+     integer, intent (in) :: a_n ! order of matrix
+     integer, intent (in) :: a_ne ! number of entries in matrix (lower and
      ! upper triangle)
-     INTEGER, INTENT (IN) :: a_ptr(:) ! On input, a_ptr(i) contains
+     integer, intent (in) :: a_ptr(:) ! On input, a_ptr(i) contains
      ! position in a_row that entries for column i start.
-     INTEGER, INTENT (IN) :: a_row(:) ! On input, a_row contains row
+     integer, intent (in) :: a_row(:) ! On input, a_row contains row
      ! indices of the nonzero entries. Diagonal entries have been
      ! removed and the matrix expanded.
      ! At the moment weights are not used at all
-     INTEGER, INTENT (IN) :: a_weight(a_n) ! On input, a_weight(i) contains
+     integer, intent (in) :: a_weight(a_n) ! On input, a_weight(i) contains
      ! the weight of column i
-     INTEGER, INTENT (IN) :: costf ! Determines which cost function is used
+     integer, intent (in) :: costf ! Determines which cost function is used
      ! Data on partition a_n1, a_n2, partition ... will be updated
-     INTEGER, INTENT (INOUT) :: a_n1 ! Size of partition 1 (ie B)
-     INTEGER, INTENT (INOUT) :: a_n2 ! Size of partition 2 (ie W)
-     INTEGER, INTENT (INOUT) :: a_weight_1, a_weight_2, a_weight_sep ! Weig
+     integer, intent (inout) :: a_n1 ! Size of partition 1 (ie B)
+     integer, intent (inout) :: a_n2 ! Size of partition 2 (ie W)
+     integer, intent (inout) :: a_weight_1, a_weight_2, a_weight_sep ! Weig
      ! hted
      ! size of partitions and separator
-     INTEGER, INTENT (INOUT) :: partition(a_n) ! First a_n1 entries contain
+     integer, intent (inout) :: partition(a_n) ! First a_n1 entries contain
      ! list of (local) indices in partition 1; next a_n2 entries
      ! contain list of (local) entries in partition 2; entries in
      ! separator are listed at the end. This is updated to the new
      ! partition.
 
      ! Parameters alpha (for balance) for cost function
-     REAL (wp), INTENT (IN) :: alpha
-     INTEGER, INTENT (IN) :: msglvl
+     real (wp), intent (in) :: alpha
+     integer, intent (in) :: msglvl
      ! output --
      ! stats[1] -- weight of vertices in S
      ! stats[2] -- weight of vertices in B
@@ -7591,10 +7590,10 @@ INNER:    DO inn = 1, n
      ! stats[7] -- weight of edges in A_{B,B}
      ! stats[8] -- weight of edges in A_{B,W}
      ! cost     -- cost of new partition
-     INTEGER, INTENT (OUT) :: stats(8)
-     REAL (wp), INTENT (OUT) :: cost
+     integer, intent (out) :: stats(8)
+     real (wp), intent (out) :: cost
 
-     TYPE (network) :: netw
+     type (network) :: netw
 
      ! Work arrays
      ! map,mapL,mapR of length a_n
@@ -7604,65 +7603,65 @@ INNER:    DO inn = 1, n
 
      ! Eventually these arrays will be allocated higher up the chain and
      ! will be passed as parameters
-     INTEGER, ALLOCATABLE :: map(:), mapl(:), mapr(:)
-     INTEGER, ALLOCATABLE :: dmapl(:), dmapr(:)
-     INTEGER, ALLOCATABLE :: vwts(:)
-     INTEGER, ALLOCATABLE :: sedge(:,:)
-     INTEGER, ALLOCATABLE :: mark1(:), mark2(:), pred(:), list(:)
-     REAL (wp), ALLOCATABLE :: imb(:)
+     integer, allocatable :: map(:), mapl(:), mapr(:)
+     integer, allocatable :: dmapl(:), dmapr(:)
+     integer, allocatable :: vwts(:)
+     integer, allocatable :: sedge(:,:)
+     integer, allocatable :: mark1(:), mark2(:), pred(:), list(:)
+     real (wp), allocatable :: imb(:)
 
      ! Local variables
-     INTEGER :: a_ns, i, istart_s, j1, k, lp, wtw, wtb, statsr(9), &
+     integer :: a_ns, i, istart_s, j1, k, lp, wtw, wtb, statsr(9), &
        statsl(9)
-     INTEGER nedge, matsiz
-     REAL (wp) :: costr, costl
+     integer nedge, matsiz
+     real (wp) :: costr, costl
 
      lp = 6
 
      ! write(9,*) 'Entering maxflow'
      ! write(0,*) 'Entering maxflow'
-     ALLOCATE (map(a_n),mapl(a_n),mapr(a_n))
+     allocate (map(a_n),mapl(a_n),mapr(a_n))
 
 
      ! Number vertices in separator
      a_ns = a_n - a_n1 - a_n2
 
-     ALLOCATE (dmapl(2*a_ns),dmapr(2*a_ns),vwts(a_ns))
+     allocate (dmapl(2*a_ns),dmapr(2*a_ns),vwts(a_ns))
 
      ! Allocate network work arrays.  Length is upper bound
-     ! ALLOCATE (mark1(2*a_ns+2),mark2(2*a_ns+2),pred(2*a_ns+2), &
+     ! allocate (mark1(2*a_ns+2),mark2(2*a_ns+2),pred(2*a_ns+2), &
      ! list(2*a_ns+2))
-     matsiz = MAX(a_n,2*a_ns+2)
-     ALLOCATE (mark1(matsiz),mark2(matsiz),pred(2*a_ns+2),list(matsiz))
-     ALLOCATE (imb(2*a_ns))
+     matsiz = max(a_n,2*a_ns+2)
+     allocate (mark1(matsiz),mark2(matsiz),pred(2*a_ns+2),list(matsiz))
+     allocate (imb(2*a_ns))
 
      ! Set up map array to define in what partition each vertex lies
      ! At same time set weights for partition (can check with Sue's input)
 
-     CALL nd_convert_partition_flags(a_n,a_n1,a_n2,partition,1,2,0, &
+     call nd_convert_partition_flags(a_n,a_n1,a_n2,partition,1,2,0, &
        map(1:a_n))
 
      wtb = a_weight_1
      wtw = a_weight_2
 
-     DO i = a_n1 + a_n2 + 1, a_n
+     do i = a_n1 + a_n2 + 1, a_n
        k = partition(i)
        vwts(i-a_n1-a_n2) = a_weight(k)
-     END DO
+     end do
 
 
      ! Count edges to get upper bound on size of sedge array
      nedge = 0
-     DO k = 1, a_ns
+     do k = 1, a_ns
        i = partition(a_n1+a_n2+k)
        j1 = a_ptr(i)
-       IF (i==a_n) THEN
+       if (i==a_n) then
          nedge = nedge + a_ne + 1 - a_ptr(i)
-       ELSE
+       else
          nedge = nedge + a_ptr(i+1) - a_ptr(i)
-       END IF
-     END DO
-     ALLOCATE (sedge(nedge,2))
+       end if
+     end do
+     allocate (sedge(nedge,2))
 
 
      ! Generate network graph.  The structure for our maxflow algorithm
@@ -7673,7 +7672,7 @@ INNER:    DO inn = 1, n
      ! Sink is associated with partition W   (size a_n2)
      ! write(9,*) 'Calling mk_network'
      ! write(0,*) 'Calling mk_network'
-     CALL mk_network(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition,map,a_ns, &
+     call mk_network(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition,map,a_ns, &
        msglvl,netw,vwts,wtb,wtw,sedge,mapl,dmapl,dmapr,pred,list,mark1, &
        mark2,imb)
      ! write(9,*) 'Leaving mk_network'
@@ -7682,80 +7681,80 @@ INNER:    DO inn = 1, n
 
      ! solve a max flow problem to find the two new maps dmapL and dmapR
 
-     CALL solvemaxflow(netw,dmapl,dmapr,mark1,mark2,pred,list)
+     call solvemaxflow(netw,dmapl,dmapr,mark1,mark2,pred,list)
 
 
-     IF (msglvl>2) THEN
-       WRITE (lp,*) 'dmapL ...'
-       WRITE (lp,'(10I4)') dmapl
-       WRITE (lp,*) 'dmapR ...'
-       WRITE (lp,'(10I4)') dmapr
-     END IF
+     if (msglvl>2) then
+       write (lp,*) 'dmapL ...'
+       write (lp,'(10I4)') dmapl
+       write (lp,*) 'dmapR ...'
+       write (lp,'(10I4)') dmapr
+     end if
 
      mapl = map
      mapr = map
      istart_s = a_n1 + a_n2
-     DO i = 1, a_ns
+     do i = 1, a_ns
        mapl(partition(istart_s+i)) = dmapl(i)
        mapr(partition(istart_s+i)) = dmapr(i)
-     END DO
+     end do
 
-     IF (msglvl>2) THEN
-       WRITE (lp,*) 'mapL ...'
-       WRITE (lp,'(10I4)') mapl
-       WRITE (lp,*) 'mapR ...'
-       WRITE (lp,'(10I4)') mapr
-     END IF
+     if (msglvl>2) then
+       write (lp,*) 'mapL ...'
+       write (lp,'(10I4)') mapl
+       write (lp,*) 'mapR ...'
+       write (lp,'(10I4)') mapr
+     end if
 
      ! Use evaluation function to choose best partition from among these
      ! two
      ! Use Sue's weighted code
-     CALL evalbsw(a_n,a_ne,a_ptr,a_row,a_weight,mapl,alpha,costf,statsl,costl)
-     CALL evalbsw(a_n,a_ne,a_ptr,a_row,a_weight,mapr,alpha,costf,statsr,costr)
+     call evalbsw(a_n,a_ne,a_ptr,a_row,a_weight,mapl,alpha,costf,statsl,costl)
+     call evalbsw(a_n,a_ne,a_ptr,a_row,a_weight,mapr,alpha,costf,statsr,costr)
 
 
      ! Find the better of the two partitions
 
 
-     IF (statsl(9)==1 .AND. statsr(9)==1) THEN
-       IF (msglvl>0) WRITE (lp,'(A)') 'both maps are acceptable'
-       IF (costl<=costr) THEN
+     if (statsl(9)==1 .and. statsr(9)==1) then
+       if (msglvl>0) write (lp,'(A)') 'both maps are acceptable'
+       if (costl<=costr) then
          map = mapl
          stats = statsl(1:8)
          cost = costl
-         IF (msglvl>0) WRITE (lp,'(A)') 'left map accepted'
-       ELSE
+         if (msglvl>0) write (lp,'(A)') 'left map accepted'
+       else
          map = mapr
          stats = statsr(1:8)
          cost = costr
-         IF (msglvl>0) WRITE (lp,'(A)') 'right map accepted'
-       END IF
-     ELSE IF (statsl(9)==1) THEN
+         if (msglvl>0) write (lp,'(A)') 'right map accepted'
+       end if
+     else if (statsl(9)==1) then
        map = mapl
        stats = statsl(1:8)
        cost = costl
-       IF (msglvl>0) WRITE (lp,'(A)') &
-         'right map NOT acceptable, left map accepted'
-     ELSE IF (statsr(9)==1) THEN
+       if (msglvl>0) write (lp,'(A)') &
+         'right map not acceptable, left map accepted'
+     else if (statsr(9)==1) then
        map = mapr
        stats = statsr(1:8)
        cost = costr
-       IF (msglvl>0) WRITE (lp,'(A)') &
-         'left map NOT acceptable, right map accepted'
-     ELSE
-       IF (msglvl>0) WRITE (lp,'(A)') 'NEITHER map acceptable'
-       IF (costl<=costr) THEN
+       if (msglvl>0) write (lp,'(A)') &
+         'left map not acceptable, right map accepted'
+     else
+       if (msglvl>0) write (lp,'(A)') 'NEITHER map acceptable'
+       if (costl<=costr) then
          map = mapl
          stats = statsl(1:8)
          cost = costl
-         IF (msglvl>0) WRITE (lp,'(A)') 'left map accepted'
-       ELSE
+         if (msglvl>0) write (lp,'(A)') 'left map accepted'
+       else
          map = mapr
          stats = statsr(1:8)
          cost = costr
-         IF (msglvl>0) WRITE (lp,'(A)') 'right map accepted'
-       END IF
-     END IF
+         if (msglvl>0) write (lp,'(A)') 'right map accepted'
+       end if
+     end if
      a_weight_1 = stats(2)
      a_weight_2 = stats(3)
      a_weight_sep = stats(1)
@@ -7765,26 +7764,26 @@ INNER:    DO inn = 1, n
      a_n1 = 0
      a_n2 = 0
      a_ns = 0
-     DO i = 1, a_n
-       IF (map(i)==1) a_n1 = a_n1 + 1
-       IF (map(i)==2) a_n2 = a_n2 + 1
-       IF (map(i)==0) a_ns = a_ns + 1
-     END DO
+     do i = 1, a_n
+       if (map(i)==1) a_n1 = a_n1 + 1
+       if (map(i)==2) a_n2 = a_n2 + 1
+       if (map(i)==0) a_ns = a_ns + 1
+     end do
 
 
-     CALL nd_convert_flags_partition(a_n,a_n1,a_n2,map(1:a_n),1,2, &
+     call nd_convert_flags_partition(a_n,a_n1,a_n2,map(1:a_n),1,2, &
        partition(1:a_n))
 
-     DEALLOCATE (map)
-     DEALLOCATE (dmapl,dmapr)
-     DEALLOCATE (mapl,mapr)
-     DEALLOCATE (mark1,mark2,pred,list,vwts)
-     DEALLOCATE (sedge)
+     deallocate (map)
+     deallocate (dmapl,dmapr)
+     deallocate (mapl,mapr)
+     deallocate (mark1,mark2,pred,list,vwts)
+     deallocate (sedge)
 
 
-   END SUBROUTINE nd_maxflow
+   end subroutine nd_maxflow
 
-   SUBROUTINE solvemaxflow(netw,maps1,maps2,mark1,mark2,pred,list)
+   subroutine solvemaxflow(netw,maps1,maps2,mark1,mark2,pred,list)
      ! Find two partitions of a wide separator graph by solving a max flow
      ! problem
 
@@ -7806,14 +7805,13 @@ INNER:    DO inn = 1, n
      ! mark1, mark2, pred, list of length nnode
 
 
-     IMPLICIT NONE
-     TYPE (network), INTENT (INOUT) :: netw
-     INTEGER, INTENT (OUT) :: maps1(:), maps2(:)
+     type (network), intent (inout) :: netw
+     integer, intent (out) :: maps1(:), maps2(:)
 
-     INTEGER :: mark1(:), mark2(:), pred(:), list(:)
+     integer :: mark1(:), mark2(:), pred(:), list(:)
 
      ! Local variables
-     INTEGER ii, lp, narc, nnode, u
+     integer ii, lp, narc, nnode, u
 
      lp = 6
 
@@ -7824,13 +7822,13 @@ INNER:    DO inn = 1, n
 
      ! Find maxflow through the network using the Ford-Fulkerson algorithm
 
-     CALL findmaxflow(netw,pred,list,mark1,mark2)
+     call findmaxflow(netw,pred,list,mark1,mark2)
 
 
 
      ! Find the two mincuts
 
-     CALL findmincut(netw,mark1,mark2,list)
+     call findmincut(netw,mark1,mark2,list)
 
 
      ! Use mark1 and mark2 to generate maps1 and maps2
@@ -7839,98 +7837,97 @@ INNER:    DO inn = 1, n
      maps1 = -1
      maps2 = -1
 
-     DO ii = 2, nnode - 1, 2
+     do ii = 2, nnode - 1, 2
        u = ii/2
-       IF (mark1(ii)==1) THEN
-         IF (mark1(ii+1)==1) THEN
+       if (mark1(ii)==1) then
+         if (mark1(ii+1)==1) then
            maps1(u) = 1
-         ELSE
+         else
            maps1(u) = 0
-         END IF
-       END IF
-       IF (mark1(ii)==2) THEN
-         IF (mark1(ii+1)==2) THEN
+         end if
+       end if
+       if (mark1(ii)==2) then
+         if (mark1(ii+1)==2) then
            maps1(u) = 2
-         ELSE
+         else
            maps1(u) = 0
-         END IF
-       END IF
-     END DO
+         end if
+       end if
+     end do
 
-     DO ii = 2, nnode - 1, 2
+     do ii = 2, nnode - 1, 2
        u = ii/2
-       IF (mark2(ii)==1) THEN
-         IF (mark2(ii+1)==1) THEN
+       if (mark2(ii)==1) then
+         if (mark2(ii+1)==1) then
            maps2(u) = 1
-         ELSE
+         else
            maps2(u) = 0
-         END IF
-       END IF
-       IF (mark2(ii)==2) THEN
-         IF (mark2(ii+1)==2) THEN
+         end if
+       end if
+       if (mark2(ii)==2) then
+         if (mark2(ii+1)==2) then
            maps2(u) = 2
-         ELSE
+         else
            maps2(u) = 0
-         END IF
-       END IF
-     END DO
+         end if
+       end if
+     end do
 
-   END SUBROUTINE solvemaxflow
+   end subroutine solvemaxflow
 
 
-   SUBROUTINE mk_network(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition,map,nvtx, &
+   subroutine mk_network(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition,map,nvtx, &
        msglvl,netw,vwts,wtb,wtw,sedge,sep_map,isadjtosource,isadjtosink, &
        count,list,mark1,mark2,imb)
      ! Create and return a network structure
 
-     IMPLICIT NONE
 
      ! Input matrix: a_n, a_ne, a_ptr, a_row
-     INTEGER, INTENT (IN) :: a_n ! order of matrix
-     INTEGER, INTENT (IN) :: a_ne ! number of entries in matrix (lower and
+     integer, intent (in) :: a_n ! order of matrix
+     integer, intent (in) :: a_ne ! number of entries in matrix (lower and
      ! upper triangle)
-     INTEGER, INTENT (IN) :: a_ptr(:) ! On input, a_ptr(i) contains
+     integer, intent (in) :: a_ptr(:) ! On input, a_ptr(i) contains
      ! position in a_row that entries for column i start.
-     INTEGER, INTENT (IN) :: a_row(:) ! On input, a_row contains row
+     integer, intent (in) :: a_row(:) ! On input, a_row contains row
      ! indices of the nonzero entries. Diagonal entries have been
      ! removed and the matrix expanded.
 
-     INTEGER, INTENT (IN) :: partition(a_n) ! First a_n1 entries contain
+     integer, intent (in) :: partition(a_n) ! First a_n1 entries contain
      ! list of (local) indices in partition 1; next a_n2 entries
      ! contain list of (local) entries in partition 2; entries in
      ! separator are listed at the end.
-     INTEGER, INTENT (IN) :: map(a_n) ! First a_n1 entries contain
-     INTEGER, INTENT (IN) :: msglvl, nvtx
-     INTEGER, INTENT (IN) :: vwts(:)
-     INTEGER, INTENT (INOUT) :: wtb, wtw
-     INTEGER, INTENT (INOUT) :: a_n1 ! Size of partition 1 (ie B)
-     INTEGER, INTENT (INOUT) :: a_n2 ! Size of partition 2 (ie W)
+     integer, intent (in) :: map(a_n) ! First a_n1 entries contain
+     integer, intent (in) :: msglvl, nvtx
+     integer, intent (in) :: vwts(:)
+     integer, intent (inout) :: wtb, wtw
+     integer, intent (inout) :: a_n1 ! Size of partition 1 (ie B)
+     integer, intent (inout) :: a_n2 ! Size of partition 2 (ie W)
 
      ! Note that we still do the allocations here.  Doing it further up the
      ! call tree would need to allocate much more storage.
-     TYPE (network), INTENT (OUT) :: netw
+     type (network), intent (out) :: netw
 
-     INTEGER i, iarc, ii, jj, lp, narc1, narc2, narc3, narc4, narc, nnode, &
+     integer i, iarc, ii, jj, lp, narc1, narc2, narc3, narc4, narc, nnode, &
        nedge, u, v, wts
-     INTEGER j1, j2, j, k
+     integer j1, j2, j, k
 
      ! Work arrays sedge(nedge,2),sep_map(a_n),isAdjToSource(nvtx),
      ! isAdjToSink(nvtx)
-     INTEGER :: sedge(:,:)
-     INTEGER :: sep_map(:)
-     INTEGER :: isadjtosource(:), isadjtosink(:)
-     REAL (wp) :: imb(:)
-     INTEGER :: COUNT(:), mark1(:), mark2(:), list(:)
-     LOGICAL :: augcap
+     integer :: sedge(:,:)
+     integer :: sep_map(:)
+     integer :: isadjtosource(:), isadjtosink(:)
+     real (wp) :: imb(:)
+     integer :: count(:), mark1(:), mark2(:), list(:)
+     logical :: augcap
 
-     augcap = .TRUE.
+     augcap = .true.
 
      lp = 0
 
-     IF (msglvl>0) THEN
-       WRITE (lp,'(/A)') '### inside mknetwork()'
-       WRITE (lp,'(A,I8,A,I8)') 'nvtx', nvtx
-     END IF
+     if (msglvl>0) then
+       write (lp,'(/A)') '### inside mknetwork()'
+       write (lp,'(A,I8,A,I8)') 'nvtx', nvtx
+     end if
 
 
      ! write(0,*) 'a_n,a_n1,a_n2,a_ne',   &
@@ -7947,10 +7944,10 @@ INNER:    DO inn = 1, n
      isadjtosink = 0
 
      ! Determine mapping of global variables of matrix to separator set
-     DO k = 1, nvtx
+     do k = 1, nvtx
        i = partition(a_n1+a_n2+k)
        sep_map(i) = k
-     END DO
+     end do
 
      ! We could use a single array although the logic for generating it is
      ! marginally more complicated.
@@ -7963,37 +7960,37 @@ INNER:    DO inn = 1, n
 
      ! Run through nodes in separator S and generate edges
      nedge = 0
-     DO k = 1, nvtx
+     do k = 1, nvtx
        i = partition(a_n1+a_n2+k)
        j1 = a_ptr(i)
-       IF (i==a_n) THEN
+       if (i==a_n) then
          j2 = a_ne
-       ELSE
+       else
          j2 = a_ptr(i+1) - 1
-       END IF
+       end if
 
        ! Run through vertices connected to vertex i
-       DO jj = j1, j2
+       do jj = j1, j2
          j = a_row(jj)
          ! Find out in which partition node j lies using map array
-         IF (map(j)==1) THEN
+         if (map(j)==1) then
            ! If in partition B add vertex k to AdjToSource
            isadjtosource(k) = 1
-         END IF
-         IF (map(j)==2) THEN
+         end if
+         if (map(j)==2) then
            ! If in partition W add vertex k to AdjToSink
            isadjtosink(k) = 1
-         END IF
-         IF (map(j)==0) THEN
+         end if
+         if (map(j)==0) then
            ! If in separator add edge accumulating number of edges
            nedge = nedge + 1
            ! Edge has this orientation to emulate matlab code
            sedge(nedge,2) = sep_map(i)
            sedge(nedge,1) = sep_map(j)
-         END IF
-       END DO
+         end if
+       end do
 
-     END DO
+     end do
 
 
      ! narc1 is number of vertices in separator and is equal to the number
@@ -8011,27 +8008,27 @@ INNER:    DO inn = 1, n
      ! source/sink
      ! to vertex in the separator set
 
-     DO k = 1, nvtx
-       IF (isadjtosource(k)==1) narc2 = narc2 + 1
-       IF (isadjtosink(k)==1) narc3 = narc3 + 1
-     END DO
+     do k = 1, nvtx
+       if (isadjtosource(k)==1) narc2 = narc2 + 1
+       if (isadjtosink(k)==1) narc3 = narc3 + 1
+     end do
 
      narc4 = 0
-     DO ii = 1, nedge
+     do ii = 1, nedge
        u = sedge(ii,1)
        v = sedge(ii,2)
        ! --- ignore self edges ---
-       IF (u==v) CYCLE
+       if (u==v) cycle
        ! --- omit edges with essential vertices ---
-       IF (isadjtosink(u)==1 .AND. isadjtosource(u)==1) CYCLE
-       IF (isadjtosink(v)==1 .AND. isadjtosource(v)==1) CYCLE
+       if (isadjtosink(u)==1 .and. isadjtosource(u)==1) cycle
+       if (isadjtosink(v)==1 .and. isadjtosource(v)==1) cycle
        ! --- omit pairs both adjacent to source ---
-       IF ((isadjtosource(u)==1) .AND. (isadjtosource(v)==1)) CYCLE
+       if ((isadjtosource(u)==1) .and. (isadjtosource(v)==1)) cycle
        ! --- omit pairs both adjacent to sink ---
-       IF ((isadjtosink(u)==1) .AND. (isadjtosink(v)==1)) CYCLE
+       if ((isadjtosink(u)==1) .and. (isadjtosink(v)==1)) cycle
        ! Qualifying arc found
        narc4 = narc4 + 1
-     END DO
+     end do
 
      nnode = 2*nvtx + 2
      netw%nnode = nnode
@@ -8040,13 +8037,13 @@ INNER:    DO inn = 1, n
      netw%source = 1
      netw%sink = 2*nvtx + 2
 
-     IF (msglvl>0) THEN
-       WRITE (lp,'(I8,A)') narc1, ' internal arcs'
-       WRITE (lp,'(I8,A)') narc2, ' arcs from source'
-       WRITE (lp,'(I8,A)') narc3, ' arcs from sink'
-       WRITE (lp,'(I8,A)') narc4, ' edge arcs'
-       WRITE (lp,'(I8,A)') narc, ' total arcs'
-     END IF
+     if (msglvl>0) then
+       write (lp,'(I8,A)') narc1, ' internal arcs'
+       write (lp,'(I8,A)') narc2, ' arcs from source'
+       write (lp,'(I8,A)') narc3, ' arcs from sink'
+       write (lp,'(I8,A)') narc4, ' edge arcs'
+       write (lp,'(I8,A)') narc, ' total arcs'
+     end if
 
 
      ! create the arc arrays
@@ -8055,9 +8052,9 @@ INNER:    DO inn = 1, n
 
      ! Allocations done here but could be easily moved up the path although
      ! values very dependent on separator size.
-     ALLOCATE (netw%firsts(narc),netw%seconds(narc),netw%capacities(narc))
-     ALLOCATE (netw%flows(narc))
-     ALLOCATE (netw%inheads(nnode),netw%outheads(nnode),netw%nextin(narc), &
+     allocate (netw%firsts(narc),netw%seconds(narc),netw%capacities(narc))
+     allocate (netw%flows(narc))
+     allocate (netw%inheads(nnode),netw%outheads(nnode),netw%nextin(narc), &
        netw%nextout(narc))
 
      netw%firsts = -1
@@ -8067,65 +8064,65 @@ INNER:    DO inn = 1, n
      ! (u-,u+) arcs first
 
      iarc = 0
-     DO u = 1, nvtx
+     do u = 1, nvtx
        iarc = iarc + 1
        netw%firsts(iarc) = 2*u
        netw%seconds(iarc) = 2*u + 1
        ! We set capacities after computing imbalance penalty
        ! netw%capacities(iarc) = vwts(u)
-     END DO
+     end do
 
-     IF (msglvl>0) WRITE (lp,'(A,I8)') 'after (u-,u+) arcs, iarc = ', iarc
+     if (msglvl>0) write (lp,'(A,I8)') 'after (u-,u+) arcs, iarc = ', iarc
 
 
      ! (source,u) arcs
 
-     DO u = 1, nvtx
-       IF (isadjtosource(u)==1) THEN
+     do u = 1, nvtx
+       if (isadjtosource(u)==1) then
          iarc = iarc + 1
          netw%firsts(iarc) = netw%source
          netw%seconds(iarc) = 2*u
-         netw%capacities(iarc) = HUGE(1)/2
-       END IF
-     END DO
+         netw%capacities(iarc) = huge(1)/2
+       end if
+     end do
 
-     IF (msglvl>0) WRITE (lp,'(A,I8)') 'after (source,u-) arcs, iarc = ', &
+     if (msglvl>0) write (lp,'(A,I8)') 'after (source,u-) arcs, iarc = ', &
        iarc
 
 
      ! (u,sink) arcs
 
-     DO u = 1, nvtx
-       IF (msglvl>5) WRITE (lp,'(A,I4,A,I8)') 'isAdjToSink(', u, ')= ', &
+     do u = 1, nvtx
+       if (msglvl>5) write (lp,'(A,I4,A,I8)') 'isAdjToSink(', u, ')= ', &
          isadjtosink(u)
-       IF (isadjtosink(u)==1) THEN
+       if (isadjtosink(u)==1) then
          iarc = iarc + 1
          netw%firsts(iarc) = 2*u + 1
          netw%seconds(iarc) = netw%sink
-         netw%capacities(iarc) = HUGE(1)/2
-       END IF
-     END DO
+         netw%capacities(iarc) = huge(1)/2
+       end if
+     end do
 
-     IF (msglvl>0) WRITE (lp,'(A,I8)') 'after (u,sink) arcs, iarc = ', iarc
+     if (msglvl>0) write (lp,'(A,I8)') 'after (u,sink) arcs, iarc = ', iarc
 
 
      ! (u+,v-) arcs
 
-     DO ii = 1, nedge
+     do ii = 1, nedge
        u = sedge(ii,1)
        v = sedge(ii,2)
-       IF ((u/=v) .AND. (isadjtosource(u)/=1 .OR. isadjtosource( &
-           v)/=1) .AND. (isadjtosink(u)/=1 .OR. isadjtosink( &
-           v)/=1) .AND. (isadjtosource(u)/=1 .OR. isadjtosink( &
-           u)/=1) .AND. (isadjtosource(v)/=1 .OR. isadjtosink(v)/=1)) THEN
+       if ((u/=v) .and. (isadjtosource(u)/=1 .or. isadjtosource( &
+           v)/=1) .and. (isadjtosink(u)/=1 .or. isadjtosink( &
+           v)/=1) .and. (isadjtosource(u)/=1 .or. isadjtosink( &
+           u)/=1) .and. (isadjtosource(v)/=1 .or. isadjtosink(v)/=1)) then
          iarc = iarc + 1
          netw%firsts(iarc) = 2*u + 1
          netw%seconds(iarc) = 2*v
-         netw%capacities(iarc) = HUGE(1)/2
-       END IF
-     END DO
+         netw%capacities(iarc) = huge(1)/2
+       end if
+     end do
 
-     IF (msglvl>0) WRITE (lp,'(A,I8)') 'after (u+,v-) arcs, iarc = ', iarc
+     if (msglvl>0) write (lp,'(A,I8)') 'after (u+,v-) arcs, iarc = ', iarc
 
 
      ! Generate the head vectors for in/out edges
@@ -8136,59 +8133,58 @@ INNER:    DO inn = 1, n
      netw%outheads = -1
      netw%nextin = -1
      netw%nextout = -1
-     DO ii = narc, 1, -1
+     do ii = narc, 1, -1
        u = netw%firsts(ii)
        v = netw%seconds(ii)
-       IF (msglvl>1) WRITE (lp,'(A,I8,A,I8,A,I8,A)') 'ii', ii, 'arc (', u, &
+       if (msglvl>1) write (lp,'(A,I8,A,I8,A,I8,A)') 'ii', ii, 'arc (', u, &
          ',', v, ')'
        netw%nextin(ii) = netw%inheads(v)
        netw%inheads(v) = ii
        netw%nextout(ii) = netw%outheads(u)
        netw%outheads(u) = ii
-     END DO
+     end do
 
-     IF (augcap) THEN
+     if (augcap) then
        ! Generate wtS
        wts = 0
-       DO i = 1, nvtx
+       do i = 1, nvtx
          wts = wts + vwts(i)
-       END DO
-       IF (msglvl>0) WRITE (lp,*) 'Calling findpenalty'
+       end do
+       if (msglvl>0) write (lp,*) 'Calling findpenalty'
        ! Compute network capacities for separator arcs.
-       CALL findpenalty(msglvl,a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition, &
+       call findpenalty(msglvl,a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition, &
          map,vwts,wtb,wtw,wts,isadjtosource,isadjtosink,mark1,mark2,list, &
          imb)
-       IF (msglvl>0) WRITE (lp,*) 'Exiting findpenalty'
-       DO i = 1, nvtx
+       if (msglvl>0) write (lp,*) 'Exiting findpenalty'
+       do i = 1, nvtx
          netw%capacities(i) = mark1(i)
-       END DO
+       end do
 
-     ELSE
-       DO i = 1, nvtx
+     else
+       do i = 1, nvtx
          netw%capacities(i) = vwts(i)
-       END DO
-     END IF
+       end do
+     end if
 
      ! ISD Would this not be initialized in routine that computes flows?
      netw%flows = 0
 
-     IF (msglvl>0) WRITE (lp,'(A/)') '### leaving mknetwork()'
+     if (msglvl>0) write (lp,'(A/)') '### leaving mknetwork()'
 
-   END SUBROUTINE mk_network
+   end subroutine mk_network
 
 
-   SUBROUTINE findmaxflow(netw,pred,list,tags,deltas)
+   subroutine findmaxflow(netw,pred,list,tags,deltas)
      ! Find a maximum flow through the network
 
 
-     IMPLICIT NONE
-     TYPE (network), INTENT (INOUT) :: netw
+     type (network), intent (inout) :: netw
 
-     INTEGER avail, iarc, lp, nnode, sink, source, stats(2), tag
+     integer avail, iarc, lp, nnode, sink, source, stats(2), tag
 
      ! Work arrays ... all of length nnode
 
-     INTEGER :: pred(:), list(:), tags(:), deltas(:)
+     integer :: pred(:), list(:), tags(:), deltas(:)
 
      lp = 6
 
@@ -8204,12 +8200,12 @@ INNER:    DO inn = 1, n
      tag = 0
      iarc = netw%outheads(source)
      ! Run through all nodes connected to source
-     DO
-       IF (iarc==-1) EXIT
+     do
+       if (iarc==-1) exit
 
-       DO
+       do
          avail = netw%capacities(iarc) - netw%flows(iarc)
-         IF (avail>0) THEN
+         if (avail>0) then
            ! Set in findaugpath
 
            ! use BFS to find path
@@ -8220,29 +8216,29 @@ INNER:    DO inn = 1, n
            ! augmenting
            ! path is given through the array pred.
 
-           CALL findaugpath(netw,iarc,avail,pred,stats,list,tags,deltas)
+           call findaugpath(netw,iarc,avail,pred,stats,list,tags,deltas)
 
 
            ! Go to next arc from source node if no augmenting path has been
            ! found
-           IF ((avail==0) .OR. (pred(sink)==0)) EXIT
+           if ((avail==0) .or. (pred(sink)==0)) exit
 
            ! Update flows
-           CALL augmentpath(netw,avail,pred)
+           call augmentpath(netw,avail,pred)
 
-         ELSE
-           EXIT
-         END IF
-       END DO
+         else
+           exit
+         end if
+       end do
 
        iarc = netw%nextout(iarc)
        tag = tag + 1
 
-     END DO
+     end do
 
-   END SUBROUTINE findmaxflow
+   end subroutine findmaxflow
 
-   SUBROUTINE findmincut(netw,mark1,mark2,list)
+   subroutine findmincut(netw,mark1,mark2,list)
 
      ! Finds one or two mincuts, one nearest the source, one nearest the
      ! sink
@@ -8260,12 +8256,11 @@ INNER:    DO inn = 1, n
      ! Workspace
      ! list --- to hold list of nodes being searched
 
-     IMPLICIT NONE
-     INTEGER, INTENT (OUT) :: mark1(:), mark2(:), list(:)
-     TYPE (network), INTENT (INOUT) :: netw
+     integer, intent (out) :: mark1(:), mark2(:), list(:)
+     type (network), intent (inout) :: netw
 
      ! Local variables
-     INTEGER iarc, last, lp, nnode, now, sink, source, x, z
+     integer iarc, last, lp, nnode, now, sink, source, x, z
 
      lp = 6
 
@@ -8285,8 +8280,8 @@ INNER:    DO inn = 1, n
      last = 1
      list(now) = source
      ! while now <= last
-     DO
-       IF (now>last) EXIT
+     do
+       if (now>last) exit
        x = list(now)
        now = now + 1
        iarc = netw%outheads(x)
@@ -8294,38 +8289,38 @@ INNER:    DO inn = 1, n
        ! Run through all arcs starting at node x and putting node at end of
        ! arc
        ! on list if there is spare capacity on arc
-       DO
-         IF (iarc==-1) EXIT
+       do
+         if (iarc==-1) exit
          z = netw%seconds(iarc)
-         IF (mark1(z)==1) THEN
-         ELSE
-           IF (netw%flows(iarc)<netw%capacities(iarc)) THEN
+         if (mark1(z)==1) then
+         else
+           if (netw%flows(iarc)<netw%capacities(iarc)) then
              last = last + 1
              list(last) = z
              mark1(z) = 1
-           END IF
-         END IF
+           end if
+         end if
          iarc = netw%nextout(iarc)
-       END DO
+       end do
        iarc = netw%inheads(x)
        ! while iarc ~= -1
        ! Run through all arcs terminating at node x and putting node at
        ! start of arc
        ! on list if there is spare capacity on arc
-       DO
-         IF (iarc==-1) EXIT
+       do
+         if (iarc==-1) exit
          z = netw%firsts(iarc)
-         IF (mark1(z)==1) THEN
-         ELSE
-           IF (netw%flows(iarc)>0) THEN
+         if (mark1(z)==1) then
+         else
+           if (netw%flows(iarc)>0) then
              last = last + 1
              list(last) = z
              mark1(z) = 1
-           END IF
-         END IF
+           end if
+         end if
          iarc = netw%nextin(iarc)
-       END DO
-     END DO
+       end do
+     end do
 
      ! breadth first traversal from sink
 
@@ -8338,8 +8333,8 @@ INNER:    DO inn = 1, n
      last = 1
      list(now) = sink
      ! while now <= last
-     DO
-       IF (now>last) EXIT
+     do
+       if (now>last) exit
        x = list(now)
        now = now + 1
        iarc = netw%outheads(x)
@@ -8347,43 +8342,43 @@ INNER:    DO inn = 1, n
        ! Run through all arcs starting at node x and putting node at end of
        ! arc
        ! on list if there is spare capacity on arc
-       DO
-         IF (iarc==-1) EXIT
+       do
+         if (iarc==-1) exit
          z = netw%seconds(iarc)
-         IF (mark2(z)==2) THEN
-         ELSE
-           IF (netw%flows(iarc)>0) THEN
+         if (mark2(z)==2) then
+         else
+           if (netw%flows(iarc)>0) then
              last = last + 1
              list(last) = z
              mark2(z) = 2
-           END IF
-         END IF
+           end if
+         end if
          iarc = netw%nextout(iarc)
-       END DO
+       end do
        iarc = netw%inheads(x)
        ! while iarc ~= -1
        ! Run through all arcs terminating at node x and putting node at
        ! start of arc
        ! on list if there is spare capacity on arc
-       DO
-         IF (iarc==-1) EXIT
+       do
+         if (iarc==-1) exit
          z = netw%firsts(iarc)
-         IF (mark2(z)==2) THEN
-         ELSE
-           IF (netw%flows(iarc)<netw%capacities(iarc)) THEN
+         if (mark2(z)==2) then
+         else
+           if (netw%flows(iarc)<netw%capacities(iarc)) then
              last = last + 1
              list(last) = z
              mark2(z) = 2
-           END IF
-         END IF
+           end if
+         end if
          iarc = netw%nextin(iarc)
-       END DO
-     END DO
+       end do
+     end do
 
 
-   END SUBROUTINE findmincut
+   end subroutine findmincut
 
-   SUBROUTINE findpenalty(msglvl,a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition, &
+   subroutine findpenalty(msglvl,a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition, &
        map,vwts,wtb,wtw,wts,count,head,mark,mark1,list,imb)
 
      ! count is isAdjToSource in call
@@ -8401,24 +8396,23 @@ INNER:    DO inn = 1, n
      ! mark1 --- records level set of vertex in cutset starting from sink
 
 
-     IMPLICIT NONE
-     INTEGER, INTENT (IN) :: msglvl, a_n, a_ne, a_n1, a_n2
-     INTEGER, INTENT (IN) :: a_ptr(:), a_row(:)
-     INTEGER, INTENT (IN) :: vwts(:), partition(:), map(:)
-     INTEGER, INTENT (INOUT) :: COUNT(:), head(:)
-     INTEGER, INTENT (INOUT) :: wtb, wtw, wts
-     INTEGER, INTENT (OUT) :: mark(:), mark1(:)
+     integer, intent (in) :: msglvl, a_n, a_ne, a_n1, a_n2
+     integer, intent (in) :: a_ptr(:), a_row(:)
+     integer, intent (in) :: vwts(:), partition(:), map(:)
+     integer, intent (inout) :: count(:), head(:)
+     integer, intent (inout) :: wtb, wtw, wts
+     integer, intent (out) :: mark(:), mark1(:)
 
      ! Workspace
      ! list --- to hold list of nodes being searched
      ! length bounded by a_n
-     INTEGER :: list(:)
-     REAL (wp) :: imb(:)
+     integer :: list(:)
+     real (wp) :: imb(:)
 
      ! Local variables
-     INTEGER inode, last, lp, maxl, minl, x, z
-     INTEGER i, j1, j2, jj, k, nvtx
-     INTEGER begin_lev, end_lev, ilev, penp
+     integer inode, last, lp, maxl, minl, x, z
+     integer i, j1, j2, jj, k, nvtx
+     integer begin_lev, end_lev, ilev, penp
 
      lp = 0
 
@@ -8428,69 +8422,69 @@ INNER:    DO inn = 1, n
      ! nvtx is number of vertices in separator
      nvtx = a_n - a_n1 - a_n2
 
-     IF (msglvl>0) THEN
-       WRITE (lp,'(A)') ''
-       WRITE (lp,'(A)') '### inside findpenalty()'
-     END IF
+     if (msglvl>0) then
+       write (lp,'(A)') ''
+       write (lp,'(A)') '### inside findpenalty()'
+     end if
 
 
      ! Breadth first traversal from source
      ! Source is defined as all vertices in black partition
 
-     IF (msglvl>0) WRITE (lp,'(A)') 'breadth first traversal from source'
+     if (msglvl>0) write (lp,'(A)') 'breadth first traversal from source'
 
      mark = 0
      ! Black vertices at level 0
      ! Run through separator vertices
      last = 0
-     DO k = a_n1 + a_n2 + 1, a_n
+     do k = a_n1 + a_n2 + 1, a_n
        z = partition(k)
        ! Check if adjacent to source
-       IF (COUNT(k-a_n1-a_n2)==1) THEN
+       if (count(k-a_n1-a_n2)==1) then
          last = last + 1
          list(last) = z
          mark(z) = 1
-       END IF
-     END DO
+       end if
+     end do
      end_lev = 0
 
      ! Each pass through this loop determines all nodes in level set k
      ! a_n is just a dummy end
-     DO k = 2, a_n
+     do k = 2, a_n
        ! Run through all nodes in the previous level set
        begin_lev = end_lev + 1
        end_lev = last
-       DO ilev = begin_lev, end_lev
+       do ilev = begin_lev, end_lev
          x = list(ilev)
-         IF (msglvl>1) WRITE (lp,'(A,I10)') 'Processing vertex', x
+         if (msglvl>1) write (lp,'(A,I10)') 'Processing vertex', x
          ! Run through vertices connected to vertex x
          j1 = a_ptr(x)
-         IF (x==a_n) THEN
+         if (x==a_n) then
            j2 = a_ne
-         ELSE
+         else
            j2 = a_ptr(x+1) - 1
-         END IF
-         DO jj = j1, j2
+         end if
+         do jj = j1, j2
            z = a_row(jj)
            ! Jump if vertex not in separator
-           IF (map(z)/=0) CYCLE
+           if (map(z)/=0) cycle
            ! Jump if vertex visited already
-           IF (mark(z)/=0) CYCLE
+           if (mark(z)/=0) cycle
            mark(z) = k
            ! write(0,*) 'z,mark(z)',z,mark(z)
            ! Add node z to list
            last = last + 1
            list(last) = z
-         END DO
-       END DO
-       IF (last==end_lev) EXIT
-     END DO ! end of processing of nodes on level k
+         end do
+       end do
+       if (last==end_lev) exit
+     end do ! end of processing of nodes on level k
 
 
      ! breadth first traversal from sink
      ! Sink is defined as all vertices in white partition
 
-     IF (msglvl>0) WRITE (lp,'(A)') 'breadth first traversal from the sink'
+     if (msglvl>0) write (lp,'(A)') 'breadth first traversal from the sink'
 
      mark1 = 0
      ! Keep sink at level 0
@@ -8500,151 +8494,151 @@ INNER:    DO inn = 1, n
      ! White nodes at level 0
      ! Put all separator vertices connected to sink in list
      last = 0
-     DO k = a_n1 + a_n2 + 1, a_n
+     do k = a_n1 + a_n2 + 1, a_n
        z = partition(k)
        ! Check if adjacent to source
-       IF (head(k-a_n1-a_n2)==1) THEN
+       if (head(k-a_n1-a_n2)==1) then
          last = last + 1
          list(last) = z
          mark1(z) = 1
          ! k = 1
          mark(z) = mark(z) - 1
-         minl = MIN(minl,mark(z))
-         maxl = MAX(maxl,mark(z))
-       END IF
-     END DO
+         minl = min(minl,mark(z))
+         maxl = max(maxl,mark(z))
+       end if
+     end do
      end_lev = 0
 
      ! Each pass through this loop determines all nodes in level set k
      ! a_n is just a dummy end
-     DO k = 2, a_n
+     do k = 2, a_n
        ! Run through all nodes in the previous level set
        begin_lev = end_lev + 1
        end_lev = last
-       DO ilev = begin_lev, end_lev
+       do ilev = begin_lev, end_lev
          x = list(ilev)
-         IF (msglvl>1) WRITE (lp,'(A,I10)') 'Processing vertex', x
+         if (msglvl>1) write (lp,'(A,I10)') 'Processing vertex', x
          ! Run through vertices connected to vertex x
          j1 = a_ptr(x)
-         IF (x==a_n) THEN
+         if (x==a_n) then
            j2 = a_ne
-         ELSE
+         else
            j2 = a_ptr(x+1) - 1
-         END IF
-         DO jj = j1, j2
+         end if
+         do jj = j1, j2
            z = a_row(jj)
            ! Jump if vertex not in separator
-           IF (map(z)/=0) CYCLE
+           if (map(z)/=0) cycle
            ! Jump if vertex visited already
-           IF (mark1(z)/=0) CYCLE
+           if (mark1(z)/=0) cycle
            mark1(z) = k
            ! write(0,*) 'z,mark1(z)',z,mark1(z)
            ! write(0,*) 'mark(z)',mark(z)
            mark(z) = mark(z) - k
            ! write(0,*) 'z,mark(z)',z,mark(z)
-           minl = MIN(minl,mark(z))
-           maxl = MAX(maxl,mark(z))
+           minl = min(minl,mark(z))
+           maxl = max(maxl,mark(z))
            ! Add node z to list
            last = last + 1
            list(last) = z
-         END DO
-       END DO
-       IF (last==end_lev) EXIT
-     END DO ! end of processing of nodes on level k
+         end do
+       end do
+       if (last==end_lev) exit
+     end do ! end of processing of nodes on level k
 
      ! Compute half-level sets
-     IF (msglvl>1) WRITE (lp,'(A,2I4)') 'minl, maxl ', minl, maxl
+     if (msglvl>1) write (lp,'(A,2I4)') 'minl, maxl ', minl, maxl
 
      ! We will number levels from 1 to maxl-minl+1
      ! count will hold total weight of all vertices in half-level set
      ! Nodes in level set are accessed by linked list in list with headers
      ! in head
-     COUNT(1:maxl-minl+1) = 0
+     count(1:maxl-minl+1) = 0
      head(1:maxl-minl+1) = -1
 
      ! Map the mark values into the local coordinates where separator
      ! vertices numbered from 1 to nvtx
-     DO i = 1, nvtx
+     do i = 1, nvtx
        k = partition(a_n1+a_n2+i)
        mark1(i) = mark(k)
-     END DO
+     end do
 
      ! Run through all notes in cutset, resetting numbering of level set
      ! putting
      ! them in level set for level and accumulating weight of half-level
      ! set
-     DO i = 1, nvtx
+     do i = 1, nvtx
        mark1(i) = mark1(i) - minl + 1
        list(i) = head(mark1(i))
        head(mark1(i)) = i
-       COUNT(mark1(i)) = COUNT(mark1(i)) + vwts(i)
-     END DO
+       count(mark1(i)) = count(mark1(i)) + vwts(i)
+     end do
 
-     IF (msglvl>1) THEN
-       WRITE (lp,'(A)') 'Number of vertices in each half-level set'
-       DO i = 1, maxl - minl + 1
-         WRITE (lp,'(2I10)') i, COUNT(i)
-       END DO
-     END IF
+     if (msglvl>1) then
+       write (lp,'(A)') 'Number of vertices in each half-level set'
+       do i = 1, maxl - minl + 1
+         write (lp,'(2I10)') i, count(i)
+       end do
+     end if
 
      ! Run through half-level sets computing imbalances
      ! wtB is weight of B
      ! wtW is set to total weight of rest of network
      wtw = wtw + wts
-     IF (msglvl>1) WRITE (lp,('(A,3I10)')) 'wtB,wtW,wtS', wtb, wtw, wts
-     IF (maxl-minl==0) THEN
+     if (msglvl>1) write (lp,('(A,3I10)')) 'wtB,wtW,wtS', wtb, wtw, wts
+     if (maxl-minl==0) then
        ! Only one level set
-       imb(1) = MAX(REAL(wtb)/REAL(wtw),REAL(wtw)/REAL(wtb))
-     ELSE
-       wtw = wtw - COUNT(1)
-      ! IF (msglvl>0) WRITE (14,'(A)') &
+       imb(1) = max(real(wtb)/real(wtw),real(wtw)/real(wtb))
+     else
+       wtw = wtw - count(1)
+      ! if (msglvl>0) write (14,'(A)') &
       !   'Half-level set   width   |B|,|W|, imbalance'
-       DO k = 1, maxl - minl
-         wtw = wtw - COUNT(k+1)
-         imb(k) = MAX(REAL(wtb)/REAL(wtw),REAL(wtw)/REAL(wtb))
-      !   IF (msglvl>0) WRITE (14,'(I10,4G12.2)') k, COUNT(k), wtb, wtw, &
+       do k = 1, maxl - minl
+         wtw = wtw - count(k+1)
+         imb(k) = max(real(wtb)/real(wtw),real(wtw)/real(wtb))
+      !   if (msglvl>0) write (14,'(I10,4G12.2)') k, count(k), wtb, wtw, &
       !     imb(k)
-         wtb = wtb + COUNT(k)
-       END DO
-     END IF
+         wtb = wtb + count(k)
+       end do
+     end if
 
-     IF (msglvl>1) THEN
-       WRITE (lp,'(A)') 'Imbalances'
-       DO i = 1, maxl - minl
-         WRITE (lp,'(I10,G12.2)') i, imb(i)
-       END DO
-     END IF
+     if (msglvl>1) then
+       write (lp,'(A)') 'Imbalances'
+       do i = 1, maxl - minl
+         write (lp,'(I10,G12.2)') i, imb(i)
+       end do
+     end if
 
      ! Run through nodes in level set assigning penalty to them
-     DO k = 1, maxl - minl + 1
+     do k = 1, maxl - minl + 1
        inode = head(k)
-       DO
-         IF (inode==-1) EXIT
-         IF (msglvl>1) WRITE (lp,('(A,2I4)')) 'level and node', k, inode
-         IF (k==1) THEN
-           mark(inode) = FLOOR(penp*imb(1)*vwts(inode))
-         ELSE
-           IF (k==maxl-minl+1) mark(inode) = FLOOR(penp*imb(maxl-minl)*vwts &
+       do
+         if (inode==-1) exit
+         if (msglvl>1) write (lp,('(A,2I4)')) 'level and node', k, inode
+         if (k==1) then
+           mark(inode) = floor(penp*imb(1)*vwts(inode))
+         else
+           if (k==maxl-minl+1) mark(inode) = floor(penp*imb(maxl-minl)*vwts &
              (inode))
-           IF (k>1 .AND. k<maxl-minl+1) mark(inode) = FLOOR(penp*MIN(imb( &
+           if (k>1 .and. k<maxl-minl+1) mark(inode) = floor(penp*min(imb( &
              k),imb(k-1))*vwts(inode))
-         END IF
+         end if
          inode = list(inode)
-       END DO
-     END DO
+       end do
+     end do
 
-     IF (msglvl>1) THEN
-       WRITE (lp,'(A)') 'Computed penalties'
-       DO i = 1, nvtx
-         WRITE (lp,'(2I10)') i, mark(i)
-       END DO
-     END IF
+     if (msglvl>1) then
+       write (lp,'(A)') 'Computed penalties'
+       do i = 1, nvtx
+         write (lp,'(2I10)') i, mark(i)
+       end do
+     end if
 
-     IF (msglvl>0) WRITE (lp,'(A/)') '### leaving findpenalty()'
+     if (msglvl>0) write (lp,'(A/)') '### leaving findpenalty()'
 
-   END SUBROUTINE findpenalty
+   end subroutine findpenalty
 
-   SUBROUTINE augmentpath(netw,delta,pred)
+   subroutine augmentpath(netw,delta,pred)
 
      ! Reset flows on augmenting path
 
@@ -8657,13 +8651,12 @@ INNER:    DO inn = 1, n
      ! Input/output
      ! network -- network object
 
-     IMPLICIT NONE
-     INTEGER, INTENT (IN) :: delta
-     TYPE (network), INTENT (INOUT) :: netw
+     integer, intent (in) :: delta
+     type (network), intent (inout) :: netw
 
-     INTEGER iarc, lp, sink, source, v, w
+     integer iarc, lp, sink, source, v, w
 
-     INTEGER, INTENT (IN) :: pred(:)
+     integer, intent (in) :: pred(:)
 
 
      lp = 6
@@ -8672,33 +8665,33 @@ INNER:    DO inn = 1, n
      sink = netw%sink
 
      ! Should set an error flag
-     IF (delta<=0 .OR. pred(sink)<=0) THEN
-       WRITE (lp,'(A,I4,A,I4)') 'ERROR : delta', delta, ', pred(sink) = ', &
+     if (delta<=0 .or. pred(sink)<=0) then
+       write (lp,'(A,I4,A,I4)') 'ERROR : delta', delta, ', pred(sink) = ', &
          pred(sink)
-       RETURN
-     END IF
+       return
+     end if
 
 
      ! work back from the sink resetting network flows
 
      w = sink
      ! while w ~= source
-     DO
-       IF (w==source) EXIT
+     do
+       if (w==source) exit
        iarc = pred(w)
-       IF (netw%firsts(iarc)==w) THEN
+       if (netw%firsts(iarc)==w) then
          v = netw%seconds(iarc)
          netw%flows(iarc) = netw%flows(iarc) - delta
-       ELSE IF (netw%seconds(iarc)==w) THEN
+       else if (netw%seconds(iarc)==w) then
          v = netw%firsts(iarc)
          netw%flows(iarc) = netw%flows(iarc) + delta
-       END IF
+       end if
        w = v
-     END DO
+     end do
 
-   END SUBROUTINE augmentpath
+   end subroutine augmentpath
 
-   SUBROUTINE findaugpath(netw,iarc_m,avail,pred,stats,list,tags,deltas)
+   subroutine findaugpath(netw,iarc_m,avail,pred,stats,list,tags,deltas)
 
      ! Find an augmenting path starting from arc iarc_m
      ! here we use a breadth first search (BFS),
@@ -8727,17 +8720,16 @@ INNER:    DO inn = 1, n
      ! tags -- mark vector, size nnode
      ! deltas -- increment flow vector, size nnode
 
-     IMPLICIT NONE
-     INTEGER, INTENT (IN) :: iarc_m
-     INTEGER, INTENT (OUT) :: avail, stats(2)
-     TYPE (network), INTENT (IN) :: netw
-     INTEGER, INTENT (OUT) :: pred(:)
+     integer, intent (in) :: iarc_m
+     integer, intent (out) :: avail, stats(2)
+     type (network), intent (in) :: netw
+     integer, intent (out) :: pred(:)
 
-     INTEGER iarc, last, lp, nnode, now, root, sink, source, v, w
+     integer iarc, last, lp, nnode, now, root, sink, source, v, w
 
-     INTEGER :: list(:), tags(:), deltas(:)
+     integer :: list(:), tags(:), deltas(:)
 
-     INTEGER narc, u, n_nodevisit, n_arcvisit
+     integer narc, u, n_nodevisit, n_arcvisit
 
      lp = 6
 
@@ -8771,16 +8763,16 @@ INNER:    DO inn = 1, n
 
      ! This will never be the case because all arcs iarc_m come from source
      ! node
-     IF (netw%firsts(iarc)/=source) THEN
-       WRITE (lp,'(A,I4,A)') 'u', u, 'is not adjacent to source'
-       RETURN
-     END IF
+     if (netw%firsts(iarc)/=source) then
+       write (lp,'(A,I4,A)') 'u', u, 'is not adjacent to source'
+       return
+     end if
 
 
      ! check for available capacity
 
      avail = netw%capacities(iarc) - netw%flows(iarc)
-     IF (avail==0) RETURN
+     if (avail==0) return
 
 
      ! Find augmenting path using an alternating tree
@@ -8801,83 +8793,83 @@ INNER:    DO inn = 1, n
      n_arcvisit = 0
 
      ! while now <= last
-     DO
-       IF (now>last) EXIT
+     do
+       if (now>last) exit
        v = list(now)
        now = now + 1
        n_nodevisit = n_nodevisit + 1
 
        iarc = netw%outheads(v)
        ! while iarc ~= -1
-       DO
+       do
          ! Run through all edges emanating from v
          ! First is v^- to v^+
-         IF (iarc==-1) EXIT
+         if (iarc==-1) exit
          w = netw%seconds(iarc)
          n_arcvisit = n_arcvisit + 1
 
-         IF (tags(w)/=root) THEN
+         if (tags(w)/=root) then
            ! Node w has not yet been visited
 
-           IF (netw%capacities(iarc)>netw%flows(iarc)) THEN
+           if (netw%capacities(iarc)>netw%flows(iarc)) then
              avail = netw%capacities(iarc) - netw%flows(iarc)
 
-             IF (avail>deltas(v)) THEN
+             if (avail>deltas(v)) then
                avail = deltas(v)
-             END IF
+             end if
              deltas(w) = avail
              pred(w) = iarc
              ! Flag w as being visited
              tags(w) = root
 
-             IF (w==sink) EXIT
+             if (w==sink) exit
 
              last = last + 1
              list(last) = w
 
-           END IF
-         END IF
+           end if
+         end if
          ! Go to next arc from v
          iarc = netw%nextout(iarc)
-       END DO
-       IF (w==sink) EXIT
+       end do
+       if (w==sink) exit
 
 
        iarc = netw%inheads(v)
        ! while iarc ~= -1
-       DO
+       do
          ! Run through all edges coming in to v
-         IF (iarc==-1) EXIT
+         if (iarc==-1) exit
          w = netw%firsts(iarc)
          n_arcvisit = n_arcvisit + 1
-         IF (tags(w)/=root) THEN
-           IF (netw%flows(iarc)>0) THEN
-             IF (avail>netw%flows(iarc)) THEN
+         if (tags(w)/=root) then
+           if (netw%flows(iarc)>0) then
+             if (avail>netw%flows(iarc)) then
                avail = netw%flows(iarc)
-             END IF
+             end if
              deltas(w) = avail
              pred(w) = iarc
              tags(w) = root
              last = last + 1
              list(last) = w
-           END IF
-         END IF
+           end if
+         end if
          iarc = netw%nextin(iarc)
-       END DO
+       end do
        ! Don't think you can reach this statement
-       IF (w==sink) EXIT
-     END DO
+       if (w==sink) exit
+     end do
 
      ! Flag to show augmenting path not found
-     IF (w/=sink) avail = 0
+     if (w/=sink) avail = 0
 
      stats(1) = n_nodevisit
      stats(2) = n_arcvisit
 
 
-   END SUBROUTINE findaugpath
+   end subroutine findaugpath
 
-   SUBROUTINE evalbsw(a_n,a_ne,a_ptr,a_row,a_weight,map,alpha,costf,stats, &
+   subroutine evalbsw(a_n,a_ne,a_ptr,a_row,a_weight,map,alpha,costf,stats, &
        stats10)
      ! Matlab call
      ! function stats = evalBSW ( A, map, alpha, beta, msglvl )
@@ -8908,18 +8900,17 @@ INNER:    DO inn = 1, n
 
      ! created -- 12jan12, cca
 
-     IMPLICIT NONE
-     INTEGER, INTENT (IN) :: a_n
-     INTEGER, INTENT (IN) :: a_ne
-     INTEGER, INTENT (IN) :: map(:), a_ptr(:), a_row(:), a_weight(:)
-     REAL (wp), INTENT (IN) :: alpha
-     INTEGER, INTENT (IN) :: costf
-     INTEGER, INTENT (OUT) :: stats(9)
-     REAL (wp), INTENT (OUT) :: stats10
-     INTEGER minbw, maxbw, nss, nsb, nsw, nbb, nww, nvtx, ns, nb, nw
-     INTEGER j, j1, j2, jj, u, v
-     REAL (wp) diffbw, beta
-     LOGICAL :: imbal
+     integer, intent (in) :: a_n
+     integer, intent (in) :: a_ne
+     integer, intent (in) :: map(:), a_ptr(:), a_row(:), a_weight(:)
+     real (wp), intent (in) :: alpha
+     integer, intent (in) :: costf
+     integer, intent (out) :: stats(9)
+     real (wp), intent (out) :: stats10
+     integer minbw, maxbw, nss, nsb, nsw, nbb, nww, nvtx, ns, nb, nw
+     integer j, j1, j2, jj, u, v
+     real (wp) diffbw, beta
+     logical :: imbal
 
      beta = 0.5_wp
      nvtx = a_n
@@ -8927,22 +8918,22 @@ INNER:    DO inn = 1, n
      ns = 0
      nb = 0
      nw = 0
-     DO u = 1, nvtx
-       IF (map(u)==0) THEN
+     do u = 1, nvtx
+       if (map(u)==0) then
          ns = ns + a_weight(u)
-       ELSE IF (map(u)==1) THEN
+       else if (map(u)==1) then
          nb = nb + a_weight(u)
-       ELSE IF (map(u)==2) THEN
+       else if (map(u)==2) then
          nw = nw + a_weight(u)
-       END IF
-     END DO
+       end if
+     end do
      stats(1) = ns
      stats(2) = nb
      stats(3) = nw
-     minbw = MIN(nb,nw)
-     maxbw = MAX(nb,nw)
-     diffbw = REAL(ABS(nb-nw))/REAL(ns+nb+nw)
-     IF (.FALSE.) THEN
+     minbw = min(nb,nw)
+     maxbw = max(nb,nw)
+     diffbw = real(abs(nb-nw))/real(ns+nb+nw)
+     if (.false.) then
        nss = 0
        nsb = 0
        nsw = 0
@@ -8950,109 +8941,109 @@ INNER:    DO inn = 1, n
        nww = 0
        ! [rows, cols, ents] = find(A) ;
        ! nzA = length(rows) ;
-       DO j = 1, a_n
+       do j = 1, a_n
          j1 = a_ptr(j)
-         IF (j==a_n) THEN
+         if (j==a_n) then
            j2 = a_ne
-         ELSE
+         else
            j2 = a_ptr(j+1) - 1
-         END IF
+         end if
          v = j
-         DO jj = j1, j2
+         do jj = j1, j2
            u = a_row(jj)
            ! v = cols(ii) ;
-           IF (map(u)==0) THEN
-             IF (map(v)==0) THEN
+           if (map(u)==0) then
+             if (map(v)==0) then
                nss = nss + 1
-             ELSE IF (map(v)==1) THEN
+             else if (map(v)==1) then
                nsb = nsb + 1
-             ELSE IF (map(v)==2) THEN
+             else if (map(v)==2) then
                nsw = nsw + 1
-             END IF
-           ELSE IF (map(u)==1) THEN
-             IF (map(v)==1) THEN
+             end if
+           else if (map(u)==1) then
+             if (map(v)==1) then
                nbb = nbb + 1
-             END IF
-           ELSE IF (map(u)==2) THEN
-             IF (map(v)==2) THEN
+             end if
+           else if (map(u)==2) then
+             if (map(v)==2) then
                nww = nww + 1
-             END IF
-           END IF
-         END DO
-       END DO
+             end if
+           end if
+         end do
+       end do
        stats(4) = nss
        stats(5) = nsb
        stats(6) = nsw
        stats(7) = nbb
        stats(8) = nww
-     END IF
+     end if
      ! stats[9] -- 1 if acceptable, 0 if not
      ! acceptable --> alpha*min(|B|,|W|) >= max(|B|,|W|)
      ! stats10 -- cost of partition
-     IF (alpha*minbw>=maxbw) THEN
+     if (alpha*minbw>=maxbw) then
        stats(9) = 1
-     ELSE
+     else
        stats(9) = 0
-     END IF
+     end if
 
-     IF (alpha > nb+nw+ns-2) THEN
-         imbal = .FALSE.
-     ELSE
-         imbal = .TRUE.
-     END IF
+     if (alpha > nb+nw+ns-2) then
+         imbal = .false.
+     else
+         imbal = .true.
+     end if
 
-     CALL cost_function(nb,nw,ns,nb+nw+ns, &
+     call cost_function(nb,nw,ns,nb+nw+ns, &
        alpha,imbal,costf,stats10)
 
-   END SUBROUTINE evalbsw
+   end subroutine evalbsw
 
-   SUBROUTINE nd_supervars(n,ptr,row,perm,invp,nsvar,svar,info,st)
+   subroutine nd_supervars(n,ptr,row,perm,invp,nsvar,svar,info,st)
      ! Detects supervariables - modified version of subroutine from hsl_mc78
-     INTEGER, INTENT (INOUT) :: n ! Dimension of system
-     INTEGER, DIMENSION (n+1), INTENT (IN) :: ptr ! Column pointers
-     INTEGER, DIMENSION (ptr(n+1)-1), INTENT (IN) :: row ! Row indices
-     INTEGER, DIMENSION (n), INTENT (INOUT) :: perm
+     integer, intent (inout) :: n ! Dimension of system
+     integer, dimension (n+1), intent (in) :: ptr ! Column pointers
+     integer, dimension (ptr(n+1)-1), intent (in) :: row ! Row indices
+     integer, dimension (n), intent (inout) :: perm
      ! perm(i) must hold position of i in the pivot sequence.
      ! On exit, holds the pivot order to be used by factorization.
-     INTEGER, DIMENSION (n), INTENT (INOUT) :: invp ! inverse of perm
-     INTEGER, INTENT (OUT) :: nsvar ! number of supervariables
-     INTEGER, DIMENSION (n), INTENT (OUT) :: svar ! number of vars in each
+     integer, dimension (n), intent (inout) :: invp ! inverse of perm
+     integer, intent (out) :: nsvar ! number of supervariables
+     integer, dimension (n), intent (out) :: svar ! number of vars in each
      ! svar
-     INTEGER, INTENT (OUT) :: info
-     INTEGER, INTENT (OUT) :: st
+     integer, intent (out) :: info
+     integer, intent (out) :: st
 
-     LOGICAL :: full_rank ! flags if supervariable 1 has ever become
+     logical :: full_rank ! flags if supervariable 1 has ever become
      ! empty.
      ! If it has not, then the varaibles in s.v. 1 are those that never
      ! occur
-     INTEGER :: i
-     INTEGER (long) :: ii
-     INTEGER :: j
-     INTEGER :: idx ! current index
-     INTEGER :: next_sv ! head of free sv linked list
-     INTEGER :: nsv ! new supervariable to move j to
-     INTEGER :: piv ! current pivot
-     INTEGER :: col ! current column of A
-     INTEGER :: sv ! current supervariable
-     INTEGER :: svc ! temporary holding supervariable count
-     INTEGER, DIMENSION (:), ALLOCATABLE :: sv_new ! Maps each
+     integer :: i
+     integer (long) :: ii
+     integer :: j
+     integer :: idx ! current index
+     integer :: next_sv ! head of free sv linked list
+     integer :: nsv ! new supervariable to move j to
+     integer :: piv ! current pivot
+     integer :: col ! current column of A
+     integer :: sv ! current supervariable
+     integer :: svc ! temporary holding supervariable count
+     integer, dimension (:), allocatable :: sv_new ! Maps each
      ! supervariable to
      ! a new supervariable with which it is associated.
-     INTEGER, DIMENSION (:), ALLOCATABLE :: sv_seen ! Flags whether
+     integer, dimension (:), allocatable :: sv_seen ! Flags whether
      ! svariables have
      ! been seen in the current column. sv_seen(j) is set to col when svar
      ! j
      ! has been encountered.
-     INTEGER, DIMENSION (:), ALLOCATABLE :: sv_count ! number of variables
+     integer, dimension (:), allocatable :: sv_count ! number of variables
      ! in sv.
 
      info = 0 ! by default completed succefully
 
-     ALLOCATE (sv_new(n+1),sv_seen(n+1),sv_count(n+1),STAT=st)
-     IF (st/=0) THEN
+     allocate (sv_new(n+1),sv_seen(n+1),sv_count(n+1),stat=st)
+     if (st/=0) then
        info = ND_ERR_MEMORY_ALLOC
-       RETURN
-     END IF
+       return
+     end if
 
      svar(:) = 1
      sv_count(1) = n
@@ -9060,24 +9051,24 @@ INNER:    DO inn = 1, n
 
      ! Setup linked list of free super variables
      next_sv = 2
-     DO i = 2, n
+     do i = 2, n
        sv_seen(i) = i + 1
-     END DO
+     end do
      sv_seen(n+1) = -1
 
      ! Determine supervariables using modified Duff and Reid algorithm
-     full_rank = .FALSE.
-     DO col = 1, n
-       IF (ptr(col+1)/=ptr(col)) THEN
+     full_rank = .false.
+     do col = 1, n
+       if (ptr(col+1)/=ptr(col)) then
          ! If column is not empty, add implicit diagonal entry
          j = col
          sv = svar(j)
-         IF (sv_count(sv)==1) THEN ! Are we only (remaining) var in sv
-           full_rank = full_rank .OR. (sv==1)
+         if (sv_count(sv)==1) then ! Are we only (remaining) var in sv
+           full_rank = full_rank .or. (sv==1)
            ! MUST BE the first time that sv has been seen for this
            ! column, so just leave j in sv, and go to next variable.
            ! (Also there can be no other vars in this block pivot)
-         ELSE
+         else
            ! There is at least one other variable remaining in sv
            ! MUST BE first occurence of sv in the current row/column,
            ! so define a new supervariable and associate it with sv.
@@ -9093,30 +9084,30 @@ INNER:    DO inn = 1, n
            sv_count(sv) = sv_count(sv) - 1
            sv_count(nsv) = 1
            ! This sv cannot be empty as initial sv_count was > 1
-         END IF
-       END IF
-       DO ii = ptr(col), ptr(col+1) - 1
+         end if
+       end if
+       do ii = ptr(col), ptr(col+1) - 1
          j = row(ii)
          sv = svar(j)
-         IF (sv_count(sv)==1) THEN ! Are we only (remaining) var in sv
-           full_rank = full_rank .OR. (sv==1)
+         if (sv_count(sv)==1) then ! Are we only (remaining) var in sv
+           full_rank = full_rank .or. (sv==1)
            ! If so, and this is first time that sv has been seen for this
            ! column, then we can just leave j in sv, and go to next
            ! variable.
-           IF (sv_seen(sv)<col) CYCLE
+           if (sv_seen(sv)<col) cycle
            ! Otherwise, we have already defined a new supervariable
            ! associated
            ! with sv. Move j to this variable, then retire (now empty) sv.
            nsv = sv_new(sv)
-           IF (sv==nsv) CYCLE
+           if (sv==nsv) cycle
            svar(j) = nsv
            sv_count(nsv) = sv_count(nsv) + 1
            ! Old sv is now empty, add it to top of free stack
            sv_seen(sv) = next_sv
            next_sv = sv
-         ELSE
+         else
            ! There is at least one other variable remaining in sv
-           IF (sv_seen(sv)<col) THEN
+           if (sv_seen(sv)<col) then
              ! this is the first occurence of sv in the current row/column,
              ! so define a new supervariable and associate it with sv.
              sv_seen(sv) = col
@@ -9125,16 +9116,16 @@ INNER:    DO inn = 1, n
              next_sv = sv_seen(next_sv)
              sv_count(sv_new(sv)) = 0
              sv_seen(sv_new(sv)) = col
-           END IF
+           end if
            ! Now move j from sv to nsv
            nsv = sv_new(sv)
            svar(j) = nsv
            sv_count(sv) = sv_count(sv) - 1
            sv_count(nsv) = sv_count(nsv) + 1
            ! This sv cannot be empty as sv_count was > 1
-         END IF
-       END DO
-     END DO
+         end if
+       end do
+     end do
 
 
      ! Now modify pivot order such that all variables in each supervariable
@@ -9155,123 +9146,123 @@ INNER:    DO inn = 1, n
      ! ordered.
      idx = 1
      nsvar = 0
-     DO piv = 1, n
-       IF (sv_seen(piv)>n+1) CYCLE ! already ordered
+     do piv = 1, n
+       if (sv_seen(piv)>n+1) cycle ! already ordered
        ! Record information for supervariable
        sv = svar(perm(piv))
-       IF ( .NOT. full_rank .AND. sv==1) CYCLE ! Don't touch unused vars
+       if ( .not. full_rank .and. sv==1) cycle ! Don't touch unused vars
        nsvar = nsvar + 1
        svc = sv_count(sv)
        sv_new(nsvar) = svc ! store # vars in s.v. to copy to svar
        ! later
        j = piv
        ! Find all variables that are members of sv and order them.
-       DO WHILE (svc>0)
-         DO j = j, n
-           IF (svar(perm(j))==sv) EXIT
-         END DO
+       do while (svc>0)
+         do j = j, n
+           if (svar(perm(j))==sv) exit
+         end do
          sv_seen(j) = n + 2 ! flag as ordered
          invp(idx) = perm(j)
          idx = idx + 1
          svc = svc - 1
          j = j + 1
-       END DO
-     END DO
+       end do
+     end do
      ! Push unused variables to end - these are those vars still in s.v. 1
-     IF ( .NOT. full_rank) THEN
+     if ( .not. full_rank) then
        svc = sv_count(1)
        ! Find all variables that are members of sv and order them.
        j = 1
-       DO WHILE (svc>0)
-         DO j = j, n
-           IF (svar(perm(j))==1) EXIT
-         END DO
+       do while (svc>0)
+         do j = j, n
+           if (svar(perm(j))==1) exit
+         end do
          invp(idx) = perm(j)
          idx = idx + 1
          svc = svc - 1
          j = j + 1
-       END DO
+       end do
        n = n - sv_count(1)
-     END IF
+     end if
 
      ! Recover perm as inverse of invp
-     DO piv = 1, n
+     do piv = 1, n
        perm(invp(piv)) = piv
-     END DO
+     end do
      ! sv_new has been used to store number of variables in each svar, copy
      ! into
      ! svar where it is returned.
      svar(1:nsvar) = sv_new(1:nsvar)
 
-     DEALLOCATE (sv_new,sv_seen,sv_count,STAT=st)
-     IF (st/=0) THEN
+     deallocate (sv_new,sv_seen,sv_count,stat=st)
+     if (st/=0) then
        info = ND_ERR_MEMORY_DEALLOC
-       RETURN
-     END IF
-   END SUBROUTINE nd_supervars
+       return
+     end if
+   end subroutine nd_supervars
 
 
    ! This subroutine takes a set of supervariables and compresses the
    ! supplied
    ! matrix using them.
 
-   SUBROUTINE nd_compress_by_svar(n,ne,ptr,row,invp,nsvar,svar,ptr2, &
+   subroutine nd_compress_by_svar(n,ne,ptr,row,invp,nsvar,svar,ptr2, &
        row2,info,st)
-     INTEGER, INTENT (IN) :: n ! Dimension of system
-     INTEGER, INTENT (IN) :: ne ! Number off-diagonal zeros in system
-     INTEGER, DIMENSION (n+1), INTENT (IN) :: ptr ! Column pointers
-     INTEGER, DIMENSION (ptr(n+1)-1), INTENT (IN) :: row ! Row indices
-     INTEGER, DIMENSION (n), INTENT (IN) :: invp ! inverse of perm
-     INTEGER, INTENT (IN) :: nsvar
-     INTEGER, DIMENSION (nsvar), INTENT (IN) :: svar ! super variables of A
-     INTEGER, DIMENSION (nsvar+1), INTENT (OUT) :: ptr2
-     INTEGER, DIMENSION (ne), INTENT (OUT) :: row2
-     INTEGER, INTENT (OUT) :: info
-     INTEGER, INTENT (OUT) :: st
+     integer, intent (in) :: n ! Dimension of system
+     integer, intent (in) :: ne ! Number off-diagonal zeros in system
+     integer, dimension (n+1), intent (in) :: ptr ! Column pointers
+     integer, dimension (ptr(n+1)-1), intent (in) :: row ! Row indices
+     integer, dimension (n), intent (in) :: invp ! inverse of perm
+     integer, intent (in) :: nsvar
+     integer, dimension (nsvar), intent (in) :: svar ! super variables of A
+     integer, dimension (nsvar+1), intent (out) :: ptr2
+     integer, dimension (ne), intent (out) :: row2
+     integer, intent (out) :: info
+     integer, intent (out) :: st
 
-     INTEGER :: piv, svc, sv, col
-     INTEGER :: j, idx
-     INTEGER, DIMENSION (:), ALLOCATABLE :: flag, sv_map
+     integer :: piv, svc, sv, col
+     integer :: j, idx
+     integer, dimension (:), allocatable :: flag, sv_map
 
      info = 0 ! by default completed succefully
 
-     ALLOCATE (flag(nsvar),sv_map(n),STAT=st)
-     IF (st/=0) THEN
+     allocate (flag(nsvar),sv_map(n),stat=st)
+     if (st/=0) then
        info = ND_ERR_MEMORY_ALLOC
-       RETURN
-     END IF
+       return
+     end if
      flag(:) = 0
 
      ! Setup sv_map
      piv = 1
-     DO svc = 1, nsvar
-       DO piv = piv, piv + svar(svc) - 1
+     do svc = 1, nsvar
+       do piv = piv, piv + svar(svc) - 1
          sv_map(invp(piv)) = svc
-       END DO
-     END DO
+       end do
+     end do
 
      piv = 1
      idx = 1
-     DO svc = 1, nsvar
+     do svc = 1, nsvar
        col = invp(piv)
        ptr2(svc) = idx
-       DO j = ptr(col), ptr(col+1) - 1
+       do j = ptr(col), ptr(col+1) - 1
          sv = sv_map(row(j))
-         IF (flag(sv)==piv) CYCLE ! Already dealt with this supervariable
+         if (flag(sv)==piv) cycle ! Already dealt with this supervariable
          ! Add row entry for this sv
          row2(idx) = sv
          flag(sv) = piv
          idx = idx + 1
-       END DO
+       end do
        piv = piv + svar(svc)
-     END DO
+     end do
      ptr2(svc) = idx
 
-     DEALLOCATE (flag,sv_map,STAT=st)
-     IF (st/=0) THEN
+     deallocate (flag,sv_map,stat=st)
+     if (st/=0) then
        info = ND_ERR_MEMORY_DEALLOC
-       RETURN
-     END IF
-   END SUBROUTINE nd_compress_by_svar
+       return
+     end if
+   end subroutine nd_compress_by_svar
 
-END MODULE spral_nd
+end module spral_nd
