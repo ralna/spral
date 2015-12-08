@@ -733,6 +733,9 @@ contains
       return
    end subroutine nd_nested_both
 
+   !
+   ! Detects supervariables and compresses graph in place
+   !
    subroutine compress_by_svar(a_n, a_ne, a_ptr, a_row, a_weight, a_n_curr, &
          a_ne_curr, nsvar, svar, sinvp, num_zero_row, control, st)
       integer, intent(in) :: a_n
@@ -751,26 +754,19 @@ contains
 
       integer :: i, j, k
       integer :: nnz_rows ! number of non-zero rows
-      integer :: sv_ptr, sv_perm, sv_ptr2, sv_row2
-      integer, allocatable, dimension(:) :: svwork
+      integer, allocatable, dimension(:) :: ptr2, row2, perm
 
-      ! Check for supervariables
-      allocate (svwork(3*a_n+a_ne+2), stat=st)
+      allocate (ptr2(a_n+1), row2(a_ne), perm(a_n), stat=st)
       if (st.ne.0) return
-      sv_ptr = 0
-      sv_perm = sv_ptr + a_n + 1
-      sv_ptr2 = sv_perm + a_n
-      sv_row2 = sv_ptr2 + a_n + 1
 
-      svwork(sv_ptr+1:sv_ptr+a_n) = a_ptr(1:a_n)
-      svwork(sv_ptr+a_n+1) = a_ne + 1
-      svwork(sv_perm+1:sv_perm+a_n) = (/ (i,i=1,a_n) /)
+      ! Construct simple identity permutation
+      perm(:) = (/ (i,i=1,a_n) /)
       sinvp(:) = (/ (i,i=1,a_n) /)
+
+      ! Identify supervariables
       nnz_rows = a_n
-      call nd_supervars(nnz_rows,svwork(sv_ptr+1:sv_ptr+a_n+1), &
-         a_row(1:a_ne),svwork(sv_perm+1:sv_perm+a_n), &
-         sinvp,nsvar, &
-         svar,st)
+      call nd_supervars(nnz_rows, a_ne, a_ptr, a_row, perm, sinvp, nsvar, &
+         svar, st)
       if (st.ne.0) return
 
       num_zero_row = a_n - nnz_rows
@@ -778,7 +774,7 @@ contains
          write (control%unit_diagnostics,'(a,i10)') &
             'Number supervariables: ', nsvar + num_zero_row
 
-      ! If there are no supervariables, don't bother compressing
+      ! If there are no supervariables, don't bother compressing: return
       if (nsvar+num_zero_row==a_n) then
          a_n_curr = a_n
          a_ne_curr = a_ne
@@ -787,21 +783,20 @@ contains
       end if
 
       ! Otherwise, compress the matrix
-      call nd_compress_by_svar(a_n,a_ne, &
-         svwork(sv_ptr+1:sv_ptr+a_n+1),a_row(1:a_ne), &
-         sinvp,nsvar, &
-         svar,svwork(sv_ptr2+1:sv_ptr2+ &
-         a_n+1),svwork(sv_row2+1:sv_row2+a_ne),st)
+      call nd_compress_by_svar(a_n, a_ne, a_ptr, a_row, sinvp, nsvar, &
+         svar, ptr2, row2, st)
       if (st.ne.0) return
 
+      ! FIXME: what is happening below? can it be simplified?
       a_n_curr = nsvar
+
       ! Fill a_ptr removing any diagonal entries
       a_ptr(:) = 0
 
       ! Set a_ptr(j) to hold no. nonzeros in column j
       do j = 1, a_n_curr
-         do k = svwork(sv_ptr2+j), svwork(sv_ptr2+j+1) - 1
-            i = svwork(sv_row2+k)
+         do k = ptr2(j), ptr2(j+1) - 1
+            i = row2(k)
             if (j<i) then
                a_ptr(i) = a_ptr(i) + 1
                a_ptr(j) = a_ptr(j) + 1
@@ -819,8 +814,8 @@ contains
 
       ! Fill a_row and a_ptr
       do j = 1, a_n_curr
-         do k = svwork(sv_ptr2+j), svwork(sv_ptr2+j+1) - 1
-            i = svwork(sv_row2+k)
+         do k = ptr2(j), ptr2(j+1) - 1
+            i = row2(k)
             if (j<i) then
                a_row(a_ptr(i)) = j
                a_row(a_ptr(j)) = i
@@ -8779,11 +8774,12 @@ inNER:    do inn = 1, n
 
    end subroutine evalbsw
 
-   subroutine nd_supervars(n,ptr,row,perm,invp,nsvar,svar,st)
+   subroutine nd_supervars(n,ne,ptr,row,perm,invp,nsvar,svar,st)
      ! Detects supervariables - modified version of subroutine from hsl_mc78
      integer, intent(inout) :: n ! Dimension of system
-     integer, dimension(n+1), intent(in) :: ptr ! Column pointers
-     integer, dimension(ptr(n+1)-1), intent(in) :: row ! Row indices
+     integer, intent(in) :: ne ! Number of entries
+     integer, dimension(n), intent(in) :: ptr ! Column pointers
+     integer, dimension(ne), intent(in) :: row ! Row indices
      integer, dimension(n), intent(inout) :: perm
      ! perm(i) must hold position of i in the pivot sequence.
      ! On exit, holds the pivot order to be used by factorization.
@@ -8835,7 +8831,7 @@ inNER:    do inn = 1, n
      ! Determine supervariables using modified Duff and Reid algorithm
      full_rank = .false.
      do col = 1, n
-       if (ptr(col+1)/=ptr(col)) then
+       if (nd_get_ptr(col+1,n,ne,ptr)/=ptr(col)) then
          ! If column is not empty, add implicit diagonal entry
          j = col
          sv = svar(j)
@@ -8862,7 +8858,7 @@ inNER:    do inn = 1, n
            ! This sv cannot be empty as initial sv_count was > 1
          end if
        end if
-       do ii = ptr(col), ptr(col+1) - 1
+       do ii = ptr(col), nd_get_ptr(col+1, n, ne, ptr) - 1
          j = row(ii)
          sv = svar(j)
          if (sv_count(sv)==1) then ! Are we only (remaining) var in sv
@@ -8971,6 +8967,20 @@ inNER:    do inn = 1, n
      svar(1:nsvar) = sv_new(1:nsvar)
    end subroutine nd_supervars
 
+   !
+   ! Returns ptr(idx) if idx.le.n, or ne+1 otherwise
+   !
+   integer function nd_get_ptr(idx, n, ne, ptr)
+      integer, intent(in) :: idx, n, ne
+      integer, dimension(n), intent(in) :: ptr
+
+      if(idx.le.n) then
+         nd_get_ptr = ptr(idx)
+      else
+         nd_get_ptr = ne+1
+      endif
+   end function nd_get_ptr
+
 
    ! This subroutine takes a set of supervariables and compresses the
    ! supplied
@@ -8980,8 +8990,8 @@ inNER:    do inn = 1, n
        row2,st)
      integer, intent(in) :: n ! Dimension of system
      integer, intent(in) :: ne ! Number off-diagonal zeros in system
-     integer, dimension(n+1), intent(in) :: ptr ! Column pointers
-     integer, dimension(ptr(n+1)-1), intent(in) :: row ! Row indices
+     integer, dimension(n), intent(in) :: ptr ! Column pointers
+     integer, dimension(ne), intent(in) :: row ! Row indices
      integer, dimension(n), intent(in) :: invp ! inverse of perm
      integer, intent(in) :: nsvar
      integer, dimension(nsvar), intent(in) :: svar ! super variables of A
@@ -9010,7 +9020,7 @@ inNER:    do inn = 1, n
      do svc = 1, nsvar
        col = invp(piv)
        ptr2(svc) = idx
-       do j = ptr(col), ptr(col+1) - 1
+       do j = ptr(col), nd_get_ptr(col+1, n, ne, ptr) - 1
          sv = sv_map(row(j))
          if (flag(sv)==piv) cycle ! Already dealt with this supervariable
          ! Add row entry for this sv
