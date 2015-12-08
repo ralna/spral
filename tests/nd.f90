@@ -3235,10 +3235,9 @@
       LOGICAL, INTENT(OUT) :: ok
 
       INTEGER :: test_count, testi_count, test
-      INTEGER :: n, ne, st, i, j, k, an1,an2,swgt,aw1,aw2,aws
+      INTEGER :: n, ne, st, i, an1,an2,swgt,aw1,aw2,aws
       INTEGER, ALLOCATABLE, DIMENSION(:) :: ptr,row,wgt,work,part
       TYPE (nd_options) :: control, control_orig
-      TYPE (nd_inform) :: info
 
       ok = .TRUE.
       testi_count = 0

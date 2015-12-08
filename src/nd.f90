@@ -931,7 +931,7 @@ contains
      integer :: deg, prev, next, dense ! pointers into work array
      integer :: ndense ! number of dense rows found
      integer :: max_deg ! maximum degree
-     integer :: degree, i, j, k, l, inext, ilast, l1, l2, m, m1
+     integer :: degree, i, j, k, l, l1, l2, m, m1
      logical :: printi, printd
 
      ! ---------------------------------------------
@@ -3397,7 +3397,7 @@ contains
      integer :: winv1, winv2, wins
      integer :: i, j, ii, jj, eye, k, l
      integer :: inn, outer
-     integer :: move, ming, gain, old_gain, inext, ilast, idummy
+     integer :: move, ming, gain, old_gain, inext, idummy
      integer :: first, tail
      real(wp) :: eval, evalc, evalo, eval1, eval2
      logical :: imbal
@@ -3838,7 +3838,7 @@ inNER:    do inn = 1, n
        integer, intent(in) :: n,mult,icut ! order matrix
        integer, intent(inout) :: next(n),last(n),head(-mult:icut)
        integer, intent(in) :: irm, ig
-       integer :: inext, ilast
+       integer :: inext
 
        inext = head(ig)
        head(ig) = irm
@@ -7506,7 +7506,7 @@ inNER:    do inn = 1, n
      ! write(9,*) 'Calling mk_network'
      ! write(0,*) 'Calling mk_network'
      call mk_network(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition,map,a_ns, &
-       msglvl,netw,vwts,wtb,wtw,sedge,mapl,dmapl,dmapr,pred,list,mark1, &
+       msglvl,netw,vwts,wtb,wtw,sedge,mapl,dmapl,dmapr,list,mark1, &
        mark2,imb)
      ! write(9,*) 'Leaving mk_network'
      ! write(0,*) 'Leaving mk_network'
@@ -7711,7 +7711,7 @@ inNER:    do inn = 1, n
 
    subroutine mk_network(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition,map,nvtx, &
        msglvl,netw,vwts,wtb,wtw,sedge,sep_map,isadjtosource,isadjtosink, &
-       count,list,mark1,mark2,imb)
+       list,mark1,mark2,imb)
      ! Create and return a network structure
 
 
@@ -7750,7 +7750,7 @@ inNER:    do inn = 1, n
      integer :: sep_map(:)
      integer :: isadjtosource(:), isadjtosink(:)
      real(wp) :: imb(:)
-     integer :: count(:), mark1(:), mark2(:), list(:)
+     integer :: mark1(:), mark2(:), list(:)
      logical :: augcap
 
      augcap = .true.
