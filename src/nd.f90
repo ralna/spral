@@ -574,8 +574,8 @@ contains
          work(amd_order_ip+1:amd_order_ip+a_n_curr) = a_ptr(1:a_n_curr)
          work(amd_order_sep+1:amd_order_sep+a_n_curr) = ND_SEP_FLAG - 1
          call amd_order(a_n_curr, a_ne_curr, lirn,             &
-            work(amd_order_irn+1:amd_order_irn+lirn),          &
             work(amd_order_ip+1:amd_order_ip+a_n_curr),        &
+            work(amd_order_irn+1:amd_order_irn+lirn),          &
             work(amd_order_sep+1:amd_order_sep+a_n_curr),      &
             work(amd_order_perm+1:amd_order_perm+a_n_curr),    &
             work(amd_order_work+1:amd_order_work+7*a_n_curr))
@@ -1373,8 +1373,8 @@ contains
      work(amd_order_irn+a_ne+1:amd_order_irn+lirn) = 0
      work(amd_order_ip+1:amd_order_ip+a_n) = a_ptr(1:a_n)
      work(amd_order_sep+1:amd_order_sep+a_n) = ND_SEP_FLAG - 1
-     call amd_order(a_n,a_ne,lirn,work(amd_order_irn+1:amd_order_irn+lirn), &
-       work(amd_order_ip+1:amd_order_ip+a_n),work(amd_order_sep+1:amd_order_sep+a_n), &
+     call amd_order(a_n,a_ne,lirn,work(amd_order_ip+1:amd_order_ip+a_n), &
+       work(amd_order_irn+1:amd_order_irn+lirn),work(amd_order_sep+1:amd_order_sep+a_n), &
        work(amd_order_perm+1:amd_order_perm+a_n),work(amd_order_work+1:amd_order_work+7*a_n))
 
      ! Extract perm from amd_order to apply to iperm
@@ -3916,8 +3916,8 @@ inNER:    do inn = 1, n
 
      ! Apply amd_order
      work(rows_sub+1:rows_sub+a_n1) = ND_PART1_FLAG
-     call amd_order(a_n_1,a_ne_sub,a_lirn_sub,work(a_irn_sub+1:a_irn_sub+ &
-       a_lirn_sub),work(a_ptr_sub+1:a_ptr_sub+a_n_1), &
+     call amd_order(a_n_1,a_ne_sub,a_lirn_sub,work(a_ptr_sub+1:a_ptr_sub+a_n_1), &
+       work(a_irn_sub+1:a_irn_sub+a_lirn_sub), &
        work(rows_sub+1:rows_sub+a_n_1),work(amd_order_perm+1:amd_order_perm+a_n_1), &
        work(amd_order_work+1:amd_order_work+7*a_n_1))
 
@@ -3944,8 +3944,8 @@ inNER:    do inn = 1, n
        a_n))
      ! Apply amd_order
      work(rows_sub+a_n1+1:rows_sub+a_n1+a_n2) = ND_PART1_FLAG
-     call amd_order(a_n_2,a_ne_sub,a_lirn_sub,work(a_irn_sub+1:a_irn_sub+ &
-       a_lirn_sub),work(a_ptr_sub+1:a_ptr_sub+a_n_2), &
+     call amd_order(a_n_2,a_ne_sub,a_lirn_sub,work(a_ptr_sub+1:a_ptr_sub+a_n_2), &
+       work(a_irn_sub+1:a_irn_sub+a_lirn_sub), &
        work(rows_sub+a_n1+1:rows_sub+a_n1+a_n_2), &
        work(amd_order_perm+a_n1+1:amd_order_perm+a_n),work(amd_order_work+1:amd_order_work+7* &
        a_n_2))
@@ -4304,8 +4304,8 @@ inNER:    do inn = 1, n
        ! Apply amd_order
        work(rows_sub+1:rows_sub+a_n1) = ND_PART1_FLAG
        work(rows_sub+a_n1+1:rows_sub+a_n_1) = ND_SEP_FLAG
-       call amd_order(a_n_1,a_ne_sub,a_lirn_sub,work(a_irn_sub+1:a_irn_sub+ &
-         a_lirn_sub),work(a_ptr_sub+1:a_ptr_sub+a_n_1), &
+       call amd_order(a_n_1,a_ne_sub,a_lirn_sub,work(a_ptr_sub+1:a_ptr_sub+a_n_1), &
+         work(a_irn_sub+1:a_irn_sub+a_lirn_sub), &
          work(rows_sub+1:rows_sub+a_n_1),work(amd_order_perm+1:amd_order_perm+a_n_1), &
          work(amd_order_work+1:amd_order_work+7*a_n_1))
 
@@ -4355,8 +4355,8 @@ inNER:    do inn = 1, n
        ! Apply amd_order
        work(rows_sub+1:rows_sub+a_n2) = ND_PART2_FLAG
        work(rows_sub+a_n2+1:rows_sub+a_n_2) = ND_SEP_FLAG
-       call amd_order(a_n_2,a_ne_sub,a_lirn_sub,work(a_irn_sub+1:a_irn_sub+ &
-         a_lirn_sub),work(a_ptr_sub+1:a_ptr_sub+a_n_2), &
+       call amd_order(a_n_2,a_ne_sub,a_lirn_sub,work(a_ptr_sub+1:a_ptr_sub+a_n_2), &
+         work(a_irn_sub+1:a_irn_sub+a_lirn_sub), &
          work(rows_sub+1:rows_sub+a_n_2),work(amd_order_perm+a_n1+1:amd_order_perm+ &
          a_n),work(amd_order_work+1:amd_order_work+7*a_n_2))
 

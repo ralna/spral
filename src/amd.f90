@@ -1,7 +1,8 @@
-    MODULE spral_amd
-
+MODULE spral_amd
       IMPLICIT NONE
+
       PRIVATE
+      PUBLIC amd_order
 
       ! ---------------------------------------------------
       ! Precision
@@ -12,15 +13,6 @@
       ! Partition flags
       ! ---------------------------------------------------
       INTEGER, PARAMETER :: nd_sep_flag = 1 ! node in separator
-
-      ! ---------------------------------------------------
-      ! Interfaces
-      ! ---------------------------------------------------
-      INTERFACE amd_order
-        MODULE PROCEDURE hamd
-      END INTERFACE
-
-      PUBLIC amd_order
 
       ! ---------------------------------------------------
       ! The main code
@@ -37,7 +29,7 @@
       ! We use the term Le to denote the set of all supervariables in element
       ! E.
       ! -------------------------------------------------------------------
-      SUBROUTINE hamd(n,ne,lirn,irn,ip,sep,perm,work)
+      SUBROUTINE amd_order(n,ne,lirn,ip,irn,sep,perm,work)
         ! ..
         ! .. Scalar Arguments ..
         INTEGER, INTENT (IN) :: lirn, n, ne
@@ -1228,6 +1220,6 @@
 
 
         pfree = maxmem
-      END SUBROUTINE hamd
+      END SUBROUTINE amd_order
 
-    END MODULE spral_amd
+END MODULE spral_amd
