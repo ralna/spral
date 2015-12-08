@@ -2669,18 +2669,23 @@
           a_n1 = num_entries
           a_n2 = a_n - a_n1
           work(work_p+1:work_p+a_n) = 0
+          a_weight_1 = 0
           DO i = 1, num_entries
             j = work(level_p+i)
             partition(i) = j
             work(work_p+j) = 1
+            a_weight_1 = a_weight_1 + a_weight(j)
           END DO
           j = num_entries + 1
+          a_weight_2 = 0
           DO i = 1, a_n
             IF (work(work_p+i)==0) THEN
               partition(j) = i
+              a_weight_2 = a_weight_2 + a_weight(j)
               j = j + 1
             END IF
           END DO
+          a_weight_sep = 0
           IF (level==0) THEN
             band = -REAL(lwidth,wp)
           END IF
