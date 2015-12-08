@@ -82,13 +82,13 @@ module spral_nd
       ! during coarsening. If cgrid%size is greater than
       ! max_reduction*grid%size or cgrid%size is less than
       ! min_reduction*grid%size then carry on coarsening
-      real (wp) :: min_reduction = 0.5 ! size of next multigrid
+      real(wp) :: min_reduction = 0.5 ! size of next multigrid
          ! matrix must be greater than min_reduction*(size of current
          ! multigrid matrix)
-      real (wp) :: max_reduction = 0.9 ! size of next multigrid
+      real(wp) :: max_reduction = 0.9 ! size of next multigrid
          ! matrix must be less than max_reduction*(size of current multigrid
          ! matrix)
-      real (wp) :: balance = 2.0 ! Try to make sure that
+      real(wp) :: balance = 2.0 ! Try to make sure that
          ! max(P1,P2)/min(P1/P2) <= balance
 
       integer :: max_improve_cycles = 2 ! Having computed a minimal partition,
@@ -119,12 +119,12 @@ module spral_nd
       integer :: maxdeg_max_component = -1 ! holds number nonzeros in largest
          ! indep component after dense rows removed and supervariables
          ! (optionally) compressed
-      real (wp) :: band = -1 ! holds L, where L is the size
+      real(wp) :: band = -1 ! holds L, where L is the size
          ! of the largest level set at the top level of nested dissection. If
          ! the matrix is reducible, then it holds the value for the largest
          ! of the irreducible components.
          ! Not returned if control%partition_method==1.
-      real (wp) :: depth = -1 ! holds number of levels in level set structure
+      real(wp) :: depth = -1 ! holds number of levels in level set structure
          ! at the top level of nested dissection. If the matrix is reducible,
          ! then it holds the value for the largest of the irreducible
          ! components.
@@ -136,9 +136,9 @@ module spral_nd
    type nd_multigrid
       integer :: size ! size of this level (number of rows)
       type (nd_matrix), pointer :: graph => null() ! this level of matrix
-      integer, pointer, dimension (:) :: where => null() ! where each row of
+      integer, pointer, dimension(:) :: where => null() ! where each row of
          ! this level of matrix will go (ie ordering for this level)
-      integer, pointer, dimension (:) :: row_wgt => null() ! number of
+      integer, pointer, dimension(:) :: row_wgt => null() ! number of
          ! vertices this vertex of the coarse graph matrix represents
       integer :: level = 0 ! the level
       integer :: part_div(2) ! number of vertices in each part
@@ -155,9 +155,9 @@ module spral_nd
       integer :: m ! number rows
       integer :: n ! number columns
       integer :: ne ! number entries in matrix
-      integer, allocatable, dimension (:) :: ptr ! pointer into col array
-      integer, allocatable, dimension (:) :: col ! column indices
-      integer, allocatable, dimension (:) :: val ! values
+      integer, allocatable, dimension(:) :: ptr ! pointer into col array
+      integer, allocatable, dimension(:) :: col ! column indices
+      integer, allocatable, dimension(:) :: val ! values
    end type nd_matrix
 
    ! *****************************************************************
@@ -186,16 +186,16 @@ contains
    ! Main user callable routine
    !
    subroutine nd_order(mtx,n,ptr,row,perm,control,info,seps)
-      integer, intent (in) :: mtx ! 0 if lower triangular part matrix input,
+      integer, intent(in) :: mtx ! 0 if lower triangular part matrix input,
          ! 1 if both upper and lower parts input
-      integer, intent (in) :: n ! number of rows in the matrix
-      integer, intent (in) :: ptr(n+1) ! column pointers
-      integer, intent (in) :: row(ptr(n+1)-1) ! row indices
-      integer, intent (out) :: perm(n) ! permutation: row i becomes row
+      integer, intent(in) :: n ! number of rows in the matrix
+      integer, intent(in) :: ptr(n+1) ! column pointers
+      integer, intent(in) :: row(ptr(n+1)-1) ! row indices
+      integer, intent(out) :: perm(n) ! permutation: row i becomes row
          ! perm(i)
-      type (nd_options), intent (in) :: control
-      type (nd_inform), intent (inout) :: info
-      integer, dimension(n), optional, intent (out) :: seps
+      type (nd_options), intent(in) :: control
+      type (nd_inform), intent(inout) :: info
+      integer, dimension(n), optional, intent(out) :: seps
          ! seps(i) is -1 if vertex is not in a separator; otherwise it
          ! is equal to lev, where lev is the nested dissection level at
          ! which it became part of the separator
@@ -206,8 +206,8 @@ contains
       ! a_ne. These variables store that information.
       integer :: a_n
       integer :: a_ne
-      integer, allocatable, dimension (:) :: a_ptr
-      integer, allocatable, dimension (:) :: a_row
+      integer, allocatable, dimension(:) :: a_ptr
+      integer, allocatable, dimension(:) :: a_row
 
       ! Other local variables
       integer :: i
@@ -291,9 +291,9 @@ contains
    ! Prints out errors and warnings according to value of flag
    !
    subroutine nd_print_message(flag,unit,context)
-     integer, intent (in) :: flag ! Error flag to print message for
-     integer, intent (in) :: unit ! Fortran unit to print message to
-     character (len=*), intent (in) :: context ! context to print with message
+     integer, intent(in) :: flag ! Error flag to print message for
+     integer, intent(in) :: unit ! Fortran unit to print message to
+     character (len=*), intent(in) :: context ! context to print with message
 
      if (unit.lt.0) return ! No output
 
@@ -326,7 +326,7 @@ contains
       integer, intent(out) :: ne_out
       integer, dimension(:), allocatable, intent(out) :: ptr_out
       integer, dimension(:), allocatable, intent(out) :: row_out
-      type (nd_options), intent (in) :: control
+      type (nd_options), intent(in) :: control
       integer, intent(out) :: st
 
       integer :: i, j, k
@@ -397,7 +397,7 @@ contains
       integer, intent(out) :: ne_out
       integer, dimension(:), allocatable, intent(out) :: ptr_out
       integer, dimension(:), allocatable, intent(out) :: row_out
-      type (nd_options), intent (in) :: control
+      type (nd_options), intent(in) :: control
       integer, intent(out) :: st
 
       integer :: i, j, k, p
@@ -448,15 +448,15 @@ contains
    ! ---------------------------------------------------
    subroutine nd_nested_both(a_n,a_ne,a_ptr,a_row,perm,control,info, &
        seps)
-     integer, intent (in) :: a_n ! number of rows in the matrix
-     integer, intent (in) :: a_ne ! number of entries in the matrix
-     integer, intent (inout) :: a_ptr(a_n) ! column pointers
-     integer, intent (inout) :: a_row(a_ne) ! row indices (lower and upper)
-     integer, intent (out) :: perm(a_n) ! permutation: row i becomes row
+     integer, intent(in) :: a_n ! number of rows in the matrix
+     integer, intent(in) :: a_ne ! number of entries in the matrix
+     integer, intent(inout) :: a_ptr(a_n) ! column pointers
+     integer, intent(inout) :: a_row(a_ne) ! row indices (lower and upper)
+     integer, intent(out) :: perm(a_n) ! permutation: row i becomes row
      ! perm(i)
-     type (nd_options), intent (in) :: control
-     type (nd_inform), intent (inout) :: info
-     integer, intent (out), optional :: seps(a_n)
+     type (nd_options), intent(in) :: control
+     type (nd_inform), intent(inout) :: info
+     integer, intent(out), optional :: seps(a_n)
      ! seps(i) is -1 if vertex is not in a separator; otherwise it
      ! is equal to l, where l is the nested dissection level at
      ! which it became part of the separator
@@ -473,13 +473,13 @@ contains
      integer :: st, nsvar, svinfo
      integer :: sv_ptr, sv_perm, sv_invp, sv_svar, sv_ptr2, sv_row2, &
        sumweight
-     integer, allocatable, dimension (:) :: a_weight ! a_weight(i) will
+     integer, allocatable, dimension(:) :: a_weight ! a_weight(i) will
      ! contain the weight of variable (column) i ends for the
      ! expanded matrix
-     integer, allocatable, dimension (:) :: iperm ! row iperm(i) will
+     integer, allocatable, dimension(:) :: iperm ! row iperm(i) will
      ! become row i when matrix reordered
-     integer, allocatable, dimension (:) :: work ! space for doing work
-     integer, allocatable, dimension (:) :: svwork ! supervariable work
+     integer, allocatable, dimension(:) :: work ! space for doing work
+     integer, allocatable, dimension(:) :: svwork ! supervariable work
      ! space
      logical :: printe, printi, printd
      logical :: use_multilevel
@@ -901,30 +901,30 @@ contains
    ! Identifies and removes dense rows
    subroutine nd_dense_rows(a_n_in,a_ne_in,a_ptr,a_row,a_n_out,a_ne_out, &
        iperm,work,control,info)
-     integer, intent (in) :: a_n_in ! dimension of subproblem before dense
+     integer, intent(in) :: a_n_in ! dimension of subproblem before dense
      ! rows removed
-     integer, intent (in) :: a_ne_in ! no. nonzeros of subproblem before
+     integer, intent(in) :: a_ne_in ! no. nonzeros of subproblem before
      ! dense rows removed
-     integer, intent (inout) :: a_ptr(a_n_in) ! On input a_ptr(i) contains
+     integer, intent(inout) :: a_ptr(a_n_in) ! On input a_ptr(i) contains
      ! position in a_row that entries for column i start. This is then
      ! used to hold positions for submatrices after dense row removed
-     integer, intent (inout) :: a_row(a_ne_in) ! On input a_row contains
+     integer, intent(inout) :: a_row(a_ne_in) ! On input a_row contains
      ! row
      ! indices of the non-zero rows. Diagonal entries have been removed
      ! and the matrix expanded.This is then used to hold row indices for
      ! submatrices after partitioning
-     integer, intent (inout) :: iperm(a_n_in) ! On input, iperm(i) contains
+     integer, intent(inout) :: iperm(a_n_in) ! On input, iperm(i) contains
      ! the row in the original matrix (when nd_nested was called) that
      ! row i in this sub problem maps to. On output, this is updated to
      ! reflect the computed permutation.
-     integer, intent (out) :: a_n_out ! dimension of subproblem after dense
+     integer, intent(out) :: a_n_out ! dimension of subproblem after dense
      ! rows removed
-     integer, intent (out) :: a_ne_out ! no. nonzeros of subproblem after
+     integer, intent(out) :: a_ne_out ! no. nonzeros of subproblem after
      ! dense rows removed
-     integer, intent (out) :: work(4*a_n_in) ! Used during the algorithm to
+     integer, intent(out) :: work(4*a_n_in) ! Used during the algorithm to
      ! reduce need for allocations. The output is garbage.
-     type (nd_options), intent (in) :: control
-     type (nd_inform), intent (inout) :: info
+     type (nd_options), intent(in) :: control
+     type (nd_inform), intent(inout) :: info
 
      ! ---------------------------------------------
      integer :: unit_diagnostics ! unit on which to print diagnostics
@@ -1153,41 +1153,41 @@ contains
        a_weight,sumweight,iperm,work,work_comp_n,work_comp_nz,level, &
        control,info,use_amd,use_multilevel,grid,seps)
 
-     integer, intent (in) :: a_n ! dimension of subproblem ND is applied to
-     integer, intent (in) :: a_ne ! no. nonzeros of subproblem
-     integer, intent (inout) :: a_ptr(a_n) ! On input a_ptr(i) contains
+     integer, intent(in) :: a_n ! dimension of subproblem ND is applied to
+     integer, intent(in) :: a_ne ! no. nonzeros of subproblem
+     integer, intent(inout) :: a_ptr(a_n) ! On input a_ptr(i) contains
      ! position in a_row that entries for column i start. This is then
      ! used to hold positions for submatrices after partitioning
-     integer, intent (inout) :: a_row(a_ne) ! On input a_row contains row
+     integer, intent(inout) :: a_row(a_ne) ! On input a_row contains row
      ! indices of the non-zero rows. Diagonal entries have been removed
      ! and the matrix expanded.This is then used to hold row indices for
      ! submatrices after partitioning
-     integer, intent (inout) :: a_weight(a_n) ! On input a_weight(i)
+     integer, intent(inout) :: a_weight(a_n) ! On input a_weight(i)
      ! contains
      ! weight of column i. This is then
      ! used to hold the weights for submatrices after partitioning
-     integer, intent (in) :: sumweight ! sum entries in a_weight
+     integer, intent(in) :: sumweight ! sum entries in a_weight
      ! (unchanged)
-     integer, intent (inout) :: iperm(a_n) ! On input, iperm(i) contains
+     integer, intent(inout) :: iperm(a_n) ! On input, iperm(i) contains
      ! the
      ! row in the original matrix (when nd_nested was called) that
      ! row i in this sub problem maps to. On output, this is updated to
      ! reflect the computed permutation.
-     integer, intent (out) :: work_comp_n(a_n)
-     integer, intent (out) :: work_comp_nz(a_n)
-     integer, intent (out) :: work(12*a_n+sumweight+a_ne) ! Used during the
+     integer, intent(out) :: work_comp_n(a_n)
+     integer, intent(out) :: work_comp_nz(a_n)
+     integer, intent(out) :: work(12*a_n+sumweight+a_ne) ! Used during the
      ! algorithm to reduce need for allocations. The output is garbage.
-     integer, intent (in) :: level ! which level of nested dissection is
+     integer, intent(in) :: level ! which level of nested dissection is
      ! this
-     type (nd_options), intent (in) :: control
-     type (nd_inform), intent (inout) :: info
-     logical, intent (in) :: use_amd
-     logical, intent (inout) :: use_multilevel
-     integer, intent (inout), optional :: seps(a_n)
+     type (nd_options), intent(in) :: control
+     type (nd_inform), intent(inout) :: info
+     logical, intent(in) :: use_amd
+     logical, intent(inout) :: use_multilevel
+     integer, intent(inout), optional :: seps(a_n)
      ! seps(i) is -1 if vertex i of permuted submatrix is not in a
      ! separator; otherwise it is equal to l, where l is the nested
      ! dissection level at which it became part of the separator
-     type (nd_multigrid), intent (inout) :: grid
+     type (nd_multigrid), intent(inout) :: grid
 
      ! ---------------------------------------------
      ! Local variables
@@ -1424,44 +1424,44 @@ contains
    ! Finds and forms independent components in a matrix
    subroutine nd_find_indep_comps(a_n,a_ne,a_ptr,a_row,a_weight,iperm, &
        comp_num,compsizes,compnzs,work,control,info)
-     integer, intent (in) :: a_n ! size of matrix
-     integer, intent (in) :: a_ne ! no. nonzeros in matrix
-     integer, intent (inout) :: a_ptr(a_n) ! On entry, column ptrs for
+     integer, intent(in) :: a_n ! size of matrix
+     integer, intent(in) :: a_ne ! no. nonzeros in matrix
+     integer, intent(inout) :: a_ptr(a_n) ! On entry, column ptrs for
      ! input
      ! matrix.
      ! On exit, a_ptr(1:compsizes(1)) contains column ptrs for compontent
      ! 1;
      ! a_ptr(compsizes(1)+1:compsizes(1)+compsizes(2)) contains column ptrs
      ! for compontent 2; etc.
-     integer, intent (inout) :: a_row(a_ne) ! On entry, row indices for
+     integer, intent(inout) :: a_row(a_ne) ! On entry, row indices for
      ! input
      ! matrix.
      ! On exit, a_row(1:compnzs(1)) contains row indices for compontent 1;
      ! a_ptr(compnzs(1)+1:compnzs(1)+compnzs(2)) contains row indices
      ! for compontent 2; etc.
-     integer, intent (inout) :: a_weight(a_n) ! On entry, a_weight(i)
+     integer, intent(inout) :: a_weight(a_n) ! On entry, a_weight(i)
      ! contains
      ! weight of column i for input matrix.
      ! On exit, a_weight(1:compsizes(1)) contains column weights for
      ! compontent 1;
      ! a_weight(compsizes(1)+1:compsizes(1)+compsizes(2)) contains column
      ! weights or compontent 2; etc.
-     integer, intent (inout) :: iperm(a_n) ! On input, iperm(i) contains
+     integer, intent(inout) :: iperm(a_n) ! On input, iperm(i) contains
      ! the
      ! row in the original matrix (when nd_nested was called) that
      ! row i in this sub problem maps to. On output, this is updated to
      ! reflect the computed permutation.
-     integer, intent (out) :: comp_num ! number independent components
+     integer, intent(out) :: comp_num ! number independent components
      ! found
-     integer, intent (out) :: compsizes(a_n) ! compsizes(i) will contain
+     integer, intent(out) :: compsizes(a_n) ! compsizes(i) will contain
      ! the
      ! size of compontent i
-     integer, intent (out) :: compnzs(a_n) ! compnzs(i) will contain the
+     integer, intent(out) :: compnzs(a_n) ! compnzs(i) will contain the
      ! number of nonzeros in compontent i
-     integer, intent (out) :: work(3*a_n+a_ne) ! used as work arrays during
+     integer, intent(out) :: work(3*a_n+a_ne) ! used as work arrays during
      ! computation
-     type (nd_options), intent (in) :: control
-     type (nd_inform), intent (inout) :: info
+     type (nd_options), intent(in) :: control
+     type (nd_inform), intent(inout) :: info
 
      ! ---------------------------------------------
      ! Local variables
@@ -1608,35 +1608,35 @@ contains
        level,a_n1,a_n2,a_ne1,a_ne2,iperm,work,control,info,use_multilevel, &
        grid)
 
-     integer, intent (in) :: a_n ! dimension of subproblem ND is applied to
-     integer, intent (in) :: a_ne ! no. nonzeros of subproblem
-     integer, intent (inout) :: a_ptr(a_n) ! On input a_ptr(i) contains
+     integer, intent(in) :: a_n ! dimension of subproblem ND is applied to
+     integer, intent(in) :: a_ne ! no. nonzeros of subproblem
+     integer, intent(inout) :: a_ptr(a_n) ! On input a_ptr(i) contains
      ! position in a_row that entries for column i start. This is then
      ! used to hold positions for submatrices after partitioning
-     integer, intent (inout) :: a_row(a_ne) ! On input a_row contains row
+     integer, intent(inout) :: a_row(a_ne) ! On input a_row contains row
      ! indices of the non-zero rows. Diagonal entries have been removed
      ! and the matrix expanded.This is then used to hold row indices for
      ! submatrices after partitioning
-     integer, intent (inout) :: a_weight(a_n) ! On input a_weight(i)
+     integer, intent(inout) :: a_weight(a_n) ! On input a_weight(i)
      ! contains
      ! the weight of column i. This is then used to hold the weights for
      ! the submatrices after partitioning.
-     integer, intent (in) :: sumweight ! Sum entries in a_weight.
+     integer, intent(in) :: sumweight ! Sum entries in a_weight.
      ! Unchanged.
-     integer, intent (in) :: level ! Current nested dissection level
-     integer, intent (out) :: a_n1, a_n2 ! size of the two submatrices
-     integer, intent (out) :: a_ne1, a_ne2 ! no. nonzeros in two
+     integer, intent(in) :: level ! Current nested dissection level
+     integer, intent(out) :: a_n1, a_n2 ! size of the two submatrices
+     integer, intent(out) :: a_ne1, a_ne2 ! no. nonzeros in two
      ! submatrices
-     integer, intent (inout) :: iperm(a_n) ! On input, iperm(i) contains
+     integer, intent(inout) :: iperm(a_n) ! On input, iperm(i) contains
      ! the
      ! row in the original matrix (when nd_nested was called) that
      ! row i in this sub problem maps to. On output, this is updated to
      ! reflect the computed permutation.
-     logical, intent (inout) :: use_multilevel
-     integer, intent (out) :: work(12*a_n+sumweight+a_ne)
-     type (nd_options), intent (in) :: control
-     type (nd_inform), intent (inout) :: info
-     type (nd_multigrid), intent (inout) :: grid
+     logical, intent(inout) :: use_multilevel
+     integer, intent(out) :: work(12*a_n+sumweight+a_ne)
+     type (nd_options), intent(in) :: control
+     type (nd_inform), intent(inout) :: info
+     type (nd_multigrid), intent(inout) :: grid
 
      ! ---------------------------------------------
      ! Local variables
@@ -1653,7 +1653,7 @@ contains
      integer :: ref_method, ref_control
      integer :: a_n1_new, a_n2_new, a_weight_1_new, a_weight_2_new, &
        a_weight_sep_new
-     real (wp) :: ratio, tau_best, tau, band, depth
+     real(wp) :: ratio, tau_best, tau, band, depth
      logical :: imbal
 
 
@@ -2023,39 +2023,39 @@ contains
        sumweight,level,a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep, &
        partition,work,control,info,band,depth,use_multilevel,grid)
 
-     integer, intent (in) :: a_n ! dimension of subproblem ND is applied to
-     integer, intent (in) :: a_ne ! no. nonzeros of subproblem
-     integer, intent (in) :: a_ptr(a_n) ! On input a_ptr(i) contains
+     integer, intent(in) :: a_n ! dimension of subproblem ND is applied to
+     integer, intent(in) :: a_ne ! no. nonzeros of subproblem
+     integer, intent(in) :: a_ptr(a_n) ! On input a_ptr(i) contains
      ! position in a_row that entries for column i start.
-     integer, intent (in) :: a_row(a_ne) ! On input a_row contains row
+     integer, intent(in) :: a_row(a_ne) ! On input a_row contains row
      ! indices of the non-zero rows. Diagonal entries have been removed
      ! and the matrix expanded.
-     integer, intent (in) :: a_weight(a_n) ! On input a_weight(i) contains
+     integer, intent(in) :: a_weight(a_n) ! On input a_weight(i) contains
      ! the weight of column i.
-     integer, intent (in) :: sumweight ! sum of entries in a_weight
-     integer, intent (in) :: level ! current level of nested dissection
-     integer, intent (out) :: a_n1, a_n2 ! size of the two submatrices
-     integer, intent (out) :: a_weight_1, a_weight_2, a_weight_sep ! Weight
+     integer, intent(in) :: sumweight ! sum of entries in a_weight
+     integer, intent(in) :: level ! current level of nested dissection
+     integer, intent(out) :: a_n1, a_n2 ! size of the two submatrices
+     integer, intent(out) :: a_weight_1, a_weight_2, a_weight_sep ! Weight
      ! ed
      ! size of partitions and separator
-     integer, intent (out) :: partition(a_n) ! First a_n1 entries will
+     integer, intent(out) :: partition(a_n) ! First a_n1 entries will
      ! contain
      ! list of (local) indices in partition 1; next a_n2 entries will
      ! contain list of (local) entries in partition 2; entries in
      ! separator are listed at the end
-     integer, intent (out) :: work(9*a_n+sumweight) ! used as work array
-     type (nd_options), intent (in) :: control
-     integer, intent (inout) :: info
-     real (wp), intent (out) :: band ! If level = 0, then on
+     integer, intent(out) :: work(9*a_n+sumweight) ! used as work array
+     type (nd_options), intent(in) :: control
+     integer, intent(inout) :: info
+     real(wp), intent(out) :: band ! If level = 0, then on
      ! output band = 100*L/a_n, where L is the size of the
      ! largest levelset
-     real (wp), intent (out) :: depth ! If level = 0, then
+     real(wp), intent(out) :: depth ! If level = 0, then
      ! on
      ! output depth = num_levels_nend
-     logical, intent (inout) :: use_multilevel ! are we allowed to use a
+     logical, intent(inout) :: use_multilevel ! are we allowed to use a
      ! multilevel
      ! partitioning strategy
-     type (nd_multigrid), intent (inout) :: grid
+     type (nd_multigrid), intent(inout) :: grid
 
      ! ---------------------------------------------
      ! Local variables
@@ -2073,9 +2073,9 @@ contains
      integer :: lwidth, mindeg, degree, max_search
      integer :: ww
      integer :: stop_coarsening2 ! max no. multigrid levels
-     real (wp) :: bestval
-     real (wp) :: val
-     real (wp) :: ratio
+     real(wp) :: bestval
+     real(wp) :: val
+     real(wp) :: ratio
      logical :: printi, printd
      logical :: imbal, use_multilevel_copy
 
@@ -2354,39 +2354,39 @@ contains
        sumweight,level,a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep, &
        partition,work,control,info,band,depth,use_multilevel,grid)
 
-     integer, intent (in) :: a_n ! dimension of subproblem ND is applied to
-     integer, intent (in) :: a_ne ! no. nonzeros of subproblem
-     integer, intent (in) :: a_ptr(a_n) ! On input a_ptr(i) contains
+     integer, intent(in) :: a_n ! dimension of subproblem ND is applied to
+     integer, intent(in) :: a_ne ! no. nonzeros of subproblem
+     integer, intent(in) :: a_ptr(a_n) ! On input a_ptr(i) contains
      ! position in a_row that entries for column i start.
-     integer, intent (in) :: a_row(a_ne) ! On input a_row contains row
+     integer, intent(in) :: a_row(a_ne) ! On input a_row contains row
      ! indices of the non-zero rows. Diagonal entries have been removed
      ! and the matrix expanded.
-     integer, intent (in) :: a_weight(a_n) ! On input a_weight(i) contains
+     integer, intent(in) :: a_weight(a_n) ! On input a_weight(i) contains
      ! the weight of column i.
-     integer, intent (in) :: sumweight ! sum of entries in a_weight
-     integer, intent (in) :: level ! current nested dissection level
-     integer, intent (out) :: a_n1, a_n2 ! size of the two submatrices
-     integer, intent (out) :: a_weight_1, a_weight_2, a_weight_sep ! Weight
+     integer, intent(in) :: sumweight ! sum of entries in a_weight
+     integer, intent(in) :: level ! current nested dissection level
+     integer, intent(out) :: a_n1, a_n2 ! size of the two submatrices
+     integer, intent(out) :: a_weight_1, a_weight_2, a_weight_sep ! Weight
      ! ed
      ! size of partitions and separator
-     integer, intent (out) :: partition(a_n) ! First a_n1 entries will
+     integer, intent(out) :: partition(a_n) ! First a_n1 entries will
      ! contain
      ! list of (local) indices in partition 1; next a_n2 entries will
      ! contain list of (local) entries in partition 2; entries in
      ! separator are listed at the end
-     integer, intent (out) :: work(9*a_n+sumweight)
-     type (nd_options), intent (in) :: control
-     integer, intent (inout) :: info
-     real (wp), intent (out) :: band ! If level = 0, then on
+     integer, intent(out) :: work(9*a_n+sumweight)
+     type (nd_options), intent(in) :: control
+     integer, intent(inout) :: info
+     real(wp), intent(out) :: band ! If level = 0, then on
      ! output band = 100*L/a_n, where L is the size of the
      ! largest levelset
-     real (wp), intent (out) :: depth ! If level = 0, then
+     real(wp), intent(out) :: depth ! If level = 0, then
      ! on
      ! output band = num_levels_nend
-     logical, intent (inout) :: use_multilevel ! are we allowed to use a
+     logical, intent(inout) :: use_multilevel ! are we allowed to use a
      ! multilevel
      ! partitioning strategy
-     type (nd_multigrid), intent (inout) :: grid
+     type (nd_multigrid), intent(inout) :: grid
 
      ! ---------------------------------------------
      ! Local variables
@@ -2401,9 +2401,9 @@ contains
      integer :: i, j, k, p1sz, p2sz, sepsz, lwidth
      integer :: stop_coarsening2, lwork
      integer :: mindeg, degree, max_search
-     real (wp) :: bestval
-     real (wp) :: val
-     real (wp) :: ratio
+     real(wp) :: bestval
+     real(wp) :: val
+     real(wp) :: ratio
      logical :: imbal
 
      ! ---------------------------------------------
@@ -2615,30 +2615,30 @@ contains
    subroutine nd_find_pseudo(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
        level_ptr,level,nstrt,nend,max_search,work,num_levels,num_entries, &
        lwidth)
-     integer, intent (in) :: a_n ! dimension of subproblem ND is applied to
-     integer, intent (in) :: a_ne ! no. nonzeros of subproblem
-     integer, intent (in) :: a_ptr(a_n) ! On input a_ptr(i) contains
+     integer, intent(in) :: a_n ! dimension of subproblem ND is applied to
+     integer, intent(in) :: a_ne ! no. nonzeros of subproblem
+     integer, intent(in) :: a_ptr(a_n) ! On input a_ptr(i) contains
      ! position in a_row that entries for column i start.
-     integer, intent (in) :: a_row(a_ne) ! On input a_row contains row
+     integer, intent(in) :: a_row(a_ne) ! On input a_row contains row
      ! indices of the non-zero rows. Diagonal entries have been removed
      ! and the matrix expanded.
-     integer, intent (in) :: a_weight(a_n) ! On input a_weight(i) contains
+     integer, intent(in) :: a_weight(a_n) ! On input a_weight(i) contains
      ! weight of vertex i
-     integer, intent (in) :: sumweight ! sum of entries in a_weight
-     integer, intent (out) :: level_ptr(a_n) ! On output level_ptr(i)
+     integer, intent(in) :: sumweight ! sum of entries in a_weight
+     integer, intent(out) :: level_ptr(a_n) ! On output level_ptr(i)
      ! contains
      ! position in level that entries for level i start.
-     integer, intent (out) :: level(a_n) ! On output level contains lists
+     integer, intent(out) :: level(a_n) ! On output level contains lists
      ! of
      ! rows according to the level set that they are in
-     integer, intent (inout) :: nstrt ! Starting pseudoperipheral node
-     integer, intent (out) :: nend ! End pseudoperipheral node
-     integer, intent (in) :: max_search
-     integer, intent (out) :: work(2*a_n)
-     integer, intent (out) :: num_levels
-     integer, intent (out) :: num_entries ! number of entries in level
+     integer, intent(inout) :: nstrt ! Starting pseudoperipheral node
+     integer, intent(out) :: nend ! End pseudoperipheral node
+     integer, intent(in) :: max_search
+     integer, intent(out) :: work(2*a_n)
+     integer, intent(out) :: num_levels
+     integer, intent(out) :: num_entries ! number of entries in level
      ! structure
-     integer, intent (out) :: lwidth
+     integer, intent(out) :: lwidth
      ! Based on MC60HD
 
      ! ---------------------------------------------
@@ -2788,29 +2788,29 @@ contains
    subroutine nd_level_struct(root,a_n,a_ne,a_ptr,a_row,mask,level_ptr, &
        level,num_levels,lwidth,num_entries)
 
-     integer, intent (in) :: root ! Root node for level structure
-     integer, intent (in) :: a_n ! dimension of subproblem ND is applied to
-     integer, intent (in) :: a_ne ! no. nonzeros of subproblem
-     integer, intent (in) :: a_ptr(a_n) ! On input a_ptr(i) contains
+     integer, intent(in) :: root ! Root node for level structure
+     integer, intent(in) :: a_n ! dimension of subproblem ND is applied to
+     integer, intent(in) :: a_ne ! no. nonzeros of subproblem
+     integer, intent(in) :: a_ptr(a_n) ! On input a_ptr(i) contains
      ! position in a_row that entries for column i start.
-     integer, intent (in) :: a_row(a_ne) ! On input a_row contains row
+     integer, intent(in) :: a_row(a_ne) ! On input a_row contains row
      ! indices of the non-zero rows. Diagonal entries have been removed
      ! and the matrix expanded.
-     integer, intent (inout) :: mask(a_n) ! Always restored to input value
+     integer, intent(inout) :: mask(a_n) ! Always restored to input value
      ! at
      ! end of the call. mask(node) > 0 for all visible nodes
-     integer, intent (out) :: level_ptr(a_n) ! On output level_ptr(i)
+     integer, intent(out) :: level_ptr(a_n) ! On output level_ptr(i)
      ! contains
      ! position in level that entries for level i start.
-     integer, intent (out) :: level(a_n) ! On output level contains lists
+     integer, intent(out) :: level(a_n) ! On output level contains lists
      ! of
      ! rows according to the level set that they are in
-     integer, intent (out) :: num_levels ! On output num_levels contains
+     integer, intent(out) :: num_levels ! On output num_levels contains
      ! the
      ! number of levels
-     integer, intent (out) :: lwidth ! On output, contains the width of the
+     integer, intent(out) :: lwidth ! On output, contains the width of the
      ! structure
-     integer, intent (out) :: num_entries ! On output, contains number of
+     integer, intent(out) :: num_entries ! On output, contains number of
      ! entries in the tree structure containing root
 
      ! ---------------------------------------------
@@ -2882,24 +2882,24 @@ contains
    ! from the start and end node
    subroutine nd_distance(a_n,num_levels_nend,level_ptr_nend,level_nend, &
        num_levels_nstrt,level_ptr_nstrt,level_nstrt,distance_ptr,distance)
-     integer, intent (in) :: a_n ! order of matrix
-     integer, intent (in) :: num_levels_nend ! number of levels with root
+     integer, intent(in) :: a_n ! order of matrix
+     integer, intent(in) :: num_levels_nend ! number of levels with root
      ! nend
-     integer, intent (in) :: level_ptr_nend(a_n) ! level_ptr(i) contains
+     integer, intent(in) :: level_ptr_nend(a_n) ! level_ptr(i) contains
      ! position in level that entries for level i start (root = nend)
-     integer, intent (in) :: level_nend(a_n) ! Contains lists of rows
+     integer, intent(in) :: level_nend(a_n) ! Contains lists of rows
      ! according to the level set that they are in (root = nend)
-     integer, intent (in) :: num_levels_nstrt ! no. of levels with root
+     integer, intent(in) :: num_levels_nstrt ! no. of levels with root
      ! nstrt
-     integer, intent (inout) :: level_ptr_nstrt(a_n) ! level_ptr(i)
+     integer, intent(inout) :: level_ptr_nstrt(a_n) ! level_ptr(i)
      ! contains
      ! position in level that entries for level i start (root = nstrt)
      ! Reused during subroutine
-     integer, intent (in) :: level_nstrt(a_n) ! Contains lists of rows
+     integer, intent(in) :: level_nstrt(a_n) ! Contains lists of rows
      ! according to the level set that they are in (root = nstrt)
-     integer, intent (out) :: distance_ptr(2*a_n-1) ! distance(i) contains
+     integer, intent(out) :: distance_ptr(2*a_n-1) ! distance(i) contains
      ! position in distance where entries with distance i-a_n
-     integer, intent (out) :: distance(a_n) ! Contains lists of rows
+     integer, intent(out) :: distance(a_n) ! Contains lists of rows
      ! ordered
      ! according to their distance
 
@@ -2971,17 +2971,17 @@ contains
    ! Given a partition array, convert the partition into a flag array
    subroutine nd_convert_partition_flags(a_n,a_n1,a_n2,partition,flag_1, &
        flag_2,flag_sep,flags)
-     integer, intent (in) :: a_n ! order of matrix
-     integer, intent (in) :: a_n1 ! Size of partition 1
-     integer, intent (in) :: a_n2 ! Size of partition 2
-     integer, intent (in) :: partition(a_n) ! First a_n1 entries contain
+     integer, intent(in) :: a_n ! order of matrix
+     integer, intent(in) :: a_n1 ! Size of partition 1
+     integer, intent(in) :: a_n2 ! Size of partition 2
+     integer, intent(in) :: partition(a_n) ! First a_n1 entries contain
      ! list of (local) indices in partition 1; next a_n2 entries
      ! contain list of (local) entries in partition 2; entries in
      ! separator are listed at the end.
-     integer, intent (in) :: flag_1 ! flag for rows in partition 1
-     integer, intent (in) :: flag_2 ! flag for rows in partition 2
-     integer, intent (in) :: flag_sep ! flag for rows in separator
-     integer, intent (out) :: flags(a_n) ! flags(i) contains flag for row i
+     integer, intent(in) :: flag_1 ! flag for rows in partition 1
+     integer, intent(in) :: flag_2 ! flag for rows in partition 2
+     integer, intent(in) :: flag_sep ! flag for rows in separator
+     integer, intent(out) :: flags(a_n) ! flags(i) contains flag for row i
      ! and indicates which partition it is in
 
      integer :: j, k
@@ -3008,14 +3008,14 @@ contains
    ! Given a partition array, convert the partition into a flag array
    subroutine nd_convert_flags_partition(a_n,a_n1,a_n2,flags,flag_1, &
        flag_2,partition)
-     integer, intent (in) :: a_n ! order of matrix
-     integer, intent (in) :: a_n1 ! Size of partition 1
-     integer, intent (in) :: a_n2 ! Size of partition 2
-     integer, intent (in) :: flags(a_n) ! flags(i) contains flag for row i
+     integer, intent(in) :: a_n ! order of matrix
+     integer, intent(in) :: a_n1 ! Size of partition 1
+     integer, intent(in) :: a_n2 ! Size of partition 2
+     integer, intent(in) :: flags(a_n) ! flags(i) contains flag for row i
      ! and indicates which partition it is in
-     integer, intent (in) :: flag_1 ! flag for rows in partition 1
-     integer, intent (in) :: flag_2 ! flag for rows in partition 2
-     integer, intent (out) :: partition(a_n) ! First a_n1 entries contain
+     integer, intent(in) :: flag_1 ! flag for rows in partition 1
+     integer, intent(in) :: flag_2 ! flag for rows in partition 2
+     integer, intent(out) :: partition(a_n) ! First a_n1 entries contain
      ! list of (local) indices in partition 1; next a_n2 entries
      ! contain list of (local) entries in partition 2; entries in
      ! separator are listed at the end.
@@ -3049,24 +3049,24 @@ contains
    ! between the input separator and the larger of P1 and P2
    subroutine nd_move_partition(a_n,a_ne,a_ptr,a_row,a_weight,a_n1,a_n2, &
        a_weight_1,a_weight_2,a_weight_sep,flag_1,flag_2,flag_sep,flags)
-     integer, intent (in) :: a_n ! order of matrix
-     integer, intent (in) :: a_ne ! number of entries in matrix
-     integer, intent (in) :: a_ptr(a_n) ! On input a_ptr(i) contains
+     integer, intent(in) :: a_n ! order of matrix
+     integer, intent(in) :: a_ne ! number of entries in matrix
+     integer, intent(in) :: a_ptr(a_n) ! On input a_ptr(i) contains
      ! position in a_row that entries for column i start.
-     integer, intent (in) :: a_row(a_ne) ! On input a_row contains row
+     integer, intent(in) :: a_row(a_ne) ! On input a_row contains row
      ! indices of the non-zero rows. Diagonal entries have been removed
      ! and the matrix expanded.
-     integer, intent (in) :: a_weight(a_n) ! On input a_weight(i) contains
+     integer, intent(in) :: a_weight(a_n) ! On input a_weight(i) contains
      ! the weight of column i
-     integer, intent (inout) :: a_n1 ! Size of partition 1
-     integer, intent (inout) :: a_n2 ! Size of partition 2
-     integer, intent (inout) :: a_weight_1, a_weight_2, a_weight_sep ! Weig
+     integer, intent(inout) :: a_n1 ! Size of partition 1
+     integer, intent(inout) :: a_n2 ! Size of partition 2
+     integer, intent(inout) :: a_weight_1, a_weight_2, a_weight_sep ! Weig
      ! hted
      ! size of partitions and separator
-     integer, intent (in) :: flag_1 ! flag for rows in partition 1
-     integer, intent (in) :: flag_2 ! flag for rows in partition 2
-     integer, intent (in) :: flag_sep ! flag for rows in separator
-     integer, intent (inout) :: flags(a_n) ! flags(i) contains flag for row
+     integer, intent(in) :: flag_1 ! flag for rows in partition 1
+     integer, intent(in) :: flag_2 ! flag for rows in partition 2
+     integer, intent(in) :: flag_sep ! flag for rows in separator
+     integer, intent(inout) :: flags(a_n) ! flags(i) contains flag for row
      ! i
      ! and indicates which partition it is in. This is updated
 
@@ -3165,28 +3165,28 @@ contains
    ! trimming or max flow
    subroutine nd_refine_edge(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
        a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep,partition,work,control)
-     integer, intent (in) :: a_n ! order of matrix
-     integer, intent (in) :: a_ne ! number of entries in matrix
-     integer, intent (in) :: a_ptr(a_n) ! On input a_ptr(i) contains
+     integer, intent(in) :: a_n ! order of matrix
+     integer, intent(in) :: a_ne ! number of entries in matrix
+     integer, intent(in) :: a_ptr(a_n) ! On input a_ptr(i) contains
      ! position in a_row that entries for column i start.
-     integer, intent (in) :: a_row(a_ne) ! On input a_row contains row
+     integer, intent(in) :: a_row(a_ne) ! On input a_row contains row
      ! indices of the non-zero rows. Diagonal entries have been removed
      ! and the matrix expanded.
-     integer, intent (in) :: a_weight(a_n) ! On input a_weight(i) contains
+     integer, intent(in) :: a_weight(a_n) ! On input a_weight(i) contains
      ! the weight of column i
-     integer, intent (in) :: sumweight ! Sum of weights in a_weight
-     integer, intent (inout) :: a_n1 ! Size of partition 1
-     integer, intent (inout) :: a_n2 ! Size of partition 2
-     integer, intent (inout) :: a_weight_1, a_weight_2, a_weight_sep ! Weig
+     integer, intent(in) :: sumweight ! Sum of weights in a_weight
+     integer, intent(inout) :: a_n1 ! Size of partition 1
+     integer, intent(inout) :: a_n2 ! Size of partition 2
+     integer, intent(inout) :: a_weight_1, a_weight_2, a_weight_sep ! Weig
      ! hted
      ! size of partitions and separator
-     integer, intent (inout) :: partition(a_n) ! First a_n1 entries contain
+     integer, intent(inout) :: partition(a_n) ! First a_n1 entries contain
      ! list of (local) indices in partition 1; next a_n2 entries
      ! contain list of (local) entries in partition 2; entries in
      ! separator are listed at the end. This is updated to the new
      ! partition
-     integer, intent (out) :: work(3*a_n) ! Work array
-     type (nd_options), intent (in) :: control
+     integer, intent(out) :: work(3*a_n) ! Work array
+     type (nd_options), intent(in) :: control
 
      ! ---------------------------------------------
      ! Local variables
@@ -3232,28 +3232,28 @@ contains
    ! for code
    subroutine nd_refine_fm(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,a_n1, &
        a_n2,a_weight_1,a_weight_2,a_weight_sep,partition,work,control)
-     integer, intent (in) :: a_n ! order of matrix
-     integer, intent (in) :: a_ne ! number of entries in matrix
-     integer, intent (in) :: a_ptr(a_n) ! On input a_ptr(i) contains
+     integer, intent(in) :: a_n ! order of matrix
+     integer, intent(in) :: a_ne ! number of entries in matrix
+     integer, intent(in) :: a_ptr(a_n) ! On input a_ptr(i) contains
      ! position in a_row that entries for column i start.
-     integer, intent (in) :: a_row(a_ne) ! On input a_row contains row
+     integer, intent(in) :: a_row(a_ne) ! On input a_row contains row
      ! indices of the non-zero rows. Diagonal entries have been removed
      ! and the matrix expanded.
-     integer, intent (in) :: a_weight(a_n) ! On input a_weight(i) contains
+     integer, intent(in) :: a_weight(a_n) ! On input a_weight(i) contains
      ! the weight of column i
-     integer, intent (in) :: sumweight ! Sum of weights in a_weight
-     integer, intent (inout) :: a_n1 ! Size of partition 1
-     integer, intent (inout) :: a_n2 ! Size of partition 2
-     integer, intent (inout) :: a_weight_1, a_weight_2, a_weight_sep ! Weig
+     integer, intent(in) :: sumweight ! Sum of weights in a_weight
+     integer, intent(inout) :: a_n1 ! Size of partition 1
+     integer, intent(inout) :: a_n2 ! Size of partition 2
+     integer, intent(inout) :: a_weight_1, a_weight_2, a_weight_sep ! Weig
      ! hted
      ! size of partitions and separator
-     integer, intent (inout) :: partition(a_n) ! First a_n1 entries contain
+     integer, intent(inout) :: partition(a_n) ! First a_n1 entries contain
      ! list of (local) indices in partition 1; next a_n2 entries
      ! contain list of (local) entries in partition 2; entries in
      ! separator are listed at the end. This is updated to the new
      ! partition
-     integer, intent (out) :: work(8*a_n+sumweight) ! Work array
-     type (nd_options), intent (in) :: control
+     integer, intent(out) :: work(8*a_n+sumweight) ! Work array
+     type (nd_options), intent(in) :: control
 
      ! ---------------------------------------------
      ! Local variables
@@ -3277,7 +3277,7 @@ contains
      ! from FM
      integer :: icut, mult ! Used within FM refinement
      integer :: band
-     real (wp) :: ratio
+     real(wp) :: ratio
      logical :: imbal ! Should we check for imbalance?
 
      if (control%refinement_band .lt. 1) return
@@ -3351,27 +3351,27 @@ contains
        gain2,done,head,dist)
 
      ! Matrix is held in matrix using compressed column scheme
-     integer, intent (in) :: n ! size of matrix
-     integer, intent (in) :: a_ne ! no. nonzeros in matrix
-     integer, intent (in) :: ptr(n) ! row pointers
-     integer, intent (in) :: col(a_ne) ! column indices
-     ! type (nd_matrix), intent (inout) :: matrix
+     integer, intent(in) :: n ! size of matrix
+     integer, intent(in) :: a_ne ! no. nonzeros in matrix
+     integer, intent(in) :: ptr(n) ! row pointers
+     integer, intent(in) :: col(a_ne) ! column indices
+     ! type (nd_matrix), intent(inout) :: matrix
      ! The array weight is used to hold a weight on the vertices indicating
      ! how many vertices from the finer graphs have been combined into the
      ! current coarse graph vertex.
-     integer, intent (in) :: weight(n)
-     integer, intent (in) :: sumweight
-     integer, intent (in) :: icut ! Used to limit search
-     integer, intent (in) :: mult ! Used to bound search
-     integer, intent (in) :: costf ! Determines which cost function used
-     integer, intent (inout) :: a_n1 ! No. vertices partition 1
-     integer, intent (inout) :: a_n2 ! No. vertices partition 2
-     integer, intent (inout) :: wnv1 ! Weighted sum of vertices partition 1
-     integer, intent (inout) :: wnv2 ! Weighted sum of vertices partition 2
-     integer, intent (inout) :: wns ! Weighted sum of vertices separator
-     integer, intent (in) :: band ! width of band around initial separator
+     integer, intent(in) :: weight(n)
+     integer, intent(in) :: sumweight
+     integer, intent(in) :: icut ! Used to limit search
+     integer, intent(in) :: mult ! Used to bound search
+     integer, intent(in) :: costf ! Determines which cost function used
+     integer, intent(inout) :: a_n1 ! No. vertices partition 1
+     integer, intent(inout) :: a_n2 ! No. vertices partition 2
+     integer, intent(inout) :: wnv1 ! Weighted sum of vertices partition 1
+     integer, intent(inout) :: wnv2 ! Weighted sum of vertices partition 2
+     integer, intent(inout) :: wns ! Weighted sum of vertices separator
+     integer, intent(in) :: band ! width of band around initial separator
      ! that the separator can lie in
-     real (wp), intent (in) :: ratio ! ratio to determine
+     real(wp), intent(in) :: ratio ! ratio to determine
      ! whether
      ! partition is balanced
 
@@ -3383,13 +3383,13 @@ contains
      ! flags(i) == ND_PART1_FLAG : i is in partition 1
      ! flags(i) == ND_PART2_FLAG : i is in partition 2
      ! flags(i) == ND_SEP_FLAG   : i is in separator/cutset
-     integer, intent (inout) :: flags(n)
+     integer, intent(inout) :: flags(n)
      ! info holds parameters giving information about the performance of
      ! the
      ! subroutine
-     integer, intent (out) :: ipart(n), next(n), last(n)
-     integer, intent (out) :: gain1(n), gain2(n), done(n), head(-mult:icut)
-     integer, intent (out) :: dist(n)
+     integer, intent(out) :: ipart(n), next(n), last(n)
+     integer, intent(out) :: gain1(n), gain2(n), done(n), head(-mult:icut)
+     integer, intent(out) :: dist(n)
 
      ! Number nodes in each partition
      integer :: nv1, ns, nv2, inv1, inv2, ins
@@ -3399,7 +3399,7 @@ contains
      integer :: inn, outer
      integer :: move, ming, gain, old_gain, inext, ilast, idummy
      integer :: first, tail
-     real (wp) :: eval, evalc, evalo, eval1, eval2
+     real(wp) :: eval, evalc, evalo, eval1, eval2
      logical :: imbal
 
 
@@ -3878,20 +3878,20 @@ inNER:    do inn = 1, n
 
    subroutine amd_order_both(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition, &
        iperm,a_weight,work)
-     integer, intent (in) :: a_n ! order of matrix being partitioned
-     integer, intent (in) :: a_ne ! no. entries in matrix being partitioned
-     integer, intent (in) :: a_ptr(a_n) ! col ptrs for matrix being
+     integer, intent(in) :: a_n ! order of matrix being partitioned
+     integer, intent(in) :: a_ne ! no. entries in matrix being partitioned
+     integer, intent(in) :: a_ptr(a_n) ! col ptrs for matrix being
      ! partitioned
-     integer, intent (in) :: a_row(a_ne) ! row indices for matrix
+     integer, intent(in) :: a_row(a_ne) ! row indices for matrix
      ! being partitioned.
-     integer, intent (in) :: a_n1 ! no. rows in partition 1
-     integer, intent (in) :: a_n2 ! no. rows in partition 2
-     integer, intent (in) :: partition(a_n) ! the partitions
-     integer, intent (inout) :: iperm(a_n) ! maps current permutation to
+     integer, intent(in) :: a_n1 ! no. rows in partition 1
+     integer, intent(in) :: a_n2 ! no. rows in partition 2
+     integer, intent(in) :: partition(a_n) ! the partitions
+     integer, intent(inout) :: iperm(a_n) ! maps current permutation to
      ! the
      ! column indices of the matrix whose ordering is being computed
-     integer, intent (inout) :: a_weight(a_n) ! weights of vertices
-     integer, intent (out) :: work(12*a_n+a_ne)
+     integer, intent(inout) :: a_weight(a_n) ! weights of vertices
+     integer, intent(out) :: work(12*a_n+a_ne)
 
 
      ! Local variables
@@ -3997,27 +3997,27 @@ inNER:    do inn = 1, n
 
    subroutine extract_matrix(a_n,a_ne,a_ptr,a_row,a_n_part,a_n_sep, &
        rows_sub,a_ne_sub,a_ptr_sub,len_a_row_sub,a_row_sub,work)
-     integer, intent (in) :: a_n ! order of matrix being partitioned
-     integer, intent (in) :: a_ne ! no. entries in matrix being partitioned
-     integer, intent (in) :: a_ptr(a_n) ! col ptrs for matrix being
+     integer, intent(in) :: a_n ! order of matrix being partitioned
+     integer, intent(in) :: a_ne ! no. entries in matrix being partitioned
+     integer, intent(in) :: a_ptr(a_n) ! col ptrs for matrix being
      ! partitioned
-     integer, intent (in) :: a_row(a_ne) ! row indices for matrix
+     integer, intent(in) :: a_row(a_ne) ! row indices for matrix
      ! being partitioned.
-     integer, intent (in) :: a_n_part ! no. rows in partition
-     integer, intent (in) :: a_n_sep ! no. rows in partition
-     integer, intent (in) :: rows_sub(a_n_part+a_n_sep) ! rows/cols of
+     integer, intent(in) :: a_n_part ! no. rows in partition
+     integer, intent(in) :: a_n_sep ! no. rows in partition
+     integer, intent(in) :: rows_sub(a_n_part+a_n_sep) ! rows/cols of
      ! matrix
      ! to be extracted. Intersecting rows/cols of separator will be
      ! replaced
      ! by matrix of all zeros
-     integer, intent (out) :: a_ne_sub ! no. entries stored in extracted
+     integer, intent(out) :: a_ne_sub ! no. entries stored in extracted
      ! matrix
-     integer, intent (out) :: a_ptr_sub(a_n_part+a_n_sep) ! col ptrs for
+     integer, intent(out) :: a_ptr_sub(a_n_part+a_n_sep) ! col ptrs for
      ! extracted matrix
-     integer, intent (in) :: len_a_row_sub ! length of a_row_sub
-     integer, intent (out) :: a_row_sub(len_a_row_sub) ! row indices for
+     integer, intent(in) :: len_a_row_sub ! length of a_row_sub
+     integer, intent(out) :: a_row_sub(len_a_row_sub) ! row indices for
      ! extracted matrix
-     integer, intent (out) :: work(a_n)
+     integer, intent(out) :: work(a_n)
 
      ! Local variables
      integer :: i, j, k, l, m, p
@@ -4115,26 +4115,26 @@ inNER:    do inn = 1, n
    subroutine extract_both_matrices(a_n,a_ne,a_ptr,a_row,a_n_part1, &
        a_n_part2,rows_sub,a_ne_sub1,a_ne_sub2,a_ptr_sub,len_a_row_sub, &
        a_row_sub,work)
-     integer, intent (in) :: a_n ! order of matrix being partitioned
-     integer, intent (in) :: a_ne ! no. entries in matrix being partitioned
-     integer, intent (in) :: a_ptr(a_n) ! col ptrs for matrix being
+     integer, intent(in) :: a_n ! order of matrix being partitioned
+     integer, intent(in) :: a_ne ! no. entries in matrix being partitioned
+     integer, intent(in) :: a_ptr(a_n) ! col ptrs for matrix being
      ! partitioned
-     integer, intent (in) :: a_row(a_ne) ! row indices for matrix
+     integer, intent(in) :: a_row(a_ne) ! row indices for matrix
      ! being partitioned.
-     integer, intent (in) :: a_n_part1 ! no. rows in partition 1
-     integer, intent (in) :: a_n_part2 ! no. rows in partition 2
-     integer, intent (in) :: rows_sub(a_n_part1+a_n_part2) ! rows/cols of
+     integer, intent(in) :: a_n_part1 ! no. rows in partition 1
+     integer, intent(in) :: a_n_part2 ! no. rows in partition 2
+     integer, intent(in) :: rows_sub(a_n_part1+a_n_part2) ! rows/cols of
      ! matrices to be extracted. First a_n_part1 entries contain the
      ! rows/cols forming the first matrix to be extracted.
-     integer, intent (out) :: a_ne_sub1 ! no. entries in extracted matrix 1
-     integer, intent (out) :: a_ne_sub2 ! no. entries in extracted matrix 2
-     integer, intent (out) :: a_ptr_sub(a_n_part1+a_n_part2) ! col ptrs for
+     integer, intent(out) :: a_ne_sub1 ! no. entries in extracted matrix 1
+     integer, intent(out) :: a_ne_sub2 ! no. entries in extracted matrix 2
+     integer, intent(out) :: a_ptr_sub(a_n_part1+a_n_part2) ! col ptrs for
      ! extracted matrices. First a_n_part1 are for first matrix, etc
-     integer, intent (in) :: len_a_row_sub ! length of a_row_sub
-     integer, intent (out) :: a_row_sub(len_a_row_sub) ! row indices for
+     integer, intent(in) :: len_a_row_sub ! length of a_row_sub
+     integer, intent(out) :: a_row_sub(len_a_row_sub) ! row indices for
      ! extracted matrices. First a_ne_part1 entries are for first matrix;
      ! the immediately following a_ne_part2 entries are for second matrix
-     integer, intent (out) :: work(a_n)
+     integer, intent(out) :: work(a_n)
 
      ! Local variables
      integer :: i, j, k, l, m, p
@@ -4242,21 +4242,21 @@ inNER:    do inn = 1, n
      ! Apply amd_order to the smaller partition and extract the other matrix
      ! into
      ! a_ptr and a_row
-     integer, intent (in) :: a_n ! order of matrix being partitioned
-     integer, intent (in) :: a_ne ! no. entries in matrix being partitioned
-     integer, intent (inout) :: a_ptr(a_n) ! col ptrs for matrix being
+     integer, intent(in) :: a_n ! order of matrix being partitioned
+     integer, intent(in) :: a_ne ! no. entries in matrix being partitioned
+     integer, intent(inout) :: a_ptr(a_n) ! col ptrs for matrix being
      ! partitioned and, on return, for the extracted submatrix
-     integer, intent (inout) :: a_row(a_ne) ! row indices for matrix
+     integer, intent(inout) :: a_row(a_ne) ! row indices for matrix
      ! being partitioned and, on return, for the extracted submatrix
-     integer, intent (in) :: a_n1 ! no. rows in partition 1
-     integer, intent (in) :: a_n2 ! no. rows in partition 2
-     integer, intent (in) :: partition(a_n) ! the partitions
-     integer, intent (inout) :: iperm(a_n) ! maps current permuation to the
+     integer, intent(in) :: a_n1 ! no. rows in partition 1
+     integer, intent(in) :: a_n2 ! no. rows in partition 2
+     integer, intent(in) :: partition(a_n) ! the partitions
+     integer, intent(inout) :: iperm(a_n) ! maps current permuation to the
      ! column indices of the matrix whose ordering is being computed
-     integer, intent (inout) :: a_weight(a_n) ! weights of vertices
-     integer, intent (out) :: a_ne_sub ! number entries in returned
+     integer, intent(inout) :: a_weight(a_n) ! weights of vertices
+     integer, intent(out) :: a_ne_sub ! number entries in returned
      ! submatrix
-     integer, intent (out) :: work(12*a_n+a_ne)
+     integer, intent(out) :: work(12*a_n+a_ne)
 
      ! Local variables
      integer :: i, j
@@ -4419,30 +4419,30 @@ inNER:    do inn = 1, n
        partition,a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep,control, &
        info1,lwork,work,stop_coarsening2,grid)
 
-     integer, intent (in) :: a_n ! order of matrix being partitioned
-     integer, intent (in) :: a_ne ! no. entries in matrix being partitioned
-     integer, intent (in) :: a_ptr(a_n) ! col ptrs for matrix being
+     integer, intent(in) :: a_n ! order of matrix being partitioned
+     integer, intent(in) :: a_ne ! no. entries in matrix being partitioned
+     integer, intent(in) :: a_ptr(a_n) ! col ptrs for matrix being
      ! partitioned and, on return, for the extracted submatrix
-     integer, intent (in) :: a_row(a_ne) ! row indices for matrix
-     integer, intent (in) :: a_weight(a_n) ! weights associated with rows
+     integer, intent(in) :: a_row(a_ne) ! row indices for matrix
+     integer, intent(in) :: a_weight(a_n) ! weights associated with rows
      ! of matrix (useful if matrix has already been compressed)
-     integer, intent (in) :: sumweight ! sum of entries in a_weight
-     integer, intent (out) :: partition(a_n) ! computed partition
-     integer, intent (out) :: a_n1 ! number of entries in partition 1
-     integer, intent (out) :: a_n2 ! number of entries in partition 2
-     integer, intent (out) :: a_weight_1, a_weight_2, a_weight_sep ! Weight
+     integer, intent(in) :: sumweight ! sum of entries in a_weight
+     integer, intent(out) :: partition(a_n) ! computed partition
+     integer, intent(out) :: a_n1 ! number of entries in partition 1
+     integer, intent(out) :: a_n2 ! number of entries in partition 2
+     integer, intent(out) :: a_weight_1, a_weight_2, a_weight_sep ! Weight
      ! ed
      ! size of partitions and separator
-     type (nd_options), intent (in) :: control
-     integer, intent (in) :: lwork ! length of work array: must be atleast
+     type (nd_options), intent(in) :: control
+     integer, intent(in) :: lwork ! length of work array: must be atleast
      ! 9a_n + sumweight
-     integer, intent (out) :: work(lwork) ! work array
-     integer, intent (inout) :: info1
-     integer, intent (in) :: stop_coarsening2 ! no. levels in the
+     integer, intent(out) :: work(lwork) ! work array
+     integer, intent(inout) :: info1
+     integer, intent(in) :: stop_coarsening2 ! no. levels in the
      ! multilevel grid (default
      ! 10)
 
-     type (nd_multigrid), intent (inout) :: grid ! the multilevel of
+     type (nd_multigrid), intent(inout) :: grid ! the multilevel of
      ! graphs (matrices)
 
      integer :: i, j, k, inv1, inv2, ins
@@ -4597,21 +4597,21 @@ inNER:    do inn = 1, n
    RECURSIVE subroutine multilevel(grid,control,sumweight,mglevel_cur,mp, &
        print_level,lwork,work,info)
 
-     real (wp), parameter :: half = 0.5_wp
-     real (wp), parameter :: one = 1.0_wp
+     real(wp), parameter :: half = 0.5_wp
+     real(wp), parameter :: one = 1.0_wp
 
      ! Arguments
-     type (nd_multigrid), intent (inout), TARGET :: grid ! this level
+     type (nd_multigrid), intent(inout), TARGET :: grid ! this level
      ! of matrix (grid)
-     type (nd_options), intent (in) :: control
-     integer, intent (in) :: sumweight ! sum of weights (unchanged between
+     type (nd_options), intent(in) :: control
+     integer, intent(in) :: sumweight ! sum of weights (unchanged between
      ! coarse and fine grid
-     integer, intent (inout) :: mglevel_cur ! current grid level
-     integer, intent (in) :: mp, print_level ! diagnostic printing
-     integer, intent (in) :: lwork ! length of work array
+     integer, intent(inout) :: mglevel_cur ! current grid level
+     integer, intent(in) :: mp, print_level ! diagnostic printing
+     integer, intent(in) :: lwork ! length of work array
      ! (.ge.9*grid%graph%n +sumweight)
-     integer, intent (out) :: work(lwork) ! work array
-     integer, intent (inout) :: info ! Error flag
+     integer, intent(out) :: work(lwork) ! work array
+     integer, intent(inout) :: info ! Error flag
 
      ! Local variables
      type (nd_multigrid), pointer :: cgrid ! the coarse level grid
@@ -4620,19 +4620,19 @@ inNER:    do inn = 1, n
      type (nd_matrix), pointer :: p ! the coarse grid prolongator
      type (nd_matrix), pointer :: r ! the coarse grid restrictor (= p')
 
-     integer, dimension (:), pointer :: fwhere ! partition on fine grid
-     integer, dimension (:), pointer :: cwhere ! partition on coarse grid
+     integer, dimension(:), pointer :: fwhere ! partition on fine grid
+     integer, dimension(:), pointer :: cwhere ! partition on coarse grid
      type (nd_matrix), pointer :: cgraph ! the coarse graph
      type (nd_matrix), pointer :: graph ! the fine graph
-     integer, dimension (:), pointer :: row_wgt ! fine
+     integer, dimension(:), pointer :: row_wgt ! fine
      ! graph vertex weights
-     integer, dimension (:), pointer :: crow_wgt ! coarse
+     integer, dimension(:), pointer :: crow_wgt ! coarse
      ! graph vertex weights
-     real (wp) :: grid_rdc_fac_min ! min grid reduction
+     real(wp) :: grid_rdc_fac_min ! min grid reduction
      ! factor
-     real (wp) :: grid_rdc_fac_max ! max grid reduction
+     real(wp) :: grid_rdc_fac_max ! max grid reduction
      ! factor
-     real (wp) :: one1
+     real(wp) :: one1
      integer :: stop_coarsening1 ! controls when to stop coarsening
      integer :: partition_ptr, part_ptr, work_ptr, a_ne, ref_control, &
        clwork
@@ -4641,7 +4641,7 @@ inNER:    do inn = 1, n
      integer :: a_n1_new, a_n2_new, a_weight_1_new, a_weight_2_new, &
        a_weight_sep_new
      logical :: imbal
-     real (wp) :: tau, ratio, tau_best
+     real(wp) :: tau, ratio, tau_best
      ! !!!!!!!!!!!!!!!!!!!!!!!!!!
      info = 0
      one1 = 1.0
@@ -5058,28 +5058,28 @@ inNER:    do inn = 1, n
    subroutine nd_coarse_partition(a_n,a_ne,a_ptr,a_row,a_weight, &
        sumweight,a_n1,a_n2,where1,lwork,work,control,info)
 
-     integer, intent (in) :: a_n ! dimension of subproblem ND is applied to
-     integer, intent (in) :: a_ne ! no. nonzeros of subproblem
-     integer, intent (inout) :: a_ptr(a_n) ! On input a_ptr(i) contains
+     integer, intent(in) :: a_n ! dimension of subproblem ND is applied to
+     integer, intent(in) :: a_ne ! no. nonzeros of subproblem
+     integer, intent(inout) :: a_ptr(a_n) ! On input a_ptr(i) contains
      ! position in a_row that entries for column i start. This is then
      ! used to hold positions for submatrices after partitioning
-     integer, intent (inout) :: a_row(a_ne) ! On input a_row contains row
+     integer, intent(inout) :: a_row(a_ne) ! On input a_row contains row
      ! indices of the non-zero rows. Diagonal entries have been removed
      ! and the matrix expanded.This is then used to hold row indices for
      ! submatrices after partitioning
-     integer, intent (inout) :: a_weight(a_n) ! On input a_weight(i)
+     integer, intent(inout) :: a_weight(a_n) ! On input a_weight(i)
      ! contains
      ! the weight of column i. This is then used to hold the weights for
      ! the submatrices after partitioning.
-     integer, intent (in) :: sumweight ! Sum entries in a_weight.
+     integer, intent(in) :: sumweight ! Sum entries in a_weight.
      ! Unchanged.
-     integer, intent (out) :: a_n1, a_n2 ! size of the two submatrices
-     integer, intent (out) :: where1(a_n) ! Computed partition
-     integer, intent (in) :: lwork ! .ge. 9*a_n+sumweight
-     integer, intent (out) :: work(lwork)
-     type (nd_options), intent (in) :: control
-     integer, intent (inout) :: info
-     ! real (wp), optional, intent(out) :: real_work(a_n)
+     integer, intent(out) :: a_n1, a_n2 ! size of the two submatrices
+     integer, intent(out) :: where1(a_n) ! Computed partition
+     integer, intent(in) :: lwork ! .ge. 9*a_n+sumweight
+     integer, intent(out) :: work(lwork)
+     type (nd_options), intent(in) :: control
+     integer, intent(inout) :: info
+     ! real(wp), optional, intent(out) :: real_work(a_n)
 
      ! ---------------------------------------------
      ! Local variables
@@ -5092,7 +5092,7 @@ inNER:    do inn = 1, n
      integer :: a_weight_1, a_weight_2, a_weight_sep, ref_method, &
        ref_control
      integer, allocatable :: work1(:)
-     real (wp) :: dummy, dummy1
+     real(wp) :: dummy, dummy1
      type (nd_multigrid) :: gridtemp
 
      ! ---------------------------------------------
@@ -5378,7 +5378,7 @@ inNER:    do inn = 1, n
      ! grid%graph
      ! has not been formed yet
      type (nd_multigrid) :: grid
-     integer, intent (inout) :: info
+     integer, intent(inout) :: info
 
 
      integer :: ierr
@@ -5409,7 +5409,7 @@ inNER:    do inn = 1, n
      ! grid%p
      ! does not exist
      type (nd_multigrid) :: grid
-     integer, intent (inout) :: info
+     integer, intent(inout) :: info
      integer :: ierr
 
      if (associated(grid%graph)) then
@@ -5434,10 +5434,10 @@ inNER:    do inn = 1, n
      ! coarsen the grid using heavy-edge collapsing and set up the
      ! coarse grid equation, the prolongator and restrictor
 
-     type (nd_multigrid), intent (inout), TARGET :: grid
-     integer, intent (in) :: lwork
-     integer, intent (out) :: work(lwork)
-     integer, intent (inout) :: info
+     type (nd_multigrid), intent(inout), TARGET :: grid
+     integer, intent(in) :: lwork
+     integer, intent(out) :: work(lwork)
+     integer, intent(inout) :: info
 
 
      if ( .not. associated(grid%coarse)) allocate (grid%coarse)
@@ -5458,10 +5458,10 @@ inNER:    do inn = 1, n
      ! coarsen the grid using common neighbours collapsing and set up the
      ! coarse grid equation, the prolongator and restrictor
 
-     type (nd_multigrid), intent (inout), TARGET :: grid
+     type (nd_multigrid), intent(inout), TARGET :: grid
 
-     integer, intent (in) :: lwork
-     integer, intent (out) :: work(lwork)
+     integer, intent(in) :: lwork
+     integer, intent(out) :: work(lwork)
 
      if ( .not. associated(grid%coarse)) allocate (grid%coarse)
 
@@ -5480,11 +5480,11 @@ inNER:    do inn = 1, n
      ! coarsen the grid using common neighbours collapsing and set up the
      ! coarse grid equation, the prolongator and restrictor
 
-     integer, intent (inout) :: info
-     type (nd_multigrid), intent (inout), TARGET :: grid
+     integer, intent(inout) :: info
+     type (nd_multigrid), intent(inout), TARGET :: grid
 
-     integer, intent (in) :: lwork
-     integer, intent (out) :: work(lwork)
+     integer, intent(in) :: lwork
+     integer, intent(out) :: work(lwork)
 
      if ( .not. associated(grid%coarse)) allocate (grid%coarse)
 
@@ -5507,17 +5507,17 @@ inNER:    do inn = 1, n
      ! is checked and returned if it is smaller than the row dimension
      ! of x    !
 
-     ! matrix: of the derived type nd_matrix, intent (in),
+     ! matrix: of the derived type nd_matrix, intent(in),
      ! the sparse matrix in compressed sparse row format
-     type (nd_matrix), intent (in) :: matrix
+     type (nd_matrix), intent(in) :: matrix
 
-     ! x: integer array of intent (in), a vector to be
+     ! x: integer array of intent(in), a vector to be
      ! multiplied with the matrix
-     integer, intent (in), dimension (*) :: x
+     integer, intent(in), dimension(*) :: x
 
-     ! y: integer array of intent (out), the result of
+     ! y: integer array of intent(out), the result of
      ! matrix*x or matrix^T*x
-     integer, intent (out), dimension (*) :: y
+     integer, intent(out), dimension(*) :: y
 
      ! local ==========
      integer :: m, n, i, l1, l2
@@ -5542,18 +5542,18 @@ inNER:    do inn = 1, n
      ! matrix. including matrix%ptr, matrix%col and matrix%val.
 
      ! matrix: is of the derived type nd_matrix,
-     ! with intent (inout). It
+     ! with intent(inout). It
      ! the sparse matrix object to be destroyed.
-     type (nd_matrix), intent (inout) :: matrix
+     type (nd_matrix), intent(inout) :: matrix
 
-     ! info: is an integer scaler of intent (out).
+     ! info: is an integer scaler of intent(out).
      ! = 0 if successful
      ! = nd_ERR_MEMORY_DEALLOC if memory deallocation failed
-     integer, intent (out) :: info
+     integer, intent(out) :: info
 
-     ! stat: is an integer scaler of intent (out). If supplied,
+     ! stat: is an integer scaler of intent(out). If supplied,
      ! on exit it holds the error tag for memory allocation
-     integer, optional, intent (out) :: stat
+     integer, optional, intent(out) :: stat
 
      ! ===================== local variables =============
      ! ierr: error tag for deallocation
@@ -5588,12 +5588,12 @@ inNER:    do inn = 1, n
      ! size(p%val) <-  max(ne, size(p%val)
      ! size(p%col) <-  max(ne, size(p%col)
      ! size(p%ptr) <-  max(m+1, size(p%ptr)
-     type (nd_matrix), intent (inout) :: p ! matrix being formed using
+     type (nd_matrix), intent(inout) :: p ! matrix being formed using
      ! CSR
-     integer, intent (in) :: m ! number of rows
-     integer, intent (in) :: n ! number of columns
-     integer, intent (in) :: ne ! number entries
-     integer, intent (out) :: info
+     integer, intent(in) :: m ! number of rows
+     integer, intent(in) :: n ! number of columns
+     integer, intent(in) :: ne ! number entries
+     integer, intent(out) :: info
 
      info = 0
 
@@ -5621,9 +5621,9 @@ inNER:    do inn = 1, n
    ! ***************************************************************
 
    subroutine nd_alloc(v,n,info)
-     integer, intent (inout), allocatable :: v(:)
-     integer, intent (in) :: n
-     integer, intent (out) :: info
+     integer, intent(inout), allocatable :: v(:)
+     integer, intent(in) :: n
+     integer, intent(out) :: info
 
      integer :: st
 
@@ -5656,9 +5656,9 @@ inNER:    do inn = 1, n
      ! If arr has size at least sz, do nothing. Otherwise, create array arr
      ! of size
      ! sz.
-     integer, pointer, intent (inout) :: arr(:)
-     integer, intent (in) :: sz
-     integer, intent (inout) :: info1
+     integer, pointer, intent(inout) :: arr(:)
+     integer, intent(in) :: sz
+     integer, intent(inout) :: info1
 
      integer :: st
 
@@ -5687,11 +5687,11 @@ inNER:    do inn = 1, n
      ! calculate the prolongator for heavy-edge collapsing:
      ! match the vertices of the heaviest edges
 
-     integer, intent (inout) :: info
+     integer, intent(inout) :: info
      ! input fine grid
-     type (nd_multigrid), intent (inout) :: grid
-     integer, intent (in) :: lwork
-     integer, intent (out) :: work(lwork)
+     type (nd_multigrid), intent(inout) :: grid
+     integer, intent(in) :: lwork
+     integer, intent(out) :: work(lwork)
 
      ! coarse grid based on the fine grid
      type (nd_multigrid), pointer :: cgrid
@@ -5862,9 +5862,9 @@ inNER:    do inn = 1, n
      ! match the vertices of with most neighbours in common
 
      ! input fine grid
-     integer, intent (in) :: lwork
-     integer, intent (out) :: work(lwork)
-     type (nd_multigrid), intent (inout) :: grid
+     integer, intent(in) :: lwork
+     integer, intent(out) :: work(lwork)
+     type (nd_multigrid), intent(inout) :: grid
 
      ! coarse grid based on the fine grid
      type (nd_multigrid), pointer :: cgrid
@@ -6055,11 +6055,11 @@ inNER:    do inn = 1, n
      ! calculate the prolongator for heavy-edge collapsing:
      ! match the vertices of the heaviest edges
 
-     integer, intent (inout) :: info
+     integer, intent(inout) :: info
      ! input fine grid
-     type (nd_multigrid), intent (inout) :: grid
-     integer, intent (in) :: lwork
-     integer, intent (out), TARGET :: work(lwork)
+     type (nd_multigrid), intent(inout) :: grid
+     integer, intent(in) :: lwork
+     integer, intent(out), TARGET :: work(lwork)
 
      ! coarse grid based on the fine grid
      type (nd_multigrid), pointer :: cgrid
@@ -6090,7 +6090,7 @@ inNER:    do inn = 1, n
      integer :: maxwgt
      integer :: maxind
 
-     integer, pointer, dimension (:) :: matching
+     integer, pointer, dimension(:) :: matching
 
      ! allocate the prolongation matrix pointers
      cgrid => grid%coarse
@@ -6303,10 +6303,10 @@ inNER:    do inn = 1, n
    ! *******************************************************************
    subroutine level_print(mp,title1,level,title2,res)
 
-     character (len=*), intent (in) :: title1
-     integer, intent (in) :: mp, level
-     real (wp), optional, intent (in) :: res
-     character (len=*), optional, intent (in) :: title2
+     character (len=*), intent(in) :: title1
+     integer, intent(in) :: mp, level
+     real(wp), optional, intent(in) :: res
+     character (len=*), optional, intent(in) :: title2
      integer :: char_len1, char_len2
 
      char_len1 = len_trim(title1)
@@ -6329,21 +6329,21 @@ inNER:    do inn = 1, n
      ! find the coarse matrix R*A*P
 
      ! matrix: fine grid matrix
-     type (nd_matrix), intent (in) :: matrix
+     type (nd_matrix), intent(in) :: matrix
      ! p: prolongation operator
-     type (nd_matrix), intent (in) :: p
+     type (nd_matrix), intent(in) :: p
      ! r: restriction operator
-     type (nd_matrix), intent (in) :: r
+     type (nd_matrix), intent(in) :: r
      ! cmatrix: coarse grid matrix
-     type (nd_matrix), intent (inout) :: cmatrix
-     integer, intent (in) :: lwork
-     integer, intent (out) :: work(lwork)
+     type (nd_matrix), intent(inout) :: cmatrix
+     integer, intent(in) :: lwork
+     integer, intent(out) :: work(lwork)
 
      ! nvtx,cnvtx: size of fine and coarse grid
      integer :: nvtx, cnvtx
      integer :: nz
 
-     integer, intent (inout) :: info
+     integer, intent(inout) :: info
 
      ! call mc65_matrix_transpose(p,r,info65)
      ! if (info65<0) then
@@ -6379,25 +6379,25 @@ inNER:    do inn = 1, n
      ! get the number of nonzeros in R*A*P
      ! nvtx: size of aa matrix
      ! cnvtx: size of ca matrix
-     integer, intent (in) :: nvtx, cnvtx
+     integer, intent(in) :: nvtx, cnvtx
      ! nz: number of nonzeros in R*A*P
-     integer, intent (out) :: nz
+     integer, intent(out) :: nz
 
      ! P: matrix
-     integer, intent (in) :: nzp
-     integer, intent (in), dimension (nzp) :: pcol
-     integer, intent (in), dimension (nvtx+1) :: pptr
+     integer, intent(in) :: nzp
+     integer, intent(in), dimension(nzp) :: pcol
+     integer, intent(in), dimension(nvtx+1) :: pptr
      ! aa: matrix
-     integer, intent (in) :: nzaa
-     integer, intent (in), dimension (nzaa) :: acol
-     integer, intent (in), dimension (nvtx+1) :: aptr
+     integer, intent(in) :: nzaa
+     integer, intent(in), dimension(nzaa) :: acol
+     integer, intent(in), dimension(nvtx+1) :: aptr
      ! R: matrix
-     integer, intent (in) :: nzr
-     integer, intent (in), dimension (nzr) :: rcol
-     integer, intent (in), dimension (cnvtx+1) :: rptr
+     integer, intent(in) :: nzr
+     integer, intent(in), dimension(nzr) :: rcol
+     integer, intent(in), dimension(cnvtx+1) :: rptr
 
-     integer, intent (in) :: lwork
-     integer, intent (out) :: work(lwork)
+     integer, intent(in) :: lwork
+     integer, intent(out) :: work(lwork)
 
      ! mask: masking array to see if an entry has been seen before
      integer :: ptr_mask
@@ -6452,30 +6452,30 @@ inNER:    do inn = 1, n
      ! multiply R*A*P to get CA
      ! nvtx: size of aa matrix
      ! cnvtx: size of ca matrix
-     integer, intent (in) :: nvtx, cnvtx
+     integer, intent(in) :: nvtx, cnvtx
      ! p: matrix
-     integer, intent (in) :: nzp
-     integer, intent (in), dimension (nzp) :: pa
-     integer, intent (in), dimension (nzp) :: pcol
-     integer, intent (in), dimension (nvtx+1) :: pptr
+     integer, intent(in) :: nzp
+     integer, intent(in), dimension(nzp) :: pa
+     integer, intent(in), dimension(nzp) :: pcol
+     integer, intent(in), dimension(nvtx+1) :: pptr
      ! aa: matrix
-     integer, intent (in) :: nzaa
-     integer, intent (in), dimension (:) :: aa
-     integer, intent (in), dimension (nzaa) :: acol
-     integer, intent (in), dimension (:) :: aptr
+     integer, intent(in) :: nzaa
+     integer, intent(in), dimension(:) :: aa
+     integer, intent(in), dimension(nzaa) :: acol
+     integer, intent(in), dimension(:) :: aptr
      ! r: matrix
-     integer, intent (in) :: nzr
-     integer, intent (in), dimension (nzr) :: ra
-     integer, intent (in), dimension (nzr) :: rcol
-     integer, intent (in), dimension (cnvtx+1) :: rptr
+     integer, intent(in) :: nzr
+     integer, intent(in), dimension(nzr) :: ra
+     integer, intent(in), dimension(nzr) :: rcol
+     integer, intent(in), dimension(cnvtx+1) :: rptr
      ! ca: matrix
-     integer, intent (in) :: nzca
-     integer, intent (inout), dimension (nzca) :: ca
-     integer, intent (inout), dimension (nzca) :: ccol
-     integer, intent (inout), dimension (cnvtx+1) :: cptr
+     integer, intent(in) :: nzca
+     integer, intent(inout), dimension(nzca) :: ca
+     integer, intent(inout), dimension(nzca) :: ccol
+     integer, intent(inout), dimension(cnvtx+1) :: cptr
 
-     integer, intent (in) :: lwork
-     integer, intent (out) :: work(lwork)
+     integer, intent(in) :: lwork
+     integer, intent(out) :: work(lwork)
 
 
      ! mask: masking array to see if an entry has been seen before
@@ -6559,28 +6559,28 @@ inNER:    do inn = 1, n
    ! Given a partition, trim the partition to make it minimal
    subroutine nd_refine_trim(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
        a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep,partition,work,control)
-     integer, intent (in) :: a_n ! order of matrix
-     integer, intent (in) :: a_ne ! number of entries in matrix
-     integer, intent (in) :: a_ptr(a_n) ! On input a_ptr(i) contains
+     integer, intent(in) :: a_n ! order of matrix
+     integer, intent(in) :: a_ne ! number of entries in matrix
+     integer, intent(in) :: a_ptr(a_n) ! On input a_ptr(i) contains
      ! position in a_row that entries for column i start.
-     integer, intent (in) :: a_row(a_ne) ! On input a_row contains row
+     integer, intent(in) :: a_row(a_ne) ! On input a_row contains row
      ! indices of the non-zero rows. Diagonal entries have been removed
      ! and the matrix expanded.
-     integer, intent (in) :: a_weight(a_n) ! On input a_weight(i) contains
+     integer, intent(in) :: a_weight(a_n) ! On input a_weight(i) contains
      ! the weight of column i
-     integer, intent (in) :: sumweight ! Sum of weights in a_weight
-     integer, intent (inout) :: a_n1 ! Size of partition 1
-     integer, intent (inout) :: a_n2 ! Size of partition 2
-     integer, intent (inout) :: a_weight_1, a_weight_2, a_weight_sep ! Weig
+     integer, intent(in) :: sumweight ! Sum of weights in a_weight
+     integer, intent(inout) :: a_n1 ! Size of partition 1
+     integer, intent(inout) :: a_n2 ! Size of partition 2
+     integer, intent(inout) :: a_weight_1, a_weight_2, a_weight_sep ! Weig
      ! hted
      ! size of partitions and separator
-     integer, intent (inout) :: partition(a_n) ! First a_n1 entries contain
+     integer, intent(inout) :: partition(a_n) ! First a_n1 entries contain
      ! list of (local) indices in partition 1; next a_n2 entries
      ! contain list of (local) entries in partition 2; entries in
      ! separator are listed at the end. This is updated to the new
      ! partition
-     integer, intent (out) :: work(3*a_n) ! Work array
-     type (nd_options), intent (in) :: control
+     integer, intent(out) :: work(3*a_n) ! Work array
+     type (nd_options), intent(in) :: control
 
      ! ---------------------------------------------
      ! Local variables
@@ -6592,8 +6592,8 @@ inNER:    do inn = 1, n
      integer, parameter :: sep3 = -3
      integer :: i, j, k, l, m, p, q, w1, w2
      logical :: next1, next2, imbal
-     real (wp) :: t1, t2
-     real (wp) :: ratio
+     real(wp) :: t1, t2
+     real(wp) :: ratio
 
      ratio = max(real(1.0,wp),control%balance)
      if (ratio>real(sumweight-2)) then
@@ -6918,28 +6918,28 @@ inNER:    do inn = 1, n
    subroutine nd_refine_block_trim(a_n,a_ne,a_ptr,a_row,a_weight, &
        sumweight,a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep,partition, &
        work,control)
-     integer, intent (in) :: a_n ! order of matrix
-     integer, intent (in) :: a_ne ! number of entries in matrix
-     integer, intent (in) :: a_ptr(a_n) ! On input a_ptr(i) contains
+     integer, intent(in) :: a_n ! order of matrix
+     integer, intent(in) :: a_ne ! number of entries in matrix
+     integer, intent(in) :: a_ptr(a_n) ! On input a_ptr(i) contains
      ! position in a_row that entries for column i start.
-     integer, intent (in) :: a_row(a_ne) ! On input a_row contains row
+     integer, intent(in) :: a_row(a_ne) ! On input a_row contains row
      ! indices of the non-zero rows. Diagonal entries have been removed
      ! and the matrix expanded.
-     integer, intent (in) :: a_weight(a_n) ! On input a_weight(i) contains
+     integer, intent(in) :: a_weight(a_n) ! On input a_weight(i) contains
      ! the weight of column i
-     integer, intent (in) :: sumweight ! Sum of weights in a_weight
-     integer, intent (inout) :: a_n1 ! Size of partition 1
-     integer, intent (inout) :: a_n2 ! Size of partition 2
-     integer, intent (inout) :: a_weight_1, a_weight_2, a_weight_sep ! Weig
+     integer, intent(in) :: sumweight ! Sum of weights in a_weight
+     integer, intent(inout) :: a_n1 ! Size of partition 1
+     integer, intent(inout) :: a_n2 ! Size of partition 2
+     integer, intent(inout) :: a_weight_1, a_weight_2, a_weight_sep ! Weig
      ! hted
      ! size of partitions and separator
-     integer, intent (inout) :: partition(a_n) ! First a_n1 entries contain
+     integer, intent(inout) :: partition(a_n) ! First a_n1 entries contain
      ! list of (local) indices in partition 1; next a_n2 entries
      ! contain list of (local) entries in partition 2; entries in
      ! separator are listed at the end. This is updated to the new
      ! partition
-     integer, intent (out) :: work(5*a_n) ! Work array
-     type (nd_options), intent (in) :: control
+     integer, intent(out) :: work(5*a_n) ! Work array
+     type (nd_options), intent(in) :: control
 
      ! ---------------------------------------------
      ! Local variables
@@ -6949,8 +6949,8 @@ inNER:    do inn = 1, n
      integer :: currlevel1, currlevel2
      integer :: i, j, k, l, m, w1, w2, l1, l2
      logical :: next1, next2, imbal
-     real (wp) :: t1, t2
-     real (wp) :: ratio
+     real(wp) :: t1, t2
+     real(wp) :: ratio
 
      ratio = max(real(1.0,wp),control%balance)
      if (ratio>real(sumweight-2)) then
@@ -7192,32 +7192,32 @@ inNER:    do inn = 1, n
    ! Given a partition, trim the partition using blocks to make it minimal
    subroutine nd_refine_max_flow(a_n,a_ne,a_ptr,a_row,a_weight,a_n1, &
        a_n2,a_weight_1,a_weight_2,a_weight_sep,partition,work,control)
-     integer, intent (in) :: a_n ! order of matrix
-     integer, intent (in) :: a_ne ! number of entries in matrix
-     integer, intent (in) :: a_ptr(a_n) ! On input a_ptr(i) contains
+     integer, intent(in) :: a_n ! order of matrix
+     integer, intent(in) :: a_ne ! number of entries in matrix
+     integer, intent(in) :: a_ptr(a_n) ! On input a_ptr(i) contains
      ! position in a_row that entries for column i start.
-     integer, intent (in) :: a_row(a_ne) ! On input a_row contains row
+     integer, intent(in) :: a_row(a_ne) ! On input a_row contains row
      ! indices of the non-zero rows. Diagonal entries have been removed
      ! and the matrix expanded.
-     integer, intent (in) :: a_weight(a_n) ! On input a_weight(i) contains
+     integer, intent(in) :: a_weight(a_n) ! On input a_weight(i) contains
      ! the weight of column i
-     integer, intent (inout) :: a_n1 ! Size of partition 1
-     integer, intent (inout) :: a_n2 ! Size of partition 2
-     integer, intent (inout) :: a_weight_1, a_weight_2, a_weight_sep ! Weig
+     integer, intent(inout) :: a_n1 ! Size of partition 1
+     integer, intent(inout) :: a_n2 ! Size of partition 2
+     integer, intent(inout) :: a_weight_1, a_weight_2, a_weight_sep ! Weig
      ! hted
      ! size of partitions and separator
-     integer, intent (inout) :: partition(a_n) ! First a_n1 entries contain
+     integer, intent(inout) :: partition(a_n) ! First a_n1 entries contain
      ! list of (local) indices in partition 1; next a_n2 entries
      ! contain list of (local) entries in partition 2; entries in
      ! separator are listed at the end. This is updated to the new
      ! partition
-     integer, intent (out) :: work(8) ! Work array
-     type (nd_options), intent (in) :: control
+     integer, intent(out) :: work(8) ! Work array
+     type (nd_options), intent(in) :: control
 
      ! ---------------------------------------------
      ! Local variables
      integer :: msglvl
-     real (wp) :: cost, ratio
+     real(wp) :: cost, ratio
 
      msglvl = 0
      if (control%print_level==1 .and. control%unit_diagnostics>=0) &
@@ -7239,26 +7239,26 @@ inNER:    do inn = 1, n
 
    subroutine expand_partition(a_n,a_ne,a_ptr,a_row,a_weight,a_n1,a_n2, &
        a_weight_1,a_weight_2,a_weight_sep,partition,work)
-     integer, intent (in) :: a_n ! order of matrix
-     integer, intent (in) :: a_ne ! number of entries in matrix
-     integer, intent (in) :: a_ptr(a_n) ! On input a_ptr(i) contains
+     integer, intent(in) :: a_n ! order of matrix
+     integer, intent(in) :: a_ne ! number of entries in matrix
+     integer, intent(in) :: a_ptr(a_n) ! On input a_ptr(i) contains
      ! position in a_row that entries for column i start.
-     integer, intent (in) :: a_row(a_ne) ! On input a_row contains row
+     integer, intent(in) :: a_row(a_ne) ! On input a_row contains row
      ! indices of the non-zero rows. Diagonal entries have been removed
      ! and the matrix expanded.
-     integer, intent (in) :: a_weight(a_n) ! On input a_weight(i) contains
+     integer, intent(in) :: a_weight(a_n) ! On input a_weight(i) contains
      ! the weight of column i
-     integer, intent (inout) :: a_n1 ! Size of partition 1
-     integer, intent (inout) :: a_n2 ! Size of partition 2
-     integer, intent (inout) :: a_weight_1, a_weight_2, a_weight_sep ! Weig
+     integer, intent(inout) :: a_n1 ! Size of partition 1
+     integer, intent(inout) :: a_n2 ! Size of partition 2
+     integer, intent(inout) :: a_weight_1, a_weight_2, a_weight_sep ! Weig
      ! hted
      ! size of partitions and separator
-     integer, intent (inout) :: partition(a_n) ! First a_n1 entries contain
+     integer, intent(inout) :: partition(a_n) ! First a_n1 entries contain
      ! list of (local) indices in partition 1; next a_n2 entries
      ! contain list of (local) entries in partition 2; entries in
      ! separator are listed at the end. This is updated to the new
      ! partition
-     integer, intent (out) :: work(a_n) ! Work array
+     integer, intent(out) :: work(a_n) ! Work array
 
      ! Local variables
      integer :: i, j, k, l, m, w
@@ -7343,15 +7343,15 @@ inNER:    do inn = 1, n
    subroutine cost_function(a_weight_1,a_weight_2,a_weight_sep,sumweight, &
        ratio,imbal,costf,tau)
 
-     integer, intent (in) :: a_weight_1, a_weight_2, a_weight_sep ! Weighte
+     integer, intent(in) :: a_weight_1, a_weight_2, a_weight_sep ! Weighte
      ! d
      ! size of partitions and separator
-     integer, intent (in) :: sumweight
-     real (wp), intent (in) :: ratio
-     logical, intent (in) :: imbal ! Use penalty function?
-     integer, intent (in) :: costf
-     real (wp), intent (out) :: tau
-     real (wp) :: beta, a_wgt1, a_wgt2
+     integer, intent(in) :: sumweight
+     real(wp), intent(in) :: ratio
+     logical, intent(in) :: imbal ! Use penalty function?
+     integer, intent(in) :: costf
+     real(wp), intent(out) :: tau
+     real(wp) :: beta, a_wgt1, a_wgt2
 
      beta = 0.5
      a_wgt1 = max(1,a_weight_1)
@@ -7386,33 +7386,33 @@ inNER:    do inn = 1, n
        cost)
 
      ! Input matrix: a_n, a_ne, a_ptr, a_row
-     integer, intent (in) :: a_n ! order of matrix
-     integer, intent (in) :: a_ne ! number of entries in matrix (lower and
+     integer, intent(in) :: a_n ! order of matrix
+     integer, intent(in) :: a_ne ! number of entries in matrix (lower and
      ! upper triangle)
-     integer, intent (in) :: a_ptr(:) ! On input, a_ptr(i) contains
+     integer, intent(in) :: a_ptr(:) ! On input, a_ptr(i) contains
      ! position in a_row that entries for column i start.
-     integer, intent (in) :: a_row(:) ! On input, a_row contains row
+     integer, intent(in) :: a_row(:) ! On input, a_row contains row
      ! indices of the nonzero entries. Diagonal entries have been
      ! removed and the matrix expanded.
      ! At the moment weights are not used at all
-     integer, intent (in) :: a_weight(a_n) ! On input, a_weight(i) contains
+     integer, intent(in) :: a_weight(a_n) ! On input, a_weight(i) contains
      ! the weight of column i
-     integer, intent (in) :: costf ! Determines which cost function is used
+     integer, intent(in) :: costf ! Determines which cost function is used
      ! Data on partition a_n1, a_n2, partition ... will be updated
-     integer, intent (inout) :: a_n1 ! Size of partition 1 (ie B)
-     integer, intent (inout) :: a_n2 ! Size of partition 2 (ie W)
-     integer, intent (inout) :: a_weight_1, a_weight_2, a_weight_sep ! Weig
+     integer, intent(inout) :: a_n1 ! Size of partition 1 (ie B)
+     integer, intent(inout) :: a_n2 ! Size of partition 2 (ie W)
+     integer, intent(inout) :: a_weight_1, a_weight_2, a_weight_sep ! Weig
      ! hted
      ! size of partitions and separator
-     integer, intent (inout) :: partition(a_n) ! First a_n1 entries contain
+     integer, intent(inout) :: partition(a_n) ! First a_n1 entries contain
      ! list of (local) indices in partition 1; next a_n2 entries
      ! contain list of (local) entries in partition 2; entries in
      ! separator are listed at the end. This is updated to the new
      ! partition.
 
      ! Parameters alpha (for balance) for cost function
-     real (wp), intent (in) :: alpha
-     integer, intent (in) :: msglvl
+     real(wp), intent(in) :: alpha
+     integer, intent(in) :: msglvl
      ! output --
      ! stats[1] -- weight of vertices in S
      ! stats[2] -- weight of vertices in B
@@ -7423,8 +7423,8 @@ inNER:    do inn = 1, n
      ! stats[7] -- weight of edges in A_{B,B}
      ! stats[8] -- weight of edges in A_{B,W}
      ! cost     -- cost of new partition
-     integer, intent (out) :: stats(8)
-     real (wp), intent (out) :: cost
+     integer, intent(out) :: stats(8)
+     real(wp), intent(out) :: cost
 
      type (network) :: netw
 
@@ -7441,13 +7441,13 @@ inNER:    do inn = 1, n
      integer, allocatable :: vwts(:)
      integer, allocatable :: sedge(:,:)
      integer, allocatable :: mark1(:), mark2(:), pred(:), list(:)
-     real (wp), allocatable :: imb(:)
+     real(wp), allocatable :: imb(:)
 
      ! Local variables
      integer :: a_ns, i, istart_s, j1, k, lp, wtw, wtb, statsr(9), &
        statsl(9)
      integer nedge, matsiz
-     real (wp) :: costr, costl
+     real(wp) :: costr, costl
 
      lp = 6
 
@@ -7638,8 +7638,8 @@ inNER:    do inn = 1, n
      ! mark1, mark2, pred, list of length nnode
 
 
-     type (network), intent (inout) :: netw
-     integer, intent (out) :: maps1(:), maps2(:)
+     type (network), intent(inout) :: netw
+     integer, intent(out) :: maps1(:), maps2(:)
 
      integer :: mark1(:), mark2(:), pred(:), list(:)
 
@@ -7716,29 +7716,29 @@ inNER:    do inn = 1, n
 
 
      ! Input matrix: a_n, a_ne, a_ptr, a_row
-     integer, intent (in) :: a_n ! order of matrix
-     integer, intent (in) :: a_ne ! number of entries in matrix (lower and
+     integer, intent(in) :: a_n ! order of matrix
+     integer, intent(in) :: a_ne ! number of entries in matrix (lower and
      ! upper triangle)
-     integer, intent (in) :: a_ptr(:) ! On input, a_ptr(i) contains
+     integer, intent(in) :: a_ptr(:) ! On input, a_ptr(i) contains
      ! position in a_row that entries for column i start.
-     integer, intent (in) :: a_row(:) ! On input, a_row contains row
+     integer, intent(in) :: a_row(:) ! On input, a_row contains row
      ! indices of the nonzero entries. Diagonal entries have been
      ! removed and the matrix expanded.
 
-     integer, intent (in) :: partition(a_n) ! First a_n1 entries contain
+     integer, intent(in) :: partition(a_n) ! First a_n1 entries contain
      ! list of (local) indices in partition 1; next a_n2 entries
      ! contain list of (local) entries in partition 2; entries in
      ! separator are listed at the end.
-     integer, intent (in) :: map(a_n) ! First a_n1 entries contain
-     integer, intent (in) :: msglvl, nvtx
-     integer, intent (in) :: vwts(:)
-     integer, intent (inout) :: wtb, wtw
-     integer, intent (inout) :: a_n1 ! Size of partition 1 (ie B)
-     integer, intent (inout) :: a_n2 ! Size of partition 2 (ie W)
+     integer, intent(in) :: map(a_n) ! First a_n1 entries contain
+     integer, intent(in) :: msglvl, nvtx
+     integer, intent(in) :: vwts(:)
+     integer, intent(inout) :: wtb, wtw
+     integer, intent(inout) :: a_n1 ! Size of partition 1 (ie B)
+     integer, intent(inout) :: a_n2 ! Size of partition 2 (ie W)
 
      ! Note that we still do the allocations here.  Doing it further up the
      ! call tree would need to allocate much more storage.
-     type (network), intent (out) :: netw
+     type (network), intent(out) :: netw
 
      integer i, iarc, ii, jj, lp, narc1, narc2, narc3, narc4, narc, nnode, &
        nedge, u, v, wts
@@ -7749,7 +7749,7 @@ inNER:    do inn = 1, n
      integer :: sedge(:,:)
      integer :: sep_map(:)
      integer :: isadjtosource(:), isadjtosink(:)
-     real (wp) :: imb(:)
+     real(wp) :: imb(:)
      integer :: count(:), mark1(:), mark2(:), list(:)
      logical :: augcap
 
@@ -8011,7 +8011,7 @@ inNER:    do inn = 1, n
      ! Find a maximum flow through the network
 
 
-     type (network), intent (inout) :: netw
+     type (network), intent(inout) :: netw
 
      integer avail, iarc, lp, nnode, sink, source, stats(2), tag
 
@@ -8089,8 +8089,8 @@ inNER:    do inn = 1, n
      ! Workspace
      ! list --- to hold list of nodes being searched
 
-     integer, intent (out) :: mark1(:), mark2(:), list(:)
-     type (network), intent (inout) :: netw
+     integer, intent(out) :: mark1(:), mark2(:), list(:)
+     type (network), intent(inout) :: netw
 
      ! Local variables
      integer iarc, last, lp, nnode, now, sink, source, x, z
@@ -8229,18 +8229,18 @@ inNER:    do inn = 1, n
      ! mark1 --- records level set of vertex in cutset starting from sink
 
 
-     integer, intent (in) :: msglvl, a_n, a_ne, a_n1, a_n2
-     integer, intent (in) :: a_ptr(:), a_row(:)
-     integer, intent (in) :: vwts(:), partition(:), map(:)
-     integer, intent (inout) :: count(:), head(:)
-     integer, intent (inout) :: wtb, wtw, wts
-     integer, intent (out) :: mark(:), mark1(:)
+     integer, intent(in) :: msglvl, a_n, a_ne, a_n1, a_n2
+     integer, intent(in) :: a_ptr(:), a_row(:)
+     integer, intent(in) :: vwts(:), partition(:), map(:)
+     integer, intent(inout) :: count(:), head(:)
+     integer, intent(inout) :: wtb, wtw, wts
+     integer, intent(out) :: mark(:), mark1(:)
 
      ! Workspace
      ! list --- to hold list of nodes being searched
      ! length bounded by a_n
      integer :: list(:)
-     real (wp) :: imb(:)
+     real(wp) :: imb(:)
 
      ! Local variables
      integer inode, last, lp, maxl, minl, x, z
@@ -8484,12 +8484,12 @@ inNER:    do inn = 1, n
      ! Input/output
      ! network -- network object
 
-     integer, intent (in) :: delta
-     type (network), intent (inout) :: netw
+     integer, intent(in) :: delta
+     type (network), intent(inout) :: netw
 
      integer iarc, lp, sink, source, v, w
 
-     integer, intent (in) :: pred(:)
+     integer, intent(in) :: pred(:)
 
 
      lp = 6
@@ -8553,10 +8553,10 @@ inNER:    do inn = 1, n
      ! tags -- mark vector, size nnode
      ! deltas -- increment flow vector, size nnode
 
-     integer, intent (in) :: iarc_m
-     integer, intent (out) :: avail, stats(2)
-     type (network), intent (in) :: netw
-     integer, intent (out) :: pred(:)
+     integer, intent(in) :: iarc_m
+     integer, intent(out) :: avail, stats(2)
+     type (network), intent(in) :: netw
+     integer, intent(out) :: pred(:)
 
      integer iarc, last, lp, nnode, now, root, sink, source, v, w
 
@@ -8733,16 +8733,16 @@ inNER:    do inn = 1, n
 
      ! created -- 12jan12, cca
 
-     integer, intent (in) :: a_n
-     integer, intent (in) :: a_ne
-     integer, intent (in) :: map(:), a_ptr(:), a_row(:), a_weight(:)
-     real (wp), intent (in) :: alpha
-     integer, intent (in) :: costf
-     integer, intent (out) :: stats(9)
-     real (wp), intent (out) :: stats10
+     integer, intent(in) :: a_n
+     integer, intent(in) :: a_ne
+     integer, intent(in) :: map(:), a_ptr(:), a_row(:), a_weight(:)
+     real(wp), intent(in) :: alpha
+     integer, intent(in) :: costf
+     integer, intent(out) :: stats(9)
+     real(wp), intent(out) :: stats10
      integer minbw, maxbw, nss, nsb, nsw, nbb, nww, nvtx, ns, nb, nw
      integer j, j1, j2, jj, u, v
-     real (wp) diffbw, beta
+     real(wp) diffbw, beta
      logical :: imbal
 
      beta = 0.5_wp
@@ -8832,25 +8832,25 @@ inNER:    do inn = 1, n
 
    subroutine nd_supervars(n,ptr,row,perm,invp,nsvar,svar,info,st)
      ! Detects supervariables - modified version of subroutine from hsl_mc78
-     integer, intent (inout) :: n ! Dimension of system
-     integer, dimension (n+1), intent (in) :: ptr ! Column pointers
-     integer, dimension (ptr(n+1)-1), intent (in) :: row ! Row indices
-     integer, dimension (n), intent (inout) :: perm
+     integer, intent(inout) :: n ! Dimension of system
+     integer, dimension(n+1), intent(in) :: ptr ! Column pointers
+     integer, dimension(ptr(n+1)-1), intent(in) :: row ! Row indices
+     integer, dimension(n), intent(inout) :: perm
      ! perm(i) must hold position of i in the pivot sequence.
      ! On exit, holds the pivot order to be used by factorization.
-     integer, dimension (n), intent (inout) :: invp ! inverse of perm
-     integer, intent (out) :: nsvar ! number of supervariables
-     integer, dimension (n), intent (out) :: svar ! number of vars in each
+     integer, dimension(n), intent(inout) :: invp ! inverse of perm
+     integer, intent(out) :: nsvar ! number of supervariables
+     integer, dimension(n), intent(out) :: svar ! number of vars in each
      ! svar
-     integer, intent (out) :: info
-     integer, intent (out) :: st
+     integer, intent(out) :: info
+     integer, intent(out) :: st
 
      logical :: full_rank ! flags if supervariable 1 has ever become
      ! empty.
      ! If it has not, then the varaibles in s.v. 1 are those that never
      ! occur
      integer :: i
-     integer (long) :: ii
+     integer(long) :: ii
      integer :: j
      integer :: idx ! current index
      integer :: next_sv ! head of free sv linked list
@@ -8859,15 +8859,15 @@ inNER:    do inn = 1, n
      integer :: col ! current column of A
      integer :: sv ! current supervariable
      integer :: svc ! temporary holding supervariable count
-     integer, dimension (:), allocatable :: sv_new ! Maps each
+     integer, dimension(:), allocatable :: sv_new ! Maps each
      ! supervariable to
      ! a new supervariable with which it is associated.
-     integer, dimension (:), allocatable :: sv_seen ! Flags whether
+     integer, dimension(:), allocatable :: sv_seen ! Flags whether
      ! svariables have
      ! been seen in the current column. sv_seen(j) is set to col when svar
      ! j
      ! has been encountered.
-     integer, dimension (:), allocatable :: sv_count ! number of variables
+     integer, dimension(:), allocatable :: sv_count ! number of variables
      ! in sv.
 
      info = 0 ! by default completed succefully
@@ -9041,21 +9041,21 @@ inNER:    do inn = 1, n
 
    subroutine nd_compress_by_svar(n,ne,ptr,row,invp,nsvar,svar,ptr2, &
        row2,info,st)
-     integer, intent (in) :: n ! Dimension of system
-     integer, intent (in) :: ne ! Number off-diagonal zeros in system
-     integer, dimension (n+1), intent (in) :: ptr ! Column pointers
-     integer, dimension (ptr(n+1)-1), intent (in) :: row ! Row indices
-     integer, dimension (n), intent (in) :: invp ! inverse of perm
-     integer, intent (in) :: nsvar
-     integer, dimension (nsvar), intent (in) :: svar ! super variables of A
-     integer, dimension (nsvar+1), intent (out) :: ptr2
-     integer, dimension (ne), intent (out) :: row2
-     integer, intent (out) :: info
-     integer, intent (out) :: st
+     integer, intent(in) :: n ! Dimension of system
+     integer, intent(in) :: ne ! Number off-diagonal zeros in system
+     integer, dimension(n+1), intent(in) :: ptr ! Column pointers
+     integer, dimension(ptr(n+1)-1), intent(in) :: row ! Row indices
+     integer, dimension(n), intent(in) :: invp ! inverse of perm
+     integer, intent(in) :: nsvar
+     integer, dimension(nsvar), intent(in) :: svar ! super variables of A
+     integer, dimension(nsvar+1), intent(out) :: ptr2
+     integer, dimension(ne), intent(out) :: row2
+     integer, intent(out) :: info
+     integer, intent(out) :: st
 
      integer :: piv, svc, sv, col
      integer :: j, idx
-     integer, dimension (:), allocatable :: flag, sv_map
+     integer, dimension(:), allocatable :: flag, sv_map
 
      info = 0 ! by default completed succefully
 
