@@ -442,246 +442,228 @@ contains
       end if
    end subroutine construct_full_from_full
 
-   ! ---------------------------------------------------
-   ! nd_nested
-   ! ---------------------------------------------------
-   subroutine nd_nested_both(a_n,a_ne,a_ptr,a_row,perm,control,info, &
-       seps)
-     integer, intent(inout) :: a_n ! number of rows in the matrix
-     integer, intent(inout) :: a_ne ! number of entries in the matrix
-     integer, intent(inout) :: a_ptr(a_n) ! column pointers
-     integer, intent(inout) :: a_row(a_ne) ! row indices (lower and upper)
-     integer, intent(out) :: perm(a_n) ! permutation: row i becomes row
-     ! perm(i)
-     type (nd_options), intent(in) :: control
-     type (nd_inform), intent(inout) :: info
-     integer, intent(out), optional :: seps(a_n)
-     ! seps(i) is -1 if vertex is not in a separator; otherwise it
-     ! is equal to l, where l is the nested dissection level at
-     ! which it became part of the separator
+   !
+   ! Main wrapper routine
+   !
+   subroutine nd_nested_both(a_n,a_ne,a_ptr,a_row,perm,control,info,seps)
+      ! Expects input in internal CSC format
+      integer, intent(inout) :: a_n
+      integer, intent(inout) :: a_ne
+      integer, dimension(a_n), intent(inout) :: a_ptr
+      integer, dimension(a_ne), intent(inout) :: a_row
+      integer, dimension(a_n), intent(out) :: perm ! row i becomes row perm(i)
+      type (nd_options), intent(in) :: control
+      type (nd_inform), intent(inout) :: info
+      integer, dimension(a_n), optional, intent(out) :: seps
+         ! seps(i) is -1 if vertex is not in a separator; otherwise it
+         ! is equal to l, where l is the nested dissection level at
+         ! which it became part of the separator
 
-     ! ---------------------------------------------------
-     ! LOCAL VARIABLES
-     integer :: i, j, k, l, ll, lwork, lirn
-     integer :: a_n_curr, a_ne_curr, num_zero_row
-     integer :: amd_order_irn, amd_order_ip, amd_order_sep, amd_order_perm, amd_order_work, &
-       amd_order_iperm
-     integer :: work_iperm, work_seps
-     integer :: unit_error ! unit on which to print errors
-     integer :: unit_diagnostics ! unit on which to print diagnostics
-     integer :: st, nsvar, svinfo
-     integer :: sv_ptr, sv_perm, sv_invp, sv_svar, sv_ptr2, sv_row2, &
-       sumweight
-     integer, allocatable, dimension(:) :: a_weight ! a_weight(i) will
-     ! contain the weight of variable (column) i ends for the
-     ! expanded matrix
-     integer, allocatable, dimension(:) :: iperm ! row iperm(i) will
-     ! become row i when matrix reordered
-     integer, allocatable, dimension(:) :: work ! space for doing work
-     integer, allocatable, dimension(:) :: svwork ! supervariable work
-     ! space
-     logical :: printe, printi, printd
-     logical :: use_multilevel
-     type (nd_multigrid) :: grid
+      integer :: i, j, k, l, ll, lwork, lirn
+      integer :: a_n_curr, a_ne_curr, num_zero_row
+      integer :: amd_order_irn, amd_order_ip, amd_order_sep, amd_order_perm, amd_order_work, &
+         amd_order_iperm
+      integer :: work_iperm, work_seps
+      integer :: unit_error ! unit on which to print errors
+      integer :: unit_diagnostics ! unit on which to print diagnostics
+      integer :: st, nsvar, svinfo
+      integer :: sv_ptr, sv_perm, sv_invp, sv_svar, sv_ptr2, sv_row2, &
+         sumweight
+      integer, allocatable, dimension(:) :: a_weight ! a_weight(i) will
+         ! contain the weight of variable (column) i ends for the
+         ! expanded matrix
+      integer, allocatable, dimension(:) :: iperm ! inverse of perm(:)
+      integer, allocatable, dimension(:) :: work ! space for doing work
+      integer, allocatable, dimension(:) :: svwork ! supervariable work
+         ! space
+      logical :: printe, printi, printd
+      logical :: use_multilevel
+      type (nd_multigrid) :: grid
 
-     ! ---------------------------------------------
-     ! Printing levels
-     unit_diagnostics = control%unit_diagnostics
-     unit_error = control%unit_error
-     printe = (control%print_level>=0 .and. unit_error>=0)
-     printi = (control%print_level==1 .and. unit_diagnostics>=0)
-     printd = (control%print_level>=2 .and. unit_diagnostics>=0)
-     ! ---------------------------------------------------
+      ! ---------------------------------------------
+      ! Printing levels
+      unit_diagnostics = control%unit_diagnostics
+      unit_error = control%unit_error
+      printe = (control%print_level>=0 .and. unit_error>=0)
+      printi = (control%print_level==1 .and. unit_diagnostics>=0)
+      printd = (control%print_level>=2 .and. unit_diagnostics>=0)
+      ! ---------------------------------------------------
 
-     ! Expand the matrix to hold all of its pattern
-     ! Throughout the code we will use a modified compressed sparse
-     ! column/row
-     ! format a_ptr(i) will contain the position in a_row that column i
-     ! begins. This
-     ! is to avoid lots of allocations during the nested part of the
-     ! algorithm. a_ne
-     ! contains the number of entries stored for the expanded matrix.
-
-     if (printi .or. printd) then
-       write (unit_diagnostics,'(a)') ' '
-       write (unit_diagnostics,'(a)') 'nd_nested_both:'
-     end if
-     work_seps = 0
-     work_iperm = 0
-
-     ! Allocate iperm to have length n
-     allocate (iperm(a_n),stat=info%stat)
-     if (info%stat/=0) go to 10
-
-     ! Initialise iperm to identity permutation
-     iperm(:) = (/ (i,i=1,a_n) /)
-     if (present(seps)) then
-       seps(:) = -1
-     end if
-
-     ! Check for dense rows
-     if (control%remove_dense_rows) then
-       ! Initially allocate work to have length 4*a_n
-       allocate (work(4*a_n),stat=info%stat)
-       if (info%stat/=0) go to 10
-
-       call nd_dense_rows(a_n,a_ne,a_ptr,a_row,iperm,work(1:4*a_n),control,&
-          info)
-
-       deallocate (work,stat=info%stat)
-       if (info%stat/=0) go to 20
-     end if
-
-     ! Check whether matrix is diagonal
-     if (a_ne==0) then
-
-       if (printi .or. printd) then
+      if (printi .or. printd) then
          write (unit_diagnostics,'(a)') ' '
-         write (unit_diagnostics,'(a)') 'Matrix is diagonal'
-       end if
+         write (unit_diagnostics,'(a)') 'nd_nested_both:'
+      end if
+      work_seps = 0
+      work_iperm = 0
 
-       info%nsuper = a_n
-       info%nzsuper = 0
-       ! Create perm from iperm
-       do i = 1, a_n
-         j = iperm(i)
-         perm(j) = i
-       end do
+      ! Allocate iperm and initialize to identity
+      allocate (iperm(a_n),stat=info%stat)
+      if (info%stat/=0) go to 10
+      iperm(:) = (/ (i,i=1,a_n) /)
 
-       return
-     end if
+      ! Initialize all variables to not be in a seperator
+      if (present(seps)) seps(:) = -1
 
-     if (control%find_supervariables) then
-       ! Check for supervariables
-       allocate (svwork(5*a_n+a_ne+2),stat=info%stat)
-       if (info%stat/=0) go to 10
-       sv_ptr = 0
-       sv_perm = sv_ptr + a_n + 1
-       sv_invp = sv_perm + a_n
-       sv_svar = sv_invp + a_n
-       sv_ptr2 = sv_svar + a_n
-       sv_row2 = sv_ptr2 + a_n + 1
+      ! Remove any dense rows from matrix and modify iperm (if enabled)
+      if (control%remove_dense_rows) then
+         ! NB: uses private workspace that is deallocated afterwards
+         allocate (work(4*a_n), stat=info%stat)
+         if (info%stat.ne.0) go to 10
+         call remove_dense_rows(a_n, a_ne, a_ptr, a_row, iperm, work, &
+            control, info)
+         deallocate (work, stat=info%stat)
+         if (info%stat.ne.0) go to 20
+      end if
 
+      ! Return if matrix is diagonal
+      if (a_ne.eq.0) then ! (recall diagonal entries are not stored)
+         if (printi .or. printd) then
+            write (unit_diagnostics,'(a)') ' '
+            write (unit_diagnostics,'(a)') 'Matrix is diagonal'
+         end if
 
-       svwork(sv_ptr+1:sv_ptr+a_n) = a_ptr(1:a_n)
-       svwork(sv_ptr+a_n+1) = a_ne + 1
-       svwork(sv_perm+1:sv_perm+a_n) = (/ (i,i=1,a_n) /)
-       svwork(sv_invp+1:sv_invp+a_n) = (/ (i,i=1,a_n) /)
-       i = a_n
-       call nd_supervars(i,svwork(sv_ptr+1:sv_ptr+a_n+1), &
-         a_row(1:a_ne),svwork(sv_perm+1:sv_perm+a_n), &
-         svwork(sv_invp+1:sv_invp+a_n),nsvar, &
-         svwork(sv_svar+1:sv_svar+a_n),svinfo,st)
-       if (svinfo==ND_ERR_MEMORY_ALLOC) go to 10
-       if (svinfo==ND_ERR_MEMORY_DEALLOC) go to 20
+         info%nsuper = a_n
+         info%nzsuper = 0
+         ! Create perm from iperm
+         do i = 1, a_n
+            j = iperm(i)
+            perm(j) = i
+         end do
 
-       num_zero_row = a_n - i
-       if (printd) then
-         write (unit_diagnostics,'(a,i10)') 'Number supervariables: ', &
-           nsvar + num_zero_row
-       end if
-       if (nsvar+num_zero_row==a_n) then
-         deallocate (svwork,stat=info%stat)
-         if (info%stat/=0) go to 20
-         a_n_curr = a_n
-         a_ne_curr = a_ne
-         allocate (a_weight(a_n_curr),stat=info%stat)
+         return
+      end if
+
+      if (control%find_supervariables) then
+         ! Check for supervariables
+         allocate (svwork(5*a_n+a_ne+2),stat=info%stat)
          if (info%stat/=0) go to 10
+         sv_ptr = 0
+         sv_perm = sv_ptr + a_n + 1
+         sv_invp = sv_perm + a_n
+         sv_svar = sv_invp + a_n
+         sv_ptr2 = sv_svar + a_n
+         sv_row2 = sv_ptr2 + a_n + 1
 
-         ! Initialise a_weight
-         a_weight(:) = 1
 
-       else
-         call nd_compress_by_svar(a_n,a_ne, &
-           svwork(sv_ptr+1:sv_ptr+a_n+1),a_row(1:a_ne), &
-           svwork(sv_invp+1:sv_invp+a_n),nsvar, &
-           svwork(sv_svar+1:sv_svar+a_n),svwork(sv_ptr2+1:sv_ptr2+ &
-           a_n+1),svwork(sv_row2+1:sv_row2+a_ne),svinfo,st)
+         svwork(sv_ptr+1:sv_ptr+a_n) = a_ptr(1:a_n)
+         svwork(sv_ptr+a_n+1) = a_ne + 1
+         svwork(sv_perm+1:sv_perm+a_n) = (/ (i,i=1,a_n) /)
+         svwork(sv_invp+1:sv_invp+a_n) = (/ (i,i=1,a_n) /)
+         i = a_n
+         call nd_supervars(i,svwork(sv_ptr+1:sv_ptr+a_n+1), &
+            a_row(1:a_ne),svwork(sv_perm+1:sv_perm+a_n), &
+            svwork(sv_invp+1:sv_invp+a_n),nsvar, &
+            svwork(sv_svar+1:sv_svar+a_n),svinfo,st)
          if (svinfo==ND_ERR_MEMORY_ALLOC) go to 10
          if (svinfo==ND_ERR_MEMORY_DEALLOC) go to 20
 
-         a_n_curr = nsvar
-         ! Fill a_ptr removing any diagonal entries
-         a_ptr(:) = 0
+         num_zero_row = a_n - i
+         if (printd) then
+            write (unit_diagnostics,'(a,i10)') 'Number supervariables: ', &
+               nsvar + num_zero_row
+         end if
+         if (nsvar+num_zero_row==a_n) then
+            deallocate (svwork,stat=info%stat)
+            if (info%stat/=0) go to 20
+            a_n_curr = a_n
+            a_ne_curr = a_ne
+            allocate (a_weight(a_n_curr),stat=info%stat)
+            if (info%stat/=0) go to 10
 
-         ! Set a_ptr(j) to hold no. nonzeros in column j
-         do j = 1, a_n_curr
-           do k = svwork(sv_ptr2+j), svwork(sv_ptr2+j+1) - 1
-             i = svwork(sv_row2+k)
-             if (j<i) then
-               a_ptr(i) = a_ptr(i) + 1
+            ! Initialise a_weight
+            a_weight(:) = 1
+
+         else
+            call nd_compress_by_svar(a_n,a_ne, &
+               svwork(sv_ptr+1:sv_ptr+a_n+1),a_row(1:a_ne), &
+               svwork(sv_invp+1:sv_invp+a_n),nsvar, &
+               svwork(sv_svar+1:sv_svar+a_n),svwork(sv_ptr2+1:sv_ptr2+ &
+               a_n+1),svwork(sv_row2+1:sv_row2+a_ne),svinfo,st)
+            if (svinfo==ND_ERR_MEMORY_ALLOC) go to 10
+            if (svinfo==ND_ERR_MEMORY_DEALLOC) go to 20
+
+            a_n_curr = nsvar
+            ! Fill a_ptr removing any diagonal entries
+            a_ptr(:) = 0
+
+            ! Set a_ptr(j) to hold no. nonzeros in column j
+            do j = 1, a_n_curr
+               do k = svwork(sv_ptr2+j), svwork(sv_ptr2+j+1) - 1
+                  i = svwork(sv_row2+k)
+                  if (j<i) then
+                     a_ptr(i) = a_ptr(i) + 1
+                     a_ptr(j) = a_ptr(j) + 1
+                  end if
+               end do
+            end do
+
+            ! Set a_ptr(j) to point to where row indices will end in a_row
+            do j = 2, a_n_curr
+               a_ptr(j) = a_ptr(j-1) + a_ptr(j)
+            end do
+            a_ne_curr = a_ptr(a_n_curr)
+            ! Initialise all of a_row to 0
+            a_row(1:a_ne_curr) = 0
+
+            ! Fill a_row and a_ptr
+            do j = 1, a_n_curr
+               do k = svwork(sv_ptr2+j), svwork(sv_ptr2+j+1) - 1
+                  i = svwork(sv_row2+k)
+                  if (j<i) then
+                     a_row(a_ptr(i)) = j
+                     a_row(a_ptr(j)) = i
+                     a_ptr(i) = a_ptr(i) - 1
+                     a_ptr(j) = a_ptr(j) - 1
+                  end if
+               end do
+            end do
+
+            ! Reset a_ptr to point to where column starts
+            do j = 1, a_n_curr
                a_ptr(j) = a_ptr(j) + 1
-             end if
-           end do
-         end do
+            end do
 
-         ! Set a_ptr(j) to point to where row indices will end in a_row
-         do j = 2, a_n_curr
-           a_ptr(j) = a_ptr(j-1) + a_ptr(j)
-         end do
-         a_ne_curr = a_ptr(a_n_curr)
-         ! Initialise all of a_row to 0
-         a_row(1:a_ne_curr) = 0
+            allocate (a_weight(a_n_curr+num_zero_row),stat=info%stat)
+            if (info%stat/=0) go to 10
 
-         ! Fill a_row and a_ptr
-         do j = 1, a_n_curr
-           do k = svwork(sv_ptr2+j), svwork(sv_ptr2+j+1) - 1
-             i = svwork(sv_row2+k)
-             if (j<i) then
-               a_row(a_ptr(i)) = j
-               a_row(a_ptr(j)) = i
-               a_ptr(i) = a_ptr(i) - 1
-               a_ptr(j) = a_ptr(j) - 1
-             end if
-           end do
-         end do
+            ! Initialise a_weight
+            a_weight(1:a_n_curr) = svwork(sv_svar+1:sv_svar+a_n_curr)
+            a_weight(a_n_curr+1:a_n_curr+num_zero_row) = 1
 
-         ! Reset a_ptr to point to where column starts
-         do j = 1, a_n_curr
-           a_ptr(j) = a_ptr(j) + 1
-         end do
+            ! Add zero rows/cols to matrix
+            a_ptr(a_n_curr+1:a_n_curr+num_zero_row) = a_ne_curr + 1
+            a_n_curr = a_n_curr + num_zero_row
 
+            ! set svwork(sv_svar+1:sv_svar+a_n) such that
+            ! svwork(sv_svar+i)
+            ! points to the end of the list of variables in sv_invp for
+            ! supervariable i
+            do i = 2, nsvar
+               svwork(sv_svar+i) = svwork(sv_svar+i) + svwork(sv_svar+i-1)
+            end do
+            j = svwork(sv_svar+nsvar)
+            do i = 1, num_zero_row
+               svwork(sv_svar+nsvar+i) = j + 1
+               j = j + 1
+            end do
+
+         end if
+
+      else
+         a_n_curr = a_n
+         a_ne_curr = a_ne
+         nsvar = a_n
+         num_zero_row = 0
          allocate (a_weight(a_n_curr+num_zero_row),stat=info%stat)
          if (info%stat/=0) go to 10
 
          ! Initialise a_weight
-         a_weight(1:a_n_curr) = svwork(sv_svar+1:sv_svar+a_n_curr)
-         a_weight(a_n_curr+1:a_n_curr+num_zero_row) = 1
+         a_weight(:) = 1
+      end if
 
-         ! Add zero rows/cols to matrix
-         a_ptr(a_n_curr+1:a_n_curr+num_zero_row) = a_ne_curr + 1
-         a_n_curr = a_n_curr + num_zero_row
-
-         ! set svwork(sv_svar+1:sv_svar+a_n) such that
-         ! svwork(sv_svar+i)
-         ! points to the end of the list of variables in sv_invp for
-         ! supervariable i
-         do i = 2, nsvar
-           svwork(sv_svar+i) = svwork(sv_svar+i) + svwork(sv_svar+i-1)
-         end do
-         j = svwork(sv_svar+nsvar)
-         do i = 1, num_zero_row
-           svwork(sv_svar+nsvar+i) = j + 1
-           j = j + 1
-         end do
-
-       end if
-
-     else
-       a_n_curr = a_n
-       a_ne_curr = a_ne
-       nsvar = a_n
-       num_zero_row = 0
-       allocate (a_weight(a_n_curr+num_zero_row),stat=info%stat)
-       if (info%stat/=0) go to 10
-
-       ! Initialise a_weight
-       a_weight(:) = 1
-     end if
-
-     ! Carryout nested dissection on matrix once dense rows removed
-     info%nzsuper = a_ne_curr
-     info%nsuper = a_n_curr
+      ! Carryout nested dissection on matrix once dense rows removed
+      info%nzsuper = a_ne_curr
+      info%nsuper = a_n_curr
 
      if (control%amd_switch2<=0 .or. a_n_curr<=max(2,max(control%amd_call, &
          control%amd_switch1))) then
@@ -883,10 +865,10 @@ contains
    end subroutine nd_nested_both
 
    ! ---------------------------------------------------
-   ! nd_dense_rows
+   ! remove_dense_rows
    ! ---------------------------------------------------
    ! Identifies and removes dense rows
-   subroutine nd_dense_rows(a_n_in,a_ne_in,a_ptr,a_row,iperm,work,control,info)
+   subroutine remove_dense_rows(a_n_in,a_ne_in,a_ptr,a_row,iperm,work,control,info)
      integer, intent(inout) :: a_n_in ! dimension of subproblem before dense
      ! rows removed
      integer, intent(inout) :: a_ne_in ! no. nonzeros of subproblem before
@@ -1093,7 +1075,7 @@ contains
      info%flag = 0
      if (printi .or. printd) then
        call nd_print_message(info%flag,unit_diagnostics, &
-         'nd_dense_rows')
+         'remove_dense_rows')
      end if
 
      if (printd) then
@@ -1103,7 +1085,7 @@ contains
      a_n_in = a_n_out
      a_ne_in = a_ne_out
 
-   end subroutine nd_dense_rows
+   end subroutine remove_dense_rows
 
      subroutine dense_remove_from_list(n,next,prev,deg,irm,ig)
        integer, intent(in) :: n ! order matrix
