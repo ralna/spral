@@ -41,7 +41,7 @@ module spral_nd
       integer :: amd_switch1 = 50 ! switch to (halo)AMD if matrix size is
          ! less than or equal to nd_switch
       integer :: amd_switch2 = 20 ! maximum number of ND levels allowed
-      integer :: cost_function = 1 ! selects the cost function used for 
+      integer :: cost_function = 1 ! selects the cost function used for
          ! evaluating a partition
          ! <=1 : |P1||P2|/|S| + penalty for imbalance
          ! >=2 : |S|(1 +  0.5||P1|-|P2||)
@@ -266,7 +266,7 @@ contains
          write (unit_diagnostics,'(a21)') 'a_row(1:min(5,a_ne)) = '
          write (unit_diagnostics,'(5i15)') (a_row(i),i=1,min(5,a_ne))
       end if
-      
+
       ! Call main worker routine
       call nd_nested_both(a_n,a_ne,a_ptr,a_row,perm,control,info,seps)
 
@@ -2492,7 +2492,7 @@ contains
      if (use_multilevel) then
        stop_coarsening2 = control%stop_coarsening2
        lwork = 9*a_n + sumweight
-       
+
        call multilevel_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
          partition,a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep,control, &
          info,lwork,work(1:lwork),stop_coarsening2,grid)
@@ -3134,9 +3134,9 @@ contains
    ! ---------------------------------------------------
    ! nd_refine_edge
    ! ---------------------------------------------------
-   ! Given a partition, refine the partition to improve the (weighted) value 
-   ! of the cost function. An edge separator is formed between the input 
-   ! separator and the larger partition, and this is then minimal using 
+   ! Given a partition, refine the partition to improve the (weighted) value
+   ! of the cost function. An edge separator is formed between the input
+   ! separator and the larger partition, and this is then minimal using
    ! trimming or max flow
    subroutine nd_refine_edge(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
        a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep,partition,work,control)
@@ -3825,7 +3825,7 @@ inNER:    do inn = 1, n
 
      subroutine compute_gain(n,a_ne,ptr,col,gain1,gain2,weight,i,partit)
        integer, intent(in) :: n,a_ne,ptr(n),col(a_ne),weight(n)
-       integer, intent(inout) :: gain1(n), gain2(n)  
+       integer, intent(inout) :: gain1(n), gain2(n)
        integer, intent(in) :: i, partit(:)
        integer :: j, jj, l
        ! Initialize gain ... knowing node i will be removed from cutset
@@ -4739,7 +4739,7 @@ inNER:    do inn = 1, n
 
      ! check if partition is returned
      if (cgrid%part_div(1)==0 .or. cgrid%part_div(2)==0) then
-       ! Unlikely to be called because 99.999% of cases caught in full 
+       ! Unlikely to be called because 99.999% of cases caught in full
        ! matrix check above. Follows same procedure as when full matrix found
        if (print_level.ge.2) then
          write (mp,'(a,i10,a)') 'at level ', grid%level, &
