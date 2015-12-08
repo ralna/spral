@@ -30,184 +30,155 @@ MODULE spral_nd
    ! Derived type definitions
    ! ---------------------------------------------------
 
-   ! *****************************************************************
    TYPE :: nd_options
-     INTEGER :: print_level = 0 ! amount of informational output required
-     INTEGER :: unit_diagnostics = 6 ! stream number for diagnostic
-     ! messages
-     INTEGER :: unit_error = 6 ! stream number for error messages
+      INTEGER :: print_level = 0 ! amount of informational output required
+      INTEGER :: unit_diagnostics = 6 ! stream number for diagnostic
+         ! messages
+      INTEGER :: unit_error = 6 ! stream number for error messages
 
-     INTEGER :: amd_call = 5 ! call AMD if number of supervariables is
-     ! less than or equal to amd_call  *UPDATE*
-     INTEGER :: amd_switch1 = 50 ! switch to (halo)AMD if matrix size is
-     ! less
-     ! than or equal to nd_switch
-     INTEGER :: amd_switch2 = 20 ! maximum number of ND levels allowed
-     INTEGER :: cost_function = 1 ! selects the cost function used for 
-     ! evaluating a partition
-     ! <=1 : |P1||P2|/|S| + penalty for imbalance
-     ! >=2 : |S|(1 +  0.5||P1|-|P2||)
-     INTEGER :: partition_method = 2 ! Are we allowed to use a multilevel
-     ! strategy
-     ! <= 0 : do not use multilevel
-     ! == 1 : use multilevel
-     ! >= 2 : automatic choice based on size of levelsets
-     INTEGER :: matching = 0 ! Which coarsening method to use
-     ! > 0 : heavy-edge
-     ! <= 0 : common neighbours
-     INTEGER :: coarse_partition_method = 1 ! Which partition method to use
-     ! at coarsest level
-     ! <=1 : Ashcraft method (half-level set)
-     ! >=2 : Level-set method
-     INTEGER :: refinement = 7 ! Which sort of refinement to use
-     ! <2 : trim + fm to increase weights of A1 and A2
-     ! =2 : trim + fm to increase weight of smaller partition and
-     ! decrease weight of larger partition
-     ! =3 : Automatically choose between options 1 and 2
-     ! =4 : maxflow + fm to increase weights of A1 and A2
-     ! =5 : maxflow + fm to increase weight of smaller partition and
-     ! decrease weight of larger partition
-     ! =6 : Automatically choose between options 4 and 5
-     ! >6 : Automatically choose between options 1 and 5
-     INTEGER :: refinement_band = 4 ! band width for FM refinement. Values
-     ! less than 1 mean that no FM refinement is done
-     LOGICAL :: remove_dense_rows = .TRUE. ! test the input for dense rows
-     ! and place them at the end of the ordering
-     INTEGER :: stop_coarsening2 = 20 ! Max number of levels in the
-     ! multilevel grid
-     INTEGER :: stop_coarsening1 = 100 ! Stop coarsening once matrix has
-     ! order at most stop_coarsening1
-     INTEGER :: ml_call = 12000 ! Stop coarsening once matrix has
-     ! order at most stop_coarsening1
+      INTEGER :: amd_call = 5 ! call AMD if number of supervariables is
+         ! less than or equal to amd_call  *UPDATE*
+      INTEGER :: amd_switch1 = 50 ! switch to (halo)AMD if matrix size is
+         ! less than or equal to nd_switch
+      INTEGER :: amd_switch2 = 20 ! maximum number of ND levels allowed
+      INTEGER :: cost_function = 1 ! selects the cost function used for 
+         ! evaluating a partition
+         ! <=1 : |P1||P2|/|S| + penalty for imbalance
+         ! >=2 : |S|(1 +  0.5||P1|-|P2||)
+      INTEGER :: partition_method = 2 ! Are we allowed to use a multilevel
+         ! strategy
+         ! <= 0 : do not use multilevel
+         ! == 1 : use multilevel
+         ! >= 2 : automatic choice based on size of levelsets
+      INTEGER :: matching = 0 ! Which coarsening method to use
+         ! > 0 : heavy-edge
+         ! <= 0 : common neighbours
+      INTEGER :: coarse_partition_method = 1 ! Which partition method to use
+         ! at coarsest level
+         ! <=1 : Ashcraft method (half-level set)
+         ! >=2 : Level-set method
+      INTEGER :: refinement = 7 ! Which sort of refinement to use
+         ! <2 : trim + fm to increase weights of A1 and A2
+         ! =2 : trim + fm to increase weight of smaller partition and
+         !      decrease weight of larger partition
+         ! =3 : Automatically choose between options 1 and 2
+         ! =4 : maxflow + fm to increase weights of A1 and A2
+         ! =5 : maxflow + fm to increase weight of smaller partition and
+         !      decrease weight of larger partition
+         ! =6 : Automatically choose between options 4 and 5
+         ! >6 : Automatically choose between options 1 and 5
+      INTEGER :: refinement_band = 4 ! band width for FM refinement. Values
+         ! less than 1 mean that no FM refinement is done
+      LOGICAL :: remove_dense_rows = .TRUE. ! test the input for dense rows
+         ! and place them at the end of the ordering
+      INTEGER :: stop_coarsening2 = 20 ! Max number of levels in the
+         ! multilevel grid
+      INTEGER :: stop_coarsening1 = 100 ! Stop coarsening once matrix has
+         ! order at most stop_coarsening1
+      INTEGER :: ml_call = 12000 ! Stop coarsening once matrix has
+         ! order at most stop_coarsening1
 
-     ! minimum and maximum grid reduction factors that must be achieved
-     ! during coarsening. If cgrid%size is greater than
-     ! max_reduction*grid%size or cgrid%size is less than
-     ! min_reduction*grid%size then carry on coarsening
-     REAL (wp) :: min_reduction = 0.5 ! size of next
-     ! multigrid
-     ! matrix must be greater than min_reduction*(size of current
-     ! multigrid matrix)
-     REAL (wp) :: max_reduction = 0.9 ! size of next
-     ! multigrid
-     ! matrix must be less than max_reduction*(size of current multigrid
-     ! matrix)
-     REAL (wp) :: balance = 2.0 ! Try to make sure that
-     ! max(P1,P2)/min(P1/P2) <= balance
+      ! minimum and maximum grid reduction factors that must be achieved
+      ! during coarsening. If cgrid%size is greater than
+      ! max_reduction*grid%size or cgrid%size is less than
+      ! min_reduction*grid%size then carry on coarsening
+      REAL (wp) :: min_reduction = 0.5 ! size of next multigrid
+         ! matrix must be greater than min_reduction*(size of current
+         ! multigrid matrix)
+      REAL (wp) :: max_reduction = 0.9 ! size of next multigrid
+         ! matrix must be less than max_reduction*(size of current multigrid
+         ! matrix)
+      REAL (wp) :: balance = 2.0 ! Try to make sure that
+         ! max(P1,P2)/min(P1/P2) <= balance
 
-     INTEGER :: max_improve_cycles = 2 ! Having computed a minimal
-     ! partition,
-     ! expand and refine it at most max_improve_cycles times to improve
-     ! the quality of the partition.
-     LOGICAL :: find_supervariables = .TRUE. ! If .TRUE., after dense rows
-     ! have been (optionally) removed, check for supervariables and
-     ! compress matrix if supervariables found.
-
-     ! REAL (wp) :: ml_bandwidth = 1.0 ! Let B be matrix A after
-     ! dense rows removed and compressed. If ml>1 and bandwidth of B after
-     ! RCM
-     ! ordering is larger than ml_bandwidth*order(B), continue as if ml=1;
-     ! otherwise continue as if ml=0; If B is separable, perform test on
-     ! each
-     ! component separately use accordingly with each component. Note: RCM
-     ! ordering is not computed.
-
+      INTEGER :: max_improve_cycles = 2 ! Having computed a minimal partition,
+         ! expand and refine it at most max_improve_cycles times to improve
+         ! the quality of the partition.
+      LOGICAL :: find_supervariables = .TRUE. ! If .TRUE., after dense rows
+         ! have been (optionally) removed, check for supervariables and
+         ! compress matrix if supervariables found.
    END TYPE nd_options
 
    ! *****************************************************************
+
    TYPE :: nd_inform
-     INTEGER :: flag = 0 ! error/warning flag
-     INTEGER :: dense = 0 ! holds number of dense rows
-     INTEGER :: stat = 0 ! holds Fortran stat parameter
-     INTEGER :: nsuper = 0 ! holds number of supervariables + number
-     ! of zero
-     ! rows after dense rows removed
-     INTEGER :: nzsuper = 0 ! holds number of nonzeros in compressed
-     ! graph
-     INTEGER :: num_components = 1 ! Number of independent components after
-     ! dense rows (optionally) removed
-     INTEGER :: n_max_component = -1 ! holds number rows in largest indep
-     ! component after dense rows removed and supervariables (optionally)
-     ! compressed
-     INTEGER :: nz_max_component = -1 ! holds number nonzeros in largest
-     ! indep
-     ! component after dense rows removed and supervariables (optionally)
-     ! compressed
-     INTEGER :: maxdeg_max_component = -1 ! holds number nonzeros in
-     ! largest indep
-     ! component after dense rows removed and supervariables (optionally)
-     ! compressed
-     REAL (wp) :: band = -1 ! holds L, where L is the size
-     ! of the largest level set at the top level of nested dissection. If
-     ! the matrix is reducible, then it holds the value for the largest
-     ! of the irreducible components.
-     ! Not returned if control%partition_method==1.
-     REAL (wp) :: depth = -1 ! holds number of levels in
-     ! level set
-     ! structure at the top level of nested dissection. If
-     ! the matrix is reducible, then it holds the value for the largest
-     ! of the irreducible components.
-     ! Not returned if control%partition_method==1.
+      INTEGER :: flag = 0 ! error/warning flag
+      INTEGER :: dense = 0 ! holds number of dense rows
+      INTEGER :: stat = 0 ! holds Fortran stat parameter
+      INTEGER :: nsuper = 0 ! holds number of supervariables + number of zero
+         ! rows after dense rows removed
+      INTEGER :: nzsuper = 0 ! holds number of nonzeros in compressed graph
+      INTEGER :: num_components = 1 ! Number of independent components after
+         ! dense rows (optionally) removed
+      INTEGER :: n_max_component = -1 ! holds number rows in largest indep
+         ! component after dense rows removed and supervariables (optionally)
+         ! compressed
+      INTEGER :: nz_max_component = -1 ! holds number nonzeros in largest indep
+         ! component after dense rows removed and supervariables (optionally)
+         ! compressed
+      INTEGER :: maxdeg_max_component = -1 ! holds number nonzeros in largest
+         ! indep component after dense rows removed and supervariables
+         ! (optionally) compressed
+      REAL (wp) :: band = -1 ! holds L, where L is the size
+         ! of the largest level set at the top level of nested dissection. If
+         ! the matrix is reducible, then it holds the value for the largest
+         ! of the irreducible components.
+         ! Not returned if control%partition_method==1.
+      REAL (wp) :: depth = -1 ! holds number of levels in level set structure
+         ! at the top level of nested dissection. If the matrix is reducible,
+         ! then it holds the value for the largest of the irreducible
+         ! components.
+         ! Not returned if control%partition_method==1.
    END TYPE nd_inform
 
    ! *****************************************************************
 
    TYPE nd_multigrid
-     INTEGER :: size ! size of this level (number of rows)
-     TYPE (nd_matrix), POINTER :: graph => NULL() ! this level of matrix
-     INTEGER, POINTER, DIMENSION (:) :: where => NULL() ! where each row of
-     ! this
-     ! level of matrix will go (ie ordering for this level)
-     INTEGER, POINTER, DIMENSION (:) :: row_wgt => NULL() ! number of
-     ! vertices
-     ! this vertex of the coarse graph matrix represents
-     INTEGER :: level = 0 ! the level
-     INTEGER :: part_div(2) ! number of vertices in each part
-     TYPE (nd_multigrid), POINTER :: coarse => NULL() ! pointer to the
-     ! coarse grid
-     TYPE (nd_multigrid), POINTER :: fine => NULL() ! pointer to the
-     ! fine grid
-     TYPE (nd_matrix), POINTER :: p => NULL() ! the prolongation
-     ! operator
-     TYPE (nd_matrix), POINTER :: r => NULL() ! the restriction operator
+      INTEGER :: size ! size of this level (number of rows)
+      TYPE (nd_matrix), POINTER :: graph => NULL() ! this level of matrix
+      INTEGER, POINTER, DIMENSION (:) :: where => NULL() ! where each row of
+         ! this level of matrix will go (ie ordering for this level)
+      INTEGER, POINTER, DIMENSION (:) :: row_wgt => NULL() ! number of
+         ! vertices this vertex of the coarse graph matrix represents
+      INTEGER :: level = 0 ! the level
+      INTEGER :: part_div(2) ! number of vertices in each part
+      TYPE (nd_multigrid), POINTER :: coarse => NULL() ! pointer to the
+         ! coarse grid
+      TYPE (nd_multigrid), POINTER :: fine => NULL() ! pointer to the fine grid
+      TYPE (nd_matrix), POINTER :: p => NULL() ! the prolongation operator
+      TYPE (nd_matrix), POINTER :: r => NULL() ! the restriction operator
    END TYPE nd_multigrid
+
    ! *****************************************************************
 
    TYPE nd_matrix
-     INTEGER :: m ! number rows
-     INTEGER :: n ! number columns
-     INTEGER :: ne ! number entries in matrix
-     INTEGER, ALLOCATABLE, DIMENSION (:) :: ptr ! pointer into col array
-     INTEGER, ALLOCATABLE, DIMENSION (:) :: col ! column indices
-     INTEGER, ALLOCATABLE, DIMENSION (:) :: val ! values
-
+      INTEGER :: m ! number rows
+      INTEGER :: n ! number columns
+      INTEGER :: ne ! number entries in matrix
+      INTEGER, ALLOCATABLE, DIMENSION (:) :: ptr ! pointer into col array
+      INTEGER, ALLOCATABLE, DIMENSION (:) :: col ! column indices
+      INTEGER, ALLOCATABLE, DIMENSION (:) :: val ! values
    END TYPE nd_matrix
 
-   ! This is a version of maxflow with no bandgraph and assumption that
-   ! there
-   ! are no duplicated edges.
+   ! *****************************************************************
 
+   ! This is a version of maxflow with no bandgraph and assumption that
+   ! there are no duplicated edges.
    TYPE network
-     INTEGER :: nnode ! number of nodes in the network
-     INTEGER :: narc ! number of arcs in the network
-     INTEGER :: source ! source node = 1
-     INTEGER :: sink ! sink node = nnode
-     INTEGER, ALLOCATABLE :: inheads(:) ! for each node u
-     ! first incoming arc for u
-     INTEGER, ALLOCATABLE :: outheads(:) ! for each node u
-     ! first outgoing arc for u
-     INTEGER, ALLOCATABLE :: firsts(:) ! for each arc e
-     ! first node for arc e
-     INTEGER, ALLOCATABLE :: seconds(:) ! for each arc e
-     ! second node for arc e
-     INTEGER, ALLOCATABLE :: capacities(:) ! for each arc e
-     ! capacity of arc e
-     INTEGER, ALLOCATABLE :: flows(:) ! for each arc e
-     ! flow through arc e
-     INTEGER, ALLOCATABLE :: nextin(:) ! for each arc e
-     ! next incoming arc
-     INTEGER, ALLOCATABLE :: nextout(:) ! for each arc e
-     ! next outgoing arc
+      INTEGER :: nnode ! number of nodes in the network
+      INTEGER :: narc ! number of arcs in the network
+      INTEGER :: source ! source node = 1
+      INTEGER :: sink ! sink node = nnode
+      INTEGER, ALLOCATABLE :: inheads(:) ! for each node u first incoming arc
+         ! for u
+      INTEGER, ALLOCATABLE :: outheads(:) ! for each node u first outgoing arc
+         ! for u
+      INTEGER, ALLOCATABLE :: firsts(:) ! for each arc e first node for arc e
+      INTEGER, ALLOCATABLE :: seconds(:) ! for each arc e second node for arc e
+      INTEGER, ALLOCATABLE :: capacities(:) ! for each arc e capacity of arc e
+      INTEGER, ALLOCATABLE :: flows(:) ! for each arc e flow through arc e
+      INTEGER, ALLOCATABLE :: nextin(:) ! for each arc e next incoming arc
+      INTEGER, ALLOCATABLE :: nextout(:) ! for each arc e next outgoing arc
    END TYPE network
 
 
@@ -218,11 +189,7 @@ MODULE spral_nd
      MODULE PROCEDURE nd_nested_order
    END INTERFACE
 
-   ! ---------------------------------------------------
-   ! The main code
-   ! ---------------------------------------------------
-
- CONTAINS
+CONTAINS
 
    ! ---------------------------------------------------
    ! nd_print_message
