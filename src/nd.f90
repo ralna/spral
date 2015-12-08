@@ -1113,7 +1113,7 @@ contains
    ! ---------------------------------------------------
    ! Does the recursive nested dissection
 
-   RECURSIVE subroutine nd_nested_internal(a_n,a_ne,a_ptr,a_row, &
+   recursive subroutine nd_nested_internal(a_n,a_ne,a_ptr,a_row, &
        a_weight,sumweight,iperm,work,work_comp_n,work_comp_nz,level, &
        control,info,use_amd,use_multilevel,grid,seps)
 
@@ -1983,7 +1983,7 @@ contains
    ! nd_ashcraft
    ! ---------------------------------------------------
    ! Partition the matrix using the Ashcraft method
-   RECURSIVE subroutine nd_ashcraft(a_n,a_ne,a_ptr,a_row,a_weight, &
+   recursive subroutine nd_ashcraft(a_n,a_ne,a_ptr,a_row,a_weight, &
        sumweight,level,a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep, &
        partition,work,control,info,band,depth,use_multilevel,grid)
 
@@ -2314,7 +2314,7 @@ contains
    ! nd_level_set
    ! ---------------------------------------------------
    ! Partition the matrix using the level set method
-   RECURSIVE subroutine nd_level_set(a_n,a_ne,a_ptr,a_row,a_weight, &
+   recursive subroutine nd_level_set(a_n,a_ne,a_ptr,a_row,a_weight, &
        sumweight,level,a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep, &
        partition,work,control,info,band,depth,use_multilevel,grid)
 
@@ -4558,7 +4558,7 @@ inNER:    do inn = 1, n
    ! set for coarsening. We will need to test out to see
    ! which is better.
 
-   RECURSIVE subroutine multilevel(grid,control,sumweight,mglevel_cur,mp, &
+   recursive subroutine multilevel(grid,control,sumweight,mglevel_cur,mp, &
        print_level,lwork,work,info)
 
      real(wp), parameter :: half = 0.5_wp
@@ -5267,7 +5267,7 @@ inNER:    do inn = 1, n
 
    ! *****************************************************************
 
-   RECURSIVE subroutine mg_grid_destroy(grid,info)
+   recursive subroutine mg_grid_destroy(grid,info)
      ! deallocate a grid structure
      type (nd_multigrid) :: grid
      integer :: info
