@@ -200,11 +200,91 @@ contains
          ! is equal to lev, where lev is the nested dissection level at
          ! which it became part of the separator
 
-      if (mtx<1) then
-         call nd_nested_lower(n,ptr,row,perm,control,info,seps)
-      else
-         call nd_nested_full(n,ptr,row,perm,control,info,seps)
+      ! Throughout the code we will use a modified compressed sparse
+      ! column/row format (same due to symmetry). However there is no
+      ! a_ptr(n+1) entry, instead the number of non-zeroes is stored as
+      ! a_ne. These variables store that information.
+      integer :: a_n
+      integer :: a_ne
+      integer, allocatable, dimension (:) :: a_ptr
+      integer, allocatable, dimension (:) :: a_row
+
+      ! Other local variables
+      integer :: i
+      integer :: unit_error
+      integer :: unit_diagnostics
+      logical :: printe, printi, printd
+
+      ! ---------------------------------------------
+      ! Printing levels
+      unit_diagnostics = control%unit_diagnostics
+      unit_error = control%unit_error
+      printe = (control%print_level>=0 .and. unit_error>=0)
+      printi = (control%print_level==1 .and. unit_diagnostics>=0)
+      printd = (control%print_level>=2 .and. unit_diagnostics>=0)
+      ! ---------------------------------------------------
+
+      if (printi .or. printd) then
+         write (unit_diagnostics,'(a)') ' '
+         write (unit_diagnostics,'(a)') 'nd_order:'
       end if
+
+      ! Error checks
+      if (n<1) then
+         info%flag = ND_ERR_N
+         if (printe) call nd_print_message(info%flag,unit_error, &
+            'nd_order')
+         return
+      end if
+
+      ! Convert matrix to internal format without diagonals
+      if (mtx<1) then
+         call construct_full_from_lower(n, ptr, row, a_n, a_ne, a_ptr, a_row, &
+            control, info%stat)
+      else
+         call construct_full_from_full(n, ptr, row, a_n, a_ne, a_ptr, a_row, &
+            control, info%stat)
+      endif
+      if(info%stat.ne.0) then
+         info%flag = ND_ERR_MEMORY_ALLOC
+         if (printe) &
+            call nd_print_message(info%flag,unit_error, 'nd_order')
+         return
+      endif
+
+      ! Output summary of input matrix post-conversion
+      if (printd) then
+         ! Print out a_ptr and a_row
+         write (unit_diagnostics,'(a8)') 'a_ptr = '
+         write (unit_diagnostics,'(5i15)') (a_ptr(i),i=1,a_n)
+         write (unit_diagnostics,'(a8)') 'a_row = '
+         write (unit_diagnostics,'(5i15)') (a_row(i),i=1,a_ne)
+      else if (printi) then
+         ! Print out first few entries of a_ptr and a_row
+         write (unit_diagnostics,'(a21)') 'a_ptr(1:min(5,a_n)) = '
+         write (unit_diagnostics,'(5i15)') (a_ptr(i),i=1,min(5,a_n))
+         write (unit_diagnostics,'(a21)') 'a_row(1:min(5,a_ne)) = '
+         write (unit_diagnostics,'(5i15)') (a_row(i),i=1,min(5,a_ne))
+      end if
+      
+      ! Call main worker routine
+      call nd_nested_both(a_n,a_ne,a_ptr,a_row,perm,control,info,seps)
+
+      ! Output summary of results
+      if (printd) then
+         ! Print out perm
+         write (unit_diagnostics,'(a8)') 'perm = '
+         write (unit_diagnostics,'(5i15)') (perm(i),i=1,a_n)
+      else if (printi) then
+         ! Print out first few entries of perm
+         write (unit_diagnostics,'(a21)') 'perm(1:min(5,a_n)) = '
+         write (unit_diagnostics,'(5i15)') (perm(i),i=1,min(5,a_n))
+      end if
+
+      info%flag = 0
+      if (printi .or. printd) &
+         call nd_print_message(info%flag,unit_diagnostics,'nd_order')
+
    end subroutine nd_order
 
    !
@@ -233,343 +313,135 @@ contains
      end select
    end subroutine nd_print_message
 
-   ! ---------------------------------------------------
-   ! nd_nested_lower
-   ! ---------------------------------------------------
-   subroutine nd_nested_lower(n,ptr,row,perm,control,info,seps)
-     integer, intent (in) :: n ! number of rows in the matrix
-     integer, intent (in) :: ptr(n+1) ! column pointers
-     integer, intent (in) :: row(ptr(n+1)-1) ! row indices (lower triangle)
-     integer, intent (out) :: perm(n) ! permutation: row i becomes row
-     ! perm(i)
-     type (nd_options), intent (in) :: control
-     type (nd_inform), intent (inout) :: info
-     integer, intent (out), optional :: seps(n)
-     ! seps(i) is -1 if vertex is not in a separator; otherwise it
-     ! is equal to l, where l is the nested dissection level at
-     ! which it became part of the separator
+   !
+   ! Constructs a full matrix (without diagonals) from one with only lower
+   ! triangle stored (perhaps with diagonals)
+   !
+   subroutine construct_full_from_lower(n, ptr, row, n_out, ne_out, ptr_out, &
+         row_out, control, st)
+      integer, intent(in) :: n
+      integer, dimension(n+1), intent(in) :: ptr
+      integer, dimension(ptr(n+1)-1), intent(in) :: row
+      integer, intent(out) :: n_out
+      integer, intent(out) :: ne_out
+      integer, dimension(:), allocatable, intent(out) :: ptr_out
+      integer, dimension(:), allocatable, intent(out) :: row_out
+      type (nd_options), intent (in) :: control
+      integer, intent(out) :: st
 
-     ! ---------------------------------------------------
-     ! LOCAL VARIABLES
-     integer :: a_n ! dimension of the expanded matrix
-     integer :: a_ne ! number off-diagonal entries stored in
-     ! expanded matrix
-     integer :: i, j, k
-     integer :: unit_error ! unit on which to print errors
-     integer :: unit_diagnostics ! unit on which to print diagnostics
-     integer, allocatable, dimension (:) :: a_ptr ! a_ptr(i) will contain
-     ! the
-     ! position in a_row that column i ends for the expanded matrix
-     integer, allocatable, dimension (:) :: a_row ! contains for row
-     ! indices
-     ! for the pattern of the expanded matrix. The row indices of
-     ! column j are stored before those of column j+1, j=1,..,n-1.
-     logical :: printe, printi, printd
+      integer :: i, j, k
 
-     ! ---------------------------------------------
-     ! Printing levels
-     unit_diagnostics = control%unit_diagnostics
-     unit_error = control%unit_error
-     printe = (control%print_level>=0 .and. unit_error>=0)
-     printi = (control%print_level==1 .and. unit_diagnostics>=0)
-     printd = (control%print_level>=2 .and. unit_diagnostics>=0)
-     ! ---------------------------------------------------
+      n_out = n
+      if (control%print_level.ge.1 .and. control%unit_diagnostics.gt.0) &
+         write (control%unit_diagnostics,'(a,i10)') 'n = ', n_out
 
-     ! Expand the matrix to hold all of its pattern
-     ! Throughout the code we will use a modified compressed sparse
-     ! column/row
-     ! format a_ptr(i) will contain the position in a_row that column i
-     ! begins. This
-     ! is to avoid lots of allocations during the nested part of the
-     ! algorithm. a_ne
-     ! contains the number of entries stored for the expanded matrix.
+      ! Allocate space to store pointers for expanded matrix
+      allocate (ptr_out(n),stat=st)
+      if (st.ne.0) return
 
-     if (printi .or. printd) then
-       write (unit_diagnostics,'(a)') ' '
-       write (unit_diagnostics,'(a)') 'nd_nested_lower:'
-     end if
-
-
-
-     ! Set the dimension of the expanded matrix
-     a_n = n
-     if (printi .or. printd) then
-       write (unit_diagnostics,'(a,i10)') 'n = ', n
-     end if
-     if (n<1) then
-       info%flag = ND_ERR_N
-       if (printe) call nd_print_message(info%flag,unit_error, &
-         'nd_nested_lower')
-       return
-     end if
-
-
-     ! Allocate space to store pointers for expanded matrix
-     allocate (a_ptr(a_n),stat=info%stat)
-     if (info%stat/=0) go to 10
-
-     ! Fill a_col and a_ptr removing any diagonal entries
-     a_ptr(:) = 0
-
-     ! Set a_ptr(j) to hold no. nonzeros in column j
-     do j = 1, n
-       do k = ptr(j), ptr(j+1) - 1
-         i = row(k)
-         if (j/=i) then
-           a_ptr(i) = a_ptr(i) + 1
-           a_ptr(j) = a_ptr(j) + 1
-         end if
-       end do
-     end do
-
-     ! Set a_ptr(j) to point to where row indices will end in a_row
-     do j = 2, n
-       a_ptr(j) = a_ptr(j-1) + a_ptr(j)
-     end do
-     a_ne = a_ptr(a_n)
-     if (printi .or. printd) then
-       write (unit_diagnostics,'(a,i10)') &
-         'entries in expanded matrix with diags removed = ', a_ne
-     end if
-
-     ! Allocate space to store row indices of expanded matrix
-     allocate (a_row(a_ne),stat=info%stat)
-     if (info%stat/=0) go to 10
-
-     ! Initialise all of a_row to 0
-     a_row(:) = 0
-
-     ! Fill a_row and a_ptr
-     do j = 1, n
-       do k = ptr(j), ptr(j+1) - 1
-         i = row(k)
-         if (j/=i) then
-           a_row(a_ptr(i)) = j
-           a_row(a_ptr(j)) = i
-           a_ptr(i) = a_ptr(i) - 1
-           a_ptr(j) = a_ptr(j) - 1
-         end if
-       end do
-     end do
-
-     ! Reset a_ptr to point to where column starts
-     do j = 1, a_n
-       a_ptr(j) = a_ptr(j) + 1
-     end do
-
-     if (printd) then
-       ! Print out a_ptr and a_row
-       write (unit_diagnostics,'(a8)') 'a_ptr = '
-       write (unit_diagnostics,'(5i15)') (a_ptr(i),i=1,a_n)
-       write (unit_diagnostics,'(a8)') 'a_row = '
-       write (unit_diagnostics,'(5i15)') (a_row(i),i=1,a_ne)
-     else if (printi) then
-       ! Print out first few entries of a_ptr and a_row
-       write (unit_diagnostics,'(a21)') 'a_ptr(1:min(5,a_n)) = '
-       write (unit_diagnostics,'(5i15)') (a_ptr(i),i=1,min(5,a_n))
-       write (unit_diagnostics,'(a21)') 'a_row(1:min(5,a_ne)) = '
-       write (unit_diagnostics,'(5i15)') (a_row(i),i=1,min(5,a_ne))
-     end if
-     if (present(seps)) then
-       call nd_nested_both(a_n,a_ne,a_ptr,a_row,perm,control,info,seps)
-     else
-       call nd_nested_both(a_n,a_ne,a_ptr,a_row,perm,control,info)
-     end if
-
-     if (printd) then
-       ! Print out perm
-       write (unit_diagnostics,'(a8)') 'perm = '
-       write (unit_diagnostics,'(5i15)') (perm(i),i=1,a_n)
-     else if (printi) then
-       ! Print out first few entries of perm
-       write (unit_diagnostics,'(a21)') 'perm(1:min(5,a_n)) = '
-       write (unit_diagnostics,'(5i15)') (perm(i),i=1,min(5,a_n))
-     end if
-
-     ! Deallocate arrays
-     deallocate (a_ptr,stat=info%stat)
-     if (info%stat/=0) go to 20
-     deallocate (a_row,stat=info%stat)
-     if (info%stat/=0) go to 20
-
-     info%flag = 0
-     if (printi .or. printd) then
-       call nd_print_message(info%flag,unit_diagnostics,'nd_nested_lower')
-     end if
-     return
-
-10      info%flag = ND_ERR_MEMORY_ALLOC
-     if (printe) call nd_print_message(info%flag,unit_error, &
-       'nd_nested_lower')
-     return
-
-20      info%flag = ND_ERR_MEMORY_DEALLOC
-     if (printe) call nd_print_message(info%flag,unit_error, &
-       'nd_nested_lower')
-     return
-
-   end subroutine nd_nested_lower
-
-
-   ! ---------------------------------------------------
-   ! nd_nested
-   ! ---------------------------------------------------
-   subroutine nd_nested_full(n,ptr,row,perm,control,info,seps)
-     integer, intent (in) :: n ! number of rows in the matrix
-     integer, intent (in) :: ptr(n+1) ! column pointers
-     integer, intent (in) :: row(ptr(n+1)-1) ! row indices (lower triangle)
-     integer, intent (out) :: perm(n) ! permutation: row i becomes row
-     ! perm(i)
-     type (nd_options), intent (in) :: control
-     type (nd_inform), intent (inout) :: info
-     integer, intent (out), optional :: seps(n)
-     ! seps(i) is -1 if vertex is not in a separator; otherwise it
-     ! is equal to l, where l is the nested dissection level at
-     ! which it became part of the separator
-
-     ! ---------------------------------------------------
-     ! LOCAL VARIABLES
-     integer :: a_n ! dimension of the expanded matrix
-     integer :: a_ne ! number off-diagonal entries stored in
-     ! expanded matrix
-     integer :: i, j, k, l, ndiags
-     integer :: unit_error ! unit on which to print errors
-     integer :: unit_diagnostics ! unit on which to print diagnostics
-     integer, allocatable, dimension (:) :: a_ptr ! a_ptr(i) will contain
-     ! the
-     ! position in a_row that column i ends for the expanded matrix
-     integer, allocatable, dimension (:) :: a_row ! contains for row
-     ! indices
-     ! for the pattern of the expanded matrix. The row indices of
-     ! column j are stored before those of column j+1, j=1,..,n-1.
-     logical :: printe, printi, printd
-
-     ! ---------------------------------------------
-     ! Printing levels
-     unit_diagnostics = control%unit_diagnostics
-     unit_error = control%unit_error
-     printe = (control%print_level>=0 .and. unit_error>=0)
-     printi = (control%print_level==1 .and. unit_diagnostics>=0)
-     printd = (control%print_level>=2 .and. unit_diagnostics>=0)
-     ! ---------------------------------------------------
-
-     ! Expand the matrix to hold all of its pattern
-     ! Throughout the code we will use a modified compressed sparse
-     ! column/row
-     ! format a_ptr(i) will contain the position in a_row that column i
-     ! begins. This
-     ! is to avoid lots of allocations during the nested part of the
-     ! algorithm. a_ne
-     ! contains the number of entries stored for the expanded matrix.
-
-     if (printi .or. printd) then
-       write (unit_diagnostics,'(a)') ' '
-       write (unit_diagnostics,'(a)') 'nd_nested_full:'
-     end if
-
-     ! Set the dimension of the expanded matrix
-     a_n = n
-     if (printi .or. printd) then
-       write (unit_diagnostics,'(a,i10)') 'n = ', n
-     end if
-     if (n<1) then
-       info%flag = ND_ERR_N
-       if (printe) call nd_print_message(info%flag,unit_error, &
-         'nd_nested_full')
-       return
-     end if
-
-
-     ! Work out how many diagonal entries need removing
-     ndiags = 0
-     do j = 1, n
-       do l = ptr(j), ptr(j+1) - 1
-         i = row(l)
-         if (i==j) ndiags = ndiags + 1
-       end do
-     end do
-     a_ne = ptr(n+1) - 1 - ndiags
-
-     ! Allocate space to store pointers and rows for expanded matrix
-     allocate (a_ptr(a_n),stat=info%stat)
-     if (info%stat/=0) go to 10
-     allocate (a_row(a_ne),stat=info%stat)
-     if (info%stat/=0) go to 10
-
-     if (ndiags==0) then
-       ! No diagonal entries so do direct copy
-       a_ptr(1:a_n) = ptr(1:n)
-       a_row(1:a_ne) = row(1:a_ne)
-
-     else
-       ! Diagonal entries present
-       k = 1
-       do i = 1, n
-         a_ptr(i) = k
-         do l = ptr(i), ptr(i+1) - 1
-           j = row(l)
-           if (i/=j) then
-             a_row(k) = j
-             k = k + 1
-           end if
+      ! Set ptr_out(j) to hold no. nonzeros in column j, without diagonal
+      ptr_out(:) = 0
+      do j = 1, n
+         do k = ptr(j), ptr(j+1) - 1
+            i = row(k)
+            if (j.ne.i) then
+               ptr_out(i) = ptr_out(i) + 1
+               ptr_out(j) = ptr_out(j) + 1
+            end if
          end do
-       end do
-     end if
+      end do
 
+      ! Set ptr_out(j) to point to where row indices will end in row_out
+      do j = 2, n
+         ptr_out(j) = ptr_out(j-1) + ptr_out(j)
+      end do
+      ne_out = ptr_out(n)
 
-     if (printd) then
-       ! Print out a_ptr and a_row
-       write (unit_diagnostics,'(a8)') 'a_ptr = '
-       write (unit_diagnostics,'(5i15)') (a_ptr(i),i=1,a_n)
-       write (unit_diagnostics,'(a8)') 'a_row = '
-       write (unit_diagnostics,'(5i15)') (a_row(i),i=1,a_ne)
-     else if (printi) then
-       ! Print out first few entries of a_ptr and a_row
-       write (unit_diagnostics,'(a21)') 'a_ptr(1:min(5,a_n)) = '
-       write (unit_diagnostics,'(5i15)') (a_ptr(i),i=1,min(5,a_n))
-       write (unit_diagnostics,'(a21)') 'a_row(1:min(5,a_ne)) = '
-       write (unit_diagnostics,'(5i15)') (a_row(i),i=1,min(5,a_ne))
-     end if
-     if (present(seps)) then
-       call nd_nested_both(a_n,a_ne,a_ptr,a_row,perm,control,info,seps)
-     else
-       call nd_nested_both(a_n,a_ne,a_ptr,a_row,perm,control,info)
-     end if
+      if (control%print_level.ge.1 .and. control%unit_diagnostics.gt.0) &
+         write (control%unit_diagnostics,'(a,i10)') &
+            'entries in expanded matrix with diags removed = ', ne_out
 
-     if (printd) then
-       ! Print out perm
-       write (unit_diagnostics,'(a8)') 'perm = '
-       write (unit_diagnostics,'(5i15)') (perm(i),i=1,a_n)
-     else if (printi) then
-       ! Print out first few entries of perm
-       write (unit_diagnostics,'(a21)') 'perm(1:min(5,a_n)) = '
-       write (unit_diagnostics,'(5i15)') (perm(i),i=1,min(5,a_n))
-     end if
+      ! Allocate space to store row indices of expanded matrix
+      allocate (row_out(ne_out), stat=st)
+      if (st.ne.0) return
 
-     ! Deallocate arrays
-     deallocate (a_ptr,stat=info%stat)
-     if (info%stat/=0) go to 20
-     deallocate (a_row,stat=info%stat)
-     if (info%stat/=0) go to 20
+      ! Fill row_out and ptr_out
+      do j = 1, n
+         do k = ptr(j), ptr(j+1) - 1
+            i = row(k)
+            if (j.ne.i) then
+               row_out(ptr_out(i)) = j
+               row_out(ptr_out(j)) = i
+               ptr_out(i) = ptr_out(i) - 1
+               ptr_out(j) = ptr_out(j) - 1
+            end if
+         end do
+      end do
 
-     info%flag = 0
-     if (printi .or. printd) then
-       call nd_print_message(info%flag,unit_diagnostics, &
-         'nd_nested_full')
-     end if
-     return
+      ! Reset ptr_out to point to where column starts
+      do j = 1, n
+         ptr_out(j) = ptr_out(j) + 1
+      end do
+   end subroutine construct_full_from_lower
 
-10      info%flag = ND_ERR_MEMORY_ALLOC
-     if (printe) call nd_print_message(info%flag,unit_error, &
-       'nd_nested_full')
-     return
+   !
+   ! Constructs a new full matrix (without diagonals) in internal CSC format
+   ! from user supplied matrix in standard CSC format (which may have diagonals)
+   !
+   subroutine construct_full_from_full(n, ptr, row, n_out, ne_out, ptr_out, &
+         row_out, control, st)
+      integer, intent(in) :: n
+      integer, dimension(n+1), intent(in) :: ptr
+      integer, dimension(ptr(n+1)-1), intent(in) :: row
+      integer, intent(out) :: n_out
+      integer, intent(out) :: ne_out
+      integer, dimension(:), allocatable, intent(out) :: ptr_out
+      integer, dimension(:), allocatable, intent(out) :: row_out
+      type (nd_options), intent (in) :: control
+      integer, intent(out) :: st
 
-20      info%flag = ND_ERR_MEMORY_DEALLOC
-     if (printe) call nd_print_message(info%flag,unit_error, &
-       'nd_nested_full')
-     return
+      integer :: i, j, k, p
+      integer :: ndiags
 
-   end subroutine nd_nested_full
+      ! Set the dimension of the expanded matrix
+      n_out = n
+      if (control%print_level.ge.1 .and. control%unit_diagnostics.gt.0) &
+         write (control%unit_diagnostics,'(a,i10)') 'n = ', n
+
+      ! Work out how many diagonal entries need removing
+      ndiags = 0
+      do i = 1, n
+         do j = ptr(i), ptr(i+1) - 1
+            k = row(j)
+            if (k.eq.i) ndiags = ndiags + 1
+         end do
+      end do
+      ne_out = ptr(n+1) - 1 - ndiags
+
+      ! Allocate space to store pointers and rows for expanded matrix
+      allocate (ptr_out(n), row_out(ne_out), stat=st)
+      if (st.ne.0) return
+
+      if (ndiags.eq.0) then
+         ! No diagonal entries so do direct copy
+         ptr_out(1:n) = ptr(1:n)
+         row_out(1:ne_out) = row(1:ne_out)
+      else
+         ! Diagonal entries present
+         k = 1
+         do i = 1, n
+            ptr_out(i) = k
+            do p = ptr(i), ptr(i+1) - 1
+               j = row(p)
+               if (i.ne.j) then
+                  row_out(k) = j
+                  k = k + 1
+               end if
+            end do
+         end do
+      end if
+   end subroutine construct_full_from_full
+
 
    ! ---------------------------------------------------
    ! nd_nested
