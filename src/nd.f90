@@ -463,7 +463,7 @@ contains
       integer :: a_n_curr, a_ne_curr, num_zero_row
       integer, dimension(:), allocatable :: amd_order_row, amd_order_ptr, &
          amd_order_sep, amd_order_perm, amd_order_work, amd_order_iperm
-      integer :: work_iperm, work_seps
+      integer, dimension(:), allocatable :: work_iperm, work_seps
       integer :: unit_error
       integer :: unit_diagnostics
       integer :: nsvar
@@ -491,8 +491,6 @@ contains
          write (unit_diagnostics,'(a)') ' '
          write (unit_diagnostics,'(a)') 'nd_nested_both:'
       end if
-      work_seps = 0
-      work_iperm = 0
 
       ! Allocate iperm and initialize to identity
       allocate (iperm(a_n),stat=info%stat)
@@ -605,23 +603,23 @@ contains
       else
          ! Apply ND to matrix
 
-         if (printd) then
+         if (printd) &
             write (unit_diagnostics,'(a)') ' Form ND ordering'
-         end if
 
-         if (nsvar+num_zero_row==a_n) then
-            ! Allocate work to have length 14*a_n_curr+a_ne_curr
-            allocate (work(a_n+14*a_n_curr+a_ne_curr), stat=info%stat)
-         else
-            ! Allocate work to have length a_n+14*a_n_curr+a_ne_curr
-            allocate (work(3*a_n+14*a_n_curr+a_ne_curr), stat=info%stat)
-            work_iperm = 14*a_n_curr + a_ne_curr + a_n
-            work(work_iperm+1:work_iperm+a_n_curr) = (/ (i,i=1,a_n_curr) /)
+         if (nsvar+num_zero_row.ne.a_n) then
+            ! Create shadow versions of iperm and seps that work on
+            ! supervariables rather than variables
+            allocate(work_iperm(a_n), stat=info%stat)
+            if (info%stat.ne.0) go to 10
+            work_iperm(1:a_n_curr) = (/ (i,i=1,a_n_curr) /)
             if (present(seps)) then
-               work_seps = work_iperm + a_n_curr
-               work(work_seps+1:work_seps+a_n_curr) = -1
+               allocate(work_seps(a_n_curr), stat=info%stat)
+               if (info%stat.ne.0) go to 10
+               work_seps(1:a_n_curr) = -1
             end if
          end if
+         ! Allocate a workspace that can be reused at lower levels
+         allocate (work(a_n+14*a_n_curr+a_ne_curr), stat=info%stat)
          if (info%stat/=0) go to 10
 
          use_multilevel = .true.
@@ -650,16 +648,14 @@ contains
             if (present(seps)) then
                call nd_nested_internal(a_n_curr, a_ne_curr, a_ptr(1:a_n_curr), &
                   a_row(1:a_ne_curr), a_weight(1:a_n_curr), sumweight,         &
-                  work(work_iperm+1:work_iperm+a_n_curr), work(1:lwork),       &
-                  work(lwork+1:lwork+a_n_curr),                                &
+                  work_iperm, work(1:lwork), work(lwork+1:lwork+a_n_curr),     &
                   work(lwork+a_n_curr+1:lwork+2*a_n_curr), 0, control, info,   &
                   .false., use_multilevel, grid,                               &
-                  seps=work(work_seps+1:work_seps+a_n_curr))
+                  seps=work_seps)
             else
                call nd_nested_internal(a_n_curr, a_ne_curr, a_ptr(1:a_n_curr), &
                   a_row(1:a_ne_curr), a_weight(1:a_n_curr), sumweight,         &
-                  work(work_iperm+1:work_iperm+a_n_curr), work(1:lwork),       &
-                  work(lwork+1:lwork+a_n_curr),                                &
+                  work_iperm, work(1:lwork), work(lwork+1:lwork+a_n_curr),     &
                   work(lwork+a_n_curr+1:lwork+2*a_n_curr), 0, control, info,   &
                   .false., use_multilevel, grid)
             end if
@@ -667,40 +663,7 @@ contains
 
          if (grid%level==1) call mg_grid_destroy(grid,info%flag)
 
-         if (nsvar+num_zero_row<a_n) then
-            if (present(seps)) then
-               ! Expand and reorder seps
-               do i = 1, a_n_curr
-                  j = work(work_iperm+i)
-                  if (j==1) then
-                     ll = 1
-                  else
-                     ll = svar(j-1) + 1
-                  end if
-                  do l = ll, svar(j)
-                     seps(sinvp(l)) = work(work_seps+i)
-                  end do
-               end do
-            end if
-
-            ! Expand iperm to matrix before supervariables detected
-            k = a_n
-            do i = a_n_curr, 1, -1
-               j = work(work_iperm+i)
-               if (j==1) then
-                  ll = 1
-               else
-                  ll = svar(j-1) + 1
-               end if
-               do l = ll, svar(j)
-                  work(work_iperm+k) = iperm(sinvp(l))
-                  k = k - 1
-               end do
-            end do
-
-            iperm(1:a_n) = work(work_iperm+1:work_iperm+a_n)
-
-         else
+         if (nsvar+num_zero_row.eq.a_n) then
             if (present(seps)) then
                ! reorder seps
                do i = 1, a_n_curr
@@ -709,8 +672,42 @@ contains
                end do
                seps(1:a_n_curr) = work(1:a_n_curr)
             end if
+         else
+            if (present(seps)) then
+               ! Expand and reorder seps
+               do i = 1, a_n_curr
+                  j = work_iperm(i)
+                  if (j==1) then
+                     ll = 1
+                  else
+                     ll = svar(j-1) + 1
+                  end if
+                  do l = ll, svar(j)
+                     seps(sinvp(l)) = work_seps(i)
+                  end do
+               end do
+            end if
+
+            ! Expand iperm to matrix before supervariables detected
+            k = a_n
+            do i = a_n_curr, 1, -1
+               j = work_iperm(i)
+               if (j==1) then
+                  ll = 1
+               else
+                  ll = svar(j-1) + 1
+               end if
+               do l = ll, svar(j)
+                  work_iperm(k) = iperm(sinvp(l))
+                  k = k - 1
+               end do
+            end do
+
+            iperm(1:a_n) = work_iperm(1:a_n)
+
          end if
       end if
+
       ! Create perm from iperm
       do i = 1, a_n
          j = iperm(i)
