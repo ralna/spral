@@ -133,24 +133,6 @@ module spral_nd
 
    ! *****************************************************************
 
-   type nd_multigrid
-      integer :: size ! size of this level (number of rows)
-      type (nd_matrix), pointer :: graph => null() ! this level of matrix
-      integer, pointer, dimension(:) :: where => null() ! where each row of
-         ! this level of matrix will go (ie ordering for this level)
-      integer, pointer, dimension(:) :: row_wgt => null() ! number of
-         ! vertices this vertex of the coarse graph matrix represents
-      integer :: level = 0 ! the level
-      integer :: part_div(2) ! number of vertices in each part
-      type (nd_multigrid), pointer :: coarse => null() ! pointer to the
-         ! coarse grid
-      type (nd_multigrid), pointer :: fine => null() ! pointer to the fine grid
-      type (nd_matrix), pointer :: p => null() ! the prolongation operator
-      type (nd_matrix), pointer :: r => null() ! the restriction operator
-   end type nd_multigrid
-
-   ! *****************************************************************
-
    type nd_matrix
       integer :: m ! number rows
       integer :: n ! number columns
@@ -159,6 +141,25 @@ module spral_nd
       integer, allocatable, dimension(:) :: col ! column indices
       integer, allocatable, dimension(:) :: val ! values
    end type nd_matrix
+
+   ! *****************************************************************
+
+   type nd_multigrid
+      integer :: size ! size of this level (number of rows)
+      type (nd_matrix), allocatable :: graph ! this level of matrix
+      integer, allocatable, dimension(:) :: where ! where each row of
+         ! this level of matrix will go (ie ordering for this level)
+      integer, allocatable, dimension(:) :: row_wgt ! number of
+         ! vertices this vertex of the coarse graph matrix represents
+      integer :: level = 0 ! the level
+      integer :: part_div(2) ! number of vertices in each part
+      type (nd_multigrid), pointer :: coarse => null() ! child coarse grid
+         ! (NB: owned by this instance)
+      type (nd_multigrid), pointer :: fine => null() ! pointer to parent fine
+         ! grid (NB: owns this instance)
+      type (nd_matrix), allocatable :: p ! the prolongation operator
+      type (nd_matrix), allocatable :: r ! the restriction operator
+   end type nd_multigrid
 
    ! *****************************************************************
 
@@ -4435,7 +4436,7 @@ inNER:    do inn = 1, n
 
      ! construct the multigrid at this level
 
-     if ( .not. associated(grid%graph)) allocate (grid%graph)
+     if ( .not. allocated(grid%graph)) allocate (grid%graph)
 
      call nd_matrix_construct(grid%graph,a_n,a_n,a_ne,info1)
      if (info1<0) then
@@ -5264,7 +5265,6 @@ inNER:    do inn = 1, n
 
    end subroutine nd_coarse_partition
 
-
    ! *****************************************************************
 
    recursive subroutine mg_grid_destroy(grid,info)
@@ -5307,7 +5307,7 @@ inNER:    do inn = 1, n
    subroutine multigrid_deallocate(grid,info)
      ! deallocate a grid (at given level between last and first)
      type (nd_multigrid) :: grid
-     integer :: st, info
+     integer :: info
 
      call nd_matrix_destruct(grid%graph,info)
      if (info/=0) then
@@ -5326,12 +5326,9 @@ inNER:    do inn = 1, n
        return
      end if
 
-     deallocate (grid%graph,grid%p,grid%r,grid%where,grid%row_wgt,stat=st)
-     if (st/=0) then
-       info = ND_ERR_MEMORY_DEALLOC
-       return
-     end if
-     nullify (grid%graph,grid%coarse)
+     if(associated(grid%coarse)) deallocate(grid%coarse)
+     deallocate (grid%graph,grid%p,grid%r,grid%where,grid%row_wgt)
+     nullify (grid%coarse)
 
    end subroutine multigrid_deallocate
 
@@ -5358,13 +5355,9 @@ inNER:    do inn = 1, n
        info = ND_ERR_MEMORY_DEALLOC
        return
      end if
-     deallocate (grid%graph,grid%p,grid%r,grid%where,grid%row_wgt, &
-       stat=ierr)
-     if (ierr/=0) then
-       info = ND_ERR_MEMORY_DEALLOC
-       return
-     end if
-     nullify (grid%graph,grid%coarse)
+     if(associated(grid%coarse)) deallocate(grid%coarse)
+     deallocate (grid%graph,grid%p,grid%r,grid%where,grid%row_wgt)
+     nullify (grid%coarse)
 
    end subroutine multigrid_deallocate_last
    ! *****************************************************************
@@ -5376,7 +5369,7 @@ inNER:    do inn = 1, n
      integer, intent(inout) :: info
      integer :: ierr
 
-     if (associated(grid%graph)) then
+     if (allocated(grid%graph)) then
        call nd_matrix_destruct(grid%graph,ierr)
        if (ierr/=0) then
          info = ND_ERR_MEMORY_DEALLOC
@@ -5384,10 +5377,6 @@ inNER:    do inn = 1, n
        end if
      end if
 
-     ! in subroutine front, grid%graph is not allocated but is pointed to
-     ! the
-     ! finest level graph. so no need to deallocate
-     nullify (grid%graph)
      deallocate (grid%where,grid%row_wgt,stat=ierr)
      if (ierr/=0) info = ND_ERR_MEMORY_DEALLOC
 
@@ -5616,32 +5605,28 @@ inNER:    do inn = 1, n
 
    ! ********************************************************
 
-   subroutine nd_assoc(arr,sz,info1)
-     ! If arr has size at least sz, do nothing. Otherwise, create array arr
-     ! of size
-     ! sz.
-     integer, pointer, intent(inout) :: arr(:)
-     integer, intent(in) :: sz
-     integer, intent(inout) :: info1
+   !
+   ! If array has size at least sz, do nothing. Otherwise, create/resize array
+   ! arr of size sz.
+   !
+   subroutine nd_assoc(array,sz,info)
+      integer, allocatable, dimension(:), intent(inout) :: array
+      integer, intent(in) :: sz
+      integer, intent(out) :: info
 
-     integer :: st
+      integer :: st
 
-     info1 = 0
+      info = 0
 
-     if (associated(arr)) then
-       if (SIZE(arr)<sz) then
-         deallocate (arr,stat=st)
-         if (st/=0) then
-           info1 = ND_ERR_MEMORY_DEALLOC
-           return
-         end if
-       end if
-     end if
+      if (allocated(array)) then
+        if(size(array).ge.sz) return ! All is well, immediate return
+        ! Otherwise deallocate
+        deallocate (array)
+      endif
 
-     if ( .not. associated(arr)) then
-       allocate (arr(sz),stat=st)
-       if (st/=0) info1 = ND_ERR_MEMORY_ALLOC
-     end if
+      ! If we reach thsi point, arr is now deallocated: allocate to correct size
+      allocate (array(sz),stat=st)
+      if (st/=0) info = ND_ERR_MEMORY_ALLOC
 
    end subroutine nd_assoc
 
@@ -5653,7 +5638,7 @@ inNER:    do inn = 1, n
 
      integer, intent(inout) :: info
      ! input fine grid
-     type (nd_multigrid), intent(inout) :: grid
+     type (nd_multigrid), target, intent(inout) :: grid
      integer, intent(in) :: lwork
      integer, intent(out) :: work(lwork)
 
@@ -5692,7 +5677,7 @@ inNER:    do inn = 1, n
 
      ! allocate the graph and matrix pointer and the mincut pointer
      ! so that everything is defined
-     if ( .not. associated(cgrid%graph)) allocate (cgrid%graph)
+     if ( .not. allocated(cgrid%graph)) allocate (cgrid%graph)
 
      nvtx = graph%n
 
@@ -5744,7 +5729,7 @@ inNER:    do inn = 1, n
 
      ! storage allocation for col. indices and values of prolongation
      ! matrix P (nvtx * cnvtx)
-     if ( .not. associated(cgrid%p)) then
+     if ( .not. allocated(cgrid%p)) then
        allocate (cgrid%p)
        p => cgrid%p
        call nd_matrix_construct(p,nvtx,cnvtx,nz,info)
@@ -5756,7 +5741,7 @@ inNER:    do inn = 1, n
 
      ! storage allocation for col. indices and values of restiction
      ! matrix R (cnvtx * nvtx)
-     if ( .not. associated(cgrid%r)) then
+     if ( .not. allocated(cgrid%r)) then
        allocate (cgrid%r)
        r => cgrid%r
        call nd_matrix_construct(r,cnvtx,nvtx,nz,info)
@@ -5828,7 +5813,7 @@ inNER:    do inn = 1, n
      ! input fine grid
      integer, intent(in) :: lwork
      integer, intent(out) :: work(lwork)
-     type (nd_multigrid), intent(inout) :: grid
+     type (nd_multigrid), target, intent(inout) :: grid
 
      ! coarse grid based on the fine grid
      type (nd_multigrid), pointer :: cgrid
@@ -5869,7 +5854,7 @@ inNER:    do inn = 1, n
 
      ! allocate the graph and matrix pointer and the mincut pointer
      ! so that everything is defined
-     if ( .not. associated(cgrid%graph)) allocate (cgrid%graph)
+     if ( .not. allocated(cgrid%graph)) allocate (cgrid%graph)
 
      nvtx = graph%n
 
@@ -5937,7 +5922,7 @@ inNER:    do inn = 1, n
 
      ! storage allocation for col. indices and values of prolongation
      ! matrix P (order nvtx * cnvtx)
-     if ( .not. associated(cgrid%p)) then
+     if ( .not. allocated(cgrid%p)) then
        allocate (cgrid%p)
        p => cgrid%p
        call nd_matrix_construct(p,nvtx,cnvtx,nz,info)
@@ -5949,7 +5934,7 @@ inNER:    do inn = 1, n
 
      ! storage allocation for col. indices and values of restiction
      ! matrix R (cnvtx * nvtx)
-     if ( .not. associated(cgrid%r)) then
+     if ( .not. allocated(cgrid%r)) then
        allocate (cgrid%r)
        r => cgrid%r
        call nd_matrix_construct(r,cnvtx,nvtx,nz,info)
@@ -6021,7 +6006,7 @@ inNER:    do inn = 1, n
 
      integer, intent(inout) :: info
      ! input fine grid
-     type (nd_multigrid), intent(inout) :: grid
+     type (nd_multigrid), target, intent(inout) :: grid
      integer, intent(in) :: lwork
      integer, intent(out), TARGET :: work(lwork)
 
@@ -6062,7 +6047,7 @@ inNER:    do inn = 1, n
 
      ! allocate the graph and matrix pointer and the mincut pointer
      ! so that everything is defined
-     if ( .not. associated(cgrid%graph)) allocate (cgrid%graph)
+     if ( .not. allocated(cgrid%graph)) allocate (cgrid%graph)
 
      nvtx = graph%n
 
@@ -6188,7 +6173,7 @@ inNER:    do inn = 1, n
 
      ! storage allocation for col. indices and values of prolongation
      ! matrix P (nvtx * cnvtx)
-     if ( .not. associated(cgrid%p)) then
+     if ( .not. allocated(cgrid%p)) then
        allocate (cgrid%p)
        p => cgrid%p
        call nd_matrix_construct(p,nvtx,cnvtx,nz,info)
@@ -6200,7 +6185,7 @@ inNER:    do inn = 1, n
 
      ! storage allocation for col. indices and values of restiction
      ! matrix R (cnvtx * nvtx)
-     if ( .not. associated(cgrid%r)) then
+     if ( .not. allocated(cgrid%r)) then
        allocate (cgrid%r)
        r => cgrid%r
        call nd_matrix_construct(r,cnvtx,nvtx,nz,info)
