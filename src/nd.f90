@@ -9,6 +9,7 @@
       ! Precision
       ! ---------------------------------------------------
       INTEGER, PARAMETER :: wp = KIND(1.0D0)
+      INTEGER, PARAMETER :: long = SELECTED_INT_KIND(18)
 
       ! ---------------------------------------------------
       ! Error flags
@@ -83,15 +84,15 @@
         ! during coarsening. If cgrid%size is greater than
         ! max_reduction*grid%size or cgrid%size is less than
         ! min_reduction*grid%size then carry on coarsening
-        REAL (kind=wp) :: min_reduction = 0.5 ! size of next
+        REAL (wp) :: min_reduction = 0.5 ! size of next
         ! multigrid
         ! matrix must be greater than min_reduction*(size of current
         ! multigrid matrix)
-        REAL (kind=wp) :: max_reduction = 0.9 ! size of next
+        REAL (wp) :: max_reduction = 0.9 ! size of next
         ! multigrid
         ! matrix must be less than max_reduction*(size of current multigrid
         ! matrix)
-        REAL (kind=wp) :: balance = 2.0 ! Try to make sure that
+        REAL (wp) :: balance = 2.0 ! Try to make sure that
         ! max(P1,P2)/min(P1/P2) <= balance
 
         INTEGER :: max_improve_cycles = 2 ! Having computed a minimal
@@ -136,12 +137,12 @@
         ! largest indep
         ! component after dense rows removed and supervariables (optionally)
         ! compressed
-        REAL (kind=wp) :: band = -1 ! holds L, where L is the size
+        REAL (wp) :: band = -1 ! holds L, where L is the size
         ! of the largest level set at the top level of nested dissection. If
         ! the matrix is reducible, then it holds the value for the largest
         ! of the irreducible components.
         ! Not returned if control%partition_method==1.
-        REAL (kind=wp) :: depth = -1 ! holds number of levels in
+        REAL (wp) :: depth = -1 ! holds number of levels in
         ! level set
         ! structure at the top level of nested dissection. If
         ! the matrix is reducible, then it holds the value for the largest
@@ -1854,7 +1855,7 @@
         INTEGER :: ref_method, ref_control
         INTEGER :: a_n1_new, a_n2_new, a_weight_1_new, a_weight_2_new, &
           a_weight_sep_new
-        REAL (kind=wp) :: ratio, tau_best, tau, band, depth
+        REAL (wp) :: ratio, tau_best, tau, band, depth
         LOGICAL :: imbal
 
 
@@ -2247,10 +2248,10 @@
         INTEGER, INTENT (OUT) :: work(9*a_n+sumweight) ! used as work array
         TYPE (nd_options), INTENT (IN) :: control
         INTEGER, INTENT (INOUT) :: info
-        REAL (kind=wp), INTENT (OUT) :: band ! If level = 0, then on
+        REAL (wp), INTENT (OUT) :: band ! If level = 0, then on
         ! output band = 100*L/a_n, where L is the size of the
         ! largest levelset
-        REAL (kind=wp), INTENT (OUT) :: depth ! If level = 0, then
+        REAL (wp), INTENT (OUT) :: depth ! If level = 0, then
         ! on
         ! output depth = num_levels_nend
         LOGICAL, INTENT (INOUT) :: use_multilevel ! are we allowed to use a
@@ -2274,9 +2275,9 @@
         INTEGER :: lwidth, mindeg, degree, max_search
         INTEGER :: ww
         INTEGER :: stop_coarsening2 ! max no. multigrid levels
-        REAL (kind=wp) :: bestval
-        REAL (kind=wp) :: val
-        REAL (kind=wp) :: ratio
+        REAL (wp) :: bestval
+        REAL (wp) :: val
+        REAL (wp) :: ratio
         LOGICAL :: printi, printd
         LOGICAL :: imbal, use_multilevel_copy
 
@@ -2578,10 +2579,10 @@
         INTEGER, INTENT (OUT) :: work(9*a_n+sumweight)
         TYPE (nd_options), INTENT (IN) :: control
         INTEGER, INTENT (INOUT) :: info
-        REAL (kind=wp), INTENT (OUT) :: band ! If level = 0, then on
+        REAL (wp), INTENT (OUT) :: band ! If level = 0, then on
         ! output band = 100*L/a_n, where L is the size of the
         ! largest levelset
-        REAL (kind=wp), INTENT (OUT) :: depth ! If level = 0, then
+        REAL (wp), INTENT (OUT) :: depth ! If level = 0, then
         ! on
         ! output band = num_levels_nend
         LOGICAL, INTENT (INOUT) :: use_multilevel ! are we allowed to use a
@@ -2602,9 +2603,9 @@
         INTEGER :: i, j, k, p1sz, p2sz, sepsz, lwidth
         INTEGER :: stop_coarsening2, lwork
         INTEGER :: mindeg, degree, max_search
-        REAL (kind=wp) :: bestval
-        REAL (kind=wp) :: val
-        REAL (kind=wp) :: ratio
+        REAL (wp) :: bestval
+        REAL (wp) :: val
+        REAL (wp) :: ratio
         LOGICAL :: imbal
 
         ! ---------------------------------------------
@@ -3478,7 +3479,7 @@
         ! from FM
         INTEGER :: icut, mult ! Used within FM refinement
         INTEGER :: band
-        REAL (kind=wp) :: ratio
+        REAL (wp) :: ratio
         LOGICAL :: imbal ! Should we check for imbalance?
 
         IF (control%refinement_band .LT. 1) RETURN
@@ -3572,7 +3573,7 @@
         INTEGER, INTENT (INOUT) :: wns ! Weighted sum of vertices separator
         INTEGER, INTENT (IN) :: band ! width of band around initial separator
         ! that the separator can lie in
-        REAL (kind=wp), INTENT (IN) :: ratio ! ratio to determine
+        REAL (wp), INTENT (IN) :: ratio ! ratio to determine
         ! whether
         ! partition is balanced
 
@@ -3600,7 +3601,7 @@
         INTEGER :: inn, outer
         INTEGER :: move, ming, gain, old_gain, inext, ilast, idummy
         INTEGER :: first, tail
-        REAL (kind=wp) :: eval, evalc, evalo, eval1, eval2
+        REAL (wp) :: eval, evalc, evalo, eval1, eval2
         LOGICAL :: imbal
 
 
@@ -4798,8 +4799,8 @@ INNER:    DO inn = 1, n
       RECURSIVE SUBROUTINE multilevel(grid,control,sumweight,mglevel_cur,mp, &
           print_level,lwork,work,info)
 
-        REAL (kind=wp), PARAMETER :: half = 0.5_wp
-        REAL (kind=wp), PARAMETER :: one = 1.0_wp
+        REAL (wp), PARAMETER :: half = 0.5_wp
+        REAL (wp), PARAMETER :: one = 1.0_wp
 
         ! Arguments
         TYPE (nd_multigrid), INTENT (INOUT), TARGET :: grid ! this level
@@ -4829,11 +4830,11 @@ INNER:    DO inn = 1, n
         ! graph vertex weights
         INTEGER, DIMENSION (:), POINTER :: crow_wgt ! coarse
         ! graph vertex weights
-        REAL (kind=wp) :: grid_rdc_fac_min ! min grid reduction
+        REAL (wp) :: grid_rdc_fac_min ! min grid reduction
         ! factor
-        REAL (kind=wp) :: grid_rdc_fac_max ! max grid reduction
+        REAL (wp) :: grid_rdc_fac_max ! max grid reduction
         ! factor
-        REAL (kind=wp) :: one1
+        REAL (wp) :: one1
         INTEGER :: stop_coarsening1 ! controls when to stop coarsening
         INTEGER :: partition_ptr, part_ptr, work_ptr, a_ne, ref_control, &
           clwork
@@ -4842,7 +4843,7 @@ INNER:    DO inn = 1, n
         INTEGER :: a_n1_new, a_n2_new, a_weight_1_new, a_weight_2_new, &
           a_weight_sep_new
         LOGICAL :: imbal
-        REAL (kind=wp) :: tau, ratio, tau_best
+        REAL (wp) :: tau, ratio, tau_best
         ! !!!!!!!!!!!!!!!!!!!!!!!!!!
         info = 0
         one1 = 1.0
@@ -5293,7 +5294,7 @@ INNER:    DO inn = 1, n
         INTEGER :: a_weight_1, a_weight_2, a_weight_sep, ref_method, &
           ref_control
         INTEGER, ALLOCATABLE :: work1(:)
-        REAL (kind=wp) :: dummy, dummy1
+        REAL (wp) :: dummy, dummy1
         TYPE (nd_multigrid) :: gridtemp
 
         ! ---------------------------------------------
@@ -6506,7 +6507,7 @@ INNER:    DO inn = 1, n
 
         CHARACTER (len=*), INTENT (IN) :: title1
         INTEGER, INTENT (IN) :: mp, level
-        REAL (kind=wp), OPTIONAL, INTENT (IN) :: res
+        REAL (wp), OPTIONAL, INTENT (IN) :: res
         CHARACTER (len=*), OPTIONAL, INTENT (IN) :: title2
         INTEGER :: char_len1, char_len2
 
@@ -6793,8 +6794,8 @@ INNER:    DO inn = 1, n
         INTEGER, PARAMETER :: sep3 = -3
         INTEGER :: i, j, k, l, m, p, q, w1, w2
         LOGICAL :: next1, next2, imbal
-        REAL (kind=wp) :: t1, t2
-        REAL (kind=wp) :: ratio
+        REAL (wp) :: t1, t2
+        REAL (wp) :: ratio
 
         ratio = MAX(REAL(1.0,wp),control%balance)
         IF (ratio>REAL(sumweight-2)) THEN
@@ -7150,8 +7151,8 @@ INNER:    DO inn = 1, n
         INTEGER :: currlevel1, currlevel2
         INTEGER :: i, j, k, l, m, w1, w2, l1, l2
         LOGICAL :: next1, next2, imbal
-        REAL (kind=wp) :: t1, t2
-        REAL (kind=wp) :: ratio
+        REAL (wp) :: t1, t2
+        REAL (wp) :: ratio
 
         ratio = MAX(REAL(1.0,wp),control%balance)
         IF (ratio>REAL(sumweight-2)) THEN
@@ -7418,7 +7419,7 @@ INNER:    DO inn = 1, n
         ! ---------------------------------------------
         ! Local variables
         INTEGER :: msglvl
-        REAL (kind=wp) :: cost, ratio
+        REAL (wp) :: cost, ratio
 
         msglvl = 0
         IF (control%print_level==1 .AND. control%unit_diagnostics>=0) &
@@ -7548,11 +7549,11 @@ INNER:    DO inn = 1, n
         ! d
         ! size of partitions and separator
         INTEGER, INTENT (IN) :: sumweight
-        REAL (kind=wp), INTENT (IN) :: ratio
+        REAL (wp), INTENT (IN) :: ratio
         LOGICAL, INTENT (IN) :: imbal ! Use penalty function?
         INTEGER, INTENT (IN) :: costf
-        REAL (kind=wp), INTENT (OUT) :: tau
-        REAL (kind=wp) :: beta, a_wgt1, a_wgt2
+        REAL (wp), INTENT (OUT) :: tau
+        REAL (wp) :: beta, a_wgt1, a_wgt2
 
         beta = 0.5
         a_wgt1 = MAX(1,a_weight_1)
@@ -7613,7 +7614,7 @@ INNER:    DO inn = 1, n
         ! partition.
 
         ! Parameters alpha (for balance) for cost function
-        REAL (kind=wp), INTENT (IN) :: alpha
+        REAL (wp), INTENT (IN) :: alpha
         INTEGER, INTENT (IN) :: msglvl
         ! output --
         ! stats[1] -- weight of vertices in S
@@ -7626,7 +7627,7 @@ INNER:    DO inn = 1, n
         ! stats[8] -- weight of edges in A_{B,W}
         ! cost     -- cost of new partition
         INTEGER, INTENT (OUT) :: stats(8)
-        REAL (kind=wp), INTENT (OUT) :: cost
+        REAL (wp), INTENT (OUT) :: cost
 
         TYPE (network) :: netw
 
@@ -7643,13 +7644,13 @@ INNER:    DO inn = 1, n
         INTEGER, ALLOCATABLE :: vwts(:)
         INTEGER, ALLOCATABLE :: sedge(:,:)
         INTEGER, ALLOCATABLE :: mark1(:), mark2(:), pred(:), list(:)
-        REAL (kind=wp), ALLOCATABLE :: imb(:)
+        REAL (wp), ALLOCATABLE :: imb(:)
 
         ! Local variables
         INTEGER :: a_ns, i, istart_s, j1, k, lp, wtw, wtb, statsr(9), &
           statsl(9)
         INTEGER nedge, matsiz
-        REAL (kind=wp) :: costr, costl
+        REAL (wp) :: costr, costl
 
         lp = 6
 
@@ -7953,7 +7954,7 @@ INNER:    DO inn = 1, n
         INTEGER :: sedge(:,:)
         INTEGER :: sep_map(:)
         INTEGER :: isadjtosource(:), isadjtosink(:)
-        REAL (kind=wp) :: imb(:)
+        REAL (wp) :: imb(:)
         INTEGER :: COUNT(:), mark1(:), mark2(:), list(:)
         LOGICAL :: augcap
 
@@ -8447,7 +8448,7 @@ INNER:    DO inn = 1, n
         ! list --- to hold list of nodes being searched
         ! length bounded by a_n
         INTEGER :: list(:)
-        REAL (kind=wp) :: imb(:)
+        REAL (wp) :: imb(:)
 
         ! Local variables
         INTEGER inode, last, lp, maxl, minl, x, z
@@ -8946,13 +8947,13 @@ INNER:    DO inn = 1, n
         INTEGER, INTENT (IN) :: a_n
         INTEGER, INTENT (IN) :: a_ne
         INTEGER, INTENT (IN) :: map(:), a_ptr(:), a_row(:), a_weight(:)
-        REAL (kind=wp), INTENT (IN) :: alpha
+        REAL (wp), INTENT (IN) :: alpha
         INTEGER, INTENT (IN) :: costf
         INTEGER, INTENT (OUT) :: stats(9)
-        REAL (kind=wp), INTENT (OUT) :: stats10
+        REAL (wp), INTENT (OUT) :: stats10
         INTEGER minbw, maxbw, nss, nsb, nsw, nbb, nww, nvtx, ns, nb, nw
         INTEGER j, j1, j2, jj, u, v
-        REAL (kind=wp) diffbw, beta
+        REAL (wp) diffbw, beta
         LOGICAL :: imbal
 
         beta = 0.5_wp
@@ -9060,7 +9061,7 @@ INNER:    DO inn = 1, n
         ! If it has not, then the varaibles in s.v. 1 are those that never
         ! occur
         INTEGER :: i
-        INTEGER (kind=SELECTED_INT_KIND(18)) :: ii
+        INTEGER (long) :: ii
         INTEGER :: j
         INTEGER :: idx ! current index
         INTEGER :: next_sv ! head of free sv linked list
