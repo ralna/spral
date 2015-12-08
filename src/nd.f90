@@ -461,21 +461,19 @@ contains
 
       integer :: i, j, k, l, ll, lwork, lirn
       integer :: a_n_curr, a_ne_curr, num_zero_row
-      integer :: amd_order_irn, amd_order_ip, amd_order_sep, amd_order_perm, amd_order_work, &
-         amd_order_iperm
+      integer :: amd_order_irn, amd_order_ip, amd_order_sep, amd_order_perm, &
+         amd_order_work, amd_order_iperm
       integer :: work_iperm, work_seps
-      integer :: unit_error ! unit on which to print errors
-      integer :: unit_diagnostics ! unit on which to print diagnostics
-      integer :: st, nsvar, svinfo
-      integer :: sv_ptr, sv_perm, sv_invp, sv_svar, sv_ptr2, sv_row2, &
-         sumweight
+      integer :: unit_error
+      integer :: unit_diagnostics
+      integer :: nsvar
+      integer :: sumweight
+      integer, dimension(:), allocatable :: svar, sinvp ! supervariable info
       integer, allocatable, dimension(:) :: a_weight ! a_weight(i) will
          ! contain the weight of variable (column) i ends for the
          ! expanded matrix
       integer, allocatable, dimension(:) :: iperm ! inverse of perm(:)
       integer, allocatable, dimension(:) :: work ! space for doing work
-      integer, allocatable, dimension(:) :: svwork ! supervariable work
-         ! space
       logical :: printe, printi, printd
       logical :: use_multilevel
       type (nd_multigrid) :: grid
@@ -533,137 +531,28 @@ contains
          return
       end if
 
+      allocate(a_weight(a_n), stat=info%stat)
+      if (info%stat.ne.0) go to 10
+
       if (control%find_supervariables) then
-         ! Check for supervariables
-         allocate (svwork(5*a_n+a_ne+2),stat=info%stat)
-         if (info%stat/=0) go to 10
-         sv_ptr = 0
-         sv_perm = sv_ptr + a_n + 1
-         sv_invp = sv_perm + a_n
-         sv_svar = sv_invp + a_n
-         sv_ptr2 = sv_svar + a_n
-         sv_row2 = sv_ptr2 + a_n + 1
+         allocate(svar(a_n), sinvp(a_n), stat=info%stat)
+         if (info%stat.ne.0) go to 10
+         call compress_by_svar(a_n, a_ne, a_ptr, a_row, a_weight, a_n_curr, &
+            a_ne_curr, nsvar, svar, sinvp, num_zero_row, control, info%stat)
+         if (info%stat.ne.0) go to 10
+     else
+       a_n_curr = a_n
+       a_ne_curr = a_ne
+       nsvar = a_n
+       num_zero_row = 0
 
+       ! Initialise a_weight
+       a_weight(1:a_n_curr) = 1
+     end if
 
-         svwork(sv_ptr+1:sv_ptr+a_n) = a_ptr(1:a_n)
-         svwork(sv_ptr+a_n+1) = a_ne + 1
-         svwork(sv_perm+1:sv_perm+a_n) = (/ (i,i=1,a_n) /)
-         svwork(sv_invp+1:sv_invp+a_n) = (/ (i,i=1,a_n) /)
-         i = a_n
-         call nd_supervars(i,svwork(sv_ptr+1:sv_ptr+a_n+1), &
-            a_row(1:a_ne),svwork(sv_perm+1:sv_perm+a_n), &
-            svwork(sv_invp+1:sv_invp+a_n),nsvar, &
-            svwork(sv_svar+1:sv_svar+a_n),svinfo,st)
-         if (svinfo==ND_ERR_MEMORY_ALLOC) go to 10
-         if (svinfo==ND_ERR_MEMORY_DEALLOC) go to 20
-
-         num_zero_row = a_n - i
-         if (printd) then
-            write (unit_diagnostics,'(a,i10)') 'Number supervariables: ', &
-               nsvar + num_zero_row
-         end if
-         if (nsvar+num_zero_row==a_n) then
-            deallocate (svwork,stat=info%stat)
-            if (info%stat/=0) go to 20
-            a_n_curr = a_n
-            a_ne_curr = a_ne
-            allocate (a_weight(a_n_curr),stat=info%stat)
-            if (info%stat/=0) go to 10
-
-            ! Initialise a_weight
-            a_weight(:) = 1
-
-         else
-            call nd_compress_by_svar(a_n,a_ne, &
-               svwork(sv_ptr+1:sv_ptr+a_n+1),a_row(1:a_ne), &
-               svwork(sv_invp+1:sv_invp+a_n),nsvar, &
-               svwork(sv_svar+1:sv_svar+a_n),svwork(sv_ptr2+1:sv_ptr2+ &
-               a_n+1),svwork(sv_row2+1:sv_row2+a_ne),svinfo,st)
-            if (svinfo==ND_ERR_MEMORY_ALLOC) go to 10
-            if (svinfo==ND_ERR_MEMORY_DEALLOC) go to 20
-
-            a_n_curr = nsvar
-            ! Fill a_ptr removing any diagonal entries
-            a_ptr(:) = 0
-
-            ! Set a_ptr(j) to hold no. nonzeros in column j
-            do j = 1, a_n_curr
-               do k = svwork(sv_ptr2+j), svwork(sv_ptr2+j+1) - 1
-                  i = svwork(sv_row2+k)
-                  if (j<i) then
-                     a_ptr(i) = a_ptr(i) + 1
-                     a_ptr(j) = a_ptr(j) + 1
-                  end if
-               end do
-            end do
-
-            ! Set a_ptr(j) to point to where row indices will end in a_row
-            do j = 2, a_n_curr
-               a_ptr(j) = a_ptr(j-1) + a_ptr(j)
-            end do
-            a_ne_curr = a_ptr(a_n_curr)
-            ! Initialise all of a_row to 0
-            a_row(1:a_ne_curr) = 0
-
-            ! Fill a_row and a_ptr
-            do j = 1, a_n_curr
-               do k = svwork(sv_ptr2+j), svwork(sv_ptr2+j+1) - 1
-                  i = svwork(sv_row2+k)
-                  if (j<i) then
-                     a_row(a_ptr(i)) = j
-                     a_row(a_ptr(j)) = i
-                     a_ptr(i) = a_ptr(i) - 1
-                     a_ptr(j) = a_ptr(j) - 1
-                  end if
-               end do
-            end do
-
-            ! Reset a_ptr to point to where column starts
-            do j = 1, a_n_curr
-               a_ptr(j) = a_ptr(j) + 1
-            end do
-
-            allocate (a_weight(a_n_curr+num_zero_row),stat=info%stat)
-            if (info%stat/=0) go to 10
-
-            ! Initialise a_weight
-            a_weight(1:a_n_curr) = svwork(sv_svar+1:sv_svar+a_n_curr)
-            a_weight(a_n_curr+1:a_n_curr+num_zero_row) = 1
-
-            ! Add zero rows/cols to matrix
-            a_ptr(a_n_curr+1:a_n_curr+num_zero_row) = a_ne_curr + 1
-            a_n_curr = a_n_curr + num_zero_row
-
-            ! set svwork(sv_svar+1:sv_svar+a_n) such that
-            ! svwork(sv_svar+i)
-            ! points to the end of the list of variables in sv_invp for
-            ! supervariable i
-            do i = 2, nsvar
-               svwork(sv_svar+i) = svwork(sv_svar+i) + svwork(sv_svar+i-1)
-            end do
-            j = svwork(sv_svar+nsvar)
-            do i = 1, num_zero_row
-               svwork(sv_svar+nsvar+i) = j + 1
-               j = j + 1
-            end do
-
-         end if
-
-      else
-         a_n_curr = a_n
-         a_ne_curr = a_ne
-         nsvar = a_n
-         num_zero_row = 0
-         allocate (a_weight(a_n_curr+num_zero_row),stat=info%stat)
-         if (info%stat/=0) go to 10
-
-         ! Initialise a_weight
-         a_weight(:) = 1
-      end if
-
-      ! Carryout nested dissection on matrix once dense rows removed
-      info%nzsuper = a_ne_curr
-      info%nsuper = a_n_curr
+     ! Carryout nested dissection on matrix once dense rows removed
+     info%nzsuper = a_ne_curr
+     info%nsuper = a_n_curr
 
      if (control%amd_switch2<=0 .or. a_n_curr<=max(2,max(control%amd_call, &
          control%amd_switch1))) then
@@ -710,10 +599,10 @@ contains
            if (j==1) then
              ll = 1
            else
-             ll = svwork(sv_svar+j-1) + 1
+             ll = svar(j-1) + 1
            end if
-           do l = ll, svwork(sv_svar+j)
-             work(amd_order_iperm+k) = iperm(svwork(sv_invp+l))
+           do l = ll, svar(j)
+             work(amd_order_iperm+k) = iperm(sinvp(l))
              k = k + 1
            end do
          end do
@@ -791,10 +680,10 @@ contains
              if (j==1) then
                ll = 1
              else
-               ll = svwork(sv_svar+j-1) + 1
+               ll = svar(j-1) + 1
              end if
-             do l = ll, svwork(sv_svar+j)
-               seps(svwork(sv_invp+l)) = work(work_seps+i)
+             do l = ll, svar(j)
+               seps(sinvp(l)) = work(work_seps+i)
              end do
            end do
          end if
@@ -806,10 +695,10 @@ contains
            if (j==1) then
              ll = 1
            else
-             ll = svwork(sv_svar+j-1) + 1
+             ll = svar(j-1) + 1
            end if
-           do l = ll, svwork(sv_svar+j)
-             work(work_iperm+k) = iperm(svwork(sv_invp+l))
+           do l = ll, svar(j)
+             work(work_iperm+k) = iperm(sinvp(l))
              k = k - 1
            end do
          end do
@@ -833,18 +722,6 @@ contains
        perm(j) = i
      end do
 
-     ! Deallocate arrays
-     if (nsvar+num_zero_row<a_n) then
-       deallocate (svwork,stat=info%stat)
-       if (info%stat/=0) go to 20
-     end if
-     deallocate (a_weight,stat=info%stat)
-     if (info%stat/=0) go to 20
-     deallocate (iperm,stat=info%stat)
-     if (info%stat/=0) go to 20
-     deallocate (work,stat=info%stat)
-     if (info%stat/=0) go to 20
-
      info%flag = 0
      if (printi .or. printd) then
        call nd_print_message(info%flag,unit_diagnostics, &
@@ -864,11 +741,134 @@ contains
 
    end subroutine nd_nested_both
 
+   subroutine compress_by_svar(a_n, a_ne, a_ptr, a_row, a_weight, a_n_curr, &
+         a_ne_curr, nsvar, svar, sinvp, num_zero_row, control, st)
+      integer, intent(in) :: a_n
+      integer, intent(in) :: a_ne
+      integer, dimension(a_n), intent(inout) :: a_ptr
+      integer, dimension(a_ne), intent(inout) :: a_row
+      integer, dimension(a_n), intent(out) :: a_weight
+      integer, intent(out) :: a_n_curr
+      integer, intent(out) :: a_ne_curr
+      integer, intent(out) :: nsvar
+      integer, dimension(a_n), intent(out) :: svar
+      integer, dimension(a_n), intent(out) :: sinvp
+      integer, intent(out) :: num_zero_row
+      type(nd_options) :: control
+      integer, intent(out) :: st
+
+      integer :: i, j, k
+      integer :: nnz_rows ! number of non-zero rows
+      integer :: sv_ptr, sv_perm, sv_ptr2, sv_row2
+      integer, allocatable, dimension(:) :: svwork
+
+      ! Check for supervariables
+      allocate (svwork(3*a_n+a_ne+2), stat=st)
+      if (st.ne.0) return
+      sv_ptr = 0
+      sv_perm = sv_ptr + a_n + 1
+      sv_ptr2 = sv_perm + a_n
+      sv_row2 = sv_ptr2 + a_n + 1
+
+      svwork(sv_ptr+1:sv_ptr+a_n) = a_ptr(1:a_n)
+      svwork(sv_ptr+a_n+1) = a_ne + 1
+      svwork(sv_perm+1:sv_perm+a_n) = (/ (i,i=1,a_n) /)
+      sinvp(:) = (/ (i,i=1,a_n) /)
+      nnz_rows = a_n
+      call nd_supervars(nnz_rows,svwork(sv_ptr+1:sv_ptr+a_n+1), &
+         a_row(1:a_ne),svwork(sv_perm+1:sv_perm+a_n), &
+         sinvp,nsvar, &
+         svar,st)
+      if (st.ne.0) return
+
+      num_zero_row = a_n - nnz_rows
+      if (control%print_level.ge.2 .and. control%unit_diagnostics.gt.0) &
+         write (control%unit_diagnostics,'(a,i10)') &
+            'Number supervariables: ', nsvar + num_zero_row
+
+      ! If there are no supervariables, don't bother compressing
+      if (nsvar+num_zero_row==a_n) then
+         a_n_curr = a_n
+         a_ne_curr = a_ne
+         a_weight(:) = 1
+         return
+      end if
+
+      ! Otherwise, compress the matrix
+      call nd_compress_by_svar(a_n,a_ne, &
+         svwork(sv_ptr+1:sv_ptr+a_n+1),a_row(1:a_ne), &
+         sinvp,nsvar, &
+         svar,svwork(sv_ptr2+1:sv_ptr2+ &
+         a_n+1),svwork(sv_row2+1:sv_row2+a_ne),st)
+      if (st.ne.0) return
+
+      a_n_curr = nsvar
+      ! Fill a_ptr removing any diagonal entries
+      a_ptr(:) = 0
+
+      ! Set a_ptr(j) to hold no. nonzeros in column j
+      do j = 1, a_n_curr
+         do k = svwork(sv_ptr2+j), svwork(sv_ptr2+j+1) - 1
+            i = svwork(sv_row2+k)
+            if (j<i) then
+               a_ptr(i) = a_ptr(i) + 1
+               a_ptr(j) = a_ptr(j) + 1
+            end if
+         end do
+      end do
+
+      ! Set a_ptr(j) to point to where row indices will end in a_row
+      do j = 2, a_n_curr
+         a_ptr(j) = a_ptr(j-1) + a_ptr(j)
+      end do
+      a_ne_curr = a_ptr(a_n_curr)
+      ! Initialise all of a_row to 0
+      a_row(1:a_ne_curr) = 0
+
+      ! Fill a_row and a_ptr
+      do j = 1, a_n_curr
+         do k = svwork(sv_ptr2+j), svwork(sv_ptr2+j+1) - 1
+            i = svwork(sv_row2+k)
+            if (j<i) then
+               a_row(a_ptr(i)) = j
+               a_row(a_ptr(j)) = i
+               a_ptr(i) = a_ptr(i) - 1
+               a_ptr(j) = a_ptr(j) - 1
+            end if
+         end do
+      end do
+
+      ! Reset a_ptr to point to where column starts
+      do j = 1, a_n_curr
+         a_ptr(j) = a_ptr(j) + 1
+      end do
+
+      ! Initialise a_weight
+      a_weight(1:a_n_curr) = svar(1:a_n_curr)
+      a_weight(a_n_curr+1:a_n_curr+num_zero_row) = 1
+
+      ! Add zero rows/cols to matrix
+      a_ptr(a_n_curr+1:a_n_curr+num_zero_row) = a_ne_curr + 1
+      a_n_curr = a_n_curr + num_zero_row
+
+      ! set svar(:) such that svar(i) points to the end of the list of variables
+      ! in sinvp for supervariable i
+      do i = 2, nsvar
+         svar(i) = svar(i) + svar(i-1)
+      end do
+      j = svar(nsvar)
+      do i = 1, num_zero_row
+         svar(nsvar+i) = j + 1
+         j = j + 1
+      end do
+   end subroutine compress_by_svar
+
    ! ---------------------------------------------------
    ! remove_dense_rows
    ! ---------------------------------------------------
    ! Identifies and removes dense rows
-   subroutine remove_dense_rows(a_n_in,a_ne_in,a_ptr,a_row,iperm,work,control,info)
+   subroutine remove_dense_rows(a_n_in, a_ne_in, a_ptr, a_row, iperm, work, &
+       control,info)
      integer, intent(inout) :: a_n_in ! dimension of subproblem before dense
      ! rows removed
      integer, intent(inout) :: a_ne_in ! no. nonzeros of subproblem before
@@ -8803,7 +8803,7 @@ inNER:    do inn = 1, n
 
    end subroutine evalbsw
 
-   subroutine nd_supervars(n,ptr,row,perm,invp,nsvar,svar,info,st)
+   subroutine nd_supervars(n,ptr,row,perm,invp,nsvar,svar,st)
      ! Detects supervariables - modified version of subroutine from hsl_mc78
      integer, intent(inout) :: n ! Dimension of system
      integer, dimension(n+1), intent(in) :: ptr ! Column pointers
@@ -8815,7 +8815,6 @@ inNER:    do inn = 1, n
      integer, intent(out) :: nsvar ! number of supervariables
      integer, dimension(n), intent(out) :: svar ! number of vars in each
      ! svar
-     integer, intent(out) :: info
      integer, intent(out) :: st
 
      logical :: full_rank ! flags if supervariable 1 has ever become
@@ -8843,13 +8842,8 @@ inNER:    do inn = 1, n
      integer, dimension(:), allocatable :: sv_count ! number of variables
      ! in sv.
 
-     info = 0 ! by default completed succefully
-
      allocate (sv_new(n+1),sv_seen(n+1),sv_count(n+1),stat=st)
-     if (st/=0) then
-       info = ND_ERR_MEMORY_ALLOC
-       return
-     end if
+     if (st.ne.0) return
 
      svar(:) = 1
      sv_count(1) = n
@@ -8999,12 +8993,6 @@ inNER:    do inn = 1, n
      ! into
      ! svar where it is returned.
      svar(1:nsvar) = sv_new(1:nsvar)
-
-     deallocate (sv_new,sv_seen,sv_count,stat=st)
-     if (st/=0) then
-       info = ND_ERR_MEMORY_DEALLOC
-       return
-     end if
    end subroutine nd_supervars
 
 
@@ -9013,7 +9001,7 @@ inNER:    do inn = 1, n
    ! matrix using them.
 
    subroutine nd_compress_by_svar(n,ne,ptr,row,invp,nsvar,svar,ptr2, &
-       row2,info,st)
+       row2,st)
      integer, intent(in) :: n ! Dimension of system
      integer, intent(in) :: ne ! Number off-diagonal zeros in system
      integer, dimension(n+1), intent(in) :: ptr ! Column pointers
@@ -9023,20 +9011,14 @@ inNER:    do inn = 1, n
      integer, dimension(nsvar), intent(in) :: svar ! super variables of A
      integer, dimension(nsvar+1), intent(out) :: ptr2
      integer, dimension(ne), intent(out) :: row2
-     integer, intent(out) :: info
      integer, intent(out) :: st
 
      integer :: piv, svc, sv, col
      integer :: j, idx
      integer, dimension(:), allocatable :: flag, sv_map
 
-     info = 0 ! by default completed succefully
-
      allocate (flag(nsvar),sv_map(n),stat=st)
-     if (st/=0) then
-       info = ND_ERR_MEMORY_ALLOC
-       return
-     end if
+     if (st.ne.0) return
      flag(:) = 0
 
      ! Setup sv_map
@@ -9063,12 +9045,6 @@ inNER:    do inn = 1, n
        piv = piv + svar(svc)
      end do
      ptr2(svc) = idx
-
-     deallocate (flag,sv_map,stat=st)
-     if (st/=0) then
-       info = ND_ERR_MEMORY_DEALLOC
-       return
-     end if
    end subroutine nd_compress_by_svar
 
 end module spral_nd
