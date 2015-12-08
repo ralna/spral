@@ -116,6 +116,11 @@ contains
          case("--cost=2")
             options%cost_function = 2
             print *, "Set cost function to 2"
+         case("--refinement")
+            call get_command_argument(argnum, argval)
+            argnum = argnum + 1
+            read( argval, * ) options%refinement
+            print *, "Set options%refinement = ", options%refinement
          case("--amd-call")
             call get_command_argument(argnum, argval)
             argnum = argnum + 1
