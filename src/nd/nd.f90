@@ -229,15 +229,8 @@ contains
       if (present(seps)) seps(:) = -1
 
       ! Remove any dense rows from matrix and modify iperm (if enabled)
-      if (options%remove_dense_rows) then
-         ! NB: uses private workspace that is deallocated afterwards
-         allocate (work(4*a_n), stat=info%stat)
-         if (info%stat.ne.0) go to 10
-         call remove_dense_rows(a_n, a_ne, a_ptr, a_row, iperm, work, &
-            options, info)
-         deallocate (work, stat=info%stat)
-         if (info%stat.ne.0) go to 20
-      end if
+      if (options%remove_dense_rows) &
+         call remove_dense_rows(a_n, a_ne, a_ptr, a_row, iperm, options, info)
 
       ! Return if matrix is diagonal
       if (a_ne.eq.0) then ! (recall diagonal entries are not stored)
@@ -449,12 +442,6 @@ contains
 
       10 continue
       info%flag = ND_ERR_MEMORY_ALLOC
-      if (printe) &
-         call nd_print_message(info%flag, unit_error, 'nd_nested_both')
-      return
-
-      20 continue
-      info%flag = ND_ERR_MEMORY_DEALLOC
       if (printe) &
          call nd_print_message(info%flag, unit_error, 'nd_nested_both')
       return

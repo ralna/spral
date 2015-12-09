@@ -127,6 +127,32 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 !
+! Prints out error associated with flag (if options is set to print errors)
+!
+subroutine nd_print_error(flag, options, context)
+   integer, intent(in) :: flag ! Error flag to print message for
+   type(nd_options), intent(in) :: options
+   character(len=*), intent(in) :: context ! context to print with message
+
+   if(options%print_level.lt.0) return ! Print level too low, don't print
+   if(options%unit_error.le.0) return ! Invalid unit, don't print
+
+   ! Otherwise print the error message
+   call nd_print_message(flag, options%unit_error, context)
+end subroutine nd_print_error
+
+subroutine nd_print_diagnostic(diag_level, options, text)
+   integer, intent(in) :: diag_level ! level of diagnostic this is
+   type(nd_options), intent(in) :: options
+   character(len=*), intent(in) :: text ! text to print
+
+   if(options%print_level.lt.diag_level) return ! Above print level, don't print
+   if(options%unit_diagnostics.le.0) return ! Invalid unit, don't print
+
+   write (options%unit_diagnostics,'(a)') text
+end subroutine nd_print_diagnostic
+
+!
 ! Prints out errors and warnings according to value of flag
 !
 subroutine nd_print_message(flag,unit,context)
