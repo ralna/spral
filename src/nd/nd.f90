@@ -90,7 +90,21 @@ contains
       integer, allocatable, dimension(:) :: a_row
 
       ! Other local variables
-      integer :: i
+      integer :: i, j, k, l, ll, lwork, lirn
+      integer :: a_n_curr, a_ne_curr, num_zero_row
+      integer, dimension(:), allocatable :: amd_order_row, amd_order_ptr, &
+         amd_order_sep, amd_order_perm, amd_order_work, amd_order_iperm
+      integer, dimension(:), allocatable :: work_iperm, work_seps
+      integer :: nsvar
+      integer :: sumweight
+      integer, dimension(:), allocatable :: svar, sinvp ! supervariable info
+      integer, allocatable, dimension(:) :: a_weight ! a_weight(i) will
+         ! contain the weight of variable (column) i ends for the
+         ! expanded matrix
+      integer, allocatable, dimension(:) :: iperm ! inverse of perm(:)
+      integer, allocatable, dimension(:) :: work ! space for doing work
+      logical :: use_multilevel
+      type (nd_multigrid) :: grid
 
       call nd_print_diagnostic(1, options, ' ')
       call nd_print_diagnostic(1, options, 'nd_order:')
@@ -110,11 +124,7 @@ contains
          call construct_full_from_full(n, ptr, row, a_n, a_ne, a_ptr, a_row, &
             options, info%stat)
       endif
-      if(info%stat.ne.0) then
-         info%flag = ND_ERR_MEMORY_ALLOC
-         call nd_print_error(info%flag, options, 'nd_order')
-         return
-      endif
+      if(info%stat.ne.0) go to 10
 
       ! Output summary of input matrix post-conversion
       if (options%print_level.ge.2 .and. options%unit_diagnostics.gt.0) then
@@ -131,66 +141,9 @@ contains
          write (options%unit_diagnostics,'(5i15)') (a_row(i),i=1,min(5,a_ne))
       end if
 
-      ! Call main worker routine
-      call nd_nested_both(a_n,a_ne,a_ptr,a_row,perm,options,info,seps)
-
-      ! Output summary of results
-      if (options%print_level.ge.2 .and. options%unit_diagnostics.gt.0) then
-         ! Print out perm
-         write (options%unit_diagnostics,'(a8)') 'perm = '
-         write (options%unit_diagnostics,'(5i15)') (perm(i),i=1,n)
-      else if (options%print_level.ge.1.and.options%unit_diagnostics.gt.0) then
-         ! Print out first few entries of perm
-         write (options%unit_diagnostics,'(a21)') 'perm(1:min(5,n)) = '
-         write (options%unit_diagnostics,'(5i15)') (perm(i),i=1,min(5,n))
-      end if
-
-      info%flag = 0
-      call nd_print_diagnostic(1, options, ' nd_order: successful completion')
-   end subroutine nd_order
-
-   !
-   ! Main wrapper routine
-   !
-   subroutine nd_nested_both(a_n,a_ne,a_ptr,a_row,perm,options,info,seps)
-      ! Expects input in internal CSC format
-      integer, intent(inout) :: a_n
-      integer, intent(inout) :: a_ne
-      integer, dimension(a_n), intent(inout) :: a_ptr
-      integer, dimension(a_ne), intent(inout) :: a_row
-      integer, dimension(a_n), intent(out) :: perm ! row i becomes row perm(i)
-      type (nd_options), intent(in) :: options
-      type (nd_inform), intent(inout) :: info
-      integer, dimension(a_n), optional, intent(out) :: seps
-         ! seps(i) is -1 if vertex is not in a separator; otherwise it
-         ! is equal to l, where l is the nested dissection level at
-         ! which it became part of the separator
-
-      integer :: i, j, k, l, ll, lwork, lirn
-      integer :: a_n_orig, a_n_curr, a_ne_curr, num_zero_row
-      integer, dimension(:), allocatable :: amd_order_row, amd_order_ptr, &
-         amd_order_sep, amd_order_perm, amd_order_work, amd_order_iperm
-      integer, dimension(:), allocatable :: work_iperm, work_seps
-      integer :: nsvar
-      integer :: sumweight
-      integer, dimension(:), allocatable :: svar, sinvp ! supervariable info
-      integer, allocatable, dimension(:) :: a_weight ! a_weight(i) will
-         ! contain the weight of variable (column) i ends for the
-         ! expanded matrix
-      integer, allocatable, dimension(:) :: iperm ! inverse of perm(:)
-      integer, allocatable, dimension(:) :: work ! space for doing work
-      logical :: use_multilevel
-      type (nd_multigrid) :: grid
-
-      call nd_print_diagnostic(1, options, ' ')
-      call nd_print_diagnostic(1, options, 'nd_nested_both:')
-
-      ! Record original size for alter use
-      a_n_orig = a_n
-
       ! Allocate iperm and initialize to identity
       allocate (iperm(a_n),stat=info%stat)
-      if (info%stat/=0) go to 10
+      if (info%stat.ne.0) go to 10
       iperm(:) = (/ (i,i=1,a_n) /)
 
       ! Initialize all variables to not be in a seperator
@@ -207,13 +160,8 @@ contains
 
          info%nsuper = a_n
          info%nzsuper = 0
-         ! Create perm from iperm
-         do i = 1, a_n_orig
-            j = iperm(i)
-            perm(j) = i
-         end do
 
-         return
+         goto 100 ! Skip straight to exit
       end if
 
       allocate(a_weight(a_n), stat=info%stat)
@@ -393,24 +341,34 @@ contains
          end if
       end if
 
+      100 continue
+
       ! Create perm from iperm
-      do i = 1, a_n_orig
+      do i = 1, n
          j = iperm(i)
          perm(j) = i
       end do
 
+      ! Output summary of results
+      if (options%print_level.ge.2 .and. options%unit_diagnostics.gt.0) then
+         ! Print out perm
+         write (options%unit_diagnostics,'(a8)') 'perm = '
+         write (options%unit_diagnostics,'(5i15)') (perm(i),i=1,n)
+      else if (options%print_level.ge.1.and.options%unit_diagnostics.gt.0) then
+         ! Print out first few entries of perm
+         write (options%unit_diagnostics,'(a21)') 'perm(1:min(5,n)) = '
+         write (options%unit_diagnostics,'(5i15)') (perm(i),i=1,min(5,n))
+      end if
+
       info%flag = 0
-      call nd_print_diagnostic(1, options, &
-         ' nd_nested_both: successful completion' &
-         )
+      call nd_print_diagnostic(1, options, ' nd_order: successful completion')
       return
 
       10 continue
       info%flag = ND_ERR_MEMORY_ALLOC
-      call nd_print_error(info%flag, options, 'nd_nested_both')
+      call nd_print_error(info%flag, options, 'nd_order')
       return
-   end subroutine nd_nested_both
-
+   end subroutine nd_order
 
    ! ---------------------------------------------------
    ! nd_nested_internal
