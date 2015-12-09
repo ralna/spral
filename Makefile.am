@@ -23,13 +23,9 @@ CUDA_LIBS = -lcublas
 lib_LIBRARIES = libspral.a
 include_HEADERS = include/spral.h
 
-# AMD
+# BLAS_IFACE
 # Note: first so not +=
 libspral_a_SOURCES = \
-   src/amd.f90
-
-# BLAS_IFACE
-libspral_a_SOURCES += \
 	src/blas_iface.f90
 
 # CORE_ANALYSE
@@ -66,6 +62,7 @@ EXTRA_DIST = src/metis4_wrapper.f90 src/metis5_wrapper.f90
 # ND
 include_HEADERS += include/spral_nd.h
 libspral_a_SOURCES += \
+	src/nd/hamd.f90 \
 	src/nd/nd.f90 \
 	src/nd/preprocess.f90 \
 	src/nd/types.f90 \
@@ -311,7 +308,8 @@ clean-local:
 # Fortran 90 dependencies
 src/match_order.$(OBJEXT): src/metis$(METIS_VERSION)_wrapper.$(OBJEXT) \
 									src/scaling.$(OBJEXT)
-src/nd/nd.$(OBJEXT): src/nd/preprocess.$(OBJEXT) \
+src/nd/nd.$(OBJEXT): src/nd/hamd.$(OBJEXT) \
+							src/nd/preprocess.$(OBJEXT) \
 							src/nd/types.$(OBJEXT)
 src/nd/preprocess.$(OBJEXT): src/nd/types.$(OBJEXT)
 src/random_matrix.$(OBJEXT): src/random.$(OBJEXT)

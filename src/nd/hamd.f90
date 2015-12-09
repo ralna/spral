@@ -1,4 +1,4 @@
-MODULE spral_amd
+MODULE spral_nd_hamd
       IMPLICIT NONE
 
       PRIVATE
@@ -1222,4 +1222,4 @@ MODULE spral_amd
         pfree = maxmem
       END SUBROUTINE amd_order
 
-END MODULE spral_amd
+END MODULE spral_nd_hamd

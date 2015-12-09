@@ -1,5 +1,5 @@
 module spral_nd
-   use spral_amd
+   use spral_nd_hamd
    use spral_nd_preprocess
    use spral_nd_types
    implicit none
