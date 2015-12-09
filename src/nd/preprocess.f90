@@ -14,7 +14,7 @@ contains
    ! Detects supervariables and compresses graph in place
    !
    subroutine compress_by_svar(a_n, a_ne, a_ptr, a_row, a_weight, a_n_curr, &
-         a_ne_curr, nsvar, svar, sinvp, num_zero_row, control, st)
+         a_ne_curr, nsvar, svar, sinvp, num_zero_row, options, st)
       integer, intent(in) :: a_n
       integer, intent(in) :: a_ne
       integer, dimension(a_n), intent(inout) :: a_ptr
@@ -26,7 +26,7 @@ contains
       integer, dimension(a_n), intent(out) :: svar
       integer, dimension(a_n), intent(out) :: sinvp
       integer, intent(out) :: num_zero_row
-      type(nd_options) :: control
+      type(nd_options) :: options
       integer, intent(out) :: st
 
       integer :: i, j, k
@@ -47,8 +47,8 @@ contains
       if (st.ne.0) return
 
       num_zero_row = a_n - nnz_rows
-      if (control%print_level.ge.2 .and. control%unit_diagnostics.gt.0) &
-         write (control%unit_diagnostics,'(a,i10)') &
+      if (options%print_level.ge.2 .and. options%unit_diagnostics.gt.0) &
+         write (options%unit_diagnostics,'(a,i10)') &
             'Number supervariables: ', nsvar + num_zero_row
 
       ! If there are no supervariables, don't bother compressing: return
@@ -131,7 +131,7 @@ contains
    ! ---------------------------------------------------
    ! Identifies and removes dense rows
    subroutine remove_dense_rows(a_n_in, a_ne_in, a_ptr, a_row, iperm, work, &
-       control,info)
+       options,info)
      integer, intent(inout) :: a_n_in ! dimension of subproblem before dense
      ! rows removed
      integer, intent(inout) :: a_ne_in ! no. nonzeros of subproblem before
@@ -150,7 +150,7 @@ contains
      ! reflect the computed permutation.
      integer, intent(out) :: work(4*a_n_in) ! Used during the algorithm to
      ! reduce need for allocations. The output is garbage.
-     type (nd_options), intent(in) :: control
+     type (nd_options), intent(in) :: options
      type (nd_inform), intent(inout) :: info
 
      ! ---------------------------------------------
@@ -165,9 +165,9 @@ contains
 
      ! ---------------------------------------------
      ! Printing levels
-     unit_diagnostics = control%unit_diagnostics
-     printi = (control%print_level==1 .and. unit_diagnostics>=0)
-     printd = (control%print_level>=2 .and. unit_diagnostics>=0)
+     unit_diagnostics = options%unit_diagnostics
+     printi = (options%print_level==1 .and. unit_diagnostics>=0)
+     printd = (options%print_level>=2 .and. unit_diagnostics>=0)
      ! ---------------------------------------------------
      if (printi .or. printd) then
        write (unit_diagnostics,'(a)') ' '
@@ -384,7 +384,7 @@ contains
    ! triangle stored (perhaps with diagonals)
    !
    subroutine construct_full_from_lower(n, ptr, row, n_out, ne_out, ptr_out, &
-         row_out, control, st)
+         row_out, options, st)
       integer, intent(in) :: n
       integer, dimension(n+1), intent(in) :: ptr
       integer, dimension(ptr(n+1)-1), intent(in) :: row
@@ -392,14 +392,14 @@ contains
       integer, intent(out) :: ne_out
       integer, dimension(:), allocatable, intent(out) :: ptr_out
       integer, dimension(:), allocatable, intent(out) :: row_out
-      type (nd_options), intent(in) :: control
+      type (nd_options), intent(in) :: options
       integer, intent(out) :: st
 
       integer :: i, j, k
 
       n_out = n
-      if (control%print_level.ge.1 .and. control%unit_diagnostics.gt.0) &
-         write (control%unit_diagnostics,'(a,i10)') 'n = ', n_out
+      if (options%print_level.ge.1 .and. options%unit_diagnostics.gt.0) &
+         write (options%unit_diagnostics,'(a,i10)') 'n = ', n_out
 
       ! Allocate space to store pointers for expanded matrix
       allocate (ptr_out(n),stat=st)
@@ -423,8 +423,8 @@ contains
       end do
       ne_out = ptr_out(n)
 
-      if (control%print_level.ge.1 .and. control%unit_diagnostics.gt.0) &
-         write (control%unit_diagnostics,'(a,i10)') &
+      if (options%print_level.ge.1 .and. options%unit_diagnostics.gt.0) &
+         write (options%unit_diagnostics,'(a,i10)') &
             'entries in expanded matrix with diags removed = ', ne_out
 
       ! Allocate space to store row indices of expanded matrix
@@ -455,7 +455,7 @@ contains
    ! from user supplied matrix in standard CSC format (which may have diagonals)
    !
    subroutine construct_full_from_full(n, ptr, row, n_out, ne_out, ptr_out, &
-         row_out, control, st)
+         row_out, options, st)
       integer, intent(in) :: n
       integer, dimension(n+1), intent(in) :: ptr
       integer, dimension(ptr(n+1)-1), intent(in) :: row
@@ -463,7 +463,7 @@ contains
       integer, intent(out) :: ne_out
       integer, dimension(:), allocatable, intent(out) :: ptr_out
       integer, dimension(:), allocatable, intent(out) :: row_out
-      type (nd_options), intent(in) :: control
+      type (nd_options), intent(in) :: options
       integer, intent(out) :: st
 
       integer :: i, j, k, p
@@ -471,8 +471,8 @@ contains
 
       ! Set the dimension of the expanded matrix
       n_out = n
-      if (control%print_level.ge.1 .and. control%unit_diagnostics.gt.0) &
-         write (control%unit_diagnostics,'(a,i10)') 'n = ', n
+      if (options%print_level.ge.1 .and. options%unit_diagnostics.gt.0) &
+         write (options%unit_diagnostics,'(a,i10)') 'n = ', n
 
       ! Work out how many diagonal entries need removing
       ndiags = 0

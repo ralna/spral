@@ -66,7 +66,7 @@ contains
    !
    ! Main user callable routine
    !
-   subroutine nd_order(mtx,n,ptr,row,perm,control,info,seps)
+   subroutine nd_order(mtx,n,ptr,row,perm,options,info,seps)
       integer, intent(in) :: mtx ! 0 if lower triangular part matrix input,
          ! 1 if both upper and lower parts input
       integer, intent(in) :: n ! number of rows in the matrix
@@ -74,7 +74,7 @@ contains
       integer, intent(in) :: row(ptr(n+1)-1) ! row indices
       integer, intent(out) :: perm(n) ! permutation: row i becomes row
          ! perm(i)
-      type (nd_options), intent(in) :: control
+      type (nd_options), intent(in) :: options
       type (nd_inform), intent(inout) :: info
       integer, dimension(n), optional, intent(out) :: seps
          ! seps(i) is -1 if vertex is not in a separator; otherwise it
@@ -98,11 +98,11 @@ contains
 
       ! ---------------------------------------------
       ! Printing levels
-      unit_diagnostics = control%unit_diagnostics
-      unit_error = control%unit_error
-      printe = (control%print_level>=0 .and. unit_error>=0)
-      printi = (control%print_level==1 .and. unit_diagnostics>=0)
-      printd = (control%print_level>=2 .and. unit_diagnostics>=0)
+      unit_diagnostics = options%unit_diagnostics
+      unit_error = options%unit_error
+      printe = (options%print_level>=0 .and. unit_error>=0)
+      printi = (options%print_level==1 .and. unit_diagnostics>=0)
+      printd = (options%print_level>=2 .and. unit_diagnostics>=0)
       ! ---------------------------------------------------
 
       if (printi .or. printd) then
@@ -121,10 +121,10 @@ contains
       ! Convert matrix to internal format without diagonals
       if (mtx<1) then
          call construct_full_from_lower(n, ptr, row, a_n, a_ne, a_ptr, a_row, &
-            control, info%stat)
+            options, info%stat)
       else
          call construct_full_from_full(n, ptr, row, a_n, a_ne, a_ptr, a_row, &
-            control, info%stat)
+            options, info%stat)
       endif
       if(info%stat.ne.0) then
          info%flag = ND_ERR_MEMORY_ALLOC
@@ -149,7 +149,7 @@ contains
       end if
 
       ! Call main worker routine
-      call nd_nested_both(a_n,a_ne,a_ptr,a_row,perm,control,info,seps)
+      call nd_nested_both(a_n,a_ne,a_ptr,a_row,perm,options,info,seps)
 
       ! Output summary of results
       if (printd) then
@@ -173,14 +173,14 @@ contains
    !
    ! Main wrapper routine
    !
-   subroutine nd_nested_both(a_n,a_ne,a_ptr,a_row,perm,control,info,seps)
+   subroutine nd_nested_both(a_n,a_ne,a_ptr,a_row,perm,options,info,seps)
       ! Expects input in internal CSC format
       integer, intent(inout) :: a_n
       integer, intent(inout) :: a_ne
       integer, dimension(a_n), intent(inout) :: a_ptr
       integer, dimension(a_ne), intent(inout) :: a_row
       integer, dimension(a_n), intent(out) :: perm ! row i becomes row perm(i)
-      type (nd_options), intent(in) :: control
+      type (nd_options), intent(in) :: options
       type (nd_inform), intent(inout) :: info
       integer, dimension(a_n), optional, intent(out) :: seps
          ! seps(i) is -1 if vertex is not in a separator; otherwise it
@@ -208,11 +208,11 @@ contains
 
       ! ---------------------------------------------
       ! Printing levels
-      unit_diagnostics = control%unit_diagnostics
-      unit_error = control%unit_error
-      printe = (control%print_level>=0 .and. unit_error>=0)
-      printi = (control%print_level==1 .and. unit_diagnostics>=0)
-      printd = (control%print_level>=2 .and. unit_diagnostics>=0)
+      unit_diagnostics = options%unit_diagnostics
+      unit_error = options%unit_error
+      printe = (options%print_level>=0 .and. unit_error>=0)
+      printi = (options%print_level==1 .and. unit_diagnostics>=0)
+      printd = (options%print_level>=2 .and. unit_diagnostics>=0)
       ! ---------------------------------------------------
 
       if (printi .or. printd) then
@@ -229,12 +229,12 @@ contains
       if (present(seps)) seps(:) = -1
 
       ! Remove any dense rows from matrix and modify iperm (if enabled)
-      if (control%remove_dense_rows) then
+      if (options%remove_dense_rows) then
          ! NB: uses private workspace that is deallocated afterwards
          allocate (work(4*a_n), stat=info%stat)
          if (info%stat.ne.0) go to 10
          call remove_dense_rows(a_n, a_ne, a_ptr, a_row, iperm, work, &
-            control, info)
+            options, info)
          deallocate (work, stat=info%stat)
          if (info%stat.ne.0) go to 20
       end if
@@ -260,11 +260,11 @@ contains
       allocate(a_weight(a_n), stat=info%stat)
       if (info%stat.ne.0) go to 10
 
-      if (control%find_supervariables) then
+      if (options%find_supervariables) then
          allocate(svar(a_n), sinvp(a_n), stat=info%stat)
          if (info%stat.ne.0) go to 10
          call compress_by_svar(a_n, a_ne, a_ptr, a_row, a_weight, a_n_curr, &
-            a_ne_curr, nsvar, svar, sinvp, num_zero_row, control, info%stat)
+            a_ne_curr, nsvar, svar, sinvp, num_zero_row, options, info%stat)
          if (info%stat.ne.0) go to 10
       else
          ! Otherwise, set things up for consistency with lack of supervariables
@@ -279,8 +279,8 @@ contains
       info%nzsuper = a_ne_curr
       info%nsuper = a_n_curr
 
-      if (control%amd_switch2.le.0 .or. &
-            a_n_curr.le.max(2,max(control%amd_call,control%amd_switch1)) ) then
+      if (options%amd_switch2.le.0 .or. &
+            a_n_curr.le.max(2,max(options%amd_call,options%amd_switch1)) ) then
          ! Apply AMD to matrix
          ! Allocate work to have length 5*a_n_curr+a_ne_curr
          if (printd) &
@@ -359,14 +359,14 @@ contains
                   a_row(1:a_ne_curr), a_weight(1:a_n_curr), sumweight,         &
                   iperm(1:a_n_curr), work(1:lwork),                            &
                   work(lwork+1:lwork+a_n_curr),                                &
-                  work(lwork+a_n_curr+1:lwork+2*a_n_curr), 0, control, info,   &
+                  work(lwork+a_n_curr+1:lwork+2*a_n_curr), 0, options, info,   &
                   .false., use_multilevel, grid, seps=seps(1:a_n_curr))
             else
                call nd_nested_internal(a_n_curr, a_ne_curr, a_ptr(1:a_n_curr), &
                   a_row(1:a_ne_curr), a_weight(1:a_n_curr), sumweight,         &
                   iperm(1:a_n_curr), work(1:lwork),                            &
                   work(lwork+1:lwork+a_n_curr),                                &
-                  work(lwork+a_n_curr+1:lwork+2*a_n_curr), 0, control, info,   &
+                  work(lwork+a_n_curr+1:lwork+2*a_n_curr), 0, options, info,   &
                   .false.,use_multilevel,grid)
 
             end if
@@ -377,14 +377,14 @@ contains
                call nd_nested_internal(a_n_curr, a_ne_curr, a_ptr(1:a_n_curr), &
                   a_row(1:a_ne_curr), a_weight(1:a_n_curr), sumweight,         &
                   work_iperm, work(1:lwork), work(lwork+1:lwork+a_n_curr),     &
-                  work(lwork+a_n_curr+1:lwork+2*a_n_curr), 0, control, info,   &
+                  work(lwork+a_n_curr+1:lwork+2*a_n_curr), 0, options, info,   &
                   .false., use_multilevel, grid,                               &
                   seps=work_seps)
             else
                call nd_nested_internal(a_n_curr, a_ne_curr, a_ptr(1:a_n_curr), &
                   a_row(1:a_ne_curr), a_weight(1:a_n_curr), sumweight,         &
                   work_iperm, work(1:lwork), work(lwork+1:lwork+a_n_curr),     &
-                  work(lwork+a_n_curr+1:lwork+2*a_n_curr), 0, control, info,   &
+                  work(lwork+a_n_curr+1:lwork+2*a_n_curr), 0, options, info,   &
                   .false., use_multilevel, grid)
             end if
          end if
@@ -468,7 +468,7 @@ contains
 
    recursive subroutine nd_nested_internal(a_n,a_ne,a_ptr,a_row, &
        a_weight,sumweight,iperm,work,work_comp_n,work_comp_nz,level, &
-       control,info,use_amd,use_multilevel,grid,seps)
+       options,info,use_amd,use_multilevel,grid,seps)
 
      integer, intent(in) :: a_n ! dimension of subproblem ND is applied to
      integer, intent(in) :: a_ne ! no. nonzeros of subproblem
@@ -496,7 +496,7 @@ contains
      ! algorithm to reduce need for allocations. The output is garbage.
      integer, intent(in) :: level ! which level of nested dissection is
      ! this
-     type (nd_options), intent(in) :: control
+     type (nd_options), intent(in) :: options
      type (nd_inform), intent(inout) :: info
      logical, intent(in) :: use_amd
      logical, intent(inout) :: use_multilevel
@@ -520,9 +520,9 @@ contains
 
      ! ---------------------------------------------
      ! Printing levels
-     unit_diagnostics = control%unit_diagnostics
-     printi = (control%print_level==1 .and. unit_diagnostics>=0)
-     printd = (control%print_level>=2 .and. unit_diagnostics>=0)
+     unit_diagnostics = options%unit_diagnostics
+     printi = (options%print_level==1 .and. unit_diagnostics>=0)
+     printd = (options%print_level>=2 .and. unit_diagnostics>=0)
      use_amdi = .false.
 
      if (printi .or. printd) then
@@ -552,12 +552,12 @@ contains
      ! Check whether max number of levels has been reached or if matrix
      ! size is below
      ! nd_switch
-     if (level>=control%amd_switch2 .or. a_n<=max(2,control%amd_switch1) &
+     if (level>=options%amd_switch2 .or. a_n<=max(2,options%amd_switch1) &
        .or. use_amd) &
        go to 10
      lwork = 12*a_n + sumweight + a_ne
      call nd_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,level, &
-       a_n1,a_n2,a_ne1,a_ne2,iperm,work(1:lwork),control,info, &
+       a_n1,a_n2,a_ne1,a_ne2,iperm,work(1:lwork),options,info, &
        use_multilevel,grid)
 
 
@@ -576,9 +576,9 @@ contains
        ! work array needs to be total length 5*a_n+a_ne
        call nd_find_indep_comps(a_n,a_ne,a_ptr,a_row,a_weight,iperm, &
          num_components,work_comp_n(1:a_n),work_comp_nz(1:a_n), &
-         work(compwork+1:compwork+3*a_n+a_ne),control,info)
+         work(compwork+1:compwork+3*a_n+a_ne),options,info)
        if (num_components==1) then
-         k = control%amd_switch2 ! Should never be reached - indep. comps.
+         k = options%amd_switch2 ! Should never be reached - indep. comps.
          ! only found if it has been detected that they exist
        else
          k = level
@@ -596,7 +596,7 @@ contains
        do while (i>=1)
          if (level==0) use_multilevel = .true.
          l = work_comp_n(i)
-         if (level==0 .and. l .le. control%amd_call) then
+         if (level==0 .and. l .le. options%amd_call) then
             use_amdi = .true.
          else
             use_amdi = .false.
@@ -611,7 +611,7 @@ contains
                a_weight(offset_ptr-l:offset_ptr-1),s, &
                iperm(offset_ptr-l:offset_ptr-1),work(compwork+1:compwork+12 &
                *l+s+m),work_comp_n(j-l+1:j),work_comp_nz(j-l+1:j),k, &
-               control,info,use_amdi,use_multilevel,grid,seps(offset_ptr-l: &
+               options,info,use_amdi,use_multilevel,grid,seps(offset_ptr-l: &
                offset_ptr-1))
            else
              call nd_nested_internal(l,m,a_ptr(offset_ptr-l:offset_ptr-1 &
@@ -619,7 +619,7 @@ contains
                a_weight(offset_ptr-l:offset_ptr-1),s, &
                iperm(offset_ptr-l:offset_ptr-1),work(compwork+1:compwork+12 &
                *l+s+m),work_comp_n(j-l+1:j),work_comp_nz(j-l+1:j),k, &
-               control,info,use_amdi,use_multilevel,grid)
+               options,info,use_amdi,use_multilevel,grid)
 
            end if
          end if
@@ -640,34 +640,34 @@ contains
      if (present(seps)) then
        seps(a_n1+a_n2+1:a_n) = level
      end if
-     if (a_n1>max(2,control%amd_switch1)) then
+     if (a_n1>max(2,options%amd_switch1)) then
        sumweight_sub = sum(a_weight(1:a_n1))
        if (present(seps)) then
          call nd_nested_internal(a_n1,a_ne1,a_ptr(1:a_n1), &
            a_row(1:a_ne1),a_weight(1:a_n1),sumweight_sub,iperm(1:a_n1), &
            work(1:12*a_n1+sumweight_sub+a_ne1),work_comp_n(1:a_n1), &
-           work_comp_nz(1:a_n1),level+1,control,info,use_amdi,&
+           work_comp_nz(1:a_n1),level+1,options,info,use_amdi,&
            use_multilevel,grid, &
            seps(1:a_n1))
        else
          call nd_nested_internal(a_n1,a_ne1,a_ptr(1:a_n1), &
            a_row(1:a_ne1),a_weight(1:a_n1),sumweight_sub,iperm(1:a_n1), &
            work(1:12*a_n1+sumweight_sub+a_ne1),work_comp_n(1:a_n1), &
-           work_comp_nz(1:a_n1),level+1,control,info,use_amdi,&
+           work_comp_nz(1:a_n1),level+1,options,info,use_amdi,&
            use_multilevel,grid)
        end if
 
      end if
 
-     if (a_n2>max(2,control%amd_switch1)) then
-       if (a_n1>max(2,control%amd_switch1)) then
+     if (a_n2>max(2,options%amd_switch1)) then
+       if (a_n1>max(2,options%amd_switch1)) then
          sumweight_sub = sum(a_weight(a_n1+1:a_n1+a_n2))
          if (present(seps)) then
            call nd_nested_internal(a_n2,a_ne2,a_ptr(a_n1+1:a_n1+a_n2), &
              a_row(a_ne1+1:a_ne1+a_ne2),a_weight(a_n1+1:a_n1+a_n2), &
              sumweight_sub,iperm(a_n1+1:a_n1+a_n2), &
              work(1:12*a_n2+sumweight_sub+a_ne2),work_comp_n(1:a_n2), &
-             work_comp_nz(1:a_n2),level+1,control,info,use_amdi,&
+             work_comp_nz(1:a_n2),level+1,options,info,use_amdi,&
              use_multilevel,grid, &
              seps(a_n1+1:a_n1+a_n2))
          else
@@ -675,7 +675,7 @@ contains
              a_row(a_ne1+1:a_ne1+a_ne2),a_weight(a_n1+1:a_n1+a_n2), &
              sumweight_sub,iperm(a_n1+1:a_n1+a_n2), &
              work(1:12*a_n2+sumweight_sub+a_ne2),work_comp_n(1:a_n2), &
-             work_comp_nz(1:a_n2),level+1,control,info,use_amdi,&
+             work_comp_nz(1:a_n2),level+1,options,info,use_amdi,&
              use_multilevel,grid)
          end if
        else
@@ -684,13 +684,13 @@ contains
            call nd_nested_internal(a_n2,a_ne2,a_ptr(1:a_n2), &
              a_row(1:a_ne2),a_weight(a_n1+1:a_n1+a_n2),sumweight_sub, &
              iperm(a_n1+1:a_n1+a_n2),work(1:12*a_n2+sumweight_sub+a_ne2), &
-             work_comp_n(1:a_n2),work_comp_nz(1:a_n2),level+1,control,info, &
+             work_comp_n(1:a_n2),work_comp_nz(1:a_n2),level+1,options,info, &
              use_amdi,use_multilevel,grid,seps(a_n1+1:a_n1+a_n2))
          else
            call nd_nested_internal(a_n2,a_ne2,a_ptr(1:a_n2), &
              a_row(1:a_ne2),a_weight(a_n1+1:a_n1+a_n2),sumweight_sub, &
              iperm(a_n1+1:a_n1+a_n2),work(1:12*a_n2+sumweight_sub+a_ne2), &
-             work_comp_n(1:a_n2),work_comp_nz(1:a_n2),level+1,control,info, &
+             work_comp_n(1:a_n2),work_comp_nz(1:a_n2),level+1,options,info, &
              use_amdi,use_multilevel,grid)
 
          end if
@@ -740,7 +740,7 @@ contains
    ! ---------------------------------------------------
    ! Finds and forms independent components in a matrix
    subroutine nd_find_indep_comps(a_n,a_ne,a_ptr,a_row,a_weight,iperm, &
-       comp_num,compsizes,compnzs,work,control,info)
+       comp_num,compsizes,compnzs,work,options,info)
      integer, intent(in) :: a_n ! size of matrix
      integer, intent(in) :: a_ne ! no. nonzeros in matrix
      integer, intent(inout) :: a_ptr(a_n) ! On entry, column ptrs for
@@ -777,7 +777,7 @@ contains
      ! number of nonzeros in compontent i
      integer, intent(out) :: work(3*a_n+a_ne) ! used as work arrays during
      ! computation
-     type (nd_options), intent(in) :: control
+     type (nd_options), intent(in) :: options
      type (nd_inform), intent(inout) :: info
 
      ! ---------------------------------------------
@@ -795,9 +795,9 @@ contains
 
      ! ---------------------------------------------
      ! Printing levels
-     unit_diagnostics = control%unit_diagnostics
-     printi = (control%print_level==1 .and. unit_diagnostics>=0)
-     printd = (control%print_level>=2 .and. unit_diagnostics>=0)
+     unit_diagnostics = options%unit_diagnostics
+     printi = (options%print_level==1 .and. unit_diagnostics>=0)
+     printd = (options%print_level>=2 .and. unit_diagnostics>=0)
 
      if (printi .or. printd) then
        write (unit_diagnostics,'(a)') ' '
@@ -922,7 +922,7 @@ contains
    ! small enough, apply halo amd
 
    subroutine nd_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
-       level,a_n1,a_n2,a_ne1,a_ne2,iperm,work,control,info,use_multilevel, &
+       level,a_n1,a_n2,a_ne1,a_ne2,iperm,work,options,info,use_multilevel, &
        grid)
 
      integer, intent(in) :: a_n ! dimension of subproblem ND is applied to
@@ -951,7 +951,7 @@ contains
      ! reflect the computed permutation.
      logical, intent(inout) :: use_multilevel
      integer, intent(out) :: work(12*a_n+sumweight+a_ne)
-     type (nd_options), intent(in) :: control
+     type (nd_options), intent(in) :: options
      type (nd_inform), intent(inout) :: info
      type (nd_multigrid), intent(inout) :: grid
 
@@ -967,7 +967,7 @@ contains
      integer :: partition_method
      integer :: i, j, k
      integer :: a_weight_1, a_weight_2, a_weight_sep
-     integer :: ref_method, ref_control
+     integer :: ref_method, ref_options
      integer :: a_n1_new, a_n2_new, a_weight_1_new, a_weight_2_new, &
        a_weight_sep_new
      real(wp) :: ratio, tau_best, tau, band, depth
@@ -976,9 +976,9 @@ contains
 
      ! ---------------------------------------------
      ! Printing levels
-     unit_diagnostics = control%unit_diagnostics
-     printi = (control%print_level==1 .and. unit_diagnostics>=0)
-     printd = (control%print_level>=2 .and. unit_diagnostics>=0)
+     unit_diagnostics = options%unit_diagnostics
+     printi = (options%print_level==1 .and. unit_diagnostics>=0)
+     printd = (options%print_level>=2 .and. unit_diagnostics>=0)
 
      if (printi .or. printd) then
        write (unit_diagnostics,'(a)') ' '
@@ -995,7 +995,7 @@ contains
      end if
 
      ! Find the partition
-     if (control%coarse_partition_method<=1) then
+     if (options%coarse_partition_method<=1) then
        partition_method = 1
      else
        partition_method = 2
@@ -1006,19 +1006,19 @@ contains
      work_ptr = partition_ptr + a_n ! max length 9*a_n+sumweight+a_ne/2
      ! do p = 1,a_n
      ! do q = p+1,a_n
-     ! if (control%partition_method .ge. 2) use_multilevel = .true.
+     ! if (options%partition_method .ge. 2) use_multilevel = .true.
      if (partition_method==1) then
        ! Ashcraft method
        call nd_ashcraft(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,level, &
          a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep, &
          work(partition_ptr+1:partition_ptr+a_n), &
-         work(work_ptr+1:work_ptr+9*a_n+sumweight),control,info%flag,band, &
+         work(work_ptr+1:work_ptr+9*a_n+sumweight),options,info%flag,band, &
          depth,use_multilevel,grid)
      else
        call nd_level_set(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
          level,a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep, &
          work(partition_ptr+1:partition_ptr+a_n), &
-         work(work_ptr+1:work_ptr+9*a_n+sumweight),control,info%flag, &
+         work(work_ptr+1:work_ptr+9*a_n+sumweight),options,info%flag, &
          band,depth,use_multilevel,grid)
 
      end if
@@ -1039,17 +1039,17 @@ contains
      if (a_n1/=0 .and. a_n2/=0 .and. a_n>=3) then
        if ( .not. use_multilevel) then
 
-         if (control%refinement>6) then
-           ref_control = 3
+         if (options%refinement>6) then
+           ref_options = 3
          else
-           if (control%refinement<1) then
-             ref_control = 1
+           if (options%refinement<1) then
+             ref_options = 1
            else
-             ref_control = control%refinement
+             ref_options = options%refinement
            end if
          end if
 
-         select case (ref_control)
+         select case (ref_options)
          case (1)
            ref_method = 1
 
@@ -1059,7 +1059,7 @@ contains
          case (3)
            if (real(max(a_weight_1,a_weight_2))/real(min(a_weight_1, &
                a_weight_2)+a_weight_sep)>=max(real(1.0, &
-               wp),control%balance)) then
+               wp),options%balance)) then
              ref_method = 2
            else
              ref_method = 1
@@ -1074,7 +1074,7 @@ contains
          case (6)
            if (real(max(a_weight_1,a_weight_2))/real(min(a_weight_1, &
                a_weight_2)+a_weight_sep)>=max(real(1.0, &
-               wp),control%balance)) then
+               wp),options%balance)) then
              ref_method = 2
            else
              ref_method = 0
@@ -1093,7 +1093,7 @@ contains
            call nd_refine_max_flow(a_n,a_ne,a_ptr,a_row,a_weight,a_n1, &
              a_n2,a_weight_1,a_weight_2,a_weight_sep, &
              work(partition_ptr+1:partition_ptr+a_n), &
-             work(work_ptr+1:work_ptr+8),control)
+             work(work_ptr+1:work_ptr+8),options)
 
          case (1)
            if (min(a_weight_1,a_weight_2)+a_weight_sep< &
@@ -1101,12 +1101,12 @@ contains
              call nd_refine_block_trim(a_n,a_ne,a_ptr,a_row, &
                a_weight,sumweight,a_n1,a_n2,a_weight_1,a_weight_2, &
                a_weight_sep,work(partition_ptr+1:partition_ptr+a_n), &
-               work(work_ptr+1:work_ptr+5*a_n),control)
+               work(work_ptr+1:work_ptr+5*a_n),options)
            else
              call nd_refine_trim(a_n,a_ne,a_ptr,a_row,a_weight, &
                sumweight,a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep, &
                work(partition_ptr+1:partition_ptr+a_n), &
-               work(work_ptr+1:work_ptr+3*a_n),control)
+               work(work_ptr+1:work_ptr+3*a_n),options)
            end if
 
 
@@ -1114,7 +1114,7 @@ contains
            call nd_refine_edge(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
              a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep, &
              work(partition_ptr+1:partition_ptr+a_n), &
-             work(work_ptr+1:work_ptr+3*a_n),control)
+             work(work_ptr+1:work_ptr+3*a_n),options)
 
 
          end select
@@ -1126,15 +1126,15 @@ contains
              ',  a_n2=', a_n2, ',  a_n_sep=', a_n - a_n1 - a_n2
          end if
 
-         if (control%max_improve_cycles>0) then
-           ratio = max(real(1.0,wp),control%balance)
+         if (options%max_improve_cycles>0) then
+           ratio = max(real(1.0,wp),options%balance)
            if (ratio>real(sumweight-2)) then
              imbal = .false.
            else
              imbal = .true.
            end if
            call cost_function(a_weight_1,a_weight_2,a_weight_sep,sumweight, &
-             ratio,imbal,control%cost_function,tau_best)
+             ratio,imbal,options%cost_function,tau_best)
            a_n1_new = a_n1
            a_n2_new = a_n2
            a_weight_1_new = a_weight_1
@@ -1146,7 +1146,7 @@ contains
          work(part_ptr+1:part_ptr+a_n) = work(partition_ptr+1:partition_ptr &
            +a_n)
 
-         k = control%max_improve_cycles
+         k = options%max_improve_cycles
          do i = 1, k
 
            call expand_partition(a_n,a_ne,a_ptr,a_row,a_weight,a_n1_new, &
@@ -1166,12 +1166,12 @@ contains
            ! check_partition1(a_n,a_ne,a_ptr,a_row,a_n1_new,a_n2_new,work(p
            ! art_ptr+1:part_ptr+a_n))
 
-           select case (ref_control)
+           select case (ref_options)
 
            case (3)
              if (real(max(a_weight_1_new,a_weight_2_new))/real(min( &
                  a_weight_1_new,a_weight_2_new)+a_weight_sep_new)>max(real( &
-                 1.0,wp),control%balance)) then
+                 1.0,wp),options%balance)) then
                ref_method = 2
              else
                ref_method = 1
@@ -1180,7 +1180,7 @@ contains
            case (6)
              if (real(max(a_weight_1_new,a_weight_2_new))/real(min( &
                  a_weight_1_new,a_weight_2_new)+a_weight_sep_new)>max(real( &
-                 1.0,wp),control%balance)) then
+                 1.0,wp),options%balance)) then
                ref_method = 2
              else
                ref_method = 0
@@ -1194,7 +1194,7 @@ contains
              call nd_refine_max_flow(a_n,a_ne,a_ptr,a_row,a_weight, &
                a_n1_new,a_n2_new,a_weight_1_new,a_weight_2_new, &
                a_weight_sep_new,work(part_ptr+1:part_ptr+a_n), &
-               work(work_ptr+1:work_ptr+8),control)
+               work(work_ptr+1:work_ptr+8),options)
 
            case (1)
              if (min(a_weight_1,a_weight_2)+a_weight_sep< &
@@ -1203,12 +1203,12 @@ contains
                  a_weight,sumweight,a_n1_new,a_n2_new,a_weight_1_new, &
                  a_weight_2_new,a_weight_sep_new, &
                  work(part_ptr+1:part_ptr+a_n),work(work_ptr+1:work_ptr+5* &
-                 a_n),control)
+                 a_n),options)
              else
                call nd_refine_trim(a_n,a_ne,a_ptr,a_row,a_weight, &
                  sumweight,a_n1_new,a_n2_new,a_weight_1_new,a_weight_2_new, &
                  a_weight_sep_new,work(part_ptr+1:part_ptr+a_n), &
-                 work(work_ptr+1:work_ptr+3*a_n),control)
+                 work(work_ptr+1:work_ptr+3*a_n),options)
              end if
 
 
@@ -1216,7 +1216,7 @@ contains
              call nd_refine_edge(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
                a_n1_new,a_n2_new,a_weight_1_new,a_weight_2_new, &
                a_weight_sep_new,work(part_ptr+1:part_ptr+a_n), &
-               work(work_ptr+1:work_ptr+3*a_n),control)
+               work(work_ptr+1:work_ptr+3*a_n),options)
 
            end select
 
@@ -1231,7 +1231,7 @@ contains
 
 
            call cost_function(a_weight_1_new,a_weight_2_new, &
-             a_weight_sep_new,sumweight,ratio,imbal,control%cost_function,tau)
+             a_weight_sep_new,sumweight,ratio,imbal,options%cost_function,tau)
            if (tau<tau_best) then
              tau_best = tau
              work(partition_ptr+1:partition_ptr+a_n) &
@@ -1249,7 +1249,7 @@ contains
          call nd_refine_fm(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,a_n1, &
            a_n2,a_weight_1,a_weight_2,a_weight_sep, &
            work(partition_ptr+1:partition_ptr+a_n), &
-           work(work_ptr+1:work_ptr+8*a_n+sumweight),control)
+           work(work_ptr+1:work_ptr+8*a_n+sumweight),options)
 
 
        end if
@@ -1263,8 +1263,8 @@ contains
          ', a_n2=', a_n2, ', a_nsep=', a_n - a_n1 - a_n2
      end if
 
-     if ((a_n1<=max(2,control%amd_switch1) .and. a_n2<=max(2, &
-         control%amd_switch1))) then
+     if ((a_n1<=max(2,options%amd_switch1) .and. a_n2<=max(2, &
+         options%amd_switch1))) then
        ! apply halo amd to submatrics
        call amd_order_both(a_n,a_ne,a_ptr,a_row,a_n1,a_n2, &
          work(partition_ptr+1:partition_ptr+a_n),iperm,a_weight, &
@@ -1272,7 +1272,7 @@ contains
        a_ne1 = 0
        a_ne2 = 0
 
-     else if (a_n1<=max(2,control%amd_switch1)) then
+     else if (a_n1<=max(2,options%amd_switch1)) then
        ! apply halo amd to [A1, B1'; B1, I] using two levels
        ! return A2 and apply ND to it
        call amd_order_one(a_n,a_ne,a_ptr,a_row,a_n1,a_n2, &
@@ -1281,7 +1281,7 @@ contains
        a_ne1 = 0
 
 
-     else if (a_n2<=max(2,control%amd_switch1)) then
+     else if (a_n2<=max(2,options%amd_switch1)) then
        ! apply halo amd to [A2, B2'; B2, I] using two levels
        ! return A1 and apply ND to it
        call amd_order_one(a_n,a_ne,a_ptr,a_row,a_n1,a_n2, &
@@ -1338,7 +1338,7 @@ contains
    ! Partition the matrix using the Ashcraft method
    recursive subroutine nd_ashcraft(a_n,a_ne,a_ptr,a_row,a_weight, &
        sumweight,level,a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep, &
-       partition,work,control,info,band,depth,use_multilevel,grid)
+       partition,work,options,info,band,depth,use_multilevel,grid)
 
      integer, intent(in) :: a_n ! dimension of subproblem ND is applied to
      integer, intent(in) :: a_ne ! no. nonzeros of subproblem
@@ -1361,7 +1361,7 @@ contains
      ! contain list of (local) entries in partition 2; entries in
      ! separator are listed at the end
      integer, intent(out) :: work(9*a_n+sumweight) ! used as work array
-     type (nd_options), intent(in) :: control
+     type (nd_options), intent(in) :: options
      integer, intent(inout) :: info
      real(wp), intent(out) :: band ! If level = 0, then on
      ! output band = 100*L/a_n, where L is the size of the
@@ -1398,15 +1398,15 @@ contains
 
      ! ---------------------------------------------
      ! Printing levels
-     unit_diagnostics = control%unit_diagnostics
-     printi = (control%print_level==1 .and. unit_diagnostics>=0)
-     printd = (control%print_level>=2 .and. unit_diagnostics>=0)
+     unit_diagnostics = options%unit_diagnostics
+     printi = (options%print_level==1 .and. unit_diagnostics>=0)
+     printd = (options%print_level>=2 .and. unit_diagnostics>=0)
 
      if (printi .or. printd) then
        write (unit_diagnostics,'(a)') ' '
        write (unit_diagnostics,'(a)') 'Use two-sided level set method'
      end if
-     ratio = max(real(1.0,wp),control%balance)
+     ratio = max(real(1.0,wp),options%balance)
      if (ratio>real(sumweight-2)) then
        imbal = .false.
      else
@@ -1420,9 +1420,9 @@ contains
      band = -1
      depth = -1
 
-     if (control%partition_method==1 .and. use_multilevel) go to 10
+     if (options%partition_method==1 .and. use_multilevel) go to 10
 
-     if (control%partition_method>1 .and. level>0 .and. use_multilevel) &
+     if (options%partition_method>1 .and. level>0 .and. use_multilevel) &
        go to 10
 
      ! Find pseudoperipheral nodes nstart and nend, and the level structure
@@ -1502,15 +1502,15 @@ contains
        depth = 100.0*real(num_levels_nend,wp)/ &
          real(a_n,wp)
      end if
-     if (control%stop_coarsening2<=0 .or. control%partition_method<1) then
+     if (options%stop_coarsening2<=0 .or. options%partition_method<1) then
        use_multilevel = .false.
      end if
-     if (control%partition_method>=2 .and. use_multilevel) then
+     if (options%partition_method>=2 .and. use_multilevel) then
        ! if (real(lwidth,wp) .le. 2.0* &
        ! real(sumweight,wp)/real(num_levels_nend,wp) )
        ! then
        if (100.0*real(lwidth,wp)/real(sumweight,wp)<=3.0 .or. &
-          a_n.lt. control%ml_call) &
+          a_n.lt. options%ml_call) &
            then
          use_multilevel = .false.
        else
@@ -1585,7 +1585,7 @@ contains
      a_weight_2 = p2sz
      a_weight_sep = sepsz
      call cost_function(p1sz,p2sz,sepsz,sumweight,ratio,imbal,&
-         control%cost_function,bestval)
+         options%cost_function,bestval)
 
      ! Search for best separator using tau
 
@@ -1598,7 +1598,7 @@ contains
        p2sz = sumweight - sepsz - p1sz
        if (p2sz==0) exit
        call cost_function(p1sz,p2sz,sepsz,sumweight,ratio,imbal,&
-          control%cost_function,val)
+          options%cost_function,val)
        if (val<bestval) then
          bestval = val
          best_sep_start = j + 1
@@ -1610,7 +1610,7 @@ contains
        end if
      end do
 
-     if (imbal .and. use_multilevel_copy .and. control%partition_method>=2) &
+     if (imbal .and. use_multilevel_copy .and. options%partition_method>=2) &
          then
        if (real(max(a_weight_1,a_weight_2))/real(min(a_weight_1, &
            a_weight_2))>ratio) then
@@ -1645,10 +1645,10 @@ contains
 10      continue
 
      if (use_multilevel) then
-       stop_coarsening2 = control%stop_coarsening2
+       stop_coarsening2 = options%stop_coarsening2
        lwork = 9*a_n + sumweight
        call multilevel_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
-         partition,a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep,control, &
+         partition,a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep,options, &
          info,lwork,work(1:lwork),stop_coarsening2,grid)
        return
      end if
@@ -1669,7 +1669,7 @@ contains
    ! Partition the matrix using the level set method
    recursive subroutine nd_level_set(a_n,a_ne,a_ptr,a_row,a_weight, &
        sumweight,level,a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep, &
-       partition,work,control,info,band,depth,use_multilevel,grid)
+       partition,work,options,info,band,depth,use_multilevel,grid)
 
      integer, intent(in) :: a_n ! dimension of subproblem ND is applied to
      integer, intent(in) :: a_ne ! no. nonzeros of subproblem
@@ -1692,7 +1692,7 @@ contains
      ! contain list of (local) entries in partition 2; entries in
      ! separator are listed at the end
      integer, intent(out) :: work(9*a_n+sumweight)
-     type (nd_options), intent(in) :: control
+     type (nd_options), intent(in) :: options
      integer, intent(inout) :: info
      real(wp), intent(out) :: band ! If level = 0, then on
      ! output band = 100*L/a_n, where L is the size of the
@@ -1725,16 +1725,16 @@ contains
 
      ! ---------------------------------------------
      ! Printing levels
-     unit_diagnostics = control%unit_diagnostics
-     printi = (control%print_level==1 .and. unit_diagnostics>=0)
-     printd = (control%print_level>=2 .and. unit_diagnostics>=0)
+     unit_diagnostics = options%unit_diagnostics
+     printi = (options%print_level==1 .and. unit_diagnostics>=0)
+     printd = (options%print_level>=2 .and. unit_diagnostics>=0)
 
      if (printi .or. printd) then
        write (unit_diagnostics,'(a)') ' '
        write (unit_diagnostics,'(a)') 'Use one-sided level set method'
      end if
 
-     ratio = max(real(1.0,wp),control%balance)
+     ratio = max(real(1.0,wp),options%balance)
      if (ratio>real(sumweight-2)) then
        imbal = .false.
      else
@@ -1744,12 +1744,12 @@ contains
      band = -1
      depth = -1
 
-     if (control%partition_method==1 .and. use_multilevel) then
+     if (options%partition_method==1 .and. use_multilevel) then
        use_multilevel = .true.
        go to 10
      end if
 
-     if (control%partition_method>1 .and. level>0 .and. use_multilevel) &
+     if (options%partition_method>1 .and. level>0 .and. use_multilevel) &
        go to 10
 
      ! Find pseudoperipheral nodes nstart and nend, and the level structure
@@ -1815,13 +1815,13 @@ contains
        ! band = max(band,real(lwidth,wp))
      end if
 
-     if ((control%partition_method<=0) .or. (use_multilevel .and. control% &
+     if ((options%partition_method<=0) .or. (use_multilevel .and. options% &
          stop_coarsening2<=0)) then
        use_multilevel = .false.
      end if
-     if (control%partition_method>=2 .and. use_multilevel) then
+     if (options%partition_method>=2 .and. use_multilevel) then
        if (100.0*real(lwidth,wp)/real(sumweight,wp)<=3.0 .or. &
-          a_n.lt. control%ml_call) &
+          a_n.lt. options%ml_call) &
            then
          use_multilevel = .false.
        else
@@ -1832,11 +1832,11 @@ contains
 10      continue
 
      if (use_multilevel) then
-       stop_coarsening2 = control%stop_coarsening2
+       stop_coarsening2 = options%stop_coarsening2
        lwork = 9*a_n + sumweight
 
        call multilevel_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
-         partition,a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep,control, &
+         partition,a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep,options, &
          info,lwork,work(1:lwork),stop_coarsening2,grid)
        return
      end if
@@ -1875,7 +1875,7 @@ contains
      a_n1 = work(level_ptr_p+2) - 1
      a_n2 = a_n - work(level_ptr_p+3) + 1
      call cost_function(p1sz,p2sz,sepsz,sumweight,ratio,imbal,&
-      control%cost_function,bestval)
+      options%cost_function,bestval)
 
      ! Search for best separator using tau
      do j = 2, num_levels_nend - 4
@@ -1883,7 +1883,7 @@ contains
        sepsz = work(work_p+j+1)
        p2sz = p2sz - work(work_p+j+1)
        call cost_function(p1sz,p2sz,sepsz,sumweight,ratio,imbal,&
-          control%cost_function,val)
+          options%cost_function,val)
        if (val<bestval) then
          bestval = val
          best_sep_start = j + 1
@@ -2481,7 +2481,7 @@ contains
    ! separator and the larger partition, and this is then minimal using
    ! trimming or max flow
    subroutine nd_refine_edge(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
-       a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep,partition,work,control)
+       a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep,partition,work,options)
      integer, intent(in) :: a_n ! order of matrix
      integer, intent(in) :: a_ne ! number of entries in matrix
      integer, intent(in) :: a_ptr(a_n) ! On input a_ptr(i) contains
@@ -2503,7 +2503,7 @@ contains
      ! separator are listed at the end. This is updated to the new
      ! partition
      integer, intent(out) :: work(3*a_n) ! Work array
-     type (nd_options), intent(in) :: control
+     type (nd_options), intent(in) :: options
 
      ! ---------------------------------------------
      ! Local variables
@@ -2529,13 +2529,13 @@ contains
        work(fm_flags+1:fm_flags+a_n),ND_PART1_FLAG,ND_PART2_FLAG, &
        partition(1:a_n))
 
-     if (control%refinement>3) then
+     if (options%refinement>3) then
        call nd_refine_max_flow(a_n,a_ne,a_ptr,a_row,a_weight,a_n1,a_n2, &
-         a_weight_1,a_weight_2,a_weight_sep,partition,work(1:8),control)
+         a_weight_1,a_weight_2,a_weight_sep,partition,work(1:8),options)
      else
        call nd_refine_trim(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,a_n1, &
          a_n2,a_weight_1,a_weight_2,a_weight_sep,partition,work(1:3*a_n), &
-         control)
+         options)
      end if
 
 
@@ -2548,7 +2548,7 @@ contains
    ! Given a partition, refine the partition using FM refinement. Wrapper
    ! for code
    subroutine nd_refine_fm(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,a_n1, &
-       a_n2,a_weight_1,a_weight_2,a_weight_sep,partition,work,control)
+       a_n2,a_weight_1,a_weight_2,a_weight_sep,partition,work,options)
      integer, intent(in) :: a_n ! order of matrix
      integer, intent(in) :: a_ne ! number of entries in matrix
      integer, intent(in) :: a_ptr(a_n) ! On input a_ptr(i) contains
@@ -2570,7 +2570,7 @@ contains
      ! separator are listed at the end. This is updated to the new
      ! partition
      integer, intent(out) :: work(8*a_n+sumweight) ! Work array
-     type (nd_options), intent(in) :: control
+     type (nd_options), intent(in) :: options
 
      ! ---------------------------------------------
      ! Local variables
@@ -2597,9 +2597,9 @@ contains
      real(wp) :: ratio
      logical :: imbal ! Should we check for imbalance?
 
-     if (control%refinement_band .lt. 1) return
+     if (options%refinement_band .lt. 1) return
 
-     ratio = max(real(1.0,wp),control%balance)
+     ratio = max(real(1.0,wp),options%balance)
      if (ratio>real(sumweight-2)) then
        imbal = .false.
      else
@@ -2628,10 +2628,10 @@ contains
      ! mult = sumweight/2-1
      fm_distance = fm_head + icut + mult + 1
 
-     band = min(control%refinement_band,a_n)
+     band = min(options%refinement_band,a_n)
 
      call nd_fm_refinement(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,icut, &
-       mult,control%cost_function,a_n1,a_n2,a_weight_1,a_weight_2,&
+       mult,options%cost_function,a_n1,a_n2,a_weight_1,a_weight_2,&
        a_weight_sep,band,ratio, &
        work(fm_flags+1:fm_flags+a_n),work(fm_ipart+1:fm_ipart+a_n), &
        work(fm_next+1:fm_next+a_n),work(fm_last+1:fm_last+a_n), &
@@ -3733,7 +3733,7 @@ inNER:    do inn = 1, n
    end subroutine amd_order_one
 
    subroutine multilevel_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
-       partition,a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep,control, &
+       partition,a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep,options, &
        info1,lwork,work,stop_coarsening2,grid)
 
      integer, intent(in) :: a_n ! order of matrix being partitioned
@@ -3750,7 +3750,7 @@ inNER:    do inn = 1, n
      integer, intent(out) :: a_weight_1, a_weight_2, a_weight_sep ! Weight
      ! ed
      ! size of partitions and separator
-     type (nd_options), intent(in) :: control
+     type (nd_options), intent(in) :: options
      integer, intent(in) :: lwork ! length of work array: must be atleast
      ! 9a_n + sumweight
      integer, intent(out) :: work(lwork) ! work array
@@ -3770,16 +3770,16 @@ inNER:    do inn = 1, n
 
      info1 = 0
      ! Set up printing
-     if (control%print_level<0) print_level = 0
-     ! The default is control%print_level = 0
-     if (control%print_level==0) print_level = 1
-     if (control%print_level==1) print_level = 2
-     if (control%print_level>1) print_level = 3
-     mp = control%unit_diagnostics
+     if (options%print_level<0) print_level = 0
+     ! The default is options%print_level = 0
+     if (options%print_level==0) print_level = 1
+     if (options%print_level==1) print_level = 2
+     if (options%print_level>1) print_level = 3
+     mp = options%unit_diagnostics
      if (mp<0) print_level = 0
-     ! Set error controls
-     lerr = control%unit_error >= 0 .and. print_level > 0
-     err = control%unit_error
+     ! Set error optionss
+     lerr = options%unit_error >= 0 .and. print_level > 0
+     err = options%unit_error
 
 
      if (print_level>1) then
@@ -3836,7 +3836,7 @@ inNER:    do inn = 1, n
      ! initialise mglevel_cur to the maximum number of levels
      ! allowed for this bisection
      mglevel_cur = stop_coarsening2
-     call multilevel(grid,control,sumweight,mglevel_cur,mp,print_level, &
+     call multilevel(grid,options,sumweight,mglevel_cur,mp,print_level, &
        lwork,work,info1)
 
      if (info1/=0) then
@@ -3911,7 +3911,7 @@ inNER:    do inn = 1, n
    ! set for coarsening. We will need to test out to see
    ! which is better.
 
-   recursive subroutine multilevel(grid,control,sumweight,mglevel_cur,mp, &
+   recursive subroutine multilevel(grid,options,sumweight,mglevel_cur,mp, &
        print_level,lwork,work,info)
 
      real(wp), parameter :: half = 0.5_wp
@@ -3920,7 +3920,7 @@ inNER:    do inn = 1, n
      ! Arguments
      type (nd_multigrid), intent(inout), TARGET :: grid ! this level
      ! of matrix (grid)
-     type (nd_options), intent(in) :: control
+     type (nd_options), intent(in) :: options
      integer, intent(in) :: sumweight ! sum of weights (unchanged between
      ! coarse and fine grid
      integer, intent(inout) :: mglevel_cur ! current grid level
@@ -3950,8 +3950,8 @@ inNER:    do inn = 1, n
      real(wp) :: grid_rdc_fac_max ! max grid reduction
      ! factor
      real(wp) :: one1
-     integer :: stop_coarsening1 ! controls when to stop coarsening
-     integer :: partition_ptr, part_ptr, work_ptr, a_ne, ref_control, &
+     integer :: stop_coarsening1 ! optionss when to stop coarsening
+     integer :: partition_ptr, part_ptr, work_ptr, a_ne, ref_options, &
        clwork
      integer :: i, j, k, l, a_weight_1, a_weight_2, a_weight_sep, &
        ref_method, lwk
@@ -3963,13 +3963,13 @@ inNER:    do inn = 1, n
      info = 0
      one1 = 1.0
 
-     stop_coarsening1 = max(2,control%stop_coarsening1)
+     stop_coarsening1 = max(2,options%stop_coarsening1)
      if (print_level.ge.2) call level_print(mp,'size of grid on level ', &
        grid%level,' is ',real(grid%size,wp))
 
-     grid_rdc_fac_min = max(0.01_wp,control%min_reduction)
+     grid_rdc_fac_min = max(0.01_wp,options%min_reduction)
      ! max grid reduction factor must be at least half and at most one
-     grid_rdc_fac_max = max(half,control%max_reduction)
+     grid_rdc_fac_max = max(half,options%max_reduction)
      grid_rdc_fac_max = min(one,grid_rdc_fac_max)
 
      ! Test to see if this is either the last level or
@@ -3981,16 +3981,16 @@ inNER:    do inn = 1, n
        a_ne = grid%graph%ptr(grid%graph%n+1) - 1
        call nd_coarse_partition(grid%graph%n,a_ne,grid%graph%ptr, &
          grid%graph%col,grid%row_wgt,sumweight,grid%part_div(1), &
-         grid%part_div(2),grid%where,lwork,work,control,info)
+         grid%part_div(2),grid%where,lwork,work,options,info)
        return
      end if
 
      ! Coarsest level not yet reached so carry on coarsening
-     if (control%matching==1) then
+     if (options%matching==1) then
        lwk = grid%size
        call coarsen_hec(grid,lwk,work(1:lwk),info)
      else
-       if (control%matching>1) then
+       if (options%matching>1) then
          lwk = 3*grid%size
          call coarsen_best(grid,lwk,work(1:lwk),info)
        else
@@ -4032,7 +4032,7 @@ inNER:    do inn = 1, n
        ! set current grid level and recurse
        mglevel_cur = grid%level
 
-       call multilevel(grid,control,sumweight,mglevel_cur,mp,print_level, &
+       call multilevel(grid,options,sumweight,mglevel_cur,mp,print_level, &
          lwork,work,info)
        if (info<0) return
 
@@ -4063,7 +4063,7 @@ inNER:    do inn = 1, n
 
        ! set current grid level and recurse
        mglevel_cur = grid%level - 1
-       call multilevel(grid,control,sumweight,mglevel_cur,mp,print_level, &
+       call multilevel(grid,options,sumweight,mglevel_cur,mp,print_level, &
          lwork,work,info)
        if (info<0) return
 
@@ -4075,7 +4075,7 @@ inNER:    do inn = 1, n
      crow_wgt => cgrid%row_wgt(1:cgrid%size)
      call nd_matrix_multiply_vec(r,row_wgt,crow_wgt)
      clwork = 9*cgrid%graph%n + sumweight
-     call multilevel(cgrid,control,sumweight,mglevel_cur,mp,print_level, &
+     call multilevel(cgrid,options,sumweight,mglevel_cur,mp,print_level, &
        clwork,work(1:clwork),info)
 
 
@@ -4090,7 +4090,7 @@ inNER:    do inn = 1, n
 
        ! set current grid level and recurse
        mglevel_cur = grid%level - 1
-       call multilevel(grid,control,sumweight,mglevel_cur,mp,print_level, &
+       call multilevel(grid,options,sumweight,mglevel_cur,mp,print_level, &
          lwork,work,info)
        if (info<0) return
 
@@ -4150,17 +4150,17 @@ inNER:    do inn = 1, n
      if (a_weight_sep>0) then
        ! Do not refine if separable graph
 
-       if (control%refinement>6) then
-         ref_control = 3
+       if (options%refinement>6) then
+         ref_options = 3
        else
-         if (control%refinement<1) then
-           ref_control = 1
+         if (options%refinement<1) then
+           ref_options = 1
          else
-           ref_control = control%refinement
+           ref_options = options%refinement
          end if
        end if
 
-       select case (ref_control)
+       select case (ref_options)
        case (1)
          ref_method = 1
 
@@ -4170,7 +4170,7 @@ inNER:    do inn = 1, n
        case (3)
          if (real(max(a_weight_1,a_weight_2))/real(min(a_weight_1, &
              a_weight_2)+a_weight_sep)>max(real(1.0, &
-             wp),control%balance)) then
+             wp),options%balance)) then
            ref_method = 2
          else
            ref_method = 1
@@ -4185,7 +4185,7 @@ inNER:    do inn = 1, n
        case (6)
          if (real(max(a_weight_1,a_weight_2))/real(min(a_weight_1, &
              a_weight_2)+a_weight_sep)>max(real(1.0, &
-             wp),control%balance)) then
+             wp),options%balance)) then
            ref_method = 2
          else
            ref_method = 0
@@ -4197,7 +4197,7 @@ inNER:    do inn = 1, n
          call nd_refine_max_flow(grid%graph%n,a_ne,grid%graph%ptr, &
            grid%graph%col,grid%row_wgt,grid%part_div(1),grid%part_div(2), &
            a_weight_1,a_weight_2,a_weight_sep,work(partition_ptr+1: &
-           partition_ptr+grid%graph%n),work(work_ptr+1:work_ptr+8),control)
+           partition_ptr+grid%graph%n),work(work_ptr+1:work_ptr+8),options)
        case (1)
          if (min(a_weight_1,a_weight_2)+a_weight_sep< &
              max(a_weight_1,a_weight_2)) then
@@ -4205,13 +4205,13 @@ inNER:    do inn = 1, n
              grid%graph%ptr,grid%graph%col,grid%row_wgt,sumweight, &
              grid%part_div(1),grid%part_div(2),a_weight_1,a_weight_2, &
              a_weight_sep,work(partition_ptr+1:partition_ptr+grid%graph%n), &
-             work(work_ptr+1:work_ptr+5*grid%graph%n),control)
+             work(work_ptr+1:work_ptr+5*grid%graph%n),options)
          else
            call nd_refine_trim(grid%graph%n,a_ne,grid%graph%ptr, &
              grid%graph%col,grid%row_wgt,sumweight,grid%part_div(1), &
              grid%part_div(2),a_weight_1,a_weight_2,a_weight_sep, &
              work(partition_ptr+1:partition_ptr+grid%graph%n), &
-             work(work_ptr+1:work_ptr+3*grid%graph%n),control)
+             work(work_ptr+1:work_ptr+3*grid%graph%n),options)
 
          end if
        case (2)
@@ -4219,18 +4219,18 @@ inNER:    do inn = 1, n
            grid%graph%col,grid%row_wgt,sumweight,grid%part_div(1), &
            grid%part_div(2),a_weight_1,a_weight_2,a_weight_sep, &
            work(partition_ptr+1:partition_ptr+grid%graph%n), &
-           work(work_ptr+1:work_ptr+3*grid%graph%n),control)
+           work(work_ptr+1:work_ptr+3*grid%graph%n),options)
        end select
 
-       if (control%max_improve_cycles>0) then
-         ratio = max(real(1.0,wp),control%balance)
+       if (options%max_improve_cycles>0) then
+         ratio = max(real(1.0,wp),options%balance)
          if (ratio>real(sumweight-2)) then
            imbal = .false.
          else
            imbal = .true.
          end if
          call cost_function(a_weight_1,a_weight_2,a_weight_sep,sumweight, &
-           ratio,imbal,control%cost_function,tau_best)
+           ratio,imbal,options%cost_function,tau_best)
          a_n1_new = grid%part_div(1)
          a_n2_new = grid%part_div(2)
          a_weight_1_new = a_weight_1
@@ -4242,7 +4242,7 @@ inNER:    do inn = 1, n
        work(part_ptr+1:part_ptr+grid%graph%n) = work(partition_ptr+1: &
          partition_ptr+grid%graph%n)
 
-       k = control%max_improve_cycles
+       k = options%max_improve_cycles
        do i = 1, k
 
          call expand_partition(grid%graph%n,a_ne,grid%graph%ptr, &
@@ -4255,12 +4255,12 @@ inNER:    do inn = 1, n
          ! check_partition1(a_n,a_ne,a_ptr,a_row,a_n1_new,a_n2_new,work(par
          ! t_ptr+1:part_ptr+a_n))
 
-         select case (ref_control)
+         select case (ref_options)
 
          case (3)
            if (real(max(a_weight_1_new,a_weight_2_new))/real(min( &
                a_weight_1_new,a_weight_2_new)+a_weight_sep_new)>max(real( &
-               1.0,wp),control%balance)) then
+               1.0,wp),options%balance)) then
              ref_method = 2
            else
              ref_method = 1
@@ -4269,7 +4269,7 @@ inNER:    do inn = 1, n
          case (6)
            if (real(max(a_weight_1_new,a_weight_2_new))/real(min( &
                a_weight_1_new,a_weight_2_new)+a_weight_sep_new)>max(real( &
-               1.0,wp),control%balance)) then
+               1.0,wp),options%balance)) then
              ref_method = 2
            else
              ref_method = 0
@@ -4283,7 +4283,7 @@ inNER:    do inn = 1, n
            call nd_refine_max_flow(grid%graph%n,a_ne,grid%graph%ptr, &
              grid%graph%col,grid%row_wgt,a_n1_new,a_n2_new,a_weight_1_new, &
              a_weight_2_new,a_weight_sep_new,work(part_ptr+1:part_ptr+grid% &
-             graph%n),work(work_ptr+1:work_ptr+8),control)
+             graph%n),work(work_ptr+1:work_ptr+8),options)
 
          case (1)
            if (min(a_weight_1,a_weight_2)+a_weight_sep< &
@@ -4292,13 +4292,13 @@ inNER:    do inn = 1, n
                grid%graph%ptr,grid%graph%col,grid%row_wgt,sumweight, &
                a_n1_new,a_n2_new,a_weight_1_new,a_weight_2_new, &
                a_weight_sep_new,work(part_ptr+1:part_ptr+grid%graph%n), &
-               work(work_ptr+1:work_ptr+5*grid%graph%n),control)
+               work(work_ptr+1:work_ptr+5*grid%graph%n),options)
            else
              call nd_refine_trim(grid%graph%n,a_ne,grid%graph%ptr, &
                grid%graph%col,grid%row_wgt,sumweight,a_n1_new,a_n2_new, &
                a_weight_1_new,a_weight_2_new,a_weight_sep_new, &
                work(part_ptr+1:part_ptr+grid%graph%n), &
-               work(work_ptr+1:work_ptr+3*grid%graph%n),control)
+               work(work_ptr+1:work_ptr+3*grid%graph%n),options)
            end if
 
 
@@ -4307,13 +4307,13 @@ inNER:    do inn = 1, n
              grid%graph%col,grid%row_wgt,sumweight,a_n1_new,a_n2_new, &
              a_weight_1_new,a_weight_2_new,a_weight_sep_new, &
              work(part_ptr+1:part_ptr+grid%graph%n), &
-             work(work_ptr+1:work_ptr+3*grid%graph%n),control)
+             work(work_ptr+1:work_ptr+3*grid%graph%n),options)
 
          end select
 
 
          call cost_function(a_weight_1_new,a_weight_2_new,a_weight_sep_new, &
-           sumweight,ratio,imbal,control%cost_function,tau)
+           sumweight,ratio,imbal,options%cost_function,tau)
          if (tau<tau_best) then
            tau_best = tau
            work(partition_ptr+1:partition_ptr+grid%graph%n) &
@@ -4336,7 +4336,7 @@ inNER:    do inn = 1, n
          grid%graph%col,grid%row_wgt,sumweight,grid%part_div(1), &
          grid%part_div(2),a_weight_1,a_weight_2,a_weight_sep, &
          work(partition_ptr+1:partition_ptr+grid%graph%n), &
-         work(work_ptr+1:work_ptr+8*grid%graph%n+sumweight),control)
+         work(work_ptr+1:work_ptr+8*grid%graph%n+sumweight),options)
        ! end if
 
      end if
@@ -4373,7 +4373,7 @@ inNER:    do inn = 1, n
    ! small enough, apply halo amd
 
    subroutine nd_coarse_partition(a_n,a_ne,a_ptr,a_row,a_weight, &
-       sumweight,a_n1,a_n2,where1,lwork,work,control,info)
+       sumweight,a_n1,a_n2,where1,lwork,work,options,info)
 
      integer, intent(in) :: a_n ! dimension of subproblem ND is applied to
      integer, intent(in) :: a_ne ! no. nonzeros of subproblem
@@ -4394,7 +4394,7 @@ inNER:    do inn = 1, n
      integer, intent(out) :: where1(a_n) ! Computed partition
      integer, intent(in) :: lwork ! .ge. 9*a_n+sumweight
      integer, intent(out) :: work(lwork)
-     type (nd_options), intent(in) :: control
+     type (nd_options), intent(in) :: options
      integer, intent(inout) :: info
      ! real(wp), optional, intent(out) :: real_work(a_n)
 
@@ -4407,16 +4407,16 @@ inNER:    do inn = 1, n
      integer :: partition_method
      integer :: st
      integer :: a_weight_1, a_weight_2, a_weight_sep, ref_method, &
-       ref_control
+       ref_options
      integer, allocatable :: work1(:)
      real(wp) :: dummy, dummy1
      type (nd_multigrid) :: gridtemp
 
      ! ---------------------------------------------
      ! Printing levels
-     unit_diagnostics = control%unit_diagnostics
-     printi = (control%print_level==1 .and. unit_diagnostics>=0)
-     printd = (control%print_level>=2 .and. unit_diagnostics>=0)
+     unit_diagnostics = options%unit_diagnostics
+     printi = (options%print_level==1 .and. unit_diagnostics>=0)
+     printd = (options%print_level>=2 .and. unit_diagnostics>=0)
 
      if (printi .or. printd) then
        write (unit_diagnostics,'(a)') ' '
@@ -4426,7 +4426,7 @@ inNER:    do inn = 1, n
      end if
 
      ! Find the partition
-     if (control%coarse_partition_method<=1) then
+     if (options%coarse_partition_method<=1) then
        partition_method = 1
      else
        partition_method = 2
@@ -4449,7 +4449,7 @@ inNER:    do inn = 1, n
        call nd_ashcraft(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,2,a_n1, &
          a_n2,a_weight_1,a_weight_2,a_weight_sep, &
          work1(partition_ptr+1:partition_ptr+a_n),work(1:9*a_n+sumweight), &
-         control,info,dummy,dummy1,use_multilevel,gridtemp)
+         options,info,dummy,dummy1,use_multilevel,gridtemp)
 
        if (printi .or. printd) then
          write (unit_diagnostics,'(a)') ' '
@@ -4467,7 +4467,7 @@ inNER:    do inn = 1, n
        call nd_level_set(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,2,a_n1, &
          a_n2,a_weight_1,a_weight_2,a_weight_sep, &
          work1(partition_ptr+1:partition_ptr+a_n),work(1:9*a_n+sumweight), &
-         control,info,dummy,dummy1,use_multilevel,gridtemp)
+         options,info,dummy,dummy1,use_multilevel,gridtemp)
 
 
        if (printi .or. printd) then
@@ -4487,17 +4487,17 @@ inNER:    do inn = 1, n
      if (a_n1/=0 .and. a_n2/=0 .and. a_n>=3) then
        if (a_n1+a_n2<a_n) then
          ! Refine the partition
-         if (control%refinement>6) then
-           ref_control = 3
+         if (options%refinement>6) then
+           ref_options = 3
          else
-           if (control%refinement<1) then
-             ref_control = 1
+           if (options%refinement<1) then
+             ref_options = 1
            else
-             ref_control = control%refinement
+             ref_options = options%refinement
            end if
          end if
 
-         select case (ref_control)
+         select case (ref_options)
          case (1)
            ref_method = 1
 
@@ -4507,7 +4507,7 @@ inNER:    do inn = 1, n
          case (3)
            if (real(max(a_weight_1,a_weight_2))/real(min(a_weight_1, &
                a_weight_2)+a_weight_sep)>max(real(1.0, &
-               wp),control%balance)) then
+               wp),options%balance)) then
              ref_method = 2
            else
              ref_method = 1
@@ -4522,7 +4522,7 @@ inNER:    do inn = 1, n
          case (6)
            if (real(max(a_weight_1,a_weight_2))/real(min(a_weight_1, &
                a_weight_2)+a_weight_sep)>max(real(1.0, &
-               wp),control%balance)) then
+               wp),options%balance)) then
              ref_method = 2
            else
              ref_method = 0
@@ -4534,7 +4534,7 @@ inNER:    do inn = 1, n
          case (0)
            call nd_refine_max_flow(a_n,a_ne,a_ptr,a_row,a_weight,a_n1, &
              a_n2,a_weight_1,a_weight_2,a_weight_sep, &
-             work1(partition_ptr+1:partition_ptr+a_n),work(1:8),control)
+             work1(partition_ptr+1:partition_ptr+a_n),work(1:8),options)
 
          case (1)
            if (min(a_weight_1,a_weight_2)+a_weight_sep< &
@@ -4542,19 +4542,19 @@ inNER:    do inn = 1, n
              call nd_refine_block_trim(a_n,a_ne,a_ptr,a_row, &
                a_weight,sumweight,a_n1,a_n2,a_weight_1,a_weight_2, &
                a_weight_sep,work1(partition_ptr+1:partition_ptr+a_n), &
-               work(1:5*a_n),control)
+               work(1:5*a_n),options)
            else
              call nd_refine_trim(a_n,a_ne,a_ptr,a_row,a_weight, &
                sumweight,a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep, &
                work1(partition_ptr+1:partition_ptr+a_n),work(1:3*a_n), &
-               control)
+               options)
            end if
 
          case (2)
            call nd_refine_edge(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
              a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep, &
              work1(partition_ptr+1:partition_ptr+a_n),work(1:3*a_n), &
-             control)
+             options)
 
 
          end select
@@ -4572,7 +4572,7 @@ inNER:    do inn = 1, n
          call nd_refine_fm(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,a_n1, &
            a_n2,a_weight_1,a_weight_2,a_weight_sep, &
            work1(partition_ptr+1:partition_ptr+a_n), &
-           work(1:8*a_n+sumweight),control)
+           work(1:8*a_n+sumweight),options)
 
        end if
      else
@@ -5859,7 +5859,7 @@ inNER:    do inn = 1, n
    ! ---------------------------------------------------
    ! Given a partition, trim the partition to make it minimal
    subroutine nd_refine_trim(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
-       a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep,partition,work,control)
+       a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep,partition,work,options)
      integer, intent(in) :: a_n ! order of matrix
      integer, intent(in) :: a_ne ! number of entries in matrix
      integer, intent(in) :: a_ptr(a_n) ! On input a_ptr(i) contains
@@ -5881,7 +5881,7 @@ inNER:    do inn = 1, n
      ! separator are listed at the end. This is updated to the new
      ! partition
      integer, intent(out) :: work(3*a_n) ! Work array
-     type (nd_options), intent(in) :: control
+     type (nd_options), intent(in) :: options
 
      ! ---------------------------------------------
      ! Local variables
@@ -5896,7 +5896,7 @@ inNER:    do inn = 1, n
      real(wp) :: t1, t2
      real(wp) :: ratio
 
-     ratio = max(real(1.0,wp),control%balance)
+     ratio = max(real(1.0,wp),options%balance)
      if (ratio>real(sumweight-2)) then
        imbal = .false.
      else
@@ -5980,9 +5980,9 @@ inNER:    do inn = 1, n
          w1 = a_weight(head1)
          w2 = a_weight(head2)
          call cost_function(a_weight_1+w1,a_weight_2,a_weight_sep-w1, &
-           sumweight,ratio,imbal,control%cost_function,t1)
+           sumweight,ratio,imbal,options%cost_function,t1)
          call cost_function(a_weight_1,a_weight_2+w2,a_weight_sep-w2, &
-           sumweight,ratio,imbal,control%cost_function,t2)
+           sumweight,ratio,imbal,options%cost_function,t2)
 
          if (t1<t2) then
            go to 10
@@ -6218,7 +6218,7 @@ inNER:    do inn = 1, n
    ! Given a partition, trim the partition using blocks to make it minimal
    subroutine nd_refine_block_trim(a_n,a_ne,a_ptr,a_row,a_weight, &
        sumweight,a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep,partition, &
-       work,control)
+       work,options)
      integer, intent(in) :: a_n ! order of matrix
      integer, intent(in) :: a_ne ! number of entries in matrix
      integer, intent(in) :: a_ptr(a_n) ! On input a_ptr(i) contains
@@ -6240,7 +6240,7 @@ inNER:    do inn = 1, n
      ! separator are listed at the end. This is updated to the new
      ! partition
      integer, intent(out) :: work(5*a_n) ! Work array
-     type (nd_options), intent(in) :: control
+     type (nd_options), intent(in) :: options
 
      ! ---------------------------------------------
      ! Local variables
@@ -6253,7 +6253,7 @@ inNER:    do inn = 1, n
      real(wp) :: t1, t2
      real(wp) :: ratio
 
-     ratio = max(real(1.0,wp),control%balance)
+     ratio = max(real(1.0,wp),options%balance)
      if (ratio>real(sumweight-2)) then
        imbal = .false.
      else
@@ -6410,7 +6410,7 @@ inNER:    do inn = 1, n
            cycle
          else
            call cost_function(a_weight_1+w1,a_weight_2,a_weight_sep-w1, &
-             sumweight,ratio,imbal,control%cost_function,t1)
+             sumweight,ratio,imbal,options%cost_function,t1)
          end if
        end if
 
@@ -6432,7 +6432,7 @@ inNER:    do inn = 1, n
            cycle
          else
            call cost_function(a_weight_1,a_weight_2+w2,a_weight_sep-w2, &
-             sumweight,ratio,imbal,control%cost_function,t2)
+             sumweight,ratio,imbal,options%cost_function,t2)
          end if
        end if
 
@@ -6492,7 +6492,7 @@ inNER:    do inn = 1, n
    ! ---------------------------------------------------
    ! Given a partition, trim the partition using blocks to make it minimal
    subroutine nd_refine_max_flow(a_n,a_ne,a_ptr,a_row,a_weight,a_n1, &
-       a_n2,a_weight_1,a_weight_2,a_weight_sep,partition,work,control)
+       a_n2,a_weight_1,a_weight_2,a_weight_sep,partition,work,options)
      integer, intent(in) :: a_n ! order of matrix
      integer, intent(in) :: a_ne ! number of entries in matrix
      integer, intent(in) :: a_ptr(a_n) ! On input a_ptr(i) contains
@@ -6513,7 +6513,7 @@ inNER:    do inn = 1, n
      ! separator are listed at the end. This is updated to the new
      ! partition
      integer, intent(out) :: work(8) ! Work array
-     type (nd_options), intent(in) :: control
+     type (nd_options), intent(in) :: options
 
      ! ---------------------------------------------
      ! Local variables
@@ -6521,15 +6521,15 @@ inNER:    do inn = 1, n
      real(wp) :: cost, ratio
 
      msglvl = 0
-     if (control%print_level==1 .and. control%unit_diagnostics>=0) &
+     if (options%print_level==1 .and. options%unit_diagnostics>=0) &
        msglvl = 1
-     if (control%print_level>=2 .and. control%unit_diagnostics>=0) &
+     if (options%print_level>=2 .and. options%unit_diagnostics>=0) &
        msglvl = 3
 
 
      if (a_n-a_n1-a_n2>1) then
-       ratio = max(real(1.0,wp),control%balance)
-       call nd_maxflow(a_n,a_ne,a_ptr,a_row,a_weight,control%cost_function,&
+       ratio = max(real(1.0,wp),options%balance)
+       call nd_maxflow(a_n,a_ne,a_ptr,a_row,a_weight,options%cost_function,&
          a_n1,a_n2, &
          a_weight_1,a_weight_2,a_weight_sep,partition,ratio,msglvl, &
          work(1:8),cost)

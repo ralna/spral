@@ -111,12 +111,12 @@ module spral_nd_types
          ! of the largest level set at the top level of nested dissection. If
          ! the matrix is reducible, then it holds the value for the largest
          ! of the irreducible components.
-         ! Not returned if control%partition_method==1.
+         ! Not returned if options%partition_method==1.
       real(wp) :: depth = -1 ! holds number of levels in level set structure
          ! at the top level of nested dissection. If the matrix is reducible,
          ! then it holds the value for the largest of the irreducible
          ! components.
-         ! Not returned if control%partition_method==1.
+         ! Not returned if options%partition_method==1.
    end type nd_inform
 
    ! *****************************************************************
