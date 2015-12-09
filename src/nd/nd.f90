@@ -301,6 +301,7 @@ subroutine nd_order(mtx,n,ptr,row,perm,options,info,seps)
                .false., use_multilevel, grid)
          end if
       end if
+      if(info%flag.lt.0) return
 
       if (grid%level.eq.1) call mg_grid_destroy(grid,info%flag)
 
@@ -382,7 +383,7 @@ subroutine nd_order(mtx,n,ptr,row,perm,options,info,seps)
 end subroutine nd_order
 
 !
-! Main (recusrive) routine for performing nested dissection
+! Main (recursive) routine for performing nested dissection
 !
 recursive subroutine nd_nested_internal(a_n, a_ne, a_ptr, a_row, &
       a_weight, sumweight, iperm, work, work_comp_n, work_comp_nz, level, &
@@ -408,11 +409,11 @@ recursive subroutine nd_nested_internal(a_n, a_ne, a_ptr, a_row, &
    type (nd_inform), intent(inout) :: info
    logical, intent(in) :: use_amd
    logical, intent(inout) :: use_multilevel
+   type (nd_multigrid), intent(inout) :: grid
    integer, intent(inout), optional :: seps(a_n)
       ! seps(i) is -1 if vertex i of permuted submatrix is not in a
       ! separator; otherwise it is equal to l, where l is the nested
       ! dissection level at which it became part of the separator
-   type (nd_multigrid), intent(inout) :: grid
 
    integer :: i, j, k, l, m, s
    integer :: unit_diagnostics ! unit on which to print diagnostics
@@ -432,17 +433,16 @@ recursive subroutine nd_nested_internal(a_n, a_ne, a_ptr, a_row, &
    printd = (options%print_level.ge.2 .and. unit_diagnostics.ge.0)
    use_amdi = .false.
 
-   if (printi .or. printd) then
-      write (unit_diagnostics,'(a)') ' '
-      write (unit_diagnostics,'(a,i6)') 'Nested dissection level ', level
+   if (options%print_level.ge.1 .and. options%unit_diagnostics.gt.0) then
+      write (options%unit_diagnostics,'(a)') ' '
+      write (options%unit_diagnostics,'(a,i6)') &
+         'Nested dissection level ', level
    end if
 
    ! Check whether matrix is diagonal and act accordingly
-   if (a_ne.eq.0) then
-      if (printi .or. printd) then
-         write (unit_diagnostics,'(a)') ' '
-         write (unit_diagnostics,'(a)') 'Submatrix is diagonal'
-      end if
+   if (a_ne.eq.0) then ! Recall we don't store diagonal entries
+      call nd_print_diagnostic(1, options, ' ')
+      call nd_print_diagnostic(1, options, 'Submatrix is diagonal')
       return
    end if
 
@@ -454,39 +454,42 @@ recursive subroutine nd_nested_internal(a_n, a_ne, a_ptr, a_row, &
       end do
    end if
 
-
-   ! Check whether max number of levels has been reached or if matrix
-   ! size is below
-   ! nd_switch
-   if (level.ge.options%amd_switch2 .or. a_n.le.max(2,options%amd_switch1) &
-         .or. use_amd) &
+   ! Check whether to stop recursion
+   ! (i.e. if either max levels reached or matrix is smaller than nd_switch)
+   if (level.ge.options%amd_switch2 .or. &
+         a_n.le.max(2,options%amd_switch1) .or. &
+         use_amd) &
       go to 10
+
+   ! Find a partition into (B, W, S)
    lwork = 12*a_n + sumweight + a_ne
    call nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level, &
       a_n1, a_n2, a_ne1, a_ne2, iperm, work(1:lwork), options, info,      &
       use_multilevel, grid)
 
-   if (a_n1.eq.a_n) go to 10
+   if (a_n1.eq.a_n) go to 10 ! Failed to find a partition
 
 
-   if (a_n1.ne.0 .and. a_n2.ne.0 .and. a_n1+a_n2.eq.a_n) then
+   if (a_n1.ne.0 .and. a_n2.ne.0 .and. a_n1+a_n2.eq.a_n) then ! i.e. |S| = 0
       ! matrix is reducible
-      if (printi .or. printd) then
-         write (unit_diagnostics,'(a)') ' '
-         write (unit_diagnostics,'(a)') 'Matrix is reducible'
-      end if
+      call nd_print_diagnostic(1, options, ' ')
+      call nd_print_diagnostic(1, options, 'Matrix is reducible')
       compwork = 0
-      ! work array needs to be total length 5*a_n+a_ne
+      ! Whilst B and W are independent, there may be more than two independent
+      ! components, we want to find them all.
+      ! NB: work array needs to be total length 5*a_n+a_ne
       call nd_find_indep_comps(a_n, a_ne, a_ptr, a_row, a_weight, iperm, &
          num_components, work_comp_n(1:a_n), work_comp_nz(1:a_n), &
          work(compwork+1:compwork+3*a_n+a_ne), options, info)
       if (num_components.eq.1) then
-         k = options%amd_switch2 ! Should never be reached - indep. comps.
-            ! only found if it has been detected that they exist
-      else
-         k = level
-         if (k.eq.0) info%num_components = num_components
+         ! This should never happen.
+         info%flag = ND_ERR_INTERNAL
+         call nd_print_diagnostic(0, options, 'Only found one component?!?!?')
+         call nd_print_error(info%flag, options, 'nd_nested_internal')
+         return
       end if
+      k = level
+      if (level.eq.0) info%num_components = num_components
 
       ! Apply the ND to each component - do not test for indep comps
       offset_ptr = a_n + 1
@@ -526,6 +529,7 @@ recursive subroutine nd_nested_internal(a_n, a_ne, a_ptr, a_row, &
                   use_multilevel, grid)
 
             end if
+            if(info%flag.lt.0) return
          end if
          offset_ptr = offset_ptr - l
          offset_row = offset_row - m
@@ -533,12 +537,13 @@ recursive subroutine nd_nested_internal(a_n, a_ne, a_ptr, a_row, &
          i = i - 1
       end do
       return
-   else
-      if (level.eq.0 .and. a_n.gt.info%n_max_component) then
-         info%n_max_component = a_n
-         info%nz_max_component = a_ne
-         info%maxdeg_max_component = maxdeg_max_component
-      end if
+   end if
+
+   ! Otherwise, S is non-empty
+   if (level.eq.0 .and. a_n.gt.info%n_max_component) then
+      info%n_max_component = a_n
+      info%nz_max_component = a_ne
+      info%maxdeg_max_component = maxdeg_max_component
    end if
 
    if (present(seps)) seps(a_n1+a_n2+1:a_n) = level
@@ -557,6 +562,7 @@ recursive subroutine nd_nested_internal(a_n, a_ne, a_ptr, a_row, &
             work_comp_nz(1:a_n1), level+1, options, info, use_amdi,          &
             use_multilevel, grid)
       end if
+      if(info%flag.lt.0) return
    end if
 
    if (a_n2.gt.max(2,options%amd_switch1)) then
@@ -594,6 +600,7 @@ recursive subroutine nd_nested_internal(a_n, a_ne, a_ptr, a_row, &
                info, use_amdi, use_multilevel, grid)
          end if
       end if
+      if(info%flag.lt.0) return
    end if
    go to 20
    return
