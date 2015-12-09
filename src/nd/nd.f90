@@ -188,7 +188,7 @@ contains
          ! which it became part of the separator
 
       integer :: i, j, k, l, ll, lwork, lirn
-      integer :: a_n_curr, a_ne_curr, num_zero_row
+      integer :: a_n_orig, a_n_curr, a_ne_curr, num_zero_row
       integer, dimension(:), allocatable :: amd_order_row, amd_order_ptr, &
          amd_order_sep, amd_order_perm, amd_order_work, amd_order_iperm
       integer, dimension(:), allocatable :: work_iperm, work_seps
@@ -219,6 +219,9 @@ contains
          write (unit_diagnostics,'(a)') ' '
          write (unit_diagnostics,'(a)') 'nd_nested_both:'
       end if
+
+      ! Record original size for alter use
+      a_n_orig = a_n
 
       ! Allocate iperm and initialize to identity
       allocate (iperm(a_n),stat=info%stat)
@@ -430,7 +433,7 @@ contains
       end if
 
       ! Create perm from iperm
-      do i = 1, a_n
+      do i = 1, a_n_orig
          j = iperm(i)
          perm(j) = i
       end do
