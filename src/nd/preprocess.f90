@@ -153,254 +153,250 @@ end subroutine construct_full_from_full
 ! ---------------------------------------------------
 ! Identifies and removes dense rows
 subroutine remove_dense_rows(a_n_in, a_ne_in, a_ptr, a_row, iperm, work, &
-    options,info)
-  integer, intent(inout) :: a_n_in ! dimension of subproblem before dense
-  ! rows removed
-  integer, intent(inout) :: a_ne_in ! no. nonzeros of subproblem before
-  ! dense rows removed
-  integer, intent(inout) :: a_ptr(a_n_in) ! On input a_ptr(i) contains
-  ! position in a_row that entries for column i start. This is then
-  ! used to hold positions for submatrices after dense row removed
-  integer, intent(inout) :: a_row(a_ne_in) ! On input a_row contains
-  ! row
-  ! indices of the non-zero rows. Diagonal entries have been removed
-  ! and the matrix expanded.This is then used to hold row indices for
-  ! submatrices after partitioning
-  integer, intent(inout) :: iperm(a_n_in) ! On input, iperm(i) contains
-  ! the row in the original matrix (when nd_nested was called) that
-  ! row i in this sub problem maps to. On output, this is updated to
-  ! reflect the computed permutation.
-  integer, intent(out) :: work(4*a_n_in) ! Used during the algorithm to
-  ! reduce need for allocations. The output is garbage.
-  type (nd_options), intent(in) :: options
-  type (nd_inform), intent(inout) :: info
+      options,info)
+   integer, intent(inout) :: a_n_in ! dimension of subproblem before dense
+      ! rows removed
+   integer, intent(inout) :: a_ne_in ! no. nonzeros of subproblem before
+      ! dense rows removed
+   integer, intent(inout) :: a_ptr(a_n_in) ! On input a_ptr(i) contains
+      ! position in a_row that entries for column i start. This is then
+      ! used to hold positions for submatrices after dense row removed
+   integer, intent(inout) :: a_row(a_ne_in) ! On input a_row contains row
+      ! indices of the non-zero rows. Diagonal entries have been removed
+      ! and the matrix expanded.This is then used to hold row indices for
+      ! submatrices after partitioning
+   integer, intent(inout) :: iperm(a_n_in) ! On input, iperm(i) contains
+      ! the row in the original matrix (when nd_nested was called) that
+      ! row i in this sub problem maps to. On output, this is updated to
+      ! reflect the computed permutation.
+   integer, intent(out) :: work(4*a_n_in) ! Used during the algorithm to
+      ! reduce need for allocations. The output is garbage.
+   type (nd_options), intent(in) :: options
+   type (nd_inform), intent(inout) :: info
 
-  ! ---------------------------------------------
-  integer :: unit_diagnostics ! unit on which to print diagnostics
-  integer :: deg, prev, next, dense ! pointers into work array
-  integer :: ndense ! number of dense rows found
-  integer :: max_deg ! maximum degree
-  integer :: degree, i, j, k, l, l1, l2, m, m1
-  logical :: printi, printd
-  integer :: a_n_out ! dimension of subproblem after dense rows removed
-  integer :: a_ne_out ! no. nonzeros of subproblem after dense rows removed
+   ! ---------------------------------------------
+   integer :: unit_diagnostics ! unit on which to print diagnostics
+   integer :: deg, prev, next, dense ! pointers into work array
+   integer :: ndense ! number of dense rows found
+   integer :: max_deg ! maximum degree
+   integer :: degree, i, j, k, l, l1, l2, m, m1
+   logical :: printi, printd
+   integer :: a_n_out ! dimension of subproblem after dense rows removed
+   integer :: a_ne_out ! no. nonzeros of subproblem after dense rows removed
 
-  ! ---------------------------------------------
-  ! Printing levels
-  unit_diagnostics = options%unit_diagnostics
-  printi = (options%print_level==1 .and. unit_diagnostics>=0)
-  printd = (options%print_level>=2 .and. unit_diagnostics>=0)
-  ! ---------------------------------------------------
-  if (printi .or. printd) then
-    write (unit_diagnostics,'(a)') ' '
-    write (unit_diagnostics,'(a)') 'Find and remove dense rows'
-  end if
-
-  ! Set pointers into work array
-  deg = 0
-  prev = deg + a_n_in
-  next = prev + a_n_in
-  dense = next + a_n_in
-
-  ! By the end of this loop work(dense+i) will be
-  ! 0 if row is not dense
-  ! <0 otherwise. The larger the number, the earlier the row was
-  ! was determined to be dense.
-  ndense = 0
-  max_deg = 0
-  work(deg+1:deg+a_n_in) = 0
-
-  ! Calculate degree of each row before anything removed
-  do i = 1, a_n_in
-    k = a_ptr(i)
-    if (i<a_n_in) then
-      degree = a_ptr(i+1) - k
-    else
-      degree = a_ne_in - a_ptr(a_n_in) + 1
-    end if
-    work(dense+i) = degree
-    if (degree/=0) then
-      max_deg = max(max_deg,degree)
-      call dense_add_to_list(a_n_in,work(next+1:next+a_n_in),&
-          work(prev+1:prev+a_n_in),work(deg+1:deg+a_n_in),i,degree)
-    end if
-  end do
-  degree = max_deg
-  a_n_out = a_n_in
-  a_ne_out = a_ne_in
-
-  do while (real(degree)-real(a_ne_out)/real(a_n_out)>=40*(real(a_n_out- &
-      1)/real(a_n_out))*LOG(real(a_n_out)) .and. degree>0)
-    ! do while (real(degree) - real(a_ne_out)/real(a_n_out)>= &
-    ! 300*(real(a_n_out-1)/real(a_n_out)) &
-    ! .and. degree>0)
-    i = work(deg+degree)
-    ndense = ndense + 1
-    work(dense+i) = -ndense
-    call dense_remove_from_list(a_n_in,work(next+1:next+a_n_in),&
-          work(prev+1:prev+a_n_in),work(deg+1:deg+a_n_in),i,degree)
-    ! update degrees of adjacent vertices
-    if (i<a_n_in) then
-      l = a_ptr(i+1) - 1
-    else
-      l = a_ne_in
-    end if
-    do k = a_ptr(i), l
-      j = a_row(k)
-      if (work(dense+j)>0) then
-        call dense_remove_from_list(a_n_in,work(next+1:next+a_n_in),&
-          work(prev+1:prev+a_n_in),work(deg+1:deg+a_n_in),j,work(dense+j))
-        work(dense+j) = work(dense+j) - 1
-        if (work(dense+j)>0) then
-          call dense_add_to_list(a_n_in,work(next+1:next+a_n_in),&
-          work(prev+1:prev+a_n_in),work(deg+1:deg+a_n_in),j,work(dense+j))
-        end if
-      end if
-    end do
-    a_n_out = a_n_out - 1
-    a_ne_out = a_ne_out - 2*degree
-    if (work(deg+degree)==0) then
-      ! Find next largest degree
-      degree = degree - 1
-      do
-        if (degree==0) exit
-        if (work(deg+degree)>0) exit
-        degree = degree - 1
-      end do
-    end if
-  end do
-
-  ! By the end of this loop work(dense+i) will be
-  ! >=0 if row is not dense
-  ! <0 otherwise. The larger the number, the earlier the row was
-  ! was determined to be dense.
-  ! !!!!
-
-  if (ndense>0) then
-    if (printi .or. printd) then
+   ! ---------------------------------------------
+   ! Printing levels
+   unit_diagnostics = options%unit_diagnostics
+   printi = (options%print_level==1 .and. unit_diagnostics>=0)
+   printd = (options%print_level>=2 .and. unit_diagnostics>=0)
+   ! ---------------------------------------------------
+   if (printi .or. printd) then
       write (unit_diagnostics,'(a)') ' '
-      write (unit_diagnostics,'(i10,a)') ndense, ' dense rows detected'
-    end if
-    info%dense = ndense
+      write (unit_diagnostics,'(a)') 'Find and remove dense rows'
+   end if
 
-    a_n_out = 0
-    l = a_n_in + 1
-    do i = 1, a_n_in
-      k = work(dense+i)
-      if (k>=0) then
-        a_n_out = a_n_out + 1
-        work(dense+i) = a_n_out
-        work(next+a_n_out) = i
-      else
-        work(next+l+k) = i
-      end if
-    end do
+   ! Set pointers into work array
+   deg = 0
+   prev = deg + a_n_in
+   next = prev + a_n_in
+   dense = next + a_n_in
 
-    k = 1
-    j = 1
+   ! By the end of this loop work(dense+i) will be
+   ! 0 if row is not dense
+   ! <0 otherwise. The larger the number, the earlier the row was
+   ! was determined to be dense.
+   ndense = 0
+   max_deg = 0
+   work(deg+1:deg+a_n_in) = 0
 
-    do i = 1, a_n_in
-      l1 = a_ptr(i)
+   ! Calculate degree of each row before anything removed
+   do i = 1, a_n_in
+      k = a_ptr(i)
       if (i<a_n_in) then
-        l2 = a_ptr(i+1) - 1
+         degree = a_ptr(i+1) - k
       else
-        l2 = a_ne_in
+         degree = a_ne_in - a_ptr(a_n_in) + 1
       end if
-      if (work(dense+i)>=0) then
-        a_ptr(j) = k
-        do l = l1, l2
-          m = a_row(l)
-          m1 = work(dense+m)
-          if (m1>=0) then
-            a_row(k) = m1
-            k = k + 1
-          end if
-        end do
-        j = j + 1
+      work(dense+i) = degree
+      if (degree/=0) then
+         max_deg = max(max_deg,degree)
+         call dense_add_to_list(a_n_in,work(next+1:next+a_n_in),&
+            work(prev+1:prev+a_n_in),work(deg+1:deg+a_n_in),i,degree)
       end if
-    end do
-    a_ptr(j) = k
-    if (printd) then
-      ! Print out a_ptr and a_row
-      write (unit_diagnostics,'(a11)') 'a_n_out = '
-      write (unit_diagnostics,'(i15)') a_n_out
-      write (unit_diagnostics,'(a11)') 'a_ne_out = '
-      write (unit_diagnostics,'(i15)') a_ne_out
-      write (unit_diagnostics,'(a8)') 'a_ptr = '
-      write (unit_diagnostics,'(5i15)') (a_ptr(i),i=1,a_n_out)
-      write (unit_diagnostics,'(a8)') 'a_row = '
-      write (unit_diagnostics,'(5i15)') (a_row(i),i=1,a_ne_out)
-    else if (printi) then
-      ! Print out first few entries of a_ptr and a_row
-      write (unit_diagnostics,'(a11)') 'a_n_out = '
-      write (unit_diagnostics,'(i15)') a_n_out
-      write (unit_diagnostics,'(a11)') 'a_ne_out = '
-      write (unit_diagnostics,'(i15)') a_ne_out
-      write (unit_diagnostics,'(a21)') 'a_ptr(1:min(5,a_n_out)) = '
-      write (unit_diagnostics,'(5i15)') (a_ptr(i),i=1,min(5,a_n_out))
-      write (unit_diagnostics,'(a21)') 'a_row(1:min(5,a_ne_out)) = '
-      write (unit_diagnostics,'(5i15)') (a_row(i),i=1,min(5,a_ne_out))
-    end if
-  else
+   end do
+   degree = max_deg
+   a_n_out = a_n_in
+   a_ne_out = a_ne_in
 
-    a_n_out = a_n_in
-    a_ne_out = a_ne_in
-    work(next+1:next+a_n_in) = (/ (i,i=1,a_n_in) /)
-  end if
+   do while (real(degree)-real(a_ne_out)/real(a_n_out)>=40*(real(a_n_out- &
+         1)/real(a_n_out))*LOG(real(a_n_out)) .and. degree>0)
+      i = work(deg+degree)
+      ndense = ndense + 1
+      work(dense+i) = -ndense
+      call dense_remove_from_list(a_n_in,work(next+1:next+a_n_in),&
+         work(prev+1:prev+a_n_in),work(deg+1:deg+a_n_in),i,degree)
+      ! update degrees of adjacent vertices
+      if (i<a_n_in) then
+         l = a_ptr(i+1) - 1
+      else
+         l = a_ne_in
+      end if
+      do k = a_ptr(i), l
+         j = a_row(k)
+         if (work(dense+j)>0) then
+            call dense_remove_from_list(a_n_in,work(next+1:next+a_n_in),&
+               work(prev+1:prev+a_n_in),work(deg+1:deg+a_n_in),j,work(dense+j))
+            work(dense+j) = work(dense+j) - 1
+            if (work(dense+j)>0) then
+               call dense_add_to_list(a_n_in,work(next+1:next+a_n_in),&
+               work(prev+1:prev+a_n_in),work(deg+1:deg+a_n_in),j,work(dense+j))
+            end if
+         end if
+      end do
+      a_n_out = a_n_out - 1
+      a_ne_out = a_ne_out - 2*degree
+      if (work(deg+degree)==0) then
+         ! Find next largest degree
+         degree = degree - 1
+         do
+            if (degree==0) exit
+            if (work(deg+degree)>0) exit
+            degree = degree - 1
+         end do
+      end if
+   end do
 
-  do i = 1, a_n_in
-    j = work(next+i)
-    work(next+i) = iperm(j)
-  end do
+   ! By the end of this loop work(dense+i) will be
+   ! >=0 if row is not dense
+   ! <0 otherwise. The larger the number, the earlier the row was
+   ! was determined to be dense.
+   ! !!!!
 
-  do i = 1, a_n_in
-    iperm(i) = work(next+i)
-  end do
+   if (ndense>0) then
+      if (printi .or. printd) then
+         write (unit_diagnostics,'(a)') ' '
+         write (unit_diagnostics,'(i10,a)') ndense, ' dense rows detected'
+      end if
+      info%dense = ndense
 
-  info%flag = 0
-  if (printi .or. printd) then
-    call nd_print_message(info%flag,unit_diagnostics, &
-      'remove_dense_rows')
-  end if
+      a_n_out = 0
+      l = a_n_in + 1
+      do i = 1, a_n_in
+         k = work(dense+i)
+         if (k>=0) then
+            a_n_out = a_n_out + 1
+            work(dense+i) = a_n_out
+            work(next+a_n_out) = i
+         else
+            work(next+l+k) = i
+         end if
+      end do
 
-  if (printd) then
-    write (unit_diagnostics,'(a,i10)') ' No. dense rows removed: ', &
-      a_n_in - a_n_out
-  end if
-  a_n_in = a_n_out
-  a_ne_in = a_ne_out
+      k = 1
+      j = 1
+
+      do i = 1, a_n_in
+         l1 = a_ptr(i)
+         if (i<a_n_in) then
+            l2 = a_ptr(i+1) - 1
+         else
+            l2 = a_ne_in
+         end if
+         if (work(dense+i)>=0) then
+            a_ptr(j) = k
+            do l = l1, l2
+               m = a_row(l)
+               m1 = work(dense+m)
+               if (m1>=0) then
+                  a_row(k) = m1
+                  k = k + 1
+               end if
+            end do
+            j = j + 1
+         end if
+      end do
+      a_ptr(j) = k
+      if (printd) then
+         ! Print out a_ptr and a_row
+         write (unit_diagnostics,'(a11)') 'a_n_out = '
+         write (unit_diagnostics,'(i15)') a_n_out
+         write (unit_diagnostics,'(a11)') 'a_ne_out = '
+         write (unit_diagnostics,'(i15)') a_ne_out
+         write (unit_diagnostics,'(a8)') 'a_ptr = '
+         write (unit_diagnostics,'(5i15)') (a_ptr(i),i=1,a_n_out)
+         write (unit_diagnostics,'(a8)') 'a_row = '
+         write (unit_diagnostics,'(5i15)') (a_row(i),i=1,a_ne_out)
+      else if (printi) then
+         ! Print out first few entries of a_ptr and a_row
+         write (unit_diagnostics,'(a11)') 'a_n_out = '
+         write (unit_diagnostics,'(i15)') a_n_out
+         write (unit_diagnostics,'(a11)') 'a_ne_out = '
+         write (unit_diagnostics,'(i15)') a_ne_out
+         write (unit_diagnostics,'(a21)') 'a_ptr(1:min(5,a_n_out)) = '
+         write (unit_diagnostics,'(5i15)') (a_ptr(i),i=1,min(5,a_n_out))
+         write (unit_diagnostics,'(a21)') 'a_row(1:min(5,a_ne_out)) = '
+         write (unit_diagnostics,'(5i15)') (a_row(i),i=1,min(5,a_ne_out))
+      end if
+   else
+
+      a_n_out = a_n_in
+      a_ne_out = a_ne_in
+      work(next+1:next+a_n_in) = (/ (i,i=1,a_n_in) /)
+   end if
+
+   do i = 1, a_n_in
+      j = work(next+i)
+      work(next+i) = iperm(j)
+   end do
+
+   do i = 1, a_n_in
+      iperm(i) = work(next+i)
+   end do
+
+   info%flag = 0
+   if (printi .or. printd) then
+      call nd_print_message(info%flag,unit_diagnostics, &
+         'remove_dense_rows')
+   end if
+
+   if (printd) then
+      write (unit_diagnostics,'(a,i10)') ' No. dense rows removed: ', &
+         a_n_in - a_n_out
+   end if
+   a_n_in = a_n_out
+   a_ne_in = a_ne_out
 
 end subroutine remove_dense_rows
 
-  subroutine dense_remove_from_list(n,next,prev,deg,irm,ig)
-    integer, intent(in) :: n ! order matrix
-    integer, intent(inout) :: next(n),prev(n),deg(n)
-    integer, intent(in) :: irm, ig
-    integer :: inext, ilast
+subroutine dense_remove_from_list(n,next,prev,deg,irm,ig)
+   integer, intent(in) :: n ! order matrix
+   integer, intent(inout) :: next(n),prev(n),deg(n)
+   integer, intent(in) :: irm, ig
+   integer :: inext, ilast
 
-    inext = next(irm)
-    ilast = prev(irm)
-    if (ilast==0) then
+   inext = next(irm)
+   ilast = prev(irm)
+   if (ilast==0) then
       deg(ig) = inext
       if (inext/=0) prev(inext) = 0
-    else
+   else
       next(ilast) = inext
       if (inext/=0) prev(inext) = ilast
-    end if
-  end subroutine dense_remove_from_list
+   end if
+end subroutine dense_remove_from_list
 
-  subroutine dense_add_to_list(n,next,prev,deg,irm,ig)
-    integer, intent(in) :: n ! order matrix
-    integer, intent(inout) :: next(n),prev(n),deg(n)
-    integer, intent(in) :: irm, ig
-    integer :: inext
+subroutine dense_add_to_list(n,next,prev,deg,irm,ig)
+   integer, intent(in) :: n ! order matrix
+   integer, intent(inout) :: next(n),prev(n),deg(n)
+   integer, intent(in) :: irm, ig
+   integer :: inext
 
-    inext = deg(ig)
-    deg(ig) = irm
-    next(irm) = inext
-    if (inext/=0) prev(inext) = irm
-    prev(irm) = 0
-  end subroutine dense_add_to_list
+   inext = deg(ig)
+   deg(ig) = irm
+   next(irm) = inext
+   if (inext/=0) prev(inext) = irm
+   prev(irm) = 0
+end subroutine dense_add_to_list
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Routines for detecting and exploiting supervariables
