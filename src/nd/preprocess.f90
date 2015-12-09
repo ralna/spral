@@ -390,7 +390,7 @@ subroutine compress_by_svar(a_n, a_ne, a_ptr, a_row, a_weight, a_n_curr, &
    type(nd_options) :: options
    integer, intent(out) :: st
 
-   integer :: i, j, k
+   integer :: i, j
    integer :: nnz_rows ! number of non-zero rows
    integer, allocatable, dimension(:) :: ptr2, row2, perm
 
@@ -427,46 +427,9 @@ subroutine compress_by_svar(a_n, a_ne, a_ptr, a_row, a_weight, a_n_curr, &
 
    ! FIXME: what is happening below? can it be simplified?
    a_n_curr = nsvar
-
-   ! Fill a_ptr removing any diagonal entries
-   a_ptr(:) = 0
-
-   ! Set a_ptr(j) to hold no. nonzeros in column j
-   do j = 1, a_n_curr
-      do k = ptr2(j), ptr2(j+1) - 1
-         i = row2(k)
-         if (j.lt.i) then
-            a_ptr(i) = a_ptr(i) + 1
-            a_ptr(j) = a_ptr(j) + 1
-         end if
-      end do
-   end do
-
-   ! Set a_ptr(j) to point to where row indices will end in a_row
-   do j = 2, a_n_curr
-      a_ptr(j) = a_ptr(j-1) + a_ptr(j)
-   end do
-   a_ne_curr = a_ptr(a_n_curr)
-   ! Initialise all of a_row to 0
-   a_row(1:a_ne_curr) = 0
-
-   ! Fill a_row and a_ptr
-   do j = 1, a_n_curr
-      do k = ptr2(j), ptr2(j+1) - 1
-         i = row2(k)
-         if (j.lt.i) then
-            a_row(a_ptr(i)) = j
-            a_row(a_ptr(j)) = i
-            a_ptr(i) = a_ptr(i) - 1
-            a_ptr(j) = a_ptr(j) - 1
-         end if
-      end do
-   end do
-
-   ! Reset a_ptr to point to where column starts
-   do j = 1, a_n_curr
-      a_ptr(j) = a_ptr(j) + 1
-   end do
+   a_ne_curr = ptr2(nsvar+1)-1
+   a_ptr(1:a_n_curr) = ptr2(1:a_n_curr)
+   a_row(1:a_ne_curr) = row2(1:a_ne_curr)
 
    ! Initialise a_weight
    a_weight(1:a_n_curr) = svar(1:a_n_curr)
@@ -722,6 +685,7 @@ subroutine nd_compress_by_svar(n,ne,ptr,row,invp,nsvar,svar,ptr2, &
     ptr2(svc) = idx
     do j = ptr(col), nd_get_ptr(col+1, n, ne, ptr) - 1
       sv = sv_map(row(j))
+      if(sv.eq.svc) cycle ! Skip diagonals
       if (flag(sv).eq.piv) cycle ! Already dealt with this supervariable
       ! Add row entry for this sv
       row2(idx) = sv
