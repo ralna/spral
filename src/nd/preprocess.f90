@@ -451,250 +451,242 @@ subroutine compress_by_svar(a_n, a_ne, a_ptr, a_row, a_weight, a_n_curr, &
    end do
 end subroutine compress_by_svar
 
+!
+! Find supervariables if any exist. Modifes n to reflect number of non-zero
+! columns.
+!
+! This is a modified version of mc78_supervars().
+!
 subroutine nd_supervars(n,ne,ptr,row,perm,invp,nsvar,svar,st)
-  ! Detects supervariables - modified version of subroutine from hsl_mc78
-  integer, intent(inout) :: n ! Dimension of system
-  integer, intent(in) :: ne ! Number of entries
-  integer, dimension(n), intent(in) :: ptr ! Column pointers
-  integer, dimension(ne), intent(in) :: row ! Row indices
-  integer, dimension(n), intent(inout) :: perm
-  ! perm(i) must hold position of i in the pivot sequence.
-  ! On exit, holds the pivot order to be used by factorization.
-  integer, dimension(n), intent(inout) :: invp ! inverse of perm
-  integer, intent(out) :: nsvar ! number of supervariables
-  integer, dimension(n), intent(out) :: svar ! number of vars in each
-  ! svar
-  integer, intent(out) :: st
+   integer, intent(inout) :: n ! Dimension of system. On exit num non-zero cols
+   integer, intent(in) :: ne ! Number of entries
+   integer, dimension(n), intent(in) :: ptr ! Column pointers
+   integer, dimension(ne), intent(in) :: row ! Row indices
+   integer, dimension(n), intent(inout) :: perm
+      ! perm(i) must hold position of i in the pivot sequence.
+      ! On exit, holds the pivot order to be used by factorization.
+   integer, dimension(n), intent(inout) :: invp ! inverse of perm
+   integer, intent(out) :: nsvar ! number of supervariables
+   integer, dimension(n), intent(out) :: svar ! number of vars in each svar
+   integer, intent(out) :: st
 
-  logical :: full_rank ! flags if supervariable 1 has ever become
-  ! empty.
-  ! If it has not, then the varaibles in s.v. 1 are those that never
-  ! occur
-  integer :: i
-  integer(long) :: ii
-  integer :: j
-  integer :: idx ! current index
-  integer :: next_sv ! head of free sv linked list
-  integer :: nsv ! new supervariable to move j to
-  integer :: piv ! current pivot
-  integer :: col ! current column of A
-  integer :: sv ! current supervariable
-  integer :: svc ! temporary holding supervariable count
-  integer, dimension(:), allocatable :: sv_new ! Maps each
-  ! supervariable to
-  ! a new supervariable with which it is associated.
-  integer, dimension(:), allocatable :: sv_seen ! Flags whether
-  ! svariables have
-  ! been seen in the current column. sv_seen(j) is set to col when svar
-  ! j
-  ! has been encountered.
-  integer, dimension(:), allocatable :: sv_count ! number of variables
-  ! in sv.
+   logical :: full_rank ! flags if supervariable 1 has ever become empty.
+      ! If it has not, then the varaibles in s.v. 1 are those that never occur
+   integer :: i
+   integer(long) :: ii
+   integer :: j
+   integer :: idx ! current index
+   integer :: next_sv ! head of free sv linked list
+   integer :: nsv ! new supervariable to move j to
+   integer :: piv ! current pivot
+   integer :: col ! current column of A
+   integer :: sv ! current supervariable
+   integer :: svc ! temporary holding supervariable count
+   integer, dimension(:), allocatable :: sv_new ! Maps each supervariable to
+      ! a new supervariable with which it is associated.
+   integer, dimension(:), allocatable :: sv_seen ! Flags whether svariables have
+      ! been seen in the current column. sv_seen(j) is set to col when svar j
+      ! has been encountered.
+   integer, dimension(:), allocatable :: sv_count ! number of variables in sv.
 
-  allocate (sv_new(n+1),sv_seen(n+1),sv_count(n+1),stat=st)
-  if (st.ne.0) return
+   allocate(sv_new(n+1), sv_seen(n+1), sv_count(n+1), stat=st)
+   if (st.ne.0) return
 
-  svar(:) = 1
-  sv_count(1) = n
-  sv_seen(1) = 0
+   svar(:) = 1
+   sv_count(1) = n
+   sv_seen(1) = 0
 
-  ! Setup linked list of free super variables
-  next_sv = 2
-  do i = 2, n
-    sv_seen(i) = i + 1
-  end do
-  sv_seen(n+1) = -1
+   ! Setup linked list of free super variables
+   next_sv = 2
+   do i = 2, n
+      sv_seen(i) = i + 1
+   end do
+   sv_seen(n+1) = -1
 
-  ! Determine supervariables using modified Duff and Reid algorithm
-  full_rank = .false.
-  do col = 1, n
-    if (nd_get_ptr(col+1,n,ne,ptr).ne.ptr(col)) then
-      ! If column is not empty, add implicit diagonal entry
-      j = col
-      sv = svar(j)
-      if (sv_count(sv).eq.1) then ! Are we only (remaining) var in sv
-        full_rank = full_rank .or. (sv.eq.1)
-        ! MUST BE the first time that sv has been seen for this
-        ! column, so just leave j in sv, and go to next variable.
-        ! (Also there can be no other vars in this block pivot)
-      else
-        ! There is at least one other variable remaining in sv
-        ! MUST BE first occurence of sv in the current row/column,
-        ! so define a new supervariable and associate it with sv.
-        sv_seen(sv) = col
-        sv_new(sv) = next_sv
-        nsv = next_sv
-        next_sv = sv_seen(next_sv)
-        sv_new(nsv) = nsv ! avoids problems with duplicates
-        sv_seen(nsv) = col
-        ! Now move j from sv to nsv
-        nsv = sv_new(sv)
-        svar(j) = nsv
-        sv_count(sv) = sv_count(sv) - 1
-        sv_count(nsv) = 1
-        ! This sv cannot be empty as initial sv_count was > 1
+   ! Determine supervariables using modified Duff and Reid algorithm
+   full_rank = .false.
+   do col = 1, n
+      if (nd_get_ptr(col+1,n,ne,ptr).ne.ptr(col)) then
+         ! If column is not empty, add implicit diagonal entry
+         j = col
+         sv = svar(j)
+         if (sv_count(sv).eq.1) then ! Are we only (remaining) var in sv
+            full_rank = full_rank .or. (sv.eq.1)
+            ! MUST BE the first time that sv has been seen for this
+            ! column, so just leave j in sv, and go to next variable.
+            ! (Also there can be no other vars in this block pivot)
+         else
+            ! There is at least one other variable remaining in sv
+            ! MUST BE first occurence of sv in the current row/column,
+            ! so define a new supervariable and associate it with sv.
+            sv_seen(sv) = col
+            sv_new(sv) = next_sv
+            nsv = next_sv
+            next_sv = sv_seen(next_sv)
+            sv_new(nsv) = nsv ! avoids problems with duplicates
+            sv_seen(nsv) = col
+            ! Now move j from sv to nsv
+            nsv = sv_new(sv)
+            svar(j) = nsv
+            sv_count(sv) = sv_count(sv) - 1
+            sv_count(nsv) = 1
+            ! This sv cannot be empty as initial sv_count was > 1
+         end if
       end if
-    end if
-    do ii = ptr(col), nd_get_ptr(col+1, n, ne, ptr) - 1
-      j = row(ii)
-      sv = svar(j)
-      if (sv_count(sv).eq.1) then ! Are we only (remaining) var in sv
-        full_rank = full_rank .or. (sv.eq.1)
-        ! If so, and this is first time that sv has been seen for this
-        ! column, then we can just leave j in sv, and go to next
-        ! variable.
-        if (sv_seen(sv).lt.col) cycle
-        ! Otherwise, we have already defined a new supervariable
-        ! associated
-        ! with sv. Move j to this variable, then retire (now empty) sv.
-        nsv = sv_new(sv)
-        if (sv.eq.nsv) cycle
-        svar(j) = nsv
-        sv_count(nsv) = sv_count(nsv) + 1
-        ! Old sv is now empty, add it to top of free stack
-        sv_seen(sv) = next_sv
-        next_sv = sv
-      else
-        ! There is at least one other variable remaining in sv
-        if (sv_seen(sv).lt.col) then
-          ! this is the first occurence of sv in the current row/column,
-          ! so define a new supervariable and associate it with sv.
-          sv_seen(sv) = col
-          sv_new(sv) = next_sv
-          sv_new(next_sv) = next_sv ! avoids problems with duplicates
-          next_sv = sv_seen(next_sv)
-          sv_count(sv_new(sv)) = 0
-          sv_seen(sv_new(sv)) = col
-        end if
-        ! Now move j from sv to nsv
-        nsv = sv_new(sv)
-        svar(j) = nsv
-        sv_count(sv) = sv_count(sv) - 1
-        sv_count(nsv) = sv_count(nsv) + 1
-        ! This sv cannot be empty as sv_count was > 1
-      end if
-    end do
-  end do
-
-
-  ! Now modify pivot order such that all variables in each supervariable
-  ! are
-  ! consecutive. Do so by iterating over pivots in elimination order. If
-  ! a
-  ! pivot has not already been listed, then order that pivot followed by
-  ! any other pivots in that supervariable.
-
-  ! We will build a new inverse permutation in invp, and then find perm
-  ! afterwards. First copy invp to perm:
-  perm(:) = invp(:)
-  ! Next we iterate over the pivots that have not been ordered already
-  ! Note: as we begin, all entries of sv_seen are less than or equal to
-  ! n+1
-  ! hence we can use <=n+1 or >n+1 as a flag to indicate if a variable
-  ! has been
-  ! ordered.
-  idx = 1
-  nsvar = 0
-  do piv = 1, n
-    if (sv_seen(piv).gt.n+1) cycle ! already ordered
-    ! Record information for supervariable
-    sv = svar(perm(piv))
-    if ( .not. full_rank .and. sv.eq.1) cycle ! Don't touch unused vars
-    nsvar = nsvar + 1
-    svc = sv_count(sv)
-    sv_new(nsvar) = svc ! store # vars in s.v. to copy to svar
-    ! later
-    j = piv
-    ! Find all variables that are members of sv and order them.
-    do while (svc.gt.0)
-      do j = j, n
-        if (svar(perm(j)).eq.sv) exit
+      do ii = ptr(col), nd_get_ptr(col+1, n, ne, ptr) - 1
+         j = row(ii)
+         sv = svar(j)
+         if (sv_count(sv).eq.1) then ! Are we only (remaining) var in sv
+            full_rank = full_rank .or. (sv.eq.1)
+            ! If so, and this is first time that sv has been seen for this
+            ! column, then we can just leave j in sv, and go to next variable.
+            if (sv_seen(sv).lt.col) cycle
+            ! Otherwise, we have already defined a new supervariable associated
+            ! with sv. Move j to this variable, then retire (now empty) sv.
+            nsv = sv_new(sv)
+            if (sv.eq.nsv) cycle
+            svar(j) = nsv
+            sv_count(nsv) = sv_count(nsv) + 1
+            ! Old sv is now empty, add it to top of free stack
+            sv_seen(sv) = next_sv
+            next_sv = sv
+         else
+            ! There is at least one other variable remaining in sv
+            if (sv_seen(sv).lt.col) then
+               ! this is the first occurence of sv in the current row/column,
+               ! so define a new supervariable and associate it with sv.
+               sv_seen(sv) = col
+               sv_new(sv) = next_sv
+               sv_new(next_sv) = next_sv ! avoids problems with duplicates
+               next_sv = sv_seen(next_sv)
+               sv_count(sv_new(sv)) = 0
+               sv_seen(sv_new(sv)) = col
+            end if
+            ! Now move j from sv to nsv
+            nsv = sv_new(sv)
+            svar(j) = nsv
+            sv_count(sv) = sv_count(sv) - 1
+            sv_count(nsv) = sv_count(nsv) + 1
+            ! This sv cannot be empty as sv_count was > 1
+         end if
       end do
-      sv_seen(j) = n + 2 ! flag as ordered
-      invp(idx) = perm(j)
-      idx = idx + 1
-      svc = svc - 1
-      j = j + 1
-    end do
-  end do
-  ! Push unused variables to end - these are those vars still in s.v. 1
-  if ( .not. full_rank) then
-    svc = sv_count(1)
-    ! Find all variables that are members of sv and order them.
-    j = 1
-    do while (svc.gt.0)
-      do j = j, n
-        if (svar(perm(j)).eq.1) exit
-      end do
-      invp(idx) = perm(j)
-      idx = idx + 1
-      svc = svc - 1
-      j = j + 1
-    end do
-    n = n - sv_count(1)
-  end if
+   end do
 
-  ! Recover perm as inverse of invp
-  do piv = 1, n
-    perm(invp(piv)) = piv
-  end do
-  ! sv_new has been used to store number of variables in each svar, copy
-  ! into
-  ! svar where it is returned.
-  svar(1:nsvar) = sv_new(1:nsvar)
+
+   ! Now modify pivot order such that all variables in each supervariable are
+   ! consecutive. Do so by iterating over pivots in elimination order. If a
+   ! pivot has not already been listed, then order that pivot followed by
+   ! any other pivots in that supervariable.
+
+   ! We will build a new inverse permutation in invp, and then find perm
+   ! afterwards. First copy invp to perm:
+   perm(:) = invp(:)
+   ! Next we iterate over the pivots that have not been ordered already
+   ! Note: as we begin, all entries of sv_seen are less than or equal to n+1
+   ! hence we can use <=n+1 or >n+1 as a flag to indicate if a variable has been
+   ! ordered.
+   idx = 1
+   nsvar = 0
+   do piv = 1, n
+      if (sv_seen(piv).gt.n+1) cycle ! already ordered
+      ! Record information for supervariable
+      sv = svar(perm(piv))
+      if ( .not. full_rank .and. sv.eq.1) cycle ! Don't touch unused vars
+      nsvar = nsvar + 1
+      svc = sv_count(sv)
+      sv_new(nsvar) = svc ! store # vars in s.v. to copy to svar later
+      j = piv
+      ! Find all variables that are members of sv and order them.
+      do while (svc.gt.0)
+         do j = j, n
+            if (svar(perm(j)).eq.sv) exit
+         end do
+         sv_seen(j) = n + 2 ! flag as ordered
+         invp(idx) = perm(j)
+         idx = idx + 1
+         svc = svc - 1
+         j = j + 1
+      end do
+   end do
+   ! Push unused variables to end - these are those vars still in s.v. 1
+   if ( .not. full_rank) then
+      svc = sv_count(1)
+      ! Find all variables that are members of sv and order them.
+      j = 1
+      do while (svc.gt.0)
+         do j = j, n
+            if (svar(perm(j)).eq.1) exit
+         end do
+         invp(idx) = perm(j)
+         idx = idx + 1
+         svc = svc - 1
+         j = j + 1
+      end do
+      n = n - sv_count(1)
+   end if
+
+   ! Recover perm as inverse of invp
+   do piv = 1, n
+      perm(invp(piv)) = piv
+   end do
+   ! sv_new has been used to store number of variables in each svar, copy
+   ! into
+   ! svar where it is returned.
+   svar(1:nsvar) = sv_new(1:nsvar)
 end subroutine nd_supervars
 
 
-! This subroutine takes a set of supervariables and compresses the
-! supplied
-! matrix using them.
+!
+! This subroutine takes a set of supervariables and compresses the supplied
+! matrix using them. It avoids adding diagonal entries as ND code doesn't need
+! them.
+!
+subroutine nd_compress_by_svar(n, ne, ptr, row, invp, nsvar, svar, ptr2, row2, &
+      st)
+   integer, intent(in) :: n ! Dimension of system
+   integer, intent(in) :: ne ! Number off-diagonal zeros in system
+   integer, dimension(n), intent(in) :: ptr ! Column pointers
+   integer, dimension(ne), intent(in) :: row ! Row indices
+   integer, dimension(n), intent(in) :: invp ! inverse of perm
+   integer, intent(in) :: nsvar
+   integer, dimension(nsvar), intent(in) :: svar ! super variables of A
+   integer, dimension(nsvar+1), intent(out) :: ptr2
+   integer, dimension(ne), intent(out) :: row2
+   integer, intent(out) :: st
 
-subroutine nd_compress_by_svar(n,ne,ptr,row,invp,nsvar,svar,ptr2, &
-    row2,st)
-  integer, intent(in) :: n ! Dimension of system
-  integer, intent(in) :: ne ! Number off-diagonal zeros in system
-  integer, dimension(n), intent(in) :: ptr ! Column pointers
-  integer, dimension(ne), intent(in) :: row ! Row indices
-  integer, dimension(n), intent(in) :: invp ! inverse of perm
-  integer, intent(in) :: nsvar
-  integer, dimension(nsvar), intent(in) :: svar ! super variables of A
-  integer, dimension(nsvar+1), intent(out) :: ptr2
-  integer, dimension(ne), intent(out) :: row2
-  integer, intent(out) :: st
+   integer :: piv, svc, sv, col
+   integer :: j, idx
+   integer, dimension(:), allocatable :: flag, sv_map
 
-  integer :: piv, svc, sv, col
-  integer :: j, idx
-  integer, dimension(:), allocatable :: flag, sv_map
+   allocate(flag(nsvar),sv_map(n),stat=st)
+   if (st.ne.0) return
+   flag(:) = 0
 
-  allocate (flag(nsvar),sv_map(n),stat=st)
-  if (st.ne.0) return
-  flag(:) = 0
+   ! Setup sv_map
+   piv = 1
+   do svc = 1, nsvar
+      do piv = piv, piv + svar(svc) - 1
+         sv_map(invp(piv)) = svc
+      end do
+   end do
 
-  ! Setup sv_map
-  piv = 1
-  do svc = 1, nsvar
-    do piv = piv, piv + svar(svc) - 1
-      sv_map(invp(piv)) = svc
-    end do
-  end do
-
-  piv = 1
-  idx = 1
-  do svc = 1, nsvar
-    col = invp(piv)
-    ptr2(svc) = idx
-    do j = ptr(col), nd_get_ptr(col+1, n, ne, ptr) - 1
-      sv = sv_map(row(j))
-      if(sv.eq.svc) cycle ! Skip diagonals
-      if (flag(sv).eq.piv) cycle ! Already dealt with this supervariable
-      ! Add row entry for this sv
-      row2(idx) = sv
-      flag(sv) = piv
-      idx = idx + 1
-    end do
-    piv = piv + svar(svc)
-  end do
-  ptr2(svc) = idx
+   piv = 1
+   idx = 1
+   do svc = 1, nsvar
+      col = invp(piv)
+      ptr2(svc) = idx
+      do j = ptr(col), nd_get_ptr(col+1, n, ne, ptr) - 1
+         sv = sv_map(row(j))
+         if(sv.eq.svc) cycle ! Skip diagonals
+         if (flag(sv).eq.piv) cycle ! Already dealt with this supervariable
+         ! Add row entry for this sv
+         row2(idx) = sv
+         flag(sv) = piv
+         idx = idx + 1
+      end do
+      piv = piv + svar(svc)
+   end do
+   ptr2(svc) = idx
 end subroutine nd_compress_by_svar
 
 end module spral_nd_preprocess
