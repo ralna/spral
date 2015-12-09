@@ -115,14 +115,14 @@ subroutine nd_order(mtx,n,ptr,row,perm,options,info,seps)
    !!!!!!!!!!!!!!!!!!!!!!
 
    ! Error checks
-   if (n<1) then
+   if (n.lt.1) then
       info%flag = ND_ERR_N
       call nd_print_error(info%flag, options, 'nd_order')
       return
    end if
 
    ! Convert matrix to internal format without diagonals
-   if (mtx<1) then
+   if (mtx.lt.1) then
       call construct_full_from_lower(n, ptr, row, a_n, a_ne, a_ptr, a_row, &
          options, info%stat)
    else
@@ -203,7 +203,7 @@ subroutine nd_order(mtx,n,ptr,row,perm,options,info,seps)
       allocate(amd_order_ptr(a_n_curr), amd_order_row(lirn), &
          amd_order_sep(a_n_curr), amd_order_perm(a_n_curr), &
          amd_order_work(7*a_n_curr), amd_order_iperm(a_n))
-      if (info%stat/=0) go to 10
+      if (info%stat.ne.0) go to 10
 
       amd_order_ptr(1:a_n_curr) = a_ptr(1:a_n_curr)
       amd_order_row(1:a_ne_curr) = a_row(1:a_ne_curr)
@@ -261,10 +261,10 @@ subroutine nd_order(mtx,n,ptr,row,perm,options,info,seps)
       end if
       ! Allocate a workspace that can be reused at lower levels
       allocate (work(a_n+14*a_n_curr+a_ne_curr), stat=info%stat)
-      if (info%stat/=0) go to 10
+      if (info%stat.ne.0) go to 10
 
       use_multilevel = .true.
-      if (nsvar+num_zero_row==a_n) then
+      if (nsvar+num_zero_row.eq.a_n) then
          sumweight = sum(a_weight(1:a_n_curr))
          lwork = 12*a_n_curr + sumweight + a_ne_curr
          if (present(seps)) then
@@ -302,7 +302,7 @@ subroutine nd_order(mtx,n,ptr,row,perm,options,info,seps)
          end if
       end if
 
-      if (grid%level==1) call mg_grid_destroy(grid,info%flag)
+      if (grid%level.eq.1) call mg_grid_destroy(grid,info%flag)
 
       if (nsvar+num_zero_row.eq.a_n) then
          if (present(seps)) then
@@ -318,7 +318,7 @@ subroutine nd_order(mtx,n,ptr,row,perm,options,info,seps)
             ! Expand and reorder seps
             do i = 1, a_n_curr
                j = work_iperm(i)
-               if (j==1) then
+               if (j.eq.1) then
                   ll = 1
                else
                   ll = svar(j-1) + 1
@@ -333,7 +333,7 @@ subroutine nd_order(mtx,n,ptr,row,perm,options,info,seps)
          k = a_n
          do i = a_n_curr, 1, -1
             j = work_iperm(i)
-            if (j==1) then
+            if (j.eq.1) then
                ll = 1
             else
                ll = svar(j-1) + 1
@@ -428,8 +428,8 @@ recursive subroutine nd_nested_internal(a_n, a_ne, a_ptr, a_row, &
    ! ---------------------------------------------
    ! Printing levels
    unit_diagnostics = options%unit_diagnostics
-   printi = (options%print_level==1 .and. unit_diagnostics>=0)
-   printd = (options%print_level>=2 .and. unit_diagnostics>=0)
+   printi = (options%print_level.eq.1 .and. unit_diagnostics.ge.0)
+   printd = (options%print_level.ge.2 .and. unit_diagnostics.ge.0)
    use_amdi = .false.
 
    if (printi .or. printd) then
@@ -438,7 +438,7 @@ recursive subroutine nd_nested_internal(a_n, a_ne, a_ptr, a_row, &
    end if
 
    ! Check whether matrix is diagonal and act accordingly
-   if (a_ne==0) then
+   if (a_ne.eq.0) then
       if (printi .or. printd) then
          write (unit_diagnostics,'(a)') ' '
          write (unit_diagnostics,'(a)') 'Submatrix is diagonal'
@@ -446,10 +446,10 @@ recursive subroutine nd_nested_internal(a_n, a_ne, a_ptr, a_row, &
       return
    end if
 
-   if (level==0) then
+   if (level.eq.0) then
       maxdeg_max_component = a_ne + 1 - a_ptr(a_n)
       do i = 1, a_n - 1
-         if (maxdeg_max_component<a_ptr(i+1)-a_ptr(i)) &
+         if (maxdeg_max_component.lt.a_ptr(i+1)-a_ptr(i)) &
             maxdeg_max_component = a_ptr(i+1) - a_ptr(i)
       end do
    end if
@@ -458,7 +458,7 @@ recursive subroutine nd_nested_internal(a_n, a_ne, a_ptr, a_row, &
    ! Check whether max number of levels has been reached or if matrix
    ! size is below
    ! nd_switch
-   if (level>=options%amd_switch2 .or. a_n<=max(2,options%amd_switch1) &
+   if (level.ge.options%amd_switch2 .or. a_n.le.max(2,options%amd_switch1) &
          .or. use_amd) &
       go to 10
    lwork = 12*a_n + sumweight + a_ne
@@ -466,10 +466,10 @@ recursive subroutine nd_nested_internal(a_n, a_ne, a_ptr, a_row, &
       a_n1, a_n2, a_ne1, a_ne2, iperm, work(1:lwork), options, info,      &
       use_multilevel, grid)
 
-   if (a_n1==a_n) go to 10
+   if (a_n1.eq.a_n) go to 10
 
 
-   if (a_n1/=0 .and. a_n2/=0 .and. a_n1+a_n2==a_n) then
+   if (a_n1.ne.0 .and. a_n2.ne.0 .and. a_n1+a_n2.eq.a_n) then
       ! matrix is reducible
       if (printi .or. printd) then
          write (unit_diagnostics,'(a)') ' '
@@ -480,12 +480,12 @@ recursive subroutine nd_nested_internal(a_n, a_ne, a_ptr, a_row, &
       call nd_find_indep_comps(a_n, a_ne, a_ptr, a_row, a_weight, iperm, &
          num_components, work_comp_n(1:a_n), work_comp_nz(1:a_n), &
          work(compwork+1:compwork+3*a_n+a_ne), options, info)
-      if (num_components==1) then
+      if (num_components.eq.1) then
          k = options%amd_switch2 ! Should never be reached - indep. comps.
             ! only found if it has been detected that they exist
       else
          k = level
-         if (k==0) info%num_components = num_components
+         if (k.eq.0) info%num_components = num_components
       end if
 
       ! Apply the ND to each component - do not test for indep comps
@@ -496,17 +496,17 @@ recursive subroutine nd_nested_internal(a_n, a_ne, a_ptr, a_row, &
       ! work_comp_nz can be reused without worrying about overwriting
       ! important data
       j = a_n
-      do while (i>=1)
-         if (level==0) use_multilevel = .true.
+      do while (i.ge.1)
+         if (level.eq.0) use_multilevel = .true.
          l = work_comp_n(i)
-         if (level==0 .and. l .le. options%amd_call) then
+         if (level.eq.0 .and. l .le. options%amd_call) then
             use_amdi = .true.
          else
             use_amdi = .false.
          end if
          m = work_comp_nz(i)
          s = sum(a_weight(offset_ptr-l:offset_ptr-1))
-         if (m>0) then
+         if (m.gt.0) then
             ! Matrix not diagonal
             if (present(seps)) then
                call nd_nested_internal(l, m, a_ptr(offset_ptr-l:offset_ptr-1), &
@@ -534,7 +534,7 @@ recursive subroutine nd_nested_internal(a_n, a_ne, a_ptr, a_row, &
       end do
       return
    else
-      if (level==0 .and. a_n>info%n_max_component) then
+      if (level.eq.0 .and. a_n.gt.info%n_max_component) then
          info%n_max_component = a_n
          info%nz_max_component = a_ne
          info%maxdeg_max_component = maxdeg_max_component
@@ -542,7 +542,7 @@ recursive subroutine nd_nested_internal(a_n, a_ne, a_ptr, a_row, &
    end if
 
    if (present(seps)) seps(a_n1+a_n2+1:a_n) = level
-   if (a_n1>max(2,options%amd_switch1)) then
+   if (a_n1.gt.max(2,options%amd_switch1)) then
       sumweight_sub = sum(a_weight(1:a_n1))
       if (present(seps)) then
          call nd_nested_internal(a_n1, a_ne1, a_ptr(1:a_n1), a_row(1:a_ne1), &
@@ -559,8 +559,8 @@ recursive subroutine nd_nested_internal(a_n, a_ne, a_ptr, a_row, &
       end if
    end if
 
-   if (a_n2>max(2,options%amd_switch1)) then
-      if (a_n1>max(2,options%amd_switch1)) then
+   if (a_n2.gt.max(2,options%amd_switch1)) then
+      if (a_n1.gt.max(2,options%amd_switch1)) then
          sumweight_sub = sum(a_weight(a_n1+1:a_n1+a_n2))
          if (present(seps)) then
             call nd_nested_internal(a_n2, a_ne2, a_ptr(a_n1+1:a_n1+a_n2),  &
@@ -694,8 +694,8 @@ subroutine nd_find_indep_comps(a_n,a_ne,a_ptr,a_row,a_weight,iperm, &
   ! ---------------------------------------------
   ! Printing levels
   unit_diagnostics = options%unit_diagnostics
-  printi = (options%print_level==1 .and. unit_diagnostics>=0)
-  printd = (options%print_level>=2 .and. unit_diagnostics>=0)
+  printi = (options%print_level.eq.1 .and. unit_diagnostics.ge.0)
+  printd = (options%print_level.ge.2 .and. unit_diagnostics.ge.0)
 
   if (printi .or. printd) then
     write (unit_diagnostics,'(a)') ' '
@@ -716,7 +716,7 @@ subroutine nd_find_indep_comps(a_n,a_ne,a_ptr,a_row,a_weight,iperm, &
   num_assigned = 0
   comp_num = 0
   do root = 1, a_n
-    if (work(mask+root)==0) then
+    if (work(mask+root).eq.0) then
       comp_num = comp_num + 1
       front_sta = num_assigned + 1
       front_sto = front_sta
@@ -726,12 +726,12 @@ subroutine nd_find_indep_comps(a_n,a_ne,a_ptr,a_row,a_weight,iperm, &
       work(mask+root) = compsizes(comp_num)
       num_assigned = num_assigned + 1
 
-      do while (front_sto-front_sta>=0)
+      do while (front_sto-front_sta.ge.0)
         do i = front_sta, front_sto
           ! pick vertex from front
           v = work(front+i)
           ! update compnzs
-          if (v<a_n) then
+          if (v.lt.a_n) then
             l = a_ptr(v+1)
           else
             l = a_ne + 1
@@ -740,7 +740,7 @@ subroutine nd_find_indep_comps(a_n,a_ne,a_ptr,a_row,a_weight,iperm, &
           do j = a_ptr(v), l - 1
             ! pick a neighbour
             u = a_row(j)
-            if (work(mask+u)/=0) cycle
+            if (work(mask+u).ne.0) cycle
             ! found unmasked vertex
             compsizes(comp_num) = compsizes(comp_num) + 1
             num_assigned = num_assigned + 1
@@ -761,7 +761,7 @@ subroutine nd_find_indep_comps(a_n,a_ne,a_ptr,a_row,a_weight,iperm, &
     write (unit_diagnostics,'(i5,a)') comp_num, ' components found'
   end if
 
-  if (comp_num>1) then
+  if (comp_num.gt.1) then
     ! Reorder matrix into block diagonal form
     ! Indexing will be local to each block
     ptr_temp_pos = 1
@@ -773,7 +773,7 @@ subroutine nd_find_indep_comps(a_n,a_ne,a_ptr,a_row,a_weight,iperm, &
       do u = 1, compsizes(l)
         v = work(front+front_pos) ! for each column in the component
         front_pos = front_pos + 1
-        if (v==a_n) then
+        if (v.eq.a_n) then
           p = a_ne
         else
           p = a_ptr(v+1) - 1
@@ -782,7 +782,7 @@ subroutine nd_find_indep_comps(a_n,a_ne,a_ptr,a_row,a_weight,iperm, &
           work(row_temp+row_temp_pos) = work(mask+a_row(i))
           row_temp_pos = row_temp_pos + 1
         end do
-        if (u<compsizes(l)) then
+        if (u.lt.compsizes(l)) then
           work(ptr_temp+ptr_temp_pos) = work(ptr_temp+ptr_temp_pos-1) + &
             p + 1 - a_ptr(v)
           ptr_temp_pos = ptr_temp_pos + 1
@@ -875,8 +875,8 @@ subroutine nd_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
   ! ---------------------------------------------
   ! Printing levels
   unit_diagnostics = options%unit_diagnostics
-  printi = (options%print_level==1 .and. unit_diagnostics>=0)
-  printd = (options%print_level>=2 .and. unit_diagnostics>=0)
+  printi = (options%print_level.eq.1 .and. unit_diagnostics.ge.0)
+  printd = (options%print_level.ge.2 .and. unit_diagnostics.ge.0)
 
   if (printi .or. printd) then
     write (unit_diagnostics,'(a)') ' '
@@ -884,7 +884,7 @@ subroutine nd_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
   end if
 
   ! If matrix is full, then don't partition
-  if (a_ne==a_n*(a_n-1)) then
+  if (a_ne.eq.a_n*(a_n-1)) then
     a_n1 = a_n
     a_n2 = 0
     a_ne1 = a_ne
@@ -893,7 +893,7 @@ subroutine nd_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
   end if
 
   ! Find the partition
-  if (options%coarse_partition_method<=1) then
+  if (options%coarse_partition_method.le.1) then
     partition_method = 1
   else
     partition_method = 2
@@ -905,7 +905,7 @@ subroutine nd_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
   ! do p = 1,a_n
   ! do q = p+1,a_n
   ! if (options%partition_method .ge. 2) use_multilevel = .true.
-  if (partition_method==1) then
+  if (partition_method.eq.1) then
     ! Ashcraft method
     call nd_ashcraft(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,level, &
       a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep, &
@@ -921,26 +921,26 @@ subroutine nd_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
 
   end if
 
-  if (a_n1+a_n2==a_n) then
+  if (a_n1+a_n2.eq.a_n) then
     return
   end if
 
-  if (level==0) then
-    if (a_n>info%n_max_component .or. (a_n==info%n_max_component .and. &
-        band>info%band)) then
+  if (level.eq.0) then
+    if (a_n.gt.info%n_max_component .or. (a_n.eq.info%n_max_component .and. &
+        band.gt.info%band)) then
       info%band = band
       info%depth = depth
     end if
 
   end if
 
-  if (a_n1/=0 .and. a_n2/=0 .and. a_n>=3) then
+  if (a_n1.ne.0 .and. a_n2.ne.0 .and. a_n.ge.3) then
     if ( .not. use_multilevel) then
 
-      if (options%refinement>6) then
+      if (options%refinement.gt.6) then
         ref_options = 3
       else
-        if (options%refinement<1) then
+        if (options%refinement.lt.1) then
           ref_options = 1
         else
           ref_options = options%refinement
@@ -956,7 +956,7 @@ subroutine nd_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
 
       case (3)
         if (real(max(a_weight_1,a_weight_2))/real(min(a_weight_1, &
-            a_weight_2)+a_weight_sep)>=max(real(1.0, &
+            a_weight_2)+a_weight_sep).ge.max(real(1.0, &
             wp),options%balance)) then
           ref_method = 2
         else
@@ -971,7 +971,7 @@ subroutine nd_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
 
       case (6)
         if (real(max(a_weight_1,a_weight_2))/real(min(a_weight_1, &
-            a_weight_2)+a_weight_sep)>=max(real(1.0, &
+            a_weight_2)+a_weight_sep).ge.max(real(1.0, &
             wp),options%balance)) then
           ref_method = 2
         else
@@ -994,7 +994,7 @@ subroutine nd_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
           work(work_ptr+1:work_ptr+8),options)
 
       case (1)
-        if (min(a_weight_1,a_weight_2)+a_weight_sep< &
+        if (min(a_weight_1,a_weight_2)+a_weight_sep.lt. &
             max(a_weight_1,a_weight_2)) then
           call nd_refine_block_trim(a_n,a_ne,a_ptr,a_row, &
             a_weight,sumweight,a_n1,a_n2,a_weight_1,a_weight_2, &
@@ -1024,9 +1024,9 @@ subroutine nd_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
           ',  a_n2=', a_n2, ',  a_n_sep=', a_n - a_n1 - a_n2
       end if
 
-      if (options%max_improve_cycles>0) then
+      if (options%max_improve_cycles.gt.0) then
         ratio = max(real(1.0,wp),options%balance)
-        if (ratio>real(sumweight-2)) then
+        if (ratio.gt.real(sumweight-2)) then
           imbal = .false.
         else
           imbal = .true.
@@ -1068,7 +1068,7 @@ subroutine nd_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
 
         case (3)
           if (real(max(a_weight_1_new,a_weight_2_new))/real(min( &
-              a_weight_1_new,a_weight_2_new)+a_weight_sep_new)>max(real( &
+              a_weight_1_new,a_weight_2_new)+a_weight_sep_new).gt.max(real( &
               1.0,wp),options%balance)) then
             ref_method = 2
           else
@@ -1077,7 +1077,7 @@ subroutine nd_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
 
         case (6)
           if (real(max(a_weight_1_new,a_weight_2_new))/real(min( &
-              a_weight_1_new,a_weight_2_new)+a_weight_sep_new)>max(real( &
+              a_weight_1_new,a_weight_2_new)+a_weight_sep_new).gt.max(real( &
               1.0,wp),options%balance)) then
             ref_method = 2
           else
@@ -1095,7 +1095,7 @@ subroutine nd_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
             work(work_ptr+1:work_ptr+8),options)
 
         case (1)
-          if (min(a_weight_1,a_weight_2)+a_weight_sep< &
+          if (min(a_weight_1,a_weight_2)+a_weight_sep.lt. &
               max(a_weight_1,a_weight_2)) then
             call nd_refine_block_trim(a_n,a_ne,a_ptr,a_row, &
               a_weight,sumweight,a_n1_new,a_n2_new,a_weight_1_new, &
@@ -1130,7 +1130,7 @@ subroutine nd_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
 
         call cost_function(a_weight_1_new,a_weight_2_new, &
           a_weight_sep_new,sumweight,ratio,imbal,options%cost_function,tau)
-        if (tau<tau_best) then
+        if (tau.lt.tau_best) then
           tau_best = tau
           work(partition_ptr+1:partition_ptr+a_n) &
             = work(part_ptr+1:part_ptr+a_n)
@@ -1161,7 +1161,7 @@ subroutine nd_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
       ', a_n2=', a_n2, ', a_nsep=', a_n - a_n1 - a_n2
   end if
 
-  if ((a_n1<=max(2,options%amd_switch1) .and. a_n2<=max(2, &
+  if ((a_n1.le.max(2,options%amd_switch1) .and. a_n2.le.max(2, &
       options%amd_switch1))) then
     ! apply halo amd to submatrics
     call amd_order_both(a_n,a_ne,a_ptr,a_row,a_n1,a_n2, &
@@ -1170,7 +1170,7 @@ subroutine nd_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
     a_ne1 = 0
     a_ne2 = 0
 
-  else if (a_n1<=max(2,options%amd_switch1)) then
+  else if (a_n1.le.max(2,options%amd_switch1)) then
     ! apply halo amd to [A1, B1'; B1, I] using two levels
     ! return A2 and apply ND to it
     call amd_order_one(a_n,a_ne,a_ptr,a_row,a_n1,a_n2, &
@@ -1179,7 +1179,7 @@ subroutine nd_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
     a_ne1 = 0
 
 
-  else if (a_n2<=max(2,options%amd_switch1)) then
+  else if (a_n2.le.max(2,options%amd_switch1)) then
     ! apply halo amd to [A2, B2'; B2, I] using two levels
     ! return A1 and apply ND to it
     call amd_order_one(a_n,a_ne,a_ptr,a_row,a_n1,a_n2, &
@@ -1297,15 +1297,15 @@ recursive subroutine nd_ashcraft(a_n,a_ne,a_ptr,a_row,a_weight, &
   ! ---------------------------------------------
   ! Printing levels
   unit_diagnostics = options%unit_diagnostics
-  printi = (options%print_level==1 .and. unit_diagnostics>=0)
-  printd = (options%print_level>=2 .and. unit_diagnostics>=0)
+  printi = (options%print_level.eq.1 .and. unit_diagnostics.ge.0)
+  printd = (options%print_level.ge.2 .and. unit_diagnostics.ge.0)
 
   if (printi .or. printd) then
     write (unit_diagnostics,'(a)') ' '
     write (unit_diagnostics,'(a)') 'Use two-sided level set method'
   end if
   ratio = max(real(1.0,wp),options%balance)
-  if (ratio>real(sumweight-2)) then
+  if (ratio.gt.real(sumweight-2)) then
     imbal = .false.
   else
     imbal = .true.
@@ -1318,9 +1318,9 @@ recursive subroutine nd_ashcraft(a_n,a_ne,a_ptr,a_row,a_weight, &
   band = -1
   depth = -1
 
-  if (options%partition_method==1 .and. use_multilevel) go to 10
+  if (options%partition_method.eq.1 .and. use_multilevel) go to 10
 
-  if (options%partition_method>1 .and. level>0 .and. use_multilevel) &
+  if (options%partition_method.gt.1 .and. level.gt.0 .and. use_multilevel) &
     go to 10
 
   ! Find pseudoperipheral nodes nstart and nend, and the level structure
@@ -1338,7 +1338,7 @@ recursive subroutine nd_ashcraft(a_n,a_ne,a_ptr,a_row,a_weight, &
   ! node with minimum degree
   mindeg = sumweight + 1
   do i = 1, a_n
-    if (i<a_n) then
+    if (i.lt.a_n) then
       k = a_ptr(i+1) - 1
     else
       k = a_ne
@@ -1347,7 +1347,7 @@ recursive subroutine nd_ashcraft(a_n,a_ne,a_ptr,a_row,a_weight, &
     do j = a_ptr(i), k
       degree = degree + a_weight(a_row(j))
     end do
-    if (degree<mindeg) then
+    if (degree.lt.mindeg) then
       mindeg = degree
       nstrt = i
     end if
@@ -1360,7 +1360,7 @@ recursive subroutine nd_ashcraft(a_n,a_ne,a_ptr,a_row,a_weight, &
     nstrt,nend,max_search,work(work_p+1:work_p+2*a_n),num_levels_nend, &
     num_entries,lwidth)
 
-  if (num_entries<a_n) then
+  if (num_entries.lt.a_n) then
     ! matrix is separable
     a_n1 = num_entries
     a_n2 = a_n - a_n1
@@ -1376,13 +1376,13 @@ recursive subroutine nd_ashcraft(a_n,a_ne,a_ptr,a_row,a_weight, &
     a_weight_2 = sumweight - a_weight_1
     j = num_entries + 1
     do i = 1, a_n
-      if (work(work_p+i)==0) then
+      if (work(work_p+i).eq.0) then
         partition(j) = i
         j = j + 1
       end if
 
     end do
-    if (level==0) then
+    if (level.eq.0) then
       band = -real(lwidth,wp)
     end if
 
@@ -1391,7 +1391,7 @@ recursive subroutine nd_ashcraft(a_n,a_ne,a_ptr,a_row,a_weight, &
 
   ! ********************************************************************
   ! ***
-  if (level==0) then
+  if (level.eq.0) then
     band = 100.0*real(lwidth,wp)/real(a_n,wp)
     ! band = max(band,real(lwidth,wp))
     ! write(*,*) sqrt(real(lwidth))/real(num_levels_nend), lwidth, &
@@ -1400,14 +1400,14 @@ recursive subroutine nd_ashcraft(a_n,a_ne,a_ptr,a_row,a_weight, &
     depth = 100.0*real(num_levels_nend,wp)/ &
       real(a_n,wp)
   end if
-  if (options%stop_coarsening2<=0 .or. options%partition_method<1) then
+  if (options%stop_coarsening2.le.0 .or. options%partition_method.lt.1) then
     use_multilevel = .false.
   end if
-  if (options%partition_method>=2 .and. use_multilevel) then
+  if (options%partition_method.ge.2 .and. use_multilevel) then
     ! if (real(lwidth,wp) .le. 2.0* &
     ! real(sumweight,wp)/real(num_levels_nend,wp) )
     ! then
-    if (100.0*real(lwidth,wp)/real(sumweight,wp)<=3.0 .or. &
+    if (100.0*real(lwidth,wp)/real(sumweight,wp).le.3.0 .or. &
        a_n.lt. options%ml_call) &
         then
       use_multilevel = .false.
@@ -1459,12 +1459,12 @@ recursive subroutine nd_ashcraft(a_n,a_ne,a_ptr,a_row,a_weight, &
       sepsz = sepsz + work(dptr+i+1+j)
     end do
     p2sz = sumweight - p1sz - sepsz
-    if (p1sz>0 .and. sepsz>0) then
+    if (p1sz.gt.0 .and. sepsz.gt.0) then
       exit
     end if
   end do
 
-  if (i+ww>=num_levels_nend-1 .or. p2sz==0) then
+  if (i+ww.ge.num_levels_nend-1 .or. p2sz.eq.0) then
     ! Not possible to find separator
     ! This can only be invoked for a fully connected graph. The
     ! partition
@@ -1494,10 +1494,10 @@ recursive subroutine nd_ashcraft(a_n,a_ne,a_ptr,a_row,a_weight, &
       sepsz = sepsz + work(dptr+j+1+k)
     end do
     p2sz = sumweight - sepsz - p1sz
-    if (p2sz==0) exit
+    if (p2sz.eq.0) exit
     call cost_function(p1sz,p2sz,sepsz,sumweight,ratio,imbal,&
        options%cost_function,val)
-    if (val<bestval) then
+    if (val.lt.bestval) then
       bestval = val
       best_sep_start = j + 1
       a_n1 = work(distance_ptr+a_n+j+1) - 1
@@ -1508,10 +1508,10 @@ recursive subroutine nd_ashcraft(a_n,a_ne,a_ptr,a_row,a_weight, &
     end if
   end do
 
-  if (imbal .and. use_multilevel_copy .and. options%partition_method>=2) &
+  if (imbal .and. use_multilevel_copy .and. options%partition_method.ge.2) &
       then
     if (real(max(a_weight_1,a_weight_2))/real(min(a_weight_1, &
-        a_weight_2))>ratio) then
+        a_weight_2)).gt.ratio) then
       use_multilevel = .true.
       go to 10
 
@@ -1624,8 +1624,8 @@ recursive subroutine nd_level_set(a_n,a_ne,a_ptr,a_row,a_weight, &
   ! ---------------------------------------------
   ! Printing levels
   unit_diagnostics = options%unit_diagnostics
-  printi = (options%print_level==1 .and. unit_diagnostics>=0)
-  printd = (options%print_level>=2 .and. unit_diagnostics>=0)
+  printi = (options%print_level.eq.1 .and. unit_diagnostics.ge.0)
+  printd = (options%print_level.ge.2 .and. unit_diagnostics.ge.0)
 
   if (printi .or. printd) then
     write (unit_diagnostics,'(a)') ' '
@@ -1633,7 +1633,7 @@ recursive subroutine nd_level_set(a_n,a_ne,a_ptr,a_row,a_weight, &
   end if
 
   ratio = max(real(1.0,wp),options%balance)
-  if (ratio>real(sumweight-2)) then
+  if (ratio.gt.real(sumweight-2)) then
     imbal = .false.
   else
     imbal = .true.
@@ -1642,12 +1642,12 @@ recursive subroutine nd_level_set(a_n,a_ne,a_ptr,a_row,a_weight, &
   band = -1
   depth = -1
 
-  if (options%partition_method==1 .and. use_multilevel) then
+  if (options%partition_method.eq.1 .and. use_multilevel) then
     use_multilevel = .true.
     go to 10
   end if
 
-  if (options%partition_method>1 .and. level>0 .and. use_multilevel) &
+  if (options%partition_method.gt.1 .and. level.gt.0 .and. use_multilevel) &
     go to 10
 
   ! Find pseudoperipheral nodes nstart and nend, and the level structure
@@ -1657,7 +1657,7 @@ recursive subroutine nd_level_set(a_n,a_ne,a_ptr,a_row,a_weight, &
   work_p = level_p + a_n ! size 2*a_n
   mindeg = sumweight + 1
   do i = 1, a_n
-    if (i<a_n) then
+    if (i.lt.a_n) then
       k = a_ptr(i+1) - 1
     else
       k = a_ne
@@ -1666,7 +1666,7 @@ recursive subroutine nd_level_set(a_n,a_ne,a_ptr,a_row,a_weight, &
     do j = a_ptr(i), k
       degree = degree + a_weight(a_row(j))
     end do
-    if (degree<mindeg) then
+    if (degree.lt.mindeg) then
       mindeg = degree
       nstrt = i
     end if
@@ -1678,7 +1678,7 @@ recursive subroutine nd_level_set(a_n,a_ne,a_ptr,a_row,a_weight, &
     nstrt,nend,max_search,work(work_p+1:work_p+2*a_n),num_levels_nend, &
     num_entries,lwidth)
 
-  if (num_entries<a_n) then
+  if (num_entries.lt.a_n) then
     ! matrix is separable
     a_n1 = num_entries
     a_n2 = a_n - a_n1
@@ -1693,32 +1693,32 @@ recursive subroutine nd_level_set(a_n,a_ne,a_ptr,a_row,a_weight, &
     j = num_entries + 1
     a_weight_2 = 0
     do i = 1, a_n
-      if (work(work_p+i)==0) then
+      if (work(work_p+i).eq.0) then
         partition(j) = i
         a_weight_2 = a_weight_2 + a_weight(j)
         j = j + 1
       end if
     end do
     a_weight_sep = 0
-    if (level==0) then
+    if (level.eq.0) then
       band = -real(lwidth,wp)
     end if
     return
   end if
 
-  if (level==0) then
+  if (level.eq.0) then
     band = 100.0*real(lwidth,wp)/real(sumweight,wp)
     depth = 100.0*real(num_levels_nend,wp)/ &
       real(sumweight,wp)
     ! band = max(band,real(lwidth,wp))
   end if
 
-  if ((options%partition_method<=0) .or. (use_multilevel .and. options% &
-      stop_coarsening2<=0)) then
+  if ((options%partition_method.le.0) .or. (use_multilevel .and. options% &
+      stop_coarsening2.le.0)) then
     use_multilevel = .false.
   end if
-  if (options%partition_method>=2 .and. use_multilevel) then
-    if (100.0*real(lwidth,wp)/real(sumweight,wp)<=3.0 .or. &
+  if (options%partition_method.ge.2 .and. use_multilevel) then
+    if (100.0*real(lwidth,wp)/real(sumweight,wp).le.3.0 .or. &
        a_n.lt. options%ml_call) &
         then
       use_multilevel = .false.
@@ -1739,7 +1739,7 @@ recursive subroutine nd_level_set(a_n,a_ne,a_ptr,a_row,a_weight, &
     return
   end if
 
-  if (num_levels_nend<=2) then
+  if (num_levels_nend.le.2) then
     ! Not possible to find separator
     ! This can only be invoked for a full connected graph. The partition
     ! subroutine checks for this case so it should never be called
@@ -1782,7 +1782,7 @@ recursive subroutine nd_level_set(a_n,a_ne,a_ptr,a_row,a_weight, &
     p2sz = p2sz - work(work_p+j+1)
     call cost_function(p1sz,p2sz,sepsz,sumweight,ratio,imbal,&
        options%cost_function,val)
-    if (val<bestval) then
+    if (val.lt.bestval) then
       bestval = val
       best_sep_start = j + 1
       a_n1 = work(level_ptr_p+j+1) - 1
@@ -1884,7 +1884,7 @@ subroutine nd_find_pseudo(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
   ! Generate level structure for node nstrt
   call nd_level_struct(nstrt,a_n,a_ne,a_ptr,a_row, &
     work(mask+1:mask+a_n),level_ptr,level,maxdep,lwidth,num_entries)
-  if (num_entries<a_n) then
+  if (num_entries.lt.a_n) then
     ! matrix is separable
     num_levels = maxdep
     return
@@ -1901,7 +1901,7 @@ subroutine nd_find_pseudo(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
       lsize = lsize + 1
       work(list+lsize) = node
       level_ptr(node) = 0
-      if (node==a_n) then
+      if (node.eq.a_n) then
         k = a_ne
       else
         k = a_ptr(node+1) - 1
@@ -1917,20 +1917,20 @@ subroutine nd_find_pseudo(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
       mindeg = sumweight + 1
       ! mindeg = -1
       do i = nlsize, lsize
-        if (level_ptr(work(list+i))<mindeg) then
+        if (level_ptr(work(list+i)).lt.mindeg) then
           j = i
           mindeg = level_ptr(work(list+i))
         end if
       end do
       ! Jump out of loop if no candidates left
-      if (mindeg==sumweight+1) go to 10
+      if (mindeg.eq.sumweight+1) go to 10
       ! if (mindeg .eq. -1) go to 55
       ! Swap chose candidate to next position
       node = work(list+j)
       work(list+j) = work(list+nlsize)
       work(list+nlsize) = node
       ! Rule out the neighbours of the chosen node
-      if (node==a_n) then
+      if (node.eq.a_n) then
         k = a_ne
       else
         k = a_ptr(node+1) - 1
@@ -1964,14 +1964,14 @@ subroutine nd_find_pseudo(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
         lwidth1 = lwidth1 + nlvl*a_weight(ll)
       end do
 
-      if (nlvl>maxdep) then
+      if (nlvl.gt.maxdep) then
         ! Level structure of greater depth. Begin a new iteration.
         nstrt = node
         maxdep = nlvl
 
         go to 20
       else
-        if (lwidth1<minwid1) then
+        if (lwidth1.lt.minwid1) then
 
           nstop = node
           minwid = lwidth
@@ -1983,7 +1983,7 @@ subroutine nd_find_pseudo(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
     go to 30
 20        continue
   end do
-30      if (nstop/=node) then
+30      if (nstop.ne.node) then
     call nd_level_struct(node,a_n,a_ne,a_ptr,a_row, &
       work(mask+1:mask+a_n),level_ptr,level,nlvl,lwidth,num_entries)
   end if
@@ -2057,14 +2057,14 @@ subroutine nd_level_struct(root,a_n,a_ne,a_ptr,a_row,mask,level_ptr, &
     lw = 0
     do i = lbegin, lvlend
       node = level(i)
-      if (node==a_n) then
+      if (node.eq.a_n) then
         k = a_ne
       else
         k = a_ptr(node+1) - 1
       end if
       do j = a_ptr(node), k
         nbr = a_row(j)
-        if (mask(nbr)>0) then
+        if (mask(nbr).gt.0) then
           lnbr = lnbr + 1
           level(lnbr) = nbr
           mask(nbr) = -mask(nbr)
@@ -2076,7 +2076,7 @@ subroutine nd_level_struct(root,a_n,a_ne,a_ptr,a_row,mask,level_ptr, &
     lwidth = max(lwidth,lw)
     nvars = nvars + lw
     ! If no neighbours found, we are done
-    if (lnbr==lvlend) exit
+    if (lnbr.eq.lvlend) exit
     ! Abort construnction if level structure too wide
     ! if (lwidth .gt. maxwid) exit
   end do
@@ -2159,7 +2159,7 @@ subroutine nd_distance(a_n,num_levels_nend,level_ptr_nend,level_nend, &
   ! Set distance_ptr(i) to point one place to the right of where entries
   ! with distance i will be
   do j = 1 - a_n, a_n - 1
-    if (distance_ptr(dptr+j)>0) then
+    if (distance_ptr(dptr+j).gt.0) then
       exit
     else
       distance_ptr(dptr+j) = 1
@@ -2241,11 +2241,11 @@ subroutine nd_convert_flags_partition(a_n,a_n1,a_n2,flags,flag_1, &
   j = a_n1 + 1
   k = a_n1 + a_n2 + 1
   do l = 1, a_n
-    if (flags(l)==flag_1) then
+    if (flags(l).eq.flag_1) then
       partition(i) = l
       i = i + 1
     else
-      if (flags(l)==flag_2) then
+      if (flags(l).eq.flag_2) then
         partition(j) = l
         j = j + 1
       else
@@ -2294,7 +2294,7 @@ subroutine nd_move_partition(a_n,a_ne,a_ptr,a_row,a_weight,a_n1,a_n2, &
   ! intersection of the separator with partition 1 or the intersection
   ! of
   ! the separator with partition 2
-  if (a_weight_1>a_weight_2) then
+  if (a_weight_1.gt.a_weight_2) then
     ! Apply to partition 1
     part_no = flag_1
   else
@@ -2309,44 +2309,44 @@ subroutine nd_move_partition(a_n,a_ne,a_ptr,a_row,a_weight,a_n1,a_n2, &
   a_weight_sep_temp = a_weight_sep
 
   do j = 1, a_n
-    if (flags(j)/=flag_sep) cycle
+    if (flags(j).ne.flag_sep) cycle
     ! j is in initial separator
-    if (j==a_n) then
+    if (j.eq.a_n) then
       k = a_ne
     else
       k = a_ptr(j+1) - 1
     end if
     stay_sep = .false.
     do l = a_ptr(j), k
-      if (flags(a_row(l))==part_no) then
+      if (flags(a_row(l)).eq.part_no) then
         stay_sep = .true.
-        if (part_no==flag_1) then
-          if (a_n1_temp>1) then
+        if (part_no.eq.flag_1) then
+          if (a_n1_temp.gt.1) then
             a_n1_temp = a_n1_temp - 1
             flags(a_row(l)) = -1
             a_weight_sep_temp = a_weight_sep_temp + a_weight(a_row(l))
             a_weight_1_temp = a_weight_1_temp - a_weight(a_row(l))
           end if
         else
-          if (a_n2_temp>1) then
+          if (a_n2_temp.gt.1) then
             a_n2_temp = a_n2_temp - 1
             flags(a_row(l)) = -1
             a_weight_sep_temp = a_weight_sep_temp + a_weight(a_row(l))
             a_weight_2_temp = a_weight_2_temp - a_weight(a_row(l))
           end if
         end if
-      else if (flags(a_row(l))==-1) then
+      else if (flags(a_row(l)).eq.-1) then
         stay_sep = .true.
       end if
     end do
     if ( .not. stay_sep) then
-      if (part_no==flag_1) then
+      if (part_no.eq.flag_1) then
         flags(j) = flag_2
       else
         flags(j) = flag_1
       end if
       a_weight_sep_temp = a_weight_sep_temp - a_weight(j)
-      if (part_no==flag_1) then
+      if (part_no.eq.flag_1) then
         a_n2_temp = a_n2_temp + 1
         a_weight_2_temp = a_weight_2_temp + a_weight(j)
       else
@@ -2357,7 +2357,7 @@ subroutine nd_move_partition(a_n,a_ne,a_ptr,a_row,a_weight,a_n1,a_n2, &
   end do
 
   do j = 1, a_n
-    if (flags(j)==-1) then
+    if (flags(j).eq.-1) then
       flags(j) = flag_sep
     end if
   end do
@@ -2427,7 +2427,7 @@ subroutine nd_refine_edge(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
     work(fm_flags+1:fm_flags+a_n),ND_PART1_FLAG,ND_PART2_FLAG, &
     partition(1:a_n))
 
-  if (options%refinement>3) then
+  if (options%refinement.gt.3) then
     call nd_refine_max_flow(a_n,a_ne,a_ptr,a_row,a_weight,a_n1,a_n2, &
       a_weight_1,a_weight_2,a_weight_sep,partition,work(1:8),options)
   else
@@ -2498,7 +2498,7 @@ subroutine nd_refine_fm(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,a_n1, &
   if (options%refinement_band .lt. 1) return
 
   ratio = max(real(1.0,wp),options%balance)
-  if (ratio>real(sumweight-2)) then
+  if (ratio.gt.real(sumweight-2)) then
     imbal = .false.
   else
     imbal = .true.
@@ -2595,9 +2595,9 @@ subroutine nd_fm_refinement(n,a_ne,ptr,col,weight,sumweight,icut, &
   ! with better properties.  Normally less nodes in the cutset while
   ! maintaining
   ! a balance between the number of nodes in the two components.
-  ! flags(i) == ND_PART1_FLAG : i is in partition 1
-  ! flags(i) == ND_PART2_FLAG : i is in partition 2
-  ! flags(i) == ND_SEP_FLAG   : i is in separator/cutset
+  ! flags(i) .eq. ND_PART1_FLAG : i is in partition 1
+  ! flags(i) .eq. ND_PART2_FLAG : i is in partition 2
+  ! flags(i) .eq. ND_SEP_FLAG   : i is in separator/cutset
   integer, intent(inout) :: flags(n)
   ! info holds parameters giving information about the performance of
   ! the
@@ -2618,7 +2618,7 @@ subroutine nd_fm_refinement(n,a_ne,ptr,col,weight,sumweight,icut, &
   logical :: imbal
 
 
-  if (ratio>real(sumweight-2)) then
+  if (ratio.gt.real(sumweight-2)) then
     imbal = .false.
   else
     imbal = .true.
@@ -2630,9 +2630,9 @@ subroutine nd_fm_refinement(n,a_ne,ptr,col,weight,sumweight,icut, &
   first = 0
   tail = 0
   do i = 1, n
-    if (flags(i)==ND_SEP_FLAG) then
+    if (flags(i).eq.ND_SEP_FLAG) then
       dist(i) = 0
-      if (first==0) then
+      if (first.eq.0) then
         first = i
         tail = i
       else
@@ -2644,29 +2644,29 @@ subroutine nd_fm_refinement(n,a_ne,ptr,col,weight,sumweight,icut, &
     end if
   end do
 
-  do while (first/=0)
+  do while (first.ne.0)
     j = dist(first)
-    if (j==band-1) then
-      if (first==n) then
+    if (j.eq.band-1) then
+      if (first.eq.n) then
         l = a_ne
       else
         l = ptr(first+1) - 1
       end if
       do i = ptr(first), l
-        if (dist(col(i))==-2) then
+        if (dist(col(i)).eq.-2) then
           k = col(i)
           dist(k) = j + 1
         end if
       end do
 
     else
-      if (first==n) then
+      if (first.eq.n) then
         l = a_ne
       else
         l = ptr(first+1) - 1
       end if
       do i = ptr(first), l
-        if (dist(col(i))==-2) then
+        if (dist(col(i)).eq.-2) then
           k = col(i)
           dist(k) = j + 1
           next(tail) = k
@@ -2675,7 +2675,7 @@ subroutine nd_fm_refinement(n,a_ne,ptr,col,weight,sumweight,icut, &
       end do
 
     end if
-    if (first==tail) then
+    if (first.eq.tail) then
       first = 0
     else
       k = next(first)
@@ -2723,7 +2723,7 @@ subroutine nd_fm_refinement(n,a_ne,ptr,col,weight,sumweight,icut, &
   ming = sumweight
   do i = 1, n
 
-    if (flags(i)==ND_SEP_FLAG) then
+    if (flags(i).eq.ND_SEP_FLAG) then
       ! Node i is in cutset
       ! gain1(i) is change to cutset size if node i is moved to
       ! partition 1.
@@ -2736,8 +2736,8 @@ subroutine nd_fm_refinement(n,a_ne,ptr,col,weight,sumweight,icut, &
       call compute_gain(n,a_ne,ptr,col,gain1,gain2,weight,i,flags)
       gain = max(-mult,min(gain1(i),gain2(i)))
 
-      if (gain<ming) ming = gain
-      if (gain>icut) cycle
+      if (gain.lt.ming) ming = gain
+      if (gain.gt.icut) cycle
       ! New node is put at head of list
       call add_to_list(n,mult,icut,next,last,head,i,gain)
     end if
@@ -2764,22 +2764,22 @@ inNER:    do inn = 1, n
       do idummy = 1, n
 
         do gain = ming, icut
-          if (head(gain)/=0) exit
+          if (head(gain).ne.0) exit
         end do
-        if (gain>icut) exit inNER
+        if (gain.gt.icut) exit inNER
 
         ! Now cycle through nodes of least gain
         ! Currently inefficient because of re-searching linked list
         inext = head(gain)
         k = 0
 10            i = inext
-        if (i==0) cycle
+        if (i.eq.0) cycle
         ! Use node if it has not been considered already
-        if (done(i)<outer) go to 20
+        if (done(i).lt.outer) go to 20
         inext = next(i)
         ! !! Extra statements to trap infinite loop
         k = k + 1
-        if (k>ins) then
+        if (k.gt.ins) then
           ! write (*,*) 'Bug in code because of infinite loop'
           ! !! You may wish to change this to a stop
           exit
@@ -2796,7 +2796,7 @@ inNER:    do inn = 1, n
       ! information
       ! We will try both weighted and unweighted
 
-      if (wnv1==0 .and. wnv2>0) then
+      if (wnv1.eq.0 .and. wnv2.gt.0) then
 
         ! Move node i to partition 1
         move = ND_PART1_FLAG
@@ -2804,7 +2804,7 @@ inNER:    do inn = 1, n
         winv1 = winv1 + weight(i)
         ins = ins - 1
         wins = wins - weight(i)
-      else if (wnv2==0 .and. wnv1>0) then
+      else if (wnv2.eq.0 .and. wnv1.gt.0) then
         ! Move node i to partition 2
         move = ND_PART2_FLAG
         inv2 = inv2 + 1
@@ -2818,7 +2818,7 @@ inNER:    do inn = 1, n
 
         call cost_function(winv1+1-gain2(i)-weight(i),winv2+weight(i), &
           wins+gain2(i)-1,sumweight,ratio,imbal,costf,eval2)
-        if ((eval1<eval2) .or. ((eval1==eval2) .and. (wnv1<wnv2))) then
+        if ((eval1.lt.eval2) .or. ((eval1.eq.eval2) .and. (wnv1.lt.wnv2))) then
           ! Move node i to partition 1
           move = ND_PART1_FLAG
           inv1 = inv1 + 1
@@ -2837,7 +2837,7 @@ inNER:    do inn = 1, n
       ! Set new partition for node i
       ipart(i) = move
       ! Run through neigbours of node i to update data
-      if (i==n) then
+      if (i.eq.n) then
         l = a_ne
       else
         l = ptr(i+1) - 1
@@ -2845,35 +2845,35 @@ inNER:    do inn = 1, n
       do jj = ptr(i), l
         j = col(jj)
         ! Check which partition node j is in and take appropriate action
-        if (ipart(j)==move) cycle
+        if (ipart(j).eq.move) cycle
         ! If node j is in cutset, update its gain value
-        if (ipart(j)==ND_SEP_FLAG) then
+        if (ipart(j).eq.ND_SEP_FLAG) then
           ! If it has already been chosen in this pass just skip it
-          if (done(j)==outer .or. dist(j)==-2) cycle
+          if (done(j).eq.outer .or. dist(j).eq.-2) cycle
           ! old_gain is present gain
 
           old_gain = max(-mult,min(gain1(j),gain2(j)))
           ! old_gain = min(gain1(j),gain2(j))
 
-          if (move==ND_PART1_FLAG) gain2(j) = gain2(j) + weight(i)
-          if (move==ND_PART2_FLAG) gain1(j) = gain1(j) + weight(i)
+          if (move.eq.ND_PART1_FLAG) gain2(j) = gain2(j) + weight(i)
+          if (move.eq.ND_PART2_FLAG) gain1(j) = gain1(j) + weight(i)
           gain = max(-mult,min(gain1(j),gain2(j)))
           ! gain = min(gain1(j),gain2(j))
 
-          if (old_gain==gain) cycle
+          if (old_gain.eq.gain) cycle
           ! Remove from old list
-          if (old_gain<=icut) then
+          if (old_gain.le.icut) then
             call remove_from_list(n,mult,icut,next,last,head,j,old_gain)
           end if
           ! gain has changed so move to new linked list if less than
           ! icut
-          if (gain<=icut) then
+          if (gain.le.icut) then
             ! Reset ming if necessary
-            if (gain<ming) ming = gain
+            if (gain.lt.ming) ming = gain
             call add_to_list(n,mult,icut,next,last,head,j,gain)
           end if
         end if
-        if (ipart(j)==2-move) then
+        if (ipart(j).eq.2-move) then
           ! We have a new node in the cutset.
           ipart(j) = ND_SEP_FLAG
           ! Compute gains for this new node in the cutset and place in
@@ -2884,15 +2884,15 @@ inNER:    do inn = 1, n
           ! as not put
           ! in head linked list so won't be accessed
           ! First check that it was not earlier moved from cutset
-          if (done(j)/=outer .and. dist(j)/=-2) then
+          if (done(j).ne.outer .and. dist(j).ne.-2) then
             ! Compute gain
             call compute_gain(n,a_ne,ptr,col,gain1,gain2,weight,j,ipart)
             gain = max(-mult,min(gain1(j),gain2(j)))
             ! gain = min(gain1(j),gain2(j))
             ! !! Just added this
-            if (gain<ming) ming = gain
+            if (gain.lt.ming) ming = gain
             ! Add to  list
-            if (gain<=icut) then
+            if (gain.le.icut) then
               call add_to_list(n,mult,icut,next,last,head,j,gain)
             end if
           end if
@@ -2900,52 +2900,52 @@ inNER:    do inn = 1, n
           ! to node j
           ins = ins + 1
           wins = wins + weight(j)
-          if (move==ND_PART1_FLAG) then
+          if (move.eq.ND_PART1_FLAG) then
             inv2 = inv2 - 1
             winv2 = winv2 - weight(j)
           end if
-          if (move==ND_PART2_FLAG) then
+          if (move.eq.ND_PART2_FLAG) then
             inv1 = inv1 - 1
             winv1 = winv1 - weight(j)
           end if
           ! Check neighbours of j since any in cut set will have gain
           ! changed
-          if (j==n) then
+          if (j.eq.n) then
             l = a_ne
           else
             l = ptr(j+1) - 1
           end if
           do ii = ptr(j), l
             eye = col(ii)
-            if (ipart(eye)/=ND_SEP_FLAG) cycle
-            if (dist(eye)==-2) cycle
+            if (ipart(eye).ne.ND_SEP_FLAG) cycle
+            if (dist(eye).eq.-2) cycle
             ! Neighbour is in cutset. Recompute gain and insert in
             ! linked list.
-            if (done(eye)==outer) cycle
+            if (done(eye).eq.outer) cycle
             ! old_gain is present gain
             old_gain = max(-mult,min(gain1(eye),gain2(eye)))
             ! old_gain = min(gain1(eye),gain2(eye))
 
 
-            if (move==ND_PART1_FLAG) then
+            if (move.eq.ND_PART1_FLAG) then
               gain1(eye) = gain1(eye) - weight(j)
             end if
-            if (move==ND_PART2_FLAG) then
+            if (move.eq.ND_PART2_FLAG) then
               gain2(eye) = gain2(eye) - weight(j)
             end if
             ! gain is new gain
             gain = max(-mult,min(gain1(eye),gain2(eye)))
             ! gain = min(gain1(eye),gain2(eye))
-            if (old_gain==gain) cycle
+            if (old_gain.eq.gain) cycle
             ! Remove from old list
-            if (old_gain<=icut) then
+            if (old_gain.le.icut) then
               call remove_from_list(n,mult,icut,next,last,head,eye,old_gain)
             end if
             ! gain has changed so move to new linked list if less than
             ! icut
-            if (gain<=icut) then
+            if (gain.le.icut) then
               ! Reset ming if necessary
-              if (gain<ming) ming = gain
+              if (gain.lt.ming) ming = gain
               call add_to_list(n,mult,icut,next,last,head,eye,gain)
             end if
           end do
@@ -2955,7 +2955,7 @@ inNER:    do inn = 1, n
 
       ! ii = 0
       ! do i = 1,n
-      ! if (ipart(i) == 2) ii = ii + 1
+      ! if (ipart(i) .eq. 2) ii = ii + 1
       ! enddo
       ! if (ii .ne. inv2) write(6,*) 'problem in partition',ii,inv2
 
@@ -2964,7 +2964,7 @@ inNER:    do inn = 1, n
         costf,eval)
       ! Compare this with best so far in inner loop and store partition
       ! information if it is the best
-      if (inv1*inv2>0 .and. nv1*nv2==0) then
+      if (inv1*inv2.gt.0 .and. nv1*nv2.eq.0) then
         ! Might have to store gains and who is in the cutset
         evalc = eval
         nv1 = inv1
@@ -2975,7 +2975,7 @@ inNER:    do inn = 1, n
         wns = wins
         flags = ipart
 
-      else if (eval<evalc .and. (inv1*inv2>0)) then
+      else if (eval.lt.evalc .and. (inv1*inv2.gt.0)) then
         ! Might have to store gains and who is in the cutset
         evalc = eval
         nv1 = inv1
@@ -2989,7 +2989,7 @@ inNER:    do inn = 1, n
       ! End inner loop
     end do inNER
     ! Leave loop if inner loop has not found better partition
-    if (evalc>=(1.0-1.0/(LOG(real(sumweight))**2.3))*evalo) exit
+    if (evalc.ge.(1.0-1.0/(LOG(real(sumweight))**2.3))*evalo) exit
     ! Otherwise we reset evalo and go back to inner loop
     evalo = evalc
     ! Recompute gains for this new partition
@@ -2998,8 +2998,8 @@ inNER:    do inn = 1, n
     head(-mult:icut) = 0
     ming = icut + 1
     do i = 1, n
-      if (flags(i)/=ND_SEP_FLAG) cycle
-      if (dist(i)==-2) cycle
+      if (flags(i).ne.ND_SEP_FLAG) cycle
+      if (dist(i).eq.-2) cycle
       ! Node i is in cutset
       ! gain1(i) is change to cutset size if node i is moved to
       ! partition 1.
@@ -3017,8 +3017,8 @@ inNER:    do inn = 1, n
       ! an inner loop pass
       gain = max(-mult,min(gain1(i),gain2(i)))
       ! gain = min(gain1(i),gain2(i))
-      if (gain>icut) cycle
-      if (gain<ming) ming = gain
+      if (gain.gt.icut) cycle
+      if (gain.lt.ming) ming = gain
       ! New node is put at head of list
       call add_to_list(n,mult,icut,next,last,head,i,gain)
     end do
@@ -3039,12 +3039,12 @@ end subroutine nd_fm_refinement
 
     inext = next(irm)
     ilast = last(irm)
-    if (ilast==0) then
+    if (ilast.eq.0) then
       head(ig) = inext
-      if (inext/=0) last(inext) = 0
+      if (inext.ne.0) last(inext) = 0
     else
       next(ilast) = inext
-      if (inext/=0) last(inext) = ilast
+      if (inext.ne.0) last(inext) = ilast
     end if
   end subroutine remove_from_list
 
@@ -3058,7 +3058,7 @@ end subroutine nd_fm_refinement
     inext = head(ig)
     head(ig) = irm
     next(irm) = inext
-    if (inext/=0) last(inext) = irm
+    if (inext.ne.0) last(inext) = irm
     last(irm) = 0
   end subroutine add_to_list
 
@@ -3073,7 +3073,7 @@ end subroutine nd_fm_refinement
     ! weights
     gain1(i) = -weight(i) + 1
     gain2(i) = -weight(i) + 1
-    if (i==n) then
+    if (i.eq.n) then
       l = a_ne
     else
       l = ptr(i+1) - 1
@@ -3082,10 +3082,10 @@ end subroutine nd_fm_refinement
       j = col(jj)
       ! Check which partition node j is in and adjust gain array
       ! appropriately
-      if (partit(j)==ND_PART1_FLAG) then
+      if (partit(j).eq.ND_PART1_FLAG) then
         gain2(i) = gain2(i) + weight(j)
       end if
-      if (partit(j)==ND_PART2_FLAG) then
+      if (partit(j).eq.ND_PART2_FLAG) then
         gain1(i) = gain1(i) + weight(j)
       end if
     end do
@@ -3260,14 +3260,14 @@ subroutine extract_matrix(a_n,a_ne,a_ptr,a_row,a_n_part,a_n_sep, &
   do j = 1, a_n_part
     a_ptr_sub(j) = 0
     i = rows_sub(j)
-    if (i==a_n) then
+    if (i.eq.a_n) then
       l = a_ne
     else
       l = a_ptr(i+1) - 1
     end if
     do k = a_ptr(i), l
       m = a_row(k)
-      if (work(mask+m)/=0) then
+      if (work(mask+m).ne.0) then
         a_ptr_sub(j) = a_ptr_sub(j) + 1
 
       end if
@@ -3276,14 +3276,14 @@ subroutine extract_matrix(a_n,a_ne,a_ptr,a_row,a_n_part,a_n_sep, &
   do j = a_n_part + 1, a_n_sub
     a_ptr_sub(j) = 0
     i = rows_sub(j)
-    if (i==a_n) then
+    if (i.eq.a_n) then
       l = a_ne
     else
       l = a_ptr(i+1) - 1
     end if
     do k = a_ptr(i), l
       m = a_row(k)
-      if (work(mask+m)>0) a_ptr_sub(j) = a_ptr_sub(j) + 1
+      if (work(mask+m).gt.0) a_ptr_sub(j) = a_ptr_sub(j) + 1
     end do
   end do
   a_ptr_sub(1) = a_ptr_sub(1) + 1
@@ -3295,14 +3295,14 @@ subroutine extract_matrix(a_n,a_ne,a_ptr,a_row,a_n_part,a_n_sep, &
   ! Form a_row_sub
   do j = 1, a_n_part
     i = rows_sub(j)
-    if (i==a_n) then
+    if (i.eq.a_n) then
       l = a_ne
     else
       l = a_ptr(i+1) - 1
     end if
     do k = a_ptr(i), l
       m = a_row(k)
-      if (work(mask+m)/=0) then
+      if (work(mask+m).ne.0) then
         a_ptr_sub(j) = a_ptr_sub(j) - 1
         p = a_ptr_sub(j)
         a_row_sub(p) = abs(work(mask+m))
@@ -3311,14 +3311,14 @@ subroutine extract_matrix(a_n,a_ne,a_ptr,a_row,a_n_part,a_n_sep, &
   end do
   do j = a_n_part + 1, a_n_sub
     i = rows_sub(j)
-    if (i==a_n) then
+    if (i.eq.a_n) then
       l = a_ne
     else
       l = a_ptr(i+1) - 1
     end if
     do k = a_ptr(i), l
       m = a_row(k)
-      if (work(mask+m)>0) then
+      if (work(mask+m).gt.0) then
         a_ptr_sub(j) = a_ptr_sub(j) - 1
         p = a_ptr_sub(j)
         a_row_sub(p) = work(mask+m)
@@ -3376,14 +3376,14 @@ subroutine extract_both_matrices(a_n,a_ne,a_ptr,a_row,a_n_part1, &
   do j = 1, a_n_part1
     a_ptr_sub(j) = 0
     i = rows_sub(j)
-    if (i==a_n) then
+    if (i.eq.a_n) then
       l = a_ne
     else
       l = a_ptr(i+1) - 1
     end if
     do k = a_ptr(i), l
       m = a_row(k)
-      if (work(mask+m)>0) then
+      if (work(mask+m).gt.0) then
         a_ptr_sub(j) = a_ptr_sub(j) + 1
 
       end if
@@ -3393,14 +3393,14 @@ subroutine extract_both_matrices(a_n,a_ne,a_ptr,a_row,a_n_part1, &
   do j = a_n_part1 + 1, a_n_part1 + a_n_part2
     a_ptr_sub(j) = 0
     i = rows_sub(j)
-    if (i==a_n) then
+    if (i.eq.a_n) then
       l = a_ne
     else
       l = a_ptr(i+1) - 1
     end if
     do k = a_ptr(i), l
       m = a_row(k)
-      if (work(mask+m)<0) a_ptr_sub(j) = a_ptr_sub(j) + 1
+      if (work(mask+m).lt.0) a_ptr_sub(j) = a_ptr_sub(j) + 1
     end do
   end do
 
@@ -3419,14 +3419,14 @@ subroutine extract_both_matrices(a_n,a_ne,a_ptr,a_row,a_n_part1, &
   ! Form a_row_sub
   do j = 1, a_n_part1
     i = rows_sub(j)
-    if (i==a_n) then
+    if (i.eq.a_n) then
       l = a_ne
     else
       l = a_ptr(i+1) - 1
     end if
     do k = a_ptr(i), l
       m = a_row(k)
-      if (work(mask+m)>0) then
+      if (work(mask+m).gt.0) then
         a_ptr_sub(j) = a_ptr_sub(j) - 1
         p = a_ptr_sub(j)
         a_row_sub(p) = abs(work(mask+m))
@@ -3436,14 +3436,14 @@ subroutine extract_both_matrices(a_n,a_ne,a_ptr,a_row,a_n_part1, &
 
   do j = a_n_part1 + 1, a_n_part1 + a_n_part2
     i = rows_sub(j)
-    if (i==a_n) then
+    if (i.eq.a_n) then
       l = a_ne
     else
       l = a_ptr(i+1) - 1
     end if
     do k = a_ptr(i), l
       m = a_row(k)
-      if (work(mask+m)<0) then
+      if (work(mask+m).lt.0) then
         a_ptr_sub(j) = a_ptr_sub(j) - 1
         p = a_ptr_sub(j)
         a_row_sub(p+a_ne_sub1) = -work(mask+m)
@@ -3491,7 +3491,7 @@ subroutine amd_order_one(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition,iperm, &
   integer :: len_a_row_sub ! used when extracting submatrices
 
   ! Set orders of submatrices
-  if (a_n1<a_n2) then
+  if (a_n1.lt.a_n2) then
     ! Applying amd_order to first partition
     a_n_1 = a_n - a_n2
     a_n_2 = a_n2
@@ -3508,7 +3508,7 @@ subroutine amd_order_one(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition,iperm, &
   ! Set pointers into work array
   amd_order_perm = 0 ! length a_n
   a_ptr_sub = amd_order_perm + a_n ! length a_n
-  if (a_n1<a_n2) then
+  if (a_n1.lt.a_n2) then
     a_lirn_sub = a_ne + a_n_1 + 1
   else
     a_lirn_sub = a_ne + a_n_2 + 1
@@ -3520,7 +3520,7 @@ subroutine amd_order_one(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition,iperm, &
   amd_order_work = rows_sub + a_n ! length 7*a_n
 
   ! Extract matrix that amd_order is applied to
-  if (a_n1<a_n2) then
+  if (a_n1.lt.a_n2) then
 
     ! Start by updating iperm and a_weight
     do i = 1, a_n
@@ -3668,19 +3668,19 @@ subroutine multilevel_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
 
   info1 = 0
   ! Set up printing
-  if (options%print_level<0) print_level = 0
+  if (options%print_level.lt.0) print_level = 0
   ! The default is options%print_level = 0
-  if (options%print_level==0) print_level = 1
-  if (options%print_level==1) print_level = 2
-  if (options%print_level>1) print_level = 3
+  if (options%print_level.eq.0) print_level = 1
+  if (options%print_level.eq.1) print_level = 2
+  if (options%print_level.gt.1) print_level = 3
   mp = options%unit_diagnostics
-  if (mp<0) print_level = 0
+  if (mp.lt.0) print_level = 0
   ! Set error optionss
-  lerr = options%unit_error >= 0 .and. print_level > 0
+  lerr = options%unit_error .ge. 0 .and. print_level .gt. 0
   err = options%unit_error
 
 
-  if (print_level>1) then
+  if (print_level.gt.1) then
     write (mp,'(a)') 'Start multilevel_partition:'
   end if
 
@@ -3689,7 +3689,7 @@ subroutine multilevel_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
   if ( .not. allocated(grid%graph)) allocate (grid%graph)
 
   call nd_matrix_construct(grid%graph,a_n,a_n,a_ne,info1)
-  if (info1<0) then
+  if (info1.lt.0) then
     if (lerr) call nd_print_message(info1,err, &
       ' multilevel_partition')
     return
@@ -3715,14 +3715,14 @@ subroutine multilevel_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
   ! nullify (grid%p)
 
   call nd_assoc(grid%where,a_n,info1)
-  if (info1<0) then
+  if (info1.lt.0) then
     if (lerr) call nd_print_message(info1,err, &
       ' multilevel_partition')
     return
   end if
 
   call nd_assoc(grid%row_wgt,a_n,info1)
-  if (info1<0) then
+  if (info1.lt.0) then
     if (lerr) call nd_print_message(info1,err, &
       ' multilevel_partition')
     return
@@ -3737,7 +3737,7 @@ subroutine multilevel_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
   call multilevel(grid,options,sumweight,mglevel_cur,mp,print_level, &
     lwork,work,info1)
 
-  if (info1/=0) then
+  if (info1.ne.0) then
     if (lerr) call nd_print_message(info1,err, &
       ' multilevel_partition')
     return
@@ -3782,21 +3782,21 @@ subroutine multilevel_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
 
   ! deallocate the finest level
   ! call multigrid_deallocate_first(a_n,a_n,grid,info1)
-  if (info1/=0) then
+  if (info1.ne.0) then
     if (lerr) call nd_print_message(info1,err, &
       ' multilevel_partition')
     return
   end if
 
   ! deallocate (matrix%ptr,matrix%col,matrix%val,stat=st)
-  ! if (st/=0) info1 = ND_ERR_MEMORY_DEALLOC
-  if (info1<0) then
+  ! if (st.ne.0) info1 = ND_ERR_MEMORY_DEALLOC
+  if (info1.lt.0) then
     if (lerr) call nd_print_message(info1,err, &
       ' multilevel_partition')
     return
   end if
 
-  if (print_level>2) then
+  if (print_level.gt.2) then
     write (mp,'(a)') 'multilevel_partition: successful completion'
   end if
 
@@ -3872,7 +3872,7 @@ recursive subroutine multilevel(grid,options,sumweight,mglevel_cur,mp, &
 
   ! Test to see if this is either the last level or
   ! if the matrix size too small
-  if (grid%level>=mglevel_cur .or. grid%size<=stop_coarsening1) then
+  if (grid%level.ge.mglevel_cur .or. grid%size.le.stop_coarsening1) then
     if (print_level.ge.2) call level_print(mp,'end of level ',grid%level)
 
     ! coarsest level in multilevel so compute separator
@@ -3884,11 +3884,11 @@ recursive subroutine multilevel(grid,options,sumweight,mglevel_cur,mp, &
   end if
 
   ! Coarsest level not yet reached so carry on coarsening
-  if (options%matching==1) then
+  if (options%matching.eq.1) then
     lwk = grid%size
     call coarsen_hec(grid,lwk,work(1:lwk),info)
   else
-    if (options%matching>1) then
+    if (options%matching.gt.1) then
       lwk = 3*grid%size
       call coarsen_best(grid,lwk,work(1:lwk),info)
     else
@@ -3896,18 +3896,18 @@ recursive subroutine multilevel(grid,options,sumweight,mglevel_cur,mp, &
       call coarsen_cn(grid,lwk,work(1:lwk))
     end if
   end if
-  if (info<0) return
+  if (info.lt.0) return
 
   cgrid => grid%coarse
   cnvtx = cgrid%size
   ! allocate coarse grid quantities
   call nd_assoc(cgrid%where,cnvtx,info)
-  if (info/=0) then
+  if (info.ne.0) then
     return
   end if
 
   call nd_assoc(cgrid%row_wgt,cnvtx,info)
-  if (info/=0) then
+  if (info.ne.0) then
     return
   end if
 
@@ -3915,9 +3915,9 @@ recursive subroutine multilevel(grid,options,sumweight,mglevel_cur,mp, &
   ! maximum level to current level and partition this level
   ! deallocate the coarse grid quantities that haves been allocated so
   ! far
-  if (real(cgrid%size)/real(grid%size)>grid_rdc_fac_max .or. &
-      real(cgrid%size)/real(grid%size)<grid_rdc_fac_min .or. &
-      cgrid%size<4) then
+  if (real(cgrid%size)/real(grid%size).gt.grid_rdc_fac_max .or. &
+      real(cgrid%size)/real(grid%size).lt.grid_rdc_fac_min .or. &
+      cgrid%size.lt.4) then
 
     if (print_level.ge.2) then
       ! if (.true.) then
@@ -3932,7 +3932,7 @@ recursive subroutine multilevel(grid,options,sumweight,mglevel_cur,mp, &
 
     call multilevel(grid,options,sumweight,mglevel_cur,mp,print_level, &
       lwork,work,info)
-    if (info<0) return
+    if (info.lt.0) return
 
     return
   end if
@@ -3949,10 +3949,10 @@ recursive subroutine multilevel(grid,options,sumweight,mglevel_cur,mp, &
   ! get the coarse matrix
   lwk = 3*grid%size
   call galerkin_graph(graph,p,r,cgraph,info,lwk,work(1:lwk))
-  if (info<0) return
+  if (info.lt.0) return
 
   ! check if matrix is full
-  if (real(cgrid%graph%ptr(cgrid%graph%n+1)-1)/real(cgrid%graph%n)>=real &
+  if (real(cgrid%graph%ptr(cgrid%graph%n+1)-1)/real(cgrid%graph%n).ge.real &
       (cgrid%graph%n-1)) then
     if (print_level.ge.2) then
       write (mp,'(a,i10,a)') 'at level ', grid%level, &
@@ -3963,7 +3963,7 @@ recursive subroutine multilevel(grid,options,sumweight,mglevel_cur,mp, &
     mglevel_cur = grid%level - 1
     call multilevel(grid,options,sumweight,mglevel_cur,mp,print_level, &
       lwork,work,info)
-    if (info<0) return
+    if (info.lt.0) return
 
     return
   end if
@@ -3978,7 +3978,7 @@ recursive subroutine multilevel(grid,options,sumweight,mglevel_cur,mp, &
 
 
   ! check if partition is returned
-  if (cgrid%part_div(1)==0 .or. cgrid%part_div(2)==0) then
+  if (cgrid%part_div(1).eq.0 .or. cgrid%part_div(2).eq.0) then
     ! Unlikely to be called because 99.999% of cases caught in full
     ! matrix check above. Follows same procedure as when full matrix found
     if (print_level.ge.2) then
@@ -3990,7 +3990,7 @@ recursive subroutine multilevel(grid,options,sumweight,mglevel_cur,mp, &
     mglevel_cur = grid%level - 1
     call multilevel(grid,options,sumweight,mglevel_cur,mp,print_level, &
       lwork,work,info)
-    if (info<0) return
+    if (info.lt.0) return
 
     return
   end if
@@ -4009,10 +4009,10 @@ recursive subroutine multilevel(grid,options,sumweight,mglevel_cur,mp, &
   call nd_matrix_multiply_vec(p,cwhere,fwhere)
 
   do i = 1, grid%size
-    if (fwhere(i)==ND_PART1_FLAG) then
+    if (fwhere(i).eq.ND_PART1_FLAG) then
       grid%part_div(1) = grid%part_div(1) + 1
     else
-      if (fwhere(i)==ND_PART2_FLAG) then
+      if (fwhere(i).eq.ND_PART2_FLAG) then
         grid%part_div(2) = grid%part_div(2) + 1
       end if
     end if
@@ -4045,13 +4045,13 @@ recursive subroutine multilevel(grid,options,sumweight,mglevel_cur,mp, &
   end do
   a_ne = grid%graph%ptr(grid%graph%n+1) - 1
 
-  if (a_weight_sep>0) then
+  if (a_weight_sep.gt.0) then
     ! Do not refine if separable graph
 
-    if (options%refinement>6) then
+    if (options%refinement.gt.6) then
       ref_options = 3
     else
-      if (options%refinement<1) then
+      if (options%refinement.lt.1) then
         ref_options = 1
       else
         ref_options = options%refinement
@@ -4067,7 +4067,7 @@ recursive subroutine multilevel(grid,options,sumweight,mglevel_cur,mp, &
 
     case (3)
       if (real(max(a_weight_1,a_weight_2))/real(min(a_weight_1, &
-          a_weight_2)+a_weight_sep)>max(real(1.0, &
+          a_weight_2)+a_weight_sep).gt.max(real(1.0, &
           wp),options%balance)) then
         ref_method = 2
       else
@@ -4082,7 +4082,7 @@ recursive subroutine multilevel(grid,options,sumweight,mglevel_cur,mp, &
 
     case (6)
       if (real(max(a_weight_1,a_weight_2))/real(min(a_weight_1, &
-          a_weight_2)+a_weight_sep)>max(real(1.0, &
+          a_weight_2)+a_weight_sep).gt.max(real(1.0, &
           wp),options%balance)) then
         ref_method = 2
       else
@@ -4097,7 +4097,7 @@ recursive subroutine multilevel(grid,options,sumweight,mglevel_cur,mp, &
         a_weight_1,a_weight_2,a_weight_sep,work(partition_ptr+1: &
         partition_ptr+grid%graph%n),work(work_ptr+1:work_ptr+8),options)
     case (1)
-      if (min(a_weight_1,a_weight_2)+a_weight_sep< &
+      if (min(a_weight_1,a_weight_2)+a_weight_sep.lt. &
           max(a_weight_1,a_weight_2)) then
         call nd_refine_block_trim(grid%graph%n,a_ne, &
           grid%graph%ptr,grid%graph%col,grid%row_wgt,sumweight, &
@@ -4120,9 +4120,9 @@ recursive subroutine multilevel(grid,options,sumweight,mglevel_cur,mp, &
         work(work_ptr+1:work_ptr+3*grid%graph%n),options)
     end select
 
-    if (options%max_improve_cycles>0) then
+    if (options%max_improve_cycles.gt.0) then
       ratio = max(real(1.0,wp),options%balance)
-      if (ratio>real(sumweight-2)) then
+      if (ratio.gt.real(sumweight-2)) then
         imbal = .false.
       else
         imbal = .true.
@@ -4157,7 +4157,7 @@ recursive subroutine multilevel(grid,options,sumweight,mglevel_cur,mp, &
 
       case (3)
         if (real(max(a_weight_1_new,a_weight_2_new))/real(min( &
-            a_weight_1_new,a_weight_2_new)+a_weight_sep_new)>max(real( &
+            a_weight_1_new,a_weight_2_new)+a_weight_sep_new).gt.max(real( &
             1.0,wp),options%balance)) then
           ref_method = 2
         else
@@ -4166,7 +4166,7 @@ recursive subroutine multilevel(grid,options,sumweight,mglevel_cur,mp, &
 
       case (6)
         if (real(max(a_weight_1_new,a_weight_2_new))/real(min( &
-            a_weight_1_new,a_weight_2_new)+a_weight_sep_new)>max(real( &
+            a_weight_1_new,a_weight_2_new)+a_weight_sep_new).gt.max(real( &
             1.0,wp),options%balance)) then
           ref_method = 2
         else
@@ -4184,7 +4184,7 @@ recursive subroutine multilevel(grid,options,sumweight,mglevel_cur,mp, &
           graph%n),work(work_ptr+1:work_ptr+8),options)
 
       case (1)
-        if (min(a_weight_1,a_weight_2)+a_weight_sep< &
+        if (min(a_weight_1,a_weight_2)+a_weight_sep.lt. &
             max(a_weight_1,a_weight_2)) then
           call nd_refine_block_trim(grid%graph%n,a_ne, &
             grid%graph%ptr,grid%graph%col,grid%row_wgt,sumweight, &
@@ -4212,7 +4212,7 @@ recursive subroutine multilevel(grid,options,sumweight,mglevel_cur,mp, &
 
       call cost_function(a_weight_1_new,a_weight_2_new,a_weight_sep_new, &
         sumweight,ratio,imbal,options%cost_function,tau)
-      if (tau<tau_best) then
+      if (tau.lt.tau_best) then
         tau_best = tau
         work(partition_ptr+1:partition_ptr+grid%graph%n) &
           = work(part_ptr+1:part_ptr+grid%graph%n)
@@ -4252,9 +4252,9 @@ recursive subroutine multilevel(grid,options,sumweight,mglevel_cur,mp, &
     grid%where(j) = ND_SEP_FLAG
   end do
 
-  if (info<0) return
+  if (info.lt.0) return
 
-  if (print_level==3) call level_print(mp,' after post smoothing ', &
+  if (print_level.eq.3) call level_print(mp,' after post smoothing ', &
     grid%level)
 
   ! deallocate the previous level
@@ -4313,8 +4313,8 @@ subroutine nd_coarse_partition(a_n,a_ne,a_ptr,a_row,a_weight, &
   ! ---------------------------------------------
   ! Printing levels
   unit_diagnostics = options%unit_diagnostics
-  printi = (options%print_level==1 .and. unit_diagnostics>=0)
-  printd = (options%print_level>=2 .and. unit_diagnostics>=0)
+  printi = (options%print_level.eq.1 .and. unit_diagnostics.ge.0)
+  printd = (options%print_level.ge.2 .and. unit_diagnostics.ge.0)
 
   if (printi .or. printd) then
     write (unit_diagnostics,'(a)') ' '
@@ -4324,7 +4324,7 @@ subroutine nd_coarse_partition(a_n,a_ne,a_ptr,a_row,a_weight, &
   end if
 
   ! Find the partition
-  if (options%coarse_partition_method<=1) then
+  if (options%coarse_partition_method.le.1) then
     partition_method = 1
   else
     partition_method = 2
@@ -4334,7 +4334,7 @@ subroutine nd_coarse_partition(a_n,a_ne,a_ptr,a_row,a_weight, &
   work_ptr = partition_ptr + a_n ! max length needed 9*a_n+a_ne
 
   allocate (work1(a_n),stat=st)
-  if (st/=0) then
+  if (st.ne.0) then
     info = ND_ERR_MEMORY_ALLOC
     return
   end if
@@ -4382,13 +4382,13 @@ subroutine nd_coarse_partition(a_n,a_ne,a_ptr,a_row,a_weight, &
 
 
 
-  if (a_n1/=0 .and. a_n2/=0 .and. a_n>=3) then
-    if (a_n1+a_n2<a_n) then
+  if (a_n1.ne.0 .and. a_n2.ne.0 .and. a_n.ge.3) then
+    if (a_n1+a_n2.lt.a_n) then
       ! Refine the partition
-      if (options%refinement>6) then
+      if (options%refinement.gt.6) then
         ref_options = 3
       else
-        if (options%refinement<1) then
+        if (options%refinement.lt.1) then
           ref_options = 1
         else
           ref_options = options%refinement
@@ -4404,7 +4404,7 @@ subroutine nd_coarse_partition(a_n,a_ne,a_ptr,a_row,a_weight, &
 
       case (3)
         if (real(max(a_weight_1,a_weight_2))/real(min(a_weight_1, &
-            a_weight_2)+a_weight_sep)>max(real(1.0, &
+            a_weight_2)+a_weight_sep).gt.max(real(1.0, &
             wp),options%balance)) then
           ref_method = 2
         else
@@ -4419,7 +4419,7 @@ subroutine nd_coarse_partition(a_n,a_ne,a_ptr,a_row,a_weight, &
 
       case (6)
         if (real(max(a_weight_1,a_weight_2))/real(min(a_weight_1, &
-            a_weight_2)+a_weight_sep)>max(real(1.0, &
+            a_weight_2)+a_weight_sep).gt.max(real(1.0, &
             wp),options%balance)) then
           ref_method = 2
         else
@@ -4435,7 +4435,7 @@ subroutine nd_coarse_partition(a_n,a_ne,a_ptr,a_row,a_weight, &
           work1(partition_ptr+1:partition_ptr+a_n),work(1:8),options)
 
       case (1)
-        if (min(a_weight_1,a_weight_2)+a_weight_sep< &
+        if (min(a_weight_1,a_weight_2)+a_weight_sep.lt. &
             max(a_weight_1,a_weight_2)) then
           call nd_refine_block_trim(a_n,a_ne,a_ptr,a_row, &
             a_weight,sumweight,a_n1,a_n2,a_weight_1,a_weight_2, &
@@ -4483,7 +4483,7 @@ subroutine nd_coarse_partition(a_n,a_ne,a_ptr,a_row,a_weight, &
     ND_PART2_FLAG,ND_SEP_FLAG,where1(1:a_n))
 
   deallocate (work1,stat=st)
-  if (st/=0) then
+  if (st.ne.0) then
     info = ND_ERR_MEMORY_ALLOC
     return
   end if
@@ -4526,7 +4526,7 @@ recursive subroutine mg_grid_destroy(grid,info)
 
     call mg_grid_destroy(grid%coarse,info)
 
-    if (grid%level/=1) then
+    if (grid%level.ne.1) then
 
       call multigrid_deallocate(grid,info)
 
@@ -4538,7 +4538,7 @@ recursive subroutine mg_grid_destroy(grid,info)
 
   else
 
-    if (grid%level/=1) then
+    if (grid%level.ne.1) then
 
       call multigrid_deallocate_last(grid,info)
 
@@ -4560,19 +4560,19 @@ subroutine multigrid_deallocate(grid,info)
   integer :: info
 
   call nd_matrix_destruct(grid%graph,info)
-  if (info/=0) then
+  if (info.ne.0) then
     return
   end if
 
   call nd_matrix_destruct(grid%p,info)
-  if (info/=0) then
+  if (info.ne.0) then
     return
   end if
 
 
 
   call nd_matrix_destruct(grid%r,info)
-  if (info/=0) then
+  if (info.ne.0) then
     return
   end if
 
@@ -4595,13 +4595,13 @@ subroutine multigrid_deallocate_last(grid,info)
   integer :: ierr
 
   call nd_matrix_destruct(grid%p,ierr)
-  if (ierr/=0) then
+  if (ierr.ne.0) then
     info = ND_ERR_MEMORY_DEALLOC
     return
   end if
 
   call nd_matrix_destruct(grid%r,ierr)
-  if (ierr/=0) then
+  if (ierr.ne.0) then
     info = ND_ERR_MEMORY_DEALLOC
     return
   end if
@@ -4621,14 +4621,14 @@ subroutine multigrid_deallocate_first(grid,info)
 
   if (allocated(grid%graph)) then
     call nd_matrix_destruct(grid%graph,ierr)
-    if (ierr/=0) then
+    if (ierr.ne.0) then
       info = ND_ERR_MEMORY_DEALLOC
       return
     end if
   end if
 
   deallocate (grid%where,grid%row_wgt,stat=ierr)
-  if (ierr/=0) info = ND_ERR_MEMORY_DEALLOC
+  if (ierr.ne.0) info = ND_ERR_MEMORY_DEALLOC
 
 end subroutine multigrid_deallocate_first
 
@@ -4766,14 +4766,14 @@ subroutine nd_matrix_destruct(matrix,info,stat)
   if (present(stat)) stat = 0
   deallocate (matrix%col,matrix%ptr,stat=ierr)
   if (present(stat)) stat = ierr
-  if (ierr/=0) then
+  if (ierr.ne.0) then
     info = ND_ERR_MEMORY_DEALLOC
     return
   end if
 
   deallocate (matrix%val,stat=ierr)
   if (present(stat)) stat = ierr
-  if (ierr/=0) then
+  if (ierr.ne.0) then
     info = ND_ERR_MEMORY_DEALLOC
     return
   end if
@@ -4805,17 +4805,17 @@ subroutine nd_matrix_construct(p,m,n,ne,info)
   p%ne = ne
 
   call nd_alloc(p%ptr,m+1,info)
-  if (info<0) then
+  if (info.lt.0) then
     return
   end if
 
   call nd_alloc(p%col,ne,info)
-  if (info<0) then
+  if (info.lt.0) then
     return
   end if
 
   call nd_alloc(p%val,ne,info)
-  if (info<0) then
+  if (info.lt.0) then
     return
   end if
 
@@ -4833,9 +4833,9 @@ subroutine nd_alloc(v,n,info)
   info = 0
 
   if (allocateD(v)) then
-    if (SIZE(v)<n) then
+    if (SIZE(v).lt.n) then
       deallocate (v,stat=st)
-      if (st<0) then
+      if (st.lt.0) then
         info = ND_ERR_MEMORY_ALLOC
         return
       end if
@@ -4845,7 +4845,7 @@ subroutine nd_alloc(v,n,info)
   end if
 
   allocate (v(n),stat=st)
-  if (st<0) then
+  if (st.lt.0) then
     info = ND_ERR_MEMORY_DEALLOC
   end if
 
@@ -4876,7 +4876,7 @@ subroutine nd_assoc(array,sz,info)
 
    ! If we reach thsi point, arr is now deallocated: allocate to correct size
    allocate (array(sz),stat=st)
-   if (st/=0) info = ND_ERR_MEMORY_ALLOC
+   if (st.ne.0) info = ND_ERR_MEMORY_ALLOC
 
 end subroutine nd_assoc
 
@@ -4944,7 +4944,7 @@ subroutine prolng_heavy_edge(grid,lwork,work,info)
   do i = 1, nvtx
     v = i
     ! If already matched, next vertex please
-    if (work(ptr_match+v)/=unmatched) cycle
+    if (work(ptr_match+v).ne.unmatched) cycle
     maxwgt = -huge(0)
     ! in the case no match is found then match itself
     maxind = v
@@ -4955,7 +4955,7 @@ subroutine prolng_heavy_edge(grid,lwork,work,info)
       ! heavy edge matching
       ! if u is unmatched and value of the entry in col. u is greater
       ! than maxwgt, select u as the matching.
-      if (work(ptr_match+u)==unmatched .and. maxwgt<abs(graph%val(j))) &
+      if (work(ptr_match+u).eq.unmatched .and. maxwgt.lt.abs(graph%val(j))) &
           then
         maxwgt = abs(graph%val(j))
         maxind = u
@@ -4972,7 +4972,7 @@ subroutine prolng_heavy_edge(grid,lwork,work,info)
     ! linked
     ! with the coarse grid vertex cnvtx
     nz = nz + 1
-    if (maxind/=v) then
+    if (maxind.ne.v) then
       nz = nz + 1
     end if
   end do
@@ -5008,13 +5008,13 @@ subroutine prolng_heavy_edge(grid,lwork,work,info)
   j = 1
   k = 1
   do i = 1, nvtx
-    if (work(ptr_match+i)==i) then
+    if (work(ptr_match+i).eq.i) then
       r%ptr(k) = j
       r%col(j) = i
       j = j + 1
       k = k + 1
     else
-      if (work(ptr_match+i)>i) then
+      if (work(ptr_match+i).gt.i) then
         r%ptr(k) = j
         r%col(j) = i
         r%col(j+1) = work(ptr_match+i)
@@ -5036,11 +5036,11 @@ subroutine prolng_heavy_edge(grid,lwork,work,info)
   j = 1
   do i = 1, nvtx
     k = work(ptr_match+i)
-    if (k==i) then
+    if (k.eq.i) then
       p%col(p%ptr(i)) = j
       j = j + 1
     else
-      if (k>i) then
+      if (k.gt.i) then
         p%col(p%ptr(i)) = j
         p%col(p%ptr(k)) = j
         j = j + 1
@@ -5125,7 +5125,7 @@ subroutine prolng_common_neigh(grid,lwork,work)
   do i = 1, nvtx
     v = i
     ! If already matched, next vertex please
-    if (work(ptr_match+v)/=unmatched) cycle
+    if (work(ptr_match+v).ne.unmatched) cycle
     ! access the col. indices of row v
 
     ! in the case no match is found then match itself
@@ -5143,13 +5143,13 @@ subroutine prolng_common_neigh(grid,lwork,work)
     do j = grid%graph%ptr(v), grid%graph%ptr(v+1) - 1
       u = grid%graph%col(j)
       ! cycle is u is already matched
-      if (work(ptr_match+u)/=unmatched) cycle
+      if (work(ptr_match+u).ne.unmatched) cycle
       num = 0
       do k = grid%graph%ptr(u), grid%graph%ptr(u+1) - 1
         w = grid%graph%col(k)
-        if (work(ptr_flag+w)==i) num = num + 1
+        if (work(ptr_flag+w).eq.i) num = num + 1
       end do
-      if (num>max_neigh) then
+      if (num.gt.max_neigh) then
         max_neigh = num
         maxind = u
       end if
@@ -5165,7 +5165,7 @@ subroutine prolng_common_neigh(grid,lwork,work)
     ! linked
     ! with the coarse grid vertex cnvtx
     nz = nz + 1
-    if (maxind/=v) then
+    if (maxind.ne.v) then
       nz = nz + 1
     end if
   end do
@@ -5201,13 +5201,13 @@ subroutine prolng_common_neigh(grid,lwork,work)
   j = 1
   k = 1
   do i = 1, nvtx
-    if (work(ptr_match+i)==i) then
+    if (work(ptr_match+i).eq.i) then
       r%ptr(k) = j
       r%col(j) = i
       j = j + 1
       k = k + 1
     else
-      if (work(ptr_match+i)>i) then
+      if (work(ptr_match+i).gt.i) then
         r%ptr(k) = j
         r%col(j) = i
         r%col(j+1) = work(ptr_match+i)
@@ -5230,11 +5230,11 @@ subroutine prolng_common_neigh(grid,lwork,work)
   j = 1
   do i = 1, nvtx
     k = work(ptr_match+i)
-    if (k==i) then
+    if (k.eq.i) then
       p%col(p%ptr(i)) = j
       j = j + 1
     else
-      if (k>i) then
+      if (k.gt.i) then
         p%col(p%ptr(i)) = j
         p%col(p%ptr(k)) = j
         j = j + 1
@@ -5316,7 +5316,7 @@ subroutine prolng_best(grid,lwork,work,info)
   do i = 1, nvtx
     v = i
     ! If already matched, next vertex please
-    if (work(ptr_match+v)/=unmatched) cycle
+    if (work(ptr_match+v).ne.unmatched) cycle
     maxwgt = -huge(0)
     ! in the case no match is found then match itself
     maxind = v
@@ -5327,7 +5327,7 @@ subroutine prolng_best(grid,lwork,work,info)
       ! heavy edge matching
       ! if u is unmatched and value of the entry in col. u is greater
       ! than maxwgt, select u as the matching.
-      if (work(ptr_match+u)==unmatched .and. maxwgt<abs(graph%val(j))) &
+      if (work(ptr_match+u).eq.unmatched .and. maxwgt.lt.abs(graph%val(j))) &
           then
         maxwgt = abs(graph%val(j))
         maxind = u
@@ -5364,7 +5364,7 @@ subroutine prolng_best(grid,lwork,work,info)
   do i = 1, nvtx
     v = i
     ! If already matched, next vertex please
-    if (work(ptr_match1+v)/=unmatched) cycle
+    if (work(ptr_match1+v).ne.unmatched) cycle
     ! access the col. indices of row v
 
     ! in the case no match is found then match itself
@@ -5382,13 +5382,13 @@ subroutine prolng_best(grid,lwork,work,info)
     do j = grid%graph%ptr(v), grid%graph%ptr(v+1) - 1
       u = grid%graph%col(j)
       ! cycle is u is already matched
-      if (work(ptr_match1+u)/=unmatched) cycle
+      if (work(ptr_match1+u).ne.unmatched) cycle
       num = 0
       do k = grid%graph%ptr(u), grid%graph%ptr(u+1) - 1
         w = grid%graph%col(k)
-        if (work(ptr_flag+w)==i) num = num + 1
+        if (work(ptr_flag+w).eq.i) num = num + 1
       end do
-      if (num>max_neigh) then
+      if (num.gt.max_neigh) then
         max_neigh = num
         maxind = u
       end if
@@ -5404,14 +5404,14 @@ subroutine prolng_best(grid,lwork,work,info)
     ! linked
     ! with the coarse grid vertex cnvtx1
     nz = nz + 1
-    if (maxind/=v) then
+    if (maxind.ne.v) then
       nz = nz + 1
     end if
   end do
 
   ! --------------------------------------------------------------------
   ! -
-  if (cnvtx<=cnvtx1) then
+  if (cnvtx.le.cnvtx1) then
     ! use heavy-edge matching
     matching => work(ptr_match+1:ptr_match+nvtx)
   else
@@ -5452,13 +5452,13 @@ subroutine prolng_best(grid,lwork,work,info)
   j = 1
   k = 1
   do i = 1, nvtx
-    if (matching(i)==i) then
+    if (matching(i).eq.i) then
       r%ptr(k) = j
       r%col(j) = i
       j = j + 1
       k = k + 1
     else
-      if (matching(i)>i) then
+      if (matching(i).gt.i) then
         r%ptr(k) = j
         r%col(j) = i
         r%col(j+1) = matching(i)
@@ -5480,11 +5480,11 @@ subroutine prolng_best(grid,lwork,work,info)
   j = 1
   do i = 1, nvtx
     k = matching(i)
-    if (k==i) then
+    if (k.eq.i) then
       p%col(p%ptr(i)) = j
       j = j + 1
     else
-      if (k>i) then
+      if (k.gt.i) then
         p%col(p%ptr(i)) = j
         p%col(p%ptr(k)) = j
         j = j + 1
@@ -5545,7 +5545,7 @@ subroutine galerkin_graph(matrix,p,r,cmatrix,info,lwork,work)
   integer, intent(inout) :: info
 
   ! call mc65_matrix_transpose(p,r,info65)
-  ! if (info65<0) then
+  ! if (info65.lt.0) then
   ! info = info65
   ! return
   ! end if
@@ -5556,10 +5556,10 @@ subroutine galerkin_graph(matrix,p,r,cmatrix,info,lwork,work)
   call galerkin_graph_rap_size(nvtx,cnvtx,nz,p%ptr(nvtx+1)-1,p%col, &
     p%ptr,matrix%ptr(nvtx+1)-1,matrix%col,matrix%ptr,r%ptr(cnvtx+1)-1, &
     r%col,r%ptr,lwork,work(1:lwork))
-  if (info<0) return
+  if (info.lt.0) return
 
   call nd_matrix_construct(cmatrix,cnvtx,cnvtx,nz,info)
-  if (info<0) then
+  if (info.lt.0) then
     return
   end if
 
@@ -5567,7 +5567,7 @@ subroutine galerkin_graph(matrix,p,r,cmatrix,info,lwork,work)
     matrix%ptr(nvtx+1)-1,matrix%val,matrix%col,matrix%ptr, &
     r%ptr(cnvtx+1)-1,r%val,r%col,r%ptr,nz,cmatrix%val,cmatrix%col, &
     cmatrix%ptr,lwork,work(1:lwork))
-  if (info<0) return
+  if (info.lt.0) return
 
 end subroutine galerkin_graph
 
@@ -5624,7 +5624,7 @@ subroutine galerkin_graph_rap_size(nvtx,cnvtx,nz,nzp,pcol,pptr,nzaa, &
       ! find D's neighbor
       do k = aptr(neigh), aptr(neigh+1) - 1
         neighneigh = acol(k)
-        if (work(ptr_mask+neighneigh)/=i) then
+        if (work(ptr_mask+neighneigh).ne.i) then
           nz1 = nz1 + 1
           work(ptr_col+nz1) = neighneigh
           work(ptr_mask+neighneigh) = i
@@ -5636,7 +5636,7 @@ subroutine galerkin_graph_rap_size(nvtx,cnvtx,nz,nzp,pcol,pptr,nzaa, &
       neigh = work(ptr_col+j)
       do k = pptr(neigh), pptr(neigh+1) - 1
         neighneigh = pcol(k)
-        if (work(ptr_mask+neighneigh)/=-i .and. neighneigh/=i) then
+        if (work(ptr_mask+neighneigh).ne.-i .and. neighneigh.ne.i) then
           nz = nz + 1
           work(ptr_mask+neighneigh) = -i
         end if
@@ -5710,7 +5710,7 @@ subroutine galerkin_graph_rap(nvtx,cnvtx,nzp,pa,pcol,pptr,nzaa,aa,acol, &
       do k = aptr(neigh), aptr(neigh+1) - 1
         neighneigh = acol(k)
         nzz = work(ptr_mask+neighneigh)
-        if (nzz==0) then
+        if (nzz.eq.0) then
           nz1 = nz1 + 1
           work(ptr_col+nz1) = neighneigh
           work(ptr_a+nz1) = r_ij*aa(k)
@@ -5730,9 +5730,9 @@ subroutine galerkin_graph_rap(nvtx,cnvtx,nzp,pa,pcol,pptr,nzaa,aa,acol, &
       r_ij = work(ptr_a+j)
       do k = pptr(neigh), pptr(neigh+1) - 1
         neighneigh = pcol(k)
-        if (neighneigh==i) cycle
+        if (neighneigh.eq.i) cycle
         nzz = work(ptr_mask+neighneigh)
-        if (nzz==0) then
+        if (nzz.eq.0) then
           nz = nz + 1
           work(ptr_mask+neighneigh) = nz
           ca(nz) = r_ij*pa(k)
@@ -5795,7 +5795,7 @@ subroutine nd_refine_trim(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
   real(wp) :: ratio
 
   ratio = max(real(1.0,wp),options%balance)
-  if (ratio>real(sumweight-2)) then
+  if (ratio.gt.real(sumweight-2)) then
     imbal = .false.
   else
     imbal = .true.
@@ -5823,23 +5823,23 @@ subroutine nd_refine_trim(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
     next1 = .false.
     next2 = .false.
     j = partition(i)
-    if (j<a_n) then
+    if (j.lt.a_n) then
       k = a_ptr(j+1) - 1
     else
       k = a_ne
     end if
     do l = a_ptr(j), k
       m = a_row(l)
-      if (work(work_part+m)==ND_PART1_FLAG) then
+      if (work(work_part+m).eq.ND_PART1_FLAG) then
         next1 = .true.
-      else if (work(work_part+m)==ND_PART2_FLAG) then
+      else if (work(work_part+m).eq.ND_PART2_FLAG) then
         next2 = .true.
       end if
     end do
     if ((next1 .and. .not. next2) .or. ( .not. next1 .and. .not. next2 &
-        .and. a_n1==0)) then
+        .and. a_n1.eq.0)) then
       ! Add to list 1
-      if (head1==0) then
+      if (head1.eq.0) then
         head1 = j
         work(work_next+j) = 0
         work(work_prev+j) = 0
@@ -5852,9 +5852,9 @@ subroutine nd_refine_trim(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
       end if
       work(work_part+j) = sep1
     else if ((next2 .and. .not. next1) .or. ( .not. next1 .and. .not. &
-        next2 .and. a_n2==0)) then
+        next2 .and. a_n2.eq.0)) then
       ! Add to list 2
-      if (head2==0) then
+      if (head2.eq.0) then
         head2 = j
         work(work_next+j) = 0
         work(work_prev+j) = 0
@@ -5873,8 +5873,8 @@ subroutine nd_refine_trim(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
     end if
   end do
 
-  do while (head1>0 .or. head2>0)
-    if (head1>0 .and. head2>0) then
+  do while (head1.gt.0 .or. head2.gt.0)
+    if (head1.gt.0 .and. head2.gt.0) then
       w1 = a_weight(head1)
       w2 = a_weight(head2)
       call cost_function(a_weight_1+w1,a_weight_2,a_weight_sep-w1, &
@@ -5882,13 +5882,13 @@ subroutine nd_refine_trim(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
       call cost_function(a_weight_1,a_weight_2+w2,a_weight_sep-w2, &
         sumweight,ratio,imbal,options%cost_function,t2)
 
-      if (t1<t2) then
+      if (t1.lt.t2) then
         go to 10
       else
         go to 20
       end if
 
-    else if (head1>0) then
+    else if (head1.gt.0) then
       go to 10
     else
       go to 20
@@ -5904,7 +5904,7 @@ subroutine nd_refine_trim(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
     a_weight_1 = a_weight_1 + a_weight(i)
     a_weight_sep = a_weight_sep - a_weight(i)
     ! update list
-    if (i<a_n) then
+    if (i.lt.a_n) then
       k = a_ptr(i+1) - 1
     else
       k = a_ne
@@ -5920,7 +5920,7 @@ subroutine nd_refine_trim(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
         work(work_next+j) = 0
         tail1 = j
         work(work_part+j) = sep1
-        if (head1==0) then
+        if (head1.eq.0) then
           head1 = j
         end if
 
@@ -5929,16 +5929,16 @@ subroutine nd_refine_trim(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
         p = work(work_prev+j)
         q = work(work_next+j)
 
-        if (j/=head2 .and. j/=tail2) then
+        if (j.ne.head2 .and. j.ne.tail2) then
           work(work_prev+q) = p
           work(work_next+p) = q
           work(work_prev+j) = 0
           work(work_next+j) = 0
-        else if (j/=head2 .and. j==tail2) then
+        else if (j.ne.head2 .and. j.eq.tail2) then
           work(work_next+p) = 0
           work(work_prev+j) = 0
           tail2 = p
-        else if (j/=tail2 .and. j==head2) then
+        else if (j.ne.tail2 .and. j.eq.head2) then
           work(work_prev+q) = p
           work(work_next+j) = 0
           head2 = q
@@ -5962,7 +5962,7 @@ subroutine nd_refine_trim(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
     a_weight_2 = a_weight_2 + a_weight(i)
     a_weight_sep = a_weight_sep - a_weight(i)
     ! update list
-    if (i<a_n) then
+    if (i.lt.a_n) then
       k = a_ptr(i+1) - 1
     else
       k = a_ne
@@ -5978,7 +5978,7 @@ subroutine nd_refine_trim(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
         work(work_next+j) = 0
         tail2 = j
         work(work_part+j) = sep2
-        if (head2==0) then
+        if (head2.eq.0) then
           head2 = j
         end if
 
@@ -5987,16 +5987,16 @@ subroutine nd_refine_trim(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
         p = work(work_prev+j)
         q = work(work_next+j)
 
-        if (j/=head1 .and. j/=tail1) then
+        if (j.ne.head1 .and. j.ne.tail1) then
           work(work_prev+q) = p
           work(work_next+p) = q
           work(work_prev+j) = 0
           work(work_next+j) = 0
-        else if (j/=head1 .and. j==tail1) then
+        else if (j.ne.head1 .and. j.eq.tail1) then
           work(work_next+p) = 0
           work(work_prev+j) = 0
           tail1 = p
-        else if (j/=tail1 .and. j==head1) then
+        else if (j.ne.tail1 .and. j.eq.head1) then
           work(work_prev+q) = p
           work(work_next+j) = 0
           head1 = q
@@ -6018,9 +6018,9 @@ subroutine nd_refine_trim(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
   work(work_next+a_n1_orig+a_n2_orig+1:work_next+a_n) = 0
   do i = a_n1_orig + a_n2_orig + 1, a_n
     j = partition(i)
-    if (work(work_part+j)==ND_SEP_FLAG) then
+    if (work(work_part+j).eq.ND_SEP_FLAG) then
       ! j is not on the boundary
-      if (a_weight_1<a_weight_2) then
+      if (a_weight_1.lt.a_weight_2) then
         ! Move j into partition 1
         work(work_part+j) = ND_PART1_FLAG
         a_n1 = a_n1 + 1
@@ -6029,16 +6029,16 @@ subroutine nd_refine_trim(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
 
         head1 = j
         tail1 = j
-        do while (head1>0)
+        do while (head1.gt.0)
           q = head1
-          if (q<a_n) then
+          if (q.lt.a_n) then
             k = a_ptr(q+1) - 1
           else
             k = a_ne
           end if
           do l = a_ptr(q), k
             p = a_row(l)
-            if (work(work_part+p)==ND_SEP_FLAG) then
+            if (work(work_part+p).eq.ND_SEP_FLAG) then
               work(work_part+p) = ND_PART1_FLAG
               a_n1 = a_n1 + 1
               a_weight_1 = a_weight_1 + a_weight(p)
@@ -6047,7 +6047,7 @@ subroutine nd_refine_trim(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
               tail1 = p
             end if
           end do
-          if (head1==tail1) then
+          if (head1.eq.tail1) then
             head1 = 0
             tail1 = 0
           else
@@ -6066,16 +6066,16 @@ subroutine nd_refine_trim(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
         head2 = j
         tail2 = j
 
-        do while (head2>0)
+        do while (head2.gt.0)
           q = head2
-          if (q<a_n) then
+          if (q.lt.a_n) then
             k = a_ptr(q+1) - 1
           else
             k = a_ne
           end if
           do l = a_ptr(q), k
             p = a_row(l)
-            if (work(work_part+p)==ND_SEP_FLAG) then
+            if (work(work_part+p).eq.ND_SEP_FLAG) then
               work(work_part+p) = ND_PART2_FLAG
               a_n2 = a_n2 + 1
               a_weight_2 = a_weight_2 + a_weight(p)
@@ -6084,7 +6084,7 @@ subroutine nd_refine_trim(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
               tail2 = p
             end if
           end do
-          if (head2==tail2) then
+          if (head2.eq.tail2) then
             head2 = 0
             tail2 = 0
           else
@@ -6152,7 +6152,7 @@ subroutine nd_refine_block_trim(a_n,a_ne,a_ptr,a_row,a_weight, &
   real(wp) :: ratio
 
   ratio = max(real(1.0,wp),options%balance)
-  if (ratio>real(sumweight-2)) then
+  if (ratio.gt.real(sumweight-2)) then
     imbal = .false.
   else
     imbal = .true.
@@ -6191,22 +6191,22 @@ subroutine nd_refine_block_trim(a_n,a_ne,a_ptr,a_row,a_weight, &
     next1 = .false.
     next2 = .false.
     j = partition(i)
-    if (j<a_n) then
+    if (j.lt.a_n) then
       k = a_ptr(j+1) - 1
     else
       k = a_ne
     end if
     do l = a_ptr(j), k
       m = a_row(l)
-      if (work(work_part+m)==ND_PART1_FLAG) then
+      if (work(work_part+m).eq.ND_PART1_FLAG) then
         next1 = .true.
-      else if (work(work_part+m)==ND_PART2_FLAG) then
+      else if (work(work_part+m).eq.ND_PART2_FLAG) then
         next2 = .true.
       end if
     end do
     if (next1) then
       ! Add to list 1
-      if (head1==0) then
+      if (head1.eq.0) then
         head1 = j
       else
         work(work_next1+tail1) = j
@@ -6216,7 +6216,7 @@ subroutine nd_refine_block_trim(a_n,a_ne,a_ptr,a_row,a_weight, &
     end if
     if (next2) then
       ! Add to list 2
-      if (head2==0) then
+      if (head2.eq.0) then
         head2 = j
       else
         work(work_next2+tail2) = j
@@ -6229,16 +6229,16 @@ subroutine nd_refine_block_trim(a_n,a_ne,a_ptr,a_row,a_weight, &
   ! Breadth first search of separator from entries adjacent to partition
   ! 1
   l1 = head1
-  do while (l1>0)
-    if (l1<a_n) then
+  do while (l1.gt.0)
+    if (l1.lt.a_n) then
       k = a_ptr(l1+1) - 1
     else
       k = a_ne
     end if
     do l = a_ptr(l1), k
       m = a_row(l)
-      if (work(work_part+m)==ND_SEP_FLAG .and. &
-          work(work_level1+m)==0) then
+      if (work(work_part+m).eq.ND_SEP_FLAG .and. &
+          work(work_level1+m).eq.0) then
         ! Add to list (note list is non-empty)
         work(work_next1+tail1) = m
         tail1 = m
@@ -6252,16 +6252,16 @@ subroutine nd_refine_block_trim(a_n,a_ne,a_ptr,a_row,a_weight, &
   ! Breadth first search of separator from entries adjacent to partition
   ! 2
   l1 = head2
-  do while (l1>0)
-    if (l1<a_n) then
+  do while (l1.gt.0)
+    if (l1.lt.a_n) then
       k = a_ptr(l1+1) - 1
     else
       k = a_ne
     end if
     do l = a_ptr(l1), k
       m = a_row(l)
-      if (work(work_part+m)==ND_SEP_FLAG .and. &
-          work(work_level2+m)==0) then
+      if (work(work_part+m).eq.ND_SEP_FLAG .and. &
+          work(work_level2+m).eq.0) then
         ! Add to list (note list is non-empty)
         work(work_next2+tail2) = m
         tail2 = m
@@ -6275,10 +6275,10 @@ subroutine nd_refine_block_trim(a_n,a_ne,a_ptr,a_row,a_weight, &
   ! Check for any entries in separator only reachable from one partition
   do i = a_n1 + a_n2 + 1, a_n
     j = partition(i)
-    if (work(work_level2+j)==0) then
+    if (work(work_level2+j).eq.0) then
       work(work_level2+j) = maxlevel2 + 1
     else
-      if (work(work_level1+j)==0) then
+      if (work(work_level1+j).eq.0) then
         work(work_level1+j) = maxlevel1 + 1
       end if
     end if
@@ -6289,20 +6289,20 @@ subroutine nd_refine_block_trim(a_n,a_ne,a_ptr,a_row,a_weight, &
   currlevel2 = 1
   l1 = head1
   l2 = head2
-  do while (currlevel1<=maxlevel1 .or. currlevel2<=maxlevel2)
-    if (currlevel1>maxlevel1) then
+  do while (currlevel1.le.maxlevel1 .or. currlevel2.le.maxlevel2)
+    if (currlevel1.gt.maxlevel1) then
       t1 = huge(1.0_wp)
     else
       w1 = 0
       j = l1
-      do while (work(work_level1+j)==currlevel1)
-        if (work(work_level2+j)>currlevel2) then
+      do while (work(work_level1+j).eq.currlevel1)
+        if (work(work_level2+j).gt.currlevel2) then
           w1 = w1 + a_weight(j)
         end if
         j = work(work_next1+j)
-        if (j==0) exit
+        if (j.eq.0) exit
       end do
-      if (w1==0) then
+      if (w1.eq.0) then
         currlevel1 = currlevel1 + 1
         l1 = j
         cycle
@@ -6312,19 +6312,19 @@ subroutine nd_refine_block_trim(a_n,a_ne,a_ptr,a_row,a_weight, &
       end if
     end if
 
-    if (currlevel2>maxlevel2) then
+    if (currlevel2.gt.maxlevel2) then
       t2 = huge(1.0_wp)
     else
       w2 = 0
       j = l2
-      do while (work(work_level2+j)==currlevel2)
-        if (work(work_level1+j)>currlevel1) then
+      do while (work(work_level2+j).eq.currlevel2)
+        if (work(work_level1+j).gt.currlevel1) then
           w2 = w2 + a_weight(j)
         end if
         j = work(work_next2+j)
-        if (j==0) exit
+        if (j.eq.0) exit
       end do
-      if (w2==0) then
+      if (w2.eq.0) then
         currlevel2 = currlevel2 + 1
         l2 = j
         cycle
@@ -6335,20 +6335,20 @@ subroutine nd_refine_block_trim(a_n,a_ne,a_ptr,a_row,a_weight, &
     end if
 
     ! Add entries to relevant partition and update a_n1, a_n2 etc
-    if (t1<t2) then
+    if (t1.lt.t2) then
       j = l1
-      do while (work(work_level1+j)==currlevel1)
-        if (work(work_level2+j)>currlevel2) then
+      do while (work(work_level1+j).eq.currlevel1)
+        if (work(work_level2+j).gt.currlevel2) then
           work(work_part+j) = ND_PART1_FLAG
           a_n1 = a_n1 + 1
         end if
         j = work(work_next1+j)
-        if (j==0) exit
+        if (j.eq.0) exit
       end do
       a_weight_1 = a_weight_1 + w1
       a_weight_sep = a_weight_sep - w1
       l1 = j
-      if (j==0) then
+      if (j.eq.0) then
         currlevel1 = maxlevel1 + 1
       else
         currlevel1 = (work(work_level1+l1))
@@ -6356,18 +6356,18 @@ subroutine nd_refine_block_trim(a_n,a_ne,a_ptr,a_row,a_weight, &
 
     else
       j = l2
-      do while (work(work_level2+j)==currlevel2)
-        if (work(work_level1+j)>currlevel1) then
+      do while (work(work_level2+j).eq.currlevel2)
+        if (work(work_level1+j).gt.currlevel1) then
           work(work_part+j) = ND_PART2_FLAG
           a_n2 = a_n2 + 1
         end if
         j = work(work_next2+j)
-        if (j==0) exit
+        if (j.eq.0) exit
       end do
       a_weight_2 = a_weight_2 + w2
       a_weight_sep = a_weight_sep - w2
       l2 = j
-      if (j==0) then
+      if (j.eq.0) then
         currlevel2 = maxlevel2 + 1
       else
         currlevel2 = (work(work_level2+l2))
@@ -6419,13 +6419,13 @@ subroutine nd_refine_max_flow(a_n,a_ne,a_ptr,a_row,a_weight,a_n1, &
   real(wp) :: cost, ratio
 
   msglvl = 0
-  if (options%print_level==1 .and. options%unit_diagnostics>=0) &
+  if (options%print_level.eq.1 .and. options%unit_diagnostics.ge.0) &
     msglvl = 1
-  if (options%print_level>=2 .and. options%unit_diagnostics>=0) &
+  if (options%print_level.ge.2 .and. options%unit_diagnostics.ge.0) &
     msglvl = 3
 
 
-  if (a_n-a_n1-a_n2>1) then
+  if (a_n-a_n1-a_n2.gt.1) then
     ratio = max(real(1.0,wp),options%balance)
     call nd_maxflow(a_n,a_ne,a_ptr,a_row,a_weight,options%cost_function,&
       a_n1,a_n2, &
@@ -6490,14 +6490,14 @@ subroutine expand_partition(a_n,a_ne,a_ptr,a_row,a_weight,a_n1,a_n2, &
   do i = a_n1 + a_n2 + 1, a_n
     j = partition(i)
     ! search neighbours of j and add to separator
-    if (j==a_n) then
+    if (j.eq.a_n) then
       k = a_ne
     else
       k = a_ptr(j+1) - 1
     end if
     do l = a_ptr(j), k
       m = a_row(l)
-      if (work(work_part+m)==ND_PART1_FLAG .and. a_n1>1) then
+      if (work(work_part+m).eq.ND_PART1_FLAG .and. a_n1.gt.1) then
         ! if (side .eq. ND_PART1_FLAG .or. side .eq. ND_SEP_FLAG)
         ! then
         work(work_part+m) = ND_SEP_FLAG
@@ -6506,7 +6506,7 @@ subroutine expand_partition(a_n,a_ne,a_ptr,a_row,a_weight,a_n1,a_n2, &
         a_weight_1 = a_weight_1 - w
         a_weight_sep = a_weight_sep + w
         ! end if
-      else if (work(work_part+m)==ND_PART2_FLAG .and. a_n2>1) then
+      else if (work(work_part+m).eq.ND_PART2_FLAG .and. a_n2.gt.1) then
         ! if (side .eq. ND_PART2_FLAG .or. side .eq. ND_SEP_FLAG)
         ! then
         work(work_part+m) = ND_SEP_FLAG
@@ -6559,12 +6559,12 @@ subroutine cost_function(a_weight_1,a_weight_2,a_weight_sep,sumweight, &
   if (costf.le.1) then
     tau = ((real(a_weight_sep)**1.0)/real(a_wgt1))/real(a_wgt2)
     if (imbal .and. real(max(a_wgt1,a_wgt2))/real(min(a_wgt1, &
-        a_wgt2))>=ratio) then
+        a_wgt2)).ge.ratio) then
       tau = real(sumweight-2) + tau
     end if
   else
     if (imbal .and. real(max(a_wgt1,a_wgt2))/real(min(a_wgt1, &
-        a_wgt2))>=ratio) then
+        a_wgt2)).ge.ratio) then
       tau = real(sumweight)*(1.0+beta) + real(a_weight_sep)*( &
         1.0_wp+beta*real(abs(a_wgt1-a_wgt2))/real(sumweight))
     else
@@ -6687,7 +6687,7 @@ subroutine nd_maxflow(a_n,a_ne,a_ptr,a_row,a_weight,costf,a_n1,a_n2, &
   do k = 1, a_ns
     i = partition(a_n1+a_n2+k)
     j1 = a_ptr(i)
-    if (i==a_n) then
+    if (i.eq.a_n) then
       nedge = nedge + a_ne + 1 - a_ptr(i)
     else
       nedge = nedge + a_ptr(i+1) - a_ptr(i)
@@ -6716,7 +6716,7 @@ subroutine nd_maxflow(a_n,a_ne,a_ptr,a_row,a_weight,costf,a_n1,a_n2, &
   call solvemaxflow(netw,dmapl,dmapr,mark1,mark2,pred,list)
 
 
-  if (msglvl>2) then
+  if (msglvl.gt.2) then
     write (lp,*) 'dmapL ...'
     write (lp,'(10I4)') dmapl
     write (lp,*) 'dmapR ...'
@@ -6731,7 +6731,7 @@ subroutine nd_maxflow(a_n,a_ne,a_ptr,a_row,a_weight,costf,a_n1,a_n2, &
     mapr(partition(istart_s+i)) = dmapr(i)
   end do
 
-  if (msglvl>2) then
+  if (msglvl.gt.2) then
     write (lp,*) 'mapL ...'
     write (lp,'(10I4)') mapl
     write (lp,*) 'mapR ...'
@@ -6748,43 +6748,43 @@ subroutine nd_maxflow(a_n,a_ne,a_ptr,a_row,a_weight,costf,a_n1,a_n2, &
   ! Find the better of the two partitions
 
 
-  if (statsl(9)==1 .and. statsr(9)==1) then
-    if (msglvl>0) write (lp,'(A)') 'both maps are acceptable'
-    if (costl<=costr) then
+  if (statsl(9).eq.1 .and. statsr(9).eq.1) then
+    if (msglvl.gt.0) write (lp,'(A)') 'both maps are acceptable'
+    if (costl.le.costr) then
       map = mapl
       stats = statsl(1:8)
       cost = costl
-      if (msglvl>0) write (lp,'(A)') 'left map accepted'
+      if (msglvl.gt.0) write (lp,'(A)') 'left map accepted'
     else
       map = mapr
       stats = statsr(1:8)
       cost = costr
-      if (msglvl>0) write (lp,'(A)') 'right map accepted'
+      if (msglvl.gt.0) write (lp,'(A)') 'right map accepted'
     end if
-  else if (statsl(9)==1) then
+  else if (statsl(9).eq.1) then
     map = mapl
     stats = statsl(1:8)
     cost = costl
-    if (msglvl>0) write (lp,'(A)') &
+    if (msglvl.gt.0) write (lp,'(A)') &
       'right map not acceptable, left map accepted'
-  else if (statsr(9)==1) then
+  else if (statsr(9).eq.1) then
     map = mapr
     stats = statsr(1:8)
     cost = costr
-    if (msglvl>0) write (lp,'(A)') &
+    if (msglvl.gt.0) write (lp,'(A)') &
       'left map not acceptable, right map accepted'
   else
-    if (msglvl>0) write (lp,'(A)') 'NEITHER map acceptable'
-    if (costl<=costr) then
+    if (msglvl.gt.0) write (lp,'(A)') 'NEITHER map acceptable'
+    if (costl.le.costr) then
       map = mapl
       stats = statsl(1:8)
       cost = costl
-      if (msglvl>0) write (lp,'(A)') 'left map accepted'
+      if (msglvl.gt.0) write (lp,'(A)') 'left map accepted'
     else
       map = mapr
       stats = statsr(1:8)
       cost = costr
-      if (msglvl>0) write (lp,'(A)') 'right map accepted'
+      if (msglvl.gt.0) write (lp,'(A)') 'right map accepted'
     end if
   end if
   a_weight_1 = stats(2)
@@ -6797,9 +6797,9 @@ subroutine nd_maxflow(a_n,a_ne,a_ptr,a_row,a_weight,costf,a_n1,a_n2, &
   a_n2 = 0
   a_ns = 0
   do i = 1, a_n
-    if (map(i)==1) a_n1 = a_n1 + 1
-    if (map(i)==2) a_n2 = a_n2 + 1
-    if (map(i)==0) a_ns = a_ns + 1
+    if (map(i).eq.1) a_n1 = a_n1 + 1
+    if (map(i).eq.2) a_n2 = a_n2 + 1
+    if (map(i).eq.0) a_ns = a_ns + 1
   end do
 
 
@@ -6871,15 +6871,15 @@ subroutine solvemaxflow(netw,maps1,maps2,mark1,mark2,pred,list)
 
   do ii = 2, nnode - 1, 2
     u = ii/2
-    if (mark1(ii)==1) then
-      if (mark1(ii+1)==1) then
+    if (mark1(ii).eq.1) then
+      if (mark1(ii+1).eq.1) then
         maps1(u) = 1
       else
         maps1(u) = 0
       end if
     end if
-    if (mark1(ii)==2) then
-      if (mark1(ii+1)==2) then
+    if (mark1(ii).eq.2) then
+      if (mark1(ii+1).eq.2) then
         maps1(u) = 2
       else
         maps1(u) = 0
@@ -6889,15 +6889,15 @@ subroutine solvemaxflow(netw,maps1,maps2,mark1,mark2,pred,list)
 
   do ii = 2, nnode - 1, 2
     u = ii/2
-    if (mark2(ii)==1) then
-      if (mark2(ii+1)==1) then
+    if (mark2(ii).eq.1) then
+      if (mark2(ii+1).eq.1) then
         maps2(u) = 1
       else
         maps2(u) = 0
       end if
     end if
-    if (mark2(ii)==2) then
-      if (mark2(ii+1)==2) then
+    if (mark2(ii).eq.2) then
+      if (mark2(ii+1).eq.2) then
         maps2(u) = 2
       else
         maps2(u) = 0
@@ -6956,7 +6956,7 @@ subroutine mk_network(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition,map,nvtx, &
 
   lp = 0
 
-  if (msglvl>0) then
+  if (msglvl.gt.0) then
     write (lp,'(/A)') '### inside mknetwork()'
     write (lp,'(A,I8,A,I8)') 'nvtx', nvtx
   end if
@@ -6995,7 +6995,7 @@ subroutine mk_network(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition,map,nvtx, &
   do k = 1, nvtx
     i = partition(a_n1+a_n2+k)
     j1 = a_ptr(i)
-    if (i==a_n) then
+    if (i.eq.a_n) then
       j2 = a_ne
     else
       j2 = a_ptr(i+1) - 1
@@ -7005,15 +7005,15 @@ subroutine mk_network(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition,map,nvtx, &
     do jj = j1, j2
       j = a_row(jj)
       ! Find out in which partition node j lies using map array
-      if (map(j)==1) then
+      if (map(j).eq.1) then
         ! If in partition B add vertex k to AdjToSource
         isadjtosource(k) = 1
       end if
-      if (map(j)==2) then
+      if (map(j).eq.2) then
         ! If in partition W add vertex k to AdjToSink
         isadjtosink(k) = 1
       end if
-      if (map(j)==0) then
+      if (map(j).eq.0) then
         ! If in separator add edge accumulating number of edges
         nedge = nedge + 1
         ! Edge has this orientation to emulate matlab code
@@ -7041,8 +7041,8 @@ subroutine mk_network(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition,map,nvtx, &
   ! to vertex in the separator set
 
   do k = 1, nvtx
-    if (isadjtosource(k)==1) narc2 = narc2 + 1
-    if (isadjtosink(k)==1) narc3 = narc3 + 1
+    if (isadjtosource(k).eq.1) narc2 = narc2 + 1
+    if (isadjtosink(k).eq.1) narc3 = narc3 + 1
   end do
 
   narc4 = 0
@@ -7050,14 +7050,14 @@ subroutine mk_network(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition,map,nvtx, &
     u = sedge(ii,1)
     v = sedge(ii,2)
     ! --- ignore self edges ---
-    if (u==v) cycle
+    if (u.eq.v) cycle
     ! --- omit edges with essential vertices ---
-    if (isadjtosink(u)==1 .and. isadjtosource(u)==1) cycle
-    if (isadjtosink(v)==1 .and. isadjtosource(v)==1) cycle
+    if (isadjtosink(u).eq.1 .and. isadjtosource(u).eq.1) cycle
+    if (isadjtosink(v).eq.1 .and. isadjtosource(v).eq.1) cycle
     ! --- omit pairs both adjacent to source ---
-    if ((isadjtosource(u)==1) .and. (isadjtosource(v)==1)) cycle
+    if ((isadjtosource(u).eq.1) .and. (isadjtosource(v).eq.1)) cycle
     ! --- omit pairs both adjacent to sink ---
-    if ((isadjtosink(u)==1) .and. (isadjtosink(v)==1)) cycle
+    if ((isadjtosink(u).eq.1) .and. (isadjtosink(v).eq.1)) cycle
     ! Qualifying arc found
     narc4 = narc4 + 1
   end do
@@ -7069,7 +7069,7 @@ subroutine mk_network(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition,map,nvtx, &
   netw%source = 1
   netw%sink = 2*nvtx + 2
 
-  if (msglvl>0) then
+  if (msglvl.gt.0) then
     write (lp,'(I8,A)') narc1, ' internal arcs'
     write (lp,'(I8,A)') narc2, ' arcs from source'
     write (lp,'(I8,A)') narc3, ' arcs from sink'
@@ -7104,13 +7104,13 @@ subroutine mk_network(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition,map,nvtx, &
     ! netw%capacities(iarc) = vwts(u)
   end do
 
-  if (msglvl>0) write (lp,'(A,I8)') 'after (u-,u+) arcs, iarc = ', iarc
+  if (msglvl.gt.0) write (lp,'(A,I8)') 'after (u-,u+) arcs, iarc = ', iarc
 
 
   ! (source,u) arcs
 
   do u = 1, nvtx
-    if (isadjtosource(u)==1) then
+    if (isadjtosource(u).eq.1) then
       iarc = iarc + 1
       netw%firsts(iarc) = netw%source
       netw%seconds(iarc) = 2*u
@@ -7118,16 +7118,16 @@ subroutine mk_network(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition,map,nvtx, &
     end if
   end do
 
-  if (msglvl>0) write (lp,'(A,I8)') 'after (source,u-) arcs, iarc = ', &
+  if (msglvl.gt.0) write (lp,'(A,I8)') 'after (source,u-) arcs, iarc = ', &
     iarc
 
 
   ! (u,sink) arcs
 
   do u = 1, nvtx
-    if (msglvl>5) write (lp,'(A,I4,A,I8)') 'isAdjToSink(', u, ')= ', &
+    if (msglvl.gt.5) write (lp,'(A,I4,A,I8)') 'isAdjToSink(', u, ')= ', &
       isadjtosink(u)
-    if (isadjtosink(u)==1) then
+    if (isadjtosink(u).eq.1) then
       iarc = iarc + 1
       netw%firsts(iarc) = 2*u + 1
       netw%seconds(iarc) = netw%sink
@@ -7135,7 +7135,7 @@ subroutine mk_network(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition,map,nvtx, &
     end if
   end do
 
-  if (msglvl>0) write (lp,'(A,I8)') 'after (u,sink) arcs, iarc = ', iarc
+  if (msglvl.gt.0) write (lp,'(A,I8)') 'after (u,sink) arcs, iarc = ', iarc
 
 
   ! (u+,v-) arcs
@@ -7143,10 +7143,10 @@ subroutine mk_network(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition,map,nvtx, &
   do ii = 1, nedge
     u = sedge(ii,1)
     v = sedge(ii,2)
-    if ((u/=v) .and. (isadjtosource(u)/=1 .or. isadjtosource( &
-        v)/=1) .and. (isadjtosink(u)/=1 .or. isadjtosink( &
-        v)/=1) .and. (isadjtosource(u)/=1 .or. isadjtosink( &
-        u)/=1) .and. (isadjtosource(v)/=1 .or. isadjtosink(v)/=1)) then
+    if ((u.ne.v) .and. (isadjtosource(u).ne.1 .or. isadjtosource( &
+        v).ne.1) .and. (isadjtosink(u).ne.1 .or. isadjtosink( &
+        v).ne.1) .and. (isadjtosource(u).ne.1 .or. isadjtosink( &
+        u).ne.1) .and. (isadjtosource(v).ne.1 .or. isadjtosink(v).ne.1)) then
       iarc = iarc + 1
       netw%firsts(iarc) = 2*u + 1
       netw%seconds(iarc) = 2*v
@@ -7154,7 +7154,7 @@ subroutine mk_network(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition,map,nvtx, &
     end if
   end do
 
-  if (msglvl>0) write (lp,'(A,I8)') 'after (u+,v-) arcs, iarc = ', iarc
+  if (msglvl.gt.0) write (lp,'(A,I8)') 'after (u+,v-) arcs, iarc = ', iarc
 
 
   ! Generate the head vectors for in/out edges
@@ -7168,7 +7168,7 @@ subroutine mk_network(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition,map,nvtx, &
   do ii = narc, 1, -1
     u = netw%firsts(ii)
     v = netw%seconds(ii)
-    if (msglvl>1) write (lp,'(A,I8,A,I8,A,I8,A)') 'ii', ii, 'arc (', u, &
+    if (msglvl.gt.1) write (lp,'(A,I8,A,I8,A,I8,A)') 'ii', ii, 'arc (', u, &
       ',', v, ')'
     netw%nextin(ii) = netw%inheads(v)
     netw%inheads(v) = ii
@@ -7182,12 +7182,12 @@ subroutine mk_network(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition,map,nvtx, &
     do i = 1, nvtx
       wts = wts + vwts(i)
     end do
-    if (msglvl>0) write (lp,*) 'Calling findpenalty'
+    if (msglvl.gt.0) write (lp,*) 'Calling findpenalty'
     ! Compute network capacities for separator arcs.
     call findpenalty(msglvl,a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition, &
       map,vwts,wtb,wtw,wts,isadjtosource,isadjtosink,mark1,mark2,list, &
       imb)
-    if (msglvl>0) write (lp,*) 'Exiting findpenalty'
+    if (msglvl.gt.0) write (lp,*) 'Exiting findpenalty'
     do i = 1, nvtx
       netw%capacities(i) = mark1(i)
     end do
@@ -7201,7 +7201,7 @@ subroutine mk_network(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition,map,nvtx, &
   ! ISD Would this not be initialized in routine that computes flows?
   netw%flows = 0
 
-  if (msglvl>0) write (lp,'(A/)') '### leaving mknetwork()'
+  if (msglvl.gt.0) write (lp,'(A/)') '### leaving mknetwork()'
 
 end subroutine mk_network
 
@@ -7233,11 +7233,11 @@ subroutine findmaxflow(netw,pred,list,tags,deltas)
   iarc = netw%outheads(source)
   ! Run through all nodes connected to source
   do
-    if (iarc==-1) exit
+    if (iarc.eq.-1) exit
 
     do
       avail = netw%capacities(iarc) - netw%flows(iarc)
-      if (avail>0) then
+      if (avail.gt.0) then
         ! Set in findaugpath
 
         ! use BFS to find path
@@ -7253,7 +7253,7 @@ subroutine findmaxflow(netw,pred,list,tags,deltas)
 
         ! Go to next arc from source node if no augmenting path has been
         ! found
-        if ((avail==0) .or. (pred(sink)==0)) exit
+        if ((avail.eq.0) .or. (pred(sink).eq.0)) exit
 
         ! Update flows
         call augmentpath(netw,avail,pred)
@@ -7313,7 +7313,7 @@ subroutine findmincut(netw,mark1,mark2,list)
   list(now) = source
   ! while now <= last
   do
-    if (now>last) exit
+    if (now.gt.last) exit
     x = list(now)
     now = now + 1
     iarc = netw%outheads(x)
@@ -7322,11 +7322,11 @@ subroutine findmincut(netw,mark1,mark2,list)
     ! arc
     ! on list if there is spare capacity on arc
     do
-      if (iarc==-1) exit
+      if (iarc.eq.-1) exit
       z = netw%seconds(iarc)
-      if (mark1(z)==1) then
+      if (mark1(z).eq.1) then
       else
-        if (netw%flows(iarc)<netw%capacities(iarc)) then
+        if (netw%flows(iarc).lt.netw%capacities(iarc)) then
           last = last + 1
           list(last) = z
           mark1(z) = 1
@@ -7340,11 +7340,11 @@ subroutine findmincut(netw,mark1,mark2,list)
     ! start of arc
     ! on list if there is spare capacity on arc
     do
-      if (iarc==-1) exit
+      if (iarc.eq.-1) exit
       z = netw%firsts(iarc)
-      if (mark1(z)==1) then
+      if (mark1(z).eq.1) then
       else
-        if (netw%flows(iarc)>0) then
+        if (netw%flows(iarc).gt.0) then
           last = last + 1
           list(last) = z
           mark1(z) = 1
@@ -7366,7 +7366,7 @@ subroutine findmincut(netw,mark1,mark2,list)
   list(now) = sink
   ! while now <= last
   do
-    if (now>last) exit
+    if (now.gt.last) exit
     x = list(now)
     now = now + 1
     iarc = netw%outheads(x)
@@ -7375,11 +7375,11 @@ subroutine findmincut(netw,mark1,mark2,list)
     ! arc
     ! on list if there is spare capacity on arc
     do
-      if (iarc==-1) exit
+      if (iarc.eq.-1) exit
       z = netw%seconds(iarc)
-      if (mark2(z)==2) then
+      if (mark2(z).eq.2) then
       else
-        if (netw%flows(iarc)>0) then
+        if (netw%flows(iarc).gt.0) then
           last = last + 1
           list(last) = z
           mark2(z) = 2
@@ -7393,11 +7393,11 @@ subroutine findmincut(netw,mark1,mark2,list)
     ! start of arc
     ! on list if there is spare capacity on arc
     do
-      if (iarc==-1) exit
+      if (iarc.eq.-1) exit
       z = netw%firsts(iarc)
-      if (mark2(z)==2) then
+      if (mark2(z).eq.2) then
       else
-        if (netw%flows(iarc)<netw%capacities(iarc)) then
+        if (netw%flows(iarc).lt.netw%capacities(iarc)) then
           last = last + 1
           list(last) = z
           mark2(z) = 2
@@ -7454,7 +7454,7 @@ subroutine findpenalty(msglvl,a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition, &
   ! nvtx is number of vertices in separator
   nvtx = a_n - a_n1 - a_n2
 
-  if (msglvl>0) then
+  if (msglvl.gt.0) then
     write (lp,'(A)') ''
     write (lp,'(A)') '### inside findpenalty()'
   end if
@@ -7463,7 +7463,7 @@ subroutine findpenalty(msglvl,a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition, &
   ! Breadth first traversal from source
   ! Source is defined as all vertices in black partition
 
-  if (msglvl>0) write (lp,'(A)') 'breadth first traversal from source'
+  if (msglvl.gt.0) write (lp,'(A)') 'breadth first traversal from source'
 
   mark = 0
   ! Black vertices at level 0
@@ -7472,7 +7472,7 @@ subroutine findpenalty(msglvl,a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition, &
   do k = a_n1 + a_n2 + 1, a_n
     z = partition(k)
     ! Check if adjacent to source
-    if (count(k-a_n1-a_n2)==1) then
+    if (count(k-a_n1-a_n2).eq.1) then
       last = last + 1
       list(last) = z
       mark(z) = 1
@@ -7488,10 +7488,10 @@ subroutine findpenalty(msglvl,a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition, &
     end_lev = last
     do ilev = begin_lev, end_lev
       x = list(ilev)
-      if (msglvl>1) write (lp,'(A,I10)') 'Processing vertex', x
+      if (msglvl.gt.1) write (lp,'(A,I10)') 'Processing vertex', x
       ! Run through vertices connected to vertex x
       j1 = a_ptr(x)
-      if (x==a_n) then
+      if (x.eq.a_n) then
         j2 = a_ne
       else
         j2 = a_ptr(x+1) - 1
@@ -7499,9 +7499,9 @@ subroutine findpenalty(msglvl,a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition, &
       do jj = j1, j2
         z = a_row(jj)
         ! Jump if vertex not in separator
-        if (map(z)/=0) cycle
+        if (map(z).ne.0) cycle
         ! Jump if vertex visited already
-        if (mark(z)/=0) cycle
+        if (mark(z).ne.0) cycle
         mark(z) = k
         ! write(0,*) 'z,mark(z)',z,mark(z)
         ! Add node z to list
@@ -7509,14 +7509,14 @@ subroutine findpenalty(msglvl,a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition, &
         list(last) = z
       end do
     end do
-    if (last==end_lev) exit
+    if (last.eq.end_lev) exit
   end do ! end of processing of nodes on level k
 
 
   ! breadth first traversal from sink
   ! Sink is defined as all vertices in white partition
 
-  if (msglvl>0) write (lp,'(A)') 'breadth first traversal from the sink'
+  if (msglvl.gt.0) write (lp,'(A)') 'breadth first traversal from the sink'
 
   mark1 = 0
   ! Keep sink at level 0
@@ -7529,7 +7529,7 @@ subroutine findpenalty(msglvl,a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition, &
   do k = a_n1 + a_n2 + 1, a_n
     z = partition(k)
     ! Check if adjacent to source
-    if (head(k-a_n1-a_n2)==1) then
+    if (head(k-a_n1-a_n2).eq.1) then
       last = last + 1
       list(last) = z
       mark1(z) = 1
@@ -7549,10 +7549,10 @@ subroutine findpenalty(msglvl,a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition, &
     end_lev = last
     do ilev = begin_lev, end_lev
       x = list(ilev)
-      if (msglvl>1) write (lp,'(A,I10)') 'Processing vertex', x
+      if (msglvl.gt.1) write (lp,'(A,I10)') 'Processing vertex', x
       ! Run through vertices connected to vertex x
       j1 = a_ptr(x)
-      if (x==a_n) then
+      if (x.eq.a_n) then
         j2 = a_ne
       else
         j2 = a_ptr(x+1) - 1
@@ -7560,9 +7560,9 @@ subroutine findpenalty(msglvl,a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition, &
       do jj = j1, j2
         z = a_row(jj)
         ! Jump if vertex not in separator
-        if (map(z)/=0) cycle
+        if (map(z).ne.0) cycle
         ! Jump if vertex visited already
-        if (mark1(z)/=0) cycle
+        if (mark1(z).ne.0) cycle
         mark1(z) = k
         ! write(0,*) 'z,mark1(z)',z,mark1(z)
         ! write(0,*) 'mark(z)',mark(z)
@@ -7575,11 +7575,11 @@ subroutine findpenalty(msglvl,a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition, &
         list(last) = z
       end do
     end do
-    if (last==end_lev) exit
+    if (last.eq.end_lev) exit
   end do ! end of processing of nodes on level k
 
   ! Compute half-level sets
-  if (msglvl>1) write (lp,'(A,2I4)') 'minl, maxl ', minl, maxl
+  if (msglvl.gt.1) write (lp,'(A,2I4)') 'minl, maxl ', minl, maxl
 
   ! We will number levels from 1 to maxl-minl+1
   ! count will hold total weight of all vertices in half-level set
@@ -7606,7 +7606,7 @@ subroutine findpenalty(msglvl,a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition, &
     count(mark1(i)) = count(mark1(i)) + vwts(i)
   end do
 
-  if (msglvl>1) then
+  if (msglvl.gt.1) then
     write (lp,'(A)') 'Number of vertices in each half-level set'
     do i = 1, maxl - minl + 1
       write (lp,'(2I10)') i, count(i)
@@ -7617,24 +7617,24 @@ subroutine findpenalty(msglvl,a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition, &
   ! wtB is weight of B
   ! wtW is set to total weight of rest of network
   wtw = wtw + wts
-  if (msglvl>1) write (lp,('(A,3I10)')) 'wtB,wtW,wtS', wtb, wtw, wts
-  if (maxl-minl==0) then
+  if (msglvl.gt.1) write (lp,('(A,3I10)')) 'wtB,wtW,wtS', wtb, wtw, wts
+  if (maxl-minl.eq.0) then
     ! Only one level set
     imb(1) = max(real(wtb)/real(wtw),real(wtw)/real(wtb))
   else
     wtw = wtw - count(1)
-   ! if (msglvl>0) write (14,'(A)') &
+   ! if (msglvl.gt.0) write (14,'(A)') &
    !   'Half-level set   width   |B|,|W|, imbalance'
     do k = 1, maxl - minl
       wtw = wtw - count(k+1)
       imb(k) = max(real(wtb)/real(wtw),real(wtw)/real(wtb))
-   !   if (msglvl>0) write (14,'(I10,4G12.2)') k, count(k), wtb, wtw, &
+   !   if (msglvl.gt.0) write (14,'(I10,4G12.2)') k, count(k), wtb, wtw, &
    !     imb(k)
       wtb = wtb + count(k)
     end do
   end if
 
-  if (msglvl>1) then
+  if (msglvl.gt.1) then
     write (lp,'(A)') 'Imbalances'
     do i = 1, maxl - minl
       write (lp,'(I10,G12.2)') i, imb(i)
@@ -7645,28 +7645,28 @@ subroutine findpenalty(msglvl,a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition, &
   do k = 1, maxl - minl + 1
     inode = head(k)
     do
-      if (inode==-1) exit
-      if (msglvl>1) write (lp,('(A,2I4)')) 'level and node', k, inode
-      if (k==1) then
+      if (inode.eq.-1) exit
+      if (msglvl.gt.1) write (lp,('(A,2I4)')) 'level and node', k, inode
+      if (k.eq.1) then
         mark(inode) = floor(penp*imb(1)*vwts(inode))
       else
-        if (k==maxl-minl+1) mark(inode) = floor(penp*imb(maxl-minl)*vwts &
+        if (k.eq.maxl-minl+1) mark(inode) = floor(penp*imb(maxl-minl)*vwts &
           (inode))
-        if (k>1 .and. k<maxl-minl+1) mark(inode) = floor(penp*min(imb( &
+        if (k.gt.1 .and. k.lt.maxl-minl+1) mark(inode) = floor(penp*min(imb( &
           k),imb(k-1))*vwts(inode))
       end if
       inode = list(inode)
     end do
   end do
 
-  if (msglvl>1) then
+  if (msglvl.gt.1) then
     write (lp,'(A)') 'Computed penalties'
     do i = 1, nvtx
       write (lp,'(2I10)') i, mark(i)
     end do
   end if
 
-  if (msglvl>0) write (lp,'(A/)') '### leaving findpenalty()'
+  if (msglvl.gt.0) write (lp,'(A/)') '### leaving findpenalty()'
 
 end subroutine findpenalty
 
@@ -7697,7 +7697,7 @@ subroutine augmentpath(netw,delta,pred)
   sink = netw%sink
 
   ! Should set an error flag
-  if (delta<=0 .or. pred(sink)<=0) then
+  if (delta.le.0 .or. pred(sink).le.0) then
     write (lp,'(A,I4,A,I4)') 'ERROR : delta', delta, ', pred(sink) = ', &
       pred(sink)
     return
@@ -7709,12 +7709,12 @@ subroutine augmentpath(netw,delta,pred)
   w = sink
   ! while w ~= source
   do
-    if (w==source) exit
+    if (w.eq.source) exit
     iarc = pred(w)
-    if (netw%firsts(iarc)==w) then
+    if (netw%firsts(iarc).eq.w) then
       v = netw%seconds(iarc)
       netw%flows(iarc) = netw%flows(iarc) - delta
-    else if (netw%seconds(iarc)==w) then
+    else if (netw%seconds(iarc).eq.w) then
       v = netw%firsts(iarc)
       netw%flows(iarc) = netw%flows(iarc) + delta
     end if
@@ -7795,7 +7795,7 @@ subroutine findaugpath(netw,iarc_m,avail,pred,stats,list,tags,deltas)
 
   ! This will never be the case because all arcs iarc_m come from source
   ! node
-  if (netw%firsts(iarc)/=source) then
+  if (netw%firsts(iarc).ne.source) then
     write (lp,'(A,I4,A)') 'u', u, 'is not adjacent to source'
     return
   end if
@@ -7804,7 +7804,7 @@ subroutine findaugpath(netw,iarc_m,avail,pred,stats,list,tags,deltas)
   ! check for available capacity
 
   avail = netw%capacities(iarc) - netw%flows(iarc)
-  if (avail==0) return
+  if (avail.eq.0) return
 
 
   ! Find augmenting path using an alternating tree
@@ -7826,7 +7826,7 @@ subroutine findaugpath(netw,iarc_m,avail,pred,stats,list,tags,deltas)
 
   ! while now <= last
   do
-    if (now>last) exit
+    if (now.gt.last) exit
     v = list(now)
     now = now + 1
     n_nodevisit = n_nodevisit + 1
@@ -7836,17 +7836,17 @@ subroutine findaugpath(netw,iarc_m,avail,pred,stats,list,tags,deltas)
     do
       ! Run through all edges emanating from v
       ! First is v^- to v^+
-      if (iarc==-1) exit
+      if (iarc.eq.-1) exit
       w = netw%seconds(iarc)
       n_arcvisit = n_arcvisit + 1
 
-      if (tags(w)/=root) then
+      if (tags(w).ne.root) then
         ! Node w has not yet been visited
 
-        if (netw%capacities(iarc)>netw%flows(iarc)) then
+        if (netw%capacities(iarc).gt.netw%flows(iarc)) then
           avail = netw%capacities(iarc) - netw%flows(iarc)
 
-          if (avail>deltas(v)) then
+          if (avail.gt.deltas(v)) then
             avail = deltas(v)
           end if
           deltas(w) = avail
@@ -7854,7 +7854,7 @@ subroutine findaugpath(netw,iarc_m,avail,pred,stats,list,tags,deltas)
           ! Flag w as being visited
           tags(w) = root
 
-          if (w==sink) exit
+          if (w.eq.sink) exit
 
           last = last + 1
           list(last) = w
@@ -7864,19 +7864,19 @@ subroutine findaugpath(netw,iarc_m,avail,pred,stats,list,tags,deltas)
       ! Go to next arc from v
       iarc = netw%nextout(iarc)
     end do
-    if (w==sink) exit
+    if (w.eq.sink) exit
 
 
     iarc = netw%inheads(v)
     ! while iarc ~= -1
     do
       ! Run through all edges coming in to v
-      if (iarc==-1) exit
+      if (iarc.eq.-1) exit
       w = netw%firsts(iarc)
       n_arcvisit = n_arcvisit + 1
-      if (tags(w)/=root) then
-        if (netw%flows(iarc)>0) then
-          if (avail>netw%flows(iarc)) then
+      if (tags(w).ne.root) then
+        if (netw%flows(iarc).gt.0) then
+          if (avail.gt.netw%flows(iarc)) then
             avail = netw%flows(iarc)
           end if
           deltas(w) = avail
@@ -7889,11 +7889,11 @@ subroutine findaugpath(netw,iarc_m,avail,pred,stats,list,tags,deltas)
       iarc = netw%nextin(iarc)
     end do
     ! Don't think you can reach this statement
-    if (w==sink) exit
+    if (w.eq.sink) exit
   end do
 
   ! Flag to show augmenting path not found
-  if (w/=sink) avail = 0
+  if (w.ne.sink) avail = 0
 
   stats(1) = n_nodevisit
   stats(2) = n_arcvisit
@@ -7910,9 +7910,9 @@ subroutine evalbsw(a_n,a_ne,a_ptr,a_row,a_weight,map,alpha,costf,stats, &
 
   ! input ---
   ! map[nvtx] -- map from vertices to region
-  ! map[u] == 0 --> u in S
-  ! map[u] == 1 --> u in B
-  ! map[u] == 2 --> u in W
+  ! map[u] .eq. 0 --> u in S
+  ! map[u] .eq. 1 --> u in B
+  ! map[u] .eq. 2 --> u in W
   ! alpha --- acceptability parameter
   ! beta  --- imbalance penalty parameter
 
@@ -7951,11 +7951,11 @@ subroutine evalbsw(a_n,a_ne,a_ptr,a_row,a_weight,map,alpha,costf,stats, &
   nb = 0
   nw = 0
   do u = 1, nvtx
-    if (map(u)==0) then
+    if (map(u).eq.0) then
       ns = ns + a_weight(u)
-    else if (map(u)==1) then
+    else if (map(u).eq.1) then
       nb = nb + a_weight(u)
-    else if (map(u)==2) then
+    else if (map(u).eq.2) then
       nw = nw + a_weight(u)
     end if
   end do
@@ -7975,7 +7975,7 @@ subroutine evalbsw(a_n,a_ne,a_ptr,a_row,a_weight,map,alpha,costf,stats, &
     ! nzA = length(rows) ;
     do j = 1, a_n
       j1 = a_ptr(j)
-      if (j==a_n) then
+      if (j.eq.a_n) then
         j2 = a_ne
       else
         j2 = a_ptr(j+1) - 1
@@ -7984,20 +7984,20 @@ subroutine evalbsw(a_n,a_ne,a_ptr,a_row,a_weight,map,alpha,costf,stats, &
       do jj = j1, j2
         u = a_row(jj)
         ! v = cols(ii) ;
-        if (map(u)==0) then
-          if (map(v)==0) then
+        if (map(u).eq.0) then
+          if (map(v).eq.0) then
             nss = nss + 1
-          else if (map(v)==1) then
+          else if (map(v).eq.1) then
             nsb = nsb + 1
-          else if (map(v)==2) then
+          else if (map(v).eq.2) then
             nsw = nsw + 1
           end if
-        else if (map(u)==1) then
-          if (map(v)==1) then
+        else if (map(u).eq.1) then
+          if (map(v).eq.1) then
             nbb = nbb + 1
           end if
-        else if (map(u)==2) then
-          if (map(v)==2) then
+        else if (map(u).eq.2) then
+          if (map(v).eq.2) then
             nww = nww + 1
           end if
         end if
@@ -8012,13 +8012,13 @@ subroutine evalbsw(a_n,a_ne,a_ptr,a_row,a_weight,map,alpha,costf,stats, &
   ! stats[9] -- 1 if acceptable, 0 if not
   ! acceptable --> alpha*min(|B|,|W|) >= max(|B|,|W|)
   ! stats10 -- cost of partition
-  if (alpha*minbw>=maxbw) then
+  if (alpha*minbw.ge.maxbw) then
     stats(9) = 1
   else
     stats(9) = 0
   end if
 
-  if (alpha > nb+nw+ns-2) then
+  if (alpha .gt. nb+nw+ns-2) then
       imbal = .false.
   else
       imbal = .true.
