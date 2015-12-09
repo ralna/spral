@@ -97,7 +97,6 @@ contains
       logical, intent(out) :: with_metis
 
       integer :: argnum, narg
-      integer :: i
       character(len=200) :: argval
 
       ! Defaults

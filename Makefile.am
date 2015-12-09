@@ -67,6 +67,8 @@ EXTRA_DIST = src/metis4_wrapper.f90 src/metis5_wrapper.f90
 include_HEADERS += include/spral_nd.h
 libspral_a_SOURCES += \
 	src/nd/nd.f90 \
+	src/nd/preprocess.f90 \
+	src/nd/types.f90 \
 	interfaces/C/nd.f90
 bin_PROGRAMS = spral_nd
 spral_nd_SOURCES = \
@@ -310,6 +312,9 @@ clean-local:
 driver/ssids_spral.$(OBJEXT): libspral.a
 src/match_order.$(OBJEXT): src/metis$(METIS_VERSION)_wrapper.$(OBJEXT) \
 									src/scaling.$(OBJEXT)
+src/nd/nd.$(OBJEXT): src/nd/preprocess.$(OBJEXT) \
+							src/nd/types.$(OBJEXT)
+src/nd/preprocess.$(OBJEXT): src/nd/types.$(OBJEXT)
 src/random_matrix.$(OBJEXT): src/random.$(OBJEXT)
 src/rutherford_boeing.$(OBJEXT): src/matrix_util.$(OBJEXT) \
 											src/random.$(OBJEXT)
@@ -363,6 +368,7 @@ driver/spral_ssids.$(OBJEXT): libspral.a
 src/ssids/solve_kernels.$(OBJEXT): src/ssids/dtrsv.h
 
 # C interface deps
+interfaces/C/nd.$(OBJEXT): src/nd/nd.$(OBJEXT)
 interfaces/C/random.$(OBJEXT): src/random.$(OBJEXT)
 interfaces/C/random_matrix.$(OBJEXT): src/random_matrix.$(OBJEXT)
 interfaces/C/rutherford_boeing.$(OBJEXT): src/rutherford_boeing.$(OBJEXT)
