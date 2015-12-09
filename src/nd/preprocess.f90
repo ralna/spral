@@ -333,9 +333,11 @@ subroutine remove_dense_rows(a_n, a_ne, a_ptr, a_row, iperm, options, info)
 
 end subroutine remove_dense_rows
 
-subroutine dense_remove_from_list(n,next,prev,deg,irm,ig)
-   integer, intent(in) :: n ! order matrix
-   integer, intent(inout) :: next(n),prev(n),deg(n)
+subroutine dense_remove_from_list(n, next, prev, deg, irm, ig)
+   integer, intent(in) :: n
+   integer, dimension(n), intent(inout) :: next
+   integer, dimension(n), intent(inout) :: prev
+   integer, dimension(n), intent(inout) :: deg
    integer, intent(in) :: irm, ig
    integer :: inext, ilast
 
@@ -350,9 +352,11 @@ subroutine dense_remove_from_list(n,next,prev,deg,irm,ig)
    end if
 end subroutine dense_remove_from_list
 
-subroutine dense_add_to_list(n,next,prev,deg,irm,ig)
-   integer, intent(in) :: n ! order matrix
-   integer, intent(inout) :: next(n),prev(n),deg(n)
+subroutine dense_add_to_list(n, next, prev, deg, irm, ig)
+   integer, intent(in) :: n
+   integer, intent(inout) :: next(n)
+   integer, intent(inout) :: prev(n)
+   integer, intent(inout) :: deg(n)
    integer, intent(in) :: irm, ig
    integer :: inext
 
