@@ -121,29 +121,49 @@ module spral_nd_types
 
    ! *****************************************************************
 contains
-   !
-   ! Prints out errors and warnings according to value of flag
-   !
-   subroutine nd_print_message(flag,unit,context)
-      integer, intent(in) :: flag ! Error flag to print message for
-      integer, intent(in) :: unit ! Fortran unit to print message to
-      character(len=*), intent(in) :: context ! context to print with message
 
-      if (unit.lt.0) return ! No output
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! General utility functions needed by all nd modules
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-      if (flag<0) write (unit,fmt='('' ERROR: '')')
-      write (unit,advance='no',fmt='('' '', a,'':'')') &
-         context(1:len_trim(context))
+!
+! Prints out errors and warnings according to value of flag
+!
+subroutine nd_print_message(flag,unit,context)
+   integer, intent(in) :: flag ! Error flag to print message for
+   integer, intent(in) :: unit ! Fortran unit to print message to
+   character(len=*), intent(in) :: context ! context to print with message
 
-      select case (flag)
-      case (0)
-         write (unit,'(A)') ' successful completion'
-      case (ND_ERR_MEMORY_ALLOC)
-         write (unit,'(A)') ' memory allocation failure'
-      case (ND_ERR_MEMORY_DEALLOC)
-         write (unit,'(A)') ' memory deallocation failure'
-      case (ND_ERR_N)
-         write (unit,'(A)') ' n<1'
-      end select
-   end subroutine nd_print_message
+   if (unit.lt.0) return ! No output
+
+   if (flag<0) write (unit,fmt='('' ERROR: '')')
+   write (unit,advance='no',fmt='('' '', a,'':'')') &
+      context(1:len_trim(context))
+
+   select case (flag)
+   case (0)
+      write (unit,'(A)') ' successful completion'
+   case (ND_ERR_MEMORY_ALLOC)
+      write (unit,'(A)') ' memory allocation failure'
+   case (ND_ERR_MEMORY_DEALLOC)
+      write (unit,'(A)') ' memory deallocation failure'
+   case (ND_ERR_N)
+      write (unit,'(A)') ' n<1'
+   end select
+end subroutine nd_print_message
+
+!
+! Returns ptr(idx) if idx.le.n, or ne+1 otherwise
+!
+integer function nd_get_ptr(idx, n, ne, ptr)
+   integer, intent(in) :: idx, n, ne
+   integer, dimension(n), intent(in) :: ptr
+
+   if(idx.le.n) then
+      nd_get_ptr = ptr(idx)
+   else
+      nd_get_ptr = ne+1
+   endif
+end function nd_get_ptr
+
 end module spral_nd_types
