@@ -152,7 +152,12 @@ subroutine nd_order(mtx,n,ptr,row,perm,options,info,seps)
    iperm(:) = (/ (i,i=1,a_n) /)
 
    ! Initialize all variables to not be in a seperator
-   if (present(seps)) seps(:) = -1
+   ! NB: To make code easier to handle, we always have a work_seps(:) array
+   !     rather than optional arguments throughout (i.e. treat it as always
+   !     present).
+   allocate(work_seps(n), stat=info%stat)
+   if (info%stat.ne.0) go to 10
+   work_seps(:) = -1
 
    ! Remove any dense rows from matrix and modify iperm (if enabled)
    if (options%remove_dense_rows) &
@@ -253,53 +258,28 @@ subroutine nd_order(mtx,n,ptr,row,perm,options,info,seps)
          allocate(work_iperm(a_n), stat=info%stat)
          if (info%stat.ne.0) go to 10
          work_iperm(1:a_n_curr) = (/ (i,i=1,a_n_curr) /)
-         if (present(seps)) then
-            allocate(work_seps(a_n_curr), stat=info%stat)
-            if (info%stat.ne.0) go to 10
-            work_seps(1:a_n_curr) = -1
-         end if
       end if
       ! Allocate a workspace that can be reused at lower levels
       allocate (work(a_n+14*a_n_curr+a_ne_curr), stat=info%stat)
       if (info%stat.ne.0) go to 10
 
       use_multilevel = .true.
+      sumweight = sum(a_weight(1:a_n_curr))
+      lwork = 12*a_n_curr + sumweight + a_ne_curr
       if (nsvar+num_zero_row.eq.a_n) then
-         sumweight = sum(a_weight(1:a_n_curr))
-         lwork = 12*a_n_curr + sumweight + a_ne_curr
-         if (present(seps)) then
-            call nd_nested_internal(a_n_curr, a_ne_curr, a_ptr(1:a_n_curr), &
-               a_row(1:a_ne_curr), a_weight(1:a_n_curr), sumweight,         &
-               iperm(1:a_n_curr), work(1:lwork),                            &
-               work(lwork+1:lwork+a_n_curr),                                &
-               work(lwork+a_n_curr+1:lwork+2*a_n_curr), 0, options, info,   &
-               .false., use_multilevel, grid, seps=seps(1:a_n_curr))
-         else
-            call nd_nested_internal(a_n_curr, a_ne_curr, a_ptr(1:a_n_curr), &
-               a_row(1:a_ne_curr), a_weight(1:a_n_curr), sumweight,         &
-               iperm(1:a_n_curr), work(1:lwork),                            &
-               work(lwork+1:lwork+a_n_curr),                                &
-               work(lwork+a_n_curr+1:lwork+2*a_n_curr), 0, options, info,   &
-               .false.,use_multilevel,grid)
-
-         end if
+         call nd_nested_internal(a_n_curr, a_ne_curr, a_ptr(1:a_n_curr), &
+            a_row(1:a_ne_curr), a_weight(1:a_n_curr), sumweight,         &
+            iperm(1:a_n_curr), work(1:lwork),                            &
+            work(lwork+1:lwork+a_n_curr),                                &
+            work(lwork+a_n_curr+1:lwork+2*a_n_curr), 0, options, info,   &
+            .false., use_multilevel, grid, work_seps)
       else
-         sumweight = sum(a_weight(1:a_n_curr))
-         lwork = 12*a_n_curr + sumweight + a_ne_curr
-         if (present(seps)) then
-            call nd_nested_internal(a_n_curr, a_ne_curr, a_ptr(1:a_n_curr), &
-               a_row(1:a_ne_curr), a_weight(1:a_n_curr), sumweight,         &
-               work_iperm, work(1:lwork), work(lwork+1:lwork+a_n_curr),     &
-               work(lwork+a_n_curr+1:lwork+2*a_n_curr), 0, options, info,   &
-               .false., use_multilevel, grid,                               &
-               seps=work_seps)
-         else
-            call nd_nested_internal(a_n_curr, a_ne_curr, a_ptr(1:a_n_curr), &
-               a_row(1:a_ne_curr), a_weight(1:a_n_curr), sumweight,         &
-               work_iperm, work(1:lwork), work(lwork+1:lwork+a_n_curr),     &
-               work(lwork+a_n_curr+1:lwork+2*a_n_curr), 0, options, info,   &
-               .false., use_multilevel, grid)
-         end if
+         ! Supervariables: use work_iperm(:) instead of perm(:)
+         call nd_nested_internal(a_n_curr, a_ne_curr, a_ptr(1:a_n_curr), &
+            a_row(1:a_ne_curr), a_weight(1:a_n_curr), sumweight,         &
+            work_iperm, work(1:lwork), work(lwork+1:lwork+a_n_curr),     &
+            work(lwork+a_n_curr+1:lwork+2*a_n_curr), 0, options, info,   &
+            .false., use_multilevel, grid, work_seps)
       end if
       if(info%flag.lt.0) return
 
@@ -307,10 +287,10 @@ subroutine nd_order(mtx,n,ptr,row,perm,options,info,seps)
 
       if (nsvar+num_zero_row.eq.a_n) then
          if (present(seps)) then
-            ! reorder seps
+            ! Reorder seps
             do i = 1, a_n_curr
                j = iperm(i)
-               work(j) = seps(i)
+               work(j) = work_seps(i)
             end do
             seps(1:a_n_curr) = work(1:a_n_curr)
          end if
@@ -410,7 +390,7 @@ recursive subroutine nd_nested_internal(a_n, a_ne, a_ptr, a_row, &
    logical, intent(in) :: use_amd
    logical, intent(inout) :: use_multilevel
    type (nd_multigrid), intent(inout) :: grid
-   integer, intent(inout), optional :: seps(a_n)
+   integer, intent(inout) :: seps(a_n)
       ! seps(i) is -1 if vertex i of permuted submatrix is not in a
       ! separator; otherwise it is equal to l, where l is the nested
       ! dissection level at which it became part of the separator
@@ -511,24 +491,13 @@ recursive subroutine nd_nested_internal(a_n, a_ne, a_ptr, a_row, &
          s = sum(a_weight(offset_ptr-l:offset_ptr-1))
          if (m.gt.0) then
             ! Matrix not diagonal
-            if (present(seps)) then
-               call nd_nested_internal(l, m, a_ptr(offset_ptr-l:offset_ptr-1), &
-                  a_row(offset_row-m:offset_row-1),                            &
-                  a_weight(offset_ptr-l:offset_ptr-1), s,                      &
-                  iperm(offset_ptr-l:offset_ptr-1),                            &
-                  work(compwork+1:compwork+12*l+s+m), work_comp_n(j-l+1:j),    &
-                  work_comp_nz(j-l+1:j), k, options, info, use_amdi,           &
-                  use_multilevel, grid, seps(offset_ptr-l:offset_ptr-1) )
-            else
-               call nd_nested_internal(l, m, a_ptr(offset_ptr-l:offset_ptr-1), &
-                  a_row(offset_row-m:offset_row-1),                            &
-                  a_weight(offset_ptr-l:offset_ptr-1), s,                      &
-                  iperm(offset_ptr-l:offset_ptr-1),                            &
-                  work(compwork+1:compwork+12*l+s+m), work_comp_n(j-l+1:j),    &
-                  work_comp_nz(j-l+1:j), k, options, info, use_amdi,           &
-                  use_multilevel, grid)
-
-            end if
+            call nd_nested_internal(l, m, a_ptr(offset_ptr-l:offset_ptr-1), &
+               a_row(offset_row-m:offset_row-1),                            &
+               a_weight(offset_ptr-l:offset_ptr-1), s,                      &
+               iperm(offset_ptr-l:offset_ptr-1),                            &
+               work(compwork+1:compwork+12*l+s+m), work_comp_n(j-l+1:j),    &
+               work_comp_nz(j-l+1:j), k, options, info, use_amdi,           &
+               use_multilevel, grid, seps(offset_ptr-l:offset_ptr-1) )
             if(info%flag.lt.0) return
          end if
          offset_ptr = offset_ptr - l
@@ -546,59 +515,34 @@ recursive subroutine nd_nested_internal(a_n, a_ne, a_ptr, a_row, &
       info%maxdeg_max_component = maxdeg_max_component
    end if
 
-   if (present(seps)) seps(a_n1+a_n2+1:a_n) = level
+   seps(a_n1+a_n2+1:a_n) = level
    if (a_n1.gt.max(2,options%amd_switch1)) then
       sumweight_sub = sum(a_weight(1:a_n1))
-      if (present(seps)) then
-         call nd_nested_internal(a_n1, a_ne1, a_ptr(1:a_n1), a_row(1:a_ne1), &
-            a_weight(1:a_n1), sumweight_sub, iperm(1:a_n1),                  &
-            work(1:12*a_n1+sumweight_sub+a_ne1), work_comp_n(1:a_n1),        &
-            work_comp_nz(1:a_n1), level+1, options, info, use_amdi,          &
-            use_multilevel, grid, seps=seps(1:a_n1))
-      else
-         call nd_nested_internal(a_n1, a_ne1, a_ptr(1:a_n1), a_row(1:a_ne1), &
-            a_weight(1:a_n1), sumweight_sub, iperm(1:a_n1),                  &
-            work(1:12*a_n1+sumweight_sub+a_ne1), work_comp_n(1:a_n1),        &
-            work_comp_nz(1:a_n1), level+1, options, info, use_amdi,          &
-            use_multilevel, grid)
-      end if
+      call nd_nested_internal(a_n1, a_ne1, a_ptr(1:a_n1), a_row(1:a_ne1), &
+         a_weight(1:a_n1), sumweight_sub, iperm(1:a_n1),                  &
+         work(1:12*a_n1+sumweight_sub+a_ne1), work_comp_n(1:a_n1),        &
+         work_comp_nz(1:a_n1), level+1, options, info, use_amdi,          &
+         use_multilevel, grid, seps(1:a_n1))
       if(info%flag.lt.0) return
    end if
 
    if (a_n2.gt.max(2,options%amd_switch1)) then
       if (a_n1.gt.max(2,options%amd_switch1)) then
          sumweight_sub = sum(a_weight(a_n1+1:a_n1+a_n2))
-         if (present(seps)) then
-            call nd_nested_internal(a_n2, a_ne2, a_ptr(a_n1+1:a_n1+a_n2),  &
-               a_row(a_ne1+1:a_ne1+a_ne2), a_weight(a_n1+1:a_n1+a_n2),     &
-               sumweight_sub, iperm(a_n1+1:a_n1+a_n2),                     &
-               work(1:12*a_n2+sumweight_sub+a_ne2), work_comp_n(1:a_n2),   &
-               work_comp_nz(1:a_n2), level+1, options, info, use_amdi,     &
-               use_multilevel, grid, seps=seps(a_n1+1:a_n1+a_n2) )
-         else
-            call nd_nested_internal(a_n2, a_ne2, a_ptr(a_n1+1:a_n1+a_n2),  &
-               a_row(a_ne1+1:a_ne1+a_ne2), a_weight(a_n1+1:a_n1+a_n2),     &
-               sumweight_sub, iperm(a_n1+1:a_n1+a_n2),                     &
-               work(1:12*a_n2+sumweight_sub+a_ne2), work_comp_n(1:a_n2),   &
-               work_comp_nz(1:a_n2), level+1, options, info, use_amdi,     &
-               use_multilevel, grid)
-         end if
+         call nd_nested_internal(a_n2, a_ne2, a_ptr(a_n1+1:a_n1+a_n2),  &
+            a_row(a_ne1+1:a_ne1+a_ne2), a_weight(a_n1+1:a_n1+a_n2),     &
+            sumweight_sub, iperm(a_n1+1:a_n1+a_n2),                     &
+            work(1:12*a_n2+sumweight_sub+a_ne2), work_comp_n(1:a_n2),   &
+            work_comp_nz(1:a_n2), level+1, options, info, use_amdi,     &
+            use_multilevel, grid, seps=seps(a_n1+1:a_n1+a_n2) )
       else
          sumweight_sub = sum(a_weight(a_n1+1:a_n1+a_n2))
-         if (present(seps)) then
-            call nd_nested_internal(a_n2, a_ne2, a_ptr(1:a_n2), a_row(1:a_ne2),&
-               a_weight(a_n1+1:a_n1+a_n2), sumweight_sub,                      &
-               iperm(a_n1+1:a_n1+a_n2), work(1:12*a_n2+sumweight_sub+a_ne2),   &
-               work_comp_n(1:a_n2), work_comp_nz(1:a_n2), level+1, options,    &
-               info, use_amdi, use_multilevel, grid,                           &
-               seps=seps(a_n1+1:a_n1+a_n2) )
-         else
-            call nd_nested_internal(a_n2, a_ne2, a_ptr(1:a_n2), a_row(1:a_ne2),&
-               a_weight(a_n1+1:a_n1+a_n2), sumweight_sub,                      &
-               iperm(a_n1+1:a_n1+a_n2), work(1:12*a_n2+sumweight_sub+a_ne2),   &
-               work_comp_n(1:a_n2), work_comp_nz(1:a_n2), level+1, options,    &
-               info, use_amdi, use_multilevel, grid)
-         end if
+         call nd_nested_internal(a_n2, a_ne2, a_ptr(1:a_n2), a_row(1:a_ne2),&
+            a_weight(a_n1+1:a_n1+a_n2), sumweight_sub,                      &
+            iperm(a_n1+1:a_n1+a_n2), work(1:12*a_n2+sumweight_sub+a_ne2),   &
+            work_comp_n(1:a_n2), work_comp_nz(1:a_n2), level+1, options,    &
+            info, use_amdi, use_multilevel, grid,                           &
+            seps=seps(a_n1+1:a_n1+a_n2) )
       end if
       if(info%flag.lt.0) return
    end if
