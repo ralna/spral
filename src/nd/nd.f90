@@ -12,7 +12,6 @@ module spral_nd
    ! Derived type definitions
    ! ---------------------------------------------------
 
-
    type nd_matrix
       integer :: m ! number rows
       integer :: n ! number columns
@@ -92,29 +91,14 @@ contains
 
       ! Other local variables
       integer :: i
-      integer :: unit_error
-      integer :: unit_diagnostics
-      logical :: printe, printi, printd
 
-      ! ---------------------------------------------
-      ! Printing levels
-      unit_diagnostics = options%unit_diagnostics
-      unit_error = options%unit_error
-      printe = (options%print_level>=0 .and. unit_error>=0)
-      printi = (options%print_level==1 .and. unit_diagnostics>=0)
-      printd = (options%print_level>=2 .and. unit_diagnostics>=0)
-      ! ---------------------------------------------------
-
-      if (printi .or. printd) then
-         write (unit_diagnostics,'(a)') ' '
-         write (unit_diagnostics,'(a)') 'nd_order:'
-      end if
+      call nd_print_diagnostic(1, options, ' ')
+      call nd_print_diagnostic(1, options, 'nd_order:')
 
       ! Error checks
       if (n<1) then
          info%flag = ND_ERR_N
-         if (printe) call nd_print_message(info%flag,unit_error, &
-            'nd_order')
+         call nd_print_error(info%flag, options, 'nd_order')
          return
       end if
 
@@ -128,47 +112,42 @@ contains
       endif
       if(info%stat.ne.0) then
          info%flag = ND_ERR_MEMORY_ALLOC
-         if (printe) &
-            call nd_print_message(info%flag,unit_error, 'nd_order')
+         call nd_print_error(info%flag, options, 'nd_order')
          return
       endif
 
       ! Output summary of input matrix post-conversion
-      if (printd) then
+      if (options%print_level.ge.2 .and. options%unit_diagnostics.gt.0) then
          ! Print out a_ptr and a_row
-         write (unit_diagnostics,'(a8)') 'a_ptr = '
-         write (unit_diagnostics,'(5i15)') (a_ptr(i),i=1,a_n)
-         write (unit_diagnostics,'(a8)') 'a_row = '
-         write (unit_diagnostics,'(5i15)') (a_row(i),i=1,a_ne)
-      else if (printi) then
+         write (options%unit_diagnostics,'(a8)') 'a_ptr = '
+         write (options%unit_diagnostics,'(5i15)') (a_ptr(i),i=1,a_n)
+         write (options%unit_diagnostics,'(a8)') 'a_row = '
+         write (options%unit_diagnostics,'(5i15)') (a_row(i),i=1,a_ne)
+      else if (options%print_level.ge.1.and.options%unit_diagnostics.gt.0) then
          ! Print out first few entries of a_ptr and a_row
-         write (unit_diagnostics,'(a21)') 'a_ptr(1:min(5,a_n)) = '
-         write (unit_diagnostics,'(5i15)') (a_ptr(i),i=1,min(5,a_n))
-         write (unit_diagnostics,'(a21)') 'a_row(1:min(5,a_ne)) = '
-         write (unit_diagnostics,'(5i15)') (a_row(i),i=1,min(5,a_ne))
+         write (options%unit_diagnostics,'(a21)') 'a_ptr(1:min(5,a_n)) = '
+         write (options%unit_diagnostics,'(5i15)') (a_ptr(i),i=1,min(5,a_n))
+         write (options%unit_diagnostics,'(a21)') 'a_row(1:min(5,a_ne)) = '
+         write (options%unit_diagnostics,'(5i15)') (a_row(i),i=1,min(5,a_ne))
       end if
 
       ! Call main worker routine
       call nd_nested_both(a_n,a_ne,a_ptr,a_row,perm,options,info,seps)
 
       ! Output summary of results
-      if (printd) then
+      if (options%print_level.ge.2 .and. options%unit_diagnostics.gt.0) then
          ! Print out perm
-         write (unit_diagnostics,'(a8)') 'perm = '
-         write (unit_diagnostics,'(5i15)') (perm(i),i=1,n)
-      else if (printi) then
+         write (options%unit_diagnostics,'(a8)') 'perm = '
+         write (options%unit_diagnostics,'(5i15)') (perm(i),i=1,n)
+      else if (options%print_level.ge.1.and.options%unit_diagnostics.gt.0) then
          ! Print out first few entries of perm
-         write (unit_diagnostics,'(a21)') 'perm(1:min(5,n)) = '
-         write (unit_diagnostics,'(5i15)') (perm(i),i=1,min(5,n))
+         write (options%unit_diagnostics,'(a21)') 'perm(1:min(5,n)) = '
+         write (options%unit_diagnostics,'(5i15)') (perm(i),i=1,min(5,n))
       end if
 
       info%flag = 0
-      if (printi .or. printd) &
-         call nd_print_message(info%flag,unit_diagnostics,'nd_order')
-
+      call nd_print_diagnostic(1, options, ' nd_order: successful completion')
    end subroutine nd_order
-
-
 
    !
    ! Main wrapper routine
@@ -192,8 +171,6 @@ contains
       integer, dimension(:), allocatable :: amd_order_row, amd_order_ptr, &
          amd_order_sep, amd_order_perm, amd_order_work, amd_order_iperm
       integer, dimension(:), allocatable :: work_iperm, work_seps
-      integer :: unit_error
-      integer :: unit_diagnostics
       integer :: nsvar
       integer :: sumweight
       integer, dimension(:), allocatable :: svar, sinvp ! supervariable info
@@ -202,23 +179,11 @@ contains
          ! expanded matrix
       integer, allocatable, dimension(:) :: iperm ! inverse of perm(:)
       integer, allocatable, dimension(:) :: work ! space for doing work
-      logical :: printe, printi, printd
       logical :: use_multilevel
       type (nd_multigrid) :: grid
 
-      ! ---------------------------------------------
-      ! Printing levels
-      unit_diagnostics = options%unit_diagnostics
-      unit_error = options%unit_error
-      printe = (options%print_level>=0 .and. unit_error>=0)
-      printi = (options%print_level==1 .and. unit_diagnostics>=0)
-      printd = (options%print_level>=2 .and. unit_diagnostics>=0)
-      ! ---------------------------------------------------
-
-      if (printi .or. printd) then
-         write (unit_diagnostics,'(a)') ' '
-         write (unit_diagnostics,'(a)') 'nd_nested_both:'
-      end if
+      call nd_print_diagnostic(1, options, ' ')
+      call nd_print_diagnostic(1, options, 'nd_nested_both:')
 
       ! Record original size for alter use
       a_n_orig = a_n
@@ -237,10 +202,8 @@ contains
 
       ! Return if matrix is diagonal
       if (a_ne.eq.0) then ! (recall diagonal entries are not stored)
-         if (printi .or. printd) then
-            write (unit_diagnostics,'(a)') ' '
-            write (unit_diagnostics,'(a)') 'Matrix is diagonal'
-         end if
+         call nd_print_diagnostic(1, options, ' ')
+         call nd_print_diagnostic(1, options, 'Matrix is diagonal')
 
          info%nsuper = a_n
          info%nzsuper = 0
@@ -279,8 +242,7 @@ contains
             a_n_curr.le.max(2,max(options%amd_call,options%amd_switch1)) ) then
          ! Apply AMD to matrix
          ! Allocate work to have length 5*a_n_curr+a_ne_curr
-         if (printd) &
-            write (unit_diagnostics,'(a)') ' Form AMD ordering'
+         call nd_print_diagnostic(2, options, ' Form AMD ordering')
          lirn = a_ne_curr + a_n_curr
          allocate(amd_order_ptr(a_n_curr), amd_order_row(lirn), &
             amd_order_sep(a_n_curr), amd_order_perm(a_n_curr), &
@@ -327,8 +289,7 @@ contains
       else
          ! Apply ND to matrix
 
-         if (printd) &
-            write (unit_diagnostics,'(a)') ' Form ND ordering'
+         call nd_print_diagnostic(2, options, ' Form ND ordering')
 
          if (nsvar+num_zero_row.ne.a_n) then
             ! Create shadow versions of iperm and seps that work on
@@ -439,14 +400,14 @@ contains
       end do
 
       info%flag = 0
-      if (printi .or. printd) &
-         call nd_print_message(info%flag, unit_diagnostics, 'nd_nested_both')
+      call nd_print_diagnostic(1, options, &
+         ' nd_nested_both: successful completion' &
+         )
       return
 
       10 continue
       info%flag = ND_ERR_MEMORY_ALLOC
-      if (printe) &
-         call nd_print_message(info%flag, unit_error, 'nd_nested_both')
+      call nd_print_error(info%flag, options, 'nd_nested_both')
       return
    end subroutine nd_nested_both
 
