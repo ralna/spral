@@ -109,6 +109,10 @@ contains
       call nd_print_diagnostic(1, options, ' ')
       call nd_print_diagnostic(1, options, 'nd_order:')
 
+      !!!!!!!!!!!!!!!!!!!!!!
+      ! Preprocessing
+      !!!!!!!!!!!!!!!!!!!!!!
+
       ! Error checks
       if (n<1) then
          info%flag = ND_ERR_N
@@ -182,7 +186,10 @@ contains
          a_weight(1:a_n_curr) = 1
       end if
 
-      ! Proceed to main ordering now preprocessing is complete
+      !!!!!!!!!!!!!!!!!!!!!!
+      ! Main ordering
+      !!!!!!!!!!!!!!!!!!!!!!
+
       info%nzsuper = a_ne_curr
       info%nsuper = a_n_curr
 
@@ -341,6 +348,9 @@ contains
          end if
       end if
 
+      !!!!!!!!!!!!!!!!!!!!!!
+      ! Postprocessing
+      !!!!!!!!!!!!!!!!!!!!!!
       100 continue
 
       ! Create perm from iperm
