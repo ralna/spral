@@ -309,7 +309,6 @@ clean-local:
 	-rm *.mod
 
 # Fortran 90 dependencies
-driver/ssids_spral.$(OBJEXT): libspral.a
 src/match_order.$(OBJEXT): src/metis$(METIS_VERSION)_wrapper.$(OBJEXT) \
 									src/scaling.$(OBJEXT)
 src/nd/nd.$(OBJEXT): src/nd/preprocess.$(OBJEXT) \
@@ -362,6 +361,7 @@ src/ssmfe/core.$(OBJEXT): src/blas_iface.$(OBJEXT) \
 								  src/lapack_iface.$(OBJEXT)
 src/ssmfe/expert.$(OBJEXT): src/ssmfe/core.$(OBJEXT)
 src/ssmfe/ssmfe.$(OBJEXT): src/ssmfe/expert.$(OBJEXT)
+driver/spral_nd.$(OBJEXT): libspral.a
 driver/spral_ssids.$(OBJEXT): libspral.a
 
 # CUDA header deps
