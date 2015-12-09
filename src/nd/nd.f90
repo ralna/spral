@@ -245,7 +245,7 @@ contains
          info%nsuper = a_n
          info%nzsuper = 0
          ! Create perm from iperm
-         do i = 1, a_n
+         do i = 1, a_n_orig
             j = iperm(i)
             perm(j) = i
          end do

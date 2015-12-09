@@ -69,6 +69,8 @@ program run_prob
    write(*, "(a)") "ok"
    print "(a,es10.2)", "nd nfact = ", real(nfact)
    print "(a,es10.2)", "nd nflop = ", real(nflops)
+   print "(a,i10)", "nd ndense = ", inform%dense
+   print "(a,i10)", "nd sv var reduce = ", n - inform%dense - inform%nsuper
 
    ! Order using metis
    if(with_metis) then
