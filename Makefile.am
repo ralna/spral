@@ -66,7 +66,7 @@ EXTRA_DIST = src/metis4_wrapper.f90 src/metis5_wrapper.f90
 # ND
 include_HEADERS += include/spral_nd.h
 libspral_a_SOURCES += \
-	src/nd.f90 \
+	src/nd/nd.f90 \
 	interfaces/C/nd.f90
 bin_PROGRAMS = spral_nd
 spral_nd_SOURCES = \

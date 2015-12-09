@@ -211,7 +211,7 @@ am__libspral_a_SOURCES_DIST = src/amd.f90 src/blas_iface.f90 \
 	src/cuda/cuda.f90 src/cuda/cuda_check.h src/lapack_iface.f90 \
 	src/match_order.f90 src/matrix_util.f90 \
 	interfaces/C/matrix_util.f90 \
-	src/metis$(METIS_VERSION)_wrapper.f90 src/nd.f90 \
+	src/metis$(METIS_VERSION)_wrapper.f90 src/nd/nd.f90 \
 	interfaces/C/nd.f90 src/pgm.f90 src/rutherford_boeing.f90 \
 	interfaces/C/rutherford_boeing.f90 src/scaling.f90 \
 	interfaces/C/scaling.f90 src/timer.f90 src/random.f90 \
@@ -253,9 +253,9 @@ am_libspral_a_OBJECTS = src/amd.$(OBJEXT) src/blas_iface.$(OBJEXT) \
 	src/core_analyse.$(OBJEXT) $(am__objects_1) \
 	src/lapack_iface.$(OBJEXT) src/match_order.$(OBJEXT) \
 	src/matrix_util.$(OBJEXT) interfaces/C/matrix_util.$(OBJEXT) \
-	src/metis$(METIS_VERSION)_wrapper.$(OBJEXT) src/nd.$(OBJEXT) \
-	interfaces/C/nd.$(OBJEXT) src/pgm.$(OBJEXT) \
-	src/rutherford_boeing.$(OBJEXT) \
+	src/metis$(METIS_VERSION)_wrapper.$(OBJEXT) \
+	src/nd/nd.$(OBJEXT) interfaces/C/nd.$(OBJEXT) \
+	src/pgm.$(OBJEXT) src/rutherford_boeing.$(OBJEXT) \
 	interfaces/C/rutherford_boeing.$(OBJEXT) src/scaling.$(OBJEXT) \
 	interfaces/C/scaling.$(OBJEXT) src/timer.$(OBJEXT) \
 	src/random.$(OBJEXT) interfaces/C/random.$(OBJEXT) \
@@ -1064,7 +1064,7 @@ libspral_a_SOURCES = src/amd.f90 src/blas_iface.f90 \
 	src/core_analyse.f90 $(am__append_1) src/lapack_iface.f90 \
 	src/match_order.f90 src/matrix_util.f90 \
 	interfaces/C/matrix_util.f90 \
-	src/metis$(METIS_VERSION)_wrapper.f90 src/nd.f90 \
+	src/metis$(METIS_VERSION)_wrapper.f90 src/nd/nd.f90 \
 	interfaces/C/nd.f90 src/pgm.f90 src/rutherford_boeing.f90 \
 	interfaces/C/rutherford_boeing.f90 src/scaling.f90 \
 	interfaces/C/scaling.f90 src/timer.f90 src/random.f90 \
@@ -1264,7 +1264,14 @@ interfaces/C/matrix_util.$(OBJEXT): interfaces/C/$(am__dirstamp) \
 	interfaces/C/$(DEPDIR)/$(am__dirstamp)
 src/metis$(METIS_VERSION)_wrapper.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
-src/nd.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
+src/nd/$(am__dirstamp):
+	@$(MKDIR_P) src/nd
+	@: > src/nd/$(am__dirstamp)
+src/nd/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) src/nd/$(DEPDIR)
+	@: > src/nd/$(DEPDIR)/$(am__dirstamp)
+src/nd/nd.$(OBJEXT): src/nd/$(am__dirstamp) \
+	src/nd/$(DEPDIR)/$(am__dirstamp)
 interfaces/C/nd.$(OBJEXT): interfaces/C/$(am__dirstamp) \
 	interfaces/C/$(DEPDIR)/$(am__dirstamp)
 src/pgm.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
@@ -1724,6 +1731,7 @@ mostlyclean-compile:
 	-rm -f interfaces/C/*.$(OBJEXT)
 	-rm -f src/*.$(OBJEXT)
 	-rm -f src/cuda/*.$(OBJEXT)
+	-rm -f src/nd/*.$(OBJEXT)
 	-rm -f src/ssids/*.$(OBJEXT)
 	-rm -f src/ssmfe/*.$(OBJEXT)
 	-rm -f tests/*.$(OBJEXT)
@@ -2277,6 +2285,8 @@ distclean-generic:
 	-rm -f src/$(am__dirstamp)
 	-rm -f src/cuda/$(DEPDIR)/$(am__dirstamp)
 	-rm -f src/cuda/$(am__dirstamp)
+	-rm -f src/nd/$(DEPDIR)/$(am__dirstamp)
+	-rm -f src/nd/$(am__dirstamp)
 	-rm -f src/ssids/$(DEPDIR)/$(am__dirstamp)
 	-rm -f src/ssids/$(am__dirstamp)
 	-rm -f src/ssmfe/$(DEPDIR)/$(am__dirstamp)
