@@ -588,7 +588,7 @@ end subroutine nd_nested_internal
 ! Finds and forms independent components in a matrix
 !
 subroutine nd_find_indep_comps(a_n, a_ne, a_ptr, a_row, a_weight, iperm, &
-    comp_num, compsizes, compnzs, work, options)
+      comp_num, compsizes, compnzs, work, options)
    integer, intent(in) :: a_n
    integer, intent(in) :: a_ne
    integer, intent(inout) :: a_ptr(a_n) ! On entry, input matrix. On exit,
@@ -725,422 +725,358 @@ subroutine nd_find_indep_comps(a_n, a_ne, a_ptr, a_row, a_weight, iperm, &
       )
 end subroutine nd_find_indep_comps
 
-! ---------------------------------------------------
-! nd_partition matrix
-! ---------------------------------------------------
-! Partition the matrix and if one (or more) of the generated submatrices
-! is
+!
+! Partition the matrix and if one (or more) of the generated submatrices is
 ! small enough, apply halo amd
+!
+subroutine nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level, &
+      a_n1, a_n2, a_ne1, a_ne2, iperm, work, options, info, use_multilevel, grid)
+   integer, intent(in) :: a_n
+   integer, intent(in) :: a_ne
+   integer, intent(inout) :: a_ptr(a_n) ! On entry, input matrix. On exit,
+      ! modified so parts are contigous
+   integer, intent(inout) :: a_row(a_ne) ! On entry, input matrix. On exit,
+      ! modified so parts are contigous
+   integer, intent(inout) :: a_weight(a_n) ! As above
+   integer, intent(in) :: sumweight ! Sum entries in a_weight.
+   integer, intent(in) :: level ! Current nested dissection level
+   integer, intent(out) :: a_n1, a_n2 ! size of the two submatrices
+   integer, intent(out) :: a_ne1, a_ne2 ! no. nonzeros in two submatrices
+   integer, intent(inout) :: iperm(a_n) ! On input, iperm(i) contains the
+      ! row in the original matrix (when nd_nested was called) that
+      ! row i in this sub problem maps to. On output, this is updated to
+      ! reflect the computed permutation.
+   logical, intent(inout) :: use_multilevel
+   integer, intent(out) :: work(12*a_n+sumweight+a_ne)
+   type (nd_options), intent(in) :: options
+   type (nd_inform), intent(inout) :: info
+   type (nd_multigrid), intent(inout) :: grid
 
-subroutine nd_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
-    level,a_n1,a_n2,a_ne1,a_ne2,iperm,work,options,info,use_multilevel, &
-    grid)
+   integer :: unit_diagnostics ! unit on which to print diagnostics
+   logical :: printi, printd
+   integer :: partition_ptr ! pointer into work array
+   integer :: work_ptr ! pointer into work array
+   integer :: part_ptr ! pointer into work array
+   integer :: a_ptr_sub_ptr ! pointer into work array
+   integer :: a_row_sub_ptr ! pointer into work array
+   integer :: partition_method
+   integer :: i, j, k
+   integer :: a_weight_1, a_weight_2, a_weight_sep
+   integer :: ref_method, ref_options
+   integer :: a_n1_new, a_n2_new, a_weight_1_new, a_weight_2_new, &
+      a_weight_sep_new
+   real(wp) :: ratio, tau_best, tau, band, depth
+   logical :: imbal
 
-  integer, intent(in) :: a_n ! dimension of subproblem ND is applied to
-  integer, intent(in) :: a_ne ! no. nonzeros of subproblem
-  integer, intent(inout) :: a_ptr(a_n) ! On input a_ptr(i) contains
-  ! position in a_row that entries for column i start. This is then
-  ! used to hold positions for submatrices after partitioning
-  integer, intent(inout) :: a_row(a_ne) ! On input a_row contains row
-  ! indices of the non-zero rows. Diagonal entries have been removed
-  ! and the matrix expanded.This is then used to hold row indices for
-  ! submatrices after partitioning
-  integer, intent(inout) :: a_weight(a_n) ! On input a_weight(i)
-  ! contains
-  ! the weight of column i. This is then used to hold the weights for
-  ! the submatrices after partitioning.
-  integer, intent(in) :: sumweight ! Sum entries in a_weight.
-  ! Unchanged.
-  integer, intent(in) :: level ! Current nested dissection level
-  integer, intent(out) :: a_n1, a_n2 ! size of the two submatrices
-  integer, intent(out) :: a_ne1, a_ne2 ! no. nonzeros in two
-  ! submatrices
-  integer, intent(inout) :: iperm(a_n) ! On input, iperm(i) contains
-  ! the
-  ! row in the original matrix (when nd_nested was called) that
-  ! row i in this sub problem maps to. On output, this is updated to
-  ! reflect the computed permutation.
-  logical, intent(inout) :: use_multilevel
-  integer, intent(out) :: work(12*a_n+sumweight+a_ne)
-  type (nd_options), intent(in) :: options
-  type (nd_inform), intent(inout) :: info
-  type (nd_multigrid), intent(inout) :: grid
+   ! ---------------------------------------------
+   ! Printing levels
+   unit_diagnostics = options%unit_diagnostics
+   printi = (options%print_level.eq.1 .and. unit_diagnostics.ge.0)
+   printd = (options%print_level.ge.2 .and. unit_diagnostics.ge.0)
 
-  ! ---------------------------------------------
-  ! Local variables
-  integer :: unit_diagnostics ! unit on which to print diagnostics
-  logical :: printi, printd
-  integer :: partition_ptr ! pointer into work array
-  integer :: work_ptr ! pointer into work array
-  integer :: part_ptr ! pointer into work array
-  integer :: a_ptr_sub_ptr ! pointer into work array
-  integer :: a_row_sub_ptr ! pointer into work array
-  integer :: partition_method
-  integer :: i, j, k
-  integer :: a_weight_1, a_weight_2, a_weight_sep
-  integer :: ref_method, ref_options
-  integer :: a_n1_new, a_n2_new, a_weight_1_new, a_weight_2_new, &
-    a_weight_sep_new
-  real(wp) :: ratio, tau_best, tau, band, depth
-  logical :: imbal
+   if (printi .or. printd) then
+      write (unit_diagnostics,'(a)') ' '
+      write (unit_diagnostics,'(a)') 'Start finding a partition'
+   end if
 
+   ! If matrix is full, then don't partition
+   if (a_ne.eq.a_n*(a_n-1)) then
+      a_n1 = a_n
+      a_n2 = 0
+      a_ne1 = a_ne
+      a_ne2 = 0
+      go to 10
+   end if
 
-  ! ---------------------------------------------
-  ! Printing levels
-  unit_diagnostics = options%unit_diagnostics
-  printi = (options%print_level.eq.1 .and. unit_diagnostics.ge.0)
-  printd = (options%print_level.ge.2 .and. unit_diagnostics.ge.0)
-
-  if (printi .or. printd) then
-    write (unit_diagnostics,'(a)') ' '
-    write (unit_diagnostics,'(a)') 'Start finding a partition'
-  end if
-
-  ! If matrix is full, then don't partition
-  if (a_ne.eq.a_n*(a_n-1)) then
-    a_n1 = a_n
-    a_n2 = 0
-    a_ne1 = a_ne
-    a_ne2 = 0
-    go to 10
-  end if
-
-  ! Find the partition
-  if (options%coarse_partition_method.le.1) then
-    partition_method = 1
-  else
-    partition_method = 2
-  end if
+   ! Find the partition
+   if (options%coarse_partition_method.le.1) then
+      partition_method = 1
+   else
+      partition_method = 2
+   end if
 
 
-  partition_ptr = 0 ! length a_n
-  work_ptr = partition_ptr + a_n ! max length 9*a_n+sumweight+a_ne/2
-  ! do p = 1,a_n
-  ! do q = p+1,a_n
-  ! if (options%partition_method .ge. 2) use_multilevel = .true.
-  if (partition_method.eq.1) then
-    ! Ashcraft method
-    call nd_ashcraft(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,level, &
-      a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep, &
-      work(partition_ptr+1:partition_ptr+a_n), &
-      work(work_ptr+1:work_ptr+9*a_n+sumweight),options,info%flag,band, &
-      depth,use_multilevel,grid)
-  else
-    call nd_level_set(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
-      level,a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep, &
-      work(partition_ptr+1:partition_ptr+a_n), &
-      work(work_ptr+1:work_ptr+9*a_n+sumweight),options,info%flag, &
-      band,depth,use_multilevel,grid)
+   partition_ptr = 0 ! length a_n
+   work_ptr = partition_ptr + a_n ! max length 9*a_n+sumweight+a_ne/2
+   if (partition_method.eq.1) then
+      call nd_ashcraft(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level,   &
+         a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep,                    &
+         work(partition_ptr+1:partition_ptr+a_n),                             &
+         work(work_ptr+1:work_ptr+9*a_n+sumweight), options, info%flag, band, &
+         depth, use_multilevel, grid)
+   else
+      call nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight,         &
+         level, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep,             &
+         work(partition_ptr+1:partition_ptr+a_n),                             &
+         work(work_ptr+1:work_ptr+9*a_n+sumweight), options, info%flag,       &
+         band, depth, use_multilevel, grid)
+   end if
 
-  end if
+   if (a_n1+a_n2.eq.a_n) return
 
-  if (a_n1+a_n2.eq.a_n) then
-    return
-  end if
-
-  if (level.eq.0) then
-    if (a_n.gt.info%n_max_component .or. (a_n.eq.info%n_max_component .and. &
-        band.gt.info%band)) then
-      info%band = band
-      info%depth = depth
-    end if
-
-  end if
-
-  if (a_n1.ne.0 .and. a_n2.ne.0 .and. a_n.ge.3) then
-    if ( .not. use_multilevel) then
-
-      if (options%refinement.gt.6) then
-        ref_options = 3
-      else
-        if (options%refinement.lt.1) then
-          ref_options = 1
-        else
-          ref_options = options%refinement
-        end if
+   if (level.eq.0) then
+      if (a_n.gt.info%n_max_component .or. (a_n.eq.info%n_max_component .and. &
+            band.gt.info%band)) then
+         info%band = band
+         info%depth = depth
       end if
+   end if
 
-      select case (ref_options)
-      case (1)
-        ref_method = 1
+   if (a_n1.ne.0 .and. a_n2.ne.0 .and. a_n.ge.3) then
+      if ( .not. use_multilevel) then
+         if (options%refinement.gt.6) then
+            ref_options = 3
+         else
+            if (options%refinement.lt.1) then
+               ref_options = 1
+            else
+               ref_options = options%refinement
+            end if
+         end if
 
-      case (2)
-        ref_method = 2
-
-      case (3)
-        if (real(max(a_weight_1,a_weight_2))/real(min(a_weight_1, &
-            a_weight_2)+a_weight_sep).ge.max(real(1.0, &
-            wp),options%balance)) then
-          ref_method = 2
-        else
-          ref_method = 1
-        end if
-
-      case (4)
-        ref_method = 0
-
-      case (5)
-        ref_method = 2
-
-      case (6)
-        if (real(max(a_weight_1,a_weight_2))/real(min(a_weight_1, &
-            a_weight_2)+a_weight_sep).ge.max(real(1.0, &
-            wp),options%balance)) then
-          ref_method = 2
-        else
-          ref_method = 0
-        end if
-
-      end select
-      if (printd) then
-        write (unit_diagnostics,'(a)') 'Partition before refinement'
-        write (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_n1=', a_n1, &
-          ',  a_n2=', a_n2, ',  a_n_sep=', a_n - a_n1 - a_n2
-      end if
-
-      select case (ref_method)
-
-      case (0)
-        call nd_refine_max_flow(a_n,a_ne,a_ptr,a_row,a_weight,a_n1, &
-          a_n2,a_weight_1,a_weight_2,a_weight_sep, &
-          work(partition_ptr+1:partition_ptr+a_n), &
-          work(work_ptr+1:work_ptr+8),options)
-
-      case (1)
-        if (min(a_weight_1,a_weight_2)+a_weight_sep.lt. &
-            max(a_weight_1,a_weight_2)) then
-          call nd_refine_block_trim(a_n,a_ne,a_ptr,a_row, &
-            a_weight,sumweight,a_n1,a_n2,a_weight_1,a_weight_2, &
-            a_weight_sep,work(partition_ptr+1:partition_ptr+a_n), &
-            work(work_ptr+1:work_ptr+5*a_n),options)
-        else
-          call nd_refine_trim(a_n,a_ne,a_ptr,a_row,a_weight, &
-            sumweight,a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep, &
-            work(partition_ptr+1:partition_ptr+a_n), &
-            work(work_ptr+1:work_ptr+3*a_n),options)
-        end if
-
-
-      case (2)
-        call nd_refine_edge(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
-          a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep, &
-          work(partition_ptr+1:partition_ptr+a_n), &
-          work(work_ptr+1:work_ptr+3*a_n),options)
-
-
-      end select
-
-
-      if (printd) then
-        write (unit_diagnostics,'(a)') 'Partition after refinement'
-        write (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_n1=', a_n1, &
-          ',  a_n2=', a_n2, ',  a_n_sep=', a_n - a_n1 - a_n2
-      end if
-
-      if (options%max_improve_cycles.gt.0) then
-        ratio = max(real(1.0,wp),options%balance)
-        if (ratio.gt.real(sumweight-2)) then
-          imbal = .false.
-        else
-          imbal = .true.
-        end if
-        call cost_function(a_weight_1,a_weight_2,a_weight_sep,sumweight, &
-          ratio,imbal,options%cost_function,tau_best)
-        a_n1_new = a_n1
-        a_n2_new = a_n2
-        a_weight_1_new = a_weight_1
-        a_weight_2_new = a_weight_2
-        a_weight_sep_new = a_weight_sep
-      end if
-
-      part_ptr = work_ptr + 5*a_n
-      work(part_ptr+1:part_ptr+a_n) = work(partition_ptr+1:partition_ptr &
-        +a_n)
-
-      k = options%max_improve_cycles
-      do i = 1, k
-
-        call expand_partition(a_n,a_ne,a_ptr,a_row,a_weight,a_n1_new, &
-          a_n2_new,a_weight_1_new,a_weight_2_new,a_weight_sep_new, &
-          work(part_ptr+1:part_ptr+a_n),work(work_ptr+1:work_ptr+5*a_n))
-
-
-        if (printd) then
-          write (unit_diagnostics,'(a)') &
-            'Partition sizes after expansion'
-          write (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_n1=', &
-            a_n1_new, ',  a_n2=', a_n2_new, ',  a_n_sep=', &
-            a_n - a_n1_new - a_n2_new
-        end if
-
-        ! call
-        ! check_partition1(a_n,a_ne,a_ptr,a_row,a_n1_new,a_n2_new,work(p
-        ! art_ptr+1:part_ptr+a_n))
-
-        select case (ref_options)
-
-        case (3)
-          if (real(max(a_weight_1_new,a_weight_2_new))/real(min( &
-              a_weight_1_new,a_weight_2_new)+a_weight_sep_new).gt.max(real( &
-              1.0,wp),options%balance)) then
-            ref_method = 2
-          else
+         select case (ref_options)
+         case (1)
             ref_method = 1
-          end if
-
-        case (6)
-          if (real(max(a_weight_1_new,a_weight_2_new))/real(min( &
-              a_weight_1_new,a_weight_2_new)+a_weight_sep_new).gt.max(real( &
-              1.0,wp),options%balance)) then
+         case (2)
             ref_method = 2
-          else
+         case (3)
+            if (real(max(a_weight_1,a_weight_2))/real(min(a_weight_1, &
+                  a_weight_2)+a_weight_sep).ge.max(1.0_wp,options%balance)) then
+               ref_method = 2
+            else
+               ref_method = 1
+            end if
+         case (4)
             ref_method = 0
-          end if
-        end select
+         case (5)
+            ref_method = 2
+         case (6)
+            if (real(max(a_weight_1,a_weight_2))/real(min(a_weight_1, &
+                  a_weight_2)+a_weight_sep).ge.max(1.0_wp,options%balance)) then
+               ref_method = 2
+            else
+               ref_method = 0
+            end if
+         end select
+         if (printd) then
+            write (unit_diagnostics,'(a)') 'Partition before refinement'
+            write (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_n1=', a_n1, &
+               ',  a_n2=', a_n2, ',  a_n_sep=', a_n - a_n1 - a_n2
+         end if
 
+         select case (ref_method)
+         case (0)
+            call nd_refine_max_flow(a_n, a_ne, a_ptr, a_row, a_weight, a_n1,  &
+               a_n2, a_weight_1, a_weight_2, a_weight_sep,                    &
+               work(partition_ptr+1:partition_ptr+a_n),                       &
+               work(work_ptr+1:work_ptr+8), options)
+         case (1)
+            if (min(a_weight_1,a_weight_2)+a_weight_sep.lt. &
+                  max(a_weight_1,a_weight_2)) then
+               call nd_refine_block_trim(a_n, a_ne, a_ptr, a_row, a_weight,    &
+                  sumweight, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, &
+                  work(partition_ptr+1:partition_ptr+a_n),                     &
+                  work(work_ptr+1:work_ptr+5*a_n),options)
+            else
+               call nd_refine_trim(a_n, a_ne, a_ptr, a_row, a_weight,          &
+                  sumweight, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, &
+                  work(partition_ptr+1:partition_ptr+a_n),                     &
+                  work(work_ptr+1:work_ptr+3*a_n), options)
+            end if
+         case (2)
+            call nd_refine_edge(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
+               a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep,              &
+               work(partition_ptr+1:partition_ptr+a_n),                       &
+               work(work_ptr+1:work_ptr+3*a_n), options)
+         end select
 
-        select case (ref_method)
+         if (printd) then
+            write (unit_diagnostics,'(a)') 'Partition after refinement'
+            write (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_n1=', a_n1, &
+               ',  a_n2=', a_n2, ',  a_n_sep=', a_n - a_n1 - a_n2
+         end if
 
-        case (0)
-          call nd_refine_max_flow(a_n,a_ne,a_ptr,a_row,a_weight, &
-            a_n1_new,a_n2_new,a_weight_1_new,a_weight_2_new, &
-            a_weight_sep_new,work(part_ptr+1:part_ptr+a_n), &
-            work(work_ptr+1:work_ptr+8),options)
+         if (options%max_improve_cycles.gt.0) then
+            ratio = max(real(1.0,wp),options%balance)
+            if (ratio.gt.real(sumweight-2)) then
+               imbal = .false.
+            else
+               imbal = .true.
+            end if
+            call cost_function(a_weight_1, a_weight_2, a_weight_sep, sumweight,&
+               ratio, imbal, options%cost_function, tau_best)
+            a_n1_new = a_n1
+            a_n2_new = a_n2
+            a_weight_1_new = a_weight_1
+            a_weight_2_new = a_weight_2
+            a_weight_sep_new = a_weight_sep
+         end if
 
-        case (1)
-          if (min(a_weight_1,a_weight_2)+a_weight_sep.lt. &
-              max(a_weight_1,a_weight_2)) then
-            call nd_refine_block_trim(a_n,a_ne,a_ptr,a_row, &
-              a_weight,sumweight,a_n1_new,a_n2_new,a_weight_1_new, &
-              a_weight_2_new,a_weight_sep_new, &
-              work(part_ptr+1:part_ptr+a_n),work(work_ptr+1:work_ptr+5* &
-              a_n),options)
-          else
-            call nd_refine_trim(a_n,a_ne,a_ptr,a_row,a_weight, &
-              sumweight,a_n1_new,a_n2_new,a_weight_1_new,a_weight_2_new, &
-              a_weight_sep_new,work(part_ptr+1:part_ptr+a_n), &
-              work(work_ptr+1:work_ptr+3*a_n),options)
-          end if
+         part_ptr = work_ptr + 5*a_n
+         work(part_ptr+1:part_ptr+a_n) = work(partition_ptr+1:partition_ptr+a_n)
 
+         k = options%max_improve_cycles
+         do i = 1, k
+            call expand_partition(a_n, a_ne, a_ptr, a_row, a_weight, a_n1_new, &
+               a_n2_new, a_weight_1_new, a_weight_2_new, a_weight_sep_new,     &
+               work(part_ptr+1:part_ptr+a_n), work(work_ptr+1:work_ptr+5*a_n))
 
-        case (2)
-          call nd_refine_edge(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
-            a_n1_new,a_n2_new,a_weight_1_new,a_weight_2_new, &
-            a_weight_sep_new,work(part_ptr+1:part_ptr+a_n), &
-            work(work_ptr+1:work_ptr+3*a_n),options)
+            if (printd) then
+               write (unit_diagnostics,'(a)') &
+                  'Partition sizes after expansion'
+               write (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_n1=', &
+                  a_n1_new, ',  a_n2=', a_n2_new, ',  a_n_sep=', &
+                  a_n - a_n1_new - a_n2_new
+            end if
 
-        end select
+            select case (ref_options)
+            case (3)
+               if (real(max(a_weight_1_new,a_weight_2_new))/real(min( &
+                     a_weight_1_new,a_weight_2_new)+a_weight_sep_new).gt.max(real( &
+                     1.0,wp),options%balance)) then
+                  ref_method = 2
+               else
+                  ref_method = 1
+               end if
+            case (6)
+               if (real(max(a_weight_1_new,a_weight_2_new))/real(min( &
+                  a_weight_1_new,a_weight_2_new)+a_weight_sep_new).gt.max(real( &
+                  1.0,wp),options%balance)) then
+                  ref_method = 2
+               else
+                  ref_method = 0
+               end if
+            end select
 
+            select case (ref_method)
+            case (0)
+               call nd_refine_max_flow(a_n, a_ne, a_ptr, a_row, a_weight,  &
+                  a_n1_new, a_n2_new, a_weight_1_new, a_weight_2_new,      &
+                  a_weight_sep_new, work(part_ptr+1:part_ptr+a_n),         &
+                  work(work_ptr+1:work_ptr+8), options)
+            case (1)
+               if (min(a_weight_1,a_weight_2)+a_weight_sep.lt. &
+                     max(a_weight_1,a_weight_2)) then
+                  call nd_refine_block_trim(a_n, a_ne, a_ptr, a_row, a_weight, &
+                     sumweight, a_n1_new, a_n2_new, a_weight_1_new,            &
+                     a_weight_2_new, a_weight_sep_new,                         &
+                     work(part_ptr+1:part_ptr+a_n),                            &
+                     work(work_ptr+1:work_ptr+5*a_n), options)
+               else
+                  call nd_refine_trim(a_n, a_ne, a_ptr, a_row, a_weight,       &
+                     sumweight, a_n1_new, a_n2_new, a_weight_1_new,            &
+                     a_weight_2_new, a_weight_sep_new,                         &
+                     work(part_ptr+1:part_ptr+a_n),                            &
+                     work(work_ptr+1:work_ptr+3*a_n), options)
+               end if
+            case (2)
+               call nd_refine_edge(a_n, a_ne, a_ptr, a_row, a_weight,   &
+                  sumweight, a_n1_new, a_n2_new, a_weight_1_new,        &
+                  a_weight_2_new, a_weight_sep_new,                     &
+                  work(part_ptr+1:part_ptr+a_n),                        &
+                  work(work_ptr+1:work_ptr+3*a_n), options)
+            end select
 
-        if (printd) then
-          write (unit_diagnostics,'(a)') &
-            'Partition sizes after refinement'
-          write (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_n1=', &
-            a_n1_new, ',  a_n2=', a_n2_new, ',  a_n_sep=', &
-            a_n - a_n1_new - a_n2_new
-        end if
+            if (printd) then
+               write (unit_diagnostics,'(a)') &
+                  'Partition sizes after refinement'
+               write (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_n1=', &
+                  a_n1_new, ',  a_n2=', a_n2_new, ',  a_n_sep=', &
+                  a_n - a_n1_new - a_n2_new
+            end if
 
+            call cost_function(a_weight_1_new, a_weight_2_new, &
+               a_weight_sep_new, sumweight, ratio, imbal,      &
+               options%cost_function, tau)
+            if (tau.lt.tau_best) then
+               tau_best = tau
+               work(partition_ptr+1:partition_ptr+a_n) &
+                  = work(part_ptr+1:part_ptr+a_n)
+               a_n1 = a_n1_new
+               a_n2 = a_n2_new
+               a_weight_1 = a_weight_1_new
+               a_weight_2 = a_weight_2_new
+               a_weight_sep = a_weight_sep_new
+            else
+               exit
+            end if
+         end do
 
-        call cost_function(a_weight_1_new,a_weight_2_new, &
-          a_weight_sep_new,sumweight,ratio,imbal,options%cost_function,tau)
-        if (tau.lt.tau_best) then
-          tau_best = tau
-          work(partition_ptr+1:partition_ptr+a_n) &
-            = work(part_ptr+1:part_ptr+a_n)
-          a_n1 = a_n1_new
-          a_n2 = a_n2_new
-          a_weight_1 = a_weight_1_new
-          a_weight_2 = a_weight_2_new
-          a_weight_sep = a_weight_sep_new
-        else
-          exit
-        end if
+         call nd_refine_fm(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, a_n1, &
+            a_n2, a_weight_1, a_weight_2, a_weight_sep,                        &
+            work(partition_ptr+1:partition_ptr+a_n),                           &
+            work(work_ptr+1:work_ptr+8*a_n+sumweight), options)
+      end if
+   else
+      go to 10
+   end if
+
+   if (printi .or. printd) then
+      write (unit_diagnostics,'(a)') 'Partition found:'
+      write (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_n1=', a_n1, &
+         ', a_n2=', a_n2, ', a_nsep=', a_n - a_n1 - a_n2
+   end if
+
+   if ((a_n1.le.max(2,options%amd_switch1) .and. a_n2.le.max(2, &
+         options%amd_switch1))) then
+      ! apply halo amd to submatrics
+      call amd_order_both(a_n, a_ne, a_ptr, a_row, a_n1, a_n2, &
+         work(partition_ptr+1:partition_ptr+a_n), iperm, a_weight, &
+         work(work_ptr+1:work_ptr+12*a_n+a_ne))
+      a_ne1 = 0
+      a_ne2 = 0
+   else if (a_n1.le.max(2,options%amd_switch1)) then
+      ! apply halo amd to [A1, B1'; B1, I] using two levels
+      ! return A2 and apply ND to it
+      call amd_order_one(a_n, a_ne, a_ptr, a_row, a_n1, a_n2, &
+         work(partition_ptr+1:partition_ptr+a_n), iperm, a_weight, a_ne2, &
+         work(work_ptr+1:work_ptr+12*a_n+a_ne))
+      a_ne1 = 0
+   else if (a_n2.le.max(2,options%amd_switch1)) then
+      ! apply halo amd to [A2, B2'; B2, I] using two levels
+      ! return A1 and apply ND to it
+      call amd_order_one(a_n, a_ne, a_ptr, a_row, a_n1, a_n2, &
+         work(partition_ptr+1:partition_ptr+a_n), iperm, a_weight, a_ne1, &
+         work(work_ptr+1:work_ptr+12*a_n+a_ne))
+      a_ne2 = 0
+   else
+      ! return A1 and A2 and apply ND to them
+      a_ptr_sub_ptr = work_ptr + a_n ! length a_n
+      a_row_sub_ptr = a_ptr_sub_ptr + a_n ! length a_ne
+
+      call extract_both_matrices(a_n, a_ne, a_ptr, a_row, a_n1, a_n2, &
+         work(partition_ptr+1:partition_ptr+a_n1+a_n2), a_ne1, a_ne2, &
+         work(a_ptr_sub_ptr+1:a_ptr_sub_ptr+a_n1+a_n2), a_ne, &
+         work(a_row_sub_ptr+1:a_row_sub_ptr+a_ne), &
+         work(work_ptr+1:work_ptr+a_n))
+
+      ! Copy extracted matrices
+      a_ptr(1:a_n1+a_n2) = work(a_ptr_sub_ptr+1:a_ptr_sub_ptr+a_n1+a_n2)
+      a_row(1:a_ne1+a_ne2) = work(a_row_sub_ptr+1:a_row_sub_ptr+a_ne1+a_ne2)
+
+      ! Update iperm and a_weight
+      do i = 1, a_n
+         j = work(partition_ptr+i)
+         work(a_ptr_sub_ptr+i) = iperm(j)
+         work(work_ptr+i) = a_weight(j)
       end do
+      do i = 1, a_n
+         iperm(i) = work(a_ptr_sub_ptr+i)
+         a_weight(i) = work(work_ptr+i)
+      end do
+   end if
+   go to 20
 
-      call nd_refine_fm(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,a_n1, &
-        a_n2,a_weight_1,a_weight_2,a_weight_sep, &
-        work(partition_ptr+1:partition_ptr+a_n), &
-        work(work_ptr+1:work_ptr+8*a_n+sumweight),options)
+   10 continue
+   if (printi .or. printd) then
+      write (unit_diagnostics,'(a)') 'No partition found'
+   end if
 
-
-    end if
-  else
-    go to 10
-  end if
-
-  if (printi .or. printd) then
-    write (unit_diagnostics,'(a)') 'Partition found:'
-    write (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_n1=', a_n1, &
-      ', a_n2=', a_n2, ', a_nsep=', a_n - a_n1 - a_n2
-  end if
-
-  if ((a_n1.le.max(2,options%amd_switch1) .and. a_n2.le.max(2, &
-      options%amd_switch1))) then
-    ! apply halo amd to submatrics
-    call amd_order_both(a_n,a_ne,a_ptr,a_row,a_n1,a_n2, &
-      work(partition_ptr+1:partition_ptr+a_n),iperm,a_weight, &
-      work(work_ptr+1:work_ptr+12*a_n+a_ne))
-    a_ne1 = 0
-    a_ne2 = 0
-
-  else if (a_n1.le.max(2,options%amd_switch1)) then
-    ! apply halo amd to [A1, B1'; B1, I] using two levels
-    ! return A2 and apply ND to it
-    call amd_order_one(a_n,a_ne,a_ptr,a_row,a_n1,a_n2, &
-      work(partition_ptr+1:partition_ptr+a_n),iperm,a_weight,a_ne2, &
-      work(work_ptr+1:work_ptr+12*a_n+a_ne))
-    a_ne1 = 0
-
-
-  else if (a_n2.le.max(2,options%amd_switch1)) then
-    ! apply halo amd to [A2, B2'; B2, I] using two levels
-    ! return A1 and apply ND to it
-    call amd_order_one(a_n,a_ne,a_ptr,a_row,a_n1,a_n2, &
-      work(partition_ptr+1:partition_ptr+a_n),iperm,a_weight,a_ne1, &
-      work(work_ptr+1:work_ptr+12*a_n+a_ne))
-    a_ne2 = 0
-
-  else
-    ! return A1 and A2 and apply ND to them
-    a_ptr_sub_ptr = work_ptr + a_n ! length a_n
-    a_row_sub_ptr = a_ptr_sub_ptr + a_n ! length a_ne
-
-    call extract_both_matrices(a_n,a_ne,a_ptr,a_row,a_n1,a_n2, &
-      work(partition_ptr+1:partition_ptr+a_n1+a_n2),a_ne1,a_ne2, &
-      work(a_ptr_sub_ptr+1:a_ptr_sub_ptr+a_n1+a_n2),a_ne, &
-      work(a_row_sub_ptr+1:a_row_sub_ptr+a_ne), &
-      work(work_ptr+1:work_ptr+a_n))
-
-    ! Copy extracted matrices
-    a_ptr(1:a_n1+a_n2) = work(a_ptr_sub_ptr+1:a_ptr_sub_ptr+a_n1+a_n2)
-    a_row(1:a_ne1+a_ne2) = work(a_row_sub_ptr+1:a_row_sub_ptr+a_ne1+ &
-      a_ne2)
-
-    ! Update iperm and a_weight
-    do i = 1, a_n
-      j = work(partition_ptr+i)
-      work(a_ptr_sub_ptr+i) = iperm(j)
-      work(work_ptr+i) = a_weight(j)
-    end do
-    do i = 1, a_n
-      iperm(i) = work(a_ptr_sub_ptr+i)
-      a_weight(i) = work(work_ptr+i)
-    end do
-
-  end if
-  go to 20
-
-10      if (printi .or. printd) then
-    write (unit_diagnostics,'(a)') 'No partition found'
-  end if
-
-20      info%flag = 0
-  if (printi .or. printd) then
-    call nd_print_message(info%flag,unit_diagnostics, &
-      'nd_partition')
-  end if
-  return
-
+   20 continue
+   info%flag = 0
+   if (printi .or. printd) then
+      call nd_print_message(info%flag,unit_diagnostics,'nd_partition')
+   end if
 end subroutine nd_partition
 
 ! ---------------------------------------------------
