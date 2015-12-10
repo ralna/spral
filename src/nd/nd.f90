@@ -3162,6 +3162,54 @@ subroutine extract_matrix(a_n,a_ne,a_ptr,a_row,a_n_part,a_n_sep, &
   end do
 end subroutine extract_matrix
 
+subroutine extract_matrices(n, ne_in, ptr_in, row_in, nparts, n_sub, &
+      rows_sub, ne_out, ptr_out, row_out, work)
+   ! Matrix to be partitioned
+   integer, intent(in) :: n
+   integer, intent(in) :: ne_in
+   integer, dimension(n), intent(in) :: ptr_in
+   integer, dimension(ne_in), intent(in) :: row_in
+   ! Details of partitions
+   integer, intent(in) :: nparts ! number of partitions
+   integer, dimension(nparts), intent(in) :: n_sub ! dimensions of partitions
+   integer, dimension(*), intent(in) :: rows_sub ! rows in each partition
+   integer, dimension(nparts), intent(out) :: ne_out ! #entries in each part
+   integer, intent(out) :: ptr_out(*) ! First n_sub(1) are for first matrix...
+   integer, intent(out) :: row_out(*)
+   integer, intent(out) :: work(n)
+
+   integer :: i, j, cp, col, ins, part_start
+   integer :: part, rsptr
+
+   ! Loop over parts, extracting matrix
+   rsptr = 0
+   ins = 1
+   do part = 1, nparts
+      ! Set work(col) to index of col within new submatrix, or 0 if absent
+      work(:) = 0
+      do cp = rsptr+1, rsptr + n_sub(part)
+         col = rows_sub(cp)
+         work(col) = cp - rsptr
+      end do
+      ! Initialize refence start for ptr
+      part_start = ins - 1
+      ! Copy submatrix of marked variables
+      do cp = rsptr+1, rsptr + n_sub(part)
+         ptr_out(cp) = ins - part_start
+         col = rows_sub(cp)
+         do i = ptr_in(col), nd_get_ptr(col+1, n, ne_in, ptr_in)-1
+            j = work( row_in(i) )
+            if(j.eq.0) cycle ! Variable not in this partition
+            row_out(ins) = j
+            ins = ins + 1
+         end do
+      end do
+      ne_out(part) = ins - part_start - 1
+      ! Update for next partition
+      rsptr = rsptr + n_sub(part)
+   end do
+end subroutine extract_matrices
+
 subroutine extract_both_matrices(a_n, a_ne, a_ptr, a_row, a_n_part1, &
       a_n_part2, rows_sub, a_ne_sub1, a_ne_sub2, a_ptr_sub, len_a_row_sub, &
       a_row_sub, work)
@@ -3189,100 +3237,14 @@ subroutine extract_both_matrices(a_n, a_ne, a_ptr, a_row, a_n_part1, &
    integer :: i, j, k, l, m, p
    integer :: mask ! pointer into work array for mask arrays
 
+   integer, dimension(2) :: n_array, ne_array
 
-   ! Set pointers into work array
-   mask = 0 ! length a_n
-
-   ! Set mask
-   work(mask+1:mask+a_n) = 0
-   do i = 1, a_n_part1
-      j = rows_sub(i)
-      work(mask+j) = i
-   end do
-   do i = a_n_part1 + 1, a_n_part1 + a_n_part2
-      j = rows_sub(i)
-      work(mask+j) = -i + a_n_part1
-   end do
-   a_row_sub(:) = 0
-
-   ! Count number of entries in each submatrix and set-up column ptrs
-   a_ptr_sub(1:a_n_part1+a_n_part2) = 0
-   do j = 1, a_n_part1
-      a_ptr_sub(j) = 0
-      i = rows_sub(j)
-      if (i.eq.a_n) then
-         l = a_ne
-      else
-         l = a_ptr(i+1) - 1
-      end if
-      do k = a_ptr(i), l
-         m = a_row(k)
-         if (work(mask+m).gt.0) then
-            a_ptr_sub(j) = a_ptr_sub(j) + 1
-         end if
-      end do
-   end do
-
-   do j = a_n_part1 + 1, a_n_part1 + a_n_part2
-      a_ptr_sub(j) = 0
-      i = rows_sub(j)
-      if (i.eq.a_n) then
-         l = a_ne
-      else
-         l = a_ptr(i+1) - 1
-      end if
-      do k = a_ptr(i), l
-         m = a_row(k)
-         if (work(mask+m).lt.0) a_ptr_sub(j) = a_ptr_sub(j) + 1
-      end do
-   end do
-
-   a_ptr_sub(1) = a_ptr_sub(1) + 1
-   do j = 2, a_n_part1
-      a_ptr_sub(j) = a_ptr_sub(j) + a_ptr_sub(j-1)
-   end do
-   a_ne_sub1 = a_ptr_sub(a_n_part1) - 1
-
-   a_ptr_sub(a_n_part1+1) = a_ptr_sub(a_n_part1+1) + 1
-   do j = a_n_part1 + 2, a_n_part1 + a_n_part2
-      a_ptr_sub(j) = a_ptr_sub(j) + a_ptr_sub(j-1)
-   end do
-   a_ne_sub2 = a_ptr_sub(a_n_part1+a_n_part2) - 1
-
-   ! Form a_row_sub
-   do j = 1, a_n_part1
-      i = rows_sub(j)
-      if (i.eq.a_n) then
-         l = a_ne
-      else
-         l = a_ptr(i+1) - 1
-      end if
-      do k = a_ptr(i), l
-         m = a_row(k)
-         if (work(mask+m).gt.0) then
-            a_ptr_sub(j) = a_ptr_sub(j) - 1
-            p = a_ptr_sub(j)
-            a_row_sub(p) = abs(work(mask+m))
-         end if
-      end do
-   end do
-
-   do j = a_n_part1 + 1, a_n_part1 + a_n_part2
-      i = rows_sub(j)
-      if (i.eq.a_n) then
-         l = a_ne
-      else
-         l = a_ptr(i+1) - 1
-      end if
-      do k = a_ptr(i), l
-         m = a_row(k)
-         if (work(mask+m).lt.0) then
-            a_ptr_sub(j) = a_ptr_sub(j) - 1
-            p = a_ptr_sub(j)
-            a_row_sub(p+a_ne_sub1) = -work(mask+m)
-         end if
-      end do
-   end do
+   n_array(1) = a_n_part1
+   n_array(2) = a_n_part2
+   call extract_matrices(a_n, a_ne, a_ptr, a_row, 2, n_array, rows_sub, &
+      ne_array, a_ptr_sub, a_row_sub, work)
+   a_ne_sub1 = ne_array(1)
+   a_ne_sub2 = ne_array(2)
 end subroutine extract_both_matrices
 
 subroutine amd_order_one(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition,iperm, &
