@@ -730,7 +730,8 @@ end subroutine nd_find_indep_comps
 ! small enough, apply halo amd
 !
 subroutine nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level, &
-      a_n1, a_n2, a_ne1, a_ne2, iperm, work, options, info, use_multilevel, grid)
+      a_n1, a_n2, a_ne1, a_ne2, iperm, work, options, info, use_multilevel, &
+      grid)
    integer, intent(in) :: a_n
    integer, intent(in) :: a_ne
    integer, intent(inout) :: a_ptr(a_n) ! On entry, input matrix. On exit,
@@ -799,8 +800,8 @@ subroutine nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level, &
    partition_ptr = 0 ! length a_n
    work_ptr = partition_ptr + a_n ! max length 9*a_n+sumweight+a_ne/2
    if (partition_method.eq.1) then
-      call nd_ashcraft(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level,   &
-         a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep,                    &
+      call nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight,    &
+         level, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep,             &
          work(partition_ptr+1:partition_ptr+a_n),                             &
          work(work_ptr+1:work_ptr+9*a_n+sumweight), options, info%flag, band, &
          depth, use_multilevel, grid)
@@ -1080,10 +1081,10 @@ subroutine nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level, &
 end subroutine nd_partition
 
 ! ---------------------------------------------------
-! nd_ashcraft
+! nd_half_level_set
 ! ---------------------------------------------------
-! Partition the matrix using the Ashcraft method
-recursive subroutine nd_ashcraft(a_n,a_ne,a_ptr,a_row,a_weight, &
+! Partition the matrix using the half level set (Ashcraft) method
+recursive subroutine nd_half_level_set(a_n,a_ne,a_ptr,a_row,a_weight, &
     sumweight,level,a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep, &
     partition,work,options,info,band,depth,use_multilevel,grid)
 
@@ -1403,11 +1404,11 @@ recursive subroutine nd_ashcraft(a_n,a_ne,a_ptr,a_row,a_weight, &
 
 20      info = 0
   if (printi .or. printd) then
-    call nd_print_message(info,unit_diagnostics,'nd_ashcraft')
+    call nd_print_message(info,unit_diagnostics,'nd_half_level_set')
   end if
   return
 
-end subroutine nd_ashcraft
+end subroutine nd_half_level_set
 
 
 ! ---------------------------------------------------
@@ -4191,9 +4192,9 @@ subroutine nd_coarse_partition(a_n,a_ne,a_ptr,a_row,a_weight, &
 
   select case (partition_method)
   case (1)
-    ! Ashcraft method
+    ! Half level set method
     use_multilevel = .false.
-    call nd_ashcraft(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,2,a_n1, &
+    call nd_half_level_set(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,2,a_n1, &
       a_n2,a_weight_1,a_weight_2,a_weight_sep, &
       work1(partition_ptr+1:partition_ptr+a_n),work(1:9*a_n+sumweight), &
       options,info,dummy,dummy1,use_multilevel,gridtemp)
