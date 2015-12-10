@@ -753,32 +753,26 @@ subroutine nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level, &
    type (nd_inform), intent(inout) :: info
    type (nd_multigrid), intent(inout) :: grid
 
-   integer :: unit_diagnostics ! unit on which to print diagnostics
-   logical :: printi, printd
    integer :: partition_ptr ! pointer into work array
    integer :: work_ptr ! pointer into work array
    integer :: part_ptr ! pointer into work array
    integer :: a_ptr_sub_ptr ! pointer into work array
    integer :: a_row_sub_ptr ! pointer into work array
-   integer :: partition_method
    integer :: i, j, k
    integer :: a_weight_1, a_weight_2, a_weight_sep
    integer :: ref_method, ref_options
    integer :: a_n1_new, a_n2_new, a_weight_1_new, a_weight_2_new, &
       a_weight_sep_new
-   real(wp) :: ratio, tau_best, tau, band, depth
+   real(wp) :: r, ratio, tau_best, tau, band, depth
    logical :: imbal
 
-   ! ---------------------------------------------
-   ! Printing levels
-   unit_diagnostics = options%unit_diagnostics
-   printi = (options%print_level.eq.1 .and. unit_diagnostics.ge.0)
-   printd = (options%print_level.ge.2 .and. unit_diagnostics.ge.0)
+   ! Internal options on what to do
+   integer, parameter :: REFINE_MAXFLOW   = 0, &
+                         REFINE_TRIM      = 1, &
+                         REFINE_EDGE      = 2
 
-   if (printi .or. printd) then
-      write (unit_diagnostics,'(a)') ' '
-      write (unit_diagnostics,'(a)') 'Start finding a partition'
-   end if
+   call nd_print_diagnostic(1, options, ' ')
+   call nd_print_diagnostic(1, options, 'Start finding a partition')
 
    ! If matrix is full, then don't partition
    if (a_ne.eq.a_n*(a_n-1)) then
@@ -786,240 +780,240 @@ subroutine nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level, &
       a_n2 = 0
       a_ne1 = a_ne
       a_ne2 = 0
-      go to 10
+      info%flag = 0
+      call nd_print_diagnostic(1, options, 'No partition found')
+      call nd_print_diagnostic(1, options, &
+         ' nd_partition: successful completion' &
+         )
+      return
    end if
 
    ! Find the partition
-   if (options%coarse_partition_method.le.1) then
-      partition_method = 1
-   else
-      partition_method = 2
-   end if
-
-
    partition_ptr = 0 ! length a_n
    work_ptr = partition_ptr + a_n ! max length 9*a_n+sumweight+a_ne/2
-   if (partition_method.eq.1) then
+   select case(options%coarse_partition_method)
+   case(:ND_PARTITION_HALF_LEVEL_SET)
       call nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight,    &
          level, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep,             &
          work(partition_ptr+1:partition_ptr+a_n),                             &
          work(work_ptr+1:work_ptr+9*a_n+sumweight), options, info%flag, band, &
          depth, use_multilevel, grid)
-   else
+   case(ND_PARTITION_LEVEL_SET:)
       call nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight,         &
          level, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep,             &
          work(partition_ptr+1:partition_ptr+a_n),                             &
          work(work_ptr+1:work_ptr+9*a_n+sumweight), options, info%flag,       &
          band, depth, use_multilevel, grid)
-   end if
+   end select
 
+   ! If S is empty, return and caller will handle as special case
    if (a_n1+a_n2.eq.a_n) return
 
    if (level.eq.0) then
-      if (a_n.gt.info%n_max_component .or. (a_n.eq.info%n_max_component .and. &
-            band.gt.info%band)) then
+      if (   a_n.gt.info%n_max_component .or. &
+            (a_n.eq.info%n_max_component .and. band.gt.info%band)) then
          info%band = band
          info%depth = depth
       end if
    end if
 
-   if (a_n1.ne.0 .and. a_n2.ne.0 .and. a_n.ge.3) then
-      if ( .not. use_multilevel) then
-         if (options%refinement.gt.6) then
-            ref_options = 3
+   ! If one or other partition is empty, give up
+   if(a_n1.eq.0 .or. a_n2.eq.0) then
+      info%flag = 0
+      call nd_print_diagnostic(1, options, 'No partition found')
+      call nd_print_diagnostic(1, options, &
+         ' nd_partition: successful completion' &
+         )
+      return
+   endif
+
+   if ( .not. use_multilevel) then
+      select case(options%refinement)
+      case(:ND_REFINE_TRIM_FM_BOTH)
+         ref_options = ND_REFINE_TRIM_FM_BOTH
+      case(ND_REFINE_AUTO:)
+         ref_options = ND_REFINE_TRIM_FM_AUTO
+      case default
+         ref_options = options%refinement
+      end select
+
+      select case (ref_options)
+      case (ND_REFINE_TRIM_FM_BOTH)
+         ref_method = REFINE_TRIM
+      case (ND_REFINE_TRIM_FM_SMALLER)
+         ref_method = REFINE_EDGE
+      case (ND_REFINE_TRIM_FM_AUTO)
+         ratio = max(a_weight_1,a_weight_2) / &
+            real(min(a_weight_1,a_weight_2)+a_weight_sep)
+         if (ratio.ge.max(1.0_wp,options%balance)) then
+            ref_method = REFINE_EDGE
          else
-            if (options%refinement.lt.1) then
-               ref_options = 1
-            else
-               ref_options = options%refinement
-            end if
+            ref_method = REFINE_TRIM
+         end if
+      case (ND_REFINE_MAXFLOW_BOTH)
+         ref_method = REFINE_MAXFLOW
+      case (ND_REFINE_MAXFLOW_SMALLER)
+         ref_method = REFINE_EDGE
+      case (ND_REFINE_MAXFLOW_AUTO)
+         ratio = max(a_weight_1,a_weight_2) / &
+            real(min(a_weight_1,a_weight_2)+a_weight_sep)
+         if (ratio.ge.max(1.0_wp,options%balance)) then
+            ref_method = REFINE_EDGE
+         else
+            ref_method = REFINE_MAXFLOW
+         end if
+      end select
+      if (options%print_level.ge.2 .and. options%unit_diagnostics.gt.0) then
+         write (options%unit_diagnostics,'(a)') 'Partition before refinement'
+         write (options%unit_diagnostics,'(a,i10,a,i10,a,i10)') &
+            'a_n1=', a_n1, ',  a_n2=', a_n2, ',  a_n_sep=', a_n - a_n1 - a_n2
+      end if
+
+      select case (ref_method)
+      case (REFINE_MAXFLOW)
+         call nd_refine_max_flow(a_n, a_ne, a_ptr, a_row, a_weight, a_n1,  &
+            a_n2, a_weight_1, a_weight_2, a_weight_sep,                    &
+            work(partition_ptr+1:partition_ptr+a_n),                       &
+            work(work_ptr+1:work_ptr+8), options)
+      case (REFINE_TRIM)
+         if (min(a_weight_1,a_weight_2)+a_weight_sep.lt. &
+               max(a_weight_1,a_weight_2)) then
+            call nd_refine_block_trim(a_n, a_ne, a_ptr, a_row, a_weight,    &
+               sumweight, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, &
+               work(partition_ptr+1:partition_ptr+a_n),                     &
+               work(work_ptr+1:work_ptr+5*a_n),options)
+         else
+            call nd_refine_trim(a_n, a_ne, a_ptr, a_row, a_weight,          &
+               sumweight, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, &
+               work(partition_ptr+1:partition_ptr+a_n),                     &
+               work(work_ptr+1:work_ptr+3*a_n), options)
+         end if
+      case (REFINE_EDGE)
+         call nd_refine_edge(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
+            a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep,              &
+            work(partition_ptr+1:partition_ptr+a_n),                       &
+            work(work_ptr+1:work_ptr+3*a_n), options)
+      end select
+
+      if (options%print_level.ge.2 .and. options%unit_diagnostics.gt.0) then
+         write (options%unit_diagnostics,'(a)') 'Partition after refinement'
+         write (options%unit_diagnostics,'(a,i10,a,i10,a,i10)') &
+            'a_n1=', a_n1, ',  a_n2=', a_n2, ',  a_n_sep=', a_n - a_n1 - a_n2
+      end if
+
+      if (options%max_improve_cycles.gt.0) then
+         ratio = max(real(1.0,wp),options%balance)
+         imbal = (ratio.le.real(sumweight-2))
+         call cost_function(a_weight_1, a_weight_2, a_weight_sep, sumweight,&
+            ratio, imbal, options%cost_function, tau_best)
+         a_n1_new = a_n1
+         a_n2_new = a_n2
+         a_weight_1_new = a_weight_1
+         a_weight_2_new = a_weight_2
+         a_weight_sep_new = a_weight_sep
+      end if
+
+      part_ptr = work_ptr + 5*a_n
+      work(part_ptr+1:part_ptr+a_n) = work(partition_ptr+1:partition_ptr+a_n)
+
+      k = options%max_improve_cycles
+      do i = 1, k
+         call expand_partition(a_n, a_ne, a_ptr, a_row, a_weight, a_n1_new, &
+            a_n2_new, a_weight_1_new, a_weight_2_new, a_weight_sep_new,     &
+            work(part_ptr+1:part_ptr+a_n), work(work_ptr+1:work_ptr+5*a_n))
+
+         if (options%print_level.ge.2 .and. options%unit_diagnostics.gt.0) then
+            write (options%unit_diagnostics,'(a)') &
+               'Partition sizes after expansion'
+            write (options%unit_diagnostics,'(a,i10,a,i10,a,i10)') &
+               'a_n1=', a_n1_new, ',  a_n2=', a_n2_new, &
+               ',  a_n_sep=', a_n - a_n1_new - a_n2_new
          end if
 
          select case (ref_options)
-         case (1)
-            ref_method = 1
-         case (2)
-            ref_method = 2
-         case (3)
-            if (real(max(a_weight_1,a_weight_2))/real(min(a_weight_1, &
-                  a_weight_2)+a_weight_sep).ge.max(1.0_wp,options%balance)) then
-               ref_method = 2
+         case (ND_REFINE_TRIM_FM_AUTO)
+            r = max(a_weight_1_new,a_weight_2_new) / &
+               real(min(a_weight_1_new,a_weight_2_new)+a_weight_sep_new)
+            if (r.gt.max(1.0_wp,options%balance)) then
+               ref_method = REFINE_EDGE
             else
-               ref_method = 1
+               ref_method = REFINE_TRIM
             end if
-         case (4)
-            ref_method = 0
-         case (5)
-            ref_method = 2
-         case (6)
-            if (real(max(a_weight_1,a_weight_2))/real(min(a_weight_1, &
-                  a_weight_2)+a_weight_sep).ge.max(1.0_wp,options%balance)) then
-               ref_method = 2
+         case (ND_REFINE_MAXFLOW_AUTO)
+            r = max(a_weight_1_new,a_weight_2_new) / &
+               real(min(a_weight_1_new,a_weight_2_new)+a_weight_sep_new)
+            if (r.gt.max(1.0_wp,options%balance)) then
+               ref_method = REFINE_EDGE
             else
-               ref_method = 0
+               ref_method = REFINE_MAXFLOW
             end if
          end select
-         if (printd) then
-            write (unit_diagnostics,'(a)') 'Partition before refinement'
-            write (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_n1=', a_n1, &
-               ',  a_n2=', a_n2, ',  a_n_sep=', a_n - a_n1 - a_n2
-         end if
 
          select case (ref_method)
-         case (0)
-            call nd_refine_max_flow(a_n, a_ne, a_ptr, a_row, a_weight, a_n1,  &
-               a_n2, a_weight_1, a_weight_2, a_weight_sep,                    &
-               work(partition_ptr+1:partition_ptr+a_n),                       &
+         case (REFINE_MAXFLOW)
+            call nd_refine_max_flow(a_n, a_ne, a_ptr, a_row, a_weight,  &
+               a_n1_new, a_n2_new, a_weight_1_new, a_weight_2_new,      &
+               a_weight_sep_new, work(part_ptr+1:part_ptr+a_n),         &
                work(work_ptr+1:work_ptr+8), options)
-         case (1)
+         case (REFINE_TRIM)
             if (min(a_weight_1,a_weight_2)+a_weight_sep.lt. &
                   max(a_weight_1,a_weight_2)) then
-               call nd_refine_block_trim(a_n, a_ne, a_ptr, a_row, a_weight,    &
-                  sumweight, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, &
-                  work(partition_ptr+1:partition_ptr+a_n),                     &
-                  work(work_ptr+1:work_ptr+5*a_n),options)
+               call nd_refine_block_trim(a_n, a_ne, a_ptr, a_row, a_weight, &
+                  sumweight, a_n1_new, a_n2_new, a_weight_1_new,            &
+                  a_weight_2_new, a_weight_sep_new,                         &
+                  work(part_ptr+1:part_ptr+a_n),                            &
+                  work(work_ptr+1:work_ptr+5*a_n), options)
             else
-               call nd_refine_trim(a_n, a_ne, a_ptr, a_row, a_weight,          &
-                  sumweight, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, &
-                  work(partition_ptr+1:partition_ptr+a_n),                     &
+               call nd_refine_trim(a_n, a_ne, a_ptr, a_row, a_weight,       &
+                  sumweight, a_n1_new, a_n2_new, a_weight_1_new,            &
+                  a_weight_2_new, a_weight_sep_new,                         &
+                  work(part_ptr+1:part_ptr+a_n),                            &
                   work(work_ptr+1:work_ptr+3*a_n), options)
             end if
-         case (2)
-            call nd_refine_edge(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
-               a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep,              &
-               work(partition_ptr+1:partition_ptr+a_n),                       &
+         case (REFINE_EDGE)
+            call nd_refine_edge(a_n, a_ne, a_ptr, a_row, a_weight,   &
+               sumweight, a_n1_new, a_n2_new, a_weight_1_new,        &
+               a_weight_2_new, a_weight_sep_new,                     &
+               work(part_ptr+1:part_ptr+a_n),                        &
                work(work_ptr+1:work_ptr+3*a_n), options)
          end select
 
-         if (printd) then
-            write (unit_diagnostics,'(a)') 'Partition after refinement'
-            write (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_n1=', a_n1, &
-               ',  a_n2=', a_n2, ',  a_n_sep=', a_n - a_n1 - a_n2
+         if (options%print_level.ge.2 .and. options%unit_diagnostics.gt.0) then
+            write (options%unit_diagnostics,'(a)') &
+               'Partition sizes after refinement'
+            write (options%unit_diagnostics,'(a,i10,a,i10,a,i10)') &
+               'a_n1=', a_n1_new, ',  a_n2=', a_n2_new, &
+               ',  a_n_sep=', a_n - a_n1_new - a_n2_new
          end if
 
-         if (options%max_improve_cycles.gt.0) then
-            ratio = max(real(1.0,wp),options%balance)
-            if (ratio.gt.real(sumweight-2)) then
-               imbal = .false.
-            else
-               imbal = .true.
-            end if
-            call cost_function(a_weight_1, a_weight_2, a_weight_sep, sumweight,&
-               ratio, imbal, options%cost_function, tau_best)
-            a_n1_new = a_n1
-            a_n2_new = a_n2
-            a_weight_1_new = a_weight_1
-            a_weight_2_new = a_weight_2
-            a_weight_sep_new = a_weight_sep
-         end if
+         call cost_function(a_weight_1_new, a_weight_2_new, &
+            a_weight_sep_new, sumweight, ratio, imbal,      &
+            options%cost_function, tau)
+         if (tau.ge.tau_best) exit ! No improvement, stop
+         tau_best = tau
+         work(partition_ptr+1:partition_ptr+a_n) = &
+            work(part_ptr+1:part_ptr+a_n)
+         a_n1 = a_n1_new
+         a_n2 = a_n2_new
+         a_weight_1 = a_weight_1_new
+         a_weight_2 = a_weight_2_new
+         a_weight_sep = a_weight_sep_new
+      end do
 
-         part_ptr = work_ptr + 5*a_n
-         work(part_ptr+1:part_ptr+a_n) = work(partition_ptr+1:partition_ptr+a_n)
-
-         k = options%max_improve_cycles
-         do i = 1, k
-            call expand_partition(a_n, a_ne, a_ptr, a_row, a_weight, a_n1_new, &
-               a_n2_new, a_weight_1_new, a_weight_2_new, a_weight_sep_new,     &
-               work(part_ptr+1:part_ptr+a_n), work(work_ptr+1:work_ptr+5*a_n))
-
-            if (printd) then
-               write (unit_diagnostics,'(a)') &
-                  'Partition sizes after expansion'
-               write (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_n1=', &
-                  a_n1_new, ',  a_n2=', a_n2_new, ',  a_n_sep=', &
-                  a_n - a_n1_new - a_n2_new
-            end if
-
-            select case (ref_options)
-            case (3)
-               if (real(max(a_weight_1_new,a_weight_2_new))/real(min( &
-                     a_weight_1_new,a_weight_2_new)+a_weight_sep_new).gt.max(real( &
-                     1.0,wp),options%balance)) then
-                  ref_method = 2
-               else
-                  ref_method = 1
-               end if
-            case (6)
-               if (real(max(a_weight_1_new,a_weight_2_new))/real(min( &
-                  a_weight_1_new,a_weight_2_new)+a_weight_sep_new).gt.max(real( &
-                  1.0,wp),options%balance)) then
-                  ref_method = 2
-               else
-                  ref_method = 0
-               end if
-            end select
-
-            select case (ref_method)
-            case (0)
-               call nd_refine_max_flow(a_n, a_ne, a_ptr, a_row, a_weight,  &
-                  a_n1_new, a_n2_new, a_weight_1_new, a_weight_2_new,      &
-                  a_weight_sep_new, work(part_ptr+1:part_ptr+a_n),         &
-                  work(work_ptr+1:work_ptr+8), options)
-            case (1)
-               if (min(a_weight_1,a_weight_2)+a_weight_sep.lt. &
-                     max(a_weight_1,a_weight_2)) then
-                  call nd_refine_block_trim(a_n, a_ne, a_ptr, a_row, a_weight, &
-                     sumweight, a_n1_new, a_n2_new, a_weight_1_new,            &
-                     a_weight_2_new, a_weight_sep_new,                         &
-                     work(part_ptr+1:part_ptr+a_n),                            &
-                     work(work_ptr+1:work_ptr+5*a_n), options)
-               else
-                  call nd_refine_trim(a_n, a_ne, a_ptr, a_row, a_weight,       &
-                     sumweight, a_n1_new, a_n2_new, a_weight_1_new,            &
-                     a_weight_2_new, a_weight_sep_new,                         &
-                     work(part_ptr+1:part_ptr+a_n),                            &
-                     work(work_ptr+1:work_ptr+3*a_n), options)
-               end if
-            case (2)
-               call nd_refine_edge(a_n, a_ne, a_ptr, a_row, a_weight,   &
-                  sumweight, a_n1_new, a_n2_new, a_weight_1_new,        &
-                  a_weight_2_new, a_weight_sep_new,                     &
-                  work(part_ptr+1:part_ptr+a_n),                        &
-                  work(work_ptr+1:work_ptr+3*a_n), options)
-            end select
-
-            if (printd) then
-               write (unit_diagnostics,'(a)') &
-                  'Partition sizes after refinement'
-               write (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_n1=', &
-                  a_n1_new, ',  a_n2=', a_n2_new, ',  a_n_sep=', &
-                  a_n - a_n1_new - a_n2_new
-            end if
-
-            call cost_function(a_weight_1_new, a_weight_2_new, &
-               a_weight_sep_new, sumweight, ratio, imbal,      &
-               options%cost_function, tau)
-            if (tau.lt.tau_best) then
-               tau_best = tau
-               work(partition_ptr+1:partition_ptr+a_n) &
-                  = work(part_ptr+1:part_ptr+a_n)
-               a_n1 = a_n1_new
-               a_n2 = a_n2_new
-               a_weight_1 = a_weight_1_new
-               a_weight_2 = a_weight_2_new
-               a_weight_sep = a_weight_sep_new
-            else
-               exit
-            end if
-         end do
-
-         call nd_refine_fm(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, a_n1, &
-            a_n2, a_weight_1, a_weight_2, a_weight_sep,                        &
-            work(partition_ptr+1:partition_ptr+a_n),                           &
-            work(work_ptr+1:work_ptr+8*a_n+sumweight), options)
-      end if
-   else
-      go to 10
+      call nd_refine_fm(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, a_n1, &
+         a_n2, a_weight_1, a_weight_2, a_weight_sep,                        &
+         work(partition_ptr+1:partition_ptr+a_n),                           &
+         work(work_ptr+1:work_ptr+8*a_n+sumweight), options)
    end if
 
-   if (printi .or. printd) then
-      write (unit_diagnostics,'(a)') 'Partition found:'
-      write (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_n1=', a_n1, &
-         ', a_n2=', a_n2, ', a_nsep=', a_n - a_n1 - a_n2
+   if (options%print_level.ge.1 .and. options%unit_diagnostics.gt.0) then
+      write (options%unit_diagnostics,'(a)') 'Partition found:'
+      write (options%unit_diagnostics,'(a,i10,a,i10,a,i10)') &
+         'a_n1=', a_n1, ', a_n2=', a_n2, ', a_nsep=', a_n - a_n1 - a_n2
    end if
 
-   if ((a_n1.le.max(2,options%amd_switch1) .and. a_n2.le.max(2, &
-         options%amd_switch1))) then
+   if (  a_n1.le.max(2,options%amd_switch1) .and. &
+         a_n2.le.max(2,options%amd_switch1) ) then
       ! apply halo amd to submatrics
       call amd_order_both(a_n, a_ne, a_ptr, a_row, a_n1, a_n2, &
          work(partition_ptr+1:partition_ptr+a_n), iperm, a_weight, &
@@ -1066,18 +1060,9 @@ subroutine nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level, &
          a_weight(i) = work(work_ptr+i)
       end do
    end if
-   go to 20
 
-   10 continue
-   if (printi .or. printd) then
-      write (unit_diagnostics,'(a)') 'No partition found'
-   end if
-
-   20 continue
    info%flag = 0
-   if (printi .or. printd) then
-      call nd_print_message(info%flag,unit_diagnostics,'nd_partition')
-   end if
+   call nd_print_diagnostic(1, options, ' nd_partition: successful completion')
 end subroutine nd_partition
 
 ! ---------------------------------------------------

@@ -17,6 +17,17 @@ module spral_nd_types
                          ND_PART2_FLAG = 2, &
                          ND_SEP_FLAG = 1
 
+   ! Option values
+   integer, parameter :: ND_PARTITION_HALF_LEVEL_SET = 1, &
+                         ND_PARTITION_LEVEL_SET      = 2
+   integer, parameter :: ND_REFINE_TRIM_FM_BOTH    = 1, &
+                         ND_REFINE_TRIM_FM_SMALLER = 2, &
+                         ND_REFINE_TRIM_FM_AUTO    = 3, &
+                         ND_REFINE_MAXFLOW_BOTH    = 4, &
+                         ND_REFINE_MAXFLOW_SMALLER = 5, &
+                         ND_REFINE_MAXFLOW_AUTO    = 6, &
+                         ND_REFINE_AUTO            = 7
+
    ! *****************************************************************
 
    type :: nd_options
@@ -44,7 +55,7 @@ module spral_nd_types
          ! <= 0 : common neighbours
       integer :: coarse_partition_method = 1 ! Which partition method to use
          ! at coarsest level
-         ! <=1 : Ashcraft method (half-level set)
+         ! <=1 : Half-level set method (Ashcraft)
          ! >=2 : Level-set method
       integer :: refinement = 7 ! Which sort of refinement to use
          ! <2 : trim + fm to increase weights of A1 and A2
