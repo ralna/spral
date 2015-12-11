@@ -733,7 +733,7 @@ subroutine nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level, &
    integer :: ref_method, ref_options
    integer :: a_n1_new, a_n2_new, a_weight_1_new, a_weight_2_new, &
       a_weight_sep_new
-   real(wp) :: r, ratio, tau_best, tau, band, depth
+   real(wp) :: balance, balance_tol, tau_best, tau, band, depth
    logical :: imbal
 
    ! Internal options on what to do
@@ -743,6 +743,8 @@ subroutine nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level, &
 
    call nd_print_diagnostic(1, options, ' ')
    call nd_print_diagnostic(1, options, 'Start finding a partition')
+
+   balance_tol = max(1.0_wp, options%balance)
 
    ! If matrix is full, then don't partition
    if (a_ne.eq.a_n*(a_n-1)) then
@@ -820,9 +822,9 @@ subroutine nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level, &
       case (ND_REFINE_TRIM_FM_SMALLER)
          ref_method = REFINE_EDGE
       case (ND_REFINE_TRIM_FM_AUTO)
-         ratio = max(a_weight_1,a_weight_2) / &
+         balance = max(a_weight_1,a_weight_2) / &
             real(min(a_weight_1,a_weight_2)+a_weight_sep)
-         if (ratio.ge.max(1.0_wp,options%balance)) then
+         if (balance.ge.balance_tol) then
             ref_method = REFINE_EDGE
          else
             ref_method = REFINE_TRIM
@@ -832,9 +834,9 @@ subroutine nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level, &
       case (ND_REFINE_MAXFLOW_SMALLER)
          ref_method = REFINE_EDGE
       case (ND_REFINE_MAXFLOW_AUTO)
-         ratio = max(a_weight_1,a_weight_2) / &
+         balance = max(a_weight_1,a_weight_2) / &
             real(min(a_weight_1,a_weight_2)+a_weight_sep)
-         if (ratio.ge.max(1.0_wp,options%balance)) then
+         if (balance.ge.balance_tol) then
             ref_method = REFINE_EDGE
          else
             ref_method = REFINE_MAXFLOW
@@ -879,10 +881,9 @@ subroutine nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level, &
       end if
 
       if (options%max_improve_cycles.gt.0) then
-         ratio = max(real(1.0,wp),options%balance)
-         imbal = (ratio.le.real(sumweight-2))
+         imbal = (balance_tol.le.real(sumweight-2))
          call cost_function(a_weight_1, a_weight_2, a_weight_sep, sumweight,&
-            ratio, imbal, options%cost_function, tau_best)
+            balance_tol, imbal, options%cost_function, tau_best)
          a_n1_new = a_n1
          a_n2_new = a_n2
          a_weight_1_new = a_weight_1
@@ -909,17 +910,17 @@ subroutine nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level, &
 
          select case (ref_options)
          case (ND_REFINE_TRIM_FM_AUTO)
-            r = max(a_weight_1_new,a_weight_2_new) / &
+            balance = max(a_weight_1_new,a_weight_2_new) / &
                real(min(a_weight_1_new,a_weight_2_new)+a_weight_sep_new)
-            if (r.gt.max(1.0_wp,options%balance)) then
+            if (balance.gt.balance_tol) then
                ref_method = REFINE_EDGE
             else
                ref_method = REFINE_TRIM
             end if
          case (ND_REFINE_MAXFLOW_AUTO)
-            r = max(a_weight_1_new,a_weight_2_new) / &
+            balance = max(a_weight_1_new,a_weight_2_new) / &
                real(min(a_weight_1_new,a_weight_2_new)+a_weight_sep_new)
-            if (r.gt.max(1.0_wp,options%balance)) then
+            if (balance.gt.balance_tol) then
                ref_method = REFINE_EDGE
             else
                ref_method = REFINE_MAXFLOW
@@ -964,7 +965,7 @@ subroutine nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level, &
          end if
 
          call cost_function(a_weight_1_new, a_weight_2_new, &
-            a_weight_sep_new, sumweight, ratio, imbal,      &
+            a_weight_sep_new, sumweight, balance_tol, imbal,      &
             options%cost_function, tau)
          if (tau.ge.tau_best) exit ! No improvement, stop
          tau_best = tau
@@ -1088,7 +1089,7 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
    integer :: ww
    real(wp) :: bestval
    real(wp) :: val
-   real(wp) :: ratio
+   real(wp) :: balance_tol
    logical :: printi, printd
    logical :: imbal, use_multilevel_copy
 
@@ -1113,8 +1114,8 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
       return
 
    ! Initialize various internal variables
-   ratio = max(1.0_wp, options%balance)
-   imbal = (ratio .le. sumweight-2.0_wp)
+   balance_tol = max(1.0_wp, options%balance)
+   imbal = (balance_tol .le. sumweight-2.0_wp)
    p2sz = 0
    sepsz = 0
    use_multilevel_copy = use_multilevel
@@ -1249,7 +1250,7 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
    a_weight_1 = p1sz
    a_weight_2 = p2sz
    a_weight_sep = sepsz
-   call cost_function(p1sz,p2sz,sepsz,sumweight,ratio,imbal,&
+   call cost_function(p1sz,p2sz,sepsz,sumweight,balance_tol,imbal,&
       options%cost_function,bestval)
 
    ! Search for best separator using tau
@@ -1262,7 +1263,7 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
       end do
       p2sz = sumweight - sepsz - p1sz
       if (p2sz.eq.0) exit
-      call cost_function(p1sz,p2sz,sepsz,sumweight,ratio,imbal,&
+      call cost_function(p1sz,p2sz,sepsz,sumweight,balance_tol,imbal,&
          options%cost_function,val)
       if (val.lt.bestval) then
          bestval = val
@@ -1278,7 +1279,7 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
    if (imbal .and. use_multilevel_copy .and. options%partition_method.ge.2) &
          then
       if (real(max(a_weight_1,a_weight_2)) / min(a_weight_1,a_weight_2) .gt. &
-            ratio) then
+            balance_tol) then
          use_multilevel = .true.
          return
       end if
@@ -1354,7 +1355,7 @@ subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level,  &
    integer :: mindeg, degree, max_search
    real(wp) :: bestval
    real(wp) :: val
-   real(wp) :: ratio
+   real(wp) :: balance_tol
    logical :: imbal
 
    unit_diagnostics = options%unit_diagnostics
@@ -1376,8 +1377,8 @@ subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level,  &
       return
 
    ! Initialize internal variables
-   ratio = max(real(1.0,wp),options%balance)
-   imbal = (ratio .le. (sumweight-2))
+   balance_tol = max(real(1.0,wp),options%balance)
+   imbal = (balance_tol .le. (sumweight-2))
 
    ! Find pseudoperipheral nodes nstart and nend, and the level structure
    ! rooted at nend
@@ -1477,7 +1478,7 @@ subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level,  &
    best_sep_start = 2
    a_n1 = work(level_ptr_p+2) - 1
    a_n2 = a_n - work(level_ptr_p+3) + 1
-   call cost_function(p1sz,p2sz,sepsz,sumweight,ratio,imbal,&
+   call cost_function(p1sz,p2sz,sepsz,sumweight,balance_tol,imbal,&
       options%cost_function,bestval)
 
    ! Search for best separator using tau
@@ -1485,7 +1486,7 @@ subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level,  &
       p1sz = p1sz + work(work_p+j)
       sepsz = work(work_p+j+1)
       p2sz = p2sz - work(work_p+j+1)
-      call cost_function(p1sz,p2sz,sepsz,sumweight,ratio,imbal,&
+      call cost_function(p1sz,p2sz,sepsz,sumweight,balance_tol,imbal,&
          options%cost_function,val)
       if (val.lt.bestval) then
          bestval = val
@@ -2195,17 +2196,13 @@ subroutine nd_refine_fm(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,a_n1, &
   ! from FM
   integer :: icut, mult ! Used within FM refinement
   integer :: band
-  real(wp) :: ratio
+  real(wp) :: balance_tol
   logical :: imbal ! Should we check for imbalance?
 
   if (options%refinement_band .lt. 1) return
 
-  ratio = max(real(1.0,wp),options%balance)
-  if (ratio.gt.real(sumweight-2)) then
-    imbal = .false.
-  else
-    imbal = .true.
-  end if
+  balance_tol = max(real(1.0,wp),options%balance)
+  imbal = (balance_tol.le.real(sumweight-2))
   fm_flags = 0 ! length a_n
 
   ! Initialise work(fm_flags+1:fm_flags+a_n)
@@ -2233,7 +2230,7 @@ subroutine nd_refine_fm(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,a_n1, &
 
   call nd_fm_refinement(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,icut, &
     mult,options%cost_function,a_n1,a_n2,a_weight_1,a_weight_2,&
-    a_weight_sep,band,ratio, &
+    a_weight_sep,band,balance_tol, &
     work(fm_flags+1:fm_flags+a_n),work(fm_ipart+1:fm_ipart+a_n), &
     work(fm_next+1:fm_next+a_n),work(fm_last+1:fm_last+a_n), &
     work(fm_gain1+1:fm_gain1+a_n),work(fm_gain2+1:fm_gain2+a_n), &
@@ -2258,14 +2255,14 @@ end subroutine nd_refine_fm
 ! partition 2 must go through a node in the cutset (partition 3).
 ! The intention of the algorithm is to reduce f(P1,P2,P3), where
 ! f(P1,P2,P3) =   |P3|/(|P1||P2|) if min(|P1|,|P2|)/max(|P1|,|P2|) >=
-! ratio
+! balance_tol
 ! =  sumweight - 2 + max(|P1|,|P2|)/min(|P1|,|P2|), otherwise
 ! This is a banded version so only nodes a distance of at most band from
 ! the
 ! input separator can be moved into the new separator
 
 subroutine nd_fm_refinement(n,a_ne,ptr,col,weight,sumweight,icut, &
-    mult,costf,a_n1,a_n2,wnv1,wnv2,wns,band,ratio,flags,ipart,next,last,gain1, &
+    mult,costf,a_n1,a_n2,wnv1,wnv2,wns,band,balance_tol,flags,ipart,next,last,gain1, &
     gain2,done,head,dist)
 
   ! Matrix is held in matrix using compressed column scheme
@@ -2289,7 +2286,7 @@ subroutine nd_fm_refinement(n,a_ne,ptr,col,weight,sumweight,icut, &
   integer, intent(inout) :: wns ! Weighted sum of vertices separator
   integer, intent(in) :: band ! width of band around initial separator
   ! that the separator can lie in
-  real(wp), intent(in) :: ratio ! ratio to determine
+  real(wp), intent(in) :: balance_tol ! balance_tol to determine
   ! whether
   ! partition is balanced
 
@@ -2321,11 +2318,7 @@ subroutine nd_fm_refinement(n,a_ne,ptr,col,weight,sumweight,icut, &
   logical :: imbal
 
 
-  if (ratio.gt.real(sumweight-2)) then
-    imbal = .false.
-  else
-    imbal = .true.
-  end if
+  imbal = (balance_tol.le.real(sumweight-2))
 
   ! Set-up distance to hold (min) distance of node from separator. Only
   ! find
@@ -2411,7 +2404,7 @@ subroutine nd_fm_refinement(n,a_ne,ptr,col,weight,sumweight,icut, &
 
   ! Compute evaluation function for current partitioning
 
-  call cost_function(wnv1+1,wnv2+1,wns,sumweight,ratio,imbal,costf,evalc)
+  call cost_function(wnv1+1,wnv2+1,wns,sumweight,balance_tol,imbal,costf,evalc)
 
   ! icut is set to limit search in inner loop .. may later be a
   ! parameter
@@ -2517,10 +2510,10 @@ inNER:    do inn = 1, n
 
       else
         call cost_function(winv1+weight(i),winv2+1-gain1(i)-weight(i), &
-          wins+gain1(i)-1,sumweight,ratio,imbal,costf,eval1)
+          wins+gain1(i)-1,sumweight,balance_tol,imbal,costf,eval1)
 
         call cost_function(winv1+1-gain2(i)-weight(i),winv2+weight(i), &
-          wins+gain2(i)-1,sumweight,ratio,imbal,costf,eval2)
+          wins+gain2(i)-1,sumweight,balance_tol,imbal,costf,eval2)
         if ((eval1.lt.eval2) .or. ((eval1.eq.eval2) .and. (wnv1.lt.wnv2))) then
           ! Move node i to partition 1
           move = ND_PART1_FLAG
@@ -2663,7 +2656,7 @@ inNER:    do inn = 1, n
       ! if (ii .ne. inv2) write(6,*) 'problem in partition',ii,inv2
 
       ! Evaluate new partition
-      call cost_function(winv1+1,winv2+1,wins,sumweight,ratio,imbal, &
+      call cost_function(winv1+1,winv2+1,wins,sumweight,balance_tol,imbal, &
         costf,eval)
       ! Compare this with best so far in inner loop and store partition
       ! information if it is the best
@@ -3515,7 +3508,7 @@ recursive subroutine multilevel(grid,options,sumweight,mglevel_cur,mp, &
   integer :: a_n1_new, a_n2_new, a_weight_1_new, a_weight_2_new, &
     a_weight_sep_new
   logical :: imbal
-  real(wp) :: tau, ratio, tau_best
+  real(wp) :: tau, balance_tol, tau_best
   ! !!!!!!!!!!!!!!!!!!!!!!!!!!
   info = 0
   one1 = 1.0
@@ -3780,14 +3773,10 @@ recursive subroutine multilevel(grid,options,sumweight,mglevel_cur,mp, &
     end select
 
     if (options%max_improve_cycles.gt.0) then
-      ratio = max(real(1.0,wp),options%balance)
-      if (ratio.gt.real(sumweight-2)) then
-        imbal = .false.
-      else
-        imbal = .true.
-      end if
+      balance_tol = max(1.0_wp,options%balance)
+      imbal = (balance_tol.le.real(sumweight-2))
       call cost_function(a_weight_1,a_weight_2,a_weight_sep,sumweight, &
-        ratio,imbal,options%cost_function,tau_best)
+        balance_tol,imbal,options%cost_function,tau_best)
       a_n1_new = grid%part_div(1)
       a_n2_new = grid%part_div(2)
       a_weight_1_new = a_weight_1
@@ -3870,7 +3859,7 @@ recursive subroutine multilevel(grid,options,sumweight,mglevel_cur,mp, &
 
 
       call cost_function(a_weight_1_new,a_weight_2_new,a_weight_sep_new, &
-        sumweight,ratio,imbal,options%cost_function,tau)
+        sumweight,balance_tol,imbal,options%cost_function,tau)
       if (tau.lt.tau_best) then
         tau_best = tau
         work(partition_ptr+1:partition_ptr+grid%graph%n) &
@@ -5449,14 +5438,10 @@ subroutine nd_refine_trim(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
   integer :: i, j, k, l, m, p, q, w1, w2
   logical :: next1, next2, imbal
   real(wp) :: t1, t2
-  real(wp) :: ratio
+  real(wp) :: balance_tol
 
-  ratio = max(real(1.0,wp),options%balance)
-  if (ratio.gt.real(sumweight-2)) then
-    imbal = .false.
-  else
-    imbal = .true.
-  end if
+  balance_tol = max(1.0_wp,options%balance)
+  imbal = (balance_tol.le.real(sumweight-2))
 
   ! Set work(work_part+1:work_part+a_n) to hold flags to indicate what
   ! part of the partition the nodes are in
@@ -5535,9 +5520,9 @@ subroutine nd_refine_trim(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
       w1 = a_weight(head1)
       w2 = a_weight(head2)
       call cost_function(a_weight_1+w1,a_weight_2,a_weight_sep-w1, &
-        sumweight,ratio,imbal,options%cost_function,t1)
+        sumweight,balance_tol,imbal,options%cost_function,t1)
       call cost_function(a_weight_1,a_weight_2+w2,a_weight_sep-w2, &
-        sumweight,ratio,imbal,options%cost_function,t2)
+        sumweight,balance_tol,imbal,options%cost_function,t2)
 
       if (t1.lt.t2) then
         go to 10
@@ -5806,14 +5791,10 @@ subroutine nd_refine_block_trim(a_n,a_ne,a_ptr,a_row,a_weight, &
   integer :: i, j, k, l, m, w1, w2, l1, l2
   logical :: next1, next2, imbal
   real(wp) :: t1, t2
-  real(wp) :: ratio
+  real(wp) :: balance_tol
 
-  ratio = max(real(1.0,wp),options%balance)
-  if (ratio.gt.real(sumweight-2)) then
-    imbal = .false.
-  else
-    imbal = .true.
-  end if
+  balance_tol = max(1.0_wp,options%balance)
+  imbal = (balance_tol.le.real(sumweight-2))
 
   ! Set work(work_part+1:work_part+a_n) to hold flags to indicate what
   ! part of the partition the nodes are in
@@ -5965,7 +5946,7 @@ subroutine nd_refine_block_trim(a_n,a_ne,a_ptr,a_row,a_weight, &
         cycle
       else
         call cost_function(a_weight_1+w1,a_weight_2,a_weight_sep-w1, &
-          sumweight,ratio,imbal,options%cost_function,t1)
+          sumweight,balance_tol,imbal,options%cost_function,t1)
       end if
     end if
 
@@ -5987,7 +5968,7 @@ subroutine nd_refine_block_trim(a_n,a_ne,a_ptr,a_row,a_weight, &
         cycle
       else
         call cost_function(a_weight_1,a_weight_2+w2,a_weight_sep-w2, &
-          sumweight,ratio,imbal,options%cost_function,t2)
+          sumweight,balance_tol,imbal,options%cost_function,t2)
       end if
     end if
 
@@ -6073,7 +6054,7 @@ subroutine nd_refine_max_flow(a_n,a_ne,a_ptr,a_row,a_weight,a_n1, &
   ! ---------------------------------------------
   ! Local variables
   integer :: msglvl
-  real(wp) :: cost, ratio
+  real(wp) :: cost, balance_tol
 
   msglvl = 0
   if (options%print_level.eq.1 .and. options%unit_diagnostics.ge.0) &
@@ -6083,10 +6064,10 @@ subroutine nd_refine_max_flow(a_n,a_ne,a_ptr,a_row,a_weight,a_n1, &
 
 
   if (a_n-a_n1-a_n2.gt.1) then
-    ratio = max(real(1.0,wp),options%balance)
+    balance_tol = max(1.0_wp,options%balance)
     call nd_maxflow(a_n,a_ne,a_ptr,a_row,a_weight,options%cost_function,&
       a_n1,a_n2, &
-      a_weight_1,a_weight_2,a_weight_sep,partition,ratio,msglvl, &
+      a_weight_1,a_weight_2,a_weight_sep,partition,balance_tol,msglvl, &
       options%unit_diagnostics, &
       work(1:8),cost)
   end if
@@ -6197,40 +6178,33 @@ subroutine expand_partition(a_n,a_ne,a_ptr,a_row,a_weight,a_n1,a_n2, &
 end subroutine expand_partition
 
 
-subroutine cost_function(a_weight_1,a_weight_2,a_weight_sep,sumweight, &
-    ratio,imbal,costf,tau)
+subroutine cost_function(a_weight_1, a_weight_2, a_weight_sep, sumweight, &
+      balance_tol, imbal, costf, tau)
+   integer, intent(in) :: a_weight_1, a_weight_2, a_weight_sep ! Weighted
+      ! size of partitions and separator
+   integer, intent(in) :: sumweight
+   real(wp), intent(in) :: balance_tol
+   logical, intent(in) :: imbal ! Use penalty function?
+   integer, intent(in) :: costf
+   real(wp), intent(out) :: tau
 
-  integer, intent(in) :: a_weight_1, a_weight_2, a_weight_sep ! Weighte
-  ! d
-  ! size of partitions and separator
-  integer, intent(in) :: sumweight
-  real(wp), intent(in) :: ratio
-  logical, intent(in) :: imbal ! Use penalty function?
-  integer, intent(in) :: costf
-  real(wp), intent(out) :: tau
-  real(wp) :: beta, a_wgt1, a_wgt2
+   real(wp) :: a_wgt1, a_wgt2, balance 
 
-  beta = 0.5
-  a_wgt1 = max(1,a_weight_1)
-  a_wgt2 = max(1,a_weight_2)
+   real(wp), parameter :: beta = 0.5
 
-  if (costf.le.1) then
-    tau = ((real(a_weight_sep)**1.0)/real(a_wgt1))/real(a_wgt2)
-    if (imbal .and. real(max(a_wgt1,a_wgt2))/real(min(a_wgt1, &
-        a_wgt2)).ge.ratio) then
-      tau = real(sumweight-2) + tau
-    end if
-  else
-    if (imbal .and. real(max(a_wgt1,a_wgt2))/real(min(a_wgt1, &
-        a_wgt2)).ge.ratio) then
-      tau = real(sumweight)*(1.0+beta) + real(a_weight_sep)*( &
-        1.0_wp+beta*real(abs(a_wgt1-a_wgt2))/real(sumweight))
-    else
-      tau = real(a_weight_sep)*(1.0_wp+beta*real(abs(a_wgt1- &
-        a_wgt2))/real(sumweight))
-    end if
+   a_wgt1 = max(1,a_weight_1)
+   a_wgt2 = max(1,a_weight_2)
+   balance = real(max(a_wgt1,a_wgt2)) / min(a_wgt1,a_wgt2)
 
-  end if
+   if (costf.le.1) then
+      tau = a_weight_sep / real(a_wgt1 * a_wgt2)
+      if (imbal .and. balance.ge.balance_tol) &
+         tau = tau + sumweight-2
+   else
+      tau = a_weight_sep * (1.0_wp + (beta*abs(a_wgt1-a_wgt2))/sumweight)
+      if (imbal .and. balance.ge.balance_tol) &
+         tau = tau + sumweight * (1.0+beta)
+   end if
 
 end subroutine cost_function
 
@@ -6239,7 +6213,7 @@ end subroutine cost_function
 ! ---------------------------------------------------
 ! Given a partition, get better partition using maxflow algorithm
 subroutine nd_maxflow(a_n,a_ne,a_ptr,a_row,a_weight,costf,a_n1,a_n2, &
-    a_weight_1,a_weight_2,a_weight_sep,partition,alpha,msglvl,lp,stats, &
+    a_weight_1,a_weight_2,a_weight_sep,partition,balance_tol,msglvl,lp,stats, &
     cost)
 
   ! Input matrix: a_n, a_ne, a_ptr, a_row
@@ -6267,8 +6241,8 @@ subroutine nd_maxflow(a_n,a_ne,a_ptr,a_row,a_weight,costf,a_n1,a_n2, &
   ! separator are listed at the end. This is updated to the new
   ! partition.
 
-  ! Parameters alpha (for balance) for cost function
-  real(wp), intent(in) :: alpha
+  ! Parameters balance_tol (for balance) for cost function
+  real(wp), intent(in) :: balance_tol
   integer, intent(in) :: msglvl
   integer, intent(in) :: lp
   ! output --
@@ -6398,8 +6372,8 @@ subroutine nd_maxflow(a_n,a_ne,a_ptr,a_row,a_weight,costf,a_n1,a_n2, &
   ! Use evaluation function to choose best partition from among these
   ! two
   ! Use Sue's weighted code
-  call evalbsw(a_n,a_ne,a_ptr,a_row,a_weight,mapl,alpha,costf,statsl,costl)
-  call evalbsw(a_n,a_ne,a_ptr,a_row,a_weight,mapr,alpha,costf,statsr,costr)
+  call evalbsw(a_n,a_ne,a_ptr,a_row,a_weight,mapl,balance_tol,costf,statsl,costl)
+  call evalbsw(a_n,a_ne,a_ptr,a_row,a_weight,mapr,balance_tol,costf,statsr,costr)
 
 
   ! Find the better of the two partitions
@@ -7554,19 +7528,19 @@ subroutine findaugpath(netw,iarc_m,avail,pred,stats,list,tags,deltas)
 
 end subroutine findaugpath
 
-subroutine evalbsw(a_n,a_ne,a_ptr,a_row,a_weight,map,alpha,costf,stats, &
+subroutine evalbsw(a_n,a_ne,a_ptr,a_row,a_weight,map,balance_tol,costf,stats, &
     stats10)
   ! Matlab call
-  ! function stats = evalBSW ( A, map, alpha, beta, msglvl )
+  ! function stats = evalBSW ( A, map, balance_tol, beta, msglvl )
 
-  ! stats = EVALBSW ( A, map, alpha, beta )
+  ! stats = EVALBSW ( A, map, balance_tol, beta )
 
   ! input ---
   ! map[nvtx] -- map from vertices to region
   ! map[u] .eq. 0 --> u in S
   ! map[u] .eq. 1 --> u in B
   ! map[u] .eq. 2 --> u in W
-  ! alpha --- acceptability parameter
+  ! balance_tol --- acceptability parameter
   ! beta  --- imbalance penalty parameter
 
   ! output --
@@ -7579,7 +7553,7 @@ subroutine evalbsw(a_n,a_ne,a_ptr,a_row,a_weight,map,alpha,costf,stats, &
   ! stats[7] -- weight of edges in A_{B,B}
   ! stats[8] -- weight of edges in A_{B,W}
   ! stats[9] -- 1 if acceptable, 0 if not
-  ! acceptable --> alpha*min(|B|,|W|) >= max(|B|,|W|)
+  ! acceptable --> balance_tol*min(|B|,|W|) >= max(|B|,|W|)
   ! stats10 -- cost of partition
   ! cost = |S|*(1 + (beta*| |B| - |W| |)/(|B|+|S|+|W|)) ;
 
@@ -7588,7 +7562,7 @@ subroutine evalbsw(a_n,a_ne,a_ptr,a_row,a_weight,map,alpha,costf,stats, &
   integer, intent(in) :: a_n
   integer, intent(in) :: a_ne
   integer, intent(in) :: map(:), a_ptr(:), a_row(:), a_weight(:)
-  real(wp), intent(in) :: alpha
+  real(wp), intent(in) :: balance_tol
   integer, intent(in) :: costf
   integer, intent(out) :: stats(9)
   real(wp), intent(out) :: stats10
@@ -7663,22 +7637,18 @@ subroutine evalbsw(a_n,a_ne,a_ptr,a_row,a_weight,map,alpha,costf,stats, &
     stats(8) = nww
   end if
   ! stats[9] -- 1 if acceptable, 0 if not
-  ! acceptable --> alpha*min(|B|,|W|) >= max(|B|,|W|)
+  ! acceptable --> balance_tol*min(|B|,|W|) >= max(|B|,|W|)
   ! stats10 -- cost of partition
-  if (alpha*minbw.ge.maxbw) then
+  if (balance_tol*minbw.ge.maxbw) then
     stats(9) = 1
   else
     stats(9) = 0
   end if
 
-  if (alpha .gt. nb+nw+ns-2) then
-      imbal = .false.
-  else
-      imbal = .true.
-  end if
+  imbal = (balance_tol .le. nb+nw+ns-2)
 
   call cost_function(nb,nw,ns,nb+nw+ns, &
-    alpha,imbal,costf,stats10)
+    balance_tol,imbal,costf,stats10)
 
 end subroutine evalbsw
 
