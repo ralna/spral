@@ -1042,329 +1042,298 @@ end subroutine nd_partition
 ! nd_half_level_set
 ! ---------------------------------------------------
 ! Partition the matrix using the half level set (Ashcraft) method
-recursive subroutine nd_half_level_set(a_n,a_ne,a_ptr,a_row,a_weight, &
-    sumweight,level,a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep, &
-    partition,work,options,info,band,depth,use_multilevel,grid)
+subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
+      level, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, partition, &
+      work, options, info, band, depth, use_multilevel, grid)
+   integer, intent(in) :: a_n
+   integer, intent(in) :: a_ne
+   integer, intent(in) :: a_ptr(a_n)
+   integer, intent(in) :: a_row(a_ne)
+   integer, intent(in) :: a_weight(a_n)
+   integer, intent(in) :: sumweight ! sum of entries in a_weight
+   integer, intent(in) :: level ! current level of nested dissection
+   integer, intent(out) :: a_n1, a_n2 ! size of the two submatrices
+   integer, intent(out) :: a_weight_1, a_weight_2, a_weight_sep ! Weighted
+      ! size of partitions and separator
+   integer, intent(out) :: partition(a_n) ! First a_n1 entries will contain
+      ! list of (local) indices in partition 1; next a_n2 entries will
+      ! contain list of (local) entries in partition 2; entries in
+      ! separator are listed at the end
+   integer, intent(out) :: work(9*a_n+sumweight) ! used as work array
+   type (nd_options), intent(in) :: options
+   integer, intent(inout) :: info
+   real(wp), intent(out) :: band ! If level = 0, then on output
+      ! band = 100*L/a_n, where L is the size of the largest levelset
+   real(wp), intent(out) :: depth ! If level = 0, then on output
+      ! depth = num_levels_nend
+   logical, intent(inout) :: use_multilevel ! are we allowed to use a
+      ! multilevel partitioning strategy
+   type (nd_multigrid), intent(inout) :: grid
 
-  integer, intent(in) :: a_n ! dimension of subproblem ND is applied to
-  integer, intent(in) :: a_ne ! no. nonzeros of subproblem
-  integer, intent(in) :: a_ptr(a_n) ! On input a_ptr(i) contains
-  ! position in a_row that entries for column i start.
-  integer, intent(in) :: a_row(a_ne) ! On input a_row contains row
-  ! indices of the non-zero rows. Diagonal entries have been removed
-  ! and the matrix expanded.
-  integer, intent(in) :: a_weight(a_n) ! On input a_weight(i) contains
-  ! the weight of column i.
-  integer, intent(in) :: sumweight ! sum of entries in a_weight
-  integer, intent(in) :: level ! current level of nested dissection
-  integer, intent(out) :: a_n1, a_n2 ! size of the two submatrices
-  integer, intent(out) :: a_weight_1, a_weight_2, a_weight_sep ! Weight
-  ! ed
-  ! size of partitions and separator
-  integer, intent(out) :: partition(a_n) ! First a_n1 entries will
-  ! contain
-  ! list of (local) indices in partition 1; next a_n2 entries will
-  ! contain list of (local) entries in partition 2; entries in
-  ! separator are listed at the end
-  integer, intent(out) :: work(9*a_n+sumweight) ! used as work array
-  type (nd_options), intent(in) :: options
-  integer, intent(inout) :: info
-  real(wp), intent(out) :: band ! If level = 0, then on
-  ! output band = 100*L/a_n, where L is the size of the
-  ! largest levelset
-  real(wp), intent(out) :: depth ! If level = 0, then
-  ! on
-  ! output depth = num_levels_nend
-  logical, intent(inout) :: use_multilevel ! are we allowed to use a
-  ! multilevel
-  ! partitioning strategy
-  type (nd_multigrid), intent(inout) :: grid
+   integer :: nstrt, nend
+   integer :: i, j, dptr, p1sz, p2sz, sepsz, lwork, k
+   integer :: unit_diagnostics ! unit on which to print diagnostics
+   integer :: mask_p, level_p, level_ptr_p, level2_p, level2_ptr_p, &
+      work_p
+   integer :: num_levels_nend ! no. levels in structure rooted at nend
+   integer :: num_levels_nstrt ! no. levels in structure rooted at nstrt
+   integer :: num_entries ! no. entries in level set structure
+   integer :: best_sep_start
+   integer :: distance
+   integer :: distance_ptr
+   integer :: lwidth, mindeg, degree, max_search
+   integer :: ww
+   integer :: stop_coarsening2 ! max no. multigrid levels
+   real(wp) :: bestval
+   real(wp) :: val
+   real(wp) :: ratio
+   logical :: printi, printd
+   logical :: imbal, use_multilevel_copy
 
-  ! ---------------------------------------------
-  ! Local variables
-  integer :: nstrt, nend
-  integer :: i, j, dptr, p1sz, p2sz, sepsz, lwork, k
-  integer :: unit_diagnostics ! unit on which to print diagnostics
-  integer :: mask_p, level_p, level_ptr_p, level2_p, level2_ptr_p, &
-    work_p
-  integer :: num_levels_nend ! no. levels in structure rooted at nend
-  integer :: num_levels_nstrt ! no. levels in structure rooted at nstrt
-  integer :: num_entries ! no. entries in level set structure
-  integer :: best_sep_start
-  integer :: distance
-  integer :: distance_ptr
-  integer :: lwidth, mindeg, degree, max_search
-  integer :: ww
-  integer :: stop_coarsening2 ! max no. multigrid levels
-  real(wp) :: bestval
-  real(wp) :: val
-  real(wp) :: ratio
-  logical :: printi, printd
-  logical :: imbal, use_multilevel_copy
+   ! ---------------------------------------------
+   ! Printing levels
+   unit_diagnostics = options%unit_diagnostics
+   printi = (options%print_level.eq.1 .and. unit_diagnostics.ge.0)
+   printd = (options%print_level.ge.2 .and. unit_diagnostics.ge.0)
 
-  ! ---------------------------------------------
-  ! Printing levels
-  unit_diagnostics = options%unit_diagnostics
-  printi = (options%print_level.eq.1 .and. unit_diagnostics.ge.0)
-  printd = (options%print_level.ge.2 .and. unit_diagnostics.ge.0)
+   if (printi .or. printd) then
+      write (unit_diagnostics,'(a)') ' '
+      write (unit_diagnostics,'(a)') 'Use two-sided level set method'
+   end if
+   ratio = max(real(1.0,wp),options%balance)
+   if (ratio.gt.real(sumweight-2)) then
+      imbal = .false.
+   else
+      imbal = .true.
+   end if
+   p2sz = 0
+   sepsz = 0
+   use_multilevel_copy = use_multilevel
 
-  if (printi .or. printd) then
-    write (unit_diagnostics,'(a)') ' '
-    write (unit_diagnostics,'(a)') 'Use two-sided level set method'
-  end if
-  ratio = max(real(1.0,wp),options%balance)
-  if (ratio.gt.real(sumweight-2)) then
-    imbal = .false.
-  else
-    imbal = .true.
-  end if
-  p2sz = 0
-  sepsz = 0
-  use_multilevel_copy = use_multilevel
+   band = -1
+   depth = -1
 
+   if (options%partition_method.eq.1 .and. use_multilevel) go to 10
 
-  band = -1
-  depth = -1
-
-  if (options%partition_method.eq.1 .and. use_multilevel) go to 10
-
-  if (options%partition_method.gt.1 .and. level.gt.0 .and. use_multilevel) &
-    go to 10
-
-  ! Find pseudoperipheral nodes nstart and nend, and the level structure
-  ! rooted at nend
-  mask_p = 0 ! size a_n
-  level_ptr_p = mask_p + a_n ! size a_n
-  level_p = level_ptr_p + a_n ! size a_n
-  level2_ptr_p = level_p + a_n ! size a_n
-  level2_p = level2_ptr_p + a_n ! size a_n
-  work_p = level2_p + a_n ! size 2*a_n
-
-  nend = -1
-
-  ! Choose nstrt
-  ! node with minimum degree
-  mindeg = sumweight + 1
-  do i = 1, a_n
-    if (i.lt.a_n) then
-      k = a_ptr(i+1) - 1
-    else
-      k = a_ne
-    end if
-    degree = 0
-    do j = a_ptr(i), k
-      degree = degree + a_weight(a_row(j))
-    end do
-    if (degree.lt.mindeg) then
-      mindeg = degree
-      nstrt = i
-    end if
-  end do
-
-  max_search = 5
-
-  call nd_find_pseudo(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
-    work(level_ptr_p+1:level_ptr_p+a_n),work(level_p+1:level_p+a_n), &
-    nstrt,nend,max_search,work(work_p+1:work_p+2*a_n),num_levels_nend, &
-    num_entries,lwidth)
-
-  if (num_entries.lt.a_n) then
-    ! matrix is separable
-    a_n1 = num_entries
-    a_n2 = a_n - a_n1
-    a_weight_sep = 0
-    a_weight_1 = 0
-    work(work_p+1:work_p+a_n) = 0
-    do i = 1, num_entries
-      j = work(level_p+i)
-      partition(i) = j
-      work(work_p+j) = 1
-      a_weight_1 = a_weight_1 + a_weight(j)
-    end do
-    a_weight_2 = sumweight - a_weight_1
-    j = num_entries + 1
-    do i = 1, a_n
-      if (work(work_p+i).eq.0) then
-        partition(j) = i
-        j = j + 1
-      end if
-
-    end do
-    if (level.eq.0) then
-      band = -real(lwidth,wp)
-    end if
-
-    return
-  end if
-
-  ! ********************************************************************
-  ! ***
-  if (level.eq.0) then
-    band = 100.0*real(lwidth,wp)/real(a_n,wp)
-    ! band = max(band,real(lwidth,wp))
-    ! write(*,*) sqrt(real(lwidth))/real(num_levels_nend), lwidth, &
-    ! real(sumweight)/real(num_levels_nend), &
-    ! real(num_levels_nend)*(real(lwidth)/real(sumweight))
-    depth = 100.0*real(num_levels_nend,wp)/ &
-      real(a_n,wp)
-  end if
-  if (options%stop_coarsening2.le.0 .or. options%partition_method.lt.1) then
-    use_multilevel = .false.
-  end if
-  if (options%partition_method.ge.2 .and. use_multilevel) then
-    ! if (real(lwidth,wp) .le. 2.0* &
-    ! real(sumweight,wp)/real(num_levels_nend,wp) )
-    ! then
-    if (100.0*real(lwidth,wp)/real(sumweight,wp).le.3.0 .or. &
-       a_n.lt. options%ml_call) &
-        then
-      use_multilevel = .false.
-    else
-      use_multilevel = .true.
-    end if
-  end if
-
-  if (use_multilevel) go to 10
-
-
-  ! Find level structure rooted at nstrt
-  work(mask_p+1:mask_p+a_n) = 1
-  call nd_level_struct(nstrt,a_n,a_ne,a_ptr,a_row, &
-    work(mask_p+1:mask_p+a_n),work(level2_ptr_p+1:level2_ptr_p+a_n), &
-    work(level2_p+1:level2_p+a_n),num_levels_nstrt,lwidth,num_entries)
-
-  ! Calculate difference in distances from nstart and nend, and set up
-  ! lists D_i of nodes with same distance
-  distance_ptr = work_p
-  distance = mask_p
-  call nd_distance(a_n,num_levels_nend,work(level_ptr_p+1:level_ptr_p &
-    +a_n),work(level_p+1:level_p+a_n),num_levels_nstrt, &
-    work(level2_ptr_p+1:level2_ptr_p+a_n),work(level2_p+1:level2_p+a_n), &
-    work(distance_ptr+1:distance_ptr+2*a_n-1), &
-    work(distance+1:distance+a_n))
-
-  ! Do not need the information in work(level_ptr_p+1:level2_ptr_p)
-  ! Calculate total weight in each distance level
-  dptr = level_ptr_p + a_n
-  work(dptr+1-a_n:dptr+a_n-1) = 0
-  do i = 1 - num_levels_nstrt, num_levels_nend - 2
-    do j = work(distance_ptr+a_n+i), work(distance_ptr+a_n+i+1) - 1
-      work(dptr+i) = work(dptr+i) + a_weight(work(distance+j))
-    end do
-  end do
-  i = num_levels_nend - 1
-  do j = work(distance_ptr+a_n+i), a_n
-    work(dptr+i) = work(dptr+i) + a_weight(work(distance+j))
-  end do
-
-  ! Find first possible separator
-  ww = 2
-  p1sz = 0
-  do i = 1 - num_levels_nstrt, num_levels_nend - ww - 2
-    p1sz = p1sz + work(dptr+i)
-    sepsz = work(dptr+i+1)
-    do j = 1, ww - 1
-      sepsz = sepsz + work(dptr+i+1+j)
-    end do
-    p2sz = sumweight - p1sz - sepsz
-    if (p1sz.gt.0 .and. sepsz.gt.0) then
-      exit
-    end if
-  end do
-
-  if (i+ww.ge.num_levels_nend-1 .or. p2sz.eq.0) then
-    ! Not possible to find separator
-    ! This can only be invoked for a fully connected graph. The
-    ! partition
-    ! subroutine checks for this case so it should never be called
-    a_n1 = a_n
-    a_n2 = 0
-    partition(1:a_n) = (/ (i,i=1,a_n) /)
-    return
-  end if
-
-  ! Entries in level i will form first possible partition
-  best_sep_start = i + 1
-  a_n1 = work(distance_ptr+a_n+i+1) - 1
-  a_n2 = a_n - work(distance_ptr+a_n+i+1+ww) + 1
-  a_weight_1 = p1sz
-  a_weight_2 = p2sz
-  a_weight_sep = sepsz
-  call cost_function(p1sz,p2sz,sepsz,sumweight,ratio,imbal,&
-      options%cost_function,bestval)
-
-  ! Search for best separator using tau
-
-  do j = i + 1, num_levels_nend - ww - 2
-    p1sz = p1sz + work(dptr+j)
-    sepsz = work(dptr+j+1)
-    do k = 1, ww - 1
-      sepsz = sepsz + work(dptr+j+1+k)
-    end do
-    p2sz = sumweight - sepsz - p1sz
-    if (p2sz.eq.0) exit
-    call cost_function(p1sz,p2sz,sepsz,sumweight,ratio,imbal,&
-       options%cost_function,val)
-    if (val.lt.bestval) then
-      bestval = val
-      best_sep_start = j + 1
-      a_n1 = work(distance_ptr+a_n+j+1) - 1
-      a_n2 = a_n - work(distance_ptr+a_n+j+1+ww) + 1
-      a_weight_1 = p1sz
-      a_weight_2 = p2sz
-      a_weight_sep = sepsz
-    end if
-  end do
-
-  if (imbal .and. use_multilevel_copy .and. options%partition_method.ge.2) &
-      then
-    if (real(max(a_weight_1,a_weight_2))/real(min(a_weight_1, &
-        a_weight_2)).gt.ratio) then
-      use_multilevel = .true.
+   if (options%partition_method.gt.1 .and. level.gt.0 .and. use_multilevel) &
       go to 10
 
-    end if
-  end if
+   ! Find pseudoperipheral nodes nstart and nend, and the level structure
+   ! rooted at nend
+   mask_p = 0 ! size a_n
+   level_ptr_p = mask_p + a_n ! size a_n
+   level_p = level_ptr_p + a_n ! size a_n
+   level2_ptr_p = level_p + a_n ! size a_n
+   level2_p = level2_ptr_p + a_n ! size a_n
+   work_p = level2_p + a_n ! size 2*a_n
 
-  ! Rearrange partition
-  ! Entries in partition 1
-  j = 1
-  do i = 1, work(distance_ptr+a_n+best_sep_start) - 1
-    partition(j) = work(distance+i)
-    j = j + 1
-  end do
+   nend = -1
 
-  ! Entries in partition 2
-  do i = work(distance_ptr+a_n+best_sep_start+ww), a_n
-    partition(j) = work(distance+i)
-    j = j + 1
-  end do
+   ! Choose nstrt
+   ! node with minimum degree
+   mindeg = sumweight + 1
+   do i = 1, a_n
+      if (i.lt.a_n) then
+         k = a_ptr(i+1) - 1
+      else
+         k = a_ne
+      end if
+      degree = 0
+      do j = a_ptr(i), k
+         degree = degree + a_weight(a_row(j))
+      end do
+      if (degree.lt.mindeg) then
+         mindeg = degree
+         nstrt = i
+      end if
+   end do
 
-  ! Entries in separator
-  do i = work(distance_ptr+a_n+best_sep_start), &
-      work(distance_ptr+a_n+best_sep_start+ww) - 1
-    partition(j) = work(distance+i)
-    j = j + 1
-  end do
-  go to 20
+   max_search = 5
 
-10      continue
+   call nd_find_pseudo(a_n, a_ne, a_ptr, a_row, a_weight, sumweight,          &
+      work(level_ptr_p+1:level_ptr_p+a_n), work(level_p+1:level_p+a_n),       &
+      nstrt, nend, max_search, work(work_p+1:work_p+2*a_n), num_levels_nend,  &
+      num_entries, lwidth)
 
-  if (use_multilevel) then
-    stop_coarsening2 = options%stop_coarsening2
-    lwork = 9*a_n + sumweight
-    call multilevel_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
-      partition,a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep,options, &
-      info,lwork,work(1:lwork),stop_coarsening2,grid)
-    return
-  end if
+   if (num_entries.lt.a_n) then
+      ! matrix is separable
+      a_n1 = num_entries
+      a_n2 = a_n - a_n1
+      a_weight_sep = 0
+      a_weight_1 = 0
+      work(work_p+1:work_p+a_n) = 0
+      do i = 1, num_entries
+         j = work(level_p+i)
+         partition(i) = j
+         work(work_p+j) = 1
+         a_weight_1 = a_weight_1 + a_weight(j)
+      end do
+      a_weight_2 = sumweight - a_weight_1
+      j = num_entries + 1
+      do i = 1, a_n
+         if (work(work_p+i).eq.0) then
+            partition(j) = i
+            j = j + 1
+         end if
+      end do
+      if (level.eq.0) band = -real(lwidth,wp)
+
+      return
+   end if
+
+   ! ********************************************************************
+   if (level.eq.0) then
+      band = 100.0*real(lwidth,wp)/real(a_n,wp)
+      depth = 100.0*real(num_levels_nend,wp)/real(a_n,wp)
+   end if
+   if (options%stop_coarsening2.le.0 .or. options%partition_method.lt.1) then
+      use_multilevel = .false.
+   end if
+   if (options%partition_method.ge.2 .and. use_multilevel) then
+      if (100.0*real(lwidth,wp)/real(sumweight,wp).le.3.0 .or. &
+            a_n.lt. options%ml_call) then
+         use_multilevel = .false.
+      else
+         use_multilevel = .true.
+      end if
+   end if
+
+   if (use_multilevel) go to 10
 
 
-20      info = 0
-  if (printi .or. printd) then
-    call nd_print_message(info,unit_diagnostics,'nd_half_level_set')
-  end if
-  return
+   ! Find level structure rooted at nstrt
+   work(mask_p+1:mask_p+a_n) = 1
+   call nd_level_struct(nstrt, a_n, a_ne, a_ptr, a_row,                    &
+      work(mask_p+1:mask_p+a_n), work(level2_ptr_p+1:level2_ptr_p+a_n),    &
+      work(level2_p+1:level2_p+a_n), num_levels_nstrt, lwidth, num_entries)
+
+   ! Calculate difference in distances from nstart and nend, and set up
+   ! lists D_i of nodes with same distance
+   distance_ptr = work_p
+   distance = mask_p
+   call nd_distance(a_n, num_levels_nend, work(level_ptr_p+1:level_ptr_p+a_n), &
+      work(level_p+1:level_p+a_n), num_levels_nstrt,                           &
+      work(level2_ptr_p+1:level2_ptr_p+a_n), work(level2_p+1:level2_p+a_n),    &
+      work(distance_ptr+1:distance_ptr+2*a_n-1), work(distance+1:distance+a_n) )
+
+   ! Do not need the information in work(level_ptr_p+1:level2_ptr_p)
+   ! Calculate total weight in each distance level
+   dptr = level_ptr_p + a_n
+   work(dptr+1-a_n:dptr+a_n-1) = 0
+   do i = 1 - num_levels_nstrt, num_levels_nend - 2
+      do j = work(distance_ptr+a_n+i), work(distance_ptr+a_n+i+1) - 1
+         work(dptr+i) = work(dptr+i) + a_weight(work(distance+j))
+      end do
+   end do
+   i = num_levels_nend - 1
+   do j = work(distance_ptr+a_n+i), a_n
+      work(dptr+i) = work(dptr+i) + a_weight(work(distance+j))
+   end do
+
+   ! Find first possible separator
+   ww = 2
+   p1sz = 0
+   do i = 1 - num_levels_nstrt, num_levels_nend - ww - 2
+      p1sz = p1sz + work(dptr+i)
+      sepsz = work(dptr+i+1)
+      do j = 1, ww - 1
+         sepsz = sepsz + work(dptr+i+1+j)
+      end do
+      p2sz = sumweight - p1sz - sepsz
+      if (p1sz.gt.0 .and. sepsz.gt.0) exit
+   end do
+
+   if (i+ww.ge.num_levels_nend-1 .or. p2sz.eq.0) then
+      ! Not possible to find separator
+      ! This can only be invoked for a fully connected graph. The partition
+      ! subroutine checks for this case so it should never be called
+      a_n1 = a_n
+      a_n2 = 0
+      partition(1:a_n) = (/ (i,i=1,a_n) /)
+      return
+   end if
+
+   ! Entries in level i will form first possible partition
+   best_sep_start = i + 1
+   a_n1 = work(distance_ptr+a_n+i+1) - 1
+   a_n2 = a_n - work(distance_ptr+a_n+i+1+ww) + 1
+   a_weight_1 = p1sz
+   a_weight_2 = p2sz
+   a_weight_sep = sepsz
+   call cost_function(p1sz,p2sz,sepsz,sumweight,ratio,imbal,&
+      options%cost_function,bestval)
+
+   ! Search for best separator using tau
+
+   do j = i + 1, num_levels_nend - ww - 2
+      p1sz = p1sz + work(dptr+j)
+      sepsz = work(dptr+j+1)
+      do k = 1, ww - 1
+         sepsz = sepsz + work(dptr+j+1+k)
+      end do
+      p2sz = sumweight - sepsz - p1sz
+      if (p2sz.eq.0) exit
+      call cost_function(p1sz,p2sz,sepsz,sumweight,ratio,imbal,&
+         options%cost_function,val)
+      if (val.lt.bestval) then
+         bestval = val
+         best_sep_start = j + 1
+         a_n1 = work(distance_ptr+a_n+j+1) - 1
+         a_n2 = a_n - work(distance_ptr+a_n+j+1+ww) + 1
+         a_weight_1 = p1sz
+         a_weight_2 = p2sz
+         a_weight_sep = sepsz
+      end if
+   end do
+
+   if (imbal .and. use_multilevel_copy .and. options%partition_method.ge.2) &
+         then
+      if (real(max(a_weight_1,a_weight_2))/real(min(a_weight_1, &
+            a_weight_2)).gt.ratio) then
+         use_multilevel = .true.
+         go to 10
+      end if
+   end if
+
+   ! Rearrange partition
+   ! Entries in partition 1
+   j = 1
+   do i = 1, work(distance_ptr+a_n+best_sep_start) - 1
+      partition(j) = work(distance+i)
+      j = j + 1
+   end do
+
+   ! Entries in partition 2
+   do i = work(distance_ptr+a_n+best_sep_start+ww), a_n
+      partition(j) = work(distance+i)
+      j = j + 1
+   end do
+
+   ! Entries in separator
+   do i = work(distance_ptr+a_n+best_sep_start), &
+         work(distance_ptr+a_n+best_sep_start+ww) - 1
+      partition(j) = work(distance+i)
+      j = j + 1
+   end do
+   go to 20
+
+   10 continue
+
+   if (use_multilevel) then
+      stop_coarsening2 = options%stop_coarsening2
+      lwork = 9*a_n + sumweight
+      call multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight,  &
+         partition, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, options, &
+         info, lwork, work(1:lwork), stop_coarsening2, grid)
+      return
+   end if
+
+
+   20 continue
+   info = 0
+   if (printi .or. printd) &
+      call nd_print_message(info,unit_diagnostics,'nd_half_level_set')
+   return
 
 end subroutine nd_half_level_set
 
