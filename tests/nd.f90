@@ -17,22 +17,14 @@ program main
    call test_input
    call test_dense
    call test_halflevelset
+   call test_levelset
+   call test_shift
    stop
-   if(.not. ok) nerror = nerror + 1
-   call test_levelset(ok)
-   if(.not. ok) nerror = nerror + 1
-   call test_shift(ok)
-   if(.not. ok) nerror = nerror + 1
    call test_multigrid(ok)
-   if(.not. ok) nerror = nerror + 1
    call test_amd(ok)
-   if(.not. ok) nerror = nerror + 1
    call test_misc(ok)
-   if(.not. ok) nerror = nerror + 1
    call test_refine(ok)
-   if(.not. ok) nerror = nerror + 1
    call test_fm(ok)
-   if(.not. ok) nerror = nerror + 1
 
    if (nerror.eq.0) then
      write (*,'(a)') 'All tests successfully completed'
@@ -575,7 +567,7 @@ subroutine test_dense
 
    write (*, '()')
    write (*, '(a)') "****************************************"
-   write (*, '(a)') "*   Testing Dense Inputs              *"
+   write (*, '(a)') "*   Testing Dense Inputs               *"
    write (*, '(a)') "****************************************"
 
    ! --------------------------------------
@@ -707,7 +699,7 @@ subroutine test_halflevelset
 
    write (*, '()')
    write (*, '(a)') "****************************************"
-   write (*, '(a)') "*   Testing Half level-set method     *"
+   write (*, '(a)') "*   Testing Half Level-set Method      *"
    write (*, '(a)') "****************************************"
 
    ! --------------------------------------
@@ -806,434 +798,290 @@ subroutine test_halflevelset
 ! *****************************************************************
 
 
-  subroutine test_levelset(ok)
-   logical, intent(out) :: ok
-
-   integer :: test_count, testi_count, test
-   integer :: n, ne, st, i
+subroutine test_levelset
+   integer :: n, ne
    integer, allocatable, dimension(:) :: ptr, row, perm, seps
-   type (nd_options) :: options, options_orig
+   type (nd_options) :: options
    type (nd_inform) :: info
 
-   ok = .true.
-   testi_count = 0
-   test_count = 0
+   write (*, '()')
+   write (*, '(a)') "****************************************"
+   write (*, '(a)') "*   Testing Full Level-set Method      *"
+   write (*, '(a)') "****************************************"
 
 
    ! --------------------------------------
    ! Test one-sided levelset method
    ! --------------------------------------
-
-   test = 1
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****Level set test ', test, ' ***'
-   n = 10
-   ne = 14
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
-   ptr(1:n+1) = (/ 1, 3, 5, 7, 9, 11, 12, 13, 14, 15, 15 /)
-   row(1:ne) = (/ 2, 7, 7, 3, 4, 8, 5, 9, 6, 10, 10, 8, 9, 10 /)
-
+   write (*, '(a)', advance="no") &
+      ' * Test 1.......................................'
+   call setup_options(options)
    options%amd_switch1 = 5
    options%partition_method = 0
    options%coarse_partition_method = 2
    options%amd_call = 2
    options%balance = 20.0
-   do i = 0, 2
-     options%print_level = i
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
+   options%print_level = 2
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=3) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   n = 10
+   ne = 14
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 7, 9, 11, 12, 13, 14, 15, 15 /)
+   row(1:ne) = (/ 2, 7, 7, 3, 4, 8, 5, 9, 6, 10, 10, 8, 9, 10 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
    ! Test one-sided levelset method
    ! --------------------------------------
-
-   test = 2
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****Level set test ', test, ' ***'
-   n = 10
-   ne = 14
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
-   ptr(1:n+1) = (/ 1, 3, 5, 7, 9, 11, 12, 13, 14, 15, 15 /)
-   row(1:ne) = (/ 2, 7, 7, 3, 4, 8, 5, 9, 6, 10, 10, 8, 9, 10 /)
-
+   write (*, '(a)', advance="no") &
+      ' * Test 2.......................................'
+   call setup_options(options)
    options%amd_switch1 = 5
    options%partition_method = 0
    options%coarse_partition_method = 2
-   options%balance = 1.5
    options%amd_call = 2
-   do i = 0, 0
-     options%print_level = i
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
+   options%balance = 1.5
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=1) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   n = 10
+   ne = 14
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 7, 9, 11, 12, 13, 14, 15, 15 /)
+   row(1:ne) = (/ 2, 7, 7, 3, 4, 8, 5, 9, 6, 10, 10, 8, 9, 10 /)
 
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
 
-   return
+   deallocate (ptr,row,perm,seps)
 
-10    write (*,'(a,i4)') 'Allocation error during test section ', test
-   return
-
-20    write (*,'(a,i4)') 'Deallocation error during test section ', test
-
- end subroutine test_levelset
+end subroutine test_levelset
 
 ! *****************************************************************
 
 
-  subroutine test_shift(ok)
-   logical, intent(out) :: ok
-
-   integer :: test_count, testi_count, test
-   integer :: n, ne, st, i
+subroutine test_shift
+   integer :: n, ne
    integer, allocatable, dimension(:) :: ptr, row, perm, seps
-   type (nd_options) :: options, options_orig
+   type (nd_options) :: options
    type (nd_inform) :: info
 
-   ok = .true.
-   testi_count = 0
-   test_count = 0
+   write (*, '()')
+   write (*, '(a)') "****************************************"
+   write (*, '(a)') "*   Testing Shift refinement           *"
+   write (*, '(a)') "****************************************"
 
-  ! --------------------------------------
+   ! --------------------------------------
    ! Test DM-style refinement with 2-sided partition
    ! --------------------------------------
-
-   test = 1
-   write (6,'(a1)') ' '
-   write (6,'(a26,i5,a4)') '****Shift refinement test ', test, ' ***'
-   n = 8
-   ne = 11
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
-   ptr(1:n+1) = (/ 1, 4, 5, 6, 8, 9, 11, 12, 12 /)
-   row(1:ne) = (/ 2, 3, 4, 4, 4, 5, 6, 6, 7, 8, 8 /)
-
+   write (*, '(a)', advance="no") &
+      ' * Test DM-style, 2-sided part, refinement=2....'
+   call setup_options(options)
    options%amd_switch1 = 5
    options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
-   do i = 2, 2
-     options%print_level = i
-     options%refinement = 2
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0) testi_count = testi_count + 1
-     options%refinement = 5
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0) testi_count = testi_count + 1
-     options%print_level = i
-     options%refinement = 2
-     call nd_order(0,n,ptr,row,perm,options,info)
-     if (info%flag>=0) testi_count = testi_count + 1
-     options%refinement = 5
-     call nd_order(0,n,ptr,row,perm,options,info)
-     if (info%flag>=0) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
+   options%print_level = 2
+   options%refinement = 2
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=4) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   n = 8
+   ne = 11
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 4, 5, 6, 8, 9, 11, 12, 12 /)
+   row(1:ne) = (/ 2, 3, 4, 4, 4, 5, 6, 6, 7, 8, 8 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+
+   write (*, '(a)', advance="no") &
+      ' * Test DM-style, 2-sided part, refinement=5....'
+   call setup_options(options)
+   options%amd_switch1 = 5
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%print_level = 2
+   options%refinement = 5
+
+   n = 8
+   ne = 11
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 4, 5, 6, 8, 9, 11, 12, 12 /)
+   row(1:ne) = (/ 2, 3, 4, 4, 4, 5, 6, 6, 7, 8, 8 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
    ! Test DM refinement with 2-sided partition
    ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test DM refine, 2-sided, test 1..............'
+   call setup_options(options)
+   options%amd_switch1 = 5
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%refinement = 2
+   options%amd_call = 2
 
-   test = 2
-   write (6,'(a1)') ' '
-   write (6,'(a26,i5,a4)') '****Shift refinement test ', test, ' ***'
    n = 21
    ne = 37
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
    ptr(1:n+1) = (/ 1, 3, 5, 7, 9, 11, 13, 15, 16, 20, 22, 24, 26, 28, 29, &
      29, 32, 33, 35, 37, 38, 38 /)
    row(1:ne) = (/ 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 11, 16, &
      17, 11, 13, 12, 13, 13, 15, 14, 15, 15, 17, 18, 19, 18, 19, 20, 20, &
      21, 21 /)
 
-   options%amd_switch1 = 5
-   options%partition_method = 0
-   options%coarse_partition_method = 1
-   options%refinement = 2
-   options%amd_call = 2
-   do i = 0, 0
-     options%print_level = i
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=1) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
    ! Test DM refinement with 1-sided partition
    ! --------------------------------------
-
-   test = 3
-   write (6,'(a1)') ' '
-   write (6,'(a26,i5,a4)') '****Shift refinement test ', test, ' ***'
-   n = 31
-   ne = 49
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
-   ptr(1:n+1) = (/ 1, 4, 6, 8, 10, 12, 13, 15, 16, 18, 20, 21, 22, 25, 26, &
-     27, 29, 31, 32, 34, 36, 38, 39, 40, 42, 44, 45, 47, 48, 49, 50, 50 /)
-   row(1:ne) = (/ 2, 3, 4, 4, 5, 6, 7, 7, 8, 8, 9, 10, 10, 11, 11, 11, 12, &
-     13, 14, 14, 14, 15, 17, 18, 18, 16, 17, 19, 20, 21, 21, 20, 22, 23, &
-     24, 24, 25, 23, 26, 26, 27, 27, 28, 29, 29, 30, 30, 31, 31 /)
-
+   write (*, '(a)', advance="no") &
+      ' * Test DM refine, 1-sided, test 1..............'
+   call setup_options(options)
    options%amd_switch1 = 5
    options%partition_method = 0
    options%coarse_partition_method = 2
    options%refinement = 2
    options%amd_call = 2
    options%balance = 33.0
-   do i = 0, 0
-     options%print_level = i
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=1) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   n = 31
+   ne = 49
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+
+   ptr(1:n+1) = (/ 1, 4, 6, 8, 10, 12, 13, 15, 16, 18, 20, 21, 22, 25, 26, &
+      27, 29, 31, 32, 34, 36, 38, 39, 40, 42, 44, 45, 47, 48, 49, 50, 50 /)
+   row(1:ne) = (/ 2, 3, 4, 4, 5, 6, 7, 7, 8, 8, 9, 10, 10, 11, 11, 11, 12, &
+      13, 14, 14, 14, 15, 17, 18, 18, 16, 17, 19, 20, 21, 21, 20, 22, 23, &
+      24, 24, 25, 23, 26, 26, 27, 27, 28, 29, 29, 30, 30, 31, 31 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
    ! Test DM refinement with 2-sided partition
    ! --------------------------------------
-
-   test = 4
-   write (6,'(a1)') ' '
-   write (6,'(a26,i5,a4)') '****Shift refinement test ', test, ' ***'
-   n = 7
-   ne = 6
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
-   ptr(1:n+1) = (/ 1, 2, 3, 4, 5, 6, 7, 7 /)
-   row(1:ne) = (/ 7, 7, 7, 7, 7, 7 /)
-
+   write (*, '(a)', advance="no") &
+      ' * Test DM refine, 2-sided, test 2..............'
+   call setup_options(options)
    options%amd_switch1 = 5
    options%partition_method = 0
    options%coarse_partition_method = 2
    options%refinement = 2
    options%amd_call = 2
    options%balance = 12.0
-   do i = 0, 0
-     options%print_level = i
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=1) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   n = 7
+   ne = 6
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 2, 3, 4, 5, 6, 7, 7 /)
+   row(1:ne) = (/ 7, 7, 7, 7, 7, 7 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
    ! Test DM refinement with 1-sided partition
    ! --------------------------------------
-
-   test = 5
-   write (6,'(a1)') ' '
-   write (6,'(a26,i5,a4)') '****Shift refinement test ', test, ' ***'
-   n = 7
-   ne = 6
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
-   ptr(1:n+1) = (/ 1, 2, 3, 4, 5, 6, 7, 7 /)
-   row(1:ne) = (/ 7, 7, 7, 7, 7, 7 /)
-
+   write (*, '(a)', advance="no") &
+      ' * Test DM refine, 1-sided, test 2..............'
+   call setup_options(options)
    options%amd_switch1 = 5
    options%partition_method = 0
    options%coarse_partition_method = 2
    options%refinement = 5
    options%amd_call = 2
    options%balance = 12.0
-   do i = 0, 0
-     options%print_level = i
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=1) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   n = 7
+   ne = 6
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 2, 3, 4, 5, 6, 7, 7 /)
+   row(1:ne) = (/ 7, 7, 7, 7, 7, 7 /)
 
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
    ! Test DM refinement with 1-sided partition with balanced partition
    ! --------------------------------------
-
-   test = 6
-   write (6,'(a1)') ' '
-   write (6,'(a26,i5,a4)') '****Shift refinement test ', test, ' ***'
-   n = 31
-   ne = 49
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
-   ptr(1:n+1) = (/ 1, 4, 6, 8, 10, 12, 13, 15, 16, 18, 20, 21, 22, 25, 26, &
-     27, 29, 31, 32, 34, 36, 38, 39, 40, 42, 44, 45, 47, 48, 49, 50, 50 /)
-   row(1:ne) = (/ 2, 3, 4, 4, 5, 6, 7, 7, 8, 8, 9, 10, 10, 11, 11, 11, 12, &
-     13, 14, 14, 14, 15, 17, 18, 18, 16, 17, 19, 20, 21, 21, 20, 22, 23, &
-     24, 24, 25, 23, 26, 26, 27, 27, 28, 29, 29, 30, 30, 31, 31 /)
-
+   write (*, '(a)', advance="no") &
+      ' * Test DM refine, 1-sided, balanced part.......'
+   call setup_options(options)
    options%amd_switch1 = 5
    options%partition_method = 0
    options%coarse_partition_method = 2
    options%refinement = 5
    options%balance = 2.0
    options%amd_call = 2
-   do i = 0, 2
-     options%print_level = i
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
+   options%print_level = 2
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=3) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
-
-   ! --------------------------------------
-   ! Test DM refinement with 2-sided partition with balanced partition
-   ! --------------------------------------
-
-   test = 7
-   write (6,'(a1)') ' '
-   write (6,'(a26,i5,a4)') '****Shift refinement test ', test, ' ***'
    n = 31
    ne = 49
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
    ptr(1:n+1) = (/ 1, 4, 6, 8, 10, 12, 13, 15, 16, 18, 20, 21, 22, 25, 26, &
      27, 29, 31, 32, 34, 36, 38, 39, 40, 42, 44, 45, 47, 48, 49, 50, 50 /)
    row(1:ne) = (/ 2, 3, 4, 4, 5, 6, 7, 7, 8, 8, 9, 10, 10, 11, 11, 11, 12, &
      13, 14, 14, 14, 15, 17, 18, 18, 16, 17, 19, 20, 21, 21, 20, 22, 23, &
      24, 24, 25, 23, 26, 26, 27, 27, 28, 29, 29, 30, 30, 31, 31 /)
 
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test DM refinement with 2-sided partition with balanced partition
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test DM refine, 2-sided, balanced part, T1...'
+   call setup_options(options)
    options%amd_switch1 = 5
    options%partition_method = 0
    options%coarse_partition_method = 1
    options%refinement = 5
    options%balance = 2.0
    options%amd_call = 2
-   do i = 0, 0
-     options%print_level = i
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=1) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   n = 31
+   ne = 49
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 4, 6, 8, 10, 12, 13, 15, 16, 18, 20, 21, 22, 25, 26, &
+     27, 29, 31, 32, 34, 36, 38, 39, 40, 42, 44, 45, 47, 48, 49, 50, 50 /)
+   row(1:ne) = (/ 2, 3, 4, 4, 5, 6, 7, 7, 8, 8, 9, 10, 10, 11, 11, 11, 12, &
+     13, 14, 14, 14, 15, 17, 18, 18, 16, 17, 19, 20, 21, 21, 20, 22, 23, &
+     24, 24, 25, 23, 26, 26, 27, 27, 28, 29, 29, 30, 30, 31, 31 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
    ! Test DM refinement with 2-sided partition with balanced partition
    ! --------------------------------------
-
-   test = 8
-   write (6,'(a1)') ' '
-   write (6,'(a26,i5,a4)') '****Shift refinement test ', test, ' ***'
-   n = 31
-   ne = 49
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
-   ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
-     27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
-   row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
-     14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
-     24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
-
+   write (*, '(a)', advance="no") &
+      ' * Test DM refine, 2-sided, balanced part, T2...'
+   call setup_options(options)
    options%amd_switch1 = 5
    options%partition_method = 0
    options%coarse_partition_method = 1
@@ -1241,81 +1089,53 @@ subroutine test_halflevelset
    options%balance = 1.05
    options%refinement_band = n
    options%amd_call = 2
-   do i = 0, 0
-     options%print_level = i
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=1) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   n = 31
+   ne = 49
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
+     27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
+     14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
+     24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
 
 
    ! --------------------------------------
    ! Test DM refinement with 2-sided partition with balanced partition
    ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test DM refine, 2-sided, balanced part, T3...'
+   call setup_options(options)
+   options%amd_switch1 = 5
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%refinement = 2
+   options%balance = 1.30
+   options%refinement_band = n
+   options%amd_call = 2
 
-   test = 9
-   write (6,'(a1)') ' '
-   write (6,'(a26,i5,a4)') '****Shift refinement test ', test, ' ***'
    n = 13
    ne = 15
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
    ptr(1:n+1) = (/ 1, 2, 3, 6, 7, 8, 9, 11, 11, 13, 14, 15, 16, 16 /)
    row(1:ne) = (/ 2, 3, 4, 5, 6, 6, 6, 7, 8, 9, 10, 11, 12, 12, 13 /)
 
-   options%amd_switch1 = 5
-   options%partition_method = 0
-   options%coarse_partition_method = 1
-   options%refinement = 2
-   options%balance = 1.30
-   options%refinement_band = n
-   options%amd_call = 2
-   do i = 0, 0
-     options%print_level = i
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=1) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
-
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
    ! Test DM refinement with 2-sided partition with balanced partition
    ! --------------------------------------
-
-   test = 10
-   write (6,'(a1)') ' '
-   write (6,'(a26,i5,a4)') '****Shift refinement test ', test, ' ***'
-   n = 13
-   ne = 15
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
-   ptr(1:n+1) = (/ 1, 2, 4, 5, 6, 7, 8, 9, 12, 13, 14, 15, 16, 16 /)
-   row(1:ne) = (/ 2, 3, 4, 5, 5, 7, 7, 8, 9, 10, 11, 11, 11, 12, 13 /)
-
+   write (*, '(a)', advance="no") &
+      ' * Test DM refine, 2-sided, balanced part, T4...'
+   call setup_options(options)
    options%amd_switch1 = 5
    options%partition_method = 0
    options%coarse_partition_method = 1
@@ -1323,36 +1143,19 @@ subroutine test_halflevelset
    options%balance = 1.30
    options%refinement_band = n
    options%amd_call = 2
-   do i = 0, 0
-     options%print_level = i
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=1) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   n = 13
+   ne = 15
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 2, 4, 5, 6, 7, 8, 9, 12, 13, 14, 15, 16, 16 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 5, 7, 7, 8, 9, 10, 11, 11, 11, 12, 13 /)
 
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
 
+   deallocate (ptr,row,perm,seps)
 
-
-
-   return
-
-10    write (*,'(a,i4)') 'Allocation error during test section ', test
-   return
-
-20    write (*,'(a,i4)') 'Deallocation error during test section ', test
-
- end subroutine test_shift
+end subroutine test_shift
 
 ! *****************************************************************
 
