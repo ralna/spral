@@ -1103,19 +1103,21 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
    call nd_print_diagnostic(1, options, ' ')
    call nd_print_diagnostic(1, options, 'Use two-sided level set method')
 
+   ! Initialize return vars
+   band = -1
+   depth = -1
+
+   ! If we're going to use multilevel regardless, immediate return
+   if (options%partition_method.eq.1 .and. use_multilevel) return
+   if (options%partition_method.gt.1 .and. level.gt.0 .and. use_multilevel) &
+      return
+
+   ! Initialize various internal variables
    ratio = max(1.0_wp, options%balance)
    imbal = (ratio .le. sumweight-2.0_wp)
    p2sz = 0
    sepsz = 0
    use_multilevel_copy = use_multilevel
-
-   band = -1
-   depth = -1
-
-   if (options%partition_method.eq.1 .and. use_multilevel) go to 10
-
-   if (options%partition_method.gt.1 .and. level.gt.0 .and. use_multilevel) &
-      go to 10
 
    ! Find pseudoperipheral nodes nstart and nend, and the level structure
    ! rooted at nend
@@ -1185,7 +1187,7 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
          use_multilevel = .false.
    end if
 
-   if (use_multilevel) go to 10
+   if (use_multilevel) return
 
 
    ! Find level structure rooted at nstrt
@@ -1278,7 +1280,7 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
       if (real(max(a_weight_1,a_weight_2)) / min(a_weight_1,a_weight_2) .gt. &
             ratio) then
          use_multilevel = .true.
-         go to 10
+         return
       end if
    end if
 
@@ -1302,18 +1304,10 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
       partition(j) = work(distance+i)
       j = j + 1
    end do
-   go to 20
 
-   10 continue
-
-   if (use_multilevel) return
-
-
-   20 continue
    info = 0
    if (printi .or. printd) &
       call nd_print_message(info,unit_diagnostics,'nd_half_level_set')
-   return
 
 end subroutine nd_half_level_set
 
@@ -1372,19 +1366,18 @@ subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level,  &
       write (unit_diagnostics,'(a)') 'Use one-sided level set method'
    end if
 
-   ratio = max(real(1.0,wp),options%balance)
-   imbal = (ratio .le. (sumweight-2))
-
+   ! Initialize return values
    band = -1
    depth = -1
 
-   if (options%partition_method.eq.1 .and. use_multilevel) then
-      use_multilevel = .true.
-      go to 10
-   end if
-
+   ! If we're going to use multilevel regardless, immediate return
+   if (options%partition_method.eq.1 .and. use_multilevel) return
    if (options%partition_method.gt.1 .and. level.gt.0 .and. use_multilevel) &
-      go to 10
+      return
+
+   ! Initialize internal variables
+   ratio = max(real(1.0,wp),options%balance)
+   imbal = (ratio .le. (sumweight-2))
 
    ! Find pseudoperipheral nodes nstart and nend, and the level structure
    ! rooted at nend
@@ -1448,8 +1441,6 @@ subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level,  &
       if ( (100.0_wp*lwidth)/sumweight.le.3.0 .or. a_n.lt. options%ml_call ) &
          use_multilevel = .false.
    end if
-
-   10 continue
 
    if (use_multilevel) return
 
