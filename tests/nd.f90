@@ -24,8 +24,8 @@ program main
    call test_multilevel
    call test_amd
    call test_misc
+   call test_refine
    stop
-   call test_refine(ok)
    call test_fm(ok)
 
    if (nerror.eq.0) then
@@ -2168,122 +2168,207 @@ end subroutine test_amd
 
 ! *****************************************************************
 
-
-  subroutine test_refine(ok)
-   logical, intent(out) :: ok
-
-   integer :: test_count, testi_count, test
-   integer :: n, ne, st, i, j
+subroutine test_refine
+   integer :: n, ne
    integer, allocatable, dimension(:) :: ptr, row, perm, seps
-   type (nd_options) :: options, options_orig
+   type (nd_options) :: options
    type (nd_inform) :: info
 
-   ok = .true.
-   testi_count = 0
-   test_count = 0
+   write (*, '()')
+   write (*, '(a)') "****************************************"
+   write (*, '(a)') "*   Testing Refine                     *"
+   write (*, '(a)') "****************************************"
 
    ! --------------------------------------
    ! Test for refinement optionss
    ! --------------------------------------
-
-   test = 1
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****Refinement test ', test, '****'
-   n = 14
-   ne = 16
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
-   ptr(1:n+1) = (/ 1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 14, 15, 16, 17, 17 /)
-   row(1:ne) = (/ 2, 3, 4, 5, 6, 7, 8, 8, 8, 9, 10, 11, 12, 13, 13, 14 /)
-
+   write (*, '(a)', advance="no") &
+      ' * Test 1........................................'
+   call setup_options(options)
    options%amd_switch1 = 6
    options%amd_call = 2
    options%find_supervariables = .false.
    options%partition_method = 0
    options%refinement = 0
-   do i = 0, 0
-     options%print_level = i
-     call nd_order(0,n,ptr,row,perm,options,info)
-     if (info%flag>=0 .and. info%nzsuper==32) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=1) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   n = 14
+   ne = 16
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 14, 15, 16, 17, 17 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 6, 7, 8, 8, 8, 9, 10, 11, 12, 13, 13, 14 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info)
+   call check_success(n, perm, info, expect_nzsuper=32)
+
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
    ! Test for refinement optionss
    ! --------------------------------------
-
-   test = 2
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****Refinement test ', test, '****'
-   n = 14
-   ne = 16
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
-   ptr(1:n+1) = (/ 1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 14, 15, 16, 17, 17 /)
-   row(1:ne) = (/ 2, 3, 4, 5, 6, 7, 8, 8, 8, 9, 10, 11, 12, 13, 13, 14 /)
-
+   write (*, '(a)', advance="no") &
+      ' * Test 2, refinement=1..........................'
+   call setup_options(options)
    options%amd_switch1 = 6
    options%amd_call = 2
    options%find_supervariables = .false.
    options%partition_method = 0
-   options%refinement = 0
-   do i = 0, 0
-     options%print_level = i
-     do j = 1, 7
-       options%refinement = j
-       call nd_order(0,n,ptr,row,perm,options,info)
-       if (info%flag>=0 .and. info%nzsuper==32) testi_count = testi_count + &
-         1
-     end do
-   end do
-   call reset_options(options_orig,options)
+   options%refinement = 1
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=7) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   n = 14
+   ne = 16
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 14, 15, 16, 17, 17 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 6, 7, 8, 8, 8, 9, 10, 11, 12, 13, 13, 14 /)
 
+   call nd_order(0,n,ptr,row,perm,options,info)
+   call check_success(n, perm, info, expect_nzsuper=32)
 
+   deallocate (ptr,row,perm,seps)
 
+   ! --------------------------------------
+   ! Test for refinement optionss
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test 2, refinement=2..........................'
+   call setup_options(options)
+   options%amd_switch1 = 6
+   options%amd_call = 2
+   options%find_supervariables = .false.
+   options%partition_method = 0
+   options%refinement = 2
 
+   n = 14
+   ne = 16
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 14, 15, 16, 17, 17 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 6, 7, 8, 8, 8, 9, 10, 11, 12, 13, 13, 14 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info)
+   call check_success(n, perm, info, expect_nzsuper=32)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test for refinement optionss
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test 2, refinement=3..........................'
+   call setup_options(options)
+   options%amd_switch1 = 6
+   options%amd_call = 2
+   options%find_supervariables = .false.
+   options%partition_method = 0
+   options%refinement = 3
+
+   n = 14
+   ne = 16
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 14, 15, 16, 17, 17 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 6, 7, 8, 8, 8, 9, 10, 11, 12, 13, 13, 14 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info)
+   call check_success(n, perm, info, expect_nzsuper=32)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test for refinement optionss
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test 2, refinement=4..........................'
+   call setup_options(options)
+   options%amd_switch1 = 6
+   options%amd_call = 2
+   options%find_supervariables = .false.
+   options%partition_method = 0
+   options%refinement = 4
+
+   n = 14
+   ne = 16
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 14, 15, 16, 17, 17 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 6, 7, 8, 8, 8, 9, 10, 11, 12, 13, 13, 14 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info)
+   call check_success(n, perm, info, expect_nzsuper=32)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test for refinement optionss
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test 2, refinement=5..........................'
+   call setup_options(options)
+   options%amd_switch1 = 6
+   options%amd_call = 2
+   options%find_supervariables = .false.
+   options%partition_method = 0
+   options%refinement = 5
+
+   n = 14
+   ne = 16
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 14, 15, 16, 17, 17 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 6, 7, 8, 8, 8, 9, 10, 11, 12, 13, 13, 14 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info)
+   call check_success(n, perm, info, expect_nzsuper=32)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test for refinement optionss
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test 2, refinement=6..........................'
+   call setup_options(options)
+   options%amd_switch1 = 6
+   options%amd_call = 2
+   options%find_supervariables = .false.
+   options%partition_method = 0
+   options%refinement = 6
+
+   n = 14
+   ne = 16
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 14, 15, 16, 17, 17 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 6, 7, 8, 8, 8, 9, 10, 11, 12, 13, 13, 14 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info)
+   call check_success(n, perm, info, expect_nzsuper=32)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test for refinement optionss
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test 2, refinement=7..........................'
+   call setup_options(options)
+   options%amd_switch1 = 6
+   options%amd_call = 2
+   options%find_supervariables = .false.
+   options%partition_method = 0
+   options%refinement = 7
+
+   n = 14
+   ne = 16
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 14, 15, 16, 17, 17 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 6, 7, 8, 8, 8, 9, 10, 11, 12, 13, 13, 14 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info)
+   call check_success(n, perm, info, expect_nzsuper=32)
+
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
    ! Test expand-refine cycles
    ! --------------------------------------
-
-   test = 3
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****Refinement test ', test, '****'
-   n = 31
-   ne = 49
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
-   ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
-     27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
-   row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
-     14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
-     24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
-
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 1, refine=1....'
+   call setup_options(options)
    options%amd_switch1 = 4
    options%balance = 1.0
    options%partition_method = 0
@@ -2291,81 +2376,377 @@ end subroutine test_amd
    options%amd_call = 2
    options%max_improve_cycles = 2
    options%refinement_band = -1
-   do i = 0, 7
-     options%refinement = i
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
+   options%refinement = 1
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=8) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   n = 31
+   ne = 49
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
+     27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
+     14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
+     24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
    ! Test expand-refine cycles
    ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 1, refine=2....'
+   call setup_options(options)
+   options%amd_switch1 = 4
+   options%balance = 1.0
+   options%partition_method = 0
+   options%coarse_partition_method = 2
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%refinement_band = -1
+   options%refinement = 2
 
-   test = 4
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****Refinement test ', test, '****'
-   n = 7
-   ne = 12
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
+   n = 31
+   ne = 49
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
+     27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
+     14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
+     24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   ptr(1:n+1) = (/ 1, 5, 8, 10, 11, 12, 13, 13 /)
-   row(1:ne) = (/ 2, 3, 4, 5, 3, 4, 5, 4, 5, 5, 6, 7 /)
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
 
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test expand-refine cycles
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 1, refine=3....'
+   call setup_options(options)
+   options%amd_switch1 = 4
+   options%balance = 1.0
+   options%partition_method = 0
+   options%coarse_partition_method = 2
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%refinement_band = -1
+   options%refinement = 3
+
+   n = 31
+   ne = 49
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
+     27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
+     14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
+     24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test expand-refine cycles
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 1, refine=4....'
+   call setup_options(options)
+   options%amd_switch1 = 4
+   options%balance = 1.0
+   options%partition_method = 0
+   options%coarse_partition_method = 2
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%refinement_band = -1
+   options%refinement = 4
+
+   n = 31
+   ne = 49
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
+     27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
+     14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
+     24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test expand-refine cycles
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 1, refine=5....'
+   call setup_options(options)
+   options%amd_switch1 = 4
+   options%balance = 1.0
+   options%partition_method = 0
+   options%coarse_partition_method = 2
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%refinement_band = -1
+   options%refinement = 5
+
+   n = 31
+   ne = 49
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
+     27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
+     14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
+     24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test expand-refine cycles
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 1, refine=6....'
+   call setup_options(options)
+   options%amd_switch1 = 4
+   options%balance = 1.0
+   options%partition_method = 0
+   options%coarse_partition_method = 2
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%refinement_band = -1
+   options%refinement = 6
+
+   n = 31
+   ne = 49
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
+     27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
+     14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
+     24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test expand-refine cycles
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 1, refine=7....'
+   call setup_options(options)
+   options%amd_switch1 = 4
+   options%balance = 1.0
+   options%partition_method = 0
+   options%coarse_partition_method = 2
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%refinement_band = -1
+   options%refinement = 7
+
+   n = 31
+   ne = 49
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
+     27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
+     14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
+     24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test expand-refine cycles
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 2, refine=1....'
+   call setup_options(options)
    options%amd_switch1 = 3
    options%balance = 1.0
    options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%max_improve_cycles = 2
-   do i = 0, 7
-     options%refinement = i
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
+   options%refinement = 1
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=8) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   n = 7
+   ne = 12
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 5, 8, 10, 11, 12, 13, 13 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 3, 4, 5, 4, 5, 5, 6, 7 /)
 
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
    ! Test expand-refine cycles
    ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 2, refine=2....'
+   call setup_options(options)
+   options%amd_switch1 = 3
+   options%balance = 1.0
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%refinement = 2
 
-   test = 5
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****Refinement test ', test, '****'
-   n = 13
-   ne = 27
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
+   n = 7
+   ne = 12
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 5, 8, 10, 11, 12, 13, 13 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 3, 4, 5, 4, 5, 5, 6, 7 /)
 
-   ptr(1:n+1) = (/ 1, 7, 12, 16, 19, 21, 22, 23, 24, 25, 26, 27, 28, 28 /)
-   row(1:ne) = (/ 2, 3, 4, 5, 6, 7, 3, 4, 5, 6, 7, 4, 5, 6, 7, 5, 6, 7, 6, &
-     7, 7, 8, 9, 10, 11, 12, 13 /)
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
 
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test expand-refine cycles
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 2, refine=3....'
+   call setup_options(options)
+   options%amd_switch1 = 3
+   options%balance = 1.0
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%refinement = 3
+
+   n = 7
+   ne = 12
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 5, 8, 10, 11, 12, 13, 13 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 3, 4, 5, 4, 5, 5, 6, 7 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test expand-refine cycles
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 2, refine=4....'
+   call setup_options(options)
+   options%amd_switch1 = 3
+   options%balance = 1.0
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%refinement = 4
+
+   n = 7
+   ne = 12
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 5, 8, 10, 11, 12, 13, 13 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 3, 4, 5, 4, 5, 5, 6, 7 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test expand-refine cycles
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 2, refine=5....'
+   call setup_options(options)
+   options%amd_switch1 = 3
+   options%balance = 1.0
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%refinement = 5
+
+   n = 7
+   ne = 12
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 5, 8, 10, 11, 12, 13, 13 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 3, 4, 5, 4, 5, 5, 6, 7 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test expand-refine cycles
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 2, refine=6....'
+   call setup_options(options)
+   options%amd_switch1 = 3
+   options%balance = 1.0
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%refinement = 6
+
+   n = 7
+   ne = 12
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 5, 8, 10, 11, 12, 13, 13 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 3, 4, 5, 4, 5, 5, 6, 7 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test expand-refine cycles
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 2, refine=7....'
+   call setup_options(options)
+   options%amd_switch1 = 3
+   options%balance = 1.0
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%refinement = 7
+
+   n = 7
+   ne = 12
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 5, 8, 10, 11, 12, 13, 13 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 3, 4, 5, 4, 5, 5, 6, 7 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test expand-refine cycles
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 3, refine=1....'
+   call setup_options(options)
    options%amd_switch1 = 3
    options%stop_coarsening1 = 2
    options%min_reduction = 0.5
@@ -2376,42 +2757,206 @@ end subroutine test_amd
    options%amd_call = 2
    options%max_improve_cycles = 2
    options%print_level = 2
-   do i = 0, 7
-     options%refinement = i
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
+   options%refinement = 1
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=8) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   n = 13
+   ne = 27
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 7, 12, 16, 19, 21, 22, 23, 24, 25, 26, 27, 28, 28 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 6, 7, 3, 4, 5, 6, 7, 4, 5, 6, 7, 5, 6, 7, 6, &
+     7, 7, 8, 9, 10, 11, 12, 13 /)
 
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test expand-refine cycles
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 3, refine=2....'
+   call setup_options(options)
+   options%amd_switch1 = 3
+   options%stop_coarsening1 = 2
+   options%min_reduction = 0.5
+   options%balance = 1.0
+   options%partition_method = 1
+   options%ml_call = 4
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%print_level = 2
+   options%refinement = 2
+
+   n = 13
+   ne = 27
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 7, 12, 16, 19, 21, 22, 23, 24, 25, 26, 27, 28, 28 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 6, 7, 3, 4, 5, 6, 7, 4, 5, 6, 7, 5, 6, 7, 6, &
+     7, 7, 8, 9, 10, 11, 12, 13 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test expand-refine cycles
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 3, refine=3....'
+   call setup_options(options)
+   options%amd_switch1 = 3
+   options%stop_coarsening1 = 2
+   options%min_reduction = 0.5
+   options%balance = 1.0
+   options%partition_method = 1
+   options%ml_call = 4
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%print_level = 2
+   options%refinement = 3
+
+   n = 13
+   ne = 27
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 7, 12, 16, 19, 21, 22, 23, 24, 25, 26, 27, 28, 28 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 6, 7, 3, 4, 5, 6, 7, 4, 5, 6, 7, 5, 6, 7, 6, &
+     7, 7, 8, 9, 10, 11, 12, 13 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test expand-refine cycles
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 3, refine=4....'
+   call setup_options(options)
+   options%amd_switch1 = 3
+   options%stop_coarsening1 = 2
+   options%min_reduction = 0.5
+   options%balance = 1.0
+   options%partition_method = 1
+   options%ml_call = 4
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%print_level = 2
+   options%refinement = 4
+
+   n = 13
+   ne = 27
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 7, 12, 16, 19, 21, 22, 23, 24, 25, 26, 27, 28, 28 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 6, 7, 3, 4, 5, 6, 7, 4, 5, 6, 7, 5, 6, 7, 6, &
+     7, 7, 8, 9, 10, 11, 12, 13 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test expand-refine cycles
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 3, refine=5....'
+   call setup_options(options)
+   options%amd_switch1 = 3
+   options%stop_coarsening1 = 2
+   options%min_reduction = 0.5
+   options%balance = 1.0
+   options%partition_method = 1
+   options%ml_call = 4
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%print_level = 2
+   options%refinement = 5
+
+   n = 13
+   ne = 27
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 7, 12, 16, 19, 21, 22, 23, 24, 25, 26, 27, 28, 28 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 6, 7, 3, 4, 5, 6, 7, 4, 5, 6, 7, 5, 6, 7, 6, &
+     7, 7, 8, 9, 10, 11, 12, 13 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test expand-refine cycles
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 3, refine=6....'
+   call setup_options(options)
+   options%amd_switch1 = 3
+   options%stop_coarsening1 = 2
+   options%min_reduction = 0.5
+   options%balance = 1.0
+   options%partition_method = 1
+   options%ml_call = 4
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%print_level = 2
+   options%refinement = 6
+
+   n = 13
+   ne = 27
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 7, 12, 16, 19, 21, 22, 23, 24, 25, 26, 27, 28, 28 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 6, 7, 3, 4, 5, 6, 7, 4, 5, 6, 7, 5, 6, 7, 6, &
+     7, 7, 8, 9, 10, 11, 12, 13 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test expand-refine cycles
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 3, refine=7....'
+   call setup_options(options)
+   options%amd_switch1 = 3
+   options%stop_coarsening1 = 2
+   options%min_reduction = 0.5
+   options%balance = 1.0
+   options%partition_method = 1
+   options%ml_call = 4
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%print_level = 2
+   options%refinement = 7
+
+   n = 13
+   ne = 27
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 7, 12, 16, 19, 21, 22, 23, 24, 25, 26, 27, 28, 28 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 6, 7, 3, 4, 5, 6, 7, 4, 5, 6, 7, 5, 6, 7, 6, &
+     7, 7, 8, 9, 10, 11, 12, 13 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
    ! Test for full refine_trim coverage
    ! --------------------------------------
-
-   test = 6
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****Refinement test ', test, '****'
-   n = 16
-   ne = 22
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
-   ptr(1:n+1) = (/ 1, 3, 5, 6, 7, 8, 9, 12, 14, 16, 17, 18, 20, 21, 22, 23, &
-     23 /)
-   row(1:ne) = (/ 2, 3, 3, 4, 5, 6, 6, 7, 8, 9, 10, 11, 12, 12, 13, 13, 14, &
-     14, 15, 15, 16, 16 /)
-
+   write (*, '(a)', advance="no") &
+      ' * Test refine_trim(), Test 1....................'
+   call setup_options(options)
    options%amd_switch1 = 4
    options%stop_coarsening1 = 3
    options%min_reduction = 0.5
@@ -2421,42 +2966,27 @@ end subroutine test_amd
    options%amd_call = 2
    options%max_improve_cycles = 1
    options%print_level = 0
-   do i = 0, 0
-     options%refinement = 1
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
+   options%refinement = 1
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=1) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   n = 16
+   ne = 22
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 6, 7, 8, 9, 12, 14, 16, 17, 18, 20, 21, 22, 23, &
+     23 /)
+   row(1:ne) = (/ 2, 3, 3, 4, 5, 6, 6, 7, 8, 9, 10, 11, 12, 12, 13, 13, 14, &
+     14, 15, 15, 16, 16 /)
 
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
    ! Test for full refine_trim coverage
    ! --------------------------------------
-
-   test = 7
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****Refinement test ', test, '****'
-   n = 16
-   ne = 22
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
-   ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 14, 15, 16, 18, 19, 20, 22, &
-     23, 23 /)
-   row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 10, 10, 10, 11, 12, 13, &
-     14, 15, 15, 16, 16 /)
-
+   write (*, '(a)', advance="no") &
+      ' * Test refine_trim(), Test 2....................'
+   call setup_options(options)
    options%amd_switch1 = 4
    options%stop_coarsening1 = 3
    options%min_reduction = 0.5
@@ -2466,43 +2996,27 @@ end subroutine test_amd
    options%amd_call = 2
    options%max_improve_cycles = 1
    options%print_level = 2
-   do i = 0, 0
-     options%refinement = 1
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
+   options%refinement = 1
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=1) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   n = 16
+   ne = 22
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 14, 15, 16, 18, 19, 20, 22, &
+     23, 23 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 10, 10, 10, 11, 12, 13, &
+     14, 15, 15, 16, 16 /)
 
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
    ! Test for full refine_trim coverage
    ! --------------------------------------
-
-   test = 8
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****Refinement test ', test, '****'
-   n = 25
-   ne = 44
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
-   ptr(1:n+1) = (/ 1, 2, 5, 8, 10, 12, 14, 16, 18, 20, 21, 22, 23, 29, 30, &
-     30, 32, 34, 36, 38, 39, 41, 43, 44, 45, 45 /)
-   row(1:ne) = (/ 2, 3, 4, 5, 4, 6, 7, 5, 8, 9, 10, 7, 13, 8, 13, 9, 13, &
-     10, 13, 13, 12, 13, 14, 16, 17, 18, 19, 20, 15, 17, 21, 18, 21, 19, &
-     22, 20, 23, 23, 22, 24, 23, 24, 24, 25 /)
-
+   write (*, '(a)', advance="no") &
+      ' * Test refine_trim(), Test 3....................'
+   call setup_options(options)
    options%amd_switch1 = 4
    options%stop_coarsening1 = 3
    options%min_reduction = 0.5
@@ -2512,42 +3026,28 @@ end subroutine test_amd
    options%amd_call = 2
    options%max_improve_cycles = 1
    options%print_level = 2
-   do i = 0, 0
-     options%refinement = 1
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
+   options%refinement = 1
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=1) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
-
-   ! --------------------------------------
-   ! Test for not checking balance
-   ! --------------------------------------
-
-   test = 9
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****Refinement test ', test, '****'
    n = 25
    ne = 44
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
    ptr(1:n+1) = (/ 1, 2, 5, 8, 10, 12, 14, 16, 18, 20, 21, 22, 23, 29, 30, &
      30, 32, 34, 36, 38, 39, 41, 43, 44, 45, 45 /)
    row(1:ne) = (/ 2, 3, 4, 5, 4, 6, 7, 5, 8, 9, 10, 7, 13, 8, 13, 9, 13, &
      10, 13, 13, 12, 13, 14, 16, 17, 18, 19, 20, 15, 17, 21, 18, 21, 19, &
      22, 20, 23, 23, 22, 24, 23, 24, 24, 25 /)
 
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test for not checking balance
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test for not checking balance.................'
+   call setup_options(options)
    options%amd_switch1 = 4
    options%stop_coarsening1 = 3
    options%min_reduction = 0.5
@@ -2557,40 +3057,28 @@ end subroutine test_amd
    options%amd_call = 2
    options%max_improve_cycles = 1
    options%print_level = 0
-   do i = 0, 0
-     options%refinement = 7
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
+   options%refinement = 7
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=1) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   n = 25
+   ne = 44
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 2, 5, 8, 10, 12, 14, 16, 18, 20, 21, 22, 23, 29, 30, &
+     30, 32, 34, 36, 38, 39, 41, 43, 44, 45, 45 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 4, 6, 7, 5, 8, 9, 10, 7, 13, 8, 13, 9, 13, &
+     10, 13, 13, 12, 13, 14, 16, 17, 18, 19, 20, 15, 17, 21, 18, 21, 19, &
+     22, 20, 23, 23, 22, 24, 23, 24, 24, 25 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
    ! Test expand-refine cycles
    ! --------------------------------------
-
-   test = 10
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****Refinement test ', test, '****'
-   n = 9
-   ne = 19
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
-   ptr(1:n+1) = (/ 1, 3, 5, 6, 10, 14, 17, 19, 20, 20 /)
-   row(1:ne) = (/ 2, 3, 3, 4, 4, 5, 6, 7, 8, 6, 7, 8, 9, 7, 8, 9, 8, 9, &
-     9 /)
-
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 4, refine=1....'
+   call setup_options(options)
    options%amd_switch1 = 4
    options%balance = 1.0
    options%partition_method = 0
@@ -2598,41 +3086,188 @@ end subroutine test_amd
    options%amd_call = 2
    options%stop_coarsening1 = 2
    options%max_improve_cycles = 2
-   do i = 0, 7
-     options%refinement = i
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
+   options%refinement = 1
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=8) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
-
-
-   ! --------------------------------------
-   ! Test expand-refine cycles
-   ! --------------------------------------
-
-   test = 11
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****Refinement test ', test, '****'
    n = 9
    ne = 19
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
    ptr(1:n+1) = (/ 1, 3, 5, 6, 10, 14, 17, 19, 20, 20 /)
    row(1:ne) = (/ 2, 3, 3, 4, 4, 5, 6, 7, 8, 6, 7, 8, 9, 7, 8, 9, 8, 9, &
      9 /)
 
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test expand-refine cycles
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 4, refine=2....'
+   call setup_options(options)
+   options%amd_switch1 = 4
+   options%balance = 1.0
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%stop_coarsening1 = 2
+   options%max_improve_cycles = 2
+   options%refinement = 2
+
+   n = 9
+   ne = 19
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 6, 10, 14, 17, 19, 20, 20 /)
+   row(1:ne) = (/ 2, 3, 3, 4, 4, 5, 6, 7, 8, 6, 7, 8, 9, 7, 8, 9, 8, 9, &
+     9 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test expand-refine cycles
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 4, refine=3....'
+   call setup_options(options)
+   options%amd_switch1 = 4
+   options%balance = 1.0
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%stop_coarsening1 = 2
+   options%max_improve_cycles = 2
+   options%refinement = 3
+
+   n = 9
+   ne = 19
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 6, 10, 14, 17, 19, 20, 20 /)
+   row(1:ne) = (/ 2, 3, 3, 4, 4, 5, 6, 7, 8, 6, 7, 8, 9, 7, 8, 9, 8, 9, &
+     9 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test expand-refine cycles
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 4, refine=4....'
+   call setup_options(options)
+   options%amd_switch1 = 4
+   options%balance = 1.0
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%stop_coarsening1 = 2
+   options%max_improve_cycles = 2
+   options%refinement = 4
+
+   n = 9
+   ne = 19
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 6, 10, 14, 17, 19, 20, 20 /)
+   row(1:ne) = (/ 2, 3, 3, 4, 4, 5, 6, 7, 8, 6, 7, 8, 9, 7, 8, 9, 8, 9, &
+     9 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test expand-refine cycles
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 4, refine=5....'
+   call setup_options(options)
+   options%amd_switch1 = 4
+   options%balance = 1.0
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%stop_coarsening1 = 2
+   options%max_improve_cycles = 2
+   options%refinement = 5
+
+   n = 9
+   ne = 19
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 6, 10, 14, 17, 19, 20, 20 /)
+   row(1:ne) = (/ 2, 3, 3, 4, 4, 5, 6, 7, 8, 6, 7, 8, 9, 7, 8, 9, 8, 9, &
+     9 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test expand-refine cycles
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 4, refine=6....'
+   call setup_options(options)
+   options%amd_switch1 = 4
+   options%balance = 1.0
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%stop_coarsening1 = 2
+   options%max_improve_cycles = 2
+   options%refinement = 6
+
+   n = 9
+   ne = 19
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 6, 10, 14, 17, 19, 20, 20 /)
+   row(1:ne) = (/ 2, 3, 3, 4, 4, 5, 6, 7, 8, 6, 7, 8, 9, 7, 8, 9, 8, 9, &
+     9 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test expand-refine cycles
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 4, refine=7....'
+   call setup_options(options)
+   options%amd_switch1 = 4
+   options%balance = 1.0
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%stop_coarsening1 = 2
+   options%max_improve_cycles = 2
+   options%refinement = 7
+
+   n = 9
+   ne = 19
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 6, 10, 14, 17, 19, 20, 20 /)
+   row(1:ne) = (/ 2, 3, 3, 4, 4, 5, 6, 7, 8, 6, 7, 8, 9, 7, 8, 9, 8, 9, &
+     9 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test expand-refine cycles
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 5, refine=1....'
+   call setup_options(options)
    options%amd_switch1 = 4
    options%balance = 10.0
    options%partition_method = 0
@@ -2640,118 +3275,574 @@ end subroutine test_amd
    options%amd_call = 2
    options%stop_coarsening1 = 2
    options%max_improve_cycles = 2
-   do i = 0, 7
-     options%refinement = i
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
+   options%refinement = 1
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=8) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   n = 9
+   ne = 19
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 6, 10, 14, 17, 19, 20, 20 /)
+   row(1:ne) = (/ 2, 3, 3, 4, 4, 5, 6, 7, 8, 6, 7, 8, 9, 7, 8, 9, 8, 9, &
+     9 /)
 
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
    ! Test expand-refine cycles
    ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 5, refine=2....'
+   call setup_options(options)
+   options%amd_switch1 = 4
+   options%balance = 10.0
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%stop_coarsening1 = 2
+   options%max_improve_cycles = 2
+   options%refinement = 2
 
-   test = 12
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****Refinement test ', test, '****'
-   n = 7
-   ne = 12
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
+   n = 9
+   ne = 19
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 6, 10, 14, 17, 19, 20, 20 /)
+   row(1:ne) = (/ 2, 3, 3, 4, 4, 5, 6, 7, 8, 6, 7, 8, 9, 7, 8, 9, 8, 9, &
+     9 /)
 
-   ptr(1:n+1) = (/ 1, 5, 8, 10, 11, 12, 13, 13 /)
-   row(1:ne) = (/ 2, 3, 4, 5, 3, 4, 5, 4, 5, 5, 6, 7 /)
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
 
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test expand-refine cycles
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 5, refine=3....'
+   call setup_options(options)
+   options%amd_switch1 = 4
+   options%balance = 10.0
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%stop_coarsening1 = 2
+   options%max_improve_cycles = 2
+   options%refinement = 3
+
+   n = 9
+   ne = 19
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 6, 10, 14, 17, 19, 20, 20 /)
+   row(1:ne) = (/ 2, 3, 3, 4, 4, 5, 6, 7, 8, 6, 7, 8, 9, 7, 8, 9, 8, 9, &
+     9 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test expand-refine cycles
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 5, refine=4....'
+   call setup_options(options)
+   options%amd_switch1 = 4
+   options%balance = 10.0
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%stop_coarsening1 = 2
+   options%max_improve_cycles = 2
+   options%refinement = 4
+
+   n = 9
+   ne = 19
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 6, 10, 14, 17, 19, 20, 20 /)
+   row(1:ne) = (/ 2, 3, 3, 4, 4, 5, 6, 7, 8, 6, 7, 8, 9, 7, 8, 9, 8, 9, &
+     9 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test expand-refine cycles
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 5, refine=5....'
+   call setup_options(options)
+   options%amd_switch1 = 4
+   options%balance = 10.0
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%stop_coarsening1 = 2
+   options%max_improve_cycles = 2
+   options%refinement = 5
+
+   n = 9
+   ne = 19
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 6, 10, 14, 17, 19, 20, 20 /)
+   row(1:ne) = (/ 2, 3, 3, 4, 4, 5, 6, 7, 8, 6, 7, 8, 9, 7, 8, 9, 8, 9, &
+     9 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test expand-refine cycles
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 5, refine=6....'
+   call setup_options(options)
+   options%amd_switch1 = 4
+   options%balance = 10.0
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%stop_coarsening1 = 2
+   options%max_improve_cycles = 2
+   options%refinement = 6
+
+   n = 9
+   ne = 19
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 6, 10, 14, 17, 19, 20, 20 /)
+   row(1:ne) = (/ 2, 3, 3, 4, 4, 5, 6, 7, 8, 6, 7, 8, 9, 7, 8, 9, 8, 9, &
+     9 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test expand-refine cycles
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 5, refine=7....'
+   call setup_options(options)
+   options%amd_switch1 = 4
+   options%balance = 10.0
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%stop_coarsening1 = 2
+   options%max_improve_cycles = 2
+   options%refinement = 7
+
+   n = 9
+   ne = 19
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 6, 10, 14, 17, 19, 20, 20 /)
+   row(1:ne) = (/ 2, 3, 3, 4, 4, 5, 6, 7, 8, 6, 7, 8, 9, 7, 8, 9, 8, 9, &
+     9 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test expand-refine cycles
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 6, refine=1....'
+   call setup_options(options)
    options%amd_switch1 = 3
    options%balance = 8.0
    options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%max_improve_cycles = 2
-   do i = 0, 7
-     options%refinement = i
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
+   options%refinement = 1
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=8) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   n = 7
+   ne = 12
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 5, 8, 10, 11, 12, 13, 13 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 3, 4, 5, 4, 5, 5, 6, 7 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
    ! Test expand-refine cycles
    ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 6, refine=2....'
+   call setup_options(options)
+   options%amd_switch1 = 3
+   options%balance = 8.0
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%refinement = 2
 
-   test = 13
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****Refinement test ', test, '****'
-   n = 31
-   ne = 49
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
+   n = 7
+   ne = 12
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 5, 8, 10, 11, 12, 13, 13 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 3, 4, 5, 4, 5, 5, 6, 7 /)
 
-   ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
-     27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
-   row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
-     14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
-     24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
 
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test expand-refine cycles
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 6, refine=3....'
+   call setup_options(options)
+   options%amd_switch1 = 3
+   options%balance = 8.0
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%refinement = 3
+
+   n = 7
+   ne = 12
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 5, 8, 10, 11, 12, 13, 13 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 3, 4, 5, 4, 5, 5, 6, 7 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test expand-refine cycles
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 6, refine=4....'
+   call setup_options(options)
+   options%amd_switch1 = 3
+   options%balance = 8.0
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%refinement = 4
+
+   n = 7
+   ne = 12
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 5, 8, 10, 11, 12, 13, 13 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 3, 4, 5, 4, 5, 5, 6, 7 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test expand-refine cycles
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 6, refine=5....'
+   call setup_options(options)
+   options%amd_switch1 = 3
+   options%balance = 8.0
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%refinement = 5
+
+   n = 7
+   ne = 12
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 5, 8, 10, 11, 12, 13, 13 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 3, 4, 5, 4, 5, 5, 6, 7 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test expand-refine cycles
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 6, refine=6....'
+   call setup_options(options)
+   options%amd_switch1 = 3
+   options%balance = 8.0
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%refinement = 6
+
+   n = 7
+   ne = 12
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 5, 8, 10, 11, 12, 13, 13 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 3, 4, 5, 4, 5, 5, 6, 7 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test expand-refine cycles
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 6, refine=7....'
+   call setup_options(options)
+   options%amd_switch1 = 3
+   options%balance = 8.0
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%refinement = 7
+
+   n = 7
+   ne = 12
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 5, 8, 10, 11, 12, 13, 13 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 3, 4, 5, 4, 5, 5, 6, 7 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test expand-refine cycles
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 7, refine=1....'
+   call setup_options(options)
    options%amd_switch1 = 4
    options%balance = 8.0
    options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%max_improve_cycles = 2
-   do i = 0, 7
-     options%refinement = i
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
+   options%refinement = 1
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=8) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   n = 31
+   ne = 49
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
+     27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
+     14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
+     24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test expand-refine cycles
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 7, refine=2....'
+   call setup_options(options)
+   options%amd_switch1 = 4
+   options%balance = 8.0
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%refinement = 2
+
+   n = 31
+   ne = 49
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
+     27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
+     14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
+     24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test expand-refine cycles
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 7, refine=3....'
+   call setup_options(options)
+   options%amd_switch1 = 4
+   options%balance = 8.0
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%refinement = 3
+
+   n = 31
+   ne = 49
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
+     27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
+     14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
+     24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test expand-refine cycles
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 7, refine=4....'
+   call setup_options(options)
+   options%amd_switch1 = 4
+   options%balance = 8.0
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%refinement = 4
+
+   n = 31
+   ne = 49
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
+     27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
+     14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
+     24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test expand-refine cycles
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 7, refine=5....'
+   call setup_options(options)
+   options%amd_switch1 = 4
+   options%balance = 8.0
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%refinement = 5
+
+   n = 31
+   ne = 49
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
+     27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
+     14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
+     24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test expand-refine cycles
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 7, refine=6....'
+   call setup_options(options)
+   options%amd_switch1 = 4
+   options%balance = 8.0
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%refinement = 6
+
+   n = 31
+   ne = 49
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
+     27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
+     14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
+     24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test expand-refine cycles
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test exand-refind cycles, test 7, refine=7....'
+   call setup_options(options)
+   options%amd_switch1 = 4
+   options%balance = 8.0
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%refinement = 7
+
+   n = 31
+   ne = 49
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
+     27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
+     14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
+     24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
    ! Test automatic choice of shift within expand-refine cycle
    ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test automatic choice of shift, T1, refine=1..'
+   call setup_options(options)
+   options%amd_switch1 = 4
+   options%balance = 1.01
+   options%partition_method = 1
+   options%coarse_partition_method = 2
+   options%refinement_band = 0
+   options%stop_coarsening1 = 3
+   options%stop_coarsening2 = 3
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%print_level = 2
+   options%refinement = 1
 
-   test = 14
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****Refinement test ', test, '****'
    n = 29
    ne = 68
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
    ptr(1:n+1) = (/ 1, 2, 7, 9,11, 14,15,16,19,22,26,28,31,35,37,40,44,46,&
          51, 55,59,62,64,66,67,67,68,69,69,69 /)
    row(1:ne) = (/ 2,3,4,5,6,7,5,6,5,7,6,7,8,8,8,9,10,11,10,13,14,11,12,13,&
@@ -2759,6 +3850,17 @@ end subroutine test_amd
             19,19,21,23,24,25,21,22,26,27,22,23,28,26,27,24,25,25,27,29,&
             29,29,29,29 /)
 
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test automatic choice of shift within expand-refine cycle
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test automatic choice of shift, T1, refine=2..'
+   call setup_options(options)
    options%amd_switch1 = 4
    options%balance = 1.01
    options%partition_method = 1
@@ -2769,41 +3871,225 @@ end subroutine test_amd
    options%amd_call = 2
    options%max_improve_cycles = 2
    options%print_level = 2
-   do i = 0, 7
-     options%refinement = i
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
+   options%refinement = 2
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=8) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   n = 29
+   ne = 68
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 2, 7, 9,11, 14,15,16,19,22,26,28,31,35,37,40,44,46,&
+         51, 55,59,62,64,66,67,67,68,69,69,69 /)
+   row(1:ne) = (/ 2,3,4,5,6,7,5,6,5,7,6,7,8,8,8,9,10,11,10,13,14,11,12,13,&
+            14,12,13,13,16,17,14,15,16,17,15,16,16,19,20,17,18,19,20,18,&
+            19,19,21,23,24,25,21,22,26,27,22,23,28,26,27,24,25,25,27,29,&
+            29,29,29,29 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
    ! Test automatic choice of shift within expand-refine cycle
    ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test automatic choice of shift, T1, refine=3..'
+   call setup_options(options)
+   options%amd_switch1 = 4
+   options%balance = 1.01
+   options%partition_method = 1
+   options%coarse_partition_method = 2
+   options%refinement_band = 0
+   options%stop_coarsening1 = 3
+   options%stop_coarsening2 = 3
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%print_level = 2
+   options%refinement = 3
 
-   test = 15
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****Refinement test ', test, '****'
+   n = 29
+   ne = 68
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 2, 7, 9,11, 14,15,16,19,22,26,28,31,35,37,40,44,46,&
+         51, 55,59,62,64,66,67,67,68,69,69,69 /)
+   row(1:ne) = (/ 2,3,4,5,6,7,5,6,5,7,6,7,8,8,8,9,10,11,10,13,14,11,12,13,&
+            14,12,13,13,16,17,14,15,16,17,15,16,16,19,20,17,18,19,20,18,&
+            19,19,21,23,24,25,21,22,26,27,22,23,28,26,27,24,25,25,27,29,&
+            29,29,29,29 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test automatic choice of shift within expand-refine cycle
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test automatic choice of shift, T1, refine=4..'
+   call setup_options(options)
+   options%amd_switch1 = 4
+   options%balance = 1.01
+   options%partition_method = 1
+   options%coarse_partition_method = 2
+   options%refinement_band = 0
+   options%stop_coarsening1 = 3
+   options%stop_coarsening2 = 3
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%print_level = 2
+   options%refinement = 4
+
+   n = 29
+   ne = 68
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 2, 7, 9,11, 14,15,16,19,22,26,28,31,35,37,40,44,46,&
+         51, 55,59,62,64,66,67,67,68,69,69,69 /)
+   row(1:ne) = (/ 2,3,4,5,6,7,5,6,5,7,6,7,8,8,8,9,10,11,10,13,14,11,12,13,&
+            14,12,13,13,16,17,14,15,16,17,15,16,16,19,20,17,18,19,20,18,&
+            19,19,21,23,24,25,21,22,26,27,22,23,28,26,27,24,25,25,27,29,&
+            29,29,29,29 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test automatic choice of shift within expand-refine cycle
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test automatic choice of shift, T1, refine=5..'
+   call setup_options(options)
+   options%amd_switch1 = 4
+   options%balance = 1.01
+   options%partition_method = 1
+   options%coarse_partition_method = 2
+   options%refinement_band = 0
+   options%stop_coarsening1 = 3
+   options%stop_coarsening2 = 3
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%print_level = 2
+   options%refinement = 5
+
+   n = 29
+   ne = 68
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 2, 7, 9,11, 14,15,16,19,22,26,28,31,35,37,40,44,46,&
+         51, 55,59,62,64,66,67,67,68,69,69,69 /)
+   row(1:ne) = (/ 2,3,4,5,6,7,5,6,5,7,6,7,8,8,8,9,10,11,10,13,14,11,12,13,&
+            14,12,13,13,16,17,14,15,16,17,15,16,16,19,20,17,18,19,20,18,&
+            19,19,21,23,24,25,21,22,26,27,22,23,28,26,27,24,25,25,27,29,&
+            29,29,29,29 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test automatic choice of shift within expand-refine cycle
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test automatic choice of shift, T1, refine=6..'
+   call setup_options(options)
+   options%amd_switch1 = 4
+   options%balance = 1.01
+   options%partition_method = 1
+   options%coarse_partition_method = 2
+   options%refinement_band = 0
+   options%stop_coarsening1 = 3
+   options%stop_coarsening2 = 3
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%print_level = 2
+   options%refinement = 6
+
+   n = 29
+   ne = 68
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 2, 7, 9,11, 14,15,16,19,22,26,28,31,35,37,40,44,46,&
+         51, 55,59,62,64,66,67,67,68,69,69,69 /)
+   row(1:ne) = (/ 2,3,4,5,6,7,5,6,5,7,6,7,8,8,8,9,10,11,10,13,14,11,12,13,&
+            14,12,13,13,16,17,14,15,16,17,15,16,16,19,20,17,18,19,20,18,&
+            19,19,21,23,24,25,21,22,26,27,22,23,28,26,27,24,25,25,27,29,&
+            29,29,29,29 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test automatic choice of shift within expand-refine cycle
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test automatic choice of shift, T1, refine=7..'
+   call setup_options(options)
+   options%amd_switch1 = 4
+   options%balance = 1.01
+   options%partition_method = 1
+   options%coarse_partition_method = 2
+   options%refinement_band = 0
+   options%stop_coarsening1 = 3
+   options%stop_coarsening2 = 3
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%print_level = 2
+   options%refinement = 7
+
+   n = 29
+   ne = 68
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 2, 7, 9,11, 14,15,16,19,22,26,28,31,35,37,40,44,46,&
+         51, 55,59,62,64,66,67,67,68,69,69,69 /)
+   row(1:ne) = (/ 2,3,4,5,6,7,5,6,5,7,6,7,8,8,8,9,10,11,10,13,14,11,12,13,&
+            14,12,13,13,16,17,14,15,16,17,15,16,16,19,20,17,18,19,20,18,&
+            19,19,21,23,24,25,21,22,26,27,22,23,28,26,27,24,25,25,27,29,&
+            29,29,29,29 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test automatic choice of shift within expand-refine cycle
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test automatic choice of shift, T2, refine=1..'
+   call setup_options(options)
+   options%amd_switch1 = 4
+   options%balance = 1.01
+   options%partition_method = 1
+   options%coarse_partition_method = 2
+   options%refinement_band = 0
+   options%stop_coarsening1 = 3
+   options%stop_coarsening2 = 3
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%print_level = 2
+   options%refinement = 1
+
    n = 21
    ne = 34
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
    ptr(1:n+1) = (/ 1,2,3,5,7,8,10,12,13,15,18,19,21,22,25,27,29,30,32,34,&
                     35,35 /)
    row(1:ne) = (/ 2,4,4,6,5,7,8,7,9,8,10,11,10,12,11,12,13,13,13,14,14,15,&
         16,17,16,18,17,18,18,19,20,20,21,21 /)
 
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test automatic choice of shift within expand-refine cycle
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test automatic choice of shift, T2, refine=2..'
+   call setup_options(options)
    options%amd_switch1 = 4
    options%balance = 1.01
    options%partition_method = 1
@@ -2814,38 +4100,179 @@ end subroutine test_amd
    options%amd_call = 2
    options%max_improve_cycles = 2
    options%print_level = 2
-   do i = 0, 7
-     options%refinement = i
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
+   options%refinement = 2
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=8) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   n = 21
+   ne = 34
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1,2,3,5,7,8,10,12,13,15,18,19,21,22,25,27,29,30,32,34,&
+                    35,35 /)
+   row(1:ne) = (/ 2,4,4,6,5,7,8,7,9,8,10,11,10,12,11,12,13,13,13,14,14,15,&
+        16,17,16,18,17,18,18,19,20,20,21,21 /)
 
-   return
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
 
-10    write (*,'(a,i4)') 'Allocation error during test section ', test
-   return
+   deallocate (ptr,row,perm,seps)
 
-20    write (*,'(a,i4)') 'Deallocation error during test section ', test
+   ! --------------------------------------
+   ! Test automatic choice of shift within expand-refine cycle
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test automatic choice of shift, T2, refine=3..'
+   call setup_options(options)
+   options%amd_switch1 = 4
+   options%balance = 1.01
+   options%partition_method = 1
+   options%coarse_partition_method = 2
+   options%refinement_band = 0
+   options%stop_coarsening1 = 3
+   options%stop_coarsening2 = 3
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%print_level = 2
+   options%refinement = 3
+
+   n = 21
+   ne = 34
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1,2,3,5,7,8,10,12,13,15,18,19,21,22,25,27,29,30,32,34,&
+                    35,35 /)
+   row(1:ne) = (/ 2,4,4,6,5,7,8,7,9,8,10,11,10,12,11,12,13,13,13,14,14,15,&
+        16,17,16,18,17,18,18,19,20,20,21,21 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test automatic choice of shift within expand-refine cycle
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test automatic choice of shift, T2, refine=4..'
+   call setup_options(options)
+   options%amd_switch1 = 4
+   options%balance = 1.01
+   options%partition_method = 1
+   options%coarse_partition_method = 2
+   options%refinement_band = 0
+   options%stop_coarsening1 = 3
+   options%stop_coarsening2 = 3
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%print_level = 2
+   options%refinement = 4
+
+   n = 21
+   ne = 34
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1,2,3,5,7,8,10,12,13,15,18,19,21,22,25,27,29,30,32,34,&
+                    35,35 /)
+   row(1:ne) = (/ 2,4,4,6,5,7,8,7,9,8,10,11,10,12,11,12,13,13,13,14,14,15,&
+        16,17,16,18,17,18,18,19,20,20,21,21 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test automatic choice of shift within expand-refine cycle
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test automatic choice of shift, T2, refine=5..'
+   call setup_options(options)
+   options%amd_switch1 = 4
+   options%balance = 1.01
+   options%partition_method = 1
+   options%coarse_partition_method = 2
+   options%refinement_band = 0
+   options%stop_coarsening1 = 3
+   options%stop_coarsening2 = 3
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%print_level = 2
+   options%refinement = 5
+
+   n = 21
+   ne = 34
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1,2,3,5,7,8,10,12,13,15,18,19,21,22,25,27,29,30,32,34,&
+                    35,35 /)
+   row(1:ne) = (/ 2,4,4,6,5,7,8,7,9,8,10,11,10,12,11,12,13,13,13,14,14,15,&
+        16,17,16,18,17,18,18,19,20,20,21,21 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test automatic choice of shift within expand-refine cycle
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test automatic choice of shift, T2, refine=6..'
+   call setup_options(options)
+   options%amd_switch1 = 4
+   options%balance = 1.01
+   options%partition_method = 1
+   options%coarse_partition_method = 2
+   options%refinement_band = 0
+   options%stop_coarsening1 = 3
+   options%stop_coarsening2 = 3
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%print_level = 2
+   options%refinement = 6
+
+   n = 21
+   ne = 34
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1,2,3,5,7,8,10,12,13,15,18,19,21,22,25,27,29,30,32,34,&
+                    35,35 /)
+   row(1:ne) = (/ 2,4,4,6,5,7,8,7,9,8,10,11,10,12,11,12,13,13,13,14,14,15,&
+        16,17,16,18,17,18,18,19,20,20,21,21 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test automatic choice of shift within expand-refine cycle
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test automatic choice of shift, T2, refine=7..'
+   call setup_options(options)
+   options%amd_switch1 = 4
+   options%balance = 1.01
+   options%partition_method = 1
+   options%coarse_partition_method = 2
+   options%refinement_band = 0
+   options%stop_coarsening1 = 3
+   options%stop_coarsening2 = 3
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%print_level = 2
+   options%refinement = 7
+
+   n = 21
+   ne = 34
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1,2,3,5,7,8,10,12,13,15,18,19,21,22,25,27,29,30,32,34,&
+                    35,35 /)
+   row(1:ne) = (/ 2,4,4,6,5,7,8,7,9,8,10,11,10,12,11,12,13,13,13,14,14,15,&
+        16,17,16,18,17,18,18,19,20,20,21,21 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
 
 end subroutine test_refine
 
-
-
-
 ! *****************************************************************
-
 
 subroutine test_misc
    integer :: n, ne, i, j, k
