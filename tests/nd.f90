@@ -16,8 +16,8 @@ program main
    call test_errors
    call test_input
    call test_dense
+   call test_halflevelset
    stop
-   call test_halflevelset(ok)
    if(.not. ok) nerror = nerror + 1
    call test_levelset(ok)
    if(.not. ok) nerror = nerror + 1
@@ -699,175 +699,106 @@ end subroutine test_dense
 ! *****************************************************************
 
 
-  subroutine test_halflevelset(ok)
-   logical, intent(out) :: ok
-
-   integer :: test_count, testi_count, test
-   integer :: n, ne, st, i
+subroutine test_halflevelset
+   integer :: n, ne
    integer, allocatable, dimension(:) :: ptr, row, perm, seps
-   type (nd_options) :: options, options_orig
+   type (nd_options) :: options
    type (nd_inform) :: info
 
-   ok = .true.
-   testi_count = 0
-   test_count = 0
-
+   write (*, '()')
+   write (*, '(a)') "****************************************"
+   write (*, '(a)') "*   Testing Half level-set method     *"
+   write (*, '(a)') "****************************************"
 
    ! --------------------------------------
-   ! Test Ashcraft method
+   ! Test Half level-set (Ashcraft) method
    ! --------------------------------------
-
-   test = 1
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****Ashcraft test ', test, ' ***'
-   n = 10
-   ne = 14
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
-   ptr(1:n+1) = (/ 1, 3, 5, 7, 9, 11, 12, 13, 14, 15, 15 /)
-   row(1:ne) = (/ 2, 7, 7, 3, 4, 8, 5, 9, 6, 10, 10, 8, 9, 10 /)
-
+   write (*, '(a)', advance="no") &
+      ' * Test 1.......................................'
+   call setup_options(options)
    options%amd_switch1 = 5
    options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
-   do i = 0, 2
-     options%print_level = i
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
+   options%print_level = 2
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=3) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   n = 10
+   ne = 14
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 7, 9, 11, 12, 13, 14, 15, 15 /)
+   row(1:ne) = (/ 2, 7, 7, 3, 4, 8, 5, 9, 6, 10, 10, 8, 9, 10 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
    ! Test Ashcraft method
    ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test 2.......................................'
+   call setup_options(options)
+   options%amd_switch1 = 2
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
 
-   test = 2
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****Ashcraft test ', test, ' ***'
    n = 10
    ne = 15
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
    ptr(1:n+1) = (/ 1, 4, 6, 8, 9, 10, 11, 13, 15, 16, 16 /)
    row(1:ne) = (/ 2, 3, 4, 3, 5, 4, 8, 6, 7, 9, 8, 10, 9, 10, 10 /)
 
-   options%amd_switch1 = 2
-   options%partition_method = 0
-   options%coarse_partition_method = 1
-   options%amd_call = 2
-   do i = 0, 0
-     options%print_level = i
-     call nd_order(0,n,ptr,row,perm,options,info)
-     if (info%flag>=0) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
+   call nd_order(0,n,ptr,row,perm,options,info)
+   call check_success(n, perm, info)
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=1) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
    ! Test Ashcraft method
    ! --------------------------------------
-
-   test = 3
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****Ashcraft test ', test, ' ***'
-   n = 13
-   ne = 16
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
-   ptr(1:n+1) = (/ 1, 2, 4, 6, 8, 10, 12, 13, 13, 14, 14, 16, 17, 17 /)
-   row(1:ne) = (/ 2, 3, 4, 4, 11, 5, 6, 7, 8, 9, 10, 8, 10, 12, 13, 13 /)
-
+   write (*, '(a)', advance="no") &
+      ' * Test 3.......................................'
+   call setup_options(options)
    options%amd_switch1 = 2
    options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
-   do i = 0, 0
-     options%print_level = i
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=1) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   n = 13
+   ne = 16
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 2, 4, 6, 8, 10, 12, 13, 13, 14, 14, 16, 17, 17 /)
+   row(1:ne) = (/ 2, 3, 4, 4, 11, 5, 6, 7, 8, 9, 10, 8, 10, 12, 13, 13 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
    ! Test Ashcraft method
    ! --------------------------------------
-
-   test = 4
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****Ashcraft test ', test, ' ***'
-   n = 13
-   ne = 16
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
-   ptr(1:n+1) = (/ 1, 2, 4, 6, 8, 10, 12, 13, 13, 14, 14, 16, 17, 17 /)
-   row(1:ne) = (/ 2, 3, 4, 4, 11, 5, 6, 7, 8, 9, 10, 8, 10, 12, 13, 13 /)
-
+   write (*, '(a)', advance="no") &
+      ' * Test 4.......................................'
+   call setup_options(options)
    options%amd_switch1 = 2
    options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%balance = 20.0
-   do i = 0, 0
-     options%print_level = i
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=1) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   n = 13
+   ne = 16
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 2, 4, 6, 8, 10, 12, 13, 13, 14, 14, 16, 17, 17 /)
+   row(1:ne) = (/ 2, 3, 4, 4, 11, 5, 6, 7, 8, 9, 10, 8, 10, 12, 13, 13 /)
 
-   return
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
 
-10    write (*,'(a,i4)') 'Allocation error during test section ', test
-   return
-
-20    write (*,'(a,i4)') 'Deallocation error during test section ', test
+   deallocate (ptr,row,perm,seps)
 
  end subroutine test_halflevelset
 
