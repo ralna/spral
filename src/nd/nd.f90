@@ -784,7 +784,7 @@ subroutine nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level, &
       call multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight,         &
          sumweight, work(partition_ptr+1:partition_ptr+a_n), a_n1, a_n2,   &
          a_weight_1, a_weight_2, a_weight_sep, options, info%flag, lwork,  &
-         work(work_ptr+1:work_ptr+lwork), options%stop_coarsening2, grid)
+         work(work_ptr+1:work_ptr+lwork), grid)
    end if
 
    ! If S is empty, return and caller will handle as special case
@@ -2447,7 +2447,7 @@ end subroutine amd_order_one
 
 subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
     partition, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, options, &
-    info1, lwork, work, stop_coarsening2, grid)
+    info1, lwork, work, grid)
 
   integer, intent(in) :: a_n ! order of matrix being partitioned
   integer, intent(in) :: a_ne ! no. entries in matrix being partitioned
@@ -2468,9 +2468,6 @@ subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
   ! 9a_n + sumweight
   integer, intent(out) :: work(lwork) ! work array
   integer, intent(inout) :: info1
-  integer, intent(in) :: stop_coarsening2 ! no. levels in the
-  ! multilevel grid (default
-  ! 10)
 
   type (nd_multigrid), intent(inout) :: grid ! the multilevel of
   ! graphs (matrices)
@@ -2548,7 +2545,7 @@ subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
 
   ! initialise mglevel_cur to the maximum number of levels
   ! allowed for this bisection
-  mglevel_cur = stop_coarsening2
+  mglevel_cur = options%stop_coarsening2
   call multilevel(grid,options,sumweight,mglevel_cur,mp,print_level, &
     lwork,work,info1)
 
