@@ -709,77 +709,69 @@ end subroutine nd_level_struct
 ! Given two level structures, calculate the difference in each node's distance
 ! from the start and end node
 !
-subroutine nd_distance(a_n, num_levels_nend, level_ptr_nend, level_nend, &
-      num_levels_nstrt, level_ptr_nstrt, level_nstrt, distance_ptr, distance)
+subroutine nd_distance(a_n, num_levels1, level_ptr1, level1, &
+      num_levels2, level_ptr2, level2, distance_ptr, distance)
    integer, intent(in) :: a_n
-   integer, intent(in) :: num_levels_nend ! number of levels with root nend
-   integer, intent(in) :: level_ptr_nend(a_n) ! level_ptr(i) contains
-      ! position in level that entries for level i start (root = nend)
-   integer, intent(in) :: level_nend(a_n) ! Contains lists of rows
-      ! according to the level set that they are in (root = nend)
-   integer, intent(in) :: num_levels_nstrt ! no. of levels with root nstrt
-   integer, intent(inout) :: level_ptr_nstrt(a_n) ! level_ptr(i) contains
-      ! position in level that entries for level i start (root = nstrt)
-      ! Reused during subroutine
-   integer, intent(in) :: level_nstrt(a_n) ! Contains lists of rows
-      ! according to the level set that they are in (root = nstrt)
-   integer, intent(out) :: distance_ptr(2*a_n-1) ! distance(i) contains
-      ! position in distance where entries with distance i-a_n
+   integer, intent(in) :: num_levels1 ! number of levels with root 1
+   integer, intent(in) :: level_ptr1(a_n) ! level_ptr(i) contains
+      ! position in level that entries for level i start (root = 1)
+   integer, intent(in) :: level1(a_n) ! Contains lists of rows
+      ! according to the level set that they are in (root = 1)
+   integer, intent(in) :: num_levels2 ! no. of levels with root nstrt
+   integer, intent(inout) :: level_ptr2(a_n) ! level_ptr(i) contains
+      ! position in level that entries for level i start (root = 2)
+      ! Destroyed by subroutine
+   integer, intent(in) :: level2(a_n) ! Contains lists of rows
+      ! according to the level set that they are in (root = 2)
+   integer, intent(out) :: distance_ptr(-(a_n-1):a_n-1) ! distance(i) set to
+      ! position in distance where entries with distance i start (can be -ive)
    integer, intent(out) :: distance(a_n) ! Contains lists of rows ordered
       ! according to their distance
 
    integer :: j, k
-   integer :: dptr ! used as offset into distance_ptr
    integer :: lev ! stores current level
 
-   dptr = a_n
-   distance_ptr(dptr+1-a_n:dptr+a_n-1) = 0
+   distance_ptr(-(a_n-1):a_n-1) = 0
    distance(1:a_n) = 0
 
    ! set distance(i) to hold the level that i belongs to in the structure
-   ! rooted at nend (= distance from end node + 1)
-   do lev = 1, num_levels_nend - 1
-      do j = level_ptr_nend(lev), level_ptr_nend(lev+1) - 1
-         distance(level_nend(j)) = lev
+   ! rooted at node 1 (= distance from node1 + 1)
+   do lev = 1, num_levels1
+      do j = level_ptr1(lev), nd_get_ptr(lev+1, num_levels1, a_n, level_ptr1)-1
+         distance(level1(j)) = lev
       end do
    end do
-   do j = level_ptr_nend(num_levels_nend), a_n
-      distance(level_nend(j)) = num_levels_nend
-   end do
 
-   ! now consider level structure rooted at start node
-   do lev = 1, num_levels_nstrt - 1
-      do j = level_ptr_nstrt(lev), level_ptr_nstrt(lev+1) - 1
-         distance(level_nstrt(j)) = distance(level_nstrt(j)) - lev
-         k = distance(level_nstrt(j))
-         distance_ptr(dptr+k) = distance_ptr(dptr+k) + 1
+   ! now consider level structure rooted at node 2:
+   !  * calculate difference between levels
+   !  * count number at each distance
+   do lev = 1, num_levels2
+      do j = level_ptr2(lev), nd_get_ptr(lev+1, num_levels2, a_n, level_ptr2)-1
+         distance(level2(j)) = distance(level2(j)) - lev
+         k = distance(level2(j))
+         distance_ptr(k) = distance_ptr(k) + 1
       end do
    end do
-   do j = level_ptr_nstrt(num_levels_nstrt), a_n
-      distance(level_nstrt(j)) = distance(level_nstrt(j)) - lev
-      k = distance(level_nstrt(j))
-      distance_ptr(dptr+k) = distance_ptr(dptr+k) + 1
-   end do
 
-   ! Copy distance into level_ptr_nstrt to save memory
-   level_ptr_nstrt(1:a_n) = distance(1:a_n)
+   ! Copy distance into level_ptr2 to save memory
+   level_ptr2(1:a_n) = distance(1:a_n)
 
    ! Set distance_ptr(i) to point one place to the right of where entries
    ! with distance i will be
-   do j = 1 - a_n, a_n - 1
-      if (distance_ptr(dptr+j).gt.0) exit
-      distance_ptr(dptr+j) = 1
+   do j = -(a_n-1), a_n-1
+      if (distance_ptr(j).gt.0) exit
+      distance_ptr(j) = 1
    end do
-   distance_ptr(dptr+j) = distance_ptr(dptr+j) + 1
+   distance_ptr(j) = distance_ptr(j) + 1
    do k = j + 1, a_n - 1
-      distance_ptr(dptr+k) = distance_ptr(dptr+k) + distance_ptr(dptr+k-1)
+      distance_ptr(k) = distance_ptr(k) + distance_ptr(k-1)
    end do
 
    ! Set up lists of rows with same value of distance
    do j = 1, a_n
-      k = level_ptr_nstrt(j)
-      distance_ptr(dptr+k) = distance_ptr(dptr+k) - 1
-      distance(distance_ptr(dptr+k)) = j
+      k = level_ptr2(j)
+      distance_ptr(k) = distance_ptr(k) - 1
+      distance(distance_ptr(k)) = j
    end do
 end subroutine nd_distance
 
