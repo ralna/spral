@@ -1,3 +1,5 @@
+! FIXME: Actually test stuff predicted is actually happening. :(
+
 program main
    use spral_nd
    implicit none
@@ -20,9 +22,9 @@ program main
    call test_levelset
    call test_shift
    call test_multilevel
+   call test_amd
+   call test_misc
    stop
-   call test_amd(ok)
-   call test_misc(ok)
    call test_refine(ok)
    call test_fm(ok)
 
@@ -362,7 +364,6 @@ subroutine test_errors
    integer, allocatable, dimension(:) :: ptr, row, perm, seps
    type (nd_options) :: options
    type (nd_inform) :: info
-
 
    write (*, '()')
    write (*, '(a)') "****************************************"
@@ -2108,100 +2109,62 @@ end subroutine test_multilevel
 ! *****************************************************************
 
 
-  subroutine test_amd(ok)
-   logical, intent(out) :: ok
-
-   integer :: test_count, testi_count, test
-   integer :: n, ne, st, i
+subroutine test_amd
+   integer :: n, ne
    integer, allocatable, dimension(:) :: ptr, row, perm, seps
-   type (nd_options) :: options, options_orig
+   type (nd_options) :: options
    type (nd_inform) :: info
 
-   ok = .true.
-   testi_count = 0
-   test_count = 0
+   write (*, '()')
+   write (*, '(a)') "****************************************"
+   write (*, '(a)') "*   Testing AMD                        *"
+   write (*, '(a)') "****************************************"
 
    ! --------------------------------------
    ! Call AMD with no nested
    ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test AMD, non nested, Test 1..................'
+   call setup_options(options)
+   options%amd_call = 40
+   options%print_level = 2
 
-   test = 1
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****AMD test ', test, '****'
    n = 31
    ne = 49
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
    ptr(1:n+1) = (/ 1, 4, 6, 8, 10, 12, 13, 15, 16, 18, 20, 21, 22, 25, 26, &
      27, 29, 31, 32, 34, 36, 38, 39, 40, 42, 44, 45, 47, 48, 49, 50, 50 /)
    row(1:ne) = (/ 2, 3, 4, 4, 5, 6, 7, 7, 8, 8, 9, 10, 10, 11, 11, 11, 12, &
      13, 14, 14, 14, 15, 17, 18, 18, 16, 17, 19, 20, 21, 21, 20, 22, 23, &
      24, 24, 25, 23, 26, 26, 27, 27, 28, 29, 29, 30, 30, 31, 31 /)
 
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
 
-   options%amd_call = 40
-   do i = 2, 2
-     options%print_level = i
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
-
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=1) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
    ! Call AMD with no nested
    ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test AMD, non nested, Test 2..................'
+   call setup_options(options)
+   options%amd_call = 40
+   options%print_level = 2
 
-   test = 2
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****AMD test ', test, '****'
    n = 31
    ne = 1
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
    ptr(1) = 1
    ptr(2:n+1) = 2
    row(1:ne) = (/ 2 /)
 
-   options%amd_call = 40
-   do i = 2, 2
-     options%print_level = i
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=1) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   deallocate (ptr,row,perm,seps)
 
-   return
-
-10    write (*,'(a,i4)') 'Allocation error during test section ', test
-   return
-
-20    write (*,'(a,i4)') 'Deallocation error during test section ', test
-
- end subroutine test_amd
+end subroutine test_amd
 
 ! *****************************************************************
 
@@ -2876,7 +2839,7 @@ end subroutine test_multilevel
 
 20    write (*,'(a,i4)') 'Deallocation error during test section ', test
 
- end subroutine test_refine
+end subroutine test_refine
 
 
 
@@ -2884,29 +2847,30 @@ end subroutine test_multilevel
 ! *****************************************************************
 
 
-  subroutine test_misc(ok)
-   logical, intent(out) :: ok
-
-   integer :: test_count, testi_count, test
-   integer :: n, ne, st, i, j, k
+subroutine test_misc
+   integer :: n, ne, i, j, k
    integer, allocatable, dimension(:) :: ptr, row, perm, seps
-   type (nd_options) :: options, options_orig
+   type (nd_options) :: options
    type (nd_inform) :: info
 
-   ok = .true.
-   testi_count = 0
-   test_count = 0
+   write (*, '()')
+   write (*, '(a)') "****************************************"
+   write (*, '(a)') "*   Testing Miscellaneous              *"
+   write (*, '(a)') "****************************************"
+
    ! --------------------------------------
    ! Test diagonal submatrix - not diag!!!!
    ! --------------------------------------
-   test = 1
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****Misc test ', test, '****'
+   write (*, '(a)', advance="no") &
+      ' * Test diagonal *submatrix*.....................'
+   call setup_options(options)
+   options%amd_switch1 = 2
+   options%amd_call = 2
+   options%print_level = 1
+
    n = 10
    ne = 10
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
    ptr(1:n-2) = (/ (i,i=1,n-2) /)
    ptr(n-1) = ptr(n-2) + 2
    ptr(n:n+1) = ne + 1
@@ -2914,124 +2878,92 @@ end subroutine test_multilevel
    row(ne-1) = n - 1
    row(ne) = n
 
-   options%amd_switch1 = 2
-   options%amd_call = 2
-   do i = 1, 1
-     options%print_level = i
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0 .and. info%nzsuper==16) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps, expect_nzsuper=16)
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=1) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
-
-
-
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
    ! Test independent component detection
    ! --------------------------------------
-   test = 2
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****Misc test ', test, '****'
+   write (*, '(a)', advance="no") &
+      ' * Test independent component detection, CPM=1...'
+   call setup_options(options)
+   options%amd_switch1 = 2
+   options%amd_call = 2
+   options%print_level = 2
+   options%coarse_partition_method = 1
+
    n = 5
    ne = 6
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
    ptr(1:n+1) = (/ 1, 2, 3, 4, 6, 7 /)
    row(1:ne) = (/ 2, 1, 4, 3, 5, 4 /)
 
+   call nd_order(1,n,ptr,row,perm,options,info)
+   call check_success(n, perm, info)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test independent component detection
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test independent component detection, CPM=2...'
+   call setup_options(options)
    options%amd_switch1 = 2
    options%amd_call = 2
-   do i = 0, 2
-     options%print_level = i
-     options%coarse_partition_method = 2
-     call nd_order(1,n,ptr,row,perm,options,info)
-     if (info%flag>=0) testi_count = testi_count + 1
+   options%print_level = 2
+   options%coarse_partition_method = 2
 
-     options%coarse_partition_method = 1
-     call nd_order(1,n,ptr,row,perm,options,info)
-     if (info%flag>=0) testi_count = testi_count + 1
+   n = 5
+   ne = 6
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 2, 3, 4, 6, 7 /)
+   row(1:ne) = (/ 2, 1, 4, 3, 5, 4 /)
 
-   end do
-   call reset_options(options_orig,options)
+   call nd_order(1,n,ptr,row,perm,options,info)
+   call check_success(n, perm, info)
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=6) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
-
-
-
-
-
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
    ! Test for supervariable detection turned off
    ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test supervariable detection disabled.........'
+   call setup_options(options)
+   options%amd_switch1 = 2
+   options%amd_call = 2
+   options%find_supervariables = .false.
 
-   test = 3
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****Misc test ', test, '****'
    n = 10
    ne = 19
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
    ptr(1:n) = (/ (2*i-1,i=1,n) /)
    ptr(n+1) = ne + 1
    row(1:ne) = (/ 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, &
      10 /)
 
-   options%amd_switch1 = 2
-   options%amd_call = 2
-   options%find_supervariables = .false.
-   do i = 0, 0
-     options%print_level = i
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0 .and. info%nzsuper==18) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps, expect_nzsuper=18)
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=1) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
    ! Test for full matrix
    ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test full matrix..............................'
+   call setup_options(options)
+   options%amd_switch1 = 2
+   options%amd_call = 2
+   options%find_supervariables = .false.
+   options%print_level = 2
 
-   test = 4
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****Misc test ', test, '****'
    n = 10
    ne = 45
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
    ptr(1) = 1
    do i = 2, n
      ptr(i) = ptr(i-1) + n - i + 1
@@ -3046,127 +2978,95 @@ end subroutine test_multilevel
      end do
    end do
 
-   options%amd_switch1 = 2
-   options%amd_call = 2
-   options%find_supervariables = .false.
-   do i = 2, 2
-     options%print_level = i
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0 .and. info%nzsuper==90) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps, expect_nzsuper=90)
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=1) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
    ! Test cost function cost2
    ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test cost function 2..........................'
+   call setup_options(options)
+   options%amd_switch1 = 2
+   options%amd_call = 2
+   options%find_supervariables = .false.
+   options%cost_function = 2
 
-   test = 5
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****Misc test ', test, '****'
    n = 10
    ne = 19
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
    ptr(1:n) = (/ (2*i-1,i=1,n) /)
    ptr(n+1) = ne + 1
    row(1:ne) = (/ 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, &
      10 /)
 
-   options%amd_switch1 = 2
-   options%amd_call = 2
-   options%find_supervariables = .false.
-   options%cost_function = 2
-   do i = 0, 0
-     options%print_level = i
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0 .and. info%nzsuper==18) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps, expect_nzsuper=18)
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=1) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
    ! Test for no separator return, partition 2 larger than amd_switch1 but
-   ! partition
-   ! 1 equal to amd_switch1
+   ! partition 1 equal to amd_switch1
    ! --------------------------------------
-
-   test = 6
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****Misc test ', test, '****'
-   n = 14
-   ne = 16
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
-   ptr(1:n+1) = (/ 1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 14, 15, 16, 17, 17 /)
-   row(1:ne) = (/ 2, 3, 4, 5, 6, 7, 8, 8, 8, 9, 10, 11, 12, 13, 13, 14 /)
-
+   write (*, '(a)', advance="no") &
+      ' * Test no sep, p2>amd_switch1, p1==amd_switch1..'
+   call setup_options(options)
    options%amd_switch1 = 6
    options%amd_call = 2
    options%find_supervariables = .false.
    options%partition_method = 0
-   do i = 2, 2
-     options%print_level = i
-     call nd_order(0,n,ptr,row,perm,options,info)
-     if (info%flag>=0 .and. info%nzsuper==32) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
+   options%print_level = 2
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=1) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   n = 14
+   ne = 16
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 14, 15, 16, 17, 17 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 6, 7, 8, 8, 8, 9, 10, 11, 12, 13, 13, 14 /)
 
+   call nd_order(0,n,ptr,row,perm,options,info)
+   call check_success(n, perm, info, expect_nzsuper=32)
 
-
-
-
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
    ! Test matrix extraction involving end row
    ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test matrix extraction w end row, Test 1......'
+   call setup_options(options)
+   options%amd_switch1 = 7
+   options%stop_coarsening1 = 2
+   options%min_reduction = 0.5
+   options%balance = 1.0
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%max_improve_cycles = 0
+   options%print_level = 2
+   options%refinement = 7
 
-   test = 7
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****Misc test ', test, '****'
    n = 14
    ne = 26
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
    ptr(1:n+1) = (/ 1, 3, 6, 8, 10, 13, 17, 19, 23, 24, 26, 27, 27, 27, &
      27 /)
    row(1:ne) = (/ 2, 3, 3, 4, 5, 5, 14, 5, 13, 6, 13, 14, 8, 9, 13, 14, 10, &
      13, 9, 10, 11, 13, 11, 11, 12, 12 /)
 
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test matrix extraction involving end row
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test matrix extraction w end row, Test 2......'
+   call setup_options(options)
    options%amd_switch1 = 7
    options%stop_coarsening1 = 2
    options%min_reduction = 0.5
@@ -3176,86 +3076,27 @@ end subroutine test_multilevel
    options%amd_call = 2
    options%max_improve_cycles = 0
    options%print_level = 2
-   do i = 0, 0
-     options%refinement = 7
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
+   options%refinement = 7
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=1) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
-
-
-
-   ! --------------------------------------
-   ! Test matrix extraction involving end row
-   ! --------------------------------------
-
-   test = 8
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****Misc test ', test, '****'
    n = 16
    ne = 31
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
    ptr(1:n+1) = (/ 1, 3, 6, 8, 10, 13, 14, 16, 21, 25, 27, 29, 31, 31, 31, &
      32, 32 /)
    row(1:ne) = (/ 2, 3, 3, 4, 5, 5, 6, 5, 15, 6, 15, 16, 16, 11, 15, 9, 11, &
      12, 15, 16, 10, 12, 13, 16, 16, 13, 12, 14, 13, 14, 16 /)
 
-   options%amd_switch1 = 7
-   options%stop_coarsening1 = 2
-   options%min_reduction = 0.5
-   options%balance = 1.0
-   options%partition_method = 0
-   options%coarse_partition_method = 1
-   options%amd_call = 2
-   options%max_improve_cycles = 0
-   options%print_level = 2
-   do i = 0, 0
-     options%refinement = 7
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=1) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
    ! Test no balanced partition found so switch to multilevel
    ! --------------------------------------
-
-   test = 9
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****Misc test ', test, '****'
-   n = 18
-   ne = 41
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
-   ptr(1:n+1) = (/ 1,2,3,8,10,12,15,19,21,24,28,30,33,37,39,40,42,42,42 /)
-   row(1:ne) = (/ 2,3,4,5,6,7,8,6,7,7,8,7,9,10,8,9,10,11,10,11,10,12,13,11,&
-        12,13,14,13,14,13,15,16,14,15,16,17,16,17,16,17,18 /)
-
+   write (*, '(a)', advance="no") &
+      ' * Test no balanced partition so switch to ml....'
+   call setup_options(options)
    options%amd_switch1 = 7
    options%stop_coarsening1 = 2
    options%min_reduction = 0.5
@@ -3265,33 +3106,20 @@ end subroutine test_multilevel
    options%amd_call = 2
    options%max_improve_cycles = 0
    options%print_level = 2
-   do i = 0, 0
-     options%refinement = 7
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
+   options%refinement = 7
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=1) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   n = 18
+   ne = 41
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1,2,3,8,10,12,15,19,21,24,28,30,33,37,39,40,42,42,42 /)
+   row(1:ne) = (/ 2,3,4,5,6,7,8,6,7,7,8,7,9,10,8,9,10,11,10,11,10,12,13,11,&
+        12,13,14,13,14,13,15,16,14,15,16,17,16,17,16,17,18 /)
 
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
 
-   return
-
-10    write (*,'(a,i4)') 'Allocation error during test section ', test
-   return
-
-20    write (*,'(a,i4)') 'Deallocation error during test section ', test
-
- end subroutine test_misc
+   deallocate (ptr,row,perm,seps)
+end subroutine test_misc
 
 
 
