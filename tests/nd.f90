@@ -19,8 +19,8 @@ program main
    call test_halflevelset
    call test_levelset
    call test_shift
+   call test_multilevel
    stop
-   call test_multigrid(ok)
    call test_amd(ok)
    call test_misc(ok)
    call test_refine(ok)
@@ -870,7 +870,7 @@ subroutine test_shift
 
    write (*, '()')
    write (*, '(a)') "****************************************"
-   write (*, '(a)') "*   Testing Shift refinement           *"
+   write (*, '(a)') "*   Testing Shift Refinement           *"
    write (*, '(a)') "****************************************"
 
    ! --------------------------------------
@@ -1160,37 +1160,23 @@ end subroutine test_shift
 ! *****************************************************************
 
 
-  subroutine test_multigrid(ok)
-   logical, intent(out) :: ok
-
-   integer :: test_count, testi_count, test
-   integer :: n, ne, st, i, j, k
+subroutine test_multilevel
+   integer :: n, ne, i, j, k
    integer, allocatable, dimension(:) :: ptr, row, perm, seps
-   type (nd_options) :: options, options_orig
+   type (nd_options) :: options
    type (nd_inform) :: info
 
-   ok = .true.
-   testi_count = 0
-   test_count = 0
+   write (*, '()')
+   write (*, '(a)') "****************************************"
+   write (*, '(a)') "*   Testing Multilevel                 *"
+   write (*, '(a)') "****************************************"
 
    ! --------------------------------------
-   ! Test multigrid, 2-sided partitioning
+   ! Test multilevel, 2-sided partitioning
    ! --------------------------------------
-
-   test = 1
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****Multigrid  test ', test, '****'
-   n = 31
-   ne = 49
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
-   ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
-     27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
-   row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
-     14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
-     24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
-
+   write (*, '(a)', advance="no") &
+      ' * Test Multilevel, 2-sided......................'
+   call setup_options(options)
    options%amd_switch1 = 5
    options%balance = 1.05
    options%partition_method = 1
@@ -1198,43 +1184,28 @@ end subroutine test_shift
    options%coarse_partition_method = 2
    options%amd_call = 2
    options%stop_coarsening1 = 5
-   do i = 0, 2
-     options%print_level = i
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
+   options%print_level = 2
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=3) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
-
-
-   ! --------------------------------------
-   ! Test multigrid, 1-sided partitioning
-   ! --------------------------------------
-
-   test = 2
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****Multigrid  test ', test, '****'
    n = 31
    ne = 49
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
    ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
      27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
    row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! -------------------------------------------------------
+   ! Test multilevel, 1-sided partitioning, common neighbours
+   ! -------------------------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test Multilevel, 1-sided, matching=0..........'
+   call setup_options(options)
    options%amd_switch1 = 5
    options%balance = 1.05
    options%partition_method = 1
@@ -1242,45 +1213,89 @@ end subroutine test_shift
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%stop_coarsening1 = 5
-   do i = 0, 2
-     do j = 0, 2
-       options%print_level = i
-       options%matching = j
-       call nd_order(0,n,ptr,row,perm,options,info,seps)
-       if (info%flag>=0) testi_count = testi_count + 1
-     end do
-   end do
-   call reset_options(options_orig,options)
+   options%print_level = 2
+   options%matching = 0
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=9) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
-
-   ! --------------------------------------
-   ! Test multigrid coarsening
-   ! --------------------------------------
-
-   test = 3
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****Multigrid  test ', test, '****'
    n = 31
    ne = 49
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
    ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
      27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
    row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! -------------------------------------------------------
+   ! Test multilevel, 1-sided partitioning, heavy edge
+   ! -------------------------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test Multilevel, 1-sided, matching=1..........'
+   call setup_options(options)
+   options%amd_switch1 = 5
+   options%balance = 1.05
+   options%partition_method = 1
+   options%ml_call = 4
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%stop_coarsening1 = 5
+   options%print_level = 2
+   options%matching = 1
+
+   n = 31
+   ne = 49
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
+     27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
+     14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
+     24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! -------------------------------------------------------
+   ! Test multilevel, 1-sided partitioning, heavy edge (matching=2)
+   ! -------------------------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test Multilevel, 1-sided, matching=2..........'
+   call setup_options(options)
+   options%amd_switch1 = 5
+   options%balance = 1.05
+   options%partition_method = 1
+   options%ml_call = 4
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%stop_coarsening1 = 5
+   options%print_level = 2
+   options%matching = 2
+
+   n = 31
+   ne = 49
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
+     27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
+     14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
+     24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test multilevel coarsening
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test Multilevel Coarsening, Test 1............'
+   call setup_options(options)
    options%amd_switch1 = 5
    options%balance = 1.05
    options%partition_method = 1
@@ -1288,43 +1303,28 @@ end subroutine test_shift
    options%coarse_partition_method = 2
    options%amd_call = 2
    options%stop_coarsening1 = 5
-   do i = 0, 2
-     options%print_level = i
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
+   options%print_level = 2
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=3) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
-
-
-   ! --------------------------------------
-   ! Test multigrid coarsening
-   ! --------------------------------------
-
-   test = 4
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****Multigrid  test ', test, '****'
    n = 31
    ne = 49
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
    ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
      27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
    row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test multilevel coarsening, common neighbours
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test Multilevel Coarsening, matching=0........'
+   call setup_options(options)
    options%amd_switch1 = 5
    options%balance = 1.05
    options%partition_method = 1
@@ -1332,44 +1332,59 @@ end subroutine test_shift
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%stop_coarsening1 = 5
-   do i = 0, 2
-     do j = 0, 2
-       options%print_level = i
-       options%matching = j
-       call nd_order(0,n,ptr,row,perm,options,info,seps)
-       if (info%flag>=0) testi_count = testi_count + 1
-     end do
-   end do
-   call reset_options(options_orig,options)
+   options%matching = 0
+   options%print_level = 2
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=9) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   n = 31
+   ne = 49
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
+     27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
+     14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
+     24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
-   ! Test multigrid coarsening
+   ! Test multilevel coarsening, heavy-edge
    ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test Multilevel Coarsening, matching=1........'
+   call setup_options(options)
+   options%amd_switch1 = 5
+   options%balance = 1.05
+   options%partition_method = 1
+   options%ml_call = 4
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%stop_coarsening1 = 5
+   options%matching = 1
+   options%print_level = 2
 
-   test = 5
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****Multigrid  test ', test, '****'
-   n = 12
-   ne = 18
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
+   n = 31
+   ne = 49
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
+     27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
+     14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
+     24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   ptr(1:n+1) = (/ 1, 3, 4, 6, 7, 9, 10, 12, 13, 16, 18, 19, 19 /)
-   row(1:ne) = (/ 2, 9, 9, 4, 10, 10, 6, 11, 11, 8, 12, 12, 10, 11, 12, 11, &
-     12, 12 /)
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
 
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test multilevel coarsening
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test Multilevel Coarsening, Test 2............'
+   call setup_options(options)
    options%amd_switch1 = 5
    options%balance = 1.05
    options%partition_method = 1
@@ -1379,43 +1394,27 @@ end subroutine test_shift
    options%stop_coarsening1 = 5
    options%min_reduction = 0.4
    options%matching = 1
-   do i = 0, 2
-     options%print_level = i
-     options%matching = j
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
+   options%print_level = 2
+   options%matching = 2
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=3) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   n = 12
+   ne = 18
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 4, 6, 7, 9, 10, 12, 13, 16, 18, 19, 19 /)
+   row(1:ne) = (/ 2, 9, 9, 4, 10, 10, 6, 11, 11, 8, 12, 12, 10, 11, 12, 11, &
+     12, 12 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
-   ! Test multigrid refinement
+   ! Test multilevel refinement
    ! --------------------------------------
-
-   test = 6
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****Multigrid  test ', test, '****'
-   n = 31
-   ne = 49
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
-   ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
-     27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
-   row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
-     14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
-     24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
-
+   write (*, '(a)', advance="no") &
+      ' * Test Multilevel refinement=0, matching=0......'
+   call setup_options(options)
    options%amd_switch1 = 5
    options%balance = 1.05
    options%partition_method = 1
@@ -1423,136 +1422,479 @@ end subroutine test_shift
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%stop_coarsening1 = 5
-   do i = 0, 7
-     do j = 0, 2
-       options%refinement = i
-       options%matching = j
-       call nd_order(0,n,ptr,row,perm,options,info,seps)
-       if (info%flag>=0) testi_count = testi_count + 1
-     end do
-   end do
-   call reset_options(options_orig,options)
+   options%refinement = 0
+   options%matching = 0
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=24) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   n = 31
+   ne = 49
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
+     27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
+     14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
+     24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
-   ! Test no. multigrid - automatic choice refinement
+   ! Test multilevel refinement
    ! --------------------------------------
-
-   test = 7
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****Multigrid  test ', test, '****'
-   n = 9
-   ne = 19
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
-   ptr(1:n+1) = (/ 1, 3, 5, 6, 10, 14, 17, 19, 20, 20 /)
-   row(1:ne) = (/ 2, 3, 3, 4, 4, 5, 6, 7, 8, 6, 7, 8, 9, 7, 8, 9, 8, 9, &
-     9 /)
-
-   options%amd_switch1 = 4
-   options%balance = 1.0
-   options%partition_method = 0
-   options%coarse_partition_method = 1
-   options%amd_call = 2
-   options%stop_coarsening1 = 4
-   options%print_level = 2
-   do i = 0, 7
-     do j = 0, 2
-       options%refinement = 3
-       options%matching = j
-       call nd_order(0,n,ptr,row,perm,options,info,seps)
-       if (info%flag>=0) testi_count = testi_count + 1
-     end do
-   end do
-   call reset_options(options_orig,options)
-
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=24) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
-
-   ! --------------------------------------
-   ! Test multigrid - automatic choice refinement
-   ! --------------------------------------
-
-   test = 8
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****Multigrid  test ', test, '****'
-   n = 9
-   ne = 19
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
-   ptr(1:n+1) = (/ 1, 3, 5, 6, 10, 14, 17, 19, 20, 20 /)
-   row(1:ne) = (/ 2, 3, 3, 4, 4, 5, 6, 7, 8, 6, 7, 8, 9, 7, 8, 9, 8, 9, &
-     9 /)
-
-   options%amd_switch1 = 4
-   options%balance = 1.0
+   write (*, '(a)', advance="no") &
+      ' * Test Multilevel refinement=0, matching=1......'
+   call setup_options(options)
+   options%amd_switch1 = 5
+   options%balance = 1.05
    options%partition_method = 1
    options%ml_call = 4
    options%coarse_partition_method = 1
    options%amd_call = 2
-   options%stop_coarsening1 = 2
-   do i = 0, 7
-     do j = 0, 2
-       options%refinement = i
-       options%matching = j
-       call nd_order(0,n,ptr,row,perm,options,info,seps)
-       if (info%flag>=0) testi_count = testi_count + 1
-     end do
-   end do
-   call reset_options(options_orig,options)
+   options%stop_coarsening1 = 5
+   options%refinement = 0
+   options%matching = 1
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=24) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   n = 31
+   ne = 49
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
+     27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
+     14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
+     24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
 
+   deallocate (ptr,row,perm,seps)
 
+   ! --------------------------------------
+   ! Test multilevel refinement
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test Multilevel refinement=1, matching=0......'
+   call setup_options(options)
+   options%amd_switch1 = 5
+   options%balance = 1.05
+   options%partition_method = 1
+   options%ml_call = 4
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%stop_coarsening1 = 5
+   options%refinement = 1
+   options%matching = 0
+
+   n = 31
+   ne = 49
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
+     27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
+     14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
+     24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test multilevel refinement
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test Multilevel refinement=1, matching=1......'
+   call setup_options(options)
+   options%amd_switch1 = 5
+   options%balance = 1.05
+   options%partition_method = 1
+   options%ml_call = 4
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%stop_coarsening1 = 5
+   options%refinement = 1
+   options%matching = 1
+
+   n = 31
+   ne = 49
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
+     27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
+     14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
+     24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test multilevel refinement
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test Multilevel refinement=2, matching=0......'
+   call setup_options(options)
+   options%amd_switch1 = 5
+   options%balance = 1.05
+   options%partition_method = 1
+   options%ml_call = 4
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%stop_coarsening1 = 5
+   options%refinement = 2
+   options%matching = 0
+
+   n = 31
+   ne = 49
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
+     27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
+     14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
+     24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test multilevel refinement
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test Multilevel refinement=2, matching=1......'
+   call setup_options(options)
+   options%amd_switch1 = 5
+   options%balance = 1.05
+   options%partition_method = 1
+   options%ml_call = 4
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%stop_coarsening1 = 5
+   options%refinement = 2
+   options%matching = 1
+
+   n = 31
+   ne = 49
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
+     27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
+     14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
+     24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test multilevel refinement
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test Multilevel refinement=3, matching=0......'
+   call setup_options(options)
+   options%amd_switch1 = 5
+   options%balance = 1.05
+   options%partition_method = 1
+   options%ml_call = 4
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%stop_coarsening1 = 5
+   options%refinement = 3
+   options%matching = 0
+
+   n = 31
+   ne = 49
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
+     27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
+     14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
+     24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test multilevel refinement
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test Multilevel refinement=3, matching=1......'
+   call setup_options(options)
+   options%amd_switch1 = 5
+   options%balance = 1.05
+   options%partition_method = 1
+   options%ml_call = 4
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%stop_coarsening1 = 5
+   options%refinement = 3
+   options%matching = 1
+
+   n = 31
+   ne = 49
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
+     27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
+     14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
+     24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test multilevel refinement
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test Multilevel refinement=4, matching=0......'
+   call setup_options(options)
+   options%amd_switch1 = 5
+   options%balance = 1.05
+   options%partition_method = 1
+   options%ml_call = 4
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%stop_coarsening1 = 5
+   options%refinement = 4
+   options%matching = 0
+
+   n = 31
+   ne = 49
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
+     27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
+     14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
+     24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test multilevel refinement
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test Multilevel refinement=4, matching=1......'
+   call setup_options(options)
+   options%amd_switch1 = 5
+   options%balance = 1.05
+   options%partition_method = 1
+   options%ml_call = 4
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%stop_coarsening1 = 5
+   options%refinement = 4
+   options%matching = 1
+
+   n = 31
+   ne = 49
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
+     27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
+     14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
+     24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test multilevel refinement
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test Multilevel refinement=5, matching=0......'
+   call setup_options(options)
+   options%amd_switch1 = 5
+   options%balance = 1.05
+   options%partition_method = 1
+   options%ml_call = 4
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%stop_coarsening1 = 5
+   options%refinement = 5
+   options%matching = 0
+
+   n = 31
+   ne = 49
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
+     27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
+     14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
+     24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test multilevel refinement
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test Multilevel refinement=5, matching=1......'
+   call setup_options(options)
+   options%amd_switch1 = 5
+   options%balance = 1.05
+   options%partition_method = 1
+   options%ml_call = 4
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%stop_coarsening1 = 5
+   options%refinement = 5
+   options%matching = 1
+
+   n = 31
+   ne = 49
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
+     27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
+     14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
+     24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test multilevel refinement
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test Multilevel refinement=6, matching=0......'
+   call setup_options(options)
+   options%amd_switch1 = 5
+   options%balance = 1.05
+   options%partition_method = 1
+   options%ml_call = 4
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%stop_coarsening1 = 5
+   options%refinement = 6
+   options%matching = 0
+
+   n = 31
+   ne = 49
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
+     27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
+     14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
+     24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test multilevel refinement
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test Multilevel refinement=6, matching=1......'
+   call setup_options(options)
+   options%amd_switch1 = 5
+   options%balance = 1.05
+   options%partition_method = 1
+   options%ml_call = 4
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%stop_coarsening1 = 5
+   options%refinement = 6
+   options%matching = 1
+
+   n = 31
+   ne = 49
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
+     27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
+     14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
+     24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test multilevel refinement
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test Multilevel refinement=7, matching=0......'
+   call setup_options(options)
+   options%amd_switch1 = 5
+   options%balance = 1.05
+   options%partition_method = 1
+   options%ml_call = 4
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%stop_coarsening1 = 5
+   options%refinement = 0
+   options%matching = 0
+
+   n = 31
+   ne = 49
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
+     27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
+     14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
+     24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test multilevel refinement
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test Multilevel refinement=7, matching=1......'
+   call setup_options(options)
+   options%amd_switch1 = 5
+   options%balance = 1.05
+   options%partition_method = 1
+   options%ml_call = 4
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%stop_coarsening1 = 5
+   options%refinement = 0
+   options%matching = 1
+
+   n = 31
+   ne = 49
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n+1) = (/ 1, 3, 5, 7, 8, 10, 12, 13, 15, 17, 18, 20, 22, 23, 25, &
+     27, 28, 29, 32, 33, 34, 37, 39, 40, 42, 44, 45, 46, 48, 49, 50, 50 /)
+   row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 11, 11, 12, 10, 12, 13, &
+     14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
+     24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
    ! Test automatic multilevel-no multilevel check
    ! --------------------------------------
-
-   test = 9
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****Multigrid  test ', test, '****'
-   n = 200
-   ne = 199
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
-
-   ptr(1:n) = (/ (i,i=1,n) /)
-   ptr(n+1) = ne + 1
-   row(1:ne) = (/ (i,i=2,n) /)
-
+   write (*, '(a)', advance="no") &
+      ' * Test Multilevel, No Multilevel Check..........'
+   call setup_options(options)
    options%amd_switch1 = 4
    options%stop_coarsening1 = 3
    options%balance = 8.0
@@ -1562,45 +1904,25 @@ end subroutine test_shift
    options%amd_call = 2
    options%max_improve_cycles = 2
    options%refinement = 7
-   do i = 0, 0
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=1) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   n = 200
+   ne = 199
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1:n) = (/ (i,i=1,n) /)
+   ptr(n+1) = ne + 1
+   row(1:ne) = (/ (i,i=2,n) /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
    ! Test automatic multilevel-no multilevel check
    ! --------------------------------------
-
-   test = 10
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****Multigrid  test ', test, '****'
-   n = 200
-   ne = 7*(n-7)+21
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
-   j = 1
-   do i = 1,n
-    ptr(i) = j
-    do k = i+1, min(i+7,n)
-      row(j) = k
-      j = j + 1
-    end do
-   end do
-   ptr(n+1) = j
-
+   write (*, '(a)', advance="no") &
+      ' * Test Multilevel, No Multilevel Check, CPM=1...'
+   call setup_options(options)
    options%amd_switch1 = 4
    options%stop_coarsening1 = 3
    options%balance = 8.0
@@ -1609,43 +1931,66 @@ end subroutine test_shift
    options%amd_call = 2
    options%max_improve_cycles = 2
    options%refinement = 7
-   do i = 1, 2
-     options%coarse_partition_method = i
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0) testi_count = testi_count + 1
+   options%coarse_partition_method = 1
+
+   n = 200
+   ne = 7*(n-7)+21
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   j = 1
+   do i = 1,n
+      ptr(i) = j
+      do k = i+1, min(i+7,n)
+         row(j) = k
+         j = j + 1
+      end do
    end do
-   call reset_options(options_orig,options)
+   ptr(n+1) = j
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=2) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
-   ! Test multigrid reduction ratio
+   ! Test automatic multilevel-no multilevel check
    ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test Multilevel, No Multilevel Check, CPM=2...'
+   call setup_options(options)
+   options%amd_switch1 = 4
+   options%stop_coarsening1 = 3
+   options%balance = 8.0
+   options%partition_method = 2
+   options%ml_call = 10
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%refinement = 7
+   options%coarse_partition_method = 2
 
-   test = 11
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****Multigrid  test ', test, '****'
-   n = 20
-   ne = n-1
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
+   n = 200
+   ne = 7*(n-7)+21
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   j = 1
+   do i = 1,n
+      ptr(i) = j
+      do k = i+1, min(i+7,n)
+         row(j) = k
+         j = j + 1
+      end do
+   end do
+   ptr(n+1) = j
 
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
 
-   ptr(1) = 1
+   deallocate (ptr,row,perm,seps)
 
-   ptr(2:n+1) = ne + 1
-
-   row(1:ne) = (/ (i,i=2,n) /)
-
+   ! --------------------------------------
+   ! Test multilevel reduction ratio
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test Multilevel, Reduction Ratio, CPM=1.......'
+   call setup_options(options)
    options%amd_switch1 = 4
    options%stop_coarsening1 = 3
    options%balance = 2.0
@@ -1656,37 +2001,71 @@ end subroutine test_shift
    options%refinement = 7
    options%find_supervariables = .false.
    options%print_level = 2
-   do i = 1, 2
-     options%coarse_partition_method = i
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
+   options%coarse_partition_method = 1
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=2) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   n = 20
+   ne = n-1
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1) = 1
+   ptr(2:n+1) = ne + 1
+   row(1:ne) = (/ (i,i=2,n) /)
 
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
+
+   ! --------------------------------------
+   ! Test multilevel reduction ratio
+   ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test Multilevel, Reduction Ratio, CPM=2.......'
+   call setup_options(options)
+   options%amd_switch1 = 4
+   options%stop_coarsening1 = 3
+   options%balance = 2.0
+   options%partition_method = 1
+   options%ml_call = 10
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%refinement = 7
+   options%find_supervariables = .false.
+   options%print_level = 2
+   options%coarse_partition_method = 2
+
+   n = 20
+   ne = n-1
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1) = 1
+   ptr(2:n+1) = ne + 1
+   row(1:ne) = (/ (i,i=2,n) /)
+
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
+
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
    ! Test for full galerkin_graph_rap coverage
    ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Test galerkin_graph_rap().....................'
+   call setup_options(options)
+   options%amd_switch1 = 4
+   options%stop_coarsening1 = 3
+   options%min_reduction = 0.5
+   options%balance = 1.0
+   options%partition_method = 1
+   options%ml_call = 4
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%max_improve_cycles = 1
+   options%print_level = 0
+   options%refinement = 1
 
-   test = 12
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****Multigrid  test ', test, '****'
    n = 16
    ne = 42
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
    j = 1
    do i = 1, 16
      ptr(i) = j
@@ -1719,42 +2098,12 @@ end subroutine test_shift
    end do
    ptr(n+1) = j
 
-   options%amd_switch1 = 4
-   options%stop_coarsening1 = 3
-   options%min_reduction = 0.5
-   options%balance = 1.0
-   options%partition_method = 1
-   options%ml_call = 4
-   options%coarse_partition_method = 1
-   options%amd_call = 2
-   options%max_improve_cycles = 1
-   options%print_level = 0
-   do i = 0, 0
-     options%refinement = 1
-     call nd_order(0,n,ptr,row,perm,options,info,seps)
-     if (info%flag>=0) testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call check_success(n, perm, info, seps=seps)
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=1) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   deallocate (ptr,row,perm,seps)
 
-   return
-
-10    write (*,'(a,i4)') 'Allocation error during test section ', test
-   return
-
-20    write (*,'(a,i4)') 'Deallocation error during test section ', test
-
- end subroutine test_multigrid
+end subroutine test_multilevel
 
 ! *****************************************************************
 
