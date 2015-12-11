@@ -158,6 +158,7 @@ subroutine nd_order(mtx,n,ptr,row,perm,options,info,seps)
    allocate(work_seps(n), stat=info%stat)
    if (info%stat.ne.0) go to 10
    work_seps(:) = -1
+   if(present(seps)) seps(:) = -1 ! Cover anything not sent to ND routine
 
    ! Remove any dense rows from matrix and modify iperm (if enabled)
    if (options%remove_dense_rows) &
@@ -281,7 +282,7 @@ subroutine nd_order(mtx,n,ptr,row,perm,options,info,seps)
             work(lwork+a_n_curr+1:lwork+2*a_n_curr), 0, options, info,   &
             .false., use_multilevel, grid, work_seps)
       end if
-      if(info%flag.lt.0) return
+      if (info%flag.lt.0) return
 
       if (grid%level.eq.1) call mg_grid_destroy(grid,info%flag)
 

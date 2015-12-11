@@ -15,9 +15,8 @@ program main
 
    call test_errors
    call test_input
+   call test_dense
    stop
-   call test_dense(ok)
-   if(.not. ok) nerror = nerror + 1
    call test_ashcraft(ok)
    if(.not. ok) nerror = nerror + 1
    call test_levelset(ok)
@@ -290,11 +289,12 @@ subroutine check_flag(actual, expect, advance)
    endif
 end subroutine check_flag
 
-subroutine check_success(n, perm, info, seps, expect_nzsuper)
+subroutine check_success(n, perm, info, seps, expect_nsuper, expect_nzsuper)
    integer, intent(in) :: n
    integer, dimension(n), intent(in) :: perm
    type(nd_inform), intent(in) :: info
    integer, dimension(n), optional, intent(in) :: seps
+   integer, optional, intent(in) :: expect_nsuper
    integer, optional, intent(in) :: expect_nzsuper
 
    integer :: i
@@ -335,6 +335,17 @@ subroutine check_success(n, perm, info, seps, expect_nzsuper)
          nerror = nerror + 1
          write (*, '(a)') "fail."
          write (*, '(a)') "seps(:) contains values < -1"
+         return
+      endif
+   endif
+
+   ! Check nsuper (if present)
+   if(present(expect_nsuper)) then
+      if(info%nsuper.ne.expect_nsuper) then
+         nerror = nerror + 1
+         write (*, '(a)') "fail."
+         write (*, '(a,i3,a,i3,a)') &
+            "info%nsuper = ", info%nsuper, " (expected ", expect_nsuper, ")"
          return
       endif
    endif
@@ -556,180 +567,133 @@ end subroutine test_input
 ! *****************************************************************
 
 
-  subroutine test_dense(ok)
-   logical, intent(out) :: ok
-
-   integer :: test_count, testi_count, test
-   integer :: n, ne, st, i
+subroutine test_dense
+   integer :: n, ne, i
    integer, allocatable, dimension(:) :: ptr, row, perm, seps
-   type (nd_options) :: control, control_orig
+   type (nd_options) :: control
    type (nd_inform) :: info
 
-   ok = .true.
-   testi_count = 0
-   test_count = 0
+   write (*, '()')
+   write (*, '(a)') "****************************************"
+   write (*, '(a)') "*   Testing Dense Inputs              *"
+   write (*, '(a)') "****************************************"
+
    ! --------------------------------------
    ! Test dense row removal - row 1 dense
    ! --------------------------------------
-   test = 1
-   write (6,'(a1)') ' '
-   write (6,'(a26,i5,a4)') '****Dense row removal test', test, ' ***'
+   write (*, '(a)', advance="no") &
+      ' * Testing single dense row, no removal.........'
+   call setup_control(control)
+   control%amd_switch1 = 2
+   control%amd_call = 20
+   control%print_level = 2
+   control%remove_dense_rows = .false.
+
    n = 800
    ne = n
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
    ptr(1) = 1
    ptr(2:n+1) = ne + 1
    row(1:ne) = (/ (i,i=1,n) /)
 
+   call nd_order(0,n,ptr,row,perm,control,info,seps)
+     if (info%flag>=0 .and. info%nsuper==800 .and. info%nzsuper==1598) &
+   call check_success(n, perm, info, seps=seps, expect_nsuper=800, &
+      expect_nzsuper=1598)
+
+   deallocate (ptr,row,perm,seps)
+
+   write (*, '(a)', advance="no") &
+      ' * Testing single dense row, with removal.......'
+   call setup_control(control)
    control%amd_switch1 = 2
    control%amd_call = 20
-   do i = 0, 2
-     control%print_level = i
-     control%remove_dense_rows = .true.
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
-     if (info%flag>=0 .and. info%nsuper==799 .and. info%nzsuper==0) &
-       testi_count = testi_count + 1
-     control%remove_dense_rows = .false.
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
-     if (info%flag>=0 .and. info%nsuper==800 .and. info%nzsuper==1598) &
-       testi_count = testi_count + 1
-   end do
-   call reset_control(control_orig,control)
+   control%print_level = 2
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=6) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   n = 800
+   ne = n
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
+   ptr(1) = 1
+   ptr(2:n+1) = ne + 1
+   row(1:ne) = (/ (i,i=1,n) /)
+
+   call nd_order(0,n,ptr,row,perm,control,info,seps)
+   call check_success(n, perm, info, seps=seps, expect_nsuper=799, &
+      expect_nzsuper=0)
+
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
    ! Test dense row removal - first row dense
    ! --------------------------------------
-   test = 2
-   write (6,'(a1)') ' '
-   write (6,'(a26,i5,a4)') '****Dense row removal test', test, ' ***'
+   write (*, '(a)', advance="no") &
+      ' * Testing subdiag + first row dense............'
+   call setup_control(control)
+   control%amd_switch1 = 2
+   control%amd_call = 20
+
    n = 800
    ne = 2*n - 3
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
    ptr(1) = 1
    ptr(2:n) = (/ (n+i-2,i=2,n) /)
    ptr(n+1) = ne + 1
    row(1:ptr(2)-1) = (/ (i,i=2,n) /)
    row(ptr(2):ptr(n)-1) = (/ (i+1,i=2,n-1) /)
 
-   control%amd_switch1 = 2
-   control%amd_call = 20
-   do i = 0, 0
-     control%print_level = i
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
-     if (info%flag>=0 .and. info%nsuper==799 .and. info%nzsuper==1596) &
-       testi_count = testi_count + 1
-   end do
-   call reset_control(control_orig,control)
+   call nd_order(0,n,ptr,row,perm,control,info,seps)
+   call check_success(n, perm, info, seps=seps, expect_nsuper=799, &
+      expect_nzsuper=1596)
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=1) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
    ! Test dense row removal - last row dense
    ! --------------------------------------
-   test = 3
-   write (6,'(a1)') ' '
-   write (6,'(a26,i5,a4)') '****Dense row removal test', test, ' ***'
+   write (*, '(a)', advance="no") &
+      ' * Testing last row dense.......................'
+   call setup_control(control)
+   control%amd_switch1 = 2
+   control%amd_call = 20
+
    n = 800
    ne = n - 1
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
    ptr(1:n-1) = (/ (i,i=1,n-1) /)
    ptr(n:n+1) = ne + 1
    row(1:ne) = n
 
-   control%amd_switch1 = 2
-   control%amd_call = 20
-   do i = 0, 0
-     control%print_level = i
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
-     if (info%flag>=0 .and. info%nsuper==799 .and. info%nzsuper==0) &
-       testi_count = testi_count + 1
-   end do
-   call reset_control(control_orig,control)
+   call nd_order(0,n,ptr,row,perm,control,info,seps)
+   call check_success(n, perm, info, seps=seps, expect_nsuper=799, &
+      expect_nzsuper=0)
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=1) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
    ! Test dense row removal - first two rows dense but row 2 has max degree
    ! --------------------------------------
-   test = 4
-   write (6,'(a1)') ' '
-   write (6,'(a26,i5,a4)') '****Dense row removal test', test, ' ***'
+   write (*, '(a)', advance="no") &
+      ' * Testing two rows dense, row 2 max degree.....'
+   call setup_control(control)
+   control%amd_switch1 = 2
+   control%amd_call = 20
+
    n = 800
    ne = n - 3 + n - 2
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
    ptr(1) = 1
    ptr(2) = n - 2
    ptr(3:n+1) = ne + 1
    row(ptr(1):ptr(2)-1) = (/ (i+3,i=1,n-3) /)
    row(ptr(2):ne) = (/ (i+2,i=1,n-2) /)
 
-   control%amd_switch1 = 2
-   control%amd_call = 20
-   do i = 0, 0
-     control%print_level = i
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
-     if (info%flag>=0 .and. info%nsuper==798 .and. info%nzsuper==0) &
-       testi_count = testi_count + 1
-   end do
-   call reset_control(control_orig,control)
+   call nd_order(0,n,ptr,row,perm,control,info,seps)
+   call check_success(n, perm, info, seps=seps, expect_nsuper=798, &
+      expect_nzsuper=0)
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=1) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   deallocate (ptr,row,perm,seps)
 
-
-   return
-
-10    write (*,'(a,i4)') 'Allocation error during test section ', test
-   return
-
-20    write (*,'(a,i4)') 'Deallocation error during test section ', test
-
- end subroutine test_dense
+end subroutine test_dense
 
 
 ! *****************************************************************
