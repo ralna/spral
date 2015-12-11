@@ -8,7 +8,6 @@ program main
    integer, parameter :: dl_unit = 11
 
    integer :: nerror
-   logical :: ok
 
    open(unit=we_unit, file='we.out', status="replace")
    open(unit=dl_unit, file='dl.out', status="replace")
@@ -25,13 +24,13 @@ program main
    call test_amd
    call test_misc
    call test_refine
-   stop
-   call test_fm(ok)
+   call test_fm
 
+   write (*,'()')
    if (nerror.eq.0) then
      write (*,'(a)') 'All tests successfully completed'
    else
-     write (*,'(a, i4, a)') 'Failed ', nerror, ' tests'
+     write (*,'(a, i4, a)') 'There were ', nerror, ' errors'
    end if
 
    close (we_unit)
@@ -49,219 +48,6 @@ subroutine setup_options(options)
    options%unit_error = we_unit
    options%unit_diagnostics = dl_unit
 end subroutine setup_options
-
-   subroutine reset_options(options_orig,options_reset)
-
-
-     type (nd_options), INTENT (IN) :: options_orig
-
-     type (nd_options), INTENT (OUT) :: options_reset
-
-     options_reset%print_level = options_orig%print_level
-     options_reset%unit_diagnostics = options_orig%unit_diagnostics
-     options_reset%unit_error = options_orig%unit_error
-     options_reset%amd_call = options_orig%amd_call
-     options_reset%amd_switch1 = options_orig%amd_switch1
-     options_reset%amd_switch2 = options_orig%amd_switch2
-     options_reset%cost_function = options_orig%cost_function
-     options_reset%partition_method = options_orig%partition_method
-     options_reset%matching = options_orig%matching
-     options_reset%coarse_partition_method = options_orig% &
-       coarse_partition_method
-     options_reset%refinement = options_orig%refinement
-     options_reset%refinement_band = options_orig%refinement_band
-     options_reset%remove_dense_rows = options_orig%remove_dense_rows
-     options_reset%stop_coarsening2 = options_orig%stop_coarsening2
-     options_reset%stop_coarsening1 = options_orig%stop_coarsening1
-     options_reset%ml_call = options_orig%ml_call
-     options_reset%min_reduction = options_orig%min_reduction
-     options_reset%max_reduction = options_orig%max_reduction
-     options_reset%balance = options_orig%balance
-     options_reset%max_improve_cycles = options_orig%max_improve_cycles
-     options_reset%find_supervariables = options_orig%find_supervariables
-
-
-   end subroutine reset_options
-
-   subroutine testpr(n,perm)
-     ! .. Scalar Arguments ..
-     integer n
-     ! ..
-     ! .. Array Arguments ..
-     integer perm(n)
-     ! ..
-     ! .. Local Scalars ..
-     integer i, ip
-     ! .. Local Arrays
-     integer, allocatable, dimension (:) :: iw
-     ! ..
-     ! Initialize array used to test for valid permutation.
-     allocate (iw(n))
-     iw(1:n) = 1
-     do i = 1, n
-       ip = abs(perm(i))
-       if (iw(ip)==0) then
-         write (68,*) i, ip
-         go to 10
-       else
-         iw(ip) = 0
-       end if
-     end do
-     deallocate (iw)
-     return
-10      write (6,'(A)') '**** Error in permutation'
-     deallocate (iw)
-   end subroutine testpr
-
-   subroutine ndef(n,nz,a,ip,ind,w,sym)
-     ! This subroutine augments the diagonal to make the matrix pos def
-     ! Then large entries put in off-diagonal to make it a little not so.
-     ! .. Parameters ..
-     doUBLE PRECISION zero, one
-     PARAMETER (zero=0.0D0,one=1.0D0)
-     ! ..
-     ! .. Scalar Arguments ..
-     integer n, nz
-     logical sym
-     ! ..
-     ! .. Array Arguments ..
-     doUBLE PRECISION a(nz), w(n)
-     integer ind(nz), ip(*)
-     ! ..
-     ! .. Local Scalars ..
-     doUBLE PRECISION rmax
-     integer i, i1, i2, idiag, ii, ioff, j, maxoff, mprint, numoff
-     ! ..
-     ! .. Intrinsic Functions ..
-     INTRINSIC abs, max
-     ! ..
-     numoff = 0
-     ! !! MAXOFF was 1 .. now 10 to try to have more 2 x 2 pivots
-     maxoff = 10
-     mprint = 6
-     do i = 1, n
-       w(i) = zero
-     end do
-     do j = 1, n
-       rmax = zero
-       if (sym) rmax = w(j)
-       idiag = 0
-       ioff = 0
-       i1 = ip(j)
-       i2 = ip(j+1) - 1
-       if (i2<i1) then
-         go to 30
-       else
-         do ii = i1, i2
-           i = ind(ii)
-           rmax = rmax + abs(a(ii))
-           w(i) = w(i) + abs(a(ii))
-           if (i==j) idiag = ii
-           if (i/=j) ioff = ii
-         end do
-         if (idiag==0) then
-           go to 30
-         else
-           a(idiag) = rmax + one
-           if (ioff/=0 .and. numoff<maxoff) then
-             a(ioff) = 1.1*a(idiag)
-             ! !! added
-             a(idiag) = zero
-             numoff = numoff + 1
-           end if
-         end if
-       end if
-     end do
-     if ( .not. sym) then
-       do j = 1, n
-         i1 = ip(j)
-         i2 = ip(j+1) - 1
-         do ii = i1, i2
-           i = ind(ii)
-           if (i==j) go to 10
-         end do
-         go to 20
-10          a(ii) = max(a(ii),w(i)+one)
-20          continue
-       end do
-     end if
-     go to 40
-30      write (mprint,fmt=90000) j
-     nz = -1
-40      return
-90000   FORMAT (' NO DIAGONAL ENTRY IN COLUMN ',I8,/, &
-       ' SO CANNOT MAKE MATRIX DIAGONALLY doMINANT')
-   end subroutine ndef
-
-   subroutine pdef(n,nz,a,ip,ind,w,sym)
-     ! THIS subroutine AUGMENTS THE DIAGONAL TO MAKE THE MATRIX POS DEF.
-     ! .. Parameters ..
-     doUBLE PRECISION zero, one
-     PARAMETER (zero=0.0D0,one=1.0D0)
-     ! ..
-     ! .. Scalar Arguments ..
-     integer n, nz
-     logical sym
-     ! ..
-     ! .. Array Arguments ..
-     doUBLE PRECISION a(nz), w(n)
-     integer ind(nz), ip(*)
-     ! ..
-     ! .. Local Scalars ..
-     doUBLE PRECISION rmax
-     integer i, i1, i2, idiag, ii, j, mprint
-     ! ..
-     ! .. Intrinsic Functions ..
-     INTRINSIC abs, max
-     ! ..
-     mprint = 6
-     do i = 1, n
-       w(i) = zero
-     end do
-     do j = 1, n
-       rmax = zero
-       if (sym) rmax = w(j)
-       idiag = 0
-       i1 = ip(j)
-       i2 = ip(j+1) - 1
-       if (i2<i1) then
-         go to 30
-       else
-         do ii = i1, i2
-           i = ind(ii)
-           if (i/=j) then
-             rmax = rmax + abs(a(ii))
-             w(i) = w(i) + abs(a(ii))
-           end if
-           if (i==j) idiag = ii
-         end do
-         if (idiag==0) then
-           go to 30
-         else
-           a(idiag) = rmax + one
-         end if
-       end if
-     end do
-     if ( .not. sym) then
-       do j = 1, n
-         i1 = ip(j)
-         i2 = ip(j+1) - 1
-         do ii = i1, i2
-           i = ind(ii)
-           if (i==j) go to 10
-         end do
-         go to 20
-10          a(ii) = max(a(ii),w(i)+one)
-20          continue
-       end do
-     end if
-     go to 40
-30      write (mprint,fmt=90000) j
-     nz = -1
-40      return
-90000   FORMAT (' NO DIAGONAL ENTRY IN COLUMN ',I8,/, &
-       ' SO CANNOT MAKE MATRIX DIAGONALLY doMINANT')
-   end subroutine pdef
 
 subroutine check_flag(actual, expect, advance)
    integer, intent(in) :: actual
@@ -4548,36 +4334,30 @@ subroutine test_misc
    deallocate (ptr,row,perm,seps)
 end subroutine test_misc
 
-
-
-
 ! *****************************************************************
 
-
-  subroutine test_fm(ok)
-   logical, intent(out) :: ok
-
-   integer :: test_count, testi_count, test
-   integer :: n, ne, st, i, an1,an2,swgt,aw1,aw2,aws
+subroutine test_fm
+   integer :: n, ne, an1,an2,swgt,aw1,aw2,aws
    integer, allocatable, dimension(:) :: ptr,row,wgt,work,part
-   type (nd_options) :: options, options_orig
+   type (nd_options) :: options
 
-   ok = .true.
-   testi_count = 0
-   test_count = 0
+   write (*, '()')
+   write (*, '(a)') "****************************************"
+   write (*, '(a)') "*   Testing FM                         *"
+   write (*, '(a)') "****************************************"
 
    ! --------------------------------------
    ! Test fm with empty partition 2
    ! --------------------------------------
-   test = 1
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****FM test ', test, '****'
+   write (*, '(a)') &
+      ' * Test FM with empty part 2.....................'
+   call setup_options(options)
+   options%print_level = 1
+
    n = 11
    ne = 14
    swgt = n
-   allocate (ptr(n),row(ne),wgt(n),work(8*n+swgt),part(n),STAT=st)
-   if (st/=0) go to 10
-
+   allocate (ptr(n),row(ne),wgt(n),work(8*n+swgt),part(n))
    ptr(1:n) = (/ 1,2,4,6,8,9,11,12,13,14,15  /)
    row(1:ne) = (/ 2,3,4,5,6,6,7,8,8,9,9,10,10,11  /)
    wgt(:)=1
@@ -4588,37 +4368,24 @@ end subroutine test_misc
    aws = swgt - aw1-aw2
    part(1:n) = (/ 1,2,4,8,10,11,3,5,6,7,9 /)
 
-   do i = 1, 1
-     options%print_level = i
-     call nd_refine_fm(n,ne,ptr,row,wgt,swgt,an1,an2,aw1,aw2,aws,part,work,&
-       options)
-     testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
+   call nd_refine_fm(n,ne,ptr,row,wgt,swgt,an1,an2,aw1,aw2,aws,part,work,&
+      options)
+   ! FIXME: No check routine
 
-   deallocate (ptr,row,wgt,work,part,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=1) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   deallocate (ptr,row,wgt,work,part)
 
    ! --------------------------------------
    ! Test fm with empty partition 1
    ! --------------------------------------
-   test = 2
-   write (6,'(a1)') ' '
-   write (6,'(a20,i5,a4)') '****FM test ', test, '****'
+   write (*, '(a)') &
+      ' * Test FM with empty part 1.....................'
+   call setup_options(options)
+   options%print_level = 1
+
    n = 11
    ne = 14
    swgt = n
-   allocate (ptr(n),row(ne),wgt(n),work(8*n+swgt),part(n),STAT=st)
-   if (st/=0) go to 10
-
+   allocate (ptr(n),row(ne),wgt(n),work(8*n+swgt),part(n))
    ptr(1:n) = (/ 1,2,4,6,8,9,11,12,13,14,15  /)
    row(1:ne) = (/ 2,3,4,5,6,6,7,8,8,9,9,10,10,11  /)
    wgt(:)=1
@@ -4629,32 +4396,12 @@ end subroutine test_misc
    aws = swgt - aw1-aw2
    part(1:n) = (/ 1,2,4,8,10,11,3,5,6,7,9 /)
 
-   do i = 1, 1
-     options%print_level = i
-     call nd_refine_fm(n,ne,ptr,row,wgt,swgt,an1,an2,aw1,aw2,aws,part,work,&
-       options)
-     testi_count = testi_count + 1
-   end do
-   call reset_options(options_orig,options)
+   call nd_refine_fm(n,ne,ptr,row,wgt,swgt,an1,an2,aw1,aw2,aws,part,work,&
+      options)
+   ! FIXME: No check routine
 
-   deallocate (ptr,row,wgt,work,part,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=1) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   deallocate (ptr,row,wgt,work,part)
 
+end subroutine test_fm
 
-   return
-
-10    write (*,'(a,i4)') 'Allocation error during test section ', test
-   return
-
-20    write (*,'(a,i4)') 'Deallocation error during test section ', test
-
- end subroutine test_fm
 end program main
