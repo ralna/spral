@@ -609,29 +609,26 @@ subroutine nd_find_indep_comps(a_n, a_ne, a_ptr, a_row, a_weight, iperm, &
       ! size of component i
    integer, intent(out) :: compnzs(a_n) ! compnzs(i) will contain the number of
       ! nonzeros in component i
-   integer, intent(out) :: work(3*a_n+a_ne)
+   integer, target, intent(out) :: work(3*a_n+a_ne)
    type (nd_options), intent(in) :: options
 
-   integer :: mask, ptr_temp, row_temp, front ! pointers into work array
    integer :: root
    integer :: front_start, front_end ! start and end of front list
    integer :: num_assigned ! number of cols that have been assigned to a
       ! component
-   integer :: i, j, l, u, v, p
-   integer :: ptr_temp_pos, row_temp_pos, front_pos
+   integer :: i, j, u, v, front_pos
+   integer, dimension(:), pointer :: ptr_work, row_work, mask, comp_rows
 
    call nd_print_diagnostic(1, options, ' ')
    call nd_print_diagnostic(1, options, 'Start independent component search')
 
-   mask = 0
-   front = mask + a_n
-   ptr_temp = front + a_n
-   row_temp = ptr_temp + a_n ! total length of work array 3*a_n+a_ne
+   mask        => work(      1 : 1*a_n)
+   comp_rows   => work(1*a_n+1 : 2*a_n)
+   ptr_work    => work(2*a_n+1 : 3*a_n)
+   row_work    => work(3*a_n+1 : 3*a_n + a_ne)
 
-   ! Initialise arrays
-   work(1:3*a_n) = 0
-   compsizes(1:a_n) = 0
-   compnzs(1:a_n) = 0
+   ! Initialise mask
+   mask(:) = 0
 
    !
    ! From each vertex (candidate root) explore fully its connected component.
@@ -641,35 +638,31 @@ subroutine nd_find_indep_comps(a_n, a_ne, a_ptr, a_row, a_weight, iperm, &
    num_assigned = 0
    comp_num = 0
    do root = 1, a_n
-      if (work(mask+root).ne.0) cycle ! Vertex already visited
+      if (mask(root).ne.0) cycle ! Vertex already visited
       ! Initialize new component
       comp_num = comp_num + 1
       front_start = num_assigned + 1
       front_end = front_start
-      work(front+front_start) = root
+      comp_rows(front_start) = root
       compsizes(comp_num) = 1
-      compnzs(comp_num) = 0
-      work(mask+root) = compsizes(comp_num)
+      mask(root) = compsizes(comp_num)
       num_assigned = num_assigned + 1
 
       ! Breadth-first search
       do while (front_end-front_start.ge.0) ! while list is non-empty
          do i = front_start, front_end
-            v = work(front+i)
-            ! update compnzs
-            j = nd_get_ptr(v+1, a_n, a_ne, a_ptr)
-            compnzs(comp_num) = compnzs(comp_num) + j - a_ptr(v)
-            do j = a_ptr(v), j - 1
+            v = comp_rows(i)
+            do j = a_ptr(v), nd_get_ptr(v+1, a_n, a_ne, a_ptr) - 1
                ! pick a neighbour
                u = a_row(j)
-               if (work(mask+u).ne.0) cycle ! Already added
+               if (mask(u).ne.0) cycle ! Already added
                ! found unmasked vertex
                compsizes(comp_num) = compsizes(comp_num) + 1
                num_assigned = num_assigned + 1
                ! mask this vertex
-               work(mask+u) = compsizes(comp_num)
+               mask(u) = compsizes(comp_num)
                ! add vertex to component
-               work(front+num_assigned) = u
+               comp_rows(num_assigned) = u
             end do
          end do
          front_start = front_end + 1
@@ -685,40 +678,19 @@ subroutine nd_find_indep_comps(a_n, a_ne, a_ptr, a_row, a_weight, iperm, &
    if (comp_num.le.1) return ! No reordering to do
 
    ! Reorder matrix into block diagonal form
-   ! Indexing will be local to each block
-   ptr_temp_pos = 1
-   row_temp_pos = 1
-   front_pos = 1
-   do l = 1, comp_num ! for each component
-      work(ptr_temp+ptr_temp_pos) = 1
-      ptr_temp_pos = ptr_temp_pos + 1
-      do u = 1, compsizes(l)
-         v = work(front+front_pos) ! for each column in the component
-         front_pos = front_pos + 1
-         p = nd_get_ptr(v+1, a_n, a_ne, a_ptr) - 1
-         do i = a_ptr(v), p ! for each nonzero in the column
-            work(row_temp+row_temp_pos) = work(mask+a_row(i))
-            row_temp_pos = row_temp_pos + 1
-         end do
-         if (u.lt.compsizes(l)) then
-            work(ptr_temp+ptr_temp_pos) = work(ptr_temp+ptr_temp_pos-1) + &
-               p + 1 - a_ptr(v)
-            ptr_temp_pos = ptr_temp_pos + 1
-         end if
-      end do
-   end do
-
-   a_ptr(1:a_n) = work(ptr_temp+1:ptr_temp+a_n)
-   a_row(1:a_ne) = work(row_temp+1:row_temp+a_ne)
+   call extract_matrices(a_n, a_ne, a_ptr, a_row, comp_num, compsizes, &
+      comp_rows, compnzs, ptr_work, row_work, mask)
+   a_ptr(:) = ptr_work(:)
+   a_row(:) = row_work(:)
 
    ! Reorder iperm and a_weight
    do front_pos = 1, a_n
-      j = work(front+front_pos)
-      work(front+front_pos) = iperm(j)
-      work(mask+front_pos) = a_weight(j)
+      j = comp_rows(front_pos)
+      comp_rows(front_pos) = iperm(j)
+      mask(front_pos) = a_weight(j)
    end do
-   iperm(1:a_n) = work(front+1:front+a_n)
-   a_weight(1:a_n) = work(mask+1:mask+a_n)
+   iperm(:) = comp_rows(:)
+   a_weight(:) = mask(:)
 
    call nd_print_diagnostic(1, options, &
       ' nd_find_indep_comps: successful completion' &
@@ -3232,10 +3204,6 @@ subroutine extract_both_matrices(a_n, a_ne, a_ptr, a_row, a_n_part1, &
       ! extracted matrices. First a_ne_part1 entries are for first matrix;
       ! the immediately following a_ne_part2 entries are for second matrix
    integer, intent(out) :: work(a_n)
-
-   ! Local variables
-   integer :: i, j, k, l, m, p
-   integer :: mask ! pointer into work array for mask arrays
 
    integer, dimension(2) :: n_array, ne_array
 
