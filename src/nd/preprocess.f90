@@ -1,5 +1,6 @@
 module spral_nd_preprocess
    use spral_nd_types
+   use spral_nd_util
    implicit none
 
    private

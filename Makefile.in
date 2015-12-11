@@ -211,8 +211,9 @@ am__libspral_a_SOURCES_DIST = src/blas_iface.f90 src/core_analyse.f90 \
 	src/cuda/cuda_check.h src/lapack_iface.f90 src/match_order.f90 \
 	src/matrix_util.f90 interfaces/C/matrix_util.f90 \
 	src/metis$(METIS_VERSION)_wrapper.f90 src/nd/hamd.f90 \
-	src/nd/nd.f90 src/nd/preprocess.f90 src/nd/types.f90 \
-	interfaces/C/nd.f90 src/pgm.f90 src/rutherford_boeing.f90 \
+	src/nd/nd.f90 src/nd/partition.f90 src/nd/preprocess.f90 \
+	src/nd/types.f90 src/nd/util.f90 interfaces/C/nd.f90 \
+	src/pgm.f90 src/rutherford_boeing.f90 \
 	interfaces/C/rutherford_boeing.f90 src/scaling.f90 \
 	interfaces/C/scaling.f90 src/timer.f90 src/random.f90 \
 	interfaces/C/random.f90 src/random_matrix.f90 \
@@ -255,7 +256,8 @@ am_libspral_a_OBJECTS = src/blas_iface.$(OBJEXT) \
 	src/matrix_util.$(OBJEXT) interfaces/C/matrix_util.$(OBJEXT) \
 	src/metis$(METIS_VERSION)_wrapper.$(OBJEXT) \
 	src/nd/hamd.$(OBJEXT) src/nd/nd.$(OBJEXT) \
-	src/nd/preprocess.$(OBJEXT) src/nd/types.$(OBJEXT) \
+	src/nd/partition.$(OBJEXT) src/nd/preprocess.$(OBJEXT) \
+	src/nd/types.$(OBJEXT) src/nd/util.$(OBJEXT) \
 	interfaces/C/nd.$(OBJEXT) src/pgm.$(OBJEXT) \
 	src/rutherford_boeing.$(OBJEXT) \
 	interfaces/C/rutherford_boeing.$(OBJEXT) src/scaling.$(OBJEXT) \
@@ -1064,8 +1066,9 @@ libspral_a_SOURCES = src/blas_iface.f90 src/core_analyse.f90 \
 	$(am__append_1) src/lapack_iface.f90 src/match_order.f90 \
 	src/matrix_util.f90 interfaces/C/matrix_util.f90 \
 	src/metis$(METIS_VERSION)_wrapper.f90 src/nd/hamd.f90 \
-	src/nd/nd.f90 src/nd/preprocess.f90 src/nd/types.f90 \
-	interfaces/C/nd.f90 src/pgm.f90 src/rutherford_boeing.f90 \
+	src/nd/nd.f90 src/nd/partition.f90 src/nd/preprocess.f90 \
+	src/nd/types.f90 src/nd/util.f90 interfaces/C/nd.f90 \
+	src/pgm.f90 src/rutherford_boeing.f90 \
 	interfaces/C/rutherford_boeing.f90 src/scaling.f90 \
 	interfaces/C/scaling.f90 src/timer.f90 src/random.f90 \
 	interfaces/C/random.f90 src/random_matrix.f90 \
@@ -1273,9 +1276,13 @@ src/nd/hamd.$(OBJEXT): src/nd/$(am__dirstamp) \
 	src/nd/$(DEPDIR)/$(am__dirstamp)
 src/nd/nd.$(OBJEXT): src/nd/$(am__dirstamp) \
 	src/nd/$(DEPDIR)/$(am__dirstamp)
+src/nd/partition.$(OBJEXT): src/nd/$(am__dirstamp) \
+	src/nd/$(DEPDIR)/$(am__dirstamp)
 src/nd/preprocess.$(OBJEXT): src/nd/$(am__dirstamp) \
 	src/nd/$(DEPDIR)/$(am__dirstamp)
 src/nd/types.$(OBJEXT): src/nd/$(am__dirstamp) \
+	src/nd/$(DEPDIR)/$(am__dirstamp)
+src/nd/util.$(OBJEXT): src/nd/$(am__dirstamp) \
 	src/nd/$(DEPDIR)/$(am__dirstamp)
 interfaces/C/nd.$(OBJEXT): interfaces/C/$(am__dirstamp) \
 	interfaces/C/$(DEPDIR)/$(am__dirstamp)
@@ -2452,9 +2459,12 @@ clean-local:
 src/match_order.$(OBJEXT): src/metis$(METIS_VERSION)_wrapper.$(OBJEXT) \
 									src/scaling.$(OBJEXT)
 src/nd/nd.$(OBJEXT): src/nd/hamd.$(OBJEXT) \
+							src/nd/partition.$(OBJEXT) \
 							src/nd/preprocess.$(OBJEXT) \
-							src/nd/types.$(OBJEXT)
-src/nd/preprocess.$(OBJEXT): src/nd/types.$(OBJEXT)
+							src/nd/types.$(OBJEXT) \
+							src/nd/util.$(OBJEXT)
+src/nd/partition.$(OBJEXT): src/nd/types.$(OBJEXT) src/nd/util.$(OBJEXT)
+src/nd/preprocess.$(OBJEXT): src/nd/types.$(OBJEXT) src/nd/util.$(OBJEXT)
 src/random_matrix.$(OBJEXT): src/random.$(OBJEXT)
 src/rutherford_boeing.$(OBJEXT): src/matrix_util.$(OBJEXT) \
 											src/random.$(OBJEXT)

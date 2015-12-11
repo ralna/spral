@@ -64,8 +64,10 @@ include_HEADERS += include/spral_nd.h
 libspral_a_SOURCES += \
 	src/nd/hamd.f90 \
 	src/nd/nd.f90 \
+	src/nd/partition.f90 \
 	src/nd/preprocess.f90 \
 	src/nd/types.f90 \
+	src/nd/util.f90 \
 	interfaces/C/nd.f90
 bin_PROGRAMS = spral_nd
 spral_nd_SOURCES = \
@@ -309,9 +311,12 @@ clean-local:
 src/match_order.$(OBJEXT): src/metis$(METIS_VERSION)_wrapper.$(OBJEXT) \
 									src/scaling.$(OBJEXT)
 src/nd/nd.$(OBJEXT): src/nd/hamd.$(OBJEXT) \
+							src/nd/partition.$(OBJEXT) \
 							src/nd/preprocess.$(OBJEXT) \
-							src/nd/types.$(OBJEXT)
-src/nd/preprocess.$(OBJEXT): src/nd/types.$(OBJEXT)
+							src/nd/types.$(OBJEXT) \
+							src/nd/util.$(OBJEXT)
+src/nd/partition.$(OBJEXT): src/nd/types.$(OBJEXT) src/nd/util.$(OBJEXT)
+src/nd/preprocess.$(OBJEXT): src/nd/types.$(OBJEXT) src/nd/util.$(OBJEXT)
 src/random_matrix.$(OBJEXT): src/random.$(OBJEXT)
 src/rutherford_boeing.$(OBJEXT): src/matrix_util.$(OBJEXT) \
 											src/random.$(OBJEXT)
