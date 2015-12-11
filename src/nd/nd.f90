@@ -728,6 +728,7 @@ subroutine nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level, &
    integer :: a_ptr_sub_ptr ! pointer into work array
    integer :: a_row_sub_ptr ! pointer into work array
    integer :: i, j, k
+   integer :: lwork
    integer :: a_weight_1, a_weight_2, a_weight_sep
    integer :: ref_method, ref_options
    integer :: a_n1_new, a_n2_new, a_weight_1_new, a_weight_2_new, &
@@ -766,14 +767,21 @@ subroutine nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level, &
          level, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep,             &
          work(partition_ptr+1:partition_ptr+a_n),                             &
          work(work_ptr+1:work_ptr+9*a_n+sumweight), options, info%flag, band, &
-         depth, use_multilevel, grid)
+         depth, use_multilevel)
    case(ND_PARTITION_LEVEL_SET:)
       call nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight,         &
          level, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep,             &
          work(partition_ptr+1:partition_ptr+a_n),                             &
          work(work_ptr+1:work_ptr+9*a_n+sumweight), options, info%flag,       &
-         band, depth, use_multilevel, grid)
+         band, depth, use_multilevel)
    end select
+   if (use_multilevel) then
+      lwork = 9*a_n + sumweight
+      call multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight,         &
+         sumweight, work(partition_ptr+1:partition_ptr+a_n), a_n1, a_n2,   &
+         a_weight_1, a_weight_2, a_weight_sep, options, info%flag, lwork,  &
+         work(work_ptr+1:work_ptr+lwork), options%stop_coarsening2, grid)
+   end if
 
    ! If S is empty, return and caller will handle as special case
    if (a_n1+a_n2.eq.a_n) return
@@ -1040,7 +1048,7 @@ end subroutine nd_partition
 ! Partition the matrix using the half level set (Ashcraft) method
 subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
       level, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, partition, &
-      work, options, info, band, depth, use_multilevel, grid)
+      work, options, info, band, depth, use_multilevel)
    integer, intent(in) :: a_n
    integer, intent(in) :: a_ne
    integer, intent(in) :: a_ptr(a_n)
@@ -1064,10 +1072,9 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
       ! depth = num_levels_nend
    logical, intent(inout) :: use_multilevel ! are we allowed to use a
       ! multilevel partitioning strategy
-   type (nd_multigrid), intent(inout) :: grid
 
    integer :: nstrt, nend
-   integer :: i, j, dptr, p1sz, p2sz, sepsz, lwork, k
+   integer :: i, j, dptr, p1sz, p2sz, sepsz, k
    integer :: unit_diagnostics ! unit on which to print diagnostics
    integer :: mask_p, level_p, level_ptr_p, level2_p, level2_ptr_p, &
       work_p
@@ -1079,7 +1086,6 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
    integer :: distance_ptr
    integer :: lwidth, mindeg, degree
    integer :: ww
-   integer :: stop_coarsening2 ! max no. multigrid levels
    real(wp) :: bestval
    real(wp) :: val
    real(wp) :: ratio
@@ -1163,6 +1169,7 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
       end do
       if (level.eq.0) band = -real(lwidth,wp)
 
+      use_multilevel = .false. ! Will be reset for each component anyway
       return
    end if
 
@@ -1299,14 +1306,7 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
 
    10 continue
 
-   if (use_multilevel) then
-      stop_coarsening2 = options%stop_coarsening2
-      lwork = 9*a_n + sumweight
-      call multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight,  &
-         partition, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, options, &
-         info, lwork, work(1:lwork), stop_coarsening2, grid)
-      return
-   end if
+   if (use_multilevel) return
 
 
    20 continue
@@ -1324,7 +1324,7 @@ end subroutine nd_half_level_set
 ! Partition the matrix using the level set method
 subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level,  &
       a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, partition, work,      &
-      options, info, band, depth, use_multilevel, grid)
+      options, info, band, depth, use_multilevel)
    integer, intent(in) :: a_n
    integer, intent(in) :: a_ne
    integer, intent(in) :: a_ptr(a_n)
@@ -1348,7 +1348,6 @@ subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level,  &
       ! band = num_levels_nend
    logical, intent(inout) :: use_multilevel ! are we allowed to use a multilevel
       ! partitioning strategy
-   type (nd_multigrid), intent(inout) :: grid
 
    integer :: unit_diagnostics ! unit on which to print diagnostics
    integer :: nstrt, nend
@@ -1358,7 +1357,6 @@ subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level,  &
    integer :: num_entries ! no. entries in level structure rooted at nend
    integer :: best_sep_start
    integer :: i, j, p1sz, p2sz, sepsz, lwidth
-   integer :: stop_coarsening2, lwork
    integer :: mindeg, degree, max_search
    real(wp) :: bestval
    real(wp) :: val
@@ -1435,6 +1433,7 @@ subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level,  &
       a_weight_sep = 0
       if (level.eq.0) band = -real(lwidth,wp)
 
+      use_multilevel = .false. ! Will be reset for each component
       return
    end if
 
@@ -1452,15 +1451,7 @@ subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level,  &
 
    10 continue
 
-   if (use_multilevel) then
-      stop_coarsening2 = options%stop_coarsening2
-      lwork = 9*a_n + sumweight
-
-      call multilevel_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
-         partition,a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep,options, &
-         info,lwork,work(1:lwork),stop_coarsening2,grid)
-      return
-   end if
+   if (use_multilevel) return
 
    if (num_levels_nend.le.2) then
       ! Not possible to find separator
@@ -3307,9 +3298,9 @@ subroutine amd_order_one(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition,iperm, &
 
 end subroutine amd_order_one
 
-subroutine multilevel_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
-    partition,a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep,options, &
-    info1,lwork,work,stop_coarsening2,grid)
+subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
+    partition, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, options, &
+    info1, lwork, work, stop_coarsening2, grid)
 
   integer, intent(in) :: a_n ! order of matrix being partitioned
   integer, intent(in) :: a_ne ! no. entries in matrix being partitioned
@@ -3985,7 +3976,6 @@ subroutine nd_coarse_partition(a_n,a_ne,a_ptr,a_row,a_weight, &
     ref_options
   integer, allocatable :: work1(:)
   real(wp) :: dummy, dummy1
-  type (nd_multigrid) :: gridtemp
 
   ! ---------------------------------------------
   ! Printing levels
@@ -4024,7 +4014,7 @@ subroutine nd_coarse_partition(a_n,a_ne,a_ptr,a_row,a_weight, &
     call nd_half_level_set(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,2,a_n1, &
       a_n2,a_weight_1,a_weight_2,a_weight_sep, &
       work1(partition_ptr+1:partition_ptr+a_n),work(1:9*a_n+sumweight), &
-      options,info,dummy,dummy1,use_multilevel,gridtemp)
+      options,info,dummy,dummy1,use_multilevel)
 
     if (printi .or. printd) then
       write (unit_diagnostics,'(a)') ' '
@@ -4042,8 +4032,7 @@ subroutine nd_coarse_partition(a_n,a_ne,a_ptr,a_row,a_weight, &
     call nd_level_set(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,2,a_n1, &
       a_n2,a_weight_1,a_weight_2,a_weight_sep, &
       work1(partition_ptr+1:partition_ptr+a_n),work(1:9*a_n+sumweight), &
-      options,info,dummy,dummy1,use_multilevel,gridtemp)
-
+      options,info,dummy,dummy1,use_multilevel)
 
     if (printi .or. printd) then
       write (unit_diagnostics,'(a)') ' '
