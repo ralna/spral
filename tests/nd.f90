@@ -2,39 +2,49 @@ program main
    use spral_nd
    implicit none
 
+   integer, parameter :: we_unit = 10
+   integer, parameter :: dl_unit = 11
+
+   integer :: nerror
    logical :: ok
 
-   call test_errors(ok)
-   if (.not. ok) go to 80
+   open(unit=we_unit, file='we.out', status="replace")
+   open(unit=dl_unit, file='dl.out', status="replace")
+
+   nerror = 0
+
+   call test_errors
    call test_input(ok)
-   if (.not. ok) go to 80
+   if(.not. ok) nerror = nerror + 1
    call test_dense(ok)
-   if (.not. ok) go to 80
+   if(.not. ok) nerror = nerror + 1
    call test_ashcraft(ok)
-   if (.not. ok) go to 80
+   if(.not. ok) nerror = nerror + 1
    call test_levelset(ok)
-   if (.not. ok) go to 80
+   if(.not. ok) nerror = nerror + 1
    call test_shift(ok)
-   if (.not. ok) go to 80
+   if(.not. ok) nerror = nerror + 1
    call test_multigrid(ok)
-   if (.not. ok) go to 80
+   if(.not. ok) nerror = nerror + 1
    call test_amd(ok)
-   if (.not. ok) go to 80
+   if(.not. ok) nerror = nerror + 1
    call test_misc(ok)
-   if (.not. ok) go to 80
+   if(.not. ok) nerror = nerror + 1
    call test_refine(ok)
-   if (.not. ok) go to 80
+   if(.not. ok) nerror = nerror + 1
    call test_fm(ok)
-   if (.not. ok) go to 80
+   if(.not. ok) nerror = nerror + 1
 
-
-80    if (ok) then
+   if (nerror.eq.0) then
      write (*,'(a)') 'All tests successfully completed'
    else
-     write (*,'(a)') 'WARNING: Tests NOT successfully completed'
+     write (*,'(a, i4, a)') 'Failed ', nerror, ' tests'
    end if
 
- CONTAINS
+   close (we_unit)
+   close (dl_unit)
+
+contains
 
    subroutine reset_control(control_orig,control_reset)
 
@@ -249,55 +259,46 @@ program main
        ' SO CANNOT MAKE MATRIX DIAGONALLY doMINANT')
    end subroutine pdef
 
+subroutine check_flag(actual, expect)
+   integer, intent(in) :: actual
+   integer, intent(in) :: expect
 
-  subroutine test_errors(ok)
-   logical, intent(out) :: ok
+   if(actual.eq.expect) then
+      write (*, '(a)') "ok"
+   else
+      nerror = nerror + 1
+      write (*, '(a)') "fail"
+      write (*, '(a,i3,a,i3,a)') &
+         "info%flag = ", actual, " (expected ", expect, ")"
+   endif
+end subroutine check_flag
 
-   integer :: n, ne, st, err_count, i
+subroutine test_errors
+   integer :: n, ne
    integer, allocatable, dimension(:) :: ptr, row, perm, seps
    type (nd_options) :: control
    type (nd_inform) :: info
 
-   ok = .true.
+   control%unit_error = we_unit
+   control%unit_diagnostics = dl_unit
 
    ! --------------------------------------
    ! Test error flag n<1
    ! --------------------------------------
-   write (6,'(a1)') ' '
-   write (6,'(a)') '****Test n<1 error ****'
    n = 0
    ne = 0
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
+   allocate (ptr(n+1), row(ne), perm(n), seps(n))
    ptr(1) = 1
-
    control%amd_switch1 = 2
-   err_count = 0
-   do i = 0, 1
-     control%print_level = i
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
-     if (info%flag==-3) err_count = err_count + 1
-     call nd_order(1,n,ptr,row,perm,control,info,seps)
-     if (info%flag==-3) err_count = err_count + 1
-   end do
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
+   write (*, '(a)', advance="no") 'Testing n=0, lower entry...'
+   call nd_order(0, n, ptr, row, perm, control, info, seps)
+   call check_flag(info%flag, -3)
 
-   if (err_count/=4) then
-     write (6,'(a)') 'Code failure in test section'
-     ok = .false.
-   end if
-   return
-
-10    write (*,'(a)') 'Allocation error during test'
-   return
-
-20    write (*,'(a)') 'Deallocation error during test'
-
-
-  end subroutine test_errors
+   write (*, '(a)', advance="no") 'Testing n=0, lower+upper entry...'
+   call nd_order(1, n, ptr, row, perm, control, info, seps)
+   call check_flag(info%flag, -3)
+end subroutine test_errors
 
 ! *****************************************************************
 
