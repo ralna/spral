@@ -14,8 +14,8 @@ program main
    nerror = 0
 
    call test_errors
-   call test_input(ok)
-   if(.not. ok) nerror = nerror + 1
+   call test_input
+   stop
    call test_dense(ok)
    if(.not. ok) nerror = nerror + 1
    call test_ashcraft(ok)
@@ -45,6 +45,17 @@ program main
    close (dl_unit)
 
 contains
+
+subroutine setup_control(control)
+   type (nd_options), intent(out) :: control
+
+   type (nd_options) :: default_control
+
+   control = default_control
+
+   control%unit_error = we_unit
+   control%unit_diagnostics = dl_unit
+end subroutine setup_control
 
    subroutine reset_control(control_orig,control_reset)
 
@@ -259,19 +270,89 @@ contains
        ' SO CANNOT MAKE MATRIX DIAGONALLY doMINANT')
    end subroutine pdef
 
-subroutine check_flag(actual, expect)
+subroutine check_flag(actual, expect, advance)
    integer, intent(in) :: actual
    integer, intent(in) :: expect
+   character(len=*), optional, intent(in) :: advance
+
+   character(len=3) :: myadvance
+
+   myadvance = "yes"
+   if(present(advance)) myadvance = advance
 
    if(actual.eq.expect) then
-      write (*, '(a)') "ok"
+      write (*, '(a)', advance=myadvance) "ok."
    else
       nerror = nerror + 1
-      write (*, '(a)') "fail"
+      write (*, '(a)', advance=myadvance) "fail."
       write (*, '(a,i3,a,i3,a)') &
          "info%flag = ", actual, " (expected ", expect, ")"
    endif
 end subroutine check_flag
+
+subroutine check_success(n, perm, info, seps, expect_nzsuper)
+   integer, intent(in) :: n
+   integer, dimension(n), intent(in) :: perm
+   type(nd_inform), intent(in) :: info
+   integer, dimension(n), optional, intent(in) :: seps
+   integer, optional, intent(in) :: expect_nzsuper
+
+   integer :: i
+   integer, dimension(:), allocatable :: check
+
+   ! Check flag first
+   if(info%flag .ne. 0) then
+      nerror = nerror + 1
+      write (*, '(a)') "fail."
+      write (*, '(a,i3,a,i3,a)') &
+         "info%flag = ", info%flag, " (expected ", 0, ")"
+      return
+   endif
+
+   ! Check we have a permutation
+   allocate(check(n))
+   check(:) = 0
+   do i = 1, n
+      if(perm(i).lt.1 .or. perm(i).gt.n) then
+         nerror = nerror + 1
+         write (*, '(a)') "fail."
+         write (*, '(a,i3,a,i3,a,i3,a)') &
+            "perm(", i, ") = ", perm(i), "(out of range 1:", n, ")"
+         return
+      endif
+      check(perm(i)) = check(perm(i)) + 1
+   end do
+   if(any(check(1:n).ne.1)) then
+      nerror = nerror + 1
+      write (*, '(a)') "fail."
+      write (*, '(a)') "failed to return a valid permutation"
+      return
+   endif
+
+   ! Check seps is sensible (if present)
+   if(present(seps)) then
+      if(any(seps.lt.-1)) then
+         nerror = nerror + 1
+         write (*, '(a)') "fail."
+         write (*, '(a)') "seps(:) contains values < -1"
+         return
+      endif
+   endif
+
+   ! Check nzsuper (if present)
+   if(present(expect_nzsuper)) then
+      if(info%nzsuper.ne.expect_nzsuper) then
+         nerror = nerror + 1
+         write (*, '(a)') "fail."
+         write (*, '(a,i3,a,i3,a)') &
+            "info%nzsuper = ", info%nzsuper, " (expected ", expect_nzsuper, ")"
+         return
+      endif
+   endif
+
+   ! Otherwise, we're good!
+   write (*, '(a)') "ok."
+end subroutine check_success
 
 subroutine test_errors
    integer :: n, ne
@@ -279,8 +360,11 @@ subroutine test_errors
    type (nd_options) :: control
    type (nd_inform) :: info
 
-   control%unit_error = we_unit
-   control%unit_diagnostics = dl_unit
+
+   write (*, '()')
+   write (*, '(a)') "****************************************"
+   write (*, '(a)') "*   Testing Error Returns              *"
+   write (*, '(a)') "****************************************"
 
    ! --------------------------------------
    ! Test error flag n<1
@@ -289,162 +373,137 @@ subroutine test_errors
    ne = 0
    allocate (ptr(n+1), row(ne), perm(n), seps(n))
    ptr(1) = 1
+   call setup_control(control)
    control%amd_switch1 = 2
 
-   write (*, '(a)', advance="no") 'Testing n=0, lower entry...'
+   write (*, '(a)', advance="no") ' * Testing n=0, lower entry...'
    call nd_order(0, n, ptr, row, perm, control, info, seps)
    call check_flag(info%flag, -3)
 
-   write (*, '(a)', advance="no") 'Testing n=0, lower+upper entry...'
+   write (*, '(a)', advance="no") ' * Testing n=0, lower+upper entry...'
    call nd_order(1, n, ptr, row, perm, control, info, seps)
    call check_flag(info%flag, -3)
 end subroutine test_errors
 
 ! *****************************************************************
 
-  subroutine test_input(ok)
-   logical, intent(out) :: ok
-
-   integer :: test_count, testi_count, test
-   integer :: n, ne, st, i, j
+subroutine test_input
+   integer :: n, ne, i, j
    integer, allocatable, dimension(:) :: ptr, row, perm, seps
    logical :: corr
-   type (nd_options) :: control, control_orig
+   type (nd_options) :: control
    type (nd_inform) :: info
 
+   write (*, '()')
+   write (*, '(a)') "****************************************"
+   write (*, '(a)') "*   Testing Simple Inputs              *"
+   write (*, '(a)') "****************************************"
 
-   ok = .true.
-
-   test_count = 0
    ! --------------------------------------
    ! Test diagonal matrix
    ! --------------------------------------
-   testi_count = 0
-   write (6,'(a1)') ' '
-   write (6,'(a)') '**** Test inputs: diagonal matrix ****'
    n = 10
    ne = 0
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
    ptr(1:n+1) = 1
-
+   call setup_control(control)
    control%amd_switch1 = 2
-   do i = 0, 0
-     control%print_level = i
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
-     corr = .true.
-     do j = 1, n
-       corr = (corr .and. (perm(j)==j))
-     end do
-     if (info%flag>=0 .and. corr) testi_count = testi_count + 1
-     call nd_order(1,n,ptr,row,perm,control,info,seps)
-     corr = .true.
-     do j = 1, n
-       corr = (corr .and. (perm(j)==j))
-     end do
-     if (info%flag>=0 .and. corr) testi_count = testi_count + 1
+
+   write (*, '(a)', advance="no") &
+      ' * Testing diagonal matrix, lower entry.........'
+   call nd_order(0,n,ptr,row,perm,control,info,seps)
+   call check_flag(info%flag, 0, advance="no")
+   corr = .true.
+   do j = 1, n
+      corr = (corr .and. (perm(j)==j))
    end do
-   call reset_control(control_orig,control)
-
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-
-   if (testi_count/=2) then
-     write (6,'(a29)') 'Code failure in test section '
-     ok = .false.
-     return
+   if (corr) then
+      write (*, '(a)') "ok."
    else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+      nerror = nerror + 1
+      write (*, '(a)') "fail."
+      write (*, '(a, 10i5)') 'perm(:) = ', perm(:)
+   endif
 
+   write (*, '(a)', advance="no") &
+      ' * Testing diagonal matrix, lower+upper entry...'
+   call nd_order(1,n,ptr,row,perm,control,info,seps)
+   call check_flag(info%flag, 0, advance="no")
+   corr = .true.
+   do j = 1, n
+      corr = (corr .and. (perm(j)==j))
+   end do
+   if (corr) then
+      write (*, '(a)') "ok."
+   else
+      nerror = nerror + 1
+      write (*, '(a)') "fail."
+      write (*, '(a, 10i5)') 'perm(:) = ', perm(:)
+   endif
+
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
    ! Test expansion of matrix from lower triangle input
    ! --------------------------------------
-   test = 1
-   write (6,'(a1)') ' '
-   write (6,'(a34,i5,a4)') '****Test inputs: matrix expansion ', test, ' ***'
+   write (*, '(a)', advance="no") &
+      ' * Testing matrix expand, lower entry...........'
+
+   call setup_control(control)
+   control%amd_switch1 = 2
+   control%amd_call = 2
+   control%print_level = 2
+
    n = 10
    ne = 9
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
    ptr(1:n-1) = (/ (i,i=1,n-1) /)
    ptr(n:n+1) = n
    row(1:ne) = (/ (i,i=2,n) /)
 
-   control%amd_switch1 = 2
-   control%amd_call = 2
-   do i = 0, 2
-     control%print_level = i
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
-     if (info%flag>=0 .and. info%nzsuper==18) testi_count = testi_count + 1
-   end do
-   call reset_control(control_orig,control)
+   call nd_order(0,n,ptr,row,perm,control,info,seps)
+   call check_success(n, perm, info, seps=seps, expect_nzsuper=18)
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=3) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
    ! Test expansion of matrix from lower triangle format and that diags are
    ! removed
    ! --------------------------------------
+   write (*, '(a)', advance="no") &
+      ' * Testing matrix expand w diag, lower entry....'
 
-   test = 2
-   write (6,'(a1)') ' '
-   write (6,'(a34,i5,a4)') '****Test inputs: matrix expansion ', test, ' ***'
+   call setup_control(control)
+   control%amd_switch1 = 2
+   control%amd_call = 2
+
    n = 10
    ne = 19
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
    ptr(1:n) = (/ (2*i-1,i=1,n) /)
    ptr(n+1) = ne + 1
    row(1:ne) = (/ 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, &
      10 /)
 
-   control%amd_switch1 = 2
-   control%amd_call = 2
-   do i = 0, 0
-     control%print_level = i
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
-     if (info%flag>=0 .and. info%nzsuper==18) testi_count = testi_count + 1
-   end do
-   call reset_control(control_orig,control)
+   call nd_order(0,n,ptr,row,perm,control,info,seps)
+   call check_success(n, perm, info, seps=seps, expect_nzsuper=18)
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=1) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
    ! Test expansion of matrix from lower and upper triangle input with no
    ! diags
    ! --------------------------------------
-   test = 3
-   write (6,'(a1)') ' '
-   write (6,'(a34,i5,a4)') '****Test inputs: matrix expansion ', test, ' ***'
+   write (*, '(a)', advance="no") &
+      ' * Testing matrix expand, lower+upper entry.....'
+   call setup_control(control)
+   control%amd_switch1 = 2
+   control%amd_call = 2
+   control%print_level = 2
+
    n = 10
    ne = 18
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
    ptr(1) = 1
    ptr(2:n) = (/ (2*(i-1),i=2,n) /)
    ptr(n+1) = ne + 1
@@ -455,39 +514,26 @@ end subroutine test_errors
    end do
    row(ptr(n)) = n - 1
 
-   control%amd_switch1 = 2
-   control%amd_call = 2
-   do i = 2, 2
-     control%print_level = i
-     call nd_order(1,n,ptr,row,perm,control,info,seps)
-     if (info%flag>=0 .and. info%nzsuper==18) testi_count = testi_count + 1
-   end do
-   call reset_control(control_orig,control)
+   call nd_order(1,n,ptr,row,perm,control,info,seps)
+   call check_success(n, perm, info, seps=seps, expect_nzsuper=18)
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=1) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
-
+   deallocate (ptr,row,perm,seps)
 
    ! --------------------------------------
    ! Test expansion of matrix from lower and upper triangle input with diag
    ! entry
    ! --------------------------------------
-   test = 4
-   write (6,'(a1)') ' '
-   write (6,'(a34,i5,a4)') '****Test inputs: matrix expansion ', test, ' ***'
+   write (*, '(a)', advance="no") &
+      ' * Testing matrix expand w diag, lower entry....'
+
+   call setup_control(control)
+   control%amd_switch1 = 2
+   control%amd_call = 2
+   control%print_level = 2
+
    n = 10
    ne = 19
-   allocate (ptr(n+1),row(ne),perm(n),seps(n),STAT=st)
-   if (st/=0) go to 10
-
+   allocate (ptr(n+1),row(ne),perm(n),seps(n))
    ptr(1) = 1
    ptr(2:n) = (/ (2*(i-1),i=2,n) /)
    ptr(n+1) = ne + 1
@@ -499,38 +545,12 @@ end subroutine test_errors
    row(ptr(n)) = n - 1
    row(ne) = n
 
-   control%amd_switch1 = 2
-   control%amd_call = 2
-   do i = 0, 2
-     control%print_level = i
-     call nd_order(1,n,ptr,row,perm,control,info,seps)
-     if (info%flag>=0 .and. info%nzsuper==18) testi_count = testi_count + 1
-   end do
-   call reset_control(control_orig,control)
+   call nd_order(1,n,ptr,row,perm,control,info,seps)
+   call check_success(n, perm, info, seps=seps, expect_nzsuper=18)
 
-   deallocate (ptr,row,perm,seps,STAT=st)
-   if (st/=0) go to 20
-   if (testi_count/=3) then
-     write (6,'(a29,i5)') 'Code failure in test section ', test
-     ok = .false.
-     return
-   else
-     test_count = test_count + 1
-     testi_count = 0
-   end if
+   deallocate (ptr,row,perm,seps)
 
-
-
-
-
-   return
-
-10    write (*,'(a,i4)') 'Allocation error during test section ', test
-   return
-
-20    write (*,'(a,i4)') 'Deallocation error during test section ', test
-
-  end subroutine test_input
+end subroutine test_input
 
 
 ! *****************************************************************
