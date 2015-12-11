@@ -17,7 +17,7 @@ program main
    call test_input
    call test_dense
    stop
-   call test_ashcraft(ok)
+   call test_halflevelset(ok)
    if(.not. ok) nerror = nerror + 1
    call test_levelset(ok)
    if(.not. ok) nerror = nerror + 1
@@ -45,49 +45,49 @@ program main
 
 contains
 
-subroutine setup_control(control)
-   type (nd_options), intent(out) :: control
+subroutine setup_options(options)
+   type (nd_options), intent(out) :: options
 
-   type (nd_options) :: default_control
+   type (nd_options) :: default_options
 
-   control = default_control
+   options = default_options
 
-   control%unit_error = we_unit
-   control%unit_diagnostics = dl_unit
-end subroutine setup_control
+   options%unit_error = we_unit
+   options%unit_diagnostics = dl_unit
+end subroutine setup_options
 
-   subroutine reset_control(control_orig,control_reset)
+   subroutine reset_options(options_orig,options_reset)
 
 
-     type (nd_options), INTENT (IN) :: control_orig
+     type (nd_options), INTENT (IN) :: options_orig
 
-     type (nd_options), INTENT (OUT) :: control_reset
+     type (nd_options), INTENT (OUT) :: options_reset
 
-     control_reset%print_level = control_orig%print_level
-     control_reset%unit_diagnostics = control_orig%unit_diagnostics
-     control_reset%unit_error = control_orig%unit_error
-     control_reset%amd_call = control_orig%amd_call
-     control_reset%amd_switch1 = control_orig%amd_switch1
-     control_reset%amd_switch2 = control_orig%amd_switch2
-     control_reset%cost_function = control_orig%cost_function
-     control_reset%partition_method = control_orig%partition_method
-     control_reset%matching = control_orig%matching
-     control_reset%coarse_partition_method = control_orig% &
+     options_reset%print_level = options_orig%print_level
+     options_reset%unit_diagnostics = options_orig%unit_diagnostics
+     options_reset%unit_error = options_orig%unit_error
+     options_reset%amd_call = options_orig%amd_call
+     options_reset%amd_switch1 = options_orig%amd_switch1
+     options_reset%amd_switch2 = options_orig%amd_switch2
+     options_reset%cost_function = options_orig%cost_function
+     options_reset%partition_method = options_orig%partition_method
+     options_reset%matching = options_orig%matching
+     options_reset%coarse_partition_method = options_orig% &
        coarse_partition_method
-     control_reset%refinement = control_orig%refinement
-     control_reset%refinement_band = control_orig%refinement_band
-     control_reset%remove_dense_rows = control_orig%remove_dense_rows
-     control_reset%stop_coarsening2 = control_orig%stop_coarsening2
-     control_reset%stop_coarsening1 = control_orig%stop_coarsening1
-     control_reset%ml_call = control_orig%ml_call
-     control_reset%min_reduction = control_orig%min_reduction
-     control_reset%max_reduction = control_orig%max_reduction
-     control_reset%balance = control_orig%balance
-     control_reset%max_improve_cycles = control_orig%max_improve_cycles
-     control_reset%find_supervariables = control_orig%find_supervariables
+     options_reset%refinement = options_orig%refinement
+     options_reset%refinement_band = options_orig%refinement_band
+     options_reset%remove_dense_rows = options_orig%remove_dense_rows
+     options_reset%stop_coarsening2 = options_orig%stop_coarsening2
+     options_reset%stop_coarsening1 = options_orig%stop_coarsening1
+     options_reset%ml_call = options_orig%ml_call
+     options_reset%min_reduction = options_orig%min_reduction
+     options_reset%max_reduction = options_orig%max_reduction
+     options_reset%balance = options_orig%balance
+     options_reset%max_improve_cycles = options_orig%max_improve_cycles
+     options_reset%find_supervariables = options_orig%find_supervariables
 
 
-   end subroutine reset_control
+   end subroutine reset_options
 
    subroutine testpr(n,perm)
      ! .. Scalar Arguments ..
@@ -368,7 +368,7 @@ end subroutine check_success
 subroutine test_errors
    integer :: n, ne
    integer, allocatable, dimension(:) :: ptr, row, perm, seps
-   type (nd_options) :: control
+   type (nd_options) :: options
    type (nd_inform) :: info
 
 
@@ -384,15 +384,15 @@ subroutine test_errors
    ne = 0
    allocate (ptr(n+1), row(ne), perm(n), seps(n))
    ptr(1) = 1
-   call setup_control(control)
-   control%amd_switch1 = 2
+   call setup_options(options)
+   options%amd_switch1 = 2
 
    write (*, '(a)', advance="no") ' * Testing n=0, lower entry...'
-   call nd_order(0, n, ptr, row, perm, control, info, seps)
+   call nd_order(0, n, ptr, row, perm, options, info, seps)
    call check_flag(info%flag, -3)
 
    write (*, '(a)', advance="no") ' * Testing n=0, lower+upper entry...'
-   call nd_order(1, n, ptr, row, perm, control, info, seps)
+   call nd_order(1, n, ptr, row, perm, options, info, seps)
    call check_flag(info%flag, -3)
 end subroutine test_errors
 
@@ -402,7 +402,7 @@ subroutine test_input
    integer :: n, ne, i, j
    integer, allocatable, dimension(:) :: ptr, row, perm, seps
    logical :: corr
-   type (nd_options) :: control
+   type (nd_options) :: options
    type (nd_inform) :: info
 
    write (*, '()')
@@ -417,12 +417,12 @@ subroutine test_input
    ne = 0
    allocate (ptr(n+1),row(ne),perm(n),seps(n))
    ptr(1:n+1) = 1
-   call setup_control(control)
-   control%amd_switch1 = 2
+   call setup_options(options)
+   options%amd_switch1 = 2
 
    write (*, '(a)', advance="no") &
       ' * Testing diagonal matrix, lower entry.........'
-   call nd_order(0,n,ptr,row,perm,control,info,seps)
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
    call check_flag(info%flag, 0, advance="no")
    corr = .true.
    do j = 1, n
@@ -438,7 +438,7 @@ subroutine test_input
 
    write (*, '(a)', advance="no") &
       ' * Testing diagonal matrix, lower+upper entry...'
-   call nd_order(1,n,ptr,row,perm,control,info,seps)
+   call nd_order(1,n,ptr,row,perm,options,info,seps)
    call check_flag(info%flag, 0, advance="no")
    corr = .true.
    do j = 1, n
@@ -460,10 +460,10 @@ subroutine test_input
    write (*, '(a)', advance="no") &
       ' * Testing matrix expand, lower entry...........'
 
-   call setup_control(control)
-   control%amd_switch1 = 2
-   control%amd_call = 2
-   control%print_level = 2
+   call setup_options(options)
+   options%amd_switch1 = 2
+   options%amd_call = 2
+   options%print_level = 2
 
    n = 10
    ne = 9
@@ -472,7 +472,7 @@ subroutine test_input
    ptr(n:n+1) = n
    row(1:ne) = (/ (i,i=2,n) /)
 
-   call nd_order(0,n,ptr,row,perm,control,info,seps)
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps, expect_nzsuper=18)
 
    deallocate (ptr,row,perm,seps)
@@ -484,9 +484,9 @@ subroutine test_input
    write (*, '(a)', advance="no") &
       ' * Testing matrix expand w diag, lower entry....'
 
-   call setup_control(control)
-   control%amd_switch1 = 2
-   control%amd_call = 2
+   call setup_options(options)
+   options%amd_switch1 = 2
+   options%amd_call = 2
 
    n = 10
    ne = 19
@@ -496,7 +496,7 @@ subroutine test_input
    row(1:ne) = (/ 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, &
      10 /)
 
-   call nd_order(0,n,ptr,row,perm,control,info,seps)
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps, expect_nzsuper=18)
 
    deallocate (ptr,row,perm,seps)
@@ -507,10 +507,10 @@ subroutine test_input
    ! --------------------------------------
    write (*, '(a)', advance="no") &
       ' * Testing matrix expand, lower+upper entry.....'
-   call setup_control(control)
-   control%amd_switch1 = 2
-   control%amd_call = 2
-   control%print_level = 2
+   call setup_options(options)
+   options%amd_switch1 = 2
+   options%amd_call = 2
+   options%print_level = 2
 
    n = 10
    ne = 18
@@ -525,7 +525,7 @@ subroutine test_input
    end do
    row(ptr(n)) = n - 1
 
-   call nd_order(1,n,ptr,row,perm,control,info,seps)
+   call nd_order(1,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps, expect_nzsuper=18)
 
    deallocate (ptr,row,perm,seps)
@@ -537,10 +537,10 @@ subroutine test_input
    write (*, '(a)', advance="no") &
       ' * Testing matrix expand w diag, lower entry....'
 
-   call setup_control(control)
-   control%amd_switch1 = 2
-   control%amd_call = 2
-   control%print_level = 2
+   call setup_options(options)
+   options%amd_switch1 = 2
+   options%amd_call = 2
+   options%print_level = 2
 
    n = 10
    ne = 19
@@ -556,7 +556,7 @@ subroutine test_input
    row(ptr(n)) = n - 1
    row(ne) = n
 
-   call nd_order(1,n,ptr,row,perm,control,info,seps)
+   call nd_order(1,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps, expect_nzsuper=18)
 
    deallocate (ptr,row,perm,seps)
@@ -570,7 +570,7 @@ end subroutine test_input
 subroutine test_dense
    integer :: n, ne, i
    integer, allocatable, dimension(:) :: ptr, row, perm, seps
-   type (nd_options) :: control
+   type (nd_options) :: options
    type (nd_inform) :: info
 
    write (*, '()')
@@ -583,11 +583,11 @@ subroutine test_dense
    ! --------------------------------------
    write (*, '(a)', advance="no") &
       ' * Testing single dense row, no removal.........'
-   call setup_control(control)
-   control%amd_switch1 = 2
-   control%amd_call = 20
-   control%print_level = 2
-   control%remove_dense_rows = .false.
+   call setup_options(options)
+   options%amd_switch1 = 2
+   options%amd_call = 20
+   options%print_level = 2
+   options%remove_dense_rows = .false.
 
    n = 800
    ne = n
@@ -596,7 +596,7 @@ subroutine test_dense
    ptr(2:n+1) = ne + 1
    row(1:ne) = (/ (i,i=1,n) /)
 
-   call nd_order(0,n,ptr,row,perm,control,info,seps)
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0 .and. info%nsuper==800 .and. info%nzsuper==1598) &
    call check_success(n, perm, info, seps=seps, expect_nsuper=800, &
       expect_nzsuper=1598)
@@ -605,10 +605,10 @@ subroutine test_dense
 
    write (*, '(a)', advance="no") &
       ' * Testing single dense row, with removal.......'
-   call setup_control(control)
-   control%amd_switch1 = 2
-   control%amd_call = 20
-   control%print_level = 2
+   call setup_options(options)
+   options%amd_switch1 = 2
+   options%amd_call = 20
+   options%print_level = 2
 
    n = 800
    ne = n
@@ -617,7 +617,7 @@ subroutine test_dense
    ptr(2:n+1) = ne + 1
    row(1:ne) = (/ (i,i=1,n) /)
 
-   call nd_order(0,n,ptr,row,perm,control,info,seps)
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps, expect_nsuper=799, &
       expect_nzsuper=0)
 
@@ -628,9 +628,9 @@ subroutine test_dense
    ! --------------------------------------
    write (*, '(a)', advance="no") &
       ' * Testing subdiag + first row dense............'
-   call setup_control(control)
-   control%amd_switch1 = 2
-   control%amd_call = 20
+   call setup_options(options)
+   options%amd_switch1 = 2
+   options%amd_call = 20
 
    n = 800
    ne = 2*n - 3
@@ -641,7 +641,7 @@ subroutine test_dense
    row(1:ptr(2)-1) = (/ (i,i=2,n) /)
    row(ptr(2):ptr(n)-1) = (/ (i+1,i=2,n-1) /)
 
-   call nd_order(0,n,ptr,row,perm,control,info,seps)
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps, expect_nsuper=799, &
       expect_nzsuper=1596)
 
@@ -652,9 +652,9 @@ subroutine test_dense
    ! --------------------------------------
    write (*, '(a)', advance="no") &
       ' * Testing last row dense.......................'
-   call setup_control(control)
-   control%amd_switch1 = 2
-   control%amd_call = 20
+   call setup_options(options)
+   options%amd_switch1 = 2
+   options%amd_call = 20
 
    n = 800
    ne = n - 1
@@ -663,7 +663,7 @@ subroutine test_dense
    ptr(n:n+1) = ne + 1
    row(1:ne) = n
 
-   call nd_order(0,n,ptr,row,perm,control,info,seps)
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps, expect_nsuper=799, &
       expect_nzsuper=0)
 
@@ -674,9 +674,9 @@ subroutine test_dense
    ! --------------------------------------
    write (*, '(a)', advance="no") &
       ' * Testing two rows dense, row 2 max degree.....'
-   call setup_control(control)
-   control%amd_switch1 = 2
-   control%amd_call = 20
+   call setup_options(options)
+   options%amd_switch1 = 2
+   options%amd_call = 20
 
    n = 800
    ne = n - 3 + n - 2
@@ -687,7 +687,7 @@ subroutine test_dense
    row(ptr(1):ptr(2)-1) = (/ (i+3,i=1,n-3) /)
    row(ptr(2):ne) = (/ (i+2,i=1,n-2) /)
 
-   call nd_order(0,n,ptr,row,perm,control,info,seps)
+   call nd_order(0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps, expect_nsuper=798, &
       expect_nzsuper=0)
 
@@ -699,13 +699,13 @@ end subroutine test_dense
 ! *****************************************************************
 
 
-  subroutine test_ashcraft(ok)
+  subroutine test_halflevelset(ok)
    logical, intent(out) :: ok
 
    integer :: test_count, testi_count, test
    integer :: n, ne, st, i
    integer, allocatable, dimension(:) :: ptr, row, perm, seps
-   type (nd_options) :: control, control_orig
+   type (nd_options) :: options, options_orig
    type (nd_inform) :: info
 
    ok = .true.
@@ -728,16 +728,16 @@ end subroutine test_dense
    ptr(1:n+1) = (/ 1, 3, 5, 7, 9, 11, 12, 13, 14, 15, 15 /)
    row(1:ne) = (/ 2, 7, 7, 3, 4, 8, 5, 9, 6, 10, 10, 8, 9, 10 /)
 
-   control%amd_switch1 = 5
-   control%partition_method = 0
-   control%coarse_partition_method = 1
-   control%amd_call = 2
+   options%amd_switch1 = 5
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
    do i = 0, 2
-     control%print_level = i
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     options%print_level = i
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -765,16 +765,16 @@ end subroutine test_dense
    ptr(1:n+1) = (/ 1, 4, 6, 8, 9, 10, 11, 13, 15, 16, 16 /)
    row(1:ne) = (/ 2, 3, 4, 3, 5, 4, 8, 6, 7, 9, 8, 10, 9, 10, 10 /)
 
-   control%amd_switch1 = 2
-   control%partition_method = 0
-   control%coarse_partition_method = 1
-   control%amd_call = 2
+   options%amd_switch1 = 2
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
    do i = 0, 0
-     control%print_level = i
-     call nd_order(0,n,ptr,row,perm,control,info)
+     options%print_level = i
+     call nd_order(0,n,ptr,row,perm,options,info)
      if (info%flag>=0) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -802,16 +802,16 @@ end subroutine test_dense
    ptr(1:n+1) = (/ 1, 2, 4, 6, 8, 10, 12, 13, 13, 14, 14, 16, 17, 17 /)
    row(1:ne) = (/ 2, 3, 4, 4, 11, 5, 6, 7, 8, 9, 10, 8, 10, 12, 13, 13 /)
 
-   control%amd_switch1 = 2
-   control%partition_method = 0
-   control%coarse_partition_method = 1
-   control%amd_call = 2
+   options%amd_switch1 = 2
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
    do i = 0, 0
-     control%print_level = i
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     options%print_level = i
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -839,17 +839,17 @@ end subroutine test_dense
    ptr(1:n+1) = (/ 1, 2, 4, 6, 8, 10, 12, 13, 13, 14, 14, 16, 17, 17 /)
    row(1:ne) = (/ 2, 3, 4, 4, 11, 5, 6, 7, 8, 9, 10, 8, 10, 12, 13, 13 /)
 
-   control%amd_switch1 = 2
-   control%partition_method = 0
-   control%coarse_partition_method = 1
-   control%amd_call = 2
-   control%balance = 20.0
+   options%amd_switch1 = 2
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%balance = 20.0
    do i = 0, 0
-     control%print_level = i
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     options%print_level = i
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -869,7 +869,7 @@ end subroutine test_dense
 
 20    write (*,'(a,i4)') 'Deallocation error during test section ', test
 
- end subroutine test_ashcraft
+ end subroutine test_halflevelset
 
 
 ! *****************************************************************
@@ -881,7 +881,7 @@ end subroutine test_dense
    integer :: test_count, testi_count, test
    integer :: n, ne, st, i
    integer, allocatable, dimension(:) :: ptr, row, perm, seps
-   type (nd_options) :: control, control_orig
+   type (nd_options) :: options, options_orig
    type (nd_inform) :: info
 
    ok = .true.
@@ -904,17 +904,17 @@ end subroutine test_dense
    ptr(1:n+1) = (/ 1, 3, 5, 7, 9, 11, 12, 13, 14, 15, 15 /)
    row(1:ne) = (/ 2, 7, 7, 3, 4, 8, 5, 9, 6, 10, 10, 8, 9, 10 /)
 
-   control%amd_switch1 = 5
-   control%partition_method = 0
-   control%coarse_partition_method = 2
-   control%amd_call = 2
-   control%balance = 20.0
+   options%amd_switch1 = 5
+   options%partition_method = 0
+   options%coarse_partition_method = 2
+   options%amd_call = 2
+   options%balance = 20.0
    do i = 0, 2
-     control%print_level = i
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     options%print_level = i
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -942,17 +942,17 @@ end subroutine test_dense
    ptr(1:n+1) = (/ 1, 3, 5, 7, 9, 11, 12, 13, 14, 15, 15 /)
    row(1:ne) = (/ 2, 7, 7, 3, 4, 8, 5, 9, 6, 10, 10, 8, 9, 10 /)
 
-   control%amd_switch1 = 5
-   control%partition_method = 0
-   control%coarse_partition_method = 2
-   control%balance = 1.5
-   control%amd_call = 2
+   options%amd_switch1 = 5
+   options%partition_method = 0
+   options%coarse_partition_method = 2
+   options%balance = 1.5
+   options%amd_call = 2
    do i = 0, 0
-     control%print_level = i
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     options%print_level = i
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -984,7 +984,7 @@ end subroutine test_dense
    integer :: test_count, testi_count, test
    integer :: n, ne, st, i
    integer, allocatable, dimension(:) :: ptr, row, perm, seps
-   type (nd_options) :: control, control_orig
+   type (nd_options) :: options, options_orig
    type (nd_inform) :: info
 
    ok = .true.
@@ -1006,27 +1006,27 @@ end subroutine test_dense
    ptr(1:n+1) = (/ 1, 4, 5, 6, 8, 9, 11, 12, 12 /)
    row(1:ne) = (/ 2, 3, 4, 4, 4, 5, 6, 6, 7, 8, 8 /)
 
-   control%amd_switch1 = 5
-   control%partition_method = 0
-   control%coarse_partition_method = 1
-   control%amd_call = 2
+   options%amd_switch1 = 5
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
    do i = 2, 2
-     control%print_level = i
-     control%refinement = 2
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     options%print_level = i
+     options%refinement = 2
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0) testi_count = testi_count + 1
-     control%refinement = 5
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     options%refinement = 5
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0) testi_count = testi_count + 1
-     control%print_level = i
-     control%refinement = 2
-     call nd_order(0,n,ptr,row,perm,control,info)
+     options%print_level = i
+     options%refinement = 2
+     call nd_order(0,n,ptr,row,perm,options,info)
      if (info%flag>=0) testi_count = testi_count + 1
-     control%refinement = 5
-     call nd_order(0,n,ptr,row,perm,control,info)
+     options%refinement = 5
+     call nd_order(0,n,ptr,row,perm,options,info)
      if (info%flag>=0) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -1057,17 +1057,17 @@ end subroutine test_dense
      17, 11, 13, 12, 13, 13, 15, 14, 15, 15, 17, 18, 19, 18, 19, 20, 20, &
      21, 21 /)
 
-   control%amd_switch1 = 5
-   control%partition_method = 0
-   control%coarse_partition_method = 1
-   control%refinement = 2
-   control%amd_call = 2
+   options%amd_switch1 = 5
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%refinement = 2
+   options%amd_call = 2
    do i = 0, 0
-     control%print_level = i
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     options%print_level = i
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -1098,18 +1098,18 @@ end subroutine test_dense
      13, 14, 14, 14, 15, 17, 18, 18, 16, 17, 19, 20, 21, 21, 20, 22, 23, &
      24, 24, 25, 23, 26, 26, 27, 27, 28, 29, 29, 30, 30, 31, 31 /)
 
-   control%amd_switch1 = 5
-   control%partition_method = 0
-   control%coarse_partition_method = 2
-   control%refinement = 2
-   control%amd_call = 2
-   control%balance = 33.0
+   options%amd_switch1 = 5
+   options%partition_method = 0
+   options%coarse_partition_method = 2
+   options%refinement = 2
+   options%amd_call = 2
+   options%balance = 33.0
    do i = 0, 0
-     control%print_level = i
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     options%print_level = i
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -1137,18 +1137,18 @@ end subroutine test_dense
    ptr(1:n+1) = (/ 1, 2, 3, 4, 5, 6, 7, 7 /)
    row(1:ne) = (/ 7, 7, 7, 7, 7, 7 /)
 
-   control%amd_switch1 = 5
-   control%partition_method = 0
-   control%coarse_partition_method = 2
-   control%refinement = 2
-   control%amd_call = 2
-   control%balance = 12.0
+   options%amd_switch1 = 5
+   options%partition_method = 0
+   options%coarse_partition_method = 2
+   options%refinement = 2
+   options%amd_call = 2
+   options%balance = 12.0
    do i = 0, 0
-     control%print_level = i
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     options%print_level = i
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -1176,18 +1176,18 @@ end subroutine test_dense
    ptr(1:n+1) = (/ 1, 2, 3, 4, 5, 6, 7, 7 /)
    row(1:ne) = (/ 7, 7, 7, 7, 7, 7 /)
 
-   control%amd_switch1 = 5
-   control%partition_method = 0
-   control%coarse_partition_method = 2
-   control%refinement = 5
-   control%amd_call = 2
-   control%balance = 12.0
+   options%amd_switch1 = 5
+   options%partition_method = 0
+   options%coarse_partition_method = 2
+   options%refinement = 5
+   options%amd_call = 2
+   options%balance = 12.0
    do i = 0, 0
-     control%print_level = i
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     options%print_level = i
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -1219,18 +1219,18 @@ end subroutine test_dense
      13, 14, 14, 14, 15, 17, 18, 18, 16, 17, 19, 20, 21, 21, 20, 22, 23, &
      24, 24, 25, 23, 26, 26, 27, 27, 28, 29, 29, 30, 30, 31, 31 /)
 
-   control%amd_switch1 = 5
-   control%partition_method = 0
-   control%coarse_partition_method = 2
-   control%refinement = 5
-   control%balance = 2.0
-   control%amd_call = 2
+   options%amd_switch1 = 5
+   options%partition_method = 0
+   options%coarse_partition_method = 2
+   options%refinement = 5
+   options%balance = 2.0
+   options%amd_call = 2
    do i = 0, 2
-     control%print_level = i
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     options%print_level = i
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -1261,18 +1261,18 @@ end subroutine test_dense
      13, 14, 14, 14, 15, 17, 18, 18, 16, 17, 19, 20, 21, 21, 20, 22, 23, &
      24, 24, 25, 23, 26, 26, 27, 27, 28, 29, 29, 30, 30, 31, 31 /)
 
-   control%amd_switch1 = 5
-   control%partition_method = 0
-   control%coarse_partition_method = 1
-   control%refinement = 5
-   control%balance = 2.0
-   control%amd_call = 2
+   options%amd_switch1 = 5
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%refinement = 5
+   options%balance = 2.0
+   options%amd_call = 2
    do i = 0, 0
-     control%print_level = i
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     options%print_level = i
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -1303,19 +1303,19 @@ end subroutine test_dense
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   control%amd_switch1 = 5
-   control%partition_method = 0
-   control%coarse_partition_method = 1
-   control%refinement = 2
-   control%balance = 1.05
-   control%refinement_band = n
-   control%amd_call = 2
+   options%amd_switch1 = 5
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%refinement = 2
+   options%balance = 1.05
+   options%refinement_band = n
+   options%amd_call = 2
    do i = 0, 0
-     control%print_level = i
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     options%print_level = i
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -1344,19 +1344,19 @@ end subroutine test_dense
    ptr(1:n+1) = (/ 1, 2, 3, 6, 7, 8, 9, 11, 11, 13, 14, 15, 16, 16 /)
    row(1:ne) = (/ 2, 3, 4, 5, 6, 6, 6, 7, 8, 9, 10, 11, 12, 12, 13 /)
 
-   control%amd_switch1 = 5
-   control%partition_method = 0
-   control%coarse_partition_method = 1
-   control%refinement = 2
-   control%balance = 1.30
-   control%refinement_band = n
-   control%amd_call = 2
+   options%amd_switch1 = 5
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%refinement = 2
+   options%balance = 1.30
+   options%refinement_band = n
+   options%amd_call = 2
    do i = 0, 0
-     control%print_level = i
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     options%print_level = i
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -1385,19 +1385,19 @@ end subroutine test_dense
    ptr(1:n+1) = (/ 1, 2, 4, 5, 6, 7, 8, 9, 12, 13, 14, 15, 16, 16 /)
    row(1:ne) = (/ 2, 3, 4, 5, 5, 7, 7, 8, 9, 10, 11, 11, 11, 12, 13 /)
 
-   control%amd_switch1 = 5
-   control%partition_method = 0
-   control%coarse_partition_method = 1
-   control%refinement = 2
-   control%balance = 1.30
-   control%refinement_band = n
-   control%amd_call = 2
+   options%amd_switch1 = 5
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%refinement = 2
+   options%balance = 1.30
+   options%refinement_band = n
+   options%amd_call = 2
    do i = 0, 0
-     control%print_level = i
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     options%print_level = i
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -1432,7 +1432,7 @@ end subroutine test_dense
    integer :: test_count, testi_count, test
    integer :: n, ne, st, i, j, k
    integer, allocatable, dimension(:) :: ptr, row, perm, seps
-   type (nd_options) :: control, control_orig
+   type (nd_options) :: options, options_orig
    type (nd_inform) :: info
 
    ok = .true.
@@ -1457,19 +1457,19 @@ end subroutine test_dense
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   control%amd_switch1 = 5
-   control%balance = 1.05
-   control%partition_method = 1
-   control%ml_call = 4
-   control%coarse_partition_method = 2
-   control%amd_call = 2
-   control%stop_coarsening1 = 5
+   options%amd_switch1 = 5
+   options%balance = 1.05
+   options%partition_method = 1
+   options%ml_call = 4
+   options%coarse_partition_method = 2
+   options%amd_call = 2
+   options%stop_coarsening1 = 5
    do i = 0, 2
-     control%print_level = i
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     options%print_level = i
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -1501,22 +1501,22 @@ end subroutine test_dense
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   control%amd_switch1 = 5
-   control%balance = 1.05
-   control%partition_method = 1
-   control%ml_call = 4
-   control%coarse_partition_method = 1
-   control%amd_call = 2
-   control%stop_coarsening1 = 5
+   options%amd_switch1 = 5
+   options%balance = 1.05
+   options%partition_method = 1
+   options%ml_call = 4
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%stop_coarsening1 = 5
    do i = 0, 2
      do j = 0, 2
-       control%print_level = i
-       control%matching = j
-       call nd_order(0,n,ptr,row,perm,control,info,seps)
+       options%print_level = i
+       options%matching = j
+       call nd_order(0,n,ptr,row,perm,options,info,seps)
        if (info%flag>=0) testi_count = testi_count + 1
      end do
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -1547,19 +1547,19 @@ end subroutine test_dense
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   control%amd_switch1 = 5
-   control%balance = 1.05
-   control%partition_method = 1
-   control%ml_call = 4
-   control%coarse_partition_method = 2
-   control%amd_call = 2
-   control%stop_coarsening1 = 5
+   options%amd_switch1 = 5
+   options%balance = 1.05
+   options%partition_method = 1
+   options%ml_call = 4
+   options%coarse_partition_method = 2
+   options%amd_call = 2
+   options%stop_coarsening1 = 5
    do i = 0, 2
-     control%print_level = i
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     options%print_level = i
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -1591,22 +1591,22 @@ end subroutine test_dense
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   control%amd_switch1 = 5
-   control%balance = 1.05
-   control%partition_method = 1
-   control%ml_call = 4
-   control%coarse_partition_method = 1
-   control%amd_call = 2
-   control%stop_coarsening1 = 5
+   options%amd_switch1 = 5
+   options%balance = 1.05
+   options%partition_method = 1
+   options%ml_call = 4
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%stop_coarsening1 = 5
    do i = 0, 2
      do j = 0, 2
-       control%print_level = i
-       control%matching = j
-       call nd_order(0,n,ptr,row,perm,control,info,seps)
+       options%print_level = i
+       options%matching = j
+       call nd_order(0,n,ptr,row,perm,options,info,seps)
        if (info%flag>=0) testi_count = testi_count + 1
      end do
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -1636,22 +1636,22 @@ end subroutine test_dense
    row(1:ne) = (/ 2, 9, 9, 4, 10, 10, 6, 11, 11, 8, 12, 12, 10, 11, 12, 11, &
      12, 12 /)
 
-   control%amd_switch1 = 5
-   control%balance = 1.05
-   control%partition_method = 1
-   control%ml_call = 4
-   control%coarse_partition_method = 1
-   control%amd_call = 2
-   control%stop_coarsening1 = 5
-   control%min_reduction = 0.4
-   control%matching = 1
+   options%amd_switch1 = 5
+   options%balance = 1.05
+   options%partition_method = 1
+   options%ml_call = 4
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%stop_coarsening1 = 5
+   options%min_reduction = 0.4
+   options%matching = 1
    do i = 0, 2
-     control%print_level = i
-     control%matching = j
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     options%print_level = i
+     options%matching = j
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -1682,22 +1682,22 @@ end subroutine test_dense
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   control%amd_switch1 = 5
-   control%balance = 1.05
-   control%partition_method = 1
-   control%ml_call = 4
-   control%coarse_partition_method = 1
-   control%amd_call = 2
-   control%stop_coarsening1 = 5
+   options%amd_switch1 = 5
+   options%balance = 1.05
+   options%partition_method = 1
+   options%ml_call = 4
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%stop_coarsening1 = 5
    do i = 0, 7
      do j = 0, 2
-       control%refinement = i
-       control%matching = j
-       call nd_order(0,n,ptr,row,perm,control,info,seps)
+       options%refinement = i
+       options%matching = j
+       call nd_order(0,n,ptr,row,perm,options,info,seps)
        if (info%flag>=0) testi_count = testi_count + 1
      end do
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -1727,22 +1727,22 @@ end subroutine test_dense
    row(1:ne) = (/ 2, 3, 3, 4, 4, 5, 6, 7, 8, 6, 7, 8, 9, 7, 8, 9, 8, 9, &
      9 /)
 
-   control%amd_switch1 = 4
-   control%balance = 1.0
-   control%partition_method = 0
-   control%coarse_partition_method = 1
-   control%amd_call = 2
-   control%stop_coarsening1 = 4
-   control%print_level = 2
+   options%amd_switch1 = 4
+   options%balance = 1.0
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%stop_coarsening1 = 4
+   options%print_level = 2
    do i = 0, 7
      do j = 0, 2
-       control%refinement = 3
-       control%matching = j
-       call nd_order(0,n,ptr,row,perm,control,info,seps)
+       options%refinement = 3
+       options%matching = j
+       call nd_order(0,n,ptr,row,perm,options,info,seps)
        if (info%flag>=0) testi_count = testi_count + 1
      end do
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -1771,22 +1771,22 @@ end subroutine test_dense
    row(1:ne) = (/ 2, 3, 3, 4, 4, 5, 6, 7, 8, 6, 7, 8, 9, 7, 8, 9, 8, 9, &
      9 /)
 
-   control%amd_switch1 = 4
-   control%balance = 1.0
-   control%partition_method = 1
-   control%ml_call = 4
-   control%coarse_partition_method = 1
-   control%amd_call = 2
-   control%stop_coarsening1 = 2
+   options%amd_switch1 = 4
+   options%balance = 1.0
+   options%partition_method = 1
+   options%ml_call = 4
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%stop_coarsening1 = 2
    do i = 0, 7
      do j = 0, 2
-       control%refinement = i
-       control%matching = j
-       call nd_order(0,n,ptr,row,perm,control,info,seps)
+       options%refinement = i
+       options%matching = j
+       call nd_order(0,n,ptr,row,perm,options,info,seps)
        if (info%flag>=0) testi_count = testi_count + 1
      end do
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -1819,20 +1819,20 @@ end subroutine test_dense
    ptr(n+1) = ne + 1
    row(1:ne) = (/ (i,i=2,n) /)
 
-   control%amd_switch1 = 4
-   control%stop_coarsening1 = 3
-   control%balance = 8.0
-   control%partition_method = 2
-   control%coarse_partition_method = 2
-   control%ml_call = 10
-   control%amd_call = 2
-   control%max_improve_cycles = 2
-   control%refinement = 7
+   options%amd_switch1 = 4
+   options%stop_coarsening1 = 3
+   options%balance = 8.0
+   options%partition_method = 2
+   options%coarse_partition_method = 2
+   options%ml_call = 10
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%refinement = 7
    do i = 0, 0
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -1867,20 +1867,20 @@ end subroutine test_dense
    end do
    ptr(n+1) = j
 
-   control%amd_switch1 = 4
-   control%stop_coarsening1 = 3
-   control%balance = 8.0
-   control%partition_method = 2
-   control%ml_call = 10
-   control%amd_call = 2
-   control%max_improve_cycles = 2
-   control%refinement = 7
+   options%amd_switch1 = 4
+   options%stop_coarsening1 = 3
+   options%balance = 8.0
+   options%partition_method = 2
+   options%ml_call = 10
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%refinement = 7
    do i = 1, 2
-     control%coarse_partition_method = i
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     options%coarse_partition_method = i
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -1912,22 +1912,22 @@ end subroutine test_dense
 
    row(1:ne) = (/ (i,i=2,n) /)
 
-   control%amd_switch1 = 4
-   control%stop_coarsening1 = 3
-   control%balance = 2.0
-   control%partition_method = 1
-   control%ml_call = 10
-   control%amd_call = 2
-   control%max_improve_cycles = 2
-   control%refinement = 7
-   control%find_supervariables = .false.
-   control%print_level = 2
+   options%amd_switch1 = 4
+   options%stop_coarsening1 = 3
+   options%balance = 2.0
+   options%partition_method = 1
+   options%ml_call = 10
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%refinement = 7
+   options%find_supervariables = .false.
+   options%print_level = 2
    do i = 1, 2
-     control%coarse_partition_method = i
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     options%coarse_partition_method = i
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -1985,22 +1985,22 @@ end subroutine test_dense
    end do
    ptr(n+1) = j
 
-   control%amd_switch1 = 4
-   control%stop_coarsening1 = 3
-   control%min_reduction = 0.5
-   control%balance = 1.0
-   control%partition_method = 1
-   control%ml_call = 4
-   control%coarse_partition_method = 1
-   control%amd_call = 2
-   control%max_improve_cycles = 1
-   control%print_level = 0
+   options%amd_switch1 = 4
+   options%stop_coarsening1 = 3
+   options%min_reduction = 0.5
+   options%balance = 1.0
+   options%partition_method = 1
+   options%ml_call = 4
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%max_improve_cycles = 1
+   options%print_level = 0
    do i = 0, 0
-     control%refinement = 1
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     options%refinement = 1
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -2031,7 +2031,7 @@ end subroutine test_dense
    integer :: test_count, testi_count, test
    integer :: n, ne, st, i
    integer, allocatable, dimension(:) :: ptr, row, perm, seps
-   type (nd_options) :: control, control_orig
+   type (nd_options) :: options, options_orig
    type (nd_inform) :: info
 
    ok = .true.
@@ -2057,13 +2057,13 @@ end subroutine test_dense
      24, 24, 25, 23, 26, 26, 27, 27, 28, 29, 29, 30, 30, 31, 31 /)
 
 
-   control%amd_call = 40
+   options%amd_call = 40
    do i = 2, 2
-     control%print_level = i
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     options%print_level = i
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -2092,13 +2092,13 @@ end subroutine test_dense
    ptr(2:n+1) = 2
    row(1:ne) = (/ 2 /)
 
-   control%amd_call = 40
+   options%amd_call = 40
    do i = 2, 2
-     control%print_level = i
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     options%print_level = i
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -2129,7 +2129,7 @@ end subroutine test_dense
    integer :: test_count, testi_count, test
    integer :: n, ne, st, i, j
    integer, allocatable, dimension(:) :: ptr, row, perm, seps
-   type (nd_options) :: control, control_orig
+   type (nd_options) :: options, options_orig
    type (nd_inform) :: info
 
    ok = .true.
@@ -2137,7 +2137,7 @@ end subroutine test_dense
    test_count = 0
 
    ! --------------------------------------
-   ! Test for refinement controls
+   ! Test for refinement optionss
    ! --------------------------------------
 
    test = 1
@@ -2151,17 +2151,17 @@ end subroutine test_dense
    ptr(1:n+1) = (/ 1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 14, 15, 16, 17, 17 /)
    row(1:ne) = (/ 2, 3, 4, 5, 6, 7, 8, 8, 8, 9, 10, 11, 12, 13, 13, 14 /)
 
-   control%amd_switch1 = 6
-   control%amd_call = 2
-   control%find_supervariables = .false.
-   control%partition_method = 0
-   control%refinement = 0
+   options%amd_switch1 = 6
+   options%amd_call = 2
+   options%find_supervariables = .false.
+   options%partition_method = 0
+   options%refinement = 0
    do i = 0, 0
-     control%print_level = i
-     call nd_order(0,n,ptr,row,perm,control,info)
+     options%print_level = i
+     call nd_order(0,n,ptr,row,perm,options,info)
      if (info%flag>=0 .and. info%nzsuper==32) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -2175,7 +2175,7 @@ end subroutine test_dense
    end if
 
    ! --------------------------------------
-   ! Test for refinement controls
+   ! Test for refinement optionss
    ! --------------------------------------
 
    test = 2
@@ -2189,21 +2189,21 @@ end subroutine test_dense
    ptr(1:n+1) = (/ 1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 14, 15, 16, 17, 17 /)
    row(1:ne) = (/ 2, 3, 4, 5, 6, 7, 8, 8, 8, 9, 10, 11, 12, 13, 13, 14 /)
 
-   control%amd_switch1 = 6
-   control%amd_call = 2
-   control%find_supervariables = .false.
-   control%partition_method = 0
-   control%refinement = 0
+   options%amd_switch1 = 6
+   options%amd_call = 2
+   options%find_supervariables = .false.
+   options%partition_method = 0
+   options%refinement = 0
    do i = 0, 0
-     control%print_level = i
+     options%print_level = i
      do j = 1, 7
-       control%refinement = j
-       call nd_order(0,n,ptr,row,perm,control,info)
+       options%refinement = j
+       call nd_order(0,n,ptr,row,perm,options,info)
        if (info%flag>=0 .and. info%nzsuper==32) testi_count = testi_count + &
          1
      end do
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -2238,19 +2238,19 @@ end subroutine test_dense
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   control%amd_switch1 = 4
-   control%balance = 1.0
-   control%partition_method = 0
-   control%coarse_partition_method = 2
-   control%amd_call = 2
-   control%max_improve_cycles = 2
-   control%refinement_band = -1
+   options%amd_switch1 = 4
+   options%balance = 1.0
+   options%partition_method = 0
+   options%coarse_partition_method = 2
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%refinement_band = -1
    do i = 0, 7
-     control%refinement = i
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     options%refinement = i
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -2279,18 +2279,18 @@ end subroutine test_dense
    ptr(1:n+1) = (/ 1, 5, 8, 10, 11, 12, 13, 13 /)
    row(1:ne) = (/ 2, 3, 4, 5, 3, 4, 5, 4, 5, 5, 6, 7 /)
 
-   control%amd_switch1 = 3
-   control%balance = 1.0
-   control%partition_method = 0
-   control%coarse_partition_method = 1
-   control%amd_call = 2
-   control%max_improve_cycles = 2
+   options%amd_switch1 = 3
+   options%balance = 1.0
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%max_improve_cycles = 2
    do i = 0, 7
-     control%refinement = i
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     options%refinement = i
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -2320,22 +2320,22 @@ end subroutine test_dense
    row(1:ne) = (/ 2, 3, 4, 5, 6, 7, 3, 4, 5, 6, 7, 4, 5, 6, 7, 5, 6, 7, 6, &
      7, 7, 8, 9, 10, 11, 12, 13 /)
 
-   control%amd_switch1 = 3
-   control%stop_coarsening1 = 2
-   control%min_reduction = 0.5
-   control%balance = 1.0
-   control%partition_method = 1
-   control%ml_call = 4
-   control%coarse_partition_method = 1
-   control%amd_call = 2
-   control%max_improve_cycles = 2
-   control%print_level = 2
+   options%amd_switch1 = 3
+   options%stop_coarsening1 = 2
+   options%min_reduction = 0.5
+   options%balance = 1.0
+   options%partition_method = 1
+   options%ml_call = 4
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%print_level = 2
    do i = 0, 7
-     control%refinement = i
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     options%refinement = i
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -2366,21 +2366,21 @@ end subroutine test_dense
    row(1:ne) = (/ 2, 3, 3, 4, 5, 6, 6, 7, 8, 9, 10, 11, 12, 12, 13, 13, 14, &
      14, 15, 15, 16, 16 /)
 
-   control%amd_switch1 = 4
-   control%stop_coarsening1 = 3
-   control%min_reduction = 0.5
-   control%balance = 1.0
-   control%partition_method = 0
-   control%coarse_partition_method = 1
-   control%amd_call = 2
-   control%max_improve_cycles = 1
-   control%print_level = 0
+   options%amd_switch1 = 4
+   options%stop_coarsening1 = 3
+   options%min_reduction = 0.5
+   options%balance = 1.0
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%max_improve_cycles = 1
+   options%print_level = 0
    do i = 0, 0
-     control%refinement = 1
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     options%refinement = 1
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -2411,21 +2411,21 @@ end subroutine test_dense
    row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 10, 10, 10, 11, 12, 13, &
      14, 15, 15, 16, 16 /)
 
-   control%amd_switch1 = 4
-   control%stop_coarsening1 = 3
-   control%min_reduction = 0.5
-   control%balance = 1.0
-   control%partition_method = 0
-   control%coarse_partition_method = 1
-   control%amd_call = 2
-   control%max_improve_cycles = 1
-   control%print_level = 2
+   options%amd_switch1 = 4
+   options%stop_coarsening1 = 3
+   options%min_reduction = 0.5
+   options%balance = 1.0
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%max_improve_cycles = 1
+   options%print_level = 2
    do i = 0, 0
-     control%refinement = 1
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     options%refinement = 1
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -2457,21 +2457,21 @@ end subroutine test_dense
      10, 13, 13, 12, 13, 14, 16, 17, 18, 19, 20, 15, 17, 21, 18, 21, 19, &
      22, 20, 23, 23, 22, 24, 23, 24, 24, 25 /)
 
-   control%amd_switch1 = 4
-   control%stop_coarsening1 = 3
-   control%min_reduction = 0.5
-   control%balance = 1.5
-   control%partition_method = 0
-   control%coarse_partition_method = 1
-   control%amd_call = 2
-   control%max_improve_cycles = 1
-   control%print_level = 2
+   options%amd_switch1 = 4
+   options%stop_coarsening1 = 3
+   options%min_reduction = 0.5
+   options%balance = 1.5
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%max_improve_cycles = 1
+   options%print_level = 2
    do i = 0, 0
-     control%refinement = 1
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     options%refinement = 1
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -2502,21 +2502,21 @@ end subroutine test_dense
      10, 13, 13, 12, 13, 14, 16, 17, 18, 19, 20, 15, 17, 21, 18, 21, 19, &
      22, 20, 23, 23, 22, 24, 23, 24, 24, 25 /)
 
-   control%amd_switch1 = 4
-   control%stop_coarsening1 = 3
-   control%min_reduction = 0.5
-   control%balance = real(n+1)
-   control%partition_method = 1
-   control%coarse_partition_method = 1
-   control%amd_call = 2
-   control%max_improve_cycles = 1
-   control%print_level = 0
+   options%amd_switch1 = 4
+   options%stop_coarsening1 = 3
+   options%min_reduction = 0.5
+   options%balance = real(n+1)
+   options%partition_method = 1
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%max_improve_cycles = 1
+   options%print_level = 0
    do i = 0, 0
-     control%refinement = 7
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     options%refinement = 7
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -2545,19 +2545,19 @@ end subroutine test_dense
    row(1:ne) = (/ 2, 3, 3, 4, 4, 5, 6, 7, 8, 6, 7, 8, 9, 7, 8, 9, 8, 9, &
      9 /)
 
-   control%amd_switch1 = 4
-   control%balance = 1.0
-   control%partition_method = 0
-   control%coarse_partition_method = 1
-   control%amd_call = 2
-   control%stop_coarsening1 = 2
-   control%max_improve_cycles = 2
+   options%amd_switch1 = 4
+   options%balance = 1.0
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%stop_coarsening1 = 2
+   options%max_improve_cycles = 2
    do i = 0, 7
-     control%refinement = i
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     options%refinement = i
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -2587,19 +2587,19 @@ end subroutine test_dense
    row(1:ne) = (/ 2, 3, 3, 4, 4, 5, 6, 7, 8, 6, 7, 8, 9, 7, 8, 9, 8, 9, &
      9 /)
 
-   control%amd_switch1 = 4
-   control%balance = 10.0
-   control%partition_method = 0
-   control%coarse_partition_method = 1
-   control%amd_call = 2
-   control%stop_coarsening1 = 2
-   control%max_improve_cycles = 2
+   options%amd_switch1 = 4
+   options%balance = 10.0
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%stop_coarsening1 = 2
+   options%max_improve_cycles = 2
    do i = 0, 7
-     control%refinement = i
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     options%refinement = i
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -2628,18 +2628,18 @@ end subroutine test_dense
    ptr(1:n+1) = (/ 1, 5, 8, 10, 11, 12, 13, 13 /)
    row(1:ne) = (/ 2, 3, 4, 5, 3, 4, 5, 4, 5, 5, 6, 7 /)
 
-   control%amd_switch1 = 3
-   control%balance = 8.0
-   control%partition_method = 0
-   control%coarse_partition_method = 1
-   control%amd_call = 2
-   control%max_improve_cycles = 2
+   options%amd_switch1 = 3
+   options%balance = 8.0
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%max_improve_cycles = 2
    do i = 0, 7
-     control%refinement = i
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     options%refinement = i
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -2670,18 +2670,18 @@ end subroutine test_dense
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   control%amd_switch1 = 4
-   control%balance = 8.0
-   control%partition_method = 0
-   control%coarse_partition_method = 1
-   control%amd_call = 2
-   control%max_improve_cycles = 2
+   options%amd_switch1 = 4
+   options%balance = 8.0
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%max_improve_cycles = 2
    do i = 0, 7
-     control%refinement = i
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     options%refinement = i
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -2713,22 +2713,22 @@ end subroutine test_dense
             19,19,21,23,24,25,21,22,26,27,22,23,28,26,27,24,25,25,27,29,&
             29,29,29,29 /)
 
-   control%amd_switch1 = 4
-   control%balance = 1.01
-   control%partition_method = 1
-   control%coarse_partition_method = 2
-   control%refinement_band = 0
-   control%stop_coarsening1 = 3
-   control%stop_coarsening2 = 3
-   control%amd_call = 2
-   control%max_improve_cycles = 2
-   control%print_level = 2
+   options%amd_switch1 = 4
+   options%balance = 1.01
+   options%partition_method = 1
+   options%coarse_partition_method = 2
+   options%refinement_band = 0
+   options%stop_coarsening1 = 3
+   options%stop_coarsening2 = 3
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%print_level = 2
    do i = 0, 7
-     control%refinement = i
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     options%refinement = i
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -2758,22 +2758,22 @@ end subroutine test_dense
    row(1:ne) = (/ 2,4,4,6,5,7,8,7,9,8,10,11,10,12,11,12,13,13,13,14,14,15,&
         16,17,16,18,17,18,18,19,20,20,21,21 /)
 
-   control%amd_switch1 = 4
-   control%balance = 1.01
-   control%partition_method = 1
-   control%coarse_partition_method = 2
-   control%refinement_band = 0
-   control%stop_coarsening1 = 3
-   control%stop_coarsening2 = 3
-   control%amd_call = 2
-   control%max_improve_cycles = 2
-   control%print_level = 2
+   options%amd_switch1 = 4
+   options%balance = 1.01
+   options%partition_method = 1
+   options%coarse_partition_method = 2
+   options%refinement_band = 0
+   options%stop_coarsening1 = 3
+   options%stop_coarsening2 = 3
+   options%amd_call = 2
+   options%max_improve_cycles = 2
+   options%print_level = 2
    do i = 0, 7
-     control%refinement = i
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     options%refinement = i
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -2807,7 +2807,7 @@ end subroutine test_dense
    integer :: test_count, testi_count, test
    integer :: n, ne, st, i, j, k
    integer, allocatable, dimension(:) :: ptr, row, perm, seps
-   type (nd_options) :: control, control_orig
+   type (nd_options) :: options, options_orig
    type (nd_inform) :: info
 
    ok = .true.
@@ -2831,14 +2831,14 @@ end subroutine test_dense
    row(ne-1) = n - 1
    row(ne) = n
 
-   control%amd_switch1 = 2
-   control%amd_call = 2
+   options%amd_switch1 = 2
+   options%amd_call = 2
    do i = 1, 1
-     control%print_level = i
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     options%print_level = i
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0 .and. info%nzsuper==16) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -2868,20 +2868,20 @@ end subroutine test_dense
    ptr(1:n+1) = (/ 1, 2, 3, 4, 6, 7 /)
    row(1:ne) = (/ 2, 1, 4, 3, 5, 4 /)
 
-   control%amd_switch1 = 2
-   control%amd_call = 2
+   options%amd_switch1 = 2
+   options%amd_call = 2
    do i = 0, 2
-     control%print_level = i
-     control%coarse_partition_method = 2
-     call nd_order(1,n,ptr,row,perm,control,info)
+     options%print_level = i
+     options%coarse_partition_method = 2
+     call nd_order(1,n,ptr,row,perm,options,info)
      if (info%flag>=0) testi_count = testi_count + 1
 
-     control%coarse_partition_method = 1
-     call nd_order(1,n,ptr,row,perm,control,info)
+     options%coarse_partition_method = 1
+     call nd_order(1,n,ptr,row,perm,options,info)
      if (info%flag>=0) testi_count = testi_count + 1
 
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -2916,15 +2916,15 @@ end subroutine test_dense
    row(1:ne) = (/ 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, &
      10 /)
 
-   control%amd_switch1 = 2
-   control%amd_call = 2
-   control%find_supervariables = .false.
+   options%amd_switch1 = 2
+   options%amd_call = 2
+   options%find_supervariables = .false.
    do i = 0, 0
-     control%print_level = i
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     options%print_level = i
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0 .and. info%nzsuper==18) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -2963,15 +2963,15 @@ end subroutine test_dense
      end do
    end do
 
-   control%amd_switch1 = 2
-   control%amd_call = 2
-   control%find_supervariables = .false.
+   options%amd_switch1 = 2
+   options%amd_call = 2
+   options%find_supervariables = .false.
    do i = 2, 2
-     control%print_level = i
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     options%print_level = i
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0 .and. info%nzsuper==90) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -3001,16 +3001,16 @@ end subroutine test_dense
    row(1:ne) = (/ 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, &
      10 /)
 
-   control%amd_switch1 = 2
-   control%amd_call = 2
-   control%find_supervariables = .false.
-   control%cost_function = 2
+   options%amd_switch1 = 2
+   options%amd_call = 2
+   options%find_supervariables = .false.
+   options%cost_function = 2
    do i = 0, 0
-     control%print_level = i
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     options%print_level = i
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0 .and. info%nzsuper==18) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -3040,16 +3040,16 @@ end subroutine test_dense
    ptr(1:n+1) = (/ 1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 14, 15, 16, 17, 17 /)
    row(1:ne) = (/ 2, 3, 4, 5, 6, 7, 8, 8, 8, 9, 10, 11, 12, 13, 13, 14 /)
 
-   control%amd_switch1 = 6
-   control%amd_call = 2
-   control%find_supervariables = .false.
-   control%partition_method = 0
+   options%amd_switch1 = 6
+   options%amd_call = 2
+   options%find_supervariables = .false.
+   options%partition_method = 0
    do i = 2, 2
-     control%print_level = i
-     call nd_order(0,n,ptr,row,perm,control,info)
+     options%print_level = i
+     call nd_order(0,n,ptr,row,perm,options,info)
      if (info%flag>=0 .and. info%nzsuper==32) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -3084,21 +3084,21 @@ end subroutine test_dense
    row(1:ne) = (/ 2, 3, 3, 4, 5, 5, 14, 5, 13, 6, 13, 14, 8, 9, 13, 14, 10, &
      13, 9, 10, 11, 13, 11, 11, 12, 12 /)
 
-   control%amd_switch1 = 7
-   control%stop_coarsening1 = 2
-   control%min_reduction = 0.5
-   control%balance = 1.0
-   control%partition_method = 0
-   control%coarse_partition_method = 1
-   control%amd_call = 2
-   control%max_improve_cycles = 0
-   control%print_level = 2
+   options%amd_switch1 = 7
+   options%stop_coarsening1 = 2
+   options%min_reduction = 0.5
+   options%balance = 1.0
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%max_improve_cycles = 0
+   options%print_level = 2
    do i = 0, 0
-     control%refinement = 7
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     options%refinement = 7
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -3130,21 +3130,21 @@ end subroutine test_dense
    row(1:ne) = (/ 2, 3, 3, 4, 5, 5, 6, 5, 15, 6, 15, 16, 16, 11, 15, 9, 11, &
      12, 15, 16, 10, 12, 13, 16, 16, 13, 12, 14, 13, 14, 16 /)
 
-   control%amd_switch1 = 7
-   control%stop_coarsening1 = 2
-   control%min_reduction = 0.5
-   control%balance = 1.0
-   control%partition_method = 0
-   control%coarse_partition_method = 1
-   control%amd_call = 2
-   control%max_improve_cycles = 0
-   control%print_level = 2
+   options%amd_switch1 = 7
+   options%stop_coarsening1 = 2
+   options%min_reduction = 0.5
+   options%balance = 1.0
+   options%partition_method = 0
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%max_improve_cycles = 0
+   options%print_level = 2
    do i = 0, 0
-     control%refinement = 7
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     options%refinement = 7
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -3173,21 +3173,21 @@ end subroutine test_dense
    row(1:ne) = (/ 2,3,4,5,6,7,8,6,7,7,8,7,9,10,8,9,10,11,10,11,10,12,13,11,&
         12,13,14,13,14,13,15,16,14,15,16,17,16,17,16,17,18 /)
 
-   control%amd_switch1 = 7
-   control%stop_coarsening1 = 2
-   control%min_reduction = 0.5
-   control%balance = 1.0
-   control%partition_method = 2
-   control%coarse_partition_method = 1
-   control%amd_call = 2
-   control%max_improve_cycles = 0
-   control%print_level = 2
+   options%amd_switch1 = 7
+   options%stop_coarsening1 = 2
+   options%min_reduction = 0.5
+   options%balance = 1.0
+   options%partition_method = 2
+   options%coarse_partition_method = 1
+   options%amd_call = 2
+   options%max_improve_cycles = 0
+   options%print_level = 2
    do i = 0, 0
-     control%refinement = 7
-     call nd_order(0,n,ptr,row,perm,control,info,seps)
+     options%refinement = 7
+     call nd_order(0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0) testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,perm,seps,STAT=st)
    if (st/=0) go to 20
@@ -3222,7 +3222,7 @@ end subroutine test_dense
    integer :: test_count, testi_count, test
    integer :: n, ne, st, i, an1,an2,swgt,aw1,aw2,aws
    integer, allocatable, dimension(:) :: ptr,row,wgt,work,part
-   type (nd_options) :: control, control_orig
+   type (nd_options) :: options, options_orig
 
    ok = .true.
    testi_count = 0
@@ -3251,12 +3251,12 @@ end subroutine test_dense
    part(1:n) = (/ 1,2,4,8,10,11,3,5,6,7,9 /)
 
    do i = 1, 1
-     control%print_level = i
+     options%print_level = i
      call nd_refine_fm(n,ne,ptr,row,wgt,swgt,an1,an2,aw1,aw2,aws,part,work,&
-       control)
+       options)
      testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,wgt,work,part,STAT=st)
    if (st/=0) go to 20
@@ -3292,12 +3292,12 @@ end subroutine test_dense
    part(1:n) = (/ 1,2,4,8,10,11,3,5,6,7,9 /)
 
    do i = 1, 1
-     control%print_level = i
+     options%print_level = i
      call nd_refine_fm(n,ne,ptr,row,wgt,swgt,an1,an2,aw1,aw2,aws,part,work,&
-       control)
+       options)
      testi_count = testi_count + 1
    end do
-   call reset_control(control_orig,control)
+   call reset_options(options_orig,options)
 
    deallocate (ptr,row,wgt,work,part,STAT=st)
    if (st/=0) go to 20
