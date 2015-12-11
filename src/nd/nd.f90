@@ -770,14 +770,14 @@ subroutine nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level, &
       call nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight,    &
          level, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep,             &
          work(partition_ptr+1:partition_ptr+a_n),                             &
-         work(work_ptr+1:work_ptr+9*a_n+sumweight), options, info%flag, band, &
-         depth, use_multilevel)
+         work(work_ptr+1:work_ptr+9*a_n+sumweight), options, band, depth,     &
+         use_multilevel)
    case(ND_PARTITION_LEVEL_SET:)
       call nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight,         &
          level, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep,             &
          work(partition_ptr+1:partition_ptr+a_n),                             &
-         work(work_ptr+1:work_ptr+9*a_n+sumweight), options, info%flag,       &
-         band, depth, use_multilevel)
+         work(work_ptr+1:work_ptr+9*a_n+sumweight), options, band, depth,     &
+         use_multilevel)
    end select
    if (use_multilevel) then
       lwork = 9*a_n + sumweight
@@ -3157,7 +3157,7 @@ subroutine nd_coarse_partition(a_n,a_ne,a_ptr,a_row,a_weight, &
     call nd_half_level_set(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,2,a_n1, &
       a_n2,a_weight_1,a_weight_2,a_weight_sep, &
       work1(partition_ptr+1:partition_ptr+a_n),work(1:9*a_n+sumweight), &
-      options,info,dummy,dummy1,use_multilevel)
+      options,dummy,dummy1,use_multilevel)
 
     if (printi .or. printd) then
       write (unit_diagnostics,'(a)') ' '
@@ -3175,7 +3175,7 @@ subroutine nd_coarse_partition(a_n,a_ne,a_ptr,a_row,a_weight, &
     call nd_level_set(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,2,a_n1, &
       a_n2,a_weight_1,a_weight_2,a_weight_sep, &
       work1(partition_ptr+1:partition_ptr+a_n),work(1:9*a_n+sumweight), &
-      options,info,dummy,dummy1,use_multilevel)
+      options,dummy,dummy1,use_multilevel)
 
     if (printi .or. printd) then
       write (unit_diagnostics,'(a)') ' '

@@ -13,7 +13,7 @@ contains
 !
 subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
       level, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, partition, &
-      work, options, info, band, depth, use_multilevel)
+      work, options, band, depth, use_multilevel)
    integer, intent(in) :: a_n
    integer, intent(in) :: a_ne
    integer, intent(in) :: a_ptr(a_n)
@@ -30,7 +30,6 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
       ! separator are listed at the end
    integer, intent(out) :: work(9*a_n+sumweight) ! used as work array
    type (nd_options), intent(in) :: options
-   integer, intent(inout) :: info
    real(wp), intent(out) :: band ! If level = 0, then on output
       ! band = 100*L/a_n, where L is the size of the largest levelset
    real(wp), intent(out) :: depth ! If level = 0, then on output
@@ -40,7 +39,6 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
 
    integer :: nstrt, nend
    integer :: i, j, dptr, p1sz, p2sz, sepsz, k
-   integer :: unit_diagnostics ! unit on which to print diagnostics
    integer :: mask_p, level_p, level_ptr_p, level2_p, level2_ptr_p, &
       work_p
    integer :: num_levels_nend ! no. levels in structure rooted at nend
@@ -54,16 +52,9 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
    real(wp) :: bestval
    real(wp) :: val
    real(wp) :: balance_tol
-   logical :: printi, printd
    logical :: imbal, use_multilevel_copy
 
    integer, parameter :: max_search = 5
-
-   ! ---------------------------------------------
-   ! Printing levels
-   unit_diagnostics = options%unit_diagnostics
-   printi = (options%print_level.eq.1 .and. unit_diagnostics.ge.0)
-   printd = (options%print_level.ge.2 .and. unit_diagnostics.ge.0)
 
    call nd_print_diagnostic(1, options, ' ')
    call nd_print_diagnostic(1, options, 'Use two-sided level set method')
@@ -270,10 +261,9 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
       j = j + 1
    end do
 
-   info = 0
-   if (printi .or. printd) &
-      call nd_print_message(info,unit_diagnostics,'nd_half_level_set')
-
+   call nd_print_diagnostic(1, options, &
+      ' nd_half_level_set: successful completion' &
+      )
 end subroutine nd_half_level_set
 
 !
@@ -281,7 +271,7 @@ end subroutine nd_half_level_set
 !
 subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level,  &
       a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, partition, work,      &
-      options, info, band, depth, use_multilevel)
+      options, band, depth, use_multilevel)
    integer, intent(in) :: a_n
    integer, intent(in) :: a_ne
    integer, intent(in) :: a_ptr(a_n)
@@ -298,7 +288,6 @@ subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level,  &
       ! separator are listed at the end
    integer, intent(out) :: work(9*a_n+sumweight)
    type (nd_options), intent(in) :: options
-   integer, intent(inout) :: info
    real(wp), intent(out) :: band ! If level = 0, then on output
       ! band = 100*L/a_n, where L is the size of the largest levelset
    real(wp), intent(out) :: depth ! If level = 0, then on output
@@ -306,9 +295,7 @@ subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level,  &
    logical, intent(inout) :: use_multilevel ! are we allowed to use a multilevel
       ! partitioning strategy
 
-   integer :: unit_diagnostics ! unit on which to print diagnostics
    integer :: nstrt, nend
-   logical :: printi, printd
    integer :: level_p, level_ptr_p, work_p
    integer :: num_levels_nend ! no. levels in structure rooted at nend
    integer :: num_entries ! no. entries in level structure rooted at nend
@@ -320,14 +307,8 @@ subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level,  &
    real(wp) :: balance_tol
    logical :: imbal
 
-   unit_diagnostics = options%unit_diagnostics
-   printi = (options%print_level.eq.1 .and. unit_diagnostics.ge.0)
-   printd = (options%print_level.ge.2 .and. unit_diagnostics.ge.0)
-
-   if (printi .or. printd) then
-      write (unit_diagnostics,'(a)') ' '
-      write (unit_diagnostics,'(a)') 'Use one-sided level set method'
-   end if
+   call nd_print_diagnostic(1, options, ' ')
+   call nd_print_diagnostic(1, options, 'Use one-sided level set method')
 
    ! Initialize return values
    band = -1
@@ -483,9 +464,9 @@ subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level,  &
       j = j + 1
    end do
 
-   info = 0
-   if (printi .or. printd) &
-      call nd_print_message(info,unit_diagnostics,'nd_level_set')
+   call nd_print_diagnostic(1, options, &
+      ' nd_level_set: successful completion' &
+      )
 
 end subroutine nd_level_set
 
