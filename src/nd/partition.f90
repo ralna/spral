@@ -509,14 +509,14 @@ subroutine nd_find_pseudo(a_n, a_ne, a_ptr, a_row, a_weight, sumweight,        &
    integer, intent(inout) :: nstrt ! Starting pseudoperipheral node
    integer, intent(out) :: nend ! End pseudoperipheral node
    integer, intent(in) :: max_search
-   integer, intent(out) :: work(2*a_n)
+   integer, target, intent(out) :: work(2*a_n)
    integer, intent(out) :: num_levels
    integer, intent(out) :: num_entries ! number of entries in level structure
    integer, intent(out) :: lwidth
 
    integer :: i, j, k, l, ll
    integer :: mindeg, maxdep, main, lwidth1
-   integer :: mask, list
+   integer, dimension(:), pointer :: mask, list
    integer :: nstop ! ending pseudoperipheral node
    integer :: node ! Index of graph node
    integer :: lsize ! size of final levelset
@@ -526,11 +526,11 @@ subroutine nd_find_pseudo(a_n, a_ne, a_ptr, a_row, a_weight, sumweight,        &
    integer :: minwid1
 
    j = 0
-   mask = 0
-   list = mask + a_n
-   ! Initialise work(mask+1:mask+a_n) and work(list+1:list+a_n)
-   work(mask+1:mask+a_n) = 1
-   work(list+1:list+a_n) = 0
+   mask => work(1:a_n)
+   list => work(a_n+1:2*a_n)
+   ! Initialise mask(:) and list(:)
+   mask(:) = 1
+   list(:) = 0
    level_ptr(:) = 0
 
 
@@ -538,7 +538,7 @@ subroutine nd_find_pseudo(a_n, a_ne, a_ptr, a_row, a_weight, sumweight,        &
 
    ! Generate level structure for node nstrt
    call nd_level_struct(nstrt, a_n, a_ne, a_ptr, a_row, &
-      work(mask+1:mask+a_n), level_ptr, level, maxdep, lwidth, num_entries)
+      mask, level_ptr, level, maxdep, lwidth, num_entries)
    if (num_entries.lt.a_n) then
       ! matrix is separable
       num_levels = maxdep
@@ -546,14 +546,16 @@ subroutine nd_find_pseudo(a_n, a_ne, a_ptr, a_row, a_weight, sumweight,        &
    end if
 
    nstop = level(a_n)
-   do main = 1, min(a_n,10)
+   main_loop: &
+   do main = 1, min(a_n,10) ! Provides max # itr to try and improve with
+
       ! Store nodes in the final level set and their (weighted) degrees
       lsize = 0
       j = level_ptr(maxdep)
       do i = j, a_n
          node = level(i)
          lsize = lsize + 1
-         work(list+lsize) = node
+         list(lsize) = node
          level_ptr(node) = 0
          do l = a_ptr(node), nd_get_ptr(node+1, a_n, a_ne, a_ptr)-1
             level_ptr(node) = level_ptr(node) + a_weight(a_row(l))
@@ -566,17 +568,17 @@ subroutine nd_find_pseudo(a_n, a_ne, a_ptr, a_row, a_weight, sumweight,        &
          mindeg = sumweight + 1
          ! mindeg = -1
          do i = nlsize, lsize
-            if (level_ptr(work(list+i)).lt.mindeg) then
+            if (level_ptr(list(i)).lt.mindeg) then
                j = i
-               mindeg = level_ptr(work(list+i))
+               mindeg = level_ptr(list(i))
             end if
          end do
          ! Jump out of loop if no candidates left
          if (mindeg.eq.sumweight+1) exit
          ! Swap chose candidate to next position
-         node = work(list+j)
-         work(list+j) = work(list+nlsize)
-         work(list+nlsize) = node
+         node = list(j)
+         list(j) = list(nlsize)
+         list(nlsize) = node
          ! Rule out the neighbours of the chosen node
          do i = a_ptr(node), nd_get_ptr(node+1, a_n, a_ne, a_ptr)-1
             level_ptr(a_row(i)) = sumweight + 1
@@ -589,11 +591,11 @@ subroutine nd_find_pseudo(a_n, a_ne, a_ptr, a_row, a_weight, sumweight,        &
       minwid1 = huge(a_n)
 
       do i = 1, nlsize
-         node = work(list+i)
+         node = list(i)
 
          ! Form rooted level structures for node
          call nd_level_struct(node, a_n, a_ne, a_ptr, a_row, &
-            work(mask+1:mask+a_n), level_ptr, level, nlvl, lwidth, num_entries)
+            mask, level_ptr, level, nlvl, lwidth, num_entries)
          lwidth1 = 0
          do k = 1, nlvl - 1
             do l = level_ptr(k), level_ptr(k+1) - 1
@@ -610,7 +612,7 @@ subroutine nd_find_pseudo(a_n, a_ne, a_ptr, a_row, a_weight, sumweight,        &
             ! Level structure of greater depth. Begin a new iteration.
             nstrt = node
             maxdep = nlvl
-            go to 20
+            cycle main_loop
          else
             if (lwidth1.lt.minwid1) then
                nstop = node
@@ -619,17 +621,16 @@ subroutine nd_find_pseudo(a_n, a_ne, a_ptr, a_row, a_weight, sumweight,        &
             end if
          end if
       end do
-      go to 30
-      20 continue
-   end do
-   30 continue
+      ! If we reach this point, there has been no improvement, stop trying
+      exit main_loop
+   end do main_loop
+
    if (nstop.ne.node) then
       call nd_level_struct(node, a_n, a_ne, a_ptr, a_row, &
-         work(mask+1:mask+a_n), level_ptr, level, nlvl, lwidth, num_entries)
+         mask, level_ptr, level, nlvl, lwidth, num_entries)
    end if
    num_levels = maxdep
    nend = nstop
-
 end subroutine nd_find_pseudo
 
 ! ---------------------------------------------------
