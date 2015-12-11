@@ -6194,6 +6194,7 @@ subroutine nd_refine_max_flow(a_n,a_ne,a_ptr,a_row,a_weight,a_n1, &
     call nd_maxflow(a_n,a_ne,a_ptr,a_row,a_weight,options%cost_function,&
       a_n1,a_n2, &
       a_weight_1,a_weight_2,a_weight_sep,partition,ratio,msglvl, &
+      options%unit_diagnostics, &
       work(1:8),cost)
   end if
 
@@ -6345,7 +6346,7 @@ end subroutine cost_function
 ! ---------------------------------------------------
 ! Given a partition, get better partition using maxflow algorithm
 subroutine nd_maxflow(a_n,a_ne,a_ptr,a_row,a_weight,costf,a_n1,a_n2, &
-    a_weight_1,a_weight_2,a_weight_sep,partition,alpha,msglvl,stats, &
+    a_weight_1,a_weight_2,a_weight_sep,partition,alpha,msglvl,lp,stats, &
     cost)
 
   ! Input matrix: a_n, a_ne, a_ptr, a_row
@@ -6376,6 +6377,7 @@ subroutine nd_maxflow(a_n,a_ne,a_ptr,a_row,a_weight,costf,a_n1,a_n2, &
   ! Parameters alpha (for balance) for cost function
   real(wp), intent(in) :: alpha
   integer, intent(in) :: msglvl
+  integer, intent(in) :: lp
   ! output --
   ! stats[1] -- weight of vertices in S
   ! stats[2] -- weight of vertices in B
@@ -6407,12 +6409,10 @@ subroutine nd_maxflow(a_n,a_ne,a_ptr,a_row,a_weight,costf,a_n1,a_n2, &
   real(wp), allocatable :: imb(:)
 
   ! Local variables
-  integer :: a_ns, i, istart_s, j1, k, lp, wtw, wtb, statsr(9), &
+  integer :: a_ns, i, istart_s, j1, k, wtw, wtb, statsr(9), &
     statsl(9)
   integer nedge, matsiz
   real(wp) :: costr, costl
-
-  lp = 6
 
   ! write(9,*) 'Entering maxflow'
   ! write(0,*) 'Entering maxflow'
@@ -6469,7 +6469,7 @@ subroutine nd_maxflow(a_n,a_ne,a_ptr,a_row,a_weight,costf,a_n1,a_n2, &
   ! write(9,*) 'Calling mk_network'
   ! write(0,*) 'Calling mk_network'
   call mk_network(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition,map,a_ns, &
-    msglvl,netw,vwts,wtb,wtw,sedge,mapl,dmapl,dmapr,list,mark1, &
+    msglvl,lp,netw,vwts,wtb,wtw,sedge,mapl,dmapl,dmapr,list,mark1, &
     mark2,imb)
   ! write(9,*) 'Leaving mk_network'
   ! write(0,*) 'Leaving mk_network'
@@ -6673,7 +6673,7 @@ end subroutine solvemaxflow
 
 
 subroutine mk_network(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition,map,nvtx, &
-    msglvl,netw,vwts,wtb,wtw,sedge,sep_map,isadjtosource,isadjtosink, &
+    msglvl,lp,netw,vwts,wtb,wtw,sedge,sep_map,isadjtosource,isadjtosink, &
     list,mark1,mark2,imb)
   ! Create and return a network structure
 
@@ -6693,7 +6693,7 @@ subroutine mk_network(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition,map,nvtx, &
   ! contain list of (local) entries in partition 2; entries in
   ! separator are listed at the end.
   integer, intent(in) :: map(a_n) ! First a_n1 entries contain
-  integer, intent(in) :: msglvl, nvtx
+  integer, intent(in) :: msglvl, lp, nvtx
   integer, intent(in) :: vwts(:)
   integer, intent(inout) :: wtb, wtw
   integer, intent(inout) :: a_n1 ! Size of partition 1 (ie B)
@@ -6703,7 +6703,7 @@ subroutine mk_network(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition,map,nvtx, &
   ! call tree would need to allocate much more storage.
   type (network), intent(out) :: netw
 
-  integer i, iarc, ii, jj, lp, narc1, narc2, narc3, narc4, narc, nnode, &
+  integer i, iarc, ii, jj, narc1, narc2, narc3, narc4, narc, nnode, &
     nedge, u, v, wts
   integer j1, j2, j, k
 
@@ -6717,8 +6717,6 @@ subroutine mk_network(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition,map,nvtx, &
   logical :: augcap
 
   augcap = .true.
-
-  lp = 0
 
   if (msglvl.gt.0) then
     write (lp,'(/A)') '### inside mknetwork()'
@@ -6948,7 +6946,7 @@ subroutine mk_network(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition,map,nvtx, &
     end do
     if (msglvl.gt.0) write (lp,*) 'Calling findpenalty'
     ! Compute network capacities for separator arcs.
-    call findpenalty(msglvl,a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition, &
+    call findpenalty(msglvl,lp,a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition, &
       map,vwts,wtb,wtw,wts,isadjtosource,isadjtosink,mark1,mark2,list, &
       imb)
     if (msglvl.gt.0) write (lp,*) 'Exiting findpenalty'
@@ -7174,7 +7172,7 @@ subroutine findmincut(netw,mark1,mark2,list)
 
 end subroutine findmincut
 
-subroutine findpenalty(msglvl,a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition, &
+subroutine findpenalty(msglvl,lp,a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition, &
     map,vwts,wtb,wtw,wts,count,head,mark,mark1,list,imb)
 
   ! count is isAdjToSource in call
@@ -7192,7 +7190,7 @@ subroutine findpenalty(msglvl,a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition, &
   ! mark1 --- records level set of vertex in cutset starting from sink
 
 
-  integer, intent(in) :: msglvl, a_n, a_ne, a_n1, a_n2
+  integer, intent(in) :: msglvl, lp, a_n, a_ne, a_n1, a_n2
   integer, intent(in) :: a_ptr(:), a_row(:)
   integer, intent(in) :: vwts(:), partition(:), map(:)
   integer, intent(inout) :: count(:), head(:)
@@ -7206,11 +7204,9 @@ subroutine findpenalty(msglvl,a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition, &
   real(wp) :: imb(:)
 
   ! Local variables
-  integer inode, last, lp, maxl, minl, x, z
+  integer inode, last, maxl, minl, x, z
   integer i, j1, j2, jj, k, nvtx
   integer begin_lev, end_lev, ilev, penp
-
-  lp = 0
 
   ! Set imbalance weighting
   penp = 100
