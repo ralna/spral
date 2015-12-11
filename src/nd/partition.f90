@@ -633,98 +633,76 @@ subroutine nd_find_pseudo(a_n, a_ne, a_ptr, a_row, a_weight, sumweight,        &
    nend = nstop
 end subroutine nd_find_pseudo
 
-! ---------------------------------------------------
-! nd_level_struct
-! ---------------------------------------------------
-! Given a root, calculate the level structure of a given graph from that
-! root
+!
+! Given a root, calculate the level structure of a given graph from that root
+!
+! Based on MC60LD
+subroutine nd_level_struct(root, a_n, a_ne, a_ptr, a_row, mask, level_ptr, &
+      level, num_levels, lwidth, num_entries)
+   integer, intent(in) :: root ! Root node for level structure
+   integer, intent(in) :: a_n
+   integer, intent(in) :: a_ne
+   integer, intent(in) :: a_ptr(a_n)
+   integer, intent(in) :: a_row(a_ne)
+   integer, intent(inout) :: mask(a_n) ! Must be all 1s on entry, returned to
+      ! all 1s on exit. mask(node) > 0 for all visible nodes.
+   integer, intent(out) :: level_ptr(a_n) ! On output level_ptr(i) contains
+      ! position in level that entries for level i start.
+   integer, intent(out) :: level(a_n) ! On output level contains lists of
+      ! rows according to the level set that they are in
+   integer, intent(out) :: num_levels ! On output num_levels contains the
+      ! number of levels
+   integer, intent(out) :: lwidth ! On output, contains the width of the
+      ! structure
+   integer, intent(out) :: num_entries ! On output, contains number of
+      ! entries in the tree structure containing root
 
-subroutine nd_level_struct(root,a_n,a_ne,a_ptr,a_row,mask,level_ptr, &
-    level,num_levels,lwidth,num_entries)
+   integer :: lvlend ! End of previous level in level
+   integer :: lnbr ! Next position in level
+   integer :: lbegin ! Beginning of present level in level
+   integer :: lw ! Level width
+   integer :: nbr ! neighbour node
+   integer :: node ! current node
+   integer :: nvars
+   integer :: i, j
 
-  integer, intent(in) :: root ! Root node for level structure
-  integer, intent(in) :: a_n ! dimension of subproblem ND is applied to
-  integer, intent(in) :: a_ne ! no. nonzeros of subproblem
-  integer, intent(in) :: a_ptr(a_n) ! On input a_ptr(i) contains
-  ! position in a_row that entries for column i start.
-  integer, intent(in) :: a_row(a_ne) ! On input a_row contains row
-  ! indices of the non-zero rows. Diagonal entries have been removed
-  ! and the matrix expanded.
-  integer, intent(inout) :: mask(a_n) ! Always restored to input value
-  ! at
-  ! end of the call. mask(node) > 0 for all visible nodes
-  integer, intent(out) :: level_ptr(a_n) ! On output level_ptr(i)
-  ! contains
-  ! position in level that entries for level i start.
-  integer, intent(out) :: level(a_n) ! On output level contains lists
-  ! of
-  ! rows according to the level set that they are in
-  integer, intent(out) :: num_levels ! On output num_levels contains
-  ! the
-  ! number of levels
-  integer, intent(out) :: lwidth ! On output, contains the width of the
-  ! structure
-  integer, intent(out) :: num_entries ! On output, contains number of
-  ! entries in the tree structure containing root
-
-  ! ---------------------------------------------
-  ! Local variables
-  integer :: lvlend ! End of previous level in level
-  integer :: lnbr ! Next position in level
-  integer :: lbegin ! Beginning of present level in level
-  integer :: lw ! Level width
-  integer :: nbr ! neighbour node
-  integer :: node ! current node
-  integer :: nvars
-  integer :: i, j, k
-
-  ! Based on mc60ld
-  ! Establish level 1
-  level_ptr(:) = 0
-  mask(root) = -mask(root)
-  level(1) = root
-  lvlend = 0
-  nvars = 0
-  lnbr = 1
-  lwidth = 1
-  do num_levels = 1, a_n
-    ! Generate next level by finding all unmasked neighbours of nodes in
-    ! present level
-    lbegin = lvlend + 1
-    lvlend = lnbr
-    level_ptr(num_levels) = lbegin
-    lw = 0
-    do i = lbegin, lvlend
-      node = level(i)
-      if (node.eq.a_n) then
-        k = a_ne
-      else
-        k = a_ptr(node+1) - 1
-      end if
-      do j = a_ptr(node), k
-        nbr = a_row(j)
-        if (mask(nbr).gt.0) then
-          lnbr = lnbr + 1
-          level(lnbr) = nbr
-          mask(nbr) = -mask(nbr)
-          ! lw = lw + a_weight(nbr)
-          lw = lw + 1
-        end if
+   ! Establish level 1
+   level_ptr(:) = 0
+   mask(root) = -1
+   level(1) = root
+   lvlend = 0
+   nvars = 0
+   lnbr = 1
+   lwidth = 1
+   do num_levels = 1, a_n
+      ! Generate next level by finding all unmasked neighbours of nodes in
+      ! present level
+      lbegin = lvlend + 1
+      lvlend = lnbr
+      level_ptr(num_levels) = lbegin
+      lw = 0
+      do i = lbegin, lvlend
+         node = level(i)
+         do j = a_ptr(node), nd_get_ptr(node+1, a_n, a_ne, a_ptr)-1
+            nbr = a_row(j)
+            if (mask(nbr).eq.1) then
+               lnbr = lnbr + 1
+               level(lnbr) = nbr
+               mask(nbr) = -1
+               lw = lw + 1
+            end if
+         end do
       end do
-    end do
-    lwidth = max(lwidth,lw)
-    nvars = nvars + lw
-    ! If no neighbours found, we are done
-    if (lnbr.eq.lvlend) exit
-    ! Abort construnction if level structure too wide
-    ! if (lwidth .gt. maxwid) exit
-  end do
-  ! Reset mask
-  do i = 1, lnbr
-    mask(level(i)) = abs(mask(level(i)))
-  end do
-  num_entries = lnbr
-
+      lwidth = max(lwidth,lw)
+      nvars = nvars + lw
+      ! If no neighbours found, we are done
+      if (lnbr.eq.lvlend) exit
+   end do
+   ! Reset mask
+   do i = 1, lnbr
+      mask(level(i)) = 1
+   end do
+   num_entries = lnbr
 end subroutine nd_level_struct
 
 
