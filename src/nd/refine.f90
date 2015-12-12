@@ -190,7 +190,7 @@ subroutine nd_refine_fm_inner(n, a_ne, ptr, col, weight, sumweight, icut, &
    integer :: move, ming, gain, old_gain, inext, idummy
    integer :: first, tail
    real(wp) :: eval, evalc, evalo, eval1, eval2
-   logical :: imbal
+   logical :: imbal, found
 
    imbal = (balance_tol.le.real(sumweight-2))
 
@@ -310,6 +310,8 @@ subroutine nd_refine_fm_inner(n, a_ne, ptr, col, weight, sumweight, icut, &
       inner: &
       do inn = 1, n
          ! Choose best eligible move
+         found = .false.
+         find_best_move: &
          do idummy = 1, n
             do gain = ming, icut
                if (head(gain).ne.0) exit
@@ -319,26 +321,20 @@ subroutine nd_refine_fm_inner(n, a_ne, ptr, col, weight, sumweight, icut, &
             ! Now cycle through nodes of least gain
             ! Currently inefficient because of re-searching linked list
             inext = head(gain)
-            k = 0
-            10 continue
-            i = inext
-            if (i.eq.0) cycle
-            ! Use node if it has not been considered already
-            if (done(i).lt.outer) go to 20
-            inext = next(i)
-            ! !! Extra statements to trap infinite loop
-            k = k + 1
-            if (k.gt.ins) then
-               ! write (*,*) 'Bug in code because of infinite loop'
-               ! !! You may wish to change this to a stop
-               stop
-            end if
-            go to 10
-         end do
-         exit inner
+            do
+               i = inext
+               if (i.eq.0) cycle find_best_move
+               ! Use node if it has not been considered already
+               if (done(i).lt.outer) then
+                  found = .true.
+                  exit find_best_move
+               end if
+               inext = next(i)
+            end do
+         end do find_best_move
+         if(.not.found) exit inner
          ! Node i has been selected as the best eligible node
          ! Set flag so only considered once in this pass
-         20 continue
          done(i) = outer
          ! As i will not be chosen again in this pass, remove from list
          call remove_from_list(n, mult, icut, next, last, head, i, gain)
