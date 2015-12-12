@@ -12,7 +12,7 @@ contains
 ! Partition the matrix using the half level set (Ashcraft) method
 !
 subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
-      level, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, partition, &
+      ndlevel, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, partition, &
       work, options, band, depth, use_multilevel)
    integer, intent(in) :: a_n
    integer, intent(in) :: a_ne
@@ -20,7 +20,7 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
    integer, intent(in) :: a_row(a_ne)
    integer, intent(in) :: a_weight(a_n)
    integer, intent(in) :: sumweight ! sum of entries in a_weight
-   integer, intent(in) :: level ! current level of nested dissection
+   integer, intent(in) :: ndlevel ! current level of nested dissection
    integer, intent(out) :: a_n1, a_n2 ! size of the two submatrices
    integer, intent(out) :: a_weight_1, a_weight_2, a_weight_sep ! Weighted
       ! size of partitions and separator
@@ -28,25 +28,23 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
       ! list of (local) indices in partition 1; next a_n2 entries will
       ! contain list of (local) entries in partition 2; entries in
       ! separator are listed at the end
-   integer, intent(out) :: work(9*a_n+sumweight) ! used as work array
+   integer, target, intent(out) :: work(9*a_n+sumweight) ! workspace
    type (nd_options), intent(in) :: options
-   real(wp), intent(out) :: band ! If level = 0, then on output
+   real(wp), intent(out) :: band ! If ndlevel = 0, then on output
       ! band = 100*L/a_n, where L is the size of the largest levelset
-   real(wp), intent(out) :: depth ! If level = 0, then on output
+   real(wp), intent(out) :: depth ! If ndlevel = 0, then on output
       ! depth = num_levels_nend
    logical, intent(inout) :: use_multilevel ! are we allowed to use a
       ! multilevel partitioning strategy
 
    integer :: nstrt, nend
-   integer :: i, j, dptr, p1sz, p2sz, sepsz, k
-   integer :: mask_p, level_p, level_ptr_p, level2_p, level2_ptr_p, &
-      work_p
+   integer :: i, j, p1sz, p2sz, sepsz, k
+   integer, dimension(:), pointer :: mask, level_ptr, level, level2_ptr, level2
+   integer, dimension(:), pointer :: distance_ptr, distance, level_weight
    integer :: num_levels_nend ! no. levels in structure rooted at nend
    integer :: num_levels_nstrt ! no. levels in structure rooted at nstrt
    integer :: num_entries ! no. entries in level set structure
    integer :: best_sep_start
-   integer :: distance
-   integer :: distance_ptr
    integer :: lwidth, mindeg, degree
    integer :: ww
    real(wp) :: bestval
@@ -65,7 +63,7 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
 
    ! If we're going to use multilevel regardless, immediate return
    if (options%partition_method.eq.1 .and. use_multilevel) return
-   if (options%partition_method.gt.1 .and. level.gt.0 .and. use_multilevel) &
+   if (options%partition_method.gt.1 .and. ndlevel.gt.0 .and. use_multilevel) &
       return
 
    ! Initialize various internal variables
@@ -77,12 +75,12 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
 
    ! Find pseudoperipheral nodes nstart and nend, and the level structure
    ! rooted at nend
-   mask_p = 0 ! size a_n
-   level_ptr_p = mask_p + a_n ! size a_n
-   level_p = level_ptr_p + a_n ! size a_n
-   level2_ptr_p = level_p + a_n ! size a_n
-   level2_p = level2_ptr_p + a_n ! size a_n
-   work_p = level2_p + a_n ! size 2*a_n
+   mask        => work(       1 :   a_n )
+   level_ptr   => work(   a_n+1 : 2*a_n )
+   level       => work( 2*a_n+1 : 3*a_n )
+   level2_ptr  => work( 3*a_n+1 : 4*a_n )
+   level2      => work( 4*a_n+1 : 5*a_n )
+   distance_ptr=> work( 5*a_n+1 : 7*a_n )
 
    nend = -1
 
@@ -99,9 +97,9 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
       end if
    end do
 
-   call nd_find_pseudo(a_n, a_ne, a_ptr, a_row, a_weight, sumweight,          &
-      work(level_ptr_p+1:level_ptr_p+a_n), work(level_p+1:level_p+a_n),       &
-      nstrt, nend, max_search, work(work_p+1:work_p+2*a_n), num_levels_nend,  &
+   ! distance_ptr(:) just used as workspace in this call
+   call nd_find_pseudo(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level_ptr,&
+      level, nstrt, nend, max_search, distance_ptr, num_levels_nend,           &
       num_entries, lwidth)
 
    if (num_entries.lt.a_n) then
@@ -110,29 +108,29 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
       a_n2 = a_n - a_n1
       a_weight_sep = 0
       a_weight_1 = 0
-      work(work_p+1:work_p+a_n) = 0
+      mask(:) = 0
       do i = 1, num_entries
-         j = work(level_p+i)
+         j = level(i)
          partition(i) = j
-         work(work_p+j) = 1
+         mask(j) = 1
          a_weight_1 = a_weight_1 + a_weight(j)
       end do
       a_weight_2 = sumweight - a_weight_1
       j = num_entries + 1
       do i = 1, a_n
-         if (work(work_p+i).eq.0) then
+         if (mask(i).eq.0) then
             partition(j) = i
             j = j + 1
          end if
       end do
-      if (level.eq.0) band = -real(lwidth,wp)
+      if (ndlevel.eq.0) band = -real(lwidth,wp)
 
       use_multilevel = .false. ! Will be reset for each component anyway
       return
    end if
 
    ! ********************************************************************
-   if (level.eq.0) then
+   if (ndlevel.eq.0) then
       band = (100.0_wp * lwidth) / a_n
       depth = (100.0_wp * num_levels_nend) / a_n
    end if
@@ -145,44 +143,37 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
 
    if (use_multilevel) return
 
-
    ! Find level structure rooted at nstrt
-   work(mask_p+1:mask_p+a_n) = 1
-   call nd_level_struct(nstrt, a_n, a_ne, a_ptr, a_row,                    &
-      work(mask_p+1:mask_p+a_n), work(level2_ptr_p+1:level2_ptr_p+a_n),    &
-      work(level2_p+1:level2_p+a_n), num_levels_nstrt, lwidth, num_entries)
+   mask(:) = 1
+   call nd_level_struct(nstrt, a_n, a_ne, a_ptr, a_row, mask, level2_ptr, &
+      level2, num_levels_nstrt, lwidth, num_entries)
 
    ! Calculate difference in distances from nstart and nend, and set up
    ! lists D_i of nodes with same distance
-   distance_ptr = work_p
-   distance = mask_p
-   call nd_distance(a_n, num_levels_nend, work(level_ptr_p+1:level_ptr_p+a_n), &
-      work(level_p+1:level_p+a_n), num_levels_nstrt,                           &
-      work(level2_ptr_p+1:level2_ptr_p+a_n), work(level2_p+1:level2_p+a_n),    &
-      work(distance_ptr+1:distance_ptr+2*a_n-1), work(distance+1:distance+a_n) )
+   nullify(mask) ! Reused for distance
+   distance => work(1:a_n)
+   call nd_distance(a_n, num_levels_nend, level_ptr, level, num_levels_nstrt, &
+      level2_ptr, level2, distance_ptr, distance)
 
-   ! Do not need the information in work(level_ptr_p+1:level2_ptr_p)
    ! Calculate total weight in each distance level
-   dptr = level_ptr_p + a_n
-   work(dptr+1-a_n:dptr+a_n-1) = 0
-   do i = 1 - num_levels_nstrt, num_levels_nend - 2
-      do j = work(distance_ptr+a_n+i), work(distance_ptr+a_n+i+1) - 1
-         work(dptr+i) = work(dptr+i) + a_weight(work(distance+j))
+   nullify(level_ptr, level) ! Reused for level_weight
+   level_weight(-(a_n-1):a_n-1) => work(a_n+1:3*a_n-1)
+   level_weight(:) = 0
+   do i = 1 - num_levels_nstrt, num_levels_nend - 1
+      j = nd_get_ptr(a_n+i+1, a_n+num_levels_nend-1, a_n, distance_ptr) - 1
+      do j = distance_ptr(a_n+i), j
+         level_weight(i) = level_weight(i) + a_weight(distance(j))
       end do
-   end do
-   i = num_levels_nend - 1
-   do j = work(distance_ptr+a_n+i), a_n
-      work(dptr+i) = work(dptr+i) + a_weight(work(distance+j))
    end do
 
    ! Find first possible separator
    ww = 2
    p1sz = 0
    do i = 1 - num_levels_nstrt, num_levels_nend - ww - 2
-      p1sz = p1sz + work(dptr+i)
-      sepsz = work(dptr+i+1)
+      p1sz = p1sz + level_weight(i)
+      sepsz = level_weight(i+1)
       do j = 1, ww - 1
-         sepsz = sepsz + work(dptr+i+1+j)
+         sepsz = sepsz + level_weight(i+1+j)
       end do
       p2sz = sumweight - p1sz - sepsz
       if (p1sz.gt.0 .and. sepsz.gt.0) exit
@@ -200,8 +191,8 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
 
    ! Entries in level i will form first possible partition
    best_sep_start = i + 1
-   a_n1 = work(distance_ptr+a_n+i+1) - 1
-   a_n2 = a_n - work(distance_ptr+a_n+i+1+ww) + 1
+   a_n1 = distance_ptr(a_n+i+1) - 1
+   a_n2 = a_n - distance_ptr(a_n+i+1+ww) + 1
    a_weight_1 = p1sz
    a_weight_2 = p2sz
    a_weight_sep = sepsz
@@ -211,10 +202,10 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
    ! Search for best separator using tau
 
    do j = i + 1, num_levels_nend - ww - 2
-      p1sz = p1sz + work(dptr+j)
-      sepsz = work(dptr+j+1)
+      p1sz = p1sz + level_weight(j)
+      sepsz = level_weight(j+1)
       do k = 1, ww - 1
-         sepsz = sepsz + work(dptr+j+1+k)
+         sepsz = sepsz + level_weight(j+1+k)
       end do
       p2sz = sumweight - sepsz - p1sz
       if (p2sz.eq.0) exit
@@ -223,8 +214,8 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
       if (val.lt.bestval) then
          bestval = val
          best_sep_start = j + 1
-         a_n1 = work(distance_ptr+a_n+j+1) - 1
-         a_n2 = a_n - work(distance_ptr+a_n+j+1+ww) + 1
+         a_n1 = distance_ptr(a_n+j+1) - 1
+         a_n2 = a_n - distance_ptr(a_n+j+1+ww) + 1
          a_weight_1 = p1sz
          a_weight_2 = p2sz
          a_weight_sep = sepsz
@@ -243,21 +234,21 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
    ! Rearrange partition
    ! Entries in partition 1
    j = 1
-   do i = 1, work(distance_ptr+a_n+best_sep_start) - 1
-      partition(j) = work(distance+i)
+   do i = 1, distance_ptr(a_n+best_sep_start) - 1
+      partition(j) = distance(i)
       j = j + 1
    end do
 
    ! Entries in partition 2
-   do i = work(distance_ptr+a_n+best_sep_start+ww), a_n
-      partition(j) = work(distance+i)
+   do i = distance_ptr(a_n+best_sep_start+ww), a_n
+      partition(j) = distance(i)
       j = j + 1
    end do
 
    ! Entries in separator
-   do i = work(distance_ptr+a_n+best_sep_start), &
-         work(distance_ptr+a_n+best_sep_start+ww) - 1
-      partition(j) = work(distance+i)
+   do i = distance_ptr(a_n+best_sep_start), &
+         distance_ptr(a_n+best_sep_start+ww) - 1
+      partition(j) = distance(i)
       j = j + 1
    end do
 
