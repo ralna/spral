@@ -64,585 +64,499 @@ subroutine nd_refine_edge(a_n, a_ne, a_ptr, a_row, a_weight, sumweight,  &
    end select
 end subroutine nd_refine_edge
 
-! ---------------------------------------------------
-! nd_refine_fm
-! ---------------------------------------------------
+!
 ! Given a partition, refine the partition using FM refinement. Wrapper
-! for code
-subroutine nd_refine_fm(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,a_n1, &
-    a_n2,a_weight_1,a_weight_2,a_weight_sep,partition,work,options)
-  integer, intent(in) :: a_n ! order of matrix
-  integer, intent(in) :: a_ne ! number of entries in matrix
-  integer, intent(in) :: a_ptr(a_n) ! On input a_ptr(i) contains
-  ! position in a_row that entries for column i start.
-  integer, intent(in) :: a_row(a_ne) ! On input a_row contains row
-  ! indices of the non-zero rows. Diagonal entries have been removed
-  ! and the matrix expanded.
-  integer, intent(in) :: a_weight(a_n) ! On input a_weight(i) contains
-  ! the weight of column i
-  integer, intent(in) :: sumweight ! Sum of weights in a_weight
-  integer, intent(inout) :: a_n1 ! Size of partition 1
-  integer, intent(inout) :: a_n2 ! Size of partition 2
-  integer, intent(inout) :: a_weight_1, a_weight_2, a_weight_sep ! Weig
-  ! hted
-  ! size of partitions and separator
-  integer, intent(inout) :: partition(a_n) ! First a_n1 entries contain
-  ! list of (local) indices in partition 1; next a_n2 entries
-  ! contain list of (local) entries in partition 2; entries in
-  ! separator are listed at the end. This is updated to the new
-  ! partition
-  integer, intent(out) :: work(8*a_n+sumweight) ! Work array
-  type (nd_options), intent(in) :: options
+! for main fm routine
+!
+subroutine nd_refine_fm(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, a_n1, &
+      a_n2, a_weight_1, a_weight_2, a_weight_sep, partition, work, options)
+   integer, intent(in) :: a_n
+   integer, intent(in) :: a_ne
+   integer, dimension(a_n), intent(in) :: a_ptr
+   integer, dimension(a_ne), intent(in) :: a_row
+   integer, dimension(a_n), intent(in) :: a_weight
+   integer, intent(in) :: sumweight ! Sum of weights in a_weight
+   integer, intent(inout) :: a_n1 ! Size of partition 1
+   integer, intent(inout) :: a_n2 ! Size of partition 2
+   integer, intent(inout) :: a_weight_1, a_weight_2, a_weight_sep ! Weighted
+      ! size of partitions and separator
+   integer, intent(inout) :: partition(a_n) ! First a_n1 entries contain
+      ! list of (local) indices in partition 1; next a_n2 entries
+      ! contain list of (local) entries in partition 2; entries in
+      ! separator are listed at the end. This is updated to the new
+      ! partition
+   integer, intent(out) :: work(8*a_n+sumweight) ! Work array
+   type (nd_options), intent(in) :: options
 
-  ! ---------------------------------------------
-  ! Local variables
-  integer :: fm_flags ! pointer into work array for start of
-  ! flags from FM
-  integer :: fm_ipart ! pointer into work array for start of
-  ! ipart from FM
-  integer :: fm_next ! pointer into work array for start of next
-  ! from FM
-  integer :: fm_last ! pointer into work array for start of last
-  ! from FM
-  integer :: fm_gain1 ! pointer into work array for start of
-  ! gain1 from FM
-  integer :: fm_gain2 ! pointer into work array for start of
-  ! gain2 from FM
-  integer :: fm_done ! pointer into work array for start of done
-  ! from FM
-  integer :: fm_head ! pointer into work array for start of head
-  ! from FM
-  integer :: fm_distance ! pointer into work array for start of head
-  ! from FM
-  integer :: icut, mult ! Used within FM refinement
-  integer :: band
-  real(wp) :: balance_tol
-  logical :: imbal ! Should we check for imbalance?
+   integer :: fm_flags ! pointer into work array for start of flags from FM
+   integer :: fm_ipart ! pointer into work array for start of ipart from FM
+   integer :: fm_next ! pointer into work array for start of next from FM
+   integer :: fm_last ! pointer into work array for start of last from FM
+   integer :: fm_gain1 ! pointer into work array for start of gain1 from FM
+   integer :: fm_gain2 ! pointer into work array for start of gain2 from FM
+   integer :: fm_done ! pointer into work array for start of done from FM
+   integer :: fm_head ! pointer into work array for start of head from FM
+   integer :: fm_distance ! pointer into work array for start of head from FM
+   integer :: icut, mult ! Used within FM refinement
+   integer :: band
+   real(wp) :: balance_tol
+   logical :: imbal ! Should we check for imbalance?
 
-  if (options%refinement_band .lt. 1) return
+   if (options%refinement_band .lt. 1) return
 
-  balance_tol = max(real(1.0,wp),options%balance)
-  imbal = (balance_tol.le.real(sumweight-2))
-  fm_flags = 0 ! length a_n
+   balance_tol = max(1.0_wp, options%balance)
+   imbal = (balance_tol.le.real(sumweight-2))
+   fm_flags = 0 ! length a_n
 
-  ! Initialise work(fm_flags+1:fm_flags+a_n)
-  call nd_convert_partition_flags(a_n,a_n1,a_n2,partition, &
-    ND_PART1_FLAG,ND_PART2_FLAG,ND_SEP_FLAG, &
-    work(fm_flags+1:fm_flags+a_n))
+   ! Initialise work(fm_flags+1:fm_flags+a_n)
+   call nd_convert_partition_flags(a_n, a_n1, a_n2, partition, &
+      ND_PART1_FLAG, ND_PART2_FLAG, ND_SEP_FLAG, &
+      work(fm_flags+1:fm_flags+a_n))
 
-  fm_ipart = fm_flags + a_n ! length a_n
-  fm_next = fm_ipart + a_n ! length a_n
-  fm_last = fm_next + a_n ! length a_n
-  fm_gain1 = fm_last + a_n ! length a_n
-  fm_gain2 = fm_gain1 + a_n ! length a_n
-  fm_done = fm_gain2 + a_n ! length a_n
-  fm_head = fm_done + a_n ! length icut+mult+1
-  icut = min(sumweight-1,3*(sumweight/a_n))
-  icut = min(icut,5*maxVAL(a_weight))
-  ! icut = sumweight/2
-  ! mult = min(sumweight/20,10*sumweight/a_n) - 1
-  mult = sumweight - icut - 1
-  mult = min(mult,icut)
-  ! mult = sumweight/2-1
-  fm_distance = fm_head + icut + mult + 1
+   fm_ipart = fm_flags + a_n ! length a_n
+   fm_next = fm_ipart + a_n ! length a_n
+   fm_last = fm_next + a_n ! length a_n
+   fm_gain1 = fm_last + a_n ! length a_n
+   fm_gain2 = fm_gain1 + a_n ! length a_n
+   fm_done = fm_gain2 + a_n ! length a_n
+   fm_head = fm_done + a_n ! length icut+mult+1
+   icut = min(sumweight-1,3*(sumweight/a_n))
+   icut = min(icut,5*maxVAL(a_weight))
+   mult = sumweight - icut - 1
+   mult = min(mult,icut)
+   fm_distance = fm_head + icut + mult + 1
 
-  band = min(options%refinement_band,a_n)
+   band = min(options%refinement_band, a_n)
 
-  call nd_fm_refinement(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,icut, &
-    mult,options%cost_function,a_n1,a_n2,a_weight_1,a_weight_2,&
-    a_weight_sep,band,balance_tol, &
-    work(fm_flags+1:fm_flags+a_n),work(fm_ipart+1:fm_ipart+a_n), &
-    work(fm_next+1:fm_next+a_n),work(fm_last+1:fm_last+a_n), &
-    work(fm_gain1+1:fm_gain1+a_n),work(fm_gain2+1:fm_gain2+a_n), &
-    work(fm_done+1:fm_done+a_n),work(fm_head+1:fm_head+icut+mult+1), &
-    work(fm_distance+1:fm_distance+a_n))
+   call nd_fm_refinement(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, icut,  &
+      mult, options%cost_function, a_n1, a_n2, a_weight_1, a_weight_2,        &
+      a_weight_sep, band, balance_tol, work(fm_flags+1:fm_flags+a_n),         &
+      work(fm_ipart+1:fm_ipart+a_n), work(fm_next+1:fm_next+a_n),             &
+      work(fm_last+1:fm_last+a_n), work(fm_gain1+1:fm_gain1+a_n),             &
+      work(fm_gain2+1:fm_gain2+a_n), work(fm_done+1:fm_done+a_n),             &
+      work(fm_head+1:fm_head+icut+mult+1), work(fm_distance+1:fm_distance+a_n))
 
-  ! Update partition
-  call nd_convert_flags_partition(a_n,a_n1,a_n2, &
-    work(fm_flags+1:fm_flags+a_n),ND_PART1_FLAG,ND_PART2_FLAG, &
-    partition(1:a_n))
+   ! Update partition
+   call nd_convert_flags_partition(a_n, a_n1, a_n2,                  &
+      work(fm_flags+1:fm_flags+a_n), ND_PART1_FLAG, ND_PART2_FLAG,   &
+     partition(1:a_n))
 
 end subroutine nd_refine_fm
 
-
-
-
-! The subroutine nd_fm_refinement uses a version of the Fiduccia-
-! Mattheyses refinement algorithm on a tripartite partitioing of the
-! nodes of a
+!
+! The subroutine nd_fm_refinement uses a version of the Fiduccia-Mattheyses
+! refinement algorithm on a tripartite partitioing of the nodes of a
 ! graph where a node in the first partition is not connected to any node
 ! in the second partition and any path between nodes in partition 1 and
 ! partition 2 must go through a node in the cutset (partition 3).
 ! The intention of the algorithm is to reduce f(P1,P2,P3), where
-! f(P1,P2,P3) =   |P3|/(|P1||P2|) if min(|P1|,|P2|)/max(|P1|,|P2|) >=
-! balance_tol
-! =  sumweight - 2 + max(|P1|,|P2|)/min(|P1|,|P2|), otherwise
-! This is a banded version so only nodes a distance of at most band from
-! the
+! f(P1,P2,P3) = |P3|/(|P1||P2|) if min(|P1|,|P2|)/max(|P1|,|P2|) >= balance_tol
+!             =  sumweight - 2 + max(|P1|,|P2|)/min(|P1|,|P2|), otherwise
+! This is a banded version so only nodes a distance of at most band from the
 ! input separator can be moved into the new separator
+!
+subroutine nd_fm_refinement(n, a_ne, ptr, col, weight, sumweight, icut, mult, &
+      costf, a_n1, a_n2, wnv1, wnv2, wns, band, balance_tol, flags, ipart,    &
+      next, last, gain1, gain2, done, head, dist)
+   integer, intent(in) :: n
+   integer, intent(in) :: a_ne
+   integer, dimension(n), intent(in) :: ptr
+   integer, dimension(a_ne), intent(in) :: col
+   ! The array weight is used to hold a weight on the vertices indicating
+   ! how many vertices from the finer graphs have been combined into the
+   ! current coarse graph vertex.
+   integer, dimension(n), intent(in) :: weight
+   integer, intent(in) :: sumweight
+   integer, intent(in) :: icut ! Used to limit search
+   integer, intent(in) :: mult ! Used to bound search
+   integer, intent(in) :: costf ! Determines which cost function used
+   integer, intent(inout) :: a_n1 ! No. vertices partition 1
+   integer, intent(inout) :: a_n2 ! No. vertices partition 2
+   integer, intent(inout) :: wnv1 ! Weighted sum of vertices partition 1
+   integer, intent(inout) :: wnv2 ! Weighted sum of vertices partition 2
+   integer, intent(inout) :: wns ! Weighted sum of vertices separator
+   integer, intent(in) :: band ! width of band around initial separator
+      ! that the separator can lie in
+   real(wp), intent(in) :: balance_tol ! balance_tol to determine whether
+      ! partition is balanced
 
-subroutine nd_fm_refinement(n,a_ne,ptr,col,weight,sumweight,icut, &
-    mult,costf,a_n1,a_n2,wnv1,wnv2,wns,band,balance_tol,flags,ipart,next,last,gain1, &
-    gain2,done,head,dist)
+   ! flags holds a list of nodes stating which partition node i is in.
+   ! The whole point of this routine is to return a revised partition
+   ! with better properties.  Normally less nodes in the cutset while
+   ! maintaining
+   ! a balance between the number of nodes in the two components.
+   ! flags(i) .eq. ND_PART1_FLAG : i is in partition 1
+   ! flags(i) .eq. ND_PART2_FLAG : i is in partition 2
+   ! flags(i) .eq. ND_SEP_FLAG   : i is in separator/cutset
+   integer, intent(inout) :: flags(n)
+   ! info holds parameters giving information about the performance of the
+   ! subroutine
+   integer, intent(out) :: ipart(n), next(n), last(n)
+   integer, intent(out) :: gain1(n), gain2(n), done(n), head(-mult:icut)
+   integer, intent(out) :: dist(n)
 
-  ! Matrix is held in matrix using compressed column scheme
-  integer, intent(in) :: n ! size of matrix
-  integer, intent(in) :: a_ne ! no. nonzeros in matrix
-  integer, intent(in) :: ptr(n) ! row pointers
-  integer, intent(in) :: col(a_ne) ! column indices
-  ! type (nd_matrix), intent(inout) :: matrix
-  ! The array weight is used to hold a weight on the vertices indicating
-  ! how many vertices from the finer graphs have been combined into the
-  ! current coarse graph vertex.
-  integer, intent(in) :: weight(n)
-  integer, intent(in) :: sumweight
-  integer, intent(in) :: icut ! Used to limit search
-  integer, intent(in) :: mult ! Used to bound search
-  integer, intent(in) :: costf ! Determines which cost function used
-  integer, intent(inout) :: a_n1 ! No. vertices partition 1
-  integer, intent(inout) :: a_n2 ! No. vertices partition 2
-  integer, intent(inout) :: wnv1 ! Weighted sum of vertices partition 1
-  integer, intent(inout) :: wnv2 ! Weighted sum of vertices partition 2
-  integer, intent(inout) :: wns ! Weighted sum of vertices separator
-  integer, intent(in) :: band ! width of band around initial separator
-  ! that the separator can lie in
-  real(wp), intent(in) :: balance_tol ! balance_tol to determine
-  ! whether
-  ! partition is balanced
+   ! Number nodes in each partition
+   integer :: nv1, ns, nv2, inv1, inv2, ins
+   ! Weighted nodes in each partition
+   integer :: winv1, winv2, wins
+   integer :: i, j, ii, jj, eye, k
+   integer :: inn, outer
+   integer :: move, ming, gain, old_gain, inext, idummy
+   integer :: first, tail
+   real(wp) :: eval, evalc, evalo, eval1, eval2
+   logical :: imbal
 
-  ! flags holds a list of nodes stating which partition node i is in.
-  ! The whole point of this routine is to return a revised partition
-  ! with better properties.  Normally less nodes in the cutset while
-  ! maintaining
-  ! a balance between the number of nodes in the two components.
-  ! flags(i) .eq. ND_PART1_FLAG : i is in partition 1
-  ! flags(i) .eq. ND_PART2_FLAG : i is in partition 2
-  ! flags(i) .eq. ND_SEP_FLAG   : i is in separator/cutset
-  integer, intent(inout) :: flags(n)
-  ! info holds parameters giving information about the performance of
-  ! the
-  ! subroutine
-  integer, intent(out) :: ipart(n), next(n), last(n)
-  integer, intent(out) :: gain1(n), gain2(n), done(n), head(-mult:icut)
-  integer, intent(out) :: dist(n)
+   imbal = (balance_tol.le.real(sumweight-2))
 
-  ! Number nodes in each partition
-  integer :: nv1, ns, nv2, inv1, inv2, ins
-  ! Weighted nodes in each partition
-  integer :: winv1, winv2, wins
-  integer :: i, j, ii, jj, eye, k, l
-  integer :: inn, outer
-  integer :: move, ming, gain, old_gain, inext, idummy
-  integer :: first, tail
-  real(wp) :: eval, evalc, evalo, eval1, eval2
-  logical :: imbal
-
-
-  imbal = (balance_tol.le.real(sumweight-2))
-
-  ! Set-up distance to hold (min) distance of node from separator. Only
-  ! find
-  ! distance for nodes within band distance from separator
-  first = 0
-  tail = 0
-  do i = 1, n
-    if (flags(i).eq.ND_SEP_FLAG) then
-      dist(i) = 0
-      if (first.eq.0) then
-        first = i
-        tail = i
+   ! Set-up distance to hold (min) distance of node from separator. Only find
+   ! distance for nodes within band distance from separator
+   first = 0
+   tail = 0
+   do i = 1, n
+      if (flags(i).eq.ND_SEP_FLAG) then
+         dist(i) = 0
+         if (first.eq.0) then
+            first = i
+            tail = i
+         else
+            next(tail) = i
+            tail = i
+         end if
       else
-        next(tail) = i
-        tail = i
+         dist(i) = -2
       end if
-    else
-      dist(i) = -2
-    end if
-  end do
+   end do
 
-  do while (first.ne.0)
-    j = dist(first)
-    if (j.eq.band-1) then
-      if (first.eq.n) then
-        l = a_ne
+   do while (first.ne.0)
+      j = dist(first)
+      if (j.eq.band-1) then
+         do i = ptr(first), nd_get_ptr(first+1, n, a_ne, ptr)-1
+            if (dist(col(i)).eq.-2) then
+               k = col(i)
+               dist(k) = j + 1
+            end if
+         end do
       else
-        l = ptr(first+1) - 1
+         do i = ptr(first), nd_get_ptr(first+1, n, a_ne, ptr)-1
+            if (dist(col(i)).eq.-2) then
+               k = col(i)
+               dist(k) = j + 1
+               next(tail) = k
+               tail = k
+            end if
+         end do
       end if
-      do i = ptr(first), l
-        if (dist(col(i)).eq.-2) then
-          k = col(i)
-          dist(k) = j + 1
-        end if
+      if (first.eq.tail) then
+         first = 0
+      else
+         k = next(first)
+         first = k
+      end if
+   end do
+   next(1:n) = 0
+
+   ! nv1,nv2,ns are the number of nodes in partitions 1, 2 and the cutset in
+   ! the current partition
+   ! inv1,inv2,ins,ipart are the equivalent quantities within the inner loop
+   ! The same identifiers prefixed by w refer to weighted counts
+   ! inner and outer are the two main loop indices
+
+   ! Initialize nv1,nv2,ns
+   nv1 = a_n1
+   nv2 = a_n2
+   ns = n - (a_n1+a_n2)
+   ii = 1
+   jj = ii + nv1
+
+   ! Initialize ipart
+   ipart(1:n) = flags(1:n)
+
+   ! Initialize array done that flags that a node has been considered in
+   ! an inner loop pass
+   done = 0
+
+   ! Compute evaluation function for current partitioning
+   call cost_function(wnv1+1, wnv2+1, wns, sumweight, balance_tol, imbal, &
+      costf, evalc)
+
+   ! icut is set to limit search in inner loop .. may later be a parameter
+   ! we allow gains of up to max(weight)*5
+
+   head(-mult:icut) = 0
+
+   ! Set up doubly linked list linking nodes with same gain and headers
+   ! to starts (up to cut off value icut)
+
+   ! Compute gains for nodes in cutset
+   ming = sumweight
+   do i = 1, n
+      if (flags(i).eq.ND_SEP_FLAG) then
+         ! Node i is in cutset
+         ! gain1(i) is change to cutset size if node i is moved to partition 1.
+         ! gain2(i) is change to cutset size if node i is moved to partition 2.
+         ! Run through all neighbours of node i to see what loss/gain is if
+         ! node i is moved
+
+         call compute_gain(n,a_ne,ptr,col,gain1,gain2,weight,i,flags)
+         gain = max(-mult,min(gain1(i),gain2(i)))
+
+         if (gain.lt.ming) ming = gain
+         if (gain.gt.icut) cycle
+         ! New node is put at head of list
+         call add_to_list(n,mult,icut,next,last,head,i,gain)
+      end if
+   end do
+
+   ! Initilialization finished.  Now perform F-M algorithm in two loops.
+   ! In each inner loop we choose the best obtained and if the evaluation
+   ! function for this is better than previous best we perform another inner
+   ! loop; otherwise we terminate.
+   evalo = evalc
+   do outer = 1, n
+      ! Set partition that will be altered in inner loop
+      inv1 = nv1
+      inv2 = nv2
+      ins = ns
+      winv1 = wnv1
+      winv2 = wnv2
+      wins = wns
+      ipart(1:n) = flags(1:n)
+      inner: &
+      do inn = 1, n
+         ! Choose best eligible move
+         do idummy = 1, n
+            do gain = ming, icut
+               if (head(gain).ne.0) exit
+            end do
+            if (gain.gt.icut) exit inner
+
+            ! Now cycle through nodes of least gain
+            ! Currently inefficient because of re-searching linked list
+            inext = head(gain)
+            k = 0
+            10 continue
+            i = inext
+            if (i.eq.0) cycle
+            ! Use node if it has not been considered already
+            if (done(i).lt.outer) go to 20
+            inext = next(i)
+            ! !! Extra statements to trap infinite loop
+            k = k + 1
+            if (k.gt.ins) then
+               ! write (*,*) 'Bug in code because of infinite loop'
+               ! !! You may wish to change this to a stop
+               stop
+            end if
+            go to 10
+         end do
+         exit inner
+         ! Node i has been selected as the best eligible node
+         ! Set flag so only considered once in this pass
+         20 continue
+         done(i) = outer
+         ! As i will not be chosen again in this pass, remove from list
+         call remove_from_list(n, mult, icut, next, last, head, i, gain)
+         ! Move the node to the appropriate partition and reset partition
+         ! information
+         ! We will try both weighted and unweighted
+
+         if (wnv1.eq.0 .and. wnv2.gt.0) then
+            ! Move node i to partition 1
+            move = ND_PART1_FLAG
+            inv1 = inv1 + 1
+            winv1 = winv1 + weight(i)
+            ins = ins - 1
+            wins = wins - weight(i)
+         else if (wnv2.eq.0 .and. wnv1.gt.0) then
+            ! Move node i to partition 2
+            move = ND_PART2_FLAG
+            inv2 = inv2 + 1
+            winv2 = winv2 + weight(i)
+            ins = ins - 1
+            wins = wins - weight(i)
+         else
+            call cost_function(winv1+weight(i), winv2+1-gain1(i)-weight(i), &
+               wins+gain1(i)-1, sumweight, balance_tol, imbal, costf, eval1)
+            call cost_function(winv1+1-gain2(i)-weight(i), winv2+weight(i), &
+               wins+gain2(i)-1, sumweight, balance_tol, imbal, costf, eval2)
+            if ((eval1.lt.eval2).or.((eval1.eq.eval2).and.(wnv1.lt.wnv2))) then
+               ! Move node i to partition 1
+               move = ND_PART1_FLAG
+               inv1 = inv1 + 1
+               winv1 = winv1 + weight(i)
+               ins = ins - 1
+               wins = wins - weight(i)
+            else
+               ! Move node i to partition 2
+               move = ND_PART2_FLAG
+               inv2 = inv2 + 1
+               winv2 = winv2 + weight(i)
+               ins = ins - 1
+               wins = wins - weight(i)
+            end if
+         end if
+         ! Set new partition for node i
+         ipart(i) = move
+         ! Run through neigbours of node i to update data
+         do jj = ptr(i), nd_get_ptr(i+1, n, a_ne, ptr)-1
+            j = col(jj)
+            ! Check which partition node j is in and take appropriate action
+            if (ipart(j).eq.move) cycle
+            ! If node j is in cutset, update its gain value
+            if (ipart(j).eq.ND_SEP_FLAG) then
+               ! If it has already been chosen in this pass just skip it
+               if (done(j).eq.outer .or. dist(j).eq.-2) cycle
+               ! old_gain is present gain
+
+               old_gain = max(-mult,min(gain1(j),gain2(j)))
+
+               if (move.eq.ND_PART1_FLAG) gain2(j) = gain2(j) + weight(i)
+               if (move.eq.ND_PART2_FLAG) gain1(j) = gain1(j) + weight(i)
+               gain = max(-mult,min(gain1(j),gain2(j)))
+
+               if (old_gain.eq.gain) cycle
+               ! Remove from old list
+               if (old_gain.le.icut) then
+                  call remove_from_list(n, mult, icut, next, last, head, j, &
+                     old_gain)
+               end if
+               ! gain has changed so move to new linked list if less than icut
+               if (gain.le.icut) then
+                  ! Reset ming if necessary
+                  if (gain.lt.ming) ming = gain
+                  call add_to_list(n,mult,icut,next,last,head,j,gain)
+               end if
+            end if
+            if (ipart(j).eq.2-move) then
+               ! We have a new node in the cutset.
+               ipart(j) = ND_SEP_FLAG
+               ! Compute gains for this new node in the cutset and place in
+               ! linked list
+               ! We intentionally did not do this earlier but we do now
+               ! [maybe not since won't access this node again in this pass]
+               ! We use done array to record this but probably not necessary
+               ! as not put in head linked list so won't be accessed
+               ! First check that it was not earlier moved from cutset
+               if (done(j).ne.outer .and. dist(j).ne.-2) then
+                  ! Compute gain
+                  call compute_gain(n, a_ne, ptr, col, gain1, gain2, weight, &
+                     j, ipart)
+                  gain = max(-mult,min(gain1(j),gain2(j)))
+                  ! !! Just added this
+                  if (gain.lt.ming) ming = gain
+                  ! Add to  list
+                  if (gain.le.icut) then
+                     call add_to_list(n,mult,icut,next,last,head,j,gain)
+                  end if
+               end if
+               ! Update partition and gain of any nodes in cutset connected
+               ! to node j
+               ins = ins + 1
+               wins = wins + weight(j)
+               if (move.eq.ND_PART1_FLAG) then
+                  inv2 = inv2 - 1
+                  winv2 = winv2 - weight(j)
+               end if
+               if (move.eq.ND_PART2_FLAG) then
+                  inv1 = inv1 - 1
+                  winv1 = winv1 - weight(j)
+               end if
+               ! Check neighbours of j since any in cut set will have gain
+               ! changed
+               do ii = ptr(j), nd_get_ptr(j+1, n, a_ne, ptr)-1
+                  eye = col(ii)
+                  if (ipart(eye).ne.ND_SEP_FLAG) cycle
+                  if (dist(eye).eq.-2) cycle
+                  ! Neighbour is in cutset. Recompute gain and insert in 
+                  ! linked list.
+                  if (done(eye).eq.outer) cycle
+                  ! old_gain is present gain
+                  old_gain = max(-mult,min(gain1(eye),gain2(eye)))
+
+                  if (move.eq.ND_PART1_FLAG) &
+                     gain1(eye) = gain1(eye) - weight(j)
+                  if (move.eq.ND_PART2_FLAG) &
+                     gain2(eye) = gain2(eye) - weight(j)
+                  ! gain is new gain
+                  gain = max(-mult,min(gain1(eye),gain2(eye)))
+                  if (old_gain.eq.gain) cycle
+                  ! Remove from old list
+                  if (old_gain.le.icut) &
+                     call remove_from_list(n, mult, icut, next, last, head, &
+                        eye, old_gain)
+                  ! gain has changed so move to new linked list if < icut
+                  if (gain.le.icut) then
+                     ! Reset ming if necessary
+                     if (gain.lt.ming) ming = gain
+                     call add_to_list(n,mult,icut,next,last,head,eye,gain)
+                  end if
+               end do
+            end if
+            ! end of neighbours loop
+         end do
+
+         ! Evaluate new partition
+         call cost_function(winv1+1, winv2+1, wins, sumweight, balance_tol, &
+            imbal, costf, eval)
+         ! Compare this with best so far in inner loop and store partition
+         ! information if it is the best
+         if (inv1*inv2.gt.0 .and. nv1*nv2.eq.0) then
+            ! Might have to store gains and who is in the cutset
+            evalc = eval
+            nv1 = inv1
+            nv2 = inv2
+            ns = ins
+            wnv1 = winv1
+            wnv2 = winv2
+            wns = wins
+            flags = ipart
+         else if (eval.lt.evalc .and. (inv1*inv2.gt.0)) then
+            ! Might have to store gains and who is in the cutset
+            evalc = eval
+            nv1 = inv1
+            nv2 = inv2
+            ns = ins
+            wnv1 = winv1
+            wnv2 = winv2
+            wns = wins
+            flags(1:n) = ipart(1:n)
+         end if
+         ! End inner loop
+      end do inner
+
+      ! Leave loop if inner loop has not found better partition
+      if (evalc.ge.(1.0-1.0/(log(real(sumweight))**2.3))*evalo) exit
+      ! Otherwise we reset evalo and go back to inner loop
+      evalo = evalc
+      ! Recompute gains for this new partition
+      ! Compute gains for nodes in cutset
+      ! This is very inefficient but is in now to test functionality
+      head(-mult:icut) = 0
+      ming = icut + 1
+      do i = 1, n
+         if (flags(i).ne.ND_SEP_FLAG) cycle
+         if (dist(i).eq.-2) cycle
+         ! Node i is in cutset
+         ! gain1(i) is change to cutset size if node i is moved to partition 1.
+         ! gain2(i) is change to cutset size if node i is moved to partition 2.
+         ! Run through all neighbours of node i to see what loss/gain is if node
+         ! i is moved
+         call compute_gain(n,a_ne,ptr,col,gain1,gain2,weight,i,flags)
+         ! Recalculate doubly linked list linking nodes with same gain and
+         ! headers to starts (up to cut off value icut)
+         ! Initialize array done that flags that a node has been considered in
+         ! an inner loop pass
+         gain = max(-mult,min(gain1(i),gain2(i)))
+         ! gain = min(gain1(i),gain2(i))
+         if (gain.gt.icut) cycle
+         if (gain.lt.ming) ming = gain
+         ! New node is put at head of list
+         call add_to_list(n,mult,icut,next,last,head,i,gain)
       end do
-
-    else
-      if (first.eq.n) then
-        l = a_ne
-      else
-        l = ptr(first+1) - 1
-      end if
-      do i = ptr(first), l
-        if (dist(col(i)).eq.-2) then
-          k = col(i)
-          dist(k) = j + 1
-          next(tail) = k
-          tail = k
-        end if
-      end do
-
-    end if
-    if (first.eq.tail) then
-      first = 0
-    else
-      k = next(first)
-      first = k
-    end if
-  end do
-  next(1:n) = 0
-
-  ! nv1,nv2,ns are the number of nodes in partitions 1, 2 and the cutset
-  ! in
-  ! the current partition
-  ! inv1,inv2,ins,ipart are the equivalent quantities within the inner
-  ! loop
-  ! The same identifiers prefixed by w refer to weighted counts
-  ! inner and outer are the two main loop indices
-
-  ! Initialize nv1,nv2,ns
-  nv1 = a_n1
-  nv2 = a_n2
-  ns = n - (a_n1+a_n2)
-  ii = 1
-  jj = ii + nv1
-
-  ! Initialize ipart
-  ipart(1:n) = flags(1:n)
-
-  ! Initialize array done that flags that a node has been considered in
-  ! an inner loop pass
-  done = 0
-
-  ! Compute evaluation function for current partitioning
-
-  call cost_function(wnv1+1,wnv2+1,wns,sumweight,balance_tol,imbal,costf,evalc)
-
-  ! icut is set to limit search in inner loop .. may later be a
-  ! parameter
-  ! we allow gains of up to max(weight)*5
-
-  head(-mult:icut) = 0
-
-  ! Set up doubly linked list linking nodes with same gain and headers
-  ! to starts (up to cut off value icut)
-
-  ! Compute gains for nodes in cutset
-  ming = sumweight
-  do i = 1, n
-
-    if (flags(i).eq.ND_SEP_FLAG) then
-      ! Node i is in cutset
-      ! gain1(i) is change to cutset size if node i is moved to
-      ! partition 1.
-      ! gain2(i) is change to cutset size if node i is moved to
-      ! partition 2.
-      ! Run through all neighbours of node i to see what loss/gain is if
-      ! node
-      ! i is moved
-
-      call compute_gain(n,a_ne,ptr,col,gain1,gain2,weight,i,flags)
-      gain = max(-mult,min(gain1(i),gain2(i)))
-
-      if (gain.lt.ming) ming = gain
-      if (gain.gt.icut) cycle
-      ! New node is put at head of list
-      call add_to_list(n,mult,icut,next,last,head,i,gain)
-    end if
-  end do
-
-  ! Initilialization finished.  Now perform F-M algorithm in two loops.
-  ! In each inner loop we choose the best obtained and if the evaluation
-  ! function for this is better than previous best we perform another
-  ! inner
-  ! loop; otherwise we terminate.
-  evalo = evalc
-  do outer = 1, n
-    ! Set partition that will be altered in inner loop
-    inv1 = nv1
-    inv2 = nv2
-    ins = ns
-    winv1 = wnv1
-    winv2 = wnv2
-    wins = wns
-    ipart(1:n) = flags(1:n)
-inNER:    do inn = 1, n
-
-      ! Choose best eligible move
-      do idummy = 1, n
-
-        do gain = ming, icut
-          if (head(gain).ne.0) exit
-        end do
-        if (gain.gt.icut) exit inNER
-
-        ! Now cycle through nodes of least gain
-        ! Currently inefficient because of re-searching linked list
-        inext = head(gain)
-        k = 0
-10            i = inext
-        if (i.eq.0) cycle
-        ! Use node if it has not been considered already
-        if (done(i).lt.outer) go to 20
-        inext = next(i)
-        ! !! Extra statements to trap infinite loop
-        k = k + 1
-        if (k.gt.ins) then
-          ! write (*,*) 'Bug in code because of infinite loop'
-          ! !! You may wish to change this to a stop
-          exit
-        end if
-        go to 10
-      end do
-      exit inNER
-      ! Node i has been selected as the best eligible node
-      ! Set flag so only considered once in this pass
-20          done(i) = outer
-      ! As i will not be chosen again in this pass, remove from list
-      call remove_from_list(n,mult,icut,next,last,head,i,gain)
-      ! Move the node to the appropriate partition and reset partition
-      ! information
-      ! We will try both weighted and unweighted
-
-      if (wnv1.eq.0 .and. wnv2.gt.0) then
-
-        ! Move node i to partition 1
-        move = ND_PART1_FLAG
-        inv1 = inv1 + 1
-        winv1 = winv1 + weight(i)
-        ins = ins - 1
-        wins = wins - weight(i)
-      else if (wnv2.eq.0 .and. wnv1.gt.0) then
-        ! Move node i to partition 2
-        move = ND_PART2_FLAG
-        inv2 = inv2 + 1
-        winv2 = winv2 + weight(i)
-        ins = ins - 1
-        wins = wins - weight(i)
-
-      else
-        call cost_function(winv1+weight(i),winv2+1-gain1(i)-weight(i), &
-          wins+gain1(i)-1,sumweight,balance_tol,imbal,costf,eval1)
-
-        call cost_function(winv1+1-gain2(i)-weight(i),winv2+weight(i), &
-          wins+gain2(i)-1,sumweight,balance_tol,imbal,costf,eval2)
-        if ((eval1.lt.eval2) .or. ((eval1.eq.eval2) .and. (wnv1.lt.wnv2))) then
-          ! Move node i to partition 1
-          move = ND_PART1_FLAG
-          inv1 = inv1 + 1
-          winv1 = winv1 + weight(i)
-          ins = ins - 1
-          wins = wins - weight(i)
-        else
-          ! Move node i to partition 2
-          move = ND_PART2_FLAG
-          inv2 = inv2 + 1
-          winv2 = winv2 + weight(i)
-          ins = ins - 1
-          wins = wins - weight(i)
-        end if
-      end if
-      ! Set new partition for node i
-      ipart(i) = move
-      ! Run through neigbours of node i to update data
-      if (i.eq.n) then
-        l = a_ne
-      else
-        l = ptr(i+1) - 1
-      end if
-      do jj = ptr(i), l
-        j = col(jj)
-        ! Check which partition node j is in and take appropriate action
-        if (ipart(j).eq.move) cycle
-        ! If node j is in cutset, update its gain value
-        if (ipart(j).eq.ND_SEP_FLAG) then
-          ! If it has already been chosen in this pass just skip it
-          if (done(j).eq.outer .or. dist(j).eq.-2) cycle
-          ! old_gain is present gain
-
-          old_gain = max(-mult,min(gain1(j),gain2(j)))
-          ! old_gain = min(gain1(j),gain2(j))
-
-          if (move.eq.ND_PART1_FLAG) gain2(j) = gain2(j) + weight(i)
-          if (move.eq.ND_PART2_FLAG) gain1(j) = gain1(j) + weight(i)
-          gain = max(-mult,min(gain1(j),gain2(j)))
-          ! gain = min(gain1(j),gain2(j))
-
-          if (old_gain.eq.gain) cycle
-          ! Remove from old list
-          if (old_gain.le.icut) then
-            call remove_from_list(n,mult,icut,next,last,head,j,old_gain)
-          end if
-          ! gain has changed so move to new linked list if less than
-          ! icut
-          if (gain.le.icut) then
-            ! Reset ming if necessary
-            if (gain.lt.ming) ming = gain
-            call add_to_list(n,mult,icut,next,last,head,j,gain)
-          end if
-        end if
-        if (ipart(j).eq.2-move) then
-          ! We have a new node in the cutset.
-          ipart(j) = ND_SEP_FLAG
-          ! Compute gains for this new node in the cutset and place in
-          ! linked list
-          ! We intentionally did not do this earlier but we do now
-          ! [maybe not since won't access this node again in this pass]
-          ! We use done array to record this but probably not necessary
-          ! as not put
-          ! in head linked list so won't be accessed
-          ! First check that it was not earlier moved from cutset
-          if (done(j).ne.outer .and. dist(j).ne.-2) then
-            ! Compute gain
-            call compute_gain(n,a_ne,ptr,col,gain1,gain2,weight,j,ipart)
-            gain = max(-mult,min(gain1(j),gain2(j)))
-            ! gain = min(gain1(j),gain2(j))
-            ! !! Just added this
-            if (gain.lt.ming) ming = gain
-            ! Add to  list
-            if (gain.le.icut) then
-              call add_to_list(n,mult,icut,next,last,head,j,gain)
-            end if
-          end if
-          ! Update partition and gain of any nodes in cutset connected
-          ! to node j
-          ins = ins + 1
-          wins = wins + weight(j)
-          if (move.eq.ND_PART1_FLAG) then
-            inv2 = inv2 - 1
-            winv2 = winv2 - weight(j)
-          end if
-          if (move.eq.ND_PART2_FLAG) then
-            inv1 = inv1 - 1
-            winv1 = winv1 - weight(j)
-          end if
-          ! Check neighbours of j since any in cut set will have gain
-          ! changed
-          if (j.eq.n) then
-            l = a_ne
-          else
-            l = ptr(j+1) - 1
-          end if
-          do ii = ptr(j), l
-            eye = col(ii)
-            if (ipart(eye).ne.ND_SEP_FLAG) cycle
-            if (dist(eye).eq.-2) cycle
-            ! Neighbour is in cutset. Recompute gain and insert in
-            ! linked list.
-            if (done(eye).eq.outer) cycle
-            ! old_gain is present gain
-            old_gain = max(-mult,min(gain1(eye),gain2(eye)))
-            ! old_gain = min(gain1(eye),gain2(eye))
-
-
-            if (move.eq.ND_PART1_FLAG) then
-              gain1(eye) = gain1(eye) - weight(j)
-            end if
-            if (move.eq.ND_PART2_FLAG) then
-              gain2(eye) = gain2(eye) - weight(j)
-            end if
-            ! gain is new gain
-            gain = max(-mult,min(gain1(eye),gain2(eye)))
-            ! gain = min(gain1(eye),gain2(eye))
-            if (old_gain.eq.gain) cycle
-            ! Remove from old list
-            if (old_gain.le.icut) then
-              call remove_from_list(n,mult,icut,next,last,head,eye,old_gain)
-            end if
-            ! gain has changed so move to new linked list if less than
-            ! icut
-            if (gain.le.icut) then
-              ! Reset ming if necessary
-              if (gain.lt.ming) ming = gain
-              call add_to_list(n,mult,icut,next,last,head,eye,gain)
-            end if
-          end do
-        end if
-        ! end of neighbours loop
-      end do
-
-      ! ii = 0
-      ! do i = 1,n
-      ! if (ipart(i) .eq. 2) ii = ii + 1
-      ! enddo
-      ! if (ii .ne. inv2) write(6,*) 'problem in partition',ii,inv2
-
-      ! Evaluate new partition
-      call cost_function(winv1+1,winv2+1,wins,sumweight,balance_tol,imbal, &
-        costf,eval)
-      ! Compare this with best so far in inner loop and store partition
-      ! information if it is the best
-      if (inv1*inv2.gt.0 .and. nv1*nv2.eq.0) then
-        ! Might have to store gains and who is in the cutset
-        evalc = eval
-        nv1 = inv1
-        nv2 = inv2
-        ns = ins
-        wnv1 = winv1
-        wnv2 = winv2
-        wns = wins
-        flags = ipart
-
-      else if (eval.lt.evalc .and. (inv1*inv2.gt.0)) then
-        ! Might have to store gains and who is in the cutset
-        evalc = eval
-        nv1 = inv1
-        nv2 = inv2
-        ns = ins
-        wnv1 = winv1
-        wnv2 = winv2
-        wns = wins
-        flags(1:n) = ipart(1:n)
-      end if
-      ! End inner loop
-    end do inNER
-    ! Leave loop if inner loop has not found better partition
-    if (evalc.ge.(1.0-1.0/(LOG(real(sumweight))**2.3))*evalo) exit
-    ! Otherwise we reset evalo and go back to inner loop
-    evalo = evalc
-    ! Recompute gains for this new partition
-    ! Compute gains for nodes in cutset
-    ! This is very inefficient but is in now to test functionality
-    head(-mult:icut) = 0
-    ming = icut + 1
-    do i = 1, n
-      if (flags(i).ne.ND_SEP_FLAG) cycle
-      if (dist(i).eq.-2) cycle
-      ! Node i is in cutset
-      ! gain1(i) is change to cutset size if node i is moved to
-      ! partition 1.
-      ! gain2(i) is change to cutset size if node i is moved to
-      ! partition 2.
-      ! Run through all neighbours of node i to see what loss/gain is if
-      ! node
-      ! i is moved
-      call compute_gain(n,a_ne,ptr,col,gain1,gain2,weight,i,flags)
-      ! Recalculate doubly linked list linking nodes with same gain and
-      ! headers
-      ! to starts (up to cut off value icut)
-      ! Initialize array done that flags that a node has been considered
-      ! in
-      ! an inner loop pass
-      gain = max(-mult,min(gain1(i),gain2(i)))
-      ! gain = min(gain1(i),gain2(i))
-      if (gain.gt.icut) cycle
-      if (gain.lt.ming) ming = gain
-      ! New node is put at head of list
-      call add_to_list(n,mult,icut,next,last,head,i,gain)
-    end do
-    ! End of outer loop
-  end do
-  a_n1 = nv1
-  a_n2 = nv2
-  return
+      ! End of outer loop
+   end do
+   a_n1 = nv1
+   a_n2 = nv2
 
 end subroutine nd_fm_refinement
 
