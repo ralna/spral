@@ -719,14 +719,13 @@ subroutine nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level, &
       ! row i in this sub problem maps to. On output, this is updated to
       ! reflect the computed permutation.
    logical, intent(inout) :: use_multilevel
-   integer, intent(out) :: work(12*a_n+sumweight+a_ne)
+   integer, target, intent(out) :: work(12*a_n+sumweight+a_ne)
    type (nd_options), intent(in) :: options
    type (nd_inform), intent(inout) :: info
    type (nd_multigrid), intent(inout) :: grid
 
-   integer :: partition_ptr ! pointer into work array
+   integer, dimension(:), pointer :: partition, partition2
    integer :: work_ptr ! pointer into work array
-   integer :: part_ptr ! pointer into work array
    integer :: a_ptr_sub_ptr ! pointer into work array
    integer :: a_row_sub_ptr ! pointer into work array
    integer :: i, j, k
@@ -763,29 +762,25 @@ subroutine nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level, &
    end if
 
    ! Find the partition
-   partition_ptr = 0 ! length a_n
-   work_ptr = partition_ptr + a_n ! max length 9*a_n+sumweight+a_ne/2
+   partition => work(1:a_n); work_ptr = a_n
    select case(options%coarse_partition_method)
    case(:ND_PARTITION_HALF_LEVEL_SET)
       call nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight,    &
-         level, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep,             &
-         work(partition_ptr+1:partition_ptr+a_n),                             &
+         level, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, partition,  &
          work(work_ptr+1:work_ptr+9*a_n+sumweight), options, band, depth,     &
          use_multilevel, info%flag)
    case(ND_PARTITION_LEVEL_SET:)
       call nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight,         &
-         level, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep,             &
-         work(partition_ptr+1:partition_ptr+a_n),                             &
+         level, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, partition,  &
          work(work_ptr+1:work_ptr+9*a_n+sumweight), options, band, depth,     &
          use_multilevel, info%flag)
    end select
    if(info%flag.ne.0) return ! it's all gone horribly wrong
    if (use_multilevel) then
       lwork = 9*a_n + sumweight
-      call multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight,         &
-         sumweight, work(partition_ptr+1:partition_ptr+a_n), a_n1, a_n2,   &
-         a_weight_1, a_weight_2, a_weight_sep, options, info%flag, lwork,  &
-         work(work_ptr+1:work_ptr+lwork), grid)
+      call multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight,  &
+         partition, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, options, &
+         info%flag, lwork, work(work_ptr+1:work_ptr+lwork), grid)
    end if
 
    ! If S is empty, return and caller will handle as special case
@@ -854,27 +849,23 @@ subroutine nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level, &
       select case (ref_method)
       case (REFINE_MAXFLOW)
          call nd_refine_max_flow(a_n, a_ne, a_ptr, a_row, a_weight, a_n1,  &
-            a_n2, a_weight_1, a_weight_2, a_weight_sep,                    &
-            work(partition_ptr+1:partition_ptr+a_n),                       &
+            a_n2, a_weight_1, a_weight_2, a_weight_sep, partition,         &
             work(work_ptr+1:work_ptr+8), options)
       case (REFINE_TRIM)
          if (min(a_weight_1,a_weight_2)+a_weight_sep.lt. &
                max(a_weight_1,a_weight_2)) then
             call nd_refine_block_trim(a_n, a_ne, a_ptr, a_row, a_weight,    &
                sumweight, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, &
-               work(partition_ptr+1:partition_ptr+a_n),                     &
-               work(work_ptr+1:work_ptr+5*a_n),options)
+               partition, work(work_ptr+1:work_ptr+5*a_n),options)
          else
             call nd_refine_trim(a_n, a_ne, a_ptr, a_row, a_weight,          &
                sumweight, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, &
-               work(partition_ptr+1:partition_ptr+a_n),                     &
-               work(work_ptr+1:work_ptr+3*a_n), options)
+               partition, work(work_ptr+1:work_ptr+3*a_n), options)
          end if
       case (REFINE_EDGE)
          call nd_refine_edge(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
             a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep,              &
-            work(partition_ptr+1:partition_ptr+a_n),                       &
-            work(work_ptr+1:work_ptr+3*a_n), options)
+            partition, work(work_ptr+1:work_ptr+3*a_n), options)
       end select
 
       if (options%print_level.ge.2 .and. options%unit_diagnostics.gt.0) then
@@ -894,14 +885,14 @@ subroutine nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level, &
          a_weight_sep_new = a_weight_sep
       end if
 
-      part_ptr = work_ptr + 5*a_n
-      work(part_ptr+1:part_ptr+a_n) = work(partition_ptr+1:partition_ptr+a_n)
+      partition2 => work(work_ptr+1:work_ptr+a_n); work_ptr = work_ptr + a_n
+      partition2(:) = partition(:)
 
       k = options%max_improve_cycles
       do i = 1, k
          call expand_partition(a_n, a_ne, a_ptr, a_row, a_weight, a_n1_new, &
             a_n2_new, a_weight_1_new, a_weight_2_new, a_weight_sep_new,     &
-            work(part_ptr+1:part_ptr+a_n), work(work_ptr+1:work_ptr+5*a_n))
+            partition2, work(work_ptr+1:work_ptr+5*a_n))
 
          if (options%print_level.ge.2 .and. options%unit_diagnostics.gt.0) then
             write (options%unit_diagnostics,'(a)') &
@@ -932,30 +923,27 @@ subroutine nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level, &
 
          select case (ref_method)
          case (REFINE_MAXFLOW)
-            call nd_refine_max_flow(a_n, a_ne, a_ptr, a_row, a_weight,  &
-               a_n1_new, a_n2_new, a_weight_1_new, a_weight_2_new,      &
-               a_weight_sep_new, work(part_ptr+1:part_ptr+a_n),         &
-               work(work_ptr+1:work_ptr+8), options)
+            call nd_refine_max_flow(a_n, a_ne, a_ptr, a_row, a_weight,     &
+               a_n1_new, a_n2_new, a_weight_1_new, a_weight_2_new,         &
+               a_weight_sep_new, partition2, work(work_ptr+1:work_ptr+8),  &
+               options)
          case (REFINE_TRIM)
             if (min(a_weight_1,a_weight_2)+a_weight_sep.lt. &
                   max(a_weight_1,a_weight_2)) then
                call nd_refine_block_trim(a_n, a_ne, a_ptr, a_row, a_weight, &
                   sumweight, a_n1_new, a_n2_new, a_weight_1_new,            &
-                  a_weight_2_new, a_weight_sep_new,                         &
-                  work(part_ptr+1:part_ptr+a_n),                            &
+                  a_weight_2_new, a_weight_sep_new, partition2,             &
                   work(work_ptr+1:work_ptr+5*a_n), options)
             else
                call nd_refine_trim(a_n, a_ne, a_ptr, a_row, a_weight,       &
                   sumweight, a_n1_new, a_n2_new, a_weight_1_new,            &
                   a_weight_2_new, a_weight_sep_new,                         &
-                  work(part_ptr+1:part_ptr+a_n),                            &
-                  work(work_ptr+1:work_ptr+3*a_n), options)
+                  partition2, work(work_ptr+1:work_ptr+3*a_n), options)
             end if
          case (REFINE_EDGE)
             call nd_refine_edge(a_n, a_ne, a_ptr, a_row, a_weight,   &
                sumweight, a_n1_new, a_n2_new, a_weight_1_new,        &
-               a_weight_2_new, a_weight_sep_new,                     &
-               work(part_ptr+1:part_ptr+a_n),                        &
+               a_weight_2_new, a_weight_sep_new, partition2,         &
                work(work_ptr+1:work_ptr+3*a_n), options)
          end select
 
@@ -967,13 +955,12 @@ subroutine nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level, &
                ',  a_n_sep=', a_n - a_n1_new - a_n2_new
          end if
 
-         call cost_function(a_weight_1_new, a_weight_2_new, &
+         call cost_function(a_weight_1_new, a_weight_2_new,       &
             a_weight_sep_new, sumweight, balance_tol, imbal,      &
             options%cost_function, tau)
          if (tau.ge.tau_best) exit ! No improvement, stop
          tau_best = tau
-         work(partition_ptr+1:partition_ptr+a_n) = &
-            work(part_ptr+1:part_ptr+a_n)
+         partition(:) = partition2(:)
          a_n1 = a_n1_new
          a_n2 = a_n2_new
          a_weight_1 = a_weight_1_new
@@ -982,9 +969,10 @@ subroutine nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level, &
       end do
 
       call nd_refine_fm(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, a_n1, &
-         a_n2, a_weight_1, a_weight_2, a_weight_sep,                        &
-         work(partition_ptr+1:partition_ptr+a_n),                           &
+         a_n2, a_weight_1, a_weight_2, a_weight_sep, partition,             &
          work(work_ptr+1:work_ptr+8*a_n+sumweight), options)
+
+      nullify(partition2); work_ptr = work_ptr - a_n
    end if
 
    if (options%print_level.ge.1 .and. options%unit_diagnostics.gt.0) then
@@ -997,33 +985,30 @@ subroutine nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level, &
          a_n2.le.max(2,options%amd_switch1) ) then
       ! apply halo amd to submatrics
       call amd_order_both(a_n, a_ne, a_ptr, a_row, a_n1, a_n2, &
-         work(partition_ptr+1:partition_ptr+a_n), iperm, a_weight, &
-         work(work_ptr+1:work_ptr+12*a_n+a_ne))
+         partition, iperm, a_weight, work(work_ptr+1:work_ptr+12*a_n+a_ne))
       a_ne1 = 0
       a_ne2 = 0
    else if (a_n1.le.max(2,options%amd_switch1)) then
       ! apply halo amd to [A1, B1'; B1, I] using two levels
       ! return A2 and apply ND to it
-      call amd_order_one(a_n, a_ne, a_ptr, a_row, a_n1, a_n2, &
-         work(partition_ptr+1:partition_ptr+a_n), iperm, a_weight, a_ne2, &
-         work(work_ptr+1:work_ptr+12*a_n+a_ne))
+      call amd_order_one(a_n, a_ne, a_ptr, a_row, a_n1, a_n2, partition, &
+         iperm, a_weight, a_ne2, work(work_ptr+1:work_ptr+12*a_n+a_ne))
       a_ne1 = 0
    else if (a_n2.le.max(2,options%amd_switch1)) then
       ! apply halo amd to [A2, B2'; B2, I] using two levels
       ! return A1 and apply ND to it
-      call amd_order_one(a_n, a_ne, a_ptr, a_row, a_n1, a_n2, &
-         work(partition_ptr+1:partition_ptr+a_n), iperm, a_weight, a_ne1, &
-         work(work_ptr+1:work_ptr+12*a_n+a_ne))
+      call amd_order_one(a_n, a_ne, a_ptr, a_row, a_n1, a_n2, partition, &
+         iperm, a_weight, a_ne1, work(work_ptr+1:work_ptr+12*a_n+a_ne))
       a_ne2 = 0
    else
       ! return A1 and A2 and apply ND to them
       a_ptr_sub_ptr = work_ptr + a_n ! length a_n
       a_row_sub_ptr = a_ptr_sub_ptr + a_n ! length a_ne
 
-      call extract_both_matrices(a_n, a_ne, a_ptr, a_row, a_n1, a_n2, &
-         work(partition_ptr+1:partition_ptr+a_n1+a_n2), a_ne1, a_ne2, &
-         work(a_ptr_sub_ptr+1:a_ptr_sub_ptr+a_n1+a_n2), a_ne, &
-         work(a_row_sub_ptr+1:a_row_sub_ptr+a_ne), &
+      call extract_both_matrices(a_n, a_ne, a_ptr, a_row, a_n1, a_n2,   &
+         partition, a_ne1, a_ne2,                                       &
+         work(a_ptr_sub_ptr+1:a_ptr_sub_ptr+a_n1+a_n2), a_ne,           &
+         work(a_row_sub_ptr+1:a_row_sub_ptr+a_ne),                      &
          work(work_ptr+1:work_ptr+a_n))
 
       ! Copy extracted matrices
@@ -1032,7 +1017,7 @@ subroutine nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level, &
 
       ! Update iperm and a_weight
       do i = 1, a_n
-         j = work(partition_ptr+i)
+         j = partition(i)
          work(a_ptr_sub_ptr+i) = iperm(j)
          work(work_ptr+i) = a_weight(j)
       end do
