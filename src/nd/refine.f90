@@ -546,70 +546,62 @@ subroutine nd_refine_fm_inner(n, a_ne, ptr, col, weight, sumweight, icut, &
 
 end subroutine nd_refine_fm_inner
 
+subroutine remove_from_list(n, mult, icut, next, last, head, irm, ig)
+   integer, intent(in) :: n, mult, icut
+   integer, intent(inout) :: next(n), last(n), head(-mult:icut)
+   integer, intent(in) :: irm, ig
+   integer :: inext, ilast
 
-  subroutine remove_from_list(n,mult,icut,next,last,head,irm,ig)
-    integer, intent(in) :: n,mult,icut ! order matrix
-    integer, intent(inout) :: next(n),last(n),head(-mult:icut)
-    integer, intent(in) :: irm, ig
-    integer :: inext, ilast
-
-    inext = next(irm)
-    ilast = last(irm)
-    if (ilast.eq.0) then
+   inext = next(irm)
+   ilast = last(irm)
+   if (ilast.eq.0) then
       head(ig) = inext
       if (inext.ne.0) last(inext) = 0
-    else
+   else
       next(ilast) = inext
       if (inext.ne.0) last(inext) = ilast
-    end if
-  end subroutine remove_from_list
+   end if
+end subroutine remove_from_list
 
+subroutine add_to_list(n, mult, icut, next, last, head, irm, ig)
+   integer, intent(in) :: n, mult, icut ! order matrix
+   integer, intent(inout) :: next(n), last(n), head(-mult:icut)
+   integer, intent(in) :: irm, ig
+   integer :: inext
 
-  subroutine add_to_list(n,mult,icut,next,last,head,irm,ig)
-    integer, intent(in) :: n,mult,icut ! order matrix
-    integer, intent(inout) :: next(n),last(n),head(-mult:icut)
-    integer, intent(in) :: irm, ig
-    integer :: inext
+   inext = head(ig)
+   head(ig) = irm
+   next(irm) = inext
+   if (inext.ne.0) last(inext) = irm
+   last(irm) = 0
+end subroutine add_to_list
 
-    inext = head(ig)
-    head(ig) = irm
-    next(irm) = inext
-    if (inext.ne.0) last(inext) = irm
-    last(irm) = 0
-  end subroutine add_to_list
+subroutine compute_gain(n, a_ne, ptr, col, gain1, gain2, weight, i, partit)
+   integer, intent(in) :: n, a_ne, ptr(n), col(a_ne), weight(n)
+   integer, intent(inout) :: gain1(n), gain2(n)
+   integer, intent(in) :: i, partit(:)
+   integer :: j, jj
 
-  subroutine compute_gain(n,a_ne,ptr,col,gain1,gain2,weight,i,partit)
-    integer, intent(in) :: n,a_ne,ptr(n),col(a_ne),weight(n)
-    integer, intent(inout) :: gain1(n), gain2(n)
-    integer, intent(in) :: i, partit(:)
-    integer :: j, jj, l
-    ! Initialize gain ... knowing node i will be removed from cutset
-    ! The +1 is to give identical result to previous code when unit
-    ! weights
-    gain1(i) = -weight(i) + 1
-    gain2(i) = -weight(i) + 1
-    if (i.eq.n) then
-      l = a_ne
-    else
-      l = ptr(i+1) - 1
-    end if
-    do jj = ptr(i), l
+   ! Initialize gain ... knowing node i will be removed from cutset
+   ! The +1 is to give identical result to previous code when unit weights
+   gain1(i) = -weight(i) + 1
+   gain2(i) = -weight(i) + 1
+   do jj = ptr(i), nd_get_ptr(i+1, n, a_ne, ptr)-1
       j = col(jj)
       ! Check which partition node j is in and adjust gain array
       ! appropriately
       if (partit(j).eq.ND_PART1_FLAG) then
-        gain2(i) = gain2(i) + weight(j)
+         gain2(i) = gain2(i) + weight(j)
       end if
       if (partit(j).eq.ND_PART2_FLAG) then
-        gain1(i) = gain1(i) + weight(j)
+         gain1(i) = gain1(i) + weight(j)
       end if
-    end do
-  end subroutine compute_gain
+   end do
+end subroutine compute_gain
 
-! ---------------------------------------------------
-! nd_refine_trim
-! ---------------------------------------------------
+!
 ! Given a partition, trim the partition to make it minimal
+!
 subroutine nd_refine_trim(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
     a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep,partition,work,options)
   integer, intent(in) :: a_n ! order of matrix
