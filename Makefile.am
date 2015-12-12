@@ -63,9 +63,11 @@ EXTRA_DIST = src/metis4_wrapper.f90 src/metis5_wrapper.f90
 include_HEADERS += include/spral_nd.h
 libspral_a_SOURCES += \
 	src/nd/hamd.f90 \
+	src/nd/maxflow.f90 \
 	src/nd/nd.f90 \
 	src/nd/partition.f90 \
 	src/nd/preprocess.f90 \
+	src/nd/refine.f90 \
 	src/nd/types.f90 \
 	src/nd/util.f90 \
 	interfaces/C/nd.f90
@@ -311,12 +313,18 @@ clean-local:
 src/match_order.$(OBJEXT): src/metis$(METIS_VERSION)_wrapper.$(OBJEXT) \
 									src/scaling.$(OBJEXT)
 src/nd/nd.$(OBJEXT): src/nd/hamd.$(OBJEXT) \
+							src/nd/maxflow.$(OBJEXT) \
 							src/nd/partition.$(OBJEXT) \
 							src/nd/preprocess.$(OBJEXT) \
+							src/nd/refine.$(OBJEXT) \
 							src/nd/types.$(OBJEXT) \
 							src/nd/util.$(OBJEXT)
+src/nd/maxflow.$(OBJEXT): src/nd/types.$(OBJEXT) src/nd/util.$(OBJEXT)
 src/nd/partition.$(OBJEXT): src/nd/types.$(OBJEXT) src/nd/util.$(OBJEXT)
 src/nd/preprocess.$(OBJEXT): src/nd/types.$(OBJEXT) src/nd/util.$(OBJEXT)
+src/nd/refine.$(OBJEXT): src/nd/maxflow.$(OBJEXT) \
+								 src/nd/types.$(OBJEXT) \
+								 src/nd/util.$(OBJEXT)
 src/random_matrix.$(OBJEXT): src/random.$(OBJEXT)
 src/rutherford_boeing.$(OBJEXT): src/matrix_util.$(OBJEXT) \
 											src/random.$(OBJEXT)
