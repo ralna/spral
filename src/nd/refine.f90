@@ -9,73 +9,59 @@ module spral_nd_refine
       nd_refine_block_trim
 
 contains
-! ---------------------------------------------------
-! nd_refine_edge
-! ---------------------------------------------------
+!
 ! Given a partition, refine the partition to improve the (weighted) value
 ! of the cost function. An edge separator is formed between the input
 ! separator and the larger partition, and this is then minimal using
 ! trimming or max flow
-subroutine nd_refine_edge(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
-    a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep,partition,work,options)
-  integer, intent(in) :: a_n ! order of matrix
-  integer, intent(in) :: a_ne ! number of entries in matrix
-  integer, intent(in) :: a_ptr(a_n) ! On input a_ptr(i) contains
-  ! position in a_row that entries for column i start.
-  integer, intent(in) :: a_row(a_ne) ! On input a_row contains row
-  ! indices of the non-zero rows. Diagonal entries have been removed
-  ! and the matrix expanded.
-  integer, intent(in) :: a_weight(a_n) ! On input a_weight(i) contains
-  ! the weight of column i
-  integer, intent(in) :: sumweight ! Sum of weights in a_weight
-  integer, intent(inout) :: a_n1 ! Size of partition 1
-  integer, intent(inout) :: a_n2 ! Size of partition 2
-  integer, intent(inout) :: a_weight_1, a_weight_2, a_weight_sep ! Weig
-  ! hted
-  ! size of partitions and separator
-  integer, intent(inout) :: partition(a_n) ! First a_n1 entries contain
-  ! list of (local) indices in partition 1; next a_n2 entries
-  ! contain list of (local) entries in partition 2; entries in
-  ! separator are listed at the end. This is updated to the new
-  ! partition
-  integer, intent(out) :: work(3*a_n) ! Work array
-  type (nd_options), intent(in) :: options
-
-  ! ---------------------------------------------
-  ! Local variables
-  integer :: fm_flags ! pointer into work array for start of
-  ! flags from FM
-
-  fm_flags = 0 ! length a_n
-
-  ! Initialise work(fm_flags+1:fm_flags+a_n)
-  call nd_convert_partition_flags(a_n,a_n1,a_n2,partition, &
-    ND_PART1_FLAG,ND_PART2_FLAG,ND_SEP_FLAG, &
-    work(fm_flags+1:fm_flags+a_n))
-
-  ! Create new separator by forming edge separator between input
-  ! separator and largest of P1 and P2
-
-  call nd_move_partition(a_n,a_ne,a_ptr,a_row,a_weight,a_n1,a_n2, &
-    a_weight_1,a_weight_2,a_weight_sep,ND_PART1_FLAG, &
-    ND_PART2_FLAG,ND_SEP_FLAG,work(fm_flags+1:fm_flags+a_n))
-
-  ! Update partition
-  call nd_convert_flags_partition(a_n,a_n1,a_n2, &
-    work(fm_flags+1:fm_flags+a_n),ND_PART1_FLAG,ND_PART2_FLAG, &
-    partition(1:a_n))
-
-  if (options%refinement.gt.3) then
-    call nd_refine_max_flow(a_n,a_ne,a_ptr,a_row,a_weight,a_n1,a_n2, &
-      a_weight_1,a_weight_2,a_weight_sep,partition,work(1:8),options)
-  else
-    call nd_refine_trim(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,a_n1, &
-      a_n2,a_weight_1,a_weight_2,a_weight_sep,partition,work(1:3*a_n), &
+!
+subroutine nd_refine_edge(a_n, a_ne, a_ptr, a_row, a_weight, sumweight,  &
+      a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, partition, work, &
       options)
-  end if
+   integer, intent(in) :: a_n
+   integer, intent(in) :: a_ne
+   integer, intent(in) :: a_ptr(a_n)
+   integer, intent(in) :: a_row(a_ne)
+   integer, intent(in) :: a_weight(a_n)
+   integer, intent(in) :: sumweight ! Sum of weights in a_weight
+   integer, intent(inout) :: a_n1 ! Size of partition 1
+   integer, intent(inout) :: a_n2 ! Size of partition 2
+   integer, intent(inout) :: a_weight_1, a_weight_2, a_weight_sep ! Weighted
+      ! size of partitions and separator
+   integer, intent(inout) :: partition(a_n) ! First a_n1 entries contain
+      ! list of (local) indices in partition 1; next a_n2 entries
+      ! contain list of (local) entries in partition 2; entries in
+      ! separator are listed at the end. This is updated to the new partition
+   integer, target, intent(out) :: work(3*a_n) ! Workspace
+   type (nd_options), intent(in) :: options
 
+   integer, dimension(:), pointer :: fm_flags
 
+   ! Initialise fm_flags(:)
+   fm_flags => work(1:a_n)
+   call nd_convert_partition_flags(a_n, a_n1, a_n2, partition, ND_PART1_FLAG, &
+      ND_PART2_FLAG, ND_SEP_FLAG, fm_flags)
 
+   ! Create new separator by forming edge separator between input
+   ! separator and largest of P1 and P2
+   call nd_move_partition(a_n, a_ne, a_ptr, a_row, a_weight, a_n1, a_n2, &
+      a_weight_1, a_weight_2, a_weight_sep, ND_PART1_FLAG, &
+      ND_PART2_FLAG, ND_SEP_FLAG, fm_flags)
+
+   ! Update partition
+   call nd_convert_flags_partition(a_n, a_n1, a_n2, &
+      fm_flags, ND_PART1_FLAG, ND_PART2_FLAG, partition(1:a_n))
+   nullify(fm_flags) ! Workspace reused from now on
+
+   select case (options%refinement)
+   case(:ND_REFINE_TRIM_FM_AUTO)
+      call nd_refine_trim(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, a_n1,  &
+         a_n2, a_weight_1, a_weight_2, a_weight_sep, partition, work(1:3*a_n), &
+         options)
+   case(ND_REFINE_MAXFLOW_BOTH:)
+      call nd_refine_max_flow(a_n, a_ne, a_ptr, a_row, a_weight, a_n1, a_n2, &
+         a_weight_1, a_weight_2, a_weight_sep, partition, work(1:8), options)
+   end select
 end subroutine nd_refine_edge
 
 ! ---------------------------------------------------
