@@ -30,10 +30,9 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
       ! separator are listed at the end
    integer, target, intent(out) :: work(9*a_n+sumweight) ! workspace
    type (nd_options), intent(in) :: options
-   real(wp), intent(out) :: band ! If ndlevel = 0, then on output
-      ! band = 100*L/a_n, where L is the size of the largest levelset
-   real(wp), intent(out) :: depth ! If ndlevel = 0, then on output
-      ! depth = num_levels_nend
+   real(wp), intent(out) :: band ! band = 100*L/a_n, where L is the size of
+      ! the largest levelset
+   real(wp), intent(out) :: depth !  depth = num_levels_nend
    logical, intent(inout) :: use_multilevel ! are we allowed to use a
       ! multilevel partitioning strategy
    integer, intent(out) :: flag ! error indicator
@@ -60,8 +59,8 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
 
    ! Initialize return vars
    flag = 0
-   band = -1
-   depth = -1
+   band = -1.0
+   depth = -1.0
 
    ! If we're going to use multilevel regardless, immediate return
    if (options%partition_method.eq.1 .and. use_multilevel) return
@@ -125,17 +124,16 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
             j = j + 1
          end if
       end do
-      if (ndlevel.eq.0) band = -real(lwidth,wp)
+      band = -real(lwidth,wp)
 
       use_multilevel = .false. ! Will be reset for each component anyway
       return
    end if
 
    ! ********************************************************************
-   if (ndlevel.eq.0) then
-      band = (100.0_wp * lwidth) / a_n
-      depth = (100.0_wp * num_levels_nend) / a_n
-   end if
+   band = (100.0_wp * lwidth) / a_n
+   depth = (100.0_wp * num_levels_nend) / a_n
+
    if (options%stop_coarsening2.le.0 .or. options%partition_method.lt.1) &
       use_multilevel = .false.
    if (options%partition_method.ge.2 .and. use_multilevel) then
@@ -274,10 +272,9 @@ subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, ndlevel, &
       ! separator are listed at the end
    integer, target, intent(out) :: work(9*a_n+sumweight) ! workspace
    type (nd_options), intent(in) :: options
-   real(wp), intent(out) :: band ! If ndlevel = 0, then on output
-      ! band = 100*L/a_n, where L is the size of the largest levelset
-   real(wp), intent(out) :: depth ! If ndlevel = 0, then on output
-      ! band = num_levels_nend
+   real(wp), intent(out) :: band ! band = 100*L/a_n, where L is the size of
+      ! the largest levelset
+   real(wp), intent(out) :: depth ! depth = num_levels_nend
    logical, intent(inout) :: use_multilevel ! are we allowed to use a multilevel
       ! partitioning strategy
    integer, intent(out) :: flag
@@ -302,8 +299,8 @@ subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, ndlevel, &
 
    ! Initialize return values
    flag = 0
-   band = -1
-   depth = -1
+   band = -1.0
+   depth = -1.0
 
    ! If we're going to use multilevel regardless, immediate return
    if (options%partition_method.eq.1 .and. use_multilevel) return
@@ -358,16 +355,14 @@ subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, ndlevel, &
          end if
       end do
       a_weight_sep = 0
-      if (ndlevel.eq.0) band = -real(lwidth,wp)
+      band = -real(lwidth,wp)
 
       use_multilevel = .false. ! Will be reset for each component
       return
    end if
 
-   if (ndlevel.eq.0) then
-      band = (100.0_wp * lwidth) / sumweight
-      depth = (100.0_wp * num_levels_nend) / sumweight
-   end if
+   band = (100.0_wp * lwidth) / sumweight
+   depth = (100.0_wp * num_levels_nend) / sumweight
 
    if (options%partition_method.le.0 .or. options%stop_coarsening2.le.0) &
       use_multilevel = .false.
