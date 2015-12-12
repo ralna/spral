@@ -355,7 +355,6 @@ subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, ndlevel, &
          end if
       end do
       a_weight_sep = 0
-      band = -real(lwidth,wp)
 
       use_multilevel = .false. ! Will be reset for each component
       return
