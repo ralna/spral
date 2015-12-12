@@ -109,80 +109,76 @@ subroutine cost_function(a_weight_1, a_weight_2, a_weight_sep, sumweight, &
 
 end subroutine cost_function
 
-! ---------------------------------------------------
-! nd_convert_partition_flags
-! ---------------------------------------------------
+!
 ! Given a partition array, convert the partition into a flag array
-subroutine nd_convert_partition_flags(a_n,a_n1,a_n2,partition,flag_1, &
-    flag_2,flag_sep,flags)
-  integer, intent(in) :: a_n ! order of matrix
-  integer, intent(in) :: a_n1 ! Size of partition 1
-  integer, intent(in) :: a_n2 ! Size of partition 2
-  integer, intent(in) :: partition(a_n) ! First a_n1 entries contain
-  ! list of (local) indices in partition 1; next a_n2 entries
-  ! contain list of (local) entries in partition 2; entries in
-  ! separator are listed at the end.
-  integer, intent(in) :: flag_1 ! flag for rows in partition 1
-  integer, intent(in) :: flag_2 ! flag for rows in partition 2
-  integer, intent(in) :: flag_sep ! flag for rows in separator
-  integer, intent(out) :: flags(a_n) ! flags(i) contains flag for row i
-  ! and indicates which partition it is in
+!
+subroutine nd_convert_partition_flags(a_n, a_n1, a_n2, partition, flag_1, &
+      flag_2, flag_sep, flags)
+   integer, intent(in) :: a_n ! order of matrix
+   integer, intent(in) :: a_n1 ! Size of partition 1
+   integer, intent(in) :: a_n2 ! Size of partition 2
+   integer, intent(in) :: partition(a_n) ! First a_n1 entries contain
+      ! list of (local) indices in partition 1; next a_n2 entries
+      ! contain list of (local) entries in partition 2; entries in
+      ! separator are listed at the end.
+   integer, intent(in) :: flag_1 ! flag for rows in partition 1
+   integer, intent(in) :: flag_2 ! flag for rows in partition 2
+   integer, intent(in) :: flag_sep ! flag for rows in separator
+   integer, intent(out) :: flags(a_n) ! flags(i) contains flag for row i
+      ! and indicates which partition it is in
 
-  integer :: j, k
+   integer :: j, k
 
-  do j = 1, a_n1
-    k = partition(j)
-    flags(k) = flag_1
-  end do
-  do j = a_n1 + 1, a_n1 + a_n2
-    k = partition(j)
-    flags(k) = flag_2
-  end do
-  do j = a_n1 + a_n2 + 1, a_n
-    k = partition(j)
-    flags(k) = flag_sep
-  end do
-
+   do j = 1, a_n1
+      k = partition(j)
+      flags(k) = flag_1
+   end do
+   do j = a_n1 + 1, a_n1 + a_n2
+      k = partition(j)
+      flags(k) = flag_2
+   end do
+   do j = a_n1 + a_n2 + 1, a_n
+      k = partition(j)
+      flags(k) = flag_sep
+   end do
 end subroutine nd_convert_partition_flags
 
-! ---------------------------------------------------
-! nd_flags_partition
-! ---------------------------------------------------
+!
 ! Given a partition array, convert the partition into a flag array
-subroutine nd_convert_flags_partition(a_n,a_n1,a_n2,flags,flag_1, &
-    flag_2,partition)
-  integer, intent(in) :: a_n ! order of matrix
-  integer, intent(in) :: a_n1 ! Size of partition 1
-  integer, intent(in) :: a_n2 ! Size of partition 2
-  integer, intent(in) :: flags(a_n) ! flags(i) contains flag for row i
-  ! and indicates which partition it is in
-  integer, intent(in) :: flag_1 ! flag for rows in partition 1
-  integer, intent(in) :: flag_2 ! flag for rows in partition 2
-  integer, intent(out) :: partition(a_n) ! First a_n1 entries contain
-  ! list of (local) indices in partition 1; next a_n2 entries
-  ! contain list of (local) entries in partition 2; entries in
-  ! separator are listed at the end.
+!
+subroutine nd_convert_flags_partition(a_n, a_n1, a_n2, flags, flag_1, &
+    flag_2, partition)
+   integer, intent(in) :: a_n ! order of matrix
+   integer, intent(in) :: a_n1 ! Size of partition 1
+   integer, intent(in) :: a_n2 ! Size of partition 2
+   integer, intent(in) :: flags(a_n) ! flags(i) contains flag for row i
+      ! and indicates which partition it is in
+   integer, intent(in) :: flag_1 ! flag for rows in partition 1
+   integer, intent(in) :: flag_2 ! flag for rows in partition 2
+   integer, intent(out) :: partition(a_n) ! First a_n1 entries contain
+      ! list of (local) indices in partition 1; next a_n2 entries
+      ! contain list of (local) entries in partition 2; entries in
+      ! separator are listed at the end.
 
-  integer :: i, j, k, l
+   integer :: f, i, j, k
 
-  i = 1
-  j = a_n1 + 1
-  k = a_n1 + a_n2 + 1
-  do l = 1, a_n
-    if (flags(l).eq.flag_1) then
-      partition(i) = l
-      i = i + 1
-    else
-      if (flags(l).eq.flag_2) then
-        partition(j) = l
-        j = j + 1
+   i = 1
+   j = a_n1 + 1
+   k = a_n1 + a_n2 + 1
+   do f = 1, a_n
+      if (flags(f).eq.flag_1) then
+         partition(i) = f
+         i = i + 1
       else
-        partition(k) = l
-        k = k + 1
+         if (flags(f).eq.flag_2) then
+            partition(j) = f
+            j = j + 1
+         else
+            partition(k) = f
+            k = k + 1
+         end if
       end if
-    end if
-  end do
-
+   end do
 end subroutine nd_convert_flags_partition
 
 end module spral_nd_util
