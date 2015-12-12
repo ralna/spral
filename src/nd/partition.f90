@@ -257,7 +257,7 @@ end subroutine nd_half_level_set
 !
 subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, ndlevel, &
       a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, partition, work,       &
-      options, band, depth, use_multilevel)
+      options, band, depth, use_multilevel, flag)
    integer, intent(in) :: a_n
    integer, intent(in) :: a_ne
    integer, intent(in) :: a_ptr(a_n)
@@ -272,7 +272,7 @@ subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, ndlevel, &
       ! list of (local) indices in partition 1; next a_n2 entries will
       ! contain list of (local) entries in partition 2; entries in
       ! separator are listed at the end
-   integer, intent(out) :: work(9*a_n+sumweight)
+   integer, target, intent(out) :: work(9*a_n+sumweight) ! workspace
    type (nd_options), intent(in) :: options
    real(wp), intent(out) :: band ! If ndlevel = 0, then on output
       ! band = 100*L/a_n, where L is the size of the largest levelset
@@ -280,9 +280,11 @@ subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, ndlevel, &
       ! band = num_levels_nend
    logical, intent(inout) :: use_multilevel ! are we allowed to use a multilevel
       ! partitioning strategy
+   integer, intent(out) :: flag
 
    integer :: nstrt, nend
-   integer :: level_p, level_ptr_p, work_p
+   integer :: work_p
+   integer, dimension(:), pointer :: level_ptr, level, level_weight
    integer :: num_levels_nend ! no. levels in structure rooted at nend
    integer :: num_entries ! no. entries in level structure rooted at nend
    integer :: best_sep_start
@@ -299,6 +301,7 @@ subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, ndlevel, &
    call nd_print_diagnostic(1, options, 'Use one-sided level set method')
 
    ! Initialize return values
+   flag = 0
    band = -1
    depth = -1
 
@@ -313,9 +316,10 @@ subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, ndlevel, &
 
    ! Find pseudoperipheral nodes nstart and nend, and the level structure
    ! rooted at nend
-   level_ptr_p = 0 ! size a_n
-   level_p = level_ptr_p + a_n ! size a_n
-   work_p = level_p + a_n ! size 2*a_n
+   level_ptr      => work(       1 : a_n )
+   level          => work(   a_n+1 : 2*a_n )
+   level_weight   => work( 2*a_n+1 : 3*a_n )
+   work_p = 2*a_n ! size 2*a_n
    mindeg = sumweight + 1
    do i = 1, a_n
       degree = 0
@@ -328,9 +332,8 @@ subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, ndlevel, &
       end if
    end do
 
-   call nd_find_pseudo(a_n, a_ne, a_ptr, a_row, a_weight, sumweight,          &
-      work(level_ptr_p+1:level_ptr_p+a_n), work(level_p+1:level_p+a_n),       &
-      nstrt, nend, max_search, work(work_p+1:work_p+2*a_n), num_levels_nend,  &
+   call nd_find_pseudo(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level_ptr,&
+      level, nstrt, nend, max_search, work(2*a_n+1:4*a_n), num_levels_nend,    &
       num_entries, lwidth)
 
    if (num_entries.lt.a_n) then
@@ -340,7 +343,7 @@ subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, ndlevel, &
       work(work_p+1:work_p+a_n) = 0
       a_weight_1 = 0
       do i = 1, num_entries
-         j = work(level_p+i)
+         j = level(i)
          partition(i) = j
          work(work_p+j) = 1
          a_weight_1 = a_weight_1 + a_weight(j)
@@ -379,50 +382,51 @@ subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, ndlevel, &
       ! Not possible to find separator
       ! This can only be invoked for a full connected graph. The partition
       ! subroutine checks for this case so it should never be called
-      a_n1 = a_n
-      a_n2 = 0
-      partition(1:a_n) = (/ (i,i=1,a_n) /)
+      flag = ND_ERR_INTERNAL
+      call nd_print_diagnostic(0, options, &
+         'nd_level_set failed to find seperator on connected graph' &
+         )
       return
    end if
 
    ! Calculate total weight in each level set
-   work(work_p+1:work_p+num_levels_nend) = 0
+   level_weight(1:num_levels_nend) = 0
    do i = 1, num_levels_nend - 1
-      do j = work(level_ptr_p+i), work(level_ptr_p+i+1) - 1
-         work(work_p+i) = work(work_p+i) + a_weight(work(level_p+j))
+      do j = level_ptr(i), level_ptr(i+1) - 1
+         level_weight(i) = level_weight(i) + a_weight(level(j))
       end do
    end do
    i = num_levels_nend
-   do j = work(level_ptr_p+i), a_n
-      work(work_p+i) = work(work_p+i) + a_weight(work(level_p+j))
+   do j = level_ptr(i), a_n
+      level_weight(i) = level_weight(i) + a_weight(level(j))
    end do
 
 
    ! First possible separator contains all of the nodes in level 2
-   p1sz = work(work_p+1)
-   sepsz = work(work_p+2)
-   p2sz = sum(work(work_p+3:work_p+num_levels_nend))
+   p1sz = level_weight(1)
+   sepsz = level_weight(2)
+   p2sz = sum(level_weight(3:num_levels_nend))
    a_weight_1 = p1sz
    a_weight_2 = p2sz
    a_weight_sep = sepsz
    best_sep_start = 2
-   a_n1 = work(level_ptr_p+2) - 1
-   a_n2 = a_n - work(level_ptr_p+3) + 1
-   call cost_function(p1sz,p2sz,sepsz,sumweight,balance_tol,imbal,&
-      options%cost_function,bestval)
+   a_n1 = level_ptr(2) - 1
+   a_n2 = a_n - level_ptr(3) + 1
+   call cost_function(p1sz, p2sz, sepsz, sumweight, balance_tol, imbal, &
+      options%cost_function, bestval)
 
    ! Search for best separator using tau
    do j = 2, num_levels_nend - 4
-      p1sz = p1sz + work(work_p+j)
-      sepsz = work(work_p+j+1)
-      p2sz = p2sz - work(work_p+j+1)
-      call cost_function(p1sz,p2sz,sepsz,sumweight,balance_tol,imbal,&
-         options%cost_function,val)
+      p1sz = p1sz + level_weight(j)
+      sepsz = level_weight(j+1)
+      p2sz = p2sz - level_weight(j+1)
+      call cost_function(p1sz, p2sz, sepsz, sumweight, balance_tol, imbal, &
+         options%cost_function, val)
       if (val.lt.bestval) then
          bestval = val
          best_sep_start = j + 1
-         a_n1 = work(level_ptr_p+j+1) - 1
-         a_n2 = a_n - work(level_ptr_p+j+2) + 1
+         a_n1 = level_ptr(j+1) - 1
+         a_n2 = a_n - level_ptr(j+2) + 1
          a_weight_1 = p1sz
          a_weight_2 = p2sz
          a_weight_sep = sepsz
@@ -433,28 +437,26 @@ subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, ndlevel, &
    ! Rearrange partition
    ! Entries in partition 1
    j = 1
-   do i = 1, work(level_ptr_p+best_sep_start) - 1
-      partition(j) = work(level_p+i)
+   do i = 1, level_ptr(best_sep_start) - 1
+      partition(j) = level(i)
       j = j + 1
    end do
 
    ! Entries in partition 2
-   do i = work(level_ptr_p+best_sep_start+1), a_n
-      partition(j) = work(level_p+i)
+   do i = level_ptr(best_sep_start+1), a_n
+      partition(j) = level(i)
       j = j + 1
    end do
 
    ! Entries in separator
-   do i = work(level_ptr_p+best_sep_start), work(level_ptr_p+ &
-         best_sep_start+1) - 1
-      partition(j) = work(level_p+i)
+   do i = level_ptr(best_sep_start), level_ptr(best_sep_start+1) - 1
+      partition(j) = level(i)
       j = j + 1
    end do
 
    call nd_print_diagnostic(1, options, &
       ' nd_level_set: successful completion' &
       )
-
 end subroutine nd_level_set
 
 !

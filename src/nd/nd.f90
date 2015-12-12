@@ -772,14 +772,14 @@ subroutine nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level, &
          work(partition_ptr+1:partition_ptr+a_n),                             &
          work(work_ptr+1:work_ptr+9*a_n+sumweight), options, band, depth,     &
          use_multilevel, info%flag)
-      if(info%flag.ne.0) return ! it's all gone horribly wrong
    case(ND_PARTITION_LEVEL_SET:)
       call nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight,         &
          level, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep,             &
          work(partition_ptr+1:partition_ptr+a_n),                             &
          work(work_ptr+1:work_ptr+9*a_n+sumweight), options, band, depth,     &
-         use_multilevel)
+         use_multilevel, info%flag)
    end select
+   if(info%flag.ne.0) return ! it's all gone horribly wrong
    if (use_multilevel) then
       lwork = 9*a_n + sumweight
       call multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight,         &
@@ -3156,7 +3156,7 @@ subroutine nd_coarse_partition(a_n,a_ne,a_ptr,a_row,a_weight, &
       a_n2,a_weight_1,a_weight_2,a_weight_sep, &
       work1(partition_ptr+1:partition_ptr+a_n),work(1:9*a_n+sumweight), &
       options,dummy,dummy1,use_multilevel,info)
-    if(info.ne.0) return ! Error
+    if(info.ne.0) return ! it's all gone horribly wrong
 
     if (printi .or. printd) then
       write (unit_diagnostics,'(a)') ' '
@@ -3174,7 +3174,8 @@ subroutine nd_coarse_partition(a_n,a_ne,a_ptr,a_row,a_weight, &
     call nd_level_set(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,2,a_n1, &
       a_n2,a_weight_1,a_weight_2,a_weight_sep, &
       work1(partition_ptr+1:partition_ptr+a_n),work(1:9*a_n+sumweight), &
-      options,dummy,dummy1,use_multilevel)
+      options,dummy,dummy1,use_multilevel, info)
+    if(info.ne.0) return ! it's all gone horribly wrong
 
     if (printi .or. printd) then
       write (unit_diagnostics,'(a)') ' '
