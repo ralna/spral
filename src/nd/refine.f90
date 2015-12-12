@@ -65,9 +65,10 @@ subroutine nd_refine_edge(a_n, a_ne, a_ptr, a_row, a_weight, sumweight,  &
 end subroutine nd_refine_edge
 
 !
-! Given a partition, refine the partition using FM refinement. Wrapper
-! for main fm routine
-!
+! Given a partition, refine the partition using FM refinement.
+! 
+! This is just a wrapper for nd_refine_fm_inner that partitions memory and sets
+! up various internal variables
 subroutine nd_refine_fm(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, a_n1, &
       a_n2, a_weight_1, a_weight_2, a_weight_sep, partition, work, options)
    integer, intent(in) :: a_n
@@ -85,18 +86,12 @@ subroutine nd_refine_fm(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, a_n1, &
       ! contain list of (local) entries in partition 2; entries in
       ! separator are listed at the end. This is updated to the new
       ! partition
-   integer, intent(out) :: work(8*a_n+sumweight) ! Work array
+   integer, target, intent(out) :: work(8*a_n+sumweight) ! Workspace
    type (nd_options), intent(in) :: options
 
-   integer :: fm_flags ! pointer into work array for start of flags from FM
-   integer :: fm_ipart ! pointer into work array for start of ipart from FM
-   integer :: fm_next ! pointer into work array for start of next from FM
-   integer :: fm_last ! pointer into work array for start of last from FM
-   integer :: fm_gain1 ! pointer into work array for start of gain1 from FM
-   integer :: fm_gain2 ! pointer into work array for start of gain2 from FM
-   integer :: fm_done ! pointer into work array for start of done from FM
-   integer :: fm_head ! pointer into work array for start of head from FM
-   integer :: fm_distance ! pointer into work array for start of head from FM
+   integer :: work_ptr
+   integer, dimension(:), pointer :: flags, ipart, next, last, gain1, gain2, &
+      done, head, distance
    integer :: icut, mult ! Used within FM refinement
    integer :: band
    real(wp) :: balance_tol
@@ -106,40 +101,31 @@ subroutine nd_refine_fm(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, a_n1, &
 
    balance_tol = max(1.0_wp, options%balance)
    imbal = (balance_tol.le.real(sumweight-2))
-   fm_flags = 0 ! length a_n
-
-   ! Initialise work(fm_flags+1:fm_flags+a_n)
-   call nd_convert_partition_flags(a_n, a_n1, a_n2, partition, &
-      ND_PART1_FLAG, ND_PART2_FLAG, ND_SEP_FLAG, &
-      work(fm_flags+1:fm_flags+a_n))
-
-   fm_ipart = fm_flags + a_n ! length a_n
-   fm_next = fm_ipart + a_n ! length a_n
-   fm_last = fm_next + a_n ! length a_n
-   fm_gain1 = fm_last + a_n ! length a_n
-   fm_gain2 = fm_gain1 + a_n ! length a_n
-   fm_done = fm_gain2 + a_n ! length a_n
-   fm_head = fm_done + a_n ! length icut+mult+1
-   icut = min(sumweight-1,3*(sumweight/a_n))
-   icut = min(icut,5*maxVAL(a_weight))
-   mult = sumweight - icut - 1
-   mult = min(mult,icut)
-   fm_distance = fm_head + icut + mult + 1
-
+   icut = min(sumweight-1, 3*(sumweight/a_n))
+   icut = min(icut, 5*maxval(a_weight))
+   mult = min(icut, sumweight - icut - 1)
    band = min(options%refinement_band, a_n)
 
-   call nd_fm_refinement(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, icut,  &
-      mult, options%cost_function, a_n1, a_n2, a_weight_1, a_weight_2,        &
-      a_weight_sep, band, balance_tol, work(fm_flags+1:fm_flags+a_n),         &
-      work(fm_ipart+1:fm_ipart+a_n), work(fm_next+1:fm_next+a_n),             &
-      work(fm_last+1:fm_last+a_n), work(fm_gain1+1:fm_gain1+a_n),             &
-      work(fm_gain2+1:fm_gain2+a_n), work(fm_done+1:fm_done+a_n),             &
-      work(fm_head+1:fm_head+icut+mult+1), work(fm_distance+1:fm_distance+a_n))
+   work_ptr = 0
+   flags    => work(work_ptr+1:work_ptr+a_n); work_ptr = work_ptr + a_n
+   ipart    => work(work_ptr+1:work_ptr+a_n); work_ptr = work_ptr + a_n
+   next     => work(work_ptr+1:work_ptr+a_n); work_ptr = work_ptr + a_n
+   last     => work(work_ptr+1:work_ptr+a_n); work_ptr = work_ptr + a_n
+   gain1    => work(work_ptr+1:work_ptr+a_n); work_ptr = work_ptr + a_n
+   gain2    => work(work_ptr+1:work_ptr+a_n); work_ptr = work_ptr + a_n
+   done     => work(work_ptr+1:work_ptr+a_n); work_ptr = work_ptr + a_n
+   head     => work(work_ptr+1:work_ptr+icut+mult+1)
+   work_ptr = work_ptr + icut+mult+1
+   distance => work(work_ptr+1:work_ptr+a_n); work_ptr = work_ptr + a_n
 
-   ! Update partition
-   call nd_convert_flags_partition(a_n, a_n1, a_n2,                  &
-      work(fm_flags+1:fm_flags+a_n), ND_PART1_FLAG, ND_PART2_FLAG,   &
-     partition(1:a_n))
+   call nd_convert_partition_flags(a_n, a_n1, a_n2, partition, &
+      ND_PART1_FLAG, ND_PART2_FLAG, ND_SEP_FLAG, flags)
+   call nd_refine_fm_inner(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, icut, &
+      mult, options%cost_function, a_n1, a_n2, a_weight_1, a_weight_2,         &
+      a_weight_sep, band, balance_tol, flags, ipart, next, last, gain1, gain2, &
+      done, head, distance)
+   call nd_convert_flags_partition(a_n, a_n1, a_n2, flags, ND_PART1_FLAG, &
+      ND_PART2_FLAG, partition)
 
 end subroutine nd_refine_fm
 
@@ -155,9 +141,9 @@ end subroutine nd_refine_fm
 ! This is a banded version so only nodes a distance of at most band from the
 ! input separator can be moved into the new separator
 !
-subroutine nd_fm_refinement(n, a_ne, ptr, col, weight, sumweight, icut, mult, &
-      costf, a_n1, a_n2, wnv1, wnv2, wns, band, balance_tol, flags, ipart,    &
-      next, last, gain1, gain2, done, head, dist)
+subroutine nd_refine_fm_inner(n, a_ne, ptr, col, weight, sumweight, icut, &
+      mult, costf, a_n1, a_n2, wnv1, wnv2, wns, band, balance_tol, flags, &
+      ipart, next, last, gain1, gain2, done, head, dist)
    integer, intent(in) :: n
    integer, intent(in) :: a_ne
    integer, dimension(n), intent(in) :: ptr
@@ -558,7 +544,7 @@ subroutine nd_fm_refinement(n, a_ne, ptr, col, weight, sumweight, icut, mult, &
    a_n1 = nv1
    a_n2 = nv2
 
-end subroutine nd_fm_refinement
+end subroutine nd_refine_fm_inner
 
 
   subroutine remove_from_list(n,mult,icut,next,last,head,irm,ig)
