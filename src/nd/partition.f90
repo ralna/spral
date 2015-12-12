@@ -13,7 +13,7 @@ contains
 !
 subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
       ndlevel, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, partition, &
-      work, options, band, depth, use_multilevel)
+      work, options, band, depth, use_multilevel, flag)
    integer, intent(in) :: a_n
    integer, intent(in) :: a_ne
    integer, intent(in) :: a_ptr(a_n)
@@ -36,9 +36,10 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
       ! depth = num_levels_nend
    logical, intent(inout) :: use_multilevel ! are we allowed to use a
       ! multilevel partitioning strategy
+   integer, intent(out) :: flag ! error indicator
 
    integer :: nstrt, nend
-   integer :: i, j, p1sz, p2sz, sepsz, k
+   integer :: i, j, lvl, p1sz, p2sz, sepsz
    integer, dimension(:), pointer :: mask, level_ptr, level, level2_ptr, level2
    integer, dimension(:), pointer :: distance_ptr, distance, level_weight
    integer :: num_levels_nend ! no. levels in structure rooted at nend
@@ -46,18 +47,19 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
    integer :: num_entries ! no. entries in level set structure
    integer :: best_sep_start
    integer :: lwidth, mindeg, degree
-   integer :: ww
    real(wp) :: bestval
    real(wp) :: val
-   real(wp) :: balance_tol
+   real(wp) :: balance, balance_tol
    logical :: imbal, use_multilevel_copy
 
-   integer, parameter :: max_search = 5
+   integer, parameter :: max_search = 5 ! max iterations to find pseudo-diameter
+   integer, parameter :: ww = 2 ! width of seperator in terms of half level sets
 
    call nd_print_diagnostic(1, options, ' ')
    call nd_print_diagnostic(1, options, 'Use two-sided level set method')
 
    ! Initialize return vars
+   flag = 0
    band = -1
    depth = -1
 
@@ -166,51 +168,44 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
       end do
    end do
 
-   ! Find first possible separator
-   ww = 2
+   ! Find first possible separator (i.e. find first level with non-zero wgt)
    p1sz = 0
-   do i = 1 - num_levels_nstrt, num_levels_nend - ww - 2
-      p1sz = p1sz + level_weight(i)
-      sepsz = level_weight(i+1)
-      do j = 1, ww - 1
-         sepsz = sepsz + level_weight(i+1+j)
-      end do
+   do lvl = 1 - num_levels_nstrt, num_levels_nend - ww - 2
+      p1sz = p1sz + level_weight(lvl)
+      sepsz = sum(level_weight(lvl+1:lvl+ww))
       p2sz = sumweight - p1sz - sepsz
       if (p1sz.gt.0 .and. sepsz.gt.0) exit
    end do
 
-   if (i+ww.ge.num_levels_nend-1 .or. p2sz.eq.0) then
+   if (lvl+ww.ge.num_levels_nend-1 .or. p2sz.eq.0) then
       ! Not possible to find separator
       ! This can only be invoked for a fully connected graph. The partition
       ! subroutine checks for this case so it should never be called
-      a_n1 = a_n
-      a_n2 = 0
-      partition(1:a_n) = (/ (i,i=1,a_n) /)
+      flag = ND_ERR_INTERNAL
+      call nd_print_diagnostic(0, options, &
+         'nd_half_level_set failed to find seperator on connected graph' &
+         )
       return
    end if
 
    ! Entries in level i will form first possible partition
-   best_sep_start = i + 1
-   a_n1 = distance_ptr(a_n+i+1) - 1
-   a_n2 = a_n - distance_ptr(a_n+i+1+ww) + 1
+   best_sep_start = lvl + 1
+   a_n1 = distance_ptr(a_n+lvl+1) - 1
+   a_n2 = a_n - distance_ptr(a_n+lvl+1+ww) + 1
    a_weight_1 = p1sz
    a_weight_2 = p2sz
    a_weight_sep = sepsz
-   call cost_function(p1sz,p2sz,sepsz,sumweight,balance_tol,imbal,&
-      options%cost_function,bestval)
+   call cost_function(p1sz, p2sz, sepsz, sumweight, balance_tol, imbal, &
+      options%cost_function, bestval)
 
-   ! Search for best separator using tau
-
-   do j = i + 1, num_levels_nend - ww - 2
+   ! Search for seperator with best cost function value
+   do j = lvl + 1, num_levels_nend - ww - 2
       p1sz = p1sz + level_weight(j)
-      sepsz = level_weight(j+1)
-      do k = 1, ww - 1
-         sepsz = sepsz + level_weight(j+1+k)
-      end do
+      sepsz = sum(level_weight(j+1:j+ww))
       p2sz = sumweight - sepsz - p1sz
       if (p2sz.eq.0) exit
-      call cost_function(p1sz,p2sz,sepsz,sumweight,balance_tol,imbal,&
-         options%cost_function,val)
+      call cost_function(p1sz, p2sz, sepsz, sumweight, balance_tol, imbal, &
+         options%cost_function, val)
       if (val.lt.bestval) then
          bestval = val
          best_sep_start = j + 1
@@ -224,8 +219,8 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
 
    if (imbal .and. use_multilevel_copy .and. options%partition_method.ge.2) &
          then
-      if (real(max(a_weight_1,a_weight_2)) / min(a_weight_1,a_weight_2) .gt. &
-            balance_tol) then
+      balance = real(max(a_weight_1,a_weight_2)) / min(a_weight_1,a_weight_2)
+      if (balance .gt. balance_tol) then
          use_multilevel = .true.
          return
       end if
@@ -260,8 +255,8 @@ end subroutine nd_half_level_set
 !
 ! Partition the matrix using the level set method
 !
-subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level,  &
-      a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, partition, work,      &
+subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, ndlevel, &
+      a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, partition, work,       &
       options, band, depth, use_multilevel)
    integer, intent(in) :: a_n
    integer, intent(in) :: a_ne
@@ -269,7 +264,7 @@ subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level,  &
    integer, intent(in) :: a_row(a_ne)
    integer, intent(in) :: a_weight(a_n)
    integer, intent(in) :: sumweight ! sum of entries in a_weight
-   integer, intent(in) :: level ! current nested dissection level
+   integer, intent(in) :: ndlevel ! current nested dissection level
    integer, intent(out) :: a_n1, a_n2 ! size of the two submatrices
    integer, intent(out) :: a_weight_1, a_weight_2, a_weight_sep ! Weighted
       ! size of partitions and separator
@@ -279,9 +274,9 @@ subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level,  &
       ! separator are listed at the end
    integer, intent(out) :: work(9*a_n+sumweight)
    type (nd_options), intent(in) :: options
-   real(wp), intent(out) :: band ! If level = 0, then on output
+   real(wp), intent(out) :: band ! If ndlevel = 0, then on output
       ! band = 100*L/a_n, where L is the size of the largest levelset
-   real(wp), intent(out) :: depth ! If level = 0, then on output
+   real(wp), intent(out) :: depth ! If ndlevel = 0, then on output
       ! band = num_levels_nend
    logical, intent(inout) :: use_multilevel ! are we allowed to use a multilevel
       ! partitioning strategy
@@ -292,11 +287,13 @@ subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level,  &
    integer :: num_entries ! no. entries in level structure rooted at nend
    integer :: best_sep_start
    integer :: i, j, p1sz, p2sz, sepsz, lwidth
-   integer :: mindeg, degree, max_search
+   integer :: mindeg, degree
    real(wp) :: bestval
    real(wp) :: val
    real(wp) :: balance_tol
    logical :: imbal
+
+   integer, parameter :: max_search = 5
 
    call nd_print_diagnostic(1, options, ' ')
    call nd_print_diagnostic(1, options, 'Use one-sided level set method')
@@ -307,7 +304,7 @@ subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level,  &
 
    ! If we're going to use multilevel regardless, immediate return
    if (options%partition_method.eq.1 .and. use_multilevel) return
-   if (options%partition_method.gt.1 .and. level.gt.0 .and. use_multilevel) &
+   if (options%partition_method.gt.1 .and. ndlevel.gt.0 .and. use_multilevel) &
       return
 
    ! Initialize internal variables
@@ -330,7 +327,6 @@ subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level,  &
          nstrt = i
       end if
    end do
-   max_search = 5
 
    call nd_find_pseudo(a_n, a_ne, a_ptr, a_row, a_weight, sumweight,          &
       work(level_ptr_p+1:level_ptr_p+a_n), work(level_p+1:level_p+a_n),       &
@@ -359,13 +355,13 @@ subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level,  &
          end if
       end do
       a_weight_sep = 0
-      if (level.eq.0) band = -real(lwidth,wp)
+      if (ndlevel.eq.0) band = -real(lwidth,wp)
 
       use_multilevel = .false. ! Will be reset for each component
       return
    end if
 
-   if (level.eq.0) then
+   if (ndlevel.eq.0) then
       band = (100.0_wp * lwidth) / sumweight
       depth = (100.0_wp * num_levels_nend) / sumweight
    end if

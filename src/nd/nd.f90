@@ -771,7 +771,8 @@ subroutine nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level, &
          level, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep,             &
          work(partition_ptr+1:partition_ptr+a_n),                             &
          work(work_ptr+1:work_ptr+9*a_n+sumweight), options, band, depth,     &
-         use_multilevel)
+         use_multilevel, info%flag)
+      if(info%flag.ne.0) return ! it's all gone horribly wrong
    case(ND_PARTITION_LEVEL_SET:)
       call nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight,         &
          level, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep,             &
@@ -3154,7 +3155,8 @@ subroutine nd_coarse_partition(a_n,a_ne,a_ptr,a_row,a_weight, &
     call nd_half_level_set(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,2,a_n1, &
       a_n2,a_weight_1,a_weight_2,a_weight_sep, &
       work1(partition_ptr+1:partition_ptr+a_n),work(1:9*a_n+sumweight), &
-      options,dummy,dummy1,use_multilevel)
+      options,dummy,dummy1,use_multilevel,info)
+    if(info.ne.0) return ! Error
 
     if (printi .or. printd) then
       write (unit_diagnostics,'(a)') ' '
