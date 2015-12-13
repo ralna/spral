@@ -137,451 +137,404 @@ end subroutine multilevel_partition
 
 ! ********************************************************
 
+!
 ! main subroutine for computing multilevel structure.
 ! Offers heavy-edge collapsing and maximal independent vertex
 ! set for coarsening. We will need to test out to see
 ! which is better.
+!
+recursive subroutine multilevel(grid, options, sumweight, mglevel_cur, mp, &
+      print_level, lwork, work, info)
+   type (nd_multigrid), intent(inout), target :: grid ! this level of matrix
+   type (nd_options), intent(in) :: options
+   integer, intent(in) :: sumweight ! sum of weights (unchanged between
+      ! coarse and fine grid
+   integer, intent(inout) :: mglevel_cur ! current grid level
+   integer, intent(in) :: mp, print_level ! diagnostic printing
+   integer, intent(in) :: lwork ! length of work array
+      ! (>= 9*grid%graph%n + sumweight)
+   integer, intent(out) :: work(lwork) ! work array
+   integer, intent(inout) :: info ! Error flag
 
-recursive subroutine multilevel(grid,options,sumweight,mglevel_cur,mp, &
-    print_level,lwork,work,info)
-  ! Arguments
-  type (nd_multigrid), intent(inout), TARGET :: grid ! this level
-  ! of matrix (grid)
-  type (nd_options), intent(in) :: options
-  integer, intent(in) :: sumweight ! sum of weights (unchanged between
-  ! coarse and fine grid
-  integer, intent(inout) :: mglevel_cur ! current grid level
-  integer, intent(in) :: mp, print_level ! diagnostic printing
-  integer, intent(in) :: lwork ! length of work array
-  ! (.ge.9*grid%graph%n +sumweight)
-  integer, intent(out) :: work(lwork) ! work array
-  integer, intent(inout) :: info ! Error flag
+   type (nd_multigrid), pointer :: cgrid ! the coarse level grid
+   integer :: cnvtx ! number of vertices (rows) in the coarse matrix
+   type (nd_matrix), pointer :: p ! the coarse grid prolongator
+   type (nd_matrix), pointer :: r ! the coarse grid restrictor (= p')
 
-  ! Local variables
-  type (nd_multigrid), pointer :: cgrid ! the coarse level grid
-  integer :: cnvtx ! number of vertices (rows) in the coarse
-  ! matrix
-  type (nd_matrix), pointer :: p ! the coarse grid prolongator
-  type (nd_matrix), pointer :: r ! the coarse grid restrictor (= p')
+   integer, dimension(:), pointer :: fwhere ! partition on fine grid
+   integer, dimension(:), pointer :: cwhere ! partition on coarse grid
+   type (nd_matrix), pointer :: cgraph ! the coarse graph
+   type (nd_matrix), pointer :: graph ! the fine graph
+   integer, dimension(:), pointer :: row_wgt ! fine graph vertex weights
+   integer, dimension(:), pointer :: crow_wgt ! coarse graph vertex weights
+   real(wp) :: grid_rdc_fac_min ! min grid reduction factor
+   real(wp) :: grid_rdc_fac_max ! max grid reduction factor
+   integer :: stop_coarsening1 ! optionss when to stop coarsening
+   integer :: partition_ptr, part_ptr, work_ptr, a_ne, ref_options, clwork
+   integer :: i, j, k, l, a_weight_1, a_weight_2, a_weight_sep, ref_method, lwk
+   integer :: a_n1_new, a_n2_new, a_weight_1_new, a_weight_2_new, &
+      a_weight_sep_new
+   logical :: imbal
+   real(wp) :: tau, balance_tol, tau_best
 
-  integer, dimension(:), pointer :: fwhere ! partition on fine grid
-  integer, dimension(:), pointer :: cwhere ! partition on coarse grid
-  type (nd_matrix), pointer :: cgraph ! the coarse graph
-  type (nd_matrix), pointer :: graph ! the fine graph
-  integer, dimension(:), pointer :: row_wgt ! fine
-  ! graph vertex weights
-  integer, dimension(:), pointer :: crow_wgt ! coarse
-  ! graph vertex weights
-  real(wp) :: grid_rdc_fac_min ! min grid reduction
-  ! factor
-  real(wp) :: grid_rdc_fac_max ! max grid reduction
-  ! factor
-  integer :: stop_coarsening1 ! optionss when to stop coarsening
-  integer :: partition_ptr, part_ptr, work_ptr, a_ne, ref_options, &
-    clwork
-  integer :: i, j, k, l, a_weight_1, a_weight_2, a_weight_sep, &
-    ref_method, lwk
-  integer :: a_n1_new, a_n2_new, a_weight_1_new, a_weight_2_new, &
-    a_weight_sep_new
-  logical :: imbal
-  real(wp) :: tau, balance_tol, tau_best
-  ! !!!!!!!!!!!!!!!!!!!!!!!!!!
-  info = 0
+   info = 0
 
-  stop_coarsening1 = max(2,options%stop_coarsening1)
-  if (print_level.ge.2) call level_print(mp,'size of grid on level ', &
-    grid%level,' is ',real(grid%size,wp))
+   stop_coarsening1 = max(2,options%stop_coarsening1)
+   if (print_level.ge.2) &
+      call level_print(mp, 'size of grid on level ', grid%level, ' is ', &
+         real(grid%size,wp))
 
-  grid_rdc_fac_min = max(0.01_wp,options%min_reduction)
-  ! max grid reduction factor must be at least half and at most one
-  grid_rdc_fac_max = max(0.5_wp,options%max_reduction)
-  grid_rdc_fac_max = min(1.0_wp,grid_rdc_fac_max)
+   grid_rdc_fac_min = max(0.01_wp,options%min_reduction)
+   ! max grid reduction factor must be at least half and at most one
+   grid_rdc_fac_max = max(0.5_wp,options%max_reduction)
+   grid_rdc_fac_max = min(1.0_wp,grid_rdc_fac_max)
 
-  ! Test to see if this is either the last level or
-  ! if the matrix size too small
-  if (grid%level.ge.mglevel_cur .or. grid%size.le.stop_coarsening1) then
-    if (print_level.ge.2) call level_print(mp,'end of level ',grid%level)
+   ! Test to see if this is either the last level or
+   ! if the matrix size too small
+   if (grid%level.ge.mglevel_cur .or. grid%size.le.stop_coarsening1) then
+      if (print_level.ge.2) call level_print(mp, 'end of level ', grid%level)
 
-    ! coarsest level in multilevel so compute separator
-    a_ne = grid%graph%ptr(grid%graph%n+1) - 1
-    call nd_coarse_partition(grid%graph%n,a_ne,grid%graph%ptr, &
-      grid%graph%col,grid%row_wgt,sumweight,grid%part_div(1), &
-      grid%part_div(2),grid%where,lwork,work,options,info)
-    return
-  end if
+      ! coarsest level in multilevel so compute separator
+      a_ne = grid%graph%ptr(grid%graph%n+1) - 1
+      call nd_coarse_partition(grid%graph%n, a_ne, grid%graph%ptr, &
+         grid%graph%col, grid%row_wgt, sumweight, grid%part_div(1), &
+         grid%part_div(2), grid%where, lwork, work, options, info)
+      return
+   end if
 
-  ! Coarsest level not yet reached so carry on coarsening
-  if (options%matching.eq.1) then
-    lwk = grid%size
-    call coarsen_hec(grid,lwk,work(1:lwk),info)
-  else
-    if (options%matching.gt.1) then
-      lwk = 3*grid%size
-      call coarsen_best(grid,lwk,work(1:lwk),info)
-    else
-      lwk = 2*grid%size
-      call coarsen_cn(grid,lwk,work(1:lwk))
-    end if
-  end if
-  if (info.lt.0) return
-
-  cgrid => grid%coarse
-  cnvtx = cgrid%size
-  ! allocate coarse grid quantities
-  call nd_assoc(cgrid%where,cnvtx,info)
-  if (info.ne.0) then
-    return
-  end if
-
-  call nd_assoc(cgrid%row_wgt,cnvtx,info)
-  if (info.ne.0) then
-    return
-  end if
-
-  ! see if the grid reduction is achieved, if not, set the allowed
-  ! maximum level to current level and partition this level
-  ! deallocate the coarse grid quantities that haves been allocated so
-  ! far
-  if (real(cgrid%size)/real(grid%size).gt.grid_rdc_fac_max .or. &
-      real(cgrid%size)/real(grid%size).lt.grid_rdc_fac_min .or. &
-      cgrid%size.lt.4) then
-
-    if (print_level.ge.2) then
-      ! if (.true.) then
-      write (mp,'(a,i10,a,f12.4,i4)') 'at level ', grid%level, &
-        ' further coarsening gives reduction factor', &
-        cgrid%size/real(grid%size)
-      write (mp,'(a,i10)') 'current size = ', grid%size
-    end if
-
-    ! set current grid level and recurse
-    mglevel_cur = grid%level
-
-    call multilevel(grid,options,sumweight,mglevel_cur,mp,print_level, &
-      lwork,work,info)
-    if (info.lt.0) return
-
-    return
-  end if
-
-  ! restriction ================
-
-  ! form the coarse grid graph and matrix
-  ! cmatrix = P^T*matrix = R*matrix
-  p => cgrid%p
-  r => cgrid%r
-  graph => grid%graph
-  cgraph => cgrid%graph
-
-  ! get the coarse matrix
-  lwk = 3*grid%size
-  call galerkin_graph(graph,p,r,cgraph,info,lwk,work(1:lwk))
-  if (info.lt.0) return
-
-  ! check if matrix is full
-  if (real(cgrid%graph%ptr(cgrid%graph%n+1)-1)/real(cgrid%graph%n).ge.real &
-      (cgrid%graph%n-1)) then
-    if (print_level.ge.2) then
-      write (mp,'(a,i10,a)') 'at level ', grid%level, &
-        ' further coarsening gives full matrix'
-    end if
-
-    ! set current grid level and recurse
-    mglevel_cur = grid%level - 1
-    call multilevel(grid,options,sumweight,mglevel_cur,mp,print_level, &
-      lwork,work,info)
-    if (info.lt.0) return
-
-    return
-  end if
-
-  ! row weight cw = R*w
-  row_wgt => grid%row_wgt(1:grid%size)
-  crow_wgt => cgrid%row_wgt(1:cgrid%size)
-  call nd_matrix_multiply_vec(r,row_wgt,crow_wgt)
-  clwork = 9*cgrid%graph%n + sumweight
-  call multilevel(cgrid,options,sumweight,mglevel_cur,mp,print_level, &
-    clwork,work(1:clwork),info)
-
-
-  ! check if partition is returned
-  if (cgrid%part_div(1).eq.0 .or. cgrid%part_div(2).eq.0) then
-    ! Unlikely to be called because 99.999% of cases caught in full
-    ! matrix check above. Follows same procedure as when full matrix found
-    if (print_level.ge.2) then
-      write (mp,'(a,i10,a)') 'at level ', grid%level, &
-        ' no partition found'
-    end if
-
-    ! set current grid level and recurse
-    mglevel_cur = grid%level - 1
-    call multilevel(grid,options,sumweight,mglevel_cur,mp,print_level, &
-      lwork,work,info)
-    if (info.lt.0) return
-
-    return
-  end if
-
-  ! prolongation ================
-
-  ! injection of the order from coarse grid to the
-  ! fine grid, since cwhere(i) is the index of the
-  ! i-th vertex in the new ordering, the order
-  ! of this vertex should be where(i)
-  ! grid%where = P*order_on_coarse_grid
-  ! here P is a special matrix with only one non-zero entry per row
-  fwhere => grid%where(1:grid%size)
-  cwhere => cgrid%where(1:cgrid%size)
-  grid%part_div(1:2) = 0
-  call nd_matrix_multiply_vec(p,cwhere,fwhere)
-
-  do i = 1, grid%size
-    if (fwhere(i).eq.ND_PART1_FLAG) then
-      grid%part_div(1) = grid%part_div(1) + 1
-    else
-      if (fwhere(i).eq.ND_PART2_FLAG) then
-        grid%part_div(2) = grid%part_div(2) + 1
-      end if
-    end if
-  end do
-  a_weight_1 = 0
-  a_weight_2 = 0
-  a_weight_sep = 0
-
-  ! Set partition
-  partition_ptr = 0
-  work_ptr = partition_ptr + grid%graph%n
-  i = 1
-  j = grid%part_div(1) + 1
-  k = grid%part_div(1) + grid%part_div(2) + 1
-  do l = 1, grid%size
-    select case (grid%where(l))
-    case (ND_PART1_FLAG)
-      work(partition_ptr+i) = l
-      a_weight_1 = a_weight_1 + grid%row_wgt(l)
-      i = i + 1
-    case (ND_PART2_FLAG)
-      work(partition_ptr+j) = l
-      a_weight_2 = a_weight_2 + grid%row_wgt(l)
-      j = j + 1
-    case (ND_SEP_FLAG)
-      work(partition_ptr+k) = l
-      a_weight_sep = a_weight_sep + grid%row_wgt(l)
-      k = k + 1
-    end select
-  end do
-  a_ne = grid%graph%ptr(grid%graph%n+1) - 1
-
-  if (a_weight_sep.gt.0) then
-    ! Do not refine if separable graph
-
-    if (options%refinement.gt.6) then
-      ref_options = 3
-    else
-      if (options%refinement.lt.1) then
-        ref_options = 1
+   ! Coarsest level not yet reached so carry on coarsening
+   if (options%matching.eq.1) then
+      lwk = grid%size
+      call coarsen_hec(grid, lwk, work(1:lwk), info)
+   else
+      if (options%matching.gt.1) then
+         lwk = 3*grid%size
+         call coarsen_best(grid, lwk, work(1:lwk), info)
       else
-        ref_options = options%refinement
+         lwk = 2*grid%size
+         call coarsen_cn(grid, lwk, work(1:lwk))
       end if
-    end if
+   end if
+   if (info.lt.0) return
 
-    select case (ref_options)
-    case (1)
-      ref_method = 1
+   cgrid => grid%coarse
+   cnvtx = cgrid%size
+   ! allocate coarse grid quantities
+   call nd_assoc(cgrid%where, cnvtx, info)
+   if (info.ne.0) return
 
-    case (2)
-      ref_method = 2
+   call nd_assoc(cgrid%row_wgt, cnvtx, info)
+   if (info.ne.0) return
 
-    case (3)
-      if (real(max(a_weight_1,a_weight_2))/real(min(a_weight_1, &
-          a_weight_2)+a_weight_sep).gt.max(real(1.0, &
-          wp),options%balance)) then
-        ref_method = 2
+   ! see if the grid reduction is achieved, if not, set the allowed
+   ! maximum level to current level and partition this level
+   ! deallocate the coarse grid quantities that haves been allocated so
+   ! far
+   if (  real(cgrid%size)/real(grid%size).gt.grid_rdc_fac_max .or. &
+         real(cgrid%size)/real(grid%size).lt.grid_rdc_fac_min .or. &
+         cgrid%size.lt.4 ) then
+      if (print_level.ge.2) then
+         write (mp,'(a,i10,a,f12.4,i4)') 'at level ', grid%level, &
+            ' further coarsening gives reduction factor', &
+         cgrid%size/real(grid%size)
+         write (mp,'(a,i10)') 'current size = ', grid%size
+      end if
+
+      ! set current grid level and recurse
+      mglevel_cur = grid%level
+
+      call multilevel(grid, options, sumweight, mglevel_cur, mp, print_level, &
+         lwork, work, info)
+      return
+   end if
+
+   ! restriction ================
+
+   ! form the coarse grid graph and matrix
+   ! cmatrix = P^T*matrix = R*matrix
+   p => cgrid%p
+   r => cgrid%r
+   graph => grid%graph
+   cgraph => cgrid%graph
+
+   ! get the coarse matrix
+   lwk = 3*grid%size
+   call galerkin_graph(graph,p,r,cgraph,info,lwk,work(1:lwk))
+   if (info.lt.0) return
+
+   ! check if matrix is full
+   if (real(cgrid%graph%ptr(cgrid%graph%n+1)-1)/real(cgrid%graph%n).ge.real &
+         (cgrid%graph%n-1)) then
+      if (print_level.ge.2) then
+         write (mp,'(a,i10,a)') 'at level ', grid%level, &
+            ' further coarsening gives full matrix'
+      end if
+
+      ! set current grid level and recurse
+      mglevel_cur = grid%level - 1
+      call multilevel(grid, options, sumweight, mglevel_cur, mp, print_level, &
+         lwork, work, info)
+      return
+   end if
+
+   ! row weight cw = R*w
+   row_wgt => grid%row_wgt(1:grid%size)
+   crow_wgt => cgrid%row_wgt(1:cgrid%size)
+   call nd_matrix_multiply_vec(r,row_wgt,crow_wgt)
+   clwork = 9*cgrid%graph%n + sumweight
+   call multilevel(cgrid, options, sumweight, mglevel_cur, mp, print_level, &
+      clwork, work(1:clwork), info)
+
+   ! check if partition is returned
+   if (cgrid%part_div(1).eq.0 .or. cgrid%part_div(2).eq.0) then
+      ! Unlikely to be called because 99.999% of cases caught in full
+      ! matrix check above. Follows same procedure as when full matrix found
+      if (print_level.ge.2) then
+         write (mp,'(a,i10,a)') 'at level ', grid%level, &
+            ' no partition found'
+      end if
+
+      ! set current grid level and recurse
+      mglevel_cur = grid%level - 1
+      call multilevel(grid, options, sumweight, mglevel_cur, mp, print_level, &
+         lwork, work, info)
+      return
+   end if
+
+   ! prolongation ================
+
+   ! injection of the order from coarse grid to the
+   ! fine grid, since cwhere(i) is the index of the
+   ! i-th vertex in the new ordering, the order
+   ! of this vertex should be where(i)
+   ! grid%where = P*order_on_coarse_grid
+   ! here P is a special matrix with only one non-zero entry per row
+   fwhere => grid%where(1:grid%size)
+   cwhere => cgrid%where(1:cgrid%size)
+   grid%part_div(1:2) = 0
+   call nd_matrix_multiply_vec(p, cwhere, fwhere)
+
+   do i = 1, grid%size
+      if (fwhere(i).eq.ND_PART1_FLAG) then
+         grid%part_div(1) = grid%part_div(1) + 1
       else
-        ref_method = 1
+         if (fwhere(i).eq.ND_PART2_FLAG) then
+            grid%part_div(2) = grid%part_div(2) + 1
+         end if
       end if
+   end do
+   a_weight_1 = 0
+   a_weight_2 = 0
+   a_weight_sep = 0
 
-    case (4)
-      ref_method = 0
+   ! Set partition
+   partition_ptr = 0
+   work_ptr = partition_ptr + grid%graph%n
+   i = 1
+   j = grid%part_div(1) + 1
+   k = grid%part_div(1) + grid%part_div(2) + 1
+   do l = 1, grid%size
+      select case (grid%where(l))
+      case (ND_PART1_FLAG)
+         work(partition_ptr+i) = l
+         a_weight_1 = a_weight_1 + grid%row_wgt(l)
+         i = i + 1
+      case (ND_PART2_FLAG)
+         work(partition_ptr+j) = l
+         a_weight_2 = a_weight_2 + grid%row_wgt(l)
+         j = j + 1
+      case (ND_SEP_FLAG)
+         work(partition_ptr+k) = l
+         a_weight_sep = a_weight_sep + grid%row_wgt(l)
+         k = k + 1
+      end select
+   end do
+   a_ne = grid%graph%ptr(grid%graph%n+1) - 1
 
-    case (5)
-      ref_method = 2
+   if (a_weight_sep.gt.0) then
+      ! Do not refine if separable graph
 
-    case (6)
-      if (real(max(a_weight_1,a_weight_2))/real(min(a_weight_1, &
-          a_weight_2)+a_weight_sep).gt.max(real(1.0, &
-          wp),options%balance)) then
-        ref_method = 2
+      if (options%refinement.gt.6) then
+         ref_options = 3
       else
-        ref_method = 0
+         if (options%refinement.lt.1) then
+            ref_options = 1
+         else
+            ref_options = options%refinement
+         end if
       end if
-    end select
-
-    select case (ref_method)
-    case (0)
-      call nd_refine_max_flow(grid%graph%n,a_ne,grid%graph%ptr, &
-        grid%graph%col,grid%row_wgt,grid%part_div(1),grid%part_div(2), &
-        a_weight_1,a_weight_2,a_weight_sep,work(partition_ptr+1: &
-        partition_ptr+grid%graph%n),work(work_ptr+1:work_ptr+8),options)
-    case (1)
-      if (min(a_weight_1,a_weight_2)+a_weight_sep.lt. &
-          max(a_weight_1,a_weight_2)) then
-        call nd_refine_block_trim(grid%graph%n,a_ne, &
-          grid%graph%ptr,grid%graph%col,grid%row_wgt,sumweight, &
-          grid%part_div(1),grid%part_div(2),a_weight_1,a_weight_2, &
-          a_weight_sep,work(partition_ptr+1:partition_ptr+grid%graph%n), &
-          work(work_ptr+1:work_ptr+5*grid%graph%n),options)
-      else
-        call nd_refine_trim(grid%graph%n,a_ne,grid%graph%ptr, &
-          grid%graph%col,grid%row_wgt,sumweight,grid%part_div(1), &
-          grid%part_div(2),a_weight_1,a_weight_2,a_weight_sep, &
-          work(partition_ptr+1:partition_ptr+grid%graph%n), &
-          work(work_ptr+1:work_ptr+3*grid%graph%n),options)
-
-      end if
-    case (2)
-      call nd_refine_edge(grid%graph%n,a_ne,grid%graph%ptr, &
-        grid%graph%col,grid%row_wgt,sumweight,grid%part_div(1), &
-        grid%part_div(2),a_weight_1,a_weight_2,a_weight_sep, &
-        work(partition_ptr+1:partition_ptr+grid%graph%n), &
-        work(work_ptr+1:work_ptr+3*grid%graph%n),options)
-    end select
-
-    if (options%max_improve_cycles.gt.0) then
-      balance_tol = max(1.0_wp,options%balance)
-      imbal = (balance_tol.le.real(sumweight-2))
-      call cost_function(a_weight_1,a_weight_2,a_weight_sep,sumweight, &
-        balance_tol,imbal,options%cost_function,tau_best)
-      a_n1_new = grid%part_div(1)
-      a_n2_new = grid%part_div(2)
-      a_weight_1_new = a_weight_1
-      a_weight_2_new = a_weight_2
-      a_weight_sep_new = a_weight_sep
-    end if
-
-    part_ptr = work_ptr + 5*grid%graph%n
-    work(part_ptr+1:part_ptr+grid%graph%n) = work(partition_ptr+1: &
-      partition_ptr+grid%graph%n)
-
-    k = options%max_improve_cycles
-    do i = 1, k
-
-      call expand_partition(grid%graph%n,a_ne,grid%graph%ptr, &
-        grid%graph%col,grid%row_wgt,a_n1_new,a_n2_new,a_weight_1_new, &
-        a_weight_2_new,a_weight_sep_new,work(part_ptr+1:part_ptr+grid% &
-        graph%n),work(work_ptr+1:work_ptr+5*grid%graph%n))
-
-
-      ! call
-      ! check_partition1(a_n,a_ne,a_ptr,a_row,a_n1_new,a_n2_new,work(par
-      ! t_ptr+1:part_ptr+a_n))
 
       select case (ref_options)
-
+      case (1)
+         ref_method = 1
+      case (2)
+         ref_method = 2
       case (3)
-        if (real(max(a_weight_1_new,a_weight_2_new))/real(min( &
-            a_weight_1_new,a_weight_2_new)+a_weight_sep_new).gt.max(real( &
-            1.0,wp),options%balance)) then
-          ref_method = 2
-        else
-          ref_method = 1
-        end if
-
+         if (real(max(a_weight_1,a_weight_2))/real(min(a_weight_1, &
+               a_weight_2)+a_weight_sep).gt.max(real(1.0, &
+               wp),options%balance)) then
+            ref_method = 2
+         else
+            ref_method = 1
+         end if
+      case (4)
+         ref_method = 0
+      case (5)
+         ref_method = 2
       case (6)
-        if (real(max(a_weight_1_new,a_weight_2_new))/real(min( &
-            a_weight_1_new,a_weight_2_new)+a_weight_sep_new).gt.max(real( &
-            1.0,wp),options%balance)) then
-          ref_method = 2
-        else
-          ref_method = 0
-        end if
+         if (real(max(a_weight_1,a_weight_2))/real(min(a_weight_1, &
+               a_weight_2)+a_weight_sep).gt.max(real(1.0, &
+               wp),options%balance)) then
+            ref_method = 2
+         else
+            ref_method = 0
+         end if
       end select
-
 
       select case (ref_method)
-
       case (0)
-        call nd_refine_max_flow(grid%graph%n,a_ne,grid%graph%ptr, &
-          grid%graph%col,grid%row_wgt,a_n1_new,a_n2_new,a_weight_1_new, &
-          a_weight_2_new,a_weight_sep_new,work(part_ptr+1:part_ptr+grid% &
-          graph%n),work(work_ptr+1:work_ptr+8),options)
-
+         call nd_refine_max_flow(grid%graph%n, a_ne, grid%graph%ptr,          &
+            grid%graph%col, grid%row_wgt, grid%part_div(1), grid%part_div(2), &
+            a_weight_1, a_weight_2, a_weight_sep,                             &
+            work(partition_ptr+1:partition_ptr+grid%graph%n),                 &
+            work(work_ptr+1:work_ptr+8), options)
       case (1)
-        if (min(a_weight_1,a_weight_2)+a_weight_sep.lt. &
-            max(a_weight_1,a_weight_2)) then
-          call nd_refine_block_trim(grid%graph%n,a_ne, &
-            grid%graph%ptr,grid%graph%col,grid%row_wgt,sumweight, &
-            a_n1_new,a_n2_new,a_weight_1_new,a_weight_2_new, &
-            a_weight_sep_new,work(part_ptr+1:part_ptr+grid%graph%n), &
-            work(work_ptr+1:work_ptr+5*grid%graph%n),options)
-        else
-          call nd_refine_trim(grid%graph%n,a_ne,grid%graph%ptr, &
-            grid%graph%col,grid%row_wgt,sumweight,a_n1_new,a_n2_new, &
-            a_weight_1_new,a_weight_2_new,a_weight_sep_new, &
-            work(part_ptr+1:part_ptr+grid%graph%n), &
-            work(work_ptr+1:work_ptr+3*grid%graph%n),options)
-        end if
-
-
+         if (min(a_weight_1,a_weight_2)+a_weight_sep .lt. &
+               max(a_weight_1,a_weight_2)) then
+            call nd_refine_block_trim(grid%graph%n, a_ne, grid%graph%ptr,  &
+               grid%graph%col, grid%row_wgt, sumweight, grid%part_div(1),  &
+               grid%part_div(2), a_weight_1, a_weight_2, a_weight_sep,     &
+               work(partition_ptr+1:partition_ptr+grid%graph%n),           &
+               work(work_ptr+1:work_ptr+5*grid%graph%n),options)
+         else
+            call nd_refine_trim(grid%graph%n, a_ne, grid%graph%ptr,        &
+               grid%graph%col, grid%row_wgt, sumweight, grid%part_div(1),  &
+               grid%part_div(2), a_weight_1, a_weight_2, a_weight_sep,     &
+               work(partition_ptr+1:partition_ptr+grid%graph%n),           &
+               work(work_ptr+1:work_ptr+3*grid%graph%n), options)
+         end if
       case (2)
-        call nd_refine_edge(grid%graph%n,a_ne,grid%graph%ptr, &
-          grid%graph%col,grid%row_wgt,sumweight,a_n1_new,a_n2_new, &
-          a_weight_1_new,a_weight_2_new,a_weight_sep_new, &
-          work(part_ptr+1:part_ptr+grid%graph%n), &
-          work(work_ptr+1:work_ptr+3*grid%graph%n),options)
-
+         call nd_refine_edge(grid%graph%n, a_ne, grid%graph%ptr,        &
+            grid%graph%col, grid%row_wgt, sumweight, grid%part_div(1),  &
+            grid%part_div(2), a_weight_1, a_weight_2, a_weight_sep,     &
+            work(partition_ptr+1:partition_ptr+grid%graph%n),           &
+            work(work_ptr+1:work_ptr+3*grid%graph%n), options)
       end select
 
-
-      call cost_function(a_weight_1_new,a_weight_2_new,a_weight_sep_new, &
-        sumweight,balance_tol,imbal,options%cost_function,tau)
-      if (tau.lt.tau_best) then
-        tau_best = tau
-        work(partition_ptr+1:partition_ptr+grid%graph%n) &
-          = work(part_ptr+1:part_ptr+grid%graph%n)
-        grid%part_div(1) = a_n1_new
-        grid%part_div(2) = a_n2_new
-        a_weight_1 = a_weight_1_new
-        a_weight_2 = a_weight_2_new
-        a_weight_sep = a_weight_sep_new
-      else
-        exit
+      if (options%max_improve_cycles.gt.0) then
+         balance_tol = max(1.0_wp, options%balance)
+         imbal = (balance_tol.le.real(sumweight-2))
+         call cost_function(a_weight_1, a_weight_2, a_weight_sep, sumweight, &
+            balance_tol, imbal, options%cost_function, tau_best)
+         a_n1_new = grid%part_div(1)
+         a_n2_new = grid%part_div(2)
+         a_weight_1_new = a_weight_1
+         a_weight_2_new = a_weight_2
+         a_weight_sep_new = a_weight_sep
       end if
-    end do
 
+      part_ptr = work_ptr + 5*grid%graph%n
+      work(part_ptr+1:part_ptr+grid%graph%n) = &
+         work(partition_ptr+1:partition_ptr+grid%graph%n)
 
+      k = options%max_improve_cycles
+      do i = 1, k
+         call expand_partition(grid%graph%n, a_ne,grid%graph%ptr,             &
+            grid%graph%col, grid%row_wgt, a_n1_new, a_n2_new, a_weight_1_new, &
+            a_weight_2_new, a_weight_sep_new,                                 &
+            work(part_ptr+1:part_ptr+grid%graph%n),                           &
+            work(work_ptr+1:work_ptr+5*grid%graph%n) )
 
+         select case (ref_options)
+         case (3)
+            if (real(max(a_weight_1_new,a_weight_2_new))/real(min( &
+                  a_weight_1_new,a_weight_2_new)+a_weight_sep_new).gt. &
+                  max(1.0_wp,options%balance)) then
+               ref_method = 2
+            else
+               ref_method = 1
+            end if
+         case (6)
+            if (real(max(a_weight_1_new,a_weight_2_new))/real(min( &
+                  a_weight_1_new,a_weight_2_new)+a_weight_sep_new).gt. &
+                  max(1.0_wp,options%balance)) then
+               ref_method = 2
+            else
+               ref_method = 0
+            end if
+         end select
 
-    ! if (grid%level .le.2) then
-    call nd_refine_fm(grid%graph%n,a_ne,grid%graph%ptr, &
-      grid%graph%col,grid%row_wgt,sumweight,grid%part_div(1), &
-      grid%part_div(2),a_weight_1,a_weight_2,a_weight_sep, &
-      work(partition_ptr+1:partition_ptr+grid%graph%n), &
-      work(work_ptr+1:work_ptr+8*grid%graph%n+sumweight),options)
-    ! end if
+         select case (ref_method)
+         case (0)
+            call nd_refine_max_flow(grid%graph%n, a_ne, grid%graph%ptr, &
+               grid%graph%col, grid%row_wgt, a_n1_new, a_n2_new,        &
+               a_weight_1_new, a_weight_2_new, a_weight_sep_new,        &
+               work(part_ptr+1:part_ptr+grid%graph%n),                  &
+               work(work_ptr+1:work_ptr+8), options)
 
-  end if
+         case (1)
+            if (min(a_weight_1,a_weight_2)+a_weight_sep.lt. &
+                  max(a_weight_1,a_weight_2)) then
+               call nd_refine_block_trim(grid%graph%n, a_ne,                  &
+                  grid%graph%ptr, grid%graph%col, grid%row_wgt, sumweight,    &
+                  a_n1_new, a_n2_new, a_weight_1_new, a_weight_2_new,         &
+                  a_weight_sep_new, work(part_ptr+1:part_ptr+grid%graph%n),   &
+                  work(work_ptr+1:work_ptr+5*grid%graph%n), options)
+            else
+               call nd_refine_trim(grid%graph%n, a_ne, grid%graph%ptr,         &
+                  grid%graph%col, grid%row_wgt, sumweight, a_n1_new, a_n2_new, &
+                  a_weight_1_new, a_weight_2_new, a_weight_sep_new,            &
+                  work(part_ptr+1:part_ptr+grid%graph%n),                      &
+                  work(work_ptr+1:work_ptr+3*grid%graph%n), options)
+            end if
+         case (2)
+            call nd_refine_edge(grid%graph%n, a_ne, grid%graph%ptr,           &
+               grid%graph%col, grid%row_wgt, sumweight, a_n1_new, a_n2_new,   &
+               a_weight_1_new, a_weight_2_new, a_weight_sep_new,              &
+               work(part_ptr+1:part_ptr+grid%graph%n),                        &
+               work(work_ptr+1:work_ptr+3*grid%graph%n), options)
+         end select
 
-  do i = 1, grid%part_div(1)
-    j = work(partition_ptr+i)
-    grid%where(j) = ND_PART1_FLAG
-  end do
-  do i = grid%part_div(1) + 1, grid%part_div(1) + grid%part_div(2)
-    j = work(partition_ptr+i)
-    grid%where(j) = ND_PART2_FLAG
-  end do
-  do i = grid%part_div(1) + grid%part_div(2) + 1, grid%graph%n
-    j = work(partition_ptr+i)
-    grid%where(j) = ND_SEP_FLAG
-  end do
+         call cost_function(a_weight_1_new, a_weight_2_new, a_weight_sep_new, &
+            sumweight, balance_tol, imbal, options%cost_function, tau)
+         if (tau.lt.tau_best) then
+            tau_best = tau
+            work(partition_ptr+1:partition_ptr+grid%graph%n) &
+               = work(part_ptr+1:part_ptr+grid%graph%n)
+            grid%part_div(1) = a_n1_new
+            grid%part_div(2) = a_n2_new
+            a_weight_1 = a_weight_1_new
+            a_weight_2 = a_weight_2_new
+            a_weight_sep = a_weight_sep_new
+         else
+            exit
+         end if
+      end do
 
-  if (info.lt.0) return
+      call nd_refine_fm(grid%graph%n, a_ne, grid%graph%ptr,          &
+         grid%graph%col, grid%row_wgt, sumweight, grid%part_div(1),  &
+         grid%part_div(2), a_weight_1, a_weight_2, a_weight_sep,     &
+         work(partition_ptr+1:partition_ptr+grid%graph%n),           &
+         work(work_ptr+1:work_ptr+8*grid%graph%n+sumweight), options)
+      end if
 
-  if (print_level.eq.3) call level_print(mp,' after post smoothing ', &
-    grid%level)
+   do i = 1, grid%part_div(1)
+      j = work(partition_ptr+i)
+      grid%where(j) = ND_PART1_FLAG
+   end do
+   do i = grid%part_div(1) + 1, grid%part_div(1) + grid%part_div(2)
+      j = work(partition_ptr+i)
+      grid%where(j) = ND_PART2_FLAG
+   end do
+   do i = grid%part_div(1) + grid%part_div(2) + 1, grid%graph%n
+      j = work(partition_ptr+i)
+      grid%where(j) = ND_SEP_FLAG
+   end do
 
-  ! deallocate the previous level
-  ! call multigrid_deallocate(cgrid,info)
+   if (info.lt.0) return
+
+   if (print_level.eq.3) call level_print(mp,' after post smoothing ', &
+      grid%level)
 
 end subroutine multilevel
 
