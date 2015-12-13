@@ -12,172 +12,159 @@ module spral_nd_multilevel
 contains
 
 subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
-    partition, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, options, &
-    info1, lwork, work, grid)
+      partition, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, options,   &
+      info1, lwork, work, grid)
+   integer, intent(in) :: a_n
+   integer, intent(in) :: a_ne
+   integer, dimension(a_n), intent(in) :: a_ptr
+   integer, dimension(a_ne), intent(in) :: a_row
+   integer, dimension(a_n), intent(in) :: a_weight
+   integer, intent(in) :: sumweight ! sum of entries in a_weight
+   integer, dimension(a_n), intent(out) :: partition
+   integer, intent(out) :: a_n1 ! number of entries in partition 1
+   integer, intent(out) :: a_n2 ! number of entries in partition 2
+   integer, intent(out) :: a_weight_1, a_weight_2, a_weight_sep ! Weighted
+      ! size of partitions and separator
+   type (nd_options), intent(in) :: options
+   integer, intent(inout) :: info1
+   integer, intent(in) :: lwork ! length of work array: must be atleast
+      ! 9a_n + sumweight
+   integer, intent(out) :: work(lwork) ! work array
+   type (nd_multigrid), intent(inout) :: grid ! the multilevel of graphs 
+      ! (matrices)
 
-  integer, intent(in) :: a_n ! order of matrix being partitioned
-  integer, intent(in) :: a_ne ! no. entries in matrix being partitioned
-  integer, intent(in) :: a_ptr(a_n) ! col ptrs for matrix being
-  ! partitioned and, on return, for the extracted submatrix
-  integer, intent(in) :: a_row(a_ne) ! row indices for matrix
-  integer, intent(in) :: a_weight(a_n) ! weights associated with rows
-  ! of matrix (useful if matrix has already been compressed)
-  integer, intent(in) :: sumweight ! sum of entries in a_weight
-  integer, intent(out) :: partition(a_n) ! computed partition
-  integer, intent(out) :: a_n1 ! number of entries in partition 1
-  integer, intent(out) :: a_n2 ! number of entries in partition 2
-  integer, intent(out) :: a_weight_1, a_weight_2, a_weight_sep ! Weight
-  ! ed
-  ! size of partitions and separator
-  type (nd_options), intent(in) :: options
-  integer, intent(in) :: lwork ! length of work array: must be atleast
-  ! 9a_n + sumweight
-  integer, intent(out) :: work(lwork) ! work array
-  integer, intent(inout) :: info1
+   integer :: i, j, k, inv1, inv2, ins
+   integer :: mp
+   integer :: mglevel_cur ! current level
+   integer :: err, print_level ! printing
+   logical :: lerr
 
-  type (nd_multigrid), intent(inout) :: grid ! the multilevel of
-  ! graphs (matrices)
-
-  integer :: i, j, k, inv1, inv2, ins
-  integer :: mp
-  integer :: mglevel_cur ! current level
-  integer :: err, print_level ! printing
-  logical :: lerr
-
-  info1 = 0
-  ! Set up printing
-  if (options%print_level.lt.0) print_level = 0
-  ! The default is options%print_level = 0
-  if (options%print_level.eq.0) print_level = 1
-  if (options%print_level.eq.1) print_level = 2
-  if (options%print_level.gt.1) print_level = 3
-  mp = options%unit_diagnostics
-  if (mp.lt.0) print_level = 0
-  ! Set error optionss
-  lerr = options%unit_error .ge. 0 .and. print_level .gt. 0
-  err = options%unit_error
+   info1 = 0
+   ! Set up printing
+   if (options%print_level.lt.0) print_level = 0
+   ! The default is options%print_level = 0
+   if (options%print_level.eq.0) print_level = 1
+   if (options%print_level.eq.1) print_level = 2
+   if (options%print_level.gt.1) print_level = 3
+   mp = options%unit_diagnostics
+   if (mp.lt.0) print_level = 0
+   ! Set error optionss
+   lerr = options%unit_error .ge. 0 .and. print_level .gt. 0
+   err = options%unit_error
 
 
-  if (print_level.gt.1) then
-    write (mp,'(a)') 'Start multilevel_partition:'
-  end if
+   if (print_level.gt.1) then
+      write (mp,'(a)') 'Start multilevel_partition:'
+   end if
 
-  ! construct the multigrid at this level
+   ! construct the multigrid at this level
 
-  if ( .not. allocated(grid%graph)) allocate (grid%graph)
+   if ( .not. allocated(grid%graph)) allocate (grid%graph)
 
-  call nd_matrix_construct(grid%graph,a_n,a_n,a_ne,info1)
-  if (info1.lt.0) then
-    if (lerr) call nd_print_message(info1,err, &
-      ' multilevel_partition')
-    return
-  end if
+   call nd_matrix_construct(grid%graph,a_n,a_n,a_ne,info1)
+   if (info1.lt.0) then
+      if (lerr) call nd_print_message(info1,err, ' multilevel_partition')
+      return
+   end if
 
-  grid%graph%ptr(1:a_n) = a_ptr(1:a_n)
-  grid%graph%ptr(a_n+1) = a_ne + 1
-  grid%graph%col(1:a_ne) = a_row(1:a_ne)
+   grid%graph%ptr(1:a_n) = a_ptr(1:a_n)
+   grid%graph%ptr(a_n+1) = a_ne + 1
+   grid%graph%col(1:a_ne) = a_row(1:a_ne)
 
-  do i = 1, a_n - 1
-    do j = a_ptr(i), a_ptr(i+1) - 1
+   do i = 1, a_n - 1
+      do j = a_ptr(i), a_ptr(i+1) - 1
+         k = a_row(j)
+         grid%graph%val(j) = a_weight(i)*a_weight(k)
+      end do
+   end do
+   do j = a_ptr(a_n), a_ne
       k = a_row(j)
-      grid%graph%val(j) = a_weight(i)*a_weight(k)
-    end do
-  end do
-  do j = a_ptr(a_n), a_ne
-    k = a_row(j)
-    grid%graph%val(j) = a_weight(a_n)*a_weight(k)
-  end do
+      grid%graph%val(j) = a_weight(a_n)*a_weight(k)
+   end do
 
-  grid%size = a_n
-  grid%level = 1
-  ! nullify (grid%p)
+   grid%size = a_n
+   grid%level = 1
 
-  call nd_assoc(grid%where,a_n,info1)
-  if (info1.lt.0) then
-    if (lerr) call nd_print_message(info1,err, &
-      ' multilevel_partition')
-    return
-  end if
+   call nd_assoc(grid%where,a_n,info1)
+   if (info1.lt.0) then
+      if (lerr) call nd_print_message(info1,err,' multilevel_partition')
+      return
+   end if
 
-  call nd_assoc(grid%row_wgt,a_n,info1)
-  if (info1.lt.0) then
-    if (lerr) call nd_print_message(info1,err, &
-      ' multilevel_partition')
-    return
-  end if
+   call nd_assoc(grid%row_wgt,a_n,info1)
+   if (info1.lt.0) then
+      if (lerr) call nd_print_message(info1,err,' multilevel_partition')
+      return
+   end if
 
-  ! Initialise row weights
-  grid%row_wgt(1:a_n) = a_weight(1:a_n)
+   ! Initialise row weights
+   grid%row_wgt(1:a_n) = a_weight(1:a_n)
 
-  ! initialise mglevel_cur to the maximum number of levels
-  ! allowed for this bisection
-  mglevel_cur = options%stop_coarsening2
-  call multilevel(grid,options,sumweight,mglevel_cur,mp,print_level, &
-    lwork,work,info1)
+   ! initialise mglevel_cur to the maximum number of levels
+   ! allowed for this bisection
+   mglevel_cur = options%stop_coarsening2
+   call multilevel(grid,options,sumweight,mglevel_cur,mp,print_level, &
+      lwork,work,info1)
 
-  if (info1.ne.0) then
-    if (lerr) call nd_print_message(info1,err, &
-      ' multilevel_partition')
-    return
-  end if
+   if (info1.ne.0) then
+      if (lerr) call nd_print_message(info1,err,' multilevel_partition')
+      return
+   end if
 
-  inv1 = 1
-  inv2 = grid%part_div(1) + 1
-  ins = grid%part_div(1) + grid%part_div(2) + 1
+   inv1 = 1
+   inv2 = grid%part_div(1) + 1
+   ins = grid%part_div(1) + grid%part_div(2) + 1
 
-  a_weight_1 = 0
-  a_weight_2 = 0
-  a_weight_sep = 0
-  do i = 1, a_n
-    select case (grid%where(i))
-    case (ND_PART1_FLAG)
-      partition(inv1) = i
-      inv1 = inv1 + 1
-      a_weight_1 = a_weight_1 + a_weight(i)
-    case (ND_PART2_FLAG)
-      partition(inv2) = i
-      inv2 = inv2 + 1
-      a_weight_2 = a_weight_2 + a_weight(i)
-    case default
-      partition(ins) = i
-      ins = ins + 1
-      a_weight_sep = a_weight_sep + a_weight(i)
-    end select
-  end do
+   a_weight_1 = 0
+   a_weight_2 = 0
+   a_weight_sep = 0
+   do i = 1, a_n
+      select case (grid%where(i))
+      case (ND_PART1_FLAG)
+         partition(inv1) = i
+         inv1 = inv1 + 1
+         a_weight_1 = a_weight_1 + a_weight(i)
+      case (ND_PART2_FLAG)
+         partition(inv2) = i
+         inv2 = inv2 + 1
+         a_weight_2 = a_weight_2 + a_weight(i)
+      case default
+         partition(ins) = i
+         ins = ins + 1
+         a_weight_sep = a_weight_sep + a_weight(i)
+      end select
+   end do
 
-  a_n1 = grid%part_div(1)
-  a_n2 = grid%part_div(2)
+   a_n1 = grid%part_div(1)
+   a_n2 = grid%part_div(2)
 
-  if (.false.) then
-    write (*,'(a)') ' '
-    write (*,'(a)') 'Multilevel partition found'
-    write (*,'(a,i10,a,i10,a,i10)') 'a_n1 =', a_n1, ', a_n2=', a_n2, &
-      ', a_n_sep=', a_n - a_n1 - a_n2
-    write (*,'(a,i10,a,i10,a,i10)') 'a_weight_1 =', a_weight_1, &
-      ', a_weight_2=', a_weight_2, ', a_weight_sep=', &
-      sumweight - a_weight_1 - a_weight_2
-  end if
+   if (.false.) then
+      write (*,'(a)') ' '
+      write (*,'(a)') 'Multilevel partition found'
+      write (*,'(a,i10,a,i10,a,i10)') 'a_n1 =', a_n1, ', a_n2=', a_n2, &
+         ', a_n_sep=', a_n - a_n1 - a_n2
+      write (*,'(a,i10,a,i10,a,i10)') 'a_weight_1 =', a_weight_1, &
+         ', a_weight_2=', a_weight_2, ', a_weight_sep=', &
+         sumweight - a_weight_1 - a_weight_2
+   end if
 
-  ! deallocate the finest level
-  ! call multigrid_deallocate_first(a_n,a_n,grid,info1)
-  if (info1.ne.0) then
-    if (lerr) call nd_print_message(info1,err, &
-      ' multilevel_partition')
-    return
-  end if
+   ! deallocate the finest level
+   ! call multigrid_deallocate_first(a_n,a_n,grid,info1)
+   if (info1.ne.0) then
+      if (lerr) call nd_print_message(info1,err,' multilevel_partition')
+      return
+   end if
 
-  ! deallocate (matrix%ptr,matrix%col,matrix%val,stat=st)
-  ! if (st.ne.0) info1 = ND_ERR_MEMORY_DEALLOC
-  if (info1.lt.0) then
-    if (lerr) call nd_print_message(info1,err, &
-      ' multilevel_partition')
-    return
-  end if
+   ! deallocate (matrix%ptr,matrix%col,matrix%val,stat=st)
+   ! if (st.ne.0) info1 = ND_ERR_MEMORY_DEALLOC
+   if (info1.lt.0) then
+      if (lerr) call nd_print_message(info1,err,' multilevel_partition')
+      return
+   end if
 
-  if (print_level.gt.2) then
-    write (mp,'(a)') 'multilevel_partition: successful completion'
-  end if
-
+   if (print_level.gt.2) then
+      write (mp,'(a)') 'multilevel_partition: successful completion'
+   end if
 end subroutine multilevel_partition
 
 ! ********************************************************
