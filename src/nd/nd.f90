@@ -751,7 +751,7 @@ subroutine nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level, &
    if ( .not. use_multilevel) then
       call refine_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
          a_n1, a_n2, partition, a_weight_1, a_weight_2, a_weight_sep, options, &
-         work(work_ptr+1:work_ptr+9*a_n+sumweight) )
+         work(work_ptr+1:work_ptr+8*a_n+sumweight) )
    end if
 
    if (options%print_level.ge.1 .and. options%unit_diagnostics.gt.0) then

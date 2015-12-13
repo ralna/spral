@@ -5,7 +5,7 @@ module spral_nd_refine
    implicit none
 
    private
-   public :: refine_partition, nd_refine_edge, nd_refine_fm, nd_refine_trim, expand_partition, &
+   public :: refine_partition, nd_refine_edge, nd_refine_fm, nd_refine_trim, &
       nd_refine_block_trim
 
 contains
@@ -29,7 +29,7 @@ subroutine refine_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight,   &
    integer, intent(inout) :: a_weight_2
    integer, intent(inout) :: a_weight_sep
    type(nd_options), intent(in) :: options
-   integer, dimension(9*a_n+sumweight), target, intent(out) :: work
+   integer, dimension(8*a_n+sumweight), target, intent(out) :: work
 
    integer :: i, k
    integer :: a_n1_new, a_n2_new
@@ -213,6 +213,7 @@ subroutine refine_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight,   &
       a_weight_sep = a_weight_sep_new
    end do
 
+   nullify(partition2); work_ptr = work_ptr - a_n
    call nd_refine_fm(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, a_n1, &
       a_n2, a_weight_1, a_weight_2, a_weight_sep, partition,             &
       work(work_ptr+1:work_ptr+8*a_n+sumweight), options)

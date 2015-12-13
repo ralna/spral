@@ -171,12 +171,8 @@ recursive subroutine multilevel(grid, options, sumweight, mglevel_cur, &
    real(wp) :: min_reduction ! min grid reduction factor
    real(wp) :: max_reduction ! max grid reduction factor
    integer :: stop_coarsening1 ! optionss when to stop coarsening
-   integer :: partition_ptr, part_ptr, work_ptr, a_ne, ref_options, clwork
-   integer :: i, j, k, l, a_weight_1, a_weight_2, a_weight_sep, ref_method, lwk
-   integer :: a_n1_new, a_n2_new, a_weight_1_new, a_weight_2_new, &
-      a_weight_sep_new
-   logical :: imbal
-   real(wp) :: tau, balance_tol, tau_best
+   integer :: partition_ptr, work_ptr, a_ne, clwork
+   integer :: i, j, k, l, a_weight_1, a_weight_2, a_weight_sep, lwk
    integer :: st
 
    info = 0
@@ -355,171 +351,12 @@ recursive subroutine multilevel(grid, options, sumweight, mglevel_cur, &
    end do
    a_ne = grid%graph%ptr(grid%graph%n+1) - 1
 
-   if (a_weight_sep.gt.0) then
-      ! Do not refine if separable graph
-
-      if (options%refinement.gt.6) then
-         ref_options = 3
-      else
-         if (options%refinement.lt.1) then
-            ref_options = 1
-         else
-            ref_options = options%refinement
-         end if
-      end if
-
-      select case (ref_options)
-      case (1)
-         ref_method = 1
-      case (2)
-         ref_method = 2
-      case (3)
-         if (real(max(a_weight_1,a_weight_2))/real(min(a_weight_1, &
-               a_weight_2)+a_weight_sep).gt.max(real(1.0, &
-               wp),options%balance)) then
-            ref_method = 2
-         else
-            ref_method = 1
-         end if
-      case (4)
-         ref_method = 0
-      case (5)
-         ref_method = 2
-      case (6)
-         if (real(max(a_weight_1,a_weight_2))/real(min(a_weight_1, &
-               a_weight_2)+a_weight_sep).gt.max(real(1.0, &
-               wp),options%balance)) then
-            ref_method = 2
-         else
-            ref_method = 0
-         end if
-      end select
-
-      select case (ref_method)
-      case (0)
-         call nd_refine_max_flow(grid%graph%n, a_ne, grid%graph%ptr,          &
-            grid%graph%col, grid%row_wgt, grid%part_div(1), grid%part_div(2), &
-            a_weight_1, a_weight_2, a_weight_sep,                             &
-            work(partition_ptr+1:partition_ptr+grid%graph%n),                 &
-            work(work_ptr+1:work_ptr+8), options)
-      case (1)
-         if (min(a_weight_1,a_weight_2)+a_weight_sep .lt. &
-               max(a_weight_1,a_weight_2)) then
-            call nd_refine_block_trim(grid%graph%n, a_ne, grid%graph%ptr,  &
-               grid%graph%col, grid%row_wgt, sumweight, grid%part_div(1),  &
-               grid%part_div(2), a_weight_1, a_weight_2, a_weight_sep,     &
-               work(partition_ptr+1:partition_ptr+grid%graph%n),           &
-               work(work_ptr+1:work_ptr+5*grid%graph%n),options)
-         else
-            call nd_refine_trim(grid%graph%n, a_ne, grid%graph%ptr,        &
-               grid%graph%col, grid%row_wgt, sumweight, grid%part_div(1),  &
-               grid%part_div(2), a_weight_1, a_weight_2, a_weight_sep,     &
-               work(partition_ptr+1:partition_ptr+grid%graph%n),           &
-               work(work_ptr+1:work_ptr+3*grid%graph%n), options)
-         end if
-      case (2)
-         call nd_refine_edge(grid%graph%n, a_ne, grid%graph%ptr,        &
-            grid%graph%col, grid%row_wgt, sumweight, grid%part_div(1),  &
-            grid%part_div(2), a_weight_1, a_weight_2, a_weight_sep,     &
-            work(partition_ptr+1:partition_ptr+grid%graph%n),           &
-            work(work_ptr+1:work_ptr+3*grid%graph%n), options)
-      end select
-
-      if (options%max_improve_cycles.gt.0) then
-         balance_tol = max(1.0_wp, options%balance)
-         imbal = (balance_tol.le.real(sumweight-2))
-         call cost_function(a_weight_1, a_weight_2, a_weight_sep, sumweight, &
-            balance_tol, imbal, options%cost_function, tau_best)
-         a_n1_new = grid%part_div(1)
-         a_n2_new = grid%part_div(2)
-         a_weight_1_new = a_weight_1
-         a_weight_2_new = a_weight_2
-         a_weight_sep_new = a_weight_sep
-      end if
-
-      part_ptr = work_ptr + 5*grid%graph%n
-      work(part_ptr+1:part_ptr+grid%graph%n) = &
-         work(partition_ptr+1:partition_ptr+grid%graph%n)
-
-      k = options%max_improve_cycles
-      do i = 1, k
-         call expand_partition(grid%graph%n, a_ne,grid%graph%ptr,             &
-            grid%graph%col, grid%row_wgt, a_n1_new, a_n2_new, a_weight_1_new, &
-            a_weight_2_new, a_weight_sep_new,                                 &
-            work(part_ptr+1:part_ptr+grid%graph%n),                           &
-            work(work_ptr+1:work_ptr+5*grid%graph%n) )
-
-         select case (ref_options)
-         case (3)
-            if (real(max(a_weight_1_new,a_weight_2_new))/real(min( &
-                  a_weight_1_new,a_weight_2_new)+a_weight_sep_new).gt. &
-                  max(1.0_wp,options%balance)) then
-               ref_method = 2
-            else
-               ref_method = 1
-            end if
-         case (6)
-            if (real(max(a_weight_1_new,a_weight_2_new))/real(min( &
-                  a_weight_1_new,a_weight_2_new)+a_weight_sep_new).gt. &
-                  max(1.0_wp,options%balance)) then
-               ref_method = 2
-            else
-               ref_method = 0
-            end if
-         end select
-
-         select case (ref_method)
-         case (0)
-            call nd_refine_max_flow(grid%graph%n, a_ne, grid%graph%ptr, &
-               grid%graph%col, grid%row_wgt, a_n1_new, a_n2_new,        &
-               a_weight_1_new, a_weight_2_new, a_weight_sep_new,        &
-               work(part_ptr+1:part_ptr+grid%graph%n),                  &
-               work(work_ptr+1:work_ptr+8), options)
-
-         case (1)
-            if (min(a_weight_1,a_weight_2)+a_weight_sep.lt. &
-                  max(a_weight_1,a_weight_2)) then
-               call nd_refine_block_trim(grid%graph%n, a_ne,                  &
-                  grid%graph%ptr, grid%graph%col, grid%row_wgt, sumweight,    &
-                  a_n1_new, a_n2_new, a_weight_1_new, a_weight_2_new,         &
-                  a_weight_sep_new, work(part_ptr+1:part_ptr+grid%graph%n),   &
-                  work(work_ptr+1:work_ptr+5*grid%graph%n), options)
-            else
-               call nd_refine_trim(grid%graph%n, a_ne, grid%graph%ptr,         &
-                  grid%graph%col, grid%row_wgt, sumweight, a_n1_new, a_n2_new, &
-                  a_weight_1_new, a_weight_2_new, a_weight_sep_new,            &
-                  work(part_ptr+1:part_ptr+grid%graph%n),                      &
-                  work(work_ptr+1:work_ptr+3*grid%graph%n), options)
-            end if
-         case (2)
-            call nd_refine_edge(grid%graph%n, a_ne, grid%graph%ptr,           &
-               grid%graph%col, grid%row_wgt, sumweight, a_n1_new, a_n2_new,   &
-               a_weight_1_new, a_weight_2_new, a_weight_sep_new,              &
-               work(part_ptr+1:part_ptr+grid%graph%n),                        &
-               work(work_ptr+1:work_ptr+3*grid%graph%n), options)
-         end select
-
-         call cost_function(a_weight_1_new, a_weight_2_new, a_weight_sep_new, &
-            sumweight, balance_tol, imbal, options%cost_function, tau)
-         if (tau.lt.tau_best) then
-            tau_best = tau
-            work(partition_ptr+1:partition_ptr+grid%graph%n) &
-               = work(part_ptr+1:part_ptr+grid%graph%n)
-            grid%part_div(1) = a_n1_new
-            grid%part_div(2) = a_n2_new
-            a_weight_1 = a_weight_1_new
-            a_weight_2 = a_weight_2_new
-            a_weight_sep = a_weight_sep_new
-         else
-            exit
-         end if
-      end do
-
-      call nd_refine_fm(grid%graph%n, a_ne, grid%graph%ptr,          &
-         grid%graph%col, grid%row_wgt, sumweight, grid%part_div(1),  &
-         grid%part_div(2), a_weight_1, a_weight_2, a_weight_sep,     &
-         work(partition_ptr+1:partition_ptr+grid%graph%n),           &
-         work(work_ptr+1:work_ptr+8*grid%graph%n+sumweight), options)
+   if (a_weight_sep.gt.0) then ! Do not refine if separable graph
+      call refine_partition(grid%graph%n, a_ne, grid%graph%ptr, &
+         grid%graph%col, grid%row_wgt, sumweight, grid%part_div(1), &
+         grid%part_div(2), work(partition_ptr+1:partition_ptr+grid%graph%n), &
+         a_weight_1, a_weight_2, a_weight_sep, options, &
+         work(work_ptr+1:work_ptr+8*grid%graph%n+sumweight) )
    end if
 
    do i = 1, grid%part_div(1)
