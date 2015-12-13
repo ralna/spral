@@ -5,10 +5,219 @@ module spral_nd_refine
    implicit none
 
    private
-   public :: nd_refine_edge, nd_refine_fm, nd_refine_trim, expand_partition, &
+   public :: refine_partition, nd_refine_edge, nd_refine_fm, nd_refine_trim, expand_partition, &
       nd_refine_block_trim
 
 contains
+
+!
+! Refines the current partition (seemingly in place to the caller)
+!
+subroutine refine_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight,   &
+      a_n1, a_n2, partition, a_weight_1, a_weight_2, a_weight_sep, options, &
+      work)
+   integer, intent(in) :: a_n
+   integer, intent(in) :: a_ne
+   integer, dimension(a_n), intent(in) :: a_ptr
+   integer, dimension(a_ne), intent(in) :: a_row
+   integer, dimension(a_n), intent(in) :: a_weight
+   integer, intent(in) :: sumweight
+   integer, intent(inout) :: a_n1
+   integer, intent(inout) :: a_n2
+   integer, dimension(a_n), intent(inout) :: partition
+   integer, intent(inout) :: a_weight_1
+   integer, intent(inout) :: a_weight_2
+   integer, intent(inout) :: a_weight_sep
+   type(nd_options), intent(in) :: options
+   integer, dimension(9*a_n+sumweight), target, intent(out) :: work
+
+   integer :: i, k
+   integer :: a_n1_new, a_n2_new
+   integer, dimension(:), pointer :: partition2
+   integer :: a_weight_1_new, a_weight_2_new, a_weight_sep_new
+   integer :: work_ptr
+   integer :: ref_options, ref_method
+   logical :: imbal
+   real(wp) :: balance, balance_tol
+   real(wp) :: tau, tau_best
+
+   ! Internal options on what to do
+   integer, parameter :: REFINE_MAXFLOW   = 0, &
+                         REFINE_TRIM      = 1, &
+                         REFINE_EDGE      = 2
+
+   balance_tol = max(1.0_wp, options%balance)
+   imbal = (balance_tol.le.real(sumweight-2))
+
+   work_ptr = 0
+   partition2 => work(work_ptr+1:work_ptr+a_n); work_ptr = work_ptr + a_n
+
+   select case(options%refinement)
+   case(:ND_REFINE_TRIM_FM_BOTH)
+      ref_options = ND_REFINE_TRIM_FM_BOTH
+   case(ND_REFINE_AUTO:)
+      ref_options = ND_REFINE_TRIM_FM_AUTO
+   case default
+      ref_options = options%refinement
+   end select
+
+   select case (ref_options)
+   case (ND_REFINE_TRIM_FM_BOTH)
+      ref_method = REFINE_TRIM
+   case (ND_REFINE_TRIM_FM_SMALLER)
+      ref_method = REFINE_EDGE
+   case (ND_REFINE_TRIM_FM_AUTO)
+      balance = max(a_weight_1,a_weight_2) / &
+         real(min(a_weight_1,a_weight_2)+a_weight_sep)
+      if (balance.ge.balance_tol) then
+         ref_method = REFINE_EDGE
+      else
+         ref_method = REFINE_TRIM
+      end if
+   case (ND_REFINE_MAXFLOW_BOTH)
+      ref_method = REFINE_MAXFLOW
+   case (ND_REFINE_MAXFLOW_SMALLER)
+      ref_method = REFINE_EDGE
+   case (ND_REFINE_MAXFLOW_AUTO)
+      balance = max(a_weight_1,a_weight_2) / &
+         real(min(a_weight_1,a_weight_2)+a_weight_sep)
+      if (balance.ge.balance_tol) then
+         ref_method = REFINE_EDGE
+      else
+         ref_method = REFINE_MAXFLOW
+      end if
+   end select
+   if (options%print_level.ge.2 .and. options%unit_diagnostics.gt.0) then
+      write (options%unit_diagnostics,'(a)') 'Partition before refinement'
+      write (options%unit_diagnostics,'(a,i10,a,i10,a,i10)') &
+         'a_n1=', a_n1, ',  a_n2=', a_n2, ',  a_n_sep=', a_n - a_n1 - a_n2
+   end if
+
+   select case (ref_method)
+   case (REFINE_MAXFLOW)
+      call nd_refine_max_flow(a_n, a_ne, a_ptr, a_row, a_weight, a_n1,  &
+         a_n2, a_weight_1, a_weight_2, a_weight_sep, partition,         &
+         work(work_ptr+1:work_ptr+8), options)
+   case (REFINE_TRIM)
+      if (min(a_weight_1,a_weight_2)+a_weight_sep.lt. &
+            max(a_weight_1,a_weight_2)) then
+         call nd_refine_block_trim(a_n, a_ne, a_ptr, a_row, a_weight,    &
+            sumweight, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, &
+            partition, work(work_ptr+1:work_ptr+5*a_n),options)
+      else
+         call nd_refine_trim(a_n, a_ne, a_ptr, a_row, a_weight,          &
+            sumweight, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, &
+            partition, work(work_ptr+1:work_ptr+3*a_n), options)
+      end if
+   case (REFINE_EDGE)
+      call nd_refine_edge(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
+         a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep,              &
+         partition, work(work_ptr+1:work_ptr+3*a_n), options)
+   end select
+
+   if (options%print_level.ge.2 .and. options%unit_diagnostics.gt.0) then
+      write (options%unit_diagnostics,'(a)') 'Partition after refinement'
+      write (options%unit_diagnostics,'(a,i10,a,i10,a,i10)') &
+         'a_n1=', a_n1, ',  a_n2=', a_n2, ',  a_n_sep=', a_n - a_n1 - a_n2
+   end if
+
+   if (options%max_improve_cycles.gt.0) then
+      call cost_function(a_weight_1, a_weight_2, a_weight_sep, sumweight,&
+         balance_tol, imbal, options%cost_function, tau_best)
+      a_n1_new = a_n1
+      a_n2_new = a_n2
+      a_weight_1_new = a_weight_1
+      a_weight_2_new = a_weight_2
+      a_weight_sep_new = a_weight_sep
+   end if
+
+   partition2(:) = partition(:)
+
+   k = options%max_improve_cycles
+   do i = 1, k
+      call expand_partition(a_n, a_ne, a_ptr, a_row, a_weight, a_n1_new, &
+         a_n2_new, a_weight_1_new, a_weight_2_new, a_weight_sep_new,     &
+         partition2, work(work_ptr+1:work_ptr+5*a_n))
+
+      if (options%print_level.ge.2 .and. options%unit_diagnostics.gt.0) then
+         write (options%unit_diagnostics,'(a)') &
+            'Partition sizes after expansion'
+         write (options%unit_diagnostics,'(a,i10,a,i10,a,i10)') &
+            'a_n1=', a_n1_new, ',  a_n2=', a_n2_new, &
+            ',  a_n_sep=', a_n - a_n1_new - a_n2_new
+      end if
+
+      select case (ref_options)
+      case (ND_REFINE_TRIM_FM_AUTO)
+         balance = max(a_weight_1_new,a_weight_2_new) / &
+            real(min(a_weight_1_new,a_weight_2_new)+a_weight_sep_new)
+         if (balance.gt.balance_tol) then
+            ref_method = REFINE_EDGE
+         else
+            ref_method = REFINE_TRIM
+         end if
+      case (ND_REFINE_MAXFLOW_AUTO)
+         balance = max(a_weight_1_new,a_weight_2_new) / &
+            real(min(a_weight_1_new,a_weight_2_new)+a_weight_sep_new)
+         if (balance.gt.balance_tol) then
+            ref_method = REFINE_EDGE
+         else
+            ref_method = REFINE_MAXFLOW
+         end if
+      end select
+
+      select case (ref_method)
+      case (REFINE_MAXFLOW)
+         call nd_refine_max_flow(a_n, a_ne, a_ptr, a_row, a_weight,     &
+            a_n1_new, a_n2_new, a_weight_1_new, a_weight_2_new,         &
+            a_weight_sep_new, partition2, work(work_ptr+1:work_ptr+8),  &
+            options)
+      case (REFINE_TRIM)
+         if (min(a_weight_1,a_weight_2)+a_weight_sep.lt. &
+               max(a_weight_1,a_weight_2)) then
+            call nd_refine_block_trim(a_n, a_ne, a_ptr, a_row, a_weight, &
+               sumweight, a_n1_new, a_n2_new, a_weight_1_new,            &
+               a_weight_2_new, a_weight_sep_new, partition2,             &
+               work(work_ptr+1:work_ptr+5*a_n), options)
+         else
+            call nd_refine_trim(a_n, a_ne, a_ptr, a_row, a_weight,       &
+               sumweight, a_n1_new, a_n2_new, a_weight_1_new,            &
+               a_weight_2_new, a_weight_sep_new,                         &
+               partition2, work(work_ptr+1:work_ptr+3*a_n), options)
+         end if
+      case (REFINE_EDGE)
+         call nd_refine_edge(a_n, a_ne, a_ptr, a_row, a_weight,   &
+            sumweight, a_n1_new, a_n2_new, a_weight_1_new,        &
+            a_weight_2_new, a_weight_sep_new, partition2,         &
+            work(work_ptr+1:work_ptr+3*a_n), options)
+      end select
+
+      if (options%print_level.ge.2 .and. options%unit_diagnostics.gt.0) then
+         write (options%unit_diagnostics,'(a)') &
+            'Partition sizes after refinement'
+         write (options%unit_diagnostics,'(a,i10,a,i10,a,i10)') &
+            'a_n1=', a_n1_new, ',  a_n2=', a_n2_new, &
+            ',  a_n_sep=', a_n - a_n1_new - a_n2_new
+      end if
+
+      call cost_function(a_weight_1_new, a_weight_2_new,       &
+         a_weight_sep_new, sumweight, balance_tol, imbal,      &
+         options%cost_function, tau)
+      if (tau.ge.tau_best) exit ! No improvement, stop
+      tau_best = tau
+      partition(:) = partition2(:)
+      a_n1 = a_n1_new
+      a_n2 = a_n2_new
+      a_weight_1 = a_weight_1_new
+      a_weight_2 = a_weight_2_new
+      a_weight_sep = a_weight_sep_new
+   end do
+
+   call nd_refine_fm(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, a_n1, &
+      a_n2, a_weight_1, a_weight_2, a_weight_sep, partition,             &
+      work(work_ptr+1:work_ptr+8*a_n+sumweight), options)
+end subroutine refine_partition
+
 !
 ! Given a partition, refine the partition to improve the (weighted) value
 ! of the cost function. An edge separator is formed between the input
