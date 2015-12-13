@@ -33,7 +33,7 @@ subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
    type (nd_multigrid), intent(inout) :: grid ! the multilevel of graphs 
       ! (matrices)
 
-   integer :: i, j, k, inv1, inv2, ins
+   integer :: i, j, k, inv1, inv2, ins, st
 
    info1 = 0
 
@@ -42,9 +42,10 @@ subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
    !
    ! construct the grid at this level
    !
-   if ( .not. allocated(grid%graph)) allocate (grid%graph)
-   call nd_matrix_construct(grid%graph,a_n,a_n,a_ne,info1)
-   if (info1.lt.0) then
+   if (.not.allocated(grid%graph)) allocate (grid%graph)
+   call nd_matrix_construct(grid%graph,a_n,a_n,a_ne,st)
+   if (st.lt.0) then
+      info1 = ND_ERR_MEMORY_ALLOC
       call nd_print_error(info1, options, ' multilevel_partition')
       return
    end if
@@ -63,14 +64,16 @@ subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
    grid%size = a_n
    grid%level = 1
 
-   call nd_assoc(grid%where, a_n, info1)
-   if (info1.lt.0) then
+   call nd_alloc(grid%where, a_n, st)
+   if (st.lt.0) then
+      info1 = ND_ERR_MEMORY_ALLOC
       call nd_print_error(info1, options, ' multilevel_partition')
       return
    end if
 
-   call nd_assoc(grid%row_wgt, a_n, info1)
+   call nd_alloc(grid%row_wgt, a_n, info1)
    if (info1.lt.0) then
+      info1 = ND_ERR_MEMORY_ALLOC
       call nd_print_error(info1, options, ' multilevel_partition')
       return
    end if
@@ -80,8 +83,9 @@ subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
 
    ! Call main routine: mglevel set to maximum
    call multilevel(grid, options, sumweight, options%stop_coarsening2, lwork, &
-      work, info1)
-   if (info1.ne.0) then
+      work, st)
+   if (st.ne.0) then
+      info1 = ND_ERR_MEMORY_ALLOC
       call nd_print_error(info1, options, ' multilevel_partition')
       return
    end if
@@ -144,7 +148,7 @@ recursive subroutine multilevel(grid, options, sumweight, mglevel_cur, &
    integer, intent(in) :: lwork ! length of work array
       ! (>= 9*grid%graph%n + sumweight)
    integer, intent(out) :: work(lwork) ! work array
-   integer, intent(out) :: info ! Error flag
+   integer, intent(out) :: info ! Stat value
 
    type (nd_multigrid), pointer :: cgrid ! the coarse level grid
    integer :: cnvtx ! number of vertices (rows) in the coarse matrix
@@ -167,6 +171,7 @@ recursive subroutine multilevel(grid, options, sumweight, mglevel_cur, &
       a_weight_sep_new
    logical :: imbal
    real(wp) :: tau, balance_tol, tau_best
+   integer :: st
 
    info = 0
 
@@ -194,24 +199,33 @@ recursive subroutine multilevel(grid, options, sumweight, mglevel_cur, &
    select case(options%matching)
    case(:ND_MATCH_COMMON_NEIGHBOURS)
       lwk = 2*grid%size
-      call coarsen_cn(grid, lwk, work(1:lwk))
+      call coarsen_cn(grid, lwk, work(1:lwk), st)
    case(ND_MATCH_HEAVY)
       lwk = grid%size
-      call coarsen_hec(grid, lwk, work(1:lwk), info)
+      call coarsen_hec(grid, lwk, work(1:lwk), st)
    case(ND_MATCH_BEST:)
       lwk = 3*grid%size
-      call coarsen_best(grid, lwk, work(1:lwk), info)
+      call coarsen_best(grid, lwk, work(1:lwk), st)
    end select
-   if (info.lt.0) return
+   if (st.lt.0) then
+      info = ND_ERR_MEMORY_ALLOC
+      return
+   endif
 
    ! ensure coarse grid quantities are allocated to sufficient size
    cgrid => grid%coarse
    cnvtx = cgrid%size
-   call nd_assoc(cgrid%where, cnvtx, info)
-   if (info.ne.0) return
+   call nd_alloc(cgrid%where, cnvtx, st)
+   if (st.lt.0) then
+      info = ND_ERR_MEMORY_ALLOC
+      return
+   endif
 
-   call nd_assoc(cgrid%row_wgt, cnvtx, info)
-   if (info.ne.0) return
+   call nd_alloc(cgrid%row_wgt, cnvtx, st)
+   if (st.lt.0) then
+      info = ND_ERR_MEMORY_ALLOC
+      return
+   endif
 
    ! see if the grid reduction is achieved, if not, set the allowed
    ! maximum level to current level and partition this level
@@ -247,8 +261,11 @@ recursive subroutine multilevel(grid, options, sumweight, mglevel_cur, &
 
    ! get the coarse matrix
    lwk = 3*grid%size
-   call galerkin_graph(graph,p,r,cgraph,info,lwk,work(1:lwk))
-   if (info.lt.0) return
+   call galerkin_graph(graph,p,r,cgraph,st,lwk,work(1:lwk))
+   if (st.lt.0) then
+      info = ND_ERR_MEMORY_ALLOC
+      return
+   endif
 
    ! check if matrix is full
    if (real(cgrid%graph%ptr(cgrid%graph%n+1)-1)/real(cgrid%graph%n).ge.real &
@@ -269,6 +286,7 @@ recursive subroutine multilevel(grid, options, sumweight, mglevel_cur, &
    clwork = 9*cgrid%graph%n + sumweight
    call multilevel(cgrid, options, sumweight, mglevel_cur, clwork, &
       work(1:clwork), info)
+   if(info.ne.0) return
 
    ! check if partition is returned
    if (cgrid%part_div(1).eq.0 .or. cgrid%part_div(2).eq.0) then
@@ -854,14 +872,14 @@ subroutine multigrid_deallocate_first(grid)
 end subroutine multigrid_deallocate_first
 
 ! ***************************************************************
-subroutine coarsen_hec(grid,lwork,work,info)
+subroutine coarsen_hec(grid,lwork,work,st)
   ! coarsen the grid using heavy-edge collapsing and set up the
   ! coarse grid equation, the prolongator and restrictor
 
   type (nd_multigrid), intent(inout), TARGET :: grid
   integer, intent(in) :: lwork
   integer, intent(out) :: work(lwork)
-  integer, intent(inout) :: info
+  integer, intent(out) :: st
 
 
   if ( .not. associated(grid%coarse)) allocate (grid%coarse)
@@ -869,7 +887,7 @@ subroutine coarsen_hec(grid,lwork,work,info)
   grid%coarse%fine => grid
 
   ! find the prolongator
-  call prolng_heavy_edge(grid,lwork,work,info)
+  call prolng_heavy_edge(grid,lwork,work,st)
 
 
   grid%coarse%level = grid%level + 1
@@ -878,7 +896,7 @@ end subroutine coarsen_hec
 
 
 ! ***************************************************************
-subroutine coarsen_cn(grid,lwork,work)
+subroutine coarsen_cn(grid,lwork,work,st)
   ! coarsen the grid using common neighbours collapsing and set up the
   ! coarse grid equation, the prolongator and restrictor
 
@@ -886,6 +904,7 @@ subroutine coarsen_cn(grid,lwork,work)
 
   integer, intent(in) :: lwork
   integer, intent(out) :: work(lwork)
+  integer, intent(out) :: st
 
   if ( .not. associated(grid%coarse)) allocate (grid%coarse)
 
@@ -893,18 +912,18 @@ subroutine coarsen_cn(grid,lwork,work)
 
   ! find the prolongator
 
-  call prolng_common_neigh(grid,lwork,work)
+  call prolng_common_neigh(grid,lwork,work,st)
 
   grid%coarse%level = grid%level + 1
 
 end subroutine coarsen_cn
 
 ! ***************************************************************
-subroutine coarsen_best(grid,lwork,work,info)
+subroutine coarsen_best(grid,lwork,work,st)
   ! coarsen the grid using common neighbours collapsing and set up the
   ! coarse grid equation, the prolongator and restrictor
 
-  integer, intent(inout) :: info
+  integer, intent(inout) :: st
   type (nd_multigrid), intent(inout), TARGET :: grid
 
   integer, intent(in) :: lwork
@@ -916,7 +935,7 @@ subroutine coarsen_best(grid,lwork,work,info)
 
   ! find the prolongator
 
-  call prolng_best(grid,lwork,work,info)
+  call prolng_best(grid,lwork,work,st)
 
   grid%coarse%level = grid%level + 1
 
@@ -971,117 +990,68 @@ subroutine nd_matrix_destruct(matrix)
   deallocate (matrix%val, stat=st)
 end subroutine nd_matrix_destruct
 
+!
+! Construct data structure for storing sparse matrix.
+!
+! Arrays in nd_matrix will only be (re)allocated if they are not long
+! enough. On exit,
+! size(p%val) <-  max(ne, size(p%val)
+! size(p%col) <-  max(ne, size(p%col)
+! size(p%ptr) <-  max(m+1, size(p%ptr)
+!
+subroutine nd_matrix_construct(p, m, n, ne, st)
+   type (nd_matrix), intent(inout) :: p
+   integer, intent(in) :: m ! number of rows
+   integer, intent(in) :: n ! number of columns
+   integer, intent(in) :: ne ! number entries
+   integer, intent(out) :: st
 
-! ***************************************************************
+   p%m = m
+   p%n = n
+   p%ne = ne
 
-subroutine nd_matrix_construct(p,m,n,ne,info)
-  ! Construct data structure for storing sparse matrix
-  ! Arrays in nd_matrix will only be (re)allocated if they are not
-  ! long
-  ! enough. On exit,
-  ! size(p%val) <-  max(ne, size(p%val)
-  ! size(p%col) <-  max(ne, size(p%col)
-  ! size(p%ptr) <-  max(m+1, size(p%ptr)
-  type (nd_matrix), intent(inout) :: p ! matrix being formed using
-  ! CSR
-  integer, intent(in) :: m ! number of rows
-  integer, intent(in) :: n ! number of columns
-  integer, intent(in) :: ne ! number entries
-  integer, intent(out) :: info
-
-  info = 0
-
-  p%m = m
-  p%n = n
-  p%ne = ne
-
-  call nd_alloc(p%ptr,m+1,info)
-  if (info.lt.0) then
-    return
-  end if
-
-  call nd_alloc(p%col,ne,info)
-  if (info.lt.0) then
-    return
-  end if
-
-  call nd_alloc(p%val,ne,info)
-  if (info.lt.0) then
-    return
-  end if
-
+   call nd_alloc(p%ptr, m+1, st)
+   if(st.ne.0) return
+   call nd_alloc(p%col, ne, st)
+   if(st.ne.0) return
+   call nd_alloc(p%val, ne, st)
+   if(st.ne.0) return
 end subroutine nd_matrix_construct
 
 ! ***************************************************************
 
-subroutine nd_alloc(v,n,info)
-  integer, intent(inout), allocatable :: v(:)
-  integer, intent(in) :: n
-  integer, intent(out) :: info
+subroutine nd_alloc(v, n, st)
+   integer, intent(inout), allocatable :: v(:)
+   integer, intent(in) :: n
+   integer, intent(out) :: st
 
-  integer :: st
+   st = 0 ! By default no allocation error
 
-  info = 0
+   ! Check for immediate return if array already correct size
+   if (allocated(v)) then
+      if(size(v).ge.n) return
+   endif
 
-  if (allocateD(v)) then
-    if (SIZE(v).lt.n) then
-      deallocate (v,stat=st)
-      if (st.lt.0) then
-        info = ND_ERR_MEMORY_ALLOC
-        return
-      end if
-    else
-      return
-    end if
-  end if
-
-  allocate (v(n),stat=st)
-  if (st.lt.0) then
-    info = ND_ERR_MEMORY_DEALLOC
-  end if
-
-
+   ! Otherwise, ensure deallocated (ignore any error)
+   deallocate (v, stat=st)
+   
+   ! Allocate to correct size (caller should handle any error)
+   allocate (v(n), stat=st)
 end subroutine nd_alloc
 
 
 ! ********************************************************
 
-!
-! If array has size at least sz, do nothing. Otherwise, create/resize array
-! arr of size sz.
-!
-subroutine nd_assoc(array,sz,info)
-   integer, allocatable, dimension(:), intent(inout) :: array
-   integer, intent(in) :: sz
-   integer, intent(out) :: info
-
-   integer :: st
-
-   info = 0
-
-   if (allocated(array)) then
-     if(size(array).ge.sz) return ! All is well, immediate return
-     ! Otherwise deallocate
-     deallocate (array)
-   endif
-
-   ! If we reach thsi point, arr is now deallocated: allocate to correct size
-   allocate (array(sz),stat=st)
-   if (st.ne.0) info = ND_ERR_MEMORY_ALLOC
-
-end subroutine nd_assoc
-
-! ********************************************
-subroutine prolng_heavy_edge(grid,lwork,work,info)
+subroutine prolng_heavy_edge(grid,lwork,work,st)
 
   ! calculate the prolongator for heavy-edge collapsing:
   ! match the vertices of the heaviest edges
 
-  integer, intent(inout) :: info
   ! input fine grid
   type (nd_multigrid), target, intent(inout) :: grid
   integer, intent(in) :: lwork
   integer, intent(out) :: work(lwork)
+  integer, intent(out) :: st
 
   ! coarse grid based on the fine grid
   type (nd_multigrid), pointer :: cgrid
@@ -1152,7 +1122,7 @@ subroutine prolng_heavy_edge(grid,lwork,work,info)
         maxind = u
       end if
     end do
-    ! notE: maxind .ge. v
+    ! NOTE: maxind .ge. v
     ! the neighbor with heaviest weight
     work(ptr_match+v) = maxind
     ! mark maxind as having been matched
@@ -1170,26 +1140,18 @@ subroutine prolng_heavy_edge(grid,lwork,work,info)
 
   ! storage allocation for col. indices and values of prolongation
   ! matrix P (nvtx * cnvtx)
-  if ( .not. allocated(cgrid%p)) then
-    allocate (cgrid%p)
-    p => cgrid%p
-    call nd_matrix_construct(p,nvtx,cnvtx,nz,info)
-  else
-    p => cgrid%p
-    call nd_matrix_construct(p,nvtx,cnvtx,nz,info)
-  end if
+  if ( .not. allocated(cgrid%p)) allocate (cgrid%p)
+  p => cgrid%p
+  call nd_matrix_construct(p,nvtx,cnvtx,nz,st)
+  if(st.ne.0) return
 
 
   ! storage allocation for col. indices and values of restiction
   ! matrix R (cnvtx * nvtx)
-  if ( .not. allocated(cgrid%r)) then
-    allocate (cgrid%r)
-    r => cgrid%r
-    call nd_matrix_construct(r,cnvtx,nvtx,nz,info)
-  else
-    r => cgrid%r
-    call nd_matrix_construct(r,cnvtx,nvtx,nz,info)
-  end if
+  if ( .not. allocated(cgrid%r)) allocate (cgrid%r)
+  r => cgrid%r
+  call nd_matrix_construct(r,cnvtx,nvtx,nz,st)
+  if(st.ne.0) return
 
   r%val(1:nz) = 1
 
@@ -1246,7 +1208,7 @@ end subroutine prolng_heavy_edge
 
 ! *******************************************************************
 
-subroutine prolng_common_neigh(grid,lwork,work)
+subroutine prolng_common_neigh(grid,lwork,work,st)
 
   ! calculate the prolongator:
   ! match the vertices of with most neighbours in common
@@ -1255,6 +1217,7 @@ subroutine prolng_common_neigh(grid,lwork,work)
   integer, intent(in) :: lwork
   integer, intent(out) :: work(lwork)
   type (nd_multigrid), target, intent(inout) :: grid
+  integer, intent(out) :: st
 
   ! coarse grid based on the fine grid
   type (nd_multigrid), pointer :: cgrid
@@ -1286,7 +1249,6 @@ subroutine prolng_common_neigh(grid,lwork,work)
   ! vertex
   integer :: max_neigh, maxind, num
 
-  integer :: info
   integer :: nz
 
   ! allocate the prolongation matrix pointers
@@ -1363,26 +1325,18 @@ subroutine prolng_common_neigh(grid,lwork,work)
 
   ! storage allocation for col. indices and values of prolongation
   ! matrix P (order nvtx * cnvtx)
-  if ( .not. allocated(cgrid%p)) then
-    allocate (cgrid%p)
-    p => cgrid%p
-    call nd_matrix_construct(p,nvtx,cnvtx,nz,info)
-  else
-    p => cgrid%p
-    call nd_matrix_construct(p,nvtx,cnvtx,nz,info)
-  end if
+  if ( .not. allocated(cgrid%p)) allocate (cgrid%p)
+  p => cgrid%p
+  call nd_matrix_construct(p,nvtx,cnvtx,nz,st)
+  if(st.ne.0) return
   p%val(1:nz) = 0
 
   ! storage allocation for col. indices and values of restiction
   ! matrix R (cnvtx * nvtx)
-  if ( .not. allocated(cgrid%r)) then
-    allocate (cgrid%r)
-    r => cgrid%r
-    call nd_matrix_construct(r,cnvtx,nvtx,nz,info)
-  else
-    r => cgrid%r
-    call nd_matrix_construct(r,cnvtx,nvtx,nz,info)
-  end if
+  if ( .not. allocated(cgrid%r)) allocate (cgrid%r)
+  r => cgrid%r
+  call nd_matrix_construct(r,cnvtx,nvtx,nz,st)
+  if(st.ne.0) return
 
   r%val(1:nz) = 1
 
@@ -1440,16 +1394,16 @@ subroutine prolng_common_neigh(grid,lwork,work)
 end subroutine prolng_common_neigh
 
 ! ********************************************
-subroutine prolng_best(grid,lwork,work,info)
+subroutine prolng_best(grid,lwork,work,st)
 
   ! calculate the prolongator for heavy-edge collapsing:
   ! match the vertices of the heaviest edges
 
-  integer, intent(inout) :: info
   ! input fine grid
   type (nd_multigrid), target, intent(inout) :: grid
   integer, intent(in) :: lwork
   integer, intent(out), TARGET :: work(lwork)
+  integer, intent(out) :: st
 
   ! coarse grid based on the fine grid
   type (nd_multigrid), pointer :: cgrid
@@ -1524,7 +1478,7 @@ subroutine prolng_best(grid,lwork,work,info)
         maxind = u
       end if
     end do
-    ! notE: maxind .ge. v
+    ! NOTE: maxind .ge. v
     ! the neighbor with heaviest weight
     work(ptr_match+v) = maxind
     ! mark maxind as having been matched
@@ -1614,26 +1568,17 @@ subroutine prolng_best(grid,lwork,work,info)
 
   ! storage allocation for col. indices and values of prolongation
   ! matrix P (nvtx * cnvtx)
-  if ( .not. allocated(cgrid%p)) then
-    allocate (cgrid%p)
-    p => cgrid%p
-    call nd_matrix_construct(p,nvtx,cnvtx,nz,info)
-  else
-    p => cgrid%p
-    call nd_matrix_construct(p,nvtx,cnvtx,nz,info)
-  end if
-
+  if ( .not. allocated(cgrid%p)) allocate (cgrid%p)
+  p => cgrid%p
+  call nd_matrix_construct(p,nvtx,cnvtx,nz,st)
+  if(st.ne.0) return
 
   ! storage allocation for col. indices and values of restiction
   ! matrix R (cnvtx * nvtx)
-  if ( .not. allocated(cgrid%r)) then
-    allocate (cgrid%r)
-    r => cgrid%r
-    call nd_matrix_construct(r,cnvtx,nvtx,nz,info)
-  else
-    r => cgrid%r
-    call nd_matrix_construct(r,cnvtx,nvtx,nz,info)
-  end if
+  if ( .not. allocated(cgrid%r)) allocate (cgrid%r)
+  r => cgrid%r
+  call nd_matrix_construct(r,cnvtx,nvtx,nz,st)
+  if(st.ne.0) return
 
   r%val(1:nz) = 1
 
@@ -1713,7 +1658,7 @@ end subroutine level_print
 
 
 ! *************************************************
-subroutine galerkin_graph(matrix,p,r,cmatrix,info,lwork,work)
+subroutine galerkin_graph(matrix,p,r,cmatrix,st,lwork,work)
 
   ! Given matrix on fine grid and a prolongation operator p,
   ! find the coarse matrix R*A*P
@@ -1733,7 +1678,7 @@ subroutine galerkin_graph(matrix,p,r,cmatrix,info,lwork,work)
   integer :: nvtx, cnvtx
   integer :: nz
 
-  integer, intent(inout) :: info
+  integer, intent(inout) :: st
 
   ! call mc65_matrix_transpose(p,r,info65)
   ! if (info65.lt.0) then
@@ -1747,18 +1692,14 @@ subroutine galerkin_graph(matrix,p,r,cmatrix,info,lwork,work)
   call galerkin_graph_rap_size(nvtx,cnvtx,nz,p%ptr(nvtx+1)-1,p%col, &
     p%ptr,matrix%ptr(nvtx+1)-1,matrix%col,matrix%ptr,r%ptr(cnvtx+1)-1, &
     r%col,r%ptr,lwork,work(1:lwork))
-  if (info.lt.0) return
 
-  call nd_matrix_construct(cmatrix,cnvtx,cnvtx,nz,info)
-  if (info.lt.0) then
-    return
-  end if
+  call nd_matrix_construct(cmatrix,cnvtx,cnvtx,nz,st)
+  if(st.ne.0) return
 
   call galerkin_graph_rap(nvtx,cnvtx,p%ptr(nvtx+1)-1,p%val,p%col,p%ptr, &
     matrix%ptr(nvtx+1)-1,matrix%val,matrix%col,matrix%ptr, &
     r%ptr(cnvtx+1)-1,r%val,r%col,r%ptr,nz,cmatrix%val,cmatrix%col, &
     cmatrix%ptr,lwork,work(1:lwork))
-  if (info.lt.0) return
 
 end subroutine galerkin_graph
 
