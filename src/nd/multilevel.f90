@@ -42,7 +42,13 @@ subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
    !
    ! construct the grid at this level
    !
-   if (.not.allocated(grid%graph)) allocate (grid%graph)
+   st = 0
+   if (.not.allocated(grid%graph)) allocate (grid%graph, stat=st)
+   if (st.ne.0) then
+      info1 = ND_ERR_MEMORY_ALLOC
+      call nd_print_error(info1, options, ' multilevel_partition')
+      return
+   end if
    call nd_matrix_construct(grid%graph,a_n,a_n,a_ne,st)
    if (st.lt.0) then
       info1 = ND_ERR_MEMORY_ALLOC
@@ -881,8 +887,9 @@ subroutine coarsen_hec(grid,lwork,work,st)
   integer, intent(out) :: work(lwork)
   integer, intent(out) :: st
 
-
-  if ( .not. associated(grid%coarse)) allocate (grid%coarse)
+  st = 0
+  if (.not.associated(grid%coarse)) allocate (grid%coarse, stat=st)
+  if(st.ne.0) return
 
   grid%coarse%fine => grid
 
@@ -906,7 +913,9 @@ subroutine coarsen_cn(grid,lwork,work,st)
   integer, intent(out) :: work(lwork)
   integer, intent(out) :: st
 
-  if ( .not. associated(grid%coarse)) allocate (grid%coarse)
+  st = 0
+  if (.not.associated(grid%coarse)) allocate (grid%coarse, stat=st)
+  if(st.ne.0) return
 
   grid%coarse%fine => grid
 
@@ -929,7 +938,9 @@ subroutine coarsen_best(grid,lwork,work,st)
   integer, intent(in) :: lwork
   integer, intent(out) :: work(lwork)
 
-  if ( .not. associated(grid%coarse)) allocate (grid%coarse)
+  st = 0
+  if ( .not. associated(grid%coarse)) allocate (grid%coarse, stat=st)
+  if(st.ne.0) return
 
   grid%coarse%fine => grid
 
@@ -1087,8 +1098,10 @@ subroutine prolng_heavy_edge(grid,lwork,work,st)
   graph => grid%graph
 
   ! allocate the graph and matrix pointer and the mincut pointer
-  ! so that everything is defined
-  if ( .not. allocated(cgrid%graph)) allocate (cgrid%graph)
+  ! so that everything is defined 
+  st = 0
+  if (.not.allocated(cgrid%graph)) allocate (cgrid%graph, stat=st)
+  if (st.ne.0) return
 
   nvtx = graph%n
 
@@ -1140,7 +1153,8 @@ subroutine prolng_heavy_edge(grid,lwork,work,st)
 
   ! storage allocation for col. indices and values of prolongation
   ! matrix P (nvtx * cnvtx)
-  if ( .not. allocated(cgrid%p)) allocate (cgrid%p)
+  if (.not.allocated(cgrid%p)) allocate (cgrid%p, stat=st)
+  if (st.ne.0) return
   p => cgrid%p
   call nd_matrix_construct(p,nvtx,cnvtx,nz,st)
   if(st.ne.0) return
@@ -1148,7 +1162,8 @@ subroutine prolng_heavy_edge(grid,lwork,work,st)
 
   ! storage allocation for col. indices and values of restiction
   ! matrix R (cnvtx * nvtx)
-  if ( .not. allocated(cgrid%r)) allocate (cgrid%r)
+  if (.not.allocated(cgrid%r)) allocate (cgrid%r, stat=st)
+  if (st.ne.0) return
   r => cgrid%r
   call nd_matrix_construct(r,cnvtx,nvtx,nz,st)
   if(st.ne.0) return
@@ -1257,7 +1272,9 @@ subroutine prolng_common_neigh(grid,lwork,work,st)
 
   ! allocate the graph and matrix pointer and the mincut pointer
   ! so that everything is defined
-  if ( .not. allocated(cgrid%graph)) allocate (cgrid%graph)
+  st = 0
+  if (.not.allocated(cgrid%graph)) allocate (cgrid%graph, stat=st)
+  if (st.ne.0) return
 
   nvtx = graph%n
 
@@ -1325,7 +1342,8 @@ subroutine prolng_common_neigh(grid,lwork,work,st)
 
   ! storage allocation for col. indices and values of prolongation
   ! matrix P (order nvtx * cnvtx)
-  if ( .not. allocated(cgrid%p)) allocate (cgrid%p)
+  if ( .not. allocated(cgrid%p)) allocate (cgrid%p, stat=st)
+  if (st.ne.0) return
   p => cgrid%p
   call nd_matrix_construct(p,nvtx,cnvtx,nz,st)
   if(st.ne.0) return
@@ -1333,7 +1351,8 @@ subroutine prolng_common_neigh(grid,lwork,work,st)
 
   ! storage allocation for col. indices and values of restiction
   ! matrix R (cnvtx * nvtx)
-  if ( .not. allocated(cgrid%r)) allocate (cgrid%r)
+  if ( .not. allocated(cgrid%r)) allocate (cgrid%r, stat=st)
+  if (st.ne.0) return
   r => cgrid%r
   call nd_matrix_construct(r,cnvtx,nvtx,nz,st)
   if(st.ne.0) return
@@ -1442,7 +1461,9 @@ subroutine prolng_best(grid,lwork,work,st)
 
   ! allocate the graph and matrix pointer and the mincut pointer
   ! so that everything is defined
-  if ( .not. allocated(cgrid%graph)) allocate (cgrid%graph)
+  st = 0
+  if (.not.allocated(cgrid%graph)) allocate (cgrid%graph, stat=st)
+  if (st.ne.0) return
 
   nvtx = graph%n
 
@@ -1568,14 +1589,16 @@ subroutine prolng_best(grid,lwork,work,st)
 
   ! storage allocation for col. indices and values of prolongation
   ! matrix P (nvtx * cnvtx)
-  if ( .not. allocated(cgrid%p)) allocate (cgrid%p)
+  if ( .not. allocated(cgrid%p)) allocate (cgrid%p, stat=st)
+  if (st.ne.0) return
   p => cgrid%p
   call nd_matrix_construct(p,nvtx,cnvtx,nz,st)
   if(st.ne.0) return
 
   ! storage allocation for col. indices and values of restiction
   ! matrix R (cnvtx * nvtx)
-  if ( .not. allocated(cgrid%r)) allocate (cgrid%r)
+  if ( .not. allocated(cgrid%r)) allocate (cgrid%r, stat=st)
+  if (st.ne.0) return
   r => cgrid%r
   call nd_matrix_construct(r,cnvtx,nvtx,nz,st)
   if(st.ne.0) return
