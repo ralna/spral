@@ -34,15 +34,9 @@ subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
       ! (matrices)
 
    integer :: i, j, k, inv1, inv2, ins
-   integer :: mp
    integer :: mglevel_cur ! current level
-   integer :: print_level ! printing
 
    info1 = 0
-   ! Set up printing
-   print_level = max( min(options%print_level+1, 3), 0 )
-   mp = options%unit_diagnostics
-   if (mp.lt.0) print_level = 0
 
    call nd_print_diagnostic(1, options, 'Start multilevel_partition:')
 
@@ -88,8 +82,7 @@ subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
    ! initialise mglevel_cur to the maximum number of levels
    ! allowed for this bisection
    mglevel_cur = options%stop_coarsening2
-   call multilevel(grid, options, sumweight, mglevel_cur, &
-      options%unit_diagnostics, print_level, lwork, work, info1)
+   call multilevel(grid, options, sumweight, mglevel_cur, lwork, work, info1)
    if (info1.ne.0) then
       call nd_print_error(info1, options, ' multilevel_partition')
       return
@@ -143,14 +136,13 @@ end subroutine multilevel_partition
 ! set for coarsening. We will need to test out to see
 ! which is better.
 !
-recursive subroutine multilevel(grid, options, sumweight, mglevel_cur, mp, &
-      print_level, lwork, work, info)
+recursive subroutine multilevel(grid, options, sumweight, mglevel_cur, &
+      lwork, work, info)
    type (nd_multigrid), intent(inout), target :: grid ! this level of matrix
    type (nd_options), intent(in) :: options
    integer, intent(in) :: sumweight ! sum of weights (unchanged between
       ! coarse and fine grid
    integer, intent(inout) :: mglevel_cur ! current grid level
-   integer, intent(in) :: mp, print_level ! diagnostic printing
    integer, intent(in) :: lwork ! length of work array
       ! (>= 9*grid%graph%n + sumweight)
    integer, intent(out) :: work(lwork) ! work array
@@ -180,9 +172,9 @@ recursive subroutine multilevel(grid, options, sumweight, mglevel_cur, mp, &
    info = 0
 
    stop_coarsening1 = max(2,options%stop_coarsening1)
-   if (print_level.ge.2) &
-      call level_print(mp, 'size of grid on level ', grid%level, ' is ', &
-         real(grid%size,wp))
+   if (options%print_level.ge.1 .and. options%unit_diagnostics.gt.0) &
+      call level_print(options%unit_diagnostics, 'size of grid on level ', &
+         grid%level, ' is ', real(grid%size,wp))
 
    grid_rdc_fac_min = max(0.01_wp,options%min_reduction)
    ! max grid reduction factor must be at least half and at most one
@@ -192,7 +184,8 @@ recursive subroutine multilevel(grid, options, sumweight, mglevel_cur, mp, &
    ! Test to see if this is either the last level or
    ! if the matrix size too small
    if (grid%level.ge.mglevel_cur .or. grid%size.le.stop_coarsening1) then
-      if (print_level.ge.2) call level_print(mp, 'end of level ', grid%level)
+      if (options%print_level.ge.1 .and. options%unit_diagnostics.gt.0) &
+         call level_print(options%unit_diagnostics, 'end of level ', grid%level)
 
       ! coarsest level in multilevel so compute separator
       a_ne = grid%graph%ptr(grid%graph%n+1) - 1
@@ -233,18 +226,19 @@ recursive subroutine multilevel(grid, options, sumweight, mglevel_cur, mp, &
    if (  real(cgrid%size)/real(grid%size).gt.grid_rdc_fac_max .or. &
          real(cgrid%size)/real(grid%size).lt.grid_rdc_fac_min .or. &
          cgrid%size.lt.4 ) then
-      if (print_level.ge.2) then
-         write (mp,'(a,i10,a,f12.4,i4)') 'at level ', grid%level, &
+      if (options%print_level.ge.1 .and. options%unit_diagnostics.gt.0) then
+         write (options%unit_diagnostics, '(a,i10,a,f12.4,i4)') &
+            'at level ', grid%level, &
             ' further coarsening gives reduction factor', &
-         cgrid%size/real(grid%size)
-         write (mp,'(a,i10)') 'current size = ', grid%size
-      end if
+            cgrid%size/real(grid%size)
+         write (options%unit_diagnostics,'(a,i10)') &
+            'current size = ', grid%size
+      endif
 
       ! set current grid level and recurse
       mglevel_cur = grid%level
 
-      call multilevel(grid, options, sumweight, mglevel_cur, mp, print_level, &
-         lwork, work, info)
+      call multilevel(grid, options, sumweight, mglevel_cur, lwork, work, info)
       return
    end if
 
@@ -265,39 +259,35 @@ recursive subroutine multilevel(grid, options, sumweight, mglevel_cur, mp, &
    ! check if matrix is full
    if (real(cgrid%graph%ptr(cgrid%graph%n+1)-1)/real(cgrid%graph%n).ge.real &
          (cgrid%graph%n-1)) then
-      if (print_level.ge.2) then
-         write (mp,'(a,i10,a)') 'at level ', grid%level, &
-            ' further coarsening gives full matrix'
-      end if
+      if (options%print_level.ge.1 .and. options%unit_diagnostics.gt.0) &
+         write (options%unit_diagnostics,'(a,i10,a)') &
+            'at level ', grid%level, ' further coarsening gives full matrix'
 
       ! set current grid level and recurse
       mglevel_cur = grid%level - 1
-      call multilevel(grid, options, sumweight, mglevel_cur, mp, print_level, &
-         lwork, work, info)
+      call multilevel(grid, options, sumweight, mglevel_cur, lwork, work, info)
       return
    end if
 
    ! row weight cw = R*w
    row_wgt => grid%row_wgt(1:grid%size)
    crow_wgt => cgrid%row_wgt(1:cgrid%size)
-   call nd_matrix_multiply_vec(r,row_wgt,crow_wgt)
+   call nd_matrix_multiply_vec(r, row_wgt, crow_wgt)
    clwork = 9*cgrid%graph%n + sumweight
-   call multilevel(cgrid, options, sumweight, mglevel_cur, mp, print_level, &
-      clwork, work(1:clwork), info)
+   call multilevel(cgrid, options, sumweight, mglevel_cur, clwork, &
+      work(1:clwork), info)
 
    ! check if partition is returned
    if (cgrid%part_div(1).eq.0 .or. cgrid%part_div(2).eq.0) then
       ! Unlikely to be called because 99.999% of cases caught in full
       ! matrix check above. Follows same procedure as when full matrix found
-      if (print_level.ge.2) then
-         write (mp,'(a,i10,a)') 'at level ', grid%level, &
-            ' no partition found'
-      end if
+      if (options%print_level.ge.1 .and. options%unit_diagnostics.gt.0) &
+         write (options%unit_diagnostics,'(a,i10,a)') &
+            'at level ', grid%level, ' no partition found'
 
       ! set current grid level and recurse
       mglevel_cur = grid%level - 1
-      call multilevel(grid, options, sumweight, mglevel_cur, mp, print_level, &
-         lwork, work, info)
+      call multilevel(grid, options, sumweight, mglevel_cur, lwork, work, info)
       return
    end if
 
@@ -533,9 +523,9 @@ recursive subroutine multilevel(grid, options, sumweight, mglevel_cur, mp, &
 
    if (info.lt.0) return
 
-   if (print_level.eq.3) call level_print(mp,' after post smoothing ', &
-      grid%level)
-
+   if (options%print_level.ge.2 .and. options%unit_diagnostics.gt.0) &
+      call level_print(options%unit_diagnostics, ' after post smoothing ', &
+         grid%level)
 end subroutine multilevel
 
 ! ***************************************************************
