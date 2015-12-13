@@ -235,8 +235,6 @@ recursive subroutine multilevel(grid, options, sumweight, mglevel_cur, &
 
    ! see if the grid reduction is achieved, if not, set the allowed
    ! maximum level to current level and partition this level
-   ! deallocate the coarse grid quantities that haves been allocated so
-   ! far
    reduction = real(cgrid%size) / grid%size
    min_reduction = max( 0.01_wp,options%min_reduction )
    max_reduction = min( 1.0_wp, max(0.5_wp,options%max_reduction) )
@@ -522,7 +520,7 @@ recursive subroutine multilevel(grid, options, sumweight, mglevel_cur, &
          grid%part_div(2), a_weight_1, a_weight_2, a_weight_sep,     &
          work(partition_ptr+1:partition_ptr+grid%graph%n),           &
          work(work_ptr+1:work_ptr+8*grid%graph%n+sumweight), options)
-      end if
+   end if
 
    do i = 1, grid%part_div(1)
       j = work(partition_ptr+i)
