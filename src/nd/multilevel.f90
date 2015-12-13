@@ -36,34 +36,23 @@ subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
    integer :: i, j, k, inv1, inv2, ins
    integer :: mp
    integer :: mglevel_cur ! current level
-   integer :: err, print_level ! printing
-   logical :: lerr
+   integer :: print_level ! printing
 
    info1 = 0
    ! Set up printing
-   if (options%print_level.lt.0) print_level = 0
-   ! The default is options%print_level = 0
-   if (options%print_level.eq.0) print_level = 1
-   if (options%print_level.eq.1) print_level = 2
-   if (options%print_level.gt.1) print_level = 3
+   print_level = max( min(options%print_level+1, 3), 0 )
    mp = options%unit_diagnostics
    if (mp.lt.0) print_level = 0
-   ! Set error optionss
-   lerr = options%unit_error .ge. 0 .and. print_level .gt. 0
-   err = options%unit_error
 
+   call nd_print_diagnostic(1, options, 'Start multilevel_partition:')
 
-   if (print_level.gt.1) then
-      write (mp,'(a)') 'Start multilevel_partition:'
-   end if
-
-   ! construct the multigrid at this level
-
+   !
+   ! construct the grid at this level
+   !
    if ( .not. allocated(grid%graph)) allocate (grid%graph)
-
    call nd_matrix_construct(grid%graph,a_n,a_n,a_ne,info1)
    if (info1.lt.0) then
-      if (lerr) call nd_print_message(info1,err, ' multilevel_partition')
+      call nd_print_error(info1, options, ' multilevel_partition')
       return
    end if
 
@@ -71,29 +60,25 @@ subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
    grid%graph%ptr(a_n+1) = a_ne + 1
    grid%graph%col(1:a_ne) = a_row(1:a_ne)
 
-   do i = 1, a_n - 1
-      do j = a_ptr(i), a_ptr(i+1) - 1
+   do i = 1, a_n
+      do j = a_ptr(i), nd_get_ptr(i+1, a_n, a_ne, a_ptr) - 1
          k = a_row(j)
          grid%graph%val(j) = a_weight(i)*a_weight(k)
       end do
-   end do
-   do j = a_ptr(a_n), a_ne
-      k = a_row(j)
-      grid%graph%val(j) = a_weight(a_n)*a_weight(k)
    end do
 
    grid%size = a_n
    grid%level = 1
 
-   call nd_assoc(grid%where,a_n,info1)
+   call nd_assoc(grid%where, a_n, info1)
    if (info1.lt.0) then
-      if (lerr) call nd_print_message(info1,err,' multilevel_partition')
+      call nd_print_error(info1, options, ' multilevel_partition')
       return
    end if
 
-   call nd_assoc(grid%row_wgt,a_n,info1)
+   call nd_assoc(grid%row_wgt, a_n, info1)
    if (info1.lt.0) then
-      if (lerr) call nd_print_message(info1,err,' multilevel_partition')
+      call nd_print_error(info1, options, ' multilevel_partition')
       return
    end if
 
@@ -103,11 +88,10 @@ subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
    ! initialise mglevel_cur to the maximum number of levels
    ! allowed for this bisection
    mglevel_cur = options%stop_coarsening2
-   call multilevel(grid,options,sumweight,mglevel_cur,mp,print_level, &
-      lwork,work,info1)
-
+   call multilevel(grid, options, sumweight, mglevel_cur, &
+      options%unit_diagnostics, print_level, lwork, work, info1)
    if (info1.ne.0) then
-      if (lerr) call nd_print_message(info1,err,' multilevel_partition')
+      call nd_print_error(info1, options, ' multilevel_partition')
       return
    end if
 
@@ -138,33 +122,17 @@ subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
    a_n1 = grid%part_div(1)
    a_n2 = grid%part_div(2)
 
-   if (.false.) then
-      write (*,'(a)') ' '
-      write (*,'(a)') 'Multilevel partition found'
-      write (*,'(a,i10,a,i10,a,i10)') 'a_n1 =', a_n1, ', a_n2=', a_n2, &
-         ', a_n_sep=', a_n - a_n1 - a_n2
-      write (*,'(a,i10,a,i10,a,i10)') 'a_weight_1 =', a_weight_1, &
-         ', a_weight_2=', a_weight_2, ', a_weight_sep=', &
-         sumweight - a_weight_1 - a_weight_2
-   end if
+   !write (*,'(a)') ' '
+   !write (*,'(a)') 'Multilevel partition found'
+   !write (*,'(a,i10,a,i10,a,i10)') 'a_n1 =', a_n1, ', a_n2=', a_n2, &
+   !   ', a_n_sep=', a_n - a_n1 - a_n2
+   !write (*,'(a,i10,a,i10,a,i10)') 'a_weight_1 =', a_weight_1, &
+   !   ', a_weight_2=', a_weight_2, ', a_weight_sep=', &
+   !   sumweight - a_weight_1 - a_weight_2
 
-   ! deallocate the finest level
-   ! call multigrid_deallocate_first(a_n,a_n,grid,info1)
-   if (info1.ne.0) then
-      if (lerr) call nd_print_message(info1,err,' multilevel_partition')
-      return
-   end if
-
-   ! deallocate (matrix%ptr,matrix%col,matrix%val,stat=st)
-   ! if (st.ne.0) info1 = ND_ERR_MEMORY_DEALLOC
-   if (info1.lt.0) then
-      if (lerr) call nd_print_message(info1,err,' multilevel_partition')
-      return
-   end if
-
-   if (print_level.gt.2) then
-      write (mp,'(a)') 'multilevel_partition: successful completion'
-   end if
+   call nd_print_diagnostic(2, options, &
+      'multilevel_partition: successful completion' &
+      )
 end subroutine multilevel_partition
 
 ! ********************************************************
@@ -176,10 +144,6 @@ end subroutine multilevel_partition
 
 recursive subroutine multilevel(grid,options,sumweight,mglevel_cur,mp, &
     print_level,lwork,work,info)
-
-  real(wp), parameter :: half = 0.5_wp
-  real(wp), parameter :: one = 1.0_wp
-
   ! Arguments
   type (nd_multigrid), intent(inout), TARGET :: grid ! this level
   ! of matrix (grid)
@@ -212,7 +176,6 @@ recursive subroutine multilevel(grid,options,sumweight,mglevel_cur,mp, &
   ! factor
   real(wp) :: grid_rdc_fac_max ! max grid reduction
   ! factor
-  real(wp) :: one1
   integer :: stop_coarsening1 ! optionss when to stop coarsening
   integer :: partition_ptr, part_ptr, work_ptr, a_ne, ref_options, &
     clwork
@@ -224,7 +187,6 @@ recursive subroutine multilevel(grid,options,sumweight,mglevel_cur,mp, &
   real(wp) :: tau, balance_tol, tau_best
   ! !!!!!!!!!!!!!!!!!!!!!!!!!!
   info = 0
-  one1 = 1.0
 
   stop_coarsening1 = max(2,options%stop_coarsening1)
   if (print_level.ge.2) call level_print(mp,'size of grid on level ', &
@@ -232,8 +194,8 @@ recursive subroutine multilevel(grid,options,sumweight,mglevel_cur,mp, &
 
   grid_rdc_fac_min = max(0.01_wp,options%min_reduction)
   ! max grid reduction factor must be at least half and at most one
-  grid_rdc_fac_max = max(half,options%max_reduction)
-  grid_rdc_fac_max = min(one,grid_rdc_fac_max)
+  grid_rdc_fac_max = max(0.5_wp,options%max_reduction)
+  grid_rdc_fac_max = min(1.0_wp,grid_rdc_fac_max)
 
   ! Test to see if this is either the last level or
   ! if the matrix size too small
