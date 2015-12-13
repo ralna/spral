@@ -421,8 +421,7 @@ subroutine nd_coarse_partition(a_n,a_ne,a_ptr,a_row,a_weight, &
   integer :: work_ptr ! pointer into work array
   integer :: partition_method
   integer :: st
-  integer :: a_weight_1, a_weight_2, a_weight_sep, ref_method, &
-    ref_options
+  integer :: a_weight_1, a_weight_2, a_weight_sep
   integer, allocatable :: work1(:)
   real(wp) :: dummy, dummy1
 
@@ -501,94 +500,11 @@ subroutine nd_coarse_partition(a_n,a_ne,a_ptr,a_row,a_weight, &
 
   if (a_n1.ne.0 .and. a_n2.ne.0 .and. a_n.ge.3) then
     if (a_n1+a_n2.lt.a_n) then
-      ! Refine the partition
-      if (options%refinement.gt.6) then
-        ref_options = 3
-      else
-        if (options%refinement.lt.1) then
-          ref_options = 1
-        else
-          ref_options = options%refinement
-        end if
-      end if
-
-      select case (ref_options)
-      case (1)
-        ref_method = 1
-
-      case (2)
-        ref_method = 2
-
-      case (3)
-        if (real(max(a_weight_1,a_weight_2))/real(min(a_weight_1, &
-            a_weight_2)+a_weight_sep).gt.max(real(1.0, &
-            wp),options%balance)) then
-          ref_method = 2
-        else
-          ref_method = 1
-        end if
-
-      case (4)
-        ref_method = 0
-
-      case (5)
-        ref_method = 2
-
-      case (6)
-        if (real(max(a_weight_1,a_weight_2))/real(min(a_weight_1, &
-            a_weight_2)+a_weight_sep).gt.max(real(1.0, &
-            wp),options%balance)) then
-          ref_method = 2
-        else
-          ref_method = 0
-        end if
-      end select
-
-      select case (ref_method)
-
-      case (0)
-        call nd_refine_max_flow(a_n,a_ne,a_ptr,a_row,a_weight,a_n1, &
-          a_n2,a_weight_1,a_weight_2,a_weight_sep, &
-          work1(partition_ptr+1:partition_ptr+a_n),work(1:8),options)
-
-      case (1)
-        if (min(a_weight_1,a_weight_2)+a_weight_sep.lt. &
-            max(a_weight_1,a_weight_2)) then
-          call nd_refine_block_trim(a_n,a_ne,a_ptr,a_row, &
-            a_weight,sumweight,a_n1,a_n2,a_weight_1,a_weight_2, &
-            a_weight_sep,work1(partition_ptr+1:partition_ptr+a_n), &
-            work(1:5*a_n),options)
-        else
-          call nd_refine_trim(a_n,a_ne,a_ptr,a_row,a_weight, &
-            sumweight,a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep, &
-            work1(partition_ptr+1:partition_ptr+a_n),work(1:3*a_n), &
-            options)
-        end if
-
-      case (2)
-        call nd_refine_edge(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
-          a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep, &
-          work1(partition_ptr+1:partition_ptr+a_n),work(1:3*a_n), &
-          options)
-
-
-      end select
-
-      if (printi .or. printd) then
-        write (unit_diagnostics,'(a)') ' '
-        write (unit_diagnostics,'(a)') 'Trimmed partition found'
-        write (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_n1 =', a_n1, &
-          ', a_n2=', a_n2, ', a_n_sep=', a_n - a_n1 - a_n2
-        write (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_weight_1 =', &
-          a_weight_1, ', a_weight_2=', a_weight_2, ', a_weight_sep=', &
-          sumweight - a_weight_1 - a_weight_2
-      end if
-
-      call nd_refine_fm(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,a_n1, &
-        a_n2,a_weight_1,a_weight_2,a_weight_sep, &
-        work1(partition_ptr+1:partition_ptr+a_n), &
-        work(1:8*a_n+sumweight),options)
-
+      ! Call standard refinement, but WITHOUT any improvement cycles
+      call refine_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
+         a_n1, a_n2, work1(partition_ptr+1:partition_ptr+a_n), a_weight_1, &
+         a_weight_2, a_weight_sep, options, work(1:8*a_n+sumweight), &
+         max_improve_cycles=0)
     end if
   else
     go to 10
