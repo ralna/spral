@@ -241,7 +241,7 @@ subroutine nd_order(mtx,n,ptr,row,perm,options,info,seps)
       end if
       if (info%flag.lt.0) return
 
-      if (grid%level.eq.1) call mg_grid_destroy(grid,info%flag)
+      if (grid%level.eq.1) call mg_grid_destroy(grid)
 
       if (nsvar+num_zero_row.eq.a_n) then
          if (present(seps)) then

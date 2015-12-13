@@ -27,6 +27,9 @@ module spral_nd_types
                          ND_REFINE_MAXFLOW_SMALLER = 5, &
                          ND_REFINE_MAXFLOW_AUTO    = 6, &
                          ND_REFINE_AUTO            = 7
+   integer, parameter :: ND_MATCH_COMMON_NEIGHBOURS = 0, &
+                         ND_MATCH_HEAVY             = 1, &
+                         ND_MATCH_BEST              = 2
 
    ! *****************************************************************
 

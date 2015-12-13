@@ -144,7 +144,7 @@ recursive subroutine multilevel(grid, options, sumweight, mglevel_cur, &
    integer, intent(in) :: lwork ! length of work array
       ! (>= 9*grid%graph%n + sumweight)
    integer, intent(out) :: work(lwork) ! work array
-   integer, intent(inout) :: info ! Error flag
+   integer, intent(out) :: info ! Error flag
 
    type (nd_multigrid), pointer :: cgrid ! the coarse level grid
    integer :: cnvtx ! number of vertices (rows) in the coarse matrix
@@ -157,8 +157,9 @@ recursive subroutine multilevel(grid, options, sumweight, mglevel_cur, &
    type (nd_matrix), pointer :: graph ! the fine graph
    integer, dimension(:), pointer :: row_wgt ! fine graph vertex weights
    integer, dimension(:), pointer :: crow_wgt ! coarse graph vertex weights
-   real(wp) :: grid_rdc_fac_min ! min grid reduction factor
-   real(wp) :: grid_rdc_fac_max ! max grid reduction factor
+   real(wp) :: reduction ! actual grid reduction factor
+   real(wp) :: min_reduction ! min grid reduction factor
+   real(wp) :: max_reduction ! max grid reduction factor
    integer :: stop_coarsening1 ! optionss when to stop coarsening
    integer :: partition_ptr, part_ptr, work_ptr, a_ne, ref_options, clwork
    integer :: i, j, k, l, a_weight_1, a_weight_2, a_weight_sep, ref_method, lwk
@@ -169,18 +170,14 @@ recursive subroutine multilevel(grid, options, sumweight, mglevel_cur, &
 
    info = 0
 
-   stop_coarsening1 = max(2,options%stop_coarsening1)
    if (options%print_level.ge.1 .and. options%unit_diagnostics.gt.0) &
       call level_print(options%unit_diagnostics, 'size of grid on level ', &
          grid%level, ' is ', real(grid%size,wp))
 
-   grid_rdc_fac_min = max(0.01_wp,options%min_reduction)
-   ! max grid reduction factor must be at least half and at most one
-   grid_rdc_fac_max = max(0.5_wp,options%max_reduction)
-   grid_rdc_fac_max = min(1.0_wp,grid_rdc_fac_max)
 
    ! Test to see if this is either the last level or
    ! if the matrix size too small
+   stop_coarsening1 = max(2,options%stop_coarsening1)
    if (grid%level.ge.mglevel_cur .or. grid%size.le.stop_coarsening1) then
       if (options%print_level.ge.1 .and. options%unit_diagnostics.gt.0) &
          call level_print(options%unit_diagnostics, 'end of level ', grid%level)
@@ -194,23 +191,22 @@ recursive subroutine multilevel(grid, options, sumweight, mglevel_cur, &
    end if
 
    ! Coarsest level not yet reached so carry on coarsening
-   if (options%matching.eq.1) then
+   select case(options%matching)
+   case(:ND_MATCH_COMMON_NEIGHBOURS)
+      lwk = 2*grid%size
+      call coarsen_cn(grid, lwk, work(1:lwk))
+   case(ND_MATCH_HEAVY)
       lwk = grid%size
       call coarsen_hec(grid, lwk, work(1:lwk), info)
-   else
-      if (options%matching.gt.1) then
-         lwk = 3*grid%size
-         call coarsen_best(grid, lwk, work(1:lwk), info)
-      else
-         lwk = 2*grid%size
-         call coarsen_cn(grid, lwk, work(1:lwk))
-      end if
-   end if
+   case(ND_MATCH_BEST:)
+      lwk = 3*grid%size
+      call coarsen_best(grid, lwk, work(1:lwk), info)
+   end select
    if (info.lt.0) return
 
+   ! ensure coarse grid quantities are allocated to sufficient size
    cgrid => grid%coarse
    cnvtx = cgrid%size
-   ! allocate coarse grid quantities
    call nd_assoc(cgrid%where, cnvtx, info)
    if (info.ne.0) return
 
@@ -221,8 +217,10 @@ recursive subroutine multilevel(grid, options, sumweight, mglevel_cur, &
    ! maximum level to current level and partition this level
    ! deallocate the coarse grid quantities that haves been allocated so
    ! far
-   if (  real(cgrid%size)/real(grid%size).gt.grid_rdc_fac_max .or. &
-         real(cgrid%size)/real(grid%size).lt.grid_rdc_fac_min .or. &
+   reduction = real(cgrid%size) / grid%size
+   min_reduction = max( 0.01_wp,options%min_reduction )
+   max_reduction = min( 1.0_wp, max(0.5_wp,options%max_reduction) )
+   if (  reduction.gt.max_reduction .or. reduction.lt.min_reduction .or. &
          cgrid%size.lt.4 ) then
       if (options%print_level.ge.1 .and. options%unit_diagnostics.gt.0) then
          write (options%unit_diagnostics, '(a,i10,a,f12.4,i4)') &
@@ -777,22 +775,21 @@ end subroutine nd_coarse_partition
 
 ! *****************************************************************
 
-recursive subroutine mg_grid_destroy(grid,info)
+recursive subroutine mg_grid_destroy(grid)
   ! deallocate a grid structure
   type (nd_multigrid) :: grid
-  integer :: info
 
   if (associated(grid%coarse)) then
 
-    call mg_grid_destroy(grid%coarse,info)
+    call mg_grid_destroy(grid%coarse)
 
     if (grid%level.ne.1) then
 
-      call multigrid_deallocate(grid,info)
+      call multigrid_deallocate(grid)
 
     else
 
-      call multigrid_deallocate_first(grid,info)
+      call multigrid_deallocate_first(grid)
 
     end if
 
@@ -800,11 +797,11 @@ recursive subroutine mg_grid_destroy(grid,info)
 
     if (grid%level.ne.1) then
 
-      call multigrid_deallocate_last(grid,info)
+      call multigrid_deallocate_last(grid)
 
     else
 
-      call multigrid_deallocate_first(grid,info)
+      call multigrid_deallocate_first(grid)
 
     end if
 
@@ -813,83 +810,47 @@ recursive subroutine mg_grid_destroy(grid,info)
 end subroutine mg_grid_destroy
 
 
-! *****************************************************************
-subroutine multigrid_deallocate(grid,info)
-  ! deallocate a grid (at given level between last and first)
+!
+! Deallocate a grid (at given level between last and first)
+!
+subroutine multigrid_deallocate(grid)
   type (nd_multigrid) :: grid
-  integer :: info
 
-  call nd_matrix_destruct(grid%graph,info)
-  if (info.ne.0) then
-    return
-  end if
-
-  call nd_matrix_destruct(grid%p,info)
-  if (info.ne.0) then
-    return
-  end if
-
-
-
-  call nd_matrix_destruct(grid%r,info)
-  if (info.ne.0) then
-    return
-  end if
+  call nd_matrix_destruct(grid%graph)
+  call nd_matrix_destruct(grid%p)
+  call nd_matrix_destruct(grid%r)
 
   if(associated(grid%coarse)) deallocate(grid%coarse)
   deallocate (grid%graph,grid%p,grid%r,grid%where,grid%row_wgt)
   nullify (grid%coarse)
-
 end subroutine multigrid_deallocate
 
-! *****************************************************************
-subroutine multigrid_deallocate_last(grid,info)
+!
+! Deallocate a grid (at the last level).
+! In this case the matrix grid%graph has not been formed yet
+!
+subroutine multigrid_deallocate_last(grid)
+   type (nd_multigrid) :: grid
 
-  ! deallocate a grid (at the last level). In this case the matrix
-  ! grid%graph
-  ! has not been formed yet
-  type (nd_multigrid) :: grid
-  integer, intent(inout) :: info
+   call nd_matrix_destruct(grid%p)
+   call nd_matrix_destruct(grid%r)
 
-
-  integer :: ierr
-
-  call nd_matrix_destruct(grid%p,ierr)
-  if (ierr.ne.0) then
-    info = ND_ERR_MEMORY_DEALLOC
-    return
-  end if
-
-  call nd_matrix_destruct(grid%r,ierr)
-  if (ierr.ne.0) then
-    info = ND_ERR_MEMORY_DEALLOC
-    return
-  end if
-  if(associated(grid%coarse)) deallocate(grid%coarse)
-  deallocate (grid%graph,grid%p,grid%r,grid%where,grid%row_wgt)
-  nullify (grid%coarse)
-
+   if(associated(grid%coarse)) deallocate(grid%coarse)
+   deallocate (grid%graph,grid%p,grid%r,grid%where,grid%row_wgt)
+   nullify (grid%coarse)
 end subroutine multigrid_deallocate_last
-! *****************************************************************
-subroutine multigrid_deallocate_first(grid,info)
-  ! deallocate a grid (at the first level). In this case the matrix
-  ! grid%p
-  ! does not exist
+
+!
+! Deallocate a grid (at the first level).
+! In this case the matrix grid%p does not exist
+!
+subroutine multigrid_deallocate_first(grid)
   type (nd_multigrid) :: grid
-  integer, intent(inout) :: info
-  integer :: ierr
 
-  if (allocated(grid%graph)) then
-    call nd_matrix_destruct(grid%graph,ierr)
-    if (ierr.ne.0) then
-      info = ND_ERR_MEMORY_DEALLOC
-      return
-    end if
-  end if
+  if (allocated(grid%graph)) &
+    call nd_matrix_destruct(grid%graph)
 
-  deallocate (grid%where,grid%row_wgt,stat=ierr)
-  if (ierr.ne.0) info = ND_ERR_MEMORY_DEALLOC
-
+  deallocate (grid%where, grid%row_wgt)
 end subroutine multigrid_deallocate_first
 
 ! ***************************************************************
@@ -996,48 +957,18 @@ subroutine nd_matrix_multiply_vec(matrix,x,y)
 end subroutine nd_matrix_multiply_vec
 
 
-! ***************************************************************
-subroutine nd_matrix_destruct(matrix,info,stat)
-  ! subroutine nd_matrix_destruct(matrix,info):
-
-  ! destruct the matrix object by deallocating all
-  ! space occupied by
-  ! matrix. including matrix%ptr, matrix%col and matrix%val.
-
-  ! matrix: is of the derived type nd_matrix,
-  ! with intent(inout). It
-  ! the sparse matrix object to be destroyed.
+!
+! Ensures all allocatable components of matrix are deallocated
+!
+! NB: Any deallocation errors are ignored
+subroutine nd_matrix_destruct(matrix)
   type (nd_matrix), intent(inout) :: matrix
 
-  ! info: is an integer scaler of intent(out).
-  ! = 0 if successful
-  ! = nd_ERR_MEMORY_DEALLOC if memory deallocation failed
-  integer, intent(out) :: info
+  integer :: st
 
-  ! stat: is an integer scaler of intent(out). If supplied,
-  ! on exit it holds the error tag for memory allocation
-  integer, optional, intent(out) :: stat
-
-  ! ===================== local variables =============
-  ! ierr: error tag for deallocation
-  integer :: ierr
-
-  info = 0
-  if (present(stat)) stat = 0
-  deallocate (matrix%col,matrix%ptr,stat=ierr)
-  if (present(stat)) stat = ierr
-  if (ierr.ne.0) then
-    info = ND_ERR_MEMORY_DEALLOC
-    return
-  end if
-
-  deallocate (matrix%val,stat=ierr)
-  if (present(stat)) stat = ierr
-  if (ierr.ne.0) then
-    info = ND_ERR_MEMORY_DEALLOC
-    return
-  end if
-
+  deallocate (matrix%ptr, stat=st)
+  deallocate (matrix%col, stat=st)
+  deallocate (matrix%val, stat=st)
 end subroutine nd_matrix_destruct
 
 
