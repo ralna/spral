@@ -131,4 +131,34 @@ module spral_nd_types
          ! Not returned if options%partition_method==1.
    end type nd_inform
 
+   ! *****************************************************************
+
+   type nd_matrix
+      integer :: m ! number rows
+      integer :: n ! number columns
+      integer :: ne ! number entries in matrix
+      integer, allocatable, dimension(:) :: ptr ! pointer into col array
+      integer, allocatable, dimension(:) :: col ! column indices
+      integer, allocatable, dimension(:) :: val ! values
+   end type nd_matrix
+
+   ! *****************************************************************
+
+   type nd_multigrid
+      integer :: size ! size of this level (number of rows)
+      type (nd_matrix), allocatable :: graph ! this level of matrix
+      integer, allocatable, dimension(:) :: where ! where each row of
+         ! this level of matrix will go (ie ordering for this level)
+      integer, allocatable, dimension(:) :: row_wgt ! number of
+         ! vertices this vertex of the coarse graph matrix represents
+      integer :: level = 0 ! the level
+      integer :: part_div(2) ! number of vertices in each part
+      type (nd_multigrid), pointer :: coarse => null() ! child coarse grid
+         ! (NB: owned by this instance)
+      type (nd_multigrid), pointer :: fine => null() ! pointer to parent fine
+         ! grid (NB: owns this instance)
+      type (nd_matrix), allocatable :: p ! the prolongation operator
+      type (nd_matrix), allocatable :: r ! the restriction operator
+   end type nd_multigrid
+
 end module spral_nd_types
