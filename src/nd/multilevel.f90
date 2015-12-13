@@ -34,7 +34,6 @@ subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
       ! (matrices)
 
    integer :: i, j, k, inv1, inv2, ins
-   integer :: mglevel_cur ! current level
 
    info1 = 0
 
@@ -79,10 +78,9 @@ subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
    ! Initialise row weights
    grid%row_wgt(1:a_n) = a_weight(1:a_n)
 
-   ! initialise mglevel_cur to the maximum number of levels
-   ! allowed for this bisection
-   mglevel_cur = options%stop_coarsening2
-   call multilevel(grid, options, sumweight, mglevel_cur, lwork, work, info1)
+   ! Call main routine: mglevel set to maximum
+   call multilevel(grid, options, sumweight, options%stop_coarsening2, lwork, &
+      work, info1)
    if (info1.ne.0) then
       call nd_print_error(info1, options, ' multilevel_partition')
       return
@@ -142,7 +140,7 @@ recursive subroutine multilevel(grid, options, sumweight, mglevel_cur, &
    type (nd_options), intent(in) :: options
    integer, intent(in) :: sumweight ! sum of weights (unchanged between
       ! coarse and fine grid
-   integer, intent(inout) :: mglevel_cur ! current grid level
+   integer, intent(in) :: mglevel_cur ! current grid level
    integer, intent(in) :: lwork ! length of work array
       ! (>= 9*grid%graph%n + sumweight)
    integer, intent(out) :: work(lwork) ! work array
@@ -235,10 +233,8 @@ recursive subroutine multilevel(grid, options, sumweight, mglevel_cur, &
             'current size = ', grid%size
       endif
 
-      ! set current grid level and recurse
-      mglevel_cur = grid%level
-
-      call multilevel(grid, options, sumweight, mglevel_cur, lwork, work, info)
+      ! recurse
+      call multilevel(grid, options, sumweight, grid%level, lwork, work, info)
       return
    end if
 
@@ -263,9 +259,8 @@ recursive subroutine multilevel(grid, options, sumweight, mglevel_cur, &
          write (options%unit_diagnostics,'(a,i10,a)') &
             'at level ', grid%level, ' further coarsening gives full matrix'
 
-      ! set current grid level and recurse
-      mglevel_cur = grid%level - 1
-      call multilevel(grid, options, sumweight, mglevel_cur, lwork, work, info)
+      ! recurse
+      call multilevel(grid, options, sumweight, grid%level-1, lwork, work, info)
       return
    end if
 
@@ -286,8 +281,7 @@ recursive subroutine multilevel(grid, options, sumweight, mglevel_cur, &
             'at level ', grid%level, ' no partition found'
 
       ! set current grid level and recurse
-      mglevel_cur = grid%level - 1
-      call multilevel(grid, options, sumweight, mglevel_cur, lwork, work, info)
+      call multilevel(grid, options, sumweight, grid%level-1, lwork, work, info)
       return
    end if
 
