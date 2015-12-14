@@ -262,9 +262,13 @@ subroutine nd_refine_edge(a_n, a_ne, a_ptr, a_row, a_weight, sumweight,  &
 
    ! Create new separator by forming edge separator between input
    ! separator and largest of P1 and P2
-   call nd_move_partition(a_n, a_ne, a_ptr, a_row, a_weight, a_n1, a_n2, &
-      a_weight_1, a_weight_2, a_weight_sep, ND_PART1_FLAG, &
-      ND_PART2_FLAG, ND_SEP_FLAG, fm_flags)
+   if(a_weight_1.gt.a_weight_2) then
+      call nd_move_partition(ND_PART1_FLAG, a_n, a_ne, a_ptr, a_row, a_weight,&
+         a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, fm_flags)
+   else
+      call nd_move_partition(ND_PART2_FLAG, a_n, a_ne, a_ptr, a_row, a_weight,&
+         a_n2, a_n1, a_weight_2, a_weight_1, a_weight_sep, fm_flags)
+   endif
 
    ! Update partition
    call nd_convert_flags_partition(a_n, a_n1, a_n2, &
@@ -1440,98 +1444,68 @@ end subroutine nd_refine_block_trim
 ! Given a flag array, move the separator by forming an edge separator
 ! between the input separator and the larger of P1 and P2
 !
-subroutine nd_move_partition(a_n, a_ne, a_ptr, a_row, a_weight, a_n1, a_n2, &
-      a_weight_1, a_weight_2, a_weight_sep, flag_1, flag_2, flag_sep, flags)
+subroutine nd_move_partition(target_part, a_n, a_ne, a_ptr, a_row, a_weight,  &
+      a_n_target, a_n_other, a_weight_target, a_weight_other, a_weight_sep,   &
+      flags)
+   integer, intent(in) :: target_part
    integer, intent(in) :: a_n
    integer, intent(in) :: a_ne
    integer, intent(in) :: a_ptr(a_n)
    integer, intent(in) :: a_row(a_ne)
    integer, intent(in) :: a_weight(a_n)
-   integer, intent(inout) :: a_n1 ! Size of partition 1
-   integer, intent(inout) :: a_n2 ! Size of partition 2
-   integer, intent(inout) :: a_weight_1, a_weight_2, a_weight_sep ! Weighted
-      ! size of partitions and separator
-   integer, intent(in) :: flag_1 ! flag for rows in partition 1
-   integer, intent(in) :: flag_2 ! flag for rows in partition 2
-   integer, intent(in) :: flag_sep ! flag for rows in separator
+   integer, intent(inout) :: a_n_target ! Size of target partition
+   integer, intent(inout) :: a_n_other ! Size of other partition
+   integer, intent(inout) :: a_weight_target, a_weight_other, a_weight_sep
+      ! Weighted size of partitions and separator
    integer, intent(inout) :: flags(a_n) ! flags(i) contains flag for row i
-      ! and indicates which partition it is in. This is updated
+      ! and indicates which partition it is in. This is updated.
 
-   integer :: part_no, a_n1_temp, a_n2_temp
-   integer :: a_weight_1_temp, a_weight_2_temp, a_weight_sep_temp
-   integer :: j, l
+   integer :: flag_other
+   integer :: j, k
    logical :: stay_sep
 
-   ! Decide whether new (large) separator is formed from
-   ! intersection of the separator with partition 1 or the intersection
-   ! of
-   ! the separator with partition 2
-   if (a_weight_1.gt.a_weight_2) then
-      ! Apply to partition 1
-      part_no = flag_1
+   ! Initialize
+   if(target_part.eq.ND_PART1_FLAG) then
+      flag_other = ND_PART2_FLAG
    else
-      ! Apply to partition 2
-      part_no = flag_2
-   end if
+      flag_other = ND_PART1_FLAG
+   endif
 
-   a_n1_temp = a_n1
-   a_n2_temp = a_n2
-   a_weight_1_temp = a_weight_1
-   a_weight_2_temp = a_weight_2
-   a_weight_sep_temp = a_weight_sep
-
+   !
+   ! Iterate over nodes j in original seperator.
+   ! All neighbours of j in target_part are moved into new seperator.
+   ! If i has no neighbours in target_part it is moved into the other part.
+   ! If i has at least one neightbour in target_part it remains in seperator.
+   !
    do j = 1, a_n
-      if (flags(j).ne.flag_sep) cycle
-      ! j is in initial separator
+      if (flags(j).ne.ND_SEP_FLAG) cycle ! j not in original seperator
       stay_sep = .false.
-      do l = a_ptr(j), nd_get_ptr(j+1, a_n, a_ne, a_ptr)-1
-         if (flags(a_row(l)).eq.part_no) then
+      do k = a_ptr(j), nd_get_ptr(j+1, a_n, a_ne, a_ptr)-1
+         if (flags(a_row(k)).eq.target_part) then
             stay_sep = .true.
-            if (part_no.eq.flag_1) then
-               if (a_n1_temp.gt.1) then
-                  a_n1_temp = a_n1_temp - 1
-                  flags(a_row(l)) = -1
-                  a_weight_sep_temp = a_weight_sep_temp + a_weight(a_row(l))
-                  a_weight_1_temp = a_weight_1_temp - a_weight(a_row(l))
-               end if
-            else
-               if (a_n2_temp.gt.1) then
-                  a_n2_temp = a_n2_temp - 1
-                  flags(a_row(l)) = -1
-                  a_weight_sep_temp = a_weight_sep_temp + a_weight(a_row(l))
-                  a_weight_2_temp = a_weight_2_temp - a_weight(a_row(l))
-               end if
+            if (a_n_target.gt.1) then
+               a_n_target = a_n_target - 1
+               flags(a_row(k)) = ND_SPECIAL_FLAG
+               a_weight_sep = a_weight_sep + a_weight(a_row(k))
+               a_weight_target = a_weight_target - a_weight(a_row(k))
             end if
-         else if (flags(a_row(l)).eq.-1) then
+         else if (flags(a_row(k)).eq.ND_SPECIAL_FLAG) then
             stay_sep = .true.
          end if
       end do
-      if ( .not. stay_sep) then
-         if (part_no.eq.flag_1) then
-            flags(j) = flag_2
-         else
-            flags(j) = flag_1
-         end if
-         a_weight_sep_temp = a_weight_sep_temp - a_weight(j)
-         if (part_no.eq.flag_1) then
-            a_n2_temp = a_n2_temp + 1
-            a_weight_2_temp = a_weight_2_temp + a_weight(j)
-         else
-            a_n1_temp = a_n1_temp + 1
-            a_weight_1_temp = a_weight_1_temp + a_weight(j)
-         end if
+      if (.not. stay_sep) then
+         flags(j) = flag_other
+         a_n_other = a_n_other + 1
+         a_weight_other = a_weight_other + a_weight(j)
+         a_weight_sep = a_weight_sep - a_weight(j)
       end if
    end do
 
+   ! Set seperator flag correctly for newly entering vars
    do j = 1, a_n
-      if (flags(j).eq.-1) flags(j) = flag_sep
+      if (flags(j).eq.ND_SPECIAL_FLAG) flags(j) = ND_SEP_FLAG
    end do
 
-   a_n1 = a_n1_temp
-   a_n2 = a_n2_temp
-   a_weight_1 = a_weight_1_temp
-   a_weight_2 = a_weight_2_temp
-   a_weight_sep = a_weight_sep_temp
 end subroutine nd_move_partition
 
 

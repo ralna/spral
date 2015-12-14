@@ -13,9 +13,10 @@ module spral_nd_types
                          ND_ERR_INTERNAL = -99         ! Shouldn't happen
 
    ! Partition flags
-   integer, parameter :: ND_PART1_FLAG = 0, &
-                         ND_PART2_FLAG = 2, &
-                         ND_SEP_FLAG = 1
+   integer, parameter :: ND_PART1_FLAG = 0,     &
+                         ND_PART2_FLAG = 2,     &
+                         ND_SEP_FLAG = 1,       &
+                         ND_SPECIAL_FLAG = -1      ! Used by some algorithms
 
    ! Option values
    integer, parameter :: ND_PARTITION_HALF_LEVEL_SET = 1, &
