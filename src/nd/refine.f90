@@ -7,6 +7,10 @@ module spral_nd_refine
    private
    public :: refine_partition, nd_refine_fm
 
+   ! Internal options on what method to use
+   integer, parameter :: REFINE_MAXFLOW   = 0, &
+                         REFINE_TRIM      = 1, &
+                         REFINE_EDGE      = 2
 contains
 
 !
@@ -37,15 +41,10 @@ subroutine refine_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight,   &
    integer :: a_weight_1_new, a_weight_2_new, a_weight_sep_new
    integer :: work_ptr
    integer :: my_max_improve_cycles
-   integer :: ref_options, ref_method
+   integer :: ref_method
    logical :: imbal
-   real(wp) :: balance, balance_tol
+   real(wp) :: balance_tol
    real(wp) :: tau, tau_best
-
-   ! Internal options on what to do
-   integer, parameter :: REFINE_MAXFLOW   = 0, &
-                         REFINE_TRIM      = 1, &
-                         REFINE_EDGE      = 2
 
    my_max_improve_cycles = options%max_improve_cycles
    if (present(max_improve_cycles)) my_max_improve_cycles = max_improve_cycles
@@ -55,41 +54,9 @@ subroutine refine_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight,   &
 
    work_ptr = 0
 
-   select case(options%refinement)
-   case(:ND_REFINE_TRIM_FM_BOTH)
-      ref_options = ND_REFINE_TRIM_FM_BOTH
-   case(ND_REFINE_AUTO:)
-      ref_options = ND_REFINE_TRIM_FM_AUTO
-   case default
-      ref_options = options%refinement
-   end select
+   ref_method = get_refinement_method(options, a_weight_1, a_weight_2, &
+      a_weight_sep)
 
-   select case (ref_options)
-   case (ND_REFINE_TRIM_FM_BOTH)
-      ref_method = REFINE_TRIM
-   case (ND_REFINE_TRIM_FM_SMALLER)
-      ref_method = REFINE_EDGE
-   case (ND_REFINE_TRIM_FM_AUTO)
-      balance = max(a_weight_1,a_weight_2) / &
-         real(min(a_weight_1,a_weight_2)+a_weight_sep)
-      if (balance.ge.balance_tol) then
-         ref_method = REFINE_EDGE
-      else
-         ref_method = REFINE_TRIM
-      end if
-   case (ND_REFINE_MAXFLOW_BOTH)
-      ref_method = REFINE_MAXFLOW
-   case (ND_REFINE_MAXFLOW_SMALLER)
-      ref_method = REFINE_EDGE
-   case (ND_REFINE_MAXFLOW_AUTO)
-      balance = max(a_weight_1,a_weight_2) / &
-         real(min(a_weight_1,a_weight_2)+a_weight_sep)
-      if (balance.ge.balance_tol) then
-         ref_method = REFINE_EDGE
-      else
-         ref_method = REFINE_MAXFLOW
-      end if
-   end select
    if (options%print_level.ge.2 .and. options%unit_diagnostics.gt.0) then
       write (options%unit_diagnostics,'(a)') 'Partition before refinement'
       write (options%unit_diagnostics,'(a,i10,a,i10,a,i10)') &
@@ -149,24 +116,8 @@ subroutine refine_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight,   &
                ',  a_n_sep=', a_n - a_n1_new - a_n2_new
          end if
 
-         select case (ref_options)
-         case (ND_REFINE_TRIM_FM_AUTO)
-            balance = max(a_weight_1_new,a_weight_2_new) / &
-               real(min(a_weight_1_new,a_weight_2_new)+a_weight_sep_new)
-            if (balance.gt.balance_tol) then
-               ref_method = REFINE_EDGE
-            else
-               ref_method = REFINE_TRIM
-            end if
-         case (ND_REFINE_MAXFLOW_AUTO)
-            balance = max(a_weight_1_new,a_weight_2_new) / &
-               real(min(a_weight_1_new,a_weight_2_new)+a_weight_sep_new)
-            if (balance.gt.balance_tol) then
-               ref_method = REFINE_EDGE
-            else
-               ref_method = REFINE_MAXFLOW
-            end if
-         end select
+         ref_method = get_refinement_method(options, a_weight_1_new, &
+            a_weight_2_new, a_weight_sep_new)
 
          select case (ref_method)
          case (REFINE_MAXFLOW)
@@ -222,6 +173,59 @@ subroutine refine_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight,   &
       a_n2, a_weight_1, a_weight_2, a_weight_sep, partition,             &
       work(work_ptr+1:work_ptr+8*a_n+sumweight), options)
 end subroutine refine_partition
+
+!
+! Determine refinement method to use based on options and matrix properties
+!
+integer function get_refinement_method(options, a_weight_1, a_weight_2, &
+      a_weight_sep)
+   type(nd_options), intent(in) :: options
+   integer, intent(in) :: a_weight_1
+   integer, intent(in) :: a_weight_2
+   integer, intent(in) :: a_weight_sep
+
+   integer :: ref_options
+   real(wp) :: balance, balance_tol
+
+   get_refinement_method = -1 ! Avoid compiler warnings re uninit
+   balance_tol = max(1.0_wp, options%balance)
+
+   select case(options%refinement)
+   case(:ND_REFINE_TRIM_FM_BOTH)
+      ref_options = ND_REFINE_TRIM_FM_BOTH
+   case(ND_REFINE_AUTO:)
+      ref_options = ND_REFINE_TRIM_FM_AUTO
+   case default
+      ref_options = options%refinement
+   end select
+
+   select case (ref_options)
+   case (ND_REFINE_TRIM_FM_BOTH)
+      get_refinement_method = REFINE_TRIM
+   case (ND_REFINE_TRIM_FM_SMALLER)
+      get_refinement_method = REFINE_EDGE
+   case (ND_REFINE_TRIM_FM_AUTO)
+      balance = max(a_weight_1,a_weight_2) / &
+         real(min(a_weight_1,a_weight_2)+a_weight_sep)
+      if (balance.ge.balance_tol) then
+         get_refinement_method = REFINE_EDGE
+      else
+         get_refinement_method = REFINE_TRIM
+      end if
+   case (ND_REFINE_MAXFLOW_BOTH)
+      get_refinement_method = REFINE_MAXFLOW
+   case (ND_REFINE_MAXFLOW_SMALLER)
+      get_refinement_method = REFINE_EDGE
+   case (ND_REFINE_MAXFLOW_AUTO)
+      balance = max(a_weight_1,a_weight_2) / &
+         real(min(a_weight_1,a_weight_2)+a_weight_sep)
+      if (balance.ge.balance_tol) then
+         get_refinement_method = REFINE_EDGE
+      else
+         get_refinement_method = REFINE_MAXFLOW
+      end if
+   end select
+end function get_refinement_method
 
 !
 ! Given a partition, refine the partition to improve the (weighted) value
@@ -1432,117 +1436,102 @@ subroutine nd_refine_block_trim(a_n,a_ne,a_ptr,a_row,a_weight, &
 
 end subroutine nd_refine_block_trim
 
-! ---------------------------------------------------
-! nd_move_partition
-! ---------------------------------------------------
+!
 ! Given a flag array, move the separator by forming an edge separator
 ! between the input separator and the larger of P1 and P2
-subroutine nd_move_partition(a_n,a_ne,a_ptr,a_row,a_weight,a_n1,a_n2, &
-    a_weight_1,a_weight_2,a_weight_sep,flag_1,flag_2,flag_sep,flags)
-  integer, intent(in) :: a_n ! order of matrix
-  integer, intent(in) :: a_ne ! number of entries in matrix
-  integer, intent(in) :: a_ptr(a_n) ! On input a_ptr(i) contains
-  ! position in a_row that entries for column i start.
-  integer, intent(in) :: a_row(a_ne) ! On input a_row contains row
-  ! indices of the non-zero rows. Diagonal entries have been removed
-  ! and the matrix expanded.
-  integer, intent(in) :: a_weight(a_n) ! On input a_weight(i) contains
-  ! the weight of column i
-  integer, intent(inout) :: a_n1 ! Size of partition 1
-  integer, intent(inout) :: a_n2 ! Size of partition 2
-  integer, intent(inout) :: a_weight_1, a_weight_2, a_weight_sep ! Weig
-  ! hted
-  ! size of partitions and separator
-  integer, intent(in) :: flag_1 ! flag for rows in partition 1
-  integer, intent(in) :: flag_2 ! flag for rows in partition 2
-  integer, intent(in) :: flag_sep ! flag for rows in separator
-  integer, intent(inout) :: flags(a_n) ! flags(i) contains flag for row
-  ! i
-  ! and indicates which partition it is in. This is updated
+!
+subroutine nd_move_partition(a_n, a_ne, a_ptr, a_row, a_weight, a_n1, a_n2, &
+      a_weight_1, a_weight_2, a_weight_sep, flag_1, flag_2, flag_sep, flags)
+   integer, intent(in) :: a_n
+   integer, intent(in) :: a_ne
+   integer, intent(in) :: a_ptr(a_n)
+   integer, intent(in) :: a_row(a_ne)
+   integer, intent(in) :: a_weight(a_n)
+   integer, intent(inout) :: a_n1 ! Size of partition 1
+   integer, intent(inout) :: a_n2 ! Size of partition 2
+   integer, intent(inout) :: a_weight_1, a_weight_2, a_weight_sep ! Weighted
+      ! size of partitions and separator
+   integer, intent(in) :: flag_1 ! flag for rows in partition 1
+   integer, intent(in) :: flag_2 ! flag for rows in partition 2
+   integer, intent(in) :: flag_sep ! flag for rows in separator
+   integer, intent(inout) :: flags(a_n) ! flags(i) contains flag for row i
+      ! and indicates which partition it is in. This is updated
 
-  integer :: part_no, a_n1_temp, a_n2_temp
-  integer :: a_weight_1_temp, a_weight_2_temp, a_weight_sep_temp
-  integer :: j, k, l
-  logical :: stay_sep
+   integer :: part_no, a_n1_temp, a_n2_temp
+   integer :: a_weight_1_temp, a_weight_2_temp, a_weight_sep_temp
+   integer :: j, l
+   logical :: stay_sep
 
-  ! Decide whether new (large) separator is formed from
-  ! intersection of the separator with partition 1 or the intersection
-  ! of
-  ! the separator with partition 2
-  if (a_weight_1.gt.a_weight_2) then
-    ! Apply to partition 1
-    part_no = flag_1
-  else
-    ! Apply to partition 2
-    part_no = flag_2
-  end if
+   ! Decide whether new (large) separator is formed from
+   ! intersection of the separator with partition 1 or the intersection
+   ! of
+   ! the separator with partition 2
+   if (a_weight_1.gt.a_weight_2) then
+      ! Apply to partition 1
+      part_no = flag_1
+   else
+      ! Apply to partition 2
+      part_no = flag_2
+   end if
 
-  a_n1_temp = a_n1
-  a_n2_temp = a_n2
-  a_weight_1_temp = a_weight_1
-  a_weight_2_temp = a_weight_2
-  a_weight_sep_temp = a_weight_sep
+   a_n1_temp = a_n1
+   a_n2_temp = a_n2
+   a_weight_1_temp = a_weight_1
+   a_weight_2_temp = a_weight_2
+   a_weight_sep_temp = a_weight_sep
 
-  do j = 1, a_n
-    if (flags(j).ne.flag_sep) cycle
-    ! j is in initial separator
-    if (j.eq.a_n) then
-      k = a_ne
-    else
-      k = a_ptr(j+1) - 1
-    end if
-    stay_sep = .false.
-    do l = a_ptr(j), k
-      if (flags(a_row(l)).eq.part_no) then
-        stay_sep = .true.
-        if (part_no.eq.flag_1) then
-          if (a_n1_temp.gt.1) then
-            a_n1_temp = a_n1_temp - 1
-            flags(a_row(l)) = -1
-            a_weight_sep_temp = a_weight_sep_temp + a_weight(a_row(l))
-            a_weight_1_temp = a_weight_1_temp - a_weight(a_row(l))
-          end if
-        else
-          if (a_n2_temp.gt.1) then
-            a_n2_temp = a_n2_temp - 1
-            flags(a_row(l)) = -1
-            a_weight_sep_temp = a_weight_sep_temp + a_weight(a_row(l))
-            a_weight_2_temp = a_weight_2_temp - a_weight(a_row(l))
-          end if
-        end if
-      else if (flags(a_row(l)).eq.-1) then
-        stay_sep = .true.
+   do j = 1, a_n
+      if (flags(j).ne.flag_sep) cycle
+      ! j is in initial separator
+      stay_sep = .false.
+      do l = a_ptr(j), nd_get_ptr(j+1, a_n, a_ne, a_ptr)-1
+         if (flags(a_row(l)).eq.part_no) then
+            stay_sep = .true.
+            if (part_no.eq.flag_1) then
+               if (a_n1_temp.gt.1) then
+                  a_n1_temp = a_n1_temp - 1
+                  flags(a_row(l)) = -1
+                  a_weight_sep_temp = a_weight_sep_temp + a_weight(a_row(l))
+                  a_weight_1_temp = a_weight_1_temp - a_weight(a_row(l))
+               end if
+            else
+               if (a_n2_temp.gt.1) then
+                  a_n2_temp = a_n2_temp - 1
+                  flags(a_row(l)) = -1
+                  a_weight_sep_temp = a_weight_sep_temp + a_weight(a_row(l))
+                  a_weight_2_temp = a_weight_2_temp - a_weight(a_row(l))
+               end if
+            end if
+         else if (flags(a_row(l)).eq.-1) then
+            stay_sep = .true.
+         end if
+      end do
+      if ( .not. stay_sep) then
+         if (part_no.eq.flag_1) then
+            flags(j) = flag_2
+         else
+            flags(j) = flag_1
+         end if
+         a_weight_sep_temp = a_weight_sep_temp - a_weight(j)
+         if (part_no.eq.flag_1) then
+            a_n2_temp = a_n2_temp + 1
+            a_weight_2_temp = a_weight_2_temp + a_weight(j)
+         else
+            a_n1_temp = a_n1_temp + 1
+            a_weight_1_temp = a_weight_1_temp + a_weight(j)
+         end if
       end if
-    end do
-    if ( .not. stay_sep) then
-      if (part_no.eq.flag_1) then
-        flags(j) = flag_2
-      else
-        flags(j) = flag_1
-      end if
-      a_weight_sep_temp = a_weight_sep_temp - a_weight(j)
-      if (part_no.eq.flag_1) then
-        a_n2_temp = a_n2_temp + 1
-        a_weight_2_temp = a_weight_2_temp + a_weight(j)
-      else
-        a_n1_temp = a_n1_temp + 1
-        a_weight_1_temp = a_weight_1_temp + a_weight(j)
-      end if
-    end if
-  end do
+   end do
 
-  do j = 1, a_n
-    if (flags(j).eq.-1) then
-      flags(j) = flag_sep
-    end if
-  end do
+   do j = 1, a_n
+      if (flags(j).eq.-1) flags(j) = flag_sep
+   end do
 
-  a_n1 = a_n1_temp
-  a_n2 = a_n2_temp
-  a_weight_1 = a_weight_1_temp
-  a_weight_2 = a_weight_2_temp
-  a_weight_sep = a_weight_sep_temp
-
+   a_n1 = a_n1_temp
+   a_n2 = a_n2_temp
+   a_weight_1 = a_weight_1_temp
+   a_weight_2 = a_weight_2_temp
+   a_weight_sep = a_weight_sep_temp
 end subroutine nd_move_partition
 
 
