@@ -1441,8 +1441,9 @@ subroutine nd_refine_block_trim(a_n,a_ne,a_ptr,a_row,a_weight, &
 end subroutine nd_refine_block_trim
 
 !
-! Given a flag array, move the separator by forming an edge separator
-! between the input separator and the larger of P1 and P2
+! Given a flag array, move the separator by deriving a vertex seperator
+! from the edge separator formed between the input separator and the
+! target_part.
 !
 subroutine nd_move_partition(target_part, a_n, a_ne, a_ptr, a_row, a_weight,  &
       a_n_target, a_n_other, a_weight_target, a_weight_other, a_weight_sep,   &
