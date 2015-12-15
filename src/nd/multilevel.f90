@@ -157,22 +157,10 @@ recursive subroutine multilevel(grid, options, sumweight, mglevel_cur, &
    integer, intent(out) :: info ! Stat value
 
    type (nd_multigrid), pointer :: cgrid ! the coarse level grid
-   integer :: cnvtx ! number of vertices (rows) in the coarse matrix
-   type (nd_matrix), pointer :: p ! the coarse grid prolongator
-   type (nd_matrix), pointer :: r ! the coarse grid restrictor (= p')
 
-   integer, dimension(:), pointer :: fwhere ! partition on fine grid
-   integer, dimension(:), pointer :: cwhere ! partition on coarse grid
-   type (nd_matrix), pointer :: cgraph ! the coarse graph
-   type (nd_matrix), pointer :: graph ! the fine graph
-   integer, dimension(:), pointer :: row_wgt ! fine graph vertex weights
-   integer, dimension(:), pointer :: crow_wgt ! coarse graph vertex weights
-   real(wp) :: reduction ! actual grid reduction factor
-   real(wp) :: min_reduction ! min grid reduction factor
-   real(wp) :: max_reduction ! max grid reduction factor
    integer :: cexit
-   integer :: partition_ptr, work_ptr, a_ne, clwork
-   integer :: i, j, k, l, a_weight_1, a_weight_2, a_weight_sep, lwk
+   integer :: a_ne, clwork
+   integer :: a_weight_1, a_weight_2, a_weight_sep
    integer :: st
 
    info = 0
@@ -181,13 +169,13 @@ recursive subroutine multilevel(grid, options, sumweight, mglevel_cur, &
       call level_print(options%unit_diagnostics, 'size of grid on level ', &
          grid%level, ' is ', real(grid%size,wp))
 
-   call coarsen(mglevel_cur, grid, work, options, cexit, st)
+   call coarsen(mglevel_cur, grid, work(1:grid%size), options, cexit, st)
    if (st.lt.0) then
       info = ND_ERR_MEMORY_ALLOC
       return
    endif
    select case (cexit)
-   case (1:2)
+   case (1:3)
       ! Stop coarsening and partition
       a_ne = grid%graph%ptr(grid%graph%n+1) - 1
       call nd_coarse_partition(grid%graph%n, a_ne, grid%graph%ptr, &
@@ -199,41 +187,7 @@ recursive subroutine multilevel(grid, options, sumweight, mglevel_cur, &
    end select
 
    cgrid => grid%coarse
-   cnvtx = cgrid%size
 
-   ! restriction ================
-
-   ! form the coarse grid graph and matrix
-   ! cmatrix = P^T*matrix = R*matrix
-   p => cgrid%p
-   r => cgrid%r
-   graph => grid%graph
-   cgraph => cgrid%graph
-
-   ! get the coarse matrix
-   lwk = 3*grid%size
-   call galerkin_graph(graph,p,r,cgraph,st,lwk,work(1:lwk))
-   if (st.lt.0) then
-      info = ND_ERR_MEMORY_ALLOC
-      return
-   endif
-
-   ! check if matrix is full
-   if (real(cgrid%graph%ptr(cgrid%graph%n+1)-1)/real(cgrid%graph%n).ge.real &
-         (cgrid%graph%n-1)) then
-      if (options%print_level.ge.1 .and. options%unit_diagnostics.gt.0) &
-         write (options%unit_diagnostics,'(a,i10,a)') &
-            'at level ', grid%level, ' further coarsening gives full matrix'
-
-      ! recurse
-      call multilevel(grid, options, sumweight, grid%level-1, lwork, work, info)
-      return
-   end if
-
-   ! row weight cw = R*w
-   row_wgt => grid%row_wgt(1:grid%size)
-   crow_wgt => cgrid%row_wgt(1:cgrid%size)
-   call nd_matrix_multiply_vec(r, row_wgt, crow_wgt)
    clwork = 9*cgrid%graph%n + sumweight
    call multilevel(cgrid, options, sumweight, mglevel_cur, clwork, &
       work(1:clwork), info)
@@ -247,81 +201,18 @@ recursive subroutine multilevel(grid, options, sumweight, mglevel_cur, &
          write (options%unit_diagnostics,'(a,i10,a)') &
             'at level ', grid%level, ' no partition found'
 
-      ! set current grid level and recurse
-      call multilevel(grid, options, sumweight, grid%level-1, lwork, work, info)
+      ! Stop coarsening and partition
+      a_ne = grid%graph%ptr(grid%graph%n+1) - 1
+      call nd_coarse_partition(grid%graph%n, a_ne, grid%graph%ptr, &
+         grid%graph%col, grid%row_wgt, sumweight, grid%part_div(1), &
+         grid%part_div(2), grid%where, lwork, work, options, info)
       return
    end if
 
    ! prolongation ================
 
-   ! injection of the order from coarse grid to the
-   ! fine grid, since cwhere(i) is the index of the
-   ! i-th vertex in the new ordering, the order
-   ! of this vertex should be where(i)
-   ! grid%where = P*order_on_coarse_grid
-   ! here P is a special matrix with only one non-zero entry per row
-   fwhere => grid%where(1:grid%size)
-   cwhere => cgrid%where(1:cgrid%size)
-   grid%part_div(1:2) = 0
-   call nd_matrix_multiply_vec(p, cwhere, fwhere)
-
-   do i = 1, grid%size
-      if (fwhere(i).eq.ND_PART1_FLAG) then
-         grid%part_div(1) = grid%part_div(1) + 1
-      else
-         if (fwhere(i).eq.ND_PART2_FLAG) then
-            grid%part_div(2) = grid%part_div(2) + 1
-         end if
-      end if
-   end do
-   a_weight_1 = 0
-   a_weight_2 = 0
-   a_weight_sep = 0
-
-   ! Set partition
-   partition_ptr = 0
-   work_ptr = partition_ptr + grid%graph%n
-   i = 1
-   j = grid%part_div(1) + 1
-   k = grid%part_div(1) + grid%part_div(2) + 1
-   do l = 1, grid%size
-      select case (grid%where(l))
-      case (ND_PART1_FLAG)
-         work(partition_ptr+i) = l
-         a_weight_1 = a_weight_1 + grid%row_wgt(l)
-         i = i + 1
-      case (ND_PART2_FLAG)
-         work(partition_ptr+j) = l
-         a_weight_2 = a_weight_2 + grid%row_wgt(l)
-         j = j + 1
-      case (ND_SEP_FLAG)
-         work(partition_ptr+k) = l
-         a_weight_sep = a_weight_sep + grid%row_wgt(l)
-         k = k + 1
-      end select
-   end do
-   a_ne = grid%graph%ptr(grid%graph%n+1) - 1
-
-   if (a_weight_sep.gt.0) then ! Do not refine if separable graph
-      call refine_partition(grid%graph%n, a_ne, grid%graph%ptr, &
-         grid%graph%col, grid%row_wgt, sumweight, grid%part_div(1), &
-         grid%part_div(2), work(partition_ptr+1:partition_ptr+grid%graph%n), &
-         a_weight_1, a_weight_2, a_weight_sep, options, &
-         work(work_ptr+1:work_ptr+8*grid%graph%n+sumweight) )
-   end if
-
-   do i = 1, grid%part_div(1)
-      j = work(partition_ptr+i)
-      grid%where(j) = ND_PART1_FLAG
-   end do
-   do i = grid%part_div(1) + 1, grid%part_div(1) + grid%part_div(2)
-      j = work(partition_ptr+i)
-      grid%where(j) = ND_PART2_FLAG
-   end do
-   do i = grid%part_div(1) + grid%part_div(2) + 1, grid%graph%n
-      j = work(partition_ptr+i)
-      grid%where(j) = ND_SEP_FLAG
-   end do
+   call prolong(grid, sumweight, a_weight_1, a_weight_2, a_weight_sep, &
+      work(1:9*grid%graph%n+sumweight), options)
 
    if (info.lt.0) return
 
@@ -332,15 +223,22 @@ end subroutine multilevel
 
 subroutine coarsen(mglevel_cur, grid, work, options, cexit, st)
    integer, intent(in) :: mglevel_cur
-   type(nd_multigrid), intent(inout) :: grid
+   type(nd_multigrid), target, intent(inout) :: grid
    integer, dimension(3*grid%size), intent(out) :: work
    type(nd_options), intent(in) :: options
    integer, intent(out) :: cexit
    integer, intent(out) :: st
 
    integer :: lwk
-   integer :: cnvtx
-   type(nd_multigrid), pointer :: cgrid
+   type (nd_multigrid), pointer :: cgrid ! the coarse level grid
+   integer :: cnvtx ! number of vertices (rows) in the coarse matrix
+   integer :: cnedge ! number of edge (entries) in the coarse matrix
+   type (nd_matrix), pointer :: p ! the coarse grid prolongator
+   type (nd_matrix), pointer :: r ! the coarse grid restrictor (= p')
+   type (nd_matrix), pointer :: cgraph ! the coarse graph
+   type (nd_matrix), pointer :: graph ! the fine graph
+   integer, dimension(:), pointer :: row_wgt ! fine graph vertex weights
+   integer, dimension(:), pointer :: crow_wgt ! coarse graph vertex weights
    integer :: stop_coarsening1
    real(wp) :: reduction ! actual grid reduction factor
    real(wp) :: min_reduction ! min grid reduction factor
@@ -405,7 +303,127 @@ subroutine coarsen(mglevel_cur, grid, work, options, cexit, st)
       return
    end if
 
+   ! restriction ================
+
+   ! form the coarse grid graph and matrix
+   ! cmatrix = P^T*matrix = R*matrix
+   p => cgrid%p
+   r => cgrid%r
+   graph => grid%graph
+   cgraph => cgrid%graph
+
+   ! get the coarse matrix
+   lwk = 3*grid%size
+   call galerkin_graph(graph,p,r,cgraph,st,lwk,work(1:lwk))
+   if (st.ne.0) return
+
+   ! check if matrix is full
+   cnedge = cgrid%graph%ptr(cgrid%graph%n+1)-1
+   if (real(cnedge)/cgrid%graph%n .ge. cgrid%graph%n-1) then
+      if (options%print_level.ge.1 .and. options%unit_diagnostics.gt.0) &
+         write (options%unit_diagnostics,'(a,i10,a)') &
+            'at level ', grid%level, ' further coarsening gives full matrix'
+
+      cexit = 3
+      return
+   end if
+
+   ! row weight cw = R*w
+   row_wgt => grid%row_wgt(1:grid%size)
+   crow_wgt => cgrid%row_wgt(1:cgrid%size)
+   call nd_matrix_multiply_vec(r, row_wgt, crow_wgt)
+
 end subroutine coarsen
+
+subroutine prolong(grid, sumweight, a_weight_1, a_weight_2, a_weight_sep, work, options)
+   type(nd_multigrid), target, intent(inout) :: grid
+   integer, intent(in) :: sumweight
+   integer, intent(out) :: a_weight_1
+   integer, intent(out) :: a_weight_2
+   integer, intent(out) :: a_weight_sep
+   integer, dimension(9*grid%graph%n+sumweight), intent(out) :: work
+   type(nd_options), intent(in) :: options
+
+   type (nd_multigrid), pointer :: cgrid ! the coarse level grid
+   type (nd_matrix), pointer :: p ! the coarse grid prolongator
+   integer, dimension(:), pointer :: fwhere ! partition on fine grid
+   integer, dimension(:), pointer :: cwhere ! partition on coarse grid
+
+   integer :: i, j, a_ne, p1, p2, psep
+   integer :: work_ptr, partition_ptr
+
+   cgrid => grid%coarse
+   p => cgrid%p
+   fwhere => grid%where(1:grid%size)
+   cwhere => cgrid%where(1:cgrid%size)
+
+   ! injection of the order from coarse grid to the
+   ! fine grid, since cwhere(i) is the index of the
+   ! i-th vertex in the new ordering, the order
+   ! of this vertex should be where(i)
+   ! grid%where = P*order_on_coarse_grid
+   ! here P is a special matrix with only one non-zero entry per row
+   grid%part_div(1:2) = 0
+   call nd_matrix_multiply_vec(p, cwhere, fwhere)
+
+   do i = 1, grid%size
+      if (fwhere(i).eq.ND_PART1_FLAG) then
+         grid%part_div(1) = grid%part_div(1) + 1
+      else
+         if (fwhere(i).eq.ND_PART2_FLAG) then
+            grid%part_div(2) = grid%part_div(2) + 1
+         end if
+      end if
+   end do
+   a_weight_1 = 0
+   a_weight_2 = 0
+   a_weight_sep = 0
+
+   ! Set partition
+   partition_ptr = 0
+   work_ptr = partition_ptr + grid%graph%n
+   p1 = 1
+   p2 = grid%part_div(1) + 1
+   psep = grid%part_div(1) + grid%part_div(2) + 1
+   do i = 1, grid%size
+      select case (grid%where(i))
+      case (ND_PART1_FLAG)
+         work(partition_ptr+p1) = i
+         a_weight_1 = a_weight_1 + grid%row_wgt(i)
+         p1 = p1 + 1
+      case (ND_PART2_FLAG)
+         work(partition_ptr+p2) = i
+         a_weight_2 = a_weight_2 + grid%row_wgt(i)
+         p2 = p2 + 1
+      case (ND_SEP_FLAG)
+         work(partition_ptr+psep) = i
+         a_weight_sep = a_weight_sep + grid%row_wgt(i)
+         psep = psep + 1
+      end select
+   end do
+
+   a_ne = grid%graph%ptr(grid%graph%n+1) - 1
+   if (a_weight_sep.gt.0) then ! Do not refine if separable graph
+      call refine_partition(grid%graph%n, a_ne, grid%graph%ptr, &
+         grid%graph%col, grid%row_wgt, sumweight, grid%part_div(1), &
+         grid%part_div(2), work(partition_ptr+1:partition_ptr+grid%graph%n), &
+         a_weight_1, a_weight_2, a_weight_sep, options, &
+         work(work_ptr+1:work_ptr+8*grid%graph%n+sumweight) )
+   end if
+
+   do i = 1, grid%part_div(1)
+      j = work(partition_ptr+i)
+      grid%where(j) = ND_PART1_FLAG
+   end do
+   do i = grid%part_div(1) + 1, grid%part_div(1) + grid%part_div(2)
+      j = work(partition_ptr+i)
+      grid%where(j) = ND_PART2_FLAG
+   end do
+   do i = grid%part_div(1) + grid%part_div(2) + 1, grid%graph%n
+      j = work(partition_ptr+i)
+      grid%where(j) = ND_SEP_FLAG
+   end do
+end subroutine prolong
 
 ! ***************************************************************
 ! ---------------------------------------------------
