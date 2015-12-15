@@ -88,8 +88,7 @@ subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
    grid%row_wgt(1:a_n) = a_weight(1:a_n)
 
    ! Call main routine: mglevel set to maximum
-   call multilevel(grid, options, sumweight, options%stop_coarsening2, lwork, &
-      work, st)
+   call multilevel(grid, options, sumweight, lwork, work, st)
    if (st.ne.0) then
       info1 = ND_ERR_MEMORY_ALLOC
       call nd_print_error(info1, options, ' multilevel_partition')
@@ -144,13 +143,11 @@ end subroutine multilevel_partition
 ! set for coarsening. We will need to test out to see
 ! which is better.
 !
-recursive subroutine multilevel(grid, options, sumweight, mglevel_cur, &
-      lwork, work, info)
+recursive subroutine multilevel(grid, options, sumweight, lwork, work, info)
    type (nd_multigrid), intent(inout), target :: grid ! this level of matrix
    type (nd_options), intent(in) :: options
    integer, intent(in) :: sumweight ! sum of weights (unchanged between
       ! coarse and fine grid
-   integer, intent(in) :: mglevel_cur ! current grid level
    integer, intent(in) :: lwork ! length of work array
       ! (>= 9*grid%graph%n + sumweight)
    integer, intent(out) :: work(lwork) ! work array
@@ -169,7 +166,7 @@ recursive subroutine multilevel(grid, options, sumweight, mglevel_cur, &
       call level_print(options%unit_diagnostics, 'size of grid on level ', &
          grid%level, ' is ', real(grid%size,wp))
 
-   call coarsen(mglevel_cur, grid, work(1:grid%size), options, cexit, st)
+   call coarsen(grid, work(1:grid%size), options, cexit, st)
    if (st.lt.0) then
       info = ND_ERR_MEMORY_ALLOC
       return
@@ -189,8 +186,7 @@ recursive subroutine multilevel(grid, options, sumweight, mglevel_cur, &
    cgrid => grid%coarse
 
    clwork = 9*cgrid%graph%n + sumweight
-   call multilevel(cgrid, options, sumweight, mglevel_cur, clwork, &
-      work(1:clwork), info)
+   call multilevel(cgrid, options, sumweight, clwork, work(1:clwork), info)
    if(info.ne.0) return
 
    ! check if partition is returned
@@ -221,8 +217,7 @@ recursive subroutine multilevel(grid, options, sumweight, mglevel_cur, &
          grid%level)
 end subroutine multilevel
 
-subroutine coarsen(mglevel_cur, grid, work, options, cexit, st)
-   integer, intent(in) :: mglevel_cur
+subroutine coarsen(grid, work, options, cexit, st)
    type(nd_multigrid), target, intent(inout) :: grid
    integer, dimension(3*grid%size), intent(out) :: work
    type(nd_options), intent(in) :: options
@@ -251,7 +246,8 @@ subroutine coarsen(mglevel_cur, grid, work, options, cexit, st)
    ! Test to see if this is either the last level or
    ! if the matrix size too small
    stop_coarsening1 = max(2,options%stop_coarsening1)
-   if (grid%level.ge.mglevel_cur .or. grid%size.le.stop_coarsening1) then
+   if (grid%level.ge.options%stop_coarsening2 .or. &
+         grid%size.le.stop_coarsening1) then
       if (options%print_level.ge.1 .and. options%unit_diagnostics.gt.0) &
          call level_print(options%unit_diagnostics, 'end of level ', grid%level)
 
