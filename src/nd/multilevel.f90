@@ -170,7 +170,7 @@ recursive subroutine multilevel(grid, options, sumweight, mglevel_cur, &
    real(wp) :: reduction ! actual grid reduction factor
    real(wp) :: min_reduction ! min grid reduction factor
    real(wp) :: max_reduction ! max grid reduction factor
-   integer :: stop_coarsening1 ! optionss when to stop coarsening
+   integer :: cexit
    integer :: partition_ptr, work_ptr, a_ne, clwork
    integer :: i, j, k, l, a_weight_1, a_weight_2, a_weight_sep, lwk
    integer :: st
@@ -181,74 +181,25 @@ recursive subroutine multilevel(grid, options, sumweight, mglevel_cur, &
       call level_print(options%unit_diagnostics, 'size of grid on level ', &
          grid%level, ' is ', real(grid%size,wp))
 
-
-   ! Test to see if this is either the last level or
-   ! if the matrix size too small
-   stop_coarsening1 = max(2,options%stop_coarsening1)
-   if (grid%level.ge.mglevel_cur .or. grid%size.le.stop_coarsening1) then
-      if (options%print_level.ge.1 .and. options%unit_diagnostics.gt.0) &
-         call level_print(options%unit_diagnostics, 'end of level ', grid%level)
-
-      ! coarsest level in multilevel so compute separator
+   call coarsen(mglevel_cur, grid, work, options, cexit, st)
+   if (st.lt.0) then
+      info = ND_ERR_MEMORY_ALLOC
+      return
+   endif
+   select case (cexit)
+   case (1:2)
+      ! Stop coarsening and partition
       a_ne = grid%graph%ptr(grid%graph%n+1) - 1
       call nd_coarse_partition(grid%graph%n, a_ne, grid%graph%ptr, &
          grid%graph%col, grid%row_wgt, sumweight, grid%part_div(1), &
          grid%part_div(2), grid%where, lwork, work, options, info)
       return
-   end if
-
-   ! Coarsest level not yet reached so carry on coarsening
-   select case(options%matching)
-   case(:ND_MATCH_COMMON_NEIGHBOURS)
-      lwk = 2*grid%size
-      call coarsen_cn(grid, lwk, work(1:lwk), st)
-   case(ND_MATCH_HEAVY)
-      lwk = grid%size
-      call coarsen_hec(grid, lwk, work(1:lwk), st)
-   case(ND_MATCH_BEST:)
-      lwk = 3*grid%size
-      call coarsen_best(grid, lwk, work(1:lwk), st)
+   case default
+      ! Do nothing
    end select
-   if (st.lt.0) then
-      info = ND_ERR_MEMORY_ALLOC
-      return
-   endif
 
-   ! ensure coarse grid quantities are allocated to sufficient size
    cgrid => grid%coarse
    cnvtx = cgrid%size
-   call nd_alloc(cgrid%where, cnvtx, st)
-   if (st.lt.0) then
-      info = ND_ERR_MEMORY_ALLOC
-      return
-   endif
-
-   call nd_alloc(cgrid%row_wgt, cnvtx, st)
-   if (st.lt.0) then
-      info = ND_ERR_MEMORY_ALLOC
-      return
-   endif
-
-   ! see if the grid reduction is achieved, if not, set the allowed
-   ! maximum level to current level and partition this level
-   reduction = real(cgrid%size) / grid%size
-   min_reduction = max( 0.01_wp,options%min_reduction )
-   max_reduction = min( 1.0_wp, max(0.5_wp,options%max_reduction) )
-   if (  reduction.gt.max_reduction .or. reduction.lt.min_reduction .or. &
-         cgrid%size.lt.4 ) then
-      if (options%print_level.ge.1 .and. options%unit_diagnostics.gt.0) then
-         write (options%unit_diagnostics, '(a,i10,a,f12.4,i4)') &
-            'at level ', grid%level, &
-            ' further coarsening gives reduction factor', &
-            cgrid%size/real(grid%size)
-         write (options%unit_diagnostics,'(a,i10)') &
-            'current size = ', grid%size
-      endif
-
-      ! recurse
-      call multilevel(grid, options, sumweight, grid%level, lwork, work, info)
-      return
-   end if
 
    ! restriction ================
 
@@ -378,6 +329,83 @@ recursive subroutine multilevel(grid, options, sumweight, mglevel_cur, &
       call level_print(options%unit_diagnostics, ' after post smoothing ', &
          grid%level)
 end subroutine multilevel
+
+subroutine coarsen(mglevel_cur, grid, work, options, cexit, st)
+   integer, intent(in) :: mglevel_cur
+   type(nd_multigrid), intent(inout) :: grid
+   integer, dimension(3*grid%size), intent(out) :: work
+   type(nd_options), intent(in) :: options
+   integer, intent(out) :: cexit
+   integer, intent(out) :: st
+
+   integer :: lwk
+   integer :: cnvtx
+   type(nd_multigrid), pointer :: cgrid
+   integer :: stop_coarsening1
+   real(wp) :: reduction ! actual grid reduction factor
+   real(wp) :: min_reduction ! min grid reduction factor
+   real(wp) :: max_reduction ! max grid reduction factor
+
+   ! Initialize return values
+   cexit = 0   ! Keep coarsening
+   st = 0      ! No error
+
+   ! Test to see if this is either the last level or
+   ! if the matrix size too small
+   stop_coarsening1 = max(2,options%stop_coarsening1)
+   if (grid%level.ge.mglevel_cur .or. grid%size.le.stop_coarsening1) then
+      if (options%print_level.ge.1 .and. options%unit_diagnostics.gt.0) &
+         call level_print(options%unit_diagnostics, 'end of level ', grid%level)
+
+      cexit = 1 ! Stop, we're at the coarsest level
+      return
+   end if
+
+   ! Coarsest level not yet reached so carry on coarsening
+   select case(options%matching)
+   case(:ND_MATCH_COMMON_NEIGHBOURS)
+      lwk = 2*grid%size
+      call coarsen_cn(grid, lwk, work(1:lwk), st)
+   case(ND_MATCH_HEAVY)
+      lwk = grid%size
+      call coarsen_hec(grid, lwk, work(1:lwk), st)
+   case(ND_MATCH_BEST:)
+      lwk = 3*grid%size
+      call coarsen_best(grid, lwk, work(1:lwk), st)
+   end select
+   if (st.ne.0) return
+
+   ! ensure coarse grid quantities are allocated to sufficient size
+   cgrid => grid%coarse
+   cnvtx = cgrid%size
+   call nd_alloc(cgrid%where, cnvtx, st)
+   if (st.ne.0) return
+
+   call nd_alloc(cgrid%row_wgt, cnvtx, st)
+   if (st.ne.0) return
+
+   ! see if the grid reduction is achieved, if not, set the allowed
+   ! maximum level to current level and partition this level
+   reduction = real(cgrid%size) / grid%size
+   min_reduction = max( 0.01_wp,options%min_reduction )
+   max_reduction = min( 1.0_wp, max(0.5_wp,options%max_reduction) )
+   if (  reduction.gt.max_reduction .or. reduction.lt.min_reduction .or. &
+         cgrid%size.lt.4 ) then
+      if (options%print_level.ge.1 .and. options%unit_diagnostics.gt.0) then
+         write (options%unit_diagnostics, '(a,i10,a,f12.4,i4)') &
+            'at level ', grid%level, &
+            ' further coarsening gives reduction factor', &
+            cgrid%size/real(grid%size)
+         write (options%unit_diagnostics,'(a,i10)') &
+            'current size = ', grid%size
+      endif
+
+      ! recurse
+      cexit = 2
+      return
+   end if
+
+end subroutine coarsen
 
 ! ***************************************************************
 ! ---------------------------------------------------
