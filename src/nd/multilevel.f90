@@ -13,7 +13,7 @@ contains
 
 subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
       partition, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, options,   &
-      info1, lwork, work, grid)
+      info1, lwork, work, basegrid)
    integer, intent(in) :: a_n
    integer, intent(in) :: a_ne
    integer, dimension(a_n), intent(in) :: a_ptr
@@ -30,10 +30,11 @@ subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
    integer, intent(in) :: lwork ! length of work array: must be atleast
       ! 9a_n + sumweight
    integer, intent(out) :: work(lwork) ! work array
-   type (nd_multigrid), intent(inout) :: grid ! the multilevel of graphs 
+   type (nd_multigrid), target, intent(inout) :: basegrid ! the multilevel of graphs 
       ! (matrices)
 
-   integer :: i, j, k, inv1, inv2, ins, st
+   type(nd_multigrid), pointer :: grid
+   integer :: i, j, k, inv1, inv2, ins, info, st, grid_ne, cexit
 
    info1 = 0
 
@@ -43,41 +44,41 @@ subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
    ! construct the grid at this level
    !
    st = 0
-   if (.not.allocated(grid%graph)) allocate (grid%graph, stat=st)
+   if (.not.allocated(basegrid%graph)) allocate (basegrid%graph, stat=st)
    if (st.ne.0) then
       info1 = ND_ERR_MEMORY_ALLOC
       call nd_print_error(info1, options, ' multilevel_partition')
       return
    end if
-   call nd_matrix_construct(grid%graph,a_n,a_n,a_ne,st)
+   call nd_matrix_construct(basegrid%graph,a_n,a_n,a_ne,st)
    if (st.lt.0) then
       info1 = ND_ERR_MEMORY_ALLOC
       call nd_print_error(info1, options, ' multilevel_partition')
       return
    end if
 
-   grid%graph%ptr(1:a_n) = a_ptr(1:a_n)
-   grid%graph%ptr(a_n+1) = a_ne + 1
-   grid%graph%col(1:a_ne) = a_row(1:a_ne)
+   basegrid%graph%ptr(1:a_n) = a_ptr(1:a_n)
+   basegrid%graph%ptr(a_n+1) = a_ne + 1
+   basegrid%graph%col(1:a_ne) = a_row(1:a_ne)
 
    do i = 1, a_n
       do j = a_ptr(i), nd_get_ptr(i+1, a_n, a_ne, a_ptr) - 1
          k = a_row(j)
-         grid%graph%val(j) = a_weight(i)*a_weight(k)
+         basegrid%graph%val(j) = a_weight(i)*a_weight(k)
       end do
    end do
 
-   grid%size = a_n
-   grid%level = 1
+   basegrid%size = a_n
+   basegrid%level = 1
 
-   call nd_alloc(grid%where, a_n, st)
+   call nd_alloc(basegrid%where, a_n, st)
    if (st.lt.0) then
       info1 = ND_ERR_MEMORY_ALLOC
       call nd_print_error(info1, options, ' multilevel_partition')
       return
    end if
 
-   call nd_alloc(grid%row_wgt, a_n, info1)
+   call nd_alloc(basegrid%row_wgt, a_n, info1)
    if (info1.lt.0) then
       info1 = ND_ERR_MEMORY_ALLOC
       call nd_print_error(info1, options, ' multilevel_partition')
@@ -85,25 +86,71 @@ subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
    end if
 
    ! Initialise row weights
-   grid%row_wgt(1:a_n) = a_weight(1:a_n)
+   basegrid%row_wgt(1:a_n) = a_weight(1:a_n)
 
-   ! Call main routine: mglevel set to maximum
-   call multilevel(grid, options, sumweight, lwork, work, st)
-   if (st.ne.0) then
-      info1 = ND_ERR_MEMORY_ALLOC
-      call nd_print_error(info1, options, ' multilevel_partition')
-      return
-   end if
+   !
+   ! Build coarse grid hierarchy
+   !
+   grid => basegrid
+   do
+      if (options%print_level.ge.1 .and. options%unit_diagnostics.gt.0) &
+         call level_print(options%unit_diagnostics, 'size of grid on level ', &
+            grid%level, ' is ', real(grid%size,wp))
+
+      call coarsen(grid, work(1:grid%size), options, cexit, st)
+      if (st.lt.0) then
+         info = ND_ERR_MEMORY_ALLOC
+         return
+      endif
+      if(cexit.ne.0) exit ! Stop coarsening and partition
+      grid => grid%coarse
+   end do
+
+   ! Perform coarse patitioning (if it fails, keep tring on finer grids)
+   do
+      grid_ne = grid%graph%ptr(grid%graph%n+1) - 1
+      call nd_coarse_partition(grid%graph%n, grid_ne, grid%graph%ptr, &
+         grid%graph%col, grid%row_wgt, sumweight, grid%part_div(1), &
+         grid%part_div(2), grid%where, lwork, work, options, info)
+      if (info.lt.0) return
+
+      ! check if partition was succesful returned
+      if (grid%part_div(1).ne.0 .and. grid%part_div(2).ne.0) exit
+
+      ! Unlikely to get here because 99.999% of cases caught in full
+      ! matrix check above. Follows same procedure as when full matrix found
+      if (options%print_level.ge.1 .and. options%unit_diagnostics.gt.0) &
+         write (options%unit_diagnostics,'(a,i10,a)') &
+            'at level ', grid%level, ' no partition found'
+
+      ! Try partitioning previous grid level
+      grid => grid%fine
+   end do
+
+   ! Prolongation
+   do while(.not.associated(grid, basegrid))
+      call prolong(grid%fine, sumweight, a_weight_1, a_weight_2, a_weight_sep,&
+         work(1:9*grid%fine%graph%n+sumweight), options)
+      if (options%print_level.ge.2 .and. options%unit_diagnostics.gt.0) &
+         call level_print(options%unit_diagnostics, ' after post smoothing ', &
+            grid%fine%level)
+      grid => grid%fine
+   end do
+
+
+   !
+   ! Convert from flags to partition
+   ! 
 
    inv1 = 1
-   inv2 = grid%part_div(1) + 1
-   ins = grid%part_div(1) + grid%part_div(2) + 1
+   inv2 = basegrid%part_div(1) + 1
+   ins = basegrid%part_div(1) + basegrid%part_div(2) + 1
 
    a_weight_1 = 0
    a_weight_2 = 0
    a_weight_sep = 0
    do i = 1, a_n
-      select case (grid%where(i))
+      select case (basegrid%where(i))
       case (ND_PART1_FLAG)
          partition(inv1) = i
          inv1 = inv1 + 1
@@ -119,8 +166,8 @@ subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
       end select
    end do
 
-   a_n1 = grid%part_div(1)
-   a_n2 = grid%part_div(2)
+   a_n1 = basegrid%part_div(1)
+   a_n2 = basegrid%part_div(2)
 
    !write (*,'(a)') ' '
    !write (*,'(a)') 'Multilevel partition found'
@@ -134,88 +181,6 @@ subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
       'multilevel_partition: successful completion' &
       )
 end subroutine multilevel_partition
-
-! ********************************************************
-
-!
-! main subroutine for computing multilevel structure.
-! Offers heavy-edge collapsing and maximal independent vertex
-! set for coarsening. We will need to test out to see
-! which is better.
-!
-recursive subroutine multilevel(grid, options, sumweight, lwork, work, info)
-   type (nd_multigrid), intent(inout), target :: grid ! this level of matrix
-   type (nd_options), intent(in) :: options
-   integer, intent(in) :: sumweight ! sum of weights (unchanged between
-      ! coarse and fine grid
-   integer, intent(in) :: lwork ! length of work array
-      ! (>= 9*grid%graph%n + sumweight)
-   integer, intent(out) :: work(lwork) ! work array
-   integer, intent(out) :: info ! Stat value
-
-   type (nd_multigrid), pointer :: cgrid ! the coarse level grid
-
-   integer :: cexit
-   integer :: a_ne, clwork
-   integer :: a_weight_1, a_weight_2, a_weight_sep
-   integer :: st
-
-   info = 0
-
-   if (options%print_level.ge.1 .and. options%unit_diagnostics.gt.0) &
-      call level_print(options%unit_diagnostics, 'size of grid on level ', &
-         grid%level, ' is ', real(grid%size,wp))
-
-   call coarsen(grid, work(1:grid%size), options, cexit, st)
-   if (st.lt.0) then
-      info = ND_ERR_MEMORY_ALLOC
-      return
-   endif
-   select case (cexit)
-   case (1:3)
-      ! Stop coarsening and partition
-      a_ne = grid%graph%ptr(grid%graph%n+1) - 1
-      call nd_coarse_partition(grid%graph%n, a_ne, grid%graph%ptr, &
-         grid%graph%col, grid%row_wgt, sumweight, grid%part_div(1), &
-         grid%part_div(2), grid%where, lwork, work, options, info)
-      return
-   case default
-      ! Do nothing
-   end select
-
-   cgrid => grid%coarse
-
-   clwork = 9*cgrid%graph%n + sumweight
-   call multilevel(cgrid, options, sumweight, clwork, work(1:clwork), info)
-   if(info.ne.0) return
-
-   ! check if partition is returned
-   if (cgrid%part_div(1).eq.0 .or. cgrid%part_div(2).eq.0) then
-      ! Unlikely to be called because 99.999% of cases caught in full
-      ! matrix check above. Follows same procedure as when full matrix found
-      if (options%print_level.ge.1 .and. options%unit_diagnostics.gt.0) &
-         write (options%unit_diagnostics,'(a,i10,a)') &
-            'at level ', grid%level, ' no partition found'
-
-      ! Stop coarsening and partition
-      a_ne = grid%graph%ptr(grid%graph%n+1) - 1
-      call nd_coarse_partition(grid%graph%n, a_ne, grid%graph%ptr, &
-         grid%graph%col, grid%row_wgt, sumweight, grid%part_div(1), &
-         grid%part_div(2), grid%where, lwork, work, options, info)
-      return
-   end if
-
-   ! prolongation ================
-
-   call prolong(grid, sumweight, a_weight_1, a_weight_2, a_weight_sep, &
-      work(1:9*grid%graph%n+sumweight), options)
-
-   if (info.lt.0) return
-
-   if (options%print_level.ge.2 .and. options%unit_diagnostics.gt.0) &
-      call level_print(options%unit_diagnostics, ' after post smoothing ', &
-         grid%level)
-end subroutine multilevel
 
 subroutine coarsen(grid, work, options, cexit, st)
    type(nd_multigrid), target, intent(inout) :: grid
