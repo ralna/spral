@@ -30,8 +30,8 @@ subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
    integer, intent(in) :: lwork ! length of work array: must be atleast
       ! 9a_n + sumweight
    integer, intent(out) :: work(lwork) ! work array
-   type (nd_multigrid), target, intent(inout) :: basegrid ! the multilevel of graphs 
-      ! (matrices)
+   type (nd_multigrid), target, intent(inout) :: basegrid ! the multilevel of
+      ! graphs (matrices)
 
    type(nd_multigrid), pointer :: grid
    integer :: i, j, k, inv1, inv2, ins, info, st, grid_ne, cexit
@@ -44,12 +44,6 @@ subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
    ! construct the grid at this level
    !
    st = 0
-   if (.not.allocated(basegrid%graph)) allocate (basegrid%graph, stat=st)
-   if (st.ne.0) then
-      info1 = ND_ERR_MEMORY_ALLOC
-      call nd_print_error(info1, options, ' multilevel_partition')
-      return
-   end if
    call nd_matrix_construct(basegrid%graph,a_n,a_n,a_ne,st)
    if (st.lt.0) then
       info1 = ND_ERR_MEMORY_ALLOC
@@ -557,83 +551,25 @@ end subroutine nd_coarse_partition
 
 ! *****************************************************************
 
+!
+! Deallocate dynamic storage in a grid and any subgrids
+!
+! NB: failures ignored (can fail due to not being allocated)
 recursive subroutine mg_grid_destroy(grid)
-  ! deallocate a grid structure
-  type (nd_multigrid) :: grid
-
-  if (associated(grid%coarse)) then
-
-    call mg_grid_destroy(grid%coarse)
-
-    if (grid%level.ne.1) then
-
-      call multigrid_deallocate(grid)
-
-    else
-
-      call multigrid_deallocate_first(grid)
-
-    end if
-
-  else
-
-    if (grid%level.ne.1) then
-
-      call multigrid_deallocate_last(grid)
-
-    else
-
-      call multigrid_deallocate_first(grid)
-
-    end if
-
-  end if
-
-end subroutine mg_grid_destroy
-
-
-!
-! Deallocate a grid (at given level between last and first)
-!
-subroutine multigrid_deallocate(grid)
-  type (nd_multigrid) :: grid
-
-  call nd_matrix_destruct(grid%graph)
-  call nd_matrix_destruct(grid%p)
-  call nd_matrix_destruct(grid%r)
-
-  if(associated(grid%coarse)) deallocate(grid%coarse)
-  deallocate (grid%graph,grid%p,grid%r,grid%where,grid%row_wgt)
-  nullify (grid%coarse)
-end subroutine multigrid_deallocate
-
-!
-! Deallocate a grid (at the last level).
-! In this case the matrix grid%graph has not been formed yet
-!
-subroutine multigrid_deallocate_last(grid)
    type (nd_multigrid) :: grid
 
-   call nd_matrix_destruct(grid%p)
-   call nd_matrix_destruct(grid%r)
+   integer :: st
 
-   if(associated(grid%coarse)) deallocate(grid%coarse)
-   deallocate (grid%graph,grid%p,grid%r,grid%where,grid%row_wgt)
-   nullify (grid%coarse)
-end subroutine multigrid_deallocate_last
+   if (associated(grid%coarse)) then
+      call mg_grid_destroy(grid%coarse)
+      deallocate (grid%coarse)
+   endif
 
-!
-! Deallocate a grid (at the first level).
-! In this case the matrix grid%p does not exist
-!
-subroutine multigrid_deallocate_first(grid)
-  type (nd_multigrid) :: grid
+   nullify (grid%coarse, grid%fine)
 
-  if (allocated(grid%graph)) &
-    call nd_matrix_destruct(grid%graph)
-
-  deallocate (grid%where, grid%row_wgt)
-end subroutine multigrid_deallocate_first
+   deallocate (grid%where, stat=st)
+   deallocate (grid%row_wgt, stat=st)
+end subroutine mg_grid_destroy
 
 ! ***************************************************************
 subroutine coarsen_hec(grid,lwork,work,st)
@@ -744,21 +680,6 @@ subroutine nd_matrix_multiply_vec(matrix,x,y)
   end do
 end subroutine nd_matrix_multiply_vec
 
-
-!
-! Ensures all allocatable components of matrix are deallocated
-!
-! NB: Any deallocation errors are ignored
-subroutine nd_matrix_destruct(matrix)
-  type (nd_matrix), intent(inout) :: matrix
-
-  integer :: st
-
-  deallocate (matrix%ptr, stat=st)
-  deallocate (matrix%col, stat=st)
-  deallocate (matrix%val, stat=st)
-end subroutine nd_matrix_destruct
-
 !
 ! Construct data structure for storing sparse matrix.
 !
@@ -858,8 +779,6 @@ subroutine prolng_heavy_edge(grid,lwork,work,st)
   ! allocate the graph and matrix pointer and the mincut pointer
   ! so that everything is defined 
   st = 0
-  if (.not.allocated(cgrid%graph)) allocate (cgrid%graph, stat=st)
-  if (st.ne.0) return
 
   nvtx = graph%n
 
@@ -911,8 +830,6 @@ subroutine prolng_heavy_edge(grid,lwork,work,st)
 
   ! storage allocation for col. indices and values of prolongation
   ! matrix P (nvtx * cnvtx)
-  if (.not.allocated(cgrid%p)) allocate (cgrid%p, stat=st)
-  if (st.ne.0) return
   p => cgrid%p
   call nd_matrix_construct(p,nvtx,cnvtx,nz,st)
   if(st.ne.0) return
@@ -920,8 +837,6 @@ subroutine prolng_heavy_edge(grid,lwork,work,st)
 
   ! storage allocation for col. indices and values of restiction
   ! matrix R (cnvtx * nvtx)
-  if (.not.allocated(cgrid%r)) allocate (cgrid%r, stat=st)
-  if (st.ne.0) return
   r => cgrid%r
   call nd_matrix_construct(r,cnvtx,nvtx,nz,st)
   if(st.ne.0) return
@@ -1028,11 +943,7 @@ subroutine prolng_common_neigh(grid,lwork,work,st)
   cgrid => grid%coarse
   graph => grid%graph
 
-  ! allocate the graph and matrix pointer and the mincut pointer
-  ! so that everything is defined
   st = 0
-  if (.not.allocated(cgrid%graph)) allocate (cgrid%graph, stat=st)
-  if (st.ne.0) return
 
   nvtx = graph%n
 
@@ -1100,8 +1011,6 @@ subroutine prolng_common_neigh(grid,lwork,work,st)
 
   ! storage allocation for col. indices and values of prolongation
   ! matrix P (order nvtx * cnvtx)
-  if ( .not. allocated(cgrid%p)) allocate (cgrid%p, stat=st)
-  if (st.ne.0) return
   p => cgrid%p
   call nd_matrix_construct(p,nvtx,cnvtx,nz,st)
   if(st.ne.0) return
@@ -1109,8 +1018,6 @@ subroutine prolng_common_neigh(grid,lwork,work,st)
 
   ! storage allocation for col. indices and values of restiction
   ! matrix R (cnvtx * nvtx)
-  if ( .not. allocated(cgrid%r)) allocate (cgrid%r, stat=st)
-  if (st.ne.0) return
   r => cgrid%r
   call nd_matrix_construct(r,cnvtx,nvtx,nz,st)
   if(st.ne.0) return
@@ -1213,15 +1120,12 @@ subroutine prolng_best(grid,lwork,work,st)
 
   integer, pointer, dimension(:) :: matching
 
-  ! allocate the prolongation matrix pointers
+  ! Set return values
+  st = 0
+
+  ! assign the prolongation matrix pointers
   cgrid => grid%coarse
   graph => grid%graph
-
-  ! allocate the graph and matrix pointer and the mincut pointer
-  ! so that everything is defined
-  st = 0
-  if (.not.allocated(cgrid%graph)) allocate (cgrid%graph, stat=st)
-  if (st.ne.0) return
 
   nvtx = graph%n
 
@@ -1347,16 +1251,12 @@ subroutine prolng_best(grid,lwork,work,st)
 
   ! storage allocation for col. indices and values of prolongation
   ! matrix P (nvtx * cnvtx)
-  if ( .not. allocated(cgrid%p)) allocate (cgrid%p, stat=st)
-  if (st.ne.0) return
   p => cgrid%p
   call nd_matrix_construct(p,nvtx,cnvtx,nz,st)
   if(st.ne.0) return
 
   ! storage allocation for col. indices and values of restiction
   ! matrix R (cnvtx * nvtx)
-  if ( .not. allocated(cgrid%r)) allocate (cgrid%r, stat=st)
-  if (st.ne.0) return
   r => cgrid%r
   call nd_matrix_construct(r,cnvtx,nvtx,nz,st)
   if(st.ne.0) return
