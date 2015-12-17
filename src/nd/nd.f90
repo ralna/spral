@@ -62,7 +62,7 @@ subroutine nd_order(mtx,n,ptr,row,perm,options,info,seps)
    integer, allocatable, dimension(:) :: iperm ! inverse of perm(:)
    integer, allocatable, dimension(:) :: work ! space for doing work
    logical :: use_multilevel
-   type (nd_multigrid) :: grid
+   type (nd_multigrid), dimension(:), allocatable :: grids
 
    call nd_print_diagnostic(1, options, ' ')
    call nd_print_diagnostic(1, options, 'nd_order:')
@@ -217,8 +217,10 @@ subroutine nd_order(mtx,n,ptr,row,perm,options,info,seps)
          if (info%stat.ne.0) go to 10
          work_iperm(1:a_n_curr) = (/ (i,i=1,a_n_curr) /)
       end if
-      ! Allocate a workspace that can be reused at lower levels
+      ! Allocate workspace that can be reused at lower levels
       allocate (work(a_n+14*a_n_curr+a_ne_curr), stat=info%stat)
+      if (info%stat.ne.0) go to 10
+      allocate (grids(max(1,options%stop_coarsening2)), stat=info%stat)
       if (info%stat.ne.0) go to 10
 
       use_multilevel = .true.
@@ -230,18 +232,16 @@ subroutine nd_order(mtx,n,ptr,row,perm,options,info,seps)
             iperm(1:a_n_curr), work(1:lwork),                            &
             work(lwork+1:lwork+a_n_curr),                                &
             work(lwork+a_n_curr+1:lwork+2*a_n_curr), 0, options, info,   &
-            .false., use_multilevel, grid, work_seps)
+            .false., use_multilevel, grids, work_seps)
       else
          ! Supervariables: use work_iperm(:) instead of perm(:)
          call nd_nested_internal(a_n_curr, a_ne_curr, a_ptr(1:a_n_curr), &
             a_row(1:a_ne_curr), a_weight(1:a_n_curr), sumweight,         &
             work_iperm, work(1:lwork), work(lwork+1:lwork+a_n_curr),     &
             work(lwork+a_n_curr+1:lwork+2*a_n_curr), 0, options, info,   &
-            .false., use_multilevel, grid, work_seps)
+            .false., use_multilevel, grids, work_seps)
       end if
       if (info%flag.lt.0) return
-
-      if (grid%level.eq.1) call mg_grid_destroy(grid)
 
       if (nsvar+num_zero_row.eq.a_n) then
          if (present(seps)) then
@@ -325,7 +325,7 @@ end subroutine nd_order
 !
 recursive subroutine nd_nested_internal(a_n, a_ne, a_ptr, a_row, &
       a_weight, sumweight, iperm, work, work_comp_n, work_comp_nz, level, &
-      options, info, use_amd, use_multilevel, grid, seps)
+      options, info, use_amd, use_multilevel, grids, seps)
    ! NB: Many array arguments are chopped up and reused as the matrix is
    ! partitioned.
    integer, intent(in) :: a_n
@@ -347,7 +347,8 @@ recursive subroutine nd_nested_internal(a_n, a_ne, a_ptr, a_row, &
    type (nd_inform), intent(inout) :: info
    logical, intent(in) :: use_amd
    logical, intent(inout) :: use_multilevel
-   type (nd_multigrid), intent(inout) :: grid
+   type (nd_multigrid), dimension(max(1,options%stop_coarsening2)), &
+      intent(inout) :: grids
    integer, intent(inout) :: seps(a_n)
       ! seps(i) is -1 if vertex i of permuted submatrix is not in a
       ! separator; otherwise it is equal to l, where l is the nested
@@ -403,7 +404,7 @@ recursive subroutine nd_nested_internal(a_n, a_ne, a_ptr, a_row, &
    lwork = 12*a_n + sumweight + a_ne
    call nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level, &
       a_n1, a_n2, a_ne1, a_ne2, iperm, work(1:lwork), options, info,      &
-      use_multilevel, grid)
+      use_multilevel, grids)
 
    if (a_n1.eq.a_n) go to 10 ! Failed to find a partition
 
@@ -451,7 +452,7 @@ recursive subroutine nd_nested_internal(a_n, a_ne, a_ptr, a_row, &
                iperm(offset_ptr-l:offset_ptr-1),                            &
                work(compwork+1:compwork+12*l+s+m), work_comp_n(j-l+1:j),    &
                work_comp_nz(j-l+1:j), k, options, info, use_amdi,           &
-               use_multilevel, grid, seps(offset_ptr-l:offset_ptr-1) )
+               use_multilevel, grids, seps(offset_ptr-l:offset_ptr-1) )
             if(info%flag.lt.0) return
          end if
          offset_ptr = offset_ptr - l
@@ -476,7 +477,7 @@ recursive subroutine nd_nested_internal(a_n, a_ne, a_ptr, a_row, &
          a_weight(1:a_n1), sumweight_sub, iperm(1:a_n1),                  &
          work(1:12*a_n1+sumweight_sub+a_ne1), work_comp_n(1:a_n1),        &
          work_comp_nz(1:a_n1), level+1, options, info, use_amdi,          &
-         use_multilevel, grid, seps(1:a_n1))
+         use_multilevel, grids, seps(1:a_n1))
       if(info%flag.lt.0) return
    end if
 
@@ -488,14 +489,14 @@ recursive subroutine nd_nested_internal(a_n, a_ne, a_ptr, a_row, &
             sumweight_sub, iperm(a_n1+1:a_n1+a_n2),                     &
             work(1:12*a_n2+sumweight_sub+a_ne2), work_comp_n(1:a_n2),   &
             work_comp_nz(1:a_n2), level+1, options, info, use_amdi,     &
-            use_multilevel, grid, seps=seps(a_n1+1:a_n1+a_n2) )
+            use_multilevel, grids, seps=seps(a_n1+1:a_n1+a_n2) )
       else
          sumweight_sub = sum(a_weight(a_n1+1:a_n1+a_n2))
          call nd_nested_internal(a_n2, a_ne2, a_ptr(1:a_n2), a_row(1:a_ne2),&
             a_weight(a_n1+1:a_n1+a_n2), sumweight_sub,                      &
             iperm(a_n1+1:a_n1+a_n2), work(1:12*a_n2+sumweight_sub+a_ne2),   &
             work_comp_n(1:a_n2), work_comp_nz(1:a_n2), level+1, options,    &
-            info, use_amdi, use_multilevel, grid,                           &
+            info, use_amdi, use_multilevel, grids,                           &
             seps=seps(a_n1+1:a_n1+a_n2) )
       end if
       if(info%flag.lt.0) return
@@ -657,7 +658,7 @@ end subroutine nd_find_indep_comps
 !
 subroutine nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level, &
       a_n1, a_n2, a_ne1, a_ne2, iperm, work, options, info, use_multilevel, &
-      grid)
+      grids)
    integer, intent(in) :: a_n
    integer, intent(in) :: a_ne
    integer, intent(inout) :: a_ptr(a_n) ! On entry, input matrix. On exit,
@@ -677,7 +678,8 @@ subroutine nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level, &
    integer, target, intent(out) :: work(12*a_n+sumweight+a_ne)
    type (nd_options), intent(in) :: options
    type (nd_inform), intent(inout) :: info
-   type (nd_multigrid), intent(inout) :: grid
+   type (nd_multigrid), dimension(max(1,options%stop_coarsening2)), &
+      intent(inout) :: grids
 
    integer, dimension(:), pointer :: partition
    integer :: work_ptr ! pointer into work array
@@ -724,7 +726,7 @@ subroutine nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level, &
       lwork = 9*a_n + sumweight
       call multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight,  &
          partition, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, options, &
-         info%flag, lwork, work(work_ptr+1:work_ptr+lwork), grid)
+         info%flag, lwork, work(work_ptr+1:work_ptr+lwork), grids)
    end if
 
    ! If S is empty, return and caller will handle as special case

@@ -7,13 +7,13 @@ module spral_nd_multilevel
    implicit none
 
    private
-   public :: multilevel_partition, mg_grid_destroy
+   public :: multilevel_partition
 
 contains
 
 subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
       partition, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, options,   &
-      info1, lwork, work, basegrid)
+      info1, lwork, work, grids)
    integer, intent(in) :: a_n
    integer, intent(in) :: a_ne
    integer, dimension(a_n), intent(in) :: a_ptr
@@ -30,11 +30,13 @@ subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
    integer, intent(in) :: lwork ! length of work array: must be atleast
       ! 9a_n + sumweight
    integer, intent(out) :: work(lwork) ! work array
-   type (nd_multigrid), target, intent(inout) :: basegrid ! the multilevel of
-      ! graphs (matrices)
+   type (nd_multigrid), dimension(max(1,options%stop_coarsening2)), target, &
+      intent(inout) :: grids ! the multilevel of graphs (matrices)
 
+   integer :: level
    type(nd_multigrid), pointer :: grid
    integer :: i, j, k, inv1, inv2, ins, info, st, grid_ne, cexit
+   integer :: stop_coarsening1
 
    info1 = 0
 
@@ -44,35 +46,35 @@ subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
    ! construct the grid at this level
    !
    st = 0
-   call nd_matrix_construct(basegrid%graph,a_n,a_n,a_ne,st)
+   call nd_matrix_construct(grids(1)%graph,a_n,a_n,a_ne,st)
    if (st.lt.0) then
       info1 = ND_ERR_MEMORY_ALLOC
       call nd_print_error(info1, options, ' multilevel_partition')
       return
    end if
 
-   basegrid%graph%ptr(1:a_n) = a_ptr(1:a_n)
-   basegrid%graph%ptr(a_n+1) = a_ne + 1
-   basegrid%graph%col(1:a_ne) = a_row(1:a_ne)
+   grids(1)%graph%ptr(1:a_n) = a_ptr(1:a_n)
+   grids(1)%graph%ptr(a_n+1) = a_ne + 1
+   grids(1)%graph%col(1:a_ne) = a_row(1:a_ne)
 
    do i = 1, a_n
       do j = a_ptr(i), nd_get_ptr(i+1, a_n, a_ne, a_ptr) - 1
          k = a_row(j)
-         basegrid%graph%val(j) = a_weight(i)*a_weight(k)
+         grids(1)%graph%val(j) = a_weight(i)*a_weight(k)
       end do
    end do
 
-   basegrid%size = a_n
-   basegrid%level = 1
+   grids(1)%size = a_n
+   grids(1)%level = 1
 
-   call nd_alloc(basegrid%where, a_n, st)
+   call nd_alloc(grids(1)%where, a_n, st)
    if (st.lt.0) then
       info1 = ND_ERR_MEMORY_ALLOC
       call nd_print_error(info1, options, ' multilevel_partition')
       return
    end if
 
-   call nd_alloc(basegrid%row_wgt, a_n, info1)
+   call nd_alloc(grids(1)%row_wgt, a_n, info1)
    if (info1.lt.0) then
       info1 = ND_ERR_MEMORY_ALLOC
       call nd_print_error(info1, options, ' multilevel_partition')
@@ -80,25 +82,41 @@ subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
    end if
 
    ! Initialise row weights
-   basegrid%row_wgt(1:a_n) = a_weight(1:a_n)
+   grids(1)%row_wgt(1:a_n) = a_weight(1:a_n)
 
    !
    ! Build coarse grid hierarchy
    !
-   grid => basegrid
-   do
+   grid => grids(1)
+   stop_coarsening1 = max(2,options%stop_coarsening1)
+   do level = 1, options%stop_coarsening2-1 ! NB we are are creating level+1
       if (options%print_level.ge.1 .and. options%unit_diagnostics.gt.0) &
          call level_print(options%unit_diagnostics, 'size of grid on level ', &
-            grid%level, ' is ', real(grid%size,wp))
+            level, ' is ', real(grids(level)%size,wp))
 
-      call coarsen(grid, work(1:grid%size), options, cexit, st)
+      ! Test to see if the matrix size too small
+      if (grids(level)%size.le.stop_coarsening1) then
+         if (options%print_level.ge.1 .and. options%unit_diagnostics.gt.0) &
+            call level_print(options%unit_diagnostics, &
+               'Terminating coarsening as grid%size <= &
+               &options%stop_coarsening1 at level ', level)
+         exit ! Stop, we're at the coarsest level
+      end if
+
+      ! Allocate coarser level
+      grids(level+1)%fine => grid
+      grids(level+1)%level = level+1
+
+      call coarsen(grids(level), grids(level+1), work(1:grids(level)%size), &
+         options, cexit, st)
       if (st.lt.0) then
          info = ND_ERR_MEMORY_ALLOC
          return
       endif
       if(cexit.ne.0) exit ! Stop coarsening and partition
-      grid => grid%coarse
+      grid => grids(level+1)
    end do
+   grid => grids(level)
 
    ! Perform coarse patitioning (if it fails, keep tring on finer grids)
    do
@@ -122,9 +140,9 @@ subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
    end do
 
    ! Prolongation
-   do while(.not.associated(grid, basegrid))
-      call prolong(grid%fine, sumweight, a_weight_1, a_weight_2, a_weight_sep,&
-         work(1:9*grid%fine%graph%n+sumweight), options)
+   do while(.not.associated(grid, grids(1)))
+      call prolong(grid%fine, grid, sumweight, a_weight_1, a_weight_2, &
+         a_weight_sep,work(1:9*grid%fine%graph%n+sumweight), options)
       if (options%print_level.ge.2 .and. options%unit_diagnostics.gt.0) &
          call level_print(options%unit_diagnostics, ' after post smoothing ', &
             grid%fine%level)
@@ -137,14 +155,14 @@ subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
    ! 
 
    inv1 = 1
-   inv2 = basegrid%part_div(1) + 1
-   ins = basegrid%part_div(1) + basegrid%part_div(2) + 1
+   inv2 = grids(1)%part_div(1) + 1
+   ins = grids(1)%part_div(1) + grids(1)%part_div(2) + 1
 
    a_weight_1 = 0
    a_weight_2 = 0
    a_weight_sep = 0
    do i = 1, a_n
-      select case (basegrid%where(i))
+      select case (grids(1)%where(i))
       case (ND_PART1_FLAG)
          partition(inv1) = i
          inv1 = inv1 + 1
@@ -160,8 +178,8 @@ subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
       end select
    end do
 
-   a_n1 = basegrid%part_div(1)
-   a_n2 = basegrid%part_div(2)
+   a_n1 = grids(1)%part_div(1)
+   a_n2 = grids(1)%part_div(2)
 
    !write (*,'(a)') ' '
    !write (*,'(a)') 'Multilevel partition found'
@@ -176,15 +194,15 @@ subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
       )
 end subroutine multilevel_partition
 
-subroutine coarsen(grid, work, options, cexit, st)
+subroutine coarsen(grid, cgrid, work, options, cexit, st)
    type(nd_multigrid), target, intent(inout) :: grid
+   type(nd_multigrid), target, intent(inout) :: cgrid
    integer, dimension(3*grid%size), intent(out) :: work
    type(nd_options), intent(in) :: options
    integer, intent(out) :: cexit
    integer, intent(out) :: st
 
    integer :: lwk
-   type (nd_multigrid), pointer :: cgrid ! the coarse level grid
    integer :: cnvtx ! number of vertices (rows) in the coarse matrix
    integer :: cnedge ! number of edge (entries) in the coarse matrix
    type (nd_matrix), pointer :: p ! the coarse grid prolongator
@@ -193,7 +211,6 @@ subroutine coarsen(grid, work, options, cexit, st)
    type (nd_matrix), pointer :: graph ! the fine graph
    integer, dimension(:), pointer :: row_wgt ! fine graph vertex weights
    integer, dimension(:), pointer :: crow_wgt ! coarse graph vertex weights
-   integer :: stop_coarsening1
    real(wp) :: reduction ! actual grid reduction factor
    real(wp) :: min_reduction ! min grid reduction factor
    real(wp) :: max_reduction ! max grid reduction factor
@@ -202,31 +219,18 @@ subroutine coarsen(grid, work, options, cexit, st)
    cexit = 0   ! Keep coarsening
    st = 0      ! No error
 
-   ! Test to see if this is either the last level or
-   ! if the matrix size too small
-   stop_coarsening1 = max(2,options%stop_coarsening1)
-   if (grid%level.ge.options%stop_coarsening2 .or. &
-         grid%size.le.stop_coarsening1) then
-      if (options%print_level.ge.1 .and. options%unit_diagnostics.gt.0) &
-         call level_print(options%unit_diagnostics, 'end of level ', grid%level)
-
-      cexit = 1 ! Stop, we're at the coarsest level
-      return
-   end if
-
    ! Coarsest level not yet reached so carry on coarsening
    select case(options%matching)
    case(:ND_MATCH_COMMON_NEIGHBOURS)
       lwk = 2*grid%size
-      call coarsen_cn(grid, lwk, work(1:lwk), st)
+      call prolng_common_neigh(grid, cgrid, lwk, work(1:lwk), st)
    case(ND_MATCH_HEAVY:)
       lwk = grid%size
-      call coarsen_hec(grid, lwk, work(1:lwk), st)
+      call prolng_heavy_edge(grid, cgrid, lwk, work(1:lwk), st)
    end select
    if (st.ne.0) return
 
    ! ensure coarse grid quantities are allocated to sufficient size
-   cgrid => grid%coarse
    cnvtx = cgrid%size
    call nd_alloc(cgrid%where, cnvtx, st)
    if (st.ne.0) return
@@ -287,8 +291,10 @@ subroutine coarsen(grid, work, options, cexit, st)
 
 end subroutine coarsen
 
-subroutine prolong(grid, sumweight, a_weight_1, a_weight_2, a_weight_sep, work, options)
+subroutine prolong(grid, cgrid, sumweight, a_weight_1, a_weight_2, &
+      a_weight_sep, work, options)
    type(nd_multigrid), target, intent(inout) :: grid
+   type(nd_multigrid), target, intent(inout) :: cgrid
    integer, intent(in) :: sumweight
    integer, intent(out) :: a_weight_1
    integer, intent(out) :: a_weight_2
@@ -296,7 +302,6 @@ subroutine prolong(grid, sumweight, a_weight_1, a_weight_2, a_weight_sep, work, 
    integer, dimension(9*grid%graph%n+sumweight), intent(out) :: work
    type(nd_options), intent(in) :: options
 
-   type (nd_multigrid), pointer :: cgrid ! the coarse level grid
    type (nd_matrix), pointer :: p ! the coarse grid prolongator
    integer, dimension(:), pointer :: fwhere ! partition on fine grid
    integer, dimension(:), pointer :: cwhere ! partition on coarse grid
@@ -304,7 +309,6 @@ subroutine prolong(grid, sumweight, a_weight_1, a_weight_2, a_weight_sep, work, 
    integer :: i, j, a_ne, p1, p2, psep
    integer :: work_ptr, partition_ptr
 
-   cgrid => grid%coarse
    p => cgrid%p
    fwhere => grid%where(1:grid%size)
    cwhere => cgrid%where(1:cgrid%size)
@@ -546,78 +550,6 @@ subroutine nd_coarse_partition(a_n,a_ne,a_ptr,a_row,a_weight, &
 
 end subroutine nd_coarse_partition
 
-! *****************************************************************
-
-!
-! Deallocate dynamic storage in a grid and any subgrids
-!
-! NB: failures ignored (can fail due to not being allocated)
-recursive subroutine mg_grid_destroy(grid)
-   type (nd_multigrid) :: grid
-
-   integer :: st
-
-   if (associated(grid%coarse)) then
-      call mg_grid_destroy(grid%coarse)
-      deallocate (grid%coarse)
-   endif
-
-   nullify (grid%coarse, grid%fine)
-
-   deallocate (grid%where, stat=st)
-   deallocate (grid%row_wgt, stat=st)
-end subroutine mg_grid_destroy
-
-! ***************************************************************
-subroutine coarsen_hec(grid,lwork,work,st)
-  ! coarsen the grid using heavy-edge collapsing and set up the
-  ! coarse grid equation, the prolongator and restrictor
-
-  type (nd_multigrid), intent(inout), TARGET :: grid
-  integer, intent(in) :: lwork
-  integer, intent(out) :: work(lwork)
-  integer, intent(out) :: st
-
-  st = 0
-  if (.not.associated(grid%coarse)) allocate (grid%coarse, stat=st)
-  if(st.ne.0) return
-
-  grid%coarse%fine => grid
-
-  ! find the prolongator
-  call prolng_heavy_edge(grid,lwork,work,st)
-
-
-  grid%coarse%level = grid%level + 1
-
-end subroutine coarsen_hec
-
-
-! ***************************************************************
-subroutine coarsen_cn(grid,lwork,work,st)
-  ! coarsen the grid using common neighbours collapsing and set up the
-  ! coarse grid equation, the prolongator and restrictor
-
-  type (nd_multigrid), intent(inout), TARGET :: grid
-
-  integer, intent(in) :: lwork
-  integer, intent(out) :: work(lwork)
-  integer, intent(out) :: st
-
-  st = 0
-  if (.not.associated(grid%coarse)) allocate (grid%coarse, stat=st)
-  if(st.ne.0) return
-
-  grid%coarse%fine => grid
-
-  ! find the prolongator
-
-  call prolng_common_neigh(grid,lwork,work,st)
-
-  grid%coarse%level = grid%level + 1
-
-end subroutine coarsen_cn
-
 ! ***************************************************************
 subroutine nd_matrix_multiply_vec(matrix,x,y)
   ! subroutine nd_matrix_multiply_vec(matrix,x,y)
@@ -704,19 +636,16 @@ end subroutine nd_alloc
 
 ! ********************************************************
 
-subroutine prolng_heavy_edge(grid,lwork,work,st)
-
-  ! calculate the prolongator for heavy-edge collapsing:
-  ! match the vertices of the heaviest edges
-
-  ! input fine grid
-  type (nd_multigrid), target, intent(inout) :: grid
+! calculate the prolongator for heavy-edge collapsing:
+! match the vertices of the heaviest edges
+subroutine prolng_heavy_edge(grid,cgrid,lwork,work,st)
+  type (nd_multigrid), target, intent(inout) :: grid ! input fine grid
+  type (nd_multigrid), target, intent(inout) :: cgrid ! output coarse grid
   integer, intent(in) :: lwork
   integer, intent(out) :: work(lwork)
   integer, intent(out) :: st
 
   ! coarse grid based on the fine grid
-  type (nd_multigrid), pointer :: cgrid
 
   ! the fine grid row connectivity graph
   type (nd_matrix), pointer :: graph
@@ -745,7 +674,6 @@ subroutine prolng_heavy_edge(grid,lwork,work,st)
   integer :: maxind
 
   ! allocate the prolongation matrix pointers
-  cgrid => grid%coarse
   graph => grid%graph
 
   ! allocate the graph and matrix pointer and the mincut pointer
@@ -868,19 +796,14 @@ end subroutine prolng_heavy_edge
 
 ! *******************************************************************
 
-subroutine prolng_common_neigh(grid,lwork,work,st)
-
-  ! calculate the prolongator:
-  ! match the vertices of with most neighbours in common
-
-  ! input fine grid
+! calculate the prolongator:
+! match the vertices of with most neighbours in common
+subroutine prolng_common_neigh(grid,cgrid,lwork,work,st)
+  type (nd_multigrid), target, intent(inout) :: grid ! input fine grid
+  type (nd_multigrid), target, intent(inout) :: cgrid ! output coarse grid
   integer, intent(in) :: lwork
   integer, intent(out) :: work(lwork)
-  type (nd_multigrid), target, intent(inout) :: grid
   integer, intent(out) :: st
-
-  ! coarse grid based on the fine grid
-  type (nd_multigrid), pointer :: cgrid
 
   ! the fine grid row connectivity graph
   type (nd_matrix), pointer :: graph
@@ -912,7 +835,6 @@ subroutine prolng_common_neigh(grid,lwork,work,st)
   integer :: nz
 
   ! allocate the prolongation matrix pointers
-  cgrid => grid%coarse
   graph => grid%graph
 
   st = 0
