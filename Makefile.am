@@ -332,6 +332,7 @@ src/nd/preprocess.$(OBJEXT): src/nd/types.$(OBJEXT) src/nd/util.$(OBJEXT)
 src/nd/refine.$(OBJEXT): src/nd/maxflow.$(OBJEXT) \
 								 src/nd/types.$(OBJEXT) \
 								 src/nd/util.$(OBJEXT)
+src/nd/util.$(OBJEXT): src/nd/types.$(OBJEXT)
 src/random_matrix.$(OBJEXT): src/random.$(OBJEXT)
 src/rutherford_boeing.$(OBJEXT): src/matrix_util.$(OBJEXT) \
 											src/random.$(OBJEXT)

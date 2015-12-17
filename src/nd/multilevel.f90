@@ -208,7 +208,6 @@ subroutine coarsen(grid, cgrid, work, options, cexit, st)
    integer :: cnvtx ! number of vertices (rows) in the coarse matrix
    integer :: cnedge ! number of edge (entries) in the coarse matrix
    type (nd_matrix), pointer :: p ! the coarse grid prolongator
-   type (nd_matrix), pointer :: r ! the coarse grid restrictor (= p')
    type (nd_matrix), pointer :: cgraph ! the coarse graph
    type (nd_matrix), pointer :: graph ! the fine graph
    integer, dimension(:), pointer :: row_wgt ! fine graph vertex weights
@@ -222,6 +221,8 @@ subroutine coarsen(grid, cgrid, work, options, cexit, st)
    st = 0      ! No error
 
    ! Coarsest level not yet reached so carry on coarsening
+   call nd_alloc(grid%match, grid%graph%n, st)
+   if(st.ne.0) return
    select case(options%matching)
    case(:ND_MATCH_COMMON_NEIGHBOURS)
       lwk = 2*grid%size
@@ -266,14 +267,23 @@ subroutine coarsen(grid, cgrid, work, options, cexit, st)
    ! form the coarse grid graph and matrix
    ! cmatrix = P^T*matrix = R*matrix
    p => cgrid%p
-   r => cgrid%r
    graph => grid%graph
    cgraph => cgrid%graph
 
-   ! get the coarse matrix
-   lwk = 3*grid%size
-   call galerkin_graph(graph,p,r,cgraph,st,lwk,work(1:lwk))
+   ! Construct compressed graph
+   cgraph%m = cgrid%p%n
+   cgraph%n = cgrid%p%n
+   call nd_alloc(cgraph%ptr, cgraph%n+1, st)
    if (st.ne.0) return
+   call compress_matrix(graph%n, graph%ptr, graph%col, graph%val, grid%match, &
+      cgraph%ptr, work) ! NB: Only fills cgraph%ptr, to count #entries
+   cgraph%ne = cgraph%ptr(cgraph%n+1)-1
+   call nd_alloc(cgraph%col, cgraph%ne, st)
+   if (st.ne.0) return
+   call nd_alloc(cgraph%val, cgraph%ne, st)
+   if (st.ne.0) return
+   call compress_matrix(graph%n, graph%ptr, graph%col, graph%val, grid%match, &
+      cgraph%ptr, work, row_out=cgraph%col, val_out=cgraph%val)
 
    ! check if matrix is full
    cnedge = cgrid%graph%ptr(cgrid%graph%n+1)-1
@@ -287,11 +297,27 @@ subroutine coarsen(grid, cgrid, work, options, cexit, st)
    end if
 
    ! row weight cw = R*w
-   row_wgt => grid%row_wgt(1:grid%size)
-   crow_wgt => cgrid%row_wgt(1:cgrid%size)
-   call nd_matrix_multiply_vec(r, row_wgt, crow_wgt)
+   call compress_vector(grid%size, grid%match, grid%row_wgt, cgrid%row_wgt)
 
 end subroutine coarsen
+
+subroutine compress_vector(n, match, v_in, v_out)
+   integer, intent(in) :: n
+   integer, dimension(n), intent(in) :: match
+   integer, dimension(n), intent(in) :: v_in
+   integer, dimension(*), intent(out) :: v_out
+
+   integer :: i, j, k
+
+   k = 1
+   do i = 1, n
+      j = match(i)
+      if(j.lt.i) cycle
+      v_out(k) = v_in(i)
+      if(i.ne.j) v_out(k) = v_out(k) + v_in(j)
+      k = k + 1
+   end do
+end subroutine compress_vector
 
 subroutine prolong(grid, cgrid, sumweight, a_weight_1, a_weight_2, &
       a_weight_sep, work, options)
@@ -655,9 +681,6 @@ subroutine prolng_heavy_edge(grid,cgrid,lwork,work,st)
   ! the coarse grid prolongator
   type (nd_matrix), pointer :: p
 
-  ! the coarse grid restrictor
-  type (nd_matrix), pointer :: r
-
   ! the number of fine and coarse grid vertices
   integer :: nvtx, cnvtx
 
@@ -667,9 +690,6 @@ subroutine prolng_heavy_edge(grid,cgrid,lwork,work,st)
 
   ! whether a vertex is matched already
   integer, parameter :: unmatched = -1
-
-  ! matching status of each vertex
-  integer :: ptr_match
 
   ! maximum weight and index of edges connected to the current vertex
   integer :: maxwgt
@@ -686,10 +706,7 @@ subroutine prolng_heavy_edge(grid,cgrid,lwork,work,st)
 
   ! prolongator start here ================================
 
-  ! initialise the matching status and randomly permute the vertex order
-  ptr_match = 0
-
-  work(ptr_match+1:ptr_match+nvtx) = unmatched
+  grid%match(1:nvtx) = unmatched
 
   ! loop over each vertex and match along the heaviest edge
   cnvtx = 0
@@ -697,7 +714,7 @@ subroutine prolng_heavy_edge(grid,cgrid,lwork,work,st)
   do i = 1, nvtx
     v = i
     ! If already matched, next vertex please
-    if (work(ptr_match+v).ne.unmatched) cycle
+    if (grid%match(v).ne.unmatched) cycle
     maxwgt = -huge(0)
     ! in the case no match is found then match itself
     maxind = v
@@ -708,7 +725,7 @@ subroutine prolng_heavy_edge(grid,cgrid,lwork,work,st)
       ! heavy edge matching
       ! if u is unmatched and value of the entry in col. u is greater
       ! than maxwgt, select u as the matching.
-      if (work(ptr_match+u).eq.unmatched .and. maxwgt.lt.abs(graph%val(j))) &
+      if (grid%match(u).eq.unmatched .and. maxwgt.lt.abs(graph%val(j))) &
           then
         maxwgt = abs(graph%val(j))
         maxind = u
@@ -716,9 +733,9 @@ subroutine prolng_heavy_edge(grid,cgrid,lwork,work,st)
     end do
     ! NOTE: maxind .ge. v
     ! the neighbor with heaviest weight
-    work(ptr_match+v) = maxind
+    grid%match(v) = maxind
     ! mark maxind as having been matched
-    work(ptr_match+maxind) = v
+    grid%match(maxind) = v
     ! increase number of vertices in coarse graph by 1
     cnvtx = cnvtx + 1
     ! construct the prolongation matrix: find vertex v and maxind is
@@ -736,37 +753,6 @@ subroutine prolng_heavy_edge(grid,cgrid,lwork,work,st)
   call nd_matrix_construct(p,nvtx,cnvtx,nz,st)
   if(st.ne.0) return
 
-
-  ! storage allocation for col. indices and values of restiction
-  ! matrix R (cnvtx * nvtx)
-  r => cgrid%r
-  call nd_matrix_construct(r,cnvtx,nvtx,nz,st)
-  if(st.ne.0) return
-
-  r%val(1:nz) = 1
-
-  ! store restriction matrix
-  r%ptr(cnvtx+1) = nz + 1
-
-  j = 1
-  k = 1
-  do i = 1, nvtx
-    if (work(ptr_match+i).eq.i) then
-      r%ptr(k) = j
-      r%col(j) = i
-      j = j + 1
-      k = k + 1
-    else
-      if (work(ptr_match+i).gt.i) then
-        r%ptr(k) = j
-        r%col(j) = i
-        r%col(j+1) = work(ptr_match+i)
-        j = j + 2
-        k = k + 1
-      end if
-    end if
-  end do
-
   ! store prolongation matrix
 
   p%ptr(1) = 1
@@ -778,7 +764,7 @@ subroutine prolng_heavy_edge(grid,cgrid,lwork,work,st)
 
   j = 1
   do i = 1, nvtx
-    k = work(ptr_match+i)
+    k = grid%match(i)
     if (k.eq.i) then
       p%col(p%ptr(i)) = j
       j = j + 1
@@ -813,9 +799,6 @@ subroutine prolng_common_neigh(grid,cgrid,lwork,work,st)
   ! the coarse grid prolongator
   type (nd_matrix), pointer :: p
 
-  ! the fine grid restrictor
-  type (nd_matrix), pointer :: r
-
   ! the number of fine and coarse grid vertices
   integer :: nvtx, cnvtx
 
@@ -825,8 +808,6 @@ subroutine prolng_common_neigh(grid,cgrid,lwork,work,st)
   ! whether a vertex is matched already
   integer, parameter :: unmatched = -1
 
-  ! matching status of each vertex
-  integer :: ptr_match
   ! flag array to flag up neighbours of a  node
   integer :: ptr_flag
 
@@ -846,10 +827,9 @@ subroutine prolng_common_neigh(grid,cgrid,lwork,work,st)
   ! prolongator start here ================================
 
   ! initialise the matching status
-  ptr_match = 0
-  ptr_flag = ptr_match + nvtx
+  ptr_flag = nvtx
 
-  work(ptr_match+1:ptr_match+nvtx) = unmatched
+  grid%match(1:nvtx) = unmatched
 
   work(ptr_flag+1:ptr_flag+nvtx) = 0
 
@@ -860,7 +840,7 @@ subroutine prolng_common_neigh(grid,cgrid,lwork,work,st)
   do i = 1, nvtx
     v = i
     ! If already matched, next vertex please
-    if (work(ptr_match+v).ne.unmatched) cycle
+    if (grid%match(v).ne.unmatched) cycle
     ! access the col. indices of row v
 
     ! in the case no match is found then match itself
@@ -878,7 +858,7 @@ subroutine prolng_common_neigh(grid,cgrid,lwork,work,st)
     do j = grid%graph%ptr(v), grid%graph%ptr(v+1) - 1
       u = grid%graph%col(j)
       ! cycle is u is already matched
-      if (work(ptr_match+u).ne.unmatched) cycle
+      if (grid%match(u).ne.unmatched) cycle
       num = 0
       do k = grid%graph%ptr(u), grid%graph%ptr(u+1) - 1
         w = grid%graph%col(k)
@@ -891,9 +871,9 @@ subroutine prolng_common_neigh(grid,cgrid,lwork,work,st)
     end do
 
     ! the neighbor with largest number of neighbours in common with v
-    work(ptr_match+v) = maxind
+    grid%match(v) = maxind
     ! mark maxind as having been matched
-    work(ptr_match+maxind) = v
+    grid%match(maxind) = v
     ! increase number of vertices in coarse graph by 1
     cnvtx = cnvtx + 1
     ! construct the prolongation matrix: find vertex v and maxind is
@@ -912,37 +892,6 @@ subroutine prolng_common_neigh(grid,cgrid,lwork,work,st)
   if(st.ne.0) return
   p%val(1:nz) = 0
 
-  ! storage allocation for col. indices and values of restiction
-  ! matrix R (cnvtx * nvtx)
-  r => cgrid%r
-  call nd_matrix_construct(r,cnvtx,nvtx,nz,st)
-  if(st.ne.0) return
-
-  r%val(1:nz) = 1
-
-  ! store restriction matrix
-  r%ptr(cnvtx+1) = nz + 1
-
-  j = 1
-  k = 1
-  do i = 1, nvtx
-    if (work(ptr_match+i).eq.i) then
-      r%ptr(k) = j
-      r%col(j) = i
-      j = j + 1
-      k = k + 1
-    else
-      if (work(ptr_match+i).gt.i) then
-        r%ptr(k) = j
-        r%col(j) = i
-        r%col(j+1) = work(ptr_match+i)
-        j = j + 2
-        k = k + 1
-      end if
-    end if
-  end do
-
-
   ! store prolongation matrix
 
   p%ptr(1) = 1
@@ -954,7 +903,7 @@ subroutine prolng_common_neigh(grid,cgrid,lwork,work,st)
 
   j = 1
   do i = 1, nvtx
-    k = work(ptr_match+i)
+    k = grid%match(i)
     if (k.eq.i) then
       p%col(p%ptr(i)) = j
       j = j + 1
@@ -993,234 +942,91 @@ subroutine level_print(mp,title1,level,title2,res)
 
 end subroutine level_print
 
+!
+! Given a matching, produce the compressed matrix obtained by merging matched
+! rows and columns.
+!
+subroutine compress_matrix(n, ptr_in, row_in, val_in, match, ptr_out, work, &
+      row_out, val_out)
+   integer, intent(in) :: n
+   integer, dimension(n+1), intent(in) :: ptr_in
+   integer, dimension(ptr_in(n+1)-1), intent(in) :: row_in
+   integer, dimension(ptr_in(n+1)-1), intent(in) :: val_in
+   integer, dimension(n), intent(in) :: match
+   integer, dimension(*), intent(out) :: ptr_out
+   integer, dimension(3*n), target, intent(out) :: work
+   integer, dimension(*), optional, intent(out) :: row_out
+   integer, dimension(*), optional, intent(out) :: val_out
 
+   integer :: col, idx, j, k, u, v
+   integer, dimension(:), pointer :: seen
+   integer, dimension(:), pointer :: map
+   integer, dimension(:), pointer :: loc
 
-! *************************************************
-subroutine galerkin_graph(matrix,p,r,cmatrix,st,lwork,work)
+   map  => work(    1 :   n)
+   seen => work(  n+1 : 2*n)
+   loc  => work(2*n+1 : 3*n)
 
-  ! Given matrix on fine grid and a prolongation operator p,
-  ! find the coarse matrix R*A*P
-
-  ! matrix: fine grid matrix
-  type (nd_matrix), intent(in) :: matrix
-  ! p: prolongation operator
-  type (nd_matrix), intent(in) :: p
-  ! r: restriction operator
-  type (nd_matrix), intent(in) :: r
-  ! cmatrix: coarse grid matrix
-  type (nd_matrix), intent(inout) :: cmatrix
-  integer, intent(in) :: lwork
-  integer, intent(out) :: work(lwork)
-
-  ! nvtx,cnvtx: size of fine and coarse grid
-  integer :: nvtx, cnvtx
-  integer :: nz
-
-  integer, intent(inout) :: st
-
-  ! call mc65_matrix_transpose(p,r,info65)
-  ! if (info65.lt.0) then
-  ! info = info65
-  ! return
-  ! end if
-  nvtx = matrix%n
-  cnvtx = p%n
-
-  ! get the size of the coarse matrix first
-  call galerkin_graph_rap_size(nvtx,cnvtx,nz,p%ptr(nvtx+1)-1,p%col, &
-    p%ptr,matrix%ptr(nvtx+1)-1,matrix%col,matrix%ptr,r%ptr(cnvtx+1)-1, &
-    r%col,r%ptr,lwork,work(1:lwork))
-
-  call nd_matrix_construct(cmatrix,cnvtx,cnvtx,nz,st)
-  if(st.ne.0) return
-
-  call galerkin_graph_rap(nvtx,cnvtx,p%ptr(nvtx+1)-1,p%val,p%col,p%ptr, &
-    matrix%ptr(nvtx+1)-1,matrix%val,matrix%col,matrix%ptr, &
-    r%ptr(cnvtx+1)-1,r%val,r%col,r%ptr,nz,cmatrix%val,cmatrix%col, &
-    cmatrix%ptr,lwork,work(1:lwork))
-
-end subroutine galerkin_graph
-
-! *************************************************
-
-subroutine galerkin_graph_rap_size(nvtx,cnvtx,nz,nzp,pcol,pptr,nzaa, &
-    acol,aptr,nzr,rcol,rptr,lwork,work)
-  ! get the number of nonzeros in R*A*P
-  ! nvtx: size of aa matrix
-  ! cnvtx: size of ca matrix
-  integer, intent(in) :: nvtx, cnvtx
-  ! nz: number of nonzeros in R*A*P
-  integer, intent(out) :: nz
-
-  ! P: matrix
-  integer, intent(in) :: nzp
-  integer, intent(in), dimension(nzp) :: pcol
-  integer, intent(in), dimension(nvtx+1) :: pptr
-  ! aa: matrix
-  integer, intent(in) :: nzaa
-  integer, intent(in), dimension(nzaa) :: acol
-  integer, intent(in), dimension(nvtx+1) :: aptr
-  ! R: matrix
-  integer, intent(in) :: nzr
-  integer, intent(in), dimension(nzr) :: rcol
-  integer, intent(in), dimension(cnvtx+1) :: rptr
-
-  integer, intent(in) :: lwork
-  integer, intent(out) :: work(lwork)
-
-  ! mask: masking array to see if an entry has been seen before
-  integer :: ptr_mask
-  ! i,j,k: loop index
-  integer :: i, j, k
-  ! nz: number of nonzeros so far in ca
-  integer :: nz1
-  ! various neighbors
-  integer :: neigh, neighneigh
-
-  ! col: column index of a row of r*matrix
-  integer :: ptr_col
-
-  ptr_mask = 0
-  ptr_col = ptr_mask + nvtx
-  work(ptr_mask+1:ptr_mask+nvtx) = 0
-  nz = 0
-  ! loop over coarse grid points
-  do i = 1, cnvtx
-    ! first form row i of (r*matrix)
-    nz1 = 0
-    ! for each vertex D that restricts to C (including itself).
-    do j = rptr(i), rptr(i+1) - 1
-      neigh = rcol(j)
-      ! find D's neighbor
-      do k = aptr(neigh), aptr(neigh+1) - 1
-        neighneigh = acol(k)
-        if (work(ptr_mask+neighneigh).ne.i) then
-          nz1 = nz1 + 1
-          work(ptr_col+nz1) = neighneigh
-          work(ptr_mask+neighneigh) = i
-        end if
+   ! Build map array
+   col = 1 ! Variable to map to
+   do u = 1, n
+      v = match(u)
+      if(v.lt.u) cycle ! Already handled column
+      map(u) = col
+      map(v) = col
+      col = col + 1
+   end do
+   
+   ! Compress matrix
+   col = 1 ! Insert column
+   idx = 1 ! Insert location
+   seen(:) = 0
+   do u = 1, n
+      v = match(u)
+      if(v.lt.u) cycle ! Already handled column
+      ptr_out(col) = idx
+      seen(col) = u ! Avoid diagonals
+      ! Loop over entries in column u
+      do j = ptr_in(u), ptr_in(u+1)-1
+         k = map(row_in(j))
+         if(seen(k).ge.u) then
+            ! Entry already present - just add value
+            if(k.ne.col .and. present(val_out)) &
+               val_out(loc(k)) = val_out(loc(k)) + val_in(j)
+         else
+            ! New entry - insert
+            if(present(row_out)) row_out(idx) = k
+               if(present(val_out)) then
+                  loc(k) = idx
+                  val_out(loc(k)) = val_in(j)
+               endif
+            seen(k) = u
+            idx = idx + 1
+         end if
       end do
-    end do
-    ! form row i of (r*matrix)*p
-    do j = 1, nz1
-      neigh = work(ptr_col+j)
-      do k = pptr(neigh), pptr(neigh+1) - 1
-        neighneigh = pcol(k)
-        if (work(ptr_mask+neighneigh).ne.-i .and. neighneigh.ne.i) then
-          nz = nz + 1
-          work(ptr_mask+neighneigh) = -i
-        end if
-      end do
-    end do
-  end do
-
-end subroutine galerkin_graph_rap_size
-! ******************************************************
-subroutine galerkin_graph_rap(nvtx,cnvtx,nzp,pa,pcol,pptr,nzaa,aa,acol, &
-    aptr,nzr,ra,rcol,rptr,nzca,ca,ccol,cptr,lwork,work)
-  ! multiply R*A*P to get CA
-  ! nvtx: size of aa matrix
-  ! cnvtx: size of ca matrix
-  integer, intent(in) :: nvtx, cnvtx
-  ! p: matrix
-  integer, intent(in) :: nzp
-  integer, intent(in), dimension(nzp) :: pa
-  integer, intent(in), dimension(nzp) :: pcol
-  integer, intent(in), dimension(nvtx+1) :: pptr
-  ! aa: matrix
-  integer, intent(in) :: nzaa
-  integer, intent(in), dimension(:) :: aa
-  integer, intent(in), dimension(nzaa) :: acol
-  integer, intent(in), dimension(:) :: aptr
-  ! r: matrix
-  integer, intent(in) :: nzr
-  integer, intent(in), dimension(nzr) :: ra
-  integer, intent(in), dimension(nzr) :: rcol
-  integer, intent(in), dimension(cnvtx+1) :: rptr
-  ! ca: matrix
-  integer, intent(in) :: nzca
-  integer, intent(inout), dimension(nzca) :: ca
-  integer, intent(inout), dimension(nzca) :: ccol
-  integer, intent(inout), dimension(cnvtx+1) :: cptr
-
-  integer, intent(in) :: lwork
-  integer, intent(out) :: work(lwork)
-
-
-  ! mask: masking array to see if an entry has been seen before
-  integer :: ptr_mask
-  ! i,j,k,l: loop index
-  integer :: i, j, k
-  ! nz: number of nonzeros so far in ca
-  integer :: nz, nzz, nz1
-  ! various neighbors
-  integer :: neigh, neighneigh
-  ! r_ij: (i,j) element of r
-  integer :: r_ij
-  ! col: column index of a row of r*matrix
-  ! a: values of a row of r*matrix
-  integer :: ptr_col, ptr_a
-
-  ptr_mask = 0
-  ptr_col = ptr_mask + nvtx
-  ptr_a = ptr_col + nvtx
-  ! now get the entries of the coarse matrix
-  cptr(1) = 1
-  work(ptr_mask+1:ptr_mask+nvtx) = 0
-  nz = 0
-  ! loop over every coarse grid point
-  do i = 1, cnvtx
-    ! first form row i of (r*matrix)
-    nz1 = 0
-    ! foreach each vertex D that restricts to C (including itself).
-    do j = rptr(i), rptr(i+1) - 1
-      neigh = rcol(j)
-      r_ij = ra(j)
-      ! find D's neighbor
-      do k = aptr(neigh), aptr(neigh+1) - 1
-        neighneigh = acol(k)
-        nzz = work(ptr_mask+neighneigh)
-        if (nzz.eq.0) then
-          nz1 = nz1 + 1
-          work(ptr_col+nz1) = neighneigh
-          work(ptr_a+nz1) = r_ij*aa(k)
-          work(ptr_mask+neighneigh) = nz1
-        else
-          work(ptr_a+nzz) = work(ptr_a+nzz) + r_ij*aa(k)
-        end if
-      end do
-    end do
-    do j = 1, nz1
-      work(ptr_mask+work(ptr_col+j)) = 0
-    end do
-
-    ! form row i of (r*matrix)*p
-    do j = 1, nz1
-      neigh = work(ptr_col+j)
-      r_ij = work(ptr_a+j)
-      do k = pptr(neigh), pptr(neigh+1) - 1
-        neighneigh = pcol(k)
-        if (neighneigh.eq.i) cycle
-        nzz = work(ptr_mask+neighneigh)
-        if (nzz.eq.0) then
-          nz = nz + 1
-          work(ptr_mask+neighneigh) = nz
-          ca(nz) = r_ij*pa(k)
-          ccol(nz) = neighneigh
-        else
-          ca(nzz) = ca(nzz) + r_ij*pa(k)
-        end if
-      end do
-    end do
-
-    do j = cptr(i), nz
-      work(ptr_mask+ccol(j)) = 0
-    end do
-    cptr(i+1) = nz + 1
-  end do
-
-
-end subroutine galerkin_graph_rap
-
+      if(u.ne.v) then
+         ! Loop over entries in column v
+         do j = ptr_in(v), ptr_in(v+1)-1
+            k = map(row_in(j))
+            if(seen(k).ge.u) then
+               ! Entry already present - just add value
+               if(k.ne.col .and. present(val_out)) &
+                  val_out(loc(k)) = val_out(loc(k)) + val_in(j)
+            else
+               ! New entry - insert
+               if(present(row_out)) row_out(idx) = k
+               if(present(val_out)) then
+                  loc(k) = idx
+                  val_out(loc(k)) = val_in(j)
+               endif
+               seen(k) = u
+               idx = idx + 1
+            end if
+         end do
+      end if
+      col = col + 1
+   end do
+   ptr_out(col) = idx ! Set entry n+1
+end subroutine compress_matrix
 
 end module spral_nd_multilevel

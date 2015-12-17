@@ -151,6 +151,7 @@ module spral_nd_types
    type nd_multigrid
       integer :: size ! size of this level (number of rows)
       type (nd_matrix) :: graph ! this level of matrix
+      integer, allocatable, dimension(:) :: match ! matching
       integer, allocatable, dimension(:) :: where ! where each row of
          ! this level of matrix will go (ie ordering for this level)
       integer, allocatable, dimension(:) :: row_wgt ! number of
@@ -158,7 +159,6 @@ module spral_nd_types
       integer :: level = 0 ! the level
       integer :: part_div(2) ! number of vertices in each part
       type (nd_matrix) :: p ! the prolongation operator
-      type (nd_matrix) :: r ! the restriction operator
    end type nd_multigrid
 
 end module spral_nd_types
