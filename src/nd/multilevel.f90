@@ -87,7 +87,6 @@ subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
    !
    ! Build coarse grid hierarchy
    !
-   grid => grids(1)
    stop_coarsening1 = max(2,options%stop_coarsening1)
    do level = 1, options%stop_coarsening2-1 ! NB we are are creating level+1
       if (options%print_level.ge.1 .and. options%unit_diagnostics.gt.0) &
@@ -104,7 +103,6 @@ subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
       end if
 
       ! Allocate coarser level
-      grids(level+1)%fine => grid
       grids(level+1)%level = level+1
 
       call coarsen(grids(level), grids(level+1), work(1:grids(level)%size), &
@@ -114,12 +112,11 @@ subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
          return
       endif
       if(cexit.ne.0) exit ! Stop coarsening and partition
-      grid => grids(level+1)
    end do
-   grid => grids(level)
 
    ! Perform coarse patitioning (if it fails, keep tring on finer grids)
    do
+      grid => grids(level)
       grid_ne = grid%graph%ptr(grid%graph%n+1) - 1
       call nd_coarse_partition(grid%graph%n, grid_ne, grid%graph%ptr, &
          grid%graph%col, grid%row_wgt, sumweight, grid%part_div(1), &
@@ -136,17 +133,22 @@ subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
             'at level ', grid%level, ' no partition found'
 
       ! Try partitioning previous grid level
-      grid => grid%fine
+      level = level - 1
+      if(level.lt.1) then
+         info = ND_ERR_INTERNAL
+         return
+      endif
    end do
 
    ! Prolongation
-   do while(.not.associated(grid, grids(1)))
-      call prolong(grid%fine, grid, sumweight, a_weight_1, a_weight_2, &
-         a_weight_sep,work(1:9*grid%fine%graph%n+sumweight), options)
+   do level = level, 2, -1
+      grid => grids(level)
+      call prolong(grids(level-1), grids(level), sumweight, a_weight_1, &
+         a_weight_2, a_weight_sep,work(1:9*grids(level-1)%graph%n+sumweight), &
+         options)
       if (options%print_level.ge.2 .and. options%unit_diagnostics.gt.0) &
          call level_print(options%unit_diagnostics, ' after post smoothing ', &
-            grid%fine%level)
-      grid => grid%fine
+            level-1)
    end do
 
 
