@@ -158,7 +158,6 @@ module spral_nd_types
          ! vertices this vertex of the coarse graph matrix represents
       integer :: level = 0 ! the level
       integer :: part_div(2) ! number of vertices in each part
-      type (nd_matrix) :: p ! the prolongation operator
    end type nd_multigrid
 
 end module spral_nd_types

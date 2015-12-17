@@ -207,7 +207,6 @@ subroutine coarsen(grid, cgrid, work, options, cexit, st)
    integer :: lwk
    integer :: cnvtx ! number of vertices (rows) in the coarse matrix
    integer :: cnedge ! number of edge (entries) in the coarse matrix
-   type (nd_matrix), pointer :: p ! the coarse grid prolongator
    type (nd_matrix), pointer :: cgraph ! the coarse graph
    type (nd_matrix), pointer :: graph ! the fine graph
    integer, dimension(:), pointer :: row_wgt ! fine graph vertex weights
@@ -266,13 +265,12 @@ subroutine coarsen(grid, cgrid, work, options, cexit, st)
 
    ! form the coarse grid graph and matrix
    ! cmatrix = P^T*matrix = R*matrix
-   p => cgrid%p
    graph => grid%graph
    cgraph => cgrid%graph
 
    ! Construct compressed graph
-   cgraph%m = cgrid%p%n
-   cgraph%n = cgrid%p%n
+   cgraph%m = cgrid%size
+   cgraph%n = cgrid%size
    call nd_alloc(cgraph%ptr, cgraph%n+1, st)
    if (st.ne.0) return
    call compress_matrix(graph%n, graph%ptr, graph%col, graph%val, grid%match, &
@@ -330,16 +328,12 @@ subroutine prolong(grid, cgrid, sumweight, a_weight_1, a_weight_2, &
    integer, dimension(9*grid%graph%n+sumweight), intent(out) :: work
    type(nd_options), intent(in) :: options
 
-   type (nd_matrix), pointer :: p ! the coarse grid prolongator
    integer, dimension(:), pointer :: fwhere ! partition on fine grid
-   integer, dimension(:), pointer :: cwhere ! partition on coarse grid
 
    integer :: i, j, a_ne, p1, p2, psep
    integer :: work_ptr, partition_ptr
 
-   p => cgrid%p
    fwhere => grid%where(1:grid%size)
-   cwhere => cgrid%where(1:cgrid%size)
 
    ! injection of the order from coarse grid to the
    ! fine grid, since cwhere(i) is the index of the
@@ -348,7 +342,7 @@ subroutine prolong(grid, cgrid, sumweight, a_weight_1, a_weight_2, &
    ! grid%where = P*order_on_coarse_grid
    ! here P is a special matrix with only one non-zero entry per row
    grid%part_div(1:2) = 0
-   call nd_matrix_multiply_vec(p, cwhere, fwhere)
+   call prolong_vector(grid%size, grid%match, cgrid%where, grid%where)
 
    do i = 1, grid%size
       if (fwhere(i).eq.ND_PART1_FLAG) then
@@ -408,6 +402,24 @@ subroutine prolong(grid, cgrid, sumweight, a_weight_1, a_weight_2, &
       grid%where(j) = ND_SEP_FLAG
    end do
 end subroutine prolong
+
+subroutine prolong_vector(n, match, vec_in, vec_out)
+   integer, intent(in) :: n
+   integer, dimension(n), intent(in) :: match
+   integer, dimension(*), intent(in) :: vec_in
+   integer, dimension(n), intent(out) :: vec_out
+
+   integer :: i, j, k
+
+   k = 1
+   do i = 1, n
+      j = match(i)
+      if(j.lt.i) cycle
+      vec_out(i) = vec_in(k)
+      vec_out(j) = vec_in(k)
+      k = k + 1
+   end do
+end subroutine prolong_vector
 
 ! ***************************************************************
 ! ---------------------------------------------------
@@ -747,36 +759,6 @@ subroutine prolng_heavy_edge(grid,cgrid,lwork,work,st)
     end if
   end do
 
-  ! storage allocation for col. indices and values of prolongation
-  ! matrix P (nvtx * cnvtx)
-  p => cgrid%p
-  call nd_matrix_construct(p,nvtx,cnvtx,nz,st)
-  if(st.ne.0) return
-
-  ! store prolongation matrix
-
-  p%ptr(1) = 1
-  do i = 1, nvtx
-    p%ptr(i+1) = p%ptr(i) + 1
-  end do
-
-  p%val(1:nz) = 1
-
-  j = 1
-  do i = 1, nvtx
-    k = grid%match(i)
-    if (k.eq.i) then
-      p%col(p%ptr(i)) = j
-      j = j + 1
-    else
-      if (k.gt.i) then
-        p%col(p%ptr(i)) = j
-        p%col(p%ptr(k)) = j
-        j = j + 1
-      end if
-    end if
-  end do
-
   ! size of coarse grid
   cgrid%size = cnvtx
 
@@ -884,38 +866,6 @@ subroutine prolng_common_neigh(grid,cgrid,lwork,work,st)
       nz = nz + 1
     end if
   end do
-
-  ! storage allocation for col. indices and values of prolongation
-  ! matrix P (order nvtx * cnvtx)
-  p => cgrid%p
-  call nd_matrix_construct(p,nvtx,cnvtx,nz,st)
-  if(st.ne.0) return
-  p%val(1:nz) = 0
-
-  ! store prolongation matrix
-
-  p%ptr(1) = 1
-  do i = 1, nvtx
-    p%ptr(i+1) = p%ptr(i) + 1
-  end do
-
-  p%val(1:nz) = 1
-
-  j = 1
-  do i = 1, nvtx
-    k = grid%match(i)
-    if (k.eq.i) then
-      p%col(p%ptr(i)) = j
-      j = j + 1
-    else
-      if (k.gt.i) then
-        p%col(p%ptr(i)) = j
-        p%col(p%ptr(k)) = j
-        j = j + 1
-      end if
-    end if
-  end do
-
 
   ! size of coarse grid
   cgrid%size = cnvtx
