@@ -1077,9 +1077,9 @@ subroutine extract_matrices(n, ne_in, ptr_in, row_in, nparts, n_sub, &
    ! Loop over parts, extracting matrix
    rsptr = 0
    ins = 1
+   work(:) = 0
    do part = 1, nparts
       ! Set work(col) to index of col within new submatrix, or 0 if absent
-      work(:) = 0
       do cp = rsptr+1, rsptr + n_sub(part)
          col = rows_sub(cp)
          work(col) = cp - rsptr
@@ -1098,6 +1098,13 @@ subroutine extract_matrices(n, ne_in, ptr_in, row_in, nparts, n_sub, &
          end do
       end do
       ne_out(part) = ins - part_start - 1
+      ! Reset work to 0
+      if(part.ne.nparts) then
+         do cp = rsptr+1, rsptr + n_sub(part)
+            col = rows_sub(cp)
+            work(col) = 0
+         end do
+      end if
       ! Update for next partition
       rsptr = rsptr + n_sub(part)
    end do
