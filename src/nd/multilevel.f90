@@ -204,7 +204,6 @@ subroutine coarsen(grid, cgrid, work, options, cexit, st)
    integer, intent(out) :: cexit
    integer, intent(out) :: st
 
-   integer :: lwk
    integer :: cnvtx ! number of vertices (rows) in the coarse matrix
    integer :: cnedge ! number of edge (entries) in the coarse matrix
    type (nd_matrix), pointer :: cgraph ! the coarse graph
@@ -217,13 +216,12 @@ subroutine coarsen(grid, cgrid, work, options, cexit, st)
    cexit = 0   ! Keep coarsening
    st = 0      ! No error
 
-   ! Coarsest level not yet reached so carry on coarsening
    call nd_alloc(grid%match, grid%graph%n, st)
    if(st.ne.0) return
    select case(options%matching)
    case(:ND_MATCH_COMMON_NEIGHBOURS)
-      lwk = 2*grid%size
-      call prolng_common_neigh(grid, cgrid%size, lwk, work(1:lwk))
+      call match_common_neighbours(grid%graph%n, grid%graph%ptr, &
+         grid%graph%col, cgrid%size, grid%match, work(1:grid%size))
    case(ND_MATCH_HEAVY:)
       call match_heavy_edge(grid%graph%n, grid%graph%ptr, grid%graph%col, &
          grid%graph%val, cgrid%size, grid%match)
@@ -687,102 +685,64 @@ end subroutine match_heavy_edge
 
 ! *******************************************************************
 
-! calculate the prolongator:
-! match the vertices of with most neighbours in common
-subroutine prolng_common_neigh(grid,cnvtx,lwork,work)
-  type (nd_multigrid), target, intent(inout) :: grid ! input fine grid
-  integer, intent(out) :: cnvtx ! number of vertices in coarse grid
-  integer, intent(in) :: lwork
-  integer, intent(out) :: work(lwork)
+!
+! Find matching using common neighbours criterion
+!
+subroutine match_common_neighbours(n, ptr, row, cn, match, work)
+   integer, intent(in) :: n
+   integer, dimension(n+1), intent(in) :: ptr
+   integer, dimension(ptr(n+1)-1), intent(in) :: row
+   integer, intent(out) :: cn ! number of vertices in coarse grid
+   integer, dimension(n), intent(out) :: match
+   integer, dimension(n), intent(out) :: work
 
-  ! the fine grid row connectivity graph
-  type (nd_matrix), pointer :: graph
+   ! working variables
+   integer :: v, u, j
 
-  ! the number of fine and coarse grid vertices
-  integer :: nvtx
+   ! maximum no. neighbours and index of edges connected to the current vertex
+   integer :: bestv, best, num
 
-  ! working variables
-  integer :: v, u, w, j, i, k
+   ! initialise the matching status
+   match(1:n) = -1
+   work(:) = 0
 
-  ! whether a vertex is matched already
-  integer, parameter :: unmatched = -1
+   ! loop over each vertex and match based on number of neighbours in common
+   cn = 0
+   do v = 1, n
+      if (match(v).ne.-1) cycle ! Already matched
 
-  ! flag array to flag up neighbours of a  node
-  integer :: ptr_flag
+      best = v ! Default to unmatched [i.e. with self]
 
-  ! maximum no. neighbours and index of edges connected to the current
-  ! vertex
-  integer :: max_neigh, maxind, num
-
-  integer :: nz
-
-  ! allocate the prolongation matrix pointers
-  graph => grid%graph
-
-  nvtx = graph%n
-
-  ! prolongator start here ================================
-
-  ! initialise the matching status
-  ptr_flag = nvtx
-
-  grid%match(1:nvtx) = unmatched
-
-  work(ptr_flag+1:ptr_flag+nvtx) = 0
-
-  ! loop over each vertex and match based on number of neighbours in
-  ! common
-  cnvtx = 0
-  nz = 0
-  do i = 1, nvtx
-    v = i
-    ! If already matched, next vertex please
-    if (grid%match(v).ne.unmatched) cycle
-    ! access the col. indices of row v
-
-    ! in the case no match is found then match itself
-    maxind = v
-    ! Loop over entries in row v and set flag for each entry
-    work(ptr_flag+v) = i
-    do j = grid%graph%ptr(v), grid%graph%ptr(v+1) - 1
-      ! u is col index of en entry in row v (so u is neighbor of v)
-      u = grid%graph%col(j)
-      work(ptr_flag+u) = i
-    end do
-    ! For each unmatched neighbour of v, count the number of
-    ! neighbours it has in common with v
-    max_neigh = 0
-    do j = grid%graph%ptr(v), grid%graph%ptr(v+1) - 1
-      u = grid%graph%col(j)
-      ! cycle is u is already matched
-      if (grid%match(u).ne.unmatched) cycle
-      num = 0
-      do k = grid%graph%ptr(u), grid%graph%ptr(u+1) - 1
-        w = grid%graph%col(k)
-        if (work(ptr_flag+w).eq.i) num = num + 1
+      ! Flag neighbours of v
+      work(v) = v
+      do j = ptr(v), ptr(v+1) - 1
+         u = row(j)
+         work(u) = v
       end do
-      if (num.gt.max_neigh) then
-        max_neigh = num
-        maxind = u
-      end if
-    end do
 
-    ! the neighbor with largest number of neighbours in common with v
-    grid%match(v) = maxind
-    ! mark maxind as having been matched
-    grid%match(maxind) = v
-    ! increase number of vertices in coarse graph by 1
-    cnvtx = cnvtx + 1
-    ! construct the prolongation matrix: find vertex v and maxind is
-    ! linked
-    ! with the coarse grid vertex cnvtx
-    nz = nz + 1
-    if (maxind.ne.v) then
-      nz = nz + 1
-    end if
-  end do
+      ! For each unmatched neighbour of v, count the number of
+      ! neighbours it has in common with v
+      bestv = 0
+      do j = ptr(v), ptr(v+1) - 1
+         u = row(j)
+         if (match(u).ne.-1) cycle ! u already matched
+         ! Count number of flagged neighbours
+         num = count( work(row(ptr(u) : ptr(u+1)-1)) .eq. v)
+         ! Compare to best
+         if (num.gt.bestv) then
+            bestv = num
+            best = u
+         end if
+      end do
 
-end subroutine prolng_common_neigh
+      ! match v and best
+      match(v) = best
+      match(best) = v
+
+      ! increase number of vertices in coarse graph by 1
+      cn = cn + 1
+   end do
+end subroutine match_common_neighbours
 
 ! *******************************************************************
 subroutine level_print(mp,title1,level,title2,res)
