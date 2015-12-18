@@ -149,7 +149,7 @@ module spral_nd_types
    ! *****************************************************************
 
    type nd_multigrid
-      integer :: size ! size of this level (number of rows)
+      integer :: size ! number of vertices in graph at this level
       type (nd_matrix) :: graph ! this level of matrix
       integer, allocatable, dimension(:) :: match ! matching
       integer, allocatable, dimension(:) :: where ! where each row of

@@ -209,8 +209,6 @@ subroutine coarsen(grid, cgrid, work, options, cexit, st)
    integer :: cnedge ! number of edge (entries) in the coarse matrix
    type (nd_matrix), pointer :: cgraph ! the coarse graph
    type (nd_matrix), pointer :: graph ! the fine graph
-   integer, dimension(:), pointer :: row_wgt ! fine graph vertex weights
-   integer, dimension(:), pointer :: crow_wgt ! coarse graph vertex weights
    real(wp) :: reduction ! actual grid reduction factor
    real(wp) :: min_reduction ! min grid reduction factor
    real(wp) :: max_reduction ! max grid reduction factor
@@ -225,12 +223,11 @@ subroutine coarsen(grid, cgrid, work, options, cexit, st)
    select case(options%matching)
    case(:ND_MATCH_COMMON_NEIGHBOURS)
       lwk = 2*grid%size
-      call prolng_common_neigh(grid, cgrid, lwk, work(1:lwk), st)
+      call prolng_common_neigh(grid, cgrid%size, lwk, work(1:lwk))
    case(ND_MATCH_HEAVY:)
-      lwk = grid%size
-      call prolng_heavy_edge(grid, cgrid, lwk, work(1:lwk), st)
+      call match_heavy_edge(grid%graph%n, grid%graph%ptr, grid%graph%col, &
+         grid%graph%val, cgrid%size, grid%match)
    end select
-   if (st.ne.0) return
 
    ! ensure coarse grid quantities are allocated to sufficient size
    cnvtx = cgrid%size
@@ -590,40 +587,6 @@ subroutine nd_coarse_partition(a_n,a_ne,a_ptr,a_row,a_weight, &
 
 end subroutine nd_coarse_partition
 
-! ***************************************************************
-subroutine nd_matrix_multiply_vec(matrix,x,y)
-  ! subroutine nd_matrix_multiply_vec(matrix,x,y)
-
-  ! y = matrix*x where x and y are integer vectors. Entries of
-  ! matrix is assumed to be one. Dimension of y
-  ! is checked and returned if it is smaller than the row dimension
-  ! of x    !
-
-  ! matrix: of the derived type nd_matrix, intent(in),
-  ! the sparse matrix in compressed sparse row format
-  type (nd_matrix), intent(in) :: matrix
-
-  ! x: integer array of intent(in), a vector to be
-  ! multiplied with the matrix
-  integer, intent(in), dimension(*) :: x
-
-  ! y: integer array of intent(out), the result of
-  ! matrix*x or matrix^T*x
-  integer, intent(out), dimension(*) :: y
-
-  ! local ==========
-  integer :: m, n, i, l1, l2
-
-  m = matrix%m
-  n = matrix%n
-
-  do i = 1, m
-    l1 = matrix%ptr(i)
-    l2 = matrix%ptr(i+1) - 1
-    y(i) = sum(x(matrix%col(l1:l2)))
-  end do
-end subroutine nd_matrix_multiply_vec
-
 !
 ! Construct data structure for storing sparse matrix.
 !
@@ -676,113 +639,67 @@ end subroutine nd_alloc
 
 ! ********************************************************
 
-! calculate the prolongator for heavy-edge collapsing:
-! match the vertices of the heaviest edges
-subroutine prolng_heavy_edge(grid,cgrid,lwork,work,st)
-  type (nd_multigrid), target, intent(inout) :: grid ! input fine grid
-  type (nd_multigrid), target, intent(inout) :: cgrid ! output coarse grid
-  integer, intent(in) :: lwork
-  integer, intent(out) :: work(lwork)
-  integer, intent(out) :: st
+!
+! Find matching using heavy-edge collapsing
+!
+subroutine match_heavy_edge(n, ptr, row, val, cn, match)
+   integer, intent(in) :: n
+   integer, dimension(n+1), intent(in) :: ptr
+   integer, dimension(ptr(n+1)-1), intent(in) :: row
+   integer, dimension(ptr(n+1)-1), intent(in) :: val
+   integer, intent(out) :: cn ! number of vertices after matching [ie coarse]
+   integer, dimension(n), intent(out) :: match
 
-  ! coarse grid based on the fine grid
+   ! working variables
+   integer :: v, u, j
 
-  ! the fine grid row connectivity graph
-  type (nd_matrix), pointer :: graph
+   ! maximum weight and index of edges connected to the current vertex
+   integer :: bestv, best
 
-  ! the coarse grid prolongator
-  type (nd_matrix), pointer :: p
+   ! Initialise everything to unmatched
+   match(:) = -1
 
-  ! the number of fine and coarse grid vertices
-  integer :: nvtx, cnvtx
-
-  ! working variables
-  integer :: v, u, j, i, k
-  integer :: nz
-
-  ! whether a vertex is matched already
-  integer, parameter :: unmatched = -1
-
-  ! maximum weight and index of edges connected to the current vertex
-  integer :: maxwgt
-  integer :: maxind
-
-  ! allocate the prolongation matrix pointers
-  graph => grid%graph
-
-  ! allocate the graph and matrix pointer and the mincut pointer
-  ! so that everything is defined 
-  st = 0
-
-  nvtx = graph%n
-
-  ! prolongator start here ================================
-
-  grid%match(1:nvtx) = unmatched
-
-  ! loop over each vertex and match along the heaviest edge
-  cnvtx = 0
-  nz = 0
-  do i = 1, nvtx
-    v = i
-    ! If already matched, next vertex please
-    if (grid%match(v).ne.unmatched) cycle
-    maxwgt = -huge(0)
-    ! in the case no match is found then match itself
-    maxind = v
-    ! Loop over entries in row v
-    do j = graph%ptr(v), graph%ptr(v+1) - 1
-      ! u is col index of en entry in row v (so u is neighbor of v)
-      u = graph%col(j)
-      ! heavy edge matching
-      ! if u is unmatched and value of the entry in col. u is greater
-      ! than maxwgt, select u as the matching.
-      if (grid%match(u).eq.unmatched .and. maxwgt.lt.abs(graph%val(j))) &
-          then
-        maxwgt = abs(graph%val(j))
-        maxind = u
-      end if
-    end do
-    ! NOTE: maxind .ge. v
-    ! the neighbor with heaviest weight
-    grid%match(v) = maxind
-    ! mark maxind as having been matched
-    grid%match(maxind) = v
-    ! increase number of vertices in coarse graph by 1
-    cnvtx = cnvtx + 1
-    ! construct the prolongation matrix: find vertex v and maxind is
-    ! linked
-    ! with the coarse grid vertex cnvtx
-    nz = nz + 1
-    if (maxind.ne.v) then
-      nz = nz + 1
-    end if
-  end do
-
-  ! size of coarse grid
-  cgrid%size = cnvtx
-
-end subroutine prolng_heavy_edge
+   ! loop over each vertex and match along the heaviest edge
+   cn = 0
+   do v = 1, n
+      if (match(v).ne.-1) cycle ! v is already matched
+      bestv = -huge(0)
+      best = v ! Default to unmatched [ie with itself]
+      ! Loop over unmatched entries in col v, find one with largest val
+      do j = ptr(v), ptr(v+1) - 1
+         u = row(j)
+         if(match(u).ne.-1) cycle ! u already matched
+         ! heavy edge matching
+         ! if u is unmatched and value of the entry in col. u is greater
+         ! than maxwgt, select u as the matching.
+         if (val(j).gt.bestv) then
+            bestv = val(j)
+            best = u
+         end if
+      end do
+      ! Match v and best
+      match(v) = best
+      match(best) = v
+      ! increase number of vertices in coarse graph by 1
+      cn = cn + 1
+   end do
+end subroutine match_heavy_edge
 
 ! *******************************************************************
 
 ! calculate the prolongator:
 ! match the vertices of with most neighbours in common
-subroutine prolng_common_neigh(grid,cgrid,lwork,work,st)
+subroutine prolng_common_neigh(grid,cnvtx,lwork,work)
   type (nd_multigrid), target, intent(inout) :: grid ! input fine grid
-  type (nd_multigrid), target, intent(inout) :: cgrid ! output coarse grid
+  integer, intent(out) :: cnvtx ! number of vertices in coarse grid
   integer, intent(in) :: lwork
   integer, intent(out) :: work(lwork)
-  integer, intent(out) :: st
 
   ! the fine grid row connectivity graph
   type (nd_matrix), pointer :: graph
 
-  ! the coarse grid prolongator
-  type (nd_matrix), pointer :: p
-
   ! the number of fine and coarse grid vertices
-  integer :: nvtx, cnvtx
+  integer :: nvtx
 
   ! working variables
   integer :: v, u, w, j, i, k
@@ -801,8 +718,6 @@ subroutine prolng_common_neigh(grid,cgrid,lwork,work,st)
 
   ! allocate the prolongation matrix pointers
   graph => grid%graph
-
-  st = 0
 
   nvtx = graph%n
 
@@ -866,9 +781,6 @@ subroutine prolng_common_neigh(grid,cgrid,lwork,work,st)
       nz = nz + 1
     end if
   end do
-
-  ! size of coarse grid
-  cgrid%size = cnvtx
 
 end subroutine prolng_common_neigh
 
