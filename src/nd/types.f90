@@ -48,7 +48,8 @@ module spral_nd_types
       integer :: cost_function = 1 ! selects the cost function used for
          ! evaluating a partition
          ! <=1 : |P1||P2|/|S| + penalty for imbalance
-         ! >=2 : |S|(1 +  0.5||P1|-|P2||)
+         !  =2 : |S|(1 +  0.5||P1|-|P2||)
+         ! >=3 : As 1, but with more convex imbalance penalty
       integer :: partition_method = 2 ! Are we allowed to use a multilevel
          ! strategy
          ! <= 0 : do not use multilevel
@@ -101,6 +102,11 @@ module spral_nd_types
       logical :: find_supervariables = .true. ! If .true., after dense rows
          ! have been (optionally) removed, check for supervariables and
          ! compress matrix if supervariables found.
+
+      ! FIXME: decide whether to keep?
+      integer :: reord = 1 ! which reordering to use in preprocessing phase
+         ! 1 = Jonathan's [literal copy]
+         ! 2 = Sue's [slightly more ordered, but strange]
    end type nd_options
 
    ! *****************************************************************

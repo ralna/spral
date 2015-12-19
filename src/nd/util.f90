@@ -92,20 +92,26 @@ subroutine cost_function(a_weight_1, a_weight_2, a_weight_sep, sumweight, &
    real(wp) :: a_wgt1, a_wgt2, balance 
 
    real(wp), parameter :: beta = 0.5
+   real(wp), parameter :: delta = 1.0
 
    a_wgt1 = max(1,a_weight_1)
    a_wgt2 = max(1,a_weight_2)
    balance = real(max(a_wgt1,a_wgt2)) / min(a_wgt1,a_wgt2)
 
-   if (costf.le.1) then
+   select case (costf)
+   case(:1)
       tau = a_weight_sep / real(a_wgt1 * a_wgt2)
       if (imbal .and. balance.ge.balance_tol) &
          tau = tau + sumweight-2
-   else
+   case(2)
       tau = a_weight_sep * (1.0_wp + (beta*abs(a_wgt1-a_wgt2))/sumweight)
       if (imbal .and. balance.ge.balance_tol) &
          tau = tau + sumweight * (1.0+beta)
-   end if
+   case(3:)
+      tau = a_weight_sep / real(a_wgt1 * a_wgt2)
+      if (imbal .and. balance.ge.balance_tol) &
+         tau = tau + sumweight-2 + delta * balance
+   end select
 
 end subroutine cost_function
 

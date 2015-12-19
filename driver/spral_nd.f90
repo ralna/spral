@@ -117,6 +117,9 @@ contains
          case("--cost=2")
             options%cost_function = 2
             print *, "Set cost function to 2"
+         case("--cost=3")
+            options%cost_function = 3
+            print *, "Set cost function to 3"
          case("--refinement")
             call get_command_argument(argnum, argval)
             argnum = argnum + 1
@@ -130,6 +133,30 @@ contains
          case("--metis")
             with_metis = .true.
             print *, "MeTiS run requested"
+         case("--reord=1")
+            options%reord = 1
+            print *, "Set Jonathan's preprocessing ordering"
+         case("--reord=2")
+            options%reord = 2
+            print *, "Set Sue's preprocessing ordering"
+         case("--coarse-partition-method")
+            call get_command_argument(argnum, argval)
+            argnum = argnum + 1
+            read( argval, * ) options%coarse_partition_method
+            print *, "Set options%coarse_partition_method = ", &
+               options%coarse_partition_method
+         case("--matching")
+            call get_command_argument(argnum, argval)
+            argnum = argnum + 1
+            read( argval, * ) options%matching
+            print *, "Set options%matching = ", &
+               options%matching
+         case("--print-level")
+            call get_command_argument(argnum, argval)
+            argnum = argnum + 1
+            read( argval, * ) options%print_level
+            print *, "Set options%print_level = ", &
+               options%print_level
          case default
             print *, "Unrecognised command line argument: ", argval
             stop

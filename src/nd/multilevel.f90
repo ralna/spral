@@ -126,6 +126,9 @@ subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
       ! check if partition was succesful returned
       if (grid%part_div(1).ne.0 .and. grid%part_div(2).ne.0) exit
 
+      ! Even if not, give up if we're at the coarsest level
+      if ( level.eq.1 ) exit
+
       ! Unlikely to get here because 99.999% of cases caught in full
       ! matrix check above. Follows same procedure as when full matrix found
       if (options%print_level.ge.1 .and. options%unit_diagnostics.gt.0) &
