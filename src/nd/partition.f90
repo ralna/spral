@@ -137,7 +137,7 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
    if (options%stop_coarsening2.le.0 .or. options%partition_method.lt.1) &
       use_multilevel = .false.
    if (options%partition_method.ge.2 .and. use_multilevel) then
-      if ( (100.0_wp*lwidth)/sumweight.le.3.0 .or. a_n.lt.options%ml_call ) &
+      if ( (100.0_wp*lwidth)/a_n.le.3.0 .or. a_n.lt.options%ml_call ) &
          use_multilevel = .false.
    end if
 
@@ -366,7 +366,7 @@ subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, ndlevel, &
    if (options%partition_method.le.0 .or. options%stop_coarsening2.le.0) &
       use_multilevel = .false.
    if (options%partition_method.ge.2 .and. use_multilevel) then
-      if ( (100.0_wp*lwidth)/sumweight.le.3.0 .or. a_n.lt. options%ml_call ) &
+      if ( (100.0_wp*lwidth)/a_n.le.3.0 .or. a_n.lt. options%ml_call ) &
          use_multilevel = .false.
    end if
 
