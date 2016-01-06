@@ -29,9 +29,9 @@ program run_prob
    integer :: start_t, stop_t, rate_t
 
    ! Controls
-   logical :: with_metis
+   logical :: with_metis, with_nd
 
-   call proc_args(options, with_metis)
+   call proc_args(options, with_metis, with_nd)
 
    ! Read in a matrix
    write(*, "(a)", advance="no") "Reading..."
@@ -53,24 +53,26 @@ program run_prob
 
    ! Order using spral_nd
    allocate(perm(n), invp(n))
-   write(*, "(a)", advance="no") "Ordering with ND..."
-   call system_clock(start_t, rate_t)
-   call nd_order(0, n, ptr, row, perm, options, inform)
-   call system_clock(stop_t)
-   if (inform%flag < 0) then
-      print *, "oops on analyse ", inform%flag
-      stop
+   if(with_nd) then
+      write(*, "(a)", advance="no") "Ordering with ND..."
+      call system_clock(start_t, rate_t)
+      call nd_order(0, n, ptr, row, perm, options, inform)
+      call system_clock(stop_t)
+      if (inform%flag < 0) then
+         print *, "oops on analyse ", inform%flag
+         stop
+      endif
+      write(*, "(a)") "ok"
+      print *, "nd_order() took ", (stop_t - start_t)/real(rate_t)
+      ! Determine quality
+      write(*, "(a)", advance="no") "Determing stats..."
+      call calculate_stats(n, ptr, row, perm, nfact, nflops)
+      write(*, "(a)") "ok"
+      print "(a,es10.2)", "nd nfact = ", real(nfact)
+      print "(a,es10.2)", "nd nflop = ", real(nflops)
+      print "(a,i10)", "nd ndense = ", inform%dense
+      print "(a,i10)", "nd sv var reduce = ", n - inform%dense - inform%nsuper
    endif
-   write(*, "(a)") "ok"
-   print *, "nd_order() took ", (stop_t - start_t)/real(rate_t)
-   ! Determine quality
-   write(*, "(a)", advance="no") "Determing stats..."
-   call calculate_stats(n, ptr, row, perm, nfact, nflops)
-   write(*, "(a)") "ok"
-   print "(a,es10.2)", "nd nfact = ", real(nfact)
-   print "(a,es10.2)", "nd nflop = ", real(nflops)
-   print "(a,i10)", "nd ndense = ", inform%dense
-   print "(a,i10)", "nd sv var reduce = ", n - inform%dense - inform%nsuper
 
    ! Order using metis
    if(with_metis) then
@@ -94,15 +96,17 @@ program run_prob
 
 contains
 
-   subroutine proc_args(options, with_metis)
+   subroutine proc_args(options, with_metis, with_nd)
       type(nd_options), intent(inout) :: options
       logical, intent(out) :: with_metis
+      logical, intent(out) :: with_nd
 
       integer :: argnum, narg
       character(len=200) :: argval
 
       ! Defaults
       with_metis = .false.
+      with_nd = .true.
       
       ! Process args
       narg = command_argument_count()
@@ -133,6 +137,9 @@ contains
          case("--metis")
             with_metis = .true.
             print *, "MeTiS run requested"
+         case("--nond")
+            with_nd = .false.
+            print *, "ND run disabled"
          case("--reord=1")
             options%reord = 1
             print *, "Set Jonathan's preprocessing ordering"
