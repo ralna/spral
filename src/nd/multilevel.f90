@@ -228,10 +228,13 @@ subroutine coarsen(grid, cgrid, work, options, cexit, st)
    case(ND_MATCH_HEAVY)
       call match_heavy_edge(grid%graph%n, grid%graph%ptr, grid%graph%col, &
          grid%graph%val, cgrid%size, grid%match)
-   case(ND_MATCH_SHEM:)
+   case(ND_MATCH_SHEM)
       call match_sorted_heavy_edge(grid%graph%n, grid%graph%ptr, &
          grid%graph%col, grid%graph%val, cgrid%size, grid%match, &
          work(1:grid%graph%n))
+   case(ND_MATCH_SCNM:)
+      call match_sorted_common_neighbours(grid%graph%n, grid%graph%ptr, &
+         grid%graph%col, cgrid%size, grid%match, work(1:2*grid%size))
    end select
 
    ! ensure coarse grid quantities are allocated to sufficient size
@@ -765,6 +768,83 @@ subroutine match_sorted_heavy_edge(n, ptr, row, val, cn, match, work)
       cn = cn + 1
    end do
 end subroutine match_sorted_heavy_edge
+
+! *******************************************************************
+
+!
+! Find matching using common neighbours criterion
+!
+subroutine match_sorted_common_neighbours(n, ptr, row, cn, match, work)
+   integer, intent(in) :: n
+   integer, dimension(n+1), intent(in) :: ptr
+   integer, dimension(ptr(n+1)-1), intent(in) :: row
+   integer, intent(out) :: cn ! number of vertices in coarse grid
+   integer, dimension(n), intent(out) :: match
+   integer, dimension(2*n), intent(out) :: work
+
+   ! working variables
+   integer :: v, u, j, vv
+   integer :: deg, maxdeg
+
+   ! maximum no. neighbours and index of edges connected to the current vertex
+   integer :: bestv, best, num
+
+   ! Sort nodes based on degree
+   maxdeg = 0
+   do v = 1, n
+      maxdeg = max(maxdeg, ptr(v+1)-ptr(v))
+   end do
+   u = 1
+   do deg = maxdeg, 0, -1
+      do v = 1, n
+         if(ptr(v+1)-ptr(v).ne.deg) cycle
+         work(n+u) = v
+         u = u + 1
+      end do
+   end do
+
+   ! initialise the matching status
+   match(1:n) = -1
+   work(1:n) = 0
+
+   ! loop over each vertex and match based on number of neighbours in common
+   cn = 0
+   do vv = 1, n
+      v = work(n+vv)
+      if (match(v).ne.-1) cycle ! Already matched
+
+      best = v ! Default to unmatched [i.e. with self]
+
+      ! Flag neighbours of v
+      work(v) = v
+      do j = ptr(v), ptr(v+1) - 1
+         u = row(j)
+         work(u) = v
+      end do
+
+      ! For each unmatched neighbour of v, count the number of
+      ! neighbours it has in common with v
+      bestv = 0
+      do j = ptr(v), ptr(v+1) - 1
+         u = row(j)
+         if (match(u).ne.-1) cycle ! u already matched
+         ! Count number of flagged neighbours
+         num = count( work(row(ptr(u) : ptr(u+1)-1)) .eq. v)
+         ! Compare to best
+         if (num.gt.bestv) then
+            bestv = num
+            best = u
+         end if
+      end do
+
+      ! match v and best
+      match(v) = best
+      match(best) = v
+
+      ! increase number of vertices in coarse graph by 1
+      cn = cn + 1
+   end do
+end subroutine match_sorted_common_neighbours
 
 ! *******************************************************************
 
