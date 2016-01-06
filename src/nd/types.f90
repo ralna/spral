@@ -30,7 +30,7 @@ module spral_nd_types
                          ND_REFINE_AUTO            = 7
    integer, parameter :: ND_MATCH_COMMON_NEIGHBOURS = 0, &
                          ND_MATCH_HEAVY             = 1, &
-                         ND_MATCH_BEST              = 2
+                         ND_MATCH_SHEM              = 2
 
    ! *****************************************************************
 

@@ -225,9 +225,13 @@ subroutine coarsen(grid, cgrid, work, options, cexit, st)
    case(:ND_MATCH_COMMON_NEIGHBOURS)
       call match_common_neighbours(grid%graph%n, grid%graph%ptr, &
          grid%graph%col, cgrid%size, grid%match, work(1:grid%size))
-   case(ND_MATCH_HEAVY:)
+   case(ND_MATCH_HEAVY)
       call match_heavy_edge(grid%graph%n, grid%graph%ptr, grid%graph%col, &
          grid%graph%val, cgrid%size, grid%match)
+   case(ND_MATCH_SHEM:)
+      call match_sorted_heavy_edge(grid%graph%n, grid%graph%ptr, &
+         grid%graph%col, grid%graph%val, cgrid%size, grid%match, &
+         work(1:grid%graph%n))
    end select
 
    ! ensure coarse grid quantities are allocated to sufficient size
@@ -696,6 +700,71 @@ subroutine match_heavy_edge(n, ptr, row, val, cn, match)
       cn = cn + 1
    end do
 end subroutine match_heavy_edge
+
+! *******************************************************************
+
+!
+! Find matching using heavy-edge collapsing
+!
+subroutine match_sorted_heavy_edge(n, ptr, row, val, cn, match, work)
+   integer, intent(in) :: n
+   integer, dimension(n+1), intent(in) :: ptr
+   integer, dimension(ptr(n+1)-1), intent(in) :: row
+   integer, dimension(ptr(n+1)-1), intent(in) :: val
+   integer, intent(out) :: cn ! number of vertices after matching [ie coarse]
+   integer, dimension(n), intent(out) :: match
+   integer, dimension(n), intent(out) :: work
+
+   ! working variables
+   integer :: v, u, j, vv
+   integer :: deg, maxdeg
+
+   ! maximum weight and index of edges connected to the current vertex
+   integer :: bestv, best
+
+   ! Sort nodes based on degree
+   maxdeg = 0
+   do v = 1, n
+      maxdeg = max(maxdeg, ptr(v+1)-ptr(v))
+   end do
+   u = 1
+   do deg = maxdeg, 0, -1
+      do v = 1, n
+         if(ptr(v+1)-ptr(v).ne.deg) cycle
+         work(u) = v
+         u = u + 1
+      end do
+   end do
+
+   ! Initialise everything to unmatched
+   match(:) = -1
+
+   ! loop over each vertex and match along the heaviest edge
+   cn = 0
+   do vv = 1, n
+      v = work(vv)
+      if (match(v).ne.-1) cycle ! v is already matched
+      bestv = -huge(0)
+      best = v ! Default to unmatched [ie with itself]
+      ! Loop over unmatched entries in col v, find one with largest val
+      do j = ptr(v), ptr(v+1) - 1
+         u = row(j)
+         if(match(u).ne.-1) cycle ! u already matched
+         ! heavy edge matching
+         ! if u is unmatched and value of the entry in col. u is greater
+         ! than maxwgt, select u as the matching.
+         if (val(j).gt.bestv) then
+            bestv = val(j)
+            best = u
+         end if
+      end do
+      ! Match v and best
+      match(v) = best
+      match(best) = v
+      ! increase number of vertices in coarse graph by 1
+      cn = cn + 1
+   end do
+end subroutine match_sorted_heavy_edge
 
 ! *******************************************************************
 
