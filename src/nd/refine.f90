@@ -1174,269 +1174,266 @@ end subroutine nd_refine_trim
 ! nd_refine_block_trim
 ! ---------------------------------------------------
 ! Given a partition, trim the partition using blocks to make it minimal
-subroutine nd_refine_block_trim(a_n,a_ne,a_ptr,a_row,a_weight, &
-    sumweight,a_n1,a_n2,a_weight_1,a_weight_2,a_weight_sep,partition, &
-    work,options)
-  integer, intent(in) :: a_n ! order of matrix
-  integer, intent(in) :: a_ne ! number of entries in matrix
-  integer, intent(in) :: a_ptr(a_n) ! On input a_ptr(i) contains
-  ! position in a_row that entries for column i start.
-  integer, intent(in) :: a_row(a_ne) ! On input a_row contains row
-  ! indices of the non-zero rows. Diagonal entries have been removed
-  ! and the matrix expanded.
-  integer, intent(in) :: a_weight(a_n) ! On input a_weight(i) contains
-  ! the weight of column i
-  integer, intent(in) :: sumweight ! Sum of weights in a_weight
-  integer, intent(inout) :: a_n1 ! Size of partition 1
-  integer, intent(inout) :: a_n2 ! Size of partition 2
-  integer, intent(inout) :: a_weight_1, a_weight_2, a_weight_sep ! Weig
-  ! hted
-  ! size of partitions and separator
-  integer, intent(inout) :: partition(a_n) ! First a_n1 entries contain
-  ! list of (local) indices in partition 1; next a_n2 entries
-  ! contain list of (local) entries in partition 2; entries in
-  ! separator are listed at the end. This is updated to the new
-  ! partition
-  integer, intent(out) :: work(5*a_n) ! Work array
-  type (nd_options), intent(in) :: options
+subroutine nd_refine_block_trim(a_n, a_ne, a_ptr, a_row, a_weight, &
+      sumweight, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep,partition, &
+      work, options)
+   integer, intent(in) :: a_n ! order of matrix
+   integer, intent(in) :: a_ne ! number of entries in matrix
+   integer, intent(in) :: a_ptr(a_n) ! On input a_ptr(i) contains
+      ! position in a_row that entries for column i start.
+   integer, intent(in) :: a_row(a_ne) ! On input a_row contains row
+      ! indices of the non-zero rows. Diagonal entries have been removed
+      ! and the matrix expanded.
+   integer, intent(in) :: a_weight(a_n) ! On input a_weight(i) contains
+      ! the weight of column i
+   integer, intent(in) :: sumweight ! Sum of weights in a_weight
+   integer, intent(inout) :: a_n1 ! Size of partition 1
+   integer, intent(inout) :: a_n2 ! Size of partition 2
+   integer, intent(inout) :: a_weight_1, a_weight_2, a_weight_sep ! Weighted
+      ! size of partitions and separator
+   integer, intent(inout) :: partition(a_n) ! First a_n1 entries contain
+      ! list of (local) indices in partition 1; next a_n2 entries
+      ! contain list of (local) entries in partition 2; entries in
+      ! separator are listed at the end. This is updated to the new
+      ! partition
+   integer, intent(out) :: work(5*a_n) ! Work array
+   type (nd_options), intent(in) :: options
 
-  ! ---------------------------------------------
-  ! Local variables
-  integer :: work_part, work_next1, work_next2, work_level1, work_level2
-  integer :: a_n1_orig, a_n2_orig
-  integer :: head1, head2, tail1, tail2, maxlevel1, maxlevel2
-  integer :: currlevel1, currlevel2
-  integer :: i, j, k, l, m, w1, w2, l1, l2
-  logical :: next1, next2, imbal
-  real(wp) :: t1, t2
-  real(wp) :: balance_tol
+   ! ---------------------------------------------
+   ! Local variables
+   integer :: work_part, work_next1, work_next2, work_level1, work_level2
+   integer :: a_n1_orig, a_n2_orig
+   integer :: head1, head2, tail1, tail2, maxlevel1, maxlevel2
+   integer :: currlevel1, currlevel2
+   integer :: i, j, k, l, m, w1, w2, l1, l2
+   logical :: next1, next2, imbal
+   real(wp) :: t1, t2
+   real(wp) :: balance_tol
 
-  balance_tol = max(1.0_wp,options%balance)
-  imbal = (balance_tol.le.real(sumweight-2))
+   balance_tol = max(1.0_wp,options%balance)
+   imbal = (balance_tol.le.real(sumweight-2))
 
-  ! Set work(work_part+1:work_part+a_n) to hold flags to indicate what
-  ! part of the partition the nodes are in
-  work_part = 0
-  call nd_convert_partition_flags(a_n,a_n1,a_n2,partition, &
-    ND_PART1_FLAG,ND_PART2_FLAG,ND_SEP_FLAG, &
-    work(work_part+1:work_part+a_n))
-  a_n1_orig = a_n1
-  a_n2_orig = a_n2
-  a_weight_sep = sumweight - a_weight_1 - a_weight_2
+   ! Set work(work_part+1:work_part+a_n) to hold flags to indicate what
+   ! part of the partition the nodes are in
+   work_part = 0
+   call nd_convert_partition_flags(a_n, a_n1, a_n2, partition, &
+      ND_PART1_FLAG, ND_PART2_FLAG, ND_SEP_FLAG, &
+      work(work_part+1:work_part+a_n))
+   a_n1_orig = a_n1
+   a_n2_orig = a_n2
+   a_weight_sep = sumweight - a_weight_1 - a_weight_2
 
 
-  ! Set work(work_next1+1:work_next1+a_n) to hold list pointers
-  ! Set work(work_next2+1:work_next2+a_n) to hold list pointers
-  ! Set work(work_level1+1:work_level1+a_n) to hold distance from orig
-  ! partition 1
-  ! Set work(work_level2+1:work_level2+a_n) to hold distance from orig
-  ! partition 2
-  work_next1 = work_part + a_n
-  work_next2 = work_next1 + a_n
-  work_level1 = work_next2 + a_n
-  work_level2 = work_level1 + a_n
-  work(work_next1+1:work_next1+a_n) = 0
-  work(work_next2+1:work_next2+a_n) = 0
-  work(work_level1+1:work_level1+a_n) = 0
-  work(work_level2+1:work_level2+a_n) = 0
+   ! Set work(work_next1+1:work_next1+a_n) to hold list pointers
+   ! Set work(work_next2+1:work_next2+a_n) to hold list pointers
+   ! Set work(work_level1+1:work_level1+a_n) to hold distance from orig
+   ! partition 1
+   ! Set work(work_level2+1:work_level2+a_n) to hold distance from orig
+   ! partition 2
+   work_next1 = work_part + a_n
+   work_next2 = work_next1 + a_n
+   work_level1 = work_next2 + a_n
+   work_level2 = work_level1 + a_n
+   work(work_next1+1:work_next1+a_n) = 0
+   work(work_next2+1:work_next2+a_n) = 0
+   work(work_level1+1:work_level1+a_n) = 0
+   work(work_level2+1:work_level2+a_n) = 0
 
-  ! Create two lists
-  head1 = 0
-  head2 = 0
-  do i = a_n1 + a_n2 + 1, a_n
-    next1 = .false.
-    next2 = .false.
-    j = partition(i)
-    if (j.lt.a_n) then
-      k = a_ptr(j+1) - 1
-    else
-      k = a_ne
-    end if
-    do l = a_ptr(j), k
-      m = a_row(l)
-      if (work(work_part+m).eq.ND_PART1_FLAG) then
-        next1 = .true.
-      else if (work(work_part+m).eq.ND_PART2_FLAG) then
-        next2 = .true.
-      end if
-    end do
-    if (next1) then
-      ! Add to list 1
-      if (head1.eq.0) then
-        head1 = j
+   ! Create two lists
+   head1 = 0
+   head2 = 0
+   do i = a_n1 + a_n2 + 1, a_n
+      next1 = .false.
+      next2 = .false.
+      j = partition(i)
+      if (j.lt.a_n) then
+         k = a_ptr(j+1) - 1
       else
-        work(work_next1+tail1) = j
+         k = a_ne
       end if
-      tail1 = j
-      work(work_level1+j) = 1
-    end if
-    if (next2) then
-      ! Add to list 2
-      if (head2.eq.0) then
-        head2 = j
-      else
-        work(work_next2+tail2) = j
-      end if
-      tail2 = j
-      work(work_level2+j) = 1
-    end if
-  end do
-
-  ! Breadth first search of separator from entries adjacent to partition
-  ! 1
-  l1 = head1
-  do while (l1.gt.0)
-    if (l1.lt.a_n) then
-      k = a_ptr(l1+1) - 1
-    else
-      k = a_ne
-    end if
-    do l = a_ptr(l1), k
-      m = a_row(l)
-      if (work(work_part+m).eq.ND_SEP_FLAG .and. &
-          work(work_level1+m).eq.0) then
-        ! Add to list (note list is non-empty)
-        work(work_next1+tail1) = m
-        tail1 = m
-        work(work_level1+m) = work(work_level1+l1) + 1
-      end if
-    end do
-    l1 = work(work_next1+l1)
-  end do
-  maxlevel1 = work(work_level1+tail1)
-
-  ! Breadth first search of separator from entries adjacent to partition
-  ! 2
-  l1 = head2
-  do while (l1.gt.0)
-    if (l1.lt.a_n) then
-      k = a_ptr(l1+1) - 1
-    else
-      k = a_ne
-    end if
-    do l = a_ptr(l1), k
-      m = a_row(l)
-      if (work(work_part+m).eq.ND_SEP_FLAG .and. &
-          work(work_level2+m).eq.0) then
-        ! Add to list (note list is non-empty)
-        work(work_next2+tail2) = m
-        tail2 = m
-        work(work_level2+m) = work(work_level2+l1) + 1
-      end if
-    end do
-    l1 = work(work_next2+l1)
-  end do
-  maxlevel2 = work(work_level2+tail2)
-
-  ! Check for any entries in separator only reachable from one partition
-  do i = a_n1 + a_n2 + 1, a_n
-    j = partition(i)
-    if (work(work_level2+j).eq.0) then
-      work(work_level2+j) = maxlevel2 + 1
-    else
-      if (work(work_level1+j).eq.0) then
-        work(work_level1+j) = maxlevel1 + 1
-      end if
-    end if
-  end do
-
-  ! Trim the separator
-  currlevel1 = 1
-  currlevel2 = 1
-  l1 = head1
-  l2 = head2
-  do while (currlevel1.le.maxlevel1 .or. currlevel2.le.maxlevel2)
-    if (currlevel1.gt.maxlevel1) then
-      t1 = huge(1.0_wp)
-    else
-      w1 = 0
-      j = l1
-      do while (work(work_level1+j).eq.currlevel1)
-        if (work(work_level2+j).gt.currlevel2) then
-          w1 = w1 + a_weight(j)
-        end if
-        j = work(work_next1+j)
-        if (j.eq.0) exit
+      do l = a_ptr(j), k
+         m = a_row(l)
+         if (work(work_part+m).eq.ND_PART1_FLAG) then
+            next1 = .true.
+         else if (work(work_part+m).eq.ND_PART2_FLAG) then
+            next2 = .true.
+         end if
       end do
-      if (w1.eq.0) then
-        currlevel1 = currlevel1 + 1
-        l1 = j
-        cycle
-      else
-        call cost_function(a_weight_1+w1,a_weight_2,a_weight_sep-w1, &
-          sumweight,balance_tol,imbal,options%cost_function,t1)
+      if (next1) then
+         ! Add to list 1
+         if (head1.eq.0) then
+            head1 = j
+         else
+            work(work_next1+tail1) = j
+         end if
+         tail1 = j
+         work(work_level1+j) = 1
       end if
-    end if
+      if (next2) then
+         ! Add to list 2
+         if (head2.eq.0) then
+            head2 = j
+         else
+            work(work_next2+tail2) = j
+         end if
+         tail2 = j
+         work(work_level2+j) = 1
+      end if
+   end do
 
-    if (currlevel2.gt.maxlevel2) then
-      t2 = huge(1.0_wp)
-    else
-      w2 = 0
-      j = l2
-      do while (work(work_level2+j).eq.currlevel2)
-        if (work(work_level1+j).gt.currlevel1) then
-          w2 = w2 + a_weight(j)
-        end if
-        j = work(work_next2+j)
-        if (j.eq.0) exit
+   ! Breadth first search of separator from entries adjacent to partition 1
+   l1 = head1
+   do while (l1.gt.0)
+      if (l1.lt.a_n) then
+         k = a_ptr(l1+1) - 1
+      else
+         k = a_ne
+      end if
+      do l = a_ptr(l1), k
+         m = a_row(l)
+         if (work(work_part+m).eq.ND_SEP_FLAG .and. &
+               work(work_level1+m).eq.0) then
+            ! Add to list (note list is non-empty)
+            work(work_next1+tail1) = m
+            tail1 = m
+            work(work_level1+m) = work(work_level1+l1) + 1
+         end if
       end do
-      if (w2.eq.0) then
-        currlevel2 = currlevel2 + 1
-        l2 = j
-        cycle
-      else
-        call cost_function(a_weight_1,a_weight_2+w2,a_weight_sep-w2, &
-          sumweight,balance_tol,imbal,options%cost_function,t2)
-      end if
-    end if
+      l1 = work(work_next1+l1)
+   end do
+   maxlevel1 = work(work_level1+tail1)
 
-    ! Add entries to relevant partition and update a_n1, a_n2 etc
-    if (t1.lt.t2) then
-      j = l1
-      do while (work(work_level1+j).eq.currlevel1)
-        if (work(work_level2+j).gt.currlevel2) then
-          work(work_part+j) = ND_PART1_FLAG
-          a_n1 = a_n1 + 1
-        end if
-        j = work(work_next1+j)
-        if (j.eq.0) exit
+   ! Breadth first search of separator from entries adjacent to partition 2
+   l1 = head2
+   do while (l1.gt.0)
+      if (l1.lt.a_n) then
+         k = a_ptr(l1+1) - 1
+      else
+         k = a_ne
+      end if
+      do l = a_ptr(l1), k
+         m = a_row(l)
+         if (work(work_part+m).eq.ND_SEP_FLAG .and. &
+               work(work_level2+m).eq.0) then
+            ! Add to list (note list is non-empty)
+            work(work_next2+tail2) = m
+            tail2 = m
+            work(work_level2+m) = work(work_level2+l1) + 1
+         end if
       end do
-      a_weight_1 = a_weight_1 + w1
-      a_weight_sep = a_weight_sep - w1
-      l1 = j
-      if (j.eq.0) then
-        currlevel1 = maxlevel1 + 1
+      l1 = work(work_next2+l1)
+   end do
+   maxlevel2 = work(work_level2+tail2)
+
+   ! Check for any entries in separator only reachable from one partition
+   do i = a_n1 + a_n2 + 1, a_n
+      j = partition(i)
+      if (work(work_level2+j).eq.0) then
+         work(work_level2+j) = maxlevel2 + 1
       else
-        currlevel1 = (work(work_level1+l1))
+         if (work(work_level1+j).eq.0) then
+            work(work_level1+j) = maxlevel1 + 1
+         end if
+      end if
+   end do
+
+   ! Trim the separator
+   currlevel1 = 1
+   currlevel2 = 1
+   l1 = head1
+   l2 = head2
+   do while (currlevel1.le.maxlevel1 .or. currlevel2.le.maxlevel2)
+      if (currlevel1.gt.maxlevel1) then
+         t1 = huge(1.0_wp)
+      else
+         w1 = 0
+         j = l1
+         do while (work(work_level1+j).eq.currlevel1)
+            if (work(work_level2+j).gt.currlevel2) then
+               w1 = w1 + a_weight(j)
+            end if
+            j = work(work_next1+j)
+            if (j.eq.0) exit
+         end do
+         if (w1.eq.0) then
+            currlevel1 = currlevel1 + 1
+            l1 = j
+            cycle
+         else
+            call cost_function(a_weight_1+w1, a_weight_2, a_weight_sep-w1, &
+               sumweight, balance_tol, imbal, options%cost_function, t1)
+         end if
       end if
 
-    else
-      j = l2
-      do while (work(work_level2+j).eq.currlevel2)
-        if (work(work_level1+j).gt.currlevel1) then
-          work(work_part+j) = ND_PART2_FLAG
-          a_n2 = a_n2 + 1
-        end if
-        j = work(work_next2+j)
-        if (j.eq.0) exit
-      end do
-      a_weight_2 = a_weight_2 + w2
-      a_weight_sep = a_weight_sep - w2
-      l2 = j
-      if (j.eq.0) then
-        currlevel2 = maxlevel2 + 1
+      if (currlevel2.gt.maxlevel2) then
+         t2 = huge(1.0_wp)
       else
-        currlevel2 = (work(work_level2+l2))
+         w2 = 0
+         j = l2
+         do while (work(work_level2+j).eq.currlevel2)
+            if (work(work_level1+j).gt.currlevel1) then
+               w2 = w2 + a_weight(j)
+            end if
+            j = work(work_next2+j)
+            if (j.eq.0) exit
+         end do
+         if (w2.eq.0) then
+            currlevel2 = currlevel2 + 1
+            l2 = j
+            cycle
+         else
+            call cost_function(a_weight_1, a_weight_2+w2, a_weight_sep-w2, &
+               sumweight, balance_tol, imbal, options%cost_function, t2)
+         end if
       end if
-    end if
-  end do
 
-  ! Reset partition matrix
-  call nd_convert_flags_partition(a_n,a_n1,a_n2, &
-    work(work_part+1:work_part+a_n),ND_PART1_FLAG,ND_PART2_FLAG, &
-    partition(1:a_n))
-  a_weight_sep = sumweight - a_weight_1 - a_weight_2
-  ! call check_partition1(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition)
+      ! Add entries to relevant partition and update a_n1, a_n2 etc
+      if (t1.lt.t2) then
+         j = l1
+         do while (work(work_level1+j).eq.currlevel1)
+            if (work(work_level2+j).gt.currlevel2) then
+               work(work_part+j) = ND_PART1_FLAG
+               a_n1 = a_n1 + 1
+            end if
+            j = work(work_next1+j)
+            if (j.eq.0) exit
+         end do
+         a_weight_1 = a_weight_1 + w1
+         a_weight_sep = a_weight_sep - w1
+         l1 = j
+         if (j.eq.0) then
+            currlevel1 = maxlevel1 + 1
+         else
+            currlevel1 = (work(work_level1+l1))
+         end if
+
+      else
+         j = l2
+         do while (work(work_level2+j).eq.currlevel2)
+            if (work(work_level1+j).gt.currlevel1) then
+               work(work_part+j) = ND_PART2_FLAG
+               a_n2 = a_n2 + 1
+            end if
+            j = work(work_next2+j)
+            if (j.eq.0) exit
+         end do
+         a_weight_2 = a_weight_2 + w2
+         a_weight_sep = a_weight_sep - w2
+         l2 = j
+         if (j.eq.0) then
+            currlevel2 = maxlevel2 + 1
+         else
+            currlevel2 = (work(work_level2+l2))
+         end if
+      end if
+   end do
+
+   ! Reset partition matrix
+   call nd_convert_flags_partition(a_n, a_n1, a_n2, &
+      work(work_part+1:work_part+a_n), ND_PART1_FLAG, ND_PART2_FLAG, &
+      partition(1:a_n))
+   a_weight_sep = sumweight - a_weight_1 - a_weight_2
+   ! call check_partition1(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition)
 
 end subroutine nd_refine_block_trim
 
