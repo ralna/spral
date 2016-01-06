@@ -459,7 +459,6 @@ subroutine nd_coarse_partition(a_n,a_ne,a_ptr,a_row,a_weight, &
   logical :: printi, printd, use_multilevel
   integer :: partition_ptr ! pointer into work array
   integer :: work_ptr ! pointer into work array
-  integer :: partition_method
   integer :: st
   integer :: a_weight_1, a_weight_2, a_weight_sep
   integer, allocatable :: work1(:)
@@ -479,12 +478,6 @@ subroutine nd_coarse_partition(a_n,a_ne,a_ptr,a_row,a_weight, &
   end if
 
   ! Find the partition
-  if (options%coarse_partition_method.le.1) then
-    partition_method = 1
-  else
-    partition_method = 2
-  end if
-
   partition_ptr = 0 ! length a_n
   work_ptr = partition_ptr + a_n ! max length needed 9*a_n+a_ne
 
@@ -495,8 +488,8 @@ subroutine nd_coarse_partition(a_n,a_ne,a_ptr,a_row,a_weight, &
   end if
 
 
-  select case (partition_method)
-  case (1)
+  select case (options%coarse_partition_method)
+  case (:1)
     ! Half level set method
     use_multilevel = .false.
     call nd_half_level_set(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,2,a_n1, &
@@ -527,6 +520,24 @@ subroutine nd_coarse_partition(a_n,a_ne,a_ptr,a_row,a_weight, &
     if (printi .or. printd) then
       write (unit_diagnostics,'(a)') ' '
       write (unit_diagnostics,'(a)') 'Initial level set partition'
+      write (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_n1 =', a_n1, &
+        ', a_n2=', a_n2, ', a_n_sep=', a_n - a_n1 - a_n2
+      write (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_weight_1 =', &
+        a_weight_1, ', a_weight_2=', a_weight_2, ', a_weight_sep=', &
+        sumweight - a_weight_1 - a_weight_2
+    end if
+  case(3:)
+    ! Region-growing edge seperator vertex cover
+    use_multilevel = .false.
+    call region_grow_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,2,a_n1, &
+      a_n2,a_weight_1,a_weight_2,a_weight_sep, &
+      work1(partition_ptr+1:partition_ptr+a_n),work(1:9*a_n+sumweight), &
+      options,dummy,dummy1,use_multilevel, info)
+    if(info.ne.0) return ! it's all gone horribly wrong
+
+    if (printi .or. printd) then
+      write (unit_diagnostics,'(a)') ' '
+      write (unit_diagnostics,'(a)') 'Initial region-based partition'
       write (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_n1 =', a_n1, &
         ', a_n2=', a_n2, ', a_n_sep=', a_n - a_n1 - a_n2
       write (unit_diagnostics,'(a,i10,a,i10,a,i10)') 'a_weight_1 =', &

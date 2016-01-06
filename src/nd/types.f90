@@ -56,12 +56,14 @@ module spral_nd_types
          ! == 1 : use multilevel
          ! >= 2 : automatic choice based on size of levelsets
       integer :: matching = 0 ! Which coarsening method to use
-         ! > 0 : heavy-edge
          ! <= 0 : common neighbours
+         !  = 1 : heavy-edge
+         ! >= 2 : sorted heavy-edge
       integer :: coarse_partition_method = 1 ! Which partition method to use
          ! at coarsest level
          ! <=1 : Half-level set method (Ashcraft)
-         ! >=2 : Level-set method
+         !  =2 : Level-set method
+         ! >=3 : Region-growing edge seperator vertex cover
       integer :: refinement = 7 ! Which sort of refinement to use
          ! <2 : trim + fm to increase weights of A1 and A2
          ! =2 : trim + fm to increase weight of smaller partition and

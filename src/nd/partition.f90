@@ -1,12 +1,192 @@
 module spral_nd_partition
    use spral_nd_types
    use spral_nd_util
+   use spral_random
    implicit none
 
    private
-   public :: nd_half_level_set, nd_level_set
+   public :: nd_half_level_set, nd_level_set, region_grow_partition
 
 contains
+
+!
+! Partition the matrix using metis-like growth algorithm
+!
+! Performs a breadth-first search from supplied start point to obtain ordering.
+! Define partitions as first n/2 and the rest, build vetex cover of resulting
+! edge seperator.
+subroutine region_grow_partition(a_n, a_ne, a_ptr, a_row, a_weight, &
+      sumweight, ndlevel, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, &
+      partition, work, options, band, depth, use_multilevel, flag)
+   integer, intent(in) :: a_n
+   integer, intent(in) :: a_ne
+   integer, intent(in) :: a_ptr(a_n)
+   integer, intent(in) :: a_row(a_ne)
+   integer, intent(in) :: a_weight(a_n)
+   integer, intent(in) :: sumweight ! sum of entries in a_weight
+   integer, intent(in) :: ndlevel ! current level of nested dissection
+   integer, intent(out) :: a_n1, a_n2 ! size of the two submatrices
+   integer, intent(out) :: a_weight_1, a_weight_2, a_weight_sep ! Weighted
+      ! size of partitions and separator
+   integer, intent(out) :: partition(a_n) ! First a_n1 entries will contain
+      ! list of (local) indices in partition 1; next a_n2 entries will
+      ! contain list of (local) entries in partition 2; entries in
+      ! separator are listed at the end
+   integer, target, intent(out) :: work(9*a_n+sumweight) ! workspace
+   type (nd_options), intent(in) :: options
+   real(wp), intent(out) :: band ! band = 100*L/a_n, where L is the size of
+      ! the largest levelset
+   real(wp), intent(out) :: depth !  depth = num_levels_nend
+   logical, intent(inout) :: use_multilevel ! are we allowed to use a
+      ! multilevel partitioning strategy
+   integer, intent(out) :: flag ! error indicator
+
+   type(random_state) :: rstate
+   logical :: in_sep
+   integer :: i, j, v
+   integer :: work_ptr, search, head, root
+   integer, dimension(:), pointer :: seen, epart1
+
+   root = random_integer(rstate, a_n)
+   print *, "====================="
+   print *, "Begin at node ", root
+
+   call nd_print_diagnostic(1, options, ' ')
+   call nd_print_diagnostic(1, options, &
+      'Use region growing edge partitioning method')
+
+   ! Initialize return vars
+   flag = 0
+   band = -1.0
+   depth = -1.0
+
+   ! If we're going to use multilevel regardless, immediate return
+   if (options%partition_method.eq.1 .and. use_multilevel) return
+   if (options%partition_method.gt.1 .and. ndlevel.gt.0 .and. use_multilevel) &
+      return
+
+   ! Use a breadth-first search to find n/2 vertices
+   work_ptr = 0
+   seen   => work(work_ptr+1:work_ptr+a_n); work_ptr = work_ptr + a_n
+   epart1 => work(work_ptr+1:work_ptr+a_n/2); work_ptr = work_ptr + a_n/2
+   seen(:) = 0
+   head = 1
+   search = 1
+   epart1(:) = -1 ! FIXME: remove as redundant
+   epart1(head) = root
+   seen(root) = 1
+   bfs: do while(search.le.head)
+      v = epart1(search)
+      do i = a_ptr(v), nd_get_ptr(v+1, a_n, a_ne, a_ptr)-1
+         j = a_row(i)
+         if(seen(j).ne.0) cycle ! Already in epart1
+         ! Insert vertex j into epart1 and mark as seen
+         head = head + 1
+         epart1(head) = j
+         seen(j) = 1
+         ! Quit BFS if we've now visited half of graph
+         if(head.eq.a_n/2) exit bfs
+      end do
+      search = search + 1
+   end do bfs
+
+   ! Now construct vertex seperator as vertex cover of edge seperator.
+   ! Observe that this is essentially just completing the BFS on
+   ! partition(search:head), as all neighbours of partition(1:search-1) must be
+   ! in partition(:).
+   a_n1 = search-1 ! At least first search-1 vertices are in vertex partition 1.
+   partition(1:a_n1) = epart1(1:a_n1)
+   a_n2 = a_n+1 ! Insert location for seperator
+   do search = search, head
+      v = epart1(search)
+      in_sep = .false.
+      do i = a_ptr(v), nd_get_ptr(v+1, a_n, a_ne, a_ptr)-1
+         j = a_row(i)
+         if(seen(j).ne.0) cycle ! j is in partition 1 or seperator
+         ! Insert vertex j into seperator
+         a_n2 = a_n2 - 1
+         partition(a_n2) = j
+         seen(j) = 3 ! seperator
+         in_sep = .true. ! v has neighbour in edge partition 2 => v in sep
+      end do
+      if(in_sep) then
+         ! Add v to seperator
+         a_n2 = a_n2 - 1
+         partition(a_n2) = v
+         seen(v) = 3 ! seperator
+      else
+         ! v has no neighbour not in part 1 or sep. So v is in part 1.
+         a_n1 = a_n1 + 1
+         partition(a_n1) = v
+         seen(v) = 1 ! part 1
+      end if
+   end do
+
+   ! Finish up by allocating anything we've not located into part 2.
+   a_n2 = 0 ! insert location
+   do v = 1, a_n
+      if(seen(v).ne.0) cycle ! already in part 1 or seperator.
+      a_n2 = a_n2 + 1
+      partition(a_n1+a_n2) = v
+      seen(v) = 2 ! FIXME: remove redundant
+   end do
+
+   print *, "Finally ", a_n1, a_n2, a_n-a_n1-a_n2
+   call validate_partition(a_n, a_n1, a_n2, partition, a_ne, a_ptr, a_row)
+
+   ! Calculate partition weights
+   a_weight_1 = sum( a_weight( partition(1:a_n1) ) )
+   a_weight_2 = sum( a_weight( partition(a_n1+1:a_n1+a_n2) ) )
+   a_weight_sep = sum( a_weight( partition(a_n1+a_n2+1:a_n) ) )
+
+end subroutine region_grow_partition
+
+subroutine validate_partition(a_n, a_n1, a_n2, partition, a_ne, a_ptr, a_row)
+   integer, intent(in) :: a_n, a_n1, a_n2, a_ne
+   integer, intent(in) :: partition(a_n), a_ptr(a_n), a_row(a_ne)
+
+   integer :: i, j, k
+   integer, dimension(:), allocatable :: seen
+
+   if(a_n1 + a_n2 > a_n) then
+      print *, "a_n1 + a_n2 > a_n !!!"
+      print *, "a_n1, a_n2, a_n = ", a_n1, a_n2, a_n
+      stop
+   endif
+
+   allocate(seen(a_n))
+   seen(:) = 0
+   do i = 1, a_n
+      if(partition(i).lt.1 .or. partition(i).gt.a_n) then
+         print *, "partition out of range partition(", i, ") = ", partition(i)
+         print *, "a_n1, a_n2, a_n = ", a_n1, a_n2, a_n
+         stop
+      endif
+      j = partition(i)
+      if(seen(j).ne.0) then
+         print *, "Node ", j, " at posn ", i, " and ", seen(j)
+         print *, "a_n1, a_n2, a_n = ", a_n1, a_n2, a_n
+         stop
+      endif
+      seen(j) = i
+   end do
+
+   seen( partition(1:a_n1) ) = 1
+   seen( partition(a_n1+1:a_n1+a_n2) ) = 2
+   seen( partition(a_n1+a_n2+1:a_n) ) = 3
+   do i = 1, a_n
+      if(seen(i).eq.3) cycle ! Don't care what seperator connects to
+      do j = a_ptr(i), nd_get_ptr(i+1, a_n, a_ne, a_ptr)-1
+         k = a_row(j)
+         if(seen(k).eq.3) cycle ! Don't care what seperator connects to
+         if(seen(i).ne.seen(k)) then
+            print *, "Nodes ", i, " and ", k, " are connected, but in parts ", &
+               seen(i), seen(k)
+            stop
+         endif
+      end do
+   end do
+end subroutine validate_partition
 
 !
 ! Partition the matrix using the half level set (Ashcraft) method
