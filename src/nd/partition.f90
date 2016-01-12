@@ -384,6 +384,7 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
       if (p2sz.eq.0) exit
       call cost_function(p1sz, p2sz, sepsz, sumweight, balance_tol, imbal, &
          options%cost_function, val)
+      !print *, "Consider level ", lvl, p1sz, p2sz, sepsz, val
       if (val.lt.bestval) then
          bestval = val
          best_sep_start = j + 1
@@ -394,6 +395,7 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
          a_weight_sep = sepsz
       end if
    end do
+   !print *, "Finally chose ", a_weight_1, a_weight_2, a_weight_sep
 
    if (imbal .and. use_multilevel_copy .and. options%partition_method.ge.2) &
          then

@@ -91,6 +91,7 @@ subroutine cost_function(a_weight_1, a_weight_2, a_weight_sep, sumweight, &
 
    real(wp) :: a_wgt1, a_wgt2, balance 
 
+   real(wp), parameter :: alpha = 2.0
    real(wp), parameter :: beta = 0.5
    real(wp), parameter :: delta = 1.0
 
@@ -107,10 +108,17 @@ subroutine cost_function(a_weight_1, a_weight_2, a_weight_sep, sumweight, &
       tau = a_weight_sep * (1.0_wp + (beta*abs(a_wgt1-a_wgt2))/sumweight)
       if (imbal .and. balance.ge.balance_tol) &
          tau = tau + sumweight * (1.0+beta)
-   case(3:)
+   case(3)
       tau = a_weight_sep / real(a_wgt1 * a_wgt2)
       if (imbal .and. balance.ge.balance_tol) &
          tau = tau + sumweight-2 + delta * balance
+   case(4)
+      tau = a_weight_sep*(a_wgt1+a_wgt2+a_weight_sep) - alpha*a_wgt1*a_wgt2
+   case(5:)
+      tau = a_weight_sep
+      balance = min(a_wgt1, a_wgt2)
+      if(balance .lt. 0.05*(a_wgt1+a_wgt2+a_weight_sep)) &
+         tau = tau + sumweight-2 + delta*balance
    end select
 
 end subroutine cost_function
