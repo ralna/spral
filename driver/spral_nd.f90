@@ -3,6 +3,7 @@ program run_prob
    use spral_matrix_util
    use spral_metis_wrapper
    use spral_nd
+   use spral_random
    use spral_rutherford_boeing
    implicit none
 
@@ -29,9 +30,10 @@ program run_prob
    integer :: start_t, stop_t, rate_t
 
    ! Controls
+   integer :: random
    logical :: with_metis, with_nd
 
-   call proc_args(options, with_metis, with_nd)
+   call proc_args(options, with_metis, with_nd, random)
 
    ! Read in a matrix
    write(*, "(a)", advance="no") "Reading..."
@@ -50,6 +52,10 @@ program run_prob
       print *, "CSCL_VERIFY failed: ", flag, more
       stop
    endif
+
+   ! Randomize order
+   if(random.ne.-1) &
+      call randomize_matrix(n, ptr, row, random)
 
    ! Order using spral_nd
    allocate(perm(n), invp(n))
@@ -96,10 +102,11 @@ program run_prob
 
 contains
 
-   subroutine proc_args(options, with_metis, with_nd)
+   subroutine proc_args(options, with_metis, with_nd, random)
       type(nd_options), intent(inout) :: options
       logical, intent(out) :: with_metis
       logical, intent(out) :: with_nd
+      integer, intent(out) :: random
 
       integer :: argnum, narg
       character(len=200) :: argval
@@ -107,6 +114,7 @@ contains
       ! Defaults
       with_metis = .false.
       with_nd = .true.
+      random = -1
       
       ! Process args
       narg = command_argument_count()
@@ -115,15 +123,11 @@ contains
          call get_command_argument(argnum, argval)
          argnum = argnum + 1
          select case(argval)
-         case("--cost=1")
-            options%cost_function = 1
-            print *, "Set cost function to 1"
-         case("--cost=2")
-            options%cost_function = 2
-            print *, "Set cost function to 2"
-         case("--cost=3")
-            options%cost_function = 3
-            print *, "Set cost function to 3"
+         case("--cost")
+            call get_command_argument(argnum, argval)
+            argnum = argnum + 1
+            read( argval, * ) options%cost_function
+            print *, "Set cost function to ", options%cost_function
          case("--refinement")
             call get_command_argument(argnum, argval)
             argnum = argnum + 1
@@ -134,6 +138,11 @@ contains
             argnum = argnum + 1
             read( argval, * ) options%amd_call
             print *, "Set options%amd_call = ", options%amd_call
+         case("--amd-switch2")
+            call get_command_argument(argnum, argval)
+            argnum = argnum + 1
+            read( argval, * ) options%amd_switch2
+            print *, "Set options%amd_switch2 = ", options%amd_switch2
          case("--metis")
             with_metis = .true.
             print *, "MeTiS run requested"
@@ -164,12 +173,49 @@ contains
             read( argval, * ) options%print_level
             print *, "Set options%print_level = ", &
                options%print_level
+         case("--randomize")
+            call get_command_argument(argnum, argval)
+            argnum = argnum + 1
+            read( argval, * ) random
+            print *, "Randomizing matrix row order, seed = ", random
          case default
             print *, "Unrecognised command line argument: ", argval
             stop
          end select
       end do
    end subroutine proc_args
+
+   subroutine randomize_list(n, list, state)
+      integer, intent(in) :: n
+      integer, dimension(n), intent(inout) :: list
+      type(random_state), intent(inout) :: state
+
+      integer :: i, idx1, idx2, temp
+
+      ! do n random swaps
+      do i = 1, n
+         idx1 = random_integer(state, n)
+         idx2 = random_integer(state, n)
+         temp = list(idx1)
+         list(idx1) = list(idx2)
+         list(idx2) = temp
+      end do
+   end subroutine randomize_list
+
+   subroutine randomize_matrix(n, ptr, row, seed)
+      integer, intent(in) :: n
+      integer, dimension(n+1), intent(in) :: ptr
+      integer, dimension(ptr(n+1)-1), intent(inout) :: row
+      integer, intent(in) :: seed
+
+      integer :: i
+      type(random_state) :: state
+
+      call random_set_seed(state, seed)
+      do i = 1, n
+         call randomize_list(ptr(i+1)-ptr(i), row(ptr(i)), state)
+      end do
+   end subroutine randomize_matrix
 
    subroutine calculate_stats(n, ptr, row, perm, nfact, nflops)
       integer, intent(in) :: n
