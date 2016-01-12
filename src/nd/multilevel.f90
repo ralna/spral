@@ -230,11 +230,12 @@ subroutine coarsen(grid, cgrid, work, options, cexit, st)
          grid%graph%val, cgrid%size, grid%match)
    case(ND_MATCH_SHEM)
       call match_sorted_heavy_edge(grid%graph%n, grid%graph%ptr, &
-         grid%graph%col, grid%graph%val, cgrid%size, grid%match, &
-         work(1:grid%graph%n))
+         grid%graph%col, grid%graph%val, grid%row_wgt, cgrid%size, grid%match, &
+         work(1:2*grid%size))
    case(ND_MATCH_SCNM:)
       call match_sorted_common_neighbours(grid%graph%n, grid%graph%ptr, &
-         grid%graph%col, cgrid%size, grid%match, work(1:2*grid%size))
+         grid%graph%col, grid%row_wgt, cgrid%size, grid%match, &
+         work(1:3*grid%size))
    end select
 
    ! ensure coarse grid quantities are allocated to sufficient size
@@ -709,35 +710,25 @@ end subroutine match_heavy_edge
 !
 ! Find matching using heavy-edge collapsing
 !
-subroutine match_sorted_heavy_edge(n, ptr, row, val, cn, match, work)
+subroutine match_sorted_heavy_edge(n, ptr, row, val, weight, cn, match, work)
    integer, intent(in) :: n
    integer, dimension(n+1), intent(in) :: ptr
    integer, dimension(ptr(n+1)-1), intent(in) :: row
    integer, dimension(ptr(n+1)-1), intent(in) :: val
+   integer, dimension(n), intent(in) :: weight
    integer, intent(out) :: cn ! number of vertices after matching [ie coarse]
    integer, dimension(n), intent(out) :: match
-   integer, dimension(n), intent(out) :: work
+   integer, dimension(2*n), intent(out) :: work
 
    ! working variables
    integer :: v, u, j, vv
-   integer :: deg, maxdeg
 
    ! maximum weight and index of edges connected to the current vertex
    integer :: bestv, best
 
    ! Sort nodes based on degree
-   maxdeg = 0
-   do v = 1, n
-      maxdeg = max(maxdeg, ptr(v+1)-ptr(v))
-   end do
-   u = 1
-   do deg = maxdeg, 0, -1
-      do v = 1, n
-         if(ptr(v+1)-ptr(v).ne.deg) cycle
-         work(u) = v
-         u = u + 1
-      end do
-   end do
+   call construct_degree(n, ptr, row, weight, work(n+1:2*n))
+   call sort_by_degree(n, work(1:n), work(n+1:2*n))
 
    ! Initialise everything to unmatched
    match(:) = -1
@@ -771,37 +762,131 @@ end subroutine match_sorted_heavy_edge
 
 ! *******************************************************************
 
-!
-! Find matching using common neighbours criterion
-!
-subroutine match_sorted_common_neighbours(n, ptr, row, cn, match, work)
+subroutine construct_degree(n, ptr, row, weight, degree)
    integer, intent(in) :: n
    integer, dimension(n+1), intent(in) :: ptr
    integer, dimension(ptr(n+1)-1), intent(in) :: row
+   integer, dimension(n), intent(in) :: weight
+   integer, dimension(n), intent(out) :: degree
+
+   integer :: i, j
+
+   do i = 1, n
+      degree(i) = 0
+      do j = ptr(i), ptr(i+1)-1
+         degree(i) = degree(i) + weight(row(j))
+      end do
+   end do
+end subroutine construct_degree
+
+!
+! Returns an order with vertices in order of decreasing degree
+!
+subroutine sort_by_degree(n, order, val)
+   integer, intent(in) :: n
+   integer, dimension(n), intent(out) :: order
+   integer, dimension(n), intent(in) :: val 
+
+   integer :: start, last, u, temp
+
+   !
+   ! Heapsort
+   !
+   ! Our heap has the following properties:
+   ! An element must be smaller than either of its children (if they exist)
+
+   do u = 1, n
+      order(u) = u
+   end do
+
+   ! Construct heap with smallest element at top
+   start = n / 2 ! parent of n
+   do while(start.ge.1)
+      ! Sift start down to correct location in heap
+      call heap_sift_down(start, n, order, val)
+      
+      ! Go down to next parent
+      start = start - 1
+   end do
+
+   ! Keep popping elements off heap and grow ordered list from rear
+   last = n
+   do while (last.ge.1)
+      temp = order(last)
+      order(last) = order(1)
+      order(1) = temp
+      last = last - 1
+      call heap_sift_down(1, last, order, val)
+   end do
+end subroutine sort_by_degree
+
+subroutine heap_sift_down(first, last, order, val)
+   integer, intent(in) :: first
+   integer, intent(in) :: last
+   integer, dimension(*), intent(inout) :: order
+   integer, dimension(*), intent(in) :: val
+
+   integer :: root, swapidx, swapval, leftidx, rightidx, leftval, rightval
+   integer :: temp
+
+   root = first
+   do while(2*root.le.last) ! i.e. while root has any children
+      ! Initialise swap to be current root
+      swapidx = root
+      swapval = val(order(root))
+
+      ! Check if left child is smaller than current best
+      leftidx = 2*root
+      leftval = val(order(leftidx))
+      if(leftval.lt.swapval) then
+         swapidx = leftidx
+         swapval = leftval
+      endif
+
+      ! Check if right child is smaller than current best
+      rightidx = leftidx + 1
+      if(rightidx.le.last) then ! right child exists
+         rightval = val(order(rightidx))
+         if(rightval.lt.swapval) then
+            swapidx = rightidx
+            swapval = rightval
+         endif
+      endif
+
+      ! If root is largest element, heap property now holds
+      if(swapidx.eq.root) return
+
+      ! Otherwise, swap root and largest child and descend to child
+      temp = order(root)
+      order(root) = order(swapidx)
+      order(swapidx) = temp
+      root = swapidx
+   end do
+end subroutine heap_sift_down
+
+! *******************************************************************
+
+!
+! Find matching using common neighbours criterion
+!
+subroutine match_sorted_common_neighbours(n, ptr, row, weight, cn, match, work)
+   integer, intent(in) :: n
+   integer, dimension(n+1), intent(in) :: ptr
+   integer, dimension(ptr(n+1)-1), intent(in) :: row
+   integer, dimension(n), intent(in) :: weight
    integer, intent(out) :: cn ! number of vertices in coarse grid
    integer, dimension(n), intent(out) :: match
-   integer, dimension(2*n), intent(out) :: work
+   integer, dimension(3*n), intent(out) :: work
 
    ! working variables
    integer :: v, u, j, vv
-   integer :: deg, maxdeg
 
    ! maximum no. neighbours and index of edges connected to the current vertex
    integer :: bestv, best, num
 
    ! Sort nodes based on degree
-   maxdeg = 0
-   do v = 1, n
-      maxdeg = max(maxdeg, ptr(v+1)-ptr(v))
-   end do
-   u = 1
-   do deg = maxdeg, 0, -1
-      do v = 1, n
-         if(ptr(v+1)-ptr(v).ne.deg) cycle
-         work(n+u) = v
-         u = u + 1
-      end do
-   end do
+   call construct_degree(n, ptr, row, weight, work(2*n+1:3*n))
+   call sort_by_degree(n, work(n+1:2*n), work(2*n+1:3*n))
 
    ! initialise the matching status
    match(1:n) = -1
