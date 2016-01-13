@@ -28,10 +28,8 @@ module spral_nd_types
                          ND_REFINE_MAXFLOW_SMALLER = 5, &
                          ND_REFINE_MAXFLOW_AUTO    = 6, &
                          ND_REFINE_AUTO            = 7
-   integer, parameter :: ND_MATCH_COMMON_NEIGHBOURS = 0, &
-                         ND_MATCH_HEAVY             = 1, &
-                         ND_MATCH_SHEM              = 2, &
-                         ND_MATCH_SCNM              = 3
+   integer, parameter :: ND_MATCH_COMMON_NEIGHBOURS = 1, &
+                         ND_MATCH_SHEM              = 2
 
    ! *****************************************************************
 
@@ -56,10 +54,9 @@ module spral_nd_types
          ! <= 0 : do not use multilevel
          ! == 1 : use multilevel
          ! >= 2 : automatic choice based on size of levelsets
-      integer :: matching = 0 ! Which coarsening method to use
-         ! <= 0 : common neighbours
-         !  = 1 : heavy-edge
-         ! >= 2 : sorted heavy-edge
+      integer :: matching = ND_MATCH_SHEM ! Which coarsening method to use
+         ! <= 1 : common neighbours matching (CNM)
+         ! >= 2 : sorted heavy-edge matching (SHEM)
       integer :: coarse_partition_method = 1 ! Which partition method to use
          ! at coarsest level
          ! <=1 : Half-level set method (Ashcraft)
