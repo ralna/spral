@@ -155,6 +155,11 @@ contains
          case("--reord=2")
             options%reord = 2
             print *, "Set Sue's preprocessing ordering"
+         case("--partition-method")
+            call get_command_argument(argnum, argval)
+            argnum = argnum + 1
+            read( argval, * ) options%partition_method
+            print *, "Set options%partition_method = ", options%partition_method
          case("--coarse-partition-method")
             call get_command_argument(argnum, argval)
             argnum = argnum + 1
