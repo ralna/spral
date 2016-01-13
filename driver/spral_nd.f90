@@ -143,12 +143,35 @@ contains
             argnum = argnum + 1
             read( argval, * ) options%amd_switch2
             print *, "Set options%amd_switch2 = ", options%amd_switch2
+         case("--stop-coarsening1")
+            call get_command_argument(argnum, argval)
+            argnum = argnum + 1
+            read( argval, * ) options%stop_coarsening1
+            print *, "Set options%stop_coarsening1 = ", options%stop_coarsening1
+         case("--stop-coarsening2")
+            call get_command_argument(argnum, argval)
+            argnum = argnum + 1
+            read( argval, * ) options%stop_coarsening2
+            print *, "Set options%stop_coarsening2 = ", options%stop_coarsening2
+         case("--min-reduction")
+            call get_command_argument(argnum, argval)
+            argnum = argnum + 1
+            read( argval, * ) options%min_reduction
+            print *, "Set options%min_reduction = ", options%min_reduction
+         case("--max-reduction")
+            call get_command_argument(argnum, argval)
+            argnum = argnum + 1
+            read( argval, * ) options%max_reduction
+            print *, "Set options%max_reduction = ", options%max_reduction
          case("--metis")
             with_metis = .true.
             print *, "MeTiS run requested"
          case("--nond")
             with_nd = .false.
             print *, "ND run disabled"
+         case("--nosv")
+            options%find_supervariables = .false.
+            print *, "Disabled supervariables"
          case("--reord=1")
             options%reord = 1
             print *, "Set Jonathan's preprocessing ordering"
