@@ -75,6 +75,8 @@ libspral_a_SOURCES += \
 bin_PROGRAMS = spral_nd
 spral_nd_SOURCES = \
 	driver/spral_nd.f90
+spral_nd_LDADD = -Lhsl_ma87-2.3.0/src -lhsl_ma87 $(LDADD)
+spral_nd_FCFLAGS = -Ihsl_ma87-2.3.0/src
 check_PROGRAMS = \
 	nd_test \
 	examples/C/nd \
@@ -327,7 +329,8 @@ src/nd/multilevel.$(OBJEXT): src/nd/maxflow.$(OBJEXT) \
 									  src/nd/refine.$(OBJEXT) \
 	                          src/nd/types.$(OBJEXT) \
 									  src/nd/util.$(OBJEXT)
-src/nd/partition.$(OBJEXT): src/nd/types.$(OBJEXT) src/nd/util.$(OBJEXT)
+src/nd/partition.$(OBJEXT): src/nd/types.$(OBJEXT) src/nd/util.$(OBJEXT) \
+									 src/random.$(OBJEXT)
 src/nd/preprocess.$(OBJEXT): src/nd/types.$(OBJEXT) src/nd/util.$(OBJEXT)
 src/nd/refine.$(OBJEXT): src/nd/maxflow.$(OBJEXT) \
 								 src/nd/types.$(OBJEXT) \

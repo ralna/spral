@@ -537,11 +537,11 @@ scaling_test_LDADD = $(LDADD)
 scaling_test_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1)
-am_spral_nd_OBJECTS = driver/spral_nd.$(OBJEXT)
+am_spral_nd_OBJECTS = driver/spral_nd-spral_nd.$(OBJEXT)
 spral_nd_OBJECTS = $(am_spral_nd_OBJECTS)
-spral_nd_LDADD = $(LDADD)
-spral_nd_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+spral_nd_DEPENDENCIES = $(am__DEPENDENCIES_2)
+spral_nd_LINK = $(FCLD) $(spral_nd_FCFLAGS) $(FCFLAGS) $(AM_LDFLAGS) \
+	$(LDFLAGS) -o $@
 am__spral_ssids_SOURCES_DIST = driver/spral_ssids.f90
 @HAVE_NVCC_TRUE@am_spral_ssids_OBJECTS = driver/spral_ssids.$(OBJEXT)
 spral_ssids_OBJECTS = $(am_spral_ssids_OBJECTS)
@@ -591,6 +591,10 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
+AM_V_lt = $(am__v_lt_@AM_V@)
+am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
+am__v_lt_0 = --silent
+am__v_lt_1 = 
 FCCOMPILE = $(FC) $(AM_FCFLAGS) $(FCFLAGS)
 AM_V_FC = $(am__v_FC_@AM_V@)
 am__v_FC_ = $(am__v_FC_@AM_DEFAULT_V@)
@@ -1083,6 +1087,8 @@ EXTRA_DIST = src/metis4_wrapper.f90 src/metis5_wrapper.f90
 spral_nd_SOURCES = \
 	driver/spral_nd.f90
 
+spral_nd_LDADD = -Lhsl_ma87-2.3.0/src -lhsl_ma87 $(LDADD)
+spral_nd_FCFLAGS = -Ihsl_ma87-2.3.0/src
 nd_test_SOURCES = tests/nd.f90
 examples_C_nd_SOURCES = examples/C/nd.c
 examples_Fortran_nd_SOURCES = examples/Fortran/nd.f90
@@ -1703,12 +1709,12 @@ driver/$(am__dirstamp):
 driver/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) driver/$(DEPDIR)
 	@: > driver/$(DEPDIR)/$(am__dirstamp)
-driver/spral_nd.$(OBJEXT): driver/$(am__dirstamp) \
+driver/spral_nd-spral_nd.$(OBJEXT): driver/$(am__dirstamp) \
 	driver/$(DEPDIR)/$(am__dirstamp)
 
 spral_nd$(EXEEXT): $(spral_nd_OBJECTS) $(spral_nd_DEPENDENCIES) $(EXTRA_spral_nd_DEPENDENCIES) 
 	@rm -f spral_nd$(EXEEXT)
-	$(AM_V_FCLD)$(FCLINK) $(spral_nd_OBJECTS) $(spral_nd_LDADD) $(LIBS)
+	$(AM_V_FCLD)$(spral_nd_LINK) $(spral_nd_OBJECTS) $(spral_nd_LDADD) $(LIBS)
 driver/spral_ssids.$(OBJEXT): driver/$(am__dirstamp) \
 	driver/$(DEPDIR)/$(am__dirstamp)
 
@@ -1799,6 +1805,12 @@ distclean-compile:
 
 .f90.obj:
 	$(AM_V_FC)$(FCCOMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
+
+driver/spral_nd-spral_nd.o: driver/spral_nd.f90
+	$(AM_V_FC)$(FC) $(spral_nd_FCFLAGS) $(FCFLAGS) -c -o driver/spral_nd-spral_nd.o `test -f 'driver/spral_nd.f90' || echo '$(srcdir)/'`driver/spral_nd.f90
+
+driver/spral_nd-spral_nd.obj: driver/spral_nd.f90
+	$(AM_V_FC)$(FC) $(spral_nd_FCFLAGS) $(FCFLAGS) -c -o driver/spral_nd-spral_nd.obj `if test -f 'driver/spral_nd.f90'; then $(CYGPATH_W) 'driver/spral_nd.f90'; else $(CYGPATH_W) '$(srcdir)/driver/spral_nd.f90'; fi`
 install-includeHEADERS: $(include_HEADERS)
 	@$(NORMAL_INSTALL)
 	@list='$(include_HEADERS)'; test -n "$(includedir)" || list=; \
@@ -2481,7 +2493,8 @@ src/nd/multilevel.$(OBJEXT): src/nd/maxflow.$(OBJEXT) \
 									  src/nd/refine.$(OBJEXT) \
 	                          src/nd/types.$(OBJEXT) \
 									  src/nd/util.$(OBJEXT)
-src/nd/partition.$(OBJEXT): src/nd/types.$(OBJEXT) src/nd/util.$(OBJEXT)
+src/nd/partition.$(OBJEXT): src/nd/types.$(OBJEXT) src/nd/util.$(OBJEXT) \
+									 src/random.$(OBJEXT)
 src/nd/preprocess.$(OBJEXT): src/nd/types.$(OBJEXT) src/nd/util.$(OBJEXT)
 src/nd/refine.$(OBJEXT): src/nd/maxflow.$(OBJEXT) \
 								 src/nd/types.$(OBJEXT) \

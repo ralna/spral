@@ -5,6 +5,7 @@ program run_prob
    use spral_nd
    use spral_random
    use spral_rutherford_boeing
+   use spral_timer
    implicit none
 
    integer, parameter :: wp = kind(0d0)
@@ -28,13 +29,14 @@ program run_prob
    integer(long) :: nfact, nflops
 
    ! Timing
-   integer :: start_t, stop_t, rate_t
+   type(timespec) :: t1, t2
+   integer :: dummy
 
    ! Controls
    integer :: random
-   logical :: with_metis, with_nd
+   logical :: with_metis, with_nd, with_ma87
 
-   call proc_args(options, with_metis, with_nd, random)
+   call proc_args(options, with_metis, with_nd, random, with_ma87)
 
    ! Read in a matrix
    write(*, "(a)", advance="no") "Reading..."
@@ -58,7 +60,7 @@ program run_prob
    endif
 
    ! Force to be pos-def
-   !call make_posdef(n, ptr, row, val)
+   if(with_ma87) call make_diagdom(n, ptr, row, val)
 
    ! Just to be safe... (if we've symmetrized we don't guaruntee ascending idx)
    if(type_code(2:2).ne.'u') then
@@ -78,15 +80,15 @@ program run_prob
    allocate(perm(n), invp(n))
    if(with_nd) then
       write(*, "(a)", advance="no") "Ordering with ND..."
-      call system_clock(start_t, rate_t)
+      dummy = clock_gettime(0, t1)
       call nd_order(0, n, ptr, row, perm, options, inform)
-      call system_clock(stop_t)
+      dummy = clock_gettime(0, t2)
       if (inform%flag < 0) then
          print *, "oops on analyse ", inform%flag
          stop
       endif
       write(*, "(a)") "ok"
-      print *, "nd_order() took ", (stop_t - start_t)/real(rate_t)
+      print *, "nd_order() took ", tdiff(t1, t2)
       ! Determine quality
       write(*, "(a)", advance="no") "Determing stats..."
       call calculate_stats(n, ptr, row, perm, nfact, nflops)
@@ -95,35 +97,38 @@ program run_prob
       print "(a,es10.2)", "nd nflop = ", real(nflops)
       print "(a,i10)", "nd ndense = ", inform%dense
       print "(a,i10)", "nd sv var reduce = ", n - inform%dense - inform%nsuper
+      if(with_ma87) call run_ma87(n, ptr, row, val, perm)
    endif
 
    ! Order using metis
    if(with_metis) then
       write(*, "(a)", advance="no") "Ordering with Metis..."
-      call system_clock(start_t, rate_t)
+      dummy = clock_gettime(0, t1)
       call metis_order(n, ptr, row, perm, invp, flag, st)
-      call system_clock(stop_t)
+      dummy = clock_gettime(0, t2)
       if (inform%flag < 0) then
          print *, "oops on analyse ", inform%flag
          stop
       endif
       write(*, "(a)") "ok"
-      print *, "metis_order() took ", (stop_t - start_t)/real(rate_t)
+      print *, "metis_order() took ", tdiff(t1, t2)
       ! Determine quality
       write(*, "(a)", advance="no") "Determing stats..."
       call calculate_stats(n, ptr, row, perm, nfact, nflops)
       write(*, "(a)") "ok"
       print "(a,es10.2)", "metis nfact = ", real(nfact)
       print "(a,es10.2)", "metis nflop = ", real(nflops)
+      if(with_ma87) call run_ma87(n, ptr, row, val, perm)
    endif
 
 contains
 
-   subroutine proc_args(options, with_metis, with_nd, random)
+   subroutine proc_args(options, with_metis, with_nd, random, with_ma87)
       type(nd_options), intent(inout) :: options
       logical, intent(out) :: with_metis
       logical, intent(out) :: with_nd
       integer, intent(out) :: random
+      logical, intent(out) :: with_ma87
 
       integer :: argnum, narg
       character(len=200) :: argval
@@ -132,6 +137,7 @@ contains
       with_metis = .false.
       with_nd = .true.
       random = -1
+      with_ma87 = .false.
       
       ! Process args
       narg = command_argument_count()
@@ -140,6 +146,9 @@ contains
          call get_command_argument(argnum, argval)
          argnum = argnum + 1
          select case(argval)
+         case("--ma87")
+            with_ma87 = .true.
+            print *, "Running ma87"
          case("--cost")
             call get_command_argument(argnum, argval)
             argnum = argnum + 1
@@ -229,6 +238,44 @@ contains
          end select
       end do
    end subroutine proc_args
+
+   subroutine make_diagdom(n, ptr, row, val)
+      integer, intent(in) :: n
+      integer, dimension(:), intent(inout) :: ptr
+      integer, dimension(:), allocatable, intent(inout) :: row
+      real(wp), dimension(:), allocatable, intent(inout) :: val
+
+      integer :: i, j, k
+      integer, dimension(:), allocatable :: dloc
+
+      ! Find location of diagonal entries
+      allocate(dloc(n))
+      dloc(:) = -1
+      do i = 1, n
+         do j = ptr(i), ptr(i+1)-1
+            k = row(j)
+            if(i.eq.k) then
+               dloc(i) = j
+               val(j) = abs(val(j)) ! force diagonal entry to be +ive
+               exit
+            endif
+         end do
+      end do
+      if(any(dloc.eq.-1)) then
+         print *, "Missing a diagonal entry :("
+         stop
+      endif
+
+      ! Now add sum of row entries to diagonals
+      do i = 1, n
+         do j = ptr(i), ptr(i+1)-1
+            k = row(j)
+            if(i.eq.k) cycle ! diagonal entry
+            val(dloc(i)) = val(dloc(i)) + abs(val(j))
+            val(dloc(k)) = val(dloc(k)) + abs(val(j))
+         end do
+      end do
+   end subroutine make_diagdom
 
    subroutine symmetrize_problem(n, ptr, row, val)
       integer, intent(in) :: n
@@ -387,5 +434,55 @@ contains
       10 continue
       print *, "Allocation error in finding stats"
    end subroutine calculate_stats
+
+   subroutine run_ma87(n, ptr, row, val, order)
+      use hsl_ma87_double
+      integer, intent(in) :: n
+      integer, dimension(n+1), intent(in) :: ptr
+      integer, dimension(ptr(n+1)-1), intent(in) :: row
+      real(wp), dimension(ptr(n+1)-1), intent(in) :: val
+      integer, dimension(n), intent(inout) :: order
+
+      type(ma87_keep) :: keep
+      type(ma87_control) :: control
+      type(ma87_info) :: info
+
+      real(wp), dimension(:), allocatable :: rhs
+
+      type(timespec) :: t1, t2
+      integer :: dummy
+
+      ! Analyse
+      dummy = clock_gettime(0, t1)
+      call ma87_analyse(n, ptr, row, order, keep, control, info)
+      dummy = clock_gettime(0, t2)
+      if(info%flag.ne.0) then
+         print *, "ma87_analyse() failed with flag ", info%flag
+         stop 1
+      endif
+      print *, "ma87 analyse took ", tdiff(t1, t2)
+
+      ! Factor
+      dummy = clock_gettime(0, t1)
+      call ma87_factor(n, ptr, row, val, order, keep, control, info)
+      dummy = clock_gettime(0, t2)
+      if(info%flag.ne.0) then
+         print *, "ma87_factor() failed with flag ", info%flag
+         stop 1
+      endif
+      print *, "ma87 factor took ", tdiff(t1, t2)
+
+      ! Solve
+      allocate(rhs(n))
+      rhs(1:n) = 1.0
+      dummy = clock_gettime(0, t1)
+      call ma87_solve(rhs, order, keep, control, info)
+      dummy = clock_gettime(0, t2)
+      if(info%flag.ne.0) then
+         print *, "ma87_solve() failed with flag ", info%flag
+         stop 1
+      endif
+      print *, "ma87 solve took ", tdiff(t1, t2)
+   end subroutine run_ma87
 
 end program
