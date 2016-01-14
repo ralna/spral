@@ -58,14 +58,16 @@ program run_prob
    endif
 
    ! Force to be pos-def
-   !call ensure_posdef(n, ptr, row, val)
+   !call make_posdef(n, ptr, row, val)
 
-   ! Just to be safe...
-   call cscl_verify(6, SPRAL_MATRIX_REAL_SYM_INDEF, n, n, &
-      ptr, row, flag, more)
-   if(flag.ne.0) then
-      print *, "CSCL_VERIFY failed: ", flag, more
-      stop
+   ! Just to be safe... (if we've symmetrized we don't guaruntee ascending idx)
+   if(type_code(2:2).ne.'u') then
+      call cscl_verify(6, SPRAL_MATRIX_REAL_SYM_INDEF, n, n, &
+         ptr, row, flag, more)
+      if(flag.ne.0) then
+         print *, "CSCL_VERIFY failed: ", flag, more
+         stop
+      endif
    endif
 
    ! Randomize order
