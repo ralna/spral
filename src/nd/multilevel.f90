@@ -88,6 +88,7 @@ subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
    ! Build coarse grid hierarchy
    !
    stop_coarsening1 = max(2,options%stop_coarsening1)
+   !stop_coarsening1 = max(stop_coarsening1, a_n/30)
    do level = 1, options%stop_coarsening2-1 ! NB we are are creating level+1
       if (options%print_level.ge.1 .and. options%unit_diagnostics.gt.0) &
          call level_print(options%unit_diagnostics, 'size of grid on level ', &
@@ -215,6 +216,8 @@ subroutine coarsen(grid, cgrid, work, options, cexit, st)
    real(wp) :: min_reduction ! min grid reduction factor
    real(wp) :: max_reduction ! max grid reduction factor
 
+   real(wp), parameter :: dense_test = 1.0
+
    ! Initialize return values
    cexit = 0   ! Keep coarsening
    st = 0      ! No error
@@ -255,7 +258,7 @@ subroutine coarsen(grid, cgrid, work, options, cexit, st)
             'current size = ', grid%size
       endif
 
-      ! recurse
+      ! stop coarsening
       cexit = 2
       return
    end if
@@ -284,7 +287,7 @@ subroutine coarsen(grid, cgrid, work, options, cexit, st)
 
    ! check if matrix is full
    cnedge = cgrid%graph%ptr(cgrid%graph%n+1)-1
-   if (real(cnedge)/cgrid%graph%n .ge. cgrid%graph%n-1) then
+   if (real(cnedge)/cgrid%graph%n .ge. dense_test*(cgrid%graph%n-1)) then
       if (options%print_level.ge.1 .and. options%unit_diagnostics.gt.0) &
          write (options%unit_diagnostics,'(a,i10,a)') &
             'at level ', grid%level, ' further coarsening gives full matrix'
