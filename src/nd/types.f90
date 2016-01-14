@@ -76,10 +76,10 @@ module spral_nd_types
          ! less than 1 mean that no FM refinement is done
       logical :: remove_dense_rows = .true. ! test the input for dense rows
          ! and place them at the end of the ordering
-      integer :: stop_coarsening2 = 20 ! Max number of levels in the
-         ! multilevel grid
       integer :: stop_coarsening1 = 100 ! Stop coarsening once matrix has
          ! order at most stop_coarsening1
+      integer :: stop_coarsening2 = 20 ! Max number of levels in the
+         ! multilevel grid
       integer :: ml_call = 12000 ! Stop coarsening once matrix has
          ! order at most stop_coarsening1
 
