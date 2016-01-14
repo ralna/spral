@@ -14,6 +14,7 @@ program run_prob
    type(rb_reader_options) :: rb_options
    integer :: rb_flag
    integer :: flag, more, st
+   character(len=3) :: type_code
 
    ! Matrix
    integer :: m, n
@@ -38,12 +39,26 @@ program run_prob
    ! Read in a matrix
    write(*, "(a)", advance="no") "Reading..."
    rb_options%values = 2 ! make up values if necessary
-   call rb_read("matrix.rb", m, n, ptr, row, col, val, rb_options, rb_flag)
+   call rb_read("matrix.rb", m, n, ptr, row, col, val, rb_options, rb_flag, &
+      type_code=type_code)
    if(rb_flag.ne.0) then
       print *, "Rutherford-Boeing read failed with error ", rb_flag
       stop
    endif
    write(*, "(a)") "ok"
+
+   ! If unsymmetric, form A+A^T
+   if(type_code(2:2).eq.'u') then
+      if(m.ne.n) then
+         print *, "Matrix is not square!"
+         stop 1
+      endif
+      print *, "Symmetrizing unsymmetric problem..."
+      call symmetrize_problem(n, ptr, row, val)
+   endif
+
+   ! Force to be pos-def
+   !call ensure_posdef(n, ptr, row, val)
 
    ! Just to be safe...
    call cscl_verify(6, SPRAL_MATRIX_REAL_SYM_INDEF, n, n, &
@@ -212,6 +227,92 @@ contains
          end select
       end do
    end subroutine proc_args
+
+   subroutine symmetrize_problem(n, ptr, row, val)
+      integer, intent(in) :: n
+      integer, dimension(:), intent(inout) :: ptr
+      integer, dimension(:), allocatable, intent(inout) :: row
+      real(wp), dimension(:), allocatable, intent(inout) :: val
+
+      integer :: i, j, k, insert
+      integer, dimension(:), allocatable :: ptr_trans, ptr_out
+      integer, dimension(:), allocatable :: row_trans, row_out
+      real(wp), dimension(:), allocatable :: val_trans, val_out
+      integer, dimension(:), allocatable :: seen
+
+      !
+      ! Form A^T
+      !
+      ! count entries into ptr_trans at offset +2
+      allocate(ptr_trans(n+3))
+      ptr_trans(:) = 0
+      do i = 1, n
+         do j = ptr(i), ptr(i+1)-1
+            k = row(j)
+            ptr_trans(k+2) = ptr_trans(k+2) + 1
+         end do
+      end do
+      ! calculate row starts at offset +1
+      ptr_trans(1:2) = 1
+      do i = 1, n
+         ptr_trans(i+2) = ptr_trans(i+1) + ptr_trans(i+2)
+      end do
+      ! drop entries into place
+      allocate(row_trans(ptr_trans(n+2)), val_trans(ptr_trans(n+2)))
+      do i = 1, n
+         do j = ptr(i), ptr(i+1)-1
+            k = row(j)
+            row_trans(ptr_trans(k+1)) = row(j)
+            val_trans(ptr_trans(k+1)) = val(j)
+            ptr_trans(k+1) = ptr_trans(k+1) + 1
+         end do
+      end do
+
+      !
+      ! Form A+A^T
+      !
+      allocate(ptr_out(n+1), row_out(2*ptr(n+1)), val_out(2*ptr(n+1)))
+      allocate(seen(n))
+      insert = 1
+      do i = 1, n
+         ptr_out(i) = insert
+         seen(:) = 0
+         ! Add A entries
+         do j = ptr(i), ptr(i+1)-1
+            k = row(j)
+            if(k.lt.j) cycle ! Skip upper triangle
+            row_out(insert) = k
+            val_out(insert) = val(j)
+            seen(k) = insert
+            insert = insert + 1
+         end do
+         ! Add A^T entries
+         do j = ptr_trans(i), ptr_trans(i+1)-1
+            k = row_trans(j)
+            if(k.lt.j) cycle ! Skip upper triangle
+            if(seen(k).eq.0) then
+               ! New entry
+               row_out(insert) = k
+               val_out(insert) = val_trans(j)
+               seen(k) = insert
+               insert = insert + 1
+            else
+               ! Repeat entry, add to previous
+               val_out(seen(k)) = val_out(seen(k)) + val_trans(j)
+            endif
+         end do
+      end do
+      ptr_out(n+1) = insert
+
+      !
+      ! Copy *_out over original for output
+      !
+      deallocate(row, val)
+      allocate(row(ptr_out(n+1)-1), val(ptr_out(n+1)-1))
+      ptr(1:n+1) = ptr_out(1:n+1)
+      row(1:ptr(n+1)-1) = row_out(1:ptr_out(n+1)-1)
+      val(1:ptr(n+1)-1) = val_out(1:ptr_out(n+1)-1)
+   end subroutine symmetrize_problem
 
    subroutine randomize_list(n, list, state)
       integer, intent(in) :: n
