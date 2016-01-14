@@ -239,6 +239,49 @@ contains
       end do
    end subroutine proc_args
 
+   subroutine add_diag_entries(n, ptr, row, val)
+      integer, intent(in) :: n
+      integer, dimension(:), intent(inout) :: ptr
+      integer, dimension(:), allocatable, intent(inout) :: row
+      real(wp), dimension(:), allocatable, intent(inout) :: val
+
+      integer :: i, j, k, insert
+      integer, dimension(:), allocatable :: ptr_out, row_out, val_out
+
+      ! Copy matrix to _out arrays, adding diagonal values as necessary
+      allocate(ptr_out(n+1), row_out(ptr(n+1)-1+n), val_out(ptr(n+1)-1+n))
+      insert = 1
+      do i = 1, n
+         ptr_out(i) = insert
+         k = -1
+         do j = ptr(i), ptr(i+1)-1
+            k = row(j)
+            if(i.eq.k) exit ! Found diagonal entry
+         end do
+         if(i.ne.k) then
+            ! Add diagonal entry and initialise to 0.0
+            row_out(insert) = i
+            val_out(insert) = 0.0
+            insert = insert + 1
+         endif
+         ! Literal copy of existing values
+         row_out(insert:insert+ptr(i+1)-ptr(i)) = row(ptr(i):ptr(i+1)-1)
+         val_out(insert:insert+ptr(i+1)-ptr(i)-1) = val(ptr(i):ptr(i+1)-1)
+         insert = insert + ptr(i+1)-ptr(i)
+      end do
+      ptr_out(n+1) = insert
+      if(insert.eq.ptr(n+1)) return ! No extra entries required
+
+      !
+      ! Copy *_out over original for output
+      !
+      deallocate(row, val)
+      allocate(row(ptr_out(n+1)-1), val(ptr_out(n+1)-1))
+      ptr(1:n+1) = ptr_out(1:n+1)
+      row(1:ptr(n+1)-1) = row_out(1:ptr_out(n+1)-1)
+      val(1:ptr(n+1)-1) = val_out(1:ptr_out(n+1)-1)
+   end subroutine add_diag_entries
+
    subroutine make_diagdom(n, ptr, row, val)
       integer, intent(in) :: n
       integer, dimension(:), intent(inout) :: ptr
@@ -248,6 +291,8 @@ contains
       integer :: i, j, k
       integer, dimension(:), allocatable :: dloc
 
+      call add_diag_entries(n, ptr, row, val)
+
       ! Find location of diagonal entries
       allocate(dloc(n))
       dloc(:) = -1
@@ -256,15 +301,11 @@ contains
             k = row(j)
             if(i.eq.k) then
                dloc(i) = j
-               val(j) = abs(val(j)) ! force diagonal entry to be +ive
+               val(j) = 1.0 + abs(val(j)) ! force diagonal entry to be > 0.0
                exit
             endif
          end do
       end do
-      if(any(dloc.eq.-1)) then
-         print *, "Missing a diagonal entry :("
-         stop
-      endif
 
       ! Now add sum of row entries to diagonals
       do i = 1, n
