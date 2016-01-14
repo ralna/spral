@@ -507,7 +507,7 @@ contains
       dummy = clock_gettime(0, t1)
       call ma87_factor(n, ptr, row, val, order, keep, control, info)
       dummy = clock_gettime(0, t2)
-      if(info%flag.ne.0) then
+      if(info%flag.lt.0) then
          print *, "ma87_factor() failed with flag ", info%flag
          stop 1
       endif
@@ -519,7 +519,7 @@ contains
       dummy = clock_gettime(0, t1)
       call ma87_solve(rhs, order, keep, control, info)
       dummy = clock_gettime(0, t2)
-      if(info%flag.ne.0) then
+      if(info%flag.lt.0) then
          print *, "ma87_solve() failed with flag ", info%flag
          stop 1
       endif
