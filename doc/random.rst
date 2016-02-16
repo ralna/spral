@@ -1,6 +1,8 @@
-=====================
-:f:mod:`spral_random`
-=====================
+******************************************************
+:f:mod:`spral_random` - Pseudo-random number generator
+******************************************************
+.. f:module:: spral_random
+   :synopsis: Random number generator
 
 This package generates pseudo-random numbers using a linear congruential
 generator. It should generate the same random numbers using any standards
@@ -9,13 +11,12 @@ integer and real kinds are the same.
 
 The seed can optionally be observed or specified by the user.
 
-.. f:module:: spral_random
-   :synopsis: Random number generator
-
+========
 Routines
 ========
 
-**Random Number Generation**
+Random Number Generation
+""""""""""""""""""""""""
 
 .. f:function:: random_real(state[, positive])
 
@@ -46,7 +47,8 @@ Routines
    :r random_logical: Sampled value.
    :rtype random_logical: logical
 
-**Get/Set Random Seed**
+Get/Set Random Seed
+"""""""""""""""""""
 
 .. f:function:: random_get_seed(state)
    
@@ -67,6 +69,7 @@ Routines
    :p random_state state [inout]: state variable to set seed for.
    :p integer seed [in]: new seed.
 
+==========
 Data Types
 ==========
 
@@ -77,6 +80,29 @@ Data Types
    altered through calls to :f:func:`random_get_seed` and
    :f:func:`random_set_seed` respectively.
 
+=======
+Example
+=======
+The following code:
+
+.. literalinclude:: ../examples/Fortran/random.f90
+   :language: Fortran
+
+Produces the following output::
+
+   Some random values
+   Sample Unif(-1,1)       =   0.951878630556
+   Sample Unif(0,1)        =   0.395779648796
+   Sample Unif(1, ..., 20) =                3
+   Sample B(1,0.5)         =                F
+
+   The same random values again
+   Sample Unif(-1,1)       =   0.951878630556
+   Sample Unif(0,1)        =   0.395779648796
+   Sample Unif(1, ..., 20) =                3
+   Sample B(1,0.5)         =                F
+
+======
 Method
 ======
 We use a linear congruential generator of the following form:
@@ -102,23 +128,35 @@ The routines :f:func:`random_get_seed` and :f:func:`random_set_seed` allow the
 user to get and set the current value of :math:`X_n`. The default seed is
 :math:`X_0 = 486502`.
 
-Example
-=======
-The following code:
+In :f:func:`random_real`
+""""""""""""""""""""""""
 
-.. literalinclude:: ../examples/Fortran/random.f90
-   :language: Fortran
+Samples from :math:`\mathrm{Unif}(0,1)` are generated as
 
-Produces the following output::
+.. math::
 
-   Some random values
-   Sample Unif(-1,1)       =   0.951878630556
-   Sample Unif(0,1)        =   0.395779648796
-   Sample Unif(1, ..., 20) =                3
-   Sample B(1,0.5)         =                F
+   \frac{\mathrm{real}(X_n)}{\mathrm{real}(m)},
 
-   The same random values again
-   Sample Unif(-1,1)       =   0.951878630556
-   Sample Unif(0,1)        =   0.395779648796
-   Sample Unif(1, ..., 20) =                3
-   Sample B(1,0.5)         =                F
+and samples from :math:`\mathrm{Unif}(-1,1)` are generated as
+
+.. math::
+
+   1−\frac{\mathrm{real}(2X_n)}{\mathrm{real}(m)}.
+
+In :f:func:`random_integer`
+"""""""""""""""""""""""""""
+
+Samples from :math:`\mathrm{Unif}(1,\ldots,n)` are generated as
+
+.. math::
+
+   \mathrm{int}\left(X_n\frac{\mathrm{real}(n)}{\mathrm{real}(m)}\right) + 1
+
+In :f:func:`random_logical`
+""""""""""""""""""""""""""""
+
+Returns the value of the Fortran expression
+
+.. code:: Fortran
+
+   (1 .eq. random_integer(state,2))

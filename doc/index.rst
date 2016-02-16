@@ -6,12 +6,20 @@
 The Sparse Parallel Robust Algorithms Library
 =============================================
 
+Data Types
+
+.. toctree::
+   :maxdepth: 1
+
+   csc_format
+
 Packages:
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    random
+   scaling
 
 
 Indices and tables
