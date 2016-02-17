@@ -157,6 +157,6 @@ In :f:func:`random_logical`
 
 Returns the value of the Fortran expression
 
-.. code:: Fortran
+.. code-block:: Fortran
 
    (1 .eq. random_integer(state,2))
