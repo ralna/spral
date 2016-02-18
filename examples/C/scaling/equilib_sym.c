@@ -3,13 +3,12 @@
 #include <stdio.h>
 #include "spral.h"
 
-void main(void) {
+int main(void) {
    /* Derived types */
    struct spral_scaling_equilib_options options;
    struct spral_scaling_equilib_inform inform;
 
    /* Other variables */
-   int i, j;
    double scaling[5];
 
    /* Data for symmetric matrix:
@@ -45,4 +44,7 @@ void main(void) {
    }
    printf("Scaled matrix:\n");
    spral_print_matrix(-1, SPRAL_MATRIX_REAL_SYM_INDEF, n, n, ptr, row, val, 0);
+
+   /* Success */
+   return 0;
 }
