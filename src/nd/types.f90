@@ -107,6 +107,17 @@ module spral_nd_types
       integer :: reord = 1 ! which reordering to use in preprocessing phase
          ! 1 = Jonathan's [literal copy]
          ! 2 = Sue's [slightly more ordered, but strange]
+
+      ! Num-aware options
+      integer :: scaling = 2 ! Scaling to use for num-aware version
+         ! =1 Auction
+         ! =2 Hungarian
+      real(wp) :: u = 0.01 ! Pivot threshold for num-aware version
+      integer :: large_method = 1 ! method for flagging pivots as large
+         ! =1 pivot tests
+         ! =2 abs from Duff-Pralet
+      real(wp) :: dp_theta = 0.01 ! Theta for large_method=2
+      real(wp) :: dp_drop = 0.9 ! drop for large_method=2
    end type nd_options
 
    ! *****************************************************************

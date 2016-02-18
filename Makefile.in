@@ -212,9 +212,9 @@ am__libspral_a_SOURCES_DIST = src/blas_iface.f90 src/core_analyse.f90 \
 	src/matrix_util.f90 interfaces/C/matrix_util.f90 \
 	src/metis$(METIS_VERSION)_wrapper.f90 src/nd/hamd.f90 \
 	src/nd/maxflow.f90 src/nd/multilevel.f90 src/nd/nd.f90 \
-	src/nd/partition.f90 src/nd/preprocess.f90 src/nd/refine.f90 \
-	src/nd/types.f90 src/nd/util.f90 interfaces/C/nd.f90 \
-	src/pgm.f90 src/rutherford_boeing.f90 \
+	src/nd/numaware.f90 src/nd/partition.f90 src/nd/preprocess.f90 \
+	src/nd/refine.f90 src/nd/types.f90 src/nd/util.f90 \
+	interfaces/C/nd.f90 src/pgm.f90 src/rutherford_boeing.f90 \
 	interfaces/C/rutherford_boeing.f90 src/scaling.f90 \
 	interfaces/C/scaling.f90 src/timer.f90 src/random.f90 \
 	interfaces/C/random.f90 src/random_matrix.f90 \
@@ -258,10 +258,11 @@ am_libspral_a_OBJECTS = src/blas_iface.$(OBJEXT) \
 	src/metis$(METIS_VERSION)_wrapper.$(OBJEXT) \
 	src/nd/hamd.$(OBJEXT) src/nd/maxflow.$(OBJEXT) \
 	src/nd/multilevel.$(OBJEXT) src/nd/nd.$(OBJEXT) \
-	src/nd/partition.$(OBJEXT) src/nd/preprocess.$(OBJEXT) \
-	src/nd/refine.$(OBJEXT) src/nd/types.$(OBJEXT) \
-	src/nd/util.$(OBJEXT) interfaces/C/nd.$(OBJEXT) \
-	src/pgm.$(OBJEXT) src/rutherford_boeing.$(OBJEXT) \
+	src/nd/numaware.$(OBJEXT) src/nd/partition.$(OBJEXT) \
+	src/nd/preprocess.$(OBJEXT) src/nd/refine.$(OBJEXT) \
+	src/nd/types.$(OBJEXT) src/nd/util.$(OBJEXT) \
+	interfaces/C/nd.$(OBJEXT) src/pgm.$(OBJEXT) \
+	src/rutherford_boeing.$(OBJEXT) \
 	interfaces/C/rutherford_boeing.$(OBJEXT) src/scaling.$(OBJEXT) \
 	interfaces/C/scaling.$(OBJEXT) src/timer.$(OBJEXT) \
 	src/random.$(OBJEXT) interfaces/C/random.$(OBJEXT) \
@@ -1073,9 +1074,9 @@ libspral_a_SOURCES = src/blas_iface.f90 src/core_analyse.f90 \
 	src/matrix_util.f90 interfaces/C/matrix_util.f90 \
 	src/metis$(METIS_VERSION)_wrapper.f90 src/nd/hamd.f90 \
 	src/nd/maxflow.f90 src/nd/multilevel.f90 src/nd/nd.f90 \
-	src/nd/partition.f90 src/nd/preprocess.f90 src/nd/refine.f90 \
-	src/nd/types.f90 src/nd/util.f90 interfaces/C/nd.f90 \
-	src/pgm.f90 src/rutherford_boeing.f90 \
+	src/nd/numaware.f90 src/nd/partition.f90 src/nd/preprocess.f90 \
+	src/nd/refine.f90 src/nd/types.f90 src/nd/util.f90 \
+	interfaces/C/nd.f90 src/pgm.f90 src/rutherford_boeing.f90 \
 	interfaces/C/rutherford_boeing.f90 src/scaling.f90 \
 	interfaces/C/scaling.f90 src/timer.f90 src/random.f90 \
 	interfaces/C/random.f90 src/random_matrix.f90 \
@@ -1288,6 +1289,8 @@ src/nd/maxflow.$(OBJEXT): src/nd/$(am__dirstamp) \
 src/nd/multilevel.$(OBJEXT): src/nd/$(am__dirstamp) \
 	src/nd/$(DEPDIR)/$(am__dirstamp)
 src/nd/nd.$(OBJEXT): src/nd/$(am__dirstamp) \
+	src/nd/$(DEPDIR)/$(am__dirstamp)
+src/nd/numaware.$(OBJEXT): src/nd/$(am__dirstamp) \
 	src/nd/$(DEPDIR)/$(am__dirstamp)
 src/nd/partition.$(OBJEXT): src/nd/$(am__dirstamp) \
 	src/nd/$(DEPDIR)/$(am__dirstamp)
@@ -2482,6 +2485,7 @@ src/match_order.$(OBJEXT): src/metis$(METIS_VERSION)_wrapper.$(OBJEXT) \
 src/nd/nd.$(OBJEXT): src/nd/hamd.$(OBJEXT) \
 							src/nd/maxflow.$(OBJEXT) \
 							src/nd/multilevel.$(OBJEXT) \
+							src/nd/numaware.$(OBJEXT) \
 							src/nd/partition.$(OBJEXT) \
 							src/nd/preprocess.$(OBJEXT) \
 							src/nd/refine.$(OBJEXT) \
@@ -2493,6 +2497,8 @@ src/nd/multilevel.$(OBJEXT): src/nd/maxflow.$(OBJEXT) \
 									  src/nd/refine.$(OBJEXT) \
 	                          src/nd/types.$(OBJEXT) \
 									  src/nd/util.$(OBJEXT)
+src/nd/numaware.$(OBJEXT): src/nd/types.$(OBJEXT) \
+									src/scaling.$(OBJEXT)
 src/nd/partition.$(OBJEXT): src/nd/types.$(OBJEXT) src/nd/util.$(OBJEXT) \
 									 src/random.$(OBJEXT)
 src/nd/preprocess.$(OBJEXT): src/nd/types.$(OBJEXT) src/nd/util.$(OBJEXT)

@@ -66,6 +66,7 @@ libspral_a_SOURCES += \
 	src/nd/maxflow.f90 \
 	src/nd/multilevel.f90 \
 	src/nd/nd.f90 \
+	src/nd/numaware.f90 \
 	src/nd/partition.f90 \
 	src/nd/preprocess.f90 \
 	src/nd/refine.f90 \
@@ -318,6 +319,7 @@ src/match_order.$(OBJEXT): src/metis$(METIS_VERSION)_wrapper.$(OBJEXT) \
 src/nd/nd.$(OBJEXT): src/nd/hamd.$(OBJEXT) \
 							src/nd/maxflow.$(OBJEXT) \
 							src/nd/multilevel.$(OBJEXT) \
+							src/nd/numaware.$(OBJEXT) \
 							src/nd/partition.$(OBJEXT) \
 							src/nd/preprocess.$(OBJEXT) \
 							src/nd/refine.$(OBJEXT) \
@@ -329,6 +331,8 @@ src/nd/multilevel.$(OBJEXT): src/nd/maxflow.$(OBJEXT) \
 									  src/nd/refine.$(OBJEXT) \
 	                          src/nd/types.$(OBJEXT) \
 									  src/nd/util.$(OBJEXT)
+src/nd/numaware.$(OBJEXT): src/nd/types.$(OBJEXT) \
+									src/scaling.$(OBJEXT)
 src/nd/partition.$(OBJEXT): src/nd/types.$(OBJEXT) src/nd/util.$(OBJEXT) \
 									 src/random.$(OBJEXT)
 src/nd/preprocess.$(OBJEXT): src/nd/types.$(OBJEXT) src/nd/util.$(OBJEXT)

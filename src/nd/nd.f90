@@ -2,6 +2,7 @@ module spral_nd
    use spral_nd_hamd
    use spral_nd_maxflow
    use spral_nd_multilevel
+   use spral_nd_numaware
    use spral_nd_partition
    use spral_nd_preprocess
    use spral_nd_refine
@@ -23,7 +24,7 @@ contains
 !
 ! Main user callable routine
 !
-subroutine nd_order(mtx,n,ptr,row,perm,options,info,seps)
+subroutine nd_order(mtx,n,ptr,row,perm,options,info,val,seps)
    integer, intent(in) :: mtx ! 0 if lower triangular part matrix input,
       ! 1 if both upper and lower parts input
    integer, intent(in) :: n ! number of rows in the matrix
@@ -33,6 +34,7 @@ subroutine nd_order(mtx,n,ptr,row,perm,options,info,seps)
       ! perm(i)
    type (nd_options), intent(in) :: options
    type (nd_inform), intent(inout) :: info
+   real (wp), dimension(ptr(n+1)-1), optional, intent(in) :: val
    integer, dimension(n), optional, intent(out) :: seps
       ! seps(i) is -1 if vertex is not in a separator; otherwise it
       ! is equal to lev, where lev is the nested dissection level at
@@ -64,6 +66,9 @@ subroutine nd_order(mtx,n,ptr,row,perm,options,info,seps)
    logical :: use_multilevel
    type (nd_multigrid), dimension(:), allocatable :: grids
 
+   ! Num-aware vars
+   integer, allocatable, dimension(:) :: a_flags
+
    call nd_print_diagnostic(1, options, ' ')
    call nd_print_diagnostic(1, options, 'nd_order:')
 
@@ -77,6 +82,10 @@ subroutine nd_order(mtx,n,ptr,row,perm,options,info,seps)
       call nd_print_error(info%flag, options, 'nd_order')
       return
    end if
+
+   ! Construct flag matrix (needs diagonal values)
+   if(present(val)) &
+      call construct_aflags(n, ptr, row, val, a_flags, options, info)
 
    ! Convert matrix to internal format without diagonals
    if (mtx.lt.1) then
