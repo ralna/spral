@@ -472,7 +472,7 @@ recursive subroutine nd_nested_internal(a_n, a_ne, a_ptr, a_row, &
       call nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level,  &
          a_n1, a_n2, a_ne1, a_ne2, iperm, work(1:lwork), options, info,       &
          use_multilevel, grids, a_flags=a_flags, a_flags_diag=a_flags_diag,   &
-         work_flags=work_flags1(1:a_ne),                                      &
+         a_match=a_match, work_flags=work_flags1(1:a_ne),                     &
          work_flags_diag=work_flags1(a_ne+1:a_ne+a_n),                        &
          work_match=work_flags1(a_ne+a_n+1:a_ne+2*a_n))
    else
@@ -496,7 +496,8 @@ recursive subroutine nd_nested_internal(a_n, a_ne, a_ptr, a_row, &
          call nd_find_indep_comps(a_n, a_ne, a_ptr, a_row, a_weight, iperm,   &
             num_components, work_comp_n(1:a_n), work_comp_nz(1:a_n),          &
             work(compwork+1:compwork+3*a_n+a_ne), options, a_flags=a_flags,   &
-            a_flags_diag=a_flags_diag, work_flags=work_flags1(1:a_ne),        &
+            a_flags_diag=a_flags_diag, a_match=a_match,                       &
+            work_flags=work_flags1(1:a_ne),                                   &
             work_flags_diag=work_flags1(a_ne+1:a_ne+a_n),                     &
             work_match=work_flags1(a_ne+a_n+1:a_ne+2*a_n))
       else

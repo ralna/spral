@@ -34,9 +34,9 @@ program run_prob
 
    ! Controls
    integer :: random
-   logical :: with_metis, with_nd, with_ma87
+   logical :: with_metis, with_nd, with_ma87, num_aware
 
-   call proc_args(options, with_metis, with_nd, random, with_ma87)
+   call proc_args(options, with_metis, with_nd, random, with_ma87, num_aware)
 
    ! Read in a matrix
    write(*, "(a)", advance="no") "Reading..."
@@ -81,7 +81,11 @@ program run_prob
    if(with_nd) then
       write(*, "(a)", advance="no") "Ordering with ND..."
       dummy = clock_gettime(0, t1)
-      call nd_order(0, n, ptr, row, perm, options, inform)
+      if(num_aware) then
+         call nd_order(0, n, ptr, row, perm, options, inform, val=val)
+      else
+         call nd_order(0, n, ptr, row, perm, options, inform)
+      endif
       dummy = clock_gettime(0, t2)
       if (inform%flag < 0) then
          print *, "oops on analyse ", inform%flag
@@ -123,12 +127,14 @@ program run_prob
 
 contains
 
-   subroutine proc_args(options, with_metis, with_nd, random, with_ma87)
+   subroutine proc_args(options, with_metis, with_nd, random, with_ma87, &
+         num_aware)
       type(nd_options), intent(inout) :: options
       logical, intent(out) :: with_metis
       logical, intent(out) :: with_nd
       integer, intent(out) :: random
       logical, intent(out) :: with_ma87
+      logical, intent(out) :: num_aware
 
       integer :: argnum, narg
       character(len=200) :: argval
@@ -138,6 +144,7 @@ contains
       with_nd = .true.
       random = -1
       with_ma87 = .false.
+      num_aware = .false.
       
       ! Process args
       narg = command_argument_count()
@@ -232,6 +239,11 @@ contains
             argnum = argnum + 1
             read( argval, * ) random
             print *, "Randomizing matrix row order, seed = ", random
+         case("--num-aware")
+            num_aware = .true.
+            options%find_supervariables = .false.
+            print *, "Using numerically aware ordering"
+            print *, "NOTE: Had to disable supervariables for num-aware order"
          case default
             print *, "Unrecognised command line argument: ", argval
             stop

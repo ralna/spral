@@ -2501,7 +2501,9 @@ src/nd/numaware.$(OBJEXT): src/nd/types.$(OBJEXT) \
 									src/scaling.$(OBJEXT)
 src/nd/partition.$(OBJEXT): src/nd/types.$(OBJEXT) src/nd/util.$(OBJEXT) \
 									 src/random.$(OBJEXT)
-src/nd/preprocess.$(OBJEXT): src/nd/types.$(OBJEXT) src/nd/util.$(OBJEXT)
+src/nd/preprocess.$(OBJEXT): src/nd/numaware.$(OBJEXT) \
+									  src/nd/types.$(OBJEXT) \
+									  src/nd/util.$(OBJEXT)
 src/nd/refine.$(OBJEXT): src/nd/maxflow.$(OBJEXT) \
 								 src/nd/types.$(OBJEXT) \
 								 src/nd/util.$(OBJEXT)
