@@ -31,6 +31,12 @@ module spral_nd_types
    integer, parameter :: ND_MATCH_COMMON_NEIGHBOURS = 1, &
                          ND_MATCH_SHEM              = 2
 
+   ! NB: We exploit the additive nature of the below when setting.
+   integer, parameter :: FLAG_SMALL    = 0, &
+                         FLAG_BIG_COL  = 1, &
+                         FLAG_BIG_ROW  = 2, &
+                         FLAG_BIG_BOTH = 3
+
    ! *****************************************************************
 
    type :: nd_options

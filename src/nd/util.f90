@@ -195,4 +195,17 @@ subroutine nd_convert_flags_partition(a_n, a_n1, a_n2, flags, flag_1, &
    end do
 end subroutine nd_convert_flags_partition
 
+integer pure function flag_transpose(fin)
+   integer, intent(in) :: fin
+
+   select case(fin)
+   case(FLAG_BIG_COL)
+      flag_transpose = FLAG_BIG_ROW
+   case(FLAG_BIG_ROW)
+      flag_transpose = FLAG_BIG_COL
+   case default
+      flag_transpose = fin
+   end select
+end function flag_transpose
+
 end module spral_nd_util

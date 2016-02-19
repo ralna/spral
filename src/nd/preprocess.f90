@@ -1,4 +1,5 @@
 module spral_nd_preprocess
+   use spral_nd_numaware
    use spral_nd_types
    use spral_nd_util
    implicit none
@@ -20,15 +21,18 @@ contains
 ! Constructs a full matrix (without diagonals) from one with only lower
 ! triangle stored (perhaps with diagonals)
 !
-subroutine construct_full_from_lower(n, ptr, row, n_out, ne_out, ptr_out, &
-      row_out, options, st)
+subroutine construct_full_from_lower(n, ptr, row, flags, n_out, ne_out, &
+      ptr_out, row_out, flags_out, flags_diag_out, options, st)
    integer, intent(in) :: n
    integer, dimension(n+1), intent(in) :: ptr
    integer, dimension(ptr(n+1)-1), intent(in) :: row
+   integer, dimension(:), allocatable, intent(in) :: flags
    integer, intent(out) :: n_out
    integer, intent(out) :: ne_out
    integer, dimension(:), allocatable, intent(out) :: ptr_out
    integer, dimension(:), allocatable, intent(out) :: row_out
+   integer, dimension(:), allocatable, intent(out) :: flags_out
+   integer, dimension(:), allocatable, intent(out) :: flags_diag_out
    type (nd_options), intent(in) :: options
    integer, intent(out) :: st
 
@@ -67,6 +71,11 @@ subroutine construct_full_from_lower(n, ptr, row, n_out, ne_out, ptr_out, &
    ! Allocate space to store row indices of expanded matrix
    allocate (row_out(ne_out), stat=st)
    if (st.ne.0) return
+   if (allocated(flags)) then
+      allocate (flags_out(ne_out), flags_diag_out(n), stat=st)
+      if (st.ne.0) return
+      flags_diag_out(:) = FLAG_SMALL
+   endif
 
    ! Fill row_out and ptr_out
    do j = 1, n
@@ -75,8 +84,14 @@ subroutine construct_full_from_lower(n, ptr, row, n_out, ne_out, ptr_out, &
          if (j.ne.i) then
             row_out(ptr_out(i)) = j
             row_out(ptr_out(j)) = i
+            if(allocated(flags)) then
+               flags_out(ptr_out(j)) = flags(k)
+               flags_out(ptr_out(i)) = flag_transpose(flags(k))
+            endif
             ptr_out(i) = ptr_out(i) - 1
             ptr_out(j) = ptr_out(j) - 1
+         else if(allocated(flags)) then
+            flags_diag_out(i) = flags(k)
          end if
       end do
    end do
@@ -91,15 +106,18 @@ end subroutine construct_full_from_lower
 ! Constructs a new full matrix (without diagonals) in internal CSC format
 ! from user supplied matrix in standard CSC format (which may have diagonals)
 !
-subroutine construct_full_from_full(n, ptr, row, n_out, ne_out, ptr_out, &
-      row_out, options, st)
+subroutine construct_full_from_full(n, ptr, row, flags, n_out, ne_out, ptr_out,&
+      row_out, flags_out, flags_diag_out, options, st)
    integer, intent(in) :: n
    integer, dimension(n+1), intent(in) :: ptr
    integer, dimension(ptr(n+1)-1), intent(in) :: row
+   integer, dimension(:), allocatable, intent(in) :: flags
    integer, intent(out) :: n_out
    integer, intent(out) :: ne_out
    integer, dimension(:), allocatable, intent(out) :: ptr_out
    integer, dimension(:), allocatable, intent(out) :: row_out
+   integer, dimension(:), allocatable, intent(out) :: flags_out
+   integer, dimension(:), allocatable, intent(out) :: flags_diag_out
    type (nd_options), intent(in) :: options
    integer, intent(out) :: st
 
@@ -124,11 +142,17 @@ subroutine construct_full_from_full(n, ptr, row, n_out, ne_out, ptr_out, &
    ! Allocate space to store pointers and rows for expanded matrix
    allocate (ptr_out(n), row_out(ne_out), stat=st)
    if (st.ne.0) return
+   if (allocated(flags)) then
+      allocate (flags_out(ne_out), flags_diag_out(n), stat=st)
+      if (st.ne.0) return
+      flags_diag_out(:) = FLAG_SMALL
+   endif
 
    if (ndiags.eq.0) then
       ! No diagonal entries so do direct copy
       ptr_out(1:n) = ptr(1:n)
       row_out(1:ne_out) = row(1:ne_out)
+      flags_out(1:ne_out) = flags(1:ne_out)
    else
       ! Diagonal entries present
       k = 1
@@ -139,6 +163,9 @@ subroutine construct_full_from_full(n, ptr, row, n_out, ne_out, ptr_out, &
             if (i.ne.j) then
                row_out(k) = j
                k = k + 1
+               if(allocated(flags)) flags_out(k) = flags(p)
+            else if(allocated(flags)) then
+               flags_diag_out(i) = flags(p)
             end if
          end do
       end do
@@ -153,7 +180,8 @@ end subroutine construct_full_from_full
 ! Identifies and removes dense rows in place. Updates iperm to place dense
 ! rows at the back of the permutation.
 !
-subroutine remove_dense_rows(a_n, a_ne, a_ptr, a_row, iperm, options, info)
+subroutine remove_dense_rows(a_n, a_ne, a_ptr, a_row, iperm, options, info, &
+      a_flags, a_flags_diag, a_match)
    integer, intent(inout) :: a_n
    integer, intent(inout) :: a_ne
    integer, dimension(a_n), intent(inout) :: a_ptr
@@ -161,6 +189,9 @@ subroutine remove_dense_rows(a_n, a_ne, a_ptr, a_row, iperm, options, info)
    integer, dimension(a_n), intent(inout) :: iperm
    type (nd_options), intent(in) :: options
    type (nd_inform), intent(inout) :: info
+   integer, dimension(a_n), optional, intent(inout) :: a_flags
+   integer, dimension(a_n), optional, intent(inout) :: a_flags_diag
+   integer, dimension(a_n), optional, intent(inout) :: a_match
 
    integer, dimension(:), allocatable :: deg, prev, next, dense
    integer :: ndense ! number of dense rows found
@@ -210,8 +241,19 @@ subroutine remove_dense_rows(a_n, a_ne, a_ptr, a_row, iperm, options, info)
    do while (degree - real(a_ne_out)/a_n_out .ge. &
          40*(real(a_n_out-1)/a_n_out)*LOG(real(a_n_out)) .and. degree.gt.0)
       i = deg(degree)
-      ndense = ndense + 1
-      dense(i) = -ndense
+      if(dense(i).ge.0) then
+         ! Not already matched with a dense row we've removed
+         ndense = ndense + 1
+         dense(i) = -ndense
+      endif
+      if(present(a_flags)) then
+         j = a_match(i)
+         if(j.ne.-1 .and. j.ne.i) then
+            ! Mark partner as dense too - but don't remove from lists
+            ndense = ndense + 1
+            dense(j) = -ndense
+         endif
+      endif
       call dense_remove_from_list(a_n, next, prev, deg, i, degree)
       ! update degrees of adjacent vertices
       do k = a_ptr(i), nd_get_ptr(i+1, a_n, a_ne, a_ptr)-1
@@ -272,11 +314,26 @@ subroutine remove_dense_rows(a_n, a_ne, a_ptr, a_row, iperm, options, info)
          l2 = nd_get_ptr(i+1, a_n, a_ne, a_ptr) - 1
          if (dense(i).ge.0) then
             a_ptr(j) = k
+            if(present(a_flags)) then
+               a_flags_diag(j) = a_flags_diag(i)
+               l = a_match(i)
+               if(l.eq.-1) then
+                  a_match(j) = -1
+               else
+                  if(dense(l).lt.1) then
+                     a_match(j) = -1
+                  else
+                     a_match(j) = dense(l)
+                  end if
+               end if
+            end if
             do l = l1, l2
                m = a_row(l)
                m1 = dense(m)
                if (m1.ge.0) then
                   a_row(k) = m1
+                  if(present(a_flags)) &
+                     a_flags(k) = a_flags(l)
                   k = k + 1
                end if
             end do
@@ -284,6 +341,10 @@ subroutine remove_dense_rows(a_n, a_ne, a_ptr, a_row, iperm, options, info)
          end if
       end do
       a_ptr(j) = k
+
+      if(present(a_flags)) &
+         call make_a_match_symmetric(a_n_out, a_match(1:a_n_out))
+
       if (options%print_level.ge.1 .and. options%unit_diagnostics.gt.0) then
          write (options%unit_diagnostics,'(a11)') 'a_n_out = '
          write (options%unit_diagnostics,'(i15)') a_n_out
