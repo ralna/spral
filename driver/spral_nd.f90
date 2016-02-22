@@ -226,6 +226,12 @@ contains
             read( argval, * ) options%matching
             print *, "Set options%matching = ", &
                options%matching
+         case("--balance")
+            call get_command_argument(argnum, argval)
+            argnum = argnum + 1
+            read( argval, * ) options%balance
+            print *, "Set options%balance = ", &
+               options%matching
          case("--print-level")
             call get_command_argument(argnum, argval)
             argnum = argnum + 1
