@@ -96,7 +96,12 @@ program run_prob
       print "(a,es10.2)", "nd nfact = ", real(nfact)
       print "(a,es10.2)", "nd nflop = ", real(nflops)
       print "(a,i10)", "nd ndense = ", inform%dense
-      print "(a,i10)", "nd sv var reduce = ", n - inform%dense - inform%nsuper
+      print "(a,i10)", "nd nsuper = ", inform%nsuper
+      print "(a,i10)", "nd nzsuper = ", inform%nzsuper
+      print "(a,i10)", "nd ncomp = ", inform%num_components
+      print "(a,i10)", "nd n_max_component = ", inform%n_max_component
+      print "(a,i10)", "nd nz_max_component = ", inform%nz_max_component
+      print "(a,f10.2)", "nd band = ", inform%band
       if(with_ma87) call run_ma87(n, ptr, row, val, perm)
    endif
 
