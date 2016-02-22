@@ -58,6 +58,8 @@ program run_prob
       print *, "Symmetrizing unsymmetric problem..."
       call symmetrize_problem(n, ptr, row, val)
    endif
+   print *, "Input matrix n = ", n
+   print *, "Input matrix nz = ", ptr(n+1)-1
 
    ! Force to be pos-def
    if(with_ma87) call make_diagdom(n, ptr, row, val)
@@ -513,6 +515,8 @@ contains
          stop 1
       endif
       print *, "ma87 analyse took ", tdiff(t1, t2)
+      print "(a,es10.2)", "ma87 nfact = ", real(info%num_factor)
+      print "(a,es10.2)", "ma87 nflops = ", real(info%num_flops)
 
       ! Factor
       dummy = clock_gettime(0, t1)
