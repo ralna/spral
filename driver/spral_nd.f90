@@ -365,7 +365,7 @@ contains
       do i = 1, n
          do j = ptr(i), ptr(i+1)-1
             k = row(j)
-            row_trans(ptr_trans(k+1)) = row(j)
+            row_trans(ptr_trans(k+1)) = i
             val_trans(ptr_trans(k+1)) = val(j)
             ptr_trans(k+1) = ptr_trans(k+1) + 1
          end do
@@ -383,7 +383,7 @@ contains
          ! Add A entries
          do j = ptr(i), ptr(i+1)-1
             k = row(j)
-            if(k.lt.j) cycle ! Skip upper triangle
+            if(k.lt.i) cycle ! Skip upper triangle
             row_out(insert) = k
             val_out(insert) = val(j)
             seen(k) = insert
@@ -392,7 +392,7 @@ contains
          ! Add A^T entries
          do j = ptr_trans(i), ptr_trans(i+1)-1
             k = row_trans(j)
-            if(k.lt.j) cycle ! Skip upper triangle
+            if(k.lt.i) cycle ! Skip upper triangle
             if(seen(k).eq.0) then
                ! New entry
                row_out(insert) = k
@@ -413,8 +413,8 @@ contains
       deallocate(row, val)
       allocate(row(ptr_out(n+1)-1), val(ptr_out(n+1)-1))
       ptr(1:n+1) = ptr_out(1:n+1)
-      row(1:ptr(n+1)-1) = row_out(1:ptr_out(n+1)-1)
-      val(1:ptr(n+1)-1) = val_out(1:ptr_out(n+1)-1)
+      row(1:ptr_out(n+1)-1) = row_out(1:ptr_out(n+1)-1)
+      val(1:ptr_out(n+1)-1) = val_out(1:ptr_out(n+1)-1)
    end subroutine symmetrize_problem
 
    subroutine randomize_list(n, list, state)
