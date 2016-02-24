@@ -58,6 +58,8 @@ program run_prob
       print *, "Symmetrizing unsymmetric problem..."
       call symmetrize_problem(n, ptr, row, val)
    endif
+   print *, "Input matrix n = ", n
+   print *, "Input matrix nz = ", ptr(n+1)-1
 
    ! Force to be pos-def
    if(with_ma87) call make_diagdom(n, ptr, row, val)
@@ -100,7 +102,12 @@ program run_prob
       print "(a,es10.2)", "nd nfact = ", real(nfact)
       print "(a,es10.2)", "nd nflop = ", real(nflops)
       print "(a,i10)", "nd ndense = ", inform%dense
-      print "(a,i10)", "nd sv var reduce = ", n - inform%dense - inform%nsuper
+      print "(a,i10)", "nd nsuper = ", inform%nsuper
+      print "(a,i10)", "nd nzsuper = ", inform%nzsuper
+      print "(a,i10)", "nd ncomp = ", inform%num_components
+      print "(a,i10)", "nd n_max_component = ", inform%n_max_component
+      print "(a,i10)", "nd nz_max_component = ", inform%nz_max_component
+      print "(a,f10.2)", "nd band = ", inform%band
       if(with_ma87) call run_ma87(n, ptr, row, val, perm)
    endif
 
@@ -227,6 +234,12 @@ contains
             argnum = argnum + 1
             read( argval, * ) options%matching
             print *, "Set options%matching = ", &
+               options%matching
+         case("--balance")
+            call get_command_argument(argnum, argval)
+            argnum = argnum + 1
+            read( argval, * ) options%balance
+            print *, "Set options%balance = ", &
                options%matching
          case("--print-level")
             call get_command_argument(argnum, argval)
@@ -364,7 +377,7 @@ contains
       do i = 1, n
          do j = ptr(i), ptr(i+1)-1
             k = row(j)
-            row_trans(ptr_trans(k+1)) = row(j)
+            row_trans(ptr_trans(k+1)) = i
             val_trans(ptr_trans(k+1)) = val(j)
             ptr_trans(k+1) = ptr_trans(k+1) + 1
          end do
@@ -382,7 +395,7 @@ contains
          ! Add A entries
          do j = ptr(i), ptr(i+1)-1
             k = row(j)
-            if(k.lt.j) cycle ! Skip upper triangle
+            if(k.lt.i) cycle ! Skip upper triangle
             row_out(insert) = k
             val_out(insert) = val(j)
             seen(k) = insert
@@ -391,7 +404,7 @@ contains
          ! Add A^T entries
          do j = ptr_trans(i), ptr_trans(i+1)-1
             k = row_trans(j)
-            if(k.lt.j) cycle ! Skip upper triangle
+            if(k.lt.i) cycle ! Skip upper triangle
             if(seen(k).eq.0) then
                ! New entry
                row_out(insert) = k
@@ -412,8 +425,8 @@ contains
       deallocate(row, val)
       allocate(row(ptr_out(n+1)-1), val(ptr_out(n+1)-1))
       ptr(1:n+1) = ptr_out(1:n+1)
-      row(1:ptr(n+1)-1) = row_out(1:ptr_out(n+1)-1)
-      val(1:ptr(n+1)-1) = val_out(1:ptr_out(n+1)-1)
+      row(1:ptr_out(n+1)-1) = row_out(1:ptr_out(n+1)-1)
+      val(1:ptr_out(n+1)-1) = val_out(1:ptr_out(n+1)-1)
    end subroutine symmetrize_problem
 
    subroutine randomize_list(n, list, state)
@@ -514,6 +527,8 @@ contains
          stop 1
       endif
       print *, "ma87 analyse took ", tdiff(t1, t2)
+      print "(a,es10.2)", "ma87 nfact = ", real(info%num_factor)
+      print "(a,es10.2)", "ma87 nflops = ", real(info%num_flops)
 
       ! Factor
       dummy = clock_gettime(0, t1)
