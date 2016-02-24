@@ -1151,8 +1151,8 @@ subroutine amd_order_both(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition, &
     ! Apply amd_order
     i = a_n_1 - a_n_sub ! number of compressed indices
     rows_sub(1:a_n1-i) = nd_part1_flag
-    CALL amd_order(a_n_sub,a_ne_sub,a_lirn_sub,a_irn_sub(1:a_lirn_sub), &
-      a_ptr_sub(1:a_n_sub),rows_sub(1:a_n_sub),amd_perm(1:a_n_sub), &
+    CALL amd_order(a_n_sub,a_ne_sub,a_lirn_sub,a_ptr_sub(1:a_n_sub), &
+      a_irn_sub(1:a_lirn_sub),rows_sub(1:a_n_sub),amd_perm(1:a_n_sub), &
       amd_work(1:7*a_n_1))
 
     ! Overwrite first a_n1 entries of amd_perm with first a_n1 entries
@@ -1182,8 +1182,8 @@ subroutine amd_order_both(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition, &
 
     ! Apply amd_order
     rows_sub(1:a_n1) = nd_part1_flag
-    CALL amd_order(a_n_1,a_ne_sub,a_lirn_sub,a_irn_sub(1:a_lirn_sub), &
-      a_ptr_sub(1:a_n_1), &
+    CALL amd_order(a_n_1,a_ne_sub,a_lirn_sub,a_ptr_sub(1:a_n_1), &
+       a_irn_sub(1:a_lirn_sub), &
       rows_sub(1:a_n_1),amd_perm(1:a_n_1), &
       amd_work(1:7*a_n_1))
 
@@ -1210,8 +1210,8 @@ subroutine amd_order_both(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition, &
       extract_work)
     ! Apply amd_order
     rows_sub(a_n1+1:a_n1+a_n2) = nd_part1_flag
-    CALL amd_order(a_n_sub,a_ne_sub,a_lirn_sub,a_irn_sub(1:a_lirn_sub), &
-      a_ptr_sub(1:a_n_sub),rows_sub(a_n1+1:a_n1+a_n_sub), &
+    CALL amd_order(a_n_sub,a_ne_sub,a_lirn_sub,a_ptr_sub(1:a_n_sub), &
+      a_irn_sub(1:a_lirn_sub),rows_sub(a_n1+1:a_n1+a_n_sub), &
       amd_perm(a_n1+1:a_n),amd_work(1:7*a_n_2))
     ! ELSE
     ! amd_perm(a_n1+1) = 1
@@ -1250,8 +1250,8 @@ subroutine amd_order_both(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition, &
       a_irn_sub(1:a_ne),extract_work(1:a_n))
     ! Apply amd_order
     rows_sub(a_n1+1:a_n1+a_n2) = nd_part1_flag
-    CALL amd_order(a_n_2,a_ne_sub,a_lirn_sub,a_irn_sub(1:a_lirn_sub), &
-      a_ptr_sub(1:a_n_2), &
+    CALL amd_order(a_n_2,a_ne_sub,a_lirn_sub,a_ptr_sub(1:a_n_2), &
+      a_irn_sub(1:a_lirn_sub), &
       rows_sub(a_n1+1:a_n1+a_n_2), &
       amd_perm(a_n1+1:a_n),amd_work(1:7*a_n_2))
     ! ELSE
@@ -1667,7 +1667,7 @@ SUBROUTINE amd_order_one(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition,iperm, &
       rows_sub(1:a_n1-i) = nd_part1_flag
       rows_sub(a_n1-i+1:a_n_sub) = nd_sep_flag
       CALL amd_order(a_n_sub,a_ne_sub,a_lirn_sub, &
-        a_irn_sub(1:a_lirn_sub),a_ptr_sub(1:a_n_sub), &
+        a_ptr_sub(1:a_n_sub),a_irn_sub(1:a_lirn_sub), &
         rows_sub(1:a_n_sub),amd_perm(1:a_n_sub),amd_work)
       !print *, "amd_perm = ", amd_perm(1:a_n_sub)
 
@@ -1710,8 +1710,8 @@ SUBROUTINE amd_order_one(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition,iperm, &
       ! Apply amd_order
       rows_sub(1:a_n1) = nd_part1_flag
       rows_sub(a_n1+1:a_n_1) = nd_sep_flag
-      CALL amd_order(a_n_1,a_ne_sub,a_lirn_sub,a_irn_sub(1:a_lirn_sub), &
-        a_ptr_sub(1:a_n_1),rows_sub(1:a_n_1),amd_perm(1:a_n_1),amd_work)
+      CALL amd_order(a_n_1,a_ne_sub,a_lirn_sub,a_ptr_sub(1:a_n_1), &
+         a_irn_sub(1:a_lirn_sub),rows_sub(1:a_n_1),amd_perm(1:a_n_1),amd_work)
 
       ! Overwrite first a_n1 entries of amd_perm with first a_n1 entries
       ! that will form new iperm. Similarly, overwrite first a_n1 entries
@@ -1774,7 +1774,7 @@ SUBROUTINE amd_order_one(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition,iperm, &
       rows_sub(1:a_n2-i) = nd_part2_flag
       rows_sub(a_n2-i+1:a_n_sub) = nd_sep_flag
       CALL amd_order(a_n_sub,a_ne_sub,a_lirn_sub, &
-        a_irn_sub(1:a_lirn_sub),a_ptr_sub(1:a_n_sub), &
+        a_ptr_sub(1:a_n_sub),a_irn_sub(1:a_lirn_sub), &
         rows_sub(1:a_n_sub),amd_perm(a_n1+1:a_n1+a_n_sub),amd_work)
 
       k = 1
@@ -1812,8 +1812,8 @@ SUBROUTINE amd_order_one(a_n,a_ne,a_ptr,a_row,a_n1,a_n2,partition,iperm, &
       ! Apply amd_order
       rows_sub(1:a_n2) = nd_part2_flag
       rows_sub(a_n2+1:a_n_2) = nd_sep_flag
-      CALL amd_order(a_n_2,a_ne_sub,a_lirn_sub,a_irn_sub(1:a_lirn_sub), &
-        a_ptr_sub(1:a_n_2), &
+      CALL amd_order(a_n_2,a_ne_sub,a_lirn_sub,a_ptr_sub(1:a_n_2), &
+         a_irn_sub(1:a_lirn_sub), &
         rows_sub(1:a_n_2),amd_perm(a_n1+1:a_n), &
         amd_work)
 
