@@ -339,8 +339,8 @@ subroutine order_matched_pair(j1, j2, a_n, a_ne, a_ptr, a_flags_diag, &
    ! Otherwise: either both have large diagonals, or neither does. Choose
    ! densest column to go first in hopes it encourages other column
    ! into the same supernode
-   p1 = nd_get_ptr(j1, a_n, a_ne, a_ptr) - a_ptr(j1)
-   p2 = nd_get_ptr(j2, a_n, a_ne, a_ptr) - a_ptr(j2)
+   p1 = nd_get_ptr(j1+1, a_n, a_ne, a_ptr) - a_ptr(j1)
+   p2 = nd_get_ptr(j2+1, a_n, a_ne, a_ptr) - a_ptr(j2)
    if(p2 > p1) then
       j = j1
       j1 = j2
@@ -445,7 +445,7 @@ SUBROUTINE nd_expand_to_valid(a_n,a_ne,a_ptr,a_row,a_weight,a_flags,&
     do
       k = backtrace(depth)
       ! Loop through arcs of k
-      do kk = progress(depth), nd_get_ptr(k, a_n, a_ne, a_ptr)
+      do kk = progress(depth), nd_get_ptr(k+1, a_n, a_ne, a_ptr)-1
         if(.not.is_big_in_col(a_flags(kk))) cycle ! Not big
         p = a_row(kk)
         if(part(p).eq.nd_sep_flag) cycle ! Arc leads into sep
@@ -593,7 +593,7 @@ SUBROUTINE nd_trim_keep_valid(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
   integer :: nreject
   integer :: npair
   integer :: naug
-  
+
   nreject = 0
   npair = 0
   naug = 0
@@ -631,7 +631,7 @@ SUBROUTINE nd_trim_keep_valid(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
      j = partition(i)
      next1 = .FALSE.
      next2 = .FALSE.
-     do kk = a_ptr(j), nd_get_ptr(j, a_n, a_ne, a_ptr)
+     do kk = a_ptr(j), nd_get_ptr(j+1, a_n, a_ne, a_ptr)-1
        m = a_row(kk)
        if(part(m).eq.nd_part1_flag) next1 = .true.
        if(part(m).eq.nd_part2_flag) next2 = .true.
@@ -887,12 +887,12 @@ SUBROUTINE check_match_valid_partition(a_n, a_ne, a_ptr, a_row, &
     if(part(i).eq.nd_sep_flag) cycle ! Seperator can connect to anything
     j = a_match(i)
     seen_match = .false.
-    do ii = a_ptr(i), nd_get_ptr(i, a_n, a_ne, a_ptr)
+    do ii = a_ptr(i), nd_get_ptr(i+1, a_n, a_ne, a_ptr)-1
       k = a_row(ii)
       if(part(i).ne.part(k) .and. part(k).ne.nd_sep_flag) then
          print *, "Seperator does not seperate: Entry (", k, ", ", i, &
            ") with part(k) = ", part(k), " part(i) = ", part(i)
-        stop
+         stop
       endif
       if(k.eq.j) seen_match = .true.
       if(k.eq.j .and. .not.is_big_in_col(a_flags(ii)) .and. a_flags_diag(i).ne.3) then
@@ -972,7 +972,7 @@ LOGICAL FUNCTION check_match_compliance(idx, dest, a_n, a_ne, a_ptr,  &
 
   ! Look for a partner within seperator to leave with:
   ! must be adjacent only to dest, or internal to seperator
-  do kk = a_ptr(idx), nd_get_ptr(idx, a_n, a_ne, a_ptr)
+  do kk = a_ptr(idx), nd_get_ptr(idx+1, a_n, a_ne, a_ptr)-1
     if(.not.is_big_in_col(a_flags(kk))) cycle ! Not large entry
     j = a_row(kk)
     if(part(j).ne.nd_sep_flag) cycle ! j not in seperator
@@ -998,7 +998,7 @@ LOGICAL FUNCTION check_match_compliance(idx, dest, a_n, a_ne, a_ptr,  &
   do
     k = backtrace(depth)
     ! Loop through arcs of k
-    do kk = progress(depth), nd_get_ptr(k, a_n, a_ne, a_ptr)
+    do kk = progress(depth), nd_get_ptr(k+1, a_n, a_ne, a_ptr)-1
       if(.not.is_big_in_col(a_flags(kk))) cycle ! Not big enough
       p = a_row(kk)
       if(visited(p).ge.vcnt) cycle ! Already visited
@@ -1103,7 +1103,7 @@ SUBROUTINE nd_match_order_sep(a_n,a_ne,a_ptr,a_row,a_flags,a_flags_diag,&
     i = sep_list(ii)
     if(a_match(i).ne.-1) cycle ! Already matched
     if(a_flags_diag(i).eq.3) cycle ! Doesn't need a match
-    do jj = a_ptr(i), nd_get_ptr(i, a_n, a_ne, a_ptr)
+    do jj = a_ptr(i), nd_get_ptr(i+1, a_n, a_ne, a_ptr)-1
       j = a_row(i)
       if(seen(j).eq.0) cycle ! j not in seperator
       if(a_match(j).ne.-1) cycle ! j already matched
@@ -1200,7 +1200,7 @@ SUBROUTINE trim_update_neighbours(idx, a_n, a_ne, a_ptr, a_row, part, &
   integer :: j
   integer :: ii
 
-  do ii = a_ptr(idx), nd_get_ptr(idx, a_n, a_ne, a_ptr)
+  do ii = a_ptr(idx), nd_get_ptr(idx+1, a_n, a_ne, a_ptr)-1
     j = a_row(ii)
     if(part(j).ne.nd_sep_flag) cycle ! j not in seperator
     if(mask(j).ne.1) cycle ! j not a candidate: we don't care
@@ -1303,7 +1303,7 @@ SUBROUTINE extract_compressed_matrix(a_n,a_ne,a_ptr,a_row,a_match, &
     if(lperm(i).lt.0) cycle ! Already handled this column
     mark(abs(lperm(i))) = ii ! Mark diagonal so we don't include it!
     cnt = 0
-    DO kk = a_ptr(i), nd_get_ptr(i, a_n, a_ne, a_ptr)
+    DO kk = a_ptr(i), nd_get_ptr(i+1, a_n, a_ne, a_ptr)-1
       k = abs(lperm(a_row(kk)))
       if(k.eq.0) cycle ! not in part or sep
       if(mark(k).ge.ii) cycle ! Already seen this local index
@@ -1313,7 +1313,7 @@ SUBROUTINE extract_compressed_matrix(a_n,a_ne,a_ptr,a_row,a_match, &
     j = a_match(i)
     if(j.eq.i) j = -1 ! disregard self matches
     if(j.ne.-1) then
-      DO kk = a_ptr(j), nd_get_ptr(j, a_n, a_ne, a_ptr)
+      DO kk = a_ptr(j), nd_get_ptr(j+1, a_n, a_ne, a_ptr)-1
         k = abs(lperm(a_row(kk)))
         if(k.eq.0) cycle ! not in part or sep
         if(mark(k).ge.ii) cycle ! Already seen this local index
@@ -1326,7 +1326,7 @@ SUBROUTINE extract_compressed_matrix(a_n,a_ne,a_ptr,a_row,a_match, &
   DO ii = a_n_part + 1, a_n_part+a_n_sep
     i = rows_sub(ii)
     cnt = 0
-    DO kk = a_ptr(i), nd_get_ptr(i, a_n, a_ne, a_ptr)
+    DO kk = a_ptr(i), nd_get_ptr(i+1, a_n, a_ne, a_ptr)-1
       k = abs(lperm(a_row(kk)))
       if(k.eq.0) cycle ! not in part or sep
       if(k.gt.part_last) cycle ! not in part
@@ -1349,7 +1349,7 @@ SUBROUTINE extract_compressed_matrix(a_n,a_ne,a_ptr,a_row,a_match, &
     i = rows_sub(ii)
     if(lperm(i).lt.0) cycle ! Already handled this column
     mark(abs(lperm(i))) = ii ! Mark diagonal so we don't include it!
-    DO kk = a_ptr(i), nd_get_ptr(i, a_n, a_ne, a_ptr)
+    DO kk = a_ptr(i), nd_get_ptr(i+1, a_n, a_ne, a_ptr)-1
       k = abs(lperm(a_row(kk)))
       if(k.eq.0) cycle ! not in part or sep
       if(mark(k).ge.ii) cycle ! Already seen this local index
@@ -1361,7 +1361,7 @@ SUBROUTINE extract_compressed_matrix(a_n,a_ne,a_ptr,a_row,a_match, &
     j = a_match(i)
     if(j.eq.i) j = -1 ! disregard self matches
     if(j.eq.-1) cycle ! No partner
-    DO kk = a_ptr(j), nd_get_ptr(j, a_n, a_ne, a_ptr)
+    DO kk = a_ptr(j), nd_get_ptr(j+1, a_n, a_ne, a_ptr)-1
       k = abs(lperm(a_row(kk)))
       if(k.eq.0) cycle ! not in part or sep
       if(mark(k).ge.ii) cycle ! Already seen this local index
@@ -1373,7 +1373,7 @@ SUBROUTINE extract_compressed_matrix(a_n,a_ne,a_ptr,a_row,a_match, &
   END DO
   DO ii = a_n_part + 1, a_n_part+a_n_sep
     i = rows_sub(ii)
-    DO kk = a_ptr(i), nd_get_ptr(i, a_n, a_ne, a_ptr)
+    DO kk = a_ptr(i), nd_get_ptr(i+1, a_n, a_ne, a_ptr)-1
       k = abs(lperm(a_row(kk)))
       if(k.eq.0) cycle ! not in part or sep
       if(k.gt.part_last) cycle ! not in part
@@ -1389,7 +1389,7 @@ SUBROUTINE extract_compressed_matrix(a_n,a_ne,a_ptr,a_row,a_match, &
   !print *, "ptr = ", a_ptr_sub(1:a_n_sub)
   !print *, "ne = ", a_ne_sub
   !do i = 1, a_n_sub
-  !  print *, i, ":", a_row_sub(a_ptr_sub(i):nd_get_ptr(i,a_n_sub,a_ne_sub,a_ptr_sub))
+  !  print *, i, ":", a_row_sub(a_ptr_sub(i):nd_get_ptr(i+1,a_n_sub,a_ne_sub,a_ptr_sub)-1)
   !end do
   !print *, "compress_invp = ", compress_invp(1:2*part_last)
   !stop
