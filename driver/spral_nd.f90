@@ -25,7 +25,7 @@ program run_prob
    ! ND and stats
    type(nd_options) :: options
    type(nd_inform) :: inform
-   integer, dimension(:), allocatable :: perm, invp
+   integer, dimension(:), allocatable :: perm2x2, perm, invp
    integer(long) :: nfact, nflops
 
    ! Timing
@@ -84,7 +84,9 @@ program run_prob
       write(*, "(a)", advance="no") "Ordering with ND..."
       dummy = clock_gettime(0, t1)
       if(num_aware) then
-         call nd_order(0, n, ptr, row, perm, options, inform, val=val)
+         allocate(perm2x2(n))
+         call nd_order(0, n, ptr, row, perm2x2, options, inform, val=val)
+         perm(:) = abs(perm2x2(:))
       else
          call nd_order(0, n, ptr, row, perm, options, inform)
       endif
