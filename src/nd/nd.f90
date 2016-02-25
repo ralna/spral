@@ -584,16 +584,25 @@ recursive subroutine nd_nested_internal(a_n, a_ne, a_ptr, a_row, &
    if (a_n2.gt.max(2,options%amd_switch1)) then
       if (a_n1.gt.max(2,options%amd_switch1)) then
          sumweight_sub = sum(a_weight(a_n1+1:a_n1+a_n2))
-         call nd_nested_internal(a_n2, a_ne2, a_ptr(a_n1+1:a_n1+a_n2),  &
-            a_row(a_ne1+1:a_ne1+a_ne2), a_weight(a_n1+1:a_n1+a_n2),     &
-            sumweight_sub, iperm(a_n1+1:a_n1+a_n2),                     &
-            work(1:14*a_n2+sumweight_sub+a_ne2), work_comp_n(1:a_n2),   &
-            work_comp_nz(1:a_n2), level+1, options, info, use_amdi,     &
-            use_multilevel, grids, seps=seps(a_n1+1:a_n1+a_n2),         &
-            a_flags=a_flags(a_ne1+1:a_ne1+a_ne2),                       &
-            a_flags_diag=a_flags_diag(a_n1+1:a_n1+a_n2),                &
-            a_match=a_match(a_n1+1:a_n1+a_n2),                          &
-            work_flags1=work_flags1(1:a_ne2+2*a_n2) )
+         if(present(a_flags)) then
+            call nd_nested_internal(a_n2, a_ne2, a_ptr(a_n1+1:a_n1+a_n2),  &
+               a_row(a_ne1+1:a_ne1+a_ne2), a_weight(a_n1+1:a_n1+a_n2),     &
+               sumweight_sub, iperm(a_n1+1:a_n1+a_n2),                     &
+               work(1:14*a_n2+sumweight_sub+a_ne2), work_comp_n(1:a_n2),   &
+               work_comp_nz(1:a_n2), level+1, options, info, use_amdi,     &
+               use_multilevel, grids, seps=seps(a_n1+1:a_n1+a_n2),         &
+               a_flags=a_flags(a_ne1+1:a_ne1+a_ne2),                       &
+               a_flags_diag=a_flags_diag(a_n1+1:a_n1+a_n2),                &
+               a_match=a_match(a_n1+1:a_n1+a_n2),                          &
+               work_flags1=work_flags1(1:a_ne2+2*a_n2) )
+         else
+            call nd_nested_internal(a_n2, a_ne2, a_ptr(a_n1+1:a_n1+a_n2),  &
+               a_row(a_ne1+1:a_ne1+a_ne2), a_weight(a_n1+1:a_n1+a_n2),     &
+               sumweight_sub, iperm(a_n1+1:a_n1+a_n2),                     &
+               work(1:14*a_n2+sumweight_sub+a_ne2), work_comp_n(1:a_n2),   &
+               work_comp_nz(1:a_n2), level+1, options, info, use_amdi,     &
+               use_multilevel, grids, seps=seps(a_n1+1:a_n1+a_n2) )
+         endif
       else
          sumweight_sub = sum(a_weight(a_n1+1:a_n1+a_n2))
          call nd_nested_internal(a_n2, a_ne2, a_ptr(1:a_n2), a_row(1:a_ne2),&
