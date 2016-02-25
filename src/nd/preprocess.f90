@@ -222,12 +222,7 @@ subroutine remove_dense_rows(a_n, a_ne, a_ptr, a_row, iperm, options, info, &
 
    ! Calculate degree of each row before anything removed
    do i = 1, a_n
-      k = a_ptr(i)
-      if (i.lt.a_n) then
-         degree = a_ptr(i+1) - k
-      else
-         degree = a_ne - a_ptr(a_n) + 1
-      end if
+      degree = nd_get_ptr(i+1, a_n, a_ne, a_ptr) - a_ptr(i)
       dense(i) = degree
       if (degree.ne.0) then
          max_deg = max(max_deg,degree)
@@ -341,6 +336,7 @@ subroutine remove_dense_rows(a_n, a_ne, a_ptr, a_row, iperm, options, info, &
          end if
       end do
       a_ptr(j) = k
+      a_ne_out = k-1
 
       if(present(a_flags)) &
          call make_a_match_symmetric(a_n_out, a_match(1:a_n_out))
