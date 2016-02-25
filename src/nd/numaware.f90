@@ -579,10 +579,9 @@ SUBROUTINE nd_trim_keep_valid(a_n,a_ne,a_ptr,a_row,a_weight,sumweight, &
   TYPE(nd_options), INTENT (IN) :: options
 
   ! Local variables
-  INTEGER :: i, j, k, kk, l, m, w,mn,ncand, j1, j2,j12,k1,k2,ii, p
-  INTEGER :: a_weight_sep_orig
+  INTEGER :: i, j, k, kk, m, ncand, j1, j2, j12, k1, k2, p
   INTEGER :: mvchoice
-  LOGICAL :: add_list, next1,next2,redsep,redpart,imbal
+  LOGICAL :: next1,next2,imbal
   REAL(wp) :: tau1,tau2,ratio
   integer :: depth1, depth2, partner1, partner2, partner, vcnt
   integer, dimension(:), pointer :: part, mask, bnd, visited

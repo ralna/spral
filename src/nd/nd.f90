@@ -399,7 +399,7 @@ recursive subroutine nd_nested_internal(a_n, a_ne, a_ptr, a_row, &
       ! reflect the computed permutation.
    integer, intent(out) :: work_comp_n(a_n)
    integer, intent(out) :: work_comp_nz(a_n)
-   integer, intent(out) :: work(12*a_n+sumweight+a_ne) ! Used during the
+   integer, intent(out) :: work(14*a_n+sumweight+a_ne) ! Used during the
       ! algorithm to reduce need for allocations. The output is discarded.
    integer, intent(in) :: level ! which level of nested dissection is this
    type (nd_options), intent(in) :: options
@@ -838,7 +838,7 @@ subroutine nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level, &
       ! row i in this sub problem maps to. On output, this is updated to
       ! reflect the computed permutation.
    logical, intent(inout) :: use_multilevel
-   integer, target, intent(out) :: work(12*a_n+sumweight+a_ne)
+   integer, target, intent(out) :: work(14*a_n+sumweight+a_ne)
    type (nd_options), intent(in) :: options
    type (nd_inform), intent(inout) :: info
    type (nd_multigrid), dimension(max(1,options%stop_coarsening2)), &
@@ -930,7 +930,7 @@ subroutine nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level, &
       write (options%unit_diagnostics,'(a,i10,a,i10,a,i10)') &
          'a_n1=', a_n1, ', a_n2=', a_n2, ', a_nsep=', a_n - a_n1 - a_n2
    end if
-
+   
    if(present(a_flags)) then
       ! Expand partition to make it valid with respect to the flags
       call nd_expand_to_valid(a_n, a_ne, a_ptr, a_row, a_weight, &
