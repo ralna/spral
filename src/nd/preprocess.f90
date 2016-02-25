@@ -189,7 +189,7 @@ subroutine remove_dense_rows(a_n, a_ne, a_ptr, a_row, iperm, options, info, &
    integer, dimension(a_n), intent(inout) :: iperm
    type (nd_options), intent(in) :: options
    type (nd_inform), intent(inout) :: info
-   integer, dimension(a_n), optional, intent(inout) :: a_flags
+   integer, dimension(a_ne), optional, intent(inout) :: a_flags
    integer, dimension(a_n), optional, intent(inout) :: a_flags_diag
    integer, dimension(a_n), optional, intent(inout) :: a_match
 
