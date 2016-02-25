@@ -102,6 +102,8 @@ subroutine nd_order(mtx,n,ptr,row,perm,options,info,val,seps)
    endif
    if(info%stat.ne.0) go to 10
 
+   !call check_matrix_sym(a_n, a_ne, a_ptr, a_row)
+
    if(allocated(bigflag)) deallocate(bigflag, stat=info%stat)
    if(info%stat.ne.0) go to 10
 
@@ -178,6 +180,8 @@ subroutine nd_order(mtx,n,ptr,row,perm,options,info,val,seps)
       num_zero_row = 0
       a_weight(1:a_n_curr) = 1
    end if
+
+   !call check_matrix_sym(a_n, a_ne, a_ptr, a_row)
 
    !!!!!!!!!!!!!!!!!!!!!!
    ! Main ordering
@@ -943,7 +947,7 @@ subroutine nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level, &
          a_weight_sep, partition, work(work_ptr+1:work_ptr+10*a_n), options)
 
       call nd_match_order_sep(a_n, a_ne, a_ptr, a_row, a_flags, a_flags_diag,&
-         a_match, iperm, a_n-a_n1-a_n2, partition, &
+         a_match, iperm, a_n-a_n1-a_n2, partition(a_n1+a_n2+1:a_n), &
          work(work_ptr+1:work_ptr+10*a_n))
 
       if (a_n1.eq.0 .or. a_n2.eq.0) then

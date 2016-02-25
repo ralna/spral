@@ -8,6 +8,7 @@ module spral_nd_numaware
    public :: construct_aflags, order_matched_pair, nd_trim_keep_valid, &
       nd_expand_to_valid, nd_match_order_sep, make_a_match_symmetric, &
       extract_compressed_matrix
+   public :: check_matrix_sym
 
    real(wp), parameter :: sing_tol = 100*epsilon(sing_tol) ! Singular tolerance
 
@@ -1049,6 +1050,68 @@ LOGICAL FUNCTION check_match_compliance(idx, dest, a_n, a_ne, a_ptr,  &
   check_match_compliance = .false.
 END FUNCTION check_match_compliance
 
+subroutine check_matrix_sym(n, ne, ptr, row)
+   integer, intent(in) :: n, ne, ptr(n), row(ne)
+
+   integer :: i, j, k
+   integer, dimension(:), allocatable :: ptr_trans, row_trans, work
+
+   !print *, "IN"
+   !do i = 1, n
+   !   print *, i, ":", row(ptr(i):nd_get_ptr(i+1,n,ne,ptr)-1)
+   !end do
+
+   !
+   ! Find A^T
+   !
+   allocate(ptr_trans(n+3), row_trans(ne))
+   ! Count # entries at +2 offset
+   ptr_trans(:) = 0
+   do i = 1, n
+      do j = ptr(i), nd_get_ptr(i+1, n, ne, ptr)-1
+         k = row(j)
+         ptr_trans(k+2) = ptr_trans(k+2) + 1
+      end do
+   end do
+   ! Calculate row starts at offset +1
+   ptr_trans(1:2) = 1
+   do i = 1, n
+      ptr_trans(i+2) = ptr_trans(i+1) + ptr_trans(i+2)
+   end do
+   ! Drop entries into place, counting up in ptr at offset +1
+   do i = 1, n
+      do j = ptr(i), nd_get_ptr(i+1, n, ne, ptr)-1
+         k = row(j)
+         row_trans(ptr_trans(k+1)) = i
+         ptr_trans(k+1) = ptr_trans(k+1) + 1
+      end do
+   end do
+
+   !print *, "TRANS"
+   !do i = 1, n
+   !   print *, i, ":", row_trans(ptr_trans(i):ptr_trans(i+1)-1)
+   !end do
+
+   !
+   ! Compare A and A^T
+   !
+   allocate(work(n))
+   work(:) = 0
+   do i = 1, n
+      work(row_trans(ptr_trans(i):ptr_trans(i+1)-1)) = i
+      do j = ptr(i), nd_get_ptr(i+1, n, ne, ptr)-1
+         k = row(j)
+         if(work(k).lt.i) then
+            print *, "Assymetry! entry (", k, ",", i, ")"
+            stop
+         endif
+      end do
+   end do
+
+   print *, "MATRIX IS SYMMETRIC"
+
+end subroutine check_matrix_sym
+
 ! This subroutine orders sep_list to try and keep 2x2 pivots together
 SUBROUTINE nd_match_order_sep(a_n,a_ne,a_ptr,a_row,a_flags,a_flags_diag,&
     a_match,iperm,nsep,sep_list,work)
@@ -1089,8 +1152,8 @@ SUBROUTINE nd_match_order_sep(a_n,a_ne,a_ptr,a_row,a_flags,a_flags_diag,&
     seen(i) = 1
     j = a_match(i)
     if(j.eq.-1) cycle ! no matched
-    if(a_flags_diag(i).ne.3) cycle ! i needs matching
-    if(a_flags_diag(j).ne.3) cycle ! j needs matching
+    if(a_flags_diag(i).ne.FLAG_BIG_BOTH) cycle ! i needs matching
+    if(a_flags_diag(j).ne.FLAG_BIG_BOTH) cycle ! j needs matching
     ! FIXME: kill any self matchings!
     ! If we reach here neither i nor j actually needs this matching
     a_match(i) = -1
@@ -1101,7 +1164,7 @@ SUBROUTINE nd_match_order_sep(a_n,a_ne,a_ptr,a_row,a_flags,a_flags_diag,&
   do ii = 1, nsep
     i = sep_list(ii)
     if(a_match(i).ne.-1) cycle ! Already matched
-    if(a_flags_diag(i).eq.3) cycle ! Doesn't need a match
+    if(a_flags_diag(i).eq.FLAG_BIG_BOTH) cycle ! Doesn't need a match
     do jj = a_ptr(i), nd_get_ptr(i+1, a_n, a_ne, a_ptr)-1
       j = a_row(i)
       if(seen(j).eq.0) cycle ! j not in seperator
