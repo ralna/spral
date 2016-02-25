@@ -653,7 +653,8 @@ recursive subroutine nd_nested_internal(a_n, a_ne, a_ptr, a_row, &
          work(amd_order_work+1:amd_order_work+7*a_n) )
 
       ! Extract perm from amd_order to apply to iperm
-      do i = 1, a_n
+      k = 1
+      do i = 1, a_n_sub
          j = work(amd_compress_invp + 2*(work(amd_order_perm+i)-1)+1)
          work(amd_order_work+k) = iperm(j)
          k = k + 1
