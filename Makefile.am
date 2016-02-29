@@ -76,8 +76,8 @@ libspral_a_SOURCES += \
 bin_PROGRAMS = spral_nd
 spral_nd_SOURCES = \
 	driver/spral_nd.f90
-spral_nd_LDADD = -Lhsl_ma87-2.3.0/src -lhsl_ma87 $(LDADD)
-spral_nd_FCFLAGS = -Ihsl_ma87-2.3.0/src
+spral_nd_LDADD = -Lhsl_ma87-2.3.0/src -lhsl_ma87 -Lhsl_ma97-2.3.0/src -lhsl_ma97 $(LDADD)
+spral_nd_FCFLAGS = -Ihsl_ma87-2.3.0/src -Ihsl_ma97-2.3.0/src
 check_PROGRAMS = \
 	nd_test \
 	examples/C/nd \

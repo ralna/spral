@@ -5,7 +5,9 @@ program run_prob
    use spral_nd
    use spral_random
    use spral_rutherford_boeing
+   use spral_scaling
    use spral_timer
+   use spral_nd_types, only : FLAG_BIG_COL, FLAG_BIG_BOTH, FLAG_SMALL
    implicit none
 
    integer, parameter :: wp = kind(0d0)
@@ -27,16 +29,24 @@ program run_prob
    type(nd_inform) :: inform
    integer, dimension(:), allocatable :: perm2x2, perm, invp
    integer(long) :: nfact, nflops
+   real(wp), dimension(:), allocatable :: scaling
 
    ! Timing
    type(timespec) :: t1, t2
    integer :: dummy
 
    ! Controls
-   integer :: random
-   logical :: with_metis, with_nd, with_ma87, num_aware
+   integer :: random, order_type
+   logical :: with_ma87, with_ma97
 
-   call proc_args(options, with_metis, with_nd, random, with_ma87, num_aware)
+   integer, parameter :: TYPE_ND                = 0, &
+                         TYPE_METIS             = 1, &
+                         TYPE_GUPTA             = 2, &
+                         TYPE_NUM_AWARE         = 3, &
+                         TYPE_MATCH_ORDER_ND    = 4, &
+                         TYPE_MATCH_ORDER_METIS = 5
+
+   call proc_args(options, random, with_ma87, with_ma97, order_type)
 
    ! Read in a matrix
    write(*, "(a)", advance="no") "Reading..."
@@ -80,80 +90,109 @@ program run_prob
 
    ! Order using spral_nd
    allocate(perm(n), invp(n))
-   if(with_nd) then
+   select case(order_type)
+   case(TYPE_ND)
       write(*, "(a)", advance="no") "Ordering with ND..."
       dummy = clock_gettime(0, t1)
-      if(num_aware) then
-         allocate(perm2x2(n))
-         call nd_order(0, n, ptr, row, perm2x2, options, inform, val=val)
-         perm(:) = abs(perm2x2(:))
-      else
-         call nd_order(0, n, ptr, row, perm, options, inform)
-      endif
+      call nd_order(0, n, ptr, row, perm, options, inform)
       dummy = clock_gettime(0, t2)
       if (inform%flag < 0) then
-         print *, "oops on analyse ", inform%flag
+         print *, "oops on nd ", inform%flag
          stop
       endif
       write(*, "(a)") "ok"
-      print *, "nd_order() took ", tdiff(t1, t2)
-      ! Determine quality
-      write(*, "(a)", advance="no") "Determing stats..."
-      call calculate_stats(n, ptr, row, perm, nfact, nflops)
-      write(*, "(a)") "ok"
-      print "(a,es10.2)", "nd nfact = ", real(nfact)
-      print "(a,es10.2)", "nd nflop = ", real(nflops)
-      print "(a,i10)", "nd ndense = ", inform%dense
-      print "(a,i10)", "nd nsuper = ", inform%nsuper
-      print "(a,i10)", "nd nzsuper = ", inform%nzsuper
-      print "(a,i10)", "nd ncomp = ", inform%num_components
-      print "(a,i10)", "nd n_max_component = ", inform%n_max_component
-      print "(a,i10)", "nd nz_max_component = ", inform%nz_max_component
-      print "(a,f10.2)", "nd band = ", inform%band
-      if(with_ma87) call run_ma87(n, ptr, row, val, perm)
-   endif
-
-   ! Order using metis
-   if(with_metis) then
+   case(TYPE_METIS)
       write(*, "(a)", advance="no") "Ordering with Metis..."
       dummy = clock_gettime(0, t1)
       call metis_order(n, ptr, row, perm, invp, flag, st)
       dummy = clock_gettime(0, t2)
-      if (inform%flag < 0) then
-         print *, "oops on analyse ", inform%flag
+      if (flag .ne. 0) then
+         print *, "oops on metis ", flag
          stop
       endif
       write(*, "(a)") "ok"
-      print *, "metis_order() took ", tdiff(t1, t2)
-      ! Determine quality
-      write(*, "(a)", advance="no") "Determing stats..."
-      call calculate_stats(n, ptr, row, perm, nfact, nflops)
+   case(TYPE_GUPTA)
+      allocate(scaling(n))
+      call find_gupta_order(n, ptr, row, val, scaling, perm, options%u)
+   case(TYPE_NUM_AWARE)
+      write(*, "(a)", advance="no") "Ordering with ND..."
+      allocate(perm2x2(n))
+      dummy = clock_gettime(0, t1)
+      call nd_order(0, n, ptr, row, perm2x2, options, inform, val=val)
+      dummy = clock_gettime(0, t2)
+      perm(:) = abs(perm2x2(:))
+      if (inform%flag < 0) then
+         print *, "oops on nd ", inform%flag
+         stop
+      endif
       write(*, "(a)") "ok"
-      print "(a,es10.2)", "metis nfact = ", real(nfact)
-      print "(a,es10.2)", "metis nflop = ", real(nflops)
-      if(with_ma87) call run_ma87(n, ptr, row, val, perm)
-   endif
+   case(TYPE_MATCH_ORDER_ND:TYPE_MATCH_ORDER_METIS)
+      write(*, "(a)", advance="no") "Ordering with Match order..."
+      dummy = clock_gettime(0, t1)
+      call find_match_order(order_type, n, ptr, row, val, perm, options)
+      dummy = clock_gettime(0, t2)
+      write(*, "(a)") "ok"
+   end select
+   print *, "order took ", tdiff(t1, t2)
+
+   ! Determine quality
+   write(*, "(a)", advance="no") "Determing stats..."
+   call calculate_stats(n, ptr, row, perm, nfact, nflops)
+   write(*, "(a)") "ok"
+   print "(a,es10.2)", "literal nfact = ", real(nfact)
+   print "(a,es10.2)", "literal nflop = ", real(nflops)
+   if(with_ma87) call run_ma87(n, ptr, row, val, perm)
+   if(with_ma97) call run_ma97(n, ptr, row, val, perm, scaling)
 
 contains
 
-   subroutine proc_args(options, with_metis, with_nd, random, with_ma87, &
-         num_aware)
+   subroutine find_match_order(order_type, n, ptr, row, val, perm, options)
+      use spral_match_order
+      integer, intent(in) :: order_type
+      integer, intent(in) :: n
+      integer, dimension(:), intent(in) :: ptr
+      integer, dimension(:), allocatable, intent(in) :: row
+      real(wp), dimension(:), allocatable, intent(in) :: val
+      integer, dimension(n), intent(out) :: perm
+      type(nd_options), intent(in) :: options
+
+      integer, dimension(:), allocatable :: ptr2, row2, work
+      real(wp), dimension(:), allocatable :: val2, scaling
+
+      type(mo_options) :: mooptions
+      type(mo_inform) :: moinform
+
+      allocate(scaling(n), work(n))
+      allocate(ptr2(n+1), row2(2*(ptr(n+1)-1)), val2(2*(ptr(n+1)-1)))
+      ptr2(1:n+1) = ptr(1:n+1)
+      row2(1:ptr(n+1)-1) = row(1:ptr(n+1)-1)
+      val2(1:ptr(n+1)-1) = val(1:ptr(n+1)-1)
+      call half_to_full(n, row2, ptr2, work, a=val2)
+      if(order_type.eq.TYPE_MATCH_ORDER_ND) then
+         ! else default is metis
+         mooptions%order_method = 2
+         mooptions%nd_options = options
+      endif
+      call match_order(n, ptr2, row2, val2, perm, scaling, mooptions, &
+         moinform)
+      print *, "Number matched = ", moinform%nmatch
+   end subroutine find_match_order
+
+   subroutine proc_args(options, random, with_ma87, with_ma97, order_type)
       type(nd_options), intent(inout) :: options
-      logical, intent(out) :: with_metis
-      logical, intent(out) :: with_nd
       integer, intent(out) :: random
       logical, intent(out) :: with_ma87
-      logical, intent(out) :: num_aware
+      logical, intent(out) :: with_ma97
+      integer, intent(out) :: order_type
 
       integer :: argnum, narg
       character(len=200) :: argval
 
       ! Defaults
-      with_metis = .false.
-      with_nd = .true.
       random = -1
       with_ma87 = .false.
-      num_aware = .false.
+      with_ma97 = .false.
+      order_type = TYPE_ND
       
       ! Process args
       narg = command_argument_count()
@@ -165,6 +204,9 @@ contains
          case("--ma87")
             with_ma87 = .true.
             print *, "Running ma87"
+         case("--ma97")
+            with_ma97 = .true.
+            print *, "Running ma97"
          case("--cost")
             call get_command_argument(argnum, argval)
             argnum = argnum + 1
@@ -205,12 +247,6 @@ contains
             argnum = argnum + 1
             read( argval, * ) options%max_reduction
             print *, "Set options%max_reduction = ", options%max_reduction
-         case("--metis")
-            with_metis = .true.
-            print *, "MeTiS run requested"
-         case("--nond")
-            with_nd = .false.
-            print *, "ND run disabled"
          case("--nosv")
             options%find_supervariables = .false.
             print *, "Disabled supervariables"
@@ -254,11 +290,28 @@ contains
             argnum = argnum + 1
             read( argval, * ) random
             print *, "Randomizing matrix row order, seed = ", random
-         case("--num-aware")
-            num_aware = .true.
+         case("--type=num-aware")
+            order_type = TYPE_NUM_AWARE
             options%find_supervariables = .false.
             print *, "Using numerically aware ordering"
             print *, "NOTE: Had to disable supervariables for num-aware order"
+         case("--type=gupta")
+            order_type = TYPE_GUPTA
+            print *, "Using Gupta-type ordering"
+         case("--type=match-order-nd")
+            order_type = TYPE_MATCH_ORDER_ND
+            print *, "Using ND matching-based ordering"
+         case("--type=metis")
+            order_type = TYPE_METIS
+            print *, "Using normal MeTiS ordering"
+         case("--type=match-order-metis")
+            order_type = TYPE_MATCH_ORDER_METIS
+            print *, "Using MeTiS matching-based ordering"
+         case("--u_ord")
+            call get_command_argument(argnum, argval)
+            argnum = argnum + 1
+            read( argval, * ) options%u
+            print *, "Set u_ord = ", options%u
          case default
             print *, "Unrecognised command line argument: ", argval
             stop
@@ -273,7 +326,8 @@ contains
       real(wp), dimension(:), allocatable, intent(inout) :: val
 
       integer :: i, j, k, insert
-      integer, dimension(:), allocatable :: ptr_out, row_out, val_out
+      integer, dimension(:), allocatable :: ptr_out, row_out
+      real(wp), dimension(:), allocatable :: val_out
 
       ! Copy matrix to _out arrays, adding diagonal values as necessary
       allocate(ptr_out(n+1), row_out(ptr(n+1)-1+n), val_out(ptr(n+1)-1+n))
@@ -554,5 +608,319 @@ contains
       endif
       print *, "ma87 solve took ", tdiff(t1, t2)
    end subroutine run_ma87
+
+   subroutine run_ma97(n, ptr, row, val, order, scaling)
+      use hsl_mc69_double
+      use hsl_ma97_double
+      integer, intent(in) :: n
+      integer, dimension(n+1), intent(in) :: ptr
+      integer, dimension(ptr(n+1)-1), intent(in) :: row
+      real(wp), dimension(ptr(n+1)-1), intent(in) :: val
+      integer, dimension(n), intent(inout) :: order
+      real(wp), dimension(:), allocatable, intent(inout) :: scaling
+
+      type(ma97_akeep) :: akeep
+      type(ma97_fkeep) :: fkeep
+      type(ma97_control) :: control
+      type(ma97_info) :: info
+
+      type(hungarian_options) :: hoptions
+      type(hungarian_inform) :: hinform
+
+      real(wp), dimension(:), allocatable :: rhs
+
+      type(timespec) :: t1, t2
+      integer :: dummy
+
+      control%ordering = 0 ! user supplied
+
+      if(.not.allocated(scaling)) then
+         ! Generate MC64 scaling
+         allocate(scaling(n))
+         call hungarian_scale_sym(n, ptr, row, val, scaling, hoptions, hinform)
+      endif
+
+      ! Analyse
+      dummy = clock_gettime(0, t1)
+      call ma97_analyse(.false., n, ptr, row, akeep, control, info, order=order)
+      dummy = clock_gettime(0, t2)
+      if(info%flag.ne.0) then
+         print *, "ma97_analyse() failed with flag ", info%flag
+         stop 1
+      endif
+      print *, "ma97 analyse took ", tdiff(t1, t2)
+      print "(a,es10.2)", "ma97 afact = ", real(info%num_factor)
+      print "(a,es10.2)", "ma97 aflops = ", real(info%num_flops)
+
+      ! Factor
+      dummy = clock_gettime(0, t1)
+      call ma97_factor(HSL_MATRIX_REAL_SYM_INDEF, val, akeep, fkeep, control, &
+         info, ptr=ptr, row=row, scale=scaling)
+      dummy = clock_gettime(0, t2)
+      if(info%flag.lt.0) then
+         print *, "ma97_factor() failed with flag ", info%flag
+         stop 1
+      endif
+      print *, "ma97 factor took ", tdiff(t1, t2)
+      print "(a,es10.2)", "ma97 ffact = ", real(info%num_factor)
+      print "(a,es10.2)", "ma97 fflops = ", real(info%num_flops)
+      print *, "ma97 ndelay = ", info%num_delay
+
+      ! Solve
+      allocate(rhs(n))
+      rhs(1:n) = 1.0
+      dummy = clock_gettime(0, t1)
+      call ma97_solve(rhs, akeep, fkeep, control, info)
+      dummy = clock_gettime(0, t2)
+      if(info%flag.lt.0) then
+         print *, "ma97_solve() failed with flag ", info%flag
+         stop 1
+      endif
+      print *, "ma97 solve took ", tdiff(t1, t2)
+   end subroutine run_ma97
+
+   subroutine find_gupta_order(n, ptr, row, val, scaling, order, u)
+      use spral_nd_numaware
+      integer, intent(in) :: n
+      integer, dimension(n+1), intent(in) :: ptr
+      integer, dimension(ptr(n+1)-1), intent(in) :: row
+      real(wp), dimension(ptr(n+1)-1), intent(in) :: val
+      real(wp), dimension(n), intent(out) :: scaling
+      integer, dimension(n), intent(out) :: order
+      real(wp), intent(in) :: u
+
+      integer :: i, k
+      integer :: jj
+      integer, dimension(:), allocatable :: bigflag, iw, match, ptr2, row2
+      real(wp), dimension(:), allocatable :: val2
+
+      type(hungarian_options) :: hoptions
+      type(hungarian_inform) :: hinform
+
+      ! Find and apply MC64 scaling
+      call hungarian_scale_sym(n, ptr, row, val, scaling, hoptions, hinform)
+      allocate(val2(2*ptr(n+1)-1))
+      do i = 1, n
+         do jj = ptr(i), ptr(i+1)-1
+            k = row(jj)
+            val2(jj) = scaling(i) * val(jj) * scaling(k)
+         end do
+      end do
+
+      ! Expand matrix
+      allocate(ptr2(n+1), row2(2*ptr(n+1)-1), iw(n))
+      ptr2(1:n+1) = ptr(1:n+1)
+      row2(1:ptr(n+1)-1) = row(1:ptr(n+1)-1)
+      call half_to_full(n, row2, ptr2, iw, a=val2)
+
+      ! Determine flags array
+      allocate(bigflag(ptr2(n+1)-1), match(n))
+      match(:) = -1 ! set everything unmatched so no artifically "big" entries
+      call nd_set_a_flags(u, n, ptr2, row2, val2, match, bigflag)
+
+      ! Determine a matching
+      call find_matching(n, ptr2, row2, val2, bigflag, match)
+
+      ! Obtain ordering from call of metis on compressed graph
+      call compress_metis_call(n, ptr2, row2, match, order)
+   end subroutine
+
+   ! We expect both lwr and upr parts to be passed to the below
+   !
+   ! match(:) has the following values:
+   ! -2 unmatched
+   ! -1 matched as singleton
+   !  0 not yet seen
+   ! >0 matched with specified node
+   subroutine find_matching(n, ptr, row, val, bigflag, match)
+      integer, intent(in) :: n
+      integer, dimension(n+1), intent(in) :: ptr
+      integer, dimension(ptr(n+1)-1), intent(in) :: row
+      real(wp), dimension(ptr(n+1)-1), intent(in) :: val
+      integer, dimension(ptr(n+1)-1), intent(in) :: bigflag
+      integer, dimension(n), intent(out) :: match
+
+      integer :: i, k
+      integer(long) :: jj, pp
+      integer :: nz_extra, best_idx
+      integer, dimension(:), allocatable :: pattern
+      real(wp) :: score, best_score
+
+      allocate(pattern(n))
+      pattern(:) = 0
+
+      match(:) = -2 ! Initially all unmatched
+      do i = 1, n
+         if(match(i).ne.-2) cycle ! Already matched
+         ! Find diagonal and check if sufficiently large
+         ! Otherwise create pattern(:) of column
+         do jj = ptr(i), ptr(i+1)-1
+            k = row(jj)
+            if(i.eq.k .and. bigflag(jj).ne.FLAG_SMALL) then
+               match(i) = -1 ! Matched as singleton on diagonal
+               exit ! No need to work on rest of column
+            endif
+            pattern(k) = i
+         end do
+         if(match(i).eq.-1) cycle ! Diagonal was large enough
+         ! Build a list of candidate merge columns
+         ! Score them based on number of extra entries merging will create
+         best_idx = -1
+         best_score = -huge(best_score)
+         do jj = ptr(i), ptr(i+1)-1
+            if(bigflag(jj).ne.FLAG_BIG_COL .and. bigflag(jj).ne.FLAG_BIG_BOTH) cycle ! skip small entry
+            k = row(jj)
+            if(match(k).gt.0) cycle ! k already matched
+            ! Count number of extra entries from merging columns i and k
+            nz_extra = int(ptr(i+1)-ptr(i)+1) + int(ptr(k+1)-ptr(k)+1)
+            do pp = ptr(k), ptr(k+1)-1
+               if(pattern(row(pp)) .ge. i) & ! Overlapping entry
+                  nz_extra = nz_extra - 2
+            end do
+            score = abs(val(jj)) / nz_extra
+            if(score.lt.best_score) then
+               best_score = score
+               best_idx = k
+            endif
+         end do
+         if(best_idx.ne.-1) then
+            match(i) = best_idx
+            match(best_idx) = i
+         endif
+      end do
+   end subroutine find_matching
+
+   subroutine compress_metis_call(n, ptr, row, match, order)
+      integer, intent(in) :: n
+      integer, dimension(n+1), intent(in) :: ptr
+      integer, dimension(ptr(n+1)-1), intent(in) :: row
+      integer, dimension(n), intent(out) :: match
+      integer, dimension(n), intent(out) :: order
+
+      integer :: i, j, j1, j2, jj, k, krow, metis_flag, stat
+      integer(long) :: klong
+      integer :: ncomp, ncomp_matched
+      integer, dimension(:), allocatable :: old_to_new, new_to_old
+      integer, dimension(:), allocatable :: ptr3
+      integer, dimension(:), allocatable :: iwork, row3, invp
+
+      do i = 1, n
+         if(match(i).gt.0) then
+            if(match(i) .gt. n) then
+               print *, "match(", i, ") = ", match(i), " > n = ", n
+               stop
+            endif
+            if(match(match(i)).ne.i) then
+               print *, "match(match(", i, ")=", match(i), ") = ", match(match(i))
+               stop
+            endif
+         endif
+      end do
+
+      !
+      ! Build maps for new numbering schemes
+      !
+      allocate(old_to_new(n), new_to_old(n))
+      k = 1
+      do i = 1, n
+         j = match(i)
+         if (j<i .and. j.gt.0) cycle
+         old_to_new(i) = k
+         new_to_old(k) = i ! note: new_to_old only maps to first of a pair
+         if (j.gt.0) old_to_new(j) = k   
+         k = k + 1
+      end do
+      ncomp_matched = k-1
+
+      !
+      ! Produce a condensed version of the matrix for ordering.
+      ! Hold pattern using ptr3 and row3.
+      !
+      allocate(ptr3(ncomp_matched+1), row3(ptr(n+1)-1), iwork(n))
+      ptr3(1) = 1
+      iwork(:) = 0 ! Use to indicate if entry is in a paired column
+      ncomp = 1
+      jj = 1
+      do i = 1, n
+         j = match(i)
+         if (j<i .and. j.gt.0) cycle ! already seen
+         do klong = ptr(i), ptr(i+1)-1
+            krow = old_to_new(row(klong))
+            if (iwork(krow).eq.i) cycle ! already added to column
+            if (krow>ncomp_matched) cycle ! unmatched row not participating
+            row3(jj) = krow
+            jj = jj + 1
+            iwork(krow) = i
+         end do
+         if (j.gt.0) then
+            ! Also check column match(i)
+            do klong = ptr(j), ptr(j+1)-1
+               krow = old_to_new(row(klong))
+               if (iwork(krow).eq.i) cycle ! already added to column
+               if (krow>ncomp_matched) cycle ! unmatched row not participating
+               row3(jj) = krow
+               jj = jj + 1
+               iwork(krow) = i
+            end do
+         end if
+         ptr3(ncomp+1) = jj
+         ncomp = ncomp + 1
+      end do
+      ncomp = ncomp - 1
+
+      ! store just lower triangular part for input to hsl_mc68
+      ptr3(1) = 1
+      jj = 1
+      j1 = 1
+      do i = 1, ncomp
+         j2 = ptr3(i+1)
+         do k = j1, j2-1
+            krow = row3(k)
+            if ( krow.lt.i ) cycle ! already added to column
+            row3(jj) = krow
+            jj = jj + 1
+         end do
+         ptr3(i+1) = jj
+         j1 = j2
+      end do
+
+      allocate(invp(ncomp))
+
+      ! reorder the compressed matrix using metis.
+      ! switch off metis printing
+      call metis_order(ncomp,ptr3,row3,order,invp,metis_flag,stat)
+      select case(metis_flag)
+      case(0)
+         ! OK, do nothing
+      case default
+         ! Unknown error, should never happen
+         print *, "metis_order() returned unknown error ", metis_flag
+         stop
+      end select
+
+      do i = 1, ncomp
+         j = order(i)
+         iwork(j) = i
+      end do
+
+      !
+      ! Translate inverse permutation in iwork back to 
+      ! permutation for original variables.
+      !
+      k = 1
+      do i = 1, ncomp
+         j = new_to_old( iwork(i) )
+         order(j) = k
+         k = k + 1
+         if (match(j).gt.0) then
+            j = match(j)
+            order(j) = k
+            k = k + 1
+         end if
+      end do
+      
+   end subroutine compress_metis_call
+
+
 
 end program

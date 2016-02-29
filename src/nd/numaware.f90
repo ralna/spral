@@ -8,7 +8,7 @@ module spral_nd_numaware
    public :: construct_aflags, order_matched_pair, nd_trim_keep_valid, &
       nd_expand_to_valid, nd_match_order_sep, make_a_match_symmetric, &
       extract_compressed_matrix
-   public :: check_matrix_sym
+   public :: check_matrix_sym, nd_set_a_flags
 
    real(wp), parameter :: sing_tol = 100*epsilon(sing_tol) ! Singular tolerance
 
