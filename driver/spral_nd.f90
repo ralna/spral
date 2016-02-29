@@ -259,7 +259,8 @@ contains
       real(wp), dimension(:), allocatable, intent(inout) :: val
 
       integer :: i, j, k, insert
-      integer, dimension(:), allocatable :: ptr_out, row_out, val_out
+      integer, dimension(:), allocatable :: ptr_out, row_out
+      real(wp), dimension(:), allocatable :: val_out
 
       ! Copy matrix to _out arrays, adding diagonal values as necessary
       allocate(ptr_out(n+1), row_out(ptr(n+1)-1+n), val_out(ptr(n+1)-1+n))
