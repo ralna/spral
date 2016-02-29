@@ -93,7 +93,7 @@ module spral_nd_types
       real(wp) :: max_reduction = 0.9 ! size of next multigrid
          ! matrix must be less than max_reduction*(size of current multigrid
          ! matrix)
-      real(wp) :: balance = 2.0 ! Try to make sure that
+      real(wp) :: balance = 4.0 ! Try to make sure that
          ! max(P1,P2)/min(P1/P2) <= balance
 
       integer :: max_improve_cycles = 2 ! Having computed a minimal partition,
