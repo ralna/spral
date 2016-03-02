@@ -8,6 +8,7 @@ program run_prob
    use spral_scaling
    use spral_timer
    use spral_nd_types, only : FLAG_BIG_COL, FLAG_BIG_BOTH, FLAG_SMALL
+   use hsl_ma97_double
    implicit none
 
    integer, parameter :: wp = kind(0d0)
@@ -31,6 +32,8 @@ program run_prob
    integer(long) :: nfact, nflops
    real(wp), dimension(:), allocatable :: scaling
 
+   type(ma97_control) :: control97
+
    ! Timing
    type(timespec) :: t1, t2
    integer :: dummy
@@ -39,14 +42,17 @@ program run_prob
    integer :: random, order_type
    logical :: with_ma87, with_ma97
 
-   integer, parameter :: TYPE_ND                = 0, &
-                         TYPE_METIS             = 1, &
-                         TYPE_GUPTA             = 2, &
-                         TYPE_NUM_AWARE         = 3, &
-                         TYPE_MATCH_ORDER_ND    = 4, &
-                         TYPE_MATCH_ORDER_METIS = 5
+   integer, parameter :: TYPE_ND                      = 0, &
+                         TYPE_METIS                   = 1, &
+                         TYPE_NUM_AWARE               = 2, &
+                         TYPE_GUPTA                   = 3, &
+                         TYPE_GUPTA_ZERO              = 4, &
+                         TYPE_MATCH_ORDER_ND          = 5, &
+                         TYPE_MATCH_ORDER_METIS       = 6, &
+                         TYPE_MATCH_ORDER_ND_RELAX    = 7, &
+                         TYPE_MATCH_ORDER_METIS_RELAX = 8
 
-   call proc_args(options, random, with_ma87, with_ma97, order_type)
+   call proc_args(options, random, with_ma87, with_ma97, order_type, control97)
 
    ! Read in a matrix
    write(*, "(a)", advance="no") "Reading..."
@@ -111,9 +117,9 @@ program run_prob
          stop
       endif
       write(*, "(a)") "ok"
-   case(TYPE_GUPTA)
-      allocate(scaling(n))
-      call find_gupta_order(n, ptr, row, val, scaling, perm, options%u)
+   !case(TYPE_GUPTA)
+   !   allocate(scaling(n))
+   !   call find_gupta_order(n, ptr, row, val, scaling, perm, options%u)
    case(TYPE_NUM_AWARE)
       write(*, "(a)", advance="no") "Ordering with ND..."
       allocate(perm2x2(n))
@@ -126,7 +132,7 @@ program run_prob
          stop
       endif
       write(*, "(a)") "ok"
-   case(TYPE_MATCH_ORDER_ND:TYPE_MATCH_ORDER_METIS)
+   case(TYPE_GUPTA:)
       write(*, "(a)", advance="no") "Ordering with Match order..."
       dummy = clock_gettime(0, t1)
       call find_match_order(order_type, n, ptr, row, val, perm, options)
@@ -142,7 +148,7 @@ program run_prob
    print "(a,es10.2)", "literal nfact = ", real(nfact)
    print "(a,es10.2)", "literal nflop = ", real(nflops)
    if(with_ma87) call run_ma87(n, ptr, row, val, perm)
-   if(with_ma97) call run_ma97(n, ptr, row, val, perm, scaling)
+   if(with_ma97) call run_ma97(n, ptr, row, val, perm, scaling, control97)
 
 contains
 
@@ -168,22 +174,38 @@ contains
       row2(1:ptr(n+1)-1) = row(1:ptr(n+1)-1)
       val2(1:ptr(n+1)-1) = val(1:ptr(n+1)-1)
       call half_to_full(n, row2, ptr2, work, a=val2)
-      if(order_type.eq.TYPE_MATCH_ORDER_ND) then
-         ! else default is metis
-         mooptions%order_method = 2
-         mooptions%nd_options = options
-      endif
+      mooptions%nd_options = options
+      mooptions%u = options%u
+      select case(order_type)
+      case(TYPE_GUPTA)
+         mooptions%match_method = 3 ! Gupta
+         mooptions%order_method = 2 ! ND
+      case(TYPE_GUPTA_ZERO)
+         mooptions%match_method = 4 ! Gupta-zero
+         mooptions%order_method = 2 ! ND
+      case(TYPE_MATCH_ORDER_ND)
+         mooptions%order_method = 2 ! ND
+      case(TYPE_MATCH_ORDER_METIS)
+         ! Leave as defaults
+      case(TYPE_MATCH_ORDER_ND_RELAX)
+         mooptions%match_method = 2 ! mc64 relaxed
+         mooptions%order_method = 2 ! ND
+      case(TYPE_MATCH_ORDER_METIS_RELAX)
+         mooptions%match_method = 2 ! mc64 relaxed
+      end select
       call match_order(n, ptr2, row2, val2, perm, scaling, mooptions, &
          moinform)
       print *, "Number matched = ", moinform%nmatch
    end subroutine find_match_order
 
-   subroutine proc_args(options, random, with_ma87, with_ma97, order_type)
+   subroutine proc_args(options, random, with_ma87, with_ma97, order_type, &
+         control97)
       type(nd_options), intent(inout) :: options
       integer, intent(out) :: random
       logical, intent(out) :: with_ma87
       logical, intent(out) :: with_ma97
       integer, intent(out) :: order_type
+      type(ma97_control) :: control97
 
       integer :: argnum, narg
       character(len=200) :: argval
@@ -193,6 +215,9 @@ contains
       with_ma87 = .false.
       with_ma97 = .false.
       order_type = TYPE_ND
+
+      ! Other settings (not changable by command line)
+      control97%ordering = 0 ! user supplied
       
       ! Process args
       narg = command_argument_count()
@@ -298,9 +323,15 @@ contains
          case("--type=gupta")
             order_type = TYPE_GUPTA
             print *, "Using Gupta-type ordering"
+         case("--type=gupta-zero")
+            order_type = TYPE_GUPTA_ZERO
+            print *, "Using Gupta-type ordering"
          case("--type=match-order-nd")
             order_type = TYPE_MATCH_ORDER_ND
             print *, "Using ND matching-based ordering"
+         case("--type=match-order-nd-relax")
+            order_type = TYPE_MATCH_ORDER_ND_RELAX
+            print *, "Using ND matching-based relaxed ordering"
          case("--type=metis")
             order_type = TYPE_METIS
             print *, "Using normal MeTiS ordering"
@@ -312,6 +343,11 @@ contains
             argnum = argnum + 1
             read( argval, * ) options%u
             print *, "Set u_ord = ", options%u
+         case("--u_num")
+            call get_command_argument(argnum, argval)
+            argnum = argnum + 1
+            read( argval, * ) control97%u
+            print *, "Set u_num = ", control97%u
          case default
             print *, "Unrecognised command line argument: ", argval
             stop
@@ -609,30 +645,43 @@ contains
       print *, "ma87 solve took ", tdiff(t1, t2)
    end subroutine run_ma87
 
-   subroutine run_ma97(n, ptr, row, val, order, scaling)
+   subroutine run_ma97(n, ptr, row, val, order, scaling, control)
       use hsl_mc69_double
-      use hsl_ma97_double
       integer, intent(in) :: n
       integer, dimension(n+1), intent(in) :: ptr
       integer, dimension(ptr(n+1)-1), intent(in) :: row
       real(wp), dimension(ptr(n+1)-1), intent(in) :: val
       integer, dimension(n), intent(inout) :: order
       real(wp), dimension(:), allocatable, intent(inout) :: scaling
+      type(ma97_control), intent(in) :: control
 
       type(ma97_akeep) :: akeep
       type(ma97_fkeep) :: fkeep
-      type(ma97_control) :: control
       type(ma97_info) :: info
 
       type(hungarian_options) :: hoptions
       type(hungarian_inform) :: hinform
 
-      real(wp), dimension(:), allocatable :: rhs
+      integer :: i, j, k, irit
+      real(wp), dimension(:), allocatable :: rhs, soln, dx
+      real(wp) :: res
 
       type(timespec) :: t1, t2
       integer :: dummy
 
-      control%ordering = 0 ! user supplied
+      real(wp), parameter :: conv_tol = 1d-14
+
+      ! Make up a rhs
+      allocate(rhs(n), soln(n))
+      rhs(:) = 0
+      do i = 1, n
+         do j = ptr(i), ptr(i+1)-1
+            k = row(j)
+            rhs(k) = rhs(k) + val(j)
+            if(i.eq.k) cycle
+            rhs(i) = rhs(i) + val(j)
+         end do
+      end do
 
       if(.not.allocated(scaling)) then
          ! Generate MC64 scaling
@@ -667,63 +716,186 @@ contains
       print *, "ma97 ndelay = ", info%num_delay
 
       ! Solve
-      allocate(rhs(n))
-      rhs(1:n) = 1.0
+      soln(:) = rhs(:)
       dummy = clock_gettime(0, t1)
-      call ma97_solve(rhs, akeep, fkeep, control, info)
+      call ma97_solve(soln, akeep, fkeep, control, info)
       dummy = clock_gettime(0, t2)
       if(info%flag.lt.0) then
          print *, "ma97_solve() failed with flag ", info%flag
          stop 1
       endif
       print *, "ma97 solve took ", tdiff(t1, t2)
+
+      print *, "number bad cmp = ", count(abs(soln(1:n)-1.0).ge.1e-6)
+      print *, "fwd error || ||_inf = ", maxval(abs(soln(1:n)-1.0))
+      call internal_calc_norm(n, ptr, row, val, soln, rhs, res)
+      print *, "bwd error scaled = ", res
+      print *, "Inertia = ", info%matrix_rank - info%num_neg, &
+         info%num_neg, n-info%matrix_rank
+
+      ! Iterative Refinement
+      irit = 1
+      if(res.ge.conv_tol) then
+         allocate(dx(n))
+         do irit = 2, 10
+            print *, "It ref iteration ", irit
+            call spmv(n, ptr, row, val, soln, dx)
+            dx = rhs(:) - dx
+            call ma97_solve(dx,akeep,fkeep,control,info)
+            soln(:) = soln(:) + dx(:)
+            print *, "fwd error || ||_inf = ", maxval(abs(soln(1:n)-1.0))
+            call internal_calc_norm(n, ptr, row, val, soln, rhs, res)
+            print *, "bwd error scaled = ", res
+            if(res.lt.conv_tol) exit
+         end do
+      endif
+      if(res.lt.conv_tol .and. maxval(abs(soln(1:n)-1.0)).lt.1e10) then
+         print *, "IR converged in ", irit, " iterations"
+      else
+         print *, "IR failed to converge"
+      endif
    end subroutine run_ma97
 
-   subroutine find_gupta_order(n, ptr, row, val, scaling, order, u)
-      use spral_nd_numaware
+   subroutine internal_calc_norm(n, ptr, row, val, x_vec, b_vec, res)
       integer, intent(in) :: n
       integer, dimension(n+1), intent(in) :: ptr
       integer, dimension(ptr(n+1)-1), intent(in) :: row
       real(wp), dimension(ptr(n+1)-1), intent(in) :: val
-      real(wp), dimension(n), intent(out) :: scaling
-      integer, dimension(n), intent(out) :: order
-      real(wp), intent(in) :: u
+      real(wp), dimension(n), intent(in) :: x_vec
+      real(wp), dimension(n), intent(in) :: b_vec
+      real(wp), intent(out) :: res
 
-      integer :: i, k
-      integer :: jj
-      integer, dimension(:), allocatable :: bigflag, iw, match, ptr2, row2
-      real(wp), dimension(:), allocatable :: val2
+      integer :: i, j, r
+      real(wp), dimension(:), allocatable :: res_vec
+      real(wp) :: temp, x_norm, normA
 
-      type(hungarian_options) :: hoptions
-      type(hungarian_inform) :: hinform
-
-      ! Find and apply MC64 scaling
-      call hungarian_scale_sym(n, ptr, row, val, scaling, hoptions, hinform)
-      allocate(val2(2*ptr(n+1)-1))
+      ! Find the residual
+      allocate(res_vec(n))
+      res_vec = 0
       do i = 1, n
-         do jj = ptr(i), ptr(i+1)-1
-            k = row(jj)
-            val2(jj) = scaling(i) * val(jj) * scaling(k)
+         do j = ptr(i), ptr(i+1)-1
+            r = row(j)
+            res_vec(i) = res_vec(i) + val(j) * x_vec(r)
+            if(r.eq.i) cycle
+            res_vec(r) = res_vec(r) + val(j) * x_vec(i)
          end do
       end do
+      res_vec(:) = res_vec(:) - b_vec(:)
 
-      ! Expand matrix
-      allocate(ptr2(n+1), row2(2*ptr(n+1)-1), iw(n))
-      ptr2(1:n+1) = ptr(1:n+1)
-      row2(1:ptr(n+1)-1) = row(1:ptr(n+1)-1)
-      call half_to_full(n, row2, ptr2, iw, a=val2)
+      ! Find matrix norm
+      call matrix_inf_norm(n, ptr, row, val, normA)
 
-      ! Determine flags array
-      allocate(bigflag(ptr2(n+1)-1), match(n))
-      match(:) = -1 ! set everything unmatched so no artifically "big" entries
-      call nd_set_a_flags(u, n, ptr2, row2, val2, match, bigflag)
+      ! Find x norm
+      x_norm = 0
+      do j =1, n
+         x_norm = max(x_norm, abs(x_vec(j)))
+         if(x_vec(j).ne.x_vec(j)) then ! Tests for NaN
+            x_norm = x_vec(j)
+            exit
+         endif
+      end do
 
-      ! Determine a matching
-      call find_matching(n, ptr2, row2, val2, bigflag, match)
+      print *, "||r|| = ", maxval(abs(res_vec(1:n)))
+      print *, "||A|| = ", normA
+      print *, "||x|| = ", x_norm
+      print *, "||b|| = ", maxval(abs(b_vec(1:n)))
 
-      ! Obtain ordering from call of metis on compressed graph
-      call compress_metis_call(n, ptr2, row2, match, order)
-   end subroutine
+      ! Scaled residual = ||r|| / ( ||A|| ||x|| + ||b|| )
+      temp = normA * x_norm + maxval(abs(b_vec(1:n)))
+      if(temp .eq. 0) then
+         res = maxval(abs(res_vec(1:n)))
+      else
+         res = maxval(abs(res_vec(1:n))) / temp
+      endif
+   end subroutine internal_calc_norm
+
+   subroutine matrix_inf_norm(n, ptr, row, val, norm)
+      integer, intent(in) :: n
+      integer, dimension(n+1), intent(in) :: ptr
+      integer, dimension(ptr(n+1)-1), intent(in) :: row
+      real(wp), dimension(ptr(n+1)-1), intent(in) :: val
+      real(wp), intent(out) :: norm
+
+      real(wp), allocatable, dimension(:) :: row_norm
+      integer :: i
+
+      allocate(row_norm(n))
+
+      row_norm = 0
+      do i = 1, ptr(n+1)-1
+         row_norm(row(i)) = row_norm(row(i)) + abs(val(i))
+      end do
+
+      norm = maxval(row_norm) 
+   end subroutine matrix_inf_norm
+
+   ! Calculates y = Ax
+   subroutine spmv(n, ptr, row, val, x, y)
+      integer, intent(in) :: n
+      integer, dimension(n+1), intent(in) :: ptr
+      integer, dimension(ptr(n+1)-1), intent(in) :: row
+      real(wp), dimension(ptr(n+1)-1), intent(in) :: val
+      real(wp), dimension(:), intent(in) :: x
+      real(wp), dimension(:), intent(out) :: y
+
+      integer :: i, j, r
+
+      y(:) = 0
+      do i = 1, n
+         do j = ptr(i), ptr(i+1)-1
+            r = row(j)
+            y(i) = y(i) + val(j) * x(r)
+            if(r.eq.i) cycle
+            y(r) = y(r) + val(j) * x(i)
+         end do
+      end do
+   end subroutine spmv
+
+!   subroutine find_gupta_order(n, ptr, row, val, scaling, order, u)
+!      use spral_nd_numaware
+!      integer, intent(in) :: n
+!      integer, dimension(n+1), intent(in) :: ptr
+!      integer, dimension(ptr(n+1)-1), intent(in) :: row
+!      real(wp), dimension(ptr(n+1)-1), intent(in) :: val
+!      real(wp), dimension(n), intent(out) :: scaling
+!      integer, dimension(n), intent(out) :: order
+!      real(wp), intent(in) :: u
+!
+!      integer :: i, k
+!      integer :: jj
+!      integer, dimension(:), allocatable :: bigflag, iw, match, ptr2, row2
+!      real(wp), dimension(:), allocatable :: val2
+!
+!      type(hungarian_options) :: hoptions
+!      type(hungarian_inform) :: hinform
+!
+!      ! Find and apply MC64 scaling
+!      call hungarian_scale_sym(n, ptr, row, val, scaling, hoptions, hinform)
+!      allocate(val2(2*ptr(n+1)-1))
+!      do i = 1, n
+!         do jj = ptr(i), ptr(i+1)-1
+!            k = row(jj)
+!            val2(jj) = scaling(i) * val(jj) * scaling(k)
+!         end do
+!      end do
+!
+!      ! Expand matrix
+!      allocate(ptr2(n+1), row2(2*ptr(n+1)-1), iw(n))
+!      ptr2(1:n+1) = ptr(1:n+1)
+!      row2(1:ptr(n+1)-1) = row(1:ptr(n+1)-1)
+!      call half_to_full(n, row2, ptr2, iw, a=val2)
+!
+!      ! Determine flags array
+!      allocate(bigflag(ptr2(n+1)-1), match(n))
+!      match(:) = -1 ! set everything unmatched so no artifically "big" entries
+!      call nd_set_a_flags(u, n, ptr2, row2, val2, match, bigflag)
+!
+!      ! Determine a matching
+!      call find_matching(n, ptr2, row2, val2, bigflag, match)
+!
+!      ! Obtain ordering from call of metis on compressed graph
+!      call compress_metis_call(n, ptr2, row2, match, order)
+!   end subroutine
 
    ! We expect both lwr and upr parts to be passed to the below
    !
