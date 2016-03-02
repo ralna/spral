@@ -13,7 +13,7 @@ contains
 
 subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
       partition, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, options,   &
-      info1, lwork, work, grids)
+      info, lwork, work, grids)
    integer, intent(in) :: a_n
    integer, intent(in) :: a_ne
    integer, dimension(a_n), intent(in) :: a_ptr
@@ -26,7 +26,7 @@ subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
    integer, intent(out) :: a_weight_1, a_weight_2, a_weight_sep ! Weighted
       ! size of partitions and separator
    type (nd_options), intent(in) :: options
-   integer, intent(inout) :: info1
+   integer, intent(inout) :: info
    integer, intent(in) :: lwork ! length of work array: must be atleast
       ! 9a_n + sumweight
    integer, intent(out) :: work(lwork) ! work array
@@ -35,10 +35,10 @@ subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
 
    integer :: level
    type(nd_multigrid), pointer :: grid
-   integer :: i, j, k, inv1, inv2, ins, info, st, grid_ne, cexit
+   integer :: i, j, k, inv1, inv2, ins, st, grid_ne, cexit
    integer :: stop_coarsening1
 
-   info1 = 0
+   info = 0
 
    call nd_print_diagnostic(1, options, 'Start multilevel_partition:')
 
@@ -48,8 +48,8 @@ subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
    st = 0
    call nd_matrix_construct(grids(1)%graph,a_n,a_n,a_ne,st)
    if (st.lt.0) then
-      info1 = ND_ERR_MEMORY_ALLOC
-      call nd_print_error(info1, options, ' multilevel_partition')
+      info = ND_ERR_MEMORY_ALLOC
+      call nd_print_error(info, options, ' multilevel_partition')
       return
    end if
 
@@ -69,15 +69,15 @@ subroutine multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
 
    call nd_alloc(grids(1)%where, a_n, st)
    if (st.lt.0) then
-      info1 = ND_ERR_MEMORY_ALLOC
-      call nd_print_error(info1, options, ' multilevel_partition')
+      info = ND_ERR_MEMORY_ALLOC
+      call nd_print_error(info, options, ' multilevel_partition')
       return
    end if
 
-   call nd_alloc(grids(1)%row_wgt, a_n, info1)
-   if (info1.lt.0) then
-      info1 = ND_ERR_MEMORY_ALLOC
-      call nd_print_error(info1, options, ' multilevel_partition')
+   call nd_alloc(grids(1)%row_wgt, a_n, info)
+   if (info.lt.0) then
+      info = ND_ERR_MEMORY_ALLOC
+      call nd_print_error(info, options, ' multilevel_partition')
       return
    end if
 

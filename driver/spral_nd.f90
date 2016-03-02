@@ -195,6 +195,10 @@ contains
       end select
       call match_order(n, ptr2, row2, val2, perm, scaling, mooptions, &
          moinform)
+      if(moinform%flag.ne.0) then
+         print *, "match_order() returned error ", moinform%flag
+         stop
+      endif
       print *, "Number matched = ", moinform%nmatch
    end subroutine find_match_order
 

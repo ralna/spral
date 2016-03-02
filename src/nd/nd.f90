@@ -484,6 +484,7 @@ recursive subroutine nd_nested_internal(a_n, a_ne, a_ptr, a_row, &
          a_n1, a_n2, a_ne1, a_ne2, iperm, work(1:lwork), options, info,       &
          use_multilevel, grids)
    endif
+   if(info%flag.ne.0) return
 
    if (a_n1.eq.a_n) go to 10 ! Failed to find a partition
 
@@ -902,6 +903,7 @@ subroutine nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level, &
          partition, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, options, &
          info%flag, lwork, work(work_ptr+1:work_ptr+lwork), grids)
    end if
+   if(info%flag.ne.0) return ! it's all gone horribly wrong
 
    ! If S is empty, return and caller will handle as special case
    if (a_n1+a_n2.eq.a_n) return
