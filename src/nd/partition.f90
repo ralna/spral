@@ -359,6 +359,8 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
       ! Not possible to find separator
       ! This can only be invoked for a fully connected graph. The partition
       ! subroutine checks for this case so it should never be called
+      ! HOWEVER: For mostly connected graphs we not have found a true diameter
+      ! so, this can occur, return an internal error code so it can be handled
       flag = ND_ERR_PSEUDO_FULL
       call nd_print_diagnostic(0, options, &
          'nd_half_level_set failed to find seperator on connected graph' &
@@ -558,6 +560,8 @@ subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, ndlevel, &
       ! Not possible to find separator
       ! This can only be invoked for a full connected graph. The partition
       ! subroutine checks for this case so it should never be called
+      ! HOWEVER: For mostly connected graphs we not have found a true diameter
+      ! so, this can occur, return an internal error code so it can be handled
       flag = ND_ERR_PSEUDO_FULL
       call nd_print_diagnostic(0, options, &
          'nd_level_set failed to find seperator on connected graph' &
