@@ -500,7 +500,7 @@ subroutine nd_coarse_partition(a_n,a_ne,a_ptr,a_row,a_weight, &
       a_n2,a_weight_1,a_weight_2,a_weight_sep, &
       work1(partition_ptr+1:partition_ptr+a_n),work(1:9*a_n+sumweight), &
       options,dummy,dummy1,use_multilevel,info)
-    if(info.ne.0) return ! it's all gone horribly wrong
+    if(info.ne.0) goto 30
 
     if (printi .or. printd) then
       write (unit_diagnostics,'(a)') ' '
@@ -519,7 +519,7 @@ subroutine nd_coarse_partition(a_n,a_ne,a_ptr,a_row,a_weight, &
       a_n2,a_weight_1,a_weight_2,a_weight_sep, &
       work1(partition_ptr+1:partition_ptr+a_n),work(1:9*a_n+sumweight), &
       options,dummy,dummy1,use_multilevel, info)
-    if(info.ne.0) return ! it's all gone horribly wrong
+    if(info.ne.0) goto 30
 
     if (printi .or. printd) then
       write (unit_diagnostics,'(a)') ' '
@@ -600,6 +600,12 @@ subroutine nd_coarse_partition(a_n,a_ne,a_ptr,a_row,a_weight, &
       'nd_coarse_partition')
   end if
   return
+
+30 continue
+   if(info.eq.ND_ERR_PSEUDO_FULL) info = 0
+   a_n1 = a_n
+   a_n2 = 0
+   return
 
 end subroutine nd_coarse_partition
 

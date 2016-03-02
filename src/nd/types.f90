@@ -10,7 +10,8 @@ module spral_nd_types
    integer, parameter :: ND_ERR_MEMORY_ALLOC = -1,   &
                          ND_ERR_MEMORY_DEALLOC = -2, &
                          ND_ERR_N = -3,              & ! n<1
-                         ND_ERR_INTERNAL = -99         ! Shouldn't happen
+                         ND_ERR_INTERNAL = -99,      & ! Shouldn't happen
+                         ND_ERR_PSEUDO_FULL = -100     ! all in same LS
 
    ! Partition flags
    integer, parameter :: ND_PART1_FLAG = 0,     &

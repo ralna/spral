@@ -181,7 +181,7 @@ subroutine nd_order(mtx,n,ptr,row,perm,options,info,val,seps)
       a_weight(1:a_n_curr) = 1
    end if
 
-   !call check_matrix_sym(a_n, a_ne, a_ptr, a_row)
+   !call check_matrix_sym(a_n_curr, a_ne_curr, a_ptr, a_row)
 
    !!!!!!!!!!!!!!!!!!!!!!
    ! Main ordering
@@ -896,14 +896,14 @@ subroutine nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level, &
          work(work_ptr+1:work_ptr+9*a_n+sumweight), options, band, depth,     &
          use_multilevel, info%flag)
    end select
-   if(info%flag.ne.0) return ! it's all gone horribly wrong
+   if(info%flag.ne.0) goto 20
    if (use_multilevel) then
       lwork = 9*a_n + sumweight
       call multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight,  &
          partition, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, options, &
          info%flag, lwork, work(work_ptr+1:work_ptr+lwork), grids)
    end if
-   if(info%flag.ne.0) return ! it's all gone horribly wrong
+   if(info%flag.ne.0) goto 20
 
    ! If S is empty, return and caller will handle as special case
    if (a_n1+a_n2.eq.a_n) return
@@ -1082,6 +1082,21 @@ subroutine nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level, &
 
    info%flag = 0
    call nd_print_diagnostic(1, options, ' nd_partition: successful completion')
+
+   return
+
+   20 continue
+   ! Couldn't find a partition
+   a_n1 = a_n
+   a_n2 = 0
+   a_ne1 = a_ne
+   a_ne2 = 0
+   if(info%flag.eq.ND_ERR_PSEUDO_FULL) info%flag = 0
+   call nd_print_diagnostic(1, options, 'No partition found')
+   call nd_print_diagnostic(1, options, &
+      ' nd_partition: successful completion' &
+      )
+   return
 end subroutine nd_partition
 
 
