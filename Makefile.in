@@ -87,7 +87,8 @@ host_triplet = @host@
 @HAVE_NVCC_TRUE@	src/cuda/cuda.f90 \
 @HAVE_NVCC_TRUE@	src/cuda/cuda_check.h
 
-check_PROGRAMS = scaling_test$(EXEEXT) \
+check_PROGRAMS = lsmr_test$(EXEEXT) examples/Fortran/lsmr$(EXEEXT) \
+	scaling_test$(EXEEXT) \
 	examples/Fortran/scaling/auction_sym$(EXEEXT) \
 	examples/Fortran/scaling/auction_unsym$(EXEEXT) \
 	examples/Fortran/scaling/equilib_sym$(EXEEXT) \
@@ -115,7 +116,7 @@ check_PROGRAMS = scaling_test$(EXEEXT) \
 	examples/Fortran/ssmfe/precond_expert$(EXEEXT) \
 	examples/Fortran/ssmfe/precond_ssmfe$(EXEEXT) \
 	examples/Fortran/ssmfe/shift_invert$(EXEEXT)
-TESTS = scaling_test$(EXEEXT) random_test$(EXEEXT) \
+TESTS = lsmr_test$(EXEEXT) scaling_test$(EXEEXT) random_test$(EXEEXT) \
 	random_matrix_test$(EXEEXT) $(am__EXEEXT_2) \
 	ssmfe_test$(EXEEXT) ssmfe_ciface_test$(EXEEXT)
 
@@ -206,8 +207,9 @@ libspral_a_AR = $(AR) $(ARFLAGS)
 libspral_a_LIBADD =
 am__libspral_a_SOURCES_DIST = src/blas_iface.f90 src/core_analyse.f90 \
 	src/cuda/api_wrappers.cu src/cuda/cuda.f90 \
-	src/cuda/cuda_check.h src/lapack_iface.f90 src/match_order.f90 \
-	src/matrix_util.f90 interfaces/C/matrix_util.f90 \
+	src/cuda/cuda_check.h src/lapack_iface.f90 src/lsmr.f90 \
+	src/match_order.f90 src/matrix_util.f90 \
+	interfaces/C/matrix_util.f90 \
 	src/metis$(METIS_VERSION)_wrapper.f90 src/pgm.f90 \
 	src/rutherford_boeing.f90 interfaces/C/rutherford_boeing.f90 \
 	src/scaling.f90 interfaces/C/scaling.f90 src/timer.f90 \
@@ -247,8 +249,9 @@ am__dirstamp = $(am__leading_dot)dirstamp
 @HAVE_NVCC_TRUE@	interfaces/C/ssids.$(OBJEXT)
 am_libspral_a_OBJECTS = src/blas_iface.$(OBJEXT) \
 	src/core_analyse.$(OBJEXT) $(am__objects_1) \
-	src/lapack_iface.$(OBJEXT) src/match_order.$(OBJEXT) \
-	src/matrix_util.$(OBJEXT) interfaces/C/matrix_util.$(OBJEXT) \
+	src/lapack_iface.$(OBJEXT) src/lsmr.$(OBJEXT) \
+	src/match_order.$(OBJEXT) src/matrix_util.$(OBJEXT) \
+	interfaces/C/matrix_util.$(OBJEXT) \
 	src/metis$(METIS_VERSION)_wrapper.$(OBJEXT) src/pgm.$(OBJEXT) \
 	src/rutherford_boeing.$(OBJEXT) \
 	interfaces/C/rutherford_boeing.$(OBJEXT) src/scaling.$(OBJEXT) \
@@ -376,6 +379,12 @@ examples_C_ssmfe_shift_invert_LDADD = $(LDADD)
 examples_C_ssmfe_shift_invert_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1)
+am_examples_Fortran_lsmr_OBJECTS = examples/Fortran/lsmr.$(OBJEXT)
+examples_Fortran_lsmr_OBJECTS = $(am_examples_Fortran_lsmr_OBJECTS)
+examples_Fortran_lsmr_LDADD = $(LDADD)
+examples_Fortran_lsmr_DEPENDENCIES = $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 am_examples_Fortran_random_OBJECTS =  \
 	examples/Fortran/random.$(OBJEXT)
 examples_Fortran_random_OBJECTS =  \
@@ -491,6 +500,11 @@ examples_Fortran_ssmfe_shift_invert_LDADD = $(LDADD)
 examples_Fortran_ssmfe_shift_invert_DEPENDENCIES =  \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+am_lsmr_test_OBJECTS = tests/lsmr.$(OBJEXT)
+lsmr_test_OBJECTS = $(am_lsmr_test_OBJECTS)
+lsmr_test_LDADD = $(LDADD)
+lsmr_test_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_random_matrix_test_OBJECTS = tests/random_matrix.$(OBJEXT)
 random_matrix_test_OBJECTS = $(am_random_matrix_test_OBJECTS)
 random_matrix_test_LDADD = $(LDADD)
@@ -583,6 +597,7 @@ SOURCES = $(libspral_a_SOURCES) $(examples_C_random_SOURCES) \
 	$(examples_C_ssmfe_precond_expert_SOURCES) \
 	$(examples_C_ssmfe_precond_ssmfe_SOURCES) \
 	$(examples_C_ssmfe_shift_invert_SOURCES) \
+	$(examples_Fortran_lsmr_SOURCES) \
 	$(examples_Fortran_random_SOURCES) \
 	$(examples_Fortran_random_matrix_SOURCES) \
 	$(examples_Fortran_scaling_auction_sym_SOURCES) \
@@ -597,10 +612,10 @@ SOURCES = $(libspral_a_SOURCES) $(examples_C_random_SOURCES) \
 	$(examples_Fortran_ssmfe_precond_expert_SOURCES) \
 	$(examples_Fortran_ssmfe_precond_ssmfe_SOURCES) \
 	$(examples_Fortran_ssmfe_shift_invert_SOURCES) \
-	$(random_matrix_test_SOURCES) $(random_test_SOURCES) \
-	$(scaling_test_SOURCES) $(spral_ssids_SOURCES) \
-	$(ssids_test_SOURCES) $(ssmfe_ciface_test_SOURCES) \
-	$(ssmfe_test_SOURCES)
+	$(lsmr_test_SOURCES) $(random_matrix_test_SOURCES) \
+	$(random_test_SOURCES) $(scaling_test_SOURCES) \
+	$(spral_ssids_SOURCES) $(ssids_test_SOURCES) \
+	$(ssmfe_ciface_test_SOURCES) $(ssmfe_test_SOURCES)
 DIST_SOURCES = $(am__libspral_a_SOURCES_DIST) \
 	$(examples_C_random_SOURCES) \
 	$(examples_C_random_matrix_SOURCES) \
@@ -616,6 +631,7 @@ DIST_SOURCES = $(am__libspral_a_SOURCES_DIST) \
 	$(examples_C_ssmfe_precond_expert_SOURCES) \
 	$(examples_C_ssmfe_precond_ssmfe_SOURCES) \
 	$(examples_C_ssmfe_shift_invert_SOURCES) \
+	$(examples_Fortran_lsmr_SOURCES) \
 	$(examples_Fortran_random_SOURCES) \
 	$(examples_Fortran_random_matrix_SOURCES) \
 	$(examples_Fortran_scaling_auction_sym_SOURCES) \
@@ -630,10 +646,10 @@ DIST_SOURCES = $(am__libspral_a_SOURCES_DIST) \
 	$(examples_Fortran_ssmfe_precond_expert_SOURCES) \
 	$(examples_Fortran_ssmfe_precond_ssmfe_SOURCES) \
 	$(examples_Fortran_ssmfe_shift_invert_SOURCES) \
-	$(random_matrix_test_SOURCES) $(random_test_SOURCES) \
-	$(scaling_test_SOURCES) $(am__spral_ssids_SOURCES_DIST) \
-	$(am__ssids_test_SOURCES_DIST) $(ssmfe_ciface_test_SOURCES) \
-	$(ssmfe_test_SOURCES)
+	$(lsmr_test_SOURCES) $(random_matrix_test_SOURCES) \
+	$(random_test_SOURCES) $(scaling_test_SOURCES) \
+	$(am__spral_ssids_SOURCES_DIST) $(am__ssids_test_SOURCES_DIST) \
+	$(ssmfe_ciface_test_SOURCES) $(ssmfe_test_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -1014,6 +1030,8 @@ include_HEADERS = include/spral.h include/spral_matrix_util.h \
 
 # LAPACK_IFACE
 
+# LSMR
+
 # MATCH_ORDER
 
 # METIS_WRAPPER
@@ -1022,8 +1040,9 @@ include_HEADERS = include/spral.h include/spral_matrix_util.h \
 
 # TIMER
 libspral_a_SOURCES = src/blas_iface.f90 src/core_analyse.f90 \
-	$(am__append_1) src/lapack_iface.f90 src/match_order.f90 \
-	src/matrix_util.f90 interfaces/C/matrix_util.f90 \
+	$(am__append_1) src/lapack_iface.f90 src/lsmr.f90 \
+	src/match_order.f90 src/matrix_util.f90 \
+	interfaces/C/matrix_util.f90 \
 	src/metis$(METIS_VERSION)_wrapper.f90 src/pgm.f90 \
 	src/rutherford_boeing.f90 interfaces/C/rutherford_boeing.f90 \
 	src/scaling.f90 interfaces/C/scaling.f90 src/timer.f90 \
@@ -1032,6 +1051,8 @@ libspral_a_SOURCES = src/blas_iface.f90 src/core_analyse.f90 \
 	src/ssmfe/ssmfe.f90 src/ssmfe/core.f90 src/ssmfe/expert.f90 \
 	interfaces/C/ssmfe.f90 interfaces/C/ssmfe_core.f90 \
 	interfaces/C/ssmfe_expert.f90
+lsmr_test_SOURCES = tests/lsmr.f90
+examples_Fortran_lsmr_SOURCES = examples/Fortran/lsmr.f90
 EXTRA_DIST = src/metis4_wrapper.f90 src/metis5_wrapper.f90
 scaling_test_SOURCES = tests/scaling.f90
 examples_Fortran_scaling_auction_sym_SOURCES = examples/Fortran/scaling/auction_sym.f90
@@ -1202,6 +1223,7 @@ src/cuda/cuda.$(OBJEXT): src/cuda/$(am__dirstamp) \
 	src/cuda/$(DEPDIR)/$(am__dirstamp)
 src/lapack_iface.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
+src/lsmr.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 src/match_order.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/matrix_util.$(OBJEXT): src/$(am__dirstamp) \
@@ -1462,6 +1484,12 @@ examples/Fortran/$(am__dirstamp):
 examples/Fortran/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) examples/Fortran/$(DEPDIR)
 	@: > examples/Fortran/$(DEPDIR)/$(am__dirstamp)
+examples/Fortran/lsmr.$(OBJEXT): examples/Fortran/$(am__dirstamp) \
+	examples/Fortran/$(DEPDIR)/$(am__dirstamp)
+
+examples/Fortran/lsmr$(EXEEXT): $(examples_Fortran_lsmr_OBJECTS) $(examples_Fortran_lsmr_DEPENDENCIES) $(EXTRA_examples_Fortran_lsmr_DEPENDENCIES) examples/Fortran/$(am__dirstamp)
+	@rm -f examples/Fortran/lsmr$(EXEEXT)
+	$(AM_V_FCLD)$(FCLINK) $(examples_Fortran_lsmr_OBJECTS) $(examples_Fortran_lsmr_LDADD) $(LIBS)
 examples/Fortran/random.$(OBJEXT): examples/Fortran/$(am__dirstamp) \
 	examples/Fortran/$(DEPDIR)/$(am__dirstamp)
 
@@ -1582,6 +1610,12 @@ tests/$(am__dirstamp):
 tests/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) tests/$(DEPDIR)
 	@: > tests/$(DEPDIR)/$(am__dirstamp)
+tests/lsmr.$(OBJEXT): tests/$(am__dirstamp) \
+	tests/$(DEPDIR)/$(am__dirstamp)
+
+lsmr_test$(EXEEXT): $(lsmr_test_OBJECTS) $(lsmr_test_DEPENDENCIES) $(EXTRA_lsmr_test_DEPENDENCIES) 
+	@rm -f lsmr_test$(EXEEXT)
+	$(AM_V_FCLD)$(FCLINK) $(lsmr_test_OBJECTS) $(lsmr_test_LDADD) $(LIBS)
 tests/random_matrix.$(OBJEXT): tests/$(am__dirstamp) \
 	tests/$(DEPDIR)/$(am__dirstamp)
 
@@ -1916,6 +1950,13 @@ recheck: all $(check_PROGRAMS)
 	        am__force_recheck=am--force-recheck \
 	        TEST_LOGS="$$log_list"; \
 	exit $$?
+lsmr_test.log: lsmr_test$(EXEEXT)
+	@p='lsmr_test$(EXEEXT)'; \
+	b='lsmr_test'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 scaling_test.log: scaling_test$(EXEEXT)
 	@p='scaling_test$(EXEEXT)'; \
 	b='scaling_test'; \
@@ -2303,6 +2344,8 @@ uninstall-am: uninstall-binPROGRAMS uninstall-includeHEADERS \
 
 .cu.o:
 	$(NVCC) $(NVCCFLAGS) $(AM_NVCC_FLAGS) -dc -o $@ $<
+tests/lsmr.$(OBJEXT): libspral.a
+examples/Fortran/lsmr.$(OBJEXT): libspral.a
 tests/scaling.$(OBJEXT): libspral.a
 examples/Fortran/scaling/auction_sym.$(OBJEXT): libspral.a
 examples/Fortran/scaling/auction_unsym.$(OBJEXT): libspral.a
