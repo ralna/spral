@@ -970,7 +970,7 @@ contains
       integer, intent(in) :: n
       integer, dimension(n+1), intent(in) :: ptr
       integer, dimension(ptr(n+1)-1), intent(in) :: row
-      integer, dimension(n), intent(out) :: match
+      integer, dimension(n), intent(in) :: match
       integer, dimension(n), intent(out) :: order
 
       integer :: i, j, j1, j2, jj, k, krow, metis_flag, stat
