@@ -282,7 +282,7 @@ subroutine nd_order(mtx,n,ptr,row,perm,options,info,val,seps)
                .false., use_multilevel, grids, work_seps)
          endif
       else
-         ! Supervariables: use work_iperm(:) instead of perm(:)
+         ! Supervariables: use work_iperm(:) instead of iperm(:)
          if(present(val)) then
             call nd_nested_internal(a_n_curr, a_ne_curr, a_ptr(1:a_n_curr), &
                a_row(1:a_ne_curr), a_weight(1:a_n_curr), sumweight,         &
@@ -939,12 +939,15 @@ subroutine nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level, &
    end if
    
    if(present(a_flags)) then
+      ! Take copy of a_match just in case things end badly
+      work(work_ptr+10*a_n+1:work_ptr+11*a_n) = a_match(1:a_n)
+
       ! Expand partition to make it valid with respect to the flags
       call nd_expand_to_valid(a_n, a_ne, a_ptr, a_row, a_weight, &
          a_flags, a_flags_diag, a_match, a_n1, a_n2, a_weight_1, a_weight_2, &
          a_weight_sep, partition, work(work_ptr+1:work_ptr+10*a_n))
 
-        ! Trim partition keeping it valid with respect to the flags
+      ! Trim partition keeping it valid with respect to the flags
       call nd_trim_keep_valid(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
          a_flags, a_flags_diag, a_match, a_n1, a_n2, a_weight_1, a_weight_2, &
          a_weight_sep, partition, work(work_ptr+1:work_ptr+10*a_n), options)
@@ -967,6 +970,11 @@ subroutine nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level, &
          call nd_print_diagnostic(1, options, &
             ' nd_partition: successful completion' &
             )
+         a_match(1:a_n) = work(work_ptr+10*a_n+1:work_ptr+11*a_n)
+         a_n1 = a_n
+         a_n2 = 0
+         a_ne1 = a_ne
+         a_ne2 = 0
          return
       endif
         

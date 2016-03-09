@@ -240,13 +240,13 @@ subroutine remove_dense_rows(a_n, a_ne, a_ptr, a_row, iperm, options, info, &
          ! Not already matched with a dense row we've removed
          ndense = ndense + 1
          dense(i) = -ndense
-      endif
-      if(present(a_flags)) then
-         j = a_match(i)
-         if(j.ne.-1 .and. j.ne.i) then
-            ! Mark partner as dense too - but don't remove from lists
-            ndense = ndense + 1
-            dense(j) = -ndense
+         if(present(a_flags)) then
+            j = a_match(i)
+            if(j.ne.-1 .and. j.ne.i) then
+               ! Mark partner as dense too - but don't remove from lists
+               ndense = ndense + 1
+               dense(j) = -ndense
+            endif
          endif
       endif
       call dense_remove_from_list(a_n, next, prev, deg, i, degree)
