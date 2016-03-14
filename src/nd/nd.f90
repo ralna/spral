@@ -23,7 +23,8 @@ contains
 !
 ! Main user callable routine
 !
-subroutine nd_order(mtx,n,ptr,row,perm,options,info,seps)
+subroutine nd_order(method,mtx,n,ptr,row,perm,options,info,seps)
+   integer, intent(in) :: method ! <=0 non-multilevel, >=1 multilevel
    integer, intent(in) :: mtx ! 0 if lower triangular part matrix input,
       ! 1 if both upper and lower parts input
    integer, intent(in) :: n ! number of rows in the matrix
@@ -223,7 +224,7 @@ subroutine nd_order(mtx,n,ptr,row,perm,options,info,seps)
       allocate (grids(max(1,options%stop_coarsening2)), stat=info%stat)
       if (info%stat.ne.0) go to 10
 
-      use_multilevel = .true.
+      use_multilevel = (method.ge.1)
       sumweight = sum(a_weight(1:a_n_curr))
       lwork = 12*a_n_curr + sumweight + a_ne_curr
       if (nsvar+num_zero_row.eq.a_n) then

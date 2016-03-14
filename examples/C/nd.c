@@ -8,6 +8,7 @@ int main(void) {
    struct spral_nd_inform inform;
 
    /* Initialize options */
+   int method = 0; // Non-multilevel
    spral_nd_default_options(&options);
 
    /* Data for matrix:
@@ -26,7 +27,7 @@ int main(void) {
 
    /* Find and print nested dissection ordering */
    int perm[n];
-   spral_nd_order(0, n, ptr, row, perm, &options, &inform);
+   spral_nd_order(method, 0, n, ptr, row, perm, &options, &inform);
    printf("Permutation:");
    for(int i=0; i<n; i++) printf(" %5d", perm[i]);
    printf("\n");

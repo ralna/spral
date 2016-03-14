@@ -17,7 +17,6 @@ module spral_nd_ciface
       integer(C_INT) :: matching
       real(C_DOUBLE) :: max_reduction
       real(C_DOUBLE) :: min_reduction
-      integer(C_INT) :: partition_method
       integer(C_INT) :: refinement_band
       logical(C_BOOL) :: remove_dense_rows
       integer(C_INT) :: stop_coarsening1
@@ -51,7 +50,6 @@ contains
       foptions%matching             = coptions%matching
       foptions%max_reduction        = coptions%max_reduction
       foptions%min_reduction        = coptions%min_reduction
-      foptions%partition_method     = coptions%partition_method
       foptions%refinement_band      = coptions%refinement_band
       foptions%remove_dense_rows    = coptions%remove_dense_rows
       foptions%stop_coarsening1     = coptions%stop_coarsening1
@@ -92,17 +90,18 @@ subroutine spral_nd_default_options(coptions) bind(C)
    coptions%matching             = default_options%matching
    coptions%max_reduction        = default_options%max_reduction
    coptions%min_reduction        = default_options%min_reduction
-   coptions%partition_method     = default_options%partition_method
    coptions%refinement_band      = default_options%refinement_band
    coptions%remove_dense_rows    = default_options%remove_dense_rows
    coptions%stop_coarsening1     = default_options%stop_coarsening1
    coptions%stop_coarsening2     = default_options%stop_coarsening2
 end subroutine spral_nd_default_options
 
-subroutine spral_nd_order(mtx, n, cptr, crow, perm, coptions, cinform) bind(C)
+subroutine spral_nd_order(method, mtx, n, cptr, crow, perm, coptions, cinform) &
+      bind(C)
    use spral_nd_ciface
    implicit none
 
+   integer(C_INT), value :: method
    integer(C_INT), value :: mtx
    integer(C_INT), value :: n
    integer(C_INT), dimension(*), target, intent(in) :: cptr
@@ -136,7 +135,7 @@ subroutine spral_nd_order(mtx, n, cptr, crow, perm, coptions, cinform) bind(C)
    endif
 
    ! Call Fortran procedure
-   call nd_order(mtx, n, fptr, frow, perm, foptions, finform)
+   call nd_order(method, mtx, n, fptr, frow, perm, foptions, finform)
 
    ! Copy arguments out
    if(cindexed) perm(1:n) = perm(1:n) - 1

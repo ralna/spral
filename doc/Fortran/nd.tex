@@ -168,7 +168,7 @@ or duplicates may cause {\tt nd\_order} to fail in an unpredictable way.
 
 {\bf To compute the nested dissection ordering,}
    \vspace*{0.3cm} \\
-   \texttt{\hspace*{0.2cm} call nd\_order(mtx,n,ptr,row,perm,options,inform[,seps])}
+   \texttt{\hspace*{0.2cm} call nd\_order(method,mtx,n,ptr,row,perm,options,inform[,seps])}
 \vspace{0.3em}
 
 \noindent
@@ -176,6 +176,11 @@ Matrix data should be supplied as described in Section~\ref{nd:cscformat}.
 
 \noindent
 \begin{description}
+
+\item[\texttt{method}] is an {\tt INTEGER} scalar with {\tt INTENT(IN)} that
+specifies whether the non-multilevel (banded) or multilevel algorithm is used
+to order the matrix. The non-multilevel scheme is generally considerably faster,
+but delivers poorer quality orderings for non-banded matrices.
 
 \item[\texttt{mtx}] is an {\tt INTEGER} scalar with {\tt INTENT(IN)} that 
 determines whether $A$ is input using only the lower triangular entries 
@@ -352,15 +357,6 @@ The default is {\tt stop\_coarsening1=12000}.
 
 
 
-\item[\texttt{partition\_method}] is an {\tt INTEGER} scalar used to determine whether a multilevel 
-partitioning scheme is used.  The different options are
-\begin{description}
-\item{\tt $=$ 0 } Multilevel partitioning scheme is {\bf not} used,
-\item{\tt $=$ 1 } Multilevel partitioning scheme is  used,
-\item{\tt $=$ 2 } Automatic choice of whether the multilevel partitioning scheme is used.
-\end{description}
-See Section~\ref{nd:method} for further details. The default is {\tt partition\_method=2}.
-
 \item[\texttt{refinement\_band}] is an {\tt INTEGER} scalar used within the 
 Fiduccia-Mattheyses refinement. The variables in the refined separator must be 
 at most distance {\tt refinement\_band} from a variable that was in the input 
@@ -487,9 +483,8 @@ quality, or
 is performed, where \texttt{options\%matching} determines the strategy used to form 
 the coarsening matrix.
 \end{itemize}
-The user may choose which partitioning method to use or {\tt ND} can analyse 
-$\widetilde{A}$ and automatically choose how to partition the matrix, see 
-\texttt{options\%partition\_method}.
+The user must specify which method to use through the \texttt{method} parameter
+to \texttt{nd\_order()}.
 
 \vspace{0.5cm}
 \noindent\hrulefill\\

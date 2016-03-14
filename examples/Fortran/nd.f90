@@ -6,6 +6,7 @@ program example
    ! Derived types
    type (nd_options) :: options
    type (nd_inform) :: inform
+   integer :: method
 
    ! Matrix data
    integer :: n, row(14), ptr(9), perm(8)
@@ -25,7 +26,8 @@ program example
    row(1:ptr(n+1)-1) = (/ 2, 4, 5, 6, 4, 6, 7, 5, 6, 7, 6, 8, 7, 8 /)
 
    ! Find nested dissection ordering
-   call nd_order(0, n, ptr, row, perm, options, inform)
+   method = 0 ! Non-multilevel
+   call nd_order(method, 0, n, ptr, row, perm, options, inform)
 
    ! Print out nested dissection ordering
    write(*,"(a, 8i8)") ' Permutation : ', perm(:)

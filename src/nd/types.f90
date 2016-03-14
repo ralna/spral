@@ -49,11 +49,6 @@ module spral_nd_types
          ! <=1 : |P1||P2|/|S| + penalty for imbalance
          !  =2 : |S|(1 +  0.5||P1|-|P2||)
          ! >=3 : As 1, but with more convex imbalance penalty
-      integer :: partition_method = 2 ! Are we allowed to use a multilevel
-         ! strategy
-         ! <= 0 : do not use multilevel
-         ! == 1 : use multilevel
-         ! >= 2 : automatic choice based on size of levelsets
       integer :: matching = ND_MATCH_SHEM ! Which coarsening method to use
          ! <= 1 : common neighbours matching (CNM)
          ! >= 2 : sorted heavy-edge matching (SHEM)

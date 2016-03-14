@@ -37,7 +37,7 @@ subroutine region_grow_partition(a_n, a_ne, a_ptr, a_row, a_weight, &
    real(wp), intent(out) :: band ! band = 100*L/a_n, where L is the size of
       ! the largest levelset
    real(wp), intent(out) :: depth !  depth = num_levels_nend
-   logical, intent(inout) :: use_multilevel ! are we allowed to use a
+   logical, intent(in) :: use_multilevel ! are we allowed to use a
       ! multilevel partitioning strategy
    integer, intent(out) :: flag ! error indicator
 
@@ -61,9 +61,7 @@ subroutine region_grow_partition(a_n, a_ne, a_ptr, a_row, a_weight, &
    depth = -1.0
 
    ! If we're going to use multilevel regardless, immediate return
-   if (options%partition_method.eq.1 .and. use_multilevel) return
-   if (options%partition_method.gt.1 .and. ndlevel.gt.0 .and. use_multilevel) &
-      return
+   if (use_multilevel) return
 
    ! Use a breadth-first search to find n/2 vertices
    work_ptr = 0
@@ -213,7 +211,7 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
    real(wp), intent(out) :: band ! band = 100*L/a_n, where L is the size of
       ! the largest levelset
    real(wp), intent(out) :: depth !  depth = num_levels_nend
-   logical, intent(inout) :: use_multilevel ! are we allowed to use a
+   logical, intent(in) :: use_multilevel ! are we allowed to use a
       ! multilevel partitioning strategy
    integer, intent(out) :: flag ! error indicator
 
@@ -229,7 +227,7 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
    real(wp) :: bestval
    real(wp) :: val
    real(wp) :: balance, balance_tol
-   logical :: imbal, use_multilevel_copy
+   logical :: imbal
 
    integer, parameter :: max_search = 5 ! max iterations to find pseudo-diameter
    integer, parameter :: ww = 2 ! width of seperator in terms of half level sets
@@ -243,16 +241,13 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
    depth = -1.0
 
    ! If we're going to use multilevel regardless, immediate return
-   if (options%partition_method.eq.1 .and. use_multilevel) return
-   if (options%partition_method.gt.1 .and. ndlevel.gt.0 .and. use_multilevel) &
-      return
+   if (use_multilevel) return
 
    ! Initialize various internal variables
    balance_tol = max(1.0_wp, options%balance)
    imbal = (balance_tol .le. sumweight-2.0_wp)
    p2sz = 0
    sepsz = 0
-   use_multilevel_copy = use_multilevel
 
    ! Find pseudoperipheral nodes nstart and nend, and the level structure
    ! rooted at nend
@@ -306,22 +301,12 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
       end do
       band = -real(lwidth,wp)
 
-      use_multilevel = .false. ! Will be reset for each component anyway
       return
    end if
 
    ! ********************************************************************
    band = (100.0_wp * lwidth) / a_n
    depth = (100.0_wp * num_levels_nend) / a_n
-
-   if (options%stop_coarsening2.le.0 .or. options%partition_method.lt.1) &
-      use_multilevel = .false.
-   if (options%partition_method.ge.2 .and. use_multilevel) then
-      if ( (100.0_wp*lwidth)/a_n.le.3.0 .or. a_n.lt.options%ml_call ) &
-         use_multilevel = .false.
-   end if
-
-   if (use_multilevel) return
 
    ! Find level structure rooted at nstrt
    mask(:) = 1
@@ -397,15 +382,6 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
    end do
    !print *, "Finally chose ", a_weight_1, a_weight_2, a_weight_sep
 
-   if (imbal .and. use_multilevel_copy .and. options%partition_method.ge.2) &
-         then
-      balance = real(max(a_weight_1,a_weight_2)) / min(a_weight_1,a_weight_2)
-      if (balance .gt. balance_tol) then
-         use_multilevel = .true.
-         return
-      end if
-   end if
-
    ! Rearrange partition
    ! Entries in partition 1
    j = 1
@@ -457,7 +433,7 @@ subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, ndlevel, &
    real(wp), intent(out) :: band ! band = 100*L/a_n, where L is the size of
       ! the largest levelset
    real(wp), intent(out) :: depth ! depth = num_levels_nend
-   logical, intent(inout) :: use_multilevel ! are we allowed to use a multilevel
+   logical, intent(in) :: use_multilevel ! are we allowed to use a multilevel
       ! partitioning strategy
    integer, intent(out) :: flag
 
@@ -485,9 +461,7 @@ subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, ndlevel, &
    depth = -1.0
 
    ! If we're going to use multilevel regardless, immediate return
-   if (options%partition_method.eq.1 .and. use_multilevel) return
-   if (options%partition_method.gt.1 .and. ndlevel.gt.0 .and. use_multilevel) &
-      return
+   if (use_multilevel) return
 
    ! Initialize internal variables
    balance_tol = max(real(1.0,wp),options%balance)
@@ -538,21 +512,11 @@ subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, ndlevel, &
       end do
       a_weight_sep = 0
 
-      use_multilevel = .false. ! Will be reset for each component
       return
    end if
 
    band = (100.0_wp * lwidth) / sumweight
    depth = (100.0_wp * num_levels_nend) / sumweight
-
-   if (options%partition_method.le.0 .or. options%stop_coarsening2.le.0) &
-      use_multilevel = .false.
-   if (options%partition_method.ge.2 .and. use_multilevel) then
-      if ( (100.0_wp*lwidth)/a_n.le.3.0 .or. a_n.lt. options%ml_call ) &
-         use_multilevel = .false.
-   end if
-
-   if (use_multilevel) return
 
    if (num_levels_nend.le.2) then
       ! Not possible to find separator

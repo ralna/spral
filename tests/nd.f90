@@ -148,6 +148,7 @@ end subroutine check_success
 subroutine test_errors
    integer :: n, ne
    integer, allocatable, dimension(:) :: ptr, row, perm, seps
+   integer :: method
    type (nd_options) :: options
    type (nd_inform) :: info
 
@@ -164,14 +165,15 @@ subroutine test_errors
    allocate (ptr(n+1), row(ne), perm(n), seps(n))
    ptr(1) = 1
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 2
 
    write (*, '(a)', advance="no") ' * Testing n=0, lower entry...'
-   call nd_order(0, n, ptr, row, perm, options, info, seps)
+   call nd_order(method,0, n, ptr, row, perm, options, info, seps)
    call check_flag(info%flag, -3)
 
    write (*, '(a)', advance="no") ' * Testing n=0, lower+upper entry...'
-   call nd_order(1, n, ptr, row, perm, options, info, seps)
+   call nd_order(method,1, n, ptr, row, perm, options, info, seps)
    call check_flag(info%flag, -3)
 end subroutine test_errors
 
@@ -181,6 +183,7 @@ subroutine test_input
    integer :: n, ne, i, j
    integer, allocatable, dimension(:) :: ptr, row, perm, seps
    logical :: corr
+   integer :: method
    type (nd_options) :: options
    type (nd_inform) :: info
 
@@ -197,11 +200,12 @@ subroutine test_input
    allocate (ptr(n+1),row(ne),perm(n),seps(n))
    ptr(1:n+1) = 1
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 2
 
    write (*, '(a)', advance="no") &
       ' * Testing diagonal matrix, lower entry.........'
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_flag(info%flag, 0, advance="no")
    corr = .true.
    do j = 1, n
@@ -217,7 +221,7 @@ subroutine test_input
 
    write (*, '(a)', advance="no") &
       ' * Testing diagonal matrix, lower+upper entry...'
-   call nd_order(1,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,1,n,ptr,row,perm,options,info,seps)
    call check_flag(info%flag, 0, advance="no")
    corr = .true.
    do j = 1, n
@@ -240,6 +244,7 @@ subroutine test_input
       ' * Testing matrix expand, lower entry...........'
 
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 2
    options%amd_call = 2
    options%print_level = 2
@@ -251,7 +256,7 @@ subroutine test_input
    ptr(n:n+1) = n
    row(1:ne) = (/ (i,i=2,n) /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps, expect_nzsuper=18)
 
    deallocate (ptr,row,perm,seps)
@@ -264,6 +269,7 @@ subroutine test_input
       ' * Testing matrix expand w diag, lower entry....'
 
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 2
    options%amd_call = 2
 
@@ -275,7 +281,7 @@ subroutine test_input
    row(1:ne) = (/ 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, &
      10 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps, expect_nzsuper=18)
 
    deallocate (ptr,row,perm,seps)
@@ -287,6 +293,7 @@ subroutine test_input
    write (*, '(a)', advance="no") &
       ' * Testing matrix expand, lower+upper entry.....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 2
    options%amd_call = 2
    options%print_level = 2
@@ -304,7 +311,7 @@ subroutine test_input
    end do
    row(ptr(n)) = n - 1
 
-   call nd_order(1,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,1,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps, expect_nzsuper=18)
 
    deallocate (ptr,row,perm,seps)
@@ -317,6 +324,7 @@ subroutine test_input
       ' * Testing matrix expand w diag, lower entry....'
 
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 2
    options%amd_call = 2
    options%print_level = 2
@@ -335,7 +343,7 @@ subroutine test_input
    row(ptr(n)) = n - 1
    row(ne) = n
 
-   call nd_order(1,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,1,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps, expect_nzsuper=18)
 
    deallocate (ptr,row,perm,seps)
@@ -349,6 +357,7 @@ end subroutine test_input
 subroutine test_dense
    integer :: n, ne, i
    integer, allocatable, dimension(:) :: ptr, row, perm, seps
+   integer :: method
    type (nd_options) :: options
    type (nd_inform) :: info
 
@@ -363,6 +372,7 @@ subroutine test_dense
    write (*, '(a)', advance="no") &
       ' * Testing single dense row, no removal.........'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 2
    options%amd_call = 20
    options%print_level = 2
@@ -375,7 +385,7 @@ subroutine test_dense
    ptr(2:n+1) = ne + 1
    row(1:ne) = (/ (i,i=1,n) /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
      if (info%flag>=0 .and. info%nsuper==800 .and. info%nzsuper==1598) &
    call check_success(n, perm, info, seps=seps, expect_nsuper=800, &
       expect_nzsuper=1598)
@@ -384,7 +394,9 @@ subroutine test_dense
 
    write (*, '(a)', advance="no") &
       ' * Testing single dense row, with removal.......'
+   method = 0 ! Non-multilevel
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 2
    options%amd_call = 20
    options%print_level = 2
@@ -396,7 +408,7 @@ subroutine test_dense
    ptr(2:n+1) = ne + 1
    row(1:ne) = (/ (i,i=1,n) /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps, expect_nsuper=799, &
       expect_nzsuper=0)
 
@@ -407,7 +419,9 @@ subroutine test_dense
    ! --------------------------------------
    write (*, '(a)', advance="no") &
       ' * Testing subdiag + first row dense............'
+   method = 0 ! Non-multilevel
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 2
    options%amd_call = 20
 
@@ -420,7 +434,7 @@ subroutine test_dense
    row(1:ptr(2)-1) = (/ (i,i=2,n) /)
    row(ptr(2):ptr(n)-1) = (/ (i+1,i=2,n-1) /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps, expect_nsuper=799, &
       expect_nzsuper=1596)
 
@@ -431,7 +445,9 @@ subroutine test_dense
    ! --------------------------------------
    write (*, '(a)', advance="no") &
       ' * Testing last row dense.......................'
+   method = 0 ! Non-multilevel
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 2
    options%amd_call = 20
 
@@ -442,7 +458,7 @@ subroutine test_dense
    ptr(n:n+1) = ne + 1
    row(1:ne) = n
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps, expect_nsuper=799, &
       expect_nzsuper=0)
 
@@ -453,7 +469,9 @@ subroutine test_dense
    ! --------------------------------------
    write (*, '(a)', advance="no") &
       ' * Testing two rows dense, row 2 max degree.....'
+   method = 0 ! Non-multilevel
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 2
    options%amd_call = 20
 
@@ -466,7 +484,7 @@ subroutine test_dense
    row(ptr(1):ptr(2)-1) = (/ (i+3,i=1,n-3) /)
    row(ptr(2):ne) = (/ (i+2,i=1,n-2) /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps, expect_nsuper=798, &
       expect_nzsuper=0)
 
@@ -481,6 +499,7 @@ end subroutine test_dense
 subroutine test_halflevelset
    integer :: n, ne
    integer, allocatable, dimension(:) :: ptr, row, perm, seps
+   integer :: method
    type (nd_options) :: options
    type (nd_inform) :: info
 
@@ -495,8 +514,8 @@ subroutine test_halflevelset
    write (*, '(a)', advance="no") &
       ' * Test 1.......................................'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 5
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%print_level = 2
@@ -507,7 +526,7 @@ subroutine test_halflevelset
    ptr(1:n+1) = (/ 1, 3, 5, 7, 9, 11, 12, 13, 14, 15, 15 /)
    row(1:ne) = (/ 2, 7, 7, 3, 4, 8, 5, 9, 6, 10, 10, 8, 9, 10 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -518,8 +537,8 @@ subroutine test_halflevelset
    write (*, '(a)', advance="no") &
       ' * Test 2.......................................'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 2
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
 
@@ -529,7 +548,7 @@ subroutine test_halflevelset
    ptr(1:n+1) = (/ 1, 4, 6, 8, 9, 10, 11, 13, 15, 16, 16 /)
    row(1:ne) = (/ 2, 3, 4, 3, 5, 4, 8, 6, 7, 9, 8, 10, 9, 10, 10 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info)
+   call nd_order(method,0,n,ptr,row,perm,options,info)
    call check_success(n, perm, info)
 
    deallocate (ptr,row,perm,seps)
@@ -540,8 +559,8 @@ subroutine test_halflevelset
    write (*, '(a)', advance="no") &
       ' * Test 3.......................................'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 2
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
 
@@ -551,7 +570,7 @@ subroutine test_halflevelset
    ptr(1:n+1) = (/ 1, 2, 4, 6, 8, 10, 12, 13, 13, 14, 14, 16, 17, 17 /)
    row(1:ne) = (/ 2, 3, 4, 4, 11, 5, 6, 7, 8, 9, 10, 8, 10, 12, 13, 13 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -562,8 +581,8 @@ subroutine test_halflevelset
    write (*, '(a)', advance="no") &
       ' * Test 4.......................................'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 2
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%balance = 20.0
@@ -574,12 +593,12 @@ subroutine test_halflevelset
    ptr(1:n+1) = (/ 1, 2, 4, 6, 8, 10, 12, 13, 13, 14, 14, 16, 17, 17 /)
    row(1:ne) = (/ 2, 3, 4, 4, 11, 5, 6, 7, 8, 9, 10, 8, 10, 12, 13, 13 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
 
- end subroutine test_halflevelset
+end subroutine test_halflevelset
 
 
 ! *****************************************************************
@@ -588,6 +607,7 @@ subroutine test_halflevelset
 subroutine test_levelset
    integer :: n, ne
    integer, allocatable, dimension(:) :: ptr, row, perm, seps
+   integer :: method
    type (nd_options) :: options
    type (nd_inform) :: info
 
@@ -603,8 +623,8 @@ subroutine test_levelset
    write (*, '(a)', advance="no") &
       ' * Test 1.......................................'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 5
-   options%partition_method = 0
    options%coarse_partition_method = 2
    options%amd_call = 2
    options%balance = 20.0
@@ -616,7 +636,7 @@ subroutine test_levelset
    ptr(1:n+1) = (/ 1, 3, 5, 7, 9, 11, 12, 13, 14, 15, 15 /)
    row(1:ne) = (/ 2, 7, 7, 3, 4, 8, 5, 9, 6, 10, 10, 8, 9, 10 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -627,8 +647,8 @@ subroutine test_levelset
    write (*, '(a)', advance="no") &
       ' * Test 2.......................................'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 5
-   options%partition_method = 0
    options%coarse_partition_method = 2
    options%amd_call = 2
    options%balance = 1.5
@@ -639,7 +659,7 @@ subroutine test_levelset
    ptr(1:n+1) = (/ 1, 3, 5, 7, 9, 11, 12, 13, 14, 15, 15 /)
    row(1:ne) = (/ 2, 7, 7, 3, 4, 8, 5, 9, 6, 10, 10, 8, 9, 10 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -652,6 +672,7 @@ end subroutine test_levelset
 subroutine test_shift
    integer :: n, ne
    integer, allocatable, dimension(:) :: ptr, row, perm, seps
+   integer :: method
    type (nd_options) :: options
    type (nd_inform) :: info
 
@@ -666,8 +687,8 @@ subroutine test_shift
    write (*, '(a)', advance="no") &
       ' * Test DM-style, 2-sided part, refinement=2....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 5
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%print_level = 2
@@ -679,7 +700,7 @@ subroutine test_shift
    ptr(1:n+1) = (/ 1, 4, 5, 6, 8, 9, 11, 12, 12 /)
    row(1:ne) = (/ 2, 3, 4, 4, 4, 5, 6, 6, 7, 8, 8 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -688,8 +709,8 @@ subroutine test_shift
    write (*, '(a)', advance="no") &
       ' * Test DM-style, 2-sided part, refinement=5....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 5
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%print_level = 2
@@ -701,7 +722,7 @@ subroutine test_shift
    ptr(1:n+1) = (/ 1, 4, 5, 6, 8, 9, 11, 12, 12 /)
    row(1:ne) = (/ 2, 3, 4, 4, 4, 5, 6, 6, 7, 8, 8 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -712,8 +733,8 @@ subroutine test_shift
    write (*, '(a)', advance="no") &
       ' * Test DM refine, 2-sided, test 1..............'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 5
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%refinement = 2
    options%amd_call = 2
@@ -727,7 +748,7 @@ subroutine test_shift
      17, 11, 13, 12, 13, 13, 15, 14, 15, 15, 17, 18, 19, 18, 19, 20, 20, &
      21, 21 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -738,8 +759,8 @@ subroutine test_shift
    write (*, '(a)', advance="no") &
       ' * Test DM refine, 1-sided, test 1..............'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 5
-   options%partition_method = 0
    options%coarse_partition_method = 2
    options%refinement = 2
    options%amd_call = 2
@@ -755,7 +776,7 @@ subroutine test_shift
       13, 14, 14, 14, 15, 17, 18, 18, 16, 17, 19, 20, 21, 21, 20, 22, 23, &
       24, 24, 25, 23, 26, 26, 27, 27, 28, 29, 29, 30, 30, 31, 31 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -766,8 +787,8 @@ subroutine test_shift
    write (*, '(a)', advance="no") &
       ' * Test DM refine, 2-sided, test 2..............'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 5
-   options%partition_method = 0
    options%coarse_partition_method = 2
    options%refinement = 2
    options%amd_call = 2
@@ -779,7 +800,7 @@ subroutine test_shift
    ptr(1:n+1) = (/ 1, 2, 3, 4, 5, 6, 7, 7 /)
    row(1:ne) = (/ 7, 7, 7, 7, 7, 7 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -790,8 +811,8 @@ subroutine test_shift
    write (*, '(a)', advance="no") &
       ' * Test DM refine, 1-sided, test 2..............'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 5
-   options%partition_method = 0
    options%coarse_partition_method = 2
    options%refinement = 5
    options%amd_call = 2
@@ -803,7 +824,7 @@ subroutine test_shift
    ptr(1:n+1) = (/ 1, 2, 3, 4, 5, 6, 7, 7 /)
    row(1:ne) = (/ 7, 7, 7, 7, 7, 7 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -814,8 +835,8 @@ subroutine test_shift
    write (*, '(a)', advance="no") &
       ' * Test DM refine, 1-sided, balanced part.......'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 5
-   options%partition_method = 0
    options%coarse_partition_method = 2
    options%refinement = 5
    options%balance = 2.0
@@ -831,7 +852,7 @@ subroutine test_shift
      13, 14, 14, 14, 15, 17, 18, 18, 16, 17, 19, 20, 21, 21, 20, 22, 23, &
      24, 24, 25, 23, 26, 26, 27, 27, 28, 29, 29, 30, 30, 31, 31 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -842,8 +863,8 @@ subroutine test_shift
    write (*, '(a)', advance="no") &
       ' * Test DM refine, 2-sided, balanced part, T1...'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 5
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%refinement = 5
    options%balance = 2.0
@@ -858,7 +879,7 @@ subroutine test_shift
      13, 14, 14, 14, 15, 17, 18, 18, 16, 17, 19, 20, 21, 21, 20, 22, 23, &
      24, 24, 25, 23, 26, 26, 27, 27, 28, 29, 29, 30, 30, 31, 31 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -869,8 +890,8 @@ subroutine test_shift
    write (*, '(a)', advance="no") &
       ' * Test DM refine, 2-sided, balanced part, T2...'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 5
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%refinement = 2
    options%balance = 1.05
@@ -886,7 +907,7 @@ subroutine test_shift
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -898,8 +919,8 @@ subroutine test_shift
    write (*, '(a)', advance="no") &
       ' * Test DM refine, 2-sided, balanced part, T3...'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 5
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%refinement = 2
    options%balance = 1.30
@@ -912,7 +933,7 @@ subroutine test_shift
    ptr(1:n+1) = (/ 1, 2, 3, 6, 7, 8, 9, 11, 11, 13, 14, 15, 16, 16 /)
    row(1:ne) = (/ 2, 3, 4, 5, 6, 6, 6, 7, 8, 9, 10, 11, 12, 12, 13 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -923,8 +944,8 @@ subroutine test_shift
    write (*, '(a)', advance="no") &
       ' * Test DM refine, 2-sided, balanced part, T4...'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 5
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%refinement = 2
    options%balance = 1.30
@@ -937,7 +958,7 @@ subroutine test_shift
    ptr(1:n+1) = (/ 1, 2, 4, 5, 6, 7, 8, 9, 12, 13, 14, 15, 16, 16 /)
    row(1:ne) = (/ 2, 3, 4, 5, 5, 7, 7, 8, 9, 10, 11, 11, 11, 12, 13 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -950,6 +971,7 @@ end subroutine test_shift
 subroutine test_multilevel
    integer :: n, ne, i, j, k
    integer, allocatable, dimension(:) :: ptr, row, perm, seps
+   integer :: method
    type (nd_options) :: options
    type (nd_inform) :: info
 
@@ -964,9 +986,9 @@ subroutine test_multilevel
    write (*, '(a)', advance="no") &
       ' * Test Multilevel, 2-sided......................'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 5
    options%balance = 1.05
-   options%partition_method = 1
    options%ml_call = 4
    options%coarse_partition_method = 2
    options%amd_call = 2
@@ -982,7 +1004,7 @@ subroutine test_multilevel
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -993,9 +1015,9 @@ subroutine test_multilevel
    write (*, '(a)', advance="no") &
       ' * Test Multilevel, 1-sided, matching=0..........'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 5
    options%balance = 1.05
-   options%partition_method = 1
    options%ml_call = 4
    options%coarse_partition_method = 1
    options%amd_call = 2
@@ -1012,7 +1034,7 @@ subroutine test_multilevel
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -1023,9 +1045,9 @@ subroutine test_multilevel
    write (*, '(a)', advance="no") &
       ' * Test Multilevel, 1-sided, matching=1..........'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 5
    options%balance = 1.05
-   options%partition_method = 1
    options%ml_call = 4
    options%coarse_partition_method = 1
    options%amd_call = 2
@@ -1042,7 +1064,7 @@ subroutine test_multilevel
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -1053,9 +1075,9 @@ subroutine test_multilevel
    write (*, '(a)', advance="no") &
       ' * Test Multilevel, 1-sided, matching=2..........'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 5
    options%balance = 1.05
-   options%partition_method = 1
    options%ml_call = 4
    options%coarse_partition_method = 1
    options%amd_call = 2
@@ -1072,7 +1094,7 @@ subroutine test_multilevel
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -1083,9 +1105,9 @@ subroutine test_multilevel
    write (*, '(a)', advance="no") &
       ' * Test Multilevel Coarsening, Test 1............'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 5
    options%balance = 1.05
-   options%partition_method = 1
    options%ml_call = 4
    options%coarse_partition_method = 2
    options%amd_call = 2
@@ -1101,7 +1123,7 @@ subroutine test_multilevel
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -1112,9 +1134,9 @@ subroutine test_multilevel
    write (*, '(a)', advance="no") &
       ' * Test Multilevel Coarsening, matching=0........'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 5
    options%balance = 1.05
-   options%partition_method = 1
    options%ml_call = 4
    options%coarse_partition_method = 1
    options%amd_call = 2
@@ -1131,7 +1153,7 @@ subroutine test_multilevel
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -1142,9 +1164,9 @@ subroutine test_multilevel
    write (*, '(a)', advance="no") &
       ' * Test Multilevel Coarsening, matching=1........'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 5
    options%balance = 1.05
-   options%partition_method = 1
    options%ml_call = 4
    options%coarse_partition_method = 1
    options%amd_call = 2
@@ -1161,7 +1183,7 @@ subroutine test_multilevel
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -1172,9 +1194,9 @@ subroutine test_multilevel
    write (*, '(a)', advance="no") &
       ' * Test Multilevel Coarsening, Test 2............'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 5
    options%balance = 1.05
-   options%partition_method = 1
    options%ml_call = 4
    options%coarse_partition_method = 1
    options%amd_call = 2
@@ -1191,7 +1213,7 @@ subroutine test_multilevel
    row(1:ne) = (/ 2, 9, 9, 4, 10, 10, 6, 11, 11, 8, 12, 12, 10, 11, 12, 11, &
      12, 12 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -1202,9 +1224,9 @@ subroutine test_multilevel
    write (*, '(a)', advance="no") &
       ' * Test Multilevel refinement=0, matching=0......'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 5
    options%balance = 1.05
-   options%partition_method = 1
    options%ml_call = 4
    options%coarse_partition_method = 1
    options%amd_call = 2
@@ -1221,7 +1243,7 @@ subroutine test_multilevel
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -1232,9 +1254,9 @@ subroutine test_multilevel
    write (*, '(a)', advance="no") &
       ' * Test Multilevel refinement=0, matching=1......'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 5
    options%balance = 1.05
-   options%partition_method = 1
    options%ml_call = 4
    options%coarse_partition_method = 1
    options%amd_call = 2
@@ -1251,7 +1273,7 @@ subroutine test_multilevel
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -1262,9 +1284,9 @@ subroutine test_multilevel
    write (*, '(a)', advance="no") &
       ' * Test Multilevel refinement=1, matching=0......'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 5
    options%balance = 1.05
-   options%partition_method = 1
    options%ml_call = 4
    options%coarse_partition_method = 1
    options%amd_call = 2
@@ -1281,7 +1303,7 @@ subroutine test_multilevel
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -1292,9 +1314,9 @@ subroutine test_multilevel
    write (*, '(a)', advance="no") &
       ' * Test Multilevel refinement=1, matching=1......'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 5
    options%balance = 1.05
-   options%partition_method = 1
    options%ml_call = 4
    options%coarse_partition_method = 1
    options%amd_call = 2
@@ -1311,7 +1333,7 @@ subroutine test_multilevel
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -1322,9 +1344,9 @@ subroutine test_multilevel
    write (*, '(a)', advance="no") &
       ' * Test Multilevel refinement=2, matching=0......'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 5
    options%balance = 1.05
-   options%partition_method = 1
    options%ml_call = 4
    options%coarse_partition_method = 1
    options%amd_call = 2
@@ -1341,7 +1363,7 @@ subroutine test_multilevel
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -1352,9 +1374,9 @@ subroutine test_multilevel
    write (*, '(a)', advance="no") &
       ' * Test Multilevel refinement=2, matching=1......'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 5
    options%balance = 1.05
-   options%partition_method = 1
    options%ml_call = 4
    options%coarse_partition_method = 1
    options%amd_call = 2
@@ -1371,7 +1393,7 @@ subroutine test_multilevel
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -1382,9 +1404,9 @@ subroutine test_multilevel
    write (*, '(a)', advance="no") &
       ' * Test Multilevel refinement=3, matching=0......'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 5
    options%balance = 1.05
-   options%partition_method = 1
    options%ml_call = 4
    options%coarse_partition_method = 1
    options%amd_call = 2
@@ -1401,7 +1423,7 @@ subroutine test_multilevel
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -1412,9 +1434,9 @@ subroutine test_multilevel
    write (*, '(a)', advance="no") &
       ' * Test Multilevel refinement=3, matching=1......'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 5
    options%balance = 1.05
-   options%partition_method = 1
    options%ml_call = 4
    options%coarse_partition_method = 1
    options%amd_call = 2
@@ -1431,7 +1453,7 @@ subroutine test_multilevel
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -1442,9 +1464,9 @@ subroutine test_multilevel
    write (*, '(a)', advance="no") &
       ' * Test Multilevel refinement=4, matching=0......'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 5
    options%balance = 1.05
-   options%partition_method = 1
    options%ml_call = 4
    options%coarse_partition_method = 1
    options%amd_call = 2
@@ -1461,7 +1483,7 @@ subroutine test_multilevel
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -1472,9 +1494,9 @@ subroutine test_multilevel
    write (*, '(a)', advance="no") &
       ' * Test Multilevel refinement=4, matching=1......'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 5
    options%balance = 1.05
-   options%partition_method = 1
    options%ml_call = 4
    options%coarse_partition_method = 1
    options%amd_call = 2
@@ -1491,7 +1513,7 @@ subroutine test_multilevel
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -1502,9 +1524,9 @@ subroutine test_multilevel
    write (*, '(a)', advance="no") &
       ' * Test Multilevel refinement=5, matching=0......'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 5
    options%balance = 1.05
-   options%partition_method = 1
    options%ml_call = 4
    options%coarse_partition_method = 1
    options%amd_call = 2
@@ -1521,7 +1543,7 @@ subroutine test_multilevel
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -1532,9 +1554,9 @@ subroutine test_multilevel
    write (*, '(a)', advance="no") &
       ' * Test Multilevel refinement=5, matching=1......'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 5
    options%balance = 1.05
-   options%partition_method = 1
    options%ml_call = 4
    options%coarse_partition_method = 1
    options%amd_call = 2
@@ -1551,7 +1573,7 @@ subroutine test_multilevel
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -1562,9 +1584,9 @@ subroutine test_multilevel
    write (*, '(a)', advance="no") &
       ' * Test Multilevel refinement=6, matching=0......'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 5
    options%balance = 1.05
-   options%partition_method = 1
    options%ml_call = 4
    options%coarse_partition_method = 1
    options%amd_call = 2
@@ -1581,7 +1603,7 @@ subroutine test_multilevel
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -1592,9 +1614,9 @@ subroutine test_multilevel
    write (*, '(a)', advance="no") &
       ' * Test Multilevel refinement=6, matching=1......'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 5
    options%balance = 1.05
-   options%partition_method = 1
    options%ml_call = 4
    options%coarse_partition_method = 1
    options%amd_call = 2
@@ -1611,7 +1633,7 @@ subroutine test_multilevel
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -1622,9 +1644,9 @@ subroutine test_multilevel
    write (*, '(a)', advance="no") &
       ' * Test Multilevel refinement=7, matching=0......'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 5
    options%balance = 1.05
-   options%partition_method = 1
    options%ml_call = 4
    options%coarse_partition_method = 1
    options%amd_call = 2
@@ -1641,7 +1663,7 @@ subroutine test_multilevel
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -1652,9 +1674,9 @@ subroutine test_multilevel
    write (*, '(a)', advance="no") &
       ' * Test Multilevel refinement=7, matching=1......'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 5
    options%balance = 1.05
-   options%partition_method = 1
    options%ml_call = 4
    options%coarse_partition_method = 1
    options%amd_call = 2
@@ -1671,103 +1693,7 @@ subroutine test_multilevel
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
-   call check_success(n, perm, info, seps=seps)
-
-   deallocate (ptr,row,perm,seps)
-
-   ! --------------------------------------
-   ! Test automatic multilevel-no multilevel check
-   ! --------------------------------------
-   write (*, '(a)', advance="no") &
-      ' * Test Multilevel, No Multilevel Check..........'
-   call setup_options(options)
-   options%amd_switch1 = 4
-   options%stop_coarsening1 = 3
-   options%balance = 8.0
-   options%partition_method = 2
-   options%coarse_partition_method = 2
-   options%ml_call = 10
-   options%amd_call = 2
-   options%max_improve_cycles = 2
-   options%refinement = 7
-
-   n = 200
-   ne = 199
-   allocate (ptr(n+1),row(ne),perm(n),seps(n))
-   ptr(1:n) = (/ (i,i=1,n) /)
-   ptr(n+1) = ne + 1
-   row(1:ne) = (/ (i,i=2,n) /)
-
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
-   call check_success(n, perm, info, seps=seps)
-
-   deallocate (ptr,row,perm,seps)
-
-   ! --------------------------------------
-   ! Test automatic multilevel-no multilevel check
-   ! --------------------------------------
-   write (*, '(a)', advance="no") &
-      ' * Test Multilevel, No Multilevel Check, CPM=1...'
-   call setup_options(options)
-   options%amd_switch1 = 4
-   options%stop_coarsening1 = 3
-   options%balance = 8.0
-   options%partition_method = 2
-   options%ml_call = 10
-   options%amd_call = 2
-   options%max_improve_cycles = 2
-   options%refinement = 7
-   options%coarse_partition_method = 1
-
-   n = 200
-   ne = 7*(n-7)+21
-   allocate (ptr(n+1),row(ne),perm(n),seps(n))
-   j = 1
-   do i = 1,n
-      ptr(i) = j
-      do k = i+1, min(i+7,n)
-         row(j) = k
-         j = j + 1
-      end do
-   end do
-   ptr(n+1) = j
-
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
-   call check_success(n, perm, info, seps=seps)
-
-   deallocate (ptr,row,perm,seps)
-
-   ! --------------------------------------
-   ! Test automatic multilevel-no multilevel check
-   ! --------------------------------------
-   write (*, '(a)', advance="no") &
-      ' * Test Multilevel, No Multilevel Check, CPM=2...'
-   call setup_options(options)
-   options%amd_switch1 = 4
-   options%stop_coarsening1 = 3
-   options%balance = 8.0
-   options%partition_method = 2
-   options%ml_call = 10
-   options%amd_call = 2
-   options%max_improve_cycles = 2
-   options%refinement = 7
-   options%coarse_partition_method = 2
-
-   n = 200
-   ne = 7*(n-7)+21
-   allocate (ptr(n+1),row(ne),perm(n),seps(n))
-   j = 1
-   do i = 1,n
-      ptr(i) = j
-      do k = i+1, min(i+7,n)
-         row(j) = k
-         j = j + 1
-      end do
-   end do
-   ptr(n+1) = j
-
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -1778,10 +1704,10 @@ subroutine test_multilevel
    write (*, '(a)', advance="no") &
       ' * Test Multilevel, Reduction Ratio, CPM=1.......'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 4
    options%stop_coarsening1 = 3
    options%balance = 2.0
-   options%partition_method = 1
    options%ml_call = 10
    options%amd_call = 2
    options%max_improve_cycles = 2
@@ -1797,7 +1723,7 @@ subroutine test_multilevel
    ptr(2:n+1) = ne + 1
    row(1:ne) = (/ (i,i=2,n) /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -1808,10 +1734,10 @@ subroutine test_multilevel
    write (*, '(a)', advance="no") &
       ' * Test Multilevel, Reduction Ratio, CPM=2.......'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 4
    options%stop_coarsening1 = 3
    options%balance = 2.0
-   options%partition_method = 1
    options%ml_call = 10
    options%amd_call = 2
    options%max_improve_cycles = 2
@@ -1827,7 +1753,7 @@ subroutine test_multilevel
    ptr(2:n+1) = ne + 1
    row(1:ne) = (/ (i,i=2,n) /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -1838,11 +1764,11 @@ subroutine test_multilevel
    write (*, '(a)', advance="no") &
       ' * Test galerkin_graph_rap().....................'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 4
    options%stop_coarsening1 = 3
    options%min_reduction = 0.5
    options%balance = 1.0
-   options%partition_method = 1
    options%ml_call = 4
    options%coarse_partition_method = 1
    options%amd_call = 2
@@ -1885,7 +1811,7 @@ subroutine test_multilevel
    end do
    ptr(n+1) = j
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -1898,6 +1824,7 @@ end subroutine test_multilevel
 subroutine test_amd
    integer :: n, ne
    integer, allocatable, dimension(:) :: ptr, row, perm, seps
+   integer :: method
    type (nd_options) :: options
    type (nd_inform) :: info
 
@@ -1912,6 +1839,7 @@ subroutine test_amd
    write (*, '(a)', advance="no") &
       ' * Test AMD, non nested, Test 1..................'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_call = 40
    options%print_level = 2
 
@@ -1924,7 +1852,7 @@ subroutine test_amd
      13, 14, 14, 14, 15, 17, 18, 18, 16, 17, 19, 20, 21, 21, 20, 22, 23, &
      24, 24, 25, 23, 26, 26, 27, 27, 28, 29, 29, 30, 30, 31, 31 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -1935,6 +1863,7 @@ subroutine test_amd
    write (*, '(a)', advance="no") &
       ' * Test AMD, non nested, Test 2..................'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_call = 40
    options%print_level = 2
 
@@ -1945,7 +1874,7 @@ subroutine test_amd
    ptr(2:n+1) = 2
    row(1:ne) = (/ 2 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -1957,6 +1886,7 @@ end subroutine test_amd
 subroutine test_refine
    integer :: n, ne
    integer, allocatable, dimension(:) :: ptr, row, perm, seps
+   integer :: method
    type (nd_options) :: options
    type (nd_inform) :: info
 
@@ -1971,10 +1901,10 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test 1........................................'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 6
    options%amd_call = 2
    options%find_supervariables = .false.
-   options%partition_method = 0
    options%refinement = 0
 
    n = 14
@@ -1983,7 +1913,7 @@ subroutine test_refine
    ptr(1:n+1) = (/ 1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 14, 15, 16, 17, 17 /)
    row(1:ne) = (/ 2, 3, 4, 5, 6, 7, 8, 8, 8, 9, 10, 11, 12, 13, 13, 14 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info)
+   call nd_order(method,0,n,ptr,row,perm,options,info)
    call check_success(n, perm, info, expect_nzsuper=32)
 
    deallocate (ptr,row,perm,seps)
@@ -1994,10 +1924,10 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test 2, refinement=1..........................'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 6
    options%amd_call = 2
    options%find_supervariables = .false.
-   options%partition_method = 0
    options%refinement = 1
 
    n = 14
@@ -2006,7 +1936,7 @@ subroutine test_refine
    ptr(1:n+1) = (/ 1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 14, 15, 16, 17, 17 /)
    row(1:ne) = (/ 2, 3, 4, 5, 6, 7, 8, 8, 8, 9, 10, 11, 12, 13, 13, 14 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info)
+   call nd_order(method,0,n,ptr,row,perm,options,info)
    call check_success(n, perm, info, expect_nzsuper=32)
 
    deallocate (ptr,row,perm,seps)
@@ -2017,10 +1947,10 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test 2, refinement=2..........................'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 6
    options%amd_call = 2
    options%find_supervariables = .false.
-   options%partition_method = 0
    options%refinement = 2
 
    n = 14
@@ -2029,7 +1959,7 @@ subroutine test_refine
    ptr(1:n+1) = (/ 1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 14, 15, 16, 17, 17 /)
    row(1:ne) = (/ 2, 3, 4, 5, 6, 7, 8, 8, 8, 9, 10, 11, 12, 13, 13, 14 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info)
+   call nd_order(method,0,n,ptr,row,perm,options,info)
    call check_success(n, perm, info, expect_nzsuper=32)
 
    deallocate (ptr,row,perm,seps)
@@ -2040,10 +1970,10 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test 2, refinement=3..........................'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 6
    options%amd_call = 2
    options%find_supervariables = .false.
-   options%partition_method = 0
    options%refinement = 3
 
    n = 14
@@ -2052,7 +1982,7 @@ subroutine test_refine
    ptr(1:n+1) = (/ 1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 14, 15, 16, 17, 17 /)
    row(1:ne) = (/ 2, 3, 4, 5, 6, 7, 8, 8, 8, 9, 10, 11, 12, 13, 13, 14 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info)
+   call nd_order(method,0,n,ptr,row,perm,options,info)
    call check_success(n, perm, info, expect_nzsuper=32)
 
    deallocate (ptr,row,perm,seps)
@@ -2063,10 +1993,10 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test 2, refinement=4..........................'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 6
    options%amd_call = 2
    options%find_supervariables = .false.
-   options%partition_method = 0
    options%refinement = 4
 
    n = 14
@@ -2075,7 +2005,7 @@ subroutine test_refine
    ptr(1:n+1) = (/ 1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 14, 15, 16, 17, 17 /)
    row(1:ne) = (/ 2, 3, 4, 5, 6, 7, 8, 8, 8, 9, 10, 11, 12, 13, 13, 14 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info)
+   call nd_order(method,0,n,ptr,row,perm,options,info)
    call check_success(n, perm, info, expect_nzsuper=32)
 
    deallocate (ptr,row,perm,seps)
@@ -2086,10 +2016,10 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test 2, refinement=5..........................'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 6
    options%amd_call = 2
    options%find_supervariables = .false.
-   options%partition_method = 0
    options%refinement = 5
 
    n = 14
@@ -2098,7 +2028,7 @@ subroutine test_refine
    ptr(1:n+1) = (/ 1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 14, 15, 16, 17, 17 /)
    row(1:ne) = (/ 2, 3, 4, 5, 6, 7, 8, 8, 8, 9, 10, 11, 12, 13, 13, 14 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info)
+   call nd_order(method,0,n,ptr,row,perm,options,info)
    call check_success(n, perm, info, expect_nzsuper=32)
 
    deallocate (ptr,row,perm,seps)
@@ -2109,10 +2039,10 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test 2, refinement=6..........................'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 6
    options%amd_call = 2
    options%find_supervariables = .false.
-   options%partition_method = 0
    options%refinement = 6
 
    n = 14
@@ -2121,7 +2051,7 @@ subroutine test_refine
    ptr(1:n+1) = (/ 1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 14, 15, 16, 17, 17 /)
    row(1:ne) = (/ 2, 3, 4, 5, 6, 7, 8, 8, 8, 9, 10, 11, 12, 13, 13, 14 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info)
+   call nd_order(method,0,n,ptr,row,perm,options,info)
    call check_success(n, perm, info, expect_nzsuper=32)
 
    deallocate (ptr,row,perm,seps)
@@ -2132,10 +2062,10 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test 2, refinement=7..........................'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 6
    options%amd_call = 2
    options%find_supervariables = .false.
-   options%partition_method = 0
    options%refinement = 7
 
    n = 14
@@ -2144,7 +2074,7 @@ subroutine test_refine
    ptr(1:n+1) = (/ 1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 14, 15, 16, 17, 17 /)
    row(1:ne) = (/ 2, 3, 4, 5, 6, 7, 8, 8, 8, 9, 10, 11, 12, 13, 13, 14 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info)
+   call nd_order(method,0,n,ptr,row,perm,options,info)
    call check_success(n, perm, info, expect_nzsuper=32)
 
    deallocate (ptr,row,perm,seps)
@@ -2155,9 +2085,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 1, refine=1....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 4
    options%balance = 1.0
-   options%partition_method = 0
    options%coarse_partition_method = 2
    options%amd_call = 2
    options%max_improve_cycles = 2
@@ -2173,7 +2103,7 @@ subroutine test_refine
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -2184,9 +2114,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 1, refine=2....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 4
    options%balance = 1.0
-   options%partition_method = 0
    options%coarse_partition_method = 2
    options%amd_call = 2
    options%max_improve_cycles = 2
@@ -2202,7 +2132,7 @@ subroutine test_refine
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -2213,9 +2143,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 1, refine=3....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 4
    options%balance = 1.0
-   options%partition_method = 0
    options%coarse_partition_method = 2
    options%amd_call = 2
    options%max_improve_cycles = 2
@@ -2231,7 +2161,7 @@ subroutine test_refine
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -2242,9 +2172,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 1, refine=4....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 4
    options%balance = 1.0
-   options%partition_method = 0
    options%coarse_partition_method = 2
    options%amd_call = 2
    options%max_improve_cycles = 2
@@ -2260,7 +2190,7 @@ subroutine test_refine
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -2271,9 +2201,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 1, refine=5....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 4
    options%balance = 1.0
-   options%partition_method = 0
    options%coarse_partition_method = 2
    options%amd_call = 2
    options%max_improve_cycles = 2
@@ -2289,7 +2219,7 @@ subroutine test_refine
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -2300,9 +2230,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 1, refine=6....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 4
    options%balance = 1.0
-   options%partition_method = 0
    options%coarse_partition_method = 2
    options%amd_call = 2
    options%max_improve_cycles = 2
@@ -2318,7 +2248,7 @@ subroutine test_refine
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -2329,9 +2259,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 1, refine=7....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 4
    options%balance = 1.0
-   options%partition_method = 0
    options%coarse_partition_method = 2
    options%amd_call = 2
    options%max_improve_cycles = 2
@@ -2347,7 +2277,7 @@ subroutine test_refine
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -2358,9 +2288,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 2, refine=1....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 3
    options%balance = 1.0
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%max_improve_cycles = 2
@@ -2372,7 +2302,7 @@ subroutine test_refine
    ptr(1:n+1) = (/ 1, 5, 8, 10, 11, 12, 13, 13 /)
    row(1:ne) = (/ 2, 3, 4, 5, 3, 4, 5, 4, 5, 5, 6, 7 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -2383,9 +2313,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 2, refine=2....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 3
    options%balance = 1.0
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%max_improve_cycles = 2
@@ -2397,7 +2327,7 @@ subroutine test_refine
    ptr(1:n+1) = (/ 1, 5, 8, 10, 11, 12, 13, 13 /)
    row(1:ne) = (/ 2, 3, 4, 5, 3, 4, 5, 4, 5, 5, 6, 7 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -2408,9 +2338,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 2, refine=3....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 3
    options%balance = 1.0
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%max_improve_cycles = 2
@@ -2422,7 +2352,7 @@ subroutine test_refine
    ptr(1:n+1) = (/ 1, 5, 8, 10, 11, 12, 13, 13 /)
    row(1:ne) = (/ 2, 3, 4, 5, 3, 4, 5, 4, 5, 5, 6, 7 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -2433,9 +2363,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 2, refine=4....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 3
    options%balance = 1.0
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%max_improve_cycles = 2
@@ -2447,7 +2377,7 @@ subroutine test_refine
    ptr(1:n+1) = (/ 1, 5, 8, 10, 11, 12, 13, 13 /)
    row(1:ne) = (/ 2, 3, 4, 5, 3, 4, 5, 4, 5, 5, 6, 7 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -2458,9 +2388,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 2, refine=5....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 3
    options%balance = 1.0
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%max_improve_cycles = 2
@@ -2472,7 +2402,7 @@ subroutine test_refine
    ptr(1:n+1) = (/ 1, 5, 8, 10, 11, 12, 13, 13 /)
    row(1:ne) = (/ 2, 3, 4, 5, 3, 4, 5, 4, 5, 5, 6, 7 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -2483,9 +2413,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 2, refine=6....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 3
    options%balance = 1.0
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%max_improve_cycles = 2
@@ -2497,7 +2427,7 @@ subroutine test_refine
    ptr(1:n+1) = (/ 1, 5, 8, 10, 11, 12, 13, 13 /)
    row(1:ne) = (/ 2, 3, 4, 5, 3, 4, 5, 4, 5, 5, 6, 7 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -2508,9 +2438,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 2, refine=7....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 3
    options%balance = 1.0
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%max_improve_cycles = 2
@@ -2522,7 +2452,7 @@ subroutine test_refine
    ptr(1:n+1) = (/ 1, 5, 8, 10, 11, 12, 13, 13 /)
    row(1:ne) = (/ 2, 3, 4, 5, 3, 4, 5, 4, 5, 5, 6, 7 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -2533,11 +2463,11 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 3, refine=1....'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 3
    options%stop_coarsening1 = 2
    options%min_reduction = 0.5
    options%balance = 1.0
-   options%partition_method = 1
    options%ml_call = 4
    options%coarse_partition_method = 1
    options%amd_call = 2
@@ -2552,7 +2482,7 @@ subroutine test_refine
    row(1:ne) = (/ 2, 3, 4, 5, 6, 7, 3, 4, 5, 6, 7, 4, 5, 6, 7, 5, 6, 7, 6, &
      7, 7, 8, 9, 10, 11, 12, 13 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -2563,11 +2493,11 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 3, refine=2....'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 3
    options%stop_coarsening1 = 2
    options%min_reduction = 0.5
    options%balance = 1.0
-   options%partition_method = 1
    options%ml_call = 4
    options%coarse_partition_method = 1
    options%amd_call = 2
@@ -2582,7 +2512,7 @@ subroutine test_refine
    row(1:ne) = (/ 2, 3, 4, 5, 6, 7, 3, 4, 5, 6, 7, 4, 5, 6, 7, 5, 6, 7, 6, &
      7, 7, 8, 9, 10, 11, 12, 13 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -2593,11 +2523,11 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 3, refine=3....'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 3
    options%stop_coarsening1 = 2
    options%min_reduction = 0.5
    options%balance = 1.0
-   options%partition_method = 1
    options%ml_call = 4
    options%coarse_partition_method = 1
    options%amd_call = 2
@@ -2612,7 +2542,7 @@ subroutine test_refine
    row(1:ne) = (/ 2, 3, 4, 5, 6, 7, 3, 4, 5, 6, 7, 4, 5, 6, 7, 5, 6, 7, 6, &
      7, 7, 8, 9, 10, 11, 12, 13 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -2623,11 +2553,11 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 3, refine=4....'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 3
    options%stop_coarsening1 = 2
    options%min_reduction = 0.5
    options%balance = 1.0
-   options%partition_method = 1
    options%ml_call = 4
    options%coarse_partition_method = 1
    options%amd_call = 2
@@ -2642,7 +2572,7 @@ subroutine test_refine
    row(1:ne) = (/ 2, 3, 4, 5, 6, 7, 3, 4, 5, 6, 7, 4, 5, 6, 7, 5, 6, 7, 6, &
      7, 7, 8, 9, 10, 11, 12, 13 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -2653,11 +2583,11 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 3, refine=5....'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 3
    options%stop_coarsening1 = 2
    options%min_reduction = 0.5
    options%balance = 1.0
-   options%partition_method = 1
    options%ml_call = 4
    options%coarse_partition_method = 1
    options%amd_call = 2
@@ -2672,7 +2602,7 @@ subroutine test_refine
    row(1:ne) = (/ 2, 3, 4, 5, 6, 7, 3, 4, 5, 6, 7, 4, 5, 6, 7, 5, 6, 7, 6, &
      7, 7, 8, 9, 10, 11, 12, 13 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -2683,11 +2613,11 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 3, refine=6....'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 3
    options%stop_coarsening1 = 2
    options%min_reduction = 0.5
    options%balance = 1.0
-   options%partition_method = 1
    options%ml_call = 4
    options%coarse_partition_method = 1
    options%amd_call = 2
@@ -2702,7 +2632,7 @@ subroutine test_refine
    row(1:ne) = (/ 2, 3, 4, 5, 6, 7, 3, 4, 5, 6, 7, 4, 5, 6, 7, 5, 6, 7, 6, &
      7, 7, 8, 9, 10, 11, 12, 13 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -2713,11 +2643,11 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 3, refine=7....'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 3
    options%stop_coarsening1 = 2
    options%min_reduction = 0.5
    options%balance = 1.0
-   options%partition_method = 1
    options%ml_call = 4
    options%coarse_partition_method = 1
    options%amd_call = 2
@@ -2732,7 +2662,7 @@ subroutine test_refine
    row(1:ne) = (/ 2, 3, 4, 5, 6, 7, 3, 4, 5, 6, 7, 4, 5, 6, 7, 5, 6, 7, 6, &
      7, 7, 8, 9, 10, 11, 12, 13 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -2743,11 +2673,11 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test refine_trim(), Test 1....................'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 4
    options%stop_coarsening1 = 3
    options%min_reduction = 0.5
    options%balance = 1.0
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%max_improve_cycles = 1
@@ -2762,7 +2692,7 @@ subroutine test_refine
    row(1:ne) = (/ 2, 3, 3, 4, 5, 6, 6, 7, 8, 9, 10, 11, 12, 12, 13, 13, 14, &
      14, 15, 15, 16, 16 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -2773,11 +2703,11 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test refine_trim(), Test 2....................'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 4
    options%stop_coarsening1 = 3
    options%min_reduction = 0.5
    options%balance = 1.0
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%max_improve_cycles = 1
@@ -2792,7 +2722,7 @@ subroutine test_refine
    row(1:ne) = (/ 2, 3, 4, 5, 5, 6, 7, 7, 8, 8, 9, 10, 10, 10, 11, 12, 13, &
      14, 15, 15, 16, 16 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -2803,11 +2733,11 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test refine_trim(), Test 3....................'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 4
    options%stop_coarsening1 = 3
    options%min_reduction = 0.5
    options%balance = 1.5
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%max_improve_cycles = 1
@@ -2823,7 +2753,7 @@ subroutine test_refine
      10, 13, 13, 12, 13, 14, 16, 17, 18, 19, 20, 15, 17, 21, 18, 21, 19, &
      22, 20, 23, 23, 22, 24, 23, 24, 24, 25 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -2834,11 +2764,11 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test for not checking balance.................'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 4
    options%stop_coarsening1 = 3
    options%min_reduction = 0.5
    options%balance = real(n+1)
-   options%partition_method = 1
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%max_improve_cycles = 1
@@ -2854,7 +2784,7 @@ subroutine test_refine
      10, 13, 13, 12, 13, 14, 16, 17, 18, 19, 20, 15, 17, 21, 18, 21, 19, &
      22, 20, 23, 23, 22, 24, 23, 24, 24, 25 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -2865,9 +2795,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 4, refine=1....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 4
    options%balance = 1.0
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%stop_coarsening1 = 2
@@ -2881,7 +2811,7 @@ subroutine test_refine
    row(1:ne) = (/ 2, 3, 3, 4, 4, 5, 6, 7, 8, 6, 7, 8, 9, 7, 8, 9, 8, 9, &
      9 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -2892,9 +2822,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 4, refine=2....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 4
    options%balance = 1.0
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%stop_coarsening1 = 2
@@ -2908,7 +2838,7 @@ subroutine test_refine
    row(1:ne) = (/ 2, 3, 3, 4, 4, 5, 6, 7, 8, 6, 7, 8, 9, 7, 8, 9, 8, 9, &
      9 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -2919,9 +2849,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 4, refine=3....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 4
    options%balance = 1.0
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%stop_coarsening1 = 2
@@ -2935,7 +2865,7 @@ subroutine test_refine
    row(1:ne) = (/ 2, 3, 3, 4, 4, 5, 6, 7, 8, 6, 7, 8, 9, 7, 8, 9, 8, 9, &
      9 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -2946,9 +2876,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 4, refine=4....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 4
    options%balance = 1.0
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%stop_coarsening1 = 2
@@ -2962,7 +2892,7 @@ subroutine test_refine
    row(1:ne) = (/ 2, 3, 3, 4, 4, 5, 6, 7, 8, 6, 7, 8, 9, 7, 8, 9, 8, 9, &
      9 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -2973,9 +2903,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 4, refine=5....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 4
    options%balance = 1.0
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%stop_coarsening1 = 2
@@ -2989,7 +2919,7 @@ subroutine test_refine
    row(1:ne) = (/ 2, 3, 3, 4, 4, 5, 6, 7, 8, 6, 7, 8, 9, 7, 8, 9, 8, 9, &
      9 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -3000,9 +2930,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 4, refine=6....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 4
    options%balance = 1.0
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%stop_coarsening1 = 2
@@ -3016,7 +2946,7 @@ subroutine test_refine
    row(1:ne) = (/ 2, 3, 3, 4, 4, 5, 6, 7, 8, 6, 7, 8, 9, 7, 8, 9, 8, 9, &
      9 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -3027,9 +2957,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 4, refine=7....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 4
    options%balance = 1.0
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%stop_coarsening1 = 2
@@ -3043,7 +2973,7 @@ subroutine test_refine
    row(1:ne) = (/ 2, 3, 3, 4, 4, 5, 6, 7, 8, 6, 7, 8, 9, 7, 8, 9, 8, 9, &
      9 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -3054,9 +2984,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 5, refine=1....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 4
    options%balance = 10.0
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%stop_coarsening1 = 2
@@ -3070,7 +3000,7 @@ subroutine test_refine
    row(1:ne) = (/ 2, 3, 3, 4, 4, 5, 6, 7, 8, 6, 7, 8, 9, 7, 8, 9, 8, 9, &
      9 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -3081,9 +3011,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 5, refine=2....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 4
    options%balance = 10.0
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%stop_coarsening1 = 2
@@ -3097,7 +3027,7 @@ subroutine test_refine
    row(1:ne) = (/ 2, 3, 3, 4, 4, 5, 6, 7, 8, 6, 7, 8, 9, 7, 8, 9, 8, 9, &
      9 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -3108,9 +3038,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 5, refine=3....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 4
    options%balance = 10.0
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%stop_coarsening1 = 2
@@ -3124,7 +3054,7 @@ subroutine test_refine
    row(1:ne) = (/ 2, 3, 3, 4, 4, 5, 6, 7, 8, 6, 7, 8, 9, 7, 8, 9, 8, 9, &
      9 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -3135,9 +3065,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 5, refine=4....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 4
    options%balance = 10.0
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%stop_coarsening1 = 2
@@ -3151,7 +3081,7 @@ subroutine test_refine
    row(1:ne) = (/ 2, 3, 3, 4, 4, 5, 6, 7, 8, 6, 7, 8, 9, 7, 8, 9, 8, 9, &
      9 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -3162,9 +3092,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 5, refine=5....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 4
    options%balance = 10.0
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%stop_coarsening1 = 2
@@ -3178,7 +3108,7 @@ subroutine test_refine
    row(1:ne) = (/ 2, 3, 3, 4, 4, 5, 6, 7, 8, 6, 7, 8, 9, 7, 8, 9, 8, 9, &
      9 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -3189,9 +3119,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 5, refine=6....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 4
    options%balance = 10.0
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%stop_coarsening1 = 2
@@ -3205,7 +3135,7 @@ subroutine test_refine
    row(1:ne) = (/ 2, 3, 3, 4, 4, 5, 6, 7, 8, 6, 7, 8, 9, 7, 8, 9, 8, 9, &
      9 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -3216,9 +3146,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 5, refine=7....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 4
    options%balance = 10.0
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%stop_coarsening1 = 2
@@ -3232,7 +3162,7 @@ subroutine test_refine
    row(1:ne) = (/ 2, 3, 3, 4, 4, 5, 6, 7, 8, 6, 7, 8, 9, 7, 8, 9, 8, 9, &
      9 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -3243,9 +3173,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 6, refine=1....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 3
    options%balance = 8.0
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%max_improve_cycles = 2
@@ -3257,7 +3187,7 @@ subroutine test_refine
    ptr(1:n+1) = (/ 1, 5, 8, 10, 11, 12, 13, 13 /)
    row(1:ne) = (/ 2, 3, 4, 5, 3, 4, 5, 4, 5, 5, 6, 7 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -3268,9 +3198,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 6, refine=2....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 3
    options%balance = 8.0
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%max_improve_cycles = 2
@@ -3282,7 +3212,7 @@ subroutine test_refine
    ptr(1:n+1) = (/ 1, 5, 8, 10, 11, 12, 13, 13 /)
    row(1:ne) = (/ 2, 3, 4, 5, 3, 4, 5, 4, 5, 5, 6, 7 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -3293,9 +3223,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 6, refine=3....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 3
    options%balance = 8.0
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%max_improve_cycles = 2
@@ -3307,7 +3237,7 @@ subroutine test_refine
    ptr(1:n+1) = (/ 1, 5, 8, 10, 11, 12, 13, 13 /)
    row(1:ne) = (/ 2, 3, 4, 5, 3, 4, 5, 4, 5, 5, 6, 7 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -3318,9 +3248,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 6, refine=4....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 3
    options%balance = 8.0
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%max_improve_cycles = 2
@@ -3332,7 +3262,7 @@ subroutine test_refine
    ptr(1:n+1) = (/ 1, 5, 8, 10, 11, 12, 13, 13 /)
    row(1:ne) = (/ 2, 3, 4, 5, 3, 4, 5, 4, 5, 5, 6, 7 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -3343,9 +3273,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 6, refine=5....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 3
    options%balance = 8.0
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%max_improve_cycles = 2
@@ -3357,7 +3287,7 @@ subroutine test_refine
    ptr(1:n+1) = (/ 1, 5, 8, 10, 11, 12, 13, 13 /)
    row(1:ne) = (/ 2, 3, 4, 5, 3, 4, 5, 4, 5, 5, 6, 7 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -3368,9 +3298,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 6, refine=6....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 3
    options%balance = 8.0
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%max_improve_cycles = 2
@@ -3382,7 +3312,7 @@ subroutine test_refine
    ptr(1:n+1) = (/ 1, 5, 8, 10, 11, 12, 13, 13 /)
    row(1:ne) = (/ 2, 3, 4, 5, 3, 4, 5, 4, 5, 5, 6, 7 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -3393,9 +3323,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 6, refine=7....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 3
    options%balance = 8.0
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%max_improve_cycles = 2
@@ -3407,7 +3337,7 @@ subroutine test_refine
    ptr(1:n+1) = (/ 1, 5, 8, 10, 11, 12, 13, 13 /)
    row(1:ne) = (/ 2, 3, 4, 5, 3, 4, 5, 4, 5, 5, 6, 7 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -3418,9 +3348,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 7, refine=1....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 4
    options%balance = 8.0
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%max_improve_cycles = 2
@@ -3435,7 +3365,7 @@ subroutine test_refine
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -3446,9 +3376,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 7, refine=2....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 4
    options%balance = 8.0
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%max_improve_cycles = 2
@@ -3463,7 +3393,7 @@ subroutine test_refine
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -3474,9 +3404,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 7, refine=3....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 4
    options%balance = 8.0
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%max_improve_cycles = 2
@@ -3491,7 +3421,7 @@ subroutine test_refine
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -3502,9 +3432,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 7, refine=4....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 4
    options%balance = 8.0
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%max_improve_cycles = 2
@@ -3519,7 +3449,7 @@ subroutine test_refine
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -3530,9 +3460,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 7, refine=5....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 4
    options%balance = 8.0
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%max_improve_cycles = 2
@@ -3547,7 +3477,7 @@ subroutine test_refine
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -3558,9 +3488,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 7, refine=6....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 4
    options%balance = 8.0
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%max_improve_cycles = 2
@@ -3575,7 +3505,7 @@ subroutine test_refine
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -3586,9 +3516,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test exand-refind cycles, test 7, refine=7....'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 4
    options%balance = 8.0
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%max_improve_cycles = 2
@@ -3603,7 +3533,7 @@ subroutine test_refine
      14, 15, 13, 15, 16, 18, 19, 16, 19, 17, 19, 20, 21, 22, 22, 23, 23, &
      24, 25, 25, 26, 27, 27, 28, 28, 29, 29, 30, 30, 31, 31, 31 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -3614,9 +3544,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test automatic choice of shift, T1, refine=1..'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 4
    options%balance = 1.01
-   options%partition_method = 1
    options%coarse_partition_method = 2
    options%refinement_band = 0
    options%stop_coarsening1 = 3
@@ -3636,7 +3566,7 @@ subroutine test_refine
             19,19,21,23,24,25,21,22,26,27,22,23,28,26,27,24,25,25,27,29,&
             29,29,29,29 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -3647,9 +3577,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test automatic choice of shift, T1, refine=2..'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 4
    options%balance = 1.01
-   options%partition_method = 1
    options%coarse_partition_method = 2
    options%refinement_band = 0
    options%stop_coarsening1 = 3
@@ -3669,7 +3599,7 @@ subroutine test_refine
             19,19,21,23,24,25,21,22,26,27,22,23,28,26,27,24,25,25,27,29,&
             29,29,29,29 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -3680,9 +3610,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test automatic choice of shift, T1, refine=3..'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 4
    options%balance = 1.01
-   options%partition_method = 1
    options%coarse_partition_method = 2
    options%refinement_band = 0
    options%stop_coarsening1 = 3
@@ -3702,7 +3632,7 @@ subroutine test_refine
             19,19,21,23,24,25,21,22,26,27,22,23,28,26,27,24,25,25,27,29,&
             29,29,29,29 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -3713,9 +3643,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test automatic choice of shift, T1, refine=4..'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 4
    options%balance = 1.01
-   options%partition_method = 1
    options%coarse_partition_method = 2
    options%refinement_band = 0
    options%stop_coarsening1 = 3
@@ -3735,7 +3665,7 @@ subroutine test_refine
             19,19,21,23,24,25,21,22,26,27,22,23,28,26,27,24,25,25,27,29,&
             29,29,29,29 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -3746,9 +3676,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test automatic choice of shift, T1, refine=5..'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 4
    options%balance = 1.01
-   options%partition_method = 1
    options%coarse_partition_method = 2
    options%refinement_band = 0
    options%stop_coarsening1 = 3
@@ -3768,7 +3698,7 @@ subroutine test_refine
             19,19,21,23,24,25,21,22,26,27,22,23,28,26,27,24,25,25,27,29,&
             29,29,29,29 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -3779,9 +3709,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test automatic choice of shift, T1, refine=6..'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 4
    options%balance = 1.01
-   options%partition_method = 1
    options%coarse_partition_method = 2
    options%refinement_band = 0
    options%stop_coarsening1 = 3
@@ -3801,7 +3731,7 @@ subroutine test_refine
             19,19,21,23,24,25,21,22,26,27,22,23,28,26,27,24,25,25,27,29,&
             29,29,29,29 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -3812,9 +3742,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test automatic choice of shift, T1, refine=7..'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 4
    options%balance = 1.01
-   options%partition_method = 1
    options%coarse_partition_method = 2
    options%refinement_band = 0
    options%stop_coarsening1 = 3
@@ -3834,7 +3764,7 @@ subroutine test_refine
             19,19,21,23,24,25,21,22,26,27,22,23,28,26,27,24,25,25,27,29,&
             29,29,29,29 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -3845,9 +3775,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test automatic choice of shift, T2, refine=1..'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 4
    options%balance = 1.01
-   options%partition_method = 1
    options%coarse_partition_method = 2
    options%refinement_band = 0
    options%stop_coarsening1 = 3
@@ -3865,7 +3795,7 @@ subroutine test_refine
    row(1:ne) = (/ 2,4,4,6,5,7,8,7,9,8,10,11,10,12,11,12,13,13,13,14,14,15,&
         16,17,16,18,17,18,18,19,20,20,21,21 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -3876,9 +3806,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test automatic choice of shift, T2, refine=2..'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 4
    options%balance = 1.01
-   options%partition_method = 1
    options%coarse_partition_method = 2
    options%refinement_band = 0
    options%stop_coarsening1 = 3
@@ -3896,7 +3826,7 @@ subroutine test_refine
    row(1:ne) = (/ 2,4,4,6,5,7,8,7,9,8,10,11,10,12,11,12,13,13,13,14,14,15,&
         16,17,16,18,17,18,18,19,20,20,21,21 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -3907,9 +3837,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test automatic choice of shift, T2, refine=3..'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 4
    options%balance = 1.01
-   options%partition_method = 1
    options%coarse_partition_method = 2
    options%refinement_band = 0
    options%stop_coarsening1 = 3
@@ -3927,7 +3857,7 @@ subroutine test_refine
    row(1:ne) = (/ 2,4,4,6,5,7,8,7,9,8,10,11,10,12,11,12,13,13,13,14,14,15,&
         16,17,16,18,17,18,18,19,20,20,21,21 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -3938,9 +3868,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test automatic choice of shift, T2, refine=4..'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 4
    options%balance = 1.01
-   options%partition_method = 1
    options%coarse_partition_method = 2
    options%refinement_band = 0
    options%stop_coarsening1 = 3
@@ -3958,7 +3888,7 @@ subroutine test_refine
    row(1:ne) = (/ 2,4,4,6,5,7,8,7,9,8,10,11,10,12,11,12,13,13,13,14,14,15,&
         16,17,16,18,17,18,18,19,20,20,21,21 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -3969,9 +3899,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test automatic choice of shift, T2, refine=5..'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 4
    options%balance = 1.01
-   options%partition_method = 1
    options%coarse_partition_method = 2
    options%refinement_band = 0
    options%stop_coarsening1 = 3
@@ -3989,7 +3919,7 @@ subroutine test_refine
    row(1:ne) = (/ 2,4,4,6,5,7,8,7,9,8,10,11,10,12,11,12,13,13,13,14,14,15,&
         16,17,16,18,17,18,18,19,20,20,21,21 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -4000,9 +3930,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test automatic choice of shift, T2, refine=6..'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 4
    options%balance = 1.01
-   options%partition_method = 1
    options%coarse_partition_method = 2
    options%refinement_band = 0
    options%stop_coarsening1 = 3
@@ -4020,7 +3950,7 @@ subroutine test_refine
    row(1:ne) = (/ 2,4,4,6,5,7,8,7,9,8,10,11,10,12,11,12,13,13,13,14,14,15,&
         16,17,16,18,17,18,18,19,20,20,21,21 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -4031,9 +3961,9 @@ subroutine test_refine
    write (*, '(a)', advance="no") &
       ' * Test automatic choice of shift, T2, refine=7..'
    call setup_options(options)
+   method = 1 ! Multilevel
    options%amd_switch1 = 4
    options%balance = 1.01
-   options%partition_method = 1
    options%coarse_partition_method = 2
    options%refinement_band = 0
    options%stop_coarsening1 = 3
@@ -4051,7 +3981,7 @@ subroutine test_refine
    row(1:ne) = (/ 2,4,4,6,5,7,8,7,9,8,10,11,10,12,11,12,13,13,13,14,14,15,&
         16,17,16,18,17,18,18,19,20,20,21,21 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -4063,6 +3993,7 @@ end subroutine test_refine
 subroutine test_misc
    integer :: n, ne, i, j, k
    integer, allocatable, dimension(:) :: ptr, row, perm, seps
+   integer :: method
    type (nd_options) :: options
    type (nd_inform) :: info
 
@@ -4077,6 +4008,7 @@ subroutine test_misc
    write (*, '(a)', advance="no") &
       ' * Test diagonal *submatrix*.....................'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 2
    options%amd_call = 2
    options%print_level = 1
@@ -4091,7 +4023,7 @@ subroutine test_misc
    row(ne-1) = n - 1
    row(ne) = n
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps, expect_nzsuper=16)
 
    deallocate (ptr,row,perm,seps)
@@ -4102,6 +4034,7 @@ subroutine test_misc
    write (*, '(a)', advance="no") &
       ' * Test independent component detection, CPM=1...'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 2
    options%amd_call = 2
    options%print_level = 2
@@ -4113,7 +4046,7 @@ subroutine test_misc
    ptr(1:n+1) = (/ 1, 2, 3, 4, 6, 7 /)
    row(1:ne) = (/ 2, 1, 4, 3, 5, 4 /)
 
-   call nd_order(1,n,ptr,row,perm,options,info)
+   call nd_order(method,1,n,ptr,row,perm,options,info)
    call check_success(n, perm, info)
 
    deallocate (ptr,row,perm,seps)
@@ -4124,6 +4057,7 @@ subroutine test_misc
    write (*, '(a)', advance="no") &
       ' * Test independent component detection, CPM=2...'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 2
    options%amd_call = 2
    options%print_level = 2
@@ -4135,7 +4069,7 @@ subroutine test_misc
    ptr(1:n+1) = (/ 1, 2, 3, 4, 6, 7 /)
    row(1:ne) = (/ 2, 1, 4, 3, 5, 4 /)
 
-   call nd_order(1,n,ptr,row,perm,options,info)
+   call nd_order(method,1,n,ptr,row,perm,options,info)
    call check_success(n, perm, info)
 
    deallocate (ptr,row,perm,seps)
@@ -4146,6 +4080,7 @@ subroutine test_misc
    write (*, '(a)', advance="no") &
       ' * Test supervariable detection disabled.........'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 2
    options%amd_call = 2
    options%find_supervariables = .false.
@@ -4158,7 +4093,7 @@ subroutine test_misc
    row(1:ne) = (/ 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, &
      10 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps, expect_nzsuper=18)
 
    deallocate (ptr,row,perm,seps)
@@ -4169,6 +4104,7 @@ subroutine test_misc
    write (*, '(a)', advance="no") &
       ' * Test full matrix..............................'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 2
    options%amd_call = 2
    options%find_supervariables = .false.
@@ -4191,7 +4127,7 @@ subroutine test_misc
      end do
    end do
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps, expect_nzsuper=90)
 
    deallocate (ptr,row,perm,seps)
@@ -4202,6 +4138,7 @@ subroutine test_misc
    write (*, '(a)', advance="no") &
       ' * Test cost function 2..........................'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 2
    options%amd_call = 2
    options%find_supervariables = .false.
@@ -4215,7 +4152,7 @@ subroutine test_misc
    row(1:ne) = (/ 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, &
      10 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps, expect_nzsuper=18)
 
    deallocate (ptr,row,perm,seps)
@@ -4227,10 +4164,10 @@ subroutine test_misc
    write (*, '(a)', advance="no") &
       ' * Test no sep, p2>amd_switch1, p1==amd_switch1..'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 6
    options%amd_call = 2
    options%find_supervariables = .false.
-   options%partition_method = 0
    options%print_level = 2
 
    n = 14
@@ -4239,7 +4176,7 @@ subroutine test_misc
    ptr(1:n+1) = (/ 1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 14, 15, 16, 17, 17 /)
    row(1:ne) = (/ 2, 3, 4, 5, 6, 7, 8, 8, 8, 9, 10, 11, 12, 13, 13, 14 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info)
+   call nd_order(method,0,n,ptr,row,perm,options,info)
    call check_success(n, perm, info, expect_nzsuper=32)
 
    deallocate (ptr,row,perm,seps)
@@ -4250,11 +4187,11 @@ subroutine test_misc
    write (*, '(a)', advance="no") &
       ' * Test matrix extraction w end row, Test 1......'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 7
    options%stop_coarsening1 = 2
    options%min_reduction = 0.5
    options%balance = 1.0
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%max_improve_cycles = 0
@@ -4269,7 +4206,7 @@ subroutine test_misc
    row(1:ne) = (/ 2, 3, 3, 4, 5, 5, 14, 5, 13, 6, 13, 14, 8, 9, 13, 14, 10, &
      13, 9, 10, 11, 13, 11, 11, 12, 12 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -4280,11 +4217,11 @@ subroutine test_misc
    write (*, '(a)', advance="no") &
       ' * Test matrix extraction w end row, Test 2......'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%amd_switch1 = 7
    options%stop_coarsening1 = 2
    options%min_reduction = 0.5
    options%balance = 1.0
-   options%partition_method = 0
    options%coarse_partition_method = 1
    options%amd_call = 2
    options%max_improve_cycles = 0
@@ -4299,36 +4236,7 @@ subroutine test_misc
    row(1:ne) = (/ 2, 3, 3, 4, 5, 5, 6, 5, 15, 6, 15, 16, 16, 11, 15, 9, 11, &
      12, 15, 16, 10, 12, 13, 16, 16, 13, 12, 14, 13, 14, 16 /)
 
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
-   call check_success(n, perm, info, seps=seps)
-
-   deallocate (ptr,row,perm,seps)
-
-   ! --------------------------------------
-   ! Test no balanced partition found so switch to multilevel
-   ! --------------------------------------
-   write (*, '(a)', advance="no") &
-      ' * Test no balanced partition so switch to ml....'
-   call setup_options(options)
-   options%amd_switch1 = 7
-   options%stop_coarsening1 = 2
-   options%min_reduction = 0.5
-   options%balance = 1.0
-   options%partition_method = 2
-   options%coarse_partition_method = 1
-   options%amd_call = 2
-   options%max_improve_cycles = 0
-   options%print_level = 2
-   options%refinement = 7
-
-   n = 18
-   ne = 41
-   allocate (ptr(n+1),row(ne),perm(n),seps(n))
-   ptr(1:n+1) = (/ 1,2,3,8,10,12,15,19,21,24,28,30,33,37,39,40,42,42,42 /)
-   row(1:ne) = (/ 2,3,4,5,6,7,8,6,7,7,8,7,9,10,8,9,10,11,10,11,10,12,13,11,&
-        12,13,14,13,14,13,15,16,14,15,16,17,16,17,16,17,18 /)
-
-   call nd_order(0,n,ptr,row,perm,options,info,seps)
+   call nd_order(method,0,n,ptr,row,perm,options,info,seps)
    call check_success(n, perm, info, seps=seps)
 
    deallocate (ptr,row,perm,seps)
@@ -4339,6 +4247,7 @@ end subroutine test_misc
 subroutine test_fm
    integer :: n, ne, an1,an2,swgt,aw1,aw2,aws
    integer, allocatable, dimension(:) :: ptr,row,wgt,work,part
+   integer :: method
    type (nd_options) :: options
 
    write (*, '()')
@@ -4352,6 +4261,7 @@ subroutine test_fm
    write (*, '(a)') &
       ' * Test FM with empty part 2.....................'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%print_level = 1
 
    n = 11
@@ -4380,6 +4290,7 @@ subroutine test_fm
    write (*, '(a)') &
       ' * Test FM with empty part 1.....................'
    call setup_options(options)
+   method = 0 ! Non-multilevel
    options%print_level = 1
 
    n = 11

@@ -25,7 +25,6 @@ struct spral_nd_options {
    int matching;
    double max_reduction;
    double min_reduction;
-   int partition_method;
    int refinement_band;
    bool remove_dense_rows;
    int stop_coarsening1;
@@ -47,8 +46,9 @@ struct spral_nd_inform {
 /* Initialize options to defaults */
 void spral_nd_default_options(struct spral_nd_options *nd);
 /* Perform Ordering */
-void spral_nd_order(int mtx, int n, const int *ptr, const int *row, int *perm,
-      const struct spral_nd_options *options, struct spral_nd_inform *inform);
+void spral_nd_order(int method, int mtx, int n, const int *ptr, const int *row,
+      int *perm, const struct spral_nd_options *options,
+      struct spral_nd_inform *inform);
 
 #ifdef __cplusplus
 } /* extern "C" */

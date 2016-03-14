@@ -189,7 +189,7 @@ or duplicates may cause {\tt nd\_order} to fail in an unpredictable way.
 
 {\bf To compute the nested dissection ordering, the following routine is provided.}
    \vspace*{0.3cm} \\
-\texttt{\hspace*{0.2cm} void spral\_nd\_order(int mtx, int n, const int *ptr, const int *row, int *perm, const struct spral\_nd\_options *options, struct spral\_nd\_inform *inform);}
+\texttt{\hspace*{0.2cm} void spral\_nd\_order(int method, int mtx, int n, const int *ptr, const int *row, int *perm, const struct spral\_nd\_options *options, struct spral\_nd\_inform *inform);}
 \vspace{0.3em}
 
 \noindent
@@ -197,6 +197,12 @@ Matrix data should be supplied as described in Section~\ref{nd:dataformats}.
 
 \noindent
 \begin{description}
+
+\item[\texttt{method}]
+specifies whether the non-multilevel (banded) or multilevel algorithm is used
+to order the matrix. The non-multilevel scheme is generally considerably faster,
+but delivers poorer quality orderings for non-banded matrices.
+
 
 \item[\texttt{mtx}]
 determines whether $A$ is input using only the lower triangular entries 
@@ -352,15 +358,6 @@ $n_c>n_f\times{\tt min\_reduction}.$ {\tt max\_reduction} must be at least {\tt 
 {\tt 1.0} are treated as {\tt 1.0}. {\tt min\_reduction} must be at least {\tt 0.5} and values less than 
 {\tt 0.5} are treated as {\tt 0.5}. The defaults are {\tt max\_reduction=0.9} and {\tt min\_reduction=0.5}.
 
-\item[\texttt{int partition\_method}] determines whether a multilevel 
-partitioning scheme is used. The different options are
-\begin{description}
-\item{\tt $=$ 0 } Multilevel partitioning scheme is {\bf not} used,
-\item{\tt $=$ 1 } Multilevel partitioning scheme is  used,
-\item{\tt $=$ 2 } Automatic choice of whether the multilevel partitioning scheme is used.
-\end{description}
-See Section~\ref{method} for further details. The default is {\tt partition\_method=2}.
-
 \item[\texttt{int refinement\_band}] is used within the 
 Fiduccia-Mattheyses refinement. The variables in the refined separator must be 
 at most distance {\tt refinement\_band} from a variable that was in the input 
@@ -482,9 +479,8 @@ quality, or
 is performed, where \texttt{options.matching} determines the strategy used to form 
 the coarsening matrix.
 \end{itemize}
-The user may choose which partitioning method to use or {\tt ND} can analyse 
-$\widetilde{A}$ and automatically choose how to partition the matrix, see 
-\texttt{options\%partition\_method}.
+The user must specify which method to use through the \texttt{method} parameter
+to \texttt{nd\_order()}.
 
 \vspace{0.5cm}
 \noindent\hrulefill\\
