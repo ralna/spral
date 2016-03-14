@@ -710,24 +710,25 @@ subroutine nd_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, level, &
 
    ! Find the partition
    partition => work(1:a_n); work_ptr = a_n
-   select case(options%coarse_partition_method)
-   case(:ND_PARTITION_HALF_LEVEL_SET)
-      call nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight,    &
-         level, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, partition,  &
-         work(work_ptr+1:work_ptr+9*a_n+sumweight), options, band, depth,     &
-         use_multilevel, info%flag)
-   case(ND_PARTITION_LEVEL_SET:)
-      call nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight,         &
-         level, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, partition,  &
-         work(work_ptr+1:work_ptr+9*a_n+sumweight), options, band, depth,     &
-         use_multilevel, info%flag)
-   end select
-   if(info%flag.ne.0) return ! it's all gone horribly wrong
-   if (use_multilevel) then
+   if(use_multilevel) then
       lwork = 9*a_n + sumweight
       call multilevel_partition(a_n, a_ne, a_ptr, a_row, a_weight, sumweight,  &
          partition, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, options, &
          info%flag, lwork, work(work_ptr+1:work_ptr+lwork), grids)
+   else
+      select case(options%coarse_partition_method)
+      case(:ND_PARTITION_HALF_LEVEL_SET)
+         call nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
+            a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, partition,      &
+            work(work_ptr+1:work_ptr+9*a_n+sumweight), options, band, depth,  &
+            info%flag)
+      case(ND_PARTITION_LEVEL_SET:)
+         call nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight,      &
+            a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, partition,      &
+            work(work_ptr+1:work_ptr+9*a_n+sumweight), options, band, depth,  &
+            info%flag)
+      end select
+      if(info%flag.ne.0) return ! it's all gone horribly wrong
    end if
 
    ! If S is empty, return and caller will handle as special case

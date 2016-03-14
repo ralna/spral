@@ -16,15 +16,14 @@ contains
 ! Define partitions as first n/2 and the rest, build vetex cover of resulting
 ! edge seperator.
 subroutine region_grow_partition(a_n, a_ne, a_ptr, a_row, a_weight, &
-      sumweight, ndlevel, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, &
-      partition, work, options, band, depth, use_multilevel, flag)
+      sumweight, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, &
+      partition, work, options, band, depth, flag)
    integer, intent(in) :: a_n
    integer, intent(in) :: a_ne
    integer, intent(in) :: a_ptr(a_n)
    integer, intent(in) :: a_row(a_ne)
    integer, intent(in) :: a_weight(a_n)
    integer, intent(in) :: sumweight ! sum of entries in a_weight
-   integer, intent(in) :: ndlevel ! current level of nested dissection
    integer, intent(out) :: a_n1, a_n2 ! size of the two submatrices
    integer, intent(out) :: a_weight_1, a_weight_2, a_weight_sep ! Weighted
       ! size of partitions and separator
@@ -37,8 +36,6 @@ subroutine region_grow_partition(a_n, a_ne, a_ptr, a_row, a_weight, &
    real(wp), intent(out) :: band ! band = 100*L/a_n, where L is the size of
       ! the largest levelset
    real(wp), intent(out) :: depth !  depth = num_levels_nend
-   logical, intent(in) :: use_multilevel ! are we allowed to use a
-      ! multilevel partitioning strategy
    integer, intent(out) :: flag ! error indicator
 
    type(random_state) :: rstate
@@ -59,9 +56,6 @@ subroutine region_grow_partition(a_n, a_ne, a_ptr, a_row, a_weight, &
    flag = 0
    band = -1.0
    depth = -1.0
-
-   ! If we're going to use multilevel regardless, immediate return
-   if (use_multilevel) return
 
    ! Use a breadth-first search to find n/2 vertices
    work_ptr = 0
@@ -190,15 +184,14 @@ end subroutine validate_partition
 ! Partition the matrix using the half level set (Ashcraft) method
 !
 subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
-      ndlevel, a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, partition, &
-      work, options, band, depth, use_multilevel, flag)
+      a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, partition, &
+      work, options, band, depth, flag)
    integer, intent(in) :: a_n
    integer, intent(in) :: a_ne
    integer, intent(in) :: a_ptr(a_n)
    integer, intent(in) :: a_row(a_ne)
    integer, intent(in) :: a_weight(a_n)
    integer, intent(in) :: sumweight ! sum of entries in a_weight
-   integer, intent(in) :: ndlevel ! current level of nested dissection
    integer, intent(out) :: a_n1, a_n2 ! size of the two submatrices
    integer, intent(out) :: a_weight_1, a_weight_2, a_weight_sep ! Weighted
       ! size of partitions and separator
@@ -211,8 +204,6 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
    real(wp), intent(out) :: band ! band = 100*L/a_n, where L is the size of
       ! the largest levelset
    real(wp), intent(out) :: depth !  depth = num_levels_nend
-   logical, intent(in) :: use_multilevel ! are we allowed to use a
-      ! multilevel partitioning strategy
    integer, intent(out) :: flag ! error indicator
 
    integer :: nstrt, nend
@@ -226,7 +217,7 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
    integer :: lwidth, mindeg, degree
    real(wp) :: bestval
    real(wp) :: val
-   real(wp) :: balance, balance_tol
+   real(wp) :: balance_tol
    logical :: imbal
 
    integer, parameter :: max_search = 5 ! max iterations to find pseudo-diameter
@@ -239,9 +230,6 @@ subroutine nd_half_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, &
    flag = 0
    band = -1.0
    depth = -1.0
-
-   ! If we're going to use multilevel regardless, immediate return
-   if (use_multilevel) return
 
    ! Initialize various internal variables
    balance_tol = max(1.0_wp, options%balance)
@@ -411,16 +399,15 @@ end subroutine nd_half_level_set
 !
 ! Partition the matrix using the level set method
 !
-subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, ndlevel, &
-      a_n1, a_n2, a_weight_1, a_weight_2, a_weight_sep, partition, work,       &
-      options, band, depth, use_multilevel, flag)
+subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, a_n1, &
+      a_n2, a_weight_1, a_weight_2, a_weight_sep, partition, work, options, &
+      band, depth, flag)
    integer, intent(in) :: a_n
    integer, intent(in) :: a_ne
    integer, intent(in) :: a_ptr(a_n)
    integer, intent(in) :: a_row(a_ne)
    integer, intent(in) :: a_weight(a_n)
    integer, intent(in) :: sumweight ! sum of entries in a_weight
-   integer, intent(in) :: ndlevel ! current nested dissection level
    integer, intent(out) :: a_n1, a_n2 ! size of the two submatrices
    integer, intent(out) :: a_weight_1, a_weight_2, a_weight_sep ! Weighted
       ! size of partitions and separator
@@ -433,8 +420,6 @@ subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, ndlevel, &
    real(wp), intent(out) :: band ! band = 100*L/a_n, where L is the size of
       ! the largest levelset
    real(wp), intent(out) :: depth ! depth = num_levels_nend
-   logical, intent(in) :: use_multilevel ! are we allowed to use a multilevel
-      ! partitioning strategy
    integer, intent(out) :: flag
 
    integer :: nstrt, nend
@@ -459,9 +444,6 @@ subroutine nd_level_set(a_n, a_ne, a_ptr, a_row, a_weight, sumweight, ndlevel, &
    flag = 0
    band = -1.0
    depth = -1.0
-
-   ! If we're going to use multilevel regardless, immediate return
-   if (use_multilevel) return
 
    ! Initialize internal variables
    balance_tol = max(real(1.0,wp),options%balance)

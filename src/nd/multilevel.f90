@@ -495,11 +495,10 @@ subroutine nd_coarse_partition(a_n,a_ne,a_ptr,a_row,a_weight, &
   select case (options%coarse_partition_method)
   case (:1)
     ! Half level set method
-    use_multilevel = .false.
-    call nd_half_level_set(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,2,a_n1, &
+    call nd_half_level_set(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,a_n1, &
       a_n2,a_weight_1,a_weight_2,a_weight_sep, &
       work1(partition_ptr+1:partition_ptr+a_n),work(1:9*a_n+sumweight), &
-      options,dummy,dummy1,use_multilevel,info)
+      options,dummy,dummy1,info)
     if(info.ne.0) return ! it's all gone horribly wrong
 
     if (printi .or. printd) then
@@ -514,11 +513,10 @@ subroutine nd_coarse_partition(a_n,a_ne,a_ptr,a_row,a_weight, &
 
   case (2)
     ! Level set method
-    use_multilevel = .false.
-    call nd_level_set(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,2,a_n1, &
+    call nd_level_set(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,a_n1, &
       a_n2,a_weight_1,a_weight_2,a_weight_sep, &
       work1(partition_ptr+1:partition_ptr+a_n),work(1:9*a_n+sumweight), &
-      options,dummy,dummy1,use_multilevel, info)
+      options,dummy,dummy1,info)
     if(info.ne.0) return ! it's all gone horribly wrong
 
     if (printi .or. printd) then
@@ -532,11 +530,10 @@ subroutine nd_coarse_partition(a_n,a_ne,a_ptr,a_row,a_weight, &
     end if
   case(3:)
     ! Region-growing edge seperator vertex cover
-    use_multilevel = .false.
-    call region_grow_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,2,a_n1, &
+    call region_grow_partition(a_n,a_ne,a_ptr,a_row,a_weight,sumweight,a_n1, &
       a_n2,a_weight_1,a_weight_2,a_weight_sep, &
       work1(partition_ptr+1:partition_ptr+a_n),work(1:9*a_n+sumweight), &
-      options,dummy,dummy1,use_multilevel, info)
+      options,dummy,dummy1,info)
     if(info.ne.0) return ! it's all gone horribly wrong
 
     if (printi .or. printd) then
