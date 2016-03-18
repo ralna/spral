@@ -26,7 +26,9 @@ program spral_lsmr_example
     ! Data for rhs b
     b(1:m) = (/ 1.0, 1.0, 1.0, 1.0, 1.0 /)
 
-    ! prepare for LSMR calls (using default settings and no preconditioning)
+    ! prepare for LSMR calls (using no preconditioning and default
+    ! settings, except switch off diagnostic printing)
+    options%unit_diagnostics = -1
     action = 0
     u(1:m) = b(1:m)
 
@@ -36,8 +38,9 @@ program spral_lsmr_example
 
        if (action.eq.0) then
           ! we are done.
-          write (*,'(a)') ' LS solution:'
-          write (*,'(3es12.4)') x(1:n)
+          write (*,'(a,i3,a,i3)') ' Exit LSMR with inform%flag = ',inform%flag,&
+            ' and inform%itn = ',inform%itn
+          write (*,'(a)') ' LS solution is in x(1:n)'
           exit
 
       else if (action.eq.1) then

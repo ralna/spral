@@ -28,8 +28,9 @@
 ! (as required by SPRAL) and for reverse communication interface.
 !
 program spral_lsmr_test
-  use  spral_lsmr
-  use hsl_fa14_double
+  use spral_lsmr
+  use spral_random
+  use spral_random_matrix, only : random_matrix_generate
   implicit none
 
   integer(4),  parameter :: ip = kind( 1 )
@@ -53,6 +54,7 @@ program spral_lsmr_test
    integer(ip), parameter :: lsmr_stop_m_oor           = 10
 
   !---------------------------------------------------------------------
+  ! Michael's tests:
   ! This program calls lsmrtest(...) to generate a series of test problems
   ! Ax = b or Ax ~= b and solve them with LSMR.
   ! The matrix A is m x n.  It is defined by routines in lsmrReverse_TestModule.
@@ -67,24 +69,39 @@ program spral_lsmr_test
 
 
   ! Local variables
-  integer(ip)  :: m,n,nbar,ndamp,nduplc,nfail,npower,nout
-  integer(ip)  :: localSize  ! No. of vectors involved in local reorthogonalization (>= 0)
-  real(wp)     :: damp
+  integer(ip)  :: flag
+  integer(ip)  :: m,n,nbar,ndamp,nduplc,nfail,npower
+  integer(ip)  :: localSize  ! No. of vectors involved in local 
+                             ! reorthogonalization (>= 0)
+  integer(ip) :: prob
+  real(wp)    :: damp
 
-   integer, parameter :: we_unit = 11
-   character(len=13) :: we_file = "we_double.out"
+  integer(ip) :: nout, mout, pout
 
 
-  nout   = 6
 
-  if (we_unit.gt.6) open(unit=we_unit,file=we_file,status="replace")
+   ! Switch off printing by setting nout, mout and pout to <0
+   ! If these streams are positive, they must all be different.
+   nout = 6
+   mout = -10
+   pout = -11
+
+  nfail = 0
+  prob = 0
+
+  ! this file is for tests with printing on
+  if (pout.gt.0) open(pout,file='LSMR_print_output',status="replace")
+
+  ! the output in LSMR_Mtests.output can be directly compared with the output  
+  ! from Michael's code.
+  if (mout.gt.0) open(mout,file='LSMR_Mtests.output',status='replace')
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!
-  !!! Michael's tests !!!
-
-  ! the output in LSMR can be directly compared with the output from Michael's
-  ! code.
-  open(nout,file='LSMR.txt',status='replace')
+    if (nout.gt.0) then
+      write(nout,"(a)") "======================"
+      write(nout,"(a)") "Running Michaels tests:"
+      write(nout,"(a)") "======================"
+    end if
 
   nbar   = 100  ! 1000
   nduplc =   4  ! 40
@@ -98,11 +115,29 @@ program spral_lsmr_test
      npower = ndamp
      damp   = 0.0
      if (ndamp > 2) damp   = 10.0**(-ndamp)
-     call lsmrtest(m,n,nduplc,npower,damp,localSize,nout)
+     call lsmrtest(m,n,nduplc,npower,damp,localSize,flag,mout)
+     if (flag.lt.0) then
+        if (nout.gt.0) write (nout,'(a,i3)') &
+        ' On exit from lsmrtest flag = ', flag
+        nfail = nfail + 1
+     else if (flag.eq.1) then
+        prob = prob + 1
+        if (nout.gt.0) write (nout,'(a,i3)') &
+        ' LSMR  appears to be successful for problem ',prob
+     end if
   end do
 
   localsize = 10    ! Repeat last test with local reorthogonalization
-  call lsmrtest(m,n,nduplc,npower,damp,localSize,nout)
+  call lsmrtest(m,n,nduplc,npower,damp,localSize,flag,mout)
+     if (flag.lt.0) then
+        if (nout.gt.0) write (nout,'(a,i3)') &
+        ' On exit from lsmrtest flag = ', flag
+        nfail = nfail + 1
+     else if (flag.eq.1) then
+        prob = prob + 1
+        if (nout.gt.0) write (nout,'(a,i3)') &
+        ' LSMR  appears to be successful for problem ',prob
+     end if
 
 
   m = nbar          ! Square systems
@@ -113,11 +148,29 @@ program spral_lsmr_test
      npower = ndamp
      damp   = 0.0
      if (ndamp > 2) damp   = 10.0**(-ndamp-6)
-     call lsmrtest(m,n,nduplc,npower,damp,localSize,nout)
+     call lsmrtest(m,n,nduplc,npower,damp,localSize,flag,mout)
+     if (flag.lt.0) then
+        if (nout.gt.0) write (nout,'(a,i3)') &
+        ' On exit from lsmrtest flag = ', flag
+        nfail = nfail + 1
+     else if (flag.eq.1) then
+        prob = prob + 1
+        if (nout.gt.0) write (nout,'(a,i3)') &
+        ' LSMR  appears to be successful for problem ',prob
+     end if
   end do
 
   localsize = 10    ! Repeat last test with local reorthogonalization
-  call lsmrtest(m,n,nduplc,npower,damp,localSize,nout)
+  call lsmrtest(m,n,nduplc,npower,damp,localSize,flag,mout)
+     if (flag.lt.0) then
+        if (nout.gt.0) write (nout,'(a,i3)') &
+        ' On exit from lsmrtest flag = ', flag
+        nfail = nfail + 1
+     else if (flag.eq.1) then
+        prob = prob + 1
+        if (nout.gt.0) write (nout,'(a,i3)') &
+        ' LSMR  appears to be successful for problem ',prob
+     end if
 
 
   m = nbar          ! Under-determined systems
@@ -128,25 +181,48 @@ program spral_lsmr_test
      npower = ndamp
      damp   = 0.0
      if (ndamp > 2) damp   = 10.0**(-ndamp-6)
-     call lsmrtest(m,n,nduplc,npower,damp,localSize,nout)
+     call lsmrtest(m,n,nduplc,npower,damp,localSize,flag,mout)
+     if (flag.lt.0) then
+        if (nout.gt.0) write (nout,'(a,i3)') &
+        ' On exit from lsmrtest flag = ', flag
+        nfail = nfail + 1
+     else if (flag.eq.1) then
+        prob = prob + 1
+        if (nout.gt.0) write (nout,'(a,i3)') &
+        ' LSMR  appears to be successful for problem ',prob
+     end if
   end do
 
   localsize = 10    ! Repeat last test with local reorthogonalization
-  call lsmrtest(m,n,nduplc,npower,damp,localSize,nout)
+  call lsmrtest(m,n,nduplc,npower,damp,localSize,flag,mout)
+     if (flag.lt.0) then
+        if (nout.gt.0) write (nout,'(a,i3)') &
+        ' On exit from lsmrtest flag = ', flag
+        nfail = nfail + 1
+     else if (flag.eq.1) then
+        prob = prob + 1
+        if (nout.gt.0) write (nout,'(a,i3)') &
+        ' LSMR  appears to be successful for problem ',prob
+     end if
 
-  close(nout)
+     if (mout.gt.0) write (mout,'(//a,i5)') &
+         " At end of Michael's tests number of failures = ",nfail
+
+     if (nout.gt.0) write (nout,'(//a,i5)') &
+         " At end of Michael's tests number of failures = ",nfail
+
+
+  if (mout.gt.0) close(mout)
 
   !!! End Michael's tests !!!
   !!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-  open(nout,file='LSMR.output',status='replace')
-  nfail = 0
 
   call test_special
 
   call test_random
 
-  close(nout)
+  if (pout.gt.0) close(pout)
+  if (nfail.gt.0) stop -1
 
 contains
 
@@ -158,14 +234,13 @@ contains
    integer(ip), parameter :: maxn =  30 ! largest problem size (cols)
    integer(ip), parameter :: nprob = 3  ! number of error tests
    integer(ip), parameter :: mprob = 10 ! number of other tests
-   type (fa14_seed) :: seed
+   type (random_state) :: state
 
    integer(ip), allocatable :: ptr(:),row(:)
    real(wp),    allocatable :: val(:), work(:)
    real(wp)    :: a(maxm,maxn), b(maxm), x(maxn), y(maxn), rhs(maxm,1)
    real(wp)    :: u(maxm), v(maxn) ! reverse communication arrays
    real(wp)    :: w(maxn) , z(maxm)
-   integer(ip) :: iw(2*maxm)
 
     type ( lsmr_keep )    :: keep 
     type ( lsmr_options ) :: options
@@ -173,7 +248,7 @@ contains
 
    integer(ip)  :: action
    integer(ip) :: flag
-   integer(ip) :: i,j,ival
+   integer(ip) :: i,j
    integer(ip) :: lwork
    integer(ip) :: m1,n,n1,ne
    integer(ip) :: prblm
@@ -186,17 +261,16 @@ contains
    real(wp) :: dnrm2
    real(wp) :: lambda
 
-
-
-      call fa14_get_seed(seed,ival)
-
+    if (nout.gt.0) then
       write(nout,"(a)") "======================"
       write(nout,"(a)") "Testing bad arguments:"
       write(nout,"(a)") "======================"
+    end if
 
 
  main: do prblm = 1,nprob+mprob
 
+    if (nout.gt.0) then
       if (prblm.eq.1) then
          write(nout,"(a)") "======================"
          write(nout,"(a)") "Testing bad arguments:"
@@ -207,20 +281,22 @@ contains
          write(nout,"(a)") "Testing some options with printing on:"
          write(nout,"(a)") "======================================"
      end if
+   end if
  
-         call matrix_gen(seed, maxm, m, maxn, n, ne, ptr, row, val, b, a, &
-            iw, flag)
+         call matrix_gen(state, maxm, m, maxn, n, ne, ptr, row, val, b, a, &
+            flag)
 
          if (flag /= 0) then
-           write(nout,'(a)') ' Unexpected error when generating matrix'
+           if (nout.gt.0) write(nout,'(a,i3)') &
+         ' Unexpected error when generating matrix. flag=',flag
            nfail = nfail + 1;   cycle main
          end if
 
          ! run with printing on (thus some tests are not for errors but
          ! just to get the print statements executed)
          call set_controls(options)
-         options%unit_error = we_unit
-         options%unit_diagnostics = we_unit
+         options%unit_error = pout
+         options%unit_diagnostics = pout
 
          action = 0
          flag = 0
@@ -229,51 +305,63 @@ contains
          ldamp = .false.
 
          if (prblm.eq.1) then
-            write(nout,"(a)",advance="no") " * Testing m=0...................."
-            write(we_unit,"(/a)",advance="no") " * Testing m=0................."
+            if (nout.gt.0) &
+            write(nout,"(a)",advance="no") " * Testing m=0....................."
+            if (pout.gt.0) &
+            write(pout,"(/a)",advance="no") " * Testing m=0................."
             m1 = 0
             options%ctest = 1 ! use this to get some printing tested
             call LSMR(action, m1, n, u, v, y, keep, options, inform, &
               damp = lambda)
-            call print_result(inform%flag, lsmr_stop_m_oor)
+            call print_result(nout, nfail, inform%flag, lsmr_stop_m_oor)
             cycle
          end if
 
          if (prblm.eq.2) then
-            write(nout,"(a)",advance="no") " * Testing n=0...................."
-            write(we_unit,"(/a)",advance="no") " * Testing n=0................."
+            if (nout.gt.0) &
+            write(nout,"(a)",advance="no") " * Testing n=0....................."
+            if (pout.gt.0) &
+            write(pout,"(/a)",advance="no") " * Testing n=0................."
             n1 = 0
             options%ctest = 1 ! use this to get some printing tested
             call LSMR(action, m, n1, u, v, y, keep, options, inform)
-            call print_result(inform%flag, lsmr_stop_m_oor)
+            call print_result(nout, nfail, inform%flag, lsmr_stop_m_oor)
             cycle
          end if
 
          if (prblm.eq.3) then
-            write(nout,"(a)",advance="no") " * Testing itnlim too small......."
-            write(we_unit,"(/a)",advance="no") " * Testing itnlim too small...."
+            if (nout.gt.0) &
+            write(nout,"(a)",advance="no") " * Testing itnlim too small........"
+            if (pout.gt.0) &
+            write(pout,"(/a)",advance="no") " * Testing itnlim too small...."
             options%itnlim = 1
          end if
 
          if (prblm.eq.nprob+1) then
-            write(nout,"(/a)") " * Testing options%ctest=1......."
-            write(we_unit,"(/a)") " * Testing options%ctest=1....."
+            if (nout.gt.0) &
+            write(nout,"(a)") " * Testing options%ctest=1........"
+            if (pout.gt.0) &
+            write(pout,"(/a)") " * Testing options%ctest=1....."
             options%ctest = 1
             options%print_freq_itn = 1
             options%print_freq_head = 2
          end if
 
          if (prblm.eq.nprob+2) then
-            write(nout,"(/a)") " * Testing options%ctest=2......."
-            write(we_unit,"(/a)") " * Testing options%ctest=2....."
+            if (nout.gt.0) &
+            write(nout,"(a)") " * Testing options%ctest=2........"
+            if (pout.gt.0) &
+            write(pout,"(/a)") " * Testing options%ctest=2....."
             options%ctest = 2
             options%print_freq_itn = 1
             options%print_freq_head = 1
          end if
 
          if (prblm.eq.nprob+3) then
-            write(nout,"(/a)") " * Testing options%ctest=2......."
-            write(we_unit,"(/a)") " * Testing options%ctest=2....."
+            if (nout.gt.0) &
+            write(nout,"(a)") " * Testing options%ctest=2........"
+            if (pout.gt.0) &
+            write(pout,"(/a)") " * Testing options%ctest=2....."
             options%ctest = 2
             options%print_freq_itn = 1
             options%print_freq_head = 1
@@ -281,8 +369,10 @@ contains
          end if
 
          if (prblm.eq.nprob+4) then
-            write(nout,"(/a)") " * Testing options%ctest=3......."
-            write(we_unit,"(/a)") " * Testing options%ctest=3....."
+            if (nout.gt.0) &
+            write(nout,"(a)",advance="no") " * Testing options%ctest=3........"
+            if (pout.gt.0) &
+            write(pout,"(/a)",advance="no") " * Testing options%ctest=3....."
             options%ctest = 3
             options%print_freq_itn = 1
             options%print_freq_head = 1
@@ -290,31 +380,39 @@ contains
          end if
 
          if (prblm.eq.nprob+5) then
-            write(nout,"(/a)") " * Testing options%ctest=3......."
-            write(we_unit,"(/a)") " * Testing options%ctest=3....."
+            if (nout.gt.0) &
+            write(nout,"(a)",advance="no") " * Testing options%ctest=3........"
+            if (pout.gt.0) &
+            write(pout,"(/a)",advance="no") " * Testing options%ctest=3....."
             options%ctest = 3
             options%print_freq_itn = 1
             options%print_freq_head = 1
          end if
 
          if (prblm.eq.nprob+6) then
-            write(nout,"(/a)") " * Testing b=0...................."
-            write(we_unit,"(/a)") " * Testing b=0................."
+            if (nout.gt.0) &
+            write(nout,"(a)",advance="no") " * Testing b=0...................."
+            if (pout.gt.0) &
+            write(pout,"(/a)",advance="no") " * Testing b=0................."
             b(1:m) = zero
             u(1:m) = b(1:m)
             options%ctest = 3
          end if
 
          if (prblm.eq.nprob+9) then
-            write(nout,"(/a)") " * Testing b=0...................."
-            write(we_unit,"(/a)") " * Testing b=0................."
+            if (nout.gt.0) &
+            write(nout,"(a)",advance="no") " * Testing b=0...................."
+            if (pout.gt.0) &
+            write(pout,"(/a)",advance="no") " * Testing b=0................."
             b(1:m) = zero
             u(1:m) = b(1:m)
          end if
 
          if (prblm.eq.nprob+10) then
-            write(nout,"(/a)") " * Testing compatible............."
-            write(we_unit,"(/a)") " * Testing compatible.........."
+            if (nout.gt.0) &
+            write(nout,"(a)",advance="no") " * Testing compatible............."
+            if (pout.gt.0) &
+            write(pout,"(/a)",advance="no") " * Testing compatible.........."
             x(1:n) = one
             do i = 1,m
               b(i) = zero
@@ -343,7 +441,7 @@ contains
               ! we are done. check whether we have an unexpected error.
 
               if (prblm.eq.3) then
-                 call print_result(inform%flag, lsmr_stop_itnlim)
+                 call print_result(nout, nfail, inform%flag, lsmr_stop_itnlim)
                  flag = -1
                  exit
               else if (inform%flag.ge.7) then
@@ -354,26 +452,28 @@ contains
 
               if (prblm.eq.nprob+4 .or. prblm.eq.nprob+5) then
                  ! expect to have LS solution
-                 call print_result(inform%flag, lsmr_stop_LS_atol)
+                 call print_result(nout, nfail, inform%flag, lsmr_stop_LS_atol,&
+                   expected1=lsmr_stop_compatible)
               end if
 
               if (prblm.eq.nprob+7 .or. prblm.eq.nprob+8) then
                  ! test with A'b=0 should have x=0
-                 call print_result(inform%flag, lsmr_stop_x0)
+                 call print_result(nout, nfail, inform%flag, lsmr_stop_x0)
                  flag = -1
                  exit
               end if
 
               if (prblm.eq.nprob+6 .or. prblm.eq.nprob+9) then
                  ! test with b=0 should have x=0
-                 call print_result(inform%flag, lsmr_stop_x0)
+                 call print_result(nout, nfail, inform%flag, lsmr_stop_x0)
                  flag = -1
                  exit
               end if
 
               if (prblm.eq.nprob+10) then
                  ! test with compatible
-                 call print_result(inform%flag, lsmr_stop_compatible)
+                 call print_result(nout, nfail, inform%flag,&
+                   lsmr_stop_compatible)
               end if
 
               ! recover solution 
@@ -389,14 +489,18 @@ contains
 
          ! artifically set v = 0 to test out some code.
          if (prblm.eq.nprob+7) then
-            write(nout,"(/a)") " * Testing A'b=0.................."
-            write(we_unit,"(/a)") " * Testing A'b=0..............."
+            if (nout.gt.0) &
+            write(nout,"(a)",advance="no") " * Testing A'b=0.................."
+            if (pout.gt.0) &
+            write(pout,"(/a)",advance="no") " * Testing A'b=0..............."
             v(1:n) = zero
          end if
 
          if (prblm.eq.nprob+8) then
-            write(nout,"(/a)") " * Testing A'b=0.................."
-            write(we_unit,"(/a)") " * Testing A'b=0..............."
+            if (nout.gt.0) &
+            write(nout,"(a)",advance="no") " * Testing A'b=0.................."
+            if (pout.gt.0) &
+            write(pout,"(/a)",advance="no") " * Testing A'b=0..............."
             v(1:n) = zero
             options%ctest = 1
          end if
@@ -452,6 +556,7 @@ contains
            else
 
               ! we should not get here!
+              if (nout.gt.0) &
               write (nout,'(a,i3)') ' We have a bug. action = ',action
               flag = -1
               nfail = nfail + 1
@@ -479,7 +584,8 @@ contains
      !     if (abs(normr-inform%normr).gt.1000*epsilon(one) .or.  &
      !        abs(normAPr-inform%normAPr).gt.1000*epsilon(one) ) then
      !        nfail = nfail + 1
-     !        write (nout,'(a)') ' Something wrong when checking normr and normAPr'
+     !        write (nout,'(a)') &
+     !          ' Something wrong when checking normr and normAPr'
       ! write (*,*)normr,inform%normr,normAPr,inform%normAPr
       ! write (*,*) abs(normr-inform%normr),abs(normAPr-inform%normAPr)
      !     end if
@@ -507,6 +613,7 @@ contains
         call dgels( 'n', m, n, 1, a, maxm, rhs, maxm, work, lwork, flag)
 
         if (flag /= 0) then
+           if (nout.gt.0) &
            write (nout,'(a,i3)') ' Unexpected error from dgels. info = ',flag
            nfail = nfail + 1;   cycle main
         end if
@@ -541,10 +648,11 @@ contains
 
       if (stat.ne.0) then
          nfail = nfail + 1
+         if (nout.gt.0) &
          write (nout,'(a)') ' Non zero stat parameter returned from LSMR_free'
       end if
 
-      write (nout,'(//a,i5)') &
+      if (nout.gt.0) write (nout,'(//a,i5)') &
          ' At end of test_special number of failures = ',nfail
 
    end subroutine test_special
@@ -557,14 +665,13 @@ contains
    integer(ip), parameter :: maxn =  40!100 ! largest problem size (cols)
    integer(ip), parameter :: nprob = 200 ! number of error-free runs
 
-   type (fa14_seed) :: seed
+   type (random_state) :: state
 
    integer(ip), allocatable :: ptr(:),row(:)
    real(wp),    allocatable :: val(:), work(:)
    real(wp)    :: a(maxm,maxn), b(maxm), x(maxn), y(maxn), rhs(maxm,1)
    real(wp)    :: u(maxm), v(maxn) ! reverse communication arrays
    real(wp)    :: d(maxn), w(maxn) , z(maxm)
-   integer(ip) :: iw(2*maxm)
 
     type ( lsmr_keep )    :: keep 
     type ( lsmr_options ) :: options
@@ -572,7 +679,7 @@ contains
 
    integer(ip)  :: action
    integer(ip) :: flag
-   integer(ip) :: i,ival
+   integer(ip) :: i
    integer(ip) :: lwork
    integer(ip) :: n,ne
    integer(ip) :: prblm
@@ -584,25 +691,25 @@ contains
    real(wp) :: dnrm2
    real(wp) :: lambda
 
-
-      call fa14_get_seed(seed,ival)
-
+    if (nout.gt.0) then
       write(nout, "(a)")
       write(nout, "(a)") "======================="
       write(nout, "(a)") "Testing random matrices"
       write(nout, "(a)") "======================="
+    end if
 
  main: do prblm = 1,nprob
  
-         call matrix_gen(seed, maxm, m, maxn, n, ne, ptr, row, val, b, a, &
-            iw, flag)
+         call matrix_gen(state, maxm, m, maxn, n, ne, ptr, row, val, b, a, &
+            flag)
 
          if (flag /= 0) then
-           write(nout,'(a)') ' Unexpected error when generating matrix'
+           if (nout.gt.0) write(nout,'(a,i3)') &
+         ' Unexpected error when generating matrix. flag=', flag
            nfail = nfail + 1;   cycle main
          end if
 
-         write(nout, "(/a, i3, 3(1x, a, i8),a)") " * number ", &
+         if (nout.gt.0) write(nout, "(/a, i3, 3(1x, a, i8),a)") " * number ", &
          prblm, "m = ", m, "n = ", n, "ne = ", ne, " ..."
 
          call set_controls(options)
@@ -611,8 +718,7 @@ contains
          options%unit_diagnostics = -1
          options%unit_error       = -1
   
-
-         call fa14_random_integer(seed,10,i)
+         i = random_integer(state, 10)
          options%ctest = i
          if (i.gt.3) options%ctest = 3 ! Michael's stopping criteria
          ! choose these small values to get results that are close to 
@@ -622,12 +728,12 @@ contains
          options%btol = 10d-12
 
          ! Choose localsize
-         call fa14_random_integer(seed,100,options%localSize)
+         options%localSize = random_integer(state, 100)
          if (options%localSize.gt.min(m,n)) options%localSize = 0
 
          ! decide whether to use preconditioning 
          precond = .true.
-         call fa14_random_integer(seed,10,i)
+         i = random_integer(state, 10)
          if (i.lt.5) precond = .false.
          if (precond) then
             if (m.ge.n) then
@@ -762,14 +868,14 @@ contains
                    exit
                 end if
 
-
               end if
 
            !!!!!!!!!!!!!!!!!!!!!!!!!
            else
 
               ! we should not get here!
-              write (nout,'(a,i3)') ' We have a bug. action = ',action
+              if (nout.gt.0) write (nout,'(a,i3)') &
+              ' We have a bug. action = ',action
               flag = -1
               nfail = nfail + 1
               exit
@@ -807,7 +913,7 @@ contains
         call dgels( 'n', m, n, 1, a, maxm, rhs, maxm, work, lwork, flag)
 
         if (flag /= 0) then
-           write (nout,'(a,i3)') &
+           if (nout.gt.0) write (nout,'(a,i3)') &
          ' Unexpected error from dgels (initial call). info = ',flag
            nfail = nfail + 1;   cycle main
         end if
@@ -821,6 +927,7 @@ contains
         call dgels( 'n', m, n, 1, a, maxm, rhs, maxm, work, lwork, flag)
 
         if (flag /= 0) then
+           if (nout.gt.0) &
            write (nout,'(a,i3)') ' Unexpected error from dgels. info = ',flag
            nfail = nfail + 1;   cycle main
         end if
@@ -834,6 +941,7 @@ contains
         norm_rhs = dnrm2(n,rhs,1)
         if (abs(normx-norm_rhs)/normx.gt.10*sqrt(epsilon(one)) ) then
            nfail = nfail + 1
+           if (nout.gt.0) &
            write (nout,'(a)') ' Something wrong when checking norm of solution'
 
            ! note: if options%atol and options%btol too large (ie stopping
@@ -856,10 +964,11 @@ contains
 
       if (stat.ne.0) then
          nfail = nfail + 1
+         if (nout.gt.0) &
          write (nout,'(a)') ' Non zero stat parameter returned from LSMR_free'
       end if
 
-      write (nout,'(//a,i5)') &
+      if (nout.gt.0) write (nout,'(//a,i5)') &
          ' At end of test_random number of failures = ',nfail
 
     end subroutine test_random
@@ -886,14 +995,14 @@ contains
       end subroutine set_controls
 
 !********************************************
-      ! Generate random rectangular matrix using ym11
+      ! Generate random rectangular matrix 
       ! Stored in CSC format using ptr, row, val.
       ! Also held as dense matrix in a(1:m,1:n)
 
-   subroutine matrix_gen(seed, maxm, m, maxn, n, ne, ptr, row, val, b, a, &
-      iw, flag)
+   subroutine matrix_gen(state, maxm, m, maxn, n, ne, ptr, row, val, b, a, &
+      flag)
 
-      type (fa14_seed), intent(inout) :: seed
+      type (random_state), intent(inout) :: state
       integer(ip), intent(in)  :: maxm ! max row dim. of matrix
       integer(ip), intent(out) :: m    ! row dim. of matrix
       integer(ip), intent(in)  :: maxn ! max col. dim. of matrix
@@ -905,21 +1014,21 @@ contains
       real(wp),    intent(out)                            :: a(maxm,maxn)
       real(wp),    intent(out)                            :: b(maxm)
       real(wp),    intent(out), dimension(:), allocatable :: val
-      integer(ip), intent(out) :: iw(*)
-      integer(ip) :: icntl11(10)
-      integer(ip) :: i,j,nzin,seed1,st
-      character(len=8) :: key
+      integer(ip) :: i,j,nzin,matrix_type,st
 
       flag = 0
-      call fa14_random_integer(seed,maxm,m)
+      m = random_integer(state, maxm)
       m = max(1,m)
 
-      call fa14_random_integer(seed,maxn,n)
+      n = random_integer(state, maxn)
       n = max(1,n)
 
-      call fa14_random_integer(seed,m*n/3,nzin)
+      nzin = random_integer(state, m*n/3)
       nzin = max(3*m,nzin)
+      nzin = min(n*m,nzin)
       if (m == 1 .and. n == 1) nzin = 1
+
+
 
       deallocate(row,stat=st)
       deallocate(ptr,stat=st)
@@ -931,9 +1040,13 @@ contains
         return
       end if
 
-      call ym11id(icntl11,seed1)
+      matrix_type = 1
+      call random_matrix_generate(state, matrix_type, m, n, &
+      nzin, ptr, row, flag, val=val, nonsingular=.true., sort=.true.)
 
-      call ym11ad(m,n,nzin,ne,row,val,ptr,iw,icntl11,key,seed1)
+      if (flag.lt.0) return
+
+      ne = ptr(n+1) - 1
 
       ! copy into dense matrix a
       a = zero
@@ -946,7 +1059,7 @@ contains
       ! generate a random right-hand side vector b
 
       do i = 1,m
-         call fa14_random_real(seed,.false.,b(i))
+         b(i) = random_real(state)
       end do
 
     end subroutine matrix_gen
@@ -1046,11 +1159,12 @@ contains
 
   !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine lsmrtest(m,n,nduplc,npower,damp,localSize,nout)
+  subroutine lsmrtest(m,n,nduplc,npower,damp,localSize,flag,mout)
 
     integer(ip),  intent(in) :: m, n, nduplc, npower, &
                                 localSize,        & ! Local reorthogonalization
-                                nout
+                                mout
+    integer(ip), intent(out) :: flag ! error flag. set to <0 if error found
     real(wp), intent(in)     :: damp
 
     !-------------------------------------------------------------------
@@ -1062,6 +1176,7 @@ contains
     !              localSize specifies that each bidiagonalization vector v
     !              should be reorthogonalized wrto the last "localSize" v's.
     !              localSize >= 0.
+    ! 18 March 2016 : added flag for checking (removed stop statement)
     !------------------------------------------------------------------------
 
     intrinsic       :: epsilon
@@ -1069,7 +1184,7 @@ contains
     ! Local arrays and variables
     real(wp), allocatable :: b(:), w1(:), w2(:), x(:), xtrue(:)
     real(wp), allocatable :: u(:), v(:)  ! reverse communication vectors.
-    integer(ip)     :: flag, j, minmn, nprint, stat
+    integer(ip)     :: j, minmn, nprint, stat
     real(wp)        :: condA, eps, normr,  norme, etol, normw, normx
 
     real(wp) :: dnrm2
@@ -1083,12 +1198,15 @@ contains
     character(len=*),  &
               parameter :: line = '----------------------------------'
 
+    flag = 0
     eps    = epsilon(eps)
-    if (eps > 1e-9) then
+    if (mout.gt.0) then
+     if (eps > 1e-9) then
        write(nout,*) ' '
        write(nout,*) 'WARNING: '
        write(nout,*) 'MACHINE PRECISION EPS =', eps, '  SEEMS TO BE INADEQUATE'
        write(nout,*) ' '
+     end if
     end if
 
     allocate ( b(m), x(n), xtrue(n) )
@@ -1097,27 +1215,28 @@ contains
     ! Generate the specified test problem
     ! and check that Aprod1, Aprod2 form y + Ax and x + A'y consistently.
     !------------------------------------------------------------------------
-    do j = 1,n                                   ! Set the desired solution xtrue.
-       xtrue(j) = 0.1*j                          ! For least-squares problems, this is it.
-    end do                                       ! If m<n, lstp will alter it.
+    do j = 1,n                         ! Set the desired solution xtrue.
+       xtrue(j) = 0.1*j                ! For least-squares problems, this is it.
+    end do                             ! If m<n, lstp will alter it.
 
-    minmn  = min(m,n)                            ! Allocate arrays.
-    allocate( d(minmn), hy(m), hz(n) )           ! Vectors defining A = Y D Z.
-    allocate( wm(m), wn(n) )                     ! Work vectors for Aprod1, Aprod2.
-    allocate( u(m), v(n) )                       ! Vectors for reverse communication.
+    minmn  = min(m,n)                       ! Allocate arrays.
+    allocate( d(minmn), hy(m), hz(n) )      ! Vectors defining A = Y D Z.
+    allocate( wm(m), wn(n) )                ! Work vectors for Aprod1, Aprod2.
+    allocate( u(m), v(n) )                  ! Vectors for reverse communication.
 
     ! Generate test problem. If m<n, xtrue is altered.
     call lstp (m,n,nduplc,npower,damp,xtrue,b,condA,normr,hy,hz,d,wm,wn)
 
-    write(nout,1000) line,line,m,n,nduplc,npower,damp,condA,normr, &
-                     line,line
+    if (mout.gt.0) write(mout,1000) line,line,m,n,nduplc,npower,damp, &
+                     condA,normr,line,line
 
     ! Check Aprod1, Aprod2. Use u,v as work arrays.
     allocate( w1(m), w2(n) ) 
-    call Acheck(m,n,Aprod1,Aprod2,nout,flag, u, v, w1, w2)     
+    call Acheck(m,n,Aprod1,Aprod2,mout,flag, u, v, w1, w2)     
     if (flag > 0) then
-       write(nout,'(a)') 'Check tol in subroutine Acheck'
-       stop
+       if (mout.gt.0) write(mout,'(a)') 'Check tol in subroutine Acheck'
+       flag = -1
+       return
     end if
     deallocate (w1)
     deallocate (w2)
@@ -1132,8 +1251,8 @@ contains
     options%conlim = 1000.0 * condA
     options%itnlim = 4*(m + n + 50)
 
-    options%unit_diagnostics = nout
-    options%unit_error       = nout
+    options%unit_diagnostics = mout
+    options%unit_error       = mout
     options%localsize = localsize
 
 
@@ -1159,7 +1278,8 @@ contains
 
       else
          ! we should not get here!
-         write(nout,'(a,i3)') ' We have a bug. action = ',action
+         if (mout.gt.0) write(mout,'(a,i3)') ' We have a bug. action = ',action
+         flag = -2
          go to 50
       end if
 
@@ -1168,14 +1288,15 @@ contains
     ! call for deallocating components of keep
     call LSMR_free (keep, stat)
 
-    if (stat.ne.0) write(nout,'(a)') &
+    if (stat.ne.0) write(mout,'(a)') &
      ' Non zero stat parameter returned from LSMR_free'
 
     call xcheck( m, n, Aprod1, Aprod2, b, damp, x, &    ! Check x
-                 inform%normAP, nout, flag, u, v )
+                 inform%normAP, mout, flag, u, v )
 
     nprint = min(m,n,8)
-    write(nout,2500)    (j, x(j), j=1,nprint)    ! Print some of the solution
+    if (mout.gt.0) &
+       write(mout,2500) (j, x(j), j=1,nprint)    ! Print some of the solution
 
     wn     = x - xtrue                           ! Print a clue about whether
     normw  = dnrm2 (n,wn,1)                      ! the solution looks OK.
@@ -1183,9 +1304,11 @@ contains
     norme  = normw/(one + normx)
     etol   = 1.0e-3
     if (norme <= etol) then
-       write(nout,3000) norme
+       if (mout.gt.0) write(mout,3000) norme
+       flag = 1
     else
-       write(nout,3100) norme
+       if (mout.gt.0) write(mout,3100) norme
+       flag = -3
     end if
 
  50 continue
@@ -1668,21 +1791,31 @@ contains
 
 !**************************************************************
 
-subroutine print_result(actual, expected)
-   integer :: actual
-   integer :: expected
+subroutine print_result(nout, nfail, actual, expected, expected1)
+   integer(ip), intent(in)    :: nout
+   integer(ip), intent(inout) :: nfail
+   integer(ip) :: actual
+   integer(ip) :: expected
+   integer(ip), optional :: expected1
 
    if(actual.eq.expected) then
-      write(nout,"(a)") "ok"
+      if (nout.gt.0) write(nout,"(a)") "ok"
       return
    endif
 
-   write(nout,"(a)") "fail"
+   if (present(expected1)) then
+     if(actual.eq.expected1) then
+       if (nout.gt.0) write(nout,"(a)") "ok"
+       return
+     endif
+   endif
+
+   if (nout.gt.0) write(nout,"(a)") "fail"
+   if (nout.gt.0) &
    write(nout,"(2(a,i4))") "returned ", actual, ", expected ", expected
    nfail = nfail + 1
 
 end subroutine print_result
-      
 
   !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 end program spral_lsmr_test
