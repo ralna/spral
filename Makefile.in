@@ -208,7 +208,7 @@ libspral_a_LIBADD =
 am__libspral_a_SOURCES_DIST = src/blas_iface.f90 src/core_analyse.f90 \
 	src/cuda/api_wrappers.cu src/cuda/cuda.f90 \
 	src/cuda/cuda_check.h src/lapack_iface.f90 src/lsmr.f90 \
-	src/match_order.f90 src/matrix_util.f90 \
+	interfaces/C/lsmr.f90 src/match_order.f90 src/matrix_util.f90 \
 	interfaces/C/matrix_util.f90 \
 	src/metis$(METIS_VERSION)_wrapper.f90 src/pgm.f90 \
 	src/rutherford_boeing.f90 interfaces/C/rutherford_boeing.f90 \
@@ -250,8 +250,8 @@ am__dirstamp = $(am__leading_dot)dirstamp
 am_libspral_a_OBJECTS = src/blas_iface.$(OBJEXT) \
 	src/core_analyse.$(OBJEXT) $(am__objects_1) \
 	src/lapack_iface.$(OBJEXT) src/lsmr.$(OBJEXT) \
-	src/match_order.$(OBJEXT) src/matrix_util.$(OBJEXT) \
-	interfaces/C/matrix_util.$(OBJEXT) \
+	interfaces/C/lsmr.$(OBJEXT) src/match_order.$(OBJEXT) \
+	src/matrix_util.$(OBJEXT) interfaces/C/matrix_util.$(OBJEXT) \
 	src/metis$(METIS_VERSION)_wrapper.$(OBJEXT) src/pgm.$(OBJEXT) \
 	src/rutherford_boeing.$(OBJEXT) \
 	interfaces/C/rutherford_boeing.$(OBJEXT) src/scaling.$(OBJEXT) \
@@ -655,10 +655,11 @@ am__can_run_installinfo = \
     n|no|NO) false;; \
     *) (install-info --version) >/dev/null 2>&1;; \
   esac
-am__include_HEADERS_DIST = include/spral.h include/spral_matrix_util.h \
-	include/spral_rutherford_boeing.h include/spral_scaling.h \
-	include/spral_random.h include/spral_random_matrix.h \
-	include/spral_ssids.h include/spral_ssmfe.h
+am__include_HEADERS_DIST = include/spral.h include/spral_lsmr.h \
+	include/spral_matrix_util.h include/spral_rutherford_boeing.h \
+	include/spral_scaling.h include/spral_random.h \
+	include/spral_random_matrix.h include/spral_ssids.h \
+	include/spral_ssmfe.h
 HEADERS = $(include_HEADERS)
 am__tagged_files = $(HEADERS) $(SOURCES) $(TAGS_FILES) $(LISP)
 # Read a list of newline-separated strings from the standard input,
@@ -1007,6 +1008,8 @@ LDADD = -L. -lspral $(METIS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FCLIBS) -lrt
 CUDA_LIBS = -lcublas
 lib_LIBRARIES = libspral.a
 
+# LSMR
+
 # MATRIX_UTIL
 
 # RUTHERFORD_BOEING
@@ -1018,10 +1021,11 @@ lib_LIBRARIES = libspral.a
 # RANDOM_MATRIX
 
 # SSMFE
-include_HEADERS = include/spral.h include/spral_matrix_util.h \
-	include/spral_rutherford_boeing.h include/spral_scaling.h \
-	include/spral_random.h include/spral_random_matrix.h \
-	$(am__append_2) include/spral_ssmfe.h
+include_HEADERS = include/spral.h include/spral_lsmr.h \
+	include/spral_matrix_util.h include/spral_rutherford_boeing.h \
+	include/spral_scaling.h include/spral_random.h \
+	include/spral_random_matrix.h $(am__append_2) \
+	include/spral_ssmfe.h
 
 # BLAS_IFACE
 # Note: first so not +=
@@ -1029,8 +1033,6 @@ include_HEADERS = include/spral.h include/spral_matrix_util.h \
 # CORE_ANALYSE
 
 # LAPACK_IFACE
-
-# LSMR
 
 # MATCH_ORDER
 
@@ -1041,7 +1043,7 @@ include_HEADERS = include/spral.h include/spral_matrix_util.h \
 # TIMER
 libspral_a_SOURCES = src/blas_iface.f90 src/core_analyse.f90 \
 	$(am__append_1) src/lapack_iface.f90 src/lsmr.f90 \
-	src/match_order.f90 src/matrix_util.f90 \
+	interfaces/C/lsmr.f90 src/match_order.f90 src/matrix_util.f90 \
 	interfaces/C/matrix_util.f90 \
 	src/metis$(METIS_VERSION)_wrapper.f90 src/pgm.f90 \
 	src/rutherford_boeing.f90 interfaces/C/rutherford_boeing.f90 \
@@ -1224,16 +1226,18 @@ src/cuda/cuda.$(OBJEXT): src/cuda/$(am__dirstamp) \
 src/lapack_iface.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/lsmr.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
-src/match_order.$(OBJEXT): src/$(am__dirstamp) \
-	src/$(DEPDIR)/$(am__dirstamp)
-src/matrix_util.$(OBJEXT): src/$(am__dirstamp) \
-	src/$(DEPDIR)/$(am__dirstamp)
 interfaces/C/$(am__dirstamp):
 	@$(MKDIR_P) interfaces/C
 	@: > interfaces/C/$(am__dirstamp)
 interfaces/C/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) interfaces/C/$(DEPDIR)
 	@: > interfaces/C/$(DEPDIR)/$(am__dirstamp)
+interfaces/C/lsmr.$(OBJEXT): interfaces/C/$(am__dirstamp) \
+	interfaces/C/$(DEPDIR)/$(am__dirstamp)
+src/match_order.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
+src/matrix_util.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
 interfaces/C/matrix_util.$(OBJEXT): interfaces/C/$(am__dirstamp) \
 	interfaces/C/$(DEPDIR)/$(am__dirstamp)
 src/metis$(METIS_VERSION)_wrapper.$(OBJEXT): src/$(am__dirstamp) \

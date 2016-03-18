@@ -45,8 +45,10 @@ libspral_a_SOURCES += \
 	src/lapack_iface.f90
 
 # LSMR
+include_HEADERS += include/spral_lsmr.h
 libspral_a_SOURCES += \
-	src/lsmr.f90
+	src/lsmr.f90 \
+	interfaces/C/lsmr.f90
 check_PROGRAMS = \
 	lsmr_test \
 	examples/Fortran/lsmr
