@@ -40,6 +40,8 @@ struct spral_lsmr_inform {
  * Subroutines 
  ************************************/
 
+/* Initalise options structure to defaults */
+void spral_lsmr_default_options(struct spral_lsmr_options *options);
 /* Solve a least squares problem */
 int spral_lsmr(int *action, int m, int n, double u[], double v[], double y[],
    void **keep, struct spral_lsmr_options const *options,

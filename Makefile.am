@@ -51,10 +51,12 @@ libspral_a_SOURCES += \
 	interfaces/C/lsmr.f90
 check_PROGRAMS = \
 	lsmr_test \
-	examples/Fortran/lsmr
+	examples/Fortran/lsmr \
+	examples/C/lsmr
 lsmr_test_SOURCES = tests/lsmr.f90
 examples_Fortran_lsmr_SOURCES = examples/Fortran/lsmr.f90
 tests/lsmr.$(OBJEXT): libspral.a
+examples/C/lsmr.$(OBJEXT): libspral.a
 examples/Fortran/lsmr.$(OBJEXT): libspral.a
 TESTS = lsmr_test
 
