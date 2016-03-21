@@ -1,3 +1,4 @@
+! examples/Fortran/lsmr.f90 - Example code for SPRAL_LSMR package
 program spral_lsmr_example
     use  spral_lsmr
     implicit none
