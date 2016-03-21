@@ -40,7 +40,8 @@ program spral_lsmr_example
           ! we are done.
           write (*,'(a,i3,a,i3)') ' Exit LSMR with inform%flag = ',inform%flag,&
             ' and inform%itn = ',inform%itn
-          write (*,'(a)') ' LS solution is in x(1:n)'
+          write (*,'(a)') ' LS solution is:'
+          write (*,'(10f10.2)') x(1:n)
           exit
 
       else if (action.eq.1) then

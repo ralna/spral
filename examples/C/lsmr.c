@@ -27,8 +27,8 @@ int main(void) {
     * ( 5.0 3.0 -2.0 )
     * (          6.0 ) */
    const int m = 5, n = 3;
-   int ptr[]    = {   1,             4,         6,                 10 };
-   int row[]    = {   1,   3,   4,   2,   4,    1,   3,    4,   5 };
+   int ptr[]    = {   0,             3,         5,                 9 };
+   int row[]    = {   0,   2,   3,   1,   3,    0,   2,    3,   4 };
    double val[] = { 1.0, 2.0, 5.0, 2.0, 3.0, -1.0, 2.0, -2.0, 6.0 };
    /* Data for rhs b */
    double b[] = { 1.0, 1.0, 1.0, 1.0, 1.0 };
@@ -46,7 +46,9 @@ int main(void) {
       case 0: /* we are done */
          printf("Exit LSMR with inform.flag = %d and inform.itn = %d\n",
                inform.flag, inform.itn);
-         printf("LS solution is in x(1:n)\n");
+         printf("LS solution is:\n");
+         for(int i=0; i<n; ++i) printf(" %10.2f", x[i]);
+         printf("\n");
          done = true;
          break;
    
