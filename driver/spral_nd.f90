@@ -33,10 +33,10 @@ program run_prob
    integer :: dummy
 
    ! Controls
-   integer :: random
+   integer :: random, ndmethod
    logical :: with_metis, with_nd, with_ma87
 
-   call proc_args(options, with_metis, with_nd, random, with_ma87)
+   call proc_args(options, with_metis, with_nd, ndmethod, random, with_ma87)
 
    ! Read in a matrix
    write(*, "(a)", advance="no") "Reading..."
@@ -83,7 +83,7 @@ program run_prob
    if(with_nd) then
       write(*, "(a)", advance="no") "Ordering with ND..."
       dummy = clock_gettime(0, t1)
-      call nd_order(0, n, ptr, row, perm, options, inform)
+      call nd_order(ndmethod, 0, n, ptr, row, perm, options, inform)
       dummy = clock_gettime(0, t2)
       if (inform%flag < 0) then
          print *, "oops on analyse ", inform%flag
@@ -130,10 +130,11 @@ program run_prob
 
 contains
 
-   subroutine proc_args(options, with_metis, with_nd, random, with_ma87)
+   subroutine proc_args(options, with_metis, with_nd, ndmethod, random, with_ma87)
       type(nd_options), intent(inout) :: options
       logical, intent(out) :: with_metis
       logical, intent(out) :: with_nd
+      integer, intent(out) :: ndmethod
       integer, intent(out) :: random
       logical, intent(out) :: with_ma87
 
@@ -144,6 +145,7 @@ contains
       with_metis = .false.
       with_nd = .true.
       random = -1
+      ndmethod = 0 ! Non-multilevel
       with_ma87 = .false.
       
       ! Process args
@@ -214,8 +216,14 @@ contains
          case("--partition-method")
             call get_command_argument(argnum, argval)
             argnum = argnum + 1
-            read( argval, * ) options%partition_method
-            print *, "Set options%partition_method = ", options%partition_method
+            read( argval, * ) ndmethod
+            print *, "Set ndmethod = ", ndmethod
+         case("--non-multilevel")
+            ndmethod = 0
+            print *, "Set ndmethod = ", ndmethod, "(non-multilevel)"
+         case("--multilevel")
+            ndmethod = 1
+            print *, "Set ndmethod = ", ndmethod, "(multilevel)"
          case("--coarse-partition-method")
             call get_command_argument(argnum, argval)
             argnum = argnum + 1
