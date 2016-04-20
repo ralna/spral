@@ -27,7 +27,7 @@ module spral_rutherford_boeing_ciface
       !end function strlen
       integer(C_SIZE_T) pure function strlen(string) bind(C)
          use :: iso_c_binding
-         type(C_PTR), value :: string
+         type(C_PTR), value, intent(in) :: string
       end function strlen
    end interface
 
