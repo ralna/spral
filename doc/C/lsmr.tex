@@ -54,7 +54,7 @@
    Nick Gould (STFC Rutherford Appleton Laboratory) \\
    Jennifer Scott (STFC Rutherford Appleton Laboratory)
 }
-\pkglang{Fortran}
+\pkglang{C}
 \spralmaketitle
 \thispagestyle{firststyle}
 
@@ -75,18 +75,24 @@ Please see the SPRAL install documentation.
 
 \subsection{Calling sequences}
 
-Access to the package requires a {\tt USE} statement \\ \\
-\indent\hspace{8mm}{\tt use spral\_lsmr} \\
+Access to the package requires inclusion of either \texttt{spral.h} (for the
+entire \spral librar) or \texttt{spral\_lsmr.h} (for just the relevant routines)
+
+\begin{verbatim}
+   #inlcude "spral.h"
+\end{verbatim}
 
 \medskip
 
 \noindent
-The following procedures are available to the user:
+The following functions are available to the user:
 \begin{itemize}
-\item {\tt lsmr()} uses the LSMR method. It must be called repeatedly
-using a reverse communication interface.
-\item {\tt lsmr\_free()} should be called after all other calls are complete
-to free the memory that has been allocated. 
+\item {\tt spral\_lsmr\_default\_options()} initializes the \texttt{options}
+   structure to default values.
+\item {\tt spral\_lsmr()} uses the LSMR method. It must be called repeatedly
+   using a reverse communication interface.
+\item {\tt spral\_lsmr\_free()} should be called after all other calls are
+   complete to free the memory that has been allocated. 
 \end{itemize}
 
 
@@ -96,36 +102,26 @@ to free the memory that has been allocated.
 
 For each problem, the user must employ the derived types defined by the
 package to declare scalars of the types
-{\tt lsmr\_options}, {\tt lsmr\_inform}, and {\tt lsmr\_keep}.
+{\tt struct spral\_lsmr\_options}, {\tt struct spral\_lsmr\_inform}. The user
+must also
+declare a \texttt{void~*} pointer {\tt keep} for the package's private data
+structure. The options data structure \textbf{must} be initalized using
+\texttt{spral\_lsmr\_default\_options()}, and the pointer \texttt{keep} must be
+initialized to \texttt{NULL}.
 The following pseudo-code illustrates this.
 \begin{verbatim}
-      use spral_lsmr_double
+      #include "spral.h"
       ...
-      type (lsmr_options) :: options
-      type (lsmr_inform)  :: inform
-      type (lsmr_keep)    :: keep
+      struct spral_lsmr_options options;
+      struct spral_lsmr_inform inform;
+      void *keep = NULL;
       ...
+      spral_lsmr_default_options(&options);
 \end{verbatim}
-The components of {\tt lsmr\_options} and {\tt lsmr\_inform} are explained
-in Sections~\ref{LSMR:type:options} and \ref{LSMR:type:inform}.
-The components of {\tt lsmr\_keep} are used to pass
-data between calls and must not be altered by the user.
-
-
-\subsection{Optional arguments}
-
-We use square brackets {\tt [ ]} to indicate {\it optional} arguments.
-In each
-call, optional arguments follow the argument {\tt inform}.  Since we
-reserve the right to add additional optional arguments in future
-releases of the code, {\bf we strongly recommend that all optional
-arguments be called by keyword, not by position}.
-
-\subsection{Integer, real and package types}
-
-{\tt INTEGER} denotes default {\tt INTEGER}.
-{\tt REAL} denotes double precision real.
-We also use the term {\bf package type} to mean the same.
+The members of {\tt spral\_lsmr\_options} and {\tt spral\_lsmr\_inform} are
+explained in Sections~\ref{LSMR:type:options} and \ref{LSMR:type:inform}.
+The \texttt{void~*} pointer is allocated using Fortran, and must be passed to
+\texttt{spal\_lsmr\_free()} to release the associated memory.
 
 \subsection{Notation}
 In the rest of this documentation, we use the following notation:
@@ -148,28 +144,46 @@ $$
 \newpage
 \section{Argument lists}
 
-\subsection{\texttt{lsmr()}}
+\subsection{\texttt{spral\_lsmr\_default\_options()}}
+\textbf{To initialise a variable of type \texttt{struct spral\_lsmr\_options},
+the following routine is provided.}
+
+\vspace*{0.1cm}
+\noindent
+\textbf{\texttt{
+   \hspace*{0.3cm} void spral\_lsmr\_default\_options(struct spral\_lsmr\_options *options);
+}}
+
+\noindent
+\begin{description}
+   \item[\texttt{*options}] is the instance to be initialized.
+\end{description}
+
+\subsection{\texttt{spral\_lsmr()}}
 \textbf{
-   To perform the LSMR algorithm, a call of the following form must be made repeatedly
-   \vspace{0.2cm}
-   \texttt{ \hspace*{0.2cm}
-      call lsmr(action, m, n, u, v, y, keep, options, inform[,damp])
+   To perform the LSMR algorithm, a call to the following subroutine must be
+   repeated.
+   \vspace{0.2cm}\\
+   \texttt{
+      \hspace*{0.2cm} int lsmr(int *action, int m, int n, double u[], double v[], double y[], void **keep,\\
+      \hspace*{0.7cm} struct spral\_lsmr\_options const *options, struct spral\_lsmr\_inform *inform,\\
+      \hspace*{0.7cm} double *damp)
    }
 }
 
 \noindent
 \begin{description}
 
-\item[\texttt{action}] is an \intentin\ scalar of type {\tt INTEGER}. 
-Prior to the first call to {\tt lsmr()},
+\item[\texttt{action}] communicates the action to be taken.
+Prior to the first call to {\tt spral\_lsmr()},
 {\tt action} must be set {\tt 0}. On each exit, {\tt action}
 indicates the action required by the user. The possible values of {\tt action}
 and the action required are as follows:
 \begin{description}
    \item \texttt{0} The computation has terminated
-      because an error has occurred (see {\tt inform\%flag}),
+      because an error has occurred (see {\tt inform.flag}),
       or the exact solution is $x=0.0$,  or 
-      (if {\tt options\%ctest}$=${\tt 3}) convergence has been
+      (if {\tt options.ctest}$=${\tt 3}) convergence has been
       achieved.
    \item \texttt{1} The user must compute 
       $$ v = v + P^TA^Tu  $$ 
@@ -183,77 +197,72 @@ and the action required are as follows:
       wish to test for convergence or if convergence has not been achieved, the
       user should recall the subroutine without changing any of the arguments.
       Note that {\tt action}$ =${\tt 3} is never returned if 
-      {\tt options\%ctest}$=${\tt 3}.
+      {\tt options.ctest}$=${\tt 3}.
 \end{description}
 
-\item[\texttt{m}] is an \intentin\ scalar of type {\tt INTEGER} that must hold 
+\item[\texttt{m}] must hold 
 the row dimension of $A$. {\bf Restriction:} {\tt m}$ \ge 1$.
 
-\item[\texttt{n}] is an \intentin\ scalar of type {\tt INTEGER} that must hold 
+\item[\texttt{n}] must hold 
 the columns dimension of $A$.  {\bf Restriction:} {\tt n}$ \ge 1$.
 
-\item[\texttt{u(m)}] is an \intentinout\ rank-one array of package type 
-and size {\tt m}. Prior to the first call, {\tt u} must hold the vector $b$.
+\item[\texttt{u[m]}] is used for communication with the user. Prior to the first call, {\tt u} must hold the vector $b$.
 {\tt u} is then used for reverse communication (see description of \texttt{action}.
 
-\item[\texttt{v(n)}] is an \intentinout\ rank-one array of package type 
-and size {\tt n}.
-\texttt{v} is used for reverse communication (see description of \texttt{action}).
+\item[\texttt{v[n]}] is used for reverse communication (see description of \texttt{action}).
 
 
-\item[\texttt{y(n)}] is an \intentinout\ rank-one array of package type 
-and size {\tt n}. It must not be changed by the user between calls.
-{\tt y} is used to hold the computed solution $y$ of the preconditioned problem.
+\item[\texttt{y[n]}] is used to hold the computed solution $y$ of the
+preconditioned problem. It must not be changed by the user between calls.
 The user can recover the required solution $x$ by computing $x = Py$.
 
-\item[\texttt{keep}] is an \intentinout\ scalar of type
-{\tt lsmr\_keep}. It is used to hold data about the problem being
+\item[\texttt{keep}] is allocated to hold data about the problem being
 solved and must not be changed by the user.
 
-\item[\texttt{options}] is an \intentin\ scalar of type {\tt lsmr\_options}.
-Its components specify the algorithmic options used by the routine, as
-explained in Section~\ref{LSMR:type:options}.
+\item[\texttt{options}] specifies the algorithmic options used by the routine,
+as explained in Section~\ref{LSMR:type:options}.
 
-\item[\texttt{inform}] is an \intentinout\ scalar of type
-{\tt lsmr\_inform}. Its components provide information about the execution
+\item[\texttt{inform}] is used to return information about the execution
 of the routine, as explained in Section~\ref{LSMR:type:inform}.
 It must not be changed by the user.
 
-\item[\texttt{damp}] is an optional \intentin\ scalar of type
-{\tt REAL}. If present, it must hold the damping parameter $\lambda$.
+\item[\texttt{damp}] may be \texttt{NULL}. If it is non-\texttt{NULL}, it must
+hold the damping parameter $\lambda$.
+
+\item[\textbf{Return value}] is \texttt{info.flag}. That is,
+\texttt{0} on success, otherwise an error code as described in
+Section~\ref{LSMR:errors}.
 
 \end{description}
 
 
 %%%%%%% termination subroutine %%%%%%
 
-\subsection{\texttt{lsmr\_free()}}
+\subsection{\texttt{spral\_lsmr\_free()}}
 \textbf{To free memory a single call must be made
-   \vspace{0.2cm}
+   \vspace{0.2cm}\\
     \texttt{ \hspace*{0.2cm}
-      call lsmr\_free(keep, stat)
+      int spral\_lsmr\_free(void **keep)
    }
 }
 \vspace{0.2cm}
 
 \noindent
-Once all  calls to \texttt{lsmr()} are complete,
+Once all  calls to \texttt{spral\_lsmr()} are complete,
 a call should be made to free memory  allocated by
-\texttt{lsmr()}  associated with the derived data type {\tt keep}.
+\texttt{spral\_lsmr()}  associated with the derived data type {\tt keep}.
 Note that, if a series of problems is being solved sequentially, the same {\tt keep}
-may be used for them all and {\tt lsmr\_free()} needs to be called only
+may be used for them all and {\tt spral\_lsmr\_free()} needs to be called only
 after the final problem has terminated.
 
 \begin{description}
 
-\item[\texttt{keep}] is an \intentinout\ scalar  of type {\tt lsmr\_keep}
-that must be passed unchanged.
-On exit, allocatable components will have been deallocated.
+\item[\texttt{keep}] must be passed unchanged since the last call to \texttt{spral\_lsmr()}.
+On exit, internal memory will have been freed and \texttt{*keep}
+will be set to \texttt{NULL}.
 
-\item[\texttt{stat}] is an \intentout\ scalar of type {\tt INTEGER}.
-On successful exit, it is set to zero. Otherwise, it holds the Fortran stat
-parameter and indicates the deallocation of one or more components of
-{\tt keep} was unsuccessful.
+\item[Return value] is \texttt{0} on success. Otherwise, it is the Fortran
+stat parameter for the unsiccessful deallocation.
 
 \end{description}
 
@@ -262,26 +271,26 @@ parameter and indicates the deallocation of one or more components of
 %%%%%%%%%%% options type %%%%%%%%%%%
 
 \section{Derived types}
-\subsection{\texttt{lsmr\_options}}
+\subsection{\texttt{spral\_lsmr\_options}}
 \label{LSMR:type:options}
 
-The derived data type {\tt lsmr\_options} is used to specify the options used
-by the \texttt{LSMR} algorithm. The components are automatically
-given default values in the definition of the type.
+The derived data type {\tt struct spral\_lsmr\_options} is used to specify the
+options used by the \texttt{LSMR} algorithm. The data structure must be
+initialized by a call to \texttt{spral\_lsmr\_default\_options()}.
 
 %%%%%%%%%%%%
 \subsubsection*{Printing options}
 
 \begin{description}
 
-\item[\texttt{print\_freq\_head}] is a scalar of type  {\tt INTEGER}
-that is used to control the frequency of printing 
+\item[\texttt{int print\_freq\_head}]
+is used to control the frequency of printing 
 of heading information (that is, how many
 lines are printed before the heading information is reprinted). 
 The default is {\tt print\_freq\_head$=$\tt 20}.
 
-\item[\texttt{print\_freq\_itn}] is a scalar of type  {\tt INTEGER}
-that is used to control the frequency of printing.
+\item[\texttt{int print\_freq\_itn}]
+is used to control the frequency of printing.
 There is printing on each of the first {\tt print\_freq\_itn} iterations 
 and then printing  every {\tt print\_freq\_itn}
 iterations.
@@ -289,13 +298,12 @@ The default is {\tt print\_freq\_$=$\tt 10}.
 
 
 
-\item[\texttt{unit\_diagnostics}] is a scalar  of type
-{\tt INTEGER} that holds the
+\item[\texttt{int unit\_diagnostics}] holds the Fortran
 unit number for diagnostic printing. Printing is suppressed if
 {\tt unit\_diagnostics$<0$}.
 The default is {\tt unit\_diagnostics$=$6}.
 
-\item[\texttt{unit\_error}] is a scalar of type  {\tt INTEGER} that holds the
+\item[\texttt{int unit\_error}] holds the Fortran
 unit number for error messages.
 Printing of error messages
 is suppressed if {\tt unit\_error$<$0}.
@@ -311,22 +319,22 @@ The default is {\tt unit\_error$=$6}.
 
 \begin{description}
 
-\item[\texttt{atol}] is a scalar of type {\tt REAL} that is only used if
-   {\tt options\%ctest}$ =${\tt 3}.
+\item[\texttt{double atol}] is only used if
+   {\tt options.ctest}$ =${\tt 3}.
    In which case, it must hold an estimate of the relative error in the data
    defining the matrix $A$.  For example, if $A$ is accurate to about 6 digits,
-   set {\tt atol} to {\tt 1.0d-6}. The default value is {\tt sqrt(epsilon(1.0d0))}.
+   set {\tt atol} to {\tt 1.0e-6}. The default value is $\sqrt{\epsilon}$.
 
-\item[\texttt{btol}] is a scalar of type {\tt REAL} that is only used if
-   {\tt options\%ctest}$ =${\tt 3}.
+\item[\texttt{double btol}] is only used if
+   {\tt options.ctest}$ =${\tt 3}.
    In which case, it must hold an estimate of the relative error in the data
-   defining the right-hand side vector $ b$.  For example, if $b$ is
-   accurate to about 6 digits, set {\tt btol} to {\tt 1.0d-6}. The default value is 
-   {\tt sqrt(epsilon(1.0d0))}.
+   defining the right-hand side vector $b$.  For example, if $b$ is
+   accurate to about 6 digits, set {\tt btol} to {\tt 1.0d-6}. The default value
+   is the $\sqrt{\epsilon}$.
 
 
-\item[\texttt{conlim}] is a scalar of type {\tt REAL} that is only used if
-   {\tt options\%ctest}$ =${\tt 3}.
+\item[\texttt{double conlim}] is only used if
+   {\tt options.ctest}$ =${\tt 3}.
    In which case, it must hold an upper limit on $cond(\bar{A})$, the apparent
    condition number of the matrix $\bar{A}$. Iterations will be terminated 
    if a computed estimate of $cond(\bar{A})$ exceeds {\tt conlim}.
@@ -334,47 +342,47 @@ The default is {\tt unit\_error$=$6}.
    zero singular values of $A$ or $\bar{A}$ from
    coming into effect and causing unwanted growth in the computed solution.
    normally, conlim should be in the range 1000 to 1/$\epsilon$.
-   The default value is {\tt 1/(10 sqrt(epsilon(1.0d0))}.
+   The default value is $1/(10\sqrt{\epsilon})$.
 
-\item[\texttt{ctest}] is a scalar of type {\tt INTEGER} that is use to control
+\item[\texttt{int ctest}] is used to control
    convergence testing. Possible values are:
    \begin{description}
    \item[\texttt{1}] The user may test for convergence whenever 
       {\tt action}$ = ${\tt 3} is returned; this is
-      every {\tt options\%itn\_test} iterations.
-      {\tt lsmr()} does {\bf not} compute components
+      every {\tt options.itn\_test} iterations.
+      {\tt spral\_lsmr()} does {\bf not} compute members
       {\tt normAP}, {\tt condAP}, {\tt normr}, {\tt normAPr}, {\tt normy}
-      of the derived type {\tt lsmr\_inform}.
-      {\tt lsmr()} will only terminate if an  error is flagged
+      of the derived type {\tt spral\_lsmr\_inform}.
+      {\tt spral\_lsmr()} will only terminate if an  error is flagged
       or the exact solution is {\tt x}$ = ${\tt 0.0}.
       Thus the user is responsible for determining when to stop.
-   \item[\texttt{2}] As {\texttt 1} but the components
+   \item[\texttt{2}] As {\texttt 1} but the members
       {\tt normAP}, {\tt condAP}, {\tt normr}, {\tt normAPr}, {\tt normy}
-      of the derived type {\tt lsmr\_inform} hold the latest estimates and
+      of the derived type {\tt spral\_lsmr\_inform} hold the latest estimates and
       may be used by the user to decide whether convergence has been achieved.
-   \item[\texttt{3}] {\tt lsmr()} determines if convergence has been achieved
-      using the stopping criteria of Fong and Saunders. The components
+   \item[\texttt{3}] {\tt spral\_lsmr()} determines if convergence has been achieved
+      using the stopping criteria of Fong and Saunders. The members
       {\tt normAP}, {\tt condAP}, {\tt normr}, {\tt normAPr}, {\tt normy}
-      of the derived type {\tt lsmr\_inform} hold the latest estimates.
+      of the derived type {\tt spral\_lsmr\_inform} hold the latest estimates.
       If $P \neq I$,  convergence is tested in the
       preconditioner norm.
    \end{description}
    The default value is {\tt 3}.
 
-   \item[\texttt{itnlim}] is a scalar of
-      type {\tt INTEGER} that holds an upper limit on the number of iterations.
+   \item[\texttt{int itnlim}]
+      holds an upper limit on the number of iterations.
       It has default value {\tt -1}, in which case the 
       maximum number of iterations allowed is $4n$. 
 
-   \item[\texttt{itn\_test}] is a scalar of
-      type {\tt INTEGER} that holds the number of iterations that are performed
+   \item[\texttt{int itn\_test}]
+      holds the number of iterations that are performed
       between returns with {\tt action}$ = ${\tt 3} (that is, {\tt itn\_test}
       controls how frequently the user may test for convergence).
-      {\tt itn\_test} is not used if {\tt options\%ctest}$=${\tt 3}.
+      {\tt itn\_test} is not used if {\tt options.ctest}$=${\tt 3}.
       The default value is {\tt -1}, in which case the frequency of testing is 
       every $\min(n,10)$ iterations.
 
-   \item[\texttt{localSize}] is a scalar of type {\tt INTEGER} that holds the
+   \item[\texttt{int localSize}] holds the
       number of vectors for local reorthogonalization. It has default values
       {\tt 0}, in which case no reorthogonalization is performed.
       If {\tt localSize}$>${\tt0}, this many $n$-vectors  (the most recent ones)
@@ -385,31 +393,31 @@ The default is {\tt unit\_error$=$6}.
 
 %%%%%%%%%%% inform type %%%%%%%%%%%
 
-\subsection{\texttt{lsmr\_inform}}
+\subsection{\texttt{struct spral\_lsmr\_inform}}
 \label{LSMR:type:inform}
-The derived data type {\tt lsmr\_inform}
+The derived data type {\tt struct spral\_lsmr\_inform}
 is used to hold parameters that give information about the progress and needs
-of the algorithm. The components of {\tt lsmr\_inform}
+of the algorithm. The members of {\tt spral\_lsmr\_inform}
 (in alphabetical order) are:
 
 \begin{description}
 
-\item[\texttt{condAP}]  is a scalar of package type that
-   only holds information if {\tt options\%ctest}$ =${\tt 2} or {\tt 3}.
+\item[\texttt{double condAP}]
+   holds information if {\tt options.ctest}$ =${\tt 2} or {\tt 3}.
    In this case, it holds an estimate of $cond(\bar{A})$, the condition
    number of $\bar{A}$.  A very high value of {\tt condAP}
    may again indicate an error in the products 
    with $A$, $A^T$, $P$, or $P^T$. A negative value indicates
    that no estimate is currently available.
 
-\item[\texttt{flag}] is a scalar of type  {\tt INTEGER} that gives the exit
+\item[\texttt{int flag}] gives the exit
    status of the algorithm (details in Section \ref{LSMR:errors}).
 
-\item[\texttt{itn}] is a scalar of type  {\tt INTEGER} that holds the number
+\item[\texttt{int itn}] holds the number
    of iterations performed.
 
-\item[\texttt{normAP}]  is a scalar of package type that
-   only holds information if {\tt options\%ctest}$ =${\tt 2} or {\tt 3}.
+\item[\texttt{double normAP}]
+   only holds information if {\tt options.ctest}$ =${\tt 2} or {\tt 3}.
    In this case, it holds an estimate of the Frobenius norm of $\bar{A}$.
    This is the square-root of the sum of squares of the elements of $\bar{A}$.
    If $\lambda$ is small and the columns of $AP$ have all been scaled to have 
@@ -419,28 +427,28 @@ of the algorithm. The components of {\tt lsmr\_inform}
    products with $A$, $A^T$, $P$, or $P^T$. A negative value
    indicates that no estimate is currently available.
 
-\item[\texttt{normAPr}]  is a scalar of package type that only holds information
-   if {\tt options\%ctest}$ =${\tt 2} or {\tt 3}. In this case, it holds an
+\item[\texttt{double normAPr}] only holds information
+   if {\tt options.ctest}$ =${\tt 2} or {\tt 3}. In this case, it holds an
    estimate of the  value of $\| \bar{A}^T\bar{r}\|_2$, the norm of the residual
    for the normal equations. This should be small in all cases.  Note that
    {\tt normAPr}  will often be smaller than the true value computed from the
    output vector {\tt y}. A negative value indicates that no estimate is
    currently available.
     
-\item[\texttt{normr}] is a scalar of package type that
-   only holds information if {\tt options\%ctest}$ =${\tt 2} or {\tt 3}.
+\item[\texttt{double normr}]
+   only holds information if {\tt options.ctest}$ =${\tt 2} or {\tt 3}.
    In this case, it holds an estimate of the  value of $\|\bar{r}\|_2$.
    This will be small if $Ax = b$ has a solution. A negative value
    indicates that no estimate is currently available.
     
-\item[\texttt{normy}] is a scalar of package type that
-   only holds information if {\tt options\%ctest}$ =${\tt 2} or {\tt 3}.
+\item[\texttt{double normy}]
+   only holds information if {\tt options.ctest}$ =${\tt 2} or {\tt 3}.
    In this case, it holds estimate of  $\|y\|_2$ for the  solution $y$
    of the preconditioned problem.
    A negative value indicates that no estimate is currently available.
 
-\item[\texttt{stat}] is a scalar of type  {\tt INTEGER} that is used to hold
-   the Fortran stat parameter.
+\item[\texttt{int stat}] is used to hold
+   the Fortran stat parameter in the event of an allocation error.
 
 \end{description}
 
@@ -449,36 +457,36 @@ of the algorithm. The components of {\tt lsmr\_inform}
 
 \section{Return codes} \label{LSMR:errors}
 
-{\tt inform\%flag} is used to hold
-   information on each return from {\tt lsmr()}. 
+{\tt inform.flag} is used to hold
+   information on each return from {\tt spral\_lsmr()}. 
 Possible values are:
 \begin{description}
 \item{\tt 0 }  $x = 0.0$  is the exact solution.
                No iterations were performed.
 \item{\tt 1 }  The equations $Ax = b$ are probably compatible.
                $\|Ax - b\|_2$ is sufficiently small, given the
-               values of {\tt options\%atol} and {\tt options\%btol}. 
-               ({\tt options\%ctest}$ = ${\tt 3} only). 
+               values of {\tt options.atol} and {\tt options.btol}. 
+               ({\tt options.ctest}$ = ${\tt 3} only). 
 \item{\tt 2 }  If {\tt damp} is not present or is zero then the system $Ax = b$
                is probably not compatible.  A least-squares solution has been
                obtained that is sufficiently accurate, given the value of
-               {\tt options\%atol}.  
+               {\tt options.atol}.  
                Otherwise, damped least-squares solution has been obtained that
-               is sufficiently accurate, given the value of {\tt options\%atol}.
-               ({\tt options\%ctest}$ = ${\tt 3} only). 
+               is sufficiently accurate, given the value of {\tt options.atol}.
+               ({\tt options.ctest}$ = ${\tt 3} only). 
 \item{\tt 3 }  An estimate of {\tt cond($\bar{A}$)} has exceeded
-               {\tt options\%conlim}. The system $Ax = b$ appears to be
+               {\tt options.conlim}. The system $Ax = b$ appears to be
                ill-conditioned, or there could be an error in the products 
-               with $A$, $A^T$, $P$, or $P^T$. ({\tt options\%ctest}$ = ${\tt 3}
+               with $A$, $A^T$, $P$, or $P^T$. ({\tt options.ctest}$ = ${\tt 3}
                only). 
 \item{\tt 4 }  $\|APy - b \|_2$ is small enough for this machine.
-               ({\tt options\%ctest}$ = ${\tt 3} only). 
+               ({\tt options.ctest}$ = ${\tt 3} only). 
 \item{\tt 5 }  The least-squares solution is good enough for this
-               machine. ({\tt options\%ctest}$ = ${\tt 3} only). 
-\item{\tt 6 }  The estimate {\tt inform\%condAP} appears to be too large 
+               machine. ({\tt options.ctest}$ = ${\tt 3} only). 
+\item{\tt 6 }  The estimate {\tt inform.condAP} appears to be too large 
                for this machine.         
-               ({\tt options\%ctest}$ = ${\tt 3} only). 
-\item{\tt 7 }  The iteration limit {\tt options\%itnlim} has been reached. 
+               ({\tt options.ctest}$ = ${\tt 3} only). 
+\item{\tt 7 }  The iteration limit {\tt options.itnlim} has been reached. 
 \item{\tt 8 }  An array allocation failed.
 \item{\tt 9 }  An array deallocation failed.
 \item{\tt 10 } Either  {\tt m$<$0} or {\tt n$<$0} (first call only).
@@ -519,7 +527,7 @@ http://web.stanford.edu/group/SOL/software/lsmr/LSMR-SISC-2011.pdf}}.
      The parameter {\tt damp} is intended to help regularize
      ill-conditioned systems, by preventing the true solution from
      being very large.  Another aid to regularization is provided by
-     the {\tt inform\%condAP}, which may be used to terminate iterations
+     the {\tt inform.condAP}, which may be used to terminate iterations
      before the computed solution becomes very large.
 
 \subsection{Initial estimate}
@@ -535,16 +543,16 @@ http://web.stanford.edu/group/SOL/software/lsmr/LSMR-SISC-2011.pdf}}.
     \end{itemize}
      This can be generalized for the preconditioned case.
      The guess $x_0$ has to be available before and after the calls
-     to {\tt lsmr()}.  To judge the benefits, suppose {\tt lsmr()} takes $k_1$ iterations
+     to {\tt spral\_lsmr()}.  To judge the benefits, suppose {\tt spral\_lsmr()} takes $k_1$ iterations
      to solve $Ax = b$ and $k_2$ iterations to solve $A \delta x = r_0$.
      If $x_0$ is ``good", $\|r_0\|_2$ will be smaller than $\|b\|_2$.
-     If the same stopping tolerances {\tt options\%atol} and {\tt options\%btol}
+     If the same stopping tolerances {\tt options.atol} and {\tt options.btol}
       are used for each
      system, $k_1$ and $k_2$ will be similar, but the final solution $x = x_0 + \delta x$
      should be more accurate.  The only way to reduce the total work
      is to use a larger stopping tolerance for the second system.
-     If some value {\tt options\%btol} is suitable for $Ax=b$, the larger value
-     {\tt options\%btol}*$\|b\|_2$/$\|r_0\|_2$  should be suitable for $A \delta x = r_0$.
+     If some value {\tt options.btol} is suitable for $Ax=b$, the larger value
+     {\tt options.btol}*$\|b\|_2$/$\|r_0\|_2$  should be suitable for $A \delta x = r_0$.
     
 
 
@@ -554,14 +562,14 @@ http://web.stanford.edu/group/SOL/software/lsmr/LSMR-SISC-2011.pdf}}.
 \section{Example}
 The following code illustrates the use of LMSR
 
-\verbatiminput{examples/Fortran/lsmr.f90}
+\verbatiminput{examples/C/lsmr.c}
 
 This returns the following output:
 
 \begin{verbatim}
- Exit LSMR with inform%flag =   2 and inform%itn =   3
- LS solution is:
-      0.18      0.26      0.17
+Exit LSMR with inform.flag = 2 and inform.itn = 3
+LS solution is:
+       0.18       0.26       0.17
 \end{verbatim}
 
 \begin{funders}
