@@ -1,3 +1,6 @@
+2016-05-10  Jonathan Hogg <jonathan.hogg@stfc.ac.uk>
+Add ported version of LSMR package orinally from Michael Saunders.
+
 2015-09-21  Jonathan Hogg <jonathan.hogg@stfc.ac.uk>
 Add support for 64-bit integer ptr(:) arrays in scaling and matrix_util modules
 Add appropriate extern "C" {} stuff to header files to allow for C++ inclusion
