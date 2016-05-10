@@ -6,6 +6,8 @@ cuda
    Explicit Fortran interface to CUDA API and some helper routines.
 lapack_iface
    Defines interface blocks for LAPACK routines to allow type checking
+lsmr
+   Least Squares MINRES method
 match_order
    Matching-based ordering for numerically difficult symmetric indefinite
    problems.
