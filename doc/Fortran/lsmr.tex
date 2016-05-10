@@ -76,16 +76,16 @@ Please see the SPRAL install documentation.
 \subsection{Calling sequences}
 
 Access to the package requires a {\tt USE} statement \\ \\
-\indent\hspace{8mm}{\tt use spral\_LSMR} \\
+\indent\hspace{8mm}{\tt use spral\_lsmr} \\
 
 \medskip
 
 \noindent
 The following procedures are available to the user:
 \begin{itemize}
-\item {\tt LSMR()} uses the LSMR method. It must be called repeatedly
+\item {\tt lsmr()} uses the LSMR method. It must be called repeatedly
 using a reverse communication interface.
-\item {\tt LSMR\_free()} should be called after all other calls are complete
+\item {\tt lsmr\_free()} should be called after all other calls are complete
 to free the memory that has been allocated. 
 \end{itemize}
 
@@ -96,19 +96,19 @@ to free the memory that has been allocated.
 
 For each problem, the user must employ the derived types defined by the
 package to declare scalars of the types
-{\tt LSMR\_options}, {\tt LSMR\_inform}, and {\tt LSMR\_keep}.
+{\tt lsmr\_options}, {\tt lsmr\_inform}, and {\tt lsmr\_keep}.
 The following pseudo-code illustrates this.
 \begin{verbatim}
-      use spral_LSMR_double
+      use spral_lsmr_double
       ...
-      type (LSMR_options) :: options
-      type (LSMR_inform)  :: inform
-      type (LSMR_keep)    :: keep
+      type (lsmr_options) :: options
+      type (lsmr_inform)  :: inform
+      type (lsmr_keep)    :: keep
       ...
 \end{verbatim}
-The components of {\tt LSMR\_options} and {\tt LSMR\_inform} are explained
+The components of {\tt lsmr\_options} and {\tt lsmr\_inform} are explained
 in Sections~\ref{LSMR:type:options} and \ref{LSMR:type:inform}.
-The components of {\tt LSMR\_keep} are used to pass
+The components of {\tt lsmr\_keep} are used to pass
 data between calls and must not be altered by the user.
 
 
@@ -161,7 +161,7 @@ $$
 \begin{description}
 
 \item[\texttt{action}] is an \intentin\ scalar of type {\tt INTEGER}. 
-Prior to the first call to {\tt LSMR},
+   Prior to the first call to {\tt lsmr()},
 {\tt action} must be set {\tt 0}. On each exit, {\tt action}
 indicates the action required by the user. The possible values of {\tt action}
 and the action required are as follows:
@@ -230,7 +230,7 @@ It must not be changed by the user.
 \textbf{To free memory a single call must be made
    \vspace{0.2cm}
     \texttt{ \hspace*{0.2cm}
-      call LSMR\_free(keep, stat)
+      call lsmr\_free(keep, stat)
    }
 }
 \vspace{0.2cm}
@@ -245,7 +245,7 @@ after the final problem has terminated.
 
 \begin{description}
 
-\item[\texttt{keep}] is an \intentinout\ scalar  of type {\tt LSMR\_keep}
+\item[\texttt{keep}] is an \intentinout\ scalar  of type {\tt lsmr\_keep}
 that must be passed unchanged.
 On exit, allocatable components will have been deallocated.
 
@@ -261,11 +261,11 @@ parameter and indicates the deallocation of one or more components of
 %%%%%%%%%%% options type %%%%%%%%%%%
 
 \section{Derived types}
-\subsection{\texttt{LSMR\_options}}
+\subsection{\texttt{lsmr\_options}}
 \label{LSMR:type:options}
 
 The derived data type {\tt lsmr\_options} is used to specify the options used
-within \texttt{LSMR}. The components are automatically
+by the \texttt{LSMR} algorithm. The components are automatically
 given default values in the definition of the type.
 
 %%%%%%%%%%%%
@@ -341,20 +341,20 @@ The default is {\tt unit\_error$=$6}.
    \item[\texttt{1}] The user may test for convergence whenever 
       {\tt action}$ = ${\tt 3} is returned; this is
       every {\tt options\%itn\_test} iterations.
-      {\tt LSMR()} does {\bf not} compute components
+      {\tt lsmr()} does {\bf not} compute components
       {\tt normAP}, {\tt condAP}, {\tt normr}, {\tt normAPr}, {\tt normy}
-      of the derived type {\tt LSMR\_inform}.
-      {\tt LSMR()} will only terminate if an  error is flagged
+      of the derived type {\tt lsmr\_inform}.
+      {\tt lsmr()} will only terminate if an  error is flagged
       or the exact solution is {\tt x}$ = ${\tt 0.0}.
       Thus the user is responsible for determining when to stop.
    \item[\texttt{2}] As {\texttt 1} but the components
       {\tt normAP}, {\tt condAP}, {\tt normr}, {\tt normAPr}, {\tt normy}
-      of the derived type {\tt LSMR\_inform} hold the latest estimates and
+      of the derived type {\tt lsmr\_inform} hold the latest estimates and
       may be used by the user to decide whether convergence has been achieved.
-   \item[\texttt{3}] {\tt LSMR()} determines if convergence has been achieved
+   \item[\texttt{3}] {\tt lsmr()} determines if convergence has been achieved
       using the stopping criteria of Fong and Saunders. The components
       {\tt normAP}, {\tt condAP}, {\tt normr}, {\tt normAPr}, {\tt normy}
-      of the derived type {\tt LSMR\_inform} hold the latest estimates.
+      of the derived type {\tt lsmr\_inform} hold the latest estimates.
       If $P \neq I$,  convergence is tested in the
       preconditioner norm.
    \end{description}
@@ -534,7 +534,7 @@ http://web.stanford.edu/group/SOL/software/lsmr/LSMR-SISC-2011.pdf}}.
     \end{itemize}
      This can be generalized for the preconditioned case.
      The guess $x_0$ has to be available before and after the calls
-     to {\tt LSMR()}.  To judge the benefits, suppose {\tt LSMR()} takes $k_1$ iterations
+     to {\tt lsmr()}.  To judge the benefits, suppose {\tt lsmr()} takes $k_1$ iterations
      to solve $Ax = b$ and $k_2$ iterations to solve $A \delta x = r_0$.
      If $x_0$ is ``good", $\|r_0\|_2$ will be smaller than $\|b\|_2$.
      If the same stopping tolerances {\tt options\%atol} and {\tt options\%btol}
