@@ -42,7 +42,6 @@
    It is algebraically equivalent to applying MINRES to the normal 
    equation $(A^TA+\lambda^2I)x=A^Tb$ (or $((AP)^T(AP)+\lambda^2I)y=(AP)^Tb$),
    but has better numerical properties, especially if $A$ is ill-conditioned. 
-   Note that \texttt{SSIDS} should not be used if $A$ is symmetric.
 
    Details of the algorithm are given in
    D.~C.-L. Fong and M.~A. Saunders, {\it LSMR: An iterative algorithm for
@@ -76,7 +75,7 @@ Please see the SPRAL install documentation.
 \subsection{Calling sequences}
 
 Access to the package requires inclusion of either \texttt{spral.h} (for the
-entire \spral librar) or \texttt{spral\_lsmr.h} (for just the relevant routines)
+entire \spral\ library) or \texttt{spral\_lsmr.h} (for just the relevant routines)
 
 \begin{verbatim}
    #inlcude "spral.h"
@@ -121,7 +120,7 @@ The following pseudo-code illustrates this.
 The members of {\tt spral\_lsmr\_options} and {\tt spral\_lsmr\_inform} are
 explained in Sections~\ref{LSMR:type:options} and \ref{LSMR:type:inform}.
 The \texttt{void~*} pointer is allocated using Fortran, and must be passed to
-\texttt{spal\_lsmr\_free()} to release the associated memory.
+\texttt{spral\_lsmr\_free()} to release the associated memory.
 
 \subsection{Notation}
 In the rest of this documentation, we use the following notation:
@@ -165,11 +164,16 @@ the following routine is provided.}
    repeated.
    \vspace{0.2cm}\\
    \texttt{
-      \hspace*{0.2cm} int lsmr(int *action, int m, int n, double u[], double v[], double y[], void **keep,\\
+      \hspace*{0.2cm} int spral\_lsmr(int *action, int m, int n, double u[], double v[], double y[], void **keep,\\
       \hspace*{0.7cm} struct spral\_lsmr\_options const *options, struct spral\_lsmr\_inform *inform,\\
       \hspace*{0.7cm} double *damp)
    }
 }
+
+\vspace{0.1cm}
+\noindent
+A non-zero return value indicates an error, see Section~\ref{LSMR:errors} for a
+list of error codes (this value is identical to \texttt{inform.flag}).
 
 \noindent
 \begin{description}
@@ -204,10 +208,10 @@ and the action required are as follows:
 the row dimension of $A$. {\bf Restriction:} {\tt m}$ \ge 1$.
 
 \item[\texttt{n}] must hold 
-the columns dimension of $A$.  {\bf Restriction:} {\tt n}$ \ge 1$.
+the column dimension of $A$.  {\bf Restriction:} {\tt n}$ \ge 1$.
 
 \item[\texttt{u[m]}] is used for communication with the user. Prior to the first call, {\tt u} must hold the vector $b$.
-{\tt u} is then used for reverse communication (see description of \texttt{action}.
+{\tt u} is then used for reverse communication (see description of \texttt{action}).
 
 \item[\texttt{v[n]}] is used for reverse communication (see description of \texttt{action}).
 
@@ -229,10 +233,6 @@ It must not be changed by the user.
 \item[\texttt{damp}] may be \texttt{NULL}. If it is non-\texttt{NULL}, it must
 hold the damping parameter $\lambda$.
 
-\item[\textbf{Return value}] is \texttt{info.flag}. That is,
-\texttt{0} on success, otherwise an error code as described in
-Section~\ref{LSMR:errors}.
-
 \end{description}
 
 
@@ -248,6 +248,10 @@ Section~\ref{LSMR:errors}.
 \vspace{0.2cm}
 
 \noindent
+A non-zero return value indicates an error. In that case, the resturned value
+is the Fortran stat parameter associated with the failed deallocation.
+
+\noindent
 Once all  calls to \texttt{spral\_lsmr()} are complete,
 a call should be made to free memory  allocated by
 \texttt{spral\_lsmr()}  associated with the derived data type {\tt keep}.
@@ -260,9 +264,6 @@ after the final problem has terminated.
 \item[\texttt{keep}] must be passed unchanged since the last call to \texttt{spral\_lsmr()}.
 On exit, internal memory will have been freed and \texttt{*keep}
 will be set to \texttt{NULL}.
-
-\item[Return value] is \texttt{0} on success. Otherwise, it is the Fortran
-stat parameter for the unsiccessful deallocation.
 
 \end{description}
 
@@ -294,13 +295,13 @@ is used to control the frequency of printing.
 There is printing on each of the first {\tt print\_freq\_itn} iterations 
 and then printing  every {\tt print\_freq\_itn}
 iterations.
-The default is {\tt print\_freq\_$=$\tt 10}.
+The default is \\{\tt print\_freq\_itn$=$\tt 10}.
 
 
 
 \item[\texttt{int unit\_diagnostics}] holds the Fortran
 unit number for diagnostic printing. Printing is suppressed if
-{\tt unit\_diagnostics$<0$}.
+{\tt unit\_diagnostics$<$0}.
 The default is {\tt unit\_diagnostics$=$6}.
 
 \item[\texttt{int unit\_error}] holds the Fortran
@@ -329,8 +330,8 @@ The default is {\tt unit\_error$=$6}.
    {\tt options.ctest}$ =${\tt 3}.
    In which case, it must hold an estimate of the relative error in the data
    defining the right-hand side vector $b$.  For example, if $b$ is
-   accurate to about 6 digits, set {\tt btol} to {\tt 1.0d-6}. The default value
-   is the $\sqrt{\epsilon}$.
+   accurate to about 6 digits, set {\tt btol} to {\tt 1.0e-6}. The default value
+   is $\sqrt{\epsilon}$.
 
 
 \item[\texttt{double conlim}] is only used if

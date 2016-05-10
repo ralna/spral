@@ -1,6 +1,6 @@
 \packagename{LSMR}
 \version{1.0.0}
-\versiondate{19 February 2016}
+\versiondate{10 May 2016}
 \purpose{
    This package uses the LSMR iterative method to solve sparse linear 
    equations and sparse least-squares
@@ -42,7 +42,6 @@
    It is algebraically equivalent to applying MINRES to the normal 
    equation $(A^TA+\lambda^2I)x=A^Tb$ (or $((AP)^T(AP)+\lambda^2I)y=(AP)^Tb$),
    but has better numerical properties, especially if $A$ is ill-conditioned. 
-   Note that \texttt{SSIDS} should not be used if $A$ is symmetric.
 
    Details of the algorithm are given in
    D.~C.-L. Fong and M.~A. Saunders, {\it LSMR: An iterative algorithm for
@@ -149,8 +148,8 @@ $$
 \section{Argument lists}
 
 \subsection{\texttt{lsmr()}}
-\textbf{
-   To perform the LSMR algorithm, a call of the following form must be made repeatedly
+\textbf{%
+   To perform the LSMR algorithm, a call of the following form must be made repeatedly\\
    \vspace{0.2cm}
    \texttt{ \hspace*{0.2cm}
       call lsmr(action, m, n, u, v, y, keep, options, inform[,damp])
@@ -190,18 +189,18 @@ and the action required are as follows:
 the row dimension of $A$. {\bf Restriction:} {\tt m}$ \ge 1$.
 
 \item[\texttt{n}] is an \intentin\ scalar of type {\tt INTEGER} that must hold 
-the columns dimension of $A$.  {\bf Restriction:} {\tt n}$ \ge 1$.
+the column dimension of $A$.  {\bf Restriction:} {\tt n}$ \ge 1$.
 
-\item[\texttt{u(m)}] is an \intentinout\ rank-one array of package type 
+\item[\texttt{u(:)}] is an \intentinout\ rank-one array of package type 
 and size {\tt m}. Prior to the first call, {\tt u} must hold the vector $b$.
-{\tt u} is then used for reverse communication (see description of \texttt{action}.
+{\tt u} is then used for reverse communication (see description of \texttt{action}).
 
-\item[\texttt{v(n)}] is an \intentinout\ rank-one array of package type 
+\item[\texttt{v(:)}] is an \intentinout\ rank-one array of package type 
 and size {\tt n}.
 \texttt{v} is used for reverse communication (see description of \texttt{action}).
 
 
-\item[\texttt{y(n)}] is an \intentinout\ rank-one array of package type 
+\item[\texttt{y(:)}] is an \intentinout\ rank-one array of package type 
 and size {\tt n}. It must not be changed by the user between calls.
 {\tt y} is used to hold the computed solution $y$ of the preconditioned problem.
 The user can recover the required solution $x$ by computing $x = Py$.
@@ -228,7 +227,7 @@ It must not be changed by the user.
 %%%%%%% termination subroutine %%%%%%
 
 \subsection{\texttt{lsmr\_free()}}
-\textbf{To free memory a single call must be made
+\textbf{To free memory a single call must be made\\
    \vspace{0.2cm}
     \texttt{ \hspace*{0.2cm}
       call lsmr\_free(keep, stat)
@@ -285,14 +284,14 @@ that is used to control the frequency of printing.
 There is printing on each of the first {\tt print\_freq\_itn} iterations 
 and then printing  every {\tt print\_freq\_itn}
 iterations.
-The default is {\tt print\_freq\_$=$\tt 10}.
+The default is {\tt print\_freq\_itn$=$\tt 10}.
 
 
 
 \item[\texttt{unit\_diagnostics}] is a scalar  of type
 {\tt INTEGER} that holds the
 unit number for diagnostic printing. Printing is suppressed if
-{\tt unit\_diagnostics$<0$}.
+{\tt unit\_diagnostics$<$0}.
 The default is {\tt unit\_diagnostics$=$6}.
 
 \item[\texttt{unit\_error}] is a scalar of type  {\tt INTEGER} that holds the
