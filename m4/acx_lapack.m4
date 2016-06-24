@@ -15,7 +15,7 @@ esac
 AC_F77_FUNC(cheev)
 
 # We cannot use LAPACK if BLAS is not found
-if test "x$acx_blas_ok" != xyes; then
+if test "x$ax_blas_ok" != xyes; then
         acx_lapack_ok=noblas
 fi
 

@@ -4,7 +4,7 @@
 
 #define bool2str(VAL) ( (VAL) ? "true" : "false" )
 
-void main(void) {
+int main(void) {
    int state = SPRAL_RANDOM_INITIAL_SEED;
 
    // Store initial random seed so we can reuse it later
@@ -34,4 +34,7 @@ void main(void) {
          spral_random_integer(&state, 20));
    printf("Sample B(1,0.5)         = %16s\n",
          bool2str(spral_random_logical(&state)));
+
+   /* Success */
+   return 0;
 }

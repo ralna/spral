@@ -1,0 +1,1464 @@
+\packagename{SSMFE\_EXPERT}
+\version{1.0.0}
+\versiondate{8 April 2015}
+
+\purpose{
+This package computes extreme (leftmost and/or rightmost)
+eigenpairs $\{\lambda_i, x_i\}$ of the following eigenvalue problems:
+%
+\begin{itemize}
+\item 
+the standard eigenvalue problem
+%
+\begin{eqnarray}
+\label{ssmfe_expert:eqn:evp}
+A x = \lambda x,
+\end{eqnarray}
+%
+\item
+the generalized eigenvalue problem
+%
+\begin{eqnarray}
+\label{ssmfe_expert:eqn:evp.g}
+A x = \lambda B x,
+\end{eqnarray}
+%
+\item
+the buckling problem
+%
+\begin{eqnarray}
+\label{ssmfe_expert:eqn:evp.b}
+B x = \lambda A x,
+\end{eqnarray}
+%
+\end{itemize}
+%
+where 
+$A$ and $B$ are {\bf real symmetric} (or {\bf Hermitian}) matrices
+and $B$ is {\bf positive definite}.
+
+\texttt{SPRAL\_SSMFE\_EXPERT}
+delegates 
+a considerable part of the computation to the user,
+which makes its solver procedures rather difficult to use.
+The user is advised to consider first using
+the package \texttt{SPRAL\_SSMFE}, which
+offers a simple interface
+to \texttt{SPRAL\_SSMFE\_EXPERT}.
+}
+
+\title{Sparse Symmetric Matrix-Free Eigensolver, \\[5pt]
+expert interface}
+\author{
+   Evgueni Ovtchinnikov (STFC Rutherford Appleton Laboratory)
+}
+\pkglang{C}
+\spralmaketitle
+\thispagestyle{firststyle}
+
+\section*{Major version history}
+\begin{description}
+\item[2014-11-20 Version 1.0.0] Initial release
+\end{description}
+
+%%%%%%%%%%%%%%%%%%%%%% installation %%%%%%%%%%%%%%%%%%%%%%
+
+\section{Installation}
+Please see the SPRAL install documentation. In particular note that:
+\begin{itemize}
+   \item A BLAS library is required.
+   \item A LAPACK library is required.
+\end{itemize}
+
+\section{Usage overview}
+
+The eigensolver subroutines
+behind \texttt{SPRAL\_SSMFE\_EXPERT}
+implement a block iterative algorithm.
+The block nature of this algorithm allows the user
+to benefit from highly optimized linear algebra subroutines
+and from the ubiquitous multicore architecture
+of modern computers.
+It also makes this algorithm more reliable
+than Krylov-based algorithms employed e.g. by ARPACK
+in the presence of clustered eigenvalues.
+However, convergence of the iterations may be slow
+if the density of the spectrum is high.
+
+Thus, good performance 
+(in terms of speed)
+is contingent on the following two factors:
+(i) the number of desired
+eigenpairs must be substantial
+(e.g. not less than the number of CPU cores),
+and
+(ii) the employment of a convergence acceleration technique.
+The acceleration techniques that can be used 
+are shift-and-invert and preconditioning.
+The former requires
+the direct solution of linear systems
+with the matrix $A$ or its linear combination with $B$,
+for which a sparse symmetric indefinite solver
+(such as {\tt HSL\_MA97} or {\tt SPRAL\_SSIDS}) can be employed.
+The latter applies to the case of positive definite $A$ and
+requires a matrix or an operator (that is, an algorithm producing a vector $v = T u$ for a given
+vector $u$)
+$T$, called {\em a preconditioner},
+such that the vector
+$v = T f$ is an approximation to the solution $u$
+of the system $A u = f$.
+This technique is more sophisticated
+and is likely to be of interest only to experienced users.
+
+Further information on the algorithm used by
+\texttt{SPRAL\_SSMFE\_EXPERT} can be found in Section~\ref{ssmfe_expert:method}.
+
+\texttt{SPRAL\_SSMFE\_EXPERT}
+delegates 
+a considerable part of the computation to the user.
+The user's code stores all  vectors  of size equal to the problem size $n$.
+\texttt{SPRAL\_SSMFE\_EXPERT}
+is not ``aware'' of $n$ or how these vectors are stored; 
+all operations on these vectors are performed by the user.
+The amount of computation performed by 
+the solver subroutines of \texttt{SPRAL\_SSMFE\_EXPERT}
+and the memory they use are negligible. 
+These features facilitate the use of these subroutines
+for shared-memory, out-of-core and hybrid computation.
+A simpler but less flexible interface to
+\texttt{SPRAL\_SSMFE\_EXPERT}
+is offered by \texttt{SPRAL\_SSMFE}.
+
+\subsection{Calling sequences}
+
+Access to the package requires inclusion of either \texttt{spral.h} (for the
+entire \spral library) or \texttt{spral\_ssmfe.h} (for just the SSMFE routines), i.e.
+
+\begin{verbatim}
+   #include "spral.h"
+\end{verbatim}
+
+\noindent The following procedures are available to the user:
+%
+\begin{itemize}
+\vspace{-0.1cm}
+\item {\tt spral\_ssmfe\_default\_options()} initializes the \texttt{options} structure to default values
+\item {\tt spral\_ssmfe\_standard\_\textit{type}()} 
+computes leftmost eigenpairs of \EqnRef{ssmfe_expert:eqn:evp}, 
+optionally using preconditioning if $A$ is positive definite
+\item {\tt spral\_ssmfe\_standard\_shift\_\textit{type}()} 
+computes eigenpairs of \EqnRef{ssmfe_expert:eqn:evp} near a given shift
+using the shift-and-invert technique
+\item {\tt spral\_ssmfe\_generalized\_\textit{type}()} 
+computes leftmost eigenpairs of 
+\EqnRef{ssmfe_expert:eqn:evp.g}, optionally using preconditioning if $A$ is positive definite
+\item {\tt spral\_ssmfe\_generalized\_shift\_\textit{type}()} 
+computes eigenpairs of 
+\EqnRef{ssmfe_expert:eqn:evp.g} near a given shift
+using the shift-and-invert technique
+\item {\tt spral\_ssmfe\_buckling\_\textit{type}()} 
+computes eigenpairs of 
+\EqnRef{ssmfe_expert:eqn:evp.b} near a given shift
+using the shift-and-invert technique
+\item {\tt spral\_ssmfe\_expert\_free()} should be called after all other calls
+are complete. It frees memory referenced by \texttt{keep} and \texttt{inform}.
+%
+\end{itemize}
+
+The main solver procedures
+must be called repeatedly using
+a reverse communication interface.
+The procedure \texttt{spral\_ssmfe\_expert\_free()}
+should be called once after the
+final call to 
+a solver procedure
+to deallocate all arrays 
+that have been allocated by
+the solver procedure.
+
+\if 0
+Several problems can be solved simultaneously,
+i.e. the package does not require the solution of
+one problem to be finished before the solution of
+the next starts, as long as for each problem a separate set
+of arguments for the above subroutines is used.
+However, if two or more problems of the same type
+need to be solved, it is reasonable to solve them one
+after another  to reduce  memory requirements.
+\fi
+
+\subsection{Derived types}
+\label{derived types}
+
+For each problem, the user must employ the derived types defined by the
+module to declare scalars of the types 
+{\tt struct spral\_ssmfe\_rcid} (real version) or 
+{\tt struct spral\_ssmfe\_rciz} (complex version), 
+{\tt struct spral\_ssmfe\_options} and 
+{\tt struct spral\_ssmfe\_inform}. The user must also declare a \texttt{void *}
+pointer \texttt{keep} for the package's private data structure. The options
+data structure \textbf{must} be initalized through a call to \texttt{spral\_ssmfe\_default\_options()},
+and the pointer \texttt{keep} must be initialized to \texttt{NULL}.
+The following pseudocode illustrates this.
+\begin{verbatim}
+      #include "spral.h"
+      ...
+      struct spral_ssmfe_rcid rcid;
+      struct spral_ssmfe_options options;
+      struct spral_ssmfe_inform  inform;
+      void *keep = NULL;
+      ...
+      spral_ssmfe_default_options(&options);
+\end{verbatim}
+The components of {\tt struct spral\_ssmfe\_options} and {\tt struct spral\_ssmfe\_inform} are explained
+in Sections \ref{ssmfe_expert:type:options} and \ref{ssmfe_expert:type:inform}. Components
+of \texttt{struct spral\_ssmfe\_rcid} are used for the reverse communication interface and
+are explained in Section~\ref{ssmfe_expert:routine:solver}.
+The \texttt{void~*} pointer \texttt{keep} is allocated using Fortran, and
+must be passed to \texttt{spral\_ssmfe\_expert\_free()} to free the associated
+memory.
+
+%%%%%%%%%%%%%%%%%%%%%% argument lists %%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Argument lists}
+
+\subsection{\texttt{spral\_ssmfe\_default\_options()}}
+
+\textbf{To initialize a variable of type \texttt{struct spral\_ssmfe\_options}
+the following routine is provided.}
+
+\medskip
+\noindent
+\textbf{\texttt{
+      \hspace*{0.3cm} void spral\_ssmfe\_default\_options(struct spral\_ssmfe\_core\_options *options);
+}}
+
+\noindent
+\begin{description}
+   \item[\texttt{*options}] is the instance to be initialized.
+\end{description}
+
+\subsection{%
+   \texttt{spral\_ssmfe\_standard\_\textit{type}()},
+   \texttt{spral\_ssmfe\_standard\_shift\_\textit{type}()},\\
+   \texttt{spral\_ssmfe\_generalized\_\textit{type}()},
+   \texttt{spral\_ssmfe\_generalized\_shift\_\textit{type}()}, and
+   \texttt{spral\_ssmfe\_buckling\_\textit{type}()}
+}
+\label{ssmfe_expert:routine:solver}
+
+{\bf
+To compute
+the leftmost eigenpairs of \EqnRef{ssmfe_expert:eqn:evp},
+optionally using preconditioning,
+one of the following routines must be called repeatedly:
+}
+\begin{verbatim}
+   void spral_ssmfe_expert_standard_double        (struct spral_ssmfe_rcid *rci, int left,
+      int mep, double *lambda, int m, double         *rr, int *ind, void **keep,
+      const struct spral_ssmfe_options *options, struct spral_ssmfe_inform *inform);
+   void spral_ssmfe_expert_standard_double_complex(struct spral_ssmfe_rciz *rci, int left,
+      int mep, double *lambda, int m, double complex *rr, int *ind, void **keep,
+      const struct spral_ssmfe_options *options, struct spral_ssmfe_inform *inform);   
+\end{verbatim}
+
+\medskip
+\noindent
+{\bf
+To compute the eigenvalues of \EqnRef{ssmfe_expert:eqn:evp} %around 
+in the vicinity of a given value {\tt sigma}
+and the corresponding eigenvectors using the shift-and-invert technique,
+one of the following routines must be called repeatedly:
+}
+\begin{verbatim}
+   void spral_ssmfe_expert_standard_shift_double        (struct spral_ssmfe_rcid *rci,
+      double sigma, int left, int right, int mep, double *lambda, int m, double         *rr,
+      int *ind, void **keep, const struct spral_ssmfe_options *options,
+      struct spral_ssmfe_inform *inform);
+   void spral_ssmfe_expert_standard_shift_double_complex(struct spral_ssmfe_rciz *rci,
+      double sigma, int left, int right, int mep, double *lambda, int m, double complex *rr,
+      int *ind, void **keep, const struct spral_ssmfe_options *options,
+      struct spral_ssmfe_inform *inform);
+\end{verbatim}
+
+\medskip
+\noindent
+{\bf
+To compute the leftmost eigenpairs of \EqnRef{ssmfe_expert:eqn:evp.g},
+optionally using preconditioning,
+one of the following routines must be called repeatedly:
+}
+\begin{verbatim}
+   void spral_ssmfe_expert_generalized_double        (struct spral_ssmfe_rcid *rci,
+      int left, int mep, double *lambda, int m, double         *rr, int *ind, void **keep,
+      const struct spral_ssmfe_options *options, struct spral_ssmfe_inform *inform);
+   void spral_ssmfe_expert_generalized_double_complex(struct spral_ssmfe_rciz *rci,
+      int left, int mep, double *lambda, int m, double complex *rr, int *ind, void **keep,
+      const struct spral_ssmfe_options *options, struct spral_ssmfe_inform *inform);
+\end{verbatim}
+
+\medskip
+\noindent
+{\bf
+To compute the eigenvalues of \EqnRef{ssmfe_expert:eqn:evp.g} %around 
+in the vicinity of 
+a given value {\tt sigma}
+and the corresponding eigenvectors using the shift-and-invert technique,
+one of the following routines must be called repeatedly:
+}
+\begin{verbatim}
+   void spral_ssmfe_expert_generalized_shift_double        (struct spral_ssmfe_rcid *rci,
+      double sigma, int left, int right, int mep, double *lambda, int m, double         *rr,
+      int *ind, void **keep, const struct spral_ssmfe_options *options,
+      struct spral_ssmfe_inform *inform);
+   void spral_ssmfe_expert_generalized_shift_double_complex(struct spral_ssmfe_rciz *rci,
+      double sigma, int left, int right, int mep, double *lambda, int m, double complex *rr,
+      int *ind, void **keep, const struct spral_ssmfe_options *options,
+      struct spral_ssmfe_inform *inform);
+\end{verbatim}
+
+\medskip
+\noindent
+{\bf
+To compute the eigenvalues of \EqnRef{ssmfe_expert:eqn:evp.b}
+in the vicinity of a given value {\tt sigma}
+and the corresponding eigenvectors 
+one of the following routines must be called repeatedly:
+}
+\begin{verbatim}
+   void spral_ssmfe_expert_buckling_double        (struct spral_ssmfe_rcid *rci,
+      double sigma, int left, int right, int mep, double *lambda, int m, double         *rr,
+      int *ind, void **keep, const struct spral_ssmfe_options *options,
+      struct spral_ssmfe_inform *inform);
+   void spral_ssmfe_expert_buckling_double_complex(struct spral_ssmfe_rciz *rci,
+      double sigma, int left, int right, int mep, double *lambda, int m, double complex *rr,
+      int *ind, void **keep, const struct spral_ssmfe_options *options,
+      struct spral_ssmfe_inform *inform);
+\end{verbatim}
+
+\medskip
+To use the solver procedures,
+the user needs to maintain a workspace {\tt W} containing
+{\tt kw + 1} blocks of {\tt m} vectors of size $n$.
+A value {\tt kw = 7} is always sufficient. 
+However, if {\tt options.minAprod} $=$ {\tt false}
+and either {\tt options.minBprod} $=$ {\tt false} or 
+the standard eigenvalue problem \EqnRef{ssmfe_expert:eqn:evp} is solved,
+then {\tt kw = 3} is sufficient; 
+if 
+{\tt options.minAprod} $=$ {\tt true} and
+either {\tt options.minBprod} $=$ {\tt true} or
+{\tt ssmfe\_generalized\_shift} or {\tt ssmfe\_buckling} are used,
+then {\tt kw} must be at least {\tt 7};
+otherwise {\tt kw = 5} is sufficient.
+Solver procedures
+use indices {\tt 1} to {\tt m} 
+to refer to vectors inside each block
+and indices {\tt 0} to {\tt kw} 
+to refer to particular blocks.
+The first (zero-indexed) block holds the eigenvector approximations:
+the user must fill this block with 
+{\tt m} linearly independent vectors before the first call
+to a solver procedure.
+
+The number of desired eigenpairs may exceed {\tt m}:
+whenever converged eigenpairs have been detected,
+a solver procedure reports the indices of these eigenpairs
+and they must be moved by the user
+to a separate eigenvectors' storage {\tt X}.
+
+When $B \ne I$,
+it is expedient to 
+have %another 
+storage {\tt BX}
+for the $B$-images of the converged eigenvectors,
+i.e. {\tt BX = B*X}.
+
+To simplify the description of the
+reverse communication interface,
+below we assume that an array
+{\tt W[kw+1][m][n]} of package type
+is used as a workspace,
+and that arrays {\tt X[mep][n]} and {\tt BX[mep][n]} of the call
+\texttt{\textit{type}}
+are used for storing the computed eigenvectors
+and their $B$-images.
+For convienence of notation we use the convention that \texttt{x[i:j]}
+denotes indices {\tt i} through {\tt j} (inclusive) of the vector {\tt x}.
+The transpose (real or complex, depending on call \texttt{\textit{type}})
+of a matrix {\tt H} 
+is denoted by {\tt H}$^\prime$.
+
+\medskip
+The meaning of the arguments of the solver procedures is as follows.
+
+\begin{description}
+%
+\item[\texttt{rci}] is used for the reverse communication interface.
+Before the first call, {\tt rci.job} must be set to {\tt 0}.
+No other values may be assigned to {\tt rci.job} by the user.
+After each call,
+the value of {\tt rci.job} must be inspected by the user's code
+and the appropriate action taken: 
+\begin{description}
+%
+\item[\texttt{-3}]: fatal error return, the computation must be terminated;
+%
+\item[\texttt{-2}]: 
+not all desired eigenpairs converged to required accuracy,
+see Section~\ref{ssmfe_expert:errors}; 
+%
+\item[\texttt{-1}]: the computation is complete and successful.
+%
+\item[\texttt{~1}]:
+({\tt spral\_ssmfe\_standard\_\textit{type}()}\ and {\tt spral\_ssmfe\_generalized\_\textit{type}()}\ only)
+the user must compute $V = A U$, where
+
+\hspace{8mm}
+$U=$ {\tt W[rci.kx][ix:jx][:]}, 
+~with~ {\tt ix} $=$ {\tt rci.jx} 
+~and~
+{\tt jx} $=$ {\tt ix + rci.nx - 1},
+
+\hspace{8mm}
+$V=$ {\tt W[rci.ky][iy:jy][:]},
+~with~ {\tt iy} $=$ {\tt rci.jy} 
+~and~
+{\tt jy} $=$ {\tt iy + rci.nx - 1}.
+%
+\item[\texttt{~2}]:
+({\tt spral\_ssmfe\_standard\_\textit{type}()} and {\tt spral\_ssmfe\_generalized\_\textit{type}()} only)
+the user must
+compute $V = T U$ if preconditioning is used
+or copy $U$ to $V$ otherwise,
+where $U$ and $V$ are as for {\tt rci.job = 1}.
+%
+\item[\texttt{~3}]:
+({\tt spral\_ssmfe\_generalized\_\textit{type}()},
+ {\tt spral\_ssmfe\_generalized\_shift\_\textit{type}()} and\\
+ {\tt spral\_ssmfe\_buckling\_\textit{type}()} only)
+the user must compute $V = B U$ 
+where $U$ and $V$ are as for {\tt rci.job = 1}.
+%
+\item[\texttt{~5}]: the user must save the converged eigenvectors
+to the eigenvector storage {\tt X}
+and, optionally, 
+for problems \EqnRef{ssmfe_expert:eqn:evp.g} and \EqnRef{ssmfe_expert:eqn:evp.b},
+save their $B$-images.
+The converged eigenvectors are columns of the ${\tt n}\times {\tt m}$ matrix
+{\tt W[rci.kx][:][:]} and their $B$-images are respective columns of
+{\tt W[rci.ky][:][:]}
+that are identified by
+{\tt rci.i, rci.jx} and {\tt rci.nx}
+as follows:
+if {\tt rci.i > 0}, then the column numbers
+run from {\tt rci.jx} to {\tt rci.jx + rci.nx - 1},
+and if {\tt rci.i < 0}, then they run
+from {\tt rci.jx - rci.nx + 1} to {\tt rci.jx}.
+%
+\item[\texttt{~9}]:
+({\tt spral\_ssmfe\_standard\_shift\_\textit{type}()},
+ {\tt spral\_ssmfe\_generalized\_shift\_\textit{type}()} and\\
+ {\tt spral\_ssmfe\_buckling\_\textit{type}()} only)
+the user must compute $V = A_\sigma^{-1} U$, where
+$A_\sigma = A - \sigma I$
+and $I$ is $n\times n$ identity,
+for problem \EqnRef{ssmfe_expert:eqn:evp}, 
+$A_\sigma = A - \sigma B$ for problem \EqnRef{ssmfe_expert:eqn:evp.g},
+and 
+$A_\sigma = B - \sigma A$ for problem \EqnRef{ssmfe_expert:eqn:evp.b}.
+%
+\item[\texttt{11}]:
+if {\tt rci.i = 0}, then
+the user  must perform a copy $V \leftarrow U$, 
+where $U$ and $V$ are as for {\tt rci.job = 1},
+otherwise the columns of {\tt W[rci.kx][:][:]}
+and {\tt W[rci.ky][:][:]}
+(if {\tt rci.kx} $\not=$ {\tt rci.ky}) 
+must be reordered using
+the index array {\tt ind} so that %, i.e.
+the column {\tt ind[j]} becomes column {\tt j}
+for {\tt j = 0, \ldots, rci.nx-1}.
+%
+\item[\texttt{12}]:
+for each
+{\tt i = 0, \ldots, rci.nx-1}, 
+the user must compute the dot product of
+the columns 
+
+\hspace{8mm}
+{\tt W[rci.kx][rci.jx+i][:]} 
+
+and
+
+\hspace{8mm}
+{\tt W[rci.ky][rci.jy+i][:]}
+
+and place it in 
+
+\hspace{8mm}
+{\tt rr[rci.k][rci.j+i][rci.i+i]}.
+%
+\item[\texttt{13}]: 
+if {\tt rci.kx} $=$ {\tt rci.ky}, then
+for each
+{\tt i = 0, \ldots, rci.nx - 1}, 
+the user must perform the scaling
+
+\hspace{8mm}
+{\tt W[rci.kx][rci.jx+i][:] = W[rci.kx][rci.jx+i][:]$/s_i$},
+
+where $s_i$ is the 2-norm of the column 
+{\tt W[rci.kx][rci.jx+i][:]},
+otherwise the user must perform the scalings
+
+\hspace{8mm}
+{\tt W[rci.kx][rci.jx+i][:] = W[rci.kx][rci.jx+i][:]$/s_i$}
+
+\hspace{8mm}
+{\tt W[rci.ky][rci.jy+i][:] = W[rci.ky][rci.jy+i][:]$/s_i$},
+
+where $s_i$ is the square root of the dot product of 
+the columns 
+{\tt W[rci.kx][rci.jx+i][:]} and
+{\tt W[rci.ky][rci.jy+i][:]}.
+No scaling is to be applied to zero columns.
+%
+\item
+{\tt 14}: 
+for each {\tt i = 0, \ldots, rci.nx - 1}, 
+the user must perform axpy-updates:
+
+\hspace{8mm}
+{\tt 
+W[rci.ky][rci.jy+i][:] = 
+W[rci.ky][rci.jy+i][:] + 
+}
+
+\hspace{12mm}
+{\tt
+rr[rci.k][rci.j+i][rci.i+i] * W[rci.kx][rci.jx + i][:]}.
+%
+\item
+{\tt 15}: the user must perform the matrix multiplication:
+
+\hspace{8mm}
+{\tt rr[rci.k][rci.j $:$ rci.j+rci.ny-1][rci.i $:$ rci.i+rci.nx-1] =}
+
+\hspace{12mm}
+{\tt rci.alpha *
+W[rci.kx][rci.jx $:$ rci.jx+rci.nx-1][:]' *}
+
+\hspace{16mm}
+{\tt W[rci.ky][rci.jy $:$ rci.jy+rci.ny-1][:] +}
+
+\hspace{12mm}
+{\tt 
+rci.beta *
+rr[rci.k][rci.j $:$ rci.j+rci.ny-1][rci.i $:$ rci.i+rci.nx-1]}.
+
+%where {\tt W'} denotes the transpose of {\tt W};
+%
+\item
+{\tt 16}: the user must perform the matrix multiplication:
+
+\hspace{8mm}
+{\tt W[rci.ky][rci.jy $:$ rci.jy+rci.ny-1][:] =}
+
+\hspace{12mm}
+{\tt rci.alpha *
+W[rci.kx][rci.jx $:$ rci.jx+rci.nx-1][:] *}
+
+\hspace{16mm}
+{\tt rr[rci.k][rci.j $:$ rci.j+rci.ny-1][rci.i $:$ rci.i+rci.nx-1] + }
+
+\hspace{12mm}
+{\tt rci.beta * W[rci.ky][rci.jy $:$ rci.jy+rci.ny-1][:]}.
+%
+\item
+{\tt 17}: the user must perform the multiplication:
+
+
+\hspace{8mm}
+{\tt W[rci.kx][rci.jx $:$ rci.jx+rci.ny-1][:] =}
+
+\hspace{12mm}
+{\tt W[rci.kx][rci.jx $:$ rci.jx+rci.nx-1][:] *}
+
+\hspace{16mm}
+{\tt rr[rci.k][rci.j $:$ rci.j+rci.ny-1][rci.i $:$ rci.i+rci.nx-1]}.
+
+{\tt W[rci.ky][rci.jy $:$ rci.jy+rci.ny-1][:]}
+can be used as a workspace.
+%
+\item
+{\tt 21}: 
+the user must $B$-orthogonalize
+the columns of {\tt W} specified by
+{\tt rci.nx}, {\tt rci.jx} and {\tt rci.kx} 
+to all vectors stored in {\tt X}
+by solving the system
+
+\hspace{8mm}
+{\tt (X' * BX) Q = X' * W[rci.ky][rci.jy $:$ rci.jy+rci.nx-1][:]}
+
+for {\tt Q} and updating
+
+\hspace{8mm}
+{\tt W[rci.kx][rci.jx $:$ rci.jx+rci.nx-1][:] =}
+
+\hspace{12mm}
+{\tt W[rci.kx][rci.jx $:$ rci.jx+rci.nx-1][:] - X * Q}.
+
+For problems \EqnRef{ssmfe_expert:eqn:evp.g} and \EqnRef{ssmfe_expert:eqn:evp.b},
+the respective columns of {\tt W[rci.ky][:][:]},
+which store $B$-images of the respective columns of {\tt W[rci.kx][:][:])},
+must be updated
+accordingly, either by applying {\tt B} to these vectors
+or using the columns of {\tt BX}, i.e.
+
+\hspace{8mm}
+{\tt W[rci.ky][rci.jy $:$ rci.jy+rci.nx-1][:] =}
+
+\hspace{12mm}
+{\tt W[rci.ky][rci.jy $:$ rci.jy+rci.nx-1][:] - BX * Q};
+%
+\item
+{\tt 22}: 
+the user must solve the system
+
+\hspace{8mm}
+{\tt (X' * BX) Q = 
+X' * W[rci.kx][rci.jx $:$ rci.jx+rci.nx-1][:])}
+
+for {\tt Q}  and perform the update
+
+\hspace{8mm}
+{\tt W[rci.kx][rci.jx $:$ rci.jx+rci.nx-1][:] =}
+
+\hspace{12mm}
+{\tt W[rci.kx][rci.jx $:$ rci.jx+rci.nx-1][:] - BX * Q},
+
+where {\tt X} and {\tt BX} are same as in 
+the case {\tt rci.job = 21}
+(in the case of problem \EqnRef{ssmfe_expert:eqn:evp},
+{\tt rci.job = 21} and {\tt 22} 
+require exactly the same computation).
+%
+\item
+{\tt 999}: 
+If {\tt rci.k > 0}, then
+a restart, normally with a larger block size {\tt m},
+is suggested with the aim of achieving better convergence.
+If the suggestion is accepted, the user must compute
+the new block size as {\tt m = rci.nx + k + l},
+where {\tt k $\ge$ rci.i} and {\tt l $\ge$ rci.j},
+reallocate the workspace array {\tt W}
+if the new block size is different from the old one,
+and set {\tt rci.i = 0} and {\tt rci.j = 0}.
+If the restart is not acceptable
+(e.g. the new block size exceeds a certain limit set by the user), 
+then nothing needs to be done.
+If {\tt rci.k == 0}, then
+the restart with the same block size {\tt m} is required.
+In both restart cases,
+the first block {\tt W[0][:][:]} of the new
+workspace should retain the vectors 
+{\tt W[0][i:j][:]},
+where {\tt i = rci.jx} and {\tt j = i + rci.nx - 1},
+from the old workspace.
+The remaining {\tt m - rci.nx} columns of {\tt W[0][:][:]}
+must be filled
+with arbitrary vectors that are linearly independent from 
+the converged eigenvectors and such that
+the entire set of the columns of {\tt W[0][:][:]}
+is linearly independent.
+%
+\end{description}
+%
+{\bf Restriction:} 
+{\tt rci.job = 0}, 
+{\tt rci.i = 0} and
+{\tt rci.j = 0} 
+are the only %values that can be assigned 
+assignments to the components of {\tt rci}
+that can be done
+by the user.
+The first one can only be done before the first call.
+The other two can only be done if
+{\tt rci.job = 999} and {\tt rci.k > 0}.
+%
+\item[\texttt{sigma}] holds the shift, 
+a value around which the desired eigenvalues
+are situated.
+%
+\item[\texttt{left}] holds the number of desired eigenvalues to the left of {\tt sigma}.
+{\bf Restriction:} {\tt $0 < $ left + right $\le$ min(mep, n/2)},
+with {\tt right}$=${\tt 0} for {\tt spral\_ssmfe\_standard\_\textit{type}()} and
+{\tt spral\_ssmfe\_generalized\_\textit{type}()}.
+%
+\item[\texttt{right}] holds the number of desired eigenvalues to the right of {\tt sigma}.
+{\bf Restriction:} {\tt $0 < $ left + right $\le$ min(mep, n/2)}.
+%
+\item[\texttt{mep}] holds the size of the array {\tt lambda}.
+See Section~\ref{ssmfe_expert:method} for guidance on
+setting {\tt mep}.
+{\bf Restriction:} 
+{\tt mep} is not less than the number of desired eigenpairs.
+%
+\item[\texttt{lambda[mep]}] is
+used to store the computed eigenvalues.
+After a successful completion of the computation
+it contains eigenvalues in ascending order.
+This array must not be changed by the user.
+%
+\item[\texttt{m}] holds the block size of the user's workspace {\tt W}. 
+{\bf Restriction:} {\tt 2 $\le$ m $<$ n}.
+%
+\item[\texttt{rr[3][2*m][2*m]}] is a work array used as part of the reverse communication interface.
+It must only be changed by the user when
+instructed to do so by 
+{\tt rci.job}.
+%
+\item[\texttt{ind[m]}] is a work array used as part of the reverse communication interface.
+It must not be changed by the user.
+It is used for reordering the columns of some blocks of {\tt W}.
+%
+\item[\texttt{*keep}] must be initialized to \texttt{NULL} before the first call.
+It holds private data and must not be modified by the user.
+%
+\item[\texttt{*options}] specifies the algorithmic options used by the routines,
+as explained in Section~\ref{ssmfe_expert:type:options}.
+It must not be changed by the user between calls.
+%
+\item[\texttt{*inform}] is used to return information about the execution of the
+routine, as explained in Section~\ref{ssmfe_expert:type:inform}.
+It must not be changed by the user.
+%
+\end{description}
+
+\subsection{\texttt{spral\_ssmfe\_expert\_free()}}
+
+{\bf
+At the end of the computation, the memory 
+allocated by the solver procedures
+should be released
+by making a call to the following subroutine:
+}
+
+\begin{verbatim}
+   void spral_ssmfe_expert_free(void **keep, struct spral_ssmfe_inform *inform);
+\end{verbatim}
+
+\begin{description}
+%
+\item[\texttt{*keep}] must be unchanged since the last call to a solver routine.
+%
+\item[\texttt{*inform}]  must be unchanged since the last call to a solver routine.
+%
+\end{description}
+
+\section{Derived types}
+
+\subsection{\texttt{struct spral\_ssmfe\_options}}
+\label{ssmfe_expert:type:options}
+
+The structure {\tt struct spral\_ssmfe\_options} is used to specify
+the options used within {\tt SSMFE\_EXPERT}. The components, that must be given
+default values through a call to \texttt{spral\_ssmfe\_default\_options()}, are:
+
+\bigskip
+\noindent
+{\bf Convergence control options}
+
+\begin{description}
+%
+\item[\texttt{double abs\_tol\_lambda}]
+holds an absolute tolerance used when testing the estimated eigenvalue 
+error, see Section~\ref{ssmfe_expert:method}. 
+The default value is 0. %{\tt abs\_tol = 0}.
+Negative values are treated as the default.
+%
+\item[\texttt{double abs\_tol\_residual}]
+holds an absolute tolerance used when testing the residual, 
+see Section~\ref{ssmfe_expert:method}.
+The default value is 0.
+Negative values are treated as the default.
+%
+\item[\texttt{int max\_iterations}]
+holds the maximum number of iterations to be performed.
+The default value is 100.
+{\bf Restriction:} {\tt max\_it $\ge$ 0}.
+%
+\item[\texttt{double rel\_tol\_lambda}]
+holds a relative tolerance used when testing the estimated eigenvalue 
+error, see Section~\ref{ssmfe_expert:method}. 
+The default value is 0.
+Negative values are treated as the default.
+%
+\item[\texttt{double rel\_tol\_residual}]
+holds a relative tolerance used when testing the residual,
+see Section~\ref{ssmfe_expert:method}. 
+If both {\tt abs\_tol\_residual} and {\tt rel\_tol\_residual}
+are set to 0, then the residual norms are not taken
+into consideration by the convergence test,
+see Section~\ref{ssmfe_expert:method}.
+The default value is 0.
+Negative values are treated as the default.
+%
+\item[\texttt{double tol\_x}]
+holds a tolerance used when testing the estimated 
+eigenvector error, see Section~\ref{ssmfe_expert:method}. 
+If {\tt tol\_x} is set to zero, the eigenvector error is not estimated.
+If a negative value is assigned, the tolerance is set to
+{\tt 10*epsilon(lambda)}.
+The default value is -1.0.
+%
+\end{description}
+
+\medskip
+\noindent
+{\bf Printing options}
+
+\begin{description}
+%
+\item[\texttt{int print\_level}]
+determines the amount of printing.
+Possible values are:\\
+%
+\begin{tabular}{r@{ : }p{0.85\textwidth}}
+$<0$ & no printing;\\
+$0$ & error and warning messages only;\\
+$1$ & the type (standard or generalized) and the size of the problem,
+   the number of eigenpairs requested, the error tolerances and the size of
+   the subspace are printed before the iterations start;\\
+$2$ & as $1$ but, for each eigenpair tested for convergence (see
+   Section~\ref{ssmfe_expert:method}), the iteration number, the index of the
+   eigenpair, the eigenvalue, whether it has converged, the residual norm, and
+   the error estimates are printed;\\
+$>2$ & as $1$ but with all eigenvalues, whether converged, residual norms
+   and eigenvalue/eigenvector error estimates printed on each iteration. 
+\end{tabular}
+
+\noindent
+The default value is 0.
+Note that for eigenpairs that are far from convergence,
+`rough' error estimates are printed
+(the estimates that are actually used by the stopping criteria,
+see Section~\ref{ssmfe_expert:method}, only become available on the last few
+iterations).
+%
+\item[\texttt{int unit\_error}]
+holds the Fortran unit number for error messages.
+Printing is suppressed if {\tt unit\_error < 0}.
+The default value is 6. 
+%
+\item[\texttt{int unit\_diagnostic}]
+holds the Fortran unit number for messages  monitoring the convergence.
+Printing is suppressed if {\tt unit\_diagnostics < 0}.
+The default value is 6. 
+%
+\item[\texttt{int unit\_warning}]
+holds the Fortran unit number for warning messages.
+Printing is suppressed if {\tt unit\_warning < 0}.
+The default value is 6. 
+%
+\end{description}
+
+\medskip
+\noindent
+{\bf Advanced options}
+
+\begin{description}
+%
+\item[\texttt{int err\_est}] 
+defines which error estimation scheme 
+for eigenvalues and eigenvectors
+is to be used by the stopping criterion.
+Two schemes are implemented.
+If {\tt err\_est = 1}, residual error bounds are used,
+namely,
+a modified Davis-Kahan estimate for the eigenvector error
+and
+the Lehmann bounds for the eigenvalue error.
+(see Section~\ref{ssmfe_expert:errors:est}).
+If {\tt err\_est = 2}, 
+then the eigenvector and eigenvalue errors
+are estimated by analyzing the convergence curve
+for the eigenvalues (see Section~\ref{ssmfe_expert:errors:est}).
+The default is {\tt err\_est = 2}.
+{\bf Restriction:} {\tt err\_est = 1 {\rm or} 2}.
+%
+\item[\texttt{int extra\_left}]
+holds the number of extra approximate eigenvectors
+corresponding to leftmost eigenvalues
+that are of no interest to the user
+and are iterated solely to enhance convergence.
+The default is {\tt extra\_left = 0}.
+{\bf Restriction:} {\tt extra\_left $\ge$ 0}.
+%
+\item[\texttt{int extra\_right}]
+holds the number of extra approximate eigenvectors
+corresponding to rightmost eigenvalues
+that are of no interest to the user
+and are iterated solely to enhance convergence.
+The default is {\tt extra\_right = 0}.
+{\bf Restriction:} {\tt extra\_right $\ge$ 0}.
+%
+\item[\texttt{double left\_gap}]
+that is only used when
+{\tt left} is non-zero, and
+specifies the minimal acceptable distance
+between the last computed left eigenvalue
+and the rest of the spectrum.
+For {\tt spral\_ssmfe\_standard\_\textit{type}()} and {\tt spral\_ssmfe\_generalized\_\textit{type}()},
+the last computed left eigenvalue
+is the rightmost of the computed ones,
+and for the other procedures
+it is the leftmost.
+If set to a negative value $\delta$,
+the minimal distance is taken as
+$|\delta|$ times the average distance between the computed eigenvalues.
+Note that for this option to have any effect,
+the value of {\tt mep} must be larger than
+{\tt left + right}: see Section~\ref{ssmfe_expert:method}
+for further explanation.
+The default value is 0.
+%
+\item[\texttt{int max\_left}]
+holds the number of eigenvalues to the left from $\sigma$,
+or a negative value, if this number is not known
+(cf. Section~\ref{ssmfe_expert:sec:si}).
+The default is {\tt max\_left = -1}.
+%{\bf Restriction:} {\tt extra\_left $\ge$ 0}.
+%
+\item[\texttt{int max\_right}]
+holds the number of eigenvalues to the right from $\sigma$,
+or a negative value, if this number is not known.
+(cf. Section~\ref{ssmfe_expert:sec:si}).
+The default is {\tt max\_right = -1}.
+%
+\item[\texttt{bool minAprod}]
+determines whether the number of multiplications by $A$ 
+is to be reduced at the expense of memory. 
+If ${\tt minAprod = false}$, 
+on each iteration three returns to the user
+with {\tt rci.job = 1} are
+made for multiplications of {\tt rci.nx} vectors by $A$.
+Otherwise,  only one such return is made at each iteration but 
+the number {\tt kw} of blocks in the user's work array {\tt W} 
+must be increased by {\tt 2}.
+The default is {\tt minAprod~=~true}.
+{\bf Restriction:} {\tt minAprod = true}
+for {\tt spral\_ssmfe\_standard\_shift\_\textit{type}()},\\
+{\tt spral\_ssmfe\_generalized\_shift\_\textit{type}()}
+and  {\tt spral\_ssmfe\_buckling\_\textit{type}()}.
+%
+\item[\texttt{bool minBprod}]
+determines whether the number of multiplications by $B$ 
+is to be reduced at the expense of memory. 
+If ${\tt minBprod = false}$, 
+on each iteration at least three returns to the user
+with {\tt rci.job = 3} are
+made for multiplications of {\tt rci.nx} vectors by $B$.
+Otherwise,  only one such return is made at each iteration but 
+the number {\tt kw} of blocks in the user's work array {\tt W} 
+must be increased by {\tt 2}.
+The default is {\tt minBprod = true}.
+%
+\item[\texttt{double right\_gap}] has the same meaning as {\tt left\_gap} but for the rightmost eigenvalue. It is only used by the routines
+{\tt spral\_ssmfe\_standard\_shift\_\textit{type}()}, {\tt spral\_ssmfe\_generalized\_shift\_\textit{type}()}
+and {\tt spral\_ssmfe\_buckling\_\textit{type}()}
+and only when {\tt right}$\ne${\tt 0}.
+The default value is 0.
+%
+\item[\texttt{int user\_x}] specifies whether an initial guess for the eigenvectors is supplied.
+If {\tt user\_x > 0} then the first {\tt user\_x} columns
+of {\tt x[][]} will be used as initial guesses for eigenvectors.
+Hence, if the user has good approximations
+to some of the required eigenvectors, the computation time
+may be reduced by putting these approximations
+into the first {\tt user\_x} columns of {\tt x[][]}.
+The default value is 0, 
+i.e. the columns of {\tt x[][]} are overwritten by the solver.
+{\bf Restriction:} {0 $\le$ \tt user\_x $\le$ m},
+the first {\tt user\_x} columns in {\tt x[][]}
+must be linearly independent.
+%
+\end{description}
+
+\subsection{\texttt{struct spral\_ssmfe\_inform}}
+
+\label{ssmfe_expert:type:inform}
+
+The structure {\tt spral\_ssmfe\_inform} is used
+to hold information from the execution of
+the solver procedures.
+The components are:
+
+\begin{description}
+%
+\item[\texttt{int converged[mep]}] stores convergence information.
+If, on some iteration {\tt i}, an eigenpair ({\tt lambda[j], X[j]})
+has been accepted as converged,
+then {\tt converged[j] = i}; if the convergence stagnated
+then {\tt converged[j] = -i}; otherwise {\tt converged[j] = 0}.
+%
+\item[\texttt{double err\_lambda[mep]}] contains 
+the estimated eigenvalue error
+for the approximate eigenvalue {\tt lambda[i]}
+if {\tt info.converged(i)} is non-zero,
+and {\tt -1.0} otherwise.
+%
+\item[\texttt{double err\_X[m]}] is used for storing the eigenvector errors
+in the same way as {\tt err\_lamda[]} is used
+for storing the eigenvalue errors.
+%
+\item[\texttt{int flag}] is used as an error flag.
+If a call is successful, {\tt flag} has value {\tt 0}.
+A nonzero value of {\tt flag} indicates an error or a warning
+(see Section~\ref{ssmfe_expert:errors}).
+%
+\item[\texttt{int iteration}] holds the number of iterations 
+since the previous {\tt rci.job = 0} or {\tt rci.job = 999} call.
+%
+\item[\texttt{int left}] holds the number of converged eigenvalues on the left,
+i.e. the total number of converged eigenpairs of \EqnRef{ssmfe_expert:eqn:evp}
+or the number of the converged eigenvalues 
+of \EqnRef{ssmfe_expert:eqn:evp.g} or \EqnRef{ssmfe_expert:eqn:evp.b}
+to the left of {\tt sigma}. 
+%
+\item[\texttt{double next\_left}] holds
+the non-converged eigenvalue next to the last converged on the left\\
+(see {\tt options.left\_gap}).
+%
+\item[\texttt{double next\_right}] holds
+the non-converged eigenvalue next to the last converged on the right\\
+(see {\tt options.right\_gap}).
+%
+\item[\texttt{int non\_converged}] holds the number of non-converged eigenpairs
+(see Section~\ref{ssmfe_expert:errors}).
+%
+\item[\texttt{double residual\_norms[mep]}] holds, on return with 
+{\tt rci.job = 5}, the Euclidean norm of the residual. The norm for
+for {\tt lambda(i), X(i)} is returned as {\tt residual\_norms[i]}.
+%
+\item[\texttt{int right}]
+holds the number of converged eigenvalues 
+of \EqnRef{ssmfe_expert:eqn:evp.g} or \EqnRef{ssmfe_expert:eqn:evp.b}
+to the right of {\tt sigma}.
+%
+\item[\texttt{int stat}]
+holds the Fortran allocation status
+(see Section~\ref{ssmfe_expert:errors}).
+%
+\end{description}
+
+\section{Error flags}
+
+\label{ssmfe_expert:errors}
+
+A successful return from
+a solver procedure
+is indicated 
+by {\tt inform.flag$=$0}.
+A negative value indicates an error, a positive value indicates a warning.
+%{\tt info.data} provides further information
+%about some errors and warnings. 
+
+Possible negative values of {\tt inform.flag}
+are as follows:
+%
+\begin{description}
+%
+\item{~~-1}
+\hskip 9pt
+Incorrect value of {\tt rci.job}.
+%
+\item{~~-2}
+\hskip 9pt
+Block size {\tt m} is out-of-range.
+%
+\item{~~-3}
+\hskip 9pt
+Incorrect value of 
+{\tt options.err\_est}. %is out-of-range.
+%
+\item{~~-4}
+\hskip 9pt
+Incorrect value of {\tt options.minAprod}.
+%
+\item{~~-5}
+\hskip 9pt
+Incorrect value of 
+{\tt options.extra\_left} or
+{\tt options.extra\_right}.
+%
+\item{~~-6}
+\hskip 9pt
+Incorrect value of 
+{\tt options.min\_gap}. %is out-of-range.
+%
+\item{~-11}
+\hskip 7pt
+Incorrect value of 
+{\tt left}. % is out-of-range.
+%
+\item{~-12}
+\hskip 7pt
+Incorrect value of 
+{\tt right}. %is out-of-range.
+%
+\item{~-13}
+\hskip 7pt
+{\tt mep} is less than 
+the number of desired eigenpairs.
+%{\tt left} + {\tt right}.
+%
+\item{-100}
+\hskip 4pt
+Not enough memory;
+{\tt inform.stat} contains the value of the Fortran {\tt stat} parameter.
+%
+\item{-200}
+\hskip 4pt
+$B$ is not positive definite or initial eigenvectors are linearly dependent.
+%
+\end{description}
+
+Possible positive values  are: 
+%
+\begin{description}
+\item{1}
+\hskip 9pt
+The iterations have been terminated because no further improvement
+in accuracy is possible (this may happen if the preconditioner is
+not positive definite, or if the components of the residual vectors
+are so small that the round-off
+errors make them essentially random).
+The value of {\tt inform.non\_converged} is set to the number
+of non-converged eigenpairs.
+\item{2}
+\hskip 9pt
+The maximal number of iterations has been exceeded.
+The value of {\tt inform.non\_converged} is set to the number
+of non-converged eigenpairs.
+\item{3}
+\hskip 9pt
+Out of storage space for the converged eigenpairs.
+The value of {\tt inform.non\_converged} is set to the number
+of non-converged eigenpairs.
+%
+\end{description}
+
+\section{Method}
+\label{ssmfe_expert:method}
+
+\subsection{The algorithm}
+
+The solver procedures of
+\texttt{SPRAL\_SSMFE\_EXPERT}
+are interfaces to solver procedures of
+\texttt{SPRAL\_SSMFE\_CORE}, which 
+implement a block iterative algorithm
+based on the Jacobi-conjugate preconditioned gradients %(JCPG) 
+method [2,3].
+Further information on the algorithm used by
+\texttt{SPRAL\_SSMFE\_EXPERT} can be found in the
+specification document for \texttt{SPRAL\_SSMFE\_CORE}
+and in [1].
+
+\subsection{Stopping criteria}
+
+An approximate eigenpair 
+$\{x,\lambda\}$ is considered to have converged
+if %all of 
+the following three conditions are all satisfied:
+%
+\begin{enumerate}
+%
+\item
+if {\tt options.abs\_tol\_lambda} and 
+{\tt options.rel\_tol\_lambda}
+are not both equal to zero, then
+the estimated error in the approximate eigenvalue
+must be less than or equal to
+
+{\tt max(options.abs\_tol\_lambda, 
+$\delta$*options.rel\_tol\_lambda)},
+
+where $\delta$ is the estimated average distance
+between eigenvalues.
+\item
+if {\tt options.tol\_x} is not zero, then
+the estimated sine of the angle between
+the approximate eigenvector and the invariant subspace
+corresponding to the eigenvalue 
+approximated by $\lambda$
+must be less than or equal to {\tt options.tol\_x}.
+\item
+if {\tt options.abs\_tol\_residual} and 
+{\tt options.rel\_tol\_residual}
+are not both equal to zero, then
+the Euclidean norm of the residual,
+$\|A x - \lambda B x\|_2$,
+must be less than or equal to
+
+{\tt max(options.abs\_tol\_residual, 
+options.rel\_tol\_residual*$\|\lambda B x\|_2$)}.
+%
+\end{enumerate}
+%
+The extra eigenpairs are not checked for convergence,
+as their role is purely auxiliary.
+
+\subsection{Improving eigenvector accuracy}
+
+If the gap %distance 
+between the last computed eigenvalue 
+and the rest of the spectrum is small,
+then the accuracy of the corresponding eigenvector may be very low.
+To prevent this from happening,
+the user should set the eigenpairs storage size {\tt mep}
+to a value that is larger than the number of desired eigenpairs,
+and set the options 
+{\tt options.left\_gap}
+and
+{\tt options.right\_gap}
+to non-zero values $\delta_l$ and $\delta_r$.
+These values
+determine the size of the minimal acceptable gaps
+between the computed eigenvalues and the rest of the spectrum,
+$\delta_l$ referring to either leftmost eigenvalues
+(for {\tt spral\_ssmfe\_standard\_\textit{type}()} and {\tt spral\_ssmfe\_generalized\_\textit{type}()} only)
+or those to the left of the shift {\tt sigma},
+and $\delta_r$
+to those to the right of the shift {\tt sigma}.
+Positive values of $\delta_l$ and $\delta_r$
+set the gap explicitly,
+and negative values
+require the gap to be not less than their absolute value times
+the average distance between the computed eigenvalues.
+A recommended value of $\delta_l$ and $\delta_r$ is $-0.1$.
+The value of {\tt mep} %virtually does not affect 
+has little effect on
+the speed of computation,
+hence it might be set to any reasonably large value.
+The larger the value of {\tt mep}, 
+the larger the size of an eigenvalue cluster
+for which accurate eigenvectors can be computed, notably:
+to safeguard against clusters of size up to $k$,
+it is sufficient to set {\tt mep} to the number of desired eigenpairs
+plus $k - 1$.
+
+\subsection{The use of shifted matrix factorization}
+\label{ssmfe_expert:sec:si}
+
+When using the solver procedures that employ the shift-and-invert technique,
+it is very important to ensure that the numbers of desired eigenvalues
+each side of the shift do not exceed the actual numbers of these eigenvalues,
+as the eigenpairs `approximating' non-existing eigenpairs of the problem
+will not converge.
+It is therefore strongly recommended that the user employs 
+a linear system solver that performs
+the LDLT
+factorization of %for solving 
+the shifted system,
+e.g. {\tt HSL\_MA97} or {\tt SPRAL\_SSIDS}.
+The LDLT factorization of the matrix
+$A - \sigma B$ consists in finding a unit lower triangular
+matrix $L$, a block-diagonal matrix $D$
+with $1\times 1$ and $2\times 2$ blocks on the main diagonal
+and a permutation matrix $P$
+such that $P^T(A - \sigma B)P = L D L^T$.
+By inertia theorem,
+the number of eigenvalues to the left and right from 
+the shift $\sigma$
+is equal to the number of negative and positive eigenvalues of $D$,
+which allows quick computation of the eigenvalue numbers
+each side of the shift. %(see the example in Section~\ref{sec:ex2}).
+
+\subsection{Error estimation}
+
+\label{ssmfe_expert:errors:est}
+
+\subsubsection{Standard problem}
+
+If {\tt options.err\_est} {\tt =} {\tt 1}, 
+the error estimates for the eigenvalues are based on 
+the eigenvalues of a matrix of the form
+%
+\begin{eqnarray}
+\label{L.mx}
+\hat A = %\Diag\{\lambda_j^i\}_{j=1}^{k-1} 
+\tilde\Lambda_k - S_k^T S_k,
+\end{eqnarray}
+%
+where $\tilde\Lambda_k$ is a diagonal matrix with
+the $k-1$ leftmost Ritz values $\tilde\lambda_j$
+on the diagonal,
+and the columns of $S_k$ are the respective
+residual vectors $r_j = A \tilde x_j - \tilde\lambda_j \tilde x_j$
+divided by $\sqrt{\lambda_k - \tilde\lambda_j}$.
+If $k$ is such that
+$\tilde\lambda_{k-1} < \lambda_k$,
+then the eigenvalues of $\hat A$ are
+the left-hand side bounds for
+eigenvalues $\lambda_i$,
+%The minimax principle for eigenvalues implies that
+%$\lambda_j \le \tilde\lambda_j$, 
+and thus
+the difference $\tilde\lambda_j - \hat\lambda_j$ estimates
+the eigenvalue error $\tilde\lambda_j - \lambda_j$.
+The unknown  $\lambda_k$ is replaced by $\tilde\lambda_k$,
+and select the maximal $k \le m$ for which
+the distance between $\tilde\lambda_{k-1}$ and $\tilde\lambda_k$
+exceeds the sum of the absolute error tolerance for eigenvalues
+and the Frobenius norm of the matrix formed by the residuals
+$r_j, j = 1, \ldots, k-1$.
+If  $\tilde\lambda_j - \hat\lambda_j$
+is close to the machine accuracy, it may be too polluted
+by round-off errors to rely upon.
+In such case, we use instead
+%
+\begin{eqnarray}
+\tilde\lambda_j - \lambda_j \le \delta_j \approx
+\frac{\|r_j\|^2}{\tilde\lambda_k - \lambda_j}.
+\end{eqnarray}
+
+The eigenvector errors are estimated based on 
+the Davis-Kahan inequality:
+%
+\begin{eqnarray}
+\min_{x \in \mathcal{X}_{k-1}}
+\sin\{\tilde x_j; x\} \le
+\frac{\|r_j\|}{\lambda_k - \tilde\lambda_j} \approx
+\frac{\|r_j\|}{\tilde\lambda_k - \tilde\lambda_j},
+\end{eqnarray}
+%
+where $\mathcal{X}_{k-1}$ is the invariant subspace 
+corresponding to $k-1$ leftmost eigenvalues.
+
+If {\tt options.err\_est$=$2}
+the errors are estimated
+based on the eigenvalue decrements history,
+which produces an estimate for the average 
+eigenvalue error reduction per iteration,
+which in turn yields error estimates
+for both eigenvalues and eigenvectors.
+Unlike the residual estimates mentioned in this section, 
+such `kinematic' error estimates are
+not guaranteed to be upper bounds for the actual errors.
+However, the numerical tests have demonstrated
+that kinematic error estimates 
+are significantly more accurate,
+i.e. closer to the actual error,
+than the residual-based estimates. 
+Furthermore, they straightforwardly
+apply to the generalized case as well.
+
+\subsubsection{Generalized problem}
+
+In the case
+of the generalized eigenvalue problem \EqnRef{ssmfe_expert:eqn:evp.g}
+solved by iterations with preconditioning,
+all of the residual norms in the previous section must be replaced
+with %\linebreak 
+$\|\cdot\|_{B^{-1}}$-norm of the residual
+%$A x_j^i - \lambda_j^i B x_j^i$
+$r_j = A \tilde x_j - \tilde\lambda_j B \tilde x_j$
+($\|r_j\|_{B^{-1}}^2 = r_j^* B^{-1} r_j$)
+or its upper estimate, e.g. 
+$\beta_1^{-1/2}\|\cdot\|$,
+where $\beta_1$ is the smallest eigenvalue of $B$.
+Hence, if $\beta_1$ is known, then
+the error tolerances for eigenvalues and eigenvectors
+must be multiplied by $\beta_1$ and $\sqrt{\beta_1}$
+respectively. If no estimate for $\|\cdot\|_{B^{-1}}$-norm
+is available, then the use of
+non-zero residual tolerances and
+{\tt options.err\_est$=$1}
+is not recommended.
+In the case of problems \EqnRef{ssmfe_expert:eqn:evp.g} solved by 
+iterations with shift-and-invert
+and the problem \EqnRef{ssmfe_expert:eqn:evp.b},
+the residuals are computed as
+%the norm
+%$\| T B x_j^i - \lambda_j^i x_j^i\|_B$
+$r_j = T B \tilde x_j - \tilde \lambda_j \tilde x_j$
+%is used, 
+where
+$T = (A - \sigma B)^{-1}$ for \EqnRef{ssmfe_expert:eqn:evp.g} and
+$T = (B - \sigma A)^{-1}$ for \EqnRef{ssmfe_expert:eqn:evp.b},
+and $B$-norms of $r_j$ are used, so that
+Lehmann matrix becomes
+$\hat A = \tilde\Lambda_k - S_k^T B\ S_k$.
+\if 0
+Note that the residual estimates 
+may considerably overestimate the actual error of direct iterations
+because  of the use of the Euclidean norm of the residual,
+which is too strong a norm for it
+when $A$ is the discretization of a differential operator.
+\fi
+
+\subsection*{References}
+
+[1]
+E.~E.~Ovtchinnikov and J.~Reid.
+A preconditioned block conjugate gradient
+algorithm for computing extreme eigenpairs
+of symmetric and Hermitian problems.
+Technical Report RAL-TR-2010-19, 2010.
+
+\noindent
+[2]
+E.~E.~Ovtchinnikov,
+{\em Jacobi correction equation, line search and
+conjugate gradients in Hermitian eigenvalue computation I:
+Computing an extreme eigenvalue},
+SIAM J. Numer. Anal., {\bf 46}:2567--2592, 2008.
+
+\noindent
+[3]
+E.~E.~Ovtchinnikov,
+{\em Jacobi correction equation, line search and
+conjugate gradients in Hermitian eigenvalue computation II:
+Computing several extreme eigenvalues},
+SIAM J. Numer. Anal., {\bf 46}:2593--2619, 2008.
+
+\section{Examples}
+
+\subsection{Preconditioning example}
+
+The following code 
+computes the 5 leftmost eigenpairs of 
+the matrix $A$ of order 100 that approximates 
+the two-dimensional Laplacian operator
+on a 20-by-20 grid.
+One forward and one backward Gauss-Seidel update
+are used for preconditioning,
+which halves the number of iterations
+compared with solving the same problem without preconditioning.
+The header {\tt laplace2d.h} (\texttt{examples/C/ssmfe/laplace2d.h})
+supplies the subroutine {\tt apply\_laplacian()}
+that multiplies a block of vectors by $A$,
+and the subroutine 
+{\tt apply\_gauss\_seidel\_step()}
+that computes $y = T x$ for a block of vectors $x$
+by applying one forward and one backward update
+of the Gauss-Seidel method to the system $A y = x$.
+\verbatiminput{examples/C/ssmfe/precond_expert.c}
+This code produces the following output:
+\begin{verbatim}
+  6 eigenpairs converged in 129 iterations
+ lambda[0] = 4.4676695e-02
+ lambda[1] = 1.1119274e-01
+ lambda[2] = 1.1119274e-01
+ lambda[3] = 1.7770878e-01
+ lambda[4] = 2.2040061e-01
+ lambda[5] = 2.2040061e-01
+\end{verbatim}
+
+Note that the code computed one extra eigenpair
+because of the insufficient gap between the 5th and 6th
+eigenvalues.

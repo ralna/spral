@@ -131,7 +131,7 @@ a factorization of $A$.
 
 %%%%%%%%%%%%%%%%%%%%%% derived types %%%%%%%%%%%%%%%%%%%%%%%%
 
-\subsection{Derived types} \label{derived types}
+\subsection{Derived types}
 
 For each problem, the user must employ the derived types defined by the
 package to declare scalars of the types
@@ -147,16 +147,16 @@ The following pseudo-code illustrates this.
       ...
 \end{verbatim}
 The components of {\tt ssids\_options} and {\tt ssids\_inform} are explained
-in Sections~\ref{typeoptions} and \ref{typeinform}.
+in Sections~\ref{ssids:type:options} and \ref{ssids:type:inform}.
 The components of {\tt ssids\_akeep} and {\tt ssids\_fkeep} are used to pass
 data between the subroutines of the package and must not be altered by the user.
 
-\subsection{Achieving bit-compatibility} \label{bitcompat}
+\subsection{Achieving bit-compatibility}
 Care has been taken to ensure bit-compatibility is achieved using this solver.
 That is, consecutive runs with the same data on the same machine  produces exactly
 the same solution.
 
-\subsection{Optional arguments}\label{Optional arguments}
+\subsection{Optional arguments}
 
 We use square brackets {\tt [ ]} to indicate {\it optional} arguments.
 In each
@@ -165,7 +165,7 @@ reserve the right to add additional optional arguments in future
 releases of the code, {\bf we strongly recommend that all optional
 arguments be called by keyword, not by position}.
 
-\subsection{Integer, real and package types}\label{Integer kinds}
+\subsection{Integer, real and package types}
 
 {\tt INTEGER} denotes default {\tt INTEGER} and
 {\tt INTEGER(long)} denotes {\tt INTEGER(kind=selected\_int\_kind(18))}.
@@ -174,10 +174,10 @@ arguments be called by keyword, not by position}.
 {\tt REAL} denotes double precision real.
 We also use the term {\bf package type} to mean the same.
 
-\subsection{Data formats} \label{dataformats}
+\subsection{Data formats} \label{ssids:dataformats}
 
 \begin{figure}
-   \caption{ \label{format eg}
+   \caption{ \label{ssids:format eg}
       Data format example matrix
    }
    $$
@@ -191,7 +191,7 @@ We also use the term {\bf package type} to mean the same.
    $$
 \end{figure}
 
-\subsubsection{Compressed Sparse Column (CSC) Format} \label{cscformat}
+\subsubsection{Compressed Sparse Column (CSC) Format} \label{ssids:cscformat}
 This standard data format consists of the following data:
 \begin{verbatim}
    integer                   :: n      ! size of matrix
@@ -216,7 +216,7 @@ those in the upper triangle) will be discarded and any duplicates will be
 summed.
 
 To illustrate the CSC format, the following arrays describe the matrix shown in
-Figure~\ref{format eg}.
+Figure~\ref{ssids:format eg}.
 \begin{verbatim}
    n = 5
    ptr(1:6) = (/ 1,             4,   5,        7,        9,    10 /)
@@ -224,7 +224,7 @@ Figure~\ref{format eg}.
    val(1:9) = (/ 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9 /)
 \end{verbatim}
 
-\subsubsection{Coordinate Format} \label{coordformat}
+\subsubsection{Coordinate Format} \label{ssids:coordformat}
 This standard data format consists of the following data:
 \begin{verbatim}
    integer           :: n     ! size of matrix
@@ -243,7 +243,7 @@ lower \textit{or} upper triangular part. Entries present in both will be summed,
 will any duplicate entries. Out-of-range entries are ignored.
 
 To illustrate the coordinate format, the following arrays describe the matrix shown in
-Figure~\ref{format eg}.
+Figure~\ref{ssids:format eg}.
 \begin{verbatim}
    n = 5
    ne = 9
@@ -258,7 +258,7 @@ Figure~\ref{format eg}.
 
 %%%%%%%%% analyse subroutine %%%%%%
 
-\subsection{\texttt{ssids\_analyse()} and \texttt{ssids\_analyse\_coord()}}\label{analyse}
+\subsection{\texttt{ssids\_analyse()} and \texttt{ssids\_analyse\_coord()}}
 
 \textbf{
    To analyse the sparsity pattern and prepare for the factorization,
@@ -277,7 +277,7 @@ Figure~\ref{format eg}.
 }
 
 \noindent
-Matrix data should be supplied as described in Section~\ref{dataformats}. As
+Matrix data should be supplied as described in Section~\ref{ssids:dataformats}. As
 the package uses CSC format internally, \texttt{ssids\_analyse()} with checking
 disabled provides the most efficient interface.
 
@@ -295,11 +295,11 @@ Checking is always performed when the coordinate format is used.
 
 \item[\texttt{n}{\rm ,} \texttt{ptr(:)}{\rm ,} \texttt{row(:)}] are \intentin\ 
    variables of type {\tt INTEGER} specifying the lower triangular part of $A$
-   in CSC format (see Section~\ref{cscformat}).
+   in CSC format (see Section~\ref{ssids:cscformat}).
 
 \item[\texttt{n}{\rm ,} \texttt{ne}{\rm ,} \texttt{row(:)}{\rm ,} \texttt{col(:)}]
    are \intentin\ variables of type {\tt INTEGER} specifying the lower
-   (or upper) triangular part of $A$ in coordinate format (see Section~\ref{coordformat}).
+   (or upper) triangular part of $A$ in coordinate format (see Section~\ref{ssids:coordformat}).
 
 \item[\texttt{akeep}] is an \intentout\ scalar of type
 {\tt ssids\_akeep}. It is used to hold data about the problem being
@@ -307,11 +307,11 @@ solved and must be passed unchanged to the other subroutines.
 
 \item[\texttt{options}] is an \intentin\ scalar of type {\tt ssids\_options}.
 Its components specify the algorithmic options used by the subroutine, as
-explained in Section~\ref{typeoptions}.
+explained in Section~\ref{ssids:type:options}.
 
 \item[\texttt{inform}] is an \intentout\ scalar of type
 {\tt ssids\_inform}. Its components provide information about the execution
-of the subroutine, as explained in Section~\ref{typeinform}.
+of the subroutine, as explained in Section~\ref{ssids:type:inform}.
 
 \item[\texttt{order(:)}] is an optional \intentinout\ array of type
 {\tt INTEGER} and size {\tt n}. If {\tt options\%ordering}$=${\tt 0},
@@ -324,7 +324,7 @@ than the user-supplied order and, in the indefinite case, may be modified by
 
 \item[\texttt{val(:)}] is an optional \intentin\ array of package type that must
 hold the numerical values of the entries of the matrix, as described in
-Section~\ref{dataformats}.
+Section~\ref{ssids:dataformats}.
 {\tt val(:)} must be present if a matching-based elimination ordering is
 required ({\tt options\%ordering$=$2}), and is otherwise ignored.
 
@@ -332,7 +332,7 @@ required ({\tt options\%ordering$=$2}), and is otherwise ignored.
 
 
 %%%%%%%%% factorize subroutine %%%%%%
-\subsection{\texttt{ssids\_factor()}} \label{factorize}
+\subsection{\texttt{ssids\_factor()}}
 \textbf{To factorize the matrix,
    \vspace*{0.1cm} \\
    \texttt{ \hspace*{0.2cm}
@@ -347,7 +347,7 @@ must be set to {\tt .true.} if the matrix is positive-definite, and
 
 \item[\texttt{val(:)}] is an \intentin\ array of package type that must hold
 the numerical values of the entries of the matrix, as described in
-Section~\ref{dataformats}.
+Section~\ref{ssids:dataformats}.
 
 \item[\texttt{akeep}]  is an \intentin\ scalar of type
 {\tt ssids\_akeep} that must be unchanged since the
@@ -359,11 +359,11 @@ solved and must be passed unchanged to the other subroutines.
 
 \item[\texttt{options}] is an \intentin\ scalar of type {\tt ssids\_options}.
 Its components specify the algorithmic options used by the subroutine, as
-explained in Section~\ref{typeoptions}.
+explained in Section~\ref{ssids:type:options}.
 
 \item[\texttt{inform}] is an \intentout\ scalar of type
 {\tt ssids\_inform}. Its components provide information about the execution
-of the subroutine, as explained in Section~\ref{typeinform}.
+of the subroutine, as explained in Section~\ref{ssids:type:inform}.
 
 \item[\texttt{scale(:)}] is an optional \intentinout\ array of type {\tt REAL}
 and size {\tt n}. If present and \texttt{options\%scaling=0}, it must contain
@@ -378,7 +378,7 @@ In this case, they must both be present and  must be unchanged since that call.
 \end{description}
 
 %%%%%%%%% solve subroutine %%%%%%
-\subsection{\texttt{ssids\_solve()}} \label{solve}
+\subsection{\texttt{ssids\_solve()}} \label{ssids:fn:solve}
 \textbf{ To solve the linear system $AX=B$, after a call to
    \texttt{ssids\_factor()},
    \begin{itemize}
@@ -425,11 +425,11 @@ must be unchanged since the last call to {\tt ssids\_factor()}.
 
 \item[\texttt{options}] is an \intentin\ scalar of type {\tt ssids\_options}.
 Its components specify the algorithmic options used by the subroutine, as
-explained in Section~\ref{typeoptions}.
+explained in Section~\ref{ssids:type:options}.
 
 \item[\texttt{inform}] is an \intentout\ scalar of type
 {\tt ssids\_inform}. Its components provide information about the execution
-of the subroutine, as explained in Section~\ref{typeinform}.
+of the subroutine, as explained in Section~\ref{ssids:type:inform}.
 
 \item[\texttt{job}] is an optional  \intentin\ scalar of
 type  {\tt INTEGER}. If absent, ${AX = B}$ is solved.
@@ -526,11 +526,11 @@ must be unchanged since the call to {\tt ssids\_factor()}.
 
 \item[\texttt{options}] is an \intentin\ scalar of type {\tt ssids\_options}.
 Its components specify the algorithmic options used by the subroutine, as
-explained in Section~\ref{typeoptions}.
+explained in Section~\ref{ssids:type:options}.
 
 \item[\texttt{inform}] is an \intentout\ scalar of type
 {\tt ssids\_inform}. Its components provide information about the execution
-of the subroutine, as explained in Section~\ref{typeinform}.
+of the subroutine, as explained in Section~\ref{ssids:type:inform}.
 
 \item[\texttt{d(:)}] is an  \intentout\ array of type {\tt  REAL} and
 size {\tt n}. The $i$-th diagonal entry of $D$ will be placed in {\tt d(i)}.
@@ -557,11 +557,11 @@ must be unchanged since the call to {\tt ssids\_factor()}.
 
 \item[\texttt{options}] is an \intentin\ scalar of type {\tt ssids\_options}.
 Its components specify the algorithmic options used by the subroutine, as
-explained in Section~\ref{typeoptions}.
+explained in Section~\ref{ssids:type:options}.
 
 \item[\texttt{inform}] is an \intentout\ scalar of type
 {\tt ssids\_inform}. Its components provide information about the execution
-of the subroutine, as explained in Section~\ref{typeinform}.
+of the subroutine, as explained in Section~\ref{ssids:type:inform}.
 
 \item[\texttt{piv\_order(:)}] is an optional \intentout\ array of type
 {\tt INTEGER} and size {\tt n}. If present, on exit
@@ -615,7 +615,7 @@ that must be unchanged since the call to {\tt ssids\_factor()}.
 
 \section{Derived types}
 \subsection{\texttt{ssids\_options}}
-\label{typeoptions}
+\label{ssids:type:options}
 
 The derived data type {\tt ssids\_options} is used to specify the options used
 within \texttt{SSIDS}. The components, that are automatically
@@ -748,7 +748,7 @@ Values outside the range $[0,0.5]$ are treated as the closest value in that rang
    whether to use the CPU or GPU for the \texttt{ssids\_solve()}. If
    \texttt{.true.}, the GPU is used, but some more advanced features are not
    available (see the description of the \texttt{job} parameter in
-   Section~\ref{solve}).
+   Section~\ref{ssids:fn:solve}).
    Setting \texttt{use\_gpu\_solve}$=${\tt .false.} is only compatible with
    \texttt{options\%presolve}$=${\tt 0}.
    The default value is \texttt{use\_gpu\_solve}$=$\texttt{.true.}.
@@ -771,7 +771,7 @@ Values outside the range $[0,0.5]$ are treated as the closest value in that rang
 %%%%%%%%%%% inform type %%%%%%%%%%%
 
 \subsection{\texttt{ssids\_inform}}
-\label{typeinform}
+\label{ssids:type:inform}
 The derived data type {\tt ssids\_inform}
 is used to hold parameters that give information about the progress and needs
 of the algorithm. The components of {\tt ssids\_inform}
@@ -780,7 +780,7 @@ of the algorithm. The components of {\tt ssids\_inform}
 \begin{description}
 
 \item[\texttt{flag}] is a scalar of type  {\tt INTEGER}
-that gives the exit status of the algorithm (details in Section \ref{errors}).
+that gives the exit status of the algorithm (details in Section \ref{ssids:errors}).
 
 \item[\texttt{matrix\_dup}] is a scalar  of type  {\tt INTEGER}.
 On exit from {\tt ssids\_analyse()}
@@ -874,7 +874,7 @@ reported error may have a cause errors external to {\tt SSIDS}.
 
 %%%%%%%%%%%%%%%%%%%%%% Warning and error messages %%%%%%%%%%%%%%%%%%%%%%%%
 
-\section{Return codes} \label{errors}
+\section{Return codes} \label{ssids:errors}
 
 A successful return from a subroutine in the package is indicated by
 {\tt inform\%flag} having the value zero.
@@ -1078,7 +1078,7 @@ RAL Technical Report. RAL-P-2014-0xx, to appear.
 
 %%%%%%%%%%%%%%%%%%%%%% EXAMPLE %%%%%%%%%%%%%%%%%%%%%%%%
 
-\section{Example} \label{examples}
+\section{Example}
 
 Suppose we wish to factorize the matrix
 \[ A = \left(

@@ -1,6 +1,10 @@
 #ifndef SPRAL_MATRIX_UTIL_H
 #define SPRAL_MATRIX_UTIL_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* Note: At present, interface is only partially defined! */
 
 enum spral_matrix_type {
@@ -20,7 +24,15 @@ enum spral_matrix_type {
    SPRAL_MATRIX_REAL_SKEW=6,        SPRAL_MATRIX_CPLX_SKEW=-6
 };
 
+void spral_half_to_full_i64d(int n, long *ptr, int *row, double *a, int base);
 void spral_print_matrix(int lines, enum spral_matrix_type matrix_type, int m,
-      int n, int *ptr, int *row, double *val, int base);
+      int n, const int *ptr, const int *row, const double *val, int base);
+void spral_print_matrix_i64d(int lines, enum spral_matrix_type matrix_type,
+      int m, int n, const long *ptr, const int *row, const double *val,
+      int base);
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif
 
 #endif // SPRAL_MATRIX_UTIL_H

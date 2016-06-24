@@ -1276,9 +1276,9 @@ subroutine init_L_with_A(stream, lev, lvlptr, lvllist, nodes, ncb, level_size, &
       lndata(i)%lcol = c_ptr_plus( nodes(node)%gpu_lcol, &
          nodes(node)%ndelay * (1+lndata(i)%ldl) * C_SIZEOF(dummy_real) )
    end do
-   gpu_lndata = custack_alloc(gwork, C_SIZEOF(lndata(:)))
+   gpu_lndata = custack_alloc(gwork, ncb*C_SIZEOF(lndata(1)))
    cuda_error = cudaMemcpyAsync_H2D(gpu_lndata, C_LOC(lndata), &
-      C_SIZEOF(lndata(:)), stream)
+      ncb*C_SIZEOF(lndata(1)), stream)
    if(cuda_error.ne.0) return
 
    ! Initialize frontal matrices to 0
@@ -1293,7 +1293,7 @@ subroutine init_L_with_A(stream, lev, lvlptr, lvllist, nodes, ncb, level_size, &
    else
       call load_nodes( stream, ncb, gpu_lndata, gpu_nlist, ptr_val )
    end if
-   call custack_free(gwork, C_SIZEOF(lndata(:)))
+   call custack_free(gwork, ncb*C_SIZEOF(lndata(1)))
 end subroutine init_L_with_A
 
 subroutine form_contrib(stream, lev, lvlptr, nodes, lvllist, off_LDLT,&
@@ -1370,12 +1370,12 @@ subroutine form_contrib(stream, lev, lvlptr, nodes, lvllist, off_LDLT,&
    end do
 
    if ( ncb > 0 ) then
-      gpu_msdata = custack_alloc(gwork, C_SIZEOF(msdata(1:ncb)))
+      gpu_msdata = custack_alloc(gwork, ncb*C_SIZEOF(msdata(1)))
       cuda_error = cudaMemcpyAsync_H2D(gpu_msdata, C_LOC(msdata), &
-         C_SIZEOF(msdata(1:ncb)), stream)
+         ncb*C_SIZEOF(msdata(1)), stream)
       if(cuda_error.ne.0) return
       call cuda_multidsyrk_low_col( stream, ncb, gpu_msdata, ptr_levLDLT )
-      call custack_free(gwork, C_SIZEOF(msdata(1:ncb))) ! gpu_msdata
+      call custack_free(gwork, ncb*C_SIZEOF(msdata(1))) ! gpu_msdata
    end if
 
 end subroutine form_contrib
@@ -1426,12 +1426,12 @@ subroutine factor_posdef(stream, lev, lvlptr, nodes, lvllist, sptr, rptr, &
       msdata(i)%ncols = sptr(node + 1) - sptr(node)
       msdata(i)%nrows = int(rptr(node + 1) - rptr(node))
    end do
-   gpu_msdata = custack_alloc(gwork, C_SIZEOF(msdata))
+   gpu_msdata = custack_alloc(gwork, ncb*C_SIZEOF(msdata(1)))
    stats%cuda_error = &
-      cudaMemcpyAsync_h2d(gpu_msdata, C_LOC(msdata), C_SIZEOF(msdata), stream)
+      cudaMemcpyAsync_h2d(gpu_msdata, C_LOC(msdata), ncb*C_SIZEOF(msdata(1)), stream)
    if(stats%cuda_error.ne.0) return
    call multisymm(stream, ncb, gpu_msdata)
-   call custack_free(gwork, C_SIZEOF(msdata)) ! gpu_msdata
+   call custack_free(gwork, ncb*C_SIZEOF(msdata(1))) ! gpu_msdata
 
    !
    ! Factor several nodes simultaneously
@@ -1522,11 +1522,12 @@ subroutine collect_stats_indef(stream, lev, lvlptr, lvllist, nodes, &
    type(cstat_data_type), dimension(:), allocatable, target :: csdata
    type(C_PTR) :: gpu_csdata
 
-   integer :: llist
+   integer :: llist, llvlptr
    integer :: node, blkm, blkn, ndelay
    real(wp) :: dummy_real
 
-   allocate(csdata(lvlptr(lev+1)-lvlptr(lev)), stat=stats%st)
+   llvlptr = lvlptr(lev+1)-lvlptr(lev)
+   allocate(csdata(llvlptr), stat=stats%st)
    if(stats%st.ne.0) return
    do llist = lvlptr(lev), lvlptr(lev + 1) - 1
       node = lvllist(llist)
@@ -1538,14 +1539,14 @@ subroutine collect_stats_indef(stream, lev, lvlptr, lvllist, nodes, &
          blkm*(blkn+0_long)*C_SIZEOF(dummy_real))
    end do
 
-   gpu_csdata = custack_alloc(gwork, C_SIZEOF(csdata(:)))
+   gpu_csdata = custack_alloc(gwork, llvlptr*C_SIZEOF(csdata(1)))
    stats%cuda_error = cudaMemcpyAsync_H2D(gpu_csdata, C_LOC(csdata), &
-      C_SIZEOF(csdata), stream)
+      llvlptr*C_SIZEOF(csdata(1)), stream)
    if(stats%cuda_error.ne.0) return
 
    call cuda_collect_stats(stream, size(csdata), gpu_csdata, gpu_custats)
 
-   call custack_free(gwork, C_SIZEOF(csdata(:))) ! gpu_csdata
+   call custack_free(gwork, llvlptr*C_SIZEOF(csdata(1))) ! gpu_csdata
 end subroutine collect_stats_indef
 
 ! Factorize a nodal matrix (not contrib block)
@@ -1613,13 +1614,13 @@ subroutine factor_indef( stream, lev, lvlptr, nodes, lvllist, sparent, sptr, &
       msdata(i)%ncols = sptr(node + 1) - sptr(node) + ndelay
       msdata(i)%nrows = int(rptr(node + 1) - rptr(node)) + ndelay
    end do
-   gpu_msdata = custack_alloc(gwork, C_SIZEOF(msdata(:)))
+   gpu_msdata = custack_alloc(gwork, ncb*C_SIZEOF(msdata(1)))
    stats%cuda_error = &
-      cudaMemcpyAsync_H2D(gpu_msdata, C_LOC(msdata), C_SIZEOF(msdata(:)), &
+      cudaMemcpyAsync_H2D(gpu_msdata, C_LOC(msdata), ncb*C_SIZEOF(msdata(1)), &
          stream)
    if(stats%cuda_error.ne.0) return
    call multisymm( stream, ncb, gpu_msdata )
-   call custack_free(gwork, C_SIZEOF(msdata(:)))
+   call custack_free(gwork, ncb*C_SIZEOF(msdata(1)))
    ! Note: Done with gpu_msdata
 
    !
@@ -1651,12 +1652,12 @@ subroutine factor_indef( stream, lev, lvlptr, nodes, lvllist, sparent, sptr, &
       end if
    end do
    if(ncb.gt.0) then
-      gpu_swapdata = custack_alloc(gwork, C_SIZEOF(swapdata(1:ncb)))
+      gpu_swapdata = custack_alloc(gwork, ncb*C_SIZEOF(swapdata(1)))
       stats%cuda_error = cudaMemcpyAsync_H2D(gpu_swapdata, C_LOC(swapdata), &
-         C_SIZEOF(swapdata(1:ncb)), stream)
+         ncb*C_SIZEOF(swapdata(1)), stream)
       if(stats%cuda_error.ne.0) return
       call swap_ni2Dm( stream, ncb, gpu_swapdata )
-      call custack_free(gwork, C_SIZEOF(swapdata(1:ncb)))
+      call custack_free(gwork, ncb*C_SIZEOF(swapdata(1)))
    end if
 
    !
@@ -1955,15 +1956,15 @@ subroutine setup_assemble_contrib(stream, lev, lvlptr, lvllist, child_ptr, &
       end do
    end do
 
-   gpu_cpdata = custack_alloc(gwork, C_SIZEOF(cpdata(1:ncp)))
-   gpu_blkdata = custack_alloc(gwork, C_SIZEOF(blkdata(1:nblk)))
+   gpu_cpdata = custack_alloc(gwork, ncp*C_SIZEOF(cpdata(1)))
+   gpu_blkdata = custack_alloc(gwork, nblk*C_SIZEOF(blkdata(1)))
    gpu_sync = custack_alloc(gwork, (1+ncp)*C_SIZEOF(dummy_int))
 
    cuda_error = cudaMemcpyAsync_H2D(gpu_cpdata, C_LOC(cpdata), &
-      C_SIZEOF(cpdata(1:ncp)), stream)
+      ncp*C_SIZEOF(cpdata(1)), stream)
    if(cuda_error.ne.0) return
    cuda_error = cudaMemcpyAsync_H2D(gpu_blkdata, C_LOC(blkdata), &
-      C_SIZEOF(blkdata(1:nblk)), stream)
+      nblk*C_SIZEOF(blkdata(1)), stream)
    if(cuda_error.ne.0) return
 end subroutine setup_assemble_contrib
 
@@ -2205,19 +2206,19 @@ subroutine setup_assemble_fully_summed(stream, total_nch, lev, lvlptr, lvllist,&
    end do
 
    ! Copy data to GPU
-   gpu_cpdata = custack_alloc(gwork, C_SIZEOF(cpdata(1:ncp)))
-   gpu_blkdata = custack_alloc(gwork, C_SIZEOF(blkdata(:)))
-   gpu_ddata = custack_alloc(gwork, C_SIZEOF(ddata(1:ndblk)))
+   gpu_cpdata = custack_alloc(gwork, ncp*C_SIZEOF(cpdata(1)))
+   gpu_blkdata = custack_alloc(gwork, nblk*C_SIZEOF(blkdata(1)))
+   gpu_ddata = custack_alloc(gwork, ndblk*C_SIZEOF(ddata(1)))
    gpu_sync = custack_alloc(gwork, (ncp + 1)*C_SIZEOF(dummy_int))
 
    cuda_error = cudaMemcpyAsync_H2D(gpu_cpdata, C_LOC(cpdata), &
-      C_SIZEOF(cpdata(:)), stream)
+      ncp*C_SIZEOF(cpdata(1)), stream)
    if(cuda_error.ne.0) return
    cuda_error = cudaMemcpyAsync_H2D(gpu_blkdata, C_LOC(blkdata), &
-      C_SIZEOF(blkdata(:)), stream)
+      nblk*C_SIZEOF(blkdata(1)), stream)
    if(cuda_error.ne.0) return
    cuda_error = cudaMemcpyAsync_H2D(gpu_ddata, C_LOC(ddata), &
-      C_SIZEOF(ddata(1:ndblk)), stream)
+      ndblk*C_SIZEOF(ddata(1)), stream)
    if(cuda_error.ne.0) return
 
 end subroutine setup_assemble_fully_summed
@@ -2792,10 +2793,10 @@ subroutine presolve_second(stream, nnodes, nodes, sptr, rptr, nlev, tree_lev, &
          offp = offp + (blkm + 2)*blkn - nelim
       end do
       
-      cuda_error = cudaMalloc(gpu_solve_data, C_SIZEOF(sdata(1:ncb)))
+      cuda_error = cudaMalloc(gpu_solve_data, ncb*C_SIZEOF(sdata(1)))
       if(cuda_error.ne.0) return
       cuda_error = cudaMemcpyAsync_H2D(gpu_solve_data, C_LOC(sdata), &
-         C_SIZEOF(sdata(1:ncb)), stream)
+         ncb*C_SIZEOF(sdata(1)), stream)
       if(cuda_error.ne.0) return
 
       ! perform simultaneous multiplication
@@ -3036,10 +3037,10 @@ subroutine solve_setup(stream, pos_def, sparent, child_ptr, child_list, n, &
 
    ! copy rlist_direct to GPU
    cuda_error = cudaMalloc(fact_data%gpu_rlist_direct, &
-      C_SIZEOF(rlist_direct(1:2*rd_size)))
+      2*rd_size*C_SIZEOF(rlist_direct(1)))
    if(cuda_error.ne.0) return
    cuda_error = cudaMemcpyAsync_H2D(fact_data%gpu_rlist_direct, &
-      C_LOC(rlist_direct), C_SIZEOF(rlist_direct(1:2*rd_size)), stream)
+      C_LOC(rlist_direct), 2*rd_size*C_SIZEOF(rlist_direct(1)), stream)
    if(cuda_error.ne.0) return
 
    allocate(col_ind(n), row_ind(rd_size,2), fact_data%off_lx(nnodes), &
@@ -3273,13 +3274,13 @@ subroutine solve_setup(stream, pos_def, sparent, child_ptr, child_list, n, &
     
          ncp = size(cpdata)
          max_ncp = max(max_ncp, ncp)
-         sz = C_SIZEOF(cpdata(1 : ncp))
+         sz = ncp*C_SIZEOF(cpdata(1))
          cuda_error = cudaMalloc(gpu_cpdata, sz)
          if(cuda_error.ne.0) return
          cuda_error = cudaMemcpyAsync_H2D(gpu_cpdata, C_LOC(cpdata), sz, stream)
          if(cuda_error.ne.0) return
     
-         sz = C_SIZEOF(blkdata(1 : nblk))
+         sz = nblk*C_SIZEOF(blkdata(1))
          cuda_error = cudaMalloc(gpu_blkdata, sz)
          if(cuda_error.ne.0) return
          cuda_error = &
@@ -3318,7 +3319,7 @@ subroutine solve_setup(stream, pos_def, sparent, child_ptr, child_list, n, &
          allocate (sdata(ncb), stat=st)
          if(st.ne.0) return
 
-         cuda_error = cudaMalloc(gpu_solve_data, C_SIZEOF(sdata(1:ncb)))
+         cuda_error = cudaMalloc(gpu_solve_data, ncb*C_SIZEOF(sdata(1)))
          if(cuda_error.ne.0) return
 
          k = 0
@@ -3347,7 +3348,7 @@ subroutine solve_setup(stream, pos_def, sparent, child_ptr, child_list, n, &
             k = k + (blkm - 1)/64 + 1
          end do
          cuda_error = cudaMemcpyAsync_H2D(gpu_solve_data, C_LOC(sdata), &
-            C_SIZEOF(sdata(1:ncb)), stream)
+            ncb*C_SIZEOF(sdata(1)), stream)
          if(cuda_error.ne.0) return
          fact_data%values_L(lev)%gpu_solve_n_data = gpu_solve_data
 
@@ -3372,7 +3373,7 @@ subroutine solve_setup(stream, pos_def, sparent, child_ptr, child_list, n, &
          allocate(sdata(ncb), stat=st)
          if(st.ne.0) return
 
-         cuda_error = cudaMalloc(gpu_solve_data, C_SIZEOF(sdata(1:ncb)))
+         cuda_error = cudaMalloc(gpu_solve_data, ncb*C_SIZEOF(sdata(1)))
          if(cuda_error.ne.0) return
 
          k = 0
@@ -3402,7 +3403,7 @@ subroutine solve_setup(stream, pos_def, sparent, child_ptr, child_list, n, &
          end do
          cuda_error = &
             cudaMemcpyAsync_H2D(gpu_solve_data, C_LOC(sdata), &
-               C_SIZEOF(sdata(1:ncb)), stream)
+               ncb*C_SIZEOF(sdata(1)), stream)
          if(cuda_error.ne.0) return
          fact_data%values_L(lev)%gpu_solve_t_data = gpu_solve_data
 
@@ -3508,13 +3509,13 @@ subroutine solve_setup(stream, pos_def, sparent, child_ptr, child_list, n, &
             end do
          end do
 
-         sz = C_SIZEOF(cpdata(1 : ncp))
+         sz = ncp*C_SIZEOF(cpdata(1))
          cuda_error = cudaMalloc(gpu_cpdata, sz)
          if(cuda_error.ne.0) return
          cuda_error = cudaMemcpyAsync_H2D(gpu_cpdata, C_LOC(cpdata), sz, stream)
          if(cuda_error.ne.0) return
     
-         sz = C_SIZEOF(blkdata(1 : nblk))
+         sz = nblk*C_SIZEOF(blkdata(1))
          cuda_error = cudaMalloc(gpu_blkdata, sz)
          if(cuda_error.ne.0) return
          cuda_error = &
@@ -3548,14 +3549,14 @@ subroutine solve_setup(stream, pos_def, sparent, child_ptr, child_list, n, &
    cuda_error = cudaMalloc(fact_data%gpu_col_ind, n*C_SIZEOF(dummy_int))
    if(cuda_error.ne.0) return
    cuda_error = cudaMalloc(fact_data%gpu_row_ind, &
-      C_SIZEOF(rlist_direct(1:2*rd_size)))
+      2*rd_size*C_SIZEOF(rlist_direct(1)))
    if(cuda_error.ne.0) return
    cuda_error = cudaMemcpyAsync_H2D(fact_data%gpu_col_ind, C_LOC(col_ind), &
-      C_SIZEOF(col_ind(1:n)), stream)
+      n*C_SIZEOF(col_ind(1)), stream)
    if(cuda_error.ne.0) return
 
    cuda_error = cudaMemcpyAsync_H2D(fact_data%gpu_row_ind, C_LOC(row_ind), &
-      C_SIZEOF(row_ind(1:rd_size,1:2)), stream)
+      2*rd_size*C_SIZEOF(row_ind(1,1)), stream)
    if(cuda_error.ne.0) return
    cuda_error = cudaDeviceSynchronize()
    if(cuda_error.ne.0) return
@@ -3593,7 +3594,7 @@ subroutine solve_setup(stream, pos_def, sparent, child_ptr, child_list, n, &
       off = (2*nd + 1)*C_SIZEOF(dummy_real)
       gpu_u = c_ptr_plus(fact_data%gpu_diag, off)
       cuda_error = cudaMemcpyAsync_H2D(gpu_v, C_LOC(lwork), &
-         C_SIZEOF(lwork(1:nc)), stream)
+         nc*C_SIZEOF(lwork(1)), stream)
       if(cuda_error.ne.0) return
       call gather_diag( stream, nc, fact_data%values_L(lev)%ptr_levL, &
          gpu_u, gpu_v )

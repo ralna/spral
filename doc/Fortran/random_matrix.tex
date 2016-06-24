@@ -45,7 +45,7 @@ The following procedure is available to the user:
 
 %%%%%%%%%%%%%%%%%%%%%% derived types %%%%%%%%%%%%%%%%%%%%%%%%
 
-\subsection{Derived types} \label{derived types}
+\subsection{Derived types}
 
 The user must supply a random number generator state using the type
 defined in the \texttt{spral\_random} module. 
@@ -60,7 +60,7 @@ Further details are given in the documentation for the \texttt{spral\_random}
 module. The user may wish to use the routines \texttt{get\_random\_seed()} and
 \texttt{set\_random\_seed()} to control the matrix generated.
 
-\subsection{Optional arguments}\label{Optional arguments}
+\subsection{Optional arguments}
 
 We use square brackets {\tt [ ]} to indicate {\it optional} arguments.
 In each
@@ -134,7 +134,7 @@ It is used as the state of the pseudo-random number generator used.
 
 \item[\texttt{flag}] is an \intentout\ scalar of type default {\tt INTEGER}.
    On exit, it specifies a return code that indicates success with the value
-   {\tt 0} or failure with a negative value detailed in Section~\ref{errors}.
+   {\tt 0} or failure with a negative value detailed in Section~\ref{random_matrix:errors}.
 
 \item[\texttt{stat}] is an optional \intentout\ scalar of type default
    {\tt INTEGER}. If present, on exit it returns the value of the Fortran
@@ -171,7 +171,7 @@ It is used as the state of the pseudo-random number generator used.
 
 %%%%%%%%%%%%%%%%%%%%%% Warning and error messages %%%%%%%%%%%%%%%%%%%%%%%%
 
-\section{Return codes} \label{errors}
+\section{Return codes} \label{random_matrix:errors}
 
 A successful return is indicated by
 {\tt flag} having the value zero.
@@ -190,7 +190,7 @@ Possible negative values are:
 \item{$-$5} A non-singular matrix was requested, but $\texttt{nnz}<\min(\texttt{m},\texttt{n})$.
 \end{description}
 
-\section{Method} \label{method}
+\section{Method}
 
 If structural non-singularity is requested, first $\min({\tt m}, {\tt n})$ entries are generated as follows:
 \begin{description}
@@ -217,7 +217,7 @@ all the entries in each column and replaces the diagonal with this value.
 
 %%%%%%%%%%%%%%%%%%%%%% EXAMPLE %%%%%%%%%%%%%%%%%%%%%%%%
 
-\section{Example} \label{examples}
+\section{Example}
 
 The following code generates a random $4 \times 5$ matrix with $8$ non-zeroes
 that is non-singular.

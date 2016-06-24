@@ -98,7 +98,7 @@ This standard data format consists of the following data:
 \begin{verbatim}
    int    m;                  /* number of rows (unsymmetric matrix) */
    int    n;                  /* number of columns */
-   int    ptr[ n+1 ];         /* column pointers */
+   int    ptr[ n+1 ];         /* column pointers (may have type long) */
    int    row[ ptr[n]-1 ];    /* row indices */
    double val[ ptr[n]-1 ];    /* numerical values */
 \end{verbatim}
@@ -108,8 +108,10 @@ the row number and \texttt{val[k]} holds the value of the \texttt{k}-th entry.
 The \texttt{ptr[]} array stores column pointers such that \texttt{ptr[i]} is
 the position in \texttt{row[]} and \texttt{val[]} of
 the first entry in the \texttt{i}-th column, and \texttt{ptr[n]} is one more
-than the total number of entries. There must be no duplicate or out of range
-entries.
+than the total number of entries. \texttt{ptr[]} may alternatively have type
+\texttt{long}, in which case the \texttt{\_long} variant of subroutine must
+be used.
+There must be no duplicate or out of range entries.
 Entries that are zero, including those on the diagonal, need not be specified.
 
 For \textbf{symmetric matrices}, only the lower triangular entries of $A$
@@ -162,6 +164,9 @@ matrix shown in Figure~\ref{format eg}.
    void spral_scaling_auction_sym(int n, const int *ptr, const int *row, const double *val,
       double *scaling, int *match, const struct spral_scaling_auction_options *options,
       struct spral_scaling_auction_inform *inform);
+   void spral_scaling_auction_sym_long(int n, const long *ptr, const int *row, const double *val,
+      double *scaling, int *match, const struct spral_scaling_auction_options *options,
+      struct spral_scaling_auction_inform *inform);
 \end{verbatim}
 
 \begin{description}
@@ -192,6 +197,10 @@ if \texttt{match[i]}$=$\texttt{-1}.
 \vspace*{-0.1cm}
 \begin{verbatim}
    void spral_scaling_auction_unsym(int m, int n, const int *ptr, const int *row,
+      const double *val, double *rscaling, double *cscaling, int *match,
+      const struct spral_scaling_auction_options *options,
+      struct spral_scaling_auction_inform *inform);
+   void spral_scaling_auction_unsym_long(int m, int n, const long *ptr, const int *row,
       const double *val, double *rscaling, double *cscaling, int *match,
       const struct spral_scaling_auction_options *options,
       struct spral_scaling_auction_inform *inform);
@@ -414,6 +423,9 @@ Real symmetric indefinite matrix, dimension 5x5 with 8 entries.
    void spral_scaling_equilib_sym(int n, const int *ptr, const int *row, const double *val,
       double *scaling, const struct spral_scaling_equilib_options *options,
       struct spral_scaling_equilib_inform *inform);
+   void spral_scaling_equilib_sym_long(int n, const long *ptr, const int *row, const double *val,
+      double *scaling, const struct spral_scaling_equilib_options *options,
+      struct spral_scaling_equilib_inform *inform);
 \end{verbatim}
 
 \begin{description}
@@ -440,6 +452,10 @@ Real symmetric indefinite matrix, dimension 5x5 with 8 entries.
 \vspace*{-0.1cm}
 \begin{verbatim}
    void spral_scaling_equilib_unsym(int m, int n, const int *ptr, const int *row,
+      const double *val, double *rscaling, double *cscaling,
+      const struct spral_scaling_equilib_options *options,
+      struct spral_scaling_equilib_inform *inform);
+   void spral_scaling_equilib_unsym_long(int m, int n, const long *ptr, const int *row,
       const double *val, double *rscaling, double *cscaling,
       const struct spral_scaling_equilib_options *options,
       struct spral_scaling_equilib_inform *inform);
@@ -592,6 +608,9 @@ Real symmetric indefinite matrix, dimension 5x5 with 8 entries.
    void spral_scaling_hungarian_sym(int n, const int *ptr, const int *row, const double *val,
       double *scaling, int *match, const struct spral_scaling_hungarian_options *options,
       struct spral_scaling_hungarian_inform *inform);
+   void spral_scaling_hungarian_sym_long(int n, const long *ptr, const int *row, const double *val,
+      double *scaling, int *match, const struct spral_scaling_hungarian_options *options,
+      struct spral_scaling_hungarian_inform *inform);
 \end{verbatim}
 
 \begin{description}
@@ -622,6 +641,10 @@ if \texttt{match[i]}$=$\texttt{-1}.
 \vspace*{-0.1cm}
 \begin{verbatim}
    void spral_scaling_hungarian_unsym(int m, int n, const int *ptr, const int *row,
+      const double *val, double *rscaling, double *cscaling, int *match,
+      const struct spral_scaling_hungarian_options *options,
+      struct spral_scaling_hungarian_inform *inform);
+   void spral_scaling_hungarian_unsym_long(int m, int n, const long *ptr, const int *row,
       const double *val, double *rscaling, double *cscaling, int *match,
       const struct spral_scaling_hungarian_options *options,
       struct spral_scaling_hungarian_inform *inform);

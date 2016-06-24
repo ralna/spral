@@ -419,7 +419,7 @@ void factor_node_posdef(
    T *lcol = node->lcol;
 
    /* Perform factorization */
-   typedef bub::CpuLLT<T, BLOCK_SIZE> CpuLLTSpec;
+   typedef bub::CpuLLT<T, bub::CPU_BEST_ARCH, BLOCK_SIZE> CpuLLTSpec;
    //typedef bub::CpuLLT<T, 4, true> CpuLLTSpecDebug; //FIXME: remove
    int flag = CpuLLTSpec().factor(m, n, lcol, m);
    node->nelim = (flag) ? flag : n;

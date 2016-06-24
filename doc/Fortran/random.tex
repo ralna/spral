@@ -51,7 +51,7 @@ The following procedures are available to the user:
 
 %%%%%%%%%%%%%%%%%%%%%% derived types %%%%%%%%%%%%%%%%%%%%%%%%
 
-\subsection{Derived types} \label{derived types}
+\subsection{Derived types}
 
 The user must employ the derived type {\tt random\_state} defined by the
 package to store the state. 
@@ -66,7 +66,7 @@ The components of {\tt random\_state} are not available to the user, but
 may be examined and altered through calls to {\tt random\_get\_seed()} and
 {\tt random\_set\_seed()} respectively.
 
-\subsection{Optional arguments}\label{Optional arguments}
+\subsection{Optional arguments}
 
 We use square brackets {\tt [ ]} to indicate {\it optional} arguments.
 In each
@@ -75,7 +75,7 @@ reserve the right to add additional optional arguments in future
 releases of the code, {\bf we strongly recommend that all optional
 arguments be called by keyword, not by position}.
 
-\subsection{Integer, real and package types}\label{Integer kinds}
+\subsection{Integer, real and package types}
 
 {\tt INTEGER} denotes default {\tt INTEGER} and
 {\tt INTEGER(long)} denotes {\tt INTEGER(kind=selected\_int\_kind(18))}.
@@ -217,7 +217,7 @@ generator, and need not be initialized by the user.
 
 \end{description}
 
-\section{Method} \label{method}
+\section{Method}
 
 \subsection{Pseudo-random number generation}
 We use a linear congruential generator of the following form:
@@ -263,7 +263,7 @@ $$
 
 %%%%%%%%%%%%%%%%%%%%%% EXAMPLE %%%%%%%%%%%%%%%%%%%%%%%%
 
-\section{Example} \label{examples}
+\section{Example}
 
 The following example code:
 \verbatiminput{examples/Fortran/random.f90}

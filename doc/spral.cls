@@ -93,6 +93,7 @@
 \newcommand{\intentin}{\texttt{INTENT(IN)}}
 \newcommand{\intentinout}{\texttt{INTENT(INOUT)}}
 \newcommand{\intentout}{\texttt{INTENT(OUT)}}
+\newcommand{\EqnRef}[1]{(\ref{#1})}
 
 % Define our own \maketitle to avoid multiple call issues
 \makeatletter

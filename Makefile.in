@@ -87,7 +87,8 @@ host_triplet = @host@
 @HAVE_NVCC_TRUE@	src/cuda/cuda.f90 \
 @HAVE_NVCC_TRUE@	src/cuda/cuda_check.h
 
-check_PROGRAMS = scaling_test$(EXEEXT) \
+check_PROGRAMS = lsmr_test$(EXEEXT) examples/Fortran/lsmr$(EXEEXT) \
+	examples/C/lsmr$(EXEEXT) scaling_test$(EXEEXT) \
 	examples/Fortran/scaling/auction_sym$(EXEEXT) \
 	examples/Fortran/scaling/auction_unsym$(EXEEXT) \
 	examples/Fortran/scaling/equilib_sym$(EXEEXT) \
@@ -104,9 +105,21 @@ check_PROGRAMS = scaling_test$(EXEEXT) \
 	examples/C/random$(EXEEXT) random_matrix_test$(EXEEXT) \
 	examples/Fortran/random_matrix$(EXEEXT) \
 	examples/C/random_matrix$(EXEEXT) ssids_test$(EXEEXT) \
-	examples/Fortran/ssids$(EXEEXT) examples/C/ssids$(EXEEXT)
-TESTS = scaling_test$(EXEEXT) random_test$(EXEEXT) \
-	random_matrix_test$(EXEEXT) ssids_test$(EXEEXT)
+	examples/Fortran/ssids$(EXEEXT) examples/C/ssids$(EXEEXT) \
+	ssmfe_test$(EXEEXT) ssmfe_ciface_test$(EXEEXT) \
+	examples/C/ssmfe/hermitian$(EXEEXT) \
+	examples/C/ssmfe/precond_core$(EXEEXT) \
+	examples/C/ssmfe/precond_expert$(EXEEXT) \
+	examples/C/ssmfe/precond_ssmfe$(EXEEXT) \
+	examples/C/ssmfe/shift_invert$(EXEEXT) \
+	examples/Fortran/ssmfe/hermitian$(EXEEXT) \
+	examples/Fortran/ssmfe/precond_core$(EXEEXT) \
+	examples/Fortran/ssmfe/precond_expert$(EXEEXT) \
+	examples/Fortran/ssmfe/precond_ssmfe$(EXEEXT) \
+	examples/Fortran/ssmfe/shift_invert$(EXEEXT)
+TESTS = lsmr_test$(EXEEXT) scaling_test$(EXEEXT) random_test$(EXEEXT) \
+	random_matrix_test$(EXEEXT) ssids_test$(EXEEXT) \
+	ssmfe_test$(EXEEXT) ssmfe_ciface_test$(EXEEXT)
 @HAVE_NVCC_TRUE@am__append_2 = \
 @HAVE_NVCC_TRUE@	src/ssids/alloc_gpu.f90 \
 @HAVE_NVCC_TRUE@	src/ssids/akeep_gpu.f90 \
@@ -193,14 +206,15 @@ am__v_AR_0 = @echo "  AR      " $@;
 am__v_AR_1 = 
 libspral_a_AR = $(AR) $(ARFLAGS)
 libspral_a_LIBADD =
-am__libspral_a_SOURCES_DIST = src/core_analyse.f90 \
+am__libspral_a_SOURCES_DIST = src/blas_iface.f90 src/core_analyse.f90 \
 	src/cuda/api_wrappers.cu src/cuda/cuda.f90 \
-	src/cuda/cuda_check.h src/match_order.f90 src/matrix_util.f90 \
+	src/cuda/cuda_check.h src/lapack_iface.f90 src/lsmr.f90 \
+	interfaces/C/lsmr.f90 src/match_order.f90 src/matrix_util.f90 \
 	interfaces/C/matrix_util.f90 \
 	src/metis$(METIS_VERSION)_wrapper.f90 src/pgm.f90 \
-	src/rutherford_boeing.f90 src/scaling.f90 \
-	interfaces/C/scaling.f90 src/timer.f90 src/random.f90 \
-	interfaces/C/random.f90 src/random_matrix.f90 \
+	src/rutherford_boeing.f90 interfaces/C/rutherford_boeing.f90 \
+	src/scaling.f90 interfaces/C/scaling.f90 src/timer.f90 \
+	src/random.f90 interfaces/C/random.f90 src/random_matrix.f90 \
 	interfaces/C/random_matrix.f90 src/ssids/alloc_gpu.f90 \
 	src/ssids/akeep_gpu.f90 src/ssids/assemble_kernels.cu \
 	src/ssids/cuda_datatypes.f90 src/ssids/cuda_interfaces.f90 \
@@ -218,7 +232,9 @@ am__libspral_a_SOURCES_DIST = src/core_analyse.f90 \
 	src/ssids/factor_cpu_iface.f90 src/ssids/factor_cpu_iface.h \
 	src/ssids/fkeep.f90 src/ssids/inform.f90 \
 	src/ssids/solve_cpu.f90 src/ssids/ssids.f90 \
-	interfaces/C/ssids.f90
+	interfaces/C/ssids.f90 src/ssmfe/ssmfe.f90 src/ssmfe/core.f90 \
+	src/ssmfe/expert.f90 interfaces/C/ssmfe.f90 \
+	interfaces/C/ssmfe_core.f90 interfaces/C/ssmfe_expert.f90
 am__dirstamp = $(am__leading_dot)dirstamp
 @HAVE_NVCC_TRUE@am__objects_1 = src/cuda/api_wrappers.$(OBJEXT) \
 @HAVE_NVCC_TRUE@	src/cuda/cuda.$(OBJEXT)
@@ -240,11 +256,14 @@ am__dirstamp = $(am__leading_dot)dirstamp
 @HAVE_NVCC_TRUE@	src/ssids/type_select_gpu.$(OBJEXT)
 @HAVE_NVCC_FALSE@am__objects_3 = src/ssids/inform_nogpu.$(OBJEXT) \
 @HAVE_NVCC_FALSE@	src/ssids/type_select_nogpu.$(OBJEXT)
-am_libspral_a_OBJECTS = src/core_analyse.$(OBJEXT) $(am__objects_1) \
-	src/match_order.$(OBJEXT) src/matrix_util.$(OBJEXT) \
-	interfaces/C/matrix_util.$(OBJEXT) \
+am_libspral_a_OBJECTS = src/blas_iface.$(OBJEXT) \
+	src/core_analyse.$(OBJEXT) $(am__objects_1) \
+	src/lapack_iface.$(OBJEXT) src/lsmr.$(OBJEXT) \
+	interfaces/C/lsmr.$(OBJEXT) src/match_order.$(OBJEXT) \
+	src/matrix_util.$(OBJEXT) interfaces/C/matrix_util.$(OBJEXT) \
 	src/metis$(METIS_VERSION)_wrapper.$(OBJEXT) src/pgm.$(OBJEXT) \
-	src/rutherford_boeing.$(OBJEXT) src/scaling.$(OBJEXT) \
+	src/rutherford_boeing.$(OBJEXT) \
+	interfaces/C/rutherford_boeing.$(OBJEXT) src/scaling.$(OBJEXT) \
 	interfaces/C/scaling.$(OBJEXT) src/timer.$(OBJEXT) \
 	src/random.$(OBJEXT) interfaces/C/random.$(OBJEXT) \
 	src/random_matrix.$(OBJEXT) \
@@ -254,13 +273,23 @@ am_libspral_a_OBJECTS = src/core_analyse.$(OBJEXT) $(am__objects_1) \
 	src/ssids/datatypes.$(OBJEXT) src/ssids/factor_cpu.$(OBJEXT) \
 	src/ssids/factor_cpu_iface.$(OBJEXT) src/ssids/fkeep.$(OBJEXT) \
 	src/ssids/inform.$(OBJEXT) src/ssids/solve_cpu.$(OBJEXT) \
-	src/ssids/ssids.$(OBJEXT) interfaces/C/ssids.$(OBJEXT)
+	src/ssids/ssids.$(OBJEXT) interfaces/C/ssids.$(OBJEXT) \
+	src/ssmfe/ssmfe.$(OBJEXT) src/ssmfe/core.$(OBJEXT) \
+	src/ssmfe/expert.$(OBJEXT) interfaces/C/ssmfe.$(OBJEXT) \
+	interfaces/C/ssmfe_core.$(OBJEXT) \
+	interfaces/C/ssmfe_expert.$(OBJEXT)
 libspral_a_OBJECTS = $(am_libspral_a_OBJECTS)
 PROGRAMS = $(bin_PROGRAMS)
+examples_C_lsmr_SOURCES = examples/C/lsmr.c
+examples_C_lsmr_OBJECTS = examples/C/lsmr.$(OBJEXT)
+examples_C_lsmr_LDADD = $(LDADD)
+am__DEPENDENCIES_1 =
+examples_C_lsmr_DEPENDENCIES = $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 am_examples_C_random_OBJECTS = examples/C/random.$(OBJEXT)
 examples_C_random_OBJECTS = $(am_examples_C_random_OBJECTS)
 examples_C_random_LDADD = $(LDADD)
-am__DEPENDENCIES_1 =
 examples_C_random_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1)
@@ -327,7 +356,53 @@ am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 @HAVE_NVCC_FALSE@examples_C_ssids_DEPENDENCIES =  \
 @HAVE_NVCC_FALSE@	$(am__DEPENDENCIES_2) $(am__DEPENDENCIES_1)
 @HAVE_NVCC_TRUE@examples_C_ssids_DEPENDENCIES = $(am__DEPENDENCIES_2) \
-@HAVE_NVCC_TRUE@	$(am__DEPENDENCIES_1)
+@HAVE_NVCC_TRUE@	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+am_examples_C_ssmfe_hermitian_OBJECTS =  \
+	examples/C/ssmfe/hermitian.$(OBJEXT)
+examples_C_ssmfe_hermitian_OBJECTS =  \
+	$(am_examples_C_ssmfe_hermitian_OBJECTS)
+examples_C_ssmfe_hermitian_LDADD = $(LDADD)
+examples_C_ssmfe_hermitian_DEPENDENCIES = $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
+am_examples_C_ssmfe_precond_core_OBJECTS =  \
+	examples/C/ssmfe/precond_core.$(OBJEXT)
+examples_C_ssmfe_precond_core_OBJECTS =  \
+	$(am_examples_C_ssmfe_precond_core_OBJECTS)
+examples_C_ssmfe_precond_core_LDADD = $(LDADD)
+examples_C_ssmfe_precond_core_DEPENDENCIES = $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
+am_examples_C_ssmfe_precond_expert_OBJECTS =  \
+	examples/C/ssmfe/precond_expert.$(OBJEXT)
+examples_C_ssmfe_precond_expert_OBJECTS =  \
+	$(am_examples_C_ssmfe_precond_expert_OBJECTS)
+examples_C_ssmfe_precond_expert_LDADD = $(LDADD)
+examples_C_ssmfe_precond_expert_DEPENDENCIES = $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
+am_examples_C_ssmfe_precond_ssmfe_OBJECTS =  \
+	examples/C/ssmfe/precond_ssmfe.$(OBJEXT)
+examples_C_ssmfe_precond_ssmfe_OBJECTS =  \
+	$(am_examples_C_ssmfe_precond_ssmfe_OBJECTS)
+examples_C_ssmfe_precond_ssmfe_LDADD = $(LDADD)
+examples_C_ssmfe_precond_ssmfe_DEPENDENCIES = $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
+am_examples_C_ssmfe_shift_invert_OBJECTS =  \
+	examples/C/ssmfe/shift_invert.$(OBJEXT)
+examples_C_ssmfe_shift_invert_OBJECTS =  \
+	$(am_examples_C_ssmfe_shift_invert_OBJECTS)
+examples_C_ssmfe_shift_invert_LDADD = $(LDADD)
+examples_C_ssmfe_shift_invert_DEPENDENCIES = $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
+am_examples_Fortran_lsmr_OBJECTS = examples/Fortran/lsmr.$(OBJEXT)
+examples_Fortran_lsmr_OBJECTS = $(am_examples_Fortran_lsmr_OBJECTS)
+examples_Fortran_lsmr_LDADD = $(LDADD)
+examples_Fortran_lsmr_DEPENDENCIES = $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 am_examples_Fortran_random_OBJECTS =  \
 	examples/Fortran/random.$(OBJEXT)
 examples_Fortran_random_OBJECTS =  \
@@ -397,7 +472,58 @@ examples_Fortran_ssids_OBJECTS = $(am_examples_Fortran_ssids_OBJECTS)
 @HAVE_NVCC_FALSE@examples_Fortran_ssids_DEPENDENCIES =  \
 @HAVE_NVCC_FALSE@	$(am__DEPENDENCIES_2) $(am__DEPENDENCIES_1)
 @HAVE_NVCC_TRUE@examples_Fortran_ssids_DEPENDENCIES =  \
-@HAVE_NVCC_TRUE@	$(am__DEPENDENCIES_2) $(am__DEPENDENCIES_1)
+@HAVE_NVCC_TRUE@	$(am__DEPENDENCIES_2) $(am__DEPENDENCIES_1) \
+@HAVE_NVCC_TRUE@	$(am__DEPENDENCIES_1)
+am_examples_Fortran_ssmfe_hermitian_OBJECTS =  \
+	examples/Fortran/ssmfe/hermitian.$(OBJEXT)
+examples_Fortran_ssmfe_hermitian_OBJECTS =  \
+	$(am_examples_Fortran_ssmfe_hermitian_OBJECTS)
+examples_Fortran_ssmfe_hermitian_LDADD = $(LDADD)
+examples_Fortran_ssmfe_hermitian_DEPENDENCIES = $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
+am_examples_Fortran_ssmfe_precond_core_OBJECTS =  \
+	examples/Fortran/ssmfe/precond_core.$(OBJEXT) \
+	examples/Fortran/ssmfe/laplace2d.$(OBJEXT)
+examples_Fortran_ssmfe_precond_core_OBJECTS =  \
+	$(am_examples_Fortran_ssmfe_precond_core_OBJECTS)
+examples_Fortran_ssmfe_precond_core_LDADD = $(LDADD)
+examples_Fortran_ssmfe_precond_core_DEPENDENCIES =  \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+am_examples_Fortran_ssmfe_precond_expert_OBJECTS =  \
+	examples/Fortran/ssmfe/precond_expert.$(OBJEXT) \
+	examples/Fortran/ssmfe/laplace2d.$(OBJEXT)
+examples_Fortran_ssmfe_precond_expert_OBJECTS =  \
+	$(am_examples_Fortran_ssmfe_precond_expert_OBJECTS)
+examples_Fortran_ssmfe_precond_expert_LDADD = $(LDADD)
+examples_Fortran_ssmfe_precond_expert_DEPENDENCIES =  \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+am_examples_Fortran_ssmfe_precond_ssmfe_OBJECTS =  \
+	examples/Fortran/ssmfe/precond_ssmfe.$(OBJEXT) \
+	examples/Fortran/ssmfe/laplace2d.$(OBJEXT)
+examples_Fortran_ssmfe_precond_ssmfe_OBJECTS =  \
+	$(am_examples_Fortran_ssmfe_precond_ssmfe_OBJECTS)
+examples_Fortran_ssmfe_precond_ssmfe_LDADD = $(LDADD)
+examples_Fortran_ssmfe_precond_ssmfe_DEPENDENCIES =  \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+am_examples_Fortran_ssmfe_shift_invert_OBJECTS =  \
+	examples/Fortran/ssmfe/shift_invert.$(OBJEXT) \
+	examples/Fortran/ssmfe/laplace2d.$(OBJEXT) \
+	examples/Fortran/ssmfe/ldltf.$(OBJEXT)
+examples_Fortran_ssmfe_shift_invert_OBJECTS =  \
+	$(am_examples_Fortran_ssmfe_shift_invert_OBJECTS)
+examples_Fortran_ssmfe_shift_invert_LDADD = $(LDADD)
+examples_Fortran_ssmfe_shift_invert_DEPENDENCIES =  \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+am_lsmr_test_OBJECTS = tests/lsmr.$(OBJEXT)
+lsmr_test_OBJECTS = $(am_lsmr_test_OBJECTS)
+lsmr_test_LDADD = $(LDADD)
+lsmr_test_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_random_matrix_test_OBJECTS = tests/random_matrix.$(OBJEXT)
 random_matrix_test_OBJECTS = $(am_random_matrix_test_OBJECTS)
 random_matrix_test_LDADD = $(LDADD)
@@ -425,13 +551,24 @@ spral_ssids_OBJECTS = $(am_spral_ssids_OBJECTS)
 @HAVE_NVCC_FALSE@spral_ssids_DEPENDENCIES = $(am__DEPENDENCIES_2) \
 @HAVE_NVCC_FALSE@	$(am__DEPENDENCIES_1)
 @HAVE_NVCC_TRUE@spral_ssids_DEPENDENCIES = $(am__DEPENDENCIES_2) \
-@HAVE_NVCC_TRUE@	$(am__DEPENDENCIES_1)
+@HAVE_NVCC_TRUE@	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_ssids_test_OBJECTS = tests/ssids.$(OBJEXT)
 ssids_test_OBJECTS = $(am_ssids_test_OBJECTS)
 @HAVE_NVCC_FALSE@ssids_test_DEPENDENCIES = $(am__DEPENDENCIES_2) \
 @HAVE_NVCC_FALSE@	$(am__DEPENDENCIES_1)
 @HAVE_NVCC_TRUE@ssids_test_DEPENDENCIES = $(am__DEPENDENCIES_2) \
-@HAVE_NVCC_TRUE@	$(am__DEPENDENCIES_1)
+@HAVE_NVCC_TRUE@	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+am_ssmfe_ciface_test_OBJECTS = tests/ssmfe/ssmfe_ciface.$(OBJEXT)
+ssmfe_ciface_test_OBJECTS = $(am_ssmfe_ciface_test_OBJECTS)
+ssmfe_ciface_test_LDADD = $(LDADD)
+ssmfe_ciface_test_DEPENDENCIES = $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
+am_ssmfe_test_OBJECTS = tests/ssmfe/ssmfe.$(OBJEXT)
+ssmfe_test_OBJECTS = $(am_ssmfe_test_OBJECTS)
+ssmfe_test_LDADD = $(LDADD)
+ssmfe_test_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -485,27 +622,7 @@ AM_V_FCLD = $(am__v_FCLD_@AM_V@)
 am__v_FCLD_ = $(am__v_FCLD_@AM_DEFAULT_V@)
 am__v_FCLD_0 = @echo "  FCLD    " $@;
 am__v_FCLD_1 = 
-SOURCES = $(libspral_a_SOURCES) $(examples_C_random_SOURCES) \
-	$(examples_C_random_matrix_SOURCES) \
-	$(examples_C_scaling_auction_sym_SOURCES) \
-	$(examples_C_scaling_auction_unsym_SOURCES) \
-	$(examples_C_scaling_equilib_sym_SOURCES) \
-	$(examples_C_scaling_equilib_unsym_SOURCES) \
-	$(examples_C_scaling_hungarian_sym_SOURCES) \
-	$(examples_C_scaling_hungarian_unsym_SOURCES) \
-	$(examples_C_ssids_SOURCES) $(examples_Fortran_random_SOURCES) \
-	$(examples_Fortran_random_matrix_SOURCES) \
-	$(examples_Fortran_scaling_auction_sym_SOURCES) \
-	$(examples_Fortran_scaling_auction_unsym_SOURCES) \
-	$(examples_Fortran_scaling_equilib_sym_SOURCES) \
-	$(examples_Fortran_scaling_equilib_unsym_SOURCES) \
-	$(examples_Fortran_scaling_hungarian_sym_SOURCES) \
-	$(examples_Fortran_scaling_hungarian_unsym_SOURCES) \
-	$(examples_Fortran_ssids_SOURCES) \
-	$(random_matrix_test_SOURCES) $(random_test_SOURCES) \
-	$(scaling_test_SOURCES) $(spral_ssids_SOURCES) \
-	$(ssids_test_SOURCES)
-DIST_SOURCES = $(am__libspral_a_SOURCES_DIST) \
+SOURCES = $(libspral_a_SOURCES) examples/C/lsmr.c \
 	$(examples_C_random_SOURCES) \
 	$(examples_C_random_matrix_SOURCES) \
 	$(examples_C_scaling_auction_sym_SOURCES) \
@@ -514,7 +631,14 @@ DIST_SOURCES = $(am__libspral_a_SOURCES_DIST) \
 	$(examples_C_scaling_equilib_unsym_SOURCES) \
 	$(examples_C_scaling_hungarian_sym_SOURCES) \
 	$(examples_C_scaling_hungarian_unsym_SOURCES) \
-	$(examples_C_ssids_SOURCES) $(examples_Fortran_random_SOURCES) \
+	$(examples_C_ssids_SOURCES) \
+	$(examples_C_ssmfe_hermitian_SOURCES) \
+	$(examples_C_ssmfe_precond_core_SOURCES) \
+	$(examples_C_ssmfe_precond_expert_SOURCES) \
+	$(examples_C_ssmfe_precond_ssmfe_SOURCES) \
+	$(examples_C_ssmfe_shift_invert_SOURCES) \
+	$(examples_Fortran_lsmr_SOURCES) \
+	$(examples_Fortran_random_SOURCES) \
 	$(examples_Fortran_random_matrix_SOURCES) \
 	$(examples_Fortran_scaling_auction_sym_SOURCES) \
 	$(examples_Fortran_scaling_auction_unsym_SOURCES) \
@@ -523,9 +647,49 @@ DIST_SOURCES = $(am__libspral_a_SOURCES_DIST) \
 	$(examples_Fortran_scaling_hungarian_sym_SOURCES) \
 	$(examples_Fortran_scaling_hungarian_unsym_SOURCES) \
 	$(examples_Fortran_ssids_SOURCES) \
-	$(random_matrix_test_SOURCES) $(random_test_SOURCES) \
-	$(scaling_test_SOURCES) $(am__spral_ssids_SOURCES_DIST) \
-	$(ssids_test_SOURCES)
+	$(examples_Fortran_ssmfe_hermitian_SOURCES) \
+	$(examples_Fortran_ssmfe_precond_core_SOURCES) \
+	$(examples_Fortran_ssmfe_precond_expert_SOURCES) \
+	$(examples_Fortran_ssmfe_precond_ssmfe_SOURCES) \
+	$(examples_Fortran_ssmfe_shift_invert_SOURCES) \
+	$(lsmr_test_SOURCES) $(random_matrix_test_SOURCES) \
+	$(random_test_SOURCES) $(scaling_test_SOURCES) \
+	$(spral_ssids_SOURCES) $(ssids_test_SOURCES) \
+	$(ssmfe_ciface_test_SOURCES) $(ssmfe_test_SOURCES)
+DIST_SOURCES = $(am__libspral_a_SOURCES_DIST) examples/C/lsmr.c \
+	$(examples_C_random_SOURCES) \
+	$(examples_C_random_matrix_SOURCES) \
+	$(examples_C_scaling_auction_sym_SOURCES) \
+	$(examples_C_scaling_auction_unsym_SOURCES) \
+	$(examples_C_scaling_equilib_sym_SOURCES) \
+	$(examples_C_scaling_equilib_unsym_SOURCES) \
+	$(examples_C_scaling_hungarian_sym_SOURCES) \
+	$(examples_C_scaling_hungarian_unsym_SOURCES) \
+	$(examples_C_ssids_SOURCES) \
+	$(examples_C_ssmfe_hermitian_SOURCES) \
+	$(examples_C_ssmfe_precond_core_SOURCES) \
+	$(examples_C_ssmfe_precond_expert_SOURCES) \
+	$(examples_C_ssmfe_precond_ssmfe_SOURCES) \
+	$(examples_C_ssmfe_shift_invert_SOURCES) \
+	$(examples_Fortran_lsmr_SOURCES) \
+	$(examples_Fortran_random_SOURCES) \
+	$(examples_Fortran_random_matrix_SOURCES) \
+	$(examples_Fortran_scaling_auction_sym_SOURCES) \
+	$(examples_Fortran_scaling_auction_unsym_SOURCES) \
+	$(examples_Fortran_scaling_equilib_sym_SOURCES) \
+	$(examples_Fortran_scaling_equilib_unsym_SOURCES) \
+	$(examples_Fortran_scaling_hungarian_sym_SOURCES) \
+	$(examples_Fortran_scaling_hungarian_unsym_SOURCES) \
+	$(examples_Fortran_ssids_SOURCES) \
+	$(examples_Fortran_ssmfe_hermitian_SOURCES) \
+	$(examples_Fortran_ssmfe_precond_core_SOURCES) \
+	$(examples_Fortran_ssmfe_precond_expert_SOURCES) \
+	$(examples_Fortran_ssmfe_precond_ssmfe_SOURCES) \
+	$(examples_Fortran_ssmfe_shift_invert_SOURCES) \
+	$(lsmr_test_SOURCES) $(random_matrix_test_SOURCES) \
+	$(random_test_SOURCES) $(scaling_test_SOURCES) \
+	$(am__spral_ssids_SOURCES_DIST) $(ssids_test_SOURCES) \
+	$(ssmfe_ciface_test_SOURCES) $(ssmfe_test_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -888,19 +1052,33 @@ LDADD = -L. -lspral $(METIS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FCLIBS) -lrt
 CUDA_LIBS = -lcublas
 lib_LIBRARIES = libspral.a
 
+# LSMR
+
 # MATRIX_UTIL
+
+# RUTHERFORD_BOEING
+
+# SCALING
 
 # RANDOM
 
 # RANDOM_MATRIX
 
 # SSIDS
-include_HEADERS = include/spral.h include/spral_matrix_util.h \
-	include/spral_random.h include/spral_random_matrix.h \
-	include/spral_ssids.h
+
+# SSMFE
+include_HEADERS = include/spral.h include/spral_lsmr.h \
+	include/spral_matrix_util.h include/spral_rutherford_boeing.h \
+	include/spral_scaling.h include/spral_random.h \
+	include/spral_random_matrix.h include/spral_ssids.h \
+	include/spral_ssmfe.h
+
+# BLAS_IFACE
+# Note: first so not +=
 
 # CORE_ANALYSE
-# Note: first so not +=
+
+# LAPACK_IFACE
 
 # MATCH_ORDER
 
@@ -908,25 +1086,26 @@ include_HEADERS = include/spral.h include/spral_matrix_util.h \
 
 # PGM
 
-# RUTHERFORD_BOEING
-
-# SCALING
-
 # TIMER
-libspral_a_SOURCES = src/core_analyse.f90 $(am__append_1) \
-	src/match_order.f90 src/matrix_util.f90 \
+libspral_a_SOURCES = src/blas_iface.f90 src/core_analyse.f90 \
+	$(am__append_1) src/lapack_iface.f90 src/lsmr.f90 \
+	interfaces/C/lsmr.f90 src/match_order.f90 src/matrix_util.f90 \
 	interfaces/C/matrix_util.f90 \
 	src/metis$(METIS_VERSION)_wrapper.f90 src/pgm.f90 \
-	src/rutherford_boeing.f90 src/scaling.f90 \
-	interfaces/C/scaling.f90 src/timer.f90 src/random.f90 \
-	interfaces/C/random.f90 src/random_matrix.f90 \
+	src/rutherford_boeing.f90 interfaces/C/rutherford_boeing.f90 \
+	src/scaling.f90 interfaces/C/scaling.f90 src/timer.f90 \
+	src/random.f90 interfaces/C/random.f90 src/random_matrix.f90 \
 	interfaces/C/random_matrix.f90 $(am__append_2) $(am__append_3) \
 	src/ssids/alloc.f90 src/ssids/akeep.f90 src/ssids/analyse.f90 \
 	src/ssids/datatypes.f90 src/ssids/factor_cpu.cxx \
 	src/ssids/factor_cpu_iface.f90 src/ssids/factor_cpu_iface.h \
 	src/ssids/fkeep.f90 src/ssids/inform.f90 \
 	src/ssids/solve_cpu.f90 src/ssids/ssids.f90 \
-	interfaces/C/ssids.f90
+	interfaces/C/ssids.f90 src/ssmfe/ssmfe.f90 src/ssmfe/core.f90 \
+	src/ssmfe/expert.f90 interfaces/C/ssmfe.f90 \
+	interfaces/C/ssmfe_core.f90 interfaces/C/ssmfe_expert.f90
+lsmr_test_SOURCES = tests/lsmr.f90
+examples_Fortran_lsmr_SOURCES = examples/Fortran/lsmr.f90
 EXTRA_DIST = src/metis4_wrapper.f90 src/metis5_wrapper.f90
 scaling_test_SOURCES = tests/scaling.f90
 examples_Fortran_scaling_auction_sym_SOURCES = examples/Fortran/scaling/auction_sym.f90
@@ -955,19 +1134,64 @@ examples_C_ssids_SOURCES = examples/C/ssids.c
 @HAVE_NVCC_FALSE@spral_ssids_LINK = $(CXXLINK)
 @HAVE_NVCC_TRUE@spral_ssids_LINK = $(NVCCLINK)
 @HAVE_NVCC_FALSE@spral_ssids_LDADD = $(LDADD) $(HWLOC_LIBS)
-@HAVE_NVCC_TRUE@spral_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
+@HAVE_NVCC_TRUE@spral_ssids_LDADD = $(LDADD) $(HWLOC_LIBS) $(CUDA_LIBS)
 @HAVE_NVCC_FALSE@ssids_test_LINK = $(CXXLINK)
 @HAVE_NVCC_TRUE@ssids_test_LINK = $(NVCCLINK)
 @HAVE_NVCC_FALSE@ssids_test_LDADD = $(LDADD) $(HWLOC_LIBS)
-@HAVE_NVCC_TRUE@ssids_test_LDADD = $(LDADD) $(CUDA_LIBS)
+@HAVE_NVCC_TRUE@ssids_test_LDADD = $(LDADD) $(HWLOC_LIBS) $(CUDA_LIBS)
 @HAVE_NVCC_FALSE@examples_Fortran_ssids_LINK = $(CXXLINK)
 @HAVE_NVCC_TRUE@examples_Fortran_ssids_LINK = $(NVCCLINK)
 @HAVE_NVCC_FALSE@examples_Fortran_ssids_LDADD = $(LDADD) $(HWLOC_LIBS)
-@HAVE_NVCC_TRUE@examples_Fortran_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
+@HAVE_NVCC_TRUE@examples_Fortran_ssids_LDADD = $(LDADD) $(HWLOC_LIBS) $(CUDA_LIBS)
 @HAVE_NVCC_FALSE@examples_C_ssids_LINK = $(CXXLINK)
 @HAVE_NVCC_TRUE@examples_C_ssids_LINK = $(NVCCLINK)
 @HAVE_NVCC_FALSE@examples_C_ssids_LDADD = $(LDADD) $(HWLOC_LIBS)
-@HAVE_NVCC_TRUE@examples_C_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
+@HAVE_NVCC_TRUE@examples_C_ssids_LDADD = $(LDADD) $(HWLOC_LIBS) $(CUDA_LIBS)
+ssmfe_test_SOURCES = tests/ssmfe/ssmfe.f90
+ssmfe_ciface_test_SOURCES = tests/ssmfe/ssmfe_ciface.c \
+									 tests/ssmfe/laplace2d.h \
+									 tests/ssmfe/ldltf.h
+
+examples_C_ssmfe_hermitian_SOURCES = \
+	examples/C/ssmfe/hermitian.c
+
+examples_C_ssmfe_precond_core_SOURCES = \
+	examples/C/ssmfe/precond_core.c \
+	examples/C/ssmfe/laplace2d.h
+
+examples_C_ssmfe_precond_expert_SOURCES = \
+	examples/C/ssmfe/precond_expert.c \
+	examples/C/ssmfe/laplace2d.h
+
+examples_C_ssmfe_precond_ssmfe_SOURCES = \
+	examples/C/ssmfe/precond_ssmfe.c \
+	examples/C/ssmfe/laplace2d.h
+
+examples_C_ssmfe_shift_invert_SOURCES = \
+	examples/C/ssmfe/shift_invert.c \
+	examples/C/ssmfe/laplace2d.h \
+	examples/C/ssmfe/ldltf.h
+
+examples_Fortran_ssmfe_hermitian_SOURCES = \
+	examples/Fortran/ssmfe/hermitian.f90
+
+examples_Fortran_ssmfe_precond_ssmfe_SOURCES = \
+	examples/Fortran/ssmfe/precond_ssmfe.f90 \
+	examples/Fortran/ssmfe/laplace2d.f90
+
+examples_Fortran_ssmfe_precond_expert_SOURCES = \
+	examples/Fortran/ssmfe/precond_expert.f90 \
+	examples/Fortran/ssmfe/laplace2d.f90
+
+examples_Fortran_ssmfe_precond_core_SOURCES = \
+	examples/Fortran/ssmfe/precond_core.f90 \
+	examples/Fortran/ssmfe/laplace2d.f90
+
+examples_Fortran_ssmfe_shift_invert_SOURCES = \
+	examples/Fortran/ssmfe/shift_invert.f90 \
+	examples/Fortran/ssmfe/laplace2d.f90 \
+	examples/Fortran/ssmfe/ldltf.f90
+
 all: all-am
 
 .SUFFIXES:
@@ -1043,6 +1267,8 @@ src/$(am__dirstamp):
 src/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) src/$(DEPDIR)
 	@: > src/$(DEPDIR)/$(am__dirstamp)
+src/blas_iface.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
 src/core_analyse.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/cuda/$(am__dirstamp):
@@ -1055,16 +1281,21 @@ src/cuda/api_wrappers.$(OBJEXT): src/cuda/$(am__dirstamp) \
 	src/cuda/$(DEPDIR)/$(am__dirstamp)
 src/cuda/cuda.$(OBJEXT): src/cuda/$(am__dirstamp) \
 	src/cuda/$(DEPDIR)/$(am__dirstamp)
-src/match_order.$(OBJEXT): src/$(am__dirstamp) \
+src/lapack_iface.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
-src/matrix_util.$(OBJEXT): src/$(am__dirstamp) \
-	src/$(DEPDIR)/$(am__dirstamp)
+src/lsmr.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 interfaces/C/$(am__dirstamp):
 	@$(MKDIR_P) interfaces/C
 	@: > interfaces/C/$(am__dirstamp)
 interfaces/C/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) interfaces/C/$(DEPDIR)
 	@: > interfaces/C/$(DEPDIR)/$(am__dirstamp)
+interfaces/C/lsmr.$(OBJEXT): interfaces/C/$(am__dirstamp) \
+	interfaces/C/$(DEPDIR)/$(am__dirstamp)
+src/match_order.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
+src/matrix_util.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
 interfaces/C/matrix_util.$(OBJEXT): interfaces/C/$(am__dirstamp) \
 	interfaces/C/$(DEPDIR)/$(am__dirstamp)
 src/metis$(METIS_VERSION)_wrapper.$(OBJEXT): src/$(am__dirstamp) \
@@ -1072,6 +1303,9 @@ src/metis$(METIS_VERSION)_wrapper.$(OBJEXT): src/$(am__dirstamp) \
 src/pgm.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 src/rutherford_boeing.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
+interfaces/C/rutherford_boeing.$(OBJEXT):  \
+	interfaces/C/$(am__dirstamp) \
+	interfaces/C/$(DEPDIR)/$(am__dirstamp)
 src/scaling.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 interfaces/C/scaling.$(OBJEXT): interfaces/C/$(am__dirstamp) \
@@ -1149,6 +1383,24 @@ src/ssids/ssids.$(OBJEXT): src/ssids/$(am__dirstamp) \
 	src/ssids/$(DEPDIR)/$(am__dirstamp)
 interfaces/C/ssids.$(OBJEXT): interfaces/C/$(am__dirstamp) \
 	interfaces/C/$(DEPDIR)/$(am__dirstamp)
+src/ssmfe/$(am__dirstamp):
+	@$(MKDIR_P) src/ssmfe
+	@: > src/ssmfe/$(am__dirstamp)
+src/ssmfe/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) src/ssmfe/$(DEPDIR)
+	@: > src/ssmfe/$(DEPDIR)/$(am__dirstamp)
+src/ssmfe/ssmfe.$(OBJEXT): src/ssmfe/$(am__dirstamp) \
+	src/ssmfe/$(DEPDIR)/$(am__dirstamp)
+src/ssmfe/core.$(OBJEXT): src/ssmfe/$(am__dirstamp) \
+	src/ssmfe/$(DEPDIR)/$(am__dirstamp)
+src/ssmfe/expert.$(OBJEXT): src/ssmfe/$(am__dirstamp) \
+	src/ssmfe/$(DEPDIR)/$(am__dirstamp)
+interfaces/C/ssmfe.$(OBJEXT): interfaces/C/$(am__dirstamp) \
+	interfaces/C/$(DEPDIR)/$(am__dirstamp)
+interfaces/C/ssmfe_core.$(OBJEXT): interfaces/C/$(am__dirstamp) \
+	interfaces/C/$(DEPDIR)/$(am__dirstamp)
+interfaces/C/ssmfe_expert.$(OBJEXT): interfaces/C/$(am__dirstamp) \
+	interfaces/C/$(DEPDIR)/$(am__dirstamp)
 
 libspral.a: $(libspral_a_OBJECTS) $(libspral_a_DEPENDENCIES) $(EXTRA_libspral_a_DEPENDENCIES) 
 	$(AM_V_at)-rm -f libspral.a
@@ -1205,6 +1457,12 @@ examples/C/$(am__dirstamp):
 examples/C/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) examples/C/$(DEPDIR)
 	@: > examples/C/$(DEPDIR)/$(am__dirstamp)
+examples/C/lsmr.$(OBJEXT): examples/C/$(am__dirstamp) \
+	examples/C/$(DEPDIR)/$(am__dirstamp)
+
+examples/C/lsmr$(EXEEXT): $(examples_C_lsmr_OBJECTS) $(examples_C_lsmr_DEPENDENCIES) $(EXTRA_examples_C_lsmr_DEPENDENCIES) examples/C/$(am__dirstamp)
+	@rm -f examples/C/lsmr$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(examples_C_lsmr_OBJECTS) $(examples_C_lsmr_LDADD) $(LIBS)
 examples/C/random.$(OBJEXT): examples/C/$(am__dirstamp) \
 	examples/C/$(DEPDIR)/$(am__dirstamp)
 
@@ -1271,12 +1529,59 @@ examples/C/ssids.$(OBJEXT): examples/C/$(am__dirstamp) \
 examples/C/ssids$(EXEEXT): $(examples_C_ssids_OBJECTS) $(examples_C_ssids_DEPENDENCIES) $(EXTRA_examples_C_ssids_DEPENDENCIES) examples/C/$(am__dirstamp)
 	@rm -f examples/C/ssids$(EXEEXT)
 	$(AM_V_GEN)$(examples_C_ssids_LINK) $(examples_C_ssids_OBJECTS) $(examples_C_ssids_LDADD) $(LIBS)
+examples/C/ssmfe/$(am__dirstamp):
+	@$(MKDIR_P) examples/C/ssmfe
+	@: > examples/C/ssmfe/$(am__dirstamp)
+examples/C/ssmfe/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) examples/C/ssmfe/$(DEPDIR)
+	@: > examples/C/ssmfe/$(DEPDIR)/$(am__dirstamp)
+examples/C/ssmfe/hermitian.$(OBJEXT):  \
+	examples/C/ssmfe/$(am__dirstamp) \
+	examples/C/ssmfe/$(DEPDIR)/$(am__dirstamp)
+
+examples/C/ssmfe/hermitian$(EXEEXT): $(examples_C_ssmfe_hermitian_OBJECTS) $(examples_C_ssmfe_hermitian_DEPENDENCIES) $(EXTRA_examples_C_ssmfe_hermitian_DEPENDENCIES) examples/C/ssmfe/$(am__dirstamp)
+	@rm -f examples/C/ssmfe/hermitian$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(examples_C_ssmfe_hermitian_OBJECTS) $(examples_C_ssmfe_hermitian_LDADD) $(LIBS)
+examples/C/ssmfe/precond_core.$(OBJEXT):  \
+	examples/C/ssmfe/$(am__dirstamp) \
+	examples/C/ssmfe/$(DEPDIR)/$(am__dirstamp)
+
+examples/C/ssmfe/precond_core$(EXEEXT): $(examples_C_ssmfe_precond_core_OBJECTS) $(examples_C_ssmfe_precond_core_DEPENDENCIES) $(EXTRA_examples_C_ssmfe_precond_core_DEPENDENCIES) examples/C/ssmfe/$(am__dirstamp)
+	@rm -f examples/C/ssmfe/precond_core$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(examples_C_ssmfe_precond_core_OBJECTS) $(examples_C_ssmfe_precond_core_LDADD) $(LIBS)
+examples/C/ssmfe/precond_expert.$(OBJEXT):  \
+	examples/C/ssmfe/$(am__dirstamp) \
+	examples/C/ssmfe/$(DEPDIR)/$(am__dirstamp)
+
+examples/C/ssmfe/precond_expert$(EXEEXT): $(examples_C_ssmfe_precond_expert_OBJECTS) $(examples_C_ssmfe_precond_expert_DEPENDENCIES) $(EXTRA_examples_C_ssmfe_precond_expert_DEPENDENCIES) examples/C/ssmfe/$(am__dirstamp)
+	@rm -f examples/C/ssmfe/precond_expert$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(examples_C_ssmfe_precond_expert_OBJECTS) $(examples_C_ssmfe_precond_expert_LDADD) $(LIBS)
+examples/C/ssmfe/precond_ssmfe.$(OBJEXT):  \
+	examples/C/ssmfe/$(am__dirstamp) \
+	examples/C/ssmfe/$(DEPDIR)/$(am__dirstamp)
+
+examples/C/ssmfe/precond_ssmfe$(EXEEXT): $(examples_C_ssmfe_precond_ssmfe_OBJECTS) $(examples_C_ssmfe_precond_ssmfe_DEPENDENCIES) $(EXTRA_examples_C_ssmfe_precond_ssmfe_DEPENDENCIES) examples/C/ssmfe/$(am__dirstamp)
+	@rm -f examples/C/ssmfe/precond_ssmfe$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(examples_C_ssmfe_precond_ssmfe_OBJECTS) $(examples_C_ssmfe_precond_ssmfe_LDADD) $(LIBS)
+examples/C/ssmfe/shift_invert.$(OBJEXT):  \
+	examples/C/ssmfe/$(am__dirstamp) \
+	examples/C/ssmfe/$(DEPDIR)/$(am__dirstamp)
+
+examples/C/ssmfe/shift_invert$(EXEEXT): $(examples_C_ssmfe_shift_invert_OBJECTS) $(examples_C_ssmfe_shift_invert_DEPENDENCIES) $(EXTRA_examples_C_ssmfe_shift_invert_DEPENDENCIES) examples/C/ssmfe/$(am__dirstamp)
+	@rm -f examples/C/ssmfe/shift_invert$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(examples_C_ssmfe_shift_invert_OBJECTS) $(examples_C_ssmfe_shift_invert_LDADD) $(LIBS)
 examples/Fortran/$(am__dirstamp):
 	@$(MKDIR_P) examples/Fortran
 	@: > examples/Fortran/$(am__dirstamp)
 examples/Fortran/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) examples/Fortran/$(DEPDIR)
 	@: > examples/Fortran/$(DEPDIR)/$(am__dirstamp)
+examples/Fortran/lsmr.$(OBJEXT): examples/Fortran/$(am__dirstamp) \
+	examples/Fortran/$(DEPDIR)/$(am__dirstamp)
+
+examples/Fortran/lsmr$(EXEEXT): $(examples_Fortran_lsmr_OBJECTS) $(examples_Fortran_lsmr_DEPENDENCIES) $(EXTRA_examples_Fortran_lsmr_DEPENDENCIES) examples/Fortran/$(am__dirstamp)
+	@rm -f examples/Fortran/lsmr$(EXEEXT)
+	$(AM_V_FCLD)$(FCLINK) $(examples_Fortran_lsmr_OBJECTS) $(examples_Fortran_lsmr_LDADD) $(LIBS)
 examples/Fortran/random.$(OBJEXT): examples/Fortran/$(am__dirstamp) \
 	examples/Fortran/$(DEPDIR)/$(am__dirstamp)
 
@@ -1344,12 +1649,65 @@ examples/Fortran/ssids.$(OBJEXT): examples/Fortran/$(am__dirstamp) \
 examples/Fortran/ssids$(EXEEXT): $(examples_Fortran_ssids_OBJECTS) $(examples_Fortran_ssids_DEPENDENCIES) $(EXTRA_examples_Fortran_ssids_DEPENDENCIES) examples/Fortran/$(am__dirstamp)
 	@rm -f examples/Fortran/ssids$(EXEEXT)
 	$(AM_V_GEN)$(examples_Fortran_ssids_LINK) $(examples_Fortran_ssids_OBJECTS) $(examples_Fortran_ssids_LDADD) $(LIBS)
+examples/Fortran/ssmfe/$(am__dirstamp):
+	@$(MKDIR_P) examples/Fortran/ssmfe
+	@: > examples/Fortran/ssmfe/$(am__dirstamp)
+examples/Fortran/ssmfe/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) examples/Fortran/ssmfe/$(DEPDIR)
+	@: > examples/Fortran/ssmfe/$(DEPDIR)/$(am__dirstamp)
+examples/Fortran/ssmfe/hermitian.$(OBJEXT):  \
+	examples/Fortran/ssmfe/$(am__dirstamp) \
+	examples/Fortran/ssmfe/$(DEPDIR)/$(am__dirstamp)
+
+examples/Fortran/ssmfe/hermitian$(EXEEXT): $(examples_Fortran_ssmfe_hermitian_OBJECTS) $(examples_Fortran_ssmfe_hermitian_DEPENDENCIES) $(EXTRA_examples_Fortran_ssmfe_hermitian_DEPENDENCIES) examples/Fortran/ssmfe/$(am__dirstamp)
+	@rm -f examples/Fortran/ssmfe/hermitian$(EXEEXT)
+	$(AM_V_FCLD)$(FCLINK) $(examples_Fortran_ssmfe_hermitian_OBJECTS) $(examples_Fortran_ssmfe_hermitian_LDADD) $(LIBS)
+examples/Fortran/ssmfe/precond_core.$(OBJEXT):  \
+	examples/Fortran/ssmfe/$(am__dirstamp) \
+	examples/Fortran/ssmfe/$(DEPDIR)/$(am__dirstamp)
+examples/Fortran/ssmfe/laplace2d.$(OBJEXT):  \
+	examples/Fortran/ssmfe/$(am__dirstamp) \
+	examples/Fortran/ssmfe/$(DEPDIR)/$(am__dirstamp)
+
+examples/Fortran/ssmfe/precond_core$(EXEEXT): $(examples_Fortran_ssmfe_precond_core_OBJECTS) $(examples_Fortran_ssmfe_precond_core_DEPENDENCIES) $(EXTRA_examples_Fortran_ssmfe_precond_core_DEPENDENCIES) examples/Fortran/ssmfe/$(am__dirstamp)
+	@rm -f examples/Fortran/ssmfe/precond_core$(EXEEXT)
+	$(AM_V_FCLD)$(FCLINK) $(examples_Fortran_ssmfe_precond_core_OBJECTS) $(examples_Fortran_ssmfe_precond_core_LDADD) $(LIBS)
+examples/Fortran/ssmfe/precond_expert.$(OBJEXT):  \
+	examples/Fortran/ssmfe/$(am__dirstamp) \
+	examples/Fortran/ssmfe/$(DEPDIR)/$(am__dirstamp)
+
+examples/Fortran/ssmfe/precond_expert$(EXEEXT): $(examples_Fortran_ssmfe_precond_expert_OBJECTS) $(examples_Fortran_ssmfe_precond_expert_DEPENDENCIES) $(EXTRA_examples_Fortran_ssmfe_precond_expert_DEPENDENCIES) examples/Fortran/ssmfe/$(am__dirstamp)
+	@rm -f examples/Fortran/ssmfe/precond_expert$(EXEEXT)
+	$(AM_V_FCLD)$(FCLINK) $(examples_Fortran_ssmfe_precond_expert_OBJECTS) $(examples_Fortran_ssmfe_precond_expert_LDADD) $(LIBS)
+examples/Fortran/ssmfe/precond_ssmfe.$(OBJEXT):  \
+	examples/Fortran/ssmfe/$(am__dirstamp) \
+	examples/Fortran/ssmfe/$(DEPDIR)/$(am__dirstamp)
+
+examples/Fortran/ssmfe/precond_ssmfe$(EXEEXT): $(examples_Fortran_ssmfe_precond_ssmfe_OBJECTS) $(examples_Fortran_ssmfe_precond_ssmfe_DEPENDENCIES) $(EXTRA_examples_Fortran_ssmfe_precond_ssmfe_DEPENDENCIES) examples/Fortran/ssmfe/$(am__dirstamp)
+	@rm -f examples/Fortran/ssmfe/precond_ssmfe$(EXEEXT)
+	$(AM_V_FCLD)$(FCLINK) $(examples_Fortran_ssmfe_precond_ssmfe_OBJECTS) $(examples_Fortran_ssmfe_precond_ssmfe_LDADD) $(LIBS)
+examples/Fortran/ssmfe/shift_invert.$(OBJEXT):  \
+	examples/Fortran/ssmfe/$(am__dirstamp) \
+	examples/Fortran/ssmfe/$(DEPDIR)/$(am__dirstamp)
+examples/Fortran/ssmfe/ldltf.$(OBJEXT):  \
+	examples/Fortran/ssmfe/$(am__dirstamp) \
+	examples/Fortran/ssmfe/$(DEPDIR)/$(am__dirstamp)
+
+examples/Fortran/ssmfe/shift_invert$(EXEEXT): $(examples_Fortran_ssmfe_shift_invert_OBJECTS) $(examples_Fortran_ssmfe_shift_invert_DEPENDENCIES) $(EXTRA_examples_Fortran_ssmfe_shift_invert_DEPENDENCIES) examples/Fortran/ssmfe/$(am__dirstamp)
+	@rm -f examples/Fortran/ssmfe/shift_invert$(EXEEXT)
+	$(AM_V_FCLD)$(FCLINK) $(examples_Fortran_ssmfe_shift_invert_OBJECTS) $(examples_Fortran_ssmfe_shift_invert_LDADD) $(LIBS)
 tests/$(am__dirstamp):
 	@$(MKDIR_P) tests
 	@: > tests/$(am__dirstamp)
 tests/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) tests/$(DEPDIR)
 	@: > tests/$(DEPDIR)/$(am__dirstamp)
+tests/lsmr.$(OBJEXT): tests/$(am__dirstamp) \
+	tests/$(DEPDIR)/$(am__dirstamp)
+
+lsmr_test$(EXEEXT): $(lsmr_test_OBJECTS) $(lsmr_test_DEPENDENCIES) $(EXTRA_lsmr_test_DEPENDENCIES) 
+	@rm -f lsmr_test$(EXEEXT)
+	$(AM_V_FCLD)$(FCLINK) $(lsmr_test_OBJECTS) $(lsmr_test_LDADD) $(LIBS)
 tests/random_matrix.$(OBJEXT): tests/$(am__dirstamp) \
 	tests/$(DEPDIR)/$(am__dirstamp)
 
@@ -1390,23 +1748,46 @@ tests/ssids.$(OBJEXT): tests/$(am__dirstamp) \
 ssids_test$(EXEEXT): $(ssids_test_OBJECTS) $(ssids_test_DEPENDENCIES) $(EXTRA_ssids_test_DEPENDENCIES) 
 	@rm -f ssids_test$(EXEEXT)
 	$(AM_V_GEN)$(ssids_test_LINK) $(ssids_test_OBJECTS) $(ssids_test_LDADD) $(LIBS)
+tests/ssmfe/$(am__dirstamp):
+	@$(MKDIR_P) tests/ssmfe
+	@: > tests/ssmfe/$(am__dirstamp)
+tests/ssmfe/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) tests/ssmfe/$(DEPDIR)
+	@: > tests/ssmfe/$(DEPDIR)/$(am__dirstamp)
+tests/ssmfe/ssmfe_ciface.$(OBJEXT): tests/ssmfe/$(am__dirstamp) \
+	tests/ssmfe/$(DEPDIR)/$(am__dirstamp)
+
+ssmfe_ciface_test$(EXEEXT): $(ssmfe_ciface_test_OBJECTS) $(ssmfe_ciface_test_DEPENDENCIES) $(EXTRA_ssmfe_ciface_test_DEPENDENCIES) 
+	@rm -f ssmfe_ciface_test$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(ssmfe_ciface_test_OBJECTS) $(ssmfe_ciface_test_LDADD) $(LIBS)
+tests/ssmfe/ssmfe.$(OBJEXT): tests/ssmfe/$(am__dirstamp) \
+	tests/ssmfe/$(DEPDIR)/$(am__dirstamp)
+
+ssmfe_test$(EXEEXT): $(ssmfe_test_OBJECTS) $(ssmfe_test_DEPENDENCIES) $(EXTRA_ssmfe_test_DEPENDENCIES) 
+	@rm -f ssmfe_test$(EXEEXT)
+	$(AM_V_FCLD)$(FCLINK) $(ssmfe_test_OBJECTS) $(ssmfe_test_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
 	-rm -f driver/*.$(OBJEXT)
 	-rm -f examples/C/*.$(OBJEXT)
 	-rm -f examples/C/scaling/*.$(OBJEXT)
+	-rm -f examples/C/ssmfe/*.$(OBJEXT)
 	-rm -f examples/Fortran/*.$(OBJEXT)
 	-rm -f examples/Fortran/scaling/*.$(OBJEXT)
+	-rm -f examples/Fortran/ssmfe/*.$(OBJEXT)
 	-rm -f interfaces/C/*.$(OBJEXT)
 	-rm -f src/*.$(OBJEXT)
 	-rm -f src/cuda/*.$(OBJEXT)
 	-rm -f src/ssids/*.$(OBJEXT)
+	-rm -f src/ssmfe/*.$(OBJEXT)
 	-rm -f tests/*.$(OBJEXT)
+	-rm -f tests/ssmfe/*.$(OBJEXT)
 
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@examples/C/$(DEPDIR)/lsmr.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/$(DEPDIR)/random.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/$(DEPDIR)/random_matrix.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/$(DEPDIR)/ssids.Po@am__quote@
@@ -1416,7 +1797,13 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/scaling/$(DEPDIR)/equilib_unsym.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/scaling/$(DEPDIR)/hungarian_sym.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/scaling/$(DEPDIR)/hungarian_unsym.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@examples/C/ssmfe/$(DEPDIR)/hermitian.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@examples/C/ssmfe/$(DEPDIR)/precond_core.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@examples/C/ssmfe/$(DEPDIR)/precond_expert.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@examples/C/ssmfe/$(DEPDIR)/precond_ssmfe.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@examples/C/ssmfe/$(DEPDIR)/shift_invert.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ssids/$(DEPDIR)/factor_cpu.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@tests/ssmfe/$(DEPDIR)/ssmfe_ciface.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
@@ -1677,6 +2064,13 @@ recheck: all $(check_PROGRAMS)
 	        am__force_recheck=am--force-recheck \
 	        TEST_LOGS="$$log_list"; \
 	exit $$?
+lsmr_test.log: lsmr_test$(EXEEXT)
+	@p='lsmr_test$(EXEEXT)'; \
+	b='lsmr_test'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 scaling_test.log: scaling_test$(EXEEXT)
 	@p='scaling_test$(EXEEXT)'; \
 	b='scaling_test'; \
@@ -1701,6 +2095,20 @@ random_matrix_test.log: random_matrix_test$(EXEEXT)
 ssids_test.log: ssids_test$(EXEEXT)
 	@p='ssids_test$(EXEEXT)'; \
 	b='ssids_test'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+ssmfe_test.log: ssmfe_test$(EXEEXT)
+	@p='ssmfe_test$(EXEEXT)'; \
+	b='ssmfe_test'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+ssmfe_ciface_test.log: ssmfe_ciface_test$(EXEEXT)
+	@p='ssmfe_ciface_test$(EXEEXT)'; \
+	b='ssmfe_ciface_test'; \
 	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
@@ -1927,10 +2335,14 @@ distclean-generic:
 	-rm -f examples/C/$(am__dirstamp)
 	-rm -f examples/C/scaling/$(DEPDIR)/$(am__dirstamp)
 	-rm -f examples/C/scaling/$(am__dirstamp)
+	-rm -f examples/C/ssmfe/$(DEPDIR)/$(am__dirstamp)
+	-rm -f examples/C/ssmfe/$(am__dirstamp)
 	-rm -f examples/Fortran/$(DEPDIR)/$(am__dirstamp)
 	-rm -f examples/Fortran/$(am__dirstamp)
 	-rm -f examples/Fortran/scaling/$(DEPDIR)/$(am__dirstamp)
 	-rm -f examples/Fortran/scaling/$(am__dirstamp)
+	-rm -f examples/Fortran/ssmfe/$(DEPDIR)/$(am__dirstamp)
+	-rm -f examples/Fortran/ssmfe/$(am__dirstamp)
 	-rm -f interfaces/C/$(DEPDIR)/$(am__dirstamp)
 	-rm -f interfaces/C/$(am__dirstamp)
 	-rm -f src/$(DEPDIR)/$(am__dirstamp)
@@ -1939,8 +2351,12 @@ distclean-generic:
 	-rm -f src/cuda/$(am__dirstamp)
 	-rm -f src/ssids/$(DEPDIR)/$(am__dirstamp)
 	-rm -f src/ssids/$(am__dirstamp)
+	-rm -f src/ssmfe/$(DEPDIR)/$(am__dirstamp)
+	-rm -f src/ssmfe/$(am__dirstamp)
 	-rm -f tests/$(DEPDIR)/$(am__dirstamp)
 	-rm -f tests/$(am__dirstamp)
+	-rm -f tests/ssmfe/$(DEPDIR)/$(am__dirstamp)
+	-rm -f tests/ssmfe/$(am__dirstamp)
 
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
@@ -1952,7 +2368,7 @@ clean-am: clean-binPROGRAMS clean-checkPROGRAMS clean-generic \
 
 distclean: distclean-am
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
-	-rm -rf examples/C/$(DEPDIR) examples/C/scaling/$(DEPDIR) src/ssids/$(DEPDIR)
+	-rm -rf examples/C/$(DEPDIR) examples/C/scaling/$(DEPDIR) examples/C/ssmfe/$(DEPDIR) src/ssids/$(DEPDIR) tests/ssmfe/$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -2000,7 +2416,7 @@ installcheck-am:
 maintainer-clean: maintainer-clean-am
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
 	-rm -rf $(top_srcdir)/autom4te.cache
-	-rm -rf examples/C/$(DEPDIR) examples/C/scaling/$(DEPDIR) src/ssids/$(DEPDIR)
+	-rm -rf examples/C/$(DEPDIR) examples/C/scaling/$(DEPDIR) examples/C/ssmfe/$(DEPDIR) src/ssids/$(DEPDIR) tests/ssmfe/$(DEPDIR)
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 
@@ -2042,6 +2458,9 @@ uninstall-am: uninstall-binPROGRAMS uninstall-includeHEADERS \
 
 .cu.o:
 	$(NVCC) $(NVCCFLAGS) $(AM_NVCC_FLAGS) -dc -o $@ $<
+tests/lsmr.$(OBJEXT): libspral.a
+examples/C/lsmr.$(OBJEXT): libspral.a
+examples/Fortran/lsmr.$(OBJEXT): libspral.a
 tests/scaling.$(OBJEXT): libspral.a
 examples/Fortran/scaling/auction_sym.$(OBJEXT): libspral.a
 examples/Fortran/scaling/auction_unsym.$(OBJEXT): libspral.a
@@ -2064,6 +2483,23 @@ examples/C/random_matrix.$(OBJEXT): libspral.a
 examples/Fortran/ssids.$(OBJEXT): libspral.a
 tests/ssids.$(OBJEXT): libspral.a
 examples/C/ssids.$(OBJEXT): libspral.a
+tests/ssmfe/ssmfe.$(OBJEXT): libspral.a
+tests/ssmfe/ssmfe_ciface.$(OBJEXT): libspral.a
+examples/C/ssmfe/hermitian.$(OBJEXT): libspral.a
+examples/C/ssmfe/precond_core.$(OBJEXT): libspral.a
+examples/C/ssmfe/precond_expert.$(OBJEXT): libspral.a
+examples/C/ssmfe/precond_ssmfe.$(OBJEXT): libspral.a
+examples/C/ssmfe/shift_invert.$(OBJEXT): libspral.a
+examples/Fortran/ssmfe/hermitian.$(OBJEXT): libspral.a
+examples/Fortran/ssmfe/precond_core.$(OBJEXT): libspral.a \
+	examples/Fortran/ssmfe/laplace2d.$(OBJEXT)
+examples/Fortran/ssmfe/precond_expert.$(OBJEXT): libspral.a \
+	examples/Fortran/ssmfe/laplace2d.$(OBJEXT)
+examples/Fortran/ssmfe/precond_ssmfe.$(OBJEXT): libspral.a \
+	examples/Fortran/ssmfe/laplace2d.$(OBJEXT)
+examples/Fortran/ssmfe/shift_invert.$(OBJEXT): libspral.a \
+	examples/Fortran/ssmfe/laplace2d.$(OBJEXT) \
+	examples/Fortran/ssmfe/ldltf.$(OBJEXT)
 
 # Automake doesn't know much about modules, so get rid of them ourself
 clean-local:
@@ -2168,6 +2604,10 @@ src/ssids/type_select_gpu.$(OBJEXT): src/ssids/akeep_gpu.$(OBJEXT) \
 src/ssids/type_select_nogpu.$(OBJEXT): src/ssids/akeep.$(OBJEXT) \
 												   src/ssids/fkeep.$(OBJEXT) \
 	  											   src/ssids/inform.$(OBJEXT)
+src/ssmfe/core.$(OBJEXT): src/blas_iface.$(OBJEXT) \
+								  src/lapack_iface.$(OBJEXT)
+src/ssmfe/expert.$(OBJEXT): src/ssmfe/core.$(OBJEXT)
+src/ssmfe/ssmfe.$(OBJEXT): src/ssmfe/expert.$(OBJEXT)
 @HAVE_NVCC_TRUE@driver/spral_ssids.$(OBJEXT): libspral.a \
 @HAVE_NVCC_TRUE@	driver/cuda_helper_gpu.$(OBJEXT)
 @HAVE_NVCC_FALSE@driver/spral_ssids.$(OBJEXT): libspral.a \
@@ -2179,6 +2619,7 @@ src/ssids/solve_kernels.$(OBJEXT): src/ssids/dtrsv.h
 # C interface deps
 interfaces/C/random.$(OBJEXT): src/random.$(OBJEXT)
 interfaces/C/random_matrix.$(OBJEXT): src/random_matrix.$(OBJEXT)
+interfaces/C/rutherford_boeing.$(OBJEXT): src/rutherford_boeing.$(OBJEXT)
 interfaces/C/scaling.$(OBJEXT): src/scaling.$(OBJEXT)
 @HAVE_NVCC_TRUE@interfaces/C/ssids.$(OBJEXT): src/ssids/ssids.$(OBJEXT) \
 @HAVE_NVCC_TRUE@										src/ssids/inform.$(OBJEXT) \
@@ -2186,6 +2627,11 @@ interfaces/C/scaling.$(OBJEXT): src/scaling.$(OBJEXT)
 @HAVE_NVCC_FALSE@interfaces/C/ssids.$(OBJEXT): src/ssids/ssids.$(OBJEXT) \
 @HAVE_NVCC_FALSE@										src/ssids/inform.$(OBJEXT) \
 @HAVE_NVCC_FALSE@										src/ssids/inform_nogpu.$(OBJEXT)
+interfaces/C/ssmfe.$(OBJEXT): src/ssmfe/ssmfe.$(OBJEXT) \
+										interfaces/C/ssmfe_expert.$(OBJEXT)
+interfaces/C/ssmfe_core.$(OBJEXT): src/ssmfe/core.$(OBJEXT)
+interfaces/C/ssmfe_expert.$(OBJEXT): src/ssmfe/core.$(OBJEXT) \
+												 interfaces/C/ssmfe_core.$(OBJEXT)
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

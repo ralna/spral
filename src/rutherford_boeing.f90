@@ -8,6 +8,7 @@ module spral_rutherford_boeing
    implicit none
 
    integer, parameter :: wp = kind(0d0)
+   integer, parameter :: long = selected_int_kind(18)
    real(wp), parameter :: zero = 0.0_wp
 
    private
@@ -54,7 +55,7 @@ module spral_rutherford_boeing
       real     :: extra_space = 1.0             ! Array sizes are mult by this
       integer  :: format = FORMAT_CSC      ! Format to manipulate to
       integer  :: lwr_upr_full = TRI_LWR   ! Ensure entries in lwr/upr tri
-      integer  :: values = VALUES_FILE     ! Generate random values for pat
+      integer  :: values = VALUES_FILE     ! As per file
    end type rb_reader_options
 
    interface rb_peek
@@ -62,7 +63,7 @@ module spral_rutherford_boeing
    end interface rb_peek
 
    interface rb_read
-      module procedure rb_read_double
+      module procedure rb_read_double_int32, rb_read_double_int64
    end interface rb_read
 contains
    !
@@ -224,12 +225,46 @@ contains
    !
    ! FIXME: Should only need two of ptr, row, col, but any change will require
    ! extensive testing.
-   subroutine rb_read_double(filename, m, n, ptr, row, col, val, control, info,&
-         type_code, title, identifier, state)
+   subroutine rb_read_double_int32(filename, m, n, ptr, row, col, val, &
+         control, info, type_code, title, identifier, state)
       character(len=*), intent(in) :: filename ! File to read
       integer, intent(out) :: m
       integer, intent(out) :: n
       integer, dimension(:), allocatable, intent(out) :: ptr
+      integer, dimension(:), allocatable, target, intent(out) :: row
+      integer, dimension(:), allocatable, target, intent(out) :: col
+      real(wp), dimension(:), allocatable, target, intent(out) :: val
+      type(rb_reader_options), intent(in) :: control ! control variables
+      integer, intent(out) :: info ! return code
+      character(len=3), optional, intent(out) :: type_code ! file data type
+      character(len=72), optional, intent(out) :: title ! file title
+      character(len=8), optional, intent(out) :: identifier ! file identifier
+      type(random_state), optional, intent(inout) :: state ! state to use for
+         ! random number generation
+
+      integer(long), dimension(:), allocatable :: ptr64
+      integer :: st
+
+      call rb_read_double_int64(filename, m, n, ptr64, row, col, val, &
+         control, info, type_code=type_code, title=title, &
+         identifier=identifier, state=state)
+
+      ! FIXME: Add an error code if ne > maxint
+      if(allocated(ptr64)) then
+         allocate(ptr(n+1), stat=st)
+         if(st.ne.0) then
+            info = ERROR_ALLOC
+            return
+         endif
+         ptr(1:n+1) = int(ptr64(1:n+1)) ! Forced conversion, FIXME: add guard
+      endif
+   end subroutine rb_read_double_int32
+   subroutine rb_read_double_int64(filename, m, n, ptr, row, col, val, &
+         control, info, type_code, title, identifier, state)
+      character(len=*), intent(in) :: filename ! File to read
+      integer, intent(out) :: m
+      integer, intent(out) :: n
+      integer(long), dimension(:), allocatable, intent(out) :: ptr
       integer, dimension(:), allocatable, target, intent(out) :: row
       integer, dimension(:), allocatable, target, intent(out) :: col
       real(wp), dimension(:), allocatable, target, intent(out) :: val
@@ -257,7 +292,8 @@ contains
       real(wp), pointer, dimension(:) :: vptr => null()
 
       real(wp), target :: temp(1) ! place holder array
-      integer :: i, j, k ! loop indices
+      integer :: i, k ! loop indices
+      integer(long) :: j ! loop indices
       integer :: r, c ! loop indices
       integer :: nnz ! number of non-zeroes
       integer :: nelt ! number of elements in file, should be 0
@@ -476,7 +512,7 @@ contains
       !
       if(pattern .and. (control%values.lt.0 .or. control%values.ge.2)) then
          do c = 1, n
-            k = ptr(c+1) - ptr(c)
+            k = int( ptr(c+1) - ptr(c) )
             if(present(state)) then
                do j = ptr(c), ptr(c+1)-1
                   val(j) = random_real(state, .false.)
@@ -595,7 +631,7 @@ contains
          ! Allocation error
          info = ERROR_ALLOC
          goto 100
-   end subroutine rb_read_double
+   end subroutine rb_read_double_int64
 
    !
    ! This subroutine takes a matrix in CSC full format that is symmetric
@@ -604,12 +640,13 @@ contains
    !
    subroutine sym_to_skew(n, ptr, row, col, val)
       integer, intent(inout) :: n
-      integer, dimension(n+1), intent(inout) :: ptr
+      integer(long), dimension(n+1), intent(inout) :: ptr
       integer, dimension(:), allocatable, intent(inout) :: row
       integer, dimension(:), allocatable, intent(inout) :: col
       real(wp), dimension(ptr(n+1)-1), intent(inout) :: val
 
-      integer :: i, j
+      integer :: i
+      integer(long) :: j
 
       if(allocated(row)) then
          ! CSC format
@@ -638,14 +675,15 @@ contains
    !
    subroutine flip_lwr_upr(n, ptr, row, col, st, val)
       integer, intent(in) :: n ! Number of rows.columns in matrix (is symmetric)
-      integer, dimension(n+1), intent(inout) :: ptr ! pointers into row/col
+      integer(long), dimension(n+1), intent(inout) :: ptr ! ptrs into row/col
       integer, dimension(ptr(n+1)-1), intent(in) :: row ! source index array
       integer, dimension(ptr(n+1)-1), intent(out) :: col ! destination index a.
       integer, intent(out) :: st ! stat parameter for allocates
       real(wp), dimension(ptr(n+1)-1), optional, intent(inout) :: val ! numeric
          ! values can be flipped as well, if required (indiciated by presence)
 
-      integer :: r, c, i ! loop indices
+      integer(long) :: i ! loop indices
+      integer :: r, c ! loop indices
       integer, dimension(:), allocatable :: wptr ! working copy of ptr
       real(wp), dimension(:), allocatable :: wval ! working copy of val
 
@@ -701,12 +739,12 @@ contains
    subroutine add_missing_diag(m, n, ptr, row, val)
       integer, intent(in) :: m
       integer, intent(in) :: n
-      integer, dimension(n+1), intent(inout) :: ptr
+      integer(long), dimension(n+1), intent(inout) :: ptr
       integer, dimension(:), intent(inout) :: row
       real(wp), dimension(*), optional, intent(inout) :: val
 
       integer :: col 
-      integer :: i
+      integer(long) :: i
       integer :: ndiag
       logical :: found
 
@@ -769,7 +807,7 @@ contains
       integer, intent(out) :: nvec ! Number of columns or the number of elements
          ! depending on whether matrix is assembled or unassembled.
       integer, intent(out) :: ne ! Number of entries in matrix
-      integer, dimension(*), intent(out) :: ip ! Column/Element pointers
+      integer(long), dimension(*), intent(out) :: ip ! Column/Element pointers
       integer, dimension(*), intent(out) :: ind ! Row/Element indices
       integer, intent(out) :: flag ! Return code
       real(wp), dimension(*), optional, intent(out) :: val ! If present,
@@ -832,7 +870,7 @@ contains
       integer, intent(out) :: nvec ! Number of columns or the number of elements
          ! depending on whether matrix is assembled or unassembled.
       integer, intent(out) :: ne ! Number of entries in matrix
-      integer, dimension(*), intent(out) :: ip ! Column/Element pointers
+      integer(long), dimension(*), intent(out) :: ip ! Column/Element pointers
       integer, dimension(*), intent(out) :: ind ! Row/Element indices
       integer, intent(out) :: flag ! Return code
       integer, dimension(*), optional, intent(out) :: val ! If present,

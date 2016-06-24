@@ -1,0 +1,1310 @@
+\packagename{SSMFE\_CORE}
+\version{1.0.0}
+\versiondate{8 April 2015}
+
+\purpose{
+This package
+computes extreme (leftmost and/or rightmost)
+eigenpairs $\{\lambda_i, x_i\}$ of the following eigenvalue problems:
+%
+\begin{itemize}
+\item 
+the standard eigenvalue problem
+%
+\begin{eqnarray}
+\label{ssmfe_core:eqn:evp}
+A x = \lambda x,
+\end{eqnarray}
+%
+\item
+the generalized eigenvalue problem
+%
+\begin{eqnarray}
+\label{ssmfe_core:eqn:evp.g}
+A x = \lambda B x,
+\end{eqnarray}
+%
+\item
+the eigenvalue problem
+%
+\begin{eqnarray}
+\label{ssmfe_core:eqn:evp.p}
+A B x = \lambda x,
+\end{eqnarray}
+%
+\end{itemize}
+%
+where 
+$A$ and $B$ are {\bf real symmetric} (or {\bf Hermitian}) matrices
+and $B$ is {\bf positive definite}.
+
+\texttt{SPRAL\_SSMFE\_CORE}
+delegates 
+a considerable part of the computation to the user,
+which makes its solver procedures rather difficult to use.
+For solving problems \EqnRef{ssmfe_core:eqn:evp} and \EqnRef{ssmfe_core:eqn:evp.g},
+the user is advised to consider %first 
+using
+the package \texttt{SPRAL\_SSMFE}, which
+offers a simple interface
+to \texttt{SPRAL\_SSMFE\_CORE},
+or the package \texttt{SPRAL\_SSMFE\_EXPERT},
+which delegates less work to the user.
+}
+
+\title{Sparse Symmetric Matrix-Free Eigensolver, \\[2pt]
+core interface}
+%the core procedures package}
+\author{
+   Evgueni Ovtchinnikov (STFC Rutherford Appleton Laboratory)
+}
+\pkglang{Fortran}
+\spralmaketitle
+\thispagestyle{firststyle}
+
+\section*{Major version history}
+\begin{description}
+\item[2014-11-20 Version 1.0.0] Initial release
+\end{description}
+
+%%%%%%%%%%%%%%%%%%%%%% installation %%%%%%%%%%%%%%%%%%%%%%
+
+\section{Installation}
+Please see the SPRAL install documentation. In particular note that:
+\begin{itemize}
+   \item A BLAS library is required.
+   \item A LAPACK library is required.
+\end{itemize}
+
+\section{Usage overview}
+
+\texttt{SPRAL\_SSMFE\_CORE}
+implements a block iterative algorithm
+for simultaneous computation of several eigenpairs,
+i.e. eigenvalues and corresponding eigenvectors,
+of problems \EqnRef{ssmfe_core:eqn:evp}--\EqnRef{ssmfe_core:eqn:evp.p}.
+The block nature of this algorithm allows the user
+to benefit from highly optimized linear algebra subroutines
+and from the ubiquitous multicore architecture
+of modern computers.
+It also makes this algorithm more reliable
+than Krylov-based algorithms employed by e.g. ARPACK
+in the presence of clustered eigenvalues.
+However, convergence of the iterations may be slow
+if the density of the spectrum is high.
+
+Thus, good performance 
+(in terms of speed)
+is contingent on the following two factors:
+(i) the number of desired
+eigenpairs must be substantial
+(i.e. not less than the number of CPU cores),
+and
+(ii) the employment of a convergence acceleration technique.
+\texttt{SPRAL\_SSMFE\_CORE} allows the user to benefit
+from two acceleration techniques:
+{\em shift-and-invert} and {\em preconditioning}.
+The shift-and-invert technique 
+rewrites the eigenvalue problem for a matrix $M$ 
+as the eigenvalue problem \EqnRef{ssmfe_core:eqn:evp} for the matrix
+$A = (M - \sigma I)^{-1}$,
+where $I$ is the identity matrix
+and $\sigma$ is a real value near eigenvalues of interest,
+and the generalized problem $M x = \mu B x$
+as the problem \EqnRef{ssmfe_core:eqn:evp.p}
+for $B$ and 
+$A = (M - \sigma B)^{-1}$. 
+The preconditioning technique applies to 
+\EqnRef{ssmfe_core:eqn:evp} and \EqnRef{ssmfe_core:eqn:evp.g} with positive definite $A$ and
+requires a matrix or an operator (that is, an algorithm producing a vector $v = T u$ for a given
+vector $u$)
+$T$, called {\em a preconditioner},
+such that the vector
+$v = T f$ is an approximation to the solution $u$
+of the system $A u = f$.
+This technique is more sophisticated
+and is likely to be of interest only to experienced users.
+
+For futher detail on the algorithm, see the outline in Section~\ref{ssmfe_core:method}
+and associated references.
+
+\texttt{SPRAL\_SSMFE\_CORE} delegates 
+more computation to the user than the packages
+\texttt{SPRAL\_SSMFE} and \texttt{SPRAL\_SSMFE\_EXPERT}, which are built upon it.
+Not only are the storage and operations on all vectors of size $n$
+%the problem size, 
+user's responsibility, but also
+the decision on 
+whether a sufficient number of eigenpairs have been computed
+to sufficient accuracy.
+The amount of computation performed by 
+the solver subroutines of \texttt{SPRAL\_SSMFE\_CORE}
+and the memory they use are negligible. 
+These features facilitate the use of these subroutines
+for shared-memory, out-of-core and hybrid computation.
+
+\subsection{Calling sequences}
+
+Access to the package requires a {\tt USE} statement \\ \\
+\indent\hspace{8mm}{\tt use \texttt{SPRAL\_SSMFE\_CORE}} \\
+
+\medskip
+
+\noindent The following procedures are available to the user:
+%
+\vspace{-0.1cm}
+\begin{itemize}
+\item {\tt ssmfe()} 
+computes specified numbers of left- and right-most
+eigenvalues and the corresponding eigen\-vec\-tors)
+\item {\tt ssmfe\_largest()} 
+computes a specified number
+of eigenvalues of largest magnitude
+and the cor\-res\-pon\-ding eigenvectors
+\item {\tt ssmfe\_free()}  should be called after all other calls
+are complete. It frees memory referenced by \texttt{keep} and \texttt{inform}.
+\end{itemize}
+
+\noindent
+The solver procedures \texttt{ssmfe()} and \texttt{ssmfe\_largest()}
+must be called repeatedly using
+a reverse communication interface.
+The procedure \texttt{ssmfe\_free()}
+should be called once after the
+final call to 
+a solver procedure
+to free all memory that has been internally
+allocated by
+the solver procedure.
+
+\subsection{Package types} 
+
+\texttt{INTEGER} denotes default \texttt{INTEGER}, and \texttt{REAL} denotes
+\texttt{REAL(kind=kind(0d0))}. We use the term {\bf package type} to mean
+\texttt{REAL(kind=kind(0d0))} for calls to the double precision real valued
+interface, and to mean \texttt{COMPLEX(kind=kind(0d0))} for calls to the double
+precision complex valued interface.
+
+\subsection{Derived types}
+
+For each problem, the user must employ the derived types defined by the
+module to declare scalars of the types 
+{\tt ssmfe\_rcid} (real version) or 
+{\tt ssmfe\_rciz} (complex version), 
+{\tt ssmfe\_core\_keep},
+{\tt ssmfe\_core\_options} and 
+{\tt ssmfe\_inform}.
+The following pseudocode illustrates this.
+\begin{verbatim}
+      use SPRAL_SSMFE_CORE
+      ...
+      type (ssmfe_rcid        ) :: rcid
+      type (ssmfe_core_keep   ) :: keep
+      type (ssmfe_core_options) :: options
+      type (ssmfe_inform      ) :: inform
+      ...
+\end{verbatim}
+The components of {\tt ssmfe\_options} and {\tt ssmfe\_inform} are explained
+in Sections~\ref{ssmfe_core:type:options} and \ref{ssmfe_core:type:inform}. Components
+of \texttt{ssmfe\_rcid} are used for the reverse communication interface and
+are explained in Section~\ref{ssmfe_core:fn:ssmfe}.
+The components of \texttt{keep} are used to pass data between repeated calls to
+the subroutines and must not be altered by the user.
+
+\section{Argument lists}
+
+\subsection{\texttt{ssmfe()} and \texttt{ssmfe\_largest()}} \label{ssmfe_core:fn:ssmfe}
+
+{\bf
+To compute specified numbers
+of leftmost and rightmost eigenvalues 
+and corresponding eigenvectors,
+the following call must be made repeatedly:
+}
+
+\medskip
+{\tt call
+ssmfe( rci, problem, left, right, m, lambda, rr, ind, keep, options, inform )
+}
+
+\medskip
+\noindent
+{\bf
+To compute a specified number %amount 
+of eigenvalues of largest magnitude 
+and corresponding eigenvectors,
+the following call must be made repeatedly:
+}
+
+\medskip
+{\tt call
+ssmfe\_largest( rci, problem, nep, m, lambda, rr, ind, keep, options, inform )
+}
+
+\medskip
+\noindent
+To use the solver procedures,
+the user needs to maintain a workspace {\tt W} containing
+{\tt kw + 1} blocks of {\tt m} vectors of size {\tt n}.
+A value {\tt kw = 7} is always sufficient. 
+However, if {\tt options\%minAprod} $=$ {\tt .false.}
+and either {\tt options\%minBprod} $=$ {\tt .false.} or 
+the standard eigenvalue problem \EqnRef{ssmfe_core:eqn:evp} is solved,
+then {\tt kw = 3} is sufficient; 
+if 
+{\tt options\%minAprod} $=$ {\tt .true.} and
+either {\tt options\%minBprod} $=$ {\tt .true.} or
+\EqnRef{ssmfe_core:eqn:evp.p} is solved,
+then {\tt kw} must be at least {\tt 7};
+otherwise {\tt kw = 5} is sufficient.
+Solver procedures
+use indices {\tt 1} to {\tt m} 
+to refer to vectors inside each block
+and indices {\tt 0} to {\tt kw} 
+to refer to particular blocks.
+The first (zero-indexed) block holds the eigenvector approximations:
+the user must fill this block with 
+{\tt m} linearly independent vectors before the first call
+to a solver procedure.
+
+The number of desired eigenpairs may exceed {\tt m}:
+whenever converged eigenpairs have been detected,
+a solver procedure reports the indices of these eigenpairs
+and they must be moved by the user
+to a separate eigenvectors' storage {\tt X}.
+
+When $B \ne I$,
+it is expedient to 
+have %another 
+storage {\tt BX}
+for the $B$-images of the converged eigenvectors,
+i.e. {\tt BX = B*X}.
+
+To simplify the description of the %advanced RCI's,
+reverse communication interface,
+below we assume that an array
+{\tt W(n,~m,~0:kw)} of package type
+is used as a workspace,
+and that arrays {\tt X(n, mep)} and {\tt BX(n, mep)} of package type
+are used for storing the computed eigenvectors
+and their $B$-images,
+where {\tt mep} is not less than the number of desired eigenpairs.
+The transpose (real or complex, depending on the package type)
+of a matrix {\tt H} 
+is denoted by {\tt H}$^\prime$.
+
+\medskip
+\noindent
+The meaning of the arguments of the solver procedures is as follows.
+
+\begin{description}
+%
+\item[\texttt{rci}] is is an \intentinout\ scalar  of type
+{\tt ssmfe\_rcid} in real version and
+{\tt ssmfe\_rciz} in complex version.
+Before the first call, {\tt rci\%job} must be set to {\tt 0}.
+No other values may be assigned to {\tt rci\%job} by the user.
+After each call,
+the value of {\tt rci\%job} must be inspected by the user's code
+and the appropriate action taken: 
+%(see below for details).
+%The following values of {\tt rci\%job}
+%are common to all solver procedures 
+%and require the same action: 
+%
+\begin{description}
+%
+\item[\texttt{-3}]: fatal error return, the computation must be terminated;
+%
+\item[\texttt{-2}]: 
+not all desired eigenpairs converged to required accuracy,
+see Section~\ref{ssmfe_core:errors};
+%
+\item[\texttt{-1}]: the computation is complete and successful.
+%
+\item[\texttt{~1}]: the user must compute $V = A U$, where
+
+\hspace{8mm}
+$U=$ {\tt W(:, ix:jx, rci\%kx)}, 
+~with~ {\tt ix} $=$ {\tt rci\%jx} 
+~and~
+{\tt jx} $=$ {\tt ix + rci\%nx - 1},
+
+\hspace{8mm}
+$V=$ {\tt W(:, iy:jy, rci\%ky)},
+~with~ {\tt iy} $=$ {\tt rci\%jy} 
+~and~
+{\tt jy} $=$ {\tt iy + rci\%nx - 1}.
+%
+\item[\texttt{~2}]: the user must
+compute $V = T U$ if preconditioning is used
+or copy $U$ to $V$ otherwise,
+where $U$ and $V$ are as for {\tt rci\%job = 1}.
+%
+\item[\texttt{~3}]:
+the user must compute $V = B U$,
+where $U$ and $V$ are as for {\tt rci\%job = 1}.
+%
+\item[\texttt{~4}]:
+for each {\tt i = 1,\ldots,m}
+such that {\tt inform\%converged(i)} is zero,
+the user must set {\tt inform\%converged(i)}
+to a positive value if the residual norm
+{\tt inform\%res\_norms(i)} and
+the estimated eigenvalue and eigenvector errors
+{\tt inform\%err\_lambda(i)} and
+{\tt inform\%err\_x(i)} are small enough
+for this eigenpair to be deemed as converged.
+%
+\item[\texttt{~5}]: the user must save the converged eigenvectors
+to the eigenvector storage {\tt X}
+and, optionally, 
+for problems \EqnRef{ssmfe_core:eqn:evp.g} and \EqnRef{ssmfe_core:eqn:evp.p},
+save their $B$-images.
+The converged eigenvectors are columns of the $n\times m$ matrix
+{\tt W(:,:,rci\%kx)} and their $B$-images are respective columns of
+{\tt W(:,:,rci\%ky)}
+that are identified by
+{\tt rci\%i, rci\%jx} and {\tt rci\%nx}
+as follows:
+if {\tt rci\%i > 0}, then the column numbers
+run from {\tt rci\%jx} to {\tt rci\%jx + rci\%nx - 1},
+and if {\tt rci\%i < 0}, then they run
+from {\tt rci\%jx - rci\%nx + 1} to {\tt rci\%jx}.
+%
+\item[\texttt{11}]:
+if {\tt rci\%i = 0}, then
+the user  must perform a copy $V \leftarrow U$, 
+where $U$ and $V$ are as for {\tt rci\%job = 1},
+otherwise the columns of {\tt W(:,:,rci\%kx)}
+and {\tt W(:,:,rci\%ky)}
+(if {\tt rci\%kx} $\not=$ {\tt rci\%ky}) 
+must be reordered using
+the index array {\tt ind(:)} so that
+the column {\tt ind(j)} becomes column {\tt j}
+for {\tt j = 1,\ldots,rci\%nx}.
+%
+\item[\texttt{12}]:
+for each
+{\tt i = 0, 1,..., rci\%nx - 1}, 
+the user must compute the dot product of
+the columns 
+
+\hspace{8mm}
+{\tt W(:, rci\%jx + i, rci\%kx)} 
+
+and
+
+\hspace{8mm}
+{\tt W(:, rci\%jy + i, rci\%ky)}
+
+and place it in 
+
+\hspace{8mm}
+{\tt rr(rci\%i + i, rci\%j + i, rci\%k)}.
+%
+\item[\texttt{13}]: 
+if {\tt rci\%kx} $=$ {\tt rci\%ky}, then
+for each
+{\tt i = 0, 1,..., rci\%nx - 1}, 
+the user must perform the scaling
+
+\hspace{8mm}
+{\tt W(:, rci\%jx + i, rci\%kx) = W(:, rci\%jx + i, rci\%kx)$/s_i$},
+
+where $s_i$ is the 2-norm of the column 
+{\tt W(:, rci\%jx + i, rci\%kx)},
+otherwise the user must perform the scalings
+
+\hspace{8mm}
+{\tt W(:, rci\%jx + i, rci\%kx) = W(:, rci\%jx + i, rci\%kx)$/s_i$}
+
+\hspace{8mm}
+{\tt W(:, rci\%jy + i, rci\%ky) = W(:, rci\%jy + i, rci\%ky)$/s_i$},
+
+where $s_i$ is the square root of the dot product of 
+the columns 
+{\tt W(:, rci\%jx + i, rci\%kx)} and
+{\tt W(:, rci\%jy + i, rci\%ky)}.
+No scaling is to be applied to zero columns.
+%
+\item
+{\tt 14}: 
+for each {\tt i = 0, 1,..., rci\%nx - 1}, 
+the user must perform axpy-updates:
+
+\hspace{8mm}
+{\tt 
+W(:, rci\%jy + i, rci\%ky) = 
+W(:, rci\%jy + i, rci\%ky) + 
+}
+
+\hspace{12mm}
+{\tt
+rr(rci\%i + i, rci\%j + i, rci\%k) * W(:, rci\%jx + i, rci\%kx)}.
+%
+\item
+{\tt 15}: the user must perform the matrix multiplication:
+
+\hspace{8mm}
+{\tt rr(rci\%i $:$ rci\%i + rci\%nx - 1, rci\%j $:$ rci\%j + rci\%ny-1, rci\%k) =}
+
+\hspace{12mm}
+{\tt rci\%alpha *
+W(:, rci\%jx $:$ rci\%jx + rci\%nx - 1, rci\%kx)' *}
+
+\hspace{16mm}
+{\tt W(:, rci\%jy $:$ rci\%jy + rci\%ny - 1, rci\%ky) +}
+
+\hspace{12mm}
+{\tt 
+rci\%beta *
+rr(rci\%i $:$ rci\%i + rci\%nx - 1, rci\%j $:$ rci\%j + rci\%ny - 1, rci\%k)}.
+
+%where {\tt W'} denotes the transpose of {\tt W};
+%
+\item
+{\tt 16}: the user must perform the matrix multiplication:
+
+\hspace{8mm}
+{\tt W(:, rci\%jy $:$ rci\%jy + rci\%ny - 1, rci\%ky) =}
+
+\hspace{12mm}
+{\tt rci\%alpha *
+W(:, rci\%jx $:$ rci\%jx + rci\%nx - 1, rci\%kx) *}
+
+\hspace{16mm}
+{\tt rr(rci\%i $:$ rci\%i + rci\%nx - 1, 
+rci\%j $:$ rci\%j + rci\%ny - 1, rci\%k) + }
+
+\hspace{12mm}
+{\tt rci\%beta * W(:, rci\%jy $:$ rci\%jy + rci\%ny - 1, rci\%ky)}.
+%
+\item
+{\tt 17}: the user must perform the multiplication:
+
+
+\hspace{8mm}
+{\tt W(:, rci\%jx $:$ rci\%jx + rci\%ny - 1, rci\%kx) =}
+
+\hspace{12mm}
+{\tt W(:, rci\%jx $:$ rci\%jx + rci\%nx - 1, rci\%kx) *}
+
+\hspace{16mm}
+{\tt rr(rci\%i $:$ rci\%i + rci\%nx - 1, 
+rci\%j $:$ rci\%j + rci\%ny - 1, rci\%k)}.
+
+{\tt W(:, rci\%jy $:$ rci\%jy + rci\%ny - 1, rci\%ky)}
+can be used as a workspace.
+%
+\item
+{\tt 21}: 
+the user must $B$-orthogonalize
+the columns of {\tt W} specified by
+{\tt rci\%nx}, {\tt rci\%jx} and {\tt rci\%kx} 
+to all vectors stored in {\tt X}
+by solving the system
+
+\hspace{8mm}
+{\tt (X' * BX) Q = X' * W(:, rci\%jy $:$ rci\%jy + rci\%nx - 1, rci\%ky)}
+
+for {\tt Q} and updating
+
+\hspace{8mm}
+{\tt W(:, rci\%jx $:$ rci\%jx + rci\%nx - 1, rci\%kx) =}
+
+\hspace{12mm}
+{\tt W(:, rci\%jx $:$ rci\%jx + rci\%nx - 1, rci\%kx) - X * Q}.
+
+For problems \EqnRef{ssmfe_core:eqn:evp.g} and \EqnRef{ssmfe_core:eqn:evp.p},
+the respective columns of {\tt W(:,:,rci\%ky)},
+which store $B$-images of the respective columns of {\tt W(:,:,rci\%kx)},
+must be updated
+accordingly, either by applying {\tt B} to these vectors
+or using the columns of {\tt BX}, i.e.
+
+\hspace{8mm}
+{\tt W(:, rci\%jy $:$ rci\%jy + rci\%nx - 1, rci\%ky) =}
+
+\hspace{12mm}
+{\tt W(:, rci\%jy $:$ rci\%jy + rci\%nx - 1, rci\%ky) - BX * Q};
+%
+\item
+{\tt 22}: 
+the user must solve the system
+
+\hspace{8mm}
+{\tt (X' * BX) Q = 
+X' * W(:, rci\%jx $:$ rci\%jx + rci\%nx - 1, rci\%kx)}
+
+for {\tt Q}  and perform the update
+
+\hspace{8mm}
+{\tt W(:, rci\%jx $:$ rci\%jx + rci\%nx - 1, rci\%kx) =}
+
+\hspace{12mm}
+{\tt W(:, rci\%jx $:$ rci\%jx + rci\%nx - 1, rci\%kx) - BX * Q},
+
+where {\tt X} and {\tt BX} are same as in 
+the case {\tt rci\%job = 21}
+(in the case of problem \EqnRef{ssmfe_core:eqn:evp},
+{\tt rci\%job = 21} and {\tt 22} 
+require exactly the same computation).
+%
+\item
+{\tt 999}: 
+If {\tt rci\%k > 0}, then
+a restart, normally with a larger block size {\tt m},
+is suggested with the aim of achieving better convergence.
+If the suggestion is accepted, the user must compute
+the new block size as {\tt m = rci\%nx + k + l},
+where {\tt k $\ge$ rci\%i} and {\tt l $\ge$ rci\%j},
+reallocate the workspace array {\tt W}
+if the new block size is different from the old one,
+and set {\tt rci\%i = 0} and {\tt rci\%j = 0}.
+The first block {\tt W(:,:,0)} of the new
+workspace should retain the vectors 
+{\tt W(:,i:j,0)},
+where {\tt i = rci\%jx} and {\tt j = i + rci\%nx - 1},
+from the old workspace.
+The remaining {\tt m - rci\%nx} columns of {\tt W(:,:,0)}
+must be filled
+with arbitrary vectors that are linearly independent from 
+the converged eigenvectors and such that
+the entire set of the columns of {\tt W(:,:,0)}
+is linearly independent.
+If the restart is not acceptable
+(e.g. the new block size exceeds a certain limit set by the user), 
+then nothing needs to be done.
+%
+\end{description}
+%
+{\bf Restriction:} 
+{\tt rci\%job = 0}, 
+{\tt rci\%i = 0} and
+{\tt rci\%j = 0} 
+are the only %values that can be assigned 
+assignments to the components of {\tt rci}
+that can be done
+by the user.
+The first one can only be done before the first call.
+The other two can only be done if
+{\tt rci\%job = 999} and {\tt rci\%k > 0}.
+%
+\item[\texttt{problem}] is an \intentin\ scalar of type {\tt INTEGER} that
+specifies the problem to be solved:
+if {\tt problem} is zero, then \EqnRef{ssmfe_core:eqn:evp} is solved,
+if it is positive then \EqnRef{ssmfe_core:eqn:evp.g} is solved,
+otherwise \EqnRef{ssmfe_core:eqn:evp.p} is solved.
+%
+\item[\texttt{left}] is an \intentin\ scalar of type default \texttt{INTEGER}
+that specifies the number of desired leftmost eigenvalues.
+On return with {\tt rci\%job = 5}, can be set to zero if a
+sufficient number of leftmost eigenvalues have been computed.
+%
+\item[\texttt{right}] is an \intentin\ scalar of type default \texttt{INTEGER}
+that specifies the number of desired rightmost eigenvalues.
+On return with {\tt rci\%job = 5}, can be set to zero if
+sufficient number of rightmost eigenvalues have been computed.
+%
+\item[\texttt{nep}] is an \intentin\ scalar of type default \texttt{INTEGER}
+that specifies the number of desired largest eigenvalues.
+%
+\item[\texttt{lambda(:)}] is an \intentinout\
+array of type \texttt{REAL}
+and size {\tt m} 
+that is
+used to return the computed eigenvalues.
+After a successful completion of the computation
+it contains eigenvalues in ascending order.
+This array must not be changed by the user.
+%
+\item[\texttt{m}] is an \intentin\ scalar of type {\tt INTEGER} that
+holds the block size of the user's workspace {\tt W}. 
+{\bf Restriction:} %\\{\tt m $<$ n},
+if both {\tt left} and {\tt right} are non-zero
+or \texttt{ssmfe\_largest()} is called then {\tt m $>1$},
+otherwise {\tt m $>0$}.
+%
+\item[\texttt{rr(:,:,:)}] is an \intentinout\
+work array of package type,
+and dimensions {\tt 2*m}, {\tt 2*m} and {\tt 3}.
+It must only be changed by the user when
+instructed to do so by 
+{\tt rci\%job}.
+%
+\item[\texttt{ind(:)}] is an \intentinout\ 
+array of default integer type, and size at least {\tt m}. 
+It must not be changed by the user.
+It is used for reordering the columns of some blocks of {\tt W}.
+%
+\item[\texttt{keep}] is an \intentinout\ scalar of type 
+{\tt ssmfe\_core\_keep} that holds private data. 
+%
+\item[\texttt{options}] is an \intentin\  scalar  of type {\tt ssmfe\_core\_options}.
+Its components offer the user a range of options,
+see Section~\ref{ssmfe_core:type:options}.
+It must not be changed by the user between calls.
+%
+\item[\texttt{inform}] is an \intentinout\ scalar of type 
+{\tt ssmfe\_inform}. Its components provide information about the execution
+of the subroutine, see Section~\ref{ssmfe_core:type:inform}.
+It must not be changed by the user.
+%
+\end{description}
+
+\subsection{ssmfe\_free()}
+
+{\bf
+At the end of the computation, the memory 
+allocated by the solver procedures
+should be released
+by making the following subroutine call:
+}
+
+\medskip
+
+\hspace{8mm} {\tt ssmfe\_free( keep, inform )}
+
+\begin{description}
+%
+\item[\texttt{keep}] is an \intentinout\ scalar of type 
+{\tt ssmfe\_core\_keepk}, optional. 
+On exit, its components that are allocatable arrays will have been deallocated. 
+%
+\item[\texttt{inform}] is an \intentinout\ scalar of type {\tt ssmfe\_inform}, 
+optional.
+On exit, its components that are allocatable arrays will have been deallocated. 
+%
+\end{description}
+
+\section{Derived types}
+\subsection{\texttt{ssmfe\_core\_options}} \label{ssmfe_core:type:options}
+
+The derived data type {\tt ssmfe\_core\_options} is used to specify
+the options used within {\tt SSMFE\_CORE}. The components, that are
+automatically given default values in the definition of the type, are:
+
+\begin{description}
+%
+\item[\texttt{err\_est}] 
+is a scalar of type default \texttt{INTEGER} that
+defines which error estimation scheme 
+for eigenvalues and eigenvectors
+is to be used by the stopping criterion.
+Two schemes are implemented.
+If {\tt err\_est = 1}, residual error bounds are used,
+namely,
+a modified Davis-Kahan estimate for the eigenvector error
+and
+the Lehmann bounds for the eigenvalue error.
+(see Section~\ref{ssmfe_core:sec:err_est}).
+If {\tt err\_est = 2}, 
+then the eigenvector and eigenvalue errors
+are estimated by analyzing the convergence curve
+for the eigenvalues (see Section~\ref{ssmfe_core:sec:err_est}).
+The default is {\tt err\_est = 2}.
+{\bf Restriction:} {\tt err\_est = 1 {\rm or} 2}.
+%
+\item[\texttt{extra\_left}]
+is a scalar of type default \texttt{INTEGER} that
+holds the number of extra approximate eigenvectors
+corresponding to leftmost eigenvalues
+that are of no interest to the user
+and are iterated solely to enhance convergence.
+The default is {\tt extra\_left = 0}.
+{\bf Restriction:} {\tt extra\_left $\ge$ 0}.
+%
+\item[\texttt{extra\_right}]
+is a scalar of type default \texttt{INTEGER} that
+holds the number of extra approximate eigenvectors
+corresponding to rightmost eigenvalues
+that are of no interest to the user
+and are iterated solely to enhance convergence.
+The default is {\tt extra\_right = 0}.
+{\bf Restriction:} {\tt extra\_right $\ge$ 0}.
+%
+\item[\texttt{minAprod}] is a scalar of type default \texttt{LOGICAL} that
+determines whether the number of multiplications by $A$ 
+is to be reduced at the expense of memory. 
+If ${\tt minAprod = .false.}$, 
+on each iteration three returns to the user
+with {\tt rci\%job = 1} are
+made for multiplications of {\tt rci\%nx} vectors by $A$.
+Otherwise,  only one such return is made at each iteration but 
+the number {\tt kw} of blocks in the user's work array {\tt W} 
+must be increased by {\tt 2}.
+The default is {\tt minAprod = .true.}.
+{\bf Restriction:} {\tt minAprod = .true.} if {\tt problem < 0}.
+%
+\item[\texttt{minBprod}] is a scalar of type default \texttt{LOGICAL} that
+determines whether the number of multiplications by $B$ 
+is to be reduced at the expense of memory. 
+If ${\tt minBprod = .false.}$, 
+on each iteration at least three returns to the user
+with {\tt rci\%job = 3} are
+made for multiplications of {\tt rci\%nx} vectors by $B$.
+Otherwise,  only one such return is made at each iteration but 
+the number {\tt kw} of blocks in the user's work array {\tt W} 
+must be increased by {\tt 2}.
+The default is {\tt minBprod = .true.}.
+%
+\item[\texttt{min\_gap}] 
+is a scalar of type {\tt REAL}\ that
+controls the restart.
+If the relative distance between the last eigenvalue of interest
+on either margin of the spectrum and the rest of the spectrum
+is smaller than {\tt min\_gap},
+the solver procedure suggests restart
+(cf. {\tt rci\%job $= 999$}).
+The values 
+{\tt rci\%i}
+and
+{\tt rci\%j}
+are set to the numbers of eigenvalues on the left and right
+margin of the spectrum that are too close to the eigenvalues
+of interest, causing slow convergence.
+The default is {\tt min\_gap = 0}, i.e.
+by default no restart is ever suggested.
+{\bf Restriction:} {\tt $0 \le$ min\_gap $\le 1$}.
+%
+\item[\texttt{cf\_max}]
+is a scalar of type {\tt REAL} that
+is used to detect the convergence stagnation
+based on 
+the estimated asymptotic convergence factor 
+$q_{ij}$ given by \EqnRef{ssmfe_core:eqn:acf}
+(see \S\ref{ssmfe_core:sec:err_est}).
+If $q_{ij}$ is greater than {\tt cf\_max} for $i > 5$,
+the eigenpair is marked as stagnated by setting
+{\tt inform\%converged(j)} to a negative value.
+The default is {\tt cf\_max = 1}, i.e.
+the estimated asymptotic convergence factor
+is not used for stagnation detection.
+{\bf Restriction:} {\tt $0.5 \le$ cf\_max $\le 1$}.
+%
+\end{description}
+
+\subsection{\texttt{ssmfe\_infrom}} \label{ssmfe_core:type:inform}
+
+The derived data type {\tt ssmfe\_inform} is used
+to hold information from the execution of
+the solver procedures.
+The components are:
+
+\begin{description}
+%
+\item[\texttt{converged}] is a rank-1 allocatable array of type 
+default \texttt{INTEGER} that is allocated to have size {\tt m} 
+on a call with {\tt rci\%job = 0} or {\tt 999}.
+If, on some iteration {\tt i}, an eigenpair ({\tt lambda(j), X(j)})
+has been accepted as converged, then {\tt converged(j) = i}; 
+if the convergence stagnated, then {\tt converged(j) = -i}; 
+otherwise {\tt converged(j) = 0}.
+%
+\item[\texttt{err\_lambda}] is a rank-1 allocatable array of type 
+{\tt REAL} that is allocated to have size {\tt m} 
+on a call with {\tt rci\%job = 0} or {\tt 999}.
+{\tt err\_lambda(i)} contains 
+the estimated eigenvalue error
+for the approximate eigenvalue {\tt lambda(i)}
+if {\tt info\%converged(i)} is non-zero,
+and {\tt -1.0} otherwise.
+%
+\item[\texttt{err\_x}] is a rank-1 allocatable array of type {\tt REAL}.
+This array is allocated to have size {\tt m} 
+on a call with {\tt rci\%job = 0} or {\tt 999},
+and is used for storing the eigenvector errors
+in the same way as {\tt err\_lambda(:)} is used
+for storing the eigenvalue errors.
+%
+\item[\texttt{flag}] is a scalar of type default \texttt{INTEGER}
+that is used as an error flag.
+If a call is successful, {\tt flag} has value {\tt 0}.
+A nonzero value of {\tt flag} indicates an error or a warning
+(see Section~\ref{ssmfe_core:errors}).
+%
+\item[\texttt{iteration}] is a scalar of type default \texttt{INTEGER}
+that holds the number of iterations 
+since the previous {\tt rci\%job = 0} or {\tt rci\%job = 999} call.
+%
+\item[\texttt{residual\_norms}] is a rank-1 allocatable array of type
+{\tt REAL} that is allocated to have size {\tt m} 
+on a call with {\tt rci\%job = 0} or {\tt 999}.
+On returns with 
+{\tt rci\%job = 4} or {\tt 5}, {\tt res\_norms(i)} 
+contains the Euclidean norm of the residual
+for {\tt lambda(i), X(i)}.
+%
+\item[\texttt{stat}]
+is a scalar of type default \texttt{INTEGER}
+that holds the allocation status
+(see Section~\ref{ssmfe_core:errors}).
+%
+\end{description}
+
+\section{Error flags}
+
+\label{ssmfe_core:errors}
+
+A successful return from 
+ssmfe\ and
+ssmfe\_largest\
+is indicated 
+by {\tt inform\%flag$=$0}.
+A negative value indicates an error, a positive value indicates a warning.
+
+Possible negative values of {\tt inform\%flag}
+are as follows:
+%
+\begin{description}
+%
+\item{~~-1}
+\hskip 9pt
+Block size {\tt m} is out-of-range.
+%
+\item{~~-2}
+\hskip 9pt
+Incorrect value of {\tt rci\%job}. 
+%
+\item{~~-3}
+\hskip 9pt
+Incorrect value of {\tt options\%err\_est}. 
+%
+\item{~~-4}
+\hskip 9pt
+Incorrect value of {\tt options\%minAprod}.
+%
+\item{~~-5}
+\hskip 9pt
+Incorrect value of 
+{\tt options\%extra\_left} or
+{\tt options\%extra\_right}.
+%
+\item{~~-6}
+\hskip 9pt
+Incorrect value of {\tt options\%min\_gap}. 
+%
+\item{~~-7}
+\hskip 9pt
+Incorrect value of {\tt options\%cf\_max}. 
+%
+\item{~-11}
+\hskip 7pt
+Incorrect value of {\tt left} (for {\tt ssmfe})
+or {\tt nep} (for {\tt ssmfe\_largest}).
+%
+\item{~-12}
+\hskip 7pt
+Incorrect value of {\tt right}. 
+%
+\item{-100}
+\hskip 4pt
+Not enough memory;
+{\tt inform\%stat} contains the value of the Fortran {\tt stat} parameter.
+%
+\item{-200}
+\hskip 4pt
+$B$ is not positive definite or initial eigenvectors are linearly dependent.
+%or an unauthorized change has been made to
+%{\tt rr} or {\tt W}.
+%
+\end{description}
+
+%Possible positive values  are: 
+%
+%\begin{description}
+%\item{1}
+%\hskip 9pt
+%A positive value 
+The value {\tt inform\%flag = 1}
+indicates that
+the iterations have been terminated because no further improvement
+in accuracy is possible (this may happen if $B$ or the preconditioner is
+not positive definite, or if the components of the residual vectors
+are so small that the round-off
+errors make them essentially random).
+%
+%\end{description}
+
+\section{Method}
+\label{ssmfe_core:method}
+
+\subsection{The algorithm}
+
+The algorithm implemented by {\tt ssmfe()} and {\tt ssmfe\_largest()}
+is based on the Jacobi-conjugate preconditioned gradients (JCPG) method.
+The outline of the algorithm,
+assuming for simplicity
+that {\tt 0 < left $\le$ m} and {\tt right = 0}
+and using Matlab notation, is as follows.
+
+\begin{itemize}
+\item 
+{\bf Initialization.}
+Perform the Rayleigh-Ritz procedure
+in the trial subspace spanned by the columns of 
+an ${\tt n} \times {\tt m}$ matrix {\tt X} i.e. compute 
+\begin{itemize}
+\item 
+{\tt L = X'*A*X},
+if {\tt problem $\ge$ 0}, 
+and
+{\tt L = X'*B*A*B*X} otherwise,
+\item
+{\tt M = X'*B*X}
+({\tt B=I} if {\tt problem = 0}),
+\end{itemize}
+% 
+and solve the generalized eigenvalue problem
+for the matrix pencil ${\tt L - t*M}$, i.e.
+compute an ${\tt m} \times {\tt m}$ matrix {\tt Q}
+such that {\tt Q'*M*Q} is the identity matrix
+and {\tt D = Q'*L*Q} is a diagonal matrix.
+Compute {\tt X = X*Q} and set {\tt Z = F = []}.
+%
+\item
+{\bf Main loop.} 
+
+{\tt DO}
+\begin{enumerate}
+%
+\item
+\label{ssmfe_core:method:step:do.R}
+If {\tt problem$\ge$0}, compute the residual matrix
+{\tt R = A*X - B*X*D},
+where {\tt D} is a  diagonal matrix with entries
+%
+\begin{equation}
+\label{ssmfe_core:eqn:rq}
+\mbox{\tt D(j,j)}=
+\frac{\mbox{\tt X(:,j)'*A*X(:,j)}}
+{\mbox{\tt X(:,j)'*B*X(:,j)}}
+\end{equation}
+%
+else compute {\tt R = A*B*X - X*D},
+where {\tt D} is a diagonal matrix with entries
+%
+\begin{equation}
+\label{ssmfe_core:eqn:rq.AB}
+\mbox{\tt D(j,j)}=
+\frac{\mbox{\tt X(:,j)'*B*A*B*X(:,j)}}
+{\mbox{\tt X(:,j)'*B*X(:,j)}}.
+\end{equation}
+%
+\item
+\label{ssmfe_core:method:step:do.ortho.R}
+Perform the orthogonalization of {\tt R} 
+to constraints {\tt C} by updating
+{\tt R = R - B*C*(C'*R)}.
+%
+\item
+\label{ssmfe_core:method:step:do.save}
+If {\tt options\%err\_est $= $1},  compute {\tt R'*B*R}
+and use it to compute error bounds;
+otherwise only compute the diagonal of this matrix
+and use to compute error bounds.
+Test for converged eigenpairs
+and move converged eigenvectors from {\tt X} to {\tt C}
+and reduce {\tt m} accordingly.
+Exit the main loop if {\tt X = []}.
+%
+\item
+If {\tt problem} is non-negative,
+compute the preconditioned gradient
+matrix {\tt Y = T*R}.
+%
+\item
+\label{ssmfe_core:method:step:do.JC}
+If {\tt Z} is not empty, conjugate {\tt Y} to {\tt Z}, i.e.
+%
+\begin{enumerate}
+\item 
+if {\tt problem} is non-negative,
+then compute {\tt P = Z'*A*Y}, 
+otherwise compute {\tt P = Z'*B*A*B*Y};
+\item
+compute {\tt S = Z'*B*Y};
+\item
+update {\tt Y = Y + Z*H},
+where
+\begin{equation}
+\label{ssmfe_core:eqn:JC}
+\mbox{\tt H(i,j)}=
+\frac{\mbox{\tt P(i,j) - S(i,j)*D(j,j)}}
+{\mbox{\tt F(i,i) - D(j,j)}}
+\end{equation}
+\end{enumerate}
+where {\tt F} is described in step~\ref{ssmfe_core:method:step:do.update}.
+%
+\item
+\label{ssmfe_core:method:step:do.ortho.Y}
+Perform orthogonalization of the search direction matrix {\tt Y} 
+to constraints {\tt C} by updating\\
+{\tt Y = Y - C*(C'*B*Y)}.
+%
+\item
+\label{ssmfe_core:method:step:do.cleanup.Y}
+{\tt B}-normalize the columns of {\tt Y} 
+and reorder them
+so that the {\tt B}-norm of the projection of
+{\tt Y(:,j)} onto the linear span of
+{\tt X} and {\tt Y(:,1:j-1)} is
+an increasing function of {\tt j}.
+Compute {\tt M = [X Y]'*B*[X Y]}.
+If the condition number of {\tt M}
+is greater than the allowed limit
+of $10^4$
+then start removing the last columns
+of {\tt Y} and {\tt M} and respective
+rows of {\tt M} until
+the condition number falls below the limit.
+%
+\item
+\label{ssmfe_core:method:step:do.update}
+Perform the Rayleigh-Ritz procedure
+in the linear span of columns of {\tt [X Y]}.
+Update {\tt X} by selecting
+Ritz vectors corresponding to the leftmost 
+{\tt m} Ritz values,
+and place the remaining Ritz vectors into {\tt Z}
+and corresponding Ritz values onto the diagonal of {\tt F}.
+%
+\end{enumerate}
+
+{\tt END DO}
+
+\end{itemize}
+
+The orthogonalization to constraints on step~\ref{ssmfe_core:method:step:do.ortho.R}
+ensures that the algorithm deals with 
+the residuals for the constrained problem
+rather than with those for the unconstrained one,
+which may not go to zeros
+if the constraints are not close enough to exact eigenvectors.
+
+\EqnRef{ssmfe_core:eqn:JC} ensures  optimality of
+the new search direction vector {\tt Y(:,j)},
+notably, the search for the minimum
+of the Rayleigh quotient \EqnRef{ssmfe_core:eqn:rq} or,
+in the case of problem \EqnRef{ssmfe_core:eqn:evp.p}, \EqnRef{ssmfe_core:eqn:rq.AB}
+in the direction of this vector
+produces asymptotically smallest possible value.
+
+The search directions cleanup procedure
+employed on step~\ref{ssmfe_core:method:step:do.cleanup.Y}
+ensures that the convergence of iterations 
+is not damaged by
+the computational errors
+of the LAPACK eigensolver {\tt \_SYGV},
+in the Rayleigh-Ritz procedure of step~\ref{ssmfe_core:method:step:do.update}.
+The accuracy of {\tt \_SYGV} is affected
+by the condition number of {\tt M}.
+If the latter is very large,
+poor accuracy in the computed Ritz vectors may
+lead to convergence failure.
+The ordering of {\tt Y(:,j)} ensures
+that the `least important' search direction
+is dropped if the condition number of {\tt M}
+is unacceptably large.
+In practice, the loss of search direction is 
+a rare 
+and does not lead to convergence problems.
+
+If the number of sought eigenpairs exceeds {\tt m}, then
+{\tt m} is not reduced on step~\ref{ssmfe_core:method:step:do.save}.
+Instead, the approximate eigenvectors
+moved to {\tt C} are replaced with vectors from {\tt Z}.
+
+\subsection{Error estimation}
+
+\label{ssmfe_core:sec:err_est}
+
+\subsubsection{Standard problem}
+
+If {\tt options\%err\_est} {\tt =} {\tt 1}, 
+the error estimates for the eigenvalues are based on 
+the eigenvalues of a matrix of the form
+%
+\begin{eqnarray}
+\hat A = \tilde\Lambda_k - S_k^T S_k,
+\end{eqnarray}
+%
+where $\tilde\Lambda_k$ is a diagonal matrix with
+the $k-1$ leftmost Ritz values $\tilde\lambda_j$
+on the diagonal,
+and the columns of $S_k$ are the respective
+residual vectors $r_j = A \tilde x_j - \tilde\lambda_j \tilde x_j$
+divided by $\sqrt{\lambda_k - \tilde\lambda_j}$.
+If $k$ is such that
+$\tilde\lambda_{k-1} < \lambda_k$,
+then the eigenvalues of $\hat A$ are
+the left-hand side bounds for
+eigenvalues $\lambda_i$,
+and thus
+the difference $\tilde\lambda_j - \hat\lambda_j$ estimates
+the eigenvalue error $\tilde\lambda_j - \lambda_j$.
+The unknown  $\lambda_k$ is replaced by $\tilde\lambda_k$,
+and select the maximal $k \le m$ for which
+the distance between $\tilde\lambda_{k-1}$ and $\tilde\lambda_k$
+exceeds the sum of the absolute error tolerance for eigenvalues
+and the Frobenius norm of the matrix formed by the residuals
+$r_j, j = 1,\ldots,k-1$.
+If  $\tilde\lambda_j - \hat\lambda_j$
+is close to the machine accuracy, it may be too polluted
+by round-off errors to rely upon.
+In such case, we use instead
+%
+\begin{eqnarray}
+\label{ssmfe_core:eqn:aL}
+\tilde\lambda_j - \lambda_j \le \delta_j \approx
+\frac{\|r_j\|^2}{\tilde\lambda_k - \lambda_j}.
+\end{eqnarray}
+
+The eigenvector errors are estimated based on 
+the Davis-Kahan inequality:
+%
+\begin{eqnarray}
+\label{ssmfe_core:eqn:DK}
+\min_{x \in \mathcal{X}_{k-1}}
+\sin\{\tilde x_j; x\} \le
+\frac{\|r_j\|}{\lambda_k - \tilde\lambda_j} \approx
+\frac{\|r_j\|}{\tilde\lambda_k - \tilde\lambda_j},
+\end{eqnarray}
+%
+where $\mathcal{X}_{k-1}$ is the invariant subspace 
+corresponding to $k-1$ leftmost eigenvalues.
+
+If {\tt options\%err\_est$=$2}
+the errors are estimated
+based on the eigenvalue decrements history,
+which produces an estimate for 
+the asymptotic convergence facotr,
+the geometrical average of
+the eigenvalue error reduction per iteration:
+%
+\begin{equation}
+\label{ssmfe_core:eqn:acf}
+q_{ij} =
+\left|
+\frac
+{\lambda_j^i - \lambda_j^{i-1}}
+{\lambda_j^i - \lambda_j^0}
+\right|^{\frac{1}{i}}
+\approx
+\left|
+\frac
+{\lambda_j - \lambda_j^{i-1}}
+{\lambda_j - \lambda_j^0}
+\right|^{\frac{1}{i}}
+=
+\left|
+\frac
+{\lambda_j - \lambda_j^{i-1}}
+{\lambda_j - \lambda_j^{i-2}}
+\cdots
+\frac
+{\lambda_j - \lambda_j^1}
+{\lambda_j - \lambda_j^0}
+\right|^{\frac{1}{i}}
+\end{equation}
+%
+where $\lambda_j^i$ is the approximation to $\lambda_j$ on
+$i$-th iteration
+(see Technical Report RAL-TR-2010-19 for further details).
+%which in turn yields error estimates
+%for both eigenvalues and eigenvectors.
+Unlike the residual estimates mentioned in this section, 
+such `kinematic' error estimates are
+not guaranteed to be upper bounds for the actual errors.
+However, the numerical tests have demonstrated
+that kinematic error estimates 
+are significantly more accurate,
+i.e. closer to the actual error,
+than the residual-based estimates. 
+Furthermore, they straightforwardly
+apply to the generalized case as well.
+
+\subsubsection{Generalized problems}
+
+In the case
+of the generalized eigenvalue problem \EqnRef{ssmfe_core:eqn:evp.g},
+all of the residual norms in the previous section must be replaced
+with %\linebreak 
+$\|\cdot\|_{B^{-1}}$-norm of the residual
+$r_j = A \tilde x_j - \tilde\lambda_j B \tilde x_j$
+($\|r_j\|_{B^{-1}}^2 = r_j^* B^{-1} r_j$)
+or its upper estimate, e.g. 
+$\beta_1^{-1/2}\|\cdot\|$,
+where $\beta_1$ is the smallest eigenvalue of $B$.
+Hence, if $\beta_1$ is known, then
+the error tolerances for eigenvalues and eigenvectors
+must be multiplied by $\beta_1$ and $\sqrt{\beta_1}$
+respectively. If no estimate for $\|\cdot\|_{B^{-1}}$-norm
+is available, then the use of
+non-zero residual tolerances and
+{\tt options\%err\_est$=$1}
+is not recommended.
+In the case of problem \EqnRef{ssmfe_core:eqn:evp.p},
+the residuals are computed as
+$r_j = A B \tilde x_j - \tilde \lambda_j \tilde x_j$,
+$B$-norms of $r_j$ are used in \EqnRef{ssmfe_core:eqn:aL} and \EqnRef{ssmfe_core:eqn:DK},
+and Lehmann matrix becomes
+$\hat A = \tilde\Lambda_k - S_k^T B\ S_k$.
+
+\subsection*{References}
+
+[1]
+E.~E.~Ovtchinnikov and J.~Reid.
+A preconditioned block conjugate gradient
+algorithm for computing extreme eigenpairs
+of symmetric and Hermitian problems.
+Technical Report RAL-TR-2010-19, 2010.
+
+\noindent
+[2]
+E.~E.~Ovtchinnikov,
+{\em Jacobi correction equation, line search and
+conjugate gradients in Hermitian eigenvalue computation I:
+Computing an extreme eigenvalue},
+SIAM J. Numer. Anal., {\bf 46}:2567--2592, 2008.
+
+\noindent
+[3]
+E.~E.~Ovtchinnikov,
+{\em Jacobi correction equation, line search and
+conjugate gradients in Hermitian eigenvalue computation II:
+Computing several extreme eigenvalues},
+SIAM J. Numer. Anal., {\bf 46}:2593--2619, 2008.
+
+\section{Examples}
+
+\subsection{Preconditioning example}
+
+The following code 
+computes the 5 leftmost eigenpairs of 
+the matrix $A$ of order 100 that approximates 
+the two-dimensional Laplacian operator
+on a 20-by-20 grid.
+One forward and one backward Gauss-Seidel update
+are used for preconditioning,
+which halves the number of iterations
+compared with solving the same problem without preconditioning.
+The module {\tt laplace2d} (\texttt{examples/Fortran/ssmfe/laplace2d.f90})
+supplies the subroutine {\tt apply\_laplacian()}
+that multiplies a block of vectors by $A$,
+and a subroutine 
+{\tt apply\_gauss\_seidel\_step()}
+that computes $y = T x$ for a block of vectors $x$
+by applying one forward and one backward update
+of the Gauss-Seidel method to the system $A y = x$.
+\verbatiminput{examples/Fortran/ssmfe/precond_core.f90}
+The code generates the following output:
+\begin{verbatim}
+  5 eigenpairs converged in  72 iterations
+ lambda(1) = 4.4676695E-02
+ lambda(2) = 1.1119274E-01
+ lambda(3) = 1.1119274E-01
+ lambda(4) = 1.7770878E-01
+ lambda(5) = 2.2040061E-01
+\end{verbatim}

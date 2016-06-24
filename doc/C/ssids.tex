@@ -161,11 +161,11 @@ The following pseudo-code illustrates this.
       spral_ssids_default_options(&options);
       ...
 \end{verbatim}
-The components of {\tt ssids\_options} and {\tt ssids\_inform} are explained
+The components of {\tt spral\_ssids\_options} and {\tt spral\_ssids\_inform} are explained
 in Sections~\ref{ssids: typeoptions} and \ref{ssids: typeinform}.
 The \texttt{void~*} pointers are allocated using Fortran, and must be passed to
-\texttt{ssids\_free\_akeep()}, \texttt{ssids\_free\_fkeep} and/or
-\texttt{ssids\_free()} to free the associated memory.
+\texttt{spral\_ssids\_free\_akeep()}, \texttt{spral\_ssids\_free\_fkeep()} and/or
+\texttt{spral\_ssids\_free()} to free the associated memory.
 
 \subsection{Achieving bit-compatibility} \label{ssids: bitcompat}
 Care has been taken to ensure bit-compatibility is achieved using this solver.
