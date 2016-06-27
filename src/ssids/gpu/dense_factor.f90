@@ -1,11 +1,11 @@
-module spral_ssids_dense_factor_gpu
+module spral_ssids_gpu_dense_factor
   use, intrinsic :: iso_c_binding
   use spral_cuda
-  use spral_ssids_alloc_gpu, only : cuda_stack_alloc_type, custack_alloc, &
+  use spral_ssids_gpu_alloc, only : cuda_stack_alloc_type, custack_alloc, &
      custack_free
-  use spral_ssids_cuda_datatypes, only : multinode_fact_type, &
+  use spral_ssids_gpu_datatypes, only : multinode_fact_type, &
      multiblock_fact_type, multireorder_data, multielm_data
-  use spral_ssids_cuda_interfaces
+  use spral_ssids_gpu_interfaces
   use spral_ssids_datatypes, only : wp, one, &
      MNF_BLOCKS, SSIDS_ERROR_NOT_POS_DEF
   implicit none
@@ -1083,4 +1083,4 @@ main_loop:&
   call custack_free(gwork, 8*C_SIZEOF(dummy_int)) ! gpu_aux
 end subroutine multinode_llt
 
-end module spral_ssids_dense_factor_gpu
+end module spral_ssids_gpu_dense_factor

@@ -1,11 +1,11 @@
-module spral_ssids_solve_gpu
+module spral_ssids_gpu_solve
 !$ use omp_lib
    use iso_c_binding
    use spral_cuda
-   use spral_ssids_alloc_gpu, only : cuda_stack_alloc_type, custack_init, &
+   use spral_ssids_gpu_alloc, only : cuda_stack_alloc_type, custack_init, &
       custack_alloc, custack_free, custack_finalize
-   use spral_ssids_cuda_datatypes
-   use spral_ssids_cuda_interfaces
+   use spral_ssids_gpu_datatypes
+   use spral_ssids_gpu_interfaces
    use spral_ssids_datatypes
    implicit none
 
@@ -1528,4 +1528,4 @@ subroutine subtree_bwd_multisolve_gpu(pos_def, job, stream_handle, fact_data, &
    
 end subroutine subtree_bwd_multisolve_gpu
 
-end module spral_ssids_solve_gpu
+end module spral_ssids_gpu_solve

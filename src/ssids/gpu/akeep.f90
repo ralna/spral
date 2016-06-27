@@ -1,10 +1,10 @@
-module spral_ssids_akeep_gpu
+module spral_ssids_gpu_akeep
    use spral_cuda, only : cudaMemcpy_h2d, cudaMalloc, cudaFree
    use spral_ssids_akeep, only : ssids_akeep_base
    use spral_ssids_datatypes, only : long, wp, SSIDS_ERROR_CUDA_UNKNOWN, &
                                      ssids_options
    use spral_ssids_inform, only : ssids_inform_base
-   use spral_ssids_inform_gpu, only : ssids_inform_gpu
+   use spral_ssids_gpu_inform, only : ssids_inform_gpu
    use, intrinsic :: iso_c_binding
    implicit none
 
@@ -117,4 +117,4 @@ subroutine copy_analyse_data_to_device(lnlist, nlist, lrlist, rlist, &
 
 end subroutine copy_analyse_data_to_device
 
-end module spral_ssids_akeep_gpu
+end module spral_ssids_gpu_akeep

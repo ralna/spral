@@ -2,19 +2,19 @@
 ! Authors: Evgueni Ovtchinnikov and Jonathan Hogg
 !
 ! Factorize phase to run on GPU
-module spral_ssids_factor_gpu
+module spral_ssids_gpu_factor
 !$ use omp_lib
    use, intrinsic :: iso_c_binding
    use spral_cuda
    use spral_ssids_alloc, only : smalloc
-   use spral_ssids_alloc_gpu, only : cuda_stack_alloc_type, custack_alloc, &
+   use spral_ssids_gpu_alloc, only : cuda_stack_alloc_type, custack_alloc, &
       custack_init, custack_finalize, custack_free
-   use spral_ssids_cuda_datatypes
-   use spral_ssids_cuda_interfaces
+   use spral_ssids_gpu_datatypes
+   use spral_ssids_gpu_interfaces
    use spral_ssids_datatypes
-   use spral_ssids_dense_factor_gpu, only : &
+   use spral_ssids_gpu_dense_factor, only : &
       node_ldlt, node_llt, multinode_llt, multinode_ldlt
-   use spral_ssids_solve_gpu, only : setup_gpu_solve
+   use spral_ssids_gpu_solve, only : setup_gpu_solve
    implicit none
 
    private
@@ -3606,4 +3606,4 @@ subroutine solve_setup(stream, pos_def, sparent, child_ptr, child_list, n, &
 
 end subroutine solve_setup
    
-end module spral_ssids_factor_gpu
+end module spral_ssids_gpu_factor

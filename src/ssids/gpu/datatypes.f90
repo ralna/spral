@@ -4,7 +4,7 @@
 ! Interoperable datatypes for passing structured data to CUDA
 ! (Done as separate module from spral_ssids_cuda_interfaces so we can USE it
 !  in interface blocks)
-module spral_ssids_cuda_datatypes
+module spral_ssids_gpu_datatypes
    use spral_cuda, only : cudaFree
    use, intrinsic :: iso_c_binding
    implicit none
@@ -475,4 +475,4 @@ subroutine free_lookup_gpu_fwd(gpu, cuda_error)
    if(cuda_error.ne.0) return
 end subroutine free_lookup_gpu_fwd
 
-end module spral_ssids_cuda_datatypes
+end module spral_ssids_gpu_datatypes

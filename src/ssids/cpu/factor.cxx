@@ -25,7 +25,7 @@
 #include <papi.h> // FIXME: remove or make dependency in autoconf
 #include <pthread.h>
 /* SPRAL headers */
-#include "factor_cpu_iface.h"
+#include "factor_iface.h"
 
 /////////////////////////////////////////////////////////////////////////////
 // start of namespace spral::ssids::internal

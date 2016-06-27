@@ -1,4 +1,4 @@
-module spral_ssids_solve_cpu
+module spral_ssids_cpu_solve
 !$ use omp_lib
    use, intrinsic :: iso_c_binding
    use spral_ssids_datatypes
@@ -846,4 +846,4 @@ subroutine solve_diag_mult(invp, nrhs, x, ldx, nelim, d, lperm)
    end do
 end subroutine solve_diag_mult
 
-end module spral_ssids_solve_cpu
+end module spral_ssids_cpu_solve

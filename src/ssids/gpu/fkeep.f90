@@ -1,16 +1,17 @@
 !
 ! This module defines ssids_fkeep type and associated procedures (CPU version)
 !
-module spral_ssids_fkeep_gpu
+module spral_ssids_gpu_fkeep
+!$ use omp_lib
    use spral_cuda, only : cudaMemcpy_d2h, cudaMemcpy_h2d, cudaMalloc, cudaFree,&
                           c_ptr_plus, cudaStreamCreate, cudaStreamDestroy, &
                           cudaMemcpy2d, cudaMemcpyHostToDevice, &
                           cudaMemcpyDeviceToHost
    use spral_ssids_akeep, only : ssids_akeep_base
-   use spral_ssids_akeep_gpu, only : ssids_akeep_gpu
+   use spral_ssids_gpu_akeep, only : ssids_akeep_gpu
    use spral_ssids_alloc, only : smalloc
-   use spral_ssids_cuda_datatypes, only : gpu_type, free_gpu_type
-   use spral_ssids_cuda_interfaces, only : push_ssids_cuda_settings, &
+   use spral_ssids_gpu_datatypes, only : gpu_type, free_gpu_type
+   use spral_ssids_gpu_interfaces, only : push_ssids_cuda_settings, &
                           pop_ssids_cuda_settings, cuda_settings_type, scale
    use spral_ssids_datatypes, only : long, node_type, smalloc_type, &
                                      ssids_options, thread_stats, wp, &
@@ -21,11 +22,11 @@ module spral_ssids_fkeep_gpu
                                      SSIDS_SOLVE_JOB_ALL, SSIDS_SOLVE_JOB_BWD, &
                                      SSIDS_SOLVE_JOB_DIAG, SSIDS_SOLVE_JOB_FWD,&
                                      SSIDS_SOLVE_JOB_DIAG_BWD
-   use spral_ssids_factor_gpu, only : parfactor
+   use spral_ssids_gpu_factor, only : parfactor
    use spral_ssids_fkeep, only : ssids_fkeep_base
    use spral_ssids_inform, only : ssids_inform_base
-   use spral_ssids_inform_gpu, only : ssids_inform_gpu
-   use spral_ssids_solve_gpu, only : bwd_solve_gpu, fwd_solve_gpu, &
+   use spral_ssids_gpu_inform, only : ssids_inform_gpu
+   use spral_ssids_gpu_solve, only : bwd_solve_gpu, fwd_solve_gpu, &
                                      fwd_multisolve_gpu, bwd_multisolve_gpu, &
                                      d_solve_gpu
    use, intrinsic :: iso_c_binding
@@ -232,8 +233,8 @@ subroutine inner_solve_gpu(local_job, nrhs, x, ldx, akeep, fkeep, options, infor
    class(ssids_fkeep_gpu), intent(inout) :: fkeep
    integer, intent(inout) :: local_job
    integer, intent(in) :: nrhs
-   real(wp), dimension(ldx,nrhs), target, intent(inout) :: x
    integer, intent(in) :: ldx
+   real(wp), dimension(ldx,nrhs), target, intent(inout) :: x
    type(ssids_options), intent(in) :: options
    class(ssids_inform_base), intent(inout) :: inform
 
@@ -865,4 +866,4 @@ subroutine copy_stream_data_to_host(stream_data, &
    end do
 end subroutine copy_stream_data_to_host
 
-end module spral_ssids_fkeep_gpu
+end module spral_ssids_gpu_fkeep

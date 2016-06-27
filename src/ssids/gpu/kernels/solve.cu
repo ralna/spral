@@ -10,7 +10,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "../cuda/cuda_check.h"
+#include "cuda/cuda_check.h"
 #include "cublas_v2.h"
 
 //#define MIN(x,y) (((x)>(y))?(y):(x))

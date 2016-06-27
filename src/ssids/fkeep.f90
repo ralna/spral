@@ -11,8 +11,8 @@ module spral_ssids_fkeep
                                      SSIDS_SOLVE_JOB_DIAG, SSIDS_SOLVE_JOB_FWD,&
                                      SSIDS_SOLVE_JOB_DIAG_BWD
    use spral_ssids_inform, only : ssids_inform_base
-   use spral_ssids_solve_cpu, only : fwd_diag_solve, subtree_bwd_solve
-   use spral_ssids_factor_cpu_iface, only : cpu_node_data, cpu_factor_options, &
+   use spral_ssids_cpu_solve, only : fwd_diag_solve, subtree_bwd_solve
+   use spral_ssids_cpu_factor_iface, only : cpu_node_data, cpu_factor_options, &
       cpu_factor_stats, setup_cpu_data, extract_cpu_data, factor_cpu
    use, intrinsic :: iso_c_binding
    implicit none

@@ -5,8 +5,8 @@
 #include <cuda_runtime_api.h>
 #include <device_launch_parameters.h>
 
-#include "../cuda/cuda_check.h"
-#include "kernel_datatypes.h"
+#include "cuda/cuda_check.h"
+#include "datatypes.h"
 
 #define HOGG_ASSEMBLE_TX 128  // Block height
 #define HOGG_ASSEMBLE_TY 8    // Block width

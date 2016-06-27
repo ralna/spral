@@ -1,4 +1,4 @@
-module spral_ssids_factor_cpu_iface
+module spral_ssids_cpu_factor_iface
    use, intrinsic :: iso_c_binding
    use spral_ssids_akeep, only : ssids_akeep_base
    use spral_ssids_datatypes, only : ssids_options, node_type, long, &
@@ -183,7 +183,7 @@ subroutine extract_cpu_data(nnodes, cnodes, fnodes, cstats, finform)
 end subroutine extract_cpu_data
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-end module spral_ssids_factor_cpu_iface
+end module spral_ssids_cpu_factor_iface
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 ! Provide a way to alloc memory using smalloc (double version)

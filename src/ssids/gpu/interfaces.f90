@@ -2,7 +2,7 @@
 ! Authors: Evgueni Ovtchinnikov and Jonathan Hogg
 !
 ! Interface definitions for CUDA kernels
-module spral_ssids_cuda_interfaces
+module spral_ssids_gpu_interfaces
    use, intrinsic :: iso_c_binding
    use spral_cuda, only : cudaDeviceGetSharedMemConfig, &
       cudaDeviceSetSharedMemConfig, cudaSharedMemBankSizeEightByte
@@ -24,7 +24,7 @@ module spral_ssids_cuda_interfaces
       subroutine add_delays(stream, ndblk, gpu_dinfo, rlist_direct) &
             bind(C, name="spral_ssids_add_delays")
          use, intrinsic :: iso_c_binding
-         use spral_ssids_cuda_datatypes
+         use spral_ssids_gpu_datatypes
          implicit none
          type(C_PTR), value :: stream
          integer(C_INT), value :: ndblk
@@ -35,7 +35,7 @@ module spral_ssids_cuda_interfaces
             children, parents, gpu_next_sync) &
             bind(C, name="spral_ssids_assemble")
          use, intrinsic :: iso_c_binding
-         use spral_ssids_cuda_datatypes
+         use spral_ssids_gpu_datatypes
          implicit none
          type(C_PTR), value :: stream
          integer(C_INT), value :: nblk
@@ -174,7 +174,7 @@ module spral_ssids_cuda_interfaces
       subroutine cuda_collect_stats(stream, nblk, csdata, custats) &
             bind(C, name="spral_ssids_collect_stats")
          use, intrinsic :: iso_c_binding
-         use spral_ssids_cuda_datatypes
+         use spral_ssids_gpu_datatypes
          implicit none
          type(C_PTR), value :: stream
          integer(C_INT), value :: nblk
@@ -184,7 +184,7 @@ module spral_ssids_cuda_interfaces
       subroutine multiblock_ldlt(stream, nn, mbfdata, f, delta, eps, ind, &
             stat) bind(C, name="spral_ssids_multiblock_ldlt")
          use, intrinsic :: iso_c_binding
-         use spral_ssids_cuda_datatypes
+         use spral_ssids_gpu_datatypes
          implicit none
          type(C_PTR), value :: stream
          integer(C_INT), intent(in), value :: nn
@@ -198,7 +198,7 @@ module spral_ssids_cuda_interfaces
             step, block_size, blocks, stat, ind, ncb) &
             bind(C, name="spral_ssids_multiblock_ldlt_setup")
          use, intrinsic :: iso_c_binding
-         use spral_ssids_cuda_datatypes
+         use spral_ssids_gpu_datatypes
          implicit none
          type(C_PTR), value :: stream
          integer(C_INT), intent(in), value :: nb, step, block_size, blocks
@@ -211,7 +211,7 @@ module spral_ssids_cuda_interfaces
       subroutine multiblock_llt(stream, nn, mbfdata, f, stat) &
             bind(C, name="spral_ssids_multiblock_llt")
          use, intrinsic :: iso_c_binding
-         use spral_ssids_cuda_datatypes
+         use spral_ssids_gpu_datatypes
          implicit none
          type(C_PTR), value :: stream
          integer(C_INT), intent(in), value :: nn
@@ -223,7 +223,7 @@ module spral_ssids_cuda_interfaces
             block_size, blocks, stat, ncb) &
             bind(C, name="spral_ssids_multiblock_llt_setup")
          use, intrinsic :: iso_c_binding
-         use spral_ssids_cuda_datatypes
+         use spral_ssids_gpu_datatypes
          implicit none
          type(C_PTR), value :: stream
          integer(C_INT), intent(in), value :: nb, step, block_size, blocks
@@ -389,7 +389,7 @@ module spral_ssids_cuda_interfaces
             nsync, sync_gpu, gpu, stream) &
             bind(C, name="spral_ssids_run_bwd_solve_kernels")
          use, intrinsic :: iso_c_binding
-         use spral_ssids_cuda_datatypes
+         use spral_ssids_gpu_datatypes
          logical(C_BOOL), value :: dsolve
          logical(C_BOOL), value :: unit_diagonal
          type(C_PTR), value :: x_gpu
@@ -402,7 +402,7 @@ module spral_ssids_cuda_interfaces
       subroutine run_d_solve_kernel(x_gpu, y_gpu, gpu, stream) &
             bind(C, name="spral_ssids_run_d_solve_kernel")
          use, intrinsic :: iso_c_binding
-         use spral_ssids_cuda_datatypes
+         use spral_ssids_gpu_datatypes
          type(C_PTR), value :: x_gpu
          type(C_PTR), value :: y_gpu
          type(lookups_gpu_bwd), intent(in) :: gpu
@@ -413,7 +413,7 @@ module spral_ssids_cuda_interfaces
             asm_sync_gpu, stream) &
             bind(C, name="spral_ssids_run_fwd_solve_kernels")
          use, intrinsic :: iso_c_binding
-         use spral_ssids_cuda_datatypes
+         use spral_ssids_gpu_datatypes
          logical(C_BOOL), value :: posdef
          type(lookups_gpu_fwd), intent(in) :: gpu
          type(C_PTR), value :: xlocal_gpu
@@ -581,7 +581,7 @@ module spral_ssids_cuda_interfaces
             ldb, u, ldu, v, ldv, solve_data, off) &
             bind(C, name="spral_ssids_multinode_dgemm_setup")
          use, intrinsic :: iso_c_binding
-         use spral_ssids_cuda_datatypes
+         use spral_ssids_gpu_datatypes
          implicit none
          integer(C_INT), intent(in), value :: nrows, ncols, nrhs
          integer(C_INT), intent(in), value :: lda, ldb, ldu, ldv
@@ -630,4 +630,4 @@ contains
       
    end subroutine pop_ssids_cuda_settings
 
-end module spral_ssids_cuda_interfaces
+end module spral_ssids_gpu_interfaces

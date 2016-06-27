@@ -1,4 +1,4 @@
-module spral_ssids_alloc_gpu
+module spral_ssids_gpu_alloc
 !$ use omp_lib
    use, intrinsic :: iso_c_binding
    use spral_cuda, only : cudaMalloc, cudaFree, aligned_size, c_ptr_plus
@@ -100,4 +100,4 @@ subroutine custack_free(stack, bytes)
    stack%top = stack%top - bytes_aligned
 end subroutine custack_free
 
-end module spral_ssids_alloc_gpu
+end module spral_ssids_gpu_alloc

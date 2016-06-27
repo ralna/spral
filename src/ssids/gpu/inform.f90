@@ -1,4 +1,4 @@
-module spral_ssids_inform_gpu
+module spral_ssids_gpu_inform
    use spral_cuda, only : cudaGetErrorString
    use spral_ssids_datatypes, only : SSIDS_ERROR_CUBLAS_UNKNOWN, &
                                      SSIDS_ERROR_CUDA_UNKNOWN
@@ -54,4 +54,4 @@ subroutine set_cuda_error(this, cuda_error)
 end subroutine
 
 
-end module spral_ssids_inform_gpu
+end module spral_ssids_gpu_inform
