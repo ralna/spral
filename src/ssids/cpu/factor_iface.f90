@@ -178,8 +178,8 @@ subroutine extract_cpu_data(nnodes, cnodes, fnodes, cstats, finform)
    finform%num_two      = cstats%num_two
    finform%matrix_rank  = rank - cstats%num_zero
    finform%maxfront     = cstats%maxfront
-   print *, "Elim at (pass) = ", cstats%elim_at_pass(:)
-   print *, "Elim at (itr) = ", cstats%elim_at_itr(:)
+   !print *, "Elim at (pass) = ", cstats%elim_at_pass(:)
+   !print *, "Elim at (itr) = ", cstats%elim_at_itr(:)
 end subroutine extract_cpu_data
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
