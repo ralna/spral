@@ -1,7 +1,7 @@
 module spral_ssids_ciface
    use iso_c_binding
    use spral_ssids_inform, only : ssids_inform_base
-   use spral_ssids_inform_gpu, only : ssids_inform_gpu
+   use spral_ssids_gpu_inform, only : ssids_inform_gpu
    use spral_ssids
    implicit none
 

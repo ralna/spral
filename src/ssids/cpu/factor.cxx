@@ -20,16 +20,18 @@
 #include <sstream>
 #include <stdexcept>
 /* External library headers */
-#include "bub/bub.hxx"
 #include <hwloc.h>
 #include <papi.h> // FIXME: remove or make dependency in autoconf
 #include <pthread.h>
 /* SPRAL headers */
 #include "factor_iface.h"
+#include "AlignedAllocator.hxx"
+#include "kernels/CpuLLT.cxx"
+#include "kernels/CpuLDLT.cxx"
 
 /////////////////////////////////////////////////////////////////////////////
-// start of namespace spral::ssids::internal
-namespace spral { namespace ssids { namespace internal {
+// start of namespace spral::ssids::cpu
+namespace spral { namespace ssids { namespace cpu {
 
 const int SSIDS_SUCCESS = 0;
 const int SSIDS_ERROR_NOT_POS_DEF = -6;
@@ -378,8 +380,8 @@ void factor_node_indef(
    int *perm = node->perm;
 
    /* Perform factorization */
-   typedef bub::CpuLDLT<T, BLOCK_SIZE> CpuLDLTSpec;
-   typedef bub::CpuLDLT<T, BLOCK_SIZE, 5, true> CpuLDLTSpecDebug; // FIXME: debug remove
+   typedef CpuLDLT<T, BLOCK_SIZE> CpuLDLTSpec;
+   typedef CpuLDLT<T, BLOCK_SIZE, 5, true> CpuLDLTSpecDebug; // FIXME: debug remove
    struct CpuLDLTSpec::stat_type bubstats; // FIXME: not needed?
    node->nelim = CpuLDLTSpec(options->u, options->small).factor(m, n, perm, lcol, m, d, &bubstats);
    for(int i=0; i<5; i++) {
@@ -419,8 +421,8 @@ void factor_node_posdef(
    T *lcol = node->lcol;
 
    /* Perform factorization */
-   typedef bub::CpuLLT<T, bub::CPU_BEST_ARCH, BLOCK_SIZE> CpuLLTSpec;
-   //typedef bub::CpuLLT<T, 4, true> CpuLLTSpecDebug; //FIXME: remove
+   typedef CpuLLT<T, CPU_BEST_ARCH, BLOCK_SIZE> CpuLLTSpec;
+   //typedef CpuLLT<T, 4, true> CpuLLTSpecDebug; //FIXME: remove
    int flag = CpuLLTSpec().factor(m, n, lcol, m);
    node->nelim = (flag) ? flag : n;
    if(flag) throw NotPosDefError(flag);
@@ -496,7 +498,7 @@ void calculate_update(
 
    if(posdef) {
       int ldl = node->nrow_expected;
-      host_syrk<T>(bub::FILL_MODE_LWR, bub::OP_N, m, n,
+      host_syrk<T>(FILL_MODE_LWR, OP_N, m, n,
             -1.0, &node->lcol[node->ncol_expected], ldl,
             1.0, node->contrib, m);
    } else {
@@ -544,7 +546,7 @@ void calculate_update(
       }
 
       // Apply update to contrib block
-      host_gemm<T>(bub::OP_N, bub::OP_T, m, m, n,
+      host_gemm<T>(OP_N, OP_T, m, m, n,
             -1.0, lcol, ldl, ld, m,
             1.0, node->contrib, m);
    }
@@ -965,7 +967,7 @@ static void print_children(hwloc_topology_t topology, hwloc_obj_t obj, int depth
    }
 }
 
-}}} /* end of namespace spral::ssids::internal */
+}}} /* end of namespace spral::ssids::cpu */
 //////////////////////////////////////////////////////////////////////////
 
 /* Double precision wrapper around templated routines */
@@ -974,12 +976,12 @@ void spral_ssids_factor_cpu_dbl(
       bool posdef,     // If true, performs A=LL^T, if false do pivoted A=LDL^T
       int n,            // Maximum row index (+1)
       int nnodes,       // Number of nodes in assembly tree
-      struct spral::ssids::internal::cpu_node_data<double> *const nodes, // Data structure for node information
+      struct spral::ssids::cpu::cpu_node_data<double> *const nodes, // Data structure for node information
       const double *const aval, // Values of A
       const double *const scaling, // Scaling vector (NULL if none)
       void *const alloc,      // Pointer to Fortran allocator structure
-      const struct spral::ssids::internal::cpu_factor_options *const options, // Options in
-      struct spral::ssids::internal::cpu_factor_stats *const stats // Info out
+      const struct spral::ssids::cpu::cpu_factor_options *const options, // Options in
+      struct spral::ssids::cpu::cpu_factor_stats *const stats // Info out
       ) {
 
    // Initialize execution topology
@@ -987,28 +989,28 @@ void spral_ssids_factor_cpu_dbl(
    hwloc_topology_init(&topology);
    hwloc_topology_load(topology);
    //print_children(topology, hwloc_get_root_obj(topology), 0);
-   spral::ssids::internal::ExecContext eContext(topology, hwloc_get_root_obj(topology));
+   spral::ssids::cpu::ExecContext eContext(topology, hwloc_get_root_obj(topology));
    //eContext.launch_threads();
 
    // Initialize stats
-   stats->flag = spral::ssids::internal::SSIDS_SUCCESS;
+   stats->flag = spral::ssids::cpu::SSIDS_SUCCESS;
 
    // Call relevant routine
    if(posdef) {
       try {
-         spral::ssids::internal::factor<true, double, 16, 16384, false>
+         spral::ssids::cpu::factor<true, double, 16, 16384, false>
             (n, nnodes, nodes, aval, scaling, alloc, options, stats);
-      } catch(spral::ssids::internal::NotPosDefError npde) {
-         stats->flag = spral::ssids::internal::SSIDS_ERROR_NOT_POS_DEF;
+      } catch(spral::ssids::cpu::NotPosDefError npde) {
+         stats->flag = spral::ssids::cpu::SSIDS_ERROR_NOT_POS_DEF;
       }
    } else {
-      spral::ssids::internal::factor<false, double, 16, 16384, false>
+      spral::ssids::cpu::factor<false, double, 16, 16384, false>
          (n, nnodes, nodes, aval, scaling, alloc, options, stats);
    }
 
    // FIXME: Remove when done with debug
    if(options->print_level > 9999) {
       printf("Final factors:\n");
-      spral::ssids::internal::print_factors<double>(posdef, nnodes, nodes);
+      spral::ssids::cpu::print_factors<double>(posdef, nnodes, nodes);
    }
 }
