@@ -56,7 +56,7 @@ int ldlt_nopiv_factor(int m, int n, double* a, int lda, double* work) {
       if(a1[j] <= 0.0) return j; /* matrix not posdef */
       double l11 = 1/a1[j]; a1[j] = l11;
       for(int i=j+1; i<m; ++i)
-         a[i] *= l11;
+         a1[i] *= l11;
    }
 
    return -1; /* success */
