@@ -1,5 +1,7 @@
 #include "ldlt_nopiv.hxx"
 
+#include <cstdio> // FIXME: debug remove
+
 namespace spral { namespace ssids { namespace cpu {
 
 /* We perform a 2x2 blocked LDL^T factorization of an m x n matrix.
@@ -35,18 +37,16 @@ int ldlt_nopiv_factor(int m, int n, double* a, int lda, double* work) {
       double l21 = -a21 * det;   a1[j+1] = l21;
       double l22 = a11 * det;    a2[j+1] = l22;
       /* Apply to block below diagonal */
-      for(int i=j+2; j<m; ++j) {
+      for(int i=j+2; i<m; ++i) {
          double x1 = a1[i]; work1[i] = x1;
          double x2 = a2[i]; work2[i] = x2;
          a1[i] = l11*x1 + l21*x2;
          a2[i] = l21*x1 + l22*x2;
       }
       /* Apply schur complement update */
-      for(int k=j+2; k<n; ++k) {
-         for(int i=j+2; i<m; ++i) {
-            a[k*lda+i] -= a1[i]*work1[k] + a2[i]*work2[i];
-         }
-      }
+      for(int k=j+2; k<n; ++k)
+      for(int i=j+2; i<m; ++i)
+         a[k*lda+i] -= a1[i]*work1[k] + a2[i]*work2[k];
    }
 
    if(n%2!=0) {
@@ -65,7 +65,6 @@ int ldlt_nopiv_factor(int m, int n, double* a, int lda, double* work) {
 /* Corresponding forward solve to ldlt_nopiv_factor() */
 void ldlt_nopiv_solve_fwd(int m, int n, double const* a, int lda, double *x) {
    for(int j=0; j<n-1; j+=2) {
-      x[j+1] -= a[j*lda+j+1] * x[j];
       for(int i=j+2; i<m; ++i)
          x[i] -= a[j*lda+i]*x[j] + a[(j+1)*lda+i]*x[j+1];
    }
@@ -83,7 +82,7 @@ void ldlt_nopiv_solve_diag(int m, int n, double const* a, int lda, double *x) {
       double x1 = x[j];
       double x2 = x[j+1];
       x[j]   = a[j*lda+j  ]*x1 + a[    j*lda+j+1]*x2;
-      x[j+1] = a[j*lda+j+1]*x2 + a[(j+1)*lda+j+1]*x2;
+      x[j+1] = a[j*lda+j+1]*x1 + a[(j+1)*lda+j+1]*x2;
    }
    if(n%2!=0) {
       // n is odd, handle last column as 1x1 pivot
@@ -101,12 +100,11 @@ void ldlt_nopiv_solve_bwd(int m, int n, double const* a, int lda, double *x) {
          x[j] -= a[j*lda+i]*x[i];
       n--;
    }
-   for(int j=n-1; j>=0; j-=2) {
+   for(int j=n-2; j>=0; j-=2) {
       for(int i=j+2; i<m; ++i) {
          x[j] -= a[j*lda+i] * x[i];
          x[j+1] -= a[(j+1)*lda+i] * x[i];
       }
-      x[j] -= a[j*lda+j+1] * x[j+1];
    }
 }
 

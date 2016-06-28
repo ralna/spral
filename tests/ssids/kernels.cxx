@@ -26,7 +26,22 @@ void gen_posdef(int n, double* a, int lda) {
       a[j*lda+i] = std::numeric_limits<double>::signaling_NaN();
 }
 
-int test_ldlt(int m, int n) {
+double print_vec(char const* format, int n, double const* vec) {
+   for(int i=0; i<n; ++i)
+      printf(format, vec[i]);
+   printf("\n");
+}
+
+double print_mat(char const* format, int n, double const* a, int lda) {
+   for(int i=0; i<n; ++i) {
+      printf("%d:", i);
+      for(int j=0; j<=i; ++j)
+         printf(format, a[j*lda+i]);
+      printf("\n");
+   }
+}
+
+int test_ldlt(int m, int n, bool debug=false) {
    /* Generate random dense posdef matrix of size m */
    int lda = m;
    double *a = new double[m*lda];
@@ -37,7 +52,9 @@ int test_ldlt(int m, int n) {
    
    /* Factor first m x n part with our code */
    double *work = new double[2*m];
+   if(debug) { printf("PRE:\n"); print_mat(" %e", m, l, lda); }
    ldlt_nopiv_factor(m, n, l, lda, work);
+   if(debug) { printf("POST:\n"); print_mat(" %e", m, l, lda); }
    /* Schur complement update remainder block */
    for(int j=0; j<n-1; j+=2) {
       /* Calculate D (we store D^-1) */
@@ -82,11 +99,15 @@ int test_ldlt(int m, int n) {
    /* Perform a solve */
    double *soln = new double[m];
    memcpy(soln, rhs, m*sizeof(double));
+   if(debug) { printf("rhs ="); print_vec(" %e", m, soln); }
    ldlt_nopiv_solve_fwd(m, n, l, lda, soln);
+   if(debug) { printf("post fwd ="); print_vec(" %e", m, soln); }
    host_trsv<double>(FILL_MODE_LWR, OP_N, DIAG_NON_UNIT, m-n, &l[n*lda+n], lda, &soln[n], 1);
    host_trsv<double>(FILL_MODE_LWR, OP_T, DIAG_NON_UNIT, m-n, &l[n*lda+n], lda, &soln[n], 1);
    ldlt_nopiv_solve_diag(m, n, l, lda, soln);
+   if(debug) { printf("post diag ="); print_vec(" %e", m, soln); }
    ldlt_nopiv_solve_bwd(m, n, l, lda, soln);
+   if(debug) { printf("post bwd ="); print_vec(" %e", m, soln); }
 
    /* Calculate residual vector and anorm*/
    double *resid = new double[m];
@@ -151,10 +172,10 @@ int main(void) {
    int nerr = 0;
 
    /* LDL^T no pivoting tests */
-   TEST(test_ldlt(3, 3));
-#if 0
+#if 1
    TEST(test_ldlt(1, 1));
    TEST(test_ldlt(2, 2));
+   TEST(test_ldlt(3, 3));
    TEST(test_ldlt(4, 4));
    TEST(test_ldlt(5, 5));
    TEST(test_ldlt(4, 2));
