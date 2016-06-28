@@ -14,7 +14,8 @@ NVCCLINK = \
 	$(NVCC) $(NVCCFLAGS) $(AM_NVCC_FLAGS) -dc -o $@ $<
 
 # Include directory for standard C
-AM_CFLAGS = -I$(top_srcdir)/include -std=c99
+AM_CFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src -std=c99 -fopenmp
+AM_CXXFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src -std=c++11 -fopenmp
 
 # FIXME: make below configurable
 LDADD = -L. -lspral $(METIS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FCLIBS) -lrt
@@ -217,6 +218,8 @@ libspral_a_SOURCES += \
 	src/ssids/cpu/kernels/CpuLLT.hxx \
 	src/ssids/cpu/kernels/CpuLog.cxx \
 	src/ssids/cpu/kernels/CpuLog.hxx \
+	src/ssids/cpu/kernels/ldlt_nopiv.cxx \
+	src/ssids/cpu/kernels/ldlt_nopiv.hxx \
 	src/ssids/cpu/kernels/SimdVec.hxx \
 	src/ssids/cpu/kernels/wrappers.hxx \
 	interfaces/C/ssids.f90
@@ -232,15 +235,18 @@ spral_ssids_SOURCES += \
 endif
 check_PROGRAMS += \
 	ssids_test \
+	ssids_kernel_test \
 	examples/Fortran/ssids \
 	examples/C/ssids
-ssids_test_SOURCES = tests/ssids.f90
+ssids_test_SOURCES = tests/ssids/ssids.f90
+ssids_kernel_test_SOURCES = tests/ssids/kernels.cxx
 examples_Fortran_ssids_SOURCES = examples/Fortran/ssids.f90
 examples/Fortran/ssids.$(OBJEXT): libspral.a
 examples_C_ssids_SOURCES = examples/C/ssids.c
-tests/ssids.$(OBJEXT): libspral.a
+tests/ssids/ssids.$(OBJEXT): libspral.a
+tests/ssids/kernels.$(OBJEXT): libspral.a
 examples/C/ssids.$(OBJEXT): libspral.a
-TESTS += ssids_test
+TESTS += ssids_test ssids_kernel_test
 if HAVE_NVCC
 spral_ssids_LINK = $(NVCCLINK)
 spral_ssids_LDADD = $(LDADD) $(HWLOC_LIBS) $(CUDA_LIBS)

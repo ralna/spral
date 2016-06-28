@@ -105,9 +105,9 @@ check_PROGRAMS = lsmr_test$(EXEEXT) examples/Fortran/lsmr$(EXEEXT) \
 	examples/C/random$(EXEEXT) random_matrix_test$(EXEEXT) \
 	examples/Fortran/random_matrix$(EXEEXT) \
 	examples/C/random_matrix$(EXEEXT) ssids_test$(EXEEXT) \
-	examples/Fortran/ssids$(EXEEXT) examples/C/ssids$(EXEEXT) \
-	ssmfe_test$(EXEEXT) ssmfe_ciface_test$(EXEEXT) \
-	examples/C/ssmfe/hermitian$(EXEEXT) \
+	ssids_kernel_test$(EXEEXT) examples/Fortran/ssids$(EXEEXT) \
+	examples/C/ssids$(EXEEXT) ssmfe_test$(EXEEXT) \
+	ssmfe_ciface_test$(EXEEXT) examples/C/ssmfe/hermitian$(EXEEXT) \
 	examples/C/ssmfe/precond_core$(EXEEXT) \
 	examples/C/ssmfe/precond_expert$(EXEEXT) \
 	examples/C/ssmfe/precond_ssmfe$(EXEEXT) \
@@ -119,7 +119,8 @@ check_PROGRAMS = lsmr_test$(EXEEXT) examples/Fortran/lsmr$(EXEEXT) \
 	examples/Fortran/ssmfe/shift_invert$(EXEEXT)
 TESTS = lsmr_test$(EXEEXT) scaling_test$(EXEEXT) random_test$(EXEEXT) \
 	random_matrix_test$(EXEEXT) ssids_test$(EXEEXT) \
-	ssmfe_test$(EXEEXT) ssmfe_ciface_test$(EXEEXT)
+	ssids_kernel_test$(EXEEXT) ssmfe_test$(EXEEXT) \
+	ssmfe_ciface_test$(EXEEXT)
 @HAVE_NVCC_TRUE@am__append_2 = src/ssids/type_select_gpu.f90 \
 @HAVE_NVCC_TRUE@	src/ssids/gpu/inform_nogpu.f90 \
 @HAVE_NVCC_TRUE@	src/ssids/type_select_nogpu.f90
@@ -206,6 +207,8 @@ am__libspral_a_SOURCES_DIST = src/blas_iface.f90 src/core_analyse.f90 \
 	src/ssids/cpu/kernels/CpuLLT.hxx \
 	src/ssids/cpu/kernels/CpuLog.cxx \
 	src/ssids/cpu/kernels/CpuLog.hxx \
+	src/ssids/cpu/kernels/ldlt_nopiv.cxx \
+	src/ssids/cpu/kernels/ldlt_nopiv.hxx \
 	src/ssids/cpu/kernels/SimdVec.hxx \
 	src/ssids/cpu/kernels/wrappers.hxx interfaces/C/ssids.f90 \
 	src/ssmfe/ssmfe.f90 src/ssmfe/core.f90 src/ssmfe/expert.f90 \
@@ -236,6 +239,7 @@ am_libspral_a_OBJECTS = src/blas_iface.$(OBJEXT) \
 	src/ssids/cpu/factor_iface.$(OBJEXT) \
 	src/ssids/cpu/solve.$(OBJEXT) \
 	src/ssids/cpu/kernels/CpuLog.$(OBJEXT) \
+	src/ssids/cpu/kernels/ldlt_nopiv.$(OBJEXT) \
 	interfaces/C/ssids.$(OBJEXT) src/ssmfe/ssmfe.$(OBJEXT) \
 	src/ssmfe/core.$(OBJEXT) src/ssmfe/expert.$(OBJEXT) \
 	interfaces/C/ssmfe.$(OBJEXT) interfaces/C/ssmfe_core.$(OBJEXT) \
@@ -514,7 +518,13 @@ spral_ssids_OBJECTS = $(am_spral_ssids_OBJECTS)
 @HAVE_NVCC_FALSE@	$(am__DEPENDENCIES_1)
 @HAVE_NVCC_TRUE@spral_ssids_DEPENDENCIES = $(am__DEPENDENCIES_2) \
 @HAVE_NVCC_TRUE@	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
-am_ssids_test_OBJECTS = tests/ssids.$(OBJEXT)
+am_ssids_kernel_test_OBJECTS = tests/ssids/kernels.$(OBJEXT)
+ssids_kernel_test_OBJECTS = $(am_ssids_kernel_test_OBJECTS)
+ssids_kernel_test_LDADD = $(LDADD)
+ssids_kernel_test_DEPENDENCIES = $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
+am_ssids_test_OBJECTS = tests/ssids/ssids.$(OBJEXT)
 ssids_test_OBJECTS = $(am_ssids_test_OBJECTS)
 @HAVE_NVCC_FALSE@ssids_test_DEPENDENCIES = $(am__DEPENDENCIES_2) \
 @HAVE_NVCC_FALSE@	$(am__DEPENDENCIES_1)
@@ -616,8 +626,9 @@ SOURCES = $(libspral_a_SOURCES) examples/C/lsmr.c \
 	$(examples_Fortran_ssmfe_shift_invert_SOURCES) \
 	$(lsmr_test_SOURCES) $(random_matrix_test_SOURCES) \
 	$(random_test_SOURCES) $(scaling_test_SOURCES) \
-	$(spral_ssids_SOURCES) $(ssids_test_SOURCES) \
-	$(ssmfe_ciface_test_SOURCES) $(ssmfe_test_SOURCES)
+	$(spral_ssids_SOURCES) $(ssids_kernel_test_SOURCES) \
+	$(ssids_test_SOURCES) $(ssmfe_ciface_test_SOURCES) \
+	$(ssmfe_test_SOURCES)
 DIST_SOURCES = $(am__libspral_a_SOURCES_DIST) examples/C/lsmr.c \
 	$(examples_C_random_SOURCES) \
 	$(examples_C_random_matrix_SOURCES) \
@@ -650,8 +661,9 @@ DIST_SOURCES = $(am__libspral_a_SOURCES_DIST) examples/C/lsmr.c \
 	$(examples_Fortran_ssmfe_shift_invert_SOURCES) \
 	$(lsmr_test_SOURCES) $(random_matrix_test_SOURCES) \
 	$(random_test_SOURCES) $(scaling_test_SOURCES) \
-	$(am__spral_ssids_SOURCES_DIST) $(ssids_test_SOURCES) \
-	$(ssmfe_ciface_test_SOURCES) $(ssmfe_test_SOURCES)
+	$(am__spral_ssids_SOURCES_DIST) $(ssids_kernel_test_SOURCES) \
+	$(ssids_test_SOURCES) $(ssmfe_ciface_test_SOURCES) \
+	$(ssmfe_test_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -1002,7 +1014,8 @@ NVCCLINK = \
 
 
 # Include directory for standard C
-AM_CFLAGS = -I$(top_srcdir)/include -std=c99
+AM_CFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src -std=c99 -fopenmp
+AM_CXXFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src -std=c++11 -fopenmp
 
 # FIXME: make below configurable
 LDADD = -L. -lspral $(METIS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FCLIBS) -lrt
@@ -1064,6 +1077,8 @@ libspral_a_SOURCES = src/blas_iface.f90 src/core_analyse.f90 \
 	src/ssids/cpu/kernels/CpuLLT.hxx \
 	src/ssids/cpu/kernels/CpuLog.cxx \
 	src/ssids/cpu/kernels/CpuLog.hxx \
+	src/ssids/cpu/kernels/ldlt_nopiv.cxx \
+	src/ssids/cpu/kernels/ldlt_nopiv.hxx \
 	src/ssids/cpu/kernels/SimdVec.hxx \
 	src/ssids/cpu/kernels/wrappers.hxx interfaces/C/ssids.f90 \
 	src/ssmfe/ssmfe.f90 src/ssmfe/core.f90 src/ssmfe/expert.f90 \
@@ -1093,7 +1108,8 @@ examples_Fortran_random_matrix_SOURCES = examples/Fortran/random_matrix.f90
 examples_C_random_matrix_SOURCES = examples/C/random_matrix.c
 spral_ssids_SOURCES = driver/spral_ssids.f90 $(am__append_3) \
 	$(am__append_4)
-ssids_test_SOURCES = tests/ssids.f90
+ssids_test_SOURCES = tests/ssids/ssids.f90
+ssids_kernel_test_SOURCES = tests/ssids/kernels.cxx
 examples_Fortran_ssids_SOURCES = examples/Fortran/ssids.f90
 examples_C_ssids_SOURCES = examples/C/ssids.c
 @HAVE_NVCC_FALSE@spral_ssids_LINK = $(CXXLINK)
@@ -1335,6 +1351,9 @@ src/ssids/cpu/kernels/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) src/ssids/cpu/kernels/$(DEPDIR)
 	@: > src/ssids/cpu/kernels/$(DEPDIR)/$(am__dirstamp)
 src/ssids/cpu/kernels/CpuLog.$(OBJEXT):  \
+	src/ssids/cpu/kernels/$(am__dirstamp) \
+	src/ssids/cpu/kernels/$(DEPDIR)/$(am__dirstamp)
+src/ssids/cpu/kernels/ldlt_nopiv.$(OBJEXT):  \
 	src/ssids/cpu/kernels/$(am__dirstamp) \
 	src/ssids/cpu/kernels/$(DEPDIR)/$(am__dirstamp)
 interfaces/C/ssids.$(OBJEXT): interfaces/C/$(am__dirstamp) \
@@ -1698,8 +1717,20 @@ driver/cuda_helper_nogpu.$(OBJEXT): driver/$(am__dirstamp) \
 spral_ssids$(EXEEXT): $(spral_ssids_OBJECTS) $(spral_ssids_DEPENDENCIES) $(EXTRA_spral_ssids_DEPENDENCIES) 
 	@rm -f spral_ssids$(EXEEXT)
 	$(AM_V_GEN)$(spral_ssids_LINK) $(spral_ssids_OBJECTS) $(spral_ssids_LDADD) $(LIBS)
-tests/ssids.$(OBJEXT): tests/$(am__dirstamp) \
-	tests/$(DEPDIR)/$(am__dirstamp)
+tests/ssids/$(am__dirstamp):
+	@$(MKDIR_P) tests/ssids
+	@: > tests/ssids/$(am__dirstamp)
+tests/ssids/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) tests/ssids/$(DEPDIR)
+	@: > tests/ssids/$(DEPDIR)/$(am__dirstamp)
+tests/ssids/kernels.$(OBJEXT): tests/ssids/$(am__dirstamp) \
+	tests/ssids/$(DEPDIR)/$(am__dirstamp)
+
+ssids_kernel_test$(EXEEXT): $(ssids_kernel_test_OBJECTS) $(ssids_kernel_test_DEPENDENCIES) $(EXTRA_ssids_kernel_test_DEPENDENCIES) 
+	@rm -f ssids_kernel_test$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(ssids_kernel_test_OBJECTS) $(ssids_kernel_test_LDADD) $(LIBS)
+tests/ssids/ssids.$(OBJEXT): tests/ssids/$(am__dirstamp) \
+	tests/ssids/$(DEPDIR)/$(am__dirstamp)
 
 ssids_test$(EXEEXT): $(ssids_test_OBJECTS) $(ssids_test_DEPENDENCIES) $(EXTRA_ssids_test_DEPENDENCIES) 
 	@rm -f ssids_test$(EXEEXT)
@@ -1741,6 +1772,7 @@ mostlyclean-compile:
 	-rm -f src/ssids/gpu/*.$(OBJEXT)
 	-rm -f src/ssmfe/*.$(OBJEXT)
 	-rm -f tests/*.$(OBJEXT)
+	-rm -f tests/ssids/*.$(OBJEXT)
 	-rm -f tests/ssmfe/*.$(OBJEXT)
 
 distclean-compile:
@@ -1763,6 +1795,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/ssmfe/$(DEPDIR)/shift_invert.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/$(DEPDIR)/factor.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/kernels/$(DEPDIR)/CpuLog.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/kernels/$(DEPDIR)/ldlt_nopiv.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@tests/ssids/$(DEPDIR)/kernels.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@tests/ssmfe/$(DEPDIR)/ssmfe_ciface.Po@am__quote@
 
 .c.o:
@@ -2059,6 +2093,13 @@ ssids_test.log: ssids_test$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+ssids_kernel_test.log: ssids_kernel_test$(EXEEXT)
+	@p='ssids_kernel_test$(EXEEXT)'; \
+	b='ssids_kernel_test'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 ssmfe_test.log: ssmfe_test$(EXEEXT)
 	@p='ssmfe_test$(EXEEXT)'; \
 	b='ssmfe_test'; \
@@ -2321,6 +2362,8 @@ distclean-generic:
 	-rm -f src/ssmfe/$(am__dirstamp)
 	-rm -f tests/$(DEPDIR)/$(am__dirstamp)
 	-rm -f tests/$(am__dirstamp)
+	-rm -f tests/ssids/$(DEPDIR)/$(am__dirstamp)
+	-rm -f tests/ssids/$(am__dirstamp)
 	-rm -f tests/ssmfe/$(DEPDIR)/$(am__dirstamp)
 	-rm -f tests/ssmfe/$(am__dirstamp)
 
@@ -2334,7 +2377,7 @@ clean-am: clean-binPROGRAMS clean-checkPROGRAMS clean-generic \
 
 distclean: distclean-am
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
-	-rm -rf examples/C/$(DEPDIR) examples/C/scaling/$(DEPDIR) examples/C/ssmfe/$(DEPDIR) src/ssids/cpu/$(DEPDIR) src/ssids/cpu/kernels/$(DEPDIR) tests/ssmfe/$(DEPDIR)
+	-rm -rf examples/C/$(DEPDIR) examples/C/scaling/$(DEPDIR) examples/C/ssmfe/$(DEPDIR) src/ssids/cpu/$(DEPDIR) src/ssids/cpu/kernels/$(DEPDIR) tests/ssids/$(DEPDIR) tests/ssmfe/$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -2382,7 +2425,7 @@ installcheck-am:
 maintainer-clean: maintainer-clean-am
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
 	-rm -rf $(top_srcdir)/autom4te.cache
-	-rm -rf examples/C/$(DEPDIR) examples/C/scaling/$(DEPDIR) examples/C/ssmfe/$(DEPDIR) src/ssids/cpu/$(DEPDIR) src/ssids/cpu/kernels/$(DEPDIR) tests/ssmfe/$(DEPDIR)
+	-rm -rf examples/C/$(DEPDIR) examples/C/scaling/$(DEPDIR) examples/C/ssmfe/$(DEPDIR) src/ssids/cpu/$(DEPDIR) src/ssids/cpu/kernels/$(DEPDIR) tests/ssids/$(DEPDIR) tests/ssmfe/$(DEPDIR)
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 
@@ -2466,7 +2509,8 @@ examples/C/random_matrix.$(OBJEXT): libspral.a
 @HAVE_NVCC_TRUE@	src/ssids/gpu/kernels/syrk.cu \
 @HAVE_NVCC_TRUE@else
 examples/Fortran/ssids.$(OBJEXT): libspral.a
-tests/ssids.$(OBJEXT): libspral.a
+tests/ssids/ssids.$(OBJEXT): libspral.a
+tests/ssids/kernels.$(OBJEXT): libspral.a
 examples/C/ssids.$(OBJEXT): libspral.a
 tests/ssmfe/ssmfe.$(OBJEXT): libspral.a
 tests/ssmfe/ssmfe_ciface.$(OBJEXT): libspral.a
