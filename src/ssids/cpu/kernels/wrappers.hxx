@@ -10,6 +10,7 @@ extern "C" {
    void dtrsm_(char *side, char *uplo, char *transa, char *diag, int *m, int *n, const double *alpha, const double *a, int *lda, double *b, int *ldb);
    void dsyrk_(char *uplo, char *trans, int *n, int *k, double *alpha, const double *a, int *lda, double *beta, double *c, int *ldc);
    void dtrsv_(char *uplo, char *trans, char *diag, int *n, const double *a, int *lda, double *x, int *incx);
+   void dgemv_(char *trans, int *m, int *n, const double* alpha, const double* a, int *lda, const double* x, int* incx, const double* beta, double* y, int* incy);
 }
 
 namespace spral { namespace ssids { namespace cpu {
@@ -22,6 +23,15 @@ void host_gemm<double>(enum spral::ssids::cpu::operation transa, enum spral::ssi
    char ftransa = (transa==spral::ssids::cpu::OP_N) ? 'N' : 'T';
    char ftransb = (transb==spral::ssids::cpu::OP_N) ? 'N' : 'T';
    dgemm_(&ftransa, &ftransb, &m, &n, &k, &alpha, a, &lda, b, &ldb, &beta, c, &ldc);
+}
+
+/* _GEMV */
+template <typename T>
+void gemv(enum spral::ssids::cpu::operation trans, int m, int n, T alpha, const T* a, int lda, const T* x, int incx, T beta, T* y, int incy);
+template <>
+void gemv<double>(enum spral::ssids::cpu::operation trans, int m, int n, double alpha, const double* a, int lda, const double* x, int incx, double beta, double* y, int incy) {
+   char ftrans = (trans==spral::ssids::cpu::OP_N) ? 'N' : 'T';
+   dgemv_(&ftrans, &m, &n, &alpha, a, &lda, x, &incx, &beta, y, &incy);
 }
 
 /* _POTRF */

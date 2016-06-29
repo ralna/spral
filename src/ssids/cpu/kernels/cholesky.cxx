@@ -82,4 +82,11 @@ void cholesky_factor(int m, int n, double* a, int lda, int blksz, int &info) {
    }
 }
 
+/* Forwards solve corresponding to cholesky_factor() */
+void cholesky_fwd_slv(int m, int n, double const* a, int lda, double* x) {
+   host_trsv(FILL_MODE_LWR, OP_N, DIAG_NON_UNIT, n, a, lda, x, 1);
+   if(m > n)
+      gemv(OP_N, m-n, n, -1.0, &a[n], lda, x, 1, 1.0, &x[n], 1);
+}
+
 }}} /* namespaces spral::ssids::cpu */
