@@ -26,13 +26,13 @@ void gen_posdef(int n, double* a, int lda) {
       a[j*lda+i] = std::numeric_limits<double>::signaling_NaN();
 }
 
-double print_vec(char const* format, int n, double const* vec) {
+void print_vec(char const* format, int n, double const* vec) {
    for(int i=0; i<n; ++i)
       printf(format, vec[i]);
    printf("\n");
 }
 
-double print_mat(char const* format, int n, double const* a, int lda) {
+void print_mat(char const* format, int n, double const* a, int lda) {
    for(int i=0; i<n; ++i) {
       printf("%d:", i);
       for(int j=0; j<=i; ++j)
