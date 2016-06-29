@@ -213,6 +213,8 @@ libspral_a_SOURCES += \
 	src/ssids/cpu/factor_iface.h \
 	src/ssids/cpu/solve.f90 \
 	src/ssids/cpu/kernels/common.hxx \
+	src/ssids/cpu/kernels/cholesky.cxx \
+	src/ssids/cpu/kernels/cholesky.hxx \
 	src/ssids/cpu/kernels/CpuBlockLDLT.hxx \
 	src/ssids/cpu/kernels/CpuLDLT.hxx \
 	src/ssids/cpu/kernels/CpuLLT.hxx \
