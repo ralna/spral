@@ -201,7 +201,11 @@ am__libspral_a_SOURCES_DIST = src/blas_iface.f90 src/core_analyse.f90 \
 	src/ssids/inform.f90 src/ssids/ssids.f90 \
 	src/ssids/cpu/AlignedAllocator.hxx src/ssids/cpu/factor.cxx \
 	src/ssids/cpu/factor_iface.f90 src/ssids/cpu/factor_iface.h \
-	src/ssids/cpu/solve.f90 src/ssids/cpu/kernels/common.hxx \
+	src/ssids/cpu/solve.f90 src/ssids/cpu/smalloc.cxx \
+	src/ssids/cpu/smalloc.hxx src/ssids/cpu/SmallLeafSubtree.hxx \
+	src/ssids/cpu/StackAllocator.hxx \
+	src/ssids/cpu/kernels/assemble.hxx \
+	src/ssids/cpu/kernels/common.hxx \
 	src/ssids/cpu/kernels/cholesky.cxx \
 	src/ssids/cpu/kernels/cholesky.hxx \
 	src/ssids/cpu/kernels/CpuBlockLDLT.hxx \
@@ -239,7 +243,7 @@ am_libspral_a_OBJECTS = src/blas_iface.$(OBJEXT) \
 	src/ssids/fkeep.$(OBJEXT) src/ssids/inform.$(OBJEXT) \
 	src/ssids/ssids.$(OBJEXT) src/ssids/cpu/factor.$(OBJEXT) \
 	src/ssids/cpu/factor_iface.$(OBJEXT) \
-	src/ssids/cpu/solve.$(OBJEXT) \
+	src/ssids/cpu/solve.$(OBJEXT) src/ssids/cpu/smalloc.$(OBJEXT) \
 	src/ssids/cpu/kernels/cholesky.$(OBJEXT) \
 	src/ssids/cpu/kernels/CpuLog.$(OBJEXT) \
 	src/ssids/cpu/kernels/ldlt_nopiv.$(OBJEXT) \
@@ -1067,7 +1071,11 @@ libspral_a_SOURCES = src/blas_iface.f90 src/core_analyse.f90 \
 	src/ssids/inform.f90 src/ssids/ssids.f90 \
 	src/ssids/cpu/AlignedAllocator.hxx src/ssids/cpu/factor.cxx \
 	src/ssids/cpu/factor_iface.f90 src/ssids/cpu/factor_iface.h \
-	src/ssids/cpu/solve.f90 src/ssids/cpu/kernels/common.hxx \
+	src/ssids/cpu/solve.f90 src/ssids/cpu/smalloc.cxx \
+	src/ssids/cpu/smalloc.hxx src/ssids/cpu/SmallLeafSubtree.hxx \
+	src/ssids/cpu/StackAllocator.hxx \
+	src/ssids/cpu/kernels/assemble.hxx \
+	src/ssids/cpu/kernels/common.hxx \
 	src/ssids/cpu/kernels/cholesky.cxx \
 	src/ssids/cpu/kernels/cholesky.hxx \
 	src/ssids/cpu/kernels/CpuBlockLDLT.hxx \
@@ -1341,6 +1349,8 @@ src/ssids/cpu/factor.$(OBJEXT): src/ssids/cpu/$(am__dirstamp) \
 src/ssids/cpu/factor_iface.$(OBJEXT): src/ssids/cpu/$(am__dirstamp) \
 	src/ssids/cpu/$(DEPDIR)/$(am__dirstamp)
 src/ssids/cpu/solve.$(OBJEXT): src/ssids/cpu/$(am__dirstamp) \
+	src/ssids/cpu/$(DEPDIR)/$(am__dirstamp)
+src/ssids/cpu/smalloc.$(OBJEXT): src/ssids/cpu/$(am__dirstamp) \
 	src/ssids/cpu/$(DEPDIR)/$(am__dirstamp)
 src/ssids/cpu/kernels/$(am__dirstamp):
 	@$(MKDIR_P) src/ssids/cpu/kernels
@@ -1798,6 +1808,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/ssmfe/$(DEPDIR)/precond_ssmfe.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/ssmfe/$(DEPDIR)/shift_invert.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/$(DEPDIR)/factor.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/$(DEPDIR)/smalloc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/kernels/$(DEPDIR)/CpuLog.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/kernels/$(DEPDIR)/cholesky.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/kernels/$(DEPDIR)/ldlt_nopiv.Po@am__quote@

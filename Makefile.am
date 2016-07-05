@@ -212,6 +212,11 @@ libspral_a_SOURCES += \
 	src/ssids/cpu/factor_iface.f90 \
 	src/ssids/cpu/factor_iface.h \
 	src/ssids/cpu/solve.f90 \
+	src/ssids/cpu/smalloc.cxx \
+	src/ssids/cpu/smalloc.hxx \
+	src/ssids/cpu/SmallLeafSubtree.hxx \
+	src/ssids/cpu/StackAllocator.hxx \
+	src/ssids/cpu/kernels/assemble.hxx \
 	src/ssids/cpu/kernels/common.hxx \
 	src/ssids/cpu/kernels/cholesky.cxx \
 	src/ssids/cpu/kernels/cholesky.hxx \
