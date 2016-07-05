@@ -251,22 +251,22 @@ examples/C/ssids.$(OBJEXT): libspral.a
 TESTS += ssids_test ssids_kernel_test
 if HAVE_NVCC
 spral_ssids_LINK = $(NVCCLINK)
-spral_ssids_LDADD = $(LDADD) $(HWLOC_LIBS) $(CUDA_LIBS)
+spral_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
 ssids_test_LINK = $(NVCCLINK)
-ssids_test_LDADD = $(LDADD) $(HWLOC_LIBS) $(CUDA_LIBS)
+ssids_test_LDADD = $(LDADD) $(CUDA_LIBS)
 examples_Fortran_ssids_LINK = $(NVCCLINK)
-examples_Fortran_ssids_LDADD = $(LDADD) $(HWLOC_LIBS) $(CUDA_LIBS)
+examples_Fortran_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
 examples_C_ssids_LINK = $(NVCCLINK)
-examples_C_ssids_LDADD = $(LDADD) $(HWLOC_LIBS) $(CUDA_LIBS)
+examples_C_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
 else
 spral_ssids_LINK = $(CXXLINK)
-spral_ssids_LDADD = $(LDADD) $(HWLOC_LIBS)
+spral_ssids_LDADD = $(LDADD)
 ssids_test_LINK = $(CXXLINK)
-ssids_test_LDADD = $(LDADD) $(HWLOC_LIBS)
+ssids_test_LDADD = $(LDADD)
 examples_Fortran_ssids_LINK = $(CXXLINK)
-examples_Fortran_ssids_LDADD = $(LDADD) $(HWLOC_LIBS)
+examples_Fortran_ssids_LDADD = $(LDADD)
 examples_C_ssids_LINK = $(CXXLINK)
-examples_C_ssids_LDADD = $(LDADD) $(HWLOC_LIBS)
+examples_C_ssids_LDADD = $(LDADD)
 endif
 
 # SSMFE

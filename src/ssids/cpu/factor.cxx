@@ -20,9 +20,7 @@
 #include <sstream>
 #include <stdexcept>
 /* External library headers */
-#include <hwloc.h>
 #include <papi.h> // FIXME: remove or make dependency in autoconf
-#include <pthread.h>
 /* SPRAL headers */
 #include "factor_iface.h"
 #include "AlignedAllocator.hxx"
@@ -575,15 +573,6 @@ public:
    virtual void exec(void)=0;
 };
 
-/** Class representing a memory resource. Acts as an address, data only
- * accesible once actualise() method has been called. */
-class MemResource {
-   /** Returns true if memory is available locally (i.e. actualise() called) */
-   virtual bool isActualised(void)=0;
-   /** Called to bring current copy of data into local pool */
-   virtual void actualise(void)=0;
-};
-
 template <bool posdef,
           typename T,
           size_t BLOCK_SIZE,
@@ -856,121 +845,6 @@ void factor(
    }
 }
 
-/** Represents an actual execution unit (i.e. context for a thread) */
-class ExecUnit {
-private:
-   /** hwloc info for associated PU */
-   hwloc_topology_t topology;
-   hwloc_obj_t pu;
-   /** pthread object associated with this ExecUnit */
-   pthread_t thread;
-   /** flag when to stop */
-   enum stop_flags {
-      KEEP_GOING,
-      ABORT_IMMEDIATLY,
-      STOP_WHEN_DONE
-   };
-   std::atomic<enum stop_flags> stopflag;
-   /** Pipeline of work */
-   std::queue<WorkUnit *> work;
-   /** static function we can target with pthread_create to call exec()
-    *  NB: This is where binding is actually performed. */
-   static
-   void *exec_this(void *eu_ptr) {
-      // FIXME: Error checking
-      ExecUnit *eu = (ExecUnit *) eu_ptr;
-      hwloc_cpuset_t cpuset = hwloc_bitmap_alloc();
-      hwloc_bitmap_set(cpuset, eu->pu->os_index);
-      hwloc_set_cpubind(eu->topology, cpuset, HWLOC_CPUBIND_THREAD);
-      hwloc_bitmap_free(cpuset);
-      eu->exec();
-      return NULL;
-   }
-public:
-   ExecUnit (
-         hwloc_topology_t topology,
-         hwloc_obj_t pu
-         )
-      : topology(topology), pu(pu), stopflag(KEEP_GOING)
-      {}
-   /** Function to add work to be performed */
-   void enqueue(WorkUnit *item) {
-      // FIXME: thread protect
-      work.push(item);
-   }
-   /** Function to signal an abort to execution immediately */
-   void abort(void) {
-      stopflag = ABORT_IMMEDIATLY;
-   }
-   /** Function to signal that exec() should return when it runs out of work */
-   void end(void) {
-      stopflag = STOP_WHEN_DONE;
-   }
-   /** Set the current thread into a spin loop running this exec unit's work */
-   void exec(void) {
-      printf("Hello from (hopefully) %d\n", pu->logical_index);
-      //while(stopflag==KEEP_GOING) {}
-   }
-   /** Launch a thread, bind its affinity and have it call exec() */
-   void launch_thread(void) {
-      // NB binding actually performed by exec_this() function
-      // FIXME: Error check
-      pthread_create(&thread, NULL, exec_this, this);
-   }
-};
-
-class ExecContext {
-private:
-   std::vector<ExecContext *> eContexts;
-   std::vector<ExecUnit *> eUnits;
-public:
-   /** Construct ourselves from a given topology */
-   ExecContext(
-         hwloc_topology_t topology,
-         hwloc_obj_t root) {
-      // Strip extraneous layers
-      while(root->arity == 1 && root->type != HWLOC_OBJ_PU)
-         root = root->children[0];
-      // Extract children
-      for (unsigned int i = 0; i < root->arity; i++) {
-         hwloc_obj_t obj = root->children[i];
-         while(obj->arity == 1 && obj->type != HWLOC_OBJ_PU)
-            obj = obj->children[0];
-         if(obj->type == HWLOC_OBJ_PU)
-            eUnits.push_back(new ExecUnit(topology, obj));
-         else
-            eContexts.push_back(new ExecContext(topology, obj));
-      }
-      
-   }
-   void abort(void) {
-      for(auto itr=eContexts.begin(); itr!=eContexts.end(); itr++)
-         (*itr)->abort();
-      for(auto itr=eUnits.begin(); itr!=eUnits.end(); itr++)
-         (*itr)->abort();
-   }
-   void end(void) {
-      for(auto itr=eContexts.begin(); itr!=eContexts.end(); itr++)
-         (*itr)->abort();
-      for(auto itr=eUnits.begin(); itr!=eUnits.end(); itr++)
-         (*itr)->abort();
-   }
-   void launch_threads(void) {
-      for(auto itr=eContexts.begin(); itr!=eContexts.end(); itr++)
-         (*itr)->launch_threads();
-      for(auto itr=eUnits.begin(); itr!=eUnits.end(); itr++)
-         (*itr)->launch_thread();
-   }
-};
-
-static void print_children(hwloc_topology_t topology, hwloc_obj_t obj, int depth) {
-   char string[128];
-   hwloc_obj_snprintf(string, sizeof(string), topology, obj, "#", 0);
-   printf("%*s%s\n", 2*depth, "", string);
-   for (unsigned int i = 0; i < obj->arity; i++) {
-      print_children(topology, obj->children[i], depth + 1);
-   }
-}
 
 }}} /* end of namespace spral::ssids::cpu */
 //////////////////////////////////////////////////////////////////////////
@@ -988,14 +862,6 @@ void spral_ssids_factor_cpu_dbl(
       const struct spral::ssids::cpu::cpu_factor_options *const options, // Options in
       struct spral::ssids::cpu::cpu_factor_stats *const stats // Info out
       ) {
-
-   // Initialize execution topology
-   hwloc_topology_t topology;
-   hwloc_topology_init(&topology);
-   hwloc_topology_load(topology);
-   //print_children(topology, hwloc_get_root_obj(topology), 0);
-   spral::ssids::cpu::ExecContext eContext(topology, hwloc_get_root_obj(topology));
-   //eContext.launch_threads();
 
    // Initialize stats
    stats->flag = spral::ssids::cpu::SSIDS_SUCCESS;

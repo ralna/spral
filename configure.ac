@@ -27,7 +27,6 @@ ACX_LAPACK(,[AC_MSG_ERROR([No LAPACK library found.])])
 SPRAL_METIS(,
    [AC_MSG_ERROR([No MeTiS library found.])]
    )
-PKG_CHECK_MODULES(HWLOC, hwloc,[],[AC_MSG_ERROR([hwloc not found])])
 
 # Output data
 AC_CONFIG_FILES(Makefile)
