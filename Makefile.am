@@ -223,6 +223,7 @@ libspral_a_SOURCES += \
 	src/ssids/cpu/kernels/ldlt_nopiv.cxx \
 	src/ssids/cpu/kernels/ldlt_nopiv.hxx \
 	src/ssids/cpu/kernels/SimdVec.hxx \
+	src/ssids/cpu/kernels/wrappers.cxx \
 	src/ssids/cpu/kernels/wrappers.hxx \
 	interfaces/C/ssids.f90
 bin_PROGRAMS = spral_ssids

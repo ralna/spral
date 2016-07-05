@@ -212,6 +212,7 @@ am__libspral_a_SOURCES_DIST = src/blas_iface.f90 src/core_analyse.f90 \
 	src/ssids/cpu/kernels/ldlt_nopiv.cxx \
 	src/ssids/cpu/kernels/ldlt_nopiv.hxx \
 	src/ssids/cpu/kernels/SimdVec.hxx \
+	src/ssids/cpu/kernels/wrappers.cxx \
 	src/ssids/cpu/kernels/wrappers.hxx interfaces/C/ssids.f90 \
 	src/ssmfe/ssmfe.f90 src/ssmfe/core.f90 src/ssmfe/expert.f90 \
 	interfaces/C/ssmfe.f90 interfaces/C/ssmfe_core.f90 \
@@ -243,6 +244,7 @@ am_libspral_a_OBJECTS = src/blas_iface.$(OBJEXT) \
 	src/ssids/cpu/kernels/cholesky.$(OBJEXT) \
 	src/ssids/cpu/kernels/CpuLog.$(OBJEXT) \
 	src/ssids/cpu/kernels/ldlt_nopiv.$(OBJEXT) \
+	src/ssids/cpu/kernels/wrappers.$(OBJEXT) \
 	interfaces/C/ssids.$(OBJEXT) src/ssmfe/ssmfe.$(OBJEXT) \
 	src/ssmfe/core.$(OBJEXT) src/ssmfe/expert.$(OBJEXT) \
 	interfaces/C/ssmfe.$(OBJEXT) interfaces/C/ssmfe_core.$(OBJEXT) \
@@ -1085,6 +1087,7 @@ libspral_a_SOURCES = src/blas_iface.f90 src/core_analyse.f90 \
 	src/ssids/cpu/kernels/ldlt_nopiv.cxx \
 	src/ssids/cpu/kernels/ldlt_nopiv.hxx \
 	src/ssids/cpu/kernels/SimdVec.hxx \
+	src/ssids/cpu/kernels/wrappers.cxx \
 	src/ssids/cpu/kernels/wrappers.hxx interfaces/C/ssids.f90 \
 	src/ssmfe/ssmfe.f90 src/ssmfe/core.f90 src/ssmfe/expert.f90 \
 	interfaces/C/ssmfe.f90 interfaces/C/ssmfe_core.f90 \
@@ -1362,6 +1365,9 @@ src/ssids/cpu/kernels/CpuLog.$(OBJEXT):  \
 	src/ssids/cpu/kernels/$(am__dirstamp) \
 	src/ssids/cpu/kernels/$(DEPDIR)/$(am__dirstamp)
 src/ssids/cpu/kernels/ldlt_nopiv.$(OBJEXT):  \
+	src/ssids/cpu/kernels/$(am__dirstamp) \
+	src/ssids/cpu/kernels/$(DEPDIR)/$(am__dirstamp)
+src/ssids/cpu/kernels/wrappers.$(OBJEXT):  \
 	src/ssids/cpu/kernels/$(am__dirstamp) \
 	src/ssids/cpu/kernels/$(DEPDIR)/$(am__dirstamp)
 interfaces/C/ssids.$(OBJEXT): interfaces/C/$(am__dirstamp) \
@@ -1805,6 +1811,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/kernels/$(DEPDIR)/CpuLog.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/kernels/$(DEPDIR)/cholesky.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/kernels/$(DEPDIR)/ldlt_nopiv.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/kernels/$(DEPDIR)/wrappers.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@tests/ssids/$(DEPDIR)/kernels.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@tests/ssmfe/$(DEPDIR)/ssmfe_ciface.Po@am__quote@
 

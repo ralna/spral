@@ -1,8 +1,11 @@
+#include "ssids/cpu/kernels/cholesky.hxx"
 #include "ssids/cpu/kernels/ldlt_nopiv.hxx"
 #include "ssids/cpu/kernels/wrappers.hxx"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdlib>
+#include <cstdio>
 #include <cstring>
 #include <limits>
 
@@ -39,6 +42,122 @@ void print_mat(char const* format, int n, double const* a, int lda) {
          printf(format, a[j*lda+i]);
       printf("\n");
    }
+}
+
+/** Calculate scaled backward error ||Ax-b|| / ( ||A|| ||x|| + ||b|| ).
+ * All norms are infinity norms. */
+double backward_error(int n, double const* a, int lda, double const* rhs, double const* soln) {
+   /* Calculate residual vector and anorm*/
+   double *resid = new double[n];
+   double *rowsum = new double[n];
+   memcpy(resid, rhs, n*sizeof(double));
+   memset(rowsum, 0, n*sizeof(double));
+   for(int j=0; j<n; ++j) {
+      resid[j] -= a[j*lda+j] * soln[j];
+      rowsum[j] += fabs(a[j*lda+j]);
+      for(int i=j+1; i<n; ++i) {
+         resid[j] -= a[j*lda+i] * soln[i];
+         resid[i] -= a[j*lda+i] * soln[j];
+         rowsum[j] += fabs(a[j*lda+i]);
+         rowsum[i] += fabs(a[j*lda+i]);
+      }
+   }
+   double anorm = 0.0;
+   for(int i=0; i<n; ++i)
+      anorm = std::max(anorm, rowsum[i]);
+
+   /* Check scaled backwards error */
+   double rhsnorm=0.0, residnorm=0.0, solnnorm=0.0;
+   for(int i=0; i<n; ++i) {
+      rhsnorm = std::max(rhsnorm, fabs(rhs[i]));
+      residnorm = std::max(residnorm, fabs(resid[i]));
+      solnnorm = std::max(solnnorm, fabs(soln[i]));
+   }
+
+   /* Cleanup */
+   delete[] resid;
+   delete[] rowsum;
+
+   /* Return result */
+   //printf("%e / %e %e %e\n", residnorm, anorm, solnnorm, rhsnorm);
+   return residnorm / (anorm*solnnorm + rhsnorm);
+}
+
+/** Calculates forward error ||soln-x||_inf assuming x=1.0 */
+double forward_error(int n, double const* soln) {
+   /* Check scaled backwards error */
+   double fwderr=0.0;
+   for(int i=0; i<n; ++i) {
+      fwderr = std::max(fwderr, fabs(soln[i] - 1.0));
+   }
+   return fwderr;
+}
+
+int test_cholesky(int m, int n, int blksz, bool debug=false) {
+   /* Generate random dense posdef matrix of size m */
+   int lda = m;
+   double *a = new double[m*lda];
+   gen_posdef(m, a, lda);
+   /* Take a copy */
+   double *l = new double[m*lda];
+   memcpy(l, a, m*lda*sizeof(double));
+   
+   /* Factor first m x n part with our code */
+   if(debug) { printf("PRE:\n"); print_mat(" %e", m, l, lda); }
+   int info;
+   #pragma omp parallel default(shared)
+   {
+      #pragma omp single
+      {
+         cholesky_factor(m, n, l, lda, blksz, &info);
+      }
+   } /* implicit task wait on exit from parallel region */
+   if(debug) { printf("POST:\n"); print_mat(" %e", m, l, lda); }
+   if(m>n) {
+      /* Schur complement update remainder block */
+      host_gemm<double>(OP_N, OP_T, m-n, m-n, n, -1.0, &l[n], lda, &l[n], m, 1.0, &l[n*lda+n], lda);
+      if(debug) { printf("post schur:\n"); print_mat(" %e", m, l, lda); }
+      /* Factor remaining part using LAPACK Cholesky factorization */
+      lapack_potrf<double>(FILL_MODE_LWR, m-n, &l[n*lda+n], lda);
+      if(debug) { printf("post potrf:\n"); print_mat(" %e", m, l, lda); }
+   }
+
+   /* Generate a rhs corresponding to x=1.0 */
+   double *rhs = new double[m];
+   memset(rhs, 0, m*sizeof(double));
+   for(int j=0; j<m; ++j) {
+      rhs[j] += a[j*lda+j] * 1.0;
+      for(int i=j+1; i<m; ++i) {
+         rhs[j] += a[j*lda+i] * 1.0;
+         rhs[i] += a[j*lda+i] * 1.0;
+      }
+   }
+
+   /* Perform a solve */
+   double *soln = new double[m];
+   memcpy(soln, rhs, m*sizeof(double));
+   if(debug) { printf("rhs ="); print_vec(" %e", m, soln); }
+   cholesky_solve_fwd(m, n, l, lda, soln);
+   if(debug) { printf("post fwd ="); print_vec(" %e", m, soln); }
+   host_trsv<double>(FILL_MODE_LWR, OP_N, DIAG_NON_UNIT, m-n, &l[n*lda+n], lda, &soln[n], 1);
+   host_trsv<double>(FILL_MODE_LWR, OP_T, DIAG_NON_UNIT, m-n, &l[n*lda+n], lda, &soln[n], 1);
+   cholesky_solve_bwd(m, n, l, lda, soln);
+   if(debug) { printf("post bwd ="); print_vec(" %e", m, soln); }
+
+   double fwderr = forward_error(m, soln);
+   double bwderr = backward_error(m, a, lda, rhs, soln);
+
+   if(debug) printf("fwderr = %e\nbwderr = %e\n", fwderr, bwderr);
+
+   /* Cleanup memory */
+   delete[] a;
+   delete[] l;
+   delete[] rhs;
+   delete[] soln;
+
+   if(bwderr >= 1e-14 || isnan(bwderr)) return -1; // Failed accuracy test
+
+   return 0; // Test passed
 }
 
 int test_ldlt(int m, int n, bool debug=false) {
@@ -113,35 +232,8 @@ int test_ldlt(int m, int n, bool debug=false) {
    ldlt_nopiv_solve_bwd(m, n, l, lda, soln);
    if(debug) { printf("post bwd ="); print_vec(" %e", m, soln); }
 
-   /* Calculate residual vector and anorm*/
-   double *resid = new double[m];
-   double *rowsum = new double[m];
-   memcpy(resid, rhs, m*sizeof(double));
-   memset(rowsum, 0, m*sizeof(double));
-   for(int j=0; j<m; ++j) {
-      resid[j] -= a[j*lda+j] * soln[j];
-      rowsum[j] += fabs(a[j*lda+j]);
-      for(int i=j+1; i<m; ++i) {
-         resid[j] -= a[j*lda+i] * soln[i];
-         resid[i] -= a[j*lda+i] * soln[j];
-         rowsum[j] += fabs(a[j*lda+i]);
-         rowsum[i] += fabs(a[j*lda+i]);
-      }
-   }
-   double anorm = 0.0;
-   for(int i=0; i<m; ++i)
-      anorm = std::max(anorm, rowsum[i]);
-
-   /* Check scaled backwards error */
-   double rhsnorm=0.0, residnorm=0.0, solnnorm=0.0, fwderr=0.0;
-   for(int i=0; i<m; ++i) {
-      rhsnorm = std::max(rhsnorm, fabs(rhs[i]));
-      residnorm = std::max(residnorm, fabs(resid[i]));
-      solnnorm = std::max(solnnorm, fabs(soln[i]));
-      fwderr = std::max(fwderr, fabs(soln[i] - 1.0));
-   }
-   //printf("%e / %e %e %e\n", residnorm, anorm, solnnorm, rhsnorm);
-   double bwderr = residnorm / (anorm*solnnorm + rhsnorm);
+   double fwderr = forward_error(m, soln);
+   double bwderr = backward_error(m, a, lda, rhs, soln);
 
    if(debug) printf("fwderr = %e\nbwderr = %e\n", fwderr, bwderr);
 
@@ -151,8 +243,6 @@ int test_ldlt(int m, int n, bool debug=false) {
    delete[] work;
    delete[] rhs;
    delete[] soln;
-   delete[] resid;
-   delete[] rowsum;
 
    if(bwderr >= 1e-14 || isnan(bwderr)) return -1; // Failed accuracy test
 
@@ -175,7 +265,12 @@ int test_ldlt(int m, int n, bool debug=false) {
 int main(void) {
    int nerr = 0;
 
-   /* LDL^T no pivoting tests */
+   /* Cholesky tests (m, n, blksz) */
+   TEST(test_cholesky(1, 1, 1));
+   TEST(test_cholesky(2, 2, 2));
+   TEST(test_cholesky(2, 2, 1));
+
+   /* LDL^T no pivoting tests (m, n) */
    TEST(test_ldlt(1, 1));
    TEST(test_ldlt(2, 2));
    TEST(test_ldlt(3, 3));
