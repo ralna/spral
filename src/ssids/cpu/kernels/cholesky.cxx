@@ -60,7 +60,7 @@ void cholesky_factor(int m, int n, double* a, int lda, int blksz, int *info) {
          }
       }
       /* Column Solve Tasks */
-      for(int i=j+blksz; i<blksz; i+=blksz) {
+      for(int i=j+blksz; i<m; i+=blksz) {
          int blkm = std::min(blksz, m-i);
          #pragma omp task default(none) \
             firstprivate(i, j, blkn, blkm) \
@@ -69,7 +69,7 @@ void cholesky_factor(int m, int n, double* a, int lda, int blksz, int *info) {
             depend(inout: a[j*lda + i:1])
          if(*info==-1) {
             host_trsm(SIDE_RIGHT, FILL_MODE_LWR, OP_T, DIAG_NON_UNIT,
-                  blkm-blkn, blkn, 1.0, &a[j*(lda+1)], lda, &a[j*lda+i], lda);
+                  blkm, blkn, 1.0, &a[j*(lda+1)], lda, &a[j*lda+i], lda);
          }
       }
       /* Schur Update Tasks */
