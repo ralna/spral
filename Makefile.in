@@ -206,7 +206,6 @@ am__libspral_a_SOURCES_DIST = src/blas_iface.f90 src/core_analyse.f90 \
 	src/ssids/cpu/kernels/cholesky.hxx \
 	src/ssids/cpu/kernels/CpuBlockLDLT.hxx \
 	src/ssids/cpu/kernels/CpuLDLT.hxx \
-	src/ssids/cpu/kernels/CpuLLT.hxx \
 	src/ssids/cpu/kernels/CpuLog.cxx \
 	src/ssids/cpu/kernels/CpuLog.hxx \
 	src/ssids/cpu/kernels/ldlt_nopiv.cxx \
@@ -1081,7 +1080,6 @@ libspral_a_SOURCES = src/blas_iface.f90 src/core_analyse.f90 \
 	src/ssids/cpu/kernels/cholesky.hxx \
 	src/ssids/cpu/kernels/CpuBlockLDLT.hxx \
 	src/ssids/cpu/kernels/CpuLDLT.hxx \
-	src/ssids/cpu/kernels/CpuLLT.hxx \
 	src/ssids/cpu/kernels/CpuLog.cxx \
 	src/ssids/cpu/kernels/CpuLog.hxx \
 	src/ssids/cpu/kernels/ldlt_nopiv.cxx \

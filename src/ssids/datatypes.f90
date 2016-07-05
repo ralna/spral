@@ -237,6 +237,14 @@ module spral_ssids_datatypes
       type(auction_options) :: auction ! Auction algorithm parameters
       real :: min_loadbalance = 0.8 ! Minimum load balance required when
          ! finding level set used for multiple streams
+
+      !
+      ! New and undocumented - FIXME decide whether to document before release
+      !
+      integer :: cpu_small_subtree_threshold = 10000 ! Flops below which we
+         ! treat a subtree as small and use the single core kernel
+      integer :: cpu_task_block_size = 256 ! block size to use for task
+         ! generation on larger nodes
    end type ssids_options
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

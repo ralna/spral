@@ -26,8 +26,8 @@
 /* SPRAL headers */
 #include "factor_iface.h"
 #include "AlignedAllocator.hxx"
-#include "kernels/CpuLLT.cxx"
 #include "kernels/CpuLDLT.cxx"
+#include "kernels/cholesky.hxx"
 
 /////////////////////////////////////////////////////////////////////////////
 // start of namespace spral::ssids::cpu
@@ -197,6 +197,8 @@ struct cpu_factor_options {
    double small;
    double u;
    int print_level;
+   int cpu_small_subtree_threshold;
+   int cpu_task_block_size;
 };
 
 struct cpu_factor_stats {
@@ -421,11 +423,14 @@ void factor_node_posdef(
    T *lcol = node->lcol;
 
    /* Perform factorization */
-   typedef CpuLLT<T, CPU_BEST_ARCH, BLOCK_SIZE> CpuLLTSpec;
-   //typedef CpuLLT<T, 4, true> CpuLLTSpecDebug; //FIXME: remove
-   int flag = CpuLLTSpec().factor(m, n, lcol, m);
-   node->nelim = (flag) ? flag : n;
-   if(flag) throw NotPosDefError(flag);
+   int flag;
+   #pragma omp parallel default(shared)
+   {
+      #pragma omp single
+      cholesky_factor(m, n, lcol, m, options->cpu_task_block_size, &flag);
+   } /* NB: implicit taskwait at end of parallel region */
+   node->nelim = (flag!=-1) ? flag+1 : n;
+   if(flag!=-1) throw NotPosDefError(flag);
 
    /* Record information */
    node->ndelay_out = 0;

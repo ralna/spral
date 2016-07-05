@@ -41,6 +41,8 @@ module spral_ssids_cpu_factor_iface
       real(C_DOUBLE) :: small
       real(C_DOUBLE) :: u
       integer(C_INT) :: print_level
+      integer(C_INT) :: cpu_task_block_size
+      integer(C_INT) :: cpu_small_subtree_threshold
    end type cpu_factor_options
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -135,6 +137,8 @@ subroutine setup_cpu_data(akeep, cnodes, foptions, coptions)
    coptions%small       = foptions%small
    coptions%u           = foptions%u
    coptions%print_level = foptions%print_level
+   coptions%cpu_small_subtree_threshold = foptions%cpu_small_subtree_threshold
+   coptions%cpu_task_block_size         = foptions%cpu_task_block_size
 end subroutine setup_cpu_data
 
 subroutine extract_cpu_data(nnodes, cnodes, fnodes, cstats, finform)
