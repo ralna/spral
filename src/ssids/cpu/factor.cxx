@@ -1,4 +1,4 @@
-/* Copyright 2014 The Science and Technology Facilities Council (STFC)
+/* Copyright 2014-6 The Science and Technology Facilities Council (STFC)
  *
  * Authors: Jonathan Hogg (STFC)
  *
