@@ -618,7 +618,7 @@ private:
                CpuLog::LogTask *t;
                typedef void (BlockData::*BlockDataApplyTPtr)(int, int, const T*, int, const T*, const T);
                BlockDataApplyTPtr bdatp = &BlockData::apply_pivot_trans;
-               if(LOG) t = &log.tstart(1, blk, jblk, 0, (uint64_t) ((void *) bdatp), (uint64_t) &blkdata[jblk*mblk+blk]);
+               if(LOG) t = &log.tstart(1, blk, jblk, 0, (uint64_t) ((void *) &bdatp), (uint64_t) &blkdata[jblk*mblk+blk]);
                BlockData &dblk = blkdata[blk*mblk+blk];
                BlockData &cblk = blkdata[jblk*mblk+blk];
                const int *lperm = &global_lperm[blk*BLOCK_SIZE];
