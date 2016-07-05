@@ -19,8 +19,6 @@
 #include <queue>
 #include <sstream>
 #include <stdexcept>
-/* External library headers */
-#include <papi.h> // FIXME: remove or make dependency in autoconf
 /* SPRAL headers */
 #include "factor_iface.h"
 #include "AlignedAllocator.hxx"
@@ -381,7 +379,7 @@ void factor_node_indef(
 
    /* Perform factorization */
    typedef CpuLDLT<T, BLOCK_SIZE> CpuLDLTSpec;
-   typedef CpuLDLT<T, BLOCK_SIZE, 5, true> CpuLDLTSpecDebug; // FIXME: debug remove
+   //typedef CpuLDLT<T, BLOCK_SIZE, 5, true> CpuLDLTSpecDebug; // FIXME: debug remove
    struct CpuLDLTSpec::stat_type bubstats; // FIXME: not needed?
    node->nelim = CpuLDLTSpec(options->u, options->small).factor(m, n, perm, lcol, m, d, &bubstats);
    for(int i=0; i<5; i++) {
@@ -562,104 +560,6 @@ void calculate_update(
    }*/
 }
 
-/** Class representing a unit of work (i.e. a (potentially splitable) task) */
-class WorkUnit {
-public:
-   /** Returns estimated execution time in ms. A value of -1 indicates no idea */
-   virtual long estTime(void)=0;
-   /** Signal work unit that it should try and split itself to produce more work */
-   virtual void split(void)=0;
-   /** Start performing work */
-   virtual void exec(void)=0;
-};
-
-template <bool posdef,
-          typename T,
-          size_t BLOCK_SIZE,
-          int PAGE_SIZE,
-          bool timing
-          >
-class NodeWork : public WorkUnit {
-public: // FIXME: do we care enough to make this private?
-   /** Node index */
-   int index;
-   /** Pointer to Fortran data structure */
-   struct cpu_node_data<T> *data;
-   /** Pointer to options structure */
-   const struct cpu_factor_options *const options;
-   /** Pointer to Fortran allocator */
-   void *const alloc;
-   /** Pointer to values of A */
-   const T *const aval;
-   /** Pointer to scaling arrays */
-   const T *const scaling;
-
-   /* Pointers for executiong unit specific resources */
-   int *map;
-   StackAllocator<PAGE_SIZE> *stalloc_odd;
-   StackAllocator<PAGE_SIZE> *stalloc_even;
-   Workspace<T> *work;
-   struct cpu_factor_stats *stats;
-
-   /* Timing results */
-   long_long atime, ftime, ctime;
-public:
-   NodeWork(int index, struct cpu_node_data<T> *data,
-         const struct cpu_factor_options *options, void *alloc,
-         const T *aval, const T* scaling)
-      : index(index), data(data), options(options), alloc(alloc), aval(aval),
-        scaling(scaling)
-      {}
-   void check(int m, int n, int ndelay) {
-      int nrow = data->nrow_expected + data->ndelay_in;
-      int ncol = data->ncol_expected + data->ndelay_in;
-      int del = data->ndelay_out;
-      //if(nrow != m || ncol != n || del != ndelay)
-      //if(nrow == m && ncol == n && del != ndelay)
-      if(ndelay > 1.5*ndelay)
-         printf("Node %d differs from ma97\n   SSIDS %dx%d delay %d\n   ma97 %dx%d delay %d\n", index, nrow, ncol, del, m, n, ndelay);
-   }
-   void setResource(
-         int *const map,
-         StackAllocator<PAGE_SIZE> *stalloc_odd,
-         StackAllocator<PAGE_SIZE> *stalloc_even,
-         Workspace<T> *work,
-         struct cpu_factor_stats *stats
-         ) {
-      this->map = map;
-      this->stalloc_odd = stalloc_odd;
-      this->stalloc_even = stalloc_even;
-      this->work = work;
-      this->stats = stats;
-   }
-   long estTime(void) { return -1; }
-   void split(void) { /* Noop */ }
-   void exec(void) { 
-      // Assembly
-      if(timing) atime = PAPI_get_real_usec();
-      assemble_node
-         <T, PAGE_SIZE>
-         (posdef, index, data, alloc, stalloc_odd, stalloc_even, map, aval,
-          scaling);
-      if(timing) atime = PAPI_get_real_usec() - atime;
-      // Update stats
-      int nrow = data->nrow_expected + data->ndelay_in;
-      if(nrow > stats->maxfront) stats->maxfront = nrow;
-      // Factorization
-      if(timing) ftime = PAPI_get_real_usec();
-      factor_node
-         <posdef, T, BLOCK_SIZE>
-         (index, data, options, stats);
-      if(timing) ftime = PAPI_get_real_usec() - ftime;
-      // Form update
-      if(timing) ctime = PAPI_get_real_usec();
-      calculate_update
-         <posdef, T, PAGE_SIZE>
-         (data, stalloc_odd, stalloc_even, work);
-      if(timing) ctime = PAPI_get_real_usec() - ctime;
-   }
-};
-
 /* Simplistic multifrontal factorization */
 template <bool posdef,
           typename T,
@@ -678,8 +578,6 @@ void factor(
       struct cpu_factor_stats *const stats // Info out
       ) {
 
-   std::ifstream nodefile("ma97_nodes.dat");
-
    // Allocate workspaces
    StackAllocator<PAGE_SIZE> stalloc_odd;
    StackAllocator<PAGE_SIZE> stalloc_even;
@@ -695,29 +593,24 @@ void factor(
    for(int i=0; i<5; i++) stats->elim_at_pass[i] = 0;
    for(int i=0; i<5; i++) stats->elim_at_itr[i] = 0;
 
-   if(timing) {
-      if(PAPI_library_init(PAPI_VER_CURRENT) != PAPI_VER_CURRENT)
-         exit(1);
-   }
-
-   /* Set up work units */
-   typedef NodeWork<posdef, T, BLOCK_SIZE, PAGE_SIZE, timing> NodeWorkSpec;
-   std::vector<WorkUnit*> wUnits;
-   wUnits.reserve(nnodes);
-   for(int ni=0; ni<nnodes; ni++) {
-      wUnits.push_back(
-            new NodeWorkSpec(ni, &nodes[ni], options, alloc, aval, scaling)
-            );
-   }
-
    /* Main loop: Iterate over nodes in order */
-   for(auto itr=wUnits.begin(); itr!=wUnits.end(); itr++) {
-      NodeWorkSpec *nwu = dynamic_cast<NodeWorkSpec*> (*itr);
-      nwu->setResource(map, &stalloc_odd, &stalloc_even, &work, stats);
-      int idx, m, n, ndelay;
-      nodefile >> idx >> m >> n >> ndelay;
-      nwu->exec();
-      nwu->check(m, n, ndelay);
+   for(int ni=0; ni<nnodes; ++ni) {
+      // Assembly
+      assemble_node
+         <T, PAGE_SIZE>
+         (posdef, ni, &nodes[ni], alloc, &stalloc_odd, &stalloc_even, map, aval,
+          scaling);
+      // Update stats
+      int nrow = nodes[ni].nrow_expected + nodes[ni].ndelay_in;
+      stats->maxfront = std::max(stats->maxfront, nrow);
+      // Factorization
+      factor_node
+         <posdef, T, BLOCK_SIZE>
+         (ni, &nodes[ni], options, stats);
+      // Form update
+      calculate_update
+         <posdef, T, PAGE_SIZE>
+         (&nodes[ni], &stalloc_odd, &stalloc_even, &work);
    }
 
    // Count stats
@@ -760,89 +653,6 @@ void factor(
    /* Free memory */
    delete[] map;
 
-
-   /* Extract and display timing information */
-   if(timing) {
-      const int TRES = 250;
-      float *atime, *ftime, *ctime;
-      long ldt = (stats->maxfront-1)/TRES + 1;
-      atime = new float[ldt*ldt];
-      for(long i=0; i<ldt*ldt; i++) atime[i] = 0.0;
-      ftime = new float[ldt*ldt];
-      for(long i=0; i<ldt*ldt; i++) ftime[i] = 0.0;
-      ctime = new float[ldt*ldt];
-      for(long i=0; i<ldt*ldt; i++) ctime[i] = 0.0;
-
-      for(auto itr=wUnits.begin(); itr!=wUnits.end(); itr++) {
-         NodeWorkSpec *nwu = dynamic_cast<NodeWorkSpec*> (*itr);
-         const struct cpu_node_data<T> *data = nwu->data;
-         int nrow = data->nrow_expected + data->ndelay_in;
-         int ncol = data->ncol_expected + data->ndelay_in;
-         atime[ncol/TRES*ldt + nrow/TRES] += nwu->atime*1e-6;
-         ftime[ncol/TRES*ldt + nrow/TRES] += nwu->ftime*1e-6;
-         ctime[ncol/TRES*ldt + nrow/TRES] += nwu->ctime*1e-6;
-         if(nrow>3000)
-            printf("%dx%d fact took %e\n", nrow, ncol, nwu->ftime*1e-6);
-      }
-      // Find maximum nonzero entries
-      int maxr=0, maxc=0;
-      float atotal = 0.0;
-      for(int j=0; j<ldt; j++)
-      for(int i=0; i<ldt; i++) {
-         if(atime[j*ldt+i] > 0) {
-            if(i>=maxr) maxr=i+1;
-            if(j>=maxc) maxc=j+1;
-            atotal += atime[j*ldt+i];
-         }
-      }
-      
-      // Print times
-      printf("atime: %e\n", atotal);
-      for(int i=0; i<maxr; i++) {
-         printf("%6d:", i*TRES);
-         atotal = 0.0;
-         for(int j=0; j<maxc; j++) {
-            if(atime[j*ldt+i] > 0) printf(" %8.2e", atime[j*ldt+i]);
-            else                   printf(" %8s", "");
-            atotal += atime[j*ldt+i];
-         }
-         printf(" =%8.2e\n", atotal);
-      }
-      float ftotal = 0.0;
-      for(int j=0; j<maxc; j++)
-      for(int i=0; i<maxr; i++)
-         ftotal += ftime[j*ldt+i];
-      printf("ftime: %e\n", ftotal);
-      for(int i=0; i<maxr; i++) {
-         printf("%6d:", i*TRES);
-         ftotal = 0.0;
-         for(int j=0; j<maxc; j++) {
-            if(ftime[j*ldt+i] > 0) printf(" %8.2e", ftime[j*ldt+i]);
-            else                   printf(" %8s", "");
-            ftotal += ftime[j*ldt+i];
-         }
-         printf(" =%8.2e\n", ftotal);
-      }
-      float ctotal = 0.0;
-      for(int j=0; j<maxc; j++)
-      for(int i=0; i<maxr; i++)
-         ctotal += ctime[j*ldt+i];
-      printf("ctime: %e\n", ctotal);
-      for(int i=0; i<maxr; i++) {
-         printf("%6d:", i*TRES);
-         ctotal = 0.0;
-         for(int j=0; j<maxc; j++) {
-            if(ctime[j*ldt+i] > 0) printf(" %8.2e", ctime[j*ldt+i]);
-            else                   printf(" %8s", "");
-            ctotal += ctime[j*ldt+i];
-         }
-         printf(" =%8.2e\n", ctotal);
-      }
-
-      delete[] atime;
-      delete[] ftime;
-      delete[] ctime;
-   }
 }
 
 
