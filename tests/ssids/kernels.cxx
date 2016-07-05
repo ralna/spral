@@ -266,11 +266,24 @@ int main(void) {
    int nerr = 0;
 
    /* Cholesky tests (m, n, blksz) */
+#if 1
    TEST(test_cholesky(1, 1, 1));
    TEST(test_cholesky(2, 2, 2));
+   TEST(test_cholesky(2, 2, 4));
    TEST(test_cholesky(2, 2, 1));
+   TEST(test_cholesky(3, 3, 1));
+   TEST(test_cholesky(4, 4, 2));
+   TEST(test_cholesky(5, 5, 2));
+   TEST(test_cholesky(2, 1, 1));
+   TEST(test_cholesky(3, 2, 1));
+   TEST(test_cholesky(6, 4, 2));
+   TEST(test_cholesky(500, 234, 32));
+   TEST(test_cholesky(733, 231, 32));
+   TEST(test_cholesky(733, 231, 19));
+#endif
 
    /* LDL^T no pivoting tests (m, n) */
+#if 1
    TEST(test_ldlt(1, 1));
    TEST(test_ldlt(2, 2));
    TEST(test_ldlt(3, 3));
@@ -281,6 +294,7 @@ int main(void) {
    TEST(test_ldlt(6, 4));
    TEST(test_ldlt(500, 234));
    TEST(test_ldlt(733, 231));
+#endif
 
    return nerr;
 }

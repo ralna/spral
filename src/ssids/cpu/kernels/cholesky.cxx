@@ -78,14 +78,14 @@ void cholesky_factor(int m, int n, double* a, int lda, int blksz, int *info) {
          for(int i=k; i<m; i+=blksz) {
             #pragma omp task default(none) \
                firstprivate(i, j, k, blkn, blkk) \
-               firstprivate(n, a, lda, blksz, info) \
+               firstprivate(m, a, lda, blksz, info) \
                depend(in: a[j*lda+k:1]) \
                depend(in: a[j*lda+i:1]) \
                depend(inout: a[k*lda+i:1])
             if(*info==-1) {
-               int blkm = std::min(blksz, n-i);
-               host_gemm(OP_N, OP_T, blkm, blkk, blkn, -1.0, &a[j*lda+k], lda,
-                     &a[j*lda+i], lda, 1.0, &a[k*lda+i], lda);
+               int blkm = std::min(blksz, m-i);
+               host_gemm(OP_N, OP_T, blkm, blkk, blkn, -1.0, &a[j*lda+i], lda,
+                     &a[j*lda+k], lda, 1.0, &a[k*lda+i], lda);
             }
          }
       }
