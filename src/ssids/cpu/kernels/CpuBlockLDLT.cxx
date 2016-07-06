@@ -79,7 +79,6 @@ void swap_cols(int idx1, int idx2, int n, T *a, int lda, T *ldwork, int *perm) {
 
 template <typename T, int BLOCK_SIZE>
 void find_maxloc(const int from, const T *a, T &bestv_out, int &rloc, int &cloc) {
-
    typedef SimdVec<T> SimdVecT;
 
    /* Handle special cases:
@@ -88,7 +87,6 @@ void find_maxloc(const int from, const T *a, T &bestv_out, int &rloc, int &cloc)
     */
    if(   BLOCK_SIZE < SimdVecT::vector_length ||
          BLOCK_SIZE % (2*SimdVecT::vector_length) != 0) {
-   //if(true) {
       T bestv = -1.0;
       rloc = BLOCK_SIZE; cloc = BLOCK_SIZE;
       for(int c=from; c<BLOCK_SIZE; c++) {
@@ -131,7 +129,7 @@ void find_maxloc(const int from, const T *a, T &bestv_out, int &rloc, int &cloc)
       SimdVecT c_vec(c_d.d);
       // First iteration must be careful as we only want the lower triangle
       const int vlen = SimdVecT::vector_length;
-      if(vlen > 1) {
+      {
          intT r_d;
          r_d.i = vlen *(c / vlen);
          SimdVecT r_vec(r_d.d);
