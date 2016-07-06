@@ -15,6 +15,7 @@ module spral_ssids_cpu_iface
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
    type, bind(C) :: SymbolicNode
+      integer(C_INT) :: idx
       integer(C_INT) :: nrow
       integer(C_INT) :: ncol
       type(C_PTR) :: first_child
@@ -28,7 +29,6 @@ module spral_ssids_cpu_iface
       ! Fixed data from analyse
       type(C_PTR) :: first_child
       type(C_PTR) :: next_child
-      logical(C_BOOL) :: even
       type(C_PTR) :: symb
 
       ! Data about A
@@ -108,12 +108,14 @@ module spral_ssids_cpu_iface
          type(C_PTR), value :: subtree
       end subroutine c_destroy_cpu_subtree
 
-      type(C_PTR) function c_create_symbolic_subtree(nnodes, sptr, rptr, rlist)&
+      type(C_PTR) function c_create_symbolic_subtree(nnodes, sptr, sparent, &
+            rptr, rlist)&
             bind(C, name="spral_ssids_cpu_create_symbolic_subtree")
          use, intrinsic :: iso_c_binding
          implicit none
          integer(C_INT), value :: nnodes
          integer(C_INT), dimension(nnodes+1), intent(in) :: sptr
+         integer(C_INT), dimension(nnodes+1), intent(in) :: sparent
          integer(C_LONG), dimension(nnodes+1), intent(in) :: rptr
          integer(C_INT), dimension(*), intent(in) :: rlist
       end function c_create_symbolic_subtree
@@ -184,14 +186,15 @@ end subroutine cpu_subtree_factor
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 type(cpu_symbolic_subtree) function create_cpu_symbolic_subtree(nnodes, sptr, &
-      rptr, rlist)
+      sparent, rptr, rlist)
    integer(C_INT), intent(in) :: nnodes
    integer(C_INT), dimension(nnodes+1), intent(in) :: sptr
+   integer(C_INT), dimension(nnodes+1), intent(in) :: sparent
    integer(C_LONG), dimension(nnodes+1), intent(in) :: rptr
    integer(C_INT), dimension(*), intent(in) :: rlist
 
    create_cpu_symbolic_subtree%subtree = &
-      c_create_symbolic_subtree(nnodes, sptr, rptr, rlist)
+      c_create_symbolic_subtree(nnodes, sptr, sparent, rptr, rlist)
 end function create_cpu_symbolic_subtree
 
 subroutine cpu_symbolic_subtree_final(this)
@@ -216,8 +219,6 @@ subroutine setup_cpu_data(akeep, cnodes, foptions, coptions)
    ! Basic data and initialize linked lists
    do node = 1, akeep%nnodes
       ! Data about factors
-      cnodes(node)%first_child = C_NULL_PTR
-      cnodes(node)%next_child = C_NULL_PTR
       cnodes(node)%symb = C_NULL_PTR
 
       ! Print out debug info
@@ -230,22 +231,6 @@ subroutine setup_cpu_data(akeep, cnodes, foptions, coptions)
       ! Data about A
       cnodes(node)%num_a = akeep%nptr(node+1) - akeep%nptr(node)
       cnodes(node)%amap = C_LOC(akeep%nlist(1,akeep%nptr(node)))
-   end do
-   cnodes(akeep%nnodes+1)%first_child = C_NULL_PTR
-   ! Build linked lists of children
-   do node = 1, akeep%nnodes
-      parent = akeep%sparent(node)
-      cnodes(node)%next_child = cnodes(parent)%first_child
-      cnodes(parent)%first_child = C_LOC( cnodes(node) )
-   end do
-   ! Setup odd/even distance from root
-   do node = akeep%nnodes, 1, -1
-      parent = akeep%sparent(node)
-      if(parent > akeep%nnodes) then
-         cnodes(node)%even = .true.
-      else
-         cnodes(node)%even = .not.cnodes(parent)%even
-      endif
    end do
 
    !

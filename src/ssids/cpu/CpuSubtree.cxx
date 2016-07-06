@@ -44,14 +44,3 @@ void spral_ssids_destroy_cpu_subtree_dbl(bool posdef, void* subtree_ptr) {
       delete subtree;
    }
 }
-
-extern "C"
-void* spral_ssids_cpu_create_symbolic_subtree(int nnodes, int const* sptr, long const* rptr, int const* rlist) {
-   return (void*) new SymbolicSubtree(nnodes, sptr, rptr, rlist);
-}
-
-extern "C"
-void spral_ssids_cpu_destroy_symbolic_subtree(void* target) {
-   auto *subtree = static_cast<SymbolicSubtree*>(target);
-   delete subtree;
-}

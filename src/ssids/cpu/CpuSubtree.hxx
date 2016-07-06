@@ -24,9 +24,13 @@ public:
    CpuSubtree(SymbolicSubtree const& symbolic_subtree, int nnodes, struct cpu_node_data<T>* nodes)
    : nnodes_(nnodes), nodes_(nodes), symb_(symbolic_subtree)
    {
-      /* Associate symbolic nodes to numeric ones */
-      for(int ni=0; ni<nnodes_; ++ni) {
+      /* Associate symbolic nodes to numeric ones; copy tree structure */
+      for(int ni=0; ni<nnodes_+1; ++ni) {
          nodes_[ni].symb = &symbolic_subtree[ni];
+         auto* fc = symbolic_subtree[ni].first_child;
+         nodes_[ni].first_child = fc ? &nodes_[fc->idx] : nullptr;
+         auto* nc = symbolic_subtree[ni].next_child;
+         nodes_[ni].next_child = nc ? &nodes_[nc->idx] :  nullptr;
       }
    }
    void factor(T const* aval, T const* scaling, void *const alloc, StackAllocator &stalloc_odd, StackAllocator &stalloc_even, Workspace<T> &work, int* map, struct cpu_factor_options const* options, struct cpu_factor_stats* stats) {

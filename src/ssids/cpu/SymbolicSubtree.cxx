@@ -13,8 +13,8 @@
 using namespace spral::ssids::cpu;
 
 extern "C"
-void* spral_ssids_cpu_create_symbolic_subtree(int nnodes, int const* sptr, long const* rptr, int const* rlist) {
-   return (void*) new SymbolicSubtree(nnodes, sptr, rptr, rlist);
+void* spral_ssids_cpu_create_symbolic_subtree(int nnodes, int const* sptr, int const* sparent, long const* rptr, int const* rlist) {
+   return (void*) new SymbolicSubtree(nnodes, sptr, sparent, rptr, rlist);
 }
 
 extern "C"

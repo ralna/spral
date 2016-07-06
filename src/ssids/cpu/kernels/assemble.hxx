@@ -48,7 +48,7 @@ void assemble_node(
 
    /* Get space for contribution block + zero it */
    long contrib_dimn = snode.nrow - snode.ncol;
-   if(node->even) {
+   if(snode.even) {
       node->contrib = (contrib_dimn > 0) ? (T *) stalloc_even->alloc(contrib_dimn*contrib_dimn*sizeof(T)) : NULL;
    } else {
       node->contrib = (contrib_dimn > 0) ? (T *) stalloc_odd->alloc(contrib_dimn*contrib_dimn*sizeof(T)) : NULL;
@@ -150,7 +150,7 @@ void assemble_node(
                }
             }
             /* Free memory from child contribution block */
-            if(child->even) {
+            if(csnode.even) {
                stalloc_even->free(child->contrib, cm*cm*sizeof(T));
             } else {
                stalloc_odd->free(child->contrib, cm*cm*sizeof(T));

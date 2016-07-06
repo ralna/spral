@@ -162,7 +162,7 @@ void calculate_update(
       // free contrib memory and mark as no contribution for parent's assembly
       // FIXME: actually loop over children and check one exists with contriub
       //        rather than current approach of just looking for children.
-      if(node->even) {
+      if(snode.even) {
          stalloc_even->free(node->contrib, m*m*sizeof(T));
       } else {
          stalloc_odd->free(node->contrib, m*m*sizeof(T));

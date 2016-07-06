@@ -73,6 +73,9 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
 
    integer :: st
 
+   symbolic_subtree = create_cpu_symbolic_subtree(akeep%nnodes, akeep%sptr, &
+      akeep%sparent, akeep%rptr, akeep%rlist)
+
    ! Allocate cnodes and setup for main call
    allocate(cnodes(akeep%nnodes+1), stat=st)
    if(st.ne.0) then
@@ -81,9 +84,6 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
       return
    endif
    call setup_cpu_data(akeep, cnodes, options, coptions)
-
-   symbolic_subtree = create_cpu_symbolic_subtree(akeep%nnodes, akeep%sptr, &
-      akeep%rptr, akeep%rlist)
 
    ! Perform factorization in C++ code
    fposdef = fkeep%pos_def

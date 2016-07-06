@@ -9,10 +9,8 @@ class SymbolicNode;
 template <typename T>
 struct cpu_node_data {
    /* Fixed data from analyse */
-   struct cpu_node_data<T> *const first_child; // Pointer to our first child
-   struct cpu_node_data<T> *const next_child; // Pointer to parent's next child
-   const bool even; // Indicates which stack we're using (odd or even distance
-                    // from root)
+   struct cpu_node_data<T>* first_child; // Pointer to our first child
+   struct cpu_node_data<T>* next_child; // Pointer to parent's next child
    SymbolicNode const* symb; // Symbolic node associated with this one
 
    /* Data about A:
