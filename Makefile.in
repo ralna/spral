@@ -122,6 +122,24 @@ TESTS = lsmr_test$(EXEEXT) scaling_test$(EXEEXT) random_test$(EXEEXT) \
 	ssids_kernel_test$(EXEEXT) ssmfe_test$(EXEEXT) \
 	ssmfe_ciface_test$(EXEEXT)
 @HAVE_NVCC_TRUE@am__append_2 = src/ssids/type_select_gpu.f90 \
+@HAVE_NVCC_TRUE@	src/ssids/gpu/datatypes.f90 \
+@HAVE_NVCC_TRUE@	src/ssids/gpu/alloc.f90 \
+@HAVE_NVCC_TRUE@	src/ssids/gpu/akeep.f90 \
+@HAVE_NVCC_TRUE@	src/ssids/gpu/dense_factor.f90 \
+@HAVE_NVCC_TRUE@	src/ssids/gpu/factor.f90 \
+@HAVE_NVCC_TRUE@	src/ssids/gpu/fkeep.f90 \
+@HAVE_NVCC_TRUE@	src/ssids/gpu/inform.f90 \
+@HAVE_NVCC_TRUE@	src/ssids/gpu/interfaces.f90 \
+@HAVE_NVCC_TRUE@	src/ssids/gpu/solve.f90 \
+@HAVE_NVCC_TRUE@	src/ssids/gpu/kernels/assemble.cu \
+@HAVE_NVCC_TRUE@	src/ssids/gpu/kernels/datatypes.h \
+@HAVE_NVCC_TRUE@	src/ssids/gpu/kernels/dense_factor.cu \
+@HAVE_NVCC_TRUE@	src/ssids/gpu/kernels/dtrsv.h \
+@HAVE_NVCC_TRUE@	src/ssids/gpu/kernels/node_solve.cu \
+@HAVE_NVCC_TRUE@	src/ssids/gpu/kernels/node_solve.h \
+@HAVE_NVCC_TRUE@	src/ssids/gpu/kernels/reorder.cu \
+@HAVE_NVCC_TRUE@	src/ssids/gpu/kernels/solve.cu \
+@HAVE_NVCC_TRUE@	src/ssids/gpu/kernels/syrk.cu else \
 @HAVE_NVCC_TRUE@	src/ssids/gpu/inform_nogpu.f90 \
 @HAVE_NVCC_TRUE@	src/ssids/type_select_nogpu.f90
 bin_PROGRAMS = spral_ssids$(EXEEXT)
@@ -195,8 +213,21 @@ am__libspral_a_SOURCES_DIST = src/blas_iface.f90 src/core_analyse.f90 \
 	src/scaling.f90 interfaces/C/scaling.f90 src/timer.f90 \
 	src/random.f90 interfaces/C/random.f90 src/random_matrix.f90 \
 	interfaces/C/random_matrix.f90 src/ssids/type_select_gpu.f90 \
-	src/ssids/gpu/inform_nogpu.f90 src/ssids/type_select_nogpu.f90 \
-	src/ssids/alloc.f90 src/ssids/akeep.f90 src/ssids/analyse.f90 \
+	src/ssids/gpu/datatypes.f90 src/ssids/gpu/alloc.f90 \
+	src/ssids/gpu/akeep.f90 src/ssids/gpu/dense_factor.f90 \
+	src/ssids/gpu/factor.f90 src/ssids/gpu/fkeep.f90 \
+	src/ssids/gpu/inform.f90 src/ssids/gpu/interfaces.f90 \
+	src/ssids/gpu/solve.f90 src/ssids/gpu/kernels/assemble.cu \
+	src/ssids/gpu/kernels/datatypes.h \
+	src/ssids/gpu/kernels/dense_factor.cu \
+	src/ssids/gpu/kernels/dtrsv.h \
+	src/ssids/gpu/kernels/node_solve.cu \
+	src/ssids/gpu/kernels/node_solve.h \
+	src/ssids/gpu/kernels/reorder.cu \
+	src/ssids/gpu/kernels/solve.cu src/ssids/gpu/kernels/syrk.cu \
+	else src/ssids/gpu/inform_nogpu.f90 \
+	src/ssids/type_select_nogpu.f90 src/ssids/alloc.f90 \
+	src/ssids/akeep.f90 src/ssids/analyse.f90 \
 	src/ssids/datatypes.f90 src/ssids/fkeep.f90 \
 	src/ssids/inform.f90 src/ssids/ssids.f90 \
 	src/ssids/cpu/AlignedAllocator.hxx src/ssids/cpu/cpu_iface.f90 \
@@ -228,6 +259,21 @@ am__dirstamp = $(am__leading_dot)dirstamp
 @HAVE_NVCC_TRUE@am__objects_1 = src/cuda/api_wrappers.$(OBJEXT) \
 @HAVE_NVCC_TRUE@	src/cuda/cuda.$(OBJEXT)
 @HAVE_NVCC_TRUE@am__objects_2 = src/ssids/type_select_gpu.$(OBJEXT) \
+@HAVE_NVCC_TRUE@	src/ssids/gpu/datatypes.$(OBJEXT) \
+@HAVE_NVCC_TRUE@	src/ssids/gpu/alloc.$(OBJEXT) \
+@HAVE_NVCC_TRUE@	src/ssids/gpu/akeep.$(OBJEXT) \
+@HAVE_NVCC_TRUE@	src/ssids/gpu/dense_factor.$(OBJEXT) \
+@HAVE_NVCC_TRUE@	src/ssids/gpu/factor.$(OBJEXT) \
+@HAVE_NVCC_TRUE@	src/ssids/gpu/fkeep.$(OBJEXT) \
+@HAVE_NVCC_TRUE@	src/ssids/gpu/inform.$(OBJEXT) \
+@HAVE_NVCC_TRUE@	src/ssids/gpu/interfaces.$(OBJEXT) \
+@HAVE_NVCC_TRUE@	src/ssids/gpu/solve.$(OBJEXT) \
+@HAVE_NVCC_TRUE@	src/ssids/gpu/kernels/assemble.$(OBJEXT) \
+@HAVE_NVCC_TRUE@	src/ssids/gpu/kernels/dense_factor.$(OBJEXT) \
+@HAVE_NVCC_TRUE@	src/ssids/gpu/kernels/node_solve.$(OBJEXT) \
+@HAVE_NVCC_TRUE@	src/ssids/gpu/kernels/reorder.$(OBJEXT) \
+@HAVE_NVCC_TRUE@	src/ssids/gpu/kernels/solve.$(OBJEXT) \
+@HAVE_NVCC_TRUE@	src/ssids/gpu/kernels/syrk.$(OBJEXT) \
 @HAVE_NVCC_TRUE@	src/ssids/gpu/inform_nogpu.$(OBJEXT) \
 @HAVE_NVCC_TRUE@	src/ssids/type_select_nogpu.$(OBJEXT)
 am_libspral_a_OBJECTS = src/blas_iface.$(OBJEXT) \
@@ -1330,6 +1376,48 @@ src/ssids/gpu/$(am__dirstamp):
 src/ssids/gpu/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) src/ssids/gpu/$(DEPDIR)
 	@: > src/ssids/gpu/$(DEPDIR)/$(am__dirstamp)
+src/ssids/gpu/datatypes.$(OBJEXT): src/ssids/gpu/$(am__dirstamp) \
+	src/ssids/gpu/$(DEPDIR)/$(am__dirstamp)
+src/ssids/gpu/alloc.$(OBJEXT): src/ssids/gpu/$(am__dirstamp) \
+	src/ssids/gpu/$(DEPDIR)/$(am__dirstamp)
+src/ssids/gpu/akeep.$(OBJEXT): src/ssids/gpu/$(am__dirstamp) \
+	src/ssids/gpu/$(DEPDIR)/$(am__dirstamp)
+src/ssids/gpu/dense_factor.$(OBJEXT): src/ssids/gpu/$(am__dirstamp) \
+	src/ssids/gpu/$(DEPDIR)/$(am__dirstamp)
+src/ssids/gpu/factor.$(OBJEXT): src/ssids/gpu/$(am__dirstamp) \
+	src/ssids/gpu/$(DEPDIR)/$(am__dirstamp)
+src/ssids/gpu/fkeep.$(OBJEXT): src/ssids/gpu/$(am__dirstamp) \
+	src/ssids/gpu/$(DEPDIR)/$(am__dirstamp)
+src/ssids/gpu/inform.$(OBJEXT): src/ssids/gpu/$(am__dirstamp) \
+	src/ssids/gpu/$(DEPDIR)/$(am__dirstamp)
+src/ssids/gpu/interfaces.$(OBJEXT): src/ssids/gpu/$(am__dirstamp) \
+	src/ssids/gpu/$(DEPDIR)/$(am__dirstamp)
+src/ssids/gpu/solve.$(OBJEXT): src/ssids/gpu/$(am__dirstamp) \
+	src/ssids/gpu/$(DEPDIR)/$(am__dirstamp)
+src/ssids/gpu/kernels/$(am__dirstamp):
+	@$(MKDIR_P) src/ssids/gpu/kernels
+	@: > src/ssids/gpu/kernels/$(am__dirstamp)
+src/ssids/gpu/kernels/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) src/ssids/gpu/kernels/$(DEPDIR)
+	@: > src/ssids/gpu/kernels/$(DEPDIR)/$(am__dirstamp)
+src/ssids/gpu/kernels/assemble.$(OBJEXT):  \
+	src/ssids/gpu/kernels/$(am__dirstamp) \
+	src/ssids/gpu/kernels/$(DEPDIR)/$(am__dirstamp)
+src/ssids/gpu/kernels/dense_factor.$(OBJEXT):  \
+	src/ssids/gpu/kernels/$(am__dirstamp) \
+	src/ssids/gpu/kernels/$(DEPDIR)/$(am__dirstamp)
+src/ssids/gpu/kernels/node_solve.$(OBJEXT):  \
+	src/ssids/gpu/kernels/$(am__dirstamp) \
+	src/ssids/gpu/kernels/$(DEPDIR)/$(am__dirstamp)
+src/ssids/gpu/kernels/reorder.$(OBJEXT):  \
+	src/ssids/gpu/kernels/$(am__dirstamp) \
+	src/ssids/gpu/kernels/$(DEPDIR)/$(am__dirstamp)
+src/ssids/gpu/kernels/solve.$(OBJEXT):  \
+	src/ssids/gpu/kernels/$(am__dirstamp) \
+	src/ssids/gpu/kernels/$(DEPDIR)/$(am__dirstamp)
+src/ssids/gpu/kernels/syrk.$(OBJEXT):  \
+	src/ssids/gpu/kernels/$(am__dirstamp) \
+	src/ssids/gpu/kernels/$(DEPDIR)/$(am__dirstamp)
 src/ssids/gpu/inform_nogpu.$(OBJEXT): src/ssids/gpu/$(am__dirstamp) \
 	src/ssids/gpu/$(DEPDIR)/$(am__dirstamp)
 src/ssids/type_select_nogpu.$(OBJEXT): src/ssids/$(am__dirstamp) \
@@ -1799,6 +1887,7 @@ mostlyclean-compile:
 	-rm -f src/ssids/cpu/*.$(OBJEXT)
 	-rm -f src/ssids/cpu/kernels/*.$(OBJEXT)
 	-rm -f src/ssids/gpu/*.$(OBJEXT)
+	-rm -f src/ssids/gpu/kernels/*.$(OBJEXT)
 	-rm -f src/ssmfe/*.$(OBJEXT)
 	-rm -f tests/*.$(OBJEXT)
 	-rm -f tests/ssids/*.$(OBJEXT)
@@ -2392,6 +2481,8 @@ distclean-generic:
 	-rm -f src/ssids/cpu/kernels/$(am__dirstamp)
 	-rm -f src/ssids/gpu/$(DEPDIR)/$(am__dirstamp)
 	-rm -f src/ssids/gpu/$(am__dirstamp)
+	-rm -f src/ssids/gpu/kernels/$(DEPDIR)/$(am__dirstamp)
+	-rm -f src/ssids/gpu/kernels/$(am__dirstamp)
 	-rm -f src/ssmfe/$(DEPDIR)/$(am__dirstamp)
 	-rm -f src/ssmfe/$(am__dirstamp)
 	-rm -f tests/$(DEPDIR)/$(am__dirstamp)
@@ -2523,25 +2614,6 @@ examples/C/random.$(OBJEXT): libspral.a
 tests/random_matrix.$(OBJEXT): libspral.a
 examples/Fortran/random_matrix.$(OBJEXT): libspral.a
 examples/C/random_matrix.$(OBJEXT): libspral.a
-@HAVE_NVCC_TRUE@	src/ssids/gpu/datatypes.f90 \
-@HAVE_NVCC_TRUE@	src/ssids/gpu/alloc.f90 \
-@HAVE_NVCC_TRUE@	src/ssids/gpu/akeep.f90 \
-@HAVE_NVCC_TRUE@	src/ssids/gpu/dense_factor.f90 \
-@HAVE_NVCC_TRUE@	src/ssids/gpu/factor.f90 \
-@HAVE_NVCC_TRUE@	src/ssids/gpu/fkeep.f90 \
-@HAVE_NVCC_TRUE@	src/ssids/gpu/inform.f90 \
-@HAVE_NVCC_TRUE@	src/ssids/gpu/interfaces.f90 \
-@HAVE_NVCC_TRUE@	src/ssids/gpu/solve.f90 \
-@HAVE_NVCC_TRUE@	src/ssids/gpu/kernels/assemble.cu \
-@HAVE_NVCC_TRUE@	src/ssids/gpu/kernels/datatypes.h \
-@HAVE_NVCC_TRUE@	src/ssids/gpu/kernels/dense_factor.cu \
-@HAVE_NVCC_TRUE@	src/ssids/gpu/kernels/dtrsv.h \
-@HAVE_NVCC_TRUE@	src/ssids/gpu/kernels/node_solve.cu \
-@HAVE_NVCC_TRUE@	src/ssids/gpu/kernels/node_solve.h \
-@HAVE_NVCC_TRUE@	src/ssids/gpu/kernels/reorder.cu \
-@HAVE_NVCC_TRUE@	src/ssids/gpu/kernels/solve.cu \
-@HAVE_NVCC_TRUE@	src/ssids/gpu/kernels/syrk.cu \
-@HAVE_NVCC_TRUE@else
 examples/Fortran/ssids.$(OBJEXT): libspral.a
 tests/ssids/ssids.$(OBJEXT): libspral.a
 tests/ssids/kernels.$(OBJEXT): libspral.a
