@@ -6,16 +6,18 @@ SUFFIXES = .cu
 # NVCC setup
 PTX_FLAGS = -v
 #NVCCFLAGS = -Iinclude -arch=sm_20 -g -Xptxas="${PTX_FLAGS}"
+OPENMP_LIB = -lgomp # FIXME: autoconf this
 AM_NVCC_FLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src
 AM_LD_FLAGS = -lcuda
 NVCCLINK = \
-	$(NVCC) $(NVCCFLAGS) $(AM_NVCC_FLAGS) $(AM_LD_FLAGS) $(LDFLAGS) -o $@
+	$(NVCC) $(NVCCFLAGS) $(AM_NVCC_FLAGS) $(AM_LD_FLAGS) $(LDFLAGS) $(OPENMP_LIB) -o $@
 .cu.o:
 	$(NVCC) $(NVCCFLAGS) $(AM_NVCC_FLAGS) -dc -o $@ $<
 
 # Include directory for standard C
-AM_CFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src -std=c99 -fopenmp
-AM_CXXFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src -std=c++11 -fopenmp
+AM_CFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src $(OPENMP_CFLAGS)
+AM_CXXFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src -std=c++11 $(OPENMP_CXXFLAGS)
+AM_FCFLAGS = -fopenmp
 
 # FIXME: make below configurable
 LDADD = -L. -lspral $(METIS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FCLIBS) -lrt

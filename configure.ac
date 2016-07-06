@@ -18,6 +18,14 @@ AS_IF([test "x$enable_gpu" != "xno"], [
    ])
 AM_CONDITIONAL([HAVE_NVCC], [test -n "$NVCC"])
 
+# Add OpenMP support, set language standards
+AC_LANG_PUSH(C)
+AC_OPENMP
+AC_PROG_CC_C99
+AC_LANG(C++)
+AC_OPENMP
+AC_LANG_POP(C++)
+
 # Establish linking flags C->Fortran
 AC_FC_LIBRARY_LDFLAGS
 
