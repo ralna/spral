@@ -23,6 +23,7 @@
 
 #include <omp.h>
 
+#include "../AlignedAllocator.hxx"
 #include "common.hxx"
 #include "wrappers.hxx"
 #include "CpuLog.hxx"

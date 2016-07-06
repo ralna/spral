@@ -10,7 +10,7 @@
  */
 #pragma once
 
-#include "factor_iface.hxx"
+#include "cpu_iface.hxx"
 #include "factor.hxx"
 
 namespace spral { namespace ssids { namespace cpu {

@@ -8,15 +8,17 @@
  * proves to be useful beyond our own academic experiments)
  *
  */
-#include "factor.hxx"
 
 #include <cstdio>
-#include "SmallLeafSubtree.hxx"
 #include "CpuSubtree.hxx"
+#include "SmallLeafSubtree.hxx"
+#include "StackAllocator.hxx"
+
+using namespace spral::ssids::cpu;
 
 /////////////////////////////////////////////////////////////////////////////
-// start of namespace spral::ssids::cpu
-namespace spral { namespace ssids { namespace cpu {
+// anonymous namespace
+namespace {
 
 /* FIXME: remove post debug */
 template<typename T>
@@ -47,15 +49,14 @@ void print_factors(
    }
 }
 
-}}} /* end of namespace spral::ssids::cpu */
+} /* end of anon namespace */
 //////////////////////////////////////////////////////////////////////////
-
-using namespace spral::ssids::cpu;
 
 /* Double precision wrapper around templated routines */
 extern "C"
 void spral_ssids_factor_cpu_dbl(
       bool posdef,     // If true, performs A=LL^T, if false do pivoted A=LDL^T
+      void* subtree_ptr,// pointer to relevant type of CpuSubtree
       int n,            // Maximum row index (+1)
       int nnodes,       // Number of nodes in assembly tree
       struct cpu_node_data<double> *const nodes, // Data structure for node information
@@ -85,14 +86,16 @@ void spral_ssids_factor_cpu_dbl(
 
    // Call factorization routine
    if(posdef) { // Converting from runtime to compile time posdef value
-      CpuSubtree<true, BLOCK_SIZE, T, StackAllocator<PAGE_SIZE>> subtree(nnodes, nodes);
+      auto &subtree =
+         *static_cast<CpuSubtree<true, BLOCK_SIZE, T, StackAllocator<PAGE_SIZE>>*>(subtree_ptr);
       try {
          subtree.factor(aval, scaling, alloc, stalloc_odd, stalloc_even, work, map, options, stats);
       } catch(NotPosDefError npde) {
          stats->flag = SSIDS_ERROR_NOT_POS_DEF;
       }
    } else {
-      CpuSubtree<false, BLOCK_SIZE, T, StackAllocator<PAGE_SIZE>> subtree(nnodes, nodes);
+      auto &subtree =
+         *static_cast<CpuSubtree<false, BLOCK_SIZE, T, StackAllocator<PAGE_SIZE>>*>(subtree_ptr);
       subtree.factor(aval, scaling, alloc, stalloc_odd, stalloc_even, work, map, options, stats);
    }
 

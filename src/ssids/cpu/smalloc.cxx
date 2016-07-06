@@ -10,7 +10,7 @@
  */
 #include "smalloc.hxx"
 
-#include "factor_iface.hxx"
+#include "cpu_iface.hxx"
 
 namespace spral { namespace ssids { namespace cpu {
 

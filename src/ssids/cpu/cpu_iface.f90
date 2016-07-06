@@ -1,4 +1,4 @@
-module spral_ssids_cpu_factor_iface
+module spral_ssids_cpu_iface
    use, intrinsic :: iso_c_binding
    use spral_ssids_akeep, only : ssids_akeep_base
    use spral_ssids_datatypes, only : ssids_options, node_type, long, &
@@ -8,7 +8,8 @@ module spral_ssids_cpu_factor_iface
 
    private
    public :: cpu_node_data, cpu_factor_options, cpu_factor_stats
-   public :: factor_cpu, setup_cpu_data, extract_cpu_data
+   public :: setup_cpu_data, extract_cpu_data
+   public :: create_cpu_subtree, cpu_subtree
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -61,13 +62,14 @@ module spral_ssids_cpu_factor_iface
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
    interface
-      subroutine factor_cpu(pos_def, n, nnodes, nodes, aval, scaling, &
-            alloc, options, stats) &
+      subroutine c_factor_cpu(pos_def, subtree, n, nnodes, nodes, aval, &
+            scaling, alloc, options, stats) &
             bind(C, name="spral_ssids_factor_cpu_dbl")
          use, intrinsic :: iso_c_binding
          import :: cpu_node_data, cpu_factor_options, cpu_factor_stats
          implicit none
          logical(C_BOOL), value :: pos_def
+         type(C_PTR), value :: subtree
          integer(C_INT), value :: n
          integer(C_INT), value :: nnodes
          type(cpu_node_data), dimension(nnodes), intent(inout) :: nodes
@@ -76,10 +78,72 @@ module spral_ssids_cpu_factor_iface
          type(C_PTR), value :: alloc
          type(cpu_factor_options), intent(in) :: options
          type(cpu_factor_stats), intent(out) :: stats
-      end subroutine factor_cpu
+      end subroutine c_factor_cpu
+
+      type(C_PTR) function c_create_cpu_subtree(posdef, nnodes, nodes) &
+            bind(C, name="spral_ssids_create_cpu_subtree_dbl")
+         use, intrinsic :: iso_c_binding
+         import :: cpu_node_data
+         implicit none
+         logical(C_BOOL), value :: posdef
+         integer(C_INT), value :: nnodes
+         type(cpu_node_data), dimension(nnodes), intent(inout) :: nodes
+      end function c_create_cpu_subtree
+
+      subroutine c_destroy_cpu_subtree(posdef, subtree) &
+            bind(C, name="spral_ssids_destroy_cpu_subtree_dbl")
+         use, intrinsic :: iso_c_binding
+         implicit none
+         logical(C_BOOL), value :: posdef
+         type(C_PTR), value :: subtree
+      end subroutine c_destroy_cpu_subtree
    end interface
 
+   type :: cpu_subtree
+      logical(C_BOOL) :: posdef
+      type(C_PTR) :: subtree
+   contains
+      procedure :: factor => cpu_subtree_factor
+      final :: cpu_subtree_final
+   end type
+
 contains
+
+type(cpu_subtree) function create_cpu_subtree(posdef, nnodes, nodes)
+   logical(C_BOOL), intent(in) :: posdef
+   integer(C_INT), intent(in) :: nnodes
+   type(cpu_node_data), dimension(nnodes), intent(inout) :: nodes
+
+   create_cpu_subtree%posdef = posdef
+   create_cpu_subtree%subtree = c_create_cpu_subtree(posdef, nnodes, nodes)
+end function create_cpu_subtree
+
+subroutine cpu_subtree_final(this)
+   type(cpu_subtree) :: this
+
+   call c_destroy_cpu_subtree(this%posdef, this%subtree)
+end subroutine cpu_subtree_final
+
+subroutine cpu_subtree_factor(this, n, nnodes, nodes, aval, alloc, options, &
+      stats, scaling)
+   class(cpu_subtree) :: this
+   integer(C_INT), intent(in) :: n
+   integer(C_INT), intent(in) :: nnodes
+   type(cpu_node_data), dimension(nnodes), intent(inout) :: nodes
+   real(C_DOUBLE), dimension(*), intent(in) :: aval
+   type(C_PTR), intent(in) :: alloc
+   type(cpu_factor_options), intent(in) :: options
+   type(cpu_factor_stats), intent(out) :: stats
+   real(C_DOUBLE), dimension(*), target, optional, intent(in) :: scaling
+
+   type(C_PTR) :: cscaling
+
+   cscaling = C_NULL_PTR
+   if(present(scaling)) cscaling = C_LOC(scaling)
+
+   call c_factor_cpu(this%posdef, this%subtree, n, nnodes, nodes, aval, &
+      cscaling, alloc, options, stats)
+end subroutine cpu_subtree_factor
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -187,7 +251,7 @@ subroutine extract_cpu_data(nnodes, cnodes, fnodes, cstats, finform)
 end subroutine extract_cpu_data
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-end module spral_ssids_cpu_factor_iface
+end module spral_ssids_cpu_iface
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 ! Provide a way to alloc memory using smalloc (double version)

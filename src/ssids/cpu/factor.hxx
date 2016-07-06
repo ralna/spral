@@ -15,9 +15,7 @@
 #include <sstream>
 #include <stdexcept>
 /* SPRAL headers */
-#include "AlignedAllocator.hxx"
-#include "StackAllocator.hxx"
-#include "factor_iface.hxx"
+#include "cpu_iface.hxx"
 #include "kernels/assemble.hxx"
 #include "kernels/cholesky.hxx"
 #include "kernels/CpuLDLT.cxx"
