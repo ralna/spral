@@ -61,10 +61,12 @@ public:
       val = initial_value;
 #endif
    }
+#if defined(__AVX2__) || defined(__AVX__)
    /// Initialize with underlying vector type
    SimdVec(const simd_double_type &initial_value) {
       val = initial_value;
    }
+#endif
    /// Initialize with another SimdVec
    SimdVec(const SimdVec<double> &initial_value) {
       val = initial_value.val;
