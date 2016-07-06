@@ -175,7 +175,7 @@ TESTS += random_matrix_test
 include_HEADERS += include/spral_ssids.h
 if HAVE_NVCC
 libspral_a_SOURCES += \
-	src/ssids/type_select_gpu.f90
+	src/ssids/type_select_gpu.f90 \
 	src/ssids/gpu/datatypes.f90 \
 	src/ssids/gpu/alloc.f90 \
 	src/ssids/gpu/akeep.f90 \
