@@ -12,6 +12,7 @@
 
 /* SPRAL headers */
 #include "kernels/assemble.hxx"
+#include "factor.hxx"
 
 namespace spral { namespace ssids { namespace cpu {
 
@@ -26,31 +27,32 @@ namespace spral { namespace ssids { namespace cpu {
  * by the executing thread.
  */
 template <bool posdef,
+          int BLOCK_SIZE,
           typename T,
           typename StackAllocator>
 class SmallLeafSubtree {
 public:
-   SmallLeafSubtree(int nnodes)
-   : nnodes_(nnodes)
+   /** Constructor performs analyse phase work */
+   SmallLeafSubtree(int nnodes, struct cpu_node_data<T>* const nodes)
+   : nnodes_(nnodes), nodes_(nodes)
    {}
-   void factor() {
+   void factor(void* const alloc, StackAllocator &stalloc_odd, StackAllocator &stalloc_even, int* map, Workspace<T> &work, T const* aval, T const* scaling, struct cpu_factor_options const* options, struct cpu_factor_stats* stats) {
       /* Main loop: Iterate over nodes in order */
       for(int ni=0; ni<nnodes_; ++ni) {
          // Assembly
          assemble_node
-            (posdef, ni, &nodes[ni], alloc, &stalloc_odd, &stalloc_even, map,
+            (posdef, ni, &nodes_[ni], alloc, &stalloc_odd, &stalloc_even, map,
              aval, scaling);
          // Update stats
-         int nrow = nodes[ni].nrow_expected + nodes[ni].ndelay_in;
+         int nrow = nodes_[ni].nrow_expected + nodes_[ni].ndelay_in;
          stats->maxfront = std::max(stats->maxfront, nrow);
          // Factorization
          factor_node
             <posdef, T, BLOCK_SIZE>
-            (ni, &nodes[ni], options, stats);
+            (ni, &nodes_[ni], options, stats);
          // Form update
-         calculate_update
-            <posdef, T, PAGE_SIZE>
-            (&nodes[ni], &stalloc_odd, &stalloc_even, &work);
+         calculate_update<posdef>
+            (&nodes_[ni], &stalloc_odd, &stalloc_even, &work);
       }
    }
    void solve_fwd() {
@@ -61,6 +63,7 @@ public:
    }
 private:
    int nnodes_;
+   struct cpu_node_data<T>* const nodes_;
 };
 
 }}} /* namespaces spral::ssids::cpu */

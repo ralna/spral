@@ -11,6 +11,8 @@
 #include "factor.hxx"
 
 #include <cstdio>
+#include "SmallLeafSubtree.hxx"
+#include "CpuSubtree.hxx"
 
 /////////////////////////////////////////////////////////////////////////////
 // start of namespace spral::ssids::cpu
@@ -48,39 +50,58 @@ void print_factors(
 }}} /* end of namespace spral::ssids::cpu */
 //////////////////////////////////////////////////////////////////////////
 
+using namespace spral::ssids::cpu;
+
 /* Double precision wrapper around templated routines */
 extern "C"
 void spral_ssids_factor_cpu_dbl(
       bool posdef,     // If true, performs A=LL^T, if false do pivoted A=LDL^T
       int n,            // Maximum row index (+1)
       int nnodes,       // Number of nodes in assembly tree
-      struct spral::ssids::cpu::cpu_node_data<double> *const nodes, // Data structure for node information
+      struct cpu_node_data<double> *const nodes, // Data structure for node information
       const double *const aval, // Values of A
       const double *const scaling, // Scaling vector (NULL if none)
       void *const alloc,      // Pointer to Fortran allocator structure
-      const struct spral::ssids::cpu::cpu_factor_options *const options, // Options in
-      struct spral::ssids::cpu::cpu_factor_stats *const stats // Info out
+      const struct cpu_factor_options *const options, // Options in
+      struct cpu_factor_stats *const stats // Info out
       ) {
 
-   // Initialize stats
-   stats->flag = spral::ssids::cpu::SSIDS_SUCCESS;
+   typedef double T;
+   const int BLOCK_SIZE = 16;
+   const int PAGE_SIZE = 16384;
 
-   // Call relevant routine
-   if(posdef) {
+   // Initialize
+   StackAllocator<PAGE_SIZE> stalloc_odd, stalloc_even;
+   Workspace<T> work(PAGE_SIZE);
+   int *map = new int[n+1];
+   stats->flag = SSIDS_SUCCESS;
+   stats->num_delay = 0;
+   stats->num_neg = 0;
+   stats->num_two = 0;
+   stats->num_zero = 0;
+   stats->maxfront = 0;
+   for(int i=0; i<5; i++) stats->elim_at_pass[i] = 0;
+   for(int i=0; i<5; i++) stats->elim_at_itr[i] = 0;
+
+   // Call factorization routine
+   if(posdef) { // Converting from runtime to compile time posdef value
+      CpuSubtree<true, BLOCK_SIZE, T, StackAllocator<PAGE_SIZE>> subtree(nnodes, nodes);
       try {
-         spral::ssids::cpu::factor<true, double, 16, 16384, false>
-            (n, nnodes, nodes, aval, scaling, alloc, options, stats);
-      } catch(spral::ssids::cpu::NotPosDefError npde) {
-         stats->flag = spral::ssids::cpu::SSIDS_ERROR_NOT_POS_DEF;
+         subtree.factor(aval, scaling, alloc, stalloc_odd, stalloc_even, work, map, options, stats);
+      } catch(NotPosDefError npde) {
+         stats->flag = SSIDS_ERROR_NOT_POS_DEF;
       }
    } else {
-      spral::ssids::cpu::factor<false, double, 16, 16384, false>
-         (n, nnodes, nodes, aval, scaling, alloc, options, stats);
+      CpuSubtree<false, BLOCK_SIZE, T, StackAllocator<PAGE_SIZE>> subtree(nnodes, nodes);
+      subtree.factor(aval, scaling, alloc, stalloc_odd, stalloc_even, work, map, options, stats);
    }
+
+   // Release resources
+   delete[] map;
 
    // FIXME: Remove when done with debug
    if(options->print_level > 9999) {
       printf("Final factors:\n");
-      spral::ssids::cpu::print_factors<double>(posdef, nnodes, nodes);
+      print_factors<double>(posdef, nnodes, nodes);
    }
 }
