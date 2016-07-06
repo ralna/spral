@@ -10,6 +10,7 @@ module spral_ssids_cpu_iface
    public :: cpu_node_data, cpu_factor_options, cpu_factor_stats
    public :: setup_cpu_data, extract_cpu_data
    public :: create_cpu_subtree, cpu_subtree
+   public :: create_cpu_symbolic_subtree, cpu_symbolic_subtree
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -80,12 +81,14 @@ module spral_ssids_cpu_iface
          type(cpu_factor_stats), intent(out) :: stats
       end subroutine c_factor_cpu
 
-      type(C_PTR) function c_create_cpu_subtree(posdef, nnodes, nodes) &
+      type(C_PTR) function c_create_cpu_subtree(posdef, symbolic_subtree, &
+            nnodes, nodes) &
             bind(C, name="spral_ssids_create_cpu_subtree_dbl")
          use, intrinsic :: iso_c_binding
          import :: cpu_node_data
          implicit none
          logical(C_BOOL), value :: posdef
+         type(C_PTR), value :: symbolic_subtree
          integer(C_INT), value :: nnodes
          type(cpu_node_data), dimension(nnodes), intent(inout) :: nodes
       end function c_create_cpu_subtree
@@ -97,7 +100,30 @@ module spral_ssids_cpu_iface
          logical(C_BOOL), value :: posdef
          type(C_PTR), value :: subtree
       end subroutine c_destroy_cpu_subtree
+
+      type(C_PTR) function c_create_symbolic_subtree(nnodes, sptr, rptr, rlist)&
+            bind(C, name="spral_ssids_cpu_create_symbolic_subtree")
+         use, intrinsic :: iso_c_binding
+         implicit none
+         integer(C_INT), value :: nnodes
+         integer(C_INT), dimension(nnodes+1), intent(in) :: sptr
+         integer(C_LONG), dimension(nnodes+1), intent(in) :: rptr
+         integer(C_INT), dimension(*), intent(in) :: rlist
+      end function c_create_symbolic_subtree
+
+      subroutine c_destroy_symbolic_subtree(subtree) &
+            bind(C, name="spral_ssids_cpu_destroy_symbolic_subtree")
+         use, intrinsic :: iso_c_binding
+         implicit none
+         type(C_PTR), value :: subtree
+      end subroutine c_destroy_symbolic_subtree
    end interface
+
+   type :: cpu_symbolic_subtree
+      type(C_PTR) :: subtree
+   contains
+      final :: cpu_symbolic_subtree_final
+   end type cpu_symbolic_subtree
 
    type :: cpu_subtree
       logical(C_BOOL) :: posdef
@@ -105,17 +131,20 @@ module spral_ssids_cpu_iface
    contains
       procedure :: factor => cpu_subtree_factor
       final :: cpu_subtree_final
-   end type
+   end type cpu_subtree
 
 contains
 
-type(cpu_subtree) function create_cpu_subtree(posdef, nnodes, nodes)
+type(cpu_subtree) function create_cpu_subtree(posdef, symbolic_subtree, &
+      nnodes, nodes)
    logical(C_BOOL), intent(in) :: posdef
+   type(cpu_symbolic_subtree), intent(in) :: symbolic_subtree
    integer(C_INT), intent(in) :: nnodes
    type(cpu_node_data), dimension(nnodes), intent(inout) :: nodes
 
    create_cpu_subtree%posdef = posdef
-   create_cpu_subtree%subtree = c_create_cpu_subtree(posdef, nnodes, nodes)
+   create_cpu_subtree%subtree = &
+      c_create_cpu_subtree(posdef, symbolic_subtree%subtree, nnodes, nodes)
 end function create_cpu_subtree
 
 subroutine cpu_subtree_final(this)
@@ -144,6 +173,25 @@ subroutine cpu_subtree_factor(this, n, nnodes, nodes, aval, alloc, options, &
    call c_factor_cpu(this%posdef, this%subtree, n, nnodes, nodes, aval, &
       cscaling, alloc, options, stats)
 end subroutine cpu_subtree_factor
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+type(cpu_symbolic_subtree) function create_cpu_symbolic_subtree(nnodes, sptr, &
+      rptr, rlist)
+   integer(C_INT), intent(in) :: nnodes
+   integer(C_INT), dimension(nnodes+1), intent(in) :: sptr
+   integer(C_LONG), dimension(nnodes+1), intent(in) :: rptr
+   integer(C_INT), dimension(*), intent(in) :: rlist
+
+   create_cpu_symbolic_subtree%subtree = &
+      c_create_symbolic_subtree(nnodes, sptr, rptr, rlist)
+end function create_cpu_symbolic_subtree
+
+subroutine cpu_symbolic_subtree_final(this)
+   type(cpu_symbolic_subtree) :: this
+
+   call c_destroy_symbolic_subtree(this%subtree)
+end subroutine cpu_symbolic_subtree_final
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 

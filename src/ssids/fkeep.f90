@@ -14,7 +14,8 @@ module spral_ssids_fkeep
    use spral_ssids_cpu_solve, only : fwd_diag_solve, subtree_bwd_solve
    use spral_ssids_cpu_iface, only : cpu_node_data, cpu_factor_options, &
       cpu_factor_stats, setup_cpu_data, extract_cpu_data, &
-      create_cpu_subtree, cpu_subtree
+      create_cpu_subtree, cpu_subtree, &
+      create_cpu_symbolic_subtree, cpu_symbolic_subtree
    use, intrinsic :: iso_c_binding
    implicit none
 
@@ -64,6 +65,7 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
    class(ssids_inform_base), intent(inout) :: inform
 
    logical(C_BOOL) :: fposdef
+   type(cpu_symbolic_subtree) :: symbolic_subtree
    type(cpu_subtree) :: subtree
    type(cpu_node_data), dimension(:), allocatable :: cnodes
    type(cpu_factor_options) :: coptions
@@ -80,9 +82,12 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
    endif
    call setup_cpu_data(akeep, cnodes, options, coptions)
 
+   symbolic_subtree = create_cpu_symbolic_subtree(akeep%nnodes, akeep%sptr, &
+      akeep%rptr, akeep%rlist)
+
    ! Perform factorization in C++ code
    fposdef = fkeep%pos_def
-   subtree = create_cpu_subtree(fposdef, akeep%nnodes, cnodes)
+   subtree = create_cpu_subtree(fposdef, symbolic_subtree, akeep%nnodes, cnodes)
    if(allocated(fkeep%scaling)) then
       call subtree%factor(akeep%n, akeep%nnodes, cnodes, val, &
          C_LOC(fkeep%alloc), coptions, cstats, scaling=fkeep%scaling)

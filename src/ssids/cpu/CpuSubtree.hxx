@@ -12,6 +12,7 @@
 
 #include "cpu_iface.hxx"
 #include "factor.hxx"
+#include "SymbolicSubtree.hxx"
 
 namespace spral { namespace ssids { namespace cpu {
 
@@ -20,18 +21,18 @@ template <bool posdef, size_t BLOCK_SIZE, typename T, typename StackAllocator>
 class CpuSubtree {
 public:
    /** Constructor does analyse phase work */
-   CpuSubtree(int nnodes, struct cpu_node_data<T>* nodes)
-   : nnodes_(nnodes), nodes_(nodes)
+   CpuSubtree(SymbolicSubtree const& symbolic_subtree, int nnodes, struct cpu_node_data<T>* nodes)
+   : nnodes_(nnodes), nodes_(nodes), symb_(symbolic_subtree)
    {}
    void factor(T const* aval, T const* scaling, void *const alloc, StackAllocator &stalloc_odd, StackAllocator &stalloc_even, Workspace<T> &work, int* map, struct cpu_factor_options const* options, struct cpu_factor_stats* stats) {
       /* Main loop: Iterate over nodes in order */
       for(int ni=0; ni<nnodes_; ++ni) {
          // Assembly
          assemble_node
-            (posdef, ni, &nodes_[ni], alloc, &stalloc_odd, &stalloc_even, map,
-             aval, scaling);
+            (posdef, ni, symb_[ni], &nodes_[ni], alloc, &stalloc_odd,
+             &stalloc_even, map, aval, scaling);
          // Update stats
-         int nrow = nodes_[ni].nrow_expected + nodes_[ni].ndelay_in;
+         int nrow = symb_[ni].nrow + nodes_[ni].ndelay_in;
          stats->maxfront = std::max(stats->maxfront, nrow);
          // Factorization
          factor_node
@@ -85,6 +86,7 @@ public:
 private:
    int nnodes_;
    struct cpu_node_data<T>* nodes_;
+   SymbolicSubtree const& symb_;
 };
 
 }}} /* end of namespace spral::ssids::cpu */

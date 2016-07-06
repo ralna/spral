@@ -12,6 +12,7 @@
 
 #include <cstring>
 #include "../smalloc.hxx"
+#include "../SymbolicSubtree.hxx"
 
 namespace spral { namespace ssids { namespace cpu {
 
@@ -20,6 +21,7 @@ template <typename T,
 void assemble_node(
       bool posdef,
       int ni, // FIXME: remove with debug
+      SymbolicNode const& snode,
       struct cpu_node_data<T> *const node,
       void *const alloc,
       StackAllocator *stalloc_odd,
@@ -33,8 +35,8 @@ void assemble_node(
    for(struct cpu_node_data<T> *child=node->first_child; child!=NULL; child=child->next_child) {
       node->ndelay_in += child->ndelay_out;
    }
-   int nrow = node->nrow_expected + node->ndelay_in;
-   int ncol = node->ncol_expected + node->ndelay_in;
+   int nrow = snode.nrow + node->ndelay_in;
+   int ncol = snode.ncol + node->ndelay_in;
 
    /* Get space for node now we know it size using Fortran allocator + zero it*/
    // NB L is  nrow x ncol and D is 2 x ncol (but no D if posdef)
@@ -45,7 +47,7 @@ void assemble_node(
    memset(node->lcol, 0, len*sizeof(T));
 
    /* Get space for contribution block + zero it */
-   long contrib_dimn = node->nrow_expected - node->ncol_expected;
+   long contrib_dimn = snode.nrow - snode.ncol;
    if(node->even) {
       node->contrib = (contrib_dimn > 0) ? (T *) stalloc_even->alloc(contrib_dimn*contrib_dimn*sizeof(T)) : NULL;
    } else {
@@ -57,8 +59,8 @@ void assemble_node(
    /* Alloc + set perm for expected eliminations at this node (delays are set
     * when they are imported from children) */
    node->perm = smalloc<int>(alloc, ncol); // ncol fully summed variables
-   for(int i=0; i<node->ncol_expected; i++)
-      node->perm[i] = node->rlist[i];
+   for(int i=0; i<snode.ncol; i++)
+      node->perm[i] = snode.rlist[i];
 
    /* Add A */
    if(scaling) {
@@ -66,12 +68,12 @@ void assemble_node(
       for(int i=0; i<node->num_a; i++) {
          long src  = node->amap[2*i+0] - 1; // amap contains 1-based values
          long dest = node->amap[2*i+1] - 1; // amap contains 1-based values
-         int c = dest / node->nrow_expected;
-         int r = dest % node->nrow_expected;
+         int c = dest / snode.nrow;
+         int r = dest % snode.nrow;
          long k = c*nrow + r;
-         if(r >= node->ncol_expected) k += node->ndelay_in;
-         T rscale = scaling[ node->rlist[r]-1 ];
-         T cscale = scaling[ node->rlist[c]-1 ];
+         if(r >= snode.ncol) k += node->ndelay_in;
+         T rscale = scaling[ snode.rlist[r]-1 ];
+         T cscale = scaling[ snode.rlist[c]-1 ];
          node->lcol[k] = rscale * aval[src] * cscale;
       }
    } else {
@@ -79,10 +81,10 @@ void assemble_node(
       for(int i=0; i<node->num_a; i++) {
          long src  = node->amap[2*i+0] - 1; // amap contains 1-based values
          long dest = node->amap[2*i+1] - 1; // amap contains 1-based values
-         int c = dest / node->nrow_expected;
-         int r = dest % node->nrow_expected;
+         int c = dest / snode.nrow;
+         int r = dest % snode.nrow;
          long k = c*nrow + r;
-         if(r >= node->ncol_expected) k += node->ndelay_in;
+         if(r >= snode.ncol) k += node->ndelay_in;
          node->lcol[k] = aval[src];
       }
    }
@@ -92,12 +94,12 @@ void assemble_node(
       /* Build lookup vector, allowing for insertion of delayed vars */
       /* Note that while rlist[] is 1-indexed this is fine so long as lookup
        * is also 1-indexed (which it is as it is another node's rlist[] */
-      for(int i=0; i<node->ncol_expected; i++)
-         map[ node->rlist[i] ] = i;
-      for(int i=node->ncol_expected; i<node->nrow_expected; i++)
-         map[ node->rlist[i] ] = i + node->ndelay_in;
+      for(int i=0; i<snode.ncol; i++)
+         map[ snode.rlist[i] ] = i;
+      for(int i=snode.ncol; i<snode.nrow; i++)
+         map[ snode.rlist[i] ] = i + node->ndelay_in;
       /* Loop over children adding contributions */
-      int delay_col = node->ncol_expected;
+      int delay_col = snode.ncol;
       for(struct cpu_node_data<T> *child=node->first_child; child!=NULL; child=child->next_child) {
          /* Handle delays - go to back of node
           * (i.e. become the last rows as in lower triangular format) */
@@ -127,7 +129,7 @@ void assemble_node(
             for(int i=0; i<cm; i++) {
                int c = map[ child->rlist[child->ncol_expected+i] ];
                T *src = &child->contrib[i*cm];
-               if(c < node->ncol_expected) {
+               if(c < snode.ncol) {
                   // Contribution added to lcol
                   int ldd = nrow;
                   T *dest = &node->lcol[c*ldd];
@@ -138,7 +140,7 @@ void assemble_node(
                } else {
                   // Contribution added to contrib
                   // FIXME: Add after contribution block established?
-                  int ldd = node->nrow_expected - node->ncol_expected;
+                  int ldd = snode.nrow - snode.ncol;
                   T *dest = &node->contrib[(c-ncol)*ldd];
                   for(int j=i; j<cm; j++) {
                      int r = map[ child->rlist[child->ncol_expected+j] ] - ncol;
@@ -163,7 +165,7 @@ void assemble_node(
       printf("\n");
    }*/
    /*printf("Post asm contrib:\n");
-   int ldd = node->nrow_expected - node->ncol_expected;
+   int ldd = snode.nrow - snode.ncol;
    for(int i=0; i<ldd; i++) {
       for(int j=0; j<ldd; j++) printf(" %e", node->contrib[j*ldd+i]);
       printf("\n");
