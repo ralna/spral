@@ -23,8 +23,14 @@ public:
    /** Constructor does analyse phase work */
    CpuSubtree(SymbolicSubtree const& symbolic_subtree, int nnodes, struct cpu_node_data<T>* nodes)
    : nnodes_(nnodes), nodes_(nodes), symb_(symbolic_subtree)
-   {}
+   {
+      /* Associate symbolic nodes to numeric ones */
+      for(int ni=0; ni<nnodes_; ++ni) {
+         nodes_[ni].symb = &symbolic_subtree[ni];
+      }
+   }
    void factor(T const* aval, T const* scaling, void *const alloc, StackAllocator &stalloc_odd, StackAllocator &stalloc_even, Workspace<T> &work, int* map, struct cpu_factor_options const* options, struct cpu_factor_stats* stats) {
+
       /* Main loop: Iterate over nodes in order */
       for(int ni=0; ni<nnodes_; ++ni) {
          // Assembly
@@ -36,11 +42,11 @@ public:
          stats->maxfront = std::max(stats->maxfront, nrow);
          // Factorization
          factor_node
-            <posdef, T, BLOCK_SIZE>
-            (ni, &nodes_[ni], options, stats);
+            <posdef, BLOCK_SIZE>
+            (ni, symb_[ni], &nodes_[ni], options, stats);
          // Form update
          calculate_update<posdef>
-            (&nodes_[ni], &stalloc_odd, &stalloc_even, &work);
+            (symb_[ni], &nodes_[ni], &stalloc_odd, &stalloc_even, &work);
       }
 
       // Count stats
@@ -52,8 +58,8 @@ public:
          // no real changes to stats from zero initialization
       } else { // indefinite
          for(int ni=0; ni<nnodes_; ni++) {
-            int m = nodes_[ni].nrow_expected + nodes_[ni].ndelay_in;
-            int n = nodes_[ni].ncol_expected + nodes_[ni].ndelay_in;
+            int m = symb_[ni].nrow + nodes_[ni].ndelay_in;
+            int n = symb_[ni].ncol + nodes_[ni].ndelay_in;
             T *d = nodes_[ni].lcol + m*n;
             for(int i=0; i<nodes_[ni].nelim; i++)
                if(d[2*i] == std::numeric_limits<T>::infinity())
@@ -83,6 +89,8 @@ public:
    void solve_fwd() {}
    void solve_diag() {}
    void solve_bwd() {}
+
+   SymbolicSubtree const& get_symbolic_subtree() { return symb_; }
 private:
    int nnodes_;
    struct cpu_node_data<T>* nodes_;

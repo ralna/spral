@@ -101,12 +101,13 @@ void assemble_node(
       /* Loop over children adding contributions */
       int delay_col = snode.ncol;
       for(struct cpu_node_data<T> *child=node->first_child; child!=NULL; child=child->next_child) {
+         SymbolicNode const& csnode = *child->symb;
          /* Handle delays - go to back of node
           * (i.e. become the last rows as in lower triangular format) */
          for(int i=0; i<child->ndelay_out; i++) {
             // Add delayed rows (from delayed cols)
             T *dest = &node->lcol[delay_col*(nrow+1)];
-            int lds = child->nrow_expected + child->ndelay_in;
+            int lds = csnode.nrow + child->ndelay_in;
             T *src = &child->lcol[(child->nelim+i)*(lds+1)];
             node->perm[delay_col] = child->perm[child->nelim+i];
             for(int j=0; j<child->ndelay_out-i; j++) {
@@ -115,8 +116,8 @@ void assemble_node(
             // Add child's non-fully summed rows (from delayed cols)
             dest = node->lcol;
             src = &child->lcol[child->nelim*lds + child->ndelay_in +i*lds];
-            for(int j=child->ncol_expected; j<child->nrow_expected; j++) {
-               int r = map[ child->rlist[j] ];
+            for(int j=csnode.ncol; j<csnode.nrow; j++) {
+               int r = map[ csnode.rlist[j] ];
                if(r < ncol) dest[r*nrow+delay_col] = src[j];
                else         dest[delay_col*nrow+r] = src[j];
             }
@@ -125,16 +126,16 @@ void assemble_node(
 
          /* Handle expected contributions (only if something there) */
          if(child->contrib) {
-            int cm = child->nrow_expected - child->ncol_expected;
+            int cm = csnode.nrow - csnode.ncol;
             for(int i=0; i<cm; i++) {
-               int c = map[ child->rlist[child->ncol_expected+i] ];
+               int c = map[ csnode.rlist[csnode.ncol+i] ];
                T *src = &child->contrib[i*cm];
                if(c < snode.ncol) {
                   // Contribution added to lcol
                   int ldd = nrow;
                   T *dest = &node->lcol[c*ldd];
                   for(int j=i; j<cm; j++) {
-                     int r = map[ child->rlist[child->ncol_expected+j] ];
+                     int r = map[ csnode.rlist[csnode.ncol+j] ];
                      dest[r] += src[j];
                   }
                } else {
@@ -143,7 +144,7 @@ void assemble_node(
                   int ldd = snode.nrow - snode.ncol;
                   T *dest = &node->contrib[(c-ncol)*ldd];
                   for(int j=i; j<cm; j++) {
-                     int r = map[ child->rlist[child->ncol_expected+j] ] - ncol;
+                     int r = map[ csnode.rlist[csnode.ncol+j] ] - ncol;
                      dest[r] += src[j];
                   }
                }

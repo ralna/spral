@@ -4,16 +4,16 @@
 
 namespace spral { namespace ssids { namespace cpu {
 
+class SymbolicNode;
+
 template <typename T>
 struct cpu_node_data {
    /* Fixed data from analyse */
-   const int nrow_expected; // Number of rows without delays
-   const int ncol_expected; // Number of cols without delays
    struct cpu_node_data<T> *const first_child; // Pointer to our first child
    struct cpu_node_data<T> *const next_child; // Pointer to parent's next child
-   const int *const rlist; // Pointer to row lists
    const bool even; // Indicates which stack we're using (odd or even distance
                     // from root)
+   SymbolicNode const* symb; // Symbolic node associated with this one
 
    /* Data about A:
     * aval[i] goes into lcol[ amap[i] ] if there are no delays

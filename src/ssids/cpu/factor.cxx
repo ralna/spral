@@ -37,13 +37,14 @@ template<typename T>
 void print_factors(
       bool posdef,
       int nnodes,
+      SymbolicSubtree const& symb,
       struct cpu_node_data<T> *const nodes
       ) {
    for(int node=0; node<nnodes; node++) {
       printf("== Node %d ==\n", node);
-      int m = nodes[node].nrow_expected + nodes[node].ndelay_in;
-      int n = nodes[node].ncol_expected + nodes[node].ndelay_in;
-      const int *rptr = &nodes[node].rlist[ nodes[node].ncol_expected ];
+      int m = symb[node].nrow + nodes[node].ndelay_in;
+      int n = symb[node].ncol + nodes[node].ndelay_in;
+      const int *rptr = &symb[node].rlist[ symb[node].ncol ];
       print_node(posdef, m, n, nodes[node].nelim, nodes[node].perm,
             rptr, nodes[node].lcol, &nodes[node].lcol[m*n]);
    }
@@ -85,6 +86,7 @@ void spral_ssids_factor_cpu_dbl(
    for(int i=0; i<5; i++) stats->elim_at_itr[i] = 0;
 
    // Call factorization routine
+   SymbolicSubtree const* symbolic_subtree;
    if(posdef) { // Converting from runtime to compile time posdef value
       auto &subtree =
          *static_cast<CpuSubtree<true, BLOCK_SIZE, T, StackAllocator<PAGE_SIZE>>*>(subtree_ptr);
@@ -93,10 +95,12 @@ void spral_ssids_factor_cpu_dbl(
       } catch(NotPosDefError npde) {
          stats->flag = SSIDS_ERROR_NOT_POS_DEF;
       }
+      symbolic_subtree = &subtree.get_symbolic_subtree();
    } else {
       auto &subtree =
          *static_cast<CpuSubtree<false, BLOCK_SIZE, T, StackAllocator<PAGE_SIZE>>*>(subtree_ptr);
       subtree.factor(aval, scaling, alloc, stalloc_odd, stalloc_even, work, map, options, stats);
+      symbolic_subtree = &subtree.get_symbolic_subtree();
    }
 
    // Release resources
@@ -105,6 +109,6 @@ void spral_ssids_factor_cpu_dbl(
    // FIXME: Remove when done with debug
    if(options->print_level > 9999) {
       printf("Final factors:\n");
-      print_factors<double>(posdef, nnodes, nodes);
+      print_factors<double>(posdef, nnodes, *symbolic_subtree, nodes);
    }
 }

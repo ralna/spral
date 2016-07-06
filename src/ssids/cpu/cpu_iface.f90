@@ -14,15 +14,22 @@ module spral_ssids_cpu_iface
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   ! See comments in C++ definition in factor_gpu.cxx for detail
-   type, bind(C) :: cpu_node_data
-      ! Fixed data from analyse
-      integer(C_INT) :: nrow_expected
-      integer(C_INT) :: ncol_expected
+   type, bind(C) :: SymbolicNode
+      integer(C_INT) :: nrow
+      integer(C_INT) :: ncol
       type(C_PTR) :: first_child
       type(C_PTR) :: next_child
       type(C_PTR) :: rlist
       logical(C_BOOL) :: even
+   end type SymbolicNode
+
+   ! See comments in C++ definition in factor_gpu.cxx for detail
+   type, bind(C) :: cpu_node_data
+      ! Fixed data from analyse
+      type(C_PTR) :: first_child
+      type(C_PTR) :: next_child
+      logical(C_BOOL) :: even
+      type(C_PTR) :: symb
 
       ! Data about A
       integer(C_INT) :: num_a
@@ -209,11 +216,9 @@ subroutine setup_cpu_data(akeep, cnodes, foptions, coptions)
    ! Basic data and initialize linked lists
    do node = 1, akeep%nnodes
       ! Data about factors
-      cnodes(node)%nrow_expected = int(akeep%rptr(node+1) - akeep%rptr(node))
-      cnodes(node)%ncol_expected = akeep%sptr(node+1) - akeep%sptr(node)
       cnodes(node)%first_child = C_NULL_PTR
       cnodes(node)%next_child = C_NULL_PTR
-      cnodes(node)%rlist = C_LOC(akeep%rlist(akeep%rptr(node)))
+      cnodes(node)%symb = C_NULL_PTR
 
       ! Print out debug info
       if(foptions%print_level > DEBUG_PRINT_LEVEL) then
@@ -262,14 +267,16 @@ subroutine extract_cpu_data(nnodes, cnodes, fnodes, cstats, finform)
 
    integer :: node, nrow, ncol
    integer :: rank
+   type(SymbolicNode), pointer :: snode
 
    ! Copy factors (scalars and pointers)
    rank = 0
    do node = 1, nnodes
       ! Components we copy from C version
-      rank = rank + cnodes(node)%ncol_expected
-      nrow = cnodes(node)%nrow_expected + cnodes(node)%ndelay_in
-      ncol = cnodes(node)%ncol_expected + cnodes(node)%ndelay_in
+      call c_f_pointer(cnodes(node)%symb, snode)
+      rank = rank + snode%ncol
+      nrow = snode%nrow + cnodes(node)%ndelay_in
+      ncol = snode%ncol + cnodes(node)%ndelay_in
       fnodes(node)%nelim = cnodes(node)%nelim
       fnodes(node)%ndelay = cnodes(node)%ndelay_in
       call C_F_POINTER(cnodes(node)%lcol, fnodes(node)%lcol, &

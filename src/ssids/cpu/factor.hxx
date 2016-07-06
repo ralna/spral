@@ -65,13 +65,14 @@ public:
 template <typename T, int BLOCK_SIZE>
 void factor_node_indef(
       int ni, // FIXME: remove post debug
+      SymbolicNode const& snode,
       struct cpu_node_data<T> *const node,
       const struct cpu_factor_options *const options,
       struct cpu_factor_stats *const stats
       ) {
    /* Extract useful information about node */
-   int m = node->nrow_expected + node->ndelay_in;
-   int n = node->ncol_expected + node->ndelay_in;
+   int m = snode.nrow + node->ndelay_in;
+   int n = snode.ncol + node->ndelay_in;
    T *lcol = node->lcol;
    T *d = &node->lcol[ ((long) m)*n ];
    int *perm = node->perm;
@@ -109,12 +110,13 @@ void factor_node_indef(
 /* Factorize a node (posdef) */
 template <typename T, int BLOCK_SIZE>
 void factor_node_posdef(
+      SymbolicNode const& snode,
       struct cpu_node_data<T> *const node,
       const struct cpu_factor_options *const options
       ) {
    /* Extract useful information about node */
-   int m = node->nrow_expected;
-   int n = node->ncol_expected;
+   int m = snode.nrow;
+   int n = snode.ncol;
    T *lcol = node->lcol;
 
    /* Perform factorization */
@@ -131,27 +133,29 @@ void factor_node_posdef(
    node->ndelay_out = 0;
 }
 /* Factorize a node (wrapper) */
-template <bool posdef, typename T, int BLOCK_SIZE>
+template <bool posdef, int BLOCK_SIZE, typename T>
 void factor_node(
       int ni,
+      SymbolicNode const& snode,
       struct cpu_node_data<T> *const node,
       const struct cpu_factor_options *const options,
       struct cpu_factor_stats *const stats
       ) {
-   if(posdef) factor_node_posdef<T, BLOCK_SIZE>(node, options);
-   else       factor_node_indef <T, BLOCK_SIZE>(ni, node, options, stats);
+   if(posdef) factor_node_posdef<T, BLOCK_SIZE>(snode, node, options);
+   else       factor_node_indef <T, BLOCK_SIZE>(ni, snode, node, options, stats);
 }
 
 /* Calculate update */
 template <bool posdef, typename T, typename StackAllocator>
 void calculate_update(
+      SymbolicNode const& snode,
       struct cpu_node_data<T> *node,
       StackAllocator *stalloc_odd,
       StackAllocator *stalloc_even,
       Workspace<T> *work
       ) {
    // Check there is work to do
-   int m = node->nrow_expected - node->ncol_expected;
+   int m = snode.nrow - snode.ncol;
    int n = node->nelim;
    if(n==0 && !node->first_child) {
       // If everything is delayed, and no contribution from children then
@@ -169,17 +173,17 @@ void calculate_update(
    if(m==0 || n==0) return; // no-op
 
    if(posdef) {
-      int ldl = node->nrow_expected;
+      int ldl = snode.nrow;
       host_syrk<T>(FILL_MODE_LWR, OP_N, m, n,
-            -1.0, &node->lcol[node->ncol_expected], ldl,
+            -1.0, &node->lcol[snode.ncol], ldl,
             1.0, node->contrib, m);
    } else {
       // Indefinte - need to recalculate LD before we can use it!
 
       // Calculate LD
-      T *lcol = &node->lcol[node->ncol_expected+node->ndelay_in];
-      int ldl = node->nrow_expected + node->ndelay_in;
-      T *d = &node->lcol[ldl*(node->ncol_expected+node->ndelay_in)];
+      T *lcol = &node->lcol[snode.ncol+node->ndelay_in];
+      int ldl = snode.nrow + node->ndelay_in;
+      T *d = &node->lcol[ldl*(snode.ncol+node->ndelay_in)];
       work->ensure_length(m*n);
       T *ld = work->mem;
       for(int j=0; j<n;) {
