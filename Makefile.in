@@ -200,9 +200,10 @@ am__libspral_a_SOURCES_DIST = src/blas_iface.f90 src/core_analyse.f90 \
 	src/ssids/datatypes.f90 src/ssids/fkeep.f90 \
 	src/ssids/inform.f90 src/ssids/ssids.f90 \
 	src/ssids/cpu/AlignedAllocator.hxx src/ssids/cpu/factor.cxx \
-	src/ssids/cpu/factor_iface.f90 src/ssids/cpu/factor_iface.h \
-	src/ssids/cpu/solve.f90 src/ssids/cpu/smalloc.cxx \
-	src/ssids/cpu/smalloc.hxx src/ssids/cpu/SmallLeafSubtree.hxx \
+	src/ssids/cpu/factor.hxx src/ssids/cpu/factor_iface.f90 \
+	src/ssids/cpu/factor_iface.hxx src/ssids/cpu/solve.f90 \
+	src/ssids/cpu/smalloc.cxx src/ssids/cpu/smalloc.hxx \
+	src/ssids/cpu/SmallLeafSubtree.hxx \
 	src/ssids/cpu/StackAllocator.hxx \
 	src/ssids/cpu/kernels/assemble.hxx \
 	src/ssids/cpu/kernels/common.hxx \
@@ -1070,9 +1071,10 @@ libspral_a_SOURCES = src/blas_iface.f90 src/core_analyse.f90 \
 	src/ssids/datatypes.f90 src/ssids/fkeep.f90 \
 	src/ssids/inform.f90 src/ssids/ssids.f90 \
 	src/ssids/cpu/AlignedAllocator.hxx src/ssids/cpu/factor.cxx \
-	src/ssids/cpu/factor_iface.f90 src/ssids/cpu/factor_iface.h \
-	src/ssids/cpu/solve.f90 src/ssids/cpu/smalloc.cxx \
-	src/ssids/cpu/smalloc.hxx src/ssids/cpu/SmallLeafSubtree.hxx \
+	src/ssids/cpu/factor.hxx src/ssids/cpu/factor_iface.f90 \
+	src/ssids/cpu/factor_iface.hxx src/ssids/cpu/solve.f90 \
+	src/ssids/cpu/smalloc.cxx src/ssids/cpu/smalloc.hxx \
+	src/ssids/cpu/SmallLeafSubtree.hxx \
 	src/ssids/cpu/StackAllocator.hxx \
 	src/ssids/cpu/kernels/assemble.hxx \
 	src/ssids/cpu/kernels/common.hxx \

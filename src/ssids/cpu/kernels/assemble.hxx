@@ -10,20 +10,20 @@
  */
 #pragma once
 
+#include <cstring>
 #include "../smalloc.hxx"
-#include "../StackAllocator.hxx"
 
 namespace spral { namespace ssids { namespace cpu {
 
 template <typename T,
-          size_t PAGE_SIZE>
+          typename StackAllocator>
 void assemble_node(
       bool posdef,
       int ni, // FIXME: remove with debug
       struct cpu_node_data<T> *const node,
       void *const alloc,
-      StackAllocator<PAGE_SIZE> *stalloc_odd,
-      StackAllocator<PAGE_SIZE> *stalloc_even,
+      StackAllocator *stalloc_odd,
+      StackAllocator *stalloc_even,
       int *const map,
       const T *const aval,
       const T *const scaling

@@ -25,7 +25,9 @@ namespace spral { namespace ssids { namespace cpu {
  * It is expected that the subtree will fit within L2 cache exclusively owned
  * by the executing thread.
  */
-template <bool posdef, typename T>
+template <bool posdef,
+          typename T,
+          typename StackAllocator>
 class SmallLeafSubtree {
 public:
    SmallLeafSubtree(int nnodes)
@@ -36,7 +38,6 @@ public:
       for(int ni=0; ni<nnodes_; ++ni) {
          // Assembly
          assemble_node
-            <T, PAGE_SIZE>
             (posdef, ni, &nodes[ni], alloc, &stalloc_odd, &stalloc_even, map,
              aval, scaling);
          // Update stats
