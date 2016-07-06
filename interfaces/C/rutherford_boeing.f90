@@ -120,22 +120,25 @@ integer(C_INT) function spral_rb_read_i32d(filename, handle, m, n, ptr, row, &
    if(allocated(matrix%val)) val = C_LOC(matrix%val)
    ! Handle optional strings
    if(C_ASSOCIATED(type_code)) then
-      call c_f_pointer(type_code, string, shape = (/ 3 /))
+      call c_f_pointer(type_code, string, shape = (/ 3+1 /))
       do i = 1, len(ftype_code)
          string(i) = ftype_code(i:i)
       end do
+      string(len(ftype_code)+1) = C_NULL_CHAR
    endif
    if(C_ASSOCIATED(title)) then
-      call c_f_pointer(title, string, shape = (/ 72 /))
+      call c_f_pointer(title, string, shape = (/ 72+1 /))
       do i = 1, len(ftitle)
          string(i) = ftitle(i:i)
       end do
+      string(len(ftitle)+1) = C_NULL_CHAR
    endif
    if(C_ASSOCIATED(identifier)) then
-      call c_f_pointer(identifier, string, shape = (/ 8 /))
+      call c_f_pointer(identifier, string, shape = (/ 8+1 /))
       do i = 1, len(fidentifier)
          string(i) = fidentifier(i:i)
       end do
+      string(len(fidentifier)+1) = C_NULL_CHAR
    endif
 
    ! Set return code
