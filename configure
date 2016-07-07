@@ -594,6 +594,7 @@ METIS_LIBS
 LAPACK_LIBS
 BLAS_LIBS
 FLIBS
+CXXLIB
 FCLIBS
 host_os
 host_vendor
@@ -5503,6 +5504,16 @@ ac_cpp='$CPP $CPPFLAGS'
 ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+
+# Establish -lstdc++ or equivalent
+if test "x$CXXLIB" == "x"; then
+   if test "x$CXX" == "xifort"; then
+      CXXLIB="-cxxlib"
+   else
+      CXXLIB="-lstdc++"
+   fi
+fi
 
 
 # Check for required libraries

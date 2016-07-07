@@ -29,6 +29,16 @@ AC_LANG_POP(C++)
 # Establish linking flags C->Fortran
 AC_FC_LIBRARY_LDFLAGS
 
+# Establish -lstdc++ or equivalent
+if test "x$CXXLIB" == "x"; then
+   if test "x$CXX" == "xifort"; then
+      CXXLIB="-cxxlib"
+   else
+      CXXLIB="-lstdc++"
+   fi
+fi
+AC_SUBST(CXXLIB)
+
 # Check for required libraries
 ACX_BLAS(,[AC_MSG_ERROR([No BLAS library found.])])
 ACX_LAPACK(,[AC_MSG_ERROR([No LAPACK library found.])])

@@ -17,11 +17,17 @@ NVCCLINK = \
 # Include directory for standard C
 AM_CFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src $(OPENMP_CFLAGS)
 AM_CXXFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src -std=c++11 $(OPENMP_CXXFLAGS)
-AM_FCFLAGS = -fopenmp
+AM_FCFLAGS = $(OPENMP_CXXFLAGS) # assume CXX and FC use same flags...
 
 # FIXME: make below configurable
 LDADD = -L. -lspral $(METIS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FCLIBS) -lrt
-CUDA_LIBS = -lcublas
+if HAVE_NVCC
+SPRAL_LINK_LIBS = -lcublas
+SPRALLINK = $(NVCCLINK)
+else
+SPRAL_LINK_LIBS = $(CXXLIB)
+SPRALLINK = $(FCLINK)
+endif
 
 lib_LIBRARIES = libspral.a
 include_HEADERS = include/spral.h
@@ -262,25 +268,14 @@ tests/ssids/ssids.$(OBJEXT): libspral.a
 tests/ssids/kernels.$(OBJEXT): libspral.a
 examples/C/ssids.$(OBJEXT): libspral.a
 TESTS += ssids_test ssids_kernel_test
-if HAVE_NVCC
-spral_ssids_LINK = $(NVCCLINK)
-spral_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
-ssids_test_LINK = $(NVCCLINK)
-ssids_test_LDADD = $(LDADD) $(CUDA_LIBS)
-examples_Fortran_ssids_LINK = $(NVCCLINK)
-examples_Fortran_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
-examples_C_ssids_LINK = $(NVCCLINK)
-examples_C_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
-else
-spral_ssids_LINK = $(CXXLINK)
-spral_ssids_LDADD = $(LDADD)
-ssids_test_LINK = $(CXXLINK)
-ssids_test_LDADD = $(LDADD)
-examples_Fortran_ssids_LINK = $(CXXLINK)
-examples_Fortran_ssids_LDADD = $(LDADD)
-examples_C_ssids_LINK = $(CXXLINK)
-examples_C_ssids_LDADD = $(LDADD)
-endif
+spral_ssids_LDADD = $(LDADD) $(SPRAL_LINK_LIBS)
+ssids_test_LDADD = $(LDADD) $(SPRAL_LINK_LIBS)
+examples_Fortran_ssids_LDADD = $(LDADD) $(SPRAL_LINK_LIBS)
+examples_C_ssids_LDADD = $(LDADD) $(SPRAL_LINK_LIBS)
+spral_ssids_LINK = $(SPRALLINK)
+ssids_test_LINK = $(SPRALLINK)
+examples_Fortran_ssids_LINK = $(SPRALLINK)
+examples_C_ssids_LINK = $(SPRALLINK)
 
 # SSMFE
 include_HEADERS += include/spral_ssmfe.h

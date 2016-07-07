@@ -380,10 +380,9 @@ am_examples_C_ssids_OBJECTS = examples/C/ssids.$(OBJEXT)
 examples_C_ssids_OBJECTS = $(am_examples_C_ssids_OBJECTS)
 am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
-@HAVE_NVCC_FALSE@examples_C_ssids_DEPENDENCIES =  \
-@HAVE_NVCC_FALSE@	$(am__DEPENDENCIES_2)
-@HAVE_NVCC_TRUE@examples_C_ssids_DEPENDENCIES = $(am__DEPENDENCIES_2) \
-@HAVE_NVCC_TRUE@	$(am__DEPENDENCIES_1)
+@HAVE_NVCC_FALSE@am__DEPENDENCIES_3 = $(am__DEPENDENCIES_1)
+examples_C_ssids_DEPENDENCIES = $(am__DEPENDENCIES_2) \
+	$(am__DEPENDENCIES_3)
 am_examples_C_ssmfe_hermitian_OBJECTS =  \
 	examples/C/ssmfe/hermitian.$(OBJEXT)
 examples_C_ssmfe_hermitian_OBJECTS =  \
@@ -496,10 +495,8 @@ examples_Fortran_scaling_hungarian_unsym_DEPENDENCIES =  \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_examples_Fortran_ssids_OBJECTS = examples/Fortran/ssids.$(OBJEXT)
 examples_Fortran_ssids_OBJECTS = $(am_examples_Fortran_ssids_OBJECTS)
-@HAVE_NVCC_FALSE@examples_Fortran_ssids_DEPENDENCIES =  \
-@HAVE_NVCC_FALSE@	$(am__DEPENDENCIES_2)
-@HAVE_NVCC_TRUE@examples_Fortran_ssids_DEPENDENCIES =  \
-@HAVE_NVCC_TRUE@	$(am__DEPENDENCIES_2) $(am__DEPENDENCIES_1)
+examples_Fortran_ssids_DEPENDENCIES = $(am__DEPENDENCIES_2) \
+	$(am__DEPENDENCIES_3)
 am_examples_Fortran_ssmfe_hermitian_OBJECTS =  \
 	examples/Fortran/ssmfe/hermitian.$(OBJEXT)
 examples_Fortran_ssmfe_hermitian_OBJECTS =  \
@@ -574,9 +571,7 @@ am__spral_ssids_SOURCES_DIST = driver/spral_ssids.f90 \
 am_spral_ssids_OBJECTS = driver/spral_ssids.$(OBJEXT) $(am__objects_3) \
 	$(am__objects_4)
 spral_ssids_OBJECTS = $(am_spral_ssids_OBJECTS)
-@HAVE_NVCC_FALSE@spral_ssids_DEPENDENCIES = $(am__DEPENDENCIES_2)
-@HAVE_NVCC_TRUE@spral_ssids_DEPENDENCIES = $(am__DEPENDENCIES_2) \
-@HAVE_NVCC_TRUE@	$(am__DEPENDENCIES_1)
+spral_ssids_DEPENDENCIES = $(am__DEPENDENCIES_2) $(am__DEPENDENCIES_3)
 am_ssids_kernel_test_OBJECTS = tests/ssids/kernels.$(OBJEXT)
 ssids_kernel_test_OBJECTS = $(am_ssids_kernel_test_OBJECTS)
 ssids_kernel_test_LDADD = $(LDADD)
@@ -585,9 +580,7 @@ ssids_kernel_test_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1)
 am_ssids_test_OBJECTS = tests/ssids/ssids.$(OBJEXT)
 ssids_test_OBJECTS = $(am_ssids_test_OBJECTS)
-@HAVE_NVCC_FALSE@ssids_test_DEPENDENCIES = $(am__DEPENDENCIES_2)
-@HAVE_NVCC_TRUE@ssids_test_DEPENDENCIES = $(am__DEPENDENCIES_2) \
-@HAVE_NVCC_TRUE@	$(am__DEPENDENCIES_1)
+ssids_test_DEPENDENCIES = $(am__DEPENDENCIES_2) $(am__DEPENDENCIES_3)
 am_ssmfe_ciface_test_OBJECTS = tests/ssmfe/ssmfe_ciface.$(OBJEXT)
 ssmfe_ciface_test_OBJECTS = $(am_ssmfe_ciface_test_OBJECTS)
 ssmfe_ciface_test_LDADD = $(LDADD)
@@ -957,6 +950,7 @@ CPPFLAGS = @CPPFLAGS@
 CXX = @CXX@
 CXXDEPMODE = @CXXDEPMODE@
 CXXFLAGS = @CXXFLAGS@
+CXXLIB = @CXXLIB@
 CYGPATH_W = @CYGPATH_W@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
@@ -1072,11 +1066,14 @@ NVCCLINK = \
 # Include directory for standard C
 AM_CFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src $(OPENMP_CFLAGS)
 AM_CXXFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src -std=c++11 $(OPENMP_CXXFLAGS)
-AM_FCFLAGS = -fopenmp
+AM_FCFLAGS = $(OPENMP_CXXFLAGS) # assume CXX and FC use same flags...
 
 # FIXME: make below configurable
 LDADD = -L. -lspral $(METIS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FCLIBS) -lrt
-CUDA_LIBS = -lcublas
+@HAVE_NVCC_FALSE@SPRAL_LINK_LIBS = $(CXXLIB)
+@HAVE_NVCC_TRUE@SPRAL_LINK_LIBS = -lcublas
+@HAVE_NVCC_FALSE@SPRALLINK = $(FCLINK)
+@HAVE_NVCC_TRUE@SPRALLINK = $(NVCCLINK)
 lib_LIBRARIES = libspral.a
 
 # LSMR
@@ -1179,22 +1176,14 @@ ssids_test_SOURCES = tests/ssids/ssids.f90
 ssids_kernel_test_SOURCES = tests/ssids/kernels.cxx
 examples_Fortran_ssids_SOURCES = examples/Fortran/ssids.f90
 examples_C_ssids_SOURCES = examples/C/ssids.c
-@HAVE_NVCC_FALSE@spral_ssids_LINK = $(CXXLINK)
-@HAVE_NVCC_TRUE@spral_ssids_LINK = $(NVCCLINK)
-@HAVE_NVCC_FALSE@spral_ssids_LDADD = $(LDADD)
-@HAVE_NVCC_TRUE@spral_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
-@HAVE_NVCC_FALSE@ssids_test_LINK = $(CXXLINK)
-@HAVE_NVCC_TRUE@ssids_test_LINK = $(NVCCLINK)
-@HAVE_NVCC_FALSE@ssids_test_LDADD = $(LDADD)
-@HAVE_NVCC_TRUE@ssids_test_LDADD = $(LDADD) $(CUDA_LIBS)
-@HAVE_NVCC_FALSE@examples_Fortran_ssids_LINK = $(CXXLINK)
-@HAVE_NVCC_TRUE@examples_Fortran_ssids_LINK = $(NVCCLINK)
-@HAVE_NVCC_FALSE@examples_Fortran_ssids_LDADD = $(LDADD)
-@HAVE_NVCC_TRUE@examples_Fortran_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
-@HAVE_NVCC_FALSE@examples_C_ssids_LINK = $(CXXLINK)
-@HAVE_NVCC_TRUE@examples_C_ssids_LINK = $(NVCCLINK)
-@HAVE_NVCC_FALSE@examples_C_ssids_LDADD = $(LDADD)
-@HAVE_NVCC_TRUE@examples_C_ssids_LDADD = $(LDADD) $(CUDA_LIBS)
+spral_ssids_LDADD = $(LDADD) $(SPRAL_LINK_LIBS)
+ssids_test_LDADD = $(LDADD) $(SPRAL_LINK_LIBS)
+examples_Fortran_ssids_LDADD = $(LDADD) $(SPRAL_LINK_LIBS)
+examples_C_ssids_LDADD = $(LDADD) $(SPRAL_LINK_LIBS)
+spral_ssids_LINK = $(SPRALLINK)
+ssids_test_LINK = $(SPRALLINK)
+examples_Fortran_ssids_LINK = $(SPRALLINK)
+examples_C_ssids_LINK = $(SPRALLINK)
 ssmfe_test_SOURCES = tests/ssmfe/ssmfe.f90
 ssmfe_ciface_test_SOURCES = tests/ssmfe/ssmfe_ciface.c \
 									 tests/ssmfe/laplace2d.h \
