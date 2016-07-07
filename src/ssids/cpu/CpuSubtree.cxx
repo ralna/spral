@@ -31,16 +31,18 @@ void* spral_ssids_create_cpu_subtree_dbl(bool posdef, void const* symbolic_subtr
 }
 
 extern "C"
-void spral_ssids_destroy_cpu_subtree_dbl(bool posdef, void* subtree_ptr) {
+void spral_ssids_destroy_cpu_subtree_dbl(bool posdef, void* target) {
    const int BLOCK_SIZE = 16;
    const int PAGE_SIZE = 16384;
    typedef double T;
 
+   if(!target) return;
+
    if(posdef) {
-      auto *subtree = static_cast<CpuSubtree<true, BLOCK_SIZE, T, StackAllocator<PAGE_SIZE>>*>(subtree_ptr);
+      auto *subtree = static_cast<CpuSubtree<true, BLOCK_SIZE, T, StackAllocator<PAGE_SIZE>>*>(target);
       delete subtree;
    } else {
-      auto *subtree = static_cast<CpuSubtree<false, BLOCK_SIZE, T, StackAllocator<PAGE_SIZE>>*>(subtree_ptr);
+      auto *subtree = static_cast<CpuSubtree<false, BLOCK_SIZE, T, StackAllocator<PAGE_SIZE>>*>(target);
       delete subtree;
    }
 }

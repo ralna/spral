@@ -19,6 +19,8 @@ void* spral_ssids_cpu_create_symbolic_subtree(int nnodes, int const* sptr, int c
 
 extern "C"
 void spral_ssids_cpu_destroy_symbolic_subtree(void* target) {
+   if(!target) return;
+
    auto *subtree = static_cast<SymbolicSubtree*>(target);
    delete subtree;
 }
