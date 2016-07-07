@@ -3,7 +3,6 @@
 !
 module spral_ssids_fkeep
    use spral_ssids_akeep, only : ssids_akeep_base
-   use spral_ssids_datatypes
    use spral_ssids_alloc, only : smfreeall
    use spral_ssids_datatypes, only : long, node_type, smalloc_type, &
                                      ssids_options, wp, SSIDS_ERROR_ALLOCATION,&
