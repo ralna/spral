@@ -64,15 +64,15 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
    class(ssids_inform_base), intent(inout) :: inform
 
    logical(C_BOOL) :: fposdef
-   type(cpu_symbolic_subtree) :: symbolic_subtree
-   type(cpu_subtree) :: subtree
+   type(cpu_symbolic_subtree), pointer :: symbolic_subtree
+   type(cpu_subtree), pointer :: subtree
    type(cpu_node_data), dimension(:), allocatable :: cnodes
    type(cpu_factor_options) :: coptions
    type(cpu_factor_stats) :: cstats
 
    integer :: st
 
-   symbolic_subtree = create_cpu_symbolic_subtree(akeep%nnodes, akeep%sptr, &
+   symbolic_subtree => create_cpu_symbolic_subtree(akeep%nnodes, akeep%sptr, &
       akeep%sparent, akeep%rptr, akeep%rlist)
 
    ! Allocate cnodes and setup for main call
@@ -86,7 +86,8 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
 
    ! Perform factorization in C++ code
    fposdef = fkeep%pos_def
-   subtree = create_cpu_subtree(fposdef, symbolic_subtree, akeep%nnodes, cnodes)
+   subtree => create_cpu_subtree(fposdef, symbolic_subtree, akeep%nnodes, &
+      cnodes)
    if(allocated(fkeep%scaling)) then
       call subtree%factor(akeep%n, akeep%nnodes, cnodes, val, &
          C_LOC(fkeep%alloc), coptions, cstats, scaling=fkeep%scaling)
@@ -98,6 +99,9 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
    ! Gather information back to Fortran
    call extract_cpu_data(akeep%nnodes, cnodes, fkeep%nodes, cstats, inform)
 
+   ! Free data structures
+   deallocate(subtree)
+   deallocate(symbolic_subtree)
 end subroutine inner_factor_cpu
 
 subroutine inner_solve_cpu(local_job, nrhs, x, ldx, akeep, fkeep, options, inform)

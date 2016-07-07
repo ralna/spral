@@ -144,13 +144,16 @@ module spral_ssids_cpu_iface
 
 contains
 
-type(cpu_subtree) function create_cpu_subtree(posdef, symbolic_subtree, &
-      nnodes, nodes)
+! NB: We return a pointer as gfortran-6.1.1 hasn't implemented finalisation of
+! function results yet so we can't use a reference counted pointer.
+function create_cpu_subtree(posdef, symbolic_subtree, nnodes, nodes)
+   type(cpu_subtree), pointer :: create_cpu_subtree
    logical(C_BOOL), intent(in) :: posdef
    type(cpu_symbolic_subtree), intent(in) :: symbolic_subtree
    integer(C_INT), intent(in) :: nnodes
    type(cpu_node_data), dimension(nnodes), intent(inout) :: nodes
 
+   allocate(create_cpu_subtree)
    create_cpu_subtree%posdef = posdef
    create_cpu_subtree%subtree = &
       c_create_cpu_subtree(posdef, symbolic_subtree%subtree, nnodes, nodes)
@@ -185,14 +188,17 @@ end subroutine cpu_subtree_factor
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-type(cpu_symbolic_subtree) function create_cpu_symbolic_subtree(nnodes, sptr, &
-      sparent, rptr, rlist)
+! NB: We return a pointer as gfortran-6.1.1 hasn't implemented finalisation of
+! function results yet so we can't use a reference counted pointer.
+function create_cpu_symbolic_subtree(nnodes, sptr, sparent, rptr, rlist)
+   type(cpu_symbolic_subtree), pointer :: create_cpu_symbolic_subtree
    integer(C_INT), intent(in) :: nnodes
    integer(C_INT), dimension(nnodes+1), intent(in) :: sptr
    integer(C_INT), dimension(nnodes+1), intent(in) :: sparent
    integer(C_LONG), dimension(nnodes+1), intent(in) :: rptr
    integer(C_INT), dimension(*), intent(in) :: rlist
 
+   allocate(create_cpu_symbolic_subtree)
    create_cpu_symbolic_subtree%subtree = &
       c_create_symbolic_subtree(nnodes, sptr, sparent, rptr, rlist)
 end function create_cpu_symbolic_subtree
