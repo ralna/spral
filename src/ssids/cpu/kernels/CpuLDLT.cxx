@@ -1163,6 +1163,8 @@ private:
 
       /* Free memory */
       delete[] swapwith;
+      delete[] glbval;
+      delete[] glbidx;
    }
 
    static
@@ -1378,6 +1380,7 @@ public:
       //permute_a_d_to_elim_order(n, elim_order, a, lda, d, perm);
       
       // Free memory
+      delete[] eliminated;
       delete[] elim_order;
       delete[] cdata;
       for(int i=0; i<mblk*nblk; i++)
