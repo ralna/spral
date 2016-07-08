@@ -216,6 +216,7 @@ libspral_a_SOURCES += \
 	src/ssids/fkeep.f90 \
 	src/ssids/inform.f90 \
 	src/ssids/ssids.f90 \
+	src/ssids/subtree.f90 \
 	src/ssids/cpu/AlignedAllocator.hxx \
 	src/ssids/cpu/cpu_iface.f90 \
 	src/ssids/cpu/cpu_iface.hxx \
@@ -226,6 +227,7 @@ libspral_a_SOURCES += \
 	src/ssids/cpu/solve.f90 \
 	src/ssids/cpu/smalloc.cxx \
 	src/ssids/cpu/smalloc.hxx \
+	src/ssids/cpu/subtree.f90 \
 	src/ssids/cpu/SmallLeafSubtree.hxx \
 	src/ssids/cpu/StackAllocator.hxx \
 	src/ssids/cpu/SymbolicSubtree.cxx \
@@ -367,12 +369,14 @@ src/rutherford_boeing.$(OBJEXT): src/matrix_util.$(OBJEXT) \
 src/scaling.$(OBJEXT): src/matrix_util.$(OBJEXT)
 src/ssids/alloc.$(OBJEXT): src/ssids/datatypes.$(OBJEXT)
 src/ssids/akeep.$(OBJEXT): src/ssids/datatypes.$(OBJEXT) \
-                           src/ssids/inform.$(OBJEXT)
+                           src/ssids/inform.$(OBJEXT) \
+									src/ssids/subtree.$(OBJEXT)
 src/ssids/analyse.$(OBJEXT): src/core_analyse.$(OBJEXT) \
                              src/pgm.$(OBJEXT) \
                              src/ssids/akeep.$(OBJEXT) \
                              src/ssids/datatypes.$(OBJEXT) \
-                             src/ssids/inform.$(OBJEXT)
+                             src/ssids/inform.$(OBJEXT) \
+									  src/ssids/cpu/subtree.$(OBJEXT)
 src/ssids/contrib.$(OBJEXT): src/ssids/datatypes.$(OBJEXT)
 src/ssids/datatypes.$(OBJEXT): src/scaling.$(OBJEXT)
 src/ssids/fkeep.$(OBJEXT): src/ssids/akeep.$(OBJEXT) \
@@ -383,10 +387,16 @@ src/ssids/fkeep.$(OBJEXT): src/ssids/akeep.$(OBJEXT) \
                            src/ssids/cpu/solve.$(OBJEXT)
 src/ssids/inform.$(OBJEXT): src/scaling.$(OBJEXT) \
                             src/ssids/datatypes.$(OBJEXT)
+src/ssids/subtree.$(OBJEXT): src/ssids/contrib.$(OBJEXT) \
+                             src/ssids/datatypes.$(OBJEXT)
 src/ssids/cpu/cpu_iface.$(OBJEXT): src/ssids/akeep.$(OBJEXT) \
                                    src/ssids/datatypes.$(OBJEXT) \
                                    src/ssids/inform.$(OBJEXT)
 src/ssids/cpu/solve.$(OBJEXT): src/ssids/datatypes.$(OBJEXT)
+src/ssids/cpu/subtree.$(OBJEXT): src/ssids/contrib.$(OBJEXT) \
+	                              src/ssids/datatypes.$(OBJEXT) \
+											src/ssids/subtree.$(OBJEXT) \
+											src/ssids/cpu/cpu_iface.$(OBJEXT)
 src/ssids/gpu/akeep.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
                                src/ssids/akeep.$(OBJEXT) \
                                src/ssids/datatypes.$(OBJEXT) \

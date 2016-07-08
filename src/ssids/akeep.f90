@@ -2,11 +2,16 @@ module spral_ssids_akeep
    use spral_ssids_datatypes, only : long, wp, SSIDS_ERROR_CUDA_UNKNOWN, &
                                      ssids_options
    use spral_ssids_inform, only : ssids_inform_base
+   use spral_ssids_subtree, only : symbolic_subtree_base
    use, intrinsic :: iso_c_binding
    implicit none
 
    private
    public :: ssids_akeep_base
+
+   type symbolic_subtree_ptr
+      class(symbolic_subtree_base), pointer :: ptr
+   end type symbolic_subtree_ptr
 
    !
    ! Data type for information generated in analyse phase
@@ -21,6 +26,11 @@ module spral_ssids_akeep
       integer :: nnodes = -1 ! Number of nodes in assembly tree
       integer :: num_two ! This is set to 0 as we ignore any negative signs
          ! that indicate 2x2 pivot (analyse does not exploit them)
+
+      ! Subtree partition
+      integer :: nparts
+      integer, dimension(:), allocatable :: part
+      type(symbolic_subtree_ptr), dimension(:), allocatable :: subtree
 
       ! child_list(child_ptr(node):child_ptr(node+1)-1) is list of children
       ! of node. Used to ensure we always sum contributions from children
@@ -101,6 +111,8 @@ subroutine free_akeep_base(akeep, flag)
 
    flag = 0
 
+   deallocate(akeep%part, stat=st)
+   deallocate(akeep%subtree, stat=st)
    deallocate(akeep%child_ptr, stat=st)
    deallocate(akeep%child_list, stat=st)
    deallocate(akeep%invp, stat=st)

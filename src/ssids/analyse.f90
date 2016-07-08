@@ -7,6 +7,7 @@ module spral_ssids_analyse
    use spral_core_analyse, only : basic_analyse
    use spral_pgm, only : writePPM
    use spral_ssids_akeep, only : ssids_akeep_base
+   use spral_ssids_cpu_subtree, only : construct_cpu_symbolic_subtree
    use spral_ssids_datatypes
    use spral_ssids_inform, only : ssids_inform_base, ssids_print_flag
    implicit none
@@ -196,6 +197,79 @@ end subroutine check_order
 !****************************************************************************
 
 !
+! Given an elimination tree, try and split it into at least min_npart parts
+! of size at most max_flops.
+!
+! Parts are returned as contigous ranges of nodes. Part i consists of nodes
+! part(i):part(i+1)-1
+!
+! FIXME: This really needs thought through in more detail for best performance
+! it may be more sensible to come down from the top?
+subroutine find_subtree_partition(nnodes, sptr, sparent, rptr, min_npart, &
+      max_flops, nparts, part)
+   integer, intent(in) :: nnodes
+   integer, dimension(nnodes+1), intent(in) :: sptr
+   integer, dimension(nnodes), intent(in) :: sparent
+   integer(long), dimension(nnodes+1), intent(in) :: rptr
+   integer, intent(in) :: min_npart
+   integer(long), intent(in) :: max_flops
+   integer, intent(out) :: nparts
+   integer, dimension(:), allocatable, intent(inout) :: part
+
+   integer(long) :: j, target_flops, total_flops
+   integer :: m, n, node
+   integer(long), dimension(:), allocatable :: flops
+
+   !print *, "min_npart = ", min_npart, " max_flops = ", max_flops
+   ! Count flops below each node
+   allocate(flops(nnodes+1))
+   flops(:) = 0
+   !print *, "There are ", nnodes, " nodes"
+   do node = 1, nnodes
+      m = rptr(node+1)-rptr(node)
+      n = sptr(node+1)-sptr(node)
+      do j = m-n+1, m
+         flops(node) = flops(node) + j**2
+      end do
+      j = sparent(node)
+      flops(j) = flops(j) + flops(node)
+      !print *, "Node ", node, "parent", j, " flops ", flops(node)
+   end do
+   !print *, "Total flops ", flops(nnodes+1)
+
+   ! Split into parts of at most target_flops. Each part is a subtree, not a
+   ! subforest (unless it contains the artifical root node).
+   target_flops = min(flops(nnodes+1) / min_npart, max_flops)
+   !print *, "Target flops ", target_flops
+   nparts = 0
+   allocate(part(nnodes+1)) ! big enough to be safe FIXME: make smaller or alloc elsewhere?
+   part(1) = 1
+   node = 1
+   do while(node.lt.nnodes+1)
+      ! Head up from node until parent has too many flops
+      j = node
+      do while(j.lt.nnodes+1)
+         if(flops(sparent(j)).gt.target_flops) exit ! Nodes node:j form a part
+         j = sparent(j)
+      end do
+      ! Record node:j as a part
+      nparts = nparts + 1
+      !print *, "Part ", nparts, "contains ", node, ":", j
+      part(nparts+1) = j
+      node = j + 1
+      if(j.eq.nnodes+1) exit ! done, root node is incorporated
+      ! Remove subtree rooted at (node-1) from flops count of nodes above it
+      do
+         j = sparent(j)
+         if(j.ge.nnodes+1) exit ! at top of tree
+         flops(j) = flops(j) - flops(node-1)
+      end do
+   end do
+end subroutine find_subtree_partition
+
+!****************************************************************************
+
+!
 ! This routine requires the LOWER and UPPER triangular parts of A
 ! to be held in CSC format using ptr2 and row2
 ! AND lower triangular part held using ptr and row.
@@ -260,6 +334,16 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
       inform%flag = SSIDS_ERROR_UNKNOWN
    end select
    inform%num_factor = akeep%nfactor
+
+   call find_subtree_partition(akeep%nnodes, akeep%sptr, akeep%sparent, &
+      akeep%rptr, options%min_npart, options%max_flops_part, akeep%nparts, &
+      akeep%part)
+   ! FIXME: remove printing here and implement code
+   print *, "Partition suggests ", akeep%nparts, " parts (not used yet)"
+
+   allocate(akeep%subtree(1))
+   akeep%subtree(1)%ptr => construct_cpu_symbolic_subtree(akeep%nnodes, &
+      akeep%sptr, akeep%sparent, akeep%rptr, akeep%rlist)
 
    ! set invp to hold inverse of order
    do i = 1,n

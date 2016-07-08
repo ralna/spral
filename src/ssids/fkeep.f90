@@ -12,9 +12,8 @@ module spral_ssids_fkeep
    use spral_ssids_inform, only : ssids_inform_base
    use spral_ssids_cpu_solve, only : fwd_diag_solve, subtree_bwd_solve
    use spral_ssids_cpu_iface, only : cpu_node_data, cpu_factor_options, &
-      cpu_factor_stats, setup_cpu_data, extract_cpu_data, &
-      create_cpu_subtree, cpu_subtree, &
-      create_cpu_symbolic_subtree, cpu_symbolic_subtree
+      cpu_factor_stats, setup_cpu_data, extract_cpu_data
+   use spral_ssids_cpu_subtree, only : cpu_numeric_subtree, cpu_symbolic_subtree
    use, intrinsic :: iso_c_binding
    implicit none
 
@@ -65,15 +64,19 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
 
    logical(C_BOOL) :: fposdef
    type(cpu_symbolic_subtree), pointer :: symbolic_subtree
-   type(cpu_subtree), pointer :: subtree
+   type(cpu_numeric_subtree), pointer :: subtree
    type(cpu_node_data), dimension(:), allocatable :: cnodes
    type(cpu_factor_options) :: coptions
    type(cpu_factor_stats) :: cstats
 
    integer :: st
 
-   symbolic_subtree => create_cpu_symbolic_subtree(akeep%nnodes, akeep%sptr, &
-      akeep%sparent, akeep%rptr, akeep%rlist)
+   associate(ssptr => akeep%subtree(1)%ptr)
+      select type(ssptr)
+      type is(cpu_symbolic_subtree)
+         symbolic_subtree => ssptr
+      end select
+   end associate
 
    ! Allocate cnodes and setup for main call
    allocate(cnodes(akeep%nnodes+1), stat=st)
@@ -86,13 +89,12 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
 
    ! Perform factorization in C++ code
    fposdef = fkeep%pos_def
-   subtree => create_cpu_subtree(fposdef, symbolic_subtree, akeep%nnodes, &
-      cnodes)
+   subtree => symbolic_subtree%factor2(fposdef, akeep%nnodes, cnodes)
    if(allocated(fkeep%scaling)) then
-      call subtree%factor(akeep%n, akeep%nnodes, cnodes, val, &
+      call subtree%factor3(akeep%n, akeep%nnodes, cnodes, val, &
          C_LOC(fkeep%alloc), coptions, cstats, scaling=fkeep%scaling)
    else
-      call subtree%factor(akeep%n, akeep%nnodes, cnodes, val, &
+      call subtree%factor3(akeep%n, akeep%nnodes, cnodes, val, &
          C_LOC(fkeep%alloc), coptions, cstats)
    endif
 
