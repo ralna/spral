@@ -96,18 +96,13 @@ subroutine inner_solve_cpu(local_job, nrhs, x, ldx, akeep, fkeep, options, infor
    integer :: i, r
    integer :: n
    real(wp), dimension(:,:), allocatable :: x2
-   integer, dimension(:), allocatable :: fake_invp
 
    n = akeep%n
 
-   allocate(x2(n, nrhs), fake_invp(n), stat=inform%stat)
+   allocate(x2(n, nrhs), stat=inform%stat)
    if(inform%stat.ne.0) goto 100
 
-   ! FIXME: rm
-   do i = 1, n
-      fake_invp(i) = i
-   end do
-
+   ! Permute/scale
    if (allocated(fkeep%scaling) .and. (local_job == SSIDS_SOLVE_JOB_ALL .or. &
             local_job == SSIDS_SOLVE_JOB_FWD)) then
       ! Copy and scale
@@ -124,32 +119,26 @@ subroutine inner_solve_cpu(local_job, nrhs, x, ldx, akeep, fkeep, options, infor
    end if
 
 
-   ! Perform forward solve and/or diagonal solve
-   associate(subtree => fkeep%subtree(1)%ptr)
-      select type(subtree)
-      type is (cpu_numeric_subtree)
-         select case(local_job)
-         case(SSIDS_SOLVE_JOB_FWD)
-            call subtree%solve_fwd2(nrhs, x2, n, inform)
-            if (inform%stat .ne. 0) goto 100
-         case(SSIDS_SOLVE_JOB_DIAG)
-            call subtree%solve_diag2(nrhs, x2, n, inform)
-            if (inform%stat .ne. 0) goto 100
-         case(SSIDS_SOLVE_JOB_BWD)
-            call subtree%solve_diag_bwd2(nrhs, x2, n, inform, local_job)
-            if (inform%stat .ne. 0) goto 100
-         case(SSIDS_SOLVE_JOB_DIAG_BWD)
-            call subtree%solve_diag_bwd2(nrhs, x2, n, inform, local_job)
-            if (inform%stat .ne. 0) goto 100
-         case(SSIDS_SOLVE_JOB_ALL)
-            call subtree%solve_fwd2(nrhs, x2, n, inform)
-            if (inform%stat .ne. 0) goto 100
-            call subtree%solve_diag_bwd2(nrhs, x2, n, inform, local_job)
-            if (inform%stat .ne. 0) goto 100
-         end select
-      end select
-   end associate
+   ! Perform relevant solves
+   if (local_job.eq.SSIDS_SOLVE_JOB_FWD .or. &
+         local_job.eq.SSIDS_SOLVE_JOB_ALL) &
+      call fkeep%subtree(1)%ptr%solve_fwd(nrhs, x2, n, inform)
+   if (inform%stat .ne. 0) goto 100
 
+   if (local_job.eq.SSIDS_SOLVE_JOB_DIAG) &
+      call fkeep%subtree(1)%ptr%solve_diag(nrhs, x2, n, inform)
+   if (inform%stat .ne. 0) goto 100
+
+   if (local_job.eq.SSIDS_SOLVE_JOB_BWD) &
+      call fkeep%subtree(1)%ptr%solve_bwd(nrhs, x2, n, inform)
+   if (inform%stat .ne. 0) goto 100
+
+   if (local_job.eq.SSIDS_SOLVE_JOB_DIAG_BWD .or. &
+         local_job.eq.SSIDS_SOLVE_JOB_ALL) &
+      call fkeep%subtree(1)%ptr%solve_diag_bwd(nrhs, x2, n, inform)
+   if (inform%stat .ne. 0) goto 100
+
+   ! Unscale/unpermute
    if (allocated(fkeep%scaling) .and. ( &
             local_job == SSIDS_SOLVE_JOB_ALL .or. &
             local_job == SSIDS_SOLVE_JOB_BWD .or. &

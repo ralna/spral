@@ -42,13 +42,14 @@ module spral_ssids_subtree
          class(contrib_type), pointer :: get_contrib_iface
          class(numeric_subtree_base), intent(in) :: this
       end function get_contrib_iface
-      subroutine solve_proc_iface(this, nrhs, x, ldx)
-         import numeric_subtree_base, wp
+      subroutine solve_proc_iface(this, nrhs, x, ldx, inform)
+         import numeric_subtree_base, ssids_inform_base, wp
          implicit none
          class(numeric_subtree_base), intent(inout) :: this
          integer, intent(in) :: nrhs
          real(wp), dimension(*), intent(inout) :: x
          integer, intent(in) :: ldx
+         class(ssids_inform_base), intent(inout) :: inform
       end subroutine solve_proc_iface
    end interface
 end module spral_ssids_subtree
