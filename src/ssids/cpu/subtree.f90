@@ -47,6 +47,7 @@ module spral_ssids_cpu_subtree
       procedure :: solve_bwd2 ! fixme remove
       procedure :: enquire_posdef
       procedure :: enquire_indef
+      procedure :: alter
       final :: numeric_final
    end type cpu_numeric_subtree
 
@@ -416,5 +417,37 @@ subroutine enquire_indef(this, nodes, invp, piv_order, d)
       end do
    end associate
 end subroutine enquire_indef
+
+subroutine alter(this, d, nodes)
+   class(cpu_numeric_subtree), intent(inout) :: this
+   real(wp), dimension(2,*), intent(in) :: d
+   type(node_type), dimension(*), target, intent(inout) :: nodes
+
+   integer :: blkm, blkn
+   integer(long) :: ip
+   integer :: j
+   integer :: nd
+   integer :: node
+   integer :: piv
+
+   type(node_type), pointer :: nptr
+
+   associate(symbolic => this%symbolic)
+      piv = 1
+      do node = 1, symbolic%nnodes
+         nptr => nodes(node)
+         nd = nptr%ndelay
+         blkn = symbolic%sptr(node+1) - symbolic%sptr(node) + nd
+         blkm = int(symbolic%rptr(node+1) - symbolic%rptr(node)) + nd
+         ip = blkm*(blkn+0_long) + 1
+         do j = 1, nptr%nelim
+            nptr%lcol(ip)   = d(1,piv)
+            nptr%lcol(ip+1) = d(2,piv)
+            ip = ip + 2
+            piv = piv + 1
+         end do
+      end do
+   end associate
+end subroutine alter
 
 end module spral_ssids_cpu_subtree

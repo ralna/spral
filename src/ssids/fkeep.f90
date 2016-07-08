@@ -225,29 +225,12 @@ subroutine alter_cpu(d, akeep, fkeep, options, inform)
    type(ssids_options), intent(in) :: options
    class(ssids_inform_base), intent(inout) :: inform
 
-   integer :: blkm, blkn
-   integer(long) :: ip
-   integer :: j
-   integer :: nd
-   integer :: node
-   integer :: piv
-
-   type(node_type), pointer :: nptr
-
-   piv = 1
-   do node = 1, akeep%nnodes
-      nptr => fkeep%nodes(node)
-      nd = nptr%ndelay
-      blkn = akeep%sptr(node+1) - akeep%sptr(node) + nd
-      blkm = int(akeep%rptr(node+1) - akeep%rptr(node)) + nd
-      ip = blkm*(blkn+0_long) + 1
-      do j = 1, nptr%nelim
-         nptr%lcol(ip)   = d(1,piv)
-         nptr%lcol(ip+1) = d(2,piv)
-         ip = ip + 2
-         piv = piv + 1
-      end do
-   end do
+   associate(subtree => fkeep%subtree(1)%ptr)
+      select type(subtree)
+      type is (cpu_numeric_subtree)
+         call subtree%alter(d, fkeep%nodes)
+      end select
+   end associate
 end subroutine alter_cpu
 
 !****************************************************************************
