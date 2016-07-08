@@ -945,46 +945,6 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
    end if
    fkeep%nodes(1:akeep%nnodes+1)%ndelay = 0
          
-   ! Do an inital storage allocation:
-   ! * options%multiplier * n             integers (for nodes(:)%perm)
-   ! * options%multiplier * (nfactor+2*n) reals    (for nodes(:)%lcol)
-   ! FIXME: do we really need this multiplier memory????
-   ! FIXME: In posdef case ints and reals not needed!
-   if(associated(fkeep%alloc)) then
-      if(fkeep%alloc%imem_size.lt. &
-            max(n+0_long, int(options%multiplier*n,kind=long))) then
-         deallocate(fkeep%alloc%imem, stat=st)
-         fkeep%alloc%imem_size = &
-            max(n+0_long, int(options%multiplier*n,kind=long))
-         allocate(fkeep%alloc%imem(fkeep%alloc%imem_size),stat=st)
-         if (st .ne. 0) go to 10
-      end if
-      if(fkeep%alloc%rmem_size.lt. max(akeep%nfactor+2*n, &
-            int(options%multiplier*real(akeep%nfactor,wp)+2*n,kind=long))) then
-         deallocate(fkeep%alloc%rmem, stat=st)
-         fkeep%alloc%rmem_size = max(akeep%nfactor+2*n, &
-            int(options%multiplier*real(akeep%nfactor,wp)+2*n,kind=long))
-         allocate(fkeep%alloc%rmem(fkeep%alloc%rmem_size), stat=st)
-         if (st .ne. 0) go to 10
-      end if
-      next_alloc => fkeep%alloc
-      do while(associated(next_alloc))
-         next_alloc%rhead = 0
-         next_alloc%ihead = 0
-         next_alloc => next_alloc%next_alloc
-      end do
-      nullify(fkeep%alloc%top_real, fkeep%alloc%top_int)
-
-   else
-      allocate(fkeep%alloc, stat=st)
-      if (st .ne. 0) go to 10
-      call smalloc_setup(fkeep%alloc, &
-         max(n+0_long, int(options%multiplier*n,kind=long)), &
-         max(akeep%nfactor+2*n, &
-            int(options%multiplier*real(akeep%nfactor,wp)+2*n,kind=long)), st)
-      if (st .ne. 0) go to 10
-   end if
-
    ! Call main factorization routine
    if (akeep%check) then
       call fkeep%inner_factor(akeep, val2, options, inform)

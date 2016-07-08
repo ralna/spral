@@ -41,6 +41,7 @@ module spral_ssids_gpu_fkeep
       type(C_PTR) :: gpu_clists_direct = C_NULL_PTR
       type(C_PTR) :: gpu_clen = C_NULL_PTR
       logical :: host_factors = .false.
+      type(smalloc_type), pointer :: alloc => null()
 
    contains
       procedure, pass(fkeep) :: inner_factor => inner_factor_gpu ! Do actual factorization
@@ -70,6 +71,7 @@ subroutine inner_factor_gpu(fkeep, akeep, val, options, inform)
    type(thread_stats), dimension(:), allocatable :: stats ! one copy
       ! per thread, accumulates per thread statistics that are then summed to
       ! obtain global stats in inform.
+   type(smalloc_type), pointer :: next_alloc
 
    integer :: num_threads
    integer :: cuda_error, st
@@ -88,6 +90,46 @@ subroutine inner_factor_gpu(fkeep, akeep, val, options, inform)
    allocate(gpu_contribs(akeep%nnodes), stat=st)
    if(st.ne.0) goto 10
    gpu_contribs(:) = C_NULL_PTR
+
+   ! Initialise host allocator
+   ! * options%multiplier * n             integers (for nodes(:)%perm)
+   ! * options%multiplier * (nfactor+2*n) reals    (for nodes(:)%lcol)
+   ! FIXME: do we really need this multiplier memory????
+   ! FIXME: In posdef case ints and reals not needed!
+   if(associated(fkeep%alloc)) then
+      if(fkeep%alloc%imem_size.lt. &
+            max(akeep%n+0_long, int(options%multiplier*akeep%n,kind=long))) then
+         deallocate(fkeep%alloc%imem, stat=st)
+         fkeep%alloc%imem_size = &
+            max(akeep%n+0_long, int(options%multiplier*akeep%n,kind=long))
+         allocate(fkeep%alloc%imem(fkeep%alloc%imem_size),stat=st)
+         if (st .ne. 0) go to 10
+      end if
+      if(fkeep%alloc%rmem_size.lt. max(akeep%nfactor+2*akeep%n, &
+            int(options%multiplier*real(akeep%nfactor,wp)+2*akeep%n,kind=long))) then
+         deallocate(fkeep%alloc%rmem, stat=st)
+         fkeep%alloc%rmem_size = max(akeep%nfactor+2*akeep%n, &
+            int(options%multiplier*real(akeep%nfactor,wp)+2*akeep%n,kind=long))
+         allocate(fkeep%alloc%rmem(fkeep%alloc%rmem_size), stat=st)
+         if (st .ne. 0) go to 10
+      end if
+      next_alloc => fkeep%alloc
+      do while(associated(next_alloc))
+         next_alloc%rhead = 0
+         next_alloc%ihead = 0
+         next_alloc => next_alloc%next_alloc
+      end do
+      nullify(fkeep%alloc%top_real, fkeep%alloc%top_int)
+
+   else
+      allocate(fkeep%alloc, stat=st)
+      if (st .ne. 0) go to 10
+      call smalloc_setup(fkeep%alloc, &
+         max(akeep%n+0_long, int(options%multiplier*akeep%n,kind=long)), &
+         max(akeep%nfactor+2*akeep%n, &
+            int(options%multiplier*real(akeep%nfactor,wp)+2*akeep%n,kind=long)), st)
+      if (st .ne. 0) go to 10
+   end if
 
    ! Copy A values to GPU
    sz = akeep%nptr(akeep%nnodes+1) - 1
@@ -691,6 +733,11 @@ subroutine free_fkeep_gpu(fkeep, flag)
       end do
       deallocate(fkeep%stream_data, stat=st)
    endif
+
+   ! CPU-side allocator
+   call smfreeall(fkeep%alloc)
+   deallocate(fkeep%alloc)
+   nullify(fkeep%alloc)
 
    ! Cleanup top-level presolve info
    if(C_ASSOCIATED(fkeep%gpu_rlist_with_delays)) then

@@ -3,12 +3,7 @@
 !
 module spral_ssids_fkeep
    use spral_ssids_akeep, only : ssids_akeep_base
-   use spral_ssids_alloc, only : smfreeall
-   use spral_ssids_datatypes, only : long, node_type, smalloc_type, &
-                                     ssids_options, wp, SSIDS_ERROR_ALLOCATION,&
-                                     SSIDS_SOLVE_JOB_ALL, SSIDS_SOLVE_JOB_BWD, &
-                                     SSIDS_SOLVE_JOB_DIAG, SSIDS_SOLVE_JOB_FWD,&
-                                     SSIDS_SOLVE_JOB_DIAG_BWD
+   use spral_ssids_datatypes
    use spral_ssids_inform, only : ssids_inform_base
    use spral_ssids_cpu_solve, only : fwd_diag_solve, subtree_bwd_solve
    use spral_ssids_cpu_iface, only : cpu_factor_stats, extract_cpu_data
@@ -35,8 +30,6 @@ module spral_ssids_fkeep
          ! each entry (in original matrix order)
       type(node_type), dimension(:), allocatable :: nodes ! Stores pointers
          ! to information about nodes
-      type(smalloc_type), pointer :: alloc=>null() ! Linked list of memory pages
-         ! pointed to by nodes variable
       logical :: pos_def ! set to true if user indicates matrix pos. definite
 
       ! Factored subtrees
@@ -327,11 +320,6 @@ subroutine free_fkeep(fkeep, flag)
       end do
       deallocate(fkeep%subtree)
    endif
-
-   ! Free memory
-   call smfreeall(fkeep%alloc)
-   deallocate(fkeep%alloc)
-   nullify(fkeep%alloc)
 
    deallocate(fkeep%nodes, stat=st)
    deallocate(fkeep%scaling, stat=st)
