@@ -17,6 +17,7 @@ module spral_ssids_subtree
    contains
       procedure(get_contrib_iface), deferred :: get_contrib
       procedure(solve_proc_iface), deferred :: solve_fwd
+      procedure(solve_proc_iface), deferred :: solve_fwd_diag
       procedure(solve_proc_iface), deferred :: solve_diag
       procedure(solve_proc_iface), deferred :: solve_bwd
    end type numeric_subtree_base

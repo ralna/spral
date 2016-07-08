@@ -34,6 +34,7 @@ module spral_ssids_cpu_subtree
    contains
       procedure :: get_contrib
       procedure :: solve_fwd
+      procedure :: solve_fwd_diag
       procedure :: solve_diag
       procedure :: solve_bwd
       final :: numeric_final
@@ -217,6 +218,15 @@ subroutine solve_fwd(this, nrhs, x, ldx)
 
    ! FIXME
 end subroutine solve_fwd
+
+subroutine solve_fwd_diag(this, nrhs, x, ldx)
+   class(cpu_numeric_subtree), intent(inout) :: this
+   integer, intent(in) :: nrhs
+   real(wp), dimension(*), intent(inout) :: x
+   integer, intent(in) :: ldx
+
+   ! FIXME
+end subroutine solve_fwd_diag
 
 subroutine solve_diag(this, nrhs, x, ldx)
    class(cpu_numeric_subtree), intent(inout) :: this
