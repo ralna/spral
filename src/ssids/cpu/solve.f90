@@ -3,8 +3,11 @@ module spral_ssids_cpu_solve
    implicit none
 
    private
-   public :: fwd_diag_solve,   & ! Performs forward solve (or diagonal only)
-             subtree_bwd_solve   ! Performs backwards solve for a subtree
+   public :: subtree_bwd_solve, &   ! Performs backwards solve for a subtree
+             solve_fwd_mult, &
+             solve_fwd_one, &
+             solve_diag_mult, &
+             solve_diag_one
 
 contains
 
@@ -14,7 +17,7 @@ contains
 ! by sa:en.
 !
 subroutine subtree_bwd_solve(en, sa, job, pos_def, nnodes, nodes, sptr, &
-      rptr, rlist, invp, nrhs, x, ldx, st)
+      rptr, rlist, nrhs, x, ldx, st)
    integer, intent(in) :: en
    integer, intent(in) :: sa
    logical, intent(in) :: pos_def
@@ -25,7 +28,6 @@ subroutine subtree_bwd_solve(en, sa, job, pos_def, nnodes, nodes, sptr, &
    integer, dimension(nnodes+1), intent(in) :: sptr
    integer(long), dimension(nnodes+1), intent(in) :: rptr
    integer, dimension(rptr(nnodes+1)-1), intent(in) :: rlist
-   integer, dimension(*), intent(in) :: invp
    integer, intent(in) :: nrhs
    integer, intent(in) :: ldx
    real(wp), dimension(ldx,nrhs), intent(inout) :: x
@@ -51,7 +53,7 @@ subroutine subtree_bwd_solve(en, sa, job, pos_def, nnodes, nodes, sptr, &
       blkm = int(rptr(node+1) - rptr(node)) + nd
       
       if(nrhs.eq.1) then
-         call solve_bwd_one(pos_def, job, rlist(rptr(node)), invp, x, &
+         call solve_bwd_one(pos_def, job, rlist(rptr(node)), x, &
             blkm, blkn, nelim, nd, &
             !nodes(node)%rsmptr%rmem(nodes(node)%rsmsa), & ! node%lcol
             nodes(node)%lcol, &
@@ -61,7 +63,7 @@ subroutine subtree_bwd_solve(en, sa, job, pos_def, nnodes, nodes, sptr, &
             nodes(node)%perm, &
             xlocal, map)
       else
-         call solve_bwd_mult(pos_def, job, rlist(rptr(node)), invp, &
+         call solve_bwd_mult(pos_def, job, rlist(rptr(node)), &
             nrhs, x, ldx, blkm, blkn, nelim, nd, &
             !nodes(node)%rsmptr%rmem(nodes(node)%rsmsa), & ! node%lcol
             nodes(node)%lcol, &
@@ -77,97 +79,12 @@ end subroutine subtree_bwd_solve
 
 !*************************************************************************
 !
-! Provides serial versions of Forward (s/n) and diagonal solves.
-!
-subroutine fwd_diag_solve(pos_def, job, nnodes, nodes, sptr, rptr, rlist, &
-      invp, nrhs, x, ldx, st)
-   logical, intent(in) :: pos_def
-   integer, intent(in) :: job ! controls whether we are doing forward
-      ! eliminations, back substitutions etc.
-   integer, intent(in) :: nnodes
-   type(node_type), dimension(*), intent(in) :: nodes
-   integer, dimension(nnodes+1), intent(in) :: sptr
-   integer(long), dimension(nnodes+1), intent(in) :: rptr
-   integer, dimension(rptr(nnodes+1)-1), intent(in) :: rlist
-   integer, dimension(*), intent(in) :: invp
-   integer, intent(in) :: nrhs
-   integer, intent(in) :: ldx
-   real(wp), dimension(ldx,nrhs), intent(inout) :: x
-   integer, intent(out) :: st  ! stat parameter
-
-   integer :: blkm
-   integer :: blkn
-   integer :: nd
-   integer :: nelim
-   integer :: node
-   real(wp), dimension(:), allocatable :: xlocal
-   integer, dimension(:), allocatable :: map
-
-   st = 0
-   allocate(xlocal(nrhs*(sptr(nnodes+1)-1)), map(sptr(nnodes+1)-1), stat=st)
-   if(st.ne.0) return
-
-   if (job == SSIDS_SOLVE_JOB_ALL .or. job == SSIDS_SOLVE_JOB_FWD) then
-      ! Forwards solve Ly = b
-      do node = 1, nnodes
-         nelim = nodes(node)%nelim
-         if (nelim.eq.0) cycle
-         nd = nodes(node)%ndelay
-         blkn = sptr(node+1) - sptr(node) + nd
-         blkm = int(rptr(node+1) - rptr(node)) + nd
-         
-         if(nrhs.eq.1) then
-            call solve_fwd_one(pos_def, rlist(rptr(node)), invp, x, &
-               blkm, blkn, nelim, nd, &
-               !nodes(node)%rsmptr%rmem(nodes(node)%rsmsa), & ! nodes(node)%lcol
-               nodes(node)%lcol, &
-               !nodes(node)%ismptr%imem(nodes(node)%ismsa), & ! nodes(node)%perm
-               nodes(node)%perm, &
-               xlocal, map)
-         else
-            call solve_fwd_mult(pos_def, rlist(rptr(node)), invp, nrhs, x, ldx,&
-               blkm, blkn, nelim, nd, &
-               !nodes(node)%rsmptr%rmem(nodes(node)%rsmsa), & ! nodes(node)%lcol
-               nodes(node)%lcol, &
-               !nodes(node)%ismptr%imem(nodes(node)%ismsa), & ! nodes(node)%perm
-               nodes(node)%perm, &
-               xlocal, map)
-         end if
-      end do
-   end if
-
-   if (job.eq.SSIDS_SOLVE_JOB_DIAG) then
-      ! Diagonal solve Dx = z
-      do node = nnodes, 1, -1
-         nelim = nodes(node)%nelim
-         if (nelim.eq.0) cycle
-         nd = nodes(node)%ndelay
-         blkn = sptr(node+1) - sptr(node) + nd
-         blkm = int(rptr(node+1) - rptr(node)) + nd
-         
-         if(nrhs.eq.1) then
-            call solve_diag_one(invp, x, nelim, &
-               nodes(node)%rsmptr%rmem(nodes(node)%rsmsa+blkm*blkn), & ! node%d
-               nodes(node)%ismptr%imem(nodes(node)%ismsa)) ! node%perm
-         else
-            call solve_diag_mult(invp, nrhs, x, ldx, nelim, &
-               nodes(node)%rsmptr%rmem(nodes(node)%rsmsa+blkm*blkn), & ! node%d
-               nodes(node)%ismptr%imem(nodes(node)%ismsa)) ! node%perm
-         end if
-      end do
-   end if
-
-end subroutine fwd_diag_solve
-
-!*************************************************************************
-!
 ! Forward substitution single rhs
 !
-subroutine solve_fwd_one(pos_def, rlist, invp, x, blkm, blkn, nelim, nd, lcol, &
+subroutine solve_fwd_one(pos_def, rlist, x, blkm, blkn, nelim, nd, lcol, &
       lperm, xlocal, map)
    logical, intent(in) :: pos_def
    integer, dimension(*), intent(in) :: rlist
-   integer, dimension(*), intent(in) :: invp
    real(wp), dimension(*), intent(inout) :: x
    integer, intent(in) :: blkm
    integer, intent(in) :: blkn
@@ -184,11 +101,11 @@ subroutine solve_fwd_one(pos_def, rlist, invp, x, blkm, blkn, nelim, nd, lcol, &
    real(wp) :: ri, ri2
    
    do i = 1, blkn
-      map(i) = invp( lperm(i) )
+      map(i) = lperm(i)
    end do
    k = 1+blkn-nd
    do i = blkn+1, blkm
-      map(i) = invp( rlist(k) )
+      map(i) = rlist(k)
       k = k + 1
    end do
    
@@ -262,11 +179,10 @@ end subroutine solve_fwd_one
 !
 ! Forward substitution multiple rhs
 !
-subroutine solve_fwd_mult(pos_def, rlist, invp, nrhs, x, ldx, blkm, blkn, &
+subroutine solve_fwd_mult(pos_def, rlist, nrhs, x, ldx, blkm, blkn, &
       nelim, nd, lcol, lperm, xlocal, map)
    logical, intent(in) :: pos_def
    integer, dimension(*), intent(in) :: rlist
-   integer, dimension(*), intent(in) :: invp
    integer, intent(in) :: nrhs
    integer, intent(in) :: ldx
    real(wp), dimension(ldx,*), intent(inout) :: x
@@ -285,11 +201,11 @@ subroutine solve_fwd_mult(pos_def, rlist, invp, nrhs, x, ldx, blkm, blkn, &
    real(wp) :: ri
    
    do i = 1, blkn
-      map(i) = invp( lperm(i) )
+      map(i) = lperm(i)
    end do
    k = 1+blkn-nd
    do i = blkn+1, blkm
-      map(i) = invp( rlist(k) )
+      map(i) = rlist(k)
       k = k + 1
    end do
    
@@ -361,14 +277,13 @@ end subroutine solve_fwd_mult
 !
 ! Back substitution (with diagonal solve) single rhs
 !
-subroutine solve_bwd_one(pos_def, job, rlist, invp, x, blkm, blkn, nelim, &
+subroutine solve_bwd_one(pos_def, job, rlist, x, blkm, blkn, nelim, &
       nd, lcol, d, lperm, xlocal, map)
    logical, intent(in) :: pos_def
    integer, intent(in) :: job  ! used to indicate whether diag. sol. required
       ! job = 3 : backsubs only ((PL)^Tx = b)
       ! job = 0 or 4 : diag and backsubs (D(PL)^Tx = b)
    integer, dimension(*), intent(in) :: rlist
-   integer, dimension(*), intent(in) :: invp
    real(wp), dimension(*), intent(inout) :: x
    integer, intent(in) :: blkm
    integer, intent(in) :: blkn
@@ -385,11 +300,11 @@ subroutine solve_bwd_one(pos_def, job, rlist, invp, x, blkm, blkn, nelim, &
    integer :: rp1, rp2
 
    do i = 1, blkn
-      map(i) = invp( lperm(i) )
+      map(i) = lperm(i)
    end do
    k = 1+blkn-nd
    do i = blkn+1, blkm
-      map(i) = invp( rlist(k) )
+      map(i) = rlist(k)
       k = k + 1
    end do
 
@@ -491,14 +406,13 @@ end subroutine solve_bwd_one
 !
 ! Back substitution (with diagonal solve) multiple rhs
 !
-subroutine solve_bwd_mult(pos_def, job, rlist, invp, nrhs, x, ldx, blkm, &
+subroutine solve_bwd_mult(pos_def, job, rlist, nrhs, x, ldx, blkm, &
       blkn, nelim, nd, lcol, d, lperm, xlocal, map)
    logical, intent(in) :: pos_def
    integer, intent(in) :: job  ! used to indicate whether diag. sol. required
       ! job = 3 : backsubs only ((PL)^Tx = b)
       ! job = 0 or 4 : diag and backsubs (D(PL)^Tx = b)
    integer, dimension(*), intent(in) :: rlist
-   integer, dimension(*), intent(in) :: invp
    integer, intent(in) :: nrhs
    integer, intent(in) :: ldx
    real(wp), dimension(ldx,*), intent(inout) :: x
@@ -517,11 +431,11 @@ subroutine solve_bwd_mult(pos_def, job, rlist, invp, nrhs, x, ldx, blkm, &
    integer :: rp1, rp2
 
    do i = 1, blkn
-      map(i) = invp( lperm(i) )
+      map(i) = lperm(i)
    end do
    k = 1+blkn-nd
    do i = blkn+1, blkm
-      map(i) = invp( rlist(k) )
+      map(i) = rlist(k)
       k = k + 1
    end do
 
@@ -634,8 +548,7 @@ end subroutine solve_bwd_mult
 !
 ! Diagonal solve one rhs
 !
-subroutine solve_diag_one(invp, x, nelim, d, lperm)
-   integer, dimension(*), intent(in) :: invp
+subroutine solve_diag_one(x, nelim, d, lperm)
    real(wp), dimension(*), intent(inout) :: x
    integer, intent(in) :: nelim
    real(wp), dimension(2*nelim) :: d
@@ -649,8 +562,8 @@ subroutine solve_diag_one(invp, x, nelim, d, lperm)
    do while(j .le. nelim)
       if (d(2*j).ne.0) then
          ! 2x2 pivot
-         rp1 = invp( lperm(j) )
-         rp2 = invp( lperm(j+1) )
+         rp1 = lperm(j)
+         rp2 = lperm(j+1)
          temp   = d(2*j-1) * x(rp1) + &
                   d(2*j)   * x(rp2)
          x(rp2) = d(2*j)   * x(rp1) + &
@@ -659,7 +572,7 @@ subroutine solve_diag_one(invp, x, nelim, d, lperm)
          j = j + 2
       else
          ! 1x1 pivot
-         rp1 = invp( lperm(j) )
+         rp1 = lperm(j)
          x(rp1) = x(rp1) * d(2*j-1)
          j = j + 1
       end if
@@ -670,8 +583,7 @@ end subroutine solve_diag_one
 !
 ! Diagonal solve multiple rhs
 !
-subroutine solve_diag_mult(invp, nrhs, x, ldx, nelim, d, lperm)
-   integer, dimension(*), intent(in) :: invp
+subroutine solve_diag_mult(nrhs, x, ldx, nelim, d, lperm)
    integer, intent(in) :: nrhs
    integer, intent(in) :: ldx
    real(wp), dimension(ldx,*), intent(inout) :: x
@@ -688,8 +600,8 @@ subroutine solve_diag_mult(invp, nrhs, x, ldx, nelim, d, lperm)
       do while(j .le. nelim)
          if (d(2*j).ne.0) then
             ! 2x2 pivot
-            rp1 = invp( lperm(j) )
-            rp2 = invp( lperm(j+1) )
+            rp1 = lperm(j)
+            rp2 = lperm(j+1)
             temp     = d(2*j-1) * x(rp1,r) + &
                        d(2*j)   * x(rp2,r)
             x(rp2,r) = d(2*j)   * x(rp1,r) + &
@@ -698,7 +610,7 @@ subroutine solve_diag_mult(invp, nrhs, x, ldx, nelim, d, lperm)
             j = j + 2
          else
             ! 1x1 pivot
-            rp1 = invp( lperm(j) )
+            rp1 = lperm(j)
             x(rp1,r) = x(rp1,r) * d(2*j-1)
             j = j + 1
          end if

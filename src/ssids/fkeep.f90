@@ -5,7 +5,6 @@ module spral_ssids_fkeep
    use spral_ssids_akeep, only : ssids_akeep_base
    use spral_ssids_datatypes
    use spral_ssids_inform, only : ssids_inform_base
-   use spral_ssids_cpu_solve, only : fwd_diag_solve, subtree_bwd_solve
    use spral_ssids_cpu_iface, only : cpu_factor_stats, extract_cpu_data
    use spral_ssids_cpu_subtree, only : cpu_numeric_subtree, cpu_symbolic_subtree
    use spral_ssids_subtree, only : numeric_subtree_base
@@ -96,50 +95,76 @@ subroutine inner_solve_cpu(local_job, nrhs, x, ldx, akeep, fkeep, options, infor
 
    integer :: i, r
    integer :: n
+   real(wp), dimension(:,:), allocatable :: x2
+   integer, dimension(:), allocatable :: fake_invp
 
    n = akeep%n
 
-   if (allocated(fkeep%scaling)) then
-      if (local_job == SSIDS_SOLVE_JOB_ALL .or. &
-            local_job == SSIDS_SOLVE_JOB_FWD) then
-         do r = 1, nrhs
-            !x(1:n,r) = x(1:n,r) * fkeep%scaling(1:n)
-            do i = 1, n
-               x(akeep%invp(i),r) = x(akeep%invp(i),r) * fkeep%scaling(i)
-            end do
+   allocate(x2(n, nrhs), fake_invp(n), stat=inform%stat)
+   if(inform%stat.ne.0) goto 100
+
+   ! FIXME: rm
+   do i = 1, n
+      fake_invp(i) = i
+   end do
+
+   if (allocated(fkeep%scaling) .and. (local_job == SSIDS_SOLVE_JOB_ALL .or. &
+            local_job == SSIDS_SOLVE_JOB_FWD)) then
+      ! Copy and scale
+      do r = 1, nrhs
+         do i = 1, n
+            x2(i,r) = x(akeep%invp(i),r) * fkeep%scaling(i)
          end do
-      end if
+      end do
+   else
+      ! Just copy
+      do r = 1, nrhs
+         x2(1:n, r) = x(akeep%invp(1:n), r)
+      end do
    end if
+
 
    ! Perform forward solve and/or diagonal solve
    associate(subtree => fkeep%subtree(1)%ptr)
       select type(subtree)
       type is (cpu_numeric_subtree)
-         call subtree%solve_fwd_diag2(nrhs, x, ldx, inform, local_job, &
-            akeep%invp)
-         if (inform%stat .ne. 0) goto 100
-
-         if( local_job.eq.SSIDS_SOLVE_JOB_DIAG_BWD .or. &
-               local_job.eq.SSIDS_SOLVE_JOB_BWD .or. &
-               local_job.eq.SSIDS_SOLVE_JOB_ALL ) then
-            call subtree%solve_bwd2(nrhs, x, ldx, inform, local_job, &
-               akeep%invp)
-         end if
-         if (inform%stat .ne. 0) goto 100
+         select case(local_job)
+         case(SSIDS_SOLVE_JOB_FWD)
+            call subtree%solve_fwd2(nrhs, x2, n, inform)
+            if (inform%stat .ne. 0) goto 100
+         case(SSIDS_SOLVE_JOB_DIAG)
+            call subtree%solve_diag2(nrhs, x2, n, inform)
+            if (inform%stat .ne. 0) goto 100
+         case(SSIDS_SOLVE_JOB_BWD)
+            call subtree%solve_diag_bwd2(nrhs, x2, n, inform, local_job)
+            if (inform%stat .ne. 0) goto 100
+         case(SSIDS_SOLVE_JOB_DIAG_BWD)
+            call subtree%solve_diag_bwd2(nrhs, x2, n, inform, local_job)
+            if (inform%stat .ne. 0) goto 100
+         case(SSIDS_SOLVE_JOB_ALL)
+            call subtree%solve_fwd2(nrhs, x2, n, inform)
+            if (inform%stat .ne. 0) goto 100
+            call subtree%solve_diag_bwd2(nrhs, x2, n, inform, local_job)
+            if (inform%stat .ne. 0) goto 100
+         end select
       end select
    end associate
 
-   if (allocated(fkeep%scaling)) then
-      if (local_job == SSIDS_SOLVE_JOB_ALL .or. &
+   if (allocated(fkeep%scaling) .and. ( &
+            local_job == SSIDS_SOLVE_JOB_ALL .or. &
             local_job == SSIDS_SOLVE_JOB_BWD .or. &
-            local_job == SSIDS_SOLVE_JOB_DIAG_BWD) then
-         do r = 1, nrhs
-            !x(1:n,r) = x(1:n,r) * fkeep%scaling(1:n)
-            do i = 1, n
-               x(akeep%invp(i),r) = x(akeep%invp(i),r) * fkeep%scaling(i)
-            end do
+            local_job == SSIDS_SOLVE_JOB_DIAG_BWD)) then
+      ! Copy and scale
+      do r = 1, nrhs
+         do i = 1, n
+            x(akeep%invp(i),r) = x2(i,r) * fkeep%scaling(i)
          end do
-      end if
+      end do
+   else
+      ! Just copy
+      do r = 1, nrhs
+         x(akeep%invp(1:n), r) = x2(1:n, r)
+      end do
    end if
 
    return

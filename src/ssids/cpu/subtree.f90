@@ -40,11 +40,12 @@ module spral_ssids_cpu_subtree
    contains
       procedure :: get_contrib
       procedure :: solve_fwd
-      procedure :: solve_fwd_diag
-      procedure :: solve_fwd_diag2 ! fixme remove
       procedure :: solve_diag
+      procedure :: solve_diag_bwd
       procedure :: solve_bwd
-      procedure :: solve_bwd2 ! fixme remove
+      procedure :: solve_fwd2 ! fixme remove
+      procedure :: solve_diag2 ! fixme remove
+      procedure :: solve_diag_bwd2 ! fixme remove
       procedure :: enquire_posdef
       procedure :: enquire_indef
       procedure :: alter
@@ -262,31 +263,83 @@ subroutine solve_fwd(this, nrhs, x, ldx)
    ! FIXME
 end subroutine solve_fwd
 
-subroutine solve_fwd_diag2(this, nrhs, x, ldx, inform, local_job, invp)
+subroutine solve_fwd2(this, nrhs, x, ldx, inform)
    class(cpu_numeric_subtree), intent(inout) :: this
    integer, intent(in) :: nrhs
    real(wp), dimension(*), intent(inout) :: x
    integer, intent(in) :: ldx
    class(ssids_inform_base), intent(inout) :: inform
-   integer, intent(in) :: local_job
-   integer, dimension(*), intent(in) :: invp
-
+ 
    logical :: fposdef
+   integer :: blkm
+   integer :: blkn
+   integer :: nd
+   integer :: nelim
+   integer :: node
+   real(wp), dimension(:), allocatable :: xlocal
+   integer, dimension(:), allocatable :: map
 
    fposdef = this%posdef
-   call fwd_diag_solve(fposdef, local_job, this%symbolic%nnodes, this%nodes, &
-      this%symbolic%sptr, this%symbolic%rptr, this%symbolic%rlist, invp, nrhs, &
-      x, ldx, inform%stat)
-end subroutine solve_fwd_diag2
+   associate(symbolic=>this%symbolic, nodes=>this%nodes)
+      allocate(xlocal(nrhs*symbolic%n), map(symbolic%n), stat=inform%stat)
+      if(inform%stat.ne.0) return
 
-subroutine solve_fwd_diag(this, nrhs, x, ldx)
+      ! Forwards solve Ly = b
+      do node = 1, symbolic%nnodes
+         nelim = nodes(node)%nelim
+         if (nelim.eq.0) cycle
+         nd = nodes(node)%ndelay
+         blkn = symbolic%sptr(node+1) - symbolic%sptr(node) + nd
+         blkm = int(symbolic%rptr(node+1) - symbolic%rptr(node)) + nd
+         
+         if(nrhs.eq.1) then
+            call solve_fwd_one(fposdef, symbolic%rlist(symbolic%rptr(node):), &
+               x, blkm, blkn, nelim, nd, &
+               nodes(node)%lcol, nodes(node)%perm, xlocal, map)
+         else
+            call solve_fwd_mult(fposdef, symbolic%rlist(symbolic%rptr(node):), &
+               nrhs, x, ldx, blkm, blkn, nelim, nd, &
+               nodes(node)%lcol, nodes(node)%perm, xlocal, map)
+         end if
+      end do
+   end associate
+end subroutine solve_fwd2
+
+subroutine solve_diag2(this, nrhs, x, ldx, inform)
    class(cpu_numeric_subtree), intent(inout) :: this
    integer, intent(in) :: nrhs
    real(wp), dimension(*), intent(inout) :: x
    integer, intent(in) :: ldx
+   class(ssids_inform_base), intent(inout) :: inform
 
-   ! FIXME
-end subroutine solve_fwd_diag
+   logical :: fposdef
+   integer :: blkm
+   integer :: blkn
+   integer :: nd
+   integer :: nelim
+   integer :: node
+
+   fposdef = this%posdef
+   associate(symbolic=>this%symbolic, nodes=>this%nodes)
+      do node = symbolic%nnodes, 1, -1
+         nelim = nodes(node)%nelim
+         if (nelim.eq.0) cycle
+         nd = nodes(node)%ndelay
+         blkn = symbolic%sptr(node+1) - symbolic%sptr(node) + nd
+         blkm = int(symbolic%rptr(node+1) - symbolic%rptr(node)) + nd
+         
+         if(nrhs.eq.1) then
+            call solve_diag_one(x, nelim, &
+               nodes(node)%rsmptr%rmem(nodes(node)%rsmsa+blkm*blkn), & ! node%d
+               nodes(node)%ismptr%imem(nodes(node)%ismsa)) ! node%perm
+         else
+            call solve_diag_mult(nrhs, x, ldx, nelim, &
+               nodes(node)%rsmptr%rmem(nodes(node)%rsmsa+blkm*blkn), & ! node%d
+               nodes(node)%ismptr%imem(nodes(node)%ismsa)) ! node%perm
+         end if
+      end do
+   end associate
+end subroutine solve_diag2
 
 subroutine solve_diag(this, nrhs, x, ldx)
    class(cpu_numeric_subtree), intent(inout) :: this
@@ -297,22 +350,30 @@ subroutine solve_diag(this, nrhs, x, ldx)
    ! FIXME
 end subroutine solve_diag
 
-subroutine solve_bwd2(this, nrhs, x, ldx, inform, local_job, invp)
+subroutine solve_diag_bwd(this, nrhs, x, ldx)
+   class(cpu_numeric_subtree), intent(inout) :: this
+   integer, intent(in) :: nrhs
+   real(wp), dimension(*), intent(inout) :: x
+   integer, intent(in) :: ldx
+
+   ! FIXME
+end subroutine solve_diag_bwd
+
+subroutine solve_diag_bwd2(this, nrhs, x, ldx, inform, local_job)
    class(cpu_numeric_subtree), intent(inout) :: this
    integer, intent(in) :: nrhs
    real(wp), dimension(*), intent(inout) :: x
    integer, intent(in) :: ldx
    class(ssids_inform_base), intent(inout) :: inform
    integer, intent(in) :: local_job
-   integer, dimension(*), intent(in) :: invp
 
    logical :: fposdef
 
    fposdef = this%posdef
    call subtree_bwd_solve(this%symbolic%nnodes, 1, local_job, fposdef, &
       this%symbolic%nnodes, this%nodes, this%symbolic%sptr, this%symbolic%rptr,&
-      this%symbolic%rlist, invp, nrhs, x, ldx, inform%stat)
-end subroutine solve_bwd2
+      this%symbolic%rlist, nrhs, x, ldx, inform%stat)
+end subroutine solve_diag_bwd2
 
 subroutine solve_bwd(this, nrhs, x, ldx)
    class(cpu_numeric_subtree), intent(inout) :: this
