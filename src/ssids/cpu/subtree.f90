@@ -29,7 +29,6 @@ module spral_ssids_cpu_subtree
       type(cpu_symbolic_subtree), pointer :: symbolic
       logical(C_BOOL) :: posdef
       type(cpu_node_data), dimension(:), allocatable :: cnodes
-      type(cpu_factor_options) :: coptions ! FIXME: doesn't belong here
       type(contrib_type), pointer :: contrib
       type(C_PTR) :: csubtree
    contains
@@ -145,6 +144,7 @@ function factor2(this, posdef, aval, options, inform, alloc, cstats, scaling)
    real(wp), dimension(*), target, optional, intent(in) :: scaling
 
    type(cpu_numeric_subtree), pointer :: cpu_factor
+   type(cpu_factor_options) :: coptions
    type(C_PTR) :: cscaling
    integer :: st
 
@@ -169,7 +169,6 @@ function factor2(this, posdef, aval, options, inform, alloc, cstats, scaling)
       return
    endif
    call setup_cpu_data(this%nnodes, cpu_factor%cnodes, this%nptr, this%nlist)
-   call cpu_copy_options_in(options, cpu_factor%coptions)
 
    cpu_factor%posdef = posdef
    cpu_factor%csubtree = &
@@ -178,9 +177,10 @@ function factor2(this, posdef, aval, options, inform, alloc, cstats, scaling)
    cscaling = C_NULL_PTR
    if(present(scaling)) cscaling = C_LOC(scaling)
 
+   call cpu_copy_options_in(options, coptions)
    call c_factor_cpu(posdef, cpu_factor%csubtree, this%n, &
       this%nnodes, cpu_factor%cnodes, aval, cscaling, alloc, &
-      cpu_factor%coptions, cstats)
+      coptions, cstats)
 end function factor2
 
 function factor(this, posdef, aval, options, inform, scaling)
@@ -192,41 +192,8 @@ function factor(this, posdef, aval, options, inform, scaling)
    class(ssids_inform_base), intent(inout) :: inform
    real(wp), dimension(*), optional, intent(in) :: scaling
 
-   type(cpu_numeric_subtree), pointer :: cpu_factor
-   integer :: st
+   ! FIXME
 
-   ! Setup output
-   allocate(cpu_factor, stat=st)
-   if(st.ne.0) then
-      inform%flag = SSIDS_ERROR_ALLOCATION
-      inform%stat = st
-      nullify(factor)
-      return
-   endif
-   factor => cpu_factor
-   cpu_factor%symbolic => this
-
-   ! Allocate cnodes and setup for main call
-   allocate(cpu_factor%cnodes(this%nnodes+1), stat=st)
-   if(st.ne.0) then
-      inform%flag = SSIDS_ERROR_ALLOCATION
-      inform%stat = st
-      deallocate(cpu_factor, stat=st)
-      nullify(factor)
-      return
-   endif
-   call setup_cpu_data(this%nnodes, cpu_factor%cnodes, this%nptr, this%nlist)
-   call cpu_copy_options_in(options, cpu_factor%coptions)
-
-   ! Allocate subtree
-   cpu_factor%csubtree = &
-      c_create_cpu_subtree(posdef, this%csubtree, this%nnodes, cpu_factor%cnodes)
-
-   ! Perform actual factorization
-   !call cpu_factor%factor3(this%n, this%nnodes, cpu_factor%cnodes, aval, alloc, coptions, cstats, scaling)
-
-   ! Gather information back to Fortran
-   !call extract_cpu_data(this%nnodes, cnodes, fkeep%nodes, cstats, inform)
 end function factor
 
 subroutine numeric_final(this)
