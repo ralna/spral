@@ -1,6 +1,5 @@
 module spral_ssids_cpu_iface
    use, intrinsic :: iso_c_binding
-   use spral_ssids_akeep, only : ssids_akeep_base
    use spral_ssids_datatypes, only : ssids_options, node_type, long, &
                                      DEBUG_PRINT_LEVEL
    use spral_ssids_inform, only : ssids_inform_base
@@ -8,7 +7,7 @@ module spral_ssids_cpu_iface
 
    private
    public :: cpu_node_data, cpu_factor_options, cpu_factor_stats
-   public :: setup_cpu_data, extract_cpu_data
+   public :: setup_cpu_data, extract_cpu_data, cpu_copy_options_in
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -69,11 +68,11 @@ contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-subroutine setup_cpu_data(akeep, cnodes, foptions, coptions)
-   class(ssids_akeep_base), target, intent(in) :: akeep
-   type(cpu_node_data), dimension(akeep%nnodes+1), target, intent(out) :: cnodes
-   type(ssids_options), intent(in) :: foptions
-   type(cpu_factor_options), intent(out) :: coptions
+subroutine setup_cpu_data(nnodes, cnodes, nptr, nlist)
+   integer, intent(in) :: nnodes
+   type(cpu_node_data), dimension(nnodes+1), target, intent(out) :: cnodes
+   integer, dimension(nnodes+1), intent(in) :: nptr
+   integer, dimension(2,*), target, intent(in) :: nlist
 
    integer :: node, parent
 
@@ -81,31 +80,26 @@ subroutine setup_cpu_data(akeep, cnodes, foptions, coptions)
    ! Setup node data
    !
    ! Basic data and initialize linked lists
-   do node = 1, akeep%nnodes
+   do node = 1, nnodes
       ! Data about factors
       cnodes(node)%symb = C_NULL_PTR
 
-      ! Print out debug info
-      if(foptions%print_level > DEBUG_PRINT_LEVEL) then
-         print *, "node ", node, " parent ", akeep%sparent(node), &
-            int(akeep%rptr(node+1) - akeep%rptr(node)), "x", &
-            akeep%sptr(node+1) - akeep%sptr(node)
-      endif
-
       ! Data about A
-      cnodes(node)%num_a = akeep%nptr(node+1) - akeep%nptr(node)
-      cnodes(node)%amap = C_LOC(akeep%nlist(1,akeep%nptr(node)))
+      cnodes(node)%num_a = nptr(node+1) - nptr(node)
+      cnodes(node)%amap = C_LOC(nlist(1,nptr(node)))
    end do
+end subroutine setup_cpu_data
 
-   !
-   ! Setup options
-   !
+subroutine cpu_copy_options_in(foptions, coptions)
+   type(ssids_options), intent(in) :: foptions
+   type(cpu_factor_options), intent(out) :: coptions
+
    coptions%small       = foptions%small
    coptions%u           = foptions%u
    coptions%print_level = foptions%print_level
    coptions%cpu_small_subtree_threshold = foptions%cpu_small_subtree_threshold
    coptions%cpu_task_block_size         = foptions%cpu_task_block_size
-end subroutine setup_cpu_data
+end subroutine cpu_copy_options_in
 
 subroutine extract_cpu_data(nnodes, cnodes, fnodes, cstats, finform)
    integer, intent(in) :: nnodes

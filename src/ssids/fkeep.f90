@@ -14,6 +14,7 @@ module spral_ssids_fkeep
    use spral_ssids_cpu_iface, only : cpu_node_data, cpu_factor_options, &
       cpu_factor_stats, setup_cpu_data, extract_cpu_data
    use spral_ssids_cpu_subtree, only : cpu_numeric_subtree, cpu_symbolic_subtree
+   use spral_ssids_subtree, only : numeric_subtree_base
    use, intrinsic :: iso_c_binding
    implicit none
 
@@ -65,8 +66,6 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
    logical(C_BOOL) :: fposdef
    type(cpu_symbolic_subtree), pointer :: symbolic_subtree
    type(cpu_numeric_subtree), pointer :: subtree
-   type(cpu_node_data), dimension(:), allocatable :: cnodes
-   type(cpu_factor_options) :: coptions
    type(cpu_factor_stats) :: cstats
 
    integer :: st
@@ -78,32 +77,23 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
       end select
    end associate
 
-   ! Allocate cnodes and setup for main call
-   allocate(cnodes(akeep%nnodes+1), stat=st)
-   if(st.ne.0) then
-      inform%flag = SSIDS_ERROR_ALLOCATION
-      inform%stat = st
-      return
-   endif
-   call setup_cpu_data(akeep, cnodes, options, coptions)
-
    ! Perform factorization in C++ code
    fposdef = fkeep%pos_def
-   subtree => symbolic_subtree%factor2(fposdef, akeep%nnodes, cnodes)
    if(allocated(fkeep%scaling)) then
-      call subtree%factor3(akeep%n, akeep%nnodes, cnodes, val, &
-         C_LOC(fkeep%alloc), coptions, cstats, scaling=fkeep%scaling)
+      subtree => symbolic_subtree%factor2(fposdef, val, options, inform, &
+         scaling=fkeep%scaling)
+      call subtree%factor3(val, C_LOC(fkeep%alloc), subtree%coptions, &
+         cstats, scaling=fkeep%scaling)
    else
-      call subtree%factor3(akeep%n, akeep%nnodes, cnodes, val, &
-         C_LOC(fkeep%alloc), coptions, cstats)
+      subtree => symbolic_subtree%factor2(fposdef, val, options, inform)
+      call subtree%factor3(val, C_LOC(fkeep%alloc), subtree%coptions, cstats)
    endif
 
    ! Gather information back to Fortran
-   call extract_cpu_data(akeep%nnodes, cnodes, fkeep%nodes, cstats, inform)
+   call extract_cpu_data(akeep%nnodes, subtree%cnodes, fkeep%nodes, cstats, inform)
 
    ! Free data structures
    deallocate(subtree)
-   deallocate(symbolic_subtree)
 end subroutine inner_factor_cpu
 
 subroutine inner_solve_cpu(local_job, nrhs, x, ldx, akeep, fkeep, options, inform)

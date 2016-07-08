@@ -384,17 +384,19 @@ src/ssids/fkeep.$(OBJEXT): src/ssids/akeep.$(OBJEXT) \
                            src/ssids/datatypes.$(OBJEXT) \
                            src/ssids/inform.$(OBJEXT) \
                            src/ssids/cpu/cpu_iface.$(OBJEXT) \
-                           src/ssids/cpu/solve.$(OBJEXT)
+                           src/ssids/cpu/solve.$(OBJEXT) \
+                           src/ssids/cpu/subtree.$(OBJEXT)
 src/ssids/inform.$(OBJEXT): src/scaling.$(OBJEXT) \
                             src/ssids/datatypes.$(OBJEXT)
 src/ssids/subtree.$(OBJEXT): src/ssids/contrib.$(OBJEXT) \
-                             src/ssids/datatypes.$(OBJEXT)
-src/ssids/cpu/cpu_iface.$(OBJEXT): src/ssids/akeep.$(OBJEXT) \
-                                   src/ssids/datatypes.$(OBJEXT) \
+                             src/ssids/datatypes.$(OBJEXT) \
+									  src/ssids/inform.$(OBJEXT)
+src/ssids/cpu/cpu_iface.$(OBJEXT): src/ssids/datatypes.$(OBJEXT) \
                                    src/ssids/inform.$(OBJEXT)
 src/ssids/cpu/solve.$(OBJEXT): src/ssids/datatypes.$(OBJEXT)
 src/ssids/cpu/subtree.$(OBJEXT): src/ssids/contrib.$(OBJEXT) \
 	                              src/ssids/datatypes.$(OBJEXT) \
+											src/ssids/inform.$(OBJEXT) \
 											src/ssids/subtree.$(OBJEXT) \
 											src/ssids/cpu/cpu_iface.$(OBJEXT)
 src/ssids/gpu/akeep.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \

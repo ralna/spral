@@ -1,6 +1,7 @@
 module spral_ssids_subtree
    use spral_ssids_contrib, only : contrib_type
-   use spral_ssids_datatypes, only : long, wp
+   use spral_ssids_datatypes, only : long, wp, ssids_options
+   use spral_ssids_inform, only : ssids_inform_base
    implicit none
 
    private
@@ -21,13 +22,17 @@ module spral_ssids_subtree
    end type numeric_subtree_base
 
    abstract interface
-      function factor_iface(this, pos_def, aval, scaling)
+      function factor_iface(this, posdef, aval, options, inform, scaling)
+         use, intrinsic :: iso_c_binding, only : C_BOOL
          import symbolic_subtree_base, numeric_subtree_base, wp
+         import ssids_inform_base, ssids_options
          implicit none
          class(numeric_subtree_base), pointer :: factor_iface
-         class(symbolic_subtree_base), intent(inout) :: this
-         logical, intent(in) :: pos_def
+         class(symbolic_subtree_base), target, intent(inout) :: this
+         logical(C_BOOL), intent(in) :: posdef
          real(wp), dimension(*), intent(in) :: aval
+         class(ssids_options), intent(in) :: options
+         class(ssids_inform_base), intent(inout) :: inform
          real(wp), dimension(*), optional, intent(in) :: scaling
       end function factor_iface
       function get_contrib_iface(this)

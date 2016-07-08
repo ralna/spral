@@ -335,16 +335,6 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
    end select
    inform%num_factor = akeep%nfactor
 
-   call find_subtree_partition(akeep%nnodes, akeep%sptr, akeep%sparent, &
-      akeep%rptr, options%min_npart, options%max_flops_part, akeep%nparts, &
-      akeep%part)
-   ! FIXME: remove printing here and implement code
-   print *, "Partition suggests ", akeep%nparts, " parts (not used yet)"
-
-   allocate(akeep%subtree(1))
-   akeep%subtree(1)%ptr => construct_cpu_symbolic_subtree(akeep%nnodes, &
-      akeep%sptr, akeep%sparent, akeep%rptr, akeep%rlist)
-
    ! set invp to hold inverse of order
    do i = 1,n
       invp(order(i)) = i
@@ -426,6 +416,18 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
          j = child_next(j)
       end do
    end do
+
+   ! Sort out subtrees
+   call find_subtree_partition(akeep%nnodes, akeep%sptr, akeep%sparent, &
+      akeep%rptr, options%min_npart, options%max_flops_part, akeep%nparts, &
+      akeep%part)
+   ! FIXME: remove printing here and implement code
+   print *, "Partition suggests ", akeep%nparts, " parts (not used yet)"
+
+   allocate(akeep%subtree(1))
+   akeep%subtree(1)%ptr => construct_cpu_symbolic_subtree(akeep%n, &
+      akeep%nnodes, akeep%sptr, akeep%sparent, akeep%rptr, akeep%rlist, &
+      akeep%nptr, akeep%nlist)
 
    ! Copy GPU-relevent data to device if needed (no-op if not)
    call akeep%move_data(options, inform)

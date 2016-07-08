@@ -2,13 +2,43 @@ module spral_ssids_cpu_subtree
    use, intrinsic :: iso_c_binding
    use spral_ssids_contrib, only : contrib_type
    use spral_ssids_cpu_iface
-   use spral_ssids_datatypes, only : long, wp
+   use spral_ssids_datatypes, only : long, wp, ssids_options, &
+      SSIDS_ERROR_ALLOCATION
    use spral_ssids_subtree, only : symbolic_subtree_base, numeric_subtree_base
+   use spral_ssids_inform, only : ssids_inform_base
    implicit none
 
    private
    public :: cpu_symbolic_subtree, construct_cpu_symbolic_subtree
    public :: cpu_numeric_subtree
+
+   type, extends(symbolic_subtree_base) :: cpu_symbolic_subtree
+      integer :: n
+      integer :: nnodes
+      integer, dimension(:), pointer :: nptr
+      integer, dimension(:,:), pointer :: nlist
+      type(C_PTR) :: csubtree
+   contains
+      procedure :: factor
+      procedure :: factor2 ! fixme remove
+      final :: symbolic_final
+   end type cpu_symbolic_subtree
+
+   type, extends(numeric_subtree_base) :: cpu_numeric_subtree
+      type(cpu_symbolic_subtree), pointer :: symbolic
+      logical(C_BOOL) :: posdef
+      type(cpu_node_data), dimension(:), allocatable :: cnodes
+      type(cpu_factor_options) :: coptions ! FIXME: doesn't belong here
+      type(contrib_type), pointer :: contrib
+      type(C_PTR) :: csubtree
+   contains
+      procedure :: get_contrib
+      procedure :: solve_fwd
+      procedure :: solve_diag
+      procedure :: solve_bwd
+      procedure :: factor3 ! fixme remove
+      final :: numeric_final
+   end type cpu_numeric_subtree
 
    interface
       type(C_PTR) function c_create_symbolic_subtree(nnodes, sptr, sparent, &
@@ -68,39 +98,31 @@ module spral_ssids_cpu_subtree
       end subroutine c_destroy_cpu_subtree
    end interface
 
-   type, extends(symbolic_subtree_base) :: cpu_symbolic_subtree
-      type(C_PTR) :: csubtree
-   contains
-      procedure :: factor
-      procedure :: factor2 ! fixme remove
-      final :: symbolic_final
-   end type cpu_symbolic_subtree
-
-   type, extends(numeric_subtree_base) :: cpu_numeric_subtree
-      logical(C_BOOL) :: posdef
-      type(C_PTR) :: csubtree
-      type(contrib_type), pointer :: contrib
-   contains
-      procedure :: get_contrib
-      procedure :: solve_fwd
-      procedure :: solve_diag
-      procedure :: solve_bwd
-      procedure :: factor3 ! fixme remove
-      final :: numeric_final
-   end type cpu_numeric_subtree
-
 contains
 
-function construct_cpu_symbolic_subtree(nnodes, sptr, sparent, rptr, &
-      rlist) result(this)
+function construct_cpu_symbolic_subtree(n, nnodes, sptr, sparent, rptr, &
+      rlist, nptr, nlist) result(this)
    class(cpu_symbolic_subtree), pointer :: this
+   integer, intent(in) :: n
    integer, intent(in) :: nnodes
    integer, dimension(nnodes+1), intent(in) :: sptr
    integer, dimension(nnodes), intent(in) :: sparent
    integer(long), dimension(nnodes+1), intent(in) :: rptr
    integer, dimension(*), intent(in) :: rlist
+   integer, dimension(nnodes+1), target, intent(in) :: nptr
+   integer, dimension(2,nptr(nnodes+1)-1), target, intent(in) :: nlist
 
-   allocate(this)
+   integer :: st
+
+   allocate(this, stat=st)
+   if(st.ne.0) then
+      nullify(this)
+      return
+   endif
+   this%n = n
+   this%nnodes = nnodes
+   this%nptr => nptr
+   this%nlist => nlist
    this%csubtree = &
       c_create_symbolic_subtree(nnodes, sptr, sparent, rptr, rlist)
 end function construct_cpu_symbolic_subtree
@@ -111,30 +133,48 @@ subroutine symbolic_final(this)
    call c_destroy_symbolic_subtree(this%csubtree)
 end subroutine symbolic_final
 
-function factor2(this, posdef, nnodes, nodes)
+function factor2(this, posdef, aval, options, inform, scaling)
    type(cpu_numeric_subtree), pointer :: factor2
-   class(cpu_symbolic_subtree), intent(inout) :: this
+   class(cpu_symbolic_subtree), target, intent(inout) :: this
    logical(C_BOOL), intent(in) :: posdef
-   integer, intent(in) :: nnodes
-   type(cpu_node_data), dimension(nnodes), intent(inout) :: nodes
+   real(wp), dimension(*), intent(in) :: aval
+   class(ssids_options), intent(in) :: options
+   class(ssids_inform_base), intent(inout) :: inform
+   real(wp), dimension(*), optional, intent(in) :: scaling
 
    type(cpu_numeric_subtree), pointer :: cpu_factor
+   integer :: st
 
    ! Setup output
-   allocate(cpu_factor)
+   allocate(cpu_factor, stat=st)
+   if(st.ne.0) then
+      inform%flag = SSIDS_ERROR_ALLOCATION
+      inform%stat = st
+      nullify(factor2)
+      return
+   endif
    factor2 => cpu_factor
+   cpu_factor%symbolic => this
+
+   ! Allocate cnodes and setup for main call
+   allocate(cpu_factor%cnodes(this%nnodes+1), stat=st)
+   if(st.ne.0) then
+      inform%flag = SSIDS_ERROR_ALLOCATION
+      inform%stat = st
+      deallocate(cpu_factor, stat=st)
+      nullify(factor2)
+      return
+   endif
+   call setup_cpu_data(this%nnodes, cpu_factor%cnodes, this%nptr, this%nlist)
+   call cpu_copy_options_in(options, cpu_factor%coptions)
 
    cpu_factor%posdef = posdef
    cpu_factor%csubtree = &
-      c_create_cpu_subtree(posdef, this%csubtree, nnodes, nodes)
+      c_create_cpu_subtree(posdef, this%csubtree, this%nnodes, cpu_factor%cnodes)
 end function factor2
 
-subroutine factor3(this, n, nnodes, nodes, aval, alloc, options, &
-      stats, scaling)
+subroutine factor3(this, aval, alloc, options, stats, scaling)
    class(cpu_numeric_subtree) :: this
-   integer(C_INT), intent(in) :: n
-   integer(C_INT), intent(in) :: nnodes
-   type(cpu_node_data), dimension(nnodes), intent(inout) :: nodes
    real(C_DOUBLE), dimension(*), intent(in) :: aval
    type(C_PTR), intent(in) :: alloc
    type(cpu_factor_options), intent(in) :: options
@@ -146,26 +186,54 @@ subroutine factor3(this, n, nnodes, nodes, aval, alloc, options, &
    cscaling = C_NULL_PTR
    if(present(scaling)) cscaling = C_LOC(scaling)
 
-   call c_factor_cpu(this%posdef, this%csubtree, n, nnodes, nodes, aval, &
-      cscaling, alloc, options, stats)
+   call c_factor_cpu(this%posdef, this%csubtree, this%symbolic%n, &
+      this%symbolic%nnodes, this%cnodes, aval, cscaling, alloc, options, stats)
 end subroutine factor3
 
-function factor(this, pos_def, aval, scaling)
+function factor(this, posdef, aval, options, inform, scaling)
    class(numeric_subtree_base), pointer :: factor
-   class(cpu_symbolic_subtree), intent(inout) :: this
-   logical, intent(in) :: pos_def
+   class(cpu_symbolic_subtree), target, intent(inout) :: this
+   logical(C_BOOL), intent(in) :: posdef
    real(wp), dimension(*), intent(in) :: aval
+   class(ssids_options), intent(in) :: options
+   class(ssids_inform_base), intent(inout) :: inform
    real(wp), dimension(*), optional, intent(in) :: scaling
 
    type(cpu_numeric_subtree), pointer :: cpu_factor
+   integer :: st
 
    ! Setup output
-   allocate(cpu_factor)
+   allocate(cpu_factor, stat=st)
+   if(st.ne.0) then
+      inform%flag = SSIDS_ERROR_ALLOCATION
+      inform%stat = st
+      nullify(factor)
+      return
+   endif
    factor => cpu_factor
+   cpu_factor%symbolic => this
 
-   ! FIXME: remove redundancy
-   !cpu_factor%csubtree = &
-   !   c_create_cpu_subtree(posdef, this%csubtree, this%nnodes, this%nodes)
+   ! Allocate cnodes and setup for main call
+   allocate(cpu_factor%cnodes(this%nnodes+1), stat=st)
+   if(st.ne.0) then
+      inform%flag = SSIDS_ERROR_ALLOCATION
+      inform%stat = st
+      deallocate(cpu_factor, stat=st)
+      nullify(factor)
+      return
+   endif
+   call setup_cpu_data(this%nnodes, cpu_factor%cnodes, this%nptr, this%nlist)
+   call cpu_copy_options_in(options, cpu_factor%coptions)
+
+   ! Allocate subtree
+   cpu_factor%csubtree = &
+      c_create_cpu_subtree(posdef, this%csubtree, this%nnodes, cpu_factor%cnodes)
+
+   ! Perform actual factorization
+   !call cpu_factor%factor3(this%n, this%nnodes, cpu_factor%cnodes, aval, alloc, coptions, cstats, scaling)
+
+   ! Gather information back to Fortran
+   !call extract_cpu_data(this%nnodes, cnodes, fkeep%nodes, cstats, inform)
 end function factor
 
 subroutine numeric_final(this)
