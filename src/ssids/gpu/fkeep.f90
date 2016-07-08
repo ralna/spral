@@ -8,27 +8,20 @@ module spral_ssids_gpu_fkeep
                           cudaMemcpy2d, cudaMemcpyHostToDevice, &
                           cudaMemcpyDeviceToHost
    use spral_ssids_akeep, only : ssids_akeep_base
-   use spral_ssids_gpu_akeep, only : ssids_akeep_gpu
    use spral_ssids_alloc, only : smalloc
+   use spral_ssids_datatypes
+   use spral_ssids_gpu_akeep, only : ssids_akeep_gpu
+   use spral_ssids_gpu_cpu_solve, only : gpu_cpu_solve
    use spral_ssids_gpu_datatypes, only : gpu_type, free_gpu_type
    use spral_ssids_gpu_interfaces, only : push_ssids_cuda_settings, &
                           pop_ssids_cuda_settings, cuda_settings_type, scale
-   use spral_ssids_datatypes, only : long, node_type, smalloc_type, &
-                                     ssids_options, thread_stats, wp, &
-                                     SSIDS_ERROR_ALLOCATION, &
-                                     SSIDS_ERROR_CUDA_UNKNOWN, &
-                                     SSIDS_ERROR_UNIMPLEMENTED, &
-                                     SSIDS_ERROR_UNKNOWN, &
-                                     SSIDS_SOLVE_JOB_ALL, SSIDS_SOLVE_JOB_BWD, &
-                                     SSIDS_SOLVE_JOB_DIAG, SSIDS_SOLVE_JOB_FWD,&
-                                     SSIDS_SOLVE_JOB_DIAG_BWD
    use spral_ssids_gpu_factor, only : parfactor
-   use spral_ssids_fkeep, only : ssids_fkeep_base
-   use spral_ssids_inform, only : ssids_inform_base
    use spral_ssids_gpu_inform, only : ssids_inform_gpu
    use spral_ssids_gpu_solve, only : bwd_solve_gpu, fwd_solve_gpu, &
                                      fwd_multisolve_gpu, bwd_multisolve_gpu, &
                                      d_solve_gpu
+   use spral_ssids_fkeep, only : ssids_fkeep_base
+   use spral_ssids_inform, only : ssids_inform_base
    use, intrinsic :: iso_c_binding
    implicit none
 
@@ -264,7 +257,7 @@ subroutine inner_solve_gpu(local_job, nrhs, x, ldx, akeep, fkeep, options, infor
 
    ! Call CPU version if desired (or no GPU version for diag only)
    if(.not. options%use_gpu_solve) then
-      call fkeep%ssids_fkeep_base%inner_solve(local_job, nrhs, x, ldx, akeep, &
+      call gpu_cpu_solve(local_job, nrhs, x, ldx, akeep, fkeep, &
          options, inform)
       return
    endif

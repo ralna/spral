@@ -184,9 +184,10 @@ include_HEADERS += include/spral_ssids.h
 if HAVE_NVCC
 libspral_a_SOURCES += \
 	src/ssids/type_select_gpu.f90 \
-	src/ssids/gpu/datatypes.f90 \
 	src/ssids/gpu/alloc.f90 \
 	src/ssids/gpu/akeep.f90 \
+	src/ssids/gpu/cpu_solve.f90 \
+	src/ssids/gpu/datatypes.f90 \
 	src/ssids/gpu/dense_factor.f90 \
 	src/ssids/gpu/factor.f90 \
 	src/ssids/gpu/fkeep.f90 \
@@ -395,16 +396,20 @@ src/ssids/cpu/cpu_iface.$(OBJEXT): src/ssids/datatypes.$(OBJEXT) \
                                    src/ssids/inform.$(OBJEXT)
 src/ssids/cpu/solve.$(OBJEXT): src/ssids/datatypes.$(OBJEXT)
 src/ssids/cpu/subtree.$(OBJEXT): src/ssids/contrib.$(OBJEXT) \
-	                              src/ssids/datatypes.$(OBJEXT) \
-											src/ssids/inform.$(OBJEXT) \
-											src/ssids/subtree.$(OBJEXT) \
-											src/ssids/cpu/cpu_iface.$(OBJEXT) \
-											src/ssids/cpu/solve.$(OBJEXT)
+                                 src/ssids/datatypes.$(OBJEXT) \
+                                 src/ssids/inform.$(OBJEXT) \
+                                 src/ssids/subtree.$(OBJEXT) \
+                                 src/ssids/cpu/cpu_iface.$(OBJEXT) \
+                                 src/ssids/cpu/solve.$(OBJEXT)
 src/ssids/gpu/akeep.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
                                src/ssids/akeep.$(OBJEXT) \
                                src/ssids/datatypes.$(OBJEXT) \
                                src/ssids/inform.$(OBJEXT) \
                                src/ssids/gpu/inform.$(OBJEXT)
+src/ssids/gpu/cpu_solve.$(OBJEXT): src/ssids/akeep.$(OBJEXT) \
+                                   src/ssids/datatypes.$(OBJEXT) \
+                                   src/ssids/fkeep.$(OBJEXT) \
+                                   src/ssids/inform.$(OBJEXT)
 src/ssids/gpu/datatypes.$(OBJEXT): src/cuda/cuda.$(OBJEXT)
 src/ssids/gpu/interfaces.$(OBJEXT): src/ssids/gpu/datatypes.$(OBJEXT)
 src/ssids/gpu/dense_factor.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
@@ -412,18 +417,6 @@ src/ssids/gpu/dense_factor.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
                                       src/ssids/gpu/datatypes.$(OBJEXT) \
                                       src/ssids/gpu/interfaces.$(OBJEXT) \
                                       src/ssids/datatypes.$(OBJEXT)
-src/ssids/gpu/fkeep.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
-                               src/ssids/akeep.$(OBJEXT) \
-                               src/ssids/gpu/akeep.$(OBJEXT) \
-                               src/ssids/alloc.$(OBJEXT) \
-                               src/ssids/gpu/datatypes.$(OBJEXT) \
-                               src/ssids/gpu/interfaces.$(OBJEXT) \
-                               src/ssids/datatypes.$(OBJEXT) \
-                               src/ssids/gpu/factor.$(OBJEXT) \
-                               src/ssids/fkeep.$(OBJEXT) \
-                               src/ssids/inform.$(OBJEXT) \
-                               src/ssids/gpu/inform.$(OBJEXT) \
-                               src/ssids/gpu/solve.$(OBJEXT)
 src/ssids/gpu/factor.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
                                 src/ssids/alloc.$(OBJEXT) \
                                 src/ssids/gpu/alloc.$(OBJEXT) \
@@ -432,6 +425,19 @@ src/ssids/gpu/factor.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
                                 src/ssids/datatypes.$(OBJEXT) \
                                 src/ssids/gpu/dense_factor.$(OBJEXT) \
                                 src/ssids/gpu/solve.$(OBJEXT)
+src/ssids/gpu/fkeep.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
+                               src/ssids/akeep.$(OBJEXT) \
+                               src/ssids/alloc.$(OBJEXT) \
+                               src/ssids/datatypes.$(OBJEXT) \
+                               src/ssids/fkeep.$(OBJEXT) \
+                               src/ssids/inform.$(OBJEXT) \
+                               src/ssids/gpu/akeep.$(OBJEXT) \
+                               src/ssids/gpu/cpu_solve.$(OBJEXT) \
+                               src/ssids/gpu/datatypes.$(OBJEXT) \
+                               src/ssids/gpu/interfaces.$(OBJEXT) \
+                               src/ssids/gpu/factor.$(OBJEXT) \
+                               src/ssids/gpu/inform.$(OBJEXT) \
+                               src/ssids/gpu/solve.$(OBJEXT)
 src/ssids/gpu/inform.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
                                 src/ssids/datatypes.$(OBJEXT) \
                                 src/ssids/inform.$(OBJEXT)
