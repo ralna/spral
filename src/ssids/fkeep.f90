@@ -87,11 +87,10 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
    fposdef = fkeep%pos_def
    if(allocated(fkeep%scaling)) then
       subtree => symbolic_subtree%factor2(fposdef, val, options, inform, &
-         C_LOC(fkeep%alloc), cstats, &
-         scaling=fkeep%scaling)
+         cstats, scaling=fkeep%scaling)
    else
       subtree => symbolic_subtree%factor2(fposdef, val, options, inform, &
-         C_LOC(fkeep%alloc), cstats)
+         cstats)
    endif
 
    ! Gather information back to Fortran
