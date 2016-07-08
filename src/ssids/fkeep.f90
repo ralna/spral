@@ -61,30 +61,27 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
    class(ssids_inform_base), intent(inout) :: inform
 
    logical(C_BOOL) :: fposdef
-   type(cpu_symbolic_subtree), pointer :: symbolic_subtree
    class(numeric_subtree_base), pointer :: subtree
 
-   integer :: st
-
-   associate(ssptr => akeep%subtree(1)%ptr)
-      select type(ssptr)
-      type is(cpu_symbolic_subtree)
-         symbolic_subtree => ssptr
-      end select
-   end associate
-
-   ! Perform factorization in C++ code
    fposdef = fkeep%pos_def
-   if(allocated(fkeep%scaling)) then
-      subtree => symbolic_subtree%factor(fposdef, val, options, inform, &
-         scaling=fkeep%scaling)
-   else
-      subtree => symbolic_subtree%factor(fposdef, val, options, inform)
+
+   ! Allocate space for subtrees
+   allocate(fkeep%subtree(1), stat=inform%stat)
+   if(inform%stat.ne.0) then
+      inform%flag = SSIDS_ERROR_ALLOCATION
+      return
    endif
 
-   ! Keep subtree around
-   allocate(fkeep%subtree(1))
-   fkeep%subtree(1)%ptr => subtree
+   ! Call subtree factor routines
+   if(allocated(fkeep%scaling)) then
+      fkeep%subtree(1)%ptr => akeep%subtree(1)%ptr%factor( &
+         fposdef, val, options, inform, scaling=fkeep%scaling &
+         )
+   else
+      fkeep%subtree(1)%ptr => akeep%subtree(1)%ptr%factor( &
+         fposdef, val, options, inform &
+         )
+   endif
 end subroutine inner_factor_cpu
 
 subroutine inner_solve_cpu(local_job, nrhs, x, ldx, akeep, fkeep, options, inform)
