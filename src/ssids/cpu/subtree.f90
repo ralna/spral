@@ -4,8 +4,7 @@ module spral_ssids_cpu_subtree
    use spral_ssids_contrib, only : contrib_type
    use spral_ssids_cpu_iface ! fixme only
    use spral_ssids_cpu_solve ! fixme only
-   use spral_ssids_datatypes, only : long, wp, ssids_options, smalloc_type, &
-      SSIDS_ERROR_ALLOCATION
+   use spral_ssids_datatypes
    use spral_ssids_inform, only : ssids_inform_base
    use spral_ssids_subtree, only : symbolic_subtree_base, numeric_subtree_base
    implicit none
@@ -18,6 +17,9 @@ module spral_ssids_cpu_subtree
       integer :: n
       integer :: nnodes
       integer(long) :: nfactor ! Total number of entries in L (expected)
+      integer, dimension(:), pointer :: sptr
+      integer(long), dimension(:), pointer :: rptr
+      integer, dimension(:), pointer :: rlist
       integer, dimension(:), pointer :: nptr
       integer, dimension(:,:), pointer :: nlist
       type(C_PTR) :: csubtree
@@ -39,8 +41,10 @@ module spral_ssids_cpu_subtree
       procedure :: get_contrib
       procedure :: solve_fwd
       procedure :: solve_fwd_diag
+      procedure :: solve_fwd_diag2
       procedure :: solve_diag
       procedure :: solve_bwd
+      procedure :: solve_bwd2
       final :: numeric_final
    end type cpu_numeric_subtree
 
@@ -109,10 +113,10 @@ function construct_cpu_symbolic_subtree(n, nnodes, sptr, sparent, rptr, &
    class(cpu_symbolic_subtree), pointer :: this
    integer, intent(in) :: n
    integer, intent(in) :: nnodes
-   integer, dimension(nnodes+1), intent(in) :: sptr
+   integer, dimension(nnodes+1), target, intent(in) :: sptr
    integer, dimension(nnodes), intent(in) :: sparent
-   integer(long), dimension(nnodes+1), intent(in) :: rptr
-   integer, dimension(*), intent(in) :: rlist
+   integer(long), dimension(nnodes+1), target, intent(in) :: rptr
+   integer, dimension(rptr(nnodes+1)-1), target, intent(in) :: rlist
    integer, dimension(nnodes+1), target, intent(in) :: nptr
    integer, dimension(2,nptr(nnodes+1)-1), target, intent(in) :: nlist
 
@@ -132,6 +136,9 @@ function construct_cpu_symbolic_subtree(n, nnodes, sptr, sparent, rptr, &
    this%nnodes = nnodes
    this%nptr => nptr
    this%nlist => nlist
+   this%sptr => sptr
+   this%rptr => rptr
+   this%rlist => rlist
 
    ! Count size of factors
    this%nfactor = 0
@@ -256,6 +263,24 @@ subroutine solve_fwd(this, nrhs, x, ldx)
    ! FIXME
 end subroutine solve_fwd
 
+subroutine solve_fwd_diag2(this, nrhs, x, ldx, inform, local_job, nodes, invp)
+   class(cpu_numeric_subtree), intent(inout) :: this
+   integer, intent(in) :: nrhs
+   real(wp), dimension(*), intent(inout) :: x
+   integer, intent(in) :: ldx
+   class(ssids_inform_base), intent(inout) :: inform
+   integer, intent(in) :: local_job
+   type(node_type), dimension(*), intent(in) :: nodes
+   integer, dimension(*), intent(in) :: invp
+
+   logical :: fposdef
+
+   fposdef = this%posdef
+   call fwd_diag_solve(fposdef, local_job, this%symbolic%nnodes, nodes, &
+      this%symbolic%sptr, this%symbolic%rptr, this%symbolic%rlist, invp, nrhs, &
+      x, ldx, inform%stat)
+end subroutine solve_fwd_diag2
+
 subroutine solve_fwd_diag(this, nrhs, x, ldx)
    class(cpu_numeric_subtree), intent(inout) :: this
    integer, intent(in) :: nrhs
@@ -273,6 +298,24 @@ subroutine solve_diag(this, nrhs, x, ldx)
 
    ! FIXME
 end subroutine solve_diag
+
+subroutine solve_bwd2(this, nrhs, x, ldx, inform, local_job, nodes, invp)
+   class(cpu_numeric_subtree), intent(inout) :: this
+   integer, intent(in) :: nrhs
+   real(wp), dimension(*), intent(inout) :: x
+   integer, intent(in) :: ldx
+   class(ssids_inform_base), intent(inout) :: inform
+   integer, intent(in) :: local_job
+   type(node_type), dimension(*), intent(in) :: nodes
+   integer, dimension(*), intent(in) :: invp
+
+   logical :: fposdef
+
+   fposdef = this%posdef
+   call subtree_bwd_solve(this%symbolic%nnodes, 1, local_job, fposdef, &
+      this%symbolic%nnodes, nodes, this%symbolic%sptr, this%symbolic%rptr, &
+      this%symbolic%rlist, invp, nrhs, x, ldx, inform%stat)
+end subroutine solve_bwd2
 
 subroutine solve_bwd(this, nrhs, x, ldx)
    class(cpu_numeric_subtree), intent(inout) :: this

@@ -121,20 +121,23 @@ subroutine inner_solve_cpu(local_job, nrhs, x, ldx, akeep, fkeep, options, infor
       end if
    end if
 
-   ! Perform supernodal forward solve or diagonal solve (both in serial)
-   call fwd_diag_solve(fkeep%pos_def, local_job, akeep%nnodes, &
-      fkeep%nodes, akeep%sptr, akeep%rptr, akeep%rlist, akeep%invp, nrhs, &
-      x, ldx, inform%stat)
-   if (inform%stat .ne. 0) goto 100
+   ! Perform forward solve and/or diagonal solve
+   associate(subtree => fkeep%subtree(1)%ptr)
+      select type(subtree)
+      type is (cpu_numeric_subtree)
+         call subtree%solve_fwd_diag2(nrhs, x, ldx, inform, local_job, &
+            fkeep%nodes, akeep%invp)
+         if (inform%stat .ne. 0) goto 100
 
-   if( local_job.eq.SSIDS_SOLVE_JOB_DIAG_BWD .or. &
-         local_job.eq.SSIDS_SOLVE_JOB_BWD .or. &
-         local_job.eq.SSIDS_SOLVE_JOB_ALL ) then
-      call subtree_bwd_solve(akeep%nnodes, 1, local_job, fkeep%pos_def,  &
-         akeep%nnodes, fkeep%nodes, akeep%sptr, akeep%rptr, akeep%rlist, &
-         akeep%invp, nrhs, x, ldx, inform%stat)
-   end if
-   if (inform%stat .ne. 0) goto 100
+         if( local_job.eq.SSIDS_SOLVE_JOB_DIAG_BWD .or. &
+               local_job.eq.SSIDS_SOLVE_JOB_BWD .or. &
+               local_job.eq.SSIDS_SOLVE_JOB_ALL ) then
+            call subtree%solve_bwd2(nrhs, x, ldx, inform, local_job, &
+               fkeep%nodes, akeep%invp)
+         end if
+         if (inform%stat .ne. 0) goto 100
+      end select
+   end associate
 
    if (allocated(fkeep%scaling)) then
       if (local_job == SSIDS_SOLVE_JOB_ALL .or. &
