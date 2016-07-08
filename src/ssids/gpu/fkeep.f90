@@ -11,7 +11,7 @@ module spral_ssids_gpu_fkeep
    use spral_ssids_alloc, only : smalloc
    use spral_ssids_datatypes
    use spral_ssids_gpu_akeep, only : ssids_akeep_gpu
-   use spral_ssids_gpu_cpu_solve, only : gpu_cpu_solve
+   use spral_ssids_gpu_cpu_solve, only : fwd_diag_solve, subtree_bwd_solve
    use spral_ssids_gpu_datatypes, only : gpu_type, free_gpu_type
    use spral_ssids_gpu_interfaces, only : push_ssids_cuda_settings, &
                           pop_ssids_cuda_settings, cuda_settings_type, scale
@@ -42,6 +42,8 @@ module spral_ssids_gpu_fkeep
       type(C_PTR) :: gpu_clen = C_NULL_PTR
       logical :: host_factors = .false.
       type(smalloc_type), pointer :: alloc => null()
+      type(node_type), dimension(:), allocatable :: nodes ! Stores pointers
+         ! to information about nodes
 
    contains
       procedure, pass(fkeep) :: inner_factor => inner_factor_gpu ! Do actual factorization
@@ -481,6 +483,71 @@ end subroutine inner_solve_gpu
 
 !****************************************************************************
 
+subroutine gpu_cpu_solve(local_job, nrhs, x, ldx, akeep, fkeep, options, inform)
+   integer, intent(inout) :: local_job
+   integer, intent(in) :: nrhs
+   integer, intent(in) :: ldx
+   real(wp), dimension(ldx,nrhs), target, intent(inout) :: x
+   class(ssids_akeep_base), intent(in) :: akeep
+   class(ssids_fkeep_gpu), intent(inout) :: fkeep
+   type(ssids_options), intent(in) :: options
+   class(ssids_inform_base), intent(inout) :: inform
+
+   integer :: i, r
+   integer :: n
+
+   n = akeep%n
+
+   if (allocated(fkeep%scaling)) then
+      if (local_job == SSIDS_SOLVE_JOB_ALL .or. &
+            local_job == SSIDS_SOLVE_JOB_FWD) then
+         do r = 1, nrhs
+            !x(1:n,r) = x(1:n,r) * fkeep%scaling(1:n)
+            do i = 1, n
+               x(akeep%invp(i),r) = x(akeep%invp(i),r) * fkeep%scaling(i)
+            end do
+         end do
+      end if
+   end if
+
+   ! Perform supernodal forward solve or diagonal solve (both in serial)
+   call fwd_diag_solve(fkeep%pos_def, local_job, akeep%nnodes, &
+      fkeep%nodes, akeep%sptr, akeep%rptr, akeep%rlist, akeep%invp, nrhs, &
+      x, ldx, inform%stat)
+   if (inform%stat .ne. 0) goto 100
+
+   if( local_job.eq.SSIDS_SOLVE_JOB_DIAG_BWD .or. &
+         local_job.eq.SSIDS_SOLVE_JOB_BWD .or. &
+         local_job.eq.SSIDS_SOLVE_JOB_ALL ) then
+      call subtree_bwd_solve(akeep%nnodes, 1, local_job, fkeep%pos_def,  &
+         akeep%nnodes, fkeep%nodes, akeep%sptr, akeep%rptr, akeep%rlist, &
+         akeep%invp, nrhs, x, ldx, inform%stat)
+   end if
+   if (inform%stat .ne. 0) goto 100
+
+   if (allocated(fkeep%scaling)) then
+      if (local_job == SSIDS_SOLVE_JOB_ALL .or. &
+            local_job == SSIDS_SOLVE_JOB_BWD .or. &
+            local_job == SSIDS_SOLVE_JOB_DIAG_BWD) then
+         do r = 1, nrhs
+            !x(1:n,r) = x(1:n,r) * fkeep%scaling(1:n)
+            do i = 1, n
+               x(akeep%invp(i),r) = x(akeep%invp(i),r) * fkeep%scaling(i)
+            end do
+         end do
+      end if
+   end if
+
+   return
+
+   100 continue
+   inform%flag = SSIDS_ERROR_ALLOCATION
+   return
+
+end subroutine gpu_cpu_solve
+
+!****************************************************************************
+
 subroutine enquire_posdef_gpu(akeep, fkeep, inform, d)
    class(ssids_akeep_base), intent(in) :: akeep
    class(ssids_fkeep_gpu), target, intent(in) :: fkeep
@@ -784,7 +851,7 @@ subroutine alter_gpu_cpu(d, akeep, fkeep, options, inform)
      ! of D^{-1} must be placed in d(1,i) (i = 1,...n)
      ! and the off-diagonal entries must be placed in d(2,i) (i = 1,...n-1).
    type(ssids_akeep_base), intent(in) :: akeep
-   class(ssids_fkeep_base), target, intent(inout) :: fkeep
+   type(ssids_fkeep_gpu), target, intent(inout) :: fkeep
    type(ssids_options), intent(in) :: options
    class(ssids_inform_base), intent(inout) :: inform
 

@@ -7,72 +7,9 @@ module spral_ssids_gpu_cpu_solve
    implicit none
 
    private
-   public :: gpu_cpu_solve
+   public :: subtree_bwd_solve, fwd_diag_solve
 
 contains
-
-subroutine gpu_cpu_solve(local_job, nrhs, x, ldx, akeep, fkeep, options, inform)
-   integer, intent(inout) :: local_job
-   integer, intent(in) :: nrhs
-   integer, intent(in) :: ldx
-   real(wp), dimension(ldx,nrhs), target, intent(inout) :: x
-   class(ssids_akeep_base), intent(in) :: akeep
-   class(ssids_fkeep_base), intent(inout) :: fkeep
-   type(ssids_options), intent(in) :: options
-   class(ssids_inform_base), intent(inout) :: inform
-
-   integer :: i, r
-   integer :: n
-
-   n = akeep%n
-
-   if (allocated(fkeep%scaling)) then
-      if (local_job == SSIDS_SOLVE_JOB_ALL .or. &
-            local_job == SSIDS_SOLVE_JOB_FWD) then
-         do r = 1, nrhs
-            !x(1:n,r) = x(1:n,r) * fkeep%scaling(1:n)
-            do i = 1, n
-               x(akeep%invp(i),r) = x(akeep%invp(i),r) * fkeep%scaling(i)
-            end do
-         end do
-      end if
-   end if
-
-   ! Perform supernodal forward solve or diagonal solve (both in serial)
-   call fwd_diag_solve(fkeep%pos_def, local_job, akeep%nnodes, &
-      fkeep%nodes, akeep%sptr, akeep%rptr, akeep%rlist, akeep%invp, nrhs, &
-      x, ldx, inform%stat)
-   if (inform%stat .ne. 0) goto 100
-
-   if( local_job.eq.SSIDS_SOLVE_JOB_DIAG_BWD .or. &
-         local_job.eq.SSIDS_SOLVE_JOB_BWD .or. &
-         local_job.eq.SSIDS_SOLVE_JOB_ALL ) then
-      call subtree_bwd_solve(akeep%nnodes, 1, local_job, fkeep%pos_def,  &
-         akeep%nnodes, fkeep%nodes, akeep%sptr, akeep%rptr, akeep%rlist, &
-         akeep%invp, nrhs, x, ldx, inform%stat)
-   end if
-   if (inform%stat .ne. 0) goto 100
-
-   if (allocated(fkeep%scaling)) then
-      if (local_job == SSIDS_SOLVE_JOB_ALL .or. &
-            local_job == SSIDS_SOLVE_JOB_BWD .or. &
-            local_job == SSIDS_SOLVE_JOB_DIAG_BWD) then
-         do r = 1, nrhs
-            !x(1:n,r) = x(1:n,r) * fkeep%scaling(1:n)
-            do i = 1, n
-               x(akeep%invp(i),r) = x(akeep%invp(i),r) * fkeep%scaling(i)
-            end do
-         end do
-      end if
-   end if
-
-   return
-
-   100 continue
-   inform%flag = SSIDS_ERROR_ALLOCATION
-   return
-
-end subroutine gpu_cpu_solve
 
 !*************************************************************************
 !

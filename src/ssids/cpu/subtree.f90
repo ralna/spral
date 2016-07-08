@@ -30,10 +30,11 @@ module spral_ssids_cpu_subtree
    end type cpu_symbolic_subtree
 
    type, extends(numeric_subtree_base) :: cpu_numeric_subtree
+      logical(C_BOOL) :: posdef
       type(cpu_symbolic_subtree), pointer :: symbolic
       type(smalloc_type), pointer :: alloc=>null() ! Linked list of memory pages
          ! pointed to by nodes variable
-      logical(C_BOOL) :: posdef
+      type(node_type), dimension(:), allocatable :: nodes
       type(cpu_node_data), dimension(:), allocatable :: cnodes
       type(contrib_type), pointer :: contrib
       type(C_PTR) :: csubtree
@@ -163,18 +164,18 @@ subroutine symbolic_final(this)
    call c_destroy_symbolic_subtree(this%csubtree)
 end subroutine symbolic_final
 
-function factor2(this, posdef, aval, options, inform, cstats, scaling)
+function factor2(this, posdef, aval, options, inform, scaling)
    type(cpu_numeric_subtree), pointer :: factor2
    class(cpu_symbolic_subtree), target, intent(inout) :: this
    logical(C_BOOL), intent(in) :: posdef
    real(wp), dimension(*), intent(in) :: aval
    class(ssids_options), intent(in) :: options
    class(ssids_inform_base), intent(inout) :: inform
-   type(cpu_factor_stats), intent(out) :: cstats
    real(wp), dimension(*), target, optional, intent(in) :: scaling
 
    type(cpu_numeric_subtree), pointer :: cpu_factor
    type(cpu_factor_options) :: coptions
+   type(cpu_factor_stats) :: cstats
    type(C_PTR) :: cscaling
    integer :: st
 
@@ -197,6 +198,11 @@ function factor2(this, posdef, aval, options, inform, cstats, scaling)
          int(options%multiplier*real(this%nfactor,wp)+2*this%n,kind=long)), st)
    if(st.ne.0) goto 10
 
+   ! Allocate Fortran nodes structure
+   allocate(cpu_factor%nodes(this%nnodes+1), stat=st)
+   if(st.ne.0) goto 10
+   cpu_factor%nodes(:)%ndelay = 0
+
    ! Allocate cnodes and setup for main call
    allocate(cpu_factor%cnodes(this%nnodes+1), stat=st)
    if(st.ne.0) goto 10
@@ -214,6 +220,10 @@ function factor2(this, posdef, aval, options, inform, cstats, scaling)
    call c_factor_cpu(posdef, cpu_factor%csubtree, this%n, &
       this%nnodes, cpu_factor%cnodes, aval, cscaling, C_LOC(cpu_factor%alloc), &
       coptions, cstats)
+
+   ! Extract to Fortran data structures
+   call extract_cpu_data(this%nnodes, cpu_factor%cnodes, cpu_factor%nodes, &
+      cstats, inform)
 
    ! Succes, set result and return
    factor2 => cpu_factor
@@ -266,20 +276,19 @@ subroutine solve_fwd(this, nrhs, x, ldx)
    ! FIXME
 end subroutine solve_fwd
 
-subroutine solve_fwd_diag2(this, nrhs, x, ldx, inform, local_job, nodes, invp)
+subroutine solve_fwd_diag2(this, nrhs, x, ldx, inform, local_job, invp)
    class(cpu_numeric_subtree), intent(inout) :: this
    integer, intent(in) :: nrhs
    real(wp), dimension(*), intent(inout) :: x
    integer, intent(in) :: ldx
    class(ssids_inform_base), intent(inout) :: inform
    integer, intent(in) :: local_job
-   type(node_type), dimension(*), intent(in) :: nodes
    integer, dimension(*), intent(in) :: invp
 
    logical :: fposdef
 
    fposdef = this%posdef
-   call fwd_diag_solve(fposdef, local_job, this%symbolic%nnodes, nodes, &
+   call fwd_diag_solve(fposdef, local_job, this%symbolic%nnodes, this%nodes, &
       this%symbolic%sptr, this%symbolic%rptr, this%symbolic%rlist, invp, nrhs, &
       x, ldx, inform%stat)
 end subroutine solve_fwd_diag2
@@ -302,21 +311,20 @@ subroutine solve_diag(this, nrhs, x, ldx)
    ! FIXME
 end subroutine solve_diag
 
-subroutine solve_bwd2(this, nrhs, x, ldx, inform, local_job, nodes, invp)
+subroutine solve_bwd2(this, nrhs, x, ldx, inform, local_job, invp)
    class(cpu_numeric_subtree), intent(inout) :: this
    integer, intent(in) :: nrhs
    real(wp), dimension(*), intent(inout) :: x
    integer, intent(in) :: ldx
    class(ssids_inform_base), intent(inout) :: inform
    integer, intent(in) :: local_job
-   type(node_type), dimension(*), intent(in) :: nodes
    integer, dimension(*), intent(in) :: invp
 
    logical :: fposdef
 
    fposdef = this%posdef
    call subtree_bwd_solve(this%symbolic%nnodes, 1, local_job, fposdef, &
-      this%symbolic%nnodes, nodes, this%symbolic%sptr, this%symbolic%rptr, &
+      this%symbolic%nnodes, this%nodes, this%symbolic%sptr, this%symbolic%rptr,&
       this%symbolic%rlist, invp, nrhs, x, ldx, inform%stat)
 end subroutine solve_bwd2
 
@@ -329,10 +337,9 @@ subroutine solve_bwd(this, nrhs, x, ldx)
    ! FIXME
 end subroutine solve_bwd
 
-subroutine enquire_posdef(this, d, nodes)
-   class(cpu_numeric_subtree), intent(in) :: this
+subroutine enquire_posdef(this, d)
+   class(cpu_numeric_subtree), target, intent(in) :: this
    real(wp), dimension(*), intent(out) :: d
-   type(node_type), dimension(*), target, intent(in) :: nodes
 
    integer :: blkn, blkm
    integer(long) :: i
@@ -345,7 +352,7 @@ subroutine enquire_posdef(this, d, nodes)
    associate(symbolic => this%symbolic)
       piv = 1
       do node = 1, symbolic%nnodes
-         nptr => nodes(node)
+         nptr => this%nodes(node)
          blkn = symbolic%sptr(node+1) - symbolic%sptr(node)
          blkm = int(symbolic%rptr(node+1) - symbolic%rptr(node))
          i = 1
@@ -358,9 +365,8 @@ subroutine enquire_posdef(this, d, nodes)
    end associate
 end subroutine enquire_posdef
 
-subroutine enquire_indef(this, nodes, invp, piv_order, d)
-   class(cpu_numeric_subtree), intent(in) :: this
-   type(node_type), dimension(*), target, intent(in) :: nodes
+subroutine enquire_indef(this, invp, piv_order, d)
+   class(cpu_numeric_subtree), target, intent(in) :: this
    integer, dimension(*), intent(in) :: invp
    integer, dimension(*), optional, intent(out) :: piv_order
    real(wp), dimension(2,*), optional, intent(out) :: d
@@ -377,7 +383,7 @@ subroutine enquire_indef(this, nodes, invp, piv_order, d)
    associate(symbolic => this%symbolic)
       piv = 1
       do node = 1, symbolic%nnodes
-         nptr => nodes(node)
+         nptr => this%nodes(node)
          j = 1
          nd = nptr%ndelay
          blkn = symbolic%sptr(node+1) - symbolic%sptr(node) + nd
@@ -418,10 +424,9 @@ subroutine enquire_indef(this, nodes, invp, piv_order, d)
    end associate
 end subroutine enquire_indef
 
-subroutine alter(this, d, nodes)
-   class(cpu_numeric_subtree), intent(inout) :: this
+subroutine alter(this, d)
+   class(cpu_numeric_subtree), target, intent(inout) :: this
    real(wp), dimension(2,*), intent(in) :: d
-   type(node_type), dimension(*), target, intent(inout) :: nodes
 
    integer :: blkm, blkn
    integer(long) :: ip
@@ -435,7 +440,7 @@ subroutine alter(this, d, nodes)
    associate(symbolic => this%symbolic)
       piv = 1
       do node = 1, symbolic%nnodes
-         nptr => nodes(node)
+         nptr => this%nodes(node)
          nd = nptr%ndelay
          blkn = symbolic%sptr(node+1) - symbolic%sptr(node) + nd
          blkm = int(symbolic%rptr(node+1) - symbolic%rptr(node)) + nd

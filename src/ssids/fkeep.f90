@@ -28,8 +28,6 @@ module spral_ssids_fkeep
       integer :: flag ! copy of error flag.
       real(wp), dimension(:), allocatable :: scaling ! Stores scaling for
          ! each entry (in original matrix order)
-      type(node_type), dimension(:), allocatable :: nodes ! Stores pointers
-         ! to information about nodes
       logical :: pos_def ! set to true if user indicates matrix pos. definite
 
       ! Factored subtrees
@@ -65,7 +63,6 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
    logical(C_BOOL) :: fposdef
    type(cpu_symbolic_subtree), pointer :: symbolic_subtree
    type(cpu_numeric_subtree), pointer :: subtree
-   type(cpu_factor_stats) :: cstats
 
    integer :: st
 
@@ -80,14 +77,10 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
    fposdef = fkeep%pos_def
    if(allocated(fkeep%scaling)) then
       subtree => symbolic_subtree%factor2(fposdef, val, options, inform, &
-         cstats, scaling=fkeep%scaling)
+         scaling=fkeep%scaling)
    else
-      subtree => symbolic_subtree%factor2(fposdef, val, options, inform, &
-         cstats)
+      subtree => symbolic_subtree%factor2(fposdef, val, options, inform)
    endif
-
-   ! Gather information back to Fortran
-   call extract_cpu_data(akeep%nnodes, subtree%cnodes, fkeep%nodes, cstats, inform)
 
    ! Keep subtree around
    allocate(fkeep%subtree(1))
@@ -126,14 +119,14 @@ subroutine inner_solve_cpu(local_job, nrhs, x, ldx, akeep, fkeep, options, infor
       select type(subtree)
       type is (cpu_numeric_subtree)
          call subtree%solve_fwd_diag2(nrhs, x, ldx, inform, local_job, &
-            fkeep%nodes, akeep%invp)
+            akeep%invp)
          if (inform%stat .ne. 0) goto 100
 
          if( local_job.eq.SSIDS_SOLVE_JOB_DIAG_BWD .or. &
                local_job.eq.SSIDS_SOLVE_JOB_BWD .or. &
                local_job.eq.SSIDS_SOLVE_JOB_ALL ) then
             call subtree%solve_bwd2(nrhs, x, ldx, inform, local_job, &
-               fkeep%nodes, akeep%invp)
+               akeep%invp)
          end if
          if (inform%stat .ne. 0) goto 100
       end select
@@ -177,7 +170,7 @@ subroutine enquire_posdef_cpu(akeep, fkeep, inform, d)
    associate(subtree => fkeep%subtree(1)%ptr)
       select type(subtree)
       type is (cpu_numeric_subtree)
-         call subtree%enquire_posdef(d, fkeep%nodes)
+         call subtree%enquire_posdef(d)
       end select
    end associate
    
@@ -208,7 +201,7 @@ subroutine enquire_indef_cpu(akeep, fkeep, inform, piv_order, d)
    associate(subtree => fkeep%subtree(1)%ptr)
       select type(subtree)
       type is (cpu_numeric_subtree)
-         call subtree%enquire_indef(fkeep%nodes, akeep%invp, &
+         call subtree%enquire_indef(akeep%invp, &
             piv_order=piv_order, d=d)
       end select
    end associate
@@ -228,7 +221,7 @@ subroutine alter_cpu(d, akeep, fkeep, options, inform)
    associate(subtree => fkeep%subtree(1)%ptr)
       select type(subtree)
       type is (cpu_numeric_subtree)
-         call subtree%alter(d, fkeep%nodes)
+         call subtree%alter(d)
       end select
    end associate
 end subroutine alter_cpu
@@ -244,9 +237,6 @@ subroutine free_fkeep(fkeep, flag)
 
    flag = 0 ! Not used for basic SSIDS, just zet to zero
 
-   ! Skip if nothing intialized
-   if (.not.allocated(fkeep%nodes)) return
-
    if(allocated(fkeep%subtree)) then
       do i = 1, size(fkeep%subtree)
          if(associated(fkeep%subtree(i)%ptr)) deallocate(fkeep%subtree(i)%ptr)
@@ -254,7 +244,6 @@ subroutine free_fkeep(fkeep, flag)
       deallocate(fkeep%subtree)
    endif
 
-   deallocate(fkeep%nodes, stat=st)
    deallocate(fkeep%scaling, stat=st)
 
 end subroutine free_fkeep

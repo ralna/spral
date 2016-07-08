@@ -933,17 +933,6 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
       end do
       deallocate(fkeep%subtree)
    endif
-   if(allocated(fkeep%nodes)) then
-      if(size(fkeep%nodes).lt.akeep%nnodes+1) then
-         deallocate(fkeep%nodes,stat=st)
-         allocate(fkeep%nodes(akeep%nnodes+1), stat=st)
-         if (st .ne. 0) go to 10
-      end if
-   else
-      allocate(fkeep%nodes(akeep%nnodes+1), stat=st)
-      if (st .ne. 0) go to 10
-   end if
-   fkeep%nodes(1:akeep%nnodes+1)%ndelay = 0
          
    ! Call main factorization routine
    if (akeep%check) then
@@ -1104,7 +1093,7 @@ subroutine ssids_solve_mult_double(nrhs, x, ldx, akeep, fkeep, options, &
 
    if (akeep%nnodes.eq.0) return
 
-   if (.not. allocated(fkeep%nodes)) then
+   if (.not. allocated(fkeep%subtree)) then
       ! factorize phase has not been performed
       inform%flag = SSIDS_ERROR_CALL_SEQUENCE
       call ssids_print_flag(inform,nout,context)
@@ -1201,7 +1190,7 @@ subroutine ssids_enquire_posdef_double(akeep, fkeep, options, inform, d)
    nout = options%unit_error
    if (options%print_level < 0) nout = -1
 
-   if (.not. allocated(fkeep%nodes)) then
+   if (.not. allocated(fkeep%subtree)) then
       ! factorize phase has not been performed
       inform%flag = SSIDS_ERROR_CALL_SEQUENCE
       call ssids_print_flag(inform,nout,context)
@@ -1255,7 +1244,7 @@ subroutine ssids_enquire_indef_double(akeep, fkeep, options, inform, &
    nout = options%unit_error
    if (options%print_level < 0) nout = -1
 
-   if (.not. allocated(fkeep%nodes)) then
+   if (.not. allocated(fkeep%subtree)) then
       ! factorize phase has not been performed
       inform%flag = SSIDS_ERROR_CALL_SEQUENCE
       call ssids_print_flag(inform,nout,context)
@@ -1303,7 +1292,7 @@ subroutine ssids_alter_double(d, akeep, fkeep, options, inform)
    nout = options%unit_error
    if (options%print_level < 0) nout = -1
 
-   if (.not. allocated(fkeep%nodes)) then
+   if (.not. allocated(fkeep%subtree)) then
       ! factorize phase has not been performed
       inform%flag = SSIDS_ERROR_CALL_SEQUENCE
       call ssids_print_flag(inform,nout,context)
