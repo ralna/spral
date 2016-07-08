@@ -168,31 +168,19 @@ subroutine enquire_posdef_cpu(akeep, fkeep, inform, d)
    class(ssids_inform_base), intent(inout) :: inform
    real(wp), dimension(*), intent(out) :: d
 
-   integer :: blkn, blkm
-   integer(long) :: i
-   integer :: j
    integer :: n
-   integer :: node
-   integer :: piv
-
-   type(node_type), pointer :: nptr
 
    n = akeep%n
    ! ensure d is not returned undefined
    d(1:n) = 0.0 ! ensure do not returned with this undefined
+
+   associate(subtree => fkeep%subtree(1)%ptr)
+      select type(subtree)
+      type is (cpu_numeric_subtree)
+         call subtree%enquire_posdef(d, fkeep%nodes)
+      end select
+   end associate
    
-   piv = 1
-   do node = 1, akeep%nnodes
-      nptr => fkeep%nodes(node)
-      blkn = akeep%sptr(node+1) - akeep%sptr(node)
-      blkm = int(akeep%rptr(node+1) - akeep%rptr(node))
-      i = 1
-      do j = 1, blkn
-         d(piv) = nptr%lcol(i)
-         i = i + blkm + 1
-         piv = piv + 1
-      end do
-   end do
 end subroutine enquire_posdef_cpu
 
 !****************************************************************************
@@ -209,62 +197,21 @@ subroutine enquire_indef_cpu(akeep, fkeep, inform, piv_order, d)
       ! entries of D^{-1} will be placed in d(1,:i) and the off-diagonal
       ! entries will be placed in d(2,:). The entries are held in pivot order.
 
-   integer :: blkn, blkm
-   integer :: j, k
    integer :: n
-   integer :: nd
-   integer :: node
-   integer(long) :: offset
-   integer :: piv
-
-   type(node_type), pointer :: nptr
 
    n = akeep%n
    if(present(d)) then
       ! ensure d is not returned undefined
       d(1:2,1:n) = 0.0
    end if
-   
-   piv = 1
-   do node = 1, akeep%nnodes
-      nptr => fkeep%nodes(node)
-      j = 1
-      nd = nptr%ndelay
-      blkn = akeep%sptr(node+1) - akeep%sptr(node) + nd
-      blkm = int(akeep%rptr(node+1) - akeep%rptr(node)) + nd
-      offset = blkm*(blkn+0_long)
-      do while(j .le. nptr%nelim)
-         if (nptr%lcol(offset+2*j).ne.0) then
-            ! 2x2 pivot
-            if(present(piv_order))  then
-               k = akeep%invp( nptr%perm(j) )
-               piv_order(k) = -piv
-               k = akeep%invp( nptr%perm(j+1) )
-               piv_order(k) = -(piv+1)
-            end if
-            if(present(d)) then
-               d(1,piv) = nptr%lcol(offset+2*j-1)
-               d(2,piv) = nptr%lcol(offset+2*j)
-               d(1,piv+1) = nptr%lcol(offset+2*j+1)
-               d(2,piv+1) = 0
-            end if
-            piv = piv + 2
-            j = j + 2
-         else
-            ! 1x1 pivot
-            if(present(piv_order)) then
-               k = akeep%invp( nptr%perm(j) )
-               piv_order(k) = piv
-            end if
-            if(present(d)) then
-               d(1,piv) = nptr%lcol(offset+2*j-1)
-               d(2,piv) = 0
-            end if
-            piv = piv + 1
-            j = j + 1
-         end if
-      end do
-   end do
+
+   associate(subtree => fkeep%subtree(1)%ptr)
+      select type(subtree)
+      type is (cpu_numeric_subtree)
+         call subtree%enquire_indef(fkeep%nodes, akeep%invp, &
+            piv_order=piv_order, d=d)
+      end select
+   end associate
 
 end subroutine enquire_indef_cpu
 

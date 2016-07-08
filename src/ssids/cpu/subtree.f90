@@ -41,10 +41,12 @@ module spral_ssids_cpu_subtree
       procedure :: get_contrib
       procedure :: solve_fwd
       procedure :: solve_fwd_diag
-      procedure :: solve_fwd_diag2
+      procedure :: solve_fwd_diag2 ! fixme remove
       procedure :: solve_diag
       procedure :: solve_bwd
-      procedure :: solve_bwd2
+      procedure :: solve_bwd2 ! fixme remove
+      procedure :: enquire_posdef
+      procedure :: enquire_indef
       final :: numeric_final
    end type cpu_numeric_subtree
 
@@ -325,5 +327,94 @@ subroutine solve_bwd(this, nrhs, x, ldx)
 
    ! FIXME
 end subroutine solve_bwd
+
+subroutine enquire_posdef(this, d, nodes)
+   class(cpu_numeric_subtree), intent(in) :: this
+   real(wp), dimension(*), intent(out) :: d
+   type(node_type), dimension(*), target, intent(in) :: nodes
+
+   integer :: blkn, blkm
+   integer(long) :: i
+   integer :: j
+   integer :: node
+   integer :: piv
+
+   type(node_type), pointer :: nptr
+
+   associate(symbolic => this%symbolic)
+      piv = 1
+      do node = 1, symbolic%nnodes
+         nptr => nodes(node)
+         blkn = symbolic%sptr(node+1) - symbolic%sptr(node)
+         blkm = int(symbolic%rptr(node+1) - symbolic%rptr(node))
+         i = 1
+         do j = 1, blkn
+            d(piv) = nptr%lcol(i)
+            i = i + blkm + 1
+            piv = piv + 1
+         end do
+      end do 
+   end associate
+end subroutine enquire_posdef
+
+subroutine enquire_indef(this, nodes, invp, piv_order, d)
+   class(cpu_numeric_subtree), intent(in) :: this
+   type(node_type), dimension(*), target, intent(in) :: nodes
+   integer, dimension(*), intent(in) :: invp
+   integer, dimension(*), optional, intent(out) :: piv_order
+   real(wp), dimension(2,*), optional, intent(out) :: d
+
+   integer :: blkn, blkm
+   integer :: j, k
+   integer :: nd
+   integer :: node
+   integer(long) :: offset
+   integer :: piv
+
+   type(node_type), pointer :: nptr
+
+   associate(symbolic => this%symbolic)
+      piv = 1
+      do node = 1, symbolic%nnodes
+         nptr => nodes(node)
+         j = 1
+         nd = nptr%ndelay
+         blkn = symbolic%sptr(node+1) - symbolic%sptr(node) + nd
+         blkm = int(symbolic%rptr(node+1) - symbolic%rptr(node)) + nd
+         offset = blkm*(blkn+0_long)
+         do while(j .le. nptr%nelim)
+            if (nptr%lcol(offset+2*j).ne.0) then
+               ! 2x2 pivot
+               if(present(piv_order))  then
+                  k = invp( nptr%perm(j) )
+                  piv_order(k) = -piv
+                  k = invp( nptr%perm(j+1) )
+                  piv_order(k) = -(piv+1)
+               end if
+               if(present(d)) then
+                  d(1,piv) = nptr%lcol(offset+2*j-1)
+                  d(2,piv) = nptr%lcol(offset+2*j)
+                  d(1,piv+1) = nptr%lcol(offset+2*j+1)
+                  d(2,piv+1) = 0
+               end if
+               piv = piv + 2
+               j = j + 2
+            else
+               ! 1x1 pivot
+               if(present(piv_order)) then
+                  k = invp( nptr%perm(j) )
+                  piv_order(k) = piv
+               end if
+               if(present(d)) then
+                  d(1,piv) = nptr%lcol(offset+2*j-1)
+                  d(2,piv) = 0
+               end if
+               piv = piv + 1
+               j = j + 1
+            end if
+         end do
+      end do
+   end associate
+end subroutine enquire_indef
 
 end module spral_ssids_cpu_subtree

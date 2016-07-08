@@ -422,7 +422,7 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
       akeep%rptr, options%min_npart, options%max_flops_part, akeep%nparts, &
       akeep%part)
    ! FIXME: remove printing here and implement code
-   print *, "Partition suggests ", akeep%nparts, " parts (not used yet)"
+   !print *, "Partition suggests ", akeep%nparts, " parts (not used yet)"
 
    allocate(akeep%subtree(1))
    akeep%subtree(1)%ptr => construct_cpu_symbolic_subtree(akeep%n, &

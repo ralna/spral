@@ -487,14 +487,32 @@ subroutine enquire_posdef_gpu(akeep, fkeep, inform, d)
    class(ssids_inform_base), intent(inout) :: inform
    real(wp), dimension(*), intent(out) :: d
 
+   integer :: blkn, blkm
+   integer(long) :: i
+   integer :: j
+   integer :: node
+   integer :: piv
+
+   type(node_type), pointer :: nptr
+
    if(.not. fkeep%host_factors) then
       ! FIXME: Not implemented enquire_posdef for GPU without host factors yet!
       inform%flag = SSIDS_ERROR_UNIMPLEMENTED
       return
    endif
 
-   ! Just use upcall to base class to print factors
-   call fkeep%ssids_fkeep_base%enquire_posdef(akeep, inform, d)
+   piv = 1 
+   do node = 1, akeep%nnodes
+      nptr => fkeep%nodes(node) 
+      blkn = akeep%sptr(node+1) - akeep%sptr(node)
+      blkm = int(akeep%rptr(node+1) - akeep%rptr(node))
+      i = 1
+      do j = 1, blkn
+         d(piv) = nptr%lcol(i)
+         i = i + blkm + 1
+         piv = piv + 1
+      end do
+   end do
 end subroutine enquire_posdef_gpu
 
 
@@ -529,7 +547,7 @@ subroutine enquire_indef_gpu(akeep, fkeep, inform, piv_order, d)
 
    if(fkeep%host_factors) then
       ! Call CPU version instead
-      call fkeep%ssids_fkeep_base%enquire_indef(akeep, inform, piv_order=piv_order, &
+      call enquire_indef_gpu_cpu(akeep, fkeep, inform, piv_order=piv_order, &
          d=d)
       return
    endif
@@ -613,6 +631,70 @@ subroutine enquire_indef_gpu(akeep, fkeep, inform, piv_order, d)
    inform%flag = SSIDS_ERROR_CUDA_UNKNOWN
    return
 end subroutine enquire_indef_gpu
+
+! Provide implementation for when factors are on host
+subroutine enquire_indef_gpu_cpu(akeep, fkeep, inform, piv_order, d)
+   class(ssids_akeep_base), intent(in) :: akeep
+   class(ssids_fkeep_gpu), target, intent(in) :: fkeep
+   class(ssids_inform_base), intent(inout) :: inform
+   integer, dimension(*), optional, intent(out) :: piv_order
+      ! If i is used to index a variable, its position in the pivot sequence
+      ! will be placed in piv_order(i), with its sign negative if it is
+      ! part of a 2 x 2 pivot; otherwise, piv_order(i) will be set to zero.
+   real(wp), dimension(2,*), optional, intent(out) :: d ! The diagonal
+      ! entries of D^{-1} will be placed in d(1,:i) and the off-diagonal
+      ! entries will be placed in d(2,:). The entries are held in pivot order.
+
+   integer :: blkn, blkm
+   integer :: j, k
+   integer :: nd
+   integer :: node
+   integer(long) :: offset
+   integer :: piv
+
+   type(node_type), pointer :: nptr
+
+   piv = 1
+   do node = 1, akeep%nnodes
+      nptr => fkeep%nodes(node)
+      j = 1
+      nd = nptr%ndelay
+      blkn = akeep%sptr(node+1) - akeep%sptr(node) + nd
+      blkm = int(akeep%rptr(node+1) - akeep%rptr(node)) + nd
+      offset = blkm*(blkn+0_long)
+      do while(j .le. nptr%nelim)
+         if (nptr%lcol(offset+2*j).ne.0) then
+            ! 2x2 pivot
+            if(present(piv_order))  then
+               k = akeep%invp( nptr%perm(j) )
+               piv_order(k) = -piv
+               k = akeep%invp( nptr%perm(j+1) )
+               piv_order(k) = -(piv+1)
+            end if
+            if(present(d)) then
+               d(1,piv) = nptr%lcol(offset+2*j-1)
+               d(2,piv) = nptr%lcol(offset+2*j)
+               d(1,piv+1) = nptr%lcol(offset+2*j+1)
+               d(2,piv+1) = 0
+            end if
+            piv = piv + 2
+            j = j + 2
+         else
+            ! 1x1 pivot
+            if(present(piv_order)) then
+               k = akeep%invp( nptr%perm(j) )
+               piv_order(k) = piv
+            end if
+            if(present(d)) then
+               d(1,piv) = nptr%lcol(offset+2*j-1)
+               d(2,piv) = 0
+            end if
+            piv = piv + 1
+            j = j + 1
+         end if
+      end do
+   end do
+end subroutine enquire_indef_gpu_cpu
 
 !****************************************************************************
 
