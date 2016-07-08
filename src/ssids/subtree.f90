@@ -34,7 +34,7 @@ module spral_ssids_subtree
          real(wp), dimension(*), intent(in) :: aval
          class(ssids_options), intent(in) :: options
          class(ssids_inform_base), intent(inout) :: inform
-         real(wp), dimension(*), optional, intent(in) :: scaling
+         real(wp), dimension(*), target, optional, intent(in) :: scaling
       end function factor_iface
       function get_contrib_iface(this)
          import contrib_type, numeric_subtree_base

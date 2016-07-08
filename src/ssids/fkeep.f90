@@ -62,7 +62,7 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
 
    logical(C_BOOL) :: fposdef
    type(cpu_symbolic_subtree), pointer :: symbolic_subtree
-   type(cpu_numeric_subtree), pointer :: subtree
+   class(numeric_subtree_base), pointer :: subtree
 
    integer :: st
 
@@ -76,10 +76,10 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
    ! Perform factorization in C++ code
    fposdef = fkeep%pos_def
    if(allocated(fkeep%scaling)) then
-      subtree => symbolic_subtree%factor2(fposdef, val, options, inform, &
+      subtree => symbolic_subtree%factor(fposdef, val, options, inform, &
          scaling=fkeep%scaling)
    else
-      subtree => symbolic_subtree%factor2(fposdef, val, options, inform)
+      subtree => symbolic_subtree%factor(fposdef, val, options, inform)
    endif
 
    ! Keep subtree around

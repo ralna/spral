@@ -25,7 +25,6 @@ module spral_ssids_cpu_subtree
       type(C_PTR) :: csubtree
    contains
       procedure :: factor
-      procedure :: factor2 ! fixme remove
       final :: symbolic_final
    end type cpu_symbolic_subtree
 
@@ -164,8 +163,8 @@ subroutine symbolic_final(this)
    call c_destroy_symbolic_subtree(this%csubtree)
 end subroutine symbolic_final
 
-function factor2(this, posdef, aval, options, inform, scaling)
-   type(cpu_numeric_subtree), pointer :: factor2
+function factor(this, posdef, aval, options, inform, scaling)
+   class(numeric_subtree_base), pointer :: factor
    class(cpu_symbolic_subtree), target, intent(inout) :: this
    logical(C_BOOL), intent(in) :: posdef
    real(wp), dimension(*), intent(in) :: aval
@@ -180,7 +179,7 @@ function factor2(this, posdef, aval, options, inform, scaling)
    integer :: st
 
    ! Leave output as null until successful exit
-   nullify(factor2)
+   nullify(factor)
 
    ! Allocate cpu_factor for output
    allocate(cpu_factor, stat=st)
@@ -226,7 +225,7 @@ function factor2(this, posdef, aval, options, inform, scaling)
       cstats, inform)
 
    ! Succes, set result and return
-   factor2 => cpu_factor
+   factor => cpu_factor
    return
 
    ! Allocation error handler
@@ -235,19 +234,6 @@ function factor2(this, posdef, aval, options, inform, scaling)
    inform%stat = st
    deallocate(cpu_factor, stat=st)
    return
-end function factor2
-
-function factor(this, posdef, aval, options, inform, scaling)
-   class(numeric_subtree_base), pointer :: factor
-   class(cpu_symbolic_subtree), target, intent(inout) :: this
-   logical(C_BOOL), intent(in) :: posdef
-   real(wp), dimension(*), intent(in) :: aval
-   class(ssids_options), intent(in) :: options
-   class(ssids_inform_base), intent(inout) :: inform
-   real(wp), dimension(*), optional, intent(in) :: scaling
-
-   ! FIXME
-
 end function factor
 
 subroutine numeric_final(this)
