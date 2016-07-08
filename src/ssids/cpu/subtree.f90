@@ -1,7 +1,8 @@
 module spral_ssids_cpu_subtree
    use, intrinsic :: iso_c_binding
    use spral_ssids_contrib, only : contrib_type
-   use spral_ssids_cpu_iface
+   use spral_ssids_cpu_iface ! fixme only
+   use spral_ssids_cpu_solve ! fixme only
    use spral_ssids_datatypes, only : long, wp, ssids_options, &
       SSIDS_ERROR_ALLOCATION
    use spral_ssids_subtree, only : symbolic_subtree_base, numeric_subtree_base

@@ -22,6 +22,10 @@ module spral_ssids_fkeep
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+   type numeric_subtree_ptr
+      class(numeric_subtree_base), pointer :: ptr
+   end type numeric_subtree_ptr
+
    !
    ! Data type for data generated in factorise phase
    !
@@ -34,6 +38,9 @@ module spral_ssids_fkeep
       type(smalloc_type), pointer :: alloc=>null() ! Linked list of memory pages
          ! pointed to by nodes variable
       logical :: pos_def ! set to true if user indicates matrix pos. definite
+
+      ! Factored subtrees
+      type(numeric_subtree_ptr), dimension(:), allocatable :: subtree
 
       ! Info components to copy on solve
       integer :: matrix_rank
@@ -90,8 +97,9 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
    ! Gather information back to Fortran
    call extract_cpu_data(akeep%nnodes, subtree%cnodes, fkeep%nodes, cstats, inform)
 
-   ! Free data structures
-   deallocate(subtree)
+   ! Keep subtree around
+   allocate(fkeep%subtree(1))
+   fkeep%subtree(1)%ptr => subtree
 end subroutine inner_factor_cpu
 
 subroutine inner_solve_cpu(local_job, nrhs, x, ldx, akeep, fkeep, options, inform)
@@ -306,12 +314,20 @@ subroutine free_fkeep(fkeep, flag)
    class(ssids_fkeep_base), intent(inout) :: fkeep
    integer, intent(out) :: flag ! not actually used for cpu version, set to 0
 
+   integer :: i
    integer :: st
 
    flag = 0 ! Not used for basic SSIDS, just zet to zero
 
    ! Skip if nothing intialized
    if (.not.allocated(fkeep%nodes)) return
+
+   if(allocated(fkeep%subtree)) then
+      do i = 1, size(fkeep%subtree)
+         if(associated(fkeep%subtree(i)%ptr)) deallocate(fkeep%subtree(i)%ptr)
+      end do
+      deallocate(fkeep%subtree)
+   endif
 
    ! Free memory
    call smfreeall(fkeep%alloc)

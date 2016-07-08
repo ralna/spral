@@ -927,6 +927,12 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
    !      maxval(fkeep%scaling)
 
    ! Setup data storage
+   if(allocated(fkeep%subtree)) then
+      do i = 1, size(fkeep%subtree)
+         if(associated(fkeep%subtree(i)%ptr)) deallocate(fkeep%subtree(i)%ptr)
+      end do
+      deallocate(fkeep%subtree)
+   endif
    if(allocated(fkeep%nodes)) then
       if(size(fkeep%nodes).lt.akeep%nnodes+1) then
          deallocate(fkeep%nodes,stat=st)

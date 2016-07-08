@@ -1,5 +1,4 @@
 module spral_ssids_cpu_solve
-!$ use omp_lib
    use, intrinsic :: iso_c_binding
    use spral_ssids_datatypes
    implicit none
