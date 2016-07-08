@@ -11,8 +11,7 @@ module spral_ssids_fkeep
                                      SSIDS_SOLVE_JOB_DIAG_BWD
    use spral_ssids_inform, only : ssids_inform_base
    use spral_ssids_cpu_solve, only : fwd_diag_solve, subtree_bwd_solve
-   use spral_ssids_cpu_iface, only : cpu_node_data, cpu_factor_options, &
-      cpu_factor_stats, setup_cpu_data, extract_cpu_data
+   use spral_ssids_cpu_iface, only : cpu_factor_stats, extract_cpu_data
    use spral_ssids_cpu_subtree, only : cpu_numeric_subtree, cpu_symbolic_subtree
    use spral_ssids_subtree, only : numeric_subtree_base
    use, intrinsic :: iso_c_binding
@@ -81,12 +80,11 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
    fposdef = fkeep%pos_def
    if(allocated(fkeep%scaling)) then
       subtree => symbolic_subtree%factor2(fposdef, val, options, inform, &
+         C_LOC(fkeep%alloc), cstats, &
          scaling=fkeep%scaling)
-      call subtree%factor3(val, C_LOC(fkeep%alloc), subtree%coptions, &
-         cstats, scaling=fkeep%scaling)
    else
-      subtree => symbolic_subtree%factor2(fposdef, val, options, inform)
-      call subtree%factor3(val, C_LOC(fkeep%alloc), subtree%coptions, cstats)
+      subtree => symbolic_subtree%factor2(fposdef, val, options, inform, &
+         C_LOC(fkeep%alloc), cstats)
    endif
 
    ! Gather information back to Fortran

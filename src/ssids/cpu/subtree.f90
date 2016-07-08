@@ -36,7 +36,6 @@ module spral_ssids_cpu_subtree
       procedure :: solve_fwd
       procedure :: solve_diag
       procedure :: solve_bwd
-      procedure :: factor3 ! fixme remove
       final :: numeric_final
    end type cpu_numeric_subtree
 
@@ -133,16 +132,19 @@ subroutine symbolic_final(this)
    call c_destroy_symbolic_subtree(this%csubtree)
 end subroutine symbolic_final
 
-function factor2(this, posdef, aval, options, inform, scaling)
+function factor2(this, posdef, aval, options, inform, alloc, cstats, scaling)
    type(cpu_numeric_subtree), pointer :: factor2
    class(cpu_symbolic_subtree), target, intent(inout) :: this
    logical(C_BOOL), intent(in) :: posdef
    real(wp), dimension(*), intent(in) :: aval
    class(ssids_options), intent(in) :: options
    class(ssids_inform_base), intent(inout) :: inform
-   real(wp), dimension(*), optional, intent(in) :: scaling
+   type(C_PTR), intent(in) :: alloc
+   type(cpu_factor_stats), intent(out) :: cstats
+   real(wp), dimension(*), target, optional, intent(in) :: scaling
 
    type(cpu_numeric_subtree), pointer :: cpu_factor
+   type(C_PTR) :: cscaling
    integer :: st
 
    ! Setup output
@@ -171,24 +173,14 @@ function factor2(this, posdef, aval, options, inform, scaling)
    cpu_factor%posdef = posdef
    cpu_factor%csubtree = &
       c_create_cpu_subtree(posdef, this%csubtree, this%nnodes, cpu_factor%cnodes)
-end function factor2
-
-subroutine factor3(this, aval, alloc, options, stats, scaling)
-   class(cpu_numeric_subtree) :: this
-   real(C_DOUBLE), dimension(*), intent(in) :: aval
-   type(C_PTR), intent(in) :: alloc
-   type(cpu_factor_options), intent(in) :: options
-   type(cpu_factor_stats), intent(out) :: stats
-   real(C_DOUBLE), dimension(*), target, optional, intent(in) :: scaling
-
-   type(C_PTR) :: cscaling
 
    cscaling = C_NULL_PTR
    if(present(scaling)) cscaling = C_LOC(scaling)
 
-   call c_factor_cpu(this%posdef, this%csubtree, this%symbolic%n, &
-      this%symbolic%nnodes, this%cnodes, aval, cscaling, alloc, options, stats)
-end subroutine factor3
+   call c_factor_cpu(posdef, cpu_factor%csubtree, this%n, &
+      this%nnodes, cpu_factor%cnodes, aval, cscaling, alloc, &
+      cpu_factor%coptions, cstats)
+end function factor2
 
 function factor(this, posdef, aval, options, inform, scaling)
    class(numeric_subtree_base), pointer :: factor
