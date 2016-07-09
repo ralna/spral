@@ -20,7 +20,7 @@ namespace spral { namespace ssids { namespace cpu {
 template <bool posdef, size_t BLOCK_SIZE, typename T, typename StackAllocator>
 class CpuSubtree {
 public:
-   /** Constructor does analyse phase work */
+   /** Constructor ties into symbolic_subtree */
    CpuSubtree(SymbolicSubtree const& symbolic_subtree, int nnodes, struct cpu_node_data<T>* nodes)
    : nnodes_(nnodes), nodes_(nodes), symb_(symbolic_subtree)
    {

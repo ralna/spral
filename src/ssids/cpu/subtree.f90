@@ -68,9 +68,10 @@ module spral_ssids_cpu_subtree
          implicit none
          type(C_PTR), value :: subtree
       end subroutine c_destroy_symbolic_subtree
+
       subroutine c_factor_cpu(pos_def, subtree, n, nnodes, nodes, aval, &
             scaling, alloc, options, stats) &
-            bind(C, name="spral_ssids_factor_cpu_dbl")
+            bind(C, name="spral_ssids_cpu_subtree_factor_dbl")
          use, intrinsic :: iso_c_binding
          import :: cpu_node_data, cpu_factor_options, cpu_factor_stats
          implicit none
@@ -88,7 +89,7 @@ module spral_ssids_cpu_subtree
 
       type(C_PTR) function c_create_cpu_subtree(posdef, symbolic_subtree, &
             nnodes, nodes) &
-            bind(C, name="spral_ssids_create_cpu_subtree_dbl")
+            bind(C, name="spral_ssids_cpu_create_num_subtree_dbl")
          use, intrinsic :: iso_c_binding
          import :: cpu_node_data
          implicit none
@@ -99,7 +100,7 @@ module spral_ssids_cpu_subtree
       end function c_create_cpu_subtree
 
       subroutine c_destroy_cpu_subtree(posdef, subtree) &
-            bind(C, name="spral_ssids_destroy_cpu_subtree_dbl")
+            bind(C, name="spral_ssids_cpu_destroy_num_subtree_dbl")
          use, intrinsic :: iso_c_binding
          implicit none
          logical(C_BOOL), value :: posdef
