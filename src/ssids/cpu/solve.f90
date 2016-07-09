@@ -3,79 +3,14 @@ module spral_ssids_cpu_solve
    implicit none
 
    private
-   public :: subtree_bwd_solve, &   ! Performs backwards solve for a subtree
-             solve_fwd_mult, &
+   public :: solve_fwd_mult, &
              solve_fwd_one, &
              solve_diag_mult, &
-             solve_diag_one
+             solve_diag_one, &
+             solve_bwd_mult, &
+             solve_bwd_one
 
 contains
-
-!*************************************************************************
-!
-! This subroutine performs a backwards solve on the chunk of nodes specified
-! by sa:en.
-!
-subroutine subtree_bwd_solve(en, sa, job, pos_def, nnodes, nodes, sptr, &
-      rptr, rlist, nrhs, x, ldx, st)
-   integer, intent(in) :: en
-   integer, intent(in) :: sa
-   logical, intent(in) :: pos_def
-   integer, intent(in) :: job ! controls whether we are doing forward
-      ! eliminations, back substitutions etc.
-   integer, intent(in) :: nnodes
-   type(node_type), dimension(*), intent(in) :: nodes
-   integer, dimension(nnodes+1), intent(in) :: sptr
-   integer(long), dimension(nnodes+1), intent(in) :: rptr
-   integer, dimension(rptr(nnodes+1)-1), intent(in) :: rlist
-   integer, intent(in) :: nrhs
-   integer, intent(in) :: ldx
-   real(wp), dimension(ldx,nrhs), intent(inout) :: x
-   integer, intent(out) :: st  ! stat parameter
-
-   integer :: blkm
-   integer :: blkn
-   integer :: nd
-   integer :: nelim
-   integer :: node
-   real(wp), dimension(:), allocatable :: xlocal
-   integer, dimension(:), allocatable :: map
-
-   st = 0
-   allocate(xlocal(nrhs*(sptr(nnodes+1)-1)), map(sptr(nnodes+1)-1), stat=st)
-
-   ! Backwards solve DL^Tx = z or L^Tx = z
-   do node = en, sa, -1
-      nelim = nodes(node)%nelim
-      if (nelim.eq.0) cycle
-      nd = nodes(node)%ndelay
-      blkn = sptr(node+1) - sptr(node) + nd
-      blkm = int(rptr(node+1) - rptr(node)) + nd
-      
-      if(nrhs.eq.1) then
-         call solve_bwd_one(pos_def, job, rlist(rptr(node)), x, &
-            blkm, blkn, nelim, nd, &
-            !nodes(node)%rsmptr%rmem(nodes(node)%rsmsa), & ! node%lcol
-            nodes(node)%lcol, &
-            !nodes(node)%rsmptr%rmem(nodes(node)%rsmsa+blkm*blkn), & ! node%d
-            nodes(node)%lcol(1+blkm*blkn:), & ! node%d
-            !nodes(node)%ismptr%imem(nodes(node)%ismsa), & ! node%perm
-            nodes(node)%perm, &
-            xlocal, map)
-      else
-         call solve_bwd_mult(pos_def, job, rlist(rptr(node)), &
-            nrhs, x, ldx, blkm, blkn, nelim, nd, &
-            !nodes(node)%rsmptr%rmem(nodes(node)%rsmsa), & ! node%lcol
-            nodes(node)%lcol, &
-            !nodes(node)%rsmptr%rmem(nodes(node)%rsmsa+blkm*blkn), & ! node%d
-            nodes(node)%lcol(1+blkm*blkn:), & ! node%d
-            !nodes(node)%ismptr%imem(nodes(node)%ismsa), & ! node%perm
-            nodes(node)%perm, &
-            xlocal, map)
-      end if
-   end do
-
-end subroutine subtree_bwd_solve
 
 !*************************************************************************
 !
