@@ -263,8 +263,12 @@ check_PROGRAMS += \
 	examples/C/ssids
 ssids_test_SOURCES = tests/ssids/ssids.f90
 ssids_kernel_test_SOURCES = tests/ssids/kernels.cxx \
+									 tests/ssids/kernels/cholesky.cxx \
+									 tests/ssids/kernels/cholesky.hxx \
 									 tests/ssids/kernels/framework.cxx \
-									 tests/ssids/kernels/framework.hxx
+									 tests/ssids/kernels/framework.hxx \
+									 tests/ssids/kernels/ldlt_nopiv.cxx \
+									 tests/ssids/kernels/ldlt_nopiv.hxx
 examples_Fortran_ssids_SOURCES = examples/Fortran/ssids.f90
 examples/Fortran/ssids.$(OBJEXT): libspral.a
 examples_C_ssids_SOURCES = examples/C/ssids.c

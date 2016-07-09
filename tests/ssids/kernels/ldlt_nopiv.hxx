@@ -8,14 +8,6 @@
  * proves to be useful beyond our own academic experiments)
  *
  */
-#include "kernels/cholesky.hxx"
-#include "kernels/ldlt_nopiv.hxx"
+#pragma once
 
-int main(void) {
-   int nerr = 0;
-
-   nerr += run_cholesky_tests();
-   nerr += run_ldlt_nopiv_tests();
-
-   return nerr;
-}
+int run_ldlt_nopiv_tests();
