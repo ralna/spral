@@ -103,7 +103,7 @@ int test_ldlt(int m, int n, bool debug=false) {
    delete[] rhs;
    delete[] soln;
 
-   if(bwderr >= 1e-14 || std::isnan(bwderr)) return -1; // Failed accuracy test
+   if(bwderr >= 1e-14 || std::isnan(bwderr)) return 1; // Failed accuracy test
 
    return 0; // Test passed
 }

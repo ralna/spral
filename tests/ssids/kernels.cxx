@@ -8,14 +8,32 @@
  * proves to be useful beyond our own academic experiments)
  *
  */
+
+#include <cstdio>
+
+#include "kernels/framework.hxx"
 #include "kernels/cholesky.hxx"
 #include "kernels/ldlt_nopiv.hxx"
+#include "kernels/CpuBlockLDLT.hxx"
 
 int main(void) {
    int nerr = 0;
 
    nerr += run_cholesky_tests();
    nerr += run_ldlt_nopiv_tests();
+   nerr += run_CpuBlockLDLT_tests();
+
+   if(nerr==0) {
+      printf(ANSI_COLOR_BLUE "\n====================================\n"
+             ANSI_COLOR_GREEN  "   All tests passed sucessfully\n"
+             ANSI_COLOR_BLUE   "====================================\n"
+             ANSI_COLOR_RESET);
+   } else {
+      printf(ANSI_COLOR_BLUE "\n====================================\n"
+             ANSI_COLOR_RED    "   %d tests FAILED!\n"
+             ANSI_COLOR_BLUE  "====================================\n"
+             ANSI_COLOR_RESET, nerr);
+   }
 
    return nerr;
 }

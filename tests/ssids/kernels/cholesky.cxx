@@ -50,14 +50,7 @@ int test_cholesky(int m, int n, int blksz, bool debug=false) {
 
    /* Generate a rhs corresponding to x=1.0 */
    double *rhs = new double[m];
-   memset(rhs, 0, m*sizeof(double));
-   for(int j=0; j<m; ++j) {
-      rhs[j] += a[j*lda+j] * 1.0;
-      for(int i=j+1; i<m; ++i) {
-         rhs[j] += a[j*lda+i] * 1.0;
-         rhs[i] += a[j*lda+i] * 1.0;
-      }
-   }
+   gen_rhs(n, a, lda, rhs);
 
    /* Perform solves with 1 and 3 rhs */
    int nrhs = 3;
@@ -86,7 +79,7 @@ int test_cholesky(int m, int n, int blksz, bool debug=false) {
    delete[] rhs;
    delete[] soln;
 
-   if(bwderr >= 1e-14 || std::isnan(bwderr)) return -1; // Failed accuracy test
+   if(bwderr >= 1e-14 || std::isnan(bwderr)) return 1; // Failed accuracy test
 
    return 0; // Test passed
 }
