@@ -96,34 +96,54 @@ public:
    void solve_fwd(int nrhs, double* x, int ldx) {
       /* Allocate memory */
       double* xlocal = new double[nrhs*symb_.n];
+      int* map_alloc = (!posdef) ? new int[symb_.n] : nullptr; // only indef
 
-      /* Perform solve */
-      if(posdef) {
-         for(int ni=0; ni<nnodes_; ++ni) {
-            int m = symb_[ni].nrow;
-            int n = symb_[ni].ncol;
+      /* Main loop */
+      for(int ni=0; ni<nnodes_; ++ni) {
+         int m = symb_[ni].nrow;
+         int n = symb_[ni].ncol;
+         int nelim = (posdef) ? n
+                              : nodes_[ni].nelim;
+         int ndin = (posdef) ? 0
+                             : nodes_[ni].ndelay_in;
 
-            /* Gather into dense vector xlocal */
-            // FIXME: don't bother copying elements of x > m, just use beta=0
-            //        in dgemm call and then add as we scatter
-            int const* rlist = symb_[ni].rlist;
-            for(int r=0; r<nrhs; ++r)
-            for(int i=0; i<m; ++i)
-               xlocal[r*symb_.n+i] = x[r*ldx + rlist[i]-1];
-
-            /* Perform dense solve */
-            cholesky_solve_fwd(m, n, nodes_[ni].lcol, m, nrhs, xlocal, ldx);
-
-            /* Scatter result */
-            for(int r=0; r<nrhs; ++r)
-            for(int i=0; i<m; ++i)
-               x[r*ldx + rlist[i]-1] = xlocal[r*symb_.n+i];
+         /* Build map (indef only) */
+         int const *map;
+         if(!posdef) {
+            // indef need to allow for permutation and/or delays
+            for(int i=0; i<n+ndin; ++i)
+               map_alloc[i] = nodes_[ni].perm[i];
+            for(int i=n; i<m; ++i)
+               map_alloc[i+ndin] = symb_[ni].rlist[i];
+            map = map_alloc;
+         } else {
+            // posdef there is no permutation
+            map = symb_[ni].rlist;
          }
-      } else {
-         throw std::runtime_error("Not implemented: solve_fwd indef\n");
+
+         /* Gather into dense vector xlocal */
+         // FIXME: don't bother copying elements of x > m, just use beta=0
+         //        in dgemm call and then add as we scatter
+         for(int r=0; r<nrhs; ++r)
+         for(int i=0; i<m+ndin; ++i)
+            xlocal[r*symb_.n+i] = x[r*ldx + map[i]-1]; // Fortran indexed
+
+         /* Perform dense solve */
+         if(posdef) {
+            cholesky_solve_fwd(m, n, nodes_[ni].lcol, m, nrhs, xlocal, ldx);
+         } else { /* indef */
+            ldlt_solve_fwd(m+ndin, nelim, nodes_[ni].lcol, m+ndin, nrhs, xlocal,
+                  ldx);
+         }
+
+         /* Scatter result */
+         for(int r=0; r<nrhs; ++r)
+         for(int i=0; i<m+ndin; ++i)
+            x[r*ldx + map[i]-1] = xlocal[r*symb_.n+i];
       }
 
       /* Cleanup memory */
+      if(!posdef) delete[] map_alloc; // only used in indef case
       delete[] xlocal;
    }
 

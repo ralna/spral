@@ -291,34 +291,7 @@ subroutine solve_fwd(this, nrhs, x, ldx, inform)
    real(wp), dimension(:), allocatable :: xlocal
    integer, dimension(:), allocatable :: map
 
-   if(this%posdef) then
-      call c_subtree_solve_fwd(this%posdef, this%csubtree, nrhs, x, ldx)
-   else
-      fposdef = this%posdef
-      associate(symbolic=>this%symbolic, nodes=>this%nodes)
-         allocate(xlocal(nrhs*symbolic%n), map(symbolic%n), stat=inform%stat)
-         if(inform%stat.ne.0) return
-
-         ! Forwards solve Ly = b
-         do node = 1, symbolic%nnodes
-            nelim = nodes(node)%nelim
-            if (nelim.eq.0) cycle
-            nd = nodes(node)%ndelay
-            blkn = symbolic%sptr(node+1) - symbolic%sptr(node) + nd
-            blkm = int(symbolic%rptr(node+1) - symbolic%rptr(node)) + nd
-            
-            if(nrhs.eq.1) then
-               call solve_fwd_one(fposdef, symbolic%rlist(symbolic%rptr(node):), &
-                  x, blkm, blkn, nelim, nd, &
-                  nodes(node)%lcol, nodes(node)%perm, xlocal, map)
-            else
-               call solve_fwd_mult(fposdef, symbolic%rlist(symbolic%rptr(node):), &
-                  nrhs, x, ldx, blkm, blkn, nelim, nd, &
-                  nodes(node)%lcol, nodes(node)%perm, xlocal, map)
-            end if
-         end do
-      end associate
-   endif
+   call c_subtree_solve_fwd(this%posdef, this%csubtree, nrhs, x, ldx)
 end subroutine solve_fwd
 
 subroutine solve_diag(this, nrhs, x, ldx, inform)
