@@ -8,7 +8,7 @@
  * proves to be useful beyond our own academic experiments)
  *
  */
-#include "CpuBlockLDLT.hxx"
+#include "block_ldlt.hxx"
 
 #include <climits>
 #include <cmath>
@@ -17,9 +17,9 @@
 #include <iostream>
 
 #include "framework.hxx"
-#include "ssids/cpu/kernels/wrappers.hxx"
 #include "ssids/cpu/AlignedAllocator.hxx"
-#include "ssids/cpu/kernels/CpuBlockLDLT.cxx"
+#include "ssids/cpu/kernels/wrappers.hxx"
+#include "ssids/cpu/kernels/block_ldlt.hxx"
 
 using namespace spral::ssids::cpu;
 
@@ -204,7 +204,7 @@ int test_maxloc(int from, bool zero=false) {
    int rloc1, cloc1, rloc2, cloc2;
 
    find_maxloc_simple<T, BLOCK_SIZE>(from, a, mv1, rloc1, cloc1);
-   CpuBlockLDLT::find_maxloc<T, BLOCK_SIZE>(from, a, mv2, rloc2, cloc2);
+   block_ldlt_internal::find_maxloc<T, BLOCK_SIZE>(from, a, mv2, rloc2, cloc2);
 
    // Compare them
    ASSERT_LE(fabs(mv1), 1.0); // If this is wrong, find_maxloc_simple is wrong
@@ -267,7 +267,7 @@ int ldlt_test_block(T u, T small) {
    for(int i=0; i<n; i++) perm[i] = i;
    T d[2*BLOCK_SIZE];
    T ld[BLOCK_SIZE*BLOCK_SIZE];
-   CpuBlockLDLT::factor_block<T, BLOCK_SIZE>(0, perm, l, d, ld, u, small);
+   block_ldlt<T, BLOCK_SIZE>(0, perm, l, d, ld, u, small);
 
    // Print out matrices if requested
    if(debug) {
@@ -330,7 +330,7 @@ int ldlt_block_torture_test(T u, T small) {
    for(int i=0; i<n*nblock; i++) perm[i] = i % n;
    T *d = new T[2*n*nblock];
    for(int blk=0; blk<nblock; blk++)
-      CpuBlockLDLT::factor_block<T, BLOCK_SIZE>(0, &perm[n*blk], &l[n*n*blk], &d[2*n*blk], &ld[n*n*blk], u, small);
+      block_ldlt<T, BLOCK_SIZE>(0, &perm[n*blk], &l[n*n*blk], &d[2*n*blk], &ld[n*n*blk], u, small);
 
    // Check each system's residual
    T *soln = new T[n];
@@ -352,7 +352,7 @@ int ldlt_block_torture_test(T u, T small) {
    return 0;
 }
 
-int run_CpuBlockLDLT_tests() {
+int run_block_ldlt_tests() {
    int nerr = 0;
 
    /* Unit tests */

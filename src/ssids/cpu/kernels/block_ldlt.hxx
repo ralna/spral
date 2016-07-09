@@ -16,7 +16,7 @@
 #include "SimdVec.hxx"
 
 namespace spral { namespace ssids { namespace cpu {
-namespace CpuBlockLDLT {
+namespace block_ldlt_internal {
 
 /** Swaps two columns of A */
 /* NB: ldwork only well defined for c<idx1 */
@@ -277,11 +277,15 @@ void update_1x1(int p, T *a, const T *ld) {
 #endif
 }
 
+} // namespace block_ldlt_internal
+
 /** Factorize a square block without restricting pivots
  *  Expects to be given a square block of size BLOCK_SIZE with numbers of
  *  interest in bottom right part. */
 template<typename T, int BLOCK_SIZE>
-void factor_block(int from, int *perm, T *a, T *d, T *ldwork, const T u, const T small, int *lperm=nullptr) {
+void block_ldlt(int from, int *perm, T *a, T *d, T *ldwork, const T u, const T small, int *lperm=nullptr) {
+   using namespace block_ldlt_internal;
+
    /* Main loop */
    for(int p=from; p<BLOCK_SIZE; ) {
       // Find largest uneliminated entry
@@ -402,7 +406,4 @@ void factor_block(int from, int *perm, T *a, T *d, T *ldwork, const T u, const T
       p += pivsiz;
    }
 }
-
-
-} // namespace CpuBlockLDLT
 }}} /* namespaces spral::ssids::cpu */

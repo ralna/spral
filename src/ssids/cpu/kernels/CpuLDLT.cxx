@@ -24,9 +24,9 @@
 #include <omp.h>
 
 #include "../AlignedAllocator.hxx"
+#include "block_ldlt.hxx"
 #include "common.hxx"
 #include "wrappers.hxx"
-#include "CpuBlockLDLT.cxx"
 
 namespace spral { namespace ssids { namespace cpu {
 
@@ -604,7 +604,7 @@ private:
             for(int i=0; i<BLOCK_SIZE; i++)
                lperm[i] = i;
             dblk.create_restore_point();
-            CpuBlockLDLT::factor_block<T, BLOCK_SIZE>(cdata[blk].oldelim, cdata[blk].perm, dblk.aval, cdata[blk].d, thread_work.ld, u, small, lperm);
+            block_ldlt<T, BLOCK_SIZE>(cdata[blk].oldelim, cdata[blk].perm, dblk.aval, cdata[blk].d, thread_work.ld, u, small, lperm);
             // Initialize threshold check (no lock required becuase task depend)
             cdata[blk].npass = BLOCK_SIZE;
          }

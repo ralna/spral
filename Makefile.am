@@ -234,9 +234,9 @@ libspral_a_SOURCES += \
 	src/ssids/cpu/SymbolicSubtree.hxx \
 	src/ssids/cpu/kernels/assemble.hxx \
 	src/ssids/cpu/kernels/common.hxx \
+	src/ssids/cpu/kernels/block_ldlt.hxx \
 	src/ssids/cpu/kernels/cholesky.cxx \
 	src/ssids/cpu/kernels/cholesky.hxx \
-	src/ssids/cpu/kernels/CpuBlockLDLT.hxx \
 	src/ssids/cpu/kernels/CpuLDLT.hxx \
 	src/ssids/cpu/kernels/CpuLog.cxx \
 	src/ssids/cpu/kernels/CpuLog.hxx \
@@ -263,10 +263,10 @@ check_PROGRAMS += \
 	examples/C/ssids
 ssids_test_SOURCES = tests/ssids/ssids.f90
 ssids_kernel_test_SOURCES = tests/ssids/kernels.cxx \
+									 tests/ssids/kernels/block_ldlt.cxx \
+									 tests/ssids/kernels/block_ldlt.hxx \
 									 tests/ssids/kernels/cholesky.cxx \
 									 tests/ssids/kernels/cholesky.hxx \
-									 tests/ssids/kernels/CpuBlockLDLT.cxx \
-									 tests/ssids/kernels/CpuBlockLDLT.hxx \
 									 tests/ssids/kernels/CpuLDLT.cxx \
 									 tests/ssids/kernels/CpuLDLT.hxx \
 									 tests/ssids/kernels/framework.cxx \

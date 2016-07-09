@@ -10,4 +10,4 @@
  */
 #pragma once
 
-int run_CpuBlockLDLT_tests();
+int run_block_ldlt_tests();
