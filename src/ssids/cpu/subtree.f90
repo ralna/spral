@@ -50,11 +50,12 @@ module spral_ssids_cpu_subtree
    end type cpu_numeric_subtree
 
    interface
-      type(C_PTR) function c_create_symbolic_subtree(nnodes, sptr, sparent, &
+      type(C_PTR) function c_create_symbolic_subtree(n, nnodes, sptr, sparent, &
             rptr, rlist)&
             bind(C, name="spral_ssids_cpu_create_symbolic_subtree")
          use, intrinsic :: iso_c_binding
          implicit none
+         integer(C_INT), value :: n
          integer(C_INT), value :: nnodes
          integer(C_INT), dimension(nnodes+1), intent(in) :: sptr
          integer(C_INT), dimension(nnodes+1), intent(in) :: sparent
@@ -163,7 +164,7 @@ function construct_cpu_symbolic_subtree(n, nnodes, sptr, sparent, rptr, &
 
    ! Call C++ subtree analyse
    this%csubtree = &
-      c_create_symbolic_subtree(nnodes, sptr, sparent, rptr, rlist)
+      c_create_symbolic_subtree(n, nnodes, sptr, sparent, rptr, rlist)
 
 end function construct_cpu_symbolic_subtree
 
@@ -279,30 +280,34 @@ subroutine solve_fwd(this, nrhs, x, ldx, inform)
    real(wp), dimension(:), allocatable :: xlocal
    integer, dimension(:), allocatable :: map
 
-   fposdef = this%posdef
-   associate(symbolic=>this%symbolic, nodes=>this%nodes)
-      allocate(xlocal(nrhs*symbolic%n), map(symbolic%n), stat=inform%stat)
-      if(inform%stat.ne.0) return
+   if(this%posdef) then
+      call c_subtree_solve_fwd(this%posdef, this%csubtree, nrhs, x, ldx)
+   else
+      fposdef = this%posdef
+      associate(symbolic=>this%symbolic, nodes=>this%nodes)
+         allocate(xlocal(nrhs*symbolic%n), map(symbolic%n), stat=inform%stat)
+         if(inform%stat.ne.0) return
 
-      ! Forwards solve Ly = b
-      do node = 1, symbolic%nnodes
-         nelim = nodes(node)%nelim
-         if (nelim.eq.0) cycle
-         nd = nodes(node)%ndelay
-         blkn = symbolic%sptr(node+1) - symbolic%sptr(node) + nd
-         blkm = int(symbolic%rptr(node+1) - symbolic%rptr(node)) + nd
-         
-         if(nrhs.eq.1) then
-            call solve_fwd_one(fposdef, symbolic%rlist(symbolic%rptr(node):), &
-               x, blkm, blkn, nelim, nd, &
-               nodes(node)%lcol, nodes(node)%perm, xlocal, map)
-         else
-            call solve_fwd_mult(fposdef, symbolic%rlist(symbolic%rptr(node):), &
-               nrhs, x, ldx, blkm, blkn, nelim, nd, &
-               nodes(node)%lcol, nodes(node)%perm, xlocal, map)
-         end if
-      end do
-   end associate
+         ! Forwards solve Ly = b
+         do node = 1, symbolic%nnodes
+            nelim = nodes(node)%nelim
+            if (nelim.eq.0) cycle
+            nd = nodes(node)%ndelay
+            blkn = symbolic%sptr(node+1) - symbolic%sptr(node) + nd
+            blkm = int(symbolic%rptr(node+1) - symbolic%rptr(node)) + nd
+            
+            if(nrhs.eq.1) then
+               call solve_fwd_one(fposdef, symbolic%rlist(symbolic%rptr(node):), &
+                  x, blkm, blkn, nelim, nd, &
+                  nodes(node)%lcol, nodes(node)%perm, xlocal, map)
+            else
+               call solve_fwd_mult(fposdef, symbolic%rlist(symbolic%rptr(node):), &
+                  nrhs, x, ldx, blkm, blkn, nelim, nd, &
+                  nodes(node)%lcol, nodes(node)%perm, xlocal, map)
+            end if
+         end do
+      end associate
+   endif
 end subroutine solve_fwd
 
 subroutine solve_diag(this, nrhs, x, ldx, inform)

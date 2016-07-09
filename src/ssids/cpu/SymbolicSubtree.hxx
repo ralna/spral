@@ -16,7 +16,7 @@ namespace spral { namespace ssids { namespace cpu {
 
 /** Symbolic representation of a node */
 struct SymbolicNode {
-   int idx;
+   int idx; //< Index of node
    int nrow; //< Number of rows
    int ncol; //< Number of columns
    SymbolicNode* first_child; //< Pointer to first child in linked list
@@ -29,8 +29,8 @@ struct SymbolicNode {
 /** Symbolic factorization of a subtree to be factored on the CPU */
 class SymbolicSubtree {
 public:
-   SymbolicSubtree(int nnodes, int const* sptr, int const* sparent, long const* rptr, int const* rlist)
-   : nnodes_(nnodes), nodes_(nnodes+1)
+   SymbolicSubtree(int n, int nnodes, int const* sptr, int const* sparent, long const* rptr, int const* rlist)
+   : n(n), nnodes_(nnodes), nodes_(nnodes+1)
    {
       /* Fill out basic details */
       for(int ni=0; ni<nnodes_; ++ni) {
@@ -62,6 +62,8 @@ public:
    SymbolicNode const& operator[](int idx) const {
       return nodes_[idx];
    }
+public:
+   int const n; //< Maximum row index
 private:
    int nnodes_;
    std::vector<SymbolicNode> nodes_;

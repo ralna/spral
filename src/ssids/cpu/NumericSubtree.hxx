@@ -10,6 +10,8 @@
  */
 #pragma once
 
+#include <stdexcept> // FIXME: remove when done?
+
 #include "cpu_iface.hxx"
 #include "factor.hxx"
 #include "SymbolicSubtree.hxx"
@@ -90,9 +92,46 @@ public:
          }
       }
    }
-   void solve_fwd(int nrhs, double* x, int ldx) {}
-   void solve_diag(int nrhs, double* x, int ldx) {}
-   void solve_bwd(int nrhs, double* x, int ldx) {}
+
+   void solve_fwd(int nrhs, double* x, int ldx) {
+      /* Allocate memory */
+      double* xlocal = new double[nrhs*symb_.n];
+
+      /* Perform solve */
+      if(posdef) {
+         for(int ni=0; ni<nnodes_; ++ni) {
+            int m = symb_[ni].nrow;
+            int n = symb_[ni].ncol;
+
+            /* Gather into dense vector xlocal */
+            // FIXME: don't bother copying elements of x > m, just use beta=0
+            //        in dgemm call and then add as we scatter
+            int const* rlist = symb_[ni].rlist;
+            for(int r=0; r<nrhs; ++r)
+            for(int i=0; i<m; ++i)
+               xlocal[r*symb_.n+i] = x[r*ldx + rlist[i]-1];
+
+            /* Perform dense solve */
+            cholesky_solve_fwd(m, n, nodes_[ni].lcol, m, nrhs, xlocal, ldx);
+
+            /* Scatter result */
+            for(int r=0; r<nrhs; ++r)
+            for(int i=0; i<m; ++i)
+               x[r*ldx + rlist[i]-1] = xlocal[r*symb_.n+i];
+         }
+      } else {
+         throw std::runtime_error("Not implemented: solve_fwd indef\n");
+      }
+
+      /* Cleanup memory */
+      delete[] xlocal;
+   }
+
+   void solve_diag(int nrhs, double* x, int ldx) {
+   }
+
+   void solve_bwd(int nrhs, double* x, int ldx) {
+   }
 
    SymbolicSubtree const& get_symbolic_subtree() { return symb_; }
 private:
