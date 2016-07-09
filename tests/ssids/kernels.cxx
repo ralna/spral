@@ -1,3 +1,4 @@
+#include "kernels/framework.hxx"
 #include "ssids/cpu/kernels/cholesky.hxx"
 #include "ssids/cpu/kernels/ldlt_nopiv.hxx"
 #include "ssids/cpu/kernels/wrappers.hxx"
@@ -10,95 +11,6 @@
 #include <limits>
 
 using namespace spral::ssids::cpu;
-
-void gen_posdef(int n, double* a, int lda) {
-   /* Fill matrix with random numbers from Unif [-1.0,1.0] */
-   for(int j=0; j<n; ++j)
-   for(int i=j; i<n; ++i)
-      a[j*lda+i] = 1.0 - (2.0*rand()) / RAND_MAX ;
-   /* Make diagonally dominant */
-   for(int i=0; i<n; ++i) a[i*lda+i] = fabs(a[i*lda+i]);
-   for(int j=0; j<n; ++j)
-   for(int i=j; i<n; ++i) {
-      a[j*lda+j] += fabs(a[j*lda+i]);
-      a[i*lda+i] += fabs(a[j*lda+i]);
-   }
-   /* Fill upper triangle with NaN */
-   for(int j=0; j<n; ++j)
-   for(int i=0; i<j; ++i)
-      a[j*lda+i] = std::numeric_limits<double>::signaling_NaN();
-}
-
-void print_vec(char const* format, int n, double const* vec) {
-   for(int i=0; i<n; ++i)
-      printf(format, vec[i]);
-   printf("\n");
-}
-
-void print_mat(char const* format, int n, double const* a, int lda) {
-   for(int i=0; i<n; ++i) {
-      printf("%d:", i);
-      for(int j=0; j<=i; ++j)
-         printf(format, a[j*lda+i]);
-      printf("\n");
-   }
-}
-
-/** Calculate scaled backward error ||Ax-b|| / ( ||A|| ||x|| + ||b|| ).
- * All norms are infinity norms. */
-double backward_error(int n, double const* a, int lda, double const* rhs, int nrhs, double const* soln, int ldsoln) {
-   /* Allocate memory */
-   double *resid = new double[n];
-   double *rowsum = new double[n];
-
-   /* Calculate residual vector and anorm*/
-   double worstbwderr = 0.0;
-   for(int r=0; r<nrhs; ++r) {
-      memcpy(resid, rhs, n*sizeof(double));
-      memset(rowsum, 0, n*sizeof(double));
-      for(int j=0; j<n; ++j) {
-         resid[j] -= a[j*lda+j] * soln[r*ldsoln+j];
-         rowsum[j] += fabs(a[j*lda+j]);
-         for(int i=j+1; i<n; ++i) {
-            resid[j] -= a[j*lda+i] * soln[r*ldsoln+i];
-            resid[i] -= a[j*lda+i] * soln[r*ldsoln+j];
-            rowsum[j] += fabs(a[j*lda+i]);
-            rowsum[i] += fabs(a[j*lda+i]);
-         }
-      }
-      double anorm = 0.0;
-      for(int i=0; i<n; ++i)
-         anorm = std::max(anorm, rowsum[i]);
-
-      /* Check scaled backwards error */
-      double rhsnorm=0.0, residnorm=0.0, solnnorm=0.0;
-      for(int i=0; i<n; ++i) {
-         rhsnorm = std::max(rhsnorm, fabs(rhs[i]));
-         residnorm = std::max(residnorm, fabs(resid[i]));
-         solnnorm = std::max(solnnorm, fabs(r*ldsoln+soln[i]));
-      }
-
-      worstbwderr = std::max(worstbwderr, residnorm/(anorm*solnnorm + rhsnorm));
-   }
-
-   /* Cleanup */
-   delete[] resid;
-   delete[] rowsum;
-
-   /* Return result */
-   //printf("%e / %e %e %e\n", residnorm, anorm, solnnorm, rhsnorm);
-   return worstbwderr;
-}
-
-/** Calculates forward error ||soln-x||_inf assuming x=1.0 */
-double forward_error(int n, int nrhs, double const* soln, int ldx) {
-   /* Check scaled backwards error */
-   double fwderr=0.0;
-   for(int r=0; r<nrhs; ++r)
-   for(int i=0; i<n; ++i)
-      fwderr = std::max(fwderr, fabs(soln[r*ldx+i] - 1.0));
-   return fwderr;
-}
 
 int test_cholesky(int m, int n, int blksz, bool debug=false) {
    /* Generate random dense posdef matrix of size m */
@@ -260,19 +172,6 @@ int test_ldlt(int m, int n, bool debug=false) {
 
    return 0; // Test passed
 }
-
-#define ANSI_COLOR_RED     "\x1b[31;1m"
-#define ANSI_COLOR_GREEN   "\x1b[32m"
-#define ANSI_COLOR_BLUE    "\x1b[34;1m"
-#define ANSI_COLOR_RESET   "\x1b[0m"
-
-#define TEST(func) \
-   if(!func) { \
-      printf(ANSI_COLOR_BLUE "%-20s" ANSI_COLOR_RESET " [ " ANSI_COLOR_GREEN "ok" ANSI_COLOR_RESET " ]\n", #func); \
-   } else { \
-      printf(ANSI_COLOR_BLUE "%-20s" ANSI_COLOR_RESET " [" ANSI_COLOR_RED "fail" ANSI_COLOR_RESET "]\n", #func); \
-      nerr++; \
-   }
 
 int main(void) {
    int nerr = 0;
