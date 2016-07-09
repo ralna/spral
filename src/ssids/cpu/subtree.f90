@@ -118,6 +118,17 @@ module spral_ssids_cpu_subtree
          real(C_DOUBLE), dimension(*), intent(inout) :: x
          integer(C_INT), value :: ldx
       end subroutine c_subtree_solve_fwd
+
+      subroutine c_subtree_solve_diag_bwd(posdef, subtree, nrhs, x, ldx) &
+            bind(C, name="spral_ssids_cpu_subtree_solve_diag_bwd_dbl")
+         use, intrinsic :: iso_c_binding
+         implicit none
+         logical(C_BOOL), value :: posdef
+         type(C_PTR), value :: subtree
+         integer(C_INT), value :: nrhs
+         real(C_DOUBLE), dimension(*), intent(inout) :: x
+         integer(C_INT), value :: ldx
+      end subroutine c_subtree_solve_diag_bwd
    end interface
 
 contains
@@ -366,37 +377,41 @@ subroutine solve_diag_bwd(this, nrhs, x, ldx, inform)
 
    fposdef = this%posdef
 
-   associate(symbolic=>this%symbolic, nodes=>this%nodes)
-      allocate(xlocal(nrhs*symbolic%n), map(symbolic%n), stat=inform%stat)
-      if(inform%stat.ne.0) return
+   if(this%posdef) then
+      call c_subtree_solve_diag_bwd(this%posdef, this%csubtree, nrhs, x, ldx)
+   else
+      associate(symbolic=>this%symbolic, nodes=>this%nodes)
+         allocate(xlocal(nrhs*symbolic%n), map(symbolic%n), stat=inform%stat)
+         if(inform%stat.ne.0) return
 
-      ! Backwards solve DL^Tx = z or L^Tx = z
-      do node = symbolic%nnodes, 1, -1
-         nelim = nodes(node)%nelim
-         if (nelim.eq.0) cycle
-         nd = nodes(node)%ndelay
-         blkn = symbolic%sptr(node+1) - symbolic%sptr(node) + nd
-         blkm = int(symbolic%rptr(node+1) - symbolic%rptr(node)) + nd
-         
-         if(nrhs.eq.1) then
-            call solve_bwd_one(fposdef, job, &
-               symbolic%rlist(symbolic%rptr(node):), x, &
-               blkm, blkn, nelim, nd, &
-               nodes(node)%lcol, &
-               nodes(node)%lcol(1+blkm*blkn:), & ! node%d
-               nodes(node)%perm, &
-               xlocal, map)
-         else
-            call solve_bwd_mult(fposdef, job, &
-               symbolic%rlist(symbolic%rptr(node):), &
-               nrhs, x, ldx, blkm, blkn, nelim, nd, &
-               nodes(node)%lcol, &
-               nodes(node)%lcol(1+blkm*blkn:), & ! node%d
-               nodes(node)%perm, &
-               xlocal, map)
-         end if
-      end do
-   end associate
+         ! Backwards solve DL^Tx = z or L^Tx = z
+         do node = symbolic%nnodes, 1, -1
+            nelim = nodes(node)%nelim
+            if (nelim.eq.0) cycle
+            nd = nodes(node)%ndelay
+            blkn = symbolic%sptr(node+1) - symbolic%sptr(node) + nd
+            blkm = int(symbolic%rptr(node+1) - symbolic%rptr(node)) + nd
+            
+            if(nrhs.eq.1) then
+               call solve_bwd_one(fposdef, job, &
+                  symbolic%rlist(symbolic%rptr(node):), x, &
+                  blkm, blkn, nelim, nd, &
+                  nodes(node)%lcol, &
+                  nodes(node)%lcol(1+blkm*blkn:), & ! node%d
+                  nodes(node)%perm, &
+                  xlocal, map)
+            else
+               call solve_bwd_mult(fposdef, job, &
+                  symbolic%rlist(symbolic%rptr(node):), &
+                  nrhs, x, ldx, blkm, blkn, nelim, nd, &
+                  nodes(node)%lcol, &
+                  nodes(node)%lcol(1+blkm*blkn:), & ! node%d
+                  nodes(node)%perm, &
+                  xlocal, map)
+            end if
+         end do
+      end associate
+   endif
 end subroutine solve_diag_bwd
 
 subroutine solve_bwd(this, nrhs, x, ldx, inform)

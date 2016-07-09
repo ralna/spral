@@ -130,6 +130,38 @@ public:
    void solve_diag(int nrhs, double* x, int ldx) {
    }
 
+   void solve_diag_bwd(int nrhs, double* x, int ldx) {
+      /* Allocate memory */
+      double* xlocal = new double[nrhs*symb_.n];
+
+      /* Perform solve */
+      if(posdef) {
+         for(int ni=nnodes_-1; ni>=0; --ni) {
+            int m = symb_[ni].nrow;
+            int n = symb_[ni].ncol;
+
+            /* Gather into dense vector xlocal */
+            int const* rlist = symb_[ni].rlist;
+            for(int r=0; r<nrhs; ++r)
+            for(int i=0; i<m; ++i)
+               xlocal[r*symb_.n+i] = x[r*ldx + rlist[i]-1];
+
+            /* Perform dense solve */
+            cholesky_solve_bwd(m, n, nodes_[ni].lcol, m, nrhs, xlocal, ldx);
+
+            /* Scatter result (only first n entries have changed) */
+            for(int r=0; r<nrhs; ++r)
+            for(int i=0; i<n; ++i)
+               x[r*ldx + rlist[i]-1] = xlocal[r*symb_.n+i];
+         }
+      } else {
+         throw std::runtime_error("Not implemented: solve_fwd indef\n");
+      }
+
+      /* Cleanup memory */
+      delete[] xlocal;
+   }
+
    void solve_bwd(int nrhs, double* x, int ldx) {
    }
 
