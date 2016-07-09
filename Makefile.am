@@ -224,7 +224,6 @@ libspral_a_SOURCES += \
 	src/ssids/cpu/factor.hxx \
 	src/ssids/cpu/NumericSubtree.cxx \
 	src/ssids/cpu/NumericSubtree.hxx \
-	src/ssids/cpu/solve.f90 \
 	src/ssids/cpu/smalloc.cxx \
 	src/ssids/cpu/smalloc.hxx \
 	src/ssids/cpu/subtree.f90 \
@@ -392,7 +391,6 @@ src/ssids/fkeep.$(OBJEXT): src/ssids/akeep.$(OBJEXT) \
                            src/ssids/datatypes.$(OBJEXT) \
                            src/ssids/inform.$(OBJEXT) \
                            src/ssids/cpu/cpu_iface.$(OBJEXT) \
-                           src/ssids/cpu/solve.$(OBJEXT) \
                            src/ssids/cpu/subtree.$(OBJEXT)
 src/ssids/inform.$(OBJEXT): src/scaling.$(OBJEXT) \
                             src/ssids/datatypes.$(OBJEXT)
@@ -401,14 +399,12 @@ src/ssids/subtree.$(OBJEXT): src/ssids/contrib.$(OBJEXT) \
 									  src/ssids/inform.$(OBJEXT)
 src/ssids/cpu/cpu_iface.$(OBJEXT): src/ssids/datatypes.$(OBJEXT) \
                                    src/ssids/inform.$(OBJEXT)
-src/ssids/cpu/solve.$(OBJEXT): src/ssids/datatypes.$(OBJEXT)
 src/ssids/cpu/subtree.$(OBJEXT): src/ssids/alloc.$(OBJEXT) \
                                  src/ssids/contrib.$(OBJEXT) \
                                  src/ssids/datatypes.$(OBJEXT) \
                                  src/ssids/inform.$(OBJEXT) \
                                  src/ssids/subtree.$(OBJEXT) \
-                                 src/ssids/cpu/cpu_iface.$(OBJEXT) \
-                                 src/ssids/cpu/solve.$(OBJEXT)
+                                 src/ssids/cpu/cpu_iface.$(OBJEXT)
 src/ssids/gpu/akeep.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
                                src/ssids/akeep.$(OBJEXT) \
                                src/ssids/datatypes.$(OBJEXT) \

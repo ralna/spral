@@ -145,13 +145,14 @@ public:
       delete[] xlocal;
    }
 
-   void solve_diag(int nrhs, double* x, int ldx) {
-   }
+   template <bool do_diag, bool do_bwd>
+   void solve_diag_bwd_inner(int nrhs, double* x, int ldx) {
+      if(posdef && !do_bwd) return; // diagonal solve is a no-op for posdef
 
-   void solve_diag_bwd(int nrhs, double* x, int ldx) {
-      /* Allocate memory */
+      /* Allocate memory - map only needed for indef bwd/diag_bwd solve */
       double* xlocal = new double[nrhs*symb_.n];
-      int* map_alloc = (!posdef) ? new int[symb_.n] : nullptr; // only indef
+      int* map_alloc = (!posdef && do_bwd) ? new int[symb_.n]
+                                           : nullptr;
 
       /* Perform solve */
       for(int ni=nnodes_-1; ni>=0; --ni) {
@@ -166,28 +167,37 @@ public:
          int const *map;
          if(!posdef) {
             // indef need to allow for permutation and/or delays
-            for(int i=0; i<n+ndin; ++i)
-               map_alloc[i] = nodes_[ni].perm[i];
-            for(int i=n; i<m; ++i)
-               map_alloc[i+ndin] = symb_[ni].rlist[i];
-            map = map_alloc;
+            if(do_bwd) {
+               for(int i=0; i<n+ndin; ++i)
+                  map_alloc[i] = nodes_[ni].perm[i];
+               for(int i=n; i<m; ++i)
+                  map_alloc[i+ndin] = symb_[ni].rlist[i];
+               map = map_alloc;
+            } else { // if only doing diagonal, only need first nelim<=n+ndin
+               map = nodes_[ni].perm;
+            }
          } else {
             // posdef there is no permutation
             map = symb_[ni].rlist;
          }
 
          /* Gather into dense vector xlocal */
+         int blkm = (do_bwd) ? m+ndin
+                             : nelim;
          for(int r=0; r<nrhs; ++r)
-         for(int i=0; i<m+ndin; ++i)
+         for(int i=0; i<blkm; ++i)
             xlocal[r*symb_.n+i] = x[r*ldx + map[i]-1];
 
          /* Perform dense solve */
          if(posdef) {
             cholesky_solve_bwd(m, n, nodes_[ni].lcol, m, nrhs, xlocal, symb_.n);
          } else {
-            ldlt_solve_diag(nelim, &nodes_[ni].lcol[(m+ndin)*(n+ndin)], xlocal);
-            ldlt_solve_bwd(m+ndin, nelim, nodes_[ni].lcol, m+ndin, nrhs, xlocal,
-                  symb_.n);
+            if(do_diag) ldlt_solve_diag(
+                  nelim, &nodes_[ni].lcol[(m+ndin)*(n+ndin)], xlocal
+                  );
+            if(do_bwd) ldlt_solve_bwd(
+                  m+ndin, nelim, nodes_[ni].lcol, m+ndin, nrhs, xlocal, symb_.n
+                  );
          }
 
          /* Scatter result (only first nelim entries have changed) */
@@ -197,11 +207,20 @@ public:
       }
 
       /* Cleanup memory */
-      if(!posdef) delete[] map_alloc; // only used in indef case
+      if(!posdef && do_bwd) delete[] map_alloc; // only used in indef case
       delete[] xlocal;
    }
 
+   void solve_diag(int nrhs, double* x, int ldx) {
+      solve_diag_bwd_inner<true, false>(nrhs, x, ldx);
+   }
+
+   void solve_diag_bwd(int nrhs, double* x, int ldx) {
+      solve_diag_bwd_inner<true, true>(nrhs, x, ldx);
+   }
+
    void solve_bwd(int nrhs, double* x, int ldx) {
+      solve_diag_bwd_inner<false, true>(nrhs, x, ldx);
    }
 
    SymbolicSubtree const& get_symbolic_subtree() { return symb_; }
