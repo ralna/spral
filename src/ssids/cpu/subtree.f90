@@ -281,15 +281,6 @@ subroutine solve_fwd(this, nrhs, x, ldx, inform)
    real(wp), dimension(*), intent(inout) :: x
    integer, intent(in) :: ldx
    class(ssids_inform_base), intent(inout) :: inform
- 
-   logical :: fposdef
-   integer :: blkm
-   integer :: blkn
-   integer :: nd
-   integer :: nelim
-   integer :: node
-   real(wp), dimension(:), allocatable :: xlocal
-   integer, dimension(:), allocatable :: map
 
    call c_subtree_solve_fwd(this%posdef, this%csubtree, nrhs, x, ldx)
 end subroutine solve_fwd
@@ -337,54 +328,7 @@ subroutine solve_diag_bwd(this, nrhs, x, ldx, inform)
    integer, intent(in) :: ldx
    class(ssids_inform_base), intent(inout) :: inform
 
-   integer, parameter :: job = SSIDS_SOLVE_JOB_DIAG_BWD
-
-   logical :: fposdef
-   integer :: blkm
-   integer :: blkn
-   integer :: nd
-   integer :: nelim
-   integer :: node
-   real(wp), dimension(:), allocatable :: xlocal
-   integer, dimension(:), allocatable :: map
-
-   fposdef = this%posdef
-
-   if(this%posdef) then
-      call c_subtree_solve_diag_bwd(this%posdef, this%csubtree, nrhs, x, ldx)
-   else
-      associate(symbolic=>this%symbolic, nodes=>this%nodes)
-         allocate(xlocal(nrhs*symbolic%n), map(symbolic%n), stat=inform%stat)
-         if(inform%stat.ne.0) return
-
-         ! Backwards solve DL^Tx = z or L^Tx = z
-         do node = symbolic%nnodes, 1, -1
-            nelim = nodes(node)%nelim
-            if (nelim.eq.0) cycle
-            nd = nodes(node)%ndelay
-            blkn = symbolic%sptr(node+1) - symbolic%sptr(node) + nd
-            blkm = int(symbolic%rptr(node+1) - symbolic%rptr(node)) + nd
-            
-            if(nrhs.eq.1) then
-               call solve_bwd_one(fposdef, job, &
-                  symbolic%rlist(symbolic%rptr(node):), x, &
-                  blkm, blkn, nelim, nd, &
-                  nodes(node)%lcol, &
-                  nodes(node)%lcol(1+blkm*blkn:), & ! node%d
-                  nodes(node)%perm, &
-                  xlocal, map)
-            else
-               call solve_bwd_mult(fposdef, job, &
-                  symbolic%rlist(symbolic%rptr(node):), &
-                  nrhs, x, ldx, blkm, blkn, nelim, nd, &
-                  nodes(node)%lcol, &
-                  nodes(node)%lcol(1+blkm*blkn:), & ! node%d
-                  nodes(node)%perm, &
-                  xlocal, map)
-            end if
-         end do
-      end associate
-   endif
+   call c_subtree_solve_diag_bwd(this%posdef, this%csubtree, nrhs, x, ldx)
 end subroutine solve_diag_bwd
 
 subroutine solve_bwd(this, nrhs, x, ldx, inform)
