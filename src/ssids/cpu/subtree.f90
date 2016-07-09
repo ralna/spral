@@ -69,25 +69,7 @@ module spral_ssids_cpu_subtree
          type(C_PTR), value :: subtree
       end subroutine c_destroy_symbolic_subtree
 
-      subroutine c_factor_cpu(pos_def, subtree, n, nnodes, nodes, aval, &
-            scaling, alloc, options, stats) &
-            bind(C, name="spral_ssids_cpu_subtree_factor_dbl")
-         use, intrinsic :: iso_c_binding
-         import :: cpu_node_data, cpu_factor_options, cpu_factor_stats
-         implicit none
-         logical(C_BOOL), value :: pos_def
-         type(C_PTR), value :: subtree
-         integer(C_INT), value :: n
-         integer(C_INT), value :: nnodes
-         type(cpu_node_data), dimension(nnodes), intent(inout) :: nodes
-         real(C_DOUBLE), dimension(*), intent(in) :: aval
-         type(C_PTR), value :: scaling
-         type(C_PTR), value :: alloc
-         type(cpu_factor_options), intent(in) :: options
-         type(cpu_factor_stats), intent(out) :: stats
-      end subroutine c_factor_cpu
-
-      type(C_PTR) function c_create_cpu_subtree(posdef, symbolic_subtree, &
+      type(C_PTR) function c_create_numeric_subtree(posdef, symbolic_subtree, &
             nnodes, nodes) &
             bind(C, name="spral_ssids_cpu_create_num_subtree_dbl")
          use, intrinsic :: iso_c_binding
@@ -97,15 +79,44 @@ module spral_ssids_cpu_subtree
          type(C_PTR), value :: symbolic_subtree
          integer(C_INT), value :: nnodes
          type(cpu_node_data), dimension(nnodes), intent(inout) :: nodes
-      end function c_create_cpu_subtree
+      end function c_create_numeric_subtree
 
-      subroutine c_destroy_cpu_subtree(posdef, subtree) &
+      subroutine c_destroy_numeric_subtree(posdef, subtree) &
             bind(C, name="spral_ssids_cpu_destroy_num_subtree_dbl")
          use, intrinsic :: iso_c_binding
          implicit none
          logical(C_BOOL), value :: posdef
          type(C_PTR), value :: subtree
-      end subroutine c_destroy_cpu_subtree
+      end subroutine c_destroy_numeric_subtree
+
+      subroutine c_subtree_factor(posdef, subtree, n, nnodes, nodes, &
+            aval, scaling, alloc, options, stats) &
+            bind(C, name="spral_ssids_cpu_subtree_factor_dbl")
+         use, intrinsic :: iso_c_binding
+         import :: cpu_node_data, cpu_factor_options, cpu_factor_stats
+         implicit none
+         logical(C_BOOL), value :: posdef
+         type(C_PTR), value :: subtree
+         integer(C_INT), value :: n
+         integer(C_INT), value :: nnodes
+         type(cpu_node_data), dimension(nnodes), intent(inout) :: nodes
+         real(C_DOUBLE), dimension(*), intent(in) :: aval
+         type(C_PTR), value :: scaling
+         type(C_PTR), value :: alloc
+         type(cpu_factor_options), intent(in) :: options
+         type(cpu_factor_stats), intent(out) :: stats
+      end subroutine c_subtree_factor
+
+      subroutine c_subtree_solve_fwd(posdef, subtree, nrhs, x, ldx) &
+            bind(C, name="spral_ssids_cpu_subtree_solve_fwd_dbl")
+         use, intrinsic :: iso_c_binding
+         implicit none
+         logical(C_BOOL), value :: posdef
+         type(C_PTR), value :: subtree
+         integer(C_INT), value :: nrhs
+         real(C_DOUBLE), dimension(*), intent(inout) :: x
+         integer(C_INT), value :: ldx
+      end subroutine c_subtree_solve_fwd
    end interface
 
 contains
@@ -209,13 +220,13 @@ function factor(this, posdef, aval, options, inform, scaling)
    ! Setup C++ data structure
    cpu_factor%posdef = posdef
    cpu_factor%csubtree = &
-      c_create_cpu_subtree(posdef, this%csubtree, this%nnodes, cpu_factor%cnodes)
+      c_create_numeric_subtree(posdef, this%csubtree, this%nnodes, cpu_factor%cnodes)
 
    ! Call C++ factor routine
    cscaling = C_NULL_PTR
    if(present(scaling)) cscaling = C_LOC(scaling)
    call cpu_copy_options_in(options, coptions)
-   call c_factor_cpu(posdef, cpu_factor%csubtree, this%n, &
+   call c_subtree_factor(posdef, cpu_factor%csubtree, this%n, &
       this%nnodes, cpu_factor%cnodes, aval, cscaling, C_LOC(cpu_factor%alloc), &
       coptions, cstats)
 
@@ -238,7 +249,7 @@ end function factor
 subroutine numeric_final(this)
    type(cpu_numeric_subtree) :: this
 
-   call c_destroy_cpu_subtree(this%posdef, this%csubtree)
+   call c_destroy_numeric_subtree(this%posdef, this%csubtree)
 
    call smfreeall(this%alloc)
    deallocate(this%alloc)

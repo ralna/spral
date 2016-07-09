@@ -147,3 +147,29 @@ void spral_ssids_cpu_subtree_factor_dbl(
       print_factors<double>(posdef, nnodes, *symbolic_subtree, nodes);
    }
 }
+
+/* Double precision wrapper around templated routines */
+extern "C"
+void spral_ssids_cpu_subtree_solve_fwd_dbl(
+      bool posdef,      // If true, performs A=LL^T, if false do pivoted A=LDL^T
+      void* subtree_ptr,// pointer to relevant type of NumericSubtree
+      int nrhs,         // number of right-hand sides
+      double* x,        // ldx x nrhs array of right-hand sides
+      int ldx           // leading dimension of x
+      ) {
+
+   typedef double T;
+   const int BLOCK_SIZE = 16;
+   const int PAGE_SIZE = 16384;
+
+   // Call factorization routine
+   if(posdef) { // Converting from runtime to compile time posdef value
+      auto &subtree =
+         *static_cast<NumericSubtree<true, BLOCK_SIZE, T, StackAllocator<PAGE_SIZE>>*>(subtree_ptr);
+      subtree.solve_fwd(nrhs, x, ldx);
+   } else {
+      auto &subtree =
+         *static_cast<NumericSubtree<false, BLOCK_SIZE, T, StackAllocator<PAGE_SIZE>>*>(subtree_ptr);
+      subtree.solve_fwd(nrhs, x, ldx);
+   }
+}

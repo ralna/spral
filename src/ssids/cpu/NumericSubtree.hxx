@@ -90,9 +90,9 @@ public:
          }
       }
    }
-   void solve_fwd() {}
-   void solve_diag() {}
-   void solve_bwd() {}
+   void solve_fwd(int nrhs, double* x, int ldx) {}
+   void solve_diag(int nrhs, double* x, int ldx) {}
+   void solve_bwd(int nrhs, double* x, int ldx) {}
 
    SymbolicSubtree const& get_symbolic_subtree() { return symb_; }
 private:
