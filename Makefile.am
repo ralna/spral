@@ -238,8 +238,6 @@ libspral_a_SOURCES += \
 	src/ssids/cpu/kernels/cholesky.cxx \
 	src/ssids/cpu/kernels/cholesky.hxx \
 	src/ssids/cpu/kernels/CpuLDLT.hxx \
-	src/ssids/cpu/kernels/CpuLog.cxx \
-	src/ssids/cpu/kernels/CpuLog.hxx \
 	src/ssids/cpu/kernels/ldlt_nopiv.cxx \
 	src/ssids/cpu/kernels/ldlt_nopiv.hxx \
 	src/ssids/cpu/kernels/SimdVec.hxx \
