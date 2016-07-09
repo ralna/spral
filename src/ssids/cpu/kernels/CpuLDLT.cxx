@@ -26,7 +26,6 @@
 #include "../AlignedAllocator.hxx"
 #include "common.hxx"
 #include "wrappers.hxx"
-#include "CpuLog.hxx"
 #include "CpuBlockLDLT.cxx"
 
 namespace spral { namespace ssids { namespace cpu {
@@ -35,7 +34,6 @@ template<typename T,
          int BLOCK_SIZE,
          int MAX_ITR=5,
          bool debug=false,
-         bool LOG=false,
          typename Alloc=AlignedAllocator<T>
          >
 class CpuLDLT {
@@ -44,8 +42,6 @@ private:
    const T u;
    /// small specifies the threshold for entries to be considered zero
    const T small;
-   /// Logging object
-   CpuLog log;
    /// Allocator
    mutable Alloc alloc;
 
@@ -600,8 +596,6 @@ private:
             depend(inout: blkdata[blk*mblk+blk:1]) \
             depend(inout: cdata[blk:1])
          {
-            CpuLog::LogTask *t;
-            if(LOG) t = &log.tstart(0, blk, blk, 0, (uint64_t) &CpuBlockLDLT::factor_block<T, BLOCK_SIZE>, (uint64_t) &blkdata[blk*mblk+blk]);
             int thread_num = omp_get_thread_num();
             ThreadWork &thread_work = all_thread_work[thread_num];
             blkdata[blk*mblk+blk].lwork = global_work.acquire_block_wait();
@@ -613,7 +607,6 @@ private:
             CpuBlockLDLT::factor_block<T, BLOCK_SIZE>(cdata[blk].oldelim, cdata[blk].perm, dblk.aval, cdata[blk].d, thread_work.ld, u, small, lperm);
             // Initialize threshold check (no lock required becuase task depend)
             cdata[blk].npass = BLOCK_SIZE;
-            if(LOG) t->end();
          }
          
          // Loop over off-diagonal blocks applying pivot
@@ -625,10 +618,8 @@ private:
                depend(inout: blkdata[jblk*mblk+blk:1]) \
                depend(in: cdata[blk:1])
             {
-               CpuLog::LogTask *t;
                typedef void (BlockData::*BlockDataApplyTPtr)(int, int, const T*, int, const T*, const T);
                BlockDataApplyTPtr bdatp = &BlockData::apply_pivot_trans;
-               if(LOG) t = &log.tstart(1, blk, jblk, 0, (uint64_t) ((void *) &bdatp), (uint64_t) &blkdata[jblk*mblk+blk]);
                BlockData &dblk = blkdata[blk*mblk+blk];
                BlockData &cblk = blkdata[jblk*mblk+blk];
                const int *lperm = &global_lperm[blk*BLOCK_SIZE];
@@ -642,7 +633,6 @@ private:
                if(blkpass < cdata[blk].npass)
                   cdata[blk].npass = blkpass;
                omp_unset_lock(&cdata[blk].lock);
-               if(LOG) t->end();
             }
          }
          for(int iblk=blk+1; iblk<mblk; iblk++) {
@@ -653,8 +643,6 @@ private:
                depend(inout: blkdata[blk*mblk+iblk:1]) \
                depend(in: cdata[blk:1])
             {
-               CpuLog::LogTask *t;
-               if(LOG) t = &log.tstart(2, blk, iblk);
                BlockData &dblk = blkdata[blk*mblk+blk];
                BlockData &rblk = blkdata[blk*mblk+iblk];
                const int *lperm = &global_lperm[blk*BLOCK_SIZE];
@@ -669,7 +657,6 @@ private:
                if(blkpass < cdata[blk].npass)
                   cdata[blk].npass = blkpass;
                omp_unset_lock(&cdata[blk].lock);
-               if(LOG) t->end();
             }
          }
 
@@ -680,8 +667,6 @@ private:
             shared(blkdata, cdata, changed, next_elim, global_work) \
             depend(inout: cdata[blk:1])
          {
-            CpuLog::LogTask *t;
-            if(LOG) t = &log.tstart(5, blk);
             // Adjust to avoid splitting 2x2 pivots
             if(cdata[blk].npass>cdata[blk].oldelim) {
                T d11 = cdata[blk].d[2*(cdata[blk].npass-1) + 0];
@@ -700,8 +685,6 @@ private:
 
             // Record if we eliminated anything
             changed = changed || (cdata[blk].oldelim != cdata[blk].nelim);
-
-            if(LOG) t->end();
          }
 
          // Update uneliminated columns
@@ -729,8 +712,6 @@ private:
                   }
                   // Perform actual update (if required)
                   if(cdata[blk].oldelim != cdata[blk].nelim) {
-                     CpuLog::LogTask *t;
-                     if(LOG) t = &log.tstart(4, iblk, jblk, blk);
                      int thread_num = omp_get_thread_num();
                      ThreadWork &thread_work = all_thread_work[thread_num];
                      int oldelim = cdata[blk].oldelim;
@@ -751,7 +732,6 @@ private:
                            blkdata[jblk*mblk+blk].aval, BLOCK_SIZE,
                            thread_work.ld, BLOCK_SIZE,
                            rfrom, cdata[jblk].nelim);
-                     if(LOG) t->end();
                   }
                }
             }
@@ -787,8 +767,6 @@ private:
                   }
                   // Perform actual update (if required)
                   if(cdata[blk].oldelim != cdata[blk].nelim) {
-                     CpuLog::LogTask *t;
-                     if(LOG) t = &log.tstart(3, iblk, jblk, blk);
                      int thread_num = omp_get_thread_num();
                      ThreadWork &thread_work = all_thread_work[thread_num];
                      int oldelim = cdata[blk].oldelim;
@@ -802,7 +780,6 @@ private:
                            blkdata[blk*mblk+jblk].aval, BLOCK_SIZE,
                            thread_work.ld, BLOCK_SIZE,
                            rfrom, cdata[jblk].nelim);
-                     if(LOG) t->end();
                   }
                }
             }
@@ -1208,7 +1185,7 @@ public:
 
 public:
    CpuLDLT(T u, T small)
-   : u(u), small(small), log(LOG?10000:0)
+   : u(u), small(small)
    {}
 
    /** Factorize an entire matrix */
@@ -1390,27 +1367,56 @@ public:
             bdalloc, blkdata, mblk*nblk
             );
 
-      // Output log if desired
-      if(LOG) {
-#if BUB_AFTERMATH
-         std::ostringstream filename;
-         filename << "ldlt" << nblk << ".ost";
-         FILE *fp = fopen(filename.str().c_str(), "w+");
-         if(!fp) throw std::runtime_error("Failed to open trace file\n");
-         log.writeAftermath(fp);
-         fclose(fp);
-#else
-         std::ostringstream filename;
-         filename << "ldlt" << nblk << ".prof.fig";
-         std::ofstream proffile;
-         proffile.open(filename.str().c_str());
-         log.writeFig(proffile, getTaskName);
-         proffile.close();
-#endif
-      } 
-
       return num_elim;
    }
 };
+
+template <typename T>
+void ldlt_solve_fwd(int m, int n, T const* l, int ldl, int nrhs, T* x, int ldx) {
+   if(nrhs==1) {
+      host_trsv(FILL_MODE_LWR, OP_N, DIAG_UNIT, n, l, ldl, x, 1);
+      if(m > n)
+         gemv(OP_N, m-n, n, -1.0, &l[n], ldl, x, 1, 1.0, &x[n], 1);
+   } else {
+      host_trsm(SIDE_LEFT, FILL_MODE_LWR, OP_N, DIAG_UNIT, n, nrhs, 1.0, l, ldl, x, ldx);
+      if(m > n)
+         host_gemm(OP_N, OP_N, m-n, nrhs, n, -1.0, &l[n], ldl, x, ldx, 1.0, &x[n], ldx);
+   }
+}
+
+template <typename T>
+void ldlt_solve_diag(int n, T const* d, T* x) {
+   for(int i=0; i<n; ) {
+      if(d[2*i+1]==0.0) {
+         // 1x1 pivot
+         T d11 = d[2*i];
+         x[i] *= d11;
+         i++;
+      } else {
+         // 2x2 pivot
+         T d11 = d[2*i];
+         T d21 = d[2*i+1];
+         T d22 = d[2*i+3];
+         T x1 = x[i];
+         T x2 = x[i+1];
+         x[i]   = d11*x1 + d21*x2;
+         x[i+1] = d21*x1 + d22*x2;
+         i += 2;
+      }
+   }
+}
+
+template <typename T>
+void ldlt_solve_bwd(int m, int n, T const* l, int ldl, int nrhs, T* x, int ldx) {
+   if(nrhs==1) {
+      if(m > n)
+         gemv(OP_T, m-n, n, -1.0, &l[n], ldl, &x[n], 1, 1.0, x, 1);
+      host_trsv(FILL_MODE_LWR, OP_T, DIAG_UNIT, n, l, ldl, x, 1);
+   } else {
+      if(m > n)
+         host_gemm(OP_T, OP_N, m-n, nrhs, n, -1.0, &l[n], ldl, &x[n], ldx, 1.0, x, ldx);
+      host_trsm(SIDE_LEFT, FILL_MODE_LWR, OP_T, DIAG_UNIT, n, nrhs, 1.0, l, ldl, x, ldx);
+   }
+}
 
 }}} /* namespaces spral::ssids::cpu */

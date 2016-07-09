@@ -54,41 +54,22 @@ void print_d(int n, T *d) {
    std::cout << ")" << std::endl;
 }
 
-template <typename T>
-void host_dslv(int n, const T *d, T *b) {
-   for(int i=0; i<n; ) {
-      if(d[2*i+1]==0.0) {
-         // 1x1 pivot
-         T d11 = d[2*i];
-         b[i] *= d11;
-         i++;
-      } else {
-         // 2x2 pivot
-         T d11 = d[2*i];
-         T d21 = d[2*i+1];
-         T d22 = d[2*i+3];
-         T b1 = b[i];
-         T b2 = b[i+1];
-         b[i]   = d11*b1 + d21*b2;
-         b[i+1] = d21*b1 + d22*b2;
-         i += 2;
-      }
-   }
-}
-
 template<typename T>
-void solve(int n, const int *perm, const T *l, int ldl, const T *d, const T *b, T *x) {
-   for(int i=0; i<n; i++) x[i] = b[perm[i]];
+void solve(int m, int n, const int *perm, const T *l, int ldl, const T *d, const T *b, T *x) {
+   for(int i=0; i<m; i++) x[i] = b[perm[i]];
    // Fwd slv
-   host_trsv<T>(FILL_MODE_LWR, OP_N, DIAG_UNIT, n, l, ldl, x, 1);
+   ldlt_solve_fwd(m, n, l, ldl, 1, x, m);
+   ldlt_solve_fwd(m-n, m-n, &l[n*(ldl+1)], ldl, 1, &x[n], m);
    // Diag slv
-   host_dslv<T>(n, d, x);
+   ldlt_solve_diag(n, d, x);
+   ldlt_solve_diag(m-n, &d[2*n], &x[n]);
    // Bwd slv
-   host_trsv<T>(FILL_MODE_LWR, OP_T, DIAG_UNIT, n, l, ldl, x, 1);
+   ldlt_solve_bwd(m-n, m-n, &l[n*(ldl+1)], ldl, 1, &x[n], m);
+   ldlt_solve_bwd(m, n, l, ldl, 1, x, m);
    // Undo permutation
-   T *temp = new T[n];
-   for(int i=0; i<n; i++) temp[i] = x[i];
-   for(int i=0; i<n; i++) x[perm[i]] = temp[i];
+   T *temp = new T[m];
+   for(int i=0; i<m; i++) temp[i] = x[i];
+   for(int i=0; i<m; i++) x[perm[i]] = temp[i];
    // Free mem
    delete[] temp;
 }
@@ -346,7 +327,7 @@ int ldlt_test(T u, T small, bool delays, bool singular, bool dblk_singular, int 
 
    // Perform solve
    T *soln = new T[m];
-   solve(m, perm, l, lda, d, b, soln);
+   solve(m, q1, perm, l, lda, d, b, soln);
    if(debug) {
       printf("soln = ");
       for(int i=0; i<m; i++) printf(" %le", soln[i]);
