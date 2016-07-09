@@ -286,6 +286,9 @@ int ldlt_test_block(T u, T small) {
    if(debug) printf("bwderr = %le\n", bwderr);
    EXPECT_LE(bwderr, 1e-14);
 
+   // Cleanup memory
+   delete[] a; delete[] l;
+
    return 0;
 }
 

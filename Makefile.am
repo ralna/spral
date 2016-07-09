@@ -267,6 +267,8 @@ ssids_kernel_test_SOURCES = tests/ssids/kernels.cxx \
 									 tests/ssids/kernels/cholesky.hxx \
 									 tests/ssids/kernels/CpuBlockLDLT.cxx \
 									 tests/ssids/kernels/CpuBlockLDLT.hxx \
+									 tests/ssids/kernels/CpuLDLT.cxx \
+									 tests/ssids/kernels/CpuLDLT.hxx \
 									 tests/ssids/kernels/framework.cxx \
 									 tests/ssids/kernels/framework.hxx \
 									 tests/ssids/kernels/ldlt_nopiv.cxx \

@@ -15,6 +15,7 @@
 #include "kernels/cholesky.hxx"
 #include "kernels/ldlt_nopiv.hxx"
 #include "kernels/CpuBlockLDLT.hxx"
+#include "kernels/CpuLDLT.hxx"
 
 int main(void) {
    int nerr = 0;
@@ -22,6 +23,7 @@ int main(void) {
    nerr += run_cholesky_tests();
    nerr += run_ldlt_nopiv_tests();
    nerr += run_CpuBlockLDLT_tests();
+   nerr += run_CpuLDLT_tests();
 
    if(nerr==0) {
       printf(ANSI_COLOR_BLUE "\n====================================\n"
