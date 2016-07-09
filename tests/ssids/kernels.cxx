@@ -46,32 +46,39 @@ void print_mat(char const* format, int n, double const* a, int lda) {
 
 /** Calculate scaled backward error ||Ax-b|| / ( ||A|| ||x|| + ||b|| ).
  * All norms are infinity norms. */
-double backward_error(int n, double const* a, int lda, double const* rhs, double const* soln) {
-   /* Calculate residual vector and anorm*/
+double backward_error(int n, double const* a, int lda, double const* rhs, int nrhs, double const* soln, int ldsoln) {
+   /* Allocate memory */
    double *resid = new double[n];
    double *rowsum = new double[n];
-   memcpy(resid, rhs, n*sizeof(double));
-   memset(rowsum, 0, n*sizeof(double));
-   for(int j=0; j<n; ++j) {
-      resid[j] -= a[j*lda+j] * soln[j];
-      rowsum[j] += fabs(a[j*lda+j]);
-      for(int i=j+1; i<n; ++i) {
-         resid[j] -= a[j*lda+i] * soln[i];
-         resid[i] -= a[j*lda+i] * soln[j];
-         rowsum[j] += fabs(a[j*lda+i]);
-         rowsum[i] += fabs(a[j*lda+i]);
-      }
-   }
-   double anorm = 0.0;
-   for(int i=0; i<n; ++i)
-      anorm = std::max(anorm, rowsum[i]);
 
-   /* Check scaled backwards error */
-   double rhsnorm=0.0, residnorm=0.0, solnnorm=0.0;
-   for(int i=0; i<n; ++i) {
-      rhsnorm = std::max(rhsnorm, fabs(rhs[i]));
-      residnorm = std::max(residnorm, fabs(resid[i]));
-      solnnorm = std::max(solnnorm, fabs(soln[i]));
+   /* Calculate residual vector and anorm*/
+   double worstbwderr = 0.0;
+   for(int r=0; r<nrhs; ++r) {
+      memcpy(resid, rhs, n*sizeof(double));
+      memset(rowsum, 0, n*sizeof(double));
+      for(int j=0; j<n; ++j) {
+         resid[j] -= a[j*lda+j] * soln[r*ldsoln+j];
+         rowsum[j] += fabs(a[j*lda+j]);
+         for(int i=j+1; i<n; ++i) {
+            resid[j] -= a[j*lda+i] * soln[r*ldsoln+i];
+            resid[i] -= a[j*lda+i] * soln[r*ldsoln+j];
+            rowsum[j] += fabs(a[j*lda+i]);
+            rowsum[i] += fabs(a[j*lda+i]);
+         }
+      }
+      double anorm = 0.0;
+      for(int i=0; i<n; ++i)
+         anorm = std::max(anorm, rowsum[i]);
+
+      /* Check scaled backwards error */
+      double rhsnorm=0.0, residnorm=0.0, solnnorm=0.0;
+      for(int i=0; i<n; ++i) {
+         rhsnorm = std::max(rhsnorm, fabs(rhs[i]));
+         residnorm = std::max(residnorm, fabs(resid[i]));
+         solnnorm = std::max(solnnorm, fabs(r*ldsoln+soln[i]));
+      }
+
+      worstbwderr = std::max(worstbwderr, residnorm/(anorm*solnnorm + rhsnorm));
    }
 
    /* Cleanup */
@@ -80,16 +87,16 @@ double backward_error(int n, double const* a, int lda, double const* rhs, double
 
    /* Return result */
    //printf("%e / %e %e %e\n", residnorm, anorm, solnnorm, rhsnorm);
-   return residnorm / (anorm*solnnorm + rhsnorm);
+   return worstbwderr;
 }
 
 /** Calculates forward error ||soln-x||_inf assuming x=1.0 */
-double forward_error(int n, double const* soln) {
+double forward_error(int n, int nrhs, double const* soln, int ldx) {
    /* Check scaled backwards error */
    double fwderr=0.0;
-   for(int i=0; i<n; ++i) {
-      fwderr = std::max(fwderr, fabs(soln[i] - 1.0));
-   }
+   for(int r=0; r<nrhs; ++r)
+   for(int i=0; i<n; ++i)
+      fwderr = std::max(fwderr, fabs(soln[r*ldx+i] - 1.0));
    return fwderr;
 }
 
@@ -133,19 +140,24 @@ int test_cholesky(int m, int n, int blksz, bool debug=false) {
       }
    }
 
-   /* Perform a solve */
-   double *soln = new double[m];
-   memcpy(soln, rhs, m*sizeof(double));
+   /* Perform solves with 1 and 3 rhs */
+   int nrhs = 3;
+   int ldsoln = m+3;
+   double *soln = new double[(nrhs+1)*ldsoln];
+   for(int r=0; r<nrhs+1; ++r)
+      memcpy(&soln[r*ldsoln], rhs, m*sizeof(double));
    if(debug) { printf("rhs ="); print_vec(" %e", m, soln); }
-   cholesky_solve_fwd(m, n, l, lda, soln);
+   cholesky_solve_fwd(m, n, l, lda, 1, soln, ldsoln);
+   cholesky_solve_fwd(m, n, l, lda, nrhs, &soln[ldsoln], ldsoln);
    if(debug) { printf("post fwd ="); print_vec(" %e", m, soln); }
-   host_trsv<double>(FILL_MODE_LWR, OP_N, DIAG_NON_UNIT, m-n, &l[n*lda+n], lda, &soln[n], 1);
-   host_trsv<double>(FILL_MODE_LWR, OP_T, DIAG_NON_UNIT, m-n, &l[n*lda+n], lda, &soln[n], 1);
-   cholesky_solve_bwd(m, n, l, lda, soln);
+   host_trsm<double>(SIDE_LEFT, FILL_MODE_LWR, OP_N, DIAG_NON_UNIT, m-n, nrhs+1, 1.0, &l[n*lda+n], lda, &soln[n], ldsoln);
+   host_trsm<double>(SIDE_LEFT, FILL_MODE_LWR, OP_T, DIAG_NON_UNIT, m-n, nrhs+1, 1.0, &l[n*lda+n], lda, &soln[n], ldsoln);
+   cholesky_solve_bwd(m, n, l, lda, 1, soln, ldsoln);
+   cholesky_solve_bwd(m, n, l, lda, nrhs, &soln[ldsoln], ldsoln);
    if(debug) { printf("post bwd ="); print_vec(" %e", m, soln); }
 
-   double fwderr = forward_error(m, soln);
-   double bwderr = backward_error(m, a, lda, rhs, soln);
+   double fwderr = forward_error(m, nrhs, soln, ldsoln);
+   double bwderr = backward_error(m, a, lda, rhs, nrhs, soln, ldsoln);
 
    if(debug) printf("fwderr = %e\nbwderr = %e\n", fwderr, bwderr);
 
@@ -155,7 +167,7 @@ int test_cholesky(int m, int n, int blksz, bool debug=false) {
    delete[] rhs;
    delete[] soln;
 
-   if(bwderr >= 1e-14 || isnan(bwderr)) return -1; // Failed accuracy test
+   if(bwderr >= 1e-14 || std::isnan(bwderr)) return -1; // Failed accuracy test
 
    return 0; // Test passed
 }
@@ -232,8 +244,8 @@ int test_ldlt(int m, int n, bool debug=false) {
    ldlt_nopiv_solve_bwd(m, n, l, lda, soln);
    if(debug) { printf("post bwd ="); print_vec(" %e", m, soln); }
 
-   double fwderr = forward_error(m, soln);
-   double bwderr = backward_error(m, a, lda, rhs, soln);
+   double fwderr = forward_error(m, 1, soln, m);
+   double bwderr = backward_error(m, a, lda, rhs, 1, soln, m);
 
    if(debug) printf("fwderr = %e\nbwderr = %e\n", fwderr, bwderr);
 
@@ -244,7 +256,7 @@ int test_ldlt(int m, int n, bool debug=false) {
    delete[] rhs;
    delete[] soln;
 
-   if(bwderr >= 1e-14 || isnan(bwderr)) return -1; // Failed accuracy test
+   if(bwderr >= 1e-14 || std::isnan(bwderr)) return -1; // Failed accuracy test
 
    return 0; // Test passed
 }

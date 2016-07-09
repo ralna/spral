@@ -103,17 +103,29 @@ void cholesky_factor(int m, int n, double* a, int lda, int blksz, int *info) {
 }
 
 /* Forwards solve corresponding to cholesky_factor() */
-void cholesky_solve_fwd(int m, int n, double const* a, int lda, double* x) {
-   host_trsv(FILL_MODE_LWR, OP_N, DIAG_NON_UNIT, n, a, lda, x, 1);
-   if(m > n)
-      gemv(OP_N, m-n, n, -1.0, &a[n], lda, x, 1, 1.0, &x[n], 1);
+void cholesky_solve_fwd(int m, int n, double const* a, int lda, int nrhs, double* x, int ldx) {
+   if(nrhs==1) {
+      host_trsv(FILL_MODE_LWR, OP_N, DIAG_NON_UNIT, n, a, lda, x, 1);
+      if(m > n)
+         gemv(OP_N, m-n, n, -1.0, &a[n], lda, x, 1, 1.0, &x[n], 1);
+   } else {
+      host_trsm(SIDE_LEFT, FILL_MODE_LWR, OP_N, DIAG_NON_UNIT, n, nrhs, 1.0, a, lda, x, ldx);
+      if(m > n)
+         host_gemm(OP_N, OP_N, m-n, nrhs, n, -1.0, &a[n], lda, x, ldx, 1.0, &x[n], ldx);
+   }
 }
 
 /* Backwards solve corresponding to cholesky_factor() */
-void cholesky_solve_bwd(int m, int n, double const* a, int lda, double* x) {
-   if(m > n)
-      gemv(OP_T, m-n, n, -1.0, &a[n], lda, &x[n], 1, 1.0, x, 1);
-   host_trsv(FILL_MODE_LWR, OP_T, DIAG_NON_UNIT, n, a, lda, x, 1);
+void cholesky_solve_bwd(int m, int n, double const* a, int lda, int nrhs, double* x, int ldx) {
+   if(nrhs==1) {
+      if(m > n)
+         gemv(OP_T, m-n, n, -1.0, &a[n], lda, &x[n], 1, 1.0, x, 1);
+      host_trsv(FILL_MODE_LWR, OP_T, DIAG_NON_UNIT, n, a, lda, x, 1);
+   } else {
+      if(m > n)
+         host_gemm(OP_T, OP_N, m-n, nrhs, n, -1.0, &a[n], lda, &x[n], ldx, 1.0, x, ldx);
+      host_trsm(SIDE_LEFT, FILL_MODE_LWR, OP_T, DIAG_NON_UNIT, n, nrhs, 1.0, a, lda, x, ldx);
+   }
 }
 
 }}} /* namespaces spral::ssids::cpu */
