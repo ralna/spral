@@ -8,12 +8,12 @@
  * proves to be useful beyond our own academic experiments)
  *
  */
-#include "CpuSubtree.hxx"
+#include "NumericSubtree.hxx"
 
 #include <cstdio>
 
 #include "StackAllocator.hxx"
-#include "CpuSubtree.hxx"
+#include "NumericSubtree.hxx"
 #include "SmallLeafSubtree.hxx"
 
 using namespace spral::ssids::cpu;
@@ -63,10 +63,10 @@ void* spral_ssids_cpu_create_num_subtree_dbl(bool posdef, void const* symbolic_s
 
    auto const& symbolic_subtree = *static_cast<SymbolicSubtree const*>(symbolic_subtree_ptr);
 
-   return (posdef) ? (void*) new CpuSubtree
+   return (posdef) ? (void*) new NumericSubtree
                      <true, BLOCK_SIZE, T, StackAllocator<PAGE_SIZE>>
                      (symbolic_subtree, nnodes, nodes)
-                   : (void*) new CpuSubtree
+                   : (void*) new NumericSubtree
                      <false, BLOCK_SIZE, T, StackAllocator<PAGE_SIZE>>
                      (symbolic_subtree, nnodes, nodes);
 }
@@ -80,10 +80,10 @@ void spral_ssids_cpu_destroy_num_subtree_dbl(bool posdef, void* target) {
    if(!target) return;
 
    if(posdef) {
-      auto *subtree = static_cast<CpuSubtree<true, BLOCK_SIZE, T, StackAllocator<PAGE_SIZE>>*>(target);
+      auto *subtree = static_cast<NumericSubtree<true, BLOCK_SIZE, T, StackAllocator<PAGE_SIZE>>*>(target);
       delete subtree;
    } else {
-      auto *subtree = static_cast<CpuSubtree<false, BLOCK_SIZE, T, StackAllocator<PAGE_SIZE>>*>(target);
+      auto *subtree = static_cast<NumericSubtree<false, BLOCK_SIZE, T, StackAllocator<PAGE_SIZE>>*>(target);
       delete subtree;
    }
 }
@@ -92,7 +92,7 @@ void spral_ssids_cpu_destroy_num_subtree_dbl(bool posdef, void* target) {
 extern "C"
 void spral_ssids_cpu_subtree_factor_dbl(
       bool posdef,     // If true, performs A=LL^T, if false do pivoted A=LDL^T
-      void* subtree_ptr,// pointer to relevant type of CpuSubtree
+      void* subtree_ptr,// pointer to relevant type of NumericSubtree
       int n,            // Maximum row index (+1)
       int nnodes,       // Number of nodes in assembly tree
       struct cpu_node_data<double> *const nodes, // Data structure for node information
@@ -124,7 +124,7 @@ void spral_ssids_cpu_subtree_factor_dbl(
    SymbolicSubtree const* symbolic_subtree;
    if(posdef) { // Converting from runtime to compile time posdef value
       auto &subtree =
-         *static_cast<CpuSubtree<true, BLOCK_SIZE, T, StackAllocator<PAGE_SIZE>>*>(subtree_ptr);
+         *static_cast<NumericSubtree<true, BLOCK_SIZE, T, StackAllocator<PAGE_SIZE>>*>(subtree_ptr);
       try {
          subtree.factor(aval, scaling, alloc, stalloc_odd, stalloc_even, work, map, options, stats);
       } catch(NotPosDefError npde) {
@@ -133,7 +133,7 @@ void spral_ssids_cpu_subtree_factor_dbl(
       symbolic_subtree = &subtree.get_symbolic_subtree();
    } else {
       auto &subtree =
-         *static_cast<CpuSubtree<false, BLOCK_SIZE, T, StackAllocator<PAGE_SIZE>>*>(subtree_ptr);
+         *static_cast<NumericSubtree<false, BLOCK_SIZE, T, StackAllocator<PAGE_SIZE>>*>(subtree_ptr);
       subtree.factor(aval, scaling, alloc, stalloc_odd, stalloc_even, work, map, options, stats);
       symbolic_subtree = &subtree.get_symbolic_subtree();
    }

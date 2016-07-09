@@ -16,12 +16,12 @@
 
 namespace spral { namespace ssids { namespace cpu {
 
-/** Class representing a subtree to be factored on the CPU */
+/** Class representing a subtree factorized on the CPU */
 template <bool posdef, size_t BLOCK_SIZE, typename T, typename StackAllocator>
-class CpuSubtree {
+class NumericSubtree {
 public:
    /** Constructor ties into symbolic_subtree */
-   CpuSubtree(SymbolicSubtree const& symbolic_subtree, int nnodes, struct cpu_node_data<T>* nodes)
+   NumericSubtree(SymbolicSubtree const& symbolic_subtree, int nnodes, struct cpu_node_data<T>* nodes)
    : nnodes_(nnodes), nodes_(nodes), symb_(symbolic_subtree)
    {
       /* Associate symbolic nodes to numeric ones; copy tree structure */

@@ -221,10 +221,9 @@ libspral_a_SOURCES += \
 	src/ssids/cpu/AlignedAllocator.hxx \
 	src/ssids/cpu/cpu_iface.f90 \
 	src/ssids/cpu/cpu_iface.hxx \
-	src/ssids/cpu/CpuSubtree.cxx \
-	src/ssids/cpu/CpuSubtree.hxx \
-	src/ssids/cpu/factor.cxx \
 	src/ssids/cpu/factor.hxx \
+	src/ssids/cpu/NumericSubtree.cxx \
+	src/ssids/cpu/NumericSubtree.hxx \
 	src/ssids/cpu/solve.f90 \
 	src/ssids/cpu/smalloc.cxx \
 	src/ssids/cpu/smalloc.hxx \
