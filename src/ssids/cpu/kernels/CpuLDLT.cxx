@@ -35,7 +35,6 @@ template<typename T,
          int BLOCK_SIZE,
          int MAX_ITR=5,
          bool debug=false,
-         bool pivot_order_as_given=false,
          bool LOG=false,
          typename Alloc=AlignedAllocator<T>
          >
@@ -602,7 +601,7 @@ private:
             depend(inout: cdata[blk:1])
          {
             CpuLog::LogTask *t;
-            if(LOG) t = &log.tstart(0, blk, blk, 0, (uint64_t) &CpuBlockLDLT::factor_block<T, BLOCK_SIZE, pivot_order_as_given>, (uint64_t) &blkdata[blk*mblk+blk]);
+            if(LOG) t = &log.tstart(0, blk, blk, 0, (uint64_t) &CpuBlockLDLT::factor_block<T, BLOCK_SIZE>, (uint64_t) &blkdata[blk*mblk+blk]);
             int thread_num = omp_get_thread_num();
             ThreadWork &thread_work = all_thread_work[thread_num];
             blkdata[blk*mblk+blk].lwork = global_work.acquire_block_wait();
@@ -611,7 +610,7 @@ private:
             for(int i=0; i<BLOCK_SIZE; i++)
                lperm[i] = i;
             dblk.create_restore_point();
-            CpuBlockLDLT::factor_block<T, BLOCK_SIZE, pivot_order_as_given>(cdata[blk].oldelim, cdata[blk].perm, dblk.aval, cdata[blk].d, thread_work.ld, u, small, lperm);
+            CpuBlockLDLT::factor_block<T, BLOCK_SIZE>(cdata[blk].oldelim, cdata[blk].perm, dblk.aval, cdata[blk].d, thread_work.ld, u, small, lperm);
             // Initialize threshold check (no lock required becuase task depend)
             cdata[blk].npass = BLOCK_SIZE;
             if(LOG) t->end();

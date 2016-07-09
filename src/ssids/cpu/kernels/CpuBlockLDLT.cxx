@@ -280,7 +280,7 @@ void update_1x1(int p, T *a, const T *ld) {
 /** Factorize a square block without restricting pivots
  *  Expects to be given a square block of size BLOCK_SIZE with numbers of
  *  interest in bottom right part. */
-template<typename T, int BLOCK_SIZE, bool pivot_order_as_given=false>
+template<typename T, int BLOCK_SIZE>
 void factor_block(int from, int *perm, T *a, T *d, T *ldwork, const T u, const T small, int *lperm=nullptr) {
    /* Main loop */
    for(int p=from; p<BLOCK_SIZE; ) {
@@ -288,22 +288,6 @@ void factor_block(int from, int *perm, T *a, T *d, T *ldwork, const T u, const T
       T bestv; // Value of maximum entry
       int t, m; // row and col location of maximum entry
       find_maxloc<T,BLOCK_SIZE>(p, a, bestv, t, m);
-      if(pivot_order_as_given) {
-         // User wants to force natural order, doing 2x2 if approriate
-         // NB: if bestv < 0.0 still zero everything remaining!
-         if(p == BLOCK_SIZE-1) {
-            m = p; t = p;
-         } else {
-            T a11 = fabs(a[p*BLOCK_SIZE+p]);
-            T a21 = fabs(a[p*BLOCK_SIZE+p+1]);
-            T a22 = fabs(a[(p+1)*(BLOCK_SIZE+1)]);
-            if( a21 > a11 && a21 > a22 ) {
-               m = p; t = p+1;
-            } else {
-               m = p; t = p;
-            }
-         }
-      }
 
       // Handle case where everything remaining is small
       // NB: There might be delayed columns!
