@@ -73,7 +73,7 @@ module spral_ssids_cpu_subtree
             aval, scaling, alloc, options, stats) &
             bind(C, name="spral_ssids_cpu_create_num_subtree_dbl")
          use, intrinsic :: iso_c_binding
-         import :: cpu_node_data, cpu_factor_options, cpu_factor_stats
+         import :: cpu_factor_options, cpu_factor_stats
          implicit none
          logical(C_BOOL), value :: posdef
          type(C_PTR), value :: symbolic_subtree

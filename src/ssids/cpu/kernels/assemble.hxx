@@ -12,6 +12,7 @@
 
 #include <cstring>
 #include "../smalloc.hxx"
+#include "../NumericNode.hxx"
 #include "../SymbolicSubtree.hxx"
 
 namespace spral { namespace ssids { namespace cpu {
@@ -22,17 +23,17 @@ void assemble_node(
       bool posdef,
       int ni, // FIXME: remove with debug
       SymbolicNode const& snode,
-      struct cpu_node_data<T> *const node,
-      void *const alloc,
-      StackAllocator *stalloc_odd,
-      StackAllocator *stalloc_even,
-      int *const map,
-      const T *const aval,
-      const T *const scaling
+      NumericNode<T>* node,
+      void* alloc,
+      StackAllocator* stalloc_odd,
+      StackAllocator* stalloc_even,
+      int* map,
+      T const* aval,
+      T const* scaling
       ) {
    /* Count incoming delays and determine size of node */
    node->ndelay_in = 0;
-   for(struct cpu_node_data<T> *child=node->first_child; child!=NULL; child=child->next_child) {
+   for(auto* child=node->first_child; child!=NULL; child=child->next_child) {
       node->ndelay_in += child->ndelay_out;
    }
    int nrow = snode.nrow + node->ndelay_in;
@@ -100,7 +101,7 @@ void assemble_node(
          map[ snode.rlist[i] ] = i + node->ndelay_in;
       /* Loop over children adding contributions */
       int delay_col = snode.ncol;
-      for(struct cpu_node_data<T> *child=node->first_child; child!=NULL; child=child->next_child) {
+      for(auto* child=node->first_child; child!=NULL; child=child->next_child) {
          SymbolicNode const& csnode = *child->symb;
          /* Handle delays - go to back of node
           * (i.e. become the last rows as in lower triangular format) */

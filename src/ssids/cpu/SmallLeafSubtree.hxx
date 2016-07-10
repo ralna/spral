@@ -33,7 +33,7 @@ template <bool posdef,
 class SmallLeafSubtree {
 public:
    /** Constructor performs analyse phase work */
-   SmallLeafSubtree(int nnodes, struct cpu_node_data<T>* const nodes)
+   SmallLeafSubtree(int nnodes, NumericNode<T>* const nodes)
    : nnodes_(nnodes), nodes_(nodes)
    {}
    void factor(void* const alloc, StackAllocator &stalloc_odd, StackAllocator &stalloc_even, int* map, Workspace<T> &work, T const* aval, T const* scaling, struct cpu_factor_options const* options, struct cpu_factor_stats* stats) {
@@ -63,7 +63,7 @@ public:
    }
 private:
    int nnodes_;
-   struct cpu_node_data<T>* const nodes_;
+   struct NumericNode<T>* const nodes_;
 };
 
 }}} /* namespaces spral::ssids::cpu */

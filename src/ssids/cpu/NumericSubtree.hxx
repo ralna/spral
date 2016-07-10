@@ -12,6 +12,7 @@
 
 #include "cpu_iface.hxx"
 #include "factor.hxx"
+#include "NumericNode.hxx"
 #include "StackAllocator.hxx"
 #include "SymbolicSubtree.hxx"
 
@@ -329,7 +330,7 @@ public:
    SymbolicSubtree const& get_symbolic_subtree() { return symb_; }
 
 private:
-   std::vector<struct cpu_node_data<T>> nodes_;
+   std::vector<NumericNode<T>> nodes_;
    SymbolicSubtree const& symb_;
 };
 

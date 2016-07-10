@@ -1,43 +1,12 @@
 module spral_ssids_cpu_iface
    use, intrinsic :: iso_c_binding
-   use spral_ssids_datatypes, only : ssids_options, node_type, long, &
-                                     DEBUG_PRINT_LEVEL
+   use spral_ssids_datatypes, only : ssids_options
    use spral_ssids_inform, only : ssids_inform_base
    implicit none
 
    private
-   public :: cpu_node_data, cpu_factor_options, cpu_factor_stats
+   public :: cpu_factor_options, cpu_factor_stats
    public :: cpu_copy_options_in, cpu_copy_stats_out
-
-   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-   type, bind(C) :: SymbolicNode
-      integer(C_INT) :: idx
-      integer(C_INT) :: nrow
-      integer(C_INT) :: ncol
-      type(C_PTR) :: first_child
-      type(C_PTR) :: next_child
-      type(C_PTR) :: rlist
-      integer(C_INT) :: num_a
-      type(C_PTR) :: amap
-      logical(C_BOOL) :: even
-   end type SymbolicNode
-
-   ! See comments in C++ definition in factor_gpu.cxx for detail
-   type, bind(C) :: cpu_node_data
-      ! Fixed data from analyse
-      type(C_PTR) :: first_child
-      type(C_PTR) :: next_child
-      type(C_PTR) :: symb
-
-      ! Data that changes during factorize
-      integer(C_INT) :: ndelay_in
-      integer(C_INT) :: ndelay_out
-      integer(C_INT) :: nelim
-      type(C_PTR) :: lcol
-      type(C_PTR) :: perm
-      type(C_PTR) :: contrib
-   end type cpu_node_data
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
