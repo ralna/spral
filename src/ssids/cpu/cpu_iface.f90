@@ -7,7 +7,7 @@ module spral_ssids_cpu_iface
 
    private
    public :: cpu_node_data, cpu_factor_options, cpu_factor_stats
-   public :: setup_cpu_data, extract_cpu_data, cpu_copy_options_in
+   public :: cpu_copy_options_in, cpu_copy_stats_out
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -18,6 +18,8 @@ module spral_ssids_cpu_iface
       type(C_PTR) :: first_child
       type(C_PTR) :: next_child
       type(C_PTR) :: rlist
+      integer(C_INT) :: num_a
+      type(C_PTR) :: amap
       logical(C_BOOL) :: even
    end type SymbolicNode
 
@@ -27,10 +29,6 @@ module spral_ssids_cpu_iface
       type(C_PTR) :: first_child
       type(C_PTR) :: next_child
       type(C_PTR) :: symb
-
-      ! Data about A
-      integer(C_INT) :: num_a
-      type(C_PTR) :: amap
 
       ! Data that changes during factorize
       integer(C_INT) :: ndelay_in
@@ -66,30 +64,6 @@ module spral_ssids_cpu_iface
 
 contains
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-subroutine setup_cpu_data(nnodes, cnodes, nptr, nlist)
-   integer, intent(in) :: nnodes
-   type(cpu_node_data), dimension(nnodes+1), target, intent(out) :: cnodes
-   integer, dimension(nnodes+1), intent(in) :: nptr
-   integer, dimension(2,*), target, intent(in) :: nlist
-
-   integer :: node, parent
-
-   !
-   ! Setup node data
-   !
-   ! Basic data and initialize linked lists
-   do node = 1, nnodes
-      ! Data about factors
-      cnodes(node)%symb = C_NULL_PTR
-
-      ! Data about A
-      cnodes(node)%num_a = nptr(node+1) - nptr(node)
-      cnodes(node)%amap = C_LOC(nlist(1,nptr(node)))
-   end do
-end subroutine setup_cpu_data
-
 subroutine cpu_copy_options_in(foptions, coptions)
    type(ssids_options), intent(in) :: foptions
    type(cpu_factor_options), intent(out) :: coptions
@@ -101,52 +75,21 @@ subroutine cpu_copy_options_in(foptions, coptions)
    coptions%cpu_task_block_size         = foptions%cpu_task_block_size
 end subroutine cpu_copy_options_in
 
-subroutine extract_cpu_data(nnodes, cnodes, fnodes, cstats, finform)
-   integer, intent(in) :: nnodes
-   type(cpu_node_data), dimension(nnodes+1), intent(in) :: cnodes
-   type(node_type), dimension(nnodes+1), intent(out) :: fnodes
+subroutine cpu_copy_stats_out(n, cstats, finform)
+   integer, intent(in) :: n
    type(cpu_factor_stats), intent(in) :: cstats
    class(ssids_inform_base), intent(inout) :: finform
-
-   integer :: node, nrow, ncol
-   integer :: rank
-   type(SymbolicNode), pointer :: snode
-
-   ! Copy factors (scalars and pointers)
-   rank = 0
-   do node = 1, nnodes
-      ! Components we copy from C version
-      call c_f_pointer(cnodes(node)%symb, snode)
-      rank = rank + snode%ncol
-      nrow = snode%nrow + cnodes(node)%ndelay_in
-      ncol = snode%ncol + cnodes(node)%ndelay_in
-      fnodes(node)%nelim = cnodes(node)%nelim
-      fnodes(node)%ndelay = cnodes(node)%ndelay_in
-      call C_F_POINTER(cnodes(node)%lcol, fnodes(node)%lcol, &
-         shape=(/ (2_long+nrow)*ncol /) )
-      call C_F_POINTER(cnodes(node)%perm, fnodes(node)%perm, &
-         shape=(/ ncol /) )
-
-      ! Components we abdicate
-      fnodes(node)%rdptr = -1
-      fnodes(node)%ncpdb = -1
-      fnodes(node)%gpu_lcol = C_NULL_PTR
-      nullify(fnodes(node)%rsmptr)
-      nullify(fnodes(node)%ismptr)
-      fnodes(node)%rsmsa = -1
-      fnodes(node)%ismsa = -1
-   end do
 
    ! Copy stats
    finform%flag         = cstats%flag
    finform%num_delay    = cstats%num_delay
    finform%num_neg      = cstats%num_neg
    finform%num_two      = cstats%num_two
-   finform%matrix_rank  = rank - cstats%num_zero
+   finform%matrix_rank  = n - cstats%num_zero
    finform%maxfront     = cstats%maxfront
    !print *, "Elim at (pass) = ", cstats%elim_at_pass(:)
    !print *, "Elim at (itr) = ", cstats%elim_at_itr(:)
-end subroutine extract_cpu_data
+end subroutine cpu_copy_stats_out
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 end module spral_ssids_cpu_iface

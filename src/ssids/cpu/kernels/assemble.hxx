@@ -65,9 +65,9 @@ void assemble_node(
    /* Add A */
    if(scaling) {
       /* Scaling to apply */
-      for(int i=0; i<node->num_a; i++) {
-         long src  = node->amap[2*i+0] - 1; // amap contains 1-based values
-         long dest = node->amap[2*i+1] - 1; // amap contains 1-based values
+      for(int i=0; i<snode.num_a; i++) {
+         long src  = snode.amap[2*i+0] - 1; // amap contains 1-based values
+         long dest = snode.amap[2*i+1] - 1; // amap contains 1-based values
          int c = dest / snode.nrow;
          int r = dest % snode.nrow;
          long k = c*nrow + r;
@@ -78,9 +78,9 @@ void assemble_node(
       }
    } else {
       /* No scaling to apply */
-      for(int i=0; i<node->num_a; i++) {
-         long src  = node->amap[2*i+0] - 1; // amap contains 1-based values
-         long dest = node->amap[2*i+1] - 1; // amap contains 1-based values
+      for(int i=0; i<snode.num_a; i++) {
+         long src  = snode.amap[2*i+0] - 1; // amap contains 1-based values
+         long dest = snode.amap[2*i+1] - 1; // amap contains 1-based values
          int c = dest / snode.nrow;
          int r = dest % snode.nrow;
          long k = c*nrow + r;

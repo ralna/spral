@@ -13,12 +13,6 @@ struct cpu_node_data {
    struct cpu_node_data<T>* next_child; // Pointer to parent's next child
    SymbolicNode const* symb; // Symbolic node associated with this one
 
-   /* Data about A:
-    * aval[i] goes into lcol[ amap[i] ] if there are no delays
-    */
-   int num_a; // Number of entries from A
-   const int *const amap; // Map from A to node (length 2*num_a)
-
    /* Data that changes during factorize */
    int ndelay_in; // Number of delays arising from children
    int ndelay_out; // Number of delays arising to push into parent

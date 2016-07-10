@@ -32,7 +32,6 @@ module spral_ssids_cpu_subtree
       type(cpu_symbolic_subtree), pointer :: symbolic
       type(smalloc_type), pointer :: alloc=>null() ! Linked list of memory pages
          ! pointed to by nodes variable
-      type(node_type), dimension(:), allocatable :: nodes
       type(cpu_node_data), dimension(:), allocatable :: cnodes
       type(contrib_type), pointer :: contrib
       type(C_PTR) :: csubtree
@@ -50,7 +49,7 @@ module spral_ssids_cpu_subtree
 
    interface
       type(C_PTR) function c_create_symbolic_subtree(n, nnodes, sptr, sparent, &
-            rptr, rlist)&
+            rptr, rlist, nptr, nlist) &
             bind(C, name="spral_ssids_cpu_create_symbolic_subtree")
          use, intrinsic :: iso_c_binding
          implicit none
@@ -60,6 +59,8 @@ module spral_ssids_cpu_subtree
          integer(C_INT), dimension(nnodes+1), intent(in) :: sparent
          integer(C_LONG), dimension(nnodes+1), intent(in) :: rptr
          integer(C_INT), dimension(*), intent(in) :: rlist
+         integer(C_INT), dimension(*), intent(in) :: nptr
+         integer(C_INT), dimension(*), intent(in) :: nlist
       end function c_create_symbolic_subtree
 
       subroutine c_destroy_symbolic_subtree(subtree) &
@@ -201,7 +202,8 @@ function construct_cpu_symbolic_subtree(n, nnodes, sptr, sparent, rptr, &
 
    ! Call C++ subtree analyse
    this%csubtree = &
-      c_create_symbolic_subtree(n, nnodes, sptr, sparent, rptr, rlist)
+      c_create_symbolic_subtree(n, nnodes, sptr, sparent, rptr, rlist, nptr, &
+         nlist)
 
 end function construct_cpu_symbolic_subtree
 
@@ -245,15 +247,9 @@ function factor(this, posdef, aval, options, inform, scaling)
          int(options%multiplier*real(this%nfactor,wp)+2*this%n,kind=long)), st)
    if(st.ne.0) goto 10
 
-   ! Allocate Fortran nodes structure
-   allocate(cpu_factor%nodes(this%nnodes+1), stat=st)
-   if(st.ne.0) goto 10
-   cpu_factor%nodes(:)%ndelay = 0
-
    ! Allocate cnodes and setup for main call
    allocate(cpu_factor%cnodes(this%nnodes+1), stat=st)
    if(st.ne.0) goto 10
-   call setup_cpu_data(this%nnodes, cpu_factor%cnodes, this%nptr, this%nlist)
 
    ! Call C++ factor routine
    cpu_factor%posdef = posdef
@@ -269,10 +265,9 @@ function factor(this, posdef, aval, options, inform, scaling)
    endif
 
    ! Extract to Fortran data structures
-   call extract_cpu_data(this%nnodes, cpu_factor%cnodes, cpu_factor%nodes, &
-      cstats, inform)
+   call cpu_copy_stats_out(this%n, cstats, inform)
 
-   ! Succes, set result and return
+   ! Success, set result and return
    factor => cpu_factor
    return
 

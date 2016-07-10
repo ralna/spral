@@ -23,6 +23,8 @@ struct SymbolicNode {
    SymbolicNode* first_child; //< Pointer to first child in linked list
    SymbolicNode* next_child; //< Pointer to second child in linked list
    int const* rlist; //< Pointer to row lists
+   int num_a; //< Number of entries mapped from A to L
+   int const* amap; //< Pointer to map from A to L locations
    bool even; //< Indicates which stack we're using (odd or even distance
               //< from root)
 };
@@ -30,7 +32,7 @@ struct SymbolicNode {
 /** Symbolic factorization of a subtree to be factored on the CPU */
 class SymbolicSubtree {
 public:
-   SymbolicSubtree(int n, int nnodes, int const* sptr, int const* sparent, long const* rptr, int const* rlist)
+   SymbolicSubtree(int n, int nnodes, int const* sptr, int const* sparent, long const* rptr, int const* rlist, int const* nptr, int const* nlist)
    : n(n), nnodes_(nnodes), nodes_(nnodes+1)
    {
       /* Fill out basic details */
@@ -40,7 +42,9 @@ public:
          nodes_[ni].ncol = sptr[ni+1] - sptr[ni];
          nodes_[ni].first_child = nullptr;
          nodes_[ni].next_child = nullptr;
-         nodes_[ni].rlist = &rlist[rptr[ni]-1]; // NB: rptr is Fortran indexed
+         nodes_[ni].rlist = &rlist[rptr[ni]-1]; // rptr is Fortran indexed
+         nodes_[ni].num_a = nptr[ni+1] - nptr[ni];
+         nodes_[ni].amap = &nlist[2*(nptr[ni]-1)]; // nptr is Fortran indexed
       }
       nodes_[nnodes_].first_child = nullptr; // List of roots
       /* Build child linked lists */
