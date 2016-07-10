@@ -114,7 +114,7 @@ public:
       }
    }
 
-   void solve_fwd(int nrhs, double* x, int ldx) {
+   void solve_fwd(int nrhs, double* x, int ldx) const {
       /* Allocate memory */
       double* xlocal = new double[nrhs*symb_.n];
       int* map_alloc = (!posdef) ? new int[symb_.n] : nullptr; // only indef
@@ -169,7 +169,7 @@ public:
    }
 
    template <bool do_diag, bool do_bwd>
-   void solve_diag_bwd_inner(int nrhs, double* x, int ldx) {
+   void solve_diag_bwd_inner(int nrhs, double* x, int ldx) const {
       if(posdef && !do_bwd) return; // diagonal solve is a no-op for posdef
 
       /* Allocate memory - map only needed for indef bwd/diag_bwd solve */
@@ -234,15 +234,15 @@ public:
       delete[] xlocal;
    }
 
-   void solve_diag(int nrhs, double* x, int ldx) {
+   void solve_diag(int nrhs, double* x, int ldx) const {
       solve_diag_bwd_inner<true, false>(nrhs, x, ldx);
    }
 
-   void solve_diag_bwd(int nrhs, double* x, int ldx) {
+   void solve_diag_bwd(int nrhs, double* x, int ldx) const {
       solve_diag_bwd_inner<true, true>(nrhs, x, ldx);
    }
 
-   void solve_bwd(int nrhs, double* x, int ldx) {
+   void solve_bwd(int nrhs, double* x, int ldx) const {
       solve_diag_bwd_inner<false, true>(nrhs, x, ldx);
    }
 
@@ -290,6 +290,20 @@ public:
                   i+=1;
                }
             }
+         }
+      }
+   }
+
+   /** Allows user to alter D values, indef case only. */
+   void alter(double const* d) {
+      for(int ni=0; ni<symb_.nnodes_; ++ni) {
+         int blkm = symb_[ni].nrow + nodes_[ni].ndelay_in;
+         int blkn = symb_[ni].ncol + nodes_[ni].ndelay_in;
+         int nelim = nodes_[ni].nelim;
+         double* dptr = &nodes_[ni].lcol[blkm*blkn];
+         for(int i=0; i<nelim; ++i) {
+            dptr[2*i+0] = *(d++);
+            dptr[2*i+1] = *(d++);
          }
       }
    }

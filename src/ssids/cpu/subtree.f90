@@ -146,6 +146,15 @@ module spral_ssids_cpu_subtree
          type(C_PTR), value :: piv_order
          type(C_PTR), value :: d
       end subroutine c_subtree_enquire
+
+      subroutine c_subtree_alter(posdef, subtree, d) &
+            bind(C, name="spral_ssids_cpu_subtree_alter_dbl")
+         use, intrinsic :: iso_c_binding
+         implicit none
+         logical(C_BOOL), value :: posdef
+         type(C_PTR), value :: subtree
+         real(C_DOUBLE), dimension(*), intent(in) :: d
+      end subroutine c_subtree_alter
    end interface
 
 contains
@@ -374,31 +383,7 @@ subroutine alter(this, d)
    class(cpu_numeric_subtree), target, intent(inout) :: this
    real(wp), dimension(2,*), intent(in) :: d
 
-   integer :: blkm, blkn
-   integer(long) :: ip
-   integer :: j
-   integer :: nd
-   integer :: node
-   integer :: piv
-
-   type(node_type), pointer :: nptr
-
-   associate(symbolic => this%symbolic)
-      piv = 1
-      do node = 1, symbolic%nnodes
-         nptr => this%nodes(node)
-         nd = nptr%ndelay
-         blkn = symbolic%sptr(node+1) - symbolic%sptr(node) + nd
-         blkm = int(symbolic%rptr(node+1) - symbolic%rptr(node)) + nd
-         ip = blkm*(blkn+0_long) + 1
-         do j = 1, nptr%nelim
-            nptr%lcol(ip)   = d(1,piv)
-            nptr%lcol(ip+1) = d(2,piv)
-            ip = ip + 2
-            piv = piv + 1
-         end do
-      end do
-   end associate
+   call c_subtree_alter(this%posdef, this%csubtree, d)
 end subroutine alter
 
 end module spral_ssids_cpu_subtree
