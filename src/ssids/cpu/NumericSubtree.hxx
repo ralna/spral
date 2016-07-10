@@ -12,31 +12,51 @@
 
 #include "cpu_iface.hxx"
 #include "factor.hxx"
+#include "StackAllocator.hxx"
 #include "SymbolicSubtree.hxx"
 
 namespace spral { namespace ssids { namespace cpu {
 
 /** Class representing a subtree factorized on the CPU */
-template <bool posdef, size_t BLOCK_SIZE, typename T, typename StackAllocator>
+template <bool posdef, size_t BLOCK_SIZE, typename T, size_t PAGE_SIZE>
 class NumericSubtree {
 public:
-   /** Constructor ties into symbolic_subtree */
-   NumericSubtree(SymbolicSubtree const& symbolic_subtree, int nnodes, struct cpu_node_data<T>* nodes)
-   : nnodes_(nnodes), nodes_(nodes), symb_(symbolic_subtree)
+   /** Performs factorization */
+   NumericSubtree(
+         SymbolicSubtree const& symbolic_subtree,
+         struct cpu_node_data<T>* nodes,
+         T const* aval,
+         T const* scaling,
+         void* alloc,
+         struct cpu_factor_options const* options,
+         struct cpu_factor_stats* stats)
+   : nodes_(nodes), symb_(symbolic_subtree)
    {
+      /* Initalise stats */
+		stats->flag = SSIDS_SUCCESS;
+		stats->num_delay = 0;
+		stats->num_neg = 0;
+		stats->num_two = 0;
+		stats->num_zero = 0;
+		stats->maxfront = 0;
+		for(int i=0; i<5; i++) stats->elim_at_pass[i] = 0;
+		for(int i=0; i<5; i++) stats->elim_at_itr[i] = 0;
       /* Associate symbolic nodes to numeric ones; copy tree structure */
-      for(int ni=0; ni<nnodes_+1; ++ni) {
+      for(int ni=0; ni<symb_.nnodes_+1; ++ni) {
          nodes_[ni].symb = &symbolic_subtree[ni];
          auto* fc = symbolic_subtree[ni].first_child;
          nodes_[ni].first_child = fc ? &nodes_[fc->idx] : nullptr;
          auto* nc = symbolic_subtree[ni].next_child;
          nodes_[ni].next_child = nc ? &nodes_[nc->idx] :  nullptr;
       }
-   }
-   void factor(T const* aval, T const* scaling, void *const alloc, StackAllocator &stalloc_odd, StackAllocator &stalloc_even, Workspace<T> &work, int* map, struct cpu_factor_options const* options, struct cpu_factor_stats* stats) {
+
+      /* Allocate workspace */
+		StackAllocator<PAGE_SIZE> stalloc_odd, stalloc_even;
+		Workspace<T> work(PAGE_SIZE);
+		int *map = new int[symb_.n+1];
 
       /* Main loop: Iterate over nodes in order */
-      for(int ni=0; ni<nnodes_; ++ni) {
+      for(int ni=0; ni<symb_.nnodes_; ++ni) {
          // Assembly
          assemble_node
             (posdef, ni, symb_[ni], &nodes_[ni], alloc, &stalloc_odd,
@@ -53,6 +73,9 @@ public:
             (symb_[ni], &nodes_[ni], &stalloc_odd, &stalloc_even, &work);
       }
 
+		// Release resources
+		delete[] map;
+
       // Count stats
       // FIXME: gross hack for compat with bub (which needs to differentiate
       // between a natural zero and a 2x2 factor's second entry without counting)
@@ -61,7 +84,7 @@ public:
       if(posdef) {
          // no real changes to stats from zero initialization
       } else { // indefinite
-         for(int ni=0; ni<nnodes_; ni++) {
+         for(int ni=0; ni<symb_.nnodes_; ni++) {
             int m = symb_[ni].nrow + nodes_[ni].ndelay_in;
             int n = symb_[ni].ncol + nodes_[ni].ndelay_in;
             T *d = nodes_[ni].lcol + m*n;
@@ -97,7 +120,7 @@ public:
       int* map_alloc = (!posdef) ? new int[symb_.n] : nullptr; // only indef
 
       /* Main loop */
-      for(int ni=0; ni<nnodes_; ++ni) {
+      for(int ni=0; ni<symb_.nnodes_; ++ni) {
          int m = symb_[ni].nrow;
          int n = symb_[ni].ncol;
          int nelim = (posdef) ? n
@@ -155,7 +178,7 @@ public:
                                            : nullptr;
 
       /* Perform solve */
-      for(int ni=nnodes_-1; ni>=0; --ni) {
+      for(int ni=symb_.nnodes_-1; ni>=0; --ni) {
          int m = symb_[ni].nrow;
          int n = symb_[ni].ncol;
          int nelim = (posdef) ? n
@@ -223,9 +246,28 @@ public:
       solve_diag_bwd_inner<false, true>(nrhs, x, ldx);
    }
 
+	void print() const {
+		for(int node=0; node<symb_.nnodes_; node++) {
+			printf("== Node %d ==\n", node);
+			int m = symb_[node].nrow + nodes_[node].ndelay_in;
+			int n = symb_[node].ncol + nodes_[node].ndelay_in;
+         int nelim = nodes_[node].nelim;
+			int const* rlist = &symb_[node].rlist[ symb_[node].ncol ];
+			for(int i=0; i<m; ++i) {
+				if(i<n) printf("%d%s:", nodes_[node].perm[i], (i<nelim)?"X":"D");
+				else    printf("%d:", rlist[i-n]);
+				for(int j=0; j<n; j++) printf(" %10.2e", nodes_[node].lcol[j*m+i]);
+            T const* d = &nodes_[node].lcol[m*n];
+				if(!posdef && i<nelim)
+               printf("  d: %10.2e %10.2e", d[2*i+0], d[2*i+1]);
+		      printf("\n");
+			}
+		}
+	}
+
    SymbolicSubtree const& get_symbolic_subtree() { return symb_; }
+
 private:
-   int nnodes_;
    struct cpu_node_data<T>* nodes_;
    SymbolicSubtree const& symb_;
 };

@@ -10,6 +10,7 @@
  */
 #pragma once
 
+#include <cstddef>
 #include <vector>
 
 namespace spral { namespace ssids { namespace cpu {
@@ -67,6 +68,9 @@ public:
 private:
    int nnodes_;
    std::vector<SymbolicNode> nodes_;
+
+   template <bool posdef, size_t BLOCK_SIZE, typename T, size_t PAGE_SIZE>
+   friend class NumericSubtree;
 };
 
 }}} /* end of namespace spral::ssids::cpu */
