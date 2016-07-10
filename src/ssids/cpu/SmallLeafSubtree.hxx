@@ -11,8 +11,6 @@
 #pragma once
 
 /* SPRAL headers */
-#include "kernels/assemble.hxx"
-#include "factor.hxx"
 
 namespace spral { namespace ssids { namespace cpu {
 
@@ -26,44 +24,68 @@ namespace spral { namespace ssids { namespace cpu {
  * It is expected that the subtree will fit within L2 cache exclusively owned
  * by the executing thread.
  */
-template <bool posdef,
-          int BLOCK_SIZE,
-          typename T,
-          typename StackAllocator>
 class SmallLeafSubtree {
+private:
+   class Node {
+   public:
+      int nrow;
+      int ncol;
+      int sparent;
+      int* rlist;
+   };
+
 public:
    /** Constructor performs analyse phase work */
-   SmallLeafSubtree(int nnodes, NumericNode<T>* const nodes)
-   : nnodes_(nnodes), nodes_(nodes)
-   {}
-   void factor(void* const alloc, StackAllocator &stalloc_odd, StackAllocator &stalloc_even, int* map, Workspace<T> &work, T const* aval, T const* scaling, struct cpu_factor_options const* options, struct cpu_factor_stats* stats) {
-      /* Main loop: Iterate over nodes in order */
-      for(int ni=0; ni<nnodes_; ++ni) {
-         // Assembly
-         assemble_node
-            (posdef, ni, &nodes_[ni], alloc, &stalloc_odd, &stalloc_even, map,
-             aval, scaling);
-         // Update stats
-         int nrow = nodes_[ni].nrow_expected + nodes_[ni].ndelay_in;
-         stats->maxfront = std::max(stats->maxfront, nrow);
-         // Factorization
-         factor_node
-            <posdef, T, BLOCK_SIZE>
-            (ni, &nodes_[ni], options, stats);
-         // Form update
-         calculate_update<posdef>
-            (&nodes_[ni], &stalloc_odd, &stalloc_even, &work);
+   SmallLeafSubtree(int sa, int en, int const* sptr, int const* sparent, long const* rptr, int const* rlist, int const* nptr, int const* nlist)
+   : nnodes_(en-sa+1), nodes_(nnodes_), rlist_(nullptr), nptr_(nptr), nlist_(nlist)
+   {
+      /* Setup basic node information */
+      nfactor_ = 0;
+      for(int ni=sa; ni<en; ++ni) {
+         nodes_[ni-sa].nrow = rptr[ni+1] - rptr[ni];
+         nodes_[ni-sa].ncol = sptr[ni+1] - sptr[ni];
+         nodes_[ni-sa].sparent = sparent[ni]-sa-1; // sparent is Fortran indexed
+         nodes_[ni-sa].rlist = &rlist_[rptr[ni]-rptr[sa]];
+         nfactor_ += nodes_[ni-sa].nrow * nodes_[ni-sa].ncol;
+      }
+      /* Construct rlist_ being offsets into parent node */
+      rlist_ = new int[rptr[nnodes_] - rptr[0]];
+      for(int ni=sa; ni<en; ++ni) {
+         int const* ilist = &rlist[rptr[ni]-1]; // rptr is Fortran indexed
+         int pnode = sparent[ni];
+         int const* jlist = &rlist[rptr[pnode]-1]; // rptr is Fortran indexed
+         int const* jstart = jlist;
+         int *outlist = nodes_[ni-sa].rlist;
+         for(int i=0; i<nodes_[ni-sa].nrow; ++i) {
+            for(; *ilist != *jlist; ++jlist); // Finds match in jlist
+            *(outlist++) = jlist - jstart;
+         }
       }
    }
-   void solve_fwd() {
+   ~SmallLeafSubtree() {
+      delete[] rlist_;
    }
-   void solve_diag() {
-   }
-   void solve_bwd() {
+   template <typename T>
+   T* factor(T const* aval, T const* scaling, T* lcol) {
+      /* Zero factors */
+      memset(lcol, 0, nfactor_*sizeof(T));
+      /* Copy a values */
+      for(int i=0; i<nptr_[nnodes_+1]; ++i) {
+         // FIXME
+      }
+      /* Perform factorization */
+      for(int ni=0; ni<nnodes_; ++ni) {
+         // FIXME
+      }
+      // FIXME: Return contribution block
    }
 private:
    int nnodes_;
-   struct NumericNode<T>* const nodes_;
+   int nfactor_;
+   std::vector<Node> nodes_;
+   int* rlist_;
+   int const* nptr_;
+   int const* nlist_;
 };
 
 }}} /* namespaces spral::ssids::cpu */
