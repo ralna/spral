@@ -14,13 +14,7 @@ module spral_ssids_cpu_subtree
 
    type, extends(symbolic_subtree_base) :: cpu_symbolic_subtree
       integer :: n
-      integer :: nnodes
       integer(long) :: nfactor ! Total number of entries in L (expected)
-      integer, dimension(:), pointer :: sptr
-      integer(long), dimension(:), pointer :: rptr
-      integer, dimension(:), pointer :: rlist
-      integer, dimension(:), pointer :: nptr
-      integer, dimension(:,:), pointer :: nlist
       type(C_PTR) :: csubtree
    contains
       procedure :: factor
@@ -183,12 +177,6 @@ function construct_cpu_symbolic_subtree(n, nnodes, sptr, sparent, rptr, &
 
    ! Store basic details
    this%n = n
-   this%nnodes = nnodes
-   this%nptr => nptr
-   this%nlist => nlist
-   this%sptr => sptr
-   this%rptr => rptr
-   this%rlist => rlist
 
    ! Count size of factors
    this%nfactor = 0
