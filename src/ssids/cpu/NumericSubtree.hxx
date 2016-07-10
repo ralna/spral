@@ -24,13 +24,12 @@ public:
    /** Performs factorization */
    NumericSubtree(
          SymbolicSubtree const& symbolic_subtree,
-         struct cpu_node_data<T>* nodes,
          T const* aval,
          T const* scaling,
          void* alloc,
          struct cpu_factor_options const* options,
          struct cpu_factor_stats* stats)
-   : nodes_(nodes), symb_(symbolic_subtree)
+   : nodes_(symbolic_subtree.nnodes_+1), symb_(symbolic_subtree)
    {
       /* Initalise stats */
 		stats->flag = SSIDS_SUCCESS;
@@ -330,7 +329,7 @@ public:
    SymbolicSubtree const& get_symbolic_subtree() { return symb_; }
 
 private:
-   struct cpu_node_data<T>* nodes_;
+   std::vector<struct cpu_node_data<T>> nodes_;
    SymbolicSubtree const& symb_;
 };
 

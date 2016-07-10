@@ -32,7 +32,6 @@ module spral_ssids_cpu_subtree
       type(cpu_symbolic_subtree), pointer :: symbolic
       type(smalloc_type), pointer :: alloc=>null() ! Linked list of memory pages
          ! pointed to by nodes variable
-      type(cpu_node_data), dimension(:), allocatable :: cnodes
       type(contrib_type), pointer :: contrib
       type(C_PTR) :: csubtree
    contains
@@ -71,14 +70,13 @@ module spral_ssids_cpu_subtree
       end subroutine c_destroy_symbolic_subtree
 
       type(C_PTR) function c_create_numeric_subtree(posdef, symbolic_subtree, &
-            nodes, aval, scaling, alloc, options, stats) &
+            aval, scaling, alloc, options, stats) &
             bind(C, name="spral_ssids_cpu_create_num_subtree_dbl")
          use, intrinsic :: iso_c_binding
          import :: cpu_node_data, cpu_factor_options, cpu_factor_stats
          implicit none
          logical(C_BOOL), value :: posdef
          type(C_PTR), value :: symbolic_subtree
-         type(cpu_node_data), dimension(*), intent(inout) :: nodes
          real(C_DOUBLE), dimension(*), intent(in) :: aval
          type(C_PTR), value :: scaling
          type(C_PTR), value :: alloc
@@ -247,17 +245,13 @@ function factor(this, posdef, aval, options, inform, scaling)
          int(options%multiplier*real(this%nfactor,wp)+2*this%n,kind=long)), st)
    if(st.ne.0) goto 10
 
-   ! Allocate cnodes and setup for main call
-   allocate(cpu_factor%cnodes(this%nnodes+1), stat=st)
-   if(st.ne.0) goto 10
-
    ! Call C++ factor routine
    cpu_factor%posdef = posdef
    cscaling = C_NULL_PTR
    if(present(scaling)) cscaling = C_LOC(scaling)
    call cpu_copy_options_in(options, coptions)
    cpu_factor%csubtree = &
-      c_create_numeric_subtree(posdef, this%csubtree, cpu_factor%cnodes, &
+      c_create_numeric_subtree(posdef, this%csubtree, &
          aval, cscaling, C_LOC(cpu_factor%alloc), coptions, cstats)
    if(cstats%flag.ne.0) then
       inform%flag = cstats%flag

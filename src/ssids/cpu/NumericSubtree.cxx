@@ -32,7 +32,6 @@ extern "C"
 void* spral_ssids_cpu_create_num_subtree_dbl(
       bool posdef,
       void const* symbolic_subtree_ptr,
-      struct cpu_node_data<double>* nodes,
       const double *const aval, // Values of A
       const double *const scaling, // Scaling vector (NULL if none)
       void *const alloc,      // Pointer to Fortran allocator structure
@@ -45,7 +44,7 @@ void* spral_ssids_cpu_create_num_subtree_dbl(
       try {
          auto* subtree = new NumericSubtree
             <true, BLOCK_SIZE, T, PAGE_SIZE>
-            (symbolic_subtree, nodes, aval, scaling, alloc, options, stats);
+            (symbolic_subtree, aval, scaling, alloc, options, stats);
          if(options->print_level > 9999) {
             printf("Final factors:\n");
             subtree->print();
@@ -58,7 +57,7 @@ void* spral_ssids_cpu_create_num_subtree_dbl(
    } else { /* indef */
       auto* subtree = new NumericSubtree
          <false, BLOCK_SIZE, T, PAGE_SIZE>
-         (symbolic_subtree, nodes, aval, scaling, alloc, options, stats);
+         (symbolic_subtree, aval, scaling, alloc, options, stats);
       if(options->print_level > 9999) {
          printf("Final factors:\n");
          subtree->print();
