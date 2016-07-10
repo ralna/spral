@@ -246,6 +246,54 @@ public:
       solve_diag_bwd_inner<false, true>(nrhs, x, ldx);
    }
 
+   /** Returns information on diagonal entries and/or pivot order.
+    * Note that piv_order is only set in indefinite case.
+    * One of piv_order or d may be null in indefinite case.
+    */
+   void enquire(int *piv_order, double* d) const {
+      if(posdef) {
+         for(int ni=0; ni<symb_.nnodes_; ++ni) {
+            int blkm = symb_[ni].nrow;
+            int nelim = symb_[ni].ncol;
+            for(int i=0; i<nelim; ++i)
+               *(d++) = nodes_[ni].lcol[i*(blkm+1)];
+         }
+      } else { /*indef*/
+         for(int ni=0, piv=0; ni<symb_.nnodes_; ++ni) {
+            int blkm = symb_[ni].nrow + nodes_[ni].ndelay_in;
+            int blkn = symb_[ni].ncol + nodes_[ni].ndelay_in;
+            int nelim = nodes_[ni].nelim;
+            double const* dptr = &nodes_[ni].lcol[blkm*blkn];
+            for(int i=0; i<nelim; ) {
+               if(dptr[2*i+1] != 0.0) {
+                  /* 2x2 pivot */
+                  if(piv_order) {
+                     piv_order[nodes_[ni].perm[i]-1] = -(piv++);
+                     piv_order[nodes_[ni].perm[i+1]-1] = -(piv++);
+                  }
+                  if(d) {
+                     *(d++) = dptr[2*i+0];
+                     *(d++) = dptr[2*i+1];
+                     *(d++) = dptr[2*i+2];
+                     *(d++) = 0.0;
+                  }
+                  i+=2;
+               } else {
+                  /* 1x1 pivot */
+                  if(piv_order) {
+                     piv_order[nodes_[ni].perm[i]-1] = (piv++);
+                  }
+                  if(d) {
+                     *(d++) = dptr[2*i+0];
+                     *(d++) = 0.0;
+                  }
+                  i+=1;
+               }
+            }
+         }
+      }
+   }
+
 	void print() const {
 		for(int node=0; node<symb_.nnodes_; node++) {
 			printf("== Node %d ==\n", node);

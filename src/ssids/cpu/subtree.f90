@@ -136,6 +136,16 @@ module spral_ssids_cpu_subtree
          real(C_DOUBLE), dimension(*), intent(inout) :: x
          integer(C_INT), value :: ldx
       end subroutine c_subtree_solve_bwd
+
+      subroutine c_subtree_enquire(posdef, subtree, piv_order, d) &
+            bind(C, name="spral_ssids_cpu_subtree_enquire_dbl")
+         use, intrinsic :: iso_c_binding
+         implicit none
+         logical(C_BOOL), value :: posdef
+         type(C_PTR), value :: subtree
+         type(C_PTR), value :: piv_order
+         type(C_PTR), value :: d
+      end subroutine c_subtree_enquire
    end interface
 
 contains
@@ -279,6 +289,7 @@ function get_contrib(this)
    class(contrib_type), pointer :: get_contrib
    class(cpu_numeric_subtree), intent(in) :: this
 
+   !FIXME: make this actually be useful
    get_contrib => this%contrib
 end function get_contrib
 
@@ -323,90 +334,40 @@ subroutine solve_bwd(this, nrhs, x, ldx, inform)
 end subroutine solve_bwd
 
 subroutine enquire_posdef(this, d)
-   class(cpu_numeric_subtree), target, intent(in) :: this
-   real(wp), dimension(*), intent(out) :: d
+   class(cpu_numeric_subtree), intent(in) :: this
+   real(wp), dimension(*), target, intent(out) :: d
 
-   integer :: blkn, blkm
-   integer(long) :: i
-   integer :: j
-   integer :: node
-   integer :: piv
-
-   type(node_type), pointer :: nptr
-
-   associate(symbolic => this%symbolic)
-      piv = 1
-      do node = 1, symbolic%nnodes
-         nptr => this%nodes(node)
-         blkn = symbolic%sptr(node+1) - symbolic%sptr(node)
-         blkm = int(symbolic%rptr(node+1) - symbolic%rptr(node))
-         i = 1
-         do j = 1, blkn
-            d(piv) = nptr%lcol(i)
-            i = i + blkm + 1
-            piv = piv + 1
-         end do
-      end do 
-   end associate
+   call c_subtree_enquire(this%posdef, this%csubtree, C_NULL_PTR, C_LOC(d))
 end subroutine enquire_posdef
 
 subroutine enquire_indef(this, invp, piv_order, d)
-   class(cpu_numeric_subtree), target, intent(in) :: this
+   class(cpu_numeric_subtree), intent(in) :: this
    integer, dimension(*), intent(in) :: invp
    integer, dimension(*), optional, intent(out) :: piv_order
-   real(wp), dimension(2,*), optional, intent(out) :: d
+   real(wp), dimension(2,*), target, optional, intent(out) :: d
 
-   integer :: blkn, blkm
-   integer :: j, k
-   integer :: nd
-   integer :: node
-   integer(long) :: offset
-   integer :: piv
+   integer :: i
+   integer, dimension(:), target, allocatable :: po
+   type(C_PTR) :: dptr, poptr
 
-   type(node_type), pointer :: nptr
+   ! Setup pointers
+   poptr = C_NULL_PTR
+   if(present(piv_order)) then
+      allocate(po(this%symbolic%n))
+      poptr = C_LOC(po)
+   endif
+   dptr = C_NULL_PTR
+   if(present(d)) dptr = C_LOC(d)
 
-   associate(symbolic => this%symbolic)
-      piv = 1
-      do node = 1, symbolic%nnodes
-         nptr => this%nodes(node)
-         j = 1
-         nd = nptr%ndelay
-         blkn = symbolic%sptr(node+1) - symbolic%sptr(node) + nd
-         blkm = int(symbolic%rptr(node+1) - symbolic%rptr(node)) + nd
-         offset = blkm*(blkn+0_long)
-         do while(j .le. nptr%nelim)
-            if (nptr%lcol(offset+2*j).ne.0) then
-               ! 2x2 pivot
-               if(present(piv_order))  then
-                  k = invp( nptr%perm(j) )
-                  piv_order(k) = -piv
-                  k = invp( nptr%perm(j+1) )
-                  piv_order(k) = -(piv+1)
-               end if
-               if(present(d)) then
-                  d(1,piv) = nptr%lcol(offset+2*j-1)
-                  d(2,piv) = nptr%lcol(offset+2*j)
-                  d(1,piv+1) = nptr%lcol(offset+2*j+1)
-                  d(2,piv+1) = 0
-               end if
-               piv = piv + 2
-               j = j + 2
-            else
-               ! 1x1 pivot
-               if(present(piv_order)) then
-                  k = invp( nptr%perm(j) )
-                  piv_order(k) = piv
-               end if
-               if(present(d)) then
-                  d(1,piv) = nptr%lcol(offset+2*j-1)
-                  d(2,piv) = 0
-               end if
-               piv = piv + 1
-               j = j + 1
-            end if
-         end do
+   ! Call C++ routine
+   call c_subtree_enquire(this%posdef, this%csubtree, poptr, dptr)
+
+   ! Apply invp to piv_order
+   if(present(piv_order)) then
+      do i = 1, this%symbolic%n
+         piv_order( invp(i) ) = po(i)
       end do
-   end associate
+   endif
 end subroutine enquire_indef
 
 subroutine alter(this, d)

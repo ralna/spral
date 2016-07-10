@@ -167,3 +167,24 @@ void spral_ssids_cpu_subtree_solve_bwd_dbl(
       subtree.solve_bwd(nrhs, x, ldx);
    }
 }
+
+/* Double precision wrapper around templated routines */
+extern "C"
+void spral_ssids_cpu_subtree_enquire_dbl(
+      bool posdef,      // If true, performs A=LL^T, if false do pivoted A=LDL^T
+      void const* subtree_ptr,// pointer to relevant type of NumericSubtree
+      int* piv_order,   // pivot order, may be null, only used if indef
+      double* d         // diagonal entries, may be null
+      ) {
+
+   // Call method
+   if(posdef) { // Converting from runtime to compile time posdef value
+      auto &subtree =
+         *static_cast<NumericSubtree<true, BLOCK_SIZE, T, PAGE_SIZE> const*>(subtree_ptr);
+      subtree.enquire(piv_order, d);
+   } else {
+      auto &subtree =
+         *static_cast<NumericSubtree<false, BLOCK_SIZE, T, PAGE_SIZE> const*>(subtree_ptr);
+      subtree.enquire(piv_order, d);
+   }
+}
