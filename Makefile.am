@@ -230,7 +230,6 @@ libspral_a_SOURCES += \
 	src/ssids/cpu/subtree.f90 \
 	src/ssids/cpu/PoolAlloc.hxx \
 	src/ssids/cpu/SmallLeafSubtree.hxx \
-	src/ssids/cpu/StackAllocator.hxx \
 	src/ssids/cpu/SymbolicSubtree.cxx \
 	src/ssids/cpu/SymbolicSubtree.hxx \
 	src/ssids/cpu/kernels/assemble.hxx \

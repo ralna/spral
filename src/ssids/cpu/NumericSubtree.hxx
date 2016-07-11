@@ -13,7 +13,6 @@
 #include "cpu_iface.hxx"
 #include "factor.hxx"
 #include "NumericNode.hxx"
-#include "StackAllocator.hxx"
 #include "SymbolicSubtree.hxx"
 
 namespace spral { namespace ssids { namespace cpu {
@@ -23,7 +22,8 @@ template <bool posdef,
           size_t BLOCK_SIZE,
           typename T,
           size_t PAGE_SIZE,
-          typename FactorAllocator // Allocator to use for factor storage
+          typename FactorAllocator, // Allocator to use for factor storage
+          typename ContribAllocator // Allocator to use for contribution blocks
           >
 class NumericSubtree {
 public:
@@ -56,7 +56,6 @@ public:
       }
 
       /* Allocate workspace */
-		StackAllocator<PAGE_SIZE> stalloc_odd, stalloc_even;
 		Workspace<T> work(PAGE_SIZE);
 		int *map = new int[symb_.n+1];
 
@@ -65,7 +64,7 @@ public:
          // Assembly
          assemble_node
             (posdef, ni, symb_[ni], &nodes_[ni], factor_alloc_,
-             &stalloc_odd, &stalloc_even, map, aval, scaling);
+             contrib_alloc_, map, aval, scaling);
          // Update stats
          int nrow = symb_[ni].nrow + nodes_[ni].ndelay_in;
          stats->maxfront = std::max(stats->maxfront, nrow);
@@ -75,7 +74,7 @@ public:
             (ni, symb_[ni], &nodes_[ni], options, stats);
          // Form update
          calculate_update<posdef>
-            (symb_[ni], &nodes_[ni], &stalloc_odd, &stalloc_even, &work);
+            (symb_[ni], &nodes_[ni], contrib_alloc_, &work);
       }
 
 		// Release resources
@@ -338,6 +337,7 @@ private:
    SymbolicSubtree const& symb_;
    std::vector<NumericNode<T>> nodes_;
    FactorAllocator factor_alloc_;
+   ContribAllocator contrib_alloc_;
 };
 
 }}} /* end of namespace spral::ssids::cpu */

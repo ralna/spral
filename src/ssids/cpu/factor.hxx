@@ -146,14 +146,15 @@ void factor_node(
 }
 
 /* Calculate update */
-template <bool posdef, typename T, typename StackAllocator>
+template <bool posdef, typename T, typename ContribAlloc>
 void calculate_update(
       SymbolicNode const& snode,
       NumericNode<T>* node,
-      StackAllocator* stalloc_odd,
-      StackAllocator* stalloc_even,
+      ContribAlloc& contrib_alloc,
       Workspace<T>* work
       ) {
+   typedef std::allocator_traits<ContribAlloc> CATraits;
+
    // Check there is work to do
    int m = snode.nrow - snode.ncol;
    int n = node->nelim;
@@ -162,11 +163,7 @@ void calculate_update(
       // free contrib memory and mark as no contribution for parent's assembly
       // FIXME: actually loop over children and check one exists with contriub
       //        rather than current approach of just looking for children.
-      if(snode.even) {
-         stalloc_even->free(node->contrib, m*m*sizeof(T));
-      } else {
-         stalloc_odd->free(node->contrib, m*m*sizeof(T));
-      }
+      CATraits::deallocate(contrib_alloc, node->contrib, m*m);
       node->contrib = NULL;
       return;
    }

@@ -25,8 +25,6 @@ struct SymbolicNode {
    int const* rlist; //< Pointer to row lists
    int num_a; //< Number of entries mapped from A to L
    int const* amap; //< Pointer to map from A to L locations
-   bool even; //< Indicates which stack we're using (odd or even distance
-              //< from root)
 };
 
 /** Symbolic factorization of a subtree to be factored on the CPU */
@@ -53,15 +51,6 @@ public:
          nodes_[ni].next_child = parent->first_child;
          parent->first_child = &nodes_[ni];
       }
-      /* Setup odd/even distance from root */
-      for(int ni=nnodes_-1; ni>=0; --ni) {
-         if(sparent[ni] <= nnodes_) {
-            SymbolicNode const& parent = nodes_[ sparent[ni]-1 ];
-            nodes_[ni].even = !(parent.even);
-         } else {
-            nodes_[ni].even = true;
-         }
-      }
       /* Count size of factors */
       nfactor_ = 0;
       for(int ni=0; ni<nnodes_; ++ni)
@@ -82,7 +71,7 @@ private:
    size_t nfactor_;
    std::vector<SymbolicNode> nodes_;
 
-   template <bool posdef, size_t BLOCK_SIZE, typename T, size_t PAGE_SIZE, typename FactorAlloc>
+   template <bool posdef, size_t BLOCK_SIZE, typename T, size_t PAGE_SIZE, typename FactorAlloc, typename ContribAllocator>
    friend class NumericSubtree;
 };
 

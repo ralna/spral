@@ -21,15 +21,14 @@ namespace spral { namespace ssids { namespace cpu {
 
 template <typename T,
           typename FactorAlloc,
-          typename StackAllocator>
+          typename ContribAlloc>
 void assemble_node(
       bool posdef,
       int ni, // FIXME: remove with debug
       SymbolicNode const& snode,
       NumericNode<T>* node,
       FactorAlloc& factor_alloc,
-      StackAllocator* stalloc_odd,
-      StackAllocator* stalloc_even,
+      ContribAlloc& contrib_alloc,
       int* map,
       T const* aval,
       T const* scaling
@@ -39,6 +38,7 @@ void assemble_node(
    typename FADoubleTraits::allocator_type factor_alloc_double(factor_alloc);
    typedef typename std::allocator_traits<FactorAlloc>::template rebind_traits<int> FAIntTraits;
    typename FAIntTraits::allocator_type factor_alloc_int(factor_alloc);
+   typedef std::allocator_traits<ContribAlloc> CATraits;
 
    /* Count incoming delays and determine size of node */
    node->ndelay_in = 0;
@@ -59,11 +59,7 @@ void assemble_node(
 
    /* Get space for contribution block + zero it */
    long contrib_dimn = snode.nrow - snode.ncol;
-   if(snode.even) {
-      node->contrib = (contrib_dimn > 0) ? (T *) stalloc_even->alloc(contrib_dimn*contrib_dimn*sizeof(T)) : NULL;
-   } else {
-      node->contrib = (contrib_dimn > 0) ? (T *) stalloc_odd->alloc(contrib_dimn*contrib_dimn*sizeof(T)) : NULL;
-   }
+   node->contrib = (contrib_dimn > 0) ? CATraits::allocate(contrib_alloc, contrib_dimn*contrib_dimn) : nullptr;
    if(node->contrib)
       memset(node->contrib, 0, contrib_dimn*contrib_dimn*sizeof(T));
 
@@ -162,11 +158,7 @@ void assemble_node(
                }
             }
             /* Free memory from child contribution block */
-            if(csnode.even) {
-               stalloc_even->free(child->contrib, cm*cm*sizeof(T));
-            } else {
-               stalloc_odd->free(child->contrib, cm*cm*sizeof(T));
-            }
+            CATraits::deallocate(contrib_alloc, child->contrib, cm*cm);
          }
       }
    }
