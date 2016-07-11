@@ -234,9 +234,9 @@ am__libspral_a_SOURCES_DIST = src/blas_iface.f90 src/core_analyse.f90 \
 	src/ssids/fkeep.f90 src/ssids/inform.f90 src/ssids/ssids.f90 \
 	src/ssids/subtree.f90 src/ssids/cpu/AlignedAllocator.hxx \
 	src/ssids/cpu/cpu_iface.f90 src/ssids/cpu/cpu_iface.hxx \
-	src/ssids/cpu/CpuSubtree.cxx src/ssids/cpu/CpuSubtree.hxx \
-	src/ssids/cpu/factor.cxx src/ssids/cpu/factor.hxx \
-	src/ssids/cpu/solve.f90 src/ssids/cpu/smalloc.cxx \
+	src/ssids/cpu/factor.hxx src/ssids/cpu/NumericNode.hxx \
+	src/ssids/cpu/NumericSubtree.cxx \
+	src/ssids/cpu/NumericSubtree.hxx src/ssids/cpu/smalloc.cxx \
 	src/ssids/cpu/smalloc.hxx src/ssids/cpu/subtree.f90 \
 	src/ssids/cpu/SmallLeafSubtree.hxx \
 	src/ssids/cpu/StackAllocator.hxx \
@@ -244,12 +244,10 @@ am__libspral_a_SOURCES_DIST = src/blas_iface.f90 src/core_analyse.f90 \
 	src/ssids/cpu/SymbolicSubtree.hxx \
 	src/ssids/cpu/kernels/assemble.hxx \
 	src/ssids/cpu/kernels/common.hxx \
+	src/ssids/cpu/kernels/block_ldlt.hxx \
 	src/ssids/cpu/kernels/cholesky.cxx \
 	src/ssids/cpu/kernels/cholesky.hxx \
-	src/ssids/cpu/kernels/CpuBlockLDLT.hxx \
 	src/ssids/cpu/kernels/CpuLDLT.hxx \
-	src/ssids/cpu/kernels/CpuLog.cxx \
-	src/ssids/cpu/kernels/CpuLog.hxx \
 	src/ssids/cpu/kernels/ldlt_nopiv.cxx \
 	src/ssids/cpu/kernels/ldlt_nopiv.hxx \
 	src/ssids/cpu/kernels/SimdVec.hxx \
@@ -297,13 +295,11 @@ am_libspral_a_OBJECTS = src/blas_iface.$(OBJEXT) \
 	src/ssids/datatypes.$(OBJEXT) src/ssids/fkeep.$(OBJEXT) \
 	src/ssids/inform.$(OBJEXT) src/ssids/ssids.$(OBJEXT) \
 	src/ssids/subtree.$(OBJEXT) src/ssids/cpu/cpu_iface.$(OBJEXT) \
-	src/ssids/cpu/CpuSubtree.$(OBJEXT) \
-	src/ssids/cpu/factor.$(OBJEXT) src/ssids/cpu/solve.$(OBJEXT) \
+	src/ssids/cpu/NumericSubtree.$(OBJEXT) \
 	src/ssids/cpu/smalloc.$(OBJEXT) \
 	src/ssids/cpu/subtree.$(OBJEXT) \
 	src/ssids/cpu/SymbolicSubtree.$(OBJEXT) \
 	src/ssids/cpu/kernels/cholesky.$(OBJEXT) \
-	src/ssids/cpu/kernels/CpuLog.$(OBJEXT) \
 	src/ssids/cpu/kernels/ldlt_nopiv.$(OBJEXT) \
 	src/ssids/cpu/kernels/wrappers.$(OBJEXT) \
 	interfaces/C/ssids.$(OBJEXT) src/ssmfe/ssmfe.$(OBJEXT) \
@@ -577,7 +573,12 @@ am_spral_ssids_OBJECTS = driver/spral_ssids.$(OBJEXT) $(am__objects_3) \
 	$(am__objects_4)
 spral_ssids_OBJECTS = $(am_spral_ssids_OBJECTS)
 spral_ssids_DEPENDENCIES = $(am__DEPENDENCIES_2) $(am__DEPENDENCIES_3)
-am_ssids_kernel_test_OBJECTS = tests/ssids/kernels.$(OBJEXT)
+am_ssids_kernel_test_OBJECTS = tests/ssids/kernels.$(OBJEXT) \
+	tests/ssids/kernels/block_ldlt.$(OBJEXT) \
+	tests/ssids/kernels/cholesky.$(OBJEXT) \
+	tests/ssids/kernels/CpuLDLT.$(OBJEXT) \
+	tests/ssids/kernels/framework.$(OBJEXT) \
+	tests/ssids/kernels/ldlt_nopiv.$(OBJEXT)
 ssids_kernel_test_OBJECTS = $(am_ssids_kernel_test_OBJECTS)
 ssids_kernel_test_LDADD = $(LDADD)
 ssids_kernel_test_DEPENDENCIES = $(am__DEPENDENCIES_1) \
@@ -1130,9 +1131,9 @@ libspral_a_SOURCES = src/blas_iface.f90 src/core_analyse.f90 \
 	src/ssids/fkeep.f90 src/ssids/inform.f90 src/ssids/ssids.f90 \
 	src/ssids/subtree.f90 src/ssids/cpu/AlignedAllocator.hxx \
 	src/ssids/cpu/cpu_iface.f90 src/ssids/cpu/cpu_iface.hxx \
-	src/ssids/cpu/CpuSubtree.cxx src/ssids/cpu/CpuSubtree.hxx \
-	src/ssids/cpu/factor.cxx src/ssids/cpu/factor.hxx \
-	src/ssids/cpu/solve.f90 src/ssids/cpu/smalloc.cxx \
+	src/ssids/cpu/factor.hxx src/ssids/cpu/NumericNode.hxx \
+	src/ssids/cpu/NumericSubtree.cxx \
+	src/ssids/cpu/NumericSubtree.hxx src/ssids/cpu/smalloc.cxx \
 	src/ssids/cpu/smalloc.hxx src/ssids/cpu/subtree.f90 \
 	src/ssids/cpu/SmallLeafSubtree.hxx \
 	src/ssids/cpu/StackAllocator.hxx \
@@ -1140,12 +1141,10 @@ libspral_a_SOURCES = src/blas_iface.f90 src/core_analyse.f90 \
 	src/ssids/cpu/SymbolicSubtree.hxx \
 	src/ssids/cpu/kernels/assemble.hxx \
 	src/ssids/cpu/kernels/common.hxx \
+	src/ssids/cpu/kernels/block_ldlt.hxx \
 	src/ssids/cpu/kernels/cholesky.cxx \
 	src/ssids/cpu/kernels/cholesky.hxx \
-	src/ssids/cpu/kernels/CpuBlockLDLT.hxx \
 	src/ssids/cpu/kernels/CpuLDLT.hxx \
-	src/ssids/cpu/kernels/CpuLog.cxx \
-	src/ssids/cpu/kernels/CpuLog.hxx \
 	src/ssids/cpu/kernels/ldlt_nopiv.cxx \
 	src/ssids/cpu/kernels/ldlt_nopiv.hxx \
 	src/ssids/cpu/kernels/SimdVec.hxx \
@@ -1179,7 +1178,18 @@ examples_C_random_matrix_SOURCES = examples/C/random_matrix.c
 spral_ssids_SOURCES = driver/spral_ssids.f90 $(am__append_3) \
 	$(am__append_4)
 ssids_test_SOURCES = tests/ssids/ssids.f90
-ssids_kernel_test_SOURCES = tests/ssids/kernels.cxx
+ssids_kernel_test_SOURCES = tests/ssids/kernels.cxx \
+									 tests/ssids/kernels/block_ldlt.cxx \
+									 tests/ssids/kernels/block_ldlt.hxx \
+									 tests/ssids/kernels/cholesky.cxx \
+									 tests/ssids/kernels/cholesky.hxx \
+									 tests/ssids/kernels/CpuLDLT.cxx \
+									 tests/ssids/kernels/CpuLDLT.hxx \
+									 tests/ssids/kernels/framework.cxx \
+									 tests/ssids/kernels/framework.hxx \
+									 tests/ssids/kernels/ldlt_nopiv.cxx \
+									 tests/ssids/kernels/ldlt_nopiv.hxx
+
 examples_Fortran_ssids_SOURCES = examples/Fortran/ssids.f90
 examples_C_ssids_SOURCES = examples/C/ssids.c
 spral_ssids_LDADD = $(LDADD) $(SPRAL_LINK_LIBS)
@@ -1450,11 +1460,7 @@ src/ssids/cpu/$(DEPDIR)/$(am__dirstamp):
 	@: > src/ssids/cpu/$(DEPDIR)/$(am__dirstamp)
 src/ssids/cpu/cpu_iface.$(OBJEXT): src/ssids/cpu/$(am__dirstamp) \
 	src/ssids/cpu/$(DEPDIR)/$(am__dirstamp)
-src/ssids/cpu/CpuSubtree.$(OBJEXT): src/ssids/cpu/$(am__dirstamp) \
-	src/ssids/cpu/$(DEPDIR)/$(am__dirstamp)
-src/ssids/cpu/factor.$(OBJEXT): src/ssids/cpu/$(am__dirstamp) \
-	src/ssids/cpu/$(DEPDIR)/$(am__dirstamp)
-src/ssids/cpu/solve.$(OBJEXT): src/ssids/cpu/$(am__dirstamp) \
+src/ssids/cpu/NumericSubtree.$(OBJEXT): src/ssids/cpu/$(am__dirstamp) \
 	src/ssids/cpu/$(DEPDIR)/$(am__dirstamp)
 src/ssids/cpu/smalloc.$(OBJEXT): src/ssids/cpu/$(am__dirstamp) \
 	src/ssids/cpu/$(DEPDIR)/$(am__dirstamp)
@@ -1470,9 +1476,6 @@ src/ssids/cpu/kernels/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) src/ssids/cpu/kernels/$(DEPDIR)
 	@: > src/ssids/cpu/kernels/$(DEPDIR)/$(am__dirstamp)
 src/ssids/cpu/kernels/cholesky.$(OBJEXT):  \
-	src/ssids/cpu/kernels/$(am__dirstamp) \
-	src/ssids/cpu/kernels/$(DEPDIR)/$(am__dirstamp)
-src/ssids/cpu/kernels/CpuLog.$(OBJEXT):  \
 	src/ssids/cpu/kernels/$(am__dirstamp) \
 	src/ssids/cpu/kernels/$(DEPDIR)/$(am__dirstamp)
 src/ssids/cpu/kernels/ldlt_nopiv.$(OBJEXT):  \
@@ -1850,6 +1853,27 @@ tests/ssids/$(DEPDIR)/$(am__dirstamp):
 	@: > tests/ssids/$(DEPDIR)/$(am__dirstamp)
 tests/ssids/kernels.$(OBJEXT): tests/ssids/$(am__dirstamp) \
 	tests/ssids/$(DEPDIR)/$(am__dirstamp)
+tests/ssids/kernels/$(am__dirstamp):
+	@$(MKDIR_P) tests/ssids/kernels
+	@: > tests/ssids/kernels/$(am__dirstamp)
+tests/ssids/kernels/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) tests/ssids/kernels/$(DEPDIR)
+	@: > tests/ssids/kernels/$(DEPDIR)/$(am__dirstamp)
+tests/ssids/kernels/block_ldlt.$(OBJEXT):  \
+	tests/ssids/kernels/$(am__dirstamp) \
+	tests/ssids/kernels/$(DEPDIR)/$(am__dirstamp)
+tests/ssids/kernels/cholesky.$(OBJEXT):  \
+	tests/ssids/kernels/$(am__dirstamp) \
+	tests/ssids/kernels/$(DEPDIR)/$(am__dirstamp)
+tests/ssids/kernels/CpuLDLT.$(OBJEXT):  \
+	tests/ssids/kernels/$(am__dirstamp) \
+	tests/ssids/kernels/$(DEPDIR)/$(am__dirstamp)
+tests/ssids/kernels/framework.$(OBJEXT):  \
+	tests/ssids/kernels/$(am__dirstamp) \
+	tests/ssids/kernels/$(DEPDIR)/$(am__dirstamp)
+tests/ssids/kernels/ldlt_nopiv.$(OBJEXT):  \
+	tests/ssids/kernels/$(am__dirstamp) \
+	tests/ssids/kernels/$(DEPDIR)/$(am__dirstamp)
 
 ssids_kernel_test$(EXEEXT): $(ssids_kernel_test_OBJECTS) $(ssids_kernel_test_DEPENDENCIES) $(EXTRA_ssids_kernel_test_DEPENDENCIES) 
 	@rm -f ssids_kernel_test$(EXEEXT)
@@ -1899,6 +1923,7 @@ mostlyclean-compile:
 	-rm -f src/ssmfe/*.$(OBJEXT)
 	-rm -f tests/*.$(OBJEXT)
 	-rm -f tests/ssids/*.$(OBJEXT)
+	-rm -f tests/ssids/kernels/*.$(OBJEXT)
 	-rm -f tests/ssmfe/*.$(OBJEXT)
 
 distclean-compile:
@@ -1919,15 +1944,18 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/ssmfe/$(DEPDIR)/precond_expert.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/ssmfe/$(DEPDIR)/precond_ssmfe.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/ssmfe/$(DEPDIR)/shift_invert.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/$(DEPDIR)/CpuSubtree.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/$(DEPDIR)/NumericSubtree.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/$(DEPDIR)/SymbolicSubtree.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/$(DEPDIR)/factor.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/$(DEPDIR)/smalloc.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/kernels/$(DEPDIR)/CpuLog.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/kernels/$(DEPDIR)/cholesky.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/kernels/$(DEPDIR)/ldlt_nopiv.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/kernels/$(DEPDIR)/wrappers.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@tests/ssids/$(DEPDIR)/kernels.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@tests/ssids/kernels/$(DEPDIR)/CpuLDLT.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@tests/ssids/kernels/$(DEPDIR)/block_ldlt.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@tests/ssids/kernels/$(DEPDIR)/cholesky.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@tests/ssids/kernels/$(DEPDIR)/framework.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@tests/ssids/kernels/$(DEPDIR)/ldlt_nopiv.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@tests/ssmfe/$(DEPDIR)/ssmfe_ciface.Po@am__quote@
 
 .c.o:
@@ -2497,6 +2525,8 @@ distclean-generic:
 	-rm -f tests/$(am__dirstamp)
 	-rm -f tests/ssids/$(DEPDIR)/$(am__dirstamp)
 	-rm -f tests/ssids/$(am__dirstamp)
+	-rm -f tests/ssids/kernels/$(DEPDIR)/$(am__dirstamp)
+	-rm -f tests/ssids/kernels/$(am__dirstamp)
 	-rm -f tests/ssmfe/$(DEPDIR)/$(am__dirstamp)
 	-rm -f tests/ssmfe/$(am__dirstamp)
 
@@ -2510,7 +2540,7 @@ clean-am: clean-binPROGRAMS clean-checkPROGRAMS clean-generic \
 
 distclean: distclean-am
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
-	-rm -rf examples/C/$(DEPDIR) examples/C/scaling/$(DEPDIR) examples/C/ssmfe/$(DEPDIR) src/ssids/cpu/$(DEPDIR) src/ssids/cpu/kernels/$(DEPDIR) tests/ssids/$(DEPDIR) tests/ssmfe/$(DEPDIR)
+	-rm -rf examples/C/$(DEPDIR) examples/C/scaling/$(DEPDIR) examples/C/ssmfe/$(DEPDIR) src/ssids/cpu/$(DEPDIR) src/ssids/cpu/kernels/$(DEPDIR) tests/ssids/$(DEPDIR) tests/ssids/kernels/$(DEPDIR) tests/ssmfe/$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -2558,7 +2588,7 @@ installcheck-am:
 maintainer-clean: maintainer-clean-am
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
 	-rm -rf $(top_srcdir)/autom4te.cache
-	-rm -rf examples/C/$(DEPDIR) examples/C/scaling/$(DEPDIR) examples/C/ssmfe/$(DEPDIR) src/ssids/cpu/$(DEPDIR) src/ssids/cpu/kernels/$(DEPDIR) tests/ssids/$(DEPDIR) tests/ssmfe/$(DEPDIR)
+	-rm -rf examples/C/$(DEPDIR) examples/C/scaling/$(DEPDIR) examples/C/ssmfe/$(DEPDIR) src/ssids/cpu/$(DEPDIR) src/ssids/cpu/kernels/$(DEPDIR) tests/ssids/$(DEPDIR) tests/ssids/kernels/$(DEPDIR) tests/ssmfe/$(DEPDIR)
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 
@@ -2672,8 +2702,6 @@ src/ssids/fkeep.$(OBJEXT): src/ssids/akeep.$(OBJEXT) \
                            src/ssids/alloc.$(OBJEXT) \
                            src/ssids/datatypes.$(OBJEXT) \
                            src/ssids/inform.$(OBJEXT) \
-                           src/ssids/cpu/cpu_iface.$(OBJEXT) \
-                           src/ssids/cpu/solve.$(OBJEXT) \
                            src/ssids/cpu/subtree.$(OBJEXT)
 src/ssids/inform.$(OBJEXT): src/scaling.$(OBJEXT) \
                             src/ssids/datatypes.$(OBJEXT)
@@ -2682,14 +2710,12 @@ src/ssids/subtree.$(OBJEXT): src/ssids/contrib.$(OBJEXT) \
 									  src/ssids/inform.$(OBJEXT)
 src/ssids/cpu/cpu_iface.$(OBJEXT): src/ssids/datatypes.$(OBJEXT) \
                                    src/ssids/inform.$(OBJEXT)
-src/ssids/cpu/solve.$(OBJEXT): src/ssids/datatypes.$(OBJEXT)
 src/ssids/cpu/subtree.$(OBJEXT): src/ssids/alloc.$(OBJEXT) \
                                  src/ssids/contrib.$(OBJEXT) \
                                  src/ssids/datatypes.$(OBJEXT) \
                                  src/ssids/inform.$(OBJEXT) \
                                  src/ssids/subtree.$(OBJEXT) \
-                                 src/ssids/cpu/cpu_iface.$(OBJEXT) \
-                                 src/ssids/cpu/solve.$(OBJEXT)
+                                 src/ssids/cpu/cpu_iface.$(OBJEXT)
 src/ssids/gpu/akeep.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
                                src/ssids/akeep.$(OBJEXT) \
                                src/ssids/datatypes.$(OBJEXT) \
