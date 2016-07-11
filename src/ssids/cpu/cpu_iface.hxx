@@ -15,6 +15,7 @@
 namespace spral { namespace ssids { namespace cpu {
 
 struct cpu_factor_options {
+   double multiplier;
    double small;
    double u;
    int print_level;

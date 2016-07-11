@@ -10,7 +10,9 @@
  */
 #pragma once
 
-#include <cstring>
+#include<cstring>
+#include<memory>
+
 #include "../smalloc.hxx"
 #include "../NumericNode.hxx"
 #include "../SymbolicSubtree.hxx"
@@ -18,19 +20,26 @@
 namespace spral { namespace ssids { namespace cpu {
 
 template <typename T,
+          typename FactorAlloc,
           typename StackAllocator>
 void assemble_node(
       bool posdef,
       int ni, // FIXME: remove with debug
       SymbolicNode const& snode,
       NumericNode<T>* node,
-      void* alloc,
+      FactorAlloc& factor_alloc,
       StackAllocator* stalloc_odd,
       StackAllocator* stalloc_even,
       int* map,
       T const* aval,
       T const* scaling
       ) {
+   /* Rebind allocators */
+   typedef typename std::allocator_traits<FactorAlloc>::template rebind_traits<double> FADoubleTraits;
+   typename FADoubleTraits::allocator_type factor_alloc_double(factor_alloc);
+   typedef typename std::allocator_traits<FactorAlloc>::template rebind_traits<int> FAIntTraits;
+   typename FAIntTraits::allocator_type factor_alloc_int(factor_alloc);
+
    /* Count incoming delays and determine size of node */
    node->ndelay_in = 0;
    for(auto* child=node->first_child; child!=NULL; child=child->next_child) {
@@ -43,8 +52,9 @@ void assemble_node(
    // NB L is  nrow x ncol and D is 2 x ncol (but no D if posdef)
    size_t len = posdef ? ((size_t) nrow  ) * ncol  // posdef
                        : ((size_t) nrow+2) * ncol; // indef (includes D)
-   if(!(node->lcol = smalloc<T>(alloc, len)))
-      throw std::bad_alloc();
+   node->lcol = FADoubleTraits::allocate(factor_alloc_double, len);
+   //if(!(node->lcol = smalloc<T>(alloc, len)))
+   //   throw std::bad_alloc();
    memset(node->lcol, 0, len*sizeof(T));
 
    /* Get space for contribution block + zero it */
@@ -59,7 +69,8 @@ void assemble_node(
 
    /* Alloc + set perm for expected eliminations at this node (delays are set
     * when they are imported from children) */
-   node->perm = smalloc<int>(alloc, ncol); // ncol fully summed variables
+   node->perm = FAIntTraits::allocate(factor_alloc_int, ncol); // ncol fully summed variables
+   //node->perm = smalloc<int>(alloc, ncol); // ncol fully summed variables
    for(int i=0; i<snode.ncol; i++)
       node->perm[i] = snode.rlist[i];
 

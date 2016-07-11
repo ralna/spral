@@ -11,6 +11,7 @@ module spral_ssids_cpu_iface
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
    type, bind(C) :: cpu_factor_options
+      real(C_DOUBLE) :: multiplier
       real(C_DOUBLE) :: small
       real(C_DOUBLE) :: u
       integer(C_INT) :: print_level
@@ -37,6 +38,7 @@ subroutine cpu_copy_options_in(foptions, coptions)
    type(ssids_options), intent(in) :: foptions
    type(cpu_factor_options), intent(out) :: coptions
 
+   coptions%multiplier  = foptions%multiplier
    coptions%small       = foptions%small
    coptions%u           = foptions%u
    coptions%print_level = foptions%print_level

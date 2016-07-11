@@ -13,6 +13,7 @@
 #include <cstdio>
 
 #include "NumericSubtree.hxx"
+#include "PoolAlloc.hxx"
 #include "SmallLeafSubtree.hxx"
 
 using namespace spral::ssids::cpu;
@@ -24,6 +25,8 @@ namespace {
 typedef double T;
 const int BLOCK_SIZE = 16;
 const int PAGE_SIZE = 16384;
+typedef NumericSubtree<true, BLOCK_SIZE, T, PAGE_SIZE, PoolAlloc<T>> NumericSubtreePosdef;
+typedef NumericSubtree<false, BLOCK_SIZE, T, PAGE_SIZE, PoolAlloc<T>> NumericSubtreeIndef;
 
 } /* end of anon namespace */
 //////////////////////////////////////////////////////////////////////////
@@ -34,7 +37,6 @@ void* spral_ssids_cpu_create_num_subtree_dbl(
       void const* symbolic_subtree_ptr,
       const double *const aval, // Values of A
       const double *const scaling, // Scaling vector (NULL if none)
-      void *const alloc,      // Pointer to Fortran allocator structure
       struct cpu_factor_options const* options, // Options in
       struct cpu_factor_stats* stats // Info out
       ) {
@@ -42,9 +44,8 @@ void* spral_ssids_cpu_create_num_subtree_dbl(
 
    if(posdef) {
       try {
-         auto* subtree = new NumericSubtree
-            <true, BLOCK_SIZE, T, PAGE_SIZE>
-            (symbolic_subtree, aval, scaling, alloc, options, stats);
+         auto* subtree = new NumericSubtreePosdef
+            (symbolic_subtree, aval, scaling, options, stats);
          if(options->print_level > 9999) {
             printf("Final factors:\n");
             subtree->print();
@@ -55,9 +56,8 @@ void* spral_ssids_cpu_create_num_subtree_dbl(
          return nullptr;
       }
    } else { /* indef */
-      auto* subtree = new NumericSubtree
-         <false, BLOCK_SIZE, T, PAGE_SIZE>
-         (symbolic_subtree, aval, scaling, alloc, options, stats);
+      auto* subtree = new NumericSubtreeIndef
+         (symbolic_subtree, aval, scaling, options, stats);
       if(options->print_level > 9999) {
          printf("Final factors:\n");
          subtree->print();
@@ -71,10 +71,10 @@ void spral_ssids_cpu_destroy_num_subtree_dbl(bool posdef, void* target) {
    if(!target) return;
 
    if(posdef) {
-      auto *subtree = static_cast<NumericSubtree<true, BLOCK_SIZE, T, PAGE_SIZE>*>(target);
+      auto *subtree = static_cast<NumericSubtreePosdef*>(target);
       delete subtree;
    } else {
-      auto *subtree = static_cast<NumericSubtree<false, BLOCK_SIZE, T, PAGE_SIZE>*>(target);
+      auto *subtree = static_cast<NumericSubtreeIndef*>(target);
       delete subtree;
    }
 }
@@ -83,7 +83,7 @@ void spral_ssids_cpu_destroy_num_subtree_dbl(bool posdef, void* target) {
 extern "C"
 void spral_ssids_cpu_subtree_solve_fwd_dbl(
       bool posdef,      // If true, performs A=LL^T, if false do pivoted A=LDL^T
-      void* subtree_ptr,// pointer to relevant type of NumericSubtree
+      void const* subtree_ptr,// pointer to relevant type of NumericSubtree
       int nrhs,         // number of right-hand sides
       double* x,        // ldx x nrhs array of right-hand sides
       int ldx           // leading dimension of x
@@ -92,11 +92,11 @@ void spral_ssids_cpu_subtree_solve_fwd_dbl(
    // Call method
    if(posdef) { // Converting from runtime to compile time posdef value
       auto &subtree =
-         *static_cast<NumericSubtree<true, BLOCK_SIZE, T, PAGE_SIZE>*>(subtree_ptr);
+         *static_cast<NumericSubtreePosdef const*>(subtree_ptr);
       subtree.solve_fwd(nrhs, x, ldx);
    } else {
       auto &subtree =
-         *static_cast<NumericSubtree<false, BLOCK_SIZE, T, PAGE_SIZE>*>(subtree_ptr);
+         *static_cast<NumericSubtreeIndef const*>(subtree_ptr);
       subtree.solve_fwd(nrhs, x, ldx);
    }
 }
@@ -105,7 +105,7 @@ void spral_ssids_cpu_subtree_solve_fwd_dbl(
 extern "C"
 void spral_ssids_cpu_subtree_solve_diag_dbl(
       bool posdef,      // If true, performs A=LL^T, if false do pivoted A=LDL^T
-      void* subtree_ptr,// pointer to relevant type of NumericSubtree
+      void const* subtree_ptr,// pointer to relevant type of NumericSubtree
       int nrhs,         // number of right-hand sides
       double* x,        // ldx x nrhs array of right-hand sides
       int ldx           // leading dimension of x
@@ -113,12 +113,10 @@ void spral_ssids_cpu_subtree_solve_diag_dbl(
 
    // Call method
    if(posdef) { // Converting from runtime to compile time posdef value
-      auto &subtree =
-         *static_cast<NumericSubtree<true, BLOCK_SIZE, T, PAGE_SIZE>*>(subtree_ptr);
+      auto &subtree = *static_cast<NumericSubtreePosdef const*>(subtree_ptr);
       subtree.solve_diag(nrhs, x, ldx);
    } else {
-      auto &subtree =
-         *static_cast<NumericSubtree<false, BLOCK_SIZE, T, PAGE_SIZE>*>(subtree_ptr);
+      auto &subtree = *static_cast<NumericSubtreeIndef const*>(subtree_ptr);
       subtree.solve_diag(nrhs, x, ldx);
    }
 }
@@ -127,7 +125,7 @@ void spral_ssids_cpu_subtree_solve_diag_dbl(
 extern "C"
 void spral_ssids_cpu_subtree_solve_diag_bwd_dbl(
       bool posdef,      // If true, performs A=LL^T, if false do pivoted A=LDL^T
-      void* subtree_ptr,// pointer to relevant type of NumericSubtree
+      void const* subtree_ptr,// pointer to relevant type of NumericSubtree
       int nrhs,         // number of right-hand sides
       double* x,        // ldx x nrhs array of right-hand sides
       int ldx           // leading dimension of x
@@ -136,11 +134,11 @@ void spral_ssids_cpu_subtree_solve_diag_bwd_dbl(
    // Call method
    if(posdef) { // Converting from runtime to compile time posdef value
       auto &subtree =
-         *static_cast<NumericSubtree<true, BLOCK_SIZE, T, PAGE_SIZE>*>(subtree_ptr);
+         *static_cast<NumericSubtreePosdef const*>(subtree_ptr);
       subtree.solve_diag_bwd(nrhs, x, ldx);
    } else {
       auto &subtree =
-         *static_cast<NumericSubtree<false, BLOCK_SIZE, T, PAGE_SIZE>*>(subtree_ptr);
+         *static_cast<NumericSubtreeIndef const*>(subtree_ptr);
       subtree.solve_diag_bwd(nrhs, x, ldx);
    }
 }
@@ -149,7 +147,7 @@ void spral_ssids_cpu_subtree_solve_diag_bwd_dbl(
 extern "C"
 void spral_ssids_cpu_subtree_solve_bwd_dbl(
       bool posdef,      // If true, performs A=LL^T, if false do pivoted A=LDL^T
-      void* subtree_ptr,// pointer to relevant type of NumericSubtree
+      void const* subtree_ptr,// pointer to relevant type of NumericSubtree
       int nrhs,         // number of right-hand sides
       double* x,        // ldx x nrhs array of right-hand sides
       int ldx           // leading dimension of x
@@ -158,11 +156,11 @@ void spral_ssids_cpu_subtree_solve_bwd_dbl(
    // Call method
    if(posdef) { // Converting from runtime to compile time posdef value
       auto &subtree =
-         *static_cast<NumericSubtree<true, BLOCK_SIZE, T, PAGE_SIZE>*>(subtree_ptr);
+         *static_cast<NumericSubtreePosdef const*>(subtree_ptr);
       subtree.solve_bwd(nrhs, x, ldx);
    } else {
       auto &subtree =
-         *static_cast<NumericSubtree<false, BLOCK_SIZE, T, PAGE_SIZE>*>(subtree_ptr);
+         *static_cast<NumericSubtreeIndef const*>(subtree_ptr);
       subtree.solve_bwd(nrhs, x, ldx);
    }
 }
@@ -179,11 +177,11 @@ void spral_ssids_cpu_subtree_enquire_dbl(
    // Call method
    if(posdef) { // Converting from runtime to compile time posdef value
       auto &subtree =
-         *static_cast<NumericSubtree<true, BLOCK_SIZE, T, PAGE_SIZE> const*>(subtree_ptr);
+         *static_cast<NumericSubtreePosdef const*>(subtree_ptr);
       subtree.enquire(piv_order, d);
    } else {
       auto &subtree =
-         *static_cast<NumericSubtree<false, BLOCK_SIZE, T, PAGE_SIZE> const*>(subtree_ptr);
+         *static_cast<NumericSubtreeIndef const*>(subtree_ptr);
       subtree.enquire(piv_order, d);
    }
 }
@@ -199,11 +197,11 @@ void spral_ssids_cpu_subtree_alter_dbl(
    // Call method
    if(posdef) { // Converting from runtime to compile time posdef value
       auto &subtree =
-         *static_cast<NumericSubtree<true, BLOCK_SIZE, T, PAGE_SIZE>*>(subtree_ptr);
+         *static_cast<NumericSubtreePosdef*>(subtree_ptr);
       subtree.alter(d);
    } else {
       auto &subtree =
-         *static_cast<NumericSubtree<false, BLOCK_SIZE, T, PAGE_SIZE>*>(subtree_ptr);
+         *static_cast<NumericSubtreeIndef*>(subtree_ptr);
       subtree.alter(d);
    }
 }

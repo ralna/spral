@@ -228,6 +228,7 @@ libspral_a_SOURCES += \
 	src/ssids/cpu/smalloc.cxx \
 	src/ssids/cpu/smalloc.hxx \
 	src/ssids/cpu/subtree.f90 \
+	src/ssids/cpu/PoolAlloc.hxx \
 	src/ssids/cpu/SmallLeafSubtree.hxx \
 	src/ssids/cpu/StackAllocator.hxx \
 	src/ssids/cpu/SymbolicSubtree.cxx \
@@ -399,8 +400,7 @@ src/ssids/subtree.$(OBJEXT): src/ssids/contrib.$(OBJEXT) \
 									  src/ssids/inform.$(OBJEXT)
 src/ssids/cpu/cpu_iface.$(OBJEXT): src/ssids/datatypes.$(OBJEXT) \
                                    src/ssids/inform.$(OBJEXT)
-src/ssids/cpu/subtree.$(OBJEXT): src/ssids/alloc.$(OBJEXT) \
-                                 src/ssids/contrib.$(OBJEXT) \
+src/ssids/cpu/subtree.$(OBJEXT): src/ssids/contrib.$(OBJEXT) \
                                  src/ssids/datatypes.$(OBJEXT) \
                                  src/ssids/inform.$(OBJEXT) \
                                  src/ssids/subtree.$(OBJEXT) \

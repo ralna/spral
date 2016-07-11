@@ -62,18 +62,27 @@ public:
             nodes_[ni].even = true;
          }
       }
+      /* Count size of factors */
+      nfactor_ = 0;
+      for(int ni=0; ni<nnodes_; ++ni)
+         nfactor_ += static_cast<size_t>(nodes_[ni].nrow)*nodes_[ni].ncol;
    }
 
    SymbolicNode const& operator[](int idx) const {
       return nodes_[idx];
    }
+   size_t get_factor_mem_est(double multiplier) const {
+      size_t mem = n*sizeof(int) + (2*n+nfactor_)*sizeof(double);
+      return std::max(mem, static_cast<size_t>(mem*multiplier));
+   }
 public:
    int const n; //< Maximum row index
 private:
    int nnodes_;
+   size_t nfactor_;
    std::vector<SymbolicNode> nodes_;
 
-   template <bool posdef, size_t BLOCK_SIZE, typename T, size_t PAGE_SIZE>
+   template <bool posdef, size_t BLOCK_SIZE, typename T, size_t PAGE_SIZE, typename FactorAlloc>
    friend class NumericSubtree;
 };
 

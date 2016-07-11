@@ -1,6 +1,5 @@
 module spral_ssids_cpu_subtree
    use, intrinsic :: iso_c_binding
-   use spral_ssids_alloc, only : smalloc_setup, smfreeall
    use spral_ssids_contrib, only : contrib_type
    use spral_ssids_cpu_iface ! fixme only
    use spral_ssids_datatypes
@@ -14,7 +13,6 @@ module spral_ssids_cpu_subtree
 
    type, extends(symbolic_subtree_base) :: cpu_symbolic_subtree
       integer :: n
-      integer(long) :: nfactor ! Total number of entries in L (expected)
       type(C_PTR) :: csubtree
    contains
       procedure :: factor
@@ -64,7 +62,7 @@ module spral_ssids_cpu_subtree
       end subroutine c_destroy_symbolic_subtree
 
       type(C_PTR) function c_create_numeric_subtree(posdef, symbolic_subtree, &
-            aval, scaling, alloc, options, stats) &
+            aval, scaling, options, stats) &
             bind(C, name="spral_ssids_cpu_create_num_subtree_dbl")
          use, intrinsic :: iso_c_binding
          import :: cpu_factor_options, cpu_factor_stats
@@ -73,7 +71,6 @@ module spral_ssids_cpu_subtree
          type(C_PTR), value :: symbolic_subtree
          real(C_DOUBLE), dimension(*), intent(in) :: aval
          type(C_PTR), value :: scaling
-         type(C_PTR), value :: alloc
          type(cpu_factor_options), intent(in) :: options
          type(cpu_factor_stats), intent(out) :: stats
       end function c_create_numeric_subtree
@@ -178,14 +175,6 @@ function construct_cpu_symbolic_subtree(n, nnodes, sptr, sparent, rptr, &
    ! Store basic details
    this%n = n
 
-   ! Count size of factors
-   this%nfactor = 0
-   do node = 1, nnodes
-      blkm = rptr(node+1) - rptr(node)
-      blkn = sptr(node+1) - sptr(node)
-      this%nfactor = this%nfactor + blkm*blkn
-   end do
-
    ! Call C++ subtree analyse
    this%csubtree = &
       c_create_symbolic_subtree(n, nnodes, sptr, sparent, rptr, rlist, nptr, &
@@ -222,17 +211,6 @@ function factor(this, posdef, aval, options, inform, scaling)
    if(st.ne.0) goto 10
    cpu_factor%symbolic => this
 
-   ! Setup memory allocator
-   ! * options%multiplier * n             integers (for nodes(:)%perm)
-   ! * options%multiplier * (nfactor+2*n) reals    (for nodes(:)%lcol)
-   allocate(cpu_factor%alloc, stat=st)
-   if(st.ne.0) goto 10
-   call smalloc_setup(cpu_factor%alloc, &
-      max(this%n+0_long, int(options%multiplier*this%n, kind=long)), &
-      max(this%nfactor+2*this%n, &
-         int(options%multiplier*real(this%nfactor,wp)+2*this%n,kind=long)), st)
-   if(st.ne.0) goto 10
-
    ! Call C++ factor routine
    cpu_factor%posdef = posdef
    cscaling = C_NULL_PTR
@@ -240,7 +218,7 @@ function factor(this, posdef, aval, options, inform, scaling)
    call cpu_copy_options_in(options, coptions)
    cpu_factor%csubtree = &
       c_create_numeric_subtree(posdef, this%csubtree, &
-         aval, cscaling, C_LOC(cpu_factor%alloc), coptions, cstats)
+         aval, cscaling, coptions, cstats)
    if(cstats%flag.ne.0) then
       inform%flag = cstats%flag
       return
@@ -265,10 +243,6 @@ subroutine numeric_final(this)
    type(cpu_numeric_subtree) :: this
 
    call c_destroy_numeric_subtree(this%posdef, this%csubtree)
-
-   call smfreeall(this%alloc)
-   deallocate(this%alloc)
-   nullify(this%alloc)
 end subroutine numeric_final
 
 function get_contrib(this)

@@ -19,7 +19,12 @@
 namespace spral { namespace ssids { namespace cpu {
 
 /** Class representing a subtree factorized on the CPU */
-template <bool posdef, size_t BLOCK_SIZE, typename T, size_t PAGE_SIZE>
+template <bool posdef,
+          size_t BLOCK_SIZE,
+          typename T,
+          size_t PAGE_SIZE,
+          typename FactorAllocator // Allocator to use for factor storage
+          >
 class NumericSubtree {
 public:
    /** Performs factorization */
@@ -27,10 +32,10 @@ public:
          SymbolicSubtree const& symbolic_subtree,
          T const* aval,
          T const* scaling,
-         void* alloc,
          struct cpu_factor_options const* options,
          struct cpu_factor_stats* stats)
-   : nodes_(symbolic_subtree.nnodes_+1), symb_(symbolic_subtree)
+   : symb_(symbolic_subtree), nodes_(symbolic_subtree.nnodes_+1),
+     factor_alloc_(symbolic_subtree.get_factor_mem_est(options->multiplier))
    {
       /* Initalise stats */
 		stats->flag = SSIDS_SUCCESS;
@@ -59,8 +64,8 @@ public:
       for(int ni=0; ni<symb_.nnodes_; ++ni) {
          // Assembly
          assemble_node
-            (posdef, ni, symb_[ni], &nodes_[ni], alloc, &stalloc_odd,
-             &stalloc_even, map, aval, scaling);
+            (posdef, ni, symb_[ni], &nodes_[ni], factor_alloc_,
+             &stalloc_odd, &stalloc_even, map, aval, scaling);
          // Update stats
          int nrow = symb_[ni].nrow + nodes_[ni].ndelay_in;
          stats->maxfront = std::max(stats->maxfront, nrow);
@@ -330,8 +335,9 @@ public:
    SymbolicSubtree const& get_symbolic_subtree() { return symb_; }
 
 private:
-   std::vector<NumericNode<T>> nodes_;
    SymbolicSubtree const& symb_;
+   std::vector<NumericNode<T>> nodes_;
+   FactorAllocator factor_alloc_;
 };
 
 }}} /* end of namespace spral::ssids::cpu */
