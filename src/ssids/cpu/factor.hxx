@@ -25,24 +25,30 @@ namespace spral { namespace ssids { namespace cpu {
 const int SSIDS_SUCCESS = 0;
 const int SSIDS_ERROR_NOT_POS_DEF = -6;
 
-template <typename T>
+/** A Workspace is a chunk of memory that can be reused. The get_ptr<T>(len)
+ * function provides a pointer to it after ensuring it is of at least the
+ * given size. */
 class Workspace {
 public:
-   T *mem;
-   size_t len;
-   Workspace(size_t len)
-      : mem(new T[len]), len(len)
+   Workspace(size_t sz)
+      : mem_(::operator new(sz)), sz_(sz)
       {}
    ~Workspace() {
-      delete[] mem;
+      ::operator delete(mem_);
    }
-   void ensure_length(size_t newlen) {
-      if(len >= newlen) return; // Plenty big enough
-      // Otherwise resize
-      delete[] mem;
-      mem = new T[newlen];
-      len = newlen;
+   template <typename T>
+   T* get_ptr(size_t len) {
+      if(sz_ < len*sizeof(T)) {
+         // Need to resize
+         ::operator delete(mem_);
+         sz_ = len*sizeof(T);
+         mem_ = ::operator new(sz_);
+      }
+      return static_cast<T*>(mem_);
    }
+private:
+   void* mem_;
+   size_t sz_;
 };
 
 /* Custom exceptions */
@@ -151,7 +157,7 @@ void calculate_update(
       SymbolicNode const& snode,
       NumericNode<T>* node,
       ContribAlloc& contrib_alloc,
-      Workspace<T>* work
+      Workspace& work
       ) {
    typedef std::allocator_traits<ContribAlloc> CATraits;
 
@@ -181,8 +187,7 @@ void calculate_update(
       T *lcol = &node->lcol[snode.ncol+node->ndelay_in];
       int ldl = snode.nrow + node->ndelay_in;
       T *d = &node->lcol[ldl*(snode.ncol+node->ndelay_in)];
-      work->ensure_length(m*n);
-      T *ld = work->mem;
+      T *ld = work.get_ptr<T>(m*n);
       for(int j=0; j<n;) {
          if(d[2*j+1] == 0.0) {
             // 1x1 pivot

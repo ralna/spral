@@ -56,29 +56,39 @@ public:
       }
 
       /* Allocate workspace */
-		Workspace<T> work(PAGE_SIZE);
-		int *map = new int[symb_.n+1];
+		Workspace work(PAGE_SIZE);
 
       /* Main loop: Iterate over nodes in order */
+      #pragma omp single
       for(int ni=0; ni<symb_.nnodes_; ++ni) {
-         // Assembly
-         assemble_node
-            (posdef, ni, symb_[ni], &nodes_[ni], factor_alloc_,
-             contrib_alloc_, map, aval, scaling);
-         // Update stats
-         int nrow = symb_[ni].nrow + nodes_[ni].ndelay_in;
-         stats->maxfront = std::max(stats->maxfront, nrow);
-         // Factorization
-         factor_node
-            <posdef, BLOCK_SIZE>
-            (ni, symb_[ni], &nodes_[ni], options, stats);
-         // Form update
-         calculate_update<posdef>
-            (symb_[ni], &nodes_[ni], contrib_alloc_, &work);
+         // FIXME: depending inout on parent is not a good way to represent
+         //        the dependency.
+         /*#pragma omp task default(none) \
+            threadprivate(ni) \
+            shared(aval, contrib_alloc_, factor_alloc_, nodes_, options, \
+                   posdef, scaling, symb_) \
+            unknown(stats, work) \
+            depend(inout: nodes_[ni:1]) \
+            depend(inout: nodes_[symb_[ni].parent:1])*/
+         {
+            // Assembly
+            int* map = work.get_ptr<int>(symb_.n+1);
+            assemble_node
+               (posdef, ni, symb_[ni], &nodes_[ni], factor_alloc_,
+                contrib_alloc_, map, aval, scaling);
+            // Update stats
+            int nrow = symb_[ni].nrow + nodes_[ni].ndelay_in;
+            stats->maxfront = std::max(stats->maxfront, nrow);
+            // Factorization
+            factor_node
+               <posdef, BLOCK_SIZE>
+               (ni, symb_[ni], &nodes_[ni], options, stats);
+            // Form update
+            calculate_update<posdef>
+               (symb_[ni], &nodes_[ni], contrib_alloc_, work);
+         }
       }
-
-		// Release resources
-		delete[] map;
+      #pragma omp taskwait
 
       // Count stats
       // FIXME: gross hack for compat with bub (which needs to differentiate
