@@ -14,6 +14,9 @@ namespace spral { namespace ssids { namespace cpu {
 
 namespace pool_alloc_internal {
 
+/** A single fixed size page of memory with allocate function.
+ * Deallocation is not supported.
+ */
 class Page {
    const int align = 32; // 32 byte alignment
 public:
@@ -38,6 +41,9 @@ private:
    size_t space_; // Amount of free memory
 };
 
+/** A memory allocation pool consisting of one or more pages.
+ * Deallocation is not supported.
+ */
 class Pool {
    const size_t PAGE_SIZE = 8*1024*1024; // 8MB
 public:
@@ -69,6 +75,9 @@ private:
 
 } /* namespace spral::ssids::cpu::pool_alloc_internal */
 
+/** An allocator built on top of a pool of pages.
+ * Deallocation is not supported.
+ */
 template <typename T>
 class PoolAlloc {
 public :
