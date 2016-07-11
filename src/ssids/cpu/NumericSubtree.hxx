@@ -37,15 +37,6 @@ public:
    : symb_(symbolic_subtree), nodes_(symbolic_subtree.nnodes_+1),
      factor_alloc_(symbolic_subtree.get_factor_mem_est(options->multiplier))
    {
-      /* Initalise stats */
-		stats->flag = SSIDS_SUCCESS;
-		stats->num_delay = 0;
-		stats->num_neg = 0;
-		stats->num_two = 0;
-		stats->num_zero = 0;
-		stats->maxfront = 0;
-		for(int i=0; i<5; i++) stats->elim_at_pass[i] = 0;
-		for(int i=0; i<5; i++) stats->elim_at_itr[i] = 0;
       /* Associate symbolic nodes to numeric ones; copy tree structure */
       for(int ni=0; ni<symb_.nnodes_+1; ++ni) {
          nodes_[ni].symb = &symbolic_subtree[ni];
@@ -55,40 +46,80 @@ public:
          nodes_[ni].next_child = nc ? &nodes_[nc->idx] :  nullptr;
       }
 
-      /* Allocate workspace */
-		Workspace work(PAGE_SIZE);
+      /* Allocate workspaces */
+      int num_threads = omp_get_max_threads();
+      std::vector<struct cpu_factor_stats> thread_stats(num_threads);
+      std::vector<Workspace> work;
+      work.reserve(num_threads);
+      for(int i=0; i<num_threads; ++i)
+         work.emplace_back(PAGE_SIZE);
 
-      /* Main loop: Iterate over nodes in order */
-      #pragma omp single
-      for(int ni=0; ni<symb_.nnodes_; ++ni) {
-         // FIXME: depending inout on parent is not a good way to represent
-         //        the dependency.
-         /*#pragma omp task default(none) \
-            threadprivate(ni) \
-            shared(aval, contrib_alloc_, factor_alloc_, nodes_, options, \
-                   posdef, scaling, symb_) \
-            unknown(stats, work) \
-            depend(inout: nodes_[ni:1]) \
-            depend(inout: nodes_[symb_[ni].parent:1])*/
+      #pragma omp parallel default(shared)
+      {
+         /* Initalise stats */
+         int this_thread = omp_get_thread_num();
+         thread_stats[this_thread].flag = SSIDS_SUCCESS;
+         thread_stats[this_thread].num_delay = 0;
+         thread_stats[this_thread].num_neg = 0;
+         thread_stats[this_thread].num_two = 0;
+         thread_stats[this_thread].num_zero = 0;
+         thread_stats[this_thread].maxfront = 0;
+         for(int i=0; i<5; i++) thread_stats[this_thread].elim_at_pass[i] = 0;
+         for(int i=0; i<5; i++) thread_stats[this_thread].elim_at_itr[i] = 0;
+
+         /* Main loop: Iterate over nodes in order */
+         #pragma omp single
+         for(int ni=0; ni<symb_.nnodes_; ++ni) {
+            // FIXME: depending inout on parent is not a good way to represent
+            //        the dependency.
+            /*double *this_lcol = nodes_[ni].lcol; // for depend
+            double *parent_lcol = nodes_[symb_[ni].parent].lcol; // for depend
+            #pragma omp task default(none) \
+               firstprivate(ni) \
+               shared(aval, contrib_alloc_, factor_alloc_, nodes_, options, \
+                      scaling, symb_, thread_stats, work) \
+               depend(inout: this_lcol[0:1]) \
+               depend(inout: parent_lcol[0:1])*/
+            {
+               int this_thread = omp_get_thread_num();
+               // Assembly
+               int* map = work[this_thread].get_ptr<int>(symb_.n+1);
+               assemble_node
+                  (posdef, ni, symb_[ni], &nodes_[ni], factor_alloc_,
+                   contrib_alloc_, map, aval, scaling);
+               // Update stats
+               int nrow = symb_[ni].nrow + nodes_[ni].ndelay_in;
+               thread_stats[this_thread].maxfront = std::max(thread_stats[this_thread].maxfront, nrow);
+               // Factorization
+               factor_node
+                  <posdef, BLOCK_SIZE>
+                  (ni, symb_[ni], &nodes_[ni], options, thread_stats[this_thread]);
+               // Form update
+               calculate_update<posdef>
+                  (symb_[ni], &nodes_[ni], contrib_alloc_, work[this_thread]);
+            }
+         }
+         #pragma omp taskwait
+
+         // Reduce thread_stats
+         #pragma omp single 
          {
-            // Assembly
-            int* map = work.get_ptr<int>(symb_.n+1);
-            assemble_node
-               (posdef, ni, symb_[ni], &nodes_[ni], factor_alloc_,
-                contrib_alloc_, map, aval, scaling);
-            // Update stats
-            int nrow = symb_[ni].nrow + nodes_[ni].ndelay_in;
-            stats->maxfront = std::max(stats->maxfront, nrow);
-            // Factorization
-            factor_node
-               <posdef, BLOCK_SIZE>
-               (ni, symb_[ni], &nodes_[ni], options, stats);
-            // Form update
-            calculate_update<posdef>
-               (symb_[ni], &nodes_[ni], contrib_alloc_, work);
+            for(auto tstats : thread_stats) {
+               stats->flag =
+                  (stats->flag == SSIDS_SUCCESS) ? tstats.flag
+                                                 : std::min(stats->flag, tstats.flag); 
+               stats->num_delay += tstats.num_delay;
+               stats->num_neg += tstats.num_neg;
+               stats->num_two += tstats.num_two;
+               stats->num_zero += tstats.num_zero;
+               stats->maxfront = std::max(stats->maxfront, tstats.maxfront);
+               for(int i=0; i<5; ++i)
+                  stats->elim_at_pass[i] += tstats.elim_at_pass[i];
+               for(int i=0; i<5; ++i)
+                  stats->elim_at_itr[i] += tstats.elim_at_itr[i];
+            }
          }
       }
-      #pragma omp taskwait
 
       // Count stats
       // FIXME: gross hack for compat with bub (which needs to differentiate

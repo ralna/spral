@@ -74,7 +74,7 @@ void factor_node_indef(
       SymbolicNode const& snode,
       NumericNode<T>* node,
       struct cpu_factor_options const* options,
-      struct cpu_factor_stats* stats
+      struct cpu_factor_stats& stats
       ) {
    /* Extract useful information about node */
    int m = snode.nrow + node->ndelay_in;
@@ -89,11 +89,11 @@ void factor_node_indef(
    struct CpuLDLTSpec::stat_type bubstats; // FIXME: not needed?
    node->nelim = CpuLDLTSpec(options->u, options->small).factor(m, n, perm, lcol, m, d, &bubstats);
    for(int i=0; i<5; i++) {
-      stats->elim_at_pass[i] += bubstats.elim_at_pass[i];
+      stats.elim_at_pass[i] += bubstats.elim_at_pass[i];
    }
    int last_remain = n;
    for(int i=0; i<bubstats.nitr; i++) {
-      stats->elim_at_itr[i] += last_remain - bubstats.remain[i];
+      stats.elim_at_itr[i] += last_remain - bubstats.remain[i];
       last_remain = bubstats.remain[i];
    }
    /*if(bubstats.nitr > 2) {
@@ -111,7 +111,7 @@ void factor_node_indef(
 
    /* Record information */
    node->ndelay_out = n - node->nelim;
-   stats->num_delay += node->ndelay_out;
+   stats.num_delay += node->ndelay_out;
 }
 /* Factorize a node (posdef) */
 template <typename T, int BLOCK_SIZE>
@@ -127,11 +127,8 @@ void factor_node_posdef(
 
    /* Perform factorization */
    int flag;
-   #pragma omp parallel default(shared)
-   {
-      #pragma omp single
-      cholesky_factor(m, n, lcol, m, options->cpu_task_block_size, &flag);
-   } /* NB: implicit taskwait at end of parallel region */
+   cholesky_factor(m, n, lcol, m, options->cpu_task_block_size, &flag);
+   #pragma omp taskwait
    node->nelim = (flag!=-1) ? flag+1 : n;
    if(flag!=-1) throw NotPosDefError(flag);
 
@@ -145,7 +142,7 @@ void factor_node(
       SymbolicNode const& snode,
       NumericNode<T>* node,
       struct cpu_factor_options const* options,
-      struct cpu_factor_stats* stats
+      struct cpu_factor_stats& stats
       ) {
    if(posdef) factor_node_posdef<T, BLOCK_SIZE>(snode, node, options);
    else       factor_node_indef <T, BLOCK_SIZE>(ni, snode, node, options, stats);

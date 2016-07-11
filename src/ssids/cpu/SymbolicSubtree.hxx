@@ -25,6 +25,7 @@ struct SymbolicNode {
    int const* rlist; //< Pointer to row lists
    int num_a; //< Number of entries mapped from A to L
    int const* amap; //< Pointer to map from A to L locations
+   int parent; //< index of parent node
 };
 
 /** Symbolic factorization of a subtree to be factored on the CPU */
@@ -43,6 +44,7 @@ public:
          nodes_[ni].rlist = &rlist[rptr[ni]-1]; // rptr is Fortran indexed
          nodes_[ni].num_a = nptr[ni+1] - nptr[ni];
          nodes_[ni].amap = &nlist[2*(nptr[ni]-1)]; // nptr is Fortran indexed
+         nodes_[ni].parent = sparent[ni]-1; // sparent is Fortran indexed
       }
       nodes_[nnodes_].first_child = nullptr; // List of roots
       /* Build child linked lists */
