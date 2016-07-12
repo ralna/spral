@@ -72,14 +72,13 @@ public:
          for(int ni=0; ni<symb_.nnodes_; ++ni) {
             // FIXME: depending inout on parent is not a good way to represent
             //        the dependency.
-            /*double *this_lcol = nodes_[ni].lcol; // for depend
-            double *parent_lcol = nodes_[symb_[ni].parent].lcol; // for depend
+            NumericNode<T>* this_lcol = &nodes_[ni]; // for depend
+            NumericNode<T>* parent_lcol = &nodes_[symb_[ni].parent]; // for depend
             #pragma omp task default(none) \
-               firstprivate(ni) \
-               shared(aval, contrib_alloc_, factor_alloc_, nodes_, options, \
-                      scaling, symb_, thread_stats, work) \
+               firstprivate(ni, this_lcol, parent_lcol) \
+               shared(aval, options, scaling, thread_stats, work) \
                depend(inout: this_lcol[0:1]) \
-               depend(inout: parent_lcol[0:1])*/
+               depend(inout: parent_lcol[0:1])
             {
                int this_thread = omp_get_thread_num();
                // Assembly
@@ -104,6 +103,16 @@ public:
          // Reduce thread_stats
          #pragma omp single 
          {
+            stats->flag = SSIDS_SUCCESS;
+            stats->num_delay = 0;
+            stats->num_neg = 0;
+            stats->num_two = 0;
+            stats->num_zero = 0;
+            stats->maxfront = 0;
+            for(int i=0; i<5; ++i)
+               stats->elim_at_pass[i] = 0;
+            for(int i=0; i<5; ++i)
+               stats->elim_at_itr[i] = 0;
             for(auto tstats : thread_stats) {
                stats->flag =
                   (stats->flag == SSIDS_SUCCESS) ? tstats.flag

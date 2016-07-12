@@ -79,11 +79,15 @@ public:
       }
    }
    void* allocate(size_t sz) {
-      void* ptr = top_page_->allocate(sz);
-      if(!ptr) { // Insufficient space on current top page, make a new one
-         printf("OOPS, need a new one\n");
-         top_page_ = new Page(std::max(PAGE_SIZE, sz), top_page_);
+      void* ptr;
+      #pragma omp critical
+      {
          ptr = top_page_->allocate(sz);
+         if(!ptr) { // Insufficient space on current top page, make a new one
+            printf("OOPS, need a new one\n");
+            top_page_ = new Page(std::max(PAGE_SIZE, sz), top_page_);
+            ptr = top_page_->allocate(sz);
+         }
       }
       return ptr;
    }
