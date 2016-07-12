@@ -80,6 +80,8 @@ public:
                depend(inout: this_lcol[0:1]) \
                depend(inout: parent_lcol[0:1])
             {
+               /*printf("%d: Node %d parent %d (of %d)\n", omp_get_thread_num(),
+                     ni, symb_[ni].parent, symb_.nnodes_);*/
                int this_thread = omp_get_thread_num();
                // Assembly
                int* map = work[this_thread].get_ptr<int>(symb_.n+1);
