@@ -222,6 +222,11 @@ contains
             argnum = argnum + 1
             read( argval, * ) nrhs
             print *, 'solving for', nrhs, 'right-hand sides'         
+         case("--nemin")
+            call get_command_argument(argnum, argval)
+            argnum = argnum + 1
+            read( argval, * ) options%nemin
+            print *, 'Supernode amalgamation nemin = ', options%nemin
          case("--u")
             call get_command_argument(argnum, argval)
             argnum = argnum + 1
