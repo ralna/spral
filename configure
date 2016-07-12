@@ -589,6 +589,7 @@ ac_subst_vars='am__EXEEXT_FALSE
 am__EXEEXT_TRUE
 LTLIBOBJS
 LIBOBJS
+GTG_LIBS
 METIS_VERSION
 METIS_LIBS
 LAPACK_LIBS
@@ -710,11 +711,13 @@ ac_user_opts='
 enable_option_checking
 enable_silent_rules
 enable_gpu
+enable_profile
 enable_dependency_tracking
 enable_openmp
 with_blas
 with_lapack
 with_metis
+with_gtg
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1356,6 +1359,9 @@ Optional Features:
   --disable-gpu           Do not attempt to compile GPU code (otherwise
                           presence of nvcc is autodetected)
 
+  --enable-profile        Enable support for profile generation. Require gtg
+                          library.
+
   --enable-dependency-tracking
                           do not reject slow dependency extractors
   --disable-dependency-tracking
@@ -1368,6 +1374,7 @@ Optional Packages:
   --with-blas=<lib>       use BLAS library <lib>
   --with-lapack=<lib>     use LAPACK library <lib>
   --with-metis=<lib>      user METIS library <lib>
+  --with-gtg=<lib>        use GTG library <lib>
 
 Some influential environment variables:
   CC          C compiler command
@@ -2749,6 +2756,13 @@ fi
 # Check whether --enable-gpu was given.
 if test "${enable_gpu+set}" = set; then :
   enableval=$enable_gpu;
+fi
+
+
+# Allow user to enable profiling
+# Check whether --enable-profile was given.
+if test "${enable_profile+set}" = set; then :
+  enableval=$enable_profile;
 fi
 
 
@@ -7829,6 +7843,143 @@ rm -f core conftest.err conftest.$ac_objext \
 
 LIBS="$save_LIBS"
 
+
+# Check for profiling library if desired
+if test "x$enable_profile" != "xno"; then :
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for GTG library" >&5
+$as_echo_n "checking for GTG library... " >&6; }
+
+#
+# User hints...
+#
+
+# Check whether --with-gtg was given.
+if test "${with_gtg+set}" = set; then :
+  withval=$with_gtg;
+fi
+
+case $with_gtg in
+   -* | */* | *.a | *.so | *.so.* | *.o) GTG_LIBS="$with_gtg" ;;
+    *) GTG_LIBS="-L$with_gtg -lgtg" ;;
+esac
+
+spral_gtg_ok=no
+
+# Check supplied location
+if test $spral_gtg_ok = no; then
+if test "x$GTG_LIBS" != x; then
+   save_LIBS="$LIBS"; LIBS="$GTG_LIBS $LIBS -lm"
+   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for initTrace in $GTG_LIBS" >&5
+$as_echo_n "checking for initTrace in $GTG_LIBS... " >&6; }
+   cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char initTrace ();
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+return initTrace ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  spral_gtg_ok=yes
+else
+  GTG_LIBS=""
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+   { $as_echo "$as_me:${as_lineno-$LINENO}: result: $spral_gtg_ok" >&5
+$as_echo "$spral_gtg_ok" >&6; }
+   LIBS="$save_LIBS"
+fi
+fi
+
+
+
+# Try just -lgtg
+if test $spral_gtg_ok = no; then
+   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for initTrace in -lgtg" >&5
+$as_echo_n "checking for initTrace in -lgtg... " >&6; }
+if ${ac_cv_lib_gtg_initTrace+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lgtg -lm $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char initTrace ();
+#ifdef F77_DUMMY_MAIN
+
+#  ifdef __cplusplus
+     extern "C"
+#  endif
+   int F77_DUMMY_MAIN() { return 1; }
+
+#endif
+int
+main ()
+{
+return initTrace ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_gtg_initTrace=yes
+else
+  ac_cv_lib_gtg_initTrace=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_gtg_initTrace" >&5
+$as_echo "$ac_cv_lib_gtg_initTrace" >&6; }
+if test "x$ac_cv_lib_gtg_initTrace" = xyes; then :
+  spral_gtg_ok=yes; GTG_LIBS="-lgtg"
+fi
+
+fi
+
+# Finally, execute ACTION-IF-FOUND/ACTION-IF-NOT-FOUND:
+if test x"$spral_gtg_ok" = xyes; then
+
+$as_echo "#define HAVE_GTG 1" >>confdefs.h
+
+        :
+else
+        spral_gtg_ok
+        as_fn_error $? "GTG library not found, cannot enable profiling" "$LINENO" 5
+fi
+
+
+
+fi
 
 # Output data
 ac_config_files="$ac_config_files Makefile"

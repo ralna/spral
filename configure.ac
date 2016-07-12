@@ -7,6 +7,11 @@ AC_ARG_ENABLE([gpu],
    AS_HELP_STRING([--disable-gpu], [Do not attempt to compile GPU code (otherwise presence of nvcc is autodetected)])
    )
 
+# Allow user to enable profiling
+AC_ARG_ENABLE([profile],
+   AS_HELP_STRING([--enable-profile], [Enable support for profile generation. Require gtg library.])
+   )
+
 # Check for compilers
 AC_PROG_CC
 AC_PROG_CXX
@@ -45,6 +50,11 @@ ACX_LAPACK(,[AC_MSG_ERROR([No LAPACK library found.])])
 SPRAL_METIS(,
    [AC_MSG_ERROR([No MeTiS library found.])]
    )
+
+# Check for profiling library if desired
+AS_IF([test "x$enable_profile" != "xno"], [
+   SPRAL_GTG(,[AC_MSG_ERROR([GTG library not found, cannot enable profiling])])
+   ])
 
 # Output data
 AC_CONFIG_FILES(Makefile)

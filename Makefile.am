@@ -20,7 +20,7 @@ AM_CXXFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src -std=c++11 $(OPENMP_CX
 AM_FCFLAGS = $(OPENMP_CXXFLAGS) # assume CXX and FC use same flags...
 
 # FIXME: make below configurable
-LDADD = -L. -lspral $(METIS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FCLIBS) -lrt
+LDADD = -L. -lspral $(METIS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(GTG_LIBS) $(FCLIBS) -lrt
 if HAVE_NVCC
 SPRAL_LINK_LIBS = -lcublas
 SPRALLINK = $(NVCCLINK)
@@ -228,6 +228,8 @@ libspral_a_SOURCES += \
 	src/ssids/cpu/smalloc.cxx \
 	src/ssids/cpu/smalloc.hxx \
 	src/ssids/cpu/subtree.f90 \
+	src/ssids/cpu/profile.cxx \
+	src/ssids/cpu/profile.hxx \
 	src/ssids/cpu/PoolAlloc.hxx \
 	src/ssids/cpu/SmallLeafSubtree.hxx \
 	src/ssids/cpu/SymbolicSubtree.cxx \

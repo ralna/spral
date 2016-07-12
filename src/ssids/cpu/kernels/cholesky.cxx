@@ -11,8 +11,11 @@
 #include "cholesky.hxx"
 
 #include <algorithm>
+#include <cstdio> // FIXME: remove as only used for debug
 
 #include "wrappers.hxx"
+
+#include "../profile.hxx"
 
 namespace spral { namespace ssids { namespace cpu {
 
@@ -57,6 +60,9 @@ void cholesky_factor(int m, int n, double* a, int lda, int blksz, int *info) {
          firstprivate(m, a, lda, blksz, info) \
          depend(inout: a[j*(lda+1):1])
       if(*info==-1) {
+#ifdef PROFILE
+         Profile::Task task("TA_CHOL_DIAG", omp_get_thread_num());
+#endif
          int blkm = std::min(blksz, m-j);
          int flag = lapack_potrf(FILL_MODE_LWR, blkn, &a[j*(lda+1)], lda);
          if(flag > 0) {
@@ -68,6 +74,9 @@ void cholesky_factor(int m, int n, double* a, int lda, int blksz, int *info) {
                   blkm-blkn, blkn, 1.0, &a[j*(lda+1)], lda,
                   &a[j*(lda+1)+blkn], lda);
          }
+#ifdef PROFILE
+         task.done();
+#endif
       }
       /* Column Solve Tasks */
       for(int i=j+blksz; i<m; i+=blksz) {
@@ -78,8 +87,14 @@ void cholesky_factor(int m, int n, double* a, int lda, int blksz, int *info) {
             depend(in: a[j*(lda+1):1]) \
             depend(inout: a[j*lda + i:1])
          if(*info==-1) {
+#ifdef PROFILE
+            Profile::Task task("TA_CHOL_TRSM", omp_get_thread_num());
+#endif
             host_trsm(SIDE_RIGHT, FILL_MODE_LWR, OP_T, DIAG_NON_UNIT,
                   blkm, blkn, 1.0, &a[j*(lda+1)], lda, &a[j*lda+i], lda);
+#ifdef PROFILE
+            task.done();
+#endif
          }
       }
       /* Schur Update Tasks */
@@ -93,9 +108,15 @@ void cholesky_factor(int m, int n, double* a, int lda, int blksz, int *info) {
                depend(in: a[j*lda+i:1]) \
                depend(inout: a[k*lda+i:1])
             if(*info==-1) {
+#ifdef PROFILE
+               Profile::Task task("TA_CHOL_UPD", omp_get_thread_num());
+#endif
                int blkm = std::min(blksz, m-i);
                host_gemm(OP_N, OP_T, blkm, blkk, blkn, -1.0, &a[j*lda+i], lda,
                      &a[j*lda+k], lda, 1.0, &a[k*lda+i], lda);
+#ifdef PROFILE
+               task.done();
+#endif
             }
          }
       }

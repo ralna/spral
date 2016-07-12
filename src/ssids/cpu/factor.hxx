@@ -51,22 +51,6 @@ private:
    size_t sz_;
 };
 
-/* Custom exceptions */
-class NotPosDefError: public std::runtime_error {
-public:
-   int posn;
-
-   NotPosDefError(int posn)
-      : runtime_error("Matrix not positive definite"), posn(posn)
-   {}
-
-   virtual const char* what() const throw() {
-      std::ostringstream cnvt;
-      cnvt << std::runtime_error::what() << " (failed at column " << posn << ")";
-      return cnvt.str().c_str();
-   }
-};
-
 /* Factorize a node (indef) */
 template <typename T, int BLOCK_SIZE>
 void factor_node_indef(
@@ -118,7 +102,8 @@ template <typename T, int BLOCK_SIZE>
 void factor_node_posdef(
       SymbolicNode const& snode,
       NumericNode<T>* node,
-      struct cpu_factor_options const* options
+      struct cpu_factor_options const* options,
+      struct cpu_factor_stats& stats
       ) {
    /* Extract useful information about node */
    int m = snode.nrow;
@@ -129,8 +114,12 @@ void factor_node_posdef(
    int flag;
    cholesky_factor(m, n, lcol, m, options->cpu_task_block_size, &flag);
    #pragma omp taskwait
-   node->nelim = (flag!=-1) ? flag+1 : n;
-   if(flag!=-1) throw NotPosDefError(flag);
+   if(flag!=-1) {
+      node->nelim = flag+1;
+      stats.flag = SSIDS_ERROR_NOT_POS_DEF;
+      return;
+   }
+   node->nelim = n;
 
    /* Record information */
    node->ndelay_out = 0;
@@ -144,7 +133,7 @@ void factor_node(
       struct cpu_factor_options const* options,
       struct cpu_factor_stats& stats
       ) {
-   if(posdef) factor_node_posdef<T, BLOCK_SIZE>(snode, node, options);
+   if(posdef) factor_node_posdef<T, BLOCK_SIZE>(snode, node, options, stats);
    else       factor_node_indef <T, BLOCK_SIZE>(ni, snode, node, options, stats);
 }
 

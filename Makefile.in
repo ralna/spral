@@ -158,7 +158,8 @@ DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/acx_lapack.m4 \
 	$(top_srcdir)/m4/acx_prog_nvcc.m4 $(top_srcdir)/m4/ax_blas.m4 \
-	$(top_srcdir)/m4/spral_metis.m4 $(top_srcdir)/configure.ac
+	$(top_srcdir)/m4/spral_gtg.m4 $(top_srcdir)/m4/spral_metis.m4 \
+	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
@@ -238,6 +239,7 @@ am__libspral_a_SOURCES_DIST = src/blas_iface.f90 src/core_analyse.f90 \
 	src/ssids/cpu/NumericSubtree.cxx \
 	src/ssids/cpu/NumericSubtree.hxx src/ssids/cpu/smalloc.cxx \
 	src/ssids/cpu/smalloc.hxx src/ssids/cpu/subtree.f90 \
+	src/ssids/cpu/profile.cxx src/ssids/cpu/profile.hxx \
 	src/ssids/cpu/PoolAlloc.hxx src/ssids/cpu/SmallLeafSubtree.hxx \
 	src/ssids/cpu/SymbolicSubtree.cxx \
 	src/ssids/cpu/SymbolicSubtree.hxx \
@@ -297,6 +299,7 @@ am_libspral_a_OBJECTS = src/blas_iface.$(OBJEXT) \
 	src/ssids/cpu/NumericSubtree.$(OBJEXT) \
 	src/ssids/cpu/smalloc.$(OBJEXT) \
 	src/ssids/cpu/subtree.$(OBJEXT) \
+	src/ssids/cpu/profile.$(OBJEXT) \
 	src/ssids/cpu/SymbolicSubtree.$(OBJEXT) \
 	src/ssids/cpu/kernels/cholesky.$(OBJEXT) \
 	src/ssids/cpu/kernels/ldlt_nopiv.$(OBJEXT) \
@@ -313,13 +316,13 @@ examples_C_lsmr_LDADD = $(LDADD)
 am__DEPENDENCIES_1 =
 examples_C_lsmr_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_examples_C_random_OBJECTS = examples/C/random.$(OBJEXT)
 examples_C_random_OBJECTS = $(am_examples_C_random_OBJECTS)
 examples_C_random_LDADD = $(LDADD)
 examples_C_random_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_examples_C_random_matrix_OBJECTS =  \
 	examples/C/random_matrix.$(OBJEXT)
 examples_C_random_matrix_OBJECTS =  \
@@ -327,7 +330,7 @@ examples_C_random_matrix_OBJECTS =  \
 examples_C_random_matrix_LDADD = $(LDADD)
 examples_C_random_matrix_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_examples_C_scaling_auction_sym_OBJECTS =  \
 	examples/C/scaling/auction_sym.$(OBJEXT)
 examples_C_scaling_auction_sym_OBJECTS =  \
@@ -335,7 +338,7 @@ examples_C_scaling_auction_sym_OBJECTS =  \
 examples_C_scaling_auction_sym_LDADD = $(LDADD)
 examples_C_scaling_auction_sym_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_examples_C_scaling_auction_unsym_OBJECTS =  \
 	examples/C/scaling/auction_unsym.$(OBJEXT)
 examples_C_scaling_auction_unsym_OBJECTS =  \
@@ -343,7 +346,7 @@ examples_C_scaling_auction_unsym_OBJECTS =  \
 examples_C_scaling_auction_unsym_LDADD = $(LDADD)
 examples_C_scaling_auction_unsym_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_examples_C_scaling_equilib_sym_OBJECTS =  \
 	examples/C/scaling/equilib_sym.$(OBJEXT)
 examples_C_scaling_equilib_sym_OBJECTS =  \
@@ -351,7 +354,7 @@ examples_C_scaling_equilib_sym_OBJECTS =  \
 examples_C_scaling_equilib_sym_LDADD = $(LDADD)
 examples_C_scaling_equilib_sym_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_examples_C_scaling_equilib_unsym_OBJECTS =  \
 	examples/C/scaling/equilib_unsym.$(OBJEXT)
 examples_C_scaling_equilib_unsym_OBJECTS =  \
@@ -359,7 +362,7 @@ examples_C_scaling_equilib_unsym_OBJECTS =  \
 examples_C_scaling_equilib_unsym_LDADD = $(LDADD)
 examples_C_scaling_equilib_unsym_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_examples_C_scaling_hungarian_sym_OBJECTS =  \
 	examples/C/scaling/hungarian_sym.$(OBJEXT)
 examples_C_scaling_hungarian_sym_OBJECTS =  \
@@ -367,7 +370,7 @@ examples_C_scaling_hungarian_sym_OBJECTS =  \
 examples_C_scaling_hungarian_sym_LDADD = $(LDADD)
 examples_C_scaling_hungarian_sym_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_examples_C_scaling_hungarian_unsym_OBJECTS =  \
 	examples/C/scaling/hungarian_unsym.$(OBJEXT)
 examples_C_scaling_hungarian_unsym_OBJECTS =  \
@@ -375,11 +378,13 @@ examples_C_scaling_hungarian_unsym_OBJECTS =  \
 examples_C_scaling_hungarian_unsym_LDADD = $(LDADD)
 examples_C_scaling_hungarian_unsym_DEPENDENCIES =  \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 am_examples_C_ssids_OBJECTS = examples/C/ssids.$(OBJEXT)
 examples_C_ssids_OBJECTS = $(am_examples_C_ssids_OBJECTS)
 am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 @HAVE_NVCC_FALSE@am__DEPENDENCIES_3 = $(am__DEPENDENCIES_1)
 examples_C_ssids_DEPENDENCIES = $(am__DEPENDENCIES_2) \
 	$(am__DEPENDENCIES_3)
@@ -390,7 +395,7 @@ examples_C_ssmfe_hermitian_OBJECTS =  \
 examples_C_ssmfe_hermitian_LDADD = $(LDADD)
 examples_C_ssmfe_hermitian_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_examples_C_ssmfe_precond_core_OBJECTS =  \
 	examples/C/ssmfe/precond_core.$(OBJEXT)
 examples_C_ssmfe_precond_core_OBJECTS =  \
@@ -398,7 +403,7 @@ examples_C_ssmfe_precond_core_OBJECTS =  \
 examples_C_ssmfe_precond_core_LDADD = $(LDADD)
 examples_C_ssmfe_precond_core_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_examples_C_ssmfe_precond_expert_OBJECTS =  \
 	examples/C/ssmfe/precond_expert.$(OBJEXT)
 examples_C_ssmfe_precond_expert_OBJECTS =  \
@@ -406,7 +411,7 @@ examples_C_ssmfe_precond_expert_OBJECTS =  \
 examples_C_ssmfe_precond_expert_LDADD = $(LDADD)
 examples_C_ssmfe_precond_expert_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_examples_C_ssmfe_precond_ssmfe_OBJECTS =  \
 	examples/C/ssmfe/precond_ssmfe.$(OBJEXT)
 examples_C_ssmfe_precond_ssmfe_OBJECTS =  \
@@ -414,7 +419,7 @@ examples_C_ssmfe_precond_ssmfe_OBJECTS =  \
 examples_C_ssmfe_precond_ssmfe_LDADD = $(LDADD)
 examples_C_ssmfe_precond_ssmfe_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_examples_C_ssmfe_shift_invert_OBJECTS =  \
 	examples/C/ssmfe/shift_invert.$(OBJEXT)
 examples_C_ssmfe_shift_invert_OBJECTS =  \
@@ -422,13 +427,13 @@ examples_C_ssmfe_shift_invert_OBJECTS =  \
 examples_C_ssmfe_shift_invert_LDADD = $(LDADD)
 examples_C_ssmfe_shift_invert_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_examples_Fortran_lsmr_OBJECTS = examples/Fortran/lsmr.$(OBJEXT)
 examples_Fortran_lsmr_OBJECTS = $(am_examples_Fortran_lsmr_OBJECTS)
 examples_Fortran_lsmr_LDADD = $(LDADD)
 examples_Fortran_lsmr_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_examples_Fortran_random_OBJECTS =  \
 	examples/Fortran/random.$(OBJEXT)
 examples_Fortran_random_OBJECTS =  \
@@ -436,7 +441,7 @@ examples_Fortran_random_OBJECTS =  \
 examples_Fortran_random_LDADD = $(LDADD)
 examples_Fortran_random_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_examples_Fortran_random_matrix_OBJECTS =  \
 	examples/Fortran/random_matrix.$(OBJEXT)
 examples_Fortran_random_matrix_OBJECTS =  \
@@ -444,7 +449,7 @@ examples_Fortran_random_matrix_OBJECTS =  \
 examples_Fortran_random_matrix_LDADD = $(LDADD)
 examples_Fortran_random_matrix_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_examples_Fortran_scaling_auction_sym_OBJECTS =  \
 	examples/Fortran/scaling/auction_sym.$(OBJEXT)
 examples_Fortran_scaling_auction_sym_OBJECTS =  \
@@ -452,7 +457,8 @@ examples_Fortran_scaling_auction_sym_OBJECTS =  \
 examples_Fortran_scaling_auction_sym_LDADD = $(LDADD)
 examples_Fortran_scaling_auction_sym_DEPENDENCIES =  \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 am_examples_Fortran_scaling_auction_unsym_OBJECTS =  \
 	examples/Fortran/scaling/auction_unsym.$(OBJEXT)
 examples_Fortran_scaling_auction_unsym_OBJECTS =  \
@@ -460,7 +466,8 @@ examples_Fortran_scaling_auction_unsym_OBJECTS =  \
 examples_Fortran_scaling_auction_unsym_LDADD = $(LDADD)
 examples_Fortran_scaling_auction_unsym_DEPENDENCIES =  \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 am_examples_Fortran_scaling_equilib_sym_OBJECTS =  \
 	examples/Fortran/scaling/equilib_sym.$(OBJEXT)
 examples_Fortran_scaling_equilib_sym_OBJECTS =  \
@@ -468,7 +475,8 @@ examples_Fortran_scaling_equilib_sym_OBJECTS =  \
 examples_Fortran_scaling_equilib_sym_LDADD = $(LDADD)
 examples_Fortran_scaling_equilib_sym_DEPENDENCIES =  \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 am_examples_Fortran_scaling_equilib_unsym_OBJECTS =  \
 	examples/Fortran/scaling/equilib_unsym.$(OBJEXT)
 examples_Fortran_scaling_equilib_unsym_OBJECTS =  \
@@ -476,7 +484,8 @@ examples_Fortran_scaling_equilib_unsym_OBJECTS =  \
 examples_Fortran_scaling_equilib_unsym_LDADD = $(LDADD)
 examples_Fortran_scaling_equilib_unsym_DEPENDENCIES =  \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 am_examples_Fortran_scaling_hungarian_sym_OBJECTS =  \
 	examples/Fortran/scaling/hungarian_sym.$(OBJEXT)
 examples_Fortran_scaling_hungarian_sym_OBJECTS =  \
@@ -484,7 +493,8 @@ examples_Fortran_scaling_hungarian_sym_OBJECTS =  \
 examples_Fortran_scaling_hungarian_sym_LDADD = $(LDADD)
 examples_Fortran_scaling_hungarian_sym_DEPENDENCIES =  \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 am_examples_Fortran_scaling_hungarian_unsym_OBJECTS =  \
 	examples/Fortran/scaling/hungarian_unsym.$(OBJEXT)
 examples_Fortran_scaling_hungarian_unsym_OBJECTS =  \
@@ -492,7 +502,8 @@ examples_Fortran_scaling_hungarian_unsym_OBJECTS =  \
 examples_Fortran_scaling_hungarian_unsym_LDADD = $(LDADD)
 examples_Fortran_scaling_hungarian_unsym_DEPENDENCIES =  \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 am_examples_Fortran_ssids_OBJECTS = examples/Fortran/ssids.$(OBJEXT)
 examples_Fortran_ssids_OBJECTS = $(am_examples_Fortran_ssids_OBJECTS)
 examples_Fortran_ssids_DEPENDENCIES = $(am__DEPENDENCIES_2) \
@@ -504,7 +515,7 @@ examples_Fortran_ssmfe_hermitian_OBJECTS =  \
 examples_Fortran_ssmfe_hermitian_LDADD = $(LDADD)
 examples_Fortran_ssmfe_hermitian_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_examples_Fortran_ssmfe_precond_core_OBJECTS =  \
 	examples/Fortran/ssmfe/precond_core.$(OBJEXT) \
 	examples/Fortran/ssmfe/laplace2d.$(OBJEXT)
@@ -513,7 +524,8 @@ examples_Fortran_ssmfe_precond_core_OBJECTS =  \
 examples_Fortran_ssmfe_precond_core_LDADD = $(LDADD)
 examples_Fortran_ssmfe_precond_core_DEPENDENCIES =  \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 am_examples_Fortran_ssmfe_precond_expert_OBJECTS =  \
 	examples/Fortran/ssmfe/precond_expert.$(OBJEXT) \
 	examples/Fortran/ssmfe/laplace2d.$(OBJEXT)
@@ -522,7 +534,8 @@ examples_Fortran_ssmfe_precond_expert_OBJECTS =  \
 examples_Fortran_ssmfe_precond_expert_LDADD = $(LDADD)
 examples_Fortran_ssmfe_precond_expert_DEPENDENCIES =  \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 am_examples_Fortran_ssmfe_precond_ssmfe_OBJECTS =  \
 	examples/Fortran/ssmfe/precond_ssmfe.$(OBJEXT) \
 	examples/Fortran/ssmfe/laplace2d.$(OBJEXT)
@@ -531,7 +544,8 @@ examples_Fortran_ssmfe_precond_ssmfe_OBJECTS =  \
 examples_Fortran_ssmfe_precond_ssmfe_LDADD = $(LDADD)
 examples_Fortran_ssmfe_precond_ssmfe_DEPENDENCIES =  \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 am_examples_Fortran_ssmfe_shift_invert_OBJECTS =  \
 	examples/Fortran/ssmfe/shift_invert.$(OBJEXT) \
 	examples/Fortran/ssmfe/laplace2d.$(OBJEXT) \
@@ -541,29 +555,32 @@ examples_Fortran_ssmfe_shift_invert_OBJECTS =  \
 examples_Fortran_ssmfe_shift_invert_LDADD = $(LDADD)
 examples_Fortran_ssmfe_shift_invert_DEPENDENCIES =  \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 am_lsmr_test_OBJECTS = tests/lsmr.$(OBJEXT)
 lsmr_test_OBJECTS = $(am_lsmr_test_OBJECTS)
 lsmr_test_LDADD = $(LDADD)
 lsmr_test_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 am_random_matrix_test_OBJECTS = tests/random_matrix.$(OBJEXT)
 random_matrix_test_OBJECTS = $(am_random_matrix_test_OBJECTS)
 random_matrix_test_LDADD = $(LDADD)
 random_matrix_test_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_random_test_OBJECTS = tests/random.$(OBJEXT)
 random_test_OBJECTS = $(am_random_test_OBJECTS)
 random_test_LDADD = $(LDADD)
 random_test_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 am_scaling_test_OBJECTS = tests/scaling.$(OBJEXT)
 scaling_test_OBJECTS = $(am_scaling_test_OBJECTS)
 scaling_test_LDADD = $(LDADD)
 scaling_test_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am__spral_ssids_SOURCES_DIST = driver/spral_ssids.f90 \
 	driver/cuda_helper_gpu.f90 driver/cuda_helper_nogpu.f90
 @HAVE_NVCC_TRUE@am__objects_3 = driver/cuda_helper_gpu.$(OBJEXT)
@@ -582,7 +599,7 @@ ssids_kernel_test_OBJECTS = $(am_ssids_kernel_test_OBJECTS)
 ssids_kernel_test_LDADD = $(LDADD)
 ssids_kernel_test_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_ssids_test_OBJECTS = tests/ssids/ssids.$(OBJEXT)
 ssids_test_OBJECTS = $(am_ssids_test_OBJECTS)
 ssids_test_DEPENDENCIES = $(am__DEPENDENCIES_2) $(am__DEPENDENCIES_3)
@@ -591,12 +608,13 @@ ssmfe_ciface_test_OBJECTS = $(am_ssmfe_ciface_test_OBJECTS)
 ssmfe_ciface_test_LDADD = $(LDADD)
 ssmfe_ciface_test_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_ssmfe_test_OBJECTS = tests/ssmfe/ssmfe.$(OBJEXT)
 ssmfe_test_OBJECTS = $(am_ssmfe_test_OBJECTS)
 ssmfe_test_LDADD = $(LDADD)
 ssmfe_test_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -969,6 +987,7 @@ FCFLAGS = @FCFLAGS@
 FCLIBS = @FCLIBS@
 FFLAGS = @FFLAGS@
 FLIBS = @FLIBS@
+GTG_LIBS = @GTG_LIBS@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
@@ -1074,7 +1093,7 @@ AM_CXXFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src -std=c++11 $(OPENMP_CX
 AM_FCFLAGS = $(OPENMP_CXXFLAGS) # assume CXX and FC use same flags...
 
 # FIXME: make below configurable
-LDADD = -L. -lspral $(METIS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FCLIBS) -lrt
+LDADD = -L. -lspral $(METIS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(GTG_LIBS) $(FCLIBS) -lrt
 @HAVE_NVCC_FALSE@SPRAL_LINK_LIBS = $(CXXLIB)
 @HAVE_NVCC_TRUE@SPRAL_LINK_LIBS = -lcublas
 @HAVE_NVCC_FALSE@SPRALLINK = $(FCLINK)
@@ -1134,6 +1153,7 @@ libspral_a_SOURCES = src/blas_iface.f90 src/core_analyse.f90 \
 	src/ssids/cpu/NumericSubtree.cxx \
 	src/ssids/cpu/NumericSubtree.hxx src/ssids/cpu/smalloc.cxx \
 	src/ssids/cpu/smalloc.hxx src/ssids/cpu/subtree.f90 \
+	src/ssids/cpu/profile.cxx src/ssids/cpu/profile.hxx \
 	src/ssids/cpu/PoolAlloc.hxx src/ssids/cpu/SmallLeafSubtree.hxx \
 	src/ssids/cpu/SymbolicSubtree.cxx \
 	src/ssids/cpu/SymbolicSubtree.hxx \
@@ -1463,6 +1483,8 @@ src/ssids/cpu/NumericSubtree.$(OBJEXT): src/ssids/cpu/$(am__dirstamp) \
 src/ssids/cpu/smalloc.$(OBJEXT): src/ssids/cpu/$(am__dirstamp) \
 	src/ssids/cpu/$(DEPDIR)/$(am__dirstamp)
 src/ssids/cpu/subtree.$(OBJEXT): src/ssids/cpu/$(am__dirstamp) \
+	src/ssids/cpu/$(DEPDIR)/$(am__dirstamp)
+src/ssids/cpu/profile.$(OBJEXT): src/ssids/cpu/$(am__dirstamp) \
 	src/ssids/cpu/$(DEPDIR)/$(am__dirstamp)
 src/ssids/cpu/SymbolicSubtree.$(OBJEXT):  \
 	src/ssids/cpu/$(am__dirstamp) \
@@ -1944,6 +1966,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/ssmfe/$(DEPDIR)/shift_invert.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/$(DEPDIR)/NumericSubtree.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/$(DEPDIR)/SymbolicSubtree.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/$(DEPDIR)/profile.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/$(DEPDIR)/smalloc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/kernels/$(DEPDIR)/cholesky.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/kernels/$(DEPDIR)/ldlt_nopiv.Po@am__quote@

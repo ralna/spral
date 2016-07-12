@@ -44,18 +44,13 @@ void* spral_ssids_cpu_create_num_subtree_dbl(
    auto const& symbolic_subtree = *static_cast<SymbolicSubtree const*>(symbolic_subtree_ptr);
 
    if(posdef) {
-      try {
-         auto* subtree = new NumericSubtreePosdef
-            (symbolic_subtree, aval, scaling, options, stats);
-         if(options->print_level > 9999) {
-            printf("Final factors:\n");
-            subtree->print();
-         }
-         return (void*) subtree;
-      } catch(NotPosDefError npde) {
-         stats->flag = SSIDS_ERROR_NOT_POS_DEF;
-         return nullptr;
+      auto* subtree = new NumericSubtreePosdef
+         (symbolic_subtree, aval, scaling, options, stats);
+      if(options->print_level > 9999) {
+         printf("Final factors:\n");
+         subtree->print();
       }
+      return (void*) subtree;
    } else { /* indef */
       auto* subtree = new NumericSubtreeIndef
          (symbolic_subtree, aval, scaling, options, stats);

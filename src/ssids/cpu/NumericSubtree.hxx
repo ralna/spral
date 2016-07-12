@@ -15,6 +15,8 @@
 #include "NumericNode.hxx"
 #include "SymbolicSubtree.hxx"
 
+#include "profile.hxx"
+
 namespace spral { namespace ssids { namespace cpu {
 
 /** Class representing a subtree factorized on the CPU */
@@ -37,6 +39,8 @@ public:
    : symb_(symbolic_subtree), nodes_(symbolic_subtree.nnodes_+1),
      factor_alloc_(symbolic_subtree.get_factor_mem_est(options->multiplier))
    {
+      Profile::init();
+
       /* Associate symbolic nodes to numeric ones; copy tree structure */
       for(int ni=0; ni<symb_.nnodes_+1; ++ni) {
          nodes_[ni].symb = &symbolic_subtree[ni];
@@ -68,6 +72,7 @@ public:
          for(int i=0; i<5; i++) thread_stats[this_thread].elim_at_itr[i] = 0;
 
          /* Main loop: Iterate over nodes in order */
+         #pragma omp taskgroup
          #pragma omp single
          for(int ni=0; ni<symb_.nnodes_; ++ni) {
             // FIXME: depending inout on parent is not a good way to represent
@@ -80,27 +85,43 @@ public:
                depend(inout: this_lcol[0:1]) \
                depend(inout: parent_lcol[0:1])
             {
-               /*printf("%d: Node %d parent %d (of %d)\n", omp_get_thread_num(),
-                     ni, symb_[ni].parent, symb_.nnodes_);*/
+               /*printf("%d: Node %d parent %d (of %d) size %d x %d\n",
+                     omp_get_thread_num(), ni, symb_[ni].parent, symb_.nnodes_,
+                     symb_[ni].nrow, symb_[ni].ncol);*/
                int this_thread = omp_get_thread_num();
                // Assembly
+#ifdef PROFILE
+               Profile::Task task_assemble("TA_ASSEMBLE", this_thread);
+#endif
                int* map = work[this_thread].get_ptr<int>(symb_.n+1);
                assemble_node
                   (posdef, ni, symb_[ni], &nodes_[ni], factor_alloc_,
                    contrib_alloc_, map, aval, scaling);
+#ifdef PROFILE
+               task_assemble.done();
+               Profile::Task task_factor("TA_FACTOR", this_thread);
+#endif
                // Update stats
                int nrow = symb_[ni].nrow + nodes_[ni].ndelay_in;
                thread_stats[this_thread].maxfront = std::max(thread_stats[this_thread].maxfront, nrow);
                // Factorization
                factor_node
                   <posdef, BLOCK_SIZE>
-                  (ni, symb_[ni], &nodes_[ni], options, thread_stats[this_thread]);
+                  (ni, symb_[ni], &nodes_[ni], options,
+                   thread_stats[this_thread]);
+               #pragma omp cancel taskgroup if(thread_stats[this_thread].flag<SSIDS_SUCCESS)
+#ifdef PROFILE
+               task_factor.done();
+               Profile::Task task_update("TA_UPDATE", this_thread);
+#endif
                // Form update
                calculate_update<posdef>
                   (symb_[ni], &nodes_[ni], contrib_alloc_, work[this_thread]);
+#ifdef PROFILE
+               task_update.done();
+#endif
             }
          }
-         #pragma omp taskwait
 
          // Reduce thread_stats
          #pragma omp single 
@@ -168,6 +189,9 @@ public:
             }
          }
       }
+#ifdef PROFILE
+      endTrace();
+#endif
    }
 
    void solve_fwd(int nrhs, double* x, int ldx) const {
