@@ -72,10 +72,10 @@ public:
          for(int ni=0; ni<symb_.nnodes_; ++ni) {
             // FIXME: depending inout on parent is not a good way to represent
             //        the dependency.
-            NumericNode<T>* this_lcol = &nodes_[ni]; // for depend
-            NumericNode<T>* parent_lcol = &nodes_[symb_[ni].parent]; // for depend
+            auto* this_lcol = &nodes_[ni]; // for depend
+            auto* parent_lcol = &nodes_[symb_[ni].parent]; // for depend
             #pragma omp task default(none) \
-               firstprivate(ni, this_lcol, parent_lcol) \
+               firstprivate(ni) \
                shared(aval, options, scaling, thread_stats, work) \
                depend(inout: this_lcol[0:1]) \
                depend(inout: parent_lcol[0:1])

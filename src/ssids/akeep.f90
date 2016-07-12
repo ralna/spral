@@ -107,12 +107,19 @@ subroutine free_akeep_base(akeep, flag)
    class(ssids_akeep_base), intent(inout) :: akeep
    integer, intent(out) :: flag
 
+   integer :: i
    integer :: st
 
    flag = 0
 
    deallocate(akeep%part, stat=st)
-   deallocate(akeep%subtree, stat=st)
+   if(allocated(akeep%subtree)) then
+      do i = 1, size(akeep%subtree)
+         if(associated(akeep%subtree(i)%ptr)) &
+            deallocate(akeep%subtree(i)%ptr)
+      end do
+      deallocate(akeep%subtree, stat=st)
+   endif
    deallocate(akeep%child_ptr, stat=st)
    deallocate(akeep%child_list, stat=st)
    deallocate(akeep%invp, stat=st)

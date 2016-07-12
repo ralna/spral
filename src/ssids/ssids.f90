@@ -101,7 +101,7 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
    integer, intent(in) :: n ! order of A
    integer, intent(in) :: row(:) ! row indices of lower triangular part
    integer, intent(in) :: ptr(:) ! col pointers for lower triangular part
-   class(ssids_akeep_base), intent(out) :: akeep ! See derived-type declaration
+   class(ssids_akeep_base), intent(inout) :: akeep ! See derived-type declaration
    type(ssids_options), intent(in) :: options ! See derived-type declaration
    class(ssids_inform_base), intent(out) :: inform  ! See derived-type declaration
    integer, optional, intent(inout) :: order(:)

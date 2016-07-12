@@ -424,6 +424,13 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
    ! FIXME: remove printing here and implement code
    !print *, "Partition suggests ", akeep%nparts, " parts (not used yet)"
 
+   if(allocated(akeep%subtree)) then
+      do i = 1, size(akeep%subtree)
+         if(associated(akeep%subtree(i)%ptr)) &
+            deallocate(akeep%subtree(i)%ptr)
+      end do
+      deallocate(akeep%subtree)
+   endif
    allocate(akeep%subtree(1))
    akeep%subtree(1)%ptr => construct_cpu_symbolic_subtree(akeep%n, &
       akeep%nnodes, akeep%sptr, akeep%sparent, akeep%rptr, akeep%rlist, &
