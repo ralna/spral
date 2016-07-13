@@ -84,7 +84,6 @@ public:
       {
          ptr = top_page_->allocate(sz);
          if(!ptr) { // Insufficient space on current top page, make a new one
-            printf("OOPS, need a new one\n");
             top_page_ = new Page(std::max(PAGE_SIZE, sz), top_page_);
             ptr = top_page_->allocate(sz);
          }
