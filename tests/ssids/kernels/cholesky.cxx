@@ -101,6 +101,7 @@ int run_cholesky_tests() {
    TEST(test_cholesky(500, 234, 32));
    TEST(test_cholesky(733, 231, 32));
    TEST(test_cholesky(733, 231, 19));
+   TEST(test_cholesky(1668, 204, 256));
 
    return nerr;
 }
