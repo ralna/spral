@@ -28,20 +28,20 @@ int test_cholesky(int m, int n, int blksz, bool debug=false) {
    double *l = new double[m*lda];
    memcpy(l, a, m*lda*sizeof(double));
    
-   /* Factor first m x n part with our code */
+   /* Factor first m x n part with our code, generate contrib block */
    if(debug) { printf("PRE:\n"); print_mat(" %e", m, l, lda); }
    int info;
    #pragma omp parallel default(shared)
    {
       #pragma omp single
       {
-         cholesky_factor(m, n, l, lda, blksz, &info);
+         cholesky_factor(m, n, l, lda, 1.0, &l[n*lda+n], lda, blksz, &info);
       }
    } /* implicit task wait on exit from parallel region */
    if(debug) { printf("POST:\n"); print_mat(" %e", m, l, lda); }
    if(m>n) {
       /* Schur complement update remainder block */
-      host_gemm<double>(OP_N, OP_T, m-n, m-n, n, -1.0, &l[n], lda, &l[n], m, 1.0, &l[n*lda+n], lda);
+      //host_gemm<double>(OP_N, OP_T, m-n, m-n, n, -1.0, &l[n], lda, &l[n], m, 1.0, &l[n*lda+n], lda);
       if(debug) { printf("post schur:\n"); print_mat(" %e", m, l, lda); }
       /* Factor remaining part using LAPACK Cholesky factorization */
       lapack_potrf<double>(FILL_MODE_LWR, m-n, &l[n*lda+n], lda);
@@ -50,7 +50,7 @@ int test_cholesky(int m, int n, int blksz, bool debug=false) {
 
    /* Generate a rhs corresponding to x=1.0 */
    double *rhs = new double[m];
-   gen_rhs(n, a, lda, rhs);
+   gen_rhs(m, a, lda, rhs);
 
    /* Perform solves with 1 and 3 rhs */
    int nrhs = 3;

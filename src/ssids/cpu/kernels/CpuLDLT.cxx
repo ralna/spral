@@ -1414,7 +1414,7 @@ void ldlt_solve_bwd(int m, int n, T const* l, int ldl, int nrhs, T* x, int ldx) 
       host_trsv(FILL_MODE_LWR, OP_T, DIAG_UNIT, n, l, ldl, x, 1);
    } else {
       if(m > n)
-         host_gemm(OP_T, OP_N, m-n, nrhs, n, -1.0, &l[n], ldl, &x[n], ldx, 1.0, x, ldx);
+         host_gemm(OP_T, OP_N, n, nrhs, m-n, -1.0, &l[n], ldl, &x[n], ldx, 1.0, x, ldx);
       host_trsm(SIDE_LEFT, FILL_MODE_LWR, OP_T, DIAG_UNIT, n, nrhs, 1.0, l, ldl, x, ldx);
    }
 }

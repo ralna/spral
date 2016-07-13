@@ -114,9 +114,11 @@ public:
                task_factor.done();
                Profile::Task task_update("TA_UPDATE", this_thread);
 #endif
-               // Form update
-               calculate_update<posdef>
-                  (symb_[ni], &nodes_[ni], contrib_alloc_, work[this_thread]);
+               // Form update (only separate in indef case)
+               if(!posdef) {
+                  calculate_update
+                     (symb_[ni], &nodes_[ni], contrib_alloc_, work[this_thread]);
+               }
 #ifdef PROFILE
                task_update.done();
 #endif

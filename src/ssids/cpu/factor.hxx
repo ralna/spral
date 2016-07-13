@@ -109,10 +109,11 @@ void factor_node_posdef(
    int m = snode.nrow;
    int n = snode.ncol;
    T *lcol = node->lcol;
+   T *contrib = node->contrib;
 
    /* Perform factorization */
    int flag;
-   cholesky_factor(m, n, lcol, m, options->cpu_task_block_size, &flag);
+   cholesky_factor(m, n, lcol, m, 1.0, contrib, m-n, options->cpu_task_block_size, &flag);
    #pragma omp taskwait
    if(flag!=-1) {
       node->nelim = flag+1;
@@ -138,7 +139,7 @@ void factor_node(
 }
 
 /* Calculate update */
-template <bool posdef, typename T, typename ContribAlloc>
+template <typename T, typename ContribAlloc>
 void calculate_update(
       SymbolicNode const& snode,
       NumericNode<T>* node,
@@ -161,59 +162,52 @@ void calculate_update(
    }
    if(m==0 || n==0) return; // no-op
 
-   if(posdef) {
-      int ldl = snode.nrow;
-      host_syrk<T>(FILL_MODE_LWR, OP_N, m, n,
-            -1.0, &node->lcol[snode.ncol], ldl,
-            1.0, node->contrib, m);
-   } else {
-      // Indefinte - need to recalculate LD before we can use it!
+   // Indefinte - need to recalculate LD before we can use it!
 
-      // Calculate LD
-      T *lcol = &node->lcol[snode.ncol+node->ndelay_in];
-      int ldl = snode.nrow + node->ndelay_in;
-      T *d = &node->lcol[ldl*(snode.ncol+node->ndelay_in)];
-      T *ld = work.get_ptr<T>(m*n);
-      for(int j=0; j<n;) {
-         if(d[2*j+1] == 0.0) {
-            // 1x1 pivot
-            // (Actually stored as D^-1 so need to invert it again)
-            if(d[2*j] == 0.0) {
-               // Handle zero pivots with care
-               for(int i=0; i<m; i++) {
-                  ld[j*m+i] = 0.0;
-               }
-            } else {
-               // Standard 1x1 pivot
-               T d11 = 1/d[2*j];
-               // And calulate ld
-               for(int i=0; i<m; i++) {
-                  ld[j*m+i] = d11*lcol[j*ldl+i];
-               }
+   // Calculate LD
+   T *lcol = &node->lcol[snode.ncol+node->ndelay_in];
+   int ldl = snode.nrow + node->ndelay_in;
+   T *d = &node->lcol[ldl*(snode.ncol+node->ndelay_in)];
+   T *ld = work.get_ptr<T>(m*n);
+   for(int j=0; j<n;) {
+      if(d[2*j+1] == 0.0) {
+         // 1x1 pivot
+         // (Actually stored as D^-1 so need to invert it again)
+         if(d[2*j] == 0.0) {
+            // Handle zero pivots with care
+            for(int i=0; i<m; i++) {
+               ld[j*m+i] = 0.0;
             }
-            // Increment j
-            j++;
          } else {
-            // 2x2 pivot
-            // (Actually stored as D^-1 so need to invert it again)
-            T di11 = d[2*j]; T di21 = d[2*j+1]; T di22 = d[2*j+3];
-            T det = di11*di22 - di21*di21;
-            T d11 = di22 / det; T d21 = -di21 / det; T d22 = di11 / det;
+            // Standard 1x1 pivot
+            T d11 = 1/d[2*j];
             // And calulate ld
             for(int i=0; i<m; i++) {
-               ld[j*m+i]     = d11*lcol[j*ldl+i] + d21*lcol[(j+1)*ldl+i];
-               ld[(j+1)*m+i] = d21*lcol[j*ldl+i] + d22*lcol[(j+1)*ldl+i];
+               ld[j*m+i] = d11*lcol[j*ldl+i];
             }
-            // Increment j
-            j += 2;
          }
+         // Increment j
+         j++;
+      } else {
+         // 2x2 pivot
+         // (Actually stored as D^-1 so need to invert it again)
+         T di11 = d[2*j]; T di21 = d[2*j+1]; T di22 = d[2*j+3];
+         T det = di11*di22 - di21*di21;
+         T d11 = di22 / det; T d21 = -di21 / det; T d22 = di11 / det;
+         // And calulate ld
+         for(int i=0; i<m; i++) {
+            ld[j*m+i]     = d11*lcol[j*ldl+i] + d21*lcol[(j+1)*ldl+i];
+            ld[(j+1)*m+i] = d21*lcol[j*ldl+i] + d22*lcol[(j+1)*ldl+i];
+         }
+         // Increment j
+         j += 2;
       }
-
-      // Apply update to contrib block
-      host_gemm<T>(OP_N, OP_T, m, m, n,
-            -1.0, lcol, ldl, ld, m,
-            1.0, node->contrib, m);
    }
+
+   // Apply update to contrib block
+   host_gemm<T>(OP_N, OP_T, m, m, n,
+         -1.0, lcol, ldl, ld, m,
+         1.0, node->contrib, m);
 
    // FIXME: debug remove
    /*printf("Contrib = \n");

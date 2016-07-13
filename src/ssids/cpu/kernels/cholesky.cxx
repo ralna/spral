@@ -20,6 +20,7 @@
 namespace spral { namespace ssids { namespace cpu {
 
 /** Perform Cholesky factorization of lower triangular matrix a[] in place.
+ * Optionally calculates the contribution block (beta*C) - LL^T.
  *
  * Note that calling this routine just enqueues tasks, these will not
  * necessarily be complete until an omp taskwait construct is encountered.
@@ -29,12 +30,15 @@ namespace spral { namespace ssids { namespace cpu {
  * \param a the matrix to be factorized, only lower triangle is used, however
  *    upper triangle may get overwritten with rubbish
  * \param lda the leading dimension of a
+ * \param beta the coefficient to multiply C by (normally 0.0 or 1.0)
+ * \param upd the (m-n) x (m-n) contribution block C (may be null)
+ * \param ldup the leading dimension of upd
  * \param blksz the block size to use for parallelization. Blocks are aimed to
  *    contain at most blksz**2 entries.
  * \param info is initialized to -1, and will be changed to the index of any
  *    column where a non-zero column is encountered.
  */
-void cholesky_factor(int m, int n, double* a, int lda, int blksz, int *info) {
+void cholesky_factor(int m, int n, double* a, int lda, double beta, double* upd, int ldupd, int blksz, int *info) {
    if(n < blksz) {
       // Adjust so blocks have blksz**2 entries
       blksz = int((long(blksz)*blksz) / n);
@@ -121,6 +125,9 @@ void cholesky_factor(int m, int n, double* a, int lda, int blksz, int *info) {
          }
       }
    }
+   #pragma omp taskwait
+   if(m>n && upd)
+      host_syrk(FILL_MODE_LWR, OP_N, m-n, n, -1.0, &a[n], lda, beta, upd, ldupd);
 }
 
 /* Forwards solve corresponding to cholesky_factor() */
@@ -144,7 +151,7 @@ void cholesky_solve_bwd(int m, int n, double const* a, int lda, int nrhs, double
       host_trsv(FILL_MODE_LWR, OP_T, DIAG_NON_UNIT, n, a, lda, x, 1);
    } else {
       if(m > n)
-         host_gemm(OP_T, OP_N, m-n, nrhs, n, -1.0, &a[n], lda, &x[n], ldx, 1.0, x, ldx);
+         host_gemm(OP_T, OP_N, n, nrhs, m-n, -1.0, &a[n], lda, &x[n], ldx, 1.0, x, ldx);
       host_trsm(SIDE_LEFT, FILL_MODE_LWR, OP_T, DIAG_NON_UNIT, n, nrhs, 1.0, a, lda, x, ldx);
    }
 }
