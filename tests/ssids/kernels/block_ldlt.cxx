@@ -261,7 +261,8 @@ int ldlt_test_block(T u, T small) {
    }
 
    // Factorize using main routine
-   T *l = new T[n*lda];
+   AlignedAllocator<T> Talloc;
+   T *l = Talloc.allocate(n*lda);
    memcpy(l, a, n*lda*sizeof(T)); // Copy a to l
    int perm[BLOCK_SIZE];
    for(int i=0; i<n; i++) perm[i] = i;
@@ -287,7 +288,8 @@ int ldlt_test_block(T u, T small) {
    EXPECT_LE(bwderr, 1e-14);
 
    // Cleanup memory
-   delete[] a; delete[] l;
+   delete[] a;
+   Talloc.deallocate(l, n*lda);
 
    return 0;
 }
