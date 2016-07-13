@@ -46,6 +46,8 @@ void cholesky_factor(int m, int n, double* a, int lda, double beta, double* upd,
 
    *info = -1;
 
+   // FIXME: beta != 1.0 is broken - need to use only on first touch
+
    /* NOTE: as we rely on the user to taskwait in an appropriate position, we
     * can't use shared attribute on arguments they've passed in, as these may
     * cease to exist on exit from this routine. So we take a private copy using
@@ -61,7 +63,7 @@ void cholesky_factor(int m, int n, double* a, int lda, double beta, double* upd,
       /* Diagonal Block Factorization Task */
       #pragma omp task default(none) \
          firstprivate(j, blkn) \
-         firstprivate(m, a, lda, blksz, info) \
+         firstprivate(m, a, lda, blksz, info, beta, upd, ldupd) \
          depend(inout: a[j*(lda+1):1])
       if(*info==-1) {
 #ifdef PROFILE
@@ -77,6 +79,10 @@ void cholesky_factor(int m, int n, double* a, int lda, double beta, double* upd,
             host_trsm(SIDE_RIGHT, FILL_MODE_LWR, OP_T, DIAG_NON_UNIT,
                   blkm-blkn, blkn, 1.0, &a[j*(lda+1)], lda,
                   &a[j*(lda+1)+blkn], lda);
+            if(upd) {
+               host_syrk(FILL_MODE_LWR, OP_N, blkm-blkn, blkn, -1.0,
+                     &a[j*(lda+1)+blkn], lda, beta, upd, ldupd);
+            }
          }
 #ifdef PROFILE
          task.done();
@@ -87,7 +93,7 @@ void cholesky_factor(int m, int n, double* a, int lda, double beta, double* upd,
          int blkm = std::min(blksz, m-i);
          #pragma omp task default(none) \
             firstprivate(i, j, blkn, blkm) \
-            firstprivate(a, lda, info) \
+            firstprivate(a, lda, info, beta, upd, ldupd, blksz, n) \
             depend(in: a[j*(lda+1):1]) \
             depend(inout: a[j*lda + i:1])
          if(*info==-1) {
@@ -96,18 +102,22 @@ void cholesky_factor(int m, int n, double* a, int lda, double beta, double* upd,
 #endif
             host_trsm(SIDE_RIGHT, FILL_MODE_LWR, OP_T, DIAG_NON_UNIT,
                   blkm, blkn, 1.0, &a[j*(lda+1)], lda, &a[j*lda+i], lda);
+            if(blkn<blksz && upd)
+               host_gemm(OP_N, OP_T, blkm, blksz-blkn, blkn, -1.0,
+                     &a[j*lda+i], lda, &a[j*(lda+1)+blkn], lda,
+                     beta, &upd[i-n], ldupd);
 #ifdef PROFILE
             task.done();
 #endif
          }
       }
-      /* Schur Update Tasks */
+      /* Schur Update Tasks: mostly internal */
       for(int k=j+blksz; k<n; k+=blksz) {
          int blkk = std::min(blksz, n-k);
          for(int i=k; i<m; i+=blksz) {
             #pragma omp task default(none) \
                firstprivate(i, j, k, blkn, blkk) \
-               firstprivate(m, a, lda, blksz, info) \
+               firstprivate(m, a, lda, blksz, info, beta, upd, ldupd, n) \
                depend(in: a[j*lda+k:1]) \
                depend(in: a[j*lda+i:1]) \
                depend(inout: a[k*lda+i:1])
@@ -118,16 +128,53 @@ void cholesky_factor(int m, int n, double* a, int lda, double beta, double* upd,
                int blkm = std::min(blksz, m-i);
                host_gemm(OP_N, OP_T, blkm, blkk, blkn, -1.0, &a[j*lda+i], lda,
                      &a[j*lda+k], lda, 1.0, &a[k*lda+i], lda);
+               if(blkk < blksz && upd) {
+                  int upd_width = (m<k+blksz) ? blkm - blkk
+                                              : blksz - blkk;
+                  if(i-n < 0) {
+                     // Special case for first block of contrib
+                     host_gemm(OP_N, OP_T, blkm+i-n, upd_width, blkn, -1.0,
+                           &a[j*lda+n], lda, &a[j*lda+k+blkk], lda, beta,
+                           upd, ldupd);
+                  } else {
+                     host_gemm(OP_N, OP_T, blkm, upd_width, blkn, -1.0,
+                           &a[j*lda+i], lda, &a[j*lda+k+blkk], lda, beta,
+                           &upd[i-n], ldupd);
+                  }
+               }
 #ifdef PROFILE
                task.done();
 #endif
             }
          }
       }
+      /* Contrib Schur complement update: external */
+      if(upd) {
+         for(int k=blksz*((n-1)/blksz+1); k<m; k+=blksz) {
+            int blkk = std::min(blksz, m-k);
+            for(int i=k; i<m; i+=blksz) {
+               #pragma omp task default(none) \
+                  firstprivate(i, j, k, blkn, blkk) \
+                  firstprivate(m, n, a, lda, blksz, info, beta, upd, ldupd) \
+                  depend(in: a[j*lda+k:1]) \
+                  depend(in: a[j*lda+i:1]) \
+                  depend(inout: upd[(k-n)*lda+(i-n):1])
+               if(*info==-1) {
+#ifdef PROFILE
+                  Profile::Task task("TA_CHOL_UPD", omp_get_thread_num());
+#endif
+                  int blkm = std::min(blksz, m-i);
+                  host_gemm(OP_N, OP_T, blkm, blkk, blkn, -1.0,
+                        &a[j*lda+i], lda, &a[j*lda+k], lda,
+                        beta, &upd[(k-n)*ldupd+(i-n)], ldupd);
+#ifdef PROFILE
+                  task.done();
+#endif
+               }
+            }
+         }
+      }
    }
-   #pragma omp taskwait
-   if(m>n && upd)
-      host_syrk(FILL_MODE_LWR, OP_N, m-n, n, -1.0, &a[n], lda, beta, upd, ldupd);
 }
 
 /* Forwards solve corresponding to cholesky_factor() */

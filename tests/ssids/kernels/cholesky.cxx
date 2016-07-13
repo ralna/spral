@@ -97,6 +97,8 @@ int run_cholesky_tests() {
    TEST(test_cholesky(5, 5, 2));
    TEST(test_cholesky(2, 1, 1));
    TEST(test_cholesky(3, 2, 1));
+   TEST(test_cholesky(5, 1, 2));
+   TEST(test_cholesky(5, 3, 2));
    TEST(test_cholesky(6, 4, 2));
    TEST(test_cholesky(500, 234, 32));
    TEST(test_cholesky(733, 231, 32));
