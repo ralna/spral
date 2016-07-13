@@ -106,6 +106,7 @@ double backward_error(int n, double const* a, int lda, double const* rhs, int nr
          solnnorm = std::max(solnnorm, fabs(r*ldsoln+soln[i]));
       }
 
+      //printf("%e / %e %e %e\n", residnorm, anorm, solnnorm, rhsnorm);
       worstbwderr = std::max(worstbwderr, residnorm/(anorm*solnnorm + rhsnorm));
    }
 
@@ -114,7 +115,7 @@ double backward_error(int n, double const* a, int lda, double const* rhs, int nr
    delete[] rowsum;
 
    /* Return result */
-   //printf("%e / %e %e %e\n", residnorm, anorm, solnnorm, rhsnorm);
+   //printf("worstbwderr = %e\n", worstbwderr);
    return worstbwderr;
 }
 
