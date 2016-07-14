@@ -113,8 +113,8 @@ bool test_2x2(int t, int p, double maxt, double maxp, double const* a, int lda, 
    d[3] = (a11*detscale)/detpiv;
    //printf("t2 %e < %e?\n", std::max(maxp, maxt), small);
    if(std::max(maxp, maxt) < small) return true; // Rest of col small
-   double x1 = std::abs(d[0])*maxp + std::abs(d[1])*maxt;
-   double x2 = std::abs(d[1])*maxp + std::abs(d[3])*maxt;
+   double x1 = std::abs(d[0])*maxt + std::abs(d[1])*maxp;
+   double x2 = std::abs(d[1])*maxt + std::abs(d[3])*maxp;
    //printf("t3 %e < %e?\n", std::max(x1, x2), 1.0/u);
    return ( u*std::max(x1, x2) < 1.0 );
 }
@@ -173,7 +173,7 @@ int ldlt_tpp_factor(int m, int n, int* perm, double* a, int lda, double* d, doub
          printf("%d: ", perm[r]);
          for(int c=0; c<=std::min(r,n-1); ++c) printf(" %e", a[c*lda+r]);
          printf("\n");
-      }*/
+      }a*/
       // Need to check if col nelim is zero now or it gets missed
       if(check_col_small(nelim, n, &a[nelim*lda], small)) {
          // Record zero pivot
@@ -183,7 +183,7 @@ int ldlt_tpp_factor(int m, int n, int* perm, double* a, int lda, double* d, doub
          d[2*nelim] = 0.0;
          d[2*nelim+1] = 0.0;
          nelim++;
-         break;
+         continue;
       }
       int p; // Index of current candidate pivot [starts at col 2]
       for(p=nelim+1; p<n; ++p) {
@@ -273,12 +273,7 @@ void ldlt_tpp_solve_fwd(int m, int n, double const* l, int ldl, int nrhs, double
 
 void ldlt_tpp_solve_diag(int n, double const* d, double* x) {
    for(int i=0; i<n; ) {
-      if(d[2*i+1]==0.0) {
-         // 1x1 pivot
-         double d11 = d[2*i];
-         x[i] *= d11;
-         i++;
-      } else {
+      if(i+1<n && isinf(d[2*i+2])) {
          // 2x2 pivot
          double d11 = d[2*i];
          double d21 = d[2*i+1];
@@ -288,6 +283,11 @@ void ldlt_tpp_solve_diag(int n, double const* d, double* x) {
          x[i]   = d11*x1 + d21*x2;
          x[i+1] = d21*x1 + d22*x2;
          i += 2;
+      } else {
+         // 1x1 pivot
+         double d11 = d[2*i];
+         x[i] *= d11;
+         i++;
       }
    }
 }
