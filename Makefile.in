@@ -251,6 +251,8 @@ am__libspral_a_SOURCES_DIST = src/blas_iface.f90 src/core_analyse.f90 \
 	src/ssids/cpu/kernels/CpuLDLT.hxx \
 	src/ssids/cpu/kernels/ldlt_nopiv.cxx \
 	src/ssids/cpu/kernels/ldlt_nopiv.hxx \
+	src/ssids/cpu/kernels/ldlt_tpp.cxx \
+	src/ssids/cpu/kernels/ldlt_tpp.hxx \
 	src/ssids/cpu/kernels/SimdVec.hxx \
 	src/ssids/cpu/kernels/wrappers.cxx \
 	src/ssids/cpu/kernels/wrappers.hxx interfaces/C/ssids.f90 \
@@ -303,6 +305,7 @@ am_libspral_a_OBJECTS = src/blas_iface.$(OBJEXT) \
 	src/ssids/cpu/SymbolicSubtree.$(OBJEXT) \
 	src/ssids/cpu/kernels/cholesky.$(OBJEXT) \
 	src/ssids/cpu/kernels/ldlt_nopiv.$(OBJEXT) \
+	src/ssids/cpu/kernels/ldlt_tpp.$(OBJEXT) \
 	src/ssids/cpu/kernels/wrappers.$(OBJEXT) \
 	interfaces/C/ssids.$(OBJEXT) src/ssmfe/ssmfe.$(OBJEXT) \
 	src/ssmfe/core.$(OBJEXT) src/ssmfe/expert.$(OBJEXT) \
@@ -594,7 +597,8 @@ am_ssids_kernel_test_OBJECTS = tests/ssids/kernels.$(OBJEXT) \
 	tests/ssids/kernels/cholesky.$(OBJEXT) \
 	tests/ssids/kernels/CpuLDLT.$(OBJEXT) \
 	tests/ssids/kernels/framework.$(OBJEXT) \
-	tests/ssids/kernels/ldlt_nopiv.$(OBJEXT)
+	tests/ssids/kernels/ldlt_nopiv.$(OBJEXT) \
+	tests/ssids/kernels/ldlt_tpp.$(OBJEXT)
 ssids_kernel_test_OBJECTS = $(am_ssids_kernel_test_OBJECTS)
 ssids_kernel_test_LDADD = $(LDADD)
 ssids_kernel_test_DEPENDENCIES = $(am__DEPENDENCIES_1) \
@@ -1169,6 +1173,8 @@ libspral_a_SOURCES = src/blas_iface.f90 src/core_analyse.f90 \
 	src/ssids/cpu/kernels/CpuLDLT.hxx \
 	src/ssids/cpu/kernels/ldlt_nopiv.cxx \
 	src/ssids/cpu/kernels/ldlt_nopiv.hxx \
+	src/ssids/cpu/kernels/ldlt_tpp.cxx \
+	src/ssids/cpu/kernels/ldlt_tpp.hxx \
 	src/ssids/cpu/kernels/SimdVec.hxx \
 	src/ssids/cpu/kernels/wrappers.cxx \
 	src/ssids/cpu/kernels/wrappers.hxx interfaces/C/ssids.f90 \
@@ -1210,7 +1216,9 @@ ssids_kernel_test_SOURCES = tests/ssids/kernels.cxx \
 									 tests/ssids/kernels/framework.cxx \
 									 tests/ssids/kernels/framework.hxx \
 									 tests/ssids/kernels/ldlt_nopiv.cxx \
-									 tests/ssids/kernels/ldlt_nopiv.hxx
+									 tests/ssids/kernels/ldlt_nopiv.hxx \
+									 tests/ssids/kernels/ldlt_tpp.cxx \
+									 tests/ssids/kernels/ldlt_tpp.hxx
 
 examples_Fortran_ssids_SOURCES = examples/Fortran/ssids.f90
 examples_C_ssids_SOURCES = examples/C/ssids.c
@@ -1503,6 +1511,9 @@ src/ssids/cpu/kernels/cholesky.$(OBJEXT):  \
 	src/ssids/cpu/kernels/$(am__dirstamp) \
 	src/ssids/cpu/kernels/$(DEPDIR)/$(am__dirstamp)
 src/ssids/cpu/kernels/ldlt_nopiv.$(OBJEXT):  \
+	src/ssids/cpu/kernels/$(am__dirstamp) \
+	src/ssids/cpu/kernels/$(DEPDIR)/$(am__dirstamp)
+src/ssids/cpu/kernels/ldlt_tpp.$(OBJEXT):  \
 	src/ssids/cpu/kernels/$(am__dirstamp) \
 	src/ssids/cpu/kernels/$(DEPDIR)/$(am__dirstamp)
 src/ssids/cpu/kernels/wrappers.$(OBJEXT):  \
@@ -1898,6 +1909,9 @@ tests/ssids/kernels/framework.$(OBJEXT):  \
 tests/ssids/kernels/ldlt_nopiv.$(OBJEXT):  \
 	tests/ssids/kernels/$(am__dirstamp) \
 	tests/ssids/kernels/$(DEPDIR)/$(am__dirstamp)
+tests/ssids/kernels/ldlt_tpp.$(OBJEXT):  \
+	tests/ssids/kernels/$(am__dirstamp) \
+	tests/ssids/kernels/$(DEPDIR)/$(am__dirstamp)
 
 ssids_kernel_test$(EXEEXT): $(ssids_kernel_test_OBJECTS) $(ssids_kernel_test_DEPENDENCIES) $(EXTRA_ssids_kernel_test_DEPENDENCIES) 
 	@rm -f ssids_kernel_test$(EXEEXT)
@@ -1974,6 +1988,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/$(DEPDIR)/smalloc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/kernels/$(DEPDIR)/cholesky.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/kernels/$(DEPDIR)/ldlt_nopiv.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/kernels/$(DEPDIR)/ldlt_tpp.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/kernels/$(DEPDIR)/wrappers.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@tests/ssids/$(DEPDIR)/kernels.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@tests/ssids/kernels/$(DEPDIR)/CpuLDLT.Po@am__quote@
@@ -1981,6 +1996,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@tests/ssids/kernels/$(DEPDIR)/cholesky.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@tests/ssids/kernels/$(DEPDIR)/framework.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@tests/ssids/kernels/$(DEPDIR)/ldlt_nopiv.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@tests/ssids/kernels/$(DEPDIR)/ldlt_tpp.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@tests/ssmfe/$(DEPDIR)/ssmfe_ciface.Po@am__quote@
 
 .c.o:

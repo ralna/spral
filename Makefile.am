@@ -242,6 +242,8 @@ libspral_a_SOURCES += \
 	src/ssids/cpu/kernels/CpuLDLT.hxx \
 	src/ssids/cpu/kernels/ldlt_nopiv.cxx \
 	src/ssids/cpu/kernels/ldlt_nopiv.hxx \
+	src/ssids/cpu/kernels/ldlt_tpp.cxx \
+	src/ssids/cpu/kernels/ldlt_tpp.hxx \
 	src/ssids/cpu/kernels/SimdVec.hxx \
 	src/ssids/cpu/kernels/wrappers.cxx \
 	src/ssids/cpu/kernels/wrappers.hxx \
@@ -272,7 +274,9 @@ ssids_kernel_test_SOURCES = tests/ssids/kernels.cxx \
 									 tests/ssids/kernels/framework.cxx \
 									 tests/ssids/kernels/framework.hxx \
 									 tests/ssids/kernels/ldlt_nopiv.cxx \
-									 tests/ssids/kernels/ldlt_nopiv.hxx
+									 tests/ssids/kernels/ldlt_nopiv.hxx \
+									 tests/ssids/kernels/ldlt_tpp.cxx \
+									 tests/ssids/kernels/ldlt_tpp.hxx
 examples_Fortran_ssids_SOURCES = examples/Fortran/ssids.f90
 examples/Fortran/ssids.$(OBJEXT): libspral.a
 examples_C_ssids_SOURCES = examples/C/ssids.c
