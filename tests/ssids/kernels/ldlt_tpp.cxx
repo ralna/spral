@@ -10,6 +10,7 @@
  */
 #include "ldlt_tpp.hxx"
 
+#include <cmath>
 #include <cstring>
 #include <iomanip>
 #include <iostream>
@@ -249,6 +250,14 @@ void modify_test_matrix(bool singular, bool delays, int m, int n, double *a, int
    }
 }
 
+double find_l_abs_max(int n, double *a, int lda) {
+   double best = 0.0;
+   for(int c=0; c<n; ++c)
+   for(int r=c; r<n; ++r)
+      best = std::max(best, std::abs(a[c*lda+r]));
+   return best;
+}
+
 int ldlt_test(double u, double small, bool delays, bool singular, int m, int n, bool debug=false, int test=0, int seed=0) {
    bool failed = false;
    // Note: We generate an m x m test matrix, then factor it as an
@@ -294,6 +303,7 @@ int ldlt_test(double u, double small, bool delays, bool singular, int m, int n, 
       delete[] perm2;
    }
    EXPECT_EQ(m, q1+q2) << "(test " << test << " seed " << seed << ")" << std::endl;
+   EXPECT_LE(find_l_abs_max(m, l, lda), 1.0/u) << "(test " << test << " seed " << seed << ")" << std::endl;
 
    // Print out matrices if requested
    if(debug) {
@@ -338,17 +348,11 @@ void print_mat (int n, int *perm, T *a, int lda) {
    }
 }
 
-template <typename T,
-          int BLOCK_SIZE,
-          int MAX_ITR,
-          int ntest, // Number of tests
-          bool debug // Switch on debugging output
-          >
-int ldlt_torture_test(T u, T small, int m, int n) {
+int ldlt_torture_test(double u, double small, int ntest, int m, int n, bool debug=false) {
    for(int test=0; test<ntest; test++) {
       // Record seed we're using
       unsigned int seed = rand();
-      //seed = 1872440417;
+      //seed = 291189613;
       srand(seed);
 
       // Matrix has:
@@ -387,96 +391,30 @@ int run_ldlt_tpp_tests() {
    TEST(( ldlt_test(0.01, 1e-20, false, false, 8, 4) ));
    TEST(( ldlt_test(0.01, 1e-20, false, false, 33, 21) ));
 
-#if 0
-   /* Simple tests, rectangular, non-singular, with delays */
-   {
-      const int BLOCK_SIZE = 2;
-      TEST((
-         ldlt_test<double, BLOCK_SIZE, MAX_ITR, false> (0.01, 1e-20, true, false, false, 2*BLOCK_SIZE, 1*BLOCK_SIZE)
-         ));
-      TEST((
-         ldlt_test<double, BLOCK_SIZE, MAX_ITR, false> (0.01, 1e-20, true, false, false, 4*BLOCK_SIZE, 1*BLOCK_SIZE)
-         ));
-   }
-   {
-      const int BLOCK_SIZE = 8;
-      TEST((
-         ldlt_test<double, BLOCK_SIZE, MAX_ITR, false> (0.01, 1e-20, true, false, false, 8*BLOCK_SIZE, 3*BLOCK_SIZE)
-         ));
-      TEST((
-         ldlt_test<double, BLOCK_SIZE, MAX_ITR, false> (0.01, 1e-20, true, false, false, 23, 9)
-         ));
-   }
+   /* With delays */
+   TEST(( ldlt_test(0.01, 1e-20, true, false, 8, 4) ));
+   TEST(( ldlt_test(0.01, 1e-20, true, false, 12, 3) ));
+   TEST(( ldlt_test(0.01, 1e-20, true, false, 29, 7) ));
+   TEST(( ldlt_test(0.01, 1e-20, true, false, 233, 122) ));
+   TEST(( ldlt_test(0.01, 1e-20, true, false, 500, 500) ));
 
-   /* Simple tests, square, non-singular, no delays */
-   {
-      const int BLOCK_SIZE = 2;
-      TEST((
-         ldlt_test<double, BLOCK_SIZE, MAX_ITR, false> (0.01, 1e-20, false, false, false, 1*BLOCK_SIZE, 1*BLOCK_SIZE)
-         ));
-      TEST((
-         ldlt_test<double, BLOCK_SIZE, MAX_ITR, false> (0.01, 1e-20, false, false, false, 2*BLOCK_SIZE, 2*BLOCK_SIZE)
-         ));
-      TEST((
-         ldlt_test<double, BLOCK_SIZE, MAX_ITR, false> (0.01, 1e-20, false, false, false, 8*BLOCK_SIZE, 8*BLOCK_SIZE)
-         ));
-   }
-   {
-      const int BLOCK_SIZE = 8;
-      TEST((
-         ldlt_test<double, BLOCK_SIZE, MAX_ITR, false> (0.01, 1e-20, false, false, false, 8*BLOCK_SIZE, 8*BLOCK_SIZE)
-         ));
-      TEST((
-         ldlt_test<double, BLOCK_SIZE, MAX_ITR, false> (0.01, 1e-20, false, false, false, 27, 27)
-         ));
-   }
+   /* Singular */
+   TEST(( ldlt_test(0.01, 1e-20, false, true, 8, 4) ));
+   TEST(( ldlt_test(0.01, 1e-20, false, true, 12, 3) ));
+   TEST(( ldlt_test(0.01, 1e-20, false, true, 29, 7) ));
+   TEST(( ldlt_test(0.01, 1e-20, false, true, 233, 122) ));
+   TEST(( ldlt_test(0.01, 1e-20, false, true, 500, 500) ));
 
-   /* Simple tests, square, non-singular, with delays */
-   {
-      const int BLOCK_SIZE = 2;
-      TEST((
-         ldlt_test<double, BLOCK_SIZE, MAX_ITR, false> (0.01, 1e-20, true, false, false, 1*BLOCK_SIZE, 1*BLOCK_SIZE)
-         ));
-      TEST((
-         ldlt_test<double, BLOCK_SIZE, MAX_ITR, false> (0.01, 1e-20, true, false, false, 2*BLOCK_SIZE, 2*BLOCK_SIZE)
-         ));
-      TEST((
-         ldlt_test<double, BLOCK_SIZE, MAX_ITR, false> (0.01, 1e-20, true, false, false, 4*BLOCK_SIZE, 4*BLOCK_SIZE)
-         ));
-   }
-   {
-      const int BLOCK_SIZE = 8;
-      TEST((
-         ldlt_test<double, BLOCK_SIZE, MAX_ITR, false> (0.01, 1e-20, true, false, false, 8*BLOCK_SIZE, 8*BLOCK_SIZE)
-         ));
-      TEST((
-         ldlt_test<double, BLOCK_SIZE, MAX_ITR, false> (0.01, 1e-20, true, false, false, 29, 29)
-         ));
-   }
-
-   /* Test edge case of singular diagonal blocks, square non-singular matrix */
-   {
-      const int BLOCK_SIZE = 8;
-      TEST((
-         ldlt_test<double, BLOCK_SIZE, MAX_ITR, false> (0.01, 1e-20, false, false, true, 8*BLOCK_SIZE, 8*BLOCK_SIZE)
-         ));
-      TEST((
-         ldlt_test<double, BLOCK_SIZE, MAX_ITR, false> (0.01, 1e-20, false, false, true, 33, 33)
-         ));
-   }
-
+   /* Singular, with delays */
+   TEST(( ldlt_test(0.01, 1e-20, true, true, 8, 4) ));
+   TEST(( ldlt_test(0.01, 1e-20, true, true, 12, 3) ));
+   TEST(( ldlt_test(0.01, 1e-20, true, true, 29, 7) ));
+   TEST(( ldlt_test(0.01, 1e-20, true, true, 233, 122) ));
+   TEST(( ldlt_test(0.01, 1e-20, true, true, 500, 500) ));
 
    /* Torture tests */
-   {
-      const int BLOCK_SIZE = 16;
-      TEST((
-         ldlt_torture_test<double, BLOCK_SIZE, MAX_ITR, 500, false> (0.01, 1e-20, 8*BLOCK_SIZE, 8*BLOCK_SIZE)
-         ));
-      TEST((
-         ldlt_torture_test<double, BLOCK_SIZE, MAX_ITR, 500, false> (0.01, 1e-20, 8*BLOCK_SIZE, 3*BLOCK_SIZE)
-         ));
-   }
-#endif
+   TEST(( ldlt_torture_test(0.01, 1e-20, 1000, 100, 100) ));
+   TEST(( ldlt_torture_test(0.01, 1e-20, 20000, 100, 50) ));
 
    return nerr;
 }
