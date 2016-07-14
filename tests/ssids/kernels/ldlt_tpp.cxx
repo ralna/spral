@@ -258,7 +258,7 @@ double find_l_abs_max(int n, double *a, int lda) {
    return best;
 }
 
-int ldlt_test(double u, double small, bool delays, bool singular, int m, int n, bool debug=false, int test=0, int seed=0) {
+int ldlt_tpp_test(double u, double small, bool delays, bool singular, int m, int n, bool debug=false, int test=0, int seed=0) {
    bool failed = false;
    // Note: We generate an m x m test matrix, then factor it as an
    // m x n matrix followed by an (m-n) x (m-n) matrix [give or take delays]
@@ -348,7 +348,7 @@ void print_mat (int n, int *perm, T *a, int lda) {
    }
 }
 
-int ldlt_torture_test(double u, double small, int ntest, int m, int n, bool debug=false) {
+int ldlt_tpp_torture_test(double u, double small, int ntest, int m, int n, bool debug=false) {
    for(int test=0; test<ntest; test++) {
       // Record seed we're using
       unsigned int seed = rand();
@@ -369,7 +369,7 @@ int ldlt_torture_test(double u, double small, int ntest, int m, int n, bool debu
          std::cout << "##########################################" << std::endl;
       }
 
-      int err = ldlt_test(u, small, delays, singular, m, n, debug, test, seed);
+      int err = ldlt_tpp_test(u, small, delays, singular, m, n, debug, test, seed);
       if(err!=0) return err;
    }
 
@@ -382,39 +382,39 @@ int run_ldlt_tpp_tests() {
    int nerr = 0;
 
    /* Simple tests */
-   TEST(( ldlt_test(0.01, 1e-20, false, false, 1, 1) ));
-   TEST(( ldlt_test(0.01, 1e-20, false, false, 2, 2) ));
-   TEST(( ldlt_test(0.01, 1e-20, false, false, 3, 3) ));
-   TEST(( ldlt_test(0.01, 1e-20, false, false, 2, 1) ));
-   TEST(( ldlt_test(0.01, 1e-20, false, false, 3, 2) ));
-   TEST(( ldlt_test(0.01, 1e-20, false, false, 5, 3) ));
-   TEST(( ldlt_test(0.01, 1e-20, false, false, 8, 4) ));
-   TEST(( ldlt_test(0.01, 1e-20, false, false, 33, 21) ));
+   TEST(( ldlt_tpp_test(0.01, 1e-20, false, false, 1, 1) ));
+   TEST(( ldlt_tpp_test(0.01, 1e-20, false, false, 2, 2) ));
+   TEST(( ldlt_tpp_test(0.01, 1e-20, false, false, 3, 3) ));
+   TEST(( ldlt_tpp_test(0.01, 1e-20, false, false, 2, 1) ));
+   TEST(( ldlt_tpp_test(0.01, 1e-20, false, false, 3, 2) ));
+   TEST(( ldlt_tpp_test(0.01, 1e-20, false, false, 5, 3) ));
+   TEST(( ldlt_tpp_test(0.01, 1e-20, false, false, 8, 4) ));
+   TEST(( ldlt_tpp_test(0.01, 1e-20, false, false, 33, 21) ));
 
    /* With delays */
-   TEST(( ldlt_test(0.01, 1e-20, true, false, 8, 4) ));
-   TEST(( ldlt_test(0.01, 1e-20, true, false, 12, 3) ));
-   TEST(( ldlt_test(0.01, 1e-20, true, false, 29, 7) ));
-   TEST(( ldlt_test(0.01, 1e-20, true, false, 233, 122) ));
-   TEST(( ldlt_test(0.01, 1e-20, true, false, 500, 500) ));
+   TEST(( ldlt_tpp_test(0.01, 1e-20, true, false, 8, 4) ));
+   TEST(( ldlt_tpp_test(0.01, 1e-20, true, false, 12, 3) ));
+   TEST(( ldlt_tpp_test(0.01, 1e-20, true, false, 29, 7) ));
+   TEST(( ldlt_tpp_test(0.01, 1e-20, true, false, 233, 122) ));
+   TEST(( ldlt_tpp_test(0.01, 1e-20, true, false, 500, 500) ));
 
    /* Singular */
-   TEST(( ldlt_test(0.01, 1e-20, false, true, 8, 4) ));
-   TEST(( ldlt_test(0.01, 1e-20, false, true, 12, 3) ));
-   TEST(( ldlt_test(0.01, 1e-20, false, true, 29, 7) ));
-   TEST(( ldlt_test(0.01, 1e-20, false, true, 233, 122) ));
-   TEST(( ldlt_test(0.01, 1e-20, false, true, 500, 500) ));
+   TEST(( ldlt_tpp_test(0.01, 1e-20, false, true, 8, 4) ));
+   TEST(( ldlt_tpp_test(0.01, 1e-20, false, true, 12, 3) ));
+   TEST(( ldlt_tpp_test(0.01, 1e-20, false, true, 29, 7) ));
+   TEST(( ldlt_tpp_test(0.01, 1e-20, false, true, 233, 122) ));
+   TEST(( ldlt_tpp_test(0.01, 1e-20, false, true, 500, 500) ));
 
    /* Singular, with delays */
-   TEST(( ldlt_test(0.01, 1e-20, true, true, 8, 4) ));
-   TEST(( ldlt_test(0.01, 1e-20, true, true, 12, 3) ));
-   TEST(( ldlt_test(0.01, 1e-20, true, true, 29, 7) ));
-   TEST(( ldlt_test(0.01, 1e-20, true, true, 233, 122) ));
-   TEST(( ldlt_test(0.01, 1e-20, true, true, 500, 500) ));
+   TEST(( ldlt_tpp_test(0.01, 1e-20, true, true, 8, 4) ));
+   TEST(( ldlt_tpp_test(0.01, 1e-20, true, true, 12, 3) ));
+   TEST(( ldlt_tpp_test(0.01, 1e-20, true, true, 29, 7) ));
+   TEST(( ldlt_tpp_test(0.01, 1e-20, true, true, 233, 122) ));
+   TEST(( ldlt_tpp_test(0.01, 1e-20, true, true, 500, 500) ));
 
    /* Torture tests */
-   TEST(( ldlt_torture_test(0.01, 1e-20, 1000, 100, 100) ));
-   TEST(( ldlt_torture_test(0.01, 1e-20, 1000, 100, 50) ));
+   TEST(( ldlt_tpp_torture_test(0.01, 1e-20, 1000, 100, 100) ));
+   TEST(( ldlt_tpp_torture_test(0.01, 1e-20, 1000, 100, 50) ));
 
    return nerr;
 }
