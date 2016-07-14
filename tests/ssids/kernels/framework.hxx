@@ -94,13 +94,17 @@ if((a) > (b)) { \
    return 1; \
 }
 
-#define EXPECT_LE(a, b) spral::test::Expectation((a) <= (b)) \
+#define EXPECT_LE(a, b) \
+   if(!((a) <= (b))) failed=true; \
+   spral::test::Expectation((a) <= (b)) \
    << "Test failure at " __FILE__ ":" << __LINE__ << std::endl \
-   << "EXPECT_LE(" #a ", " #b "): " << (a) << " > " << (b) << std::endl
+   << "EXPECT_LE(" #a ", " #b ") : " << (a) << " > " << (b) << std::endl
 
-#define EXPECT_EQ(a, b) spral::test::Expectation((a) == (b)) \
+#define EXPECT_EQ(a, b) \
+   if(!((a) == (b))) failed=true; \
+   spral::test::Expectation((a) == (b)) \
    << "Test failure at " __FILE__ ":" << __LINE__ << std::endl \
-   << "EXPECT_EQ(" #a ", " #b ")" << (a) << " != " << (b)  << std::endl
+   << "EXPECT_EQ(" #a ", " #b ") : " << (a) << " != " << (b)  << std::endl
 
 void gen_posdef(int n, double* a, int lda);
 void gen_sym_indef(int n, double* a, int lda);

@@ -238,6 +238,7 @@ template <typename T,
           bool debug // Switch on debugging output
           >
 int ldlt_test_block(T u, T small) {
+   bool failed = false;
    int n = BLOCK_SIZE;
 
    // Generate test matrix
@@ -291,7 +292,7 @@ int ldlt_test_block(T u, T small) {
    delete[] a;
    Talloc.deallocate(l, n*lda);
 
-   return 0;
+   return (failed) ? -1 : 0;
 }
 
 template <typename T,
@@ -301,6 +302,7 @@ template <typename T,
           >
 int ldlt_block_torture_test(T u, T small) {
    int n = BLOCK_SIZE;
+   bool failed = false;
 
    // Generate nblock test matrices with entries as Unif(-10,10)
    T *a = new T[n*n*nblock];
@@ -351,7 +353,7 @@ int ldlt_block_torture_test(T u, T small) {
    delete[] b; delete[] soln;
    delete[] perm;
 
-   return 0;
+   return (failed) ? -1 : 0;
 }
 
 int run_block_ldlt_tests() {

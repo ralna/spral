@@ -15,6 +15,9 @@
 #include <limits>
 #include <utility>
 
+//FIXME: debug
+#include <cstdio>
+
 #include "wrappers.hxx"
 
 namespace spral { namespace ssids { namespace cpu {
@@ -31,6 +34,7 @@ bool check_col_small(int from, int to, double const* a, double small) {
 
 /** Returns col index of largest entry in row starting at a */
 int find_row_abs_max(int from, int to, double const* a, int lda) {
+   if(from>=to) return -1;
    int best_idx=from; double best_val=std::abs(a[from*lda]);
    for(int idx=from+1; idx<to; ++idx)
       if(std::abs(a[idx*lda]) > best_val) {
@@ -41,22 +45,23 @@ int find_row_abs_max(int from, int to, double const* a, int lda) {
 }
 
 /** Performs symmetric swap of col1 and col2 in lower triangle */
-void swap_cols(int col1, int col2, int m, int* perm, double* a, int lda) {
+// FIXME: remove n only here for debug
+void swap_cols(int col1, int col2, int m, int n, int* perm, double* a, int lda) {
    if(col1 == col2) return; // No-op
 
    // Ensure col1 < col2
-   if(col2>col1) 
+   if(col2<col1) 
       std::swap(col1, col2);
 
    // Swap perm entries
    std::swap( perm[col1], perm[col2] );
 
    // Swap a(col1, 0:col1-1) and a(col2, 0:col1-1)
-   for(int c=0; c<col1-1; ++c)
+   for(int c=0; c<col1; ++c)
       std::swap( a[c*lda+col1], a[c*lda+col2] );
 
    // Swap a(col1+1:col2-1, col1) and a(col2, col1+1:col2-1)
-   for(int i=col1+1; i<col2-1; ++i)
+   for(int i=col1+1; i<col2; ++i)
       std::swap( a[col1*lda+i], a[i*lda+col2] );
 
    // Swap a(col2+1:m, col1) and a(col2+1:m, col2)
@@ -69,7 +74,7 @@ void swap_cols(int col1, int col2, int m, int* perm, double* a, int lda) {
 
 /** Returns abs value of largest unelim entry in row/col not in posn exclude or on diagonal */
 double find_rc_abs_max_exclude(int col, int nelim, int m, double const* a, int lda, int exclude) {
-   double best = -std::numeric_limits<double>::infinity();
+   double best = 0.0;
    for(int c=nelim; c<col; ++c) {
       if(c==exclude) continue;
       best = std::max(best, std::abs(a[c*lda+col]));
@@ -89,6 +94,7 @@ bool test_2x2(int t, int p, double maxt, double maxp, double const* a, int lda, 
    double a11 = a[t*lda+t];
    double a21 = a[t*lda+p];
    double a22 = a[p*lda+p];
+   //printf("Testing 2x2 pivot (%d, %d) %e %e %e vs %e %e\n", t, p, a11, a21, a22, maxt, maxp);
    double maxpiv = std::max(std::abs(a11), std::max(std::abs(a21), std::abs(a22)));
    if(maxpiv < small) return false;
 
@@ -97,6 +103,7 @@ bool test_2x2(int t, int p, double maxt, double maxp, double const* a, int lda, 
    double detpiv0 = (a11*detscale)*a22;
    double detpiv1 = (a21*detscale)*a21;
    double detpiv = detpiv0 - detpiv1;
+   //printf("t1 %e < %e %e %e?\n", std::abs(detpiv), small, std::abs(detpiv0/2), std::abs(detpiv1/2));
    if(std::abs(detpiv) < std::max(small, std::max(std::abs(detpiv0/2), std::abs(detpiv1/2)))) return false;
 
    // Finally apply threshold pivot check
@@ -104,9 +111,11 @@ bool test_2x2(int t, int p, double maxt, double maxp, double const* a, int lda, 
    d[1] = (-a21*detscale)/detpiv;
    d[2] = std::numeric_limits<double>::infinity();
    d[3] = (a11*detscale)/detpiv;
+   //printf("t2 %e < %e?\n", std::max(maxp, maxt), small);
    if(std::max(maxp, maxt) < small) return true; // Rest of col small
    double x1 = std::abs(d[0])*maxp + std::abs(d[1])*maxt;
-   double x2 = std::abs(d[1])*maxp + std::abs(d[2])*maxt;
+   double x2 = std::abs(d[1])*maxp + std::abs(d[3])*maxt;
+   //printf("t3 %e < %e?\n", std::max(x1, x2), 1.0/u);
    return ( u*std::max(x1, x2) < 1.0 );
 }
 
@@ -156,14 +165,23 @@ void zero_col(int col, int m, double* a, int lda) {
 /* Simple LDL^T with threshold partial pivoting.
  * Intended for finishing off small matrices, not for performance */
 int ldlt_tpp_factor(int m, int n, int* perm, double* a, int lda, double* d, double* ld, int ldld, double u, double small) {
+   //printf("=== ENTRY %d %d ===\n", m, n);
    int nelim = 0; // Number of eliminated variables
    while(nelim<n) {
+      //printf("nelim = %d\n", nelim);
+      /*for(int r=0; r<m; ++r) {
+         printf("%d: ", perm[r]);
+         for(int c=0; c<=std::min(r,n-1); ++c) printf(" %e", a[c*lda+r]);
+         printf("\n");
+      }*/
       int p; // Index of current candidate pivot [starts at col 2]
       for(p=nelim+1; p<n; ++p) {
+         //printf("Consider p=%d\n", p);
          // Check if column p is effectively zero
          if(check_col_small(p, n, &a[p*lda], small)) {
             // Record zero pivot
-            swap_cols(p, nelim, m, perm, a, lda);
+            //printf("Zero pivot\n");
+            swap_cols(p, nelim, m, n, perm, a, lda);
             zero_col(nelim, m, a, lda);
             d[2*nelim] = 0.0;
             d[2*nelim+1] = 0.0;
@@ -172,14 +190,15 @@ int ldlt_tpp_factor(int m, int n, int* perm, double* a, int lda, double* d, doub
          }
          
          // Find column index of largest entry in |a(p, nelim+1:p-1)|
-         int t = find_row_abs_max(nelim+1, p-1, &a[p], lda);
+         int t = find_row_abs_max(nelim, p, &a[p], lda);
 
          // Try (t,p) as 2x2 pivot
          double maxt = find_rc_abs_max_exclude(t, nelim, m, a, lda, p);
          double maxp = find_rc_abs_max_exclude(p, nelim, m, a, lda, t);
          if( test_2x2(t, p, maxt, maxp, a, lda, u, small, &d[2*nelim]) ) {
-            swap_cols(t, nelim, m, perm, a, lda);
-            swap_cols(p, nelim+1, m, perm, a, lda);
+            //printf("2x2 pivot\n");
+            swap_cols(t, nelim, m, n, perm, a, lda);
+            swap_cols(p, nelim+1, m, n, perm, a, lda);
             apply_2x2(nelim, m, a, lda, ld, ldld, d);
             host_gemm(OP_N, OP_T, m-nelim-2, n-nelim-2, 2, -1.0,
                   &a[nelim*lda+nelim+2], lda, &ld[nelim+2], ldld,
@@ -191,7 +210,8 @@ int ldlt_tpp_factor(int m, int n, int* perm, double* a, int lda, double* d, doub
          // Try p as 1x1 pivot
          maxp = std::max(maxp, std::abs(a[t*lda+p]));
          if( std::abs(a[p*lda+p]) >= u*maxp ) {
-            swap_cols(p, nelim, m, perm, a, lda);
+            //printf("1x1 pivot\n");
+            swap_cols(p, nelim, m, n, perm, a, lda);
             d[2*nelim] = 1 / a[nelim*lda+nelim];
             d[2*nelim+1] = 0.0;
             apply_1x1(nelim, m, a, lda, ld, ldld, d);
@@ -209,7 +229,8 @@ int ldlt_tpp_factor(int m, int n, int* perm, double* a, int lda, double* d, doub
          p = nelim;
          double maxp = find_rc_abs_max_exclude(p, nelim, m, a, lda, -1);
          if( std::abs(a[p*lda+p]) >= u*maxp ) {
-            swap_cols(p, nelim, m, perm, a, lda);
+            //printf("1x1 pivot %d\n", p);
+            swap_cols(p, nelim, m, n, perm, a, lda);
             d[2*nelim] = 1 / a[nelim*lda+nelim];
             d[2*nelim+1] = 0.0;
             apply_1x1(nelim, m, a, lda, ld, ldld, d);
@@ -219,6 +240,7 @@ int ldlt_tpp_factor(int m, int n, int* perm, double* a, int lda, double* d, doub
             nelim += 1;
          } else {
             // That didn't work either. No more pivots to be found
+            printf("Out of pivots\n");
             break;
          }
       }

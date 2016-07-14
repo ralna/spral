@@ -250,17 +250,19 @@ void modify_test_matrix(bool singular, bool delays, int m, int n, double *a, int
 }
 
 int ldlt_test(double u, double small, bool delays, bool singular, int m, int n, bool debug=false, int test=0, int seed=0) {
+   bool failed = false;
    // Note: We generate an m x m test matrix, then factor it as an
    // m x n matrix followed by an (m-n) x (m-n) matrix [give or take delays]
 
    // Generate test matrix
    int lda = m;
    double* a = new double[m*lda];
+   gen_sym_indef(m, a, lda);
    modify_test_matrix(singular, delays, m, n, a, lda);
 
    // Generate a RHS based on x=1, b=Ax
    double *b = new double[m];
-   gen_sym_indef(m, a, lda);
+   gen_rhs(m, a, lda, b);
 
    // Print out matrices if requested
    if(debug) {
@@ -286,12 +288,12 @@ int ldlt_test(double u, double small, bool delays, bool singular, int m, int n, 
       int *perm2 = new int[m-q1];
       for(int i=0; i<m-q1; i++)
          perm2[i] = i;
-      q2 = ldlt_tpp_factor(m-q1, n-q1, perm2, &l[q1*(lda+1)], lda, &d[2*q1], work, m, u, small);
+      q2 = ldlt_tpp_factor(m-q1, m-q1, perm2, &l[q1*(lda+1)], lda, &d[2*q1], work, m, u, small);
       // Permute rows of A_21 as per perm
       permute_rows(m-q1, q1, perm2, &perm[q1], &l[q1], lda);
       delete[] perm2;
    }
-   EXPECT_EQ(m, q1+q2) << "(test " << test << " seed " << seed << ")";
+   EXPECT_EQ(m, q1+q2) << "(test " << test << " seed " << seed << ")" << std::endl;
 
    // Print out matrices if requested
    if(debug) {
@@ -314,7 +316,7 @@ int ldlt_test(double u, double small, bool delays, bool singular, int m, int n, 
    // Check residual
    double bwderr = backward_error(m, a, lda, b, 1, soln, m);
    if(debug) printf("bwderr = %le\n", bwderr);
-   EXPECT_LE(bwderr, 5e-14) << "(test " << test << " seed " << seed << ")";
+   EXPECT_LE(bwderr, 5e-14) << "(test " << test << " seed " << seed << ")" << std::endl;
 
    // Cleanup memory
    delete[] a; delete[] l;
@@ -323,7 +325,7 @@ int ldlt_test(double u, double small, bool delays, bool singular, int m, int n, 
    delete[] work;
    delete[] d; delete[] soln;
 
-   return 0;
+   return failed ? -1 : 0;
 }
 
 template <typename T>
@@ -375,25 +377,15 @@ int ldlt_torture_test(T u, T small, int m, int n) {
 int run_ldlt_tpp_tests() {
    int nerr = 0;
 
-   /* Simple tests, rectangular */
+   /* Simple tests */
+   TEST(( ldlt_test(0.01, 1e-20, false, false, 1, 1) ));
+   TEST(( ldlt_test(0.01, 1e-20, false, false, 2, 2) ));
+   TEST(( ldlt_test(0.01, 1e-20, false, false, 3, 3) ));
    TEST(( ldlt_test(0.01, 1e-20, false, false, 2, 1) ));
-      /*
-      TEST((
-         ldlt_test<double, BLOCK_SIZE, MAX_ITR, false> (0.01, 1e-20, false, false, false, 2, 1)
-         ));
-      TEST((
-         ldlt_test<double, BLOCK_SIZE, MAX_ITR, false> (0.01, 1e-20, false, false, false, 5, 3)
-         ));
-      TEST((
-         ldlt_test<double, BLOCK_SIZE, MAX_ITR, false> (0.01, 1e-20, false, false, false, 4*BLOCK_SIZE, 1*BLOCK_SIZE)
-         ));
-      TEST((
-         ldlt_test<double, BLOCK_SIZE, MAX_ITR, false> (0.01, 1e-20, false, false, false, 8*BLOCK_SIZE, 3*BLOCK_SIZE)
-         ));
-      TEST((
-         ldlt_test<double, BLOCK_SIZE, MAX_ITR, false> (0.01, 1e-20, false, false, false, 23, 9)
-         ));
-   }*/
+   TEST(( ldlt_test(0.01, 1e-20, false, false, 3, 2) ));
+   TEST(( ldlt_test(0.01, 1e-20, false, false, 5, 3) ));
+   TEST(( ldlt_test(0.01, 1e-20, false, false, 8, 4) ));
+   TEST(( ldlt_test(0.01, 1e-20, false, false, 33, 21) ));
 
 #if 0
    /* Simple tests, rectangular, non-singular, with delays */

@@ -275,15 +275,17 @@ template <typename T,
 int ldlt_test(T u, T small, bool delays, bool singular, bool dblk_singular, int m, int n, int test=0, int seed=0) {
    // Note: We generate an m x m test matrix, then factor it as an
    // m x n matrix followed by an (m-n) x (m-n) matrix [give or take delays]
+   bool failed = false;
 
    // Generate test matrix
    int lda = m;
    double* a = new T[m*lda];
+   gen_sym_indef(m, a, lda);
    modify_test_matrix<T, BLOCK_SIZE>(singular, delays, dblk_singular, m, n, a, lda);
 
    // Generate a RHS based on x=1, b=Ax
    T *b = new T[m];
-   gen_sym_indef(m, a, lda);
+   gen_rhs(m, a, lda, b);
 
    // Print out matrices if requested
    if(debug) {
@@ -345,7 +347,7 @@ int ldlt_test(T u, T small, bool delays, bool singular, bool dblk_singular, int 
    delete[] perm;
    delete[] d; delete[] soln;
 
-   return 0;
+   return (failed) ? -1 : 0;
 }
 
 template <typename T>
