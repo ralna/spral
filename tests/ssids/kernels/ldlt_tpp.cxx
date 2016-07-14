@@ -150,7 +150,20 @@ void do_update(int n, int k, T *a22, const T *a21, int lda, const T* d) {
    // Form A_21 D_11
    T *ad21 = new T[n*k];
    for(int j=0; j<k;) {
-      if(d[2*j+1] == 0.0) {
+      if(j+1<k && std::isinf(d[2*j+2])) {
+         // 2x2 pivot
+         // (Actually stored as D^-1 so need to invert it again)
+         T di11 = d[2*j]; T di21 = d[2*j+1]; T di22 = d[2*j+3];
+         T det = di11*di22 - di21*di21;
+         T d11 = di22 / det; T d21 = -di21 / det; T d22 = di11 / det;
+         // And calulate ad21
+         for(int i=0; i<n; i++) {
+            ad21[j*n+i]     = d11*a21[j*lda+i] + d21*a21[(j+1)*lda+i];
+            ad21[(j+1)*n+i] = d21*a21[j*lda+i] + d22*a21[(j+1)*lda+i];
+         }
+         // Increment j
+         j += 2;
+      } else {
          // 1x1 pivot
          // (Actually stored as D^-1 so need to invert it again)
          if(d[2*j] == 0.0) {
@@ -168,19 +181,6 @@ void do_update(int n, int k, T *a22, const T *a21, int lda, const T* d) {
          }
          // Increment j
          j++;
-      } else {
-         // 2x2 pivot
-         // (Actually stored as D^-1 so need to invert it again)
-         T di11 = d[2*j]; T di21 = d[2*j+1]; T di22 = d[2*j+3];
-         T det = di11*di22 - di21*di21;
-         T d11 = di22 / det; T d21 = -di21 / det; T d22 = di11 / det;
-         // And calulate ad21
-         for(int i=0; i<n; i++) {
-            ad21[j*n+i]     = d11*a21[j*lda+i] + d21*a21[(j+1)*lda+i];
-            ad21[(j+1)*n+i] = d21*a21[j*lda+i] + d22*a21[(j+1)*lda+i];
-         }
-         // Increment j
-         j += 2;
       }
    }
 
@@ -241,7 +241,7 @@ void permute_rows(int n, int k, const int *reord, int *perm, T *a, int lda) {
 void modify_test_matrix(bool singular, bool delays, int m, int n, double *a, int lda) {
    if(delays)
       cause_delays(m, a, lda);
-   if(singular) {
+   if(singular && n!=1) {
       int col1 = n * ((float) rand())/RAND_MAX;
       int col2 = col1;
       while(col1 == col2)
@@ -326,7 +326,7 @@ int ldlt_test(double u, double small, bool delays, bool singular, int m, int n, 
    // Check residual
    double bwderr = backward_error(m, a, lda, b, 1, soln, m);
    if(debug) printf("bwderr = %le\n", bwderr);
-   EXPECT_LE(bwderr, 5e-14) << "(test " << test << " seed " << seed << ")" << std::endl;
+   EXPECT_LE(bwderr, 2e-13) << "(test " << test << " seed " << seed << ")" << std::endl;
 
    // Cleanup memory
    delete[] a; delete[] l;
@@ -414,7 +414,7 @@ int run_ldlt_tpp_tests() {
 
    /* Torture tests */
    TEST(( ldlt_torture_test(0.01, 1e-20, 1000, 100, 100) ));
-   TEST(( ldlt_torture_test(0.01, 1e-20, 20000, 100, 50) ));
+   TEST(( ldlt_torture_test(0.01, 1e-20, 1000, 100, 50) ));
 
    return nerr;
 }

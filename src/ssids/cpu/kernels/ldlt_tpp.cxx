@@ -168,12 +168,12 @@ int ldlt_tpp_factor(int m, int n, int* perm, double* a, int lda, double* d, doub
    //printf("=== ENTRY %d %d ===\n", m, n);
    int nelim = 0; // Number of eliminated variables
    while(nelim<n) {
-      //printf("nelim = %d\n", nelim);
-      /*for(int r=0; r<m; ++r) {
+      /*printf("nelim = %d\n", nelim);
+      for(int r=0; r<m; ++r) {
          printf("%d: ", perm[r]);
          for(int c=0; c<=std::min(r,n-1); ++c) printf(" %e", a[c*lda+r]);
          printf("\n");
-      }a*/
+      }*/
       // Need to check if col nelim is zero now or it gets missed
       if(check_col_small(nelim, n, &a[nelim*lda], small)) {
          // Record zero pivot
@@ -256,6 +256,13 @@ int ldlt_tpp_factor(int m, int n, int* perm, double* a, int lda, double* d, doub
          }
       }
    }
+   /*printf("==== EXIT ====\n");
+   for(int r=0; r<m; ++r) {
+      printf("%d: ", perm[r]);
+      for(int c=0; c<=std::min(r,n-1); ++c) printf(" %e", a[c*lda+r]);
+      printf("\n");
+   }
+   printf("==== EXIT ====\n");*/
    return nelim;
 }
 
