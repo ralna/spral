@@ -174,6 +174,17 @@ int ldlt_tpp_factor(int m, int n, int* perm, double* a, int lda, double* d, doub
          for(int c=0; c<=std::min(r,n-1); ++c) printf(" %e", a[c*lda+r]);
          printf("\n");
       }*/
+      // Need to check if col nelim is zero now or it gets missed
+      if(check_col_small(nelim, n, &a[nelim*lda], small)) {
+         // Record zero pivot
+         //printf("Zero pivot %d\n", nelim);
+         swap_cols(nelim, nelim, m, n, perm, a, lda);
+         zero_col(nelim, m, a, lda);
+         d[2*nelim] = 0.0;
+         d[2*nelim+1] = 0.0;
+         nelim++;
+         break;
+      }
       int p; // Index of current candidate pivot [starts at col 2]
       for(p=nelim+1; p<n; ++p) {
          //printf("Consider p=%d\n", p);
@@ -240,7 +251,7 @@ int ldlt_tpp_factor(int m, int n, int* perm, double* a, int lda, double* d, doub
             nelim += 1;
          } else {
             // That didn't work either. No more pivots to be found
-            printf("Out of pivots\n");
+            //printf("Out of pivots\n");
             break;
          }
       }
