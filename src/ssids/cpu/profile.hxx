@@ -88,7 +88,11 @@ private:
          "Thread0", "Thread1", "Thread2", "Thread3",
          "Thread4", "Thread5", "Thread6", "Thread7",
          "Thread8", "Thread9", "Thread10","Thread11",
-         "Thread12", "Thread13", "Thread14", "Thread15"
+         "Thread12", "Thread13", "Thread14", "Thread15",
+         "Thread16", "Thread17", "Thread18", "Thread19",
+         "Thread20", "Thread21", "Thread22", "Thread23",
+         "Thread24", "Thread25", "Thread26", "Thread27",
+         "Thread28", "Thread29", "Thread30", "Thread31"
       };
       return thread_name[thread];
    }
