@@ -103,13 +103,13 @@ double backward_error(int n, double const* a, int lda, double const* rhs, int nr
       for(int i=0; i<n; ++i) {
          rhsnorm = std::max(rhsnorm, fabs(rhs[i]));
          residnorm = std::max(residnorm, fabs(resid[i]));
-         if(isnan(resid[i])) residnorm = resid[i]; 
+         if(std::isnan(resid[i])) residnorm = resid[i]; 
          solnnorm = std::max(solnnorm, fabs(r*ldsoln+soln[i]));
       }
 
       //printf("%e / %e %e %e\n", residnorm, anorm, solnnorm, rhsnorm);
       worstbwderr = std::max(worstbwderr, residnorm/(anorm*solnnorm + rhsnorm));
-      if(isnan(residnorm)) worstbwderr = residnorm;
+      if(std::isnan(residnorm)) worstbwderr = residnorm;
    }
 
    /* Cleanup */

@@ -280,7 +280,7 @@ void ldlt_tpp_solve_fwd(int m, int n, double const* l, int ldl, int nrhs, double
 
 void ldlt_tpp_solve_diag(int n, double const* d, double* x) {
    for(int i=0; i<n; ) {
-      if(i+1<n && isinf(d[2*i+2])) {
+      if(i+1<n && std::isinf(d[2*i+2])) {
          // 2x2 pivot
          double d11 = d[2*i];
          double d21 = d[2*i+1];
