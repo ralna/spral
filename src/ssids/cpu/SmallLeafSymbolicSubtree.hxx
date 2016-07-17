@@ -10,9 +10,16 @@
  */
 #pragma once
 
-/* SPRAL headers */
+#include <memory>
+
+#include "cpu_iface.hxx"
+#include "SymbolicNode.hxx"
+
+#include <cstdio> // FIXME debug only
 
 namespace spral { namespace ssids { namespace cpu {
+
+class SymbolicSubtree;
 
 /** Handles the factorization of a small leaf subtree on a single core.
  *
@@ -24,7 +31,7 @@ namespace spral { namespace ssids { namespace cpu {
  * It is expected that the subtree will fit within L2 cache exclusively owned
  * by the executing thread.
  */
-class SmallLeafSubtree {
+class SmallLeafSymbolicSubtree {
 private:
    class Node {
    public:
@@ -36,20 +43,20 @@ private:
 
 public:
    /** Constructor performs analyse phase work */
-   SmallLeafSubtree(int sa, int en, int const* sptr, int const* sparent, long const* rptr, int const* rlist, int const* nptr, int const* nlist)
-   : nnodes_(en-sa+1), nodes_(nnodes_), rlist_(nullptr), nptr_(nptr), nlist_(nlist)
+   SmallLeafSymbolicSubtree(int sa, int en, int const* sptr, int const* sparent, long const* rptr, int const* rlist, int const* nptr, int const* nlist, SymbolicSubtree const& symb)
+   : sa_(sa), en_(en), nnodes_(en-sa+1), nodes_(nnodes_), rlist_(new int[rptr[en]-rptr[sa]]), nptr_(nptr), nlist_(nlist), symb_(symb)
    {
       /* Setup basic node information */
       nfactor_ = 0;
+      int* newrlist = rlist_.get();
       for(int ni=sa; ni<en; ++ni) {
          nodes_[ni-sa].nrow = rptr[ni+1] - rptr[ni];
          nodes_[ni-sa].ncol = sptr[ni+1] - sptr[ni];
          nodes_[ni-sa].sparent = sparent[ni]-sa-1; // sparent is Fortran indexed
-         nodes_[ni-sa].rlist = &rlist_[rptr[ni]-rptr[sa]];
+         nodes_[ni-sa].rlist = &newrlist[rptr[ni]-rptr[sa]];
          nfactor_ += nodes_[ni-sa].nrow * nodes_[ni-sa].ncol;
       }
       /* Construct rlist_ being offsets into parent node */
-      rlist_ = new int[rptr[nnodes_] - rptr[0]];
       for(int ni=sa; ni<en; ++ni) {
          int const* ilist = &rlist[rptr[ni]-1]; // rptr is Fortran indexed
          int pnode = sparent[ni];
@@ -62,30 +69,21 @@ public:
          }
       }
    }
-   ~SmallLeafSubtree() {
-      delete[] rlist_;
-   }
-   template <typename T>
-   T* factor(T const* aval, T const* scaling, T* lcol) {
-      /* Zero factors */
-      memset(lcol, 0, nfactor_*sizeof(T));
-      /* Copy a values */
-      for(int i=0; i<nptr_[nnodes_+1]; ++i) {
-         // FIXME
-      }
-      /* Perform factorization */
-      for(int ni=0; ni<nnodes_; ++ni) {
-         // FIXME
-      }
-      // FIXME: Return contribution block
-   }
-private:
+protected:
+   int sa_;
+   int en_;
    int nnodes_;
    int nfactor_;
    std::vector<Node> nodes_;
-   int* rlist_;
+   std::shared_ptr<int> rlist_;
    int const* nptr_;
    int const* nlist_;
+   SymbolicSubtree const& symb_;
+   
+   template <typename T, int BLOCK_SIZE, typename FactorAllocator,
+             typename ContribAllocator>
+   friend class SmallLeafNumericSubtree;
 };
+
 
 }}} /* namespaces spral::ssids::cpu */

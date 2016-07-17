@@ -40,9 +40,10 @@ module spral_ssids_cpu_subtree
 
    interface
       type(C_PTR) function c_create_symbolic_subtree(n, nnodes, sptr, sparent, &
-            rptr, rlist, nptr, nlist) &
+            rptr, rlist, nptr, nlist, options) &
             bind(C, name="spral_ssids_cpu_create_symbolic_subtree")
          use, intrinsic :: iso_c_binding
+         import :: cpu_factor_options
          implicit none
          integer(C_INT), value :: n
          integer(C_INT), value :: nnodes
@@ -52,6 +53,7 @@ module spral_ssids_cpu_subtree
          integer(C_INT), dimension(*), intent(in) :: rlist
          integer(C_INT), dimension(*), intent(in) :: nptr
          integer(C_INT), dimension(*), intent(in) :: nlist
+         type(cpu_factor_options), intent(in) :: options
       end function c_create_symbolic_subtree
 
       subroutine c_destroy_symbolic_subtree(subtree) &
@@ -150,7 +152,7 @@ module spral_ssids_cpu_subtree
 contains
 
 function construct_cpu_symbolic_subtree(n, nnodes, sptr, sparent, rptr, &
-      rlist, nptr, nlist) result(this)
+      rlist, nptr, nlist, options) result(this)
    class(cpu_symbolic_subtree), pointer :: this
    integer, intent(in) :: n
    integer, intent(in) :: nnodes
@@ -160,10 +162,12 @@ function construct_cpu_symbolic_subtree(n, nnodes, sptr, sparent, rptr, &
    integer, dimension(rptr(nnodes+1)-1), target, intent(in) :: rlist
    integer, dimension(nnodes+1), target, intent(in) :: nptr
    integer, dimension(2,nptr(nnodes+1)-1), target, intent(in) :: nlist
+   class(ssids_options), intent(in) :: options
 
    integer :: node
    integer(long) :: blkm, blkn
    integer :: st
+   type(cpu_factor_options) :: coptions
 
    ! Allocate output
    allocate(this, stat=st)
@@ -176,9 +180,10 @@ function construct_cpu_symbolic_subtree(n, nnodes, sptr, sparent, rptr, &
    this%n = n
 
    ! Call C++ subtree analyse
+   call cpu_copy_options_in(options, coptions)
    this%csubtree = &
       c_create_symbolic_subtree(n, nnodes, sptr, sparent, rptr, rlist, nptr, &
-         nlist)
+         nlist, coptions)
 
 end function construct_cpu_symbolic_subtree
 

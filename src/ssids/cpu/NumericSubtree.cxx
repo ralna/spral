@@ -15,7 +15,6 @@
 
 #include "NumericSubtree.hxx"
 #include "PoolAlloc.hxx"
-#include "SmallLeafSubtree.hxx"
 
 using namespace spral::ssids::cpu;
 

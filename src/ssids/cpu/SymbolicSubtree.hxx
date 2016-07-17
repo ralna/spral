@@ -13,27 +13,18 @@
 #include <cstddef>
 #include <vector>
 
-namespace spral { namespace ssids { namespace cpu {
+#include "SmallLeafSymbolicSubtree.hxx"
+#include "SymbolicNode.hxx"
 
-/** Symbolic representation of a node */
-struct SymbolicNode {
-   int idx; //< Index of node
-   int nrow; //< Number of rows
-   int ncol; //< Number of columns
-   SymbolicNode* first_child; //< Pointer to first child in linked list
-   SymbolicNode* next_child; //< Pointer to second child in linked list
-   int const* rlist; //< Pointer to row lists
-   int num_a; //< Number of entries mapped from A to L
-   int const* amap; //< Pointer to map from A to L locations
-   int parent; //< index of parent node
-};
+namespace spral { namespace ssids { namespace cpu {
 
 /** Symbolic factorization of a subtree to be factored on the CPU */
 class SymbolicSubtree {
 public:
-   SymbolicSubtree(int n, int nnodes, int const* sptr, int const* sparent, long const* rptr, int const* rlist, int const* nptr, int const* nlist)
+   SymbolicSubtree(int n, int nnodes, int const* sptr, int const* sparent, long const* rptr, int const* rlist, int const* nptr, int const* nlist, struct cpu_factor_options const& options)
    : n(n), nnodes_(nnodes), nodes_(nnodes+1)
    {
+      // FIXME: don't process nodes that are in small leaf subtrees
       /* Fill out basic details */
       for(int ni=0; ni<nnodes_; ++ni) {
          nodes_[ni].idx = ni;
@@ -45,6 +36,7 @@ public:
          nodes_[ni].num_a = nptr[ni+1] - nptr[ni];
          nodes_[ni].amap = &nlist[2*(nptr[ni]-1)]; // nptr is Fortran indexed
          nodes_[ni].parent = sparent[ni]-1; // sparent is Fortran indexed
+         nodes_[ni].insmallleaf = false; // default to not in small leaf subtree
       }
       nodes_[nnodes_].first_child = nullptr; // List of roots
       /* Build child linked lists */
@@ -57,6 +49,30 @@ public:
       nfactor_ = 0;
       for(int ni=0; ni<nnodes_; ++ni)
          nfactor_ += static_cast<size_t>(nodes_[ni].nrow)*nodes_[ni].ncol;
+      /* Find small leaf subtrees */
+      // Count flops below each node
+      std::vector<long> flops(nnodes_+1, 0);
+      for(int ni=0; ni<nnodes_; ++ni) {
+         for(int k=0; k<nodes_[ni].ncol; ++k)
+            flops[ni] += (nodes_[ni].nrow - k)*(nodes_[ni].nrow - k);
+         flops[nodes_[ni].parent] += flops[ni];
+      }
+      // Start at least node and work way up using parents until too large
+      for(int ni=0; ni<nnodes_; ) {
+         if(nodes_[ni].first_child) { ++ni; continue; } // Not a leaf
+         int last = ni;
+         for(int current=ni; current<nnodes_; current=nodes_[current].parent) {
+            if(flops[current] >= options.cpu_small_subtree_threshold) break;
+            last = current;
+         }
+         // Nodes ni:last are in subtree
+         subtrees_.emplace_back(
+               ni, last, sptr, sparent, rptr, rlist, nptr, nlist, *this
+               );
+         for(int i=ni; i<=last; ++i)
+            nodes_[ni].insmallleaf = true;
+         ni = last+1; // Skip to next node not in this subtree
+      }
    }
 
    SymbolicNode const& operator[](int idx) const {
@@ -72,6 +88,7 @@ private:
    int nnodes_;
    size_t nfactor_;
    std::vector<SymbolicNode> nodes_;
+   std::vector<SmallLeafSymbolicSubtree> subtrees_;
 
    template <bool posdef, size_t BLOCK_SIZE, typename T, size_t PAGE_SIZE, typename FactorAlloc, typename ContribAllocator>
    friend class NumericSubtree;

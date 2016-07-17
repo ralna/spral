@@ -19,6 +19,7 @@
 #include "kernels/assemble.hxx"
 #include "kernels/cholesky.hxx"
 #include "kernels/CpuLDLT.cxx"
+#include "SymbolicNode.hxx"
 
 namespace spral { namespace ssids { namespace cpu {
 

@@ -15,7 +15,7 @@
 
 #include "../smalloc.hxx"
 #include "../NumericNode.hxx"
-#include "../SymbolicSubtree.hxx"
+#include "../SymbolicNode.hxx"
 
 namespace spral { namespace ssids { namespace cpu {
 
