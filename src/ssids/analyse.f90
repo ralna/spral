@@ -434,7 +434,7 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
    allocate(akeep%subtree(1))
    akeep%subtree(1)%ptr => construct_cpu_symbolic_subtree(akeep%n, &
       akeep%nnodes, akeep%sptr, akeep%sparent, akeep%rptr, akeep%rlist, &
-      akeep%nptr, akeep%nlist)
+      akeep%nptr, akeep%nlist, options)
 
    ! Copy GPU-relevent data to device if needed (no-op if not)
    call akeep%move_data(options, inform)

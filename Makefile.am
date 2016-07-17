@@ -231,7 +231,9 @@ libspral_a_SOURCES += \
 	src/ssids/cpu/profile.cxx \
 	src/ssids/cpu/profile.hxx \
 	src/ssids/cpu/PoolAlloc.hxx \
-	src/ssids/cpu/SmallLeafSubtree.hxx \
+	src/ssids/cpu/SmallLeafNumericSubtree.hxx \
+	src/ssids/cpu/SmallLeafSymbolicSubtree.hxx \
+	src/ssids/cpu/SymbolicNode.hxx \
 	src/ssids/cpu/SymbolicSubtree.cxx \
 	src/ssids/cpu/SymbolicSubtree.hxx \
 	src/ssids/cpu/kernels/assemble.hxx \

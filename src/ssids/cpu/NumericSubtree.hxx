@@ -14,6 +14,7 @@
 #include "factor.hxx"
 #include "NumericNode.hxx"
 #include "SymbolicSubtree.hxx"
+#include "SmallLeafNumericSubtree.hxx"
 
 #include "profile.hxx"
 
@@ -28,7 +29,11 @@ template <bool posdef,
           typename ContribAllocator // Allocator to use for contribution blocks
           >
 class NumericSubtree {
+   typedef SmallLeafNumericSubtree<T, BLOCK_SIZE, FactorAllocator, ContribAllocator> SLNS;
 public:
+   /* Delete copy constructors for safety re allocated memory */
+   NumericSubtree(const NumericSubtree&) =delete;
+   NumericSubtree& operator=(const NumericSubtree&) =delete;
    /** Performs factorization */
    NumericSubtree(
          SymbolicSubtree const& symbolic_subtree,
@@ -37,6 +42,7 @@ public:
          struct cpu_factor_options const* options,
          struct cpu_factor_stats* stats)
    : symb_(symbolic_subtree), nodes_(symbolic_subtree.nnodes_+1),
+     small_leafs_(static_cast<SLNS*>(::operator new[](symb_.small_leafs_.size()*sizeof(SLNS)))),
      factor_alloc_(symbolic_subtree.get_factor_mem_est(options->multiplier))
    {
       Profile::init();
@@ -71,10 +77,33 @@ public:
          for(int i=0; i<5; i++) thread_stats[this_thread].elim_at_pass[i] = 0;
          for(int i=0; i<5; i++) thread_stats[this_thread].elim_at_itr[i] = 0;
 
-         /* Main loop: Iterate over nodes in order */
          #pragma omp taskgroup
+         {
+         /* Loop over small leaf subtrees */
+         #pragma omp single
+         if(posdef)
+         for(unsigned int si=0; si<symb_.small_leafs_.size(); ++si) {
+            auto* parent_lcol = &nodes_[symb_.small_leafs_[si].get_parent()];
+            #pragma omp task default(none) \
+               firstprivate(si) \
+               shared(aval, options, scaling, thread_stats, work) \
+               depend(inout: parent_lcol[0:1])
+            {
+               int this_thread = omp_get_thread_num();
+               auto const& leaf = symb_.small_leafs_[si];
+               new (&small_leafs_[si]) SLNS(leaf, nodes_, aval, scaling,
+                     factor_alloc_, contrib_alloc_, work[this_thread],
+                     options, thread_stats[this_thread]);
+               #pragma omp cancel taskgroup \
+                  if(thread_stats[this_thread].flag<SSIDS_SUCCESS)
+            }
+         }
+         #pragma omp taskwait // FIXME: remove
+
+         /* Loop over singleton nodes in order */
          #pragma omp single
          for(int ni=0; ni<symb_.nnodes_; ++ni) {
+            if(posdef && symb_[ni].insmallleaf) continue; // already handled
             // FIXME: depending inout on parent is not a good way to represent
             //        the dependency.
             auto* this_lcol = &nodes_[ni]; // for depend
@@ -109,7 +138,8 @@ public:
                   <posdef, BLOCK_SIZE>
                   (ni, symb_[ni], &nodes_[ni], options,
                    thread_stats[this_thread]);
-               #pragma omp cancel taskgroup if(thread_stats[this_thread].flag<SSIDS_SUCCESS)
+               #pragma omp cancel taskgroup \
+                  if(thread_stats[this_thread].flag<SSIDS_SUCCESS)
 #ifdef PROFILE
                task_factor.done();
                Profile::Task task_update("TA_UPDATE", this_thread);
@@ -124,6 +154,7 @@ public:
 #endif
             }
          }
+         } // taskgroup
 
          // Reduce thread_stats
          #pragma omp single 
@@ -194,6 +225,9 @@ public:
 #ifdef PROFILE
       endTrace();
 #endif
+   }
+   ~NumericSubtree() {
+      delete[] small_leafs_;
    }
 
    void solve_fwd(int nrhs, double* x, int ldx) const {
@@ -414,6 +448,8 @@ public:
 private:
    SymbolicSubtree const& symb_;
    std::vector<NumericNode<T>> nodes_;
+   SLNS *small_leafs_; // Apparently emplace_back isn't threadsafe, so
+      // std::vector is out. So we use placement new instead.
    FactorAllocator factor_alloc_;
    ContribAllocator contrib_alloc_;
 };

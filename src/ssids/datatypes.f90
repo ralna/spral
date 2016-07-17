@@ -241,7 +241,7 @@ module spral_ssids_datatypes
       !
       ! New and undocumented - FIXME decide whether to document before release
       !
-      integer :: cpu_small_subtree_threshold = 10000 ! Flops below which we
+      integer :: cpu_small_subtree_threshold = 100**3 ! Flops below which we
          ! treat a subtree as small and use the single core kernel
       integer :: cpu_task_block_size = 256 ! block size to use for task
          ! generation on larger nodes

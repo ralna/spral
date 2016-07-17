@@ -44,8 +44,12 @@ private:
 public:
    /** Constructor performs analyse phase work */
    SmallLeafSymbolicSubtree(int sa, int en, int const* sptr, int const* sparent, long const* rptr, int const* rlist, int const* nptr, int const* nlist, SymbolicSubtree const& symb)
-   : sa_(sa), en_(en), nnodes_(en-sa+1), nodes_(nnodes_), rlist_(new int[rptr[en]-rptr[sa]]), nptr_(nptr), nlist_(nlist), symb_(symb)
+   : sa_(sa), en_(en), nnodes_(en-sa+1), parent_(sparent[en]-1),
+     nodes_(nnodes_),
+     rlist_(new int[rptr[en]-rptr[sa]], std::default_delete<int[]>()),
+     nptr_(nptr), nlist_(nlist), symb_(symb)
    {
+#if 0
       /* Setup basic node information */
       nfactor_ = 0;
       int* newrlist = rlist_.get();
@@ -68,12 +72,16 @@ public:
             *(outlist++) = jlist - jstart;
          }
       }
+#endif
    }
+
+   int get_parent() const { return parent_; }
 protected:
    int sa_;
    int en_;
    int nnodes_;
    int nfactor_;
+   int parent_;
    std::vector<Node> nodes_;
    std::shared_ptr<int> rlist_;
    int const* nptr_;

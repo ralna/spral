@@ -65,12 +65,13 @@ public:
             if(flops[current] >= options.cpu_small_subtree_threshold) break;
             last = current;
          }
+         if(last==ni) { ++ni; continue; } // No point for a single node
          // Nodes ni:last are in subtree
-         subtrees_.emplace_back(
+         small_leafs_.emplace_back(
                ni, last, sptr, sparent, rptr, rlist, nptr, nlist, *this
                );
          for(int i=ni; i<=last; ++i)
-            nodes_[ni].insmallleaf = true;
+            nodes_[i].insmallleaf = true;
          ni = last+1; // Skip to next node not in this subtree
       }
    }
@@ -88,7 +89,7 @@ private:
    int nnodes_;
    size_t nfactor_;
    std::vector<SymbolicNode> nodes_;
-   std::vector<SmallLeafSymbolicSubtree> subtrees_;
+   std::vector<SmallLeafSymbolicSubtree> small_leafs_;
 
    template <bool posdef, size_t BLOCK_SIZE, typename T, size_t PAGE_SIZE, typename FactorAlloc, typename ContribAllocator>
    friend class NumericSubtree;
