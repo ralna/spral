@@ -1284,8 +1284,8 @@ public:
             ThreadWork all_thread_work[num_threads];
             // FIXME: Following line is a maximum! Make smaller?
             GlobalWork global_work((nblk*(nblk+1))/2+mblk*nblk);
-            #pragma omp parallel default(shared)
-            #pragma omp single
+            //#pragma omp parallel default(shared)
+            //#pragma omp single
             {
                changed = run_elim(next_elim, mblk, nblk, cdata, blkdata, global_work, all_thread_work);
             }
