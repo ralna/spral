@@ -70,6 +70,13 @@ public:
    }
 
    static
+   void end(void) {
+#ifdef PROFILE
+      endTrace();
+#endif
+   }
+
+   static
    double now() {
 #ifdef PROFILE
       struct timespec t;

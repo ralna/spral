@@ -241,9 +241,7 @@ public:
             }
          }
       }
-#ifdef PROFILE
-      endTrace();
-#endif
+      Profile::end();
    }
    ~NumericSubtree() {
       delete[] small_leafs_;
