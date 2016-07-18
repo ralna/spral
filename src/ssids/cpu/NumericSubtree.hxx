@@ -90,12 +90,18 @@ public:
                depend(inout: parent_lcol[0:1])
             {
                int this_thread = omp_get_thread_num();
+#ifdef PROFILE
+               Profile::Task task_subtree("TA_SUBTREE", this_thread);
+#endif
                auto const& leaf = symb_.small_leafs_[si];
                new (&small_leafs_[si]) SLNS(leaf, nodes_, aval, scaling,
                      factor_alloc_, contrib_alloc_, work[this_thread],
                      options, thread_stats[this_thread]);
                #pragma omp cancel taskgroup \
                   if(thread_stats[this_thread].flag<SSIDS_SUCCESS)
+#ifdef profile
+               task_subtree.done();
+#endif
             }
          }
          #pragma omp taskwait // FIXME: remove
@@ -185,6 +191,19 @@ public:
             }
          }
       }
+
+      /*printf("Elim at pass = %d %d %d %d %d\n",
+            stats->elim_at_pass[0],
+            stats->elim_at_pass[1],
+            stats->elim_at_pass[2],
+            stats->elim_at_pass[3],
+            stats->elim_at_pass[4]);
+      printf("Elim at itr = %d %d %d %d %d\n",
+            stats->elim_at_itr[0],
+            stats->elim_at_itr[1],
+            stats->elim_at_itr[2],
+            stats->elim_at_itr[3],
+            stats->elim_at_itr[4]);*/
 
       // Count stats
       // FIXME: gross hack for compat with bub (which needs to differentiate

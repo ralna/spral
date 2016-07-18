@@ -10,7 +10,7 @@
  */
 #pragma once
 
-//#define PROFILE
+#define PROFILE
 
 #ifdef PROFILE
 extern "C" {
@@ -58,6 +58,7 @@ public:
          addContainer(0.0, get_thread_name(i), "CT_THREAD", "C_Node0", get_thread_name(i), "0");
       // Define states (i.e. task types)
       addStateType("ST_TASK", "CT_THREAD", "Task");
+      addEntityValue("TA_SUBTREE", "ST_TASK", "Subtree", GTG_RED);
       addEntityValue("TA_ASSEMBLE", "ST_TASK", "Assemble", GTG_GREEN);
       addEntityValue("TA_FACTOR", "ST_TASK", "Factor", GTG_BLUE);
       addEntityValue("TA_UPDATE", "ST_TASK", "Update", GTG_ORANGE);
