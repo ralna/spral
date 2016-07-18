@@ -39,6 +39,7 @@ private:
       int ncol;
       int sparent;
       int* rlist;
+      int lcol_offset;
    };
 
 public:
@@ -46,36 +47,40 @@ public:
    SmallLeafSymbolicSubtree(int sa, int en, int const* sptr, int const* sparent, long const* rptr, int const* rlist, int const* nptr, int const* nlist, SymbolicSubtree const& symb)
    : sa_(sa), en_(en), nnodes_(en-sa+1), parent_(sparent[en]-1),
      nodes_(nnodes_),
-     rlist_(new int[rptr[en]-rptr[sa]], std::default_delete<int[]>()),
+     rlist_(new int[rptr[en+1]-rptr[sa]], std::default_delete<int[]>()),
      nptr_(nptr), nlist_(nlist), symb_(symb)
    {
-#if 0
       /* Setup basic node information */
       nfactor_ = 0;
       int* newrlist = rlist_.get();
-      for(int ni=sa; ni<en; ++ni) {
+      for(int ni=sa; ni<=en; ++ni) {
          nodes_[ni-sa].nrow = rptr[ni+1] - rptr[ni];
          nodes_[ni-sa].ncol = sptr[ni+1] - sptr[ni];
          nodes_[ni-sa].sparent = sparent[ni]-sa-1; // sparent is Fortran indexed
+         // FIXME: subtract ncol off rlist for elim'd vars
          nodes_[ni-sa].rlist = &newrlist[rptr[ni]-rptr[sa]];
-         nfactor_ += nodes_[ni-sa].nrow * nodes_[ni-sa].ncol;
+         nodes_[ni-sa].lcol_offset = nfactor_;
+         nfactor_ += static_cast<size_t>(nodes_[ni-sa].nrow) * nodes_[ni-sa].ncol;
       }
       /* Construct rlist_ being offsets into parent node */
-      for(int ni=sa; ni<en; ++ni) {
+      for(int ni=sa; ni<=en; ++ni) {
+         if(nodes_[ni-sa].ncol == nodes_[ni-sa].nrow) continue; // is root
          int const* ilist = &rlist[rptr[ni]-1]; // rptr is Fortran indexed
-         int pnode = sparent[ni];
+         ilist += nodes_[ni-sa].ncol; // Skip eliminated vars
+         int pnode = sparent[ni]-1; //Fortran indexed
          int const* jlist = &rlist[rptr[pnode]-1]; // rptr is Fortran indexed
          int const* jstart = jlist;
          int *outlist = nodes_[ni-sa].rlist;
-         for(int i=0; i<nodes_[ni-sa].nrow; ++i) {
+         for(int i=nodes_[ni-sa].ncol; i<nodes_[ni-sa].nrow; ++i) {
             for(; *ilist != *jlist; ++jlist); // Finds match in jlist
             *(outlist++) = jlist - jstart;
+            ++ilist;
          }
       }
-#endif
    }
 
    int get_parent() const { return parent_; }
+   Node const& operator[](int idx) const { return nodes_[idx]; }
 protected:
    int sa_;
    int en_;
