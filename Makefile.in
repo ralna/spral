@@ -240,7 +240,10 @@ am__libspral_a_SOURCES_DIST = src/blas_iface.f90 src/core_analyse.f90 \
 	src/ssids/cpu/NumericSubtree.hxx src/ssids/cpu/smalloc.cxx \
 	src/ssids/cpu/smalloc.hxx src/ssids/cpu/subtree.f90 \
 	src/ssids/cpu/profile.cxx src/ssids/cpu/profile.hxx \
-	src/ssids/cpu/PoolAlloc.hxx src/ssids/cpu/SmallLeafSubtree.hxx \
+	src/ssids/cpu/PoolAlloc.hxx \
+	src/ssids/cpu/SmallLeafNumericSubtree.hxx \
+	src/ssids/cpu/SmallLeafSymbolicSubtree.hxx \
+	src/ssids/cpu/SymbolicNode.hxx \
 	src/ssids/cpu/SymbolicSubtree.cxx \
 	src/ssids/cpu/SymbolicSubtree.hxx \
 	src/ssids/cpu/kernels/assemble.hxx \
@@ -1162,7 +1165,10 @@ libspral_a_SOURCES = src/blas_iface.f90 src/core_analyse.f90 \
 	src/ssids/cpu/NumericSubtree.hxx src/ssids/cpu/smalloc.cxx \
 	src/ssids/cpu/smalloc.hxx src/ssids/cpu/subtree.f90 \
 	src/ssids/cpu/profile.cxx src/ssids/cpu/profile.hxx \
-	src/ssids/cpu/PoolAlloc.hxx src/ssids/cpu/SmallLeafSubtree.hxx \
+	src/ssids/cpu/PoolAlloc.hxx \
+	src/ssids/cpu/SmallLeafNumericSubtree.hxx \
+	src/ssids/cpu/SmallLeafSymbolicSubtree.hxx \
+	src/ssids/cpu/SymbolicNode.hxx \
 	src/ssids/cpu/SymbolicSubtree.cxx \
 	src/ssids/cpu/SymbolicSubtree.hxx \
 	src/ssids/cpu/kernels/assemble.hxx \
