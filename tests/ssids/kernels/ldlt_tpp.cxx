@@ -294,13 +294,7 @@ int ldlt_tpp_test(double u, double small, bool delays, bool singular, int m, int
       // Apply outer product update
       do_update<double>(m-n, q1, &l[n*(lda+1)], &l[n], lda, d);
       // Second (m-n) x (m-n) matrix [but add delays if any]
-      int *perm2 = new int[m-q1];
-      for(int i=0; i<m-q1; i++)
-         perm2[i] = i;
-      q2 = ldlt_tpp_factor(m-q1, m-q1, perm2, &l[q1*(lda+1)], lda, &d[2*q1], work, m, u, small);
-      // Permute rows of A_21 as per perm
-      permute_rows(m-q1, q1, perm2, &perm[q1], &l[q1], lda);
-      delete[] perm2;
+      q2 = ldlt_tpp_factor(m-q1, m-q1, &perm[q1], &l[q1*(lda+1)], lda, &d[2*q1], work, m, u, small, q1, &l[q1], lda);
    }
    EXPECT_EQ(m, q1+q2) << "(test " << test << " seed " << seed << ")" << std::endl;
    EXPECT_LE(find_l_abs_max(m, l, lda), 1.0/u) << "(test " << test << " seed " << seed << ")" << std::endl;

@@ -46,7 +46,7 @@ int find_row_abs_max(int from, int to, double const* a, int lda) {
 
 /** Performs symmetric swap of col1 and col2 in lower triangle */
 // FIXME: remove n only here for debug
-void swap_cols(int col1, int col2, int m, int n, int* perm, double* a, int lda) {
+void swap_cols(int col1, int col2, int m, int n, int* perm, double* a, int lda, int nleft, double* aleft, int ldleft) {
    if(col1 == col2) return; // No-op
 
    // Ensure col1 < col2
@@ -55,6 +55,10 @@ void swap_cols(int col1, int col2, int m, int n, int* perm, double* a, int lda) 
 
    // Swap perm entries
    std::swap( perm[col1], perm[col2] );
+
+   // Swap aleft(col1, :) and aleft(col2, :)
+   for(int c=0; c<nleft; ++c)
+      std::swap( aleft[c*ldleft+col1], aleft[c*ldleft+col2] );
 
    // Swap a(col1, 0:col1-1) and a(col2, 0:col1-1)
    for(int c=0; c<col1; ++c)
@@ -164,7 +168,7 @@ void zero_col(int col, int m, double* a, int lda) {
 
 /* Simple LDL^T with threshold partial pivoting.
  * Intended for finishing off small matrices, not for performance */
-int ldlt_tpp_factor(int m, int n, int* perm, double* a, int lda, double* d, double* ld, int ldld, double u, double small) {
+int ldlt_tpp_factor(int m, int n, int* perm, double* a, int lda, double* d, double* ld, int ldld, double u, double small, int nleft, double* aleft, int ldleft) {
    //printf("=== ENTRY %d %d ===\n", m, n);
    int nelim = 0; // Number of eliminated variables
    while(nelim<n) {
@@ -178,7 +182,7 @@ int ldlt_tpp_factor(int m, int n, int* perm, double* a, int lda, double* d, doub
       if(check_col_small(nelim, m, &a[nelim*lda], small)) {
          // Record zero pivot
          //printf("Zero pivot %d\n", nelim);
-         swap_cols(nelim, nelim, m, n, perm, a, lda);
+         swap_cols(nelim, nelim, m, n, perm, a, lda, nleft, aleft, ldleft);
          zero_col(nelim, m, a, lda);
          d[2*nelim] = 0.0;
          d[2*nelim+1] = 0.0;
@@ -192,7 +196,7 @@ int ldlt_tpp_factor(int m, int n, int* perm, double* a, int lda, double* d, doub
          if(check_col_small(p, m, &a[p*lda], small)) {
             // Record zero pivot
             //printf("Zero pivot\n");
-            swap_cols(p, nelim, m, n, perm, a, lda);
+            swap_cols(p, nelim, m, n, perm, a, lda, nleft, aleft, ldleft);
             zero_col(nelim, m, a, lda);
             d[2*nelim] = 0.0;
             d[2*nelim+1] = 0.0;
@@ -208,8 +212,8 @@ int ldlt_tpp_factor(int m, int n, int* perm, double* a, int lda, double* d, doub
          double maxp = find_rc_abs_max_exclude(p, nelim, m, a, lda, t);
          if( test_2x2(t, p, maxt, maxp, a, lda, u, small, &d[2*nelim]) ) {
             //printf("2x2 pivot\n");
-            swap_cols(t, nelim, m, n, perm, a, lda);
-            swap_cols(p, nelim+1, m, n, perm, a, lda);
+            swap_cols(t, nelim, m, n, perm, a, lda, nleft, aleft, ldleft);
+            swap_cols(p, nelim+1, m, n, perm, a, lda, nleft, aleft, ldleft);
             apply_2x2(nelim, m, a, lda, ld, ldld, d);
             host_gemm(OP_N, OP_T, m-nelim-2, n-nelim-2, 2, -1.0,
                   &a[nelim*lda+nelim+2], lda, &ld[nelim+2], ldld,
@@ -222,7 +226,7 @@ int ldlt_tpp_factor(int m, int n, int* perm, double* a, int lda, double* d, doub
          maxp = std::max(maxp, std::abs(a[t*lda+p]));
          if( std::abs(a[p*lda+p]) >= u*maxp ) {
             //printf("1x1 pivot\n");
-            swap_cols(p, nelim, m, n, perm, a, lda);
+            swap_cols(p, nelim, m, n, perm, a, lda, nleft, aleft, ldleft);
             d[2*nelim] = 1 / a[nelim*lda+nelim];
             d[2*nelim+1] = 0.0;
             apply_1x1(nelim, m, a, lda, ld, ldld, d);
@@ -241,7 +245,7 @@ int ldlt_tpp_factor(int m, int n, int* perm, double* a, int lda, double* d, doub
          double maxp = find_rc_abs_max_exclude(p, nelim, m, a, lda, -1);
          if( std::abs(a[p*lda+p]) >= u*maxp ) {
             //printf("1x1 pivot %d\n", p);
-            swap_cols(p, nelim, m, n, perm, a, lda);
+            swap_cols(p, nelim, m, n, perm, a, lda, nleft, aleft, ldleft);
             d[2*nelim] = 1 / a[nelim*lda+nelim];
             d[2*nelim+1] = 0.0;
             apply_1x1(nelim, m, a, lda, ld, ldld, d);
