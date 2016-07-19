@@ -19,6 +19,7 @@
 #include "kernels/assemble.hxx"
 #include "kernels/cholesky.hxx"
 #include "kernels/CpuLDLT.cxx"
+#include "kernels/ldlt_tpp.hxx"
 #include "SymbolicNode.hxx"
 
 namespace spral { namespace ssids { namespace cpu {
@@ -71,28 +72,15 @@ void factor_node_indef(
    /* Perform factorization */
    typedef CpuLDLT<T, BLOCK_SIZE> CpuLDLTSpec;
    //typedef CpuLDLT<T, BLOCK_SIZE, 5, true> CpuLDLTSpecDebug; // FIXME: debug remove
-   struct CpuLDLTSpec::stat_type bubstats; // FIXME: not needed?
-   node->nelim = CpuLDLTSpec(options->u, options->small).factor(m, n, perm, lcol, m, d, &bubstats);
-   for(int i=0; i<5; i++) {
-      stats.elim_at_pass[i] += bubstats.elim_at_pass[i];
-   }
-   int last_remain = n;
-   for(int i=0; i<bubstats.nitr; i++) {
-      stats.elim_at_itr[i] += last_remain - bubstats.remain[i];
-      last_remain = bubstats.remain[i];
-   }
-   /*if(bubstats.nitr > 2) {
-      printf("Node %d: %dx%d delay %d nitr %d\n", ni, m, n, n-node->nelim, bubstats.nitr);
-      for(int i=0; i<bubstats.nitr; i++)
-         printf("--> itr %d passes %d remain %d\n", i, bubstats.npass[i], bubstats.remain[i]);
-   }*/
+   node->nelim = CpuLDLTSpec(options->u, options->small).factor(m, n, perm, lcol, m, d);
 
-   /*for(int i=node->nelim; i<m; i++) {
-      printf("%d:", i);
-      for(int j=node->nelim; j<n; j++)
-         printf(" %10.2e", lcol[j*m+i]);
-      printf("\n");
-   }*/
+   /* Finish factorization worth simplistic code */
+   if(node->nelim < n) {
+      int nelim = node->nelim;
+      T *ld = new T[2*(m-nelim)]; // FIXME: Use work
+      node->nelim += ldlt_tpp_factor(m-nelim, n-nelim, &perm[nelim], &lcol[nelim*(m+1)], m, &d[2*nelim], ld, m-nelim, options->u, options->small, nelim, &lcol[nelim], m);
+      delete[] ld;
+   }
 
    /* Record information */
    node->ndelay_out = n - node->nelim;
