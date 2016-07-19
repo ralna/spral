@@ -175,7 +175,7 @@ int ldlt_tpp_factor(int m, int n, int* perm, double* a, int lda, double* d, doub
          printf("\n");
       }*/
       // Need to check if col nelim is zero now or it gets missed
-      if(check_col_small(nelim, n, &a[nelim*lda], small)) {
+      if(check_col_small(nelim, m, &a[nelim*lda], small)) {
          // Record zero pivot
          //printf("Zero pivot %d\n", nelim);
          swap_cols(nelim, nelim, m, n, perm, a, lda);
@@ -189,7 +189,7 @@ int ldlt_tpp_factor(int m, int n, int* perm, double* a, int lda, double* d, doub
       for(p=nelim+1; p<n; ++p) {
          //printf("Consider p=%d\n", p);
          // Check if column p is effectively zero
-         if(check_col_small(p, n, &a[p*lda], small)) {
+         if(check_col_small(p, m, &a[p*lda], small)) {
             // Record zero pivot
             //printf("Zero pivot\n");
             swap_cols(p, nelim, m, n, perm, a, lda);
