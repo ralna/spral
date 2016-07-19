@@ -10,7 +10,7 @@
  */
 #pragma once
 
-#define PROFILE
+//#define PROFILE
 
 #ifdef PROFILE
 extern "C" {
