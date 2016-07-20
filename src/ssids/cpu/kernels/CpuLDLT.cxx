@@ -104,9 +104,9 @@ private:
       int nelim;
       int npass;
       omp_lock_t lock;
-      int perm[BLOCK_SIZE]; // FIXME: Probably not needed, but really good for debug
+      int *perm;
       int elim_order[BLOCK_SIZE];
-      T d[2*BLOCK_SIZE];
+      T *d;
 
       col_data() : 
          nelim(0)
@@ -119,14 +119,17 @@ private:
          omp_destroy_lock(&lock);
       }
 
-      void permuted_store(T *user_d, int *user_perm) {
-         for(int j=0; j<BLOCK_SIZE; j++) {
-            int col = elim_order[j];
-            if(col < 0 ) continue; // Padding column
-            user_d[2*col+0] = d[2*j+0];
-            user_d[2*col+1] = d[2*j+1];
-            user_perm[col] = perm[j];
+      /** Moves d and perm for eliminated columns to elim_d and elim_perm
+       * (which may overlap with d and perm!). Puts uneliminated variables in
+       * failed_perm (no need for d with failed vars). */
+      void move_back(int* elim_perm, int* failed_perm) {
+         if(perm+2*oldelim != elim_perm) { // Don't move if memory is identical
+            for(int i=oldelim; i<nelim; ++i)
+               *(elim_perm++) = perm[i];
          }
+         // Copy failed perm
+         for(int i=nelim; i<BLOCK_SIZE; ++i)
+            *(failed_perm++) = perm[i];
       }
 
    };
@@ -224,12 +227,10 @@ private:
       }
 
       void permuted_store(T *user_a, int lda, const struct col_data *idata, const struct col_data *jdata) {
-         for(int j=0; j<BLOCK_SIZE; j++) {
+         for(int j=jdata->oldelim; j<BLOCK_SIZE; j++) {
             int col = jdata->elim_order[j];
-            if(col < 0 ) continue; // Padding column
-            for(int i=0; i<BLOCK_SIZE; i++) {
+            for(int i=idata->oldelim; i<BLOCK_SIZE; i++) {
                int row = idata->elim_order[i];
-               if(row < 0) continue; // Padding row
                if(row > col)
                   user_a[col*lda+row] = aval[j*BLOCK_SIZE+i];
                else
@@ -239,12 +240,10 @@ private:
       }
 
       void permuted_store_diag(T *user_a, int lda, const struct col_data *cdata) {
-         for(int j=0; j<BLOCK_SIZE; j++) {
+         for(int j=cdata->oldelim; j<BLOCK_SIZE; j++) {
             int col = cdata->elim_order[j];
-            if(col < 0 ) continue; // Padding column
             for(int i=j; i<BLOCK_SIZE; i++) {
                int row = cdata->elim_order[i];
-               if(row < 0) continue; // Padding row
                if(row > col)
                   user_a[col*lda+row] = aval[j*BLOCK_SIZE+i];
                else
@@ -255,9 +254,8 @@ private:
 
       void col_permuted_store(int nrow, T *user_a, int lda, const struct col_data *jdata) {
          T *av = aval + (BLOCK_SIZE-nrow);
-         for(int j=0; j<BLOCK_SIZE; j++) {
+         for(int j=jdata->oldelim; j<BLOCK_SIZE; j++) {
             int col = jdata->elim_order[j];
-            if(col < 0 ) continue; // Padding column
             for(int i=0; i<nrow; i++)
                user_a[col*lda+i] = av[j*BLOCK_SIZE+i];
          }
@@ -500,7 +498,7 @@ private:
    }
 
 
-   bool run_elim(int &next_elim, const int mblk, const int nblk, struct col_data *cdata, BlockData *blkdata, BlockPool<T, BLOCK_SIZE> &global_work, ThreadWork all_thread_work[]) {
+   bool run_elim(int &next_elim, const int mblk, const int nblk, struct col_data *cdata, BlockData *blkdata, T* d, BlockPool<T, BLOCK_SIZE> &global_work, ThreadWork all_thread_work[]) {
       bool changed = false;
 
       // FIXME: is global_lperm really the best way?
@@ -523,7 +521,8 @@ private:
          // Factor diagonal: depend on cdata[blk] as we do some init here
          #pragma omp task default(none) \
             firstprivate(blk) \
-            shared(blkdata, cdata, global_lperm, global_work, all_thread_work)\
+            shared(blkdata, cdata, global_lperm, global_work, all_thread_work, \
+                   next_elim, d) \
             depend(inout: blkdata[blk*mblk+blk:1]) \
             depend(inout: cdata[blk:1])
          {
@@ -535,6 +534,7 @@ private:
             for(int i=0; i<BLOCK_SIZE; i++)
                lperm[i] = i;
             dblk.create_restore_point();
+            cdata[blk].d = &d[2*next_elim] - 2*cdata[blk].oldelim;
             block_ldlt<T, BLOCK_SIZE>(cdata[blk].oldelim, cdata[blk].perm, dblk.aval, cdata[blk].d, thread_work.ld, u, small, lperm);
             // Initialize threshold check (no lock required becuase task depend)
             cdata[blk].npass = BLOCK_SIZE;
@@ -806,14 +806,13 @@ public:
       struct col_data *cdata = new struct col_data[nblk];
 
       /* Load column data */
-      for(int blk=0; blk<nblk-1; blk++)
-         for(int i=0; i<BLOCK_SIZE; i++)
-            cdata[blk].perm[i] = perm[blk*BLOCK_SIZE+i];
+      for(int blk=0; blk<nblk-1; blk++) {
+         cdata[blk].perm = &perm[blk*BLOCK_SIZE];
+      }
       {
          // Handle last block specially to allow for undersize
          int coffset = nblk*BLOCK_SIZE - n;
-         for(int i=0; i<BLOCK_SIZE-coffset; i++)
-            cdata[nblk-1].perm[coffset+i] = perm[(nblk-1)*BLOCK_SIZE+i];
+         cdata[nblk-1].perm = &perm[(nblk-1)*BLOCK_SIZE] - coffset;
       }
       if(n < nblk*BLOCK_SIZE) {
          // Account for extra cols as "already eliminated"
@@ -822,7 +821,6 @@ public:
          // Fill out "extra" entries with negative numbers for debugging sanity
          int coffset = nblk*BLOCK_SIZE - n;
          for(int i=0,j=-1; i<coffset; i++, j--) {
-            cdata[nblk-1].perm[i] = j;
             cdata[nblk-1].elim_order[i] = -1;
          }
       }
@@ -837,7 +835,7 @@ public:
       ThreadWork all_thread_work[num_threads];
       // FIXME: Following line is a maximum! Make smaller?
       BlockPool<T, BLOCK_SIZE> global_work((nblk*(nblk+1))/2+mblk*nblk);
-      run_elim(next_elim, mblk, nblk, cdata, blkdata, global_work, all_thread_work);
+      run_elim(next_elim, mblk, nblk, cdata, blkdata, d, global_work, all_thread_work);
 
       // Calculate number of successful eliminations (removing any dummy cols)
       int num_elim = next_elim;
@@ -847,10 +845,20 @@ public:
          for(int i=cdata[blk].nelim; i<BLOCK_SIZE; i++)
             cdata[blk].elim_order[i] = next_elim++;
 
+      // Permute failed entries to end
+      int* failed_perm = new int[n - num_elim];
+      for(int jblk=0, insert=0, fail_insert=0; jblk<nblk; jblk++) {
+         cdata[jblk].move_back(&perm[insert], &failed_perm[fail_insert]);
+         insert += cdata[jblk].nelim;
+         fail_insert += BLOCK_SIZE - cdata[jblk].nelim;
+      }
+      for(int i=0; i<n-num_elim; ++i)
+         perm[num_elim+i] = failed_perm[i];
+      delete[] failed_perm;
+
       // Store data back in correct permutation
       for(int jblk=0; jblk<nblk; jblk++) {
          // Diagonal block part
-         cdata[jblk].permuted_store(d, perm);
          blkdata[jblk*mblk+jblk].permuted_store_diag(a, lda, &cdata[jblk]);
          for(int iblk=jblk+1; iblk<nblk; iblk++)
             blkdata[jblk*mblk+iblk].permuted_store(a, lda, &cdata[iblk], &cdata[jblk]);
