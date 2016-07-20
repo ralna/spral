@@ -234,9 +234,9 @@ am__libspral_a_SOURCES_DIST = src/blas_iface.f90 src/core_analyse.f90 \
 	src/ssids/contrib.f90 src/ssids/datatypes.f90 \
 	src/ssids/fkeep.f90 src/ssids/inform.f90 src/ssids/ssids.f90 \
 	src/ssids/subtree.f90 src/ssids/cpu/AlignedAllocator.hxx \
-	src/ssids/cpu/cpu_iface.f90 src/ssids/cpu/cpu_iface.hxx \
-	src/ssids/cpu/factor.hxx src/ssids/cpu/NumericNode.hxx \
-	src/ssids/cpu/NumericSubtree.cxx \
+	src/ssids/cpu/BlockPool.hxx src/ssids/cpu/cpu_iface.f90 \
+	src/ssids/cpu/cpu_iface.hxx src/ssids/cpu/factor.hxx \
+	src/ssids/cpu/NumericNode.hxx src/ssids/cpu/NumericSubtree.cxx \
 	src/ssids/cpu/NumericSubtree.hxx src/ssids/cpu/smalloc.cxx \
 	src/ssids/cpu/smalloc.hxx src/ssids/cpu/subtree.f90 \
 	src/ssids/cpu/profile.cxx src/ssids/cpu/profile.hxx \
@@ -1159,9 +1159,9 @@ libspral_a_SOURCES = src/blas_iface.f90 src/core_analyse.f90 \
 	src/ssids/contrib.f90 src/ssids/datatypes.f90 \
 	src/ssids/fkeep.f90 src/ssids/inform.f90 src/ssids/ssids.f90 \
 	src/ssids/subtree.f90 src/ssids/cpu/AlignedAllocator.hxx \
-	src/ssids/cpu/cpu_iface.f90 src/ssids/cpu/cpu_iface.hxx \
-	src/ssids/cpu/factor.hxx src/ssids/cpu/NumericNode.hxx \
-	src/ssids/cpu/NumericSubtree.cxx \
+	src/ssids/cpu/BlockPool.hxx src/ssids/cpu/cpu_iface.f90 \
+	src/ssids/cpu/cpu_iface.hxx src/ssids/cpu/factor.hxx \
+	src/ssids/cpu/NumericNode.hxx src/ssids/cpu/NumericSubtree.cxx \
 	src/ssids/cpu/NumericSubtree.hxx src/ssids/cpu/smalloc.cxx \
 	src/ssids/cpu/smalloc.hxx src/ssids/cpu/subtree.f90 \
 	src/ssids/cpu/profile.cxx src/ssids/cpu/profile.hxx \

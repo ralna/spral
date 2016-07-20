@@ -24,6 +24,7 @@
 #include <omp.h>
 
 #include "../AlignedAllocator.hxx"
+#include "../BlockPool.hxx"
 #include "block_ldlt.hxx"
 #include "common.hxx"
 #include "wrappers.hxx"
@@ -55,75 +56,6 @@ private:
          delete[] ld;
       }
    };
-   /** Workspace allocated on a global basis, along with functions to aquire
-    *  memory from it.
-    *  FIXME: This can almost certainly be implemented better. */
-   class GlobalWork {
-   public:
-      GlobalWork(int num_blocks)
-      : num_blocks(num_blocks), block_pool(nullptr), block_free(nullptr),
-        nextBlock(0)
-      {
-         block_pool = new T[num_blocks*BLOCK_SIZE*BLOCK_SIZE];
-         block_free = new bool[num_blocks];
-         for(int i=0; i<num_blocks; i++) block_free[i] = true;
-         omp_init_lock(&lock);
-      }
-      ~GlobalWork() {
-         delete[] block_pool;
-         delete[] block_free;
-         omp_destroy_lock(&lock);
-      }
-
-      /** Get next free block in a thread-safe fashion.
-       *  Return nullptr if it can't find a free block.
-       */
-      T *acquire_block() {
-         T *ptr = nullptr; // Return value
-         omp_set_lock(&lock);
-         
-         /* We literally just loop over the blocks using nextBlock until
-          * we find a free one or conclude it doesn't exist */
-         for(int end_idx = nextBlock + num_blocks; nextBlock < end_idx; ) {
-            int idx = (nextBlock++) % num_blocks;
-            if(block_free[idx]) {
-               block_free[idx] = false;
-               ptr = &block_pool[idx*BLOCK_SIZE*BLOCK_SIZE];
-               break;
-            }
-         }
-         omp_unset_lock(&lock);
-         return ptr;
-      }
-      /** Get next free block in a thread-safe fashion.
-       *  Keep trying until it suceeds, use taskyield after each try.
-       *  NB: This may deadlock if there are no other tasks releasing blocks.
-       */
-      T *acquire_block_wait() {
-         while(true) {
-            T *ptr = acquire_block();
-            if(ptr) {
-               return ptr;
-            }
-            #pragma omp taskyield
-         }
-      }
-      /** Marks a block obtained by acquire_block() as availabel for reuse */
-      void release_block(const T *const ptr) {
-         int idx = (ptr-block_pool) / (BLOCK_SIZE*BLOCK_SIZE);
-         // NB: I'm not sure we need to acquire a lock here, but best be safe
-         omp_set_lock(&lock);
-         block_free[idx] = true;
-         omp_unset_lock(&lock);
-      }
-   private:
-      int num_blocks; //< Number of blocks available in block_pool
-      T *block_pool; //< Pointer to block pool
-      bool *block_free; //< block_free[i] is true if block i is free
-      int nextBlock; //< next block to check (use with modulus to get index)
-      omp_lock_t lock; //< lock used for safe access to nextBlock, block_free
-   };
-
 
    // FIXME: Horrendously inefficient, rework code to cope without
    void permute_a_d_to_elim_order(int n, const int *order, T *a, int lda, T *d, int *perm) {
@@ -568,7 +500,7 @@ private:
    }
 
 
-   bool run_elim(int &next_elim, const int mblk, const int nblk, struct col_data *cdata, BlockData *blkdata, GlobalWork &global_work, ThreadWork all_thread_work[]) {
+   bool run_elim(int &next_elim, const int mblk, const int nblk, struct col_data *cdata, BlockData *blkdata, BlockPool<T, BLOCK_SIZE> &global_work, ThreadWork all_thread_work[]) {
       bool changed = false;
 
       // FIXME: is global_lperm really the best way?
@@ -597,7 +529,7 @@ private:
          {
             int thread_num = omp_get_thread_num();
             ThreadWork &thread_work = all_thread_work[thread_num];
-            blkdata[blk*mblk+blk].lwork = global_work.acquire_block_wait();
+            blkdata[blk*mblk+blk].lwork = global_work.get_wait();
             BlockData &dblk = blkdata[blk*mblk+blk];
             int *lperm = &global_lperm[blk*BLOCK_SIZE];
             for(int i=0; i<BLOCK_SIZE; i++)
@@ -623,7 +555,7 @@ private:
                BlockData &cblk = blkdata[jblk*mblk+blk];
                const int *lperm = &global_lperm[blk*BLOCK_SIZE];
                // Perform necessary operations
-               cblk.lwork = global_work.acquire_block_wait();
+               cblk.lwork = global_work.get_wait();
                cblk.create_restore_point_with_row_perm(lperm);
                cblk.apply_pivot_trans(cdata[blk].oldelim, cdata[jblk].nelim, dblk.aval, BLOCK_SIZE, cdata[blk].d, small);
                // Update threshold check
@@ -646,7 +578,7 @@ private:
                BlockData &rblk = blkdata[blk*mblk+iblk];
                const int *lperm = &global_lperm[blk*BLOCK_SIZE];
                // Perform necessary operations
-               rblk.lwork = global_work.acquire_block_wait();
+               rblk.lwork = global_work.get_wait();
                rblk.create_restore_point_with_col_perm(lperm);
                int rfrom = (iblk < nblk) ? cdata[iblk].nelim : 0;
                rblk.apply_pivot(rfrom, cdata[blk].oldelim, dblk.aval, BLOCK_SIZE, cdata[blk].d, small);
@@ -707,13 +639,13 @@ private:
                      if(cdata[blk].nelim < BLOCK_SIZE)
                         blkdata[jblk*mblk+iblk]
                            .restore_part(cdata[blk].nelim, cdata[jblk].nelim);
-                     global_work.release_block(blkdata[jblk*mblk+blk].lwork);
+                     global_work.release(blkdata[jblk*mblk+blk].lwork);
                   }
                   // Perform actual update (if required)
                   if(cdata[blk].oldelim != cdata[blk].nelim) {
                      int thread_num = omp_get_thread_num();
                      ThreadWork &thread_work = all_thread_work[thread_num];
-                     int oldelim = cdata[blk].oldelim;
+                     int const oldelim = cdata[blk].oldelim;
                      int nelim = cdata[blk].nelim;
                      int rfrom = (iblk < nblk) ? cdata[iblk].nelim : 0;
                      if(blk <= iblk) {
@@ -762,13 +694,13 @@ private:
                               .restore_part(rfrom, cdata[blk].nelim);
                         }
                      }
-                     global_work.release_block(blkdata[jblk*mblk+iblk].lwork);
+                     global_work.release(blkdata[jblk*mblk+iblk].lwork);
                   }
                   // Perform actual update (if required)
                   if(cdata[blk].oldelim != cdata[blk].nelim) {
                      int thread_num = omp_get_thread_num();
                      ThreadWork &thread_work = all_thread_work[thread_num];
-                     int oldelim = cdata[blk].oldelim;
+                     int const oldelim = cdata[blk].oldelim;
                      int nelim = cdata[blk].nelim;
                      int rfrom = (iblk < nblk) ? cdata[iblk].nelim : 0;
                      calcLD<OP_N>(BLOCK_SIZE-rfrom, nelim-oldelim,
@@ -904,7 +836,7 @@ public:
       int num_threads = omp_get_max_threads();
       ThreadWork all_thread_work[num_threads];
       // FIXME: Following line is a maximum! Make smaller?
-      GlobalWork global_work((nblk*(nblk+1))/2+mblk*nblk);
+      BlockPool<T, BLOCK_SIZE> global_work((nblk*(nblk+1))/2+mblk*nblk);
       run_elim(next_elim, mblk, nblk, cdata, blkdata, global_work, all_thread_work);
 
       // Calculate number of successful eliminations (removing any dummy cols)
