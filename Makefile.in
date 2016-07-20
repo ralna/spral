@@ -124,7 +124,7 @@ TESTS = lsmr_test$(EXEEXT) scaling_test$(EXEEXT) random_test$(EXEEXT) \
 @HAVE_NVCC_TRUE@am__append_2 = include/spral_ssids.h
 @HAVE_NVCC_TRUE@am__append_3 = \
 @HAVE_NVCC_TRUE@	src/ssids/alloc.f90 \
-@HAVE_NVCC_TRUE@	src/ssids/analyse.f90 \
+@HAVE_NVCC_TRUE@	src/ssids/anal.f90 \
 @HAVE_NVCC_TRUE@	src/ssids/assemble_kernels.cu \
 @HAVE_NVCC_TRUE@	src/ssids/cuda_datatypes.f90 \
 @HAVE_NVCC_TRUE@	src/ssids/cuda_interfaces.f90 \
@@ -215,7 +215,7 @@ am__libspral_a_SOURCES_DIST = src/blas_iface.f90 src/core_analyse.f90 \
 	src/scaling.f90 interfaces/C/scaling.f90 src/timer.f90 \
 	src/random.f90 interfaces/C/random.f90 src/random_matrix.f90 \
 	interfaces/C/random_matrix.f90 src/ssids/alloc.f90 \
-	src/ssids/analyse.f90 src/ssids/assemble_kernels.cu \
+	src/ssids/anal.f90 src/ssids/assemble_kernels.cu \
 	src/ssids/cuda_datatypes.f90 src/ssids/cuda_interfaces.f90 \
 	src/ssids/datatypes.f90 src/ssids/dense_factor_gpu.f90 \
 	src/ssids/dense_factor_kernels.cu src/ssids/dtrsv.h \
@@ -231,7 +231,7 @@ am__dirstamp = $(am__leading_dot)dirstamp
 @HAVE_NVCC_TRUE@am__objects_1 = src/cuda/api_wrappers.$(OBJEXT) \
 @HAVE_NVCC_TRUE@	src/cuda/cuda.$(OBJEXT)
 @HAVE_NVCC_TRUE@am__objects_2 = src/ssids/alloc.$(OBJEXT) \
-@HAVE_NVCC_TRUE@	src/ssids/analyse.$(OBJEXT) \
+@HAVE_NVCC_TRUE@	src/ssids/anal.$(OBJEXT) \
 @HAVE_NVCC_TRUE@	src/ssids/assemble_kernels.$(OBJEXT) \
 @HAVE_NVCC_TRUE@	src/ssids/cuda_datatypes.$(OBJEXT) \
 @HAVE_NVCC_TRUE@	src/ssids/cuda_interfaces.$(OBJEXT) \
@@ -1276,7 +1276,7 @@ src/ssids/$(DEPDIR)/$(am__dirstamp):
 	@: > src/ssids/$(DEPDIR)/$(am__dirstamp)
 src/ssids/alloc.$(OBJEXT): src/ssids/$(am__dirstamp) \
 	src/ssids/$(DEPDIR)/$(am__dirstamp)
-src/ssids/analyse.$(OBJEXT): src/ssids/$(am__dirstamp) \
+src/ssids/anal.$(OBJEXT): src/ssids/$(am__dirstamp) \
 	src/ssids/$(DEPDIR)/$(am__dirstamp)
 src/ssids/assemble_kernels.$(OBJEXT): src/ssids/$(am__dirstamp) \
 	src/ssids/$(DEPDIR)/$(am__dirstamp)
@@ -2423,17 +2423,17 @@ src/ssids/ssids.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
 									src/metis$(METIS_VERSION)_wrapper.$(OBJEXT) \
 									src/scaling.$(OBJEXT) \
 									src/ssids/alloc.$(OBJEXT) \
-									src/ssids/analyse.$(OBJEXT) \
+									src/ssids/anal.$(OBJEXT) \
 									src/ssids/datatypes.$(OBJEXT) \
 									src/ssids/factor_gpu.$(OBJEXT) \
 									src/ssids/solve_cpu.$(OBJEXT) \
 									src/ssids/solve_gpu.$(OBJEXT)
 src/ssids/alloc.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
 									src/ssids/datatypes.$(OBJEXT)
-src/ssids/analyse.$(OBJEXT): src/ssids/datatypes.$(OBJEXT) \
-									  src/core_analyse.$(OBJEXT) \
-									  src/cuda/cuda.$(OBJEXT) \
-									  src/pgm.$(OBJEXT)
+src/ssids/anal.$(OBJEXT): src/ssids/datatypes.$(OBJEXT) \
+							     src/core_analyse.$(OBJEXT) \
+								  src/cuda/cuda.$(OBJEXT) \
+								  src/pgm.$(OBJEXT)
 src/ssids/cuda_interfaces.$(OBJEXT): src/ssids/cuda_datatypes.$(OBJEXT)
 src/ssids/datatypes.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
 										 src/scaling.$(OBJEXT)  \

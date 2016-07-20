@@ -175,7 +175,7 @@ if HAVE_NVCC
 include_HEADERS += include/spral_ssids.h
 libspral_a_SOURCES += \
 	src/ssids/alloc.f90 \
-	src/ssids/analyse.f90 \
+	src/ssids/anal.f90 \
 	src/ssids/assemble_kernels.cu \
 	src/ssids/cuda_datatypes.f90 \
 	src/ssids/cuda_interfaces.f90 \
@@ -312,17 +312,17 @@ src/ssids/ssids.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
 									src/metis$(METIS_VERSION)_wrapper.$(OBJEXT) \
 									src/scaling.$(OBJEXT) \
 									src/ssids/alloc.$(OBJEXT) \
-									src/ssids/analyse.$(OBJEXT) \
+									src/ssids/anal.$(OBJEXT) \
 									src/ssids/datatypes.$(OBJEXT) \
 									src/ssids/factor_gpu.$(OBJEXT) \
 									src/ssids/solve_cpu.$(OBJEXT) \
 									src/ssids/solve_gpu.$(OBJEXT)
 src/ssids/alloc.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
 									src/ssids/datatypes.$(OBJEXT)
-src/ssids/analyse.$(OBJEXT): src/ssids/datatypes.$(OBJEXT) \
-									  src/core_analyse.$(OBJEXT) \
-									  src/cuda/cuda.$(OBJEXT) \
-									  src/pgm.$(OBJEXT)
+src/ssids/anal.$(OBJEXT): src/ssids/datatypes.$(OBJEXT) \
+							     src/core_analyse.$(OBJEXT) \
+								  src/cuda/cuda.$(OBJEXT) \
+								  src/pgm.$(OBJEXT)
 src/ssids/cuda_interfaces.$(OBJEXT): src/ssids/cuda_datatypes.$(OBJEXT)
 src/ssids/datatypes.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
 										 src/scaling.$(OBJEXT)  \
