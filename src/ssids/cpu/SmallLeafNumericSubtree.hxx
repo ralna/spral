@@ -70,7 +70,6 @@ void add_a(
       T const* aval,
       T const* scaling
       ) {
-   int nrow = snode.nrow;
    double *lcol = lcol_ + symb_[si].lcol_offset;
    if(scaling) {
       /* Scaling to apply */
