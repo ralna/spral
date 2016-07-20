@@ -36,10 +36,10 @@ namespace pool_alloc_internal {
  * Deallocation is not supported.
  */
 class Page {
-   const int align = 32; // 32 byte alignment
+   static const int align = 32; // 32 byte alignment
 public:
    Page(size_t sz, Page* next=nullptr)
-   : next(next), mem_(::operator new(sz)), ptr_(mem_), space_(sz)
+   : next(next), mem_(::operator new(sz+align)), ptr_(mem_), space_(sz+align)
    {}
    ~Page() {
       ::operator delete(mem_);
