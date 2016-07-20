@@ -17,6 +17,7 @@
 #include "framework.hxx"
 #include "ssids/cpu/kernels/wrappers.hxx"
 #include "ssids/cpu/kernels/CpuLDLT.cxx"
+#include "ssids/cpu/kernels/ldlt_tpp.hxx"
 
 using namespace spral::ssids::cpu;
 
@@ -269,7 +270,6 @@ void modify_test_matrix(bool singular, bool delays, bool dblk_singular, int m, i
 
 template <typename T,
           int BLOCK_SIZE,
-          int MAX_ITR,
           bool debug // Switch on debugging output
           >
 int ldlt_test(T u, T small, bool delays, bool singular, bool dblk_singular, int m, int n, int test=0, int seed=0) {
@@ -294,7 +294,7 @@ int ldlt_test(T u, T small, bool delays, bool singular, bool dblk_singular, int 
    }
 
    // Factorize using main routine
-   typedef CpuLDLT<T,BLOCK_SIZE,MAX_ITR,debug> CpuLDLTSpec;
+   typedef CpuLDLT<T,BLOCK_SIZE,debug> CpuLDLTSpec;
    T *l = new T[m*lda];
    memcpy(l, a, m*lda*sizeof(T)); // Copy a to l
    int *perm = new int[m];
@@ -304,6 +304,13 @@ int ldlt_test(T u, T small, bool delays, bool singular, bool dblk_singular, int 
    int q1 = CpuLDLTSpec(u, small).factor(m, n, perm, l, lda, d);
    if(debug) std::cout << "FIRST FACTOR CALL ELIMINATED " << q1 << " of " << n << " pivots" << std::endl;
    int q2 = 0;
+   if(q1 < n) {
+      // Finish off with simplistic kernel
+      T *ld = new T[2*m];
+      q1 += ldlt_tpp_factor(m-q1, n-q1, &perm[q1], &l[(q1)*(lda+1)], lda,
+            &d[2*(q1)], ld, m, u, small, q1, &l[q1], lda);
+      delete[] ld;
+   }
    if(m > n) {
       // Apply outer product update
       do_update<T>(m-n, q1, &l[n*(lda+1)], &l[n], lda, d);
@@ -315,8 +322,16 @@ int ldlt_test(T u, T small, bool delays, bool singular, bool dblk_singular, int 
       // Permute rows of A_21 as per perm
       permute_rows(m-q1, q1, perm2, &perm[q1], &l[q1], lda);
       delete[] perm2;
+      if(q1+q2 < m) {
+         // Finish off with simplistic kernel
+         T *ld = new T[2*m];
+         q2 += ldlt_tpp_factor(m-q1-q2, m-q1-q2, &perm[q1+q2],
+               &l[(q1+q2)*(lda+1)], lda, &d[2*(q1+q2)], ld, m, u, small,
+               q1+q2, &l[q1+q2], lda);
+         delete[] ld;
+      }
    }
-   EXPECT_EQ(m, q1+q2) << "(test " << test << " seed " << seed << ")";
+   EXPECT_EQ(m, q1+q2) << "(test " << test << " seed " << seed << ")" << std::endl;
 
    // Print out matrices if requested
    if(debug) {
@@ -362,7 +377,6 @@ void print_mat (int n, int *perm, T *a, int lda) {
 
 template <typename T,
           int BLOCK_SIZE,
-          int MAX_ITR,
           int ntest, // Number of tests
           bool debug // Switch on debugging output
           >
@@ -389,7 +403,7 @@ int ldlt_torture_test(T u, T small, int m, int n) {
          std::cout << "##########################################" << std::endl;
       }
 
-      int err = ldlt_test<T, BLOCK_SIZE, MAX_ITR, debug>(u, small, delays, singular, dblk_singular, m, n, test, seed);
+      int err = ldlt_test<T, BLOCK_SIZE, debug>(u, small, delays, singular, dblk_singular, m, n, test, seed);
       if(err!=0) return err;
    }
 
@@ -399,31 +413,29 @@ int ldlt_torture_test(T u, T small, int m, int n) {
 int run_CpuLDLT_tests() {
    int nerr = 0;
 
-   const int MAX_ITR = 5;
-
    /* Simple tests, rectangular */
    {
       const int BLOCK_SIZE = 2;
       TEST((
-         ldlt_test<double, BLOCK_SIZE, MAX_ITR, false> (0.01, 1e-20, false, false, false, 2*BLOCK_SIZE, 1*BLOCK_SIZE)
+         ldlt_test<double, BLOCK_SIZE, false> (0.01, 1e-20, false, false, false, 2*BLOCK_SIZE, 1*BLOCK_SIZE)
          ));
       TEST((
-         ldlt_test<double, BLOCK_SIZE, MAX_ITR, false> (0.01, 1e-20, false, false, false, 2, 1)
+         ldlt_test<double, BLOCK_SIZE, false> (0.01, 1e-20, false, false, false, 2, 1)
          ));
       TEST((
-         ldlt_test<double, BLOCK_SIZE, MAX_ITR, false> (0.01, 1e-20, false, false, false, 5, 3)
+         ldlt_test<double, BLOCK_SIZE, false> (0.01, 1e-20, false, false, false, 5, 3)
          ));
       TEST((
-         ldlt_test<double, BLOCK_SIZE, MAX_ITR, false> (0.01, 1e-20, false, false, false, 4*BLOCK_SIZE, 1*BLOCK_SIZE)
+         ldlt_test<double, BLOCK_SIZE, false> (0.01, 1e-20, false, false, false, 4*BLOCK_SIZE, 1*BLOCK_SIZE)
          ));
    }
    {
       const int BLOCK_SIZE = 8;
       TEST((
-         ldlt_test<double, BLOCK_SIZE, MAX_ITR, false> (0.01, 1e-20, false, false, false, 8*BLOCK_SIZE, 3*BLOCK_SIZE)
+         ldlt_test<double, BLOCK_SIZE, false> (0.01, 1e-20, false, false, false, 8*BLOCK_SIZE, 3*BLOCK_SIZE)
          ));
       TEST((
-         ldlt_test<double, BLOCK_SIZE, MAX_ITR, false> (0.01, 1e-20, false, false, false, 23, 9)
+         ldlt_test<double, BLOCK_SIZE, false> (0.01, 1e-20, false, false, false, 23, 9)
          ));
    }
 
@@ -431,19 +443,19 @@ int run_CpuLDLT_tests() {
    {
       const int BLOCK_SIZE = 2;
       TEST((
-         ldlt_test<double, BLOCK_SIZE, MAX_ITR, false> (0.01, 1e-20, true, false, false, 2*BLOCK_SIZE, 1*BLOCK_SIZE)
+         ldlt_test<double, BLOCK_SIZE, false> (0.01, 1e-20, true, false, false, 2*BLOCK_SIZE, 1*BLOCK_SIZE)
          ));
       TEST((
-         ldlt_test<double, BLOCK_SIZE, MAX_ITR, false> (0.01, 1e-20, true, false, false, 4*BLOCK_SIZE, 1*BLOCK_SIZE)
+         ldlt_test<double, BLOCK_SIZE, false> (0.01, 1e-20, true, false, false, 4*BLOCK_SIZE, 1*BLOCK_SIZE)
          ));
    }
    {
       const int BLOCK_SIZE = 8;
       TEST((
-         ldlt_test<double, BLOCK_SIZE, MAX_ITR, false> (0.01, 1e-20, true, false, false, 8*BLOCK_SIZE, 3*BLOCK_SIZE)
+         ldlt_test<double, BLOCK_SIZE, false> (0.01, 1e-20, true, false, false, 8*BLOCK_SIZE, 3*BLOCK_SIZE)
          ));
       TEST((
-         ldlt_test<double, BLOCK_SIZE, MAX_ITR, false> (0.01, 1e-20, true, false, false, 23, 9)
+         ldlt_test<double, BLOCK_SIZE, false> (0.01, 1e-20, true, false, false, 23, 9)
          ));
    }
 
@@ -451,22 +463,22 @@ int run_CpuLDLT_tests() {
    {
       const int BLOCK_SIZE = 2;
       TEST((
-         ldlt_test<double, BLOCK_SIZE, MAX_ITR, false> (0.01, 1e-20, false, false, false, 1*BLOCK_SIZE, 1*BLOCK_SIZE)
+         ldlt_test<double, BLOCK_SIZE, false> (0.01, 1e-20, false, false, false, 1*BLOCK_SIZE, 1*BLOCK_SIZE)
          ));
       TEST((
-         ldlt_test<double, BLOCK_SIZE, MAX_ITR, false> (0.01, 1e-20, false, false, false, 2*BLOCK_SIZE, 2*BLOCK_SIZE)
+         ldlt_test<double, BLOCK_SIZE, false> (0.01, 1e-20, false, false, false, 2*BLOCK_SIZE, 2*BLOCK_SIZE)
          ));
       TEST((
-         ldlt_test<double, BLOCK_SIZE, MAX_ITR, false> (0.01, 1e-20, false, false, false, 8*BLOCK_SIZE, 8*BLOCK_SIZE)
+         ldlt_test<double, BLOCK_SIZE, false> (0.01, 1e-20, false, false, false, 8*BLOCK_SIZE, 8*BLOCK_SIZE)
          ));
    }
    {
       const int BLOCK_SIZE = 8;
       TEST((
-         ldlt_test<double, BLOCK_SIZE, MAX_ITR, false> (0.01, 1e-20, false, false, false, 8*BLOCK_SIZE, 8*BLOCK_SIZE)
+         ldlt_test<double, BLOCK_SIZE, false> (0.01, 1e-20, false, false, false, 8*BLOCK_SIZE, 8*BLOCK_SIZE)
          ));
       TEST((
-         ldlt_test<double, BLOCK_SIZE, MAX_ITR, false> (0.01, 1e-20, false, false, false, 27, 27)
+         ldlt_test<double, BLOCK_SIZE, false> (0.01, 1e-20, false, false, false, 27, 27)
          ));
    }
 
@@ -474,22 +486,22 @@ int run_CpuLDLT_tests() {
    {
       const int BLOCK_SIZE = 2;
       TEST((
-         ldlt_test<double, BLOCK_SIZE, MAX_ITR, false> (0.01, 1e-20, true, false, false, 1*BLOCK_SIZE, 1*BLOCK_SIZE)
+         ldlt_test<double, BLOCK_SIZE, false> (0.01, 1e-20, true, false, false, 1*BLOCK_SIZE, 1*BLOCK_SIZE)
          ));
       TEST((
-         ldlt_test<double, BLOCK_SIZE, MAX_ITR, false> (0.01, 1e-20, true, false, false, 2*BLOCK_SIZE, 2*BLOCK_SIZE)
+         ldlt_test<double, BLOCK_SIZE, false> (0.01, 1e-20, true, false, false, 2*BLOCK_SIZE, 2*BLOCK_SIZE)
          ));
       TEST((
-         ldlt_test<double, BLOCK_SIZE, MAX_ITR, false> (0.01, 1e-20, true, false, false, 4*BLOCK_SIZE, 4*BLOCK_SIZE)
+         ldlt_test<double, BLOCK_SIZE, false> (0.01, 1e-20, true, false, false, 4*BLOCK_SIZE, 4*BLOCK_SIZE)
          ));
    }
    {
       const int BLOCK_SIZE = 8;
       TEST((
-         ldlt_test<double, BLOCK_SIZE, MAX_ITR, false> (0.01, 1e-20, true, false, false, 8*BLOCK_SIZE, 8*BLOCK_SIZE)
+         ldlt_test<double, BLOCK_SIZE, false> (0.01, 1e-20, true, false, false, 8*BLOCK_SIZE, 8*BLOCK_SIZE)
          ));
       TEST((
-         ldlt_test<double, BLOCK_SIZE, MAX_ITR, false> (0.01, 1e-20, true, false, false, 29, 29)
+         ldlt_test<double, BLOCK_SIZE, false> (0.01, 1e-20, true, false, false, 29, 29)
          ));
    }
 
@@ -497,10 +509,10 @@ int run_CpuLDLT_tests() {
    {
       const int BLOCK_SIZE = 8;
       TEST((
-         ldlt_test<double, BLOCK_SIZE, MAX_ITR, false> (0.01, 1e-20, false, false, true, 8*BLOCK_SIZE, 8*BLOCK_SIZE)
+         ldlt_test<double, BLOCK_SIZE, false> (0.01, 1e-20, false, false, true, 8*BLOCK_SIZE, 8*BLOCK_SIZE)
          ));
       TEST((
-         ldlt_test<double, BLOCK_SIZE, MAX_ITR, false> (0.01, 1e-20, false, false, true, 33, 33)
+         ldlt_test<double, BLOCK_SIZE, false> (0.01, 1e-20, false, false, true, 33, 33)
          ));
    }
 
@@ -509,10 +521,10 @@ int run_CpuLDLT_tests() {
    {
       const int BLOCK_SIZE = 16;
       TEST((
-         ldlt_torture_test<double, BLOCK_SIZE, MAX_ITR, 500, false> (0.01, 1e-20, 8*BLOCK_SIZE, 8*BLOCK_SIZE)
+         ldlt_torture_test<double, BLOCK_SIZE, 500, false> (0.01, 1e-20, 8*BLOCK_SIZE, 8*BLOCK_SIZE)
          ));
       TEST((
-         ldlt_torture_test<double, BLOCK_SIZE, MAX_ITR, 500, false> (0.01, 1e-20, 8*BLOCK_SIZE, 3*BLOCK_SIZE)
+         ldlt_torture_test<double, BLOCK_SIZE, 500, false> (0.01, 1e-20, 8*BLOCK_SIZE, 3*BLOCK_SIZE)
          ));
    }
 
