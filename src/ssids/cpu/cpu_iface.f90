@@ -28,8 +28,8 @@ module spral_ssids_cpu_iface
       integer(C_INT) :: num_two
       integer(C_INT) :: num_zero
       integer(C_INT) :: maxfront
-      integer(C_INT) :: elim_at_pass(5)
-      integer(C_INT) :: elim_at_itr(5)
+      integer(C_INT) :: not_first_pass
+      integer(C_INT) :: not_second_pass
    end type cpu_factor_stats
 
 contains
@@ -58,8 +58,8 @@ subroutine cpu_copy_stats_out(n, cstats, finform)
    finform%num_two      = cstats%num_two
    finform%matrix_rank  = n - cstats%num_zero
    finform%maxfront     = cstats%maxfront
-   !print *, "Elim at (pass) = ", cstats%elim_at_pass(:)
-   !print *, "Elim at (itr) = ", cstats%elim_at_itr(:)
+   finform%not_first_pass = cstats%not_first_pass
+   finform%not_second_pass = cstats%not_second_pass
 end subroutine cpu_copy_stats_out
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

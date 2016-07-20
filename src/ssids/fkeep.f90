@@ -39,6 +39,8 @@ module spral_ssids_fkeep
       integer(long) :: num_flops
       integer :: num_neg
       integer :: num_two
+      integer :: not_first_pass
+      integer :: not_second_pass
 
    contains
       procedure, pass(fkeep) :: inner_factor => inner_factor_cpu ! Do actual factorization

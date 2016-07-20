@@ -30,8 +30,8 @@ struct cpu_factor_stats {
    int num_two;
    int num_zero;
    int maxfront;
-   int elim_at_pass[5];
-   int elim_at_itr[5];
+   int not_first_pass;
+   int not_second_pass;
 };
 
 }}} /* namespaces spral::ssids::cpu */

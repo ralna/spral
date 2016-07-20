@@ -77,8 +77,10 @@ void factor_node_indef(
    /* Finish factorization worth simplistic code */
    if(node->nelim < n) {
       int nelim = node->nelim;
+      stats.not_first_pass += n-nelim;
       T *ld = new T[2*(m-nelim)]; // FIXME: Use work
       node->nelim += ldlt_tpp_factor(m-nelim, n-nelim, &perm[nelim], &lcol[nelim*(m+1)], m, &d[2*nelim], ld, m-nelim, options->u, options->small, nelim, &lcol[nelim], m);
+      stats.not_second_pass += n - node->nelim;
       delete[] ld;
    }
 

@@ -29,6 +29,10 @@ module spral_ssids_inform
       integer :: num_two = 0 ! Number of 2x2 pivots used by factorization
       integer :: stat = 0 ! stat parameter
       type(auction_inform) :: auction
+
+      ! Undocumented FIXME: should we document them?
+      integer :: not_first_pass
+      integer :: not_second_pass
    contains
       procedure, pass(this) :: flagToCharacter
       procedure, pass(this) :: set_cuda_error

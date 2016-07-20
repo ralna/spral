@@ -995,6 +995,8 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
    fkeep%num_flops = inform%num_flops
    fkeep%num_neg = inform%num_neg
    fkeep%num_two = inform%num_two
+   fkeep%not_first_pass = inform%not_first_pass
+   fkeep%not_second_pass = inform%not_second_pass
    return
    !!!!!!!!!!!!!!!!!!!!
 
@@ -1138,6 +1140,8 @@ subroutine ssids_solve_mult_double(nrhs, x, ldx, akeep, fkeep, options, &
    inform%num_neg = fkeep%num_neg
    inform%num_sup = akeep%num_sup
    inform%num_two = fkeep%num_two
+   inform%not_first_pass = fkeep%not_first_pass
+   inform%not_second_pass = fkeep%not_second_pass
 
    ! Set local_job
    local_job = 0

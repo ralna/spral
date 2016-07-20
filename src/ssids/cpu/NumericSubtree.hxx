@@ -74,8 +74,8 @@ public:
          thread_stats[this_thread].num_two = 0;
          thread_stats[this_thread].num_zero = 0;
          thread_stats[this_thread].maxfront = 0;
-         for(int i=0; i<5; i++) thread_stats[this_thread].elim_at_pass[i] = 0;
-         for(int i=0; i<5; i++) thread_stats[this_thread].elim_at_itr[i] = 0;
+         thread_stats[this_thread].not_first_pass = 0;
+         thread_stats[this_thread].not_second_pass = 0;
 
          #pragma omp taskgroup
          {
@@ -171,10 +171,8 @@ public:
             stats->num_two = 0;
             stats->num_zero = 0;
             stats->maxfront = 0;
-            for(int i=0; i<5; ++i)
-               stats->elim_at_pass[i] = 0;
-            for(int i=0; i<5; ++i)
-               stats->elim_at_itr[i] = 0;
+            stats->not_first_pass = 0;
+            stats->not_second_pass = 0;
             for(auto tstats : thread_stats) {
                stats->flag =
                   (stats->flag == SSIDS_SUCCESS) ? tstats.flag
@@ -184,26 +182,11 @@ public:
                stats->num_two += tstats.num_two;
                stats->num_zero += tstats.num_zero;
                stats->maxfront = std::max(stats->maxfront, tstats.maxfront);
-               for(int i=0; i<5; ++i)
-                  stats->elim_at_pass[i] += tstats.elim_at_pass[i];
-               for(int i=0; i<5; ++i)
-                  stats->elim_at_itr[i] += tstats.elim_at_itr[i];
+               stats->not_first_pass += tstats.not_first_pass;
+               stats->not_second_pass += tstats.not_second_pass;
             }
          }
       }
-
-      /*printf("Elim at pass = %d %d %d %d %d\n",
-            stats->elim_at_pass[0],
-            stats->elim_at_pass[1],
-            stats->elim_at_pass[2],
-            stats->elim_at_pass[3],
-            stats->elim_at_pass[4]);
-      printf("Elim at itr = %d %d %d %d %d\n",
-            stats->elim_at_itr[0],
-            stats->elim_at_itr[1],
-            stats->elim_at_itr[2],
-            stats->elim_at_itr[3],
-            stats->elim_at_itr[4]);*/
 
       // Count stats
       // FIXME: gross hack for compat with bub (which needs to differentiate
