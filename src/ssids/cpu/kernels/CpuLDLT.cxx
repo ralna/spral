@@ -100,7 +100,7 @@ private:
    }
 
    struct col_data {
-      int oldelim;
+      int npad; //< Number of entries added for padding to start
       int nelim;
       int npass;
       omp_lock_t lock;
@@ -109,7 +109,7 @@ private:
       T *d;
 
       col_data() : 
-         nelim(0)
+         npad(0), nelim(0)
       {
          omp_init_lock(&lock);
          // FIXME: remove
@@ -123,8 +123,8 @@ private:
        * (which may overlap with d and perm!). Puts uneliminated variables in
        * failed_perm (no need for d with failed vars). */
       void move_back(int* elim_perm, int* failed_perm) {
-         if(perm+2*oldelim != elim_perm) { // Don't move if memory is identical
-            for(int i=oldelim; i<nelim; ++i)
+         if(perm+2*npad != elim_perm) { // Don't move if memory is identical
+            for(int i=npad; i<nelim; ++i)
                *(elim_perm++) = perm[i];
          }
          // Copy failed perm
@@ -227,9 +227,9 @@ private:
       }
 
       void permuted_store(T *user_a, int lda, const struct col_data *idata, const struct col_data *jdata) {
-         for(int j=jdata->oldelim; j<BLOCK_SIZE; j++) {
+         for(int j=jdata->npad; j<BLOCK_SIZE; j++) {
             int col = jdata->elim_order[j];
-            for(int i=idata->oldelim; i<BLOCK_SIZE; i++) {
+            for(int i=idata->npad; i<BLOCK_SIZE; i++) {
                int row = idata->elim_order[i];
                if(row > col)
                   user_a[col*lda+row] = aval[j*BLOCK_SIZE+i];
@@ -240,7 +240,7 @@ private:
       }
 
       void permuted_store_diag(T *user_a, int lda, const struct col_data *cdata) {
-         for(int j=cdata->oldelim; j<BLOCK_SIZE; j++) {
+         for(int j=cdata->npad; j<BLOCK_SIZE; j++) {
             int col = cdata->elim_order[j];
             for(int i=j; i<BLOCK_SIZE; i++) {
                int row = cdata->elim_order[i];
@@ -254,7 +254,7 @@ private:
 
       void col_permuted_store(int nrow, T *user_a, int lda, const struct col_data *jdata) {
          T *av = aval + (BLOCK_SIZE-nrow);
-         for(int j=jdata->oldelim; j<BLOCK_SIZE; j++) {
+         for(int j=jdata->npad; j<BLOCK_SIZE; j++) {
             int col = jdata->elim_order[j];
             for(int i=0; i<nrow; i++)
                user_a[col*lda+i] = av[j*BLOCK_SIZE+i];
@@ -372,27 +372,27 @@ private:
 
       /** Apply successful pivot update to all uneliminated columns 
        *  (this.aval in non-transpose) */
-      void update_n(int oldelim, int nelim, const T *l, int ldl, const T *ld, int ldld, int rfrom, int cfrom) {
+      void update_n(int npad, int nelim, const T *l, int ldl, const T *ld, int ldld, int rfrom, int cfrom) {
          host_gemm(OP_N, OP_T,
-               BLOCK_SIZE-rfrom, BLOCK_SIZE-cfrom, nelim-oldelim,
-               -1.0, &ld[oldelim*ldld+rfrom], ldld, &l[oldelim*ldl+cfrom], ldl,
+               BLOCK_SIZE-rfrom, BLOCK_SIZE-cfrom, nelim-npad,
+               -1.0, &ld[npad*ldld+rfrom], ldld, &l[npad*ldl+cfrom], ldl,
                1.0, &aval[cfrom*BLOCK_SIZE+rfrom], BLOCK_SIZE);
          /*for(int j=cfrom; j<BLOCK_SIZE; j++)
             for(int i=rfrom; i<BLOCK_SIZE; i++)
-               for(int k=oldelim; k<nelim; k++)
+               for(int k=npad; k<nelim; k++)
                   aval[j*BLOCK_SIZE+i] -= l[k*ldl+j] * ld[k*ldld+i];*/
       }
 
       /** Apply successful pivot update to all uneliminated columns
        * (this.aval in transpose) */
-      void update_t(int oldelim, int nelim, const T *l, int ldl, const T *ld, int ldld, int rfrom, int cfrom) {
+      void update_t(int npad, int nelim, const T *l, int ldl, const T *ld, int ldld, int rfrom, int cfrom) {
          host_gemm(OP_N, OP_N,
-               BLOCK_SIZE-rfrom, BLOCK_SIZE-cfrom, nelim-oldelim,
-               -1.0, &ld[oldelim*ldld+rfrom], ldld, &l[cfrom*ldl+oldelim], ldl,
+               BLOCK_SIZE-rfrom, BLOCK_SIZE-cfrom, nelim-npad,
+               -1.0, &ld[npad*ldld+rfrom], ldld, &l[cfrom*ldl+npad], ldl,
                1.0, &aval[cfrom*BLOCK_SIZE+rfrom], BLOCK_SIZE);
          /*for(int j=cfrom; j<BLOCK_SIZE; j++)
             for(int i=rfrom; i<BLOCK_SIZE; i++)
-               for(int k=oldelim; k<nelim; k++)
+               for(int k=npad; k<nelim; k++)
                   aval[j*BLOCK_SIZE+i] -= l[j*ldl+k] * ld[k*ldld+i];*/
       }
 
@@ -504,14 +504,10 @@ private:
       // FIXME: is global_lperm really the best way?
       int *global_lperm = new int[nblk*BLOCK_SIZE];
 
-      // Record how many were eliminated prior to this pass of blk col
-      for(int blk=0; blk<nblk; blk++)
-         cdata[blk].oldelim = cdata[blk].nelim;
-
       /* Inner loop - iterate over block columns */
       for(int blk=0; blk<nblk; blk++) {
          // Don't bother adding tasks if we eliminated everything already
-         if(cdata[blk].oldelim>=BLOCK_SIZE) continue;
+         if(cdata[blk].npad>=BLOCK_SIZE) continue;
 
          if(debug) {
             printf("Bcol %d:\n", blk);
@@ -534,8 +530,8 @@ private:
             for(int i=0; i<BLOCK_SIZE; i++)
                lperm[i] = i;
             dblk.create_restore_point();
-            cdata[blk].d = &d[2*next_elim] - 2*cdata[blk].oldelim;
-            block_ldlt<T, BLOCK_SIZE>(cdata[blk].oldelim, cdata[blk].perm, dblk.aval, cdata[blk].d, thread_work.ld, u, small, lperm);
+            cdata[blk].d = &d[2*next_elim] - 2*cdata[blk].npad;
+            block_ldlt<T, BLOCK_SIZE>(cdata[blk].npad, cdata[blk].perm, dblk.aval, cdata[blk].d, thread_work.ld, u, small, lperm);
             // Initialize threshold check (no lock required becuase task depend)
             cdata[blk].npass = BLOCK_SIZE;
          }
@@ -557,9 +553,9 @@ private:
                // Perform necessary operations
                cblk.lwork = global_work.get_wait();
                cblk.create_restore_point_with_row_perm(lperm);
-               cblk.apply_pivot_trans(cdata[blk].oldelim, cdata[jblk].nelim, dblk.aval, BLOCK_SIZE, cdata[blk].d, small);
+               cblk.apply_pivot_trans(cdata[blk].npad, cdata[jblk].nelim, dblk.aval, BLOCK_SIZE, cdata[blk].d, small);
                // Update threshold check
-               int blkpass = cblk.check_threshold_trans(cdata[blk].oldelim, cdata[jblk].nelim, u);
+               int blkpass = cblk.check_threshold_trans(cdata[blk].npad, cdata[jblk].nelim, u);
                omp_set_lock(&cdata[blk].lock);
                if(blkpass < cdata[blk].npass)
                   cdata[blk].npass = blkpass;
@@ -581,9 +577,9 @@ private:
                rblk.lwork = global_work.get_wait();
                rblk.create_restore_point_with_col_perm(lperm);
                int rfrom = (iblk < nblk) ? cdata[iblk].nelim : 0;
-               rblk.apply_pivot(rfrom, cdata[blk].oldelim, dblk.aval, BLOCK_SIZE, cdata[blk].d, small);
+               rblk.apply_pivot(rfrom, cdata[blk].npad, dblk.aval, BLOCK_SIZE, cdata[blk].d, small);
                // Update threshold check
-               int blkpass = rblk.check_threshold(rfrom, cdata[blk].oldelim, u);
+               int blkpass = rblk.check_threshold(rfrom, cdata[blk].npad, u);
                omp_set_lock(&cdata[blk].lock);
                if(blkpass < cdata[blk].npass)
                   cdata[blk].npass = blkpass;
@@ -599,7 +595,7 @@ private:
             depend(inout: cdata[blk:1])
          {
             // Adjust to avoid splitting 2x2 pivots
-            if(cdata[blk].npass>cdata[blk].oldelim) {
+            if(cdata[blk].npass>cdata[blk].npad) {
                T d11 = cdata[blk].d[2*(cdata[blk].npass-1) + 0];
                T d21 = cdata[blk].d[2*(cdata[blk].npass-1) + 1];
                if(d21!=0.0 && d11!=std::numeric_limits<T>::infinity()) {
@@ -609,13 +605,13 @@ private:
             }
             if(debug) printf("Adjusted to %d\n", cdata[blk].npass);
             // Count threshold
-            for(int i=cdata[blk].oldelim; i<cdata[blk].npass; i++) {
+            for(int i=cdata[blk].npad; i<cdata[blk].npass; i++) {
                cdata[blk].elim_order[i] = next_elim++;
                cdata[blk].nelim++;
             }
 
             // Record if we eliminated anything
-            changed = changed || (cdata[blk].oldelim != cdata[blk].nelim);
+            changed = changed || (cdata[blk].npad != cdata[blk].nelim);
          }
 
          // Update uneliminated columns
@@ -642,24 +638,24 @@ private:
                      global_work.release(blkdata[jblk*mblk+blk].lwork);
                   }
                   // Perform actual update (if required)
-                  if(cdata[blk].oldelim != cdata[blk].nelim) {
+                  if(cdata[blk].npad != cdata[blk].nelim) {
                      int thread_num = omp_get_thread_num();
                      ThreadWork &thread_work = all_thread_work[thread_num];
-                     int const oldelim = cdata[blk].oldelim;
+                     int const npad = cdata[blk].npad;
                      int nelim = cdata[blk].nelim;
                      int rfrom = (iblk < nblk) ? cdata[iblk].nelim : 0;
                      if(blk <= iblk) {
-                        calcLD<OP_N>(BLOCK_SIZE-rfrom, nelim-oldelim,
-                           &blkdata[blk*mblk+iblk].aval[oldelim*BLOCK_SIZE+rfrom], BLOCK_SIZE,
-                           &cdata[blk].d[2*oldelim],
-                           &thread_work.ld[oldelim*BLOCK_SIZE+rfrom], BLOCK_SIZE);
+                        calcLD<OP_N>(BLOCK_SIZE-rfrom, nelim-npad,
+                           &blkdata[blk*mblk+iblk].aval[npad*BLOCK_SIZE+rfrom], BLOCK_SIZE,
+                           &cdata[blk].d[2*npad],
+                           &thread_work.ld[npad*BLOCK_SIZE+rfrom], BLOCK_SIZE);
                      } else {
-                        calcLD<OP_T>(BLOCK_SIZE-rfrom, nelim-oldelim,
-                           &blkdata[iblk*mblk+blk].aval[rfrom*BLOCK_SIZE+oldelim], BLOCK_SIZE,
-                           &cdata[blk].d[2*oldelim],
-                           &thread_work.ld[oldelim*BLOCK_SIZE+rfrom], BLOCK_SIZE);
+                        calcLD<OP_T>(BLOCK_SIZE-rfrom, nelim-npad,
+                           &blkdata[iblk*mblk+blk].aval[rfrom*BLOCK_SIZE+npad], BLOCK_SIZE,
+                           &cdata[blk].d[2*npad],
+                           &thread_work.ld[npad*BLOCK_SIZE+rfrom], BLOCK_SIZE);
                      }
-                     blkdata[jblk*mblk+iblk].update_t(oldelim, nelim,
+                     blkdata[jblk*mblk+iblk].update_t(npad, nelim,
                            blkdata[jblk*mblk+blk].aval, BLOCK_SIZE,
                            thread_work.ld, BLOCK_SIZE,
                            rfrom, cdata[jblk].nelim);
@@ -697,17 +693,17 @@ private:
                      global_work.release(blkdata[jblk*mblk+iblk].lwork);
                   }
                   // Perform actual update (if required)
-                  if(cdata[blk].oldelim != cdata[blk].nelim) {
+                  if(cdata[blk].npad != cdata[blk].nelim) {
                      int thread_num = omp_get_thread_num();
                      ThreadWork &thread_work = all_thread_work[thread_num];
-                     int const oldelim = cdata[blk].oldelim;
+                     int const npad = cdata[blk].npad;
                      int nelim = cdata[blk].nelim;
                      int rfrom = (iblk < nblk) ? cdata[iblk].nelim : 0;
-                     calcLD<OP_N>(BLOCK_SIZE-rfrom, nelim-oldelim,
-                           &blkdata[blk*mblk+iblk].aval[oldelim*BLOCK_SIZE+rfrom],
-                           BLOCK_SIZE, &cdata[blk].d[2*oldelim],
-                           &thread_work.ld[oldelim*BLOCK_SIZE+rfrom], BLOCK_SIZE);
-                     blkdata[jblk*mblk+iblk].update_n(oldelim, nelim,
+                     calcLD<OP_N>(BLOCK_SIZE-rfrom, nelim-npad,
+                           &blkdata[blk*mblk+iblk].aval[npad*BLOCK_SIZE+rfrom],
+                           BLOCK_SIZE, &cdata[blk].d[2*npad],
+                           &thread_work.ld[npad*BLOCK_SIZE+rfrom], BLOCK_SIZE);
+                     blkdata[jblk*mblk+iblk].update_n(npad, nelim,
                            blkdata[blk*mblk+jblk].aval, BLOCK_SIZE,
                            thread_work.ld, BLOCK_SIZE,
                            rfrom, cdata[jblk].nelim);
@@ -816,6 +812,7 @@ public:
       }
       if(n < nblk*BLOCK_SIZE) {
          // Account for extra cols as "already eliminated"
+         cdata[nblk-1].npad = nblk*BLOCK_SIZE - n;
          cdata[nblk-1].nelim = nblk*BLOCK_SIZE - n;
          // perm is too small for extra "NaN" rows, adjust to acommodate
          // Fill out "extra" entries with negative numbers for debugging sanity
@@ -871,37 +868,21 @@ public:
                &arect[iblk*BLOCK_SIZE], lda, &cdata[jblk]);
       }
 
-      // FIXME: debug? calculate elimianted array
-      bool *eliminated = new bool[nblk*BLOCK_SIZE];
-      for(int i=0; i<n; i++) eliminated[i] = false;
-      for(int blk=0; blk<nblk; blk++) {
-         for(int j=0; j<cdata[blk].nelim; j++)
-            eliminated[blk*BLOCK_SIZE+j] = true;
-      }
-
-      // Construct elim_order
-      // FIXME: just use cdata in store
-      int *elim_order = new int[nblk*BLOCK_SIZE];
-      int j=0;
-      for(int blk=0; blk<nblk; blk++)
-         for(int i=0; i<BLOCK_SIZE; i++)
-            if(cdata[blk].elim_order[i] >= 0)
-               elim_order[cdata[blk].elim_order[i]] = j++;
 
       if(debug) {
+         // FIXME: debug? calculate eliminated array
+         bool *eliminated = new bool[nblk*BLOCK_SIZE];
+         for(int i=0; i<n; i++) eliminated[i] = false;
+         for(int blk=0; blk<nblk; blk++) {
+            for(int j=0; j<cdata[blk].nelim; j++)
+               eliminated[blk*BLOCK_SIZE+j] = true;
+         }
          printf("FINAL:\n");
          print_mat(m, n, perm, eliminated, a, lda);
-         printf("elim order:");
-         for(int i=0; i<n; i++) printf(" %d", elim_order[i]);
-         printf("\n");
+         delete[] eliminated;
       }
-
-      // Permute to match elim_order [FIXME inefficient!]
-      //permute_a_d_to_elim_order(n, elim_order, a, lda, d, perm);
       
       // Free memory
-      delete[] eliminated;
-      delete[] elim_order;
       delete[] cdata;
       for(int i=0; i<mblk*nblk; i++)
          std::allocator_traits<BlockDataAlloc>::destroy(
