@@ -154,12 +154,12 @@ void make_singular(int n, int col1, int col2, T *a, int lda) {
 }
 
 template<typename T, int BLOCK_SIZE>
-void find_maxloc_simple(const int from, const T *a, T &bestv, int &rloc, int &cloc) {
+void find_maxloc_simple(const int from, const T *a, int lda, T &bestv, int &rloc, int &cloc) {
    bestv = -1.0;
    rloc = INT_MAX; cloc = INT_MAX;
    for(int c=from; c<BLOCK_SIZE; c++) {
       for(int r=c; r<BLOCK_SIZE; r++) {
-         T v = a[c*BLOCK_SIZE+r];
+         T v = a[c*lda+r];
          if(fabs(v) > bestv) {
             bestv = fabs(v);
             rloc = r;
@@ -168,24 +168,25 @@ void find_maxloc_simple(const int from, const T *a, T &bestv, int &rloc, int &cl
       }
    }
    if(cloc < BLOCK_SIZE && rloc < BLOCK_SIZE)
-      bestv = a[cloc*BLOCK_SIZE+rloc];
+      bestv = a[cloc*lda+rloc];
    else
       bestv = 0.0;
 }
 
 template<typename T, int BLOCK_SIZE, bool debug=false>
 int test_maxloc(int from, bool zero=false) {
-   T __attribute__((aligned (32))) a[BLOCK_SIZE*BLOCK_SIZE];
+   int const lda = 2*BLOCK_SIZE;
+   alignas(32) T a[BLOCK_SIZE*lda];
 
    /* Setup a random matrix. Entries in lwr triangle < 1.0, others = 100.0 */
    for(int j=0; j<from; j++)
    for(int i=0; i<BLOCK_SIZE; i++)
-      a[j*BLOCK_SIZE+i] = 100.0;
+      a[j*lda+i] = 100.0;
    for(int j=from; j<BLOCK_SIZE; j++) {
       for(int i=0; i<j; i++)
-         a[j*BLOCK_SIZE+i] = 100.0;
+         a[j*lda+i] = 100.0;
       for(int i=j; i<BLOCK_SIZE; i++)
-         a[j*BLOCK_SIZE+i] = zero ? 0.0 : 2*((T) rand())/RAND_MAX -1;
+         a[j*lda+i] = zero ? 0.0 : 2*((T) rand())/RAND_MAX -1;
    }
 
    /* Print matrix for debug */
@@ -194,7 +195,7 @@ int test_maxloc(int from, bool zero=false) {
       for(int i=0; i<BLOCK_SIZE; i++) {
          printf("%d:", i);
          for(int j=0; j<BLOCK_SIZE; j++)
-            printf(" %e", a[j*BLOCK_SIZE+i]);
+            printf(" %e", a[j*lda+i]);
          printf("\n");
       }
    }
@@ -203,8 +204,8 @@ int test_maxloc(int from, bool zero=false) {
    T mv1, mv2;
    int rloc1, cloc1, rloc2, cloc2;
 
-   find_maxloc_simple<T, BLOCK_SIZE>(from, a, mv1, rloc1, cloc1);
-   block_ldlt_internal::find_maxloc<T, BLOCK_SIZE>(from, a, mv2, rloc2, cloc2);
+   find_maxloc_simple<T, BLOCK_SIZE>(from, a, lda, mv1, rloc1, cloc1);
+   block_ldlt_internal::find_maxloc<T, BLOCK_SIZE>(from, a, lda, mv2, rloc2, cloc2);
 
    // Compare them
    ASSERT_LE(fabs(mv1), 1.0); // If this is wrong, find_maxloc_simple is wrong
@@ -242,7 +243,7 @@ int ldlt_test_block(T u, T small) {
    int n = BLOCK_SIZE;
 
    // Generate test matrix
-   int lda = n;
+   int const lda = 2*BLOCK_SIZE;
    T *a = new T[n*lda];
    gen_sym_indef(n, a, lda);
    if(singular) {
@@ -269,7 +270,7 @@ int ldlt_test_block(T u, T small) {
    for(int i=0; i<n; i++) perm[i] = i;
    T d[2*BLOCK_SIZE];
    T ld[BLOCK_SIZE*BLOCK_SIZE];
-   block_ldlt<T, BLOCK_SIZE>(0, perm, l, d, ld, u, small);
+   block_ldlt<T, BLOCK_SIZE>(0, perm, l, lda, d, ld, u, small);
 
    // Print out matrices if requested
    if(debug) {
@@ -334,7 +335,7 @@ int ldlt_block_torture_test(T u, T small) {
    for(int i=0; i<n*nblock; i++) perm[i] = i % n;
    T *d = new T[2*n*nblock];
    for(int blk=0; blk<nblock; blk++)
-      block_ldlt<T, BLOCK_SIZE>(0, &perm[n*blk], &l[n*n*blk], &d[2*n*blk], &ld[n*n*blk], u, small);
+      block_ldlt<T, BLOCK_SIZE>(0, &perm[n*blk], &l[n*n*blk], BLOCK_SIZE, &d[2*n*blk], &ld[n*n*blk], u, small);
 
    // Check each system's residual
    T *soln = new T[n];

@@ -78,7 +78,7 @@ void swap_cols(int idx1, int idx2, int n, T *a, int lda, T *ldwork, int *perm) {
 
 
 template <typename T, int BLOCK_SIZE>
-void find_maxloc(const int from, const T *a, T &bestv_out, int &rloc, int &cloc) {
+void find_maxloc(const int from, const T *a, int lda, T &bestv_out, int &rloc, int &cloc) {
    typedef SimdVec<T> SimdVecT;
 
    /* Handle special cases:
@@ -91,7 +91,7 @@ void find_maxloc(const int from, const T *a, T &bestv_out, int &rloc, int &cloc)
       rloc = BLOCK_SIZE; cloc = BLOCK_SIZE;
       for(int c=from; c<BLOCK_SIZE; c++) {
          for(int r=c; r<BLOCK_SIZE; r++) {
-            double v = a[c*BLOCK_SIZE+r];
+            double v = a[c*lda+r];
             if(fabs(v) > bestv) {
                bestv = fabs(v);
                rloc = r;
@@ -100,7 +100,7 @@ void find_maxloc(const int from, const T *a, T &bestv_out, int &rloc, int &cloc)
          }
       }
       bestv_out = 
-         (cloc < BLOCK_SIZE && rloc < BLOCK_SIZE) ? a[cloc*BLOCK_SIZE+rloc]
+         (cloc < BLOCK_SIZE && rloc < BLOCK_SIZE) ? a[cloc*lda+rloc]
                                                   : 0.0;
       return;
    }
@@ -134,7 +134,7 @@ void find_maxloc(const int from, const T *a, T &bestv_out, int &rloc, int &cloc)
          r_d.i = vlen *(c / vlen);
          SimdVecT r_vec(r_d.d);
          // Load vector of values, taking absolute value
-         SimdVecT v = fabs(SimdVecT::load_aligned(&a[c*BLOCK_SIZE+r_d.i]));
+         SimdVecT v = fabs(SimdVecT::load_aligned(&a[c*lda+r_d.i]));
          // Compare against best in lane
          SimdVecT v_gt_bestv = (v > bestv);
          v_gt_bestv = v_gt_bestv & SimdVecT::gt_mask(c%vlen);
@@ -149,7 +149,7 @@ void find_maxloc(const int from, const T *a, T &bestv_out, int &rloc, int &cloc)
          r_d.i = vlen *(c/vlen + 1);
          SimdVecT r_vec(r_d.d);
          // Load vector of values, taking absolute value
-         SimdVecT v = fabs(SimdVecT::load_aligned(&a[c*BLOCK_SIZE+r_d.i]));
+         SimdVecT v = fabs(SimdVecT::load_aligned(&a[c*lda+r_d.i]));
          // If better, update best in lane
          SimdVecT v_gt_bestv = (v > bestv);
          bestv = blend(bestv, v, v_gt_bestv);
@@ -164,8 +164,8 @@ void find_maxloc(const int from, const T *a, T &bestv_out, int &rloc, int &cloc)
          SimdVecT r_vec(r_d.d);
          SimdVecT r_vec2(r_d2.d);
          // Load vector of values, taking absolute value
-         SimdVecT v = fabs(SimdVecT::load_aligned(&a[c*BLOCK_SIZE+r_d.i]));
-         SimdVecT v2 = fabs(SimdVecT::load_aligned(&a[c*BLOCK_SIZE+r_d2.i]));
+         SimdVecT v = fabs(SimdVecT::load_aligned(&a[c*lda+r_d.i]));
+         SimdVecT v2 = fabs(SimdVecT::load_aligned(&a[c*lda+r_d2.i]));
          // If better, update best in lane
          SimdVecT v_gt_bestv = (v > bestv);
          bestv = blend(bestv, v, v_gt_bestv);
@@ -198,7 +198,7 @@ void find_maxloc(const int from, const T *a, T &bestv_out, int &rloc, int &cloc)
          cloc = bc2[i].i;
       }
    }
-   bestv_out = a[cloc*BLOCK_SIZE+rloc];
+   bestv_out = a[cloc*lda+rloc];
 }
 
 /** Returns true if a 2x2 pivot can be stably inverted.
@@ -215,23 +215,23 @@ bool test_2x2(T a11, T a21, T a22, T &detpiv, T &detscale) {
 
 /** Updates the trailing submatrix (2x2 case) */
 template <typename T, int BLOCK_SIZE>
-void update_2x2(int p, T *a, const T *ld) {
+void update_2x2(int p, T *a, int lda, const T *ld) {
    for(int c=p+2; c<BLOCK_SIZE; c++) {
       #pragma omp simd
       for(int r=c; r<BLOCK_SIZE; r++) {
-         a[c*BLOCK_SIZE+r] -= ld[c]*a[p*BLOCK_SIZE+r] + ld[BLOCK_SIZE+c]*a[(p+1)*BLOCK_SIZE+r];
+         a[c*lda+r] -= ld[c]*a[p*lda+r] + ld[BLOCK_SIZE+c]*a[(p+1)*lda+r];
       }
    }
 }
 
 /** Updates the trailing submatrix (1x1 case) */
 template <typename T, int BLOCK_SIZE>
-void update_1x1(int p, T *a, const T *ld) {
+void update_1x1(int p, T *a, int lda, const T *ld) {
 #if 0
    for(int c=p+1; c<BLOCK_SIZE; c++)
       #pragma omp simd
       for(int r=c; r<BLOCK_SIZE; r++)
-         a[c*BLOCK_SIZE+r] -= ld[c]*a[p*BLOCK_SIZE+r];
+         a[c*lda+r] -= ld[c]*a[p*lda+r];
 #else
    const int vlen = SimdVec<T>::vector_length;
 
@@ -239,17 +239,17 @@ void update_1x1(int p, T *a, const T *ld) {
    if(BLOCK_SIZE < vlen || BLOCK_SIZE%vlen != 0) {
       for(int c=p+1; c<BLOCK_SIZE; c++)
          for(int r=c; r<BLOCK_SIZE; r++)
-            a[c*BLOCK_SIZE+r] -= ld[c]*a[p*BLOCK_SIZE+r];
+            a[c*lda+r] -= ld[c]*a[p*lda+r];
       return;
    }
    const int unroll=4; // How many iteration of loop we're doing
    for(int c=p+1; c<unroll*((p+1-1)/unroll+1); c++) {
       SimdVec<T> ldvec( -ld[c] ); // NB minus so we can use fma below
       for(int r=vlen*(c/vlen); r<BLOCK_SIZE; r+=vlen) {
-         SimdVec<T> lvec = SimdVec<T>::load_aligned(&a[p*BLOCK_SIZE+r]);
-         SimdVec<T> avec = SimdVec<T>::load_aligned(&a[c*BLOCK_SIZE+r]);
+         SimdVec<T> lvec = SimdVec<T>::load_aligned(&a[p*lda+r]);
+         SimdVec<T> avec = SimdVec<T>::load_aligned(&a[c*lda+r]);
          avec = fmadd(avec, lvec, ldvec);
-         avec.store_aligned(&a[c*BLOCK_SIZE+r]);
+         avec.store_aligned(&a[c*lda+r]);
       }
    }
    for(int c=unroll*((p+1-1)/unroll+1); c<BLOCK_SIZE; c+=unroll) {
@@ -259,19 +259,19 @@ void update_1x1(int p, T *a, const T *ld) {
       SimdVec<T> ldvec2( -ld[c+2] ); // NB minus so we can use fma below
       SimdVec<T> ldvec3( -ld[c+3] ); // NB minus so we can use fma below
       for(int r=vlen*(c/vlen); r<BLOCK_SIZE; r+=vlen) {
-         SimdVec<T> lvec = SimdVec<T>::load_aligned(&a[p*BLOCK_SIZE+r]);
-         SimdVec<T> avec0 = SimdVec<T>::load_aligned(&a[(c+0)*BLOCK_SIZE+r]);
-         SimdVec<T> avec1 = SimdVec<T>::load_aligned(&a[(c+1)*BLOCK_SIZE+r]);
-         SimdVec<T> avec2 = SimdVec<T>::load_aligned(&a[(c+2)*BLOCK_SIZE+r]);
-         SimdVec<T> avec3 = SimdVec<T>::load_aligned(&a[(c+3)*BLOCK_SIZE+r]);
+         SimdVec<T> lvec = SimdVec<T>::load_aligned(&a[p*lda+r]);
+         SimdVec<T> avec0 = SimdVec<T>::load_aligned(&a[(c+0)*lda+r]);
+         SimdVec<T> avec1 = SimdVec<T>::load_aligned(&a[(c+1)*lda+r]);
+         SimdVec<T> avec2 = SimdVec<T>::load_aligned(&a[(c+2)*lda+r]);
+         SimdVec<T> avec3 = SimdVec<T>::load_aligned(&a[(c+3)*lda+r]);
          avec0 = fmadd(avec0, lvec, ldvec0);
          avec1 = fmadd(avec1, lvec, ldvec1);
          avec2 = fmadd(avec2, lvec, ldvec2);
          avec3 = fmadd(avec3, lvec, ldvec3);
-         avec0.store_aligned(&a[(c+0)*BLOCK_SIZE+r]);
-         avec1.store_aligned(&a[(c+1)*BLOCK_SIZE+r]);
-         avec2.store_aligned(&a[(c+2)*BLOCK_SIZE+r]);
-         avec3.store_aligned(&a[(c+3)*BLOCK_SIZE+r]);
+         avec0.store_aligned(&a[(c+0)*lda+r]);
+         avec1.store_aligned(&a[(c+1)*lda+r]);
+         avec2.store_aligned(&a[(c+2)*lda+r]);
+         avec3.store_aligned(&a[(c+3)*lda+r]);
       }
    }
 #endif
@@ -283,7 +283,7 @@ void update_1x1(int p, T *a, const T *ld) {
  *  Expects to be given a square block of size BLOCK_SIZE with numbers of
  *  interest in bottom right part. */
 template<typename T, int BLOCK_SIZE>
-void block_ldlt(int from, int *perm, T *a, T *d, T *ldwork, const T u, const T small, int *lperm=nullptr) {
+void block_ldlt(int from, int *perm, T *a, int lda, T *d, T *ldwork, const T u, const T small, int *lperm=nullptr) {
    using namespace block_ldlt_internal;
 
    /* Main loop */
@@ -291,7 +291,7 @@ void block_ldlt(int from, int *perm, T *a, T *d, T *ldwork, const T u, const T s
       // Find largest uneliminated entry
       T bestv; // Value of maximum entry
       int t, m; // row and col location of maximum entry
-      find_maxloc<T,BLOCK_SIZE>(p, a, bestv, t, m);
+      find_maxloc<T,BLOCK_SIZE>(p, a, lda, bestv, t, m);
 
       // Handle case where everything remaining is small
       // NB: There might be delayed columns!
@@ -301,7 +301,7 @@ void block_ldlt(int from, int *perm, T *a, T *d, T *ldwork, const T u, const T s
             // Zero out col
             d[2*p] = 0.0; d[2*p+1] = 0.0;
             for(int r=p; r<BLOCK_SIZE; r++)
-               a[p*BLOCK_SIZE+r] = 0.0;
+               a[p*lda+r] = 0.0;
             for(int r=p; r<BLOCK_SIZE; r++)
                ldwork[p*BLOCK_SIZE+r] = 0.0;
             // NB: lperm remains unchanged
@@ -315,12 +315,12 @@ void block_ldlt(int from, int *perm, T *a, T *d, T *ldwork, const T u, const T s
       int m2=m, t2=t; // FIXME: debug remove
       T a11, a21, a22, detscale, detpiv;
       if(t==m) {
-         a11 = a[t*BLOCK_SIZE+t];
+         a11 = a[t*lda+t];
          pivsiz = 1;
       } else {
-         a11 = a[m*BLOCK_SIZE+m];
-         a22 = a[t*BLOCK_SIZE+t];
-         a21 = a[m*BLOCK_SIZE+t];
+         a11 = a[m*lda+m];
+         a22 = a[t*lda+t];
+         a21 = a[m*lda+t];
          if( test_2x2(a11, a21, a22, detpiv, detscale) ) {
             pivsiz = 2;
          } else {
@@ -344,10 +344,10 @@ void block_ldlt(int from, int *perm, T *a, T *d, T *ldwork, const T u, const T s
          // FIXME: debug remove
          printf("broken!\n");
          printf("t = %d m = %d\n", t2, m2);
-         a11 = a[m2*BLOCK_SIZE+m2];
-         printf("[%d] = %e\n", m2*BLOCK_SIZE+m2, a[m2*BLOCK_SIZE+m2]);
-         a22 = a[t2*BLOCK_SIZE+t2];
-         a21 = a[m2*BLOCK_SIZE+t2];
+         a11 = a[m2*lda+m2];
+         printf("[%d] = %e\n", m2*BLOCK_SIZE+m2, a[m2*lda+m2]);
+         a22 = a[t2*lda+t2];
+         a21 = a[m2*lda+t2];
          printf("a11 = %e a21 = %e a22 = %e\n", a11, a21, a22);
          exit(1);
       }
@@ -355,29 +355,29 @@ void block_ldlt(int from, int *perm, T *a, T *d, T *ldwork, const T u, const T s
          /* 1x1 pivot */
          T d11 = 1.0/a11;
          swap_cols<T, BLOCK_SIZE>
-            (p, t, BLOCK_SIZE, a, BLOCK_SIZE, ldwork, perm);
+            (p, t, BLOCK_SIZE, a, lda, ldwork, perm);
          if(lperm) { int temp=lperm[p]; lperm[p]=lperm[t]; lperm[t]=temp; }
          /* Divide through, preserving a copy */
          T *work = &ldwork[p*BLOCK_SIZE];
          for(int r=p+1; r<BLOCK_SIZE; r++) {
-            work[r] = a[p*BLOCK_SIZE+r];
-            a[p*BLOCK_SIZE+r] *= d11;
+            work[r] = a[p*lda+r];
+            a[p*lda+r] *= d11;
          }
          /* Perform update */
-         update_1x1<T, BLOCK_SIZE>(p, a, work);
+         update_1x1<T, BLOCK_SIZE>(p, a, lda, work);
          /* Store d */
          d[2*p] = d11;
          d[2*p+1] = 0.0;
          /* Set diagonal to I */
-         a[p*BLOCK_SIZE+p] = 1.0;
+         a[p*lda+p] = 1.0;
       } else {
          /* 2x2 pivot */
          /* NB t > m by construction. Hence m>=p, t>=p+1 and swaps are safe */
          swap_cols<T, BLOCK_SIZE>
-            (p,   m, BLOCK_SIZE, a, BLOCK_SIZE, ldwork, perm);
+            (p,   m, BLOCK_SIZE, a, lda, ldwork, perm);
          if(lperm) { int temp=lperm[p]; lperm[p]=lperm[m]; lperm[m]=temp; }
          swap_cols<T, BLOCK_SIZE>
-            (p+1, t, BLOCK_SIZE, a, BLOCK_SIZE, ldwork, perm);
+            (p+1, t, BLOCK_SIZE, a, lda, ldwork, perm);
          if(lperm) { int temp=lperm[p+1]; lperm[p+1]=lperm[t]; lperm[t]=temp; }
          /* Calculate 2x2 inverse */
          T d11 = (a22*detscale)/detpiv;
@@ -386,22 +386,22 @@ void block_ldlt(int from, int *perm, T *a, T *d, T *ldwork, const T u, const T s
          /* Divide through, preserving a copy */
          T *work = &ldwork[p*BLOCK_SIZE];
          for(int r=p+2; r<BLOCK_SIZE; r++) {
-            work[r]   = a[p*BLOCK_SIZE+r];
-            work[BLOCK_SIZE+r] = a[(p+1)*BLOCK_SIZE+r];
-            a[p*BLOCK_SIZE+r]     = d11*work[r] + d21*work[BLOCK_SIZE+r];
-            a[(p+1)*BLOCK_SIZE+r] = d21*work[r] + d22*work[BLOCK_SIZE+r];
+            work[r]   = a[p*lda+r];
+            work[BLOCK_SIZE+r] = a[(p+1)*lda+r];
+            a[p*lda+r]     = d11*work[r] + d21*work[BLOCK_SIZE+r];
+            a[(p+1)*lda+r] = d21*work[r] + d22*work[BLOCK_SIZE+r];
          }
          /* Perform update */
-         update_2x2<T,BLOCK_SIZE>(p, a, work);
+         update_2x2<T,BLOCK_SIZE>(p, a, lda, work);
          /* Store d */
          d[2*p  ] = d11;
          d[2*p+1] = d21;
          d[2*p+2] = std::numeric_limits<T>::infinity();
          d[2*p+3] = d22;
          /* Set diagonal to I */
-         a[p*(BLOCK_SIZE+1)] = 1.0;
-         a[p*(BLOCK_SIZE+1)+1] = 0.0;
-         a[(p+1)*(BLOCK_SIZE+1)] = 1.0;
+         a[p*(lda+1)] = 1.0;
+         a[p*(lda+1)+1] = 0.0;
+         a[(p+1)*(lda+1)] = 1.0;
       }
       p += pivsiz;
    }
