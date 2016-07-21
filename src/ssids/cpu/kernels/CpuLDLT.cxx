@@ -57,63 +57,18 @@ private:
       }
    };
 
-   // FIXME: Horrendously inefficient, rework code to cope without
-   void permute_a_d_to_elim_order(int n, const int *order, T *a, int lda, T *d, int *perm) {
-      // Allocate memory
-      T *acopy = new T[n*n];
-      int *permcopy = new int[n];
-
-      // Copy a (lwr -> lwr+upr)
-      for(int j=0; j<n; j++) {
-         for(int i=0; i<j; i++)
-            acopy[j*n+i] = a[i*lda+j];
-         for(int i=j; i<n; i++)
-            acopy[j*n+i] = a[j*lda+i];
-      }
-
-      // And put a back in permuted form
-      for(int jj=0; jj<n; jj++) {
-         int j = order[jj];
-         for(int ii=jj; ii<n; ii++) {
-            int i = order[ii];
-            a[jj*lda+ii] = acopy[j*n+i];
-         }
-      }
-
-      // Copy d and perm
-      for(int j=0; j<2*n; j++)
-         acopy[j] = d[j];
-      for(int i=0; i<n; i++)
-         permcopy[i] = perm[i];
-
-      // And put d and perm back in permuted form
-      for(int jj=0; jj<n; jj++) {
-         int j = order[jj];
-         d[jj*2+0] = acopy[2*j+0];
-         d[jj*2+1] = acopy[2*j+1];
-         perm[jj] = permcopy[j];
-      }
-
-      // Free memory
-      delete[] acopy;
-      delete[] permcopy;
-   }
-
    struct col_data {
       int npad; //< Number of entries added for padding to start
       int nelim;
       int npass;
       omp_lock_t lock;
       int *perm;
-      int elim_order[BLOCK_SIZE];
       T *d;
 
       col_data() : 
          npad(0), nelim(0)
       {
          omp_init_lock(&lock);
-         // FIXME: remove
-         for(int i=0; i<BLOCK_SIZE; i++) elim_order[i] = -1;
       }
       ~col_data() {
          omp_destroy_lock(&lock);
@@ -254,26 +209,22 @@ private:
       }
 
       void permuted_store(T *user_a, int lda, const struct col_data *idata, const struct col_data *jdata) {
-         for(int j=jdata->npad; j<jdata->nelim; j++) {
-            int col = jdata->elim_order[j];
-            for(int i=idata->npad; i<idata->nelim; i++) {
-               int row = idata->elim_order[i];
-               user_a[col*lda+row] = aval[j*ldav+i];
+         T *av = &aval[jdata->npad*ldav + idata->npad];
+         for(int j=0; j<jdata->nelim-jdata->npad; j++) {
+            for(int i=0; i<idata->nelim-idata->npad; i++) {
+               user_a[j*lda+i] = av[j*ldav+i];
             }
          }
       }
 
-      void permuted_store_diag(T *user_a, int lda, const struct col_data *cdata) {
-         for(int j=cdata->npad; j<cdata->nelim; j++) {
-            int col = cdata->elim_order[j];
-            for(int i=j; i<cdata->nelim; i++) {
-               int row = cdata->elim_order[i];
-               user_a[col*lda+row] = aval[j*ldav+i];
-            }
-         }
+      void permuted_store_diag(T *user_a, int lda, const struct col_data *cdata) const {
+         T *av = &aval[cdata->npad*(ldav+1)];
+         for(int j=0; j<cdata->nelim-cdata->npad; j++)
+            for(int i=j; i<cdata->nelim-cdata->npad; i++)
+               user_a[j*lda+i] = av[j*ldav+i];
       }
 
-      void col_permuted_store(int nrow, T *user_a, int lda, const struct col_data *jdata) {
+      void col_permuted_store(int nrow, T *user_a, int lda, const struct col_data *jdata) const {
          T *av = aval + (BLOCK_SIZE-nrow);
          for(int j=jdata->npad, jout=0; j<jdata->nelim; ++j, ++jout)
          for(int i=0; i<nrow; i++)
@@ -627,7 +578,7 @@ private:
             if(debug) printf("Adjusted to %d\n", cdata[blk].npass);
             // Count threshold
             for(int i=cdata[blk].npad; i<cdata[blk].npass; i++) {
-               cdata[blk].elim_order[i] = next_elim++;
+               next_elim++;
                cdata[blk].nelim++;
             }
 
@@ -853,9 +804,6 @@ public:
          // perm is too small for extra "NaN" rows, adjust to acommodate
          // Fill out "extra" entries with negative numbers for debugging sanity
          int coffset = nblk*BLOCK_SIZE - n;
-         for(int i=0,j=-1; i<coffset; i++, j--) {
-            cdata[nblk-1].elim_order[i] = -1;
-         }
       }
 
       /* Main loop
@@ -872,11 +820,6 @@ public:
 
       // Calculate number of successful eliminations (removing any dummy cols)
       int num_elim = next_elim;
-
-      // Complete elimination order for anything that wasn't eliminated
-      for(int blk=0; blk<nblk; blk++)
-         for(int i=cdata[blk].nelim; i<BLOCK_SIZE; i++)
-            cdata[blk].elim_order[i] = next_elim++;
 
       // Permute failed entries to end
       int* failed_perm = new int[n - num_elim];
@@ -919,9 +862,15 @@ public:
       // Store data back in correct permutation
       for(int jblk=0, jinsert=0; jblk<nblk; jblk++) {
          // Diagonal block part
-         blkdata[jblk*mblk+jblk].permuted_store_diag(a, lda, &cdata[jblk]);
-         for(int iblk=jblk+1; iblk<nblk; iblk++)
-            blkdata[jblk*mblk+iblk].permuted_store(a, lda, &cdata[iblk], &cdata[jblk]);
+         blkdata[jblk*mblk+jblk].permuted_store_diag(
+               &a[jinsert*(lda+1)], lda, &cdata[jblk]
+               );
+         for(int iblk=jblk+1, iinsert=jinsert+cdata[jblk].nelim; iblk<nblk; iblk++) {
+            blkdata[jblk*mblk+iblk].permuted_store(
+                  &a[jinsert*lda+iinsert], lda, &cdata[iblk], &cdata[jblk]
+                  );
+            iinsert += cdata[iblk].nelim;
+         }
          // Rectangular part
          T *arect = &a[n];
          for(int iblk=0; iblk<mblk-nblk; iblk++) {
