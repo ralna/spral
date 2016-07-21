@@ -115,7 +115,7 @@ private:
       void load(int nrow, int ncol, T *a, int lda) {
          int roffset = BLOCK_SIZE-nrow;
          int coffset = BLOCK_SIZE-ncol;
-         // Pad missing columns with NaNs
+         /*// Pad missing columns with NaNs
          T *av = aval;
          for(int j=0; j<coffset; j++)
             for(int i=0; i<BLOCK_SIZE; i++)
@@ -125,8 +125,9 @@ private:
          for(int j=0; j<ncol; j++)
             for(int i=0; i<roffset; i++)
                av[j*ldav+i] = std::numeric_limits<T>::quiet_NaN();
-         av += roffset;
+         av += roffset;*/
          // Load actual data
+         T* av = &aval[coffset*ldav+roffset];
          for(int j=0; j<ncol; j++)
             for(int i=0; i<nrow; i++) {
                av[j*ldav+i] = a[j*lda+i];
@@ -757,7 +758,7 @@ public:
                bdalloc, &blkdata[i]
                );
       int ldav = mblk*BLOCK_SIZE;
-      for(int jblk=0; jblk<nblk; ++jblk)
+      for(int jblk=0; jblk<nblk; ++jblk) {
          for(int iblk=0; iblk<mblk; ++iblk) {
             blkdata[jblk*mblk+iblk].ldav = ldav;
             blkdata[jblk*mblk+iblk].aval =
@@ -766,6 +767,19 @@ public:
             blkdata[jblk*mblk+iblk].aval =
                &a_copy[(jblk*mblk+iblk)*BLOCK_SIZE*BLOCK_SIZE];*/
          }
+         // Diagonal block part
+         for(int iblk=0; iblk<nblk; iblk++)
+            blkdata[jblk*mblk+iblk].aval = 
+               &a_copy[jblk*BLOCK_SIZE*ldav + iblk*BLOCK_SIZE];
+         // Rectangular block below it
+         // FIXME: we can move to in place fact once we can do the following
+         //        currently blocked as blodk_ldlt doesn't cope well with
+         //        partial blocks.
+         /*T *arect = &a_copy[n];
+         for(int iblk=0; iblk<mblk-nblk; iblk++)
+            blkdata[jblk*mblk+nblk+iblk].aval =
+                  &arect[jblk*BLOCK_SIZE*ldav + iblk*BLOCK_SIZE];*/
+      }
       for(int jblk=0; jblk<nblk; jblk++) {
          // Diagonal block part
          for(int iblk=0; iblk<nblk; iblk++)
