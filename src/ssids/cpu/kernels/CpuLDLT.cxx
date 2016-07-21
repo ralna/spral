@@ -228,40 +228,56 @@ private:
          }
       }
 
+      /** Copies failed rows and columns^T to specified locations */
+      void copy_failed_diag(struct col_data const& idata, struct col_data const& jdata, T* rout, T* cout, T* dout, int ldout) const {
+         /* copy rows */
+         for(int j=jdata.npad, jout=0; j<jdata.nelim; j++, ++jout)
+         for(int i=idata.nelim, iout=0; i<BLOCK_SIZE; ++i, ++iout)
+            rout[jout*ldout+iout] = aval[j*ldav+i];
+         /* copy cols in transpose (not for diagonal block) */
+         if(&idata != &jdata) {
+            for(int j=jdata.nelim, iout=0; j<BLOCK_SIZE; j++, ++iout)
+            for(int i=idata.npad, jout=0; i<idata.nelim; ++i, ++jout)
+               cout[jout*ldout+iout] = aval[j*ldav+i];
+         }
+         /* copy intersection of failed rows and cols */
+         for(int j=jdata.nelim, jout=0; j<BLOCK_SIZE; j++, ++jout)
+         for(int i=idata.nelim, iout=0; i<BLOCK_SIZE; ++i, ++iout)
+            dout[jout*ldout+iout] = aval[j*ldav+i];
+      }
+
+      /** Copies failed columns to specified location */
+      void copy_failed_rect(int nrow, struct col_data const& jdata, T* cout, int ldout) const {
+         for(int j=jdata.nelim, jout=0; j<BLOCK_SIZE; ++j, ++jout)
+            for(int i=BLOCK_SIZE-nrow, iout=0; i<BLOCK_SIZE; ++i, ++iout)
+               cout[jout*ldout+iout] = aval[j*ldav+i];
+      }
+
       void permuted_store(T *user_a, int lda, const struct col_data *idata, const struct col_data *jdata) {
-         for(int j=jdata->npad; j<BLOCK_SIZE; j++) {
+         for(int j=jdata->npad; j<jdata->nelim; j++) {
             int col = jdata->elim_order[j];
-            for(int i=idata->npad; i<BLOCK_SIZE; i++) {
+            for(int i=idata->npad; i<idata->nelim; i++) {
                int row = idata->elim_order[i];
-               if(row > col)
-                  user_a[col*lda+row] = aval[j*ldav+i];
-               else
-                  user_a[row*lda+col] = aval[j*ldav+i];
+               user_a[col*lda+row] = aval[j*ldav+i];
             }
          }
       }
 
       void permuted_store_diag(T *user_a, int lda, const struct col_data *cdata) {
-         for(int j=cdata->npad; j<BLOCK_SIZE; j++) {
+         for(int j=cdata->npad; j<cdata->nelim; j++) {
             int col = cdata->elim_order[j];
-            for(int i=j; i<BLOCK_SIZE; i++) {
+            for(int i=j; i<cdata->nelim; i++) {
                int row = cdata->elim_order[i];
-               if(row > col)
-                  user_a[col*lda+row] = aval[j*ldav+i];
-               else
-                  user_a[row*lda+col] = aval[j*ldav+i];
+               user_a[col*lda+row] = aval[j*ldav+i];
             }
          }
       }
 
       void col_permuted_store(int nrow, T *user_a, int lda, const struct col_data *jdata) {
          T *av = aval + (BLOCK_SIZE-nrow);
-         for(int j=jdata->npad; j<BLOCK_SIZE; j++) {
-            int col = jdata->elim_order[j];
-            for(int i=0; i<nrow; i++) {
-               user_a[col*lda+i] = av[j*ldav+i];
-            }
-         }
+         for(int j=jdata->npad, jout=0; j<jdata->nelim; ++j, ++jout)
+         for(int i=0; i<nrow; i++)
+            user_a[jout*lda+i] = av[j*ldav+i];
       }
 
       /** Check if a block satisifies pivot threshold (colwise version) */
@@ -873,31 +889,69 @@ public:
          perm[num_elim+i] = failed_perm[i];
       delete[] failed_perm;
 
+      // Extract failed entries of a
+      int nfail = n-num_elim;
+      T* failed_diag = new T[nfail*n];
+      T* failed_rect = new T[nfail*(m-n)];
+      for(int jblk=0, jfail=0, jinsert=0; jblk<nblk; ++jblk) {
+         for(int iblk=jblk, ifail=jfail, iinsert=jinsert; iblk<nblk; ++iblk) {
+            blkdata[jblk*mblk+iblk].copy_failed_diag(
+                  cdata[iblk], cdata[jblk],
+                  &failed_diag[jinsert*nfail+ifail],
+                  &failed_diag[iinsert*nfail+jfail],
+                  &failed_diag[num_elim*nfail+jfail*nfail+ifail],
+                  nfail
+                  );
+            iinsert += cdata[iblk].nelim;
+            ifail += BLOCK_SIZE - cdata[iblk].nelim;
+         }
+         for(int iblk=nblk; iblk<mblk; ++iblk) {
+            int nrow = std::min(BLOCK_SIZE, m-n - (iblk-nblk)*BLOCK_SIZE);
+            blkdata[jblk*mblk+iblk].copy_failed_rect(
+                  nrow, cdata[jblk],
+                  &failed_rect[jfail*(m-n)+(iblk-nblk)*BLOCK_SIZE], m-n
+                  );
+         }
+         jinsert += cdata[jblk].nelim;
+         jfail += BLOCK_SIZE - cdata[jblk].nelim;
+      }
+
       // Store data back in correct permutation
-      for(int jblk=0; jblk<nblk; jblk++) {
+      for(int jblk=0, jinsert=0; jblk<nblk; jblk++) {
          // Diagonal block part
          blkdata[jblk*mblk+jblk].permuted_store_diag(a, lda, &cdata[jblk]);
          for(int iblk=jblk+1; iblk<nblk; iblk++)
             blkdata[jblk*mblk+iblk].permuted_store(a, lda, &cdata[iblk], &cdata[jblk]);
          // Rectangular part
-         int m2 = m-n;
          T *arect = &a[n];
          for(int iblk=0; iblk<mblk-nblk; iblk++) {
+            int nrow = std::min(BLOCK_SIZE, m-n - iblk*BLOCK_SIZE);
             blkdata[jblk*mblk+nblk+iblk].col_permuted_store(
-               ((iblk+1)*BLOCK_SIZE<m2) ? BLOCK_SIZE : (m2 - iblk*BLOCK_SIZE),
-               &arect[iblk*BLOCK_SIZE], lda, &cdata[jblk]);
+               nrow, &arect[jinsert*lda+iblk*BLOCK_SIZE], lda, &cdata[jblk]
+               );
          }
+         jinsert += cdata[jblk].nelim;
       }
 
+      // Move data up FIXME
+      
+      // Store failed entries back to correct locations
+      // Diagonal part
+      for(int j=0; j<n; ++j)
+      for(int i=std::max(j,num_elim), k=i-num_elim; i<n; ++i, ++k)
+         a[j*lda+i] = failed_diag[j*nfail+k];
+      // Rectangular part
+      T* arect = &a[num_elim*lda+n];
+      for(int j=0; j<nfail; ++j)
+      for(int i=0; i<m-n; ++i)
+         arect[j*lda+i] = failed_rect[j*(m-n)+i];
+      delete[] failed_diag;
+      delete[] failed_rect;
 
       if(debug) {
-         // FIXME: debug? calculate eliminated array
-         bool *eliminated = new bool[nblk*BLOCK_SIZE];
-         for(int i=0; i<n; i++) eliminated[i] = false;
-         for(int blk=0; blk<nblk; blk++) {
-            for(int j=0; j<cdata[blk].nelim; j++)
-               eliminated[blk*BLOCK_SIZE+j] = true;
-         }
+         bool *eliminated = new bool[n];
+         for(int i=0; i<num_elim; i++) eliminated[i] = true;
+         for(int i=num_elim; i<n; i++) eliminated[i] = false;
          printf("FINAL:\n");
          print_mat(m, n, perm, eliminated, a, lda);
          delete[] eliminated;
