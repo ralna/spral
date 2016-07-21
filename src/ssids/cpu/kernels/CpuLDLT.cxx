@@ -138,7 +138,8 @@ private:
       public:
       T *aglobal;
       /// Latest accepted value of A or L
-      T __attribute__((aligned(32))) aval[BLOCK_SIZE*BLOCK_SIZE];
+      alignas(32) T* aval;
+      int ldav = BLOCK_SIZE;
       /// Trial value of L
       T *lwork;
 
@@ -163,45 +164,46 @@ private:
          T *av = aval;
          for(int j=0; j<coffset; j++)
             for(int i=0; i<BLOCK_SIZE; i++)
-               aval[j*BLOCK_SIZE+i] = std::numeric_limits<T>::quiet_NaN();
-         av += coffset*BLOCK_SIZE;
+               aval[j*ldav+i] = std::numeric_limits<T>::quiet_NaN();
+         av += coffset*ldav;
          // Pad missing rows with NaNs
          for(int j=0; j<ncol; j++)
             for(int i=0; i<roffset; i++)
-               av[j*BLOCK_SIZE+i] = std::numeric_limits<T>::quiet_NaN();
+               av[j*ldav+i] = std::numeric_limits<T>::quiet_NaN();
          av += roffset;
          // Load actual data
          for(int j=0; j<ncol; j++)
-            for(int i=0; i<nrow; i++)
-               av[j*BLOCK_SIZE+i] = a[j*lda+i];
+            for(int i=0; i<nrow; i++) {
+               av[j*ldav+i] = a[j*lda+i];
+            }
       }
 
       void create_restore_point() {
          for(int j=0; j<BLOCK_SIZE; j++)
          for(int i=0; i<BLOCK_SIZE; i++)
-            lwork[j*BLOCK_SIZE+i] = aval[j*BLOCK_SIZE+i];
+            lwork[j*BLOCK_SIZE+i] = aval[j*ldav+i];
       }
 
       void create_restore_point_with_row_perm(const int *lperm) {
          for(int j=0; j<BLOCK_SIZE; j++)
          for(int i=0; i<BLOCK_SIZE; i++) {
             int r = lperm[i];
-            lwork[j*BLOCK_SIZE+i] = aval[j*BLOCK_SIZE+r];
+            lwork[j*BLOCK_SIZE+i] = aval[j*ldav+r];
          }
          for(int j=0; j<BLOCK_SIZE; j++)
          for(int i=0; i<BLOCK_SIZE; i++)
-            aval[j*BLOCK_SIZE+i] = lwork[j*BLOCK_SIZE+i];
+            aval[j*ldav+i] = lwork[j*BLOCK_SIZE+i];
       }
 
       void create_restore_point_with_col_perm(const int *lperm) {
          for(int j=0; j<BLOCK_SIZE; j++) {
             int c = lperm[j];
             for(int i=0; i<BLOCK_SIZE; i++)
-               lwork[j*BLOCK_SIZE+i] = aval[c*BLOCK_SIZE+i];
+               lwork[j*BLOCK_SIZE+i] = aval[c*ldav+i];
          }
          for(int j=0; j<BLOCK_SIZE; j++)
          for(int i=0; i<BLOCK_SIZE; i++)
-            aval[j*BLOCK_SIZE+i] = lwork[j*BLOCK_SIZE+i];
+            aval[j*ldav+i] = lwork[j*BLOCK_SIZE+i];
       }
 
       /** Restores any columns that have failed back to their previous
@@ -209,7 +211,7 @@ private:
       void restore_part(int rfrom, int cfrom) {
          for(int j=cfrom; j<BLOCK_SIZE; j++)
          for(int i=rfrom; i<BLOCK_SIZE; i++)
-            aval[j*BLOCK_SIZE+i] = lwork[j*BLOCK_SIZE+i];
+            aval[j*ldav+i] = lwork[j*BLOCK_SIZE+i];
       }
 
       /** Restores any columns that have failed back to their previous
@@ -220,8 +222,8 @@ private:
             int c = lperm[j];
             for(int i=from; i<BLOCK_SIZE; i++) {
                int r = lperm[i];
-               aval[j*BLOCK_SIZE+i] = (r>c) ? lwork[c*BLOCK_SIZE+r]
-                                            : lwork[r*BLOCK_SIZE+c];
+               aval[j*ldav+i] = (r>c) ? lwork[c*BLOCK_SIZE+r]
+                                      : lwork[r*BLOCK_SIZE+c];
             }
          }
       }
@@ -232,9 +234,9 @@ private:
             for(int i=idata->npad; i<BLOCK_SIZE; i++) {
                int row = idata->elim_order[i];
                if(row > col)
-                  user_a[col*lda+row] = aval[j*BLOCK_SIZE+i];
+                  user_a[col*lda+row] = aval[j*ldav+i];
                else
-                  user_a[row*lda+col] = aval[j*BLOCK_SIZE+i];
+                  user_a[row*lda+col] = aval[j*ldav+i];
             }
          }
       }
@@ -245,9 +247,9 @@ private:
             for(int i=j; i<BLOCK_SIZE; i++) {
                int row = cdata->elim_order[i];
                if(row > col)
-                  user_a[col*lda+row] = aval[j*BLOCK_SIZE+i];
+                  user_a[col*lda+row] = aval[j*ldav+i];
                else
-                  user_a[row*lda+col] = aval[j*BLOCK_SIZE+i];
+                  user_a[row*lda+col] = aval[j*ldav+i];
             }
          }
       }
@@ -256,8 +258,9 @@ private:
          T *av = aval + (BLOCK_SIZE-nrow);
          for(int j=jdata->npad; j<BLOCK_SIZE; j++) {
             int col = jdata->elim_order[j];
-            for(int i=0; i<nrow; i++)
-               user_a[col*lda+i] = av[j*BLOCK_SIZE+i];
+            for(int i=0; i<nrow; i++) {
+               user_a[col*lda+i] = av[j*ldav+i];
+            }
          }
       }
 
@@ -266,8 +269,8 @@ private:
          // Perform thrshold test for each uneliminated row/column
          for(int j=cfrom; j<BLOCK_SIZE; j++)
          for(int i=rfrom; i<BLOCK_SIZE; i++)
-            if(fabs(aval[j*BLOCK_SIZE+i]) > 1.0/u) {
-               if(debug) printf("Failed %d,%d:%e\n", i, j, fabs(aval[j*BLOCK_SIZE+i]));
+            if(fabs(aval[j*ldav+i]) > 1.0/u) {
+               if(debug) printf("Failed %d,%d:%e\n", i, j, fabs(aval[j*ldav+i]));
                return j;
             }
          // If we get this far, everything is good
@@ -279,8 +282,8 @@ private:
          // Perform thrshold test for each uneliminated row/column
          for(int j=rfrom; j<BLOCK_SIZE; j++)
          for(int i=cfrom; i<BLOCK_SIZE; i++)
-            if(fabs(aval[i*BLOCK_SIZE+j]) > 1.0/u) {
-               if(debug) printf("Failed %d,%d:%e\n", i, j, fabs(aval[i*BLOCK_SIZE+j]));
+            if(fabs(aval[i*ldav+j]) > 1.0/u) {
+               if(debug) printf("Failed %d,%d:%e\n", i, j, fabs(aval[i*ldav+j]));
                return j;
             }
          // If we get this far, everything is good
@@ -291,7 +294,7 @@ private:
       void apply_pivot(int rfrom, int cfrom, const T *diag, int ldd, const T *d, const T small) {
          if(rfrom >= BLOCK_SIZE || cfrom >= BLOCK_SIZE) return; // no-op
          // Perform solve L_11^-T
-         host_trsm<T>(SIDE_RIGHT, FILL_MODE_LWR, OP_T, DIAG_UNIT, BLOCK_SIZE-rfrom, BLOCK_SIZE-cfrom, 1.0, &diag[cfrom*BLOCK_SIZE+cfrom], ldd, &aval[cfrom*BLOCK_SIZE+rfrom], BLOCK_SIZE);
+         host_trsm<T>(SIDE_RIGHT, FILL_MODE_LWR, OP_T, DIAG_UNIT, BLOCK_SIZE-rfrom, BLOCK_SIZE-cfrom, 1.0, &diag[cfrom*ldd+cfrom], ldd, &aval[cfrom*ldav+rfrom], ldav);
          // Perform solve L_21 D^-1
          for(int i=cfrom; i<BLOCK_SIZE; ) {
             if(d[2*i+1]==0.0) {
@@ -300,8 +303,8 @@ private:
                if(d11 == 0.0) {
                   // Handle zero pivots carefully
                   for(int j=rfrom; j<BLOCK_SIZE; j++) {
-                     T v = aval[i*BLOCK_SIZE+j];
-                     aval[i*BLOCK_SIZE+j] = 
+                     T v = aval[i*ldav+j];
+                     aval[i*ldav+j] = 
                         (fabs(v)<small) ? 0.0
                                         : std::numeric_limits<T>::infinity()*v;
                      // NB: *v above handles NaNs correctly
@@ -309,7 +312,7 @@ private:
                } else {
                   // Non-zero pivot, apply in normal fashion
                   for(int j=rfrom; j<BLOCK_SIZE; j++)
-                     aval[i*BLOCK_SIZE+j] *= d11;
+                     aval[i*ldav+j] *= d11;
                }
                i++;
             } else {
@@ -318,10 +321,10 @@ private:
                T d21 = d[2*i+1];
                T d22 = d[2*i+3];
                for(int j=rfrom; j<BLOCK_SIZE; j++) {
-                  T a1 = aval[i*BLOCK_SIZE+j];
-                  T a2 = aval[(i+1)*BLOCK_SIZE+j];
-                  aval[i*BLOCK_SIZE+j]     = d11*a1 + d21*a2;
-                  aval[(i+1)*BLOCK_SIZE+j] = d21*a1 + d22*a2;
+                  T a1 = aval[i*ldav+j];
+                  T a2 = aval[(i+1)*ldav+j];
+                  aval[i*ldav+j]     = d11*a1 + d21*a2;
+                  aval[(i+1)*ldav+j] = d21*a1 + d22*a2;
                }
                i += 2;
             }
@@ -332,7 +335,7 @@ private:
       void apply_pivot_trans(int rfrom, int cfrom, const T *diag, int ldd, const T *d, const T small) {
          if(rfrom >= BLOCK_SIZE || cfrom >= BLOCK_SIZE) return; // no uneliminated columns
          // Perform solve L_11^-1
-         host_trsm<T>(SIDE_LEFT, FILL_MODE_LWR, OP_N, DIAG_UNIT, BLOCK_SIZE-rfrom, BLOCK_SIZE-cfrom, 1.0, &diag[rfrom*ldd+rfrom], ldd, &aval[cfrom*BLOCK_SIZE+rfrom], BLOCK_SIZE);
+         host_trsm<T>(SIDE_LEFT, FILL_MODE_LWR, OP_N, DIAG_UNIT, BLOCK_SIZE-rfrom, BLOCK_SIZE-cfrom, 1.0, &diag[rfrom*ldd+rfrom], ldd, &aval[cfrom*ldav+rfrom], ldav);
          // Perform solve D^-T L_21^T
          for(int i=rfrom; i<BLOCK_SIZE; ) {
             if(d[2*i+1]==0.0) {
@@ -341,8 +344,8 @@ private:
                if(d11 == 0.0) {
                   // Handle zero pivots carefully
                   for(int j=cfrom; j<BLOCK_SIZE; j++) {
-                     T v = aval[j*BLOCK_SIZE+i];
-                     aval[j*BLOCK_SIZE+i] = 
+                     T v = aval[j*ldav+i];
+                     aval[j*ldav+i] = 
                         (fabs(v)<small) ? 0.0 // *v handles NaNs
                                         : std::numeric_limits<T>::infinity()*v;
                      // NB: *v above handles NaNs correctly
@@ -350,7 +353,7 @@ private:
                } else {
                   // Non-zero pivot, apply in normal fashion
                   for(int j=cfrom; j<BLOCK_SIZE; j++) {
-                     aval[j*BLOCK_SIZE+i] *= d11;
+                     aval[j*ldav+i] *= d11;
                   }
                }
                i++;
@@ -360,10 +363,10 @@ private:
                T d21 = d[2*i+1];
                T d22 = d[2*i+3];
                for(int j=cfrom; j<BLOCK_SIZE; j++) {
-                  T a1 = aval[j*BLOCK_SIZE+i];
-                  T a2 = aval[j*BLOCK_SIZE+(i+1)];
-                  aval[j*BLOCK_SIZE+i]     = d11*a1 + d21*a2;
-                  aval[j*BLOCK_SIZE+(i+1)] = d21*a1 + d22*a2;
+                  T a1 = aval[j*ldav+i];
+                  T a2 = aval[j*ldav+(i+1)];
+                  aval[j*ldav+i]     = d11*a1 + d21*a2;
+                  aval[j*ldav+(i+1)] = d21*a1 + d22*a2;
                }
                i += 2;
             }
@@ -376,11 +379,11 @@ private:
          host_gemm(OP_N, OP_T,
                BLOCK_SIZE-rfrom, BLOCK_SIZE-cfrom, nelim-npad,
                -1.0, &ld[npad*ldld+rfrom], ldld, &l[npad*ldl+cfrom], ldl,
-               1.0, &aval[cfrom*BLOCK_SIZE+rfrom], BLOCK_SIZE);
+               1.0, &aval[cfrom*ldav+rfrom], ldav);
          /*for(int j=cfrom; j<BLOCK_SIZE; j++)
             for(int i=rfrom; i<BLOCK_SIZE; i++)
                for(int k=npad; k<nelim; k++)
-                  aval[j*BLOCK_SIZE+i] -= l[k*ldl+j] * ld[k*ldld+i];*/
+                  aval[j*ldav+i] -= l[k*ldl+j] * ld[k*ldld+i];*/
       }
 
       /** Apply successful pivot update to all uneliminated columns
@@ -389,17 +392,17 @@ private:
          host_gemm(OP_N, OP_N,
                BLOCK_SIZE-rfrom, BLOCK_SIZE-cfrom, nelim-npad,
                -1.0, &ld[npad*ldld+rfrom], ldld, &l[cfrom*ldl+npad], ldl,
-               1.0, &aval[cfrom*BLOCK_SIZE+rfrom], BLOCK_SIZE);
+               1.0, &aval[cfrom*ldav+rfrom], ldav);
          /*for(int j=cfrom; j<BLOCK_SIZE; j++)
             for(int i=rfrom; i<BLOCK_SIZE; i++)
                for(int k=npad; k<nelim; k++)
-                  aval[j*BLOCK_SIZE+i] -= l[j*ldl+k] * ld[k*ldld+i];*/
+                  aval[j*ldav+i] -= l[j*ldl+k] * ld[k*ldld+i];*/
       }
 
       void rcmax_unelim(int rfrom, int cfrom, int *ridx, T *rval, int *cidx, T *cval) {
          for(int j=cfrom; j<BLOCK_SIZE; j++) {
             for(int i=rfrom; i<BLOCK_SIZE; i++) {
-               T v = fabs(aval[j*BLOCK_SIZE+i]);
+               T v = fabs(aval[j*ldav+i]);
                if(v > cval[j]) {
                   cidx[j] = i;
                   cval[j] = v;
@@ -415,7 +418,7 @@ private:
       void rcmax_unelim_diag(int from, int *idx, T *val) {
          for(int j=from; j<BLOCK_SIZE; j++) {
             for(int i=j; i<BLOCK_SIZE; i++) {
-               T v = fabs(aval[j*BLOCK_SIZE+i]);
+               T v = fabs(aval[j*ldav+i]);
                if(v > val[j]) {
                   idx[j] = i;
                   val[j] = v;
@@ -431,36 +434,36 @@ private:
       /** Returns column idx in vector xch */
       void get_col(int idx, T xch[BLOCK_SIZE]) const {
          for(int i=0; i<BLOCK_SIZE; i++)
-            xch[i] = aval[idx*BLOCK_SIZE+i];
+            xch[i] = aval[idx*ldav+i];
       }
       /** Sets column idx to vector xch */
       void set_col(int idx, const T xch[BLOCK_SIZE]) {
          for(int i=0; i<BLOCK_SIZE; i++)
-            aval[idx*BLOCK_SIZE+i] = xch[i];
+            aval[idx*ldav+i] = xch[i];
       }
       /** Returns row idx in vector xch */
       void get_row(int idx, T xch[BLOCK_SIZE]) const {
          for(int i=0; i<BLOCK_SIZE; i++)
-            xch[i] = aval[i*BLOCK_SIZE+idx];
+            xch[i] = aval[i*ldav+idx];
       }
       /** Sets row idx to vector xch */
       void set_row(int idx, const T xch[BLOCK_SIZE]) {
          for(int i=0; i<BLOCK_SIZE; i++)
-            aval[i*BLOCK_SIZE+idx] = xch[i];
+            aval[i*ldav+idx] = xch[i];
       }
       /** Returns row/column idx in vector xch (for diagonal blocks) */
       void get_rc_diag(int idx, T xch[BLOCK_SIZE]) const {
          for(int i=0; i<idx; i++)
-            xch[i] = aval[i*BLOCK_SIZE+idx];
+            xch[i] = aval[i*ldav+idx];
          for(int i=idx; i<BLOCK_SIZE; i++)
-            xch[i] = aval[idx*BLOCK_SIZE+i];
+            xch[i] = aval[idx*ldav+i];
       }
       /** Sets row/column idx to vector xch (for diagonal blocks) */
       void set_rc_diag(int idx, const T xch[BLOCK_SIZE]) {
          for(int i=0; i<idx; i++)
-            aval[i*BLOCK_SIZE+idx] = xch[i];
+            aval[i*ldav+idx] = xch[i];
          for(int i=idx; i<BLOCK_SIZE; i++)
-            aval[idx*BLOCK_SIZE+i] = xch[i];
+            aval[idx*ldav+i] = xch[i];
       }
    };
 
@@ -522,6 +525,7 @@ private:
             depend(inout: blkdata[blk*mblk+blk:1]) \
             depend(inout: cdata[blk:1])
          {
+            //printf("Factor(%d)\n", blk);
             int thread_num = omp_get_thread_num();
             ThreadWork &thread_work = all_thread_work[thread_num];
             blkdata[blk*mblk+blk].lwork = global_work.get_wait();
@@ -531,7 +535,7 @@ private:
                lperm[i] = i;
             dblk.create_restore_point();
             cdata[blk].d = &d[2*next_elim] - 2*cdata[blk].npad;
-            block_ldlt<T, BLOCK_SIZE>(cdata[blk].npad, cdata[blk].perm, dblk.aval, cdata[blk].d, thread_work.ld, u, small, lperm);
+            block_ldlt<T, BLOCK_SIZE>(cdata[blk].npad, cdata[blk].perm, dblk.aval, dblk.ldav, cdata[blk].d, thread_work.ld, u, small, lperm);
             // Initialize threshold check (no lock required becuase task depend)
             cdata[blk].npass = BLOCK_SIZE;
          }
@@ -545,15 +549,14 @@ private:
                depend(inout: blkdata[jblk*mblk+blk:1]) \
                depend(in: cdata[blk:1])
             {
-               typedef void (BlockData::*BlockDataApplyTPtr)(int, int, const T*, int, const T*, const T);
-               BlockDataApplyTPtr bdatp = &BlockData::apply_pivot_trans;
+               //printf("ApplyT(%d,%d)\n", blk, jblk);
                BlockData &dblk = blkdata[blk*mblk+blk];
                BlockData &cblk = blkdata[jblk*mblk+blk];
                const int *lperm = &global_lperm[blk*BLOCK_SIZE];
                // Perform necessary operations
                cblk.lwork = global_work.get_wait();
                cblk.create_restore_point_with_row_perm(lperm);
-               cblk.apply_pivot_trans(cdata[blk].npad, cdata[jblk].nelim, dblk.aval, BLOCK_SIZE, cdata[blk].d, small);
+               cblk.apply_pivot_trans(cdata[blk].npad, cdata[jblk].nelim, dblk.aval, dblk.ldav, cdata[blk].d, small);
                // Update threshold check
                int blkpass = cblk.check_threshold_trans(cdata[blk].npad, cdata[jblk].nelim, u);
                omp_set_lock(&cdata[blk].lock);
@@ -570,6 +573,7 @@ private:
                depend(inout: blkdata[blk*mblk+iblk:1]) \
                depend(in: cdata[blk:1])
             {
+               //printf("ApplyN(%d,%d)\n", iblk, blk);
                BlockData &dblk = blkdata[blk*mblk+blk];
                BlockData &rblk = blkdata[blk*mblk+iblk];
                const int *lperm = &global_lperm[blk*BLOCK_SIZE];
@@ -577,7 +581,7 @@ private:
                rblk.lwork = global_work.get_wait();
                rblk.create_restore_point_with_col_perm(lperm);
                int rfrom = (iblk < nblk) ? cdata[iblk].nelim : 0;
-               rblk.apply_pivot(rfrom, cdata[blk].npad, dblk.aval, BLOCK_SIZE, cdata[blk].d, small);
+               rblk.apply_pivot(rfrom, cdata[blk].npad, dblk.aval, dblk.ldav, cdata[blk].d, small);
                // Update threshold check
                int blkpass = rblk.check_threshold(rfrom, cdata[blk].npad, u);
                omp_set_lock(&cdata[blk].lock);
@@ -594,6 +598,7 @@ private:
             shared(blkdata, cdata, changed, next_elim, global_work) \
             depend(inout: cdata[blk:1])
          {
+            //printf("Adjust(%d)\n", blk);
             // Adjust to avoid splitting 2x2 pivots
             if(cdata[blk].npass>cdata[blk].npad) {
                T d11 = cdata[blk].d[2*(cdata[blk].npass-1) + 0];
@@ -629,6 +634,7 @@ private:
                   depend(in: blkdata[jblk*mblk+blk:1]) \
                   depend(in: blkdata[iblk_idx:1])
                {
+                  //printf("UpdateT(%d,%d,%d)\n", iblk, jblk, blk);
                   // If we're on the block row we've just eliminated, restore
                   // any failed rows and release resources storing checkpoint
                   if(iblk==blk) {
@@ -644,19 +650,20 @@ private:
                      int const npad = cdata[blk].npad;
                      int nelim = cdata[blk].nelim;
                      int rfrom = (iblk < nblk) ? cdata[iblk].nelim : 0;
+                     int ldav = blkdata[blk*mblk+iblk].ldav;
                      if(blk <= iblk) {
                         calcLD<OP_N>(BLOCK_SIZE-rfrom, nelim-npad,
-                           &blkdata[blk*mblk+iblk].aval[npad*BLOCK_SIZE+rfrom], BLOCK_SIZE,
+                           &blkdata[blk*mblk+iblk].aval[npad*ldav+rfrom], ldav,
                            &cdata[blk].d[2*npad],
                            &thread_work.ld[npad*BLOCK_SIZE+rfrom], BLOCK_SIZE);
                      } else {
                         calcLD<OP_T>(BLOCK_SIZE-rfrom, nelim-npad,
-                           &blkdata[iblk*mblk+blk].aval[rfrom*BLOCK_SIZE+npad], BLOCK_SIZE,
+                           &blkdata[iblk*mblk+blk].aval[rfrom*ldav+npad], ldav,
                            &cdata[blk].d[2*npad],
                            &thread_work.ld[npad*BLOCK_SIZE+rfrom], BLOCK_SIZE);
                      }
                      blkdata[jblk*mblk+iblk].update_t(npad, nelim,
-                           blkdata[jblk*mblk+blk].aval, BLOCK_SIZE,
+                           blkdata[jblk*mblk+blk].aval, ldav,
                            thread_work.ld, BLOCK_SIZE,
                            rfrom, cdata[jblk].nelim);
                   }
@@ -674,6 +681,7 @@ private:
                   depend(in: blkdata[blk*mblk+iblk:1]) \
                   depend(in: blkdata[blk*mblk+jblk:1])
                {
+                  //printf("UpdateN(%d,%d,%d)\n", iblk, jblk, blk);
                   // If we're on the block col we've just eliminated, restore
                   // any failed cols and release checkpoint resources
                   if(jblk==blk) {
@@ -699,12 +707,13 @@ private:
                      int const npad = cdata[blk].npad;
                      int nelim = cdata[blk].nelim;
                      int rfrom = (iblk < nblk) ? cdata[iblk].nelim : 0;
+                     int ldav = blkdata[blk*mblk+iblk].ldav;
                      calcLD<OP_N>(BLOCK_SIZE-rfrom, nelim-npad,
-                           &blkdata[blk*mblk+iblk].aval[npad*BLOCK_SIZE+rfrom],
-                           BLOCK_SIZE, &cdata[blk].d[2*npad],
+                           &blkdata[blk*mblk+iblk].aval[npad*ldav+rfrom], ldav,
+                           &cdata[blk].d[2*npad],
                            &thread_work.ld[npad*BLOCK_SIZE+rfrom], BLOCK_SIZE);
                      blkdata[jblk*mblk+iblk].update_n(npad, nelim,
-                           blkdata[blk*mblk+jblk].aval, BLOCK_SIZE,
+                           blkdata[blk*mblk+jblk].aval, ldav,
                            thread_work.ld, BLOCK_SIZE,
                            rfrom, cdata[jblk].nelim);
                   }
@@ -744,7 +753,7 @@ private:
             for(int cblk=0; cblk<nblk; cblk++) {
                const BlockData &blk = blkdata[cblk*mblk+rblk];
                for(int col=0; col<BLOCK_SIZE; col++)
-                  printf(" %10.4f", blk.aval[col*BLOCK_SIZE+row]);
+                  printf(" %10.4f", blk.aval[col*blk.ldav+row]);
             }
             printf("\n");
          }
@@ -770,6 +779,7 @@ public:
       int next_elim = 0;
 
       /* Load data block-wise */
+      T* a_copy = (T*) aligned_alloc(32, mblk*nblk*BLOCK_SIZE*BLOCK_SIZE*sizeof(double));
       typedef typename std::allocator_traits<Alloc>::template rebind_alloc<BlockData> BlockDataAlloc;
       BlockDataAlloc bdalloc(alloc);
       BlockData *blkdata = std::allocator_traits<BlockDataAlloc>::allocate(
@@ -779,6 +789,16 @@ public:
          std::allocator_traits<BlockDataAlloc>::construct(
                bdalloc, &blkdata[i]
                );
+      int ldav = mblk*BLOCK_SIZE;
+      for(int jblk=0; jblk<nblk; ++jblk)
+         for(int iblk=0; iblk<mblk; ++iblk) {
+            blkdata[jblk*mblk+iblk].ldav = ldav;
+            blkdata[jblk*mblk+iblk].aval =
+               &a_copy[(jblk*BLOCK_SIZE)*ldav + iblk*BLOCK_SIZE];
+            /*blkdata[jblk*mblk+iblk].ldav = BLOCK_SIZE;
+            blkdata[jblk*mblk+iblk].aval =
+               &a_copy[(jblk*mblk+iblk)*BLOCK_SIZE*BLOCK_SIZE];*/
+         }
       for(int jblk=0; jblk<nblk; jblk++) {
          // Diagonal block part
          for(int iblk=0; iblk<nblk; iblk++)
@@ -862,10 +882,11 @@ public:
          // Rectangular part
          int m2 = m-n;
          T *arect = &a[n];
-         for(int iblk=0; iblk<mblk-nblk; iblk++)
+         for(int iblk=0; iblk<mblk-nblk; iblk++) {
             blkdata[jblk*mblk+nblk+iblk].col_permuted_store(
                ((iblk+1)*BLOCK_SIZE<m2) ? BLOCK_SIZE : (m2 - iblk*BLOCK_SIZE),
                &arect[iblk*BLOCK_SIZE], lda, &cdata[jblk]);
+         }
       }
 
 
@@ -883,6 +904,7 @@ public:
       }
       
       // Free memory
+      free(a_copy);
       delete[] cdata;
       for(int i=0; i<mblk*nblk; i++)
          std::allocator_traits<BlockDataAlloc>::destroy(
