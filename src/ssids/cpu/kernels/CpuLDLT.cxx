@@ -185,15 +185,33 @@ private:
          }
       }
 
+      /** Move up eliminated entries to fill any gaps left by failed pivots
+       *  within diagonal block.
+       *  Note that out and aval may overlap. */
+      void move_up_diag(struct col_data const& idata, struct col_data const& jdata, T* out, int ldout) const {
+         for(int j=jdata.npad, jout=0; j<jdata.nelim; ++j, ++jout)
+         for(int i=idata.npad, iout=0; i<idata.nelim; ++i, ++iout)
+            out[jout*ldout+iout] = aval[j*ldav+i];
+      }
+
+      /** Move up eliminated entries to fill any gaps left by failed pivots
+       *  within rectangular block of matrix.
+       *  Note that out and aval may overlap. */
+      void move_up_rect(int rfrom, struct col_data const& jdata, T* out, int ldout) const {
+         for(int j=jdata.npad, jout=0; j<jdata.nelim; ++j, ++jout)
+         for(int i=rfrom, iout=0; i<BLOCK_SIZE; ++i, ++iout)
+            out[jout*ldout+iout] = aval[j*ldav+i];
+      }
+
       /** Copies failed rows and columns^T to specified locations */
       void copy_failed_diag(struct col_data const& idata, struct col_data const& jdata, T* rout, T* cout, T* dout, int ldout) const {
          /* copy rows */
-         for(int j=jdata.npad, jout=0; j<jdata.nelim; j++, ++jout)
+         for(int j=jdata.npad, jout=0; j<jdata.nelim; ++j, ++jout)
          for(int i=idata.nelim, iout=0; i<BLOCK_SIZE; ++i, ++iout)
             rout[jout*ldout+iout] = aval[j*ldav+i];
          /* copy cols in transpose (not for diagonal block) */
          if(&idata != &jdata) {
-            for(int j=jdata.nelim, iout=0; j<BLOCK_SIZE; j++, ++iout)
+            for(int j=jdata.nelim, iout=0; j<BLOCK_SIZE; ++j, ++iout)
             for(int i=idata.npad, jout=0; i<idata.nelim; ++i, ++jout)
                cout[jout*ldout+iout] = aval[j*ldav+i];
          }
@@ -723,13 +741,10 @@ public:
                &a_copy[(jblk*BLOCK_SIZE-coffset)*ldav + iblk*BLOCK_SIZE-roffset];
          }
          // Rectangular block below it
-         // FIXME: we can move to in place fact once we can do the following
-         //        currently blocked as blodk_ldlt doesn't cope well with
-         //        partial blocks.
-         /*T *arect = &a_copy[n];
+         T *arect = &a_copy[n];
          for(int iblk=0; iblk<mblk-nblk; iblk++)
             blkdata[jblk*mblk+nblk+iblk].aval =
-                  &arect[jblk*BLOCK_SIZE*ldav + iblk*BLOCK_SIZE];*/
+                  &arect[jblk*BLOCK_SIZE*ldav + iblk*BLOCK_SIZE];
       }
       for(int jblk=0; jblk<nblk; jblk++) {
          // Diagonal block part
@@ -844,7 +859,34 @@ public:
          jinsert += cdata[jblk].nelim;
       }
 
-      // Move data up FIXME
+      // Move data up
+      for(int jblk=0, jinsert=0; jblk<nblk; ++jblk) {
+         for(int iblk=jblk, iinsert=jinsert; iblk<nblk; ++iblk) {
+            blkdata[jblk*mblk+iblk].move_up_diag(cdata[iblk], cdata[jblk],
+                  &a_copy[jinsert*ldav+iinsert], ldav);
+            iinsert += cdata[iblk].nelim;
+         }
+         for(int iblk=nblk; iblk<mblk; ++iblk) {
+            int rfrom = std::max(0, (iblk-nblk+1)*BLOCK_SIZE-(m-n));
+            blkdata[jblk*mblk+iblk].move_up_rect(rfrom, cdata[jblk],
+                  &a_copy[jinsert*ldav+n+(iblk-nblk)*BLOCK_SIZE], ldav);
+         }
+         jinsert += cdata[jblk].nelim;
+      }
+
+      // FIXME: delete below when move to in place
+      {
+         // Store failed entries back to correct locations
+         // Diagonal part
+         for(int j=0; j<n; ++j)
+         for(int i=std::max(j,num_elim), k=i-num_elim; i<n; ++i, ++k)
+            a_copy[j*ldav+i] = failed_diag[j*nfail+k];
+         // Rectangular part
+         T* arect = &a_copy[num_elim*ldav+n];
+         for(int j=0; j<nfail; ++j)
+         for(int i=0; i<m-n; ++i)
+            arect[j*ldav+i] = failed_rect[j*(m-n)+i];
+      }
       
       // Store failed entries back to correct locations
       // Diagonal part
@@ -858,6 +900,12 @@ public:
          arect[j*lda+i] = failed_rect[j*(m-n)+i];
       delete[] failed_diag;
       delete[] failed_rect;
+
+      // FIXME: Check if a_copy and a match
+      for(int j=0; j<n; ++j)
+      for(int i=j; i<m; ++i)
+         if(a_copy[j*ldav+i] != a[j*lda+i])
+            printf("oops %d %d %e %e\n", i, j, a_copy[j*ldav+i], a[j*lda+i]);
 
       if(debug) {
          bool *eliminated = new bool[n];
