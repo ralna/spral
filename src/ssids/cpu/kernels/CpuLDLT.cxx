@@ -373,7 +373,7 @@ private:
    }
 
 
-   bool run_elim(int &next_elim, const int mblk, const int nblk, struct col_data *cdata, BlockData *blkdata, T* d, BlockPool<T, BLOCK_SIZE> &global_work, ThreadWork all_thread_work[]) {
+   bool run_elim(int &next_elim, int const m, int const n, const int mblk, const int nblk, struct col_data *cdata, BlockData *blkdata, T* d, BlockPool<T, BLOCK_SIZE> &global_work, ThreadWork all_thread_work[]) {
       bool changed = false;
 
       // FIXME: is global_lperm really the best way?
@@ -452,7 +452,8 @@ private:
                // Perform necessary operations
                rblk.lwork = global_work.get_wait();
                rblk.create_restore_point_with_col_perm(lperm);
-               int rfrom = (iblk < nblk) ? cdata[iblk].nelim : 0;
+               int rfrom = (iblk < nblk) ? cdata[iblk].nelim
+                                         : std::max(0, (iblk-nblk+1)*BLOCK_SIZE-(m-n));
                rblk.template apply_pivot<OP_N>(rfrom, cdata[blk].npad, dblk.aval, dblk.ldav, cdata[blk].d, small);
                // Update threshold check
                int blkpass = rblk.template check_threshold<OP_N>(rfrom, cdata[blk].npad, u);
@@ -521,7 +522,8 @@ private:
                      ThreadWork &thread_work = all_thread_work[thread_num];
                      int const npad = cdata[blk].npad;
                      int nelim = cdata[blk].nelim;
-                     int rfrom = (iblk < nblk) ? cdata[iblk].nelim : 0;
+                     int rfrom = (iblk < nblk) ? cdata[iblk].nelim
+                                               : std::max(0, (iblk-nblk+1)*BLOCK_SIZE-(m-n));
                      int ldav = blkdata[blk*mblk+iblk].ldav;
                      if(blk <= iblk) {
                         calcLD<OP_N>(BLOCK_SIZE-rfrom, nelim-npad,
@@ -565,7 +567,8 @@ private:
                                  cdata[blk].nelim, lperm
                                  );
                         } else {
-                           int rfrom = (iblk < nblk) ? cdata[iblk].nelim : 0;
+                           int rfrom = (iblk < nblk) ? cdata[iblk].nelim
+                                                     : std::max(0, (iblk-nblk+1)*BLOCK_SIZE-(m-n));
                            blkdata[jblk*mblk+iblk]
                               .restore_part(rfrom, cdata[blk].nelim);
                         }
@@ -578,7 +581,8 @@ private:
                      ThreadWork &thread_work = all_thread_work[thread_num];
                      int const npad = cdata[blk].npad;
                      int nelim = cdata[blk].nelim;
-                     int rfrom = (iblk < nblk) ? cdata[iblk].nelim : 0;
+                     int rfrom = (iblk < nblk) ? cdata[iblk].nelim
+                                               : std::max(0, (iblk-nblk+1)*BLOCK_SIZE-(m-n));
                      int ldav = blkdata[blk*mblk+iblk].ldav;
                      calcLD<OP_N>(BLOCK_SIZE-rfrom, nelim-npad,
                            &blkdata[blk*mblk+iblk].aval[npad*ldav+rfrom], ldav,
@@ -662,7 +666,7 @@ public:
                bdalloc, &blkdata[i]
                );
       int ldav = mblk*BLOCK_SIZE;
-      for(int jblk=0; jblk<nblk; ++jblk) {
+      for(int jblk=0; jblk<nblk; ++jblk)
          for(int iblk=0; iblk<mblk; ++iblk) {
             blkdata[jblk*mblk+iblk].ldav = ldav;
             blkdata[jblk*mblk+iblk].aval =
@@ -671,19 +675,6 @@ public:
             blkdata[jblk*mblk+iblk].aval =
                &a_copy[(jblk*mblk+iblk)*BLOCK_SIZE*BLOCK_SIZE];*/
          }
-         // Diagonal block part
-         for(int iblk=0; iblk<nblk; iblk++)
-            blkdata[jblk*mblk+iblk].aval = 
-               &a_copy[jblk*BLOCK_SIZE*ldav + iblk*BLOCK_SIZE];
-         // Rectangular block below it
-         // FIXME: we can move to in place fact once we can do the following
-         //        currently blocked as blodk_ldlt doesn't cope well with
-         //        partial blocks.
-         /*T *arect = &a_copy[n];
-         for(int iblk=0; iblk<mblk-nblk; iblk++)
-            blkdata[jblk*mblk+nblk+iblk].aval =
-                  &arect[jblk*BLOCK_SIZE*ldav + iblk*BLOCK_SIZE];*/
-      }
       for(int jblk=0; jblk<nblk; jblk++) {
          // Diagonal block part
          for(int iblk=0; iblk<nblk; iblk++)
@@ -734,7 +725,7 @@ public:
       ThreadWork all_thread_work[num_threads];
       // FIXME: Following line is a maximum! Make smaller?
       BlockPool<T, BLOCK_SIZE> global_work((nblk*(nblk+1))/2+mblk*nblk);
-      run_elim(next_elim, mblk, nblk, cdata, blkdata, d, global_work, all_thread_work);
+      run_elim(next_elim, m, n, mblk, nblk, cdata, blkdata, d, global_work, all_thread_work);
 
       // Calculate number of successful eliminations (removing any dummy cols)
       int num_elim = next_elim;
