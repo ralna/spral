@@ -161,7 +161,7 @@ void calculate_update(
    T *d = &node->lcol[ldl*(snode.ncol+node->ndelay_in)];
    T *ld = work.get_ptr<T>(m*n);
    for(int j=0; j<n;) {
-      if(d[2*j+1] == 0.0) {
+      if(j+1==n || std::isfinite(d[2*j+2])) {
          // 1x1 pivot
          // (Actually stored as D^-1 so need to invert it again)
          if(d[2*j] == 0.0) {

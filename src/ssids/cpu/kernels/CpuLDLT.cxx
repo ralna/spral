@@ -288,7 +288,7 @@ private:
                      // Handle zero pivots carefully
                      for(int j=rfrom; j<BLOCK_SIZE; j++) {
                         T v = aval[i*ldav+j];
-                        aval[i*ldav+j] *= 
+                        aval[i*ldav+j] = 
                            (fabs(v)<small) ? 0.0
                                            : std::numeric_limits<T>::infinity()*v;
                         // NB: *v above handles NaNs correctly
@@ -373,6 +373,23 @@ private:
             printf("\n");
          }
       }
+
+      void check_nan_diag(int pad) const {
+         for(int j=pad; j<BLOCK_SIZE; ++j)
+            for(int i=j; i<BLOCK_SIZE; ++i)
+               if(std::isnan(aval[j*ldav+i])) {
+                  printf("NaN at %d %d\n", i, j);
+                  exit(1);
+               }
+      }
+      void check_nan(int rpad, int cpad) const {
+         for(int j=cpad; j<BLOCK_SIZE; ++j)
+            for(int i=rpad; i<BLOCK_SIZE; ++i)
+               if(std::isnan(aval[j*ldav+i])) {
+                  printf("NaN at %d %d\n", i, j);
+                  exit(1);
+               }
+      }
    };
 
    /** Calculates LD from L and D */
@@ -380,7 +397,7 @@ private:
    static
    void calcLD(int m, int n, const T *l, int ldl, const T *d, T *ld, int ldld) {
       for(int col=0; col<n; ) {
-         if(d[2*col+1]==0.0) {
+         if(col+1==n || std::isfinite(d[2*col+2])) {
             // 1x1 pivot
             T d11 = d[2*col];
             if(d11 != 0.0) d11 = 1/d11; // Zero pivots just cause zeroes
