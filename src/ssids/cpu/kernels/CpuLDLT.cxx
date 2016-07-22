@@ -26,6 +26,7 @@
 #include "../AlignedAllocator.hxx"
 #include "../BlockPool.hxx"
 #include "block_ldlt.hxx"
+#include "ldlt_tpp.hxx"
 #include "common.hxx"
 #include "wrappers.hxx"
 
@@ -245,6 +246,12 @@ private:
       }
 
       /** Performs solve with diagonal block \f$L_{21} = A_{21} L_{11}^{-T} D_1^{-1}\f$. Designed for below diagonal. */
+      /* NB: d stores (inverted pivots as follows:
+       * 2x2 ( a b ) stored as d = [ a b Inf c ]
+       *     ( b c )
+       * 1x1  ( a )  stored as d = [ a 0.0 ]
+       * 1x1  ( 0 ) stored as d = [ 0.0 0.0 ]
+       */
       template <enum operation op>
       void apply_pivot(int rfrom, int cfrom, const T *diag, int ldd, const T *d, const T small) {
          if(rfrom >= BLOCK_SIZE || cfrom >= BLOCK_SIZE) return; // no-op
@@ -254,14 +261,14 @@ private:
             host_trsm<T>(SIDE_RIGHT, FILL_MODE_LWR, OP_T, DIAG_UNIT, BLOCK_SIZE-rfrom, BLOCK_SIZE-cfrom, 1.0, &diag[cfrom*ldd+cfrom], ldd, &aval[cfrom*ldav+rfrom], ldav);
             // Perform solve L_21 D^-1
             for(int i=cfrom; i<BLOCK_SIZE; ) {
-               if(d[2*i+1]==0.0) {
+               if(i+1==BLOCK_SIZE || std::isfinite(d[2*i+2])) {
                   // 1x1 pivot
                   T d11 = d[2*i];
                   if(d11 == 0.0) {
                      // Handle zero pivots carefully
                      for(int j=rfrom; j<BLOCK_SIZE; j++) {
                         T v = aval[i*ldav+j];
-                        aval[i*ldav+j] = 
+                        aval[i*ldav+j] *= 
                            (fabs(v)<small) ? 0.0
                                            : std::numeric_limits<T>::infinity()*v;
                         // NB: *v above handles NaNs correctly
@@ -291,7 +298,7 @@ private:
             host_trsm<T>(SIDE_LEFT, FILL_MODE_LWR, OP_N, DIAG_UNIT, BLOCK_SIZE-rfrom, BLOCK_SIZE-cfrom, 1.0, &diag[rfrom*ldd+rfrom], ldd, &aval[cfrom*ldav+rfrom], ldav);
             // Perform solve D^-T L_21^T
             for(int i=rfrom; i<BLOCK_SIZE; ) {
-               if(d[2*i+1]==0.0) {
+               if(i+1==BLOCK_SIZE || std::isfinite(d[2*i+2])) {
                   // 1x1 pivot
                   T d11 = d[2*i];
                   if(d11 == 0.0) {
@@ -336,6 +343,15 @@ private:
                -1.0, &ld[npad*ldld+rfrom], ldld,
                (op==OP_N) ? &l[npad*ldl+cfrom] : &l[cfrom*ldl+npad], ldl,
                1.0, &aval[cfrom*ldav+rfrom], ldav);
+      }
+
+      void print(int rpad, int cpad) const {
+         for(int i=rpad; i<BLOCK_SIZE; ++i) {
+            printf("%d:", i);
+            for(int j=cpad; j<BLOCK_SIZE; ++j)
+               printf(" %e", aval[j*ldav+i]);
+            printf("\n");
+         }
       }
    };
 
@@ -405,9 +421,29 @@ private:
             int *lperm = &global_lperm[blk*BLOCK_SIZE];
             for(int i=0; i<BLOCK_SIZE; i++)
                lperm[i] = i;
+            int dpad = cdata[blk].npad;
             dblk.create_restore_point();
-            cdata[blk].d = &d[2*next_elim] - 2*cdata[blk].npad;
-            block_ldlt<T, BLOCK_SIZE>(cdata[blk].npad, cdata[blk].perm, dblk.aval, dblk.ldav, cdata[blk].d, thread_work.ld, u, small, lperm);
+            cdata[blk].d = &d[2*next_elim] - 2*dpad;
+            if(dpad) {
+               int test = ldlt_tpp_factor(BLOCK_SIZE-dpad, BLOCK_SIZE-dpad,
+                     &lperm[dpad],
+                     &dblk.aval[dpad*(dblk.ldav+1)], dblk.ldav,
+                     &cdata[blk].d[2*dpad], thread_work.ld, BLOCK_SIZE,
+                     u, small);
+               // FIXME: remove following test
+               if(test != BLOCK_SIZE-dpad) {
+                  printf("Failed DEBUG REMOVE FIXME\n");
+                  exit(1);
+               }
+               int *temp = new int[BLOCK_SIZE];
+               for(int i=dpad; i<BLOCK_SIZE; ++i)
+                  temp[i] = cdata[blk].perm[lperm[i]];
+               for(int i=dpad; i<BLOCK_SIZE; ++i)
+                  cdata[blk].perm[i] = temp[i];
+               delete[] temp;
+            } else {
+               block_ldlt<T, BLOCK_SIZE>(dpad, cdata[blk].perm, dblk.aval, dblk.ldav, cdata[blk].d, thread_work.ld, u, small, lperm);
+            }
             // Initialize threshold check (no lock required becuase task depend)
             cdata[blk].npass = BLOCK_SIZE;
          }
@@ -666,15 +702,29 @@ public:
                bdalloc, &blkdata[i]
                );
       int ldav = mblk*BLOCK_SIZE;
-      for(int jblk=0; jblk<nblk; ++jblk)
+      for(int jblk=0; jblk<nblk; ++jblk) {
          for(int iblk=0; iblk<mblk; ++iblk) {
             blkdata[jblk*mblk+iblk].ldav = ldav;
             blkdata[jblk*mblk+iblk].aval =
                &a_copy[(jblk*BLOCK_SIZE)*ldav + iblk*BLOCK_SIZE];
-            /*blkdata[jblk*mblk+iblk].ldav = BLOCK_SIZE;
-            blkdata[jblk*mblk+iblk].aval =
-               &a_copy[(jblk*mblk+iblk)*BLOCK_SIZE*BLOCK_SIZE];*/
          }
+         // Diagonal block part
+         /*for(int iblk=0; iblk<nblk; iblk++) {
+            int roffset = std::max(0, (iblk+1)*BLOCK_SIZE - n);
+            int coffset = std::max(0, (jblk+1)*BLOCK_SIZE - n);
+            printf("Set [%d %d] = %d\n", iblk, jblk, (jblk*BLOCK_SIZE-coffset)*ldav + iblk*BLOCK_SIZE-roffset);
+            blkdata[jblk*mblk+iblk].aval = 
+               &a_copy[(jblk*BLOCK_SIZE-coffset)*ldav + iblk*BLOCK_SIZE-roffset];
+         }*/
+         // Rectangular block below it
+         // FIXME: we can move to in place fact once we can do the following
+         //        currently blocked as blodk_ldlt doesn't cope well with
+         //        partial blocks.
+         /*T *arect = &a_copy[n];
+         for(int iblk=0; iblk<mblk-nblk; iblk++)
+            blkdata[jblk*mblk+nblk+iblk].aval =
+                  &arect[jblk*BLOCK_SIZE*ldav + iblk*BLOCK_SIZE];*/
+      }
       for(int jblk=0; jblk<nblk; jblk++) {
          // Diagonal block part
          for(int iblk=0; iblk<nblk; iblk++)
@@ -710,9 +760,6 @@ public:
          // Account for extra cols as "already eliminated"
          cdata[nblk-1].npad = nblk*BLOCK_SIZE - n;
          cdata[nblk-1].nelim = nblk*BLOCK_SIZE - n;
-         // perm is too small for extra "NaN" rows, adjust to acommodate
-         // Fill out "extra" entries with negative numbers for debugging sanity
-         int coffset = nblk*BLOCK_SIZE - n;
       }
 
       /* Main loop
