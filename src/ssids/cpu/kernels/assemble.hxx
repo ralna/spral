@@ -13,7 +13,6 @@
 #include<cstring>
 #include<memory>
 
-#include "../smalloc.hxx"
 #include "../NumericNode.hxx"
 #include "../SymbolicNode.hxx"
 
@@ -50,11 +49,10 @@ void assemble_node(
 
    /* Get space for node now we know it size using Fortran allocator + zero it*/
    // NB L is  nrow x ncol and D is 2 x ncol (but no D if posdef)
-   size_t len = posdef ? ((size_t) nrow  ) * ncol  // posdef
-                       : ((size_t) nrow+2) * ncol; // indef (includes D)
+   size_t ldl = align_lda<double>(nrow);
+   size_t len = posdef ?  ldl    * ncol  // posdef
+                       : (ldl+2) * ncol; // indef (includes D)
    node->lcol = FADoubleTraits::allocate(factor_alloc_double, len);
-   //if(!(node->lcol = smalloc<T>(alloc, len)))
-   //   throw std::bad_alloc();
    memset(node->lcol, 0, len*sizeof(T));
 
    /* Get space for contribution block + zero it */
@@ -66,7 +64,6 @@ void assemble_node(
    /* Alloc + set perm for expected eliminations at this node (delays are set
     * when they are imported from children) */
    node->perm = FAIntTraits::allocate(factor_alloc_int, ncol); // ncol fully summed variables
-   //node->perm = smalloc<int>(alloc, ncol); // ncol fully summed variables
    for(int i=0; i<snode.ncol; i++)
       node->perm[i] = snode.rlist[i];
 
@@ -78,7 +75,7 @@ void assemble_node(
          long dest = snode.amap[2*i+1] - 1; // amap contains 1-based values
          int c = dest / snode.nrow;
          int r = dest % snode.nrow;
-         long k = c*nrow + r;
+         long k = c*ldl + r;
          if(r >= snode.ncol) k += node->ndelay_in;
          T rscale = scaling[ snode.rlist[r]-1 ];
          T cscale = scaling[ snode.rlist[c]-1 ];
@@ -91,7 +88,7 @@ void assemble_node(
          long dest = snode.amap[2*i+1] - 1; // amap contains 1-based values
          int c = dest / snode.nrow;
          int r = dest % snode.nrow;
-         long k = c*nrow + r;
+         long k = c*ldl + r;
          if(r >= snode.ncol) k += node->ndelay_in;
          node->lcol[k] = aval[src];
       }
@@ -114,8 +111,8 @@ void assemble_node(
           * (i.e. become the last rows as in lower triangular format) */
          for(int i=0; i<child->ndelay_out; i++) {
             // Add delayed rows (from delayed cols)
-            T *dest = &node->lcol[delay_col*(nrow+1)];
-            int lds = csnode.nrow + child->ndelay_in;
+            T *dest = &node->lcol[delay_col*(ldl+1)];
+            int lds = align_lda<T>(csnode.nrow + child->ndelay_in);
             T *src = &child->lcol[(child->nelim+i)*(lds+1)];
             node->perm[delay_col] = child->perm[child->nelim+i];
             for(int j=0; j<child->ndelay_out-i; j++) {
@@ -126,8 +123,8 @@ void assemble_node(
             src = &child->lcol[child->nelim*lds + child->ndelay_in +i*lds];
             for(int j=csnode.ncol; j<csnode.nrow; j++) {
                int r = map[ csnode.rlist[j] ];
-               if(r < ncol) dest[r*nrow+delay_col] = src[j];
-               else         dest[delay_col*nrow+r] = src[j];
+               if(r < ncol) dest[r*ldl+delay_col] = src[j];
+               else         dest[delay_col*ldl+r] = src[j];
             }
             delay_col++;
          }
@@ -140,7 +137,7 @@ void assemble_node(
                T *src = &child->contrib[i*cm];
                if(c < snode.ncol) {
                   // Contribution added to lcol
-                  int ldd = nrow;
+                  int ldd = align_lda<T>(nrow);
                   T *dest = &node->lcol[c*ldd];
                   for(int j=i; j<cm; j++) {
                      int r = map[ csnode.rlist[csnode.ncol+j] ];
@@ -166,7 +163,7 @@ void assemble_node(
    // FIXME: debug remove
    /*printf("Post asm node:\n");
    for(int i=0; i<nrow; i++) {
-      for(int j=0; j<ncol; j++) printf(" %10.2e", node->lcol[j*nrow+i]);
+      for(int j=0; j<ncol; j++) printf(" %10.2e", node->lcol[j*ldl+i]);
       printf("\n");
    }*/
    /*printf("Post asm contrib:\n");

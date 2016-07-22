@@ -71,6 +71,7 @@ void add_a(
       T const* scaling
       ) {
    double *lcol = lcol_ + symb_[si].lcol_offset;
+   size_t ldl = align_lda<double>(snode.nrow);
    if(scaling) {
       /* Scaling to apply */
       for(int i=0; i<snode.num_a; i++) {
@@ -80,14 +81,18 @@ void add_a(
          int r = dest % snode.nrow;
          T rscale = scaling[ snode.rlist[r]-1 ];
          T cscale = scaling[ snode.rlist[c]-1 ];
-         lcol[dest] = rscale * aval[src] * cscale;
+         size_t k = c*ldl + r;
+         lcol[k] = rscale * aval[src] * cscale;
       }
    } else {
       /* No scaling to apply */
       for(int i=0; i<snode.num_a; i++) {
          long src  = snode.amap[2*i+0] - 1; // amap contains 1-based values
          long dest = snode.amap[2*i+1] - 1; // amap contains 1-based values
-         lcol[dest] = aval[src];
+         int c = dest / snode.nrow;
+         int r = dest % snode.nrow;
+         size_t k = c*ldl + r;
+         lcol[k] = aval[src];
       }
    }
 }
@@ -139,7 +144,7 @@ void assemble(
                T *src = &child->contrib[i*cm];
                if(c < snode.ncol) {
                   // Contribution added to lcol
-                  int ldd = nrow;
+                  int ldd = align_lda<double>(nrow);
                   T *dest = &node->lcol[c*ldd];
                   for(int j=i; j<cm; j++) {
                      int r = map[ csnode.rlist[csnode.ncol+j] ];

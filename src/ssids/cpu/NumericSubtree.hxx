@@ -196,7 +196,8 @@ public:
          for(int ni=0; ni<symb_.nnodes_; ni++) {
             int m = symb_[ni].nrow + nodes_[ni].ndelay_in;
             int n = symb_[ni].ncol + nodes_[ni].ndelay_in;
-            T *d = nodes_[ni].lcol + m*n;
+            int ldl = align_lda<T>(m);
+            T *d = nodes_[ni].lcol + n*ldl;
             for(int i=0; i<nodes_[ni].nelim; ) {
                T a11 = d[2*i];
                T a21 = d[2*i+1];
@@ -237,6 +238,7 @@ public:
                               : nodes_[ni].nelim;
          int ndin = (posdef) ? 0
                              : nodes_[ni].ndelay_in;
+         int ldl = align_lda<T>(m+ndin);
 
          /* Build map (indef only) */
          int const *map;
@@ -261,9 +263,9 @@ public:
 
          /* Perform dense solve */
          if(posdef) {
-            cholesky_solve_fwd(m, n, nodes_[ni].lcol, m, nrhs, xlocal, symb_.n);
+            cholesky_solve_fwd(m, n, nodes_[ni].lcol, ldl, nrhs, xlocal, symb_.n);
          } else { /* indef */
-            ldlt_solve_fwd(m+ndin, nelim, nodes_[ni].lcol, m+ndin, nrhs, xlocal,
+            ldlt_solve_fwd(m+ndin, nelim, nodes_[ni].lcol, ldl, nrhs, xlocal,
                   symb_.n);
          }
 
@@ -317,19 +319,20 @@ public:
          /* Gather into dense vector xlocal */
          int blkm = (do_bwd) ? m+ndin
                              : nelim;
+         int ldl = align_lda<T>(blkm);
          for(int r=0; r<nrhs; ++r)
          for(int i=0; i<blkm; ++i)
             xlocal[r*symb_.n+i] = x[r*ldx + map[i]-1];
 
          /* Perform dense solve */
          if(posdef) {
-            cholesky_solve_bwd(m, n, nodes_[ni].lcol, m, nrhs, xlocal, symb_.n);
+            cholesky_solve_bwd(m, n, nodes_[ni].lcol, ldl, nrhs, xlocal, symb_.n);
          } else {
             if(do_diag) ldlt_solve_diag(
-                  nelim, &nodes_[ni].lcol[(m+ndin)*(n+ndin)], xlocal
+                  nelim, &nodes_[ni].lcol[(n+ndin)*ldl], xlocal
                   );
             if(do_bwd) ldlt_solve_bwd(
-                  m+ndin, nelim, nodes_[ni].lcol, m+ndin, nrhs, xlocal, symb_.n
+                  m+ndin, nelim, nodes_[ni].lcol, ldl, nrhs, xlocal, symb_.n
                   );
          }
 
@@ -365,15 +368,17 @@ public:
          for(int ni=0; ni<symb_.nnodes_; ++ni) {
             int blkm = symb_[ni].nrow;
             int nelim = symb_[ni].ncol;
+            int ldl = align_lda<T>(blkm);
             for(int i=0; i<nelim; ++i)
-               *(d++) = nodes_[ni].lcol[i*(blkm+1)];
+               *(d++) = nodes_[ni].lcol[i*(ldl+1)];
          }
       } else { /*indef*/
          for(int ni=0, piv=0; ni<symb_.nnodes_; ++ni) {
             int blkm = symb_[ni].nrow + nodes_[ni].ndelay_in;
             int blkn = symb_[ni].ncol + nodes_[ni].ndelay_in;
+            int ldl = align_lda<T>(blkm);
             int nelim = nodes_[ni].nelim;
-            double const* dptr = &nodes_[ni].lcol[blkm*blkn];
+            double const* dptr = &nodes_[ni].lcol[blkn*ldl];
             for(int i=0; i<nelim; ) {
                if(dptr[2*i+1] != 0.0) {
                   /* 2x2 pivot */
@@ -409,8 +414,9 @@ public:
       for(int ni=0; ni<symb_.nnodes_; ++ni) {
          int blkm = symb_[ni].nrow + nodes_[ni].ndelay_in;
          int blkn = symb_[ni].ncol + nodes_[ni].ndelay_in;
+         int ldl = align_lda<T>(blkm);
          int nelim = nodes_[ni].nelim;
-         double* dptr = &nodes_[ni].lcol[blkm*blkn];
+         double* dptr = &nodes_[ni].lcol[blkn*ldl];
          for(int i=0; i<nelim; ++i) {
             dptr[2*i+0] = *(d++);
             dptr[2*i+1] = *(d++);
@@ -423,13 +429,14 @@ public:
 			printf("== Node %d ==\n", node);
 			int m = symb_[node].nrow + nodes_[node].ndelay_in;
 			int n = symb_[node].ncol + nodes_[node].ndelay_in;
+         int ldl = align_lda<T>(m);
          int nelim = nodes_[node].nelim;
 			int const* rlist = &symb_[node].rlist[ symb_[node].ncol ];
 			for(int i=0; i<m; ++i) {
 				if(i<n) printf("%d%s:", nodes_[node].perm[i], (i<nelim)?"X":"D");
 				else    printf("%d:", rlist[i-n]);
-				for(int j=0; j<n; j++) printf(" %10.2e", nodes_[node].lcol[j*m+i]);
-            T const* d = &nodes_[node].lcol[m*n];
+				for(int j=0; j<n; j++) printf(" %10.2e", nodes_[node].lcol[j*ldl+i]);
+            T const* d = &nodes_[node].lcol[n*ldl];
 				if(!posdef && i<nelim)
                printf("  d: %10.2e %10.2e", d[2*i+0], d[2*i+1]);
 		      printf("\n");

@@ -65,21 +65,22 @@ void factor_node_indef(
    /* Extract useful information about node */
    int m = snode.nrow + node->ndelay_in;
    int n = snode.ncol + node->ndelay_in;
+   size_t ldl = align_lda<T>(m);
    T *lcol = node->lcol;
-   T *d = &node->lcol[ ((long) m)*n ];
+   T *d = &node->lcol[ n*ldl ];
    int *perm = node->perm;
 
    /* Perform factorization */
    typedef CpuLDLT<T, BLOCK_SIZE> CpuLDLTSpec;
    //typedef CpuLDLT<T, BLOCK_SIZE, 5, true> CpuLDLTSpecDebug; // FIXME: debug remove
-   node->nelim = CpuLDLTSpec(options->u, options->small).factor(m, n, perm, lcol, m, d);
+   node->nelim = CpuLDLTSpec(options->u, options->small).factor(m, n, perm, lcol, ldl, d);
 
    /* Finish factorization worth simplistic code */
    if(node->nelim < n) {
       int nelim = node->nelim;
       stats.not_first_pass += n-nelim;
       T *ld = new T[2*(m-nelim)]; // FIXME: Use work
-      node->nelim += ldlt_tpp_factor(m-nelim, n-nelim, &perm[nelim], &lcol[nelim*(m+1)], m, &d[2*nelim], ld, m-nelim, options->u, options->small, nelim, &lcol[nelim], m);
+      node->nelim += ldlt_tpp_factor(m-nelim, n-nelim, &perm[nelim], &lcol[nelim*(ldl+1)], ldl, &d[2*nelim], ld, m-nelim, options->u, options->small, nelim, &lcol[nelim], ldl);
       stats.not_second_pass += n - node->nelim;
       delete[] ld;
    }
@@ -99,12 +100,13 @@ void factor_node_posdef(
    /* Extract useful information about node */
    int m = snode.nrow;
    int n = snode.ncol;
+   int ldl = align_lda<T>(m);
    T *lcol = node->lcol;
    T *contrib = node->contrib;
 
    /* Perform factorization */
    int flag;
-   cholesky_factor(m, n, lcol, m, 1.0, contrib, m-n, options->cpu_task_block_size, &flag);
+   cholesky_factor(m, n, lcol, ldl, 1.0, contrib, m-n, options->cpu_task_block_size, &flag);
    #pragma omp taskwait
    if(flag!=-1) {
       node->nelim = flag+1;
@@ -157,7 +159,7 @@ void calculate_update(
 
    // Calculate LD
    T *lcol = &node->lcol[snode.ncol+node->ndelay_in];
-   int ldl = snode.nrow + node->ndelay_in;
+   int ldl = align_lda<T>(snode.nrow + node->ndelay_in);
    T *d = &node->lcol[ldl*(snode.ncol+node->ndelay_in)];
    T *ld = work.get_ptr<T>(m*n);
    for(int j=0; j<n;) {

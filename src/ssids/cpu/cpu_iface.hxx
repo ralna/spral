@@ -34,6 +34,15 @@ struct cpu_factor_stats {
    int not_second_pass;
 };
 
+/** Return nearest value greater than supplied lda that is multiple of alignment */
+template<typename T>
+size_t align_lda(size_t lda) {
+   int const align = 32;
+   static_assert(align % sizeof(T) == 0, "Can only align if T divides align");
+   int const Talign = align / sizeof(T);
+   return Talign*((lda-1)/Talign + 1);
+}
+
 }}} /* namespaces spral::ssids::cpu */
 
 extern "C" {

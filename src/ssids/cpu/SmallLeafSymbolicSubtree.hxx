@@ -60,7 +60,8 @@ public:
          // FIXME: subtract ncol off rlist for elim'd vars
          nodes_[ni-sa].rlist = &newrlist[rptr[ni]-rptr[sa]];
          nodes_[ni-sa].lcol_offset = nfactor_;
-         nfactor_ += static_cast<size_t>(nodes_[ni-sa].nrow) * nodes_[ni-sa].ncol;
+         size_t ldl = align_lda<double>(nodes_[ni-sa].nrow);
+         nfactor_ += nodes_[ni-sa].ncol*ldl;
       }
       /* Construct rlist_ being offsets into parent node */
       for(int ni=sa; ni<=en; ++ni) {
