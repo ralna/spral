@@ -189,10 +189,7 @@ public:
       }
 
       // Count stats
-      // FIXME: gross hack for compat with bub (which needs to differentiate
-      // between a natural zero and a 2x2 factor's second entry without counting)
-      // SSIDS original data format [a11 a21 a22 xxx] seems more bizzare than
-      // bub one [a11 a21 inf a22]
+      // FIXME: Do this as we go along...
       if(posdef) {
          // no real changes to stats from zero initialization
       } else { // indefinite
@@ -200,13 +197,10 @@ public:
             int m = symb_[ni].nrow + nodes_[ni].ndelay_in;
             int n = symb_[ni].ncol + nodes_[ni].ndelay_in;
             T *d = nodes_[ni].lcol + m*n;
-            for(int i=0; i<nodes_[ni].nelim; i++)
-               if(d[2*i] == std::numeric_limits<T>::infinity())
-                  d[2*i] = d[2*i+1];
             for(int i=0; i<nodes_[ni].nelim; ) {
                T a11 = d[2*i];
                T a21 = d[2*i+1];
-               if(a21 == 0.0) {
+               if(i+1==nodes_[ni].nelim || std::isfinite(d[2*i+2])) {
                   // 1x1 pivot (or zero)
                   if(a11 == 0.0) stats->num_zero++;
                   if(a11 < 0.0) stats->num_neg++;

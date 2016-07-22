@@ -964,7 +964,7 @@ void ldlt_solve_fwd(int m, int n, T const* l, int ldl, int nrhs, T* x, int ldx) 
 template <typename T>
 void ldlt_solve_diag(int n, T const* d, T* x) {
    for(int i=0; i<n; ) {
-      if(d[2*i+1]==0.0) {
+      if(i+1==n || std::isfinite(d[2*i+2])) {
          // 1x1 pivot
          T d11 = d[2*i];
          x[i] *= d11;
