@@ -133,31 +133,33 @@ private:
             }
       }
 
-      void create_restore_point() {
-         for(int j=0; j<BLOCK_SIZE; j++)
-         for(int i=0; i<BLOCK_SIZE; i++)
+      void create_restore_point(int pad) {
+         for(int j=pad; j<BLOCK_SIZE; j++)
+         for(int i=pad; i<BLOCK_SIZE; i++)
             lwork[j*BLOCK_SIZE+i] = aval[j*ldav+i];
       }
 
-      void create_restore_point_with_row_perm(const int *lperm) {
-         for(int j=0; j<BLOCK_SIZE; j++)
-         for(int i=0; i<BLOCK_SIZE; i++) {
+      /** Apply row permutation to block at same time as taking a copy */
+      void create_restore_point_with_row_perm(int rpad, int cpad, const int *lperm) {
+         for(int j=cpad; j<BLOCK_SIZE; j++)
+         for(int i=rpad; i<BLOCK_SIZE; i++) {
             int r = lperm[i];
             lwork[j*BLOCK_SIZE+i] = aval[j*ldav+r];
          }
-         for(int j=0; j<BLOCK_SIZE; j++)
-         for(int i=0; i<BLOCK_SIZE; i++)
+         for(int j=cpad; j<BLOCK_SIZE; j++)
+         for(int i=rpad; i<BLOCK_SIZE; i++)
             aval[j*ldav+i] = lwork[j*BLOCK_SIZE+i];
       }
 
-      void create_restore_point_with_col_perm(const int *lperm) {
-         for(int j=0; j<BLOCK_SIZE; j++) {
+      /** Apply column permutation to block at same time as taking a copy */
+      void create_restore_point_with_col_perm(int rpad, int cpad, const int *lperm) {
+         for(int j=cpad; j<BLOCK_SIZE; j++) {
             int c = lperm[j];
-            for(int i=0; i<BLOCK_SIZE; i++)
+            for(int i=rpad; i<BLOCK_SIZE; i++)
                lwork[j*BLOCK_SIZE+i] = aval[c*ldav+i];
          }
-         for(int j=0; j<BLOCK_SIZE; j++)
-         for(int i=0; i<BLOCK_SIZE; i++)
+         for(int j=cpad; j<BLOCK_SIZE; j++)
+         for(int i=rpad; i<BLOCK_SIZE; i++)
             aval[j*ldav+i] = lwork[j*BLOCK_SIZE+i];
       }
 
@@ -422,7 +424,7 @@ private:
             for(int i=0; i<BLOCK_SIZE; i++)
                lperm[i] = i;
             int dpad = cdata[blk].npad;
-            dblk.create_restore_point();
+            dblk.create_restore_point(dpad);
             cdata[blk].d = &d[2*next_elim] - 2*dpad;
             if(dpad) {
                int test = ldlt_tpp_factor(BLOCK_SIZE-dpad, BLOCK_SIZE-dpad,
@@ -463,7 +465,9 @@ private:
                const int *lperm = &global_lperm[blk*BLOCK_SIZE];
                // Perform necessary operations
                cblk.lwork = global_work.get_wait();
-               cblk.create_restore_point_with_row_perm(lperm);
+               int rpad = cdata[blk].npad;
+               int cpad = cdata[jblk].npad;
+               cblk.create_restore_point_with_row_perm(rpad, cpad, lperm);
                cblk.template apply_pivot<OP_T>(cdata[blk].npad, cdata[jblk].nelim, dblk.aval, dblk.ldav, cdata[blk].d, small);
                // Update threshold check
                int blkpass = cblk.template check_threshold<OP_T>(cdata[blk].npad, cdata[jblk].nelim, u);
@@ -487,11 +491,14 @@ private:
                const int *lperm = &global_lperm[blk*BLOCK_SIZE];
                // Perform necessary operations
                rblk.lwork = global_work.get_wait();
-               rblk.create_restore_point_with_col_perm(lperm);
+               int rpad = (iblk < nblk) ? cdata[iblk].npad
+                                        : std::max(0, (iblk-nblk+1)*BLOCK_SIZE-(m-n));
+               int cpad = cdata[blk].npad;
+               rblk.create_restore_point_with_col_perm(rpad, cpad, lperm);
+               rblk.template apply_pivot<OP_N>(rpad, cdata[blk].npad, dblk.aval, dblk.ldav, cdata[blk].d, small);
+               // Update threshold check
                int rfrom = (iblk < nblk) ? cdata[iblk].nelim
                                          : std::max(0, (iblk-nblk+1)*BLOCK_SIZE-(m-n));
-               rblk.template apply_pivot<OP_N>(rfrom, cdata[blk].npad, dblk.aval, dblk.ldav, cdata[blk].d, small);
-               // Update threshold check
                int blkpass = rblk.template check_threshold<OP_N>(rfrom, cdata[blk].npad, u);
                omp_set_lock(&cdata[blk].lock);
                if(blkpass < cdata[blk].npass)
@@ -709,13 +716,12 @@ public:
                &a_copy[(jblk*BLOCK_SIZE)*ldav + iblk*BLOCK_SIZE];
          }
          // Diagonal block part
-         /*for(int iblk=0; iblk<nblk; iblk++) {
+         for(int iblk=0; iblk<nblk; iblk++) {
             int roffset = std::max(0, (iblk+1)*BLOCK_SIZE - n);
             int coffset = std::max(0, (jblk+1)*BLOCK_SIZE - n);
-            printf("Set [%d %d] = %d\n", iblk, jblk, (jblk*BLOCK_SIZE-coffset)*ldav + iblk*BLOCK_SIZE-roffset);
             blkdata[jblk*mblk+iblk].aval = 
                &a_copy[(jblk*BLOCK_SIZE-coffset)*ldav + iblk*BLOCK_SIZE-roffset];
-         }*/
+         }
          // Rectangular block below it
          // FIXME: we can move to in place fact once we can do the following
          //        currently blocked as blodk_ldlt doesn't cope well with
