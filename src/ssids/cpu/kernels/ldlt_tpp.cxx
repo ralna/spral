@@ -25,10 +25,12 @@ namespace spral { namespace ssids { namespace cpu {
 namespace {
 
 /** Returns true if all entries in col are less than small in abs value */
-bool check_col_small(int from, int to, double const* a, double small) {
+bool check_col_small(int idx, int from, int to, double const* a, int lda, double small) {
    bool check = true;
-   for(int idx=from; idx<to; ++idx)
-      check = check && (std::abs(a[idx]) < small);
+   for(int c=from; c<idx; ++c)
+      check = check && (std::abs(a[c*lda+idx]) < small);
+   for(int r=idx; r<to; ++r)
+      check = check && (std::abs(a[idx*lda+r]) < small);
    return check;
 }
 
@@ -179,7 +181,7 @@ int ldlt_tpp_factor(int m, int n, int* perm, double* a, int lda, double* d, doub
          printf("\n");
       }*/
       // Need to check if col nelim is zero now or it gets missed
-      if(check_col_small(nelim, m, &a[nelim*lda], small)) {
+      if(check_col_small(nelim, nelim, m, a, lda, small)) {
          // Record zero pivot
          //printf("Zero pivot %d\n", nelim);
          swap_cols(nelim, nelim, m, n, perm, a, lda, nleft, aleft, ldleft);
@@ -193,7 +195,7 @@ int ldlt_tpp_factor(int m, int n, int* perm, double* a, int lda, double* d, doub
       for(p=nelim+1; p<n; ++p) {
          //printf("Consider p=%d\n", p);
          // Check if column p is effectively zero
-         if(check_col_small(p, m, &a[p*lda], small)) {
+         if(check_col_small(p, nelim, m, a, lda, small)) {
             // Record zero pivot
             //printf("Zero pivot\n");
             swap_cols(p, nelim, m, n, perm, a, lda, nleft, aleft, ldleft);
