@@ -114,23 +114,11 @@ private:
       void load(int nrow, int ncol, T *a, int lda) {
          int roffset = BLOCK_SIZE-nrow;
          int coffset = BLOCK_SIZE-ncol;
-         /*// Pad missing columns with NaNs
-         T *av = aval;
-         for(int j=0; j<coffset; j++)
-            for(int i=0; i<BLOCK_SIZE; i++)
-               aval[j*ldav+i] = std::numeric_limits<T>::quiet_NaN();
-         av += coffset*ldav;
-         // Pad missing rows with NaNs
-         for(int j=0; j<ncol; j++)
-            for(int i=0; i<roffset; i++)
-               av[j*ldav+i] = std::numeric_limits<T>::quiet_NaN();
-         av += roffset;*/
          // Load actual data
          T* av = &aval[coffset*ldav+roffset];
          for(int j=0; j<ncol; j++)
-            for(int i=0; i<nrow; i++) {
-               av[j*ldav+i] = a[j*lda+i];
-            }
+         for(int i=0; i<nrow; i++)
+            av[j*ldav+i] = a[j*lda+i];
       }
 
       void create_restore_point(int pad) {
@@ -266,7 +254,7 @@ private:
       }
 
       /** Performs solve with diagonal block \f$L_{21} = A_{21} L_{11}^{-T} D_1^{-1}\f$. Designed for below diagonal. */
-      /* NB: d stores (inverted pivots as follows:
+      /* NB: d stores (inverted) pivots as follows:
        * 2x2 ( a b ) stored as d = [ a b Inf c ]
        *     ( b c )
        * 1x1  ( a )  stored as d = [ a 0.0 ]
@@ -365,6 +353,7 @@ private:
                1.0, &aval[cfrom*ldav+rfrom], ldav);
       }
 
+      // FIXME: debug only remove
       void print(int rpad, int cpad) const {
          for(int i=rpad; i<BLOCK_SIZE; ++i) {
             printf("%d:", i);
@@ -374,6 +363,7 @@ private:
          }
       }
 
+      // FIXME: debug only remove
       void check_nan_diag(int pad) const {
          for(int j=pad; j<BLOCK_SIZE; ++j)
             for(int i=j; i<BLOCK_SIZE; ++i)
@@ -382,6 +372,8 @@ private:
                   exit(1);
                }
       }
+
+      // FIXME: debug only remove
       void check_nan(int rpad, int cpad) const {
          for(int j=cpad; j<BLOCK_SIZE; ++j)
             for(int i=rpad; i<BLOCK_SIZE; ++i)
@@ -428,6 +420,7 @@ private:
 
    bool run_elim(int &next_elim, int const m, int const n, const int mblk, const int nblk, struct col_data *cdata, BlockData *blkdata, T* d, BlockPool<T, BLOCK_SIZE> &global_work, ThreadWork all_thread_work[]) {
       bool changed = false;
+      //printf("ENTRY %d %d vis %d %d %d\n", m, n, mblk, nblk, BLOCK_SIZE);
 
       // FIXME: is global_lperm really the best way?
       int *global_lperm = new int[nblk*BLOCK_SIZE];
@@ -439,7 +432,7 @@ private:
 
          if(debug) {
             printf("Bcol %d:\n", blk);
-            print_mat(mblk, nblk, blkdata, cdata);
+            print_mat(mblk, nblk, m, n, blkdata, cdata);
          }
 
          // Factor diagonal: depend on cdata[blk] as we do some init here
@@ -453,8 +446,8 @@ private:
             //printf("Factor(%d)\n", blk);
             int thread_num = omp_get_thread_num();
             ThreadWork &thread_work = all_thread_work[thread_num];
-            blkdata[blk*mblk+blk].lwork = global_work.get_wait();
             BlockData &dblk = blkdata[blk*mblk+blk];
+            dblk.lwork = global_work.get_wait();
             int *lperm = &global_lperm[blk*BLOCK_SIZE];
             for(int i=0; i<BLOCK_SIZE; i++)
                lperm[i] = i;
@@ -689,24 +682,26 @@ private:
             printf("%d%s:", perm[row], eliminated[row]?"X":" ");
          else
             printf("%d%s:", row, "U");
-         for(int col=0; col<n; col++)
+         for(int col=0; col<std::min(n,row+1); col++)
             printf(" %10.4f", a[col*lda+row]);
          printf("\n");
       }
    }
 
    static
-   void print_mat(int mblk, int nblk, const BlockData *blkdata, const struct col_data *cdata) {
+   void print_mat(int mblk, int nblk, int m, int n, const BlockData *blkdata, const struct col_data *cdata) {
       for(int rblk=0; rblk<mblk; rblk++) {
-         for(int row=0; row<BLOCK_SIZE; row++) {
+         int rpad = (rblk < nblk) ? cdata[rblk].npad
+                                  : std::max(0, (rblk-nblk+1)*BLOCK_SIZE-(m-n));
+         for(int row=rpad; row<BLOCK_SIZE; row++) {
             int r = rblk*BLOCK_SIZE+row;
             if(r < nblk*BLOCK_SIZE)
                printf("%d%s:", cdata[rblk].perm[row], (row<cdata[rblk].nelim)?"X":" ");
             else
                printf("%d%s:", r, "U");
-            for(int cblk=0; cblk<nblk; cblk++) {
+            for(int cblk=0; cblk<std::min(rblk+1,nblk); cblk++) {
                const BlockData &blk = blkdata[cblk*mblk+rblk];
-               for(int col=0; col<BLOCK_SIZE; col++)
+               for(int col=cdata[cblk].npad; col<((rblk==cblk) ? row+1 : BLOCK_SIZE); col++)
                   printf(" %10.4f", blk.aval[col*blk.ldav+row]);
             }
             printf("\n");
@@ -733,7 +728,10 @@ public:
       int next_elim = 0;
 
       /* Load data block-wise */
-      T* a_copy = (T*) aligned_alloc(32, mblk*nblk*BLOCK_SIZE*BLOCK_SIZE*sizeof(double));
+      T* a_copy = (T*) aligned_alloc(32, std::max(
+               mblk*nblk*BLOCK_SIZE*BLOCK_SIZE,
+               n*lda
+               )*sizeof(T));
       typedef typename std::allocator_traits<Alloc>::template rebind_alloc<BlockData> BlockDataAlloc;
       BlockDataAlloc bdalloc(alloc);
       BlockData *blkdata = std::allocator_traits<BlockDataAlloc>::allocate(
@@ -743,7 +741,7 @@ public:
          std::allocator_traits<BlockDataAlloc>::construct(
                bdalloc, &blkdata[i]
                );
-      int ldav = mblk*BLOCK_SIZE;
+      int ldav = lda;
       for(int jblk=0; jblk<nblk; ++jblk) {
          for(int iblk=0; iblk<mblk; ++iblk) {
             blkdata[jblk*mblk+iblk].ldav = ldav;
@@ -759,13 +757,16 @@ public:
          }
          // Rectangular block below it
          T *arect = &a_copy[n];
-         for(int iblk=0; iblk<mblk-nblk; iblk++)
+         for(int iblk=0; iblk<mblk-nblk; iblk++) {
+            int roffset = std::max(0, (iblk+1)*BLOCK_SIZE - (m-n));
+            int coffset = std::max(0, (jblk+1)*BLOCK_SIZE - n);
             blkdata[jblk*mblk+nblk+iblk].aval =
-                  &arect[jblk*BLOCK_SIZE*ldav + iblk*BLOCK_SIZE];
+                  &arect[(jblk*BLOCK_SIZE-coffset)*ldav + iblk*BLOCK_SIZE-roffset];
+         }
       }
       for(int jblk=0; jblk<nblk; jblk++) {
          // Diagonal block part
-         for(int iblk=0; iblk<nblk; iblk++)
+         for(int iblk=jblk; iblk<nblk; iblk++)
             blkdata[jblk*mblk+iblk].init(
                   ((iblk+1)*BLOCK_SIZE<n) ? BLOCK_SIZE : (n - iblk*BLOCK_SIZE),
                   ((jblk+1)*BLOCK_SIZE<n) ? BLOCK_SIZE : (n - jblk*BLOCK_SIZE),
@@ -777,7 +778,7 @@ public:
          for(int iblk=0; iblk<mblk-nblk; iblk++)
             blkdata[jblk*mblk+nblk+iblk].init(
                   ((iblk+1)*BLOCK_SIZE<m2) ? BLOCK_SIZE : (m2 - iblk*BLOCK_SIZE),
-                  ((jblk+1)*BLOCK_SIZE<n) ? BLOCK_SIZE : (n - jblk*BLOCK_SIZE),
+                  std:: min(n - jblk*BLOCK_SIZE, BLOCK_SIZE),
                   &arect[jblk*BLOCK_SIZE*lda + iblk*BLOCK_SIZE], lda
                   );
       }
