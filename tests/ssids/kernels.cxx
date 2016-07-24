@@ -11,6 +11,8 @@
 
 #include <cstdio>
 
+#include <fenv.h>
+
 #include "kernels/framework.hxx"
 
 #include "kernels/block_ldlt.hxx"
@@ -21,6 +23,14 @@
 
 int main(void) {
    int nerr = 0;
+
+   // Enable trapping of bad numerics (NB: can give false positives
+   // eg in upper triangle if it's deliberately allowed to contain rubbish)
+#if 0
+   feenableexcept(FE_INVALID | // NaNs
+                  FE_OVERFLOW | // Infs
+                  FE_DIVBYZERO); // divide by zero
+#endif
 
    nerr += run_cholesky_tests();
    nerr += run_ldlt_nopiv_tests();
