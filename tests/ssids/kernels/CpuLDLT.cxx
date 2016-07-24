@@ -18,6 +18,7 @@
 #include "ssids/cpu/kernels/wrappers.hxx"
 #include "ssids/cpu/kernels/CpuLDLT.cxx"
 #include "ssids/cpu/kernels/ldlt_tpp.hxx"
+#include "ssids/cpu/cpu_iface.hxx"
 
 using namespace spral::ssids::cpu;
 
@@ -278,7 +279,7 @@ int ldlt_test(T u, T small, bool delays, bool singular, bool dblk_singular, int 
    bool failed = false;
 
    // Generate test matrix
-   int lda = m;
+   int lda = align_lda<T>(m);
    double* a = new T[m*lda];
    gen_sym_indef(m, a, lda);
    modify_test_matrix<T, BLOCK_SIZE>(singular, delays, dblk_singular, m, n, a, lda);
@@ -414,50 +415,38 @@ int run_CpuLDLT_tests() {
    int nerr = 0;
 
    /* Simple tests, rectangular */
-   {
-      const int BLOCK_SIZE = 2;
-      TEST((
-         ldlt_test<double, BLOCK_SIZE, false> (0.01, 1e-20, false, false, false, 2*BLOCK_SIZE, 1*BLOCK_SIZE)
-         ));
-      TEST((
-         ldlt_test<double, BLOCK_SIZE, false> (0.01, 1e-20, false, false, false, 2, 1)
-         ));
-      TEST((
-         ldlt_test<double, BLOCK_SIZE, false> (0.01, 1e-20, false, false, false, 5, 3)
-         ));
-      TEST((
-         ldlt_test<double, BLOCK_SIZE, false> (0.01, 1e-20, false, false, false, 4*BLOCK_SIZE, 1*BLOCK_SIZE)
-         ));
-   }
-   {
-      const int BLOCK_SIZE = 8;
-      TEST((
-         ldlt_test<double, BLOCK_SIZE, false> (0.01, 1e-20, false, false, false, 8*BLOCK_SIZE, 3*BLOCK_SIZE)
-         ));
-      TEST((
-         ldlt_test<double, BLOCK_SIZE, false> (0.01, 1e-20, false, false, false, 23, 9)
-         ));
-   }
+   TEST((
+      ldlt_test<double, 2, false> (0.01, 1e-20, false, false, false, 2, 1)
+      ));
+   TEST((
+      ldlt_test<double, 2, false> (0.01, 1e-20, false, false, false, 4, 2)
+      ));
+   TEST((
+      ldlt_test<double, 2, false> (0.01, 1e-20, false, false, false, 5, 3)
+      ));
+   TEST((
+      ldlt_test<double, 2, false> (0.01, 1e-20, false, false, false, 8, 2)
+      ));
+   TEST((
+      ldlt_test<double, 8, false> (0.01, 1e-20, false, false, false, 64, 24)
+      ));
+   TEST((
+      ldlt_test<double, 8, false> (0.01, 1e-20, false, false, false, 23, 9)
+      ));
 
    /* Simple tests, rectangular, non-singular, with delays */
-   {
-      const int BLOCK_SIZE = 2;
-      TEST((
-         ldlt_test<double, BLOCK_SIZE, false> (0.01, 1e-20, true, false, false, 2*BLOCK_SIZE, 1*BLOCK_SIZE)
-         ));
-      TEST((
-         ldlt_test<double, BLOCK_SIZE, false> (0.01, 1e-20, true, false, false, 4*BLOCK_SIZE, 1*BLOCK_SIZE)
-         ));
-   }
-   {
-      const int BLOCK_SIZE = 8;
-      TEST((
-         ldlt_test<double, BLOCK_SIZE, false> (0.01, 1e-20, true, false, false, 8*BLOCK_SIZE, 3*BLOCK_SIZE)
-         ));
-      TEST((
-         ldlt_test<double, BLOCK_SIZE, false> (0.01, 1e-20, true, false, false, 23, 9)
-         ));
-   }
+   TEST((
+      ldlt_test<double, 2, false> (0.01, 1e-20, true, false, false, 4, 2)
+      ));
+   TEST((
+      ldlt_test<double, 2, false> (0.01, 1e-20, true, false, false, 8, 2)
+      ));
+   TEST((
+      ldlt_test<double, 8, false> (0.01, 1e-20, true, false, false, 64, 24)
+      ));
+   TEST((
+      ldlt_test<double, 8, false> (0.01, 1e-20, true, false, false, 23, 9)
+      ));
 
    /* Simple tests, square, non-singular, no delays */
    {
