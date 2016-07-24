@@ -234,15 +234,15 @@ void update_1x1(int p, T *a, int lda, const T *ld) {
          a[c*lda+r] -= ld[c]*a[p*lda+r];
 #else
    const int vlen = SimdVec<T>::vector_length;
+   const int unroll=4; // How many iteration of loop we're doing
 
    // Handle case of small BLOCK_SIZE safely
-   if(BLOCK_SIZE < vlen || BLOCK_SIZE%vlen != 0) {
+   if(BLOCK_SIZE < vlen || BLOCK_SIZE%vlen != 0 || BLOCK_SIZE < unroll) {
       for(int c=p+1; c<BLOCK_SIZE; c++)
          for(int r=c; r<BLOCK_SIZE; r++)
             a[c*lda+r] -= ld[c]*a[p*lda+r];
       return;
    }
-   const int unroll=4; // How many iteration of loop we're doing
    for(int c=p+1; c<unroll*((p+1-1)/unroll+1); c++) {
       SimdVec<T> ldvec( -ld[c] ); // NB minus so we can use fma below
       for(int r=vlen*(c/vlen); r<BLOCK_SIZE; r+=vlen) {
