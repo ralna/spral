@@ -32,6 +32,11 @@
 
 namespace spral { namespace ssids { namespace cpu {
 
+bool is_aligned(void* ptr) {
+   const int align = 32;
+   return (reinterpret_cast<uintptr_t>(ptr) % align == 0);
+}
+
 template<typename T,
          int BLOCK_SIZE,
          bool debug=false,
@@ -411,7 +416,7 @@ private:
             int dpad = cdata[blk].npad;
             dblk.create_restore_point(dpad, lda);
             cdata[blk].d = &d[2*next_elim] - 2*dpad;
-            if(dpad) {
+            if(dpad || !is_aligned(dblk.aval)) {
                int test = ldlt_tpp_factor(BLOCK_SIZE-dpad, BLOCK_SIZE-dpad,
                      &lperm[dpad],
                      &dblk.aval[dpad*(lda+1)], lda,
