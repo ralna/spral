@@ -58,11 +58,16 @@ private:
    /** Workspace allocated on a per-thread basis */
    struct ThreadWork {
       T *ld;
+      int *perm;
 
+      ThreadWork(ThreadWork const&) =delete;
+      ThreadWork& operator=(ThreadWork const&) =delete;
       ThreadWork() {
          ld = new T[BLOCK_SIZE*BLOCK_SIZE];
+         perm = new int[BLOCK_SIZE];
       }
       ~ThreadWork() {
+         delete[] perm;
          delete[] ld;
       }
    };
@@ -70,7 +75,6 @@ private:
    struct col_data {
       int nelim; //< Number of eliminated entries in this column
       int npass; //< Reduction variable for nelim
-      omp_lock_t lock; //< Lock for altering this data structure
       int *perm; //< pointer to local permutation
       T *d; //< pointer to local d
 
@@ -81,6 +85,37 @@ private:
       }
       ~col_data() {
          omp_destroy_lock(&lock);
+      }
+
+      /** Initialize number of passed columns ready for reduction */
+      void init_passed(int passed) {
+         npass = passed;
+      }
+      /** Updates number of passed columns (reduction by min) */
+      void update_passed(int passed) {
+         omp_set_lock(&lock);
+         npass = std::min(npass, passed);
+         omp_unset_lock(&lock);
+      }
+      /** Returns number of passed columns */
+      int get_passed(int passed) const {
+         return npass;
+      }
+
+      /** Adjust column after all blocks have passed to avoid split pivots */
+      void adjust(int& next_elim) {
+         // Test if last passed column was first part of a 2x2: if so,
+         // decrement npass
+         if(npass>0) {
+            T d11 = d[2*(npass-1)+0];
+            T d21 = d[2*(npass-1)+1];
+            if(std::isfinite(d11) && // not second half of 2x2
+                  d21 != 0.0)        // not a 1x1 or zero pivot
+               npass--;              // so must be first half 2x2
+         }
+         // Update elimination progress
+         next_elim += npass;
+         nelim = npass;
       }
 
       /** Moves perm for eliminated columns to elim_perm
@@ -96,6 +131,8 @@ private:
             *(failed_perm++) = perm[i];
       }
 
+   private:
+      omp_lock_t lock; //< Lock for altering npass
    };
 
    class BlockData {
@@ -353,6 +390,114 @@ private:
       }
    };
 
+   class Block {
+   public:
+      Block(int i, int j, int m, int n, struct col_data* cdata, BlockData& blk, int lda)
+         : i_(i), j_(j), m_(m), n_(n), lda_(lda), cdata_(cdata), blk_(blk)
+      {}
+
+      void backup(BlockPool<T, BLOCK_SIZE>& pool) {
+         blk_.lwork = pool.get_wait();
+         blk_.create_restore_point(ncol(), lda_);
+      }
+
+      void apply_rperm_and_backup(BlockPool<T, BLOCK_SIZE>& pool, int const* global_lperm) {
+         blk_.lwork = pool.get_wait();
+         int const* lperm = &global_lperm[i_*BLOCK_SIZE];
+         blk_.create_restore_point_with_row_perm(nrow(), ncol(), lperm, lda_);
+      }
+
+      void apply_cperm_and_backup(BlockPool<T, BLOCK_SIZE>& pool, int const* global_lperm) {
+         blk_.lwork = pool.get_wait();
+         int const* lperm = &global_lperm[j_*BLOCK_SIZE];
+         blk_.create_restore_point_with_col_perm(nrow(), ncol(), lperm, lda_);
+      }
+
+      void restore_if_required(int elim_col, BlockPool<T, BLOCK_SIZE>& pool, int const* global_lperm) {
+         if(i_ == elim_col && j_ == elim_col) { // In eliminated diagonal block
+            if(cdata_[i_].nelim < ncol()) { // If there are failed pivots
+               int const* lperm = &global_lperm[i_*BLOCK_SIZE];
+               blk_.restore_part_with_sym_perm(ncol(), cdata_[i_].nelim, lperm, lda_);
+            }
+            // Release resources regardless, no longer required
+            pool.release(blk_.lwork);
+         }
+         else if(i_ == elim_col) { // In eliminated row
+            if(cdata_[i_].nelim < nrow()) // If there are failed pivots
+               blk_.restore_part(
+                     nrow(), ncol(), cdata_[i_].nelim, cdata_[j_].nelim, lda_
+                     );
+            // Release resources regardless, no longer required
+            pool.release(blk_.lwork);
+         }
+         else if(j_ == elim_col) { // In eliminated col
+            if(cdata_[j_].nelim < ncol()) { // If there are failed pivots
+               int rfrom = (i_*BLOCK_SIZE < n_) ? cdata_[i_].nelim : 0;
+               blk_.restore_part(
+                     nrow(), ncol(), rfrom, cdata_[j_].nelim, lda_
+                     );
+            }
+            // Release resources regardless, no longer required
+            pool.release(blk_.lwork);
+         }
+      }
+
+      void factor(int& next_elim, T* d, ThreadWork& work, int* global_lperm, T u, T small) {
+         if(i_ != j_)
+            throw std::runtime_error("factor called on non-diagonal block!");
+         int *lperm = &global_lperm[i_*BLOCK_SIZE];
+         for(int i=0; i<ncol(); i++)
+            lperm[i] = i;
+         cdata_[i_].d = &d[2*next_elim];
+         if(ncol() < BLOCK_SIZE || !is_aligned(blk_.aval)) {
+            ldlt_tpp_factor(
+                  nrow(), ncol(), lperm, blk_.aval, lda_, cdata_[i_].d,
+                  work.ld, BLOCK_SIZE, u, small
+                  );
+            int *temp = work.perm;
+            for(int i=0; i<ncol(); ++i)
+               temp[i] = cdata_[i_].perm[lperm[i]];
+            for(int i=0; i<ncol(); ++i)
+               cdata_[i_].perm[i] = temp[i];
+         } else {
+            block_ldlt<T, BLOCK_SIZE>(0, cdata_[i_].perm, blk_.aval, lda_,
+                  cdata_[i_].d, work.ld, u, small, lperm);
+         }
+      }
+
+      int apply_pivot(Block const& dblk, T u, T small) {
+         if(i_ == j_)
+            throw std::runtime_error("apply_pivot called on diagonal block!");
+         if(i_ == dblk.i_) { // Apply within row (ApplyT)
+            blk_.template apply_pivot<OP_T>(
+                  nrow(), ncol(), cdata_[j_].nelim, dblk.blk_.aval,
+                  cdata_[i_].d, small, lda_
+                  );
+            return blk_.template check_threshold<OP_T>(
+                  0, nrow(), cdata_[j_].nelim, ncol(), u, lda_
+                  );
+         } else { // Apply within column (ApplyN)
+            blk_.template apply_pivot<OP_N>(
+                  nrow(), ncol(), 0, dblk.blk_.aval, cdata_[j_].d, small, lda_
+                  );
+            return blk_.template check_threshold<OP_N>(
+                  0, nrow(), 0, ncol(), u, lda_
+                  );
+         }
+      }
+
+      int nrow() const { return get_nrow(i_, m_, n_); }
+      int ncol() const { return get_ncol(j_, n_); }
+   private:
+      int const i_; //< block's row
+      int const j_; //< block's column
+      int const m_; //< global number of rows
+      int const n_; //< global number of columns
+      int const lda_; //< leading dimension of underlying storage
+      struct col_data* const cdata_; //< global column data array
+      BlockData& blk_; //< underlying block
+   };
+
    /** Calculates LD from L and D */
    template <enum operation op>
    static
@@ -422,35 +567,13 @@ private:
             //printf("Factor(%d)\n", blk);
             int thread_num = omp_get_thread_num();
             ThreadWork &thread_work = all_thread_work[thread_num];
-            BlockData &dblk = blkdata[blk*mblk+blk];
-            dblk.lwork = global_work.get_wait();
-            int *lperm = &global_lperm[blk*BLOCK_SIZE];
-            for(int i=0; i<get_ncol(blk, n); i++)
-               lperm[i] = i;
-            dblk.create_restore_point(get_ncol(blk, n), lda);
-            cdata[blk].d = &d[2*next_elim];
-            if(get_ncol(blk, n) < BLOCK_SIZE || !is_aligned(dblk.aval)) {
-               int test = ldlt_tpp_factor(
-                     get_nrow(blk, m, n), get_ncol(blk, n),
-                     lperm, dblk.aval, lda, cdata[blk].d,
-                     thread_work.ld, BLOCK_SIZE, u, small);
-               // FIXME: remove following test
-               if(test != get_ncol(blk, n)) {
-                  printf("Failed DEBUG REMOVE FIXME\n");
-                  exit(1);
-               }
-               int *temp = new int[BLOCK_SIZE];
-               for(int i=0; i<get_ncol(blk, n); ++i)
-                  temp[i] = cdata[blk].perm[lperm[i]];
-               for(int i=0; i<get_ncol(blk, n); ++i)
-                  cdata[blk].perm[i] = temp[i];
-               delete[] temp;
-            } else {
-               block_ldlt<T, BLOCK_SIZE>(0, cdata[blk].perm, dblk.aval, lda,
-                     cdata[blk].d, thread_work.ld, u, small, lperm);
-            }
-            // Initialize threshold check (no lock required becuase task depend)
-            cdata[blk].npass = get_ncol(blk, n);
+            Block dblk(blk, blk, m, n, cdata, blkdata[blk*mblk+blk], lda);
+            // Store a copy for recovery in case of a failed column
+            dblk.backup(global_work);
+            // Perform actual factorization
+            dblk.factor(next_elim, d, thread_work, global_lperm, u, small);
+            // Init threshold check (no lock required becuase task depend)
+            cdata[blk].init_passed(dblk.ncol());
          }
          
          // Loop over off-diagonal blocks applying pivot
@@ -463,19 +586,17 @@ private:
                depend(in: cdata[blk:1])
             {
                //printf("ApplyT(%d,%d)\n", blk, jblk);
-               BlockData &dblk = blkdata[blk*mblk+blk];
-               BlockData &cblk = blkdata[jblk*mblk+blk];
-               const int *lperm = &global_lperm[blk*BLOCK_SIZE];
-               // Perform necessary operations
-               cblk.lwork = global_work.get_wait();
-               cblk.create_restore_point_with_row_perm(get_nrow(blk, m, n), get_ncol(jblk, n), lperm, lda);
-               cblk.template apply_pivot<OP_T>(get_nrow(blk, m, n), get_ncol(jblk, n), cdata[jblk].nelim, dblk.aval, cdata[blk].d, small, lda);
-               // Update threshold check
-               int blkpass = cblk.template check_threshold<OP_T>(0, get_nrow(blk, m, n), cdata[jblk].nelim, get_ncol(jblk, n), u, lda);
-               omp_set_lock(&cdata[blk].lock);
-               if(blkpass < cdata[blk].npass)
-                  cdata[blk].npass = blkpass;
-               omp_unset_lock(&cdata[blk].lock);
+               Block dblk(blk, blk, m, n, cdata, blkdata[blk*mblk+blk], lda);
+               Block cblk(blk, jblk, m, n, cdata, blkdata[jblk*mblk+blk], lda);
+               // Apply row permutation from factorization of dblk and in
+               // the process, store a (permuted) copy for recovery in case of
+               // a failed column
+               cblk.apply_rperm_and_backup(global_work, global_lperm);
+               // Perform elimination and determine number of rows in block
+               // passing a posteori threshold pivot test
+               int blkpass = cblk.apply_pivot(dblk, u, small);
+               // Update column's passed pivot count
+               cdata[blk].update_passed(blkpass);
             }
          }
          for(int iblk=blk+1; iblk<mblk; iblk++) {
@@ -487,21 +608,17 @@ private:
                depend(in: cdata[blk:1])
             {
                //printf("ApplyN(%d,%d)\n", iblk, blk);
-               BlockData &dblk = blkdata[blk*mblk+blk];
-               BlockData &rblk = blkdata[blk*mblk+iblk];
-               const int *lperm = &global_lperm[blk*BLOCK_SIZE];
-               // Perform necessary operations
-               rblk.lwork = global_work.get_wait();
-               rblk.create_restore_point_with_col_perm(get_nrow(iblk, m, n), get_ncol(blk, n), lperm, lda);
-               rblk.template apply_pivot<OP_N>(get_nrow(iblk, m, n), get_ncol(blk, n), 0, dblk.aval, cdata[blk].d, small, lda);
-               // Update threshold check
-               int rfrom = (iblk < nblk) ? cdata[iblk].nelim
-                                         : 0;
-               int blkpass = rblk.template check_threshold<OP_N>(rfrom, get_nrow(iblk, m, n), 0, get_ncol(blk, n), u, lda);
-               omp_set_lock(&cdata[blk].lock);
-               if(blkpass < cdata[blk].npass)
-                  cdata[blk].npass = blkpass;
-               omp_unset_lock(&cdata[blk].lock);
+               Block dblk(blk, blk, m, n, cdata, blkdata[blk*mblk+blk], lda);
+               Block rblk(iblk, blk, m, n, cdata, blkdata[blk*mblk+iblk], lda);
+               // Apply column permutation from factorization of dblk and in
+               // the process, store a (permuted) copy for recovery in case of
+               // a failed column
+               rblk.apply_cperm_and_backup(global_work, global_lperm);
+               // Perform elimination and determine number of rows in block
+               // passing a posteori threshold pivot test
+               int blkpass = rblk.apply_pivot(dblk, u, small);
+               // Update column's passed pivot count
+               cdata[blk].update_passed(blkpass);
             }
          }
 
@@ -513,18 +630,7 @@ private:
             depend(inout: cdata[blk:1])
          {
             //printf("Adjust(%d)\n", blk);
-            // Adjust to avoid splitting 2x2 pivots
-            if(cdata[blk].npass>0) {
-               T d11 = cdata[blk].d[2*(cdata[blk].npass-1) + 0];
-               T d21 = cdata[blk].d[2*(cdata[blk].npass-1) + 1];
-               if(d21!=0.0 && d11!=std::numeric_limits<T>::infinity()) {
-                  // last passed entry was first part of 2x2
-                  cdata[blk].npass--; 
-               }
-            }
-            if(debug) printf("Adjusted to %d\n", cdata[blk].npass);
-            next_elim += cdata[blk].npass;
-            cdata[blk].nelim += cdata[blk].npass;
+            cdata[blk].adjust(next_elim);
          }
 
          // Update uneliminated columns
@@ -536,25 +642,18 @@ private:
                                            : iblk*mblk+blk;
                #pragma omp task default(none) \
                   firstprivate(blk, iblk, jblk) \
-                  shared(cdata, blkdata, lda, all_thread_work, global_work) \
+                  shared(cdata, blkdata, lda, all_thread_work, global_lperm, \
+                         global_work) \
                   depend(inout: blkdata[jblk*mblk+iblk:1]) \
                   depend(in: cdata[blk:1]) \
                   depend(in: blkdata[jblk*mblk+blk:1]) \
                   depend(in: blkdata[iblk_idx:1])
                {
                   //printf("UpdateT(%d,%d,%d)\n", iblk, jblk, blk);
+                  Block ublk(iblk, jblk, m, n, cdata, blkdata[jblk*mblk+iblk], lda);
                   // If we're on the block row we've just eliminated, restore
-                  // any failed rows and release resources storing checkpoint
-                  if(iblk==blk) {
-                     if(cdata[blk].nelim < get_ncol(blk, n))
-                        blkdata[jblk*mblk+iblk]
-                           .restore_part(
-                                 get_nrow(iblk, m, n), get_ncol(jblk, n),
-                                 cdata[blk].nelim, cdata[jblk].nelim,
-                                 lda
-                                 );
-                     global_work.release(blkdata[jblk*mblk+blk].lwork);
-                  }
+                  // any failed rows and release resources storing backup
+                  ublk.restore_if_required(blk, global_work, global_lperm);
                   // Perform actual update (if required)
                   if(cdata[blk].nelim > 0) {
                      int thread_num = omp_get_thread_num();
@@ -591,27 +690,10 @@ private:
                   depend(in: blkdata[blk*mblk+jblk:1])
                {
                   //printf("UpdateN(%d,%d,%d)\n", iblk, jblk, blk);
+                  Block ublk(iblk, jblk, m, n, cdata, blkdata[jblk*mblk+iblk], lda);
                   // If we're on the block col we've just eliminated, restore
-                  // any failed cols and release checkpoint resources
-                  if(jblk==blk) {
-                     if(cdata[blk].nelim < get_ncol(blk, n)) {
-                        if(iblk==blk) {
-                           // Diagonal block needs to apply a permutation
-                           const int *lperm = &global_lperm[blk*BLOCK_SIZE];
-                           blkdata[jblk*mblk+iblk].restore_part_with_sym_perm(
-                                 get_ncol(blk, n), cdata[blk].nelim, lperm, lda
-                                 );
-                        } else {
-                           int rfrom = (iblk<nblk) ? cdata[iblk].nelim : 0;
-                           blkdata[jblk*mblk+iblk]
-                              .restore_part(
-                                    get_nrow(iblk, m, n), get_ncol(jblk, n),
-                                    rfrom, cdata[blk].nelim, lda
-                                    );
-                        }
-                     }
-                     global_work.release(blkdata[jblk*mblk+iblk].lwork);
-                  }
+                  // any failed cols and release resources storing backup
+                  ublk.restore_if_required(blk, global_work, global_lperm);
                   // Perform actual update (if required)
                   if(cdata[blk].nelim > 0) {
                      int thread_num = omp_get_thread_num();
