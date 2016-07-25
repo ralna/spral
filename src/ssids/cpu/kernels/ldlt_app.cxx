@@ -466,7 +466,7 @@ private:
                      lperm);
             }
             // Initialize threshold check (no lock required becuase task depend)
-            cdata[blk].npass = BLOCK_SIZE;
+            cdata[blk].npass = get_ncol(blk, n);
          }
          
          // Loop over off-diagonal blocks applying pivot
@@ -487,7 +487,7 @@ private:
                cblk.create_restore_point_with_row_perm(get_nrow(blk, m, n), get_ncol(jblk, n), lperm, lda);
                cblk.template apply_pivot<OP_T>(get_nrow(blk, m, n), get_ncol(jblk, n), cdata[jblk].nelim2, dblk.aval, cdata[blk].d, small, lda);
                // Update threshold check
-               int blkpass = cdata[blk].npad + cblk.template check_threshold<OP_T>(0, get_nrow(blk, m, n), cdata[jblk].nelim2, get_ncol(jblk, n), u, lda);
+               int blkpass = cblk.template check_threshold<OP_T>(0, get_nrow(blk, m, n), cdata[jblk].nelim2, get_ncol(jblk, n), u, lda);
                omp_set_lock(&cdata[blk].lock);
                if(blkpass < cdata[blk].npass)
                   cdata[blk].npass = blkpass;
@@ -513,7 +513,7 @@ private:
                // Update threshold check
                int rfrom = (iblk < nblk) ? cdata[iblk].nelim2
                                          : 0;
-               int blkpass = cdata[blk].npad + rblk.template check_threshold<OP_N>(rfrom, get_nrow(iblk, m, n), 0, get_ncol(blk, n), u, lda);
+               int blkpass = rblk.template check_threshold<OP_N>(rfrom, get_nrow(iblk, m, n), 0, get_ncol(blk, n), u, lda);
                omp_set_lock(&cdata[blk].lock);
                if(blkpass < cdata[blk].npass)
                   cdata[blk].npass = blkpass;
@@ -530,19 +530,18 @@ private:
          {
             //printf("Adjust(%d)\n", blk);
             // Adjust to avoid splitting 2x2 pivots
-            if(cdata[blk].npass>cdata[blk].npad) {
-               int npad = cdata[blk].npad;
-               T d11 = cdata[blk].d[2*(cdata[blk].npass-1-npad) + 0];
-               T d21 = cdata[blk].d[2*(cdata[blk].npass-1-npad) + 1];
+            if(cdata[blk].npass>0) {
+               T d11 = cdata[blk].d[2*(cdata[blk].npass-1) + 0];
+               T d21 = cdata[blk].d[2*(cdata[blk].npass-1) + 1];
                if(d21!=0.0 && d11!=std::numeric_limits<T>::infinity()) {
                   // last passed entry was first part of 2x2
                   cdata[blk].npass--; 
                }
             }
             if(debug) printf("Adjusted to %d\n", cdata[blk].npass);
-            next_elim += cdata[blk].npass - cdata[blk].npad;
-            cdata[blk].nelim += cdata[blk].npass - cdata[blk].npad;
-            cdata[blk].nelim2 += cdata[blk].npass - cdata[blk].npad;
+            next_elim += cdata[blk].npass;
+            cdata[blk].nelim += cdata[blk].npass;
+            cdata[blk].nelim2 += cdata[blk].npass;
          }
 
          // Update uneliminated columns
