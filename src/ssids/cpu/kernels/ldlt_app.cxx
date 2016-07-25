@@ -112,48 +112,43 @@ private:
       {}
 
       void create_restore_point(int n, int lda) {
-         int pad = BLOCK_SIZE-n;
          for(int j=0; j<n; j++)
          for(int i=0; i<n; i++)
-            lwork[(pad+j)*BLOCK_SIZE+(pad+i)] = aval[j*lda+i];
+            lwork[j*BLOCK_SIZE+i] = aval[j*lda+i];
       }
 
       /** Apply row permutation to block at same time as taking a copy */
       void create_restore_point_with_row_perm(int m, int n, const int *lperm, int lda) {
          int rpad = BLOCK_SIZE - m;
-         int cpad = BLOCK_SIZE - n;
          for(int j=0; j<n; j++)
          for(int i=0; i<m; i++) {
             int r = lperm[rpad+i]-rpad;
-            lwork[(cpad+j)*BLOCK_SIZE+rpad+i] = aval[j*lda+r];
+            lwork[j*BLOCK_SIZE+i] = aval[j*lda+r];
          }
          for(int j=0; j<n; j++)
          for(int i=0; i<m; i++)
-            aval[j*lda+i] = lwork[(cpad+j)*BLOCK_SIZE+rpad+i];
+            aval[j*lda+i] = lwork[j*BLOCK_SIZE+i];
       }
 
       /** Apply column permutation to block at same time as taking a copy */
       void create_restore_point_with_col_perm(int m, int n, const int *lperm, int lda) {
-         int rpad = BLOCK_SIZE - m;
          int cpad = BLOCK_SIZE - n;
          for(int j=0; j<n; j++) {
             int c = lperm[cpad+j]-cpad;
             for(int i=0; i<m; i++)
-               lwork[(cpad+j)*BLOCK_SIZE+rpad+i] = aval[c*lda+i];
+               lwork[j*BLOCK_SIZE+i] = aval[c*lda+i];
          }
          for(int j=0; j<n; j++)
          for(int i=0; i<m; i++)
-            aval[j*lda+i] = lwork[(cpad+j)*BLOCK_SIZE+rpad+i];
+            aval[j*lda+i] = lwork[j*BLOCK_SIZE+i];
       }
 
       /** Restores any columns that have failed back to their previous
        *  values stored in lwork[] */
       void restore_part(int m, int n, int rfrom, int cfrom, int lda) {
-         int rpad = BLOCK_SIZE - m;
-         int cpad = BLOCK_SIZE - n;
          for(int j=cfrom; j<n; j++)
          for(int i=rfrom; i<m; i++)
-            aval[j*lda+i] = lwork[(cpad+j)*BLOCK_SIZE+rpad+i];
+            aval[j*lda+i] = lwork[j*BLOCK_SIZE+i];
       }
 
       /** Restores any columns that have failed back to their previous
@@ -162,11 +157,11 @@ private:
       void restore_part_with_sym_perm(int n, int from, const int *lperm, int lda) {
          int pad = BLOCK_SIZE - n;
          for(int j=from; j<n; j++) {
-            int c = lperm[pad+j];
+            int c = lperm[pad+j]-pad;
             for(int i=from; i<n; i++) {
-               int r = lperm[pad+i];
+               int r = lperm[pad+i]-pad;
                aval[j*lda+i] = (r>c) ? lwork[c*BLOCK_SIZE+r]
-                                      : lwork[r*BLOCK_SIZE+c];
+                                     : lwork[r*BLOCK_SIZE+c];
             }
          }
       }
