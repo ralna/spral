@@ -486,6 +486,45 @@ private:
          }
       }
 
+      void update(Block const& isrc, Block const& jsrc, ThreadWork& work) {
+         if(isrc.i_ == i_ && isrc.j_ == jsrc.j_) {
+            // Update to right of elim column (UpdateN)
+            int elim_col = isrc.j_;
+            if(cdata_[elim_col].nelim == 0) return; // nothing to do
+            int rfrom = (i_*BLOCK_SIZE < n_) ? cdata_[i_].nelim : 0;
+            calcLD<OP_N>(
+                  nrow()-rfrom, cdata_[elim_col].nelim, &isrc.blk_.aval[rfrom],
+                  lda_, cdata_[elim_col].d, work.ld, BLOCK_SIZE
+                  );
+            blk_.template update<OP_N>(
+                  nrow(), ncol(), cdata_[elim_col].nelim, jsrc.blk_.aval,
+                  work.ld, BLOCK_SIZE, rfrom, cdata_[j_].nelim, lda_
+                  );
+         } else {
+            // Update to left of elim column (UpdateT)
+            int elim_col = jsrc.i_;
+            if(cdata_[elim_col].nelim == 0) return; // nothing to do
+            int rfrom = (i_*BLOCK_SIZE < n_) ? cdata_[i_].nelim : 0;
+            if(isrc.j_==elim_col) {
+               calcLD<OP_N>(
+                     nrow()-rfrom, cdata_[elim_col].nelim,
+                     &isrc.blk_.aval[rfrom], lda_,
+                     cdata_[elim_col].d, work.ld, BLOCK_SIZE
+                     );
+            } else {
+               calcLD<OP_T>(
+                     nrow()-rfrom, cdata_[elim_col].nelim, &
+                     isrc.blk_.aval[rfrom*lda_], lda_,
+                     cdata_[elim_col].d, work.ld, BLOCK_SIZE
+                     );
+            }
+            blk_.template update<OP_T>(
+                  nrow(), ncol(), cdata_[elim_col].nelim, jsrc.blk_.aval,
+                  work.ld, BLOCK_SIZE, rfrom, cdata_[j_].nelim, lda_
+                  );
+         }
+      }
+
       int nrow() const { return get_nrow(i_, m_, n_); }
       int ncol() const { return get_ncol(j_, n_); }
    private:
@@ -651,30 +690,17 @@ private:
                {
                   //printf("UpdateT(%d,%d,%d)\n", iblk, jblk, blk);
                   Block ublk(iblk, jblk, m, n, cdata, blkdata[jblk*mblk+iblk], lda);
+                  int isrc_row = (blk<=iblk) ? iblk : blk;
+                  int isrc_col = (blk<=iblk) ? blk : iblk;
+                  Block isrc(isrc_row, isrc_col, m, n, cdata, blkdata[isrc_col*mblk+isrc_row], lda);
+                  Block jsrc(blk, jblk, m, n, cdata, blkdata[jblk*mblk+blk], lda);
                   // If we're on the block row we've just eliminated, restore
                   // any failed rows and release resources storing backup
                   ublk.restore_if_required(blk, global_work, global_lperm);
-                  // Perform actual update (if required)
-                  if(cdata[blk].nelim > 0) {
-                     int thread_num = omp_get_thread_num();
-                     ThreadWork &thread_work = all_thread_work[thread_num];
-                     int const nelim = cdata[blk].nelim;
-                     int const rfrom = (iblk < nblk) ? cdata[iblk].nelim : 0;
-                     if(blk <= iblk) {
-                        calcLD<OP_N>(get_nrow(iblk, m, n)-rfrom, nelim,
-                           &blkdata[blk*mblk+iblk].aval[rfrom], lda,
-                           cdata[blk].d, thread_work.ld, BLOCK_SIZE);
-                     } else {
-                        calcLD<OP_T>(get_nrow(iblk, m, n)-rfrom, nelim,
-                           &blkdata[iblk*mblk+blk].aval[rfrom*lda], lda,
-                           cdata[blk].d, thread_work.ld, BLOCK_SIZE);
-                     }
-                     blkdata[jblk*mblk+iblk].template update<OP_T>(
-                           get_nrow(iblk, m, n), get_ncol(jblk, n), cdata[blk].nelim,
-                           blkdata[jblk*mblk+blk].aval,
-                           thread_work.ld, BLOCK_SIZE,
-                           rfrom, cdata[jblk].nelim, lda);
-                  }
+                  // Perform actual update
+                  int thread_num = omp_get_thread_num();
+                  ThreadWork &thread_work = all_thread_work[thread_num];
+                  ublk.update(isrc, jsrc, thread_work);
                }
             }
          }
@@ -691,24 +717,15 @@ private:
                {
                   //printf("UpdateN(%d,%d,%d)\n", iblk, jblk, blk);
                   Block ublk(iblk, jblk, m, n, cdata, blkdata[jblk*mblk+iblk], lda);
+                  Block isrc(iblk, blk, m, n, cdata, blkdata[blk*mblk+iblk], lda);
+                  Block jsrc(jblk, blk, m, n, cdata, blkdata[blk*mblk+jblk], lda);
                   // If we're on the block col we've just eliminated, restore
                   // any failed cols and release resources storing backup
                   ublk.restore_if_required(blk, global_work, global_lperm);
-                  // Perform actual update (if required)
-                  if(cdata[blk].nelim > 0) {
-                     int thread_num = omp_get_thread_num();
-                     ThreadWork &thread_work = all_thread_work[thread_num];
-                     int const nelim = cdata[blk].nelim;
-                     int const rfrom = (iblk < nblk) ? cdata[iblk].nelim : 0;
-                     calcLD<OP_N>(get_nrow(iblk, m, n)-rfrom, nelim,
-                           &blkdata[blk*mblk+iblk].aval[rfrom], lda,
-                           cdata[blk].d, thread_work.ld, BLOCK_SIZE);
-                     blkdata[jblk*mblk+iblk].template update<OP_N>(
-                           get_nrow(iblk, m, n), get_ncol(jblk, n),
-                           cdata[blk].nelim, blkdata[blk*mblk+jblk].aval,
-                           thread_work.ld, BLOCK_SIZE,
-                           rfrom, cdata[jblk].nelim, lda);
-                  }
+                  // Perform actual update
+                  int thread_num = omp_get_thread_num();
+                  ThreadWork &thread_work = all_thread_work[thread_num];
+                  ublk.update(isrc, jsrc, thread_work);
                }
             }
          }
