@@ -62,7 +62,7 @@ void factor_node_indef(
       int ni, // FIXME: remove post debug
       SymbolicNode const& snode,
       NumericNode<T>* node,
-      struct cpu_factor_options const* options,
+      struct cpu_factor_options const& options,
       struct cpu_factor_stats& stats
       ) {
    /* Extract useful information about node */
@@ -74,16 +74,14 @@ void factor_node_indef(
    int *perm = node->perm;
 
    /* Perform factorization */
-   node->nelim = ldlt_app_factor(
-         m, n, perm, lcol, ldl, d, options->u, options->small
-         );
+   node->nelim = ldlt_app_factor(m, n, perm, lcol, ldl, d, options);
 
    /* Finish factorization worth simplistic code */
    if(node->nelim < n) {
       int nelim = node->nelim;
       stats.not_first_pass += n-nelim;
       T *ld = new T[2*(m-nelim)]; // FIXME: Use work
-      node->nelim += ldlt_tpp_factor(m-nelim, n-nelim, &perm[nelim], &lcol[nelim*(ldl+1)], ldl, &d[2*nelim], ld, m-nelim, options->u, options->small, nelim, &lcol[nelim], ldl);
+      node->nelim += ldlt_tpp_factor(m-nelim, n-nelim, &perm[nelim], &lcol[nelim*(ldl+1)], ldl, &d[2*nelim], ld, m-nelim, options.u, options.small, nelim, &lcol[nelim], ldl);
       stats.not_second_pass += n - node->nelim;
       delete[] ld;
    }
@@ -97,7 +95,7 @@ template <typename T, int BLOCK_SIZE>
 void factor_node_posdef(
       SymbolicNode const& snode,
       NumericNode<T>* node,
-      struct cpu_factor_options const* options,
+      struct cpu_factor_options const& options,
       struct cpu_factor_stats& stats
       ) {
    /* Extract useful information about node */
@@ -109,7 +107,7 @@ void factor_node_posdef(
 
    /* Perform factorization */
    int flag;
-   cholesky_factor(m, n, lcol, ldl, 1.0, contrib, m-n, options->cpu_task_block_size, &flag);
+   cholesky_factor(m, n, lcol, ldl, 1.0, contrib, m-n, options.cpu_task_block_size, &flag);
    #pragma omp taskwait
    if(flag!=-1) {
       node->nelim = flag+1;
@@ -127,7 +125,7 @@ void factor_node(
       int ni,
       SymbolicNode const& snode,
       NumericNode<T>* node,
-      struct cpu_factor_options const* options,
+      struct cpu_factor_options const& options,
       struct cpu_factor_stats& stats
       ) {
    if(posdef) factor_node_posdef<T, BLOCK_SIZE>(snode, node, options, stats);

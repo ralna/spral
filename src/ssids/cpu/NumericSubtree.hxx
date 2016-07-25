@@ -39,11 +39,11 @@ public:
          SymbolicSubtree const& symbolic_subtree,
          T const* aval,
          T const* scaling,
-         struct cpu_factor_options const* options,
-         struct cpu_factor_stats* stats)
+         struct cpu_factor_options const& options,
+         struct cpu_factor_stats& stats)
    : symb_(symbolic_subtree), nodes_(symbolic_subtree.nnodes_+1),
      small_leafs_(static_cast<SLNS*>(::operator new[](symb_.small_leafs_.size()*sizeof(SLNS)))),
-     factor_alloc_(symbolic_subtree.get_factor_mem_est(options->multiplier))
+     factor_alloc_(symbolic_subtree.get_factor_mem_est(options.multiplier))
    {
       Profile::init();
 
@@ -165,25 +165,25 @@ public:
          // Reduce thread_stats
          #pragma omp single 
          {
-            stats->flag = SSIDS_SUCCESS;
-            stats->num_delay = 0;
-            stats->num_neg = 0;
-            stats->num_two = 0;
-            stats->num_zero = 0;
-            stats->maxfront = 0;
-            stats->not_first_pass = 0;
-            stats->not_second_pass = 0;
+            stats.flag = SSIDS_SUCCESS;
+            stats.num_delay = 0;
+            stats.num_neg = 0;
+            stats.num_two = 0;
+            stats.num_zero = 0;
+            stats.maxfront = 0;
+            stats.not_first_pass = 0;
+            stats.not_second_pass = 0;
             for(auto tstats : thread_stats) {
-               stats->flag =
-                  (stats->flag == SSIDS_SUCCESS) ? tstats.flag
-                                                 : std::min(stats->flag, tstats.flag); 
-               stats->num_delay += tstats.num_delay;
-               stats->num_neg += tstats.num_neg;
-               stats->num_two += tstats.num_two;
-               stats->num_zero += tstats.num_zero;
-               stats->maxfront = std::max(stats->maxfront, tstats.maxfront);
-               stats->not_first_pass += tstats.not_first_pass;
-               stats->not_second_pass += tstats.not_second_pass;
+               stats.flag =
+                  (stats.flag == SSIDS_SUCCESS) ? tstats.flag
+                                                : std::min(stats.flag, tstats.flag); 
+               stats.num_delay += tstats.num_delay;
+               stats.num_neg += tstats.num_neg;
+               stats.num_two += tstats.num_two;
+               stats.num_zero += tstats.num_zero;
+               stats.maxfront = std::max(stats.maxfront, tstats.maxfront);
+               stats.not_first_pass += tstats.not_first_pass;
+               stats.not_second_pass += tstats.not_second_pass;
             }
          }
       }
@@ -203,17 +203,17 @@ public:
                T a21 = d[2*i+1];
                if(i+1==nodes_[ni].nelim || std::isfinite(d[2*i+2])) {
                   // 1x1 pivot (or zero)
-                  if(a11 == 0.0) stats->num_zero++;
-                  if(a11 < 0.0) stats->num_neg++;
+                  if(a11 == 0.0) stats.num_zero++;
+                  if(a11 < 0.0) stats.num_neg++;
                   i++;
                } else {
                   // 2x2 pivot
                   T a22 = d[2*(i+1)];
-                  stats->num_two++;
+                  stats.num_two++;
                   T det = a11*a22 - a21*a21; // product of evals
                   T trace = a11 + a22; // sum of evals
-                  if(det < 0) stats->num_neg++;
-                  else if(trace < 0) stats->num_neg+=2;
+                  if(det < 0) stats.num_neg++;
+                  else if(trace < 0) stats.num_neg+=2;
                   i+=2;
                }
             }

@@ -295,6 +295,15 @@ int ldlt_test(T u, T small, bool delays, bool singular, bool dblk_singular, int 
       print_mat("%10.2e", m, a, lda);
    }
 
+   // Setup options
+   struct cpu_factor_options options;
+   options.multiplier = 2.0;
+   options.small = small;
+   options.u = u;
+   options.print_level = 0;
+   options.cpu_small_subtree_threshold = 100*100*100;
+   options.cpu_task_block_size = 256;
+
    // Factorize using main routine
    T *l = static_cast<T*>(aligned_alloc(32, m*lda*sizeof(T)));
    memcpy(l, a, m*lda*sizeof(T)); // Copy a to l
@@ -302,7 +311,7 @@ int ldlt_test(T u, T small, bool delays, bool singular, bool dblk_singular, int 
    for(int i=0; i<m; i++) perm[i] = i;
    T *d = new T[2*m];
    // First m x n matrix
-   int q1 = ldlt_app_factor(m, n, perm, l, lda, d, u, small);
+   int q1 = ldlt_app_factor(m, n, perm, l, lda, d, options);
    if(debug) std::cout << "FIRST FACTOR CALL ELIMINATED " << q1 << " of " << n << " pivots" << std::endl;
    int q2 = 0;
    if(q1 < n) {
@@ -319,7 +328,7 @@ int ldlt_test(T u, T small, bool delays, bool singular, bool dblk_singular, int 
       int *perm2 = new int[m-q1];
       for(int i=0; i<m-q1; i++)
          perm2[i] = i;
-      q2 = ldlt_app_factor(m-q1, m-q1, perm2, &l[q1*(lda+1)], lda, &d[2*q1], u, small);
+      q2 = ldlt_app_factor(m-q1, m-q1, perm2, &l[q1*(lda+1)], lda, &d[2*q1], options);
       // Permute rows of A_21 as per perm
       permute_rows(m-q1, q1, perm2, &perm[q1], &l[q1], lda);
       delete[] perm2;

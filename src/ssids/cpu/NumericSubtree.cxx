@@ -44,7 +44,7 @@ void* spral_ssids_cpu_create_num_subtree_dbl(
 
    if(posdef) {
       auto* subtree = new NumericSubtreePosdef
-         (symbolic_subtree, aval, scaling, options, stats);
+         (symbolic_subtree, aval, scaling, *options, *stats);
       if(options->print_level > 9999) {
          printf("Final factors:\n");
          subtree->print();
@@ -52,7 +52,7 @@ void* spral_ssids_cpu_create_num_subtree_dbl(
       return (void*) subtree;
    } else { /* indef */
       auto* subtree = new NumericSubtreeIndef
-         (symbolic_subtree, aval, scaling, options, stats);
+         (symbolic_subtree, aval, scaling, *options, *stats);
       if(options->print_level > 9999) {
          printf("Final factors:\n");
          subtree->print();

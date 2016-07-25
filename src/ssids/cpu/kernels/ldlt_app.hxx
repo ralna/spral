@@ -13,7 +13,7 @@
 namespace spral { namespace ssids { namespace cpu {
 
 template<typename T>
-int ldlt_app_factor(int m, int n, int *perm, T *a, int lda, T *d, double u, double small);
+int ldlt_app_factor(int m, int n, int *perm, T *a, int lda, T *d, struct cpu_factor_options const& options);
 
 template <typename T>
 void ldlt_app_solve_fwd(int m, int n, T const* l, int ldl, int nrhs, T* x, int ldx);

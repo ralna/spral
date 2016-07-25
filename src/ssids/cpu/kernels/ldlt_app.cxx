@@ -19,12 +19,12 @@
 #include <ostream>
 #include <sstream>
 #include <utility>
-#include <vector>
 
 #include <omp.h>
 
 #include "../AlignedAllocator.hxx"
 #include "../BlockPool.hxx"
+#include "../cpu_iface.hxx"
 #include "block_ldlt.hxx"
 #include "ldlt_tpp.hxx"
 #include "common.hxx"
@@ -32,7 +32,7 @@
 
 namespace spral { namespace ssids { namespace cpu {
 
-namespace ldlt_app {
+namespace /* anon */ {
 
 bool is_aligned(void* ptr) {
    const int align = 32;
@@ -844,13 +844,13 @@ public:
    }
 };
 
-} /* namespace spral::ssids::cpu::ldlt_app */
+} /* anon namespace */
 
 template<typename T>
-int ldlt_app_factor(int m, int n, int *perm, T *a, int lda, T *d, double u, double small) {
-   return ldlt_app::CpuLDLT<T>(u, small).factor(m, n, perm, a, lda, d);
+int ldlt_app_factor(int m, int n, int *perm, T *a, int lda, T *d, struct cpu_factor_options const& options) {
+   return CpuLDLT<T>(options.u, options.small).factor(m, n, perm, a, lda, d);
 }
-template int ldlt_app_factor<double>(int, int, int*, double*, int, double*, double, double);
+template int ldlt_app_factor<double>(int, int, int*, double*, int, double*, struct cpu_factor_options const&);
 
 template <typename T>
 void ldlt_app_solve_fwd(int m, int n, T const* l, int ldl, int nrhs, T* x, int ldx) {
