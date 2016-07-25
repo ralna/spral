@@ -10,4 +10,4 @@
  */
 #pragma once
 
-int run_CpuLDLT_tests();
+int run_ldlt_app_tests();

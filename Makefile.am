@@ -242,7 +242,7 @@ libspral_a_SOURCES += \
 	src/ssids/cpu/kernels/block_ldlt.hxx \
 	src/ssids/cpu/kernels/cholesky.cxx \
 	src/ssids/cpu/kernels/cholesky.hxx \
-	src/ssids/cpu/kernels/CpuLDLT.hxx \
+	src/ssids/cpu/kernels/ldlt_app.hxx \
 	src/ssids/cpu/kernels/ldlt_nopiv.cxx \
 	src/ssids/cpu/kernels/ldlt_nopiv.hxx \
 	src/ssids/cpu/kernels/ldlt_tpp.cxx \
@@ -272,8 +272,8 @@ ssids_kernel_test_SOURCES = tests/ssids/kernels.cxx \
 									 tests/ssids/kernels/block_ldlt.hxx \
 									 tests/ssids/kernels/cholesky.cxx \
 									 tests/ssids/kernels/cholesky.hxx \
-									 tests/ssids/kernels/CpuLDLT.cxx \
-									 tests/ssids/kernels/CpuLDLT.hxx \
+									 tests/ssids/kernels/ldlt_app.cxx \
+									 tests/ssids/kernels/ldlt_app.hxx \
 									 tests/ssids/kernels/framework.cxx \
 									 tests/ssids/kernels/framework.hxx \
 									 tests/ssids/kernels/ldlt_nopiv.cxx \

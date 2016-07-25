@@ -265,8 +265,8 @@ public:
          if(posdef) {
             cholesky_solve_fwd(m, n, nodes_[ni].lcol, ldl, nrhs, xlocal, symb_.n);
          } else { /* indef */
-            ldlt_solve_fwd(m+ndin, nelim, nodes_[ni].lcol, ldl, nrhs, xlocal,
-                  symb_.n);
+            ldlt_app_solve_fwd(m+ndin, nelim, nodes_[ni].lcol, ldl, nrhs,
+                  xlocal, symb_.n);
          }
 
          /* Scatter result */
@@ -328,10 +328,10 @@ public:
          if(posdef) {
             cholesky_solve_bwd(m, n, nodes_[ni].lcol, ldl, nrhs, xlocal, symb_.n);
          } else {
-            if(do_diag) ldlt_solve_diag(
+            if(do_diag) ldlt_app_solve_diag(
                   nelim, &nodes_[ni].lcol[(n+ndin)*ldl], xlocal
                   );
-            if(do_bwd) ldlt_solve_bwd(
+            if(do_bwd) ldlt_app_solve_bwd(
                   m+ndin, nelim, nodes_[ni].lcol, ldl, nrhs, xlocal, symb_.n
                   );
          }

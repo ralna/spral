@@ -8,7 +8,7 @@
  * proves to be useful beyond our own academic experiments)
  *
  */
-#include "CpuLDLT.hxx"
+#include "ldlt_app.hxx"
 
 #include <cstring>
 #include <iomanip>
@@ -16,7 +16,7 @@
 
 #include "framework.hxx"
 #include "ssids/cpu/kernels/wrappers.hxx"
-#include "ssids/cpu/kernels/CpuLDLT.cxx"
+#include "ssids/cpu/kernels/ldlt_app.hxx"
 #include "ssids/cpu/kernels/ldlt_tpp.hxx"
 #include "ssids/cpu/cpu_iface.hxx"
 
@@ -60,14 +60,14 @@ template<typename T>
 void solve(int m, int n, const int *perm, const T *l, int ldl, const T *d, const T *b, T *x) {
    for(int i=0; i<m; i++) x[i] = b[perm[i]];
    // Fwd slv
-   ldlt_solve_fwd(m, n, l, ldl, 1, x, m);
-   ldlt_solve_fwd(m-n, m-n, &l[n*(ldl+1)], ldl, 1, &x[n], m);
+   ldlt_app_solve_fwd(m, n, l, ldl, 1, x, m);
+   ldlt_app_solve_fwd(m-n, m-n, &l[n*(ldl+1)], ldl, 1, &x[n], m);
    // Diag slv
-   ldlt_solve_diag(n, d, x);
-   ldlt_solve_diag(m-n, &d[2*n], &x[n]);
+   ldlt_app_solve_diag(n, d, x);
+   ldlt_app_solve_diag(m-n, &d[2*n], &x[n]);
    // Bwd slv
-   ldlt_solve_bwd(m-n, m-n, &l[n*(ldl+1)], ldl, 1, &x[n], m);
-   ldlt_solve_bwd(m, n, l, ldl, 1, x, m);
+   ldlt_app_solve_bwd(m-n, m-n, &l[n*(ldl+1)], ldl, 1, &x[n], m);
+   ldlt_app_solve_bwd(m, n, l, ldl, 1, x, m);
    // Undo permutation
    T *temp = new T[m];
    for(int i=0; i<m; i++) temp[i] = x[i];
@@ -295,14 +295,13 @@ int ldlt_test(T u, T small, bool delays, bool singular, bool dblk_singular, int 
    }
 
    // Factorize using main routine
-   typedef CpuLDLT<T,BLOCK_SIZE,debug> CpuLDLTSpec;
    T *l = static_cast<T*>(aligned_alloc(32, m*lda*sizeof(T)));
    memcpy(l, a, m*lda*sizeof(T)); // Copy a to l
    int *perm = new int[m];
    for(int i=0; i<m; i++) perm[i] = i;
    T *d = new T[2*m];
    // First m x n matrix
-   int q1 = CpuLDLTSpec(u, small).factor(m, n, perm, l, lda, d);
+   int q1 = ldlt_app_factor<T, BLOCK_SIZE>(m, n, perm, l, lda, d, u, small);
    if(debug) std::cout << "FIRST FACTOR CALL ELIMINATED " << q1 << " of " << n << " pivots" << std::endl;
    int q2 = 0;
    if(q1 < n) {
@@ -319,7 +318,7 @@ int ldlt_test(T u, T small, bool delays, bool singular, bool dblk_singular, int 
       int *perm2 = new int[m-q1];
       for(int i=0; i<m-q1; i++)
          perm2[i] = i;
-      q2 = CpuLDLTSpec(u, small).factor(m-q1, m-q1, perm2, &l[q1*(lda+1)], lda, &d[2*q1]);
+      q2 = ldlt_app_factor<T, BLOCK_SIZE>(m-q1, m-q1, perm2, &l[q1*(lda+1)], lda, &d[2*q1], u, small);
       // Permute rows of A_21 as per perm
       permute_rows(m-q1, q1, perm2, &perm[q1], &l[q1], lda);
       delete[] perm2;
@@ -411,7 +410,7 @@ int ldlt_torture_test(T u, T small, int m, int n) {
    return 0; // Success
 }
 
-int run_CpuLDLT_tests() {
+int run_ldlt_app_tests() {
    int nerr = 0;
 
    /* Simple tests, rectangular */

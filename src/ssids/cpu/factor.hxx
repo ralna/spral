@@ -18,7 +18,7 @@
 #include "cpu_iface.hxx"
 #include "kernels/assemble.hxx"
 #include "kernels/cholesky.hxx"
-#include "kernels/CpuLDLT.cxx"
+#include "kernels/ldlt_app.hxx"
 #include "kernels/ldlt_tpp.hxx"
 #include "SymbolicNode.hxx"
 
@@ -71,9 +71,9 @@ void factor_node_indef(
    int *perm = node->perm;
 
    /* Perform factorization */
-   typedef CpuLDLT<T, BLOCK_SIZE> CpuLDLTSpec;
-   //typedef CpuLDLT<T, BLOCK_SIZE, 5, true> CpuLDLTSpecDebug; // FIXME: debug remove
-   node->nelim = CpuLDLTSpec(options->u, options->small).factor(m, n, perm, lcol, ldl, d);
+   node->nelim = ldlt_app_factor<T, BLOCK_SIZE>(
+         m, n, perm, lcol, ldl, d, options->u, options->small
+         );
 
    /* Finish factorization worth simplistic code */
    if(node->nelim < n) {

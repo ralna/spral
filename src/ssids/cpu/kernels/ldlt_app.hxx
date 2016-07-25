@@ -842,8 +842,13 @@ public:
    }
 };
 
+template<typename T, int BLOCK_SIZE>
+int ldlt_app_factor(int m, int n, int *perm, T *a, int lda, T *d, double u, double small) {
+   return CpuLDLT<T, BLOCK_SIZE>(u, small).factor(m, n, perm, a, lda, d);
+}
+
 template <typename T>
-void ldlt_solve_fwd(int m, int n, T const* l, int ldl, int nrhs, T* x, int ldx) {
+void ldlt_app_solve_fwd(int m, int n, T const* l, int ldl, int nrhs, T* x, int ldx) {
    if(nrhs==1) {
       host_trsv(FILL_MODE_LWR, OP_N, DIAG_UNIT, n, l, ldl, x, 1);
       if(m > n)
@@ -856,7 +861,7 @@ void ldlt_solve_fwd(int m, int n, T const* l, int ldl, int nrhs, T* x, int ldx) 
 }
 
 template <typename T>
-void ldlt_solve_diag(int n, T const* d, T* x) {
+void ldlt_app_solve_diag(int n, T const* d, T* x) {
    for(int i=0; i<n; ) {
       if(i+1==n || std::isfinite(d[2*i+2])) {
          // 1x1 pivot
@@ -878,7 +883,7 @@ void ldlt_solve_diag(int n, T const* d, T* x) {
 }
 
 template <typename T>
-void ldlt_solve_bwd(int m, int n, T const* l, int ldl, int nrhs, T* x, int ldx) {
+void ldlt_app_solve_bwd(int m, int n, T const* l, int ldl, int nrhs, T* x, int ldx) {
    if(nrhs==1) {
       if(m > n)
          gemv(OP_T, m-n, n, -1.0, &l[n], ldl, &x[n], 1, 1.0, x, 1);
