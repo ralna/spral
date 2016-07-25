@@ -296,7 +296,7 @@ int ldlt_test(T u, T small, bool delays, bool singular, bool dblk_singular, int 
 
    // Factorize using main routine
    typedef CpuLDLT<T,BLOCK_SIZE,debug> CpuLDLTSpec;
-   T *l = new T[m*lda];
+   T *l = static_cast<T*>(aligned_alloc(32, m*lda*sizeof(T)));
    memcpy(l, a, m*lda*sizeof(T)); // Copy a to l
    int *perm = new int[m];
    for(int i=0; i<m; i++) perm[i] = i;
@@ -358,7 +358,7 @@ int ldlt_test(T u, T small, bool delays, bool singular, bool dblk_singular, int 
    EXPECT_LE(bwderr, 5e-14) << "(test " << test << " seed " << seed << ")";
 
    // Cleanup memory
-   delete[] a; delete[] l;
+   delete[] a; free(l);
    delete[] b;
    delete[] perm;
    delete[] d; delete[] soln;
