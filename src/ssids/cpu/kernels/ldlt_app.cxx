@@ -89,13 +89,13 @@ private:
        * (which may overlap from the front). Puts uneliminated variables in
        * failed_perm (no need for d with failed vars). */
       void move_back(int* elim_perm, int* failed_perm) {
-         if(perm+2*npad != elim_perm) { // Don't move if memory is identical
+         if(perm != elim_perm) { // Don't move if memory is identical
             for(int i=0; i<nelim2; ++i)
-               *(elim_perm++) = perm[npad+i];
+               *(elim_perm++) = perm[i];
          }
          // Copy failed perm
          for(int i=npad+nelim2; i<BLOCK_SIZE; ++i)
-            *(failed_perm++) = perm[i];
+            *(failed_perm++) = perm[i-npad];
       }
 
    };
@@ -447,9 +447,9 @@ private:
                }
                int *temp = new int[BLOCK_SIZE];
                for(int i=0; i<get_ncol(blk, n); ++i)
-                  temp[i] = cdata[blk].perm[dpad+lperm[i]];
+                  temp[i] = cdata[blk].perm[lperm[i]];
                for(int i=0; i<get_ncol(blk, n); ++i)
-                  cdata[blk].perm[dpad+i] = temp[i];
+                  cdata[blk].perm[i] = temp[i];
                delete[] temp;
             } else {
                block_ldlt<T, BLOCK_SIZE>(dpad, cdata[blk].perm,
@@ -662,11 +662,10 @@ private:
    static
    void print_mat(int mblk, int nblk, int m, int n, const BlockData *blkdata, const struct col_data *cdata, int lda) {
       for(int rblk=0; rblk<mblk; rblk++) {
-         int rpad = BLOCK_SIZE - get_nrow(rblk, m, n);
          for(int row=0; row<get_nrow(rblk, m, n); row++) {
             int r = rblk*BLOCK_SIZE+row;
             if(r < n)
-               printf("%d%s:", cdata[rblk].perm[rpad+row], (row<cdata[rblk].nelim2)?"X":" ");
+               printf("%d%s:", cdata[rblk].perm[row], (row<cdata[rblk].nelim2)?"X":" ");
             else
                printf("%d%s:", r, "U");
             for(int cblk=0; cblk<std::min(rblk+1,nblk); cblk++) {
@@ -725,14 +724,8 @@ public:
       struct col_data *cdata = new struct col_data[nblk];
 
       /* Load column data */
-      for(int blk=0; blk<nblk-1; blk++) {
+      for(int blk=0; blk<nblk; blk++)
          cdata[blk].perm = &perm[blk*BLOCK_SIZE];
-      }
-      {
-         // Handle last block specially to allow for undersize
-         int coffset = nblk*BLOCK_SIZE - n;
-         cdata[nblk-1].perm = &perm[(nblk-1)*BLOCK_SIZE] - coffset;
-      }
       if(n < nblk*BLOCK_SIZE) {
          // Account for extra cols as "already eliminated"
          cdata[nblk-1].npad = nblk*BLOCK_SIZE - n;
