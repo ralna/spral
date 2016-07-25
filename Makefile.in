@@ -251,6 +251,7 @@ am__libspral_a_SOURCES_DIST = src/blas_iface.f90 src/core_analyse.f90 \
 	src/ssids/cpu/kernels/block_ldlt.hxx \
 	src/ssids/cpu/kernels/cholesky.cxx \
 	src/ssids/cpu/kernels/cholesky.hxx \
+	src/ssids/cpu/kernels/ldlt_app.cxx \
 	src/ssids/cpu/kernels/ldlt_app.hxx \
 	src/ssids/cpu/kernels/ldlt_nopiv.cxx \
 	src/ssids/cpu/kernels/ldlt_nopiv.hxx \
@@ -307,6 +308,7 @@ am_libspral_a_OBJECTS = src/blas_iface.$(OBJEXT) \
 	src/ssids/cpu/profile.$(OBJEXT) \
 	src/ssids/cpu/SymbolicSubtree.$(OBJEXT) \
 	src/ssids/cpu/kernels/cholesky.$(OBJEXT) \
+	src/ssids/cpu/kernels/ldlt_app.$(OBJEXT) \
 	src/ssids/cpu/kernels/ldlt_nopiv.$(OBJEXT) \
 	src/ssids/cpu/kernels/ldlt_tpp.$(OBJEXT) \
 	src/ssids/cpu/kernels/wrappers.$(OBJEXT) \
@@ -1176,6 +1178,7 @@ libspral_a_SOURCES = src/blas_iface.f90 src/core_analyse.f90 \
 	src/ssids/cpu/kernels/block_ldlt.hxx \
 	src/ssids/cpu/kernels/cholesky.cxx \
 	src/ssids/cpu/kernels/cholesky.hxx \
+	src/ssids/cpu/kernels/ldlt_app.cxx \
 	src/ssids/cpu/kernels/ldlt_app.hxx \
 	src/ssids/cpu/kernels/ldlt_nopiv.cxx \
 	src/ssids/cpu/kernels/ldlt_nopiv.hxx \
@@ -1514,6 +1517,9 @@ src/ssids/cpu/kernels/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) src/ssids/cpu/kernels/$(DEPDIR)
 	@: > src/ssids/cpu/kernels/$(DEPDIR)/$(am__dirstamp)
 src/ssids/cpu/kernels/cholesky.$(OBJEXT):  \
+	src/ssids/cpu/kernels/$(am__dirstamp) \
+	src/ssids/cpu/kernels/$(DEPDIR)/$(am__dirstamp)
+src/ssids/cpu/kernels/ldlt_app.$(OBJEXT):  \
 	src/ssids/cpu/kernels/$(am__dirstamp) \
 	src/ssids/cpu/kernels/$(DEPDIR)/$(am__dirstamp)
 src/ssids/cpu/kernels/ldlt_nopiv.$(OBJEXT):  \
@@ -1993,6 +1999,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/$(DEPDIR)/profile.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/$(DEPDIR)/smalloc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/kernels/$(DEPDIR)/cholesky.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/kernels/$(DEPDIR)/ldlt_app.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/kernels/$(DEPDIR)/ldlt_nopiv.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/kernels/$(DEPDIR)/ldlt_tpp.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/kernels/$(DEPDIR)/wrappers.Po@am__quote@

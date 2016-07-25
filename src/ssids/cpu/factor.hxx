@@ -11,15 +11,18 @@
 #pragma once
 
 /* Standard headers */
+#include <cmath>
 #include <cstddef>
 #include <sstream>
 #include <stdexcept>
+#include <omp.h>
 /* SPRAL headers */
 #include "cpu_iface.hxx"
 #include "kernels/assemble.hxx"
 #include "kernels/cholesky.hxx"
 #include "kernels/ldlt_app.hxx"
 #include "kernels/ldlt_tpp.hxx"
+#include "kernels/wrappers.hxx"
 #include "SymbolicNode.hxx"
 
 namespace spral { namespace ssids { namespace cpu {
@@ -71,7 +74,7 @@ void factor_node_indef(
    int *perm = node->perm;
 
    /* Perform factorization */
-   node->nelim = ldlt_app_factor<T, BLOCK_SIZE>(
+   node->nelim = ldlt_app_factor(
          m, n, perm, lcol, ldl, d, options->u, options->small
          );
 

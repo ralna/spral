@@ -13,6 +13,7 @@
 #include <cstring>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 
 #include "framework.hxx"
 #include "ssids/cpu/kernels/wrappers.hxx"
@@ -301,7 +302,7 @@ int ldlt_test(T u, T small, bool delays, bool singular, bool dblk_singular, int 
    for(int i=0; i<m; i++) perm[i] = i;
    T *d = new T[2*m];
    // First m x n matrix
-   int q1 = ldlt_app_factor<T, BLOCK_SIZE>(m, n, perm, l, lda, d, u, small);
+   int q1 = ldlt_app_factor(m, n, perm, l, lda, d, u, small);
    if(debug) std::cout << "FIRST FACTOR CALL ELIMINATED " << q1 << " of " << n << " pivots" << std::endl;
    int q2 = 0;
    if(q1 < n) {
@@ -318,7 +319,7 @@ int ldlt_test(T u, T small, bool delays, bool singular, bool dblk_singular, int 
       int *perm2 = new int[m-q1];
       for(int i=0; i<m-q1; i++)
          perm2[i] = i;
-      q2 = ldlt_app_factor<T, BLOCK_SIZE>(m-q1, m-q1, perm2, &l[q1*(lda+1)], lda, &d[2*q1], u, small);
+      q2 = ldlt_app_factor(m-q1, m-q1, perm2, &l[q1*(lda+1)], lda, &d[2*q1], u, small);
       // Permute rows of A_21 as per perm
       permute_rows(m-q1, q1, perm2, &perm[q1], &l[q1], lda);
       delete[] perm2;
