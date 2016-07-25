@@ -119,10 +119,9 @@ private:
 
       /** Apply row permutation to block at same time as taking a copy */
       void create_restore_point_with_row_perm(int m, int n, const int *lperm, int lda) {
-         int rpad = BLOCK_SIZE - m;
          for(int j=0; j<n; j++)
          for(int i=0; i<m; i++) {
-            int r = lperm[rpad+i]-rpad;
+            int r = lperm[i];
             lwork[j*BLOCK_SIZE+i] = aval[j*lda+r];
          }
          for(int j=0; j<n; j++)
@@ -132,9 +131,8 @@ private:
 
       /** Apply column permutation to block at same time as taking a copy */
       void create_restore_point_with_col_perm(int m, int n, const int *lperm, int lda) {
-         int cpad = BLOCK_SIZE - n;
          for(int j=0; j<n; j++) {
-            int c = lperm[cpad+j]-cpad;
+            int c = lperm[j];
             for(int i=0; i<m; i++)
                lwork[j*BLOCK_SIZE+i] = aval[c*lda+i];
          }
@@ -155,11 +153,10 @@ private:
        *  values stored in lwork[]. Applies a symmetric permutation while
        *  doing so. */
       void restore_part_with_sym_perm(int n, int from, const int *lperm, int lda) {
-         int pad = BLOCK_SIZE - n;
          for(int j=from; j<n; j++) {
-            int c = lperm[pad+j]-pad;
+            int c = lperm[j];
             for(int i=from; i<n; i++) {
-               int r = lperm[pad+i]-pad;
+               int r = lperm[i];
                aval[j*lda+i] = (r>c) ? lwork[c*BLOCK_SIZE+r]
                                      : lwork[r*BLOCK_SIZE+c];
             }
@@ -433,7 +430,7 @@ private:
             BlockData &dblk = blkdata[blk*mblk+blk];
             dblk.lwork = global_work.get_wait();
             int *lperm = &global_lperm[blk*BLOCK_SIZE];
-            for(int i=0; i<BLOCK_SIZE; i++)
+            for(int i=0; i<get_ncol(blk, n); i++)
                lperm[i] = i;
             int dpad = cdata[blk].npad;
             dblk.create_restore_point(get_ncol(blk, n), lda);
@@ -441,19 +438,18 @@ private:
             if(dpad || !is_aligned(dblk.aval)) {
                int test = ldlt_tpp_factor(
                      get_nrow(blk, m, n), get_ncol(blk, n),
-                     &lperm[dpad], dblk.aval, lda,
-                     cdata[blk].d, thread_work.ld, BLOCK_SIZE,
-                     u, small);
+                     lperm, dblk.aval, lda, cdata[blk].d,
+                     thread_work.ld, BLOCK_SIZE, u, small);
                // FIXME: remove following test
                if(test != BLOCK_SIZE-dpad) {
                   printf("Failed DEBUG REMOVE FIXME\n");
                   exit(1);
                }
                int *temp = new int[BLOCK_SIZE];
-               for(int i=dpad; i<BLOCK_SIZE; ++i)
-                  temp[i] = cdata[blk].perm[lperm[i]];
-               for(int i=dpad; i<BLOCK_SIZE; ++i)
-                  cdata[blk].perm[i] = temp[i];
+               for(int i=0; i<get_ncol(blk, n); ++i)
+                  temp[i] = cdata[blk].perm[dpad+lperm[i]];
+               for(int i=0; i<get_ncol(blk, n); ++i)
+                  cdata[blk].perm[dpad+i] = temp[i];
                delete[] temp;
             } else {
                block_ldlt<T, BLOCK_SIZE>(dpad, cdata[blk].perm,
