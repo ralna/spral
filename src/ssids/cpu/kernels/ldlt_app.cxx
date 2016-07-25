@@ -68,7 +68,6 @@ private:
    };
 
    struct col_data {
-      int npad; //< Number of entries added for padding to start
       int nelim; //< Number of eliminated entries in this column
       int nelim2; //< Number of eliminated entries in this column
       int npass; //< Reduction variable for nelim
@@ -77,7 +76,7 @@ private:
       T *d; //< pointer to local d
 
       col_data() : 
-         npad(0), nelim(0), nelim2(0)
+         nelim(0), nelim2(0)
       {
          omp_init_lock(&lock);
       }
@@ -88,14 +87,14 @@ private:
       /** Moves perm for eliminated columns to elim_perm
        * (which may overlap from the front). Puts uneliminated variables in
        * failed_perm (no need for d with failed vars). */
-      void move_back(int* elim_perm, int* failed_perm) {
+      void move_back(int n, int* elim_perm, int* failed_perm) {
          if(perm != elim_perm) { // Don't move if memory is identical
             for(int i=0; i<nelim2; ++i)
                *(elim_perm++) = perm[i];
          }
          // Copy failed perm
-         for(int i=npad+nelim2; i<BLOCK_SIZE; ++i)
-            *(failed_perm++) = perm[i-npad];
+         for(int i=nelim2; i<n; ++i)
+            *(failed_perm++) = perm[i];
       }
 
    };
@@ -408,9 +407,6 @@ private:
 
       /* Inner loop - iterate over block columns */
       for(int blk=0; blk<nblk; blk++) {
-         // Don't bother adding tasks if we eliminated everything already
-         if(cdata[blk].npad>=BLOCK_SIZE) continue;
-
          if(debug) {
             printf("Bcol %d:\n", blk);
             print_mat(mblk, nblk, m, n, blkdata, cdata, lda);
@@ -432,16 +428,15 @@ private:
             int *lperm = &global_lperm[blk*BLOCK_SIZE];
             for(int i=0; i<get_ncol(blk, n); i++)
                lperm[i] = i;
-            int dpad = cdata[blk].npad;
             dblk.create_restore_point(get_ncol(blk, n), lda);
             cdata[blk].d = &d[2*next_elim];
-            if(dpad || !is_aligned(dblk.aval)) {
+            if(get_ncol(blk, n) < BLOCK_SIZE || !is_aligned(dblk.aval)) {
                int test = ldlt_tpp_factor(
                      get_nrow(blk, m, n), get_ncol(blk, n),
                      lperm, dblk.aval, lda, cdata[blk].d,
                      thread_work.ld, BLOCK_SIZE, u, small);
                // FIXME: remove following test
-               if(test != BLOCK_SIZE-dpad) {
+               if(test != get_ncol(blk, n)) {
                   printf("Failed DEBUG REMOVE FIXME\n");
                   exit(1);
                }
@@ -452,9 +447,8 @@ private:
                   cdata[blk].perm[i] = temp[i];
                delete[] temp;
             } else {
-               block_ldlt<T, BLOCK_SIZE>(dpad, cdata[blk].perm,
-                     dblk.aval, lda, cdata[blk].d, thread_work.ld, u, small,
-                     lperm);
+               block_ldlt<T, BLOCK_SIZE>(0, cdata[blk].perm, dblk.aval, lda,
+                     cdata[blk].d, thread_work.ld, u, small, lperm);
             }
             // Initialize threshold check (no lock required becuase task depend)
             cdata[blk].npass = get_ncol(blk, n);
@@ -728,7 +722,6 @@ public:
          cdata[blk].perm = &perm[blk*BLOCK_SIZE];
       if(n < nblk*BLOCK_SIZE) {
          // Account for extra cols as "already eliminated"
-         cdata[nblk-1].npad = nblk*BLOCK_SIZE - n;
          cdata[nblk-1].nelim = nblk*BLOCK_SIZE - n;
       }
 
@@ -750,7 +743,9 @@ public:
       // Permute failed entries to end
       int* failed_perm = new int[n - num_elim];
       for(int jblk=0, insert=0, fail_insert=0; jblk<nblk; jblk++) {
-         cdata[jblk].move_back(&perm[insert], &failed_perm[fail_insert]);
+         cdata[jblk].move_back(
+               get_ncol(jblk, n), &perm[insert], &failed_perm[fail_insert]
+               );
          insert += cdata[jblk].nelim;
          fail_insert += BLOCK_SIZE - cdata[jblk].nelim;
       }
