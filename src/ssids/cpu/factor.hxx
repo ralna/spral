@@ -25,6 +25,8 @@
 #include "kernels/wrappers.hxx"
 #include "SymbolicNode.hxx"
 
+//#include "kernels/verify.hxx" // FIXME: remove debug
+
 namespace spral { namespace ssids { namespace cpu {
 
 const int SSIDS_SUCCESS = 0;
@@ -74,7 +76,9 @@ void factor_node_indef(
    int *perm = node->perm;
 
    /* Perform factorization */
+   //Verify<T> verifier(m, n, perm, lcol, ldl);
    node->nelim = ldlt_app_factor(m, n, perm, lcol, ldl, d, options);
+   //verifier.verify(node->nelim, perm, lcol, ldl, d);
 
    /* Finish factorization worth simplistic code */
    if(node->nelim < n) {
