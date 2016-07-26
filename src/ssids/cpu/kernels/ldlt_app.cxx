@@ -149,18 +149,18 @@ private:
       }
 
       /** Apply row permutation to block at same time as taking a copy */
-      void create_restore_point_with_row_perm(int m, int n, int nelim, const int *lperm, int lda) {
+      void create_restore_point_with_row_perm(int m, int n, int nperm, const int *lperm, int lda) {
          for(int j=0; j<n; j++) {
-            for(int i=0; i<nelim; i++) {
+            for(int i=0; i<nperm; i++) {
                int r = lperm[i];
                lwork[j*BLOCK_SIZE+i] = aval[j*lda+r];
             }
-            for(int i=nelim; i<m; i++) {
+            for(int i=nperm; i<m; i++) {
                lwork[j*BLOCK_SIZE+i] = aval[j*lda+i];
             }
          }
          for(int j=0; j<n; j++)
-         for(int i=0; i<nelim; i++)
+         for(int i=0; i<nperm; i++)
             aval[j*lda+i] = lwork[j*BLOCK_SIZE+i];
       }
 
@@ -406,7 +406,7 @@ private:
       void apply_rperm_and_backup(BlockPool<T, BLOCK_SIZE>& pool, int const* global_lperm) {
          blk_.lwork = pool.get_wait();
          int const* lperm = &global_lperm[i_*BLOCK_SIZE];
-         blk_.create_restore_point_with_row_perm(nrow(), ncol(), cdata_[i_].nelim, lperm, lda_);
+         blk_.create_restore_point_with_row_perm(nrow(), ncol(), get_ncol(i_, n_), lperm, lda_);
       }
 
       void apply_cperm_and_backup(BlockPool<T, BLOCK_SIZE>& pool, int const* global_lperm) {
@@ -582,12 +582,7 @@ private:
    }
 
    static int get_nrow(int blk, int m, int n) {
-      int nblk = (n-1) / BLOCK_SIZE + 1;
-      if(blk < nblk) {
-         return std::min(BLOCK_SIZE, n - blk*BLOCK_SIZE);
-      } else {
-         return std::min(BLOCK_SIZE, (m-n) - (blk-nblk)*BLOCK_SIZE);
-      }
+      return std::min(BLOCK_SIZE, m-blk*BLOCK_SIZE);
    }
    static int get_ncol(int blk, int n) {
       return std::min(BLOCK_SIZE, n-blk*BLOCK_SIZE);
@@ -802,7 +797,7 @@ public:
        * If we have m > n, then need to separate diag block and rect part to
        * make handling easier - hence the funny calculation for mblk. */
       int nblk = (n-1) / BLOCK_SIZE + 1;
-      int mblk = (m>n) ? nblk + (m-n-1) / BLOCK_SIZE + 1 : nblk;
+      int mblk = (m-1) / BLOCK_SIZE + 1;
       int next_elim = 0;
 
       /* Load data block-wise */
@@ -817,15 +812,9 @@ public:
                );
       for(int jblk=0; jblk<nblk; ++jblk) {
          // Diagonal block part
-         for(int iblk=0; iblk<nblk; iblk++) {
+         for(int iblk=jblk; iblk<mblk; iblk++) {
             blkdata[jblk*mblk+iblk].aval = 
                &a[(jblk*BLOCK_SIZE)*lda + iblk*BLOCK_SIZE];
-         }
-         // Rectangular block below it
-         T *arect = &a[n];
-         for(int iblk=0; iblk<mblk-nblk; iblk++) {
-            blkdata[jblk*mblk+nblk+iblk].aval =
-                  &arect[(jblk*BLOCK_SIZE)*lda + iblk*BLOCK_SIZE];
          }
       }
 
@@ -883,10 +872,16 @@ public:
             ifail += get_ncol(iblk, n) - cdata[iblk].nelim;
          }
          // Rectangular part
+         // (be careful with blocks that contain both diag and rect parts)
+         blkdata[jblk*mblk+(nblk-1)].copy_failed_rect(
+               get_nrow(nblk-1, m, n), get_ncol(jblk, n), get_ncol(nblk-1, n),
+               cdata[jblk], &failed_rect[jfail*(m-n)+(nblk-1)*BLOCK_SIZE-n],
+               m-n, lda
+               );
          for(int iblk=nblk; iblk<mblk; ++iblk) {
             blkdata[jblk*mblk+iblk].copy_failed_rect(
                   get_nrow(iblk, m, n), get_ncol(jblk, n), 0, cdata[jblk],
-                  &failed_rect[jfail*(m-n)+(iblk-nblk)*BLOCK_SIZE], m-n, lda
+                  &failed_rect[jfail*(m-n)+iblk*BLOCK_SIZE-n], m-n, lda
                   );
          }
          jinsert += cdata[jblk].nelim;
@@ -903,10 +898,15 @@ public:
             iinsert += cdata[iblk].nelim;
          }
          // Rectangular part
+         // (be careful with blocks that contain both diag and rect parts)
+         blkdata[jblk*mblk+(nblk-1)].move_up_rect(
+               get_nrow(nblk-1, m, n), get_ncol(nblk-1, n), cdata[jblk],
+               &a[jinsert*lda+(nblk-1)*BLOCK_SIZE], lda
+               );
          for(int iblk=nblk; iblk<mblk; ++iblk)
             blkdata[jblk*mblk+iblk].move_up_rect(
                   get_nrow(iblk, m, n), 0, cdata[jblk],
-                  &a[jinsert*lda+n+(iblk-nblk)*BLOCK_SIZE], lda
+                  &a[jinsert*lda+iblk*BLOCK_SIZE], lda
                   );
          jinsert += cdata[jblk].nelim;
       }
