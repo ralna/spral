@@ -36,6 +36,18 @@ namespace ldlt_app_internal {
 
 static const int INNER_BLOCK_SIZE = 32;
 
+/** \return number of blocks for given n */
+template<int BLOCK_SIZE>
+inline int calc_nblk(int n) {
+   return (n-1) / BLOCK_SIZE + 1;
+}
+
+/** \return block size of block blk if maximum in dimension is n */
+template<int BLOCK_SIZE>
+inline int calc_blkn(int blk, int n) {
+   return std::min(BLOCK_SIZE, n-blk*BLOCK_SIZE);
+}
+
 /** Workspace allocated on a per-thread basis */
 template<typename T, size_t BLOCK_SIZE>
 struct ThreadWork {
@@ -274,8 +286,109 @@ void apply_pivot(int m, int n, int from, const T *diag, const T *d, const T smal
    }
 }
 
+template <typename T, int BLOCK_SIZE>
+class PoolBackup {
+public:
+   // FIXME: reduce pool size
+   PoolBackup(int m, int n)
+   : m_(m), n_(n), mblk_(calc_nblk<BLOCK_SIZE>(m)),
+     pool_(calc_nblk<BLOCK_SIZE>(n)*((calc_nblk<BLOCK_SIZE>(n)+1)/2+mblk_)),
+     ptr_(mblk_*calc_nblk<BLOCK_SIZE>(n))
+   {}
+
+   void acquire(int iblk, int jblk) {
+      ptr_[jblk*mblk_+iblk] = pool_.get_wait();
+   }
+
+   void release(int iblk, int jblk) {
+      pool_.release(ptr_[jblk*mblk_+iblk]);
+      ptr_[jblk*mblk_+iblk] = nullptr;
+   }
+
+   void create_restore_point(int iblk, int jblk, T const* aval, int lda) {
+      T*& lwork = ptr_[jblk*mblk_+iblk];
+      lwork = pool_.get_wait();
+      for(int j=0; j<get_ncol(jblk); j++)
+      for(int i=0; i<get_nrow(iblk); i++)
+         lwork[j*BLOCK_SIZE+i] = aval[j*lda+i];
+   }
+
+   /** Apply row permutation to block at same time as taking a copy */
+   void create_restore_point_with_row_perm(int iblk, int jblk, int nperm, const int *lperm, T* aval, int lda) {
+      T*& lwork = ptr_[jblk*mblk_+iblk];
+      lwork = pool_.get_wait();
+      for(int j=0; j<get_ncol(jblk); j++) {
+         for(int i=0; i<nperm; i++) {
+            int r = lperm[i];
+            lwork[j*BLOCK_SIZE+i] = aval[j*lda+r];
+         }
+         for(int i=nperm; i<get_nrow(iblk); i++) {
+            lwork[j*BLOCK_SIZE+i] = aval[j*lda+i];
+         }
+      }
+      for(int j=0; j<get_ncol(jblk); j++)
+      for(int i=0; i<nperm; i++)
+         aval[j*lda+i] = lwork[j*BLOCK_SIZE+i];
+   }
+
+   /** Apply column permutation to block at same time as taking a copy */
+   void create_restore_point_with_col_perm(int iblk, int jblk, const int *lperm, T* aval, int lda) {
+      T*& lwork = ptr_[jblk*mblk_+iblk];
+      lwork = pool_.get_wait();
+      for(int j=0; j<get_ncol(jblk); j++) {
+         int c = lperm[j];
+         for(int i=0; i<get_nrow(iblk); i++)
+            lwork[j*BLOCK_SIZE+i] = aval[c*lda+i];
+      }
+      for(int j=0; j<get_ncol(jblk); j++)
+      for(int i=0; i<get_nrow(iblk); i++)
+         aval[j*lda+i] = lwork[j*BLOCK_SIZE+i];
+   }
+
+   /** Restores any columns that have failed back to their previous
+    *  values stored in lwork[] */
+   void restore_part(int iblk, int jblk, int rfrom, int cfrom, T* aval, int lda) {
+      T*& lwork = ptr_[jblk*mblk_+iblk];
+      for(int j=cfrom; j<get_ncol(jblk); j++)
+      for(int i=rfrom; i<get_nrow(iblk); i++)
+         aval[j*lda+i] = lwork[j*BLOCK_SIZE+i];
+   }
+
+   /** Restores any columns that have failed back to their previous
+    *  values stored in lwork[]. Applies a symmetric permutation while
+    *  doing so. */
+   void restore_part_with_sym_perm(int iblk, int jblk, int from, const int *lperm, T* aval, int lda) {
+      T*& lwork = ptr_[jblk*mblk_+iblk];
+      for(int j=from; j<get_ncol(jblk); j++) {
+         int c = lperm[j];
+         for(int i=from; i<get_ncol(jblk); i++) {
+            int r = lperm[i];
+            aval[j*lda+i] = (r>c) ? lwork[c*BLOCK_SIZE+r]
+                                  : lwork[r*BLOCK_SIZE+c];
+         }
+         for(int i=get_ncol(jblk); i<get_nrow(iblk); i++)
+            aval[j*lda+i] = lwork[c*BLOCK_SIZE+i];
+      }
+   }
+
+private:
+   inline int get_ncol(int blk) {
+      return calc_blkn<BLOCK_SIZE>(blk, n_);
+   }
+   inline int get_nrow(int blk) {
+      return calc_blkn<BLOCK_SIZE>(blk, m_);
+   }
+
+   int const m_;
+   int const n_;
+   int const mblk_;
+   BlockPool<T, BLOCK_SIZE> pool_;
+   std::vector<T*> ptr_;
+};
+
 template<typename T,
          int BLOCK_SIZE,
+         typename Backup,
          bool debug=false,
          typename Alloc=AlignedAllocator<T>
          >
@@ -288,96 +401,6 @@ private:
    /// Allocator
    mutable Alloc alloc;
 
-   class PoolBackup {
-   public:
-      PoolBackup(int m, int n, int pool_size)
-      : m_(m), n_(n), mblk_((m-1)/BLOCK_SIZE+1), pool_(pool_size),
-        ptr_(mblk_*((n-1)/BLOCK_SIZE+1))
-      {}
-
-      void acquire(int iblk, int jblk) {
-         ptr_[jblk*mblk_+iblk] = pool_.get_wait();
-      }
-
-      void release(int iblk, int jblk) {
-         pool_.release(ptr_[jblk*mblk_+iblk]);
-         ptr_[jblk*mblk_+iblk] = nullptr;
-      }
-
-      void create_restore_point(int iblk, int jblk, T const* aval, int lda) {
-         T*& lwork = ptr_[jblk*mblk_+iblk];
-         lwork = pool_.get_wait();
-         for(int j=0; j<get_ncol(jblk, n_); j++)
-         for(int i=0; i<get_nrow(iblk, m_, n_); i++)
-            lwork[j*BLOCK_SIZE+i] = aval[j*lda+i];
-      }
-
-      /** Apply row permutation to block at same time as taking a copy */
-      void create_restore_point_with_row_perm(int iblk, int jblk, int nperm, const int *lperm, T* aval, int lda) {
-         T*& lwork = ptr_[jblk*mblk_+iblk];
-         lwork = pool_.get_wait();
-         for(int j=0; j<get_ncol(jblk, n_); j++) {
-            for(int i=0; i<nperm; i++) {
-               int r = lperm[i];
-               lwork[j*BLOCK_SIZE+i] = aval[j*lda+r];
-            }
-            for(int i=nperm; i<get_nrow(iblk, m_, n_); i++) {
-               lwork[j*BLOCK_SIZE+i] = aval[j*lda+i];
-            }
-         }
-         for(int j=0; j<get_ncol(jblk, n_); j++)
-         for(int i=0; i<nperm; i++)
-            aval[j*lda+i] = lwork[j*BLOCK_SIZE+i];
-      }
-
-      /** Apply column permutation to block at same time as taking a copy */
-      void create_restore_point_with_col_perm(int iblk, int jblk, const int *lperm, T* aval, int lda) {
-         T*& lwork = ptr_[jblk*mblk_+iblk];
-         lwork = pool_.get_wait();
-         for(int j=0; j<get_ncol(jblk, n_); j++) {
-            int c = lperm[j];
-            for(int i=0; i<get_nrow(iblk, m_, n_); i++)
-               lwork[j*BLOCK_SIZE+i] = aval[c*lda+i];
-         }
-         for(int j=0; j<get_ncol(jblk, n_); j++)
-         for(int i=0; i<get_nrow(iblk, m_, n_); i++)
-            aval[j*lda+i] = lwork[j*BLOCK_SIZE+i];
-      }
-
-      /** Restores any columns that have failed back to their previous
-       *  values stored in lwork[] */
-      void restore_part(int iblk, int jblk, int rfrom, int cfrom, T* aval, int lda) {
-         T*& lwork = ptr_[jblk*mblk_+iblk];
-         for(int j=cfrom; j<get_ncol(jblk, n_); j++)
-         for(int i=rfrom; i<get_nrow(iblk, m_, n_); i++)
-            aval[j*lda+i] = lwork[j*BLOCK_SIZE+i];
-      }
-
-      /** Restores any columns that have failed back to their previous
-       *  values stored in lwork[]. Applies a symmetric permutation while
-       *  doing so. */
-      void restore_part_with_sym_perm(int iblk, int jblk, int from, const int *lperm, T* aval, int lda) {
-         T*& lwork = ptr_[jblk*mblk_+iblk];
-         for(int j=from; j<get_ncol(jblk, n_); j++) {
-            int c = lperm[j];
-            for(int i=from; i<get_ncol(jblk, n_); i++) {
-               int r = lperm[i];
-               aval[j*lda+i] = (r>c) ? lwork[c*BLOCK_SIZE+r]
-                                     : lwork[r*BLOCK_SIZE+c];
-            }
-            for(int i=get_ncol(jblk, n_); i<get_nrow(iblk, m_, n_); i++)
-               aval[j*lda+i] = lwork[c*BLOCK_SIZE+i];
-         }
-      }
-
-   private:
-      int const m_;
-      int const n_;
-      int const mblk_;
-      BlockPool<T, BLOCK_SIZE> pool_;
-      std::vector<T*> ptr_;
-   };
-
    class Block {
    public:
       Block(int i, int j, int m, int n, struct col_data<T>* cdata, T* a, int lda)
@@ -385,26 +408,22 @@ private:
         aval_(&a[j*BLOCK_SIZE*lda+i*BLOCK_SIZE])
       {}
 
-      template <typename Backup>
       void backup(Backup& backup) {
          backup.create_restore_point(i_, j_, aval_, lda_);
       }
 
-      template <typename Backup>
       void apply_rperm_and_backup(Backup& backup, int const* global_lperm) {
          int const* lperm = &global_lperm[i_*BLOCK_SIZE];
          backup.create_restore_point_with_row_perm(
-               i_, j_, get_ncol(i_, n_), lperm, aval_, lda_
+               i_, j_, get_ncol(i_), lperm, aval_, lda_
                );
       }
 
-      template <typename Backup>
       void apply_cperm_and_backup(Backup& backup, int const* global_lperm) {
          int const* lperm = &global_lperm[j_*BLOCK_SIZE];
          backup.create_restore_point_with_col_perm(i_, j_, lperm, aval_, lda_);
       }
 
-      template <typename Backup>
       void restore_if_required(Backup& backup, int elim_col, int const* global_lperm) {
          if(i_ == elim_col && j_ == elim_col) { // In eliminated diagonal block
             if(cdata_[i_].nelim < ncol()) { // If there are failed pivots
@@ -527,9 +546,16 @@ private:
          }
       }
 
-      int nrow() const { return get_nrow(i_, m_, n_); }
-      int ncol() const { return get_ncol(j_, n_); }
+      int nrow() const { return get_nrow(i_); }
+      int ncol() const { return get_ncol(j_); }
    private:
+      inline int get_ncol(int blk) const {
+         return calc_blkn<BLOCK_SIZE>(blk, n_);
+      }
+      inline int get_nrow(int blk) const {
+         return calc_blkn<BLOCK_SIZE>(blk, m_);
+      }
+
       int const i_; //< block's row
       int const j_; //< block's column
       int const m_; //< global number of rows
@@ -572,14 +598,6 @@ private:
       }
    }
 
-   static int get_nrow(int blk, int m, int n) {
-      return std::min(BLOCK_SIZE, m-blk*BLOCK_SIZE);
-   }
-   static int get_ncol(int blk, int n) {
-      return std::min(BLOCK_SIZE, n-blk*BLOCK_SIZE);
-   }
-
-   template <typename Backup>
    void run_elim(int &next_elim, int const m, int const n, const int mblk, const int nblk, struct col_data<T> *cdata, Backup& backup, T* d, T* a, int lda, ThreadWork<T,BLOCK_SIZE> all_thread_work[]) {
       //printf("ENTRY %d %d vis %d %d %d\n", m, n, mblk, nblk, BLOCK_SIZE);
 
@@ -753,6 +771,13 @@ private:
       }
    }
 
+   inline int get_ncol(int blk, int n) {
+      return calc_blkn<BLOCK_SIZE>(blk, n);
+   }
+   inline int get_nrow(int blk, int m) {
+      return calc_blkn<BLOCK_SIZE>(blk, m);
+   }
+
 public:
    LDLT(T u, T small)
    : u(u), small(small)
@@ -770,8 +795,7 @@ public:
       int next_elim = 0;
 
       /* Allocate handler for backup space */
-      // FIXME: Reduce number of blocks
-      PoolBackup backup(m, n, (nblk*(nblk+1))/2+mblk*nblk);
+      Backup backup(m, n);
 
       /* Temporary workspaces */
       struct col_data<T> *cdata = new struct col_data<T>[nblk];
@@ -828,13 +852,13 @@ public:
          // Rectangular part
          // (be careful with blocks that contain both diag and rect parts)
          copy_failed_rect(
-               get_nrow(nblk-1, m, n), get_ncol(jblk, n), get_ncol(nblk-1, n),
+               get_nrow(nblk-1, m), get_ncol(jblk, n), get_ncol(nblk-1, n),
                cdata[jblk], &failed_rect[jfail*(m-n)+(nblk-1)*BLOCK_SIZE-n],
                m-n, &a[jblk*BLOCK_SIZE*lda+(nblk-1)*BLOCK_SIZE], lda
                );
          for(int iblk=nblk; iblk<mblk; ++iblk) {
             copy_failed_rect(
-                  get_nrow(iblk, m, n), get_ncol(jblk, n), 0, cdata[jblk],
+                  get_nrow(iblk, m), get_ncol(jblk, n), 0, cdata[jblk],
                   &failed_rect[jfail*(m-n)+iblk*BLOCK_SIZE-n], m-n,
                   &a[jblk*BLOCK_SIZE*lda+iblk*BLOCK_SIZE], lda
                   );
@@ -856,13 +880,13 @@ public:
          // Rectangular part
          // (be careful with blocks that contain both diag and rect parts)
          move_up_rect(
-               get_nrow(nblk-1, m, n), get_ncol(nblk-1, n), cdata[jblk],
+               get_nrow(nblk-1, m), get_ncol(nblk-1, n), cdata[jblk],
                &a[jinsert*lda+(nblk-1)*BLOCK_SIZE],
                &a[jblk*BLOCK_SIZE*lda+(nblk-1)*BLOCK_SIZE], lda
                );
          for(int iblk=nblk; iblk<mblk; ++iblk)
             move_up_rect(
-                  get_nrow(iblk, m, n), 0, cdata[jblk],
+                  get_nrow(iblk, m), 0, cdata[jblk],
                   &a[jinsert*lda+iblk*BLOCK_SIZE],
                   &a[jblk*BLOCK_SIZE*lda+iblk*BLOCK_SIZE], lda
                   );
@@ -906,7 +930,7 @@ template<typename T>
 int ldlt_app_factor(int m, int n, int *perm, T *a, int lda, T *d, struct cpu_factor_options const& options) {
    if(options.cpu_task_block_size % INNER_BLOCK_SIZE != 0)
       throw std::runtime_error("options.cpu_task_block_size must be multiple of inner block size");
-   return LDLT<T, INNER_BLOCK_SIZE>(options.u, options.small).factor(m, n, perm, a, lda, d);
+   return LDLT<T, INNER_BLOCK_SIZE, PoolBackup<T,INNER_BLOCK_SIZE>>(options.u, options.small).factor(m, n, perm, a, lda, d);
 }
 template int ldlt_app_factor<double>(int, int, int*, double*, int, double*, struct cpu_factor_options const&);
 
