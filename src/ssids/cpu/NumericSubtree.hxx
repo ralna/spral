@@ -380,7 +380,17 @@ public:
             int nelim = nodes_[ni].nelim;
             double const* dptr = &nodes_[ni].lcol[blkn*ldl];
             for(int i=0; i<nelim; ) {
-               if(dptr[2*i+1] != 0.0) {
+               if(i+1==nelim || std::isfinite(dptr[2*i+2])) {
+                  /* 1x1 pivot */
+                  if(piv_order) {
+                     piv_order[nodes_[ni].perm[i]-1] = (piv++);
+                  }
+                  if(d) {
+                     *(d++) = dptr[2*i+0];
+                     *(d++) = 0.0;
+                  }
+                  i+=1;
+               } else {
                   /* 2x2 pivot */
                   if(piv_order) {
                      piv_order[nodes_[ni].perm[i]-1] = -(piv++);
@@ -393,16 +403,6 @@ public:
                      *(d++) = 0.0;
                   }
                   i+=2;
-               } else {
-                  /* 1x1 pivot */
-                  if(piv_order) {
-                     piv_order[nodes_[ni].perm[i]-1] = (piv++);
-                  }
-                  if(d) {
-                     *(d++) = dptr[2*i+0];
-                     *(d++) = 0.0;
-                  }
-                  i+=1;
                }
             }
          }
