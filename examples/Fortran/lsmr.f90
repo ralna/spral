@@ -35,7 +35,7 @@ program spral_lsmr_example
 
     do
 
-       call LSMR(action, m, n, u, v, x, keep, options, inform)
+       call lsmr_solve(action, m, n, u, v, x, keep, options, inform)
 
        if (action.eq.0) then
           ! we are done.
@@ -59,7 +59,7 @@ program spral_lsmr_example
 
    end do
 
-   call LSMR_free(keep,stat)
+   call lsmr_free(keep,stat)
 
   contains
 !**************************************************************

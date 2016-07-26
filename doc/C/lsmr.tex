@@ -88,7 +88,7 @@ The following functions are available to the user:
 \begin{itemize}
 \item {\tt spral\_lsmr\_default\_options()} initializes the \texttt{options}
    structure to default values.
-\item {\tt spral\_lsmr()} uses the LSMR method. It must be called repeatedly
+\item {\tt spral\_lsmr\_solve()} uses the LSMR method. It must be called repeatedly
    using a reverse communication interface.
 \item {\tt spral\_lsmr\_free()} should be called after all other calls are
    complete to free the memory that has been allocated. 
@@ -158,13 +158,13 @@ the following routine is provided.}
    \item[\texttt{*options}] is the instance to be initialized.
 \end{description}
 
-\subsection{\texttt{spral\_lsmr()}}
+\subsection{\texttt{spral\_lsmr\_solve()}}
 \textbf{
    To perform the LSMR algorithm, a call to the following subroutine must be
    repeated.
    \vspace{0.2cm}\\
    \texttt{
-      \hspace*{0.2cm} int spral\_lsmr(int *action, int m, int n, double u[], double v[], double y[], void **keep,\\
+      \hspace*{0.2cm} int spral\_lsmr\_solve(int *action, int m, int n, double u[], double v[], double y[], void **keep,\\
       \hspace*{0.7cm} struct spral\_lsmr\_options const *options, struct spral\_lsmr\_inform *inform,\\
       \hspace*{0.7cm} double *damp)
    }
@@ -179,7 +179,7 @@ list of error codes (this value is identical to \texttt{inform.flag}).
 \begin{description}
 
 \item[\texttt{action}] communicates the action to be taken.
-Prior to the first call to {\tt spral\_lsmr()},
+Prior to the first call to {\tt spral\_lsmr\_solve()},
 {\tt action} must be set {\tt 0}. On each exit, {\tt action}
 indicates the action required by the user. The possible values of {\tt action}
 and the action required are as follows:
@@ -252,16 +252,16 @@ A non-zero return value indicates an error. In that case, the resturned value
 is the Fortran stat parameter associated with the failed deallocation.
 
 \noindent
-Once all  calls to \texttt{spral\_lsmr()} are complete,
+Once all  calls to \texttt{spral\_lsmr\_solve()} are complete,
 a call should be made to free memory  allocated by
-\texttt{spral\_lsmr()}  associated with the derived data type {\tt keep}.
+\texttt{spral\_lsmr\_solve()}  associated with the derived data type {\tt keep}.
 Note that, if a series of problems is being solved sequentially, the same {\tt keep}
 may be used for them all and {\tt spral\_lsmr\_free()} needs to be called only
 after the final problem has terminated.
 
 \begin{description}
 
-\item[\texttt{keep}] must be passed unchanged since the last call to \texttt{spral\_lsmr()}.
+\item[\texttt{keep}] must be passed unchanged since the last call to \texttt{spral\_lsmr\_solve()}.
 On exit, internal memory will have been freed and \texttt{*keep}
 will be set to \texttt{NULL}.
 
@@ -351,17 +351,17 @@ The default is {\tt unit\_error$=$6}.
    \item[\texttt{1}] The user may test for convergence whenever 
       {\tt action}$ = ${\tt 3} is returned; this is
       every {\tt options.itn\_test} iterations.
-      {\tt spral\_lsmr()} does {\bf not} compute members
+      {\tt spral\_lsmr\_solve()} does {\bf not} compute members
       {\tt normAP}, {\tt condAP}, {\tt normr}, {\tt normAPr}, {\tt normy}
       of the derived type {\tt spral\_lsmr\_inform}.
-      {\tt spral\_lsmr()} will only terminate if an  error is flagged
+      {\tt spral\_lsmr\_solve()} will only terminate if an  error is flagged
       or the exact solution is {\tt x}$ = ${\tt 0.0}.
       Thus the user is responsible for determining when to stop.
    \item[\texttt{2}] As {\texttt 1} but the members
       {\tt normAP}, {\tt condAP}, {\tt normr}, {\tt normAPr}, {\tt normy}
       of the derived type {\tt spral\_lsmr\_inform} hold the latest estimates and
       may be used by the user to decide whether convergence has been achieved.
-   \item[\texttt{3}] {\tt spral\_lsmr()} determines if convergence has been achieved
+   \item[\texttt{3}] {\tt spral\_lsmr\_solve()} determines if convergence has been achieved
       using the stopping criteria of Fong and Saunders. The members
       {\tt normAP}, {\tt condAP}, {\tt normr}, {\tt normAPr}, {\tt normy}
       of the derived type {\tt spral\_lsmr\_inform} hold the latest estimates.
@@ -459,7 +459,7 @@ of the algorithm. The members of {\tt spral\_lsmr\_inform}
 \section{Return codes} \label{LSMR:errors}
 
 {\tt inform.flag} is used to hold
-   information on each return from {\tt spral\_lsmr()}. 
+   information on each return from {\tt spral\_lsmr\_solve()}. 
 Possible values are:
 \begin{description}
 \item{\tt 0 }  $x = 0.0$  is the exact solution.
@@ -544,7 +544,7 @@ http://web.stanford.edu/group/SOL/software/lsmr/LSMR-SISC-2011.pdf}}.
     \end{itemize}
      This can be generalized for the preconditioned case.
      The guess $x_0$ has to be available before and after the calls
-     to {\tt spral\_lsmr()}.  To judge the benefits, suppose {\tt spral\_lsmr()} takes $k_1$ iterations
+     to {\tt spral\_lsmr\_solve()}.  To judge the benefits, suppose {\tt spral\_lsmr\_solve()} takes $k_1$ iterations
      to solve $Ax = b$ and $k_2$ iterations to solve $A \delta x = r_0$.
      If $x_0$ is ``good", $\|r_0\|_2$ will be smaller than $\|b\|_2$.
      If the same stopping tolerances {\tt options.atol} and {\tt options.btol}

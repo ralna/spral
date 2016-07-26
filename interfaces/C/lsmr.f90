@@ -86,8 +86,8 @@ subroutine spral_lsmr_default_options(coptions) bind(C)
 
 end subroutine spral_lsmr_default_options
 
-integer(C_INT) function spral_lsmr(action, m, n, u, v, y, ckeep, coptions, &
-      cinform, cdamp) bind(C)
+integer(C_INT) function spral_lsmr_solve(action, m, n, u, v, y, ckeep, &
+      coptions, cinform, cdamp) bind(C)
    use spral_lsmr_ciface
    implicit none
 
@@ -120,7 +120,7 @@ integer(C_INT) function spral_lsmr(action, m, n, u, v, y, ckeep, coptions, &
          call copy_inform_out(finform, cinform)
          cinform%flag = 8 ! Allocation failed
          cinform%stat = st
-         spral_lsmr = cinform%flag
+         spral_lsmr_solve = cinform%flag
          return
       endif
       ckeep = c_loc(fkeep)
@@ -130,17 +130,18 @@ integer(C_INT) function spral_lsmr(action, m, n, u, v, y, ckeep, coptions, &
 
    ! Call Fortran routine
    if(associated(fdamp)) then
-      call lsmr(action, m, n, u, v, y, fkeep, foptions, finform, damp=fdamp)
+      call lsmr_solve(action, m, n, u, v, y, fkeep, foptions, finform, &
+         damp=fdamp)
    else
-      call lsmr(action, m, n, u, v, y, fkeep, foptions, finform)
+      call lsmr_solve(action, m, n, u, v, y, fkeep, foptions, finform)
    endif
 
    ! Copy arguments out
    call copy_inform_out(finform, cinform)
 
    ! Return status
-   spral_lsmr = cinform%flag
-end function spral_lsmr
+   spral_lsmr_solve = cinform%flag
+end function spral_lsmr_solve
 
 integer(C_INT) function spral_lsmr_free(ckeep) bind(C)
    use spral_lsmr_ciface

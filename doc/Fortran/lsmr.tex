@@ -82,7 +82,7 @@ Access to the package requires a {\tt USE} statement \\ \\
 \noindent
 The following procedures are available to the user:
 \begin{itemize}
-\item {\tt lsmr()} uses the LSMR method. It must be called repeatedly
+\item {\tt lsmr\_solve()} uses the LSMR method. It must be called repeatedly
 using a reverse communication interface.
 \item {\tt lsmr\_free()} should be called after all other calls are complete
 to free the memory that has been allocated. 
@@ -147,12 +147,12 @@ $$
 \newpage
 \section{Argument lists}
 
-\subsection{\texttt{lsmr()}}
+\subsection{\texttt{lsmr\_solve()}}
 \textbf{%
    To perform the LSMR algorithm, a call of the following form must be made repeatedly\\
    \vspace{0.2cm}
    \texttt{ \hspace*{0.2cm}
-      call lsmr(action, m, n, u, v, y, keep, options, inform[,damp])
+      call lsmr\_solve(action, m, n, u, v, y, keep, options, inform[,damp])
    }
 }
 
@@ -160,7 +160,7 @@ $$
 \begin{description}
 
 \item[\texttt{action}] is an \intentin\ scalar of type {\tt INTEGER}. 
-Prior to the first call to {\tt lsmr()},
+Prior to the first call to {\tt lsmr\_solve()},
 {\tt action} must be set {\tt 0}. On each exit, {\tt action}
 indicates the action required by the user. The possible values of {\tt action}
 and the action required are as follows:
@@ -236,9 +236,9 @@ It must not be changed by the user.
 \vspace{0.2cm}
 
 \noindent
-Once all  calls to \texttt{lsmr()} are complete,
+Once all  calls to \texttt{lsmr\_solve()} are complete,
 a call should be made to free memory  allocated by
-\texttt{lsmr()}  associated with the derived data type {\tt keep}.
+\texttt{lsmr\_solve()}  associated with the derived data type {\tt keep}.
 Note that, if a series of problems is being solved sequentially, the same {\tt keep}
 may be used for them all and {\tt lsmr\_free()} needs to be called only
 after the final problem has terminated.
@@ -341,17 +341,17 @@ The default is {\tt unit\_error$=$6}.
    \item[\texttt{1}] The user may test for convergence whenever 
       {\tt action}$ = ${\tt 3} is returned; this is
       every {\tt options\%itn\_test} iterations.
-      {\tt lsmr()} does {\bf not} compute components
+      {\tt lsmr\_solve()} does {\bf not} compute components
       {\tt normAP}, {\tt condAP}, {\tt normr}, {\tt normAPr}, {\tt normy}
       of the derived type {\tt lsmr\_inform}.
-      {\tt lsmr()} will only terminate if an  error is flagged
+      {\tt lsmr\_solve()} will only terminate if an  error is flagged
       or the exact solution is {\tt x}$ = ${\tt 0.0}.
       Thus the user is responsible for determining when to stop.
    \item[\texttt{2}] As {\texttt 1} but the components
       {\tt normAP}, {\tt condAP}, {\tt normr}, {\tt normAPr}, {\tt normy}
       of the derived type {\tt lsmr\_inform} hold the latest estimates and
       may be used by the user to decide whether convergence has been achieved.
-   \item[\texttt{3}] {\tt lsmr()} determines if convergence has been achieved
+   \item[\texttt{3}] {\tt lsmr\_solve()} determines if convergence has been achieved
       using the stopping criteria of Fong and Saunders. The components
       {\tt normAP}, {\tt condAP}, {\tt normr}, {\tt normAPr}, {\tt normy}
       of the derived type {\tt lsmr\_inform} hold the latest estimates.
@@ -449,7 +449,7 @@ of the algorithm. The components of {\tt lsmr\_inform}
 \section{Return codes} \label{LSMR:errors}
 
 {\tt inform\%flag} is used to hold
-   information on each return from {\tt lsmr()}. 
+   information on each return from {\tt lsmr\_solve()}. 
 Possible values are:
 \begin{description}
 \item{\tt 0 }  $x = 0.0$  is the exact solution.
@@ -534,7 +534,7 @@ http://web.stanford.edu/group/SOL/software/lsmr/LSMR-SISC-2011.pdf}}.
     \end{itemize}
      This can be generalized for the preconditioned case.
      The guess $x_0$ has to be available before and after the calls
-     to {\tt lsmr()}.  To judge the benefits, suppose {\tt lsmr()} takes $k_1$ iterations
+     to {\tt lsmr\_solve()}.  To judge the benefits, suppose {\tt lsmr\_solve()} takes $k_1$ iterations
      to solve $Ax = b$ and $k_2$ iterations to solve $A \delta x = r_0$.
      If $x_0$ is ``good", $\|r_0\|_2$ will be smaller than $\|b\|_2$.
      If the same stopping tolerances {\tt options\%atol} and {\tt options\%btol}

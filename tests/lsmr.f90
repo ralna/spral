@@ -311,7 +311,7 @@ contains
             write(pout,"(/a)",advance="no") " * Testing m=0................."
             m1 = 0
             options%ctest = 1 ! use this to get some printing tested
-            call LSMR(action, m1, n, u, v, y, keep, options, inform, &
+            call lsmr_solve(action, m1, n, u, v, y, keep, options, inform, &
               damp = lambda)
             call print_result(nout, nfail, inform%flag, lsmr_stop_m_oor)
             cycle
@@ -324,7 +324,7 @@ contains
             write(pout,"(/a)",advance="no") " * Testing n=0................."
             n1 = 0
             options%ctest = 1 ! use this to get some printing tested
-            call LSMR(action, m, n1, u, v, y, keep, options, inform)
+            call lsmr_solve(action, m, n1, u, v, y, keep, options, inform)
             call print_result(nout, nfail, inform%flag, lsmr_stop_m_oor)
             cycle
          end if
@@ -431,10 +431,10 @@ contains
          do
 
             if (ldamp) then
-               call LSMR(action, m, n, u, v, y, keep, options, inform, &
+               call lsmr_solve(action, m, n, u, v, y, keep, options, inform, &
                   damp=lambda)
             else
-               call LSMR(action, m, n, u, v, y, keep, options, inform)
+               call lsmr_solve(action, m, n, u, v, y, keep, options, inform)
             end if
 
             if (action.eq.0) then
@@ -760,10 +760,10 @@ contains
 
          do
             if (lambda.ne.zero) then
-               call LSMR(action, m, n, u, v, y, keep, options, inform, &
+               call lsmr_solve(action, m, n, u, v, y, keep, options, inform, &
                  damp=lambda)
             else
-               call LSMR(action, m, n, u, v, y, keep, options, inform)
+               call lsmr_solve(action, m, n, u, v, y, keep, options, inform)
             end if
 
            if (action.eq.0) then
@@ -1260,7 +1260,7 @@ contains
     u(1:m) = b(1:m)
     options%ctest = 3 ! Michael's stopping criteria
     do
-      call LSMR  (action, m, n,  u, v, x, keep, &
+      call lsmr_solve(action, m, n,  u, v, x, keep, &
          options, inform, damp=damp)
 
       if (action.eq.0) then
