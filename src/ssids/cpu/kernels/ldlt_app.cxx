@@ -183,7 +183,7 @@ private:
       /** Restores any columns that have failed back to their previous
        *  values stored in lwork[]. Applies a symmetric permutation while
        *  doing so. */
-      void restore_part_with_sym_perm(int n, int from, const int *lperm, int lda) {
+      void restore_part_with_sym_perm(int m, int n, int from, const int *lperm, int lda) {
          for(int j=from; j<n; j++) {
             int c = lperm[j];
             for(int i=from; i<n; i++) {
@@ -191,6 +191,8 @@ private:
                aval[j*lda+i] = (r>c) ? lwork[c*BLOCK_SIZE+r]
                                      : lwork[r*BLOCK_SIZE+c];
             }
+            for(int i=n; i<m; i++)
+               aval[j*lda+i] = lwork[c*BLOCK_SIZE+i];
          }
       }
 
@@ -413,7 +415,9 @@ private:
          if(i_ == elim_col && j_ == elim_col) { // In eliminated diagonal block
             if(cdata_[i_].nelim < ncol()) { // If there are failed pivots
                int const* lperm = &global_lperm[i_*BLOCK_SIZE];
-               blk_.restore_part_with_sym_perm(ncol(), cdata_[i_].nelim, lperm, lda_);
+               blk_.restore_part_with_sym_perm(
+                     nrow(), ncol(), cdata_[i_].nelim, lperm, lda_
+                     );
             }
             // Release resources regardless, no longer required
             pool.release(blk_.lwork);
@@ -468,19 +472,22 @@ private:
             throw std::runtime_error("apply_pivot called on diagonal block!");
          if(i_ == dblk.i_) { // Apply within row (ApplyT)
             blk_.template apply_pivot<OP_T>(
-                  nrow(), ncol(), cdata_[j_].nelim, dblk.blk_.aval,
+                  cdata_[i_].nelim, ncol(), cdata_[j_].nelim, dblk.blk_.aval,
                   cdata_[i_].d, small, lda_
                   );
             return blk_.template check_threshold<OP_T>(
-                  0, nrow(), cdata_[j_].nelim, ncol(), u, lda_
+                  0, cdata_[i_].nelim, cdata_[j_].nelim, ncol(), u, lda_
                   );
-         } else { // Apply within column (ApplyN)
+         } else if(j_ == dblk.j_) { // Apply within column (ApplyN)
             blk_.template apply_pivot<OP_N>(
-                  nrow(), ncol(), 0, dblk.blk_.aval, cdata_[j_].d, small, lda_
+                  nrow(), cdata_[j_].nelim, 0, dblk.blk_.aval,
+                  cdata_[j_].d, small, lda_
                   );
             return blk_.template check_threshold<OP_N>(
-                  0, nrow(), 0, ncol(), u, lda_
+                  0, nrow(), 0, cdata_[j_].nelim, u, lda_
                   );
+         } else {
+            throw std::runtime_error("apply_pivot called on block outside eliminated column");
          }
       }
 
