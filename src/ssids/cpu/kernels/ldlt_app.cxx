@@ -590,24 +590,20 @@ private:
 template<typename T,
          int BLOCK_SIZE,
          typename Backup,
-         bool debug=false,
-         typename Alloc=AlignedAllocator<T>
+         bool debug=false
          >
 class LDLT {
 private:
-   /// u specifies the pivot tolerance
-   const T u;
-   /// small specifies the threshold for entries to be considered zero
-   const T small;
-   /// Allocator
-   mutable Alloc alloc;
-
-   void run_elim(int &next_elim, int const m, int const n, const int mblk, const int nblk, struct col_data<T> *cdata, Backup& backup, T* d, T* a, int lda, ThreadWork<T,BLOCK_SIZE> all_thread_work[]) {
+   static
+   int run_elim(int const m, int const n, const int mblk, const int nblk, struct col_data<T> *cdata, Backup& backup, T* d, T* a, int lda, ThreadWork<T,BLOCK_SIZE> all_thread_work[], struct cpu_factor_options const& options) {
       typedef Block<T, BLOCK_SIZE> BlockSpec;
       //printf("ENTRY %d %d vis %d %d %d\n", m, n, mblk, nblk, BLOCK_SIZE);
 
       // FIXME: is global_lperm really the best way?
       int *global_lperm = new int[nblk*BLOCK_SIZE];
+
+      /* Setup */
+      int next_elim = 0;
 
       /* Inner loop - iterate over block columns */
       for(int blk=0; blk<nblk; blk++) {
@@ -620,7 +616,7 @@ private:
          #pragma omp task default(none) \
             firstprivate(blk) \
             shared(a, backup, cdata, lda, global_lperm, \
-                   all_thread_work, next_elim, d) \
+                   all_thread_work, next_elim, d, options) \
             depend(inout: a[blk*BLOCK_SIZE*lda+blk*BLOCK_SIZE:1]) \
             depend(inout: cdata[blk:1])
          {
@@ -632,7 +628,7 @@ private:
             // Perform actual factorization
             int nelim = dblk.factor(
                   next_elim, d, all_thread_work[thread_num], global_lperm,
-                  u, small
+                  options.u, options.small
                   );
             // Init threshold check (non locking => task dependencies)
             cdata[blk].init_passed(nelim);
@@ -642,7 +638,7 @@ private:
          for(int jblk=0; jblk<blk; jblk++) {
             #pragma omp task default(none) \
                firstprivate(blk, jblk) \
-               shared(a, backup, cdata, lda, global_lperm) \
+               shared(a, backup, cdata, lda, global_lperm, options) \
                depend(in: a[blk*BLOCK_SIZE*lda+blk*BLOCK_SIZE:1]) \
                depend(inout: a[jblk*BLOCK_SIZE*lda+blk*BLOCK_SIZE:1]) \
                depend(in: cdata[blk:1])
@@ -656,7 +652,9 @@ private:
                cblk.apply_rperm_and_backup(backup, global_lperm);
                // Perform elimination and determine number of rows in block
                // passing a posteori threshold pivot test
-               int blkpass = cblk.apply_pivot_app(dblk, u, small);
+               int blkpass = cblk.apply_pivot_app(
+                     dblk, options.u, options.small
+                     );
                // Update column's passed pivot count
                cdata[blk].update_passed(blkpass);
             }
@@ -664,7 +662,7 @@ private:
          for(int iblk=blk+1; iblk<mblk; iblk++) {
             #pragma omp task default(none) \
                firstprivate(blk, iblk) \
-               shared(a, backup, cdata, lda, global_lperm) \
+               shared(a, backup, cdata, lda, global_lperm, options) \
                depend(in: a[blk*BLOCK_SIZE*lda+blk*BLOCK_SIZE:1]) \
                depend(inout: a[blk*BLOCK_SIZE*lda+iblk*BLOCK_SIZE:1]) \
                depend(in: cdata[blk:1])
@@ -678,7 +676,7 @@ private:
                rblk.apply_cperm_and_backup(backup, global_lperm);
                // Perform elimination and determine number of rows in block
                // passing a posteori threshold pivot test
-               int blkpass = rblk.apply_pivot_app(dblk, u, small);
+               int blkpass = rblk.apply_pivot_app(dblk, options.u, options.small);
                // Update column's passed pivot count
                cdata[blk].update_passed(blkpass);
             }
@@ -761,6 +759,8 @@ private:
          printf("PostElim:\n");
          print_mat(mblk, nblk, m, n, blkdata, cdata, lda);
       }*/
+
+      return next_elim;
    }
 
    static
@@ -776,20 +776,19 @@ private:
       }
    }
 
+   static
    inline int get_ncol(int blk, int n) {
       return calc_blkn<BLOCK_SIZE>(blk, n);
    }
+   static
    inline int get_nrow(int blk, int m) {
       return calc_blkn<BLOCK_SIZE>(blk, m);
    }
 
 public:
-   LDLT(T u, T small)
-   : u(u), small(small)
-   {}
-
    /** Factorize an entire matrix */
-   int factor(int m, int n, int *perm, T *a, int lda, T *d) {
+   static
+   int factor(int m, int n, int *perm, T *a, int lda, T *d, struct cpu_factor_options const& options) {
       /* Sanity check arguments */
       if(m < n) return -1;
       if(lda < n) return -4;
@@ -797,7 +796,6 @@ public:
       /* Initialize useful quantities: */
       int nblk = calc_nblk<BLOCK_SIZE>(n);
       int mblk = calc_nblk<BLOCK_SIZE>(m);
-      int next_elim = 0;
 
       /* Allocate handler for backup space */
       Backup backup(m, n);
@@ -818,10 +816,10 @@ public:
       int num_threads = omp_get_max_threads();
       ThreadWork<T,BLOCK_SIZE> all_thread_work[num_threads];
       // FIXME: Following line is a maximum! Make smaller?
-      run_elim(next_elim, m, n, mblk, nblk, cdata, backup, d, a, lda, all_thread_work);
-
-      // Calculate number of successful eliminations (removing any dummy cols)
-      int num_elim = next_elim;
+      int num_elim = run_elim(
+            m, n, mblk, nblk, cdata, backup, d, a, lda, all_thread_work,
+            options
+            );
 
       // Permute failed entries to end
       int* failed_perm = new int[n - num_elim];
@@ -935,7 +933,7 @@ template<typename T>
 int ldlt_app_factor(int m, int n, int *perm, T *a, int lda, T *d, struct cpu_factor_options const& options) {
    if(options.cpu_task_block_size % INNER_BLOCK_SIZE != 0)
       throw std::runtime_error("options.cpu_task_block_size must be multiple of inner block size");
-   return LDLT<T, INNER_BLOCK_SIZE, PoolBackup<T,INNER_BLOCK_SIZE>>(options.u, options.small).factor(m, n, perm, a, lda, d);
+   return LDLT<T, INNER_BLOCK_SIZE, PoolBackup<T,INNER_BLOCK_SIZE>>::factor(m, n, perm, a, lda, d, options);
 }
 template int ldlt_app_factor<double>(int, int, int*, double*, int, double*, struct cpu_factor_options const&);
 
