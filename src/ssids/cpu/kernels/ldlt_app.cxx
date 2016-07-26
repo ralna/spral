@@ -294,12 +294,13 @@ private:
       : lwork_(nullptr)
       {}
 
-      void set_lwork(T *lwork) {
-         lwork_ = lwork;
+      template <typename BlockPool>
+      void acquire(BlockPool& pool) const {
+         lwork_ = pool.get_wait();
       }
 
       template <typename BlockPool>
-      void release(BlockPool &pool) const {
+      void release(BlockPool& pool) const {
          pool.release(lwork_);
          lwork_ = nullptr;
       }
@@ -376,14 +377,14 @@ private:
       void backup(Backup *backup, BlockPool<T, BLOCK_SIZE>& pool) {
          int mblk = (m_-1) / BLOCK_SIZE + 1;
          Backup& b = backup[j_*mblk+i_];
-         b.set_lwork(pool.get_wait());
+         b.acquire(pool);
          b.create_restore_point(nrow(), ncol(), aval_, lda_);
       }
 
       void apply_rperm_and_backup(Backup *backup, BlockPool<T, BLOCK_SIZE>& pool, int const* global_lperm) {
          int mblk = (m_-1) / BLOCK_SIZE + 1;
          Backup& b = backup[j_*mblk+i_];
-         b.set_lwork(pool.get_wait());
+         b.acquire(pool);
          int const* lperm = &global_lperm[i_*BLOCK_SIZE];
          b.create_restore_point_with_row_perm(nrow(), ncol(), get_ncol(i_, n_), lperm, aval_, lda_);
       }
@@ -391,7 +392,7 @@ private:
       void apply_cperm_and_backup(Backup *backup, BlockPool<T, BLOCK_SIZE>& pool, int const* global_lperm) {
          int mblk = (m_-1) / BLOCK_SIZE + 1;
          Backup& b = backup[j_*mblk+i_];
-         b.set_lwork(pool.get_wait());
+         b.acquire(pool);
          int const* lperm = &global_lperm[j_*BLOCK_SIZE];
          b.create_restore_point_with_col_perm(nrow(), ncol(), lperm, aval_, lda_);
       }
