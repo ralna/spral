@@ -32,7 +32,7 @@
 
 namespace spral { namespace ssids { namespace cpu {
 
-namespace /* anon */ {
+namespace ldlt_app_internal {
 
 static const int INNER_BLOCK_SIZE = 32;
 
@@ -46,7 +46,7 @@ template<typename T,
          bool debug=false,
          typename Alloc=AlignedAllocator<T>
          >
-class CpuLDLT {
+class LDLT {
 private:
    /// u specifies the pivot tolerance
    const T u;
@@ -770,7 +770,7 @@ private:
    }
 
 public:
-   CpuLDLT(T u, T small)
+   LDLT(T u, T small)
    : u(u), small(small)
    {}
 
@@ -922,13 +922,15 @@ public:
    }
 };
 
-} /* anon namespace */
+} /* namespace spral::ssids:cpu::ldlt_app_internal */
+
+using namespace spral::ssids::cpu::ldlt_app_internal;
 
 template<typename T>
 int ldlt_app_factor(int m, int n, int *perm, T *a, int lda, T *d, struct cpu_factor_options const& options) {
    if(options.cpu_task_block_size % INNER_BLOCK_SIZE != 0)
       throw std::runtime_error("options.cpu_task_block_size must be multiple of inner block size");
-   return CpuLDLT<T, INNER_BLOCK_SIZE>(options.u, options.small).factor(m, n, perm, a, lda, d);
+   return LDLT<T, INNER_BLOCK_SIZE>(options.u, options.small).factor(m, n, perm, a, lda, d);
 }
 template int ldlt_app_factor<double>(int, int, int*, double*, int, double*, struct cpu_factor_options const&);
 
