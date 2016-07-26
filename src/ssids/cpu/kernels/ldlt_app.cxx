@@ -74,48 +74,43 @@ private:
 
    struct col_data {
       int nelim; //< Number of eliminated entries in this column
-      int npass; //< Reduction variable for nelim
       int *perm; //< pointer to local permutation
       T *d; //< pointer to local d
 
-      col_data() : 
-         nelim(0)
-      {
-         omp_init_lock(&lock);
+      col_data(col_data const&) =delete;
+      col_data& operator=(col_data const&) =delete;
+      col_data() {
+         omp_init_lock(&lock_);
       }
       ~col_data() {
-         omp_destroy_lock(&lock);
+         omp_destroy_lock(&lock_);
       }
 
       /** Initialize number of passed columns ready for reduction */
       void init_passed(int passed) {
-         npass = passed;
+         npass_ = passed;
       }
       /** Updates number of passed columns (reduction by min) */
       void update_passed(int passed) {
-         omp_set_lock(&lock);
-         npass = std::min(npass, passed);
-         omp_unset_lock(&lock);
-      }
-      /** Returns number of passed columns */
-      int get_passed(int passed) const {
-         return npass;
+         omp_set_lock(&lock_);
+         npass_ = std::min(npass_, passed);
+         omp_unset_lock(&lock_);
       }
 
       /** Adjust column after all blocks have passed to avoid split pivots */
       void adjust(int& next_elim) {
          // Test if last passed column was first part of a 2x2: if so,
          // decrement npass
-         if(npass>0) {
-            T d11 = d[2*(npass-1)+0];
-            T d21 = d[2*(npass-1)+1];
+         if(npass_>0) {
+            T d11 = d[2*(npass_-1)+0];
+            T d21 = d[2*(npass_-1)+1];
             if(std::isfinite(d11) && // not second half of 2x2
                   d21 != 0.0)        // not a 1x1 or zero pivot
-               npass--;              // so must be first half 2x2
+               npass_--;              // so must be first half 2x2
          }
          // Update elimination progress
-         next_elim += npass;
-         nelim = npass;
+         next_elim += npass_;
+         nelim = npass_;
       }
 
       /** Moves perm for eliminated columns to elim_perm
@@ -132,7 +127,8 @@ private:
       }
 
    private:
-      omp_lock_t lock; //< Lock for altering npass
+      omp_lock_t lock_; //< Lock for altering npass
+      int npass_; //< Reduction variable for nelim
    };
 
    class BlockData {
@@ -432,7 +428,7 @@ private:
          }
          else if(j_ == elim_col) { // In eliminated col
             if(cdata_[j_].nelim < ncol()) { // If there are failed pivots
-               int rfrom = (i_*BLOCK_SIZE < n_) ? cdata_[i_].nelim : 0;
+               int rfrom = (i_ <= elim_col) ? cdata_[i_].nelim : 0;
                blk_.restore_part(
                      nrow(), ncol(), rfrom, cdata_[j_].nelim, lda_
                      );
@@ -442,7 +438,7 @@ private:
          }
       }
 
-      void factor(int& next_elim, T* d, ThreadWork& work, int* global_lperm, T u, T small) {
+      int factor(int& next_elim, T* d, ThreadWork& work, int* global_lperm, T u, T small) {
          if(i_ != j_)
             throw std::runtime_error("factor called on non-diagonal block!");
          int *lperm = &global_lperm[i_*BLOCK_SIZE];
@@ -450,7 +446,7 @@ private:
             lperm[i] = i;
          cdata_[i_].d = &d[2*next_elim];
          if(ncol() < BLOCK_SIZE || !is_aligned(blk_.aval)) {
-            ldlt_tpp_factor(
+            cdata_[i_].nelim = ldlt_tpp_factor(
                   nrow(), ncol(), lperm, blk_.aval, lda_, cdata_[i_].d,
                   work.ld, BLOCK_SIZE, u, small
                   );
@@ -462,7 +458,9 @@ private:
          } else {
             block_ldlt<T, BLOCK_SIZE>(0, cdata_[i_].perm, blk_.aval, lda_,
                   cdata_[i_].d, work.ld, u, small, lperm);
+            cdata_[i_].nelim = BLOCK_SIZE;
          }
+         return cdata_[i_].nelim;
       }
 
       int apply_pivot(Block const& dblk, T u, T small) {
@@ -491,20 +489,22 @@ private:
             // Update to right of elim column (UpdateN)
             int elim_col = isrc.j_;
             if(cdata_[elim_col].nelim == 0) return; // nothing to do
-            int rfrom = (i_*BLOCK_SIZE < n_) ? cdata_[i_].nelim : 0;
+            int rfrom = (i_ <= elim_col) ? cdata_[i_].nelim : 0;
+            int cfrom = (j_ <= elim_col) ? cdata_[j_].nelim : 0;
             calcLD<OP_N>(
                   nrow()-rfrom, cdata_[elim_col].nelim, &isrc.blk_.aval[rfrom],
                   lda_, cdata_[elim_col].d, work.ld, BLOCK_SIZE
                   );
             blk_.template update<OP_N>(
                   nrow(), ncol(), cdata_[elim_col].nelim, jsrc.blk_.aval,
-                  work.ld, BLOCK_SIZE, rfrom, cdata_[j_].nelim, lda_
+                  work.ld, BLOCK_SIZE, rfrom, cfrom, lda_
                   );
          } else {
             // Update to left of elim column (UpdateT)
             int elim_col = jsrc.i_;
             if(cdata_[elim_col].nelim == 0) return; // nothing to do
-            int rfrom = (i_*BLOCK_SIZE < n_) ? cdata_[i_].nelim : 0;
+            int rfrom = (i_ <= elim_col) ? cdata_[i_].nelim : 0;
+            int cfrom = (j_ <= elim_col) ? cdata_[j_].nelim : 0;
             if(isrc.j_==elim_col) {
                calcLD<OP_N>(
                      nrow()-rfrom, cdata_[elim_col].nelim,
@@ -520,7 +520,7 @@ private:
             }
             blk_.template update<OP_T>(
                   nrow(), ncol(), cdata_[elim_col].nelim, jsrc.blk_.aval,
-                  work.ld, BLOCK_SIZE, rfrom, cdata_[j_].nelim, lda_
+                  work.ld, BLOCK_SIZE, rfrom, cfrom, lda_
                   );
          }
       }
@@ -610,9 +610,11 @@ private:
             // Store a copy for recovery in case of a failed column
             dblk.backup(global_work);
             // Perform actual factorization
-            dblk.factor(next_elim, d, thread_work, global_lperm, u, small);
-            // Init threshold check (no lock required becuase task depend)
-            cdata[blk].init_passed(dblk.ncol());
+            int nelim = dblk.factor(
+                  next_elim, d, thread_work, global_lperm, u, small
+                  );
+            // Init threshold check (non locking => task dependencies)
+            cdata[blk].init_passed(nelim);
          }
          
          // Loop over off-diagonal blocks applying pivot
