@@ -594,7 +594,7 @@ private:
             firstprivate(blk) \
             shared(a, backup, cdata, lda, global_lperm, global_work, \
                    all_thread_work, next_elim, d) \
-            depend(inout: backup[blk*mblk+blk:1]) \
+            depend(inout: a[blk*BLOCK_SIZE*lda+blk*BLOCK_SIZE:1]) \
             depend(inout: cdata[blk:1])
          {
             if(debug) printf("Factor(%d)\n", blk);
@@ -616,8 +616,8 @@ private:
             #pragma omp task default(none) \
                firstprivate(blk, jblk) \
                shared(a, backup, cdata, lda, global_lperm, global_work) \
-               depend(in: backup[blk*mblk+blk:1]) \
-               depend(inout: backup[jblk*mblk+blk:1]) \
+               depend(in: a[blk*BLOCK_SIZE*lda+blk*BLOCK_SIZE:1]) \
+               depend(inout: a[jblk*BLOCK_SIZE*lda+blk*BLOCK_SIZE:1]) \
                depend(in: cdata[blk:1])
             {
                if(debug) printf("ApplyT(%d,%d)\n", blk, jblk);
@@ -638,8 +638,8 @@ private:
             #pragma omp task default(none) \
                firstprivate(blk, iblk) \
                shared(a, backup, cdata, lda, global_lperm, global_work) \
-               depend(in: backup[blk*mblk+blk:1]) \
-               depend(inout: backup[blk*mblk+iblk:1]) \
+               depend(in: a[blk*BLOCK_SIZE*lda+blk*BLOCK_SIZE:1]) \
+               depend(inout: a[blk*BLOCK_SIZE*lda+iblk*BLOCK_SIZE:1]) \
                depend(in: cdata[blk:1])
             {
                if(debug) printf("ApplyN(%d,%d)\n", iblk, blk);
@@ -673,16 +673,16 @@ private:
             for(int iblk=jblk; iblk<mblk; iblk++) {
                // Calculate block index we depend on for i
                // (we only work with lower half of matrix)
-               int iblk_idx = (blk < iblk) ? blk*mblk+iblk
-                                           : iblk*mblk+blk;
+               int adep_idx = (blk<iblk) ? blk*BLOCK_SIZE*lda + iblk*BLOCK_SIZE
+                                         : iblk*BLOCK_SIZE*lda + blk*BLOCK_SIZE;
                #pragma omp task default(none) \
                   firstprivate(blk, iblk, jblk) \
                   shared(a, cdata, backup, lda, all_thread_work, global_lperm, \
                          global_work) \
-                  depend(inout: backup[jblk*mblk+iblk:1]) \
+                  depend(inout: a[jblk*BLOCK_SIZE*lda+iblk*BLOCK_SIZE:1]) \
                   depend(in: cdata[blk:1]) \
-                  depend(in: backup[jblk*mblk+blk:1]) \
-                  depend(in: backup[iblk_idx:1])
+                  depend(in: a[jblk*BLOCK_SIZE*lda+blk*BLOCK_SIZE:1]) \
+                  depend(in: a[adep_idx:1])
                {
                   if(debug) printf("UpdateT(%d,%d,%d)\n", iblk, jblk, blk);
                   Block ublk(iblk, jblk, m, n, cdata, a, lda);
@@ -708,10 +708,10 @@ private:
                   firstprivate(blk, iblk, jblk) \
                   shared(a, cdata, backup, lda, all_thread_work, global_lperm,\
                          global_work) \
-                  depend(inout: backup[jblk*mblk+iblk:1]) \
+                  depend(inout: a[jblk*BLOCK_SIZE*lda+iblk*BLOCK_SIZE:1]) \
                   depend(in: cdata[blk:1]) \
-                  depend(in: backup[blk*mblk+iblk:1]) \
-                  depend(in: backup[blk*mblk+jblk:1])
+                  depend(in: a[blk*BLOCK_SIZE*lda+iblk*BLOCK_SIZE:1]) \
+                  depend(in: a[blk*BLOCK_SIZE*lda+jblk*BLOCK_SIZE:1])
                {
                   if(debug) printf("UpdateN(%d,%d,%d)\n", iblk, jblk, blk);
                   Block ublk(iblk, jblk, m, n, cdata, a, lda);
