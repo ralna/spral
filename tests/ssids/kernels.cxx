@@ -32,10 +32,12 @@ int main(void) {
                   FE_DIVBYZERO); // divide by zero
 #endif
 
+#if 0
    nerr += run_cholesky_tests();
    nerr += run_ldlt_nopiv_tests();
    nerr += run_ldlt_tpp_tests();
    nerr += run_block_ldlt_tests();
+#endif
    nerr += run_ldlt_app_tests();
 
    if(nerr==0) {

@@ -142,21 +142,25 @@ private:
       : lwork(nullptr)
       {}
 
-      void create_restore_point(int n, int lda) {
+      void create_restore_point(int m, int n, int lda) {
          for(int j=0; j<n; j++)
-         for(int i=0; i<n; i++)
+         for(int i=0; i<m; i++)
             lwork[j*BLOCK_SIZE+i] = aval[j*lda+i];
       }
 
       /** Apply row permutation to block at same time as taking a copy */
-      void create_restore_point_with_row_perm(int m, int n, const int *lperm, int lda) {
-         for(int j=0; j<n; j++)
-         for(int i=0; i<m; i++) {
-            int r = lperm[i];
-            lwork[j*BLOCK_SIZE+i] = aval[j*lda+r];
+      void create_restore_point_with_row_perm(int m, int n, int nelim, const int *lperm, int lda) {
+         for(int j=0; j<n; j++) {
+            for(int i=0; i<nelim; i++) {
+               int r = lperm[i];
+               lwork[j*BLOCK_SIZE+i] = aval[j*lda+r];
+            }
+            for(int i=nelim; i<m; i++) {
+               lwork[j*BLOCK_SIZE+i] = aval[j*lda+i];
+            }
          }
          for(int j=0; j<n; j++)
-         for(int i=0; i<m; i++)
+         for(int i=0; i<nelim; i++)
             aval[j*lda+i] = lwork[j*BLOCK_SIZE+i];
       }
 
@@ -209,10 +213,10 @@ private:
       /** Move up eliminated entries to fill any gaps left by failed pivots
        *  within rectangular block of matrix.
        *  Note that out and aval may overlap. */
-      void move_up_rect(int m, struct col_data const& jdata, T* out, int lda) const {
+      void move_up_rect(int m, int rfrom, struct col_data const& jdata, T* out, int lda) const {
          if(out == aval) return; // don't bother moving if memory is the same
          for(int j=0; j<jdata.nelim; ++j)
-         for(int i=0; i<m; ++i)
+         for(int i=rfrom; i<m; ++i)
             out[j*lda+i] = aval[j*lda+i];
       }
 
@@ -235,9 +239,9 @@ private:
       }
 
       /** Copies failed columns to specified location */
-      void copy_failed_rect(int m, int n, struct col_data const& jdata, T* cout, int ldout, int lda) const {
+      void copy_failed_rect(int m, int n, int rfrom, struct col_data const& jdata, T* cout, int ldout, int lda) const {
          for(int j=jdata.nelim, jout=0; j<n; ++j, ++jout)
-            for(int i=0; i<m; ++i)
+            for(int i=rfrom; i<m; ++i)
                cout[jout*ldout+i] = aval[j*lda+i];
       }
 
@@ -396,13 +400,13 @@ private:
 
       void backup(BlockPool<T, BLOCK_SIZE>& pool) {
          blk_.lwork = pool.get_wait();
-         blk_.create_restore_point(ncol(), lda_);
+         blk_.create_restore_point(nrow(), ncol(), lda_);
       }
 
       void apply_rperm_and_backup(BlockPool<T, BLOCK_SIZE>& pool, int const* global_lperm) {
          blk_.lwork = pool.get_wait();
          int const* lperm = &global_lperm[i_*BLOCK_SIZE];
-         blk_.create_restore_point_with_row_perm(nrow(), ncol(), lperm, lda_);
+         blk_.create_restore_point_with_row_perm(nrow(), ncol(), cdata_[i_].nelim, lperm, lda_);
       }
 
       void apply_cperm_and_backup(BlockPool<T, BLOCK_SIZE>& pool, int const* global_lperm) {
@@ -610,7 +614,7 @@ private:
             depend(inout: blkdata[blk*mblk+blk:1]) \
             depend(inout: cdata[blk:1])
          {
-            //printf("Factor(%d)\n", blk);
+            if(debug) printf("Factor(%d)\n", blk);
             int thread_num = omp_get_thread_num();
             ThreadWork &thread_work = all_thread_work[thread_num];
             Block dblk(blk, blk, m, n, cdata, blkdata[blk*mblk+blk], lda);
@@ -633,7 +637,7 @@ private:
                depend(inout: blkdata[jblk*mblk+blk:1]) \
                depend(in: cdata[blk:1])
             {
-               //printf("ApplyT(%d,%d)\n", blk, jblk);
+               if(debug) printf("ApplyT(%d,%d)\n", blk, jblk);
                Block dblk(blk, blk, m, n, cdata, blkdata[blk*mblk+blk], lda);
                Block cblk(blk, jblk, m, n, cdata, blkdata[jblk*mblk+blk], lda);
                // Apply row permutation from factorization of dblk and in
@@ -655,7 +659,7 @@ private:
                depend(inout: blkdata[blk*mblk+iblk:1]) \
                depend(in: cdata[blk:1])
             {
-               //printf("ApplyN(%d,%d)\n", iblk, blk);
+               if(debug) printf("ApplyN(%d,%d)\n", iblk, blk);
                Block dblk(blk, blk, m, n, cdata, blkdata[blk*mblk+blk], lda);
                Block rblk(iblk, blk, m, n, cdata, blkdata[blk*mblk+iblk], lda);
                // Apply column permutation from factorization of dblk and in
@@ -677,7 +681,7 @@ private:
             shared(blkdata, cdata, next_elim, global_work) \
             depend(inout: cdata[blk:1])
          {
-            //printf("Adjust(%d)\n", blk);
+            if(debug) printf("Adjust(%d)\n", blk);
             cdata[blk].adjust(next_elim);
          }
 
@@ -697,7 +701,7 @@ private:
                   depend(in: blkdata[jblk*mblk+blk:1]) \
                   depend(in: blkdata[iblk_idx:1])
                {
-                  //printf("UpdateT(%d,%d,%d)\n", iblk, jblk, blk);
+                  if(debug) printf("UpdateT(%d,%d,%d)\n", iblk, jblk, blk);
                   Block ublk(iblk, jblk, m, n, cdata, blkdata[jblk*mblk+iblk], lda);
                   int isrc_row = (blk<=iblk) ? iblk : blk;
                   int isrc_col = (blk<=iblk) ? blk : iblk;
@@ -724,7 +728,7 @@ private:
                   depend(in: blkdata[blk*mblk+iblk:1]) \
                   depend(in: blkdata[blk*mblk+jblk:1])
                {
-                  //printf("UpdateN(%d,%d,%d)\n", iblk, jblk, blk);
+                  if(debug) printf("UpdateN(%d,%d,%d)\n", iblk, jblk, blk);
                   Block ublk(iblk, jblk, m, n, cdata, blkdata[jblk*mblk+iblk], lda);
                   Block isrc(iblk, blk, m, n, cdata, blkdata[blk*mblk+iblk], lda);
                   Block jsrc(jblk, blk, m, n, cdata, blkdata[blk*mblk+jblk], lda);
@@ -742,6 +746,11 @@ private:
       #pragma omp taskwait
 
       delete[] global_lperm;
+
+      if(debug) {
+         printf("PostElim:\n");
+         print_mat(mblk, nblk, m, n, blkdata, cdata, lda);
+      }
 
       return next_elim > 0;
    }
@@ -770,7 +779,7 @@ private:
                printf("%d%s:", r, "U");
             for(int cblk=0; cblk<std::min(rblk+1,nblk); cblk++) {
                const BlockData &blk = blkdata[cblk*mblk+rblk];
-               for(int col=0; col<((rblk==cblk) ? row+1 : get_ncol(cblk, n)); col++)
+               for(int col=0; col<((rblk==cblk) ? std::min(row+1, get_ncol(cblk,n)) : get_ncol(cblk, n)); col++)
                   printf(" %10.4f", blk.aval[col*lda+row]);
             }
             printf("\n");
@@ -860,9 +869,10 @@ public:
       T* failed_diag = new T[nfail*n];
       T* failed_rect = new T[nfail*(m-n)];
       for(int jblk=0, jfail=0, jinsert=0; jblk<nblk; ++jblk) {
+         // Diagonal part
          for(int iblk=jblk, ifail=jfail, iinsert=jinsert; iblk<nblk; ++iblk) {
             blkdata[jblk*mblk+iblk].copy_failed_diag(
-                  get_nrow(iblk, m, n), get_ncol(jblk, n),
+                  get_ncol(iblk, n), get_ncol(jblk, n),
                   cdata[iblk], cdata[jblk],
                   &failed_diag[jinsert*nfail+ifail],
                   &failed_diag[iinsert*nfail+jfail],
@@ -872,9 +882,10 @@ public:
             iinsert += cdata[iblk].nelim;
             ifail += get_ncol(iblk, n) - cdata[iblk].nelim;
          }
+         // Rectangular part
          for(int iblk=nblk; iblk<mblk; ++iblk) {
             blkdata[jblk*mblk+iblk].copy_failed_rect(
-                  get_nrow(iblk, m, n), get_ncol(jblk, n), cdata[jblk],
+                  get_nrow(iblk, m, n), get_ncol(jblk, n), 0, cdata[jblk],
                   &failed_rect[jfail*(m-n)+(iblk-nblk)*BLOCK_SIZE], m-n, lda
                   );
          }
@@ -884,14 +895,19 @@ public:
 
       // Move data up
       for(int jblk=0, jinsert=0; jblk<nblk; ++jblk) {
+         // Diagonal part
          for(int iblk=jblk, iinsert=jinsert; iblk<nblk; ++iblk) {
-            blkdata[jblk*mblk+iblk].move_up_diag(cdata[iblk], cdata[jblk],
-                  &a[jinsert*lda+iinsert], lda);
+            blkdata[jblk*mblk+iblk].move_up_diag(
+                  cdata[iblk], cdata[jblk], &a[jinsert*lda+iinsert], lda
+                  );
             iinsert += cdata[iblk].nelim;
          }
+         // Rectangular part
          for(int iblk=nblk; iblk<mblk; ++iblk)
-            blkdata[jblk*mblk+iblk].move_up_rect(get_nrow(iblk, m, n),
-                  cdata[jblk], &a[jinsert*lda+n+(iblk-nblk)*BLOCK_SIZE], lda);
+            blkdata[jblk*mblk+iblk].move_up_rect(
+                  get_nrow(iblk, m, n), 0, cdata[jblk],
+                  &a[jinsert*lda+n+(iblk-nblk)*BLOCK_SIZE], lda
+                  );
          jinsert += cdata[jblk].nelim;
       }
       
