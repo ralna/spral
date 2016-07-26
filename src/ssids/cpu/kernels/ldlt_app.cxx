@@ -790,8 +790,8 @@ public:
       if(lda < n) return -4;
 
       /* Initialize useful quantities: */
-      int nblk = (n-1) / BLOCK_SIZE + 1;
-      int mblk = (m-1) / BLOCK_SIZE + 1;
+      int nblk = calc_nblk<BLOCK_SIZE>(n);
+      int mblk = calc_nblk<BLOCK_SIZE>(m);
       int next_elim = 0;
 
       /* Allocate handler for backup space */
