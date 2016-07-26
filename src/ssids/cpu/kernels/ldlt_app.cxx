@@ -288,11 +288,10 @@ private:
    /// Allocator
    mutable Alloc alloc;
 
-   template <typename BlockPool>
-   class Backup {
+   class PoolBackup {
    public:
-      Backup(int m, int n, BlockPool& pool)
-      : m_(m), n_(n), mblk_((m-1)/BLOCK_SIZE+1), pool_(pool),
+      PoolBackup(int m, int n, int pool_size)
+      : m_(m), n_(n), mblk_((m-1)/BLOCK_SIZE+1), pool_(pool_size),
         ptr_(mblk_*((n-1)/BLOCK_SIZE+1))
       {}
 
@@ -375,7 +374,7 @@ private:
       int const m_;
       int const n_;
       int const mblk_;
-      BlockPool& pool_;
+      BlockPool<T, BLOCK_SIZE> pool_;
       std::vector<T*> ptr_;
    };
 
@@ -580,7 +579,8 @@ private:
       return std::min(BLOCK_SIZE, n-blk*BLOCK_SIZE);
    }
 
-   void run_elim(int &next_elim, int const m, int const n, const int mblk, const int nblk, struct col_data<T> *cdata, Backup<BlockPool<T,BLOCK_SIZE>>& backup, T* d, T* a, int lda, BlockPool<T, BLOCK_SIZE> &global_work, ThreadWork<T,BLOCK_SIZE> all_thread_work[]) {
+   template <typename Backup>
+   void run_elim(int &next_elim, int const m, int const n, const int mblk, const int nblk, struct col_data<T> *cdata, Backup& backup, T* d, T* a, int lda, ThreadWork<T,BLOCK_SIZE> all_thread_work[]) {
       //printf("ENTRY %d %d vis %d %d %d\n", m, n, mblk, nblk, BLOCK_SIZE);
 
       // FIXME: is global_lperm really the best way?
@@ -770,8 +770,8 @@ public:
       int next_elim = 0;
 
       /* Allocate handler for backup space */
-      BlockPool<T, BLOCK_SIZE> global_work((nblk*(nblk+1))/2+mblk*nblk);
-      Backup<BlockPool<T,BLOCK_SIZE>> backup(m, n, global_work);
+      // FIXME: Reduce number of blocks
+      PoolBackup backup(m, n, (nblk*(nblk+1))/2+mblk*nblk);
 
       /* Temporary workspaces */
       struct col_data<T> *cdata = new struct col_data<T>[nblk];
@@ -789,7 +789,7 @@ public:
       int num_threads = omp_get_max_threads();
       ThreadWork<T,BLOCK_SIZE> all_thread_work[num_threads];
       // FIXME: Following line is a maximum! Make smaller?
-      run_elim(next_elim, m, n, mblk, nblk, cdata, backup, d, a, lda, global_work, all_thread_work);
+      run_elim(next_elim, m, n, mblk, nblk, cdata, backup, d, a, lda, all_thread_work);
 
       // Calculate number of successful eliminations (removing any dummy cols)
       int num_elim = next_elim;
