@@ -336,7 +336,7 @@ void calcLD(int m, int n, const T *l, int ldl, const T *d, T *ld, int ldld) {
    }
 }
 
-template <typename T, int BLOCK_SIZE, typename Allocator>
+template <typename T, typename Allocator>
 class PoolBackup {
    typedef typename std::allocator_traits<Allocator>::template rebind_alloc<T*> TptrAlloc;
 public:
@@ -442,9 +442,9 @@ template<typename T, int BLOCK_SIZE, typename ColAlloc>
 class Block {
    typedef typename std::allocator_traits<ColAlloc>::template rebind_alloc<int> IntAlloc;
 public:
-   Block(int i, int j, int m, int n, std::vector<Column<T,IntAlloc>, ColAlloc>& cdata, T* a, int lda)
-   : i_(i), j_(j), m_(m), n_(n), lda_(lda), cdata_(cdata),
-     aval_(&a[j*BLOCK_SIZE*lda+i*BLOCK_SIZE])
+   Block(int i, int j, int m, int n, std::vector<Column<T,IntAlloc>, ColAlloc>& cdata, T* a, int lda, int block_size)
+   : i_(i), j_(j), m_(m), n_(n), lda_(lda), block_size_(block_size), cdata_(cdata),
+     aval_(&a[j*block_size*lda+i*block_size])
    {}
 
    template <typename Backup>
@@ -496,8 +496,7 @@ public:
    }
 
    template <typename ThreadWork>
-   int factor(int& next_elim, int* perm, T* d, ThreadWork& work, T u, T small,
-         int block_size) {
+   int factor(int& next_elim, int* perm, T* d, ThreadWork& work, T u, T small) {
       if(i_ != j_)
          throw std::runtime_error("factor called on non-diagonal block!");
       for(int i=0; i<ncol(); i++)
@@ -557,11 +556,11 @@ public:
          int cfrom = (j_ <= elim_col) ? cdata_[j_].nelim : 0;
          calcLD<OP_N>(
                nrow()-rfrom, cdata_[elim_col].nelim, &isrc.aval_[rfrom],
-               lda_, cdata_[elim_col].d, work.ld, BLOCK_SIZE
+               lda_, cdata_[elim_col].d, work.ld, block_size_
                );
          host_gemm(
                OP_N, OP_T, nrow()-rfrom, ncol()-cfrom,
-               cdata_[elim_col].nelim, -1.0, work.ld, BLOCK_SIZE,
+               cdata_[elim_col].nelim, -1.0, work.ld, block_size_,
                &jsrc.aval_[cfrom], lda_, 1.0, &aval_[cfrom*lda_+rfrom], lda_
                );
       } else {
@@ -574,18 +573,18 @@ public:
             calcLD<OP_N>(
                   nrow()-rfrom, cdata_[elim_col].nelim,
                   &isrc.aval_[rfrom], lda_,
-                  cdata_[elim_col].d, work.ld, BLOCK_SIZE
+                  cdata_[elim_col].d, work.ld, block_size_
                   );
          } else {
             calcLD<OP_T>(
                   nrow()-rfrom, cdata_[elim_col].nelim, &
                   isrc.aval_[rfrom*lda_], lda_,
-                  cdata_[elim_col].d, work.ld, BLOCK_SIZE
+                  cdata_[elim_col].d, work.ld, block_size_
                   );
          }
          host_gemm(
                OP_N, OP_N, nrow()-rfrom, ncol()-cfrom,
-               cdata_[elim_col].nelim, -1.0, work.ld, BLOCK_SIZE,
+               cdata_[elim_col].nelim, -1.0, work.ld, block_size_,
                &jsrc.aval_[cfrom*lda_], lda_, 1.0, &aval_[cfrom*lda_+rfrom],
                lda_
                );
@@ -596,10 +595,10 @@ public:
    int ncol() const { return get_ncol(j_); }
 private:
    inline int get_ncol(int blk) const {
-      return calc_blkn(blk, n_, BLOCK_SIZE);
+      return calc_blkn(blk, n_, block_size_);
    }
    inline int get_nrow(int blk) const {
-      return calc_blkn(blk, m_, BLOCK_SIZE);
+      return calc_blkn(blk, m_, block_size_);
    }
 
    int const i_; //< block's row
@@ -607,6 +606,7 @@ private:
    int const m_; //< global number of rows
    int const n_; //< global number of columns
    int const lda_; //< leading dimension of underlying storage
+   int const block_size_; //< block size
    std::vector<Column<T,IntAlloc>, ColAlloc>& cdata_; //< global column data array
    T* aval_;
 };
@@ -628,12 +628,12 @@ private:
    int run_elim(int const m, int const n, int* perm, T* a, int const lda, T* d,
          std::vector<Column<T,IntAlloc>, ColAlloc>& cdata, Backup& backup,
          ThreadWork all_thread_work[],
-         struct cpu_factor_options const& options, int block_size) {
+         struct cpu_factor_options const& options, int const block_size) {
       typedef Block<T, BLOCK_SIZE, ColAlloc> BlockSpec;
-      //printf("ENTRY %d %d vis %d %d %d\n", m, n, mblk, nblk, BLOCK_SIZE);
+      //printf("ENTRY %d %d vis %d %d %d\n", m, n, mblk, nblk, block_size);
 
-      int const nblk = calc_nblk(n, BLOCK_SIZE);
-      int const mblk = calc_nblk(m, BLOCK_SIZE);
+      int const nblk = calc_nblk(n, block_size);
+      int const mblk = calc_nblk(m, block_size);
 
       /* Setup */
       int next_elim = 0;
@@ -645,23 +645,23 @@ private:
             print_mat(mblk, nblk, m, n, blkdata, cdata, lda);
          }*/
 
-         // Factor diagonal: depend on perm[blk*BLOCK_SIZE] as we init npass
+         // Factor diagonal: depend on perm[blk*block_size] as we init npass
          #pragma omp task default(none) \
             firstprivate(blk) \
             shared(a, perm, backup, cdata, all_thread_work, next_elim, d, \
-                   options, block_size) \
-            depend(inout: a[blk*BLOCK_SIZE*lda+blk*BLOCK_SIZE:1]) \
-            depend(inout: perm[blk*BLOCK_SIZE:1])
+                   options) \
+            depend(inout: a[blk*block_size*lda+blk*block_size:1]) \
+            depend(inout: perm[blk*block_size:1])
          {
             if(debug) printf("Factor(%d)\n", blk);
             int thread_num = omp_get_thread_num();
-            BlockSpec dblk(blk, blk, m, n, cdata, a, lda);
+            BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
             // Store a copy for recovery in case of a failed column
             dblk.backup(backup);
             // Perform actual factorization
             int nelim = dblk.factor(
                   next_elim, perm, d, all_thread_work[thread_num],
-                  options.u, options.small, block_size
+                  options.u, options.small
                   );
             // Init threshold check (non locking => task dependencies)
             cdata[blk].init_passed(nelim);
@@ -672,13 +672,13 @@ private:
             #pragma omp task default(none) \
                firstprivate(blk, jblk) \
                shared(a, backup, cdata, options) \
-               depend(in: a[blk*BLOCK_SIZE*lda+blk*BLOCK_SIZE:1]) \
-               depend(inout: a[jblk*BLOCK_SIZE*lda+blk*BLOCK_SIZE:1]) \
-               depend(in: perm[blk*BLOCK_SIZE:1])
+               depend(in: a[blk*block_size*lda+blk*block_size:1]) \
+               depend(inout: a[jblk*block_size*lda+blk*block_size:1]) \
+               depend(in: perm[blk*block_size:1])
             {
                if(debug) printf("ApplyT(%d,%d)\n", blk, jblk);
-               BlockSpec dblk(blk, blk, m, n, cdata, a, lda);
-               BlockSpec cblk(blk, jblk, m, n, cdata, a, lda);
+               BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
+               BlockSpec cblk(blk, jblk, m, n, cdata, a, lda, block_size);
                // Apply row permutation from factorization of dblk and in
                // the process, store a (permuted) copy for recovery in case of
                // a failed column
@@ -696,13 +696,13 @@ private:
             #pragma omp task default(none) \
                firstprivate(blk, iblk) \
                shared(a, backup, cdata, options) \
-               depend(in: a[blk*BLOCK_SIZE*lda+blk*BLOCK_SIZE:1]) \
-               depend(inout: a[blk*BLOCK_SIZE*lda+iblk*BLOCK_SIZE:1]) \
-               depend(in: perm[blk*BLOCK_SIZE:1])
+               depend(in: a[blk*block_size*lda+blk*block_size:1]) \
+               depend(inout: a[blk*block_size*lda+iblk*block_size:1]) \
+               depend(in: perm[blk*block_size:1])
             {
                if(debug) printf("ApplyN(%d,%d)\n", iblk, blk);
-               BlockSpec dblk(blk, blk, m, n, cdata, a, lda);
-               BlockSpec rblk(iblk, blk, m, n, cdata, a, lda);
+               BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
+               BlockSpec rblk(iblk, blk, m, n, cdata, a, lda, block_size);
                // Apply column permutation from factorization of dblk and in
                // the process, store a (permuted) copy for recovery in case of
                // a failed column
@@ -720,7 +720,7 @@ private:
          #pragma omp task default(none) \
             firstprivate(blk) \
             shared(cdata, next_elim) \
-            depend(inout: perm[blk*BLOCK_SIZE:1])
+            depend(inout: perm[blk*block_size:1])
          {
             if(debug) printf("Adjust(%d)\n", blk);
             cdata[blk].adjust(next_elim);
@@ -731,23 +731,24 @@ private:
             for(int iblk=jblk; iblk<mblk; iblk++) {
                // Calculate block index we depend on for i
                // (we only work with lower half of matrix)
-               int adep_idx = (blk<iblk) ? blk*BLOCK_SIZE*lda + iblk*BLOCK_SIZE
-                                         : iblk*BLOCK_SIZE*lda + blk*BLOCK_SIZE;
+               int adep_idx = (blk<iblk) ? blk*block_size*lda + iblk*block_size
+                                         : iblk*block_size*lda + blk*block_size;
                #pragma omp task default(none) \
                   firstprivate(blk, iblk, jblk) \
                   shared(a, cdata, backup, all_thread_work)\
-                  depend(inout: a[jblk*BLOCK_SIZE*lda+iblk*BLOCK_SIZE:1]) \
-                  depend(in: perm[blk*BLOCK_SIZE:1]) \
-                  depend(in: a[jblk*BLOCK_SIZE*lda+blk*BLOCK_SIZE:1]) \
+                  depend(inout: a[jblk*block_size*lda+iblk*block_size:1]) \
+                  depend(in: perm[blk*block_size:1]) \
+                  depend(in: a[jblk*block_size*lda+blk*block_size:1]) \
                   depend(in: a[adep_idx:1])
                {
                   if(debug) printf("UpdateT(%d,%d,%d)\n", iblk, jblk, blk);
                   int thread_num = omp_get_thread_num();
-                  BlockSpec ublk(iblk, jblk, m, n, cdata, a, lda);
+                  BlockSpec ublk(iblk, jblk, m, n, cdata, a, lda, block_size);
                   int isrc_row = (blk<=iblk) ? iblk : blk;
                   int isrc_col = (blk<=iblk) ? blk : iblk;
-                  BlockSpec isrc(isrc_row, isrc_col, m, n, cdata, a, lda);
-                  BlockSpec jsrc(blk, jblk, m, n, cdata, a, lda);
+                  BlockSpec isrc(isrc_row, isrc_col, m, n, cdata, a, lda,
+                        block_size);
+                  BlockSpec jsrc(blk, jblk, m, n, cdata, a, lda, block_size);
                   // If we're on the block row we've just eliminated, restore
                   // any failed rows and release resources storing backup
                   ublk.restore_if_required(backup, blk);
@@ -761,16 +762,16 @@ private:
                #pragma omp task default(none) \
                   firstprivate(blk, iblk, jblk) \
                   shared(a, cdata, backup, all_thread_work) \
-                  depend(inout: a[jblk*BLOCK_SIZE*lda+iblk*BLOCK_SIZE:1]) \
-                  depend(in: perm[blk*BLOCK_SIZE:1]) \
-                  depend(in: a[blk*BLOCK_SIZE*lda+iblk*BLOCK_SIZE:1]) \
-                  depend(in: a[blk*BLOCK_SIZE*lda+jblk*BLOCK_SIZE:1])
+                  depend(inout: a[jblk*block_size*lda+iblk*block_size:1]) \
+                  depend(in: perm[blk*block_size:1]) \
+                  depend(in: a[blk*block_size*lda+iblk*block_size:1]) \
+                  depend(in: a[blk*block_size*lda+jblk*block_size:1])
                {
                   if(debug) printf("UpdateN(%d,%d,%d)\n", iblk, jblk, blk);
                   int thread_num = omp_get_thread_num();
-                  BlockSpec ublk(iblk, jblk, m, n, cdata, a, lda);
-                  BlockSpec isrc(iblk, blk, m, n, cdata, a, lda);
-                  BlockSpec jsrc(jblk, blk, m, n, cdata, a, lda);
+                  BlockSpec ublk(iblk, jblk, m, n, cdata, a, lda, block_size);
+                  BlockSpec isrc(iblk, blk, m, n, cdata, a, lda, block_size);
+                  BlockSpec jsrc(jblk, blk, m, n, cdata, a, lda, block_size);
                   // If we're on the block col we've just eliminated, restore
                   // any failed cols and release resources storing backup
                   ublk.restore_if_required(backup, blk);
@@ -804,12 +805,12 @@ private:
    }
 
    static
-   inline int get_ncol(int blk, int n) {
-      return calc_blkn(blk, n, BLOCK_SIZE);
+   inline int get_ncol(int blk, int n, int block_size) {
+      return calc_blkn(blk, n, block_size);
    }
    static
-   inline int get_nrow(int blk, int m) {
-      return calc_blkn(blk, m, BLOCK_SIZE);
+   inline int get_nrow(int blk, int m, int block_size) {
+      return calc_blkn(blk, m, block_size);
    }
 
 public:
@@ -821,18 +822,18 @@ public:
       if(lda < n) return -4;
 
       /* Initialize useful quantities: */
-      int nblk = calc_nblk(n, BLOCK_SIZE);
-      int mblk = calc_nblk(m, BLOCK_SIZE);
+      int nblk = calc_nblk(n, block_size);
+      int mblk = calc_nblk(m, block_size);
 
       /* Temporary workspaces */
       int num_threads = omp_get_max_threads();
       ThreadWork<T,Allocator> all_thread_work[num_threads];
       for(int i=0; i<num_threads; ++i)
-         all_thread_work[i].init(BLOCK_SIZE, alloc);
+         all_thread_work[i].init(block_size, alloc);
       std::vector<Column<T,IntAlloc>, ColAlloc> cdata(alloc);
       cdata.reserve(nblk);
       for(int i=0; i<nblk; ++i)
-         cdata.emplace_back(BLOCK_SIZE, alloc);
+         cdata.emplace_back(block_size, alloc);
 
       /* Main loop
        *    - Each pass leaves any failed pivots in place and keeps everything
@@ -849,11 +850,11 @@ public:
       std::vector<int, IntAlloc> failed_perm(n-num_elim, alloc);
       for(int jblk=0, insert=0, fail_insert=0; jblk<nblk; jblk++) {
          cdata[jblk].move_back(
-               get_ncol(jblk, n), &perm[jblk*BLOCK_SIZE], &perm[insert],
-               &failed_perm[fail_insert]
+               get_ncol(jblk, n, block_size), &perm[jblk*block_size],
+               &perm[insert], &failed_perm[fail_insert]
                );
          insert += cdata[jblk].nelim;
-         fail_insert += get_ncol(jblk, n) - cdata[jblk].nelim;
+         fail_insert += get_ncol(jblk, n, block_size) - cdata[jblk].nelim;
       }
       for(int i=0; i<n-num_elim; ++i)
          perm[num_elim+i] = failed_perm[i];
@@ -866,32 +867,34 @@ public:
          // Diagonal part
          for(int iblk=jblk, ifail=jfail, iinsert=jinsert; iblk<nblk; ++iblk) {
             copy_failed_diag(
-                  get_ncol(iblk, n), get_ncol(jblk, n),
+                  get_ncol(iblk, n, block_size), get_ncol(jblk, n, block_size),
                   cdata[iblk], cdata[jblk],
                   &failed_diag[jinsert*nfail+ifail],
                   &failed_diag[iinsert*nfail+jfail],
                   &failed_diag[num_elim*nfail+jfail*nfail+ifail],
-                  nfail, &a[jblk*BLOCK_SIZE*lda+iblk*BLOCK_SIZE], lda
+                  nfail, &a[jblk*block_size*lda+iblk*block_size], lda
                   );
             iinsert += cdata[iblk].nelim;
-            ifail += get_ncol(iblk, n) - cdata[iblk].nelim;
+            ifail += get_ncol(iblk, n, block_size) - cdata[iblk].nelim;
          }
          // Rectangular part
          // (be careful with blocks that contain both diag and rect parts)
          copy_failed_rect(
-               get_nrow(nblk-1, m), get_ncol(jblk, n), get_ncol(nblk-1, n),
-               cdata[jblk], &failed_rect[jfail*(m-n)+(nblk-1)*BLOCK_SIZE-n],
-               m-n, &a[jblk*BLOCK_SIZE*lda+(nblk-1)*BLOCK_SIZE], lda
+               get_nrow(nblk-1, m, block_size), get_ncol(jblk, n, block_size),
+               get_ncol(nblk-1, n, block_size), cdata[jblk],
+               &failed_rect[jfail*(m-n)+(nblk-1)*block_size-n], m-n,
+               &a[jblk*block_size*lda+(nblk-1)*block_size], lda
                );
          for(int iblk=nblk; iblk<mblk; ++iblk) {
             copy_failed_rect(
-                  get_nrow(iblk, m), get_ncol(jblk, n), 0, cdata[jblk],
-                  &failed_rect[jfail*(m-n)+iblk*BLOCK_SIZE-n], m-n,
-                  &a[jblk*BLOCK_SIZE*lda+iblk*BLOCK_SIZE], lda
+                  get_nrow(iblk, m, block_size),
+                  get_ncol(jblk, n, block_size), 0, cdata[jblk],
+                  &failed_rect[jfail*(m-n)+iblk*block_size-n], m-n,
+                  &a[jblk*block_size*lda+iblk*block_size], lda
                   );
          }
          jinsert += cdata[jblk].nelim;
-         jfail += get_ncol(jblk, n) - cdata[jblk].nelim;
+         jfail += get_ncol(jblk, n, block_size) - cdata[jblk].nelim;
       }
 
       // Move data up
@@ -900,22 +903,23 @@ public:
          for(int iblk=jblk, iinsert=jinsert; iblk<nblk; ++iblk) {
             move_up_diag(
                   cdata[iblk], cdata[jblk], &a[jinsert*lda+iinsert],
-                  &a[jblk*BLOCK_SIZE*lda+iblk*BLOCK_SIZE], lda
+                  &a[jblk*block_size*lda+iblk*block_size], lda
                   );
             iinsert += cdata[iblk].nelim;
          }
          // Rectangular part
          // (be careful with blocks that contain both diag and rect parts)
          move_up_rect(
-               get_nrow(nblk-1, m), get_ncol(nblk-1, n), cdata[jblk],
-               &a[jinsert*lda+(nblk-1)*BLOCK_SIZE],
-               &a[jblk*BLOCK_SIZE*lda+(nblk-1)*BLOCK_SIZE], lda
+               get_nrow(nblk-1, m, block_size),
+               get_ncol(nblk-1, n, block_size), cdata[jblk],
+               &a[jinsert*lda+(nblk-1)*block_size],
+               &a[jblk*block_size*lda+(nblk-1)*block_size], lda
                );
          for(int iblk=nblk; iblk<mblk; ++iblk)
             move_up_rect(
-                  get_nrow(iblk, m), 0, cdata[jblk],
-                  &a[jinsert*lda+iblk*BLOCK_SIZE],
-                  &a[jblk*BLOCK_SIZE*lda+iblk*BLOCK_SIZE], lda
+                  get_nrow(iblk, m, block_size), 0, cdata[jblk],
+                  &a[jinsert*lda+iblk*block_size],
+                  &a[jblk*block_size*lda+iblk*block_size], lda
                   );
          jinsert += cdata[jblk].nelim;
       }
@@ -957,17 +961,15 @@ int ldlt_app_factor(int m, int n, int *perm, T *a, int lda, T *d, struct cpu_fac
    bool const debug = false;
    typedef std::allocator<T> Allocator;
    Allocator alloc;
-   PoolBackup<T, INNER_BLOCK_SIZE, Allocator> backup(
-         m, n, INNER_BLOCK_SIZE, alloc
-         );
+   PoolBackup<T, Allocator> backup(m, n, INNER_BLOCK_SIZE, alloc);
 
    // Actual call
    return LDLT
-      <T, INNER_BLOCK_SIZE, PoolBackup<T,INNER_BLOCK_SIZE,Allocator>, debug,
+      <T, INNER_BLOCK_SIZE, PoolBackup<T,Allocator>, debug,
        Allocator>
       ::factor(
             m, n, perm, a, lda, d, backup, options,
-            options.cpu_task_block_size, alloc
+            INNER_BLOCK_SIZE, alloc
             );
 }
 template int ldlt_app_factor<double>(int, int, int*, double*, int, double*, struct cpu_factor_options const&);
