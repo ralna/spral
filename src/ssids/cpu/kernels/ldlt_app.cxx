@@ -336,7 +336,7 @@ void calcLD(int m, int n, const T *l, int ldl, const T *d, T *ld, int ldld) {
    }
 }
 
-template <typename T, typename Allocator>
+template <typename T, typename Allocator=std::allocator<T*>>
 class PoolBackup {
    typedef typename std::allocator_traits<Allocator>::template rebind_alloc<T*> TptrAlloc;
 public:
