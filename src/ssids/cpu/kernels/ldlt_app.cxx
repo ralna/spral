@@ -664,7 +664,7 @@ private:
          std::vector<Column<T,IntAlloc>, ColAlloc>& cdata, Backup& backup,
          ThreadWork all_thread_work[],
          struct cpu_factor_options const& options, int const block_size,
-         T beta, T* upd, int ldupd, Allocator const& alloc) {
+         T const beta, T* upd, int const ldupd, Allocator const& alloc) {
       typedef Block<T, BLOCK_SIZE, ColAlloc> BlockSpec;
       //printf("ENTRY %d %d vis %d %d %d\n", m, n, mblk, nblk, block_size);
 
@@ -860,14 +860,51 @@ private:
          print_mat(mblk, nblk, m, n, blkdata, cdata, lda);
       }*/
 
-      if(upd) {
-         T *ld = new T[(m-n)*next_elim];
-         calcLD<OP_N>(m-n, next_elim, &a[n], lda, d, ld, m-n);
-         host_gemm(
-               OP_N, OP_T, m-n, m-n, next_elim, -1.0, ld, m-n, &a[n], lda,
-               beta, upd, ldupd
-               );
-         delete[] ld;
+      if(m>n && upd) {
+         // Handle thin strip that "belongs" with last eliminated block column
+         int offset = std::min(nblk*block_size, m) - n;
+         if(offset > 0) {
+            T *ld = new T[(m-n)*next_elim];
+            calcLD<OP_N>(m-n, next_elim, &a[n], lda, d, ld, m-n);
+            host_gemm(
+                  OP_N, OP_T, m-n, offset, next_elim, -1.0, ld, m-n, &a[n], lda,
+                  beta, upd, ldupd
+                  );
+            delete[] ld;
+         }
+         // Handle remainder
+         if(mblk > nblk) {
+            T *upd2 = &upd[offset*(ldupd+1)];
+            for(int kblk=0; kblk<nblk; ++kblk)
+            for(int jblk=nblk; jblk<mblk; ++jblk)
+            for(int iblk=jblk; iblk<mblk; ++iblk) {
+               T* upd_ij = &upd2[(jblk-nblk)*block_size*ldupd + 
+                                 (iblk-nblk)*block_size];
+               #pragma omp task default(none) \
+                  firstprivate(iblk, jblk, kblk, upd_ij) \
+                  shared(a, upd2, cdata, all_thread_work) \
+                  depend(inout: upd_ij[0:1])
+               {
+                  int thread_num = omp_get_thread_num();
+                  ThreadWork& work = all_thread_work[thread_num];
+                  int blkm = get_nrow(iblk, m, block_size);
+                  int blkn = get_ncol(jblk, m, block_size);
+                  int blkk = cdata[kblk].nelim;
+                  T* l_ik = &a[kblk*block_size*lda + iblk*block_size];
+                  T* l_jk = &a[kblk*block_size*lda + jblk*block_size];
+                  calcLD<OP_N>(
+                        blkm, blkk, l_ik, lda, cdata[kblk].d, work.ld,
+                        block_size
+                        );
+                  host_gemm(
+                        OP_N, OP_T, blkm, blkn, blkk,
+                        -1.0, work.ld, block_size, l_jk, lda,
+                        beta, upd_ij, ldupd
+                        );
+               }
+            }
+         }
+         #pragma omp taskwait
       }
 
       return next_elim;
