@@ -167,6 +167,9 @@ program run_prob
    print "(a6, i10)", "not_first_pass:", inform%not_first_pass
    print "(a6, i10)", "not_second_pass:", inform%not_second_pass
 
+   ! Free memory to ensure we pass leak-check tests
+   deallocate(rhs, soln, res)
+
 contains
 
    subroutine proc_args(options, pos_def, nrhs, time_scaling)
