@@ -37,19 +37,17 @@ namespace ldlt_app_internal {
 static const int INNER_BLOCK_SIZE = 32;
 
 /** \return number of blocks for given n */
-template<int BLOCK_SIZE>
-inline int calc_nblk(int n) {
-   return (n-1) / BLOCK_SIZE + 1;
+inline int calc_nblk(int n, int block_size) {
+   return (n-1) / block_size + 1;
 }
 
 /** \return block size of block blk if maximum in dimension is n */
-template<int BLOCK_SIZE>
-inline int calc_blkn(int blk, int n) {
-   return std::min(BLOCK_SIZE, n-blk*BLOCK_SIZE);
+inline int calc_blkn(int blk, int n, int block_size) {
+   return std::min(block_size, n-blk*block_size);
 }
 
 /** Workspace allocated on a per-thread basis */
-template<typename T, size_t BLOCK_SIZE, typename Allocator=std::allocator<T>>
+template<typename T, typename Allocator=std::allocator<T>>
 class ThreadWork {
    typedef typename std::allocator_traits<Allocator>::template rebind_traits<T> AllocTTraits;
    typedef typename std::allocator_traits<Allocator>::template rebind_traits<int> AllocIntTraits;
@@ -57,15 +55,18 @@ public:
 
    ThreadWork(ThreadWork const&) =delete;
    ThreadWork& operator=(ThreadWork const&) =delete;
-   ThreadWork(Allocator const& alloc = Allocator())
-   : allocT_(alloc), allocInt_(alloc)
+   ThreadWork() =default;
+   void init(int max_block_size, Allocator const& alloc = Allocator())
    {
-      ld = AllocTTraits::allocate(allocT_, BLOCK_SIZE*BLOCK_SIZE);
-      perm = AllocIntTraits::allocate(allocInt_, BLOCK_SIZE);
+      allocT_ = typename AllocTTraits::allocator_type(alloc);
+      allocInt_ = typename AllocIntTraits::allocator_type(alloc);
+      block_size_ = max_block_size;
+      ld = AllocTTraits::allocate(allocT_, block_size_*block_size_);
+      perm = AllocIntTraits::allocate(allocInt_, block_size_);
    }
    ~ThreadWork() {
-      AllocIntTraits::deallocate(allocInt_, perm, BLOCK_SIZE);
-      AllocTTraits::deallocate(allocT_, ld, BLOCK_SIZE*BLOCK_SIZE);
+      AllocIntTraits::deallocate(allocInt_, perm, block_size_);
+      AllocTTraits::deallocate(allocT_, ld, block_size_*block_size_);
    }
 
 public:
@@ -75,6 +76,7 @@ public:
 private:
    typename AllocTTraits::allocator_type allocT_;
    typename AllocIntTraits::allocator_type allocInt_;
+   int block_size_;
 };
 
 template<typename T, int BLOCK_SIZE>
@@ -335,9 +337,9 @@ class PoolBackup {
 public:
    // FIXME: reduce pool size
    PoolBackup(int m, int n, Allocator const& alloc=Allocator())
-   : m_(m), n_(n), mblk_(calc_nblk<BLOCK_SIZE>(m)),
-     pool_(calc_nblk<BLOCK_SIZE>(n)*((calc_nblk<BLOCK_SIZE>(n)+1)/2+mblk_)),
-     ptr_(mblk_*calc_nblk<BLOCK_SIZE>(n), alloc)
+   : m_(m), n_(n), mblk_(calc_nblk(m,BLOCK_SIZE)),
+     pool_(calc_nblk(n,BLOCK_SIZE)*((calc_nblk(n,BLOCK_SIZE)+1)/2+mblk_)),
+     ptr_(mblk_*calc_nblk(n,BLOCK_SIZE), alloc)
    {}
 
    void acquire(int iblk, int jblk) {
@@ -417,10 +419,10 @@ public:
 
 private:
    inline int get_ncol(int blk) {
-      return calc_blkn<BLOCK_SIZE>(blk, n_);
+      return calc_blkn(blk, n_, BLOCK_SIZE);
    }
    inline int get_nrow(int blk) {
-      return calc_blkn<BLOCK_SIZE>(blk, m_);
+      return calc_blkn(blk, m_, BLOCK_SIZE);
    }
 
    int const m_;
@@ -487,7 +489,8 @@ public:
    }
 
    template <typename ThreadWork>
-   int factor(int& next_elim, int* perm, T* d, ThreadWork& work, T u, T small) {
+   int factor(int& next_elim, int* perm, T* d, ThreadWork& work, T u, T small,
+         int block_size) {
       if(i_ != j_)
          throw std::runtime_error("factor called on non-diagonal block!");
       int *lperm = cdata_[i_].lperm;
@@ -587,10 +590,10 @@ public:
    int ncol() const { return get_ncol(j_); }
 private:
    inline int get_ncol(int blk) const {
-      return calc_blkn<BLOCK_SIZE>(blk, n_);
+      return calc_blkn(blk, n_, BLOCK_SIZE);
    }
    inline int get_nrow(int blk) const {
-      return calc_blkn<BLOCK_SIZE>(blk, m_);
+      return calc_blkn(blk, m_, BLOCK_SIZE);
    }
 
    int const i_; //< block's row
@@ -619,12 +622,12 @@ private:
    int run_elim(int const m, int const n, int* perm, T* a, int const lda, T* d,
          std::vector<Column<T,BLOCK_SIZE>, ColAlloc>& cdata, Backup& backup,
          ThreadWork all_thread_work[],
-         struct cpu_factor_options const& options) {
+         struct cpu_factor_options const& options, int block_size) {
       typedef Block<T, BLOCK_SIZE, ColAlloc> BlockSpec;
       //printf("ENTRY %d %d vis %d %d %d\n", m, n, mblk, nblk, BLOCK_SIZE);
 
-      int const nblk = calc_nblk<BLOCK_SIZE>(n);
-      int const mblk = calc_nblk<BLOCK_SIZE>(m);
+      int const nblk = calc_nblk(n, BLOCK_SIZE);
+      int const mblk = calc_nblk(m, BLOCK_SIZE);
 
       /* Setup */
       int next_elim = 0;
@@ -640,7 +643,7 @@ private:
          #pragma omp task default(none) \
             firstprivate(blk) \
             shared(a, perm, backup, cdata, all_thread_work, next_elim, d, \
-                   options) \
+                   options, block_size) \
             depend(inout: a[blk*BLOCK_SIZE*lda+blk*BLOCK_SIZE:1]) \
             depend(inout: perm[blk*BLOCK_SIZE:1])
          {
@@ -652,7 +655,7 @@ private:
             // Perform actual factorization
             int nelim = dblk.factor(
                   next_elim, perm, d, all_thread_work[thread_num],
-                  options.u, options.small
+                  options.u, options.small, block_size
                   );
             // Init threshold check (non locking => task dependencies)
             cdata[blk].init_passed(nelim);
@@ -796,28 +799,30 @@ private:
 
    static
    inline int get_ncol(int blk, int n) {
-      return calc_blkn<BLOCK_SIZE>(blk, n);
+      return calc_blkn(blk, n, BLOCK_SIZE);
    }
    static
    inline int get_nrow(int blk, int m) {
-      return calc_blkn<BLOCK_SIZE>(blk, m);
+      return calc_blkn(blk, m, BLOCK_SIZE);
    }
 
 public:
    /** Factorize an entire matrix */
    static
-   int factor(int m, int n, int *perm, T *a, int lda, T *d, Backup& backup, struct cpu_factor_options const& options, Allocator const& alloc=Allocator()) {
+   int factor(int m, int n, int *perm, T *a, int lda, T *d, Backup& backup, struct cpu_factor_options const& options, int block_size, Allocator const& alloc=Allocator()) {
       /* Sanity check arguments */
       if(m < n) return -1;
       if(lda < n) return -4;
 
       /* Initialize useful quantities: */
-      int nblk = calc_nblk<BLOCK_SIZE>(n);
-      int mblk = calc_nblk<BLOCK_SIZE>(m);
+      int nblk = calc_nblk(n, BLOCK_SIZE);
+      int mblk = calc_nblk(m, BLOCK_SIZE);
 
       /* Temporary workspaces */
       int num_threads = omp_get_max_threads();
-      ThreadWork<T,BLOCK_SIZE,Allocator> all_thread_work[num_threads]; // FIXME: pass alloc to constructors
+      ThreadWork<T,Allocator> all_thread_work[num_threads];
+      for(int i=0; i<num_threads; ++i)
+         all_thread_work[i].init(BLOCK_SIZE, alloc);
       std::vector<Column<T,BLOCK_SIZE>, ColAlloc> cdata(nblk, alloc);
 
       /* Main loop
@@ -827,7 +832,8 @@ public:
        *      entries into diagonal blocks
        */
       int num_elim = run_elim(
-            m, n, perm, a, lda, d, cdata, backup, all_thread_work, options
+            m, n, perm, a, lda, d, cdata, backup, all_thread_work, options,
+            block_size
             );
 
       // Permute failed entries to end
@@ -948,7 +954,10 @@ int ldlt_app_factor(int m, int n, int *perm, T *a, int lda, T *d, struct cpu_fac
    return LDLT
       <T, INNER_BLOCK_SIZE, PoolBackup<T,INNER_BLOCK_SIZE,Allocator>, debug,
        Allocator>
-      ::factor(m, n, perm, a, lda, d, backup, options, alloc);
+      ::factor(
+            m, n, perm, a, lda, d, backup, options,
+            options.cpu_task_block_size, alloc
+            );
 }
 template int ldlt_app_factor<double>(int, int, int*, double*, int, double*, struct cpu_factor_options const&);
 
