@@ -142,21 +142,9 @@ public:
                factor_node
                   <posdef>
                   (ni, symb_[ni], &nodes_[ni], options,
-                   thread_stats[this_thread]);
+                   thread_stats[this_thread], contrib_alloc_);
                #pragma omp cancel taskgroup \
                   if(thread_stats[this_thread].flag<SSIDS_SUCCESS)
-#ifdef PROFILE
-               task_factor.done();
-               Profile::Task task_update("TA_UPDATE", this_thread);
-#endif
-               // Form update (only separate in indef case)
-               if(!posdef) {
-                  calculate_update
-                     (symb_[ni], &nodes_[ni], contrib_alloc_, work[this_thread]);
-               }
-#ifdef PROFILE
-               task_update.done();
-#endif
             }
          }
          } // taskgroup

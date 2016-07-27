@@ -97,13 +97,14 @@ void calcLD(int m, int n, T const* lcol, int ldl, T const* d, T* ld, int ldld) {
 }
 
 /* Factorize a node (indef) */
-template <typename T>
+template <typename T, typename ContribAlloc>
 void factor_node_indef(
       int ni, // FIXME: remove post debug
       SymbolicNode const& snode,
       NumericNode<T>* node,
       struct cpu_factor_options const& options,
-      struct cpu_factor_stats& stats
+      struct cpu_factor_stats& stats,
+      ContribAlloc& contrib_alloc
       ) {
    /* Extract useful information about node */
    int m = snode.nrow + node->ndelay_in;
@@ -126,7 +127,11 @@ void factor_node_indef(
       int nelim = node->nelim;
       stats.not_first_pass += n-nelim;
       T *ld = new T[2*(m-nelim)]; // FIXME: Use work
-      node->nelim += ldlt_tpp_factor(m-nelim, n-nelim, &perm[nelim], &lcol[nelim*(ldl+1)], ldl, &d[2*nelim], ld, m-nelim, options.u, options.small, nelim, &lcol[nelim], ldl);
+      node->nelim += ldlt_tpp_factor(
+            m-nelim, n-nelim, &perm[nelim], &lcol[nelim*(ldl+1)], ldl,
+            &d[2*nelim], ld, m-nelim, options.u, options.small, nelim,
+            &lcol[nelim], ldl
+            );
       delete[] ld;
       if(m-n>0 && node->nelim>nelim) {
          int nelim2 = node->nelim - nelim;
@@ -143,6 +148,15 @@ void factor_node_indef(
    /* Record information */
    node->ndelay_out = n - node->nelim;
    stats.num_delay += node->ndelay_out;
+
+   /* Mark as no contribution if we make no contribution */
+   if(node->nelim==0 && !node->first_child) {
+      // FIXME: Actually loop over children and check one exists with contrib
+      //        rather than current approach of just looking for children.
+      typedef std::allocator_traits<ContribAlloc> CATraits;
+      CATraits::deallocate(contrib_alloc, node->contrib, (m-n)*(m-n));
+      node->contrib = nullptr;
+   }
 }
 /* Factorize a node (posdef) */
 template <typename T>
@@ -174,40 +188,17 @@ void factor_node_posdef(
    node->ndelay_out = 0;
 }
 /* Factorize a node (wrapper) */
-template <bool posdef, typename T>
+template <bool posdef, typename T, typename ContribAlloc>
 void factor_node(
       int ni,
       SymbolicNode const& snode,
       NumericNode<T>* node,
       struct cpu_factor_options const& options,
-      struct cpu_factor_stats& stats
+      struct cpu_factor_stats& stats,
+      ContribAlloc& contrib_alloc
       ) {
    if(posdef) factor_node_posdef<T>(snode, node, options, stats);
-   else       factor_node_indef <T>(ni, snode, node, options, stats);
-}
-
-/* Calculate update */
-template <typename T, typename ContribAlloc>
-void calculate_update(
-      SymbolicNode const& snode,
-      NumericNode<T>* node,
-      ContribAlloc& contrib_alloc,
-      Workspace& work
-      ) {
-   typedef std::allocator_traits<ContribAlloc> CATraits;
-
-   // Check there is work to do
-   int m = snode.nrow - snode.ncol;
-   int n = node->nelim;
-   if(n==0 && !node->first_child) {
-      // If everything is delayed, and no contribution from children then
-      // free contrib memory and mark as no contribution for parent's assembly
-      // FIXME: actually loop over children and check one exists with contriub
-      //        rather than current approach of just looking for children.
-      CATraits::deallocate(contrib_alloc, node->contrib, m*m);
-      node->contrib = NULL;
-      return;
-   }
+   else       factor_node_indef <T>(ni, snode, node, options, stats, contrib_alloc);
 }
 
 }}} /* end of namespace spral::ssids::cpu */

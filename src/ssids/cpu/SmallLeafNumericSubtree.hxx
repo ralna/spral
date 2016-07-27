@@ -57,7 +57,8 @@ public:
          // Factorization
          factor_node
             <true>
-            (ni, symb_.symb_[ni], &old_nodes_[ni], options, stats);
+            (ni, symb_.symb_[ni], &old_nodes_[ni], options, stats,
+             contrib_alloc);
          if(stats.flag<SSIDS_SUCCESS) return;
       }
    }
