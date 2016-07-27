@@ -523,7 +523,7 @@ public:
                 ::factor(
                       nrow(), ncol(), &cdata_[i_].lperm[0], aval_, lda_,
                       cdata_[i_].d, inner_backup, options, INNER_BLOCK_SIZE,
-                      alloc
+                      0, nullptr, 0, alloc
                       );
          int* temp = work.perm;
          int* blkperm = &perm[i_*block_size_];
@@ -664,7 +664,7 @@ private:
          std::vector<Column<T,IntAlloc>, ColAlloc>& cdata, Backup& backup,
          ThreadWork all_thread_work[],
          struct cpu_factor_options const& options, int const block_size,
-         Allocator const& alloc) {
+         T beta, T* upd, int ldupd, Allocator const& alloc) {
       typedef Block<T, BLOCK_SIZE, ColAlloc> BlockSpec;
       //printf("ENTRY %d %d vis %d %d %d\n", m, n, mblk, nblk, block_size);
 
@@ -860,6 +860,16 @@ private:
          print_mat(mblk, nblk, m, n, blkdata, cdata, lda);
       }*/
 
+      if(upd) {
+         T *ld = new T[(m-n)*next_elim];
+         calcLD<OP_N>(m-n, next_elim, &a[n], lda, d, ld, m-n);
+         host_gemm(
+               OP_N, OP_T, m-n, m-n, next_elim, -1.0, ld, m-n, &a[n], lda,
+               beta, upd, ldupd
+               );
+         delete[] ld;
+      }
+
       return next_elim;
    }
 
@@ -888,7 +898,7 @@ private:
 public:
    /** Factorize an entire matrix */
    static
-   int factor(int m, int n, int *perm, T *a, int lda, T *d, Backup& backup, struct cpu_factor_options const& options, int block_size, Allocator const& alloc=Allocator()) {
+   int factor(int m, int n, int *perm, T *a, int lda, T *d, Backup& backup, struct cpu_factor_options const& options, int block_size, T beta, T* upd, int ldupd, Allocator const& alloc=Allocator()) {
       /* Sanity check arguments */
       if(m < n) return -1;
       if(lda < n) return -4;
@@ -915,7 +925,7 @@ public:
        */
       int num_elim = run_elim(
             m, n, perm, a, lda, d, cdata, backup, all_thread_work, options,
-            block_size, alloc
+            block_size, beta, upd, ldupd, alloc
             );
 
       // Permute failed entries to end
@@ -1024,7 +1034,7 @@ public:
 using namespace spral::ssids::cpu::ldlt_app_internal;
 
 template<typename T>
-int ldlt_app_factor(int m, int n, int *perm, T *a, int lda, T *d, struct cpu_factor_options const& options) {
+int ldlt_app_factor(int m, int n, int* perm, T* a, int lda, T* d, T beta, T* upd, int ldupd, struct cpu_factor_options const& options) {
    // Things will break if outer block size is not a multiple of inner one
    if(options.cpu_task_block_size % INNER_BLOCK_SIZE != 0)
       throw std::runtime_error("options.cpu_task_block_size must be multiple of inner block size");
@@ -1042,10 +1052,10 @@ int ldlt_app_factor(int m, int n, int *perm, T *a, int lda, T *d, struct cpu_fac
        Allocator>
       ::factor(
             m, n, perm, a, lda, d, backup, options,
-            outer_block_size, alloc
+            outer_block_size, beta, upd, ldupd, alloc
             );
 }
-template int ldlt_app_factor<double>(int, int, int*, double*, int, double*, struct cpu_factor_options const&);
+template int ldlt_app_factor<double>(int, int, int*, double*, int, double*, double, double*, int, struct cpu_factor_options const&);
 
 template <typename T>
 void ldlt_app_solve_fwd(int m, int n, T const* l, int ldl, int nrhs, T* x, int ldx) {

@@ -94,8 +94,7 @@ protected:
    int const* nlist_;
    SymbolicSubtree const& symb_;
    
-   template <typename T, int BLOCK_SIZE, typename FactorAllocator,
-             typename ContribAllocator>
+   template <typename T, typename FactorAllocator, typename ContribAllocator>
    friend class SmallLeafNumericSubtree;
 };
 

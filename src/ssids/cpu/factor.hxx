@@ -58,8 +58,46 @@ private:
    size_t sz_;
 };
 
+template<typename T>
+void calcLD(int m, int n, T const* lcol, int ldl, T const* d, T* ld, int ldld) {
+   for(int j=0; j<n;) {
+      if(j+1==n || std::isfinite(d[2*j+2])) {
+         // 1x1 pivot
+         // (Actually stored as D^-1 so need to invert it again)
+         if(d[2*j] == 0.0) {
+            // Handle zero pivots with care
+            for(int i=0; i<m; i++) {
+               ld[j*ldld+i] = 0.0;
+            }
+         } else {
+            // Standard 1x1 pivot
+            T d11 = 1/d[2*j];
+            // And calulate ld
+            for(int i=0; i<m; i++) {
+               ld[j*ldld+i] = d11*lcol[j*ldl+i];
+            }
+         }
+         // Increment j
+         j++;
+      } else {
+         // 2x2 pivot
+         // (Actually stored as D^-1 so need to invert it again)
+         T di11 = d[2*j]; T di21 = d[2*j+1]; T di22 = d[2*j+3];
+         T det = di11*di22 - di21*di21;
+         T d11 = di22 / det; T d21 = -di21 / det; T d22 = di11 / det;
+         // And calulate ld
+         for(int i=0; i<m; i++) {
+            ld[j*ldld+i]     = d11*lcol[j*ldl+i] + d21*lcol[(j+1)*ldl+i];
+            ld[(j+1)*ldld+i] = d21*lcol[j*ldl+i] + d22*lcol[(j+1)*ldl+i];
+         }
+         // Increment j
+         j += 2;
+      }
+   }
+}
+
 /* Factorize a node (indef) */
-template <typename T, int BLOCK_SIZE>
+template <typename T>
 void factor_node_indef(
       int ni, // FIXME: remove post debug
       SymbolicNode const& snode,
@@ -74,10 +112,13 @@ void factor_node_indef(
    T *lcol = node->lcol;
    T *d = &node->lcol[ n*ldl ];
    int *perm = node->perm;
+   T *contrib = node->contrib;
 
    /* Perform factorization */
    //Verify<T> verifier(m, n, perm, lcol, ldl);
-   node->nelim = ldlt_app_factor(m, n, perm, lcol, ldl, d, options);
+   node->nelim = ldlt_app_factor(
+         m, n, perm, lcol, ldl, d, 1.0, contrib, m-n, options
+         );
    //verifier.verify(node->nelim, perm, lcol, ldl, d);
 
    /* Finish factorization worth simplistic code */
@@ -86,8 +127,17 @@ void factor_node_indef(
       stats.not_first_pass += n-nelim;
       T *ld = new T[2*(m-nelim)]; // FIXME: Use work
       node->nelim += ldlt_tpp_factor(m-nelim, n-nelim, &perm[nelim], &lcol[nelim*(ldl+1)], ldl, &d[2*nelim], ld, m-nelim, options.u, options.small, nelim, &lcol[nelim], ldl);
-      stats.not_second_pass += n - node->nelim;
       delete[] ld;
+      if(m-n>0 && node->nelim>nelim) {
+         int nelim2 = node->nelim - nelim;
+         T *ld = new T[(m-n)*nelim2]; // FIXME: Use work
+         calcLD(m-n, nelim2, &lcol[nelim*ldl+n], ldl, &d[2*nelim], ld, m-n);
+         host_gemm<T>(OP_N, OP_T, m-n, m-n, nelim2,
+               -1.0, &lcol[nelim*ldl+n], ldl, ld, m-n,
+               1.0, node->contrib, m-n);
+         delete[] ld;
+      }
+      stats.not_second_pass += n - node->nelim;
    }
 
    /* Record information */
@@ -95,7 +145,7 @@ void factor_node_indef(
    stats.num_delay += node->ndelay_out;
 }
 /* Factorize a node (posdef) */
-template <typename T, int BLOCK_SIZE>
+template <typename T>
 void factor_node_posdef(
       SymbolicNode const& snode,
       NumericNode<T>* node,
@@ -124,7 +174,7 @@ void factor_node_posdef(
    node->ndelay_out = 0;
 }
 /* Factorize a node (wrapper) */
-template <bool posdef, int BLOCK_SIZE, typename T>
+template <bool posdef, typename T>
 void factor_node(
       int ni,
       SymbolicNode const& snode,
@@ -132,8 +182,8 @@ void factor_node(
       struct cpu_factor_options const& options,
       struct cpu_factor_stats& stats
       ) {
-   if(posdef) factor_node_posdef<T, BLOCK_SIZE>(snode, node, options, stats);
-   else       factor_node_indef <T, BLOCK_SIZE>(ni, snode, node, options, stats);
+   if(posdef) factor_node_posdef<T>(snode, node, options, stats);
+   else       factor_node_indef <T>(ni, snode, node, options, stats);
 }
 
 /* Calculate update */
@@ -158,61 +208,6 @@ void calculate_update(
       node->contrib = NULL;
       return;
    }
-   if(m==0 || n==0) return; // no-op
-
-   // Indefinte - need to recalculate LD before we can use it!
-
-   // Calculate LD
-   T *lcol = &node->lcol[snode.ncol+node->ndelay_in];
-   int ldl = align_lda<T>(snode.nrow + node->ndelay_in);
-   T *d = &node->lcol[ldl*(snode.ncol+node->ndelay_in)];
-   T *ld = work.get_ptr<T>(m*n);
-   for(int j=0; j<n;) {
-      if(j+1==n || std::isfinite(d[2*j+2])) {
-         // 1x1 pivot
-         // (Actually stored as D^-1 so need to invert it again)
-         if(d[2*j] == 0.0) {
-            // Handle zero pivots with care
-            for(int i=0; i<m; i++) {
-               ld[j*m+i] = 0.0;
-            }
-         } else {
-            // Standard 1x1 pivot
-            T d11 = 1/d[2*j];
-            // And calulate ld
-            for(int i=0; i<m; i++) {
-               ld[j*m+i] = d11*lcol[j*ldl+i];
-            }
-         }
-         // Increment j
-         j++;
-      } else {
-         // 2x2 pivot
-         // (Actually stored as D^-1 so need to invert it again)
-         T di11 = d[2*j]; T di21 = d[2*j+1]; T di22 = d[2*j+3];
-         T det = di11*di22 - di21*di21;
-         T d11 = di22 / det; T d21 = -di21 / det; T d22 = di11 / det;
-         // And calulate ld
-         for(int i=0; i<m; i++) {
-            ld[j*m+i]     = d11*lcol[j*ldl+i] + d21*lcol[(j+1)*ldl+i];
-            ld[(j+1)*m+i] = d21*lcol[j*ldl+i] + d22*lcol[(j+1)*ldl+i];
-         }
-         // Increment j
-         j += 2;
-      }
-   }
-
-   // Apply update to contrib block
-   host_gemm<T>(OP_N, OP_T, m, m, n,
-         -1.0, lcol, ldl, ld, m,
-         1.0, node->contrib, m);
-
-   // FIXME: debug remove
-   /*printf("Contrib = \n");
-   for(int i=0; i<m; i++) {
-      for(int j=0; j<m; j++) printf(" %e", node->contrib[j*m+i]);
-      printf("\n");
-   }*/
 }
 
 }}} /* end of namespace spral::ssids::cpu */

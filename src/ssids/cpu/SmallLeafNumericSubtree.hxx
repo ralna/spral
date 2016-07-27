@@ -22,7 +22,6 @@
 namespace spral { namespace ssids { namespace cpu {
 
 template <typename T,
-          int BLOCK_SIZE,
           typename FactorAllocator, // Allocator to use for factor storage
           typename ContribAllocator // Allocator to use for contribution blocks
           >
@@ -57,7 +56,7 @@ public:
          stats.maxfront = std::max(stats.maxfront, nrow);
          // Factorization
          factor_node
-            <true, BLOCK_SIZE>
+            <true>
             (ni, symb_.symb_[ni], &old_nodes_[ni], options, stats);
          if(stats.flag<SSIDS_SUCCESS) return;
       }

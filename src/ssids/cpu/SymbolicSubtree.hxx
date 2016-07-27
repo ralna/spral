@@ -91,7 +91,7 @@ private:
    std::vector<SymbolicNode> nodes_;
    std::vector<SmallLeafSymbolicSubtree> small_leafs_;
 
-   template <bool posdef, size_t BLOCK_SIZE, typename T, size_t PAGE_SIZE, typename FactorAlloc, typename ContribAllocator>
+   template <bool posdef, typename T, size_t PAGE_SIZE, typename FactorAlloc, typename ContribAllocator>
    friend class NumericSubtree;
 };
 

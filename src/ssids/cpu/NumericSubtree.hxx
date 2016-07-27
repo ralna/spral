@@ -22,14 +22,13 @@ namespace spral { namespace ssids { namespace cpu {
 
 /** Class representing a subtree factorized on the CPU */
 template <bool posdef,
-          size_t BLOCK_SIZE,
           typename T,
           size_t PAGE_SIZE,
           typename FactorAllocator, // Allocator to use for factor storage
           typename ContribAllocator // Allocator to use for contribution blocks
           >
 class NumericSubtree {
-   typedef SmallLeafNumericSubtree<T, BLOCK_SIZE, FactorAllocator, ContribAllocator> SLNS;
+   typedef SmallLeafNumericSubtree<T, FactorAllocator, ContribAllocator> SLNS;
 public:
    /* Delete copy constructors for safety re allocated memory */
    NumericSubtree(const NumericSubtree&) =delete;
@@ -141,7 +140,7 @@ public:
                thread_stats[this_thread].maxfront = std::max(thread_stats[this_thread].maxfront, nrow);
                // Factorization
                factor_node
-                  <posdef, BLOCK_SIZE>
+                  <posdef>
                   (ni, symb_[ni], &nodes_[ni], options,
                    thread_stats[this_thread]);
                #pragma omp cancel taskgroup \
