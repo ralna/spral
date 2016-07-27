@@ -864,13 +864,55 @@ private:
          // Handle thin strip that "belongs" with last eliminated block column
          int offset = std::min(nblk*block_size, m) - n;
          if(offset > 0) {
-            T *ld = new T[(m-n)*next_elim];
-            calcLD<OP_N>(m-n, next_elim, &a[n], lda, d, ld, m-n);
-            host_gemm(
-                  OP_N, OP_T, m-n, offset, next_elim, -1.0, ld, m-n, &a[n], lda,
-                  beta, upd, ldupd
-                  );
-            delete[] ld;
+            // Fractional diagonal block
+            for(int kblk=0; kblk<nblk; ++kblk) {
+               #pragma omp task default(none) \
+                  firstprivate(kblk) \
+                  shared(offset, a, upd, cdata, all_thread_work) \
+                  depend(inout: upd[0:1])
+               {
+                  int thread_num = omp_get_thread_num();
+                  ThreadWork& work = all_thread_work[thread_num];
+                  T* l_ik = &a[kblk*block_size*lda+n];
+                  T* l_jk = &a[kblk*block_size*lda+n];
+                  int blkk = cdata[kblk].nelim;
+                  calcLD<OP_N>(
+                        offset, blkk, l_ik, lda, cdata[kblk].d, work.ld,
+                        block_size
+                        );
+                  host_gemm(
+                        OP_N, OP_T, offset, offset, blkk,
+                        -1.0, work.ld, block_size, l_jk, lda,
+                        beta, upd, ldupd
+                        );
+               }
+            }
+            // Fractional column
+            for(int kblk=0; kblk<nblk; ++kblk)
+            for(int iblk=nblk; iblk<mblk; ++iblk) {
+               T* upd_ij = &upd[(iblk-nblk)*block_size+offset];
+               #pragma omp task default(none) \
+                  firstprivate(iblk, kblk, upd_ij) \
+                  shared(offset, a, cdata, all_thread_work) \
+                  depend(inout: upd_ij[0:1])
+               {
+                  int thread_num = omp_get_thread_num();
+                  ThreadWork& work = all_thread_work[thread_num];
+                  int blkm = get_nrow(iblk, m, block_size);
+                  int blkk = cdata[kblk].nelim;
+                  T* l_ik = &a[kblk*block_size*lda + iblk*block_size];
+                  T* l_jk = &a[kblk*block_size*lda + n];
+                  calcLD<OP_N>(
+                        blkm, blkk, l_ik, lda, cdata[kblk].d, work.ld,
+                        block_size 
+                        );
+                  host_gemm(
+                        OP_N, OP_T, blkm, offset, blkk,
+                        -1.0, work.ld, block_size, l_jk, lda,
+                        beta, upd_ij, ldupd
+                        );
+               }
+            }
          }
          // Handle remainder
          if(mblk > nblk) {
