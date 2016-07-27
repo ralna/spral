@@ -79,16 +79,21 @@ private:
    int block_size_;
 };
 
-template<typename T, int BLOCK_SIZE>
+template<typename T, typename IntAllocator>
 class Column {
 public:
    int nelim; //< Number of eliminated entries in this column
    T *d; //< pointer to local d
-   int lperm[BLOCK_SIZE]; //< local permutation
+   std::vector<int, IntAllocator> lperm; //< local permutation
 
-   Column(Column const&) =delete; // must be unique
+   Column(Column const&) {
+      // Provided only for vector support, should never be used!
+      omp_init_lock(&lock_);
+   }
    Column& operator=(Column const&) =delete; // must be unique
-   Column() {
+   Column(int block_size, IntAllocator alloc=IntAllocator())
+   : lperm(block_size, alloc)
+   {
       omp_init_lock(&lock_);
    }
    ~Column() {
@@ -336,10 +341,10 @@ class PoolBackup {
    typedef typename std::allocator_traits<Allocator>::template rebind_alloc<T*> TptrAlloc;
 public:
    // FIXME: reduce pool size
-   PoolBackup(int m, int n, Allocator const& alloc=Allocator())
-   : m_(m), n_(n), mblk_(calc_nblk(m,BLOCK_SIZE)),
-     pool_(calc_nblk(n,BLOCK_SIZE)*((calc_nblk(n,BLOCK_SIZE)+1)/2+mblk_)),
-     ptr_(mblk_*calc_nblk(n,BLOCK_SIZE), alloc)
+   PoolBackup(int m, int n, int block_size, Allocator const& alloc=Allocator())
+   : m_(m), n_(n), block_size_(block_size), mblk_(calc_nblk(m,block_size)),
+     pool_(calc_nblk(n,block_size)*((calc_nblk(n,block_size)+1)/2+mblk_), block_size, alloc),
+     ptr_(mblk_*calc_nblk(n,block_size), alloc)
    {}
 
    void acquire(int iblk, int jblk) {
@@ -356,7 +361,7 @@ public:
       lwork = pool_.get_wait();
       for(int j=0; j<get_ncol(jblk); j++)
       for(int i=0; i<get_nrow(iblk); i++)
-         lwork[j*BLOCK_SIZE+i] = aval[j*lda+i];
+         lwork[j*block_size_+i] = aval[j*lda+i];
    }
 
    /** Apply row permutation to block at same time as taking a copy */
@@ -366,15 +371,15 @@ public:
       for(int j=0; j<get_ncol(jblk); j++) {
          for(int i=0; i<nperm; i++) {
             int r = lperm[i];
-            lwork[j*BLOCK_SIZE+i] = aval[j*lda+r];
+            lwork[j*block_size_+i] = aval[j*lda+r];
          }
          for(int i=nperm; i<get_nrow(iblk); i++) {
-            lwork[j*BLOCK_SIZE+i] = aval[j*lda+i];
+            lwork[j*block_size_+i] = aval[j*lda+i];
          }
       }
       for(int j=0; j<get_ncol(jblk); j++)
       for(int i=0; i<nperm; i++)
-         aval[j*lda+i] = lwork[j*BLOCK_SIZE+i];
+         aval[j*lda+i] = lwork[j*block_size_+i];
    }
 
    /** Apply column permutation to block at same time as taking a copy */
@@ -384,11 +389,11 @@ public:
       for(int j=0; j<get_ncol(jblk); j++) {
          int c = lperm[j];
          for(int i=0; i<get_nrow(iblk); i++)
-            lwork[j*BLOCK_SIZE+i] = aval[c*lda+i];
+            lwork[j*block_size_+i] = aval[c*lda+i];
       }
       for(int j=0; j<get_ncol(jblk); j++)
       for(int i=0; i<get_nrow(iblk); i++)
-         aval[j*lda+i] = lwork[j*BLOCK_SIZE+i];
+         aval[j*lda+i] = lwork[j*block_size_+i];
    }
 
    /** Restores any columns that have failed back to their previous
@@ -397,7 +402,7 @@ public:
       T*& lwork = ptr_[jblk*mblk_+iblk];
       for(int j=cfrom; j<get_ncol(jblk); j++)
       for(int i=rfrom; i<get_nrow(iblk); i++)
-         aval[j*lda+i] = lwork[j*BLOCK_SIZE+i];
+         aval[j*lda+i] = lwork[j*block_size_+i];
    }
 
    /** Restores any columns that have failed back to their previous
@@ -409,33 +414,35 @@ public:
          int c = lperm[j];
          for(int i=from; i<get_ncol(jblk); i++) {
             int r = lperm[i];
-            aval[j*lda+i] = (r>c) ? lwork[c*BLOCK_SIZE+r]
-                                  : lwork[r*BLOCK_SIZE+c];
+            aval[j*lda+i] = (r>c) ? lwork[c*block_size_+r]
+                                  : lwork[r*block_size_+c];
          }
          for(int i=get_ncol(jblk); i<get_nrow(iblk); i++)
-            aval[j*lda+i] = lwork[c*BLOCK_SIZE+i];
+            aval[j*lda+i] = lwork[c*block_size_+i];
       }
    }
 
 private:
    inline int get_ncol(int blk) {
-      return calc_blkn(blk, n_, BLOCK_SIZE);
+      return calc_blkn(blk, n_, block_size_);
    }
    inline int get_nrow(int blk) {
-      return calc_blkn(blk, m_, BLOCK_SIZE);
+      return calc_blkn(blk, m_, block_size_);
    }
 
    int const m_;
    int const n_;
+   int const block_size_;
    int const mblk_;
-   BlockPool<T, BLOCK_SIZE> pool_;
+   BlockPool<T, Allocator> pool_;
    std::vector<T*, TptrAlloc> ptr_;
 };
 
 template<typename T, int BLOCK_SIZE, typename ColAlloc>
 class Block {
+   typedef typename std::allocator_traits<ColAlloc>::template rebind_alloc<int> IntAlloc;
 public:
-   Block(int i, int j, int m, int n, std::vector<Column<T,BLOCK_SIZE>, ColAlloc>& cdata, T* a, int lda)
+   Block(int i, int j, int m, int n, std::vector<Column<T,IntAlloc>, ColAlloc>& cdata, T* a, int lda)
    : i_(i), j_(j), m_(m), n_(n), lda_(lda), cdata_(cdata),
      aval_(&a[j*BLOCK_SIZE*lda+i*BLOCK_SIZE])
    {}
@@ -448,14 +455,14 @@ public:
    template <typename Backup>
    void apply_rperm_and_backup(Backup& backup) {
       backup.create_restore_point_with_row_perm(
-            i_, j_, get_ncol(i_), cdata_[i_].lperm, aval_, lda_
+            i_, j_, get_ncol(i_), &cdata_[i_].lperm[0], aval_, lda_
             );
    }
 
    template <typename Backup>
    void apply_cperm_and_backup(Backup& backup) {
       backup.create_restore_point_with_col_perm(
-            i_, j_, cdata_[j_].lperm, aval_, lda_
+            i_, j_, &cdata_[j_].lperm[0], aval_, lda_
             );
    }
 
@@ -464,7 +471,7 @@ public:
       if(i_ == elim_col && j_ == elim_col) { // In eliminated diagonal block
          if(cdata_[i_].nelim < ncol()) { // If there are failed pivots
             backup.restore_part_with_sym_perm(
-                  i_, j_, cdata_[i_].nelim, cdata_[i_].lperm, aval_, lda_
+                  i_, j_, cdata_[i_].nelim, &cdata_[i_].lperm[0], aval_, lda_
                   );
          }
          // Release resources regardless, no longer required
@@ -493,25 +500,24 @@ public:
          int block_size) {
       if(i_ != j_)
          throw std::runtime_error("factor called on non-diagonal block!");
-      int *lperm = cdata_[i_].lperm;
       for(int i=0; i<ncol(); i++)
-         lperm[i] = i;
+         cdata_[i_].lperm[i] = i;
       cdata_[i_].d = &d[2*next_elim];
       if(ncol() < BLOCK_SIZE || !is_aligned(aval_)) {
          cdata_[i_].nelim = ldlt_tpp_factor(
-               nrow(), ncol(), lperm, aval_, lda_, cdata_[i_].d,
+               nrow(), ncol(), &cdata_[i_].lperm[0], aval_, lda_, cdata_[i_].d,
                work.ld, BLOCK_SIZE, u, small
                );
          int *temp = work.perm;
          int* blkperm = &perm[i_*BLOCK_SIZE];
          for(int i=0; i<ncol(); ++i)
-            temp[i] = blkperm[lperm[i]];
+            temp[i] = blkperm[cdata_[i_].lperm[i]];
          for(int i=0; i<ncol(); ++i)
             blkperm[i] = temp[i];
       } else {
          int* blkperm = &perm[i_*BLOCK_SIZE];
          block_ldlt<T, BLOCK_SIZE>(0, blkperm, aval_, lda_,
-               cdata_[i_].d, work.ld, u, small, lperm);
+               cdata_[i_].d, work.ld, u, small, &cdata_[i_].lperm[0]);
          cdata_[i_].nelim = BLOCK_SIZE;
       }
       return cdata_[i_].nelim;
@@ -601,7 +607,7 @@ private:
    int const m_; //< global number of rows
    int const n_; //< global number of columns
    int const lda_; //< leading dimension of underlying storage
-   std::vector<Column<T,BLOCK_SIZE>, ColAlloc>& cdata_; //< global column data array
+   std::vector<Column<T,IntAlloc>, ColAlloc>& cdata_; //< global column data array
    T* aval_;
 };
 
@@ -612,15 +618,15 @@ template<typename T,
          typename Allocator=std::allocator<T>
          >
 class LDLT {
-   typedef typename std::allocator_traits<Allocator>::template rebind_alloc<Column<T,BLOCK_SIZE>> ColAlloc;
    typedef typename std::allocator_traits<Allocator>::template rebind_alloc<int> IntAlloc;
+   typedef typename std::allocator_traits<Allocator>::template rebind_alloc<Column<T,IntAlloc>> ColAlloc;
    typedef typename std::allocator_traits<Allocator>::template rebind_alloc<bool> BoolAlloc;
    typedef typename std::allocator_traits<Allocator>::template rebind_alloc<T> TAlloc;
 private:
    template <typename ThreadWork>
    static
    int run_elim(int const m, int const n, int* perm, T* a, int const lda, T* d,
-         std::vector<Column<T,BLOCK_SIZE>, ColAlloc>& cdata, Backup& backup,
+         std::vector<Column<T,IntAlloc>, ColAlloc>& cdata, Backup& backup,
          ThreadWork all_thread_work[],
          struct cpu_factor_options const& options, int block_size) {
       typedef Block<T, BLOCK_SIZE, ColAlloc> BlockSpec;
@@ -823,7 +829,10 @@ public:
       ThreadWork<T,Allocator> all_thread_work[num_threads];
       for(int i=0; i<num_threads; ++i)
          all_thread_work[i].init(BLOCK_SIZE, alloc);
-      std::vector<Column<T,BLOCK_SIZE>, ColAlloc> cdata(nblk, alloc);
+      std::vector<Column<T,IntAlloc>, ColAlloc> cdata(alloc);
+      cdata.reserve(nblk);
+      for(int i=0; i<nblk; ++i)
+         cdata.emplace_back(BLOCK_SIZE, alloc);
 
       /* Main loop
        *    - Each pass leaves any failed pivots in place and keeps everything
@@ -948,7 +957,9 @@ int ldlt_app_factor(int m, int n, int *perm, T *a, int lda, T *d, struct cpu_fac
    bool const debug = false;
    typedef std::allocator<T> Allocator;
    Allocator alloc;
-   PoolBackup<T, INNER_BLOCK_SIZE, Allocator> backup(m, n, alloc);
+   PoolBackup<T, INNER_BLOCK_SIZE, Allocator> backup(
+         m, n, INNER_BLOCK_SIZE, alloc
+         );
 
    // Actual call
    return LDLT
