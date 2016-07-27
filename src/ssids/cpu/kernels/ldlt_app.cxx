@@ -429,10 +429,10 @@ private:
    std::vector<T*> ptr_;
 };
 
-template<typename T, int BLOCK_SIZE>
+template<typename T, int BLOCK_SIZE, typename Allocator>
 class Block {
 public:
-   Block(int i, int j, int m, int n, Column<T,BLOCK_SIZE>* cdata, T* a, int lda)
+   Block(int i, int j, int m, int n, std::vector<Column<T,BLOCK_SIZE>, Allocator>& cdata, T* a, int lda)
    : i_(i), j_(j), m_(m), n_(n), lda_(lda), cdata_(cdata),
      aval_(&a[j*BLOCK_SIZE*lda+i*BLOCK_SIZE])
    {}
@@ -597,7 +597,7 @@ private:
    int const m_; //< global number of rows
    int const n_; //< global number of columns
    int const lda_; //< leading dimension of underlying storage
-   Column<T,BLOCK_SIZE>* const cdata_; //< global column data array
+   std::vector<Column<T,BLOCK_SIZE>, Allocator>& cdata_; //< global column data array
    T* aval_;
 };
 
@@ -612,10 +612,10 @@ private:
    template <typename ThreadWork>
    static
    int run_elim(int const m, int const n, int* perm, T* a, int const lda, T* d,
-         Column<T,BLOCK_SIZE> *cdata, Backup& backup,
+         std::vector<Column<T,BLOCK_SIZE>, Allocator>& cdata, Backup& backup,
          ThreadWork all_thread_work[],
          struct cpu_factor_options const& options) {
-      typedef Block<T, BLOCK_SIZE> BlockSpec;
+      typedef Block<T, BLOCK_SIZE, Allocator> BlockSpec;
       //printf("ENTRY %d %d vis %d %d %d\n", m, n, mblk, nblk, BLOCK_SIZE);
 
       int const nblk = calc_nblk<BLOCK_SIZE>(n);
@@ -631,13 +631,13 @@ private:
             print_mat(mblk, nblk, m, n, blkdata, cdata, lda);
          }*/
 
-         // Factor diagonal: depend on cdata[blk] as we do some init here
+         // Factor diagonal: depend on perm[blk*BLOCK_SIZE] as we init npass
          #pragma omp task default(none) \
             firstprivate(blk) \
             shared(a, perm, backup, cdata, all_thread_work, next_elim, d, \
                    options) \
             depend(inout: a[blk*BLOCK_SIZE*lda+blk*BLOCK_SIZE:1]) \
-            depend(inout: cdata[blk:1])
+            depend(inout: perm[blk*BLOCK_SIZE:1])
          {
             if(debug) printf("Factor(%d)\n", blk);
             int thread_num = omp_get_thread_num();
@@ -660,7 +660,7 @@ private:
                shared(a, backup, cdata, options) \
                depend(in: a[blk*BLOCK_SIZE*lda+blk*BLOCK_SIZE:1]) \
                depend(inout: a[jblk*BLOCK_SIZE*lda+blk*BLOCK_SIZE:1]) \
-               depend(in: cdata[blk:1])
+               depend(in: perm[blk*BLOCK_SIZE:1])
             {
                if(debug) printf("ApplyT(%d,%d)\n", blk, jblk);
                BlockSpec dblk(blk, blk, m, n, cdata, a, lda);
@@ -684,7 +684,7 @@ private:
                shared(a, backup, cdata, options) \
                depend(in: a[blk*BLOCK_SIZE*lda+blk*BLOCK_SIZE:1]) \
                depend(inout: a[blk*BLOCK_SIZE*lda+iblk*BLOCK_SIZE:1]) \
-               depend(in: cdata[blk:1])
+               depend(in: perm[blk*BLOCK_SIZE:1])
             {
                if(debug) printf("ApplyN(%d,%d)\n", iblk, blk);
                BlockSpec dblk(blk, blk, m, n, cdata, a, lda);
@@ -706,7 +706,7 @@ private:
          #pragma omp task default(none) \
             firstprivate(blk) \
             shared(cdata, next_elim) \
-            depend(inout: cdata[blk:1])
+            depend(inout: perm[blk*BLOCK_SIZE:1])
          {
             if(debug) printf("Adjust(%d)\n", blk);
             cdata[blk].adjust(next_elim);
@@ -723,7 +723,7 @@ private:
                   firstprivate(blk, iblk, jblk) \
                   shared(a, cdata, backup, all_thread_work)\
                   depend(inout: a[jblk*BLOCK_SIZE*lda+iblk*BLOCK_SIZE:1]) \
-                  depend(in: cdata[blk:1]) \
+                  depend(in: perm[blk*BLOCK_SIZE:1]) \
                   depend(in: a[jblk*BLOCK_SIZE*lda+blk*BLOCK_SIZE:1]) \
                   depend(in: a[adep_idx:1])
                {
@@ -748,7 +748,7 @@ private:
                   firstprivate(blk, iblk, jblk) \
                   shared(a, cdata, backup, all_thread_work) \
                   depend(inout: a[jblk*BLOCK_SIZE*lda+iblk*BLOCK_SIZE:1]) \
-                  depend(in: cdata[blk:1]) \
+                  depend(in: perm[blk*BLOCK_SIZE:1]) \
                   depend(in: a[blk*BLOCK_SIZE*lda+iblk*BLOCK_SIZE:1]) \
                   depend(in: a[blk*BLOCK_SIZE*lda+jblk*BLOCK_SIZE:1])
                {
@@ -802,10 +802,6 @@ public:
    /** Factorize an entire matrix */
    static
    int factor(int m, int n, int *perm, T *a, int lda, T *d, struct cpu_factor_options const& options, Allocator const& alloc=Allocator()) {
-      /* Some typedefs and allocator rebinding*/
-      typedef typename std::allocator_traits<Allocator>::template rebind_traits<Column<T,BLOCK_SIZE>> ColumnAllocTraits;
-      typename ColumnAllocTraits::allocator_type colAlloc(alloc);
-
       /* Sanity check arguments */
       if(m < n) return -1;
       if(lda < n) return -4;
@@ -820,9 +816,7 @@ public:
       /* Temporary workspaces */
       int num_threads = omp_get_max_threads();
       ThreadWork<T,BLOCK_SIZE,Allocator> all_thread_work[num_threads]; // FIXME: pass alloc to constructors
-      Column<T,BLOCK_SIZE> *cdata = ColumnAllocTraits::allocate(colAlloc, nblk);
-      for(int i=0; i<nblk; ++i)
-         ColumnAllocTraits::construct(colAlloc, &cdata[i]);
+      std::vector<Column<T,BLOCK_SIZE>, Allocator> cdata(nblk, alloc);
 
       /* Main loop
        *    - Each pass leaves any failed pivots in place and keeps everything
@@ -927,11 +921,6 @@ public:
          printf("FINAL:\n");
          print_mat(m, n, perm, eliminated, a, lda);
       }
-      
-      // Free memory
-      for(int i=0; i<nblk; ++i)
-         ColumnAllocTraits::destroy(colAlloc, &cdata[i]);
-      ColumnAllocTraits::deallocate(colAlloc, cdata, nblk);
 
       return num_elim;
    }
