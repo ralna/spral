@@ -30,6 +30,8 @@
 #include "common.hxx"
 #include "wrappers.hxx"
 
+#include "../profile.hxx"
+
 namespace spral { namespace ssids { namespace cpu {
 
 namespace ldlt_app_internal {
@@ -687,6 +689,9 @@ private:
             depend(inout: a[blk*block_size*lda+blk*block_size:1]) \
             depend(inout: perm[blk*block_size:1])
          {
+#ifdef PROFILE
+            Profile::Task task("TA_LDLT_DIAG", omp_get_thread_num());
+#endif
             if(debug) printf("Factor(%d)\n", blk);
             int thread_num = omp_get_thread_num();
             BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
@@ -699,6 +704,9 @@ private:
                   );
             // Init threshold check (non locking => task dependencies)
             cdata[blk].init_passed(nelim);
+#ifdef PROFILE
+            task.done();
+#endif
          }
          
          // Loop over off-diagonal blocks applying pivot
@@ -710,6 +718,9 @@ private:
                depend(inout: a[jblk*block_size*lda+blk*block_size:1]) \
                depend(in: perm[blk*block_size:1])
             {
+#ifdef PROFILE
+               Profile::Task task("TA_LDLT_APPLY", omp_get_thread_num());
+#endif
                if(debug) printf("ApplyT(%d,%d)\n", blk, jblk);
                BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
                BlockSpec cblk(blk, jblk, m, n, cdata, a, lda, block_size);
@@ -724,6 +735,9 @@ private:
                      );
                // Update column's passed pivot count
                cdata[blk].update_passed(blkpass);
+#ifdef PROFILE
+               task.done();
+#endif
             }
          }
          for(int iblk=blk+1; iblk<mblk; iblk++) {
@@ -734,6 +748,9 @@ private:
                depend(inout: a[blk*block_size*lda+iblk*block_size:1]) \
                depend(in: perm[blk*block_size:1])
             {
+#ifdef PROFILE
+               Profile::Task task("TA_LDLT_APPLY", omp_get_thread_num());
+#endif
                if(debug) printf("ApplyN(%d,%d)\n", iblk, blk);
                BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
                BlockSpec rblk(iblk, blk, m, n, cdata, a, lda, block_size);
@@ -746,6 +763,9 @@ private:
                int blkpass = rblk.apply_pivot_app(dblk, options.u, options.small);
                // Update column's passed pivot count
                cdata[blk].update_passed(blkpass);
+#ifdef PROFILE
+               task.done();
+#endif
             }
          }
 
@@ -756,8 +776,14 @@ private:
             shared(cdata, next_elim) \
             depend(inout: perm[blk*block_size:1])
          {
+#ifdef PROFILE
+            Profile::Task task("TA_LDLT_ADJUST", omp_get_thread_num());
+#endif
             if(debug) printf("Adjust(%d)\n", blk);
             cdata[blk].adjust(next_elim);
+#ifdef PROFILE
+            task.done();
+#endif
          }
 
          // Update uneliminated columns
@@ -775,6 +801,9 @@ private:
                   depend(in: a[jblk*block_size*lda+blk*block_size:1]) \
                   depend(in: a[adep_idx:1])
                {
+#ifdef PROFILE
+                  Profile::Task task("TA_LDLT_UPD", omp_get_thread_num());
+#endif
                   if(debug) printf("UpdateT(%d,%d,%d)\n", iblk, jblk, blk);
                   int thread_num = omp_get_thread_num();
                   BlockSpec ublk(iblk, jblk, m, n, cdata, a, lda, block_size);
@@ -788,6 +817,9 @@ private:
                   ublk.restore_if_required(backup, blk);
                   // Perform actual update
                   ublk.update(isrc, jsrc, all_thread_work[thread_num]);
+#ifdef PROFILE
+                  task.done();
+#endif
                }
             }
          }
@@ -801,6 +833,9 @@ private:
                   depend(in: a[blk*block_size*lda+iblk*block_size:1]) \
                   depend(in: a[blk*block_size*lda+jblk*block_size:1])
                {
+#ifdef PROFILE
+                  Profile::Task task("TA_LDLT_UPD", omp_get_thread_num());
+#endif
                   if(debug) printf("UpdateN(%d,%d,%d)\n", iblk, jblk, blk);
                   int thread_num = omp_get_thread_num();
                   BlockSpec ublk(iblk, jblk, m, n, cdata, a, lda, block_size);
@@ -811,6 +846,9 @@ private:
                   ublk.restore_if_required(backup, blk);
                   // Perform actual update
                   ublk.update(isrc, jsrc, all_thread_work[thread_num]);
+#ifdef PROFILE
+                  task.done();
+#endif
                }
             }
          }
