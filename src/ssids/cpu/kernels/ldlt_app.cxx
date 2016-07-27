@@ -67,17 +67,17 @@ struct ThreadWork {
 };
 
 template<typename T>
-struct col_data {
+class Column {
+public:
    int nelim; //< Number of eliminated entries in this column
-   int *perm; //< pointer to local permutation
    T *d; //< pointer to local d
 
-   col_data(col_data const&) =delete;
-   col_data& operator=(col_data const&) =delete;
-   col_data() {
+   Column(Column const&) =delete; // must be unique
+   Column& operator=(Column const&) =delete; // must be unique
+   Column() {
       omp_init_lock(&lock_);
    }
-   ~col_data() {
+   ~Column() {
       omp_destroy_lock(&lock_);
    }
 
@@ -111,7 +111,7 @@ struct col_data {
    /** Moves perm for eliminated columns to elim_perm
     * (which may overlap from the front). Puts uneliminated variables in
     * failed_perm (no need for d with failed vars). */
-   void move_back(int n, int* elim_perm, int* failed_perm) {
+   void move_back(int n, int* perm, int* elim_perm, int* failed_perm) {
       if(perm != elim_perm) { // Don't move if memory is identical
          for(int i=0; i<nelim; ++i)
             *(elim_perm++) = perm[i];
@@ -126,7 +126,6 @@ private:
    int npass_; //< Reduction variable for nelim
 };
 
-
 /** Returns true if ptr is suitably aligned for AVX, false if not */
 bool is_aligned(void* ptr) {
    const int align = 32;
@@ -137,7 +136,7 @@ bool is_aligned(void* ptr) {
  *  within diagonal block.
  *  Note that out and aval may overlap. */
 template<typename T>
-void move_up_diag(struct col_data<T> const& idata, struct col_data<T> const& jdata, T* out, T const* aval, int lda) {
+void move_up_diag(Column<T> const& idata, Column<T> const& jdata, T* out, T const* aval, int lda) {
    if(out == aval) return; // don't bother moving if memory is the same
    for(int j=0; j<jdata.nelim; ++j)
    for(int i=0; i<idata.nelim; ++i)
@@ -148,7 +147,7 @@ void move_up_diag(struct col_data<T> const& idata, struct col_data<T> const& jda
  *  within rectangular block of matrix.
  *  Note that out and aval may overlap. */
 template<typename T>
-void move_up_rect(int m, int rfrom, struct col_data<T> const& jdata, T* out, T const* aval, int lda) {
+void move_up_rect(int m, int rfrom, Column<T> const& jdata, T* out, T const* aval, int lda) {
    if(out == aval) return; // don't bother moving if memory is the same
    for(int j=0; j<jdata.nelim; ++j)
    for(int i=rfrom; i<m; ++i)
@@ -157,7 +156,7 @@ void move_up_rect(int m, int rfrom, struct col_data<T> const& jdata, T* out, T c
 
 /** Copies failed rows and columns^T to specified locations */
 template<typename T>
-void copy_failed_diag(int m, int n, struct col_data<T> const& idata, struct col_data<T> const& jdata, T* rout, T* cout, T* dout, int ldout, T const* aval, int lda) {
+void copy_failed_diag(int m, int n, Column<T> const& idata, Column<T> const& jdata, T* rout, T* cout, T* dout, int ldout, T const* aval, int lda) {
    /* copy rows */
    for(int j=0; j<jdata.nelim; ++j)
    for(int i=idata.nelim, iout=0; i<m; ++i, ++iout)
@@ -176,7 +175,7 @@ void copy_failed_diag(int m, int n, struct col_data<T> const& idata, struct col_
 
 /** Copies failed columns to specified location */
 template<typename T>
-void copy_failed_rect(int m, int n, int rfrom, struct col_data<T> const& jdata, T* cout, int ldout, T const* aval, int lda) {
+void copy_failed_rect(int m, int n, int rfrom, Column<T> const& jdata, T* cout, int ldout, T const* aval, int lda) {
    for(int j=jdata.nelim, jout=0; j<n; ++j, ++jout)
       for(int i=rfrom; i<m; ++i)
          cout[jout*ldout+i] = aval[j*lda+i];
@@ -421,7 +420,7 @@ private:
 template<typename T, int BLOCK_SIZE>
 class Block {
 public:
-   Block(int i, int j, int m, int n, struct col_data<T>* cdata, T* a, int lda)
+   Block(int i, int j, int m, int n, Column<T>* cdata, T* a, int lda)
    : i_(i), j_(j), m_(m), n_(n), lda_(lda), cdata_(cdata),
      aval_(&a[j*BLOCK_SIZE*lda+i*BLOCK_SIZE])
    {}
@@ -475,7 +474,7 @@ public:
       }
    }
 
-   int factor(int& next_elim, T* d, ThreadWork<T,BLOCK_SIZE>& work, int* global_lperm, T u, T small) {
+   int factor(int& next_elim, int* perm, T* d, ThreadWork<T,BLOCK_SIZE>& work, int* global_lperm, T u, T small) {
       if(i_ != j_)
          throw std::runtime_error("factor called on non-diagonal block!");
       int *lperm = &global_lperm[i_*BLOCK_SIZE];
@@ -488,12 +487,14 @@ public:
                work.ld, BLOCK_SIZE, u, small
                );
          int *temp = work.perm;
+         int* blkperm = &perm[i_*BLOCK_SIZE];
          for(int i=0; i<ncol(); ++i)
-            temp[i] = cdata_[i_].perm[lperm[i]];
+            temp[i] = blkperm[lperm[i]];
          for(int i=0; i<ncol(); ++i)
-            cdata_[i_].perm[i] = temp[i];
+            blkperm[i] = temp[i];
       } else {
-         block_ldlt<T, BLOCK_SIZE>(0, cdata_[i_].perm, aval_, lda_,
+         int* blkperm = &perm[i_*BLOCK_SIZE];
+         block_ldlt<T, BLOCK_SIZE>(0, blkperm, aval_, lda_,
                cdata_[i_].d, work.ld, u, small, lperm);
          cdata_[i_].nelim = BLOCK_SIZE;
       }
@@ -583,7 +584,7 @@ private:
    int const m_; //< global number of rows
    int const n_; //< global number of columns
    int const lda_; //< leading dimension of underlying storage
-   struct col_data<T>* const cdata_; //< global column data array
+   Column<T>* const cdata_; //< global column data array
    T* aval_;
 };
 
@@ -595,9 +596,15 @@ template<typename T,
 class LDLT {
 private:
    static
-   int run_elim(int const m, int const n, const int mblk, const int nblk, struct col_data<T> *cdata, Backup& backup, T* d, T* a, int lda, ThreadWork<T,BLOCK_SIZE> all_thread_work[], struct cpu_factor_options const& options) {
+   int run_elim(int const m, int const n, int* perm, T* a, int const lda, T* d,
+         Column<T> *cdata, Backup& backup,
+         ThreadWork<T,BLOCK_SIZE> all_thread_work[],
+         struct cpu_factor_options const& options) {
       typedef Block<T, BLOCK_SIZE> BlockSpec;
       //printf("ENTRY %d %d vis %d %d %d\n", m, n, mblk, nblk, BLOCK_SIZE);
+
+      int const nblk = calc_nblk<BLOCK_SIZE>(n);
+      int const mblk = calc_nblk<BLOCK_SIZE>(m);
 
       // FIXME: is global_lperm really the best way?
       int *global_lperm = new int[nblk*BLOCK_SIZE];
@@ -615,7 +622,7 @@ private:
          // Factor diagonal: depend on cdata[blk] as we do some init here
          #pragma omp task default(none) \
             firstprivate(blk) \
-            shared(a, backup, cdata, lda, global_lperm, \
+            shared(a, perm, backup, cdata, global_lperm, \
                    all_thread_work, next_elim, d, options) \
             depend(inout: a[blk*BLOCK_SIZE*lda+blk*BLOCK_SIZE:1]) \
             depend(inout: cdata[blk:1])
@@ -627,7 +634,7 @@ private:
             dblk.backup(backup);
             // Perform actual factorization
             int nelim = dblk.factor(
-                  next_elim, d, all_thread_work[thread_num], global_lperm,
+                  next_elim, perm, d, all_thread_work[thread_num], global_lperm,
                   options.u, options.small
                   );
             // Init threshold check (non locking => task dependencies)
@@ -638,7 +645,7 @@ private:
          for(int jblk=0; jblk<blk; jblk++) {
             #pragma omp task default(none) \
                firstprivate(blk, jblk) \
-               shared(a, backup, cdata, lda, global_lperm, options) \
+               shared(a, backup, cdata, global_lperm, options) \
                depend(in: a[blk*BLOCK_SIZE*lda+blk*BLOCK_SIZE:1]) \
                depend(inout: a[jblk*BLOCK_SIZE*lda+blk*BLOCK_SIZE:1]) \
                depend(in: cdata[blk:1])
@@ -662,7 +669,7 @@ private:
          for(int iblk=blk+1; iblk<mblk; iblk++) {
             #pragma omp task default(none) \
                firstprivate(blk, iblk) \
-               shared(a, backup, cdata, lda, global_lperm, options) \
+               shared(a, backup, cdata, global_lperm, options) \
                depend(in: a[blk*BLOCK_SIZE*lda+blk*BLOCK_SIZE:1]) \
                depend(inout: a[blk*BLOCK_SIZE*lda+iblk*BLOCK_SIZE:1]) \
                depend(in: cdata[blk:1])
@@ -702,7 +709,7 @@ private:
                                          : iblk*BLOCK_SIZE*lda + blk*BLOCK_SIZE;
                #pragma omp task default(none) \
                   firstprivate(blk, iblk, jblk) \
-                  shared(a, cdata, backup, lda, all_thread_work, global_lperm)\
+                  shared(a, cdata, backup, all_thread_work, global_lperm)\
                   depend(inout: a[jblk*BLOCK_SIZE*lda+iblk*BLOCK_SIZE:1]) \
                   depend(in: cdata[blk:1]) \
                   depend(in: a[jblk*BLOCK_SIZE*lda+blk*BLOCK_SIZE:1]) \
@@ -729,7 +736,7 @@ private:
             for(int iblk=jblk; iblk<mblk; iblk++) {
                #pragma omp task default(none) \
                   firstprivate(blk, iblk, jblk) \
-                  shared(a, cdata, backup, lda, all_thread_work, global_lperm)\
+                  shared(a, cdata, backup, all_thread_work, global_lperm)\
                   depend(inout: a[jblk*BLOCK_SIZE*lda+iblk*BLOCK_SIZE:1]) \
                   depend(in: cdata[blk:1]) \
                   depend(in: a[blk*BLOCK_SIZE*lda+iblk*BLOCK_SIZE:1]) \
@@ -801,11 +808,7 @@ public:
       Backup backup(m, n);
 
       /* Temporary workspaces */
-      struct col_data<T> *cdata = new struct col_data<T>[nblk];
-
-      /* Load column data */
-      for(int blk=0; blk<nblk; blk++)
-         cdata[blk].perm = &perm[blk*BLOCK_SIZE];
+      Column<T> *cdata = new Column<T>[nblk];
 
       /* Main loop
        *    - Each pass leaves any failed pivots in place and keeps everything
@@ -817,15 +820,15 @@ public:
       ThreadWork<T,BLOCK_SIZE> all_thread_work[num_threads];
       // FIXME: Following line is a maximum! Make smaller?
       int num_elim = run_elim(
-            m, n, mblk, nblk, cdata, backup, d, a, lda, all_thread_work,
-            options
+            m, n, perm, a, lda, d, cdata, backup, all_thread_work, options
             );
 
       // Permute failed entries to end
       int* failed_perm = new int[n - num_elim];
       for(int jblk=0, insert=0, fail_insert=0; jblk<nblk; jblk++) {
          cdata[jblk].move_back(
-               get_ncol(jblk, n), &perm[insert], &failed_perm[fail_insert]
+               get_ncol(jblk, n), &perm[jblk*BLOCK_SIZE], &perm[insert],
+               &failed_perm[fail_insert]
                );
          insert += cdata[jblk].nelim;
          fail_insert += get_ncol(jblk, n) - cdata[jblk].nelim;
