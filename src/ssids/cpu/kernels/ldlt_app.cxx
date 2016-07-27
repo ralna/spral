@@ -329,14 +329,15 @@ void calcLD(int m, int n, const T *l, int ldl, const T *d, T *ld, int ldld) {
    }
 }
 
-template <typename T, int BLOCK_SIZE>
+template <typename T, int BLOCK_SIZE, typename Allocator>
 class PoolBackup {
+   typedef typename std::allocator_traits<Allocator>::template rebind_alloc<T*> TptrAlloc;
 public:
    // FIXME: reduce pool size
-   PoolBackup(int m, int n)
+   PoolBackup(int m, int n, Allocator const& alloc=Allocator())
    : m_(m), n_(n), mblk_(calc_nblk<BLOCK_SIZE>(m)),
      pool_(calc_nblk<BLOCK_SIZE>(n)*((calc_nblk<BLOCK_SIZE>(n)+1)/2+mblk_)),
-     ptr_(mblk_*calc_nblk<BLOCK_SIZE>(n))
+     ptr_(mblk_*calc_nblk<BLOCK_SIZE>(n), alloc)
    {}
 
    void acquire(int iblk, int jblk) {
@@ -426,7 +427,7 @@ private:
    int const n_;
    int const mblk_;
    BlockPool<T, BLOCK_SIZE> pool_;
-   std::vector<T*> ptr_;
+   std::vector<T*, TptrAlloc> ptr_;
 };
 
 template<typename T, int BLOCK_SIZE, typename ColAlloc>
@@ -805,7 +806,7 @@ private:
 public:
    /** Factorize an entire matrix */
    static
-   int factor(int m, int n, int *perm, T *a, int lda, T *d, struct cpu_factor_options const& options, Allocator const& alloc=Allocator()) {
+   int factor(int m, int n, int *perm, T *a, int lda, T *d, Backup& backup, struct cpu_factor_options const& options, Allocator const& alloc=Allocator()) {
       /* Sanity check arguments */
       if(m < n) return -1;
       if(lda < n) return -4;
@@ -813,9 +814,6 @@ public:
       /* Initialize useful quantities: */
       int nblk = calc_nblk<BLOCK_SIZE>(n);
       int mblk = calc_nblk<BLOCK_SIZE>(m);
-
-      /* Allocate handler for backup space */
-      Backup backup(m, n);
 
       /* Temporary workspaces */
       int num_threads = omp_get_max_threads();
@@ -936,9 +934,21 @@ using namespace spral::ssids::cpu::ldlt_app_internal;
 
 template<typename T>
 int ldlt_app_factor(int m, int n, int *perm, T *a, int lda, T *d, struct cpu_factor_options const& options) {
+   // Things will break if outer block size is not a multiple of inner one
    if(options.cpu_task_block_size % INNER_BLOCK_SIZE != 0)
       throw std::runtime_error("options.cpu_task_block_size must be multiple of inner block size");
-   return LDLT<T, INNER_BLOCK_SIZE, PoolBackup<T,INNER_BLOCK_SIZE>>::factor(m, n, perm, a, lda, d, options);
+
+   // Template parameters and workspaces
+   bool const debug = false;
+   typedef std::allocator<T> Allocator;
+   Allocator alloc;
+   PoolBackup<T, INNER_BLOCK_SIZE, Allocator> backup(m, n, alloc);
+
+   // Actual call
+   return LDLT
+      <T, INNER_BLOCK_SIZE, PoolBackup<T,INNER_BLOCK_SIZE,Allocator>, debug,
+       Allocator>
+      ::factor(m, n, perm, a, lda, d, backup, options, alloc);
 }
 template int ldlt_app_factor<double>(int, int, int*, double*, int, double*, struct cpu_factor_options const&);
 
