@@ -516,20 +516,19 @@ public:
                nrow(), ncol(), INNER_BLOCK_SIZE, alloc
                );
          cdata_[i_].nelim =
-            LDLT<T, INNER_BLOCK_SIZE, PoolBackup<T,Allocator>,
-                 false, Allocator>
-                :: factor(
+            LDLT<T, INNER_BLOCK_SIZE, PoolBackup<T,Allocator>, false,
+                 Allocator>
+                ::factor(
                       nrow(), ncol(), &cdata_[i_].lperm[0], aval_, lda_,
                       cdata_[i_].d, inner_backup, options, INNER_BLOCK_SIZE,
                       alloc
                       );
-         int *temp = work.perm;
-         int* blkperm = &perm[i_*INNER_BLOCK_SIZE];
+         int* temp = work.perm;
+         int* blkperm = &perm[i_*block_size_];
          for(int i=0; i<ncol(); ++i)
             temp[i] = blkperm[cdata_[i_].lperm[i]];
          for(int i=0; i<ncol(); ++i)
             blkperm[i] = temp[i];
-         return cdata_[i_].nelim;
       } else { /* block_size == INNER_BLOCK_SIZE */
          // Call another routine for small block factorization
          if(ncol() < INNER_BLOCK_SIZE || !is_aligned(aval_)) {
@@ -538,7 +537,7 @@ public:
                   cdata_[i_].d, work.ld, INNER_BLOCK_SIZE, options.u,
                   options.small
                   );
-            int *temp = work.perm;
+            int* temp = work.perm;
             int* blkperm = &perm[i_*INNER_BLOCK_SIZE];
             for(int i=0; i<ncol(); ++i)
                temp[i] = blkperm[cdata_[i_].lperm[i]];
@@ -552,8 +551,8 @@ public:
                   );
             cdata_[i_].nelim = INNER_BLOCK_SIZE;
          }
-         return cdata_[i_].nelim;
       }
+      return cdata_[i_].nelim;
    }
 
    int apply_pivot_app(Block const& dblk, T u, T small) {
@@ -993,7 +992,7 @@ int ldlt_app_factor(int m, int n, int *perm, T *a, int lda, T *d, struct cpu_fac
       throw std::runtime_error("options.cpu_task_block_size must be multiple of inner block size");
 
    // Template parameters and workspaces
-   int const outer_block_size = INNER_BLOCK_SIZE;//options.cpu_task_block_size;
+   int const outer_block_size = options.cpu_task_block_size;
    bool const debug = false;
    typedef std::allocator<T> Allocator;
    Allocator alloc;
