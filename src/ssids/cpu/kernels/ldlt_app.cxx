@@ -49,28 +49,40 @@ inline int calc_blkn(int blk, int n) {
 }
 
 /** Workspace allocated on a per-thread basis */
-template<typename T, size_t BLOCK_SIZE>
-struct ThreadWork {
-   T *ld;
-   int *perm;
+template<typename T, size_t BLOCK_SIZE, typename Allocator=std::allocator<T>>
+class ThreadWork {
+   typedef typename std::allocator_traits<Allocator>::template rebind_traits<T> AllocTTraits;
+   typedef typename std::allocator_traits<Allocator>::template rebind_traits<int> AllocIntTraits;
+public:
 
    ThreadWork(ThreadWork const&) =delete;
    ThreadWork& operator=(ThreadWork const&) =delete;
-   ThreadWork() {
-      ld = new T[BLOCK_SIZE*BLOCK_SIZE];
-      perm = new int[BLOCK_SIZE];
+   ThreadWork(Allocator const& alloc = Allocator())
+   : allocT_(alloc), allocInt_(alloc)
+   {
+      ld = AllocTTraits::allocate(allocT_, BLOCK_SIZE*BLOCK_SIZE);
+      perm = AllocIntTraits::allocate(allocInt_, BLOCK_SIZE);
    }
    ~ThreadWork() {
-      delete[] perm;
-      delete[] ld;
+      AllocIntTraits::deallocate(allocInt_, perm, BLOCK_SIZE);
+      AllocTTraits::deallocate(allocT_, ld, BLOCK_SIZE*BLOCK_SIZE);
    }
+
+public:
+   T *ld;
+   int *perm;
+
+private:
+   typename AllocTTraits::allocator_type allocT_;
+   typename AllocIntTraits::allocator_type allocInt_;
 };
 
-template<typename T>
+template<typename T, int BLOCK_SIZE>
 class Column {
 public:
    int nelim; //< Number of eliminated entries in this column
    T *d; //< pointer to local d
+   int lperm[BLOCK_SIZE]; //< local permutation
 
    Column(Column const&) =delete; // must be unique
    Column& operator=(Column const&) =delete; // must be unique
@@ -135,8 +147,8 @@ bool is_aligned(void* ptr) {
 /** Move up eliminated entries to fill any gaps left by failed pivots
  *  within diagonal block.
  *  Note that out and aval may overlap. */
-template<typename T>
-void move_up_diag(Column<T> const& idata, Column<T> const& jdata, T* out, T const* aval, int lda) {
+template<typename T, typename Column>
+void move_up_diag(Column const& idata, Column const& jdata, T* out, T const* aval, int lda) {
    if(out == aval) return; // don't bother moving if memory is the same
    for(int j=0; j<jdata.nelim; ++j)
    for(int i=0; i<idata.nelim; ++i)
@@ -146,8 +158,8 @@ void move_up_diag(Column<T> const& idata, Column<T> const& jdata, T* out, T cons
 /** Move up eliminated entries to fill any gaps left by failed pivots
  *  within rectangular block of matrix.
  *  Note that out and aval may overlap. */
-template<typename T>
-void move_up_rect(int m, int rfrom, Column<T> const& jdata, T* out, T const* aval, int lda) {
+template<typename T, typename Column>
+void move_up_rect(int m, int rfrom, Column const& jdata, T* out, T const* aval, int lda) {
    if(out == aval) return; // don't bother moving if memory is the same
    for(int j=0; j<jdata.nelim; ++j)
    for(int i=rfrom; i<m; ++i)
@@ -155,8 +167,8 @@ void move_up_rect(int m, int rfrom, Column<T> const& jdata, T* out, T const* ava
 }
 
 /** Copies failed rows and columns^T to specified locations */
-template<typename T>
-void copy_failed_diag(int m, int n, Column<T> const& idata, Column<T> const& jdata, T* rout, T* cout, T* dout, int ldout, T const* aval, int lda) {
+template<typename T, typename Column>
+void copy_failed_diag(int m, int n, Column const& idata, Column const& jdata, T* rout, T* cout, T* dout, int ldout, T const* aval, int lda) {
    /* copy rows */
    for(int j=0; j<jdata.nelim; ++j)
    for(int i=idata.nelim, iout=0; i<m; ++i, ++iout)
@@ -174,8 +186,8 @@ void copy_failed_diag(int m, int n, Column<T> const& idata, Column<T> const& jda
 }
 
 /** Copies failed columns to specified location */
-template<typename T>
-void copy_failed_rect(int m, int n, int rfrom, Column<T> const& jdata, T* cout, int ldout, T const* aval, int lda) {
+template<typename T, typename Column>
+void copy_failed_rect(int m, int n, int rfrom, Column const& jdata, T* cout, int ldout, T const* aval, int lda) {
    for(int j=jdata.nelim, jout=0; j<n; ++j, ++jout)
       for(int i=rfrom; i<m; ++i)
          cout[jout*ldout+i] = aval[j*lda+i];
@@ -420,7 +432,7 @@ private:
 template<typename T, int BLOCK_SIZE>
 class Block {
 public:
-   Block(int i, int j, int m, int n, Column<T>* cdata, T* a, int lda)
+   Block(int i, int j, int m, int n, Column<T,BLOCK_SIZE>* cdata, T* a, int lda)
    : i_(i), j_(j), m_(m), n_(n), lda_(lda), cdata_(cdata),
      aval_(&a[j*BLOCK_SIZE*lda+i*BLOCK_SIZE])
    {}
@@ -431,26 +443,25 @@ public:
    }
 
    template <typename Backup>
-   void apply_rperm_and_backup(Backup& backup, int const* global_lperm) {
-      int const* lperm = &global_lperm[i_*BLOCK_SIZE];
+   void apply_rperm_and_backup(Backup& backup) {
       backup.create_restore_point_with_row_perm(
-            i_, j_, get_ncol(i_), lperm, aval_, lda_
+            i_, j_, get_ncol(i_), cdata_[i_].lperm, aval_, lda_
             );
    }
 
    template <typename Backup>
-   void apply_cperm_and_backup(Backup& backup, int const* global_lperm) {
-      int const* lperm = &global_lperm[j_*BLOCK_SIZE];
-      backup.create_restore_point_with_col_perm(i_, j_, lperm, aval_, lda_);
+   void apply_cperm_and_backup(Backup& backup) {
+      backup.create_restore_point_with_col_perm(
+            i_, j_, cdata_[j_].lperm, aval_, lda_
+            );
    }
 
    template <typename Backup>
-   void restore_if_required(Backup& backup, int elim_col, int const* global_lperm) {
+   void restore_if_required(Backup& backup, int elim_col) {
       if(i_ == elim_col && j_ == elim_col) { // In eliminated diagonal block
          if(cdata_[i_].nelim < ncol()) { // If there are failed pivots
-            int const* lperm = &global_lperm[i_*BLOCK_SIZE];
             backup.restore_part_with_sym_perm(
-                  i_, j_, cdata_[i_].nelim, lperm, aval_, lda_
+                  i_, j_, cdata_[i_].nelim, cdata_[i_].lperm, aval_, lda_
                   );
          }
          // Release resources regardless, no longer required
@@ -474,10 +485,11 @@ public:
       }
    }
 
-   int factor(int& next_elim, int* perm, T* d, ThreadWork<T,BLOCK_SIZE>& work, int* global_lperm, T u, T small) {
+   template <typename ThreadWork>
+   int factor(int& next_elim, int* perm, T* d, ThreadWork& work, T u, T small) {
       if(i_ != j_)
          throw std::runtime_error("factor called on non-diagonal block!");
-      int *lperm = &global_lperm[i_*BLOCK_SIZE];
+      int *lperm = cdata_[i_].lperm;
       for(int i=0; i<ncol(); i++)
          lperm[i] = i;
       cdata_[i_].d = &d[2*next_elim];
@@ -525,7 +537,8 @@ public:
       }
    }
 
-   void update(Block const& isrc, Block const& jsrc, ThreadWork<T,BLOCK_SIZE>& work) {
+   template <typename ThreadWork>
+   void update(Block const& isrc, Block const& jsrc, ThreadWork& work) {
       if(isrc.i_ == i_ && isrc.j_ == jsrc.j_) {
          // Update to right of elim column (UpdateN)
          int elim_col = isrc.j_;
@@ -584,30 +597,29 @@ private:
    int const m_; //< global number of rows
    int const n_; //< global number of columns
    int const lda_; //< leading dimension of underlying storage
-   Column<T>* const cdata_; //< global column data array
+   Column<T,BLOCK_SIZE>* const cdata_; //< global column data array
    T* aval_;
 };
 
 template<typename T,
          int BLOCK_SIZE,
          typename Backup,
-         bool debug=false
+         bool debug=false,
+         typename Allocator=std::allocator<T>
          >
 class LDLT {
 private:
+   template <typename ThreadWork>
    static
    int run_elim(int const m, int const n, int* perm, T* a, int const lda, T* d,
-         Column<T> *cdata, Backup& backup,
-         ThreadWork<T,BLOCK_SIZE> all_thread_work[],
+         Column<T,BLOCK_SIZE> *cdata, Backup& backup,
+         ThreadWork all_thread_work[],
          struct cpu_factor_options const& options) {
       typedef Block<T, BLOCK_SIZE> BlockSpec;
       //printf("ENTRY %d %d vis %d %d %d\n", m, n, mblk, nblk, BLOCK_SIZE);
 
       int const nblk = calc_nblk<BLOCK_SIZE>(n);
       int const mblk = calc_nblk<BLOCK_SIZE>(m);
-
-      // FIXME: is global_lperm really the best way?
-      int *global_lperm = new int[nblk*BLOCK_SIZE];
 
       /* Setup */
       int next_elim = 0;
@@ -622,8 +634,8 @@ private:
          // Factor diagonal: depend on cdata[blk] as we do some init here
          #pragma omp task default(none) \
             firstprivate(blk) \
-            shared(a, perm, backup, cdata, global_lperm, \
-                   all_thread_work, next_elim, d, options) \
+            shared(a, perm, backup, cdata, all_thread_work, next_elim, d, \
+                   options) \
             depend(inout: a[blk*BLOCK_SIZE*lda+blk*BLOCK_SIZE:1]) \
             depend(inout: cdata[blk:1])
          {
@@ -634,7 +646,7 @@ private:
             dblk.backup(backup);
             // Perform actual factorization
             int nelim = dblk.factor(
-                  next_elim, perm, d, all_thread_work[thread_num], global_lperm,
+                  next_elim, perm, d, all_thread_work[thread_num],
                   options.u, options.small
                   );
             // Init threshold check (non locking => task dependencies)
@@ -645,7 +657,7 @@ private:
          for(int jblk=0; jblk<blk; jblk++) {
             #pragma omp task default(none) \
                firstprivate(blk, jblk) \
-               shared(a, backup, cdata, global_lperm, options) \
+               shared(a, backup, cdata, options) \
                depend(in: a[blk*BLOCK_SIZE*lda+blk*BLOCK_SIZE:1]) \
                depend(inout: a[jblk*BLOCK_SIZE*lda+blk*BLOCK_SIZE:1]) \
                depend(in: cdata[blk:1])
@@ -656,7 +668,7 @@ private:
                // Apply row permutation from factorization of dblk and in
                // the process, store a (permuted) copy for recovery in case of
                // a failed column
-               cblk.apply_rperm_and_backup(backup, global_lperm);
+               cblk.apply_rperm_and_backup(backup);
                // Perform elimination and determine number of rows in block
                // passing a posteori threshold pivot test
                int blkpass = cblk.apply_pivot_app(
@@ -669,7 +681,7 @@ private:
          for(int iblk=blk+1; iblk<mblk; iblk++) {
             #pragma omp task default(none) \
                firstprivate(blk, iblk) \
-               shared(a, backup, cdata, global_lperm, options) \
+               shared(a, backup, cdata, options) \
                depend(in: a[blk*BLOCK_SIZE*lda+blk*BLOCK_SIZE:1]) \
                depend(inout: a[blk*BLOCK_SIZE*lda+iblk*BLOCK_SIZE:1]) \
                depend(in: cdata[blk:1])
@@ -680,7 +692,7 @@ private:
                // Apply column permutation from factorization of dblk and in
                // the process, store a (permuted) copy for recovery in case of
                // a failed column
-               rblk.apply_cperm_and_backup(backup, global_lperm);
+               rblk.apply_cperm_and_backup(backup);
                // Perform elimination and determine number of rows in block
                // passing a posteori threshold pivot test
                int blkpass = rblk.apply_pivot_app(dblk, options.u, options.small);
@@ -709,7 +721,7 @@ private:
                                          : iblk*BLOCK_SIZE*lda + blk*BLOCK_SIZE;
                #pragma omp task default(none) \
                   firstprivate(blk, iblk, jblk) \
-                  shared(a, cdata, backup, all_thread_work, global_lperm)\
+                  shared(a, cdata, backup, all_thread_work)\
                   depend(inout: a[jblk*BLOCK_SIZE*lda+iblk*BLOCK_SIZE:1]) \
                   depend(in: cdata[blk:1]) \
                   depend(in: a[jblk*BLOCK_SIZE*lda+blk*BLOCK_SIZE:1]) \
@@ -724,9 +736,7 @@ private:
                   BlockSpec jsrc(blk, jblk, m, n, cdata, a, lda);
                   // If we're on the block row we've just eliminated, restore
                   // any failed rows and release resources storing backup
-                  ublk.restore_if_required(backup,
-                        blk, global_lperm
-                        );
+                  ublk.restore_if_required(backup, blk);
                   // Perform actual update
                   ublk.update(isrc, jsrc, all_thread_work[thread_num]);
                }
@@ -736,7 +746,7 @@ private:
             for(int iblk=jblk; iblk<mblk; iblk++) {
                #pragma omp task default(none) \
                   firstprivate(blk, iblk, jblk) \
-                  shared(a, cdata, backup, all_thread_work, global_lperm)\
+                  shared(a, cdata, backup, all_thread_work) \
                   depend(inout: a[jblk*BLOCK_SIZE*lda+iblk*BLOCK_SIZE:1]) \
                   depend(in: cdata[blk:1]) \
                   depend(in: a[blk*BLOCK_SIZE*lda+iblk*BLOCK_SIZE:1]) \
@@ -749,9 +759,7 @@ private:
                   BlockSpec jsrc(jblk, blk, m, n, cdata, a, lda);
                   // If we're on the block col we've just eliminated, restore
                   // any failed cols and release resources storing backup
-                  ublk.restore_if_required(
-                        backup, blk, global_lperm
-                        );
+                  ublk.restore_if_required(backup, blk);
                   // Perform actual update
                   ublk.update(isrc, jsrc, all_thread_work[thread_num]);
                }
@@ -759,8 +767,6 @@ private:
          }
       }
       #pragma omp taskwait
-
-      delete[] global_lperm;
 
       /*if(debug) {
          printf("PostElim:\n");
@@ -771,7 +777,7 @@ private:
    }
 
    static
-   void print_mat(int m, int n, const int *perm, const bool *eliminated, const T *a, int lda) {
+   void print_mat(int m, int n, const int *perm, std::vector<bool, Allocator> const& eliminated, const T *a, int lda) {
       for(int row=0; row<m; row++) {
          if(row < n)
             printf("%d%s:", perm[row], eliminated[row]?"X":" ");
@@ -795,7 +801,11 @@ private:
 public:
    /** Factorize an entire matrix */
    static
-   int factor(int m, int n, int *perm, T *a, int lda, T *d, struct cpu_factor_options const& options) {
+   int factor(int m, int n, int *perm, T *a, int lda, T *d, struct cpu_factor_options const& options, Allocator const& alloc=Allocator()) {
+      /* Some typedefs and allocator rebinding*/
+      typedef typename std::allocator_traits<Allocator>::template rebind_traits<Column<T,BLOCK_SIZE>> ColumnAllocTraits;
+      typename ColumnAllocTraits::allocator_type colAlloc(alloc);
+
       /* Sanity check arguments */
       if(m < n) return -1;
       if(lda < n) return -4;
@@ -808,7 +818,11 @@ public:
       Backup backup(m, n);
 
       /* Temporary workspaces */
-      Column<T> *cdata = new Column<T>[nblk];
+      int num_threads = omp_get_max_threads();
+      ThreadWork<T,BLOCK_SIZE,Allocator> all_thread_work[num_threads]; // FIXME: pass alloc to constructors
+      Column<T,BLOCK_SIZE> *cdata = ColumnAllocTraits::allocate(colAlloc, nblk);
+      for(int i=0; i<nblk; ++i)
+         ColumnAllocTraits::construct(colAlloc, &cdata[i]);
 
       /* Main loop
        *    - Each pass leaves any failed pivots in place and keeps everything
@@ -816,15 +830,12 @@ public:
        *    - If no pivots selected across matrix, perform swaps to get large
        *      entries into diagonal blocks
        */
-      int num_threads = omp_get_max_threads();
-      ThreadWork<T,BLOCK_SIZE> all_thread_work[num_threads];
-      // FIXME: Following line is a maximum! Make smaller?
       int num_elim = run_elim(
             m, n, perm, a, lda, d, cdata, backup, all_thread_work, options
             );
 
       // Permute failed entries to end
-      int* failed_perm = new int[n - num_elim];
+      std::vector<int, Allocator> failed_perm(n-num_elim, alloc);
       for(int jblk=0, insert=0, fail_insert=0; jblk<nblk; jblk++) {
          cdata[jblk].move_back(
                get_ncol(jblk, n), &perm[jblk*BLOCK_SIZE], &perm[insert],
@@ -835,12 +846,11 @@ public:
       }
       for(int i=0; i<n-num_elim; ++i)
          perm[num_elim+i] = failed_perm[i];
-      delete[] failed_perm;
 
       // Extract failed entries of a
       int nfail = n-num_elim;
-      T* failed_diag = new T[nfail*n];
-      T* failed_rect = new T[nfail*(m-n)];
+      std::vector<T, Allocator> failed_diag(nfail*n, alloc);
+      std::vector<T, Allocator> failed_rect(nfail*(m-n), alloc);
       for(int jblk=0, jfail=0, jinsert=0; jblk<nblk; ++jblk) {
          // Diagonal part
          for(int iblk=jblk, ifail=jfail, iinsert=jinsert; iblk<nblk; ++iblk) {
@@ -909,20 +919,19 @@ public:
       for(int j=0; j<nfail; ++j)
       for(int i=0; i<m-n; ++i)
          arect[j*lda+i] = failed_rect[j*(m-n)+i];
-      delete[] failed_diag;
-      delete[] failed_rect;
 
       if(debug) {
-         bool *eliminated = new bool[n];
+         std::vector<bool, Allocator> eliminated(n, alloc);
          for(int i=0; i<num_elim; i++) eliminated[i] = true;
          for(int i=num_elim; i<n; i++) eliminated[i] = false;
          printf("FINAL:\n");
          print_mat(m, n, perm, eliminated, a, lda);
-         delete[] eliminated;
       }
       
       // Free memory
-      delete[] cdata;
+      for(int i=0; i<nblk; ++i)
+         ColumnAllocTraits::destroy(colAlloc, &cdata[i]);
+      ColumnAllocTraits::deallocate(colAlloc, cdata, nblk);
 
       return num_elim;
    }
