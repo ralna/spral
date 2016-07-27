@@ -429,10 +429,10 @@ private:
    std::vector<T*> ptr_;
 };
 
-template<typename T, int BLOCK_SIZE, typename Allocator>
+template<typename T, int BLOCK_SIZE, typename ColAlloc>
 class Block {
 public:
-   Block(int i, int j, int m, int n, std::vector<Column<T,BLOCK_SIZE>, Allocator>& cdata, T* a, int lda)
+   Block(int i, int j, int m, int n, std::vector<Column<T,BLOCK_SIZE>, ColAlloc>& cdata, T* a, int lda)
    : i_(i), j_(j), m_(m), n_(n), lda_(lda), cdata_(cdata),
      aval_(&a[j*BLOCK_SIZE*lda+i*BLOCK_SIZE])
    {}
@@ -597,7 +597,7 @@ private:
    int const m_; //< global number of rows
    int const n_; //< global number of columns
    int const lda_; //< leading dimension of underlying storage
-   std::vector<Column<T,BLOCK_SIZE>, Allocator>& cdata_; //< global column data array
+   std::vector<Column<T,BLOCK_SIZE>, ColAlloc>& cdata_; //< global column data array
    T* aval_;
 };
 
@@ -608,14 +608,18 @@ template<typename T,
          typename Allocator=std::allocator<T>
          >
 class LDLT {
+   typedef typename std::allocator_traits<Allocator>::template rebind_alloc<Column<T,BLOCK_SIZE>> ColAlloc;
+   typedef typename std::allocator_traits<Allocator>::template rebind_alloc<int> IntAlloc;
+   typedef typename std::allocator_traits<Allocator>::template rebind_alloc<bool> BoolAlloc;
+   typedef typename std::allocator_traits<Allocator>::template rebind_alloc<T> TAlloc;
 private:
    template <typename ThreadWork>
    static
    int run_elim(int const m, int const n, int* perm, T* a, int const lda, T* d,
-         std::vector<Column<T,BLOCK_SIZE>, Allocator>& cdata, Backup& backup,
+         std::vector<Column<T,BLOCK_SIZE>, ColAlloc>& cdata, Backup& backup,
          ThreadWork all_thread_work[],
          struct cpu_factor_options const& options) {
-      typedef Block<T, BLOCK_SIZE, Allocator> BlockSpec;
+      typedef Block<T, BLOCK_SIZE, ColAlloc> BlockSpec;
       //printf("ENTRY %d %d vis %d %d %d\n", m, n, mblk, nblk, BLOCK_SIZE);
 
       int const nblk = calc_nblk<BLOCK_SIZE>(n);
@@ -777,7 +781,7 @@ private:
    }
 
    static
-   void print_mat(int m, int n, const int *perm, std::vector<bool, Allocator> const& eliminated, const T *a, int lda) {
+   void print_mat(int m, int n, const int *perm, std::vector<bool, BoolAlloc> const& eliminated, const T *a, int lda) {
       for(int row=0; row<m; row++) {
          if(row < n)
             printf("%d%s:", perm[row], eliminated[row]?"X":" ");
@@ -816,7 +820,7 @@ public:
       /* Temporary workspaces */
       int num_threads = omp_get_max_threads();
       ThreadWork<T,BLOCK_SIZE,Allocator> all_thread_work[num_threads]; // FIXME: pass alloc to constructors
-      std::vector<Column<T,BLOCK_SIZE>, Allocator> cdata(nblk, alloc);
+      std::vector<Column<T,BLOCK_SIZE>, ColAlloc> cdata(nblk, alloc);
 
       /* Main loop
        *    - Each pass leaves any failed pivots in place and keeps everything
@@ -829,7 +833,7 @@ public:
             );
 
       // Permute failed entries to end
-      std::vector<int, Allocator> failed_perm(n-num_elim, alloc);
+      std::vector<int, IntAlloc> failed_perm(n-num_elim, alloc);
       for(int jblk=0, insert=0, fail_insert=0; jblk<nblk; jblk++) {
          cdata[jblk].move_back(
                get_ncol(jblk, n), &perm[jblk*BLOCK_SIZE], &perm[insert],
@@ -843,8 +847,8 @@ public:
 
       // Extract failed entries of a
       int nfail = n-num_elim;
-      std::vector<T, Allocator> failed_diag(nfail*n, alloc);
-      std::vector<T, Allocator> failed_rect(nfail*(m-n), alloc);
+      std::vector<T, TAlloc> failed_diag(nfail*n, alloc);
+      std::vector<T, TAlloc> failed_rect(nfail*(m-n), alloc);
       for(int jblk=0, jfail=0, jinsert=0; jblk<nblk; ++jblk) {
          // Diagonal part
          for(int iblk=jblk, ifail=jfail, iinsert=jinsert; iblk<nblk; ++iblk) {
@@ -915,7 +919,7 @@ public:
          arect[j*lda+i] = failed_rect[j*(m-n)+i];
 
       if(debug) {
-         std::vector<bool, Allocator> eliminated(n, alloc);
+         std::vector<bool, BoolAlloc> eliminated(n, alloc);
          for(int i=0; i<num_elim; i++) eliminated[i] = true;
          for(int i=num_elim; i<n; i++) eliminated[i] = false;
          printf("FINAL:\n");
