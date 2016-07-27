@@ -438,7 +438,15 @@ private:
    std::vector<T*, TptrAlloc> ptr_;
 };
 
-template<typename T, int BLOCK_SIZE, typename ColAlloc>
+template<typename T,
+         int BLOCK_SIZE,
+         typename Backup,
+         bool debug=false,
+         typename Allocator=std::allocator<T>
+         >
+class LDLT;
+
+template<typename T, int INNER_BLOCK_SIZE, typename ColAlloc>
 class Block {
    typedef typename std::allocator_traits<ColAlloc>::template rebind_alloc<int> IntAlloc;
 public:
@@ -495,31 +503,57 @@ public:
       }
    }
 
-   template <typename ThreadWork>
-   int factor(int& next_elim, int* perm, T* d, ThreadWork& work, T u, T small) {
+   template <typename Allocator, typename ThreadWork>
+   int factor(int& next_elim, int* perm, T* d, ThreadWork& work, struct cpu_factor_options const &options, Allocator const& alloc) {
       if(i_ != j_)
          throw std::runtime_error("factor called on non-diagonal block!");
       for(int i=0; i<ncol(); i++)
          cdata_[i_].lperm[i] = i;
       cdata_[i_].d = &d[2*next_elim];
-      if(ncol() < BLOCK_SIZE || !is_aligned(aval_)) {
-         cdata_[i_].nelim = ldlt_tpp_factor(
-               nrow(), ncol(), &cdata_[i_].lperm[0], aval_, lda_, cdata_[i_].d,
-               work.ld, BLOCK_SIZE, u, small
+      if(block_size_ != INNER_BLOCK_SIZE) {
+         // Recurse
+         PoolBackup<T, Allocator> inner_backup(
+               nrow(), ncol(), INNER_BLOCK_SIZE, alloc
                );
+         cdata_[i_].nelim =
+            LDLT<T, INNER_BLOCK_SIZE, PoolBackup<T,Allocator>,
+                 false, Allocator>
+                :: factor(
+                      nrow(), ncol(), &cdata_[i_].lperm[0], aval_, lda_,
+                      cdata_[i_].d, inner_backup, options, INNER_BLOCK_SIZE,
+                      alloc
+                      );
          int *temp = work.perm;
-         int* blkperm = &perm[i_*BLOCK_SIZE];
+         int* blkperm = &perm[i_*INNER_BLOCK_SIZE];
          for(int i=0; i<ncol(); ++i)
             temp[i] = blkperm[cdata_[i_].lperm[i]];
          for(int i=0; i<ncol(); ++i)
             blkperm[i] = temp[i];
-      } else {
-         int* blkperm = &perm[i_*BLOCK_SIZE];
-         block_ldlt<T, BLOCK_SIZE>(0, blkperm, aval_, lda_,
-               cdata_[i_].d, work.ld, u, small, &cdata_[i_].lperm[0]);
-         cdata_[i_].nelim = BLOCK_SIZE;
+         return cdata_[i_].nelim;
+      } else { /* block_size == INNER_BLOCK_SIZE */
+         // Call another routine for small block factorization
+         if(ncol() < INNER_BLOCK_SIZE || !is_aligned(aval_)) {
+            cdata_[i_].nelim = ldlt_tpp_factor(
+                  nrow(), ncol(), &cdata_[i_].lperm[0], aval_, lda_,
+                  cdata_[i_].d, work.ld, INNER_BLOCK_SIZE, options.u,
+                  options.small
+                  );
+            int *temp = work.perm;
+            int* blkperm = &perm[i_*INNER_BLOCK_SIZE];
+            for(int i=0; i<ncol(); ++i)
+               temp[i] = blkperm[cdata_[i_].lperm[i]];
+            for(int i=0; i<ncol(); ++i)
+               blkperm[i] = temp[i];
+         } else {
+            int* blkperm = &perm[i_*INNER_BLOCK_SIZE];
+            block_ldlt<T, INNER_BLOCK_SIZE>(
+                  0, blkperm, aval_, lda_, cdata_[i_].d, work.ld, options.u,
+                  options.small, &cdata_[i_].lperm[0]
+                  );
+            cdata_[i_].nelim = INNER_BLOCK_SIZE;
+         }
+         return cdata_[i_].nelim;
       }
-      return cdata_[i_].nelim;
    }
 
    int apply_pivot_app(Block const& dblk, T u, T small) {
@@ -614,8 +648,8 @@ private:
 template<typename T,
          int BLOCK_SIZE,
          typename Backup,
-         bool debug=false,
-         typename Allocator=std::allocator<T>
+         bool debug,
+         typename Allocator
          >
 class LDLT {
    typedef typename std::allocator_traits<Allocator>::template rebind_alloc<int> IntAlloc;
@@ -628,7 +662,8 @@ private:
    int run_elim(int const m, int const n, int* perm, T* a, int const lda, T* d,
          std::vector<Column<T,IntAlloc>, ColAlloc>& cdata, Backup& backup,
          ThreadWork all_thread_work[],
-         struct cpu_factor_options const& options, int const block_size) {
+         struct cpu_factor_options const& options, int const block_size,
+         Allocator const& alloc) {
       typedef Block<T, BLOCK_SIZE, ColAlloc> BlockSpec;
       //printf("ENTRY %d %d vis %d %d %d\n", m, n, mblk, nblk, block_size);
 
@@ -649,7 +684,7 @@ private:
          #pragma omp task default(none) \
             firstprivate(blk) \
             shared(a, perm, backup, cdata, all_thread_work, next_elim, d, \
-                   options) \
+                   options, alloc) \
             depend(inout: a[blk*block_size*lda+blk*block_size:1]) \
             depend(inout: perm[blk*block_size:1])
          {
@@ -659,9 +694,9 @@ private:
             // Store a copy for recovery in case of a failed column
             dblk.backup(backup);
             // Perform actual factorization
-            int nelim = dblk.factor(
+            int nelim = dblk.template factor<Allocator>(
                   next_elim, perm, d, all_thread_work[thread_num],
-                  options.u, options.small
+                  options, alloc
                   );
             // Init threshold check (non locking => task dependencies)
             cdata[blk].init_passed(nelim);
@@ -843,7 +878,7 @@ public:
        */
       int num_elim = run_elim(
             m, n, perm, a, lda, d, cdata, backup, all_thread_work, options,
-            block_size
+            block_size, alloc
             );
 
       // Permute failed entries to end
@@ -958,10 +993,11 @@ int ldlt_app_factor(int m, int n, int *perm, T *a, int lda, T *d, struct cpu_fac
       throw std::runtime_error("options.cpu_task_block_size must be multiple of inner block size");
 
    // Template parameters and workspaces
+   int const outer_block_size = INNER_BLOCK_SIZE;//options.cpu_task_block_size;
    bool const debug = false;
    typedef std::allocator<T> Allocator;
    Allocator alloc;
-   PoolBackup<T, Allocator> backup(m, n, INNER_BLOCK_SIZE, alloc);
+   PoolBackup<T, Allocator> backup(m, n, outer_block_size, alloc);
 
    // Actual call
    return LDLT
@@ -969,7 +1005,7 @@ int ldlt_app_factor(int m, int n, int *perm, T *a, int lda, T *d, struct cpu_fac
        Allocator>
       ::factor(
             m, n, perm, a, lda, d, backup, options,
-            INNER_BLOCK_SIZE, alloc
+            outer_block_size, alloc
             );
 }
 template int ldlt_app_factor<double>(int, int, int*, double*, int, double*, struct cpu_factor_options const&);
