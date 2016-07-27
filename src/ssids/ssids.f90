@@ -385,7 +385,7 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
    integer, intent(in) :: ne ! entries to be input by user
    integer, intent(in) :: row(:) ! row indices
    integer, intent(in) :: col(:) ! col indices
-   class(ssids_akeep_base), intent(out) :: akeep ! See derived-type declaration
+   class(ssids_akeep_base), intent(inout) :: akeep ! See derived-type declaration
    type(ssids_options), intent(in) :: options ! See derived-type declaration
    class(ssids_inform_base), intent(out) :: inform ! See derived-type declaration
    integer, intent(inout), optional  :: order(:)
