@@ -141,7 +141,7 @@ void assemble_node(
                   shared(cm, map, csnode, child, snode, nrow, ncol, node)
                {
 #ifdef PROFILE
-                  Profile::Task task_assemble("TA_ASSEMBLE", this_thread);
+                  Profile::Task task_assemble("TA_ASSEMBLE", omp_get_thread_num());
 #endif
                   for(int i=iblk; i<std::min(cm,iblk+block_size); i++) {
                      int c = map[ csnode.rlist[csnode.ncol+i] ];

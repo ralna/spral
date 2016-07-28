@@ -130,7 +130,7 @@ void factor_node_indef(
       stats.not_first_pass += n-nelim;
       T *ld = new T[2*(m-nelim)]; // FIXME: Use work
 #ifdef PROFILE
-      Profile::Task task_tpp("TA_LDLT_TPP", this_thread);
+      Profile::Task task_tpp("TA_LDLT_TPP", omp_get_thread_num());
 #endif
       node->nelim += ldlt_tpp_factor(
             m-nelim, n-nelim, &perm[nelim], &lcol[nelim*(ldl+1)], ldl,
