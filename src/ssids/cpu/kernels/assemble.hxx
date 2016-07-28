@@ -16,6 +16,8 @@
 #include "../NumericNode.hxx"
 #include "../SymbolicNode.hxx"
 
+#include "../profile.hxx"
+
 namespace spral { namespace ssids { namespace cpu {
 
 template <typename T,
@@ -132,28 +134,43 @@ void assemble_node(
          /* Handle expected contributions (only if something there) */
          if(child->contrib) {
             int cm = csnode.nrow - csnode.ncol;
-            for(int i=0; i<cm; i++) {
-               int c = map[ csnode.rlist[csnode.ncol+i] ];
-               T *src = &child->contrib[i*cm];
-               if(c < snode.ncol) {
-                  // Contribution added to lcol
-                  int ldd = align_lda<T>(nrow);
-                  T *dest = &node->lcol[c*ldd];
-                  for(int j=i; j<cm; j++) {
-                     int r = map[ csnode.rlist[csnode.ncol+j] ];
-                     dest[r] += src[j];
+            const int block_size = 256;
+            for(int iblk=0; iblk<cm; iblk+=block_size) {
+               #pragma omp task default(none) \
+                  firstprivate(iblk) \
+                  shared(cm, map, csnode, child, snode, nrow, ncol, node)
+               {
+#ifdef PROFILE
+                  Profile::Task task_assemble("TA_ASSEMBLE", this_thread);
+#endif
+                  for(int i=iblk; i<std::min(cm,iblk+block_size); i++) {
+                     int c = map[ csnode.rlist[csnode.ncol+i] ];
+                     T *src = &child->contrib[i*cm];
+                     if(c < snode.ncol) {
+                        // Contribution added to lcol
+                        int ldd = align_lda<T>(nrow);
+                        T *dest = &node->lcol[c*ldd];
+                        for(int j=i; j<cm; j++) {
+                           int r = map[ csnode.rlist[csnode.ncol+j] ];
+                           dest[r] += src[j];
+                        }
+                     } else {
+                        // Contribution added to contrib
+                        // FIXME: Add after contribution block established?
+                        int ldd = snode.nrow - snode.ncol;
+                        T *dest = &node->contrib[(c-ncol)*ldd];
+                        for(int j=i; j<cm; j++) {
+                           int r = map[ csnode.rlist[csnode.ncol+j] ] - ncol;
+                           dest[r] += src[j];
+                        }
+                     }
                   }
-               } else {
-                  // Contribution added to contrib
-                  // FIXME: Add after contribution block established?
-                  int ldd = snode.nrow - snode.ncol;
-                  T *dest = &node->contrib[(c-ncol)*ldd];
-                  for(int j=i; j<cm; j++) {
-                     int r = map[ csnode.rlist[csnode.ncol+j] ] - ncol;
-                     dest[r] += src[j];
-                  }
+#ifdef PROFILE
+                  task_assemble.done();
+#endif
                }
             }
+            #pragma omp taskwait
             /* Free memory from child contribution block */
             CATraits::deallocate(contrib_alloc, child->contrib, cm*cm);
          }
