@@ -582,7 +582,7 @@ public:
    }
 
    template <typename ThreadWork>
-   void update(Block const& isrc, Block const& jsrc, ThreadWork& work) {
+   void update(Block const& isrc, Block const& jsrc, ThreadWork& work, double beta=1.0, T* upd=nullptr, int ldupd=0) {
       if(isrc.i_ == i_ && isrc.j_ == jsrc.j_) {
          // Update to right of elim column (UpdateN)
          int elim_col = isrc.j_;
@@ -598,6 +598,19 @@ public:
                cdata_[elim_col].nelim, -1.0, work.ld, block_size_,
                &jsrc.aval_[cfrom], lda_, 1.0, &aval_[cfrom*lda_+rfrom], lda_
                );
+         if(upd && j_==calc_nblk(n_,block_size_)-1) {
+            // Handle fractional part of upd that "belongs" to this block
+            if(i_ == j_) {
+               // diagonal block
+               int u_ncol = std::min(block_size_-ncol(), m_-n_); // ncol for upd
+               host_gemm(
+                     OP_N, OP_T, u_ncol, u_ncol, cdata_[elim_col].nelim,
+                     -1.0, &work.ld[ncol()-rfrom], block_size_,
+                     &jsrc.aval_[ncol()], lda_,
+                     beta, upd, ldupd
+                     );
+            }
+         }
       } else {
          // Update to left of elim column (UpdateT)
          int elim_col = jsrc.i_;
@@ -827,7 +840,7 @@ private:
             for(int iblk=jblk; iblk<mblk; iblk++) {
                #pragma omp task default(none) \
                   firstprivate(blk, iblk, jblk) \
-                  shared(a, cdata, backup, all_thread_work) \
+                  shared(a, cdata, backup, all_thread_work, upd) \
                   depend(inout: a[jblk*block_size*lda+iblk*block_size:1]) \
                   depend(in: perm[blk*block_size:1]) \
                   depend(in: a[blk*block_size*lda+iblk*block_size:1]) \
@@ -845,7 +858,8 @@ private:
                   // any failed cols and release resources storing backup
                   ublk.restore_if_required(backup, blk);
                   // Perform actual update
-                  ublk.update(isrc, jsrc, all_thread_work[thread_num]);
+                  ublk.update(isrc, jsrc, all_thread_work[thread_num],
+                        beta, upd, ldupd);
 #ifdef PROFILE
                   task.done();
 #endif
@@ -864,35 +878,6 @@ private:
          // Handle thin strip that "belongs" with last eliminated block column
          int offset = std::min(nblk*block_size, m) - n;
          if(offset > 0) {
-            // Fractional diagonal block
-            for(int kblk=0; kblk<nblk; ++kblk) {
-               #pragma omp task default(none) \
-                  firstprivate(kblk) \
-                  shared(offset, a, upd, cdata, all_thread_work) \
-                  depend(inout: upd[0:1])
-               {
-#ifdef PROFILE
-                  Profile::Task task("TA_LDLT_UPDC", omp_get_thread_num());
-#endif
-                  int thread_num = omp_get_thread_num();
-                  ThreadWork& work = all_thread_work[thread_num];
-                  T* l_ik = &a[kblk*block_size*lda+n];
-                  T* l_jk = &a[kblk*block_size*lda+n];
-                  int blkk = cdata[kblk].nelim;
-                  calcLD<OP_N>(
-                        offset, blkk, l_ik, lda, cdata[kblk].d, work.ld,
-                        block_size
-                        );
-                  host_gemm(
-                        OP_N, OP_T, offset, offset, blkk,
-                        -1.0, work.ld, block_size, l_jk, lda,
-                        beta, upd, ldupd
-                        );
-#ifdef PROFILE
-                  task.done();
-#endif
-               }
-            }
             // Fractional column
             for(int kblk=0; kblk<nblk; ++kblk)
             for(int iblk=nblk; iblk<mblk; ++iblk) {
