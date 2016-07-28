@@ -23,11 +23,10 @@ namespace spral { namespace ssids { namespace cpu {
 template <typename T,
           typename FactorAlloc,
           typename ContribAlloc>
-void assemble_node(
+void assemble_pre(
       bool posdef,
-      int ni, // FIXME: remove with debug
       SymbolicNode const& snode,
-      NumericNode<T>* node,
+      NumericNode<T>& node,
       FactorAlloc& factor_alloc,
       ContribAlloc& contrib_alloc,
       int* map,
@@ -42,32 +41,30 @@ void assemble_node(
    typedef std::allocator_traits<ContribAlloc> CATraits;
 
    /* Count incoming delays and determine size of node */
-   node->ndelay_in = 0;
-   for(auto* child=node->first_child; child!=NULL; child=child->next_child) {
-      node->ndelay_in += child->ndelay_out;
+   node.ndelay_in = 0;
+   for(auto* child=node.first_child; child!=NULL; child=child->next_child) {
+      node.ndelay_in += child->ndelay_out;
    }
-   int nrow = snode.nrow + node->ndelay_in;
-   int ncol = snode.ncol + node->ndelay_in;
+   int nrow = snode.nrow + node.ndelay_in;
+   int ncol = snode.ncol + node.ndelay_in;
 
    /* Get space for node now we know it size using Fortran allocator + zero it*/
    // NB L is  nrow x ncol and D is 2 x ncol (but no D if posdef)
    size_t ldl = align_lda<double>(nrow);
    size_t len = posdef ?  ldl    * ncol  // posdef
                        : (ldl+2) * ncol; // indef (includes D)
-   node->lcol = FADoubleTraits::allocate(factor_alloc_double, len);
-   memset(node->lcol, 0, len*sizeof(T));
+   node.lcol = FADoubleTraits::allocate(factor_alloc_double, len);
+   memset(node.lcol, 0, len*sizeof(T));
 
-   /* Get space for contribution block + zero it */
+   /* Get space for contribution block + (explicitly do not zero it!) */
    long contrib_dimn = snode.nrow - snode.ncol;
-   node->contrib = (contrib_dimn > 0) ? CATraits::allocate(contrib_alloc, contrib_dimn*contrib_dimn) : nullptr;
-   if(node->contrib)
-      memset(node->contrib, 0, contrib_dimn*contrib_dimn*sizeof(T));
+   node.contrib = (contrib_dimn > 0) ? CATraits::allocate(contrib_alloc, contrib_dimn*contrib_dimn) : nullptr;
 
    /* Alloc + set perm for expected eliminations at this node (delays are set
     * when they are imported from children) */
-   node->perm = FAIntTraits::allocate(factor_alloc_int, ncol); // ncol fully summed variables
+   node.perm = FAIntTraits::allocate(factor_alloc_int, ncol); // ncol fully summed variables
    for(int i=0; i<snode.ncol; i++)
-      node->perm[i] = snode.rlist[i];
+      node.perm[i] = snode.rlist[i];
 
    /* Add A */
    if(scaling) {
@@ -78,10 +75,10 @@ void assemble_node(
          int c = dest / snode.nrow;
          int r = dest % snode.nrow;
          long k = c*ldl + r;
-         if(r >= snode.ncol) k += node->ndelay_in;
+         if(r >= snode.ncol) k += node.ndelay_in;
          T rscale = scaling[ snode.rlist[r]-1 ];
          T cscale = scaling[ snode.rlist[c]-1 ];
-         node->lcol[k] = rscale * aval[src] * cscale;
+         node.lcol[k] = rscale * aval[src] * cscale;
       }
    } else {
       /* No scaling to apply */
@@ -91,37 +88,37 @@ void assemble_node(
          int c = dest / snode.nrow;
          int r = dest % snode.nrow;
          long k = c*ldl + r;
-         if(r >= snode.ncol) k += node->ndelay_in;
-         node->lcol[k] = aval[src];
+         if(r >= snode.ncol) k += node.ndelay_in;
+         node.lcol[k] = aval[src];
       }
    }
 
    /* Add children */
-   if(node->first_child != NULL) {
+   if(node.first_child != NULL) {
       /* Build lookup vector, allowing for insertion of delayed vars */
       /* Note that while rlist[] is 1-indexed this is fine so long as lookup
        * is also 1-indexed (which it is as it is another node's rlist[] */
       for(int i=0; i<snode.ncol; i++)
          map[ snode.rlist[i] ] = i;
       for(int i=snode.ncol; i<snode.nrow; i++)
-         map[ snode.rlist[i] ] = i + node->ndelay_in;
+         map[ snode.rlist[i] ] = i + node.ndelay_in;
       /* Loop over children adding contributions */
       int delay_col = snode.ncol;
-      for(auto* child=node->first_child; child!=NULL; child=child->next_child) {
+      for(auto* child=node.first_child; child!=NULL; child=child->next_child) {
          SymbolicNode const& csnode = *child->symb;
          /* Handle delays - go to back of node
           * (i.e. become the last rows as in lower triangular format) */
          for(int i=0; i<child->ndelay_out; i++) {
             // Add delayed rows (from delayed cols)
-            T *dest = &node->lcol[delay_col*(ldl+1)];
+            T *dest = &node.lcol[delay_col*(ldl+1)];
             int lds = align_lda<T>(csnode.nrow + child->ndelay_in);
             T *src = &child->lcol[(child->nelim+i)*(lds+1)];
-            node->perm[delay_col] = child->perm[child->nelim+i];
+            node.perm[delay_col] = child->perm[child->nelim+i];
             for(int j=0; j<child->ndelay_out-i; j++) {
                dest[j] = src[j];
             }
             // Add child's non-fully summed rows (from delayed cols)
-            dest = node->lcol;
+            dest = node.lcol;
             src = &child->lcol[child->nelim*lds + child->ndelay_in +i*lds];
             for(int j=csnode.ncol; j<csnode.nrow; j++) {
                int r = map[ csnode.rlist[j] ];
@@ -134,61 +131,72 @@ void assemble_node(
          /* Handle expected contributions (only if something there) */
          if(child->contrib) {
             int cm = csnode.nrow - csnode.ncol;
-            const int block_size = 256;
-            for(int iblk=0; iblk<cm; iblk+=block_size) {
-               #pragma omp task default(none) \
-                  firstprivate(iblk) \
-                  shared(cm, map, csnode, child, snode, nrow, ncol, node)
-               {
-#ifdef PROFILE
-                  Profile::Task task_assemble("TA_ASSEMBLE", omp_get_thread_num());
-#endif
-                  for(int i=iblk; i<std::min(cm,iblk+block_size); i++) {
-                     int c = map[ csnode.rlist[csnode.ncol+i] ];
-                     T *src = &child->contrib[i*cm];
-                     if(c < snode.ncol) {
-                        // Contribution added to lcol
-                        int ldd = align_lda<T>(nrow);
-                        T *dest = &node->lcol[c*ldd];
-                        for(int j=i; j<cm; j++) {
-                           int r = map[ csnode.rlist[csnode.ncol+j] ];
-                           dest[r] += src[j];
-                        }
-                     } else {
-                        // Contribution added to contrib
-                        // FIXME: Add after contribution block established?
-                        int ldd = snode.nrow - snode.ncol;
-                        T *dest = &node->contrib[(c-ncol)*ldd];
-                        for(int j=i; j<cm; j++) {
-                           int r = map[ csnode.rlist[csnode.ncol+j] ] - ncol;
-                           dest[r] += src[j];
-                        }
-                     }
+            for(int i=0; i<cm; i++) {
+               int c = map[ csnode.rlist[csnode.ncol+i] ];
+               T *src = &child->contrib[i*cm];
+               // NB: we handle contribution to contrib in assemble_post()
+               if(c < snode.ncol) {
+                  // Contribution added to lcol
+                  int ldd = align_lda<T>(nrow);
+                  T *dest = &node.lcol[c*ldd];
+                  for(int j=i; j<cm; j++) {
+                     int r = map[ csnode.rlist[csnode.ncol+j] ];
+                     dest[r] += src[j];
                   }
-#ifdef PROFILE
-                  task_assemble.done();
-#endif
                }
             }
-            #pragma omp taskwait
-            /* Free memory from child contribution block */
-            CATraits::deallocate(contrib_alloc, child->contrib, cm*cm);
          }
       }
    }
+}
 
-   // FIXME: debug remove
-   /*printf("Post asm node:\n");
-   for(int i=0; i<nrow; i++) {
-      for(int j=0; j<ncol; j++) printf(" %10.2e", node->lcol[j*ldl+i]);
-      printf("\n");
-   }*/
-   /*printf("Post asm contrib:\n");
-   int ldd = snode.nrow - snode.ncol;
-   for(int i=0; i<ldd; i++) {
-      for(int j=0; j<ldd; j++) printf(" %e", node->contrib[j*ldd+i]);
-      printf("\n");
-   }*/
+template <typename T,
+          typename ContribAlloc
+          >
+void assemble_post(
+      SymbolicNode const& snode,
+      NumericNode<T>& node,
+      ContribAlloc& contrib_alloc,
+      int* map
+      ) {
+   /* Rebind allocators */
+   typedef std::allocator_traits<ContribAlloc> CATraits;
+
+   /* Initialise variables */
+   int ncol = snode.ncol + node.ndelay_in;
+
+   /* Add children */
+   if(node.first_child != NULL) {
+      /* Build lookup vector, allowing for insertion of delayed vars */
+      /* Note that while rlist[] is 1-indexed this is fine so long as lookup
+       * is also 1-indexed (which it is as it is another node's rlist[] */
+      for(int i=0; i<snode.ncol; i++)
+         map[ snode.rlist[i] ] = i;
+      for(int i=snode.ncol; i<snode.nrow; i++)
+         map[ snode.rlist[i] ] = i + node.ndelay_in;
+      /* Loop over children adding contributions */
+      for(auto* child=node.first_child; child!=NULL; child=child->next_child) {
+         SymbolicNode const& csnode = *child->symb;
+         if(!child->contrib) continue;
+         int cm = csnode.nrow - csnode.ncol;
+         for(int i=0; i<cm; i++) {
+            int c = map[ csnode.rlist[csnode.ncol+i] ];
+            T *src = &child->contrib[i*cm];
+            // NB: only interested in contribution to generated element
+            if(c >= snode.ncol) {
+               // Contribution added to contrib
+               int ldd = snode.nrow - snode.ncol;
+               T *dest = &node.contrib[(c-ncol)*ldd];
+               for(int j=i; j<cm; j++) {
+                  int r = map[ csnode.rlist[csnode.ncol+j] ] - ncol;
+                  dest[r] += src[j];
+               }
+            }
+         }
+         /* Free memory from child contribution block */
+         CATraits::deallocate(contrib_alloc, child->contrib, cm*cm);
+      }
+   }
 }
 
 }}} /* namespaces spral::ssids::cpu */

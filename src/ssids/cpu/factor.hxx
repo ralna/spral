@@ -120,7 +120,7 @@ void factor_node_indef(
    /* Perform factorization */
    //Verify<T> verifier(m, n, perm, lcol, ldl);
    node->nelim = ldlt_app_factor(
-         m, n, perm, lcol, ldl, d, 1.0, contrib, m-n, options
+         m, n, perm, lcol, ldl, d, 0.0, contrib, m-n, options
          );
    //verifier.verify(node->nelim, perm, lcol, ldl, d);
 
@@ -142,9 +142,10 @@ void factor_node_indef(
          int nelim2 = node->nelim - nelim;
          T *ld = new T[(m-n)*nelim2]; // FIXME: Use work
          calcLD(m-n, nelim2, &lcol[nelim*ldl+n], ldl, &d[2*nelim], ld, m-n);
+         T rbeta = (nelim==0) ? 0.0 : 1.0;
          host_gemm<T>(OP_N, OP_T, m-n, m-n, nelim2,
                -1.0, &lcol[nelim*ldl+n], ldl, ld, m-n,
-               1.0, node->contrib, m-n);
+               rbeta, node->contrib, m-n);
          delete[] ld;
       }
 #ifdef profile
@@ -164,11 +165,16 @@ void factor_node_indef(
       typedef std::allocator_traits<ContribAlloc> CATraits;
       CATraits::deallocate(contrib_alloc, node->contrib, (m-n)*(m-n));
       node->contrib = nullptr;
+   } else if(node->nelim==0) {
+      // FIXME: If we fix the above, we don't need this explict zeroing
+      long contrib_size = m-n;
+      memset(node->contrib, 0, contrib_size*contrib_size*sizeof(T));
    }
 }
 /* Factorize a node (posdef) */
 template <typename T>
 void factor_node_posdef(
+      T beta,
       SymbolicNode const& snode,
       NumericNode<T>* node,
       struct cpu_factor_options const& options,
@@ -183,7 +189,9 @@ void factor_node_posdef(
 
    /* Perform factorization */
    int flag;
-   cholesky_factor(m, n, lcol, ldl, 1.0, contrib, m-n, options.cpu_task_block_size, &flag);
+   cholesky_factor(
+         m, n, lcol, ldl, beta, contrib, m-n, options.cpu_task_block_size, &flag
+         );
    #pragma omp taskwait
    if(flag!=-1) {
       node->nelim = flag+1;
@@ -203,9 +211,10 @@ void factor_node(
       NumericNode<T>* node,
       struct cpu_factor_options const& options,
       struct cpu_factor_stats& stats,
-      ContribAlloc& contrib_alloc
+      ContribAlloc& contrib_alloc,
+      T beta=0.0 // FIXME: remove once smallleafsubtree is doing own thing
       ) {
-   if(posdef) factor_node_posdef<T>(snode, node, options, stats);
+   if(posdef) factor_node_posdef<T>(beta, snode, node, options, stats);
    else       factor_node_indef <T>(ni, snode, node, options, stats, contrib_alloc);
 }
 

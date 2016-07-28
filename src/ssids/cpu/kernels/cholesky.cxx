@@ -46,8 +46,6 @@ void cholesky_factor(int m, int n, double* a, int lda, double beta, double* upd,
 
    *info = -1;
 
-   // FIXME: beta != 1.0 is broken - need to use only on first touch
-
    /* NOTE: as we rely on the user to taskwait in an appropriate position, we
     * can't use shared attribute on arguments they've passed in, as these may
     * cease to exist on exit from this routine. So we take a private copy using
@@ -80,8 +78,9 @@ void cholesky_factor(int m, int n, double* a, int lda, double beta, double* upd,
                   blkm-blkn, blkn, 1.0, &a[j*(lda+1)], lda,
                   &a[j*(lda+1)+blkn], lda);
             if(upd) {
+               double rbeta = (j==0) ? beta : 1.0;
                host_syrk(FILL_MODE_LWR, OP_N, blkm-blkn, blkn, -1.0,
-                     &a[j*(lda+1)+blkn], lda, beta, upd, ldupd);
+                     &a[j*(lda+1)+blkn], lda, rbeta, upd, ldupd);
             }
          }
 #ifdef PROFILE
@@ -102,10 +101,12 @@ void cholesky_factor(int m, int n, double* a, int lda, double beta, double* upd,
 #endif
             host_trsm(SIDE_RIGHT, FILL_MODE_LWR, OP_T, DIAG_NON_UNIT,
                   blkm, blkn, 1.0, &a[j*(lda+1)], lda, &a[j*lda+i], lda);
-            if(blkn<blksz && upd)
+            if(blkn<blksz && upd) {
+               double rbeta = (j==0) ? beta : 1.0;
                host_gemm(OP_N, OP_T, blkm, blksz-blkn, blkn, -1.0,
                      &a[j*lda+i], lda, &a[j*(lda+1)+blkn], lda,
-                     beta, &upd[i-n], ldupd);
+                     rbeta, &upd[i-n], ldupd);
+            }
 #ifdef PROFILE
             task.done();
 #endif
@@ -129,16 +130,17 @@ void cholesky_factor(int m, int n, double* a, int lda, double beta, double* upd,
                host_gemm(OP_N, OP_T, blkm, blkk, blkn, -1.0, &a[j*lda+i], lda,
                      &a[j*lda+k], lda, 1.0, &a[k*lda+i], lda);
                if(blkk < blksz && upd) {
+                  double rbeta = (j==0) ? beta : 1.0;
                   int upd_width = (m<k+blksz) ? blkm - blkk
                                               : blksz - blkk;
                   if(i-n < 0) {
                      // Special case for first block of contrib
                      host_gemm(OP_N, OP_T, blkm+i-n, upd_width, blkn, -1.0,
-                           &a[j*lda+n], lda, &a[j*lda+k+blkk], lda, beta,
+                           &a[j*lda+n], lda, &a[j*lda+k+blkk], lda, rbeta,
                            upd, ldupd);
                   } else {
                      host_gemm(OP_N, OP_T, blkm, upd_width, blkn, -1.0,
-                           &a[j*lda+i], lda, &a[j*lda+k+blkk], lda, beta,
+                           &a[j*lda+i], lda, &a[j*lda+k+blkk], lda, rbeta,
                            &upd[i-n], ldupd);
                   }
                }
@@ -164,9 +166,10 @@ void cholesky_factor(int m, int n, double* a, int lda, double beta, double* upd,
                   Profile::Task task("TA_CHOL_UPD", omp_get_thread_num());
 #endif
                   int blkm = std::min(blksz, m-i);
+                  double rbeta = (j==0) ? beta : 1.0;
                   host_gemm(OP_N, OP_T, blkm, blkk, blkn, -1.0,
                         &a[j*lda+i], lda, &a[j*lda+k], lda,
-                        beta, &upd[(k-n)*ldupd+(i-n)], ldupd);
+                        rbeta, &upd[(k-n)*ldupd+(i-n)], ldupd);
 #ifdef PROFILE
                   task.done();
 #endif

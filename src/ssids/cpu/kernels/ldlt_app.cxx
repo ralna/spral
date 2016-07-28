@@ -86,11 +86,14 @@ private:
 template<typename T, typename IntAllocator>
 class Column {
 public:
+   bool first_elim; //< True if first column with eliminations
    int nelim; //< Number of eliminated entries in this column
    T *d; //< pointer to local d
    std::vector<int, IntAllocator> lperm; //< local permutation
 
-   Column(Column const&) {
+   Column(Column const&)
+   : first_elim(false)
+   {
       // Provided only for vector support, should never be used!
       omp_init_lock(&lock_);
    }
@@ -127,6 +130,7 @@ public:
             npass_--;              // so must be first half 2x2
       }
       // Update elimination progress
+      first_elim = (next_elim==0 && npass_>0);
       next_elim += npass_;
       nelim = npass_;
    }
@@ -691,7 +695,7 @@ public:
          if(upd && j_==calc_nblk(n_,block_size_)-1) {
             // Handle fractional part of upd that "belongs" to this block
             int u_ncol = std::min(block_size_-ncol(), m_-n_); // ncol for upd
-            beta = (elim_col==0) ? beta : 1.0; // user beta only on first update
+            beta = (cdata_[elim_col].first_elim) ? beta : 1.0; // user beta only on first update
             if(i_ == j_) {
                // diagonal block
                host_gemm(
@@ -997,10 +1001,11 @@ private:
                         blkm, nelim, l_ik, lda, cdata[blk].d, work.ld,
                         block_size
                         );
+                  T rbeta = (cdata[blk].first_elim) ? beta : 1.0; // user beta only on first update
                   host_gemm(
                         OP_N, OP_T, blkm, blkn, nelim,
                         -1.0, work.ld, block_size, l_jk, lda,
-                        (blk==0) ? beta : 1.0, upd_ij, ldupd
+                        rbeta, upd_ij, ldupd
                         );
 #ifdef PROFILE
                   task.done();
