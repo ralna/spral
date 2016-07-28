@@ -594,20 +594,29 @@ public:
                lda_, cdata_[elim_col].d, work.ld, block_size_
                );
          host_gemm(
-               OP_N, OP_T, nrow()-rfrom, ncol()-cfrom,
-               cdata_[elim_col].nelim, -1.0, work.ld, block_size_,
-               &jsrc.aval_[cfrom], lda_, 1.0, &aval_[cfrom*lda_+rfrom], lda_
+               OP_N, OP_T, nrow()-rfrom, ncol()-cfrom, cdata_[elim_col].nelim,
+               -1.0, work.ld, block_size_, &jsrc.aval_[cfrom], lda_,
+               1.0, &aval_[cfrom*lda_+rfrom], lda_
                );
          if(upd && j_==calc_nblk(n_,block_size_)-1) {
             // Handle fractional part of upd that "belongs" to this block
+            int u_ncol = std::min(block_size_-ncol(), m_-n_); // ncol for upd
             if(i_ == j_) {
                // diagonal block
-               int u_ncol = std::min(block_size_-ncol(), m_-n_); // ncol for upd
                host_gemm(
                      OP_N, OP_T, u_ncol, u_ncol, cdata_[elim_col].nelim,
                      -1.0, &work.ld[ncol()-rfrom], block_size_,
                      &jsrc.aval_[ncol()], lda_,
                      beta, upd, ldupd
+                     );
+            } else {
+               // off-diagonal block
+               T* upd_ij =
+                  &upd[(i_-calc_nblk(n_,block_size_))*block_size_+u_ncol];
+               host_gemm(
+                     OP_N, OP_T, nrow(), u_ncol, cdata_[elim_col].nelim,
+                     -1.0, work.ld, block_size_, &jsrc.aval_[ncol()], lda_,
+                     beta, upd_ij, ldupd
                      );
             }
          }
@@ -877,40 +886,6 @@ private:
       if(m>n && upd) {
          // Handle thin strip that "belongs" with last eliminated block column
          int offset = std::min(nblk*block_size, m) - n;
-         if(offset > 0) {
-            // Fractional column
-            for(int kblk=0; kblk<nblk; ++kblk)
-            for(int iblk=nblk; iblk<mblk; ++iblk) {
-               T* upd_ij = &upd[(iblk-nblk)*block_size+offset];
-               #pragma omp task default(none) \
-                  firstprivate(iblk, kblk, upd_ij) \
-                  shared(offset, a, cdata, all_thread_work) \
-                  depend(inout: upd_ij[0:1])
-               {
-#ifdef PROFILE
-                  Profile::Task task("TA_LDLT_UPDC", omp_get_thread_num());
-#endif
-                  int thread_num = omp_get_thread_num();
-                  ThreadWork& work = all_thread_work[thread_num];
-                  int blkm = get_nrow(iblk, m, block_size);
-                  int blkk = cdata[kblk].nelim;
-                  T* l_ik = &a[kblk*block_size*lda + iblk*block_size];
-                  T* l_jk = &a[kblk*block_size*lda + n];
-                  calcLD<OP_N>(
-                        blkm, blkk, l_ik, lda, cdata[kblk].d, work.ld,
-                        block_size 
-                        );
-                  host_gemm(
-                        OP_N, OP_T, blkm, offset, blkk,
-                        -1.0, work.ld, block_size, l_jk, lda,
-                        beta, upd_ij, ldupd
-                        );
-#ifdef PROFILE
-                  task.done();
-#endif
-               }
-            }
-         }
          // Handle remainder
          if(mblk > nblk) {
             T *upd2 = &upd[offset*(ldupd+1)];
