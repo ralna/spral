@@ -58,17 +58,18 @@ public:
    ThreadWork(ThreadWork const&) =delete;
    ThreadWork& operator=(ThreadWork const&) =delete;
    ThreadWork() =default;
-   void init(int max_block_size, Allocator const& alloc = Allocator())
+   void init(size_t max_block_size, size_t n, Allocator const& alloc = Allocator())
    {
       allocT_ = typename AllocTTraits::allocator_type(alloc);
       allocInt_ = typename AllocIntTraits::allocator_type(alloc);
       block_size_ = max_block_size;
-      ld = AllocTTraits::allocate(allocT_, block_size_*block_size_);
-      perm = AllocIntTraits::allocate(allocInt_, block_size_);
+      block_width_ = std::min(n, block_size_);
+      ld = AllocTTraits::allocate(allocT_, block_size_ * block_width_);
+      perm = AllocIntTraits::allocate(allocInt_, block_width_);
    }
    ~ThreadWork() {
-      AllocIntTraits::deallocate(allocInt_, perm, block_size_);
-      AllocTTraits::deallocate(allocT_, ld, block_size_*block_size_);
+      AllocIntTraits::deallocate(allocInt_, perm, block_width_);
+      AllocTTraits::deallocate(allocT_, ld, block_size_*block_width_);
    }
 
 public:
@@ -78,7 +79,8 @@ public:
 private:
    typename AllocTTraits::allocator_type allocT_;
    typename AllocIntTraits::allocator_type allocInt_;
-   int block_size_;
+   size_t block_size_;
+   size_t block_width_; //< =min(block_size,n) allow for small matrix, big bsz
 };
 
 template<typename T, typename IntAllocator>
@@ -339,6 +341,98 @@ void calcLD(int m, int n, const T *l, int ldl, const T *d, T *ld, int ldld) {
 }
 
 template <typename T, typename Allocator=std::allocator<T*>>
+class CopyBackup {
+public:
+   // FIXME: reduce pool size
+   CopyBackup(int m, int n, int block_size, Allocator const& alloc=Allocator())
+   : m_(m), n_(n), block_size_(block_size), ldcopy_(align_lda<T>(m_)),
+     acopy_(n*ldcopy_, alloc)
+   {}
+
+   void release(int iblk, int jblk) { /* no-op */ }
+
+   void create_restore_point(int iblk, int jblk, T const* aval, int lda) {
+      T* lwork = get_lwork(iblk, jblk);
+      for(int j=0; j<get_ncol(jblk); j++)
+      for(int i=0; i<get_nrow(iblk); i++)
+         lwork[j*ldcopy_+i] = aval[j*lda+i];
+   }
+
+   /** Apply row permutation to block at same time as taking a copy */
+   void create_restore_point_with_row_perm(int iblk, int jblk, int nperm, const int *lperm, T* aval, int lda) {
+      T* lwork = get_lwork(iblk, jblk);
+      for(int j=0; j<get_ncol(jblk); j++) {
+         for(int i=0; i<nperm; i++) {
+            int r = lperm[i];
+            lwork[j*ldcopy_+i] = aval[j*lda+r];
+         }
+         for(int i=nperm; i<get_nrow(iblk); i++) {
+            lwork[j*ldcopy_+i] = aval[j*lda+i];
+         }
+      }
+      for(int j=0; j<get_ncol(jblk); j++)
+      for(int i=0; i<nperm; i++)
+         aval[j*lda+i] = lwork[j*ldcopy_+i];
+   }
+
+   /** Apply column permutation to block at same time as taking a copy */
+   void create_restore_point_with_col_perm(int iblk, int jblk, const int *lperm, T* aval, int lda) {
+      T* lwork = get_lwork(iblk, jblk);
+      for(int j=0; j<get_ncol(jblk); j++) {
+         int c = lperm[j];
+         for(int i=0; i<get_nrow(iblk); i++)
+            lwork[j*ldcopy_+i] = aval[c*lda+i];
+      }
+      for(int j=0; j<get_ncol(jblk); j++)
+      for(int i=0; i<get_nrow(iblk); i++)
+         aval[j*lda+i] = lwork[j*ldcopy_+i];
+   }
+
+   /** Restores any columns that have failed back to their previous
+    *  values stored in lwork[] */
+   void restore_part(int iblk, int jblk, int rfrom, int cfrom, T* aval, int lda) {
+      T* lwork = get_lwork(iblk, jblk);
+      for(int j=cfrom; j<get_ncol(jblk); j++)
+      for(int i=rfrom; i<get_nrow(iblk); i++)
+         aval[j*lda+i] = lwork[j*ldcopy_+i];
+   }
+
+   /** Restores any columns that have failed back to their previous
+    *  values stored in lwork[]. Applies a symmetric permutation while
+    *  doing so. */
+   void restore_part_with_sym_perm(int iblk, int jblk, int from, const int *lperm, T* aval, int lda) {
+      T* lwork = get_lwork(iblk, jblk);
+      for(int j=from; j<get_ncol(jblk); j++) {
+         int c = lperm[j];
+         for(int i=from; i<get_ncol(jblk); i++) {
+            int r = lperm[i];
+            aval[j*lda+i] = (r>c) ? lwork[c*ldcopy_+r]
+                                  : lwork[r*ldcopy_+c];
+         }
+         for(int i=get_ncol(jblk); i<get_nrow(iblk); i++)
+            aval[j*lda+i] = lwork[c*ldcopy_+i];
+      }
+   }
+
+private:
+   inline T* get_lwork(int iblk, int jblk) {
+      return &acopy_[jblk*block_size_*ldcopy_+iblk*block_size_];
+   }
+   inline int get_ncol(int blk) const {
+      return calc_blkn(blk, n_, block_size_);
+   }
+   inline int get_nrow(int blk) const {
+      return calc_blkn(blk, m_, block_size_);
+   }
+
+   int const m_;
+   int const n_;
+   int const block_size_;
+   size_t const ldcopy_;
+   std::vector<T, Allocator> acopy_;
+};
+
+template <typename T, typename Allocator=std::allocator<T*>>
 class PoolBackup {
    typedef typename std::allocator_traits<Allocator>::template rebind_alloc<T*> TptrAlloc;
 public:
@@ -348,10 +442,6 @@ public:
      pool_(calc_nblk(n,block_size)*((calc_nblk(n,block_size)+1)/2+mblk_), block_size, alloc),
      ptr_(mblk_*calc_nblk(n,block_size), alloc)
    {}
-
-   void acquire(int iblk, int jblk) {
-      ptr_[jblk*mblk_+iblk] = pool_.get_wait();
-   }
 
    void release(int iblk, int jblk) {
       pool_.release(ptr_[jblk*mblk_+iblk]);
@@ -967,7 +1057,7 @@ public:
       int num_threads = omp_get_max_threads();
       ThreadWork<T,Allocator> all_thread_work[num_threads];
       for(int i=0; i<num_threads; ++i)
-         all_thread_work[i].init(block_size, alloc);
+         all_thread_work[i].init(block_size, n, alloc);
       std::vector<Column<T,IntAlloc>, ColAlloc> cdata(alloc);
       cdata.reserve(nblk);
       for(int i=0; i<nblk; ++i)
@@ -1091,20 +1181,23 @@ using namespace spral::ssids::cpu::ldlt_app_internal;
 
 template<typename T>
 int ldlt_app_factor(int m, int n, int* perm, T* a, int lda, T* d, T beta, T* upd, int ldupd, struct cpu_factor_options const& options) {
-   // Things will break if outer block size is not a multiple of inner one
-   if(options.cpu_task_block_size % INNER_BLOCK_SIZE != 0)
-      throw std::runtime_error("options.cpu_task_block_size must be multiple of inner block size");
+   // If we've got a tall and narrow node, adjust block size so each block
+   // has roughly blksz**2 entries
+   int outer_block_size = options.cpu_task_block_size;
+   if(n < outer_block_size) {
+       outer_block_size = int((long(outer_block_size)*outer_block_size) / n);
+   }
 
    // Template parameters and workspaces
-   int const outer_block_size = options.cpu_task_block_size;
    bool const debug = false;
    typedef std::allocator<T> Allocator;
    Allocator alloc;
-   PoolBackup<T, Allocator> backup(m, n, outer_block_size, alloc);
+   //PoolBackup<T, Allocator> backup(m, n, outer_block_size, alloc);
+   CopyBackup<T, Allocator> backup(m, n, outer_block_size, alloc);
 
    // Actual call
    return LDLT
-      <T, INNER_BLOCK_SIZE, PoolBackup<T,Allocator>, debug,
+      <T, INNER_BLOCK_SIZE, CopyBackup<T,Allocator>, debug,
        Allocator>
       ::factor(
             m, n, perm, a, lda, d, backup, options,
