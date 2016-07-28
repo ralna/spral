@@ -69,6 +69,9 @@ public:
       addEntityValue("TA_LDLT_UPDA", "ST_TASK", "LDLT Upd A", GTG_SEABLUE);
       addEntityValue("TA_LDLT_UPDC", "ST_TASK", "LDLT Upd C", GTG_ORANGE);
       addEntityValue("TA_LDLT_TPP", "ST_TASK", "LDLT TPP", GTG_BLUE);
+      // GTG_WHITE, GTG_BLACK, GTG_TEAL, GTG_DARKGREY, GTG_YELLOW,
+      // GTG_LIGHTBROWN, GTG_LIGHTGREY, GTG_DARKBLUE, GTG_DARKPING
+      // GTG_KAKI, GTG_REDBLOOD, GTG_MAUVE, GTG_LIGHTPINK
       clock_gettime(CLOCK_REALTIME, &tstart);
 #endif
    }
