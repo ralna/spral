@@ -133,7 +133,6 @@ public:
                    contrib_alloc_, map, aval, scaling);
 #ifdef PROFILE
                task_assemble.done();
-               Profile::Task task_factor("TA_FACTOR", this_thread);
 #endif
                // Update stats
                int nrow = symb_[ni].nrow + nodes_[ni].ndelay_in;

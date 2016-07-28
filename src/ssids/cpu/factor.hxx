@@ -25,6 +25,8 @@
 #include "kernels/wrappers.hxx"
 #include "SymbolicNode.hxx"
 
+#include "profile.hxx"
+
 //#include "kernels/verify.hxx" // FIXME: remove debug
 
 namespace spral { namespace ssids { namespace cpu {
@@ -127,6 +129,9 @@ void factor_node_indef(
       int nelim = node->nelim;
       stats.not_first_pass += n-nelim;
       T *ld = new T[2*(m-nelim)]; // FIXME: Use work
+#ifdef PROFILE
+      Profile::Task task_tpp("TA_LDLT_TPP", this_thread);
+#endif
       node->nelim += ldlt_tpp_factor(
             m-nelim, n-nelim, &perm[nelim], &lcol[nelim*(ldl+1)], ldl,
             &d[2*nelim], ld, m-nelim, options.u, options.small, nelim,
@@ -142,6 +147,9 @@ void factor_node_indef(
                1.0, node->contrib, m-n);
          delete[] ld;
       }
+#ifdef profile
+      task_tpp.done();
+#endif
       stats.not_second_pass += n - node->nelim;
    }
 
