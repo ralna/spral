@@ -601,6 +601,7 @@ public:
          if(upd && j_==calc_nblk(n_,block_size_)-1) {
             // Handle fractional part of upd that "belongs" to this block
             int u_ncol = std::min(block_size_-ncol(), m_-n_); // ncol for upd
+            beta = (elim_col==0) ? beta : 1.0; // user beta only on first update
             if(i_ == j_) {
                // diagonal block
                host_gemm(
@@ -916,7 +917,7 @@ private:
                   host_gemm(
                         OP_N, OP_T, blkm, blkn, blkk,
                         -1.0, work.ld, block_size, l_jk, lda,
-                        beta, upd_ij, ldupd
+                        (kblk==0) ? beta : 1.0, upd_ij, ldupd
                         );
 #ifdef PROFILE
                   task.done();
