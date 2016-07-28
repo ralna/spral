@@ -876,29 +876,22 @@ private:
                }
             }
          }
-      }
-      #pragma omp taskwait
 
-      /*if(debug) {
-         printf("PostElim:\n");
-         print_mat(mblk, nblk, m, n, blkdata, cdata, lda);
-      }*/
-
-      if(m>n && upd) {
-         // Handle thin strip that "belongs" with last eliminated block column
-         int offset = std::min(nblk*block_size, m) - n;
-         // Handle remainder
-         if(mblk > nblk) {
-            T *upd2 = &upd[offset*(ldupd+1)];
-            for(int kblk=0; kblk<nblk; ++kblk)
+         // Handle update to contribution block, if required
+         if(upd && mblk>nblk) {
+            int uoffset = std::min(nblk*block_size, m) - n;
+            T *upd2 = &upd[uoffset*(ldupd+1)];
             for(int jblk=nblk; jblk<mblk; ++jblk)
             for(int iblk=jblk; iblk<mblk; ++iblk) {
                T* upd_ij = &upd2[(jblk-nblk)*block_size*ldupd + 
                                  (iblk-nblk)*block_size];
                #pragma omp task default(none) \
-                  firstprivate(iblk, jblk, kblk, upd_ij) \
+                  firstprivate(iblk, jblk, blk, upd_ij) \
                   shared(a, upd2, cdata, all_thread_work) \
-                  depend(inout: upd_ij[0:1])
+                  depend(inout: upd_ij[0:1]) \
+                  depend(in: perm[blk*block_size:1]) \
+                  depend(in: a[blk*block_size*lda+iblk*block_size:1]) \
+                  depend(in: a[blk*block_size*lda+jblk*block_size:1])
                {
 #ifdef PROFILE
                   Profile::Task task("TA_LDLT_UPDC", omp_get_thread_num());
@@ -907,17 +900,17 @@ private:
                   ThreadWork& work = all_thread_work[thread_num];
                   int blkm = get_nrow(iblk, m, block_size);
                   int blkn = get_ncol(jblk, m, block_size);
-                  int blkk = cdata[kblk].nelim;
-                  T* l_ik = &a[kblk*block_size*lda + iblk*block_size];
-                  T* l_jk = &a[kblk*block_size*lda + jblk*block_size];
+                  int nelim = cdata[blk].nelim;
+                  T* l_ik = &a[blk*block_size*lda + iblk*block_size];
+                  T* l_jk = &a[blk*block_size*lda + jblk*block_size];
                   calcLD<OP_N>(
-                        blkm, blkk, l_ik, lda, cdata[kblk].d, work.ld,
+                        blkm, nelim, l_ik, lda, cdata[blk].d, work.ld,
                         block_size
                         );
                   host_gemm(
-                        OP_N, OP_T, blkm, blkn, blkk,
+                        OP_N, OP_T, blkm, blkn, nelim,
                         -1.0, work.ld, block_size, l_jk, lda,
-                        (kblk==0) ? beta : 1.0, upd_ij, ldupd
+                        (blk==0) ? beta : 1.0, upd_ij, ldupd
                         );
 #ifdef PROFILE
                   task.done();
@@ -925,8 +918,13 @@ private:
                }
             }
          }
-         #pragma omp taskwait
       }
+      #pragma omp taskwait
+
+      /*if(debug) {
+         printf("PostElim:\n");
+         print_mat(mblk, nblk, m, n, blkdata, cdata, lda);
+      }*/
 
       return next_elim;
    }
