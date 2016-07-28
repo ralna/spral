@@ -802,7 +802,7 @@ private:
                   depend(in: a[adep_idx:1])
                {
 #ifdef PROFILE
-                  Profile::Task task("TA_LDLT_UPD", omp_get_thread_num());
+                  Profile::Task task("TA_LDLT_UPDA", omp_get_thread_num());
 #endif
                   if(debug) printf("UpdateT(%d,%d,%d)\n", iblk, jblk, blk);
                   int thread_num = omp_get_thread_num();
@@ -834,7 +834,7 @@ private:
                   depend(in: a[blk*block_size*lda+jblk*block_size:1])
                {
 #ifdef PROFILE
-                  Profile::Task task("TA_LDLT_UPD", omp_get_thread_num());
+                  Profile::Task task("TA_LDLT_UPDA", omp_get_thread_num());
 #endif
                   if(debug) printf("UpdateN(%d,%d,%d)\n", iblk, jblk, blk);
                   int thread_num = omp_get_thread_num();
@@ -871,6 +871,9 @@ private:
                   shared(offset, a, upd, cdata, all_thread_work) \
                   depend(inout: upd[0:1])
                {
+#ifdef PROFILE
+                  Profile::Task task("TA_LDLT_UPDC", omp_get_thread_num());
+#endif
                   int thread_num = omp_get_thread_num();
                   ThreadWork& work = all_thread_work[thread_num];
                   T* l_ik = &a[kblk*block_size*lda+n];
@@ -885,6 +888,9 @@ private:
                         -1.0, work.ld, block_size, l_jk, lda,
                         beta, upd, ldupd
                         );
+#ifdef PROFILE
+                  task.done();
+#endif
                }
             }
             // Fractional column
@@ -896,6 +902,9 @@ private:
                   shared(offset, a, cdata, all_thread_work) \
                   depend(inout: upd_ij[0:1])
                {
+#ifdef PROFILE
+                  Profile::Task task("TA_LDLT_UPDC", omp_get_thread_num());
+#endif
                   int thread_num = omp_get_thread_num();
                   ThreadWork& work = all_thread_work[thread_num];
                   int blkm = get_nrow(iblk, m, block_size);
@@ -911,6 +920,9 @@ private:
                         -1.0, work.ld, block_size, l_jk, lda,
                         beta, upd_ij, ldupd
                         );
+#ifdef PROFILE
+                  task.done();
+#endif
                }
             }
          }
@@ -927,6 +939,9 @@ private:
                   shared(a, upd2, cdata, all_thread_work) \
                   depend(inout: upd_ij[0:1])
                {
+#ifdef PROFILE
+                  Profile::Task task("TA_LDLT_UPDC", omp_get_thread_num());
+#endif
                   int thread_num = omp_get_thread_num();
                   ThreadWork& work = all_thread_work[thread_num];
                   int blkm = get_nrow(iblk, m, block_size);
@@ -943,6 +958,9 @@ private:
                         -1.0, work.ld, block_size, l_jk, lda,
                         beta, upd_ij, ldupd
                         );
+#ifdef PROFILE
+                  task.done();
+#endif
                }
             }
          }

@@ -61,14 +61,14 @@ public:
       addEntityValue("TA_SUBTREE", "ST_TASK", "Subtree", GTG_RED);
       addEntityValue("TA_ASSEMBLE", "ST_TASK", "Assemble", GTG_GREEN);
       addEntityValue("TA_FACTOR", "ST_TASK", "Factor", GTG_BLUE);
-      addEntityValue("TA_UPDATE", "ST_TASK", "Update", GTG_ORANGE);
       addEntityValue("TA_CHOL_DIAG", "ST_TASK", "CholDiag", GTG_PURPLE);
       addEntityValue("TA_CHOL_TRSM", "ST_TASK", "CholTrsm", GTG_PINK);
       addEntityValue("TA_CHOL_UPD", "ST_TASK", "CholUpd", GTG_SEABLUE);
       addEntityValue("TA_LDLT_DIAG", "ST_TASK", "LDLTDiag", GTG_PURPLE);
       addEntityValue("TA_LDLT_APPLY", "ST_TASK", "LDLTTrsm", GTG_PINK);
       addEntityValue("TA_LDLT_ADJUST", "ST_TASK", "LDLTTrsm", GTG_GRENAT);
-      addEntityValue("TA_LDLT_UPD", "ST_TASK", "LDLTUpd", GTG_SEABLUE);
+      addEntityValue("TA_LDLT_UPDA", "ST_TASK", "LDLTUpd", GTG_SEABLUE);
+      addEntityValue("TA_LDLT_UPDC", "ST_TASK", "LDLTUpd", GTG_ORANGE);
       clock_gettime(CLOCK_REALTIME, &tstart);
 #endif
    }
