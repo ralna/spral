@@ -1067,6 +1067,9 @@ public:
       cdata.reserve(nblk);
       for(int i=0; i<nblk; ++i)
          cdata.emplace_back(block_size, alloc);
+#ifdef PROFILE
+      Profile::setNullState(omp_get_thread_num());
+#endif
 
       /* Main loop
        *    - Each pass leaves any failed pivots in place and keeps everything
@@ -1080,6 +1083,9 @@ public:
             );
 
       // Permute failed entries to end
+#ifdef PROFILE
+      Profile::Task task_post("TA_LDLT_POST", omp_get_thread_num());
+#endif
       std::vector<int, IntAlloc> failed_perm(n-num_elim, alloc);
       for(int jblk=0, insert=0, fail_insert=0; jblk<nblk; jblk++) {
          cdata[jblk].move_back(
@@ -1167,6 +1173,9 @@ public:
       for(int j=0; j<nfail; ++j)
       for(int i=0; i<m-n; ++i)
          arect[j*lda+i] = failed_rect[j*(m-n)+i];
+#ifdef PROFILE
+      task_post.done();
+#endif
 
       if(debug) {
          std::vector<bool, BoolAlloc> eliminated(n, alloc);
@@ -1194,6 +1203,10 @@ int ldlt_app_factor(int m, int n, int* perm, T* a, int lda, T* d, T beta, T* upd
    /*if(n < outer_block_size) {
        outer_block_size = int((long(outer_block_size)*outer_block_size) / n);
    }*/
+
+#ifdef PROFILE
+   Profile::setState("TA_MISC1", omp_get_thread_num());
+#endif
 
    // Template parameters and workspaces
    bool const debug = false;

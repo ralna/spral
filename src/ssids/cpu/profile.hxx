@@ -33,8 +33,8 @@ public:
       void done() {
 #ifdef PROFILE
          double t2 = Profile::now();
-         setState(t1, "ST_TASK", Profile::get_thread_name(thread), name);
-         setState(t2, "ST_TASK", Profile::get_thread_name(thread), "0");
+         ::setState(t1, "ST_TASK", Profile::get_thread_name(thread), name);
+         ::setState(t2, "ST_TASK", Profile::get_thread_name(thread), "0");
 #endif
       }
 
@@ -43,6 +43,19 @@ public:
       int thread;
       double t1;
    };
+
+   static
+   void setState(char const* name, int thread) {
+#ifdef PROFILE
+      double t = Profile::now();
+      ::setState(t, "ST_TASK", Profile::get_thread_name(thread), name);
+#endif
+   }
+
+   static
+   void setNullState(int thread) {
+      setState("0", thread);
+   }
 
    static
    void init(void) {
@@ -68,10 +81,15 @@ public:
       addEntityValue("TA_LDLT_ADJUST", "ST_TASK", "LDLTTrsm", GTG_GRENAT);
       addEntityValue("TA_LDLT_UPDA", "ST_TASK", "LDLT Upd A", GTG_SEABLUE);
       addEntityValue("TA_LDLT_UPDC", "ST_TASK", "LDLT Upd C", GTG_ORANGE);
+      addEntityValue("TA_LDLT_POST", "ST_TASK", "LDLT TPP", GTG_YELLOW);
       addEntityValue("TA_LDLT_TPP", "ST_TASK", "LDLT TPP", GTG_BLUE);
-      // GTG_WHITE, GTG_BLACK, GTG_TEAL, GTG_DARKGREY, GTG_YELLOW,
-      // GTG_LIGHTBROWN, GTG_LIGHTGREY, GTG_DARKBLUE, GTG_DARKPING
-      // GTG_KAKI, GTG_REDBLOOD, GTG_MAUVE, GTG_LIGHTPINK
+      addEntityValue("TA_ASM_PRE", "ST_TASK", "Assembly Pre", GTG_TEAL);
+      addEntityValue("TA_ASM_POST", "ST_TASK", "Assembly Post", GTG_MAUVE);
+      addEntityValue("TA_MISC1", "ST_TASK", "Misc 1", GTG_KAKI);
+      addEntityValue("TA_MISC2", "ST_TASK", "Misc 2", GTG_REDBLOOD);
+      // GTG_WHITE, GTG_BLACK, GTG_DARKGREY,
+      // GTG_LIGHTBROWN, GTG_LIGHTGREY, GTG_DARKBLUE, GTG_DARKPINK
+      // GTG_LIGHTPINK
       clock_gettime(CLOCK_REALTIME, &tstart);
 #endif
    }

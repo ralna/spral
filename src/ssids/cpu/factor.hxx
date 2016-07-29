@@ -154,6 +154,9 @@ void factor_node_indef(
       stats.not_second_pass += n - node->nelim;
    }
 
+#ifdef PROFILE
+      Profile::Task task_misc("TA_MISC1", omp_get_thread_num());
+#endif
    /* Record information */
    node->ndelay_out = n - node->nelim;
    stats.num_delay += node->ndelay_out;
@@ -170,6 +173,9 @@ void factor_node_indef(
       long contrib_size = m-n;
       memset(node->contrib, 0, contrib_size*contrib_size*sizeof(T));
    }
+#ifdef profile
+      task_misc.done();
+#endif
 }
 /* Factorize a node (posdef) */
 template <typename T>
