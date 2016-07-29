@@ -179,20 +179,29 @@ void assemble_post(
          SymbolicNode const& csnode = *child->symb;
          if(!child->contrib) continue;
          int cm = csnode.nrow - csnode.ncol;
-         for(int i=0; i<cm; i++) {
-            int c = map[ csnode.rlist[csnode.ncol+i] ];
-            T *src = &child->contrib[i*cm];
-            // NB: only interested in contribution to generated element
-            if(c >= snode.ncol) {
-               // Contribution added to contrib
-               int ldd = snode.nrow - snode.ncol;
-               T *dest = &node.contrib[(c-ncol)*ldd];
-               for(int j=i; j<cm; j++) {
-                  int r = map[ csnode.rlist[csnode.ncol+j] ] - ncol;
-                  dest[r] += src[j];
+         int const block_size = 256;
+         #pragma omp taskgroup
+         {
+            for(int iblk=0; iblk<cm; iblk+=block_size) {
+               #pragma omp task default(none) \
+                  firstprivate(iblk) \
+                  shared(map, child, snode, node, cm, csnode, ncol)
+               for(int i=iblk; i<std::min(iblk+block_size,cm); i++) {
+                  int c = map[ csnode.rlist[csnode.ncol+i] ];
+                  T *src = &child->contrib[i*cm];
+                  // NB: only interested in contribution to generated element
+                  if(c >= snode.ncol) {
+                     // Contribution added to contrib
+                     int ldd = snode.nrow - snode.ncol;
+                     T *dest = &node.contrib[(c-ncol)*ldd];
+                     for(int j=i; j<cm; j++) {
+                        int r = map[ csnode.rlist[csnode.ncol+j] ] - ncol;
+                        dest[r] += src[j];
+                     }
+                  }
                }
             }
-         }
+         } /* taskgroup */
          /* Free memory from child contribution block */
          CATraits::deallocate(contrib_alloc, child->contrib, cm*cm);
       }
