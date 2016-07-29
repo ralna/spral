@@ -146,7 +146,6 @@ void factor_node_indef(
          host_gemm<T>(OP_N, OP_T, m-n, m-n, nelim2,
                -1.0, &lcol[nelim*ldl+n], ldl, ld, m-n,
                rbeta, node->contrib, m-n);
-         delete[] ld;
       }
       stats.not_second_pass += n - node->nelim;
 #ifdef profile
