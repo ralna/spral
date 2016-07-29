@@ -187,20 +187,28 @@ void assemble_post(
                   firstprivate(iblk) \
                   shared(map, child, snode, node, cm, csnode, ncol) \
                   if(iblk+block_size<cm)
-               for(int i=iblk; i<std::min(iblk+block_size,cm); i++) {
-                  int c = map[ csnode.rlist[csnode.ncol+i] ];
-                  T *src = &child->contrib[i*cm];
-                  // NB: only interested in contribution to generated element
-                  if(c >= snode.ncol) {
-                     // Contribution added to contrib
-                     int ldd = snode.nrow - snode.ncol;
-                     T *dest = &node.contrib[(c-ncol)*ldd];
-                     for(int j=i; j<cm; j++) {
-                        int r = map[ csnode.rlist[csnode.ncol+j] ] - ncol;
-                        dest[r] += src[j];
+               {
+#ifdef PROFILE
+                  Profile::Task task_asm("TA_ASSEMBLE", this_thread);
+#endif
+                  for(int i=iblk; i<std::min(iblk+block_size,cm); i++) {
+                     int c = map[ csnode.rlist[csnode.ncol+i] ];
+                     T *src = &child->contrib[i*cm];
+                     // NB: only interested in contribution to generated element
+                     if(c >= snode.ncol) {
+                        // Contribution added to contrib
+                        int ldd = snode.nrow - snode.ncol;
+                        T *dest = &node.contrib[(c-ncol)*ldd];
+                        for(int j=i; j<cm; j++) {
+                           int r = map[ csnode.rlist[csnode.ncol+j] ] - ncol;
+                           dest[r] += src[j];
+                        }
                      }
                   }
-               }
+#ifdef PROFILE
+                  task_asm.done();
+#endif
+               } /* task */
             }
          } /* taskgroup */
          /* Free memory from child contribution block */
