@@ -246,8 +246,8 @@ module spral_ssids_datatypes
       integer :: cpu_task_block_size = 256 ! block size to use for task
          ! generation on larger nodes
       integer :: min_npart = 4 ! minimum number of parts to split tree into
-      integer(long) :: max_flops_part = 1e9 ! maximum number of flops per part
-         ! when splitting tree
+      integer(long) :: max_flops_part = 10**9_long ! maximum number of flops
+         ! per part when splitting tree
    end type ssids_options
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
