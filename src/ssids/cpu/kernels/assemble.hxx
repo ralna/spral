@@ -185,7 +185,8 @@ void assemble_post(
             for(int iblk=0; iblk<cm; iblk+=block_size) {
                #pragma omp task default(none) \
                   firstprivate(iblk) \
-                  shared(map, child, snode, node, cm, csnode, ncol)
+                  shared(map, child, snode, node, cm, csnode, ncol) \
+                  if(iblk+block_size<cm)
                for(int i=iblk; i<std::min(iblk+block_size,cm); i++) {
                   int c = map[ csnode.rlist[csnode.ncol+i] ];
                   T *src = &child->contrib[i*cm];
