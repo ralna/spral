@@ -222,7 +222,7 @@ void assemble_post(
                   if(iblk+block_size<cm)
                {
 #ifdef PROFILE
-                  Profile::Task task_asm("TA_ASM_POST", this_thread);
+                  Profile::Task task_asm("TA_ASM_POST", omp_get_thread_num());
 #endif
                   for(int i=iblk; i<std::min(iblk+block_size,cm); i++) {
                      int c = map[ csnode.rlist[csnode.ncol+i] ];
