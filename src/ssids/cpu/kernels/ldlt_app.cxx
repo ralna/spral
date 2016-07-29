@@ -344,14 +344,18 @@ void calcLD(int m, int n, const T *l, int ldl, const T *d, T *ld, int ldld) {
    }
 }
 
-template <typename T, typename Allocator=std::allocator<T*>>
+template <typename T, typename Allocator=std::allocator<T>>
 class CopyBackup {
 public:
-   // FIXME: reduce pool size
+   CopyBackup(CopyBackup const&) =delete;
+   CopyBackup& operator=(CopyBackup const&) =delete;
    CopyBackup(int m, int n, int block_size, Allocator const& alloc=Allocator())
-   : m_(m), n_(n), block_size_(block_size), ldcopy_(align_lda<T>(m_)),
-     acopy_(n*ldcopy_, alloc)
+   : alloc_(alloc), m_(m), n_(n), block_size_(block_size),
+     ldcopy_(align_lda<T>(m_)), acopy_(alloc_.allocate(n_*ldcopy_))
    {}
+   ~CopyBackup() {
+      alloc_.deallocate(acopy_, n_*ldcopy_);
+   }
 
    void release(int iblk, int jblk) { /* no-op */ }
 
@@ -429,11 +433,12 @@ private:
       return calc_blkn(blk, m_, block_size_);
    }
 
+   Allocator alloc_;
    int const m_;
    int const n_;
    int const block_size_;
    size_t const ldcopy_;
-   std::vector<T, Allocator> acopy_;
+   T *acopy_;
 };
 
 template <typename T, typename Allocator=std::allocator<T*>>
