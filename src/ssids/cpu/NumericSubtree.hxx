@@ -136,7 +136,8 @@ public:
                factor_node
                   <posdef>
                   (ni, symb_[ni], &nodes_[ni], options,
-                   thread_stats[this_thread], contrib_alloc_);
+                   thread_stats[this_thread], work[this_thread],
+                   contrib_alloc_);
                #pragma omp cancel taskgroup \
                   if(thread_stats[this_thread].flag<SSIDS_SUCCESS)
 

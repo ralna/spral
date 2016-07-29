@@ -58,7 +58,7 @@ public:
          factor_node
             <true>
             (ni, symb_.symb_[ni], &old_nodes_[ni], options, stats,
-             contrib_alloc, 1.0);
+             work, contrib_alloc, 1.0);
          if(stats.flag<SSIDS_SUCCESS) return;
       }
    }

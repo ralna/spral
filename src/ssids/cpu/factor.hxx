@@ -106,6 +106,7 @@ void factor_node_indef(
       NumericNode<T>* node,
       struct cpu_factor_options const& options,
       struct cpu_factor_stats& stats,
+      Workspace& work,
       ContribAlloc& contrib_alloc
       ) {
    /* Extract useful information about node */
@@ -126,21 +127,20 @@ void factor_node_indef(
 
    /* Finish factorization worth simplistic code */
    if(node->nelim < n) {
-      int nelim = node->nelim;
-      stats.not_first_pass += n-nelim;
-      T *ld = new T[2*(m-nelim)]; // FIXME: Use work
 #ifdef PROFILE
       Profile::Task task_tpp("TA_LDLT_TPP", omp_get_thread_num());
 #endif
+      int nelim = node->nelim;
+      stats.not_first_pass += n-nelim;
+      T *ld = work.get_ptr<T>(2*(m-nelim));
       node->nelim += ldlt_tpp_factor(
             m-nelim, n-nelim, &perm[nelim], &lcol[nelim*(ldl+1)], ldl,
             &d[2*nelim], ld, m-nelim, options.u, options.small, nelim,
             &lcol[nelim], ldl
             );
-      delete[] ld;
       if(m-n>0 && node->nelim>nelim) {
          int nelim2 = node->nelim - nelim;
-         T *ld = new T[(m-n)*nelim2]; // FIXME: Use work
+         T *ld = work.get_ptr<T>((m-n)*nelim2);
          calcLD(m-n, nelim2, &lcol[nelim*ldl+n], ldl, &d[2*nelim], ld, m-n);
          T rbeta = (nelim==0) ? 0.0 : 1.0;
          host_gemm<T>(OP_N, OP_T, m-n, m-n, nelim2,
@@ -148,14 +148,14 @@ void factor_node_indef(
                rbeta, node->contrib, m-n);
          delete[] ld;
       }
+      stats.not_second_pass += n - node->nelim;
 #ifdef profile
       task_tpp.done();
 #endif
-      stats.not_second_pass += n - node->nelim;
    }
 
 #ifdef PROFILE
-      Profile::Task task_misc("TA_MISC1", omp_get_thread_num());
+      Profile::setState("TA_MISC1", omp_get_thread_num());
 #endif
    /* Record information */
    node->ndelay_out = n - node->nelim;
@@ -173,9 +173,6 @@ void factor_node_indef(
       long contrib_size = m-n;
       memset(node->contrib, 0, contrib_size*contrib_size*sizeof(T));
    }
-#ifdef profile
-      task_misc.done();
-#endif
 }
 /* Factorize a node (posdef) */
 template <typename T>
@@ -217,11 +214,12 @@ void factor_node(
       NumericNode<T>* node,
       struct cpu_factor_options const& options,
       struct cpu_factor_stats& stats,
+      Workspace& work,
       ContribAlloc& contrib_alloc,
       T beta=0.0 // FIXME: remove once smallleafsubtree is doing own thing
       ) {
    if(posdef) factor_node_posdef<T>(beta, snode, node, options, stats);
-   else       factor_node_indef <T>(ni, snode, node, options, stats, contrib_alloc);
+   else       factor_node_indef <T>(ni, snode, node, options, stats, work, contrib_alloc);
 }
 
 }}} /* end of namespace spral::ssids::cpu */
