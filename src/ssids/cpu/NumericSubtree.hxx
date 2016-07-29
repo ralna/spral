@@ -124,16 +124,10 @@ public:
                      symb_[ni].nrow, symb_[ni].ncol);*/
                int this_thread = omp_get_thread_num();
                // Assembly of node (not of contribution block)
-#ifdef PROFILE
-               Profile::Task task_asm_pre("TA_ASM_PRE", this_thread);
-#endif
                int* map = work[this_thread].get_ptr<int>(symb_.n+1);
                assemble_pre
                   (posdef, symb_[ni], nodes_[ni], factor_alloc_,
                    contrib_alloc_, map, aval, scaling);
-#ifdef PROFILE
-               task_asm_pre.done();
-#endif
                // Update stats
                int nrow = symb_[ni].nrow + nodes_[ni].ndelay_in;
                thread_stats[this_thread].maxfront = std::max(thread_stats[this_thread].maxfront, nrow);
@@ -147,13 +141,7 @@ public:
                   if(thread_stats[this_thread].flag<SSIDS_SUCCESS)
 
                // Assemble children into contribution block
-#ifdef PROFILE
-               Profile::Task task_asm_post("TA_ASM_POST", this_thread);
-#endif
                assemble_post(symb_[ni], nodes_[ni], contrib_alloc_, map);
-#ifdef PROFILE
-               task_asm_post.done();
-#endif
             }
          }
          } // taskgroup

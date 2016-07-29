@@ -33,6 +33,9 @@ void assemble_pre(
       T const* aval,
       T const* scaling
       ) {
+#ifdef PROFILE
+   Profile::Task task_asm_pre("TA_ASM_PRE", omp_get_thread_num());
+#endif
    /* Rebind allocators */
    typedef typename std::allocator_traits<FactorAlloc>::template rebind_traits<double> FADoubleTraits;
    typename FADoubleTraits::allocator_type factor_alloc_double(factor_alloc);
@@ -92,6 +95,9 @@ void assemble_pre(
          node.lcol[k] = aval[src];
       }
    }
+#ifdef PROFILE
+   if(!node.first_child) task_asm_pre.done();
+#endif
 
    /* Add children */
    if(node.first_child != NULL) {
@@ -104,7 +110,13 @@ void assemble_pre(
          map[ snode.rlist[i] ] = i + node.ndelay_in;
       /* Loop over children adding contributions */
       int delay_col = snode.ncol;
+#ifdef PROFILE
+      task_asm_pre.done();
+#endif
       for(auto* child=node.first_child; child!=NULL; child=child->next_child) {
+#ifdef PROFILE
+         Profile::Task task_asm_pre("TA_ASM_PRE", omp_get_thread_num());
+#endif
          SymbolicNode const& csnode = *child->symb;
          /* Handle delays - go to back of node
           * (i.e. become the last rows as in lower triangular format) */
@@ -127,24 +139,45 @@ void assemble_pre(
             }
             delay_col++;
          }
+#ifdef PROFILE
+         task_asm_pre.done();
+#endif
 
          /* Handle expected contributions (only if something there) */
          if(child->contrib) {
             int cm = csnode.nrow - csnode.ncol;
-            for(int i=0; i<cm; i++) {
-               int c = map[ csnode.rlist[csnode.ncol+i] ];
-               T *src = &child->contrib[i*cm];
-               // NB: we handle contribution to contrib in assemble_post()
-               if(c < snode.ncol) {
-                  // Contribution added to lcol
-                  int ldd = align_lda<T>(nrow);
-                  T *dest = &node.lcol[c*ldd];
-                  for(int j=i; j<cm; j++) {
-                     int r = map[ csnode.rlist[csnode.ncol+j] ];
-                     dest[r] += src[j];
-                  }
+            int const block_size = 256; // FIXME: make configurable?
+            #pragma omp taskgroup
+            {
+               for(int iblk=0; iblk<cm; iblk+=block_size) {
+                  #pragma omp task default(none) \
+                     firstprivate(iblk) \
+                     shared(map, child, snode, node, csnode, cm, nrow) \
+                     if(iblk+block_size<cm)
+                  {
+#ifdef PROFILE
+                     Profile::Task task_asm_pre("TA_ASM_PRE", omp_get_thread_num());
+#endif
+                     for(int i=iblk; i<std::min(iblk+block_size,cm); i++) {
+                        int c = map[ csnode.rlist[csnode.ncol+i] ];
+                        T *src = &child->contrib[i*cm];
+                        // NB: we handle contribution to contrib in assemble_post()
+                        if(c < snode.ncol) {
+                           // Contribution added to lcol
+                           int ldd = align_lda<T>(nrow);
+                           T *dest = &node.lcol[c*ldd];
+                           for(int j=i; j<cm; j++) {
+                              int r = map[ csnode.rlist[csnode.ncol+j] ];
+                              dest[r] += src[j];
+                           }
+                        }
+                     }
+#ifdef PROFILE
+                     task_asm_pre.done();
+#endif
+                  } /* task */
                }
-            }
+            } /* taskgroup */
          }
       }
    }
@@ -189,7 +222,7 @@ void assemble_post(
                   if(iblk+block_size<cm)
                {
 #ifdef PROFILE
-                  Profile::Task task_asm("TA_ASSEMBLE", this_thread);
+                  Profile::Task task_asm("TA_ASM_POST", this_thread);
 #endif
                   for(int i=iblk; i<std::min(iblk+block_size,cm); i++) {
                      int c = map[ csnode.rlist[csnode.ncol+i] ];
