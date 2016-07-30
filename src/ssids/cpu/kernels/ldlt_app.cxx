@@ -542,6 +542,8 @@ private:
 template<typename T,
          int BLOCK_SIZE,
          typename Backup,
+         bool use_tasks, // Use tasks, so we can disable on one or more levels
+         bool do_or_die, // Use Cholesky comm pattern, no backups, abort on fail
          bool debug=false,
          typename Allocator=std::allocator<T>
          >
@@ -604,7 +606,7 @@ public:
       }
    }
 
-   template <typename Allocator, typename ThreadWork>
+   template <bool do_or_die, typename Allocator, typename ThreadWork>
    int factor(int& next_elim, int* perm, T* d, ThreadWork& work, struct cpu_factor_options const &options, Allocator const& alloc) {
       if(i_ != j_)
          throw std::runtime_error("factor called on non-diagonal block!");
@@ -616,9 +618,11 @@ public:
          PoolBackup<T, Allocator> inner_backup(
                nrow(), ncol(), INNER_BLOCK_SIZE, alloc
                );
+         bool const use_tasks = false; // Don't run in parallel at lower level
+         bool const debug = false; // Don't print debug info for inner call
          cdata_[i_].nelim =
-            LDLT<T, INNER_BLOCK_SIZE, PoolBackup<T,Allocator>, false,
-                 Allocator>
+            LDLT<T, INNER_BLOCK_SIZE, PoolBackup<T,Allocator>,
+                 use_tasks, do_or_die, debug, Allocator>
                 ::factor(
                       nrow(), ncol(), &cdata_[i_].lperm[0], aval_, lda_,
                       cdata_[i_].d, inner_backup, options, INNER_BLOCK_SIZE,
@@ -771,6 +775,8 @@ private:
 template<typename T,
          int BLOCK_SIZE,
          typename Backup,
+         bool use_tasks,
+         bool do_or_die,
          bool debug,
          typename Allocator
          >
@@ -810,7 +816,7 @@ private:
                    options, alloc) \
             depend(inout: a[blk*block_size*lda+blk*block_size:1]) \
             depend(inout: perm[blk*block_size:1]) \
-            if(mblk>1)
+            if(use_tasks && mblk>1)
          {
 #ifdef PROFILE
             Profile::Task task("TA_LDLT_DIAG", omp_get_thread_num());
@@ -821,7 +827,7 @@ private:
             // Store a copy for recovery in case of a failed column
             dblk.backup(backup);
             // Perform actual factorization
-            int nelim = dblk.template factor<Allocator>(
+            int nelim = dblk.template factor<do_or_die, Allocator>(
                   next_elim, perm, d, all_thread_work[thread_num],
                   options, alloc
                   );
@@ -840,7 +846,7 @@ private:
                depend(in: a[blk*block_size*lda+blk*block_size:1]) \
                depend(inout: a[jblk*block_size*lda+blk*block_size:1]) \
                depend(in: perm[blk*block_size:1]) \
-               if(mblk>1)
+               if(use_tasks && mblk>1)
             {
 #ifdef PROFILE
                Profile::Task task("TA_LDLT_APPLY", omp_get_thread_num());
@@ -871,7 +877,7 @@ private:
                depend(in: a[blk*block_size*lda+blk*block_size:1]) \
                depend(inout: a[blk*block_size*lda+iblk*block_size:1]) \
                depend(in: perm[blk*block_size:1]) \
-               if(mblk>1)
+               if(use_tasks && mblk>1)
             {
 #ifdef PROFILE
                Profile::Task task("TA_LDLT_APPLY", omp_get_thread_num());
@@ -900,7 +906,7 @@ private:
             firstprivate(blk) \
             shared(cdata, next_elim) \
             depend(inout: perm[blk*block_size:1]) \
-            if(mblk>1)
+            if(use_tasks && mblk>1)
          {
 #ifdef PROFILE
             Profile::Task task("TA_LDLT_ADJUST", omp_get_thread_num());
@@ -926,7 +932,7 @@ private:
                   depend(in: perm[blk*block_size:1]) \
                   depend(in: a[jblk*block_size*lda+blk*block_size:1]) \
                   depend(in: a[adep_idx:1]) \
-                  if(mblk>1)
+                  if(use_tasks && mblk>1)
                {
 #ifdef PROFILE
                   Profile::Task task("TA_LDLT_UPDA", omp_get_thread_num());
@@ -959,7 +965,7 @@ private:
                   depend(in: perm[blk*block_size:1]) \
                   depend(in: a[blk*block_size*lda+iblk*block_size:1]) \
                   depend(in: a[blk*block_size*lda+jblk*block_size:1]) \
-                  if(mblk>1)
+                  if(use_tasks && mblk>1)
                {
 #ifdef PROFILE
                   Profile::Task task("TA_LDLT_UPDA", omp_get_thread_num());
@@ -997,7 +1003,7 @@ private:
                   depend(in: perm[blk*block_size:1]) \
                   depend(in: a[blk*block_size*lda+iblk*block_size:1]) \
                   depend(in: a[blk*block_size*lda+jblk*block_size:1]) \
-                  if(mblk>1)
+                  if(use_tasks && mblk>1)
                {
 #ifdef PROFILE
                   Profile::Task task("TA_LDLT_UPDC", omp_get_thread_num());
@@ -1026,7 +1032,7 @@ private:
             }
          }
       }
-      if(mblk > 1) {
+      if(use_tasks && mblk > 1) {
          // We only need a taskwait here if we've launched any subtasks...
          // NB: we don't use taskgroup as it doesn't support if()
          #pragma omp taskwait
@@ -1232,8 +1238,10 @@ int ldlt_app_factor(int m, int n, int* perm, T* a, int lda, T* d, T beta, T* upd
    CopyBackup<T, Allocator> backup(m, n, outer_block_size, alloc);
 
    // Actual call
+   bool const use_tasks = true;
+   bool const do_or_die = false;
    return LDLT
-      <T, INNER_BLOCK_SIZE, CopyBackup<T,Allocator>, debug,
+      <T, INNER_BLOCK_SIZE, CopyBackup<T,Allocator>, use_tasks, do_or_die, debug,
        Allocator>
       ::factor(
             m, n, perm, a, lda, d, backup, options,
