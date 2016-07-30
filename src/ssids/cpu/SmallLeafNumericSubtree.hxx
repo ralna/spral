@@ -221,6 +221,174 @@ public:
    }
 
 private:
+   void assemble_pre(
+         bool posdef,
+         SymbolicNode const& snode,
+         NumericNode<T>& node,
+         FactorAllocator& factor_alloc,
+         ContribAllocator& contrib_alloc,
+         int* map,
+         T const* aval,
+         T const* scaling
+         ) {
+      /* Rebind allocators */
+      typename FADoubleTraits::allocator_type factor_alloc_double(factor_alloc);
+      typename FAIntTraits::allocator_type factor_alloc_int(factor_alloc);
+
+      /* Count incoming delays and determine size of node */
+      node.ndelay_in = 0;
+      for(auto* child=node.first_child; child!=NULL; child=child->next_child) {
+         node.ndelay_in += child->ndelay_out;
+      }
+      int nrow = snode.nrow + node.ndelay_in;
+      int ncol = snode.ncol + node.ndelay_in;
+
+      /* Get space for node now we know it size using Fortran allocator + zero it*/
+      // NB L is  nrow x ncol and D is 2 x ncol (but no D if posdef)
+      size_t ldl = align_lda<double>(nrow);
+      size_t len = posdef ?  ldl    * ncol  // posdef
+                          : (ldl+2) * ncol; // indef (includes D)
+      node.lcol = FADoubleTraits::allocate(factor_alloc_double, len);
+      memset(node.lcol, 0, len*sizeof(T));
+
+      /* Get space for contribution block + (explicitly do not zero it!) */
+      long contrib_dimn = snode.nrow - snode.ncol;
+      node.contrib = (contrib_dimn > 0) ? CATraits::allocate(contrib_alloc, contrib_dimn*contrib_dimn) : nullptr;
+
+      /* Alloc + set perm for expected eliminations at this node (delays are set
+       * when they are imported from children) */
+      node.perm = FAIntTraits::allocate(factor_alloc_int, ncol); // ncol fully summed variables
+      for(int i=0; i<snode.ncol; i++)
+         node.perm[i] = snode.rlist[i];
+
+      /* Add A */
+      if(scaling) {
+         /* Scaling to apply */
+         for(int i=0; i<snode.num_a; i++) {
+            long src  = snode.amap[2*i+0] - 1; // amap contains 1-based values
+            long dest = snode.amap[2*i+1] - 1; // amap contains 1-based values
+            int c = dest / snode.nrow;
+            int r = dest % snode.nrow;
+            long k = c*ldl + r;
+            if(r >= snode.ncol) k += node.ndelay_in;
+            T rscale = scaling[ snode.rlist[r]-1 ];
+            T cscale = scaling[ snode.rlist[c]-1 ];
+            node.lcol[k] = rscale * aval[src] * cscale;
+         }
+      } else {
+         /* No scaling to apply */
+         for(int i=0; i<snode.num_a; i++) {
+            long src  = snode.amap[2*i+0] - 1; // amap contains 1-based values
+            long dest = snode.amap[2*i+1] - 1; // amap contains 1-based values
+            int c = dest / snode.nrow;
+            int r = dest % snode.nrow;
+            long k = c*ldl + r;
+            if(r >= snode.ncol) k += node.ndelay_in;
+            node.lcol[k] = aval[src];
+         }
+      }
+
+      /* Add children */
+      if(node.first_child != NULL) {
+         /* Build lookup vector, allowing for insertion of delayed vars */
+         /* Note that while rlist[] is 1-indexed this is fine so long as lookup
+          * is also 1-indexed (which it is as it is another node's rlist[] */
+         for(int i=0; i<snode.ncol; i++)
+            map[ snode.rlist[i] ] = i;
+         for(int i=snode.ncol; i<snode.nrow; i++)
+            map[ snode.rlist[i] ] = i + node.ndelay_in;
+         /* Loop over children adding contributions */
+         int delay_col = snode.ncol;
+         for(auto* child=node.first_child; child!=NULL; child=child->next_child) {
+            SymbolicNode const& csnode = *child->symb;
+            /* Handle delays - go to back of node
+             * (i.e. become the last rows as in lower triangular format) */
+            for(int i=0; i<child->ndelay_out; i++) {
+               // Add delayed rows (from delayed cols)
+               T *dest = &node.lcol[delay_col*(ldl+1)];
+               int lds = align_lda<T>(csnode.nrow + child->ndelay_in);
+               T *src = &child->lcol[(child->nelim+i)*(lds+1)];
+               node.perm[delay_col] = child->perm[child->nelim+i];
+               for(int j=0; j<child->ndelay_out-i; j++) {
+                  dest[j] = src[j];
+               }
+               // Add child's non-fully summed rows (from delayed cols)
+               dest = node.lcol;
+               src = &child->lcol[child->nelim*lds + child->ndelay_in +i*lds];
+               for(int j=csnode.ncol; j<csnode.nrow; j++) {
+                  int r = map[ csnode.rlist[j] ];
+                  if(r < ncol) dest[r*ldl+delay_col] = src[j];
+                  else         dest[delay_col*ldl+r] = src[j];
+               }
+               delay_col++;
+            }
+
+            /* Handle expected contributions (only if something there) */
+            if(child->contrib) {
+               int cm = csnode.nrow - csnode.ncol;
+               for(int i=0; i<cm; i++) {
+                  int c = map[ csnode.rlist[csnode.ncol+i] ];
+                  T *src = &child->contrib[i*cm];
+                  // NB: we handle contribution to contrib in assemble_post()
+                  if(c < snode.ncol) {
+                     // Contribution added to lcol
+                     int ldd = align_lda<T>(nrow);
+                     T *dest = &node.lcol[c*ldd];
+                     for(int j=i; j<cm; j++) {
+                        int r = map[ csnode.rlist[csnode.ncol+j] ];
+                        dest[r] += src[j];
+                     }
+                  }
+               }
+            }
+         }
+      }
+   }
+
+   void assemble_post(
+         SymbolicNode const& snode,
+         NumericNode<T>& node,
+         ContribAllocator& contrib_alloc,
+         int* map
+         ) {
+      /* Initialise variables */
+      int ncol = snode.ncol + node.ndelay_in;
+
+      /* Add children */
+      if(node.first_child != NULL) {
+         /* Build lookup vector, allowing for insertion of delayed vars */
+         /* Note that while rlist[] is 1-indexed this is fine so long as lookup
+          * is also 1-indexed (which it is as it is another node's rlist[] */
+         for(int i=0; i<snode.ncol; i++)
+            map[ snode.rlist[i] ] = i;
+         for(int i=snode.ncol; i<snode.nrow; i++)
+            map[ snode.rlist[i] ] = i + node.ndelay_in;
+         /* Loop over children adding contributions */
+         for(auto* child=node.first_child; child!=NULL; child=child->next_child) {
+            SymbolicNode const& csnode = *child->symb;
+            if(!child->contrib) continue;
+            int cm = csnode.nrow - csnode.ncol;
+            int const block_size = 256;
+            for(int i=0; i<cm; i++) {
+               int c = map[ csnode.rlist[csnode.ncol+i] ];
+               T *src = &child->contrib[i*cm];
+               // NB: only interested in contribution to generated element
+               if(c >= snode.ncol) {
+                  // Contribution added to contrib
+                  int ldd = snode.nrow - snode.ncol;
+                  T *dest = &node.contrib[(c-ncol)*ldd];
+                  for(int j=i; j<cm; j++) {
+                     int r = map[ csnode.rlist[csnode.ncol+j] ] - ncol;
+                     dest[r] += src[j];
+                  }
+               }
+            }
+            /* Free memory from child contribution block */
+            CATraits::deallocate(contrib_alloc, child->contrib, cm*cm);
+         }
+      }
+   }
+
    std::vector<NumericNode<T>>& old_nodes_;
    SmallLeafSymbolicSubtree const& symb_;
 };
