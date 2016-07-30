@@ -797,6 +797,7 @@ private:
       int next_elim = 0;
 
       /* Inner loop - iterate over block columns */
+#pragma omp taskgroup
       for(int blk=0; blk<nblk; blk++) {
          /*if(debug) {
             printf("Bcol %d:\n", blk);
@@ -809,7 +810,8 @@ private:
             shared(a, perm, backup, cdata, all_thread_work, next_elim, d, \
                    options, alloc) \
             depend(inout: a[blk*block_size*lda+blk*block_size:1]) \
-            depend(inout: perm[blk*block_size:1])
+            depend(inout: perm[blk*block_size:1]) \
+            if(mblk>1)
          {
 #ifdef PROFILE
             Profile::Task task("TA_LDLT_DIAG", omp_get_thread_num());
@@ -838,7 +840,8 @@ private:
                shared(a, backup, cdata, options) \
                depend(in: a[blk*block_size*lda+blk*block_size:1]) \
                depend(inout: a[jblk*block_size*lda+blk*block_size:1]) \
-               depend(in: perm[blk*block_size:1])
+               depend(in: perm[blk*block_size:1]) \
+               if(mblk>1)
             {
 #ifdef PROFILE
                Profile::Task task("TA_LDLT_APPLY", omp_get_thread_num());
@@ -868,7 +871,8 @@ private:
                shared(a, backup, cdata, options) \
                depend(in: a[blk*block_size*lda+blk*block_size:1]) \
                depend(inout: a[blk*block_size*lda+iblk*block_size:1]) \
-               depend(in: perm[blk*block_size:1])
+               depend(in: perm[blk*block_size:1]) \
+               if(mblk>1)
             {
 #ifdef PROFILE
                Profile::Task task("TA_LDLT_APPLY", omp_get_thread_num());
@@ -896,7 +900,8 @@ private:
          #pragma omp task default(none) \
             firstprivate(blk) \
             shared(cdata, next_elim) \
-            depend(inout: perm[blk*block_size:1])
+            depend(inout: perm[blk*block_size:1]) \
+            if(mblk>1)
          {
 #ifdef PROFILE
             Profile::Task task("TA_LDLT_ADJUST", omp_get_thread_num());
@@ -921,7 +926,8 @@ private:
                   depend(inout: a[jblk*block_size*lda+iblk*block_size:1]) \
                   depend(in: perm[blk*block_size:1]) \
                   depend(in: a[jblk*block_size*lda+blk*block_size:1]) \
-                  depend(in: a[adep_idx:1])
+                  depend(in: a[adep_idx:1]) \
+                  if(mblk>1)
                {
 #ifdef PROFILE
                   Profile::Task task("TA_LDLT_UPDA", omp_get_thread_num());
@@ -953,7 +959,8 @@ private:
                   depend(inout: a[jblk*block_size*lda+iblk*block_size:1]) \
                   depend(in: perm[blk*block_size:1]) \
                   depend(in: a[blk*block_size*lda+iblk*block_size:1]) \
-                  depend(in: a[blk*block_size*lda+jblk*block_size:1])
+                  depend(in: a[blk*block_size*lda+jblk*block_size:1]) \
+                  if(mblk>1)
                {
 #ifdef PROFILE
                   Profile::Task task("TA_LDLT_UPDA", omp_get_thread_num());
@@ -990,7 +997,8 @@ private:
                   depend(inout: upd_ij[0:1]) \
                   depend(in: perm[blk*block_size:1]) \
                   depend(in: a[blk*block_size*lda+iblk*block_size:1]) \
-                  depend(in: a[blk*block_size*lda+jblk*block_size:1])
+                  depend(in: a[blk*block_size*lda+jblk*block_size:1]) \
+                  if(mblk>1)
                {
 #ifdef PROFILE
                   Profile::Task task("TA_LDLT_UPDC", omp_get_thread_num());
@@ -1018,8 +1026,7 @@ private:
                }
             }
          }
-      }
-      #pragma omp taskwait
+      } /* for and taskgroup */
 
       /*if(debug) {
          printf("PostElim:\n");
