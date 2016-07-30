@@ -834,7 +834,7 @@ private:
             // Init threshold check (non locking => task dependencies)
             cdata[blk].init_passed(nelim);
 #ifdef PROFILE
-            task.done();
+            if(use_tasks) task.done();
 #endif
          }
          
@@ -866,7 +866,7 @@ private:
                // Update column's passed pivot count
                cdata[blk].update_passed(blkpass);
 #ifdef PROFILE
-               task.done();
+               if(use_tasks) task.done();
 #endif
             }
          }
@@ -895,7 +895,7 @@ private:
                // Update column's passed pivot count
                cdata[blk].update_passed(blkpass);
 #ifdef PROFILE
-               task.done();
+               if(use_tasks) task.done();
 #endif
             }
          }
@@ -914,7 +914,7 @@ private:
             if(debug) printf("Adjust(%d)\n", blk);
             cdata[blk].adjust(next_elim);
 #ifdef PROFILE
-            task.done();
+            if(use_tasks) task.done();
 #endif
          }
 
@@ -951,7 +951,7 @@ private:
                   // Perform actual update
                   ublk.update(isrc, jsrc, all_thread_work[thread_num]);
 #ifdef PROFILE
-                  task.done();
+                  if(use_tasks) task.done();
 #endif
                }
             }
@@ -982,7 +982,7 @@ private:
                   ublk.update(isrc, jsrc, all_thread_work[thread_num],
                         beta, upd, ldupd);
 #ifdef PROFILE
-                  task.done();
+                  if(use_tasks) task.done();
 #endif
                }
             }
@@ -1026,7 +1026,7 @@ private:
                         rbeta, upd_ij, ldupd
                         );
 #ifdef PROFILE
-                  task.done();
+                  if(use_tasks) task.done();
 #endif
                }
             }
