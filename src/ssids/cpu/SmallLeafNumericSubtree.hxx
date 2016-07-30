@@ -21,11 +21,19 @@
 
 namespace spral { namespace ssids { namespace cpu {
 
+template <bool posdef,
+          typename T,
+          typename FactorAllocator, // Allocator to use for factor storage
+          typename ContribAllocator // Allocator to use for contribution blocks
+          >
+class SmallLeafNumericSubtree;
+
+/// Positive-definite specialization
 template <typename T,
           typename FactorAllocator, // Allocator to use for factor storage
           typename ContribAllocator // Allocator to use for contribution blocks
           >
-class SmallLeafNumericSubtree {
+class SmallLeafNumericSubtree<true, T, FactorAllocator, ContribAllocator> {
    typedef typename std::allocator_traits<FactorAllocator>::template rebind_traits<double> FADoubleTraits;
    typedef typename std::allocator_traits<FactorAllocator>::template rebind_traits<int> FAIntTraits;
    typedef std::allocator_traits<ContribAllocator> CATraits;
@@ -172,6 +180,20 @@ private:
    std::vector<NumericNode<T>>& old_nodes_;
    SmallLeafSymbolicSubtree const& symb_;
    T* lcol_;
+};
+
+// Indefinite specialization
+template <typename T,
+          typename FactorAllocator, // Allocator to use for factor storage
+          typename ContribAllocator // Allocator to use for contribution blocks
+          >
+class SmallLeafNumericSubtree<false, T, FactorAllocator, ContribAllocator> {
+   typedef typename std::allocator_traits<FactorAllocator>::template rebind_traits<double> FADoubleTraits;
+   typedef typename std::allocator_traits<FactorAllocator>::template rebind_traits<int> FAIntTraits;
+   typedef std::allocator_traits<ContribAllocator> CATraits;
+public:
+   SmallLeafNumericSubtree(SmallLeafSymbolicSubtree const& symb, std::vector<NumericNode<T>>& old_nodes, T const* aval, T const* scaling, FactorAllocator& factor_alloc, ContribAllocator& contrib_alloc, Workspace& work, struct cpu_factor_options const& options, struct cpu_factor_stats& stats) 
+   {}
 };
 
 }}} /* namespaces spral::ssids::cpu */

@@ -28,7 +28,7 @@ template <bool posdef,
           typename ContribAllocator // Allocator to use for contribution blocks
           >
 class NumericSubtree {
-   typedef SmallLeafNumericSubtree<T, FactorAllocator, ContribAllocator> SLNS;
+   typedef SmallLeafNumericSubtree<posdef, T, FactorAllocator, ContribAllocator> SLNS;
 public:
    /* Delete copy constructors for safety re allocated memory */
    NumericSubtree(const NumericSubtree&) =delete;
