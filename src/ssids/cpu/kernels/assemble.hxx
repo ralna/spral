@@ -147,37 +147,38 @@ void assemble_pre(
          if(child->contrib) {
             int cm = csnode.nrow - csnode.ncol;
             int const block_size = 256; // FIXME: make configurable?
-            #pragma omp taskgroup
-            {
-               for(int iblk=0; iblk<cm; iblk+=block_size) {
-                  #pragma omp task default(none) \
-                     firstprivate(iblk) \
-                     shared(map, child, snode, node, csnode, cm, nrow) \
-                     if(iblk+block_size<cm)
-                  {
+            for(int iblk=0; iblk<cm; iblk+=block_size) {
+               #pragma omp task default(none) \
+                  firstprivate(iblk) \
+                  shared(map, child, snode, node, csnode, cm, nrow) \
+                  if(iblk+block_size<cm)
+               {
 #ifdef PROFILE
-                     Profile::Task task_asm_pre("TA_ASM_PRE", omp_get_thread_num());
+                  Profile::Task task_asm_pre("TA_ASM_PRE", omp_get_thread_num());
 #endif
-                     for(int i=iblk; i<std::min(iblk+block_size,cm); i++) {
-                        int c = map[ csnode.rlist[csnode.ncol+i] ];
-                        T *src = &child->contrib[i*cm];
-                        // NB: we handle contribution to contrib in assemble_post()
-                        if(c < snode.ncol) {
-                           // Contribution added to lcol
-                           int ldd = align_lda<T>(nrow);
-                           T *dest = &node.lcol[c*ldd];
-                           for(int j=i; j<cm; j++) {
-                              int r = map[ csnode.rlist[csnode.ncol+j] ];
-                              dest[r] += src[j];
-                           }
+                  for(int i=iblk; i<std::min(iblk+block_size,cm); i++) {
+                     int c = map[ csnode.rlist[csnode.ncol+i] ];
+                     T *src = &child->contrib[i*cm];
+                     // NB: we handle contribution to contrib in assemble_post()
+                     if(c < snode.ncol) {
+                        // Contribution added to lcol
+                        int ldd = align_lda<T>(nrow);
+                        T *dest = &node.lcol[c*ldd];
+                        for(int j=i; j<cm; j++) {
+                           int r = map[ csnode.rlist[csnode.ncol+j] ];
+                           dest[r] += src[j];
                         }
                      }
+                  }
 #ifdef PROFILE
-                     task_asm_pre.done();
+                  task_asm_pre.done();
 #endif
-                  } /* task */
-               }
-            } /* taskgroup */
+               } /* task */
+            }
+            if(cm > block_size) {
+               // only wait if we've actually created tasks
+               #pragma omp taskwait
+            }
          }
       }
    }
@@ -213,37 +214,38 @@ void assemble_post(
          if(!child->contrib) continue;
          int cm = csnode.nrow - csnode.ncol;
          int const block_size = 256;
-         #pragma omp taskgroup
-         {
-            for(int iblk=0; iblk<cm; iblk+=block_size) {
-               #pragma omp task default(none) \
-                  firstprivate(iblk) \
-                  shared(map, child, snode, node, cm, csnode, ncol) \
-                  if(iblk+block_size<cm)
-               {
+         for(int iblk=0; iblk<cm; iblk+=block_size) {
+            #pragma omp task default(none) \
+               firstprivate(iblk) \
+               shared(map, child, snode, node, cm, csnode, ncol) \
+               if(iblk+block_size<cm)
+            {
 #ifdef PROFILE
-                  Profile::Task task_asm("TA_ASM_POST", omp_get_thread_num());
+               Profile::Task task_asm("TA_ASM_POST", omp_get_thread_num());
 #endif
-                  for(int i=iblk; i<std::min(iblk+block_size,cm); i++) {
-                     int c = map[ csnode.rlist[csnode.ncol+i] ];
-                     T *src = &child->contrib[i*cm];
-                     // NB: only interested in contribution to generated element
-                     if(c >= snode.ncol) {
-                        // Contribution added to contrib
-                        int ldd = snode.nrow - snode.ncol;
-                        T *dest = &node.contrib[(c-ncol)*ldd];
-                        for(int j=i; j<cm; j++) {
-                           int r = map[ csnode.rlist[csnode.ncol+j] ] - ncol;
-                           dest[r] += src[j];
-                        }
+               for(int i=iblk; i<std::min(iblk+block_size,cm); i++) {
+                  int c = map[ csnode.rlist[csnode.ncol+i] ];
+                  T *src = &child->contrib[i*cm];
+                  // NB: only interested in contribution to generated element
+                  if(c >= snode.ncol) {
+                     // Contribution added to contrib
+                     int ldd = snode.nrow - snode.ncol;
+                     T *dest = &node.contrib[(c-ncol)*ldd];
+                     for(int j=i; j<cm; j++) {
+                        int r = map[ csnode.rlist[csnode.ncol+j] ] - ncol;
+                        dest[r] += src[j];
                      }
                   }
+               }
 #ifdef PROFILE
-                  task_asm.done();
+               task_asm.done();
 #endif
-               } /* task */
-            }
-         } /* taskgroup */
+            } /* task */
+         }
+         if(cm > block_size) {
+            // Only wait if we've actually lanuched tasks
+            #pragma omp taskwait
+         }
          /* Free memory from child contribution block */
          CATraits::deallocate(contrib_alloc, child->contrib, cm*cm);
       }

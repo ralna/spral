@@ -797,7 +797,6 @@ private:
       int next_elim = 0;
 
       /* Inner loop - iterate over block columns */
-#pragma omp taskgroup
       for(int blk=0; blk<nblk; blk++) {
          /*if(debug) {
             printf("Bcol %d:\n", blk);
@@ -1026,7 +1025,12 @@ private:
                }
             }
          }
-      } /* for and taskgroup */
+      }
+      if(mblk > 1) {
+         // We only need a taskwait here if we've launched any subtasks...
+         // NB: we don't use taskgroup as it doesn't support if()
+         #pragma omp taskwait
+      }
 
       /*if(debug) {
          printf("PostElim:\n");
