@@ -80,7 +80,6 @@ public:
          {
          /* Loop over small leaf subtrees */
          #pragma omp single
-         if(posdef)
          for(unsigned int si=0; si<symb_.small_leafs_.size(); ++si) {
             auto* parent_lcol = &nodes_[symb_.small_leafs_[si].get_parent()];
             #pragma omp task default(none) \
@@ -108,7 +107,7 @@ public:
          /* Loop over singleton nodes in order */
          #pragma omp single
          for(int ni=0; ni<symb_.nnodes_; ++ni) {
-            if(posdef && symb_[ni].insmallleaf) continue; // already handled
+            if(symb_[ni].insmallleaf) continue; // already handled
             // FIXME: depending inout on parent is not a good way to represent
             //        the dependency.
             auto* this_lcol = &nodes_[ni]; // for depend

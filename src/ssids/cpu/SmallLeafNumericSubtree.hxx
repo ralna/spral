@@ -193,7 +193,36 @@ class SmallLeafNumericSubtree<false, T, FactorAllocator, ContribAllocator> {
    typedef std::allocator_traits<ContribAllocator> CATraits;
 public:
    SmallLeafNumericSubtree(SmallLeafSymbolicSubtree const& symb, std::vector<NumericNode<T>>& old_nodes, T const* aval, T const* scaling, FactorAllocator& factor_alloc, ContribAllocator& contrib_alloc, Workspace& work, struct cpu_factor_options const& options, struct cpu_factor_stats& stats) 
-   {}
+   : old_nodes_(old_nodes), symb_(symb)
+   {
+      for(int ni=symb_.sa_; ni<=symb_.en_; ++ni) {
+         /*printf("%d: Node %d parent %d (of %d) size %d x %d\n",
+               omp_get_thread_num(), ni, symb_[ni].parent, symb_.nnodes_,
+               symb_[ni].nrow, symb_[ni].ncol);*/
+         // Assembly of node (not of contribution block)
+         int* map = work.get_ptr<int>(symb_.symb_.n+1);
+         assemble_pre
+            (false, symb_.symb_[ni], old_nodes_[ni], factor_alloc,
+             contrib_alloc, map, aval, scaling);
+         // Update stats
+         int nrow = symb_.symb_[ni].nrow + old_nodes_[ni].ndelay_in;
+         stats.maxfront = std::max(stats.maxfront, nrow);
+
+         // Factorization
+         factor_node
+            <false>
+            (ni, symb_.symb_[ni], &old_nodes_[ni], options,
+             stats, work, contrib_alloc);
+         if(stats.flag<SSIDS_SUCCESS) return; // something is wrong
+
+         // Assemble children into contribution block
+         assemble_post(symb_.symb_[ni], old_nodes_[ni], contrib_alloc, map);
+      }
+   }
+
+private:
+   std::vector<NumericNode<T>>& old_nodes_;
+   SmallLeafSymbolicSubtree const& symb_;
 };
 
 }}} /* namespaces spral::ssids::cpu */
