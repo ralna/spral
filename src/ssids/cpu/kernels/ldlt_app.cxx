@@ -65,7 +65,7 @@ public:
    {
       allocT_ = typename AllocTTraits::allocator_type(alloc);
       allocInt_ = typename AllocIntTraits::allocator_type(alloc);
-      block_size_ = max_block_size;
+      block_size_ = align_lda<T>(max_block_size);
       block_width_ = std::min(n, block_size_);
       ld_mem_ = AllocTTraits::allocate(
             allocT_, block_size_*block_width_ + align/sizeof(T)
