@@ -205,6 +205,11 @@ public:
 #endif
    }
 
+   SimdVec& operator*=(const SimdVec &rhs) {
+      *this = *this * rhs;
+      return *this;
+   }
+
    /// Add
    friend
    SimdVec operator+(const SimdVec &lhs, const SimdVec &rhs) {
