@@ -39,25 +39,33 @@ const int SSIDS_ERROR_NOT_POS_DEF = -6;
  * function provides a pointer to it after ensuring it is of at least the
  * given size. */
 class Workspace {
+   static int const align = 32;
 public:
    Workspace(size_t sz)
-      : mem_(::operator new(sz)), sz_(sz)
-      {}
+   {
+      alloc_and_align(sz);
+   }
    ~Workspace() {
       ::operator delete(mem_);
+   }
+   void alloc_and_align(size_t sz) {
+      sz_ = sz+align;
+      mem_ = ::operator new(sz_);
+      mem_aligned_ = mem_;
+      std::align(align, sz, mem_aligned_, sz_);
    }
    template <typename T>
    T* get_ptr(size_t len) {
       if(sz_ < len*sizeof(T)) {
          // Need to resize
          ::operator delete(mem_);
-         sz_ = len*sizeof(T);
-         mem_ = ::operator new(sz_);
+         alloc_and_align(len*sizeof(T));
       }
-      return static_cast<T*>(mem_);
+      return static_cast<T*>(mem_aligned_);
    }
 private:
    void* mem_;
+   void* mem_aligned_;
    size_t sz_;
 };
 
