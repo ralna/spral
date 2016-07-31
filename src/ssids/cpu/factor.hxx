@@ -19,6 +19,7 @@
 /* SPRAL headers */
 #include "cpu_iface.hxx"
 #include "kernels/assemble.hxx"
+#include "kernels/calc_ld.hxx"
 #include "kernels/cholesky.hxx"
 #include "kernels/ldlt_app.hxx"
 #include "kernels/ldlt_tpp.hxx"
@@ -59,44 +60,6 @@ private:
    void* mem_;
    size_t sz_;
 };
-
-template<typename T>
-void calcLD(int m, int n, T const* lcol, int ldl, T const* d, T* ld, int ldld) {
-   for(int j=0; j<n;) {
-      if(j+1==n || std::isfinite(d[2*j+2])) {
-         // 1x1 pivot
-         // (Actually stored as D^-1 so need to invert it again)
-         if(d[2*j] == 0.0) {
-            // Handle zero pivots with care
-            for(int i=0; i<m; i++) {
-               ld[j*ldld+i] = 0.0;
-            }
-         } else {
-            // Standard 1x1 pivot
-            T d11 = 1/d[2*j];
-            // And calulate ld
-            for(int i=0; i<m; i++) {
-               ld[j*ldld+i] = d11*lcol[j*ldl+i];
-            }
-         }
-         // Increment j
-         j++;
-      } else {
-         // 2x2 pivot
-         // (Actually stored as D^-1 so need to invert it again)
-         T di11 = d[2*j]; T di21 = d[2*j+1]; T di22 = d[2*j+3];
-         T det = di11*di22 - di21*di21;
-         T d11 = di22 / det; T d21 = -di21 / det; T d22 = di11 / det;
-         // And calulate ld
-         for(int i=0; i<m; i++) {
-            ld[j*ldld+i]     = d11*lcol[j*ldl+i] + d21*lcol[(j+1)*ldl+i];
-            ld[(j+1)*ldld+i] = d21*lcol[j*ldl+i] + d22*lcol[(j+1)*ldl+i];
-         }
-         // Increment j
-         j += 2;
-      }
-   }
-}
 
 /* Factorize a node (indef) */
 template <typename T, typename ContribAlloc>
@@ -141,7 +104,7 @@ void factor_node_indef(
       if(m-n>0 && node->nelim>nelim) {
          int nelim2 = node->nelim - nelim;
          T *ld = work.get_ptr<T>((m-n)*nelim2);
-         calcLD(m-n, nelim2, &lcol[nelim*ldl+n], ldl, &d[2*nelim], ld, m-n);
+         calcLD<OP_N>(m-n, nelim2, &lcol[nelim*ldl+n], ldl, &d[2*nelim], ld, m-n);
          T rbeta = (nelim==0) ? 0.0 : 1.0;
          host_gemm<T>(OP_N, OP_T, m-n, m-n, nelim2,
                -1.0, &lcol[nelim*ldl+n], ldl, ld, m-n,

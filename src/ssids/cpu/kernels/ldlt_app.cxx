@@ -26,6 +26,7 @@
 #include "../BlockPool.hxx"
 #include "../cpu_iface.hxx"
 #include "block_ldlt.hxx"
+#include "calc_ld.hxx"
 #include "ldlt_tpp.hxx"
 #include "common.hxx"
 #include "wrappers.hxx"
@@ -308,38 +309,6 @@ void apply_pivot(int m, int n, int from, const T *diag, const T *d, const T smal
             }
             i += 2;
          }
-      }
-   }
-}
-
-/** Calculates LD from L and D */
-template <enum operation op, typename T>
-void calcLD(int m, int n, const T *l, int ldl, const T *d, T *ld, int ldld) {
-   for(int col=0; col<n; ) {
-      if(col+1==n || std::isfinite(d[2*col+2])) {
-         // 1x1 pivot
-         T d11 = d[2*col];
-         if(d11 != 0.0) d11 = 1/d11; // Zero pivots just cause zeroes
-         for(int row=0; row<m; row++)
-            ld[col*ldld+row] = d11 * ((op==OP_N) ? l[col*ldl+row]
-                                                 : l[row*ldl+col]);
-         col++;
-      } else {
-         // 2x2 pivot
-         T d11 = d[2*col];
-         T d21 = d[2*col+1];
-         T d22 = d[2*col+3];
-         T det = d11*d22 - d21*d21;
-         d11 = d11/det;
-         d21 = d21/det;
-         d22 = d22/det;
-         for(int row=0; row<m; row++) {
-            T a1 = (op==OP_N) ? l[col*ldl+row]     : l[row*ldl+col];
-            T a2 = (op==OP_N) ? l[(col+1)*ldl+row] : l[row*ldl+(col+1)];
-            ld[col*ldld+row]     =  d22*a1 - d21*a2;
-            ld[(col+1)*ldld+row] = -d21*a1 + d11*a2;
-         }
-         col += 2;
       }
    }
 }
