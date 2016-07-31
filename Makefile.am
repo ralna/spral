@@ -240,6 +240,7 @@ libspral_a_SOURCES += \
 	src/ssids/cpu/kernels/assemble.hxx \
 	src/ssids/cpu/kernels/common.hxx \
 	src/ssids/cpu/kernels/block_ldlt.hxx \
+	src/ssids/cpu/kernels/calc_ld.hxx \
 	src/ssids/cpu/kernels/cholesky.cxx \
 	src/ssids/cpu/kernels/cholesky.hxx \
 	src/ssids/cpu/kernels/ldlt_app.cxx \
