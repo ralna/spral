@@ -681,13 +681,14 @@ public:
          if(cdata_[elim_col].nelim == 0) return; // nothing to do
          int rfrom = (i_ <= elim_col) ? cdata_[i_].nelim : 0;
          int cfrom = (j_ <= elim_col) ? cdata_[j_].nelim : 0;
+         int ldld = align_lda<T>(block_size_);
          calcLD<OP_N>(
                nrow()-rfrom, cdata_[elim_col].nelim, &isrc.aval_[rfrom],
-               lda_, cdata_[elim_col].d, work.ld, block_size_
+               lda_, cdata_[elim_col].d, work.ld, ldld
                );
          host_gemm(
                OP_N, OP_T, nrow()-rfrom, ncol()-cfrom, cdata_[elim_col].nelim,
-               -1.0, work.ld, block_size_, &jsrc.aval_[cfrom], lda_,
+               -1.0, work.ld, ldld, &jsrc.aval_[cfrom], lda_,
                1.0, &aval_[cfrom*lda_+rfrom], lda_
                );
          if(upd && j_==calc_nblk(n_,block_size_)-1) {
@@ -698,7 +699,7 @@ public:
                // diagonal block
                host_gemm(
                      OP_N, OP_T, u_ncol, u_ncol, cdata_[elim_col].nelim,
-                     -1.0, &work.ld[ncol()-rfrom], block_size_,
+                     -1.0, &work.ld[ncol()-rfrom], ldld,
                      &jsrc.aval_[ncol()], lda_,
                      beta, upd, ldupd
                      );
@@ -708,7 +709,7 @@ public:
                   &upd[(i_-calc_nblk(n_,block_size_))*block_size_+u_ncol];
                host_gemm(
                      OP_N, OP_T, nrow(), u_ncol, cdata_[elim_col].nelim,
-                     -1.0, work.ld, block_size_, &jsrc.aval_[ncol()], lda_,
+                     -1.0, work.ld, ldld, &jsrc.aval_[ncol()], lda_,
                      beta, upd_ij, ldupd
                      );
             }
@@ -719,24 +720,24 @@ public:
          if(cdata_[elim_col].nelim == 0) return; // nothing to do
          int rfrom = (i_ <= elim_col) ? cdata_[i_].nelim : 0;
          int cfrom = (j_ <= elim_col) ? cdata_[j_].nelim : 0;
+         int ldld = align_lda<T>(block_size_);
          if(isrc.j_==elim_col) {
             calcLD<OP_N>(
                   nrow()-rfrom, cdata_[elim_col].nelim,
                   &isrc.aval_[rfrom], lda_,
-                  cdata_[elim_col].d, work.ld, block_size_
+                  cdata_[elim_col].d, work.ld, ldld
                   );
          } else {
             calcLD<OP_T>(
                   nrow()-rfrom, cdata_[elim_col].nelim, &
                   isrc.aval_[rfrom*lda_], lda_,
-                  cdata_[elim_col].d, work.ld, block_size_
+                  cdata_[elim_col].d, work.ld, ldld
                   );
          }
          host_gemm(
-               OP_N, OP_N, nrow()-rfrom, ncol()-cfrom,
-               cdata_[elim_col].nelim, -1.0, work.ld, block_size_,
-               &jsrc.aval_[cfrom*lda_], lda_, 1.0, &aval_[cfrom*lda_+rfrom],
-               lda_
+               OP_N, OP_N, nrow()-rfrom, ncol()-cfrom, cdata_[elim_col].nelim,
+               -1.0, work.ld, ldld, &jsrc.aval_[cfrom*lda_], lda_,
+               1.0, &aval_[cfrom*lda_+rfrom], lda_
                );
       }
    }
@@ -1004,14 +1005,14 @@ private:
                   int nelim = cdata[blk].nelim;
                   T* l_ik = &a[blk*block_size*lda + iblk*block_size];
                   T* l_jk = &a[blk*block_size*lda + jblk*block_size];
+                  int ldld = align_lda<T>(block_size);
                   calcLD<OP_N>(
-                        blkm, nelim, l_ik, lda, cdata[blk].d, work.ld,
-                        block_size
+                        blkm, nelim, l_ik, lda, cdata[blk].d, work.ld, ldld
                         );
                   T rbeta = (cdata[blk].first_elim) ? beta : 1.0; // user beta only on first update
                   host_gemm(
                         OP_N, OP_T, blkm, blkn, nelim,
-                        -1.0, work.ld, block_size, l_jk, lda,
+                        -1.0, work.ld, ldld, l_jk, lda,
                         rbeta, upd_ij, ldupd
                         );
 #ifdef PROFILE
