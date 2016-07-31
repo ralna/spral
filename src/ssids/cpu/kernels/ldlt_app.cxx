@@ -16,6 +16,7 @@
 #include <cstdio>
 #include <fstream>
 #include <limits>
+#include <memory>
 #include <ostream>
 #include <sstream>
 #include <utility>
@@ -52,6 +53,7 @@ inline int calc_blkn(int blk, int n, int block_size) {
 /** Workspace allocated on a per-thread basis */
 template<typename T, typename Allocator=std::allocator<T>>
 class ThreadWork {
+   int const align = 32;
    typedef typename std::allocator_traits<Allocator>::template rebind_traits<T> AllocTTraits;
    typedef typename std::allocator_traits<Allocator>::template rebind_traits<int> AllocIntTraits;
 public:
@@ -65,12 +67,28 @@ public:
       allocInt_ = typename AllocIntTraits::allocator_type(alloc);
       block_size_ = max_block_size;
       block_width_ = std::min(n, block_size_);
-      ld = AllocTTraits::allocate(allocT_, block_size_ * block_width_);
-      perm = AllocIntTraits::allocate(allocInt_, block_width_);
+      ld_mem_ = AllocTTraits::allocate(
+            allocT_, block_size_*block_width_ + align/sizeof(T)
+            );
+      void *ld_align = ld_mem_;
+      size_t ld_space = sizeof(T)*(block_size_*block_width_ + align/sizeof(T));
+      std::align(align, block_size_*block_width_*sizeof(T), ld_align, ld_space);
+      ld = static_cast<T*>(ld_align);
+      perm_mem_ = AllocIntTraits::allocate(
+            allocInt_, block_width_ + align/sizeof(int)
+            );
+      void *perm_align = perm_mem_;
+      size_t perm_space = sizeof(int)*(block_width_ + align/sizeof(int));
+      std::align(align, block_width_*sizeof(int), perm_align, perm_space);
+      perm = static_cast<int*>(perm_align);
    }
    ~ThreadWork() {
-      AllocIntTraits::deallocate(allocInt_, perm, block_width_);
-      AllocTTraits::deallocate(allocT_, ld, block_size_*block_width_);
+      AllocIntTraits::deallocate(
+            allocInt_, perm_mem_, block_width_ + align/sizeof(int)
+            );
+      AllocTTraits::deallocate(allocT_, ld_mem_,
+            block_size_*block_width_ + align/sizeof(T)
+            );
    }
 
 public:
@@ -80,6 +98,8 @@ public:
 private:
    typename AllocTTraits::allocator_type allocT_;
    typename AllocIntTraits::allocator_type allocInt_;
+   T *ld_mem_;
+   int *perm_mem_;
    size_t block_size_;
    size_t block_width_; //< =min(block_size,n) allow for small matrix, big bsz
 };
