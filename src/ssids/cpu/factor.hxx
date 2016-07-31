@@ -111,11 +111,14 @@ void factor_node_indef(
             );
       if(m-n>0 && node->nelim>nelim) {
          int nelim2 = node->nelim - nelim;
-         T *ld = work.get_ptr<T>((m-n)*nelim2);
-         calcLD<OP_N>(m-n, nelim2, &lcol[nelim*ldl+n], ldl, &d[2*nelim], ld, m-n);
+         int ldld = align_lda<T>(m-n);
+         T *ld = work.get_ptr<T>(nelim2*ldld);
+         calcLD<OP_N>(
+               m-n, nelim2, &lcol[nelim*ldl+n], ldl, &d[2*nelim], ld, ldld
+               );
          T rbeta = (nelim==0) ? 0.0 : 1.0;
          host_gemm<T>(OP_N, OP_T, m-n, m-n, nelim2,
-               -1.0, &lcol[nelim*ldl+n], ldl, ld, m-n,
+               -1.0, &lcol[nelim*ldl+n], ldl, ld, ldld,
                rbeta, node->contrib, m-n);
       }
       stats.not_second_pass += n - node->nelim;

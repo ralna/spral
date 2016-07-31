@@ -371,10 +371,11 @@ private:
 
       if(m-n>0 && node->nelim>0) {
          int nelim = node->nelim;
-         T *ld = work.get_ptr<T>((m-n)*nelim);
-         calcLD<OP_N>(m-n, nelim, &lcol[n], ldl, d, ld, m-n);
+         int ldld = align_lda<T>(m-n);
+         T *ld = work.get_ptr<T>(nelim*ldld);
+         calcLD<OP_N>(m-n, nelim, &lcol[n], ldl, d, ld, ldld);
          host_gemm<T>(OP_N, OP_T, m-n, m-n, nelim,
-               -1.0, &lcol[n], ldl, ld, m-n,
+               -1.0, &lcol[n], ldl, ld, ldld,
                0.0, node->contrib, m-n);
       }
 
