@@ -273,6 +273,7 @@ void modify_test_matrix(bool singular, bool delays, bool dblk_singular, int m, i
 
 template <typename T,
           int INNER_BLOCK_SIZE,
+          bool do_or_die,
           bool debug // Switch on debugging output
           >
 int ldlt_test(T u, T small, bool delays, bool singular, bool dblk_singular, int m, int n, int outer_block_size=INNER_BLOCK_SIZE, int test=0, int seed=0) {
@@ -308,16 +309,21 @@ int ldlt_test(T u, T small, bool delays, bool singular, bool dblk_singular, int 
    options.cpu_task_block_size = 256;
 
    // Factorize using main routine
-   T *l = static_cast<T*>(aligned_alloc(32, m*lda*sizeof(T)));
+   AlignedAllocator<T> allocT;
+   T *l = allocT.allocate(m*lda);
    memcpy(l, a, m*lda*sizeof(T)); // Copy a to l
    int *perm = new int[m];
    for(int i=0; i<m; i++) perm[i] = i;
    T *d = new T[2*m];
    // First m x n matrix
    PoolBackup<T> backup(m, n, outer_block_size);
-   int q1 = LDLT<T, INNER_BLOCK_SIZE, PoolBackup<T>, debug>::factor(
-         m, n, perm, l, lda, d, backup, options, outer_block_size
-         );
+   int const use_tasks = true;
+   int q1 = LDLT
+         <T, INNER_BLOCK_SIZE, PoolBackup<T>, use_tasks, do_or_die, debug>
+         ::factor(
+            m, n, perm, l, lda, d, backup, options, outer_block_size,
+            0.0, nullptr, 0
+            );
    if(debug) std::cout << "FIRST FACTOR CALL ELIMINATED " << q1 << " of " << n << " pivots" << std::endl;
    int q2 = 0;
    if(q1 < n) {
@@ -335,9 +341,11 @@ int ldlt_test(T u, T small, bool delays, bool singular, bool dblk_singular, int 
       for(int i=0; i<m-q1; i++)
          perm2[i] = i;
       PoolBackup<T> backup(m-q1, m-q1, outer_block_size);
-      q2 = LDLT<T, INNER_BLOCK_SIZE, PoolBackup<T>, debug>::factor(
+      q2 = LDLT
+         <T, INNER_BLOCK_SIZE, PoolBackup<T>, use_tasks, do_or_die, debug>
+         ::factor(
             m-q1, m-q1, perm2, &l[q1*(lda+1)], lda, &d[2*q1], backup, options,
-            outer_block_size
+            outer_block_size, 0.0, nullptr, 0
             );
       // Permute rows of A_21 as per perm
       permute_rows(m-q1, q1, perm2, &perm[q1], &l[q1], lda);
@@ -377,7 +385,7 @@ int ldlt_test(T u, T small, bool delays, bool singular, bool dblk_singular, int 
    EXPECT_LE(bwderr, 5e-14) << "(test " << test << " seed " << seed << ")" << std::endl;
 
    // Cleanup memory
-   delete[] a; free(l);
+   delete[] a; allocT.deallocate(l, m*lda);
    delete[] b;
    delete[] perm;
    delete[] d; delete[] soln;
@@ -398,6 +406,7 @@ void print_mat (int n, int *perm, T *a, int lda) {
 template <typename T,
           int BLOCK_SIZE,
           int ntest, // Number of tests
+          bool do_or_die, // Use Cholesky-like execution pattern
           bool debug // Switch on debugging output
           >
 int ldlt_torture_test(T u, T small, int m, int n) {
@@ -423,7 +432,7 @@ int ldlt_torture_test(T u, T small, int m, int n) {
          std::cout << "##########################################" << std::endl;
       }
 
-      int err = ldlt_test<T, BLOCK_SIZE, debug>(u, small, delays, singular, dblk_singular, m, n, BLOCK_SIZE, test, seed);
+      int err = ldlt_test<T, BLOCK_SIZE, do_or_die, debug>(u, small, delays, singular, dblk_singular, m, n, BLOCK_SIZE, test, seed);
       if(err!=0) return err;
    }
 
@@ -435,110 +444,110 @@ int run_ldlt_app_tests() {
 
    /* Simple tests, single level blocking, rectangular */
    TEST((
-      ldlt_test<double, 2, false> (0.01, 1e-20, false, false, false, 2, 1)
+      ldlt_test<double, 2, false, false> (0.01, 1e-20, false, false, false, 2, 1)
       ));
    TEST((
-      ldlt_test<double, 2, false> (0.01, 1e-20, false, false, false, 4, 2)
+      ldlt_test<double, 2, false, false> (0.01, 1e-20, false, false, false, 4, 2)
       ));
    TEST((
-      ldlt_test<double, 2, false> (0.01, 1e-20, false, false, false, 5, 3)
+      ldlt_test<double, 2, false, false> (0.01, 1e-20, false, false, false, 5, 3)
       ));
    TEST((
-      ldlt_test<double, 2, false> (0.01, 1e-20, false, false, false, 8, 2)
+      ldlt_test<double, 2, false, false> (0.01, 1e-20, false, false, false, 8, 2)
       ));
    TEST((
-      ldlt_test<double, 8, false> (0.01, 1e-20, false, false, false, 64, 24)
+      ldlt_test<double, 8, false, false> (0.01, 1e-20, false, false, false, 64, 24)
       ));
    TEST((
-      ldlt_test<double, 8, false> (0.01, 1e-20, false, false, false, 23, 9)
+      ldlt_test<double, 8, false, false> (0.01, 1e-20, false, false, false, 23, 9)
       ));
 
    /* Simple tests, two-level blocking, rectangular */
    TEST((
-      ldlt_test<double, 2, false> (0.01, 1e-20, false, false, false, 2, 1, 4)
+      ldlt_test<double, 2, false, false> (0.01, 1e-20, false, false, false, 2, 1, 4)
       ));
    TEST((
-      ldlt_test<double, 2, false> (0.01, 1e-20, false, false, false, 4, 2, 4)
+      ldlt_test<double, 2, false, false> (0.01, 1e-20, false, false, false, 4, 2, 4)
       ));
    TEST((
-      ldlt_test<double, 2, false> (0.01, 1e-20, false, false, false, 5, 3, 4)
+      ldlt_test<double, 2, false, false> (0.01, 1e-20, false, false, false, 5, 3, 4)
       ));
    TEST((
-      ldlt_test<double, 2, false> (0.01, 1e-20, false, false, false, 8, 2, 4)
+      ldlt_test<double, 2, false, false> (0.01, 1e-20, false, false, false, 8, 2, 4)
       ));
    TEST((
-      ldlt_test<double, 8, false> (0.01, 1e-20, false, false, false, 23, 9, 32)
+      ldlt_test<double, 8, false, false> (0.01, 1e-20, false, false, false, 23, 9, 32)
       ));
    TEST((
-      ldlt_test<double, 4, false> (0.01, 1e-20, false, false, false, 32, 12, 8)
+      ldlt_test<double, 4, false, false> (0.01, 1e-20, false, false, false, 32, 12, 8)
       ));
    TEST((
-      ldlt_test<double, 8, false> (0.01, 1e-20, false, false, false, 64, 24, 32)
+      ldlt_test<double, 8, false, false> (0.01, 1e-20, false, false, false, 64, 24, 32)
       ));
 
    /* Simple tests, single-level blocking, rectangular, non-singular,
     * with delays */
    TEST((
-      ldlt_test<double, 2, false> (0.01, 1e-20, true, false, false, 4, 2)
+      ldlt_test<double, 2, false, false> (0.01, 1e-20, true, false, false, 4, 2)
       ));
    TEST((
-      ldlt_test<double, 2, false> (0.01, 1e-20, true, false, false, 8, 2)
+      ldlt_test<double, 2, false, false> (0.01, 1e-20, true, false, false, 8, 2)
       ));
    TEST((
-      ldlt_test<double, 8, false> (0.01, 1e-20, true, false, false, 64, 24)
+      ldlt_test<double, 8, false, false> (0.01, 1e-20, true, false, false, 64, 24)
       ));
    TEST((
-      ldlt_test<double, 8, false> (0.01, 1e-20, true, false, false, 23, 9)
+      ldlt_test<double, 8, false, false> (0.01, 1e-20, true, false, false, 23, 9)
       ));
 
    /* Simple tests, single-level blocking, square, non-singular, no delays */
    TEST((
-      ldlt_test<double, 2, false> (0.01, 1e-20, false, false, false, 1*2, 1*2)
+      ldlt_test<double, 2, false, false> (0.01, 1e-20, false, false, false, 1*2, 1*2)
       ));
    TEST((
-      ldlt_test<double, 2, false> (0.01, 1e-20, false, false, false, 2*2, 2*2)
+      ldlt_test<double, 2, false, false> (0.01, 1e-20, false, false, false, 2*2, 2*2)
       ));
    TEST((
-      ldlt_test<double, 2, false> (0.01, 1e-20, false, false, false, 8*2, 8*2)
+      ldlt_test<double, 2, false, false> (0.01, 1e-20, false, false, false, 8*2, 8*2)
       ));
    TEST((
-      ldlt_test<double, 8, false> (0.01, 1e-20, false, false, false, 8*8, 8*8)
+      ldlt_test<double, 8, false, false> (0.01, 1e-20, false, false, false, 8*8, 8*8)
       ));
    TEST((
-      ldlt_test<double, 8, false> (0.01, 1e-20, false, false, false, 27, 27)
+      ldlt_test<double, 8, false, false> (0.01, 1e-20, false, false, false, 27, 27)
       ));
 
    /* Simple tests, single-level blocking, square, non-singular, with delays */
    TEST((
-      ldlt_test<double, 2, false> (0.01, 1e-20, true, false, false, 1*2, 1*2)
+      ldlt_test<double, 2, false, false> (0.01, 1e-20, true, false, false, 1*2, 1*2)
       ));
    TEST((
-      ldlt_test<double, 2, false> (0.01, 1e-20, true, false, false, 2*2, 2*2)
+      ldlt_test<double, 2, false, false> (0.01, 1e-20, true, false, false, 2*2, 2*2)
       ));
    TEST((
-      ldlt_test<double, 2, false> (0.01, 1e-20, true, false, false, 4*2, 4*2)
+      ldlt_test<double, 2, false, false> (0.01, 1e-20, true, false, false, 4*2, 4*2)
       ));
    TEST((
-      ldlt_test<double, 8, false> (0.01, 1e-20, true, false, false, 8*8, 8*8)
+      ldlt_test<double, 8, false, false> (0.01, 1e-20, true, false, false, 8*8, 8*8)
       ));
    TEST((
-      ldlt_test<double, 8, false> (0.01, 1e-20, true, false, false, 29, 29)
+      ldlt_test<double, 8, false, false> (0.01, 1e-20, true, false, false, 29, 29)
       ));
 
    /* Test edge case of singular diagonal blocks, square non-singular matrix */
    TEST((
-      ldlt_test<double, 8, false> (0.01, 1e-20, false, false, true, 8*8, 8*8)
+      ldlt_test<double, 8, false, false> (0.01, 1e-20, false, false, true, 8*8, 8*8)
       ));
    TEST((
-      ldlt_test<double, 8, false> (0.01, 1e-20, false, false, true, 33, 33)
+      ldlt_test<double, 8, false, false> (0.01, 1e-20, false, false, true, 33, 33)
       ));
 
    /* Torture tests */
    TEST((
-      ldlt_torture_test<double, 16, 500, false> (0.01, 1e-20, 8*16, 8*16)
+      ldlt_torture_test<double, 16, 500, false, false> (0.01, 1e-20, 8*16, 8*16)
       ));
    TEST((
-      ldlt_torture_test<double, 16, 500, false> (0.01, 1e-20, 8*16, 3*16)
+      ldlt_torture_test<double, 16, 500, false, false> (0.01, 1e-20, 8*16, 3*16)
       ));
 
    return nerr;
