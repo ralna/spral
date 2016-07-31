@@ -97,7 +97,7 @@ public:
                      options, thread_stats[this_thread]);
                #pragma omp cancel taskgroup \
                   if(thread_stats[this_thread].flag<SSIDS_SUCCESS)
-#ifdef profile
+#ifdef PROFILE
                task_subtree.done();
 #endif
             }
