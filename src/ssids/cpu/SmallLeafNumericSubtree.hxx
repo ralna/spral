@@ -210,8 +210,7 @@ public:
 
          // Factorization
          factor_node
-            <false>
-            (ni, symb_.symb_[ni], &old_nodes_[ni], options,
+            (symb_.symb_[ni], &old_nodes_[ni], options,
              stats, work, contrib_alloc);
          if(stats.flag<SSIDS_SUCCESS) return; // something is wrong
 
@@ -345,6 +344,58 @@ private:
       }
    }
 
+   /* Factorize a node (indef) */
+   void factor_node(
+         SymbolicNode const& snode,
+         NumericNode<T>* node,
+         struct cpu_factor_options const& options,
+         struct cpu_factor_stats& stats,
+         Workspace& work,
+         ContribAllocator& contrib_alloc
+         ) {
+      /* Extract useful information about node */
+      int m = snode.nrow + node->ndelay_in;
+      int n = snode.ncol + node->ndelay_in;
+      size_t ldl = align_lda<T>(m);
+      T *lcol = node->lcol;
+      T *d = &node->lcol[ n*ldl ];
+      int *perm = node->perm;
+
+      /* Perform factorization */
+      //Verify<T> verifier(m, n, perm, lcol, ldl);
+      T *ld = work.get_ptr<T>(2*m);
+      node->nelim = ldlt_tpp_factor(
+            m, n, perm, lcol, ldl, d, ld, m, options.u, options.small
+            );
+      //verifier.verify(node->nelim, perm, lcol, ldl, d);
+
+      if(m-n>0 && node->nelim>0) {
+         int nelim = node->nelim;
+         T *ld = work.get_ptr<T>((m-n)*nelim);
+         calcLD<OP_N>(m-n, nelim, &lcol[n], ldl, d, ld, m-n);
+         host_gemm<T>(OP_N, OP_T, m-n, m-n, nelim,
+               -1.0, &lcol[n], ldl, ld, m-n,
+               0.0, node->contrib, m-n);
+      }
+
+      /* Record information */
+      node->ndelay_out = n - node->nelim;
+      stats.num_delay += node->ndelay_out;
+
+      /* Mark as no contribution if we make no contribution */
+      if(node->nelim==0 && !node->first_child) {
+         // FIXME: Actually loop over children and check one exists with contrib
+         //        rather than current approach of just looking for children.
+         typedef std::allocator_traits<ContribAllocator> CATraits;
+         CATraits::deallocate(contrib_alloc, node->contrib, (m-n)*(m-n));
+         node->contrib = nullptr;
+      } else if(node->nelim==0) {
+         // FIXME: If we fix the above, we don't need this explict zeroing
+         long contrib_size = m-n;
+         memset(node->contrib, 0, contrib_size*contrib_size*sizeof(T));
+      }
+   }
+
    void assemble_post(
          SymbolicNode const& snode,
          NumericNode<T>& node,
@@ -368,7 +419,6 @@ private:
             SymbolicNode const& csnode = *child->symb;
             if(!child->contrib) continue;
             int cm = csnode.nrow - csnode.ncol;
-            int const block_size = 256;
             for(int i=0; i<cm; i++) {
                int c = map[ csnode.rlist[csnode.ncol+i] ];
                T *src = &child->contrib[i*cm];
