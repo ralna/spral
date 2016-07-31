@@ -76,6 +76,10 @@ public:
          thread_stats[this_thread].not_first_pass = 0;
          thread_stats[this_thread].not_second_pass = 0;
 
+         // Each node is depend(inout) on itself and depend(in) on its parent.
+         // Whilst this isn't really what's happening it does ensure our
+         // ordering is correct: each node cannot be scheduled until all its
+         // children are done, but its children to run in any order.
          #pragma omp taskgroup
          {
          /* Loop over small leaf subtrees */
@@ -85,7 +89,7 @@ public:
             #pragma omp task default(none) \
                firstprivate(si) \
                shared(aval, options, scaling, thread_stats, work) \
-               depend(inout: parent_lcol[0:1])
+               depend(in: parent_lcol[0:1])
             {
                int this_thread = omp_get_thread_num();
 #ifdef PROFILE
@@ -102,21 +106,18 @@ public:
 #endif
             }
          }
-         #pragma omp taskwait // FIXME: remove
 
          /* Loop over singleton nodes in order */
          #pragma omp single
          for(int ni=0; ni<symb_.nnodes_; ++ni) {
             if(symb_[ni].insmallleaf) continue; // already handled
-            // FIXME: depending inout on parent is not a good way to represent
-            //        the dependency.
             auto* this_lcol = &nodes_[ni]; // for depend
             auto* parent_lcol = &nodes_[symb_[ni].parent]; // for depend
             #pragma omp task default(none) \
                firstprivate(ni) \
                shared(aval, options, scaling, thread_stats, work) \
                depend(inout: this_lcol[0:1]) \
-               depend(inout: parent_lcol[0:1])
+               depend(in: parent_lcol[0:1])
             {
                /*printf("%d: Node %d parent %d (of %d) size %d x %d\n",
                      omp_get_thread_num(), ni, symb_[ni].parent, symb_.nnodes_,
