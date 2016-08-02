@@ -44,12 +44,26 @@ public:
       for(int i=0; i<nlevel-1; ++i)
          head_[i] = -1; // ... and no free blocks at other levels
    }
+   // Move constructor
+   Page(Page&& other)
+   : alloc_(other.alloc_), min_size_(other.min_size_), size_(other.size_),
+     mem_(other.mem_), base_(other.base_), next_(other.next_)
+   {
+      other.mem_ = nullptr;
+      other.base_ = nullptr;
+      other.next_ = nullptr;
+      for(int i=0; i<nlevel; ++i)
+         head_[i] = other.head_[i];
+   }
    ~Page() {
-      typename IntAllocTraits::allocator_type intAlloc(alloc_);
-      IntAllocTraits::deallocate(intAlloc, next_, 1<<nlevel);
-      std::allocator_traits<CharAllocator>::deallocate(
-            alloc_, mem_, size_+align
-            );
+      if(next_) {
+         typename IntAllocTraits::allocator_type intAlloc(alloc_);
+         IntAllocTraits::deallocate(intAlloc, next_, 1<<nlevel);
+      }
+      if(mem_)
+         std::allocator_traits<CharAllocator>::deallocate(
+               alloc_, mem_, size_+align
+               );
    }
    void* allocate(std::size_t sz) {
       if(sz > size_) return nullptr; // too big: don't even try 
@@ -61,6 +75,11 @@ public:
       int idx = ptr_to_addr(ptr);
       int level = sz_to_level(sz);
       mark_free(idx, level);
+   }
+   /** Return true if this Page owners given pointer */
+   bool is_owner(void* ptr) {
+      int idx = ptr_to_addr(ptr);
+      return (idx>=0 && idx<(1<<nlevel));
    }
 private:
    /** Returns next ptr at given level, creating one if required.
@@ -159,28 +178,69 @@ private:
    int *next_; //< next free block at given level
 };
 
+template <typename CharAllocator>
+class Table {
+public:
+   Table(std::size_t sz, CharAllocator const& alloc=CharAllocator())
+   : alloc_(alloc), max_sz_(sz)
+   {
+      pages_.emplace_back(max_sz_, alloc_);
+   }
+
+   void* allocate(std::size_t sz) {
+      // Try allocating in existing pages
+      for(auto page: pages_) {
+         void* ptr = page.allocate(sz);
+         if(ptr) return ptr;
+      }
+      // If we failed, make another page, bigger this time
+      max_sz_ = std::max(2*max_sz_, sz);
+      pages_.emplace_back(max_sz_, alloc_);
+      return pages_.back().allocate(sz);
+   }
+
+   void deallocate(void* ptr, std::size_t sz) {
+      for(auto page: pages_) {
+         if(page.is_owner(ptr)) {
+            page.deallocate(ptr, sz);
+            return;
+         }
+      }
+   }
+
+private:
+   CharAllocator alloc_;
+   std::size_t max_sz_;
+   std::vector<Page<CharAllocator>> pages_;
+}
+
 } /* namespace buddy_alloc_internal */
 
 /** Simple buddy-system allocator */
 template <typename T, typename BaseAllocator>
 class BuddyAllocator {
    typedef T value_type;
+   typedef typename std::allocator_traits<BaseAllocator>::template rebind_allocator<char> CharAllocator;
 public:
    BuddyAllocator(BaseAllocator const& base=BaseAllocator())
-   : base_(base)
+   : table_(new Table)
    {}
    template<typename U, typename UBaseAllocator>
    BuddyAllocator(BuddyAllocator<U, UBaseAllocator> &other)
-   : base_(other.base)
+   : table_(other.table_)
    {}
 
    T* allocate(std::size_t n)
-   {}
+   {
+      return static_cast<T*>(table_.get_ptr()->allocate(n*sizeof(T)));
+   }
 
    void deallocate(T* ptr, std::size_t n)
-   {}
+   {
+      table_.get_ptr()->deallocate(ptr, n*sizeof(T));
+   }
 private:
-   BaseAllocator base_;
+   std::shared_ptr<Table> table_;
 };
 
 }}} /* namespaces spral::ssids::cpu */
