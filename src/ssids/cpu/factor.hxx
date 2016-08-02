@@ -25,6 +25,7 @@
 #include "kernels/ldlt_tpp.hxx"
 #include "kernels/wrappers.hxx"
 #include "SymbolicNode.hxx"
+#include "Workspace.hxx"
 
 #include "profile.hxx"
 
@@ -35,40 +36,6 @@ namespace spral { namespace ssids { namespace cpu {
 const int SSIDS_SUCCESS = 0;
 const int SSIDS_ERROR_NOT_POS_DEF = -6;
 
-/** A Workspace is a chunk of memory that can be reused. The get_ptr<T>(len)
- * function provides a pointer to it after ensuring it is of at least the
- * given size. */
-class Workspace {
-   static int const align = 32;
-public:
-   Workspace(size_t sz)
-   {
-      alloc_and_align(sz);
-   }
-   ~Workspace() {
-      ::operator delete(mem_);
-   }
-   void alloc_and_align(size_t sz) {
-      sz_ = sz+align;
-      mem_ = ::operator new(sz_);
-      mem_aligned_ = mem_;
-      std::align(align, sz, mem_aligned_, sz_);
-   }
-   template <typename T>
-   T* get_ptr(size_t len) {
-      if(sz_ < len*sizeof(T)) {
-         // Need to resize
-         ::operator delete(mem_);
-         alloc_and_align(len*sizeof(T));
-      }
-      return static_cast<T*>(mem_aligned_);
-   }
-private:
-   void* mem_;
-   void* mem_aligned_;
-   size_t sz_;
-};
-
 /* Factorize a node (indef) */
 template <typename T, typename ContribAlloc>
 void factor_node_indef(
@@ -77,7 +44,7 @@ void factor_node_indef(
       NumericNode<T>* node,
       struct cpu_factor_options const& options,
       struct cpu_factor_stats& stats,
-      Workspace& work,
+      std::vector<Workspace>& work,
       ContribAlloc& contrib_alloc
       ) {
    /* Extract useful information about node */
@@ -92,7 +59,7 @@ void factor_node_indef(
    /* Perform factorization */
    //Verify<T> verifier(m, n, perm, lcol, ldl);
    node->nelim = ldlt_app_factor(
-         m, n, perm, lcol, ldl, d, 0.0, contrib, m-n, options
+         m, n, perm, lcol, ldl, d, 0.0, contrib, m-n, options, work
          );
    //verifier.verify(node->nelim, perm, lcol, ldl, d);
 
@@ -103,7 +70,7 @@ void factor_node_indef(
 #endif
       int nelim = node->nelim;
       stats.not_first_pass += n-nelim;
-      T *ld = work.get_ptr<T>(2*(m-nelim));
+      T *ld = work[omp_get_thread_num()].get_ptr<T>(2*(m-nelim));
       node->nelim += ldlt_tpp_factor(
             m-nelim, n-nelim, &perm[nelim], &lcol[nelim*(ldl+1)], ldl,
             &d[2*nelim], ld, m-nelim, options.u, options.small, nelim,
@@ -112,7 +79,7 @@ void factor_node_indef(
       if(m-n>0 && node->nelim>nelim) {
          int nelim2 = node->nelim - nelim;
          int ldld = align_lda<T>(m-n);
-         T *ld = work.get_ptr<T>(nelim2*ldld);
+         T *ld = work[omp_get_thread_num()].get_ptr<T>(nelim2*ldld);
          calcLD<OP_N>(
                m-n, nelim2, &lcol[nelim*ldl+n], ldl, &d[2*nelim], ld, ldld
                );
@@ -187,7 +154,7 @@ void factor_node(
       NumericNode<T>* node,
       struct cpu_factor_options const& options,
       struct cpu_factor_stats& stats,
-      Workspace& work,
+      std::vector<Workspace>& work,
       ContribAlloc& contrib_alloc,
       T beta=0.0 // FIXME: remove once smallleafsubtree is doing own thing
       ) {

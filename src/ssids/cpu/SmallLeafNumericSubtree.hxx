@@ -38,9 +38,10 @@ class SmallLeafNumericSubtree<true, T, FactorAllocator, ContribAllocator> {
    typedef typename std::allocator_traits<FactorAllocator>::template rebind_traits<int> FAIntTraits;
    typedef std::allocator_traits<ContribAllocator> CATraits;
 public:
-   SmallLeafNumericSubtree(SmallLeafSymbolicSubtree const& symb, std::vector<NumericNode<T>>& old_nodes, T const* aval, T const* scaling, FactorAllocator& factor_alloc, ContribAllocator& contrib_alloc, Workspace& work, struct cpu_factor_options const& options, struct cpu_factor_stats& stats) 
+   SmallLeafNumericSubtree(SmallLeafSymbolicSubtree const& symb, std::vector<NumericNode<T>>& old_nodes, T const* aval, T const* scaling, FactorAllocator& factor_alloc, ContribAllocator& contrib_alloc, std::vector<Workspace>& work_vec, struct cpu_factor_options const& options, struct cpu_factor_stats& stats) 
       : old_nodes_(old_nodes), symb_(symb), lcol_(FADoubleTraits::allocate(factor_alloc, symb.nfactor_))
    {
+      Workspace& work = work_vec[omp_get_thread_num()];
       /* Initialize nodes */
       for(int ni=symb_.sa_; ni<=symb_.en_; ++ni) {
          old_nodes_[ni].ndelay_in = 0;
@@ -66,7 +67,7 @@ public:
          factor_node
             <true>
             (ni, symb_.symb_[ni], &old_nodes_[ni], options, stats,
-             work, contrib_alloc, 1.0);
+             work_vec, contrib_alloc, 1.0);
          if(stats.flag<SSIDS_SUCCESS) return;
       }
    }
@@ -192,9 +193,10 @@ class SmallLeafNumericSubtree<false, T, FactorAllocator, ContribAllocator> {
    typedef typename std::allocator_traits<FactorAllocator>::template rebind_traits<int> FAIntTraits;
    typedef std::allocator_traits<ContribAllocator> CATraits;
 public:
-   SmallLeafNumericSubtree(SmallLeafSymbolicSubtree const& symb, std::vector<NumericNode<T>>& old_nodes, T const* aval, T const* scaling, FactorAllocator& factor_alloc, ContribAllocator& contrib_alloc, Workspace& work, struct cpu_factor_options const& options, struct cpu_factor_stats& stats) 
+   SmallLeafNumericSubtree(SmallLeafSymbolicSubtree const& symb, std::vector<NumericNode<T>>& old_nodes, T const* aval, T const* scaling, FactorAllocator& factor_alloc, ContribAllocator& contrib_alloc, std::vector<Workspace>& work_vec, struct cpu_factor_options const& options, struct cpu_factor_stats& stats) 
    : old_nodes_(old_nodes), symb_(symb)
    {
+      Workspace& work = work_vec[omp_get_thread_num()];
       for(int ni=symb_.sa_; ni<=symb_.en_; ++ni) {
          /*printf("%d: Node %d parent %d (of %d) size %d x %d\n",
                omp_get_thread_num(), ni, symb_[ni].parent, symb_.nnodes_,

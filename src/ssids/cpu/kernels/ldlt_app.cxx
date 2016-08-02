@@ -26,6 +26,7 @@
 #include "../AlignedAllocator.hxx"
 #include "../BlockPool.hxx"
 #include "../cpu_iface.hxx"
+#include "../Workspace.hxx"
 #include "block_ldlt.hxx"
 #include "calc_ld.hxx"
 #include "ldlt_tpp.hxx"
@@ -49,60 +50,6 @@ inline int calc_nblk(int n, int block_size) {
 inline int calc_blkn(int blk, int n, int block_size) {
    return std::min(block_size, n-blk*block_size);
 }
-
-/** Workspace allocated on a per-thread basis */
-template<typename T, typename Allocator=std::allocator<T>>
-class ThreadWork {
-   int const align = 32;
-   typedef typename std::allocator_traits<Allocator>::template rebind_traits<T> AllocTTraits;
-   typedef typename std::allocator_traits<Allocator>::template rebind_traits<int> AllocIntTraits;
-public:
-
-   ThreadWork(ThreadWork const&) =delete;
-   ThreadWork& operator=(ThreadWork const&) =delete;
-   ThreadWork() =default;
-   void init(size_t max_block_size, size_t n, Allocator const& alloc = Allocator())
-   {
-      allocT_ = typename AllocTTraits::allocator_type(alloc);
-      allocInt_ = typename AllocIntTraits::allocator_type(alloc);
-      block_size_ = align_lda<T>(max_block_size);
-      block_width_ = std::min(n, block_size_);
-      ld_mem_ = AllocTTraits::allocate(
-            allocT_, block_size_*block_width_ + align/sizeof(T)
-            );
-      void *ld_align = ld_mem_;
-      size_t ld_space = sizeof(T)*(block_size_*block_width_ + align/sizeof(T));
-      std::align(align, block_size_*block_width_*sizeof(T), ld_align, ld_space);
-      ld = static_cast<T*>(ld_align);
-      perm_mem_ = AllocIntTraits::allocate(
-            allocInt_, block_width_ + align/sizeof(int)
-            );
-      void *perm_align = perm_mem_;
-      size_t perm_space = sizeof(int)*(block_width_ + align/sizeof(int));
-      std::align(align, block_width_*sizeof(int), perm_align, perm_space);
-      perm = static_cast<int*>(perm_align);
-   }
-   ~ThreadWork() {
-      AllocIntTraits::deallocate(
-            allocInt_, perm_mem_, block_width_ + align/sizeof(int)
-            );
-      AllocTTraits::deallocate(allocT_, ld_mem_,
-            block_size_*block_width_ + align/sizeof(T)
-            );
-   }
-
-public:
-   T *ld;
-   int *perm;
-
-private:
-   typename AllocTTraits::allocator_type allocT_;
-   typename AllocIntTraits::allocator_type allocInt_;
-   T *ld_mem_;
-   int *perm_mem_;
-   size_t block_size_;
-   size_t block_width_; //< =min(block_size,n) allow for small matrix, big bsz
-};
 
 template<typename T>
 class Column {
@@ -378,7 +325,15 @@ public:
      ldcopy_(align_lda<T>(m_)), acopy_(alloc_.allocate(n_*ldcopy_))
    {}
    ~CopyBackup() {
-      alloc_.deallocate(acopy_, n_*ldcopy_);
+      release_all_memory();
+   }
+
+   /** Release all underlying memory - instnace cannot be used again */
+   void release_all_memory() {
+      if(acopy_) {
+         alloc_.deallocate(acopy_, n_*ldcopy_);
+         acopy_ = nullptr;
+      }
    }
 
    void release(int iblk, int jblk) { /* no-op */ }
@@ -629,8 +584,8 @@ public:
       }
    }
 
-   template <bool do_or_die, typename Allocator, typename ThreadWork>
-   int factor(int& next_elim, int* perm, T* d, ThreadWork& work, struct cpu_factor_options const &options, Allocator const& alloc) {
+   template <bool do_or_die, typename Allocator>
+   int factor(int& next_elim, int* perm, T* d, struct cpu_factor_options const &options, std::vector<Workspace>& work, Allocator const& alloc) {
       if(i_ != j_)
          throw std::runtime_error("factor called on non-diagonal block!");
       int* lperm = cdata_.get_lperm(i_);
@@ -639,20 +594,20 @@ public:
       cdata_[i_].d = &d[2*next_elim];
       if(block_size_ != INNER_BLOCK_SIZE) {
          // Recurse
-         PoolBackup<T, Allocator> inner_backup(
+         CopyBackup<T, Allocator> inner_backup(
                nrow(), ncol(), INNER_BLOCK_SIZE, alloc
                );
          bool const use_tasks = false; // Don't run in parallel at lower level
          bool const debug = false; // Don't print debug info for inner call
          cdata_[i_].nelim =
-            LDLT<T, INNER_BLOCK_SIZE, PoolBackup<T,Allocator>,
+            LDLT<T, INNER_BLOCK_SIZE, CopyBackup<T,Allocator>,
                  use_tasks, do_or_die, debug, Allocator>
                 ::factor(
                       nrow(), ncol(), lperm, aval_, lda_,
                       cdata_[i_].d, inner_backup, options, INNER_BLOCK_SIZE,
-                      0, nullptr, 0, alloc
+                      0, nullptr, 0, work, alloc
                       );
-         int* temp = work.perm;
+         int* temp = work[omp_get_thread_num()].get_ptr<int>(ncol());
          int* blkperm = &perm[i_*block_size_];
          for(int i=0; i<ncol(); ++i)
             temp[i] = blkperm[lperm[i]];
@@ -661,12 +616,13 @@ public:
       } else { /* block_size == INNER_BLOCK_SIZE */
          // Call another routine for small block factorization
          if(ncol() < INNER_BLOCK_SIZE || !is_aligned(aval_)) {
+            T* ld = work[omp_get_thread_num()].get_ptr<T>(2*INNER_BLOCK_SIZE);
             cdata_[i_].nelim = ldlt_tpp_factor(
                   nrow(), ncol(), lperm, aval_, lda_,
-                  cdata_[i_].d, work.ld, INNER_BLOCK_SIZE, options.u,
+                  cdata_[i_].d, ld, INNER_BLOCK_SIZE, options.u,
                   options.small
                   );
-            int* temp = work.perm;
+            int* temp = work[omp_get_thread_num()].get_ptr<int>(ncol());
             int* blkperm = &perm[i_*INNER_BLOCK_SIZE];
             for(int i=0; i<ncol(); ++i)
                temp[i] = blkperm[lperm[i]];
@@ -674,8 +630,11 @@ public:
                blkperm[i] = temp[i];
          } else {
             int* blkperm = &perm[i_*INNER_BLOCK_SIZE];
+            T* ld = work[omp_get_thread_num()].get_ptr<T>(
+                  INNER_BLOCK_SIZE*INNER_BLOCK_SIZE
+                  );
             block_ldlt<T, INNER_BLOCK_SIZE>(
-                  0, blkperm, aval_, lda_, cdata_[i_].d, work.ld, options.u,
+                  0, blkperm, aval_, lda_, cdata_[i_].d, ld, options.u,
                   options.small, lperm
                   );
             cdata_[i_].nelim = INNER_BLOCK_SIZE;
@@ -708,8 +667,7 @@ public:
       }
    }
 
-   template <typename ThreadWork>
-   void update(Block const& isrc, Block const& jsrc, ThreadWork& work, double beta=1.0, T* upd=nullptr, int ldupd=0) {
+   void update(Block const& isrc, Block const& jsrc, Workspace& work, double beta=1.0, T* upd=nullptr, int ldupd=0) {
       if(isrc.i_ == i_ && isrc.j_ == jsrc.j_) {
          // Update to right of elim column (UpdateN)
          int elim_col = isrc.j_;
@@ -717,13 +675,14 @@ public:
          int rfrom = (i_ <= elim_col) ? cdata_[i_].nelim : 0;
          int cfrom = (j_ <= elim_col) ? cdata_[j_].nelim : 0;
          int ldld = align_lda<T>(block_size_);
+         T* ld = work.get_ptr<T>(block_size_*ldld);
          calcLD<OP_N>(
                nrow()-rfrom, cdata_[elim_col].nelim, &isrc.aval_[rfrom],
-               lda_, cdata_[elim_col].d, work.ld, ldld
+               lda_, cdata_[elim_col].d, ld, ldld
                );
          host_gemm(
                OP_N, OP_T, nrow()-rfrom, ncol()-cfrom, cdata_[elim_col].nelim,
-               -1.0, work.ld, ldld, &jsrc.aval_[cfrom], lda_,
+               -1.0, ld, ldld, &jsrc.aval_[cfrom], lda_,
                1.0, &aval_[cfrom*lda_+rfrom], lda_
                );
          if(upd && j_==calc_nblk(n_,block_size_)-1) {
@@ -734,7 +693,7 @@ public:
                // diagonal block
                host_gemm(
                      OP_N, OP_T, u_ncol, u_ncol, cdata_[elim_col].nelim,
-                     -1.0, &work.ld[ncol()-rfrom], ldld,
+                     -1.0, &ld[ncol()-rfrom], ldld,
                      &jsrc.aval_[ncol()], lda_,
                      beta, upd, ldupd
                      );
@@ -744,7 +703,7 @@ public:
                   &upd[(i_-calc_nblk(n_,block_size_))*block_size_+u_ncol];
                host_gemm(
                      OP_N, OP_T, nrow(), u_ncol, cdata_[elim_col].nelim,
-                     -1.0, work.ld, ldld, &jsrc.aval_[ncol()], lda_,
+                     -1.0, ld, ldld, &jsrc.aval_[ncol()], lda_,
                      beta, upd_ij, ldupd
                      );
             }
@@ -756,22 +715,23 @@ public:
          int rfrom = (i_ <= elim_col) ? cdata_[i_].nelim : 0;
          int cfrom = (j_ <= elim_col) ? cdata_[j_].nelim : 0;
          int ldld = align_lda<T>(block_size_);
+         T* ld = work.get_ptr<T>(block_size_*ldld);
          if(isrc.j_==elim_col) {
             calcLD<OP_N>(
                   nrow()-rfrom, cdata_[elim_col].nelim,
                   &isrc.aval_[rfrom], lda_,
-                  cdata_[elim_col].d, work.ld, ldld
+                  cdata_[elim_col].d, ld, ldld
                   );
          } else {
             calcLD<OP_T>(
                   nrow()-rfrom, cdata_[elim_col].nelim, &
                   isrc.aval_[rfrom*lda_], lda_,
-                  cdata_[elim_col].d, work.ld, ldld
+                  cdata_[elim_col].d, ld, ldld
                   );
          }
          host_gemm(
                OP_N, OP_N, nrow()-rfrom, ncol()-cfrom, cdata_[elim_col].nelim,
-               -1.0, work.ld, ldld, &jsrc.aval_[cfrom*lda_], lda_,
+               -1.0, ld, ldld, &jsrc.aval_[cfrom*lda_], lda_,
                1.0, &aval_[cfrom*lda_+rfrom], lda_
                );
       }
@@ -809,13 +769,12 @@ class LDLT {
    typedef typename std::allocator_traits<Allocator>::template rebind_alloc<int> IntAlloc;
    typedef typename std::allocator_traits<Allocator>::template rebind_alloc<T> TAlloc;
 private:
-   template <typename ThreadWork>
    static
    int run_elim(int const m, int const n, int* perm, T* a, int const lda, T* d,
          ColumnData<T,IntAlloc>& cdata, Backup& backup,
-         ThreadWork all_thread_work[],
          struct cpu_factor_options const& options, int const block_size,
-         T const beta, T* upd, int const ldupd, Allocator const& alloc) {
+         T const beta, T* upd, int const ldupd, std::vector<Workspace>& work,
+         Allocator const& alloc) {
       typedef Block<T, BLOCK_SIZE, IntAlloc> BlockSpec;
       //printf("ENTRY %d %d vis %d %d %d\n", m, n, mblk, nblk, block_size);
 
@@ -835,8 +794,8 @@ private:
          // Factor diagonal: depend on perm[blk*block_size] as we init npass
          #pragma omp task default(none) \
             firstprivate(blk) \
-            shared(a, perm, backup, cdata, all_thread_work, next_elim, d, \
-                   options, alloc) \
+            shared(a, perm, backup, cdata, next_elim, d, \
+                   options, work, alloc) \
             depend(inout: a[blk*block_size*lda+blk*block_size:1]) \
             depend(inout: perm[blk*block_size:1]) \
             if(use_tasks && mblk>1)
@@ -845,14 +804,12 @@ private:
             Profile::Task task("TA_LDLT_DIAG", omp_get_thread_num());
 #endif
             if(debug) printf("Factor(%d)\n", blk);
-            int thread_num = omp_get_thread_num();
             BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
             // Store a copy for recovery in case of a failed column
             dblk.backup(backup);
             // Perform actual factorization
             int nelim = dblk.template factor<do_or_die, Allocator>(
-                  next_elim, perm, d, all_thread_work[thread_num],
-                  options, alloc
+                  next_elim, perm, d, options, work, alloc
                   );
             // Init threshold check (non locking => task dependencies)
             cdata[blk].init_passed(nelim);
@@ -950,7 +907,7 @@ private:
                                          : iblk*block_size*lda + blk*block_size;
                #pragma omp task default(none) \
                   firstprivate(blk, iblk, jblk) \
-                  shared(a, cdata, backup, all_thread_work)\
+                  shared(a, cdata, backup, work)\
                   depend(inout: a[jblk*block_size*lda+iblk*block_size:1]) \
                   depend(in: perm[blk*block_size:1]) \
                   depend(in: a[jblk*block_size*lda+blk*block_size:1]) \
@@ -972,7 +929,7 @@ private:
                   // any failed rows and release resources storing backup
                   ublk.restore_if_required(backup, blk);
                   // Perform actual update
-                  ublk.update(isrc, jsrc, all_thread_work[thread_num]);
+                  ublk.update(isrc, jsrc, work[thread_num]);
 #ifdef PROFILE
                   if(use_tasks) task.done();
 #endif
@@ -983,7 +940,7 @@ private:
             for(int iblk=jblk; iblk<mblk; iblk++) {
                #pragma omp task default(none) \
                   firstprivate(blk, iblk, jblk) \
-                  shared(a, cdata, backup, all_thread_work, upd) \
+                  shared(a, cdata, backup, work, upd) \
                   depend(inout: a[jblk*block_size*lda+iblk*block_size:1]) \
                   depend(in: perm[blk*block_size:1]) \
                   depend(in: a[blk*block_size*lda+iblk*block_size:1]) \
@@ -1002,7 +959,7 @@ private:
                   // any failed cols and release resources storing backup
                   ublk.restore_if_required(backup, blk);
                   // Perform actual update
-                  ublk.update(isrc, jsrc, all_thread_work[thread_num],
+                  ublk.update(isrc, jsrc, work[thread_num],
                         beta, upd, ldupd);
 #ifdef PROFILE
                   if(use_tasks) task.done();
@@ -1021,7 +978,7 @@ private:
                                  (iblk-nblk)*block_size];
                #pragma omp task default(none) \
                   firstprivate(iblk, jblk, blk, upd_ij) \
-                  shared(a, upd2, cdata, all_thread_work) \
+                  shared(a, upd2, cdata, work) \
                   depend(inout: upd_ij[0:1]) \
                   depend(in: perm[blk*block_size:1]) \
                   depend(in: a[blk*block_size*lda+iblk*block_size:1]) \
@@ -1032,20 +989,20 @@ private:
                   Profile::Task task("TA_LDLT_UPDC", omp_get_thread_num());
 #endif
                   int thread_num = omp_get_thread_num();
-                  ThreadWork& work = all_thread_work[thread_num];
                   int blkm = get_nrow(iblk, m, block_size);
                   int blkn = get_ncol(jblk, m, block_size);
                   int nelim = cdata[blk].nelim;
                   T* l_ik = &a[blk*block_size*lda + iblk*block_size];
                   T* l_jk = &a[blk*block_size*lda + jblk*block_size];
                   int ldld = align_lda<T>(block_size);
+                  T* ld = work[thread_num].get_ptr<T>(block_size*ldld);
                   calcLD<OP_N>(
-                        blkm, nelim, l_ik, lda, cdata[blk].d, work.ld, ldld
+                        blkm, nelim, l_ik, lda, cdata[blk].d, ld, ldld
                         );
                   T rbeta = (cdata[blk].first_elim) ? beta : 1.0; // user beta only on first update
                   host_gemm(
                         OP_N, OP_T, blkm, blkn, nelim,
-                        -1.0, work.ld, ldld, l_jk, lda,
+                        -1.0, ld, ldld, l_jk, lda,
                         rbeta, upd_ij, ldupd
                         );
 #ifdef PROFILE
@@ -1094,7 +1051,7 @@ private:
 public:
    /** Factorize an entire matrix */
    static
-   int factor(int m, int n, int *perm, T *a, int lda, T *d, Backup& backup, struct cpu_factor_options const& options, int block_size, T beta, T* upd, int ldupd, Allocator const& alloc=Allocator()) {
+   int factor(int m, int n, int *perm, T *a, int lda, T *d, Backup& backup, struct cpu_factor_options const& options, int block_size, T beta, T* upd, int ldupd, std::vector<Workspace>& work, Allocator const& alloc=Allocator()) {
       /* Sanity check arguments */
       if(m < n) return -1;
       if(lda < n) return -4;
@@ -1104,10 +1061,6 @@ public:
       int mblk = calc_nblk(m, block_size);
 
       /* Temporary workspaces */
-      int num_threads = omp_get_max_threads();
-      ThreadWork<T,Allocator> all_thread_work[num_threads];
-      for(int i=0; i<num_threads; ++i)
-         all_thread_work[i].init(block_size, n, alloc);
       ColumnData<T, IntAlloc> cdata(n, block_size, alloc);
 #ifdef PROFILE
       Profile::setNullState(omp_get_thread_num());
@@ -1120,9 +1073,11 @@ public:
        *      entries into diagonal blocks
        */
       int num_elim = run_elim(
-            m, n, perm, a, lda, d, cdata, backup, all_thread_work, options,
-            block_size, beta, upd, ldupd, alloc
+            m, n, perm, a, lda, d, cdata, backup, options,
+            block_size, beta, upd, ldupd, work, alloc
             );
+      backup.release_all_memory(); // we're done with it now, but may want the
+                                   // memory back before it goes out of scope.
 
       // Permute failed entries to end
 #ifdef PROFILE
@@ -1236,7 +1191,13 @@ public:
 using namespace spral::ssids::cpu::ldlt_app_internal;
 
 template<typename T>
-int ldlt_app_factor(int m, int n, int* perm, T* a, int lda, T* d, T beta, T* upd, int ldupd, struct cpu_factor_options const& options) {
+size_t ldlt_app_factor_mem_required(int m, int n, int block_size) {
+   int const align = 32;
+   return align_lda<T>(m) * n * sizeof(T) + align; // CopyBackup
+}
+
+template<typename T>
+int ldlt_app_factor(int m, int n, int* perm, T* a, int lda, T* d, T beta, T* upd, int ldupd, struct cpu_factor_options const& options, std::vector<Workspace>& work) {
    // If we've got a tall and narrow node, adjust block size so each block
    // has roughly blksz**2 entries
    // FIXME: Decide if this reshape is actually useful, given it will generate
@@ -1265,10 +1226,10 @@ int ldlt_app_factor(int m, int n, int* perm, T* a, int lda, T* d, T beta, T* upd
        Allocator>
       ::factor(
             m, n, perm, a, lda, d, backup, options,
-            outer_block_size, beta, upd, ldupd, alloc
+            outer_block_size, beta, upd, ldupd, work, alloc
             );
 }
-template int ldlt_app_factor<double>(int, int, int*, double*, int, double*, double, double*, int, struct cpu_factor_options const&);
+template int ldlt_app_factor<double>(int, int, int*, double*, int, double*, double, double*, int, struct cpu_factor_options const&, std::vector<Workspace>&);
 
 template <typename T>
 void ldlt_app_solve_fwd(int m, int n, T const* l, int ldl, int nrhs, T* x, int ldx) {

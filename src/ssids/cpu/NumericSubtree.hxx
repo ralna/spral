@@ -97,7 +97,7 @@ public:
 #endif
                auto const& leaf = symb_.small_leafs_[si];
                new (&small_leafs_[si]) SLNS(leaf, nodes_, aval, scaling,
-                     factor_alloc_, contrib_alloc_, work[this_thread],
+                     factor_alloc_, contrib_alloc_, work,
                      options, thread_stats[this_thread]);
                #pragma omp cancel taskgroup \
                   if(thread_stats[this_thread].flag<SSIDS_SUCCESS)
@@ -136,7 +136,7 @@ public:
                factor_node
                   <posdef>
                   (ni, symb_[ni], &nodes_[ni], options,
-                   thread_stats[this_thread], work[this_thread],
+                   thread_stats[this_thread], work,
                    contrib_alloc_);
                #pragma omp cancel taskgroup \
                   if(thread_stats[this_thread].flag<SSIDS_SUCCESS)
