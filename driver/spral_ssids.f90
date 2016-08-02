@@ -168,7 +168,7 @@ program run_prob
    print "(a6, i10)", "not_second_pass:", inform%not_second_pass
 
    ! Free memory to ensure we pass leak-check tests
-   deallocate(rhs, soln, res)
+   deallocate(ptr, rhs, soln, res)
 
 contains
 
