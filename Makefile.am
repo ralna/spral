@@ -226,8 +226,6 @@ libspral_a_SOURCES += \
 	src/ssids/cpu/NumericNode.hxx \
 	src/ssids/cpu/NumericSubtree.cxx \
 	src/ssids/cpu/NumericSubtree.hxx \
-	src/ssids/cpu/smalloc.cxx \
-	src/ssids/cpu/smalloc.hxx \
 	src/ssids/cpu/subtree.f90 \
 	src/ssids/cpu/profile.cxx \
 	src/ssids/cpu/profile.hxx \

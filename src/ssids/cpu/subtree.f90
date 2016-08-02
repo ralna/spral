@@ -22,8 +22,6 @@ module spral_ssids_cpu_subtree
    type, extends(numeric_subtree_base) :: cpu_numeric_subtree
       logical(C_BOOL) :: posdef
       type(cpu_symbolic_subtree), pointer :: symbolic
-      type(smalloc_type), pointer :: alloc=>null() ! Linked list of memory pages
-         ! pointed to by nodes variable
       type(contrib_type), pointer :: contrib
       type(C_PTR) :: csubtree
    contains
