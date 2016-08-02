@@ -773,7 +773,6 @@ template<typename T,
 class LDLT {
    typedef typename std::allocator_traits<Allocator>::template rebind_alloc<int> IntAlloc;
    typedef typename std::allocator_traits<Allocator>::template rebind_alloc<Column<T,IntAlloc>> ColAlloc;
-   typedef typename std::allocator_traits<Allocator>::template rebind_alloc<bool> BoolAlloc;
    typedef typename std::allocator_traits<Allocator>::template rebind_alloc<T> TAlloc;
 private:
    template <typename ThreadWork>
@@ -1037,7 +1036,7 @@ private:
    }
 
    static
-   void print_mat(int m, int n, const int *perm, std::vector<bool, BoolAlloc> const& eliminated, const T *a, int lda) {
+   void print_mat(int m, int n, const int *perm, std::vector<bool> const& eliminated, const T *a, int lda) {
       for(int row=0; row<m; row++) {
          if(row < n)
             printf("%d%s:", perm[row], eliminated[row]?"X":" ");
@@ -1190,7 +1189,7 @@ public:
 #endif
 
       if(debug) {
-         std::vector<bool, BoolAlloc> eliminated(n, alloc);
+         std::vector<bool> eliminated(n);
          for(int i=0; i<num_elim; i++) eliminated[i] = true;
          for(int i=num_elim; i<n; i++) eliminated[i] = false;
          printf("FINAL:\n");
