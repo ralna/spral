@@ -57,7 +57,8 @@ void assemble_pre(
    size_t len = posdef ?  ldl    * ncol  // posdef
                        : (ldl+2) * ncol; // indef (includes D)
    node.lcol = FADoubleTraits::allocate(factor_alloc_double, len);
-   memset(node.lcol, 0, len*sizeof(T));
+   //memset(node.lcol, 0, len*sizeof(T)); NOT REQUIRED as ContribAlloc is
+   // required to ensure it is zero for us (i.e. uses calloc)
 
    /* Get space for contribution block + (explicitly do not zero it!) */
    long contrib_dimn = snode.nrow - snode.ncol;

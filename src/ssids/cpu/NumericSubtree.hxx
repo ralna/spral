@@ -24,7 +24,8 @@ namespace spral { namespace ssids { namespace cpu {
 template <bool posdef,
           typename T,
           size_t PAGE_SIZE,
-          typename FactorAllocator, // Allocator to use for factor storage
+          typename FactorAllocator, // Allocator to use for factor storage:
+                                    // must zero storage upon allocation
           typename ContribAllocator // Allocator to use for contribution blocks
           >
 class NumericSubtree {

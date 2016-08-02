@@ -33,16 +33,18 @@ namespace spral { namespace ssids { namespace cpu {
 namespace pool_alloc_internal {
 
 /** A single fixed size page of memory with allocate function.
+ * We are required to guaruntee it is zero'd, so use calloc rather than anything
+ * else for the allocation.
  * Deallocation is not supported.
  */
 class Page {
    static const int align = 32; // 32 byte alignment
 public:
    Page(size_t sz, Page* next=nullptr)
-   : next(next), mem_(::operator new(sz+align)), ptr_(mem_), space_(sz+align)
+   : next(next), mem_(calloc(sz+align, 1)), ptr_(mem_), space_(sz+align)
    {}
    ~Page() {
-      ::operator delete(mem_);
+      free(mem_);
    }
    void* allocate(size_t sz) {
       if(!std::align(32, sz, ptr_, space_)) return nullptr;
