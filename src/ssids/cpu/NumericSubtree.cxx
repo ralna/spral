@@ -14,7 +14,7 @@
 #include <memory>
 
 #include "NumericSubtree.hxx"
-#include "PoolAlloc.hxx"
+#include "AppendAlloc.hxx"
 
 using namespace spral::ssids::cpu;
 
@@ -24,8 +24,8 @@ namespace {
 
 typedef double T;
 const int PAGE_SIZE = 8*1024*1024; // 8MB
-typedef NumericSubtree<true, T, PAGE_SIZE, PoolAlloc<T>, std::allocator<T>> NumericSubtreePosdef;
-typedef NumericSubtree<false, T, PAGE_SIZE, PoolAlloc<T>, std::allocator<T>> NumericSubtreeIndef;
+typedef NumericSubtree<true, T, PAGE_SIZE, AppendAlloc<T>> NumericSubtreePosdef;
+typedef NumericSubtree<false, T, PAGE_SIZE, AppendAlloc<T>> NumericSubtreeIndef;
 
 } /* end of anon namespace */
 //////////////////////////////////////////////////////////////////////////

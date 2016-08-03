@@ -87,7 +87,7 @@ public:
    }
    template <typename T>
    size_t get_pool_size() const {
-      return 2*maxfront_*align_lda<double>(maxfront_);
+      return maxfront_*align_lda<double>(maxfront_);
    }
 public:
    int const n; //< Maximum row index
@@ -98,7 +98,7 @@ private:
    std::vector<SymbolicNode> nodes_;
    std::vector<SmallLeafSymbolicSubtree> small_leafs_;
 
-   template <bool posdef, typename T, size_t PAGE_SIZE, typename FactorAlloc, typename ContribAllocator>
+   template <bool posdef, typename T, size_t PAGE_SIZE, typename FactorAlloc>
    friend class NumericSubtree;
 };
 

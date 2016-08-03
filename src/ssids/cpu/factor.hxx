@@ -37,7 +37,7 @@ const int SSIDS_SUCCESS = 0;
 const int SSIDS_ERROR_NOT_POS_DEF = -6;
 
 /* Factorize a node (indef) */
-template <typename T, typename ContribAlloc, typename PoolAlloc>
+template <typename T, typename PoolAlloc>
 void factor_node_indef(
       int ni, // FIXME: remove post debug
       SymbolicNode const& snode,
@@ -45,7 +45,6 @@ void factor_node_indef(
       struct cpu_factor_options const& options,
       struct cpu_factor_stats& stats,
       std::vector<Workspace>& work,
-      ContribAlloc& contrib_alloc,
       PoolAlloc& pool_alloc
       ) {
    /* Extract useful information about node */
@@ -106,8 +105,8 @@ void factor_node_indef(
    if(node->nelim==0 && !node->first_child) {
       // FIXME: Actually loop over children and check one exists with contrib
       //        rather than current approach of just looking for children.
-      typedef std::allocator_traits<ContribAlloc> CATraits;
-      CATraits::deallocate(contrib_alloc, node->contrib, (m-n)*(m-n));
+      typedef std::allocator_traits<PoolAlloc> PATraits;
+      PATraits::deallocate(pool_alloc, node->contrib, (m-n)*(m-n));
       node->contrib = nullptr;
    } else if(node->nelim==0) {
       // FIXME: If we fix the above, we don't need this explict zeroing
@@ -148,7 +147,7 @@ void factor_node_posdef(
    node->ndelay_out = 0;
 }
 /* Factorize a node (wrapper) */
-template <bool posdef, typename T, typename ContribAlloc, typename PoolAlloc>
+template <bool posdef, typename T, typename PoolAlloc>
 void factor_node(
       int ni,
       SymbolicNode const& snode,
@@ -156,12 +155,11 @@ void factor_node(
       struct cpu_factor_options const& options,
       struct cpu_factor_stats& stats,
       std::vector<Workspace>& work,
-      ContribAlloc& contrib_alloc,
       PoolAlloc& pool_alloc,
       T beta=0.0 // FIXME: remove once smallleafsubtree is doing own thing
       ) {
    if(posdef) factor_node_posdef(beta, snode, node, options, stats);
-   else       factor_node_indef(ni, snode, node, options, stats, work, contrib_alloc, pool_alloc);
+   else       factor_node_indef(ni, snode, node, options, stats, work, pool_alloc);
 }
 
 }}} /* end of namespace spral::ssids::cpu */

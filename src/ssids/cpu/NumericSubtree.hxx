@@ -25,13 +25,12 @@ namespace spral { namespace ssids { namespace cpu {
 template <bool posdef,
           typename T,
           size_t PAGE_SIZE,
-          typename FactorAllocator, // Allocator to use for factor storage:
-                                    // must zero storage upon allocation
-          typename ContribAllocator // Allocator to use for contribution blocks
+          typename FactorAllocator // Allocator to use for factor storage:
+                                   // must zero storage upon allocation
           >
 class NumericSubtree {
    typedef BuddyAllocator<T,std::allocator<T>> PoolAllocator; // FIXME use for contrib?
-   typedef SmallLeafNumericSubtree<posdef, T, FactorAllocator, ContribAllocator, PoolAllocator> SLNS;
+   typedef SmallLeafNumericSubtree<posdef, T, FactorAllocator, PoolAllocator> SLNS;
 public:
    /* Delete copy constructors for safety re allocated memory */
    NumericSubtree(const NumericSubtree&) =delete;
@@ -101,7 +100,7 @@ public:
 #endif
                auto const& leaf = symb_.small_leafs_[si];
                new (&small_leafs_[si]) SLNS(leaf, nodes_, aval, scaling,
-                     factor_alloc_, contrib_alloc_, pool_alloc_, work,
+                     factor_alloc_, pool_alloc_, work,
                      options, thread_stats[this_thread]);
                #pragma omp cancel taskgroup \
                   if(thread_stats[this_thread].flag<SSIDS_SUCCESS)
@@ -131,7 +130,7 @@ public:
                int* map = work[this_thread].get_ptr<int>(symb_.n+1);
                assemble_pre
                   (posdef, symb_[ni], nodes_[ni], factor_alloc_,
-                   contrib_alloc_, map, aval, scaling);
+                   pool_alloc_, map, aval, scaling);
                // Update stats
                int nrow = symb_[ni].nrow + nodes_[ni].ndelay_in;
                thread_stats[this_thread].maxfront = std::max(thread_stats[this_thread].maxfront, nrow);
@@ -140,12 +139,12 @@ public:
                factor_node<posdef>
                   (ni, symb_[ni], &nodes_[ni], options,
                    thread_stats[this_thread], work,
-                   contrib_alloc_, pool_alloc_);
+                   pool_alloc_);
                #pragma omp cancel taskgroup \
                   if(thread_stats[this_thread].flag<SSIDS_SUCCESS)
 
                // Assemble children into contribution block
-               assemble_post(symb_[ni], nodes_[ni], contrib_alloc_, map);
+               assemble_post(symb_[ni], nodes_[ni], pool_alloc_, map);
             }
          }
          } // taskgroup
@@ -440,7 +439,6 @@ private:
    SLNS *small_leafs_; // Apparently emplace_back isn't threadsafe, so
       // std::vector is out. So we use placement new instead.
    FactorAllocator factor_alloc_;
-   ContribAllocator contrib_alloc_;
    PoolAllocator pool_alloc_;
 };
 

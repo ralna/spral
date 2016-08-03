@@ -223,6 +223,7 @@ libspral_a_SOURCES += \
 	src/ssids/ssids.f90 \
 	src/ssids/subtree.f90 \
 	src/ssids/cpu/AlignedAllocator.hxx \
+	src/ssids/cpu/AppendAlloc.hxx \
 	src/ssids/cpu/BlockPool.hxx \
 	src/ssids/cpu/BuddyAllocator.hxx \
 	src/ssids/cpu/cpu_iface.f90 \
@@ -234,7 +235,6 @@ libspral_a_SOURCES += \
 	src/ssids/cpu/subtree.f90 \
 	src/ssids/cpu/profile.cxx \
 	src/ssids/cpu/profile.hxx \
-	src/ssids/cpu/PoolAlloc.hxx \
 	src/ssids/cpu/SmallLeafNumericSubtree.hxx \
 	src/ssids/cpu/SmallLeafSymbolicSubtree.hxx \
 	src/ssids/cpu/SymbolicNode.hxx \

@@ -30,7 +30,7 @@ void* align(std::size_t alignment, std::size_t size, void*& ptr, std::size_t& sp
 
 namespace spral { namespace ssids { namespace cpu {
 
-namespace pool_alloc_internal {
+namespace append_alloc_internal {
 
 /** A single fixed size page of memory with allocate function.
  * We are required to guaruntee it is zero'd, so use calloc rather than anything
@@ -96,23 +96,24 @@ private:
    Page* top_page_;
 };
 
-} /* namespace spral::ssids::cpu::pool_alloc_internal */
+} /* namespace spral::ssids::cpu::append_alloc_internal */
 
-/** An allocator built on top of a pool of pages.
+/** An allocator built on top of a pool of pages, with expectation of
+ * sequential allocation, and then everything deallocated at the end.
  * Deallocation is not supported.
  */
 template <typename T>
-class PoolAlloc {
+class AppendAlloc {
 public :
    typedef T               value_type;
 
-   PoolAlloc(size_t initial_size)
-   : pool_(new pool_alloc_internal::Pool(initial_size))
+   AppendAlloc(size_t initial_size)
+   : pool_(new append_alloc_internal::Pool(initial_size))
    {}
 
-   /** Rebind a type T to a type U PoolAlloc */
+   /** Rebind a type T to a type U AppendAlloc */
    template <typename U>
-   PoolAlloc(PoolAlloc<U> &other)
+   AppendAlloc(AppendAlloc<U> &other)
    : pool_(other.pool_)
    {}
 
@@ -120,19 +121,19 @@ public :
       return static_cast<T*>(pool_->allocate(n*sizeof(T)));
    }
    void deallocate(T* p, std::size_t n) {
-      throw std::runtime_error("Deallocation not supported on PoolAlloc");
+      throw std::runtime_error("Deallocation not supported on AppendAlloc");
    }
    template<class U>
-   bool operator==(PoolAlloc<U> const& rhs) {
+   bool operator==(AppendAlloc<U> const& rhs) {
       return true;
    }
    template<class U>
-   bool operator!=(PoolAlloc<U> const& rhs) {
+   bool operator!=(AppendAlloc<U> const& rhs) {
       return !(*this==rhs);
    }
 protected:
-   std::shared_ptr<pool_alloc_internal::Pool> pool_;
-   template <typename U> friend class PoolAlloc;
+   std::shared_ptr<append_alloc_internal::Pool> pool_;
+   template <typename U> friend class AppendAlloc;
 };
 
 }}} /* namepsace spral::ssids::cpu */

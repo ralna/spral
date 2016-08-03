@@ -95,7 +95,7 @@ protected:
    SymbolicSubtree const& symb_;
    
    template <bool posdef, typename T, typename FactorAllocator,
-             typename ContribAllocator, typename PoolAllocator>
+             typename PoolAllocator>
    friend class SmallLeafNumericSubtree;
 };
 

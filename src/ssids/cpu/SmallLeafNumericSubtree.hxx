@@ -24,7 +24,6 @@ namespace spral { namespace ssids { namespace cpu {
 template <bool posdef,
           typename T,
           typename FactorAllocator, // Allocator to use for factor storage
-          typename ContribAllocator, // Allocator to use for contribution blocks
           typename PoolAllocator // Allocator for pool memory usage
           >
 class SmallLeafNumericSubtree;
@@ -32,15 +31,14 @@ class SmallLeafNumericSubtree;
 /// Positive-definite specialization
 template <typename T,
           typename FactorAllocator, // Allocator to use for factor storage
-          typename ContribAllocator, // Allocator to use for contribution blocks
           typename PoolAllocator // Allocator for pool memory usage
           >
-class SmallLeafNumericSubtree<true, T, FactorAllocator, ContribAllocator, PoolAllocator> {
+class SmallLeafNumericSubtree<true, T, FactorAllocator, PoolAllocator> {
    typedef typename std::allocator_traits<FactorAllocator>::template rebind_traits<double> FADoubleTraits;
    typedef typename std::allocator_traits<FactorAllocator>::template rebind_traits<int> FAIntTraits;
-   typedef std::allocator_traits<ContribAllocator> CATraits;
+   typedef std::allocator_traits<PoolAllocator> PATraits;
 public:
-   SmallLeafNumericSubtree(SmallLeafSymbolicSubtree const& symb, std::vector<NumericNode<T>>& old_nodes, T const* aval, T const* scaling, FactorAllocator& factor_alloc, ContribAllocator& contrib_alloc, PoolAllocator& pool_alloc, std::vector<Workspace>& work_vec, struct cpu_factor_options const& options, struct cpu_factor_stats& stats) 
+   SmallLeafNumericSubtree(SmallLeafSymbolicSubtree const& symb, std::vector<NumericNode<T>>& old_nodes, T const* aval, T const* scaling, FactorAllocator& factor_alloc, PoolAllocator& pool_alloc, std::vector<Workspace>& work_vec, struct cpu_factor_options const& options, struct cpu_factor_stats& stats) 
       : old_nodes_(old_nodes), symb_(symb), lcol_(FADoubleTraits::allocate(factor_alloc, symb.nfactor_))
    {
       Workspace& work = work_vec[omp_get_thread_num()];
@@ -61,14 +59,14 @@ public:
          int* map = work.get_ptr<int>(symb_.symb_.n+1);
          assemble
             (ni-symb_.sa_, symb_.symb_[ni], &old_nodes_[ni], factor_alloc,
-             contrib_alloc, map, aval, scaling);
+             pool_alloc, map, aval, scaling);
          // Update stats
          int nrow = symb_.symb_[ni].nrow;
          stats.maxfront = std::max(stats.maxfront, nrow);
          // Factorization
          factor_node<true>
             (ni, symb_.symb_[ni], &old_nodes_[ni], options, stats,
-             work_vec, contrib_alloc, pool_alloc, 1.0);
+             work_vec, pool_alloc, 1.0);
          if(stats.flag<SSIDS_SUCCESS) return;
       }
    }
@@ -112,7 +110,7 @@ void assemble(
       SymbolicNode const& snode,
       NumericNode<T>* node,
       FactorAllocator& factor_alloc,
-      ContribAllocator& contrib_alloc,
+      PoolAllocator& pool_alloc,
       int* map,
       T const* aval,
       T const* scaling
@@ -126,7 +124,7 @@ void assemble(
 
    /* Get space for contribution block + zero it */
    long contrib_dimn = snode.nrow - snode.ncol;
-   node->contrib = (contrib_dimn > 0) ? CATraits::allocate(contrib_alloc, contrib_dimn*contrib_dimn) : nullptr;
+   node->contrib = (contrib_dimn > 0) ? PATraits::allocate(pool_alloc, contrib_dimn*contrib_dimn) : nullptr;
    if(node->contrib)
       memset(node->contrib, 0, contrib_dimn*contrib_dimn*sizeof(T));
 
@@ -172,7 +170,7 @@ void assemble(
                }
             }
             /* Free memory from child contribution block */
-            CATraits::deallocate(contrib_alloc, child->contrib, cm*cm);
+            PATraits::deallocate(pool_alloc, child->contrib, cm*cm);
          }
       }
    }
@@ -187,15 +185,14 @@ private:
 // Indefinite specialization
 template <typename T,
           typename FactorAllocator, // Allocator to use for factor storage
-          typename ContribAllocator, // Allocator to use for contribution blocks
           typename PoolAllocator // Allocator for pool memory usage
           >
-class SmallLeafNumericSubtree<false, T, FactorAllocator, ContribAllocator, PoolAllocator> {
+class SmallLeafNumericSubtree<false, T, FactorAllocator, PoolAllocator> {
    typedef typename std::allocator_traits<FactorAllocator>::template rebind_traits<double> FADoubleTraits;
    typedef typename std::allocator_traits<FactorAllocator>::template rebind_traits<int> FAIntTraits;
-   typedef std::allocator_traits<ContribAllocator> CATraits;
+   typedef std::allocator_traits<PoolAllocator> PATraits;
 public:
-   SmallLeafNumericSubtree(SmallLeafSymbolicSubtree const& symb, std::vector<NumericNode<T>>& old_nodes, T const* aval, T const* scaling, FactorAllocator& factor_alloc, ContribAllocator& contrib_alloc, PoolAllocator& pool_alloc, std::vector<Workspace>& work_vec, struct cpu_factor_options const& options, struct cpu_factor_stats& stats) 
+   SmallLeafNumericSubtree(SmallLeafSymbolicSubtree const& symb, std::vector<NumericNode<T>>& old_nodes, T const* aval, T const* scaling, FactorAllocator& factor_alloc, PoolAllocator& pool_alloc, std::vector<Workspace>& work_vec, struct cpu_factor_options const& options, struct cpu_factor_stats& stats) 
    : old_nodes_(old_nodes), symb_(symb)
    {
       Workspace& work = work_vec[omp_get_thread_num()];
@@ -207,7 +204,7 @@ public:
          int* map = work.get_ptr<int>(symb_.symb_.n+1);
          assemble_pre
             (false, symb_.symb_[ni], old_nodes_[ni], factor_alloc,
-             contrib_alloc, map, aval, scaling);
+             pool_alloc, map, aval, scaling);
          // Update stats
          int nrow = symb_.symb_[ni].nrow + old_nodes_[ni].ndelay_in;
          stats.maxfront = std::max(stats.maxfront, nrow);
@@ -215,11 +212,11 @@ public:
          // Factorization
          factor_node
             (symb_.symb_[ni], &old_nodes_[ni], options,
-             stats, work, contrib_alloc);
+             stats, work, pool_alloc);
          if(stats.flag<SSIDS_SUCCESS) return; // something is wrong
 
          // Assemble children into contribution block
-         assemble_post(symb_.symb_[ni], old_nodes_[ni], contrib_alloc, map);
+         assemble_post(symb_.symb_[ni], old_nodes_[ni], pool_alloc, map);
       }
    }
 
@@ -229,7 +226,7 @@ private:
          SymbolicNode const& snode,
          NumericNode<T>& node,
          FactorAllocator& factor_alloc,
-         ContribAllocator& contrib_alloc,
+         PoolAllocator& pool_alloc,
          int* map,
          T const* aval,
          T const* scaling
@@ -256,7 +253,7 @@ private:
 
       /* Get space for contribution block + (explicitly do not zero it!) */
       long contrib_dimn = snode.nrow - snode.ncol;
-      node.contrib = (contrib_dimn > 0) ? CATraits::allocate(contrib_alloc, contrib_dimn*contrib_dimn) : nullptr;
+      node.contrib = (contrib_dimn > 0) ? PATraits::allocate(pool_alloc, contrib_dimn*contrib_dimn) : nullptr;
 
       /* Alloc + set perm for expected eliminations at this node (delays are set
        * when they are imported from children) */
@@ -355,7 +352,7 @@ private:
          struct cpu_factor_options const& options,
          struct cpu_factor_stats& stats,
          Workspace& work,
-         ContribAllocator& contrib_alloc
+         PoolAllocator& pool_alloc
          ) {
       /* Extract useful information about node */
       int m = snode.nrow + node->ndelay_in;
@@ -391,8 +388,8 @@ private:
       if(node->nelim==0 && !node->first_child) {
          // FIXME: Actually loop over children and check one exists with contrib
          //        rather than current approach of just looking for children.
-         typedef std::allocator_traits<ContribAllocator> CATraits;
-         CATraits::deallocate(contrib_alloc, node->contrib, (m-n)*(m-n));
+         typedef std::allocator_traits<PoolAllocator> PATraits;
+         PATraits::deallocate(pool_alloc, node->contrib, (m-n)*(m-n));
          node->contrib = nullptr;
       } else if(node->nelim==0) {
          // FIXME: If we fix the above, we don't need this explict zeroing
@@ -404,7 +401,7 @@ private:
    void assemble_post(
          SymbolicNode const& snode,
          NumericNode<T>& node,
-         ContribAllocator& contrib_alloc,
+         PoolAllocator& pool_alloc,
          int* map
          ) {
       /* Initialise variables */
@@ -439,7 +436,7 @@ private:
                }
             }
             /* Free memory from child contribution block */
-            CATraits::deallocate(contrib_alloc, child->contrib, cm*cm);
+            PATraits::deallocate(pool_alloc, child->contrib, cm*cm);
          }
       }
    }
