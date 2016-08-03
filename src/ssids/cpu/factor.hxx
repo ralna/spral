@@ -37,7 +37,7 @@ const int SSIDS_SUCCESS = 0;
 const int SSIDS_ERROR_NOT_POS_DEF = -6;
 
 /* Factorize a node (indef) */
-template <typename T, typename ContribAlloc>
+template <typename T, typename ContribAlloc, typename PoolAlloc>
 void factor_node_indef(
       int ni, // FIXME: remove post debug
       SymbolicNode const& snode,
@@ -45,7 +45,8 @@ void factor_node_indef(
       struct cpu_factor_options const& options,
       struct cpu_factor_stats& stats,
       std::vector<Workspace>& work,
-      ContribAlloc& contrib_alloc
+      ContribAlloc& contrib_alloc,
+      PoolAlloc& pool_alloc
       ) {
    /* Extract useful information about node */
    int m = snode.nrow + node->ndelay_in;
@@ -59,7 +60,7 @@ void factor_node_indef(
    /* Perform factorization */
    //Verify<T> verifier(m, n, perm, lcol, ldl);
    node->nelim = ldlt_app_factor(
-         m, n, perm, lcol, ldl, d, 0.0, contrib, m-n, options, work
+         m, n, perm, lcol, ldl, d, 0.0, contrib, m-n, options, work, pool_alloc
          );
    //verifier.verify(node->nelim, perm, lcol, ldl, d);
 
@@ -147,7 +148,7 @@ void factor_node_posdef(
    node->ndelay_out = 0;
 }
 /* Factorize a node (wrapper) */
-template <bool posdef, typename T, typename ContribAlloc>
+template <bool posdef, typename T, typename ContribAlloc, typename PoolAlloc>
 void factor_node(
       int ni,
       SymbolicNode const& snode,
@@ -156,10 +157,11 @@ void factor_node(
       struct cpu_factor_stats& stats,
       std::vector<Workspace>& work,
       ContribAlloc& contrib_alloc,
+      PoolAlloc& pool_alloc,
       T beta=0.0 // FIXME: remove once smallleafsubtree is doing own thing
       ) {
-   if(posdef) factor_node_posdef<T>(beta, snode, node, options, stats);
-   else       factor_node_indef <T>(ni, snode, node, options, stats, work, contrib_alloc);
+   if(posdef) factor_node_posdef(beta, snode, node, options, stats);
+   else       factor_node_indef(ni, snode, node, options, stats, work, contrib_alloc, pool_alloc);
 }
 
 }}} /* end of namespace spral::ssids::cpu */

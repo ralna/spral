@@ -25,6 +25,7 @@
 
 #include "../AlignedAllocator.hxx"
 #include "../BlockPool.hxx"
+#include "../BuddyAllocator.hxx"
 #include "../cpu_iface.hxx"
 #include "../Workspace.hxx"
 #include "block_ldlt.hxx"
@@ -1063,7 +1064,7 @@ public:
       int mblk = calc_nblk(m, block_size);
 
       /* Temporary workspaces */
-      ColumnData<T, IntAlloc> cdata(n, block_size, alloc);
+      ColumnData<T, IntAlloc> cdata(n, block_size, IntAlloc(alloc));
 #ifdef PROFILE
       Profile::setNullState(omp_get_thread_num());
 #endif
@@ -1198,8 +1199,8 @@ size_t ldlt_app_factor_mem_required(int m, int n, int block_size) {
    return align_lda<T>(m) * n * sizeof(T) + align; // CopyBackup
 }
 
-template<typename T>
-int ldlt_app_factor(int m, int n, int* perm, T* a, int lda, T* d, T beta, T* upd, int ldupd, struct cpu_factor_options const& options, std::vector<Workspace>& work) {
+template<typename T, typename Allocator>
+int ldlt_app_factor(int m, int n, int* perm, T* a, int lda, T* d, T beta, T* upd, int ldupd, struct cpu_factor_options const& options, std::vector<Workspace>& work, Allocator const& alloc) {
    // If we've got a tall and narrow node, adjust block size so each block
    // has roughly blksz**2 entries
    // FIXME: Decide if this reshape is actually useful, given it will generate
@@ -1215,8 +1216,6 @@ int ldlt_app_factor(int m, int n, int* perm, T* a, int lda, T* d, T beta, T* upd
 
    // Template parameters and workspaces
    bool const debug = false;
-   typedef std::allocator<T> Allocator;
-   Allocator alloc;
    //PoolBackup<T, Allocator> backup(m, n, outer_block_size, alloc);
    CopyBackup<T, Allocator> backup(m, n, outer_block_size, alloc);
 
@@ -1231,7 +1230,7 @@ int ldlt_app_factor(int m, int n, int* perm, T* a, int lda, T* d, T beta, T* upd
             outer_block_size, beta, upd, ldupd, work, alloc
             );
 }
-template int ldlt_app_factor<double>(int, int, int*, double*, int, double*, double, double*, int, struct cpu_factor_options const&, std::vector<Workspace>&);
+template int ldlt_app_factor<double, BuddyAllocator<double,std::allocator<double>>>(int, int, int*, double*, int, double*, double, double*, int, struct cpu_factor_options const&, std::vector<Workspace>&, BuddyAllocator<double,std::allocator<double>> const& alloc);
 
 template <typename T>
 void ldlt_app_solve_fwd(int m, int n, T const* l, int ldl, int nrhs, T* x, int ldx) {

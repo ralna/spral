@@ -24,21 +24,23 @@ namespace spral { namespace ssids { namespace cpu {
 template <bool posdef,
           typename T,
           typename FactorAllocator, // Allocator to use for factor storage
-          typename ContribAllocator // Allocator to use for contribution blocks
+          typename ContribAllocator, // Allocator to use for contribution blocks
+          typename PoolAllocator // Allocator for pool memory usage
           >
 class SmallLeafNumericSubtree;
 
 /// Positive-definite specialization
 template <typename T,
           typename FactorAllocator, // Allocator to use for factor storage
-          typename ContribAllocator // Allocator to use for contribution blocks
+          typename ContribAllocator, // Allocator to use for contribution blocks
+          typename PoolAllocator // Allocator for pool memory usage
           >
-class SmallLeafNumericSubtree<true, T, FactorAllocator, ContribAllocator> {
+class SmallLeafNumericSubtree<true, T, FactorAllocator, ContribAllocator, PoolAllocator> {
    typedef typename std::allocator_traits<FactorAllocator>::template rebind_traits<double> FADoubleTraits;
    typedef typename std::allocator_traits<FactorAllocator>::template rebind_traits<int> FAIntTraits;
    typedef std::allocator_traits<ContribAllocator> CATraits;
 public:
-   SmallLeafNumericSubtree(SmallLeafSymbolicSubtree const& symb, std::vector<NumericNode<T>>& old_nodes, T const* aval, T const* scaling, FactorAllocator& factor_alloc, ContribAllocator& contrib_alloc, std::vector<Workspace>& work_vec, struct cpu_factor_options const& options, struct cpu_factor_stats& stats) 
+   SmallLeafNumericSubtree(SmallLeafSymbolicSubtree const& symb, std::vector<NumericNode<T>>& old_nodes, T const* aval, T const* scaling, FactorAllocator& factor_alloc, ContribAllocator& contrib_alloc, PoolAllocator& pool_alloc, std::vector<Workspace>& work_vec, struct cpu_factor_options const& options, struct cpu_factor_stats& stats) 
       : old_nodes_(old_nodes), symb_(symb), lcol_(FADoubleTraits::allocate(factor_alloc, symb.nfactor_))
    {
       Workspace& work = work_vec[omp_get_thread_num()];
@@ -64,10 +66,9 @@ public:
          int nrow = symb_.symb_[ni].nrow;
          stats.maxfront = std::max(stats.maxfront, nrow);
          // Factorization
-         factor_node
-            <true>
+         factor_node<true>
             (ni, symb_.symb_[ni], &old_nodes_[ni], options, stats,
-             work_vec, contrib_alloc, 1.0);
+             work_vec, contrib_alloc, pool_alloc, 1.0);
          if(stats.flag<SSIDS_SUCCESS) return;
       }
    }
@@ -186,14 +187,15 @@ private:
 // Indefinite specialization
 template <typename T,
           typename FactorAllocator, // Allocator to use for factor storage
-          typename ContribAllocator // Allocator to use for contribution blocks
+          typename ContribAllocator, // Allocator to use for contribution blocks
+          typename PoolAllocator // Allocator for pool memory usage
           >
-class SmallLeafNumericSubtree<false, T, FactorAllocator, ContribAllocator> {
+class SmallLeafNumericSubtree<false, T, FactorAllocator, ContribAllocator, PoolAllocator> {
    typedef typename std::allocator_traits<FactorAllocator>::template rebind_traits<double> FADoubleTraits;
    typedef typename std::allocator_traits<FactorAllocator>::template rebind_traits<int> FAIntTraits;
    typedef std::allocator_traits<ContribAllocator> CATraits;
 public:
-   SmallLeafNumericSubtree(SmallLeafSymbolicSubtree const& symb, std::vector<NumericNode<T>>& old_nodes, T const* aval, T const* scaling, FactorAllocator& factor_alloc, ContribAllocator& contrib_alloc, std::vector<Workspace>& work_vec, struct cpu_factor_options const& options, struct cpu_factor_stats& stats) 
+   SmallLeafNumericSubtree(SmallLeafSymbolicSubtree const& symb, std::vector<NumericNode<T>>& old_nodes, T const* aval, T const* scaling, FactorAllocator& factor_alloc, ContribAllocator& contrib_alloc, PoolAllocator& pool_alloc, std::vector<Workspace>& work_vec, struct cpu_factor_options const& options, struct cpu_factor_stats& stats) 
    : old_nodes_(old_nodes), symb_(symb)
    {
       Workspace& work = work_vec[omp_get_thread_num()];

@@ -30,7 +30,8 @@ template <bool posdef,
           typename ContribAllocator // Allocator to use for contribution blocks
           >
 class NumericSubtree {
-   typedef SmallLeafNumericSubtree<posdef, T, FactorAllocator, ContribAllocator> SLNS;
+   typedef BuddyAllocator<T,std::allocator<T>> PoolAllocator; // FIXME use contrib
+   typedef SmallLeafNumericSubtree<posdef, T, FactorAllocator, ContribAllocator, PoolAllocator> SLNS;
 public:
    /* Delete copy constructors for safety re allocated memory */
    NumericSubtree(const NumericSubtree&) =delete;
@@ -44,7 +45,8 @@ public:
          struct cpu_factor_stats& stats)
    : symb_(symbolic_subtree), nodes_(symbolic_subtree.nnodes_+1),
      small_leafs_(static_cast<SLNS*>(::operator new[](symb_.small_leafs_.size()*sizeof(SLNS)))),
-     factor_alloc_(symbolic_subtree.get_factor_mem_est(options.multiplier))
+     factor_alloc_(symbolic_subtree.get_factor_mem_est(options.multiplier)),
+     pool_alloc_(symbolic_subtree.get_pool_size<T>())
    {
       Profile::init();
 
@@ -99,7 +101,7 @@ public:
 #endif
                auto const& leaf = symb_.small_leafs_[si];
                new (&small_leafs_[si]) SLNS(leaf, nodes_, aval, scaling,
-                     factor_alloc_, contrib_alloc_, work,
+                     factor_alloc_, contrib_alloc_, pool_alloc_, work,
                      options, thread_stats[this_thread]);
                #pragma omp cancel taskgroup \
                   if(thread_stats[this_thread].flag<SSIDS_SUCCESS)
@@ -135,11 +137,10 @@ public:
                thread_stats[this_thread].maxfront = std::max(thread_stats[this_thread].maxfront, nrow);
 
                // Factorization
-               factor_node
-                  <posdef>
+               factor_node<posdef>
                   (ni, symb_[ni], &nodes_[ni], options,
                    thread_stats[this_thread], work,
-                   contrib_alloc_);
+                   contrib_alloc_, pool_alloc_);
                #pragma omp cancel taskgroup \
                   if(thread_stats[this_thread].flag<SSIDS_SUCCESS)
 
@@ -440,6 +441,7 @@ private:
       // std::vector is out. So we use placement new instead.
    FactorAllocator factor_alloc_;
    ContribAllocator contrib_alloc_;
+   PoolAllocator pool_alloc_;
 };
 
 }}} /* end of namespace spral::ssids::cpu */

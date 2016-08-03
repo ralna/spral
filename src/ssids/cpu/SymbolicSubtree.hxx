@@ -26,6 +26,7 @@ public:
    {
       // FIXME: don't process nodes that are in small leaf subtrees
       /* Fill out basic details */
+      maxfront_ = 0;
       for(int ni=0; ni<nnodes_; ++ni) {
          nodes_[ni].idx = ni;
          nodes_[ni].nrow = static_cast<int>(rptr[ni+1] - rptr[ni]);
@@ -37,6 +38,7 @@ public:
          nodes_[ni].amap = &nlist[2*(nptr[ni]-1)]; // nptr is Fortran indexed
          nodes_[ni].parent = sparent[ni]-1; // sparent is Fortran indexed
          nodes_[ni].insmallleaf = false; // default to not in small leaf subtree
+         maxfront_ = std::max(maxfront_, (size_t) nodes_[ni].nrow);
       }
       nodes_[nnodes_].first_child = nullptr; // List of roots
       /* Build child linked lists */
@@ -83,11 +85,16 @@ public:
       size_t mem = n*sizeof(int) + (2*n+nfactor_)*sizeof(double);
       return std::max(mem, static_cast<size_t>(mem*multiplier));
    }
+   template <typename T>
+   size_t get_pool_size() const {
+      return 2*maxfront_*align_lda<double>(maxfront_);
+   }
 public:
    int const n; //< Maximum row index
 private:
    int nnodes_;
    size_t nfactor_;
+   size_t maxfront_;
    std::vector<SymbolicNode> nodes_;
    std::vector<SmallLeafSymbolicSubtree> small_leafs_;
 
