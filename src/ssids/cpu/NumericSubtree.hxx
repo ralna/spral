@@ -30,7 +30,7 @@ template <bool posdef,
           typename ContribAllocator // Allocator to use for contribution blocks
           >
 class NumericSubtree {
-   typedef BuddyAllocator<T,std::allocator<T>> PoolAllocator; // FIXME use contrib
+   typedef BuddyAllocator<T,std::allocator<T>> PoolAllocator; // FIXME use for contrib?
    typedef SmallLeafNumericSubtree<posdef, T, FactorAllocator, ContribAllocator, PoolAllocator> SLNS;
 public:
    /* Delete copy constructors for safety re allocated memory */
