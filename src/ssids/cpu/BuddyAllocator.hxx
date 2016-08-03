@@ -21,7 +21,7 @@ namespace buddy_alloc_internal {
 template <typename CharAllocator=std::allocator<char>>
 class Page {
    typedef typename std::allocator_traits<CharAllocator>::template rebind_traits<int> IntAllocTraits;
-   static int const nlevel=8;
+   static int const nlevel=16;
    static int const align=32;
    static int const ISSUED_FLAG = -2; // flag value as issued
 public:
@@ -33,7 +33,6 @@ public:
       min_size_ = std::max(size_t(1), size / (1<<(nlevel-1)));
       min_size_ = align * ((min_size_-1)/align + 1); // make muliple of align
       size_ = min_size_<<(nlevel-1);
-      //printf("Allocating to size %ld\n", size_);
       /* Allocate memory of sufficient size and align it */
       mem_ = std::allocator_traits<CharAllocator>::allocate(alloc_, size_+align);
       size_t space = size_+align; 
@@ -74,7 +73,8 @@ public:
       if(sz > size_) return nullptr; // too big: don't even try 
       // Determine which level of block we're trying to find
       int level = sz_to_level(sz);
-      return addr_to_ptr(get_next_ptr(level));
+      void* ptr = addr_to_ptr(get_next_ptr(level));
+      return ptr;
    }
    void deallocate(void* ptr, std::size_t sz) {
       int idx = ptr_to_addr(ptr);
@@ -85,6 +85,14 @@ public:
    bool is_owner(void* ptr) {
       int idx = ptr_to_addr(ptr);
       return (idx>=0 && idx<(1<<(nlevel-1)));
+   }
+   size_t count_free() const {
+      size_t free=0;
+      for(int i=0; i<nlevel; ++i) {
+         for(int p=head_[i]; p!=-1; p=next_[p])
+            free += (1<<i) * min_size_;
+      }
+      return free;
    }
 private:
    /** Returns next ptr at given level, creating one if required.
@@ -207,6 +215,9 @@ public:
       }
       if(!ptr) {
          // Failed to alloc on existing page: make a bigger page and use it
+         /*printf("Failed to allocate %ld on existing page...\n", sz);
+         for(auto& page: pages_)
+            printf("page %p free %ld\n", &page, page.count_free());*/
          max_sz_ = std::max(2*max_sz_, sz);
          pages_.emplace_back(max_sz_, alloc_);
          ptr = pages_.back().allocate(sz);
