@@ -32,6 +32,7 @@ public:
       min_size_ = std::max(size_t(1), size / (1<<(nlevel-1)));
       min_size_ = align * ((min_size_-1)/align + 1); // make muliple of align
       size_ = min_size_<<(nlevel-1);
+      //printf("Allocating to size %ld\n", size_);
       /* Allocate memory of sufficient size and align it */
       mem_ = std::allocator_traits<CharAllocator>::allocate(alloc_, size_+align);
       size_t space = size_+align; 
@@ -56,7 +57,7 @@ public:
       for(int i=0; i<nlevel; ++i)
          head_[i] = other.head_[i];
    }
-   ~Page() {
+   ~Page() noexcept(false) {
       if(next_ && head_[nlevel-1] != 0)
          throw std::runtime_error("outstanding allocations on cleanup\n");
       if(next_) {
