@@ -11,12 +11,26 @@
 #pragma once
 
 #include <cmath>
-#include <stdexcept>
+#include <limits>
 
 #include "common.hxx"
 #include "SimdVec.hxx"
 
 namespace spral { namespace ssids { namespace cpu {
+
+/** Return number of elements to skip at beginning to get an aligned element,
+ *  or max int if alignment is not (trivally) possible.
+ *
+ *  Note this will mostly just fail if sizeof(T) doesn't divide into alignment.
+ */
+template <typename T>
+int offset_to_align(T* ptr) {
+   int const align = 32;
+   uintptr_t offset = reinterpret_cast<uintptr_t>(ptr) % align;
+   offset /= sizeof(T);
+   if((reinterpret_cast<uintptr_t>(ptr+offset) % align) == 0) return offset;
+   else return std::numeric_limits<int>::max();
+}
 
 /** Calculates LD from L and D.
  *
@@ -35,17 +49,21 @@ void calcLD(int m, int n, T const* l, int ldl, T const* d, T* ld, int ldld) {
          if(op==OP_N) {
             int const vlen = SimdVecT::vector_length;
             int const unroll = 4;
-            int nvec = m / vlen;
+            int offset = offset_to_align(l);
+            if(offset_to_align(ld) != offset) offset = m; // give up on vectors
+            int nvec = (m-offset) / vlen;
+            for(int row=0; row<std::min(offset,m); ++row)
+               ld[col*ldld+row] = d11 * l[col*ldl+row];
             SimdVecT d11v(d11);
             if(nvec < unroll) {
-               for(int row=0; row<nvec*vlen; row+=vlen) {
+               for(int row=offset; row<offset+nvec*vlen; row+=vlen) {
                   SimdVecT lv = SimdVecT::load_aligned(&l[col*ldl+row]);
                   lv = lv * d11;
                   lv.store_aligned(&ld[col*ldld+row]);
                }
             } else {
                int nunroll = nvec / unroll;
-               for(int row=0; row<nunroll*unroll*vlen; row+=unroll*vlen) {
+               for(int row=offset; row<offset+nunroll*unroll*vlen; row+=unroll*vlen) {
                   SimdVecT lv0 = SimdVecT::load_aligned(&l[col*ldl+row+0*vlen]);
                   SimdVecT lv1 = SimdVecT::load_aligned(&l[col*ldl+row+1*vlen]);
                   SimdVecT lv2 = SimdVecT::load_aligned(&l[col*ldl+row+2*vlen]);
@@ -59,13 +77,13 @@ void calcLD(int m, int n, T const* l, int ldl, T const* d, T* ld, int ldld) {
                   lv2.store_aligned(&ld[col*ldld+row+2*vlen]);
                   lv3.store_aligned(&ld[col*ldld+row+3*vlen]);
                }
-               for(int row=nunroll*unroll*vlen; row<nvec*vlen; row+=vlen) {
+               for(int row=offset+nunroll*unroll*vlen; row<nvec*vlen; row+=vlen) {
                   SimdVecT lv = SimdVecT::load_aligned(&l[col*ldl+row]);
                   lv = lv * d11;
                   lv.store_aligned(&ld[col*ldld+row]);
                }
             }
-            for(int row=nvec*vlen; row<m; row++)
+            for(int row=offset+nvec*vlen; row<m; row++)
                ld[col*ldld+row] = d11 * l[col*ldl+row];
          } else { /* op==OP_T */
             for(int row=0; row<m; row++)

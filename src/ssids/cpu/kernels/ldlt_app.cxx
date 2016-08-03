@@ -676,13 +676,14 @@ public:
          int cfrom = (j_ <= elim_col) ? cdata_[j_].nelim : 0;
          int ldld = align_lda<T>(block_size_);
          T* ld = work.get_ptr<T>(block_size_*ldld);
+         // NB: we use ld[rfrom] below so alignment matches that of aval[rfrom]
          calcLD<OP_N>(
                nrow()-rfrom, cdata_[elim_col].nelim, &isrc.aval_[rfrom],
-               lda_, cdata_[elim_col].d, ld, ldld
+               lda_, cdata_[elim_col].d, &ld[rfrom], ldld
                );
          host_gemm(
                OP_N, OP_T, nrow()-rfrom, ncol()-cfrom, cdata_[elim_col].nelim,
-               -1.0, ld, ldld, &jsrc.aval_[cfrom], lda_,
+               -1.0, &ld[rfrom], ldld, &jsrc.aval_[cfrom], lda_,
                1.0, &aval_[cfrom*lda_+rfrom], lda_
                );
          if(upd && j_==calc_nblk(n_,block_size_)-1) {
@@ -693,7 +694,7 @@ public:
                // diagonal block
                host_gemm(
                      OP_N, OP_T, u_ncol, u_ncol, cdata_[elim_col].nelim,
-                     -1.0, &ld[ncol()-rfrom], ldld,
+                     -1.0, &ld[ncol()], ldld,
                      &jsrc.aval_[ncol()], lda_,
                      beta, upd, ldupd
                      );
@@ -703,7 +704,7 @@ public:
                   &upd[(i_-calc_nblk(n_,block_size_))*block_size_+u_ncol];
                host_gemm(
                      OP_N, OP_T, nrow(), u_ncol, cdata_[elim_col].nelim,
-                     -1.0, ld, ldld, &jsrc.aval_[ncol()], lda_,
+                     -1.0, &ld[rfrom], ldld, &jsrc.aval_[ncol()], lda_,
                      beta, upd_ij, ldupd
                      );
             }
@@ -716,22 +717,23 @@ public:
          int cfrom = (j_ <= elim_col) ? cdata_[j_].nelim : 0;
          int ldld = align_lda<T>(block_size_);
          T* ld = work.get_ptr<T>(block_size_*ldld);
+         // NB: we use ld[rfrom] below so alignment matches that of aval[rfrom]
          if(isrc.j_==elim_col) {
             calcLD<OP_N>(
                   nrow()-rfrom, cdata_[elim_col].nelim,
                   &isrc.aval_[rfrom], lda_,
-                  cdata_[elim_col].d, ld, ldld
+                  cdata_[elim_col].d, &ld[rfrom], ldld
                   );
          } else {
             calcLD<OP_T>(
                   nrow()-rfrom, cdata_[elim_col].nelim, &
                   isrc.aval_[rfrom*lda_], lda_,
-                  cdata_[elim_col].d, ld, ldld
+                  cdata_[elim_col].d, &ld[rfrom], ldld
                   );
          }
          host_gemm(
                OP_N, OP_N, nrow()-rfrom, ncol()-cfrom, cdata_[elim_col].nelim,
-               -1.0, ld, ldld, &jsrc.aval_[cfrom*lda_], lda_,
+               -1.0, &ld[rfrom], ldld, &jsrc.aval_[cfrom*lda_], lda_,
                1.0, &aval_[cfrom*lda_+rfrom], lda_
                );
       }
