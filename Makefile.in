@@ -234,18 +234,18 @@ am__libspral_a_SOURCES_DIST = src/blas_iface.f90 src/core_analyse.f90 \
 	src/ssids/contrib.f90 src/ssids/datatypes.f90 \
 	src/ssids/fkeep.f90 src/ssids/inform.f90 src/ssids/ssids.f90 \
 	src/ssids/subtree.f90 src/ssids/cpu/AlignedAllocator.hxx \
-	src/ssids/cpu/BlockPool.hxx src/ssids/cpu/cpu_iface.f90 \
-	src/ssids/cpu/cpu_iface.hxx src/ssids/cpu/factor.hxx \
-	src/ssids/cpu/NumericNode.hxx src/ssids/cpu/NumericSubtree.cxx \
-	src/ssids/cpu/NumericSubtree.hxx src/ssids/cpu/smalloc.cxx \
-	src/ssids/cpu/smalloc.hxx src/ssids/cpu/subtree.f90 \
+	src/ssids/cpu/BlockPool.hxx src/ssids/cpu/BuddyAllocator.hxx \
+	src/ssids/cpu/cpu_iface.f90 src/ssids/cpu/cpu_iface.hxx \
+	src/ssids/cpu/factor.hxx src/ssids/cpu/NumericNode.hxx \
+	src/ssids/cpu/NumericSubtree.cxx \
+	src/ssids/cpu/NumericSubtree.hxx src/ssids/cpu/subtree.f90 \
 	src/ssids/cpu/profile.cxx src/ssids/cpu/profile.hxx \
 	src/ssids/cpu/PoolAlloc.hxx \
 	src/ssids/cpu/SmallLeafNumericSubtree.hxx \
 	src/ssids/cpu/SmallLeafSymbolicSubtree.hxx \
 	src/ssids/cpu/SymbolicNode.hxx \
 	src/ssids/cpu/SymbolicSubtree.cxx \
-	src/ssids/cpu/SymbolicSubtree.hxx \
+	src/ssids/cpu/SymbolicSubtree.hxx src/ssids/cpu/Workspace.hxx \
 	src/ssids/cpu/kernels/assemble.hxx \
 	src/ssids/cpu/kernels/common.hxx \
 	src/ssids/cpu/kernels/block_ldlt.hxx \
@@ -304,7 +304,6 @@ am_libspral_a_OBJECTS = src/blas_iface.$(OBJEXT) \
 	src/ssids/inform.$(OBJEXT) src/ssids/ssids.$(OBJEXT) \
 	src/ssids/subtree.$(OBJEXT) src/ssids/cpu/cpu_iface.$(OBJEXT) \
 	src/ssids/cpu/NumericSubtree.$(OBJEXT) \
-	src/ssids/cpu/smalloc.$(OBJEXT) \
 	src/ssids/cpu/subtree.$(OBJEXT) \
 	src/ssids/cpu/profile.$(OBJEXT) \
 	src/ssids/cpu/SymbolicSubtree.$(OBJEXT) \
@@ -1162,18 +1161,18 @@ libspral_a_SOURCES = src/blas_iface.f90 src/core_analyse.f90 \
 	src/ssids/contrib.f90 src/ssids/datatypes.f90 \
 	src/ssids/fkeep.f90 src/ssids/inform.f90 src/ssids/ssids.f90 \
 	src/ssids/subtree.f90 src/ssids/cpu/AlignedAllocator.hxx \
-	src/ssids/cpu/BlockPool.hxx src/ssids/cpu/cpu_iface.f90 \
-	src/ssids/cpu/cpu_iface.hxx src/ssids/cpu/factor.hxx \
-	src/ssids/cpu/NumericNode.hxx src/ssids/cpu/NumericSubtree.cxx \
-	src/ssids/cpu/NumericSubtree.hxx src/ssids/cpu/smalloc.cxx \
-	src/ssids/cpu/smalloc.hxx src/ssids/cpu/subtree.f90 \
+	src/ssids/cpu/BlockPool.hxx src/ssids/cpu/BuddyAllocator.hxx \
+	src/ssids/cpu/cpu_iface.f90 src/ssids/cpu/cpu_iface.hxx \
+	src/ssids/cpu/factor.hxx src/ssids/cpu/NumericNode.hxx \
+	src/ssids/cpu/NumericSubtree.cxx \
+	src/ssids/cpu/NumericSubtree.hxx src/ssids/cpu/subtree.f90 \
 	src/ssids/cpu/profile.cxx src/ssids/cpu/profile.hxx \
 	src/ssids/cpu/PoolAlloc.hxx \
 	src/ssids/cpu/SmallLeafNumericSubtree.hxx \
 	src/ssids/cpu/SmallLeafSymbolicSubtree.hxx \
 	src/ssids/cpu/SymbolicNode.hxx \
 	src/ssids/cpu/SymbolicSubtree.cxx \
-	src/ssids/cpu/SymbolicSubtree.hxx \
+	src/ssids/cpu/SymbolicSubtree.hxx src/ssids/cpu/Workspace.hxx \
 	src/ssids/cpu/kernels/assemble.hxx \
 	src/ssids/cpu/kernels/common.hxx \
 	src/ssids/cpu/kernels/block_ldlt.hxx \
@@ -1502,8 +1501,6 @@ src/ssids/cpu/$(DEPDIR)/$(am__dirstamp):
 src/ssids/cpu/cpu_iface.$(OBJEXT): src/ssids/cpu/$(am__dirstamp) \
 	src/ssids/cpu/$(DEPDIR)/$(am__dirstamp)
 src/ssids/cpu/NumericSubtree.$(OBJEXT): src/ssids/cpu/$(am__dirstamp) \
-	src/ssids/cpu/$(DEPDIR)/$(am__dirstamp)
-src/ssids/cpu/smalloc.$(OBJEXT): src/ssids/cpu/$(am__dirstamp) \
 	src/ssids/cpu/$(DEPDIR)/$(am__dirstamp)
 src/ssids/cpu/subtree.$(OBJEXT): src/ssids/cpu/$(am__dirstamp) \
 	src/ssids/cpu/$(DEPDIR)/$(am__dirstamp)
@@ -1999,7 +1996,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/$(DEPDIR)/NumericSubtree.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/$(DEPDIR)/SymbolicSubtree.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/$(DEPDIR)/profile.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/$(DEPDIR)/smalloc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/kernels/$(DEPDIR)/cholesky.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/kernels/$(DEPDIR)/ldlt_app.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/kernels/$(DEPDIR)/ldlt_nopiv.Po@am__quote@

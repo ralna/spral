@@ -220,6 +220,7 @@ libspral_a_SOURCES += \
 	src/ssids/subtree.f90 \
 	src/ssids/cpu/AlignedAllocator.hxx \
 	src/ssids/cpu/BlockPool.hxx \
+	src/ssids/cpu/BuddyAllocator.hxx \
 	src/ssids/cpu/cpu_iface.f90 \
 	src/ssids/cpu/cpu_iface.hxx \
 	src/ssids/cpu/factor.hxx \
