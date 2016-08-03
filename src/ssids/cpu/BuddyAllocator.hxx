@@ -11,6 +11,7 @@
 #pragma once
 
 #include <memory>
+#include <omp.h>
 
 namespace spral { namespace ssids { namespace cpu {
 
@@ -28,9 +29,9 @@ public:
    Page(size_t size, CharAllocator const &alloc=CharAllocator())
    : alloc_(alloc)
    {
-      min_size_ = size / (1<<nlevel);
+      min_size_ = std::max(size_t(1), size / (1<<(nlevel-1)));
       min_size_ = align * ((min_size_-1)/align + 1); // make muliple of align
-      size_ = min_size_<<nlevel;
+      size_ = min_size_<<(nlevel-1);
       /* Allocate memory of sufficient size and align it */
       mem_ = std::allocator_traits<CharAllocator>::allocate(alloc_, size_+align);
       size_t space = size_+align; 
@@ -38,7 +39,7 @@ public:
       std::align(align, size, to_align, space);
       base_ = static_cast<char*>(to_align);
       typename IntAllocTraits::allocator_type intAlloc(alloc_);
-      next_ = IntAllocTraits::allocate(intAlloc, 1<<nlevel);
+      next_ = IntAllocTraits::allocate(intAlloc, 1<<(nlevel-1));
       /* Initialize data structures */
       head_[nlevel-1] = 0; next_[0] = -1; // a single free block at top level
       for(int i=0; i<nlevel-1; ++i)
@@ -56,9 +57,11 @@ public:
          head_[i] = other.head_[i];
    }
    ~Page() {
+      if(next_ && head_[nlevel-1] != 0)
+         throw std::runtime_error("outstanding allocations on cleanup\n");
       if(next_) {
          typename IntAllocTraits::allocator_type intAlloc(alloc_);
-         IntAllocTraits::deallocate(intAlloc, next_, 1<<nlevel);
+         IntAllocTraits::deallocate(intAlloc, next_, 1<<(nlevel-1));
       }
       if(mem_)
          std::allocator_traits<CharAllocator>::deallocate(
@@ -79,7 +82,7 @@ public:
    /** Return true if this Page owners given pointer */
    bool is_owner(void* ptr) {
       int idx = ptr_to_addr(ptr);
-      return (idx>=0 && idx<(1<<nlevel));
+      return (idx>=0 && idx<(1<<(nlevel-1)));
    }
 private:
    /** Returns next ptr at given level, creating one if required.
@@ -100,13 +103,16 @@ private:
 
    /** Marks given block as free, tries to merge with partner if possible */
    void mark_free(int idx, int level) {
-      int partner = get_partner(idx, level);
-      if(next_[partner] != ISSUED_FLAG && level<nlevel-1) {
-         // Partner is free in *some* list, not necessarily this level
-         if(remove_from_free_list(partner, level)) {
-            // It was this level - we can merge
-            mark_free(std::min(idx, partner), level+1);
-            return;
+      if(level < nlevel-1) {
+         // There exists a partner, see if we can merge with it
+         int partner = get_partner(idx, level);
+         if(next_[partner] != ISSUED_FLAG) {
+            // Partner is free in *some* list, not necessarily this level
+            if(remove_from_free_list(partner, level)) {
+               // It was this level - we can merge
+               mark_free(std::min(idx, partner), level+1);
+               return;
+            }
          }
       }
       // Otherwise, can't merge, add to free list
@@ -181,37 +187,52 @@ private:
 template <typename CharAllocator>
 class Table {
 public:
+   Table(const Table&) =delete;
+   Table& operator=(const Table&) =delete;
    Table(std::size_t sz, CharAllocator const& alloc=CharAllocator())
    : alloc_(alloc), max_sz_(sz)
    {
+      omp_init_lock(&lock_);
       pages_.emplace_back(max_sz_, alloc_);
+   }
+   ~Table() {
+      omp_destroy_lock(&lock_);
    }
 
    void* allocate(std::size_t sz) {
       // Try allocating in existing pages
+      omp_set_lock(&lock_);
+      void* ptr;
       for(auto& page: pages_) {
-         void* ptr = page.allocate(sz);
-         if(ptr) return ptr;
+         ptr = page.allocate(sz);
+         if(ptr) break; // allocation suceeded
       }
-      // If we failed, make another page, bigger this time
-      max_sz_ = std::max(2*max_sz_, sz);
-      pages_.emplace_back(max_sz_, alloc_);
-      return pages_.back().allocate(sz);
+      if(!ptr) {
+         // Failed to alloc on existing page: make a bigger page and use it
+         max_sz_ = std::max(2*max_sz_, sz);
+         pages_.emplace_back(max_sz_, alloc_);
+         ptr = pages_.back().allocate(sz);
+      }
+      omp_unset_lock(&lock_);
+      return ptr;
    }
 
    void deallocate(void* ptr, std::size_t sz) {
+      omp_set_lock(&lock_);
       for(auto& page: pages_) {
          if(page.is_owner(ptr)) {
             page.deallocate(ptr, sz);
-            return;
+            break;
          }
       }
+      omp_unset_lock(&lock_);
    }
 
 private:
    CharAllocator alloc_;
    std::size_t max_sz_;
    std::vector<Page<CharAllocator>> pages_;
+   omp_lock_t lock_;
 };
 
 } /* namespace buddy_alloc_internal */
@@ -224,7 +245,7 @@ public:
    typedef T value_type;
 
    BuddyAllocator(size_t size, BaseAllocator const& base=BaseAllocator())
-   : table_(new buddy_alloc_internal::Table<CharAllocator>(size, base))
+   : table_(new buddy_alloc_internal::Table<CharAllocator>(size*sizeof(T), base))
    {}
    template<typename U, typename UBaseAllocator>
    BuddyAllocator(BuddyAllocator<U, UBaseAllocator> const& other)
