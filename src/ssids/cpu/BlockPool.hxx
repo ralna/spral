@@ -10,11 +10,11 @@
  */
 #pragma once
 
-#include <omp.h>
-
 #include <memory>
 #include <type_traits>
 #include <vector>
+
+#include "omp.hxx"
 
 namespace spral { namespace ssids { namespace cpu {
 
@@ -43,12 +43,9 @@ public:
       for(int i=num_blocks-1; i>=0; --i) {
          pool_.push_back(reinterpret_cast<T*>(mem_ + i*block_size_));
       }
-      // Initialize lock
-      omp_init_lock(&lock);
    }
    ~BlockPool() {
       // FIXME: Throw an exception if we've not had all memory returned? 
-      omp_destroy_lock(&lock);
       CharAllocTraits::deallocate(alloc_, mem_, num_blocks_*block_size_);
    }
 
@@ -57,12 +54,12 @@ public:
     */
    T *get_nowait() {
       T *ptr = nullptr;
-      omp_set_lock(&lock);
+      lock_.set();
          if(pool_.size() > 0) {
             ptr = pool_.back();
             pool_.pop_back();
          }
-      omp_unset_lock(&lock);
+      lock_.unset();
       return ptr;
    }
    /** Get next free block in a thread-safe fashion.
@@ -80,9 +77,9 @@ public:
    }
    /** Release block acquired using get_*() function for reuse */
    void release(T *const ptr) {
-      omp_set_lock(&lock);
+      lock_.set();
          pool_.push_back(ptr);
-      omp_unset_lock(&lock);
+      lock_.unset();
    }
 private:
    typename CharAllocTraits::allocator_type alloc_;
@@ -91,7 +88,7 @@ private:
    std::size_t block_size_; //< Size of an aligned block in bytes
    char* mem_; //< pointer to allocated memory
    std::vector<T*> pool_; //< stack of free blocks
-   omp_lock_t lock; //< lock used for safe access to pool_
+   spral::omp::Lock lock_; //< lock used for safe access to pool_
 };
 
 }}} /* namespace spral::ssids::cpu */

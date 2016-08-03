@@ -11,7 +11,8 @@
 #pragma once
 
 #include <memory>
-#include <omp.h>
+
+#include "omp.hxx"
 
 namespace spral { namespace ssids { namespace cpu {
 
@@ -193,16 +194,12 @@ public:
    Table(std::size_t sz, CharAllocator const& alloc=CharAllocator())
    : alloc_(alloc), max_sz_(sz)
    {
-      omp_init_lock(&lock_);
       pages_.emplace_back(max_sz_, alloc_);
-   }
-   ~Table() {
-      omp_destroy_lock(&lock_);
    }
 
    void* allocate(std::size_t sz) {
       // Try allocating in existing pages
-      omp_set_lock(&lock_);
+      lock_.set();
       void* ptr;
       for(auto& page: pages_) {
          ptr = page.allocate(sz);
@@ -214,26 +211,26 @@ public:
          pages_.emplace_back(max_sz_, alloc_);
          ptr = pages_.back().allocate(sz);
       }
-      omp_unset_lock(&lock_);
+      lock_.unset();
       return ptr;
    }
 
    void deallocate(void* ptr, std::size_t sz) {
-      omp_set_lock(&lock_);
+      lock_.set();
       for(auto& page: pages_) {
          if(page.is_owner(ptr)) {
             page.deallocate(ptr, sz);
             break;
          }
       }
-      omp_unset_lock(&lock_);
+      lock_.unset();
    }
 
 private:
    CharAllocator alloc_;
    std::size_t max_sz_;
    std::vector<Page<CharAllocator>> pages_;
-   omp_lock_t lock_;
+   spral::omp::Lock lock_;
 };
 
 } /* namespace buddy_alloc_internal */
