@@ -212,7 +212,7 @@ private:
    CharAllocator alloc_;
    std::size_t max_sz_;
    std::vector<Page<CharAllocator>> pages_;
-}
+};
 
 } /* namespace buddy_alloc_internal */
 
@@ -223,7 +223,7 @@ class BuddyAllocator {
    typedef typename std::allocator_traits<BaseAllocator>::template rebind_allocator<char> CharAllocator;
 public:
    BuddyAllocator(BaseAllocator const& base=BaseAllocator())
-   : table_(new Table)
+   : table_(new buddy_alloc_internal::Table<CharAllocator>)
    {}
    template<typename U, typename UBaseAllocator>
    BuddyAllocator(BuddyAllocator<U, UBaseAllocator> &other)
@@ -240,7 +240,7 @@ public:
       table_.get_ptr()->deallocate(ptr, n*sizeof(T));
    }
 private:
-   std::shared_ptr<Table> table_;
+   std::shared_ptr<buddy_alloc_internal::Table<CharAllocator>> table_;
 };
 
 }}} /* namespaces spral::ssids::cpu */

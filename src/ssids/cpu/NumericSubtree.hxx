@@ -12,6 +12,7 @@
 
 #include "cpu_iface.hxx"
 #include "factor.hxx"
+#include "BuddyAllocator.hxx"
 #include "NumericNode.hxx"
 #include "SymbolicSubtree.hxx"
 #include "SmallLeafNumericSubtree.hxx"
