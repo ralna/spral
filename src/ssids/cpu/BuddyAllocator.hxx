@@ -189,7 +189,7 @@ public:
 
    void* allocate(std::size_t sz) {
       // Try allocating in existing pages
-      for(auto page: pages_) {
+      for(auto& page: pages_) {
          void* ptr = page.allocate(sz);
          if(ptr) return ptr;
       }
@@ -200,7 +200,7 @@ public:
    }
 
    void deallocate(void* ptr, std::size_t sz) {
-      for(auto page: pages_) {
+      for(auto& page: pages_) {
          if(page.is_owner(ptr)) {
             page.deallocate(ptr, sz);
             return;
@@ -219,28 +219,31 @@ private:
 /** Simple buddy-system allocator */
 template <typename T, typename BaseAllocator>
 class BuddyAllocator {
-   typedef T value_type;
-   typedef typename std::allocator_traits<BaseAllocator>::template rebind_allocator<char> CharAllocator;
+   typedef typename std::allocator_traits<BaseAllocator>::template rebind_alloc<char> CharAllocator;
 public:
-   BuddyAllocator(BaseAllocator const& base=BaseAllocator())
-   : table_(new buddy_alloc_internal::Table<CharAllocator>)
+   typedef T value_type;
+
+   BuddyAllocator(size_t size, BaseAllocator const& base=BaseAllocator())
+   : table_(new buddy_alloc_internal::Table<CharAllocator>(size, base))
    {}
    template<typename U, typename UBaseAllocator>
-   BuddyAllocator(BuddyAllocator<U, UBaseAllocator> &other)
+   BuddyAllocator(BuddyAllocator<U, UBaseAllocator> const& other)
    : table_(other.table_)
    {}
 
    T* allocate(std::size_t n)
    {
-      return static_cast<T*>(table_.get_ptr()->allocate(n*sizeof(T)));
+      return static_cast<T*>(table_.get()->allocate(n*sizeof(T)));
    }
 
    void deallocate(T* ptr, std::size_t n)
    {
-      table_.get_ptr()->deallocate(ptr, n*sizeof(T));
+      table_.get()->deallocate(ptr, n*sizeof(T));
    }
 private:
    std::shared_ptr<buddy_alloc_internal::Table<CharAllocator>> table_;
+   template<typename U, typename UAlloc>
+   friend class BuddyAllocator;
 };
 
 }}} /* namespaces spral::ssids::cpu */
