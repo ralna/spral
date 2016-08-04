@@ -71,30 +71,40 @@ void assemble_pre(
       node.perm[i] = snode.rlist[i];
 
    /* Add A */
-   if(scaling) {
-      /* Scaling to apply */
-      for(int i=0; i<snode.num_a; i++) {
-         long src  = snode.amap[2*i+0] - 1; // amap contains 1-based values
-         long dest = snode.amap[2*i+1] - 1; // amap contains 1-based values
-         int c = dest / snode.nrow;
-         int r = dest % snode.nrow;
-         long k = c*ldl + r;
-         if(r >= snode.ncol) k += node.ndelay_in;
-         T rscale = scaling[ snode.rlist[r]-1 ];
-         T cscale = scaling[ snode.rlist[c]-1 ];
-         node.lcol[k] = rscale * aval[src] * cscale;
+   int const add_a_blk_sz = 256;
+   for(int iblk=0; iblk<snode.num_a; iblk+=add_a_blk_sz) {
+      #pragma omp task default(none) \
+         firstprivate(iblk) \
+         shared(snode, node, aval, scaling, ldl) \
+         if(iblk+add_a_blk_sz < snode.num_a)
+      if(scaling) {
+         /* Scaling to apply */
+         for(int i=iblk; i<std::min(iblk+add_a_blk_sz,snode.num_a); ++i) {
+            long src  = snode.amap[2*i+0] - 1; // amap contains 1-based values
+            long dest = snode.amap[2*i+1] - 1; // amap contains 1-based values
+            int c = dest / snode.nrow;
+            int r = dest % snode.nrow;
+            long k = c*ldl + r;
+            if(r >= snode.ncol) k += node.ndelay_in;
+            T rscale = scaling[ snode.rlist[r]-1 ];
+            T cscale = scaling[ snode.rlist[c]-1 ];
+            node.lcol[k] = rscale * aval[src] * cscale;
+         }
+      } else {
+         /* No scaling to apply */
+         for(int i=iblk; i<std::min(iblk+add_a_blk_sz,snode.num_a); ++i) {
+            long src  = snode.amap[2*i+0] - 1; // amap contains 1-based values
+            long dest = snode.amap[2*i+1] - 1; // amap contains 1-based values
+            int c = dest / snode.nrow;
+            int r = dest % snode.nrow;
+            long k = c*ldl + r;
+            if(r >= snode.ncol) k += node.ndelay_in;
+            node.lcol[k] = aval[src];
+         }
       }
-   } else {
-      /* No scaling to apply */
-      for(int i=0; i<snode.num_a; i++) {
-         long src  = snode.amap[2*i+0] - 1; // amap contains 1-based values
-         long dest = snode.amap[2*i+1] - 1; // amap contains 1-based values
-         int c = dest / snode.nrow;
-         int r = dest % snode.nrow;
-         long k = c*ldl + r;
-         if(r >= snode.ncol) k += node.ndelay_in;
-         node.lcol[k] = aval[src];
-      }
+   }
+   if(add_a_blk_sz < snode.num_a) {
+      #pragma omp taskwait
    }
 #ifdef PROFILE
    if(!node.first_child) task_asm_pre.done();
