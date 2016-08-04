@@ -22,14 +22,14 @@ namespace spral { namespace ssids { namespace cpu {
 
 template <typename T,
           typename FactorAlloc,
-          typename ContribAlloc>
+          typename PoolAlloc>
 void assemble_pre(
       bool posdef,
+      int n,
       SymbolicNode const& snode,
       NumericNode<T>& node,
       FactorAlloc& factor_alloc,
-      ContribAlloc& contrib_alloc,
-      int* map,
+      PoolAlloc& pool_alloc,
       T const* aval,
       T const* scaling
       ) {
@@ -41,7 +41,9 @@ void assemble_pre(
    typename FADoubleTraits::allocator_type factor_alloc_double(factor_alloc);
    typedef typename std::allocator_traits<FactorAlloc>::template rebind_traits<int> FAIntTraits;
    typename FAIntTraits::allocator_type factor_alloc_int(factor_alloc);
-   typedef std::allocator_traits<ContribAlloc> CATraits;
+   typedef std::allocator_traits<PoolAlloc> PATraits;
+   typedef typename std::allocator_traits<PoolAlloc>::template rebind_traits<int> PAIntTraits;
+   typename PAIntTraits::allocator_type pool_alloc_int(pool_alloc);
 
    /* Count incoming delays and determine size of node */
    node.ndelay_in = 0;
@@ -57,12 +59,12 @@ void assemble_pre(
    size_t len = posdef ?  ldl    * ncol  // posdef
                        : (ldl+2) * ncol; // indef (includes D)
    node.lcol = FADoubleTraits::allocate(factor_alloc_double, len);
-   //memset(node.lcol, 0, len*sizeof(T)); NOT REQUIRED as ContribAlloc is
+   //memset(node.lcol, 0, len*sizeof(T)); NOT REQUIRED as PoolAlloc is
    // required to ensure it is zero for us (i.e. uses calloc)
 
    /* Get space for contribution block + (explicitly do not zero it!) */
    long contrib_dimn = snode.nrow - snode.ncol;
-   node.contrib = (contrib_dimn > 0) ? CATraits::allocate(contrib_alloc, contrib_dimn*contrib_dimn) : nullptr;
+   node.contrib = (contrib_dimn > 0) ? PATraits::allocate(pool_alloc, contrib_dimn*contrib_dimn) : nullptr;
 
    /* Alloc + set perm for expected eliminations at this node (delays are set
     * when they are imported from children) */
@@ -111,10 +113,12 @@ void assemble_pre(
 #endif
 
    /* Add children */
+   int* map = nullptr;
    if(node.first_child != NULL) {
       /* Build lookup vector, allowing for insertion of delayed vars */
       /* Note that while rlist[] is 1-indexed this is fine so long as lookup
        * is also 1-indexed (which it is as it is another node's rlist[] */
+      if(!map) map = PAIntTraits::allocate(pool_alloc_int, n+1);
       for(int i=0; i<snode.ncol; i++)
          map[ snode.rlist[i] ] = i;
       for(int i=snode.ncol; i<snode.nrow; i++)
@@ -193,28 +197,33 @@ void assemble_pre(
          }
       }
    }
+   if(map) PAIntTraits::deallocate(pool_alloc_int, map, n+1);
 }
 
 template <typename T,
-          typename ContribAlloc
+          typename PoolAlloc
           >
 void assemble_post(
+      int n,
       SymbolicNode const& snode,
       NumericNode<T>& node,
-      ContribAlloc& contrib_alloc,
-      int* map
+      PoolAlloc& pool_alloc
       ) {
    /* Rebind allocators */
-   typedef std::allocator_traits<ContribAlloc> CATraits;
+   typedef std::allocator_traits<PoolAlloc> PATraits;
+   typedef typename std::allocator_traits<PoolAlloc>::template rebind_traits<int> PAIntTraits;
+   typename PAIntTraits::allocator_type pool_alloc_int(pool_alloc);
 
    /* Initialise variables */
    int ncol = snode.ncol + node.ndelay_in;
 
    /* Add children */
+   int* map = nullptr;
    if(node.first_child != NULL) {
       /* Build lookup vector, allowing for insertion of delayed vars */
       /* Note that while rlist[] is 1-indexed this is fine so long as lookup
        * is also 1-indexed (which it is as it is another node's rlist[] */
+      if(!map) map = PAIntTraits::allocate(pool_alloc_int, n+1);
       for(int i=0; i<snode.ncol; i++)
          map[ snode.rlist[i] ] = i;
       for(int i=snode.ncol; i<snode.nrow; i++)
@@ -258,9 +267,10 @@ void assemble_post(
             #pragma omp taskwait
          }
          /* Free memory from child contribution block */
-         CATraits::deallocate(contrib_alloc, child->contrib, cm*cm);
+         PATraits::deallocate(pool_alloc, child->contrib, cm*cm);
       }
    }
+   if(map) PAIntTraits::deallocate(pool_alloc_int, map, n+1);
 }
 
 }}} /* namespaces spral::ssids::cpu */

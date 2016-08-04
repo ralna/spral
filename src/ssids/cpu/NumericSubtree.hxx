@@ -127,10 +127,9 @@ public:
                      symb_[ni].nrow, symb_[ni].ncol);*/
                int this_thread = omp_get_thread_num();
                // Assembly of node (not of contribution block)
-               int* map = work[this_thread].get_ptr<int>(symb_.n+1);
                assemble_pre
-                  (posdef, symb_[ni], nodes_[ni], factor_alloc_,
-                   pool_alloc_, map, aval, scaling);
+                  (posdef, symb_.n, symb_[ni], nodes_[ni], factor_alloc_,
+                   pool_alloc_, aval, scaling);
                // Update stats
                int nrow = symb_[ni].nrow + nodes_[ni].ndelay_in;
                thread_stats[this_thread].maxfront = std::max(thread_stats[this_thread].maxfront, nrow);
@@ -144,7 +143,7 @@ public:
                   if(thread_stats[this_thread].flag<SSIDS_SUCCESS)
 
                // Assemble children into contribution block
-               assemble_post(symb_[ni], nodes_[ni], pool_alloc_, map);
+               assemble_post(symb_.n, symb_[ni], nodes_[ni], pool_alloc_);
             }
          }
          } // taskgroup
