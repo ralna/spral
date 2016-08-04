@@ -197,7 +197,7 @@ void assemble_pre(
                   for(int j=iblk; j<cm; ++j)
                      cache[j] = map[ csnode.rlist[csnode.ncol+j] ];
                   for(int i=iblk; i<std::min(iblk+block_size,cm); i++) {
-                     int c = map[ csnode.rlist[csnode.ncol+i] ];
+                     int c = cache[i];
                      T *src = &child->contrib[i*cm];
                      // NB: we handle contribution to contrib in assemble_post()
                      if(c < snode.ncol) {
@@ -270,7 +270,7 @@ void assemble_post(
                for(int j=iblk; j<cm; ++j)
                   cache[j] = map[ csnode.rlist[csnode.ncol+j] ] - ncol;
                for(int i=iblk; i<std::min(iblk+block_size,cm); i++) {
-                  int c = map[ csnode.rlist[csnode.ncol+i] ];
+                  int c = cache[i]+ncol;
                   T *src = &child->contrib[i*cm];
                   // NB: only interested in contribution to generated element
                   if(c >= snode.ncol) {
