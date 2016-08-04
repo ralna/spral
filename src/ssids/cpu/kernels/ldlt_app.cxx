@@ -115,6 +115,8 @@ public:
          *(failed_perm++) = perm[i];
    }
 
+   int get_npass() const { return npass_; }
+
 private:
    omp_lock_t lock_; //< Lock for altering npass
    int npass_; //< Reduction variable for nelim
@@ -216,12 +218,21 @@ void copy_failed_rect(int m, int n, int rfrom, Column const& jdata, T* cout, int
 template <enum operation op, typename T>
 int check_threshold(int rfrom, int rto, int cfrom, int cto, T u, T* aval, int lda) {
    // Perform threshold test for each uneliminated row/column
+   int least_fail = (op==OP_N) ? cto : rto;
    for(int j=cfrom; j<cto; j++)
    for(int i=rfrom; i<rto; i++)
-      if(fabs(aval[j*lda+i]) > 1.0/u)
-         return (op==OP_N) ? j : i;
+      if(fabs(aval[j*lda+i]) > 1.0/u) {
+         if(op==OP_N) {
+            // must be least failed col
+            return j;
+         } else {
+            // may be an earlier failed row
+            least_fail = std::min(least_fail, i);
+            break;
+         }
+      }
    // If we get this far, everything is good
-   return (op==OP_N) ? cto : rto;
+   return least_fail;
 }
 
 /** Performs solve with diagonal block \f$L_{21} = A_{21} L_{11}^{-T} D_1^{-1}\f$. Designed for below diagonal. */
@@ -738,6 +749,24 @@ public:
                1.0, &aval_[cfrom*lda_+rfrom], lda_
                );
       }
+   }
+
+   /** Returns true if block contains NaNs (debug only). */
+   bool isnan(int elim_col=-1) const {
+      int m = (i_==elim_col) ? cdata_[i_].get_npass() : nrow();
+      int n = (j_==elim_col) ? cdata_[j_].get_npass() : ncol();
+      for(int j=0; j<n; ++j)
+      for(int i=((i_==j_)?j:0); i<m; ++i) {
+         if(std::isnan(aval_[j*lda_+i])) {
+            printf("%d, %d is nan\n", i, j);
+            return true;
+         }
+         if(!std::isfinite(aval_[j*lda_+i])) {
+            printf("%d, %d is inf\n", i, j);
+            return true;
+         }
+      }
+      return false;
    }
 
    int nrow() const { return get_nrow(i_); }
