@@ -12,13 +12,34 @@
 
 #include<cstring>
 #include<memory>
+#include<vector>
 
 #include "../NumericNode.hxx"
 #include "../SymbolicNode.hxx"
+#include "../Workspace.hxx"
 
 #include "../profile.hxx"
 
 namespace spral { namespace ssids { namespace cpu {
+
+/** Assemble a column.
+ *
+ * Performs the operation dest( idx(:) ) += src(:)
+ */
+template <typename T>
+inline
+void asm_col(int n, int const* idx, T const* src, T* dest) {
+   int const nunroll = 4;
+   int n2 = nunroll*(n/nunroll);
+   for(int j=0; j<n2; j+=nunroll) {
+      dest[ idx[j+0] ] += src[j+0];
+      dest[ idx[j+1] ] += src[j+1];
+      dest[ idx[j+2] ] += src[j+2];
+      dest[ idx[j+3] ] += src[j+3];
+   }
+   for(int j=n2; j<n; j++)
+      dest[ idx[j] ] += src[j];
+}
 
 template <typename T,
           typename FactorAlloc,
@@ -30,6 +51,7 @@ void assemble_pre(
       NumericNode<T>& node,
       FactorAlloc& factor_alloc,
       PoolAlloc& pool_alloc,
+      std::vector<Workspace>& work,
       T const* aval,
       T const* scaling
       ) {
@@ -165,12 +187,15 @@ void assemble_pre(
             for(int iblk=0; iblk<cm; iblk+=block_size) {
                #pragma omp task default(none) \
                   firstprivate(iblk) \
-                  shared(map, child, snode, node, csnode, cm, nrow) \
+                  shared(map, child, snode, node, csnode, cm, nrow, work) \
                   if(iblk+block_size<cm)
                {
 #ifdef PROFILE
                   Profile::Task task_asm_pre("TA_ASM_PRE", omp_get_thread_num());
 #endif
+                  int* cache = work[omp_get_thread_num()].get_ptr<int>(cm);
+                  for(int j=iblk; j<cm; ++j)
+                     cache[j] = map[ csnode.rlist[csnode.ncol+j] ];
                   for(int i=iblk; i<std::min(iblk+block_size,cm); i++) {
                      int c = map[ csnode.rlist[csnode.ncol+i] ];
                      T *src = &child->contrib[i*cm];
@@ -179,10 +204,7 @@ void assemble_pre(
                         // Contribution added to lcol
                         int ldd = align_lda<T>(nrow);
                         T *dest = &node.lcol[c*ldd];
-                        for(int j=i; j<cm; j++) {
-                           int r = map[ csnode.rlist[csnode.ncol+j] ];
-                           dest[r] += src[j];
-                        }
+                        asm_col(cm-i, &cache[i], &src[i], dest);
                      }
                   }
 #ifdef PROFILE
@@ -207,7 +229,8 @@ void assemble_post(
       int n,
       SymbolicNode const& snode,
       NumericNode<T>& node,
-      PoolAlloc& pool_alloc
+      PoolAlloc& pool_alloc,
+      std::vector<Workspace>& work
       ) {
    /* Rebind allocators */
    typedef std::allocator_traits<PoolAlloc> PATraits;
@@ -237,12 +260,15 @@ void assemble_post(
          for(int iblk=0; iblk<cm; iblk+=block_size) {
             #pragma omp task default(none) \
                firstprivate(iblk) \
-               shared(map, child, snode, node, cm, csnode, ncol) \
+               shared(map, child, snode, node, cm, csnode, ncol, work) \
                if(iblk+block_size<cm)
             {
 #ifdef PROFILE
                Profile::Task task_asm("TA_ASM_POST", omp_get_thread_num());
 #endif
+               int* cache = work[omp_get_thread_num()].get_ptr<int>(cm);
+               for(int j=iblk; j<cm; ++j)
+                  cache[j] = map[ csnode.rlist[csnode.ncol+j] ] - ncol;
                for(int i=iblk; i<std::min(iblk+block_size,cm); i++) {
                   int c = map[ csnode.rlist[csnode.ncol+i] ];
                   T *src = &child->contrib[i*cm];
@@ -251,10 +277,7 @@ void assemble_post(
                      // Contribution added to contrib
                      int ldd = snode.nrow - snode.ncol;
                      T *dest = &node.contrib[(c-ncol)*ldd];
-                     for(int j=i; j<cm; j++) {
-                        int r = map[ csnode.rlist[csnode.ncol+j] ] - ncol;
-                        dest[r] += src[j];
-                     }
+                     asm_col(cm-i, &cache[i], &src[i], dest);
                   }
                }
 #ifdef PROFILE
