@@ -155,7 +155,7 @@ public:
       int nblk = calc_nblk(n_, block_size_);
       int nelim = 0;
       for(int j=0; j<nblk; ++j) {
-         if(cdata_[j].get_npass() == mblk-j-1)
+         if(cdata_[j].get_npass() == mblk-j)
             nelim += cdata_[j].nelim;
       }
       return nelim;
@@ -545,7 +545,6 @@ template<typename T,
          int BLOCK_SIZE,
          typename Backup,
          bool use_tasks, // Use tasks, so we can disable on one or more levels
-         bool do_or_die, // Use Cholesky comm pattern, no backups, abort on fail
          bool debug=false,
          typename Allocator=std::allocator<T>
          >
@@ -645,7 +644,7 @@ public:
       }
    }
 
-   template <bool do_or_die, typename Allocator>
+   template <typename Allocator>
    int factor(int& next_elim, int* perm, T* d, struct cpu_factor_options const &options, std::vector<Workspace>& work, Allocator const& alloc) {
       if(i_ != j_)
          throw std::runtime_error("factor called on non-diagonal block!");
@@ -662,11 +661,11 @@ public:
          bool const debug = false; // Don't print debug info for inner call
          cdata_[i_].nelim =
             LDLT<T, INNER_BLOCK_SIZE, CopyBackup<T,Allocator>,
-                 use_tasks, do_or_die, debug, Allocator>
+                 use_tasks, debug, Allocator>
                 ::factor(
                       nrow(), ncol(), lperm, aval_, lda_,
-                      cdata_[i_].d, inner_backup, options, INNER_BLOCK_SIZE,
-                      0, nullptr, 0, work, alloc
+                      cdata_[i_].d, inner_backup, options, options.pivot_method,
+                      INNER_BLOCK_SIZE, 0, nullptr, 0, work, alloc
                       );
          int* temp = work[omp_get_thread_num()].get_ptr<int>(ncol());
          int* blkperm = &perm[i_*block_size_];
@@ -836,6 +835,17 @@ public:
       return false;
    }
 
+   /** Prints block (debug only) */
+   void print() const {
+      printf("Block %d, %d (%d x %d):\n", i_, j_, nrow(), ncol());
+      for(int i=0; i<nrow(); ++i) {
+         printf("%d:", i);
+         for(int j=0; j<ncol(); ++j)
+            printf(" %e", aval_[j*lda_+i]);
+         printf("\n");
+      }
+   }
+
    int nrow() const { return get_nrow(i_); }
    int ncol() const { return get_ncol(j_); }
 private:
@@ -860,7 +870,6 @@ template<typename T,
          int BLOCK_SIZE,
          typename Backup,
          bool use_tasks,
-         bool do_or_die,
          bool debug,
          typename Allocator
          >
@@ -909,7 +918,7 @@ private:
             // Store a copy for recovery in case of a failed column
             dblk.backup(backup);
             // Perform actual factorization
-            int nelim = dblk.template factor<do_or_die, Allocator>(
+            int nelim = dblk.template factor<Allocator>(
                   next_elim, perm, d, options, work, alloc
                   );
             // Init threshold check (non locking => task dependencies)
@@ -1159,12 +1168,15 @@ private:
             // On first access to this block, store copy in case of failure
             if(blk==0) dblk.backup(backup);
             // Perform actual factorization
-            int nelim = dblk.template factor<do_or_die, Allocator>(
+            int nelim = dblk.template factor<Allocator>(
                   next_elim, perm, d, options, work, alloc
                   );
             if(nelim < get_ncol(blk, n, block_size)) {
                #pragma omp cancel taskgroup
             }
+            cdata[blk].first_elim = (blk==0);
+            cdata[blk].init_passed(1); // diagonal block has passed
+            next_elim += nelim; // we're assuming everything works
 #ifdef PROFILE
             if(use_tasks) task.done();
 #endif
@@ -1174,7 +1186,7 @@ private:
          for(int jblk=0; jblk<blk; jblk++) {
             #pragma omp task default(none) \
                firstprivate(blk, jblk) \
-               shared(a, backup, cdata, options) \
+               shared(a, backup, cdata, options, work) \
                depend(in: a[blk*block_size*lda+blk*block_size:1]) \
                depend(inout: a[jblk*block_size*lda+blk*block_size:1]) \
                if(use_tasks && mblk>1)
@@ -1198,7 +1210,7 @@ private:
          for(int iblk=blk+1; iblk<mblk; iblk++) {
             #pragma omp task default(none) \
                firstprivate(blk, iblk) \
-               shared(a, backup, cdata, options) \
+               shared(a, backup, cdata, options, work) \
                depend(in: a[blk*block_size*lda+blk*block_size:1]) \
                depend(inout: a[blk*block_size*lda+iblk*block_size:1]) \
                if(use_tasks && mblk>1)
@@ -1228,9 +1240,8 @@ private:
          }
 
          // Update uneliminated columns
-         // Column blk is included only if it is the last one and upd is
-         // present, as it may need to update the first (partial) col of upd
-         int jsa = (upd && blk==nblk) ? blk : blk + 1;
+         // Column blk only needed if upd is present
+         int jsa = (upd) ? blk : blk + 1;
          for(int jblk=jsa; jblk<nblk; jblk++) {
             for(int iblk=jblk; iblk<mblk; iblk++) {
                #pragma omp task default(none) \
@@ -1249,6 +1260,9 @@ private:
                   BlockSpec ublk(iblk, jblk, m, n, cdata, a, lda, block_size);
                   BlockSpec isrc(iblk, blk, m, n, cdata, a, lda, block_size);
                   BlockSpec jsrc(jblk, blk, m, n, cdata, a, lda, block_size);
+                  // On first access to this block, store copy in case of fail
+                  if(blk==0 && jblk!=blk) ublk.backup(backup);
+                  // Actual update
                   ublk.update(isrc, jsrc, work[thread_num], beta, upd, ldupd);
 #ifdef PROFILE
                   if(use_tasks) task.done();
@@ -1325,7 +1339,7 @@ private:
          for(int iblk=jblk; iblk<mblk; ++iblk) {
             #pragma omp task default(none) \
                firstprivate(iblk, jblk) \
-               shared(backup)
+               shared(a, backup, cdata)
             {
                BlockSpec rblk(iblk, jblk, m, n, cdata, a, lda, block_size);
                rblk.full_restore(backup);
@@ -1361,7 +1375,7 @@ private:
 public:
    /** Factorize an entire matrix */
    static
-   int factor(int m, int n, int *perm, T *a, int lda, T *d, Backup& backup, struct cpu_factor_options const& options, int block_size, T beta, T* upd, int ldupd, std::vector<Workspace>& work, Allocator const& alloc=Allocator()) {
+   int factor(int m, int n, int *perm, T *a, int lda, T *d, Backup& backup, struct cpu_factor_options const& options, PivotMethod pivot_method, int block_size, T beta, T* upd, int ldupd, std::vector<Workspace>& work, Allocator const& alloc=Allocator()) {
       /* Sanity check arguments */
       if(m < n) return -1;
       if(lda < n) return -4;
@@ -1383,7 +1397,7 @@ public:
        *      entries into diagonal blocks
        */
       int num_elim;
-      if(do_or_die) {
+      if(pivot_method == PivotMethod::app_aggressive) {
          // Take a copy of perm
          int* perm_copy = new int[n]; // FIXME: use allocator
          for(int i=0; i<n; ++i) {
@@ -1406,15 +1420,16 @@ public:
                   m, n, perm, a, lda, d, cdata, backup, perm_copy, block_size
                   );
             // Factorize more carefully
-            return LDLT
-               <T, BLOCK_SIZE, Backup, use_tasks, false, debug, Allocator>
+            num_elim =
+               LDLT<T, BLOCK_SIZE, Backup, use_tasks, debug, Allocator>
                ::factor(
-                     m, n, perm, a, lda, d, backup, options, block_size, beta,
+                     m, n, perm, a, lda, d, backup, options,
+                     PivotMethod::app_block, block_size, beta,
                      upd, ldupd, work, alloc
                      );
-         } else {
-            return num_elim;
          }
+         delete[] perm_copy;
+         return num_elim;
       } else {
          num_elim = run_elim_pivoted(
                m, n, perm, a, lda, d, cdata, backup, options,
@@ -1565,12 +1580,11 @@ int ldlt_app_factor(int m, int n, int* perm, T* a, int lda, T* d, T beta, T* upd
 
    // Actual call
    bool const use_tasks = true;
-   bool const do_or_die = false;
    return LDLT
-      <T, INNER_BLOCK_SIZE, CopyBackup<T,Allocator>, use_tasks, do_or_die, debug,
+      <T, INNER_BLOCK_SIZE, CopyBackup<T,Allocator>, use_tasks, debug,
        Allocator>
       ::factor(
-            m, n, perm, a, lda, d, backup, options,
+            m, n, perm, a, lda, d, backup, options, options.pivot_method,
             outer_block_size, beta, upd, ldupd, work, alloc
             );
 }

@@ -273,7 +273,7 @@ void modify_test_matrix(bool singular, bool delays, bool dblk_singular, int m, i
 
 template <typename T,
           int INNER_BLOCK_SIZE,
-          bool do_or_die,
+          bool aggressive, // Use Cholesky-like app pattern
           bool debug // Switch on debugging output
           >
 int ldlt_test(T u, T small, bool delays, bool singular, bool dblk_singular, int m, int n, int outer_block_size=INNER_BLOCK_SIZE, int test=0, int seed=0) {
@@ -307,6 +307,8 @@ int ldlt_test(T u, T small, bool delays, bool singular, bool dblk_singular, int 
    options.print_level = 0;
    options.cpu_small_subtree_threshold = 100*100*100;
    options.cpu_task_block_size = 256;
+   options.pivot_method = (aggressive) ? PivotMethod::app_aggressive
+                                       : PivotMethod::app_block;
 
    // Factorize using main routine
    AlignedAllocator<T> allocT;
@@ -316,15 +318,25 @@ int ldlt_test(T u, T small, bool delays, bool singular, bool dblk_singular, int 
    for(int i=0; i<m; i++) perm[i] = i;
    T *d = new T[2*m];
    // First m x n matrix
-   PoolBackup<T> backup(m, n, outer_block_size);
+   CopyBackup<T> backup(m, n, outer_block_size);
+   std::vector<Workspace> work;
+   const int PAGE_SIZE = 8*1024*1024; // 8 MB
+   for(int i=0; i<omp_get_num_threads(); ++i)
+      work.emplace_back(PAGE_SIZE);
    int const use_tasks = true;
    int q1 = LDLT
-         <T, INNER_BLOCK_SIZE, PoolBackup<T>, use_tasks, do_or_die, debug>
+         <T, INNER_BLOCK_SIZE, CopyBackup<T>, use_tasks, debug>
          ::factor(
-            m, n, perm, l, lda, d, backup, options, outer_block_size,
-            0.0, nullptr, 0
+            m, n, perm, l, lda, d, backup, options, options.pivot_method,
+            outer_block_size, 0.0, nullptr, 0, work
             );
-   if(debug) std::cout << "FIRST FACTOR CALL ELIMINATED " << q1 << " of " << n << " pivots" << std::endl;
+   if(debug) {
+      std::cout << "FIRST FACTOR CALL ELIMINATED " << q1 << " of " << n << " pivots" << std::endl;
+      std::cout << "L after first elim:" << std::endl;
+      print_mat("%10.2e", m, l, lda, perm);
+      std::cout << "D:" << std::endl;
+      print_d<T>(q1, d);
+   }
    int q2 = 0;
    if(q1 < n) {
       // Finish off with simplistic kernel
@@ -340,12 +352,12 @@ int ldlt_test(T u, T small, bool delays, bool singular, bool dblk_singular, int 
       int *perm2 = new int[m-q1];
       for(int i=0; i<m-q1; i++)
          perm2[i] = i;
-      PoolBackup<T> backup(m-q1, m-q1, outer_block_size);
+      CopyBackup<T> backup(m-q1, m-q1, outer_block_size);
       q2 = LDLT
-         <T, INNER_BLOCK_SIZE, PoolBackup<T>, use_tasks, do_or_die, debug>
+         <T, INNER_BLOCK_SIZE, CopyBackup<T>, use_tasks, debug>
          ::factor(
             m-q1, m-q1, perm2, &l[q1*(lda+1)], lda, &d[2*q1], backup, options,
-            outer_block_size, 0.0, nullptr, 0
+            options.pivot_method, outer_block_size, 0.0, nullptr, 0, work
             );
       // Permute rows of A_21 as per perm
       permute_rows(m-q1, q1, perm2, &perm[q1], &l[q1], lda);
@@ -405,8 +417,8 @@ void print_mat (int n, int *perm, T *a, int lda) {
 
 template <typename T,
           int BLOCK_SIZE,
+          bool aggressive, // Use Cholesky-like app pattern
           int ntest, // Number of tests
-          bool do_or_die, // Use Cholesky-like execution pattern
           bool debug // Switch on debugging output
           >
 int ldlt_torture_test(T u, T small, int m, int n) {
@@ -432,7 +444,7 @@ int ldlt_torture_test(T u, T small, int m, int n) {
          std::cout << "##########################################" << std::endl;
       }
 
-      int err = ldlt_test<T, BLOCK_SIZE, do_or_die, debug>(u, small, delays, singular, dblk_singular, m, n, BLOCK_SIZE, test, seed);
+      int err = ldlt_test<T, BLOCK_SIZE, aggressive, debug>(u, small, delays, singular, dblk_singular, m, n, BLOCK_SIZE, test, seed);
       if(err!=0) return err;
    }
 
@@ -442,7 +454,7 @@ int ldlt_torture_test(T u, T small, int m, int n) {
 int run_ldlt_app_tests() {
    int nerr = 0;
 
-   /* Simple tests, single level blocking, rectangular */
+   /* Simple tests, single level blocking, rectangular, app_block */
    TEST((
       ldlt_test<double, 2, false, false> (0.01, 1e-20, false, false, false, 2, 1)
       ));
@@ -460,6 +472,26 @@ int run_ldlt_app_tests() {
       ));
    TEST((
       ldlt_test<double, 8, false, false> (0.01, 1e-20, false, false, false, 23, 9)
+      ));
+
+   /* Simple tests, single level blocking, rectangular, app_aggressive */
+   TEST((
+      ldlt_test<double, 2, true, false> (0.01, 1e-20, false, false, false, 2, 1)
+      ));
+   TEST((
+      ldlt_test<double, 2, true, false> (0.01, 1e-20, false, false, false, 4, 2)
+      ));
+   TEST((
+      ldlt_test<double, 2, true, false> (0.01, 1e-20, false, false, false, 5, 3)
+      ));
+   TEST((
+      ldlt_test<double, 2, true, false> (0.01, 1e-20, false, false, false, 8, 2)
+      ));
+   TEST((
+      ldlt_test<double, 8, true, false> (0.01, 1e-20, false, false, false, 64, 24)
+      ));
+   TEST((
+      ldlt_test<double, 8, true, false> (0.01, 1e-20, false, false, false, 23, 9)
       ));
 
    /* Simple tests, two-level blocking, rectangular */
