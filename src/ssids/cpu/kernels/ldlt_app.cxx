@@ -751,6 +751,24 @@ public:
       }
    }
 
+   void form_contrib(Block const& isrc, Block const& jsrc, Workspace& work, double beta, T* upd_ij, int ldupd) {
+      int elim_col = isrc.j_;
+      int ldld = align_lda<T>(block_size_);
+      T* ld = work.get_ptr<T>(block_size_*ldld);
+      calcLD<OP_N>(
+            nrow(), cdata_[elim_col].nelim, isrc.aval_, lda_,
+            cdata_[elim_col].d, ld, ldld
+            );
+      // User-supplied beta only on first update; otherwise 1.0
+      T rbeta = (cdata_[elim_col].first_elim) ? beta : 1.0;
+      int blkn = get_nrow(j_); // nrow not ncol as we're on contrib
+      host_gemm(
+            OP_N, OP_T, nrow(), blkn, cdata_[elim_col].nelim,
+            -1.0, ld, ldld, jsrc.aval_, lda_,
+            rbeta, upd_ij, ldupd
+            );
+   }
+
    /** Returns true if block contains NaNs (debug only). */
    bool isnan(int elim_col=-1) const {
       int m = (i_==elim_col) ? cdata_[i_].get_npass() : nrow();
@@ -1020,22 +1038,13 @@ private:
 #ifdef PROFILE
                   Profile::Task task("TA_LDLT_UPDC", omp_get_thread_num());
 #endif
+                  if(debug) printf("FormContrib(%d,%d,%d)\n", iblk, jblk, blk);
                   int thread_num = omp_get_thread_num();
-                  int blkm = get_nrow(iblk, m, block_size);
-                  int blkn = get_ncol(jblk, m, block_size);
-                  int nelim = cdata[blk].nelim;
-                  T* l_ik = &a[blk*block_size*lda + iblk*block_size];
-                  T* l_jk = &a[blk*block_size*lda + jblk*block_size];
-                  int ldld = align_lda<T>(block_size);
-                  T* ld = work[thread_num].get_ptr<T>(block_size*ldld);
-                  calcLD<OP_N>(
-                        blkm, nelim, l_ik, lda, cdata[blk].d, ld, ldld
-                        );
-                  T rbeta = (cdata[blk].first_elim) ? beta : 1.0; // user beta only on first update
-                  host_gemm(
-                        OP_N, OP_T, blkm, blkn, nelim,
-                        -1.0, ld, ldld, l_jk, lda,
-                        rbeta, upd_ij, ldupd
+                  BlockSpec ublk(iblk, jblk, m, n, cdata, a, lda, block_size);
+                  BlockSpec isrc(iblk, blk, m, n, cdata, a, lda, block_size);
+                  BlockSpec jsrc(jblk, blk, m, n, cdata, a, lda, block_size);
+                  ublk.form_contrib(
+                        isrc, jsrc, work[thread_num], beta, upd_ij, ldupd
                         );
 #ifdef PROFILE
                   if(use_tasks) task.done();
