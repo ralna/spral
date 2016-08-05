@@ -15,9 +15,9 @@
 namespace spral { namespace ssids { namespace cpu {
 
 enum struct PivotMethod : int {
-   app_aggressive = 0,
-   app_block      = 1,
-   tpp            = 2
+   app_aggressive = 1,
+   app_block      = 2,
+   tpp            = 3
 };
 
 struct cpu_factor_options {

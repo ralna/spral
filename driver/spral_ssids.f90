@@ -241,6 +241,15 @@ contains
             call get_command_argument(argnum, argval)
             argnum = argnum + 1
             read( argval, * ) options%nstream
+         case("--pivot-method=app-aggressive")
+            options%pivot_method = 1
+            print *, 'Pivoting method APP_AGGRESSIVE'
+         case("--pivot-method=app-block")
+            options%pivot_method = 2
+            print *, 'Pivoting method APP_BLOCK'
+         case("--pivot-method=tpp")
+            options%pivot_method = 3
+            print *, 'Pivoting method TPP'
          case default
             print *, "Unrecognised command line argument: ", argval
             stop

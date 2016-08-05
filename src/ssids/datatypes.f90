@@ -59,9 +59,9 @@ module spral_ssids_datatypes
    integer, parameter, public :: SSIDS_SOLVE_JOB_DIAG_BWD= 4 !D(PL)^TX=B (indef)
 
    ! NB: the below must match enum pivot_method in cpu/cpu_iface.hxx
-   integer, parameter, public :: PIVOT_METHOD_APP_AGGRESIVE = 0
-   integer, parameter, public :: PIVOT_METHOD_APP_BLOCK     = 1
-   integer, parameter, public :: PIVOT_METHOD_TPP           = 2
+   integer, parameter, public :: PIVOT_METHOD_APP_AGGRESIVE = 1
+   integer, parameter, public :: PIVOT_METHOD_APP_BLOCK     = 2
+   integer, parameter, public :: PIVOT_METHOD_TPP           = 3
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
