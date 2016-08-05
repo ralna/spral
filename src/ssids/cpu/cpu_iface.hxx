@@ -14,6 +14,12 @@
 
 namespace spral { namespace ssids { namespace cpu {
 
+enum struct PivotMethod : int {
+   app_aggressive = 0,
+   app_block      = 1,
+   tpp            = 2
+};
+
 struct cpu_factor_options {
    double multiplier;
    double small;
@@ -21,6 +27,7 @@ struct cpu_factor_options {
    int print_level;
    int cpu_small_subtree_threshold;
    int cpu_task_block_size;
+   PivotMethod pivot_method;
 };
 
 struct cpu_factor_stats {

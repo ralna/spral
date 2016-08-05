@@ -58,6 +58,11 @@ module spral_ssids_datatypes
    integer, parameter, public :: SSIDS_SOLVE_JOB_BWD     = 3 !(PL)^TX = B
    integer, parameter, public :: SSIDS_SOLVE_JOB_DIAG_BWD= 4 !D(PL)^TX=B (indef)
 
+   ! NB: the below must match enum pivot_method in cpu/cpu_iface.hxx
+   integer, parameter, public :: PIVOT_METHOD_APP_AGGRESIVE = 0
+   integer, parameter, public :: PIVOT_METHOD_APP_BLOCK     = 1
+   integer, parameter, public :: PIVOT_METHOD_TPP           = 2
+
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
    ! Note: below smalloc etc. types can't be in spral_ssids_alloc module as
@@ -248,6 +253,11 @@ module spral_ssids_datatypes
       integer :: min_npart = 4 ! minimum number of parts to split tree into
       integer(long) :: max_flops_part = 10**9_long ! maximum number of flops
          ! per part when splitting tree
+      integer :: pivot_method = PIVOT_METHOD_APP_AGGRESIVE
+         ! Type of pivoting to use on CPU side:
+         ! 0 - A posteori pivoting, roll back entire front on pivot failure
+         ! 1 - A posteori pivoting, roll back on block column level for failure
+         ! 2 - Traditional threshold partial pivoting (serial, inefficient!)
    end type ssids_options
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

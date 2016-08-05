@@ -17,6 +17,7 @@ module spral_ssids_cpu_iface
       integer(C_INT) :: print_level
       integer(C_INT) :: cpu_small_subtree_threshold
       integer(C_INT) :: cpu_task_block_size
+      integer(C_INT) :: pivot_method
    end type cpu_factor_options
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -38,12 +39,13 @@ subroutine cpu_copy_options_in(foptions, coptions)
    type(ssids_options), intent(in) :: foptions
    type(cpu_factor_options), intent(out) :: coptions
 
-   coptions%multiplier  = foptions%multiplier
-   coptions%small       = foptions%small
-   coptions%u           = foptions%u
-   coptions%print_level = foptions%print_level
+   coptions%multiplier     = foptions%multiplier
+   coptions%small          = foptions%small
+   coptions%u              = foptions%u
+   coptions%print_level    = foptions%print_level
    coptions%cpu_small_subtree_threshold = foptions%cpu_small_subtree_threshold
    coptions%cpu_task_block_size         = foptions%cpu_task_block_size
+   coptions%pivot_method   = foptions%pivot_method
 end subroutine cpu_copy_options_in
 
 subroutine cpu_copy_stats_out(n, cstats, finform)
