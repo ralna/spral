@@ -210,7 +210,7 @@ am__libspral_a_SOURCES_DIST = src/blas_iface.f90 src/core_analyse.f90 \
 	src/cuda/cuda_check.h src/lapack_iface.f90 src/lsmr.f90 \
 	interfaces/C/lsmr.f90 src/match_order.f90 src/matrix_util.f90 \
 	interfaces/C/matrix_util.f90 \
-	src/metis$(METIS_VERSION)_wrapper.f90 src/pgm.f90 \
+	src/metis$(METIS_VERSION)_wrapper.f90 src/omp.hxx src/pgm.f90 \
 	src/rutherford_boeing.f90 interfaces/C/rutherford_boeing.f90 \
 	src/scaling.f90 interfaces/C/scaling.f90 src/timer.f90 \
 	src/random.f90 interfaces/C/random.f90 src/random_matrix.f90 \
@@ -234,13 +234,12 @@ am__libspral_a_SOURCES_DIST = src/blas_iface.f90 src/core_analyse.f90 \
 	src/ssids/contrib.f90 src/ssids/datatypes.f90 \
 	src/ssids/fkeep.f90 src/ssids/inform.f90 src/ssids/ssids.f90 \
 	src/ssids/subtree.f90 src/ssids/cpu/AlignedAllocator.hxx \
-	src/ssids/cpu/BlockPool.hxx src/ssids/cpu/BuddyAllocator.hxx \
-	src/ssids/cpu/cpu_iface.f90 src/ssids/cpu/cpu_iface.hxx \
-	src/ssids/cpu/factor.hxx src/ssids/cpu/NumericNode.hxx \
-	src/ssids/cpu/NumericSubtree.cxx \
+	src/ssids/cpu/AppendAlloc.hxx src/ssids/cpu/BlockPool.hxx \
+	src/ssids/cpu/BuddyAllocator.hxx src/ssids/cpu/cpu_iface.f90 \
+	src/ssids/cpu/cpu_iface.hxx src/ssids/cpu/factor.hxx \
+	src/ssids/cpu/NumericNode.hxx src/ssids/cpu/NumericSubtree.cxx \
 	src/ssids/cpu/NumericSubtree.hxx src/ssids/cpu/subtree.f90 \
 	src/ssids/cpu/profile.cxx src/ssids/cpu/profile.hxx \
-	src/ssids/cpu/PoolAlloc.hxx \
 	src/ssids/cpu/SmallLeafNumericSubtree.hxx \
 	src/ssids/cpu/SmallLeafSymbolicSubtree.hxx \
 	src/ssids/cpu/SymbolicNode.hxx \
@@ -1145,6 +1144,8 @@ include_HEADERS = include/spral.h include/spral_lsmr.h \
 
 # METIS_WRAPPER
 
+# OMP
+
 # PGM
 
 # TIMER
@@ -1152,7 +1153,7 @@ libspral_a_SOURCES = src/blas_iface.f90 src/core_analyse.f90 \
 	$(am__append_1) src/lapack_iface.f90 src/lsmr.f90 \
 	interfaces/C/lsmr.f90 src/match_order.f90 src/matrix_util.f90 \
 	interfaces/C/matrix_util.f90 \
-	src/metis$(METIS_VERSION)_wrapper.f90 src/pgm.f90 \
+	src/metis$(METIS_VERSION)_wrapper.f90 src/omp.hxx src/pgm.f90 \
 	src/rutherford_boeing.f90 interfaces/C/rutherford_boeing.f90 \
 	src/scaling.f90 interfaces/C/scaling.f90 src/timer.f90 \
 	src/random.f90 interfaces/C/random.f90 src/random_matrix.f90 \
@@ -1161,13 +1162,12 @@ libspral_a_SOURCES = src/blas_iface.f90 src/core_analyse.f90 \
 	src/ssids/contrib.f90 src/ssids/datatypes.f90 \
 	src/ssids/fkeep.f90 src/ssids/inform.f90 src/ssids/ssids.f90 \
 	src/ssids/subtree.f90 src/ssids/cpu/AlignedAllocator.hxx \
-	src/ssids/cpu/BlockPool.hxx src/ssids/cpu/BuddyAllocator.hxx \
-	src/ssids/cpu/cpu_iface.f90 src/ssids/cpu/cpu_iface.hxx \
-	src/ssids/cpu/factor.hxx src/ssids/cpu/NumericNode.hxx \
-	src/ssids/cpu/NumericSubtree.cxx \
+	src/ssids/cpu/AppendAlloc.hxx src/ssids/cpu/BlockPool.hxx \
+	src/ssids/cpu/BuddyAllocator.hxx src/ssids/cpu/cpu_iface.f90 \
+	src/ssids/cpu/cpu_iface.hxx src/ssids/cpu/factor.hxx \
+	src/ssids/cpu/NumericNode.hxx src/ssids/cpu/NumericSubtree.cxx \
 	src/ssids/cpu/NumericSubtree.hxx src/ssids/cpu/subtree.f90 \
 	src/ssids/cpu/profile.cxx src/ssids/cpu/profile.hxx \
-	src/ssids/cpu/PoolAlloc.hxx \
 	src/ssids/cpu/SmallLeafNumericSubtree.hxx \
 	src/ssids/cpu/SmallLeafSymbolicSubtree.hxx \
 	src/ssids/cpu/SymbolicNode.hxx \
