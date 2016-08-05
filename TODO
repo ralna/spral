@@ -1,0 +1,3 @@
+1) Add some form of backup tracking so APP Aggressive is good even if we fail beofre everything is backed up
+2) Only recover what we need to on APP fail (i.e. first nelim x nelim submat is fine)
+3) Add support for TPP pivot_mode
