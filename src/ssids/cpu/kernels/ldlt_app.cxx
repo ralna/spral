@@ -1414,6 +1414,9 @@ public:
                block_size, beta, upd, ldupd, work, alloc
                );
          if(num_elim < n) {
+#ifdef PROFILE
+            Profile::addEvent("EV_AGG_FAIL", omp_get_thread_num(), "Failed");
+#endif
             // Factorization ecountered a pivoting failure.
             // Rollback to known good state
             restore(

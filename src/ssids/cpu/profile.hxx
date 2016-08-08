@@ -54,8 +54,17 @@ public:
 
    static
    void setNullState(int thread) {
+#ifdef PROFILE
       setState("0", thread);
+#endif
    }
+
+   static
+   void addEvent(char const* type, int thread, char const*val) {
+#ifdef PROFILE
+      addEvent(now(), type, get_thread_name(thread), val);
+#endif
+   };
 
    static
    void init(void) {
@@ -70,6 +79,9 @@ public:
       for(int i=0; i<omp_get_max_threads(); ++i)
          addContainer(0.0, get_thread_name(i), "CT_THREAD", "C_Node0", get_thread_name(i), "0");
       // Define states (i.e. task types)
+      // GTG_WHITE, GTG_BLACK, GTG_DARKGREY,
+      // GTG_LIGHTBROWN, GTG_LIGHTGREY, GTG_DARKBLUE, GTG_DARKPINK
+      // GTG_LIGHTPINK
       addStateType("ST_TASK", "CT_THREAD", "Task");
       addEntityValue("TA_SUBTREE", "ST_TASK", "Subtree", GTG_RED);
       addEntityValue("TA_ASSEMBLE", "ST_TASK", "Assemble", GTG_GREEN);
@@ -87,9 +99,9 @@ public:
       addEntityValue("TA_ASM_POST", "ST_TASK", "Assembly Post", GTG_MAUVE);
       addEntityValue("TA_MISC1", "ST_TASK", "Misc 1", GTG_KAKI);
       addEntityValue("TA_MISC2", "ST_TASK", "Misc 2", GTG_REDBLOOD);
-      // GTG_WHITE, GTG_BLACK, GTG_DARKGREY,
-      // GTG_LIGHTBROWN, GTG_LIGHTGREY, GTG_DARKBLUE, GTG_DARKPINK
-      // GTG_LIGHTPINK
+      // Define events
+      addEventType("EV_AGG_FAIL", "CT_THREAD", "Aggressive pivot fail");
+      // Initialise start time
       clock_gettime(CLOCK_REALTIME, &tstart);
 #endif
    }
