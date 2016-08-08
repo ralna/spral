@@ -1399,7 +1399,9 @@ public:
       int num_elim;
       if(pivot_method == PivotMethod::app_aggressive) {
          // Take a copy of perm
-         int* perm_copy = new int[n]; // FIXME: use allocator
+         typedef std::allocator_traits<IntAlloc> IATraits;
+         IntAlloc intAlloc(alloc);
+         int* perm_copy = IATraits::allocate(intAlloc, n);
          for(int i=0; i<n; ++i) {
             perm_copy[i] = perm[i];
          }
@@ -1436,7 +1438,7 @@ public:
                      upd, ldupd, work, alloc
                      );
          }
-         delete[] perm_copy;
+         IATraits::deallocate(intAlloc, perm_copy, n);
          return num_elim;
       } else {
          num_elim = run_elim_pivoted(
