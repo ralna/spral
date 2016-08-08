@@ -14,6 +14,7 @@
 #include <climits>
 #include <cmath>
 #include <cstdio>
+#include <cstring>
 #include <fstream>
 #include <limits>
 #include <memory>
@@ -340,13 +341,19 @@ void apply_pivot(int m, int n, int from, const T *diag, const T *d, const T smal
 
 template <typename T, typename Allocator=std::allocator<T>>
 class CopyBackup {
+   typedef typename std::allocator_traits<Allocator>::template rebind_traits<bool> BATraits;
 public:
    CopyBackup(CopyBackup const&) =delete;
    CopyBackup& operator=(CopyBackup const&) =delete;
    CopyBackup(int m, int n, int block_size, Allocator const& alloc=Allocator())
-   : alloc_(alloc), m_(m), n_(n), block_size_(block_size),
-     ldcopy_(align_lda<T>(m_)), acopy_(alloc_.allocate(n_*ldcopy_))
-   {}
+   : alloc_(alloc), m_(m), n_(n), mblk_(calc_nblk(m,block_size)),
+     block_size_(block_size), ldcopy_(align_lda<T>(m_)),
+     acopy_(alloc_.allocate(n_*ldcopy_))
+   {
+      typename BATraits::allocator_type boolAlloc(alloc_);
+      used_ = BATraits::allocate(boolAlloc, mblk_*calc_nblk(n_,block_size));
+      memset(used_, 0, mblk_*calc_nblk(n_,block_size)*sizeof(bool));
+   }
    ~CopyBackup() {
       release_all_memory();
    }
@@ -356,6 +363,13 @@ public:
       if(acopy_) {
          alloc_.deallocate(acopy_, n_*ldcopy_);
          acopy_ = nullptr;
+      }
+      if(used_) {
+         typename BATraits::allocator_type boolAlloc(alloc_);
+         BATraits::deallocate(
+               boolAlloc, used_, mblk_*calc_nblk(n_,block_size_)
+               );
+         used_ = nullptr;
       }
    }
 
@@ -424,8 +438,13 @@ public:
       }
    }
 
+   bool is_used(int iblk, int jblk) const {
+      return used_[jblk*mblk_+iblk];
+   }
+
 private:
    inline T* get_lwork(int iblk, int jblk) {
+      used_[jblk*mblk_+iblk] = true;
       return &acopy_[jblk*block_size_*ldcopy_+iblk*block_size_];
    }
    inline int get_ncol(int blk) const {
@@ -438,9 +457,11 @@ private:
    Allocator alloc_;
    int const m_;
    int const n_;
+   int const mblk_;
    int const block_size_;
    size_t const ldcopy_;
-   T *acopy_;
+   T* acopy_;
+   bool* used_;
 };
 
 template <typename T, typename Allocator=std::allocator<T*>>
@@ -1337,12 +1358,14 @@ private:
       /* Restore a */
       for(int jblk=0; jblk<nblk; ++jblk) {
          for(int iblk=jblk; iblk<mblk; ++iblk) {
-            #pragma omp task default(none) \
-               firstprivate(iblk, jblk) \
-               shared(a, backup, cdata)
-            {
-               BlockSpec rblk(iblk, jblk, m, n, cdata, a, lda, block_size);
-               rblk.full_restore(backup);
+            if(backup.is_used(iblk, jblk)) {
+               #pragma omp task default(none) \
+                  firstprivate(iblk, jblk) \
+                  shared(a, backup, cdata)
+               {
+                  BlockSpec rblk(iblk, jblk, m, n, cdata, a, lda, block_size);
+                  rblk.full_restore(backup);
+               }
             }
          }
       }
@@ -1402,9 +1425,8 @@ public:
          typedef std::allocator_traits<IntAlloc> IATraits;
          IntAlloc intAlloc(alloc);
          int* perm_copy = IATraits::allocate(intAlloc, n);
-         for(int i=0; i<n; ++i) {
+         for(int i=0; i<n; ++i)
             perm_copy[i] = perm[i];
-         }
          if(beta!=0.0) {
             throw std::runtime_error(
                   "run_elim_unpivoted currently only supports beta=0.0"
