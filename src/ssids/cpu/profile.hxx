@@ -62,7 +62,7 @@ public:
    static
    void addEvent(char const* type, int thread, char const*val) {
 #ifdef PROFILE
-      addEvent(now(), type, get_thread_name(thread), val);
+      ::addEvent(now(), type, get_thread_name(thread), val);
 #endif
    };
 
