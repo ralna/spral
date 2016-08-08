@@ -1415,7 +1415,12 @@ public:
                );
          if(num_elim < n) {
 #ifdef PROFILE
-            Profile::addEvent("EV_AGG_FAIL", omp_get_thread_num(), "Failed");
+            {
+               char buffer[200];
+               snprintf(buffer, 200, "tpp-aggressive failed at %d / %d\n",
+                        num_elim, n);
+               Profile::addEvent("EV_AGG_FAIL", omp_get_thread_num(), buffer);
+            }
 #endif
             // Factorization ecountered a pivoting failure.
             // Rollback to known good state
