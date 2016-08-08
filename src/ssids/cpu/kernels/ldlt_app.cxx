@@ -156,8 +156,11 @@ public:
       int nblk = calc_nblk(n_, block_size_);
       int nelim = 0;
       for(int j=0; j<nblk; ++j) {
-         if(cdata_[j].get_npass() == mblk-j)
+         if(cdata_[j].get_npass() == mblk-j) {
             nelim += cdata_[j].nelim;
+         } else {
+            break; // After first failure, no later pivots are valid
+         }
       }
       return nelim;
    };
@@ -600,6 +603,23 @@ public:
          for(int i=0; i<get_ncol(i_); ++i) {
             int r = lperm[i];
             lwork[j*ldl+i] = aval_[j*lda_+r];
+         }
+      }
+      // Copy back again
+      for(int j=0; j<ncol(); ++j)
+      for(int i=0; i<get_ncol(i_); ++i)
+         aval_[j*lda_+i] = lwork[j*ldl+i];
+   }
+
+   void apply_inv_rperm(Workspace& work) {
+      int ldl = align_lda<T>(block_size_);
+      T* lwork = work.get_ptr<T>(ncol()*ldl);
+      int* lperm = cdata_.get_lperm(i_);
+      // Copy into lwork with permutation
+      for(int j=0; j<ncol(); ++j) {
+         for(int i=0; i<get_ncol(i_); ++i) {
+            int r = lperm[i];
+            lwork[j*ldl+r] = aval_[j*lda_+i];
          }
       }
       // Copy back again
@@ -1153,14 +1173,14 @@ private:
    static
    int run_elim_unpivoted(int const m, int const n, int* perm, T* a,
          int const lda, T* d, ColumnData<T,IntAlloc>& cdata, Backup& backup,
-         struct cpu_factor_options const& options, int const block_size,
-         T const beta, T* upd, int const ldupd, std::vector<Workspace>& work,
-         Allocator const& alloc) {
+         int* up_to_date, struct cpu_factor_options const& options,
+         int const block_size, T const beta, T* upd, int const ldupd,
+         std::vector<Workspace>& work, Allocator const& alloc) {
       typedef Block<T, BLOCK_SIZE, IntAlloc> BlockSpec;
-      //printf("ENTRY %d %d vis %d %d %d\n", m, n, mblk, nblk, block_size);
 
       int const nblk = calc_nblk(n, block_size);
       int const mblk = calc_nblk(m, block_size);
+      //printf("ENTRY %d %d vis %d %d %d\n", m, n, mblk, nblk, block_size);
 
       /* Setup */
       int next_elim = 0;
@@ -1177,7 +1197,7 @@ private:
          #pragma omp task default(none) \
             firstprivate(blk) \
             shared(a, perm, backup, cdata, next_elim, d, \
-                   options, work, alloc) \
+                   options, work, alloc, up_to_date) \
             depend(inout: a[blk*block_size*lda+blk*block_size:1]) \
             if(use_tasks && mblk>1)
          {
@@ -1188,6 +1208,8 @@ private:
             BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
             // On first access to this block, store copy in case of failure
             if(blk==0) dblk.backup(backup);
+            // Record block state as assuming we've done up to col blk
+            up_to_date[blk*mblk+blk] = blk;
             // Perform actual factorization
             int nelim = dblk.template factor<Allocator>(
                   next_elim, perm, d, options, work, alloc
@@ -1207,7 +1229,7 @@ private:
          for(int jblk=0; jblk<blk; jblk++) {
             #pragma omp task default(none) \
                firstprivate(blk, jblk) \
-               shared(a, backup, cdata, options, work) \
+               shared(a, backup, cdata, options, work, up_to_date) \
                depend(in: a[blk*block_size*lda+blk*block_size:1]) \
                depend(inout: a[jblk*block_size*lda+blk*block_size:1]) \
                if(use_tasks && mblk>1)
@@ -1219,6 +1241,8 @@ private:
                int thread_num = omp_get_thread_num();
                BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
                BlockSpec cblk(blk, jblk, m, n, cdata, a, lda, block_size);
+               // Record block state as assuming we've done up to col blk
+               up_to_date[jblk*mblk+blk] = blk;
                // Apply row permutation from factorization of dblk
                cblk.apply_rperm(work[thread_num]);
                // NB: no actual application of pivot must be done, as we are
@@ -1231,7 +1255,7 @@ private:
          for(int iblk=blk+1; iblk<mblk; iblk++) {
             #pragma omp task default(none) \
                firstprivate(blk, iblk) \
-               shared(a, backup, cdata, options, work) \
+               shared(a, backup, cdata, options, work, up_to_date) \
                depend(in: a[blk*block_size*lda+blk*block_size:1]) \
                depend(inout: a[blk*block_size*lda+iblk*block_size:1]) \
                if(use_tasks && mblk>1)
@@ -1245,6 +1269,8 @@ private:
                BlockSpec rblk(iblk, blk, m, n, cdata, a, lda, block_size);
                // On first access to this block, store copy in case of failure
                if(blk==0) rblk.backup(backup);
+               // Record block state as assuming we've done up to col blk
+               up_to_date[blk*mblk+iblk] = blk;
                // Apply column permutation from factorization of dblk
                rblk.apply_cperm(work[thread_num]);
                // Perform elimination and determine number of rows in block
@@ -1267,7 +1293,7 @@ private:
             for(int iblk=jblk; iblk<mblk; iblk++) {
                #pragma omp task default(none) \
                   firstprivate(blk, iblk, jblk) \
-                  shared(a, cdata, backup, work, upd) \
+                  shared(a, cdata, backup, work, upd, up_to_date) \
                   depend(inout: a[jblk*block_size*lda+iblk*block_size:1]) \
                   depend(in: a[blk*block_size*lda+iblk*block_size:1]) \
                   depend(in: a[blk*block_size*lda+jblk*block_size:1]) \
@@ -1283,6 +1309,8 @@ private:
                   BlockSpec jsrc(jblk, blk, m, n, cdata, a, lda, block_size);
                   // On first access to this block, store copy in case of fail
                   if(blk==0 && jblk!=blk) ublk.backup(backup);
+                  // Record block state as assuming we've done up to col blk
+                  up_to_date[jblk*mblk+iblk] = blk;
                   // Actual update
                   ublk.update(isrc, jsrc, work[thread_num], beta, upd, ldupd);
 #ifdef PROFILE
@@ -1302,7 +1330,7 @@ private:
                                  (iblk-nblk)*block_size];
                #pragma omp task default(none) \
                   firstprivate(iblk, jblk, blk, upd_ij) \
-                  shared(a, upd2, cdata, work) \
+                  shared(a, upd2, cdata, work, up_to_date) \
                   depend(inout: upd_ij[0:1]) \
                   depend(in: a[blk*block_size*lda+iblk*block_size:1]) \
                   depend(in: a[blk*block_size*lda+jblk*block_size:1]) \
@@ -1316,6 +1344,9 @@ private:
                   BlockSpec ublk(iblk, jblk, m, n, cdata, a, lda, block_size);
                   BlockSpec isrc(iblk, blk, m, n, cdata, a, lda, block_size);
                   BlockSpec jsrc(jblk, blk, m, n, cdata, a, lda, block_size);
+                  // Record block state as assuming we've done up to col blk
+                  up_to_date[jblk*mblk+iblk] = blk;
+                  // Perform update
                   ublk.form_contrib(
                         isrc, jsrc, work[thread_num], beta, upd_ij, ldupd
                         );
@@ -1341,11 +1372,20 @@ private:
       return cdata.calc_nelim(m);
    }
 
-   /** Restore matrix to original state prior to aborted factorization */
+   /** Restore matrix to original state prior to aborted factorization.
+    *
+    * We take the first nelim_blk block columns as having suceeded, and for
+    * each block look at up_to_date to see if they have assumed anything that
+    * is incorrect:
+    * 1) If up_to_date < nelim_blk then we apply any missing operations
+    * 2) If up_to_date == nelim_blk then we do nothing
+    * 3) If up_to_date > nelim_blk then we reset and recalculate completely
+    * */
    static
-   void restore(int const m, int const n, int* perm, T* a, int const lda, T* d,
-         ColumnData<T,IntAlloc>& cdata, Backup& backup, int const* old_perm,
-         int const block_size) {
+   void restore(int const nelim_blk, int const m, int const n, int* perm, T* a,
+         int const lda, T* d, ColumnData<T,IntAlloc>& cdata, Backup& backup,
+         int const* old_perm, int const* up_to_date, int const block_size,
+         std::vector<Workspace>& work, T* upd, int const ldupd) {
       typedef Block<T, BLOCK_SIZE, IntAlloc> BlockSpec;
 
       int const nblk = calc_nblk(n, block_size);
@@ -1421,20 +1461,27 @@ public:
        */
       int num_elim;
       if(pivot_method == PivotMethod::app_aggressive) {
+         if(beta!=0.0) {
+            // We don't support backup of contribution block at present,
+            // so we only work if we assume it is zero to begin with
+            throw std::runtime_error(
+                  "run_elim_unpivoted currently only supports beta=0.0"
+                  );
+         }
          // Take a copy of perm
          typedef std::allocator_traits<IntAlloc> IATraits;
          IntAlloc intAlloc(alloc);
          int* perm_copy = IATraits::allocate(intAlloc, n);
          for(int i=0; i<n; ++i)
             perm_copy[i] = perm[i];
-         if(beta!=0.0) {
-            throw std::runtime_error(
-                  "run_elim_unpivoted currently only supports beta=0.0"
-                  );
-         }
+         size_t num_blocks = (upd) ? ((size_t) mblk)*mblk
+                                   : ((size_t) mblk)*nblk;
+         int* up_to_date = IATraits::allocate(intAlloc, num_blocks);
+         for(size_t i=0; i<num_blocks; ++i)
+            up_to_date[i] = -1; // not even backed up yet
          // Run the elimination
          num_elim = run_elim_unpivoted(
-               m, n, perm, a, lda, d, cdata, backup, options,
+               m, n, perm, a, lda, d, cdata, backup, up_to_date, options,
                block_size, beta, upd, ldupd, work, alloc
                );
          if(num_elim < n) {
@@ -1447,19 +1494,24 @@ public:
             }
 #endif
             // Factorization ecountered a pivoting failure.
+            int nelim_blk = num_elim/block_size;
             // Rollback to known good state
             restore(
-                  m, n, perm, a, lda, d, cdata, backup, perm_copy, block_size
+                  nelim_blk, m, n, perm, a, lda, d, cdata, backup, perm_copy,
+                  up_to_date, block_size, work, upd, ldupd
                   );
             // Factorize more carefully
+            int k = 0;
+            double rbeta = (k==0) ? beta : 1.0; // don't void updates if exist
             num_elim =
                LDLT<T, BLOCK_SIZE, Backup, use_tasks, debug, Allocator>
                ::factor(
-                     m, n, perm, a, lda, d, backup, options,
-                     PivotMethod::app_block, block_size, beta,
+                     m-k, n-k, &perm[k], &a[k*lda+k], lda, &d[2*k],
+                     backup, options, PivotMethod::app_block, block_size, rbeta,
                      upd, ldupd, work, alloc
                      );
          }
+         IATraits::deallocate(intAlloc, up_to_date, num_blocks);
          IATraits::deallocate(intAlloc, perm_copy, n);
          return num_elim;
       } else {
