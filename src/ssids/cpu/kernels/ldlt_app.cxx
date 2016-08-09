@@ -1398,7 +1398,7 @@ private:
 
       /* Restore a */
       for(int jblk=0; jblk<nelim_blk; ++jblk) {
-         for(int iblk=jblk+1; iblk<mblk; ++iblk) {
+         for(int iblk=nelim_blk; iblk<mblk; ++iblk) {
             if(backup.is_used(iblk, jblk)) {
                #pragma omp task default(none) \
                   firstprivate(iblk, jblk) \
@@ -1434,31 +1434,7 @@ private:
          }*/
 
          // Loop over off-diagonal blocks applying pivot
-         for(int jblk=0; jblk<blk; jblk++) {
-            #pragma omp task default(none) \
-               firstprivate(blk, jblk) \
-               shared(a, backup, cdata, options, work) \
-               depend(in: a[blk*block_size*lda+blk*block_size:1]) \
-               depend(inout: a[jblk*block_size*lda+blk*block_size:1]) \
-               if(use_tasks && mblk>1)
-            {
-#ifdef PROFILE
-               Profile::Task task("TA_LDLT_APPLY", omp_get_thread_num());
-#endif
-               if(debug) printf("ApplyT(%d,%d)\n", blk, jblk);
-               int thread_num = omp_get_thread_num();
-               BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
-               BlockSpec cblk(blk, jblk, m, n, cdata, a, lda, block_size);
-               // Apply row permutation from factorization of dblk
-               cblk.apply_rperm(work[thread_num]);
-               // NB: no actual application of pivot must be done, as we are
-               // assuming everything has passed...
-#ifdef PROFILE
-               if(use_tasks) task.done();
-#endif
-            }
-         }
-         for(int iblk=blk+1; iblk<mblk; iblk++) {
+         for(int iblk=nelim_blk; iblk<mblk; iblk++) {
             #pragma omp task default(none) \
                firstprivate(blk, iblk) \
                shared(a, backup, cdata, options, work) \
@@ -1488,7 +1464,7 @@ private:
          // Column blk only needed if upd is present
          int jsa = (upd) ? blk : blk + 1;
          for(int jblk=jsa; jblk<nblk; jblk++) {
-            int isa = (jblk<nelim_blk) ? jblk+1 : jblk;
+            int isa = (jblk<nelim_blk) ? nelim_blk : jblk;
             for(int iblk=isa; iblk<mblk; iblk++) {
                #pragma omp task default(none) \
                   firstprivate(blk, iblk, jblk) \
