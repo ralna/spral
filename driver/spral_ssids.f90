@@ -44,15 +44,16 @@ program run_prob
    
    integer :: nrhs
    
-   logical :: pos_def, time_scaling
+   logical :: force_psdef, pos_def, time_scaling
 
    options%use_gpu_solve = .true.
 
-   call proc_args(options, pos_def, nrhs, time_scaling)
+   call proc_args(options, force_psdef, pos_def, nrhs, time_scaling)
    if ( nrhs < 1 ) stop
 
    ! Read in a matrix
    write(*, "(a)") "Reading..."
+   if(force_psdef) rb_options%values = 3 ! Force diagonal dominance
    rb_options%values = 2 ! make up values if necessary
    call rb_read("matrix.rb", m, n, ptr, row, col, val, rb_options, rb_flag)
    if(rb_flag.ne.0) then
@@ -172,8 +173,9 @@ program run_prob
 
 contains
 
-   subroutine proc_args(options, pos_def, nrhs, time_scaling)
+   subroutine proc_args(options, force_psdef, pos_def, nrhs, time_scaling)
       type(ssids_options), intent(inout) :: options
+      logical, intent(out) :: force_psdef
       logical, intent(out) :: pos_def
       integer, intent(out) :: nrhs
       logical, intent(out) :: time_scaling
@@ -184,6 +186,7 @@ contains
       
       ! Defaults
       nrhs = 1
+      force_psdef = .false.
       pos_def = .false.
       time_scaling = .false.
 
@@ -210,6 +213,9 @@ contains
             options%ordering = 2 ! Matching-based ordering
             options%scaling = 3 ! Scaling from matching ordering
             print *, "Using matching-based ordering (scaling overwritten)"
+         case("--force-posdef")
+            force_psdef = .true.
+            print *, "Forcing matrix to be positive definite"
          case("--posdef")
             pos_def = .true.
             print *, 'Matrix assumed positive definite'
