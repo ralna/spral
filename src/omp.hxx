@@ -42,4 +42,7 @@ private:
    omp_lock_t lock_;
 };
 
+/// Returns true if omp cancel is supported
+bool cancel_support();
+
 }} /* end of namespace spral::omp */

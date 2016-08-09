@@ -86,6 +86,7 @@ EXTRA_DIST = src/metis4_wrapper.f90 src/metis5_wrapper.f90
 
 # OMP
 libspral_a_SOURCES += \
+	src/omp.cxx \
 	src/omp.hxx
 
 # PGM

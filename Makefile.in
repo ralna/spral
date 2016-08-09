@@ -153,8 +153,8 @@ bin_PROGRAMS = spral_ssids$(EXEEXT)
 subdir = .
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
 	$(top_srcdir)/configure $(am__configure_deps) depcomp \
-	$(include_HEADERS) test-driver ChangeLog compile config.guess \
-	config.sub install-sh missing
+	$(include_HEADERS) test-driver ChangeLog TODO compile \
+	config.guess config.sub install-sh missing
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/acx_lapack.m4 \
 	$(top_srcdir)/m4/acx_prog_nvcc.m4 $(top_srcdir)/m4/ax_blas.m4 \
@@ -210,10 +210,11 @@ am__libspral_a_SOURCES_DIST = src/blas_iface.f90 src/core_analyse.f90 \
 	src/cuda/cuda_check.h src/lapack_iface.f90 src/lsmr.f90 \
 	interfaces/C/lsmr.f90 src/match_order.f90 src/matrix_util.f90 \
 	interfaces/C/matrix_util.f90 \
-	src/metis$(METIS_VERSION)_wrapper.f90 src/omp.hxx src/pgm.f90 \
-	src/rutherford_boeing.f90 interfaces/C/rutherford_boeing.f90 \
-	src/scaling.f90 interfaces/C/scaling.f90 src/timer.f90 \
-	src/random.f90 interfaces/C/random.f90 src/random_matrix.f90 \
+	src/metis$(METIS_VERSION)_wrapper.f90 src/omp.cxx src/omp.hxx \
+	src/pgm.f90 src/rutherford_boeing.f90 \
+	interfaces/C/rutherford_boeing.f90 src/scaling.f90 \
+	interfaces/C/scaling.f90 src/timer.f90 src/random.f90 \
+	interfaces/C/random.f90 src/random_matrix.f90 \
 	interfaces/C/random_matrix.f90 src/ssids/type_select_gpu.f90 \
 	src/ssids/gpu/alloc.f90 src/ssids/gpu/akeep.f90 \
 	src/ssids/gpu/cpu_solve.f90 src/ssids/gpu/datatypes.f90 \
@@ -290,8 +291,8 @@ am_libspral_a_OBJECTS = src/blas_iface.$(OBJEXT) \
 	src/lapack_iface.$(OBJEXT) src/lsmr.$(OBJEXT) \
 	interfaces/C/lsmr.$(OBJEXT) src/match_order.$(OBJEXT) \
 	src/matrix_util.$(OBJEXT) interfaces/C/matrix_util.$(OBJEXT) \
-	src/metis$(METIS_VERSION)_wrapper.$(OBJEXT) src/pgm.$(OBJEXT) \
-	src/rutherford_boeing.$(OBJEXT) \
+	src/metis$(METIS_VERSION)_wrapper.$(OBJEXT) src/omp.$(OBJEXT) \
+	src/pgm.$(OBJEXT) src/rutherford_boeing.$(OBJEXT) \
 	interfaces/C/rutherford_boeing.$(OBJEXT) src/scaling.$(OBJEXT) \
 	interfaces/C/scaling.$(OBJEXT) src/timer.$(OBJEXT) \
 	src/random.$(OBJEXT) interfaces/C/random.$(OBJEXT) \
@@ -1153,10 +1154,11 @@ libspral_a_SOURCES = src/blas_iface.f90 src/core_analyse.f90 \
 	$(am__append_1) src/lapack_iface.f90 src/lsmr.f90 \
 	interfaces/C/lsmr.f90 src/match_order.f90 src/matrix_util.f90 \
 	interfaces/C/matrix_util.f90 \
-	src/metis$(METIS_VERSION)_wrapper.f90 src/omp.hxx src/pgm.f90 \
-	src/rutherford_boeing.f90 interfaces/C/rutherford_boeing.f90 \
-	src/scaling.f90 interfaces/C/scaling.f90 src/timer.f90 \
-	src/random.f90 interfaces/C/random.f90 src/random_matrix.f90 \
+	src/metis$(METIS_VERSION)_wrapper.f90 src/omp.cxx src/omp.hxx \
+	src/pgm.f90 src/rutherford_boeing.f90 \
+	interfaces/C/rutherford_boeing.f90 src/scaling.f90 \
+	interfaces/C/scaling.f90 src/timer.f90 src/random.f90 \
+	interfaces/C/random.f90 src/random_matrix.f90 \
 	interfaces/C/random_matrix.f90 $(am__append_2) \
 	src/ssids/alloc.f90 src/ssids/akeep.f90 src/ssids/analyse.f90 \
 	src/ssids/contrib.f90 src/ssids/datatypes.f90 \
@@ -1393,6 +1395,7 @@ interfaces/C/matrix_util.$(OBJEXT): interfaces/C/$(am__dirstamp) \
 	interfaces/C/$(DEPDIR)/$(am__dirstamp)
 src/metis$(METIS_VERSION)_wrapper.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
+src/omp.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 src/pgm.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 src/rutherford_boeing.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
@@ -1993,6 +1996,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/ssmfe/$(DEPDIR)/precond_expert.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/ssmfe/$(DEPDIR)/precond_ssmfe.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/ssmfe/$(DEPDIR)/shift_invert.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/omp.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/$(DEPDIR)/NumericSubtree.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/$(DEPDIR)/SymbolicSubtree.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/$(DEPDIR)/profile.Po@am__quote@
@@ -2592,7 +2596,7 @@ clean-am: clean-binPROGRAMS clean-checkPROGRAMS clean-generic \
 
 distclean: distclean-am
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
-	-rm -rf examples/C/$(DEPDIR) examples/C/scaling/$(DEPDIR) examples/C/ssmfe/$(DEPDIR) src/ssids/cpu/$(DEPDIR) src/ssids/cpu/kernels/$(DEPDIR) tests/ssids/$(DEPDIR) tests/ssids/kernels/$(DEPDIR) tests/ssmfe/$(DEPDIR)
+	-rm -rf examples/C/$(DEPDIR) examples/C/scaling/$(DEPDIR) examples/C/ssmfe/$(DEPDIR) src/$(DEPDIR) src/ssids/cpu/$(DEPDIR) src/ssids/cpu/kernels/$(DEPDIR) tests/ssids/$(DEPDIR) tests/ssids/kernels/$(DEPDIR) tests/ssmfe/$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -2640,7 +2644,7 @@ installcheck-am:
 maintainer-clean: maintainer-clean-am
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
 	-rm -rf $(top_srcdir)/autom4te.cache
-	-rm -rf examples/C/$(DEPDIR) examples/C/scaling/$(DEPDIR) examples/C/ssmfe/$(DEPDIR) src/ssids/cpu/$(DEPDIR) src/ssids/cpu/kernels/$(DEPDIR) tests/ssids/$(DEPDIR) tests/ssids/kernels/$(DEPDIR) tests/ssmfe/$(DEPDIR)
+	-rm -rf examples/C/$(DEPDIR) examples/C/scaling/$(DEPDIR) examples/C/ssmfe/$(DEPDIR) src/$(DEPDIR) src/ssids/cpu/$(DEPDIR) src/ssids/cpu/kernels/$(DEPDIR) tests/ssids/$(DEPDIR) tests/ssids/kernels/$(DEPDIR) tests/ssmfe/$(DEPDIR)
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 
