@@ -1215,11 +1215,13 @@ private:
                   next_elim, perm, d, options, work, alloc
                   );
             if(nelim < get_ncol(blk, n, block_size)) {
+               cdata[blk].init_passed(0); // diagonal block has NOT passed
                #pragma omp cancel taskgroup
+            } else {
+               cdata[blk].first_elim = (blk==0);
+               cdata[blk].init_passed(1); // diagonal block has passed
+               next_elim += nelim; // we're assuming everything works
             }
-            cdata[blk].first_elim = (blk==0);
-            cdata[blk].init_passed(1); // diagonal block has passed
-            next_elim += nelim; // we're assuming everything works
 #ifdef PROFILE
             if(use_tasks) task.done();
 #endif
