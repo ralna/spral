@@ -1387,33 +1387,44 @@ private:
    void restore(int const nelim_blk, int const m, int const n, int* perm, T* a,
          int const lda, T* d, ColumnData<T,IntAlloc>& cdata, Backup& backup,
          int const* old_perm, int const* up_to_date, int const block_size,
-         std::vector<Workspace>& work, T* upd, int const ldupd,
-         struct cpu_factor_options const& options, Allocator const& alloc) {
+         std::vector<Workspace>& work, T* upd, int const ldupd) {
       typedef Block<T, BLOCK_SIZE, IntAlloc> BlockSpec;
 
       int const nblk = calc_nblk(n, block_size);
       int const mblk = calc_nblk(m, block_size);
 
-      /* Restore perm */
+      /* Restore perm for failed part */
       for(int i=nelim_blk*block_size; i<n; ++i)
          perm[i] = old_perm[i];
 
       /* Restore a */
+      // NB: If we've accepted a block column as eliminated, then everything in
+      // that column must have been updated fully. However, if the row is in
+      // [nelim_blk+1:nblk] it may have a failed row permutation applied, so
+      // for those we need a dependency structure.
+      // e.g. we have a structure something like this:
+      // OK |
+      // OK | OK |
+      // ?? | ?? | FAIL |
+      // ?? | ?? |  ??  | ?? |
+      // OK | OK |  ??  | ?? | ?? |
+      // Hence we skip the "passed" diagonal block, and the rectangular block
+      // below it. Then we just apply a reverse row permutation if required to
+      // the failed rows in the passed columns.
       for(int jblk=0; jblk<nelim_blk; ++jblk) {
          for(int iblk=nelim_blk; iblk<nblk; ++iblk) {
-            if(backup.is_used(iblk, jblk)) {
-               #pragma omp task default(none) \
-                  firstprivate(iblk, jblk) \
-                  shared(a, cdata, work) \
-                  depend(inout: a[jblk*block_size*lda+iblk*block_size:1])
-               {
-                  int thread_num = omp_get_thread_num();
-                  BlockSpec rblk(iblk, jblk, m, n, cdata, a, lda, block_size);
-                  rblk.apply_inv_rperm(work[thread_num]);
-               }
+            #pragma omp task default(none) \
+               firstprivate(iblk, jblk) \
+               shared(a, cdata, work) \
+               depend(inout: a[jblk*block_size*lda+iblk*block_size:1])
+            {
+               int thread_num = omp_get_thread_num();
+               BlockSpec rblk(iblk, jblk, m, n, cdata, a, lda, block_size);
+               rblk.apply_inv_rperm(work[thread_num]);
             }
          }
       }
+      // Now all eliminated columns are good, fix up remainder of node
       for(int jblk=nelim_blk; jblk<nblk; ++jblk) {
          for(int iblk=jblk; iblk<mblk; ++iblk) {
             if(backup.is_used(iblk, jblk)) {
@@ -1428,10 +1439,8 @@ private:
             }
          }
       }
-      #pragma omp taskwait
 
       /* Inner loop - iterate over block columns */
-      #pragma omp taskgroup
       for(int blk=0; blk<nelim_blk; blk++) {
          /*if(debug) {
             printf("Bcol %d:\n", blk);
@@ -1447,13 +1456,8 @@ private:
                   shared(a, cdata, backup, work, upd) \
                   depend(inout: a[jblk*block_size*lda+iblk*block_size:1]) \
                   depend(in: a[blk*block_size*lda+iblk*block_size:1]) \
-                  depend(in: a[blk*block_size*lda+jblk*block_size:1]) \
-                  if(use_tasks && mblk>1)
+                  depend(in: a[blk*block_size*lda+jblk*block_size:1])
                {
-#ifdef PROFILE
-                  Profile::Task task("TA_LDLT_UPDA", omp_get_thread_num());
-#endif
-                  if(debug) printf("UpdateN(%d,%d,%d)\n", iblk, jblk, blk);
                   int thread_num = omp_get_thread_num();
                   BlockSpec ublk(iblk, jblk, m, n, cdata, a, lda, block_size);
                   BlockSpec isrc(iblk, blk, m, n, cdata, a, lda, block_size);
@@ -1462,9 +1466,6 @@ private:
                   if(blk==0 && jblk!=blk) ublk.backup(backup);
                   // Actual update
                   ublk.update(isrc, jsrc, work[thread_num], 0.0, upd, ldupd);
-#ifdef PROFILE
-                  if(use_tasks) task.done();
-#endif
                }
             }
          }
@@ -1485,10 +1486,6 @@ private:
                   depend(in: a[blk*block_size*lda+jblk*block_size:1]) \
                   if(use_tasks && mblk>1)
                {
-#ifdef PROFILE
-                  Profile::Task task("TA_LDLT_UPDC", omp_get_thread_num());
-#endif
-                  if(debug) printf("FormContrib(%d,%d,%d)\n", iblk, jblk, blk);
                   int thread_num = omp_get_thread_num();
                   BlockSpec ublk(iblk, jblk, m, n, cdata, a, lda, block_size);
                   BlockSpec isrc(iblk, blk, m, n, cdata, a, lda, block_size);
@@ -1497,24 +1494,18 @@ private:
                   ublk.form_contrib(
                         isrc, jsrc, work[thread_num], 0.0, upd_ij, ldupd
                         );
-#ifdef PROFILE
-                  if(use_tasks) task.done();
-#endif
                }
             }
          }
       }
       // FIXME: ...
+      #pragma omp taskwait
       /*if(use_tasks && mblk > 1) {
          // We only need a taskwait here if we've launched any subtasks...
          // NB: we don't use taskgroup as it doesn't support if()
          #pragma omp taskwait
       }*/
 
-      /*if(debug) {
-         printf("PostElim:\n");
-         print_mat(mblk, nblk, m, n, blkdata, cdata, lda);
-      }*/
    }
 
    static
@@ -1602,12 +1593,13 @@ public:
             // Rollback to known good state
             restore(
                   nelim_blk, m, n, perm, a, lda, d, cdata, backup, perm_copy,
-                  up_to_date, block_size, work, upd, ldupd, options, alloc
+                  up_to_date, block_size, work, upd, ldupd
                   );
             // Factorize more carefully
-            num_elim =
-               run_elim_pivoted(m, n, perm, a, lda, d, cdata, backup, options,
-                     block_size, beta, upd, ldupd, work, alloc, nelim_blk);
+            num_elim = run_elim_pivoted(
+                  m, n, perm, a, lda, d, cdata, backup, options, block_size,
+                  beta, upd, ldupd, work, alloc, nelim_blk
+                  );
          }
          IATraits::deallocate(intAlloc, up_to_date, num_blocks);
          IATraits::deallocate(intAlloc, perm_copy, n);
