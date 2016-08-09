@@ -13,6 +13,7 @@
 #include <cstdio>
 #include <memory>
 
+#include "omp.hxx"
 #include "NumericSubtree.hxx"
 #include "AppendAlloc.hxx"
 
@@ -40,6 +41,8 @@ void* spral_ssids_cpu_create_num_subtree_dbl(
       struct cpu_factor_stats* stats // Info out
       ) {
    auto const& symbolic_subtree = *static_cast<SymbolicSubtree const*>(symbolic_subtree_ptr);
+
+   spral::omp::warn_if_no_cancel();
 
    if(posdef) {
       auto* subtree = new NumericSubtreePosdef

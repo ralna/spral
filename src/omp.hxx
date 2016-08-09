@@ -42,6 +42,9 @@ private:
    omp_lock_t lock_;
 };
 
+/// Prints a warning message is cancel is not supported
+void warn_if_no_cancel();
+
 /// Returns true if omp cancel is supported
 bool cancel_support();
 
