@@ -1393,11 +1393,24 @@ private:
       int const mblk = calc_nblk(m, block_size);
 
       /* Restore perm */
-      for(int i=0; i<n; ++i)
+      for(int i=nelim_blk*block_size; i<n; ++i)
          perm[i] = old_perm[i];
 
       /* Restore a */
-      for(int jblk=0; jblk<nblk; ++jblk) {
+      for(int jblk=0; jblk<nelim_blk; ++jblk) {
+         for(int iblk=jblk+1; iblk<mblk; ++iblk) {
+            if(backup.is_used(iblk, jblk)) {
+               #pragma omp task default(none) \
+                  firstprivate(iblk, jblk) \
+                  shared(a, backup, cdata)
+               {
+                  BlockSpec rblk(iblk, jblk, m, n, cdata, a, lda, block_size);
+                  rblk.full_restore(backup);
+               }
+            }
+         }
+      }
+      for(int jblk=nelim_blk; jblk<nblk; ++jblk) {
          for(int iblk=jblk; iblk<mblk; ++iblk) {
             if(backup.is_used(iblk, jblk)) {
                #pragma omp task default(none) \
@@ -1412,9 +1425,6 @@ private:
       }
       #pragma omp taskwait
 
-      /* Setup */
-      int next_elim = 0;
-
       /* Inner loop - iterate over block columns */
       #pragma omp taskgroup
       for(int blk=0; blk<nelim_blk; blk++) {
@@ -1423,36 +1433,6 @@ private:
             print_mat(mblk, nblk, m, n, blkdata, cdata, lda);
          }*/
 
-         // Factor diagonal
-         #pragma omp task default(none) \
-            firstprivate(blk) \
-            shared(a, perm, backup, cdata, next_elim, d, \
-                   options, work, alloc) \
-            depend(inout: a[blk*block_size*lda+blk*block_size:1]) \
-            if(use_tasks && mblk>1)
-         {
-#ifdef PROFILE
-            Profile::Task task("TA_LDLT_DIAG", omp_get_thread_num());
-#endif
-            if(debug) printf("Factor(%d)\n", blk);
-            BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
-            // On first access to this block, store copy in case of failure
-            if(blk==0) dblk.backup(backup);
-            // Perform actual factorization
-            int nelim = dblk.template factor<Allocator>(
-                  next_elim, perm, d, options, work, alloc
-                  );
-            if(nelim < get_ncol(blk, n, block_size)) {
-               #pragma omp cancel taskgroup
-            }
-            cdata[blk].first_elim = (blk==0);
-            cdata[blk].init_passed(1); // diagonal block has passed
-            next_elim += nelim; // we're assuming everything works
-#ifdef PROFILE
-            if(use_tasks) task.done();
-#endif
-         }
-         
          // Loop over off-diagonal blocks applying pivot
          for(int jblk=0; jblk<blk; jblk++) {
             #pragma omp task default(none) \
@@ -1493,17 +1473,11 @@ private:
                int thread_num = omp_get_thread_num();
                BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
                BlockSpec rblk(iblk, blk, m, n, cdata, a, lda, block_size);
-               // On first access to this block, store copy in case of failure
-               if(blk==0) rblk.backup(backup);
                // Apply column permutation from factorization of dblk
                rblk.apply_cperm(work[thread_num]);
                // Perform elimination and determine number of rows in block
                // passing a posteori threshold pivot test
-               int blkpass = rblk.apply_pivot_app(dblk, options.u, options.small);
-               // Update column's passed pivot count
-               if(cdata[blk].test_fail(blkpass)) {
-                  #pragma omp cancel taskgroup
-               }
+               rblk.apply_pivot_app(dblk, options.u, options.small);
 #ifdef PROFILE
                if(use_tasks) task.done();
 #endif
@@ -1514,7 +1488,8 @@ private:
          // Column blk only needed if upd is present
          int jsa = (upd) ? blk : blk + 1;
          for(int jblk=jsa; jblk<nblk; jblk++) {
-            for(int iblk=jblk; iblk<mblk; iblk++) {
+            int isa = (jblk<nelim_blk) ? jblk+1 : jblk;
+            for(int iblk=isa; iblk<mblk; iblk++) {
                #pragma omp task default(none) \
                   firstprivate(blk, iblk, jblk) \
                   shared(a, cdata, backup, work, upd) \
