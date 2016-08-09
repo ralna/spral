@@ -27,7 +27,7 @@ void warn_if_no_cancel() {
       warn = cancel_warning_issued++;
       if(!warn)
          printf("\nCancellation support is not enabled.\n"
-                "For best performance, enable cancellation support by setting.\n"
+                "For best performance, enable cancellation support by setting\n"
                 "the environment variable OMP_CANCELLATION=true.\n");
    }
 }
