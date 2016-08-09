@@ -1398,7 +1398,7 @@ private:
 
       /* Restore a */
       for(int jblk=0; jblk<nelim_blk; ++jblk) {
-         for(int iblk=nelim_blk; iblk<mblk; ++iblk) {
+         for(int iblk=nelim_blk; iblk<nblk; ++iblk) {
             if(backup.is_used(iblk, jblk)) {
                #pragma omp task default(none) \
                   firstprivate(iblk, jblk) \
@@ -1434,7 +1434,7 @@ private:
          }*/
 
          // Loop over off-diagonal blocks applying pivot
-         for(int iblk=nelim_blk; iblk<mblk; iblk++) {
+         for(int iblk=nelim_blk; iblk<nblk; iblk++) {
             #pragma omp task default(none) \
                firstprivate(blk, iblk) \
                shared(a, backup, cdata, options, work) \
@@ -1465,7 +1465,8 @@ private:
          int jsa = (upd) ? blk : blk + 1;
          for(int jblk=jsa; jblk<nblk; jblk++) {
             int isa = (jblk<nelim_blk) ? nelim_blk : jblk;
-            for(int iblk=isa; iblk<mblk; iblk++) {
+            int ien = (jblk<nelim_blk) ? nblk : mblk;
+            for(int iblk=isa; iblk<ien; iblk++) {
                #pragma omp task default(none) \
                   firstprivate(blk, iblk, jblk) \
                   shared(a, cdata, backup, work, upd) \
