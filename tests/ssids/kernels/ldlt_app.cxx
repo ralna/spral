@@ -532,6 +532,21 @@ int run_ldlt_app_tests() {
       ldlt_test<double, 8, false, false> (0.01, 1e-20, true, false, false, 23, 9)
       ));
 
+   /* Simple tests, single-level blocking, rectangular, non-singular,
+    * with delays, app-aggressive */
+   TEST((
+      ldlt_test<double, 2, true, false> (0.01, 1e-20, true, false, false, 4, 2)
+      ));
+   TEST((
+      ldlt_test<double, 2, true, false> (0.01, 1e-20, true, false, false, 8, 2)
+      ));
+   TEST((
+      ldlt_test<double, 8, true, false> (0.01, 1e-20, true, false, false, 64, 24)
+      ));
+   TEST((
+      ldlt_test<double, 8, true, false> (0.01, 1e-20, true, false, false, 23, 9)
+      ));
+
    /* Simple tests, single-level blocking, square, non-singular, no delays */
    TEST((
       ldlt_test<double, 2, false, false> (0.01, 1e-20, false, false, false, 1*2, 1*2)
