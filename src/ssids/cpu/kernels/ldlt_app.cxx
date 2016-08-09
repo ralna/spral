@@ -1427,7 +1427,9 @@ private:
       // Now all eliminated columns are good, fix up remainder of node
       for(int jblk=nelim_blk; jblk<nblk; ++jblk) {
          for(int iblk=jblk; iblk<mblk; ++iblk) {
-            if(backup.is_used(iblk, jblk)) {
+            int progress = up_to_date[jblk*mblk+iblk];
+            if(progress >= nelim_blk) {
+               // Bad updates applied, needs reset and full recalculation
                #pragma omp task default(none) \
                   firstprivate(iblk, jblk) \
                   shared(a, backup, cdata) \
@@ -1436,11 +1438,10 @@ private:
                   BlockSpec rblk(iblk, jblk, m, n, cdata, a, lda, block_size);
                   rblk.full_restore(backup);
                }
+               progress = -1;
             }
-         }
-         // Apply any missing updates to a
-         for(int iblk=jblk; iblk<mblk; iblk++) {
-            for(int kblk=0; kblk<nelim_blk; kblk++) {
+            // Apply any missing updates to a
+            for(int kblk=progress+1; kblk<nelim_blk; ++kblk) {
                #pragma omp task default(none) \
                   firstprivate(iblk, jblk, kblk) \
                   shared(a, upd, cdata, work) \
@@ -1463,16 +1464,16 @@ private:
          T *upd2 = &upd[uoffset*(ldupd+1)];
          for(int jblk=nblk; jblk<mblk; ++jblk)
          for(int iblk=jblk; iblk<mblk; ++iblk) {
+            int progress = up_to_date[jblk*mblk+iblk];
+            if(progress >= nelim_blk) progress = -1; // needs complete reset
             T* upd_ij = &upd2[(jblk-nblk)*block_size*ldupd + 
                               (iblk-nblk)*block_size];
-            for(int kblk=0; kblk<nelim_blk; kblk++) {
+            for(int kblk=progress+1; kblk<nelim_blk; ++kblk) {
                // NB: no need for isrc or jsrc dep as must be good already
                #pragma omp task default(none) \
                   firstprivate(iblk, jblk, kblk, upd_ij) \
                   shared(a, cdata, work) \
-                  depend(inout: upd_ij[0:1]) \
-                  depend(in: a[kblk*block_size*lda+iblk*block_size:1]) \
-                  depend(in: a[kblk*block_size*lda+jblk*block_size:1])
+                  depend(inout: upd_ij[0:1])
                {
                   int thread_num = omp_get_thread_num();
                   BlockSpec ublk(iblk, jblk, m, n, cdata, a, lda, block_size);
