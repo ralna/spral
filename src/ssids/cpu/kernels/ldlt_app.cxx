@@ -1438,58 +1438,46 @@ private:
                }
             }
          }
-      }
-
-      /* Inner loop - iterate over block columns */
-      for(int blk=0; blk<nelim_blk; blk++) {
-         /*if(debug) {
-            printf("Bcol %d:\n", blk);
-            print_mat(mblk, nblk, m, n, blkdata, cdata, lda);
-         }*/
-
-         // Update uneliminated columns
-         // Column blk only needed if upd is present
-         for(int jblk=nelim_blk; jblk<nblk; jblk++) {
-            for(int iblk=jblk; iblk<mblk; iblk++) {
+         // Apply any missing updates to a
+         for(int iblk=jblk; iblk<mblk; iblk++) {
+            for(int kblk=0; kblk<nelim_blk; kblk++) {
                #pragma omp task default(none) \
-                  firstprivate(blk, iblk, jblk) \
-                  shared(a, cdata, backup, work, upd) \
+                  firstprivate(iblk, jblk, kblk) \
+                  shared(a, upd, cdata, work) \
                   depend(inout: a[jblk*block_size*lda+iblk*block_size:1]) \
-                  depend(in: a[blk*block_size*lda+iblk*block_size:1]) \
-                  depend(in: a[blk*block_size*lda+jblk*block_size:1])
+                  depend(in: a[kblk*block_size*lda+iblk*block_size:1]) \
+                  depend(in: a[kblk*block_size*lda+jblk*block_size:1])
                {
                   int thread_num = omp_get_thread_num();
                   BlockSpec ublk(iblk, jblk, m, n, cdata, a, lda, block_size);
-                  BlockSpec isrc(iblk, blk, m, n, cdata, a, lda, block_size);
-                  BlockSpec jsrc(jblk, blk, m, n, cdata, a, lda, block_size);
-                  // On first access to this block, store copy in case of fail
-                  if(blk==0 && jblk!=blk) ublk.backup(backup);
-                  // Actual update
+                  BlockSpec isrc(iblk, kblk, m, n, cdata, a, lda, block_size);
+                  BlockSpec jsrc(jblk, kblk, m, n, cdata, a, lda, block_size);
                   ublk.update(isrc, jsrc, work[thread_num], 0.0, upd, ldupd);
                }
             }
          }
-
-         // Handle update to contribution block, if required
-         if(upd && mblk>nblk) {
-            int uoffset = std::min(nblk*block_size, m) - n;
-            T *upd2 = &upd[uoffset*(ldupd+1)];
-            for(int jblk=nblk; jblk<mblk; ++jblk)
-            for(int iblk=jblk; iblk<mblk; ++iblk) {
-               T* upd_ij = &upd2[(jblk-nblk)*block_size*ldupd + 
-                                 (iblk-nblk)*block_size];
+      }
+      // Now all eliminated columns are good, fix up contribution block
+      if(upd) {
+         int uoffset = std::min(nblk*block_size, m) - n;
+         T *upd2 = &upd[uoffset*(ldupd+1)];
+         for(int jblk=nblk; jblk<mblk; ++jblk)
+         for(int iblk=jblk; iblk<mblk; ++iblk) {
+            T* upd_ij = &upd2[(jblk-nblk)*block_size*ldupd + 
+                              (iblk-nblk)*block_size];
+            for(int kblk=0; kblk<nelim_blk; kblk++) {
+               // NB: no need for isrc or jsrc dep as must be good already
                #pragma omp task default(none) \
-                  firstprivate(iblk, jblk, blk, upd_ij) \
-                  shared(a, upd2, cdata, work) \
+                  firstprivate(iblk, jblk, kblk, upd_ij) \
+                  shared(a, cdata, work) \
                   depend(inout: upd_ij[0:1]) \
-                  depend(in: a[blk*block_size*lda+iblk*block_size:1]) \
-                  depend(in: a[blk*block_size*lda+jblk*block_size:1]) \
-                  if(use_tasks && mblk>1)
+                  depend(in: a[kblk*block_size*lda+iblk*block_size:1]) \
+                  depend(in: a[kblk*block_size*lda+jblk*block_size:1])
                {
                   int thread_num = omp_get_thread_num();
                   BlockSpec ublk(iblk, jblk, m, n, cdata, a, lda, block_size);
-                  BlockSpec isrc(iblk, blk, m, n, cdata, a, lda, block_size);
-                  BlockSpec jsrc(jblk, blk, m, n, cdata, a, lda, block_size);
+                  BlockSpec isrc(iblk, kblk, m, n, cdata, a, lda, block_size);
+                  BlockSpec jsrc(jblk, kblk, m, n, cdata, a, lda, block_size);
                   // Perform update
                   ublk.form_contrib(
                         isrc, jsrc, work[thread_num], 0.0, upd_ij, ldupd
