@@ -1413,14 +1413,17 @@ private:
       // the failed rows in the passed columns.
       for(int jblk=0; jblk<nelim_blk; ++jblk) {
          for(int iblk=nelim_blk; iblk<nblk; ++iblk) {
-            #pragma omp task default(none) \
-               firstprivate(iblk, jblk) \
-               shared(a, cdata, work) \
-               depend(inout: a[jblk*block_size*lda+iblk*block_size:1])
-            {
-               int thread_num = omp_get_thread_num();
-               BlockSpec rblk(iblk, jblk, m, n, cdata, a, lda, block_size);
-               rblk.apply_inv_rperm(work[thread_num]);
+            int progress = up_to_date[jblk*mblk+iblk];
+            if(progress >= nelim_blk) {
+               #pragma omp task default(none) \
+                  firstprivate(iblk, jblk) \
+                  shared(a, cdata, work) \
+                  depend(inout: a[jblk*block_size*lda+iblk*block_size:1])
+               {
+                  int thread_num = omp_get_thread_num();
+                  BlockSpec rblk(iblk, jblk, m, n, cdata, a, lda, block_size);
+                  rblk.apply_inv_rperm(work[thread_num]);
+               }
             }
          }
       }
