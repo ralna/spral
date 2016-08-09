@@ -1402,10 +1402,12 @@ private:
             if(backup.is_used(iblk, jblk)) {
                #pragma omp task default(none) \
                   firstprivate(iblk, jblk) \
-                  shared(a, backup, cdata)
+                  shared(a, cdata, work) \
+                  depend(inout: a[jblk*block_size*lda+iblk*block_size:1])
                {
+                  int thread_num = omp_get_thread_num();
                   BlockSpec rblk(iblk, jblk, m, n, cdata, a, lda, block_size);
-                  rblk.full_restore(backup);
+                  rblk.apply_inv_rperm(work[thread_num]);
                }
             }
          }
@@ -1415,7 +1417,8 @@ private:
             if(backup.is_used(iblk, jblk)) {
                #pragma omp task default(none) \
                   firstprivate(iblk, jblk) \
-                  shared(a, backup, cdata)
+                  shared(a, backup, cdata) \
+                  depend(inout: a[jblk*block_size*lda+iblk*block_size:1])
                {
                   BlockSpec rblk(iblk, jblk, m, n, cdata, a, lda, block_size);
                   rblk.full_restore(backup);
@@ -1433,40 +1436,10 @@ private:
             print_mat(mblk, nblk, m, n, blkdata, cdata, lda);
          }*/
 
-         // Loop over off-diagonal blocks applying pivot
-         for(int iblk=nelim_blk; iblk<nblk; iblk++) {
-            #pragma omp task default(none) \
-               firstprivate(blk, iblk) \
-               shared(a, backup, cdata, options, work) \
-               depend(in: a[blk*block_size*lda+blk*block_size:1]) \
-               depend(inout: a[blk*block_size*lda+iblk*block_size:1]) \
-               if(use_tasks && mblk>1)
-            {
-#ifdef PROFILE
-               Profile::Task task("TA_LDLT_APPLY", omp_get_thread_num());
-#endif
-               if(debug) printf("ApplyN(%d,%d)\n", iblk, blk);
-               int thread_num = omp_get_thread_num();
-               BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
-               BlockSpec rblk(iblk, blk, m, n, cdata, a, lda, block_size);
-               // Apply column permutation from factorization of dblk
-               rblk.apply_cperm(work[thread_num]);
-               // Perform elimination and determine number of rows in block
-               // passing a posteori threshold pivot test
-               rblk.apply_pivot_app(dblk, options.u, options.small);
-#ifdef PROFILE
-               if(use_tasks) task.done();
-#endif
-            }
-         }
-
          // Update uneliminated columns
          // Column blk only needed if upd is present
-         int jsa = (upd) ? blk : blk + 1;
-         for(int jblk=jsa; jblk<nblk; jblk++) {
-            int isa = (jblk<nelim_blk) ? nelim_blk : jblk;
-            int ien = (jblk<nelim_blk) ? nblk : mblk;
-            for(int iblk=isa; iblk<ien; iblk++) {
+         for(int jblk=nelim_blk; jblk<nblk; jblk++) {
+            for(int iblk=jblk; iblk<mblk; iblk++) {
                #pragma omp task default(none) \
                   firstprivate(blk, iblk, jblk) \
                   shared(a, cdata, backup, work, upd) \
