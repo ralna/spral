@@ -1,2 +1,10 @@
-* Only recover what we need to on APP fail (i.e. first nelim x nelim submat is fine)
 * Add support for TPP pivot_mode
+* Handle multiple NUMA regions and GPU through top level tree split
+* Handle middle of tree better (adapt small subtree kernel to allow inputs?)
+* Optimize small subtree factorization code
+* Figure out how to improve root node performance on many cores
+* Optimize/parallelize TPP code [or pass straight to parent?]
+* Other optimizations around delayed pivots
+* Write report on code
+* Sort out test deck
+* Sort out documentation

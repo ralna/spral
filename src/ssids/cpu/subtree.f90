@@ -191,11 +191,12 @@ subroutine symbolic_final(this)
    call c_destroy_symbolic_subtree(this%csubtree)
 end subroutine symbolic_final
 
-function factor(this, posdef, aval, options, inform, scaling)
+function factor(this, posdef, aval, child_contrib, options, inform, scaling)
    class(numeric_subtree_base), pointer :: factor
    class(cpu_symbolic_subtree), target, intent(inout) :: this
    logical(C_BOOL), intent(in) :: posdef
    real(wp), dimension(*), intent(in) :: aval
+   type(contrib_type), dimension(:), intent(inout) :: child_contrib
    class(ssids_options), intent(in) :: options
    class(ssids_inform_base), intent(inout) :: inform
    real(wp), dimension(*), target, optional, intent(in) :: scaling

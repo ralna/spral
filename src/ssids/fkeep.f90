@@ -3,6 +3,7 @@
 !
 module spral_ssids_fkeep
    use spral_ssids_akeep, only : ssids_akeep_base
+   use spral_ssids_contrib, only : contrib_type
    use spral_ssids_datatypes
    use spral_ssids_inform, only : ssids_inform_base
    use spral_ssids_cpu_subtree, only : cpu_numeric_subtree, cpu_symbolic_subtree
@@ -62,6 +63,7 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
 
    logical(C_BOOL) :: fposdef
    class(numeric_subtree_base), pointer :: subtree
+   type(contrib_type), dimension(:), allocatable :: child_contrib
 
    fposdef = fkeep%pos_def
 
@@ -73,13 +75,14 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
    endif
 
    ! Call subtree factor routines
+   allocate(child_contrib(0))
    if(allocated(fkeep%scaling)) then
       fkeep%subtree(1)%ptr => akeep%subtree(1)%ptr%factor( &
-         fposdef, val, options, inform, scaling=fkeep%scaling &
+         fposdef, val, child_contrib, options, inform, scaling=fkeep%scaling &
          )
    else
       fkeep%subtree(1)%ptr => akeep%subtree(1)%ptr%factor( &
-         fposdef, val, options, inform &
+         fposdef, val, child_contrib, options, inform &
          )
    endif
 end subroutine inner_factor_cpu
