@@ -196,14 +196,13 @@ public:
    }
 
    /// Multiply
+   // NB: don't override builtin operator*(double,double) in scalar case
+#if defined(__AVX2__) || defined(__AVX__)
    friend
    SimdVec operator*(const SimdVec &lhs, const SimdVec &rhs) {
-#if defined(__AVX2__) || defined(__AVX__)
       return SimdVec( _mm256_mul_pd(lhs.val, rhs.val) );
-#else
-      return SimdVec( lhs.val * rhs.val );
-#endif
    }
+#endif
 
    SimdVec& operator*=(const SimdVec &rhs) {
       *this = *this * rhs;
@@ -211,14 +210,13 @@ public:
    }
 
    /// Add
+   // NB: don't override builtin operator*(double,double) in scalar case
+#if defined(__AVX2__) || defined(__AVX__)
    friend
    SimdVec operator+(const SimdVec &lhs, const SimdVec &rhs) {
-#if defined(__AVX2__) || defined(__AVX__)
       return SimdVec( _mm256_add_pd(lhs.val, rhs.val) );
-#else
-      return SimdVec( lhs.val + rhs.val );
-#endif
    }
+#endif
 
    /*******************************************
     * Factory functions for special cases
