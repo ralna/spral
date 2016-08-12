@@ -18,6 +18,12 @@ namespace spral { namespace omp {
 bool cancel_support() {
    return omp_get_cancellation();
 }
+bool nested_support() {
+   return omp_get_nested();
+}
+bool proc_bind_support() {
+   return (omp_get_proc_bind() != omp_proc_bind_false);
+}
 
 static int cancel_warning_issued = 0;
 void warn_if_no_cancel() {
@@ -26,9 +32,35 @@ void warn_if_no_cancel() {
       #pragma omp atomic capture
       warn = cancel_warning_issued++;
       if(!warn)
-         printf("\nCancellation support is not enabled.\n"
+         printf("\nOpenMP cancellation support is not enabled.\n"
                 "For best performance, enable cancellation support by setting\n"
                 "the environment variable OMP_CANCELLATION=true.\n");
+   }
+}
+
+static int nested_warning_issued = 0;
+void warn_if_no_nested() {
+   if(!nested_support()) {
+      int warn;
+      #pragma omp atomic capture
+      warn = nested_warning_issued++;
+      if(!warn)
+         printf("\nOpenMP nested parallelism support is not enabled.\n"
+                "For best performance, enable nested support by setting\n"
+                "the environment variable OMP_NESTED=true.\n");
+   }
+}
+
+static int proc_bind_warning_issued = 0;
+void warn_if_no_proc_bind() {
+   if(!proc_bind_support()) {
+      int warn;
+      #pragma omp atomic capture
+      warn = proc_bind_warning_issued++;
+      if(!warn)
+         printf("\nOpenMP processor binding support is not enabled.\n"
+                "For best performance, enable support by setting\n"
+                "the environment variable OMP_PROC_BIND=true.\n");
    }
 }
 

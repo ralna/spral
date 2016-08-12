@@ -218,6 +218,8 @@ libspral_a_SOURCES += \
 	src/ssids/akeep.f90 \
 	src/ssids/analyse.f90 \
 	src/ssids/contrib.f90 \
+	src/ssids/contrib.h \
+	src/ssids/contrib_free.f90 \
 	src/ssids/datatypes.f90 \
 	src/ssids/fkeep.f90 \
 	src/ssids/inform.f90 \

@@ -42,10 +42,18 @@ private:
    omp_lock_t lock_;
 };
 
-/// Prints a warning message is cancel is not supported
-void warn_if_no_cancel();
-
 /// Returns true if omp cancel is supported
 bool cancel_support();
+/// Returns true if omp nesting is supported
+bool nested_support();
+/// Returns true if omp processor binding is supported
+bool proc_bind_support();
+
+/// Prints a warning message if cancel is not supported
+void warn_if_no_cancel();
+/// Prints a warning message if nesting is not supported
+void warn_if_no_nested();
+/// Prints a warning message if processor binding is not supported
+void warn_if_no_proc_bind();
 
 }} /* end of namespace spral::omp */

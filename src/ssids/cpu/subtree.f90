@@ -9,7 +9,7 @@ module spral_ssids_cpu_subtree
 
    private
    public :: cpu_symbolic_subtree, construct_cpu_symbolic_subtree
-   public :: cpu_numeric_subtree
+   public :: cpu_numeric_subtree, cpu_free_contrib
 
    type, extends(symbolic_subtree_base) :: cpu_symbolic_subtree
       integer :: n
@@ -22,7 +22,6 @@ module spral_ssids_cpu_subtree
    type, extends(numeric_subtree_base) :: cpu_numeric_subtree
       logical(C_BOOL) :: posdef
       type(cpu_symbolic_subtree), pointer :: symbolic
-      type(contrib_type), pointer :: contrib
       type(C_PTR) :: csubtree
    contains
       procedure :: get_contrib
@@ -37,20 +36,23 @@ module spral_ssids_cpu_subtree
    end type cpu_numeric_subtree
 
    interface
-      type(C_PTR) function c_create_symbolic_subtree(n, nnodes, sptr, sparent, &
-            rptr, rlist, nptr, nlist, options) &
+      type(C_PTR) function c_create_symbolic_subtree(n, sa, en, sptr, sparent, &
+            rptr, rlist, nptr, nlist, ncontrib, contrib_idx, options) &
             bind(C, name="spral_ssids_cpu_create_symbolic_subtree")
          use, intrinsic :: iso_c_binding
          import :: cpu_factor_options
          implicit none
          integer(C_INT), value :: n
-         integer(C_INT), value :: nnodes
-         integer(C_INT), dimension(nnodes+1), intent(in) :: sptr
-         integer(C_INT), dimension(nnodes+1), intent(in) :: sparent
-         integer(C_LONG), dimension(nnodes+1), intent(in) :: rptr
+         integer(C_INT), value :: sa
+         integer(C_INT), value :: en
+         integer(C_INT), dimension(*), intent(in) :: sptr
+         integer(C_INT), dimension(*), intent(in) :: sparent
+         integer(C_LONG), dimension(*), intent(in) :: rptr
          integer(C_INT), dimension(*), intent(in) :: rlist
          integer(C_INT), dimension(*), intent(in) :: nptr
          integer(C_INT), dimension(*), intent(in) :: nlist
+         integer(C_INT), value :: ncontrib
+         integer(C_INT), dimension(*), intent(in) :: contrib_idx
          type(cpu_factor_options), intent(in) :: options
       end function c_create_symbolic_subtree
 
@@ -62,7 +64,7 @@ module spral_ssids_cpu_subtree
       end subroutine c_destroy_symbolic_subtree
 
       type(C_PTR) function c_create_numeric_subtree(posdef, symbolic_subtree, &
-            aval, scaling, options, stats) &
+            aval, scaling, child_contrib, options, stats) &
             bind(C, name="spral_ssids_cpu_create_num_subtree_dbl")
          use, intrinsic :: iso_c_binding
          import :: cpu_factor_options, cpu_factor_stats
@@ -71,6 +73,7 @@ module spral_ssids_cpu_subtree
          type(C_PTR), value :: symbolic_subtree
          real(C_DOUBLE), dimension(*), intent(in) :: aval
          type(C_PTR), value :: scaling
+         type(C_PTR), dimension(*), intent(inout) :: child_contrib
          type(cpu_factor_options), intent(in) :: options
          type(cpu_factor_stats), intent(out) :: stats
       end function c_create_numeric_subtree
@@ -145,21 +148,47 @@ module spral_ssids_cpu_subtree
          type(C_PTR), value :: subtree
          real(C_DOUBLE), dimension(*), intent(in) :: d
       end subroutine c_subtree_alter
+
+      subroutine c_get_contrib(posdef, subtree, n, val, rlist, ndelay, &
+            delay_perm, delay_val, lddelay) &
+            bind(C, name="spral_ssids_cpu_subtree_get_contrib_dbl")
+         use, intrinsic :: iso_c_binding
+         implicit none
+         logical(C_BOOL), value :: posdef
+         type(C_PTR), value :: subtree
+         integer(C_INT) :: n
+         type(C_PTR) :: val
+         type(C_PTR) :: rlist
+         integer(C_INT) :: ndelay
+         type(C_PTR) :: delay_perm
+         type(C_PTR) :: delay_val
+         integer(C_INT) :: lddelay
+      end subroutine c_get_contrib
+
+      subroutine c_free_contrib(posdef, subtree) &
+            bind(C, name="spral_ssids_cpu_subtree_free_contrib_dbl")
+         use, intrinsic :: iso_c_binding
+         implicit none
+         logical(C_BOOL), value :: posdef
+         type(C_PTR), value :: subtree
+      end subroutine c_free_contrib
    end interface
 
 contains
 
-function construct_cpu_symbolic_subtree(n, nnodes, sptr, sparent, rptr, &
-      rlist, nptr, nlist, options) result(this)
+function construct_cpu_symbolic_subtree(n, sa, en, sptr, sparent, rptr, &
+      rlist, nptr, nlist, contrib_idx, options) result(this)
    class(cpu_symbolic_subtree), pointer :: this
    integer, intent(in) :: n
-   integer, intent(in) :: nnodes
-   integer, dimension(nnodes+1), target, intent(in) :: sptr
-   integer, dimension(nnodes), intent(in) :: sparent
-   integer(long), dimension(nnodes+1), target, intent(in) :: rptr
-   integer, dimension(rptr(nnodes+1)-1), target, intent(in) :: rlist
-   integer, dimension(nnodes+1), target, intent(in) :: nptr
-   integer, dimension(2,nptr(nnodes+1)-1), target, intent(in) :: nlist
+   integer, intent(in) :: sa
+   integer, intent(in) :: en
+   integer, dimension(*), target, intent(in) :: sptr
+   integer, dimension(*), intent(in) :: sparent
+   integer(long), dimension(*), target, intent(in) :: rptr
+   integer, dimension(*), target, intent(in) :: rlist
+   integer, dimension(*), target, intent(in) :: nptr
+   integer, dimension(2,*), target, intent(in) :: nlist
+   integer, dimension(:), intent(in) :: contrib_idx
    class(ssids_options), intent(in) :: options
 
    integer :: node
@@ -180,8 +209,8 @@ function construct_cpu_symbolic_subtree(n, nnodes, sptr, sparent, rptr, &
    ! Call C++ subtree analyse
    call cpu_copy_options_in(options, coptions)
    this%csubtree = &
-      c_create_symbolic_subtree(n, nnodes, sptr, sparent, rptr, rlist, nptr, &
-         nlist, coptions)
+      c_create_symbolic_subtree(n, sa, en, sptr, sparent, rptr, rlist, nptr, &
+         nlist, size(contrib_idx), contrib_idx, coptions)
 
 end function construct_cpu_symbolic_subtree
 
@@ -196,7 +225,7 @@ function factor(this, posdef, aval, child_contrib, options, inform, scaling)
    class(cpu_symbolic_subtree), target, intent(inout) :: this
    logical(C_BOOL), intent(in) :: posdef
    real(wp), dimension(*), intent(in) :: aval
-   type(contrib_type), dimension(:), intent(inout) :: child_contrib
+   type(contrib_type), dimension(:), target, intent(inout) :: child_contrib
    class(ssids_options), intent(in) :: options
    class(ssids_inform_base), intent(inout) :: inform
    real(wp), dimension(*), target, optional, intent(in) :: scaling
@@ -205,6 +234,8 @@ function factor(this, posdef, aval, child_contrib, options, inform, scaling)
    type(cpu_factor_options) :: coptions
    type(cpu_factor_stats) :: cstats
    type(C_PTR) :: cscaling
+   integer :: i
+   type(C_PTR), dimension(:), allocatable :: contrib_ptr
    integer :: st
 
    ! Leave output as null until successful exit
@@ -215,6 +246,13 @@ function factor(this, posdef, aval, child_contrib, options, inform, scaling)
    if(st.ne.0) goto 10
    cpu_factor%symbolic => this
 
+   ! Convert child_contrib to contrib_ptr
+   allocate(contrib_ptr(size(child_contrib)), stat=st)
+   if(st.ne.0) goto 10
+   do i = 1, size(child_contrib)
+      contrib_ptr(i) = C_LOC(child_contrib(i))
+   end do
+
    ! Call C++ factor routine
    cpu_factor%posdef = posdef
    cscaling = C_NULL_PTR
@@ -222,7 +260,7 @@ function factor(this, posdef, aval, child_contrib, options, inform, scaling)
    call cpu_copy_options_in(options, coptions)
    cpu_factor%csubtree = &
       c_create_numeric_subtree(posdef, this%csubtree, &
-         aval, cscaling, coptions, cstats)
+         aval, cscaling, contrib_ptr, coptions, cstats)
    if(cstats%flag.ne.0) then
       inform%flag = cstats%flag
       return
@@ -250,11 +288,27 @@ subroutine numeric_final(this)
 end subroutine numeric_final
 
 function get_contrib(this)
-   class(contrib_type), pointer :: get_contrib
+   type(contrib_type) :: get_contrib
    class(cpu_numeric_subtree), intent(in) :: this
 
-   !FIXME: make this actually be useful
-   get_contrib => this%contrib
+   type(C_PTR) :: cval, crlist, delay_perm, delay_val
+
+   call c_get_contrib(this%posdef, this%csubtree, get_contrib%n, cval, crlist, &
+      get_contrib%ndelay, delay_perm, delay_val, get_contrib%lddelay)
+   call c_f_pointer(cval, get_contrib%val, shape = (/ get_contrib%n**2 /))
+   call c_f_pointer(crlist, get_contrib%rlist, shape = (/ get_contrib%n /))
+   if(c_associated(delay_val)) then
+      call c_f_pointer(delay_perm, get_contrib%delay_perm, &
+         shape = (/ get_contrib%ndelay /))
+      call c_f_pointer(delay_val, get_contrib%delay_val, &
+         shape = (/ get_contrib%ndelay*get_contrib%lddelay /))
+   else
+      nullify(get_contrib%delay_perm)
+      nullify(get_contrib%delay_val)
+   endif
+   get_contrib%owner = 0 ! cpu
+   get_contrib%posdef = this%posdef
+   get_contrib%owner_ptr = this%csubtree
 end function get_contrib
 
 subroutine solve_fwd(this, nrhs, x, ldx, inform)
@@ -304,34 +358,21 @@ subroutine enquire_posdef(this, d)
    call c_subtree_enquire(this%posdef, this%csubtree, C_NULL_PTR, C_LOC(d))
 end subroutine enquire_posdef
 
-subroutine enquire_indef(this, invp, piv_order, d)
+subroutine enquire_indef(this, piv_order, d)
    class(cpu_numeric_subtree), intent(in) :: this
-   integer, dimension(*), intent(in) :: invp
-   integer, dimension(*), optional, intent(out) :: piv_order
+   integer, dimension(*), target, optional, intent(out) :: piv_order
    real(wp), dimension(2,*), target, optional, intent(out) :: d
 
-   integer :: i
-   integer, dimension(:), target, allocatable :: po
    type(C_PTR) :: dptr, poptr
 
    ! Setup pointers
    poptr = C_NULL_PTR
-   if(present(piv_order)) then
-      allocate(po(this%symbolic%n))
-      poptr = C_LOC(po)
-   endif
+   if(present(piv_order)) poptr = C_LOC(piv_order)
    dptr = C_NULL_PTR
    if(present(d)) dptr = C_LOC(d)
 
    ! Call C++ routine
    call c_subtree_enquire(this%posdef, this%csubtree, poptr, dptr)
-
-   ! Apply invp to piv_order
-   if(present(piv_order)) then
-      do i = 1, this%symbolic%n
-         piv_order( invp(i) ) = po(i)
-      end do
-   endif
 end subroutine enquire_indef
 
 subroutine alter(this, d)
@@ -340,5 +381,12 @@ subroutine alter(this, d)
 
    call c_subtree_alter(this%posdef, this%csubtree, d)
 end subroutine alter
+
+subroutine cpu_free_contrib(posdef, csubtree)
+   logical(C_BOOL), intent(in) :: posdef
+   type(C_PTR), intent(inout) :: csubtree
+
+   call c_free_contrib(posdef, csubtree)
+end subroutine cpu_free_contrib
 
 end module spral_ssids_cpu_subtree

@@ -44,21 +44,21 @@ private:
 
 public:
    /** Constructor performs analyse phase work */
-   SmallLeafSymbolicSubtree(int sa, int en, int const* sptr, int const* sparent, long const* rptr, int const* rlist, int const* nptr, int const* nlist, SymbolicSubtree const& symb)
-   : sa_(sa), en_(en), nnodes_(en-sa+1), parent_(sparent[en]-1),
+   SmallLeafSymbolicSubtree(int sa, int en, int part_offset, int const* sptr, int const* sparent, long const* rptr, int const* rlist, int const* nptr, int const* nlist, SymbolicSubtree const& symb)
+   : sa_(sa), en_(en), nnodes_(en-sa+1), parent_(sparent[part_offset+en]-1-part_offset),
      nodes_(nnodes_),
-     rlist_(new int[rptr[en+1]-rptr[sa]], std::default_delete<int[]>()),
+     rlist_(new int[rptr[part_offset+en+1]-rptr[part_offset+sa]], std::default_delete<int[]>()),
      nptr_(nptr), nlist_(nlist), symb_(symb)
    {
       /* Setup basic node information */
       nfactor_ = 0;
       int* newrlist = rlist_.get();
       for(int ni=sa; ni<=en; ++ni) {
-         nodes_[ni-sa].nrow = rptr[ni+1] - rptr[ni];
-         nodes_[ni-sa].ncol = sptr[ni+1] - sptr[ni];
-         nodes_[ni-sa].sparent = sparent[ni]-sa-1; // sparent is Fortran indexed
+         nodes_[ni-sa].nrow = rptr[part_offset+ni+1] - rptr[part_offset+ni];
+         nodes_[ni-sa].ncol = sptr[part_offset+ni+1] - sptr[part_offset+ni];
+         nodes_[ni-sa].sparent = sparent[part_offset+ni]-sa-1; // sparent is Fortran indexed
          // FIXME: subtract ncol off rlist for elim'd vars
-         nodes_[ni-sa].rlist = &newrlist[rptr[ni]-rptr[sa]];
+         nodes_[ni-sa].rlist = &newrlist[rptr[part_offset+ni]-rptr[part_offset+sa]];
          nodes_[ni-sa].lcol_offset = nfactor_;
          size_t ldl = align_lda<double>(nodes_[ni-sa].nrow);
          nfactor_ += nodes_[ni-sa].ncol*ldl;
@@ -66,9 +66,9 @@ public:
       /* Construct rlist_ being offsets into parent node */
       for(int ni=sa; ni<=en; ++ni) {
          if(nodes_[ni-sa].ncol == nodes_[ni-sa].nrow) continue; // is root
-         int const* ilist = &rlist[rptr[ni]-1]; // rptr is Fortran indexed
+         int const* ilist = &rlist[rptr[part_offset+ni]-1]; // rptr is Fortran indexed
          ilist += nodes_[ni-sa].ncol; // Skip eliminated vars
-         int pnode = sparent[ni]-1; //Fortran indexed
+         int pnode = sparent[part_offset+ni]-1; //Fortran indexed
          int const* jlist = &rlist[rptr[pnode]-1]; // rptr is Fortran indexed
          int const* jstart = jlist;
          int *outlist = nodes_[ni-sa].rlist;

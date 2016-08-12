@@ -232,7 +232,8 @@ am__libspral_a_SOURCES_DIST = src/blas_iface.f90 src/core_analyse.f90 \
 	else src/ssids/gpu/inform_nogpu.f90 \
 	src/ssids/type_select_nogpu.f90 src/ssids/alloc.f90 \
 	src/ssids/akeep.f90 src/ssids/analyse.f90 \
-	src/ssids/contrib.f90 src/ssids/datatypes.f90 \
+	src/ssids/contrib.f90 src/ssids/contrib.h \
+	src/ssids/contrib_free.f90 src/ssids/datatypes.f90 \
 	src/ssids/fkeep.f90 src/ssids/inform.f90 src/ssids/ssids.f90 \
 	src/ssids/subtree.f90 src/ssids/cpu/AlignedAllocator.hxx \
 	src/ssids/cpu/AppendAlloc.hxx src/ssids/cpu/BlockPool.hxx \
@@ -300,9 +301,10 @@ am_libspral_a_OBJECTS = src/blas_iface.$(OBJEXT) \
 	interfaces/C/random_matrix.$(OBJEXT) $(am__objects_2) \
 	src/ssids/alloc.$(OBJEXT) src/ssids/akeep.$(OBJEXT) \
 	src/ssids/analyse.$(OBJEXT) src/ssids/contrib.$(OBJEXT) \
-	src/ssids/datatypes.$(OBJEXT) src/ssids/fkeep.$(OBJEXT) \
-	src/ssids/inform.$(OBJEXT) src/ssids/ssids.$(OBJEXT) \
-	src/ssids/subtree.$(OBJEXT) src/ssids/cpu/cpu_iface.$(OBJEXT) \
+	src/ssids/contrib_free.$(OBJEXT) src/ssids/datatypes.$(OBJEXT) \
+	src/ssids/fkeep.$(OBJEXT) src/ssids/inform.$(OBJEXT) \
+	src/ssids/ssids.$(OBJEXT) src/ssids/subtree.$(OBJEXT) \
+	src/ssids/cpu/cpu_iface.$(OBJEXT) \
 	src/ssids/cpu/NumericSubtree.$(OBJEXT) \
 	src/ssids/cpu/subtree.$(OBJEXT) \
 	src/ssids/cpu/profile.$(OBJEXT) \
@@ -1161,7 +1163,8 @@ libspral_a_SOURCES = src/blas_iface.f90 src/core_analyse.f90 \
 	interfaces/C/random.f90 src/random_matrix.f90 \
 	interfaces/C/random_matrix.f90 $(am__append_2) \
 	src/ssids/alloc.f90 src/ssids/akeep.f90 src/ssids/analyse.f90 \
-	src/ssids/contrib.f90 src/ssids/datatypes.f90 \
+	src/ssids/contrib.f90 src/ssids/contrib.h \
+	src/ssids/contrib_free.f90 src/ssids/datatypes.f90 \
 	src/ssids/fkeep.f90 src/ssids/inform.f90 src/ssids/ssids.f90 \
 	src/ssids/subtree.f90 src/ssids/cpu/AlignedAllocator.hxx \
 	src/ssids/cpu/AppendAlloc.hxx src/ssids/cpu/BlockPool.hxx \
@@ -1484,6 +1487,8 @@ src/ssids/akeep.$(OBJEXT): src/ssids/$(am__dirstamp) \
 src/ssids/analyse.$(OBJEXT): src/ssids/$(am__dirstamp) \
 	src/ssids/$(DEPDIR)/$(am__dirstamp)
 src/ssids/contrib.$(OBJEXT): src/ssids/$(am__dirstamp) \
+	src/ssids/$(DEPDIR)/$(am__dirstamp)
+src/ssids/contrib_free.$(OBJEXT): src/ssids/$(am__dirstamp) \
 	src/ssids/$(DEPDIR)/$(am__dirstamp)
 src/ssids/datatypes.$(OBJEXT): src/ssids/$(am__dirstamp) \
 	src/ssids/$(DEPDIR)/$(am__dirstamp)

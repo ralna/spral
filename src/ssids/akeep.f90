@@ -31,6 +31,8 @@ module spral_ssids_akeep
       integer :: nparts
       integer, dimension(:), allocatable :: part
       type(symbolic_subtree_ptr), dimension(:), allocatable :: subtree
+      integer, dimension(:), allocatable :: contrib_ptr
+      integer, dimension(:), allocatable :: contrib_idx
 
       ! child_list(child_ptr(node):child_ptr(node+1)-1) is list of children
       ! of node. Used to ensure we always sum contributions from children

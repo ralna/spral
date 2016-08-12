@@ -61,6 +61,7 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
    class(ssids_options), intent(in) :: options
    class(ssids_inform_base), intent(inout) :: inform
 
+   integer :: i
    logical(C_BOOL) :: fposdef
    class(numeric_subtree_base), pointer :: subtree
    type(contrib_type), dimension(:), allocatable :: child_contrib
@@ -68,23 +69,31 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
    fposdef = fkeep%pos_def
 
    ! Allocate space for subtrees
-   allocate(fkeep%subtree(1), stat=inform%stat)
+   allocate(fkeep%subtree(akeep%nparts), stat=inform%stat)
    if(inform%stat.ne.0) then
       inform%flag = SSIDS_ERROR_ALLOCATION
       return
    endif
 
    ! Call subtree factor routines
-   allocate(child_contrib(0))
-   if(allocated(fkeep%scaling)) then
-      fkeep%subtree(1)%ptr => akeep%subtree(1)%ptr%factor( &
-         fposdef, val, child_contrib, options, inform, scaling=fkeep%scaling &
-         )
-   else
-      fkeep%subtree(1)%ptr => akeep%subtree(1)%ptr%factor( &
-         fposdef, val, child_contrib, options, inform &
-         )
-   endif
+   allocate(child_contrib(akeep%nparts)) ! FIXME stat
+   do i = 1, akeep%nparts
+      if(allocated(fkeep%scaling)) then
+         fkeep%subtree(i)%ptr => akeep%subtree(i)%ptr%factor( &
+            fposdef, val, &
+            child_contrib(akeep%contrib_ptr(i):akeep%contrib_ptr(i+1)-1), &
+            options, inform, scaling=fkeep%scaling &
+            )
+      else
+         fkeep%subtree(i)%ptr => akeep%subtree(i)%ptr%factor( &
+            fposdef, val, &
+            child_contrib(akeep%contrib_ptr(i):akeep%contrib_ptr(i+1)-1), &
+            options, inform &
+            )
+      endif
+      if(akeep%contrib_idx(i).gt.akeep%nparts) cycle ! part is a root
+      child_contrib(akeep%contrib_idx(i)) = fkeep%subtree(i)%ptr%get_contrib()
+   end do
 end subroutine inner_factor_cpu
 
 subroutine inner_solve_cpu(local_job, nrhs, x, ldx, akeep, fkeep, options, inform)
@@ -97,7 +106,7 @@ subroutine inner_solve_cpu(local_job, nrhs, x, ldx, akeep, fkeep, options, infor
    type(ssids_options), intent(in) :: options
    class(ssids_inform_base), intent(inout) :: inform
 
-   integer :: i, r
+   integer :: i, r, part
    integer :: n
    real(wp), dimension(:,:), allocatable :: x2
 
@@ -125,22 +134,34 @@ subroutine inner_solve_cpu(local_job, nrhs, x, ldx, akeep, fkeep, options, infor
 
    ! Perform relevant solves
    if (local_job.eq.SSIDS_SOLVE_JOB_FWD .or. &
-         local_job.eq.SSIDS_SOLVE_JOB_ALL) &
-      call fkeep%subtree(1)%ptr%solve_fwd(nrhs, x2, n, inform)
-   if (inform%stat .ne. 0) goto 100
+         local_job.eq.SSIDS_SOLVE_JOB_ALL) then
+      do part = 1, akeep%nparts
+         call fkeep%subtree(part)%ptr%solve_fwd(nrhs, x2, n, inform)
+         if (inform%stat .ne. 0) goto 100
+      end do
+   endif
 
-   if (local_job.eq.SSIDS_SOLVE_JOB_DIAG) &
-      call fkeep%subtree(1)%ptr%solve_diag(nrhs, x2, n, inform)
-   if (inform%stat .ne. 0) goto 100
+   if (local_job.eq.SSIDS_SOLVE_JOB_DIAG) then
+      do part = 1, akeep%nparts
+         call fkeep%subtree(part)%ptr%solve_diag(nrhs, x2, n, inform)
+         if (inform%stat .ne. 0) goto 100
+      end do
+   endif
 
-   if (local_job.eq.SSIDS_SOLVE_JOB_BWD) &
-      call fkeep%subtree(1)%ptr%solve_bwd(nrhs, x2, n, inform)
-   if (inform%stat .ne. 0) goto 100
+   if (local_job.eq.SSIDS_SOLVE_JOB_BWD) then
+      do part = akeep%nparts, 1, -1
+         call fkeep%subtree(part)%ptr%solve_bwd(nrhs, x2, n, inform)
+         if (inform%stat .ne. 0) goto 100
+      end do
+   endif
 
    if (local_job.eq.SSIDS_SOLVE_JOB_DIAG_BWD .or. &
-         local_job.eq.SSIDS_SOLVE_JOB_ALL) &
-      call fkeep%subtree(1)%ptr%solve_diag_bwd(nrhs, x2, n, inform)
-   if (inform%stat .ne. 0) goto 100
+         local_job.eq.SSIDS_SOLVE_JOB_ALL) then
+      do part = akeep%nparts, 1, -1
+         call fkeep%subtree(part)%ptr%solve_diag_bwd(nrhs, x2, n, inform)
+         if (inform%stat .ne. 0) goto 100
+      end do
+   endif
 
    ! Unscale/unpermute
    if (allocated(fkeep%scaling) .and. ( &
@@ -177,17 +198,22 @@ subroutine enquire_posdef_cpu(akeep, fkeep, inform, d)
    real(wp), dimension(*), intent(out) :: d
 
    integer :: n
+   integer :: part, sa, en
 
    n = akeep%n
    ! ensure d is not returned undefined
    d(1:n) = 0.0 ! ensure do not returned with this undefined
 
-   associate(subtree => fkeep%subtree(1)%ptr)
-      select type(subtree)
-      type is (cpu_numeric_subtree)
-         call subtree%enquire_posdef(d)
-      end select
-   end associate
+   do part = 1, akeep%nparts
+      sa = akeep%part(part)
+      en = akeep%part(part+1)-1
+      associate(subtree => fkeep%subtree(part)%ptr)
+         select type(subtree)
+         type is (cpu_numeric_subtree)
+            call subtree%enquire_posdef(d(sa:en))
+         end select
+      end associate
+   end do
    
 end subroutine enquire_posdef_cpu
 
@@ -197,15 +223,17 @@ subroutine enquire_indef_cpu(akeep, fkeep, inform, piv_order, d)
    class(ssids_akeep_base), intent(in) :: akeep
    class(ssids_fkeep_base), target, intent(in) :: fkeep
    class(ssids_inform_base), intent(inout) :: inform
-   integer, dimension(*), optional, intent(out) :: piv_order
+   integer, dimension(akeep%n), optional, intent(out) :: piv_order
       ! If i is used to index a variable, its position in the pivot sequence
       ! will be placed in piv_order(i), with its sign negative if it is
       ! part of a 2 x 2 pivot; otherwise, piv_order(i) will be set to zero.
-   real(wp), dimension(2,*), optional, intent(out) :: d ! The diagonal
+   real(wp), dimension(2,akeep%n), optional, intent(out) :: d ! The diagonal
       ! entries of D^{-1} will be placed in d(1,:i) and the off-diagonal
       ! entries will be placed in d(2,:). The entries are held in pivot order.
 
-   integer :: n
+   integer :: part, sa
+   integer :: i, n
+   integer, dimension(:), allocatable :: po
 
    n = akeep%n
    if(present(d)) then
@@ -213,13 +241,40 @@ subroutine enquire_indef_cpu(akeep, fkeep, inform, piv_order, d)
       d(1:2,1:n) = 0.0
    end if
 
-   associate(subtree => fkeep%subtree(1)%ptr)
-      select type(subtree)
-      type is (cpu_numeric_subtree)
-         call subtree%enquire_indef(akeep%invp, &
-            piv_order=piv_order, d=d)
-      end select
-   end associate
+   ! We need to apply the invp externally to piv_order
+   if(present(piv_order)) allocate(po(akeep%n)) ! FIXME: stat
+
+   ! FIXME: should probably return nelim from each part, due to delays passing
+   ! between them
+   do part = 1, akeep%nparts
+      sa = akeep%part(part)
+      associate(subtree => fkeep%subtree(1)%ptr)
+         select type(subtree)
+         type is (cpu_numeric_subtree)
+            if(present(d)) then
+               if(present(piv_order)) then
+                  call subtree%enquire_indef(piv_order=po(sa:), d=d(1:2,sa:))
+               else
+                  call subtree%enquire_indef(d=d(1:2,sa:))
+               endif
+            else
+               if(present(piv_order)) then
+                  call subtree%enquire_indef(piv_order=po(sa:))
+               else
+                  ! No-op
+                  ! FIXME: should we report an error here? (or done higher up?)
+               endif
+            endif
+         end select
+      end associate
+   end do
+
+   ! Apply invp to piv_order
+   if(present(piv_order)) then
+      do i = 1, akeep%n
+         piv_order( akeep%invp(i) ) = po(i)
+      end do
+   endif
 
 end subroutine enquire_indef_cpu
 
@@ -233,12 +288,16 @@ subroutine alter_cpu(d, akeep, fkeep, options, inform)
    type(ssids_options), intent(in) :: options
    class(ssids_inform_base), intent(inout) :: inform
 
-   associate(subtree => fkeep%subtree(1)%ptr)
-      select type(subtree)
-      type is (cpu_numeric_subtree)
-         call subtree%alter(d)
-      end select
-   end associate
+   integer :: part
+
+   do part = 1, akeep%nparts
+      associate(subtree => fkeep%subtree(1)%ptr)
+         select type(subtree)
+         type is (cpu_numeric_subtree)
+            call subtree%alter(d(1:2,akeep%part(part):akeep%part(part+1)-1))
+         end select
+      end associate
+   end do
 end subroutine alter_cpu
 
 !****************************************************************************

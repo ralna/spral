@@ -102,7 +102,7 @@ void factor_node_indef(
    stats.num_delay += node->ndelay_out;
 
    /* Mark as no contribution if we make no contribution */
-   if(node->nelim==0 && !node->first_child) {
+   if(node->nelim==0 && !node->first_child && snode.contrib.size()==0) {
       // FIXME: Actually loop over children and check one exists with contrib
       //        rather than current approach of just looking for children.
       typedef std::allocator_traits<PoolAlloc> PATraits;

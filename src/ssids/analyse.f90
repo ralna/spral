@@ -206,7 +206,7 @@ end subroutine check_order
 ! FIXME: This really needs thought through in more detail for best performance
 ! it may be more sensible to come down from the top?
 subroutine find_subtree_partition(nnodes, sptr, sparent, rptr, min_npart, &
-      max_flops, nparts, part)
+      max_flops, nparts, part, contrib_ptr, contrib_idx, contrib_dest)
    integer, intent(in) :: nnodes
    integer, dimension(nnodes+1), intent(in) :: sptr
    integer, dimension(nnodes), intent(in) :: sparent
@@ -215,10 +215,17 @@ subroutine find_subtree_partition(nnodes, sptr, sparent, rptr, min_npart, &
    integer(long), intent(in) :: max_flops
    integer, intent(out) :: nparts
    integer, dimension(:), allocatable, intent(inout) :: part
+   integer, dimension(:), allocatable, intent(inout) :: contrib_ptr
+   integer, dimension(:), allocatable, intent(inout) :: contrib_idx
+   integer, dimension(:), allocatable, intent(inout) :: contrib_dest
 
+   integer :: i, k
    integer(long) :: j, target_flops, total_flops
    integer :: m, n, node
    integer(long), dimension(:), allocatable :: flops
+   integer :: st
+
+   ! FIXME: stat parameters
 
    !print *, "min_npart = ", min_npart, " max_flops = ", max_flops
    ! Count flops below each node
@@ -240,6 +247,7 @@ subroutine find_subtree_partition(nnodes, sptr, sparent, rptr, min_npart, &
    ! Split into parts of at most target_flops. Each part is a subtree, not a
    ! subforest (unless it contains the artifical root node).
    target_flops = min(flops(nnodes+1) / min_npart, max_flops)
+   !target_flops = flops(nnodes+1) ! FIXME: rm
    !print *, "Target flops ", target_flops
    nparts = 0
    allocate(part(nnodes+1)) ! big enough to be safe FIXME: make smaller or alloc elsewhere?
@@ -248,14 +256,14 @@ subroutine find_subtree_partition(nnodes, sptr, sparent, rptr, min_npart, &
    do while(node.lt.nnodes+1)
       ! Head up from node until parent has too many flops
       j = node
-      do while(j.lt.nnodes+1)
+      do while(j.lt.nnodes)
          if(flops(sparent(j)).gt.target_flops) exit ! Nodes node:j form a part
          j = sparent(j)
       end do
       ! Record node:j as a part
       nparts = nparts + 1
       !print *, "Part ", nparts, "contains ", node, ":", j
-      part(nparts+1) = j
+      part(nparts+1) = j+1
       node = j + 1
       if(j.eq.nnodes+1) exit ! done, root node is incorporated
       ! Remove subtree rooted at (node-1) from flops count of nodes above it
@@ -264,6 +272,45 @@ subroutine find_subtree_partition(nnodes, sptr, sparent, rptr, min_npart, &
          if(j.ge.nnodes+1) exit ! at top of tree
          flops(j) = flops(j) - flops(node-1)
       end do
+   end do
+
+   ! Figure out contribution blocks that are input to each part
+   ! FIXME: consolidate all these deallocation by just calling free() at start of anal???
+   deallocate(contrib_ptr, stat=st)
+   deallocate(contrib_idx, stat=st)
+   allocate(contrib_ptr(nparts+3), contrib_idx(nparts), contrib_dest(nparts))
+   contrib_idx(1:nparts) = sparent(part(2:nparts+1)-1)
+   ! Count contributions at offset +2
+   contrib_ptr(3:nparts+3) = 0
+   do i = 1, nparts
+      j = sparent(part(i+1)-1) ! node index of parent
+      if(j.gt.nnodes) cycle ! part is a root
+      k = i+1 ! part index of j
+      do while(j.ge.part(k+1))
+         k = k + 1
+      end do
+      contrib_ptr(k+2) = contrib_ptr(k+2) + 1
+   end do
+   ! Figure out contrib_ptr starts at offset +1
+   contrib_ptr(1:2) = 1
+   do i = 1, nparts
+      contrib_ptr(i+2) = contrib_ptr(i+1) + contrib_ptr(i+2)
+   end do
+   ! Drop sources into list
+   do i = 1, nparts
+      j = sparent(part(i+1)-1) ! node index of parent
+      if(j.gt.nnodes) then
+         ! part is a root
+         contrib_idx(i) = nparts+1
+         cycle
+      endif
+      k = i+1 ! part index of j
+      do while(j.ge.part(k+1))
+         k = k + 1
+      end do
+      contrib_idx(i) = contrib_ptr(k+1)
+      contrib_dest(contrib_idx(i)) = j
+      contrib_ptr(k+1) = contrib_ptr(k+1) + 1
    end do
 end subroutine find_subtree_partition
 
@@ -296,6 +343,7 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
    character(50)  :: context ! Procedure name (used when printing).
    integer, dimension(:), allocatable :: child_next, child_head ! linked
       ! list for children, used to build akeep%child_ptr, akeep%child_list
+   integer, dimension(:), allocatable :: contrib_dest
 
    integer :: nemin, flag
    integer :: blkm, blkn
@@ -420,9 +468,15 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
    ! Sort out subtrees
    call find_subtree_partition(akeep%nnodes, akeep%sptr, akeep%sparent, &
       akeep%rptr, options%min_npart, options%max_flops_part, akeep%nparts, &
-      akeep%part)
-   ! FIXME: remove printing here and implement code
-   !print *, "Partition suggests ", akeep%nparts, " parts (not used yet)"
+      akeep%part, akeep%contrib_ptr, akeep%contrib_idx, contrib_dest)
+   !print *, "invp = ", akeep%invp
+   !print *, "sparent = ", akeep%sparent
+   !print *, "Partition suggests ", akeep%nparts, " parts"
+   !print *, "akeep%part = ", akeep%part(1:akeep%nparts+1)
+   !print *, "parents = ", akeep%sparent(akeep%part(2:akeep%nparts+1)-1)
+   !print *, "contrib_ptr = ", akeep%contrib_ptr(1:akeep%nparts+1)
+   !print *, "contrib_idx = ", akeep%contrib_idx(1:akeep%nparts)
+   !print *, "contrib_dest = ", contrib_dest(1:akeep%nparts)
 
    if(allocated(akeep%subtree)) then
       do i = 1, size(akeep%subtree)
@@ -431,10 +485,14 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
       end do
       deallocate(akeep%subtree)
    endif
-   allocate(akeep%subtree(1))
-   akeep%subtree(1)%ptr => construct_cpu_symbolic_subtree(akeep%n, &
-      akeep%nnodes, akeep%sptr, akeep%sparent, akeep%rptr, akeep%rlist, &
-      akeep%nptr, akeep%nlist, options)
+   allocate(akeep%subtree(akeep%nparts))
+   do i = 1, akeep%nparts
+      akeep%subtree(i)%ptr => construct_cpu_symbolic_subtree(akeep%n, &
+         akeep%part(i), akeep%part(i+1), akeep%sptr, akeep%sparent, &
+         akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist, &
+         contrib_dest(akeep%contrib_ptr(i):akeep%contrib_ptr(i+1)-1), &
+         options)
+   end do
 
    ! Copy GPU-relevent data to device if needed (no-op if not)
    call akeep%move_data(options, inform)

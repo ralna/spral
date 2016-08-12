@@ -14,6 +14,7 @@
 #include<memory>
 #include<vector>
 
+#include "ssids/contrib.h"
 #include "../NumericNode.hxx"
 #include "../SymbolicNode.hxx"
 #include "../Workspace.hxx"
@@ -48,6 +49,7 @@ void assemble_pre(
       bool posdef,
       int n,
       SymbolicNode const& snode,
+      void** child_contrib,
       NumericNode<T>& node,
       FactorAlloc& factor_alloc,
       PoolAlloc& pool_alloc,
@@ -71,6 +73,16 @@ void assemble_pre(
    node.ndelay_in = 0;
    for(auto* child=node.first_child; child!=NULL; child=child->next_child) {
       node.ndelay_in += child->ndelay_out;
+   }
+   for(int contrib_idx : snode.contrib) {
+      int cn, ndelay, lddelay;
+      double const *cval, *delay_val;
+      int const *crlist, *delay_perm;
+      spral_ssids_contrib_get_data(
+            child_contrib[contrib_idx], &cn, &cval, &crlist, &ndelay,
+            &delay_perm, &delay_val, &lddelay
+            );
+      node.ndelay_in += ndelay;
    }
    int nrow = snode.nrow + node.ndelay_in;
    int ncol = snode.ncol + node.ndelay_in;
@@ -136,7 +148,8 @@ void assemble_pre(
 
    /* Add children */
    int* map = nullptr;
-   if(node.first_child != NULL) {
+   int delay_col = snode.ncol;
+   if(node.first_child != NULL || snode.contrib.size() > 0) {
       /* Build lookup vector, allowing for insertion of delayed vars */
       /* Note that while rlist[] is 1-indexed this is fine so long as lookup
        * is also 1-indexed (which it is as it is another node's rlist[] */
@@ -146,7 +159,6 @@ void assemble_pre(
       for(int i=snode.ncol; i<snode.nrow; i++)
          map[ snode.rlist[i] ] = i + node.ndelay_in;
       /* Loop over children adding contributions */
-      int delay_col = snode.ncol;
 #ifdef PROFILE
       task_asm_pre.done();
 #endif
@@ -219,6 +231,52 @@ void assemble_pre(
          }
       }
    }
+   /* Add any contribution block from other subtrees */
+   for(int contrib_idx : snode.contrib) {
+      int cn, ndelay, lddelay;
+      double const *cval, *delay_val;
+      int const *crlist, *delay_perm;
+      spral_ssids_contrib_get_data(
+            child_contrib[contrib_idx], &cn, &cval, &crlist, &ndelay,
+            &delay_perm, &delay_val, &lddelay
+            );
+      int* cache = work[omp_get_thread_num()].get_ptr<int>(cn);
+      for(int j=0; j<cn; ++j)
+         cache[j] = map[ crlist[j] ];
+      /* Handle delays - go to back of node
+       * (i.e. become the last rows as in lower triangular format) */
+      for(int i=0; i<ndelay; i++) {
+         // Add delayed rows (from delayed cols)
+         T *dest = &node.lcol[delay_col*(ldl+1)];
+         T const* src = &delay_val[i*(lddelay+1)];
+         node.perm[delay_col] = delay_perm[i];
+         for(int j=0; j<ndelay-i; j++) {
+            dest[j] = src[j];
+         }
+         // Add child's non-fully summed rows (from delayed cols)
+         dest = node.lcol;
+         src = &delay_val[i*lddelay+ndelay];
+         for(int j=0; j<cn; j++) {
+            int r = cache[j];
+            if(r < ncol) dest[r*ldl+delay_col] = src[j];
+            else         dest[delay_col*ldl+r] = src[j];
+         }
+         delay_col++;
+      }
+      if(!cval) continue; // child was all delays, nothing more to do
+      /* Handle expected contribution */
+      for(int i=0; i<cn; ++i) {
+         int c = cache[i];
+         T const* src = &cval[i*cn];
+         // NB: we handle contribution to contrib in assemble_post()
+         if(c < snode.ncol) {
+            // Contribution added to lcol
+            int ldd = align_lda<T>(nrow);
+            T *dest = &node.lcol[c*ldd];
+            asm_col(cn-i, &cache[i], &src[i], dest);
+         }
+      }
+   }
    if(map) PAIntTraits::deallocate(pool_alloc_int, map, n+1);
 }
 
@@ -228,6 +286,7 @@ template <typename T,
 void assemble_post(
       int n,
       SymbolicNode const& snode,
+      void** child_contrib,
       NumericNode<T>& node,
       PoolAlloc& pool_alloc,
       std::vector<Workspace>& work
@@ -242,11 +301,12 @@ void assemble_post(
 
    /* Add children */
    int* map = nullptr;
-   if(node.first_child != NULL) {
+   if(node.first_child != NULL || snode.contrib.size() > 0) {
       /* Build lookup vector, allowing for insertion of delayed vars */
       /* Note that while rlist[] is 1-indexed this is fine so long as lookup
        * is also 1-indexed (which it is as it is another node's rlist[] */
       if(!map) map = PAIntTraits::allocate(pool_alloc_int, n+1);
+      // FIXME: probably don't need to worry about first ncol?
       for(int i=0; i<snode.ncol; i++)
          map[ snode.rlist[i] ] = i;
       for(int i=snode.ncol; i<snode.nrow; i++)
@@ -292,6 +352,33 @@ void assemble_post(
          /* Free memory from child contribution block */
          PATraits::deallocate(pool_alloc, child->contrib, cm*cm);
       }
+   }
+   /* Add any contribution block from other subtrees */
+   for(int contrib_idx : snode.contrib) {
+      int cn, ndelay, lddelay;
+      double const *cval, *delay_val;
+      int const *crlist, *delay_perm;
+      spral_ssids_contrib_get_data(
+            child_contrib[contrib_idx], &cn, &cval, &crlist, &ndelay,
+            &delay_perm, &delay_val, &lddelay
+            );
+      if(!cval) continue; // child was all delays, nothing to do
+      int* cache = work[omp_get_thread_num()].get_ptr<int>(cn);
+      for(int j=0; j<cn; ++j)
+         cache[j] = map[ crlist[j] ] - ncol;
+      for(int i=0; i<cn; ++i) {
+         int c = cache[i]+ncol;
+         T const* src = &cval[i*cn];
+         // NB: only interested in contribution to generated element
+         if(c >= snode.ncol) {
+            // Contribution added to contrib
+            int ldd = snode.nrow - snode.ncol;
+            T *dest = &node.contrib[(c-ncol)*ldd];
+            asm_col(cn-i, &cache[i], &src[i], dest);
+         }
+      }
+      /* Free memory from child contribution block */
+      spral_ssids_contrib_free_dbl(child_contrib[contrib_idx]);
    }
    if(map) PAIntTraits::deallocate(pool_alloc_int, map, n+1);
 }

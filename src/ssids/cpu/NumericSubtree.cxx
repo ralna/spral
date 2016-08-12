@@ -37,16 +37,19 @@ void* spral_ssids_cpu_create_num_subtree_dbl(
       void const* symbolic_subtree_ptr,
       const double *const aval, // Values of A
       const double *const scaling, // Scaling vector (NULL if none)
+      void** child_contrib, // Contributions from child subtrees
       struct cpu_factor_options const* options, // Options in
       struct cpu_factor_stats* stats // Info out
       ) {
    auto const& symbolic_subtree = *static_cast<SymbolicSubtree const*>(symbolic_subtree_ptr);
 
    spral::omp::warn_if_no_cancel();
+   spral::omp::warn_if_no_nested();
+   spral::omp::warn_if_no_proc_bind();
 
    if(posdef) {
       auto* subtree = new NumericSubtreePosdef
-         (symbolic_subtree, aval, scaling, *options, *stats);
+         (symbolic_subtree, aval, scaling, child_contrib, *options, *stats);
       if(options->print_level > 9999) {
          printf("Final factors:\n");
          subtree->print();
@@ -54,7 +57,7 @@ void* spral_ssids_cpu_create_num_subtree_dbl(
       return (void*) subtree;
    } else { /* indef */
       auto* subtree = new NumericSubtreeIndef
-         (symbolic_subtree, aval, scaling, *options, *stats);
+         (symbolic_subtree, aval, scaling, child_contrib, *options, *stats);
       if(options->print_level > 9999) {
          printf("Final factors:\n");
          subtree->print();
@@ -200,5 +203,52 @@ void spral_ssids_cpu_subtree_alter_dbl(
       auto &subtree =
          *static_cast<NumericSubtreeIndef*>(subtree_ptr);
       subtree.alter(d);
+   }
+}
+
+/* Double precision wrapper around templated routines */
+extern "C"
+void spral_ssids_cpu_subtree_get_contrib_dbl(
+      bool posdef,      // If true, performs A=LL^T, if false do pivoted A=LDL^T
+      void* subtree_ptr,// pointer to relevant type of NumericSubtree
+      int* n,           // returned dimension of contribution block
+      double const** val,     // returned pointer to contribution block
+      int const** rlist,      // returned pointer to row list
+      int* ndelay,      // returned number of delays
+      int const** delay_perm,  // returned pointer to delay values
+      double const** delay_val,  // returned pointer to delay values
+      int* lddelay      // leading dimension of delay_val
+      ) {
+   // Call method
+   if(posdef) { // Converting from runtime to compile time posdef value
+      auto &subtree =
+         *static_cast<NumericSubtreePosdef*>(subtree_ptr);
+      subtree.get_contrib(
+            *n, *val, *rlist, *ndelay, *delay_perm, *delay_val, *lddelay
+            );
+   } else {
+      auto &subtree =
+         *static_cast<NumericSubtreeIndef*>(subtree_ptr);
+      subtree.get_contrib(
+            *n, *val, *rlist, *ndelay, *delay_perm, *delay_val, *lddelay
+            );
+   }
+}
+
+/* Double precision wrapper around templated routines */
+extern "C"
+void spral_ssids_cpu_subtree_free_contrib_dbl(
+      bool posdef,      // If true, performs A=LL^T, if false do pivoted A=LDL^T
+      void* subtree_ptr // pointer to relevant type of NumericSubtree
+      ) {
+   // Call method
+   if(posdef) { // Converting from runtime to compile time posdef value
+      auto &subtree =
+         *static_cast<NumericSubtreePosdef*>(subtree_ptr);
+      subtree.free_contrib();
+   } else {
+      auto &subtree =
+         *static_cast<NumericSubtreeIndef*>(subtree_ptr);
+      subtree.free_contrib();
    }
 }

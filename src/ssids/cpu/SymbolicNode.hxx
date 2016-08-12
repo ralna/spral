@@ -10,6 +10,8 @@
  */
 #pragma once
 
+#include <vector>
+
 namespace spral { namespace ssids { namespace cpu {
 
 /** Symbolic representation of a node */
@@ -24,6 +26,7 @@ struct SymbolicNode {
    int num_a; //< Number of entries mapped from A to L
    int const* amap; //< Pointer to map from A to L locations
    int parent; //< index of parent node
+   std::vector<int> contrib; //< index of expected contribution(s)
 };
 
 }}} /* end of namespace spral::ssids::cpu */

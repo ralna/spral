@@ -29,7 +29,7 @@ template <bool posdef,
                                    // must zero storage upon allocation
           >
 class NumericSubtree {
-   typedef BuddyAllocator<T,std::allocator<T>> PoolAllocator; // FIXME use for contrib?
+   typedef BuddyAllocator<T,std::allocator<T>> PoolAllocator;
    typedef SmallLeafNumericSubtree<posdef, T, FactorAllocator, PoolAllocator> SLNS;
 public:
    /* Delete copy constructors for safety re allocated memory */
@@ -40,6 +40,7 @@ public:
          SymbolicSubtree const& symbolic_subtree,
          T const* aval,
          T const* scaling,
+         void** child_contrib,
          struct cpu_factor_options const& options,
          struct cpu_factor_stats& stats)
    : symb_(symbolic_subtree), nodes_(symbolic_subtree.nnodes_+1),
@@ -118,7 +119,8 @@ public:
             auto* parent_lcol = &nodes_[symb_[ni].parent]; // for depend
             #pragma omp task default(none) \
                firstprivate(ni) \
-               shared(aval, options, scaling, thread_stats, work) \
+               shared(aval, child_contrib, options, scaling, thread_stats, \
+                      work) \
                depend(inout: this_lcol[0:1]) \
                depend(in: parent_lcol[0:1])
             {
@@ -128,8 +130,8 @@ public:
                int this_thread = omp_get_thread_num();
                // Assembly of node (not of contribution block)
                assemble_pre
-                  (posdef, symb_.n, symb_[ni], nodes_[ni], factor_alloc_,
-                   pool_alloc_, work, aval, scaling);
+                  (posdef, symb_.n, symb_[ni], child_contrib, nodes_[ni],
+                   factor_alloc_, pool_alloc_, work, aval, scaling);
                // Update stats
                int nrow = symb_[ni].nrow + nodes_[ni].ndelay_in;
                thread_stats[this_thread].maxfront = std::max(thread_stats[this_thread].maxfront, nrow);
@@ -143,7 +145,8 @@ public:
                   if(thread_stats[this_thread].flag<SSIDS_SUCCESS)
 
                // Assemble children into contribution block
-               assemble_post(symb_.n, symb_[ni], nodes_[ni], pool_alloc_, work);
+               assemble_post(symb_.n, symb_[ni], child_contrib, nodes_[ni],
+                     pool_alloc_, work);
             }
          }
          } // taskgroup
@@ -429,6 +432,29 @@ public:
 			}
 		}
 	}
+
+   /** Return contribution block from subtree (if not a real root) */
+   void get_contrib(int& n, T const*& val, int const*& rlist, int& ndelay,
+         int const*& delay_perm, T const*& delay_val, int& lddelay) const {
+      auto& root = *nodes_.back().first_child;
+      n = root.symb->nrow - root.symb->ncol;
+      val = root.contrib;
+      rlist = &root.symb->rlist[root.symb->ncol];
+      ndelay = root.ndelay_out;
+      delay_perm = (ndelay>0) ? &root.perm[root.nelim]
+                              : nullptr;
+      lddelay = align_lda<T>(root.symb->nrow + root.ndelay_in);
+      delay_val = (ndelay>0) ? &root.lcol[root.nelim*(lddelay+1)] 
+                             : nullptr;
+   }
+
+   /** Frees root's contribution block */
+   void free_contrib() {
+      typedef std::allocator_traits<PoolAllocator> PATraits;
+      auto& root = *nodes_.back().first_child;
+      int n = root.symb->nrow - root.symb->ncol;
+      PATraits::deallocate(pool_alloc_, root.contrib, n*n);
+   }
 
    SymbolicSubtree const& get_symbolic_subtree() { return symb_; }
 

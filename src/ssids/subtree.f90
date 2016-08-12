@@ -34,7 +34,7 @@ module spral_ssids_subtree
          class(symbolic_subtree_base), target, intent(inout) :: this
          logical(C_BOOL), intent(in) :: posdef
          real(wp), dimension(*), intent(in) :: aval
-         type(contrib_type), dimension(:), intent(inout) :: child_contrib
+         type(contrib_type), dimension(:), target, intent(inout) :: child_contrib
          class(ssids_options), intent(in) :: options
          class(ssids_inform_base), intent(inout) :: inform
          real(wp), dimension(*), target, optional, intent(in) :: scaling
@@ -42,7 +42,7 @@ module spral_ssids_subtree
       function get_contrib_iface(this)
          import contrib_type, numeric_subtree_base
          implicit none
-         class(contrib_type), pointer :: get_contrib_iface
+         type(contrib_type) :: get_contrib_iface
          class(numeric_subtree_base), intent(in) :: this
       end function get_contrib_iface
       subroutine solve_proc_iface(this, nrhs, x, ldx, inform)

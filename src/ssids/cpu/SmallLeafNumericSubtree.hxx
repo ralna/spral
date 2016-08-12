@@ -130,7 +130,6 @@ void assemble(
 
    /* Alloc + set perm */
    node->perm = FAIntTraits::allocate(factor_alloc_int, ncol); // ncol fully summed variables
-   //node->perm = smalloc<int>(alloc, ncol); // ncol fully summed variables
    for(int i=0; i<snode.ncol; i++)
       node->perm[i] = snode.rlist[i];
 
