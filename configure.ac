@@ -1,5 +1,6 @@
 AC_INIT(spral, 2016.06.24, jonathan.hogg@stfc.ac.uk)
 AC_CONFIG_SRCDIR([src/ssids/ssids.f90])
+AC_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE
 
 # Allow disabling of GPU if desired
@@ -43,6 +44,9 @@ if test "x$CXXLIB" == "x"; then
    fi
 fi
 AC_SUBST(CXXLIB)
+
+# Check for std::align
+SPRAL_STD_ALIGN
 
 # Check for required libraries
 ACX_BLAS(,[AC_MSG_ERROR([No BLAS library found.])])

@@ -41,6 +41,10 @@ libspral_a_SOURCES = \
 libspral_a_SOURCES += \
 	src/core_analyse.f90
 
+# COMPAT (compatability header)
+libspral_a_SOURCES += \
+   src/compat.cxx
+
 # CUDA
 if HAVE_NVCC
 libspral_a_SOURCES += \

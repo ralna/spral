@@ -152,19 +152,21 @@ bin_PROGRAMS = spral_ssids$(EXEEXT)
 
 subdir = .
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
-	$(top_srcdir)/configure $(am__configure_deps) depcomp \
-	$(include_HEADERS) test-driver ChangeLog TODO compile \
-	config.guess config.sub install-sh missing
+	$(top_srcdir)/configure $(am__configure_deps) \
+	$(srcdir)/config.h.in depcomp $(include_HEADERS) test-driver \
+	ChangeLog TODO compile config.guess config.sub install-sh \
+	missing
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/acx_lapack.m4 \
 	$(top_srcdir)/m4/acx_prog_nvcc.m4 $(top_srcdir)/m4/ax_blas.m4 \
 	$(top_srcdir)/m4/spral_gtg.m4 $(top_srcdir)/m4/spral_metis.m4 \
-	$(top_srcdir)/configure.ac
+	$(top_srcdir)/m4/spral_std_align.m4 $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
  configure.lineno config.status.lineno
 mkinstalldirs = $(install_sh) -d
+CONFIG_HEADER = config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
@@ -206,7 +208,7 @@ am__v_AR_1 =
 libspral_a_AR = $(AR) $(ARFLAGS)
 libspral_a_LIBADD =
 am__libspral_a_SOURCES_DIST = src/blas_iface.f90 src/core_analyse.f90 \
-	src/cuda/api_wrappers.cu src/cuda/cuda.f90 \
+	src/compat.cxx src/cuda/api_wrappers.cu src/cuda/cuda.f90 \
 	src/cuda/cuda_check.h src/lapack_iface.f90 src/lsmr.f90 \
 	interfaces/C/lsmr.f90 src/match_order.f90 src/matrix_util.f90 \
 	interfaces/C/matrix_util.f90 \
@@ -288,8 +290,8 @@ am__dirstamp = $(am__leading_dot)dirstamp
 @HAVE_NVCC_TRUE@	src/ssids/gpu/inform_nogpu.$(OBJEXT) \
 @HAVE_NVCC_TRUE@	src/ssids/type_select_nogpu.$(OBJEXT)
 am_libspral_a_OBJECTS = src/blas_iface.$(OBJEXT) \
-	src/core_analyse.$(OBJEXT) $(am__objects_1) \
-	src/lapack_iface.$(OBJEXT) src/lsmr.$(OBJEXT) \
+	src/core_analyse.$(OBJEXT) src/compat.$(OBJEXT) \
+	$(am__objects_1) src/lapack_iface.$(OBJEXT) src/lsmr.$(OBJEXT) \
 	interfaces/C/lsmr.$(OBJEXT) src/match_order.$(OBJEXT) \
 	src/matrix_util.$(OBJEXT) interfaces/C/matrix_util.$(OBJEXT) \
 	src/metis$(METIS_VERSION)_wrapper.$(OBJEXT) src/omp.$(OBJEXT) \
@@ -755,7 +757,8 @@ am__can_run_installinfo = \
     *) (install-info --version) >/dev/null 2>&1;; \
   esac
 HEADERS = $(include_HEADERS)
-am__tagged_files = $(HEADERS) $(SOURCES) $(TAGS_FILES) $(LISP)
+am__tagged_files = $(HEADERS) $(SOURCES) $(TAGS_FILES) \
+	$(LISP)config.h.in
 # Read a list of newline-separated strings from the standard input,
 # and print each of them once, without duplicates.  Input order is
 # *not* preserved.
@@ -1141,6 +1144,8 @@ include_HEADERS = include/spral.h include/spral_lsmr.h \
 
 # CORE_ANALYSE
 
+# COMPAT (compatability header)
+
 # LAPACK_IFACE
 
 # MATCH_ORDER
@@ -1153,9 +1158,9 @@ include_HEADERS = include/spral.h include/spral_lsmr.h \
 
 # TIMER
 libspral_a_SOURCES = src/blas_iface.f90 src/core_analyse.f90 \
-	$(am__append_1) src/lapack_iface.f90 src/lsmr.f90 \
-	interfaces/C/lsmr.f90 src/match_order.f90 src/matrix_util.f90 \
-	interfaces/C/matrix_util.f90 \
+	src/compat.cxx $(am__append_1) src/lapack_iface.f90 \
+	src/lsmr.f90 interfaces/C/lsmr.f90 src/match_order.f90 \
+	src/matrix_util.f90 interfaces/C/matrix_util.f90 \
 	src/metis$(METIS_VERSION)_wrapper.f90 src/omp.cxx src/omp.hxx \
 	src/pgm.f90 src/rutherford_boeing.f90 \
 	interfaces/C/rutherford_boeing.f90 src/scaling.f90 \
@@ -1290,7 +1295,8 @@ examples_Fortran_ssmfe_shift_invert_SOURCES = \
 	examples/Fortran/ssmfe/laplace2d.f90 \
 	examples/Fortran/ssmfe/ldltf.f90
 
-all: all-am
+all: config.h
+	$(MAKE) $(AM_MAKEFLAGS) all-am
 
 .SUFFIXES:
 .SUFFIXES: .cu .c .cxx .f90 .log .o .obj .test .test$(EXEEXT) .trs
@@ -1328,6 +1334,21 @@ $(top_srcdir)/configure:  $(am__configure_deps)
 $(ACLOCAL_M4):  $(am__aclocal_m4_deps)
 	$(am__cd) $(srcdir) && $(ACLOCAL) $(ACLOCAL_AMFLAGS)
 $(am__aclocal_m4_deps):
+
+config.h: stamp-h1
+	@test -f $@ || rm -f stamp-h1
+	@test -f $@ || $(MAKE) $(AM_MAKEFLAGS) stamp-h1
+
+stamp-h1: $(srcdir)/config.h.in $(top_builddir)/config.status
+	@rm -f stamp-h1
+	cd $(top_builddir) && $(SHELL) ./config.status config.h
+$(srcdir)/config.h.in:  $(am__configure_deps) 
+	($(am__cd) $(top_srcdir) && $(AUTOHEADER))
+	rm -f stamp-h1
+	touch $@
+
+distclean-hdr:
+	-rm -f config.h stamp-h1
 install-libLIBRARIES: $(lib_LIBRARIES)
 	@$(NORMAL_INSTALL)
 	@list='$(lib_LIBRARIES)'; test -n "$(libdir)" || list=; \
@@ -1368,6 +1389,8 @@ src/$(DEPDIR)/$(am__dirstamp):
 src/blas_iface.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/core_analyse.$(OBJEXT): src/$(am__dirstamp) \
+	src/$(DEPDIR)/$(am__dirstamp)
+src/compat.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/cuda/$(am__dirstamp):
 	@$(MKDIR_P) src/cuda
@@ -2001,6 +2024,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/ssmfe/$(DEPDIR)/precond_expert.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/ssmfe/$(DEPDIR)/precond_ssmfe.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/ssmfe/$(DEPDIR)/shift_invert.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/compat.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/omp.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/$(DEPDIR)/NumericSubtree.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/$(DEPDIR)/SymbolicSubtree.Po@am__quote@
@@ -2516,7 +2540,7 @@ check-am: all-am
 	$(MAKE) $(AM_MAKEFLAGS) $(check_PROGRAMS)
 	$(MAKE) $(AM_MAKEFLAGS) check-TESTS
 check: check-am
-all-am: Makefile $(LIBRARIES) $(PROGRAMS) $(HEADERS)
+all-am: Makefile $(LIBRARIES) $(PROGRAMS) $(HEADERS) config.h
 installdirs:
 	for dir in "$(DESTDIR)$(libdir)" "$(DESTDIR)$(bindir)" "$(DESTDIR)$(includedir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
@@ -2604,7 +2628,7 @@ distclean: distclean-am
 	-rm -rf examples/C/$(DEPDIR) examples/C/scaling/$(DEPDIR) examples/C/ssmfe/$(DEPDIR) src/$(DEPDIR) src/ssids/cpu/$(DEPDIR) src/ssids/cpu/kernels/$(DEPDIR) tests/ssids/$(DEPDIR) tests/ssids/kernels/$(DEPDIR) tests/ssmfe/$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
-	distclean-tags
+	distclean-hdr distclean-tags
 
 dvi: dvi-am
 
@@ -2668,7 +2692,7 @@ ps-am:
 uninstall-am: uninstall-binPROGRAMS uninstall-includeHEADERS \
 	uninstall-libLIBRARIES
 
-.MAKE: check-am install-am install-strip
+.MAKE: all check-am install-am install-strip
 
 .PHONY: CTAGS GTAGS TAGS all all-am am--refresh check check-TESTS \
 	check-am clean clean-binPROGRAMS clean-checkPROGRAMS \
@@ -2676,14 +2700,15 @@ uninstall-am: uninstall-binPROGRAMS uninstall-includeHEADERS \
 	cscope cscopelist-am ctags ctags-am dist dist-all dist-bzip2 \
 	dist-gzip dist-lzip dist-shar dist-tarZ dist-xz dist-zip \
 	distcheck distclean distclean-compile distclean-generic \
-	distclean-tags distcleancheck distdir distuninstallcheck dvi \
-	dvi-am html html-am info info-am install install-am \
-	install-binPROGRAMS install-data install-data-am install-dvi \
-	install-dvi-am install-exec install-exec-am install-html \
-	install-html-am install-includeHEADERS install-info \
-	install-info-am install-libLIBRARIES install-man install-pdf \
-	install-pdf-am install-ps install-ps-am install-strip \
-	installcheck installcheck-am installdirs maintainer-clean \
+	distclean-hdr distclean-tags distcleancheck distdir \
+	distuninstallcheck dvi dvi-am html html-am info info-am \
+	install install-am install-binPROGRAMS install-data \
+	install-data-am install-dvi install-dvi-am install-exec \
+	install-exec-am install-html install-html-am \
+	install-includeHEADERS install-info install-info-am \
+	install-libLIBRARIES install-man install-pdf install-pdf-am \
+	install-ps install-ps-am install-strip installcheck \
+	installcheck-am installdirs maintainer-clean \
 	maintainer-clean-generic mostlyclean mostlyclean-compile \
 	mostlyclean-generic pdf pdf-am ps ps-am recheck tags tags-am \
 	uninstall uninstall-am uninstall-binPROGRAMS \

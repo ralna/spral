@@ -12,21 +12,7 @@
 
 #include <memory>
 
-#ifdef __INTEL_COMPILER
-// Define our own std::align as intel (at least <=16.0.3) don't
-namespace std {
-void* align(std::size_t alignment, std::size_t size, void*& ptr, std::size_t& space) {
-   auto cptr = reinterpret_cast<uintptr_t>(ptr);
-   auto pad = cptr % alignment;
-   if(pad == 0) return ptr;
-   pad = alignment - pad;
-   cptr += pad;
-   space -= pad;
-   ptr = reinterpret_cast<void*>(cptr);
-   return ptr;
-}
-} /* namespace std */
-#endif
+#include "compat.hxx" // for std::align if required
 
 namespace spral { namespace ssids { namespace cpu {
 

@@ -2,6 +2,8 @@ blas_iface
    Defines interface blocks for BLAS routines to allow type checking
 core_analyse
    Core analyse phase functionality for symmetric patterned matrices.
+compat
+   Compatability header for portability
 cuda
    Explicit Fortran interface to CUDA API and some helper routines.
 lapack_iface
@@ -18,6 +20,8 @@ metis4_wrapper
    Wrapper around Metis v4.
 metis5_wrapper
    Wrapper around Metis v5.
+omp
+   OpenMP helper functions and C++-style wrappers
 pgm
    Utilities for writing pgm and ppm files
 random
