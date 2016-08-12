@@ -8730,9 +8730,8 @@ $as_echo "#define HAVE_GTG 1" >>confdefs.h
 
         :
 else
-        spral_gtg_lib_ok
-        spral_gtg_inc_ok
-        as_fn_error $? "GTG library not found, cannot enable profiling" "$LINENO" 5
+        { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: GTG library not found, cannot enable profiling" >&5
+$as_echo "$as_me: WARNING: GTG library not found, cannot enable profiling" >&2;}
 fi
 
 
