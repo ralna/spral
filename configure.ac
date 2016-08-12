@@ -57,7 +57,7 @@ SPRAL_METIS(,
 
 # Check for profiling library if desired
 AS_IF([test "x$enable_profile" != "xno"], [
-   SPRAL_GTG(,[AC_MSG_ERROR([GTG library not found, cannot enable profiling])])
+   SPRAL_GTG(,[AC_MSG_WARN([GTG library not found, cannot enable profiling])])
    ])
 
 # Output data

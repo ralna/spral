@@ -10,9 +10,15 @@
  */
 #pragma once
 
+#include "config.h"
+
 //#define PROFILE
 
-#ifdef PROFILE
+#if defined(PROFILE) && !defined(HAVE_GTG)
+#error "Cannot enable profiling without GTG library"
+#endif
+
+#ifdef GAVE_GTG
 extern "C" {
 #include <GTG.h>
 }
@@ -31,7 +37,7 @@ public:
       {}
 
       void done() {
-#ifdef PROFILE
+#if defined(PROFILE) && defined(HAVE_GTG)
          double t2 = Profile::now();
          ::setState(t1, "ST_TASK", Profile::get_thread_name(thread), name);
          ::setState(t2, "ST_TASK", Profile::get_thread_name(thread), "0");
@@ -46,7 +52,7 @@ public:
 
    static
    void setState(char const* name, int thread) {
-#ifdef PROFILE
+#if defined(PROFILE) && defined(HAVE_GTG)
       double t = Profile::now();
       ::setState(t, "ST_TASK", Profile::get_thread_name(thread), name);
 #endif
@@ -54,21 +60,19 @@ public:
 
    static
    void setNullState(int thread) {
-#ifdef PROFILE
       setState("0", thread);
-#endif
    }
 
    static
    void addEvent(char const* type, int thread, char const*val) {
-#ifdef PROFILE
+#if defined(PROFILE) && defined(HAVE_GTG)
       ::addEvent(now(), type, get_thread_name(thread), val);
 #endif
    };
 
    static
    void init(void) {
-#ifdef PROFILE
+#if defined(PROFILE) && defined(HAVE_GTG)
       // Initialise profiling
       setTraceType(PAJE);
       initTrace("ssids", 0, GTG_FLAG_NONE);
@@ -108,7 +112,7 @@ public:
 
    static
    void end(void) {
-#ifdef PROFILE
+#if defined(PROFILE) && defined(HAVE_GTG)
       endTrace();
 #endif
    }

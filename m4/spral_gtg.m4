@@ -58,8 +58,6 @@ if test x"$spral_gtg_lib_ok$spral_gtg_inc_ok" = xyesyes; then
         ifelse([$1],,AC_DEFINE(HAVE_GTG,1,[Define if you have a GTG library.]),[$1])
         :
 else
-        spral_gtg_lib_ok
-        spral_gtg_inc_ok
         $2
 fi
 
