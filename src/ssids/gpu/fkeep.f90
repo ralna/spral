@@ -589,11 +589,11 @@ subroutine enquire_indef_gpu(akeep, fkeep, inform, piv_order, d)
    class(ssids_akeep_base), intent(in) :: akeep
    class(ssids_fkeep_gpu), target, intent(in) :: fkeep
    class(ssids_inform_base), intent(inout) :: inform
-   integer, dimension(*), optional, intent(out) :: piv_order
+   integer, dimension(akeep%n), optional, intent(out) :: piv_order
       ! If i is used to index a variable, its position in the pivot sequence
       ! will be placed in piv_order(i), with its sign negative if it is
       ! part of a 2 x 2 pivot; otherwise, piv_order(i) will be set to zero.
-   real(wp), dimension(2,*), optional, intent(out) :: d ! The diagonal
+   real(wp), dimension(2,akeep%n), optional, intent(out) :: d ! The diagonal
       ! entries of D^{-1} will be placed in d(1,:i) and the off-diagonal
       ! entries will be placed in d(2,:). The entries are held in pivot order.
 
