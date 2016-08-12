@@ -253,7 +253,7 @@ module spral_ssids_datatypes
       integer :: min_npart = 4 ! minimum number of parts to split tree into
       integer(long) :: max_flops_part = 10**9_long ! maximum number of flops
          ! per part when splitting tree
-      integer :: pivot_method = PIVOT_METHOD_APP_AGGRESIVE
+      integer :: pivot_method = PIVOT_METHOD_APP_BLOCK
          ! Type of pivoting to use on CPU side:
          ! 0 - A posteori pivoting, roll back entire front on pivot failure
          ! 1 - A posteori pivoting, roll back on block column level for failure
