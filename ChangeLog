@@ -1,4 +1,7 @@
-2016-05-10  Jonathan Hogg <jonathan.hogg@stfc.ac.uk>
+2016-XX-XX  Jonathan Hogg <jonathan.hogg@stfc.ac.uk>
+SSIDS v2 adding CPU, multi-GPU and hetrogeneous execution support,
+
+2016-05-10  Jennifer Scott <jennifer.scott@stfc.ac.uk>
 Add ported version of LSMR package orinally from Michael Saunders.
 
 2015-09-21  Jonathan Hogg <jonathan.hogg@stfc.ac.uk>
