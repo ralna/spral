@@ -223,8 +223,8 @@ end subroutine symbolic_final
 function factor(this, posdef, aval, child_contrib, options, inform, scaling)
    class(numeric_subtree_base), pointer :: factor
    class(cpu_symbolic_subtree), target, intent(inout) :: this
-   logical(C_BOOL), intent(in) :: posdef
-   real(wp), dimension(*), intent(in) :: aval
+   logical, intent(in) :: posdef
+   real(wp), dimension(*), target, intent(in) :: aval
    type(contrib_type), dimension(:), target, intent(inout) :: child_contrib
    class(ssids_options), intent(in) :: options
    class(ssids_inform_base), intent(inout) :: inform
@@ -259,7 +259,7 @@ function factor(this, posdef, aval, child_contrib, options, inform, scaling)
    if(present(scaling)) cscaling = C_LOC(scaling)
    call cpu_copy_options_in(options, coptions)
    cpu_factor%csubtree = &
-      c_create_numeric_subtree(posdef, this%csubtree, &
+      c_create_numeric_subtree(cpu_factor%posdef, this%csubtree, &
          aval, cscaling, contrib_ptr, coptions, cstats)
    if(cstats%flag.ne.0) then
       inform%flag = cstats%flag

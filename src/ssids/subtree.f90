@@ -25,15 +25,14 @@ module spral_ssids_subtree
    abstract interface
       function factor_iface(this, posdef, aval, child_contrib, options, &
             inform, scaling)
-         use, intrinsic :: iso_c_binding, only : C_BOOL
          import symbolic_subtree_base, numeric_subtree_base, wp
          import ssids_inform_base, ssids_options
          import contrib_type
          implicit none
          class(numeric_subtree_base), pointer :: factor_iface
          class(symbolic_subtree_base), target, intent(inout) :: this
-         logical(C_BOOL), intent(in) :: posdef
-         real(wp), dimension(*), intent(in) :: aval
+         logical, intent(in) :: posdef
+         real(wp), dimension(*), target, intent(in) :: aval
          type(contrib_type), dimension(:), target, intent(inout) :: child_contrib
          class(ssids_options), intent(in) :: options
          class(ssids_inform_base), intent(inout) :: inform

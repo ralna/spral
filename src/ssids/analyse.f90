@@ -8,8 +8,10 @@ module spral_ssids_analyse
    use spral_pgm, only : writePPM
    use spral_ssids_akeep, only : ssids_akeep_base
    use spral_ssids_cpu_subtree, only : construct_cpu_symbolic_subtree
+   use spral_ssids_gpu_subtree, only : construct_gpu_symbolic_subtree
    use spral_ssids_datatypes
    use spral_ssids_inform, only : ssids_inform_base, ssids_print_flag
+   use spral_ssids_type_select, only : detect_gpu
    implicit none
 
    private
@@ -206,23 +208,27 @@ end subroutine check_order
 ! FIXME: This really needs thought through in more detail for best performance
 ! it may be more sensible to come down from the top?
 subroutine find_subtree_partition(nnodes, sptr, sparent, rptr, min_npart, &
-      max_flops, nparts, part, contrib_ptr, contrib_idx, contrib_dest)
+      max_flops, cpu_gpu_ratio, nparts, part, exec_loc, contrib_ptr, &
+      contrib_idx, contrib_dest)
    integer, intent(in) :: nnodes
    integer, dimension(nnodes+1), intent(in) :: sptr
    integer, dimension(nnodes), intent(in) :: sparent
    integer(long), dimension(nnodes+1), intent(in) :: rptr
    integer, intent(in) :: min_npart
    integer(long), intent(in) :: max_flops
+   real, intent(in) :: cpu_gpu_ratio
    integer, intent(out) :: nparts
    integer, dimension(:), allocatable, intent(inout) :: part
+   integer, dimension(:), allocatable, intent(inout) :: exec_loc ! 0=cpu, 1=gpu
    integer, dimension(:), allocatable, intent(inout) :: contrib_ptr
    integer, dimension(:), allocatable, intent(inout) :: contrib_idx
    integer, dimension(:), allocatable, intent(inout) :: contrib_dest
 
-   integer :: i, k
-   integer(long) :: j, target_flops, total_flops
+   integer :: i, j, k
+   integer(long) :: jj, target_flops
    integer :: m, n, node
    integer(long), dimension(:), allocatable :: flops
+   real :: cpu_flops, gpu_flops, total_flops
    integer :: st
 
    ! FIXME: stat parameters
@@ -233,10 +239,10 @@ subroutine find_subtree_partition(nnodes, sptr, sparent, rptr, min_npart, &
    flops(:) = 0
    !print *, "There are ", nnodes, " nodes"
    do node = 1, nnodes
-      m = rptr(node+1)-rptr(node)
+      m = int(rptr(node+1)-rptr(node))
       n = sptr(node+1)-sptr(node)
-      do j = m-n+1, m
-         flops(node) = flops(node) + j**2
+      do jj = m-n+1, m
+         flops(node) = flops(node) + jj**2
       end do
       j = sparent(node)
       flops(j) = flops(j) + flops(node)
@@ -249,6 +255,9 @@ subroutine find_subtree_partition(nnodes, sptr, sparent, rptr, min_npart, &
    target_flops = min(flops(nnodes+1) / min_npart, max_flops)
    !target_flops = flops(nnodes+1) ! FIXME: rm
    !print *, "Target flops ", target_flops
+   total_flops = real(flops(nnodes+1))
+   gpu_flops = 0.0
+   cpu_flops = 0.0
    nparts = 0
    allocate(part(nnodes+1)) ! big enough to be safe FIXME: make smaller or alloc elsewhere?
    part(1) = 1
@@ -262,7 +271,6 @@ subroutine find_subtree_partition(nnodes, sptr, sparent, rptr, min_npart, &
       end do
       ! Record node:j as a part
       nparts = nparts + 1
-      !print *, "Part ", nparts, "contains ", node, ":", j
       part(nparts+1) = j+1
       node = j + 1
       if(j.eq.nnodes+1) exit ! done, root node is incorporated
@@ -273,16 +281,16 @@ subroutine find_subtree_partition(nnodes, sptr, sparent, rptr, min_npart, &
          flops(j) = flops(j) - flops(node-1)
       end do
    end do
+   part(nparts+1) = nnodes+1 ! handle edge case so we don't access virtual root
 
    ! Figure out contribution blocks that are input to each part
    ! FIXME: consolidate all these deallocation by just calling free() at start of anal???
    deallocate(contrib_ptr, stat=st)
    deallocate(contrib_idx, stat=st)
    allocate(contrib_ptr(nparts+3), contrib_idx(nparts), contrib_dest(nparts))
-   contrib_idx(1:nparts) = sparent(part(2:nparts+1)-1)
    ! Count contributions at offset +2
    contrib_ptr(3:nparts+3) = 0
-   do i = 1, nparts
+   do i = 1, nparts-1 ! by defn, last part has no parent
       j = sparent(part(i+1)-1) ! node index of parent
       if(j.gt.nnodes) cycle ! part is a root
       k = i+1 ! part index of j
@@ -297,7 +305,7 @@ subroutine find_subtree_partition(nnodes, sptr, sparent, rptr, min_npart, &
       contrib_ptr(i+2) = contrib_ptr(i+1) + contrib_ptr(i+2)
    end do
    ! Drop sources into list
-   do i = 1, nparts
+   do i = 1, nparts-1 ! by defn, last part has no parent
       j = sparent(part(i+1)-1) ! node index of parent
       if(j.gt.nnodes) then
          ! part is a root
@@ -311,6 +319,30 @@ subroutine find_subtree_partition(nnodes, sptr, sparent, rptr, min_npart, &
       contrib_idx(i) = contrib_ptr(k+1)
       contrib_dest(contrib_idx(i)) = j
       contrib_ptr(k+1) = contrib_ptr(k+1) + 1
+   end do
+   contrib_idx(nparts) = nparts+1 ! last part must be a root
+
+   ! Allocate subtrees to execution locations to try and get close to target
+   ! cpu_gpu_ratio = flops(cpu) / flops(cpu+gpu)
+   allocate(exec_loc(nparts)) !FIXME stat
+   exec_loc(:) = -1 ! default to nowhere
+   ! All subtrees with contribution must be on CPU
+   do i = 1, nparts
+      if(contrib_ptr(i).eq.contrib_ptr(i+1)) cycle ! no contrib to subtree
+      exec_loc(i) = EXEC_LOC_CPU
+      cpu_flops = cpu_flops + flops(part(i+1)-1)
+   end do
+   ! Handle any unallocated subtrees with greedy algorithm moving towards
+   ! desired ratio
+   do i = 1, nparts
+      if(exec_loc(i).ne.-1) cycle ! already allocated
+      if(cpu_flops / total_flops .lt. cpu_gpu_ratio) then
+         exec_loc(i) = EXEC_LOC_CPU
+         cpu_flops = cpu_flops + flops(part(i+1)-1)
+      else
+         exec_loc(i) = EXEC_LOC_GPU
+         gpu_flops = gpu_flops + flops(part(i+1)-1)
+      endif
    end do
 end subroutine find_subtree_partition
 
@@ -343,8 +375,9 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
    character(50)  :: context ! Procedure name (used when printing).
    integer, dimension(:), allocatable :: child_next, child_head ! linked
       ! list for children, used to build akeep%child_ptr, akeep%child_list
-   integer, dimension(:), allocatable :: contrib_dest
+   integer, dimension(:), allocatable :: contrib_dest, exec_loc
 
+   real :: cpu_gpu_ratio
    integer :: nemin, flag
    integer :: blkm, blkn
    integer :: i, j, k
@@ -466,13 +499,17 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
    end do
 
    ! Sort out subtrees
+   cpu_gpu_ratio = options%cpu_gpu_ratio
+   if(.not.detect_gpu()) cpu_gpu_ratio = 1.0 ! Entirely on CPU
    call find_subtree_partition(akeep%nnodes, akeep%sptr, akeep%sparent, &
-      akeep%rptr, options%min_npart, options%max_flops_part, akeep%nparts, &
-      akeep%part, akeep%contrib_ptr, akeep%contrib_idx, contrib_dest)
+      akeep%rptr, options%min_npart, options%max_flops_part, &
+      options%cpu_gpu_ratio, akeep%nparts, akeep%part, exec_loc, &
+      akeep%contrib_ptr, akeep%contrib_idx, contrib_dest)
    !print *, "invp = ", akeep%invp
    !print *, "sparent = ", akeep%sparent
    !print *, "Partition suggests ", akeep%nparts, " parts"
    !print *, "akeep%part = ", akeep%part(1:akeep%nparts+1)
+   !print *, "exec_loc   = ", exec_loc(1:akeep%nparts)
    !print *, "parents = ", akeep%sparent(akeep%part(2:akeep%nparts+1)-1)
    !print *, "contrib_ptr = ", akeep%contrib_ptr(1:akeep%nparts+1)
    !print *, "contrib_idx = ", akeep%contrib_idx(1:akeep%nparts)
@@ -487,11 +524,20 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
    endif
    allocate(akeep%subtree(akeep%nparts))
    do i = 1, akeep%nparts
-      akeep%subtree(i)%ptr => construct_cpu_symbolic_subtree(akeep%n, &
-         akeep%part(i), akeep%part(i+1), akeep%sptr, akeep%sparent, &
-         akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist, &
-         contrib_dest(akeep%contrib_ptr(i):akeep%contrib_ptr(i+1)-1), &
-         options)
+      select case(exec_loc(i))
+      case(EXEC_LOC_CPU)
+         akeep%subtree(i)%ptr => construct_cpu_symbolic_subtree(akeep%n, &
+            akeep%part(i), akeep%part(i+1), akeep%sptr, akeep%sparent, &
+            akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist, &
+            contrib_dest(akeep%contrib_ptr(i):akeep%contrib_ptr(i+1)-1), &
+            options)
+      case(EXEC_LOC_GPU)
+         akeep%subtree(i)%ptr => construct_gpu_symbolic_subtree(akeep%n, &
+            akeep%part(i), akeep%part(i+1), akeep%sptr, akeep%sparent, &
+            akeep%rptr, akeep%rlist, akeep%rlist_direct, akeep%nptr, &
+            akeep%nlist, akeep%nfactor, akeep%child_ptr, akeep%child_list, &
+            options)
+      end select
    end do
 
    ! Copy GPU-relevent data to device if needed (no-op if not)

@@ -1,0 +1,940 @@
+module spral_ssids_gpu_subtree
+   use, intrinsic :: iso_c_binding
+!$ use omp_lib
+   use spral_cuda
+   use spral_ssids_alloc, only : smalloc, smfreeall, smalloc_setup
+   use spral_ssids_contrib, only : contrib_type
+   use spral_ssids_datatypes
+   use spral_ssids_inform, only : ssids_inform_base
+   use spral_ssids_subtree, only : symbolic_subtree_base, numeric_subtree_base
+   use spral_ssids_gpu_datatypes, only : gpu_type, free_gpu_type
+   use spral_ssids_gpu_factor, only : parfactor
+   use spral_ssids_gpu_inform, only : ssids_inform_gpu
+   use spral_ssids_gpu_solve, only : bwd_solve_gpu, fwd_solve_gpu, &
+                                     fwd_multisolve_gpu, bwd_multisolve_gpu, &
+                                     d_solve_gpu
+   implicit none
+
+   private
+   public :: gpu_symbolic_subtree, construct_gpu_symbolic_subtree
+   public :: gpu_numeric_subtree
+
+   type, extends(symbolic_subtree_base) :: gpu_symbolic_subtree
+      integer :: n
+      integer :: sa
+      integer :: en
+      integer :: nnodes
+      integer(long) :: nfactor
+      integer, dimension(:), allocatable :: nptr
+      integer, dimension(:), allocatable :: child_ptr
+      integer, dimension(:), allocatable :: child_list
+      integer, dimension(:), pointer :: sptr
+      integer, dimension(:), allocatable :: sparent
+      integer(long), dimension(:), allocatable :: rptr
+      integer, dimension(:), pointer :: rlist
+      integer, dimension(:), pointer :: rlist_direct
+      ! GPU pointers (copies of the CPU arrays of same name)
+      type(C_PTR) :: gpu_nlist = C_NULL_PTR
+      type(C_PTR) :: gpu_rlist = C_NULL_PTR
+      type(C_PTR) :: gpu_rlist_direct = C_NULL_PTR
+      integer(long) :: max_a_idx
+   contains
+      procedure :: factor
+      final :: symbolic_final
+   end type gpu_symbolic_subtree
+
+   type, extends(numeric_subtree_base) :: gpu_numeric_subtree
+      logical :: posdef
+      type(gpu_symbolic_subtree), pointer :: symbolic
+      type(C_PTR) :: stream_handle
+      type(gpu_type) :: stream_data
+      type(C_PTR) :: gpu_rlist_with_delays = C_NULL_PTR
+      type(C_PTR) :: gpu_rlist_direct_with_delays = C_NULL_PTR
+      type(C_PTR) :: gpu_clists = C_NULL_PTR
+      type(C_PTR) :: gpu_clists_direct = C_NULL_PTR
+      type(C_PTR) :: gpu_clen = C_NULL_PTR
+      logical :: host_factors = .false.
+      type(smalloc_type), pointer :: alloc => null()
+      type(node_type), dimension(:), allocatable :: nodes ! Stores pointers
+         ! to information about nodes
+      integer :: presolve ! FIXME: make logical?
+   contains
+      procedure :: get_contrib
+      procedure :: solve_fwd
+      procedure :: solve_diag
+      procedure :: solve_diag_bwd
+      procedure :: solve_bwd
+      procedure :: enquire_posdef
+      procedure :: enquire_indef
+      procedure :: alter
+      final :: numeric_final
+   end type gpu_numeric_subtree
+
+contains
+
+function construct_gpu_symbolic_subtree(n, sa, en, sptr, sparent, rptr, &
+      rlist, rlist_direct, nptr, nlist, nfactor, child_ptr, child_list, &
+      options) result(this)
+   class(gpu_symbolic_subtree), pointer :: this
+   integer, intent(in) :: n
+   integer, intent(in) :: sa
+   integer, intent(in) :: en
+   integer, dimension(*), target, intent(in) :: sptr
+   integer, dimension(*), target, intent(in) :: sparent
+   integer(long), dimension(*), target, intent(in) :: rptr
+   integer, dimension(*), target, intent(in) :: rlist
+   integer, dimension(*), target, intent(in) :: rlist_direct
+   integer, dimension(*), target, intent(in) :: nptr
+   integer, dimension(2,*), target, intent(in) :: nlist
+   integer(long), intent(in) :: nfactor
+   integer, dimension(*), target, intent(in) :: child_ptr
+   integer, dimension(*), target, intent(in) :: child_list
+   class(ssids_options), intent(in) :: options
+
+   integer :: cuda_error, st
+
+   ! Allocate output
+   allocate(this, stat=st)
+   if(st.ne.0) then
+      nullify(this)
+      return
+   endif
+
+   ! Initialise members
+   !FIXME: stat
+   this%n = n
+   this%sa = sa
+   this%en = en-1
+   this%nnodes = en-sa
+   this%nfactor = nfactor
+   allocate(this%nptr(this%nnodes+1))
+   this%nptr(1:this%nnodes+1) = nptr(sa:en) - nptr(sa) + 1
+   allocate(this%child_ptr(this%nnodes+1))
+   this%child_ptr(1:this%nnodes+1) = child_ptr(sa:en) - sa + 1
+   allocate(this%child_list(this%child_ptr(this%nnodes+1)-1))
+   this%child_list(:) = child_list(child_ptr(sa):child_ptr(en)-1) - sa + 1
+   this%sptr => sptr(sa:en)
+   allocate(this%sparent(this%nnodes))
+   this%sparent = sparent(sa:en-1) - sa + 1
+   allocate(this%rptr(this%nnodes+1))
+   this%rptr(1:this%nnodes+1) = rptr(sa:en) - rptr(sa) + 1
+   this%rlist => rlist(rptr(sa):rptr(en)-1)
+   this%rlist_direct => rlist_direct(rptr(sa):rptr(en)-1)
+
+   this%max_a_idx = maxval(nlist(1,nptr(sa):nptr(en)-1)) ! needed for aval copy
+
+   ! Copy data to device
+   ! FIXME: only copy part we care about from sa:en
+   cuda_error=0
+   call copy_analyse_data_to_device(2*(this%nptr(this%nnodes+1)-1), &
+      nlist(:,nptr(sa):nptr(en)-1), rptr(en)-rptr(sa), &
+      rlist(rptr(sa):rptr(en)-1), rlist_direct(rptr(sa):rptr(en)-1), &
+      this%gpu_nlist, this%gpu_rlist, this%gpu_rlist_direct, cuda_error)
+   if(cuda_error .ne. 0) then
+      print *, "CUDA error on copy"
+      ! FIXME: error handling
+      !select type(inform)
+      !type is (ssids_inform_gpu)
+      !   inform%cuda_error = cuda_error
+      !end select
+      !inform%flag = SSIDS_ERROR_CUDA_UNKNOWN
+      deallocate(this)
+      nullify(this)
+      return
+   endif
+end function construct_gpu_symbolic_subtree
+
+!****************************************************************************
+!
+! Copy data generated by analyse phase to GPU
+! (Specifically, nlist, rlist and rlist_direct)
+!
+subroutine copy_analyse_data_to_device(lnlist, nlist, lrlist, rlist, &
+      rlist_direct, gpu_nlist, gpu_rlist, gpu_rlist_direct, cuda_error)
+   integer, intent(in) :: lnlist
+   integer(C_INT), dimension(lnlist), target, intent(in) :: nlist
+   integer(long), intent(in) :: lrlist
+   integer(C_INT), dimension(lrlist), target, intent(in) :: rlist
+   integer(C_INT), dimension(lrlist), target, intent(in) :: rlist_direct
+   type(C_PTR), intent(out) :: gpu_nlist
+   type(C_PTR), intent(out) :: gpu_rlist
+   type(C_PTR), intent(out) :: gpu_rlist_direct
+   integer, intent(out) :: cuda_error ! Non-zero on error
+
+   ! Copy nlist
+   cuda_error = cudaMalloc(gpu_nlist, lnlist*C_SIZEOF(nlist(1)))
+   if(cuda_error.ne.0) return
+   cuda_error = cudaMemcpy_h2d(gpu_nlist, C_LOC(nlist), &
+      lnlist*C_SIZEOF(nlist(1)))
+   if(cuda_error.ne.0) return
+
+   ! Copy rlist
+   cuda_error = cudaMalloc(gpu_rlist, lrlist*C_SIZEOF(rlist(1)))
+   if(cuda_error.ne.0) return
+   cuda_error = cudaMemcpy_h2d(gpu_rlist, C_LOC(rlist), &
+      lrlist*C_SIZEOF(rlist(1)))
+   if(cuda_error.ne.0) return
+
+   ! Copy rlist_direct
+   cuda_error = cudaMalloc(gpu_rlist_direct, lrlist*C_SIZEOF(rlist_direct(1)))
+   if(cuda_error.ne.0) return
+   cuda_error = cudaMemcpy_h2d(gpu_rlist_direct, C_LOC(rlist_direct), &
+      lrlist*C_SIZEOF(rlist_direct(1)))
+   if(cuda_error.ne.0) return
+
+end subroutine copy_analyse_data_to_device
+
+subroutine symbolic_final(this)
+   type(gpu_symbolic_subtree) :: this
+
+   integer :: flag
+   
+   ! Free GPU arrays if needed
+   if(C_ASSOCIATED(this%gpu_nlist)) then
+      flag = cudaFree(this%gpu_nlist)
+      this%gpu_nlist = C_NULL_PTR
+      if(flag.ne.0) &
+         print *, "CUDA error freeing this%gpu_nlist flag = ", flag
+   endif
+   if(C_ASSOCIATED(this%gpu_rlist)) then
+      flag = cudaFree(this%gpu_rlist)
+      this%gpu_rlist = C_NULL_PTR
+      if(flag.ne.0) &
+         print *, "CUDA error freeing this%gpu_rlist flag = ", flag
+   endif
+   if(C_ASSOCIATED(this%gpu_rlist_direct)) then
+      flag = cudaFree(this%gpu_rlist_direct)
+      this%gpu_rlist_direct = C_NULL_PTR
+      if(flag.ne.0) &
+         print *, "CUDA error freeing this%gpu_rlist_direct flag = ", flag
+   endif
+end subroutine symbolic_final
+
+function factor(this, posdef, aval, child_contrib, options, inform, scaling)
+   class(numeric_subtree_base), pointer :: factor
+   class(gpu_symbolic_subtree), target, intent(inout) :: this
+   logical, intent(in) :: posdef
+   real(wp), dimension(*), target, intent(in) :: aval
+   type(contrib_type), dimension(:), target, intent(inout) :: child_contrib
+   class(ssids_options), intent(in) :: options
+   class(ssids_inform_base), intent(inout) :: inform
+   real(wp), dimension(*), target, optional, intent(in) :: scaling
+
+   type(gpu_numeric_subtree), pointer :: gpu_factor
+
+   integer :: i
+   type(C_PTR) :: gpu_val, gpu_scaling
+   type(C_PTR), dimension(:), allocatable :: gpu_contribs
+   integer(long) :: sz
+   integer, dimension(:), allocatable :: map ! work array, one copy per
+      ! thread. Size (0:n), with 0 index used to track which node current map
+      ! refers to.
+   type(thread_stats) :: stats ! accumulates per thread statistics that are
+      ! then summed to obtain global stats in inform. FIXME: not needed?
+
+   integer :: cuda_error, st
+
+   ! Leave output as null until successful exit
+   nullify(factor)
+
+   ! Allocate cpu_factor for output
+   allocate(gpu_factor, stat=st)
+   if(st.ne.0) goto 10
+   gpu_factor%symbolic => this
+   gpu_factor%posdef = posdef
+   gpu_factor%presolve = options%presolve
+
+   ! Allocate memory
+   gpu_factor%host_factors = .false.
+   allocate(gpu_factor%nodes(this%nnodes+1), stat=st)
+   if(st.ne.0) goto 10
+   gpu_factor%nodes(:)%ndelay = 0
+
+   allocate(map(0:this%n), stat=st)
+   if(st.ne.0) goto 10
+   map(0) = -1 ! initally map unassociated with any node
+
+   ! Setup child contribution array
+   ! Note: only non-NULL where we're passing contributions between subtrees
+   allocate(gpu_contribs(this%nnodes), stat=st)
+   if(st.ne.0) goto 10
+   gpu_contribs(:) = C_NULL_PTR
+
+   ! Initialise host allocator
+   ! * options%multiplier * n             integers (for nodes(:)%perm)
+   ! * options%multiplier * (nfactor+2*n) reals    (for nodes(:)%lcol)
+   ! FIXME: do we really need this multiplier memory????
+   ! FIXME: In posdef case ints and reals not needed!
+   allocate(gpu_factor%alloc, stat=st)
+   if (st .ne. 0) go to 10
+   call smalloc_setup(gpu_factor%alloc, &
+      max(this%n+0_long, int(options%multiplier*this%n,kind=long)), &
+      max(this%nfactor+2*this%n, &
+         int(options%multiplier*real(this%nfactor,wp)+2*this%n,kind=long)), st)
+   if (st .ne. 0) go to 10
+
+   ! Copy A values to GPU
+   sz = this%max_a_idx
+   cuda_error = cudaMalloc(gpu_val, sz*C_SIZEOF(aval(1)))
+   if(cuda_error.ne.0) goto 200
+   cuda_error = cudaMemcpy_h2d(gpu_val, C_LOC(aval), sz*C_SIZEOF(aval(1)))
+   if(cuda_error.ne.0) goto 200
+   
+   ! Allocate and initialize stream
+   cuda_error = cudaStreamCreate(gpu_factor%stream_handle)
+   if(cuda_error.ne.0) goto 200
+
+   ! Call main factorization routine
+   if (present(scaling)) then
+      ! Copy scaling vector to GPU
+      cuda_error = cudaMalloc(gpu_scaling, this%n*C_SIZEOF(scaling(1)))
+      if(cuda_error.ne.0) goto 200
+      cuda_error = cudaMemcpy_h2d(gpu_scaling, C_LOC(scaling), &
+         this%n*C_SIZEOF(scaling(1)))
+      if(cuda_error.ne.0) goto 200
+
+      ! Perform factorization
+      call parfactor(posdef, this%child_ptr, this%child_list, this%n,         &
+         this%nptr, this%gpu_nlist, gpu_val, this%nnodes, gpu_factor%nodes,   &
+         this%sptr, this%sparent, this%rptr, this%rlist,                      &
+         this%rlist_direct, this%gpu_rlist, this%gpu_rlist_direct,            &
+         gpu_contribs, gpu_factor%stream_handle, gpu_factor%stream_data,      &
+         gpu_factor%gpu_rlist_with_delays,                                    &
+         gpu_factor%gpu_rlist_direct_with_delays, gpu_factor%gpu_clists,      &
+         gpu_factor%gpu_clists_direct, gpu_factor%gpu_clen, gpu_factor%alloc, &
+         options, stats, ptr_scale=gpu_scaling)
+      cuda_error = cudaFree(gpu_scaling)
+      if(cuda_error.ne.0) goto 200
+   else
+      call parfactor(posdef, this%child_ptr, this%child_list, this%n,         &
+         this%nptr, this%gpu_nlist, gpu_val, this%nnodes, gpu_factor%nodes,   &
+         this%sptr, this%sparent, this%rptr, this%rlist,                      &
+         this%rlist_direct, this%gpu_rlist, this%gpu_rlist_direct,            &
+         gpu_contribs, gpu_factor%stream_handle, gpu_factor%stream_data,      &
+         gpu_factor%gpu_rlist_with_delays,                                    &
+         gpu_factor%gpu_rlist_direct_with_delays, gpu_factor%gpu_clists,      &
+         gpu_factor%gpu_clists_direct, gpu_factor%gpu_clen, gpu_factor%alloc, &
+         options, stats)
+   end if
+
+   cuda_error = cudaFree(gpu_val)
+   if(cuda_error.ne.0) goto 200
+   
+   ! Set inform
+   inform%flag = i
+   inform%stat = stats%st
+   inform%maxfront = stats%maxfront
+   inform%num_factor = stats%num_factor
+   inform%num_flops = stats%num_flops
+   inform%num_delay = stats%num_delay
+   inform%num_neg = stats%num_neg
+   inform%num_two = stats%num_two
+   inform%matrix_rank = this%sptr(this%nnodes+1)-1 - stats%num_zero
+   select type(inform)
+   type is (ssids_inform_gpu)
+      inform%cuda_error = stats%cuda_error
+      inform%cublas_error = stats%cublas_error
+   end select
+
+   ! Success, set result and return
+   factor => gpu_factor
+   return
+
+   ! Allocation error handler
+   10 continue
+   inform%flag = SSIDS_ERROR_ALLOCATION
+   inform%stat = st
+   deallocate(gpu_factor, stat=st)
+   return
+
+   200 continue
+   inform%flag = SSIDS_ERROR_CUDA_UNKNOWN
+   select type(inform)
+   type is (ssids_inform_gpu)
+      inform%cuda_error = cuda_error
+   end select
+   deallocate(gpu_factor, stat=st)
+   return
+end function factor
+
+subroutine numeric_final(this)
+   type(gpu_numeric_subtree) :: this
+
+   integer :: flag
+
+   ! FIXME: error handling?
+
+   ! Skip if nothing intialized
+   if (.not.allocated(this%nodes)) return
+
+   !
+   ! Now cleanup GPU-specific stuff
+   !
+   call free_gpu_type(this%stream_data, flag)
+
+   ! CPU-side allocator
+   call smfreeall(this%alloc)
+   deallocate(this%alloc)
+   nullify(this%alloc)
+
+   ! Cleanup top-level presolve info
+   if(C_ASSOCIATED(this%gpu_rlist_with_delays)) then
+      flag = cudaFree(this%gpu_rlist_with_delays)
+      this%gpu_rlist_with_delays = C_NULL_PTR
+      if(flag.ne.0) return
+   endif
+   if(C_ASSOCIATED(this%gpu_clists)) then
+      flag = cudaFree(this%gpu_clists)
+      this%gpu_clists = C_NULL_PTR
+      if(flag.ne.0) return
+   endif
+   if(C_ASSOCIATED(this%gpu_clists_direct)) then
+      flag = cudaFree(this%gpu_clists)
+      this%gpu_clists = C_NULL_PTR
+      if(flag.ne.0) return
+   endif
+   if(C_ASSOCIATED(this%gpu_clen)) then
+      flag = cudaFree(this%gpu_clen)
+      this%gpu_clen = C_NULL_PTR
+      if(flag.ne.0) return
+   endif
+
+   ! Release stream
+   flag = cudaStreamDestroy(this%stream_handle)
+   if(flag.ne.0) return
+end subroutine numeric_final
+
+function get_contrib(this)
+   type(contrib_type) :: get_contrib
+   class(gpu_numeric_subtree), intent(in) :: this
+
+   get_contrib%n = 0
+   nullify(get_contrib%val)
+   nullify(get_contrib%rlist)
+   get_contrib%ndelay = 0
+   nullify(get_contrib%delay_perm)
+   nullify(get_contrib%delay_val)
+   get_contrib%lddelay = 0
+   get_contrib%owner = 1 ! gpu
+end function get_contrib
+
+! FIXME: general: push/pop cuda settings at higher level
+! FIXME: general: do we need to worry about avoiding unnecessary gpu_x creation?
+subroutine solve_fwd(this, nrhs, x, ldx, inform)
+   class(gpu_numeric_subtree), intent(inout) :: this
+   integer, intent(in) :: nrhs
+   real(wp), dimension(*), intent(inout) :: x
+   integer, intent(in) :: ldx
+   class(ssids_inform_base), intent(inout) :: inform
+
+   integer :: cuda_error
+   type(C_PTR) :: gpu_x
+
+   if(this%presolve.eq.0) then
+      call fwd_solve_gpu(this%posdef, this%symbolic%child_ptr,          &
+         this%symbolic%child_list, this%symbolic%n,                      &
+         this%symbolic%nnodes, this%nodes, this%symbolic%rptr,           &
+         this%stream_handle, this%stream_data, x, inform%stat, cuda_error)
+      if(inform%stat.ne.0) goto 100
+      if(cuda_error.ne.0) goto 200
+   else
+      gpu_x = create_gpu_x(this%symbolic%n, nrhs, x, ldx, cuda_error)
+      if(cuda_error.ne.0) goto 200
+      call fwd_multisolve_gpu(this%symbolic%nnodes, this%nodes,            &
+         this%symbolic%rptr, this%stream_handle, this%stream_data, nrhs,   &
+         gpu_x, cuda_error, inform%stat)
+      if(inform%stat.ne.0) goto 100
+      if(cuda_error.ne.0) goto 200
+      call recover_destroy_gpu_x(this%symbolic%n, nrhs, x, ldx, gpu_x, &
+         cuda_error)
+      if(cuda_error.ne.0) goto 200
+   end if
+
+
+   return
+
+   100 continue
+   inform%flag = SSIDS_ERROR_ALLOCATION
+   return
+
+   200 continue ! CUDA error
+   select type(inform)
+   type is (ssids_inform_gpu)
+      inform%cuda_error = cuda_error
+   end select
+   inform%flag = SSIDS_ERROR_CUDA_UNKNOWN
+   return
+end subroutine solve_fwd
+
+type(C_PTR) function create_gpu_x(n, nrhs, x, ldx, cuda_error) result(gpu_x)
+   integer, intent(in) :: n
+   integer, intent(in) :: nrhs
+   real(wp), dimension(*), target, intent(in) :: x
+   integer, intent(in) :: ldx
+   integer, intent(out) :: cuda_error
+
+   cuda_error = cudaMalloc(gpu_x, nrhs*n*C_SIZEOF(x(1)))
+   if(cuda_error.ne.0) return
+   if(n.eq.ldx) then
+      cuda_error = cudaMemcpy_h2d(gpu_x, C_LOC(x), n*nrhs*C_SIZEOF(x(1)))
+      if(cuda_error.ne.0) return
+   else
+      cuda_error = cudaMemcpy2d(gpu_x, n*C_SIZEOF(x(1)), C_LOC(x), &
+         ldx*C_SIZEOF(x(1)), n*C_SIZEOF(x(1)), int(nrhs, C_SIZE_T), &
+         cudaMemcpyHostToDevice)
+      if(cuda_error.ne.0) return
+   end if
+end function create_gpu_x
+
+subroutine recover_destroy_gpu_x(n, nrhs, x, ldx, gpu_x, cuda_error)
+   integer, intent(in) :: n
+   integer, intent(in) :: nrhs
+   real(wp), dimension(*), target, intent(inout) :: x
+   integer, intent(in) :: ldx
+   type(C_PTR), intent(inout) :: gpu_x
+   integer, intent(out) :: cuda_error
+
+   if(n.eq.ldx) then
+      cuda_error = cudaMemcpy_d2h(C_LOC(x), gpu_x, nrhs*n*C_SIZEOF(x(1)))
+      if(cuda_error.ne.0) return
+   else
+      cuda_error = cudaMemcpy2d(C_LOC(x), ldx*C_SIZEOF(x(1)), gpu_x, &
+         n*C_SIZEOF(x(1)), n*C_SIZEOF(x(1)), int(nrhs, C_SIZE_T), &
+         cudaMemcpyDeviceToHost)
+      if(cuda_error.ne.0) return
+   end if
+   cuda_error = cudaFree(gpu_x)
+   if(cuda_error.ne.0) return
+end subroutine recover_destroy_gpu_x
+
+! FIXME: general solve : recover gpu_x memory on error?
+subroutine solve_diag(this, nrhs, x, ldx, inform)
+   class(gpu_numeric_subtree), intent(inout) :: this
+   integer, intent(in) :: nrhs
+   real(wp), dimension(*), intent(inout) :: x
+   integer, intent(in) :: ldx
+   class(ssids_inform_base), intent(inout) :: inform
+
+   type(C_PTR) :: gpu_x
+   integer :: cuda_error
+
+
+   ! FIXME: comments in fkeep.f90 about unimplemented on GPU????
+   if(this%presolve.eq.0) then
+      call d_solve_gpu(this%symbolic%nnodes, this%symbolic%sptr,  &
+         this%stream_handle, this%stream_data, this%symbolic%n,   &
+         x, inform%stat, cuda_error)
+      if(inform%stat.ne.0) goto 100
+   else
+      gpu_x = create_gpu_x(this%symbolic%n, nrhs, x, ldx, cuda_error)
+      if(cuda_error.ne.0) goto 200
+      call bwd_multisolve_gpu(this%posdef, SSIDS_SOLVE_JOB_DIAG, &
+         this%stream_handle, this%stream_data, nrhs, gpu_x, cuda_error)
+      call recover_destroy_gpu_x(this%symbolic%n, nrhs, x, ldx, gpu_x, &
+         cuda_error)
+      if(cuda_error.ne.0) goto 200
+   end if
+   if(cuda_error.ne.0) goto 200
+
+
+   return
+
+   100 continue
+   inform%flag = SSIDS_ERROR_ALLOCATION
+   return
+
+   200 continue ! CUDA error
+   select type(inform)
+   type is (ssids_inform_gpu)
+      inform%cuda_error = cuda_error
+   end select
+   inform%flag = SSIDS_ERROR_CUDA_UNKNOWN
+   return
+end subroutine solve_diag
+
+subroutine solve_diag_bwd(this, nrhs, x, ldx, inform)
+   class(gpu_numeric_subtree), intent(inout) :: this
+   integer, intent(in) :: nrhs
+   real(wp), dimension(*), intent(inout) :: x
+   integer, intent(in) :: ldx
+   class(ssids_inform_base), intent(inout) :: inform
+
+   type(C_PTR) :: gpu_x
+   integer :: cuda_error
+
+
+   if(this%presolve.eq.0) then
+      call bwd_solve_gpu(SSIDS_SOLVE_JOB_DIAG_BWD, this%posdef, &
+         this%symbolic%nnodes, this%symbolic%sptr, this%stream_handle, &
+         this%stream_data, x, inform%stat, cuda_error)
+      if(cuda_error.ne.0) goto 200
+   else
+      gpu_x = create_gpu_x(this%symbolic%n, nrhs, x, ldx, cuda_error)
+      if(cuda_error.ne.0) goto 200
+      call bwd_multisolve_gpu(this%posdef, SSIDS_SOLVE_JOB_DIAG_BWD, &
+         this%stream_handle, this%stream_data, nrhs, gpu_x, cuda_error)
+      if(cuda_error.ne.0) goto 200
+      call recover_destroy_gpu_x(this%symbolic%n, nrhs, x, ldx, gpu_x, &
+         cuda_error)
+      if(cuda_error.ne.0) goto 200
+   end if
+   if (inform%stat .ne. 0) goto 100
+
+
+   return
+
+   100 continue
+   inform%flag = SSIDS_ERROR_ALLOCATION
+   return
+
+   200 continue ! CUDA error
+   select type(inform)
+   type is (ssids_inform_gpu)
+      inform%cuda_error = cuda_error
+   end select
+   inform%flag = SSIDS_ERROR_CUDA_UNKNOWN
+   return
+end subroutine solve_diag_bwd
+
+subroutine solve_bwd(this, nrhs, x, ldx, inform)
+   class(gpu_numeric_subtree), intent(inout) :: this
+   integer, intent(in) :: nrhs
+   real(wp), dimension(*), intent(inout) :: x
+   integer, intent(in) :: ldx
+   class(ssids_inform_base), intent(inout) :: inform
+
+   type(C_PTR) :: gpu_x
+   integer :: cuda_error
+
+   if(this%presolve.eq.0) then
+      call bwd_solve_gpu(SSIDS_SOLVE_JOB_BWD, this%posdef,              &
+         this%symbolic%nnodes, this%symbolic%sptr, this%stream_handle,  &
+         this%stream_data, x, inform%stat, cuda_error)
+      if(cuda_error.ne.0) goto 200
+   else
+      gpu_x = create_gpu_x(this%symbolic%n, nrhs, x, ldx, cuda_error)
+      if(cuda_error.ne.0) goto 200
+      call bwd_multisolve_gpu(this%posdef, SSIDS_SOLVE_JOB_BWD,   &
+         this%stream_handle, this%stream_data, nrhs, gpu_x, cuda_error)
+      if(cuda_error.ne.0) goto 200
+      call recover_destroy_gpu_x(this%symbolic%n, nrhs, x, ldx, gpu_x, &
+         cuda_error)
+      if(cuda_error.ne.0) goto 200
+   end if
+   if (inform%stat .ne. 0) goto 100
+
+
+   return
+
+   100 continue
+   inform%flag = SSIDS_ERROR_ALLOCATION
+   return
+
+   200 continue ! CUDA error
+   select type(inform)
+   type is (ssids_inform_gpu)
+      inform%cuda_error = cuda_error
+   end select
+   inform%flag = SSIDS_ERROR_CUDA_UNKNOWN
+   return
+end subroutine solve_bwd
+
+subroutine enquire_posdef(this, d)
+   class(gpu_numeric_subtree), target, intent(in) :: this
+   real(wp), dimension(*), target, intent(out) :: d
+
+   integer :: blkn, blkm
+   integer(long) :: i
+   integer :: j
+   integer :: node
+   integer :: piv
+
+   type(node_type), pointer :: nptr
+
+   !if(.not. this%host_factors) then
+   !   ! FIXME: Not implemented enquire_posdef for GPU without host factors yet
+   !   inform%flag = SSIDS_ERROR_UNIMPLEMENTED
+   !   return
+   !endif
+
+   piv = 1 
+   do node = 1, this%symbolic%nnodes
+      nptr => this%nodes(node) 
+      blkn = this%symbolic%sptr(node+1) - this%symbolic%sptr(node)
+      blkm = int(this%symbolic%rptr(node+1) - this%symbolic%rptr(node))
+      i = 1
+      do j = 1, blkn
+         d(piv) = nptr%lcol(i)
+         i = i + blkm + 1
+         piv = piv + 1
+      end do
+   end do
+end subroutine enquire_posdef
+
+subroutine enquire_indef(this, piv_order, d)
+   class(gpu_numeric_subtree), target, intent(in) :: this
+   integer, dimension(*), target, optional, intent(out) :: piv_order
+   real(wp), dimension(2,*), target, optional, intent(out) :: d
+
+   integer :: blkn, blkm
+   integer :: j, k
+   integer :: n
+   integer :: nd
+   integer :: node
+   integer(long) :: offset
+   integer :: piv
+   real(C_DOUBLE), dimension(:), allocatable, target :: d2
+   type(C_PTR) :: srcptr
+   integer, dimension(:), allocatable :: lvllookup
+   integer :: st, cuda_error
+   real(wp) :: real_dummy
+
+   type(node_type), pointer :: nptr
+
+   if(this%host_factors) then
+      ! Call CPU version instead
+      call enquire_indef_gpu_cpu(this, piv_order=piv_order, d=d)
+      return
+   endif
+
+   !
+   ! Otherwise extract information from GPU memory
+   !
+
+   n = this%symbolic%n
+   if(present(d)) then
+      ! ensure d is not returned undefined
+      d(1:2,1:n) = 0.0
+   end if
+   
+   allocate(lvllookup(this%symbolic%nnodes), d2(2*this%symbolic%n), stat=st)
+   if(st.ne.0) goto 100
+
+   piv = 1
+   do node = 1, this%symbolic%nnodes
+      nptr => this%nodes(node)
+      j = 1
+      nd = nptr%ndelay
+      blkn = this%symbolic%sptr(node+1) - this%symbolic%sptr(node) + nd
+      blkm = int(this%symbolic%rptr(node+1) - this%symbolic%rptr(node)) + nd
+      offset = blkm*(blkn+0_long)
+      srcptr = c_ptr_plus(nptr%gpu_lcol, offset*C_SIZEOF(real_dummy))
+      cuda_error = cudaMemcpy_d2h(C_LOC(d2), srcptr, &
+         2*nptr%nelim*C_SIZEOF(d2(1)))
+      if(cuda_error.ne.0) goto 200
+      do while(j .le. nptr%nelim)
+         if (d2(2*j).ne.0) then
+            ! 2x2 pivot
+            if(present(piv_order))  then
+               k = nptr%perm(j)
+               piv_order(k) = -piv
+               k = nptr%perm(j+1)
+               piv_order(k) = -(piv+1)
+            end if
+            if(present(d)) then
+               d(1,piv) = d2(2*j-1)
+               d(2,piv) = d2(2*j)
+               d(1,piv+1) = d2(2*j+1)
+               d(2,piv+1) = 0
+            end if
+            piv = piv + 2
+            j = j + 2
+         else
+            ! 1x1 pivot
+            if(present(piv_order)) then
+               k = nptr%perm(j)
+               piv_order(k) = piv
+            end if
+            if(present(d)) then
+               d(1,piv) = d2(2*j-1)
+               d(2,piv) = 0
+            end if
+            piv = piv + 1
+            j = j + 1
+         end if
+      end do
+   end do
+
+   return ! Normal return
+
+   100 continue ! Memory allocation error
+   ! FIXME
+   !inform%stat = st
+   !inform%flag = SSIDS_ERROR_ALLOCATION
+   return
+
+   200 continue ! CUDA error
+   ! FIXME
+   !select type(inform)
+   !type is (ssids_inform_gpu)
+   !   inform%cuda_error = cuda_error
+   !end select
+   !inform%flag = SSIDS_ERROR_CUDA_UNKNOWN
+   return
+end subroutine enquire_indef
+
+! Provide implementation for when factors are on host
+subroutine enquire_indef_gpu_cpu(this, piv_order, d)
+   class(gpu_numeric_subtree), target, intent(in) :: this
+   integer, dimension(*), optional, intent(out) :: piv_order
+      ! If i is used to index a variable, its position in the pivot sequence
+      ! will be placed in piv_order(i), with its sign negative if it is
+      ! part of a 2 x 2 pivot; otherwise, piv_order(i) will be set to zero.
+   real(wp), dimension(2,*), optional, intent(out) :: d ! The diagonal
+      ! entries of D^{-1} will be placed in d(1,:i) and the off-diagonal
+      ! entries will be placed in d(2,:). The entries are held in pivot order.
+
+   integer :: blkn, blkm
+   integer :: j, k
+   integer :: nd
+   integer :: node
+   integer(long) :: offset
+   integer :: piv
+
+   type(node_type), pointer :: nptr
+
+   piv = 1
+   do node = 1, this%symbolic%nnodes
+      nptr => this%nodes(node)
+      j = 1
+      nd = nptr%ndelay
+      blkn = this%symbolic%sptr(node+1) - this%symbolic%sptr(node) + nd
+      blkm = int(this%symbolic%rptr(node+1) - this%symbolic%rptr(node)) + nd
+      offset = blkm*(blkn+0_long)
+      do while(j .le. nptr%nelim)
+         if (nptr%lcol(offset+2*j).ne.0) then
+            ! 2x2 pivot
+            if(present(piv_order))  then
+               k = nptr%perm(j)
+               piv_order(k) = -piv
+               k = nptr%perm(j+1)
+               piv_order(k) = -(piv+1)
+            end if
+            if(present(d)) then
+               d(1,piv) = nptr%lcol(offset+2*j-1)
+               d(2,piv) = nptr%lcol(offset+2*j)
+               d(1,piv+1) = nptr%lcol(offset+2*j+1)
+               d(2,piv+1) = 0
+            end if
+            piv = piv + 2
+            j = j + 2
+         else
+            ! 1x1 pivot
+            if(present(piv_order)) then
+               k = nptr%perm(j)
+               piv_order(k) = piv
+            end if
+            if(present(d)) then
+               d(1,piv) = nptr%lcol(offset+2*j-1)
+               d(2,piv) = 0
+            end if
+            piv = piv + 1
+            j = j + 1
+         end if
+      end do
+   end do
+end subroutine enquire_indef_gpu_cpu
+
+subroutine alter(this, d)
+   class(gpu_numeric_subtree), target, intent(inout) :: this
+   real(wp), dimension(2,*), intent(in) :: d
+
+   integer :: blkm, blkn
+   integer(long) :: ip
+   integer :: j
+   integer :: nd
+   integer :: node
+   integer :: piv
+   real(wp), dimension(:), allocatable, target :: d2
+   integer, dimension(:), allocatable :: lvllookup
+   type(C_PTR) :: srcptr
+   integer :: st, cuda_error
+   real(wp) :: real_dummy
+
+   type(node_type), pointer :: nptr
+
+   if(this%host_factors) &
+      call alter_gpu_cpu(this, d)
+
+   !
+   ! Also alter GPU factors if they exist
+   !
+
+   ! FIXME: Move to gpu_factors a la host_factors?
+   ! FIXME: if statement
+   !if(options%use_gpu_solve) then
+      allocate(lvllookup(this%symbolic%nnodes), d2(2*this%symbolic%n), stat=st)
+      if(st.ne.0) goto 100
+
+      piv = 1
+      do node = 1, this%symbolic%nnodes
+         nptr => this%nodes(node)
+         nd = nptr%ndelay
+         blkn = this%symbolic%sptr(node+1) - this%symbolic%sptr(node) + nd
+         blkm = int(this%symbolic%rptr(node+1) - this%symbolic%rptr(node)) + nd
+         ip = 1
+         do j = 1, nptr%nelim
+            d2(ip)   = d(1,piv)
+            d2(ip+1) = d(2,piv)
+            ip = ip + 2
+            piv = piv + 1
+         end do
+         srcptr = c_ptr_plus(this%nodes(node)%gpu_lcol, &
+            blkm*(blkn+0_long)*C_SIZEOF(real_dummy))
+         cuda_error = cudaMemcpy_h2d(srcptr, C_LOC(d2), &
+            2*nptr%nelim*C_SIZEOF(d2(1)))
+         if(cuda_error.ne.0) goto 200
+      end do
+   !endif
+
+   return ! Normal return
+
+   100 continue ! Memory allocation error
+   ! FIXME
+   !inform%stat = st
+   !inform%flag = SSIDS_ERROR_ALLOCATION
+   return
+
+   200 continue ! CUDA error
+   ! FIXME
+   !select type(inform)
+   !type is (ssids_inform_gpu)
+   !   inform%cuda_error = cuda_error
+   !end select
+   !inform%flag = SSIDS_ERROR_CUDA_UNKNOWN
+   return
+end subroutine alter
+
+! Alters D for factors stored on CPU
+subroutine alter_gpu_cpu(this, d)
+   class(gpu_numeric_subtree), target, intent(inout) :: this
+   real(wp), dimension(2,*), intent(in) :: d  ! The required diagonal entries
+     ! of D^{-1} must be placed in d(1,i) (i = 1,...n)
+     ! and the off-diagonal entries must be placed in d(2,i) (i = 1,...n-1).
+
+   integer :: blkm, blkn
+   integer(long) :: ip
+   integer :: j
+   integer :: nd
+   integer :: node
+   integer :: piv
+
+   type(node_type), pointer :: nptr
+
+   piv = 1
+   do node = 1, this%symbolic%nnodes
+      nptr => this%nodes(node)
+      nd = nptr%ndelay
+      blkn = this%symbolic%sptr(node+1) - this%symbolic%sptr(node) + nd
+      blkm = int(this%symbolic%rptr(node+1) - this%symbolic%rptr(node)) + nd
+      ip = blkm*(blkn+0_long) + 1
+      do j = 1, nptr%nelim
+         nptr%lcol(ip)   = d(1,piv)
+         nptr%lcol(ip+1) = d(2,piv)
+         ip = ip + 2
+         piv = piv + 1
+      end do
+   end do
+end subroutine alter_gpu_cpu
+
+end module spral_ssids_gpu_subtree

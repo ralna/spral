@@ -62,11 +62,9 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
    class(ssids_inform_base), intent(inout) :: inform
 
    integer :: i
-   logical(C_BOOL) :: fposdef
    class(numeric_subtree_base), pointer :: subtree
    type(contrib_type), dimension(:), allocatable :: child_contrib
 
-   fposdef = fkeep%pos_def
 
    ! Allocate space for subtrees
    allocate(fkeep%subtree(akeep%nparts), stat=inform%stat)
@@ -80,13 +78,13 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
    do i = 1, akeep%nparts
       if(allocated(fkeep%scaling)) then
          fkeep%subtree(i)%ptr => akeep%subtree(i)%ptr%factor( &
-            fposdef, val, &
+            fkeep%pos_def, val, &
             child_contrib(akeep%contrib_ptr(i):akeep%contrib_ptr(i+1)-1), &
             options, inform, scaling=fkeep%scaling &
             )
       else
          fkeep%subtree(i)%ptr => akeep%subtree(i)%ptr%factor( &
-            fposdef, val, &
+            fkeep%pos_def, val, &
             child_contrib(akeep%contrib_ptr(i):akeep%contrib_ptr(i+1)-1), &
             options, inform &
             )

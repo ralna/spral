@@ -8,4 +8,9 @@ module spral_ssids_type_select
    use spral_ssids_inform, only : &
       ssids_inform => ssids_inform_base
    implicit none
+contains
+   logical function detect_gpu()
+      ! Not compiled with GPU support
+      detect_gpu = .false.
+   end function detect_gpu
 end module spral_ssids_type_select

@@ -37,10 +37,10 @@ module spral_ssids_gpu_factor
 contains
 
 subroutine parfactor(pos_def, child_ptr, child_list, n, nptr, gpu_nlist,      &
-      ptr_val, nnodes, nodes, sptr, sparent, rptr, rlist, invp, rlist_direct, &
+      ptr_val, nnodes, nodes, sptr, sparent, rptr, rlist, rlist_direct,       &
       gpu_rlist, gpu_rlist_direct, gpu_contribs, stream_handle, stream_data,  &
-      top_data, gpu_rlist_with_delays, gpu_rlist_direct_with_delays,          &
-      gpu_clists, gpu_clists_direct, gpu_clen, alloc, options, stats, ptr_scale)
+      gpu_rlist_with_delays, gpu_rlist_direct_with_delays, gpu_clists,        &
+      gpu_clists_direct, gpu_clen, alloc, options, stats, ptr_scale)
    logical, intent(in) :: pos_def ! True if problem is supposedly pos-definite
    integer, dimension(*), intent(in) :: child_ptr
    integer, dimension(*), intent(in) :: child_list
@@ -55,14 +55,12 @@ subroutine parfactor(pos_def, child_ptr, child_list, n, nptr, gpu_nlist,      &
    integer, dimension(*), intent(in) :: sparent
    integer(long), dimension(*), intent(in) :: rptr
    integer, dimension(*), intent(in) :: rlist
-   integer, dimension(*), intent(in) :: invp
    integer, dimension(*), intent(in), target :: rlist_direct
    type(C_PTR), intent(in) :: gpu_rlist
    type(C_PTR), intent(in) :: gpu_rlist_direct
    type(C_PTR), dimension(*), intent(inout) :: gpu_contribs
-   type(C_PTR), dimension(*), intent(in) :: stream_handle
-   type(gpu_type), dimension(:), intent(out) :: stream_data
-   type(gpu_type), intent(out) :: top_data
+   type(C_PTR), intent(in) :: stream_handle
+   type(gpu_type), intent(out) :: stream_data
    type(C_PTR), intent(out) :: gpu_rlist_with_delays
    type(C_PTR), intent(out) :: gpu_rlist_direct_with_delays
    type(C_PTR), intent(out) :: gpu_clists
@@ -73,163 +71,68 @@ subroutine parfactor(pos_def, child_ptr, child_list, n, nptr, gpu_nlist,      &
       ! pointer to this.
    ! explicit size required on buf to avoid gfortran-4.3 bug
    type(ssids_options), intent(in) :: options
-   type(thread_stats), dimension(*), intent(inout) :: stats
+   type(thread_stats), intent(inout) :: stats
    type(C_PTR), optional, intent(in) :: ptr_scale
 
-   integer :: stream, root
-   integer, dimension(:), allocatable :: stptr, stlist
-   type(C_PTR), dimension(:), allocatable :: gpu_LDLT
-   type(C_PTR) :: gpu_LDLT_top
+   type(C_PTR) :: gpu_LDLT
    
    integer :: st
 
    type(cuda_settings_type) :: user_settings
-   integer :: this_thread
-   logical :: abort
 
    ! Set GPU device settings as we wish
-   call push_ssids_cuda_settings(user_settings, stats(1)%cuda_error)
-   if(stats(1)%cuda_error.ne.0) goto 200
+   call push_ssids_cuda_settings(user_settings, stats%cuda_error)
+   if(stats%cuda_error.ne.0) goto 200
 
-   ! Find subtrees to run on each stream
-   allocate(stptr(options%nstream+1), stlist(nnodes), stat=stats(1)%st)
-   if(stats(1)%st.ne.0) goto 100
-   call assign_subtrees(options%nstream, nnodes, child_ptr, child_list, &
-      sparent, sptr, rptr, stptr, stlist, options%min_loadbalance, stats(1)%st)
-   if(stats(1)%st.ne.0) goto 100
+   ! Determine level structure
+   allocate(stream_data%lvllist(nnodes), &
+      stream_data%lvlptr(nnodes + 1), stat=stats%st)
+   if(stats%st.ne.0) goto  100
+   call assign_nodes_to_levels(nnodes, sparent, gpu_contribs, &
+      stream_data%num_levels, stream_data%lvlptr, stream_data%lvllist, stats%st)
+   if(stats%st.ne.0) goto 100
 
-   ! Allocate memory
-   allocate(gpu_LDLT(options%nstream), stat=stats(1)%st)
-   if(stats(1)%st.ne.0) goto 100
-
-   ! Run subtrees
-   abort = .false.
-!$OMP PARALLEL DEFAULT(NONE)                                                  &
-!$OMP SHARED(abort, alloc, gpu_LDLT, gpu_nlist, gpu_rlist, gpu_rlist_direct,  &
-!$OMP    n, nnodes, nodes, options, pos_def, ptr_scale, ptr_val, stats, stptr,&
-!$OMP    stlist, stream_data)                                                 &
-!$OMP PRIVATE(stream, this_thread)
-   this_thread = 1
-!$ this_thread = omp_get_thread_num() + 1
-
-!$OMP DO
-   do stream = 1, options%nstream
-!$OMP FLUSH(abort)
-      if(abort) cycle
-      !print *, "Running stream ", stream, stptr(stream+1)-stptr(stream)
-      allocate(stream_data(stream)%lvllist(nnodes), &
-         stream_data(stream)%lvlptr(nnodes + 1), stat=stats(this_thread)%st)
-      if(stats(this_thread)%st.ne.0) then
-         abort=.true.
-!$OMP FLUSH(abort)
-         cycle
-      endif
-
-      ! FIXME: the below multi-GPU stuff should be made to work
-      ! (Maybe just needs sync or something?????)
-      !if(omp_get_thread_num() .eq. 0) then
-      !   cuda_error = cudaSetDevice(0)
-      !   cuda_error = cudaDeviceEnablePeerAccess(2, 0)
-      !else
-      !   cuda_error = cudaSetDevice(2)
-      !   cuda_error = cudaDeviceEnablePeerAccess(0, 0)
-      !endif
-
-      call assign_nodes_to_levels_bottom(stptr(stream+1)-stptr(stream), &
-         stlist(stptr(stream)), nnodes, child_ptr, child_list, &
-         sparent, gpu_contribs, stream_data(stream)%num_levels, &
-         stream_data(stream)%lvlptr, stream_data(stream)%lvllist, &
-         stats(this_thread)%st)
-      if(stats(this_thread)%st.ne.0) then
-         abort=.true.
-!$OMP FLUSH(abort)
-         cycle
-      endif
-      call subtree_factor_gpu(stream_handle(stream), pos_def, child_ptr, &
-         child_list, n, nptr, gpu_nlist, ptr_val, nnodes, nodes, sptr, &
-         sparent, rptr, rlist_direct, gpu_rlist, gpu_rlist_direct, &
-         gpu_contribs, gpu_LDLT(stream), stream_data(stream), alloc, options, &
-         stats(this_thread), ptr_scale)
-      if(stats(this_thread)%flag.lt.0) then
-         abort=.true.
-!$OMP FLUSH(abort)
-         cycle
-      endif
-      if(stats(this_thread)%cuda_error.ne.0) then
-         abort=.true.
-!$OMP FLUSH(abort)
-         cycle
-      endif
-
-   end do
-!$OMP END DO NOWAIT
-
-   if(stats(this_thread)%st.ne.0) &
-      stats(this_thread)%flag = SSIDS_ERROR_ALLOCATION
-   if(stats(this_thread)%cuda_error.ne.0) &
-      stats(this_thread)%flag = SSIDS_ERROR_CUDA_UNKNOWN
-   
-!$OMP END PARALLEL ! Implicit barrier
-   if(abort) then
-      call push_ssids_cuda_settings(user_settings, st)
-      return
-   endif
-
-   stats(1)%cuda_error = cudaDeviceSynchronize() ! Wait for streams to finish
-   if(stats(1)%cuda_error.ne.0) goto 200
-
-   !cuda_error = cudaSetDevice(0)
-
-   ! Run root node
-   root = nnodes + 1
-   allocate(top_data%lvllist(nnodes), top_data%lvlptr(nnodes + 1), &
-      stat=stats(1)%st)
-   if(stats(1)%st.ne.0) goto 100
-   call assign_nodes_to_levels_top(root, nnodes, child_ptr, child_list, &
-      sparent, stptr(options%nstream+1)-1, stlist, &
-      top_data%num_levels, top_data%lvlptr, top_data%lvllist, stats(1)%st)
-   if(stats(1)%st.ne.0) goto 100
-   call subtree_factor_gpu(stream_handle(1), pos_def, child_ptr, child_list, n,&
-      nptr, gpu_nlist, ptr_val, nnodes, nodes, sptr, sparent, rptr,            &
-      rlist_direct, gpu_rlist, gpu_rlist_direct, gpu_contribs, gpu_LDLT_top,   &
-      top_data, alloc, options, stats(1), ptr_scale)
-   if(stats(1)%cuda_error.ne.0) goto 200
+   ! Perform actual factorization
+   call subtree_factor_gpu(stream_handle, pos_def, child_ptr, child_list,  &
+      n, nptr, gpu_nlist, ptr_val, nnodes, nodes, sptr, sparent, rptr,     &
+      rlist_direct, gpu_rlist, gpu_rlist_direct, gpu_contribs, gpu_LDLT,   &
+      stream_data, alloc, options, stats, ptr_scale)
+   if(stats%flag.lt.0) return
+   if(stats%cuda_error.ne.0) goto 200
 
    ! Free gpu_LDLT as required
-   do stream = 1, options%nstream
-      if(C_ASSOCIATED(gpu_LDLT(stream))) then
-         stats(1)%cuda_error = cudaFree(gpu_LDLT(stream))
-         if(stats(1)%cuda_error.ne.0) goto 200
-      endif
-   end do
+   if(C_ASSOCIATED(gpu_LDLT)) then
+      stats%cuda_error = cudaFree(gpu_LDLT)
+      if(stats%cuda_error.ne.0) goto 200
+   endif
 
    ! Apply any presolve as required
    call perform_presolve(pos_def, child_ptr, child_list, n, nnodes, nodes,    &
-      sptr, sparent, rptr, rlist, invp, stream_handle, stream_data, top_data, &
+      sptr, sparent, rptr, rlist, stream_handle, stream_data,                 &
       gpu_rlist_with_delays, gpu_rlist_direct_with_delays, gpu_clists,        &
-      gpu_clists_direct, gpu_clen, options, stats(1)%st, stats(1)%cuda_error)
-   if(stats(1)%st.ne.0) goto 100
-   if(stats(1)%cuda_error.ne.0) goto 200
+      gpu_clists_direct, gpu_clen, options, stats%st, stats%cuda_error)
+   if(stats%st.ne.0) goto 100
+   if(stats%cuda_error.ne.0) goto 200
 
    ! Restore user GPU device settings
-   call push_ssids_cuda_settings(user_settings, stats(1)%cuda_error)
-   if(stats(1)%cuda_error.ne.0) goto 200
+   call push_ssids_cuda_settings(user_settings, stats%cuda_error)
+   if(stats%cuda_error.ne.0) goto 200
 
    return
 
    100 continue ! Fortran Memory allocation error
-   stats(1)%flag = SSIDS_ERROR_ALLOCATION
+   stats%flag = SSIDS_ERROR_ALLOCATION
    call push_ssids_cuda_settings(user_settings, st)
    return
 
    200 continue ! CUDA Error
-   stats(1)%flag = SSIDS_ERROR_CUDA_UNKNOWN
+   stats%flag = SSIDS_ERROR_CUDA_UNKNOWN
    call push_ssids_cuda_settings(user_settings, st)
    return
 end subroutine parfactor
 
 subroutine perform_presolve(pos_def, child_ptr, child_list, n, nnodes, nodes, &
-      sptr, sparent, rptr, rlist, invp, stream_handle, stream_data, top_data, &
+      sptr, sparent, rptr, rlist, stream_handle, stream_data,                 &
       gpu_rlist_with_delays, gpu_rlist_direct_with_delays, gpu_clists,        &
       gpu_clists_direct, gpu_clen, options, st, cuda_error)
    logical, intent(in) :: pos_def
@@ -242,10 +145,8 @@ subroutine perform_presolve(pos_def, child_ptr, child_list, n, nnodes, nodes, &
    type(node_type), dimension(nnodes), intent(inout) :: nodes
    integer(long), dimension(*), intent(in) :: rptr
    integer, dimension(*), intent(in) :: rlist
-   integer, dimension(*), intent(in) :: invp
-   type(C_PTR), dimension(*), intent(in) :: stream_handle
-   type(gpu_type), dimension(:), intent(inout) :: stream_data
-   type(gpu_type), intent(inout) :: top_data
+   type(C_PTR), intent(in) :: stream_handle
+   type(gpu_type), intent(inout) :: stream_data
    type(C_PTR), intent(out) :: gpu_rlist_with_delays
    type(C_PTR), intent(out) :: gpu_rlist_direct_with_delays
    type(C_PTR), intent(out) :: gpu_clists
@@ -255,7 +156,6 @@ subroutine perform_presolve(pos_def, child_ptr, child_list, n, nnodes, nodes, &
    integer, intent(out) :: st
    integer, intent(out) :: cuda_error
 
-   integer :: stream
    integer(long) :: nrd
    integer, dimension(:), allocatable :: rlist_direct_postfact
 
@@ -265,10 +165,10 @@ subroutine perform_presolve(pos_def, child_ptr, child_list, n, nnodes, nodes, &
    select case(options%presolve)
    case(0)
       ! Setup data-strctures for normal GPU solve
-      call setup_gpu_solve(n, child_ptr, child_list, nnodes, nodes, sparent,  &
-         sptr, rptr, rlist, options%nstream, stream_handle, stream_data,      &
-         top_data, gpu_rlist_with_delays, gpu_clists, gpu_clists_direct,      &
-         gpu_clen, st, cuda_error, gpu_rlist_direct_with_delays)
+      call setup_gpu_solve(n, child_ptr, child_list, nnodes, nodes, sparent,   &
+         sptr, rptr, rlist, stream_handle, stream_data, gpu_rlist_with_delays, &
+         gpu_clists, gpu_clists_direct, gpu_clen, st, cuda_error,              &
+         gpu_rlist_direct_with_delays)
       if(st.ne.0) return
       if(cuda_error.ne.0) return
    case(1:)
@@ -280,22 +180,10 @@ subroutine perform_presolve(pos_def, child_ptr, child_list, n, nnodes, nodes, &
          child_list, nrd, rlist_direct_postfact, st)
       if(st.ne.0) return
 
-      ! Setup solves on stream subtrees
-      do stream = 1, options%nstream
-         call solve_setup(stream_handle(stream), pos_def, sparent, child_ptr, &
-            child_list, n, invp, nnodes, nodes, sptr, rptr, rlist,            &
-            rlist_direct_postfact, stream_data(stream), st, cuda_error)
-         if(st.ne.0) return
-         if(cuda_error.ne.0) return
-      end do
-
-      ! Wait for streams to finish
-      cuda_error = cudaDeviceSynchronize()
-      if(cuda_error.ne.0) return
-
-      call solve_setup(stream_handle(1), pos_def, sparent, child_ptr,   &
-         child_list, n, invp, nnodes, nodes, sptr, rptr, rlist,         &
-         rlist_direct_postfact, top_data, st, cuda_error)
+      ! Setup solves
+      call solve_setup(stream_handle, pos_def, sparent, child_ptr,         &
+         child_list, n, nnodes, nodes, sptr, rptr, rlist,                  &
+         rlist_direct_postfact, stream_data, st, cuda_error)
       if(st.ne.0) return
       if(cuda_error.ne.0) return
    end select
@@ -932,96 +820,9 @@ integer(C_SIZE_T) function level_gpu_work_size(lev, lvlptr, lvllist, &
 end function level_gpu_work_size
 
 ! Assigns nodes to level lists, with level 1 being the closest to the leaves
-! This version handles the top of the tree, stopping at the level set L_th
-! and not proceeding below it.
-subroutine assign_nodes_to_levels_top(root, nnodes, child_ptr, child_list, &
-      sparent, nL_th, L_th, num_levels, lvlptr, lvllist, st)
-   integer, intent(in) :: root
+subroutine assign_nodes_to_levels(nnodes, sparent, gpu_contribs, num_levels, &
+      lvlptr, lvllist, st)
    integer, intent(in) :: nnodes
-   integer, dimension(*), intent(in) :: child_ptr
-   integer, dimension(*), intent(in) :: child_list
-   integer, dimension(*), intent(in) :: sparent
-   integer, intent(in) :: nL_th
-   integer, dimension(*), intent(in) :: L_th
-   integer, intent(out) :: num_levels
-   integer, dimension(*), intent(out) :: lvlptr
-   integer, dimension(*), intent(out) :: lvllist
-   integer, intent(out) :: st
-
-   integer :: sa
-   integer :: node, lvl, ri
-   integer, dimension(:), allocatable :: level ! level of node
-   integer, dimension(:), allocatable :: lvlcount
-
-   logical, dimension(:), allocatable :: dead
-
-   ! Find first child of subtree
-   sa = root
-   do while(child_ptr(sa+1)-child_ptr(sa).gt.0)
-      sa = child_list(child_ptr(sa))
-   end do
-
-   allocate(level(sa:root), lvlcount(root-sa+1), dead(sa:root), stat=st)
-   if(st.ne.0) return
-   dead(:) = .false.
-
-   ! Find level of each node, with level 1 being a root
-   lvlcount(:) = 0
-   if(root.le.nnodes) then
-      ! Count root
-      level(root) = 1
-      lvlcount(1) = 1
-      num_levels = 1
-   else
-      ! Don't count root
-      level(root) = 0
-      num_levels = 0
-   endif
-   ! Mark as dead all nodes in L_th
-   do ri = 1, nL_th
-      node = L_th(ri)
-      dead(node) = .true.
-   end do
-   do node = root-1, sa, -1
-      ! Mark as dead any nodes in subtrees below L_th
-      if(dead(sparent(node))) dead(node) = .true.
-      if(dead(node)) cycle
-      ! Record non-dead nodes
-      lvl = level(sparent(node)) + 1
-      level(node) = lvl
-      lvlcount(lvl) = lvlcount(lvl) + 1
-      num_levels = max(num_levels, lvl)
-   end do
-
-   ! Carefully remove any virtual root we have
-   dead(nnodes+1:root) = .true.
-
-   ! Setup pointers, note that the final level we want for each node is
-   ! num_levels-level(node)+1 as we number from the bottom, not the top!
-   ! We use lvlptr(i+1) as the insert position for level i
-   lvlptr(1:2) = 1
-   do lvl = 2, num_levels
-      lvlptr(lvl+1) = lvlptr(lvl) + lvlcount(num_levels-(lvl-1)+1)
-   end do
-
-   ! Finally assign nodes to levels
-   do node = sa, root
-      if(dead(node)) cycle
-      lvl = num_levels - level(node) + 1
-      lvllist(lvlptr(lvl+1)) = node
-      lvlptr(lvl+1) = lvlptr(lvl+1) + 1
-   end do
-end subroutine assign_nodes_to_levels_top
-
-! Assigns nodes to level lists, with level 1 being the closest to the leaves
-! This version handles multiple roots below the level set L_th.
-subroutine assign_nodes_to_levels_bottom(nroot, roots, nnodes, child_ptr, &
-      child_list, sparent, gpu_contribs, num_levels, lvlptr, lvllist, st)
-   integer, intent(in) :: nroot
-   integer, dimension(nroot), intent(in) :: roots
-   integer, intent(in) :: nnodes
-   integer, dimension(*), intent(in) :: child_ptr
-   integer, dimension(*), intent(in) :: child_list
    integer, dimension(*), intent(in) :: sparent
    type(C_PTR), dimension(*), intent(in) :: gpu_contribs
    integer, intent(out) :: num_levels
@@ -1029,57 +830,31 @@ subroutine assign_nodes_to_levels_bottom(nroot, roots, nnodes, child_ptr, &
    integer, dimension(*), intent(out) :: lvllist
    integer, intent(out) :: st
 
-   integer, dimension(:), allocatable :: sa
-   integer :: node, lvl, ri, root
+   integer :: node, lvl, j
    integer, dimension(:), allocatable :: level ! level of node
    integer, dimension(:), allocatable :: lvlcount
 
    logical, dimension(:), allocatable :: dead
 
-   if(nroot.eq.0) then
-      num_levels = 0
-      return
-   endif
-
    allocate(level(nnodes+1), lvlcount(nnodes+1), dead(nnodes+1), stat=st)
    if(st.ne.0) return
 
-   ! Find first children of subtrees
-   allocate(sa(nroot), stat=st)
-   if(st.ne.0) return
-   do ri = 1, nroot
-      sa(ri) = roots(ri)
-      do while(child_ptr(sa(ri)+1)-child_ptr(sa(ri)).gt.0)
-         sa(ri) = child_list(child_ptr(sa(ri)))
-      end do
-   end do
-
    ! Find level of each node, with level 1 being a root
-   num_levels = 0
+   num_levels = 1
    dead(:) = .false.
    lvlcount(:) = 0
-   do ri = 1, nroot
-      root = roots(ri)
-      if(root.le.nnodes) then
-         ! Count root
-         level(root) = 1
-         lvlcount(1) = lvlcount(1) + 1
-         num_levels = max(num_levels, 1)
-      else
-         ! Don't count root
-         level(root) = 0
-      endif
-      do node = root-1, sa(ri), -1
-         ! Mark as dead nodes in subtrees rooted at nodes with defined contrib
-         if(C_ASSOCIATED(gpu_contribs(node))) dead(node) = .true.
-         if(dead(sparent(node))) dead(node) = .true.
-         if(dead(node)) cycle
-         ! Record non-dead nodes
-         lvl = level(sparent(node)) + 1
-         level(node) = lvl
-         lvlcount(lvl) = lvlcount(lvl) + 1
-         num_levels = max(num_levels, lvl)
-      end do
+   level(nnodes+1) = 0
+   do node = nnodes, 1, -1
+      j = min(sparent(node), nnodes+1) ! handle parents outwith subtree
+      ! Mark as dead nodes in subtrees rooted at nodes with defined contrib
+      if(C_ASSOCIATED(gpu_contribs(node))) dead(node) = .true.
+      if(dead(j)) dead(node) = .true.
+      if(dead(node)) cycle
+      ! Record non-dead nodes
+      lvl = level(j) + 1
+      level(node) = lvl
+      lvlcount(lvl) = lvlcount(lvl) + 1
+      num_levels = max(num_levels, lvl)
    end do
 
    ! Remove any virtual root we have
@@ -1094,144 +869,13 @@ subroutine assign_nodes_to_levels_bottom(nroot, roots, nnodes, child_ptr, &
    end do
 
    ! Finally assign nodes to levels
-   do ri = 1, nroot
-      root = roots(ri)
-      do node = sa(ri), root
-         if(dead(node)) cycle
-         lvl = num_levels - level(node) + 1
-         lvllist(lvlptr(lvl+1)) = node
-         lvlptr(lvl+1) = lvlptr(lvl+1) + 1
-      end do
-   end do
-end subroutine assign_nodes_to_levels_bottom
-
-subroutine assign_subtrees(nstream, nnodes, child_ptr, child_list, sparent, &
-      sptr, rptr, stptr, stlist, min_loadbalance, st)
-   integer, intent(in) :: nstream
-   integer, intent(in) :: nnodes
-   integer, intent(in) :: child_ptr(*) ! Pointers into child_list for node
-   integer, intent(in) :: child_list(*) ! Children of node node are given by:
-      ! child_list(child_ptr(node):child_ptr(node+1)-1)
-   integer, dimension(*), intent(in) :: sparent
-   integer, dimension(*), intent(in) :: sptr
-   integer(long), dimension(*), intent(in) :: rptr
-   integer, dimension(*), intent(out) :: stptr
-   integer, dimension(*), intent(out) :: stlist
-   real :: min_loadbalance
-   integer, intent(out) :: st
-
-   integer :: node
-   integer, dimension(:), allocatable :: level ! level of node
-   integer, dimension(:), allocatable :: lvlcount
-
-   type(ntype), dimension(:), allocatable :: nwork
-   integer, dimension(:), allocatable :: sthead, stnext
-   integer(long), dimension(:), allocatable :: stwork
-   integer :: n_lth, nbelow, nchild, stream
-   integer, dimension(:), allocatable :: L_th
-   real :: loadbalance
-
-   integer :: i, j
-   integer(long) :: jj, blkm, blkn, w
-
-   allocate(level(nnodes+1), lvlcount(nnodes), nwork(nnodes+1), stat=st)
-   if(st.ne.0) return
-
-   ! Calculate work at and below each node, exploiting postorder
    do node = 1, nnodes
-      blkm = rptr(node+1) - rptr(node)
-      blkn = sptr(node+1) - sptr(node)
-      w = 0
-      do jj = blkm, blkm-blkn+1, -1
-         w = w + jj**2
-      end do
-      nwork(node)%work_here = w
-      nwork(node)%work_below = nwork(node)%work_below + w
-      j = sparent(node)
-      nwork(j)%work_below = nwork(j)%work_below + nwork(node)%work_below
-      nwork(j)%level = max(nwork(j)%level, nwork(node)%level + 1)
+      if(dead(node)) cycle
+      lvl = num_levels - level(node) + 1
+      lvllist(lvlptr(lvl+1)) = node
+      lvlptr(lvl+1) = lvlptr(lvl+1) + 1
    end do
-
-   ! Find L_th
-   allocate(L_th(nnodes), sthead(nstream), stnext(nnodes), stwork(nstream), &
-      stat=st)
-   if(st.ne.0) return
-   n_lth = 1
-   nbelow = nnodes+1
-   L_th(1) = nnodes+1
-   loadbalance = 0.0
-   do while(loadbalance < min_loadbalance .and. nbelow>0)
-      ! Split largest node into its children
-      nbelow = nbelow - 1
-      node = L_th(1)
-      nchild = child_ptr(node+1)-child_ptr(node)
-      if(nchild.eq.0) then
-         do i = 2, n_lth
-            L_th(i-1) = L_th(i)
-         end do
-         n_lth = n_lth - 1
-      else
-         L_th(1) = child_list(child_ptr(node))
-         do i = child_ptr(node)+1, child_ptr(node+1)-1
-            n_lth = n_lth + 1
-            L_th(n_lth) = child_list(i)
-         end do
-      endif
-      ! Sort nodes by work
-      call sort_nodes(n_lth, L_th, nwork)
-      ! Allocate nodes to streams
-      stwork(:) = 0
-      sthead(:) = -1
-      do i = 1, n_lth
-         node = L_th(i)
-         ! Find stream with least work
-         stream = 1
-         do j = 2, nstream
-            if(stwork(j) < stwork(stream)) stream = j
-         end do
-         stnext(node) = sthead(stream)
-         sthead(stream) = node
-         stwork(stream) = stwork(stream) + nwork(node)%work_below
-      end do
-      loadbalance = real(minval(stwork(:))) / real(maxval(stwork(:)))
-   end do
-
-   ! Store stream's work
-   stptr(1) = 1
-   do stream = 1, nstream
-      stptr(stream+1) = stptr(stream)
-      node = sthead(stream)
-      do while(node.ne.-1)
-         stlist(stptr(stream+1)) = node
-         stptr(stream+1) = stptr(stream+1) + 1
-         node = stnext(node)
-      end do
-   end do
-
-end subroutine assign_subtrees
-
-subroutine sort_nodes(n_lth, L_th, nwork)
-   integer, intent(in) :: n_lth
-   integer, dimension(*), intent(inout) :: L_th
-   type(ntype), dimension(*), intent(in) :: nwork
-
-   integer :: i, nxchg, n1, n2
-
-   nxchg = 1 ! Force a first pass
-   do while(nxchg > 0)
-      nxchg = 0
-      do i = 1, n_lth-1
-         n1 = L_th(i)
-         n2 = L_th(i+1)
-         if(nwork(n1)%work_below < nwork(n2)%work_below) then
-            ! swap n1 and n2
-            L_th(i+1) = n1
-            L_th(i) = n2
-            nxchg = nxchg + 1
-         endif
-      end do
-   end do
-end subroutine sort_nodes
+end subroutine assign_nodes_to_levels
 
 subroutine init_L_with_A(stream, lev, lvlptr, lvllist, nodes, ncb, level_size, &
       nptr, rptr, gpu_nlist, gpu_rlist, ptr_val, ptr_levL, &
@@ -2950,7 +2594,7 @@ end subroutine rebuild_rlist_direct
 ! This subroutine sets up the data for the solve phase
 !
 subroutine solve_setup(stream, pos_def, sparent, child_ptr, child_list, n, &
-      invp, nnodes, nodes, sptr, rptr, rlist, rlist_direct, fact_data, st, &
+      nnodes, nodes, sptr, rptr, rlist, rlist_direct, fact_data, st, &
       cuda_error)
    type(C_PTR), intent(in) :: stream
    logical, intent(in) :: pos_def
@@ -2958,7 +2602,6 @@ subroutine solve_setup(stream, pos_def, sparent, child_ptr, child_list, n, &
    integer, dimension(*), intent(in) :: child_ptr
    integer, dimension(*), intent(in) :: child_list
    integer, intent(in) :: n
-   integer, dimension(*), intent(in) :: invp
    ! Note: gfortran-4.3 bug requires explicit size of nodes array
    integer, intent(in) :: nnodes
    type(node_type), dimension(nnodes), intent(in) :: nodes
@@ -3130,7 +2773,7 @@ subroutine solve_setup(stream, pos_def, sparent, child_ptr, child_list, n, &
          fact_data%off_ln(node) = nr - fact_data%values_L(lev)%off_row_ind
          do i = 1, nelim
             nc = nc + 1
-            j = invp(lperm(i))
+            j = lperm(i)
             col_ind(nc) = j
             nr = nr + 1
             row_ind(nr,1) = j ! source index for cuda_gather_dx
@@ -3138,12 +2781,12 @@ subroutine solve_setup(stream, pos_def, sparent, child_ptr, child_list, n, &
          end do
          do i = nelim + 1, blkn + ndelay
             nr = nr + 1
-            row_ind(nr,1) = invp(lperm(i))
+            row_ind(nr,1) = lperm(i)
             row_ind(nr,2) = 0 ! multiplication by D flag is off
          end do
          do ii = rptr(node) + blkn, rptr(node + 1) - 1
             nr = nr + 1
-            row_ind(nr,1) = invp(rlist(ii))
+            row_ind(nr,1) = rlist(ii)
             row_ind(nr,2) = 0
          end do
          nch = child_ptr(node + 1) - child_ptr(node)

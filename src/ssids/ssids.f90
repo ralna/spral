@@ -661,7 +661,6 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
    ! Solve parameters. Tree is broken up into multiple chunks. Parent-child
    ! relations between chunks are stored in fwd_ptr and fwd (see solve routine
    ! comments)
-   type(smalloc_type), pointer :: next_alloc
    integer :: matrix_type
    real(wp), dimension(:), allocatable :: scaling
 
