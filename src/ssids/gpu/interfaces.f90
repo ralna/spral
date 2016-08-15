@@ -383,7 +383,8 @@ module spral_ssids_gpu_interfaces
    !
    public :: run_bwd_solve_kernels,    & ! execute prepared bwd solve
              run_d_solve_kernel,       & ! execute prepared d solve
-             run_fwd_solve_kernels       ! execute prepared fwd solve
+             run_fwd_solve_kernels,    & ! execute prepared fwd solve
+             run_slv_contrib_fwd         ! execute prepared scatter of contrib
    interface ! solve_kernels.cu
       subroutine run_bwd_solve_kernels(dsolve, unit_diagonal, x_gpu, work_gpu, &
             nsync, sync_gpu, gpu, stream) &
@@ -427,6 +428,15 @@ module spral_ssids_gpu_interfaces
          type(C_PTR), value :: asm_sync_gpu
          type(C_PTR), value :: stream
       end subroutine run_fwd_solve_kernels
+      subroutine run_slv_contrib_fwd(gpu, x_gpu, xstack_gpu, stream) &
+            bind(C, name="spral_ssids_run_slv_contrib_fwd")
+         use, intrinsic :: iso_c_binding
+         use spral_ssids_gpu_datatypes
+         type(lookup_contrib_fwd), intent(in) :: gpu
+         type(C_PTR), value :: x_gpu
+         type(C_PTR), value :: xstack_gpu
+         type(C_PTR), value :: stream
+      end subroutine run_slv_contrib_fwd
    end interface ! solve_kernels.cu
 
    !

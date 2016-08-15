@@ -7,11 +7,12 @@ module spral_ssids_gpu_factor
    use, intrinsic :: iso_c_binding
    use spral_cuda
    use spral_ssids_alloc, only : smalloc
+   use spral_ssids_contrib, only : contrib_type
+   use spral_ssids_datatypes
    use spral_ssids_gpu_alloc, only : cuda_stack_alloc_type, custack_alloc, &
       custack_init, custack_finalize, custack_free
    use spral_ssids_gpu_datatypes
    use spral_ssids_gpu_interfaces
-   use spral_ssids_datatypes
    use spral_ssids_gpu_dense_factor, only : &
       node_ldlt, node_llt, multinode_llt, multinode_ldlt
    use spral_ssids_gpu_solve, only : setup_gpu_solve
@@ -40,7 +41,8 @@ subroutine parfactor(pos_def, child_ptr, child_list, n, nptr, gpu_nlist,      &
       ptr_val, nnodes, nodes, sptr, sparent, rptr, rlist, rlist_direct,       &
       gpu_rlist, gpu_rlist_direct, gpu_contribs, stream_handle, stream_data,  &
       gpu_rlist_with_delays, gpu_rlist_direct_with_delays, gpu_clists,        &
-      gpu_clists_direct, gpu_clen, alloc, options, stats, ptr_scale)
+      gpu_clists_direct, gpu_clen, contrib, contrib_wait, alloc, options,     &
+      stats, ptr_scale)
    logical, intent(in) :: pos_def ! True if problem is supposedly pos-definite
    integer, dimension(*), intent(in) :: child_ptr
    integer, dimension(*), intent(in) :: child_list
@@ -66,6 +68,8 @@ subroutine parfactor(pos_def, child_ptr, child_list, n, nptr, gpu_nlist,      &
    type(C_PTR), intent(out) :: gpu_clists
    type(C_PTR), intent(out) :: gpu_clists_direct
    type(C_PTR), intent(out) :: gpu_clen
+   type(contrib_type), intent(out) :: contrib
+   type(C_PTR), intent(inout) :: contrib_wait
    type(smalloc_type), target, intent(inout) :: alloc ! Contains actual memory
       ! allocations for L. Everything else (within the subtree) is just a
       ! pointer to this.
@@ -100,6 +104,14 @@ subroutine parfactor(pos_def, child_ptr, child_list, n, nptr, gpu_nlist,      &
    if(stats%flag.lt.0) return
    if(stats%cuda_error.ne.0) goto 200
 
+   ! Extract contribution to parent of subtree (if any)
+   if(C_ASSOCIATED(gpu_LDLT)) then
+      call transfer_contrib(nnodes, sptr, rptr, rlist, nodes, gpu_contribs, &
+         contrib, contrib_wait, stream_handle, stats%st, stats%cuda_error)
+      if(stats%st.ne.0) goto 100
+      if(stats%cuda_error.ne.0) goto 200
+   endif
+
    ! Free gpu_LDLT as required
    if(C_ASSOCIATED(gpu_LDLT)) then
       stats%cuda_error = cudaFree(gpu_LDLT)
@@ -130,6 +142,73 @@ subroutine parfactor(pos_def, child_ptr, child_list, n, nptr, gpu_nlist,      &
    call push_ssids_cuda_settings(user_settings, st)
    return
 end subroutine parfactor
+
+subroutine transfer_contrib(node, sptr, rptr, rlist, nodes, gpu_contribs, &
+      contrib, contrib_wait, stream, st, cuda_error)
+   integer, intent(in) :: node
+   integer, dimension(*), intent(in) :: sptr
+   integer(long), dimension(*), intent(in) :: rptr
+   integer, dimension(*), target, intent(in) :: rlist
+   type(node_type), dimension(*), intent(in) :: nodes
+   type(C_PTR), dimension(*), intent(in) :: gpu_contribs
+   type(contrib_type), intent(out) :: contrib
+   type(C_PTR), intent(inout) :: contrib_wait ! event pointer
+   type(C_PTR), intent(in) :: stream
+   integer, intent(out) :: st
+   integer, intent(out) :: cuda_error
+
+   integer :: blkn, blkm, ndelay_in, nelim
+   integer(C_SIZE_T) :: sz
+   type(C_PTR) :: gpu_delay_ptr
+
+   cuda_error = 0
+   st = 0
+
+   ! Initialise block statistics
+   blkn = sptr(node+1) - sptr(node)
+   blkm = int( rptr(node+1) - rptr(node) )
+   ndelay_in = nodes(node)%ndelay
+   nelim = nodes(node)%nelim
+
+   ! Handle expected contribution block
+   contrib%n = blkm - blkn
+   sz = int(contrib%n,c_size_t)*contrib%n
+   allocate(contrib%val(sz), stat=st)
+   if(st.ne.0) return
+   contrib%ldval = contrib%n
+   cuda_error = cudaMemcpyAsync_d2h(C_LOC(contrib%val), gpu_contribs(node), &
+      sz*C_SIZEOF(contrib%val(1)), stream)
+   if(cuda_error.ne.0) return
+   contrib%rlist => rlist(rptr(node)+blkn:rptr(node)+blkm)
+
+   ! Handle any delays
+   contrib%ndelay = blkn+ndelay_in - nelim
+   if(contrib%ndelay > 0) then
+      ! There are some delays
+      contrib%delay_perm => nodes(node)%perm(nelim+1:blkn+ndelay_in)
+      contrib%lddelay = blkm-blkn + contrib%ndelay
+      allocate(contrib%delay_val(contrib%lddelay*int(contrib%ndelay,long)), &
+         stat=st)
+      if(st.ne.0) return
+      gpu_delay_ptr = c_ptr_plus( nodes(node)%gpu_lcol, &
+         nelim*(blkm+ndelay_in+1_C_SIZE_T)*C_SIZEOF(contrib%delay_val(1)) )
+      cuda_error = cudaMemcpy2DAsync(C_LOC(contrib%delay_val), &
+         contrib%lddelay*C_SIZEOF(contrib%delay_val(1)), gpu_delay_ptr, &
+         (blkm+ndelay_in)*C_SIZEOF(contrib%delay_val(1)), &
+         contrib%lddelay*C_SIZEOF(contrib%delay_val(1)), &
+         int(contrib%ndelay, C_SIZE_T), cudaMemcpyDeviceToHost, stream)
+      if(cuda_error.ne.0) return
+   else
+      ! No delays
+      nullify(contrib%delay_perm)
+      nullify(contrib%delay_val)
+      contrib%lddelay = 0
+   endif
+
+   ! Record event when we're finished
+   cuda_error = cudaEventRecord(contrib_wait, stream)
+   if(cuda_error.ne.0) return
+end subroutine transfer_contrib
 
 subroutine perform_presolve(pos_def, child_ptr, child_list, n, nnodes, nodes, &
       sptr, sparent, rptr, rlist, stream_handle, stream_data,                 &
@@ -522,7 +601,7 @@ subroutine subtree_factor_gpu(stream, pos_def, child_ptr, child_list, n,   &
          call factor_posdef(stream, lev, gpu%lvlptr, nodes, gpu%lvllist, &
             sptr, rptr, ptr_levL, cublas_handle, stats, gwork)
       else
-         call factor_indef(stream, lev, gpu%lvlptr, nodes, gpu%lvllist, &
+         call factor_indef(stream, lev, gpu%lvlptr, nnodes, nodes, gpu%lvllist,&
             sparent, sptr, rptr, level_height, level_width, delta, eps, &
             gpu_ldcol, gwork, cublas_handle, options, stats, gpu_custats)
       endif
@@ -622,7 +701,9 @@ subroutine subtree_factor_gpu(stream, pos_def, child_ptr, child_list, n,   &
    free_contrib = .true.
    do llist = gpu%lvlptr(gpu%num_levels), gpu%lvlptr(gpu%num_levels+1)-1
       node = gpu%lvllist(llist)
-      if(sparent(node) .le. nnodes) then
+      blkm = int(rptr(node+1) - rptr(node))
+      blkn = sptr(node+1) - sptr(node)
+      if(blkm.gt.blkn) then
          gpu_contribs(node) = &
             c_ptr_plus(ptr_ccval, off_LDLT(node)*C_SIZEOF(dummy_real))
          free_contrib = .false.
@@ -1194,12 +1275,13 @@ subroutine collect_stats_indef(stream, lev, lvlptr, lvllist, nodes, &
 end subroutine collect_stats_indef
 
 ! Factorize a nodal matrix (not contrib block)
-subroutine factor_indef( stream, lev, lvlptr, nodes, lvllist, sparent, sptr, &
-      rptr, level_height, level_width, delta, eps, gpu_ldcol, gwork, &
+subroutine factor_indef( stream, lev, lvlptr, nnodes, nodes, lvllist, sparent, &
+      sptr, rptr, level_height, level_width, delta, eps, gpu_ldcol, gwork, &
       cublas_handle, options, stats, gpu_custats )
    type(C_PTR), intent(in) :: stream
    integer, intent(in) :: lev
    integer, dimension(*), intent(in) :: lvlptr
+   integer, intent(in) :: nnodes
    type(node_type), dimension(*), intent(inout) :: nodes
    integer, dimension(*), intent(in) :: lvllist
    integer, dimension(*), intent(in) :: sparent
@@ -1360,7 +1442,7 @@ subroutine factor_indef( stream, lev, lvlptr, nodes, lvllist, sparent, sptr, &
          ndelay = nodes(node)%ndelay
          blkn = sptr(node + 1) - sptr(node) + ndelay
          blkm = int(rptr(node + 1) - rptr(node)) + ndelay
-         parent = sparent(node)
+         parent = min(sparent(node), nnodes+1)
          lperm => nodes(node)%perm
          if(blkn.lt.blkm) then
             ncb = ncb + 1
@@ -1399,7 +1481,7 @@ subroutine factor_indef( stream, lev, lvlptr, nodes, lvllist, sparent, sptr, &
       ndelay = nodes(node)%ndelay
       blkn = sptr(node + 1) - sptr(node) + ndelay
       blkm = int(rptr(node + 1) - rptr(node)) + ndelay
-      parent = sparent(node)
+      parent = min(sparent(node), nnodes+1)
       lperm => nodes(node)%perm
    
       ptr_D = c_ptr_plus( ptr_L, blkm*blkn*C_SIZEOF(dummy_real) )

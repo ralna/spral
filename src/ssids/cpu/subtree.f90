@@ -149,7 +149,7 @@ module spral_ssids_cpu_subtree
          real(C_DOUBLE), dimension(*), intent(in) :: d
       end subroutine c_subtree_alter
 
-      subroutine c_get_contrib(posdef, subtree, n, val, rlist, ndelay, &
+      subroutine c_get_contrib(posdef, subtree, n, val, ldval, rlist, ndelay, &
             delay_perm, delay_val, lddelay) &
             bind(C, name="spral_ssids_cpu_subtree_get_contrib_dbl")
          use, intrinsic :: iso_c_binding
@@ -158,6 +158,7 @@ module spral_ssids_cpu_subtree
          type(C_PTR), value :: subtree
          integer(C_INT) :: n
          type(C_PTR) :: val
+         integer(C_INT) :: ldval
          type(C_PTR) :: rlist
          integer(C_INT) :: ndelay
          type(C_PTR) :: delay_perm
@@ -293,8 +294,9 @@ function get_contrib(this)
 
    type(C_PTR) :: cval, crlist, delay_perm, delay_val
 
-   call c_get_contrib(this%posdef, this%csubtree, get_contrib%n, cval, crlist, &
-      get_contrib%ndelay, delay_perm, delay_val, get_contrib%lddelay)
+   call c_get_contrib(this%posdef, this%csubtree, get_contrib%n, cval, &
+      get_contrib%ldval, crlist, get_contrib%ndelay, delay_perm, delay_val, &
+      get_contrib%lddelay)
    call c_f_pointer(cval, get_contrib%val, shape = (/ get_contrib%n**2 /))
    call c_f_pointer(crlist, get_contrib%rlist, shape = (/ get_contrib%n /))
    if(c_associated(delay_val)) then

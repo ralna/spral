@@ -213,6 +213,7 @@ void spral_ssids_cpu_subtree_get_contrib_dbl(
       void* subtree_ptr,// pointer to relevant type of NumericSubtree
       int* n,           // returned dimension of contribution block
       double const** val,     // returned pointer to contribution block
+      int* ldval,       // leading dimension of val
       int const** rlist,      // returned pointer to row list
       int* ndelay,      // returned number of delays
       int const** delay_perm,  // returned pointer to delay values
@@ -224,13 +225,13 @@ void spral_ssids_cpu_subtree_get_contrib_dbl(
       auto &subtree =
          *static_cast<NumericSubtreePosdef*>(subtree_ptr);
       subtree.get_contrib(
-            *n, *val, *rlist, *ndelay, *delay_perm, *delay_val, *lddelay
+            *n, *val, *ldval, *rlist, *ndelay, *delay_perm, *delay_val, *lddelay
             );
    } else {
       auto &subtree =
          *static_cast<NumericSubtreeIndef*>(subtree_ptr);
       subtree.get_contrib(
-            *n, *val, *rlist, *ndelay, *delay_perm, *delay_val, *lddelay
+            *n, *val, *ldval, *rlist, *ndelay, *delay_perm, *delay_val, *lddelay
             );
    }
 }

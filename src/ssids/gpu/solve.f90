@@ -19,19 +19,18 @@ module spral_ssids_gpu_solve
 
 contains
 
-subroutine bwd_solve_gpu(job, posdef, nnodes, sptr, stream_handle, stream_data,&
-      x, st, cuda_error)
+subroutine bwd_solve_gpu(job, posdef, n, stream_handle, stream_data, x, &
+      st, cuda_error)
    integer, intent(in) :: job
    logical, intent(in) :: posdef
-   integer, intent(in) :: nnodes
-   integer, dimension(nnodes+1), intent(in) :: sptr
+   integer, intent(in) :: n
    type(C_PTR), intent(in) :: stream_handle
    type(gpu_type), intent(in) :: stream_data
    real(wp), dimension(*), target, intent(inout) :: x
    integer, intent(out) :: cuda_error
    integer, intent(out) :: st  ! stat parameter
 
-   integer :: i, n
+   integer :: i
 
    type(C_PTR) :: gpu_x
 
@@ -39,7 +38,6 @@ subroutine bwd_solve_gpu(job, posdef, nnodes, sptr, stream_handle, stream_data,&
    cuda_error = 0
 
    ! Push x on to GPU
-   n = sptr(nnodes+1)-1
    cuda_error = cudaMalloc(gpu_x, n*C_SIZEOF(x(1)))
    if(cuda_error.ne.0) return
    cuda_error = cudaMemcpy_h2d(gpu_x, C_LOC(x), n*C_SIZEOF(x(1)))
@@ -194,7 +192,7 @@ subroutine fwd_solve_gpu(posdef, child_ptr, child_list, n, nnodes, nodes, &
    type(C_PTR) :: gpu_x
 
    integer, dimension(:), allocatable :: cvmap
-   type(C_PTR) :: gpu_cvalues
+   type(C_PTR) :: gpu_cvalues, gpu_contrib
 
    integer :: blkm
    integer :: cn
@@ -224,6 +222,7 @@ subroutine fwd_solve_gpu(posdef, child_ptr, child_list, n, nnodes, nodes, &
    ! Build map from nodes to position in child lists
    allocate(cvmap(nnodes), stat=st)
    if(st.ne.0) return
+   cvmap(:) = child_ptr(nnodes+1)-1 ! default for no parent
    do node = 1, nnodes
       do cn = child_ptr(node), child_ptr(node+1)-1
          cnode = child_list(cn)
@@ -260,8 +259,6 @@ subroutine fwd_solve_gpu(posdef, child_ptr, child_list, n, nnodes, nodes, &
    cuda_error = cudaMemcpy_h2d(gpu_cvalues, C_LOC(cvalues), &
       nnodes*C_SIZEOF(cvalues(1)))
    if(cuda_error.ne.0) return
-   deallocate(cvalues, stat=st)
-   if(st.ne.0) return
 
    ! Forwards solve
    call subtree_fwd_solve_gpu_lvl(posdef, stream_data%num_levels, gpu_x,   &
@@ -269,6 +266,12 @@ subroutine fwd_solve_gpu(posdef, child_ptr, child_list, n, nnodes, nodes, &
       stream_data%fwd_slv_nlocal, stream_data%fwd_slv_nsync,               &
       stream_data%fwd_slv_nasync, gpu_cvalues, cuda_error, stream_handle)
    if(cuda_error.ne.0) return
+
+   ! Apply any contribution above subtree to x directly
+   if(stream_data%fwd_slv_contrib_lookup%nscatter > 0) then
+      call run_slv_contrib_fwd(stream_data%fwd_slv_contrib_lookup, gpu_x, &
+         cvalues(nnodes), stream_handle)
+   endif
 
    ! Free memory
    cuda_error = cudaFree(gpu_cvalues)
@@ -948,6 +951,7 @@ subroutine setup_gpu_solve(n, child_ptr, child_list, nnodes, nodes, sparent,  &
    if(cuda_error.ne.0) return
    cuda_error = cudaMalloc(gpu_clen, nnodes*C_SIZEOF(dummy_int))
    if(cuda_error.ne.0) return
+   cvmap(:) = child_ptr(nnodes+1)-1 ! default for no parent
    do node = 1, nnodes
       do cn = child_ptr(node), child_ptr(node+1)-1
          cnode = child_list(cn)
@@ -981,23 +985,25 @@ subroutine setup_gpu_solve(n, child_ptr, child_list, nnodes, nodes, sparent,  &
       cuda_error, stream_handle)
    if(st.ne.0) return
    if(cuda_error.ne.0) return
-   call setup_fwd_slv(child_ptr, child_list, nodes, sptr, rptr,               &
+   call setup_fwd_slv(child_ptr, child_list, nnodes, nodes, sptr, rptr,       &
       stream_data%num_levels, stream_data%lvlptr, stream_data%lvllist,        &
       rptr_with_delays, gpu_rlist_with_delays, gpu_clen, gpu_clists,          &
       gpu_clists_direct, cvmap, stream_data%fwd_slv_lookup,                   &
-      stream_data%fwd_slv_lwork, stream_data%fwd_slv_nlocal,                  &
-      stream_data%fwd_slv_nsync, stream_data%fwd_slv_nasync, st, cuda_error,  &
-      stream_handle)
+      stream_data%fwd_slv_contrib_lookup, stream_data%fwd_slv_lwork,          &
+      stream_data%fwd_slv_nlocal, stream_data%fwd_slv_nsync,                  &
+      stream_data%fwd_slv_nasync, st, cuda_error, stream_handle)
    if(st.ne.0) return
    if(cuda_error.ne.0) return
 end subroutine setup_gpu_solve
 
-subroutine setup_fwd_slv(child_ptr, child_list, nodes, sptr, rptr, num_levels,&
-      lvlptr, lvllist, rptr_with_delays, gpu_rlist_with_delays, gpu_clen,     &
-      gpu_clists, gpu_clists_direct, cvmap, fwd_slv_lookup, lwork, nlocal,    &
-      nsync, nasm_sync, st, cuda_error, stream)
+subroutine setup_fwd_slv(child_ptr, child_list, nnodes, nodes, sptr, rptr,    &
+      num_levels, lvlptr, lvllist, rptr_with_delays, gpu_rlist_with_delays,   &
+      gpu_clen, gpu_clists, gpu_clists_direct, cvmap, fwd_slv_lookup,         &
+      fwd_slv_contrib_lookup, lwork, nlocal, nsync, nasm_sync, st,            &
+      cuda_error, stream)
    integer, dimension(*), intent(in) :: child_ptr
    integer, dimension(*), intent(in) :: child_list
+   integer, intent(in) :: nnodes
    type(node_type), dimension(*), intent(in) :: nodes
    integer, dimension(*), intent(in) :: sptr
    integer(long), dimension(*), intent(in) :: rptr
@@ -1012,6 +1018,7 @@ subroutine setup_fwd_slv(child_ptr, child_list, nodes, sptr, rptr, num_levels,&
    integer, dimension(*), intent(in) :: cvmap
    type(lookups_gpu_fwd), dimension(:), allocatable, intent(out) :: &
       fwd_slv_lookup
+   type(lookup_contrib_fwd), intent(out) :: fwd_slv_contrib_lookup
    integer, intent(out) :: lwork
    integer, intent(out) :: nlocal
    integer, intent(out) :: nsync
@@ -1021,6 +1028,10 @@ subroutine setup_fwd_slv(child_ptr, child_list, nodes, sptr, rptr, num_levels,&
    type(C_PTR), intent(in) :: stream
 
    integer :: lvl, i, j, k, p
+   integer :: blkm, blkn, ndelay, nelim
+   type(scatter_lookup_type), dimension(:), allocatable, target :: &
+      scatter_lookup
+   integer(C_INT) :: dummy_int
 
    st = 0
    cuda_error = 0
@@ -1045,6 +1056,37 @@ subroutine setup_fwd_slv(child_ptr, child_list, nodes, sptr, rptr, num_levels,&
       lwork = max(lwork, k)
       nasm_sync = max(nasm_sync, p)
    end do
+
+   ! If we contribute to a parent subtree, we need to do a scatter at end of slv
+   ! If there is a contribution, it must be from the last node
+   blkm = int(rptr(nnodes+1)-rptr(nnodes))
+   blkn = sptr(nnodes+1)-sptr(nnodes)
+   if(blkm>blkn) then
+      ndelay = nodes(nnodes)%ndelay
+      nelim = nodes(nnodes)%nelim
+      fwd_slv_contrib_lookup%nscatter = (blkm+ndelay-nelim-1)/SLV_SCATTER_NB + 1
+      allocate(scatter_lookup(fwd_slv_contrib_lookup%nscatter), stat=st)
+      if(st.ne.0) return
+      cuda_error = cudaMalloc(fwd_slv_contrib_lookup%scatter, &
+         fwd_slv_contrib_lookup%nscatter*C_SIZEOF(scatter_lookup(1)))
+      if(cuda_error.ne.0) return
+      do i = 0, fwd_slv_contrib_lookup%nscatter-1
+         scatter_lookup(i+1)%n = &
+            min(SLV_SCATTER_NB,blkm+ndelay-nelim-i*SLV_SCATTER_NB)
+         scatter_lookup(i+1)%src_offset = i*SLV_SCATTER_NB
+         scatter_lookup(i+1)%index = &
+            c_ptr_plus(gpu_rlist_with_delays, rptr_with_delays(nnodes) + &
+            (nelim+i*SLV_SCATTER_NB)*C_SIZEOF(dummy_int))
+         scatter_lookup(i+1)%dest_offset = 0
+      end do
+      cuda_error = cudaMemcpyAsync_h2d(fwd_slv_contrib_lookup%scatter, &
+         C_LOC(scatter_lookup), &
+         fwd_slv_contrib_lookup%nscatter*C_SIZEOF(scatter_lookup(1)), stream)
+      if(cuda_error.ne.0) return
+   else
+      fwd_slv_contrib_lookup%nscatter = 0
+      fwd_slv_contrib_lookup%scatter = C_NULL_PTR
+   endif
 end subroutine setup_fwd_slv
 
 subroutine setup_bwd_slv(nodes, sptr, rptr, num_levels, lvlptr, lvllist,      &

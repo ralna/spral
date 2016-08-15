@@ -75,12 +75,12 @@ void assemble_pre(
       node.ndelay_in += child->ndelay_out;
    }
    for(int contrib_idx : snode.contrib) {
-      int cn, ndelay, lddelay;
+      int cn, ldcontrib, ndelay, lddelay;
       double const *cval, *delay_val;
       int const *crlist, *delay_perm;
       spral_ssids_contrib_get_data(
-            child_contrib[contrib_idx], &cn, &cval, &crlist, &ndelay,
-            &delay_perm, &delay_val, &lddelay
+            child_contrib[contrib_idx], &cn, &cval, &ldcontrib, &crlist,
+            &ndelay, &delay_perm, &delay_val, &lddelay
             );
       node.ndelay_in += ndelay;
    }
@@ -233,12 +233,12 @@ void assemble_pre(
    }
    /* Add any contribution block from other subtrees */
    for(int contrib_idx : snode.contrib) {
-      int cn, ndelay, lddelay;
+      int cn, ldcontrib, ndelay, lddelay;
       double const *cval, *delay_val;
       int const *crlist, *delay_perm;
       spral_ssids_contrib_get_data(
-            child_contrib[contrib_idx], &cn, &cval, &crlist, &ndelay,
-            &delay_perm, &delay_val, &lddelay
+            child_contrib[contrib_idx], &cn, &cval, &ldcontrib, &crlist,
+            &ndelay, &delay_perm, &delay_val, &lddelay
             );
       int* cache = work[omp_get_thread_num()].get_ptr<int>(cn);
       for(int j=0; j<cn; ++j)
@@ -267,7 +267,7 @@ void assemble_pre(
       /* Handle expected contribution */
       for(int i=0; i<cn; ++i) {
          int c = cache[i];
-         T const* src = &cval[i*cn];
+         T const* src = &cval[i*ldcontrib];
          // NB: we handle contribution to contrib in assemble_post()
          if(c < snode.ncol) {
             // Contribution added to lcol
@@ -355,12 +355,12 @@ void assemble_post(
    }
    /* Add any contribution block from other subtrees */
    for(int contrib_idx : snode.contrib) {
-      int cn, ndelay, lddelay;
+      int cn, ldcontrib, ndelay, lddelay;
       double const *cval, *delay_val;
       int const *crlist, *delay_perm;
       spral_ssids_contrib_get_data(
-            child_contrib[contrib_idx], &cn, &cval, &crlist, &ndelay,
-            &delay_perm, &delay_val, &lddelay
+            child_contrib[contrib_idx], &cn, &cval, &ldcontrib, &crlist,
+            &ndelay, &delay_perm, &delay_val, &lddelay
             );
       if(!cval) continue; // child was all delays, nothing to do
       int* cache = work[omp_get_thread_num()].get_ptr<int>(cn);
@@ -368,7 +368,7 @@ void assemble_post(
          cache[j] = map[ crlist[j] ] - ncol;
       for(int i=0; i<cn; ++i) {
          int c = cache[i]+ncol;
-         T const* src = &cval[i*cn];
+         T const* src = &cval[i*ldcontrib];
          // NB: only interested in contribution to generated element
          if(c >= snode.ncol) {
             // Contribution added to contrib

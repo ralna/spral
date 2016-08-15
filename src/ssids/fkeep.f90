@@ -129,7 +129,6 @@ subroutine inner_solve_cpu(local_job, nrhs, x, ldx, akeep, fkeep, options, infor
       end do
    end if
 
-
    ! Perform relevant solves
    if (local_job.eq.SSIDS_SOLVE_JOB_FWD .or. &
          local_job.eq.SSIDS_SOLVE_JOB_ALL) then

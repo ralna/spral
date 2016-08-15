@@ -19,7 +19,7 @@ module spral_ssids_gpu_datatypes
       cuda_stats_type, cstat_data_type, multisymm_type, &
       multiswap_type, multisyrk_type, &
       node_data, node_solve_data, multireorder_data, multielm_data, &
-      assemble_lookup2_type, gpu_type, eltree_level
+      assemble_lookup2_type, gpu_type, eltree_level, lookup_contrib_fwd
    ! Procedures
    public :: free_gpu_type,    &
              free_lookup_gpu       ! Cleanup data structures
@@ -177,6 +177,11 @@ module spral_ssids_gpu_datatypes
       type(C_PTR) :: scatter
    end type
 
+   type, bind(C) :: lookup_contrib_fwd ! for fwd slv, contrib to parent subtree
+      integer(C_INT) :: nscatter
+      type(C_PTR) :: scatter
+   end type lookup_contrib_fwd
+
    type, bind(C) :: lookups_gpu_bwd ! for bwd slv
       integer(C_INT) :: ngemv
       integer(C_INT) :: nrds
@@ -246,6 +251,7 @@ module spral_ssids_gpu_datatypes
       integer :: bwd_slv_lwork
       integer :: bwd_slv_nsync
       type(lookups_gpu_fwd), dimension(:), allocatable :: fwd_slv_lookup
+      type(lookup_contrib_fwd) :: fwd_slv_contrib_lookup
       integer :: fwd_slv_lwork
       integer :: fwd_slv_nlocal
       integer :: fwd_slv_nsync
@@ -429,6 +435,11 @@ subroutine free_gpu_type(sdata, cuda_error)
          if(cuda_error.ne.0) return
       end do
       deallocate(sdata%bwd_slv_lookup, stat=st)
+      if(C_ASSOCIATED(sdata%fwd_slv_contrib_lookup%scatter)) then
+         cuda_error = cudaFree(sdata%fwd_slv_contrib_lookup%scatter)
+         sdata%fwd_slv_contrib_lookup%scatter = C_NULL_PTR
+         if(cuda_error.ne.0) return
+      endif
    endif
    if(sdata%presolve.ne.0) then
       deallocate( sdata%off_lx, stat=st )

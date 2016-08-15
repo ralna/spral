@@ -289,6 +289,24 @@ void __global__ scatter(struct scatter_lookup *lookup, const double *src,
 
 }
 
+/* This subroutine performs the scatter operation dest( index(:) ) += src(:)
+ */
+void __global__ scatter_sum(struct scatter_lookup *lookup, const double *src,
+      double *dest
+      ) {
+
+   lookup += blockIdx.x;
+   if(threadIdx.x >= lookup->n) return; // Skip on out of range threads
+   src += lookup->src_offset;
+   const int *index = lookup->index;
+   dest += lookup->dest_offset;
+
+
+   int idx = index[threadIdx.x];
+   dest[idx] += src[threadIdx.x];
+
+}
+
 /***********************************************************************/
 /***********************************************************************/
 /***********************************************************************/
@@ -600,6 +618,11 @@ struct lookups_gpu_fwd {
    struct scatter_lookup *scatter;
 };
 
+struct lookup_contrib_fwd {
+   int nscatter;
+   struct scatter_lookup *scatter;
+};
+
 } } // end namespace spral::ssids
 
 /*******************************************************************************
@@ -740,6 +763,17 @@ void spral_ssids_run_bwd_solve_kernels(bool dsolve, bool unit_diagonal,
          scatter
             <<<MIN(65535,gpu->nscatter-i), SCATTER_NB, 0, *stream>>>
             (gpu->scatter+i, work_gpu, x_gpu);
+      CudaCheckError();
+   }
+}
+
+void spral_ssids_run_slv_contrib_fwd(struct lookup_contrib_fwd const* gpu,
+      double* x_gpu, double const* xstack_gpu, cudaStream_t const* stream) {
+   if(gpu->nscatter>0) {
+      for(int i=0; i<gpu->nscatter; i+=65535)
+         scatter_sum
+            <<<MIN(65535,gpu->nscatter-i), SCATTER_NB, 0, *stream>>>
+            (gpu->scatter+i, xstack_gpu, x_gpu);
       CudaCheckError();
    }
 }

@@ -4,13 +4,23 @@
 module spral_ssids_contrib_free
    use spral_ssids_contrib, only : contrib_type
    use spral_ssids_cpu_subtree, only : cpu_free_contrib
+   use spral_ssids_gpu_subtree, only : gpu_free_contrib
    implicit none
 
 contains
    subroutine contrib_free(contrib)
       type(contrib_type), intent(inout) :: contrib
 
-      call cpu_free_contrib(contrib%posdef, contrib%owner_ptr)
+      select case(contrib%owner)
+      case(0) ! CPU
+         call cpu_free_contrib(contrib%posdef, contrib%owner_ptr)
+      case(1) ! GPU
+         call gpu_free_contrib(contrib)
+      case default
+         ! This should never happen
+         print *, "Unrecognised contrib owner ", contrib%owner
+         stop -1
+      end select
    end subroutine contrib_free
 end module spral_ssids_contrib_free
 

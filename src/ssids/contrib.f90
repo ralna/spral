@@ -15,6 +15,7 @@ module spral_ssids_contrib
    type :: contrib_type
       integer :: n ! size of block
       real(C_DOUBLE), dimension(:), pointer :: val ! n x n lwr triangular matrix
+      integer(C_INT) :: ldval
       integer(C_INT), dimension(:), pointer :: rlist ! row list
       integer :: ndelay
       integer(C_INT), dimension(:), pointer :: delay_perm
@@ -28,8 +29,8 @@ module spral_ssids_contrib
 end module spral_ssids_contrib
 
 ! C function to get interesting components
-subroutine spral_ssids_contrib_get_data(ccontrib, n, val, rlist, ndelay, &
-      delay_perm, delay_val, lddelay) bind(C)
+subroutine spral_ssids_contrib_get_data(ccontrib, n, val, ldval, rlist, &
+      ndelay, delay_perm, delay_val, lddelay) bind(C)
    use, intrinsic :: iso_c_binding
    use spral_ssids_contrib
    implicit none
@@ -37,6 +38,7 @@ subroutine spral_ssids_contrib_get_data(ccontrib, n, val, rlist, ndelay, &
    type(C_PTR), value :: ccontrib
    integer(C_INT), intent(out) :: n
    type(C_PTR), intent(out) :: val
+   integer(C_INT), intent(out) :: ldval
    type(C_PTR), intent(out) :: rlist
    integer(C_INT), intent(out) :: ndelay
    type(C_PTR), intent(out) :: delay_perm
@@ -49,6 +51,7 @@ subroutine spral_ssids_contrib_get_data(ccontrib, n, val, rlist, ndelay, &
 
    n = fcontrib%n
    val = c_loc(fcontrib%val)
+   ldval = fcontrib%ldval
    rlist = c_loc(fcontrib%rlist)
    ndelay = fcontrib%ndelay
    if(associated(fcontrib%delay_val)) then

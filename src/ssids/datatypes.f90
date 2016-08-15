@@ -250,7 +250,7 @@ module spral_ssids_datatypes
          ! treat a subtree as small and use the single core kernel
       integer :: cpu_task_block_size = 256 ! block size to use for task
          ! generation on larger nodes
-      integer :: min_npart = 1 ! minimum number of parts to split tree into !4?
+      integer :: min_npart = 4 ! minimum number of parts to split tree into !4?
       integer(long) :: max_flops_part = 10**9_long ! maximum number of flops
          ! per part when splitting tree
       real :: cpu_gpu_ratio = 0.0 ! number in [0,1] being target value for

@@ -17,7 +17,7 @@ module spral_ssids_gpu_subtree
 
    private
    public :: gpu_symbolic_subtree, construct_gpu_symbolic_subtree
-   public :: gpu_numeric_subtree
+   public :: gpu_numeric_subtree, gpu_free_contrib
 
    type, extends(symbolic_subtree_base) :: gpu_symbolic_subtree
       integer :: n
@@ -58,6 +58,8 @@ module spral_ssids_gpu_subtree
       type(node_type), dimension(:), allocatable :: nodes ! Stores pointers
          ! to information about nodes
       integer :: presolve ! FIXME: make logical?
+      type(contrib_type) :: contrib
+      type(C_PTR) :: contrib_wait
    contains
       procedure :: get_contrib
       procedure :: solve_fwd
@@ -110,7 +112,7 @@ function construct_gpu_symbolic_subtree(n, sa, en, sptr, sparent, rptr, &
    allocate(this%nptr(this%nnodes+1))
    this%nptr(1:this%nnodes+1) = nptr(sa:en) - nptr(sa) + 1
    allocate(this%child_ptr(this%nnodes+1))
-   this%child_ptr(1:this%nnodes+1) = child_ptr(sa:en) - sa + 1
+   this%child_ptr(1:this%nnodes+1) = child_ptr(sa:en) - child_ptr(sa) + 1
    allocate(this%child_list(this%child_ptr(this%nnodes+1)-1))
    this%child_list(:) = child_list(child_ptr(sa):child_ptr(en)-1) - sa + 1
    this%sptr => sptr(sa:en)
@@ -280,8 +282,11 @@ function factor(this, posdef, aval, child_contrib, options, inform, scaling)
    cuda_error = cudaMemcpy_h2d(gpu_val, C_LOC(aval), sz*C_SIZEOF(aval(1)))
    if(cuda_error.ne.0) goto 200
    
-   ! Allocate and initialize stream
+   ! Initialize stream and contrib_wait event
    cuda_error = cudaStreamCreate(gpu_factor%stream_handle)
+   if(cuda_error.ne.0) goto 200
+   cuda_error = cudaEventCreateWithFlags(gpu_factor%contrib_wait, &
+      cudaEventBlockingSync+cudaEventDisableTiming)
    if(cuda_error.ne.0) goto 200
 
    ! Call main factorization routine
@@ -301,7 +306,8 @@ function factor(this, posdef, aval, child_contrib, options, inform, scaling)
          gpu_contribs, gpu_factor%stream_handle, gpu_factor%stream_data,      &
          gpu_factor%gpu_rlist_with_delays,                                    &
          gpu_factor%gpu_rlist_direct_with_delays, gpu_factor%gpu_clists,      &
-         gpu_factor%gpu_clists_direct, gpu_factor%gpu_clen, gpu_factor%alloc, &
+         gpu_factor%gpu_clists_direct, gpu_factor%gpu_clen,                   &
+         gpu_factor%contrib, gpu_factor%contrib_wait, gpu_factor%alloc,       &
          options, stats, ptr_scale=gpu_scaling)
       cuda_error = cudaFree(gpu_scaling)
       if(cuda_error.ne.0) goto 200
@@ -313,7 +319,8 @@ function factor(this, posdef, aval, child_contrib, options, inform, scaling)
          gpu_contribs, gpu_factor%stream_handle, gpu_factor%stream_data,      &
          gpu_factor%gpu_rlist_with_delays,                                    &
          gpu_factor%gpu_rlist_direct_with_delays, gpu_factor%gpu_clists,      &
-         gpu_factor%gpu_clists_direct, gpu_factor%gpu_clen, gpu_factor%alloc, &
+         gpu_factor%gpu_clists_direct, gpu_factor%gpu_clen,                   &
+         gpu_factor%contrib, gpu_factor%contrib_wait, gpu_factor%alloc,       &
          options, stats)
    end if
 
@@ -408,15 +415,27 @@ function get_contrib(this)
    type(contrib_type) :: get_contrib
    class(gpu_numeric_subtree), intent(in) :: this
 
-   get_contrib%n = 0
-   nullify(get_contrib%val)
-   nullify(get_contrib%rlist)
-   get_contrib%ndelay = 0
-   nullify(get_contrib%delay_perm)
-   nullify(get_contrib%delay_val)
-   get_contrib%lddelay = 0
+   integer :: cuda_error
+
+   get_contrib = this%contrib
    get_contrib%owner = 1 ! gpu
+
+   ! Now wait until data copy has finished before releasing result
+   cuda_error = cudaEventSynchronize(this%contrib_wait)
+   ! FIXME: handle cuda_error?
 end function get_contrib
+
+subroutine gpu_free_contrib(contrib)
+   type(contrib_type), intent(inout) :: contrib
+
+   ! FIXME: stat check?
+   if(associated(contrib%delay_val)) &
+      deallocate(contrib%delay_val)
+   nullify(contrib%delay_val)
+   if(associated(contrib%val)) &
+      deallocate(contrib%val)
+   nullify(contrib%val)
+end subroutine gpu_free_contrib
 
 ! FIXME: general: push/pop cuda settings at higher level
 ! FIXME: general: do we need to worry about avoiding unnecessary gpu_x creation?
@@ -449,7 +468,6 @@ subroutine solve_fwd(this, nrhs, x, ldx, inform)
          cuda_error)
       if(cuda_error.ne.0) goto 200
    end if
-
 
    return
 
@@ -564,9 +582,9 @@ subroutine solve_diag_bwd(this, nrhs, x, ldx, inform)
 
 
    if(this%presolve.eq.0) then
-      call bwd_solve_gpu(SSIDS_SOLVE_JOB_DIAG_BWD, this%posdef, &
-         this%symbolic%nnodes, this%symbolic%sptr, this%stream_handle, &
-         this%stream_data, x, inform%stat, cuda_error)
+      call bwd_solve_gpu(SSIDS_SOLVE_JOB_DIAG_BWD, this%posdef,      &
+         this%symbolic%n, this%stream_handle, this%stream_data, x,   &
+         inform%stat, cuda_error)
       if(cuda_error.ne.0) goto 200
    else
       gpu_x = create_gpu_x(this%symbolic%n, nrhs, x, ldx, cuda_error)
@@ -607,9 +625,8 @@ subroutine solve_bwd(this, nrhs, x, ldx, inform)
    integer :: cuda_error
 
    if(this%presolve.eq.0) then
-      call bwd_solve_gpu(SSIDS_SOLVE_JOB_BWD, this%posdef,              &
-         this%symbolic%nnodes, this%symbolic%sptr, this%stream_handle,  &
-         this%stream_data, x, inform%stat, cuda_error)
+      call bwd_solve_gpu(SSIDS_SOLVE_JOB_BWD, this%posdef, this%symbolic%n, &
+         this%stream_handle, this%stream_data, x, inform%stat, cuda_error)
       if(cuda_error.ne.0) goto 200
    else
       gpu_x = create_gpu_x(this%symbolic%n, nrhs, x, ldx, cuda_error)

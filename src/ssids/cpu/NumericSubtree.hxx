@@ -434,11 +434,13 @@ public:
 	}
 
    /** Return contribution block from subtree (if not a real root) */
-   void get_contrib(int& n, T const*& val, int const*& rlist, int& ndelay,
-         int const*& delay_perm, T const*& delay_val, int& lddelay) const {
+   void get_contrib(int& n, T const*& val, int& ldval, int const*& rlist,
+         int& ndelay, int const*& delay_perm, T const*& delay_val,
+         int& lddelay) const {
       auto& root = *nodes_.back().first_child;
       n = root.symb->nrow - root.symb->ncol;
       val = root.contrib;
+      ldval = n;
       rlist = &root.symb->rlist[root.symb->ncol];
       ndelay = root.ndelay_out;
       delay_perm = (ndelay>0) ? &root.perm[root.nelim]
