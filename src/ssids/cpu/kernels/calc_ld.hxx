@@ -26,7 +26,7 @@ namespace spral { namespace ssids { namespace cpu {
 template <typename T>
 int offset_to_align(T* ptr) {
    int const align = 32;
-   uintptr_t offset = reinterpret_cast<uintptr_t>(ptr) % align;
+   uintptr_t offset = align - (reinterpret_cast<uintptr_t>(ptr) % align);
    offset /= sizeof(T);
    if((reinterpret_cast<uintptr_t>(ptr+offset) % align) == 0) return offset;
    else return std::numeric_limits<int>::max();
@@ -51,7 +51,7 @@ void calcLD(int m, int n, T const* l, int ldl, T const* d, T* ld, int ldld) {
             int const unroll = 4;
             int offset = offset_to_align(l);
             if(offset_to_align(ld) != offset) offset = m; // give up on vectors
-            int nvec = (m-offset) / vlen;
+            int nvec = std::max(0, (m-offset) / vlen);
             for(int row=0; row<std::min(offset,m); ++row)
                ld[col*ldld+row] = d11 * l[col*ldl+row];
             SimdVecT d11v(d11);
@@ -77,7 +77,7 @@ void calcLD(int m, int n, T const* l, int ldl, T const* d, T* ld, int ldld) {
                   lv2.store_aligned(&ld[col*ldld+row+2*vlen]);
                   lv3.store_aligned(&ld[col*ldld+row+3*vlen]);
                }
-               for(int row=offset+nunroll*unroll*vlen; row<nvec*vlen; row+=vlen) {
+               for(int row=offset+nunroll*unroll*vlen; row<offset+nvec*vlen; row+=vlen) {
                   SimdVecT lv = SimdVecT::load_aligned(&l[col*ldl+row]);
                   lv = lv * d11;
                   lv.store_aligned(&ld[col*ldld+row]);
