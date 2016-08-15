@@ -9,7 +9,7 @@ module spral_ssids_gpu_subtree
 
    private
    public :: gpu_symbolic_subtree, construct_gpu_symbolic_subtree
-   public :: gpu_numeric_subtree
+   public :: gpu_numeric_subtree, gpu_free_contrib
 
    type, extends(symbolic_subtree_base) :: gpu_symbolic_subtree
    contains
@@ -79,6 +79,10 @@ function get_contrib(this)
    type(contrib_type) :: get_contrib
    class(gpu_numeric_subtree), intent(in) :: this
 end function get_contrib
+
+subroutine gpu_free_contrib(contrib)
+   type(contrib_type), intent(inout) :: contrib
+end subroutine gpu_free_contrib
 
 subroutine solve_fwd(this, nrhs, x, ldx, inform)
    class(gpu_numeric_subtree), intent(inout) :: this
