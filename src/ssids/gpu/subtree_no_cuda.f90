@@ -33,7 +33,7 @@ module spral_ssids_gpu_subtree
 contains
 
 function construct_gpu_symbolic_subtree(n, sa, en, sptr, sparent, rptr, &
-      rlist, rlist_direct, nptr, nlist, nfactor, child_ptr, child_list, invp, &
+      rlist, rlist_direct, nptr, nlist, nfactor, child_ptr, child_list, &
       options) result(this)
    class(gpu_symbolic_subtree), pointer :: this
    integer, intent(in) :: n
@@ -49,7 +49,6 @@ function construct_gpu_symbolic_subtree(n, sa, en, sptr, sparent, rptr, &
    integer(long), intent(in) :: nfactor
    integer, dimension(*), target, intent(in) :: child_ptr
    integer, dimension(*), target, intent(in) :: child_list
-   integer, dimension(*), target, intent(in) :: invp
    class(ssids_options), intent(in) :: options
 
    print *, "construct_gpu_symbolic_subtree() called without GPU support."

@@ -503,7 +503,7 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
    if(.not.detect_gpu()) cpu_gpu_ratio = 1.0 ! Entirely on CPU
    call find_subtree_partition(akeep%nnodes, akeep%sptr, akeep%sparent, &
       akeep%rptr, options%min_npart, options%max_flops_part, &
-      options%cpu_gpu_ratio, akeep%nparts, akeep%part, exec_loc, &
+      cpu_gpu_ratio, akeep%nparts, akeep%part, exec_loc, &
       akeep%contrib_ptr, akeep%contrib_idx, contrib_dest)
    !print *, "invp = ", akeep%invp
    !print *, "sparent = ", akeep%sparent
