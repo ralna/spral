@@ -394,6 +394,7 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
    nemin = options%nemin
    if(nemin < 1) nemin = nemin_default
 
+   ! Perform basic analysis so we can figure out subtrees we want to construct
    call basic_analyse(n, ptr2, row2, order, akeep%nnodes, akeep%sptr, &
       akeep%sparent, akeep%rptr,akeep%rlist,                        &
       nemin, flag, inform%stat, inform%num_factor, inform%num_flops)
@@ -427,25 +428,9 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
    nz = ptr(n+1) - 1
    allocate(akeep%nptr(n+1), akeep%nlist(2,nz), stat=st)
    if (st .ne. 0) go to 100
-
    call build_map(n, ptr, row, order, invp, akeep%nnodes, akeep%sptr, &
       akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist, st)
    if (st .ne. 0) go to 100
-
-   ! Determine inform%maxfront and inform%maxdepth
-   allocate(level(akeep%nnodes+1), stat=st)
-   if (st .ne. 0) go to 100
-   level(akeep%nnodes+1) = 0
-   inform%maxfront = 0
-   inform%maxdepth = 0
-   do i = akeep%nnodes, 1, -1
-      blkn = akeep%sptr(i+1) - akeep%sptr(i) 
-      blkm = int(akeep%rptr(i+1) - akeep%rptr(i))
-      level(i) = level(akeep%sparent(i)) + 1
-      inform%maxfront = max(inform%maxfront, blkn)
-      inform%maxdepth = max(inform%maxdepth, level(i))
-   end do
-   deallocate(level, stat=st)
 
    ! Sort out subtrees
    cpu_gpu_ratio = options%cpu_gpu_ratio
@@ -466,6 +451,7 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
    !print *, "contrib_dest = ", &
    !   contrib_dest(1:akeep%contrib_ptr(akeep%nparts+1)-1)
 
+   ! Construct symbolic subtrees
    if(allocated(akeep%subtree)) then
       do i = 1, size(akeep%subtree)
          if(associated(akeep%subtree(i)%ptr)) &
@@ -490,6 +476,19 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
    end do
 
    ! Info
+   allocate(level(akeep%nnodes+1), stat=st)
+   if (st .ne. 0) go to 100
+   level(akeep%nnodes+1) = 0
+   inform%maxfront = 0
+   inform%maxdepth = 0
+   do i = akeep%nnodes, 1, -1
+      blkn = akeep%sptr(i+1) - akeep%sptr(i) 
+      blkm = int(akeep%rptr(i+1) - akeep%rptr(i))
+      level(i) = level(akeep%sparent(i)) + 1
+      inform%maxfront = max(inform%maxfront, blkn)
+      inform%maxdepth = max(inform%maxdepth, level(i))
+   end do
+   deallocate(level, stat=st)
    inform%matrix_rank = akeep%sptr(akeep%nnodes+1)-1
    inform%num_sup = akeep%nnodes
 
