@@ -5,9 +5,17 @@ module spral_cuda
    implicit none
 
    private
+   public :: cudaGetErrorString
    public :: detect_gpu
 
 contains
+! Convert a CUDA error code to a Fortran character string
+character(len=200) function cudaGetErrorString(error)
+   integer(C_INT) :: error
+
+   cudaGetErrorString = "Not compiled with CUDA support"
+end function cudaGetErrorString
+
 
 ! Return true if a GPU is present and code is compiled with CUDA support
 logical function detect_gpu()
