@@ -29,7 +29,7 @@ module spral_ssids_gpu_subtree
       integer, dimension(:), allocatable :: sparent
       integer(long), dimension(:), allocatable :: rptr
       integer, dimension(:), pointer :: rlist
-      integer, dimension(:), pointer :: rlist_direct
+      integer, dimension(:), allocatable :: rlist_direct
       ! GPU pointers (copies of the CPU arrays of same name)
       type(C_PTR) :: gpu_nlist = C_NULL_PTR
       type(C_PTR) :: gpu_rlist = C_NULL_PTR
@@ -71,8 +71,7 @@ module spral_ssids_gpu_subtree
 contains
 
 function construct_gpu_symbolic_subtree(n, sa, en, sptr, sparent, rptr, &
-      rlist, rlist_direct, nptr, nlist, nfactor, child_ptr, child_list, &
-      options) result(this)
+      rlist, nptr, nlist, nfactor, child_ptr, child_list, options) result(this)
    class(gpu_symbolic_subtree), pointer :: this
    integer, intent(in) :: n
    integer, intent(in) :: sa
@@ -81,7 +80,6 @@ function construct_gpu_symbolic_subtree(n, sa, en, sptr, sparent, rptr, &
    integer, dimension(*), target, intent(in) :: sparent
    integer(long), dimension(*), target, intent(in) :: rptr
    integer, dimension(*), target, intent(in) :: rlist
-   integer, dimension(*), target, intent(in) :: rlist_direct
    integer, dimension(*), target, intent(in) :: nptr
    integer, dimension(2,*), target, intent(in) :: nlist
    integer(long), intent(in) :: nfactor
@@ -117,16 +115,20 @@ function construct_gpu_symbolic_subtree(n, sa, en, sptr, sparent, rptr, &
    allocate(this%rptr(this%nnodes+1))
    this%rptr(1:this%nnodes+1) = rptr(sa:en) - rptr(sa) + 1
    this%rlist => rlist(rptr(sa):rptr(en)-1)
-   this%rlist_direct => rlist_direct(rptr(sa):rptr(en)-1)
 
    this%max_a_idx = maxval(nlist(1,nptr(sa):nptr(en)-1)) ! needed for aval copy
+
+   ! Build rlist direct
+   allocate(this%rlist_direct(this%rptr(this%nnodes+1)-1))
+   call build_rlist_direct(n, this%nnodes, this%sparent, this%rptr, &
+      this%rlist, this%rlist_direct, st) ! FIXME: st
 
    ! Copy data to device
    ! FIXME: only copy part we care about from sa:en
    cuda_error=0
    call copy_analyse_data_to_device(2*(this%nptr(this%nnodes+1)-1), &
       nlist(:,nptr(sa):nptr(en)-1), rptr(en)-rptr(sa), &
-      rlist(rptr(sa):rptr(en)-1), rlist_direct(rptr(sa):rptr(en)-1), &
+      rlist(rptr(sa):rptr(en)-1), this%rlist_direct, &
       this%gpu_nlist, this%gpu_rlist, this%gpu_rlist_direct, cuda_error)
    if(cuda_error .ne. 0) then
       print *, "CUDA error on copy"
@@ -141,6 +143,43 @@ function construct_gpu_symbolic_subtree(n, sa, en, sptr, sparent, rptr, &
       return
    endif
 end function construct_gpu_symbolic_subtree
+
+!****************************************************************************
+!
+! Build a direct mapping (assuming no delays) between a node's rlist and that
+! of it's parent such that update can be done as:
+! lcol_parent(rlist_direct(i)) = lcol(i)
+!
+subroutine build_rlist_direct(n, nnodes, sparent, rptr, rlist, rlist_direct, st)
+   integer, intent(in) :: n
+   integer, intent(in) :: nnodes
+   integer, dimension(nnodes), intent(in) :: sparent
+   integer(long), dimension(nnodes+1), intent(in) :: rptr
+   integer, dimension(rptr(nnodes+1)-1), intent(in) :: rlist
+   integer, dimension(rptr(nnodes+1)-1), intent(out) :: rlist_direct
+   integer, intent(out) :: st
+
+   integer :: node, parent
+   integer(long) :: ii
+   integer, dimension(:), allocatable :: map
+
+   allocate(map(n), stat=st)
+   if(st.ne.0) return
+
+   do node = 1, nnodes
+      ! Build a map for parent
+      parent = sparent(node)
+      if(parent > nnodes) cycle ! root of tree
+      do ii = rptr(parent), rptr(parent+1)-1
+         map(rlist(ii)) = int(ii-rptr(parent)+1)
+      end do
+
+      ! Build rlist_direct
+      do ii = rptr(node), rptr(node+1)-1
+         rlist_direct(ii) = map(rlist(ii))
+      end do
+   end do
+end subroutine build_rlist_direct
 
 !****************************************************************************
 !

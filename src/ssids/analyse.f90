@@ -435,13 +435,6 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
       akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist, st)
    if (st .ne. 0) go to 100
 
-   ! Build direct map for children
-   allocate(akeep%rlist_direct(akeep%rptr(akeep%nnodes+1)-1), stat=st)
-   if (st .ne. 0) go to 100
-   call build_rlist_direct(n, akeep%nnodes, akeep%sparent, akeep%rptr, &
-      akeep%rlist, akeep%rlist_direct, st)
-   if (st .ne. 0) go to 100
-
    ! Find maxmn and setup levels
    allocate(akeep%level(akeep%nnodes+1), stat=st)
    if (st .ne. 0) go to 100
@@ -536,9 +529,8 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
       case(EXEC_LOC_GPU)
          akeep%subtree(i)%ptr => construct_gpu_symbolic_subtree(akeep%n, &
             akeep%part(i), akeep%part(i+1), akeep%sptr, akeep%sparent, &
-            akeep%rptr, akeep%rlist, akeep%rlist_direct, akeep%nptr, &
-            akeep%nlist, akeep%nfactor, akeep%child_ptr, akeep%child_list, &
-            options)
+            akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist, akeep%nfactor, &
+            akeep%child_ptr, akeep%child_list, options)
       end select
    end do
 
@@ -573,43 +565,6 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
    return
  
 end subroutine analyse_phase
-
-!****************************************************************************
-!
-! Build a direct mapping (assuming no delays) between a node's rlist and that
-! of it's parent such that update can be done as:
-! lcol_parent(rlist_direct(i)) = lcol(i)
-!
-subroutine build_rlist_direct(n, nnodes, sparent, rptr, rlist, rlist_direct, st)
-   integer, intent(in) :: n
-   integer, intent(in) :: nnodes
-   integer, dimension(nnodes), intent(in) :: sparent
-   integer(long), dimension(nnodes+1), intent(in) :: rptr
-   integer, dimension(rptr(nnodes+1)-1), intent(in) :: rlist
-   integer, dimension(rptr(nnodes+1)-1), intent(out) :: rlist_direct
-   integer, intent(out) :: st
-
-   integer :: node, parent
-   integer(long) :: ii
-   integer, dimension(:), allocatable :: map
-
-   allocate(map(n), stat=st)
-   if(st.ne.0) return
-
-   do node = 1, nnodes
-      ! Build a map for parent
-      parent = sparent(node)
-      if(parent > nnodes) cycle ! root of tree
-      do ii = rptr(parent), rptr(parent+1)-1
-         map(rlist(ii)) = int(ii-rptr(parent)+1)
-      end do
-
-      ! Build rlist_direct
-      do ii = rptr(node), rptr(node+1)-1
-         rlist_direct(ii) = map(rlist(ii))
-      end do
-   end do
-end subroutine build_rlist_direct
 
 !****************************************************************************
 !

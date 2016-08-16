@@ -66,9 +66,6 @@ module spral_ssids_akeep
       integer(long), dimension(:), allocatable :: subtree_work ! For each node,
          ! the number of flops involved in the subtree rooted at that node.
 
-      integer, dimension(:), allocatable :: rlist_direct ! List of rows
-         ! for direct addressing of children (assuming no delays!)
-
       ! Following components are for cleaned up matrix data.
       ! LOWER triangle only. We have to retain these for factorize phase
       ! as used if the user wants to do scaling.
@@ -129,7 +126,6 @@ subroutine free_akeep(akeep, flag)
    deallocate(akeep%nlist, stat=st)
    deallocate(akeep%nptr, stat=st)
    deallocate(akeep%rlist, stat=st)
-   deallocate(akeep%rlist_direct, stat=st)
    deallocate(akeep%rptr, stat=st)
    deallocate(akeep%sparent, stat=st)
    deallocate(akeep%sptr, stat=st)
