@@ -378,7 +378,7 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
    real :: cpu_gpu_ratio
    integer :: nemin, flag
    integer :: blkm, blkn
-   integer :: i, j, k
+   integer :: i, j
    integer :: nout, nout1 ! streams for errors and warnings
    integer :: nz ! ptr(n+1)-1
    integer :: st
@@ -396,7 +396,7 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
 
    call basic_analyse(n, ptr2, row2, order, akeep%nnodes, akeep%sptr, &
       akeep%sparent, akeep%rptr,akeep%rlist,                        &
-      nemin, flag, inform%stat, akeep%nfactor, inform%num_flops)
+      nemin, flag, inform%stat, inform%num_factor, inform%num_flops)
    select case(flag)
    case(0)
       ! Do nothing
@@ -412,7 +412,6 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
       ! Should never reach here
       inform%flag = SSIDS_ERROR_UNKNOWN
    end select
-   inform%num_factor = akeep%nfactor
 
    ! set invp to hold inverse of order
    do i = 1,n
@@ -486,8 +485,7 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
       case(EXEC_LOC_GPU)
          akeep%subtree(i)%ptr => construct_gpu_symbolic_subtree(akeep%n, &
             akeep%part(i), akeep%part(i+1), akeep%sptr, akeep%sparent, &
-            akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist, akeep%nfactor, &
-            options)
+            akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist, options)
       end select
    end do
 

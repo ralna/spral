@@ -21,10 +21,7 @@ module spral_ssids_akeep
       integer :: flag ! copy of error flag.
       integer :: n ! Dimension of matrix
       integer :: ne ! Set to number of entries input by user.
-      integer(long) :: nfactor 
       integer :: nnodes = -1 ! Number of nodes in assembly tree
-      integer :: num_two ! This is set to 0 as we ignore any negative signs
-         ! that indicate 2x2 pivot (analyse does not exploit them)
 
       ! Subtree partition
       integer :: nparts

@@ -71,7 +71,7 @@ module spral_ssids_gpu_subtree
 contains
 
 function construct_gpu_symbolic_subtree(n, sa, en, sptr, sparent, rptr, &
-      rlist, nptr, nlist, nfactor, options) result(this)
+      rlist, nptr, nlist, options) result(this)
    class(gpu_symbolic_subtree), pointer :: this
    integer, intent(in) :: n
    integer, intent(in) :: sa
@@ -82,9 +82,9 @@ function construct_gpu_symbolic_subtree(n, sa, en, sptr, sparent, rptr, &
    integer, dimension(*), target, intent(in) :: rlist
    integer, dimension(*), target, intent(in) :: nptr
    integer, dimension(2,*), target, intent(in) :: nlist
-   integer(long), intent(in) :: nfactor
    class(ssids_options), intent(in) :: options
 
+   integer :: node
    integer :: cuda_error, st
 
    ! Allocate output
@@ -100,7 +100,6 @@ function construct_gpu_symbolic_subtree(n, sa, en, sptr, sparent, rptr, &
    this%sa = sa
    this%en = en-1
    this%nnodes = en-sa
-   this%nfactor = nfactor
    allocate(this%nptr(this%nnodes+1))
    this%nptr(1:this%nnodes+1) = nptr(sa:en) - nptr(sa) + 1
    this%sptr => sptr(sa:en)
@@ -109,7 +108,15 @@ function construct_gpu_symbolic_subtree(n, sa, en, sptr, sparent, rptr, &
    allocate(this%rptr(this%nnodes+1))
    this%rptr(1:this%nnodes+1) = rptr(sa:en) - rptr(sa) + 1
    this%rlist => rlist(rptr(sa):rptr(en)-1)
+
+   ! Calculate derived quantities
    this%max_a_idx = maxval(nlist(1,nptr(sa):nptr(en)-1)) ! needed for aval copy
+   this%nfactor = 0
+   do node = 1, this%nnodes
+      this%nfactor = this%nfactor + &
+         (this%sptr(node+1)-this%sptr(node)) * &
+         (this%rptr(node+1)-this%rptr(node))
+   end do
 
    ! Build rlist direct
    allocate(this%rlist_direct(this%rptr(this%nnodes+1)-1))

@@ -62,7 +62,6 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
    type(ssids_inform), intent(inout) :: inform
 
    integer :: i
-   class(numeric_subtree_base), pointer :: subtree
    type(contrib_type), dimension(:), allocatable :: child_contrib
 
 
