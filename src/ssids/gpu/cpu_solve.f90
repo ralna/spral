@@ -1,9 +1,6 @@
 ! This module provides a way of doing solve on CPU using GPU data structures
 module spral_ssids_gpu_cpu_solve
-   use spral_ssids_akeep, only : ssids_akeep_base
    use spral_ssids_datatypes
-   use spral_ssids_fkeep, only : ssids_fkeep_base
-   use spral_ssids_inform, only : ssids_inform_base
    implicit none
 
    private

@@ -1,7 +1,5 @@
 module spral_ssids_ciface
    use iso_c_binding
-   use spral_ssids_inform, only : ssids_inform_base
-   use spral_ssids_gpu_inform, only : ssids_inform_gpu
    use spral_ssids
    implicit none
 
@@ -60,7 +58,7 @@ contains
    end subroutine copy_options_in
 
    subroutine copy_inform_out(finform, cinform)
-      class(ssids_inform_base), intent(in) :: finform
+      type(ssids_inform), intent(in) :: finform
       type(spral_ssids_inform), intent(out) :: cinform
 
       cinform%flag                  = finform%flag
@@ -77,11 +75,8 @@ contains
       cinform%num_sup               = finform%num_sup
       cinform%num_two               = finform%num_two
       cinform%stat                  = finform%stat
-      select type(finform)
-      type is (ssids_inform_gpu)
-         cinform%cuda_error            = finform%cuda_error
-         cinform%cublas_error          = finform%cublas_error
-      end select
+      cinform%cuda_error            = finform%cuda_error
+      cinform%cublas_error          = finform%cublas_error
    end subroutine copy_inform_out
 end module spral_ssids_ciface
 

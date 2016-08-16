@@ -2,17 +2,17 @@
 ! This module defines ssids_fkeep type and associated procedures (CPU version)
 !
 module spral_ssids_fkeep
-   use spral_ssids_akeep, only : ssids_akeep_base
+   use spral_ssids_akeep, only : ssids_akeep
    use spral_ssids_contrib, only : contrib_type
    use spral_ssids_datatypes
-   use spral_ssids_inform, only : ssids_inform_base
+   use spral_ssids_inform, only : ssids_inform
    use spral_ssids_cpu_subtree, only : cpu_numeric_subtree, cpu_symbolic_subtree
    use spral_ssids_subtree, only : numeric_subtree_base
    use, intrinsic :: iso_c_binding
    implicit none
 
    private
-   public :: ssids_fkeep_base
+   public :: ssids_fkeep
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -23,7 +23,7 @@ module spral_ssids_fkeep
    !
    ! Data type for data generated in factorise phase
    !
-   type ssids_fkeep_base
+   type ssids_fkeep
       integer :: flag ! copy of error flag.
       real(wp), dimension(:), allocatable :: scaling ! Stores scaling for
          ! each entry (in original matrix order)
@@ -50,16 +50,16 @@ module spral_ssids_fkeep
       procedure, pass(fkeep) :: enquire_indef => enquire_indef_cpu
       procedure, pass(fkeep) :: alter => alter_cpu ! Alter D values
       procedure, pass(fkeep) :: free => free_fkeep ! Frees memory
-   end type ssids_fkeep_base
+   end type ssids_fkeep
 
 contains
 
 subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
-   class(ssids_akeep_base), intent(in) :: akeep
-   class(ssids_fkeep_base), target, intent(inout) :: fkeep
+   type(ssids_akeep), intent(in) :: akeep
+   class(ssids_fkeep), target, intent(inout) :: fkeep
    real(wp), dimension(*), target, intent(in) :: val
-   class(ssids_options), intent(in) :: options
-   class(ssids_inform_base), intent(inout) :: inform
+   type(ssids_options), intent(in) :: options
+   type(ssids_inform), intent(inout) :: inform
 
    integer :: i
    class(numeric_subtree_base), pointer :: subtree
@@ -95,14 +95,14 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
 end subroutine inner_factor_cpu
 
 subroutine inner_solve_cpu(local_job, nrhs, x, ldx, akeep, fkeep, options, inform)
-   class(ssids_akeep_base), intent(in) :: akeep
-   class(ssids_fkeep_base), intent(inout) :: fkeep
+   type(ssids_akeep), intent(in) :: akeep
+   class(ssids_fkeep), intent(inout) :: fkeep
    integer, intent(inout) :: local_job
    integer, intent(in) :: nrhs
    integer, intent(in) :: ldx
    real(wp), dimension(ldx,nrhs), target, intent(inout) :: x
    type(ssids_options), intent(in) :: options
-   class(ssids_inform_base), intent(inout) :: inform
+   type(ssids_inform), intent(inout) :: inform
 
    integer :: i, r, part
    integer :: n
@@ -189,9 +189,9 @@ end subroutine inner_solve_cpu
 !****************************************************************************
 
 subroutine enquire_posdef_cpu(akeep, fkeep, inform, d)
-   class(ssids_akeep_base), intent(in) :: akeep
-   class(ssids_fkeep_base), target, intent(in) :: fkeep
-   class(ssids_inform_base), intent(inout) :: inform
+   type(ssids_akeep), intent(in) :: akeep
+   class(ssids_fkeep), target, intent(in) :: fkeep
+   type(ssids_inform), intent(inout) :: inform
    real(wp), dimension(*), intent(out) :: d
 
    integer :: n
@@ -217,9 +217,9 @@ end subroutine enquire_posdef_cpu
 !****************************************************************************
 
 subroutine enquire_indef_cpu(akeep, fkeep, inform, piv_order, d)
-   class(ssids_akeep_base), intent(in) :: akeep
-   class(ssids_fkeep_base), target, intent(in) :: fkeep
-   class(ssids_inform_base), intent(inout) :: inform
+   type(ssids_akeep), intent(in) :: akeep
+   class(ssids_fkeep), target, intent(in) :: fkeep
+   type(ssids_inform), intent(inout) :: inform
    integer, dimension(akeep%n), optional, intent(out) :: piv_order
       ! If i is used to index a variable, its position in the pivot sequence
       ! will be placed in piv_order(i), with its sign negative if it is
@@ -280,10 +280,10 @@ subroutine alter_cpu(d, akeep, fkeep, options, inform)
    real(wp), dimension(2,*), intent(in) :: d  ! The required diagonal entries
      ! of D^{-1} must be placed in d(1,i) (i = 1,...n)
      ! and the off-diagonal entries must be placed in d(2,i) (i = 1,...n-1).
-   type(ssids_akeep_base), intent(in) :: akeep
-   class(ssids_fkeep_base), target, intent(inout) :: fkeep
+   type(ssids_akeep), intent(in) :: akeep
+   class(ssids_fkeep), target, intent(inout) :: fkeep
    type(ssids_options), intent(in) :: options
-   class(ssids_inform_base), intent(inout) :: inform
+   type(ssids_inform), intent(inout) :: inform
 
    integer :: part
 
@@ -300,7 +300,7 @@ end subroutine alter_cpu
 !****************************************************************************
 
 subroutine free_fkeep(fkeep, flag)
-   class(ssids_fkeep_base), intent(inout) :: fkeep
+   class(ssids_fkeep), intent(inout) :: fkeep
    integer, intent(out) :: flag ! not actually used for cpu version, set to 0
 
    integer :: i

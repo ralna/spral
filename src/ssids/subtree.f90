@@ -1,7 +1,7 @@
 module spral_ssids_subtree
    use spral_ssids_contrib, only : contrib_type
    use spral_ssids_datatypes, only : long, wp, ssids_options
-   use spral_ssids_inform, only : ssids_inform_base
+   use spral_ssids_inform, only : ssids_inform
    implicit none
 
    private
@@ -26,7 +26,7 @@ module spral_ssids_subtree
       function factor_iface(this, posdef, aval, child_contrib, options, &
             inform, scaling)
          import symbolic_subtree_base, numeric_subtree_base, wp
-         import ssids_inform_base, ssids_options
+         import ssids_inform, ssids_options
          import contrib_type
          implicit none
          class(numeric_subtree_base), pointer :: factor_iface
@@ -34,8 +34,8 @@ module spral_ssids_subtree
          logical, intent(in) :: posdef
          real(wp), dimension(*), target, intent(in) :: aval
          type(contrib_type), dimension(:), target, intent(inout) :: child_contrib
-         class(ssids_options), intent(in) :: options
-         class(ssids_inform_base), intent(inout) :: inform
+         type(ssids_options), intent(in) :: options
+         type(ssids_inform), intent(inout) :: inform
          real(wp), dimension(*), target, optional, intent(in) :: scaling
       end function factor_iface
       function get_contrib_iface(this)
@@ -45,13 +45,13 @@ module spral_ssids_subtree
          class(numeric_subtree_base), intent(in) :: this
       end function get_contrib_iface
       subroutine solve_proc_iface(this, nrhs, x, ldx, inform)
-         import numeric_subtree_base, ssids_inform_base, wp
+         import numeric_subtree_base, ssids_inform, wp
          implicit none
          class(numeric_subtree_base), intent(inout) :: this
          integer, intent(in) :: nrhs
          real(wp), dimension(*), intent(inout) :: x
          integer, intent(in) :: ldx
-         class(ssids_inform_base), intent(inout) :: inform
+         type(ssids_inform), intent(inout) :: inform
       end subroutine solve_proc_iface
    end interface
 end module spral_ssids_subtree

@@ -30,6 +30,8 @@ module spral_cuda
    ! Syntactically nicer ways of calling cudaMemcpy
    public :: cudaMemcpy_h2d, cudaMemcpy_d2h, cudaMemcpy_d2d, &
       cudaMemcpyAsync_h2d, cudaMemcpyAsync_d2h, cudaMemcpyAsync_d2d
+   ! Utility functions
+   public :: detect_gpu
 
    ! Based on enum in cuda.h
    integer, parameter :: cudaMemcpyHostToHost      = 0
@@ -377,5 +379,13 @@ integer(C_INT) function cudaMemcpyAsync_D2D(dst, src, count, stream)
    cudaMemcpyAsync_D2D = cudaMemcpyAsync(dst, src, count, &
       cudaMemcpyDeviceToDevice, stream)
 end function cudaMemcpyAsync_D2D
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+! Return true if a GPU is present and code is compiled with CUDA support
+! FIXME: actually detect gpus
+logical function detect_gpu()
+   detect_gpu = .true.
+end function detect_gpu
 
 end module spral_cuda

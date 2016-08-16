@@ -5,13 +5,13 @@
 module spral_ssids_analyse
    use, intrinsic :: iso_c_binding
    use spral_core_analyse, only : basic_analyse
+   use spral_cuda, only : detect_gpu
    use spral_pgm, only : writePPM
-   use spral_ssids_akeep, only : ssids_akeep_base
+   use spral_ssids_akeep, only : ssids_akeep
    use spral_ssids_cpu_subtree, only : construct_cpu_symbolic_subtree
    use spral_ssids_gpu_subtree, only : construct_gpu_symbolic_subtree
    use spral_ssids_datatypes
-   use spral_ssids_inform, only : ssids_inform_base, ssids_print_flag
-   use spral_ssids_type_select, only : detect_gpu
+   use spral_ssids_inform, only : ssids_inform, ssids_print_flag
    implicit none
 
    private
@@ -152,9 +152,9 @@ subroutine check_order(n, order, invp, akeep, options, inform)
       ! !!!! In this version, signs are reset to positive value
    integer, intent(out) :: invp(n)
       ! Used to check order and then holds inverse of perm.
-   class(ssids_akeep_base), intent(inout) :: akeep
-   type (ssids_options), intent(in) :: options
-   class(ssids_inform_base), intent(inout) :: inform
+   type(ssids_akeep), intent(inout) :: akeep
+   type(ssids_options), intent(in) :: options
+   type(ssids_inform), intent(inout) :: inform
 
    character(50)  :: context ! Procedure name (used when printing).
 
@@ -368,9 +368,9 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
    integer, dimension(n), intent(out) :: invp 
       ! Work array. Used to hold inverse of order but
       ! is NOT set to inverse for the final order that is returned.
-   class(ssids_akeep_base), intent(inout) :: akeep
-   type (ssids_options), intent(in) :: options
-   class(ssids_inform_base), intent(inout) :: inform
+   type(ssids_akeep), intent(inout) :: akeep
+   type(ssids_options), intent(in) :: options
+   type(ssids_inform), intent(inout) :: inform
 
    character(50)  :: context ! Procedure name (used when printing).
    integer, dimension(:), allocatable :: child_next, child_head ! linked

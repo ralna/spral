@@ -1,13 +1,13 @@
 module spral_ssids_akeep
    use spral_ssids_datatypes, only : long, wp, SSIDS_ERROR_CUDA_UNKNOWN, &
                                      ssids_options
-   use spral_ssids_inform, only : ssids_inform_base
+   use spral_ssids_inform, only : ssids_inform
    use spral_ssids_subtree, only : symbolic_subtree_base
    use, intrinsic :: iso_c_binding
    implicit none
 
    private
-   public :: ssids_akeep_base
+   public :: ssids_akeep
 
    type symbolic_subtree_ptr
       class(symbolic_subtree_base), pointer :: ptr
@@ -16,7 +16,7 @@ module spral_ssids_akeep
    !
    ! Data type for information generated in analyse phase
    !
-   type ssids_akeep_base
+   type ssids_akeep
       logical :: check ! copy of check as input to analyse phase
       integer :: flag ! copy of error flag.
       integer :: maxmn ! maximum value of blkm or blkn
@@ -91,22 +91,22 @@ module spral_ssids_akeep
       ! Scaling from matching-based ordering
       real(wp), dimension(:), allocatable :: scaling
    contains
-      procedure, pass(akeep) :: free => free_akeep_base
+      procedure, pass(akeep) :: free => free_akeep
       procedure, pass(akeep) :: move_data
-   end type ssids_akeep_base
+   end type ssids_akeep
 
 contains
 
 subroutine move_data(akeep, options, inform)
-   class(ssids_akeep_base), intent(inout) :: akeep
+   class(ssids_akeep), intent(inout) :: akeep
    type(ssids_options), intent(in) :: options
-   class(ssids_inform_base), intent(inout) :: inform
+   type(ssids_inform), intent(inout) :: inform
 
    ! No-op
 end subroutine move_data
 
-subroutine free_akeep_base(akeep, flag)
-   class(ssids_akeep_base), intent(inout) :: akeep
+subroutine free_akeep(akeep, flag)
+   class(ssids_akeep), intent(inout) :: akeep
    integer, intent(out) :: flag
 
    integer :: i
@@ -137,6 +137,6 @@ subroutine free_akeep_base(akeep, flag)
    deallocate(akeep%ptr, stat=st)
    deallocate(akeep%row, stat=st)
    deallocate(akeep%map, stat=st)
-end subroutine free_akeep_base
+end subroutine free_akeep
 
 end module spral_ssids_akeep

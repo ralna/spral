@@ -28,8 +28,6 @@ subroutine bwd_solve_gpu(job, posdef, n, stream_handle, stream_data, x, &
    integer, intent(out) :: cuda_error
    integer, intent(out) :: st  ! stat parameter
 
-   integer :: i
-
    type(C_PTR) :: gpu_x
 
    st = 0
@@ -123,8 +121,6 @@ subroutine d_solve_gpu(nnodes, sptr, stream_handle, &
    integer, intent(out) :: cuda_error
    integer, intent(out) :: st  ! stat parameter
 
-   integer :: stream, i
-
    type(C_PTR) :: gpu_x, gpu_y
 
    st = 0
@@ -184,13 +180,10 @@ subroutine fwd_solve_gpu(posdef, child_ptr, child_list, n, nnodes, nodes, &
    integer, intent(out) :: st
    integer, intent(out) :: cuda_error
 
-   integer :: i
-
-   real(C_DOUBLE), dimension(:), allocatable, target :: xlocal
    type(C_PTR) :: gpu_x
 
    integer, dimension(:), allocatable :: cvmap
-   type(C_PTR) :: gpu_cvalues, gpu_contrib
+   type(C_PTR) :: gpu_cvalues
 
    integer :: blkm
    integer :: cn
@@ -200,7 +193,6 @@ subroutine fwd_solve_gpu(posdef, child_ptr, child_list, n, nnodes, nodes, &
 
    integer :: node
 
-   integer :: stream
    type(C_PTR), dimension(:), allocatable, target :: cvalues
 
    integer(long) :: stack_ptr
@@ -860,7 +852,6 @@ subroutine setup_gpu_solve(n, child_ptr, child_list, nnodes, nodes, sparent,  &
    integer, dimension(:), allocatable, target :: rlist2, rlist_direct2
    integer, dimension(:), pointer :: lperm
 
-   integer :: stream
    integer(long) :: int_data
 
    integer :: cn, cnelim, cnode, parent

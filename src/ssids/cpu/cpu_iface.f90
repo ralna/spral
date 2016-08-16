@@ -1,7 +1,7 @@
 module spral_ssids_cpu_iface
    use, intrinsic :: iso_c_binding
    use spral_ssids_datatypes, only : ssids_options
-   use spral_ssids_inform, only : ssids_inform_base
+   use spral_ssids_inform, only : ssids_inform
    implicit none
 
    private
@@ -51,7 +51,7 @@ end subroutine cpu_copy_options_in
 subroutine cpu_copy_stats_out(n, cstats, finform)
    integer, intent(in) :: n
    type(cpu_factor_stats), intent(in) :: cstats
-   class(ssids_inform_base), intent(inout) :: finform
+   type(ssids_inform), intent(inout) :: finform
 
    ! Copy stats
    finform%flag         = cstats%flag

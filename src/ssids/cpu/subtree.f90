@@ -3,7 +3,7 @@ module spral_ssids_cpu_subtree
    use spral_ssids_contrib, only : contrib_type
    use spral_ssids_cpu_iface ! fixme only
    use spral_ssids_datatypes
-   use spral_ssids_inform, only : ssids_inform_base
+   use spral_ssids_inform, only : ssids_inform
    use spral_ssids_subtree, only : symbolic_subtree_base, numeric_subtree_base
    implicit none
 
@@ -227,8 +227,8 @@ function factor(this, posdef, aval, child_contrib, options, inform, scaling)
    logical, intent(in) :: posdef
    real(wp), dimension(*), target, intent(in) :: aval
    type(contrib_type), dimension(:), target, intent(inout) :: child_contrib
-   class(ssids_options), intent(in) :: options
-   class(ssids_inform_base), intent(inout) :: inform
+   type(ssids_options), intent(in) :: options
+   type(ssids_inform), intent(inout) :: inform
    real(wp), dimension(*), target, optional, intent(in) :: scaling
 
    type(cpu_numeric_subtree), pointer :: cpu_factor
@@ -318,7 +318,7 @@ subroutine solve_fwd(this, nrhs, x, ldx, inform)
    integer, intent(in) :: nrhs
    real(wp), dimension(*), intent(inout) :: x
    integer, intent(in) :: ldx
-   class(ssids_inform_base), intent(inout) :: inform
+   type(ssids_inform), intent(inout) :: inform
 
    call c_subtree_solve_fwd(this%posdef, this%csubtree, nrhs, x, ldx)
 end subroutine solve_fwd
@@ -328,7 +328,7 @@ subroutine solve_diag(this, nrhs, x, ldx, inform)
    integer, intent(in) :: nrhs
    real(wp), dimension(*), intent(inout) :: x
    integer, intent(in) :: ldx
-   class(ssids_inform_base), intent(inout) :: inform
+   type(ssids_inform), intent(inout) :: inform
 
    call c_subtree_solve_diag(this%posdef, this%csubtree, nrhs, x, ldx)
 end subroutine solve_diag
@@ -338,7 +338,7 @@ subroutine solve_diag_bwd(this, nrhs, x, ldx, inform)
    integer, intent(in) :: nrhs
    real(wp), dimension(*), intent(inout) :: x
    integer, intent(in) :: ldx
-   class(ssids_inform_base), intent(inout) :: inform
+   type(ssids_inform), intent(inout) :: inform
 
    call c_subtree_solve_diag_bwd(this%posdef, this%csubtree, nrhs, x, ldx)
 end subroutine solve_diag_bwd
@@ -348,7 +348,7 @@ subroutine solve_bwd(this, nrhs, x, ldx, inform)
    integer, intent(in) :: nrhs
    real(wp), dimension(*), intent(inout) :: x
    integer, intent(in) :: ldx
-   class(ssids_inform_base), intent(inout) :: inform
+   type(ssids_inform), intent(inout) :: inform
 
    call c_subtree_solve_bwd(this%posdef, this%csubtree, nrhs, x, ldx)
 end subroutine solve_bwd

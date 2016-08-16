@@ -5,11 +5,10 @@ module spral_ssids_gpu_subtree
    use spral_ssids_alloc, only : smalloc, smfreeall, smalloc_setup
    use spral_ssids_contrib, only : contrib_type
    use spral_ssids_datatypes
-   use spral_ssids_inform, only : ssids_inform_base
+   use spral_ssids_inform, only : ssids_inform
    use spral_ssids_subtree, only : symbolic_subtree_base, numeric_subtree_base
    use spral_ssids_gpu_datatypes, only : gpu_type, free_gpu_type
    use spral_ssids_gpu_factor, only : parfactor
-   use spral_ssids_gpu_inform, only : ssids_inform_gpu
    use spral_ssids_gpu_solve, only : bwd_solve_gpu, fwd_solve_gpu, d_solve_gpu
    implicit none
 
@@ -215,8 +214,8 @@ function factor(this, posdef, aval, child_contrib, options, inform, scaling)
    logical, intent(in) :: posdef
    real(wp), dimension(*), target, intent(in) :: aval
    type(contrib_type), dimension(:), target, intent(inout) :: child_contrib
-   class(ssids_options), intent(in) :: options
-   class(ssids_inform_base), intent(inout) :: inform
+   type(ssids_options), intent(in) :: options
+   type(ssids_inform), intent(inout) :: inform
    real(wp), dimension(*), target, optional, intent(in) :: scaling
 
    type(gpu_numeric_subtree), pointer :: gpu_factor
@@ -332,11 +331,8 @@ function factor(this, posdef, aval, child_contrib, options, inform, scaling)
    inform%num_neg = stats%num_neg
    inform%num_two = stats%num_two
    inform%matrix_rank = this%sptr(this%nnodes+1)-1 - stats%num_zero
-   select type(inform)
-   type is (ssids_inform_gpu)
-      inform%cuda_error = stats%cuda_error
-      inform%cublas_error = stats%cublas_error
-   end select
+   inform%cuda_error = stats%cuda_error
+   inform%cublas_error = stats%cublas_error
 
    ! Success, set result and return
    factor => gpu_factor
@@ -351,10 +347,7 @@ function factor(this, posdef, aval, child_contrib, options, inform, scaling)
 
    200 continue
    inform%flag = SSIDS_ERROR_CUDA_UNKNOWN
-   select type(inform)
-   type is (ssids_inform_gpu)
-      inform%cuda_error = cuda_error
-   end select
+   inform%cuda_error = cuda_error
    deallocate(gpu_factor, stat=st)
    return
 end function factor
@@ -439,7 +432,7 @@ subroutine solve_fwd(this, nrhs, x, ldx, inform)
    integer, intent(in) :: nrhs
    real(wp), dimension(*), intent(inout) :: x
    integer, intent(in) :: ldx
-   class(ssids_inform_base), intent(inout) :: inform
+   type(ssids_inform), intent(inout) :: inform
 
    integer :: r
    integer :: cuda_error
@@ -462,10 +455,7 @@ subroutine solve_fwd(this, nrhs, x, ldx, inform)
    return
 
    200 continue ! CUDA error
-   select type(inform)
-   type is (ssids_inform_gpu)
-      inform%cuda_error = cuda_error
-   end select
+   inform%cuda_error = cuda_error
    inform%flag = SSIDS_ERROR_CUDA_UNKNOWN
    return
 end subroutine solve_fwd
@@ -476,7 +466,7 @@ subroutine solve_diag(this, nrhs, x, ldx, inform)
    integer, intent(in) :: nrhs
    real(wp), dimension(*), intent(inout) :: x
    integer, intent(in) :: ldx
-   class(ssids_inform_base), intent(inout) :: inform
+   type(ssids_inform), intent(inout) :: inform
 
    integer :: r
    integer :: cuda_error
@@ -497,10 +487,7 @@ subroutine solve_diag(this, nrhs, x, ldx, inform)
    return
 
    200 continue ! CUDA error
-   select type(inform)
-   type is (ssids_inform_gpu)
-      inform%cuda_error = cuda_error
-   end select
+   inform%cuda_error = cuda_error
    inform%flag = SSIDS_ERROR_CUDA_UNKNOWN
    return
 end subroutine solve_diag
@@ -510,7 +497,7 @@ subroutine solve_diag_bwd(this, nrhs, x, ldx, inform)
    integer, intent(in) :: nrhs
    real(wp), dimension(*), intent(inout) :: x
    integer, intent(in) :: ldx
-   class(ssids_inform_base), intent(inout) :: inform
+   type(ssids_inform), intent(inout) :: inform
 
    integer :: r
    integer :: cuda_error
@@ -531,10 +518,7 @@ subroutine solve_diag_bwd(this, nrhs, x, ldx, inform)
    return
 
    200 continue ! CUDA error
-   select type(inform)
-   type is (ssids_inform_gpu)
-      inform%cuda_error = cuda_error
-   end select
+   inform%cuda_error = cuda_error
    inform%flag = SSIDS_ERROR_CUDA_UNKNOWN
    return
 end subroutine solve_diag_bwd
@@ -544,7 +528,7 @@ subroutine solve_bwd(this, nrhs, x, ldx, inform)
    integer, intent(in) :: nrhs
    real(wp), dimension(*), intent(inout) :: x
    integer, intent(in) :: ldx
-   class(ssids_inform_base), intent(inout) :: inform
+   type(ssids_inform), intent(inout) :: inform
 
    integer :: r
    integer :: cuda_error
@@ -565,10 +549,7 @@ subroutine solve_bwd(this, nrhs, x, ldx, inform)
    return
 
    200 continue ! CUDA error
-   select type(inform)
-   type is (ssids_inform_gpu)
-      inform%cuda_error = cuda_error
-   end select
+   inform%cuda_error = cuda_error
    inform%flag = SSIDS_ERROR_CUDA_UNKNOWN
    return
 end subroutine solve_bwd

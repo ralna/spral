@@ -1,16 +1,17 @@
 module spral_ssids_inform
+   use spral_cuda, only : cudaGetErrorString
    use spral_scaling, only : auction_inform
    use spral_ssids_datatypes
    implicit none
 
    private
-   public :: ssids_inform_base
+   public :: ssids_inform
    public :: ssids_print_flag
 
    !
    ! Data type for information returned by code
    !
-   type ssids_inform_base
+   type ssids_inform
       integer :: flag ! Takes one of the enumerated flag values:
          ! SSIDS_SUCCESS
          ! SSIDS_ERROR_XXX
@@ -29,14 +30,15 @@ module spral_ssids_inform
       integer :: num_two = 0 ! Number of 2x2 pivots used by factorization
       integer :: stat = 0 ! stat parameter
       type(auction_inform) :: auction
+      integer :: cuda_error
+      integer :: cublas_error
 
       ! Undocumented FIXME: should we document them?
       integer :: not_first_pass
       integer :: not_second_pass
    contains
       procedure, pass(this) :: flagToCharacter
-      procedure, pass(this) :: set_cuda_error
-   end type ssids_inform_base
+   end type ssids_inform
 
 contains
 
@@ -45,7 +47,7 @@ contains
 ! Member function inform%flagToCharacter
 !
 function flagToCharacter(this) result(msg)
-   class(ssids_inform_base), intent(in) :: this
+   class(ssids_inform), intent(in) :: this
    character(len=200) :: msg ! return value
 
    select case(this%flag)
@@ -95,6 +97,12 @@ function flagToCharacter(this) result(msg)
          &and requested operation - see documentation for legal combinations'
    case(SSIDS_ERROR_UNIMPLEMENTED)
       msg = 'Functionality not yet implemented'
+   case(SSIDS_ERROR_CUDA_UNKNOWN)
+      write(msg,'(2a)') ' Unhandled CUDA error: ', &
+         cudaGetErrorString(this%cuda_error)
+   case(SSIDS_ERROR_CUBLAS_UNKNOWN)
+      msg = 'Unhandled CUBLAS error:'
+      ! FIXME?
 
    !
    ! Warnings
@@ -122,18 +130,11 @@ function flagToCharacter(this) result(msg)
 
 end function flagToCharacter
 
-subroutine set_cuda_error(this, cuda_error)
-   class(ssids_inform_base), intent(inout) :: this
-   integer, intent(in) :: cuda_error
-
-   ! No-op as CUDA not available
-end subroutine
-
 !
 ! routine to print errors and warnings
 !
 subroutine ssids_print_flag(inform,nout,context)
-   class(ssids_inform_base), intent(in) :: inform
+   class(ssids_inform), intent(in) :: inform
    integer, intent(in) :: nout
    character (len=*), optional, intent(in) :: context
 
