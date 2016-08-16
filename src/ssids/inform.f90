@@ -134,7 +134,7 @@ end function flagToCharacter
 ! routine to print errors and warnings
 !
 subroutine ssids_print_flag(inform,nout,context)
-   class(ssids_inform), intent(in) :: inform
+   type(ssids_inform), intent(in) :: inform
    integer, intent(in) :: nout
    character (len=*), optional, intent(in) :: context
 
