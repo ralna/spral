@@ -241,31 +241,13 @@ subroutine perform_presolve(pos_def, child_ptr, child_list, n, nnodes, nodes, &
    st = 0
    cuda_error = 0
 
-   select case(options%presolve)
-   case(0)
-      ! Setup data-strctures for normal GPU solve
-      call setup_gpu_solve(n, child_ptr, child_list, nnodes, nodes, sparent,   &
-         sptr, rptr, rlist, stream_handle, stream_data, gpu_rlist_with_delays, &
-         gpu_clists, gpu_clists_direct, gpu_clen, st, cuda_error,              &
-         gpu_rlist_direct_with_delays)
-      if(st.ne.0) return
-      if(cuda_error.ne.0) return
-   case(1:)
-      ! Allocate modified version of rlist_direct
-      nrd = rlist_direct_size(nnodes, nodes, rptr)
-      allocate(rlist_direct_postfact(2*nrd), stat=st)
-      if(st.ne.0) return
-      call rebuild_rlist_direct(n, nnodes, nodes, sptr, rptr, rlist, child_ptr,&
-         child_list, nrd, rlist_direct_postfact, st)
-      if(st.ne.0) return
-
-      ! Setup solves
-      call solve_setup(stream_handle, pos_def, sparent, child_ptr,         &
-         child_list, n, nnodes, nodes, sptr, rptr, rlist,                  &
-         rlist_direct_postfact, stream_data, st, cuda_error)
-      if(st.ne.0) return
-      if(cuda_error.ne.0) return
-   end select
+   ! Setup data-strctures for normal GPU solve
+   call setup_gpu_solve(n, child_ptr, child_list, nnodes, nodes, sparent,   &
+      sptr, rptr, rlist, stream_handle, stream_data, gpu_rlist_with_delays, &
+      gpu_clists, gpu_clists_direct, gpu_clen, st, cuda_error,              &
+      gpu_rlist_direct_with_delays)
+   if(st.ne.0) return
+   if(cuda_error.ne.0) return
 end subroutine perform_presolve
 
 !*******************************
@@ -664,38 +646,6 @@ subroutine subtree_factor_gpu(stream, pos_def, child_ptr, child_list, n,   &
    stats%num_neg = custats%num_neg
    stats%num_two = custats%num_two
   
-   if ( options%presolve > 0 ) then
-      gpu%presolve = options%presolve
-      tile_size = 24
-      maxnelm = max_nelim(nnodes, nodes, gpu%num_levels, gpu%lvlptr, gpu%lvllist)
-      maxtc = (maxnelm - 1)/tile_size + 1
-      m = gpu%lvlptr(gpu%num_levels + 1) - 1
-      allocate(iwork(maxtc + 1, 2), jwork(m), stat=stats%st)
-      if(stats%st.ne.0) goto 100
-      call presolve_lwork( nnodes, nodes, sptr, rptr, gpu%num_levels, &
-         gpu%lvlptr, gpu%lvllist, tile_size, maxtc, iwork, ntlev, m )
-      stats%cuda_error = cudaMalloc(ptr_u, m*C_SIZEOF(dummy_real))
-      if(stats%cuda_error.ne.0) go to 200
-      call presolve_first( stream, nnodes, nodes, rptr, &
-         gpu%num_levels, gpu%lvlptr, &
-         gpu%lvllist, tile_size, ntlev, iwork, maxtc, iwork(1,2), jwork, &
-         pos_def, cublas_handle, ptr_u, stats%st, stats%cuda_error, &
-         stats%cublas_error )
-      if(stats%st.ne.0) goto 100
-      if(stats%cuda_error.ne.0) goto 200
-      if(stats%cublas_error.ne.0) goto 300
-      call presolve_second( stream, nnodes, nodes, sptr, rptr, &
-         gpu%num_levels, gpu%values_L, &
-         gpu%lvlptr, gpu%lvllist, tile_size, ntlev, iwork, maxtc, iwork(1,2), &
-         ptr_u, stats%st, stats%cuda_error)
-      if(stats%st.ne.0) goto 100
-      if(stats%cuda_error.ne.0) go to 200
-      deallocate(iwork, jwork, stat=stats%st)
-      if(stats%st.ne.0) goto 100
-      stats%cuda_error = cudaFree( ptr_u )
-      if(stats%cuda_error.ne.0) go to 200
-   end if
-
    20 continue ! start of cleanup
 
    free_contrib = .true.
@@ -2809,14 +2759,17 @@ subroutine solve_setup(stream, pos_def, sparent, child_ptr, child_list, n, &
    end do
 
    ! find the nodes that are top subtree's nodes' children
+   print *, "GIGIGI"
    do lev = 1, fact_data%num_levels
       m = 0
       do li = fact_data%lvlptr(lev), fact_data%lvlptr(lev + 1) - 1
          node = fact_data%lvllist(li)
+         print *, "consider ", node, sparent(node), nnodes
          if(sparent(node).gt.nnodes ) cycle
          if(mask(sparent(node)).eq.0) m = m + 1
       end do
       fact_data%values_L(lev)%nexp = m
+      print *, "lev ", lev, " m ", m
       if(m.eq.0) cycle
       allocate(fact_data%values_L(lev)%export(m), stat=st)
       if(st.ne.0) return
@@ -2829,6 +2782,7 @@ subroutine solve_setup(stream, pos_def, sparent, child_ptr, child_list, n, &
             fact_data%values_L(lev)%export(m) = node
          end if
       end do
+      print *, "EXPORT = ", fact_data%values_L(lev)%export(:)
    end do
 
    max_lx_size = 0

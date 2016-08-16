@@ -10,9 +10,7 @@ module spral_ssids_gpu_subtree
    use spral_ssids_gpu_datatypes, only : gpu_type, free_gpu_type
    use spral_ssids_gpu_factor, only : parfactor
    use spral_ssids_gpu_inform, only : ssids_inform_gpu
-   use spral_ssids_gpu_solve, only : bwd_solve_gpu, fwd_solve_gpu, &
-                                     fwd_multisolve_gpu, bwd_multisolve_gpu, &
-                                     d_solve_gpu
+   use spral_ssids_gpu_solve, only : bwd_solve_gpu, fwd_solve_gpu, d_solve_gpu
    implicit none
 
    private
@@ -57,7 +55,6 @@ module spral_ssids_gpu_subtree
       type(smalloc_type), pointer :: alloc => null()
       type(node_type), dimension(:), allocatable :: nodes ! Stores pointers
          ! to information about nodes
-      integer :: presolve ! FIXME: make logical?
       type(contrib_type) :: contrib
       type(C_PTR) :: contrib_wait
    contains
@@ -244,7 +241,6 @@ function factor(this, posdef, aval, child_contrib, options, inform, scaling)
    if(st.ne.0) goto 10
    gpu_factor%symbolic => this
    gpu_factor%posdef = posdef
-   gpu_factor%presolve = options%presolve
 
    ! Allocate memory
    gpu_factor%host_factors = .false.
@@ -449,25 +445,12 @@ subroutine solve_fwd(this, nrhs, x, ldx, inform)
    integer :: cuda_error
    type(C_PTR) :: gpu_x
 
-   if(this%presolve.eq.0) then
-      call fwd_solve_gpu(this%posdef, this%symbolic%child_ptr,          &
-         this%symbolic%child_list, this%symbolic%n,                      &
-         this%symbolic%nnodes, this%nodes, this%symbolic%rptr,           &
-         this%stream_handle, this%stream_data, x, inform%stat, cuda_error)
-      if(inform%stat.ne.0) goto 100
-      if(cuda_error.ne.0) goto 200
-   else
-      gpu_x = create_gpu_x(this%symbolic%n, nrhs, x, ldx, cuda_error)
-      if(cuda_error.ne.0) goto 200
-      call fwd_multisolve_gpu(this%symbolic%nnodes, this%nodes,            &
-         this%symbolic%rptr, this%stream_handle, this%stream_data, nrhs,   &
-         gpu_x, cuda_error, inform%stat)
-      if(inform%stat.ne.0) goto 100
-      if(cuda_error.ne.0) goto 200
-      call recover_destroy_gpu_x(this%symbolic%n, nrhs, x, ldx, gpu_x, &
-         cuda_error)
-      if(cuda_error.ne.0) goto 200
-   end if
+   call fwd_solve_gpu(this%posdef, this%symbolic%child_ptr,          &
+      this%symbolic%child_list, this%symbolic%n,                      &
+      this%symbolic%nnodes, this%nodes, this%symbolic%rptr,           &
+      this%stream_handle, this%stream_data, x, inform%stat, cuda_error)
+   if(inform%stat.ne.0) goto 100
+   if(cuda_error.ne.0) goto 200
 
    return
 
@@ -538,22 +521,10 @@ subroutine solve_diag(this, nrhs, x, ldx, inform)
 
 
    ! FIXME: comments in fkeep.f90 about unimplemented on GPU????
-   if(this%presolve.eq.0) then
-      call d_solve_gpu(this%symbolic%nnodes, this%symbolic%sptr,  &
-         this%stream_handle, this%stream_data, this%symbolic%n,   &
-         x, inform%stat, cuda_error)
-      if(inform%stat.ne.0) goto 100
-   else
-      gpu_x = create_gpu_x(this%symbolic%n, nrhs, x, ldx, cuda_error)
-      if(cuda_error.ne.0) goto 200
-      call bwd_multisolve_gpu(this%posdef, SSIDS_SOLVE_JOB_DIAG, &
-         this%stream_handle, this%stream_data, nrhs, gpu_x, cuda_error)
-      call recover_destroy_gpu_x(this%symbolic%n, nrhs, x, ldx, gpu_x, &
-         cuda_error)
-      if(cuda_error.ne.0) goto 200
-   end if
-   if(cuda_error.ne.0) goto 200
-
+   call d_solve_gpu(this%symbolic%nnodes, this%symbolic%sptr,  &
+      this%stream_handle, this%stream_data, this%symbolic%n,   &
+      x, inform%stat, cuda_error)
+   if(inform%stat.ne.0) goto 100
 
    return
 
@@ -581,23 +552,11 @@ subroutine solve_diag_bwd(this, nrhs, x, ldx, inform)
    integer :: cuda_error
 
 
-   if(this%presolve.eq.0) then
-      call bwd_solve_gpu(SSIDS_SOLVE_JOB_DIAG_BWD, this%posdef,      &
-         this%symbolic%n, this%stream_handle, this%stream_data, x,   &
-         inform%stat, cuda_error)
-      if(cuda_error.ne.0) goto 200
-   else
-      gpu_x = create_gpu_x(this%symbolic%n, nrhs, x, ldx, cuda_error)
-      if(cuda_error.ne.0) goto 200
-      call bwd_multisolve_gpu(this%posdef, SSIDS_SOLVE_JOB_DIAG_BWD, &
-         this%stream_handle, this%stream_data, nrhs, gpu_x, cuda_error)
-      if(cuda_error.ne.0) goto 200
-      call recover_destroy_gpu_x(this%symbolic%n, nrhs, x, ldx, gpu_x, &
-         cuda_error)
-      if(cuda_error.ne.0) goto 200
-   end if
+   call bwd_solve_gpu(SSIDS_SOLVE_JOB_DIAG_BWD, this%posdef,      &
+      this%symbolic%n, this%stream_handle, this%stream_data, x,   &
+      inform%stat, cuda_error)
    if (inform%stat .ne. 0) goto 100
-
+   if(cuda_error.ne.0) goto 200
 
    return
 
@@ -624,22 +583,10 @@ subroutine solve_bwd(this, nrhs, x, ldx, inform)
    type(C_PTR) :: gpu_x
    integer :: cuda_error
 
-   if(this%presolve.eq.0) then
-      call bwd_solve_gpu(SSIDS_SOLVE_JOB_BWD, this%posdef, this%symbolic%n, &
-         this%stream_handle, this%stream_data, x, inform%stat, cuda_error)
-      if(cuda_error.ne.0) goto 200
-   else
-      gpu_x = create_gpu_x(this%symbolic%n, nrhs, x, ldx, cuda_error)
-      if(cuda_error.ne.0) goto 200
-      call bwd_multisolve_gpu(this%posdef, SSIDS_SOLVE_JOB_BWD,   &
-         this%stream_handle, this%stream_data, nrhs, gpu_x, cuda_error)
-      if(cuda_error.ne.0) goto 200
-      call recover_destroy_gpu_x(this%symbolic%n, nrhs, x, ldx, gpu_x, &
-         cuda_error)
-      if(cuda_error.ne.0) goto 200
-   end if
+   call bwd_solve_gpu(SSIDS_SOLVE_JOB_BWD, this%posdef, this%symbolic%n, &
+      this%stream_handle, this%stream_data, x, inform%stat, cuda_error)
    if (inform%stat .ne. 0) goto 100
-
+   if(cuda_error.ne.0) goto 200
 
    return
 

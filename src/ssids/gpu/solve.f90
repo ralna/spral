@@ -10,10 +10,8 @@ module spral_ssids_gpu_solve
    implicit none
 
    private
-   public :: bwd_solve_gpu,      & ! Backwards solve on GPU (presolve=0)
-             bwd_multisolve_gpu, & ! Backwards solve on GPU (presolve=1)
-             fwd_solve_gpu,      & ! Forwards solve on GPU (presolve=0)
-             fwd_multisolve_gpu, & ! Forwards solve on GPU (presolve=1)
+   public :: bwd_solve_gpu,      & ! Backwards solve on GPU
+             fwd_solve_gpu,      & ! Forwards solve on GPU
              d_solve_gpu,        & ! D solve on GPU
              setup_gpu_solve       ! Setup data strucutres prior to solve
 

@@ -577,25 +577,6 @@ subroutine test_errors
 
    call simple_mat(a)
    posdef = .false.
-   write(*,"(a)",advance="no") " * Testing !use_gpu_solve and presolve=1....."
-   options%use_gpu_solve = .false.
-   options%presolve = 1
-   call ssids_analyse(check, a%n, a%ptr, a%row, akeep, options, info, &
-      order=order)
-   call ssids_factor(posdef,a%val,akeep,fkeep,options,info)
-   if (allocated(x1)) deallocate(x1)
-   allocate(x1(a%n))
-   x1(1:a%n) = one
-   call ssids_solve(x1,akeep,fkeep,options,info)
-   call print_result(info%flag, SSIDS_ERROR_PRESOLVE_INCOMPAT)
-   call ssids_free(akeep,fkeep,cuda_error)
-   options%use_gpu_solve = .true.
-   options%presolve = 0
-
-!!!!!!
-
-   call simple_mat(a)
-   posdef = .false.
    write(*,"(a)",advance="no") " * Testing job out of range below............"
    call ssids_analyse(check, a%n, a%ptr, a%row, akeep, options, info, &
       order=order)
@@ -837,19 +818,6 @@ subroutine test_errors
    call print_result(info%flag, SSIDS_ERROR_NOT_LDLT)
    call ssids_free(akeep, fkeep, cuda_error)
 
-   write(*,"(a)",advance="no") " * Testing call to alter_indef presolved....."
-   call simple_mat(a)
-   posdef = .false.
-   call ssids_analyse(check, a%n, a%ptr, a%row, &
-      akeep, options, info, order=order)
-   options%presolve = 1
-   call ssids_factor(.false., a%val, akeep, fkeep, options, info)
-   if (allocated(d)) deallocate(d)
-   allocate(d(2,a%n))
-   call ssids_alter(d,akeep,fkeep,options,info)
-   call print_result(info%flag, SSIDS_ERROR_PRESOLVE_INCOMPAT)
-   call ssids_free(akeep, fkeep, cuda_error)
-   options%presolve = 0
 end subroutine test_errors
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -874,8 +842,6 @@ subroutine test_warnings
    write(*,"(a)") "================"
    write(*,"(a)") "Testing warnings"
    write(*,"(a)") "================"
-
-   options%presolve = 1
 
    options%unit_warning = we_unit
    options%unit_diagnostics = dl_unit
@@ -1177,8 +1143,6 @@ subroutine test_special
    options%unit_warning = we_unit; default_options%unit_warning = we_unit
    check = .true.
 
-!   options%presolve = 1
-
    write(*,"(a)")
    write(*,"(a)") "====================="
    write(*,"(a)") "Testing special cases"
@@ -1329,7 +1293,6 @@ subroutine test_special
       res, SSIDS_WARNING_FACT_SINGULAR, fs=.true.)
 
    options = default_options
-!   options%presolve = 1
    write(*,"(a)",advance="no") &
       " * Testing n>1e5, ne<3.0*n, order=1......"
    a%n = big_test_n
@@ -1411,7 +1374,6 @@ subroutine test_special
    write(*,"(a)",advance="no") &
       " * Testing n=500, posdef, BBD............"
    options = default_options
-   options%presolve = 1
    call gen_bordered_block_diag(.true., (/ 15, 455, 10 /), 20, a%n, a%ptr, &
       a%row, a%val, state)
    call ssids_analyse(check, a%n, a%ptr, a%row, akeep, options, info, val=a%val)
@@ -1911,9 +1873,12 @@ subroutine test_random
    options%multiplier = 1.0 ! Ensure we give reallocation a work out
 
    if(debug) options%print_level = 10000
+   !options%cpu_gpu_ratio = 1.0 ! all on cpu
+   !options%min_npart = 1
 
    do prblm = 1, nprob
-      !call random_set_seed(state, 226717912)
+      if(errors>0) stop ! FIXME: rm
+      !call random_set_seed(state, 1963535693)
       !print *, random_get_seed(state)
 
       ! decide whether pos. def. problem
@@ -1951,9 +1916,7 @@ subroutine test_random
       if(debug) call print_matrix(6, -1, mt, a%n, a%n, a%ptr, a%row, a%val)
 
       options%ordering = random_integer(state, 2) - 1 ! user or metis
-      options%presolve = random_integer(state, 2) - 1
-      options%use_gpu_solve = ( 1.ne.random_integer(state,3) .or. &
-                                options%presolve.eq.1 )
+      options%use_gpu_solve = ( 1.ne.random_integer(state,3) )
 
       if(random_logical(state)) then
          options%nstream = random_integer(state, 4)
@@ -2007,7 +1970,7 @@ subroutine test_random
          cycle
       endif
 
-      if(options%presolve.ne.0 .or. .not.options%use_gpu_solve) then
+      if(.not.options%use_gpu_solve) then
          nrhs = random_integer(state,  maxnrhs)
       else
          nrhs = 1
@@ -2256,14 +2219,12 @@ subroutine test_random
            cycle 
          endif
 
-         if(options%presolve.eq.0) then
-            call ssids_alter(d,akeep,fkeep,options,info)
-            if (info%flag < 0) then
-               write (*,'(a)') ' Unexpected error from ssids_alter'
-               call ssids_free(akeep, fkeep, cuda_error)
-               errors = errors + 1
-               cycle 
-            endif
+         call ssids_alter(d,akeep,fkeep,options,info)
+         if (info%flag < 0) then
+            write (*,'(a)') ' Unexpected error from ssids_alter'
+            call ssids_free(akeep, fkeep, cuda_error)
+            errors = errors + 1
+            cycle 
          endif
       else
          call ssids_enquire_posdef(akeep,fkeep,options,info,d1)
@@ -2314,7 +2275,6 @@ subroutine test_big
    a%n = 2000
    a%ne = 5*a%n
    nrhs = 3
-   options%presolve = 1
 
    allocate(a%ptr(a%n+1))
    allocate(a%row(2*a%ne), a%val(2*a%ne), a%col(2*a%ne))
@@ -2451,7 +2411,6 @@ subroutine test_random_scale
    posdef = .false.
 
    options%action = .false.
-   options%presolve = 1
    options%nstream = 2
 
    do prblm = 1, nprob
@@ -2491,7 +2450,6 @@ subroutine test_random_scale
       n1 = random_integer(state, maxn)
       if ((n1/2)*2 == n1) options%ordering = 0
 
-      options%presolve = random_integer(state, 2) - 1
       if(random_logical(state)) then
          options%nstream = random_integer(state, 4)
       else
@@ -2544,7 +2502,7 @@ subroutine test_random_scale
          cycle
       endif
 
-      if(options%presolve.ne.0 .or. .not.options%use_gpu_solve) then
+      if(.not.options%use_gpu_solve) then
          nrhs = random_integer(state,  maxnrhs)
       else
          nrhs = 1
@@ -2553,7 +2511,6 @@ subroutine test_random_scale
       if(prblm.eq.nprob) then
          options%print_level = 2
          options%unit_diagnostics = dl_unit
-         options%presolve = 1
          nrhs = 3
       endif
 

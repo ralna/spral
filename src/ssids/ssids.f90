@@ -1036,7 +1036,7 @@ end subroutine ssids_solve_one_double
 
 !*************************************************************************
 
-! Note: GPU solve + nrhs>1 doesn't work without presolve
+! Note: GPU solve + nrhs>1 doesn't work
 subroutine ssids_solve_mult_double(nrhs, x, ldx, akeep, fkeep, options, &
       inform, job)
    integer, intent(in) :: nrhs
@@ -1157,13 +1157,6 @@ subroutine ssids_solve_mult_double(nrhs, x, ldx, akeep, fkeep, options, &
       end if
       local_job = job
    end if
-
-   if(.not.options%use_gpu_solve .and. options%presolve.ne.0) then
-      ! Presolve and CPU solve incompatible
-      inform%flag = SSIDS_ERROR_PRESOLVE_INCOMPAT
-      call ssids_print_flag(inform,nout,context)
-      return
-   endif
 
    call fkeep%inner_solve(local_job, nrhs, x, ldx, akeep, options, inform)
    if(inform%flag .ne. 0) then
@@ -1314,12 +1307,6 @@ subroutine ssids_alter_double(d, akeep, fkeep, options, inform)
       call ssids_print_flag(inform,nout,context)
       return
    end if 
-
-   if (options%presolve.ne.0) then
-      inform%flag = SSIDS_ERROR_PRESOLVE_INCOMPAT
-      call ssids_print_flag(inform,nout,context)
-      return
-   end if
 
    call fkeep%alter(d, akeep, options, inform)
    if(inform%flag.lt.0) call ssids_print_flag(inform,nout,context)

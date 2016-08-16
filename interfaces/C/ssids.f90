@@ -17,7 +17,6 @@ module spral_ssids_ciface
       logical(C_BOOL) :: action
       real(C_DOUBLE) :: u
       logical(C_BOOL) :: use_gpu_solve
-      integer(C_INT) :: presolve
       character(C_CHAR) :: unused(80)
    end type spral_ssids_options
 
@@ -58,7 +57,6 @@ contains
       foptions%action            = coptions%action
       foptions%u                 = coptions%u
       foptions%use_gpu_solve     = coptions%use_gpu_solve
-      foptions%presolve          = coptions%presolve
    end subroutine copy_options_in
 
    subroutine copy_inform_out(finform, cinform)
@@ -106,7 +104,6 @@ subroutine spral_ssids_default_options(coptions) bind(C)
    coptions%action            = default_options%action
    coptions%u                 = default_options%u
    coptions%use_gpu_solve     = default_options%use_gpu_solve
-   coptions%presolve          = default_options%presolve
 end subroutine spral_ssids_default_options
 
 subroutine spral_ssids_analyse(ccheck, n, corder, cptr, crow, cval, cakeep, &
