@@ -373,9 +373,7 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
    type(ssids_inform), intent(inout) :: inform
 
    character(50)  :: context ! Procedure name (used when printing).
-   integer, dimension(:), allocatable :: child_next, child_head ! linked
-      ! list for children, used to build akeep%child_ptr, akeep%child_list
-   integer, dimension(:), allocatable :: contrib_dest, exec_loc
+   integer, dimension(:), allocatable :: contrib_dest, exec_loc, level
 
    real :: cpu_gpu_ratio
    integer :: nemin, flag
@@ -435,61 +433,20 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
       akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist, st)
    if (st .ne. 0) go to 100
 
-   ! Find maxmn and setup levels
-   allocate(akeep%level(akeep%nnodes+1), stat=st)
+   ! Determine inform%maxfront and inform%maxdepth
+   allocate(level(akeep%nnodes+1), stat=st)
    if (st .ne. 0) go to 100
-
-   akeep%maxmn = 0
-   akeep%level(akeep%nnodes+1) = 0
+   level(akeep%nnodes+1) = 0
    inform%maxfront = 0
    inform%maxdepth = 0
    do i = akeep%nnodes, 1, -1
       blkn = akeep%sptr(i+1) - akeep%sptr(i) 
       blkm = int(akeep%rptr(i+1) - akeep%rptr(i))
-      akeep%maxmn = max(akeep%maxmn, blkm, blkn)
-      akeep%level(i) = akeep%level(akeep%sparent(i)) + 1
+      level(i) = level(akeep%sparent(i)) + 1
       inform%maxfront = max(inform%maxfront, blkn)
-      inform%maxdepth = max(inform%maxdepth, akeep%level(i))
+      inform%maxdepth = max(inform%maxdepth, level(i))
    end do
-
-   !call count_matrix_sizes(akeep%n, akeep%nnodes, akeep%level, &
-   !   akeep%sptr, akeep%rptr)
-
-   ! Setup child_ptr, child_next and calculate work per subtree
-   allocate(child_next(akeep%nnodes+1), child_head(akeep%nnodes+1), &
-      akeep%child_ptr(akeep%nnodes+2), akeep%child_list(akeep%nnodes), &
-      akeep%subtree_work(akeep%nnodes+1), stat=st)
-   if (st .ne. 0) go to 100
-   child_head(:) = -1
-   do i = akeep%nnodes, 1, -1 ! backwards so child list is in order
-      blkn = akeep%sptr(i+1) - akeep%sptr(i) 
-      blkm = int(akeep%rptr(i+1) - akeep%rptr(i))
-      j = akeep%sparent(i)
-      ! Add to parent's child linked list
-      child_next(i) = child_head(j)
-      child_head(j) = i
-      ! Calculate extra work at this node
-      akeep%subtree_work(i) = 0
-      do k = blkm, blkm-blkn+1, -1
-         akeep%subtree_work(i) = akeep%subtree_work(i) + k**2
-      end do
-   end do
-   akeep%subtree_work(akeep%nnodes+1) = 0
-   ! Add work up tree, build child_ptr and child_list
-   akeep%child_ptr(1) = 1
-   do i = 1, akeep%nnodes+1
-      if(i.lt.akeep%nnodes+1) then
-         j = akeep%sparent(i)
-         akeep%subtree_work(j) = akeep%subtree_work(j) + akeep%subtree_work(i)
-      end if
-      j = child_head(i)
-      akeep%child_ptr(i+1) = akeep%child_ptr(i)
-      do while(j.ne.-1)
-         akeep%child_list(akeep%child_ptr(i+1)) = j
-         akeep%child_ptr(i+1) = akeep%child_ptr(i+1) + 1
-         j = child_next(j)
-      end do
-   end do
+   deallocate(level, stat=st)
 
    ! Sort out subtrees
    cpu_gpu_ratio = options%cpu_gpu_ratio
@@ -530,16 +487,9 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
          akeep%subtree(i)%ptr => construct_gpu_symbolic_subtree(akeep%n, &
             akeep%part(i), akeep%part(i+1), akeep%sptr, akeep%sparent, &
             akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist, akeep%nfactor, &
-            akeep%child_ptr, akeep%child_list, options)
+            options)
       end select
    end do
-
-   ! Copy GPU-relevent data to device if needed (no-op if not)
-   call akeep%move_data(options, inform)
-   if(inform%flag.lt.0) then
-      call ssids_print_flag(inform, nout, context)
-      return
-   endif
 
    ! Info
    inform%matrix_rank = akeep%sptr(akeep%nnodes+1)-1

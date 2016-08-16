@@ -71,7 +71,7 @@ module spral_ssids_gpu_subtree
 contains
 
 function construct_gpu_symbolic_subtree(n, sa, en, sptr, sparent, rptr, &
-      rlist, nptr, nlist, nfactor, child_ptr, child_list, options) result(this)
+      rlist, nptr, nlist, nfactor, options) result(this)
    class(gpu_symbolic_subtree), pointer :: this
    integer, intent(in) :: n
    integer, intent(in) :: sa
@@ -83,8 +83,6 @@ function construct_gpu_symbolic_subtree(n, sa, en, sptr, sparent, rptr, &
    integer, dimension(*), target, intent(in) :: nptr
    integer, dimension(2,*), target, intent(in) :: nlist
    integer(long), intent(in) :: nfactor
-   integer, dimension(*), target, intent(in) :: child_ptr
-   integer, dimension(*), target, intent(in) :: child_list
    class(ssids_options), intent(in) :: options
 
    integer :: cuda_error, st
@@ -105,17 +103,12 @@ function construct_gpu_symbolic_subtree(n, sa, en, sptr, sparent, rptr, &
    this%nfactor = nfactor
    allocate(this%nptr(this%nnodes+1))
    this%nptr(1:this%nnodes+1) = nptr(sa:en) - nptr(sa) + 1
-   allocate(this%child_ptr(this%nnodes+1))
-   this%child_ptr(1:this%nnodes+1) = child_ptr(sa:en) - child_ptr(sa) + 1
-   allocate(this%child_list(this%child_ptr(this%nnodes+1)-1))
-   this%child_list(:) = child_list(child_ptr(sa):child_ptr(en)-1) - sa + 1
    this%sptr => sptr(sa:en)
    allocate(this%sparent(this%nnodes))
    this%sparent = sparent(sa:en-1) - sa + 1
    allocate(this%rptr(this%nnodes+1))
    this%rptr(1:this%nnodes+1) = rptr(sa:en) - rptr(sa) + 1
    this%rlist => rlist(rptr(sa):rptr(en)-1)
-
    this%max_a_idx = maxval(nlist(1,nptr(sa):nptr(en)-1)) ! needed for aval copy
 
    ! Build rlist direct
@@ -123,8 +116,11 @@ function construct_gpu_symbolic_subtree(n, sa, en, sptr, sparent, rptr, &
    call build_rlist_direct(n, this%nnodes, this%sparent, this%rptr, &
       this%rlist, this%rlist_direct, st) ! FIXME: st
 
+   ! Build child pointers
+   call build_child_pointers(this%nnodes, this%sparent, this%child_ptr, &
+      this%child_list, st)
+
    ! Copy data to device
-   ! FIXME: only copy part we care about from sa:en
    cuda_error=0
    call copy_analyse_data_to_device(2*(this%nptr(this%nnodes+1)-1), &
       nlist(:,nptr(sa):nptr(en)-1), rptr(en)-rptr(sa), &
@@ -143,6 +139,41 @@ function construct_gpu_symbolic_subtree(n, sa, en, sptr, sparent, rptr, &
       return
    endif
 end function construct_gpu_symbolic_subtree
+
+subroutine build_child_pointers(nnodes, sparent, child_ptr, child_list, st)
+   integer, intent(in) :: nnodes
+   integer, dimension(nnodes), intent(in) :: sparent
+   integer, dimension(:), allocatable :: child_ptr
+   integer, dimension(:), allocatable :: child_list
+   integer, intent(out) :: st
+
+   integer :: i, j
+   integer, dimension(:), allocatable :: child_next, child_head ! linked
+      ! list for children
+
+   ! Setup child_ptr, child_next and calculate work per subtree
+   allocate(child_next(nnodes+1), child_head(nnodes+1), child_ptr(nnodes+2), &
+      child_list(nnodes), stat=st)
+   if(st.ne.0) return
+   child_head(:) = -1
+   do i = nnodes, 1, -1 ! backwards so child list is in order
+      ! Add to parent's child linked list
+      j = min(sparent(i), nnodes+1)
+      child_next(i) = child_head(j)
+      child_head(j) = i
+   end do
+   ! Add work up tree, build child_ptr and child_list
+   child_ptr(1) = 1
+   do i = 1, nnodes+1
+      j = child_head(i)
+      child_ptr(i+1) = child_ptr(i)
+      do while(j.ne.-1)
+         child_list(child_ptr(i+1)) = j
+         child_ptr(i+1) = child_ptr(i+1) + 1
+         j = child_next(j)
+      end do
+   end do
+end subroutine build_child_pointers
 
 !****************************************************************************
 !

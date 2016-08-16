@@ -19,7 +19,6 @@ module spral_ssids_akeep
    type ssids_akeep
       logical :: check ! copy of check as input to analyse phase
       integer :: flag ! copy of error flag.
-      integer :: maxmn ! maximum value of blkm or blkn
       integer :: n ! Dimension of matrix
       integer :: ne ! Set to number of entries input by user.
       integer(long) :: nfactor 
@@ -34,15 +33,8 @@ module spral_ssids_akeep
       integer, dimension(:), allocatable :: contrib_ptr
       integer, dimension(:), allocatable :: contrib_idx
 
-      ! child_list(child_ptr(node):child_ptr(node+1)-1) is list of children
-      ! of node. Used to ensure we always sum contributions from children
-      ! in the same order
-      integer, dimension(:), allocatable :: child_ptr 
-      integer, dimension(:), allocatable :: child_list
       integer(C_INT), dimension(:), allocatable :: invp ! inverse of pivot order
          ! that is passed to factorize phase
-      integer, dimension(:), allocatable :: level ! level(i) of the assembly
-         ! tree at which node i sits. root is level 1.
       integer, dimension(:,:), allocatable :: nlist ! map from A to factors
          ! For nodes i, the entries nlist(1:2, nptr(i):nptr(i+1)-1) define
          ! a relationship:
@@ -63,8 +55,6 @@ module spral_ssids_akeep
       integer, dimension(:), allocatable :: sptr ! (super)node pointers.
          ! Supernode i consists of sptr(i) through sptr(i+1)-1.
          ! Allocated within mc78_analyse.
-      integer(long), dimension(:), allocatable :: subtree_work ! For each node,
-         ! the number of flops involved in the subtree rooted at that node.
 
       ! Following components are for cleaned up matrix data.
       ! LOWER triangle only. We have to retain these for factorize phase
@@ -89,18 +79,9 @@ module spral_ssids_akeep
       real(wp), dimension(:), allocatable :: scaling
    contains
       procedure, pass(akeep) :: free => free_akeep
-      procedure, pass(akeep) :: move_data
    end type ssids_akeep
 
 contains
-
-subroutine move_data(akeep, options, inform)
-   class(ssids_akeep), intent(inout) :: akeep
-   type(ssids_options), intent(in) :: options
-   type(ssids_inform), intent(inout) :: inform
-
-   ! No-op
-end subroutine move_data
 
 subroutine free_akeep(akeep, flag)
    class(ssids_akeep), intent(inout) :: akeep
@@ -119,17 +100,13 @@ subroutine free_akeep(akeep, flag)
       end do
       deallocate(akeep%subtree, stat=st)
    endif
-   deallocate(akeep%child_ptr, stat=st)
-   deallocate(akeep%child_list, stat=st)
    deallocate(akeep%invp, stat=st)
-   deallocate(akeep%level, stat=st)
    deallocate(akeep%nlist, stat=st)
    deallocate(akeep%nptr, stat=st)
    deallocate(akeep%rlist, stat=st)
    deallocate(akeep%rptr, stat=st)
    deallocate(akeep%sparent, stat=st)
    deallocate(akeep%sptr, stat=st)
-   deallocate(akeep%subtree_work, stat=st)
    deallocate(akeep%ptr, stat=st)
    deallocate(akeep%row, stat=st)
    deallocate(akeep%map, stat=st)
