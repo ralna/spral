@@ -3,7 +3,7 @@ module spral_ssids_gpu_subtree
    use, intrinsic :: iso_c_binding
    use spral_ssids_contrib, only : contrib_type
    use spral_ssids_datatypes
-   use spral_ssids_inform, only : ssids_inform_base
+   use spral_ssids_inform, only : ssids_inform
    use spral_ssids_subtree, only : symbolic_subtree_base, numeric_subtree_base
    implicit none
 
@@ -66,8 +66,8 @@ function factor(this, posdef, aval, child_contrib, options, inform, scaling)
    logical, intent(in) :: posdef
    real(wp), dimension(*), target, intent(in) :: aval
    type(contrib_type), dimension(:), target, intent(inout) :: child_contrib
-   class(ssids_options), intent(in) :: options
-   class(ssids_inform_base), intent(inout) :: inform
+   type(ssids_options), intent(in) :: options
+   type(ssids_inform), intent(inout) :: inform
    real(wp), dimension(*), target, optional, intent(in) :: scaling
 end function factor
 
@@ -89,7 +89,7 @@ subroutine solve_fwd(this, nrhs, x, ldx, inform)
    integer, intent(in) :: nrhs
    real(wp), dimension(*), intent(inout) :: x
    integer, intent(in) :: ldx
-   class(ssids_inform_base), intent(inout) :: inform
+   type(ssids_inform), intent(inout) :: inform
 end subroutine solve_fwd
 
 subroutine solve_diag(this, nrhs, x, ldx, inform)
@@ -97,7 +97,7 @@ subroutine solve_diag(this, nrhs, x, ldx, inform)
    integer, intent(in) :: nrhs
    real(wp), dimension(*), intent(inout) :: x
    integer, intent(in) :: ldx
-   class(ssids_inform_base), intent(inout) :: inform
+   type(ssids_inform), intent(inout) :: inform
 end subroutine solve_diag
 
 subroutine solve_diag_bwd(this, nrhs, x, ldx, inform)
@@ -105,7 +105,7 @@ subroutine solve_diag_bwd(this, nrhs, x, ldx, inform)
    integer, intent(in) :: nrhs
    real(wp), dimension(*), intent(inout) :: x
    integer, intent(in) :: ldx
-   class(ssids_inform_base), intent(inout) :: inform
+   type(ssids_inform), intent(inout) :: inform
 end subroutine solve_diag_bwd
 
 subroutine solve_bwd(this, nrhs, x, ldx, inform)
@@ -113,7 +113,7 @@ subroutine solve_bwd(this, nrhs, x, ldx, inform)
    integer, intent(in) :: nrhs
    real(wp), dimension(*), intent(inout) :: x
    integer, intent(in) :: ldx
-   class(ssids_inform_base), intent(inout) :: inform
+   type(ssids_inform), intent(inout) :: inform
 end subroutine solve_bwd
 
 subroutine enquire_posdef(this, d)
