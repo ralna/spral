@@ -221,7 +221,6 @@ function factor(this, posdef, aval, child_contrib, options, inform, scaling)
 
    type(gpu_numeric_subtree), pointer :: gpu_factor
 
-   integer :: i
    type(C_PTR) :: gpu_val, gpu_scaling
    type(C_PTR), dimension(:), allocatable :: gpu_contribs
    integer(long) :: sz
@@ -324,7 +323,7 @@ function factor(this, posdef, aval, child_contrib, options, inform, scaling)
    if(cuda_error.ne.0) goto 200
    
    ! Set inform
-   inform%flag = i
+   inform%flag = stats%flag
    inform%stat = stats%st
    inform%maxfront = stats%maxfront
    inform%num_factor = stats%num_factor
@@ -442,15 +441,19 @@ subroutine solve_fwd(this, nrhs, x, ldx, inform)
    integer, intent(in) :: ldx
    class(ssids_inform_base), intent(inout) :: inform
 
+   integer :: r
    integer :: cuda_error
-   type(C_PTR) :: gpu_x
 
-   call fwd_solve_gpu(this%posdef, this%symbolic%child_ptr,          &
-      this%symbolic%child_list, this%symbolic%n,                      &
-      this%symbolic%nnodes, this%nodes, this%symbolic%rptr,           &
-      this%stream_handle, this%stream_data, x, inform%stat, cuda_error)
-   if(inform%stat.ne.0) goto 100
-   if(cuda_error.ne.0) goto 200
+   ! NB: gpu solve doesn't support nrhs > 1, so just loop instead
+   do r = 0, nrhs-1
+      call fwd_solve_gpu(this%posdef, this%symbolic%child_ptr,             &
+         this%symbolic%child_list, this%symbolic%n,                        &
+         this%symbolic%nnodes, this%nodes, this%symbolic%rptr,             &
+         this%stream_handle, this%stream_data,                             &
+         x(r*ldx+1:r*ldx:this%symbolic%n), inform%stat, cuda_error)
+      if(inform%stat.ne.0) goto 100
+      if(cuda_error.ne.0) goto 200
+   end do
 
    return
 
@@ -467,47 +470,6 @@ subroutine solve_fwd(this, nrhs, x, ldx, inform)
    return
 end subroutine solve_fwd
 
-type(C_PTR) function create_gpu_x(n, nrhs, x, ldx, cuda_error) result(gpu_x)
-   integer, intent(in) :: n
-   integer, intent(in) :: nrhs
-   real(wp), dimension(*), target, intent(in) :: x
-   integer, intent(in) :: ldx
-   integer, intent(out) :: cuda_error
-
-   cuda_error = cudaMalloc(gpu_x, nrhs*n*C_SIZEOF(x(1)))
-   if(cuda_error.ne.0) return
-   if(n.eq.ldx) then
-      cuda_error = cudaMemcpy_h2d(gpu_x, C_LOC(x), n*nrhs*C_SIZEOF(x(1)))
-      if(cuda_error.ne.0) return
-   else
-      cuda_error = cudaMemcpy2d(gpu_x, n*C_SIZEOF(x(1)), C_LOC(x), &
-         ldx*C_SIZEOF(x(1)), n*C_SIZEOF(x(1)), int(nrhs, C_SIZE_T), &
-         cudaMemcpyHostToDevice)
-      if(cuda_error.ne.0) return
-   end if
-end function create_gpu_x
-
-subroutine recover_destroy_gpu_x(n, nrhs, x, ldx, gpu_x, cuda_error)
-   integer, intent(in) :: n
-   integer, intent(in) :: nrhs
-   real(wp), dimension(*), target, intent(inout) :: x
-   integer, intent(in) :: ldx
-   type(C_PTR), intent(inout) :: gpu_x
-   integer, intent(out) :: cuda_error
-
-   if(n.eq.ldx) then
-      cuda_error = cudaMemcpy_d2h(C_LOC(x), gpu_x, nrhs*n*C_SIZEOF(x(1)))
-      if(cuda_error.ne.0) return
-   else
-      cuda_error = cudaMemcpy2d(C_LOC(x), ldx*C_SIZEOF(x(1)), gpu_x, &
-         n*C_SIZEOF(x(1)), n*C_SIZEOF(x(1)), int(nrhs, C_SIZE_T), &
-         cudaMemcpyDeviceToHost)
-      if(cuda_error.ne.0) return
-   end if
-   cuda_error = cudaFree(gpu_x)
-   if(cuda_error.ne.0) return
-end subroutine recover_destroy_gpu_x
-
 ! FIXME: general solve : recover gpu_x memory on error?
 subroutine solve_diag(this, nrhs, x, ldx, inform)
    class(gpu_numeric_subtree), intent(inout) :: this
@@ -516,15 +478,17 @@ subroutine solve_diag(this, nrhs, x, ldx, inform)
    integer, intent(in) :: ldx
    class(ssids_inform_base), intent(inout) :: inform
 
-   type(C_PTR) :: gpu_x
+   integer :: r
    integer :: cuda_error
 
-
-   ! FIXME: comments in fkeep.f90 about unimplemented on GPU????
-   call d_solve_gpu(this%symbolic%nnodes, this%symbolic%sptr,  &
-      this%stream_handle, this%stream_data, this%symbolic%n,   &
-      x, inform%stat, cuda_error)
-   if(inform%stat.ne.0) goto 100
+   ! NB: gpu solve doesn't support nrhs > 1, so just loop instead
+   do r = 0, nrhs-1
+      call d_solve_gpu(this%symbolic%nnodes, this%symbolic%sptr,  &
+         this%stream_handle, this%stream_data, this%symbolic%n,   &
+         x(r*ldx+1:r*ldx:this%symbolic%n), inform%stat, cuda_error)
+      if(inform%stat.ne.0) goto 100
+      if(cuda_error.ne.0) goto 200
+   end do
 
    return
 
@@ -548,15 +512,17 @@ subroutine solve_diag_bwd(this, nrhs, x, ldx, inform)
    integer, intent(in) :: ldx
    class(ssids_inform_base), intent(inout) :: inform
 
-   type(C_PTR) :: gpu_x
+   integer :: r
    integer :: cuda_error
 
-
-   call bwd_solve_gpu(SSIDS_SOLVE_JOB_DIAG_BWD, this%posdef,      &
-      this%symbolic%n, this%stream_handle, this%stream_data, x,   &
-      inform%stat, cuda_error)
-   if (inform%stat .ne. 0) goto 100
-   if(cuda_error.ne.0) goto 200
+   ! NB: gpu solve doesn't support nrhs > 1, so just loop instead
+   do r = 0, nrhs-1
+      call bwd_solve_gpu(SSIDS_SOLVE_JOB_DIAG_BWD, this%posdef,      &
+         this%symbolic%n, this%stream_handle, this%stream_data,      &
+         x(r*ldx+1:r*ldx:this%symbolic%n), inform%stat, cuda_error)
+      if(inform%stat.ne.0) goto 100
+      if(cuda_error.ne.0) goto 200
+   end do
 
    return
 
@@ -580,13 +546,17 @@ subroutine solve_bwd(this, nrhs, x, ldx, inform)
    integer, intent(in) :: ldx
    class(ssids_inform_base), intent(inout) :: inform
 
-   type(C_PTR) :: gpu_x
+   integer :: r
    integer :: cuda_error
 
-   call bwd_solve_gpu(SSIDS_SOLVE_JOB_BWD, this%posdef, this%symbolic%n, &
-      this%stream_handle, this%stream_data, x, inform%stat, cuda_error)
-   if (inform%stat .ne. 0) goto 100
-   if(cuda_error.ne.0) goto 200
+   ! NB: gpu solve doesn't support nrhs > 1, so just loop instead
+   do r = 0, nrhs-1
+      call bwd_solve_gpu(SSIDS_SOLVE_JOB_BWD, this%posdef, this%symbolic%n,   &
+         this%stream_handle, this%stream_data,                                &
+         x(r*ldx+1:r*ldx:this%symbolic%n), inform%stat, cuda_error)
+      if(inform%stat.ne.0) goto 100
+      if(cuda_error.ne.0) goto 200
+   end do
 
    return
 

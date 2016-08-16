@@ -12,7 +12,7 @@ lookup capability added to allow execution on multiple small matrices
 simulateously.
 */
 
-namespace spral { namespace ssids {
+namespace spral { namespace ssids { namespace gpu {
 
 __inline__ __device__ float cuConj(float x) { return x; }
 __inline__ __device__ double cuConj(double x) { return x; }
@@ -686,4 +686,4 @@ void __global__ trsv_ln_exec(T_ELEM* __restrict__ xglobal,
    __threadfence(); // Flush sync[0] asap
 }
 
-} } // end namespace spral::ssids
+}}} /* namespace spral::ssids::gpu */

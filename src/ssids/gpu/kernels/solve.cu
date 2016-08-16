@@ -30,7 +30,9 @@
 #define GEMV_THREADSY 4
 #define ASSEMBLE_NB 128
 
-namespace spral { namespace ssids {
+using namespace spral::ssids::gpu;
+
+namespace /* anon */ {
 
 /* Perform the assignment xdense(:) = xsparse( idx(:) ) */
 template <int threadsx, int threadsy>
@@ -459,47 +461,6 @@ void __global__ gemv_reduce_lookup(const double *src, double **dest, int numLook
    d[threadIdx.x] -= val;
 }
 
-void __global__ gemv_reduce(int m, int n, const double *src, double **dest) {
-   int idx = blockIdx.x*blockDim.x + threadIdx.x;
-   if(idx>=m) return;
-   src += idx;
-   double val = 0;
-   for(int i=0; i<n; i++)
-      val += src[i*m];
-   (*dest)[idx] -= val;
-}
-
-/* Each thread looks after exactly one entry of x only */
-void __global__ assemble(int m, int nelim, int const* list, double *xlocal,
-      double **xstack, const double *x, int nchild, int const* clen,
-      int * const* clists, double * const* cvalues) {
-
-   /* Calculate entry, return if out of range */
-   int idx = blockIdx.x*blockDim.x + threadIdx.x;
-   if(idx>=m) return;
-   int row = list[idx];
-
-   /* Accumulate contribution */
-   double val=0;
-   for(int child=0; child<nchild; child++) {
-      const int *clist = clists[child];
-      const double *cval = cvalues[child];
-      int i;
-      /* Note: If we want to optimize this, try fixing the upper bound, but
-         beware: delays can cause the child rlist to be out of order! */
-      for(i=0; i<clen[child]; i++) {
-         if(clist[i] == row) {
-            val += cval[i];
-            break;
-         }
-      }
-   }
-
-   /* Add to x or xstack as appropriate */
-   if(idx<nelim)  xlocal[idx] = x[row] + val;
-   else           (*xstack)[idx-nelim] = val;
-}
-
 // FIXME: move to common header?
 struct assemble_blk_type {
    int cp;
@@ -623,13 +584,11 @@ struct lookup_contrib_fwd {
    struct scatter_lookup *scatter;
 };
 
-} } // end namespace spral::ssids
+} /* anon namespace */
 
 /*******************************************************************************
  * Following routines are exported with C binding so can be called from Fortran
  ******************************************************************************/
-
-using namespace spral::ssids;
 
 extern "C" {
 

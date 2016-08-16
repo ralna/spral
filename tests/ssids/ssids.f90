@@ -1970,11 +1970,7 @@ subroutine test_random
          cycle
       endif
 
-      if(.not.options%use_gpu_solve) then
-         nrhs = random_integer(state,  maxnrhs)
-      else
-         nrhs = 1
-      endif
+      nrhs = random_integer(state,  maxnrhs)
 
       ! Generate rhs assuming x(k) = k/maxn. remember we have only
       ! half matrix held.

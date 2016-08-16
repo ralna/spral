@@ -15,7 +15,7 @@
 #define ADD_DELAYS_TX 32
 #define ADD_DELAYS_TY 4
 
-namespace spral { namespace ssids {
+namespace /* anon */ {
 
 struct load_nodes_type {
    int nnz;    // Number of entries to map
@@ -226,123 +226,6 @@ void __global__ assemble(
    }
 }
 
-/* Same for the solve phase, multiple rhs */
-template <unsigned int SIZE_X, unsigned int SIZE_Y,
-          unsigned int STEP_X, unsigned STEP_Y>
-void __global__ cu_assemble4solve(
-      int nrhs,
-      const struct assemble_blk_type *blkdata, // block mapping
-      const struct assemble_cp_type *cpdata, // child-parent data
-      double* pval,
-      const double* cval,
-      unsigned int *next_blk, // gmem location used to determine next block
-      unsigned int *sync // sync[cp] is #blocks completed so far for cp
-      ) {
-   // Get block number
-   unsigned int __shared__ mynext_blk;
-
-   if( threadIdx.x == 0 && threadIdx.y == 0 )
-      mynext_blk = atomicAdd(next_blk, 1);
-   __syncthreads();
-
-   // Determine global information
-   blkdata += mynext_blk;
-   int cp = blkdata->cp;
-   cpdata += cp;
-
-   // Wait for previous child of this parent to complete
-   if ( threadIdx.x == 0 && threadIdx.y == 0 ) {
-      while(loadVolatile(&sync[cpdata->sync_offset]) < cpdata->sync_wait_for);
-   }
-   __syncthreads();
-
-   int cm = cpdata->cm;
-   if ( cm < 1 || nrhs < 1 ) {
-     if( threadIdx.x == 0 && threadIdx.y == 0 )
-        atomicAdd(&sync[cp], 1);
-     return;
-   }
-
-   int blk = blkdata->blk;
-   int ldc = cpdata->ldc;
-   int ldp = cpdata->ldp;
-
-   // Initialize local information
-   int m = min(SIZE_X, cm - blk*SIZE_X);
-   double *dest = pval + cpdata->pvoffset;
-   const double *src = cval + cpdata->cvoffset;
-   int* rows = cpdata->rlist_direct;
-   int* ind = cpdata->ind + blk*SIZE_X;
-
-   for( int i = threadIdx.x; i < m; i += STEP_X ) {
-      int indx = ind[i] - 1;
-      int row = rows[indx] - 1;
-      for ( int j = threadIdx.y; j < nrhs; j += STEP_Y )
-         dest[row + j*ldp] += src[indx + j*ldc];
-   }
-
-   // Record that we're done
-   __syncthreads();
-   if( threadIdx.x == 0 && threadIdx.y == 0 )
-      atomicAdd(&sync[cp], 1);
-}
-
-/* Same for the solve phase, one rhs */
-template< unsigned int SIZE_X, unsigned int STEP_X >
-void __global__ cu_assemble4solve_onerhs(
-      const struct assemble_blk_type *blkdata, // block mapping
-      const struct assemble_cp_type *cpdata, // child-parent data
-      double* pval,
-      const double* cval,
-      unsigned int *next_blk, // gmem location used to determine next block
-      unsigned int *sync // sync[cp] is #blocks completed so far for cp
-      ) {
-   // Get block number
-   unsigned int __shared__ mynext_blk;
-
-   if( threadIdx.x == 0 )
-      mynext_blk = atomicAdd(next_blk, 1);
-   __syncthreads();
-
-   // Determine global information
-   blkdata += mynext_blk;
-   int cp = blkdata->cp;
-   cpdata += cp;
-
-   // Wait for previous child of this parent to complete
-   if ( threadIdx.x == 0 ) {
-      while(loadVolatile(&sync[cpdata->sync_offset]) < cpdata->sync_wait_for);
-   }
-   __syncthreads();
-
-   int cm = cpdata->cm;
-   if ( cm < 1 ) {
-     if( threadIdx.x == 0 )
-        atomicAdd(&sync[cp], 1);
-     return;
-   }
-
-   int blk = blkdata->blk;
-
-   // Initialize local information
-   int m = min(SIZE_X, cm - blk*SIZE_X);
-   double *dest = pval + cpdata->pvoffset;
-   const double *src = cval + cpdata->cvoffset;
-   int* rows = cpdata->rlist_direct;
-   int* ind = cpdata->ind + blk*SIZE_X;
-
-   for( int i = threadIdx.x; i < m; i += STEP_X ) {
-      int indx = ind[i] - 1;
-      int row = rows[indx] - 1;
-      dest[row] += src[indx];
-   }
-
-   // Record that we're done
-   __syncthreads();
-   if( threadIdx.x == 0 )
-      atomicAdd(&sync[cp], 1);
-}
-
 struct assemble_delay_type {
    int dskip; // Number of rows to skip for delays from later children
    int m; // Number of rows in child to copy
@@ -385,13 +268,11 @@ void __global__ add_delays(
    }
 } 
 
-} } // End namespace spral::ssids
+} /* anon namespace */
 
 /*******************************************************************************
  * Following routines are exported with C binding so can be called from Fortran
  ******************************************************************************/
-
-using namespace spral::ssids;
 
 extern "C" {
 
@@ -436,44 +317,6 @@ void spral_ssids_assemble(const cudaStream_t *stream, int nblk, int blkoffset,
          (&blkdata[blkoffset], cpdata, children, parents, &gpu_next_sync[0],
           &gpu_next_sync[1]);
       CudaCheckError();
-   }
-}
-
-/* Same for solve phase */
-extern "C"
-void 
-spral_ssids_assemble_solve_phase( 
-      const cudaStream_t *stream, 
-      int nrhs,
-      int nblk,
-      struct assemble_blk_type *blkdata, 
-      int ncp,
-      struct assemble_cp_type *cpdata,
-      double* pval,
-      const double* cval,
-      unsigned int *gpu_next_sync ) {
-   cudaMemset(gpu_next_sync, 0, (1 + ncp)*sizeof(unsigned int));
-   for ( int i = 0; i < nblk; i += MAX_CUDA_BLOCKS ) {
-      int blocks = min(MAX_CUDA_BLOCKS, nblk - i);
-      if ( nrhs > 1 ) {
-         dim3 threads(HOGG_ASSEMBLE_NTX, HOGG_ASSEMBLE_NTY);
-         cu_assemble4solve
-           <HOGG_ASSEMBLE_TX, HOGG_ASSEMBLE_TY,
-            HOGG_ASSEMBLE_NTX, HOGG_ASSEMBLE_NTY>
-           <<< blocks, threads, 0, *stream >>>
-           ( nrhs, blkdata, cpdata, pval, cval, 
-              &gpu_next_sync[0], &gpu_next_sync[1] );
-         CudaCheckError();
-      }
-      else {
-         dim3 threads(HOGG_ASSEMBLE_NTX);
-         cu_assemble4solve_onerhs
-           < HOGG_ASSEMBLE_TX, HOGG_ASSEMBLE_NTX >
-           <<< blocks, threads, 0, *stream >>>
-           ( blkdata, cpdata, pval, cval, 
-              &gpu_next_sync[0], &gpu_next_sync[1] );
-         CudaCheckError();
-      }
    }
 }
 

@@ -16,7 +16,6 @@ module spral_ssids_gpu_interfaces
    public :: &
              add_delays,    & ! Copies/expands any delayed pivots into node
              assemble,      & ! Performs assembly of non-delayed part
-             assemble_solve_phase, & ! Same for solve phase
              load_nodes,    & ! Copies A into L (no scaling)
              load_nodes_sc, & ! Copies A into L (with scaling)
              max_abs          ! Find max absolute value in node
@@ -47,19 +46,6 @@ module spral_ssids_gpu_interfaces
          type(C_PTR), value :: parents
          type(C_PTR), value :: gpu_next_sync ! >= (1+ncp)*sizeof(unsigned int)
       end subroutine assemble
-      subroutine assemble_solve_phase(stream, m, &
-            nb, blkdata, ncp, cpdata, pval, &
-            cval, sync) bind(C, name = "spral_ssids_assemble_solve_phase")
-         use, intrinsic :: iso_c_binding
-         implicit none
-         type(C_PTR), value :: stream
-         integer(C_INT), intent(in), value :: m, nb, ncp
-         type(C_PTR), value :: blkdata
-         type(C_PTR), value :: cpdata
-         type(C_PTR), value :: pval
-         type(C_PTR), value :: cval
-         type(C_PTR), value :: sync
-      end subroutine assemble_solve_phase
       subroutine load_nodes(stream, nb, lndata, list, mval) &
             bind(C, name="spral_ssids_load_nodes")
          use, intrinsic :: iso_c_binding
@@ -438,171 +424,6 @@ module spral_ssids_gpu_interfaces
          type(C_PTR), value :: stream
       end subroutine run_slv_contrib_fwd
    end interface ! solve_kernels.cu
-
-   !
-   ! node_solve_kernels.cu
-   !
-   public :: &
-             gather,              & ! gathers rows of a sparse matrix
-             gather_diag,         & ! gathers D from nodes into an array
-             gather_dx,           & ! gathers with partial multiplication by D
-             apply_d,             & ! gathers with multiplication by D
-             multinode_dgemm_n,   & ! multiplies several matrices
-             multinode_solve_n,   & ! forward-solves for several nodes
-             multinode_solve_t,   & ! backward-solves for several nodes
-             scale,               & ! scales rhs/solution
-             scatter,             & ! scatters rows into a sparse matrix
-             scatter_sum,         & ! scutters the sum of two dense matrices
-             multi_Ld_inv,        & ! inverts node's diagonal blocks
-             multi_Ld_inv_init,   & ! prepares for the above
-             multinode_dgemm_setup  ! sets data for multinode_dgemm_n
-   interface ! node_solve_kernels.cu
-      subroutine gather( stream, nr, nc, src, lds, dst, ldd, ind ) &
-            bind(C, name="spral_ssids_gather")
-         use iso_c_binding
-         implicit none
-         type(C_PTR), value :: stream
-         integer(C_INT), intent(in), value :: nr, nc, lds, ldd
-         type(C_PTR), value :: src
-         type(C_PTR), value :: dst
-         type(C_PTR), value :: ind
-      end subroutine gather
-      subroutine gather_diag( stream, n, src, dst, ind ) &
-            bind(C, name="spral_ssids_gather_diag")
-         use iso_c_binding
-         implicit none
-         type(C_PTR), value :: stream
-         integer(C_INT), intent(in), value :: n
-         type(C_PTR), value :: src
-         type(C_PTR), value :: dst
-         type(C_PTR), value :: ind
-      end subroutine gather_diag
-      subroutine gather_dx( stream, nr, nc, d, u, ldu, v, ldv, &
-            indd, indx ) &
-            bind(C, name="spral_ssids_gather_dx")
-         use iso_c_binding
-         implicit none
-         type(C_PTR), value :: stream
-         integer(C_INT), intent(in), value :: nr, nc, ldu, ldv
-         type(C_PTR), value :: d
-         type(C_PTR), value :: u
-         type(C_PTR), value :: v
-         type(C_PTR), value :: indd
-         type(C_PTR), value :: indx
-      end subroutine gather_dx
-      subroutine apply_d( stream, nr, nc, d, u, ldu, v, ldv, indx ) &
-            bind(C, name="spral_ssids_apply_d")
-         use iso_c_binding
-         implicit none
-         type(C_PTR), value :: stream
-         integer(C_INT), intent(in), value :: nr, nc, ldu, ldv
-         type(C_PTR), value :: d
-         type(C_PTR), value :: u
-         type(C_PTR), value :: v
-         type(C_PTR), value :: indx
-      end subroutine apply_d
-      subroutine multinode_dgemm_n( stream, nblocks, solve_data, alpha ) &
-            bind(C, name="spral_ssids_multinode_dgemm_n")
-         use iso_c_binding
-         implicit none
-         type(C_PTR), value :: stream
-         integer(C_INT), intent(in), value :: nblocks
-         type(C_PTR), value :: solve_data
-         real(C_DOUBLE), intent(in), value :: alpha
-      end subroutine multinode_dgemm_n
-      subroutine multinode_solve_n( stream, nblocks, nrhs, &
-            a, b, u, v, solve_data ) &
-            bind(C, name="spral_ssids_multinode_solve_n")
-         use iso_c_binding
-         implicit none
-         type(C_PTR), value :: stream
-         integer(C_INT), intent(in), value :: nblocks, nrhs
-         type(C_PTR), value :: a
-         type(C_PTR), value :: b
-         type(C_PTR), value :: u
-         type(C_PTR), value :: v
-         type(C_PTR), value :: solve_data
-      end subroutine multinode_solve_n
-      subroutine multinode_solve_t( stream, nblocks, nrhs, &
-            a, b, u, v, solve_data ) &
-            bind(C, name="spral_ssids_multinode_solve_t")
-         use iso_c_binding
-         implicit none
-         type(C_PTR), value :: stream
-         integer(C_INT), intent(in), value :: nblocks, nrhs
-         type(C_PTR), value :: a
-         type(C_PTR), value :: b
-         type(C_PTR), value :: u
-         type(C_PTR), value :: v
-         type(C_PTR), value :: solve_data
-      end subroutine multinode_solve_t
-      subroutine scale( nrows, ncols, a, lda, s, ind ) &
-            bind(C, name="spral_ssids_scale")
-         use iso_c_binding
-         implicit none
-         integer(C_INT), intent(in), value :: nrows, ncols, lda
-         type(C_PTR), value :: a
-         type(C_PTR), value :: s
-         type(C_PTR), value :: ind
-      end subroutine scale
-      subroutine scatter( stream, nr, nc, src, lds, dst, ldd, ind ) &
-            bind(C, name="spral_ssids_scatter")
-         use iso_c_binding
-         implicit none
-         type(C_PTR), value :: stream
-         integer(C_INT), intent(in), value :: nr, nc, lds, ldd
-         type(C_PTR), value :: src
-         type(C_PTR), value :: dst
-         type(C_PTR), value :: ind
-      end subroutine scatter
-      subroutine scatter_sum( stream, nr, nc, &
-            u, ldu, v, ldv, dst, ldd, ind ) &
-            bind(C, name="spral_ssids_scatter_sum")
-         use iso_c_binding
-         implicit none
-         type(C_PTR), value :: stream
-         integer(C_INT), intent(in), value :: nr, nc, ldu, ldv, ldd
-         type(C_PTR), value :: u
-         type(C_PTR), value :: v
-         type(C_PTR), value :: dst
-         type(C_PTR), value :: ind
-      end subroutine scatter_sum
-      integer(C_INT) function multi_Ld_inv(stream, nn, ndata, ts, work) &
-            bind(C, name = "spral_ssids_multi_Ld_inv")
-         use iso_c_binding
-         implicit none
-         type(C_PTR), value :: stream
-         integer(C_INT), intent(in), value :: nn, ts
-         type(C_PTR), value :: ndata
-         type(C_PTR), value :: work
-      end function multi_Ld_inv
-      integer(C_INT) function multi_Ld_inv_init &
-            (stream, nn, ndata, ts, nud, work) &
-            bind(C, name = "spral_ssids_multi_Ld_inv_init")
-            use iso_c_binding
-         implicit none
-         type(C_PTR), value :: stream
-         integer(C_INT), intent(in), value :: nn, ts, nud
-         type(C_PTR), value :: ndata
-         type(C_PTR), value :: work
-      end function multi_Ld_inv_init
-      integer(C_INT) function multinode_dgemm_setup &
-            (nrows, ncols, nrhs, a, lda, b, &
-            ldb, u, ldu, v, ldv, solve_data, off) &
-            bind(C, name="spral_ssids_multinode_dgemm_setup")
-         use, intrinsic :: iso_c_binding
-         use spral_ssids_gpu_datatypes
-         implicit none
-         integer(C_INT), intent(in), value :: nrows, ncols, nrhs
-         integer(C_INT), intent(in), value :: lda, ldb, ldu, ldv
-         integer(C_INT), intent(in), value :: off
-         type(C_PTR), value :: a
-         type(C_PTR), value :: b
-         type(C_PTR), value :: u
-         type(C_PTR), value :: v
-         type(node_solve_data), dimension(*) :: solve_data
-      end function multinode_dgemm_setup
-   end interface ! node_solve_kernels.cu
 
    public :: cuda_settings_type
    public :: push_ssids_cuda_settings, pop_ssids_cuda_settings

@@ -19,7 +19,9 @@
 
 #define SM_3X (__CUDA_ARCH__ == 300 || __CUDA_ARCH__ == 350)
 
-namespace spral { namespace ssids {
+using namespace spral::ssids::gpu;
+
+namespace /* anon */ {
 
 
 
@@ -591,13 +593,11 @@ cu_syrk_r4x4(
 }
 
 
-} } // end namespace spral::ssids
+} /* anon namespace */
 
 /*******************************************************************************
  * Following routines are exported with C binding so can be called from Fortran
  ******************************************************************************/
-
-using namespace spral::ssids;
 
 extern "C" {
 

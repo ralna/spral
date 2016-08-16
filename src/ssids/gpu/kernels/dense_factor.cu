@@ -26,8 +26,9 @@
 
 #define MAX_CUDA_BLOCKS 65535
 
+using namespace spral::ssids::gpu;
 
-namespace spral { namespace ssids {
+namespace /* anon */ {
 
 extern __shared__ char SharedMemory[];
 
@@ -1431,13 +1432,11 @@ cu_collect_stats(
       atomicAdd(&(stats->num_two), num_two);
 }
 
-} } // end namespace spral::ssids
+} /* anon namespace */
 
 /*******************************************************************************
  * Following routines are exported with C binding so can be called from Fortran
  ******************************************************************************/
-
-using namespace spral::ssids;
 
 extern "C" {
 

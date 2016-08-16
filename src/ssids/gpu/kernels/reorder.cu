@@ -15,7 +15,9 @@
 
 #define SM_3X (__CUDA_ARCH__ == 300 || __CUDA_ARCH__ == 350)
 
-namespace spral { namespace ssids {
+using namespace spral::ssids::gpu;
+
+namespace /* anon */ {
 
 template< typename ELEMENT_TYPE >
 __global__ void
@@ -859,13 +861,11 @@ cu_multisymm( const struct multisymm_type* msdata )
         a[j + i*nrows] = a[i + j*nrows];
 }
 
-} } // End namespace spral::ssids
+} /* anon namespace */
 
 /*******************************************************************************
  * Following routines are exported with C binding so can be called from Fortran
  ******************************************************************************/
-
-using namespace spral::ssids;
 
 extern "C" {
 

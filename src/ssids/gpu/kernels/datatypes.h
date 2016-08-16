@@ -1,6 +1,6 @@
 #define MAX_CUDA_BLOCKS 65535
 
-namespace spral { namespace ssids {
+namespace spral { namespace ssids { namespace gpu {
 
 struct multinode_fact_type {
    int nrows;
@@ -22,4 +22,4 @@ struct cuda_stats {
    int num_zero;
 };
 
-} } // end namespace spral::ssids
+}}} /* namespace spral::ssids::gpu */

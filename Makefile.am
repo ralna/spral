@@ -206,8 +206,6 @@ libspral_a_SOURCES += \
 	src/ssids/gpu/kernels/datatypes.h \
 	src/ssids/gpu/kernels/dense_factor.cu \
 	src/ssids/gpu/kernels/dtrsv.h \
-	src/ssids/gpu/kernels/node_solve.cu \
-	src/ssids/gpu/kernels/node_solve.h \
 	src/ssids/gpu/kernels/reorder.cu \
 	src/ssids/gpu/kernels/solve.cu \
 	src/ssids/gpu/kernels/syrk.cu
@@ -452,10 +450,11 @@ src/ssids/gpu/dense_factor.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
                                       src/ssids/datatypes.$(OBJEXT)
 src/ssids/gpu/factor.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
                                 src/ssids/alloc.$(OBJEXT) \
+										  src/ssids/contrib.$(OBJEXT) \
+                                src/ssids/datatypes.$(OBJEXT) \
                                 src/ssids/gpu/alloc.$(OBJEXT) \
                                 src/ssids/gpu/datatypes.$(OBJEXT) \
                                 src/ssids/gpu/interfaces.$(OBJEXT) \
-                                src/ssids/datatypes.$(OBJEXT) \
                                 src/ssids/gpu/dense_factor.$(OBJEXT) \
                                 src/ssids/gpu/solve.$(OBJEXT)
 src/ssids/gpu/inform.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
