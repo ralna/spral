@@ -21,12 +21,18 @@
 
 namespace spral { namespace ssids { namespace cpu {
 
-/** Class representing a subtree factorized on the CPU */
-template <bool posdef,
+/** \brief Represents a submatrix (subtree) factorized on the CPU. 
+ *
+ * \tparam posdef true for Cholesky factorization, false for indefinite LDL^T
+ * \tparam T underlying numerical type e.g. double
+ * \tparam PAGE_SIZE initial size to be used for thread Workspace
+ * \tparam FactorAllocator allocator to be used for factor storage. It must
+ *         zero memory upon allocation (eg through calloc or memset).
+ * */
+template <bool posdef, //< true for Cholesky factoriztion, false for indefinte
           typename T,
           size_t PAGE_SIZE,
-          typename FactorAllocator // Allocator to use for factor storage:
-                                   // must zero storage upon allocation
+          typename FactorAllocator
           >
 class NumericSubtree {
    typedef BuddyAllocator<T,std::allocator<T>> PoolAllocator;
@@ -35,7 +41,18 @@ public:
    /* Delete copy constructors for safety re allocated memory */
    NumericSubtree(const NumericSubtree&) =delete;
    NumericSubtree& operator=(const NumericSubtree&) =delete;
-   /** Performs factorization */
+   /** \brief Construct factors associated with specified symbolic subtree by
+    *         performing factorization.
+    *  \param symbolic_subtree symbolic factorization of subtree to factorize
+    *  \param aval pointer to user's a value array (references entire matrix)
+    *  \param scaling pointer to optional scaling vector to be applied 
+    *         (references entire matrix). No scaling applied if null.
+    *  \param child_contrib array of pointers to contributions from child
+    *         subtrees. Information to be extracted by call to Fortran routine
+    *         spral_ssids_contrib_get_data().
+    *  \param options user-supplied options controlling execution.
+    *  \param stats collection of statistics for return to user.
+    */
    NumericSubtree(
          SymbolicSubtree const& symbolic_subtree,
          T const* aval,

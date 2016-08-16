@@ -324,12 +324,13 @@ void __global__ trsv_init(int *sync) {
    sync[1] = 0; // Next row to assign
 }
 
+/** \brief Represents a single block for batched trsv call. */
 struct trsv_lookup {
-   int n;
-   const double *a;
-   int lda;
-   int x_offset;
-   int sync_offset;
+   int n; ///< Size of matrix this block works on.
+   const double *a; ///< Data for matrix this block works on.
+   int lda; ///< Leading dimension of a.
+   int x_offset; ///< Offset into x vector we're solving for
+   int sync_offset; ///< Offset into sync vector for this matrix
 };
 
 #ifdef TIMING
