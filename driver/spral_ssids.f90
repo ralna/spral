@@ -219,8 +219,6 @@ contains
          case("--posdef")
             pos_def = .true.
             print *, 'Matrix assumed positive definite'
-         case("--presolve")
-            options%presolve = 1
          case("--time-scaling")
             time_scaling = .true.
          case("--timing")
