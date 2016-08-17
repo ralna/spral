@@ -6,6 +6,8 @@ compat
    Compatability header for portability
 cuda
    Explicit Fortran interface to CUDA API and some helper routines.
+hw_topology
+   Allows detection and specification of hardware topology
 lapack_iface
    Defines interface blocks for LAPACK routines to allow type checking
 lsmr

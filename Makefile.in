@@ -211,9 +211,11 @@ libspral_a_LIBADD =
 am__libspral_a_SOURCES_DIST = src/blas_iface.f90 src/core_analyse.f90 \
 	src/compat.cxx src/cuda/api_wrappers.cu src/cuda/cuda.f90 \
 	src/cuda/cuda_check.h src/cuda/cuda_nocuda.f90 \
-	src/lapack_iface.f90 src/lsmr.f90 interfaces/C/lsmr.f90 \
-	src/match_order.f90 src/matrix_util.f90 \
-	interfaces/C/matrix_util.f90 \
+	src/hw_topology/hw_topology.f90 \
+	src/hw_topology/guess_topology.cxx \
+	src/hw_topology/guess_topology.hxx src/lapack_iface.f90 \
+	src/lsmr.f90 interfaces/C/lsmr.f90 src/match_order.f90 \
+	src/matrix_util.f90 interfaces/C/matrix_util.f90 \
 	src/metis$(METIS_VERSION)_wrapper.f90 src/omp.cxx src/omp.hxx \
 	src/pgm.f90 src/rutherford_boeing.f90 \
 	interfaces/C/rutherford_boeing.f90 src/scaling.f90 \
@@ -285,10 +287,12 @@ am__dirstamp = $(am__leading_dot)dirstamp
 @HAVE_NVCC_FALSE@	src/ssids/gpu/subtree_no_cuda.$(OBJEXT)
 am_libspral_a_OBJECTS = src/blas_iface.$(OBJEXT) \
 	src/core_analyse.$(OBJEXT) src/compat.$(OBJEXT) \
-	$(am__objects_1) $(am__objects_2) src/lapack_iface.$(OBJEXT) \
-	src/lsmr.$(OBJEXT) interfaces/C/lsmr.$(OBJEXT) \
-	src/match_order.$(OBJEXT) src/matrix_util.$(OBJEXT) \
-	interfaces/C/matrix_util.$(OBJEXT) \
+	$(am__objects_1) $(am__objects_2) \
+	src/hw_topology/hw_topology.$(OBJEXT) \
+	src/hw_topology/guess_topology.$(OBJEXT) \
+	src/lapack_iface.$(OBJEXT) src/lsmr.$(OBJEXT) \
+	interfaces/C/lsmr.$(OBJEXT) src/match_order.$(OBJEXT) \
+	src/matrix_util.$(OBJEXT) interfaces/C/matrix_util.$(OBJEXT) \
 	src/metis$(METIS_VERSION)_wrapper.$(OBJEXT) src/omp.$(OBJEXT) \
 	src/pgm.$(OBJEXT) src/rutherford_boeing.$(OBJEXT) \
 	interfaces/C/rutherford_boeing.$(OBJEXT) src/scaling.$(OBJEXT) \
@@ -1141,6 +1145,8 @@ include_HEADERS = include/spral.h include/spral_lsmr.h \
 
 # COMPAT (compatability header)
 
+# HW_TOPOLOGY
+
 # LAPACK_IFACE
 
 # MATCH_ORDER
@@ -1154,9 +1160,11 @@ include_HEADERS = include/spral.h include/spral_lsmr.h \
 # TIMER
 libspral_a_SOURCES = src/blas_iface.f90 src/core_analyse.f90 \
 	src/compat.cxx $(am__append_1) $(am__append_2) \
-	src/lapack_iface.f90 src/lsmr.f90 interfaces/C/lsmr.f90 \
-	src/match_order.f90 src/matrix_util.f90 \
-	interfaces/C/matrix_util.f90 \
+	src/hw_topology/hw_topology.f90 \
+	src/hw_topology/guess_topology.cxx \
+	src/hw_topology/guess_topology.hxx src/lapack_iface.f90 \
+	src/lsmr.f90 interfaces/C/lsmr.f90 src/match_order.f90 \
+	src/matrix_util.f90 interfaces/C/matrix_util.f90 \
 	src/metis$(METIS_VERSION)_wrapper.f90 src/omp.cxx src/omp.hxx \
 	src/pgm.f90 src/rutherford_boeing.f90 \
 	interfaces/C/rutherford_boeing.f90 src/scaling.f90 \
@@ -1401,6 +1409,18 @@ src/cuda/cuda.$(OBJEXT): src/cuda/$(am__dirstamp) \
 	src/cuda/$(DEPDIR)/$(am__dirstamp)
 src/cuda/cuda_nocuda.$(OBJEXT): src/cuda/$(am__dirstamp) \
 	src/cuda/$(DEPDIR)/$(am__dirstamp)
+src/hw_topology/$(am__dirstamp):
+	@$(MKDIR_P) src/hw_topology
+	@: > src/hw_topology/$(am__dirstamp)
+src/hw_topology/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) src/hw_topology/$(DEPDIR)
+	@: > src/hw_topology/$(DEPDIR)/$(am__dirstamp)
+src/hw_topology/hw_topology.$(OBJEXT):  \
+	src/hw_topology/$(am__dirstamp) \
+	src/hw_topology/$(DEPDIR)/$(am__dirstamp)
+src/hw_topology/guess_topology.$(OBJEXT):  \
+	src/hw_topology/$(am__dirstamp) \
+	src/hw_topology/$(DEPDIR)/$(am__dirstamp)
 src/lapack_iface.$(OBJEXT): src/$(am__dirstamp) \
 	src/$(DEPDIR)/$(am__dirstamp)
 src/lsmr.$(OBJEXT): src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
@@ -1984,6 +2004,7 @@ mostlyclean-compile:
 	-rm -f interfaces/C/*.$(OBJEXT)
 	-rm -f src/*.$(OBJEXT)
 	-rm -f src/cuda/*.$(OBJEXT)
+	-rm -f src/hw_topology/*.$(OBJEXT)
 	-rm -f src/ssids/*.$(OBJEXT)
 	-rm -f src/ssids/cpu/*.$(OBJEXT)
 	-rm -f src/ssids/cpu/kernels/*.$(OBJEXT)
@@ -2015,6 +2036,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@examples/C/ssmfe/$(DEPDIR)/shift_invert.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/compat.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/omp.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/hw_topology/$(DEPDIR)/guess_topology.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/$(DEPDIR)/NumericSubtree.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/$(DEPDIR)/SymbolicSubtree.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ssids/cpu/$(DEPDIR)/profile.Po@am__quote@
@@ -2583,6 +2605,8 @@ distclean-generic:
 	-rm -f src/$(am__dirstamp)
 	-rm -f src/cuda/$(DEPDIR)/$(am__dirstamp)
 	-rm -f src/cuda/$(am__dirstamp)
+	-rm -f src/hw_topology/$(DEPDIR)/$(am__dirstamp)
+	-rm -f src/hw_topology/$(am__dirstamp)
 	-rm -f src/ssids/$(DEPDIR)/$(am__dirstamp)
 	-rm -f src/ssids/$(am__dirstamp)
 	-rm -f src/ssids/cpu/$(DEPDIR)/$(am__dirstamp)
@@ -2614,7 +2638,7 @@ clean-am: clean-binPROGRAMS clean-checkPROGRAMS clean-generic \
 
 distclean: distclean-am
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
-	-rm -rf examples/C/$(DEPDIR) examples/C/scaling/$(DEPDIR) examples/C/ssmfe/$(DEPDIR) src/$(DEPDIR) src/ssids/cpu/$(DEPDIR) src/ssids/cpu/kernels/$(DEPDIR) tests/ssids/$(DEPDIR) tests/ssids/kernels/$(DEPDIR) tests/ssmfe/$(DEPDIR)
+	-rm -rf examples/C/$(DEPDIR) examples/C/scaling/$(DEPDIR) examples/C/ssmfe/$(DEPDIR) src/$(DEPDIR) src/hw_topology/$(DEPDIR) src/ssids/cpu/$(DEPDIR) src/ssids/cpu/kernels/$(DEPDIR) tests/ssids/$(DEPDIR) tests/ssids/kernels/$(DEPDIR) tests/ssmfe/$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-hdr distclean-tags
@@ -2662,7 +2686,7 @@ installcheck-am:
 maintainer-clean: maintainer-clean-am
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
 	-rm -rf $(top_srcdir)/autom4te.cache
-	-rm -rf examples/C/$(DEPDIR) examples/C/scaling/$(DEPDIR) examples/C/ssmfe/$(DEPDIR) src/$(DEPDIR) src/ssids/cpu/$(DEPDIR) src/ssids/cpu/kernels/$(DEPDIR) tests/ssids/$(DEPDIR) tests/ssids/kernels/$(DEPDIR) tests/ssmfe/$(DEPDIR)
+	-rm -rf examples/C/$(DEPDIR) examples/C/scaling/$(DEPDIR) examples/C/ssmfe/$(DEPDIR) src/$(DEPDIR) src/hw_topology/$(DEPDIR) src/ssids/cpu/$(DEPDIR) src/ssids/cpu/kernels/$(DEPDIR) tests/ssids/$(DEPDIR) tests/ssids/kernels/$(DEPDIR) tests/ssmfe/$(DEPDIR)
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

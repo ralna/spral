@@ -56,6 +56,12 @@ libspral_a_SOURCES += \
 	src/cuda/cuda_nocuda.f90
 endif
 
+# HW_TOPOLOGY
+libspral_a_SOURCES += \
+   src/hw_topology/hw_topology.f90 \
+	src/hw_topology/guess_topology.cxx \
+	src/hw_topology/guess_topology.hxx
+
 # LAPACK_IFACE
 libspral_a_SOURCES += \
 	src/lapack_iface.f90
