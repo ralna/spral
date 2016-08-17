@@ -135,10 +135,10 @@ public:
     *           with perm). Uneliminated variables are placed into failed_perm.
     *  \param n number of entries in block to be moved to elim_perm or failed.
     *  \param perm[n] source pointer
-    *  \param elim_perm[nelim] destination pointer for eliminated columns
-    *         from perm
-    *  \param failed_perm[n-nelim] destination pointer for failed columns from
-    *         perm
+    *  \param elim_perm destination pointer for eliminated columns
+    *         from perm, first nelim entries are filled on output.
+    *  \param failed_perm destination pointer for failed columns from
+    *         perm first (n-nelim) entries are filled on output.
     *  \internal Note that there is no need to consider a similar operation for
     *            d[] as it is only used for eliminated variables.
     */
@@ -761,19 +761,47 @@ template<typename T,
          >
 class LDLT;
 
+/** \brief Functional wrapper around a block of the underlying matrix.
+ *  \details Provides a light-weight wrapper around blocks of the matrix
+ *           to provide location-aware functionality and thus safety.
+ *  \tparam T Underlying datatype, e.g. double.
+ *  \tparam INNER_BLOCK_SIZE The inner block size to be used for recursion
+ *          decisions in factor().
+ *  \tparam IntAlloc an allocator for type int used in specification of
+ *          ColumnData type.
+ */
 template<typename T, int INNER_BLOCK_SIZE, typename IntAlloc>
 class Block {
 public:
-   Block(int i, int j, int m, int n, ColumnData<T,IntAlloc>& cdata, T* a, int lda, int block_size)
-   : i_(i), j_(j), m_(m), n_(n), lda_(lda), block_size_(block_size), cdata_(cdata),
-     aval_(&a[j*block_size*lda+i*block_size])
+   /** \brief Constuctor.
+    *  \param i Block's row index.
+    *  \param j Block's column index.
+    *  \param m Number of rows in matrix.
+    *  \param n Number of columns in matrix.
+    *  \param cdata ColumnData for factorization.
+    *  \param a Pointer to underlying storage of matrix.
+    *  \param lda Leading dimension of a.
+    *  \param block_size The block size.
+    */
+   Block(int i, int j, int m, int n, ColumnData<T,IntAlloc>& cdata, T* a,
+         int lda, int block_size)
+   : i_(i), j_(j), m_(m), n_(n), lda_(lda), block_size_(block_size),
+     cdata_(cdata), aval_(&a[j*block_size*lda+i*block_size])
    {}
 
+   /** \brief Create backup of this block.
+    *  \tparam Backup Underlying backup type.
+    *  \param backup Storage containing backup.
+    */
    template <typename Backup>
    void backup(Backup& backup) {
       backup.create_restore_point(i_, j_, aval_, lda_);
    }
 
+   /** \brief Apply column permutation to block and create a backup.
+    *  \tparam Backup Underlying backup type.
+    *  \param backup Storage containing backup.
+    */
    template <typename Backup>
    void apply_rperm_and_backup(Backup& backup) {
       backup.create_restore_point_with_row_perm(
@@ -781,6 +809,9 @@ public:
             );
    }
 
+   /** \brief Apply row permutation to block.
+    *  \param work Thread-specific workspace.
+    */
    void apply_rperm(Workspace& work) {
       int ldl = align_lda<T>(block_size_);
       T* lwork = work.get_ptr<T>(ncol()*ldl);
@@ -798,6 +829,10 @@ public:
          aval_[j*lda_+i] = lwork[j*ldl+i];
    }
 
+   /** \brief Apply inverse of row permutation to block.
+    *  \details Intended for recovery from failed Cholesky-like factorization.
+    *  \param work Thread-specific workspace.
+    */
    void apply_inv_rperm(Workspace& work) {
       int ldl = align_lda<T>(block_size_);
       T* lwork = work.get_ptr<T>(ncol()*ldl);
@@ -815,6 +850,10 @@ public:
          aval_[j*lda_+i] = lwork[j*ldl+i];
    }
 
+   /** \brief Apply column permutation to block and create a backup.
+    *  \tparam Backup Underlying backup type.
+    *  \param backup Storage containing backup.
+    */
    template <typename Backup>
    void apply_cperm_and_backup(Backup& backup) {
       backup.create_restore_point_with_col_perm(
@@ -822,6 +861,9 @@ public:
             );
    }
 
+   /** \brief Apply column permutation to block.
+    *  \param work Thread-specific workspace.
+    */
    void apply_cperm(Workspace& work) {
       int ldl = align_lda<T>(block_size_);
       T* lwork = work.get_ptr<T>(ncol()*ldl);
@@ -838,11 +880,25 @@ public:
          aval_[j*lda_+i] = lwork[j*ldl+i];
    }
 
+   /** \brief Restore the entire block from backup.
+    *  \details Intended for recovery from failed Cholesky-like factorization.
+    *  \tparam Backup Underlying backup type.
+    *  \param backup Storage containing backup.
+    */
    template <typename Backup>
    void full_restore(Backup& backup) {
       backup.restore_part(i_, j_, 0, 0, aval_, lda_);
    }
 
+   /** \brief Restore any failed columns from backup.
+    *  \details Storage associated with backup is released by this routine
+    *           once we are done with it. This routine should only be called
+    *           for blocks in the eliminated row/column.
+    *  \tparam Backup Underlying backup type.
+    *  \param backup Storage containing backup.
+    *  \param elim_col The block column we've just finished eliminating and
+    *         wish to perform restores associated with.
+    */
    template <typename Backup>
    void restore_if_required(Backup& backup, int elim_col) {
       if(i_ == elim_col && j_ == elim_col) { // In eliminated diagonal block
@@ -872,8 +928,34 @@ public:
       }
    }
 
+   /** \brief Factorize diagonal block.
+    *  \details Performs the in-place factorization
+    *           \f[ A_{ii} = P L_{ii} D_i L_{ii}^T P^T. \f]
+    *           The mechanism to do so varies:
+    *           - If block_size != BLOCK_SIZE then recurse with a call to
+    *             LDLT::factor() using BLOCK_SIZE as the new block size.
+    *           - Otherwise, if the block is a full block of size BLOCK_SIZE,
+    *             call block_ldlt().
+    *           - Otherwise, if the block is not full, call ldlt_tpp_factor().
+    *           Note that two permutations are maintained, the user permutation
+    *           perm, and the local permutation lperm obtained from
+    *           ColumnData::get_lperm() that represents P above.
+    *  \tparam Allocator allocator type to be used on recursion to
+    *          LDLT::factor().
+    *  \param next_elim Next variable to be eliminated, used to determine
+    *         location in d to be used.
+    *  \param perm User permutation: entries are permuted in same way as
+    *         matrix columns.
+    *  \param d pointer to global array for D.
+    *  \param options user-supplied options
+    *  \param work vector of thread-specific workspaces
+    *  \param alloc allocator instance to be used on recursion to
+    *         LDLT::factor().
+    */
    template <typename Allocator>
-   int factor(int& next_elim, int* perm, T* d, struct cpu_factor_options const &options, std::vector<Workspace>& work, Allocator const& alloc) {
+   int factor(int next_elim, int* perm, T* d,
+         struct cpu_factor_options const &options,
+         std::vector<Workspace>& work, Allocator const& alloc) {
       if(i_ != j_)
          throw std::runtime_error("factor called on non-diagonal block!");
       int* lperm = cdata_.get_lperm(i_);
@@ -931,6 +1013,23 @@ public:
       return cdata_[i_].nelim;
    }
 
+   /** \brief Apply pivots to this block and return number of pivots passing
+    *         a posteori pivot test.
+    *  \details If this block is below dblk, perform the operation
+    *           \f[ L_{ij} = A_{ij} (D_j L_{jj})^{-T} \f]
+    *           otherwise, if this block is to left of dblk, perform the
+    *           operation
+    *           \f[ L_{ij} = (D_i L_{ii})^{-1} A_{ij} \f]
+    *           but only to uneliminated columns.
+    *           After operation has completed, check a posteori pivoting
+    *           condition \f$ l_{ij} < u^{-1} \f$ and return first column
+    *           (block below dblk) or row (block left of dblk) in which
+    *           it fails, or the total number of rows/columns otherwise.
+    *  \param dblk The diagonal block to apply.
+    *  \param u The pivot threshold for threshold test.
+    *  \param small The drop tolerance for zero testing.
+    *  \returns Number of successful pivots in this block.
+    */
    int apply_pivot_app(Block const& dblk, T u, T small) {
       if(i_ == j_)
          throw std::runtime_error("apply_pivot called on diagonal block!");
@@ -955,7 +1054,24 @@ public:
       }
    }
 
-   void update(Block const& isrc, Block const& jsrc, Workspace& work, double beta=1.0, T* upd=nullptr, int ldupd=0) {
+   /** \brief Perform update of this block.
+    *  \details Perform an update using the outer product of the supplied
+    *           blocks:
+    *           \f[ A_{ij} = A_{ij} - L_{ik} D_k L_{jk}^T \f]
+    *           If this block is in the last "real" block column, optionally
+    *           apply the same update to the supplied part of the contribution
+    *           block that maps on to the "missing" part of this block.
+    *  \param isrc The Block L_{ik}.
+    *  \param jsrc The Block L_{jk}.
+    *  \param work Thread-specific workspace.
+    *  \param beta Global coefficient of original \f$ U_{ij} \f$ value.
+    *         See form_contrib() for details.
+    *  \param upd Optional pointer to \f$ U_{ij} \f$ values to be updated.
+    *         If this is null, no such update is performed.
+    *  \param ldupd Leading dimension of upd.
+    */
+   void update(Block const& isrc, Block const& jsrc, Workspace& work,
+         double beta=1.0, T* upd=nullptr, int ldupd=0) {
       if(isrc.i_ == i_ && isrc.j_ == jsrc.j_) {
          // Update to right of elim column (UpdateN)
          int elim_col = isrc.j_;
@@ -1027,6 +1143,21 @@ public:
       }
    }
 
+   /** \brief Update this block as part of contribution block.
+    *  \details Treat this block's coordinates as beloning to the trailing
+    *           matrix (contribution block/generated elment) and perform an
+    *           update using the outer product of the supplied blocks.
+    *           \f[ U_{ij} = U_{ij} - L_{ik} D_k L_{jk}^T \f]
+    *           If this is the first update to \f$ U_{ij} \f$, the existing
+    *           values are multipled by a user-supplied coefficient
+    *           \f$ \beta \f$.
+    *  \param isrc the Block L_{ik}.
+    *  \param jsrc the Block L_{jk}.
+    *  \param work this thread's workspace.
+    *  \param beta Global coefficient of original \f$ U_{ij} \f$ value.
+    *  \param upd_ij pointer to \f$ U_{ij} \f$ values to be updated.
+    *  \param ldupd leading dimension of upd_ij.
+    */
    void form_contrib(Block const& isrc, Block const& jsrc, Workspace& work, double beta, T* upd_ij, int ldupd) {
       int elim_col = isrc.j_;
       int ldld = align_lda<T>(block_size_);
@@ -1045,7 +1176,11 @@ public:
             );
    }
 
-   /** Returns true if block contains NaNs (debug only). */
+   /** \brief Returns true if block contains NaNs or Infs (debug only).
+    *  \param elim_col if supplied, the block column currently being considered
+    *         for elimination. Entries in that block row/column marked as
+    *         failed are ignored.
+    */
    bool isnan(int elim_col=-1) const {
       int m = (i_==elim_col) ? cdata_[i_].get_npass() : nrow();
       int n = (j_==elim_col) ? cdata_[j_].get_npass() : ncol();
@@ -1063,7 +1198,7 @@ public:
       return false;
    }
 
-   /** Prints block (debug only) */
+   /** \brief Prints block (debug only) */
    void print() const {
       printf("Block %d, %d (%d x %d):\n", i_, j_, nrow(), ncol());
       for(int i=0; i<nrow(); ++i) {
@@ -1074,24 +1209,28 @@ public:
       }
    }
 
+   /** \brief return number of rows in this block */
    int nrow() const { return get_nrow(i_); }
+   /** \brief return number of columns in this block */
    int ncol() const { return get_ncol(j_); }
 private:
+   /** \brief return number of columns in given block column */
    inline int get_ncol(int blk) const {
       return calc_blkn(blk, n_, block_size_);
    }
+   /** \brief return number of rows in given block row */
    inline int get_nrow(int blk) const {
       return calc_blkn(blk, m_, block_size_);
    }
 
-   int const i_; //< block's row
-   int const j_; //< block's column
-   int const m_; //< global number of rows
-   int const n_; //< global number of columns
-   int const lda_; //< leading dimension of underlying storage
-   int const block_size_; //< block size
-   ColumnData<T,IntAlloc>& cdata_; //< global column data array
-   T* aval_;
+   int const i_; ///< block's row
+   int const j_; ///< block's column
+   int const m_; ///< number of rows in matrix
+   int const n_; ///< number of columns in matrix
+   int const lda_; ///< leading dimension of underlying storage
+   int const block_size_; ///< block size
+   ColumnData<T,IntAlloc>& cdata_; ///< global column data array
+   T* aval_; ///< pointer to underlying matrix storage
 };
 
 /** \brief Grouping of assorted functions for LDL^T factorization that share
