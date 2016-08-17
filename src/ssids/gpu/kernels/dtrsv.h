@@ -14,9 +14,7 @@ simulateously.
 
 namespace spral { namespace ssids { namespace gpu {
 
-__inline__ __device__ float cuConj(float x) { return x; }
-__inline__ __device__ double cuConj(double x) { return x; }
-
+/** \brief Return value at address vptr using volatile load. */
 template<typename T_ELEM>
 __inline__ __device__ T_ELEM loadVolatile(volatile T_ELEM *vptr) {
    return *vptr;
@@ -44,14 +42,23 @@ __inline__ __device__ T_ELEM loadVolatile(volatile T_ELEM *vptr) {
 #define THREADSY_TASK 4
 #endif
 
+/** \brief Return physical SM id as per special register %smid. */
 unsigned int __inline__ __device__ getSM(void) {
    unsigned int output;
    asm("mov.u32 %0,%smid;" : "=r"(output) : );
    return output;
 }
 
-/* Performs trsv on a blksz x blksz tile.
- * IMPORTANT blkSize <= warpSize
+/** 
+ * \brief Perform non-transpose solve with diagonal block.
+ * \warning blkSize MUST be <= warpSize.
+ * \tparam T_ELEM Underlying data type, e.g. double.
+ * \tparam blkSize Block size.
+ * \tparam ISUNIT True if diagonal is 1.0, false otherwise.
+ * \param minus_a Diagonal block
+ * \param lda Leading dimension of a.
+ * \param val This thread's element of x.
+ * \sa dblkSolve_trans()
  */
 template <typename T_ELEM, int blkSize, bool ISUNIT>
 void __device__ dblkSolve(const T_ELEM *minus_a, int lda, T_ELEM &val) {
@@ -69,6 +76,16 @@ void __device__ dblkSolve(const T_ELEM *minus_a, int lda, T_ELEM &val) {
    }
 }
 
+/** 
+ * \brief Perform transpose solve with diagonal block.
+ * \tparam T_ELEM Underlying data type, e.g. double.
+ * \tparam blkSize Block size.
+ * \tparam ISUNIT True if diagonal is 1.0, false otherwise.
+ * \param minus_a Diagonal block
+ * \param lda Leading dimension of a.
+ * \param val This thread's element of x.
+ * \sa dblkSolve()
+ */
 template <typename T_ELEM, int blkSize, bool ISUNIT>
 void __device__ dblkSolve_trans(const T_ELEM *minus_a, int lda, T_ELEM &val) {
 
@@ -85,10 +102,22 @@ void __device__ dblkSolve_trans(const T_ELEM *minus_a, int lda, T_ELEM &val) {
    }
 }
 
-/* Copies a nbi x nbi block of a to provided cache.
- * Copies -a and only the half triangle
+/**
+ * \brief Copies an nbi x nbi block of a to provided cache.
+ * \details Copies -a and only the half triangle
+ * \tparam T_ELEM underlying data type, e.g. double.
+ * \tparam nbi Inner block size.
+ * \tparam ntid Number of participating threads.
+ * \tparam TRANS Perform transpose during copy if true.
+ * \tparam ISUNIT true if diagonal is 1.0, false otherwise.
+ * \param tid The thread id.
+ * \param a Matrix values.
+ * \param lda Leading dimension of a.
+ * \param cache Location to copy to, leading dimension nbi.
+ * \sa tocache_small()
  */
-template <typename T_ELEM, unsigned int nbi, unsigned int ntid, bool TRANS, bool ISUNIT>
+template <typename T_ELEM, unsigned int nbi, unsigned int ntid, bool TRANS,
+          bool ISUNIT>
 void __device__ tocache(unsigned int tid, const T_ELEM *a, int lda,
       T_ELEM *cache) {
    int x = tid % nbi;
@@ -110,11 +139,23 @@ void __device__ tocache(unsigned int tid, const T_ELEM *a, int lda,
    }
 }
 
-/* Copies an n x n block of a to provided cache, provided n<nbi.
- * If diag is true, then only copy lower triangle. 
- * ntid is the number of participating threads, tid is the thread id.
+/**
+ * \brief Copy an n x n block of a to provided cache, provided n<nbi.
+ * \details If diag is true, then only copy lower triangle. ???
+ * \tparam T_ELEM underlying data type, e.g. double.
+ * \tparam nbi Inner block size.
+ * \tparam ntid Number of participating threads.
+ * \tparam TRANS Perform transpose during copy if true.
+ * \tparam ISUNIT true if diagonal is 1.0, false otherwise.
+ * \param n Size of matrix
+ * \param tid The thread id.
+ * \param a Matrix values.
+ * \param lda Leading dimension of a.
+ * \param cache Location to copy to, leading dimension nbi.
+ * \sa tocache()
  */
-template <typename T_ELEM, unsigned int nbi, unsigned int ntid, bool TRANS, bool ISUNIT>
+template <typename T_ELEM, unsigned int nbi, unsigned int ntid, bool TRANS,
+          bool ISUNIT>
 void __device__ tocache_small(int n, unsigned int tid, const T_ELEM *a,
       int lda, T_ELEM *cache) {
    int x = tid % nbi;
@@ -137,8 +178,14 @@ void __device__ tocache_small(int n, unsigned int tid, const T_ELEM *a,
    }
 }
 
-/* loops until *sync > val.
- * Needs to be seperate function to force volatile onto *sync.
+/** 
+ * \brief Wait until *sync >= col_to_wait.
+ * \details Needs to be a separate function to force volatile onto *sync.
+ * \warning Call __syncthreads().
+ * \param tid This thread's index.
+ * \param sync memory location to wait on.
+ * \param col_to_wait Target number to wait for.
+ * \param col_done Value of *sync on return.
  */
 void __device__ wait_until_ge(int tid, volatile int *sync, int col_to_wait, int *col_done) {
    if(tid == 0) {
@@ -151,7 +198,13 @@ void __device__ wait_until_ge(int tid, volatile int *sync, int col_to_wait, int 
    __syncthreads();
 }
 
-/* Returns next block row index that requires processing */
+/** 
+ * \brief Atomically increment next row counter and return old value to all
+ *        threads.
+ * \warning Contains a call to __syncthreads()
+ * \param address pointer to global address used to store next row.
+ * \returns next row index
+ */
 int __device__ nextRow(int *address) {
    volatile int __shared__ old;
    if(threadIdx.x==0 && threadIdx.y==0)
@@ -160,13 +213,25 @@ int __device__ nextRow(int *address) {
    return old;
 }
 
-/*
-   Solves the system
-      L_22 X_21 = - L_21 X_11
-   for X_21.
+/**
+ * \brief Solves the system \f$ L_{22} X_{21} = - L_{21} X_{11} \f$
+ *        for \f$ X_{21} \f$.
+ * \tparam T_ELEM underlying data type, e.g. double.
+ * \tparam n size of matrix.
+ * \tparam lda leading dimension of x11, a21 and l22.
+ * \tparam threadsx compile-time version of blockDim.x.
+ * \tparam threadsy compile-time version of blockDim.y.
+ * \tparam ISUNIT true if diagonal is 1.0, false otherwise.
+ * \param x11 The matrix \f$ X_{11} \f$.
+ * \param a21 On input, the matrix \f$ L_{21} \f$, on return the solution
+ *        \f$ X_{21} \f$.
+ * \param l22 The matrix \f$ L_{21} \f$.
+ * \param xsarray workspace???
 */
-template <typename T_ELEM, int n, int lda, int threadsx, int threadsy, bool ISUNIT>
-void __device__ slv21(const T_ELEM *x11, T_ELEM *a21, const T_ELEM *l22, volatile T_ELEM *xsarray) {
+template <typename T_ELEM, int n, int lda, int threadsx, int threadsy,
+          bool ISUNIT>
+void __device__ slv21(const T_ELEM *x11, T_ELEM *a21, const T_ELEM *l22,
+      volatile T_ELEM *xsarray) {
 
    const int tid = threadsx*threadIdx.y+threadIdx.x;
    const int ntid = threadsx*threadsy;
@@ -205,7 +270,15 @@ void __device__ slv21(const T_ELEM *x11, T_ELEM *a21, const T_ELEM *l22, volatil
    }
 }
 
-/* Take transpose of a matrix in shared memory */
+/**
+ * \brief Take transpose of a matrix in shared memory
+ * \tparam T_ELEM underlying data type, e.g. double.
+ * \tparam threadsy compile-time version of blockDim.y.
+ * \tparam lda leading dimension of a and at.
+ * \param n Matrix dimension.
+ * \param a Matrix to transpose.
+ * \param at Space to output transpose of a.
+ */
 template <typename T_ELEM, int threadsy, int lda>
 void __device__ transpose(int n, const T_ELEM *a, T_ELEM *at) {
    if(threadIdx.y==0 && threadIdx.x<n) {
@@ -214,17 +287,35 @@ void __device__ transpose(int n, const T_ELEM *a, T_ELEM *at) {
    }
 }
 
-/* Invert a lower triangular matrix recursively using formula
- * ( L_11      ) ^-1 = ( L_11^-1                        )
- * ( L_21 L_22 )       ( -L_22^-1*L_21*L_11^-1  L22^_-1 )
+/**
+ * \brief Invert a lower triangular matrix
+ * \details Works recursively using the formula:
+ * \f[\left(\begin{array}{cc}
+ *       L_{11} &        \\
+ *       L_{21} & L_{22}
+ *    \end{array}\right)^{-1} = \left(\begin{array}{cc}
+ *        L_{11}^{-1} &      \\
+ *       -L_{22}^{-1} L_{21} L_{11}^{-1} & L_{22}^{-1}
+ *    \end{array}\right)
+ * \f]
  *
- * Note: Expects -L to be passed in, and factorises to +L
+ * Note: Expects \f$ -L \f$ to be passed in, and factorises to \f$ +L \f$
  *
  * (This method is recommended as componentwise backwards stable for
  * divide an conquer computation of triangular matrix in version in:
  * Stability of parallel triangular system solvers, Higham, 1995)
+ * \tparam T_ELEM Underlying datatype, e.g. double.
+ * \tparam n matrix size
+ * \tparam lda leading dimension of a
+ * \tparam threadsx compile-time version of blockDim.x.
+ * \tparam threadsy compile-time version of blockDim.y.
+ * \tparam ISUNIT true if diagonal is 1.0, false otherwise.
+ * \tparam TRANS true if we actually want to invert L^T, false otherwise.
+ * \param a matrix to invert
+ * \param xsarray workspace ???
  */
-template <typename T_ELEM, int n, int lda, int threadsx, int threadsy, bool ISUNIT, bool TRANS>
+template <typename T_ELEM, int n, int lda, int threadsx, int threadsy,
+          bool ISUNIT, bool TRANS>
 void __device__ invert(T_ELEM *a, volatile T_ELEM /*__shared__*/ *xsarray) {
 
    if(n==2) {
@@ -253,9 +344,17 @@ void __device__ invert(T_ELEM *a, volatile T_ELEM /*__shared__*/ *xsarray) {
    }
 }
 
-/* 
- * Performs a solve through a precalulated matrix inverse
- * (so actually a triangular matrix-vector multiply)
+/** 
+ * \brief Performs a solve through a precalulated matrix inverse
+ * \details (so actually a triangular matrix-vector multiply)
+ * \tparam T_ELEM underlying data type, e.g. double.
+ * \tparam n matrix size.
+ * \tparam threadsy compile-time version of blockDim.y.
+ * \param a precalculated matrix inverse
+ * \param xshared workspace???
+ * \param val this thread's component of rhs vector in input, replaced with
+ *        solution on output
+ * \param partSum workspace???
  */
 template<typename T_ELEM, int n, int threadsy>
 void __device__ slvinv(const T_ELEM *a, T_ELEM *xshared, T_ELEM &val,
@@ -284,9 +383,18 @@ void __device__ slvinv(const T_ELEM *a, T_ELEM *xshared, T_ELEM &val,
    }
 }
 
-/* 
- * Performs a solve through a transpose precalulated matrix inverse
- * (so actually a transpose triangular matrix-vector multiply)
+/** 
+ * \brief Performs a solve through a transpose precalulated matrix inverse
+ * \details (so actually a transpose triangular matrix-vector multiply)
+ * \tparam T_ELEM underlying data type, e.g. double.
+ * \tparam n matrix size.
+ * \tparam threadsy compile-time version of blockDim.y.
+ * \param a precalculated matrix inverse
+ * \param xshared workspace???
+ * \param val this thread's component of rhs vector in input, replaced with
+ *        solution on output
+ * \param partSum workspace???
+ * \param row FIXME: unused???
  */
 template<typename T_ELEM, int n, int threadsy>
 void __device__ slvinv_trans(const T_ELEM *a, T_ELEM *xshared, T_ELEM &val,
@@ -317,7 +425,7 @@ void __device__ slvinv_trans(const T_ELEM *a, T_ELEM *xshared, T_ELEM &val,
    }
 }
 
-/* Sets sync values correctly prior to call to trsv_ln_exec */
+/** \brief Sets sync values correctly prior to call to trsv_ln_exec */
 void __global__ trsv_init(int *sync) {
    sync += 2*blockIdx.x;
    sync[0] = -1; // Last ready column
@@ -341,12 +449,23 @@ struct trsv_times {
 };
 #endif
 
-/* Performs trsv for Transposed Lower-triangular matrices
- * Requires trsv_init() to be called first to initialize sync[].
+/**
+ * \brief Performs batched trsv for Transposed Lower-triangular matrices
+ * \details Requires trsv_init() to be called first to initialize sync[].
+ * \tparam T_ELEM underlying data type, e.g. double.
+ * \tparam nb block size.
+ * \tparam threadsx compile-time version of blockDim.x.
+ * \tparam threadsy compile-time version of blockDim.y.
+ * \tparam ISUNIT true if diagonal is 1.0, false otherwise.
+ * \param lookup batch lookup array.
+ * \param xglobal x array to offset into.
+ * \param sync sync array to offset into.
  */
 template <typename T_ELEM, unsigned int nb, unsigned int threadsx,
    unsigned int threadsy, bool ISUNIT>
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
 __launch_bounds__(threadsx*threadsy, 4)
+#endif /* DOXYGEN_SHOULD_SKIP_THIS */
 void __global__ trsv_lt_exec(const struct trsv_lookup *lookup, T_ELEM *xglobal,
       int *sync
 #ifdef TIMING
@@ -547,12 +666,23 @@ void __global__ trsv_lt_exec(const struct trsv_lookup *lookup, T_ELEM *xglobal,
 }
 
 
-/* Performs trsv for Non-transposed Lower-triangular matrices
- * Requires trsv_init() to be called first to initialize sync[].
+/** 
+ * \brief Performs batched trsv for Non-transposed Lower-triangular matrices
+ * \details Requires trsv_init() to be called first to initialize sync[].
+ * \tparam T_ELEM underlying data type, e.g. double.
+ * \tparam nb block size.
+ * \tparam threadsx compile-time version of blockDim.x.
+ * \tparam threadsy compile-time version of blockDim.y.
+ * \tparam ISUNIT true if diagonal is 1.0, false otherwise.
+ * \param xglobal x array to offset into.
+ * \param sync sync array to offset into.
+ * \param lookup batch lookup array.
  */
 template <typename T_ELEM, unsigned int nb, unsigned int threadsx,
    unsigned int threadsy, bool ISUNIT>
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
 __launch_bounds__(threadsx*threadsy, 4)
+#endif /* DOXYGEN_SHOULD_SKIP_THIS */
 /* Note: setting above occupany to 5 causes random errors on large problems:
    suspect compiler bug */
 void __global__ trsv_ln_exec(T_ELEM* __restrict__ xglobal,

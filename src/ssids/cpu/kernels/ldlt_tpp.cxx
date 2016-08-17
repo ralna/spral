@@ -168,7 +168,7 @@ void zero_col(int col, int m, double* a, int lda) {
 
 } /* anon namespace */
 
-/* Simple LDL^T with threshold partial pivoting.
+/** Simple LDL^T with threshold partial pivoting.
  * Intended for finishing off small matrices, not for performance */
 int ldlt_tpp_factor(int m, int n, int* perm, double* a, int lda, double* d, double* ld, int ldld, double u, double small, int nleft, double* aleft, int ldleft) {
    //printf("=== ENTRY %d %d ===\n", m, n);
