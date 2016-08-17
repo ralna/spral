@@ -1,6 +1,5 @@
 #pragma once
 
-/// BUB namespace
 namespace spral { namespace ssids { namespace cpu {
 
 /** \brief Supported CPU architectures that can be targeted */
