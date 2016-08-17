@@ -17,24 +17,28 @@ module spral_hw_topology
    public :: numa_region ! datatype describing regions
    public :: guess_topology ! returns best guess of hardware topology
 
+   !> Fortran interoperable definition of spral::hw_topology::NumaRegion
    type, bind(C) :: c_numa_region
       integer(C_INT) :: nproc
       integer(C_INT) :: ngpu
       type(C_PTR) :: gpus
    end type c_numa_region
 
+   !> Represents a NUMA region
    type :: numa_region
-      integer :: nproc
-      integer, dimension(:), allocatable :: gpus
+      integer :: nproc !< Number of processors in region
+      integer, dimension(:), allocatable :: gpus !< List of attached GPUs
    end type numa_region
 
    interface
+      !> Interface to spral_hw_topology_guess()
       subroutine spral_hw_topology_guess(nregion, regions) bind(C)
          use, intrinsic :: iso_c_binding
          implicit none
          integer(C_INT), intent(out) :: nregion
          type(C_PTR), intent(out) :: regions
       end subroutine spral_hw_topology_guess
+      !> Interface to spral_hw_topology_free()
       subroutine spral_hw_topology_free(nregion, regions) bind(C)
          use, intrinsic :: iso_c_binding
          implicit none
@@ -45,8 +49,14 @@ module spral_hw_topology
 
 contains
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!> @brief Return best guess for machine topology
+!> @param regions Upon return allocated to have size equal to the number of
+!>        NUMA regions. The members describe each region.
+!> @param st Status return from allocate. If non-zero upon return, an allocation
+!>        failed.
 subroutine guess_topology(regions, st)
-   type(numa_region), dimension(:), allocatable :: regions
+   type(numa_region), dimension(:), allocatable, intent(out) :: regions
    integer, intent(out) :: st
 
    integer :: i
