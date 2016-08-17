@@ -2787,10 +2787,12 @@ src/rutherford_boeing.$(OBJEXT): src/matrix_util.$(OBJEXT) \
 src/scaling.$(OBJEXT): src/matrix_util.$(OBJEXT)
 src/ssids/alloc.$(OBJEXT): src/ssids/datatypes.$(OBJEXT)
 src/ssids/akeep.$(OBJEXT): src/ssids/datatypes.$(OBJEXT) \
+                           src/hw_topology/hw_topology.$(OBJEXT) \
                            src/ssids/inform.$(OBJEXT) \
 									src/ssids/subtree.$(OBJEXT)
 @HAVE_NVCC_TRUE@src/ssids/analyse.$(OBJEXT): src/core_analyse.$(OBJEXT) \
 @HAVE_NVCC_TRUE@                             src/cuda/cuda.$(OBJEXT) \
+@HAVE_NVCC_TRUE@                             src/hw_topology/hw_topology.$(OBJEXT) \
 @HAVE_NVCC_TRUE@                             src/pgm.$(OBJEXT) \
 @HAVE_NVCC_TRUE@                             src/ssids/akeep.$(OBJEXT) \
 @HAVE_NVCC_TRUE@                             src/ssids/datatypes.$(OBJEXT) \
@@ -2799,6 +2801,7 @@ src/ssids/akeep.$(OBJEXT): src/ssids/datatypes.$(OBJEXT) \
 @HAVE_NVCC_TRUE@                             src/ssids/gpu/subtree.$(OBJEXT)
 @HAVE_NVCC_FALSE@src/ssids/analyse.$(OBJEXT): src/core_analyse.$(OBJEXT) \
 @HAVE_NVCC_FALSE@                             src/cuda/cuda_nocuda.$(OBJEXT) \
+@HAVE_NVCC_FALSE@                             src/hw_topology/hw_topology.$(OBJEXT) \
 @HAVE_NVCC_FALSE@                             src/pgm.$(OBJEXT) \
 @HAVE_NVCC_FALSE@                             src/ssids/akeep.$(OBJEXT) \
 @HAVE_NVCC_FALSE@                             src/ssids/datatypes.$(OBJEXT) \
@@ -2869,7 +2872,8 @@ src/ssids/gpu/subtree_no_cuda.$(OBJEXT): src/ssids/contrib.$(OBJEXT) \
 @HAVE_NVCC_TRUE@                           src/ssids/datatypes.$(OBJEXT) \
 @HAVE_NVCC_TRUE@                           src/ssids/fkeep.$(OBJEXT) \
 @HAVE_NVCC_TRUE@                           src/ssids/inform.$(OBJEXT)
-@HAVE_NVCC_FALSE@src/ssids/ssids.$(OBJEXT): src/match_order.$(OBJEXT) \
+@HAVE_NVCC_FALSE@src/ssids/ssids.$(OBJEXT): src/hw_topology/hw_topology.$(OBJEXT) \
+@HAVE_NVCC_FALSE@                           src/match_order.$(OBJEXT) \
 @HAVE_NVCC_FALSE@                           src/matrix_util.$(OBJEXT) \
 @HAVE_NVCC_FALSE@                           src/metis$(METIS_VERSION)_wrapper.$(OBJEXT) \
 @HAVE_NVCC_FALSE@                           src/scaling.$(OBJEXT) \

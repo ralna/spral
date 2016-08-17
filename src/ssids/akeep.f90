@@ -1,6 +1,7 @@
 module spral_ssids_akeep
    use spral_ssids_datatypes, only : long, wp, SSIDS_ERROR_CUDA_UNKNOWN, &
                                      ssids_options
+   use spral_hw_topology, only : numa_region
    use spral_ssids_inform, only : ssids_inform
    use spral_ssids_subtree, only : symbolic_subtree_base
    use, intrinsic :: iso_c_binding
@@ -74,6 +75,9 @@ module spral_ssids_akeep
 
       ! Scaling from matching-based ordering
       real(wp), dimension(:), allocatable :: scaling
+
+      ! Machine topology
+      type(numa_region), dimension(:), allocatable :: topology
    contains
       procedure, pass(akeep) :: free => free_akeep
    end type ssids_akeep
@@ -107,6 +111,7 @@ subroutine free_akeep(akeep, flag)
    deallocate(akeep%ptr, stat=st)
    deallocate(akeep%row, stat=st)
    deallocate(akeep%map, stat=st)
+   deallocate(akeep%topology, stat=st)
 end subroutine free_akeep
 
 end module spral_ssids_akeep

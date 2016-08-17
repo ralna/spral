@@ -9,6 +9,7 @@
 module spral_ssids
 !$ use omp_lib
    use, intrinsic :: iso_c_binding
+   use spral_hw_topology, only : guess_topology, numa_region
    use spral_match_order, only : match_order_metis
    use spral_matrix_util, only : SPRAL_MATRIX_REAL_SYM_INDEF, &
                                  SPRAL_MATRIX_REAL_SYM_PSDEF, &
@@ -94,7 +95,7 @@ contains
 ! Otherwise, matrix_util routines are used to clean data.
 !
 subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
-      order, val)
+      order, val, topology)
    logical, intent(in) :: check ! if set to true, matrix data is checked
      ! and cleaned data stored in akeep
    integer, intent(in) :: n ! order of A
@@ -120,6 +121,7 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
      ! if a matching-based elimination ordering is required
      ! (options%ordering 2).
      ! If present,  val(k) must hold the value of the entry in row(k).
+   type(numa_region), dimension(:), optional, intent(in) :: topology
 
    character(50)  :: context      ! Procedure name (used when printing).
    integer :: mu_flag       ! error flag for matrix_util routines
@@ -344,6 +346,17 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
       deallocate (val2,stat=st)
    end select
 
+   ! Figure out topology
+   if(present(topology)) then
+      ! User supplied
+      allocate(akeep%topology(size(topology)), stat=st)
+      if(st.ne.0) goto 490
+      akeep%topology(:) = topology(:)
+   else
+      ! Guess it
+      call guess_topology(akeep%topology, st)
+      if(st.ne.0) goto 490
+   endif
 
    ! perform rest of analyse
    if (check) then

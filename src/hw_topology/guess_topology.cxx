@@ -8,6 +8,7 @@
  * proves to be useful beyond our own academic experiments)
  *
  */
+/** \file */
 #include "guess_topology.hxx"
 
 #include <omp.h>
@@ -15,10 +16,10 @@
 using namespace spral::hw_topology;
 
 /**
- * \brief Guess hardware topology (using hwloc if available)
+ * \brief Guess hardware topology (FIXME: using hwloc if available)
  * \param nregions Number of regions.
  * \param regions[nregions] Array of region descriptors, allocated by this
- *        routine.
+ *        routine. To free, call spral_hw_topology_free().
  */
 extern "C"
 void spral_hw_topology_guess(int* nregions, NumaRegion** regions) {

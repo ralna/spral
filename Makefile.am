@@ -403,11 +403,13 @@ src/rutherford_boeing.$(OBJEXT): src/matrix_util.$(OBJEXT) \
 src/scaling.$(OBJEXT): src/matrix_util.$(OBJEXT)
 src/ssids/alloc.$(OBJEXT): src/ssids/datatypes.$(OBJEXT)
 src/ssids/akeep.$(OBJEXT): src/ssids/datatypes.$(OBJEXT) \
+                           src/hw_topology/hw_topology.$(OBJEXT) \
                            src/ssids/inform.$(OBJEXT) \
 									src/ssids/subtree.$(OBJEXT)
 if HAVE_NVCC
 src/ssids/analyse.$(OBJEXT): src/core_analyse.$(OBJEXT) \
                              src/cuda/cuda.$(OBJEXT) \
+                             src/hw_topology/hw_topology.$(OBJEXT) \
                              src/pgm.$(OBJEXT) \
                              src/ssids/akeep.$(OBJEXT) \
                              src/ssids/datatypes.$(OBJEXT) \
@@ -417,6 +419,7 @@ src/ssids/analyse.$(OBJEXT): src/core_analyse.$(OBJEXT) \
 else
 src/ssids/analyse.$(OBJEXT): src/core_analyse.$(OBJEXT) \
                              src/cuda/cuda_nocuda.$(OBJEXT) \
+                             src/hw_topology/hw_topology.$(OBJEXT) \
                              src/pgm.$(OBJEXT) \
                              src/ssids/akeep.$(OBJEXT) \
                              src/ssids/datatypes.$(OBJEXT) \
@@ -490,7 +493,8 @@ src/ssids/ssids.$(OBJEXT): src/match_order.$(OBJEXT) \
                            src/ssids/fkeep.$(OBJEXT) \
                            src/ssids/inform.$(OBJEXT)
 else
-src/ssids/ssids.$(OBJEXT): src/match_order.$(OBJEXT) \
+src/ssids/ssids.$(OBJEXT): src/hw_topology/hw_topology.$(OBJEXT) \
+                           src/match_order.$(OBJEXT) \
                            src/matrix_util.$(OBJEXT) \
                            src/metis$(METIS_VERSION)_wrapper.$(OBJEXT) \
                            src/scaling.$(OBJEXT) \

@@ -6,6 +6,7 @@ module spral_ssids_analyse
    use, intrinsic :: iso_c_binding
    use spral_core_analyse, only : basic_analyse
    use spral_cuda, only : detect_gpu
+   use spral_hw_topology, only : guess_topology, numa_region
    use spral_pgm, only : writePPM
    use spral_ssids_akeep, only : ssids_akeep
    use spral_ssids_cpu_subtree, only : construct_cpu_symbolic_subtree
@@ -207,13 +208,14 @@ end subroutine check_order
 !
 ! FIXME: This really needs thought through in more detail for best performance
 ! it may be more sensible to come down from the top?
-subroutine find_subtree_partition(nnodes, sptr, sparent, rptr, min_npart, &
-      max_flops, cpu_gpu_ratio, nparts, part, exec_loc, contrib_ptr, &
-      contrib_idx, contrib_dest)
+subroutine find_subtree_partition(nnodes, sptr, sparent, rptr, topology, &
+      min_npart, max_flops, cpu_gpu_ratio, nparts, part, exec_loc, &
+      contrib_ptr, contrib_idx, contrib_dest)
    integer, intent(in) :: nnodes
    integer, dimension(nnodes+1), intent(in) :: sptr
    integer, dimension(nnodes), intent(in) :: sparent
    integer(long), dimension(nnodes+1), intent(in) :: rptr
+   type(numa_region), dimension(:), intent(in) :: topology
    integer, intent(in) :: min_npart
    integer(long), intent(in) :: max_flops
    real, intent(in) :: cpu_gpu_ratio
@@ -357,7 +359,7 @@ end subroutine find_subtree_partition
 ! input to factorization.
 !
 subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
-      akeep, options, inform)
+      akeep, options, inform, user_topology)
    integer, intent(in) :: n ! order of system
    integer, intent(in) :: ptr(n+1) ! col pointers (lower triangle) 
    integer, intent(in) :: row(ptr(n+1)-1) ! row indices (lower triangle)
@@ -371,9 +373,11 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
    type(ssids_akeep), intent(inout) :: akeep
    type(ssids_options), intent(in) :: options
    type(ssids_inform), intent(inout) :: inform
+   type(numa_region), dimension(:), optional, intent(in) :: user_topology
 
    character(50)  :: context ! Procedure name (used when printing).
    integer, dimension(:), allocatable :: contrib_dest, exec_loc, level
+   type(numa_region), dimension(:), allocatable :: topology
 
    real :: cpu_gpu_ratio
    integer :: nemin, flag
@@ -436,7 +440,7 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
    cpu_gpu_ratio = options%cpu_gpu_ratio
    if(.not.detect_gpu()) cpu_gpu_ratio = 1.0 ! Entirely on CPU
    call find_subtree_partition(akeep%nnodes, akeep%sptr, akeep%sparent, &
-      akeep%rptr, options%min_npart, options%max_flops_part, &
+      akeep%rptr, akeep%topology, options%min_npart, options%max_flops_part, &
       cpu_gpu_ratio, akeep%nparts, akeep%part, exec_loc, &
       akeep%contrib_ptr, akeep%contrib_idx, contrib_dest)
    !print *, "invp = ", akeep%invp
