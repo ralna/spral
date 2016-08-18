@@ -19,4 +19,8 @@ AC_ARG_VAR(NVCCFLAGS,[CUDA compiler flags])
 test "x$NVCC" = x && AC_CHECK_PROGS(NVCC,nvcc)
 test "x$NVCCFLAGS" = x && NVCCFLAGS="-g -arch=compute_20 -code=compute_20,sm_20,sm_35"
 
+if test "x$NVCC" != x; then
+   AC_DEFINE(HAVE_NVCC,1,[Define to 1 if you are linking against NVCC])
+fi
+
 ])dnl AX_NVCC
