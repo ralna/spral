@@ -13,8 +13,13 @@
 
 #include "config.h"
 #include <omp.h>
+#ifdef HAVE_NVCC
+#include <cuda_runtime_api.h>
+#endif /* HAVE_NVCC */
 
 #include "hw_topology/hwloc_wrapper.hxx"
+
+#include <cstdio> // debug
 
 using namespace spral::hw_topology;
 
@@ -42,12 +47,21 @@ void spral_hw_topology_guess(int* nregions, NumaRegion** regions) {
    // Compiled without hwloc support, just put everything in one region
    *nregions = 1;
    *regions = new NumaRegion[*nregions];
-   for(int i=0; i<*nregions; ++i) {
-      NumaRegion& region = (*regions)[i];
-      region.nproc = omp_get_max_threads();
+   NumaRegion& region = (*regions)[0];
+   region.nproc = omp_get_max_threads();
+#if HAVE_NVCC
+   cudaError_t cuda_error = cudaGetDeviceCount(&region.ngpu);
+   if(cuda_error != 0) {
+      printf("CUDA Failed, working without GPU\n");
       region.ngpu = 0;
-      region.gpus = nullptr;
    }
+   region.gpus = (region.ngpu > 0) ? new int[region.ngpu] : nullptr;
+   for(int i=0; i<region.ngpu; ++i)
+      region.gpus[i] = i;
+#else /* HAVE_NVCC */
+   region.ngpu = 0;
+   region.gpus = nullptr;
+#endif /* HAVE_NVCC */
 #endif /* HAVE_HWLOC */
 }
 
