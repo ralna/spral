@@ -1,5 +1,4 @@
 * Add support for TPP pivot_mode
-* Handle multiple NUMA regions and GPU through top level tree split
 * Handle middle of tree better (adapt small subtree kernel to allow inputs?)
 * Optimize small subtree factorization code
 * Figure out how to improve root node performance on many cores
@@ -9,3 +8,4 @@
 * Sort out test deck
 * Sort out documentation
 * Parallel solve?
+* Add note that hwloc needs cuda support at compile time to work right for us?
