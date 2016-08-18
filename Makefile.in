@@ -213,7 +213,8 @@ am__libspral_a_SOURCES_DIST = src/blas_iface.f90 src/core_analyse.f90 \
 	src/cuda/cuda_check.h src/cuda/cuda_nocuda.f90 \
 	src/hw_topology/hw_topology.f90 \
 	src/hw_topology/guess_topology.cxx \
-	src/hw_topology/guess_topology.hxx src/lapack_iface.f90 \
+	src/hw_topology/guess_topology.hxx \
+	src/hw_topology/hwloc_wrapper.hxx src/lapack_iface.f90 \
 	src/lsmr.f90 interfaces/C/lsmr.f90 src/match_order.f90 \
 	src/matrix_util.f90 interfaces/C/matrix_util.f90 \
 	src/metis$(METIS_VERSION)_wrapper.f90 src/omp.cxx src/omp.hxx \
@@ -1194,7 +1195,8 @@ libspral_a_SOURCES = src/blas_iface.f90 src/core_analyse.f90 \
 	src/compat.cxx $(am__append_1) $(am__append_2) \
 	src/hw_topology/hw_topology.f90 \
 	src/hw_topology/guess_topology.cxx \
-	src/hw_topology/guess_topology.hxx src/lapack_iface.f90 \
+	src/hw_topology/guess_topology.hxx \
+	src/hw_topology/hwloc_wrapper.hxx src/lapack_iface.f90 \
 	src/lsmr.f90 interfaces/C/lsmr.f90 src/match_order.f90 \
 	src/matrix_util.f90 interfaces/C/matrix_util.f90 \
 	src/metis$(METIS_VERSION)_wrapper.f90 src/omp.cxx src/omp.hxx \

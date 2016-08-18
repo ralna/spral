@@ -14,9 +14,7 @@
 #include "config.h"
 #include <omp.h>
 
-#ifdef HAVE_HWLOC
-#include <hwloc.h>
-#endif /* HAVE_HWLOC */
+#include "hw_topology/hwloc_wrapper.hxx"
 
 using namespace spral::hw_topology;
 
@@ -30,24 +28,18 @@ extern "C"
 void spral_hw_topology_guess(int* nregions, NumaRegion** regions) {
 #if HAVE_HWLOC
    // Compiled with hwloc support
-   // Call hwloc to get topology
-   hwloc_topology_t topology;
-   hwloc_topology_init(&topology);
-   hwloc_topology_load(topology);
    printf("Using hwloc\n");
-
-   // Extract information about NUMA regions
-   *nregions = 1;
+   HwlocTopology topology;
+   auto numa_nodes = topology.get_numa_nodes();
+   *nregions = numa_nodes.size();
    *regions = new NumaRegion[*nregions];
    for(int i=0; i<*nregions; ++i) {
       NumaRegion& region = (*regions)[i];
-      region.nproc = omp_get_max_threads();
+      region.nproc = topology.count_cores(numa_nodes[i]);
+      printf("Region %d has %d cores\n", i, region.nproc);
       region.ngpu = 0;
       region.gpus = nullptr;
    }
-
-   // Free hwloc resources
-   hwloc_topology_destroy(topology);
 #else /* HAVE_HWLOC */
    // Compiled without hwloc support, just put everything in one region
    *nregions = 1;

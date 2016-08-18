@@ -63,7 +63,8 @@ endif
 libspral_a_SOURCES += \
    src/hw_topology/hw_topology.f90 \
 	src/hw_topology/guess_topology.cxx \
-	src/hw_topology/guess_topology.hxx
+	src/hw_topology/guess_topology.hxx \
+	src/hw_topology/hwloc_wrapper.hxx
 
 # LAPACK_IFACE
 libspral_a_SOURCES += \
