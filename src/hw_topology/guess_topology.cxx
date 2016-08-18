@@ -11,18 +11,32 @@
 /** \file */
 #include "guess_topology.hxx"
 
+#include "config.h"
 #include <omp.h>
+
+#ifdef HAVE_HWLOC
+#include <hwloc.h>
+#endif /* HAVE_HWLOC */
 
 using namespace spral::hw_topology;
 
 /**
- * \brief Guess hardware topology (FIXME: using hwloc if available)
+ * \brief Guess hardware topology (using hwloc if available)
  * \param nregions Number of regions.
  * \param regions[nregions] Array of region descriptors, allocated by this
  *        routine. To free, call spral_hw_topology_free().
  */
 extern "C"
 void spral_hw_topology_guess(int* nregions, NumaRegion** regions) {
+#if HAVE_HWLOC
+   // Compiled with hwloc support
+   // Call hwloc to get topology
+   hwloc_topology_t topology;
+   hwloc_topology_init(&topology);
+   hwloc_topology_load(topology);
+   printf("Using hwloc\n");
+
+   // Extract information about NUMA regions
    *nregions = 1;
    *regions = new NumaRegion[*nregions];
    for(int i=0; i<*nregions; ++i) {
@@ -31,6 +45,20 @@ void spral_hw_topology_guess(int* nregions, NumaRegion** regions) {
       region.ngpu = 0;
       region.gpus = nullptr;
    }
+
+   // Free hwloc resources
+   hwloc_topology_destroy(topology);
+#else /* HAVE_HWLOC */
+   // Compiled without hwloc support, just put everything in one region
+   *nregions = 1;
+   *regions = new NumaRegion[*nregions];
+   for(int i=0; i<*nregions; ++i) {
+      NumaRegion& region = (*regions)[i];
+      region.nproc = omp_get_max_threads();
+      region.ngpu = 0;
+      region.gpus = nullptr;
+   }
+#endif /* HAVE_HWLOC */
 }
 
 /**

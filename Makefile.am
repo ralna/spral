@@ -15,12 +15,15 @@ NVCCLINK = \
 	$(NVCC) $(NVCCFLAGS) $(AM_NVCC_FLAGS) -dc -o $@ $<
 
 # Include directory for standard C
-AM_CFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src $(OPENMP_CFLAGS)
-AM_CXXFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src -std=c++11 $(OPENMP_CXXFLAGS) $(GTG_INCLUDE)
+AM_CFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src $(OPENMP_CFLAGS) \
+				$(HWLOC_CFLAGS)
+AM_CXXFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src -std=c++11 \
+				  $(OPENMP_CXXFLAGS) $(GTG_INCLUDE) $(HWLOC_CFLAGS)
 AM_FCFLAGS = $(OPENMP_CXXFLAGS) # assume CXX and FC use same flags...
 
 # FIXME: make below configurable
-LDADD = -L. -lspral $(METIS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(GTG_LIBS) $(FCLIBS) -lrt
+LDADD = -L. -lspral $(METIS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(GTG_LIBS) \
+		  $(HWLOC_LIBS) $(FCLIBS) -lrt
 if HAVE_NVCC
 SPRAL_LINK_LIBS = -lcublas
 SPRALLINK = $(NVCCLINK)

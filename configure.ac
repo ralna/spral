@@ -55,6 +55,12 @@ SPRAL_METIS(,
    [AC_MSG_ERROR([No MeTiS library found.])]
    )
 
+# Check for hwloc
+PKG_CHECK_MODULES([HWLOC], [hwloc],
+   AC_DEFINE(HAVE_HWLOC,1,[Define if you have hwloc library]),
+   AC_MSG_WARN([hwloc no supplied: cannot detect NUMA regions])
+   )
+
 # Check for profiling library if desired
 AS_IF([test "x$enable_profile" != "xno"], [
    SPRAL_GTG(,[AC_MSG_WARN([GTG library not found, cannot enable profiling])])
