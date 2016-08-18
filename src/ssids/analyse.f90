@@ -325,18 +325,22 @@ subroutine find_subtree_partition(nnodes, sptr, sparent, rptr, topology, &
    end do
 
    ! Keep splitting until we meet balance criterion
+   best_load_balance = huge(best_load_balance)
    do i = 1, 2*(nregion+ngpu)
       ! Check load balance criterion
       load_balance = calc_exec_alloc(nparts, part, size_order, is_child, &
          flops, topology, min_gpu_work, gpu_perf_coeff, exec_loc, st)
       if(st.ne.0) return
-      if(load_balance < max_load_inbalance) exit ! we have a good allocation
       best_load_balance = min(load_balance, best_load_balance)
+      if(load_balance < max_load_inbalance) exit ! we have a good allocation
       ! Split tree further
       call split_tree(nparts, part, size_order, is_child, sparent, flops, &
          ngpu, min_gpu_work, st)
       if(st.ne.0) return
    end do
+   load_balance = calc_exec_alloc(nparts, part, size_order, is_child, &
+      flops, topology, min_gpu_work, gpu_perf_coeff, exec_loc, st)
+   if(st.ne.0) return
 
    ! Figure out contribution blocks that are input to each part
    ! FIXME: consolidate all these deallocation by just calling free() at start of anal???
@@ -496,6 +500,7 @@ real function calc_exec_alloc(nparts, part, size_order, is_child, flops, &
          ! Avoid GPUs
          do while(map(next).gt.nregion)
             next = next + 1
+            if(next.gt.size(map)) next = 1
          end do
       endif
       exec_loc(p) = map(next)
@@ -577,7 +582,8 @@ subroutine split_tree(nparts, part, size_order, is_child, sparent, flops, &
       to_split = to_split + 1
    end do
    to_split = size_order(to_split)
-   ! Find all roots thereof
+   !print *, "Trying to split ", to_split
+   ! Find all children of root
    root = part(to_split+1)-1
    do i = part(to_split), root-1
       if(sparent(i).eq.root) then
@@ -593,6 +599,7 @@ subroutine split_tree(nparts, part, size_order, is_child, sparent, flops, &
          children(nchild) = i
       endif
    end do
+   !print *, "children = ", children(1:nchild)
 
    ! Check we can split safely
    if(nchild.eq.0) return ! singleton node, can't split
@@ -615,16 +622,16 @@ subroutine split_tree(nparts, part, size_order, is_child, sparent, flops, &
    ! Can safely split, so do so. As part to_split was contigous, when
    ! split the new parts fall into the same region. Thus, we first push any
    ! later regions back to make room, then add the new parts.
-   part(to_split+nchild:nparts+nchild) = part(to_split+1:nparts+1)
-   is_child(to_split+nchild:nparts+nchild) = is_child(to_split+1:nchild+1)
+   part(to_split+nchild+1:nparts+nchild+1) = part(to_split+1:nparts+1)
+   is_child(to_split+nchild+1:nparts+nchild) = is_child(to_split+1:nparts)
    do i = 1, nchild
       ! New part corresponding to child i *ends* at part(to_split+i)-1
       part(to_split+i) = children(i)+1
    end do
-   is_child(to_split:to_split+nchild-2) = .true.
-   is_child(to_split+nchild-1) = .false. ! Newly created non-parent subtree
+   is_child(to_split:to_split+nchild-1) = .true.
+   is_child(to_split+nchild) = .false. ! Newly created non-parent subtree
    old_nparts = nparts
-   nparts = old_nparts + nchild - 1
+   nparts = old_nparts + nchild
 
    ! Finally, recreate size_order array
    call create_size_order(nparts, part, flops, size_order)
@@ -688,9 +695,7 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
 
    character(50)  :: context ! Procedure name (used when printing).
    integer, dimension(:), allocatable :: contrib_dest, exec_loc, level
-   type(numa_region), dimension(:), allocatable :: topology
 
-   real :: cpu_gpu_ratio
    integer :: nemin, flag
    integer :: blkm, blkn
    integer :: i, j
@@ -748,6 +753,12 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
    if (st .ne. 0) go to 100
 
    ! Sort out subtrees
+   !print *, "Input topology"
+   !do i = 1, size(akeep%topology)
+   !   print *, "Region ", i, " with ", akeep%topology(i)%nproc, " cores"
+   !   if(size(akeep%topology(i)%gpus).gt.0) &
+   !      print *, "---> gpus ", akeep%topology(i)%gpus
+   !end do
    call find_subtree_partition(akeep%nnodes, akeep%sptr, akeep%sparent, &
       akeep%rptr, akeep%topology, options%min_gpu_work,                 &
       options%max_load_inbalance, options%gpu_perf_coeff, akeep%nparts, &
@@ -776,8 +787,9 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
    endif
    allocate(akeep%subtree(akeep%nparts))
    do i = 1, akeep%nparts
-      if(exec_loc(i).le.size(topology)) then
+      if(exec_loc(i).le.size(akeep%topology)) then
          ! CPU
+         !print *, "init cpu subtree ", i, akeep%part(i), akeep%part(i+1)-1
          akeep%subtree(i)%ptr => construct_cpu_symbolic_subtree(akeep%n, &
             akeep%part(i), akeep%part(i+1), akeep%sptr, akeep%sparent, &
             akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist, &
@@ -785,6 +797,7 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
             options)
       else
          ! GPU
+         !print *, "init gpu subtree ", i, akeep%part(i), akeep%part(i+1)-1
          akeep%subtree(i)%ptr => construct_gpu_symbolic_subtree(akeep%n, &
             akeep%part(i), akeep%part(i+1), akeep%sptr, akeep%sparent, &
             akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist, options)
