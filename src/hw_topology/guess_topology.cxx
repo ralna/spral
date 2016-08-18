@@ -40,8 +40,11 @@ void spral_hw_topology_guess(int* nregions, NumaRegion** regions) {
    for(int i=0; i<*nregions; ++i) {
       NumaRegion& region = (*regions)[i];
       region.nproc = topology.count_cores(numa_nodes[i]);
-      region.ngpu = 0;
-      region.gpus = nullptr;
+      auto gpus = topology.get_gpus(numa_nodes[i]);
+      region.ngpu = gpus.size();
+      region.gpus = (region.ngpu > 0) ? new int[region.ngpu] : nullptr;
+      for(int i=0; i<region.ngpu; ++i)
+         region.gpus[i] = gpus[i];
    }
 #else /* HAVE_HWLOC */
    // Compiled without hwloc support, just put everything in one region

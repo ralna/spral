@@ -15,6 +15,10 @@
 #include <vector>
 
 #include <hwloc.h>
+#ifdef HAVE_NVCC
+#include <cuda_runtime_api.h>
+#include <hwloc/cudart.h>
+#endif /* HAVE_NVCC */
 
 namespace spral { namespace hw_topology {
 
@@ -28,6 +32,12 @@ public:
    /** \brief Constructor */
    HwlocTopology() {
       hwloc_topology_init(&topology_);
+      // FIXME: For old versions I think?
+      //hwloc_topology_set_flags(topology_, HWLOC_TOPOLOGY_FLAG_IO_DEVICES);
+      hwloc_topology_set_type_filter(topology_, HWLOC_OBJ_OS_DEVICE,
+            HWLOC_TYPE_FILTER_KEEP_IMPORTANT);
+      hwloc_topology_set_type_filter(topology_, HWLOC_OBJ_PCI_DEVICE,
+            HWLOC_TYPE_FILTER_KEEP_IMPORTANT);
       hwloc_topology_load(topology_);
    }
    /** \brief Destructor */
@@ -58,13 +68,43 @@ public:
 
    /** \brief Return number of cores associated to object. */
    int count_cores(hwloc_obj_t const& obj) {
-      if(obj->type == HWLOC_OBJ_CORE) return 1;
+      return count_type(obj, HWLOC_OBJ_CORE);
+   }
+
+   /** \brief Return list of gpu indices associated to object. */
+   std::vector<int> get_gpus(hwloc_obj_t const& obj) {
+      std::vector<int> gpus;
+#ifdef HAVE_NVCC
+      int ngpu;
+      cudaError_t cuda_error = cudaGetDeviceCount(&ngpu);
+      if(cuda_error != cudaSuccess) {
+         printf("Error using CUDA. Assuming no GPUs.\n");
+         return gpus; // empty
+      }
+      /* Now for each device search up its topology tree and see if we
+       * encounter obj. */
+      for(int i=0; i<ngpu; ++i) {
+         hwloc_obj_t p = hwloc_cudart_get_device_osdev_by_index(topology_, i);
+         for(; p; p=p->parent) {
+            if(p==obj) {
+               gpus.push_back(i);
+               break;
+            }
+         }
+      }
+#endif
+      return gpus; // will be empty ifndef HAVE_NVCC
+   }
+
+private:
+   int count_type(hwloc_obj_t const& obj, hwloc_obj_type_t type) {
+      if(obj->type == type) return 1;
       int count = 0;
       for(unsigned int i=0; i<obj->arity; ++i)
-         count += count_cores(obj->children[i]);
+         count += count_type(obj->children[i], type);
       return count;
    }
-private:
+
    hwloc_topology_t topology_; ///< Underlying topology object
 };
 
