@@ -56,9 +56,10 @@ SPRAL_METIS(,
    )
 
 # Check for hwloc
+PKG_CONFIG="$PKG_CONFIG --static" # we will be linking statically
 PKG_CHECK_MODULES([HWLOC], [hwloc],
    AC_DEFINE(HAVE_HWLOC,1,[Define if you have hwloc library]),
-   AC_MSG_WARN([hwloc no supplied: cannot detect NUMA regions])
+   AC_MSG_WARN([hwloc not supplied: cannot detect NUMA regions])
    )
 
 # Check for profiling library if desired
