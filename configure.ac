@@ -56,6 +56,7 @@ SPRAL_METIS(,
    )
 
 # Check for hwloc
+PKG_PROG_PKG_CONFIG # initialise $PKG_CONFIG
 PKG_CONFIG="$PKG_CONFIG --static" # we will be linking statically
 PKG_CHECK_MODULES([HWLOC], [hwloc],
    AC_DEFINE(HAVE_HWLOC,1,[Define if you have hwloc library]),
