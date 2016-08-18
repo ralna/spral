@@ -1,7 +1,7 @@
 #
 # SYNOPSIS
 #
-#     AX_PROG_NVCC([compiler-search-list])
+#     SPRAL_PROG_NVCC([compiler-search-list])
 #
 # DESCRIPTION
 #
@@ -11,7 +11,7 @@
 #     $NVCCFLAGS     The flags pased to the CUDA compiler
 #
 
-AC_DEFUN([ACX_PROG_NVCC], [
+AC_DEFUN([SPRAL_PROG_NVCC], [
 
 AC_ARG_VAR(NVCC,[CUDA compiler command])
 AC_ARG_VAR(NVCCFLAGS,[CUDA compiler flags])
@@ -19,8 +19,4 @@ AC_ARG_VAR(NVCCFLAGS,[CUDA compiler flags])
 test "x$NVCC" = x && AC_CHECK_PROGS(NVCC,nvcc)
 test "x$NVCCFLAGS" = x && NVCCFLAGS="-g -arch=compute_20 -code=compute_20,sm_20,sm_35"
 
-if test "x$NVCC" != x; then
-   AC_DEFINE(HAVE_NVCC,1,[Define to 1 if you are linking against NVCC])
-fi
-
-])dnl AX_NVCC
+])dnl SPRAL_PROG_NVCC

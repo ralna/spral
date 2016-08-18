@@ -20,7 +20,7 @@ AC_PROG_F77
 AC_PROG_FC
 AC_PROG_RANLIB
 AS_IF([test "x$enable_gpu" != "xno"], [
-   ACX_PROG_NVCC
+   SPRAL_PROG_NVCC
    ])
 AM_CONDITIONAL([HAVE_NVCC], [test -n "$NVCC"])
 
@@ -62,6 +62,10 @@ PKG_CHECK_MODULES([HWLOC], [hwloc],
    AC_DEFINE(HAVE_HWLOC,1,[Define if you have hwloc library]),
    AC_MSG_WARN([hwloc not supplied: cannot detect NUMA regions])
    )
+
+AS_IF([test "x$NVCC" != x], [
+   SPRAL_NVCC_LIB
+])
 
 # Check for profiling library if desired
 AS_IF([test "x$enable_profile" != "xno"], [
