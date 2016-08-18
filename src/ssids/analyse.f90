@@ -199,45 +199,92 @@ end subroutine check_order
 
 !****************************************************************************
 
-!
-! Given an elimination tree, try and split it into at least min_npart parts
-! of size at most max_flops.
-!
-! Parts are returned as contigous ranges of nodes. Part i consists of nodes
-! part(i):part(i+1)-1
-!
-! FIXME: This really needs thought through in more detail for best performance
-! it may be more sensible to come down from the top?
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!> @brief Partition an elimination tree for execution on different NUMA regions
+!>        and GPUs.
+!>
+!> Start with a single tree, and proceed top down splitting the largest subtree
+!> (in terms of total flops)  until we have a sufficient number of independent
+!> subtrees. A sufficient number is such that subtrees can be assigned to NUMA
+!> regions and GPUs with a load balance no worse than max_load_inbalance.
+!> Load balance is calculated as the maximum value over all regions/GPUs of:
+!> \f[ \frac{ n x_i / \alpha_i } { \sum_j (x_j/\alpha_j) } \f]
+!> Where \f$ \alpha_i \f$ is the performance coefficient of region/GPU i,
+!> \f$ x_i \f$ is the number of flops assigned to region/GPU i and \f$ n \f$ is
+!> the total number of regions. \f$ \alpha_i \f$ should be proportional to the
+!> speed of the region/GPU (i.e. if GPU is twice as fast as CPU, set alpha for
+!> CPU to 1.0 and alpha for GPU to 2.0).
+!>
+!> If the original number of flops is greater than min_gpu_work and the
+!> performance coefficient of a GPU is greater than the combined coefficients
+!> of the CPU, then subtrees will not be split to become smaller than
+!> min_gpu_work until all GPUs are filled.
+!>
+!> If the balance criterion cannot be satisfied after we have split into
+!> 2 * (total regions/GPUs), we just use the best obtained value.
+!>
+!> GPUs may only handle leaf subtrees, so the top nodes are assigned to the
+!> full set of CPUs.
+!>
+!> Parts are returned as contigous ranges of nodes. Part i consists of nodes
+!> part(i):part(i+1)-1
+!>
+!> @param nnodes Total number of nodes
+!> @param sptr Supernode pointers. Supernode i consists of nodes
+!>        sptr(i):sptr(i+1)-1.
+!> @param sparent Supernode parent array. Supernode i has parent sparent(i).
+!> @param rptr Row pointers. Supernode i has rows rlist(rptr(i):rptr(i+1)-1).
+!> @param topology Machine topology to partition for.
+!> @param min_gpu_work Minimum flops for a GPU execution to be worthwhile.
+!> @param max_load_inbalance Number greater than 1.0 representing maximum
+!>        permissible load inbalance.
+!> @param gpu_perf_coeff The value of \f$ \alpha_i \f$ used for all GPUs,
+!>        assuming that used for all NUMA region CPUs is 1.0.
+!> @param nparts Number of parts found.
+!> @param parts List of part ranges. Part i consists of supernodes
+!>        part(i):part(i+1)-1.
+!> @param exec_loc Execution location. Part i should be run on partition
+!>        mod(exec_loc(i), size(topology)). It should be run on the CPUs
+!>        if exec_loc(i) < size(topology), otherwise it should be run on
+!>        GPU number exec_loc(i)/size(topology).
+!> @param contrib_ptr Contribution pointer. Part i has contribution from
+!>        subtrees contrib_idx(contrib_ptr(i):contrib_ptr(i+1)-1).
+!> @param contrib_idx List of contributing subtrees, see contrib_ptr.
+!> @param contrib_dest Node to which each subtree listed in contrib_idx(:)
+!>        contributes.
+!> @param st Allocation status parameter. If non-zero an allocation error
+!>        occurred.
 subroutine find_subtree_partition(nnodes, sptr, sparent, rptr, topology, &
-      min_npart, max_flops, cpu_gpu_ratio, nparts, part, exec_loc, &
-      contrib_ptr, contrib_idx, contrib_dest)
+      min_gpu_work, max_load_inbalance, gpu_perf_coeff, nparts, part, &
+      exec_loc, contrib_ptr, contrib_idx, contrib_dest, st)
    integer, intent(in) :: nnodes
    integer, dimension(nnodes+1), intent(in) :: sptr
    integer, dimension(nnodes), intent(in) :: sparent
    integer(long), dimension(nnodes+1), intent(in) :: rptr
    type(numa_region), dimension(:), intent(in) :: topology
-   integer, intent(in) :: min_npart
-   integer(long), intent(in) :: max_flops
-   real, intent(in) :: cpu_gpu_ratio
+   integer(long), intent(in) :: min_gpu_work
+   real, intent(in) :: max_load_inbalance
+   real, intent(in) :: gpu_perf_coeff
    integer, intent(out) :: nparts
    integer, dimension(:), allocatable, intent(inout) :: part
    integer, dimension(:), allocatable, intent(inout) :: exec_loc ! 0=cpu, 1=gpu
    integer, dimension(:), allocatable, intent(inout) :: contrib_ptr
    integer, dimension(:), allocatable, intent(inout) :: contrib_idx
    integer, dimension(:), allocatable, intent(inout) :: contrib_dest
+   integer, intent(out) :: st
 
    integer :: i, j, k
    integer(long) :: jj, target_flops
    integer :: m, n, node
    integer(long), dimension(:), allocatable :: flops
-   real :: cpu_flops, gpu_flops, total_flops
-   integer :: st
+   integer, dimension(:), allocatable :: size_order
+   logical, dimension(:), allocatable :: is_child
+   real :: load_balance, best_load_balance
+   integer :: nregion, ngpu
 
-   ! FIXME: stat parameters
-
-   !print *, "min_npart = ", min_npart, " max_flops = ", max_flops
    ! Count flops below each node
-   allocate(flops(nnodes+1))
+   allocate(flops(nnodes+1), stat=st)
+   if(st.ne.0) return
    flops(:) = 0
    !print *, "There are ", nnodes, " nodes"
    do node = 1, nnodes
@@ -252,44 +299,52 @@ subroutine find_subtree_partition(nnodes, sptr, sparent, rptr, topology, &
    end do
    !print *, "Total flops ", flops(nnodes+1)
 
-   ! Split into parts of at most target_flops. Each part is a subtree, not a
-   ! subforest (unless it contains the artifical root node).
-   target_flops = min(flops(nnodes+1) / min_npart, max_flops)
-   !target_flops = flops(nnodes+1) ! FIXME: rm
-   !print *, "Target flops ", target_flops
-   total_flops = real(flops(nnodes+1))
-   gpu_flops = 0.0
-   cpu_flops = 0.0
+   ! Initialize partition to be all children of virtual root
+   allocate(part(nnodes+1), size_order(nnodes), exec_loc(nnodes), &
+      is_child(nnodes), stat=st)
+   if(st.ne.0) return
    nparts = 0
-   allocate(part(nnodes+1)) ! big enough to be safe FIXME: make smaller or alloc elsewhere?
    part(1) = 1
-   node = 1
-   do while(node.lt.nnodes+1)
-      ! Head up from node until parent has too many flops
-      j = node
-      do while(j.lt.nnodes)
-         if(flops(sparent(j)).gt.target_flops) exit ! Nodes node:j form a part
-         j = sparent(j)
-      end do
-      ! Record node:j as a part
-      nparts = nparts + 1
-      part(nparts+1) = j+1
-      node = j + 1
-      if(j.eq.nnodes+1) exit ! done, root node is incorporated
-      ! Remove subtree rooted at (node-1) from flops count of nodes above it
-      do
-         j = sparent(j)
-         if(j.ge.nnodes+1) exit ! at top of tree
-         flops(j) = flops(j) - flops(node-1)
-      end do
+   do i = 1, nnodes
+      if(sparent(i).gt.nnodes) then
+         nparts = nparts + 1
+         part(nparts+1) = i+1
+         is_child(nparts) = .true. ! All subtrees are intially child subtrees
+      endif
    end do
-   part(nparts+1) = nnodes+1 ! handle edge case so we don't access virtual root
+   call create_size_order(nparts, part, flops, size_order)
+   !print *, "Initial partition has ", nparts, " parts"
+   !print *, "part = ", part(1:nparts+1)
+   !print *, "size_order = ", size_order(1:nparts)
+
+   ! Calculate number of regions/gpus
+   nregion = size(topology)
+   ngpu = 0
+   do i = 1, size(topology)
+      ngpu = ngpu + size(topology(i)%gpus)
+   end do
+
+   ! Keep splitting until we meet balance criterion
+   do i = 1, 2*(nregion+ngpu)
+      ! Check load balance criterion
+      load_balance = calc_exec_alloc(nparts, part, size_order, is_child, &
+         flops, topology, min_gpu_work, gpu_perf_coeff, exec_loc, st)
+      if(st.ne.0) return
+      if(load_balance < max_load_inbalance) exit ! we have a good allocation
+      best_load_balance = min(load_balance, best_load_balance)
+      ! Split tree further
+      call split_tree(nparts, part, size_order, is_child, sparent, flops, &
+         ngpu, min_gpu_work, st)
+      if(st.ne.0) return
+   end do
 
    ! Figure out contribution blocks that are input to each part
    ! FIXME: consolidate all these deallocation by just calling free() at start of anal???
    deallocate(contrib_ptr, stat=st)
    deallocate(contrib_idx, stat=st)
-   allocate(contrib_ptr(nparts+3), contrib_idx(nparts), contrib_dest(nparts))
+   allocate(contrib_ptr(nparts+3), contrib_idx(nparts), contrib_dest(nparts), &
+      stat=st)
+   if(st.ne.0) return
    ! Count contributions at offset +2
    contrib_ptr(3:nparts+3) = 0
    do i = 1, nparts-1 ! by defn, last part has no parent
@@ -323,30 +378,287 @@ subroutine find_subtree_partition(nnodes, sptr, sparent, rptr, topology, &
       contrib_ptr(k+1) = contrib_ptr(k+1) + 1
    end do
    contrib_idx(nparts) = nparts+1 ! last part must be a root
+end subroutine find_subtree_partition
 
-   ! Allocate subtrees to execution locations to try and get close to target
-   ! cpu_gpu_ratio = flops(cpu) / flops(cpu+gpu)
-   allocate(exec_loc(nparts)) !FIXME stat
-   exec_loc(:) = -1 ! default to nowhere
-   ! All subtrees with contribution must be on CPU
-   do i = 1, nparts
-      if(contrib_ptr(i).eq.contrib_ptr(i+1)) cycle ! no contrib to subtree
-      exec_loc(i) = EXEC_LOC_CPU
-      cpu_flops = cpu_flops + flops(part(i+1)-1)
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!> @brief Allocate execution of subtrees to resources and calculate load balance
+!>
+!> Given the partition supplied, uses a greedy algorithm to assign subtrees to
+!> resources specified by topology and then returns the resulting load balance
+!> as
+!> \f[ \frac{\max_i( n x_i / \alpha_i )} { \sum_j (x_j/\alpha_j) } \f]
+!> Where \f$ \alpha_i \f$ is the performance coefficient of region/GPU i,
+!> \f$ x_i \f$ is the number of flops assigned to region/GPU i and \f$ n \f$ is
+!> the total number of regions. \f$ \alpha_i \f$ should be proportional to the
+!> speed of the region/GPU (i.e. if GPU is twice as fast as CPU, set alpha for
+!> CPU to 1.0 and alpha for GPU to 2.0).
+!>
+!> Work is only assigned to GPUs if the subtree has at least min_gpu_work flops.
+!>
+!> None-child subtrees are ignored (they will be executed using all available
+!> resources). They are recorded with exec_loc -1.
+!>
+!> @param nparts Number of parts.
+!> @param parts List of part ranges. Part i consists of supernodes
+!>        part(i):part(i+1)-1.
+!> @param size_order Lists parts in decreasing order of flops.
+!>        i.e. size_order(1) is the largest part.
+!> @param is_child True if subtree is a child subtree (has no contributions
+!>        from other subtrees).
+!> @param flops Number of floating points in subtree rooted at each node.
+!> @param topology Machine topology to allocate execution for.
+!> @param min_gpu_work Minimum work before allocation to GPU is useful.
+!> @param gpu_perf_coeff The value of \f$ \alpha_i \f$ used for all GPUs,
+!>        assuming that used for all NUMA region CPUs is 1.0.
+!> @param exec_loc Execution location. Part i will be run on partition
+!>        mod(exec_loc(i), size(topology)). It should be run on the CPUs
+!>        if exec_loc(i) < size(topology), otherwise it should be run on
+!>        GPU number exec_loc(i)/size(topology).
+!> @param st Allocation status parameter. If non-zero an allocation error
+!>        occurred.
+!> @returns Load balance value as detailed in subroutine description.
+!> @sa find_subtree_partition()
+! FIXME: Consider case when gpu_perf_coeff > 2.0 ???
+!        (Round robin may not be correct thing)
+real function calc_exec_alloc(nparts, part, size_order, is_child, flops, &
+      topology, min_gpu_work, gpu_perf_coeff, exec_loc, st)
+   integer, intent(in) :: nparts
+   integer, dimension(nparts+1), intent(in) :: part
+   integer, dimension(nparts), intent(in) :: size_order
+   logical, dimension(nparts), intent(in) :: is_child
+   integer(long), dimension(*), intent(in) :: flops
+   type(numa_region), dimension(:), intent(in) :: topology
+   integer(long), intent(in) :: min_gpu_work
+   real, intent(in) :: gpu_perf_coeff
+   integer, dimension(nparts), intent(out) :: exec_loc
+   integer, intent(out) :: st
+
+   integer :: i, p, nregion, ngpu, max_gpu, next
+   integer(long) :: pflops
+   integer, dimension(:), allocatable :: map ! List resources in order of
+      ! decreasing power
+   real, dimension(:), allocatable :: load_balance
+   real :: total_balance
+
+   !
+   ! Create resource map
+   !
+   nregion = size(topology)
+   ngpu = 0
+   max_gpu = 0
+   do i = 1, size(topology)
+      ngpu = ngpu + size(topology(i)%gpus)
+      max_gpu = max(max_gpu, size(topology(i)%gpus))
    end do
-   ! Handle any unallocated subtrees with greedy algorithm moving towards
-   ! desired ratio
+   allocate(map(nregion+ngpu), stat=st)
+   if(st.ne.0) return
+   if(gpu_perf_coeff.gt.1.0) then
+      ! GPUs are more powerful than CPUs
+      next = 1
+      do i = 1, size(topology)
+         do p = 1, size(topology(i)%gpus)
+            map(next) = p*nregion + p
+            next = next + 1
+         end do
+      end do
+      do i = 1, size(topology)
+         map(next) = i
+         next = next + 1
+      end do
+   else
+      ! CPUs are more powerful than GPUs
+      next = 1
+      do i = 1, size(topology)
+         map(next) = i
+         next = next + 1
+      end do
+      do i = 1, size(topology)
+         do p = 1, size(topology(i)%gpus)
+            map(next) = p*nregion + p
+            next = next + 1
+         end do
+      end do
+   end if
+
+   !
+   ! Simple round robin allocation in decreasing size order.
+   !
+   next = 1
    do i = 1, nparts
-      if(exec_loc(i).ne.-1) cycle ! already allocated
-      if(cpu_flops / total_flops .lt. cpu_gpu_ratio) then
-         exec_loc(i) = EXEC_LOC_CPU
-         cpu_flops = cpu_flops + flops(part(i+1)-1)
+      p = size_order(i)
+      if(.not.is_child(p)) then
+         ! Not a child subtree
+         exec_loc(p) = -1
+         cycle
+      endif
+      pflops = flops(part(p+1)-1)
+      if(pflops.lt.min_gpu_work) then
+         ! Avoid GPUs
+         do while(map(next).gt.nregion)
+            next = next + 1
+         end do
+      endif
+      exec_loc(p) = map(next)
+      next = next + 1
+      if(next.gt.size(map)) next = 1
+   end do
+
+   !
+   ! Calculate load inbalance
+   !
+   allocate(load_balance(nregion*(1+max_gpu)), stat=st)
+   if(st.ne.0) return
+   load_balance(:) = 0.0
+   total_balance = 0.0
+   ! Sum total 
+   do p = 1, nparts
+      if(exec_loc(p).eq.-1) cycle ! not a child subtree
+      pflops = flops(part(p+1)-1)
+      if(exec_loc(p).gt.nregion) then
+         ! GPU
+         load_balance(exec_loc(p)) = load_balance(exec_loc(p)) + &
+            pflops / gpu_perf_coeff
+         total_balance = total_balance + pflops / gpu_perf_coeff
       else
-         exec_loc(i) = EXEC_LOC_GPU
-         gpu_flops = gpu_flops + flops(part(i+1)-1)
+         ! CPU
+         load_balance(exec_loc(p)) = load_balance(exec_loc(p)) + pflops
+         total_balance = total_balance + pflops
       endif
    end do
-end subroutine find_subtree_partition
+   ! Calculate n * max(x_i/a_i) / sum(x_j/a_j)
+   calc_exec_alloc = (nregion+ngpu) * maxval(load_balance(:)) / total_balance
+end function calc_exec_alloc
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!> @brief Split tree into an additional part as required by
+!>        find_subtree_partition().
+!>
+!> Split largest partition into two parts, unless doing so would reduce the
+!> number of subtrees with at least min_gpu_work below ngpu.
+!>
+!> Note: We require all input parts to have a single root.
+!>
+!> @param nparts Number of parts: normally increased by one on return.
+!> @param part Part i consists of nodes part(i):part(i+1).
+!> @param size_order Lists parts in decreasing order of flops.
+!>        i.e. size_order(1) is the largest part.
+!> @param is_child True if subtree is a child subtree (has no contributions
+!>        from other subtrees).
+!> @param sparent Supernode parent array. Supernode i has parent sparent(i).
+!> @param flops Number of floating points in subtree rooted at each node.
+!> @param ngpu Number of gpus.
+!> @param min_gpu_work Minimum worthwhile work to give to GPU.
+!> @param st Allocation status parameter. If non-zero an allocation error
+!>        occurred.
+!> @sa find_subtree_partition()
+subroutine split_tree(nparts, part, size_order, is_child, sparent, flops, &
+      ngpu, min_gpu_work, st)
+   integer, intent(inout) :: nparts
+   integer, dimension(*), intent(inout) :: part
+   integer, dimension(*), intent(inout) :: size_order
+   logical, dimension(*), intent(inout) :: is_child
+   integer, dimension(*), intent(in) :: sparent
+   integer(long), dimension(*), intent(in) :: flops
+   integer, intent(in) :: ngpu
+   integer(long), intent(in) :: min_gpu_work
+   integer, intent(out) :: st
+
+   integer :: i, j, p, nchild, nbig, root, to_split, old_nparts
+   integer(long) :: iflops
+   integer, dimension(:), allocatable :: children, temp
+
+   ! Look for all children of root in biggest child part
+   nchild = 0
+   allocate(children(10), stat=st) ! we will resize if necessary
+   if(st.ne.0) return
+   ! Find biggest child subtree
+   to_split = 1
+   do while(.not.is_child(size_order(to_split)))
+      to_split = to_split + 1
+   end do
+   to_split = size_order(to_split)
+   ! Find all roots thereof
+   root = part(to_split+1)-1
+   do i = part(to_split), root-1
+      if(sparent(i).eq.root) then
+         nchild = nchild+1
+         if(nchild.gt.size(children)) then
+            ! Increase size of children(:)
+            allocate(temp(2*size(children)), stat=st)
+            if(st.ne.0) return
+            temp(1:size(children)) = children(:)
+            deallocate(children)
+            call MOVE_ALLOC(TEMP, CHILDREN)
+         endif
+         children(nchild) = i
+      endif
+   end do
+
+   ! Check we can split safely
+   if(nchild.eq.0) return ! singleton node, can't split
+   nbig = 0 ! number of new parts > min_gpu_work
+   do i = to_split+1, nparts
+      p = size_order(i)
+      if(.not.is_child(p)) cycle ! non-children can't go on GPUs
+      root = part(p+1)-1
+      if(flops(root).lt.min_gpu_work) exit
+      nbig = nbig + 1
+   end do
+   if(nbig+1.ge.ngpu) then
+      ! Original partition met min_gpu_work criterion
+      do i = 1, nchild
+         if(flops(i).ge.min_gpu_work) nbig = nbig + 1
+      end do
+      if(nbig.lt.ngpu) return ! new partition fails min_gpu_work criterion
+   endif
+
+   ! Can safely split, so do so. As part to_split was contigous, when
+   ! split the new parts fall into the same region. Thus, we first push any
+   ! later regions back to make room, then add the new parts.
+   part(to_split+nchild:nparts+nchild) = part(to_split+1:nparts+1)
+   is_child(to_split+nchild:nparts+nchild) = is_child(to_split+1:nchild+1)
+   do i = 1, nchild
+      ! New part corresponding to child i *ends* at part(to_split+i)-1
+      part(to_split+i) = children(i)+1
+   end do
+   is_child(to_split:to_split+nchild-2) = .true.
+   is_child(to_split+nchild-1) = .false. ! Newly created non-parent subtree
+   old_nparts = nparts
+   nparts = old_nparts + nchild - 1
+
+   ! Finally, recreate size_order array
+   call create_size_order(nparts, part, flops, size_order)
+end subroutine split_tree
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!> @brief Determine order of subtrees based on size
+!>
+!> @note Sorting algorithm could be improved if this becomes a bottleneck.
+!>
+!> @param nparts Number of parts: normally increased by one on return.
+!> @param part Part i consists of nodes part(i):part(i+1).
+!> @param flops Number of floating points in subtree rooted at each node.
+!> @param size_order Lists parts in decreasing order of flops.
+!>        i.e. size_order(1) is the largest part.
+subroutine create_size_order(nparts, part, flops, size_order)
+   integer, intent(in) :: nparts
+   integer, dimension(nparts+1), intent(in) :: part
+   integer(long), dimension(*), intent(in) :: flops
+   integer, dimension(nparts), intent(out) :: size_order
+
+   integer :: i, j
+   integer(long) :: iflops
+
+   do i = 1, nparts
+      ! We assume parts 1:i-1 are in order and aim to insert part i
+      iflops = flops(part(i+1)-1)
+      do j = 1, i-1
+         if(iflops.gt.flops(part(j+1)-1)) exit ! node i belongs in posn j
+      end do
+      size_order(j+1:i) = size_order(j:i-1)
+      size_order(j) = i
+   end do
+end subroutine create_size_order
 
 !****************************************************************************
 
@@ -359,7 +671,7 @@ end subroutine find_subtree_partition
 ! input to factorization.
 !
 subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
-      akeep, options, inform, user_topology)
+      akeep, options, inform)
    integer, intent(in) :: n ! order of system
    integer, intent(in) :: ptr(n+1) ! col pointers (lower triangle) 
    integer, intent(in) :: row(ptr(n+1)-1) ! row indices (lower triangle)
@@ -373,7 +685,6 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
    type(ssids_akeep), intent(inout) :: akeep
    type(ssids_options), intent(in) :: options
    type(ssids_inform), intent(inout) :: inform
-   type(numa_region), dimension(:), optional, intent(in) :: user_topology
 
    character(50)  :: context ! Procedure name (used when printing).
    integer, dimension(:), allocatable :: contrib_dest, exec_loc, level
@@ -437,12 +748,12 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
    if (st .ne. 0) go to 100
 
    ! Sort out subtrees
-   cpu_gpu_ratio = options%cpu_gpu_ratio
-   if(.not.detect_gpu()) cpu_gpu_ratio = 1.0 ! Entirely on CPU
    call find_subtree_partition(akeep%nnodes, akeep%sptr, akeep%sparent, &
-      akeep%rptr, akeep%topology, options%min_npart, options%max_flops_part, &
-      cpu_gpu_ratio, akeep%nparts, akeep%part, exec_loc, &
-      akeep%contrib_ptr, akeep%contrib_idx, contrib_dest)
+      akeep%rptr, akeep%topology, options%min_gpu_work,                 &
+      options%max_load_inbalance, options%gpu_perf_coeff, akeep%nparts, &
+      akeep%part, exec_loc, akeep%contrib_ptr, akeep%contrib_idx,       &
+      contrib_dest, st)
+   if (st .ne. 0) go to 100
    !print *, "invp = ", akeep%invp
    !print *, "sptr = ", akeep%sptr(1:akeep%nnodes+1)
    !print *, "sparent = ", akeep%sparent
@@ -465,18 +776,19 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
    endif
    allocate(akeep%subtree(akeep%nparts))
    do i = 1, akeep%nparts
-      select case(exec_loc(i))
-      case(EXEC_LOC_CPU)
+      if(exec_loc(i).le.size(topology)) then
+         ! CPU
          akeep%subtree(i)%ptr => construct_cpu_symbolic_subtree(akeep%n, &
             akeep%part(i), akeep%part(i+1), akeep%sptr, akeep%sparent, &
             akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist, &
             contrib_dest(akeep%contrib_ptr(i):akeep%contrib_ptr(i+1)-1), &
             options)
-      case(EXEC_LOC_GPU)
+      else
+         ! GPU
          akeep%subtree(i)%ptr => construct_gpu_symbolic_subtree(akeep%n, &
             akeep%part(i), akeep%part(i+1), akeep%sptr, akeep%sparent, &
             akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist, options)
-      end select
+      end if
    end do
 
    ! Info

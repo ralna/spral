@@ -393,7 +393,7 @@ end subroutine analyse_double
 ! required by the factorization are set up.
 !
 subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
-      inform, order, val)
+      inform, order, val, topology)
    integer, intent(in) :: n ! order of A
    integer, intent(in) :: ne ! entries to be input by user
    integer, intent(in) :: row(:) ! row indices
@@ -412,6 +412,8 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
      ! if a matching-based elimination ordering is required 
      ! (options%ordering = 2).
      ! If present, val(k) must hold value of entry in row(k) and col(k).
+   type(numa_region), dimension(:), optional, intent(in) :: topology
+     ! user specified topology
 
    integer, dimension(:), allocatable :: ptr2 ! col. pointers for expanded mat
    integer, dimension(:), allocatable :: row2 ! row indices for expanded matrix
@@ -618,6 +620,17 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
       deallocate (val2,stat=st)
    end select
 
+   ! Figure out topology
+   if(present(topology)) then
+      ! User supplied
+      allocate(akeep%topology(size(topology)), stat=st)
+      if(st.ne.0) goto 490
+      akeep%topology(:) = topology(:)
+   else
+      ! Guess it
+      call guess_topology(akeep%topology, st)
+      if(st.ne.0) goto 490
+   endif
 
    ! we now have the expanded structure held using ptr2, row2
    ! and we are ready to get on with the analyse phase.

@@ -247,13 +247,12 @@ module spral_ssids_datatypes
          ! treat a subtree as small and use the single core kernel
       integer :: cpu_task_block_size = 256 ! block size to use for task
          ! generation on larger nodes
-      integer :: min_npart = 4 ! minimum number of parts to split tree into !4?
-      integer(long) :: max_flops_part = 10**9_long ! maximum number of flops
-         ! per part when splitting tree
-      real :: cpu_gpu_ratio = 0.0 ! number in [0,1] being target value for
-         ! flops(cpu)/flops(cpu+gpu).
-         ! <= 0.0 means all work on gpu
-         ! >= 1.0 means all work on cpu
+      integer(long) :: min_gpu_work = 100**6_long ! Only assign subtree to GPU
+         ! if it contains at least this many flops
+      real :: max_load_inbalance = 1.5 ! Maximum permissible load inbalance
+         ! when dividing tree into subtrees
+      real :: gpu_perf_coeff = 1.5 ! How many times better is a GPU than a
+         ! single NUMA region's worth of processors
       integer :: pivot_method = PIVOT_METHOD_APP_BLOCK
          ! Type of pivoting to use on CPU side:
          ! 0 - A posteori pivoting, roll back entire front on pivot failure

@@ -28,7 +28,6 @@ extern "C"
 void spral_hw_topology_guess(int* nregions, NumaRegion** regions) {
 #if HAVE_HWLOC
    // Compiled with hwloc support
-   printf("Using hwloc\n");
    HwlocTopology topology;
    auto numa_nodes = topology.get_numa_nodes();
    *nregions = numa_nodes.size();
@@ -36,7 +35,6 @@ void spral_hw_topology_guess(int* nregions, NumaRegion** regions) {
    for(int i=0; i<*nregions; ++i) {
       NumaRegion& region = (*regions)[i];
       region.nproc = topology.count_cores(numa_nodes[i]);
-      printf("Region %d has %d cores\n", i, region.nproc);
       region.ngpu = 0;
       region.gpus = nullptr;
    }
