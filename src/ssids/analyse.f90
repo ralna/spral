@@ -338,9 +338,28 @@ subroutine find_subtree_partition(nnodes, sptr, sparent, rptr, topology, &
          ngpu, min_gpu_work, st)
       if(st.ne.0) return
    end do
+
+   ! Consolidate adjacent non-children nodes into same part and regen exec_alloc
+   !print *
+   !print *, "pre merge", part(1:nparts+1)
+   !print *, "exec_loc ", exec_loc(1:nparts)
+   j = 1
+   do i = 2, nparts
+      part(j+1) = part(i)
+      if(is_child(i).or.is_child(j)) then
+         ! We can't merge j and i
+         j = j + 1
+         is_child(j) = is_child(i)
+      endif
+   end do
+   part(j+1) = part(nparts+1)
+   nparts = j
+   !print *, "post merge", part(1:nparts+1)
+   call create_size_order(nparts, part, flops, size_order)
    load_balance = calc_exec_alloc(nparts, part, size_order, is_child, &
       flops, topology, min_gpu_work, gpu_perf_coeff, exec_loc, st)
    if(st.ne.0) return
+   !print *, "exec_loc ", exec_loc(1:nparts)
 
    ! Figure out contribution blocks that are input to each part
    ! FIXME: consolidate all these deallocation by just calling free() at start of anal???
