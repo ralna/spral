@@ -32,12 +32,14 @@ public:
    /** \brief Constructor */
    HwlocTopology() {
       hwloc_topology_init(&topology_);
-      // FIXME: For old versions I think?
-      //hwloc_topology_set_flags(topology_, HWLOC_TOPOLOGY_FLAG_IO_DEVICES);
+#if HWLOC_API_VERSION >= 0x20000
       hwloc_topology_set_type_filter(topology_, HWLOC_OBJ_OS_DEVICE,
             HWLOC_TYPE_FILTER_KEEP_IMPORTANT);
       hwloc_topology_set_type_filter(topology_, HWLOC_OBJ_PCI_DEVICE,
             HWLOC_TYPE_FILTER_KEEP_IMPORTANT);
+#else /* HWLOC_API_VERSION */
+      hwloc_topology_set_flags(topology_, HWLOC_TOPOLOGY_FLAG_IO_DEVICES);
+#endif /* HWLOC_API_VERSION */
       hwloc_topology_load(topology_);
    }
    /** \brief Destructor */
