@@ -250,6 +250,7 @@ libspral_a_SOURCES += \
 	src/ssids/cpu/subtree.f90 \
 	src/ssids/cpu/profile.cxx \
 	src/ssids/cpu/profile.hxx \
+	src/ssids/cpu/profile_iface.f90 \
 	src/ssids/cpu/SmallLeafNumericSubtree.hxx \
 	src/ssids/cpu/SmallLeafSymbolicSubtree.hxx \
 	src/ssids/cpu/SymbolicNode.hxx \
@@ -437,6 +438,7 @@ src/ssids/fkeep.$(OBJEXT): src/ssids/akeep.$(OBJEXT) \
                            src/ssids/alloc.$(OBJEXT) \
                            src/ssids/datatypes.$(OBJEXT) \
                            src/ssids/inform.$(OBJEXT) \
+                           src/ssids/cpu/profile_iface.$(OBJEXT) \
                            src/ssids/cpu/subtree.$(OBJEXT)
 src/ssids/inform.$(OBJEXT): src/scaling.$(OBJEXT) \
                             src/ssids/datatypes.$(OBJEXT)
