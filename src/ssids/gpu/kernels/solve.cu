@@ -10,13 +10,13 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <cublas_v2.h>
 #include "cuda/cuda_check.h"
-#include "cublas_v2.h"
 
 //#define MIN(x,y) (((x)>(y))?(y):(x))
 #define MAX(x,y) (((x)>(y))?(x):(y))
 
-#include "dtrsv.h"
+#include "ssids/gpu/kernels/dtrsv.h"
 
 #define TRSM_TR_NBX 256
 #define TRSM_TR_NBY 32

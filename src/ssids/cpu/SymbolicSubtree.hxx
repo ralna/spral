@@ -8,8 +8,8 @@
 #include <cstddef>
 #include <vector>
 
-#include "SmallLeafSymbolicSubtree.hxx"
-#include "SymbolicNode.hxx"
+#include "ssids/cpu/SmallLeafSymbolicSubtree.hxx"
+#include "ssids/cpu/SymbolicNode.hxx"
 
 namespace spral { namespace ssids { namespace cpu {
 

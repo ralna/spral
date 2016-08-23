@@ -7,7 +7,7 @@
 
 #include <vector>
 
-#include "wrappers.hxx"
+#include "ssids/cpu/kernels/wrappers.hxx"
 
 namespace spral { namespace ssids { namespace cpu {
 

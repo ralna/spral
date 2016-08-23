@@ -7,10 +7,8 @@
 
 #include <memory>
 
-#include "cpu_iface.hxx"
-#include "SymbolicNode.hxx"
-
-#include <cstdio> // FIXME debug only
+#include "ssids/cpu/cpu_iface.hxx"
+#include "ssids/cpu/SymbolicNode.hxx"
 
 namespace spral { namespace ssids { namespace cpu {
 

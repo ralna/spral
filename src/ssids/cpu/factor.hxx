@@ -12,19 +12,18 @@
 #include <stdexcept>
 #include <omp.h>
 /* SPRAL headers */
-#include "cpu_iface.hxx"
-#include "kernels/assemble.hxx"
-#include "kernels/calc_ld.hxx"
-#include "kernels/cholesky.hxx"
-#include "kernels/ldlt_app.hxx"
-#include "kernels/ldlt_tpp.hxx"
-#include "kernels/wrappers.hxx"
-#include "SymbolicNode.hxx"
-#include "Workspace.hxx"
+#include "ssids/cpu/cpu_iface.hxx"
+#include "ssids/cpu/profile.hxx"
+#include "ssids/cpu/SymbolicNode.hxx"
+#include "ssids/cpu/Workspace.hxx"
+#include "ssids/cpu/kernels/assemble.hxx"
+#include "ssids/cpu/kernels/calc_ld.hxx"
+#include "ssids/cpu/kernels/cholesky.hxx"
+#include "ssids/cpu/kernels/ldlt_app.hxx"
+#include "ssids/cpu/kernels/ldlt_tpp.hxx"
+#include "ssids/cpu/kernels/wrappers.hxx"
 
-#include "profile.hxx"
-
-//#include "kernels/verify.hxx" // FIXME: remove debug
+//#include "ssids/cpu/kernels/verify.hxx" // FIXME: remove debug
 
 namespace spral { namespace ssids { namespace cpu {
 

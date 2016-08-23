@@ -5,14 +5,14 @@
  */
 #pragma once
 
-#include "cpu_iface.hxx"
-#include "factor.hxx"
-#include "BuddyAllocator.hxx"
-#include "NumericNode.hxx"
-#include "SymbolicSubtree.hxx"
-#include "SmallLeafNumericSubtree.hxx"
+#include "ssids/cpu/cpu_iface.hxx"
+#include "ssids/cpu/factor.hxx"
+#include "ssids/cpu/BuddyAllocator.hxx"
+#include "ssids/cpu/NumericNode.hxx"
+#include "ssids/cpu/profile.hxx"
+#include "ssids/cpu/SymbolicSubtree.hxx"
+#include "ssids/cpu/SmallLeafNumericSubtree.hxx"
 
-#include "profile.hxx"
 
 namespace spral { namespace ssids { namespace cpu {
 

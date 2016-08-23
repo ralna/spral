@@ -8,8 +8,8 @@
 #include <cmath>
 #include <limits>
 
-#include "common.hxx"
-#include "SimdVec.hxx"
+#include "ssids/cpu/kernels/common.hxx"
+#include "ssids/cpu/kernels/SimdVec.hxx"
 
 namespace spral { namespace ssids { namespace cpu {
 

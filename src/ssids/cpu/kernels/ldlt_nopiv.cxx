@@ -3,9 +3,7 @@
  *  \licence   BSD licence, see LICENCE file for details
  *  \author    Jonathan Hogg
  */
-#include "ldlt_nopiv.hxx"
-
-#include <cstdio> // FIXME: debug remove
+#include "ssids/cpu/kernels/ldlt_nopiv.hxx"
 
 namespace spral { namespace ssids { namespace cpu {
 

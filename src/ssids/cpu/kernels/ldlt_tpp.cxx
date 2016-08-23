@@ -3,17 +3,14 @@
  *  \licence   BSD licence, see LICENCE file for details
  *  \author    Jonathan Hogg
  */
-#include "ldlt_tpp.hxx"
+#include "ssids/cpu/kernels/ldlt_tpp.hxx"
 
 #include <algorithm>
 #include <cmath>
 #include <limits>
 #include <utility>
 
-//FIXME: debug
-#include <cstdio>
-
-#include "wrappers.hxx"
+#include "ssids/cpu/kernels/wrappers.hxx"
 
 namespace spral { namespace ssids { namespace cpu {
 

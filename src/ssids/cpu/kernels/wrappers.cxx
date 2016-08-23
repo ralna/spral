@@ -3,7 +3,7 @@
  *  \licence   BSD licence, see LICENCE file for details
  *  \author    Jonathan Hogg
  */
-#include "wrappers.hxx"
+#include "ssids/cpu/kernels/wrappers.hxx"
 
 #include <stdexcept>
 

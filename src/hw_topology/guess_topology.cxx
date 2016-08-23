@@ -6,7 +6,7 @@
  *  \brief
  *  Implements topology guessing functions.
  */
-#include "guess_topology.hxx"
+#include "hw_topology/guess_topology.hxx"
 
 #include "config.h"
 #include <omp.h>

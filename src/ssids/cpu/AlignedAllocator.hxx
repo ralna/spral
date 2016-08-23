@@ -9,8 +9,6 @@
 #include <cstdlib>
 #include <new>
 
-#include <cstdio>
-
 namespace spral { namespace ssids { namespace cpu {
 
 template <class T>

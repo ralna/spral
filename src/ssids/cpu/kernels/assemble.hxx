@@ -10,11 +10,10 @@
 #include<vector>
 
 #include "ssids/contrib.h"
-#include "../NumericNode.hxx"
-#include "../SymbolicNode.hxx"
-#include "../Workspace.hxx"
-
-#include "../profile.hxx"
+#include "ssids/cpu/NumericNode.hxx"
+#include "ssids/cpu/profile.hxx"
+#include "ssids/cpu/SymbolicNode.hxx"
+#include "ssids/cpu/Workspace.hxx"
 
 namespace spral { namespace ssids { namespace cpu {
 

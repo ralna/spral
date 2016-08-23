@@ -5,7 +5,7 @@
  */
 #pragma once
 
-#include "common.hxx"
+#include "ssids/cpu/kernels/common.hxx"
 
 namespace spral { namespace ssids { namespace cpu {
 

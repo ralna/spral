@@ -17,7 +17,7 @@
 extern "C" {
 #include <GTG.h>
 }
-#include "time.h"
+#include <time.h>
 #endif
 
 #include "omp.hxx"

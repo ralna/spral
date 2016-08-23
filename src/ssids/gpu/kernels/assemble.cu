@@ -6,7 +6,7 @@
 #include <device_launch_parameters.h>
 
 #include "cuda/cuda_check.h"
-#include "datatypes.h"
+#include "ssids/gpu/kernels/datatypes.h"
 
 #define HOGG_ASSEMBLE_TX 128  // Block height
 #define HOGG_ASSEMBLE_TY 8    // Block width

@@ -3,7 +3,7 @@
  *  \licence   BSD licence, see LICENCE file for details
  *  \author    Jonathan Hogg
  */
-#include "ldlt_app.hxx"
+#include "ssids/cpu/kernels/ldlt_app.hxx"
 
 #include <algorithm>
 #include <climits>
@@ -19,18 +19,17 @@
 
 #include <omp.h>
 
-#include "../AlignedAllocator.hxx"
-#include "../BlockPool.hxx"
-#include "../BuddyAllocator.hxx"
-#include "../cpu_iface.hxx"
-#include "../Workspace.hxx"
-#include "block_ldlt.hxx"
-#include "calc_ld.hxx"
-#include "ldlt_tpp.hxx"
-#include "common.hxx"
-#include "wrappers.hxx"
-
-#include "../profile.hxx"
+#include "ssids/cpu/AlignedAllocator.hxx"
+#include "ssids/cpu/BlockPool.hxx"
+#include "ssids/cpu/BuddyAllocator.hxx"
+#include "ssids/cpu/cpu_iface.hxx"
+#include "ssids/cpu/profile.hxx"
+#include "ssids/cpu/Workspace.hxx"
+#include "ssids/cpu/kernels/block_ldlt.hxx"
+#include "ssids/cpu/kernels/calc_ld.hxx"
+#include "ssids/cpu/kernels/ldlt_tpp.hxx"
+#include "ssids/cpu/kernels/common.hxx"
+#include "ssids/cpu/kernels/wrappers.hxx"
 
 namespace spral { namespace ssids { namespace cpu {
 

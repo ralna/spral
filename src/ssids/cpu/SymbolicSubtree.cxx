@@ -3,7 +3,7 @@
  *  \licence   BSD licence, see LICENCE file for details
  *  \author    Jonathan Hogg
  */
-#include "SymbolicSubtree.hxx"
+#include "ssids/cpu/SymbolicSubtree.hxx"
 
 using namespace spral::ssids::cpu;
 
