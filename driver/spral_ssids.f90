@@ -1,10 +1,12 @@
 program run_prob
+   use, intrinsic :: iso_c_binding
+   use omp_lib
    use cuda_helper
+   use spral_hw_topology
    use spral_rutherford_boeing
    use spral_ssids
    use spral_matrix_util, only : cscl_verify, SPRAL_MATRIX_REAL_SYM_INDEF
    use spral_scaling
-   use iso_c_binding
    implicit none
 
    integer, parameter :: wp = kind(0d0)
@@ -44,11 +46,14 @@ program run_prob
    
    integer :: nrhs
    
-   logical :: force_psdef, pos_def, time_scaling
+   logical :: force_psdef, pos_def, time_scaling, flat_topology
+
+   type(numa_region), dimension(:), allocatable :: topology
 
    options%use_gpu_solve = .true.
 
-   call proc_args(options, force_psdef, pos_def, nrhs, time_scaling)
+   call proc_args(options, force_psdef, pos_def, nrhs, time_scaling, &
+         flat_topology)
    if ( nrhs < 1 ) stop
 
    ! Read in a matrix
@@ -76,6 +81,12 @@ program run_prob
      end do
    end do
 
+   if(flat_topology) then
+      allocate(topology(1))
+      topology(1)%nproc = omp_get_max_threads()
+      allocate(topology(1)%gpus(0))
+   endif
+
    call cscl_verify(6, SPRAL_MATRIX_REAL_SYM_INDEF, n, n, &
       ptr, row, flag, more)
    if(flag.ne.0) then
@@ -87,8 +98,13 @@ program run_prob
 
    ! Analyse and factor
    call system_clock(start_t, rate_t)
-   call ssids_analyse(.false., n, ptr, row, akeep, &
-      options, inform, val=val)
+   if(allocated(topology)) then
+      call ssids_analyse(.false., n, ptr, row, akeep, &
+         options, inform, val=val, topology=topology)
+   else
+      call ssids_analyse(.false., n, ptr, row, akeep, &
+         options, inform, val=val)
+   endif
    call system_clock(stop_t)
    print *, "Used order ", options%ordering
    if (inform%flag < 0) then
@@ -173,12 +189,14 @@ program run_prob
 
 contains
 
-   subroutine proc_args(options, force_psdef, pos_def, nrhs, time_scaling)
+   subroutine proc_args(options, force_psdef, pos_def, nrhs, time_scaling, &
+         flat_topology)
       type(ssids_options), intent(inout) :: options
       logical, intent(out) :: force_psdef
       logical, intent(out) :: pos_def
       integer, intent(out) :: nrhs
       logical, intent(out) :: time_scaling
+      logical, intent(out) :: flat_topology
 
       integer :: argnum, narg
       integer :: i
@@ -189,6 +207,7 @@ contains
       force_psdef = .false.
       pos_def = .false.
       time_scaling = .false.
+      flat_topology = .false.
 
       ! Process args
       narg = command_argument_count()
@@ -254,6 +273,9 @@ contains
          case("--pivot-method=tpp")
             options%pivot_method = 3
             print *, 'Pivoting method TPP'
+         case("--flat-topology")
+            flat_topology = .true.
+            print *, 'Forcing flat topology'
          case default
             print *, "Unrecognised command line argument: ", argval
             stop
