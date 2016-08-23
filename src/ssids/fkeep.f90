@@ -2,13 +2,14 @@
 ! This module defines ssids_fkeep type and associated procedures (CPU version)
 !
 module spral_ssids_fkeep
+   use, intrinsic :: iso_c_binding
+   use, intrinsic :: omp_lib
    use spral_ssids_akeep, only : ssids_akeep
    use spral_ssids_contrib, only : contrib_type
    use spral_ssids_datatypes
    use spral_ssids_inform, only : ssids_inform
    use spral_ssids_cpu_subtree, only : cpu_numeric_subtree, cpu_symbolic_subtree
    use spral_ssids_subtree, only : numeric_subtree_base
-   use, intrinsic :: iso_c_binding
    implicit none
 
    private
@@ -61,20 +62,28 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
    type(ssids_options), intent(in) :: options
    type(ssids_inform), intent(inout) :: inform
 
-   integer :: i
+   integer :: i, numa_region, exec_loc
    type(contrib_type), dimension(:), allocatable :: child_contrib
 
 
    ! Allocate space for subtrees
    allocate(fkeep%subtree(akeep%nparts), stat=inform%stat)
-   if(inform%stat.ne.0) then
-      inform%flag = SSIDS_ERROR_ALLOCATION
-      return
-   endif
+   if(inform%stat.ne.0) goto 100
 
    ! Call subtree factor routines
-   allocate(child_contrib(akeep%nparts)) ! FIXME stat
+   allocate(child_contrib(akeep%nparts), stat=inform%stat)
+   if(inform%stat.ne.0) goto 100
+   ! Split into numa regions; parallelism within a region is responsibility
+   ! of subtrees.
+   ! FIXME: do we not want to have within-node parallelism at a higher level?
+!$omp parallel proc_bind(spread) num_threads(size(akeep%topology)) &
+!$omp    default(none) private(i, exec_loc, numa_region) &
+!$omp    shared(akeep, fkeep, val, options, inform, child_contrib)
+   numa_region = omp_get_thread_num()
+   call omp_set_num_threads(akeep%topology(numa_region+1)%nproc)
    do i = 1, akeep%nparts
+      exec_loc = akeep%subtree(i)%exec_loc
+      if(mod(exec_loc,size(akeep%topology)).ne.numa_region) cycle
       if(allocated(fkeep%scaling)) then
          fkeep%subtree(i)%ptr => akeep%subtree(i)%ptr%factor( &
             fkeep%pos_def, val, &
@@ -90,7 +99,16 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
       endif
       if(akeep%contrib_idx(i).gt.akeep%nparts) cycle ! part is a root
       child_contrib(akeep%contrib_idx(i)) = fkeep%subtree(i)%ptr%get_contrib()
+!$omp flush
+      child_contrib(akeep%contrib_idx(i))%ready = .true.
    end do
+!$omp end parallel
+
+   return
+
+   100 continue
+   inform%flag = SSIDS_ERROR_ALLOCATION
+   return
 end subroutine inner_factor_cpu
 
 subroutine inner_solve_cpu(local_job, nrhs, x, ldx, akeep, fkeep, options, inform)

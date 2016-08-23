@@ -84,7 +84,7 @@ public:
       for(int i=0; i<num_threads; ++i)
          work.emplace_back(PAGE_SIZE);
 
-      #pragma omp parallel default(shared)
+      #pragma omp parallel default(shared) proc_bind(close)
       {
          /* Initalise stats */
          int this_thread = omp_get_thread_num();

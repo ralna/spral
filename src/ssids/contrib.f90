@@ -13,6 +13,7 @@ module spral_ssids_contrib
    ! but alas Fortran/C interop causes severe problems, so we just have the
    ! owner value instead and if statements to call the right thing).
    type :: contrib_type
+      logical :: ready = .false.
       integer :: n ! size of block
       real(C_DOUBLE), dimension(:), pointer :: val ! n x n lwr triangular matrix
       integer(C_INT) :: ldval
@@ -46,6 +47,11 @@ subroutine spral_ssids_contrib_get_data(ccontrib, n, val, ldval, rlist, &
    integer(C_INT), intent(out) :: lddelay
 
    type(contrib_type), pointer :: fcontrib
+
+   do while(.not.fcontrib%ready)
+      ! FIXME: make below a taskyield?
+!$omp flush
+   end do
 
    call c_f_pointer(ccontrib, fcontrib)
 

@@ -4,6 +4,7 @@
 ! Originally based on HSL_MA97 v2.2.0
 module spral_ssids_analyse
    use, intrinsic :: iso_c_binding
+   use, intrinsic :: omp_lib
    use spral_core_analyse, only : basic_analyse
    use spral_cuda, only : detect_gpu
    use spral_hw_topology, only : guess_topology, numa_region
@@ -274,7 +275,7 @@ subroutine find_subtree_partition(nnodes, sptr, sparent, rptr, topology, &
    integer, intent(out) :: st
 
    integer :: i, j, k
-   integer(long) :: jj, target_flops
+   integer(long) :: jj
    integer :: m, n, node
    integer(long), dimension(:), allocatable :: flops
    integer, dimension(:), allocatable :: size_order
@@ -587,8 +588,7 @@ subroutine split_tree(nparts, part, size_order, is_child, sparent, flops, &
    integer(long), intent(in) :: min_gpu_work
    integer, intent(out) :: st
 
-   integer :: i, j, p, nchild, nbig, root, to_split, old_nparts
-   integer(long) :: iflops
+   integer :: i, p, nchild, nbig, root, to_split, old_nparts
    integer, dimension(:), allocatable :: children, temp
 
    ! Look for all children of root in biggest child part
@@ -715,6 +715,7 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
    character(50)  :: context ! Procedure name (used when printing).
    integer, dimension(:), allocatable :: contrib_dest, exec_loc, level
 
+   integer :: numa_region
    integer :: nemin, flag
    integer :: blkm, blkn
    integer :: i, j
@@ -805,10 +806,17 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
       deallocate(akeep%subtree)
    endif
    allocate(akeep%subtree(akeep%nparts))
+   ! Split into one thread per numa region for setup (assume mem is first touch)
+!$omp parallel proc_bind(spread) num_threads(size(akeep%topology)) &
+!$omp    default(shared) private(i, numa_region)
+   numa_region = omp_get_thread_num()
    do i = 1, akeep%nparts
+      if(mod(exec_loc(i), size(akeep%topology)).ne.numa_region) cycle
+      akeep%subtree(i)%exec_loc = exec_loc(i)
       if(exec_loc(i).le.size(akeep%topology)) then
          ! CPU
-         !print *, "init cpu subtree ", i, akeep%part(i), akeep%part(i+1)-1
+         !print *, numa_region, "init cpu subtree ", i, akeep%part(i), &
+         !   akeep%part(i+1)-1
          akeep%subtree(i)%ptr => construct_cpu_symbolic_subtree(akeep%n, &
             akeep%part(i), akeep%part(i+1), akeep%sptr, akeep%sparent, &
             akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist, &
@@ -816,12 +824,14 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
             options)
       else
          ! GPU
-         !print *, "init gpu subtree ", i, akeep%part(i), akeep%part(i+1)-1
+         !print *, numa_region, "init gpu subtree ", i, akeep%part(i), &
+         !   akeep%part(i+1)-1
          akeep%subtree(i)%ptr => construct_gpu_symbolic_subtree(akeep%n, &
             akeep%part(i), akeep%part(i+1), akeep%sptr, akeep%sparent, &
             akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist, options)
       end if
    end do
+!$omp end parallel
 
    ! Info
    allocate(level(akeep%nnodes+1), stat=st)
