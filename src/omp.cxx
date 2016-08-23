@@ -18,7 +18,7 @@ namespace spral { namespace omp {
 int get_global_thread_num() {
    int nbelow = 1;
    int thread_num = 0;
-   for(int level=omp_get_active_level(); level>0; --level) {
+   for(int level=omp_get_level(); level>0; --level) {
       thread_num += nbelow * omp_get_ancestor_thread_num(level);
       nbelow *= omp_get_team_size(level);
    }
