@@ -192,8 +192,6 @@ function construct_cpu_symbolic_subtree(n, sa, en, sptr, sparent, rptr, &
    integer, dimension(:), intent(in) :: contrib_idx
    class(ssids_options), intent(in) :: options
 
-   integer :: node
-   integer(long) :: blkm, blkn
    integer :: st
    type(cpu_factor_options) :: coptions
 
