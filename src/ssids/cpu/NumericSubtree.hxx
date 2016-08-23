@@ -65,8 +65,6 @@ public:
      factor_alloc_(symbolic_subtree.get_factor_mem_est(options.multiplier)),
      pool_alloc_(symbolic_subtree.get_pool_size<T>())
    {
-      Profile::init();
-
       /* Associate symbolic nodes to numeric ones; copy tree structure */
       for(int ni=0; ni<symb_.nnodes_+1; ++ni) {
          nodes_[ni].symb = &symbolic_subtree[ni];
@@ -114,7 +112,7 @@ public:
             {
                int this_thread = omp_get_thread_num();
 #ifdef PROFILE
-               Profile::Task task_subtree("TA_SUBTREE", this_thread);
+               Profile::Task task_subtree("TA_SUBTREE");
 #endif
                auto const& leaf = symb_.small_leafs_[si];
                new (&small_leafs_[si]) SLNS(leaf, nodes_, aval, scaling,
@@ -227,7 +225,6 @@ public:
             }
          }
       }
-      Profile::end();
    }
    ~NumericSubtree() {
       delete[] small_leafs_;

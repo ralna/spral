@@ -1292,7 +1292,7 @@ private:
             if(use_tasks && mblk>1)
          {
 #ifdef PROFILE
-            Profile::Task task("TA_LDLT_DIAG", omp_get_thread_num());
+            Profile::Task task("TA_LDLT_DIAG");
 #endif
             if(debug) printf("Factor(%d)\n", blk);
             BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
@@ -1320,7 +1320,7 @@ private:
                if(use_tasks && mblk>1)
             {
 #ifdef PROFILE
-               Profile::Task task("TA_LDLT_APPLY", omp_get_thread_num());
+               Profile::Task task("TA_LDLT_APPLY");
 #endif
                if(debug) printf("ApplyT(%d,%d)\n", blk, jblk);
                BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
@@ -1351,7 +1351,7 @@ private:
                if(use_tasks && mblk>1)
             {
 #ifdef PROFILE
-               Profile::Task task("TA_LDLT_APPLY", omp_get_thread_num());
+               Profile::Task task("TA_LDLT_APPLY");
 #endif
                if(debug) printf("ApplyN(%d,%d)\n", iblk, blk);
                BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
@@ -1380,7 +1380,7 @@ private:
             if(use_tasks && mblk>1)
          {
 #ifdef PROFILE
-            Profile::Task task("TA_LDLT_ADJUST", omp_get_thread_num());
+            Profile::Task task("TA_LDLT_ADJUST");
 #endif
             if(debug) printf("Adjust(%d)\n", blk);
             cdata[blk].adjust(next_elim);
@@ -1406,7 +1406,7 @@ private:
                   if(use_tasks && mblk>1)
                {
 #ifdef PROFILE
-                  Profile::Task task("TA_LDLT_UPDA", omp_get_thread_num());
+                  Profile::Task task("TA_LDLT_UPDA");
 #endif
                   if(debug) printf("UpdateT(%d,%d,%d)\n", iblk, jblk, blk);
                   int thread_num = omp_get_thread_num();
@@ -1439,7 +1439,7 @@ private:
                   if(use_tasks && mblk>1)
                {
 #ifdef PROFILE
-                  Profile::Task task("TA_LDLT_UPDA", omp_get_thread_num());
+                  Profile::Task task("TA_LDLT_UPDA");
 #endif
                   if(debug) printf("UpdateN(%d,%d,%d)\n", iblk, jblk, blk);
                   int thread_num = omp_get_thread_num();
@@ -1477,7 +1477,7 @@ private:
                   if(use_tasks && mblk>1)
                {
 #ifdef PROFILE
-                  Profile::Task task("TA_LDLT_UPDC", omp_get_thread_num());
+                  Profile::Task task("TA_LDLT_UPDC");
 #endif
                   if(debug) printf("FormContrib(%d,%d,%d)\n", iblk, jblk, blk);
                   int thread_num = omp_get_thread_num();
@@ -1542,7 +1542,7 @@ private:
             if(use_tasks && mblk>1)
          {
 #ifdef PROFILE
-            Profile::Task task("TA_LDLT_DIAG", omp_get_thread_num());
+            Profile::Task task("TA_LDLT_DIAG");
 #endif
             if(debug) printf("Factor(%d)\n", blk);
             BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
@@ -1577,7 +1577,7 @@ private:
                if(use_tasks && mblk>1)
             {
 #ifdef PROFILE
-               Profile::Task task("TA_LDLT_APPLY", omp_get_thread_num());
+               Profile::Task task("TA_LDLT_APPLY");
 #endif
                if(debug) printf("ApplyT(%d,%d)\n", blk, jblk);
                int thread_num = omp_get_thread_num();
@@ -1603,7 +1603,7 @@ private:
                if(use_tasks && mblk>1)
             {
 #ifdef PROFILE
-               Profile::Task task("TA_LDLT_APPLY", omp_get_thread_num());
+               Profile::Task task("TA_LDLT_APPLY");
 #endif
                if(debug) printf("ApplyN(%d,%d)\n", iblk, blk);
                int thread_num = omp_get_thread_num();
@@ -1642,7 +1642,7 @@ private:
                   if(use_tasks && mblk>1)
                {
 #ifdef PROFILE
-                  Profile::Task task("TA_LDLT_UPDA", omp_get_thread_num());
+                  Profile::Task task("TA_LDLT_UPDA");
 #endif
                   if(debug) printf("UpdateN(%d,%d,%d)\n", iblk, jblk, blk);
                   int thread_num = omp_get_thread_num();
@@ -1679,7 +1679,7 @@ private:
                   if(use_tasks && mblk>1)
                {
 #ifdef PROFILE
-                  Profile::Task task("TA_LDLT_UPDC", omp_get_thread_num());
+                  Profile::Task task("TA_LDLT_UPDC");
 #endif
                   if(debug) printf("FormContrib(%d,%d,%d)\n", iblk, jblk, blk);
                   int thread_num = omp_get_thread_num();
@@ -1887,7 +1887,7 @@ public:
       /* Temporary workspaces */
       ColumnData<T, IntAlloc> cdata(n, block_size, IntAlloc(alloc));
 #ifdef PROFILE
-      Profile::setNullState(omp_get_thread_num());
+      Profile::setNullState();
 #endif
 
       /* Main loop
@@ -1927,7 +1927,7 @@ public:
                char buffer[200];
                snprintf(buffer, 200, "tpp-aggressive failed at %d / %d\n",
                         num_elim, n);
-               Profile::addEvent("EV_AGG_FAIL", omp_get_thread_num(), buffer);
+               Profile::addEvent("EV_AGG_FAIL", buffer);
             }
 #endif
             // Factorization ecountered a pivoting failure.
@@ -1959,7 +1959,7 @@ public:
       if(num_elim < n) {
          // Permute failed entries to end
 #ifdef PROFILE
-         Profile::Task task_post("TA_LDLT_POST", omp_get_thread_num());
+         Profile::Task task_post("TA_LDLT_POST");
 #endif
          std::vector<int, IntAlloc> failed_perm(n-num_elim, alloc);
          for(int jblk=0, insert=0, fail_insert=0; jblk<nblk; jblk++) {
@@ -2087,7 +2087,7 @@ int ldlt_app_factor(int m, int n, int* perm, T* a, int lda, T* d, T beta, T* upd
    }*/
 
 #ifdef PROFILE
-   Profile::setState("TA_MISC1", omp_get_thread_num());
+   Profile::setState("TA_MISC1");
 #endif
 
    // Template parameters and workspaces

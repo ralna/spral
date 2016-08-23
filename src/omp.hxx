@@ -42,6 +42,9 @@ private:
    omp_lock_t lock_;
 };
 
+/// Return global thread number (=thread number if not nested)
+int get_global_thread_num();
+
 /// Returns true if omp cancel is supported
 bool cancel_support();
 /// Returns true if omp nesting is supported

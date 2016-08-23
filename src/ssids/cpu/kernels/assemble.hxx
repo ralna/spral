@@ -58,7 +58,7 @@ void assemble_pre(
       T const* scaling
       ) {
 #ifdef PROFILE
-   Profile::Task task_asm_pre("TA_ASM_PRE", omp_get_thread_num());
+   Profile::Task task_asm_pre("TA_ASM_PRE");
 #endif
    /* Rebind allocators */
    typedef typename std::allocator_traits<FactorAlloc>::template rebind_traits<double> FADoubleTraits;
@@ -164,7 +164,7 @@ void assemble_pre(
 #endif
       for(auto* child=node.first_child; child!=NULL; child=child->next_child) {
 #ifdef PROFILE
-         Profile::Task task_asm_pre("TA_ASM_PRE", omp_get_thread_num());
+         Profile::Task task_asm_pre("TA_ASM_PRE");
 #endif
          SymbolicNode const& csnode = *child->symb;
          /* Handle delays - go to back of node
@@ -203,7 +203,7 @@ void assemble_pre(
                   if(iblk+block_size<cm)
                {
 #ifdef PROFILE
-                  Profile::Task task_asm_pre("TA_ASM_PRE", omp_get_thread_num());
+                  Profile::Task task_asm_pre("TA_ASM_PRE");
 #endif
                   int* cache = work[omp_get_thread_num()].get_ptr<int>(cm);
                   for(int j=iblk; j<cm; ++j)
@@ -324,7 +324,7 @@ void assemble_post(
                if(iblk+block_size<cm)
             {
 #ifdef PROFILE
-               Profile::Task task_asm("TA_ASM_POST", omp_get_thread_num());
+               Profile::Task task_asm("TA_ASM_POST");
 #endif
                int* cache = work[omp_get_thread_num()].get_ptr<int>(cm);
                for(int j=iblk; j<cm; ++j)

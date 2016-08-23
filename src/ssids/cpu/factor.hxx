@@ -66,7 +66,7 @@ void factor_node_indef(
    /* Finish factorization worth simplistic code */
    if(node->nelim < n) {
 #ifdef PROFILE
-      Profile::Task task_tpp("TA_LDLT_TPP", omp_get_thread_num());
+      Profile::Task task_tpp("TA_LDLT_TPP");
 #endif
       int nelim = node->nelim;
       stats.not_first_pass += n-nelim;
@@ -95,7 +95,7 @@ void factor_node_indef(
    }
 
 #ifdef PROFILE
-      Profile::setState("TA_MISC1", omp_get_thread_num());
+      Profile::setState("TA_MISC1");
 #endif
    /* Record information */
    node->ndelay_out = n - node->nelim;

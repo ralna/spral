@@ -18,13 +18,14 @@
 #error "Cannot enable profiling without GTG library"
 #endif
 
-#ifdef GAVE_GTG
+#ifdef HAVE_GTG
 extern "C" {
 #include <GTG.h>
 }
 #include "time.h"
-#include <omp.h>
 #endif
+
+#include "omp.hxx"
 
 namespace spral { namespace ssids { namespace cpu {
 
@@ -32,7 +33,7 @@ class Profile {
 public:
    class Task {
    public:
-      Task(char const* name, int thread)
+      Task(char const* name, int thread=omp::get_global_thread_num())
       : name(name), thread(thread), t1(Profile::now())
       {}
 
@@ -51,7 +52,7 @@ public:
    };
 
    static
-   void setState(char const* name, int thread) {
+   void setState(char const* name, int thread=omp::get_global_thread_num()) {
 #if defined(PROFILE) && defined(HAVE_GTG)
       double t = Profile::now();
       ::setState(t, "ST_TASK", Profile::get_thread_name(thread), name);
@@ -59,12 +60,13 @@ public:
    }
 
    static
-   void setNullState(int thread) {
+   void setNullState(int thread=omp::get_global_thread_num()) {
       setState("0", thread);
    }
 
    static
-   void addEvent(char const* type, int thread, char const*val) {
+   void addEvent(char const* type, char const*val,
+         int thread=omp::get_global_thread_num()) {
 #if defined(PROFILE) && defined(HAVE_GTG)
       ::addEvent(now(), type, get_thread_name(thread), val);
 #endif

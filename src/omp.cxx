@@ -15,6 +15,16 @@
 /* This file wraps the C interface for OpenMP in C++ for style/safety */
 namespace spral { namespace omp {
 
+int get_global_thread_num() {
+   int nbelow = 1;
+   int thread_num = 0;
+   for(int level=omp_get_active_level(); level>0; --level) {
+      thread_num += nbelow * omp_get_ancestor_thread_num(level);
+      nbelow *= omp_get_team_size(level);
+   }
+   return thread_num;
+}
+
 bool cancel_support() {
    return omp_get_cancellation();
 }

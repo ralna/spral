@@ -65,7 +65,7 @@ void cholesky_factor(int m, int n, double* a, int lda, double beta, double* upd,
          depend(inout: a[j*(lda+1):1])
       if(*info==-1) {
 #ifdef PROFILE
-         Profile::Task task("TA_CHOL_DIAG", omp_get_thread_num());
+         Profile::Task task("TA_CHOL_DIAG");
 #endif
          int blkm = std::min(blksz, m-j);
          int flag = lapack_potrf(FILL_MODE_LWR, blkn, &a[j*(lda+1)], lda);
@@ -97,7 +97,7 @@ void cholesky_factor(int m, int n, double* a, int lda, double beta, double* upd,
             depend(inout: a[j*lda + i:1])
          if(*info==-1) {
 #ifdef PROFILE
-            Profile::Task task("TA_CHOL_TRSM", omp_get_thread_num());
+            Profile::Task task("TA_CHOL_TRSM");
 #endif
             host_trsm(SIDE_RIGHT, FILL_MODE_LWR, OP_T, DIAG_NON_UNIT,
                   blkm, blkn, 1.0, &a[j*(lda+1)], lda, &a[j*lda+i], lda);
@@ -124,7 +124,7 @@ void cholesky_factor(int m, int n, double* a, int lda, double beta, double* upd,
                depend(inout: a[k*lda+i:1])
             if(*info==-1) {
 #ifdef PROFILE
-               Profile::Task task("TA_CHOL_UPD", omp_get_thread_num());
+               Profile::Task task("TA_CHOL_UPD");
 #endif
                int blkm = std::min(blksz, m-i);
                host_gemm(OP_N, OP_T, blkm, blkk, blkn, -1.0, &a[j*lda+i], lda,
@@ -163,7 +163,7 @@ void cholesky_factor(int m, int n, double* a, int lda, double beta, double* upd,
                   depend(inout: upd[(k-n)*lda+(i-n):1])
                if(*info==-1) {
 #ifdef PROFILE
-                  Profile::Task task("TA_CHOL_UPD", omp_get_thread_num());
+                  Profile::Task task("TA_CHOL_UPD");
 #endif
                   int blkm = std::min(blksz, m-i);
                   double rbeta = (j==0) ? beta : 1.0;
