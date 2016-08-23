@@ -120,8 +120,9 @@ public:
                new (&small_leafs_[si]) SLNS(leaf, nodes_, aval, scaling,
                      factor_alloc_, pool_alloc_, work,
                      options, thread_stats[this_thread]);
-               #pragma omp cancel taskgroup \
-                  if(thread_stats[this_thread].flag<SSIDS_SUCCESS)
+               if(thread_stats[this_thread].flag<SSIDS_SUCCESS) {
+                  #pragma omp cancel taskgroup
+               }
 #ifdef PROFILE
                task_subtree.done();
 #endif
@@ -158,8 +159,9 @@ public:
                   (ni, symb_[ni], &nodes_[ni], options,
                    thread_stats[this_thread], work,
                    pool_alloc_);
-               #pragma omp cancel taskgroup \
-                  if(thread_stats[this_thread].flag<SSIDS_SUCCESS)
+               if(thread_stats[this_thread].flag<SSIDS_SUCCESS) {
+                  #pragma omp cancel taskgroup
+               }
 
                // Assemble children into contribution block
                assemble_post(symb_.n, symb_[ni], child_contrib, nodes_[ni],

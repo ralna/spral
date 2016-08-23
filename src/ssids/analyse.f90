@@ -4,7 +4,7 @@
 ! Originally based on HSL_MA97 v2.2.0
 module spral_ssids_analyse
    use, intrinsic :: iso_c_binding
-   use, intrinsic :: omp_lib
+   use :: omp_lib
    use spral_core_analyse, only : basic_analyse
    use spral_cuda, only : detect_gpu
    use spral_hw_topology, only : guess_topology, numa_region

@@ -3,7 +3,7 @@
 !
 module spral_ssids_fkeep
    use, intrinsic :: iso_c_binding
-   use, intrinsic :: omp_lib
+   use :: omp_lib
    use spral_ssids_akeep, only : ssids_akeep
    use spral_ssids_contrib, only : contrib_type
    use spral_ssids_datatypes
