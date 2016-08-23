@@ -264,6 +264,11 @@ contains
             call get_command_argument(argnum, argval)
             argnum = argnum + 1
             read( argval, * ) options%nstream
+         case("--max-load-inbalance")
+            call get_command_argument(argnum, argval)
+            argnum = argnum + 1
+            read( argval, * ) options%max_load_inbalance
+            print *, 'Max load inbalance = ', options%max_load_inbalance
          case("--pivot-method=app-aggressive")
             options%pivot_method = 1
             print *, 'Pivoting method APP_AGGRESSIVE'
