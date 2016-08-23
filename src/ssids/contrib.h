@@ -1,3 +1,11 @@
+/** \file
+ *  \copyright 2016 The Science and Technology Facilities Council (STFC)
+ *  \licence   BSD licence, see LICENCE file for details
+ *  \author    Jonathan Hogg
+ *
+ *  \brief Defines C++ interface to routines from spral_ssids_contrib and
+ *         spral_ssids_contrib_free modules.
+ */
 #ifndef SPRAL_SSIDS_CONTRIB_H
 #define SPRAL_SSIDS_CONTRIB_H
 

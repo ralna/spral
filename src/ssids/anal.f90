@@ -1,7 +1,7 @@
-! (c) STFC 2010-2013
-! Author: Jonathan Hogg
-!
-! Originally based on HSL_MA97 v2.2.0
+!> \copyright 2010-2016 The Science and Technology Facilities Council (STFC)
+!> \licence   BSD licence, see LICENCE file for details
+!> \author    Jonathan Hogg
+!> \note      Originally based on HSL_MA97 v2.2.0
 module spral_ssids_anal
    use, intrinsic :: iso_c_binding
    use :: omp_lib

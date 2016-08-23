@@ -1,3 +1,7 @@
+!> \file
+!> \copyright 2016 The Science and Technology Facilities Council (STFC)
+!> \licence   BSD licence, see LICENCE file for details
+!> \author    Jonathan Hogg
 module spral_ssids_akeep
    use spral_ssids_datatypes, only : long, wp, SSIDS_ERROR_CUDA_UNKNOWN, &
                                      ssids_options

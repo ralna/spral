@@ -1,3 +1,7 @@
+!> \file
+!> \copyright 2016 The Science and Technology Facilities Council (STFC)
+!> \licence   BSD licence, see LICENCE file for details
+!> \author    Jonathan Hogg
 module spral_ssids_inform
    use spral_cuda, only : cudaGetErrorString
    use spral_scaling, only : auction_inform

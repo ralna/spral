@@ -1,3 +1,7 @@
+!> \file
+!> \copyright 2016 The Science and Technology Facilities Council (STFC)
+!> \licence   BSD licence, see LICENCE file for details
+!> \author    Jonathan Hogg
 module spral_ssids_subtree
    use spral_ssids_contrib, only : contrib_type
    use spral_ssids_datatypes, only : long, wp, ssids_options

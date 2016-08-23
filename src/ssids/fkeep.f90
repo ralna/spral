@@ -1,6 +1,9 @@
+!> \file
+!> \copyright 2016 The Science and Technology Facilities Council (STFC)
+!> \licence   BSD licence, see LICENCE file for details
+!> \author    Jonathan Hogg
 !
-! This module defines ssids_fkeep type and associated procedures (CPU version)
-!
+!> \brief Define ssids_fkeep type and associated procedures (CPU version)
 module spral_ssids_fkeep
    use, intrinsic :: iso_c_binding
    use :: omp_lib

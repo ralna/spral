@@ -1,3 +1,7 @@
+!> \file
+!> \copyright 2016 The Science and Technology Facilities Council (STFC)
+!> \licence   BSD licence, see LICENCE file for details
+!> \author    Jonathan Hogg
 module spral_ssids_alloc
 !$ use omp_lib
    use spral_ssids_datatypes, only : smalloc_type, stack_mem_type, long, wp

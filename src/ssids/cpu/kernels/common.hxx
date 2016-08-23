@@ -1,3 +1,8 @@
+/** \file
+ *  \copyright 2016 The Science and Technology Facilities Council (STFC)
+ *  \licence   BSD licence, see LICENCE file for details
+ *  \author    Jonathan Hogg
+ */
 #pragma once
 
 namespace spral { namespace ssids { namespace cpu {

@@ -1,6 +1,12 @@
-! This module contains routines for freeing contrib_type.
-! As it depends on routines defined by module that use the type, it needs
-! to be a seperate module.
+!> \file
+!> \copyright 2016 The Science and Technology Facilities Council (STFC)
+!> \licence   BSD licence, see LICENCE file for details
+!> \author    Jonathan Hogg
+!
+!> \brief Routines for freeing contrib_type.
+!>
+!> As it depends on routines defined by module that use the type, it needs
+!> to be a seperate module to spral_ssids_contrib.
 module spral_ssids_contrib_free
    use spral_ssids_contrib, only : contrib_type
    use spral_ssids_cpu_subtree, only : cpu_free_contrib

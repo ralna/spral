@@ -1,3 +1,8 @@
+/** \file
+ *  \copyright 2016 The Science and Technology Facilities Council (STFC)
+ *  \licence   BSD licence, see LICENCE file for details
+ *  \author    Jonathan Hogg
+ */
 #include "wrappers.hxx"
 
 #include <stdexcept>

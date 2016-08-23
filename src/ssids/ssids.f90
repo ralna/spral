@@ -1,11 +1,8 @@
-! COPYRIGHT (c) 2011-4 The Science and Technology Facilities Council (STFC)
-! Original date 20 December 2011, Version 1.0.0
-!
-! Written by: Jonathan Hogg and Jennifer Scott
-!
-! Originally based on HSL_MA97 v2.2.0
-!
-
+!> \file
+!> \copyright 2011-2016 The Science and Technology Facilities Council (STFC)
+!> \licence   BSD licence, see LICENCE file for details
+!> \author    Jonathan Hogg and Jennifer Scott
+!> \note      Originally based on HSL_MA97 v2.2.0
 module spral_ssids
 !$ use omp_lib
    use, intrinsic :: iso_c_binding
