@@ -48,12 +48,12 @@ subroutine spral_ssids_contrib_get_data(ccontrib, n, val, ldval, rlist, &
 
    type(contrib_type), pointer :: fcontrib
 
+   call c_f_pointer(ccontrib, fcontrib)
+
    do while(.not.fcontrib%ready)
       ! FIXME: make below a taskyield?
 !$omp flush
    end do
-
-   call c_f_pointer(ccontrib, fcontrib)
 
    n = fcontrib%n
    val = c_loc(fcontrib%val)

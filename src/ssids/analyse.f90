@@ -811,7 +811,10 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
 !$omp    default(shared) private(i, numa_region)
    numa_region = omp_get_thread_num()
    do i = 1, akeep%nparts
-      if(mod(exec_loc(i), size(akeep%topology)).ne.numa_region) cycle
+      ! only initialize subtree if this is the correct region: note that
+      ! an "all region" subtree with location -1 is initialised by region 0
+      if(mod(exec_loc(i), size(akeep%topology)).ne.numa_region .and. &
+         .not.(exec_loc(i).eq.-1 .and. numa_region.eq.0)) cycle
       akeep%subtree(i)%exec_loc = exec_loc(i)
       if(exec_loc(i).le.size(akeep%topology)) then
          ! CPU

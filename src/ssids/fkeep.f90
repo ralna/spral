@@ -63,8 +63,9 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
    type(ssids_inform), intent(inout) :: inform
 
    integer :: i, numa_region, exec_loc
+   integer :: total_threads
+   logical :: all_region
    type(contrib_type), dimension(:), allocatable :: child_contrib
-
 
    ! Allocate space for subtrees
    allocate(fkeep%subtree(akeep%nparts), stat=inform%stat)
@@ -76,13 +77,15 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
    ! Split into numa regions; parallelism within a region is responsibility
    ! of subtrees.
    ! FIXME: do we not want to have within-node parallelism at a higher level?
+   all_region = .false.
 !$omp parallel proc_bind(spread) num_threads(size(akeep%topology)) &
 !$omp    default(none) private(i, exec_loc, numa_region) &
-!$omp    shared(akeep, fkeep, val, options, inform, child_contrib)
+!$omp    shared(akeep, fkeep, val, options, inform, child_contrib, all_region)
    numa_region = omp_get_thread_num()
    call omp_set_num_threads(akeep%topology(numa_region+1)%nproc)
    do i = 1, akeep%nparts
       exec_loc = akeep%subtree(i)%exec_loc
+      if(numa_region.eq.0 .and. exec_loc.eq.-1) all_region = .true.
       if(mod(exec_loc,size(akeep%topology)).ne.numa_region) cycle
       if(allocated(fkeep%scaling)) then
          fkeep%subtree(i)%ptr => akeep%subtree(i)%ptr%factor( &
@@ -103,6 +106,35 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
       child_contrib(akeep%contrib_idx(i))%ready = .true.
    end do
 !$omp end parallel
+
+   if(all_region) then
+      ! At least some all region subtrees exist
+      total_threads = 0
+      do i = 1, size(akeep%topology)
+         total_threads = total_threads + akeep%topology(i)%nproc
+      end do
+      call omp_set_num_threads(total_threads)
+      do i = 1, akeep%nparts
+         exec_loc = akeep%subtree(i)%exec_loc
+         if(exec_loc.ne.-1) cycle
+         if(allocated(fkeep%scaling)) then
+            fkeep%subtree(i)%ptr => akeep%subtree(i)%ptr%factor( &
+               fkeep%pos_def, val, &
+               child_contrib(akeep%contrib_ptr(i):akeep%contrib_ptr(i+1)-1), &
+               options, inform, scaling=fkeep%scaling &
+               )
+         else
+            fkeep%subtree(i)%ptr => akeep%subtree(i)%ptr%factor( &
+               fkeep%pos_def, val, &
+               child_contrib(akeep%contrib_ptr(i):akeep%contrib_ptr(i+1)-1), &
+               options, inform &
+               )
+         endif
+         if(akeep%contrib_idx(i).gt.akeep%nparts) cycle ! part is a root
+         child_contrib(akeep%contrib_idx(i)) = &
+            fkeep%subtree(i)%ptr%get_contrib()
+      end do
+   end if
 
    return
 
