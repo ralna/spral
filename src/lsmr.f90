@@ -1,5 +1,5 @@
 ! Copyright (c) 2010, 2012 David Fong, Michael Saunders, Stanford University
-! Copyright (c) 2014, 2015, 2016 Science and Technology Facilites Council (STFC)
+! Copyright (c) 2014-2016 Science and Technology Facilites Council (STFC)
 ! All rights reserved.
 !
 ! Redistribution and use in source and binary forms, with or without
@@ -83,7 +83,7 @@ module spral_lsmr
 
    private
    public :: lsmr_keep, lsmr_options, lsmr_inform
-   public :: lsmr, lsmr_free
+   public :: lsmr_solve, lsmr_free
 
    integer(4),  parameter :: ip = kind( 0 )
    integer(4),  parameter :: wp = kind( 0.0d+0 )
@@ -105,8 +105,8 @@ module spral_lsmr
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
    ! Make interfaces generic.
-   interface lsmr
-      module procedure lsmr_double
+   interface lsmr_solve
+      module procedure lsmr_solve_double
    end interface
 
    interface lsmr_free
@@ -438,7 +438,8 @@ contains
 
   !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine LSMR_double (action, m, n, u, v, y, keep, options, inform, damp)
+  subroutine lsmr_solve_double(action, m, n, u, v, y, keep, options, inform, &
+        damp)
 
     integer(ip), intent(inout) :: action ! This parameter controls
     ! the action. On initial entry, must be set to 0.
@@ -1184,11 +1185,11 @@ contains
 
     end subroutine localVOrtho
 
-  end subroutine LSMR_double
+  end subroutine lsmr_solve_double
 
   !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-  subroutine LSMR_free_double (keep, stat)
+  subroutine lsmr_free_double (keep, stat)
 
   ! Routine to deallocate components of keep. Failure is indicated
   ! by nonzero stat value. No printing.
@@ -1215,7 +1216,7 @@ contains
        stat = max(stat,st)
     end if
 
-  end subroutine LSMR_free_double
+  end subroutine lsmr_free_double
 
 
 end module spral_lsmr

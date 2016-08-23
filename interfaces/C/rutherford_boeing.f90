@@ -67,7 +67,7 @@ integer(C_INT) function spral_rb_read_i32d(filename, handle, m, n, ptr, row, &
    use spral_rutherford_boeing_ciface
    implicit none
 
-   character(C_CHAR), dimension(*), target, intent(in) :: filename
+   type(C_PTR), value :: filename
    type(C_PTR), intent(out) :: handle
    integer(C_INT), intent(out) :: m
    integer(C_INT), intent(out) :: n
@@ -82,6 +82,7 @@ integer(C_INT) function spral_rb_read_i32d(filename, handle, m, n, ptr, row, &
 
    integer :: info
    type(handle_type), pointer :: matrix
+   character(C_CHAR), dimension(:), pointer :: cfilename
    character(len=:), allocatable :: ffilename
    character(len=3) :: ftype_code
    character(len=72) :: ftitle
@@ -93,9 +94,10 @@ integer(C_INT) function spral_rb_read_i32d(filename, handle, m, n, ptr, row, &
    character(C_CHAR), dimension(:), pointer :: string
 
    ! Handle filename
-   allocate(character(len=strlen(C_LOC(filename))) :: ffilename)
-   do i = 1, int(strlen(C_LOC(filename)))
-      ffilename(i:i) = filename(i)
+   allocate(character(len=strlen(filename)) :: ffilename)
+   call c_f_pointer(filename, cfilename, shape = (/ strlen(filename)+1 /))
+   do i = 1, int(strlen(filename))
+      ffilename(i:i) = cfilename(i)
    end do
    ! Create object to store data in
    allocate(matrix)
@@ -120,22 +122,25 @@ integer(C_INT) function spral_rb_read_i32d(filename, handle, m, n, ptr, row, &
    if(allocated(matrix%val)) val = C_LOC(matrix%val)
    ! Handle optional strings
    if(C_ASSOCIATED(type_code)) then
-      call c_f_pointer(type_code, string, shape = (/ 3 /))
+      call c_f_pointer(type_code, string, shape = (/ 3+1 /))
       do i = 1, len(ftype_code)
          string(i) = ftype_code(i:i)
       end do
+      string(len(ftype_code)+1) = C_NULL_CHAR
    endif
    if(C_ASSOCIATED(title)) then
-      call c_f_pointer(title, string, shape = (/ 72 /))
+      call c_f_pointer(title, string, shape = (/ 72+1 /))
       do i = 1, len(ftitle)
          string(i) = ftitle(i:i)
       end do
+      string(len(ftitle)+1) = C_NULL_CHAR
    endif
    if(C_ASSOCIATED(identifier)) then
-      call c_f_pointer(identifier, string, shape = (/ 8 /))
+      call c_f_pointer(identifier, string, shape = (/ 8+1 /))
       do i = 1, len(fidentifier)
          string(i) = fidentifier(i:i)
       end do
+      string(len(fidentifier)+1) = C_NULL_CHAR
    endif
 
    ! Set return code
@@ -147,7 +152,7 @@ integer(C_INT) function spral_rb_read_i64d(filename, handle, m, n, ptr, row, &
    use spral_rutherford_boeing_ciface
    implicit none
 
-   character(C_CHAR), dimension(*), target, intent(in) :: filename
+   type(C_PTR), value :: filename
    type(C_PTR), intent(out) :: handle
    integer(C_INT), intent(out) :: m
    integer(C_INT), intent(out) :: n
@@ -162,6 +167,7 @@ integer(C_INT) function spral_rb_read_i64d(filename, handle, m, n, ptr, row, &
 
    integer :: info
    type(handle_type), pointer :: matrix
+   character(C_CHAR), dimension(:), pointer :: cfilename
    character(len=:), allocatable :: ffilename
    character(len=3) :: ftype_code
    character(len=72) :: ftitle
@@ -173,9 +179,10 @@ integer(C_INT) function spral_rb_read_i64d(filename, handle, m, n, ptr, row, &
    character(C_CHAR), dimension(:), pointer :: string
 
    ! Handle filename
-   allocate(character(len=strlen(C_LOC(filename))) :: ffilename)
-   do i = 1, int(strlen(C_LOC(filename)))
-      ffilename(i:i) = filename(i)
+   allocate(character(len=strlen(filename)) :: ffilename)
+   call c_f_pointer(filename, cfilename, shape = (/ strlen(filename)+1 /))
+   do i = 1, int(strlen(filename))
+      ffilename(i:i) = cfilename(i)
    end do
    ! Create object to store data in
    allocate(matrix)

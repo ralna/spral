@@ -40,7 +40,7 @@ int main(void) {
 
    bool done = false;
    while(!done) {
-      spral_lsmr(&action, m, n, u, v, x, &keep, &options, &inform, NULL);
+      spral_lsmr_solve(&action, m, n, u, v, x, &keep, &options, &inform, NULL);
 
       switch(action) {
       case 0: /* we are done */

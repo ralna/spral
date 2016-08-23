@@ -21,8 +21,8 @@ module spral_ssids
                              equilib_options, equilib_inform, &
                              hungarian_options, hungarian_inform
    use spral_ssids_alloc, only : smalloc_setup
-   use spral_ssids_analyse, only : analyse_phase, check_order, expand_matrix, &
-                                   expand_pattern
+   use spral_ssids_anal, only : analyse_phase, check_order, expand_matrix, &
+                                expand_pattern
    use spral_ssids_datatypes
    use spral_ssids_akeep, only : ssids_akeep
    use spral_ssids_fkeep, only : ssids_fkeep

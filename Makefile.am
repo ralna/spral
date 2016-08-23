@@ -16,7 +16,7 @@ NVCCLINK = \
 
 # Include directory for standard C
 AM_CFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src $(OPENMP_CFLAGS) \
-				$(HWLOC_CFLAGS)
+				$(HWLOC_CFLAGS) -std=c99
 AM_CXXFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src -std=c++11 \
 				  $(OPENMP_CXXFLAGS) $(GTG_INCLUDE) $(HWLOC_CFLAGS)
 AM_FCFLAGS = $(OPENMP_CXXFLAGS) # assume CXX and FC use same flags...
@@ -227,7 +227,7 @@ endif
 libspral_a_SOURCES += \
 	src/ssids/alloc.f90 \
 	src/ssids/akeep.f90 \
-	src/ssids/analyse.f90 \
+	src/ssids/anal.f90 \
 	src/ssids/contrib.f90 \
 	src/ssids/contrib.h \
 	src/ssids/contrib_free.f90 \
@@ -412,25 +412,25 @@ src/ssids/akeep.$(OBJEXT): src/ssids/datatypes.$(OBJEXT) \
                            src/ssids/inform.$(OBJEXT) \
 									src/ssids/subtree.$(OBJEXT)
 if HAVE_NVCC
-src/ssids/analyse.$(OBJEXT): src/core_analyse.$(OBJEXT) \
-                             src/cuda/cuda.$(OBJEXT) \
-                             src/hw_topology/hw_topology.$(OBJEXT) \
-                             src/pgm.$(OBJEXT) \
-                             src/ssids/akeep.$(OBJEXT) \
-                             src/ssids/datatypes.$(OBJEXT) \
-                             src/ssids/inform.$(OBJEXT) \
-									  src/ssids/cpu/subtree.$(OBJEXT) \
-                             src/ssids/gpu/subtree.$(OBJEXT)
+src/ssids/anal.$(OBJEXT): src/core_analyse.$(OBJEXT) \
+                          src/cuda/cuda.$(OBJEXT) \
+                          src/hw_topology/hw_topology.$(OBJEXT) \
+                          src/pgm.$(OBJEXT) \
+                          src/ssids/akeep.$(OBJEXT) \
+                          src/ssids/datatypes.$(OBJEXT) \
+                          src/ssids/inform.$(OBJEXT) \
+                          src/ssids/cpu/subtree.$(OBJEXT) \
+                          src/ssids/gpu/subtree.$(OBJEXT)
 else
-src/ssids/analyse.$(OBJEXT): src/core_analyse.$(OBJEXT) \
-                             src/cuda/cuda_nocuda.$(OBJEXT) \
-                             src/hw_topology/hw_topology.$(OBJEXT) \
-                             src/pgm.$(OBJEXT) \
-                             src/ssids/akeep.$(OBJEXT) \
-                             src/ssids/datatypes.$(OBJEXT) \
-                             src/ssids/inform.$(OBJEXT) \
-									  src/ssids/cpu/subtree.$(OBJEXT) \
-                             src/ssids/gpu/subtree_no_cuda.$(OBJEXT)
+src/ssids/anal.$(OBJEXT): src/core_analyse.$(OBJEXT) \
+                          src/cuda/cuda_nocuda.$(OBJEXT) \
+                          src/hw_topology/hw_topology.$(OBJEXT) \
+                          src/pgm.$(OBJEXT) \
+                          src/ssids/akeep.$(OBJEXT) \
+                          src/ssids/datatypes.$(OBJEXT) \
+                          src/ssids/inform.$(OBJEXT) \
+                          src/ssids/cpu/subtree.$(OBJEXT) \
+                          src/ssids/gpu/subtree_no_cuda.$(OBJEXT)
 endif
 src/ssids/contrib.$(OBJEXT): src/ssids/datatypes.$(OBJEXT)
 src/ssids/datatypes.$(OBJEXT): src/scaling.$(OBJEXT)
@@ -494,7 +494,7 @@ src/ssids/ssids.$(OBJEXT): src/match_order.$(OBJEXT) \
                            src/scaling.$(OBJEXT) \
                            src/ssids/akeep.$(OBJEXT) \
                            src/ssids/alloc.$(OBJEXT) \
-                           src/ssids/analyse.$(OBJEXT) \
+                           src/ssids/anal.$(OBJEXT) \
                            src/ssids/datatypes.$(OBJEXT) \
                            src/ssids/fkeep.$(OBJEXT) \
                            src/ssids/inform.$(OBJEXT)
@@ -506,7 +506,7 @@ src/ssids/ssids.$(OBJEXT): src/hw_topology/hw_topology.$(OBJEXT) \
                            src/scaling.$(OBJEXT) \
                            src/ssids/akeep.$(OBJEXT) \
                            src/ssids/alloc.$(OBJEXT) \
-                           src/ssids/analyse.$(OBJEXT) \
+                           src/ssids/anal.$(OBJEXT) \
                            src/ssids/datatypes.$(OBJEXT) \
                            src/ssids/fkeep.$(OBJEXT) \
                            src/ssids/inform.$(OBJEXT)

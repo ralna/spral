@@ -2,7 +2,7 @@
 ! Author: Jonathan Hogg
 !
 ! Originally based on HSL_MA97 v2.2.0
-module spral_ssids_analyse
+module spral_ssids_anal
    use, intrinsic :: iso_c_binding
    use :: omp_lib
    use spral_core_analyse, only : basic_analyse
@@ -983,4 +983,4 @@ subroutine build_map(n, ptr, row, perm, invp, nnodes, sptr, rptr, rlist, &
    
 end subroutine build_map
 
-end module spral_ssids_analyse
+end module spral_ssids_anal
