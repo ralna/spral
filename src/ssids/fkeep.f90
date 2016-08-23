@@ -133,6 +133,8 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
          if(akeep%contrib_idx(i).gt.akeep%nparts) cycle ! part is a root
          child_contrib(akeep%contrib_idx(i)) = &
             fkeep%subtree(i)%ptr%get_contrib()
+!$omp    flush
+         child_contrib(akeep%contrib_idx(i))%ready = .true.
       end do
    end if
 
