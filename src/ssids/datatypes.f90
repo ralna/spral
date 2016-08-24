@@ -264,7 +264,7 @@ module spral_ssids_datatypes
          ! 2 - Traditional threshold partial pivoting (serial, inefficient!)
       logical :: ignore_numa = .true. ! If true, treat entire machine as single
          ! NUMA region for purposes of subtree allocation.
-      logical :: ignore_gpu = .false. ! Ignore any GPUs
+      logical :: use_gpu = .true. ! Use GPUs if present
    end type ssids_options
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

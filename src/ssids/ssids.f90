@@ -354,6 +354,8 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
       call guess_topology(akeep%topology, st)
       if(st.ne.0) goto 490
    endif
+   call squash_topology(akeep%topology, options, st)
+   if(st.ne.0) goto 490
 
    ! perform rest of analyse
    if (check) then
@@ -377,6 +379,60 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
    akeep%flag = inform%flag
 
 end subroutine analyse_double
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!> @brief Given an initial topology, modify it to squash any resources options
+!>        parameters tell us to ignore.
+!> @param topology
+subroutine squash_topology(topology, options, st)
+   type(numa_region), dimension(:), allocatable, intent(inout) :: topology
+   type(ssids_options), intent(in) :: options
+   integer, intent(out) :: st
+
+   integer :: i, ngpu, nproc
+   type(numa_region), dimension(:), allocatable :: new_topology
+
+   st = 0
+
+   ! Get rid of GPUs if we're not using them
+   if(.not.options%use_gpu) then
+      do i = 1, size(topology)
+         if(size(topology(i)%gpus).ne.0) then
+            deallocate(topology(i)%gpus)
+            allocate(topology(i)%gpus(0), stat=st)
+            if(st.ne.0) return
+         endif
+      end do
+   endif
+
+   ! Squash everything to single NUMA region if we're ignoring numa
+   if(size(topology).gt.1 .and. options%ignore_numa) then
+      allocate(new_topology(1), stat=st)
+      if(st.ne.0) return
+      ! Count resources to reallocate
+      new_topology(1)%nproc = 0
+      ngpu = 0
+      do i = 1, size(topology)
+         new_topology(1)%nproc = new_topology(1)%nproc + topology(i)%nproc
+         ngpu = ngpu + size(topology(i)%gpus)
+      end do
+      ! Store list of GPUs
+      allocate(new_topology(1)%gpus(ngpu), stat=st)
+      if(st.ne.0) return
+      if(ngpu.gt.0) then
+         ngpu = 0
+         do i = 1, size(topology)
+            new_topology(1)%gpus(ngpu+1:ngpu+size(topology(i)%gpus)) = &
+               topology(i)%gpus(:)
+            ngpu = ngpu + size(topology(i)%gpus)
+         end do
+      endif
+      ! Move new_topology into place, deallocating old one
+      deallocate(topology)
+      call move_alloc(new_topology, topology)
+   endif
+
+end subroutine squash_topology
 
 !****************************************************************************
 !

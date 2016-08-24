@@ -318,12 +318,10 @@ subroutine find_subtree_partition(nnodes, sptr, sparent, rptr, options, &
 
    ! Calculate number of regions/gpus
    nregion = size(topology)
-   if(options%ignore_numa) nregion = 1
    ngpu = 0
    do i = 1, size(topology)
       ngpu = ngpu + size(topology(i)%gpus)
    end do
-   if(options%ignore_gpu) ngpu = 0
 
    ! Keep splitting until we meet balance criterion
    best_load_balance = huge(best_load_balance)
