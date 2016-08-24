@@ -255,17 +255,15 @@ end subroutine check_order
 !>        contributes.
 !> @param st Allocation status parameter. If non-zero an allocation error
 !>        occurred.
-subroutine find_subtree_partition(nnodes, sptr, sparent, rptr, topology, &
-      min_gpu_work, max_load_inbalance, gpu_perf_coeff, nparts, part, &
-      exec_loc, contrib_ptr, contrib_idx, contrib_dest, st)
+subroutine find_subtree_partition(nnodes, sptr, sparent, rptr, options, &
+      topology, nparts, part, exec_loc, contrib_ptr, contrib_idx, &
+      contrib_dest, st)
    integer, intent(in) :: nnodes
    integer, dimension(nnodes+1), intent(in) :: sptr
    integer, dimension(nnodes), intent(in) :: sparent
    integer(long), dimension(nnodes+1), intent(in) :: rptr
+   type(ssids_options), intent(in) :: options
    type(numa_region), dimension(:), intent(in) :: topology
-   integer(long), intent(in) :: min_gpu_work
-   real, intent(in) :: max_load_inbalance
-   real, intent(in) :: gpu_perf_coeff
    integer, intent(out) :: nparts
    integer, dimension(:), allocatable, intent(inout) :: part
    integer, dimension(:), allocatable, intent(inout) :: exec_loc ! 0=cpu, 1=gpu
@@ -320,23 +318,26 @@ subroutine find_subtree_partition(nnodes, sptr, sparent, rptr, topology, &
 
    ! Calculate number of regions/gpus
    nregion = size(topology)
+   if(options%ignore_numa) nregion = 1
    ngpu = 0
    do i = 1, size(topology)
       ngpu = ngpu + size(topology(i)%gpus)
    end do
+   if(options%ignore_gpu) ngpu = 0
 
    ! Keep splitting until we meet balance criterion
    best_load_balance = huge(best_load_balance)
    do i = 1, 2*(nregion+ngpu)
       ! Check load balance criterion
-      load_balance = calc_exec_alloc(nparts, part, size_order, is_child, &
-         flops, topology, min_gpu_work, gpu_perf_coeff, exec_loc, st)
+      load_balance = calc_exec_alloc(nparts, part, size_order, is_child,   &
+         flops, topology, options%min_gpu_work, options%gpu_perf_coeff,    &
+         exec_loc, st)
       if(st.ne.0) return
       best_load_balance = min(load_balance, best_load_balance)
-      if(load_balance < max_load_inbalance) exit ! we have a good allocation
+      if(load_balance < options%max_load_inbalance) exit ! allocation is good
       ! Split tree further
       call split_tree(nparts, part, size_order, is_child, sparent, flops, &
-         ngpu, min_gpu_work, st)
+         ngpu, options%min_gpu_work, st)
       if(st.ne.0) return
    end do
 
@@ -357,8 +358,9 @@ subroutine find_subtree_partition(nnodes, sptr, sparent, rptr, topology, &
    nparts = j
    !print *, "post merge", part(1:nparts+1)
    call create_size_order(nparts, part, flops, size_order)
-   load_balance = calc_exec_alloc(nparts, part, size_order, is_child, &
-      flops, topology, min_gpu_work, gpu_perf_coeff, exec_loc, st)
+   load_balance = calc_exec_alloc(nparts, part, size_order, is_child,   &
+      flops, topology, options%min_gpu_work, options%gpu_perf_coeff,    &
+      exec_loc, st)
    if(st.ne.0) return
    !print *, "exec_loc ", exec_loc(1:nparts)
 
@@ -780,10 +782,8 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
    !      print *, "---> gpus ", akeep%topology(i)%gpus
    !end do
    call find_subtree_partition(akeep%nnodes, akeep%sptr, akeep%sparent, &
-      akeep%rptr, akeep%topology, options%min_gpu_work,                 &
-      options%max_load_inbalance, options%gpu_perf_coeff, akeep%nparts, &
-      akeep%part, exec_loc, akeep%contrib_ptr, akeep%contrib_idx,       &
-      contrib_dest, st)
+      akeep%rptr, options, akeep%topology, akeep%nparts, akeep%part,    &
+      exec_loc, akeep%contrib_ptr, akeep%contrib_idx, contrib_dest, st)
    if (st .ne. 0) go to 100
    !print *, "invp = ", akeep%invp
    !print *, "sptr = ", akeep%sptr(1:akeep%nnodes+1)

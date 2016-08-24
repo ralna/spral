@@ -262,6 +262,9 @@ module spral_ssids_datatypes
          ! 0 - A posteori pivoting, roll back entire front on pivot failure
          ! 1 - A posteori pivoting, roll back on block column level for failure
          ! 2 - Traditional threshold partial pivoting (serial, inefficient!)
+      logical :: ignore_numa = .true. ! If true, treat entire machine as single
+         ! NUMA region for purposes of subtree allocation.
+      logical :: ignore_gpu = .false. ! Ignore any GPUs
    end type ssids_options
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
