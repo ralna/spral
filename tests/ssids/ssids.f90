@@ -1873,8 +1873,7 @@ subroutine test_random
    options%multiplier = 1.0 ! Ensure we give reallocation a work out
 
    if(debug) options%print_level = 10000
-   !options%cpu_gpu_ratio = 1.0 ! all on cpu
-   !options%min_npart = 1
+   options%min_gpu_work = 0 ! alway allow some gpu working
 
    do prblm = 1, nprob
       if(errors>0) stop ! FIXME: rm
