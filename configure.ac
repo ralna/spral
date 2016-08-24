@@ -68,8 +68,10 @@ AS_IF([test "x$NVCC" != x], [
 ])
 
 # Check for profiling library if desired
-AS_IF([test "x$enable_profile" != "xno"], [
-   SPRAL_GTG(,[AC_MSG_WARN([GTG library not found, cannot enable profiling])])
+AS_IF([test "x$enable_profile" == "xyes"], [
+   SPRAL_GTG(,[AC_MSG_ERROR([GTG library not found, cannot enable profiling])])
+   AC_DEFINE(PROFILE,1,[Define to 1 to enable profiling])
+   echo "Bite me $enable_profile"
    ])
 
 # Output data
