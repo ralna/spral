@@ -389,7 +389,7 @@ subroutine squash_topology(topology, options, st)
    type(ssids_options), intent(in) :: options
    integer, intent(out) :: st
 
-   integer :: i, ngpu, nproc
+   integer :: i, ngpu
    type(numa_region), dimension(:), allocatable :: new_topology
 
    st = 0

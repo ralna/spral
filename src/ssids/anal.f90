@@ -806,7 +806,7 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
    allocate(akeep%subtree(akeep%nparts))
    ! Split into one thread per numa region for setup (assume mem is first touch)
 !$omp parallel proc_bind(spread) num_threads(size(akeep%topology)) &
-!$omp    default(shared) private(i, numa_region)
+!$omp    default(shared) private(i, numa_region) if(size(akeep%topology).gt.1)
    numa_region = omp_get_thread_num()
    do i = 1, akeep%nparts
       ! only initialize subtree if this is the correct region: note that

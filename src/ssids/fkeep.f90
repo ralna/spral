@@ -87,7 +87,8 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
    all_region = .false.
 !$omp parallel proc_bind(spread) num_threads(size(akeep%topology)) &
 !$omp    default(none) private(i, exec_loc, numa_region) &
-!$omp    shared(akeep, fkeep, val, options, inform, child_contrib, all_region)
+!$omp    shared(akeep, fkeep, val, options, inform, child_contrib, all_region) &
+!$omp    if(size(akeep%topology).gt.1)
    numa_region = omp_get_thread_num()
    call omp_set_num_threads(akeep%topology(numa_region+1)%nproc)
    do i = 1, akeep%nparts
