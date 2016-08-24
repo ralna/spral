@@ -36,7 +36,41 @@ private:
    };
 
 public:
-   /** Constructor performs analyse phase work */
+   /** 
+    * \brief Constructor
+    *
+    * Perform work in the analyse phase of the solver. Set up data structures
+    * for fast numerical factorization. We are passed datastructures describing
+    * the whole tree, and consider the subtree composed of contigously numbered
+    * nodes sa:en.
+    *
+    * NB: The global tree is split into parts (parttrees), which then futher
+    * split themselves into small leaf subtrees like this.
+    *
+    * \param sa First (start) supernode in subtree, from start of containing
+    *        parttree.
+    * \param en Last (end) supernode in subtree, from start of containing
+    *        parttree.
+    * \param part_offset Offset of containing parttree into global tree.
+    * \param sptr Supernode pointers. Supernode i consists of columns
+    *        sptr[i]:sptr[i+1]-1. Entries of sptr are numbered from 1 not 0.
+    * \param sparent Supernode parent list. Supernode i has parent sparent[i].
+    *        If sparent[i]>part_offset+en then it belongs to a parent subtree.
+    *        Or is a virtual root if node i is square.
+    * \param rptr Row list pointers. Supernode i consists of rows
+    *        row_list[rptr[i]-1:rptr[i+1]-1-1]. Note entries are numbered from 1
+    *        not 0.
+    * \param rlist Row lists. Supernode i consists of rows
+    *        row_list[rptr[i]-1:rptr[i+1]-1-1]. Note entries are numbered from 1
+    *        not 0.
+    * \param nptr Node pointers for map from \f$ A \f$ to \f$ L \f$. Node i
+    *        has map entries nlist[2*(nptr[i]-1):2*(nptr[i+1]-1-1)+1].
+    *        Note entries are numbered from 1 not 0.
+    * \param nlist Mapping from \f$ A \f$ to \f$ L \f$. Each map entry is a
+    *        pair such that entry nlist[2*i+0] of \f$ A \f$ maps to entry
+    *        nlist[2*i+1] of the relevant supernode (as per nptr) of \f$ L \f$.
+    * \param symb Underlying SymbolicSubtree for containing parttree.
+    */
    SmallLeafSymbolicSubtree(int sa, int en, int part_offset, int const* sptr, int const* sparent, long const* rptr, int const* rlist, int const* nptr, int const* nlist, SymbolicSubtree const& symb)
    : sa_(sa), en_(en), nnodes_(en-sa+1), parent_(sparent[part_offset+en]-1-part_offset),
      nodes_(nnodes_),
@@ -73,19 +107,21 @@ public:
       }
    }
 
+   /** \brief Return parent node of subtree in parttree indexing. */
    int get_parent() const { return parent_; }
+   /** \brief Return given node of this tree. */
    Node const& operator[](int idx) const { return nodes_[idx]; }
 protected:
-   int sa_;
-   int en_;
-   int nnodes_;
-   int nfactor_;
-   int parent_;
-   std::vector<Node> nodes_;
-   std::shared_ptr<int> rlist_;
-   int const* nptr_;
-   int const* nlist_;
-   SymbolicSubtree const& symb_;
+   int sa_; //< First node in subtree.
+   int en_; //< Last node in subtree.
+   int nnodes_; //< Number of nodes in subtree.
+   int nfactor_; //< Number of entries in factor for subtree.
+   int parent_; //< Parent of subtree in parttree.
+   std::vector<Node> nodes_; //< Nodes of this subtree.
+   std::shared_ptr<int> rlist_; //< Row entries of this subtree.
+   int const* nptr_; //< Node mapping into nlist_.
+   int const* nlist_; //< Mapping from \f$ A \f$ to \f$ L \f$.
+   SymbolicSubtree const& symb_; //< Underlying parttree
    
    template <bool posdef, typename T, typename FactorAllocator,
              typename PoolAllocator>
