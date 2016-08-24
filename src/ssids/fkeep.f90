@@ -94,6 +94,7 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
    do i = 1, akeep%nparts
       exec_loc = akeep%subtree(i)%exec_loc
       if(numa_region.eq.0 .and. exec_loc.eq.-1) all_region = .true.
+      if(exec_loc.eq.-1) cycle ! can't rely on being negative if mod is 1
       if(mod(exec_loc,size(akeep%topology)).ne.numa_region) cycle
       if(allocated(fkeep%scaling)) then
          fkeep%subtree(i)%ptr => akeep%subtree(i)%ptr%factor( &
