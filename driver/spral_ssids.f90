@@ -117,6 +117,9 @@ program run_prob
    smanal = (stop_t - start_t)/real(rate_t)
    print "(a,es10.2)", "Predict nfact = ", real(inform%num_factor)
    print "(a,es10.2)", "Predict nflop = ", real(inform%num_flops)
+   print "(a6, i10)", "nparts", inform%nparts
+   print "(a6, es10.2)", "cpu_flops", real(inform%cpu_flops)
+   print "(a6, es10.2)", "gpu_flops", real(inform%gpu_flops)
    smaflop = real(inform%num_flops)
    smafact = real(inform%num_factor)
 
@@ -281,6 +284,9 @@ contains
          case("--flat-topology")
             flat_topology = .true.
             print *, 'Forcing flat topology'
+         case("--disable-gpu")
+            options%use_gpu = .false.
+            print *, 'Disabling GPUs'
          case default
             print *, "Unrecognised command line argument: ", argval
             stop

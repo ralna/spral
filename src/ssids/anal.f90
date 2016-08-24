@@ -257,7 +257,7 @@ end subroutine check_order
 !>        occurred.
 subroutine find_subtree_partition(nnodes, sptr, sparent, rptr, options, &
       topology, nparts, part, exec_loc, contrib_ptr, contrib_idx, &
-      contrib_dest, st)
+      contrib_dest, inform, st)
    integer, intent(in) :: nnodes
    integer, dimension(nnodes+1), intent(in) :: sptr
    integer, dimension(nnodes), intent(in) :: sparent
@@ -270,6 +270,7 @@ subroutine find_subtree_partition(nnodes, sptr, sparent, rptr, options, &
    integer, dimension(:), allocatable, intent(inout) :: contrib_ptr
    integer, dimension(:), allocatable, intent(inout) :: contrib_idx
    integer, dimension(:), allocatable, intent(inout) :: contrib_dest
+   type(ssids_inform), intent(inout) :: inform
    integer, intent(out) :: st
 
    integer :: i, j, k
@@ -285,7 +286,6 @@ subroutine find_subtree_partition(nnodes, sptr, sparent, rptr, options, &
    allocate(flops(nnodes+1), stat=st)
    if(st.ne.0) return
    flops(:) = 0
-   !print *, "There are ", nnodes, " nodes"
    do node = 1, nnodes
       m = int(rptr(node+1)-rptr(node))
       n = sptr(node+1)-sptr(node)
@@ -322,6 +322,7 @@ subroutine find_subtree_partition(nnodes, sptr, sparent, rptr, options, &
    do i = 1, size(topology)
       ngpu = ngpu + size(topology(i)%gpus)
    end do
+   !print *, "running on ", nregion, " regions and ", ngpu, " gpus"
 
    ! Keep splitting until we meet balance criterion
    best_load_balance = huge(best_load_balance)
@@ -402,6 +403,15 @@ subroutine find_subtree_partition(nnodes, sptr, sparent, rptr, options, &
       contrib_ptr(k+1) = contrib_ptr(k+1) + 1
    end do
    contrib_idx(nparts) = nparts+1 ! last part must be a root
+
+   ! Fill out inform
+   inform%nparts = nparts
+   inform%gpu_flops = 0
+   do i = 1, nparts
+      if(exec_loc(i).ge.size(topology)) &
+         inform%gpu_flops = inform%gpu_flops + flops(part(i+1)-1)
+   end do
+   inform%cpu_flops = flops(nnodes+1) - inform%gpu_flops
 end subroutine find_subtree_partition
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -601,7 +611,6 @@ subroutine split_tree(nparts, part, size_order, is_child, sparent, flops, &
       to_split = to_split + 1
    end do
    to_split = size_order(to_split)
-   !print *, "Trying to split ", to_split
    ! Find all children of root
    root = part(to_split+1)-1
    do i = part(to_split), root-1
@@ -618,7 +627,6 @@ subroutine split_tree(nparts, part, size_order, is_child, sparent, flops, &
          children(nchild) = i
       endif
    end do
-   !print *, "children = ", children(1:nchild)
 
    ! Check we can split safely
    if(nchild.eq.0) return ! singleton node, can't split
@@ -633,7 +641,7 @@ subroutine split_tree(nparts, part, size_order, is_child, sparent, flops, &
    if(nbig+1.ge.ngpu) then
       ! Original partition met min_gpu_work criterion
       do i = 1, nchild
-         if(flops(i).ge.min_gpu_work) nbig = nbig + 1
+         if(flops(children(i)).ge.min_gpu_work) nbig = nbig + 1
       end do
       if(nbig.lt.ngpu) return ! new partition fails min_gpu_work criterion
    endif
@@ -781,7 +789,7 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
    !end do
    call find_subtree_partition(akeep%nnodes, akeep%sptr, akeep%sparent, &
       akeep%rptr, options, akeep%topology, akeep%nparts, akeep%part,    &
-      exec_loc, akeep%contrib_ptr, akeep%contrib_idx, contrib_dest, st)
+      exec_loc, akeep%contrib_ptr, akeep%contrib_idx, contrib_dest, inform, st)
    if (st .ne. 0) go to 100
    !print *, "invp = ", akeep%invp
    !print *, "sptr = ", akeep%sptr(1:akeep%nnodes+1)

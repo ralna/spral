@@ -40,6 +40,9 @@ module spral_ssids_inform
       ! Undocumented FIXME: should we document them?
       integer :: not_first_pass
       integer :: not_second_pass
+      integer :: nparts
+      integer(long) :: cpu_flops
+      integer(long) :: gpu_flops
    contains
       procedure, pass(this) :: flagToCharacter
    end type ssids_inform

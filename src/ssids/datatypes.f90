@@ -251,7 +251,7 @@ module spral_ssids_datatypes
          ! treat a subtree as small and use the single core kernel
       integer :: cpu_task_block_size = 256 ! block size to use for task
          ! generation on larger nodes
-      integer(long) :: min_gpu_work = 100**6_long ! Only assign subtree to GPU
+      integer(long) :: min_gpu_work = 10**10_long ! Only assign subtree to GPU
          ! if it contains at least this many flops
       real :: max_load_inbalance = 1.5 ! Maximum permissible load inbalance
          ! when dividing tree into subtrees
