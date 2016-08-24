@@ -13,12 +13,14 @@
 #ifndef HAVE_STD_ALIGN
 // Older versions of g++ (and intel that relies on equivalent -lstdc++) don't
 // define std::align, so we do it ourselves.
+// If there is insufficient space, return nullptr
 namespace std {
 void* align(std::size_t alignment, std::size_t size, void*& ptr, std::size_t& space) {
    auto cptr = reinterpret_cast<uintptr_t>(ptr);
    auto pad = cptr % alignment;
    if(pad == 0) return ptr;
    pad = alignment - pad;
+   if(size+pad > space) return nullptr;
    cptr += pad;
    space -= pad;
    ptr = reinterpret_cast<void*>(cptr);
