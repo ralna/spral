@@ -13,14 +13,19 @@
 #error "Cannot enable profiling without GTG library"
 #endif
 
+#include <cstdio>
+
 #ifdef HAVE_GTG
 extern "C" {
 #include <GTG.h>
 }
 #include <time.h>
-#endif
+#endif /* HAVE_GTG */
+#ifdef HAVE_SCHED_GETCPU
+#include <sched.h>
+#endif /* HAVE_SCHED_GETCPU */
 
-#include "hw_topology/hwloc_wrapper.hxx"
+#include "hw_topology/guess_topology.hxx"
 #include "omp.hxx"
 
 namespace spral { namespace ssids { namespace cpu {
@@ -51,7 +56,7 @@ public:
        * \param name Predefined name of task, as setup in Profile::init().
        * \param thread Optional thread number, otherwise use best guess.
        */
-      Task(char const* name, int thread=omp::get_global_thread_num())
+      Task(char const* name, int thread=Profile::guess_core())
       : name(name), thread(thread), t1(Profile::now())
       {}
 
@@ -78,7 +83,7 @@ public:
     * \param thread Optional thread number, otherwise use best guess.
     */
    static
-   void setState(char const* name, int thread=omp::get_global_thread_num()) {
+   void setState(char const* name, int thread=Profile::guess_core()) {
 #if defined(PROFILE) && defined(HAVE_GTG)
       double t = Profile::now();
       ::setState(t, "ST_TASK", Profile::get_thread_name(thread), name);
@@ -90,7 +95,7 @@ public:
     * \param thread Optional thread number, otherwise use best guess.
     */
    static
-   void setNullState(int thread=omp::get_global_thread_num()) {
+   void setNullState(int thread=Profile::guess_core()) {
       setState("0", thread);
    }
 
@@ -102,7 +107,7 @@ public:
     */
    static
    void addEvent(char const* type, char const*val,
-         int thread=omp::get_global_thread_num()) {
+         int thread=Profile::guess_core()) {
 #if defined(PROFILE) && defined(HAVE_GTG)
       ::addEvent(now(), type, get_thread_name(thread), val);
 #endif
@@ -123,33 +128,29 @@ public:
       addContType("CT_NODE", "0", "Node");
       addContType("CT_THREAD", "CT_NODE", "Thread");
       addContType("CT_GPU", "CT_NODE", "GPU");
-#if HAVE_HWLOC
-      spral::hw_topology::HwlocTopology topology;
-      int node_idx=0;
+      int nnodes = 0;
+      spral::hw_topology::NumaRegion* nodes;
+      spral_hw_topology_guess(&nnodes, &nodes);
       int core_idx=0;
-      for(auto& node: topology.get_numa_nodes()) {
+      for(int node=0; node<nnodes; ++node) {
          char node_id[100], node_name[100];
-         snprintf(node_id, 100, "C_Node%d", node_idx);
-         snprintf(node_name, 100, "Node %d", node_idx);
+         snprintf(node_id, 100, "C_Node%d", node);
+         snprintf(node_name, 100, "Node %d", node);
          addContainer(0.0, node_id, "CT_NODE", "0", node_name, "0");
-         node_idx++;
-         for(int i=0; i<topology.count_cores(node); ++i) {
+         for(int i=0; i<nodes[node].nproc; ++i) {
+            char core_name[100];
+            snprintf(core_name, 100, "Core %d", core_idx);
             addContainer(0.0, get_thread_name(core_idx), "CT_THREAD", node_id,
-                  get_thread_name(core_idx), "0");
+                  core_name, "0");
             core_idx++;
          }
-         for(int gpu: topology.get_gpus(node)) {
+         for(int gpu=0; gpu<nodes[node].ngpu; ++gpu) {
             char gpu_name[100], gpu_id[100];
-            snprintf(gpu_id, 100, "C_GPU%d", gpu);
-            snprintf(gpu_name, 100, "GPU %d", gpu);
+            snprintf(gpu_id, 100, "C_GPU%d", nodes[node].gpus[gpu]);
+            snprintf(gpu_name, 100, "GPU %d", nodes[node].gpus[gpu]);
             addContainer(0.0, gpu_id, "CT_GPU", node_id, gpu_name, "0");
          }
       }
-#else
-      addContainer(0.0, "C_Node0", "CT_NODE", "0", "Node 0", "0");
-      for(int i=0; i<omp_get_max_threads(); ++i)
-         addContainer(0.0, get_thread_name(i), "CT_THREAD", "C_Node0", get_thread_name(i), "0");
-#endif
       // Define states (i.e. task types)
       // GTG_WHITE, GTG_BLACK, GTG_DARKGREY,
       // GTG_LIGHTBROWN, GTG_LIGHTGREY, GTG_DARKBLUE, GTG_DARKPINK
@@ -224,6 +225,16 @@ private:
    static
    double tdiff(struct timespec t1, struct timespec t2) {
       return (t2.tv_sec - t1.tv_sec) + 1e-9*(t2.tv_nsec - t1.tv_nsec);
+   }
+
+   /** \brief Return best guess at processor id. */
+   static
+   int guess_core() {
+#ifdef HAVE_SCHED_GETCPU
+      return sched_getcpu();
+#else /* HAVE_SCHED_GETCPU */
+      return omp::get_global_thread_num()
+#endif /* HAVE_SCHED_GETCPU */
    }
 
    static struct timespec tstart; //< The time at end of Profile::init().
