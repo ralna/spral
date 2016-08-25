@@ -67,12 +67,12 @@ public:
    }
 
    /** \brief Return number of cores associated to object. */
-   int count_cores(hwloc_obj_t const& obj) {
+   int count_cores(hwloc_obj_t const& obj) const {
       return count_type(obj, HWLOC_OBJ_CORE);
    }
 
    /** \brief Return list of gpu indices associated to object. */
-   std::vector<int> get_gpus(hwloc_obj_t const& obj) {
+   std::vector<int> get_gpus(hwloc_obj_t const& obj) const {
       std::vector<int> gpus;
 #ifdef HAVE_NVCC
       int ngpu;
@@ -97,7 +97,7 @@ public:
    }
 
 private:
-   int count_type(hwloc_obj_t const& obj, hwloc_obj_type_t type) {
+   int count_type(hwloc_obj_t const& obj, hwloc_obj_type_t type) const {
       if(obj->type == type) return 1;
       int count = 0;
       for(unsigned int i=0; i<obj->arity; ++i)

@@ -20,6 +20,7 @@ extern "C" {
 #include <time.h>
 #endif
 
+#include "hw_topology/hwloc_wrapper.hxx"
 #include "omp.hxx"
 
 namespace spral { namespace ssids { namespace cpu {
@@ -121,9 +122,34 @@ public:
       // Define containers (i.e. nodes/threads)
       addContType("CT_NODE", "0", "Node");
       addContType("CT_THREAD", "CT_NODE", "Thread");
+      addContType("CT_GPU", "CT_NODE", "GPU");
+#if HAVE_HWLOC
+      spral::hw_topology::HwlocTopology topology;
+      int node_idx=0;
+      int core_idx=0;
+      for(auto& node: topology.get_numa_nodes()) {
+         char node_id[100], node_name[100];
+         snprintf(node_id, 100, "C_Node%d", node_idx);
+         snprintf(node_name, 100, "Node %d", node_idx);
+         addContainer(0.0, node_id, "CT_NODE", "0", node_name, "0");
+         node_idx++;
+         for(int i=0; i<topology.count_cores(node); ++i) {
+            addContainer(0.0, get_thread_name(core_idx), "CT_THREAD", node_id,
+                  get_thread_name(core_idx), "0");
+            core_idx++;
+         }
+         for(int gpu: topology.get_gpus(node)) {
+            char gpu_name[100], gpu_id[100];
+            snprintf(gpu_id, 100, "C_GPU%d", gpu);
+            snprintf(gpu_name, 100, "GPU %d", gpu);
+            addContainer(0.0, gpu_id, "CT_GPU", node_id, gpu_name, "0");
+         }
+      }
+#else
       addContainer(0.0, "C_Node0", "CT_NODE", "0", "Node 0", "0");
       for(int i=0; i<omp_get_max_threads(); ++i)
          addContainer(0.0, get_thread_name(i), "CT_THREAD", "C_Node0", get_thread_name(i), "0");
+#endif
       // Define states (i.e. task types)
       // GTG_WHITE, GTG_BLACK, GTG_DARKGREY,
       // GTG_LIGHTBROWN, GTG_LIGHTGREY, GTG_DARKBLUE, GTG_DARKPINK
