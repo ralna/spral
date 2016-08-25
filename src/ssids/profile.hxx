@@ -91,6 +91,19 @@ public:
    }
 
    /**
+    * \brief Set a particular state (e.g. in a particular task)
+    * \param name Name of state.
+    * \param container Container on which to set state
+    */
+   static
+   void setState(char const* container, char const* type, char const* name) {
+#if defined(PROFILE) && defined(HAVE_GTG)
+      double t = Profile::now();
+      ::setState(t, type, container, name);
+#endif
+   }
+
+   /**
     * \brief Set state as "0", signifying not executing.
     * \param thread Optional thread number, otherwise use best guess.
     */
@@ -155,6 +168,7 @@ public:
       // GTG_WHITE, GTG_BLACK, GTG_DARKGREY,
       // GTG_LIGHTBROWN, GTG_LIGHTGREY, GTG_DARKBLUE, GTG_DARKPINK
       // GTG_LIGHTPINK
+      // CPU tasks
       addStateType("ST_TASK", "CT_THREAD", "Task");
       addEntityValue("TA_SUBTREE", "ST_TASK", "Subtree", GTG_RED);
       addEntityValue("TA_ASSEMBLE", "ST_TASK", "Assemble", GTG_GREEN);
@@ -172,6 +186,9 @@ public:
       addEntityValue("TA_ASM_POST", "ST_TASK", "Assembly Post", GTG_MAUVE);
       addEntityValue("TA_MISC1", "ST_TASK", "Misc 1", GTG_KAKI);
       addEntityValue("TA_MISC2", "ST_TASK", "Misc 2", GTG_REDBLOOD);
+      // GPU tasks
+      addStateType("ST_GPU_TASK", "CT_GPU", "GPU exec");
+      addEntityValue("GT_FACTOR", "ST_GPU_TASK", "Factor", GTG_RED);
       // Define events
       addEventType("EV_AGG_FAIL", "CT_THREAD", "Aggressive pivot fail");
       // Initialise start time

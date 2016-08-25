@@ -464,6 +464,7 @@ src/ssids/gpu/factor.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
                                 src/ssids/alloc.$(OBJEXT) \
 										  src/ssids/contrib.$(OBJEXT) \
                                 src/ssids/datatypes.$(OBJEXT) \
+                                src/ssids/profile_iface.$(OBJEXT) \
                                 src/ssids/gpu/alloc.$(OBJEXT) \
                                 src/ssids/gpu/datatypes.$(OBJEXT) \
                                 src/ssids/gpu/interfaces.$(OBJEXT) \

@@ -9,6 +9,7 @@ module spral_ssids_gpu_factor
    use spral_ssids_alloc, only : smalloc
    use spral_ssids_contrib, only : contrib_type
    use spral_ssids_datatypes
+   use spral_ssids_profile, only : profile_set_state
    use spral_ssids_gpu_alloc, only : cuda_stack_alloc_type, custack_alloc, &
       custack_init, custack_finalize, custack_free
    use spral_ssids_gpu_datatypes
@@ -84,6 +85,9 @@ subroutine parfactor(pos_def, child_ptr, child_list, n, nptr, gpu_nlist,      &
 
    type(cuda_settings_type) :: user_settings
 
+   ! Start recording profile
+   call profile_set_state("C_GPU0", "ST_GPU_TASK", "GT_FACTOR")
+
    ! Set GPU device settings as we wish
    call push_ssids_cuda_settings(user_settings, stats%cuda_error)
    if(stats%cuda_error.ne.0) goto 200
@@ -129,6 +133,9 @@ subroutine parfactor(pos_def, child_ptr, child_list, n, nptr, gpu_nlist,      &
    ! Restore user GPU device settings
    call push_ssids_cuda_settings(user_settings, stats%cuda_error)
    if(stats%cuda_error.ne.0) goto 200
+
+   ! Stop recording profile
+   call profile_set_state("C_GPU0", "ST_GPU_TASK", "0")
 
    return
 
