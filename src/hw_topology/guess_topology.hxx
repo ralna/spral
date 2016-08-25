@@ -18,5 +18,9 @@ struct NumaRegion {
    int *gpus;
 };
 
+extern "C"
+void spral_hw_topology_guess(int* nregions, NumaRegion** regions);
+extern "C"
+void spral_hw_topology_free(int nregions, NumaRegion* regions);
 
 }} /* namespace spral::hw_topology */
