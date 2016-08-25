@@ -287,6 +287,17 @@ contains
          case("--disable-gpu")
             options%use_gpu = .false.
             print *, 'Disabling GPUs'
+         case("--small-subtree-threshold")
+            call get_command_argument(argnum, argval)
+            argnum = argnum + 1
+            read( argval, * ) options%cpu_small_subtree_threshold
+            print *, 'CPU Small subtree treshold = ', &
+               options%cpu_small_subtree_threshold
+         case("--nb")
+            call get_command_argument(argnum, argval)
+            argnum = argnum + 1
+            read( argval, * ) options%cpu_task_block_size
+            print *, 'CPU block size = ', options%cpu_task_block_size
          case default
             print *, "Unrecognised command line argument: ", argval
             stop
