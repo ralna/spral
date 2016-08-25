@@ -19,11 +19,11 @@
 
 #include <omp.h>
 
+#include "ssids/profile.hxx"
 #include "ssids/cpu/AlignedAllocator.hxx"
 #include "ssids/cpu/BlockPool.hxx"
 #include "ssids/cpu/BuddyAllocator.hxx"
 #include "ssids/cpu/cpu_iface.hxx"
-#include "ssids/cpu/profile.hxx"
 #include "ssids/cpu/Workspace.hxx"
 #include "ssids/cpu/kernels/block_ldlt.hxx"
 #include "ssids/cpu/kernels/calc_ld.hxx"

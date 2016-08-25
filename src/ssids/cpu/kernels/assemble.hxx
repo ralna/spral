@@ -10,8 +10,8 @@
 #include<vector>
 
 #include "ssids/contrib.h"
+#include "ssids/profile.hxx"
 #include "ssids/cpu/NumericNode.hxx"
-#include "ssids/cpu/profile.hxx"
 #include "ssids/cpu/SymbolicNode.hxx"
 #include "ssids/cpu/Workspace.hxx"
 

@@ -5,11 +5,11 @@
  */
 #pragma once
 
+#include "ssids/profile.hxx"
 #include "ssids/cpu/cpu_iface.hxx"
 #include "ssids/cpu/factor.hxx"
 #include "ssids/cpu/BuddyAllocator.hxx"
 #include "ssids/cpu/NumericNode.hxx"
-#include "ssids/cpu/profile.hxx"
 #include "ssids/cpu/SymbolicSubtree.hxx"
 #include "ssids/cpu/SmallLeafNumericSubtree.hxx"
 

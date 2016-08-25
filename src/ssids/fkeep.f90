@@ -13,7 +13,7 @@ module spral_ssids_fkeep
    use spral_ssids_inform, only : ssids_inform
    use spral_ssids_subtree, only : numeric_subtree_base
    use spral_ssids_cpu_subtree, only : cpu_numeric_subtree
-   use spral_ssids_cpu_profile, only : cpu_profile_begin, cpu_profile_end
+   use spral_ssids_profile, only : profile_begin, profile_end
    implicit none
 
    private
@@ -72,7 +72,7 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
    type(contrib_type), dimension(:), allocatable :: child_contrib
 
    ! Begin profile trace (noop if not enabled)
-   call cpu_profile_begin()
+   call profile_begin()
 
    ! Allocate space for subtrees
    allocate(fkeep%subtree(akeep%nparts), stat=inform%stat)
@@ -148,7 +148,7 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
    end if
 
    ! End profile trace (noop if not enabled)
-   call cpu_profile_end()
+   call profile_end()
 
    return
 

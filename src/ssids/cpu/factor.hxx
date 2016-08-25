@@ -12,8 +12,8 @@
 #include <stdexcept>
 #include <omp.h>
 /* SPRAL headers */
+#include "ssids/profile.hxx"
 #include "ssids/cpu/cpu_iface.hxx"
-#include "ssids/cpu/profile.hxx"
 #include "ssids/cpu/SymbolicNode.hxx"
 #include "ssids/cpu/Workspace.hxx"
 #include "ssids/cpu/kernels/assemble.hxx"

@@ -28,7 +28,7 @@ extern "C" {
 #include "hw_topology/guess_topology.hxx"
 #include "omp.hxx"
 
-namespace spral { namespace ssids { namespace cpu {
+namespace spral { namespace ssids {
 
 /**
  * \brief Provide easy to use wrapper around GTG to record execution traces.
@@ -242,4 +242,4 @@ private:
 };
 
 
-}}} /* namespace spral::ssids::cpu */
+}} /* namespace spral::ssids */
