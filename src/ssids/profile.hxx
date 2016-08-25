@@ -221,7 +221,6 @@ public:
    }
 
 private:
-#ifdef PROFILE
    /** \brief Convert thread index to character string */
    static
    char const* get_thread_name(int thread) {
@@ -254,8 +253,9 @@ private:
 #endif /* HAVE_SCHED_GETCPU */
    }
 
+#ifdef PROFILE
    static struct timespec tstart; //< The time at end of Profile::init().
-#endif
+#endif /* PROFILE */
 };
 
 
