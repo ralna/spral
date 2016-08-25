@@ -18,7 +18,8 @@ module spral_ssids_datatypes
    real(wp), parameter, public :: one = 1.0_wp
    real(wp), parameter, public :: zero = 0.0_wp
 
-   integer, parameter, public :: nemin_default = 8 ! node amalgamation parameter
+   integer, parameter, public :: nemin_default = 32 ! node amalgamation
+      ! parameter
 
    ! Success flag
    integer, parameter, public :: SSIDS_SUCCESS                 = 0
@@ -247,8 +248,8 @@ module spral_ssids_datatypes
       !
       ! New and undocumented - FIXME decide whether to document before release
       !
-      integer :: cpu_small_subtree_threshold = 100**3 ! Flops below which we
-         ! treat a subtree as small and use the single core kernel
+      integer(long) :: cpu_small_subtree_threshold = 4*10**6 ! Flops below
+         ! which we treat a subtree as small and use the single core kernel
       integer :: cpu_task_block_size = 256 ! block size to use for task
          ! generation on larger nodes
       integer(long) :: min_gpu_work = 10**10_long ! Only assign subtree to GPU
