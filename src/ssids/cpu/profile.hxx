@@ -24,14 +24,39 @@ extern "C" {
 
 namespace spral { namespace ssids { namespace cpu {
 
+/**
+ * \brief Provide easy to use wrapper around GTG to record execution traces.
+ *
+ * Whilst GTG nicely wraps the file format, this class also builds in knowledge
+ * of the SSIDS application (e.g. what tasks we have) and handles timing and
+ * topology as well.
+ *
+ * \note If PROFILE is not defined (by ./configure --enable-profile) most
+ *       of these calls are no-ops.
+ */
 class Profile {
 public:
+   /**
+    * \brief Represents a single Task that begins upon constructions and ends
+    *        when done() is called.
+    */
    class Task {
    public:
+      /**
+       * \brief Constructor. Starts task timer.
+       *
+       * \note Task state change not acutally written until done() is called.
+       *
+       * \param name Predefined name of task, as setup in Profile::init().
+       * \param thread Optional thread number, otherwise use best guess.
+       */
       Task(char const* name, int thread=omp::get_global_thread_num())
       : name(name), thread(thread), t1(Profile::now())
       {}
 
+      /**
+       * \brief Stop task timer and write event out to profile.
+       */
       void done() {
 #if defined(PROFILE) && defined(HAVE_GTG)
          double t2 = Profile::now();
@@ -41,11 +66,16 @@ public:
       }
 
    private:
-      char const* name;
-      int thread;
-      double t1;
+      char const* name; //< Name of task, one defined in Profile::init().
+      int thread; //< Thread of task.
+      double t1; //< Start time of task.
    };
 
+   /**
+    * \brief Set a particular state (e.g. in a particular task)
+    * \param name Name of state.
+    * \param thread Optional thread number, otherwise use best guess.
+    */
    static
    void setState(char const* name, int thread=omp::get_global_thread_num()) {
 #if defined(PROFILE) && defined(HAVE_GTG)
@@ -54,11 +84,21 @@ public:
 #endif
    }
 
+   /**
+    * \brief Set state as "0", signifying not executing.
+    * \param thread Optional thread number, otherwise use best guess.
+    */
    static
    void setNullState(int thread=omp::get_global_thread_num()) {
       setState("0", thread);
    }
 
+   /**
+    * \brief Add an event at current time.
+    * \param type Type of event, one of those predefined in Profile::init().
+    * \param val A value to associated with the event ie specific description.
+    * \param thread Optional thread number, otherwise use best guess.
+    */
    static
    void addEvent(char const* type, char const*val,
          int thread=omp::get_global_thread_num()) {
@@ -67,6 +107,11 @@ public:
 #endif
    };
 
+   /**
+    * \brief Open trace file, initialise topoology and define states and events.
+    *
+    * \note Times are all measured from the end of this subroutine.
+    */
    static
    void init(void) {
 #if defined(PROFILE) && defined(HAVE_GTG)
@@ -107,6 +152,9 @@ public:
 #endif
    }
 
+   /**
+    * \brief Close trace file.
+    */
    static
    void end(void) {
 #if defined(PROFILE) && defined(HAVE_GTG)
@@ -114,6 +162,9 @@ public:
 #endif
    }
 
+   /**
+    * \brief Return time since end of call to Profile::init().
+    */
    static
    double now() {
 #ifdef PROFILE
@@ -127,7 +178,7 @@ public:
 
 private:
 #ifdef PROFILE
-   static struct timespec tstart;
+   /** \brief Convert thread index to character string */
    static
    char const* get_thread_name(int thread) {
       char const* thread_name[] = {
@@ -142,10 +193,14 @@ private:
       };
       return thread_name[thread];
    }
+
+   /** \brief Return difference in seconds between t1 and t2. */
    static
    double tdiff(struct timespec t1, struct timespec t2) {
       return (t2.tv_sec - t1.tv_sec) + 1e-9*(t2.tv_nsec - t1.tv_nsec);
    }
+
+   static struct timespec tstart; //< The time at end of Profile::init().
 #endif
 };
 
