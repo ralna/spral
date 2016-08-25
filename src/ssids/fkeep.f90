@@ -66,8 +66,8 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
    type(ssids_options), intent(in) :: options
    type(ssids_inform), intent(inout) :: inform
 
-   integer :: i, numa_region, exec_loc
-   integer :: total_threads
+   integer :: i, numa_region, exec_loc, my_loc
+   integer :: total_threads, max_gpus, to_launch
    logical :: all_region
    type(contrib_type), dimension(:), allocatable :: child_contrib
 
@@ -78,6 +78,14 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
    allocate(fkeep%subtree(akeep%nparts), stat=inform%stat)
    if(inform%stat.ne.0) goto 100
 
+   ! Determine resources
+   total_threads = 0
+   max_gpus = 0
+   do i = 1, size(akeep%topology)
+      total_threads = total_threads + akeep%topology(i)%nproc
+      max_gpus = max(max_gpus, size(akeep%topology(i)%gpus))
+   end do
+
    ! Call subtree factor routines
    allocate(child_contrib(akeep%nparts), stat=inform%stat)
    if(inform%stat.ne.0) goto 100
@@ -85,17 +93,21 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
    ! of subtrees.
    ! FIXME: do we not want to have within-node parallelism at a higher level?
    all_region = .false.
-!$omp parallel proc_bind(spread) num_threads(size(akeep%topology)) &
-!$omp    default(none) private(i, exec_loc, numa_region) &
+   to_launch = size(akeep%topology)*(1+max_gpus)
+!$omp parallel proc_bind(spread) num_threads(to_launch) &
+!$omp    default(none) private(i, exec_loc, numa_region, my_loc) &
 !$omp    shared(akeep, fkeep, val, options, inform, child_contrib, all_region) &
-!$omp    if(size(akeep%topology).gt.1)
-   numa_region = omp_get_thread_num()
-   call omp_set_num_threads(akeep%topology(numa_region+1)%nproc)
+!$omp    if(to_launch.gt.1)
+   numa_region = mod(omp_get_thread_num(), size(akeep%topology)) + 1
+   my_loc = omp_get_thread_num() + 1
+   if(omp_get_thread_num() < size(akeep%topology)) then
+      ! CPU, control number of inner threads (not needed for gpu)
+      call omp_set_num_threads(akeep%topology(numa_region)%nproc)
+   endif
    do i = 1, akeep%nparts
       exec_loc = akeep%subtree(i)%exec_loc
-      if(numa_region.eq.0 .and. exec_loc.eq.-1) all_region = .true.
-      if(exec_loc.eq.-1) cycle ! can't rely on being negative if mod is 1
-      if(mod(exec_loc,size(akeep%topology)).ne.numa_region) cycle
+      if(numa_region.eq.1 .and. exec_loc.eq.-1) all_region = .true.
+      if(exec_loc.ne.my_loc) cycle
       if(allocated(fkeep%scaling)) then
          fkeep%subtree(i)%ptr => akeep%subtree(i)%ptr%factor( &
             fkeep%pos_def, val, &
@@ -118,10 +130,6 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
 
    if(all_region) then
       ! At least some all region subtrees exist
-      total_threads = 0
-      do i = 1, size(akeep%topology)
-         total_threads = total_threads + akeep%topology(i)%nproc
-      end do
       call omp_set_num_threads(total_threads)
       do i = 1, akeep%nparts
          exec_loc = akeep%subtree(i)%exec_loc

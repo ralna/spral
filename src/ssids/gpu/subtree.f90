@@ -17,6 +17,7 @@ module spral_ssids_gpu_subtree
    public :: gpu_numeric_subtree, gpu_free_contrib
 
    type, extends(symbolic_subtree_base) :: gpu_symbolic_subtree
+      integer :: device
       integer :: n
       integer :: sa
       integer :: en
@@ -70,9 +71,10 @@ module spral_ssids_gpu_subtree
 
 contains
 
-function construct_gpu_symbolic_subtree(n, sa, en, sptr, sparent, rptr, &
-      rlist, nptr, nlist, options) result(this)
+function construct_gpu_symbolic_subtree(device, n, sa, en, sptr, sparent, &
+      rptr, rlist, nptr, nlist, options) result(this)
    class(gpu_symbolic_subtree), pointer :: this
+   integer, intent(in) :: device
    integer, intent(in) :: n
    integer, intent(in) :: sa
    integer, intent(in) :: en
@@ -87,6 +89,14 @@ function construct_gpu_symbolic_subtree(n, sa, en, sptr, sparent, rptr, &
    integer :: node
    integer :: cuda_error, st
 
+   ! Specify which device we're using
+   cuda_error = cudaSetDevice(device)
+   if(cuda_error .ne. 0) then
+      print *, "CUDA error on copy"
+      nullify(this)
+      return
+   endif
+
    ! Allocate output
    allocate(this, stat=st)
    if(st.ne.0) then
@@ -96,6 +106,7 @@ function construct_gpu_symbolic_subtree(n, sa, en, sptr, sparent, rptr, &
 
    ! Initialise members
    !FIXME: stat
+   this%device = device
    this%n = n
    this%sa = sa
    this%en = en-1
@@ -308,6 +319,10 @@ function factor(this, posdef, aval, child_contrib, options, inform, scaling)
 
    integer :: cuda_error, st
 
+   ! Specify which device we're using
+   cuda_error = cudaSetDevice(this%device)
+   if(cuda_error.ne.0) goto 200
+
    ! Leave output as null until successful exit
    nullify(factor)
 
@@ -432,9 +447,11 @@ end function factor
 subroutine numeric_final(this)
    type(gpu_numeric_subtree) :: this
 
-   integer :: flag
+   integer :: flag, cuda_error
 
    ! FIXME: error handling?
+
+   cuda_error = cudaSetDevice(this%symbolic%device)
 
    ! Skip if nothing intialized
    if (.not.allocated(this%nodes)) return
@@ -482,6 +499,8 @@ function get_contrib(this)
 
    integer :: cuda_error
 
+   cuda_error = cudaSetDevice(this%symbolic%device)
+
    get_contrib = this%contrib
    get_contrib%owner = 1 ! gpu
 
@@ -513,6 +532,10 @@ subroutine solve_fwd(this, nrhs, x, ldx, inform)
 
    integer :: r
    integer :: cuda_error
+
+   ! Specify which device we're using
+   cuda_error = cudaSetDevice(this%symbolic%device)
+   if(cuda_error.ne.0) goto 200
 
    ! NB: gpu solve doesn't support nrhs > 1, so just loop instead
    do r = 0, nrhs-1
@@ -548,6 +571,10 @@ subroutine solve_diag(this, nrhs, x, ldx, inform)
    integer :: r
    integer :: cuda_error
 
+   ! Specify which device we're using
+   cuda_error = cudaSetDevice(this%symbolic%device)
+   if(cuda_error.ne.0) goto 200
+
    ! NB: gpu solve doesn't support nrhs > 1, so just loop instead
    do r = 0, nrhs-1
       call d_solve_gpu(this%symbolic%nnodes, this%symbolic%sptr,  &
@@ -578,6 +605,10 @@ subroutine solve_diag_bwd(this, nrhs, x, ldx, inform)
 
    integer :: r
    integer :: cuda_error
+
+   ! Specify which device we're using
+   cuda_error = cudaSetDevice(this%symbolic%device)
+   if(cuda_error.ne.0) goto 200
 
    ! NB: gpu solve doesn't support nrhs > 1, so just loop instead
    do r = 0, nrhs-1
@@ -610,6 +641,10 @@ subroutine solve_bwd(this, nrhs, x, ldx, inform)
    integer :: r
    integer :: cuda_error
 
+   ! Specify which device we're using
+   cuda_error = cudaSetDevice(this%symbolic%device)
+   if(cuda_error.ne.0) goto 200
+
    ! NB: gpu solve doesn't support nrhs > 1, so just loop instead
    do r = 0, nrhs-1
       call bwd_solve_gpu(SSIDS_SOLVE_JOB_BWD, this%posdef, this%symbolic%n,   &
@@ -640,8 +675,13 @@ subroutine enquire_posdef(this, d)
    integer :: j
    integer :: node
    integer :: piv
+   integer :: cuda_error
 
    type(node_type), pointer :: nptr
+
+   ! Specify which device we're using
+   cuda_error = cudaSetDevice(this%symbolic%device)
+   ! FIXME: error handling
 
    !if(.not. this%host_factors) then
    !   ! FIXME: Not implemented enquire_posdef for GPU without host factors yet
@@ -682,6 +722,9 @@ subroutine enquire_indef(this, piv_order, d)
    real(wp) :: real_dummy
 
    type(node_type), pointer :: nptr
+
+   cuda_error = cudaSetDevice(this%symbolic%device)
+   ! FIXME: error handling
 
    if(this%host_factors) then
       ! Call CPU version instead
@@ -844,6 +887,9 @@ subroutine alter(this, d)
    real(wp) :: real_dummy
 
    type(node_type), pointer :: nptr
+
+   cuda_error = cudaSetDevice(this%symbolic%device)
+   ! FIXME: error handling
 
    if(this%host_factors) &
       call alter_gpu_cpu(this, d)

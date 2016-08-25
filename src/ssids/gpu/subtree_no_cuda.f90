@@ -32,9 +32,10 @@ module spral_ssids_gpu_subtree
 
 contains
 
-function construct_gpu_symbolic_subtree(n, sa, en, sptr, sparent, rptr, &
-      rlist, nptr, nlist, options) result(this)
+function construct_gpu_symbolic_subtree(device, n, sa, en, sptr, sparent, &
+      rptr, rlist, nptr, nlist, options) result(this)
    class(gpu_symbolic_subtree), pointer :: this
+   integer, intent(in) :: device
    integer, intent(in) :: n
    integer, intent(in) :: sa
    integer, intent(in) :: en

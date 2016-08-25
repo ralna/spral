@@ -723,7 +723,8 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
    character(50)  :: context ! Procedure name (used when printing).
    integer, dimension(:), allocatable :: contrib_dest, exec_loc, level
 
-   integer :: numa_region
+   integer :: numa_region, device, my_loc
+   integer :: max_gpus, to_launch
    integer :: nemin, flag
    integer :: blkm, blkn
    integer :: i, j
@@ -812,17 +813,25 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
       deallocate(akeep%subtree)
    endif
    allocate(akeep%subtree(akeep%nparts))
+
    ! Split into one thread per numa region for setup (assume mem is first touch)
-!$omp parallel proc_bind(spread) num_threads(size(akeep%topology)) &
-!$omp    default(shared) private(i, numa_region) if(size(akeep%topology).gt.1)
-   numa_region = omp_get_thread_num()
+   max_gpus = 0
+   do i = 1, size(akeep%topology)
+      max_gpus = max(max_gpus, size(akeep%topology(i)%gpus))
+   end do
+   to_launch = size(akeep%topology)*(1+max_gpus)
+!$omp parallel proc_bind(spread) num_threads(to_launch) &
+!$omp    default(shared) private(i, numa_region, my_loc, device) &
+!$omp    if(to_launch.gt.1)
+   numa_region = mod(omp_get_thread_num(), size(akeep%topology)) + 1
+   my_loc = omp_get_thread_num() + 1
    do i = 1, akeep%nparts
       ! only initialize subtree if this is the correct region: note that
       ! an "all region" subtree with location -1 is initialised by region 0
-      if(mod(exec_loc(i), size(akeep%topology)).ne.numa_region .and. &
-         .not.(exec_loc(i).eq.-1 .and. numa_region.eq.0)) cycle
+      if(exec_loc(i).ne.my_loc .and. &
+         .not.(exec_loc(i).eq.-1 .and. my_loc.eq.1)) cycle
       akeep%subtree(i)%exec_loc = exec_loc(i)
-      if(exec_loc(i).le.size(akeep%topology)) then
+      if(my_loc.le.size(akeep%topology)) then
          ! CPU
          !print *, numa_region, "init cpu subtree ", i, akeep%part(i), &
          !   akeep%part(i+1)-1
@@ -833,11 +842,14 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
             options)
       else
          ! GPU
+         device = (my_loc-1) / size(akeep%topology)
+         device = akeep%topology(numa_region)%gpus(device)
          !print *, numa_region, "init gpu subtree ", i, akeep%part(i), &
-         !   akeep%part(i+1)-1
-         akeep%subtree(i)%ptr => construct_gpu_symbolic_subtree(akeep%n, &
-            akeep%part(i), akeep%part(i+1), akeep%sptr, akeep%sparent, &
-            akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist, options)
+         !   akeep%part(i+1)-1, "device", device
+         akeep%subtree(i)%ptr => construct_gpu_symbolic_subtree(device, &
+            akeep%n, akeep%part(i), akeep%part(i+1), akeep%sptr, &
+            akeep%sparent, akeep%rptr, akeep%rlist, akeep%nptr, akeep%nlist, &
+            options)
       end if
    end do
 !$omp end parallel
