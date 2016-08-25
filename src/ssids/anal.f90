@@ -408,7 +408,7 @@ subroutine find_subtree_partition(nnodes, sptr, sparent, rptr, options, &
    inform%nparts = nparts
    inform%gpu_flops = 0
    do i = 1, nparts
-      if(exec_loc(i).ge.size(topology)) &
+      if(exec_loc(i).gt.size(topology)) &
          inform%gpu_flops = inform%gpu_flops + flops(part(i+1)-1)
    end do
    inform%cpu_flops = flops(nnodes+1) - inform%gpu_flops
