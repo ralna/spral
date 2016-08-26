@@ -24,6 +24,8 @@ ThreadStats& ThreadStats::operator+=(ThreadStats const& other) {
    maxfront = std::max(maxfront, other.maxfront);
    not_first_pass += other.not_first_pass;
    not_second_pass += other.not_second_pass;
+
+   return *this;
 }
 
 }}} /* namespace spral::ssids::cpu */
