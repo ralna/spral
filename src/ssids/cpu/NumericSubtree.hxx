@@ -78,16 +78,13 @@ public:
       for(int i=0; i<num_threads; ++i)
          work.emplace_back(PAGE_SIZE);
 
-      #pragma omp parallel default(shared) proc_bind(close)
+      // Each node is depend(inout) on itself and depend(in) on its parent.
+      // Whilst this isn't really what's happening it does ensure our
+      // ordering is correct: each node cannot be scheduled until all its
+      // children are done, but its children to run in any order.
+      #pragma omp taskgroup
       {
-         // Each node is depend(inout) on itself and depend(in) on its parent.
-         // Whilst this isn't really what's happening it does ensure our
-         // ordering is correct: each node cannot be scheduled until all its
-         // children are done, but its children to run in any order.
-         #pragma omp taskgroup
-         {
          /* Loop over small leaf subtrees */
-         #pragma omp single
          for(unsigned int si=0; si<symb_.small_leafs_.size(); ++si) {
             auto* parent_lcol = &nodes_[symb_.small_leafs_[si].get_parent()];
             #pragma omp task default(none) \
@@ -116,7 +113,6 @@ public:
          }
 
          /* Loop over singleton nodes in order */
-         #pragma omp single
          for(int ni=0; ni<symb_.nnodes_; ++ni) {
             if(symb_[ni].insmallleaf) continue; // already handled
             auto* this_lcol = &nodes_[ni]; // for depend
@@ -157,16 +153,12 @@ public:
                #pragma omp cancel taskgroup
             }
          }
-         } // taskgroup
+      } // taskgroup
 
-         // Reduce thread_stats
-         #pragma omp single 
-         {
-            stats = ThreadStats(); // initialise
-            for(auto tstats : thread_stats)
-               stats += tstats;
-         }
-      }
+      // Reduce thread_stats
+      stats = ThreadStats(); // initialise
+      for(auto tstats : thread_stats)
+         stats += tstats;
 
       // Count stats
       // FIXME: Do this as we go along...

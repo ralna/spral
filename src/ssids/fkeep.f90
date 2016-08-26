@@ -96,10 +96,16 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
       ! CPU, control number of inner threads (not needed for gpu)
       call omp_set_num_threads(akeep%topology(numa_region)%nproc)
    endif
+   ! Split into threads for this NUMA region (unless we're running a GPU)
+!$omp parallel proc_bind(close) num_threads(numa_region) default(shared) &
+!$omp    if(my_loc.le.size(akeep%topology))
+!$omp single
    do i = 1, akeep%nparts
       exec_loc = akeep%subtree(i)%exec_loc
       if(numa_region.eq.1 .and. exec_loc.eq.-1) all_region = .true.
       if(exec_loc.ne.my_loc) cycle
+!$omp task default(shared) firstprivate(i, exec_loc) &
+!$omp    if(my_loc.le.size(akeep%topology))
       if(allocated(fkeep%scaling)) then
          fkeep%subtree(i)%ptr => akeep%subtree(i)%ptr%factor( &
             fkeep%pos_def, val, &
@@ -113,11 +119,17 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
             options, inform &
             )
       endif
-      if(akeep%contrib_idx(i).gt.akeep%nparts) cycle ! part is a root
-      child_contrib(akeep%contrib_idx(i)) = fkeep%subtree(i)%ptr%get_contrib()
-!$omp flush
-      child_contrib(akeep%contrib_idx(i))%ready = .true.
+      if(akeep%contrib_idx(i).le.akeep%nparts) then
+         ! There is a parent subtree to contribute to
+         child_contrib(akeep%contrib_idx(i)) = &
+            fkeep%subtree(i)%ptr%get_contrib()
+!$omp    flush
+         child_contrib(akeep%contrib_idx(i))%ready = .true.
+      endif
+!$omp end task
    end do
+!$omp end single
+!$omp end parallel
 !$omp end parallel
 
    if(all_region) then
