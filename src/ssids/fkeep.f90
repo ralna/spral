@@ -379,15 +379,13 @@ subroutine free_fkeep(fkeep, flag)
 
    flag = 0 ! Not used for basic SSIDS, just zet to zero
 
+   deallocate(fkeep%scaling, stat=st)
    if(allocated(fkeep%subtree)) then
       do i = 1, size(fkeep%subtree)
          if(associated(fkeep%subtree(i)%ptr)) deallocate(fkeep%subtree(i)%ptr)
       end do
       deallocate(fkeep%subtree)
    endif
-
-   deallocate(fkeep%scaling, stat=st)
-
 end subroutine free_fkeep
 
 end module spral_ssids_fkeep
