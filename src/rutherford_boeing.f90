@@ -1,4 +1,4 @@
-! COPYRIGHT (c) 2000,2010,2013 Science and Technology Facilities Council
+! COPYRIGHT (c) 2000,2010,2013,2016 Science and Technology Facilities Council
 ! Authors: Jonathan Hogg and Iain Duff
 !
 ! Based on modified versions of MC56 and HSL_MC56.
@@ -13,7 +13,8 @@ module spral_rutherford_boeing
 
    private
    public :: rb_peek, &        ! Peeks at the header of a RB file
-             rb_read           ! Reads a RB file
+             rb_read, &        ! Reads a RB file
+             rb_write          ! Writes a RB file
    public :: rb_reader_options ! Options that control what rb_read returns
 
    ! Possible values of control%format
@@ -58,6 +59,10 @@ module spral_rutherford_boeing
       integer  :: values = VALUES_FILE     ! As per file
    end type rb_reader_options
 
+   type rb_writer_options
+      character(len=20) :: val_format = "(3e24.16)"
+   end type rb_writer_options
+
    interface rb_peek
       module procedure rb_peek_file, rb_peek_unit
    end interface rb_peek
@@ -65,6 +70,10 @@ module spral_rutherford_boeing
    interface rb_read
       module procedure rb_read_double_int32, rb_read_double_int64
    end interface rb_read
+
+   interface rb_write
+      module procedure rb_write_double_int32, rb_write_double_int64
+   end interface rb_write
 contains
    !
    ! This subroutine reads the header information for a file.
@@ -632,6 +641,161 @@ contains
          info = ERROR_ALLOC
          goto 100
    end subroutine rb_read_double_int64
+
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   !> @brief Write a CSC matrix to the specified file
+   !> @param filename File to write to. If it already exists, it will be
+   !>        overwritten.
+   !> @param sym One of 's'ymmetric, 'u'nsymmetric, 'h'ermitian,
+   !>        'z' skew symmetric, 'r'ectangular.
+   !> @param m Number of rows in matrix.
+   !> @param n Number of columns in matrix.
+   !> @param ptr Column pointers for matrix. Column i has entries corresponding
+   !>        to row(ptr(i):ptr(i+1)-1) and val(ptr(i):ptr(i+1)-1).
+   !> @param row Row indices for matrix.
+   !> @param val Floating point values for matrix.
+   !> @param options User-specifyable options.
+   !> @param info Status on output, 0 for success.
+   subroutine rb_write_double_int32(filename, sym, m, n, ptr, row, val, &
+         options, inform)
+      character(len=*), intent(in) :: filename
+      character(len=1), intent(in) :: sym
+      integer, intent(in) :: m
+      integer, intent(in) :: n
+      integer, dimension(n+1), intent(in) :: ptr
+      integer, dimension(ptr(n+1)-1), intent(in) :: row
+      real(wp), dimension(ptr(n+1)-1), intent(in) :: val
+      type(rb_writer_options), intent(in) :: options
+      integer, intent(out) :: inform
+
+      integer(long), dimension(:), allocatable :: ptr64
+      integer :: st
+
+      ! Copy from 32-bit to 64-bit ptr array and call 64-bit version.
+      allocate(ptr64(n+1), stat=st)
+      if(st.ne.0) then
+         inform = ERROR_ALLOC
+         return
+      endif
+      ptr64(:) = ptr(:)
+      
+      call rb_write_double_int64(filename, sym, m, n, ptr64, row, val, &
+         options, inform)
+   end subroutine rb_write_double_int32
+
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   !> @brief Write a CSC matrix to the specified file
+   !> @param filename File to write to. If it already exists, it will be
+   !>        overwritten.
+   !> @param sym One of 's'ymmetric, 'u'nsymmetric, 'h'ermitian,
+   !>        'z' skew symmetric, 'r'ectangular.
+   !> @param m Number of rows in matrix.
+   !> @param n Number of columns in matrix.
+   !> @param ptr Column pointers for matrix. Column i has entries corresponding
+   !>        to row(ptr(i):ptr(i+1)-1) and val(ptr(i):ptr(i+1)-1).
+   !> @param row Row indices for matrix.
+   !> @param val Floating point values for matrix.
+   !> @param options User-specifyable options.
+   !> @param inform Status on output, 0 for success.
+   !> @param title Title to use in file, defaults to "Matrix"
+   !> @param id Matrix name/identifyer to use in file, defaults to "0"
+   subroutine rb_write_double_int64(filename, sym, m, n, ptr, row, val, &
+         options, inform, title, id)
+      character(len=*), intent(in) :: filename
+      character(len=1), intent(in) :: sym
+      integer, intent(in) :: m
+      integer, intent(in) :: n
+      integer(long), dimension(n+1), intent(in) :: ptr
+      integer, dimension(ptr(n+1)-1), intent(in) :: row
+      real(wp), dimension(ptr(n+1)-1), intent(in) :: val
+      type(rb_writer_options), intent(in) :: options
+      integer, intent(out) :: inform
+      character(len=72), optional, intent(in) :: title
+      character(len=8), optional, intent(in) :: id
+
+      character(len=3) :: type
+      integer :: i, iunit
+      integer(long) :: ptr_lines, row_lines, val_lines, total_lines
+      integer(long) :: max_ptr
+      integer :: max_row, ptr_prec, row_prec
+      integer :: ptr_per_line, row_per_line, val_per_line
+      character(len=16) :: ptr_format, row_format
+      character(len=72) :: the_title
+      character(len=8) :: the_id
+      integer :: st
+
+      ! Open file
+      open(file=filename, newunit=iunit, status='replace', iostat=st)
+      if(st.ne.0) then
+         inform = ERROR_BAD_FILE
+         return
+      endif
+
+      ! Determine formats
+      max_ptr = maxval(ptr(1:n+1))
+      ptr_prec = int(log10(real(max_ptr, wp)))+2
+      ptr_per_line = 80 / ptr_prec ! 80 character per line
+      ptr_format = create_format(ptr_per_line, ptr_prec)
+      max_row = maxval(row(1:ptr(n+1)-1))
+      row_prec = int(log10(real(max_row, wp)))+2
+      row_per_line = 80 / row_prec ! 80 character per line
+      row_format = create_format(row_per_line, row_prec)
+
+      ! Calculate lines
+      ! First find val_per_line
+      do i = 2, len(options%val_format)
+         if(options%val_format(i:i).eq.'e'.or.options%val_format(i:i).eq.'f') &
+            exit
+      end do
+      read(options%val_format(1:i-1), *) val_per_line
+      ptr_lines = (size(ptr)-1) / ptr_per_line + 1
+      row_lines = (size(row)-1) / row_per_line + 1
+      val_lines = (size(val)-1) / val_per_line + 1
+      total_lines = ptr_lines + row_lines + val_lines
+
+      ! Determine type string
+      type(1:1) = 'r' ! real
+      type(2:2) = sym
+      type(3:3) = 'a' ! assembled
+
+      ! Write header
+      the_title = "Matrix"
+      if(present(title)) the_title = title
+      the_id = "0"
+      if(present(id)) the_id = id
+      write(iunit, "(a72,a8)") the_title, the_id
+      write(iunit, "(i14, 1x, i13, 1x, i13, 1x, i13)") &
+         total_lines, ptr_lines, row_lines, val_lines
+      write(iunit, "(a3, 11x, i14, 1x, i13, 1x, i13, 1x, i13)") &
+         type, m, n, ptr(n+1)-1, 0 ! last entry is explicitly zero by RB spec
+      write(iunit, "(a16, a16, a20)") &
+         ptr_format, row_format, options%val_format
+
+      ! Write matrix
+      write(iunit, ptr_format) ptr(:)
+      write(iunit, row_format) row(:)
+      write(iunit, options%val_format) val(:)
+   end subroutine rb_write_double_int64
+
+   character(len=16) function create_format(per_line, prec)
+      integer, intent(in) :: per_line
+      integer, intent(in) :: prec
+
+      ! We assume inputs are both < 100
+      if(per_line < 10) then
+         if(prec < 10) then
+            write(create_format, "('(',i1,'i',i1,')')") per_line, prec
+         else ! prec >= 10
+            write(create_format, "('(',i1,'i',i2,')')") per_line, prec
+         endif
+      else ! per_line >= 10
+         if(prec < 10) then
+            write(create_format, "('(',i2,'i',i1,')')") per_line, prec
+         else ! prec >= 10
+            write(create_format, "('(',i2,'i',i2,')')") per_line, prec
+         endif
+      endif
+   end function create_format
 
    !
    ! This subroutine takes a matrix in CSC full format that is symmetric

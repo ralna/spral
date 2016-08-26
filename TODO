@@ -9,3 +9,4 @@
 * Sort out documentation
 * Parallel solve?
 * Add note that hwloc needs cuda support at compile time to work right for us?
+* Document rb_write and add C inteface
