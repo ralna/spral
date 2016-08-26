@@ -106,6 +106,8 @@ subroutine free_akeep(akeep, flag)
       end do
       deallocate(akeep%subtree, stat=st)
    endif
+   deallocate(akeep%contrib_ptr, stat=st)
+   deallocate(akeep%contrib_idx, stat=st)
    deallocate(akeep%invp, stat=st)
    deallocate(akeep%nlist, stat=st)
    deallocate(akeep%nptr, stat=st)
@@ -116,6 +118,7 @@ subroutine free_akeep(akeep, flag)
    deallocate(akeep%ptr, stat=st)
    deallocate(akeep%row, stat=st)
    deallocate(akeep%map, stat=st)
+   deallocate(akeep%scaling, stat=st)
    deallocate(akeep%topology, stat=st)
 end subroutine free_akeep
 

@@ -228,7 +228,6 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
 
    st = 0
    if (check) then
-      deallocate (akeep%ptr,stat=st)
       allocate (akeep%ptr(n+1),stat=st)
       if (st .ne. 0) go to 490
 
@@ -269,7 +268,6 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
    ! Otherwise, we check the supplied order.
    !
 
-   deallocate (akeep%invp,stat=st)
    allocate (akeep%invp(n),order2(n),ptr2(n+1),row2(2*nz),stat=st)
    if (st .ne. 0) go to 490
    if(options%ordering.eq.2) then
@@ -575,7 +573,6 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
    end if
 
    st = 0
-   deallocate (akeep%ptr,stat=st)
    allocate (akeep%ptr(n+1),stat=st)
    if (st .ne. 0) go to 490
 
@@ -613,7 +610,6 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
    ! here, before we expand the matrix structure.
    ! Otherwise, we must check the supplied order.
 
-   deallocate(akeep%invp, stat=st)
    allocate (akeep%invp(n),order2(n),ptr2(n+1),row2(2*nz),stat=st)
    if (st .ne. 0) go to 490
    if(options%ordering.eq.2) then

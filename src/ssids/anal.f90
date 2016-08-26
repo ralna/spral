@@ -364,9 +364,6 @@ subroutine find_subtree_partition(nnodes, sptr, sparent, rptr, options, &
    !print *, "exec_loc ", exec_loc(1:nparts)
 
    ! Figure out contribution blocks that are input to each part
-   ! FIXME: consolidate all these deallocation by just calling free() at start of anal???
-   deallocate(contrib_ptr, stat=st)
-   deallocate(contrib_idx, stat=st)
    allocate(contrib_ptr(nparts+3), contrib_idx(nparts), contrib_dest(nparts), &
       stat=st)
    if(st.ne.0) return
@@ -622,7 +619,7 @@ subroutine split_tree(nparts, part, size_order, is_child, sparent, flops, &
             if(st.ne.0) return
             temp(1:size(children)) = children(:)
             deallocate(children)
-            call MOVE_ALLOC(TEMP, CHILDREN)
+            call move_alloc(temp, children)
          endif
          children(nchild) = i
       endif
@@ -805,13 +802,6 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
    !   contrib_dest(1:akeep%contrib_ptr(akeep%nparts+1)-1)
 
    ! Construct symbolic subtrees
-   if(allocated(akeep%subtree)) then
-      do i = 1, size(akeep%subtree)
-         if(associated(akeep%subtree(i)%ptr)) &
-            deallocate(akeep%subtree(i)%ptr)
-      end do
-      deallocate(akeep%subtree)
-   endif
    allocate(akeep%subtree(akeep%nparts))
 
    ! Split into one thread per numa region for setup (assume mem is first touch)
