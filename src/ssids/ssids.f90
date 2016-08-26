@@ -198,11 +198,7 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
       akeep%nnodes = 0
       allocate(akeep%sptr(0), stat=st) ! used to check if analyse has been run
       if (st .ne. 0) go to 490
-      akeep%matrix_dup = 0
-      akeep%matrix_missing_diag = 0
-      akeep%matrix_outrange = 0
-      akeep%maxdepth = 0
-      akeep%num_sup = 0
+      akeep%inform = inform
       return
    end if
 
@@ -495,6 +491,7 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
       inform%cuda_error = free_flag
       akeep%flag = inform%flag
       call ssids_print_flag(inform,nout,context)
+      akeep%inform = inform
       return
    endif
    inform%flag = 0
@@ -538,6 +535,7 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
    if (n < 0 .or. ne < 0) then
       inform%flag = SSIDS_ERROR_A_N_OOR
       akeep%flag = inform%flag
+      akeep%inform = inform
       call ssids_print_flag(inform,nout,context)
       return
    end if
@@ -546,11 +544,7 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
       akeep%nnodes = 0
       allocate(akeep%sptr(0), stat=st) ! used to check if analyse has been run
       if (st .ne. 0) go to 490
-      akeep%matrix_dup = 0
-      akeep%matrix_missing_diag = 0
-      akeep%matrix_outrange = 0
-      akeep%maxdepth = 0
-      akeep%num_sup = 0
+      akeep%inform = inform
       return
    end if
 
@@ -559,6 +553,7 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
       inform%flag = SSIDS_ERROR_ORDER
       call ssids_print_flag(inform,nout,context)
       akeep%flag = inform%flag
+      akeep%inform = inform
       return
    end if
 
@@ -568,6 +563,7 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
         inform%flag = SSIDS_ERROR_VAL
         call ssids_print_flag(inform,nout,context)
         akeep%flag = inform%flag
+        akeep%inform = inform
         return
      end if
    end if
@@ -623,7 +619,9 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
          ! we have an error since user should have supplied the order
          inform%flag = SSIDS_ERROR_ORDER
          akeep%flag = inform%flag
+         akeep%inform = inform
          call ssids_print_flag(inform,nout,context)
+         akeep%inform = inform
          return
       end if
       call check_order(n,order,akeep%invp,akeep,options,inform)
@@ -659,11 +657,13 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
          inform%flag = SSIDS_ERROR_ALLOCATION
          call ssids_print_flag(inform,nout,context)
          akeep%flag = inform%flag
+         akeep%inform = inform
          return
       case default
          inform%flag = SSIDS_ERROR_UNKNOWN
          call ssids_print_flag(inform,nout,context)
          akeep%flag = inform%flag
+         akeep%inform = inform
          return
       end select
 
@@ -804,22 +804,17 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
       inform%flag = SSIDS_ERROR_CALL_SEQUENCE
       call ssids_print_flag(inform,nout,context)
       fkeep%flag = inform%flag
+      fkeep%inform = inform
       return
    end if
 
    ! Initialize inform output
-   inform%flag = SSIDS_SUCCESS
-   inform%matrix_dup = akeep%matrix_dup
-   inform%matrix_missing_diag = akeep%matrix_missing_diag
-   inform%matrix_outrange = akeep%matrix_outrange
-   inform%maxdepth = akeep%maxdepth
-   inform%num_sup = akeep%num_sup
+   inform = akeep%inform
    inform%maxfront = 0
    inform%num_neg = 0
    inform%num_delay = 0
    inform%num_factor = 0
    inform%num_flops = 0
-   inform%num_sup = akeep%nnodes
    inform%num_two = 0
    inform%stat = 0
 
@@ -832,6 +827,7 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
       inform%flag = SSIDS_SUCCESS
       inform%matrix_rank = 0
       fkeep%flag = inform%flag
+      fkeep%inform = inform
       return
    end if
 
@@ -856,6 +852,7 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
       if (inform%flag < 0) then
          call ssids_print_flag(inform,nout,context)
          fkeep%flag = inform%flag
+         fkeep%inform = inform
          return
       end if
       nz = akeep%ne
@@ -877,6 +874,7 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
       endif
       if(flag.ne.0) then
          inform%flag = SSIDS_ERROR_UNKNOWN
+         fkeep%inform = inform
          return
       endif
    endif
@@ -933,6 +931,7 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
          inform%flag = SSIDS_ERROR_SINGULAR
          call ssids_print_flag(inform,nout,context)
          fkeep%flag = inform%flag
+         fkeep%inform = inform
          return
       end select
       ! Permute scaling to correct order
@@ -980,6 +979,7 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
          inform%flag = SSIDS_ERROR_NO_SAVED_SCALING
          call ssids_print_flag(inform,nout,context)
          fkeep%flag = inform%flag
+         fkeep%inform = inform
          return
       end if
       do i = 1, n
@@ -1082,16 +1082,7 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
  
    end if
 
-   fkeep%flag = inform%flag
-   fkeep%matrix_rank = inform%matrix_rank
-   fkeep%maxfront = inform%maxfront
-   fkeep%num_delay = inform%num_delay
-   fkeep%num_factor = inform%num_factor
-   fkeep%num_flops = inform%num_flops
-   fkeep%num_neg = inform%num_neg
-   fkeep%num_two = inform%num_two
-   fkeep%not_first_pass = inform%not_first_pass
-   fkeep%not_second_pass = inform%not_second_pass
+   fkeep%inform = inform
    return
    !!!!!!!!!!!!!!!!!!!!
 
@@ -1223,20 +1214,7 @@ subroutine ssids_solve_mult_double(nrhs, x, ldx, akeep, fkeep, options, &
    end if
 
    ! Copy previous phases' inform data from akeep and fkeep
-   inform%matrix_dup = akeep%matrix_dup
-   inform%matrix_missing_diag = akeep%matrix_missing_diag
-   inform%matrix_outrange = akeep%matrix_outrange
-   inform%maxdepth = akeep%maxdepth
-   inform%matrix_rank = fkeep%matrix_rank
-   inform%maxfront = fkeep%maxfront
-   inform%num_delay = fkeep%num_delay
-   inform%num_factor = fkeep%num_factor
-   inform%num_flops = fkeep%num_flops
-   inform%num_neg = fkeep%num_neg
-   inform%num_sup = akeep%num_sup
-   inform%num_two = fkeep%num_two
-   inform%not_first_pass = fkeep%not_first_pass
-   inform%not_second_pass = fkeep%not_second_pass
+   inform = fkeep%inform
 
    ! Set local_job
    local_job = 0

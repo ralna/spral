@@ -37,16 +37,8 @@ module spral_ssids_fkeep
       ! Factored subtrees
       type(numeric_subtree_ptr), dimension(:), allocatable :: subtree
 
-      ! Info components to copy on solve
-      integer :: matrix_rank
-      integer :: maxfront
-      integer :: num_delay
-      integer(long) :: num_factor
-      integer(long) :: num_flops
-      integer :: num_neg
-      integer :: num_two
-      integer :: not_first_pass
-      integer :: not_second_pass
+      ! Copy of inform on exit from factorize
+      type(ssids_inform) :: inform
 
    contains
       procedure, pass(fkeep) :: inner_factor => inner_factor_cpu ! Do actual factorization

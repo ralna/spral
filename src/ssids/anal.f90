@@ -862,13 +862,7 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
    inform%num_sup = akeep%nnodes
 
    ! Store copy of inform data in akeep
-   akeep%flag = inform%flag
-   akeep%matrix_dup = inform%matrix_dup
-   akeep%matrix_missing_diag = inform%matrix_missing_diag
-   akeep%matrix_outrange = inform%matrix_outrange
-   akeep%maxdepth = inform%maxdepth
-   akeep%num_sup = inform%num_sup
-   akeep%num_flops = inform%num_flops
+   akeep%inform = inform
 
    return
 

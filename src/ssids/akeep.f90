@@ -69,20 +69,14 @@ module spral_ssids_akeep
       integer :: lmap ! used by hsl_mc69
       integer, allocatable :: map(:) ! used by hsl_mc69
 
-      ! Following components are cached members of inform
-      integer :: matrix_dup
-      integer :: matrix_outrange
-      integer :: matrix_missing_diag
-      integer :: maxdepth
-      integer(long) :: num_flops ! not copied to inform in factor, but used to
-         ! determine if parallelism should be used
-      integer :: num_sup
-
       ! Scaling from matching-based ordering
       real(wp), dimension(:), allocatable :: scaling
 
       ! Machine topology
       type(numa_region), dimension(:), allocatable :: topology
+
+      ! Inform at end of analyse phase
+      type(ssids_inform) :: inform
    contains
       procedure, pass(akeep) :: free => free_akeep
    end type ssids_akeep
