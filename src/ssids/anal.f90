@@ -281,6 +281,7 @@ subroutine find_subtree_partition(nnodes, sptr, sparent, rptr, options, &
    logical, dimension(:), allocatable :: is_child
    real :: load_balance, best_load_balance
    integer :: nregion, ngpu
+   logical :: has_parent
 
    ! Count flops below each node
    allocate(flops(nnodes+1), stat=st)
@@ -362,6 +363,25 @@ subroutine find_subtree_partition(nnodes, sptr, sparent, rptr, options, &
       exec_loc, st)
    if(st.ne.0) return
    !print *, "exec_loc ", exec_loc(1:nparts)
+
+   ! Merge adjacent subtrees that are executing on the same node so long as
+   ! there is no more than one contribution to a parent subtree
+   j = 1
+   k = sparent(part(j+1)-1)
+   has_parent = (k.le.nnodes)
+   do i = 2, nparts
+      part(j+1) = part(i)
+      exec_loc(j+1) = exec_loc(i)
+      k = sparent(part(i+1)-1)
+      if(exec_loc(i).ne.exec_loc(j) .or. has_parent.and.(k.le.nnodes)) then
+         ! We can't merge j and i
+         j = j + 1
+         has_parent = .false. 
+      endif
+      has_parent = has_parent.or.(k.le.nnodes)
+   end do
+   part(j+1) = part(nparts+1)
+   nparts = j
 
    ! Figure out contribution blocks that are input to each part
    allocate(contrib_ptr(nparts+3), contrib_idx(nparts), contrib_dest(nparts), &
