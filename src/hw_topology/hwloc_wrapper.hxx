@@ -20,6 +20,9 @@
 
 namespace spral { namespace hw_topology {
 
+/**
+ * \brief Object orientated wrapper around hwloc topology.
+ */
 class HwlocTopology {
 public:
    // \{
