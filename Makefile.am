@@ -256,6 +256,8 @@ libspral_a_SOURCES += \
 	src/ssids/cpu/SymbolicNode.hxx \
 	src/ssids/cpu/SymbolicSubtree.cxx \
 	src/ssids/cpu/SymbolicSubtree.hxx \
+	src/ssids/cpu/ThreadStats.cxx \
+	src/ssids/cpu/ThreadStats.hxx \
 	src/ssids/cpu/Workspace.hxx \
 	src/ssids/cpu/kernels/assemble.hxx \
 	src/ssids/cpu/kernels/common.hxx \

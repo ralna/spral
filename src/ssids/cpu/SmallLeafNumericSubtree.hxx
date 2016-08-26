@@ -11,6 +11,7 @@
 #include "ssids/cpu/factor.hxx"
 #include "ssids/cpu/NumericNode.hxx"
 #include "ssids/cpu/SmallLeafSymbolicSubtree.hxx"
+#include "ssids/cpu/ThreadStats.hxx"
 
 /* SPRAL headers */
 
@@ -33,7 +34,7 @@ class SmallLeafNumericSubtree<true, T, FactorAllocator, PoolAllocator> {
    typedef typename std::allocator_traits<FactorAllocator>::template rebind_traits<int> FAIntTraits;
    typedef std::allocator_traits<PoolAllocator> PATraits;
 public:
-   SmallLeafNumericSubtree(SmallLeafSymbolicSubtree const& symb, std::vector<NumericNode<T>>& old_nodes, T const* aval, T const* scaling, FactorAllocator& factor_alloc, PoolAllocator& pool_alloc, std::vector<Workspace>& work_vec, struct cpu_factor_options const& options, struct cpu_factor_stats& stats) 
+   SmallLeafNumericSubtree(SmallLeafSymbolicSubtree const& symb, std::vector<NumericNode<T>>& old_nodes, T const* aval, T const* scaling, FactorAllocator& factor_alloc, PoolAllocator& pool_alloc, std::vector<Workspace>& work_vec, struct cpu_factor_options const& options, ThreadStats& stats) 
       : old_nodes_(old_nodes), symb_(symb), lcol_(FADoubleTraits::allocate(factor_alloc, symb.nfactor_))
    {
       Workspace& work = work_vec[omp_get_thread_num()];
@@ -62,7 +63,7 @@ public:
          factor_node<true>
             (ni, symb_.symb_[ni], &old_nodes_[ni], options, stats,
              work_vec, pool_alloc, 1.0);
-         if(stats.flag<SSIDS_SUCCESS) return;
+         if(stats.flag<Flag::SUCCESS) return;
       }
    }
 
@@ -186,7 +187,7 @@ class SmallLeafNumericSubtree<false, T, FactorAllocator, PoolAllocator> {
    typedef typename std::allocator_traits<FactorAllocator>::template rebind_traits<int> FAIntTraits;
    typedef std::allocator_traits<PoolAllocator> PATraits;
 public:
-   SmallLeafNumericSubtree(SmallLeafSymbolicSubtree const& symb, std::vector<NumericNode<T>>& old_nodes, T const* aval, T const* scaling, FactorAllocator& factor_alloc, PoolAllocator& pool_alloc, std::vector<Workspace>& work_vec, struct cpu_factor_options const& options, struct cpu_factor_stats& stats) 
+   SmallLeafNumericSubtree(SmallLeafSymbolicSubtree const& symb, std::vector<NumericNode<T>>& old_nodes, T const* aval, T const* scaling, FactorAllocator& factor_alloc, PoolAllocator& pool_alloc, std::vector<Workspace>& work_vec, struct cpu_factor_options const& options, ThreadStats& stats) 
    : old_nodes_(old_nodes), symb_(symb)
    {
       Workspace& work = work_vec[omp_get_thread_num()];
@@ -207,7 +208,7 @@ public:
          factor_node
             (symb_.symb_[ni], &old_nodes_[ni], options,
              stats, work, pool_alloc);
-         if(stats.flag<SSIDS_SUCCESS) return; // something is wrong
+         if(stats.flag<Flag::SUCCESS) return; // something is wrong
 
          // Assemble children into contribution block
          assemble_post(symb_.symb_[ni], old_nodes_[ni], pool_alloc, map);
@@ -344,7 +345,7 @@ private:
          SymbolicNode const& snode,
          NumericNode<T>* node,
          struct cpu_factor_options const& options,
-         struct cpu_factor_stats& stats,
+         ThreadStats& stats,
          Workspace& work,
          PoolAllocator& pool_alloc
          ) {

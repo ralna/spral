@@ -15,6 +15,7 @@
 #include "ssids/profile.hxx"
 #include "ssids/cpu/cpu_iface.hxx"
 #include "ssids/cpu/SymbolicNode.hxx"
+#include "ssids/cpu/ThreadStats.hxx"
 #include "ssids/cpu/Workspace.hxx"
 #include "ssids/cpu/kernels/assemble.hxx"
 #include "ssids/cpu/kernels/calc_ld.hxx"
@@ -27,9 +28,6 @@
 
 namespace spral { namespace ssids { namespace cpu {
 
-const int SSIDS_SUCCESS = 0;
-const int SSIDS_ERROR_NOT_POS_DEF = -6;
-
 /* Factorize a node (indef) */
 template <typename T, typename PoolAlloc>
 void factor_node_indef(
@@ -37,7 +35,7 @@ void factor_node_indef(
       SymbolicNode const& snode,
       NumericNode<T>* node,
       struct cpu_factor_options const& options,
-      struct cpu_factor_stats& stats,
+      ThreadStats& stats,
       std::vector<Workspace>& work,
       PoolAlloc& pool_alloc
       ) {
@@ -115,7 +113,7 @@ void factor_node_posdef(
       SymbolicNode const& snode,
       NumericNode<T>* node,
       struct cpu_factor_options const& options,
-      struct cpu_factor_stats& stats
+      ThreadStats& stats
       ) {
    /* Extract useful information about node */
    int m = snode.nrow;
@@ -132,7 +130,7 @@ void factor_node_posdef(
    #pragma omp taskwait
    if(flag!=-1) {
       node->nelim = flag+1;
-      stats.flag = SSIDS_ERROR_NOT_POS_DEF;
+      stats.flag = Flag::ERROR_NOT_POS_DEF;
       return;
    }
    node->nelim = n;
@@ -147,7 +145,7 @@ void factor_node(
       SymbolicNode const& snode,
       NumericNode<T>* node,
       struct cpu_factor_options const& options,
-      struct cpu_factor_stats& stats,
+      ThreadStats& stats,
       std::vector<Workspace>& work,
       PoolAlloc& pool_alloc,
       T beta=0.0 // FIXME: remove once smallleafsubtree is doing own thing

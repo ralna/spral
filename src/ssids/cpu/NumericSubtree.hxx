@@ -12,6 +12,7 @@
 #include "ssids/cpu/NumericNode.hxx"
 #include "ssids/cpu/SymbolicSubtree.hxx"
 #include "ssids/cpu/SmallLeafNumericSubtree.hxx"
+#include "ssids/cpu/ThreadStats.hxx"
 
 
 namespace spral { namespace ssids { namespace cpu {
@@ -54,7 +55,7 @@ public:
          T const* scaling,
          void** child_contrib,
          struct cpu_factor_options const& options,
-         struct cpu_factor_stats& stats)
+         ThreadStats& stats)
    : symb_(symbolic_subtree), nodes_(symbolic_subtree.nnodes_+1),
      small_leafs_(static_cast<SLNS*>(::operator new[](symb_.small_leafs_.size()*sizeof(SLNS)))),
      factor_alloc_(symbolic_subtree.get_factor_mem_est(options.multiplier)),
@@ -71,7 +72,7 @@ public:
 
       /* Allocate workspaces */
       int num_threads = omp_get_max_threads();
-      std::vector<struct cpu_factor_stats> thread_stats(num_threads);
+      std::vector<ThreadStats> thread_stats(num_threads);
       std::vector<Workspace> work;
       work.reserve(num_threads);
       for(int i=0; i<num_threads; ++i)
@@ -79,17 +80,6 @@ public:
 
       #pragma omp parallel default(shared) proc_bind(close)
       {
-         /* Initalise stats */
-         int this_thread = omp_get_thread_num();
-         thread_stats[this_thread].flag = SSIDS_SUCCESS;
-         thread_stats[this_thread].num_delay = 0;
-         thread_stats[this_thread].num_neg = 0;
-         thread_stats[this_thread].num_two = 0;
-         thread_stats[this_thread].num_zero = 0;
-         thread_stats[this_thread].maxfront = 0;
-         thread_stats[this_thread].not_first_pass = 0;
-         thread_stats[this_thread].not_second_pass = 0;
-
          // Each node is depend(inout) on itself and depend(in) on its parent.
          // Whilst this isn't really what's happening it does ensure our
          // ordering is correct: each node cannot be scheduled until all its
@@ -113,7 +103,7 @@ public:
                new (&small_leafs_[si]) SLNS(leaf, nodes_, aval, scaling,
                      factor_alloc_, pool_alloc_, work,
                      options, thread_stats[this_thread]);
-               if(thread_stats[this_thread].flag<SSIDS_SUCCESS) {
+               if(thread_stats[this_thread].flag<Flag::SUCCESS) {
                   #pragma omp cancel taskgroup
                }
 #ifdef PROFILE
@@ -152,7 +142,7 @@ public:
                   (ni, symb_[ni], &nodes_[ni], options,
                    thread_stats[this_thread], work,
                    pool_alloc_);
-               if(thread_stats[this_thread].flag<SSIDS_SUCCESS) {
+               if(thread_stats[this_thread].flag<Flag::SUCCESS) {
                   #pragma omp cancel taskgroup
                }
 
@@ -166,26 +156,9 @@ public:
          // Reduce thread_stats
          #pragma omp single 
          {
-            stats.flag = SSIDS_SUCCESS;
-            stats.num_delay = 0;
-            stats.num_neg = 0;
-            stats.num_two = 0;
-            stats.num_zero = 0;
-            stats.maxfront = 0;
-            stats.not_first_pass = 0;
-            stats.not_second_pass = 0;
-            for(auto tstats : thread_stats) {
-               stats.flag =
-                  (stats.flag == SSIDS_SUCCESS) ? tstats.flag
-                                                : std::min(stats.flag, tstats.flag); 
-               stats.num_delay += tstats.num_delay;
-               stats.num_neg += tstats.num_neg;
-               stats.num_two += tstats.num_two;
-               stats.num_zero += tstats.num_zero;
-               stats.maxfront = std::max(stats.maxfront, tstats.maxfront);
-               stats.not_first_pass += tstats.not_first_pass;
-               stats.not_second_pass += tstats.not_second_pass;
-            }
+            stats = ThreadStats(); // initialise
+            for(auto tstats : thread_stats)
+               stats += tstats;
          }
       }
 

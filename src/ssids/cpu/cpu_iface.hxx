@@ -25,17 +25,6 @@ struct cpu_factor_options {
    PivotMethod pivot_method;
 };
 
-struct cpu_factor_stats {
-   int flag;
-   int num_delay;
-   int num_neg;
-   int num_two;
-   int num_zero;
-   int maxfront;
-   int not_first_pass;
-   int not_second_pass;
-};
-
 /** Return nearest value greater than supplied lda that is multiple of alignment */
 template<typename T>
 size_t align_lda(size_t lda) {

@@ -14,6 +14,10 @@ module spral_ssids_cpu_iface
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+   !> @brief Interoperable subset of ssids_options
+   !> @details Interoperates with cpu_factor_options C++ type
+   !> @sa spral_ssids_datatypes::ssids_options
+   !> @sa spral::ssids::cpu::cpu_factor_options
    type, bind(C) :: cpu_factor_options
       real(C_DOUBLE) :: multiplier
       real(C_DOUBLE) :: small
@@ -26,6 +30,10 @@ module spral_ssids_cpu_iface
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+   !> @brief Interoperable subset of ssids_inform
+   !> @details Interoperates with ThreadStats C++ type
+   !> @sa spral_ssids_inform::ssids_inform
+   !> @sa spral::ssids::cpu::ThreadStats
    type, bind(C) :: cpu_factor_stats
       integer(C_INT) :: flag
       integer(C_INT) :: num_delay
@@ -39,6 +47,8 @@ module spral_ssids_cpu_iface
 
 contains
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!> @brief Copy subset of ssids_options to interoperable type
 subroutine cpu_copy_options_in(foptions, coptions)
    type(ssids_options), intent(in) :: foptions
    type(cpu_factor_options), intent(out) :: coptions
@@ -52,6 +62,8 @@ subroutine cpu_copy_options_in(foptions, coptions)
    coptions%pivot_method   = foptions%pivot_method
 end subroutine cpu_copy_options_in
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!> @brief Copy subset of ssids_inform from interoperable type
 subroutine cpu_copy_stats_out(n, cstats, finform)
    integer, intent(in) :: n
    type(cpu_factor_stats), intent(in) :: cstats

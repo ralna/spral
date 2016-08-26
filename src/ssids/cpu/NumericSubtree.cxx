@@ -9,7 +9,6 @@
 #include <memory>
 
 #include "omp.hxx"
-#include "ssids/cpu/NumericSubtree.hxx"
 #include "ssids/cpu/AppendAlloc.hxx"
 
 using namespace spral::ssids::cpu;
@@ -34,7 +33,7 @@ void* spral_ssids_cpu_create_num_subtree_dbl(
       const double *const scaling, // Scaling vector (NULL if none)
       void** child_contrib, // Contributions from child subtrees
       struct cpu_factor_options const* options, // Options in
-      struct cpu_factor_stats* stats // Info out
+      ThreadStats* stats // Info out
       ) {
    auto const& symbolic_subtree = *static_cast<SymbolicSubtree const*>(symbolic_subtree_ptr);
 
