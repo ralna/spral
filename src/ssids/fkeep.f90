@@ -97,14 +97,15 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
       call omp_set_num_threads(akeep%topology(numa_region)%nproc)
    endif
    ! Split into threads for this NUMA region (unless we're running a GPU)
-!$omp parallel proc_bind(close) num_threads(numa_region) default(shared) &
+!$omp parallel proc_bind(close) default(shared) &
+!$omp    num_threads(akeep%topology(numa_region)%nproc) &
 !$omp    if(my_loc.le.size(akeep%topology))
 !$omp single
    do i = 1, akeep%nparts
       exec_loc = akeep%subtree(i)%exec_loc
       if(numa_region.eq.1 .and. exec_loc.eq.-1) all_region = .true.
       if(exec_loc.ne.my_loc) cycle
-!$omp task default(shared) firstprivate(i, exec_loc) &
+!$omp task untied default(shared) firstprivate(i, exec_loc) &
 !$omp    if(my_loc.le.size(akeep%topology))
       if(allocated(fkeep%scaling)) then
          fkeep%subtree(i)%ptr => akeep%subtree(i)%ptr%factor( &
