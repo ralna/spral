@@ -24,6 +24,7 @@ module spral_ssids
    use spral_ssids_akeep, only : ssids_akeep
    use spral_ssids_fkeep, only : ssids_fkeep
    use spral_ssids_inform, only : ssids_inform, ssids_print_flag
+   use spral_rutherford_boeing, only : rb_writer_options, rb_write
    implicit none
 
    private
@@ -749,6 +750,9 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
    type(hungarian_inform) :: hsinform
    type(equilib_options) :: esoptions
    type(equilib_inform) :: esinform
+
+   type(rb_writer_options) :: rb_options
+   integer :: flag
    
    ! Setup for any printing we may require
    context = 'ssids_factor'
@@ -864,6 +868,22 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
    ! At this point, either  ptr, row, val   
    !                  or    akeep%ptr, akeep%row, val2
    ! hold the lower triangular part of A
+
+   ! Dump matrix if required
+   if(allocated(options%rb_dump)) then
+      write(options%unit_warning,*) "Dumping matrix to '", options%rb_dump, "'"
+      if (akeep%check) then
+         call rb_write(options%rb_dump, 's', n, n, akeep%ptr, akeep%row, val2, &
+            rb_options, flag)
+      else
+         call rb_write(options%rb_dump, 's', n, n, ptr, row, val, rb_options, &
+            flag)
+      endif
+      if(flag.ne.0) then
+         inform%flag = SSIDS_ERROR_UNKNOWN
+         return
+      endif
+   endif
 
    !
    ! Perform scaling if required

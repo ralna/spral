@@ -12,10 +12,11 @@ module spral_rutherford_boeing
    real(wp), parameter :: zero = 0.0_wp
 
    private
-   public :: rb_peek, &        ! Peeks at the header of a RB file
-             rb_read, &        ! Reads a RB file
-             rb_write          ! Writes a RB file
-   public :: rb_reader_options ! Options that control what rb_read returns
+   public :: rb_peek, &             ! Peeks at the header of a RB file
+             rb_read, &             ! Reads a RB file
+             rb_write               ! Writes a RB file
+   public :: rb_reader_options, &   ! Options that control what rb_read returns
+             rb_writer_options      ! Options that control what rb_write does
 
    ! Possible values of control%format
    integer, parameter :: FORMAT_CSC = 1 ! Compressed Sparse Column
@@ -724,6 +725,8 @@ contains
       character(len=8) :: the_id
       integer :: st
 
+      inform = 0 ! by default, success
+
       ! Open file
       open(file=filename, newunit=iunit, status='replace', iostat=st)
       if(st.ne.0) then
@@ -747,7 +750,7 @@ contains
          if(options%val_format(i:i).eq.'e'.or.options%val_format(i:i).eq.'f') &
             exit
       end do
-      read(options%val_format(1:i-1), *) val_per_line
+      read(options%val_format(2:i-1), *) val_per_line
       ptr_lines = (size(ptr)-1) / ptr_per_line + 1
       row_lines = (size(row)-1) / row_per_line + 1
       val_lines = (size(val)-1) / val_per_line + 1

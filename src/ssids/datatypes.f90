@@ -266,6 +266,9 @@ module spral_ssids_datatypes
       logical :: ignore_numa = .true. ! If true, treat entire machine as single
          ! NUMA region for purposes of subtree allocation.
       logical :: use_gpu = .true. ! Use GPUs if present
+      character(len=:), allocatable :: rb_dump ! Filename to dump matrix in
+         ! prior to factorization. No dump takes place if not allocated (the
+         ! default).
    end type ssids_options
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
