@@ -75,9 +75,8 @@ public:
     *  \param passed number of variables passing a posteori pivot test in block
     */
    void update_passed(int passed) {
-      lock_.set();
+      spral::omp::AcquiredLock scopeLock(lock_);
       npass_ = std::min(npass_, passed);
-      lock_.unset();
    }
    /** \brief Test if column has failed (in unpivoted case), recording number of
     *         blocks in column that have passed. To be called once per block

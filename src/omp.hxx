@@ -13,7 +13,15 @@
 /* This file wraps the C interface for OpenMP in C++ for style/safety */
 namespace spral { namespace omp {
 
-/** Light-weight wrapper around omp_lock_t. Disabled move semantics. */
+/**
+ * \brief Safe wrapper around omp_lock_t ensuring init/cleanup.
+ *        See AcquiredLock for locking functionality.
+ *
+ * This acts as an underlying resource that may be aquired by instantiating
+ * an AcquiredLock with this as an argument.
+ *
+ * \sa AcquiredLock
+ */
 class Lock {
 public:
    Lock(Lock const&) =delete;
@@ -24,6 +32,7 @@ public:
    ~Lock() {
       omp_destroy_lock(&lock_);
    }
+private:
    inline
    void set() {
       omp_set_lock(&lock_);
@@ -36,8 +45,27 @@ public:
    bool test() {
       return omp_test_lock(&lock_);
    }
-private:
+
    omp_lock_t lock_;
+
+   friend class AcquiredLock;
+};
+
+/**
+ * \brief RAII lock. Acquires lock on construction, releases on destruction.
+ */
+class AcquiredLock {
+public:
+   AcquiredLock(Lock& lock)
+   : lock_(lock)
+   {
+      lock_.set();
+   }
+   ~AcquiredLock() {
+      lock_.unset();
+   }
+private:
+   Lock& lock_; ///< Underlying lock.
 };
 
 /// Return global thread number (=thread number if not nested)

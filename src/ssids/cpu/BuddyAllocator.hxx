@@ -202,7 +202,7 @@ public:
 
    void* allocate(std::size_t sz) {
       // Try allocating in existing pages
-      lock_.set();
+      spral::omp::AcquiredLock scopeLock(lock_);
       void* ptr;
       for(auto& page: pages_) {
          ptr = page.allocate(sz);
@@ -217,19 +217,17 @@ public:
          pages_.emplace_back(max_sz_, alloc_);
          ptr = pages_.back().allocate(sz);
       }
-      lock_.unset();
       return ptr;
    }
 
    void deallocate(void* ptr, std::size_t sz) {
-      lock_.set();
+      spral::omp::AcquiredLock scopeLock(lock_);
       for(auto& page: pages_) {
          if(page.is_owner(ptr)) {
             page.deallocate(ptr, sz);
             break;
          }
       }
-      lock_.unset();
    }
 
 private:
