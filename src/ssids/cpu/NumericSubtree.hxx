@@ -209,7 +209,7 @@ public:
                   i++;
                } else {
                   // 2x2 pivot
-                  T a22 = d[2*(i+1)];
+                  T a22 = d[2*i+3];
                   stats.num_two++;
                   T det = a11*a22 - a21*a21; // product of evals
                   T trace = a11 + a22; // sum of evals
