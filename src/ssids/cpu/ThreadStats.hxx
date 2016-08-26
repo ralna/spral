@@ -12,8 +12,9 @@ namespace spral { namespace ssids { namespace cpu {
  * Must match Fortran definitions in src/ssids/datatypes.f90
  */
 enum Flag : int {
-   SUCCESS = 0,
-   ERROR_NOT_POS_DEF = -6
+   SUCCESS              = 0,
+   ERROR_NOT_POS_DEF    = -6,
+   ERROR_ALLOCATION     = -50
 };
 
 /**

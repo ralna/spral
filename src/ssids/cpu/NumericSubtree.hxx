@@ -94,7 +94,7 @@ public:
                firstprivate(si) \
                shared(aval, options, scaling, thread_stats, work) \
                depend(in: parent_lcol[0:1])
-            {
+            try {
                int this_thread = omp_get_thread_num();
 #ifdef PROFILE
                Profile::Task task_subtree("TA_SUBTREE");
@@ -109,6 +109,9 @@ public:
 #ifdef PROFILE
                task_subtree.done();
 #endif
+            } catch (std::bad_alloc const&) {
+               thread_stats[omp_get_thread_num()].flag = Flag::ERROR_ALLOCATION;
+               #pragma omp cancel taskgroup
             }
          }
 
@@ -124,7 +127,7 @@ public:
                       work) \
                depend(inout: this_lcol[0:1]) \
                depend(in: parent_lcol[0:1])
-            {
+            try {
                /*printf("%d: Node %d parent %d (of %d) size %d x %d\n",
                      omp_get_thread_num(), ni, symb_[ni].parent, symb_.nnodes_,
                      symb_[ni].nrow, symb_[ni].ncol);*/
@@ -149,6 +152,9 @@ public:
                // Assemble children into contribution block
                assemble_post(symb_.n, symb_[ni], child_contrib, nodes_[ni],
                      pool_alloc_, work);
+            } catch (std::bad_alloc const&) {
+               thread_stats[omp_get_thread_num()].flag = Flag::ERROR_ALLOCATION;
+               #pragma omp cancel taskgroup
             }
          }
          } // taskgroup
