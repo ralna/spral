@@ -53,6 +53,10 @@ void factor_node_indef(
    node->nelim = ldlt_app_factor(
          m, n, perm, lcol, ldl, d, 0.0, contrib, m-n, options, work, pool_alloc
          );
+   if(node->nelim < 0) {
+      stats.flag = Flag::ERROR_ALLOCATION;
+      return;
+   }
    //verifier.verify(node->nelim, perm, lcol, ldl, d);
 
    /* Finish factorization worth simplistic code */
