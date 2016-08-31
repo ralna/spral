@@ -1522,6 +1522,7 @@ private:
 
       /* Setup */
       int next_elim = 0;
+      int flag = 0;
 
       /* Inner loop - iterate over block columns */
       #pragma omp taskgroup
@@ -1535,10 +1536,10 @@ private:
          #pragma omp task default(none) \
             firstprivate(blk) \
             shared(a, perm, backup, cdata, next_elim, d, \
-                   options, work, alloc, up_to_date) \
+                   options, work, alloc, up_to_date, flag) \
             depend(inout: a[blk*block_size*lda+blk*block_size:1]) \
             if(use_tasks && mblk>1)
-         {
+         try {
 #ifdef PROFILE
             Profile::Task task("TA_LDLT_DIAG");
 #endif
@@ -1563,6 +1564,9 @@ private:
 #ifdef PROFILE
             if(use_tasks) task.done();
 #endif
+         } catch(std::bad_alloc const&) {
+            flag = -1;
+            #pragma omp cancel taskgroup
          }
          
          // Loop over off-diagonal blocks applying pivot
@@ -1709,6 +1713,7 @@ private:
          print_mat(mblk, nblk, m, n, blkdata, cdata, lda);
       }*/
 
+      if(flag<0) return flag;
       return cdata.calc_nelim(m);
    }
 
