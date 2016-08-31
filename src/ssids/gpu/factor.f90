@@ -6,7 +6,6 @@ module spral_ssids_gpu_factor
 !$ use omp_lib
    use, intrinsic :: iso_c_binding
    use spral_cuda
-   use spral_ssids_alloc, only : smalloc
    use spral_ssids_contrib, only : contrib_type
    use spral_ssids_datatypes
    use spral_ssids_profile, only : profile_set_state
@@ -16,6 +15,7 @@ module spral_ssids_gpu_factor
    use spral_ssids_gpu_interfaces
    use spral_ssids_gpu_dense_factor, only : &
       node_ldlt, node_llt, multinode_llt, multinode_ldlt
+   use spral_ssids_gpu_smalloc, only : smalloc
    use spral_ssids_gpu_solve, only : setup_gpu_solve
    implicit none
 

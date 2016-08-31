@@ -17,7 +17,6 @@ module spral_ssids
                              hungarian_scale_sym, &
                              equilib_options, equilib_inform, &
                              hungarian_options, hungarian_inform
-   use spral_ssids_alloc, only : smalloc_setup
    use spral_ssids_anal, only : analyse_phase, check_order, expand_matrix, &
                                 expand_pattern
    use spral_ssids_datatypes

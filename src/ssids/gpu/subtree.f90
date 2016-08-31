@@ -2,7 +2,7 @@ module spral_ssids_gpu_subtree
    use, intrinsic :: iso_c_binding
 !$ use omp_lib
    use spral_cuda
-   use spral_ssids_alloc, only : smalloc, smfreeall, smalloc_setup
+   use spral_ssids_gpu_smalloc, only : smalloc, smfreeall, smalloc_setup
    use spral_ssids_contrib, only : contrib_type
    use spral_ssids_datatypes
    use spral_ssids_inform, only : ssids_inform

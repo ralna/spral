@@ -212,6 +212,7 @@ libspral_a_SOURCES += \
 	src/ssids/gpu/factor.f90 \
 	src/ssids/gpu/interfaces.f90 \
 	src/ssids/gpu/solve.f90 \
+	src/ssids/gpu/smalloc.f90 \
 	src/ssids/gpu/subtree.f90 \
 	src/ssids/gpu/kernels/assemble.cu \
 	src/ssids/gpu/kernels/datatypes.h \
@@ -225,7 +226,6 @@ libspral_a_SOURCES += \
 	src/ssids/gpu/subtree_no_cuda.f90
 endif
 libspral_a_SOURCES += \
-	src/ssids/alloc.f90 \
 	src/ssids/akeep.f90 \
 	src/ssids/anal.f90 \
 	src/ssids/contrib.f90 \
@@ -408,7 +408,6 @@ src/random_matrix.$(OBJEXT): src/random.$(OBJEXT)
 src/rutherford_boeing.$(OBJEXT): src/matrix_util.$(OBJEXT) \
                                  src/random.$(OBJEXT)
 src/scaling.$(OBJEXT): src/matrix_util.$(OBJEXT)
-src/ssids/alloc.$(OBJEXT): src/ssids/datatypes.$(OBJEXT)
 src/ssids/akeep.$(OBJEXT): src/ssids/datatypes.$(OBJEXT) \
                            src/hw_topology/hw_topology.$(OBJEXT) \
                            src/ssids/inform.$(OBJEXT) \
@@ -437,7 +436,6 @@ endif
 src/ssids/contrib.$(OBJEXT): src/ssids/datatypes.$(OBJEXT)
 src/ssids/datatypes.$(OBJEXT): src/scaling.$(OBJEXT)
 src/ssids/fkeep.$(OBJEXT): src/ssids/akeep.$(OBJEXT) \
-                           src/ssids/alloc.$(OBJEXT) \
                            src/ssids/datatypes.$(OBJEXT) \
                            src/ssids/inform.$(OBJEXT) \
                            src/ssids/profile_iface.$(OBJEXT) \
@@ -463,7 +461,6 @@ src/ssids/gpu/dense_factor.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
                                       src/ssids/gpu/interfaces.$(OBJEXT) \
                                       src/ssids/datatypes.$(OBJEXT)
 src/ssids/gpu/factor.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
-                                src/ssids/alloc.$(OBJEXT) \
 										  src/ssids/contrib.$(OBJEXT) \
                                 src/ssids/datatypes.$(OBJEXT) \
                                 src/ssids/profile_iface.$(OBJEXT) \
@@ -471,21 +468,23 @@ src/ssids/gpu/factor.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
                                 src/ssids/gpu/datatypes.$(OBJEXT) \
                                 src/ssids/gpu/interfaces.$(OBJEXT) \
                                 src/ssids/gpu/dense_factor.$(OBJEXT) \
-                                src/ssids/gpu/solve.$(OBJEXT)
+                                src/ssids/gpu/solve.$(OBJEXT) \
+                                src/ssids/gpu/smalloc.$(OBJEXT)
 src/ssids/gpu/solve.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
                                src/ssids/gpu/alloc.$(OBJEXT) \
                                src/ssids/gpu/datatypes.$(OBJEXT) \
                                src/ssids/gpu/interfaces.$(OBJEXT) \
                                src/ssids/datatypes.$(OBJEXT)
+src/ssids/gpu/smalloc.$(OBJEXT): src/ssids/datatypes.$(OBJEXT)
 src/ssids/gpu/subtree.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
-                                 src/ssids/alloc.$(OBJEXT) \
                                  src/ssids/contrib.$(OBJEXT) \
                                  src/ssids/datatypes.$(OBJEXT) \
                                  src/ssids/inform.$(OBJEXT) \
                                  src/ssids/subtree.$(OBJEXT) \
                                  src/ssids/gpu/datatypes.$(OBJEXT) \
                                  src/ssids/gpu/factor.$(OBJEXT) \
-                                 src/ssids/gpu/solve.$(OBJEXT)
+                                 src/ssids/gpu/solve.$(OBJEXT) \
+                                 src/ssids/gpu/smalloc.$(OBJEXT)
 src/ssids/gpu/subtree_no_cuda.$(OBJEXT): src/ssids/contrib.$(OBJEXT) \
                                          src/ssids/datatypes.$(OBJEXT) \
                                          src/ssids/subtree.$(OBJEXT) \
@@ -496,7 +495,6 @@ src/ssids/ssids.$(OBJEXT): src/match_order.$(OBJEXT) \
                            src/metis$(METIS_VERSION)_wrapper.$(OBJEXT) \
                            src/scaling.$(OBJEXT) \
                            src/ssids/akeep.$(OBJEXT) \
-                           src/ssids/alloc.$(OBJEXT) \
                            src/ssids/anal.$(OBJEXT) \
                            src/ssids/datatypes.$(OBJEXT) \
                            src/ssids/fkeep.$(OBJEXT) \
@@ -508,7 +506,6 @@ src/ssids/ssids.$(OBJEXT): src/hw_topology/hw_topology.$(OBJEXT) \
                            src/metis$(METIS_VERSION)_wrapper.$(OBJEXT) \
                            src/scaling.$(OBJEXT) \
                            src/ssids/akeep.$(OBJEXT) \
-                           src/ssids/alloc.$(OBJEXT) \
                            src/ssids/anal.$(OBJEXT) \
                            src/ssids/datatypes.$(OBJEXT) \
                            src/ssids/fkeep.$(OBJEXT) \

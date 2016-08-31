@@ -2,7 +2,7 @@
 !> \copyright 2016 The Science and Technology Facilities Council (STFC)
 !> \licence   BSD licence, see LICENCE file for details
 !> \author    Jonathan Hogg
-module spral_ssids_alloc
+module spral_ssids_gpu_smalloc
 !$ use omp_lib
    use spral_ssids_datatypes, only : smalloc_type, stack_mem_type, long, wp
    implicit none
@@ -220,4 +220,4 @@ subroutine smfreeall(alloc_in)
    end do
 end subroutine smfreeall
 
-end module spral_ssids_alloc
+end module spral_ssids_gpu_smalloc
