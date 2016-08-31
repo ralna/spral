@@ -969,6 +969,7 @@ public:
                       cdata_[i_].d, inner_backup, options, options.pivot_method,
                       INNER_BLOCK_SIZE, 0, nullptr, 0, work, alloc
                       );
+         if(cdata_[i_].nelim < 0) return cdata_[i_].nelim;
          int* temp = work[omp_get_thread_num()].get_ptr<int>(ncol());
          int* blkperm = &perm[i_*block_size_];
          for(int i=0; i<ncol(); ++i)
@@ -1266,6 +1267,7 @@ private:
 
       /* Setup */
       int next_elim = from_blk*block_size;
+      int flag = 0;
 
       /* Inner loop - iterate over block columns */
       for(int blk=from_blk; blk<nblk; blk++) {
@@ -1278,11 +1280,11 @@ private:
          #pragma omp task default(none) \
             firstprivate(blk) \
             shared(a, perm, backup, cdata, next_elim, d, \
-                   options, work, alloc) \
+                   options, work, alloc, flag) \
             depend(inout: a[blk*block_size*lda+blk*block_size:1]) \
             depend(inout: perm[blk*block_size:1]) \
             if(use_tasks && mblk>1)
-         {
+         if(flag==0) { try {
 #ifdef PROFILE
             Profile::Task task("TA_LDLT_DIAG");
 #endif
@@ -1294,23 +1296,26 @@ private:
             int nelim = dblk.template factor<Allocator>(
                   next_elim, perm, d, options, work, alloc
                   );
+            if(nelim<0) flag = nelim;
             // Init threshold check (non locking => task dependencies)
             cdata[blk].init_passed(nelim);
 #ifdef PROFILE
             if(use_tasks) task.done();
 #endif
-         }
+         } catch(std::bad_alloc const&) {
+            flag = -1;
+         }}
          
          // Loop over off-diagonal blocks applying pivot
          for(int jblk=0; jblk<blk; jblk++) {
             #pragma omp task default(none) \
                firstprivate(blk, jblk) \
-               shared(a, backup, cdata, options) \
+               shared(a, backup, cdata, options, flag) \
                depend(in: a[blk*block_size*lda+blk*block_size:1]) \
                depend(inout: a[jblk*block_size*lda+blk*block_size:1]) \
                depend(in: perm[blk*block_size:1]) \
                if(use_tasks && mblk>1)
-            {
+             if(flag==0) {
 #ifdef PROFILE
                Profile::Task task("TA_LDLT_APPLY");
 #endif
@@ -1336,12 +1341,12 @@ private:
          for(int iblk=blk+1; iblk<mblk; iblk++) {
             #pragma omp task default(none) \
                firstprivate(blk, iblk) \
-               shared(a, backup, cdata, options) \
+               shared(a, backup, cdata, options, flag) \
                depend(in: a[blk*block_size*lda+blk*block_size:1]) \
                depend(inout: a[blk*block_size*lda+iblk*block_size:1]) \
                depend(in: perm[blk*block_size:1]) \
                if(use_tasks && mblk>1)
-            {
+            if(flag==0) {
 #ifdef PROFILE
                Profile::Task task("TA_LDLT_APPLY");
 #endif
@@ -1367,10 +1372,10 @@ private:
          // number of passed columns.
          #pragma omp task default(none) \
             firstprivate(blk) \
-            shared(cdata, next_elim) \
+            shared(cdata, next_elim, flag) \
             depend(inout: perm[blk*block_size:1]) \
             if(use_tasks && mblk>1)
-         {
+         if(flag==0) {
 #ifdef PROFILE
             Profile::Task task("TA_LDLT_ADJUST");
 #endif
@@ -1390,13 +1395,13 @@ private:
                                          : iblk*block_size*lda + blk*block_size;
                #pragma omp task default(none) \
                   firstprivate(blk, iblk, jblk) \
-                  shared(a, cdata, backup, work)\
+                  shared(a, cdata, backup, work, flag)\
                   depend(inout: a[jblk*block_size*lda+iblk*block_size:1]) \
                   depend(in: perm[blk*block_size:1]) \
                   depend(in: a[jblk*block_size*lda+blk*block_size:1]) \
                   depend(in: a[adep_idx:1]) \
                   if(use_tasks && mblk>1)
-               {
+               if(flag==0) {
 #ifdef PROFILE
                   Profile::Task task("TA_LDLT_UPDA");
 #endif
@@ -1423,13 +1428,13 @@ private:
             for(int iblk=jblk; iblk<mblk; iblk++) {
                #pragma omp task default(none) \
                   firstprivate(blk, iblk, jblk) \
-                  shared(a, cdata, backup, work, upd) \
+                  shared(a, cdata, backup, work, upd, flag) \
                   depend(inout: a[jblk*block_size*lda+iblk*block_size:1]) \
                   depend(in: perm[blk*block_size:1]) \
                   depend(in: a[blk*block_size*lda+iblk*block_size:1]) \
                   depend(in: a[blk*block_size*lda+jblk*block_size:1]) \
                   if(use_tasks && mblk>1)
-               {
+               if(flag==0) {
 #ifdef PROFILE
                   Profile::Task task("TA_LDLT_UPDA");
 #endif
@@ -1461,13 +1466,13 @@ private:
                                  (iblk-nblk)*block_size];
                #pragma omp task default(none) \
                   firstprivate(iblk, jblk, blk, upd_ij) \
-                  shared(a, upd2, cdata, work) \
+                  shared(a, upd2, cdata, work, flag) \
                   depend(inout: upd_ij[0:1]) \
                   depend(in: perm[blk*block_size:1]) \
                   depend(in: a[blk*block_size*lda+iblk*block_size:1]) \
                   depend(in: a[blk*block_size*lda+jblk*block_size:1]) \
                   if(use_tasks && mblk>1)
-               {
+               if(flag==0) {
 #ifdef PROFILE
                   Profile::Task task("TA_LDLT_UPDC");
 #endif
@@ -1490,6 +1495,7 @@ private:
          // We only need a taskwait here if we've launched any subtasks...
          // NB: we don't use taskgroup as it doesn't support if()
          #pragma omp taskwait
+         if(flag<0) return flag; // Error
       }
 
       /*if(debug) {
@@ -1913,6 +1919,7 @@ public:
                m, n, perm, a, lda, d, cdata, backup, up_to_date, options,
                block_size, beta, upd, ldupd, work, alloc
                );
+         if(num_elim < 0) return num_elim; // error
          if(num_elim < n) {
 #ifdef PROFILE
             {

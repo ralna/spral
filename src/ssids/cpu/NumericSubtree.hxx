@@ -159,6 +159,7 @@ public:
       stats = ThreadStats(); // initialise
       for(auto tstats : thread_stats)
          stats += tstats;
+      if(stats.flag < 0) return;
 
       // Count stats
       // FIXME: Do this as we go along...

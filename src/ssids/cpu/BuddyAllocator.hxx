@@ -47,7 +47,7 @@ public:
 #endif /* MEM_STATS */
    }
    // Move constructor
-   Page(Page&& other)
+   Page(Page&& other) noexcept
    : alloc_(other.alloc_), min_size_(other.min_size_), size_(other.size_),
      mem_(other.mem_), base_(other.base_), next_(other.next_)
    {
@@ -222,11 +222,13 @@ private:
 
 template <typename CharAllocator>
 class Table {
+   typedef Page<CharAllocator> PageSpec;
+   typedef typename std::allocator_traits<CharAllocator>::template rebind_alloc<PageSpec> PageAlloc;
 public:
    Table(const Table&) =delete;
    Table& operator=(const Table&) =delete;
    Table(std::size_t sz, CharAllocator const& alloc=CharAllocator())
-   : alloc_(alloc), max_sz_(sz)
+   : alloc_(alloc), max_sz_(sz), pages_(PageAlloc(alloc))
    {
       pages_.emplace_back(max_sz_, alloc_);
    }
@@ -246,8 +248,22 @@ public:
          for(auto& page: pages_)
             page.print();
 #endif /* MEM_STATS */
-         max_sz_ = std::max(2*max_sz_, sz);
-         pages_.emplace_back(max_sz_, alloc_);
+         size_t old_max_sz = max_sz_;
+         try {
+            max_sz_ = std::max(2*max_sz_, sz);
+            pages_.emplace_back(max_sz_, alloc_);
+         } catch(std::bad_alloc const&) {
+            // Failed to alloc block twice as big, try one the same size
+            max_sz_ = old_max_sz;
+            try {
+               max_sz_ = std::max(max_sz_, sz);
+               pages_.emplace_back(max_sz_, alloc_);
+            } catch(std::bad_alloc const&) {
+               // That didn't work either, try one of just big enough for sz
+               pages_.emplace_back(sz, alloc_);
+               // If this fails, we just give up and propogate std::bad_alloc 
+            }
+         }
          ptr = pages_.back().allocate(sz);
       }
       return ptr;
@@ -266,7 +282,7 @@ public:
 private:
    CharAllocator alloc_;
    std::size_t max_sz_;
-   std::vector<Page<CharAllocator>> pages_;
+   std::vector<PageSpec, PageAlloc> pages_;
    spral::omp::Lock lock_;
 };
 
