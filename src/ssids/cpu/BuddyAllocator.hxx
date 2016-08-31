@@ -27,7 +27,7 @@ public:
    Page(size_t size, CharAllocator const &alloc=CharAllocator())
    : alloc_(alloc)
    {
-      min_size_ = std::max(size_t(1), size / (1<<(nlevel-1)));
+      min_size_ = std::max(size_t(1), (size-1) / (1<<(nlevel-1)) + 1);
       min_size_ = align * ((min_size_-1)/align + 1); // make muliple of align
       size_ = min_size_<<(nlevel-1);
       /* Allocate memory of sufficient size and align it */
