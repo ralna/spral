@@ -20,7 +20,6 @@
 #include <omp.h>
 
 #include "ssids/profile.hxx"
-#include "ssids/cpu/AlignedAllocator.hxx"
 #include "ssids/cpu/BlockPool.hxx"
 #include "ssids/cpu/BuddyAllocator.hxx"
 #include "ssids/cpu/cpu_iface.hxx"
