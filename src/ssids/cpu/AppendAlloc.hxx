@@ -5,6 +5,8 @@
  */
 #pragma once
 
+//#define MEM_STATS
+
 #include <memory>
 
 #include "compat.hxx" // for std::align if required
@@ -25,6 +27,15 @@ public:
    : next(next), mem_(calloc(sz+align, 1)), ptr_(mem_), space_(sz+align)
    {}
    ~Page() {
+#ifdef MEM_STATS
+      uintptr_t used =
+         reinterpret_cast<uintptr_t>(ptr_) - reinterpret_cast<uintptr_t>(mem_);
+      uintptr_t total = used + space_;
+      printf("AppendAlloc: Allocated %16ld (%.2e GB)\n",
+            total, 1e-9*double(used));
+      printf("AppendAlloc: Used      %16ld (%.2e GB)\n",
+            used, 1e-9*double(used));
+#endif /* MEM_STATS */
       free(mem_);
    }
    void* allocate(size_t sz) {

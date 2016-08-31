@@ -5,6 +5,8 @@
  */
 #pragma once
 
+//#define MEM_STATS
+
 #include <memory>
 
 #include "omp.hxx"
@@ -40,6 +42,9 @@ public:
       head_[nlevel-1] = 0; next_[0] = -1; // a single free block at top level
       for(int i=0; i<nlevel-1; ++i)
          head_[i] = -1; // ... and no free blocks at other levels
+#ifdef MEM_STATS
+      printf("BuddyAllocator: Creating new page %p size %ld\n", mem_, size_);
+#endif /* MEM_STATS */
    }
    // Move constructor
    Page(Page&& other)
@@ -51,6 +56,10 @@ public:
       other.next_ = nullptr;
       for(int i=0; i<nlevel; ++i)
          head_[i] = other.head_[i];
+#ifdef MEM_STATS
+      used_ = other.used_;
+      max_used_ = other.max_used_;
+#endif /* MEM_STATS */
    }
    ~Page() noexcept(false) {
       if(next_ && head_[nlevel-1] != 0)
@@ -58,6 +67,12 @@ public:
       if(next_) {
          typename IntAllocTraits::allocator_type intAlloc(alloc_);
          IntAllocTraits::deallocate(intAlloc, next_, 1<<(nlevel-1));
+#ifdef MEM_STATS
+         printf("BuddyAllocator: Allocated %16ld (%.2e GB)\n", 
+               size_, 1e-9*size_);
+         printf("BuddyAllocator: Max Used  %16ld (%.2e GB)\n",
+               max_used_, 1e-9*max_used_);
+#endif /* MEM_STATS */
       }
       if(mem_)
          std::allocator_traits<CharAllocator>::deallocate(
@@ -69,12 +84,21 @@ public:
       // Determine which level of block we're trying to find
       int level = sz_to_level(sz);
       void* ptr = addr_to_ptr(get_next_ptr(level));
+#ifdef MEM_STATS
+      if(ptr) {
+         used_ += sz;
+         max_used_ = std::max(max_used_, used_);
+      }
+#endif /* MEM_STATS */
       return ptr;
    }
    void deallocate(void* ptr, std::size_t sz) {
       int idx = ptr_to_addr(ptr);
       int level = sz_to_level(sz);
       mark_free(idx, level);
+#ifdef MEM_STATS
+      used_ -= sz;
+#endif /* MEM_STATS */
    }
    /** Return true if this Page owners given pointer */
    bool is_owner(void* ptr) {
@@ -88,6 +112,9 @@ public:
             free += (1<<i) * min_size_;
       }
       return free;
+   }
+   void print() const {
+      printf("Page %p size %ld free %ld\n", mem_, size_, count_free());
    }
 private:
    /** Returns next ptr at given level, creating one if required.
@@ -181,12 +208,16 @@ private:
    }
 
    CharAllocator alloc_;
-   size_t min_size_; //< size of smallest block we can allocate
-   size_t size_; //< maximum size
-   char* mem_; //< pointer to memory allocation
-   char* base_; //< aligned memory base
-   int head_[nlevel]; //< first free block at each level's size
-   int *next_; //< next free block at given level
+   size_t min_size_; ///< size of smallest block we can allocate
+   size_t size_; ///< maximum size
+   char* mem_; ///< pointer to memory allocation
+   char* base_; ///< aligned memory base
+   int head_[nlevel]; ///< first free block at each level's size
+   int *next_; ///< next free block at given level
+#ifdef MEM_STATS
+   size_t used_ = 0; ///< Total amount used
+   size_t max_used_ = 0; ///< High water mark of used_
+#endif /* MEM_STATS */
 };
 
 template <typename CharAllocator>
@@ -210,9 +241,11 @@ public:
       }
       if(!ptr) {
          // Failed to alloc on existing page: make a bigger page and use it
-         /*printf("Failed to allocate %ld on existing page...\n", sz);
+#ifdef MEM_STATS
+         printf("Failed to allocate %ld on existing page...\n", sz);
          for(auto& page: pages_)
-            printf("page %p free %ld\n", &page, page.count_free());*/
+            page.print();
+#endif /* MEM_STATS */
          max_sz_ = std::max(2*max_sz_, sz);
          pages_.emplace_back(max_sz_, alloc_);
          ptr = pages_.back().allocate(sz);
