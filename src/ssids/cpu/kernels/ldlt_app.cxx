@@ -1941,6 +1941,7 @@ public:
                   m, n, perm, a, lda, d, cdata, backup, options, block_size,
                   beta, upd, ldupd, work, alloc, nelim_blk
                   );
+            if(num_elim < 0) return num_elim; // error
          }
          IATraits::deallocate(intAlloc, up_to_date, num_blocks);
          IATraits::deallocate(intAlloc, perm_copy, n);
@@ -1949,6 +1950,7 @@ public:
                m, n, perm, a, lda, d, cdata, backup, options,
                block_size, beta, upd, ldupd, work, alloc
                );
+         if(num_elim < 0) return num_elim; // error
          backup.release_all_memory(); // we're done with it now, but we want
                                       // the memory back for reuse before we
                                       // get it automatically when it goes out
