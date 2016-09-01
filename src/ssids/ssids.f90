@@ -1381,7 +1381,7 @@ subroutine ssids_alter_double(d, akeep, fkeep, options, inform)
       return
    end if 
 
-   call fkeep%alter(d, akeep, options, inform)
+   call fkeep%alter(d, akeep, options)
    if(inform%flag.lt.0) call ssids_print_flag(inform,nout,context)
    
 end subroutine ssids_alter_double

@@ -352,14 +352,13 @@ subroutine enquire_indef_cpu(akeep, fkeep, inform, piv_order, d)
 end subroutine enquire_indef_cpu
 
 ! Alter D values
-subroutine alter_cpu(d, akeep, fkeep, options, inform)
+subroutine alter_cpu(d, akeep, fkeep, options)
    real(wp), dimension(2,*), intent(in) :: d  ! The required diagonal entries
      ! of D^{-1} must be placed in d(1,i) (i = 1,...n)
      ! and the off-diagonal entries must be placed in d(2,i) (i = 1,...n-1).
    type(ssids_akeep), intent(in) :: akeep
    class(ssids_fkeep), target, intent(inout) :: fkeep
    type(ssids_options), intent(in) :: options
-   type(ssids_inform), intent(inout) :: inform
 
    integer :: part
 
