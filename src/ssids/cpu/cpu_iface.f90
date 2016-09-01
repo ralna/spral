@@ -23,7 +23,7 @@ module spral_ssids_cpu_iface
       real(C_DOUBLE) :: small
       real(C_DOUBLE) :: u
       integer(C_INT) :: print_level
-      integer(C_INT) :: cpu_small_subtree_threshold
+      integer(C_LONG) :: cpu_small_subtree_threshold
       integer(C_INT) :: cpu_task_block_size
       integer(C_INT) :: pivot_method
    end type cpu_factor_options

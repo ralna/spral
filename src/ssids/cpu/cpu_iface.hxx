@@ -20,7 +20,7 @@ struct cpu_factor_options {
    double small;
    double u;
    int print_level;
-   int cpu_small_subtree_threshold;
+   long cpu_small_subtree_threshold;
    int cpu_task_block_size;
    PivotMethod pivot_method;
 };
