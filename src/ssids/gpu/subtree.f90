@@ -413,18 +413,22 @@ function factor(this, posdef, aval, child_contrib, options, inform, scaling)
    cuda_error = cudaFree(gpu_val)
    if(cuda_error.ne.0) goto 200
    
-   ! Set inform
-   inform%flag = stats%flag
-   inform%stat = stats%st
-   inform%maxfront = stats%maxfront
-   inform%num_factor = stats%num_factor
-   inform%num_flops = stats%num_flops
-   inform%num_delay = stats%num_delay
-   inform%num_neg = stats%num_neg
-   inform%num_two = stats%num_two
-   inform%matrix_rank = this%sptr(this%nnodes+1)-1 - stats%num_zero
-   inform%cuda_error = stats%cuda_error
-   inform%cublas_error = stats%cublas_error
+   ! Set inform (in cumulative fashion)
+   if(inform%flag.lt.0 .or. stats%flag.lt.0) then
+      inform%flag = min(inform%flag, stats%flag) ! error
+   else
+      inform%flag = max(inform%flag, stats%flag) ! warning/success
+   endif
+   if(stats%st.ne.0) inform%stat = stats%st
+   inform%maxfront = max(inform%maxfront, stats%maxfront)
+   inform%num_factor = inform%num_factor+stats%num_factor
+   inform%num_flops = inform%num_flops+stats%num_flops
+   inform%num_delay = inform%num_delay+stats%num_delay
+   inform%num_neg = inform%num_neg+stats%num_neg
+   inform%num_two = inform%num_neg+stats%num_two
+   inform%matrix_rank = inform%matrix_rank - stats%num_zero
+   if(stats%cuda_error.ne.0) inform%cuda_error = stats%cuda_error
+   if(stats%cublas_error.ne.0) inform%cublas_error = stats%cublas_error
 
    ! Success, set result and return
    factor => gpu_factor
