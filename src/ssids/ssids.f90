@@ -722,6 +722,7 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
       inform%flag = SSIDS_SUCCESS
       inform%matrix_rank = 0
       fkeep%inform = inform
+      call inform%print_flag(options, context)
       return
    end if
 
@@ -744,8 +745,8 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
       if (.not.present(ptr)) inform%flag = SSIDS_ERROR_PTR_ROW
       if (.not.present(row)) inform%flag = SSIDS_ERROR_PTR_ROW
       if (inform%flag < 0) then
-         call inform%print_flag(options, context)
          fkeep%inform = inform
+         call inform%print_flag(options, context)
          return
       end if
       nz = akeep%ne
@@ -768,6 +769,7 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
       if(flag.ne.0) then
          inform%flag = SSIDS_ERROR_UNKNOWN
          fkeep%inform = inform
+         call inform%print_flag(options, context)
          return
       endif
    endif
@@ -822,8 +824,8 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
       case(-2)
          ! Structually singular matrix and control%action=.false.
          inform%flag = SSIDS_ERROR_SINGULAR
-         call inform%print_flag(options, context)
          fkeep%inform = inform
+         call inform%print_flag(options, context)
          return
       end select
       ! Permute scaling to correct order
@@ -869,8 +871,8 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
       if (.not.allocated(akeep%scaling)) then
          ! No scaling saved from analyse phase
          inform%flag = SSIDS_ERROR_NO_SAVED_SCALING
-         call inform%print_flag(options, context)
          fkeep%inform = inform
+         call inform%print_flag(options, context)
          return
       end if
       do i = 1, n
@@ -930,15 +932,10 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
       call fkeep%inner_factor(akeep, val, options, inform)
    endif
    if(inform%flag .lt. 0) then
+      fkeep%inform = inform
       call inform%print_flag(options, context)
       return
    endif
-
-   if (inform%flag < 0) then
-      call inform%print_flag(options, context)
-      fkeep%inform = inform
-      return
-   end if
 
    if(akeep%n.ne.inform%matrix_rank) then
       ! Rank deficient
@@ -1153,7 +1150,7 @@ subroutine ssids_enquire_posdef_double(akeep, fkeep, options, inform, d)
       return
    end if
 
-   if (akeep%inform%flag .lt. 0 .or. fkeep%inform%flag .lt. 0) then
+   if (akeep%inform%flag.lt.0 .or. fkeep%inform%flag.lt.0) then
       ! immediate return if had an error
       inform%flag = SSIDS_ERROR_CALL_SEQUENCE
       call inform%print_flag(options, context)
