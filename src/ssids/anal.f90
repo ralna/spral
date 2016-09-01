@@ -491,6 +491,9 @@ real function calc_exec_alloc(nparts, part, size_order, is_child, flops, &
    real, dimension(:), allocatable :: load_balance
    real :: total_balance
 
+   ! Initialise in case of an error return
+   calc_exec_alloc = huge(calc_exec_alloc)
+
    !
    ! Create resource map
    !
@@ -569,12 +572,12 @@ real function calc_exec_alloc(nparts, part, size_order, is_child, flops, &
       if(exec_loc(p).gt.nregion) then
          ! GPU
          load_balance(exec_loc(p)) = load_balance(exec_loc(p)) + &
-            pflops / gpu_perf_coeff
-         total_balance = total_balance + pflops / gpu_perf_coeff
+            real(pflops) / gpu_perf_coeff
+         total_balance = total_balance + real(pflops) / gpu_perf_coeff
       else
          ! CPU
-         load_balance(exec_loc(p)) = load_balance(exec_loc(p)) + pflops
-         total_balance = total_balance + pflops
+         load_balance(exec_loc(p)) = load_balance(exec_loc(p)) + real(pflops)
+         total_balance = total_balance + real(pflops)
       endif
    end do
    ! Calculate n * max(x_i/a_i) / sum(x_j/a_j)

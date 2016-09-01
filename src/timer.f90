@@ -47,7 +47,7 @@ real function tdiff(tp1, tp2)
    type(timespec) :: tp1, tp2
 
    tdiff = tp2%tv_sec - tp1%tv_sec
-   tdiff = tdiff + 1e-9 * (tp2%tv_nsec-tp1%tv_nsec)
+   tdiff = tdiff + 1e-9 * real(tp2%tv_nsec-tp1%tv_nsec)
 end function tdiff
 
 subroutine log_start(task, id, opt1, opt2, opt3)

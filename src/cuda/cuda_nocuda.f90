@@ -13,7 +13,7 @@ contains
 character(len=200) function cudaGetErrorString(error)
    integer(C_INT) :: error
 
-   cudaGetErrorString = "Not compiled with CUDA support"
+   write(cudaGetErrorString, "(a,i3)") "Not compiled with CUDA support ", error
 end function cudaGetErrorString
 
 

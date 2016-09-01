@@ -569,7 +569,7 @@ subroutine find_supernodes(n, realn, parent, cc, sperm, nnodes, sptr, sparent, &
    height(:) = 1
 
    ! Initialise number of variables in each node
-   nelim(:) = 1
+   nelim(1:n+1) = 1
    totalwt = n
    nvert(1:n+1) = 1 ! Note: Explicit bounds used to silence warning
 
