@@ -15,8 +15,8 @@ namespace spral { namespace ssids { namespace cpu {
  * sensibly at the end of factorization.
  */
 ThreadStats& ThreadStats::operator+=(ThreadStats const& other) {
-   flag = (flag == Flag::SUCCESS) ? other.flag
-                                  : std::min(flag, other.flag);
+   flag = (flag<0 || other.flag<0) ? std::min(flag, other.flag) // error
+                                   : std::max(flag, other.flag);// warning/pass
    num_delay += other.num_delay;
    num_neg += other.num_neg;
    num_two += other.num_two;
