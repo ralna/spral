@@ -22,7 +22,7 @@ module spral_ssids
    use spral_ssids_datatypes
    use spral_ssids_akeep, only : ssids_akeep
    use spral_ssids_fkeep, only : ssids_fkeep
-   use spral_ssids_inform, only : ssids_inform, ssids_print_flag
+   use spral_ssids_inform, only : ssids_inform
    use spral_rutherford_boeing, only : rb_writer_options, rb_write
    implicit none
 
@@ -122,9 +122,6 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
 
    character(50)  :: context      ! Procedure name (used when printing).
    integer :: mu_flag       ! error flag for matrix_util routines
-   integer :: mp           ! stream number for diagnostic messages
-   integer :: nout         ! stream for errors
-   integer :: nout1        ! stream for warnings
    integer :: nz           ! entries in expanded matrix
    integer :: st           ! stat parameter
    integer :: flag         ! error flag for metis
@@ -151,28 +148,15 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
       inform%flag = SSIDS_ERROR_CUDA_UNKNOWN
       inform%cuda_error = free_flag
       akeep%flag = inform%flag
-      call ssids_print_flag(inform,nout,context)
+      call inform%print_flag(options, context)
       return
    endif
 
-   ! Set stream numbers
-   mp = options%unit_diagnostics
-   nout = options%unit_error
-   if (options%print_level < 0) nout = -1
-   nout1 = options%unit_warning
-   if (options%print_level < 0) nout1 = -1
-
    ! Print status on entry
-   if (options%print_level>=1 .and. mp>=0) then
-     write (mp,'(/a)') ' On entry to ssids_analyse:'
-     write (mp,'(a,i15)') ' options%print_level       =  ', &
-        options%print_level
-     write (mp,'(a,i15)') ' options%unit_diagnostics  =  ',mp
-     write (mp,'(a,i15)') ' options%unit_error        =  ',options%unit_error
-     write (mp,'(a,i15)') ' options%unit_warning      =  ',options%unit_warning
-     write (mp,'(a,i15)') ' options%nemin             =  ',options%nemin
-     write (mp,'(a,i15)') ' options%ordering          =  ',options%ordering
-     write (mp,'(a,i15)') ' n                         =  ',n
+   call options%print_summary_analyse(context)
+   if (options%print_level>=1 .and. options%unit_diagnostics>=0) then
+     write (options%unit_diagnostics,'(a,i15)') &
+        ' n                         =  ',n
    end if
 
    akeep%check = check
@@ -182,8 +166,8 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
    ! Checking of matrix data
    if (n < 0) then
       inform%flag = SSIDS_ERROR_A_N_OOR
-      call ssids_print_flag(inform,nout,context)
       akeep%flag = inform%flag
+      call inform%print_flag(options, context)
       return
    end if
 
@@ -198,19 +182,19 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
    ! check options%ordering has a valid value
    if (options%ordering < 0 .or. options%ordering > 2) then
       inform%flag = SSIDS_ERROR_ORDER
-      call ssids_print_flag(inform,nout,context)
       akeep%flag = inform%flag
+      call inform%print_flag(options, context)
       return
    end if
 
    ! check val present when expected
    if (options%ordering.eq.2) then
-     if (.not.present(val)) then
-        inform%flag = SSIDS_ERROR_VAL
-        call ssids_print_flag(inform,nout,context)
-        akeep%flag = inform%flag
-        return
-     end if
+      if (.not.present(val)) then
+         inform%flag = SSIDS_ERROR_VAL
+         akeep%flag = inform%flag
+         call inform%print_flag(options, context)
+         return
+      end if
    end if
 
    akeep%ne = ptr(n+1)-1
@@ -236,8 +220,8 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
          if (mu_flag .eq. -5) inform%flag  = SSIDS_ERROR_A_PTR
          if (mu_flag .eq. -6) inform%flag  = SSIDS_ERROR_A_PTR
          if (mu_flag .eq. -10) inform%flag = SSIDS_ERROR_A_ALL_OOR
-         call ssids_print_flag(inform,nout,context)
          akeep%flag = inform%flag
+         call inform%print_flag(options, context)
          return
       end if
 
@@ -245,7 +229,7 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
       ! Note: same numbering of positive flags as in matrix_util
       if (mu_flag > 0) then
          inform%flag = mu_flag
-         call ssids_print_flag(inform,nout1,context)
+         call inform%print_flag(options, context)
       end if
       nz = akeep%ptr(n+1) - 1
    else
@@ -270,7 +254,7 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
          ! we have an error since user should have supplied the order
          inform%flag = SSIDS_ERROR_ORDER
          akeep%flag = inform%flag
-         call ssids_print_flag(inform,nout,context)
+         call inform%print_flag(options, context)
          return
       end if
       call check_order(n,order,akeep%invp,akeep,options,inform)
@@ -315,15 +299,14 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
       case(1)
          ! singularity warning required
          inform%flag = SSIDS_WARNING_ANAL_SINGULAR
-         call ssids_print_flag(inform,nout1,context)
       case(-1)
          inform%flag = SSIDS_ERROR_ALLOCATION
-         call ssids_print_flag(inform,nout,context)
+         call inform%print_flag(options, context)
          akeep%flag = inform%flag
          return
       case default
          inform%flag = SSIDS_ERROR_UNKNOWN
-         call ssids_print_flag(inform,nout,context)
+         call inform%print_flag(options, context)
          akeep%flag = inform%flag
          return
       end select
@@ -362,9 +345,9 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
    inform%stat = st
    if (inform%stat .ne. 0) then
       inform%flag = SSIDS_ERROR_ALLOCATION
-      call ssids_print_flag(inform,nout,context)
    end if
    akeep%flag = inform%flag
+   call inform%print_flag(options, context)
 
 end subroutine analyse_double
 
@@ -468,9 +451,6 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
 
    character(50)  :: context      ! Procedure name (used when printing).
    integer :: mu_flag       ! error flag for matrix_util routines
-   integer :: mp           ! stream number for diagnostic messages
-   integer :: nout         ! stream for errors
-   integer :: nout1        ! stream for warnings
    integer :: nz           ! entries in expanded matrix
    integer :: flag         ! error flag for metis
    integer :: st           ! stat parameter
@@ -486,30 +466,18 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
       inform%flag = SSIDS_ERROR_CUDA_UNKNOWN
       inform%cuda_error = free_flag
       akeep%flag = inform%flag
-      call ssids_print_flag(inform,nout,context)
+      call inform%print_flag(options, context)
       akeep%inform = inform
       return
    endif
 
-   ! Set stream numbers
-   mp = options%unit_diagnostics
-   nout = options%unit_error
-   if (options%print_level < 0) nout = -1
-   nout1 = options%unit_warning
-   if (options%print_level < 0) nout1 = -1
-
    ! Output status on entry
-   if (options%print_level>=1 .and. mp>=0) then
-     write (mp,'(/a)') ' On entry to ssids_analyse_coord:'
-     write (mp,'(a,i15)') ' options%print_level       =  ', &
-        options%print_level
-     write (mp,'(a,i15)') ' options%unit_diagnostics  =  ',mp
-     write (mp,'(a,i15)') ' options%unit_error        =  ',options%unit_error
-     write (mp,'(a,i15)') ' options%unit_warning      =  ',options%unit_warning
-     write (mp,'(a,i15)') ' options%nemin             =  ',options%nemin
-     write (mp,'(a,i15)') ' options%ordering          =  ',options%ordering
-     write (mp,'(a,i15)') ' n                         =  ',n
-     write (mp,'(a,i15)') ' ne                        =  ',ne
+   call options%print_summary_analyse(context)
+   if (options%print_level>=1 .and. options%unit_diagnostics>=0) then
+      write (options%unit_diagnostics,'(a,i15)') &
+         ' n                         =  ', n
+      write (options%unit_diagnostics,'(a,i15)') &
+         ' ne                        =  ', ne
    end if
 
    akeep%check = .true.
@@ -524,7 +492,7 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
       inform%flag = SSIDS_ERROR_A_N_OOR
       akeep%flag = inform%flag
       akeep%inform = inform
-      call ssids_print_flag(inform,nout,context)
+      call inform%print_flag(options, context)
       return
    end if
 
@@ -539,21 +507,21 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
    ! check options%ordering has a valid value
    if (options%ordering < 0 .or. options%ordering > 2) then
       inform%flag = SSIDS_ERROR_ORDER
-      call ssids_print_flag(inform,nout,context)
       akeep%flag = inform%flag
       akeep%inform = inform
+      call inform%print_flag(options, context)
       return
    end if
 
    ! check val present when expected
    if (options%ordering.eq.2) then
-     if (.not.present(val)) then
-        inform%flag = SSIDS_ERROR_VAL
-        call ssids_print_flag(inform,nout,context)
-        akeep%flag = inform%flag
-        akeep%inform = inform
-        return
-     end if
+      if (.not.present(val)) then
+         inform%flag = SSIDS_ERROR_VAL
+         akeep%flag = inform%flag
+         akeep%inform = inform
+         call inform%print_flag(options, context)
+         return
+      end if
    end if
 
    st = 0
@@ -575,8 +543,8 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
    if (mu_flag < 0) then
       if (mu_flag .eq. -1)  inform%flag = SSIDS_ERROR_ALLOCATION
       if (mu_flag .eq. -10) inform%flag = SSIDS_ERROR_A_ALL_OOR
-      call ssids_print_flag(inform,nout,context)
       akeep%flag = inform%flag
+      call inform%print_flag(options, context)
       return
    end if
 
@@ -584,8 +552,8 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
    ! Note: same numbering of positive flags as in matrix_util
    if (mu_flag > 0) then
       inform%flag = mu_flag
-      call ssids_print_flag(inform,nout1,context)
       akeep%flag = inform%flag
+      call inform%print_flag(options, context)
    end if
 
    nz = akeep%ptr(n+1) - 1
@@ -608,8 +576,8 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
          inform%flag = SSIDS_ERROR_ORDER
          akeep%flag = inform%flag
          akeep%inform = inform
-         call ssids_print_flag(inform,nout,context)
          akeep%inform = inform
+         call inform%print_flag(options, context)
          return
       end if
       call check_order(n,order,akeep%invp,akeep,options,inform)
@@ -640,18 +608,17 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
       case(1)
          ! singularity warning required
          inform%flag = SSIDS_WARNING_ANAL_SINGULAR
-         call ssids_print_flag(inform,nout1,context)
       case(-1)
          inform%flag = SSIDS_ERROR_ALLOCATION
-         call ssids_print_flag(inform,nout,context)
          akeep%flag = inform%flag
          akeep%inform = inform
+         call inform%print_flag(options, context)
          return
       case default
          inform%flag = SSIDS_ERROR_UNKNOWN
-         call ssids_print_flag(inform,nout,context)
          akeep%flag = inform%flag
          akeep%inform = inform
+         call inform%print_flag(options, context)
          return
       end select
 
@@ -684,9 +651,9 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
    inform%stat = st
    if (inform%stat .ne. 0) then
       inform%flag = SSIDS_ERROR_ALLOCATION
-      call ssids_print_flag(inform,nout,context)
    end if
    akeep%flag = inform%flag
+   call inform%print_flag(options, context)
     
 end subroutine ssids_analyse_coord_double
 
@@ -720,8 +687,6 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
 
    integer :: i
    integer :: n, nz
-   integer :: nout, nout1
-   integer :: mp
    integer :: st
    ! Solve parameters. Tree is broken up into multiple chunks. Parent-child
    ! relations between chunks are stored in fwd_ptr and fwd (see solve routine
@@ -740,57 +705,15 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
    
    ! Setup for any printing we may require
    context = 'ssids_factor'
-   mp = options%unit_diagnostics
-   nout = options%unit_error
-   if (options%print_level < 0) nout = -1
-   nout1 = options%unit_warning
-   if (options%print_level < 0) nout1 = -1
 
-   ! Perform appropriate printing
-   if (options%print_level >= 1 .and. mp >= 0) then
-      if (posdef) then
-         write (mp,'(//a,i2,a)') &
-            ' Entering ssids_factor with posdef = .true. and :'
-         write (mp,'(a,5(/a,i12),5(/a,es12.4))') &
-            ' options parameters (options%) :', &
-            ' print_level         Level of diagnostic printing           = ', &
-            options%print_level,      &
-            ' unit_diagnostics    Unit for diagnostics                   = ', &
-            options%unit_diagnostics, &
-            ' unit_error          Unit for errors                        = ', &
-            options%unit_error,       &
-            ' unit_warning        Unit for warnings                      = ', &
-            options%unit_warning,     &
-            ' scaling             Scaling control                        = ', &
-            options%scaling
-      else ! indef
-         write (mp,'(//a,i2,a)') &
-            ' Entering ssids_factor with posdef = .false. and :'
-         write (mp,'(a,5(/a,i12),5(/a,es12.4))') &
-            ' options parameters (options%) :', &
-            ' print_level         Level of diagnostic printing           = ', &
-            options%print_level,      &
-            ' unit_diagnostics    Unit for diagnostics                   = ', &
-            options%unit_diagnostics, &
-            ' unit_error          Unit for errors                        = ', &
-            options%unit_error,       &
-            ' unit_warning        Unit for warnings                      = ', &
-            options%unit_warning,     &
-            ' scaling             Scaling control                        = ', &
-            options%scaling,          &
-            ' small               Small pivot size                       = ', &
-            options%small,           &
-            ' u                   Initial relative pivot tolerance       = ', &
-            options%u,               &
-            ' multiplier          Multiplier for increasing array sizes  = ', &
-            options%multiplier
-      end if
-   end if
+   ! Print summary of input options (depending on print level etc.)
+   call options%print_summary_factor(posdef, context)
 
+   ! Check for error in call sequence
    if (.not.allocated(akeep%sptr) .or. akeep%flag < 0) then
       ! Analyse cannot have been run
       inform%flag = SSIDS_ERROR_CALL_SEQUENCE
-      call ssids_print_flag(inform,nout,context)
+      call inform%print_flag(options, context)
       fkeep%flag = inform%flag
       fkeep%inform = inform
       return
@@ -806,7 +729,7 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
    if(.not.options%action .and. akeep%n.ne.akeep%inform%matrix_rank) then
       inform%flag = SSIDS_ERROR_SINGULAR
       fkeep%inform = inform
-      call ssids_print_flag(inform,nout,context)
+      call inform%print_flag(options, context)
       return
    end if
 
@@ -838,7 +761,7 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
       if (.not.present(ptr)) inform%flag = SSIDS_ERROR_PTR_ROW
       if (.not.present(row)) inform%flag = SSIDS_ERROR_PTR_ROW
       if (inform%flag < 0) then
-         call ssids_print_flag(inform,nout,context)
+         call inform%print_flag(options, context)
          fkeep%flag = inform%flag
          fkeep%inform = inform
          return
@@ -886,7 +809,7 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
 
    if(allocated(akeep%scaling) .and. options%scaling.ne.3) then
       inform%flag = SSIDS_WARNING_MATCH_ORD_NO_SCALE
-      call ssids_print_flag(inform,nout1,context)
+      call inform%print_flag(options, context)
    end if
 
    select case (options%scaling)
@@ -917,7 +840,7 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
       case(-2)
          ! Structually singular matrix and control%action=.false.
          inform%flag = SSIDS_ERROR_SINGULAR
-         call ssids_print_flag(inform,nout,context)
+         call inform%print_flag(options, context)
          fkeep%flag = inform%flag
          fkeep%inform = inform
          return
@@ -965,7 +888,7 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
       if (.not.allocated(akeep%scaling)) then
          ! No scaling saved from analyse phase
          inform%flag = SSIDS_ERROR_NO_SAVED_SCALING
-         call ssids_print_flag(inform,nout,context)
+         call inform%print_flag(options, context)
          fkeep%flag = inform%flag
          fkeep%inform = inform
          return
@@ -1027,12 +950,12 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
       call fkeep%inner_factor(akeep, val, options, inform)
    endif
    if(inform%flag .lt. 0) then
-      call ssids_print_flag(inform,nout,context)
+      call inform%print_flag(options, context)
       return
    endif
 
    if (inform%flag < 0) then
-      call ssids_print_flag(inform,nout,context)
+      call inform%print_flag(options, context)
       fkeep%flag = inform%flag
       return
    end if
@@ -1045,7 +968,7 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
       else
         inform%flag = SSIDS_ERROR_SINGULAR
       end if
-      call ssids_print_flag(inform,nout,context)
+      call inform%print_flag(options, context)
    end if
 
    if (options%print_level >= 1 .and. options%unit_diagnostics >= 0) then
@@ -1074,6 +997,7 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
    end if
 
    fkeep%inform = inform
+   call inform%print_flag(options, context)
    return
    !!!!!!!!!!!!!!!!!!!!
 
@@ -1084,7 +1008,7 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
    inform%flag = SSIDS_ERROR_ALLOCATION
    inform%stat = st
    fkeep%flag = inform%flag
-   call ssids_print_flag(inform,nout,context)
+   call inform%print_flag(options, context)
    return
 
 end subroutine ssids_factor_double
@@ -1238,36 +1162,33 @@ subroutine ssids_enquire_posdef_double(akeep, fkeep, options, inform, d)
    type(ssids_inform), intent(out) :: inform
    real(wp), dimension(*), intent(out) :: d
 
-   integer :: nout
    character(50)  :: context      ! Procedure name (used when printing).
 
    context = 'ssids_enquire_posdef' 
    inform%flag = SSIDS_SUCCESS
 
-   nout = options%unit_error
-   if (options%print_level < 0) nout = -1
-
    if (.not. allocated(fkeep%subtree)) then
       ! factorize phase has not been performed
       inform%flag = SSIDS_ERROR_CALL_SEQUENCE
-      call ssids_print_flag(inform,nout,context)
+      call inform%print_flag(options, context)
       return
    end if
 
    if (akeep%flag .lt. 0 .or. fkeep%flag .lt. 0) then
       ! immediate return if had an error
       inform%flag = SSIDS_ERROR_CALL_SEQUENCE
-      call ssids_print_flag(inform,nout,context)
+      call inform%print_flag(options, context)
       return
    end if
 
    if (.not.fkeep%pos_def) then
       inform%flag = SSIDS_ERROR_NOT_LLT
-      call ssids_print_flag(inform,nout,context)
+      call inform%print_flag(options, context)
       return
    end if
 
    call fkeep%enquire_posdef(akeep, d)
+   call inform%print_flag(options, context)
 end subroutine ssids_enquire_posdef_double
 
 !*************************************************************************
@@ -1292,37 +1213,33 @@ subroutine ssids_enquire_indef_double(akeep, fkeep, options, inform, &
       ! entries of D^{-1} will be placed in d(1,:i) and the off-diagonal
       ! entries will be placed in d(2,:). The entries are held in pivot order.
 
-   integer :: nout
    character(50)  :: context      ! Procedure name (used when printing).
 
    context = 'ssids_enquire_indef' 
    inform%flag = SSIDS_SUCCESS
 
-   nout = options%unit_error
-   if (options%print_level < 0) nout = -1
-
    if (.not. allocated(fkeep%subtree)) then
       ! factorize phase has not been performed
       inform%flag = SSIDS_ERROR_CALL_SEQUENCE
-      call ssids_print_flag(inform,nout,context)
+      call inform%print_flag(options, context)
       return
    end if
 
    if (akeep%flag .lt. 0 .or. fkeep%flag .lt. 0) then
       ! immediate return if had an error
       inform%flag = SSIDS_ERROR_CALL_SEQUENCE
-      call ssids_print_flag(inform,nout,context)
+      call inform%print_flag(options, context)
       return
    end if
 
    if (fkeep%pos_def) then
       inform%flag = SSIDS_ERROR_NOT_LDLT
-      call ssids_print_flag(inform,nout,context)
+      call inform%print_flag(options, context)
       return
    end if
 
    call fkeep%enquire_indef(akeep, inform, piv_order, d)
-   if(inform%flag.ne.0) call ssids_print_flag(inform,nout,context)
+   call inform%print_flag(options, context)
 
 end subroutine ssids_enquire_indef_double
 
@@ -1339,38 +1256,33 @@ subroutine ssids_alter_double(d, akeep, fkeep, options, inform)
    type(ssids_options), intent(in) :: options
    type(ssids_inform), intent(out) :: inform
 
-   integer :: nout
    character(50)  :: context      ! Procedure name (used when printing).
 
-   inform%flag = SSIDS_SUCCESS
-
    context = 'ssids_alter'
-
-   nout = options%unit_error
-   if (options%print_level < 0) nout = -1
+   inform%flag = SSIDS_SUCCESS
 
    if (.not. allocated(fkeep%subtree)) then
       ! factorize phase has not been performed
       inform%flag = SSIDS_ERROR_CALL_SEQUENCE
-      call ssids_print_flag(inform,nout,context)
+      call inform%print_flag(options, context)
       return
     end if
 
    ! immediate return if already had an error
    if (akeep%flag .lt. 0 .or. fkeep%flag .lt. 0) then
       inform%flag = SSIDS_ERROR_CALL_SEQUENCE
-      call ssids_print_flag(inform,nout,context)
+      call inform%print_flag(options, context)
       return
    end if
 
    if (fkeep%pos_def) then
       inform%flag = SSIDS_ERROR_NOT_LDLT
-      call ssids_print_flag(inform,nout,context)
+      call inform%print_flag(options, context)
       return
    end if 
 
    call fkeep%alter(d, akeep)
-   if(inform%flag.lt.0) call ssids_print_flag(inform,nout,context)
+   call inform%print_flag(options, context)
    
 end subroutine ssids_alter_double
 

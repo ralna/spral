@@ -10,7 +10,6 @@ module spral_ssids_inform
 
    private
    public :: ssids_inform
-   public :: ssids_print_flag
 
    !
    ! Data type for information returned by code
@@ -139,6 +138,7 @@ function flag_to_character(this) result(msg)
 
 end function flag_to_character
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !> @brief Print out warning or error if flag is non-zero
 !> @param this Instance variable.
 !> @param options Options to be used for printing
@@ -167,29 +167,6 @@ subroutine print_flag(this, options, context)
       write(options%unit_error, '(a)') msg
    end if
 end subroutine print_flag
-
-!
-! routine to print errors and warnings
-!
-subroutine ssids_print_flag(inform,nout,context)
-   type(ssids_inform), intent(in) :: inform
-   integer, intent(in) :: nout
-   character (len=*), optional, intent(in) :: context
-
-   character(len=200) :: msg
-
-   if (nout < 0) return
-   if (inform%flag < 0) then
-      write (nout,'(/3a,i3)') ' Error return from ',trim(context),&
-         '. Error flag = ', inform%flag
-   else
-      write (nout,'(/3a,i3)') ' Warning from ',trim(context),&
-         '. Warning flag = ', inform%flag
-   end if
-   msg = inform%flag_to_character()
-   write(nout, '(a)') msg
-
-end subroutine ssids_print_flag
 
 !> @brief Combine other's values into this object.
 !>

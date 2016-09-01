@@ -13,7 +13,7 @@ module spral_ssids_anal
    use spral_ssids_cpu_subtree, only : construct_cpu_symbolic_subtree
    use spral_ssids_gpu_subtree, only : construct_gpu_symbolic_subtree
    use spral_ssids_datatypes
-   use spral_ssids_inform, only : ssids_inform, ssids_print_flag
+   use spral_ssids_inform, only : ssids_inform
    implicit none
 
    private
@@ -171,7 +171,6 @@ subroutine check_order(n, order, invp, akeep, options, inform)
       ! Order is too short
       inform%flag = SSIDS_ERROR_ORDER
       akeep%flag = inform%flag
-      call ssids_print_flag(inform, nout, context)
       return
    end if
 
@@ -193,7 +192,6 @@ subroutine check_order(n, order, invp, akeep, options, inform)
    if (i-1 .ne. n) then
       inform%flag = SSIDS_ERROR_ORDER
       akeep%flag = inform%flag
-      call ssids_print_flag(inform,nout,context)
       return
    end if
 end subroutine check_order
@@ -773,7 +771,6 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
    case(-1)
       ! Allocation error
       inform%flag = SSIDS_ERROR_ALLOCATION
-      call ssids_print_flag(inform,nout,context)
       return
    case(1)
       ! Zero row/column.
@@ -893,7 +890,6 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
    inform%stat = st
    if (inform%stat .ne. 0) then
       inform%flag = SSIDS_ERROR_ALLOCATION
-      call ssids_print_flag(inform,nout,context)
    end if
    return
  

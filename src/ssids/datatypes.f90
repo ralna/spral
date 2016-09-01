@@ -269,6 +269,9 @@ module spral_ssids_datatypes
       character(len=:), allocatable :: rb_dump ! Filename to dump matrix in
          ! prior to factorization. No dump takes place if not allocated (the
          ! default).
+   contains
+      procedure :: print_summary_analyse
+      procedure :: print_summary_factor
    end type ssids_options
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -282,5 +285,79 @@ module spral_ssids_datatypes
    integer, parameter, public :: EXEC_LOC_GPU = 1
 
    integer, parameter, public :: DEBUG_PRINT_LEVEL = 9999 
+
+contains
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!> @brief Print summary of options used in analysis
+!> @param this Instance to summarise
+!> @param context Name of subroutine to use in printing
+subroutine print_summary_analyse(this, context)
+   class(ssids_options), intent(in) :: this
+   character(len=*), intent(in) :: context
+
+   integer :: mp
+
+   if(this%print_level.lt.1 .or. this%unit_diagnostics.lt.0) return
+   mp = this%unit_diagnostics
+   write (mp,'(/3a)') ' On entry to ', context, ':'
+   write (mp,'(a,i15)') ' options%print_level       =  ',this%print_level
+   write (mp,'(a,i15)') ' options%unit_diagnostics  =  ',this%unit_diagnostics
+   write (mp,'(a,i15)') ' options%unit_error        =  ',this%unit_error
+   write (mp,'(a,i15)') ' options%unit_warning      =  ',this%unit_warning
+   write (mp,'(a,i15)') ' options%nemin             =  ',this%nemin
+   write (mp,'(a,i15)') ' options%ordering          =  ',this%ordering
+end subroutine print_summary_analyse
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!> @brief Print summary of options used in factorization
+!> @param this Instance to summarise
+!> @param posdef True if positive-definite factorization to be performed,
+!>        false for indefinite.
+!> @param context Name of subroutine to use in printing
+subroutine print_summary_factor(this, posdef, context)
+   class(ssids_options), intent(in) :: this
+   logical, intent(in) :: posdef
+   character(len=*), intent(in) :: context
+
+   if(this%print_level.lt.1 .or. this%unit_diagnostics.lt.0) return
+   if(posdef) then
+      write (this%unit_diagnostics,'(//3a,i2,a)') &
+         ' Entering ', context, ' with posdef = .true. and :'
+      write (this%unit_diagnostics,'(a,5(/a,i12),5(/a,es12.4))') &
+         ' options parameters (options%) :', &
+         ' print_level         Level of diagnostic printing           = ', &
+         this%print_level,      &
+         ' unit_diagnostics    Unit for diagnostics                   = ', &
+         this%unit_diagnostics, &
+         ' unit_error          Unit for errors                        = ', &
+         this%unit_error,       &
+         ' unit_warning        Unit for warnings                      = ', &
+         this%unit_warning,     &
+         ' scaling             Scaling control                        = ', &
+         this%scaling
+   else ! indef
+      write (this%unit_diagnostics,'(//3a,i2,a)') &
+         ' Entering ', context, ' with posdef = .false. and :'
+      write (this%unit_diagnostics,'(a,5(/a,i12),5(/a,es12.4))') &
+         ' options parameters (options%) :', &
+         ' print_level         Level of diagnostic printing           = ', &
+         this%print_level,      &
+         ' unit_diagnostics    Unit for diagnostics                   = ', &
+         this%unit_diagnostics, &
+         ' unit_error          Unit for errors                        = ', &
+         this%unit_error,       &
+         ' unit_warning        Unit for warnings                      = ', &
+         this%unit_warning,     &
+         ' scaling             Scaling control                        = ', &
+         this%scaling,          &
+         ' small               Small pivot size                       = ', &
+         this%small,           &
+         ' u                   Initial relative pivot tolerance       = ', &
+         this%u,               &
+         ' multiplier          Multiplier for increasing array sizes  = ', &
+         this%multiplier
+   end if
+end subroutine print_summary_factor
 
 end module spral_ssids_datatypes
