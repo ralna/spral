@@ -56,14 +56,15 @@ public:
          void** child_contrib,
          struct cpu_factor_options const& options,
          ThreadStats& stats)
-   : symb_(symbolic_subtree), nodes_(symbolic_subtree.nnodes_+1),
-     small_leafs_(static_cast<SLNS*>(::operator new[](symb_.small_leafs_.size()*sizeof(SLNS)))),
+   : symb_(symbolic_subtree),
      factor_alloc_(symbolic_subtree.get_factor_mem_est(options.multiplier)),
-     pool_alloc_(symbolic_subtree.get_pool_size<T>())
+     pool_alloc_(symbolic_subtree.get_pool_size<T>()),
+     small_leafs_(static_cast<SLNS*>(::operator new[](symb_.small_leafs_.size()*sizeof(SLNS))))
    {
       /* Associate symbolic nodes to numeric ones; copy tree structure */
+      nodes_.reserve(symbolic_subtree.nnodes_+1);
       for(int ni=0; ni<symb_.nnodes_+1; ++ni) {
-         nodes_[ni].symb = &symbolic_subtree[ni];
+         nodes_.emplace_back(symbolic_subtree[ni], pool_alloc_);
          auto* fc = symbolic_subtree[ni].first_child;
          nodes_[ni].first_child = fc ? &nodes_[fc->idx] : nullptr;
          auto* nc = symbolic_subtree[ni].next_child;
@@ -431,35 +432,32 @@ public:
          int& ndelay, int const*& delay_perm, T const*& delay_val,
          int& lddelay) const {
       auto& root = *nodes_.back().first_child;
-      n = root.symb->nrow - root.symb->ncol;
+      n = root.symb.nrow - root.symb.ncol;
       val = root.contrib;
       ldval = n;
-      rlist = &root.symb->rlist[root.symb->ncol];
+      rlist = &root.symb.rlist[root.symb.ncol];
       ndelay = root.ndelay_out;
       delay_perm = (ndelay>0) ? &root.perm[root.nelim]
                               : nullptr;
-      lddelay = align_lda<T>(root.symb->nrow + root.ndelay_in);
+      lddelay = align_lda<T>(root.symb.nrow + root.ndelay_in);
       delay_val = (ndelay>0) ? &root.lcol[root.nelim*(lddelay+1)] 
                              : nullptr;
    }
 
    /** Frees root's contribution block */
    void free_contrib() {
-      typedef std::allocator_traits<PoolAllocator> PATraits;
-      auto& root = *nodes_.back().first_child;
-      int n = root.symb->nrow - root.symb->ncol;
-      PATraits::deallocate(pool_alloc_, root.contrib, n*n);
+      nodes_.back().first_child->free_contrib();
    }
 
    SymbolicSubtree const& get_symbolic_subtree() { return symb_; }
 
 private:
    SymbolicSubtree const& symb_;
-   std::vector<NumericNode<T>> nodes_;
-   SLNS *small_leafs_; // Apparently emplace_back isn't threadsafe, so
-      // std::vector is out. So we use placement new instead.
    FactorAllocator factor_alloc_;
    PoolAllocator pool_alloc_;
+   std::vector<NumericNode<T,PoolAllocator>> nodes_;
+   SLNS *small_leafs_; // Apparently emplace_back isn't threadsafe, so
+      // std::vector is out. So we use placement new instead.
 };
 
 }}} /* end of namespace spral::ssids::cpu */

@@ -33,7 +33,7 @@ template <typename T, typename PoolAlloc>
 void factor_node_indef(
       int ni, // FIXME: remove post debug
       SymbolicNode const& snode,
-      NumericNode<T>* node,
+      NumericNode<T, PoolAlloc>* node,
       struct cpu_factor_options const& options,
       ThreadStats& stats,
       std::vector<Workspace>& work,
@@ -111,11 +111,11 @@ void factor_node_indef(
    }
 }
 /* Factorize a node (posdef) */
-template <typename T>
+template <typename T, typename PoolAlloc>
 void factor_node_posdef(
       T beta,
       SymbolicNode const& snode,
-      NumericNode<T>* node,
+      NumericNode<T, PoolAlloc>* node,
       struct cpu_factor_options const& options,
       ThreadStats& stats
       ) {
@@ -147,7 +147,7 @@ template <bool posdef, typename T, typename PoolAlloc>
 void factor_node(
       int ni,
       SymbolicNode const& snode,
-      NumericNode<T>* node,
+      NumericNode<T, PoolAlloc>* node,
       struct cpu_factor_options const& options,
       ThreadStats& stats,
       std::vector<Workspace>& work,

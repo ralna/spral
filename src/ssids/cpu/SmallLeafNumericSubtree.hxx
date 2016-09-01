@@ -34,7 +34,7 @@ class SmallLeafNumericSubtree<true, T, FactorAllocator, PoolAllocator> {
    typedef typename std::allocator_traits<FactorAllocator>::template rebind_traits<int> FAIntTraits;
    typedef std::allocator_traits<PoolAllocator> PATraits;
 public:
-   SmallLeafNumericSubtree(SmallLeafSymbolicSubtree const& symb, std::vector<NumericNode<T>>& old_nodes, T const* aval, T const* scaling, FactorAllocator& factor_alloc, PoolAllocator& pool_alloc, std::vector<Workspace>& work_vec, struct cpu_factor_options const& options, ThreadStats& stats) 
+   SmallLeafNumericSubtree(SmallLeafSymbolicSubtree const& symb, std::vector<NumericNode<T,PoolAllocator>>& old_nodes, T const* aval, T const* scaling, FactorAllocator& factor_alloc, PoolAllocator& pool_alloc, std::vector<Workspace>& work_vec, struct cpu_factor_options const& options, ThreadStats& stats) 
       : old_nodes_(old_nodes), symb_(symb), lcol_(FADoubleTraits::allocate(factor_alloc, symb.nfactor_))
    {
       Workspace& work = work_vec[omp_get_thread_num()];
@@ -104,7 +104,7 @@ void add_a(
 void assemble(
       int si,
       SymbolicNode const& snode,
-      NumericNode<T>* node,
+      NumericNode<T,PoolAllocator>* node,
       FactorAllocator& factor_alloc,
       PoolAllocator& pool_alloc,
       int* map,
@@ -138,7 +138,7 @@ void assemble(
          map[ snode.rlist[i] ] = i;
       /* Loop over children adding contributions */
       for(auto* child=node->first_child; child!=NULL; child=child->next_child) {
-         SymbolicNode const& csnode = *child->symb;
+         SymbolicNode const& csnode = child->symb;
          /* Handle expected contributions (only if something there) */
          if(child->contrib) {
             int cm = csnode.nrow - csnode.ncol;
@@ -165,14 +165,14 @@ void assemble(
                }
             }
             /* Free memory from child contribution block */
-            PATraits::deallocate(pool_alloc, child->contrib, cm*cm);
+            child->free_contrib();
          }
       }
    }
 }
 
 private:
-   std::vector<NumericNode<T>>& old_nodes_;
+   std::vector<NumericNode<T,PoolAllocator>>& old_nodes_;
    SmallLeafSymbolicSubtree const& symb_;
    T* lcol_;
 };
@@ -187,7 +187,7 @@ class SmallLeafNumericSubtree<false, T, FactorAllocator, PoolAllocator> {
    typedef typename std::allocator_traits<FactorAllocator>::template rebind_traits<int> FAIntTraits;
    typedef std::allocator_traits<PoolAllocator> PATraits;
 public:
-   SmallLeafNumericSubtree(SmallLeafSymbolicSubtree const& symb, std::vector<NumericNode<T>>& old_nodes, T const* aval, T const* scaling, FactorAllocator& factor_alloc, PoolAllocator& pool_alloc, std::vector<Workspace>& work_vec, struct cpu_factor_options const& options, ThreadStats& stats) 
+   SmallLeafNumericSubtree(SmallLeafSymbolicSubtree const& symb, std::vector<NumericNode<T,PoolAllocator>>& old_nodes, T const* aval, T const* scaling, FactorAllocator& factor_alloc, PoolAllocator& pool_alloc, std::vector<Workspace>& work_vec, struct cpu_factor_options const& options, ThreadStats& stats) 
    : old_nodes_(old_nodes), symb_(symb)
    {
       Workspace& work = work_vec[omp_get_thread_num()];
@@ -219,7 +219,7 @@ private:
    void assemble_pre(
          bool posdef,
          SymbolicNode const& snode,
-         NumericNode<T>& node,
+         NumericNode<T,PoolAllocator>& node,
          FactorAllocator& factor_alloc,
          PoolAllocator& pool_alloc,
          int* map,
@@ -295,7 +295,7 @@ private:
          /* Loop over children adding contributions */
          int delay_col = snode.ncol;
          for(auto* child=node.first_child; child!=NULL; child=child->next_child) {
-            SymbolicNode const& csnode = *child->symb;
+            SymbolicNode const& csnode = child->symb;
             /* Handle delays - go to back of node
              * (i.e. become the last rows as in lower triangular format) */
             for(int i=0; i<child->ndelay_out; i++) {
@@ -343,7 +343,7 @@ private:
    /* Factorize a node (indef) */
    void factor_node(
          SymbolicNode const& snode,
-         NumericNode<T>* node,
+         NumericNode<T,PoolAllocator>* node,
          struct cpu_factor_options const& options,
          ThreadStats& stats,
          Workspace& work,
@@ -384,9 +384,7 @@ private:
       if(node->nelim==0 && !node->first_child) {
          // FIXME: Actually loop over children and check one exists with contrib
          //        rather than current approach of just looking for children.
-         typedef std::allocator_traits<PoolAllocator> PATraits;
-         PATraits::deallocate(pool_alloc, node->contrib, (m-n)*(m-n));
-         node->contrib = nullptr;
+         node->free_contrib();
       } else if(node->nelim==0) {
          // FIXME: If we fix the above, we don't need this explict zeroing
          long contrib_size = m-n;
@@ -396,7 +394,7 @@ private:
 
    void assemble_post(
          SymbolicNode const& snode,
-         NumericNode<T>& node,
+         NumericNode<T,PoolAllocator>& node,
          PoolAllocator& pool_alloc,
          int* map
          ) {
@@ -414,7 +412,7 @@ private:
             map[ snode.rlist[i] ] = i + node.ndelay_in;
          /* Loop over children adding contributions */
          for(auto* child=node.first_child; child!=NULL; child=child->next_child) {
-            SymbolicNode const& csnode = *child->symb;
+            SymbolicNode const& csnode = child->symb;
             if(!child->contrib) continue;
             int cm = csnode.nrow - csnode.ncol;
             for(int i=0; i<cm; i++) {
@@ -432,12 +430,12 @@ private:
                }
             }
             /* Free memory from child contribution block */
-            PATraits::deallocate(pool_alloc, child->contrib, cm*cm);
+            child->free_contrib();
          }
       }
    }
 
-   std::vector<NumericNode<T>>& old_nodes_;
+   std::vector<NumericNode<T,PoolAllocator>>& old_nodes_;
    SmallLeafSymbolicSubtree const& symb_;
 };
 

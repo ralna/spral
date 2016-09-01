@@ -269,6 +269,7 @@ function factor(this, posdef, aval, child_contrib, options, inform, scaling)
       c_create_numeric_subtree(cpu_factor%posdef, this%csubtree, &
          aval, cscaling, contrib_ptr, coptions, cstats)
    if(cstats%flag.lt.0) then
+      call c_destroy_numeric_subtree(cpu_factor%posdef, cpu_factor%csubtree)
       inform%flag = cstats%flag
       return
    endif

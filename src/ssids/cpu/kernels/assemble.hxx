@@ -44,7 +44,7 @@ void assemble_pre(
       int n,
       SymbolicNode const& snode,
       void** child_contrib,
-      NumericNode<T>& node,
+      NumericNode<T,PoolAlloc>& node,
       FactorAlloc& factor_alloc,
       PoolAlloc& pool_alloc,
       std::vector<Workspace>& work,
@@ -59,7 +59,6 @@ void assemble_pre(
    typename FADoubleTraits::allocator_type factor_alloc_double(factor_alloc);
    typedef typename std::allocator_traits<FactorAlloc>::template rebind_traits<int> FAIntTraits;
    typename FAIntTraits::allocator_type factor_alloc_int(factor_alloc);
-   typedef std::allocator_traits<PoolAlloc> PATraits;
    typedef typename std::allocator_traits<PoolAlloc>::template rebind_traits<int> PAIntTraits;
    typename PAIntTraits::allocator_type pool_alloc_int(pool_alloc);
 
@@ -91,8 +90,7 @@ void assemble_pre(
    // required to ensure it is zero for us (i.e. uses calloc)
 
    /* Get space for contribution block + (explicitly do not zero it!) */
-   long contrib_dimn = snode.nrow - snode.ncol;
-   node.contrib = (contrib_dimn > 0) ? PATraits::allocate(pool_alloc, contrib_dimn*contrib_dimn) : nullptr;
+   node.alloc_contrib();
 
    /* Alloc + set perm for expected eliminations at this node (delays are set
     * when they are imported from children) */
@@ -160,7 +158,7 @@ void assemble_pre(
 #ifdef PROFILE
          Profile::Task task_asm_pre("TA_ASM_PRE");
 #endif
-         SymbolicNode const& csnode = *child->symb;
+         SymbolicNode const& csnode = child->symb;
          /* Handle delays - go to back of node
           * (i.e. become the last rows as in lower triangular format) */
          for(int i=0; i<child->ndelay_out; i++) {
@@ -281,12 +279,11 @@ void assemble_post(
       int n,
       SymbolicNode const& snode,
       void** child_contrib,
-      NumericNode<T>& node,
+      NumericNode<T,PoolAlloc>& node,
       PoolAlloc& pool_alloc,
       std::vector<Workspace>& work
       ) {
    /* Rebind allocators */
-   typedef std::allocator_traits<PoolAlloc> PATraits;
    typedef typename std::allocator_traits<PoolAlloc>::template rebind_traits<int> PAIntTraits;
    typename PAIntTraits::allocator_type pool_alloc_int(pool_alloc);
 
@@ -307,7 +304,7 @@ void assemble_post(
          map[ snode.rlist[i] ] = i + node.ndelay_in;
       /* Loop over children adding contributions */
       for(auto* child=node.first_child; child!=NULL; child=child->next_child) {
-         SymbolicNode const& csnode = *child->symb;
+         SymbolicNode const& csnode = child->symb;
          if(!child->contrib) continue;
          int cm = csnode.nrow - csnode.ncol;
          int const block_size = 256;
@@ -344,7 +341,7 @@ void assemble_post(
             #pragma omp taskwait
          }
          /* Free memory from child contribution block */
-         PATraits::deallocate(pool_alloc, child->contrib, cm*cm);
+         child->free_contrib();
       }
    }
    /* Add any contribution block from other subtrees */
