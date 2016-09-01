@@ -1231,7 +1231,7 @@ subroutine ssids_solve_mult_double(nrhs, x, ldx, akeep, fkeep, options, &
       local_job = job
    end if
 
-   call fkeep%inner_solve(local_job, nrhs, x, ldx, akeep, options, inform)
+   call fkeep%inner_solve(local_job, nrhs, x, ldx, akeep, inform)
    if(inform%flag .ne. 0) then
       call ssids_print_flag(inform,nout,context)
       return
@@ -1279,7 +1279,7 @@ subroutine ssids_enquire_posdef_double(akeep, fkeep, options, inform, d)
       return
    end if
 
-   call fkeep%enquire_posdef(akeep, inform, d)
+   call fkeep%enquire_posdef(akeep, d)
 end subroutine ssids_enquire_posdef_double
 
 !*************************************************************************
@@ -1381,7 +1381,7 @@ subroutine ssids_alter_double(d, akeep, fkeep, options, inform)
       return
    end if 
 
-   call fkeep%alter(d, akeep, options)
+   call fkeep%alter(d, akeep)
    if(inform%flag.lt.0) call ssids_print_flag(inform,nout,context)
    
 end subroutine ssids_alter_double

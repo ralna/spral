@@ -170,14 +170,13 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
    return
 end subroutine inner_factor_cpu
 
-subroutine inner_solve_cpu(local_job, nrhs, x, ldx, akeep, fkeep, options, inform)
+subroutine inner_solve_cpu(local_job, nrhs, x, ldx, akeep, fkeep, inform)
    type(ssids_akeep), intent(in) :: akeep
    class(ssids_fkeep), intent(inout) :: fkeep
    integer, intent(inout) :: local_job
    integer, intent(in) :: nrhs
    integer, intent(in) :: ldx
    real(wp), dimension(ldx,nrhs), target, intent(inout) :: x
-   type(ssids_options), intent(in) :: options
    type(ssids_inform), intent(inout) :: inform
 
    integer :: i, r, part
@@ -264,10 +263,9 @@ end subroutine inner_solve_cpu
 
 !****************************************************************************
 
-subroutine enquire_posdef_cpu(akeep, fkeep, inform, d)
+subroutine enquire_posdef_cpu(akeep, fkeep, d)
    type(ssids_akeep), intent(in) :: akeep
    class(ssids_fkeep), target, intent(in) :: fkeep
-   type(ssids_inform), intent(inout) :: inform
    real(wp), dimension(*), intent(out) :: d
 
    integer :: n
@@ -315,7 +313,13 @@ subroutine enquire_indef_cpu(akeep, fkeep, inform, piv_order, d)
    end if
 
    ! We need to apply the invp externally to piv_order
-   if(present(piv_order)) allocate(po(akeep%n)) ! FIXME: stat
+   if(present(piv_order)) then
+      allocate(po(akeep%n), stat=inform%stat)
+      if(inform%stat.ne.0) then
+         inform%flag = SSIDS_ERROR_ALLOCATION
+         return
+      endif
+   endif
 
    ! FIXME: should probably return nelim from each part, due to delays passing
    ! between them
@@ -352,13 +356,12 @@ subroutine enquire_indef_cpu(akeep, fkeep, inform, piv_order, d)
 end subroutine enquire_indef_cpu
 
 ! Alter D values
-subroutine alter_cpu(d, akeep, fkeep, options)
+subroutine alter_cpu(d, akeep, fkeep)
    real(wp), dimension(2,*), intent(in) :: d  ! The required diagonal entries
      ! of D^{-1} must be placed in d(1,i) (i = 1,...n)
      ! and the off-diagonal entries must be placed in d(2,i) (i = 1,...n-1).
    type(ssids_akeep), intent(in) :: akeep
    class(ssids_fkeep), target, intent(inout) :: fkeep
-   type(ssids_options), intent(in) :: options
 
    integer :: part
 
