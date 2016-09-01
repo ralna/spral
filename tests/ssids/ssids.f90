@@ -80,7 +80,7 @@ program main
    errors = 0
 
    call test_warnings
-   !call test_errors
+   call test_errors
    !call test_special
    call test_random
    !call test_random_scale
@@ -559,6 +559,9 @@ subroutine test_errors
 
 !!!!!!
    call simple_mat(a)
+   deallocate(x1)
+   allocate(x1(a%n))
+   x1(1:a%n) = one
    posdef = .false.
    write(*,"(a)",advance="no") " * Testing solve out of sequence............."
    if (allocated(order)) deallocate(order)
@@ -657,10 +660,12 @@ subroutine test_errors
 
    call ssids_analyse(check, a%n, a%ptr, a%row, akeep, options, info, &
       order=order)
+   call assert_flag('analyse', info%flag, SSIDS_WARNING_MISSING_DIAGONAL)
 
    options%action = .false.
    posdef = .true.
    call ssids_factor(posdef, a%val, akeep, fkeep, options, info)
+   call assert_flag('factor', info%flag, SSIDS_ERROR_NOT_POS_DEF)
 
    if (allocated(d1)) deallocate(d1)
    allocate(d1(a%n))
@@ -2850,6 +2855,22 @@ subroutine gen_random_posdef(a, nza, state)
       a%val(i) = one + a%val(i) + tempv
    end do
 end subroutine gen_random_posdef
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine assert_flag(context, actual, expected)
+   character(len=*), intent(in) :: context
+   integer, intent(in) :: actual
+   integer, intent(in) :: expected
+
+   if(actual.eq.expected) return ! All is good
+
+   ! Otherwise report/record error
+   write(*, "(3a,i4,a,i4,a)") &
+      "Unexpected error during ", context, ". flag = ", actual, &
+      " (expected ", expected, ")"
+   errors = errors + 1
+   return
+end subroutine assert_flag
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
