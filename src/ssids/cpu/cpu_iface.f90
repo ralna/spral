@@ -54,10 +54,11 @@ subroutine cpu_copy_options_in(foptions, coptions)
    type(ssids_options), intent(in) :: foptions
    type(cpu_factor_options), intent(out) :: coptions
 
-   coptions%multiplier     = foptions%multiplier
+   coptions%print_level    = foptions%print_level
+   coptions%action         = foptions%action
    coptions%small          = foptions%small
    coptions%u              = foptions%u
-   coptions%print_level    = foptions%print_level
+   coptions%multiplier     = foptions%multiplier
    coptions%cpu_small_subtree_threshold = foptions%cpu_small_subtree_threshold
    coptions%cpu_task_block_size         = foptions%cpu_task_block_size
    coptions%pivot_method   = foptions%pivot_method
