@@ -101,9 +101,7 @@ void factor_node_indef(
    if(node->nelim==0 && !node->first_child && snode.contrib.size()==0) {
       // FIXME: Actually loop over children and check one exists with contrib
       //        rather than current approach of just looking for children.
-      typedef std::allocator_traits<PoolAlloc> PATraits;
-      PATraits::deallocate(pool_alloc, node->contrib, (m-n)*(m-n));
-      node->contrib = nullptr;
+      node->free_contrib();
    } else if(node->nelim==0) {
       // FIXME: If we fix the above, we don't need this explict zeroing
       long contrib_size = m-n;
