@@ -330,13 +330,13 @@ subroutine enquire_indef_cpu(akeep, fkeep, inform, piv_order, d)
          type is (cpu_numeric_subtree)
             if(present(d)) then
                if(present(piv_order)) then
-                  call subtree%enquire_indef(piv_order=po(sa:), d=d(1:2,sa:))
+                  call subtree%enquire_indef(piv_order=po(sa:n), d=d(1:2,sa:n))
                else
                   call subtree%enquire_indef(d=d(1:2,sa:))
                endif
             else
                if(present(piv_order)) then
-                  call subtree%enquire_indef(piv_order=po(sa:))
+                  call subtree%enquire_indef(piv_order=po(sa:akeep%n))
                else
                   ! No-op
                   ! FIXME: should we report an error here? (or done higher up?)
