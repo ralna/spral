@@ -95,8 +95,10 @@ subroutine free_akeep(akeep, flag)
    deallocate(akeep%part, stat=st)
    if(allocated(akeep%subtree)) then
       do i = 1, size(akeep%subtree)
-         if(associated(akeep%subtree(i)%ptr)) &
+         if(associated(akeep%subtree(i)%ptr)) then
+            call akeep%subtree(i)%ptr%cleanup()
             deallocate(akeep%subtree(i)%ptr)
+         endif
       end do
       deallocate(akeep%subtree, stat=st)
    endif

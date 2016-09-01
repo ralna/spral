@@ -1023,7 +1023,10 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
    ! Setup data storage
    if(allocated(fkeep%subtree)) then
       do i = 1, size(fkeep%subtree)
-         if(associated(fkeep%subtree(i)%ptr)) deallocate(fkeep%subtree(i)%ptr)
+         if(associated(fkeep%subtree(i)%ptr)) then
+            call fkeep%subtree(i)%ptr%cleanup()
+            deallocate(fkeep%subtree(i)%ptr)
+         endif
       end do
       deallocate(fkeep%subtree)
    endif

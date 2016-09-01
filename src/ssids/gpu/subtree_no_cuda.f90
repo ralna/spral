@@ -15,7 +15,7 @@ module spral_ssids_gpu_subtree
       integer(long) :: dummy
    contains
       procedure :: factor
-      final :: symbolic_final
+      procedure :: cleanup => symbolic_cleanup
    end type gpu_symbolic_subtree
 
    type, extends(numeric_subtree_base) :: gpu_numeric_subtree
@@ -29,7 +29,7 @@ module spral_ssids_gpu_subtree
       procedure :: enquire_posdef
       procedure :: enquire_indef
       procedure :: alter
-      final :: numeric_final
+      procedure :: cleanup => numeric_cleanup
    end type gpu_numeric_subtree
 
 contains
@@ -59,12 +59,12 @@ function construct_gpu_symbolic_subtree(device, n, sa, en, sptr, sparent, &
       nlist(1,1)+options%cpu_small_subtree_threshold
 end function construct_gpu_symbolic_subtree
 
-subroutine symbolic_final(this)
-   type(gpu_symbolic_subtree) :: this
+subroutine symbolic_cleanup(this)
+   class(gpu_symbolic_subtree), intent(inout) :: this
 
    ! Dummy operation to prevent warnings
    this%dummy = 0
-end subroutine symbolic_final
+end subroutine symbolic_cleanup
 
 function factor(this, posdef, aval, child_contrib, options, inform, scaling)
    class(numeric_subtree_base), pointer :: factor
@@ -88,11 +88,11 @@ function factor(this, posdef, aval, child_contrib, options, inform, scaling)
    inform%flag = SSIDS_ERROR_UNKNOWN
 end function factor
 
-subroutine numeric_final(this)
-   type(gpu_numeric_subtree) :: this
+subroutine numeric_cleanup(this)
+   class(gpu_numeric_subtree), intent(inout) :: this
 
    this%dummy = 0
-end subroutine numeric_final
+end subroutine numeric_cleanup
 
 function get_contrib(this)
    type(contrib_type) :: get_contrib

@@ -28,6 +28,8 @@ module spral_ssids_subtree
       !> @brief Perform numeric factorization, returning a subclass of
       !>        numeric_subtree_base representing this.
       procedure(factor_iface), deferred :: factor
+      !> @brief Free associated memory/resources
+      procedure(symbolic_cleanup_iface), deferred :: cleanup
    end type symbolic_subtree_base
 
    !> @brief Abstract base class for Numeric subtrees.
@@ -52,6 +54,8 @@ module spral_ssids_subtree
       procedure(solve_proc_iface), deferred :: solve_diag_bwd
       !> @brief Perform backward solve.
       procedure(solve_proc_iface), deferred :: solve_bwd
+      !> @brief Free associated memory/resources
+      procedure(numeric_cleanup_iface), deferred :: cleanup
    end type numeric_subtree_base
 
    abstract interface
@@ -79,6 +83,13 @@ module spral_ssids_subtree
          type(ssids_inform), intent(inout) :: inform
          real(wp), dimension(*), target, optional, intent(in) :: scaling
       end function factor_iface
+      !> @brief Free associated memory/resources
+      !> @param this Instance pointer.
+      subroutine symbolic_cleanup_iface(this)
+         import symbolic_subtree_base
+         implicit none
+         class(symbolic_subtree_base), intent(inout) :: this
+      end subroutine symbolic_cleanup_iface
       !> @brief Return contribution block from this subtree to parent.
       !>
       !> Behaviour is undefined if called on a root subtree.
@@ -106,5 +117,12 @@ module spral_ssids_subtree
          integer, intent(in) :: ldx
          type(ssids_inform), intent(inout) :: inform
       end subroutine solve_proc_iface
+      !> @brief Free associated memory/resources
+      !> @param this Instance pointer.
+      subroutine numeric_cleanup_iface(this)
+         import numeric_subtree_base
+         implicit none
+         class(numeric_subtree_base), intent(inout) :: this
+      end subroutine numeric_cleanup_iface
    end interface
 end module spral_ssids_subtree

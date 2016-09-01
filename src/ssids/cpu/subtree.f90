@@ -20,7 +20,7 @@ module spral_ssids_cpu_subtree
       type(C_PTR) :: csubtree
    contains
       procedure :: factor
-      final :: symbolic_final
+      procedure :: cleanup => symbolic_cleanup
    end type cpu_symbolic_subtree
 
    type, extends(numeric_subtree_base) :: cpu_numeric_subtree
@@ -36,7 +36,7 @@ module spral_ssids_cpu_subtree
       procedure :: enquire_posdef
       procedure :: enquire_indef
       procedure :: alter
-      final :: numeric_final
+      procedure :: cleanup => numeric_cleanup
    end type cpu_numeric_subtree
 
    interface
@@ -221,11 +221,11 @@ function construct_cpu_symbolic_subtree(n, sa, en, sptr, sparent, rptr, &
 
 end function construct_cpu_symbolic_subtree
 
-subroutine symbolic_final(this)
-   type(cpu_symbolic_subtree) :: this
+subroutine symbolic_cleanup(this)
+   class(cpu_symbolic_subtree), intent(inout) :: this
 
    call c_destroy_symbolic_subtree(this%csubtree)
-end subroutine symbolic_final
+end subroutine symbolic_cleanup
 
 function factor(this, posdef, aval, child_contrib, options, inform, scaling)
    class(numeric_subtree_base), pointer :: factor
@@ -288,11 +288,11 @@ function factor(this, posdef, aval, child_contrib, options, inform, scaling)
    return
 end function factor
 
-subroutine numeric_final(this)
-   type(cpu_numeric_subtree) :: this
+subroutine numeric_cleanup(this)
+   class(cpu_numeric_subtree), intent(inout) :: this
 
    call c_destroy_numeric_subtree(this%posdef, this%csubtree)
-end subroutine numeric_final
+end subroutine numeric_cleanup
 
 function get_contrib(this)
    type(contrib_type) :: get_contrib

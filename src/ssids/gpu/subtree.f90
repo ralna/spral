@@ -38,7 +38,7 @@ module spral_ssids_gpu_subtree
       integer(long) :: max_a_idx
    contains
       procedure :: factor
-      final :: symbolic_final
+      procedure :: cleanup => symbolic_cleanup
    end type gpu_symbolic_subtree
 
    type, extends(numeric_subtree_base) :: gpu_numeric_subtree
@@ -66,7 +66,7 @@ module spral_ssids_gpu_subtree
       procedure :: enquire_posdef
       procedure :: enquire_indef
       procedure :: alter
-      final :: numeric_final
+      procedure :: cleanup => numeric_cleanup
    end type gpu_numeric_subtree
 
 contains
@@ -270,8 +270,8 @@ subroutine copy_analyse_data_to_device(lnlist, nlist, lrlist, rlist, &
 
 end subroutine copy_analyse_data_to_device
 
-subroutine symbolic_final(this)
-   type(gpu_symbolic_subtree) :: this
+subroutine symbolic_cleanup(this)
+   class(gpu_symbolic_subtree), intent(inout) :: this
 
    integer :: flag
    
@@ -294,7 +294,7 @@ subroutine symbolic_final(this)
       if(flag.ne.0) &
          print *, "CUDA error freeing this%gpu_rlist_direct flag = ", flag
    endif
-end subroutine symbolic_final
+end subroutine symbolic_cleanup
 
 function factor(this, posdef, aval, child_contrib, options, inform, scaling)
    class(numeric_subtree_base), pointer :: factor
@@ -444,8 +444,8 @@ function factor(this, posdef, aval, child_contrib, options, inform, scaling)
    return
 end function factor
 
-subroutine numeric_final(this)
-   type(gpu_numeric_subtree) :: this
+subroutine numeric_cleanup(this)
+   class(gpu_numeric_subtree), intent(inout) :: this
 
    integer :: flag, cuda_error
 
@@ -491,7 +491,7 @@ subroutine numeric_final(this)
    ! Release stream
    flag = cudaStreamDestroy(this%stream_handle)
    if(flag.ne.0) return
-end subroutine numeric_final
+end subroutine numeric_cleanup
 
 function get_contrib(this)
    type(contrib_type) :: get_contrib
