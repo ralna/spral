@@ -1498,8 +1498,8 @@ private:
          // We only need a taskwait here if we've launched any subtasks...
          // NB: we don't use taskgroup as it doesn't support if()
          #pragma omp taskwait
-         if(flag<0) return flag; // Error
       }
+      if(flag<0) return flag; // Error
 
       /*if(debug) {
          printf("PostElim:\n");
