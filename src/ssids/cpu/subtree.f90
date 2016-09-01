@@ -270,6 +270,7 @@ function factor(this, posdef, aval, child_contrib, options, inform, scaling)
          aval, cscaling, contrib_ptr, coptions, cstats)
    if(cstats%flag.lt.0) then
       call c_destroy_numeric_subtree(cpu_factor%posdef, cpu_factor%csubtree)
+      deallocate(cpu_factor, stat=st)
       inform%flag = cstats%flag
       return
    endif
