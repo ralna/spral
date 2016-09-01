@@ -79,7 +79,7 @@ program main
 
    errors = 0
 
-   !call test_warnings
+   call test_warnings
    !call test_errors
    !call test_special
    call test_random
@@ -871,8 +871,9 @@ subroutine test_warnings
    posdef = .true.
    call gen_rhs(a, rhs, x1, x, res, 1)
    call ssids_analyse(check, a%n, a%ptr, a%row, akeep, options, info, order)
-   call print_result(info%flag,SSIDS_WARNING_IDX_OOR)
-   call chk_answer(posdef, a, akeep, options, rhs, x, res, SSIDS_SUCCESS)
+   call print_result(info%flag, SSIDS_WARNING_IDX_OOR)
+   call chk_answer(posdef, a, akeep, options, rhs, x, res, &
+      SSIDS_WARNING_IDX_OOR)
    call ssids_free(akeep, cuda_error)
 
    write(*,"(a)",advance="no") " * Testing out of range below............"
@@ -890,7 +891,8 @@ subroutine test_warnings
    end do
    call ssids_analyse(check, a%n, a%ptr, a%row, akeep, options, info, order)
    call print_result(info%flag,SSIDS_WARNING_IDX_OOR)
-   call chk_answer(posdef, a, akeep, options, rhs, x, res, SSIDS_SUCCESS)
+   call chk_answer(posdef, a, akeep, options, rhs, x, res, &
+      SSIDS_WARNING_IDX_OOR)
    call ssids_free(akeep, cuda_error)
 
    write(*,"(a)",advance="no") " * Testing duplicates...................."
@@ -909,7 +911,8 @@ subroutine test_warnings
    end do
    call ssids_analyse(check, a%n, a%ptr, a%row, akeep, options, info, order)
    call print_result(info%flag,SSIDS_WARNING_DUP_IDX)
-   call chk_answer(posdef, a, akeep, options, rhs, x, res, SSIDS_SUCCESS)
+   call chk_answer(posdef, a, akeep, options, rhs, x, res, &
+      SSIDS_WARNING_DUP_IDX)
    call ssids_free(akeep, cuda_error)
 
    write(*,"(a)",advance="no") " * Testing out of range and duplicates..."
@@ -930,8 +933,8 @@ subroutine test_warnings
    end do
    call ssids_analyse(check, a%n, a%ptr, a%row, akeep, options, info, order)
    call print_result(info%flag,SSIDS_WARNING_DUP_AND_OOR)
-   call chk_answer(posdef, a, akeep, options, rhs, x, res, SSIDS_SUCCESS, &
-        fs=.true.)
+   call chk_answer(posdef, a, akeep, options, rhs, x, res, &
+      SSIDS_WARNING_DUP_AND_OOR, fs=.true.)
    call ssids_free(akeep, cuda_error)
 
    write(*,"(a)", advance="no") " * Testing missing diagonal entry (indef)....."
@@ -951,7 +954,8 @@ subroutine test_warnings
    a%ne = a%ptr(a%n+1) - 1
    call ssids_analyse(check, a%n, a%ptr, a%row, akeep, options, info, order)
    call print_result(info%flag, SSIDS_WARNING_MISSING_DIAGONAL)
-   call chk_answer(posdef, a, akeep, options, rhs, x, res, SSIDS_SUCCESS)
+   call chk_answer(posdef, a, akeep, options, rhs, x, res, &
+      SSIDS_WARNING_MISSING_DIAGONAL)
    call ssids_free(akeep, cuda_error)
 
 
@@ -972,7 +976,8 @@ subroutine test_warnings
    a%ne = a%ptr(a%n+1) - 1
    call ssids_analyse(check, a%n, a%ptr, a%row, akeep, options, info, order)
    call print_result(info%flag, SSIDS_WARNING_MISS_DIAG_OORDUP)
-   call chk_answer(posdef, a, akeep, options, rhs, x, res, SSIDS_SUCCESS)
+   call chk_answer(posdef, a, akeep, options, rhs, x, res, &
+      SSIDS_WARNING_MISS_DIAG_OORDUP)
    call ssids_free(akeep, cuda_error)
 
    write(*,"(a)",advance="no") " * Testing arrays min size (zero diag)........"
@@ -981,7 +986,8 @@ subroutine test_warnings
    call gen_rhs(a, rhs, x1, x, res, 1)
    call ssids_analyse(check, a%n, a%ptr, a%row, akeep, options, info, order)
    call print_result(info%flag, SSIDS_WARNING_MISSING_DIAGONAL)
-   call chk_answer(posdef, a, akeep, options, rhs, x, res, SSIDS_SUCCESS)
+   call chk_answer(posdef, a, akeep, options, rhs, x, res, &
+      SSIDS_WARNING_MISSING_DIAGONAL)
    call ssids_free(akeep, cuda_error)
 
    write(*,"(a)", advance="no") " * Testing missing diagonal and duplicate....."
@@ -1001,8 +1007,8 @@ subroutine test_warnings
    a%ne = a%ptr(a%n+1) - 1
    call ssids_analyse(check, a%n, a%ptr, a%row, akeep, options, info, order)
    call print_result(info%flag, SSIDS_WARNING_MISS_DIAG_OORDUP)
-   call chk_answer(posdef, a, akeep, options, rhs, x, res, SSIDS_SUCCESS, &
-        fs=.true.)
+   call chk_answer(posdef, a, akeep, options, rhs, x, res, &
+      SSIDS_WARNING_MISS_DIAG_OORDUP, fs=.true.)
    call ssids_free(akeep, cuda_error)
 
    write(*,"(a)", advance="no") " * Testing analyse with structurally singular."
@@ -1099,7 +1105,8 @@ subroutine test_warnings
    options%ordering = 1
    call ssids_analyse_coord(a%n, a%ne, a%row, a%col, akeep, options, info)
    call print_result(info%flag,SSIDS_WARNING_IDX_OOR)
-   call chk_answer(posdef, a, akeep, options, rhs, x, res, SSIDS_SUCCESS)
+   call chk_answer(posdef, a, akeep, options, rhs, x, res, &
+      SSIDS_WARNING_IDX_OOR)
 
    write(*,"(a)", advance="no") &
       " * Testing analyse struct singular and MC80.."
@@ -1630,12 +1637,16 @@ subroutine chk_answer(posdef, a, akeep, options, rhs, x, res, &
    type(ssids_fkeep) :: fkeep
    type(ssids_inform) :: info
    integer :: nrhs, cuda_error
+   type(ssids_options) :: myoptions
+
+   myoptions = options
+   myoptions%unit_warning = -1 ! disable printing warnings
 
    write(*,"(a)",advance="no") " *    checking answer...................."
 
    nrhs = 1
    if(present(fs) .and. .false.) then
-      call ssids_factor_solve(posdef,a%val,nrhs,x,a%n,akeep,fkeep,options, &
+      call ssids_factor_solve(posdef,a%val,nrhs,x,a%n,akeep,fkeep,myoptions, &
          info)
       if(info%flag .ne. expected_flag) then
          write(*, "(a,2i4)") "fail on factor_solve",info%flag,expected_flag
@@ -1643,14 +1654,14 @@ subroutine chk_answer(posdef, a, akeep, options, rhs, x, res, &
          go to 99
       endif
    else
-      call ssids_factor(posdef,a%val,akeep,fkeep,options,info)
+      call ssids_factor(posdef,a%val,akeep,fkeep,myoptions,info)
       if(info%flag .ne. expected_flag) then
          write(*, "(a,2i4)") "fail on factor",info%flag,expected_flag
          errors = errors + 1
          go to 99
       endif
 
-      call ssids_solve(nrhs,x,a%n,akeep,fkeep,options,info)
+      call ssids_solve(nrhs,x,a%n,akeep,fkeep,myoptions,info)
       if(info%flag .ne. expected_flag) then
          write(*, "(a,2i4)") "fail on solve", info%flag,expected_flag
          errors = errors + 1
