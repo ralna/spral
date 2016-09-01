@@ -361,7 +361,8 @@ private:
       //Verify<T> verifier(m, n, perm, lcol, ldl);
       T *ld = work.get_ptr<T>(2*m);
       node->nelim = ldlt_tpp_factor(
-            m, n, perm, lcol, ldl, d, ld, m, options.u, options.small
+            m, n, perm, lcol, ldl, d, ld, m, options.action, options.u,
+            options.small
             );
       //verifier.verify(node->nelim, perm, lcol, ldl, d);
 

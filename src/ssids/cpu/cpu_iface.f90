@@ -19,10 +19,11 @@ module spral_ssids_cpu_iface
    !> @sa spral_ssids_datatypes::ssids_options
    !> @sa spral::ssids::cpu::cpu_factor_options
    type, bind(C) :: cpu_factor_options
-      real(C_DOUBLE) :: multiplier
+      integer(C_INT) :: print_level
+      logical(C_BOOL) :: action
       real(C_DOUBLE) :: small
       real(C_DOUBLE) :: u
-      integer(C_INT) :: print_level
+      real(C_DOUBLE) :: multiplier
       integer(C_LONG) :: cpu_small_subtree_threshold
       integer(C_INT) :: cpu_task_block_size
       integer(C_INT) :: pivot_method
@@ -69,15 +70,19 @@ subroutine cpu_copy_stats_out(n, cstats, finform)
    type(cpu_factor_stats), intent(in) :: cstats
    type(ssids_inform), intent(inout) :: finform
 
-   ! Copy stats
-   finform%flag         = cstats%flag
-   finform%num_delay    = cstats%num_delay
-   finform%num_neg      = cstats%num_neg
-   finform%num_two      = cstats%num_two
-   finform%matrix_rank  = n - cstats%num_zero
-   finform%maxfront     = cstats%maxfront
-   finform%not_first_pass = cstats%not_first_pass
-   finform%not_second_pass = cstats%not_second_pass
+   ! Combine stats
+   if(cstats%flag < 0) then
+      finform%flag = min(finform%flag, cstats%flag) ! error
+   else
+      finform%flag = max(finform%flag, cstats%flag) ! success or warning
+   endif
+   finform%num_delay    = finform%num_delay + cstats%num_delay
+   finform%num_neg      = finform%num_neg + cstats%num_neg
+   finform%num_two      = finform%num_two + cstats%num_two
+   finform%maxfront     = max(finform%maxfront, cstats%maxfront)
+   finform%not_first_pass = finform%not_first_pass + cstats%not_first_pass
+   finform%not_second_pass = finform%not_second_pass + cstats%not_second_pass
+   finform%matrix_rank  = finform%matrix_rank - cstats%num_zero
 end subroutine cpu_copy_stats_out
 
 end module spral_ssids_cpu_iface

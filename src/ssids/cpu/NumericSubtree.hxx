@@ -109,6 +109,9 @@ public:
             } catch (std::bad_alloc const&) {
                thread_stats[omp_get_thread_num()].flag = Flag::ERROR_ALLOCATION;
                #pragma omp cancel taskgroup
+            } catch (SingularError const&) {
+               thread_stats[omp_get_thread_num()].flag = Flag::ERROR_SINGULAR;
+               #pragma omp cancel taskgroup
             }
          }
 
@@ -151,6 +154,9 @@ public:
             } catch (std::bad_alloc const&) {
                thread_stats[omp_get_thread_num()].flag = Flag::ERROR_ALLOCATION;
                #pragma omp cancel taskgroup
+            } catch (SingularError const&) {
+               thread_stats[omp_get_thread_num()].flag = Flag::ERROR_SINGULAR;
+               #pragma omp cancel taskgroup
             }
          }
       } // taskgroup
@@ -164,7 +170,7 @@ public:
       // Count stats
       // FIXME: Do this as we go along...
       if(posdef) {
-         // no real changes to stats from zero initialization
+         // all stats remain zero
       } else { // indefinite
          for(int ni=0; ni<symb_.nnodes_; ni++) {
             int m = symb_[ni].nrow + nodes_[ni].ndelay_in;
@@ -176,7 +182,11 @@ public:
                T a21 = d[2*i+1];
                if(i+1==nodes_[ni].nelim || std::isfinite(d[2*i+2])) {
                   // 1x1 pivot (or zero)
-                  if(a11 == 0.0) stats.num_zero++;
+                  if(a11 == 0.0) {
+                     // NB: If we reach this stage, options.action must be true.
+                     stats.flag = Flag::WARNING_FACT_SINGULAR;
+                     stats.num_zero++;
+                  }
                   if(a11 < 0.0) stats.num_neg++;
                   i++;
                } else {

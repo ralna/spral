@@ -8,6 +8,7 @@
 #include <cstdlib> // FIXME: remove debug?
 #include <limits>
 
+#include "ssids/cpu/ThreadStats.hxx"
 #include "ssids/cpu/kernels/SimdVec.hxx"
 
 namespace spral { namespace ssids { namespace cpu {
@@ -278,7 +279,8 @@ void update_1x1(int p, T *a, int lda, const T *ld) {
  *  Expects to be given a square block of size BLOCK_SIZE with numbers of
  *  interest in bottom right part. */
 template<typename T, int BLOCK_SIZE>
-void block_ldlt(int from, int *perm, T *a, int lda, T *d, T *ldwork, const T u, const T small, int *lperm=nullptr) {
+void block_ldlt(int from, int *perm, T *a, int lda, T *d, T *ldwork,
+      bool action, const T u, const T small, int *lperm=nullptr) {
    using namespace block_ldlt_internal;
 
    /* Main loop */
@@ -291,6 +293,7 @@ void block_ldlt(int from, int *perm, T *a, int lda, T *d, T *ldwork, const T u, 
       // Handle case where everything remaining is small
       // NB: There might be delayed columns!
       if(fabs(bestv) < small) {
+         if(!action) throw SingularError(p);
          // Loop over remaining columns
          for(; p<BLOCK_SIZE; ) {
             // Zero out col

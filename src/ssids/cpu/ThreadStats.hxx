@@ -5,6 +5,8 @@
  */
 #pragma once
 
+#include <stdexcept>
+
 namespace spral { namespace ssids { namespace cpu {
 
 /** \brief SSIDS error/warning flags.
@@ -12,9 +14,25 @@ namespace spral { namespace ssids { namespace cpu {
  * Must match Fortran definitions in src/ssids/datatypes.f90
  */
 enum Flag : int {
-   SUCCESS              = 0,
-   ERROR_NOT_POS_DEF    = -6,
-   ERROR_ALLOCATION     = -50
+   SUCCESS                 = 0,
+
+   ERROR_SINGULAR          = -5,
+   ERROR_NOT_POS_DEF       = -6,
+   ERROR_ALLOCATION        = -50,
+
+   WARNING_FACT_SINGULAR   = 7
+};
+
+/**
+ * \brief Exception class for options.action = false and singular matrix.
+ */
+class SingularError: public std::runtime_error {
+public:
+   SingularError(int col)
+   : std::runtime_error("Matrix is singular"), col(col)
+   {}
+   
+   int const col;
 };
 
 /**

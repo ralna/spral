@@ -16,10 +16,11 @@ enum struct PivotMethod : int {
 };
 
 struct cpu_factor_options {
-   double multiplier;
+   int print_level;
+   bool action;
    double small;
    double u;
-   int print_level;
+   double multiplier;
    long cpu_small_subtree_threshold;
    int cpu_task_block_size;
    PivotMethod pivot_method;

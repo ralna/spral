@@ -16,7 +16,7 @@ module spral_ssids_inform
    ! Data type for information returned by code
    !
    type ssids_inform
-      integer :: flag ! Takes one of the enumerated flag values:
+      integer :: flag = SSIDS_SUCCESS ! Takes one of the enumerated flag values:
          ! SSIDS_SUCCESS
          ! SSIDS_ERROR_XXX
          ! SSIDS_WARNING_XXX
@@ -24,8 +24,8 @@ module spral_ssids_inform
       integer :: matrix_missing_diag = 0 ! Number of missing diag. entries
       integer :: matrix_outrange = 0 ! Number of out-of-range entries.
       integer :: matrix_rank = 0 ! Rank of matrix (anal=structral, fact=actual)
-      integer :: maxdepth ! Maximum depth of tree
-      integer :: maxfront ! Maximum front size
+      integer :: maxdepth = 0 ! Maximum depth of tree
+      integer :: maxfront = 0 ! Maximum front size
       integer :: num_delay = 0 ! Number of delayed variables
       integer(long) :: num_factor = 0_long ! Number of entries in factors
       integer(long) :: num_flops = 0_long ! Number of floating point operations
@@ -34,17 +34,19 @@ module spral_ssids_inform
       integer :: num_two = 0 ! Number of 2x2 pivots used by factorization
       integer :: stat = 0 ! stat parameter
       type(auction_inform) :: auction
-      integer :: cuda_error
-      integer :: cublas_error
+      integer :: cuda_error = 0
+      integer :: cublas_error = 0
 
       ! Undocumented FIXME: should we document them?
-      integer :: not_first_pass
-      integer :: not_second_pass
-      integer :: nparts
-      integer(long) :: cpu_flops
-      integer(long) :: gpu_flops
+      integer :: not_first_pass = 0
+      integer :: not_second_pass = 0
+      integer :: nparts = 0
+      integer(long) :: cpu_flops = 0
+      integer(long) :: gpu_flops = 0
    contains
-      procedure, pass(this) :: flagToCharacter
+      procedure :: flag_to_character
+      procedure :: print_flag
+      procedure :: reduce
    end type ssids_inform
 
 contains
@@ -53,7 +55,7 @@ contains
 ! Returns a string representation
 ! Member function inform%flagToCharacter
 !
-function flagToCharacter(this) result(msg)
+function flag_to_character(this) result(msg)
    class(ssids_inform), intent(in) :: this
    character(len=200) :: msg ! return value
 
@@ -135,7 +137,36 @@ function flagToCharacter(this) result(msg)
       msg = 'SSIDS Internal Error'
    end select
 
-end function flagToCharacter
+end function flag_to_character
+
+!> @brief Print out warning or error if flag is non-zero
+!> @param this Instance variable.
+!> @param options Options to be used for printing
+!> @param context Name of routine to report error from
+subroutine print_flag(this, options, context)
+   class(ssids_inform), intent(in) :: this
+   type(ssids_options), intent(in) :: options
+   character (len=*), intent(in) :: context
+
+   character(len=200) :: msg
+
+   if(this%flag.eq.SSIDS_SUCCESS) return ! Nothing to print
+   if(options%print_level.lt.0) return ! No printing
+   if(this%flag.gt.SSIDS_SUCCESS) then
+      ! Warning
+      if(options%unit_warning.lt.0) return ! printing supressed
+      write(options%unit_warning,'(/3a,i3)') ' Warning from ', &
+         trim(context), '. Warning flag = ', this%flag
+      msg = this%flag_to_character()
+      write(options%unit_warning, '(a)') msg
+   else
+      if(options%unit_error.lt.0) return ! printing supressed
+      write (options%unit_error,'(/3a,i3)') ' Error return from ', &
+         trim(context), '. Error flag = ', this%flag
+      msg = this%flag_to_character()
+      write(options%unit_error, '(a)') msg
+   end if
+end subroutine print_flag
 
 !
 ! routine to print errors and warnings
@@ -155,10 +186,49 @@ subroutine ssids_print_flag(inform,nout,context)
       write (nout,'(/3a,i3)') ' Warning from ',trim(context),&
          '. Warning flag = ', inform%flag
    end if
-   msg = inform%flagToCharacter()
+   msg = inform%flag_to_character()
    write(nout, '(a)') msg
 
 end subroutine ssids_print_flag
 
+!> @brief Combine other's values into this object.
+!>
+!> Primarily intended for reducing inform objects after parallel execution.
+!> @param this Instance object.
+!> @param other Object to reduce values from
+subroutine reduce(this, other)
+   class(ssids_inform), intent(inout) :: this
+   class(ssids_inform), intent(in) :: other
+
+   if(other%flag < 0) then
+      ! An error is present
+      this%flag = min(this%flag, other%flag)
+   else
+      ! Otherwise only success if both are zero
+      this%flag = max(this%flag, other%flag)
+   endif
+   this%matrix_dup = this%matrix_dup + other%matrix_dup
+   this%matrix_missing_diag = this%matrix_missing_diag + &
+      other%matrix_missing_diag
+   this%matrix_outrange = this%matrix_outrange + other%matrix_outrange
+   this%matrix_rank = this%matrix_rank + other%matrix_rank
+   this%maxdepth = max(this%maxdepth, other%maxdepth)
+   this%maxfront = max(this%maxfront, other%maxfront)
+   this%num_delay = this%num_delay + other%num_delay
+   this%num_factor = this%num_factor + other%num_factor
+   this%num_flops = this%num_flops + other%num_flops
+   this%num_neg = this%num_neg + other%num_neg
+   this%num_sup = this%num_sup + other%num_sup
+   this%num_two = this%num_two + other%num_two
+   if(other%stat.ne.0) this%stat = other%stat
+   ! FIXME: %auction ???
+   if(other%cuda_error.ne.0) this%cuda_error = other%cuda_error
+   if(other%cublas_error.ne.0) this%cublas_error = other%cublas_error
+   this%not_first_pass = this%not_first_pass + other%not_first_pass
+   this%not_second_pass = this%not_second_pass + other%not_second_pass
+   this%nparts = this%nparts + other%nparts
+   this%cpu_flops = this%cpu_flops + other%cpu_flops
+   this%gpu_flops = this%gpu_flops + other%gpu_flops
+end subroutine reduce
 
 end module spral_ssids_inform

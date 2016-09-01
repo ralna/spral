@@ -10,6 +10,7 @@
 #include <limits>
 #include <utility>
 
+#include "ssids/cpu/ThreadStats.hxx"
 #include "ssids/cpu/kernels/wrappers.hxx"
 
 namespace spral { namespace ssids { namespace cpu {
@@ -162,7 +163,9 @@ void zero_col(int col, int m, double* a, int lda) {
 
 /** Simple LDL^T with threshold partial pivoting.
  * Intended for finishing off small matrices, not for performance */
-int ldlt_tpp_factor(int m, int n, int* perm, double* a, int lda, double* d, double* ld, int ldld, double u, double small, int nleft, double* aleft, int ldleft) {
+int ldlt_tpp_factor(int m, int n, int* perm, double* a, int lda, double* d,
+      double* ld, int ldld, bool action, double u, double small, int nleft,
+      double* aleft, int ldleft) {
    //printf("=== ENTRY %d %d ===\n", m, n);
    int nelim = 0; // Number of eliminated variables
    while(nelim<n) {
@@ -176,6 +179,7 @@ int ldlt_tpp_factor(int m, int n, int* perm, double* a, int lda, double* d, doub
       if(check_col_small(nelim, nelim, m, a, lda, small)) {
          // Record zero pivot
          //printf("Zero pivot %d\n", nelim);
+         if(!action) throw SingularError(nelim);
          swap_cols(nelim, nelim, m, n, perm, a, lda, nleft, aleft, ldleft);
          zero_col(nelim, m, a, lda);
          d[2*nelim] = 0.0;
@@ -190,6 +194,7 @@ int ldlt_tpp_factor(int m, int n, int* perm, double* a, int lda, double* d, doub
          if(check_col_small(p, nelim, m, a, lda, small)) {
             // Record zero pivot
             //printf("Zero pivot\n");
+            if(!action) throw SingularError(nelim);
             swap_cols(p, nelim, m, n, perm, a, lda, nleft, aleft, ldleft);
             zero_col(nelim, m, a, lda);
             d[2*nelim] = 0.0;

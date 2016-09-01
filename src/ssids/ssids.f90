@@ -141,9 +141,11 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
 
    integer :: mo_flag
    integer :: free_flag
+   type(ssids_inform) :: inform_default
 
    ! Initialise
    context = 'ssids_analyse'
+   inform = inform_default
    call ssids_free(akeep, free_flag)
    if(free_flag.ne.0) then
       inform%flag = SSIDS_ERROR_CUDA_UNKNOWN
@@ -152,14 +154,6 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
       call ssids_print_flag(inform,nout,context)
       return
    endif
-   inform%flag = 0
-   inform%matrix_missing_diag = 0
-   inform%matrix_outrange = 0
-   inform%matrix_dup = 0
-   inform%matrix_rank = n
-   inform%maxdepth = 0
-   inform%num_sup = 0
-   inform%stat = 0
 
    ! Set stream numbers
    mp = options%unit_diagnostics
@@ -482,8 +476,11 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
    integer :: st           ! stat parameter
    integer :: free_flag
 
+   type(ssids_inform) :: inform_default
+
    ! Initialise
    context = 'ssids_analyse_coord'
+   inform = inform_default
    call ssids_free(akeep, free_flag)
    if(free_flag.ne.0) then
       inform%flag = SSIDS_ERROR_CUDA_UNKNOWN
@@ -493,14 +490,6 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
       akeep%inform = inform
       return
    endif
-   inform%flag = 0
-   inform%matrix_missing_diag = 0
-   inform%matrix_outrange = 0
-   inform%matrix_dup = 0
-   inform%matrix_rank = n
-   inform%maxdepth = 0
-   inform%num_sup = 0
-   inform%stat = 0
 
    ! Set stream numbers
    mp = options%unit_diagnostics
@@ -807,21 +796,21 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
       return
    end if
 
-   ! Initialize inform output
+   ! Initialize
    inform = akeep%inform
-   inform%maxfront = 0
-   inform%num_neg = 0
-   inform%num_delay = 0
-   inform%num_factor = 0
-   inform%num_flops = 0
-   inform%num_two = 0
-   inform%stat = 0
-
    fkeep%flag = 0
    st = 0
-
    n = akeep%n
 
+   ! Immediate return if analyse detected singularity and options%action=false
+   if(.not.options%action .and. akeep%n.ne.akeep%inform%matrix_rank) then
+      inform%flag = SSIDS_ERROR_SINGULAR
+      fkeep%inform = inform
+      call ssids_print_flag(inform,nout,context)
+      return
+   end if
+
+   ! Immediate return for trivial matrix
    if (akeep%nnodes.eq.0) then
       inform%flag = SSIDS_SUCCESS
       inform%matrix_rank = 0
@@ -1152,7 +1141,6 @@ subroutine ssids_solve_mult_double(nrhs, x, ldx, akeep, fkeep, options, &
    character(50)  :: context  ! Procedure name (used when printing).
    integer :: local_job ! local job parameter
    integer :: n
-   integer :: nout
 
    inform%flag = SSIDS_SUCCESS
 
@@ -1177,8 +1165,6 @@ subroutine ssids_solve_mult_double(nrhs, x, ldx, akeep, fkeep, options, &
          ldx
    end if
 
-   nout = options%unit_error
-   if (options%print_level < 0) nout = -1
    context = 'ssids_solve'
 
    if (akeep%nnodes.eq.0) return
@@ -1186,7 +1172,7 @@ subroutine ssids_solve_mult_double(nrhs, x, ldx, akeep, fkeep, options, &
    if (.not. allocated(fkeep%subtree)) then
       ! factorize phase has not been performed
       inform%flag = SSIDS_ERROR_CALL_SEQUENCE
-      call ssids_print_flag(inform,nout,context)
+      call inform%print_flag(options, context)
       return
    end if
 
@@ -1194,24 +1180,26 @@ subroutine ssids_solve_mult_double(nrhs, x, ldx, akeep, fkeep, options, &
    ! immediate return if already had an error
    if (akeep%flag .lt. 0 .or. fkeep%flag .lt. 0) then
       inform%flag = SSIDS_ERROR_CALL_SEQUENCE
-      call ssids_print_flag(inform,nout,context)
+      call inform%print_flag(options, context)
       return
    end if
 
    n = akeep%n
    if (ldx .lt. n) then
       inform%flag = SSIDS_ERROR_X_SIZE
-      call ssids_print_flag(inform,nout,context)
-      if (nout .ge. 0) write (nout,'(a,i8,a,i8)') &
-         ' Increase ldx from ', ldx, ' to at least ', n
+      call inform%print_flag(options, context)
+      if(options%print_level.ge.0 .and. options%unit_error.gt.0) &
+         write (options%unit_error,'(a,i8,a,i8)') &
+            ' Increase ldx from ', ldx, ' to at least ', n
       return
    end if
 
    if (nrhs .lt. 1) then
       inform%flag = SSIDS_ERROR_X_SIZE
-      call ssids_print_flag(inform,nout,context)
-      if (nout .ge. 0) write (nout,'(a,i8,a,i8)') &
-         ' nrhs must be at least 1. nrhs = ', nrhs
+      call inform%print_flag(options, context)
+      if(options%print_level.ge.0 .and. options%unit_error.gt.0) &
+         write (options%unit_error,'(a,i8,a,i8)') &
+            ' nrhs must be at least 1. nrhs = ', nrhs
       return
    end if
 
@@ -1228,17 +1216,14 @@ subroutine ssids_solve_mult_double(nrhs, x, ldx, akeep, fkeep, options, &
       if (fkeep%pos_def .and. job.eq.SSIDS_SOLVE_JOB_DIAG_BWD) &
          inform%flag = SSIDS_ERROR_JOB_OOR
       if (inform%flag.eq.SSIDS_ERROR_JOB_OOR) then
-         call ssids_print_flag(inform,nout,context)
+         call inform%print_flag(options, context)
          return
       end if
       local_job = job
    end if
 
    call fkeep%inner_solve(local_job, nrhs, x, ldx, akeep, inform)
-   if(inform%flag .ne. 0) then
-      call ssids_print_flag(inform,nout,context)
-      return
-   endif
+   call inform%print_flag(options, context)
 
 end subroutine ssids_solve_mult_double
 

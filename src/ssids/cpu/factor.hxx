@@ -54,7 +54,7 @@ void factor_node_indef(
          m, n, perm, lcol, ldl, d, 0.0, contrib, m-n, options, work, pool_alloc
          );
    if(node->nelim < 0) {
-      stats.flag = Flag::ERROR_ALLOCATION;
+      stats.flag = static_cast<Flag>(node->nelim);
       return;
    }
    //verifier.verify(node->nelim, perm, lcol, ldl, d);
@@ -69,8 +69,8 @@ void factor_node_indef(
       T *ld = work[omp_get_thread_num()].get_ptr<T>(2*(m-nelim));
       node->nelim += ldlt_tpp_factor(
             m-nelim, n-nelim, &perm[nelim], &lcol[nelim*(ldl+1)], ldl,
-            &d[2*nelim], ld, m-nelim, options.u, options.small, nelim,
-            &lcol[nelim], ldl
+            &d[2*nelim], ld, m-nelim, options.action, options.u, options.small,
+            nelim, &lcol[nelim], ldl
             );
       if(m-n>0 && node->nelim>nelim) {
          int nelim2 = node->nelim - nelim;

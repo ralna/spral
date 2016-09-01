@@ -982,8 +982,8 @@ public:
             T* ld = work[omp_get_thread_num()].get_ptr<T>(2*INNER_BLOCK_SIZE);
             cdata_[i_].nelim = ldlt_tpp_factor(
                   nrow(), ncol(), lperm, aval_, lda_,
-                  cdata_[i_].d, ld, INNER_BLOCK_SIZE, options.u,
-                  options.small
+                  cdata_[i_].d, ld, INNER_BLOCK_SIZE, options.action,
+                  options.u, options.small
                   );
             int* temp = work[omp_get_thread_num()].get_ptr<int>(ncol());
             int* blkperm = &perm[i_*INNER_BLOCK_SIZE];
@@ -997,8 +997,8 @@ public:
                   INNER_BLOCK_SIZE*INNER_BLOCK_SIZE
                   );
             block_ldlt<T, INNER_BLOCK_SIZE>(
-                  0, blkperm, aval_, lda_, cdata_[i_].d, ld, options.u,
-                  options.small, lperm
+                  0, blkperm, aval_, lda_, cdata_[i_].d, ld, options.action,
+                  options.u, options.small, lperm
                   );
             cdata_[i_].nelim = INNER_BLOCK_SIZE;
          }
@@ -1303,8 +1303,11 @@ private:
             if(use_tasks) task.done();
 #endif
          } catch(std::bad_alloc const&) {
-            flag = -1;
-         }}
+            flag = Flag::ERROR_ALLOCATION;
+         } catch(SingularError const&) {
+            flag = Flag::ERROR_SINGULAR;
+         }
+         }
          
          // Loop over off-diagonal blocks applying pivot
          for(int jblk=0; jblk<blk; jblk++) {
@@ -1565,7 +1568,10 @@ private:
             if(use_tasks) task.done();
 #endif
          } catch(std::bad_alloc const&) {
-            flag = -1;
+            flag = Flag::ERROR_ALLOCATION;
+            #pragma omp cancel taskgroup
+         } catch(SingularError const&) {
+            flag = Flag::ERROR_SINGULAR;
             #pragma omp cancel taskgroup
          }
          
