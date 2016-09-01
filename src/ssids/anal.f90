@@ -142,7 +142,7 @@ end subroutine expand_matrix
 ! The user has supplied a pivot order and this routine checks it is OK
 ! and returns an error if not. Also sets perm, invp.
 !
-subroutine check_order(n, order, invp, akeep, options, inform)
+subroutine check_order(n, order, invp, options, inform)
     integer, intent(in) :: n ! order of system
     integer, intent(inout) :: order(:)
       ! If i is used to index a variable, |order(i)| must
@@ -154,7 +154,6 @@ subroutine check_order(n, order, invp, akeep, options, inform)
       ! !!!! In this version, signs are reset to positive value
    integer, intent(out) :: invp(n)
       ! Used to check order and then holds inverse of perm.
-   type(ssids_akeep), intent(inout) :: akeep
    type(ssids_options), intent(in) :: options
    type(ssids_inform), intent(inout) :: inform
 
@@ -170,7 +169,6 @@ subroutine check_order(n, order, invp, akeep, options, inform)
    if (size(order) < n) then
       ! Order is too short
       inform%flag = SSIDS_ERROR_ORDER
-      akeep%flag = inform%flag
       return
    end if
 
@@ -191,7 +189,6 @@ subroutine check_order(n, order, invp, akeep, options, inform)
    end do
    if (i-1 .ne. n) then
       inform%flag = SSIDS_ERROR_ORDER
-      akeep%flag = inform%flag
       return
    end if
 end subroutine check_order

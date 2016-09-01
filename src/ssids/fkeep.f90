@@ -29,7 +29,6 @@ module spral_ssids_fkeep
    ! Data type for data generated in factorise phase
    !
    type ssids_fkeep
-      integer :: flag ! copy of error flag.
       real(wp), dimension(:), allocatable :: scaling ! Stores scaling for
          ! each entry (in original matrix order)
       logical :: pos_def ! set to true if user indicates matrix pos. definite

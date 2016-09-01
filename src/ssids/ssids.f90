@@ -147,7 +147,7 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
    if(free_flag.ne.0) then
       inform%flag = SSIDS_ERROR_CUDA_UNKNOWN
       inform%cuda_error = free_flag
-      akeep%flag = inform%flag
+      akeep%inform = inform
       call inform%print_flag(options, context)
       return
    endif
@@ -161,12 +161,11 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
 
    akeep%check = check
    akeep%n = n
-   akeep%flag = 0
 
    ! Checking of matrix data
    if (n < 0) then
       inform%flag = SSIDS_ERROR_A_N_OOR
-      akeep%flag = inform%flag
+      akeep%inform = inform
       call inform%print_flag(options, context)
       return
    end if
@@ -182,7 +181,7 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
    ! check options%ordering has a valid value
    if (options%ordering < 0 .or. options%ordering > 2) then
       inform%flag = SSIDS_ERROR_ORDER
-      akeep%flag = inform%flag
+      akeep%inform = inform
       call inform%print_flag(options, context)
       return
    end if
@@ -191,7 +190,7 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
    if (options%ordering.eq.2) then
       if (.not.present(val)) then
          inform%flag = SSIDS_ERROR_VAL
-         akeep%flag = inform%flag
+         akeep%inform = inform
          call inform%print_flag(options, context)
          return
       end if
@@ -220,7 +219,7 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
          if (mu_flag .eq. -5) inform%flag  = SSIDS_ERROR_A_PTR
          if (mu_flag .eq. -6) inform%flag  = SSIDS_ERROR_A_PTR
          if (mu_flag .eq. -10) inform%flag = SSIDS_ERROR_A_ALL_OOR
-         akeep%flag = inform%flag
+         akeep%inform = inform
          call inform%print_flag(options, context)
          return
       end if
@@ -253,11 +252,11 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
       if (.not.present(order)) then
          ! we have an error since user should have supplied the order
          inform%flag = SSIDS_ERROR_ORDER
-         akeep%flag = inform%flag
+         akeep%inform = inform
          call inform%print_flag(options, context)
          return
       end if
-      call check_order(n,order,akeep%invp,akeep,options,inform)
+      call check_order(n,order,akeep%invp,options,inform)
       if (inform%flag < 0) go to 490
       order2(1:n) = order(1:n)
       if (check) then
@@ -301,13 +300,13 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
          inform%flag = SSIDS_WARNING_ANAL_SINGULAR
       case(-1)
          inform%flag = SSIDS_ERROR_ALLOCATION
+         akeep%inform = inform
          call inform%print_flag(options, context)
-         akeep%flag = inform%flag
          return
       case default
          inform%flag = SSIDS_ERROR_UNKNOWN
+         akeep%inform = inform
          call inform%print_flag(options, context)
-         akeep%flag = inform%flag
          return
       end select
 
@@ -346,7 +345,7 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
    if (inform%stat .ne. 0) then
       inform%flag = SSIDS_ERROR_ALLOCATION
    end if
-   akeep%flag = inform%flag
+   akeep%inform = inform
    call inform%print_flag(options, context)
 
 end subroutine analyse_double
@@ -465,9 +464,8 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
    if(free_flag.ne.0) then
       inform%flag = SSIDS_ERROR_CUDA_UNKNOWN
       inform%cuda_error = free_flag
-      akeep%flag = inform%flag
-      call inform%print_flag(options, context)
       akeep%inform = inform
+      call inform%print_flag(options, context)
       return
    endif
 
@@ -483,14 +481,12 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
    akeep%check = .true.
    akeep%n = n
    akeep%ne = ne
-   akeep%flag = 0
 
    !
    ! Checking of matrix data
    !
    if (n < 0 .or. ne < 0) then
       inform%flag = SSIDS_ERROR_A_N_OOR
-      akeep%flag = inform%flag
       akeep%inform = inform
       call inform%print_flag(options, context)
       return
@@ -507,7 +503,6 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
    ! check options%ordering has a valid value
    if (options%ordering < 0 .or. options%ordering > 2) then
       inform%flag = SSIDS_ERROR_ORDER
-      akeep%flag = inform%flag
       akeep%inform = inform
       call inform%print_flag(options, context)
       return
@@ -517,7 +512,6 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
    if (options%ordering.eq.2) then
       if (.not.present(val)) then
          inform%flag = SSIDS_ERROR_VAL
-         akeep%flag = inform%flag
          akeep%inform = inform
          call inform%print_flag(options, context)
          return
@@ -543,18 +537,14 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
    if (mu_flag < 0) then
       if (mu_flag .eq. -1)  inform%flag = SSIDS_ERROR_ALLOCATION
       if (mu_flag .eq. -10) inform%flag = SSIDS_ERROR_A_ALL_OOR
-      akeep%flag = inform%flag
+      akeep%inform = inform
       call inform%print_flag(options, context)
       return
    end if
 
    ! Check whether warning needs to be raised
    ! Note: same numbering of positive flags as in matrix_util
-   if (mu_flag > 0) then
-      inform%flag = mu_flag
-      akeep%flag = inform%flag
-      call inform%print_flag(options, context)
-   end if
+   if (mu_flag > 0) inform%flag = mu_flag
 
    nz = akeep%ptr(n+1) - 1
 
@@ -574,13 +564,11 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
       if (.not.present(order)) then
          ! we have an error since user should have supplied the order
          inform%flag = SSIDS_ERROR_ORDER
-         akeep%flag = inform%flag
-         akeep%inform = inform
          akeep%inform = inform
          call inform%print_flag(options, context)
          return
       end if
-      call check_order(n,order,akeep%invp,akeep,options,inform)
+      call check_order(n,order,akeep%invp,options,inform)
       if (inform%flag < 0) go to 490
       order2(1:n) = order(1:n)
       call expand_pattern(n, nz, akeep%ptr, akeep%row, ptr2, row2)
@@ -610,13 +598,11 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
          inform%flag = SSIDS_WARNING_ANAL_SINGULAR
       case(-1)
          inform%flag = SSIDS_ERROR_ALLOCATION
-         akeep%flag = inform%flag
          akeep%inform = inform
          call inform%print_flag(options, context)
          return
       case default
          inform%flag = SSIDS_ERROR_UNKNOWN
-         akeep%flag = inform%flag
          akeep%inform = inform
          call inform%print_flag(options, context)
          return
@@ -652,7 +638,7 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
    if (inform%stat .ne. 0) then
       inform%flag = SSIDS_ERROR_ALLOCATION
    end if
-   akeep%flag = inform%flag
+   akeep%inform = inform
    call inform%print_flag(options, context)
     
 end subroutine ssids_analyse_coord_double
@@ -710,18 +696,16 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
    call options%print_summary_factor(posdef, context)
 
    ! Check for error in call sequence
-   if (.not.allocated(akeep%sptr) .or. akeep%flag < 0) then
+   if (.not.allocated(akeep%sptr) .or. akeep%inform%flag < 0) then
       ! Analyse cannot have been run
       inform%flag = SSIDS_ERROR_CALL_SEQUENCE
       call inform%print_flag(options, context)
-      fkeep%flag = inform%flag
       fkeep%inform = inform
       return
    end if
 
    ! Initialize
    inform = akeep%inform
-   fkeep%flag = 0
    st = 0
    n = akeep%n
 
@@ -737,7 +721,6 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
    if (akeep%nnodes.eq.0) then
       inform%flag = SSIDS_SUCCESS
       inform%matrix_rank = 0
-      fkeep%flag = inform%flag
       fkeep%inform = inform
       return
    end if
@@ -762,7 +745,6 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
       if (.not.present(row)) inform%flag = SSIDS_ERROR_PTR_ROW
       if (inform%flag < 0) then
          call inform%print_flag(options, context)
-         fkeep%flag = inform%flag
          fkeep%inform = inform
          return
       end if
@@ -841,7 +823,6 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
          ! Structually singular matrix and control%action=.false.
          inform%flag = SSIDS_ERROR_SINGULAR
          call inform%print_flag(options, context)
-         fkeep%flag = inform%flag
          fkeep%inform = inform
          return
       end select
@@ -889,7 +870,6 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
          ! No scaling saved from analyse phase
          inform%flag = SSIDS_ERROR_NO_SAVED_SCALING
          call inform%print_flag(options, context)
-         fkeep%flag = inform%flag
          fkeep%inform = inform
          return
       end if
@@ -956,7 +936,7 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
 
    if (inform%flag < 0) then
       call inform%print_flag(options, context)
-      fkeep%flag = inform%flag
+      fkeep%inform = inform
       return
    end if
 
@@ -1007,7 +987,7 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
    10 continue
    inform%flag = SSIDS_ERROR_ALLOCATION
    inform%stat = st
-   fkeep%flag = inform%flag
+   fkeep%inform = inform
    call inform%print_flag(options, context)
    return
 
@@ -1038,7 +1018,6 @@ end subroutine ssids_solve_one_double
 
 !*************************************************************************
 
-! Note: GPU solve + nrhs>1 doesn't work
 subroutine ssids_solve_mult_double(nrhs, x, ldx, akeep, fkeep, options, &
       inform, job)
    integer, intent(in) :: nrhs
@@ -1100,9 +1079,9 @@ subroutine ssids_solve_mult_double(nrhs, x, ldx, akeep, fkeep, options, &
       return
    end if
 
-   inform%flag = max(SSIDS_SUCCESS, fkeep%flag) ! Preserve warnings
+   inform%flag = max(SSIDS_SUCCESS, fkeep%inform%flag) ! Preserve warnings
    ! immediate return if already had an error
-   if (akeep%flag .lt. 0 .or. fkeep%flag .lt. 0) then
+   if (akeep%inform%flag .lt. 0 .or. fkeep%inform%flag .lt. 0) then
       inform%flag = SSIDS_ERROR_CALL_SEQUENCE
       call inform%print_flag(options, context)
       return
@@ -1174,7 +1153,7 @@ subroutine ssids_enquire_posdef_double(akeep, fkeep, options, inform, d)
       return
    end if
 
-   if (akeep%flag .lt. 0 .or. fkeep%flag .lt. 0) then
+   if (akeep%inform%flag .lt. 0 .or. fkeep%inform%flag .lt. 0) then
       ! immediate return if had an error
       inform%flag = SSIDS_ERROR_CALL_SEQUENCE
       call inform%print_flag(options, context)
@@ -1225,7 +1204,7 @@ subroutine ssids_enquire_indef_double(akeep, fkeep, options, inform, &
       return
    end if
 
-   if (akeep%flag .lt. 0 .or. fkeep%flag .lt. 0) then
+   if (akeep%inform%flag .lt. 0 .or. fkeep%inform%flag .lt. 0) then
       ! immediate return if had an error
       inform%flag = SSIDS_ERROR_CALL_SEQUENCE
       call inform%print_flag(options, context)
@@ -1269,7 +1248,7 @@ subroutine ssids_alter_double(d, akeep, fkeep, options, inform)
     end if
 
    ! immediate return if already had an error
-   if (akeep%flag .lt. 0 .or. fkeep%flag .lt. 0) then
+   if (akeep%inform%flag .lt. 0 .or. fkeep%inform%flag .lt. 0) then
       inform%flag = SSIDS_ERROR_CALL_SEQUENCE
       call inform%print_flag(options, context)
       return

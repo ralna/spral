@@ -24,7 +24,6 @@ module spral_ssids_akeep
    !
    type ssids_akeep
       logical :: check ! copy of check as input to analyse phase
-      integer :: flag ! copy of error flag.
       integer :: n ! Dimension of matrix
       integer :: ne ! Set to number of entries input by user.
       integer :: nnodes = -1 ! Number of nodes in assembly tree
