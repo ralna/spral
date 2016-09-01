@@ -90,7 +90,8 @@ module spral_ssids_cpu_subtree
          type(C_PTR), value :: subtree
       end subroutine c_destroy_numeric_subtree
 
-      subroutine c_subtree_solve_fwd(posdef, subtree, nrhs, x, ldx) &
+      integer(C_INT) function c_subtree_solve_fwd(posdef, subtree, nrhs, x, &
+            ldx) &
             bind(C, name="spral_ssids_cpu_subtree_solve_fwd_dbl")
          use, intrinsic :: iso_c_binding
          implicit none
@@ -99,9 +100,10 @@ module spral_ssids_cpu_subtree
          integer(C_INT), value :: nrhs
          real(C_DOUBLE), dimension(*), intent(inout) :: x
          integer(C_INT), value :: ldx
-      end subroutine c_subtree_solve_fwd
+      end function c_subtree_solve_fwd
 
-      subroutine c_subtree_solve_diag(posdef, subtree, nrhs, x, ldx) &
+      integer(C_INT) function c_subtree_solve_diag(posdef, subtree, nrhs, x, &
+            ldx) &
             bind(C, name="spral_ssids_cpu_subtree_solve_diag_dbl")
          use, intrinsic :: iso_c_binding
          implicit none
@@ -110,9 +112,10 @@ module spral_ssids_cpu_subtree
          integer(C_INT), value :: nrhs
          real(C_DOUBLE), dimension(*), intent(inout) :: x
          integer(C_INT), value :: ldx
-      end subroutine c_subtree_solve_diag
+      end function c_subtree_solve_diag
 
-      subroutine c_subtree_solve_diag_bwd(posdef, subtree, nrhs, x, ldx) &
+      integer(C_INT) function c_subtree_solve_diag_bwd(posdef, subtree, nrhs, &
+            x, ldx) &
             bind(C, name="spral_ssids_cpu_subtree_solve_diag_bwd_dbl")
          use, intrinsic :: iso_c_binding
          implicit none
@@ -121,9 +124,10 @@ module spral_ssids_cpu_subtree
          integer(C_INT), value :: nrhs
          real(C_DOUBLE), dimension(*), intent(inout) :: x
          integer(C_INT), value :: ldx
-      end subroutine c_subtree_solve_diag_bwd
+      end function c_subtree_solve_diag_bwd
 
-      subroutine c_subtree_solve_bwd(posdef, subtree, nrhs, x, ldx) &
+      integer(C_INT) function c_subtree_solve_bwd(posdef, subtree, nrhs, x, &
+            ldx) &
             bind(C, name="spral_ssids_cpu_subtree_solve_bwd_dbl")
          use, intrinsic :: iso_c_binding
          implicit none
@@ -132,7 +136,7 @@ module spral_ssids_cpu_subtree
          integer(C_INT), value :: nrhs
          real(C_DOUBLE), dimension(*), intent(inout) :: x
          integer(C_INT), value :: ldx
-      end subroutine c_subtree_solve_bwd
+      end function c_subtree_solve_bwd
 
       subroutine c_subtree_enquire(posdef, subtree, piv_order, d) &
             bind(C, name="spral_ssids_cpu_subtree_enquire_dbl")
@@ -322,7 +326,10 @@ subroutine solve_fwd(this, nrhs, x, ldx, inform)
    integer, intent(in) :: ldx
    type(ssids_inform), intent(inout) :: inform
 
-   call c_subtree_solve_fwd(this%posdef, this%csubtree, nrhs, x, ldx)
+   integer(C_INT) :: flag
+
+   flag = c_subtree_solve_fwd(this%posdef, this%csubtree, nrhs, x, ldx)
+   if(flag.ne.SSIDS_SUCCESS) inform%flag = flag
 end subroutine solve_fwd
 
 subroutine solve_diag(this, nrhs, x, ldx, inform)
@@ -332,7 +339,10 @@ subroutine solve_diag(this, nrhs, x, ldx, inform)
    integer, intent(in) :: ldx
    type(ssids_inform), intent(inout) :: inform
 
-   call c_subtree_solve_diag(this%posdef, this%csubtree, nrhs, x, ldx)
+   integer(C_INT) :: flag
+
+   flag = c_subtree_solve_diag(this%posdef, this%csubtree, nrhs, x, ldx)
+   if(flag.ne.SSIDS_SUCCESS) inform%flag = flag
 end subroutine solve_diag
 
 subroutine solve_diag_bwd(this, nrhs, x, ldx, inform)
@@ -342,7 +352,10 @@ subroutine solve_diag_bwd(this, nrhs, x, ldx, inform)
    integer, intent(in) :: ldx
    type(ssids_inform), intent(inout) :: inform
 
-   call c_subtree_solve_diag_bwd(this%posdef, this%csubtree, nrhs, x, ldx)
+   integer(C_INT) :: flag
+
+   flag = c_subtree_solve_diag_bwd(this%posdef, this%csubtree, nrhs, x, ldx)
+   if(flag.ne.SSIDS_SUCCESS) inform%flag = flag
 end subroutine solve_diag_bwd
 
 subroutine solve_bwd(this, nrhs, x, ldx, inform)
@@ -352,7 +365,10 @@ subroutine solve_bwd(this, nrhs, x, ldx, inform)
    integer, intent(in) :: ldx
    type(ssids_inform), intent(inout) :: inform
 
-   call c_subtree_solve_bwd(this%posdef, this%csubtree, nrhs, x, ldx)
+   integer(C_INT) :: flag
+
+   flag = c_subtree_solve_bwd(this%posdef, this%csubtree, nrhs, x, ldx)
+   if(flag.ne.SSIDS_SUCCESS) inform%flag = flag
 end subroutine solve_bwd
 
 subroutine enquire_posdef(this, d)

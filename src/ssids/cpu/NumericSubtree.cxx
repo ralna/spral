@@ -75,7 +75,7 @@ void spral_ssids_cpu_destroy_num_subtree_dbl(bool posdef, void* target) {
 
 /* Double precision wrapper around templated routines */
 extern "C"
-void spral_ssids_cpu_subtree_solve_fwd_dbl(
+Flag spral_ssids_cpu_subtree_solve_fwd_dbl(
       bool posdef,      // If true, performs A=LL^T, if false do pivoted A=LDL^T
       void const* subtree_ptr,// pointer to relevant type of NumericSubtree
       int nrhs,         // number of right-hand sides
@@ -84,20 +84,25 @@ void spral_ssids_cpu_subtree_solve_fwd_dbl(
       ) {
 
    // Call method
-   if(posdef) { // Converting from runtime to compile time posdef value
-      auto &subtree =
-         *static_cast<NumericSubtreePosdef const*>(subtree_ptr);
-      subtree.solve_fwd(nrhs, x, ldx);
-   } else {
-      auto &subtree =
-         *static_cast<NumericSubtreeIndef const*>(subtree_ptr);
-      subtree.solve_fwd(nrhs, x, ldx);
+   try {
+      if(posdef) { // Converting from runtime to compile time posdef value
+         auto &subtree =
+            *static_cast<NumericSubtreePosdef const*>(subtree_ptr);
+         subtree.solve_fwd(nrhs, x, ldx);
+      } else {
+         auto &subtree =
+            *static_cast<NumericSubtreeIndef const*>(subtree_ptr);
+         subtree.solve_fwd(nrhs, x, ldx);
+      }
+   } catch(std::bad_alloc const&) {
+      return Flag::ERROR_ALLOCATION;
    }
+   return Flag::SUCCESS;
 }
 
 /* Double precision wrapper around templated routines */
 extern "C"
-void spral_ssids_cpu_subtree_solve_diag_dbl(
+Flag spral_ssids_cpu_subtree_solve_diag_dbl(
       bool posdef,      // If true, performs A=LL^T, if false do pivoted A=LDL^T
       void const* subtree_ptr,// pointer to relevant type of NumericSubtree
       int nrhs,         // number of right-hand sides
@@ -106,18 +111,23 @@ void spral_ssids_cpu_subtree_solve_diag_dbl(
       ) {
 
    // Call method
-   if(posdef) { // Converting from runtime to compile time posdef value
-      auto &subtree = *static_cast<NumericSubtreePosdef const*>(subtree_ptr);
-      subtree.solve_diag(nrhs, x, ldx);
-   } else {
-      auto &subtree = *static_cast<NumericSubtreeIndef const*>(subtree_ptr);
-      subtree.solve_diag(nrhs, x, ldx);
+   try {
+      if(posdef) { // Converting from runtime to compile time posdef value
+         auto &subtree = *static_cast<NumericSubtreePosdef const*>(subtree_ptr);
+         subtree.solve_diag(nrhs, x, ldx);
+      } else {
+         auto &subtree = *static_cast<NumericSubtreeIndef const*>(subtree_ptr);
+         subtree.solve_diag(nrhs, x, ldx);
+      }
+   } catch(std::bad_alloc const&) {
+      return Flag::ERROR_ALLOCATION;
    }
+   return Flag::SUCCESS;
 }
 
 /* Double precision wrapper around templated routines */
 extern "C"
-void spral_ssids_cpu_subtree_solve_diag_bwd_dbl(
+Flag spral_ssids_cpu_subtree_solve_diag_bwd_dbl(
       bool posdef,      // If true, performs A=LL^T, if false do pivoted A=LDL^T
       void const* subtree_ptr,// pointer to relevant type of NumericSubtree
       int nrhs,         // number of right-hand sides
@@ -126,20 +136,25 @@ void spral_ssids_cpu_subtree_solve_diag_bwd_dbl(
       ) {
 
    // Call method
-   if(posdef) { // Converting from runtime to compile time posdef value
-      auto &subtree =
-         *static_cast<NumericSubtreePosdef const*>(subtree_ptr);
-      subtree.solve_diag_bwd(nrhs, x, ldx);
-   } else {
-      auto &subtree =
-         *static_cast<NumericSubtreeIndef const*>(subtree_ptr);
-      subtree.solve_diag_bwd(nrhs, x, ldx);
+   try {
+      if(posdef) { // Converting from runtime to compile time posdef value
+         auto &subtree =
+            *static_cast<NumericSubtreePosdef const*>(subtree_ptr);
+         subtree.solve_diag_bwd(nrhs, x, ldx);
+      } else {
+         auto &subtree =
+            *static_cast<NumericSubtreeIndef const*>(subtree_ptr);
+         subtree.solve_diag_bwd(nrhs, x, ldx);
+      }
+   } catch(std::bad_alloc const&) {
+      return Flag::ERROR_ALLOCATION;
    }
+   return Flag::SUCCESS;
 }
 
 /* Double precision wrapper around templated routines */
 extern "C"
-void spral_ssids_cpu_subtree_solve_bwd_dbl(
+Flag spral_ssids_cpu_subtree_solve_bwd_dbl(
       bool posdef,      // If true, performs A=LL^T, if false do pivoted A=LDL^T
       void const* subtree_ptr,// pointer to relevant type of NumericSubtree
       int nrhs,         // number of right-hand sides
@@ -148,15 +163,20 @@ void spral_ssids_cpu_subtree_solve_bwd_dbl(
       ) {
 
    // Call method
-   if(posdef) { // Converting from runtime to compile time posdef value
-      auto &subtree =
-         *static_cast<NumericSubtreePosdef const*>(subtree_ptr);
-      subtree.solve_bwd(nrhs, x, ldx);
-   } else {
-      auto &subtree =
-         *static_cast<NumericSubtreeIndef const*>(subtree_ptr);
-      subtree.solve_bwd(nrhs, x, ldx);
+   try {
+      if(posdef) { // Converting from runtime to compile time posdef value
+         auto &subtree =
+            *static_cast<NumericSubtreePosdef const*>(subtree_ptr);
+         subtree.solve_bwd(nrhs, x, ldx);
+      } else {
+         auto &subtree =
+            *static_cast<NumericSubtreeIndef const*>(subtree_ptr);
+         subtree.solve_bwd(nrhs, x, ldx);
+      }
+   } catch(std::bad_alloc const&) {
+      return Flag::ERROR_ALLOCATION;
    }
+   return Flag::SUCCESS;
 }
 
 /* Double precision wrapper around templated routines */
