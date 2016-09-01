@@ -287,6 +287,12 @@ contains
          case("--disable-gpu")
             options%use_gpu = .false.
             print *, 'Disabling GPUs'
+         case("--gpu-perf-coeff")
+            call get_command_argument(argnum, argval)
+            argnum = argnum + 1
+            read( argval, * ) options%gpu_perf_coeff
+            print *, 'GPU Performance coefficient = ', &
+               options%gpu_perf_coeff
          case("--small-subtree-threshold")
             call get_command_argument(argnum, argval)
             argnum = argnum + 1
