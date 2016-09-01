@@ -268,7 +268,7 @@ function factor(this, posdef, aval, child_contrib, options, inform, scaling)
    cpu_factor%csubtree = &
       c_create_numeric_subtree(cpu_factor%posdef, this%csubtree, &
          aval, cscaling, contrib_ptr, coptions, cstats)
-   if(cstats%flag.ne.0) then
+   if(cstats%flag.lt.0) then
       inform%flag = cstats%flag
       return
    endif
