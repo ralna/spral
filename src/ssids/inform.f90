@@ -177,7 +177,7 @@ subroutine reduce(this, other)
    class(ssids_inform), intent(inout) :: this
    class(ssids_inform), intent(in) :: other
 
-   if(other%flag < 0) then
+   if(this%flag.lt.0 .or. other%flag.lt.0) then
       ! An error is present
       this%flag = min(this%flag, other%flag)
    else
