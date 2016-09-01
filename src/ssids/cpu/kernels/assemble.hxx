@@ -59,8 +59,7 @@ void assemble_pre(
    typename FADoubleTraits::allocator_type factor_alloc_double(factor_alloc);
    typedef typename std::allocator_traits<FactorAlloc>::template rebind_traits<int> FAIntTraits;
    typename FAIntTraits::allocator_type factor_alloc_int(factor_alloc);
-   typedef typename std::allocator_traits<PoolAlloc>::template rebind_traits<int> PAIntTraits;
-   typename PAIntTraits::allocator_type pool_alloc_int(pool_alloc);
+   typedef typename std::allocator_traits<PoolAlloc>::template rebind_alloc<int> PoolAllocInt;
 
    /* Count incoming delays and determine size of node */
    node.ndelay_in = 0;
@@ -138,88 +137,91 @@ void assemble_pre(
    if(!node.first_child) task_asm_pre.done();
 #endif
 
-   /* Add children */
-   int* map = nullptr;
+   /* If we have no children, we're done. */
+   if(node.first_child == nullptr && snode.contrib.size() == 0) return;
+
+   /*
+    * Add children
+    */
    int delay_col = snode.ncol;
-   if(node.first_child != NULL || snode.contrib.size() > 0) {
-      /* Build lookup vector, allowing for insertion of delayed vars */
-      /* Note that while rlist[] is 1-indexed this is fine so long as lookup
-       * is also 1-indexed (which it is as it is another node's rlist[] */
-      if(!map) map = PAIntTraits::allocate(pool_alloc_int, n+1);
-      for(int i=0; i<snode.ncol; i++)
-         map[ snode.rlist[i] ] = i;
-      for(int i=snode.ncol; i<snode.nrow; i++)
-         map[ snode.rlist[i] ] = i + node.ndelay_in;
-      /* Loop over children adding contributions */
+
+   /* Build lookup vector, allowing for insertion of delayed vars */
+   /* Note that while rlist[] is 1-indexed this is fine so long as lookup
+    * is also 1-indexed (which it is as it is another node's rlist[] */
+   std::vector<int, PoolAllocInt> map(n+1, PoolAllocInt(pool_alloc));
+   for(int i=0; i<snode.ncol; i++)
+      map[ snode.rlist[i] ] = i;
+   for(int i=snode.ncol; i<snode.nrow; i++)
+      map[ snode.rlist[i] ] = i + node.ndelay_in;
+   /* Loop over children adding contributions */
+#ifdef PROFILE
+   task_asm_pre.done();
+#endif
+   for(auto* child=node.first_child; child!=NULL; child=child->next_child) {
+#ifdef PROFILE
+      Profile::Task task_asm_pre("TA_ASM_PRE");
+#endif
+      SymbolicNode const& csnode = child->symb;
+      /* Handle delays - go to back of node
+       * (i.e. become the last rows as in lower triangular format) */
+      for(int i=0; i<child->ndelay_out; i++) {
+         // Add delayed rows (from delayed cols)
+         T *dest = &node.lcol[delay_col*(ldl+1)];
+         int lds = align_lda<T>(csnode.nrow + child->ndelay_in);
+         T *src = &child->lcol[(child->nelim+i)*(lds+1)];
+         node.perm[delay_col] = child->perm[child->nelim+i];
+         for(int j=0; j<child->ndelay_out-i; j++) {
+            dest[j] = src[j];
+         }
+         // Add child's non-fully summed rows (from delayed cols)
+         dest = node.lcol;
+         src = &child->lcol[child->nelim*lds + child->ndelay_in +i*lds];
+         for(int j=csnode.ncol; j<csnode.nrow; j++) {
+            int r = map[ csnode.rlist[j] ];
+            if(r < ncol) dest[r*ldl+delay_col] = src[j];
+            else         dest[delay_col*ldl+r] = src[j];
+         }
+         delay_col++;
+      }
 #ifdef PROFILE
       task_asm_pre.done();
 #endif
-      for(auto* child=node.first_child; child!=NULL; child=child->next_child) {
-#ifdef PROFILE
-         Profile::Task task_asm_pre("TA_ASM_PRE");
-#endif
-         SymbolicNode const& csnode = child->symb;
-         /* Handle delays - go to back of node
-          * (i.e. become the last rows as in lower triangular format) */
-         for(int i=0; i<child->ndelay_out; i++) {
-            // Add delayed rows (from delayed cols)
-            T *dest = &node.lcol[delay_col*(ldl+1)];
-            int lds = align_lda<T>(csnode.nrow + child->ndelay_in);
-            T *src = &child->lcol[(child->nelim+i)*(lds+1)];
-            node.perm[delay_col] = child->perm[child->nelim+i];
-            for(int j=0; j<child->ndelay_out-i; j++) {
-               dest[j] = src[j];
-            }
-            // Add child's non-fully summed rows (from delayed cols)
-            dest = node.lcol;
-            src = &child->lcol[child->nelim*lds + child->ndelay_in +i*lds];
-            for(int j=csnode.ncol; j<csnode.nrow; j++) {
-               int r = map[ csnode.rlist[j] ];
-               if(r < ncol) dest[r*ldl+delay_col] = src[j];
-               else         dest[delay_col*ldl+r] = src[j];
-            }
-            delay_col++;
-         }
-#ifdef PROFILE
-         task_asm_pre.done();
-#endif
 
-         /* Handle expected contributions (only if something there) */
-         if(child->contrib) {
-            int cm = csnode.nrow - csnode.ncol;
-            int const block_size = 256; // FIXME: make configurable?
-            for(int iblk=0; iblk<cm; iblk+=block_size) {
-               #pragma omp task default(none) \
-                  firstprivate(iblk) \
-                  shared(map, child, snode, node, csnode, cm, nrow, work) \
-                  if(iblk+block_size<cm)
-               {
+      /* Handle expected contributions (only if something there) */
+      if(child->contrib) {
+         int cm = csnode.nrow - csnode.ncol;
+         int const block_size = 256; // FIXME: make configurable?
+         for(int iblk=0; iblk<cm; iblk+=block_size) {
+            #pragma omp task default(none) \
+               firstprivate(iblk) \
+               shared(map, child, snode, node, csnode, cm, nrow, work) \
+               if(iblk+block_size<cm)
+            {
 #ifdef PROFILE
-                  Profile::Task task_asm_pre("TA_ASM_PRE");
+               Profile::Task task_asm_pre("TA_ASM_PRE");
 #endif
-                  int* cache = work[omp_get_thread_num()].get_ptr<int>(cm);
-                  for(int j=iblk; j<cm; ++j)
-                     cache[j] = map[ csnode.rlist[csnode.ncol+j] ];
-                  for(int i=iblk; i<std::min(iblk+block_size,cm); i++) {
-                     int c = cache[i];
-                     T *src = &child->contrib[i*cm];
-                     // NB: we handle contribution to contrib in assemble_post()
-                     if(c < snode.ncol) {
-                        // Contribution added to lcol
-                        int ldd = align_lda<T>(nrow);
-                        T *dest = &node.lcol[c*ldd];
-                        asm_col(cm-i, &cache[i], &src[i], dest);
-                     }
+               int* cache = work[omp_get_thread_num()].get_ptr<int>(cm);
+               for(int j=iblk; j<cm; ++j)
+                  cache[j] = map[ csnode.rlist[csnode.ncol+j] ];
+               for(int i=iblk; i<std::min(iblk+block_size,cm); i++) {
+                  int c = cache[i];
+                  T *src = &child->contrib[i*cm];
+                  // NB: we handle contribution to contrib in assemble_post()
+                  if(c < snode.ncol) {
+                     // Contribution added to lcol
+                     int ldd = align_lda<T>(nrow);
+                     T *dest = &node.lcol[c*ldd];
+                     asm_col(cm-i, &cache[i], &src[i], dest);
                   }
+               }
 #ifdef PROFILE
-                  task_asm_pre.done();
+               task_asm_pre.done();
 #endif
-               } /* task */
-            }
-            if(cm > block_size) {
-               // only wait if we've actually created tasks
-               #pragma omp taskwait
-            }
+            } /* task */
+         }
+         if(cm > block_size) {
+            // only wait if we've actually created tasks
+            #pragma omp taskwait
          }
       }
    }
@@ -269,7 +271,6 @@ void assemble_pre(
          }
       }
    }
-   if(map) PAIntTraits::deallocate(pool_alloc_int, map, n+1);
 }
 
 template <typename T,
