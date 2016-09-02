@@ -81,10 +81,10 @@ program main
 
    call test_warnings
    call test_errors
-   !call test_special
+   call test_special
    call test_random
-   !call test_random_scale
-   !call test_big
+   call test_random_scale
+   call test_big
 
    write(*, "(/a)") "=========================="
    write(*, "(a,i4)") "Total number of errors = ", errors
@@ -1345,7 +1345,7 @@ subroutine test_special
    call print_result(info%flag,SSIDS_WARNING_MISSING_DIAGONAL)
    call gen_rhs(a, rhs, x1, x, res, 1)
    call chk_answer(.false., a, akeep, options, rhs, x, &
-      res, SSIDS_SUCCESS, fs=.true.)
+      res, SSIDS_WARNING_MISSING_DIAGONAL, fs=.true.)
    call ssids_free(akeep, cuda_error)
 
    ! (  x   x  1.0 )
