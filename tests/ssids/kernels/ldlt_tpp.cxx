@@ -260,6 +260,7 @@ double find_l_abs_max(int n, double *a, int lda) {
 
 int ldlt_tpp_test(double u, double small, bool delays, bool singular, int m, int n, bool debug=false, int test=0, int seed=0) {
    bool failed = false;
+   bool action = true; // Don't abort on singular matrices
    // Note: We generate an m x m test matrix, then factor it as an
    // m x n matrix followed by an (m-n) x (m-n) matrix [give or take delays]
 
@@ -287,14 +288,14 @@ int ldlt_tpp_test(double u, double small, bool delays, bool singular, int m, int
    double *d = new double[2*m];
    double *work = new double[2*m];
    // First m x n matrix
-   int q1 = ldlt_tpp_factor(m, n, perm, l, lda, d, work, m, u, small);
+   int q1 = ldlt_tpp_factor(m, n, perm, l, lda, d, work, m, action, u, small);
    if(debug) std::cout << "FIRST FACTOR CALL ELIMINATED " << q1 << " of " << n << " pivots" << std::endl;
    int q2 = 0;
    if(m > n) {
       // Apply outer product update
       do_update<double>(m-n, q1, &l[n*(lda+1)], &l[n], lda, d);
       // Second (m-n) x (m-n) matrix [but add delays if any]
-      q2 = ldlt_tpp_factor(m-q1, m-q1, &perm[q1], &l[q1*(lda+1)], lda, &d[2*q1], work, m, u, small, q1, &l[q1], lda);
+      q2 = ldlt_tpp_factor(m-q1, m-q1, &perm[q1], &l[q1*(lda+1)], lda, &d[2*q1], work, m, action, u, small, q1, &l[q1], lda);
    }
    EXPECT_EQ(m, q1+q2) << "(test " << test << " seed " << seed << ")" << std::endl;
    EXPECT_LE(find_l_abs_max(m, l, lda), 1.0/u) << "(test " << test << " seed " << seed << ")" << std::endl;

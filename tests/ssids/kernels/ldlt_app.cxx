@@ -15,6 +15,7 @@
 #include <iostream>
 #include <limits>
 
+#include "AlignedAllocator.hxx"
 #include "framework.hxx"
 #include "ssids/cpu/kernels/wrappers.hxx"
 #include "ssids/cpu/kernels/ldlt_app.cxx" // .cxx as we need internal namespace
@@ -64,8 +65,8 @@ void solve(int m, int n, const int *perm, const T *l, int ldl, const T *d, const
    ldlt_app_solve_fwd(m, n, l, ldl, 1, x, m);
    ldlt_app_solve_fwd(m-n, m-n, &l[n*(ldl+1)], ldl, 1, &x[n], m);
    // Diag slv
-   ldlt_app_solve_diag(n, d, x);
-   ldlt_app_solve_diag(m-n, &d[2*n], &x[n]);
+   ldlt_app_solve_diag(n, d, 1, x, m);
+   ldlt_app_solve_diag(m-n, &d[2*n], 1, &x[n], m);
    // Bwd slv
    ldlt_app_solve_bwd(m-n, m-n, &l[n*(ldl+1)], ldl, 1, &x[n], m);
    ldlt_app_solve_bwd(m, n, l, ldl, 1, x, m);
@@ -301,6 +302,7 @@ int ldlt_test(T u, T small, bool delays, bool singular, bool dblk_singular, int 
 
    // Setup options
    struct cpu_factor_options options;
+   options.action = true;
    options.multiplier = 2.0;
    options.small = small;
    options.u = u;
@@ -311,7 +313,7 @@ int ldlt_test(T u, T small, bool delays, bool singular, bool dblk_singular, int 
                                        : PivotMethod::app_block;
 
    // Factorize using main routine
-   AlignedAllocator<T> allocT;
+   spral::test::AlignedAllocator<T> allocT;
    T *l = allocT.allocate(m*lda);
    memcpy(l, a, m*lda*sizeof(T)); // Copy a to l
    int *perm = new int[m];
@@ -342,7 +344,7 @@ int ldlt_test(T u, T small, bool delays, bool singular, bool dblk_singular, int 
       // Finish off with simplistic kernel
       T *ld = new T[2*m];
       q1 += ldlt_tpp_factor(m-q1, n-q1, &perm[q1], &l[(q1)*(lda+1)], lda,
-            &d[2*(q1)], ld, m, u, small, q1, &l[q1], lda);
+            &d[2*(q1)], ld, m, options.action, u, small, q1, &l[q1], lda);
       delete[] ld;
    }
    if(m > n) {
@@ -366,8 +368,8 @@ int ldlt_test(T u, T small, bool delays, bool singular, bool dblk_singular, int 
          // Finish off with simplistic kernel
          T *ld = new T[2*m];
          q2 += ldlt_tpp_factor(m-q1-q2, m-q1-q2, &perm[q1+q2],
-               &l[(q1+q2)*(lda+1)], lda, &d[2*(q1+q2)], ld, m, u, small,
-               q1+q2, &l[q1+q2], lda);
+               &l[(q1+q2)*(lda+1)], lda, &d[2*(q1+q2)], ld, m, options.action,
+               u, small, q1+q2, &l[q1+q2], lda);
          delete[] ld;
       }
    }

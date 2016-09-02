@@ -291,6 +291,7 @@ check_PROGRAMS += \
 	examples/C/ssids
 ssids_test_SOURCES = tests/ssids/ssids.f90
 ssids_kernel_test_SOURCES = tests/ssids/kernels.cxx \
+									 tests/ssids/kernels/AlignedAllocator.hxx \
 									 tests/ssids/kernels/block_ldlt.cxx \
 									 tests/ssids/kernels/block_ldlt.hxx \
 									 tests/ssids/kernels/cholesky.cxx \

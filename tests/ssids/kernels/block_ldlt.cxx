@@ -17,11 +17,12 @@
 #include <iostream>
 
 #include "framework.hxx"
-#include "ssids/cpu/AlignedAllocator.hxx"
+#include "AlignedAllocator.hxx"
 #include "ssids/cpu/kernels/wrappers.hxx"
 #include "ssids/cpu/kernels/block_ldlt.hxx"
 
 using namespace spral::ssids::cpu;
+using namespace spral::test;
 
 template<typename T>
 void sym_mv(int n, const T *a, int lda, const T *x, T *b) {
@@ -241,6 +242,7 @@ template <typename T,
 int ldlt_test_block(T u, T small) {
    bool failed = false;
    int n = BLOCK_SIZE;
+   bool action = true; // Don't abort in presence of singularity
 
    // Generate test matrix
    int const lda = 2*BLOCK_SIZE;
@@ -270,7 +272,7 @@ int ldlt_test_block(T u, T small) {
    for(int i=0; i<n; i++) perm[i] = i;
    T d[2*BLOCK_SIZE];
    T ld[BLOCK_SIZE*BLOCK_SIZE];
-   block_ldlt<T, BLOCK_SIZE>(0, perm, l, lda, d, ld, u, small);
+   block_ldlt<T, BLOCK_SIZE>(0, perm, l, lda, d, ld, action, u, small);
 
    // Print out matrices if requested
    if(debug) {
@@ -304,6 +306,7 @@ template <typename T,
 int ldlt_block_torture_test(T u, T small) {
    int n = BLOCK_SIZE;
    bool failed = false;
+   bool action = true; // Don't abort in case of singularity
 
    // Generate nblock test matrices with entries as Unif(-10,10)
    T *a = new T[n*n*nblock];
@@ -335,7 +338,7 @@ int ldlt_block_torture_test(T u, T small) {
    for(int i=0; i<n*nblock; i++) perm[i] = i % n;
    T *d = new T[2*n*nblock];
    for(int blk=0; blk<nblock; blk++)
-      block_ldlt<T, BLOCK_SIZE>(0, &perm[n*blk], &l[n*n*blk], BLOCK_SIZE, &d[2*n*blk], &ld[n*n*blk], u, small);
+      block_ldlt<T, BLOCK_SIZE>(0, &perm[n*blk], &l[n*n*blk], BLOCK_SIZE, &d[2*n*blk], &ld[n*n*blk], action, u, small);
 
    // Check each system's residual
    T *soln = new T[n];
