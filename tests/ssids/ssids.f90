@@ -2441,7 +2441,11 @@ subroutine test_random_scale
          cycle
       endif
 
-      call gen_random_indef(a, nza, state)
+      if(posdef) then
+         call gen_random_posdef(a, nza, state)
+      else
+         call gen_random_indef(a, nza, state)
+      endif
 
       ! Generate a pivot order
       call simple_metis_order(a, order)
@@ -2594,7 +2598,11 @@ subroutine test_random_scale
             errors = errors + 1
             cycle
          endif
-         call ssids_solve(x1, akeep, fkeep, options, info, job=4)
+         if(posdef) then
+            call ssids_solve(x1, akeep, fkeep, options, info, job=3)
+         else
+            call ssids_solve(x1, akeep, fkeep, options, info, job=4)
+         endif
          if(info%flag .lt. SSIDS_SUCCESS) then
             write(*, "(a,i4)") " fail on 1d solve with job = 4", &
                info%flag
@@ -2608,7 +2616,11 @@ subroutine test_random_scale
             errors = errors + 1
             cycle
          endif
-         call ssids_solve(nrhs, x, maxn, akeep, fkeep, options, info, job=4)
+         if(posdef) then
+            call ssids_solve(nrhs, x, maxn, akeep, fkeep, options, info, job=3)
+         else
+            call ssids_solve(nrhs, x, maxn, akeep, fkeep, options, info, job=4)
+         endif
          if(info%flag .lt. SSIDS_SUCCESS) then
             write(*, "(a,i4)") " fail on 1d solve with job = 4", &
                info%flag
@@ -2624,12 +2636,14 @@ subroutine test_random_scale
             errors = errors + 1
             cycle
          endif
-         call ssids_solve(x1, akeep, fkeep, options, info, job=2)
-         if(info%flag .lt. SSIDS_SUCCESS) then
-            write(*, "(a,i4)") " fail on 1d solve with job = 2", &
-               info%flag
-            errors = errors + 1
-            cycle
+         if(.not.posdef) then
+            call ssids_solve(x1, akeep, fkeep, options, info, job=2)
+            if(info%flag .lt. SSIDS_SUCCESS) then
+               write(*, "(a,i4)") " fail on 1d solve with job = 2", &
+                  info%flag
+               errors = errors + 1
+               cycle
+            endif
          endif
          call ssids_solve(x1, akeep, fkeep, options, info, job=3)
          if(info%flag .lt. SSIDS_SUCCESS) then
@@ -2645,12 +2659,14 @@ subroutine test_random_scale
             errors = errors + 1
             cycle
          endif
-         call ssids_solve(nrhs, x, maxn, akeep, fkeep, options, info, job=2)
-         if(info%flag .lt. SSIDS_SUCCESS) then
-            write(*, "(a,i4)") " fail on 1d solve with job = 2", &
-               info%flag
-            errors = errors + 1
-            cycle
+         if(.not.posdef) then
+            call ssids_solve(nrhs, x, maxn, akeep, fkeep, options, info, job=2)
+            if(info%flag .lt. SSIDS_SUCCESS) then
+               write(*, "(a,i4)") " fail on 1d solve with job = 2", &
+                  info%flag
+               errors = errors + 1
+               cycle
+            endif
          endif
          call ssids_solve(nrhs, x, maxn, akeep, fkeep, options, info, job=3)
          if(info%flag .lt. SSIDS_SUCCESS) then
