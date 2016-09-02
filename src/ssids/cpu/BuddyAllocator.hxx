@@ -15,15 +15,47 @@ namespace spral { namespace ssids { namespace cpu {
 
 namespace buddy_alloc_internal {
 
+/**
+ * \brief Single Buddy Allocator Page. True buddy allocator.
+ *
+ * Manages a pool of memory. Upon an allocation requires, the pool is
+ * repeatedly divided into two halves until an area "just big enough" for the
+ * requested allocation is obtained, and returned to the user. The unused halves
+ * resulting from this process are stored in free lists. Upon deallocation,
+ * if the corresponding half(s) are still free, they are recombined to obtain
+ * a larger allocation unit as far as possible.
+ *
+ * This design prevents memory fragmentation and enables cheap reuse at the cost
+ * of some inefficiency in memory allocation.
+ *
+ * \tparam CharAllocator Underlying allocator, must allocate pointers of type
+ *         char.
+ * \sa Table
+ * \sa BuddyAllocator
+ */
 template <typename CharAllocator=std::allocator<char>>
 class Page {
+   // \{
    typedef typename std::allocator_traits<CharAllocator>::template rebind_traits<int> IntAllocTraits;
-   static int const nlevel=16;
-   static int const align=32;
-   static int const ISSUED_FLAG = -2; // flag value as issued
+   // \}
+   static int const nlevel=16; ///< Number of divisions to smallest allocation
+                               ///  unit.
+   static int const align=32; ///< Underlying alignment of all pointers returned
+   static int const ISSUED_FLAG = -2; ///< Flag: value is issued
 public:
+   // \{
    Page(Page const&) =delete; // not copyable
    Page& operator=(Page const&) =delete; // not copyable
+   // \}
+   /**
+    * \brief (Constructor)
+    *
+    * \param size Minimum size of underlying memory area to be allocated and
+    *        managed. A larger area may be used to allow for alignment and to
+    *        ensure sufficient levels of division are available.
+    * \param alloc Allocator to be used for allocation of underlying memory
+    *        area.
+    */
    Page(size_t size, CharAllocator const &alloc=CharAllocator())
    : alloc_(alloc)
    {
@@ -46,7 +78,8 @@ public:
       printf("BuddyAllocator: Creating new page %p size %ld\n", mem_, size_);
 #endif /* MEM_STATS */
    }
-   // Move constructor
+   /** \brief (Move constructor)
+    */
    Page(Page&& other) noexcept
    : alloc_(other.alloc_), min_size_(other.min_size_), size_(other.size_),
      mem_(other.mem_), base_(other.base_), next_(other.next_)
@@ -79,6 +112,12 @@ public:
                alloc_, mem_, size_+align
                );
    }
+   /**
+    * \brief Allocate a pointer of given size.
+    *
+    * \return Pointer to memory, aligned as per align. Or nullptr if there is
+    *         insufficient space.
+    */
    void* allocate(std::size_t sz) {
       if(sz > size_) return nullptr; // too big: don't even try 
       // Determine which level of block we're trying to find
@@ -92,6 +131,7 @@ public:
 #endif /* MEM_STATS */
       return ptr;
    }
+   /** \brief Release memory associated with ptr for reuse. */
    void deallocate(void* ptr, std::size_t sz) {
       int idx = ptr_to_addr(ptr);
       int level = sz_to_level(sz);
@@ -100,11 +140,17 @@ public:
       used_ -= sz;
 #endif /* MEM_STATS */
    }
-   /** Return true if this Page owners given pointer */
+   /** \brief Return true if this Page owners given pointer */
    bool is_owner(void* ptr) {
       int idx = ptr_to_addr(ptr);
       return (idx>=0 && idx<(1<<(nlevel-1)));
    }
+   /**
+    * \brief Return number of free bytes that could be allocated.
+    *
+    * Number returned is theoretical, and assumes exactly right sizes are
+    * chosen to maximize usage.
+    * */
    size_t count_free() const {
       size_t free=0;
       for(int i=0; i<nlevel; ++i) {
@@ -113,6 +159,7 @@ public:
       }
       return free;
    }
+   /** \brief Print summary of page (debug only) */
    void print() const {
       printf("Page %p size %ld free %ld\n", mem_, size_, count_free());
    }
@@ -207,32 +254,56 @@ private:
       return idx ^ (1<<level);
    }
 
-   CharAllocator alloc_;
-   size_t min_size_; ///< size of smallest block we can allocate
-   size_t size_; ///< maximum size
-   char* mem_; ///< pointer to memory allocation
-   char* base_; ///< aligned memory base
-   int head_[nlevel]; ///< first free block at each level's size
-   int *next_; ///< next free block at given level
+   CharAllocator alloc_; ///< Underlying allocator.
+   size_t min_size_; ///< Size of smallest block we can allocate.
+   size_t size_; ///< Maximum size.
+   char* mem_; ///< Pointer to memory allocation.
+   char* base_; ///< Aligned memory base.
+   int head_[nlevel]; ///< First free block at each level's size.
+   int *next_; ///< Next free block at given level.
 #ifdef MEM_STATS
-   size_t used_ = 0; ///< Total amount used
-   size_t max_used_ = 0; ///< High water mark of used_
+   size_t used_ = 0; ///< Total amount used.
+   size_t max_used_ = 0; ///< High water mark of used_.
 #endif /* MEM_STATS */
 };
 
+/**
+ * \brief Type-agnostic collection of Page s. Backing for BuddyAllocator.
+ *
+ * If a Page has insufficient space, a new Page of twice the size is added to
+ * the Table.
+ *
+ * \sa Page
+ * \sa BuddyAllocator
+ */
 template <typename CharAllocator>
 class Table {
+   // \{
    typedef Page<CharAllocator> PageSpec;
    typedef typename std::allocator_traits<CharAllocator>::template rebind_alloc<PageSpec> PageAlloc;
+   // \}
 public:
+   // \{
    Table(const Table&) =delete;
    Table& operator=(const Table&) =delete;
+   // \}
+   /**
+    * \brief (Constructor)
+    *
+    * \param sz Size of initial page.
+    * \param alloc Underlying allocator to use.
+    */
    Table(std::size_t sz, CharAllocator const& alloc=CharAllocator())
    : alloc_(alloc), max_sz_(sz), pages_(PageAlloc(alloc))
    {
       pages_.emplace_back(max_sz_, alloc_);
    }
 
+   /**
+    * \brief Allocate and return a pointer of the given size.
+    * 
+    * If there is insufficient space on existing pages, create a new one.
+    */
    void* allocate(std::size_t sz) {
       // Try allocating in existing pages
       spral::omp::AcquiredLock scopeLock(lock_);
@@ -269,7 +340,9 @@ public:
       return ptr;
    }
 
+   /** \brief Release memory starting at ptr of size sz back to pool */
    void deallocate(void* ptr, std::size_t sz) {
+      // Find page ptr belongs to and call it's deallocate function
       spral::omp::AcquiredLock scopeLock(lock_);
       for(auto& page: pages_) {
          if(page.is_owner(ptr)) {
@@ -280,15 +353,25 @@ public:
    }
 
 private:
-   CharAllocator alloc_;
-   std::size_t max_sz_;
-   std::vector<PageSpec, PageAlloc> pages_;
-   spral::omp::Lock lock_;
+   CharAllocator alloc_; ///< Underlying allocator to be passed to new pages
+   std::size_t max_sz_; ///< Size of last page allocated
+   std::vector<PageSpec, PageAlloc> pages_; ///< Individual buddy allocators
+   spral::omp::Lock lock_; ///< Underlying OpenMP lock
 };
 
 } /* namespace buddy_alloc_internal */
 
-/** Simple buddy-system allocator */
+/**
+ * \brief Simple buddy-system allocator.
+ *
+ * Designed to prevents memory fragmentation and enables cheap reuse at the cost
+ * of some inefficiency in memory allocation.
+ *
+ * Actually a type-specific wrapper around the type-agnostic Table.
+ *
+ * \sa buddy_alloc_internal::Table
+ * \sa buddy_alloc_internal::Page
+ */
 template <typename T, typename BaseAllocator>
 class BuddyAllocator {
    typedef typename std::allocator_traits<BaseAllocator>::template rebind_alloc<char> CharAllocator;
