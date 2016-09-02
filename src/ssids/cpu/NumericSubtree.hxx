@@ -302,7 +302,7 @@ public:
          /* Gather into dense vector xlocal */
          int blkm = (do_bwd) ? m+ndin
                              : nelim;
-         int ldl = align_lda<T>(blkm);
+         int ldl = align_lda<T>(m+ndin);
          for(int r=0; r<nrhs; ++r)
          for(int i=0; i<blkm; ++i)
             xlocal[r*symb_.n+i] = x[r*ldx + map[i]-1];
