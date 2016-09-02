@@ -2425,6 +2425,8 @@ subroutine test_random_scale
    options%nstream = 2
 
    do prblm = 1, nprob
+      !call random_set_seed(state, 1221086619)
+      !print *, random_get_seed(state)
 
       ! Generate parameters
       a%n = random_integer(state,  maxn)
