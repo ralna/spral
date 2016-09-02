@@ -18,7 +18,7 @@ template <typename T>
 void ldlt_app_solve_fwd(int m, int n, T const* l, int ldl, int nrhs, T* x, int ldx);
 
 template <typename T>
-void ldlt_app_solve_diag(int n, T const* d, T* x);
+void ldlt_app_solve_diag(int n, T const* d, int nrhs, T* x, int ldx);
 
 template <typename T>
 void ldlt_app_solve_bwd(int m, int n, T const* l, int ldl, int nrhs, T* x, int ldx);

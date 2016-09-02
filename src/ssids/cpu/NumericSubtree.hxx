@@ -312,7 +312,7 @@ public:
             cholesky_solve_bwd(m, n, nodes_[ni].lcol, ldl, nrhs, xlocal, symb_.n);
          } else {
             if(do_diag) ldlt_app_solve_diag(
-                  nelim, &nodes_[ni].lcol[(n+ndin)*ldl], xlocal
+                  nelim, &nodes_[ni].lcol[(n+ndin)*ldl], nrhs, xlocal, symb_.n
                   );
             if(do_bwd) ldlt_app_solve_bwd(
                   m+ndin, nelim, nodes_[ni].lcol, ldl, nrhs, xlocal, symb_.n

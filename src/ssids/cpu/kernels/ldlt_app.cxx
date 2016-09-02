@@ -2134,27 +2134,30 @@ void ldlt_app_solve_fwd(int m, int n, T const* l, int ldl, int nrhs, T* x, int l
 template void ldlt_app_solve_fwd<double>(int, int, double const*, int, int, double*, int);
 
 template <typename T>
-void ldlt_app_solve_diag(int n, T const* d, T* x) {
+void ldlt_app_solve_diag(int n, T const* d, int nrhs, T* x, int ldx) {
    for(int i=0; i<n; ) {
       if(i+1==n || std::isfinite(d[2*i+2])) {
          // 1x1 pivot
          T d11 = d[2*i];
-         x[i] *= d11;
+         for(int r=0; r<nrhs; ++r)
+            x[r*ldx+i] *= d11;
          i++;
       } else {
          // 2x2 pivot
          T d11 = d[2*i];
          T d21 = d[2*i+1];
          T d22 = d[2*i+3];
-         T x1 = x[i];
-         T x2 = x[i+1];
-         x[i]   = d11*x1 + d21*x2;
-         x[i+1] = d21*x1 + d22*x2;
+         for(int r=0; r<nrhs; ++r) {
+            T x1 = x[r*ldx+i];
+            T x2 = x[r*ldx+i+1];
+            x[r*ldx+i]   = d11*x1 + d21*x2;
+            x[r*ldx+i+1] = d21*x1 + d22*x2;
+         }
          i += 2;
       }
    }
 }
-template void ldlt_app_solve_diag<double>(int, double const*, double*);
+template void ldlt_app_solve_diag<double>(int, double const*, int, double*, int);
 
 template <typename T>
 void ldlt_app_solve_bwd(int m, int n, T const* l, int ldl, int nrhs, T* x, int ldx) {
