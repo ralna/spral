@@ -46,4 +46,4 @@ install:
    - ./autogen.sh
 # Actual build step
 script:
-   - ./configure CC=gcc-${COMP_VER} CXX=g++-${COMP_VER} F77=gfortran-${COMP_VER} FC=gfortran-${COMP_VER} && make && make check
+   - ./configure CC=gcc-${COMP_VER} CXX=g++-${COMP_VER} F77=gfortran-${COMP_VER} FC=gfortran-${COMP_VER} CFLAGS="-g -O2 -Wall" CXXFLAGS="-g -O2 -Wall" FCFLAGS="-g -O2 -Wall -pedantic" && make && make check
