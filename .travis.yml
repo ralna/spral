@@ -1,3 +1,4 @@
+language: c
 # Enable trusty so we have access to libmetis-dev
 sudo: required
 dist: trusty
@@ -10,7 +11,5 @@ addons:
 install:
    - ./autogen.sh
 # Actual build step
-build:
-   - ./configure
-   - make
-   - make check
+script:
+   - ./configure && make && make check
