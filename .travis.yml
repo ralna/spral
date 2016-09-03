@@ -19,7 +19,7 @@ env:
 # Define matrix of builds with different compiler versions
 matrix:
    include:
-      - compiler: gcc
+      - compiler: gcc-5
         addons:
            apt:
               sources:
@@ -28,8 +28,8 @@ matrix:
                  - gfortran-5
                  - gcc-5
                  - g++-5
-        env: CC=gcc-5 CXX=g++-5 FC=gfortran-5
-      - compiler: gcc
+        env: CC=gcc-5 CXX=g++-5 FC=gfortran-5 F77=gfortran-5
+      - compiler: gcc-6
         addons:
            apt:
               sources:
@@ -38,7 +38,7 @@ matrix:
                  - gfortran-6
                  - gcc-6
                  - g++-6
-        env: CC=gcc-6 CXX=g++-6 FC=gfortran-6
+        env: CC=gcc-6 CXX=g++-6 FC=gfortran-6 F77=gfortran-6
 # Don't worry about high git depth, we don't need it
 git:
    depth: 3
