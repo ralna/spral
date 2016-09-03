@@ -2,13 +2,6 @@ language: c++
 # Enable trusty so we have access to libmetis-dev
 sudo: required
 dist: trusty
-# Install various library dependencies and mroe up-to-date compilers
-addons:
-   apt:
-      packages:
-         - libmetis-dev
-         - libatlas-dev
-         - liblapack-dev
 # Make OpenMP happy
 env:
    global:
@@ -28,6 +21,9 @@ matrix:
                  - gfortran-5
                  - gcc-5
                  - g++-5
+                 - libmetis-dev
+                 - libatlas-dev
+                 - liblapack-dev
         env: CC=gcc-5 CXX=g++-5 FC=gfortran-5 F77=gfortran-5
       - compiler: gcc-6
         addons:
@@ -38,6 +34,9 @@ matrix:
                  - gfortran-6
                  - gcc-6
                  - g++-6
+                 - libmetis-dev
+                 - libatlas-dev
+                 - liblapack-dev
         env: CC=gcc-6 CXX=g++-6 FC=gfortran-6 F77=gfortran-6
 # Don't worry about high git depth, we don't need it
 git:
