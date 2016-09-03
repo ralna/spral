@@ -1,0 +1,8 @@
+addons:
+   apt:
+      packages:
+         - libmetis-dev
+install:
+   - ./autogen.sh
+build:
+   - ./configure && make && make check
