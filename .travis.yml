@@ -1,4 +1,3 @@
-language: c
 # Enable trusty so we have access to libmetis-dev
 sudo: required
 dist: trusty
@@ -7,8 +6,13 @@ addons:
    apt:
       packages:
          - libmetis-dev
+         - gfortran
+# Don't worry about high git depth, we don't need it
+git:
+   depth: 3
 # Pre build, generate autotools files
 install:
+   - apt-cache search gfortran
    - ./autogen.sh
 # Actual build step
 script:
