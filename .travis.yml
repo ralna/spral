@@ -1,0 +1,49 @@
+language: c++
+# Enable trusty so we have access to libmetis-dev
+sudo: required
+dist: trusty
+# Make OpenMP happy
+env:
+   global:
+      - OMP_NESTED=true
+      - OMP_CANCELLATION=true
+      - OMP_PROC_BIND=true
+      - OMP_NUM_THREADS=4
+# Define matrix of builds with different compiler versions
+matrix:
+   include:
+      - compiler: gcc-5
+        addons:
+           apt:
+              sources:
+                 - ubuntu-toolchain-r-test
+              packages:
+                 - gfortran-5
+                 - gcc-5
+                 - g++-5
+                 - libmetis-dev
+                 - libatlas-dev
+                 - liblapack-dev
+        env: COMP_VER=5
+      - compiler: gcc-6
+        addons:
+           apt:
+              sources:
+                 - ubuntu-toolchain-r-test
+              packages:
+                 - gfortran-6
+                 - gcc-6
+                 - g++-6
+                 - libmetis-dev
+                 - libatlas-dev
+                 - liblapack-dev
+        env: COMP_VER=6
+# Don't worry about high git depth, we don't need it
+git:
+   depth: 3
+# Pre build, generate autotools files
+install:
+   - ./autogen.sh
+# Actual build step
+script:
+   - ./configure CC=gcc-${COMP_VER} CXX=g++-${COMP_VER} F77=gfortran-${COMP_VER} FC=gfortran-${COMP_VER} CFLAGS="-g -O2 -Wall" CXXFLAGS="-g -O2 -Wall" FCFLAGS="-g -O2 -Wall -pedantic" && make && make check

@@ -44,6 +44,22 @@ endif
 libspral_a_SOURCES += \
 	src/lapack_iface.f90
 
+# LSMR
+include_HEADERS += include/spral_lsmr.h
+libspral_a_SOURCES += \
+	src/lsmr.f90 \
+	interfaces/C/lsmr.f90
+check_PROGRAMS = \
+	lsmr_test \
+	examples/Fortran/lsmr \
+	examples/C/lsmr
+lsmr_test_SOURCES = tests/lsmr.f90
+examples_Fortran_lsmr_SOURCES = examples/Fortran/lsmr.f90
+tests/lsmr.$(OBJEXT): libspral.a
+examples/C/lsmr.$(OBJEXT): libspral.a
+examples/Fortran/lsmr.$(OBJEXT): libspral.a
+TESTS = lsmr_test
+
 # MATCH_ORDER
 libspral_a_SOURCES += \
 	src/match_order.f90
@@ -74,7 +90,7 @@ include_HEADERS += include/spral_scaling.h
 libspral_a_SOURCES += \
   	src/scaling.f90 \
 	interfaces/C/scaling.f90
-check_PROGRAMS = \
+check_PROGRAMS += \
 	scaling_test \
 	examples/Fortran/scaling/auction_sym \
 	examples/Fortran/scaling/auction_unsym \
@@ -114,7 +130,7 @@ examples/C/scaling/equilib_sym.$(OBJEXT): libspral.a
 examples/C/scaling/equilib_unsym.$(OBJEXT): libspral.a
 examples/C/scaling/hungarian_sym.$(OBJEXT): libspral.a
 examples/C/scaling/hungarian_unsym.$(OBJEXT): libspral.a
-TESTS = scaling_test
+TESTS += scaling_test
 
 # TIMER
 libspral_a_SOURCES += \
@@ -159,7 +175,7 @@ if HAVE_NVCC
 include_HEADERS += include/spral_ssids.h
 libspral_a_SOURCES += \
 	src/ssids/alloc.f90 \
-	src/ssids/analyse.f90 \
+	src/ssids/anal.f90 \
 	src/ssids/assemble_kernels.cu \
 	src/ssids/cuda_datatypes.f90 \
 	src/ssids/cuda_interfaces.f90 \
@@ -296,17 +312,17 @@ src/ssids/ssids.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
 									src/metis$(METIS_VERSION)_wrapper.$(OBJEXT) \
 									src/scaling.$(OBJEXT) \
 									src/ssids/alloc.$(OBJEXT) \
-									src/ssids/analyse.$(OBJEXT) \
+									src/ssids/anal.$(OBJEXT) \
 									src/ssids/datatypes.$(OBJEXT) \
 									src/ssids/factor_gpu.$(OBJEXT) \
 									src/ssids/solve_cpu.$(OBJEXT) \
 									src/ssids/solve_gpu.$(OBJEXT)
 src/ssids/alloc.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
 									src/ssids/datatypes.$(OBJEXT)
-src/ssids/analyse.$(OBJEXT): src/ssids/datatypes.$(OBJEXT) \
-									  src/core_analyse.$(OBJEXT) \
-									  src/cuda/cuda.$(OBJEXT) \
-									  src/pgm.$(OBJEXT)
+src/ssids/anal.$(OBJEXT): src/ssids/datatypes.$(OBJEXT) \
+							     src/core_analyse.$(OBJEXT) \
+								  src/cuda/cuda.$(OBJEXT) \
+								  src/pgm.$(OBJEXT)
 src/ssids/cuda_interfaces.$(OBJEXT): src/ssids/cuda_datatypes.$(OBJEXT)
 src/ssids/datatypes.$(OBJEXT): src/cuda/cuda.$(OBJEXT) \
 										 src/scaling.$(OBJEXT)  \

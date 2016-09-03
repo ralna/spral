@@ -2,7 +2,7 @@
 ! Author: Jonathan Hogg
 !
 ! Originally based on HSL_MA97 v2.2.0
-module spral_ssids_analyse
+module spral_ssids_anal ! not _analyse due to namespace conflict with C i/face
    use, intrinsic :: iso_c_binding
    use spral_ssids_datatypes
    use spral_core_analyse, only : basic_analyse
@@ -565,4 +565,4 @@ subroutine copy_analyse_data_to_device(lnlist, nlist, lrlist, rlist, &
 
 end subroutine copy_analyse_data_to_device
 
-end module spral_ssids_analyse
+end module spral_ssids_anal

@@ -25,8 +25,8 @@ module spral_ssids
                              equilib_options, equilib_inform, &
                              hungarian_options, hungarian_inform
    use spral_ssids_alloc, only : smalloc_setup, smalloc, smfreeall
-   use spral_ssids_analyse, only : analyse_phase, check_order, expand_matrix, &
-                                   expand_pattern
+   use spral_ssids_anal, only : analyse_phase, check_order, expand_matrix, &
+                                expand_pattern
    use spral_ssids_datatypes
    use spral_ssids_factor_gpu, only : parfactor
    use spral_ssids_solve_cpu, only : solve_calc_chunk, inner_solve, &

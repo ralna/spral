@@ -1,3 +1,11 @@
+2016-06-26  Jonathan Hogg <jonathan.hogg@stfc.ac.uk>
+Rename lsmr() to lsmr_solve() to avoid namespace issues with C interface
+(change was deemed acceptable as it's not yet been part of formal release).
+Apply workaround for nagfor issue in rutherford-boeing C interface
+
+2016-05-10  Jennifer Scott <jennifer.scott@stfc.ac.uk>
+Add ported version of LSMR package orinally from Michael Saunders.
+
 2015-09-21  Jonathan Hogg <jonathan.hogg@stfc.ac.uk>
 Add support for 64-bit integer ptr(:) arrays in scaling and matrix_util modules
 Add appropriate extern "C" {} stuff to header files to allow for C++ inclusion
