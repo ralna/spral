@@ -24,7 +24,7 @@ matrix:
                  - libmetis-dev
                  - libatlas-dev
                  - liblapack-dev
-        env: CC=gcc-5 CXX=g++-5 FC=gfortran-5 F77=gfortran-5
+        env: CC=gcc-5 CXX=g++-5 FC=gfortran-5 F77=gfortran-5 COMPILER=g++-5
       - compiler: gcc-6
         addons:
            apt:
@@ -37,7 +37,7 @@ matrix:
                  - libmetis-dev
                  - libatlas-dev
                  - liblapack-dev
-        env: CC=gcc-6 CXX=g++-6 FC=gfortran-6 F77=gfortran-6
+        env: CC=gcc-6 CXX=g++-6 FC=gfortran-6 F77=gfortran-6 COMPILER=g++-6
 # Don't worry about high git depth, we don't need it
 git:
    depth: 3
