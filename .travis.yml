@@ -5,8 +5,6 @@ dist: trusty
 # Install various library dependencies and mroe up-to-date compilers
 addons:
    apt:
-      sources:
-         - ubuntu-toolchain-r-test
       packages:
          - libmetis-dev
          - libatlas-dev
@@ -23,6 +21,8 @@ matrix:
    include:
       - compiler: gcc
         addons:
+           sources:
+              - ubuntu-toolchain-r-test
            apt:
               packages:
                  - gfortran-5
@@ -31,6 +31,8 @@ matrix:
         env: CC=gcc-5 CXX=g++-5 FC=gfortran-5
       - compiler: gcc
         addons:
+           sources:
+              - ubuntu-toolchain-r-test
            apt:
               packages:
                  - gfortran-6
