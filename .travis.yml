@@ -1,8 +1,16 @@
+# Enable trusty so we have access to libmetis-dev
+sudo: required
+dist: trusty
+# Install dependencies availble through apt
 addons:
    apt:
       packages:
          - libmetis-dev
+# Pre build, generate autotools files
 install:
    - ./autogen.sh
+# Actual build step
 build:
-   - ./configure && make && make check
+   - ./configure
+   - make
+   - make check
