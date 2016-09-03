@@ -2,9 +2,11 @@ language: c++
 # Enable trusty so we have access to libmetis-dev
 sudo: required
 dist: trusty
-# Install dependencies availble through apt
+# Install various library dependencies and mroe up-to-date compilers
 addons:
    apt:
+      sources:
+         - ubuntu-toolchain-r-test
       packages:
          - gfortran
          - libmetis-dev
