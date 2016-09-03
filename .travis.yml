@@ -5,8 +5,9 @@ dist: trusty
 addons:
    apt:
       packages:
-         - libmetis-dev
          - gfortran
+         - libmetis-dev
+         - libatlas-dev
 # Don't worry about high git depth, we don't need it
 git:
    depth: 3
