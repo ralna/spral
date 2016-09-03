@@ -21,9 +21,9 @@ matrix:
    include:
       - compiler: gcc
         addons:
-           sources:
-              - ubuntu-toolchain-r-test
            apt:
+              sources:
+                 - ubuntu-toolchain-r-test
               packages:
                  - gfortran-5
                  - gcc-5
@@ -31,9 +31,9 @@ matrix:
         env: CC=gcc-5 CXX=g++-5 FC=gfortran-5
       - compiler: gcc
         addons:
-           sources:
-              - ubuntu-toolchain-r-test
            apt:
+              sources:
+                 - ubuntu-toolchain-r-test
               packages:
                  - gfortran-6
                  - gcc-6
