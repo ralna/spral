@@ -20,6 +20,7 @@ Packages:
 
    random
    scaling
+   ssids
 
 
 Indices and tables
