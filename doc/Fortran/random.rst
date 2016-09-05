@@ -85,7 +85,7 @@ Example
 =======
 The following code:
 
-.. literalinclude:: ../examples/Fortran/random.f90
+.. literalinclude:: ../../examples/Fortran/random.f90
    :language: Fortran
 
 Produces the following output::

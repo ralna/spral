@@ -130,7 +130,7 @@ Example
 
 The following code shows an example usage of :f:subr:`auction_scale_sym`.
 
-.. literalinclude:: ../examples/Fortran/scaling/auction_sym.f90
+.. literalinclude:: ../../examples/Fortran/scaling/auction_sym.f90
    :language: Fortran
 
 The above code produces the following output::
@@ -328,7 +328,7 @@ Example
 
 The following code shows an example usage of :f:subr:`equilib_scale_sym`.
 
-.. literalinclude:: ../examples/Fortran/scaling/equilib_sym.f90
+.. literalinclude:: ../../examples/Fortran/scaling/equilib_sym.f90
    :language: Fortran
 
 The above code produces the following output::
@@ -475,7 +475,7 @@ Example
 
 The following code shows an example usage of :f:subr:`hungarian_scale_sym`.
 
-.. literalinclude:: ../examples/Fortran/scaling/hungarian_sym.f90
+.. literalinclude:: ../../examples/Fortran/scaling/hungarian_sym.f90
    :language: Fortran
 
 The above code produces the following output::
