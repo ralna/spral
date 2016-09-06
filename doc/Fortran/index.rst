@@ -23,6 +23,7 @@ Packages:
    random
    scaling
    ssids
+   ssmfe
 
 
 Indices and tables
