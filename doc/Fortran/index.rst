@@ -6,7 +6,7 @@
 The Sparse Parallel Robust Algorithms Library
 =============================================
 
-Data Types
+Data Formats
 
 .. toctree::
    :maxdepth: 1
@@ -19,6 +19,7 @@ Packages:
 .. toctree::
    :maxdepth: 1
 
+   lsmr
    random
    scaling
    ssids
