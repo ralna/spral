@@ -26,11 +26,10 @@ eigenpairs :math:`\{\lambda_i, x_i\}` of the following eigenvalue problems:
 where :math:`A` and :math:`B` are **real symmetric** (or **Hermitian**) matrices
 and :math:`B` is **positive definite**.
 
-This package provides a user-friendly wrapper around :f:mod:`ssmfe_expert`,
-which in turn provides a wrapper around :f:mod:`ssmfe_core`. If more fine-tuned
-control of the eigensolver is required, consider using one of those modules
-instead.
-
+This package provides a user-friendly wrapper around
+:f:mod:`spral_ssmfe_expert`, which in turn provides a wrapper around
+:f:mod:`spral_ssmfe_core`. If more fine-tuned control of the eigensolver is
+required, use those modules instead.
 
 Version history
 ---------------
