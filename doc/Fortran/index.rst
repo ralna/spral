@@ -12,6 +12,7 @@ Data Types
    :maxdepth: 1
 
    csc_format
+   coord_format
 
 Packages:
 
