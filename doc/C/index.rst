@@ -8,11 +8,11 @@ The Sparse Parallel Robust Algorithms Library
 
 Data Formats
 
-..
-   .. toctree::
-      :maxdepth: 1
-      csc_format
-      coord_format
+.. toctree::
+   :maxdepth: 1
+
+   csc_format
+   coord_format
 
 Packages:
 
@@ -20,8 +20,6 @@ Packages:
    :maxdepth: 1
 
    random
-
-..
    lsmr
    scaling
    ssids
