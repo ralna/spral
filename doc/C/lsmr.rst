@@ -136,6 +136,7 @@ Subroutines
    :param inform: information about execution of algorithm.
       Must not be changed by the user.
    :param damp: Damping parameter :math:`\lambda`.
+   :returns: Value of :c:member:`spral_lsmr_inform.flag`.
 
 .. c:function:: int lsmr_free(void **keep)
 
