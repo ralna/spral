@@ -6,26 +6,21 @@ This standard data format consists of the following data:
 
 .. code-block:: Fortran
 
-   integer                   :: m      ! number of rows (unsymmetric only)
-   integer                   :: n      ! number of columns
-   integer                   :: ne     ! number of entries in matrix (may have type long)
-   integer, size(ptr(n+1)-1) :: row    ! row indices
-   integer, size(ptr(n+1)-1) :: col    ! column indices
-   real,    size(ptr(n+1)-1) :: val    ! numerical values
+   integer           :: m     ! number of rows (unsymmetric only)
+   integer           :: n     ! number of columns
+   integer           :: ne    ! number of entries in matrix (may have type long)
+   integer, size(ne) :: row   ! row indices
+   integer, size(ne) :: col   ! column indices
+   real,    size(ne) :: val   ! numerical values
 
 The arrays should be set such that the ``k``-th entry is in row
 ``row(k)`` and column ``col(k)`` with value ``val(k)``. Entries that are
 zero, including those on the diagonal, need not be specified.
 
-If this format is used, ``SSIDS`` requires that each entry of :math:`A`
-should be present **only** in the lower *or* upper triangular part.
-Entries present in both will be summed, as will any duplicate entries.
-Out-of-range entries are ignored.
-
 For **symmetric matrices**, only the lower *or* upper triangular entries of
 :math:`A` should be supplied. For **unsymmetric matrices**, all entries in the
 matrix should be supplied. Duplicate entries will be summed and out-of-range
-entries will be ignored
+entries will be ignored.
 
 Some SPRAL routines offer only input in :doc:`CSC format<csc_format>`, you
 may need to use routines from the :f:mod:`spral_matrix_util` package to convert
