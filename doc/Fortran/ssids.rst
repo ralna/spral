@@ -4,6 +4,10 @@
 .. f:module:: spral_ssids
    :synopsis: Sparse Symmetric Indefinite Direct Solver
 
+=======
+Purpose
+=======
+
 This package solves one or more sets of :math:`n\times n`
 sparse **symmetric** equations  :math:`AX = B` using a multifrontal method on an
 **NVIDIA GPU**.
@@ -37,12 +41,13 @@ An option exists to scale the matrix. In this case, the factorization of
 the scaled matrix  :math:`\overline{A} = S A S` is computed,
 where :math:`S` is a diagonal scaling matrix.
 
-=====================
-Major version history
-=====================
+Version history
+---------------
+
+[For detail, see ChangeLog]
 
 2014-03-17 Version 1.0.0
-    Initial release
+   Initial release
 
 ==============
 Usage overview
