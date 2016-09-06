@@ -1,8 +1,8 @@
 *************************************************
-:f:mod:`spral_lsmr` - Least Squares MINRES Solver
+:f:mod:`spral_lsmr` - LSMR Least Squares Solver
 *************************************************
 .. f:module:: spral_lsmr
-   :synopsis: Least Squares MINRES Solver
+   :synopsis: LSMR Sparse Least Squares Solver
 
 =======
 Purpose
@@ -53,13 +53,6 @@ It is algebraically equivalent to applying MINRES to the normal
 equation :math:`(A^TA+\lambda^2I)x=A^Tb` (or
 :math:`((AP)^T(AP)+\lambda^2I)y=(AP)^Tb`), but has better numerical properties,
 especially if :math:`A` is ill-conditioned. 
-
-Details of the algorithm are given in:
-
-.. [1] D.C.-L. Fong and M.A. Saunders (2011).
-   *LSMR: An iterative algorithm for sparse least-squares problems*.
-   SIAM J. Sci. Comput. 33:5, 2950-2971.
-   [`DOI: 10.1137/10079687X <https://doi.org/10.1137/10079687X>`_]
 
 Notation
 --------
@@ -357,3 +350,11 @@ tolerance for the second system. If some value `options%btol` is suitable for
 :math:`Ax=b`, the larger value
 :math:`\mathrm{options\%btol}*\|b\|_2 / \|r_0\|_2` should be suitable for
 :math:`A \delta x = r_0`.
+
+References
+----------
+
+.. [1] D.C.-L. Fong and M.A. Saunders (2011).
+   *LSMR: An iterative algorithm for sparse least-squares problems*.
+   SIAM J. Sci. Comput. 33:5, 2950-2971.
+   [`DOI: 10.1137/10079687X <https://doi.org/10.1137/10079687X>`_]
