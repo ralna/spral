@@ -124,7 +124,7 @@ Subroutines
    :p integer n [in]: number of columns in :math:`A`.
    :p real u (m) [inout]: the vector :math:`u`. Must contain :math:`b` on first
       call.
-   :p real u (n) [inout]: the vector :math:`v`.
+   :p real v (n) [inout]: the vector :math:`v`.
    :p real y (n) [inout]: the current solution :math:`y` of the preconditioned
       problem (note :math:`x=Py`).
    :p lsmr_keep keep [inout]: private internal data for LSMR.
