@@ -1,8 +1,8 @@
 *************************************************
-:f:mod:`spral_lsmr` - LSMR Least Squares Solver
+:f:mod:`spral_lsmr` - Sparse Least Squares LSMR Solver
 *************************************************
 .. f:module:: spral_lsmr
-   :synopsis: LSMR Sparse Least Squares Solver
+   :synopsis: Sparse Least Squares LSMR Solver
 
 =======
 Purpose
