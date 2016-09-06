@@ -61,29 +61,8 @@ Details of the algorithm are given in:
    SIAM J. Sci. Comput. 33:5, 2950-2971.
    [`DOI: 10.1137/10079687X <https://doi.org/10.1137/10079687X>`_]
 
-
-Version history
----------------
-
-2016-05-10 Version 1.0.0.
-    Initial release.
-
-[For detailed history, see ChangeLog]
-
-==============
-Usage overview
-==============
-
-This package uses reverse communication. The user must repeatedly call
-:f:subr:`lsmr_solve()`, and each time it returns perform the action dictated
-by the parameter `action`.
-
-Once all calls are complete, the user may call :f:subr:`lsmr_free()` to release
-all memory allocated by the routine.
-
-========
 Notation
-========
+--------
 
 In the rest of this documentation, we use the following notation:
 
@@ -103,6 +82,15 @@ and
 
    r = b - APy , \hspace{1cm}  \bar{r} = \bar{b} - \bar{A}y,
          \hspace{1cm}  x = Py.
+
+
+Version history
+---------------
+
+2016-05-10 Version 1.0.0.
+    Initial release.
+
+[For detailed history, see ChangeLog]
 
 ===========
 Subroutines
@@ -243,43 +231,48 @@ Derived types
    :f integer stat: The Fortran stat parameter in the event of a failed
       allocation.
 
-   +----+----------------------------------------------------------------------+
-   |  0 | :math:`x = 0.0` is the exact solution.                               |
-   |    | No iterations were performed.                                        |
-   +----+----------------------------------------------------------------------+
-   |  1 | The equations :math:`Ax = b` are probably compatible.                |
-   |    | :math:`\|Ax - b\|_2` is sufficiently small, given the values of      |
-   |    | `options%atol` and `options%btol`. (`options%ctest=3` only).         |
-   +----+----------------------------------------------------------------------+
-   |  2 | If damp is not present or is zero then the system :math:`Ax = b` is  |
-   |    | probably not compatible. A least-squares solution has been obtained  |
-   |    | that is sufficiently accurate, given the value of `options%atol`.    |
-   |    | Otherwise, damped least-squares solution has been obtained that is   |
-   |    | sufficiently accurate, given the value of `options%atol`.            |
-   |    | (`options%ctest=3` only).                                            |
-   +----+----------------------------------------------------------------------+
-   |  3 | An estimate of cond(:math:`\bar{A}`) has exceeded `options%conlim`.  |
-   |    | The system :math:`Ax = b` appears to be ill-conditioned, or there    |
-   |    | could be an error in the products with :math:`A`, :math:`A^T`,       |
-   |    | :math:`P`, or :math:`P^T`. (`options%ctest=3` only).                 |
-   +----+----------------------------------------------------------------------+
-   |  4 | :math:`\|APy - b \|_2` is small enough for this machine.             |
-   |    | (`options%ctest=3` only).                                            |
-   +----+----------------------------------------------------------------------+
-   |  5 | The least-squares solution is good enough for this machine.          |
-   |    | (options%ctest=3 only).                                              |
-   +----+----------------------------------------------------------------------+
-   |  6 | The estimate `inform%condAP` appears to be too large for this        |
-   |    | machine. (`options%ctest=3` only).                                   |
-   +----+----------------------------------------------------------------------+
-   |  7 | The iteration limit `options%itnlim` has been reached.               |
-   +----+----------------------------------------------------------------------+
-   |  8 | An array allocation failed.                                          |
-   +----+----------------------------------------------------------------------+
-   |  9 | An array deallocation failed.                                        |
-   +----+----------------------------------------------------------------------+
-   | 10 | Either `m<0` or `n<0`.                                               |
-   +----+----------------------------------------------------------------------+
+   +-------------+-------------------------------------------------------------+
+   | inform%flag | Interpretation                                              |
+   +=============+=============================================================+
+   |  0          | :math:`x = 0.0` is the exact solution.                      |
+   |             | No iterations were performed.                               |
+   +-------------+-------------------------------------------------------------+
+   |  1          | The equations :math:`Ax = b` are probably compatible.       |
+   |             | :math:`\|Ax - b\|_2` is sufficiently small, given the values|
+   |             | of `options%atol` and `options%btol`.                       |
+   |             | (`options%ctest=3` only).                                   |
+   +-------------+-------------------------------------------------------------+
+   |  2          | If damp is not present or is zero then the system           |
+   |             | :math:`Ax = b` is probably not compatible. A least-squares  |
+   |             | solution has been obtained that is sufficiently accurate,   |
+   |             | given the value of `options%atol`. Otherwise, damped        |
+   |             | least-squares solution has been obtained that is            |
+   |             | sufficiently accurate, given the value of `options%atol`.   |
+   |             | (`options%ctest=3` only).                                   |
+   +-------------+-------------------------------------------------------------+
+   |  3          | An estimate of cond(:math:`\bar{A}`) has exceeded           |
+   |             | `options%conlim`. The system :math:`Ax = b` appears to be   |
+   |             | ill-conditioned, or there could be an error in the products |
+   |             | with :math:`A`, :math:`A^T`, :math:`P`, or :math:`P^T`.     |
+   |             | (`options%ctest=3` only).                                   |
+   +-------------+-------------------------------------------------------------+
+   |  4          | :math:`\|APy - b \|_2` is small enough for this machine.    |
+   |             | (`options%ctest=3` only).                                   |
+   +-------------+-------------------------------------------------------------+
+   |  5          | The least-squares solution is good enough for this machine. |
+   |             | (options%ctest=3 only).                                     |
+   +-------------+-------------------------------------------------------------+
+   |  6          | The estimate `inform%condAP` appears to be too large for    |
+   |             | this machine. (`options%ctest=3` only).                     |
+   +-------------+-------------------------------------------------------------+
+   |  7          | The iteration limit `options%itnlim` has been reached.      |
+   +-------------+-------------------------------------------------------------+
+   |  8          | An array allocation failed.                                 |
+   +-------------+-------------------------------------------------------------+
+   |  9          | An array deallocation failed.                               |
+   +-------------+-------------------------------------------------------------+
+   | 10          | Either `m<0` or `n<0`.                                      |
+   +-------------+-------------------------------------------------------------+
 
 =======
 Example
