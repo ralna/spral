@@ -5,4 +5,4 @@ if test "x$DOCDIR" == "x"; then
 fi
 
 sphinx-build Fortran $DOCDIR/Fortran
-sphinx-build C $DOCDIR/Fortran
+sphinx-build C $DOCDIR/C
