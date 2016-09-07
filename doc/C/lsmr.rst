@@ -2,6 +2,10 @@
 LSMR - Sparse Least Squares LSMR Solver
 ***************************************
 
+.. code-block:: C
+
+   #include <spral_lsmr.h> /* or <spral.h> for all packages */
+
 =======
 Purpose
 =======

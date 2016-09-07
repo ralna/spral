@@ -4,11 +4,18 @@
 .. f:module:: spral_random_matrix
    :synopsis: Pseudo-random Matrix Generator
 
+=======
+Purpose
+=======
+
 This package generates a random sparse matrix of specified size and density in
 compressed sparse column format. Either the pattern or both the pattern and
 values can be generated. Both symmetric and unsymmetric matrices can be
 generated, and structural non-degeneracy can optionally be ensured, and the
 row indices can be sorted within columns.
+
+Version history
+---------------
 
 2014-03-06 Version 1.0.0
     Initial release
