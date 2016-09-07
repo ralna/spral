@@ -134,10 +134,10 @@ without checking.
    :p logical posdef [in]: true if matrix is matrix is positive-definite
    :p real val(*) [in]: non-zero values for :math:`A` in same format as for
       the call to :f:subr:`ssids_analyse()` or :f:subr:`ssids_analyse_coord()`.
-   :p ssids_akeep [in]: symbolic factorization returned by preceding call to
-      :f:subr:`ssids_analyse()` or :f:subr:`ssids_analyse_coord()`.
-   :p ssids_fkeep [inout]: returns numeric factorization, to be passed unchanged
-      to subsequent routines.
+   :p ssids_akeep akeep [in]: symbolic factorization returned by preceding call
+      to :f:subr:`ssids_analyse()` or :f:subr:`ssids_analyse_coord()`.
+   :p ssids_fkeep fkeep [inout]: returns numeric factorization, to be passed
+      unchanged to subsequent routines.
    :p ssids_options options [in]: specifies algorithm options to be used
       (see [ssids:type:option]).
    :p ssids_inform inform [out]: returns information about the execution of the
@@ -235,7 +235,7 @@ without checking.
    :p ssids_fkeep fkeep [inout]: numeric factors to be freed.
    :p integer cuda_error [out]: 0 on success, or a CUDA error code on failure.
 
-.. warning:
+.. warning::
 
    This routine must be called by the user. Merely deallocating :f:type:`akeep`
    or :f:type:`fkeep`, or allowing them to go out of scope will result in memory
