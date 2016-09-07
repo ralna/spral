@@ -444,7 +444,7 @@ Derived types
    :f real next_right: upon completion, next right eigenvalue in spectrum
       (see `options%right_gap`).
    :f integer non_converged: number of non-converged eigenpairs.
-   :f integer left: number of converged right eigenvalues.
+   :f integer right: number of converged right eigenvalues.
    :f integer stat: allocation status in event of failure
 
    +--------------+-----------------------------------------------------------+
@@ -632,8 +632,8 @@ desired eigenpairs, and set the options `options%left_gap` and
 acceptable gaps between the computed eigenvalues and the rest of the
 spectrum, :math:`\delta_l` referring to either leftmost eigenvalues (for
 :f:subr:`ssmfe_standard()` and :f:subr:`ssmfe_generalized()` only) or those
-to the left of the shift sigma, and :math:`\delta_r` to those to the right of
-the shift sigma. Positive values of :math:`\delta_l` and :math:`\delta_r` set
+to the left of the shift `sigma`, and :math:`\delta_r` to those to the right of
+the shift `sigma`. Positive values of :math:`\delta_l` and :math:`\delta_r` set
 the gap explicitely, and negative values require the gap to be not less than
 their absolute value times the average distance between the computed
 eigenvalues. A recommended value of :math:`\delta_l` and

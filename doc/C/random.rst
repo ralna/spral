@@ -4,7 +4,11 @@ RANDOM - Pseudo-random number generator
 
 .. code-block:: C
 
-   #include "spral_random.h" // or "spral.h" for all packages
+   #include <spral_random.h> /* or <spral.h> for all packages */
+
+=======
+Purpose
+=======
 
 This package generates pseudo-random numbers using a linear congruential
 generator. It should generate the same random numbers using any standards
