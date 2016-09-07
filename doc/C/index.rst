@@ -20,6 +20,7 @@ Packages:
    :maxdepth: 1
 
    lsmr
+   matrix_util
    random
    random_matrix
    scaling
