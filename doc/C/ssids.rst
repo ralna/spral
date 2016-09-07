@@ -356,43 +356,65 @@ Advanced subroutines
       (see :c:type:`spral_ssids_inform`).
 
    **Note:** This routine is not compatabile with the option
-   ``options.presolve=1``.
+   :c:member:`options.presolve=1 <spral_ssids_options.presolve>`.
 
 =============
 Derived types
 =============
 
-.. f:type:: ssids_options
+.. c:type:: struct spral_ssids_options
 
    The derived data type ssids\_options is used to specify the options
    used within ``SSIDS``. The components, that are automatically given
    default values in the definition of the type, are:
 
-   :f integer print_level [default=0]: the level of printing. The different
-      levels are:
+   .. c:member:: int array_base
 
-      +-----+-------------------------------------------------+
-      | < 0 | No printing.                                    |
-      +-----+-------------------------------------------------+
-      | = 0 | Error and warning messages only.                |
-      +-----+-------------------------------------------------+
-      | = 1 | As 0, plus basic diagnostic printing.           |
-      +-----+-------------------------------------------------+
-      | > 1 | As 1, plus some additional diagnostic printing. |
-      +-----+-------------------------------------------------+
+      Indexing base for arrays. Either 0 (C indexing) or 1 (Fortran indexing).
+      Default is 0.
 
-   :f integer unit_diagnostics [default=6]: Fortran unit number for
-      diagnostics printing. Printing is suppressed if <0.
-   :f integer unit_error [default=6]: Fortran unit number for printing of
-      error messages. Printing is suppressed if <0.
-   :f integer unit_warning [default=6]: Fortran unit number for printing of
-      warning messages. Printing is suppressed if <0.
-   :f integer ordering [default=1]: Ordering method to use in analyse phase:
+   .. c:member:: int print_level
+   
+      Level of printing:
+
+      +---------------+-------------------------------------------------+
+      | < 0           | No printing.                                    |
+      +---------------+-------------------------------------------------+
+      | = 0 (default) | Error and warning messages only.                |
+      +---------------+-------------------------------------------------+
+      | = 1           | As 0, plus basic diagnostic printing.           |
+      +---------------+-------------------------------------------------+
+      | > 1           | As 1, plus some additional diagnostic printing. |
+      +---------------+-------------------------------------------------+
+
+      The default is 0.
+
+   .. c:member:: int unit_diagnostics
+   
+      Fortran unit number for diagnostics printing.
+      Printing is suppressed if <0.
+      The default is 6 (stdout).
+
+   .. c:member:: int unit_error
+   
+      Fortran unit number for printing of error messages.
+      Printing is suppressed if <0.
+      The default is 6 (stdout).
+
+   .. c:member:: int unit_warning
+   
+      Fortran unit number for printing of warning messages.
+      Printing is suppressed if <0.
+      The default is 6 (stdout).
+
+   .. c:member:: int ordering
+   
+      Ordering method to use in analyse phase:
 
       +-------------+---------------------------------------------------------+
       | 0           | User-supplied ordering is used (`order` argument to     |
-      |             | :f:subr:`ssids_analyse()` or                            |
-      |             | :f:subr:`ssids_analyse_coord()`).                       |
+      |             | :c:func:`spral_ssids_analyse()` or                      |
+      |             | :c:func:`spral_ssids_analyse_coord()`).                 |
       +-------------+---------------------------------------------------------+
       | 1 (default) | METIS ordering with default settings.                   |
       +-------------+---------------------------------------------------------+
@@ -403,22 +425,31 @@ Derived types
       |             |                                                         |
       |             | **Note:** This option should only be chosen for         |
       |             | indefinite systems. A scaling is also computed that may |
-      |             | be used in :f:subr:`ssids_factor()` (see %scaling       |
+      |             | be used in :c:func:`spral_ssids_factor()` (see          |
+      |             | :c:member:`scaling <spral_ssids_options.scaling>`       |
       |             | below).                                                 |
       +-------------+---------------------------------------------------------+
 
-   :f integer nemin [default=8]: supernode amalgamation threshold. Two
-      neighbours in the elimination tree are merged if they both involve fewer
-      than nemin eliminations. The default is used if nemin<1.
-   :f integer scaling [default=0]: scaling algorithm to use:
+      The default is 1.
+
+   .. c:member:: int nemin
+   
+      Supernode amalgamation threshold. Two neighbours in the elimination tree
+      are merged if they both involve fewer than `nemin` eliminations.
+      The default is used if `nemin<1`.
+      The default is 8.
+
+   .. c:member:: int scaling
+   
+      Scaling algorithm to use:
 
       +---------------+-------------------------------------------------------+
-      | <=0 (default) | No scaling (if ``scale(:)`` is not present on call to |
-      |               | :f:subr:`ssids_factor()`, or user-supplied scaling (if|
-      |               | ``scale(:)`` is present).                             |
+      | <=0 (default) | No scaling (if ``scale[]`` is not present on call to  |
+      |               | :c:func:`spral_ssids_factor()`, or user-supplied      |
+      |               | scaling (if ``scale[]`` is present).                  |
       +---------------+-------------------------------------------------------+
       | =1            | Compute using weighted bipartite matching via the     |
-      |               | Hungarian Algorithm (``MC64`` algorithm).             |
+      |               | Hungarian Algorithm (MC64 algorithm).                 |
       +---------------+-------------------------------------------------------+
       | =2            | Compute using a weighted bipartite matching via the   |
       |               | Auction Algorithm (may be lower quality than that     |
@@ -426,8 +457,11 @@ Derived types
       |               | considerably faster).                                 |
       +---------------+-------------------------------------------------------+
       | =3            | Use matching-based ordering generated during the      |
-      |               | analyse phase using options%ordering=2. The scaling   |
-      |               | will be the same as that generated with %scaling= 1   |
+      |               | analyse phase using :c:member:`options.ordering=2     |
+      |               | <spral_ssids_options.ordering>`. The scaling          |
+      |               | will be the same as that generated with               |
+      |               | :c:member:`options.scaling=1                          |
+      |               | <spral_ssids_options.scaling>`                        |
       |               | if the matrix values have not changed. This option    |
       |               | will generate an error if a matching-based ordering   |
       |               | was not used during analysis.                         |
@@ -436,75 +470,140 @@ Derived types
       |               | Ruiz.                                                 |
       +---------------+-------------------------------------------------------+
 
-   :f logical action [default=.true.]: continue factorization of singular matrix
-      on discovery of zero pivot if true (a warning is issued), or abort if
-      false.
-   :f real u [default=0.01]: relative pivot threshold used in symmetric
-      indefinite case. Values outside of the range :math:`[0,0.5]` are treated
-      as the closest value in that range.
-   :f logical use_gpu_solve [default=.true.]: use GPU for solve phase if true,
-      or CPU if false. 
-   :f integer presolve [default=0]: perform presolve operations during factorize
-      to accelerate solves. It may take the following values:
+      The default is 0.
+
+   .. c:member:: bool action
+   
+      Continue factorization of singular matrix on discovery of zero pivot if
+      true (a warning is issued), or abort if false.
+      The default is true.
+
+   .. c:member:: double u
+   
+      Relative pivot threshold used in symmetric indefinite case. Values outside
+      of the range :math:`[0,0.5]` are treated as the closest value in that
+      range.
+      The default is 0.01.
+
+   .. c:member:: bool use_gpu_solve
+      
+      Use GPU for solve phase if true, or CPU if false. 
+      The default is true.
+
+   .. c:member:: int presolve
+      
+      Perform presolve operations during factorize to accelerate solves.
+      It may take the following values:
 
       +-------------+----------------------------------------------------------+
-      | 0 (default) | Minimal work is performed during :f:subr:`ssids_factor()`|
-      |             | to prepare for the solve.                                |
+      | 0 (default) | Minimal work is performed during                         |
+      |             | :c:func:`spral_ssids_factor()` to prepare for the solve. |
       +-------------+----------------------------------------------------------+
       | 1           | The explicit inverse of the                              |
       |             | :math:`\mathrm{nelim}\times\mathrm{nelim}` block in each |
       |             | supernode is precalculated during                        |
-      |             | :f:subr:`ssids_factor()` (where ``nelim`` is the number  |
-      |             | of variables eliminated at that supernode). As the matrix|
-      |             | :math:`L` is overwritten, the routine                    |
-      |             | :f:subr:`ssids_alter() cannot be used.                   |
+      |             | :c:func:`spral_ssids_factor()` (where ``nelim`` is the   |
+      |             | number of variables eliminated at that supernode). As the|
+      |             | matrix :math:`L` is overwritten, the routine             |
+      |             | :c:func:`spral_ssids_alter() cannot be used.             |
       |             |                                                          |
-      |             | This option requires %use_gpu_solve=.true.               |
+      |             | This option requires                                     |
+      |             | :c:member:`options%use_gpu_solve=true                    |
+      |             | <spral_ssids_options.use_gpu_solve>`                     |
       +-------------+----------------------------------------------------------+
 
-.. f:type:: ssids_inform
+      The default is 0.
+
+.. c:type:: struct spral_ssids_inform
 
    Used to return information about the progress and needs of the algorithm.
 
-   :f integer flag: exit status of the algorithm (see table below).
-   :f integer matrix_dup: number of duplicate entries encountered (if
-      :f:subr:`ssids_analyse()` called with check=true, or any call to
-      :f:subr:`ssids_analyse_coord()`).
-   :f integer matrix_missing_diag: number of diagonal entries without an
-      explicit value (if :f:subr:`ssids_analyse()` called with check=true, or
-      any call to :f:subr:`ssids_analyse_coord()`).
-   :f integer matrix_outrange: number of out-of-range entries encountered (if
-      :f:subr:`ssids_analyse()` called with check=true, or any call to
-      :f:subr:`ssids_analyse_coord()`).
-   :f integer matrix_rank: (estimated) rank (structural after analyse phase,
-      numerical after factorize phase).
-   :f integer maxdepth: maximum depth of the assembly tree.
-   :f integer maxfront: maximum front size (without pivoting after analyse
-      phase, with pivoting after factorize phase).
-   :f integer num_delay: number of delayed pivots. That is, the total
-      number of fully-summed variables that were passed to the father node
-      because of stability considerations. If a variable is passed further
-      up the tree, it will be counted again.
-   :f integer(long) num_factor: number of entries in :math:`L` (without pivoting
-      after analyse phase, with pivoting after factorize phase).
-   :f integer(long) num_flops: number of floating-point operations for Cholesky
-      factorization (indefinte needs slightly more). Without pivoting after
-      analyse phase, with pivoting after factorize phase.
-   :f integer num_neg: number of negative eigenvalues of the matrix :math:`D`
+   .. c:member:: int flag
+      
+      Exit status of the algorithm (see table below).
+
+   .. c:member:: int matrix_dup
+   
+      Number of duplicate entries encountered (if
+      :c:func:`spral_ssids_analyse()` called with check=true, or any call to
+      :c:func:`spral_ssids_analyse_coord()`).
+
+   .. c:member:: int matrix_missing_diag
+   
+      Number of diagonal entries without an explicit value (if
+      :c:func:`spral_ssids_analyse()` called with check=true, or
+      any call to :c:func:`spral_ssids_analyse_coord()`).
+
+   .. c:member:: int matrix_outrange
+   
+      Number of out-of-range entries encountered (if
+      :c:func:`spral_ssids_analyse()` called with check=true, or any call to
+      :c:func:`spral_ssids_analyse_coord()`).
+
+   .. c:member:: int matrix_rank
+   
+      (Estimated) rank (structural after analyse phase, numerical after
+      factorize phase).
+
+   .. c:member:: int maxdepth
+   
+      Maximum depth of the assembly tree.
+
+   .. c:member:: int maxfront
+   
+      Maximum front size (without pivoting after analyse phase, with pivoting
+      after factorize phase).
+
+   .. c:member:: int num_delay
+   
+      Number of delayed pivots. That is, the total number of fully-summed
+      variables that were passed to the father node because of stability
+      considerations. If a variable is passed further up the tree, it will be
+      counted again.
+
+   .. c:member:: long num_factor
+   
+      Number of entries in :math:`L` (without pivoting after analyse phase,
+      with pivoting after factorize phase).
+
+   .. c:member:: long num_flops
+   
+      Number of floating-point operations for Cholesky factorization (indefinte
+      needs slightly more). Without pivoting after analyse phase, with pivoting
       after factorize phase.
-   :f integer num_sup: number of supernodes in assembly tree.
-   :f integer num_two: number of :math:`2 \times 2` pivots used by the
-      factorization (i.e. in the matrix :math:`D`).
-   :f integer stat: Fortran allocation status parameter in event of allocation
-      error (0 otherwise).
-   :f integer cublas_error: CUBLAS error code in the event of a CUBLAS error
+
+
+   .. c:member:: int num_neg
+   
+      Number of negative eigenvalues of the matrix :math:`D` after factorize
+      phase.
+
+   .. c:member:: int num_sup
+   
+      Number of supernodes in assembly tree.
+
+   .. c:member:: int num_two
+   
+      Number of :math:`2 \times 2` pivots used by the factorization (i.e. in
+      the matrix :math:`D`).
+
+   .. c:member:: int stat
+      
+      Fortran allocation status parameter in event of allocation error
       (0 otherwise).
-   :f integer cublas_error: CUDA error code in the event of a CUDA error
-      (0 otherwise). Note that due to asynchronous execution, CUDA errors may 
+
+   .. c:member:: int cublas_error
+   
+      CUBLAS error code in the event of a CUBLAS error (0 otherwise).
+
+   .. c:member:: int cuda_error
+   
+      CUDA error code in the event of a CUDA error (0 otherwise).
+      Note that due to asynchronous execution, CUDA errors may 
       not be reported by the call that caused them.
 
    +-------------+-------------------------------------------------------------+
-   | inform%flag | Return status                                               |
+   | inform.flag | Return status                                               |
    +=============+=============================================================+
    | 0           | Success.                                                    |
    +-------------+-------------------------------------------------------------+
@@ -513,57 +612,57 @@ Derived types
    +-------------+-------------------------------------------------------------+
    | -2          | n<0 or ne<1.                                                |
    +-------------+-------------------------------------------------------------+
-   | -3          | Error in ptr(:).                                            |
+   | -3          | Error in ptr[].                                             |
    +-------------+-------------------------------------------------------------+
    | -4          | CSC format: All variable indices in one or more columns are |
    |             | out-of-range.                                               |
    |             |                                                             |
    |             | Coordinate format: All entries are out-of-range.            |
    +-------------+-------------------------------------------------------------+
-   | -5          | Matrix is singular and options%action=.false.               |
+   | -5          | Matrix is singular and options.action=false                 |
    +-------------+-------------------------------------------------------------+
    | -6          | Matrix found not to be positive definite.                   |
    +-------------+-------------------------------------------------------------+
-   | -7          | ptr(:) and/or row(:) not present, but required as           |
-   |             | :f:subr:`ssids_analyse()` was called with check=.false,.    |
+   | -7          | ptr[] and/or row[] not present, but required as             |
+   |             | :c:func:`spral_ssids_analyse()` was called with check=false.|
    +-------------+-------------------------------------------------------------+
-   | -8          | options%ordering out of range, or options%ordering=0 and    |
+   | -8          | options.ordering out of range, or options.ordering=0 and    |
    |             | order parameter not provided or not a valid permutation.    |
    +-------------+-------------------------------------------------------------+
-   | -9          | options%ordering=-2 but val(:) was not supplied.            |
+   | -9          | options.ordering=-2 but val[] was not supplied.             |
    +-------------+-------------------------------------------------------------+
    | -10         | ldx<n or nrhs<1.                                            |
    +-------------+-------------------------------------------------------------+
    | -11         | job is out-of-range.                                        |
    +-------------+-------------------------------------------------------------+
-   | -12         | The combination of options%use_gpu_solve and                |
-   |             | options%presolve are not compatible with the requested      |
+   | -12         | The combination of options.use_gpu_solve and                |
+   |             | options.presolve are not compatible with the requested      |
    |             | operation.                                                  |
    +-------------+-------------------------------------------------------------+
-   | -13         | Called :f:subr:`ssids_enquire_posdef()` on indefinite       |
+   | -13         | Called :c:func:`spral_ssids_enquire_posdef()` on indefinite |
    |             | factorization.                                              |
    +-------------+-------------------------------------------------------------+
-   | -14         | Called :f:subr:`ssids_enquire_indef()` on positive-definite |
-   |             | factorization.                                              |
+   | -14         | Called :c:func:`spral_ssids_enquire_indef()` on             |
+   |             | positive-definite factorization.                            |
    +-------------+-------------------------------------------------------------+
-   | -15         | options%scaling=3 but a matching-based ordering was not     |
+   | -15         | options.scaling=3 but a matching-based ordering was not     |
    |             | performed during analyse phase.                             |
    +-------------+-------------------------------------------------------------+
    | -50         | Allocation error. If available, the stat parameter is       |
-   |             | returned in inform%stat.                                    |
+   |             | returned in inform.stat.                                    |
    +-------------+-------------------------------------------------------------+
    | -51         | CUDA error. The CUDA error return value is returned in      |
-   |             | inform%cuda_error.                                          |
+   |             | inform.cuda_error.                                          |
    +-------------+-------------------------------------------------------------+
    | -52         | CUBLAS error. The CUBLAS error return value is returned in  |
-   |             | inform%cublas_error.                                        |
+   |             | inform.cublas_error.                                        |
    +-------------+-------------------------------------------------------------+
    | +1          | Out-of-range variable indices found and ignored in input    |
-   |             | data. inform%matrix_outrange is set to the number of such   |
+   |             | data. inform.matrix_outrange is set to the number of such   |
    |             | entries.                                                    |
    +-------------+-------------------------------------------------------------+
    | +2          | Duplicate entries found and summed in input data.           |
-   |             | inform%matrix_dup is set to the number of such entries.     |
+   |             | inform.matrix_dup is set to the number of such entries.     |
    +-------------+-------------------------------------------------------------+
    | +3          | Combination of +1 and +2.                                   |
    +-------------+-------------------------------------------------------------+
@@ -578,7 +677,7 @@ Derived types
    +-------------+-------------------------------------------------------------+
    | +8          | Matching-based scaling found as side-effect of              |
    |             | matching-based ordering ignored                             |
-   |             | (consider setting options%scaling=3).                       |
+   |             | (consider setting options.scaling=3).                       |
    +-------------+-------------------------------------------------------------+
 
 =======
@@ -611,52 +710,49 @@ and then solve for the right-hand side
 
 The following code may be used.
 
-.. literalinclude:: ../../examples/Fortran/ssids.f90
-   :language: Fortran
+.. literalinclude:: ../../examples/C/ssids.c
+   :language: C
 
 
-This produces the following output:
-
-::
+This produces the following output::
 
      Warning from ssids_analyse. Warning flag =   4
      one or more diagonal entries is missing
 
-     The computed solution is:
-      1.0000000000E+00  2.0000000000E+00  3.0000000000E+00
-      4.0000000000E+00  5.0000000000E+00
-     Pivot order:   4    5   -2   -1    3
+ 	  The computed solution is:
+	     1.0000000000e+00   2.0000000000e+00   3.0000000000e+00   4.0000000000e+00   5.0000000000e+00
+ 	  Pivot order:     3     4     1     0     2
 
 ======
 Method
 ======
 
-:f:subr:`ssids_analyse()` and :f:subr:`ssids_analyse_coord()`
--------------------------------------------------------------
+:c:func:`spral_ssids_analyse()` and :c:func:`spral_ssids_analyse_coord()`
+-------------------------------------------------------------------------
 
-If check is set to .true. on the call to :f:subr:`ssids_analyse()` or if
-:f:subr:`ssids_analyse_coord()` is called, the user-supplied matrix data is
-checked for errors. The cleaned integer matrix data (duplicates are
-summed and out-of-range indices discarded) is stored in akeep. The use
-of checking is optional on a call to :f:subr:`ssids_analyse()` as it incurs both
-time and memory overheads. However, it is recommended since the
+If check is set to true on the call to :c:func:`spral_ssids_analyse()` or if
+:c:func:`spral_ssids_analyse_coord()` is called, the user-supplied matrix data
+is checked for errors. The cleaned integer matrix data (duplicates are
+summed and out-of-range indices discarded) is stored in akeep. The use of
+checking is optional on a call to :c:func:`spral_ssids_analyse()` as it incurs
+both time and memory overheads. However, it is recommended since the
 behaviour of the other routines in the package is unpredictable if
 duplicates and/or out-of-range variable indices are entered.
 
 If the user has supplied an elimination order it is checked for errors.
 Otherwise, an elimination order is generated by the package. The
 elimination order is used to construct an assembly tree. On exit from
-:f:subr:`ssids_analyse()` (and :f:subr:`ssids_analyse_coord()`), order(:) is
-set so that order(i) holds the position of variable :math:`i` in the elimination
-order. If an ordering was supplied by the user, this order may differ,
-but will be equivalent in terms of fill-in.
+:c:func:`spral_ssids_analyse()` (and :c:func:`spral_ssids_analyse_coord()`),
+`order[]` is set so that `order[i]` holds the position of variable :math:`i` in
+the elimination order. If an ordering was supplied by the user, this order may
+differ, but will be equivalent in terms of fill-in.
 
-:f:subr:`ssids_factor()`
-------------------------
+:c:func:`spral_ssids_factor()`
+------------------------------
 
-:f:subr:`ssids_factor()` optionally computes a scaling and then performs the
-numerical factorization. The user must specify whether or not the matrix
-is positive definite. If posdef is set to .true., no pivoting is
+:c:func:`spral_ssids_factor()` optionally computes a scaling and then performs
+the numerical factorization. The user must specify whether or not the matrix
+is positive definite. If `posdef` is set to `true`, no pivoting is
 performed and the computation will terminate with an error if a
 non-positive pivot is encountered.
 
@@ -685,35 +781,40 @@ The details are described in [1]_.
 If a pivot candidate does not pass the pivot tests at a node, it is
 delayed to its parent node, where further elimination operations may
 make it acceptable. Delaying pivots leads to additional fill-in and
-floating-point operations beyond that predicted by :f:subr:`ssids_analyse()`
-(or :f:subr:`ssids_analyse_coord()`), and may result in additional memory
-allocations being required. The number of delayed pivots can often be
-reduced by using appropriate scaling.
+floating-point operations beyond that predicted by
+:c:func:`spral_ssids_analyse()` (or :c:func:`spral_ssids_analyse_coord()`),
+and may result in additional memory allocations being required. The number of
+delayed pivots can often be reduced by using appropriate scaling.
 
 At each non-root node, the majority of the floating-point operations
 involve the formation of the generated element. This is handled by a
 single dedicated kernel; again, see [1]_ for details.
 
 At the end of the factorization, data structures for use in future calls
-to :f:subr:`ssids_solve()` are prepared. If ``options%presolve=1``, the block
-of :math:`L` corresponding to the eliminated variables is explicitly
-inverted to accelerate future calls to :f:subr:`ssids_solve()` at the cost of
-making :f:subr:`ssids_factor()` slower.
+to :c:func:`spral_ssids_solve()` are prepared. If :c:member:`options.presolve=1
+<spral_ssids_options.presolve>`, the block of :math:`L` corresponding to the
+eliminated variables is explicitly inverted to accelerate future calls to
+:c:func:`spral_ssids_solve()` at the cost of making
+:c:func:`spral_ssids_factor()` slower.
 
-:f:subr:`ssids_solve()`
------------------------
+:c:func:`spral_ssids_solve()`
+-----------------------------
 
-If ``options%use_gpu_solve=.false.``, data is moved to
-the CPU if required and the BLAS calls are used to perform a solve using
-the assembly tree and factors generated on previous calls.
+The routine :c:func:`spral_ssids_solve1()` is just a wrapper around
+:c:func:`spral_ssids_solve()`.
+
+If :c:member:`options.use_gpu_solve=false <spral_ssids_options.use_gpu_solve>`,
+data is moved to the CPU if required and the BLAS calls are used to perform a
+solve using the assembly tree and factors generated on previous calls.
 
 Otherwise, the solve is conducted on the GPU in a similar fashion. If
-``options%presolve=0``, custom GPU implementations of ``_trsv()`` and
-``_gemv()`` are used to handle multiple independent operations. If
-multiple right-hand sides are to be solved for, the single right-hand
-side solve is looped over. If ``options%presolve=1``, ``_trsv()`` can be
-replaced by the much more parallel (and hence faster) ``_gemv()``. In
-this case multiple right-hand sides are handled at the same time.
+:c:member:`options.presolve=0 <spral_ssids_options.presolve>`, custom GPU
+implementations of ``_trsv()`` and ``_gemv()`` are used to handle multiple
+independent operations. If multiple right-hand sides are to be solved for, the
+single right-hand side solve is looped over. If :c:member:`options.presolve=1
+<spral_ssids_options.presolve>`, ``_trsv()`` can be replaced by the much more
+parallel (and hence faster) ``_gemv()``. In this case multiple right-hand sides
+are handled at the same time.
 
 References
 ----------
