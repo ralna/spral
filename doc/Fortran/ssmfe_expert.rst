@@ -1,22 +1,49 @@
+*****************************************************************************************
+:f:mod:`spral_ssmfe_expert` - Sparse Symmetric Matrix-Free Eigensolver (Expert interface)
+*****************************************************************************************
+.. f:module:: spral_ssmfe_expert
+   :synopsis: Sparse Symmetric Matrix-Free Eigensolver (Expert interface)
+
+=======
+Purpose
+=======
+
+This package computes extreme (leftmost and/or rightmost)
+eigenpairs :math:`\{\lambda_i, x_i\}` of the following eigenvalue problems:
+
+- the standard eigenvalue problem
+
+   .. math:: A x = \lambda x,
+
+- the generalized eigenvalue problem
+
+   .. math:: A x = \lambda B x,
+
+- the buckling problem
+
+   .. math:: B x = \lambda A x,
+
+where :math:`A` and :math:`B` are **real symmetric** (or **Hermitian**) matrices
+and :math:`B` is **positive definite**.
+
+The module :f:mod:`spral_ssmfe` provides a more user-friendly wrapper around
+this code. Conversely, :f:mod:`spral_ssmfe_core` provides a lower level
+implementation of the core solver, which this package provides a wrapper for.
+
+
 Major version history
-=====================
+---------------------
 
 2014-11-20 Version 1.0.0
     Initial release
 
-Installation
-============
+[for detail please see ChangeLog]
 
-Please see the SPRAL install documentation. In particular note that:
-
--  A BLAS library is required.
-
--  A LAPACK library is required.
-
+==============
 Usage overview
 ==============
 
-The eigensolver subroutines behind ``SPRAL_SSMFE_EXPERT`` implement a
+The eigensolver subroutines behind :f:mod:`spral_ssmfe_expert` implement a
 block iterative algorithm. The block nature of this algorithm allows the
 user to benefit from highly optimized linear algebra subroutines and
 from the ubiquitous multicore architecture of modern computers. It also
@@ -26,653 +53,1044 @@ convergence of the iterations may be slow if the density of the spectrum
 is high.
 
 Thus, good performance (in terms of speed) is contingent on the
-following two factors: (i) the number of desired eigenpairs must be
-substantial (e.g. not less than the number of CPU cores), and (ii) the
-employment of a convergence acceleration technique. The acceleration
-techniques that can be used are shift-and-invert and preconditioning.
-The former requires the direct solution of linear systems with the
-matrix :math:`A` or its linear combination with :math:`B`, for which a
-sparse symmetric indefinite solver (such as HSL\_MA97 or SPRAL\_SSIDS)
-can be employed. The latter applies to the case of positive definite
-:math:`A` and requires a matrix or an operator (that is, an algorithm
-producing a vector :math:`v = T u` for a given vector :math:`u`)
-:math:`T`, called *a preconditioner*, such that the vector
-:math:`v = T f` is an approximation to the solution :math:`u` of the
-system :math:`A u = f`. This technique is more sophisticated and is
-likely to be of interest only to experienced users.
-
-Further information on the algorithm used by ``SPRAL_SSMFE_EXPERT`` can
-be found in Section [ssmfe\ :sub:`e`\ xpert:method].
-
-``SPRAL_SSMFE_EXPERT`` delegates a considerable part of the computation
-to the user. The user’s code stores all vectors of size equal to the
-problem size :math:`n`. ``SPRAL_SSMFE_EXPERT`` is not “aware” of
-:math:`n` or how these vectors are stored; all operations on these
-vectors are performed by the user. The amount of computation performed
-by the solver subroutines of ``SPRAL_SSMFE_EXPERT`` and the memory they
-use are negligible. These features facilitate the use of these
-subroutines for shared-memory, out-of-core and hybrid computation. A
-simpler but less flexible interface to ``SPRAL_SSMFE_EXPERT`` is offered
-by ``SPRAL_SSMFE``.
-
-Calling sequences
------------------
-
-| Access to the package requires a USE statement
-
-| 
-
-The following procedures are available to the user:
-
--  ssmfe\_standard() computes leftmost eigenpairs of , optionally using
-   preconditioning if :math:`A` is positive definite
-
--  ssmfe\_standard\_shift() computes eigenpairs of near a given shift
-   using the shift-and-invert technique
-
--  ssmfe\_generalized() computes leftmost eigenpairs of , optionally
-   using preconditioning if :math:`A` is positive definite
-
--  ssmfe\_generalized\_shift() computes eigenpairs of near a given shift
-   using the shift-and-invert technique
-
--  ssmfe\_buckling() computes eigenpairs of near a given shift using the
-   shift-and-invert technique
-
--  ssmfe\_free() should be called after all other calls are complete. It
-   frees memory referenced by ``keep`` and ``inform``.
-
-The main solver procedures must be called repeatedly using a reverse
-communication interface. The procedure ``ssmfe_free()`` should be called
-once after the final call to a solver procedure to deallocate all arrays
-that have been allocated by the solver procedure.
-
-0 Several problems can be solved simultaneously, i.e. the package does
-not require the solution of one problem to be finished before the
-solution of the next starts, as long as for each problem a separate set
-of arguments for the above subroutines is used. However, if two or more
-problems of the same type need to be solved, it is reasonable to solve
-them one after another to reduce memory requirements.
-
-Package types
--------------
-
-``INTEGER`` denotes default ``INTEGER``, and ``REAL`` denotes
-``REAL(kind=kind(0d0))``. The term **call type** means
-``REAL(kind=kind(0d0))`` for calls to the double precision real
-interface, and ``COMPLEX(kind=kind(0d0))`` for calls to the double
-precision complex interface.
-
-Derived types
--------------
-
-For each problem, the user must employ the derived types defined by the
-module to declare scalars of the types ssmfe\_rcid (real version) or
-ssmfe\_rciz (complex version), ssmfe\_expert\_keep, ssmfe\_options and
-ssmfe\_inform. The following pseudocode illustrates this.
-
-::
-
-          use SPRAL_SSMFE_EXPERT
-          ...
-          type (ssmfe_rcid       ) :: rcid
-          type (ssmfe_expert_keep) :: keep
-          type (ssmfe_options    ) :: options
-          type (ssmfe_inform     ) :: inform
-          ...
-
-Argument lists
-==============
-
- ``ssmfe_standard()``, ``ssmfe_standard_shift()``, ``ssmfe_generalized()``,
-``ssmfe_generalized_shift()``, and ``ssmfe_buckling()`` 
----------------------------------------------------------------------------
-
-**To compute the leftmost eigenpairs of , optionally using
-preconditioning, the following call must be made repeatedly: **
-
-To use the solver procedures, the user needs to maintain a workspace W
-containing kw + 1 blocks of m vectors of size :math:`n`. A value kw = 7
-is always sufficient. However, if options%minAprod :math:`=` .false. and
-either options%minBprod :math:`=` .false. or the standard eigenvalue
-problem is solved, then kw = 3 is sufficient; if options%minAprod
-:math:`=` .true. and either options%minBprod :math:`=` .true. or
-ssmfe\_generalized\_shift or ssmfe\_buckling are used, then kw must be
-at least 7; otherwise kw = 5 is sufficient. Solver procedures use
-indices 1 to m to refer to vectors inside each block and indices 0 to kw
-to refer to particular blocks. The first (zero-indexed) block holds the
-eigenvector approximations: the user must fill this block with m
-linearly independent vectors before the first call to a solver
-procedure.
-
-The number of desired eigenpairs may exceed m: whenever converged
-eigenpairs have been detected, a solver procedure reports the indices of
-these eigenpairs and they must be moved by the user to a separate
-eigenvectors’ storage X.
-
-When :math:`B \ne I`, it is expedient to have storage BX for the
-:math:`B`-images of the converged eigenvectors, i.e. BX = B\*X.
-
-To simplify the description of the reverse communication interface,
-below we assume that an array W(n,m,0:kw) of package type is used as a
-workspace, and that arrays X(n, mep) and BX(n, mep) of package type are
-used for storing the computed eigenvectors and their :math:`B`-images.
-The transpose (real or complex, depending on the package type) of a
-matrix H is denoted by H\ :math:`^\prime`.
-
-The meaning of the arguments of the solver procedures is as follows.
-
-is an  scalar of type ssmfe\_rcid in the real version and ssmfe\_rciz in
-the complex version. Before the first call, rci%job must be set to 0. No
-other values may be assigned to rci%job by the user. After each call,
-the value of rci%job must be inspected by the user’s code and the
-appropriate action taken:
-
-: fatal error return, the computation must be terminated;
-
-: not all desired eigenpairs converged to required accuracy, see
-Section [ssmfe\ :sub:`e`\ xpert:errors];
-
-: the computation is complete and successful.
-
-: (ssmfe\_standard() and ssmfe\_generalized() only) the user must
-compute :math:`V = A U`, where
-
-:math:`U=` W(:, ix:jx, rci%kx),  with  ix :math:`=` rci%jx  and  jx
-:math:`=` ix + rci%nx - 1,
-
-:math:`V=` W(:, iy:jy, rci%ky),  with  iy :math:`=` rci%jy  and  jy
-:math:`=` iy + rci%nx - 1.
-
-: (ssmfe\_standard() and ssmfe\_generalized() only) the user must
-compute :math:`V = T U` if preconditioning is used or copy :math:`U` to
-:math:`V` otherwise, where :math:`U` and :math:`V` are as for rci%job =
-1.
-
-: (ssmfe\_generalized(), ssmfe\_generalized\_shift() and
-ssmfe\_buckling() only) the user must compute :math:`V = B U` where
-:math:`U` and :math:`V` are as for rci%job = 1.
-
-: the user must save the converged eigenvectors to the eigenvector
-storage X and, optionally, for problems and , save their
-:math:`B`-images. The converged eigenvectors are columns of the
-:math:`{\tt n}\times {\tt m}` matrix W(:,:,rci%kx) and their
-:math:`B`-images are respective columns of W(:,:,rci%ky) that are
-identified by rci%i, rci%jx and rci%nx as follows: if rci%i > 0, then
-the column numbers run from rci%jx to rci%jx + rci%nx - 1, and if rci%i
-< 0, then they run from rci%jx - rci%nx + 1 to rci%jx.
-
-: (ssmfe\_standard\_shift(), ssmfe\_generalized\_shift() and
-ssmfe\_buckling() only) the user must compute
-:math:`V = A_\sigma^{-1} U`, where :math:`A_\sigma = A - \sigma I` and
-:math:`I` is :math:`n\times n` identity, for problem ,
-:math:`A_\sigma = A - \sigma B` for problem , and
-:math:`A_\sigma = B - \sigma A` for problem .
-
-: if rci%i = 0, then the user must perform a copy
-:math:`V \leftarrow U`, where :math:`U` and :math:`V` are as for rci%job
-= 1, otherwise the columns of W(:,:,rci%kx) and W(:,:,rci%ky) (if rci%kx
-:math:`\not=` rci%ky) must be reordered using the index array ind so
-that the column ind(j) becomes column j for j = 1, …, rci%nx.
-
-: for each i = 0, 1,..., rci%nx - 1, the user must compute the dot
-product of the columns
-
-and
-
-and place it in
-
-.
-
-: if rci%kx :math:`=` rci%ky, then for each i = 0, 1,..., rci%nx - 1,
-the user must perform the scaling
-
-,
-
-where :math:`s_i` is the 2-norm of the column W(:, rci%jx + i, rci%kx),
-otherwise the user must perform the scalings
-
-,
-
-where :math:`s_i` is the square root of the dot product of the columns
-W(:, rci%jx + i, rci%kx) and W(:, rci%jy + i, rci%ky). No scaling is to
-be applied to zero columns.
-
-14: for each i = 0, 1,..., rci%nx - 1, the user must perform
-axpy-updates:
-
-.
-
-15: the user must perform the matrix multiplication:
-
-.
-
-16: the user must perform the matrix multiplication:
-
-.
-
-17: the user must perform the multiplication:
-
-.
-
-W(:, rci%jy :math:`:` rci%jy + rci%ny - 1, rci%ky) can be used as a
-workspace.
-
-21: the user must :math:`B`-orthogonalize the columns of W specified by
-rci%nx, rci%jx and rci%kx to all vectors stored in X by solving the
-system
-
-for Q and updating
-
-.
-
-For problems and , the respective columns of W(:,:,rci%ky), which store
-:math:`B`-images of the respective columns of W(:,:,rci%kx), must be
-updated accordingly, either by applying B to these vectors or using the
-columns of BX, i.e.
-
-;
-
-22: the user must solve the system
-
-for Q and perform the update
-
-,
-
-where X and BX are same as in the case rci%job = 21 (in the case of
-problem , rci%job = 21 and 22 require exactly the same computation).
-
-999: If rci%k > 0, then a restart, normally with a larger block size m,
-is suggested with the aim of achieving better convergence. If the
-suggestion is accepted, the user must compute the new block size as m =
-rci%nx + k + l, where k :math:`\ge` rci%i and l :math:`\ge` rci%j,
-reallocate the workspace array W if the new block size is different from
-the old one, and set rci%i = 0 and rci%j = 0. If the restart is not
-acceptable (e.g. the new block size exceeds a certain limit set by the
-user), then nothing needs to be done. If rci%k == 0, then the restart
-with the same block size m is required. In both restart cases, the first
-block W(:,:,0) of the new workspace should retain the vectors
-W(:,i:j,0), where i = rci%jx and j = i + rci%nx - 1, from the old
-workspace. The remaining m - rci%nx columns of W(:,:,0) must be filled
-with arbitrary vectors that are linearly independent from the converged
-eigenvectors and such that the entire set of the columns of W(:,:,0) is
-linearly independent.
-
-**Restriction:** rci%job = 0, rci%i = 0 and rci%j = 0 are the only
-assignments to the components of rci that can be done by the user. The
-first one can only be done before the first call. The other two can only
-be done if rci%job = 999 and rci%k > 0.
-
-is an  scalar of type ``REAL`` that holds the shift, a value around
-which the desired eigenvalues are situated.
-
-is an  scalar of type default ``INTEGER`` that holds the number of
-desired eigenvalues to the left of sigma. **Restriction:** :math:`0 < `
-left + right :math:`\le` min(mep, n/2), where right is zero for
-ssmfe\_standard() and ssmfe\_generalized().
-
-is an  scalar of type default ``INTEGER`` that holds the number of
-desired eigenvalues to the right of sigma. **Restriction:** :math:`0 < `
-left + right :math:`\le` min(mep, n/2).
-
-is an  scalar of type default ``INTEGER`` that holds the size of the
-array lambda. See Section [ssmfe\ :sub:`e`\ xpert:method] for guidance
-on setting mep. **Restriction:** mep is not less than the number of
-desired eigenpairs.
-
-is an array of type ``REAL`` and size mep that is used to store the
-computed eigenvalues. After a successful completion of the computation
-it contains eigenvalues in ascending order. This array must not be
-changed by the user.
-
-| is an  scalar of type INTEGER that holds the block size of the user’s
-workspace W. **Restriction:**
-| 2 :math:`\le` m :math:`<` n.
-
-is an work array of package type, and dimensions 2\*m, 2\*m and 3. It
-can only be changed by the user when instructed to do so by rci%job.
-
-is an   array of default integer type, and size at least m. It must not
-be changed by the user. It is used for reordering the columns of some
-blocks of W.
-
-is an  scalar of type ssmfe\_expert\_keep that holds private data.
-
-is an   scalar of type ssmfe\_options. Its components offer the user a
-range of options, see Section [ssmfe\ :sub:`e`\ xpert:type:options]. It
-must not be changed by the user between calls.
-
-is an  scalar of type ssmfe\_inform. Its components provide information
-about the execution of the subroutine, see
-Section [ssmfe\ :sub:`e`\ xpert:type:inform]. It must not be changed by
-the user.
-
-``ssmfe_free()``
-----------------
-
-**At the end of the computation, the memory allocated by the solver
-procedures should be released by making the following subroutine call:
-**
-
-``keep``
-    is an  scalar of type ssmfe\_expert\_keep, optional. On exit, its
-    components that are allocatable arrays will have been deallocated.
-
-``inform``
-    is an  scalar of type ssmfe\_inform, optional. On exit, its
-    components that are allocatable arrays will have been deallocated.
-
+following two factors:
+
+i. the number of desired eigenpairs must be substantial (e.g. not fewer than
+   the number of CPU cores), and
+ii. the employment of a convergence acceleration technique.
+
+The acceleration techniques that can be used are shift-and-invert and
+preconditioning.
+
+The former requires the direct solution of linear systems
+with the matrix :math:`A` or its linear combination with :math:`B`, for which a
+sparse symmetric indefinite solver (such as HSL_MA97 or SPRAL_SSIDS)
+can be employed.
+
+The latter applies to the case of positive definite
+:math:`A` and requires a matrix or an operator :math:`T`, called *a
+preconditioner*, such that the vector :math:`v = T f` is an
+approximation to the solution :math:`u` of the system :math:`A u = f`
+(see a simple example in Section [ssmfe:example:precond]). Note: This
+technique is only recommended for experienced users.
+
+In this expert interface, the user must handle storage of all vectors,
+facilitating advanced memory handling techniques required for parallel,
+hybrid and/or out-of-core execution. If there is no requirement to store
+these vectors, consider using the simplified interface of :f:mod:`spral_ssmfe`
+instead.
+
+===========
+Subroutines
+===========
+
+To use the solver procedures, the user must maintain a workspace of `(kw+1)`
+blocks each containing `m` vectors of size `n`. For notational convienience
+we refer to this workspace as a Fortran array ``W(n,m,0:kw)``, but the user
+is free to store it as they wish. Note the block dimension is indexed from
+zero, not from one. The following table provides minimum values of `kw` for
+each setup:
+
+ +-------------------+------------+------------+------------+------------+
+ |                   |        minAprod=T       |       minAprod=F        |
+ +-------------------+------------+------------+------------+------------+
+ | Problem           | minBprod=T | minBprod=F | minBprod=T | minBprod=F |
+ +===================+============+============+============+============+
+ | standard          |     7      |     5      |     3      |     3      |
+ +-------------------+------------+------------+------------+------------+
+ | standard_shift    |     7      |     5      |     N/A    |     N/A    |
+ +-------------------+------------+------------+------------+------------+
+ | generalized       |     7      |     5      |     5      |     3      |
+ +-------------------+------------+------------+------------+------------+
+ | generalized_shift |     7      |     7      |     N/A    |     N/A    |
+ +-------------------+------------+------------+------------+------------+
+ | buckling          |     7      |     7      |     N/A    |     N/A    |
+ +-------------------+------------+------------+------------+------------+
+
+.. f:subroutine:: ssmfe_standard(rci,left,mep,lambda,m,rr,ind,keep,options,inform)
+
+   Computes the left-most eigenpairs of the standard eigenvalue problem
+
+   .. math:: Ax = \lambda x
+
+   Optionally uses preconditioning.
+
+   Uses reverse-communication. Upon return the user must perform a task
+   specified by the `rci` parameter and recall the routine. Possible values of
+   `rci` and associated tasks are:
+
+   +----------+---------------------------------------------------------------+
+   | `rci%job`| Task to be performed                                          |
+   +==========+===============================================================+
+   | -3       | None. Fatal error, see `inform%flag`.                         |
+   +----------+---------------------------------------------------------------+
+   | -2       | Failed to converge, see `inform%flag`.                        |
+   +----------+---------------------------------------------------------------+
+   | -1       | None. Computation complete.                                   |
+   +----------+---------------------------------------------------------------+
+   |  1       | Calculate :math:`\bar{V} = AU`.                               |
+   +----------+---------------------------------------------------------------+
+   |  2       | Apply preconditioner :math:`\bar{V} = TU`. (Copy if T=I).     |
+   +----------+---------------------------------------------------------------+
+   |  5       | Save converged eigenvectors:                                  |
+   |          |                                                               |
+   |          | * If `rci%i>0`: ``W(:,rci%jx:rci%jx+rci%nx-1,rci%kx)``.       |
+   |          | * Else:         ``W(:,rci%jx-rci%nx+1:rci%jx,rci%kx)``.       |
+   +----------+---------------------------------------------------------------+
+   | 11       | If `rci%i.eq.0`, copy :math:`\bar{V} = U`.                    |
+   |          |                                                               |
+   |          | Otherwise, reorder columns of block `rci%kx` such that column |
+   |          | `ind(j)` becomes the new column `j` for `j=1, ..., rci%nx`    |
+   |          |                                                               |
+   |          | Note: if ``rci%kx.eq.rci%ky``, only reorder once.             |
+   +----------+---------------------------------------------------------------+
+   | 12       | Compute the dot products                                      |
+   |          |                                                               |
+   |          | .. math:: r_{ii} = U_i \cdot \bar{V}_i                        |
+   +----------+---------------------------------------------------------------+
+   | 13       | Perform the scalings                                          |
+   |          |                                                               |
+   |          | .. math:: U_i = U_i/\sqrt{(U_i\cdot \bar{V}_i)}               |
+   |          |                                                               |
+   |          | and                                                           |
+   |          |                                                               |
+   |          | .. math:: \bar{V}_i = \bar{V}_i/\sqrt{(U_i\cdot \bar{V}_i)}   |
+   |          |                                                               |
+   |          | for each column :math:`U_i` and :math:`\bar{V}_i` of :math:`U`|
+   |          | and :math:`\bar{V}`.                                          |
+   |          |                                                               |
+   |          | Note: if ``rci%kx.eq.rci%ky``, only scale once.               |
+   +----------+---------------------------------------------------------------+
+   | 14       | Perform the updates                                           |
+   |          |                                                               |
+   |          | .. math:: \bar{V}_i = \bar{V}_i + r_{ii} U_i                  |
+   |          |                                                               |
+   |          | for each column :math:`\bar{V}_i` of :math:`\bar{V}`          |
+   +----------+---------------------------------------------------------------+
+   | 15       | Perform the update                                            |
+   |          |                                                               |
+   |          | .. math:: R = \alpha U^T V + \beta R                          |
+   +----------+---------------------------------------------------------------+
+   | 16       | Perform the update                                            |
+   |          |                                                               |
+   |          | .. math:: V = \alpha U R + \beta V                            |
+   +----------+---------------------------------------------------------------+
+   | 17       | Perform the update                                            |
+   |          |                                                               |
+   |          | .. math:: U = \alpha U R                                      |
+   |          |                                                               |
+   |          | Note: :math:`V` may be used as a workspace                    |
+   +----------+---------------------------------------------------------------+
+   | 21       | Orthogonalize columns of :math:`V` to all vectors :math:`X`   |
+   |          | by solving                                                    |
+   |          |                                                               |
+   |          | .. math:: (X^TX) Q = X^T \bar{V}                              |
+   |          |                                                               |
+   |          | for :math:`Q` and updating                                    |
+   |          |                                                               |
+   |          | .. math:: U = U - XQ                                          |
+   +----------+---------------------------------------------------------------+
+   | 22       | Orthogonalize columns of :math:`U` to all vectors :math:`X`   |
+   |          | by solving                                                    |
+   |          |                                                               |
+   |          | .. math:: (X^TX) Q = X^T U                                    |
+   |          |                                                               |
+   |          | for :math:`Q` and updating                                    |
+   |          |                                                               |
+   |          | .. math:: U = U - XQ                                          |
+   +----------+---------------------------------------------------------------+
+   | 999      | Restart suggested (if not possible, just recall the routine). |
+   |          |                                                               |
+   |          | If `rci%k>0`: Restart with larger block size                  |
+   |          | `m >= m + rci%nx + rci%i + rci%j`, adjusting workspace size   |
+   |          | to match. Set `rci%i=0` and `rci%j=0` and recall the routing. |
+   |          |                                                               |
+   |          | If `rci%k=0`: Restart with the same block size.               |
+   |          |                                                               |
+   |          | In both cases, the first block ``W(:,:,0)`` should retain     |
+   |          | vectors ``rci%jx:rci%jx+rci%nx-1``, filling remaining vectors |
+   |          | randomly such that the entire set of columns is linearly      |
+   |          | independent.                                                  |
+   +----------+---------------------------------------------------------------+
+
+   The matrices are defined as follows:
+    
+   * :math:`U` = ``W(:, rci%jx:rci%jx+rci%nx-1, rci%kx)``
+   * :math:`V` = ``W(:, rci%jy:rci%jy+rci%ny-1, rci%ky)``
+   * :math:`\bar{V}` = ``W(:, rci%jy:rci%jy+rci%nx-1, rci%ky)``
+   * :math:`R` = ``rr(rci%i:rci%i+rci%nx-1, rci%j:rci%j+rci%ny-1, rci%k)``
+
+   and :math:`\alpha` and :math:`\beta` are given by ``rci%alpha`` and
+   ``rci%beta`` respectively.
+
+   :p ssmfe_rcid rci [inout]: Reverse communication type. `rci%job` must be
+      set to `0` before the first call. (Type :f:type:`ssmfe_rciz` in complex
+      version).
+   :p integer left [in]: Number of left eigenpairs to find.
+   :p integer mep [in]: Number of working eigenpairs. See [method] section for
+      guidance on selecting a good value. Must be at least `left`.
+   :p real lambda (mep) [inout]: Current eigenvalue estimates in ascending
+      order.
+   :p integer m [in]: Block size of workspace `W`. Must be at least `2`.
+   :p real rr (2*m,2*m,3) [inout]: reverse communication workspace.
+      (Type `complex` in complex version).
+   :p integer ind (m) [inout]: reverse communication workspace.
+   :p ssmfe_expert_keep keep [inout]: Internal workspace used by routine.
+   :p ssmfe_options options [in]: specifies algorithm options to be used.
+   :p ssmfe_inform inform [inout]: returns information about the exection of
+      the routine.
+
+.. f:subroutine:: ssmfe_standard_shift(rci,sigma,left,right,mep,lambda,m,rr,ind,keep,options,inform)
+
+   Computes eigenpairs of the standard eigenvalue problem
+
+   .. math:: Ax = \lambda x
+
+   in the vicinity of a given value :math:`sigma`.
+
+   Uses reverse-communication. Upon return the user must perform a task
+   specified by the `rci` parameter and recall the routine. Possible values of
+   `rci` and associated tasks are:
+
+   +----------+---------------------------------------------------------------+
+   | `rci%job`| Task to be performed                                          |
+   +==========+===============================================================+
+   | -3       | None. Fatal error, see `inform%flag`.                         |
+   +----------+---------------------------------------------------------------+
+   | -2       | Failed to converge, see `inform%flag`.                        |
+   +----------+---------------------------------------------------------------+
+   | -1       | None. Computation complete.                                   |
+   +----------+---------------------------------------------------------------+
+   |  2       | Apply preconditioner :math:`\bar{V} = TU`. (Copy if T=I).     |
+   +----------+---------------------------------------------------------------+
+   |  5       | Save converged eigenvectors:                                  |
+   |          |                                                               |
+   |          | * If `rci%i>0`: ``W(:,rci%jx:rci%jx+rci%nx-1,rci%kx)``.       |
+   |          | * Else:         ``W(:,rci%jx-rci%nx+1:rci%jx,rci%kx)``.       |
+   +----------+---------------------------------------------------------------+
+   |  9       | Compute :math:`V = (A-\sigma I)^{-1} U`                       |
+   +----------+---------------------------------------------------------------+
+   | 11       | If `rci%i.eq.0`, copy :math:`\bar{V} = U`.                    |
+   |          |                                                               |
+   |          | Otherwise, reorder columns of block `rci%kx` such that column |
+   |          | `ind(j)` becomes the new column `j` for `j=1, ..., rci%nx`    |
+   |          |                                                               |
+   |          | Note: if ``rci%kx.eq.rci%ky``, only reorder once.             |
+   +----------+---------------------------------------------------------------+
+   | 12       | Compute the dot products                                      |
+   |          |                                                               |
+   |          | .. math:: r_{ii} = U_i \cdot \bar{V}_i                        |
+   +----------+---------------------------------------------------------------+
+   | 13       | Perform the scalings                                          |
+   |          |                                                               |
+   |          | .. math:: U_i = U_i/\sqrt{(U_i\cdot \bar{V}_i)}               |
+   |          |                                                               |
+   |          | and                                                           |
+   |          |                                                               |
+   |          | .. math:: \bar{V}_i = \bar{V}_i/\sqrt{(U_i\cdot \bar{V}_i)}   |
+   |          |                                                               |
+   |          | for each column :math:`U_i` and :math:`\bar{V}_i` of :math:`U`|
+   |          | and :math:`\bar{V}`.                                          |
+   |          |                                                               |
+   |          | Note: if ``rci%kx.eq.rci%ky``, only scale once.               |
+   +----------+---------------------------------------------------------------+
+   | 14       | Perform the updates                                           |
+   |          |                                                               |
+   |          | .. math:: \bar{V}_i = \bar{V}_i + r_{ii} U_i                  |
+   |          |                                                               |
+   |          | for each column :math:`\bar{V}_i` of :math:`\bar{V}`          |
+   +----------+---------------------------------------------------------------+
+   | 15       | Perform the update                                            |
+   |          |                                                               |
+   |          | .. math:: R = \alpha U^T V + \beta R                          |
+   +----------+---------------------------------------------------------------+
+   | 16       | Perform the update                                            |
+   |          |                                                               |
+   |          | .. math:: V = \alpha U R + \beta V                            |
+   +----------+---------------------------------------------------------------+
+   | 17       | Perform the update                                            |
+   |          |                                                               |
+   |          | .. math:: U = \alpha U R                                      |
+   |          |                                                               |
+   |          | Note: :math:`V` may be used as a workspace                    |
+   +----------+---------------------------------------------------------------+
+   | 21       | Orthogonalize columns of :math:`V` to all vectors :math:`X`   |
+   |          | by solving                                                    |
+   |          |                                                               |
+   |          | .. math:: (X^TX) Q = X^T \bar{V}                              |
+   |          |                                                               |
+   |          | for :math:`Q` and updating                                    |
+   |          |                                                               |
+   |          | .. math:: U = U - XQ                                          |
+   +----------+---------------------------------------------------------------+
+   | 22       | Orthogonalize columns of :math:`U` to all vectors :math:`X`   |
+   |          | by solving                                                    |
+   |          |                                                               |
+   |          | .. math:: (X^TX) Q = X^T U                                    |
+   |          |                                                               |
+   |          | for :math:`Q` and updating                                    |
+   |          |                                                               |
+   |          | .. math:: U = U - XQ                                          |
+   +----------+---------------------------------------------------------------+
+   | 999      | Restart suggested (if not possible, just recall the routine). |
+   |          |                                                               |
+   |          | If `rci%k>0`: Restart with larger block size                  |
+   |          | `m >= m + rci%nx + rci%i + rci%j`, adjusting workspace size   |
+   |          | to match. Set `rci%i=0` and `rci%j=0` and recall the routing. |
+   |          |                                                               |
+   |          | If `rci%k=0`: Restart with the same block size.               |
+   |          |                                                               |
+   |          | In both cases, the first block ``W(:,:,0)`` should retain     |
+   |          | vectors ``rci%jx:rci%jx+rci%nx-1``, filling remaining vectors |
+   |          | randomly such that the entire set of columns is linearly      |
+   |          | independent.                                                  |
+   +----------+---------------------------------------------------------------+
+
+   The matrices are defined as follows:
+    
+   * :math:`U` = ``W(:, rci%jx:rci%jx+rci%nx-1, rci%kx)``
+   * :math:`V` = ``W(:, rci%jy:rci%jy+rci%ny-1, rci%ky)``
+   * :math:`\bar{V}` = ``W(:, rci%jy:rci%jy+rci%nx-1, rci%ky)``
+   * :math:`R` = ``rr(rci%i:rci%i+rci%nx-1, rci%j:rci%j+rci%ny-1, rci%k)``
+
+   and :math:`\alpha` and :math:`\beta` are given by ``rci%alpha`` and
+   ``rci%beta`` respectively.
+
+   :p ssmfe_rcid rci [inout]: Reverse communication type. `rci%job` must be
+      set to `0` before the first call. (Type :f:type:`ssmfe_rciz` in complex
+      version).
+   :p real sigma [in]: Shift value :math:`sigma`.
+   :p integer left [in]: Number of left eigenpairs to find.
+   :p integer right [in]: Number of right eigenpairs to find.
+   :p integer mep [in]: Number of working eigenpairs. See [method] section for
+      guidance on selecting a good value. Must be at least `left+right`.
+   :p real lambda (mep) [inout]: Current eigenvalue estimates in ascending
+      order.
+   :p integer m [in]: Block size of workspace `W`. Must be at least `2`.
+   :p real rr (2*m,2*m,3) [inout]: reverse communication workspace.
+      (Type `complex` in complex version).
+   :p integer ind (m) [inout]: reverse communication workspace.
+   :p ssmfe_expert_keep keep [inout]: Internal workspace used by routine.
+   :p ssmfe_options options [in]: specifies algorithm options to be used.
+   :p ssmfe_inform inform [inout]: returns information about the exection of
+      the routine.
+
+.. f:subroutine:: ssmfe_generalized(rci,left,mep,lambda,m,rr,ind,keep,options,inform)
+
+   Computes the left-most eigenpairs of the generalized eigenvalue problem
+
+   .. math:: Ax = \lambda B x
+
+   Optionally uses preconditioning.
+
+   Uses reverse-communication. Upon return the user must perform a task
+   specified by the `rci` parameter and recall the routine. Possible values of
+   `rci` and associated tasks are:
+
+   +----------+---------------------------------------------------------------+
+   | `rci%job`| Task to be performed                                          |
+   +==========+===============================================================+
+   | -3       | None. Fatal error, see `inform%flag`.                         |
+   +----------+---------------------------------------------------------------+
+   | -2       | Failed to converge, see `inform%flag`.                        |
+   +----------+---------------------------------------------------------------+
+   | -1       | None. Computation complete.                                   |
+   +----------+---------------------------------------------------------------+
+   |  1       | Calculate :math:`\bar{V} = AU`.                               |
+   +----------+---------------------------------------------------------------+
+   |  2       | Apply preconditioner :math:`\bar{V} = TU`. (Copy if T=I).     |
+   +----------+---------------------------------------------------------------+
+   |  3       | Compute :math:`\bar{V} = BU`                                  |
+   +----------+---------------------------------------------------------------+
+   |  5       | Save converged eigenvectors:                                  |
+   |          |                                                               |
+   |          | * If `rci%i>0`: ``W(:,rci%jx:rci%jx+rci%nx-1,rci%kx)``.       |
+   |          | * Else:         ``W(:,rci%jx-rci%nx+1:rci%jx,rci%kx)``.       |
+   |          |                                                               |
+   |          | Optionally save their :math:`B`-images:                       |
+   |          |                                                               |
+   |          | * If `rci%i>0`: ``W(:,rci%jx:rci%jx+rci%nx-1,rci%ky)``.       |
+   |          | * Else:         ``W(:,rci%jx-rci%nx+1:rci%jx,rci%ky)``.       |
+   +----------+---------------------------------------------------------------+
+   | 11       | If `rci%i.eq.0`, copy :math:`\bar{V} = U`.                    |
+   |          |                                                               |
+   |          | Otherwise, reorder columns of block `rci%kx` such that column |
+   |          | `ind(j)` becomes the new column `j` for `j=1, ..., rci%nx`    |
+   |          |                                                               |
+   |          | Note: if ``rci%kx.eq.rci%ky``, only reorder once.             |
+   +----------+---------------------------------------------------------------+
+   | 12       | Compute the dot products                                      |
+   |          |                                                               |
+   |          | .. math:: r_{ii} = U_i \cdot \bar{V}_i                        |
+   +----------+---------------------------------------------------------------+
+   | 13       | Perform the scalings                                          |
+   |          |                                                               |
+   |          | .. math:: U_i = U_i/\sqrt{(U_i\cdot \bar{V}_i)}               |
+   |          |                                                               |
+   |          | and                                                           |
+   |          |                                                               |
+   |          | .. math:: \bar{V}_i = \bar{V}_i/\sqrt{(U_i\cdot \bar{V}_i)}   |
+   |          |                                                               |
+   |          | for each column :math:`U_i` and :math:`\bar{V}_i` of :math:`U`|
+   |          | and :math:`\bar{V}`.                                          |
+   |          |                                                               |
+   |          | Note: if ``rci%kx.eq.rci%ky``, only scale once.               |
+   +----------+---------------------------------------------------------------+
+   | 14       | Perform the updates                                           |
+   |          |                                                               |
+   |          | .. math:: \bar{V}_i = \bar{V}_i + r_{ii} U_i                  |
+   |          |                                                               |
+   |          | for each column :math:`\bar{V}_i` of :math:`\bar{V}`          |
+   +----------+---------------------------------------------------------------+
+   | 15       | Perform the update                                            |
+   |          |                                                               |
+   |          | .. math:: R = \alpha U^T V + \beta R                          |
+   +----------+---------------------------------------------------------------+
+   | 16       | Perform the update                                            |
+   |          |                                                               |
+   |          | .. math:: V = \alpha U R + \beta V                            |
+   +----------+---------------------------------------------------------------+
+   | 17       | Perform the update                                            |
+   |          |                                                               |
+   |          | .. math:: U = \alpha U R                                      |
+   |          |                                                               |
+   |          | Note: :math:`V` may be used as a workspace                    |
+   +----------+---------------------------------------------------------------+
+   | 21       | :math:`B`-orthogonalize columns of :math:`V` to all vectors   |
+   |          | :math:`X` by solving                                          |
+   |          |                                                               |
+   |          | .. math:: (X^TBX) Q = X^T \bar{V}                             |
+   |          |                                                               |
+   |          | for :math:`Q` and updating                                    |
+   |          |                                                               |
+   |          | .. math::                                                     |
+   |          |                                                               |
+   |          |    U       & = & U - XQ \\                                    |
+   |          |    \bar{V} & = & \bar{V} - BXQ                                |
+   |          |                                                               |
+   |          | The update of :math:`\bar{V}` may be replaced by              |
+   |          |                                                               |
+   |          | .. math:: \bar{V} = BU                                        |
+   +----------+---------------------------------------------------------------+
+   | 22       | Orthogonalize columns of :math:`U` to all vectors :math:`X`   |
+   |          | by solving                                                    |
+   |          |                                                               |
+   |          | .. math:: (X^TX) Q = X^T U                                    |
+   |          |                                                               |
+   |          | for :math:`Q` and updating                                    |
+   |          |                                                               |
+   |          | .. math:: U = U - BXQ                                         |
+   +----------+---------------------------------------------------------------+
+   | 999      | Restart suggested (if not possible, just recall the routine). |
+   |          |                                                               |
+   |          | If `rci%k>0`: Restart with larger block size                  |
+   |          | `m >= m + rci%nx + rci%i + rci%j`, adjusting workspace size   |
+   |          | to match. Set `rci%i=0` and `rci%j=0` and recall the routing. |
+   |          |                                                               |
+   |          | If `rci%k=0`: Restart with the same block size.               |
+   |          |                                                               |
+   |          | In both cases, the first block ``W(:,:,0)`` should retain     |
+   |          | vectors ``rci%jx:rci%jx+rci%nx-1``, filling remaining vectors |
+   |          | randomly such that the entire set of columns is linearly      |
+   |          | independent.                                                  |
+   +----------+---------------------------------------------------------------+
+
+   The matrices are defined as follows:
+    
+   * :math:`U` = ``W(:, rci%jx:rci%jx+rci%nx-1, rci%kx)``
+   * :math:`V` = ``W(:, rci%jy:rci%jy+rci%ny-1, rci%ky)``
+   * :math:`\bar{V}` = ``W(:, rci%jy:rci%jy+rci%nx-1, rci%ky)``
+   * :math:`R` = ``rr(rci%i:rci%i+rci%nx-1, rci%j:rci%j+rci%ny-1, rci%k)``
+
+   and :math:`\alpha` and :math:`\beta` are given by ``rci%alpha`` and
+   ``rci%beta`` respectively.
+
+   :p ssmfe_rcid rci [inout]: Reverse communication type. `rci%job` must be
+      set to `0` before the first call. (Type :f:type:`ssmfe_rciz` in complex
+      version).
+   :p integer left [in]: Number of left eigenpairs to find.
+   :p integer mep [in]: Number of working eigenpairs. See [method] section for
+      guidance on selecting a good value. Must be at least `left`.
+   :p real lambda (mep) [inout]: Current eigenvalue estimates in ascending
+      order.
+   :p integer m [in]: Block size of workspace `W`. Must be at least `2`.
+   :p real rr (2*m,2*m,3) [inout]: reverse communication workspace.
+      (Type `complex` in complex version).
+   :p integer ind (m) [inout]: reverse communication workspace.
+   :p ssmfe_expert_keep keep [inout]: Internal workspace used by routine.
+   :p ssmfe_options options [in]: specifies algorithm options to be used.
+   :p ssmfe_inform inform [inout]: returns information about the exection of
+      the routine.
+
+.. f:subroutine:: ssmfe_generalized_shift(rci,sigma,left,right,mep,lambda,m,rr,ind,keep,options,inform)
+
+   Computes eigenpairs of the generalized eigenvalue problem
+
+   .. math:: Ax = \lambda B x
+
+   in the vicinity of a given value :math:`\sigma`.
+
+   Uses reverse-communication. Upon return the user must perform a task
+   specified by the `rci` parameter and recall the routine. Possible values of
+   `rci` and associated tasks are:
+
+   +----------+---------------------------------------------------------------+
+   | `rci%job`| Task to be performed                                          |
+   +==========+===============================================================+
+   | -3       | None. Fatal error, see `inform%flag`.                         |
+   +----------+---------------------------------------------------------------+
+   | -2       | Failed to converge, see `inform%flag`.                        |
+   +----------+---------------------------------------------------------------+
+   | -1       | None. Computation complete.                                   |
+   +----------+---------------------------------------------------------------+
+   |  3       | Compute :math:`\bar{V} = BU`                                  |
+   +----------+---------------------------------------------------------------+
+   |  5       | Save converged eigenvectors:                                  |
+   |          |                                                               |
+   |          | * If `rci%i>0`: ``W(:,rci%jx:rci%jx+rci%nx-1,rci%kx)``.       |
+   |          | * Else:         ``W(:,rci%jx-rci%nx+1:rci%jx,rci%kx)``.       |
+   |          |                                                               |
+   |          | Optionally save their :math:`B`-images:                       |
+   |          |                                                               |
+   |          | * If `rci%i>0`: ``W(:,rci%jx:rci%jx+rci%nx-1,rci%ky)``.       |
+   |          | * Else:         ``W(:,rci%jx-rci%nx+1:rci%jx,rci%ky)``.       |
+   +----------+---------------------------------------------------------------+
+   |  9       | Compute :math:`V = (A-\sigma B)^{-1} U`                       |
+   +----------+---------------------------------------------------------------+
+   | 11       | If `rci%i.eq.0`, copy :math:`\bar{V} = U`.                    |
+   |          |                                                               |
+   |          | Otherwise, reorder columns of block `rci%kx` such that column |
+   |          | `ind(j)` becomes the new column `j` for `j=1, ..., rci%nx`    |
+   |          |                                                               |
+   |          | Note: if ``rci%kx.eq.rci%ky``, only reorder once.             |
+   +----------+---------------------------------------------------------------+
+   | 12       | Compute the dot products                                      |
+   |          |                                                               |
+   |          | .. math:: r_{ii} = U_i \cdot \bar{V}_i                        |
+   +----------+---------------------------------------------------------------+
+   | 13       | Perform the scalings                                          |
+   |          |                                                               |
+   |          | .. math:: U_i = U_i/\sqrt{(U_i\cdot \bar{V}_i)}               |
+   |          |                                                               |
+   |          | and                                                           |
+   |          |                                                               |
+   |          | .. math:: \bar{V}_i = \bar{V}_i/\sqrt{(U_i\cdot \bar{V}_i)}   |
+   |          |                                                               |
+   |          | for each column :math:`U_i` and :math:`\bar{V}_i` of :math:`U`|
+   |          | and :math:`\bar{V}`.                                          |
+   |          |                                                               |
+   |          | Note: if ``rci%kx.eq.rci%ky``, only scale once.               |
+   +----------+---------------------------------------------------------------+
+   | 14       | Perform the updates                                           |
+   |          |                                                               |
+   |          | .. math:: \bar{V}_i = \bar{V}_i + r_{ii} U_i                  |
+   |          |                                                               |
+   |          | for each column :math:`\bar{V}_i` of :math:`\bar{V}`          |
+   +----------+---------------------------------------------------------------+
+   | 15       | Perform the update                                            |
+   |          |                                                               |
+   |          | .. math:: R = \alpha U^T V + \beta R                          |
+   +----------+---------------------------------------------------------------+
+   | 16       | Perform the update                                            |
+   |          |                                                               |
+   |          | .. math:: V = \alpha U R + \beta V                            |
+   +----------+---------------------------------------------------------------+
+   | 17       | Perform the update                                            |
+   |          |                                                               |
+   |          | .. math:: U = \alpha U R                                      |
+   |          |                                                               |
+   |          | Note: :math:`V` may be used as a workspace                    |
+   +----------+---------------------------------------------------------------+
+   | 21       | :math:`B`-orthogonalize columns of :math:`V` to all vectors   |
+   |          | :math:`X` by solving                                          |
+   |          |                                                               |
+   |          | .. math:: (X^TBX) Q = X^T \bar{V}                             |
+   |          |                                                               |
+   |          | for :math:`Q` and updating                                    |
+   |          |                                                               |
+   |          | .. math::                                                     |
+   |          |                                                               |
+   |          |    U       & = & U - XQ \\                                    |
+   |          |    \bar{V} & = & \bar{V} - BXQ                                |
+   |          |                                                               |
+   |          | The update of :math:`\bar{V}` may be replaced by              |
+   |          |                                                               |
+   |          | .. math:: \bar{V} = BU                                        |
+   +----------+---------------------------------------------------------------+
+   | 22       | Orthogonalize columns of :math:`U` to all vectors :math:`X`   |
+   |          | by solving                                                    |
+   |          |                                                               |
+   |          | .. math:: (X^TX) Q = X^T U                                    |
+   |          |                                                               |
+   |          | for :math:`Q` and updating                                    |
+   |          |                                                               |
+   |          | .. math:: U = U - BXQ                                         |
+   +----------+---------------------------------------------------------------+
+   | 999      | Restart suggested (if not possible, just recall the routine). |
+   |          |                                                               |
+   |          | If `rci%k>0`: Restart with larger block size                  |
+   |          | `m >= m + rci%nx + rci%i + rci%j`, adjusting workspace size   |
+   |          | to match. Set `rci%i=0` and `rci%j=0` and recall the routing. |
+   |          |                                                               |
+   |          | If `rci%k=0`: Restart with the same block size.               |
+   |          |                                                               |
+   |          | In both cases, the first block ``W(:,:,0)`` should retain     |
+   |          | vectors ``rci%jx:rci%jx+rci%nx-1``, filling remaining vectors |
+   |          | randomly such that the entire set of columns is linearly      |
+   |          | independent.                                                  |
+   +----------+---------------------------------------------------------------+
+
+   The matrices are defined as follows:
+    
+   * :math:`U` = ``W(:, rci%jx:rci%jx+rci%nx-1, rci%kx)``
+   * :math:`V` = ``W(:, rci%jy:rci%jy+rci%ny-1, rci%ky)``
+   * :math:`\bar{V}` = ``W(:, rci%jy:rci%jy+rci%nx-1, rci%ky)``
+   * :math:`R` = ``rr(rci%i:rci%i+rci%nx-1, rci%j:rci%j+rci%ny-1, rci%k)``
+
+   and :math:`\alpha` and :math:`\beta` are given by ``rci%alpha`` and
+   ``rci%beta`` respectively.
+
+   :p ssmfe_rcid rci [inout]: Reverse communication type. `rci%job` must be
+      set to `0` before the first call. (Type :f:type:`ssmfe_rciz` in complex
+      version).
+   :p real sigma [in]: Shift value :math:`sigma`.
+   :p integer left [in]: Number of left eigenpairs to find.
+   :p integer right [in]: Number of right eigenpairs to find.
+   :p integer mep [in]: Number of working eigenpairs. See [method] section for
+      guidance on selecting a good value. Must be at least `left+right`.
+   :p real lambda (mep) [inout]: Current eigenvalue estimates in ascending
+      order.
+   :p integer m [in]: Block size of workspace `W`. Must be at least `2`.
+   :p real rr (2*m,2*m,3) [inout]: reverse communication workspace.
+      (Type `complex` in complex version).
+   :p integer ind (m) [inout]: reverse communication workspace.
+   :p ssmfe_expert_keep keep [inout]: Internal workspace used by routine.
+   :p ssmfe_options options [in]: specifies algorithm options to be used.
+   :p ssmfe_inform inform [inout]: returns information about the exection of
+      the routine.
+
+.. f:subroutine:: ssmfe_buckling(rci,sigma,left,right,mep,lambda,m,rr,ind,keep,options,inform)
+
+   Computes the eigenpairs of the buckling problem
+
+   .. math:: Bx = \lambda A x
+
+   in the vicinity of a given value :math:`\sigma`.
+
+   Uses reverse-communication. Upon return the user must perform a task
+   specified by the `rci` parameter and recall the routine. Possible values of
+   `rci` and associated tasks are:
+
+   +----------+---------------------------------------------------------------+
+   | `rci%job`| Task to be performed                                          |
+   +==========+===============================================================+
+   | -3       | None. Fatal error, see `inform%flag`.                         |
+   +----------+---------------------------------------------------------------+
+   | -2       | Failed to converge, see `inform%flag`.                        |
+   +----------+---------------------------------------------------------------+
+   | -1       | None. Computation complete.                                   |
+   +----------+---------------------------------------------------------------+
+   |  3       | Compute :math:`\bar{V} = BU`                                  |
+   +----------+---------------------------------------------------------------+
+   |  5       | Save converged eigenvectors:                                  |
+   |          |                                                               |
+   |          | * If `rci%i>0`: ``W(:,rci%jx:rci%jx+rci%nx-1,rci%kx)``.       |
+   |          | * Else:         ``W(:,rci%jx-rci%nx+1:rci%jx,rci%kx)``.       |
+   |          |                                                               |
+   |          | Optionally save their :math:`B`-images:                       |
+   |          |                                                               |
+   |          | * If `rci%i>0`: ``W(:,rci%jx:rci%jx+rci%nx-1,rci%ky)``.       |
+   |          | * Else:         ``W(:,rci%jx-rci%nx+1:rci%jx,rci%ky)``.       |
+   +----------+---------------------------------------------------------------+
+   |  9       | Compute :math:`V = (B-\sigma A)^{-1} U`                       |
+   +----------+---------------------------------------------------------------+
+   | 11       | If `rci%i.eq.0`, copy :math:`\bar{V} = U`.                    |
+   |          |                                                               |
+   |          | Otherwise, reorder columns of block `rci%kx` such that column |
+   |          | `ind(j)` becomes the new column `j` for `j=1, ..., rci%nx`    |
+   |          |                                                               |
+   |          | Note: if ``rci%kx.eq.rci%ky``, only reorder once.             |
+   +----------+---------------------------------------------------------------+
+   | 12       | Compute the dot products                                      |
+   |          |                                                               |
+   |          | .. math:: r_{ii} = U_i \cdot \bar{V}_i                        |
+   +----------+---------------------------------------------------------------+
+   | 13       | Perform the scalings                                          |
+   |          |                                                               |
+   |          | .. math:: U_i = U_i/\sqrt{(U_i\cdot \bar{V}_i)}               |
+   |          |                                                               |
+   |          | and                                                           |
+   |          |                                                               |
+   |          | .. math:: \bar{V}_i = \bar{V}_i/\sqrt{(U_i\cdot \bar{V}_i)}   |
+   |          |                                                               |
+   |          | for each column :math:`U_i` and :math:`\bar{V}_i` of :math:`U`|
+   |          | and :math:`\bar{V}`.                                          |
+   |          |                                                               |
+   |          | Note: if ``rci%kx.eq.rci%ky``, only scale once.               |
+   +----------+---------------------------------------------------------------+
+   | 14       | Perform the updates                                           |
+   |          |                                                               |
+   |          | .. math:: \bar{V}_i = \bar{V}_i + r_{ii} U_i                  |
+   |          |                                                               |
+   |          | for each column :math:`\bar{V}_i` of :math:`\bar{V}`          |
+   +----------+---------------------------------------------------------------+
+   | 15       | Perform the update                                            |
+   |          |                                                               |
+   |          | .. math:: R = \alpha U^T V + \beta R                          |
+   +----------+---------------------------------------------------------------+
+   | 16       | Perform the update                                            |
+   |          |                                                               |
+   |          | .. math:: V = \alpha U R + \beta V                            |
+   +----------+---------------------------------------------------------------+
+   | 17       | Perform the update                                            |
+   |          |                                                               |
+   |          | .. math:: U = \alpha U R                                      |
+   |          |                                                               |
+   |          | Note: :math:`V` may be used as a workspace                    |
+   +----------+---------------------------------------------------------------+
+   | 21       | :math:`B`-orthogonalize columns of :math:`V` to all vectors   |
+   |          | :math:`X` by solving                                          |
+   |          |                                                               |
+   |          | .. math:: (X^TBX) Q = X^T \bar{V}                             |
+   |          |                                                               |
+   |          | for :math:`Q` and updating                                    |
+   |          |                                                               |
+   |          | .. math::                                                     |
+   |          |                                                               |
+   |          |    U       & = & U - XQ \\                                    |
+   |          |    \bar{V} & = & \bar{V} - BXQ                                |
+   |          |                                                               |
+   |          | The update of :math:`\bar{V}` may be replaced by              |
+   |          |                                                               |
+   |          | .. math:: \bar{V} = BU                                        |
+   +----------+---------------------------------------------------------------+
+   | 22       | Orthogonalize columns of :math:`U` to all vectors :math:`X`   |
+   |          | by solving                                                    |
+   |          |                                                               |
+   |          | .. math:: (X^TX) Q = X^T U                                    |
+   |          |                                                               |
+   |          | for :math:`Q` and updating                                    |
+   |          |                                                               |
+   |          | .. math:: U = U - BXQ                                         |
+   +----------+---------------------------------------------------------------+
+   | 999      | Restart suggested (if not possible, just recall the routine). |
+   |          |                                                               |
+   |          | If `rci%k>0`: Restart with larger block size                  |
+   |          | `m >= m + rci%nx + rci%i + rci%j`, adjusting workspace size   |
+   |          | to match. Set `rci%i=0` and `rci%j=0` and recall the routing. |
+   |          |                                                               |
+   |          | If `rci%k=0`: Restart with the same block size.               |
+   |          |                                                               |
+   |          | In both cases, the first block ``W(:,:,0)`` should retain     |
+   |          | vectors ``rci%jx:rci%jx+rci%nx-1``, filling remaining vectors |
+   |          | randomly such that the entire set of columns is linearly      |
+   |          | independent.                                                  |
+   +----------+---------------------------------------------------------------+
+
+   The matrices are defined as follows:
+    
+   * :math:`U` = ``W(:, rci%jx:rci%jx+rci%nx-1, rci%kx)``
+   * :math:`V` = ``W(:, rci%jy:rci%jy+rci%ny-1, rci%ky)``
+   * :math:`\bar{V}` = ``W(:, rci%jy:rci%jy+rci%nx-1, rci%ky)``
+   * :math:`R` = ``rr(rci%i:rci%i+rci%nx-1, rci%j:rci%j+rci%ny-1, rci%k)``
+
+   and :math:`\alpha` and :math:`\beta` are given by ``rci%alpha`` and
+   ``rci%beta`` respectively.
+
+   :p ssmfe_rcid rci [inout]: Reverse communication type. `rci%job` must be
+      set to `0` before the first call. (Type :f:type:`ssmfe_rciz` in complex
+      version).
+   :p real sigma [in]: Shift value :math:`sigma`.
+   :p integer left [in]: Number of left eigenpairs to find.
+   :p integer right [in]: Number of right eigenpairs to find.
+   :p integer mep [in]: Number of working eigenpairs. See [method] section for
+      guidance on selecting a good value. Must be at least `left+right`.
+   :p real lambda (mep) [inout]: Current eigenvalue estimates in ascending
+      order.
+   :p integer m [in]: Block size of workspace `W`. Must be at least `2`.
+   :p real rr (2*m,2*m,3) [inout]: reverse communication workspace.
+      (Type `complex` in complex version).
+   :p integer ind (m) [inout]: reverse communication workspace.
+   :p ssmfe_expert_keep keep [inout]: Internal workspace used by routine.
+   :p ssmfe_options options [in]: specifies algorithm options to be used.
+   :p ssmfe_inform inform [inout]: returns information about the exection of
+      the routine.
+
+.. f:subroutine:: ssmfe_free(keep,inform)
+
+   Free memory allocated in `keep` and `inform`. Unnecessary if both are going
+   out of scope.
+
+   :p ssmfe_expert_keep keep [inout]: Workspace to be freed.
+   :p ssmfe_inform inform [inout]: Information type to be freed.
+
+=============
 Derived types
 =============
 
-``type(ssmfe_options)``
+.. f:type:: ssmfe_rcid
+
+   Real-valued reverse communication interface (RCI) type.
+
+   :f integer job: Reverse-communication task to perform.
+   :f integer jx: First column of :math:`U` in block.
+   :f integer kx: Block to which :math:`U` belongs.
+   :f integer nx: Number of columns in :math:`U` and :math:`\bar{V}`, and
+      number of rows in :math:`R`.
+   :f integer jy: First column of :math:`V` in block.
+   :f integer ky: Block to which :math:`V` belongs.
+   :f integer ny: Number of columns in :math:`V` and :math:`R`.
+   :f integer i: First row of :math:`R` in ``rr(:,:,:)``.
+   :f integer j: First column of :math:`R` in ``rr(:,:,:)``.
+   :f integer k: Block of :math:`R` in ``rr(:,:,:)``.
+   :f real alpha: Coefficient for matrix multiplication.
+   :f real beta: Coefficient for matrix multiplication.
+
+.. f:type:: ssmfe_rciz
+
+   Real-valued reverse communication interface (RCI) type.
+
+   :f integer job: Reverse-communication task to perform.
+   :f integer jx: First column of :math:`U` in block.
+   :f integer kx: Block to which :math:`U` belongs.
+   :f integer nx: Number of columns in :math:`U` and :math:`\bar{V}`, and
+      number of rows in :math:`R`.
+   :f integer jy: First column of :math:`V` in block.
+   :f integer ky: Block to which :math:`V` belongs.
+   :f integer ny: Number of columns in :math:`V` and :math:`R`.
+   :f integer i: First row of :math:`R` in ``rr(:,:,:)``.
+   :f integer j: First column of :math:`R` in ``rr(:,:,:)``.
+   :f integer k: Block of :math:`R` in ``rr(:,:,:)``.
+   :f complex alpha: Coefficient for matrix multiplication.
+   :f complex beta: Coefficient for matrix multiplication.
+
+.. f:type:: ssmfe_options
+
+   Options that control the algorithm.
+
+   :f real abs_tol_lambda [default=0.0]: absolute tolerance for estimated
+      eigenvalue convergence test, see Section [ssmfe:method].
+      Negative values are treated as the default.
+   :f real abs_tol_residual [default=0.0]: absolute tolerance for residual
+      convergence test, see Section [ssmfe:method]. Negative values are
+      treated as the default.
+   :f integer max_iterations [default=100]: maximum number of iterations.
+   :f real rel_tol_lambda [default=0.0]: relative tolerance for estimated
+      eigenvalue error convergence test, see Section [ssmfe:method]. Negative
+      values are treated as the default.
+   :f real rel_tol_residual [default=0.0]: relative tolerance for residual
+      convergence test, see Section [ssmfe:method]. If both
+      `abs_tol_residual` and `rel_tol_residual` are 0.0, then the
+      residual norms are not taken into consideration by the convergence
+      test, see Section [ssmfe:method]. Negative values are treated as the
+      default.
+   :f real tol_x [default=-1.0]: tolerance for estimated eigenvector error
+      convergence test, see Section [ssmfe:method].
+      If tol_x is set to `0.0`, the eigenvector error is not estimated. If
+      a negative value is assigned, the tolerance is set to
+      `sqrt(epsilon(lambda))`.
+   :f integer print_level [default=0]: amount of printing. Possible values
+      are:
+
+      +----+------------------------------------------------------------------+
+      | <0 | no printing                                                      |
+      +----+------------------------------------------------------------------+
+      |  0 | error and warning messages only                                  |
+      +----+------------------------------------------------------------------+
+      |  1 | the type (standard or generalized) and the size of the problem,  |
+      |    | the number of eigenpairs requested, the error tolerances and the |
+      |    | size of the subspace are printed before the iterations start     |
+      +----+------------------------------------------------------------------+
+      |  2 | as above but, for each eigenpair tested for convergence, the     |
+      |    | iteration number, the index of the eigenpair, the eigenvalue,    |
+      |    | whether it has converged, the residual norm, and the error       |
+      |    | estimates are also printed                                       |
+      +----+------------------------------------------------------------------+
+      | >2 | as 1 but with all eigenvalues, whether converged, residual norms |
+      |    | and eigenvalue/eigenvector error estimates printed on each       |
+      |    | iteration.                                                       |
+      +----+------------------------------------------------------------------+
+
+      Note that for eigenpairs that are far from convergence, ‘rough’ error
+      estimates are printed (the estimates that are actually used by the
+      stopping criteria, see Section [ssmfe:method], only become available on
+      the last few iterations).
+
+   :f integer unit_error [default=6]: unit number for error messages. Printing
+      suppressed if negative.
+   :f integer unit_diagnostic [default=6]: unit number for diagnostic messages.
+      Printing suppressed if negative.
+   :f integer unit_warning [default=6]: unit number for warning messages.
+      Printing suppressed if negative.
+   :f integer err_est [default=2]: error estimation scheme, one of:
+      
+      +-------------+---------------------------------------------------------+
+      | 1           | Residual error bounds: modified Davis-Kahan estimate for|
+      |             | eigenvector error and Lehmann bounds for eigenvale error|
+      |             | (see method section).                                   |
+      +-------------+---------------------------------------------------------+
+      | 2 (default) | Convergence curve-based estimate.                       |
+      +-------------+---------------------------------------------------------+
+
+   :f integer extra_left [default=0]: number of extra approximate eigenvectors
+      corresponding to leftmost eigenvalues used to enhance convergence.
+   :f integer extra_right [default=0]: number of extra approximate eigenvectors
+      corresponding to rightmost eigenvalues used to enhance convergence.
+   :f real left_gap [default=0.0]: minimal acceptable distance between last
+      computed left eigenvalue and rest of spectrum.
+      For :f:subr:`ssmfe_standard()` and :f:subr:`ssmfe_generalized()` the
+      last computed left eigenvalue is the rightmost of those computed.
+      For other routines it is the leftmost.
+      If set to a negative value :math:`\delta`, the minimal distance is taken
+      as :math:`|\delta|` times the average distance between the computed
+      eigenvalues. Note that for this option to have any effect, the value of
+      `mep` must be larger than `left+right`. See Section [ssmfe:method] for
+      further explanation.
+   :f integer max_left [default=-1]: number of eigenvalues to left of
+      :math:`\sigma`, or a negative value if not known.
+   :f integer max_right [default=-1]: number of eigenvalues to right of
+      :math:`\sigma`, or a negative value if not known.
+   :f logical minAprod [default=.true.]: If true, minimize number of
+      multiplications with :math:`A` by requiring 2 additional blocks of memory
+      for the workspace ``W(:,:,:)``. Must be true for calls to
+      :f:subr:`ssmfe_standard_shift()`, :f:subr:`ssmfe_generalized_shift()`,
+      and :f:subr:`ssmfe_buckling()`.
+   :f logical minBprod [default=.true.]: If true, minimize number of
+      multiplications with :math:`B` by requiring 2 additional blocks of memory
+      for the workspace ``W(:,:,:)``.
+   :f real right_gap [default=0.0]: as `left_gap`, but for right eigenvalues.
+   :f integer user_x [default=0]: number of eigenvectors for which an initial
+      guess is supplied in `x(:,:)` on the first call. Such eigenvectors must
+      be lineraly independent.
+
+
+.. f:type:: ssmfe_inform
+
+   Information on progress of the algorithm.
+
+   :f integer converged (mep) [allocatable]: Convergence status.
+   
+      * If ``converged(j)>0``, the eigenpair `(lambda(j), X(j))` converged
+        on iteration `converged(j)`.
+      * If ``converged(j)=0``, the eigenpair `(lambda(j), X(j))` is still
+        converging.
+      * If ``converged(j)<0``, the eigenpair `(lambda(j), X(j))` stagnated
+        at iteration `converged(j)`.
+   
+   :f real err_lambda (mep) [allocatable]: estimated eigenvalue errors for
+      converged and stagnated eigenvalues.
+   :f real err_x (mep) [allocatable]: estimated eigenvector errors for
+      converged and stagnated eigenvectors.
+   :f integer flag: return status of algorithm. See table below.
+   :f integer iteration: number of iterations.
+   :f integer left: number of converged left eigenvalues.
+   :f real next_left: upon completion, next left eigenvalue in spectrum
+      (see `options%left_gap`).
+   :f real next_right: upon completion, next right eigenvalue in spectrum
+      (see `options%right_gap`).
+   :f real residual_norms (mep) [allocatable]: Euclidean norms of residuals
+      for `(lambda(:), X(:))` on return with ``rci%job=5``.
+   :f integer non_converged: number of non-converged eigenpairs.
+   :f integer right: number of converged right eigenvalues.
+   :f integer stat: allocation status in event of failure
+
+   +--------------+-----------------------------------------------------------+
+   | `inform%flag`|                                                           |
+   +==============+===========================================================+
+   |   -1         | rci%job is out-of-range.                                  |
+   +--------------+-----------------------------------------------------------+
+   |   -2         | m is out-of-range.                                        |
+   +--------------+-----------------------------------------------------------+
+   |   -3         | options%err_est is out-of-range.                          |
+   +--------------+-----------------------------------------------------------+
+   |   -4         | options%minAprod is incompatible with selected routine.   |
+   +--------------+-----------------------------------------------------------+
+   |   -5         | options%extra_left or options%extra_right is out-of-range.|
+   +--------------+-----------------------------------------------------------+
+   |   -6         | options%min_gap is out-of-range.                          |
+   +--------------+-----------------------------------------------------------+
+   |  -11         | left is out-of-range.                                     |
+   +--------------+-----------------------------------------------------------+
+   |  -12         | right is out-of-range.                                    |
+   +--------------+-----------------------------------------------------------+
+   |  -13         | mep is less than the number of desired eigenpairs.        |
+   +--------------+-----------------------------------------------------------+
+   | -100         | Not enough memory; `inform%stat` contains the value of the|
+   |              | Fortran stat parameter.                                   |
+   +--------------+-----------------------------------------------------------+
+   | -200         | :math:`B` is not positive definite or `user_x>0` and      |
+   |              | linearly dependent initial guesses were supplied.         |
+   +--------------+-----------------------------------------------------------+
+   |   +1         | The iterations have been terminated because no further    |
+   |              | improvement in accuracy is possible (this may happen if   |
+   |              | :math:`B` or the preconditioner is not positive definite, |
+   |              | or if the components of the residual vectors are so small |
+   |              | that the round-off errors make them essentially random).  |
+   |              | The value of `inform%non_converged` is set to the number  |
+   |              | of non-converged eigenpairs.                              |
+   +--------------+-----------------------------------------------------------+
+   |   +2         | The maximum number of iterations `max_iterations` has been|
+   |              | exceeded. The value of `inform%non_converged` is set to   |
+   |              | the number of non-converged eigenpairs.                   |
+   +--------------+-----------------------------------------------------------+
+   |   +3         | The solver had run out of storage space for the converged |
+   |              | eigenpairs before the gap in the spectrum required by     |
+   |              | `options%left_gap` and/or `options%right_gap` was reached.|
+   |              | The value of `inform%non_converged` is set to the number  |
+   |              | of non-converged eigenpairs.                              |
+   +--------------+-----------------------------------------------------------+
+
+========
+Examples
+========
+
+Preconditioning example
 -----------------------
 
-The derived data type ssmfe\_options has the following components.
+The following code computes the 5 leftmost eigenpairs of the matrix
+:math:`A` of order 100 that approximates the two-dimensional Laplacian
+operator on a 20-by-20 grid. One forward and one backward Gauss-Seidel
+update are used for preconditioning, which halves the number of
+iterations compared with solving the same problem without
+preconditioning. The module `laplace2d`
+(examples/Fortran/ssmfe/laplace2d.f90) supplies the subroutine
+`apply_laplacian()` that multiplies a block of vectors by :math:`A`, and
+the subroutine `apply_gauss_seidel_step()` that computes :math:`y = T x`
+for a block of vectors :math:`x` by applying one forward
+and one backward update of the Gauss-Seidel method to the system
+:math:`A y = x`.
 
-``abs_tol_lambda``
-    is a scalar of type ``REAL`` that holds an absolute tolerance used
-    when testing the estimated eigenvalue error, see
-    Section [ssmfe\ :sub:`e`\ xpert:method]. The default value is 0.
-    Negative values are treated as the default.
+.. literalinclude:: ../../examples/Fortran/ssmfe/precond_expert.f90
+   :language: Fortran
 
-``abs_tol_residual``
-    is a scalar of type ``REAL`` that holds an absolute tolerance used
-    when testing the residual, see
-    Section [ssmfe\ :sub:`e`\ xpert:method]. The default value is 0.
-    Negative values are treated as the default.
+This code produces the following output:
 
-``max_iterations``
-    is a scalar of type default ``INTEGER`` that contains the maximum
-    number of iterations to be performed. The default value is 100.
-    **Restriction:** max\_it :math:`\ge` 0.
+::
 
-``rel_tol_lambda``
-    is a scalar of type ``REAL`` that holds a relative tolerance used
-    when testing the estimated eigenvalue error, see
-    Section [ssmfe\ :sub:`e`\ xpert:method]. The default value is 0.
-    Negative values are treated as the default.
+      6 eigenpairs converged in 129 iterations
+     lambda( 1) = 4.4676695E-02
+     lambda( 2) = 1.1119274E-01
+     lambda( 3) = 1.1119274E-01
+     lambda( 4) = 1.7770878E-01
+     lambda( 5) = 2.2040061E-01
+     lambda( 6) = 2.2040061E-01
 
-``rel_tol_residual``
-    is a scalar of type ``REAL`` that holds a relative tolerance used
-    when testing the residual, see
-    Section [ssmfe\ :sub:`e`\ xpert:method]. If both abs\_tol\_residual
-    and rel\_tol\_residual are set to 0, then the residual norms are not
-    taken into consideration by the convergence test, see
-    Section [ssmfe\ :sub:`e`\ xpert:method]. The default value is 0.
-    Negative values are treated as the default.
+Note that the code computed one extra eigenpair because of the
+insufficient gap between the 5th and 6th eigenvalues.
 
-``tol_x``
-    is a scalar of type ``REAL`` that holds a tolerance used when
-    testing the estimated eigenvector error, see
-    Section [ssmfe\ :sub:`e`\ xpert:method]. If tol\_x is set to zero,
-    the eigenvector error is not estimated. If a negative value is
-    assigned, the tolerance is set to 10\*epsilon(lambda). The default
-    value is -1.0.
-
-``print_level``
-    | is a scalar of type default ``INTEGER`` that determines the amount
-    of printing. Possible values are:
-
-    | r@ : p0.85 :math:`<0` & no printing;
-    | :math:`0` & error and warning messages only;
-    | :math:`1` & the type (standard or generalized) and the size of the
-    problem, the number of eigenpairs requested, the error tolerances
-    and the size of the subspace are printed before the iterations
-    start;
-    | :math:`2` & as :math:`1` but, for each eigenpair tested for
-    convergence (see Section [ssmfe\ :sub:`e`\ xpert:method]), the
-    iteration number, the index of the eigenpair, the eigenvalue,
-    whether it has converged, the residual norm, and the error estimates
-    are printed;
-    | :math:`>2` & as :math:`1` but with all eigenvalues, whether
-    converged, residual norms and eigenvalue/eigenvector error estimates
-    printed on each iteration.
-
-    The default value is 0. Note that for eigenpairs that are far from
-    convergence, ‘rough’ error estimates are printed (the estimates that
-    are actually used by the stopping criteria, see
-    Section [ssmfe\ :sub:`e`\ xpert:method], only become available on
-    the last few iterations).
-
-``unit_error``
-    is a scalar of type default ``INTEGER`` that holds the unit number
-    for error messages. Printing is suppressed if unit\_error < 0. The
-    default value is 6.
-
-``unit_diagnostic``
-    is a scalar of type default ``INTEGER`` that holds the unit number
-    for messages monitoring the convergence. Printing is suppressed if
-    unit\_diagnostics < 0. The default value is 6.
-
-``unit_warning``
-    is a scalar of type default ``INTEGER`` that holds the unit number
-    for warning messages. Printing is suppressed if unit\_warning < 0.
-    The default value is 6.
-
-``err_est``
-    is a scalar of type default ``INTEGER`` that defines which error
-    estimation scheme for eigenvalues and eigenvectors is to be used by
-    the stopping criterion. Two schemes are implemented. If err\_est =
-    1, residual error bounds are used, namely, a modified Davis-Kahan
-    estimate for the eigenvector error and the Lehmann bounds for the
-    eigenvalue error. (see Section [ssmfe\ :sub:`e`\ xpert:errors:est]).
-    If err\_est = 2, then the eigenvector and eigenvalue errors are
-    estimated by analyzing the convergence curve for the eigenvalues
-    (see Section [ssmfe\ :sub:`e`\ xpert:errors:est]). The default is
-    err\_est = 2. **Restriction:** err\_est = 1 or 2.
-
-``extra_left``
-    is a scalar of type default ``INTEGER`` that holds the number of
-    extra approximate eigenvectors corresponding to leftmost eigenvalues
-    that are of no interest to the user and are iterated solely to
-    enhance convergence. The default is extra\_left = 0.
-    **Restriction:** extra\_left :math:`\ge` 0.
-
-``extra_right``
-    is a scalar of type default ``INTEGER`` that holds the number of
-    extra approximate eigenvectors corresponding to rightmost
-    eigenvalues that are of no interest to the user and are iterated
-    solely to enhance convergence. The default is extra\_right = 0.
-    **Restriction:** extra\_right :math:`\ge` 0.
-
-``left_gap``
-    is a scalar of type ``REAL`` that is only used when left is
-    non-zero, and specifies the minimal acceptable distance between the
-    last computed left eigenvalue and the rest of the spectrum. For
-    ssmfe\_standard() and ssmfe\_generalized(), the last computed left
-    eigenvalue is the rightmost of the computed ones, and for the other
-    procedures it is the leftmost. If set to a negative value
-    :math:`\delta`, the minimal distance is taken as :math:`|\delta|`
-    times the average distance between the computed eigenvalues. Note
-    that for this option to have any effect, the value of mep must be
-    larger than left + right: see
-    Section [ssmfe\ :sub:`e`\ xpert:method] for further explanation. The
-    default value is 0.
-
-``max_left``
-    is a scalar of type default ``INTEGER`` that holds the number of
-    eigenvalues to the left from :math:`\sigma`, or a negative value, if
-    this number is not known (cf.
-    Section [ssmfe\ :sub:`e`\ xpert:sec:si]). The default is max\_left =
-    -1.
-
-``max_right``
-    is a scalar of type default ``INTEGER`` that holds the number of
-    eigenvalues to the right from :math:`\sigma`, or a negative value,
-    if this number is not known. (cf.
-    Section [ssmfe\ :sub:`e`\ xpert:sec:si]). The default is max\_right
-    = -1.
-
-``minAprod``
-    is a scalar of type default ``LOGICAL`` that determines whether the
-    number of multiplications by :math:`A` is to be reduced at the
-    expense of memory. If :math:`{\tt minAprod = .false.}`, on each
-    iteration three returns to the user with rci%job = 1 are made for
-    multiplications of rci%nx vectors by :math:`A`. Otherwise, only one
-    such return is made at each iteration but the number kw of blocks in
-    the user’s work array W must be increased by 2. The default is
-    minAprod = .true.. **Restriction:** minAprod = .true. for
-    ssmfe\_standard\_shift(), ssmfe\_generalized\_shift() and
-    ssmfe\_buckling().
-
-``minBprod``
-    is a scalar of type default ``LOGICAL`` that determines whether the
-    number of multiplications by :math:`B` is to be reduced at the
-    expense of memory. If :math:`{\tt minBprod = .false.}`, on each
-    iteration at least three returns to the user with rci%job = 3 are
-    made for multiplications of rci%nx vectors by :math:`B`. Otherwise,
-    only one such return is made at each iteration but the number kw of
-    blocks in the user’s work array W must be increased by 2. The
-    default is minBprod = .true..
-
-``right_gap``
-    is a scalar of type ``REAL`` that is only used by ssmfe\_shift,
-    ssmfe\_gen\_shift and ssmfe\_buckling with a non-zero right, and has
-    the same meaning as options%left\_gap but for the rightmost computed
-    eigenvalue. The default value is 0.
-
-``user_x``
-    is a scalar of type default ``INTEGER``. If user\_x > 0 then the
-    first user\_x columns of x(:,:) will be used as initial guesses for
-    eigenvectors. Hence, if the user has good approximations to some of
-    the required eigenvectors, the computation time may be reduced by
-    putting these approximations into the first user\_x columns of
-    x(:,:). The default value is 0, i.e. the columns of x(:,:) are
-    overwritten by the solver. **Restriction:** 0 :math:`\le` user\_x
-    :math:`\le` m, the first user\_x columns in x(:,:) must be linearly
-    independent.
-
-``type(ssmfe_inform)``
-----------------------
-
-The derived data type ssmfe\_inform is used to hold information from the
-execution of the solver procedures. The components are:
-
-``converged``
-    is a rank-1 allocatable array of type default ``INTEGER`` that is
-    allocated to have size mep on a call with rci%job = 0 or 999. If, on
-    some iteration i, an eigenpair (lambda(j), X(j)) has been accepted
-    as converged, then converged(j) = i; if the convergence stagnated
-    then converged(j) = -i; otherwise converged(j) = 0.
-
-``err_lambda``
-    is a rank-1 allocatable array of type REAL that is allocated to have
-    size mep on a call with rci%job = 0 or 999. err\_lmd(i) contains the
-    estimated eigenvalue error for the approximate eigenvalue lambda(i)
-    if info%converged(i) is non-zero, and -1.0 otherwise.
-
-``err_x``
-    is a rank-1 allocatable array of type REAL. This array is allocated
-    to have size mep on a call with rci%job = 0 or 999, and is used for
-    storing the eigenvector errors in the same way as err\_lmd is used
-    for storing the eigenvalue errors.
-
-``flag``
-    is a scalar of type default ``INTEGER`` that is used as an error
-    flag. If a call is successful, flag has value 0. A nonzero value of
-    flag indicates an error or a warning (see
-    Section [ssmfe\ :sub:`e`\ xpert:errors]).
-
-``iteration``
-    is a scalar of type default ``INTEGER`` that holds the number of
-    iterations since the previous rci%job = 0 or rci%job = 999 call.
-
-``left``
-    is a scalar of type default ``INTEGER`` that holds the number of
-    converged eigenvalues on the left, i.e. the total number of
-    converged eigenpairs of or the number of the converged eigenvalues
-    of or to the left of sigma.
-
-``next_left``
-    is a scalar of type default REAL that holds the non-converged
-    eigenvalue next to the last converged on the left (cf.
-    options%left\_gap).
-
-``next_right``
-    is a scalar of type default REAL that holds the non-converged
-    eigenvalue next to the last converged on the right (cf.
-    options%right\_gap).
-
-``non_converged``
-    is a scalar of type default ``INTEGER`` that holds the number of
-    non-converged eigenpairs (see
-    Section [ssmfe\ :sub:`e`\ xpert:errors]).
-
-``residual_norms``
-    is a rank-1 allocatable array of type default REAL that is allocated
-    to have size mep on a call with rci%job = 0 or 999. On returns with
-    rci%job = 5, residual\_norms(i) contains the Euclidean norm of the
-    residual for lambda(i), X(i).
-
-``right``
-    is a scalar of type default ``INTEGER`` that holds the number of
-    converged eigenvalues of or to the right of sigma.
-
-``stat``
-    is a scalar of type default ``INTEGER`` that holds the allocation
-    status (see Section [ssmfe\ :sub:`e`\ xpert:errors]).
-
-Error flags
-===========
-
-A successful return from a solver procedure is indicated by
-inform%flag\ :math:`=`\ 0. A negative value indicates an error, a
-positive value indicates a warning.
-
-Possible negative values of inform%flag are as follows:
-
-  -1 Incorrect value of rci%job.
-
-  -2 Block size m is out-of-range.
-
-  -3 Incorrect value of options%err\_est.
-
-  -4 Incorrect value of options%minAprod.
-
-  -5 Incorrect value of options%extra\_left or options%extra\_right.
-
-  -6 Incorrect value of options%min\_gap.
-
- -11 Incorrect value of left.
-
- -12 Incorrect value of right.
-
- -13 mep is less than the number of desired eigenpairs.
-
--100 Not enough memory; inform%stat contains the value of the Fortran
-stat parameter.
-
--200 :math:`B` is not positive definite or initial eigenvectors are
-linearly dependent.
-
-Possible positive values are:
-
-1 The iterations have been terminated because no further improvement in
-accuracy is possible (this may happen if the preconditioner is not
-positive definite, or if the components of the residual vectors are so
-small that the round-off errors make them essentially random). The value
-of inform%non\_converged is set to the number of non-converged
-eigenpairs.
-
-2 The maximal number of iterations has been exceeded. The value of
-inform%non\_converged is set to the number of non-converged eigenpairs.
-
-3 Out of storage space for the converged eigenpairs. The value of
-inform%non\_converged is set to the number of non-converged eigenpairs.
-
+======
 Method
 ======
 
 The algorithm
 -------------
 
-The solver procedures of ``SPRAL_SSMFE_EXPERT`` are interfaces to solver
-procedures of ``SPRAL_SSMFE_CORE``, which implement a block iterative
+The solver procedures of :f:mod:`spral_ssmfe_expert` are interfaces to solver
+procedures of :f:mod:`spral_ssmfe_core`, which implement a block iterative
 algorithm based on the Jacobi-conjugate preconditioned gradients method
-[2,3]. Further information on the algorithm used by
-``SPRAL_SSMFE_EXPERT`` can be found in the specification document for
-``SPRAL_SSMFE_CORE`` and in [1].
+[2]_, [3]_. Further information on the algorithm used by
+:f:mod:`spral_ssmfe_expert` can be found in the specification document for
+:f:mod:`spral_ssmfe_core` and in [1]_.
 
 Stopping criteria
 -----------------
@@ -680,30 +1098,26 @@ Stopping criteria
 An approximate eigenpair :math:`\{x,\lambda\}` is considered to have
 converged if the following three conditions are all satisfied:
 
-#. if options%abs\_tol\_lambda and options%rel\_tol\_lambda are not both
+#. if `options%abs_tol_lambda` and `options%rel_tol_lambda` are not both
    equal to zero, then the estimated error in the approximate eigenvalue
    must be less than or equal to
-
-   max(options%abs\_tol\_lambda,
-   :math:`\delta`\ \*options%rel\_tol\_lambda),
-
+   :math:`\max(\mathrm{options\%abs\_tol\_lambda}, \delta*\mathrm{options\%rel\_tol\_lambda})`,
    where :math:`\delta` is the estimated average distance between
    eigenvalues.
 
-#. if options%tol\_x is not zero, then the estimated sine of the angle
+#. if `options%tol_x` is not zero, then the estimated sine of the angle
    between the approximate eigenvector and the invariant subspace
    corresponding to the eigenvalue approximated by :math:`\lambda` must
-   be less than or equal to options%tol\_x.
+   be less than or equal to `options%tol_x`.
 
-#. if options%abs\_tol\_residual and options%rel\_tol\_residual are not
+#. if `options%abs_tol_residual` and `options%rel_tol_residual` are not
    both equal to zero, then the Euclidean norm of the residual,
    :math:`\|A x - \lambda B x\|_2`, must be less than or equal to
-
-   max(options%abs\_tol\_residual,
-   options%rel\_tol\_residual\*\ :math:`\|\lambda B x\|_2`).
+   :math:`\max(\mathrm{options\%abs\_tol\_residual}, \mathrm{options\%rel\_tol\_residual}*\|\lambda B x\|_2)`.
 
 The extra eigenpairs are not checked for convergence, as their role is
 purely auxiliary.
+
 
 Improving eigenvector accuracy
 ------------------------------
@@ -712,20 +1126,20 @@ If the gap between the last computed eigenvalue and the rest of the
 spectrum is small, then the accuracy of the corresponding eigenvector
 may be very low. To prevent this from happening, the user should set the
 eigenpairs storage size mep to a value that is larger than the number of
-desired eigenpairs, and set the options options%left\_gap and
-options%right\_gap to non-zero values :math:`\delta_l` and
+desired eigenpairs, and set the options `options%left_gap` and
+`options%right_gap` to non-zero values :math:`\delta_l` and
 :math:`\delta_r`. These values determine the size of the minimal
 acceptable gaps between the computed eigenvalues and the rest of the
 spectrum, :math:`\delta_l` referring to either leftmost eigenvalues (for
-ssmfe\_standard() and ssmfe\_generalized() only) or those to the left of
-the shift sigma, and :math:`\delta_r` to those to the right of the shift
-sigma. Positive values of :math:`\delta_l` and :math:`\delta_r` set the
-gap explicitly, and negative values require the gap to be not less than
+:f:subr:`ssmfe_standard()` and :f:subr:`ssmfe_generalized()` only) or those
+to the left of the shift `sigma`, and :math:`\delta_r` to those to the right of
+the shift `sigma`. Positive values of :math:`\delta_l` and :math:`\delta_r` set
+the gap explicitly, and negative values require the gap to be not less than
 their absolute value times the average distance between the computed
 eigenvalues. A recommended value of :math:`\delta_l` and
-:math:`\delta_r` is :math:`-0.1`. The value of mep has little effect on
+:math:`\delta_r` is :math:`-0.1`. The value of `mep` has little effect on
 the speed of computation, hence it might be set to any reasonably large
-value. The larger the value of mep, the larger the size of an eigenvalue
+value. The larger the value of `mep`, the larger the size of an eigenvalue
 cluster for which accurate eigenvectors can be computed, notably: to
 safeguard against clusters of size up to :math:`k`, it is sufficient to
 set mep to the number of desired eigenpairs plus :math:`k - 1`.
@@ -739,12 +1153,12 @@ eigenvalues each side of the shift do not exceed the actual numbers of
 these eigenvalues, as the eigenpairs ‘approximating’ non-existing
 eigenpairs of the problem will not converge. It is therefore strongly
 recommended that the user employs a linear system solver that performs
-the LDLT factorization of the shifted system, e.g. HSL\_MA97 or
-SPRAL\_SSIDS. The LDLT factorization of the matrix :math:`A - \sigma B`
-consists in finding a unit lower triangular matrix :math:`L`, a
+the :math:`LDL^T` factorization of the shifted system, e.g. `HSL_MA97` or
+`SPRAL_SSIDS`. The :math:`LDL^T` factorization of the matrix
+:math:`A - \sigma B` consists in finding a lower triangular matrix :math:`L`, a
 block-diagonal matrix :math:`D` with :math:`1\times 1` and
-:math:`2\times 2` blocks on the main diagonal and a permutation matrix
-:math:`P` such that :math:`P^T(A - \sigma B)P = L D L^T`. By inertia
+:math:`2\times 2` blocks on the diagonal and a permutation matrix
+:math:`P` such that :math:`P^T(A - \sigma B)P = L D L^T`. By the inertia
 theorem, the number of eigenvalues to the left and right from the shift
 :math:`\sigma` is equal to the number of negative and positive
 eigenvalues of :math:`D`, which allows quick computation of the
@@ -756,7 +1170,7 @@ Error estimation
 Standard problem
 ~~~~~~~~~~~~~~~~
 
-If options%err\_est = 1, the error estimates for the eigenvalues are
+If ``options%err_est=1``, the error estimates for the eigenvalues are
 based on the eigenvalues of a matrix of the form
 
 .. math::
@@ -804,7 +1218,7 @@ inequality:
 where :math:`\mathcal{X}_{k-1}` is the invariant subspace corresponding
 to :math:`k-1` leftmost eigenvalues.
 
-If options%err\_est\ :math:`=`\ 2 the errors are estimated based on the
+If ``options%err_est=2`` the errors are estimated based on the
 eigenvalue decrements history, which produces an estimate for the
 average eigenvalue error reduction per iteration, which in turn yields
 error estimates for both eigenvalues and eigenvectors. Unlike the
@@ -829,7 +1243,7 @@ then the error tolerances for eigenvalues and eigenvectors must be
 multiplied by :math:`\beta_1` and :math:`\sqrt{\beta_1}` respectively.
 If no estimate for :math:`\|\cdot\|_{B^{-1}}`-norm is available, then
 the use of non-zero residual tolerances and
-options%err\_est\ :math:`=`\ 1 is not recommended. In the case of
+``options%err_est=1`` is not recommended. In the case of
 problems solved by iterations with shift-and-invert and the problem ,
 the residuals are computed as
 :math:`r_j = T B \tilde x_j - \tilde \lambda_j \tilde x_j` where
@@ -844,47 +1258,17 @@ discretization of a differential operator.
 References
 ----------
 
-[1] E. E. Ovtchinnikov and J. Reid. A preconditioned block conjugate
-gradient algorithm for computing extreme eigenpairs of symmetric and
-Hermitian problems. Technical Report RAL-TR-2010-19, 2010.
+.. [1] E. E. Ovtchinnikov and J. Reid (2010).
+   *A preconditioned block conjugate gradient algorithm for computing extreme
+   eigenpairs of symmetric and Hermitian problems*.
+   Technical Report RAL-TR-2010-19.
 
-E. E. Ovtchinnikov, *Jacobi correction equation, line search and
-conjugate gradients in Hermitian eigenvalue computation I: Computing an
-extreme eigenvalue*, SIAM J. Numer. Anal., **46**:2567–2592, 2008.
+.. [2] E. E. Ovtchinnikov (2008).
+   *Jacobi correction equation, line search and conjugate gradients in
+   Hermitian eigenvalue computation I: Computing an extreme eigenvalue*.
+   SIAM J. Numer. Anal., 46:2567–2592.
 
-E. E. Ovtchinnikov, *Jacobi correction equation, line search and
-conjugate gradients in Hermitian eigenvalue computation II: Computing
-several extreme eigenvalues*, SIAM J. Numer. Anal., **46**:2593–2619,
-2008.
-
-Examples
-========
-
-Preconditioning example
------------------------
-
-The following code computes the 5 leftmost eigenpairs of the matrix
-:math:`A` of order 100 that approximates the two-dimensional Laplacian
-operator on a 20-by-20 grid. One forward and one backward Gauss-Seidel
-update are used for preconditioning, which halves the number of
-iterations compared with solving the same problem without
-preconditioning. The module laplace2d
-(``examples/Fortran/ssmfe/laplace2d.f90``) supplies the subroutine
-apply\_laplacian() that multiplies a block of vectors by :math:`A`, and
-the subroutine apply\_gauss\_seidel\_step() that computes
-:math:`y = T x` for a block of vectors :math:`x` by applying one forward
-and one backward update of the Gauss-Seidel method to the system
-:math:`A y = x`. This code produces the following output:
-
-::
-
-      6 eigenpairs converged in 129 iterations
-     lambda( 1) = 4.4676695E-02
-     lambda( 2) = 1.1119274E-01
-     lambda( 3) = 1.1119274E-01
-     lambda( 4) = 1.7770878E-01
-     lambda( 5) = 2.2040061E-01
-     lambda( 6) = 2.2040061E-01
-
-Note that the code computed one extra eigenpair because of the
-insufficient gap between the 5th and 6th eigenvalues.
+.. [3] E. E. Ovtchinnikov (2008).
+   *Jacobi correction equation, line search and conjugate gradients in
+   Hermitian eigenvalue computation II: Computing several extreme eigenvalues*.
+   SIAM J. Numer. Anal., 46:2593–2619.

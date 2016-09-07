@@ -24,6 +24,7 @@ Packages:
    scaling
    ssids
    ssmfe
+   ssmfe_expert
 
 
 Indices and tables
