@@ -443,7 +443,7 @@ Derived types
       error (0 otherwise).
    :f integer cublas_error: CUBLAS error code in the event of a CUBLAS error
       (0 otherwise).
-   :f integer cublas_error: CUDA error code in the event of a CUDA error
+   :f integer cuda_error: CUDA error code in the event of a CUDA error
       (0 otherwise). Note that due to asynchronous execution, CUDA errors may 
       not be reported by the call that caused them.
 
