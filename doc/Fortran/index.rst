@@ -21,6 +21,7 @@ Packages:
 
    lsmr
    random
+   random_matrix
    scaling
    ssids
    ssmfe
