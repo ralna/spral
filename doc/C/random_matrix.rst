@@ -1,6 +1,6 @@
-*************************************************************
+**********************************************
 RANDOM_MATRIX - Pseudo-random Matrix Generator
-*************************************************************
+**********************************************
 
 .. code-block:: C
 
@@ -105,7 +105,20 @@ Macros
 
 The following preprocessor macros are defined:
 
-.. c:macro:: 
+.. c:macro:: SPRAL_RANDOM_MATRIX_FINDEX 1
+
+   Flag to use Fortran indexing on call to
+   :c:func:`spral_random_matrix_generate()`.
+
+.. c:macro:: SPRAL_RANDOM_MATRIX_NONSINGULAR 2
+
+   Flag to generate non-singular matrix on call to
+   :c:func:`spral_random_matrix_generate()`.
+
+.. c:macro:: SPRAL_RANDOM_MATRIX_SORT 4
+
+   Flag to sort row indices on call to
+   :c:func:`spral_random_matrix_generate()`.
 
 =======
 Example
