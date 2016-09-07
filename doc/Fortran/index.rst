@@ -26,6 +26,7 @@ Packages:
    ssids
    ssmfe
    ssmfe_expert
+   ssmfe_core
 
 
 Indices and tables

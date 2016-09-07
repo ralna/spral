@@ -19,11 +19,14 @@ Packages:
 .. toctree::
    :maxdepth: 1
 
-   random
    lsmr
+   random
+   random_matrix
    scaling
    ssids
    ssmfe
+   ssmfe_expert
+   ssmfe_core
 
 
 Indices and tables
