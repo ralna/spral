@@ -70,7 +70,7 @@ Routines
    The scaled matrix is such that the entry of maximum absolute value in each
    row and column is (approximately) :math:`1.0`.
 
-   :p integer n [in]: number of rows in :math:`A`
+   :p integer m [in]: number of rows in :math:`A`
    :p integer n [in]: number of columns in :math:`A`
    :p integer ptr(n+1) [in]: columns pointers for :math:`A` (see :doc:`CSC format<csc_format>`)
    :p integer row(ptr(n+1)-1) [in]: row indices for :math:`A` (see :doc:`CSC format<csc_format>`)
@@ -285,7 +285,7 @@ Routines
    :p integer ptr(n+1) [in]: columns pointers for :math:`A` (see :doc:`CSC format<csc_format>`).
    :p integer row(ptr(n+1)-1) [in]: row indices for :math:`A` (see :doc:`CSC format<csc_format>`).
    :p real val(ptr(n+1)-1) [in]: non-zero values for :math:`A` (see :doc:`CSC format<csc_format>`).
-   :p real rscaling(n) [out]: returns row scaling found by routine.
+   :p real rscaling(m) [out]: returns row scaling found by routine.
    :p real cscaling(n) [out]: returns column scaling found by routine.
    :p equilib_options options [in]: controls behaviour of routine.
    :p equilib_inform inform [out]: returns information on execution of routine.
@@ -413,7 +413,7 @@ Routines
    :p integer ptr(n+1) [in]: columns pointers for :math:`A` (see :doc:`CSC format<csc_format>`).
    :p integer row(ptr(n+1)-1) [in]: row indices for :math:`A` (see :doc:`CSC format<csc_format>`).
    :p real val(ptr(n+1)-1) [in]: non-zero values for :math:`A` (see :doc:`CSC format<csc_format>`).
-   :p real rscaling(n) [out]: returns row scaling found by routine.
+   :p real rscaling(m) [out]: returns row scaling found by routine.
    :p real cscaling(n) [out]: returns column scaling found by routine.
    :p hungarian_options options [in]: controls behaviour of routine.
    :p hungarian_inform inform [out]: returns information on execution of routine.
