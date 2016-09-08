@@ -300,7 +300,7 @@ subroutine get_simple_matrix(m, n, ptr, row, val)
    deallocate(ptr, stat=st)
    deallocate(row, stat=st)
    deallocate(val, stat=st)
-   allocate(ptr(5), row(8), val(8))
+   allocate(ptr(6), row(8), val(8))
 
    ! Set values
    ! ( 2  1         )
@@ -366,7 +366,7 @@ subroutine test_random()
    type(rb_write_options) :: write_options
 
    ! Working variables
-   integer :: problem, flag
+   integer :: problem, flag, st
    integer(long) :: nnz
 
    write(*, "(a)")
@@ -435,8 +435,20 @@ subroutine test_random()
       write(*, "(a)", advance="no") "... "
 
       ! Read random matrix
-      call rb_read(filename, m_in, n_in, ptr64_in, row_in, val_in, &
-         read_options, flag, title=title_in, identifier=id_in)
+      if(random_logical(state)) then
+         ! 32-bit ptr
+         call rb_read(filename, m_in, n_in, ptr32_in, row_in, val_in, &
+            read_options, flag, title=title_in, identifier=id_in)
+         if(allocated(ptr32_in)) then
+            deallocate(ptr64_in, stat=st)
+            allocate(ptr64_in(n_in+1))
+            ptr64_in(1:n_in+1) = ptr32_in(1:n_in+1)
+         endif
+      else
+         ! 64-bit ptr
+         call rb_read(filename, m_in, n_in, ptr64_in, row_in, val_in, &
+            read_options, flag, title=title_in, identifier=id_in)
+      endif
       if(flag.ne.0) then
          write(*, "(a,/,a,i3)") "fail", "rb_read() returned", flag
          errors = errors + 1
