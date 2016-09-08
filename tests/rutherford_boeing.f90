@@ -25,12 +25,11 @@ program rutherford_boeing_test
    integer, parameter :: ERROR_ALLOC       = -20   ! failed on allocate
    integer, parameter :: WARN_AUX_FILE     = 1     ! values in auxiliary file
 
-
    errors = 0
 
    call test_errors
    call test_warnings
-   !call test_random
+   call test_random
 
    write(*, "(/a)") "=========================="
    write(*, "(a,i4)") "Total number of errors = ", errors
@@ -70,12 +69,41 @@ subroutine test_errors()
    call rb_peek(filename, inform, m=m, n=n)
    call test_eq(inform, ERROR_IO)
 
-   ! Not an RB file
+   ! Not an RB file 1
    open(newunit=iunit,file=filename,status='replace')
-   write(iunit,"(a80/a80/a14,4(1x,i13))") &
+   write(iunit,"(a80/a80/a3,11x,4(1x,i13))") &
       "This is", "not an RB file", "xxx", 1, 2, 3, 4
    close(iunit)
-   write(*,"(a)",advance="no") " * Not a valid RB file......................."
+   write(*,"(a)",advance="no") " * Not a valid RB file 1....................."
+   call rb_peek(filename, inform, m=m, n=n)
+   call test_eq(inform, ERROR_NOT_RB)
+
+   ! Not an RB file 2
+   open(newunit=iunit,file=filename,status='replace')
+   write(iunit,"(a80/a80/a3,11x,4(1x,i13))") &
+      "This is", "not an RB file", "rxx", 1, 2, 3, 4
+   close(iunit)
+   write(*,"(a)",advance="no") " * Not a valid RB file 2....................."
+   call rb_peek(filename, inform, m=m, n=n)
+   call test_eq(inform, ERROR_NOT_RB)
+
+   ! Not an RB file 3
+   open(newunit=iunit,file=filename,status='replace')
+   write(iunit,"(a80/a80/a3,11x,4(1x,i13))") &
+      "This is", "not an RB file", "rsx", 1, 2, 3, 4
+   close(iunit)
+   write(*,"(a)",advance="no") " * Not a valid RB file 3....................."
+   call rb_peek(filename, inform, m=m, n=n)
+   call test_eq(inform, ERROR_NOT_RB)
+
+   ! Not an RB file 4
+   open(newunit=iunit,file=filename,status='replace')
+   write(iunit,"(a72,a8)") "Matrix", "ID"
+   write(iunit,"(i14, 1x, i13, 1x, i13, 1x, i13)") 5, 1, 1, 3
+   write(iunit, "(a3, 11x, i14, 1x, i13, 1x, i13, 1x, i13)") &
+      "rsa", 5, 5, 8, 1
+   close(iunit)
+   write(*,"(a)",advance="no") " * Not a valid RB file 4....................."
    call rb_peek(filename, inform, m=m, n=n)
    call test_eq(inform, ERROR_NOT_RB)
 
@@ -103,13 +131,47 @@ subroutine test_errors()
    call rb_read(filename, m, n, ptr, row, val, read_options, inform)
    call test_eq(inform, ERROR_IO)
 
-   ! Not an RB file
+   ! Not an RB file 1
    open(newunit=iunit,file=filename,status='replace')
-   write(iunit,"(a80/a80/a14,4(1x,i13))") &
+   write(iunit,"(a80/a80/a3,11x,4(1x,i13))") &
       "This is", "not an RB file", "xxx", 1, 2, 3, 4
    close(iunit)
    read_options = default_read_options
-   write(*,"(a)",advance="no") " * Not a valid RB file......................."
+   write(*,"(a)",advance="no") " * Not a valid RB file 1....................."
+   call rb_read(filename, m, n, ptr, row, val, read_options, inform)
+   call test_eq(inform, ERROR_NOT_RB)
+
+   ! Not an RB file 2
+   open(newunit=iunit,file=filename,status='replace')
+   write(iunit,"(a80/a80/a3,11x,4(1x,i13))") &
+      "This is", "not an RB file", "rxx", 1, 2, 3, 4
+   close(iunit)
+   read_options = default_read_options
+   write(*,"(a)",advance="no") " * Not a valid RB file 2....................."
+   call rb_read(filename, m, n, ptr, row, val, read_options, inform)
+   call test_eq(inform, ERROR_NOT_RB)
+
+   ! Not an RB file 3
+   open(newunit=iunit,file=filename,status='replace')
+   write(iunit,"(a80/a80/a3,11x,4(1x,i13))") &
+      "This is", "not an RB file", "rsx", 1, 2, 3, 4
+   close(iunit)
+   read_options = default_read_options
+   write(*,"(a)",advance="no") " * Not a valid RB file 3....................."
+   call rb_read(filename, m, n, ptr, row, val, read_options, inform)
+   call test_eq(inform, ERROR_NOT_RB)
+
+   ! Not an RB file 4
+   open(newunit=iunit,file=filename,status='replace')
+   write(iunit,"(a72,a8)") "Matrix", "ID"
+   write(iunit,"(i14, 1x, i13, 1x, i13, 1x, i13)") 5, 1, 1, 3
+   write(iunit, "(a3, 11x, i14, 1x, i13, 1x, i13, 1x, i13)") &
+      "rsa", 5, 5, 8, 1
+   write(iunit, "(a16, a16, a20)") "(40i2)", "(40i2)", "(3e24.16)"
+   write(iunit, "(40i2)") 1, 3, 6, 8, 8, 9
+   close(iunit)
+   read_options = default_read_options
+   write(*,"(a)",advance="no") " * Not a valid RB file 4....................."
    call rb_read(filename, m, n, ptr, row, val, read_options, inform)
    call test_eq(inform, ERROR_NOT_RB)
 
