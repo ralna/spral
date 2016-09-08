@@ -174,7 +174,7 @@ Exit status codes
    +------------+-------------------------------------------------------------+
    | -20        | Memory allocation failed.                                   |
    +------------+-------------------------------------------------------------+
-   | +1         | Values are stored in an auxiliary file (not read)            |
+   | +1         | Values are stored in an auxiliary file (not read)           |
    +------------+-------------------------------------------------------------+
 
 
@@ -214,7 +214,7 @@ Derived types
       |             | randomly generate symmetric values.                     |
       +-------------+---------------------------------------------------------+
       | 3           | Read values from file. If no values are present,        |
-      |             | randomly generate symmetric, diagonally dominant       |
+      |             | randomly generate symmetric, diagonally dominant        |
       |             | values.                                                 |
       +-------------+---------------------------------------------------------+
       | 4           | Read values from file. If no values are present,        |
@@ -223,7 +223,7 @@ Derived types
       | -2          | Randomly generate symmetric values. Any values in file  |
       |             | are ignored.                                            |
       +-------------+---------------------------------------------------------+
-      | -3          | Randomly generate symmetric, diagonally dominant       |
+      | -3          | Randomly generate symmetric, diagonally dominant        |
       |             | values. Any values in file are ignored.                 |
       +-------------+---------------------------------------------------------+
       | -4          | Randomly generate (unsymmetric) values. Any values in   |
