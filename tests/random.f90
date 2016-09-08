@@ -7,6 +7,7 @@ program random
    use spral_random
    implicit none
 
+   integer, parameter :: long = selected_int_kind(18)
    integer, parameter :: wp = kind(0d0)
 
    integer, parameter :: nsamples = 50000
@@ -18,7 +19,8 @@ program random
    errors = 0
 
    call test_real_dist()
-   call test_integer_dist()
+   call test_integer32_dist()
+   call test_integer64_dist()
    call test_logical_dist()
 
    if(errors.eq.0) then
@@ -91,7 +93,7 @@ subroutine test_real_dist
 
 end subroutine test_real_dist
 
-subroutine test_integer_dist
+subroutine test_integer32_dist
    type(random_state) :: state
 
    integer :: i
@@ -100,10 +102,9 @@ subroutine test_integer_dist
    integer :: sample
 
    write(*, "(/a)") "====================================="
-   write(*, "(a)") "Testing random_integer()"
+   write(*, "(a)") "Testing random_integer() 32-bit"
    write(*, "(a)") "====================================="
 
-   
    !
    ! Test (1,...,n) distribution
    !
@@ -124,8 +125,41 @@ subroutine test_integer_dist
          chisq_pval(nbins-1, require_confidence)
       errors = errors + 1
    endif
-   
-end subroutine test_integer_dist
+end subroutine test_integer32_dist
+
+subroutine test_integer64_dist
+   type(random_state) :: state
+
+   integer :: i
+   integer :: bin(nbins)
+   real(wp) :: chisq
+   integer(long) :: sample
+
+   write(*, "(/a)") "====================================="
+   write(*, "(a)") "Testing random_integer() 64-bit"
+   write(*, "(a)") "====================================="
+
+   !
+   ! Test (1,...,n) distribution
+   !
+   write(*, "(a)", advance="no") "Sampling Unif(1,...,n)... "
+   ! Acquire sample
+   bin(:) = 0
+   do i = 1, nsamples
+      sample = random_integer(state,int(nbins,long))
+      bin(sample) = bin(sample) + 1
+   end do
+   chisq = 1.0_wp/nsamples * sum( (bin(:)**2.0_wp) * nbins ) - nsamples
+   if(chisq < chisq_pval(nbins-1, require_confidence)) then
+      write(*, "(a)") "pass"
+   else
+      write(*, "(a)") "fail"
+      write(*, "(a,es12.4)") "chisq statistic = ", chisq
+      write(*, "(a,es12.4)") "chisq required  < ", &
+         chisq_pval(nbins-1, require_confidence)
+      errors = errors + 1
+   endif
+end subroutine test_integer64_dist
 
 subroutine test_logical_dist
    type(random_state) :: state
