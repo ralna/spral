@@ -22,6 +22,7 @@ Packages:
    lsmr
    random
    random_matrix
+   rutherford_boeing
    scaling
    ssids
    ssmfe

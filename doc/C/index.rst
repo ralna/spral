@@ -23,6 +23,7 @@ Packages:
    matrix_util
    random
    random_matrix
+   rutherford_boeing
    scaling
    ssids
    ssmfe
