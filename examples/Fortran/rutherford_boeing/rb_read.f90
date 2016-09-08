@@ -11,7 +11,7 @@ program rb_read_example
    integer, parameter :: wp = kind(0d0)
 
    ! Matrix data
-   character(len=72), allocatable :: title
+   character(len=72) :: title
    integer :: m, n
    integer(long), dimension(:), allocatable :: ptr
    integer, dimension(:), allocatable :: row
@@ -26,7 +26,7 @@ program rb_read_example
       title=title)
 
    ! Print matrix
-   write(*, "(3a)") "Matrix '", title, "'"
+   write(*, "(3a)") "Matrix '", trim(title), "'"
    call print_matrix(6, -1, SPRAL_MATRIX_REAL_SYM_INDEF, m, n, ptr, row, val)
 
 end program rb_read_example
