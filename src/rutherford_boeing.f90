@@ -32,12 +32,11 @@ module spral_rutherford_boeing
 
    ! Possible error returns
    integer, parameter :: SUCCESS           =  0 ! No errors
-   integer, parameter :: ERROR_UNIT        = -1 ! Failed to find a unit
-   integer, parameter :: ERROR_BAD_FILE    = -2 ! Failed to open file
-   integer, parameter :: ERROR_NOT_RB      = -3 ! Header not valid for RB
-   integer, parameter :: ERROR_IO          = -4 ! Error return from io
-   integer, parameter :: ERROR_TYPE        = -5 ! Tried to read bad type
-   integer, parameter :: ERROR_ELT_ASM     = -6 ! Read elt as asm or v/v
+   integer, parameter :: ERROR_BAD_FILE    = -1 ! Failed to open file
+   integer, parameter :: ERROR_NOT_RB      = -2 ! Header not valid for RB
+   integer, parameter :: ERROR_IO          = -3 ! Error return from io
+   integer, parameter :: ERROR_TYPE        = -4 ! Tried to read bad type
+   integer, parameter :: ERROR_ELT_ASM     = -5 ! Read elt as asm or v/v
    integer, parameter :: ERROR_EXTRA_SPACE = -10 ! control%extra_space<1.0
    integer, parameter :: ERROR_LWR_UPR_FULL= -11 ! control%lwr_up_full oor
    integer, parameter :: ERROR_VALUES      = -13 ! control%values oor
@@ -277,7 +276,6 @@ contains
 
       ! Below variables are required for calling f77 MC56
       integer, dimension(10) :: icntl
-      integer, dimension(5) :: f77info
       integer, dimension(:), allocatable :: ival
 
       ! Shadow variables for type_code, title and identifier (as arguments
@@ -420,8 +418,7 @@ contains
       select case(r_type_code(1:1))
       case ("r") ! Real
          call read_data_real(iunit, r_title, r_identifier, &
-            r_type_code, m, n, nnz, ptr, rcptr, f77info(1), &
-            val=vptr)
+            r_type_code, m, n, nnz, ptr, rcptr, info, val=vptr)
       case ("c") ! Complex
          info = ERROR_TYPE
          goto 100
@@ -433,7 +430,7 @@ contains
          endif
          if(st.ne.0) goto 200
          call read_data_integer(iunit, r_title, r_identifier, &
-            r_type_code, m, n, nnz, ptr, rcptr, f77info(1), val=ival)
+            r_type_code, m, n, nnz, ptr, rcptr, info, val=ival)
          if(icntl(2).ne.1) val(1:nnz) = real(ival)
       case ("p", "q") ! Pattern only
          ! Note: if "q", then values are in an auxilary file we cannot read,
@@ -443,14 +440,10 @@ contains
             info = WARN_AUX_FILE
          endif
          call read_data_real(iunit, r_title, r_identifier, &
-            r_type_code, m, n, nnz, ptr, rcptr, f77info(1))
+            r_type_code, m, n, nnz, ptr, rcptr, info)
          pattern = .true.
       end select
-      if(f77info(1).ne.0) then
-         ! Unexpected error from MC56 call
-         info = -99
-         goto 100
-      endif
+      if(info.lt.0) goto 100 ! error
 
       !
       ! Add any missing diagonal entries
@@ -890,7 +883,7 @@ contains
    !  ==================================================
 
    subroutine read_data_real(lunit, title, key, dattyp, m, nvec, ne, ip, &
-         ind, flag, val)
+         ind, inform, val)
       integer, intent(in) :: lunit ! unit from which to read data
       character(len=72), intent(out) :: title   ! Title read from file
       character(len=8), intent(out) :: key      ! Key read from file
@@ -906,7 +899,7 @@ contains
       integer(long), intent(out) :: ne ! Number of entries in matrix
       integer(long), dimension(*), intent(out) :: ip ! Column/Element pointers
       integer, dimension(*), intent(out) :: ind ! Row/Element indices
-      integer, intent(out) :: flag ! Return code
+      integer, intent(inout) :: inform ! Return code
       real(wp), dimension(*), optional, intent(out) :: val ! If present,
          ! and DATTYP is not equal to ord, ipt, or icv, returns the numerical
          ! data.
@@ -916,30 +909,49 @@ contains
       integer(long) :: nreal
       character(len=16) :: ptrfmt, indfmt
       character(len=20) :: valfmt
-
-      flag = 0
+      integer :: iost
 
       ! Read in header block
-      read (lunit,'(a72,a8/a80/a80)') title, key, buffer1, buffer2
+      read (lunit,'(a72,a8/a80/a80)', iostat=iost) title, key, buffer1, buffer2
+      if(iost.ne.0) then
+         inform = ERROR_IO
+         return
+      endif
 
       ! Check we have matrix data
       if (buffer2(3:3).ne.'e' .and. buffer2(3:3).ne.'a') then
          ! Not matrix data
-         flag = ERROR_TYPE
+         inform = ERROR_TYPE
          return
       endif
 
       ! Read matrix header information
-      read(buffer2,'(a3,11x,4(1x,i13))') dattyp, m, nvec, ne, neltvl
-      read(lunit,'(2a16,a20)') ptrfmt, indfmt, valfmt
+      read(buffer2,'(a3,11x,4(1x,i13))',iostat=iost) dattyp, m, nvec, ne, neltvl
+      if(iost.ne.0) then
+         inform = ERROR_IO
+         return
+      endif
+      read(lunit,'(2a16,a20)',iostat=iost) ptrfmt, indfmt, valfmt
+      if(iost.ne.0) then
+         inform = ERROR_IO
+         return
+      endif
 
       ! Read ip array
       np1 = nvec+1
       if (dattyp(3:3).eq.'e' .and. dattyp(2:2).eq.'r') np1=2*nvec+1
-      read(lunit,ptrfmt) ip(1:np1)
+      read(lunit,ptrfmt,iostat=iost) ip(1:np1)
+      if(iost.ne.0) then
+         inform = ERROR_IO
+         return
+      endif
 
       ! Read ind array
-      read(lunit,indfmt) ind(1:ne)
+      read(lunit,indfmt,iostat=iost) ind(1:ne)
+      if(iost.ne.0) then
+         inform = ERROR_IO
+         return
+      endif
 
       if (dattyp(1:1).eq.'p' .or. dattyp(1:1).eq.'x') return ! pattern only
 
@@ -947,13 +959,17 @@ contains
          ! read values
          nreal = ne
          if (neltvl.gt.0) nreal = neltvl
-         read(lunit,valfmt) val(1:nreal)
+         read(lunit,valfmt,iostat=iost) val(1:nreal)
+         if(iost.ne.0) then
+            inform = ERROR_IO
+            return
+         endif
       endif
 
    end subroutine read_data_real
 
    subroutine read_data_integer(lunit, title, key, dattyp, m, nvec, ne, ip, &
-         ind, flag, val)
+         ind, inform, val)
       integer, intent(in) :: lunit ! unit from which to read data
       character(len=72), intent(out) :: title   ! Title read from file
       character(len=8), intent(out) :: key      ! Key read from file
@@ -969,7 +985,7 @@ contains
       integer(long), intent(out) :: ne ! Number of entries in matrix
       integer(long), dimension(*), intent(out) :: ip ! Column/Element pointers
       integer, dimension(*), intent(out) :: ind ! Row/Element indices
-      integer, intent(out) :: flag ! Return code
+      integer, intent(inout) :: inform ! Return code
       integer, dimension(*), optional, intent(out) :: val ! If present,
          ! and DATTYP is not equal to ord, ipt, or icv, returns the numerical
          ! data.
@@ -979,30 +995,49 @@ contains
       integer(long) :: nreal
       character(len=16) :: ptrfmt, indfmt
       character(len=20) :: valfmt
-
-      flag = 0
+      integer :: iost
 
       ! Read in header block
-      read (lunit,'(a72,a8/a80/a80)') title, key, buffer1, buffer2
+      read (lunit,'(a72,a8/a80/a80)',iostat=iost) title, key, buffer1, buffer2
+      if(iost.ne.0) then
+         inform = ERROR_IO
+         return
+      endif
 
       ! Check we have matrix data
       if (buffer2(3:3).ne.'e' .and. buffer2(3:3).ne.'a') then
          ! Not matrix data
-         flag = ERROR_TYPE
+         inform = ERROR_TYPE
          return
       endif
 
       ! Read matrix header information
-      read(buffer2,'(a3,11x,4(1x,i13))') dattyp, m, nvec, ne, neltvl
-      read(lunit,'(2a16,a20)') ptrfmt, indfmt, valfmt
+      read(buffer2,'(a3,11x,4(1x,i13))',iostat=iost) dattyp, m, nvec, ne, neltvl
+      if(iost.ne.0) then
+         inform = ERROR_IO
+         return
+      endif
+      read(lunit,'(2a16,a20)',iostat=iost) ptrfmt, indfmt, valfmt
+      if(iost.ne.0) then
+         inform = ERROR_IO
+         return
+      endif
 
       ! Read ip array
       np1 = nvec+1
       if (dattyp(3:3).eq.'e' .and. dattyp(2:2).eq.'r') np1=2*nvec+1
-      read(lunit,ptrfmt) ip(1:np1)
+      read(lunit,ptrfmt,iostat=iost) ip(1:np1)
+      if(iost.ne.0) then
+         inform = ERROR_IO
+         return
+      endif
 
       ! Read ind array
-      read(lunit,indfmt) ind(1:ne)
+      read(lunit,indfmt,iostat=iost) ind(1:ne)
+      if(iost.ne.0) then
+         inform = ERROR_IO
+         return
+      endif
 
       if (dattyp(1:1).eq.'p' .or. dattyp(1:1).eq.'x') return ! pattern only
 
@@ -1010,7 +1045,11 @@ contains
          ! read values
          nreal = ne
          if (neltvl.gt.0) nreal = neltvl
-         read(lunit,valfmt) val(1:nreal)
+         read(lunit,valfmt,iostat=iost) val(1:nreal)
+         if(iost.ne.0) then
+            inform = ERROR_IO
+            return
+         endif
       endif
 
    end subroutine read_data_integer
