@@ -16,7 +16,7 @@ is not supported. If it is required to read and write these files, we
 recommend the use of the HSL routines
 `MC55 <http://www.hsl.rl.ac.uk/catalogue/mc55.html>`_ and
 `MC56 <http://www.hsl.rl.ac.uk/catalogue/mc56.html>`_ that are available
-for free (though redistrbution is not permitted).
+for free (though redistribution is not permitted).
 
 Version history
 ---------------
@@ -68,7 +68,7 @@ Subroutines
    Returns information about a matrix :math:`A` stored in specified file (only
    information from the file header is accessed).
 
-   :p chracter(len=*) filename [in]: File to read.
+   :p character(len=*) filename [in]: File to read.
    :p integer inform [out]: Exit status, see :ref:`table below <exit_status>`.
    :o integer m [out]: Number of rows in :math:`A`.
    :o integer n [out]: Number of columns in :math:`A`.
@@ -93,7 +93,7 @@ Subroutines
    :o logical no_rewind [in]: If present and `.true.`, the file is not rewound
       after reading the header.
 
-.. f:subroutine:: rb_read(filename,m,n,ptr,row,val,options,inform,type_code,title,identifier,state)
+.. f:subroutine:: rb_read(filename,m,n,ptr,row,val,options,inform[,type_code,title,identifier,state])
 
    Reads a CSC format matrix from the specified file.
 
@@ -174,7 +174,7 @@ Exit status codes
    +------------+-------------------------------------------------------------+
    | -20        | Memory allocation failed.                                   |
    +------------+-------------------------------------------------------------+
-   | +1         | Values are stored in an auxilary file (not read)            |
+   | +1         | Values are stored in an auxiliary file (not read)            |
    +------------+-------------------------------------------------------------+
 
 
@@ -214,7 +214,7 @@ Derived types
       |             | randomly generate symmetric values.                     |
       +-------------+---------------------------------------------------------+
       | 3           | Read values from file. If no values are present,        |
-      |             | randomly generate symmetric, diagonally dominanat       |
+      |             | randomly generate symmetric, diagonally dominant       |
       |             | values.                                                 |
       +-------------+---------------------------------------------------------+
       | 4           | Read values from file. If no values are present,        |
@@ -223,7 +223,7 @@ Derived types
       | -2          | Randomly generate symmetric values. Any values in file  |
       |             | are ignored.                                            |
       +-------------+---------------------------------------------------------+
-      | -3          | Randomly generate symmetric, diagonally dominanat       |
+      | -3          | Randomly generate symmetric, diagonally dominant       |
       |             | values. Any values in file are ignored.                 |
       +-------------+---------------------------------------------------------+
       | -4          | Randomly generate (unsymmetric) values. Any values in   |
@@ -289,7 +289,7 @@ Method
 Generation of random values
 ---------------------------
 
-Values are generated uniformally at random from :math:`[-1,1]`.
+Values are generated uniformly at random from :math:`[-1,1]`.
 If a diagonally dominant matrix is requested, the diagonal entry in each
 row is set to :math:`\max(100, 10k)`, where `k` is the number of entries
 in the column.
