@@ -12,22 +12,25 @@ program rutherford_boeing_test
 
    integer :: errors
 
-   ! Possible error returns
-   integer, parameter :: SUCCESS           =  0 ! No errors
-   integer, parameter :: ERROR_BAD_FILE    = -1 ! Failed to open file
-   integer, parameter :: ERROR_NOT_RB      = -2 ! Header not valid for RB
-   integer, parameter :: ERROR_IO          = -3 ! Error return from io
-   integer, parameter :: ERROR_TYPE        = -4 ! Tried to read bad type
-   integer, parameter :: ERROR_ELT_ASM     = -5 ! Read elt as asm or v/v
-   integer, parameter :: ERROR_EXTRA_SPACE = -10 ! control%extra_space<1.0
-   integer, parameter :: ERROR_LWR_UPR_FULL= -11 ! control%lwr_up_full oor
-   integer, parameter :: ERROR_VALUES      = -13 ! control%values oor
-   integer, parameter :: ERROR_ALLOC       = -20 ! failed on allocate
+   ! Return codes
+   integer, parameter :: SUCCESS           =  0    ! No errors
+   integer, parameter :: ERROR_BAD_FILE    = -1    ! Failed to open file
+   integer, parameter :: ERROR_NOT_RB      = -2    ! Header not valid for RB
+   integer, parameter :: ERROR_IO          = -3    ! Error return from io
+   integer, parameter :: ERROR_TYPE        = -4    ! Tried to read bad type
+   integer, parameter :: ERROR_ELT_ASM     = -5    ! Read elt as asm or v/v
+   integer, parameter :: ERROR_EXTRA_SPACE = -10   ! control%extra_space<1.0
+   integer, parameter :: ERROR_LWR_UPR_FULL= -11   ! control%lwr_up_full oor
+   integer, parameter :: ERROR_VALUES      = -13   ! control%values oor
+   integer, parameter :: ERROR_ALLOC       = -20   ! failed on allocate
+   integer, parameter :: WARN_AUX_FILE     = 1     ! values in auxiliary file
+
 
    errors = 0
 
    call test_errors
-   call test_random
+   call test_warnings
+   !call test_random
 
    write(*, "(/a)") "=========================="
    write(*, "(a,i4)") "Total number of errors = ", errors
@@ -43,6 +46,7 @@ subroutine test_errors()
    integer, dimension(:), allocatable :: ptr, row
    real(wp), dimension(:), allocatable :: val
    type(rb_read_options) :: read_options, default_read_options
+   type(rb_write_options) :: write_options, default_write_options
 
    write(*, "(a)")
    write(*, "(a)") "====================="
@@ -161,7 +165,50 @@ subroutine test_errors()
    call rb_read(filename, m, n, ptr, row, val, read_options, inform)
    call test_eq(inform, ERROR_VALUES)
 
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   write(*,"(/,a)") "rb_write():"
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   ! Failure to open a non-existent file
+   write(*,"(a)",advance="no") " * Failure to open file......................"
+   write_options = default_write_options
+   call get_simple_matrix(m,n,ptr,row,val)
+   call rb_write("/does/not/exist/matrix.rb", "s", m, n, ptr, row, val, &
+      write_options, inform)
+   call test_eq(inform, ERROR_BAD_FILE)
 end subroutine test_errors
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!> Test warnings
+subroutine test_warnings
+   integer :: m, n, inform, iunit
+   integer, dimension(:), allocatable :: ptr, row
+   real(wp), dimension(:), allocatable :: val
+   type(rb_read_options) :: read_options
+
+   write(*, "(a)")
+   write(*, "(a)") "======================="
+   write(*, "(a)") "Testing warning returns"
+   write(*, "(a)") "======================="
+
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   write(*,"(/,a)") "rb_read():"
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   ! Values in auxiliary file
+   open(newunit=iunit,file=filename,status='replace')
+   write(iunit,"(a72,a8)") "Matrix", "ID"
+   write(iunit,"(i14, 1x, i13, 1x, i13, 1x, i13)") 2, 1, 1, 0
+   write(iunit, "(a3, 11x, i14, 1x, i13, 1x, i13, 1x, i13)") &
+      "qsa", 5, 5, 8, 0
+   write(iunit, "(a16, a16, a20)") "(40i2)", "(40i2)", "(3e24.16)"
+   write(iunit, "(40i2)") 1, 3, 6, 8, 8, 9
+   write(iunit, "(40i2)") 1, 2, 2, 3, 5, 3, 4, 5
+   close(iunit)
+   write(*,"(a)",advance="no") " * Values in auxiliary file.................."
+   call rb_read(filename, m, n, ptr, row, val, read_options, inform)
+   call test_eq(inform, WARN_AUX_FILE)
+end subroutine test_warnings
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !> Test (actual.eq.expected).
@@ -180,14 +227,20 @@ subroutine test_eq(actual, expected)
    endif
 end subroutine test_eq
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!> Write simple matrix to file
-subroutine write_simple_matrix()
-   integer :: n, ptr(5), row(8), inform
-   real(wp) :: val(8)
-   type(rb_write_options) :: options
+subroutine get_simple_matrix(m, n, ptr, row, val)
+   integer, intent(out) :: m, n
+   integer, allocatable, intent(inout) :: ptr(:), row(:)
+   real(wp), allocatable, intent(inout) :: val(:)
 
-   ! Data for symmetric matrix
+   integer :: st
+
+   ! Ensure arrays are correct size
+   deallocate(ptr, stat=st)
+   deallocate(row, stat=st)
+   deallocate(val, stat=st)
+   allocate(ptr(5), row(8), val(8))
+
+   ! Set values
    ! ( 2  1         )
    ! ( 1  4  1    8 )
    ! (    1  3  2   )
@@ -197,8 +250,18 @@ subroutine write_simple_matrix()
    ptr(1:n+1)        = (/ 1,        3,             6,      8,8,   9 /)
    row(1:ptr(n+1)-1) = (/ 1,   2,   2,   3,   5,   3,   4,   5   /)
    val(1:ptr(n+1)-1) = (/ 2.0, 1.0, 4.0, 1.0, 8.0, 3.0, 2.0, 2.0 /)
+end subroutine get_simple_matrix
 
-   call rb_write(filename, 's', n, n, ptr, row, val, options, inform)
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!> Write simple matrix to file
+subroutine write_simple_matrix()
+   integer :: m, n, inform
+   integer, allocatable :: ptr(:), row(:)
+   real(wp), allocatable :: val(:)
+   type(rb_write_options) :: options
+
+   call get_simple_matrix(m, n, ptr, row, val)
+   call rb_write(filename, 's', m, n, ptr, row, val, options, inform)
    if(inform.ne.0) then
       print *, "write_simple_matrix: rb_write error. Aborting.", inform
       stop -2
