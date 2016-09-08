@@ -636,8 +636,8 @@ contains
       real(wp), dimension(ptr(n+1)-1), intent(in) :: val
       type(rb_write_options), intent(in) :: options
       integer, intent(out) :: inform
-      character(len=72), optional, intent(in) :: title
-      character(len=8), optional, intent(in) :: id
+      character(len=*), optional, intent(in) :: title
+      character(len=*), optional, intent(in) :: id
 
       character(len=3) :: type
       integer :: i, iunit
@@ -649,6 +649,8 @@ contains
       character(len=72) :: the_title
       character(len=8) :: the_id
       integer :: st
+
+      ! FIXME: check args? incl char lens
 
       inform = 0 ! by default, success
 

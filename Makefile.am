@@ -85,10 +85,14 @@ libspral_a_SOURCES += \
 	src/rutherford_boeing.f90 \
 	interfaces/C/rutherford_boeing.f90
 check_PROGRAMS += \
-	examples/Fortran/rutherford_boeing/rb_read
+	examples/Fortran/rutherford_boeing/rb_read \
+	examples/Fortran/rutherford_boeing/rb_write
 examples_Fortran_rutherford_boeing_rb_read_SOURCES = \
 	examples/Fortran/rutherford_boeing/rb_read.f90
+examples_Fortran_rutherford_boeing_rb_write_SOURCES = \
+	examples/Fortran/rutherford_boeing/rb_write.f90
 examples/Fortran/rutherford_boeing/rb_read.$(OBJEXT): libspral.a
+examples/Fortran/rutherford_boeing/rb_write.$(OBJEXT): libspral.a
 
 # SCALING
 include_HEADERS += include/spral_scaling.h

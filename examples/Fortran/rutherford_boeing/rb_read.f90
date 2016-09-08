@@ -22,7 +22,7 @@ program rb_read_example
    integer :: inform
 
    ! Read matrix
-   call rb_read("matrix_in.rb", m, n, ptr, row, val, options, inform, &
+   call rb_read("matrix.rb", m, n, ptr, row, val, options, inform, &
       title=title)
 
    ! Print matrix

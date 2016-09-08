@@ -247,10 +247,10 @@ Reading a matrix
 
 The following code reads a matrix from the file "matrix.rb":
 
-.. literalinclude:: ../../examples/Fortran/rb/rb_read.f90
+.. literalinclude:: ../../examples/Fortran/rutherford_boeing/rb_read.f90
    :language: Fortran
 
-This returns the following output::
+This produces the following output::
 
    La la la
 
@@ -258,14 +258,22 @@ This returns the following output::
 Writing a matrix
 ----------------
 
-The following code reads a matrix from the file "matrix.rb":
+The following code writes a matrix to the file "matrix.rb":
 
-.. literalinclude:: ../../examples/Fortran/rb/rb_write.f90
+.. literalinclude:: ../../examples/Fortran/rutherford_boeing/rb_write.f90
    :language: Fortran
 
 This produces the following file::
 
-   La la la
+   SPRAL_RUTHERFORD_BOEING test matrix                                     0       
+                5             1             1             3
+   rsa                        5             5             8             0
+   (40i2)          (40i2)          (3e24.16)           
+    1 3 6 8 8 9
+    1 2 2 3 5 3 4 5
+     0.2000000000000000E+01  0.1000000000000000E+01  0.4000000000000000E+01
+     0.1000000000000000E+01  0.8000000000000000E+01  0.3000000000000000E+01
+     0.2000000000000000E+01  0.2000000000000000E+01
 
 ======
 Method
