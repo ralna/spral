@@ -24,6 +24,10 @@ module spral_random_matrix
                          ERROR_NONSQUARE  = -4, & ! m!=n contradicts matrix_type
                          ERROR_SINGULAR   = -5    ! request non-singular
                                                   ! but nnz<min(m,n)
+
+   interface random_matrix_generate
+      module procedure random_matrix_generate32, random_matrix_generate64
+   end interface random_matrix_generate
 contains
 
 !
@@ -31,10 +35,7 @@ contains
 ! User can additionally specify a symmetric matrix (requires m==n), forced
 ! non-singularity, and the sorting of entries within columns.
 !
-! FIXME: This routine will be slow if we're asked for a (near) dense matrix
-! In this case, we might be better served by finding holes or using the first
-! part of random permutations
-subroutine random_matrix_generate(state, matrix_type, m, n, nnz, ptr, row, &
+subroutine random_matrix_generate32(state, matrix_type, m, n, nnz, ptr, row, &
       flag, stat, val, nonsingular, sort)
    type(random_state), intent(inout) :: state ! random generator to use
    integer, intent(in) :: matrix_type ! ignored except for symmetric/unsymmetric
@@ -52,7 +53,53 @@ subroutine random_matrix_generate(state, matrix_type, m, n, nnz, ptr, row, &
    logical, optional, intent(in) :: sort ! sort entries in columns by row index.
       ! If not present, treated as .false.
 
+   integer(long), dimension(:), allocatable :: ptr64
+   integer :: st
+
+   ! Create temporary 64-bit version of ptr
+   allocate(ptr64(n+1), stat=st)
+   if(st.ne.0) then
+      flag = ERROR_ALLOCATION
+      if(present(stat)) stat = st
+      return
+   endif
+
+   ! Call 64-bit version
+   call random_matrix_generate64(state, matrix_type, m, n, int(nnz,long), &
+      ptr64, row, flag, stat=stat, val=val, nonsingular=nonsingular, sort=sort)
+
+   ! ... and copy back to 32-bit ptr
+   ptr(:) = int(ptr64(:))
+end subroutine random_matrix_generate32
+
+!
+! Generate a random m x n matrix with nnz non-zeroes.
+! User can additionally specify a symmetric matrix (requires m==n), forced
+! non-singularity, and the sorting of entries within columns.
+!
+! FIXME: This routine will be slow if we're asked for a (near) dense matrix
+! In this case, we might be better served by finding holes or using the first
+! part of random permutations
+subroutine random_matrix_generate64(state, matrix_type, m, n, nnz, ptr, row, &
+      flag, stat, val, nonsingular, sort)
+   type(random_state), intent(inout) :: state ! random generator to use
+   integer, intent(in) :: matrix_type ! ignored except for symmetric/unsymmetric
+      ! (in future will be used for complex sym vs hermitian at least)
+   integer, intent(in) :: m ! number of rows
+   integer, intent(in) :: n ! number of columns
+   integer(long), intent(in) :: nnz ! number of entries
+   integer(long), dimension(n+1), intent(out) :: ptr ! column pointers
+   integer, dimension(nnz), intent(out) :: row ! row indices
+   integer, intent(out) :: flag ! return code
+   integer, optional, intent(out) :: stat ! allocate error code
+   real(wp), dimension(nnz), optional, intent(out) :: val ! numerical values
+   logical, optional, intent(in) :: nonsingular ! force matrix to be explicitly
+      ! non-singular. If not present, treated as .false.
+   logical, optional, intent(in) :: sort ! sort entries in columns by row index.
+      ! If not present, treated as .false.
+
    integer :: i, j, k, minidx
+   integer(long) :: ii, jj
    integer, dimension(:), allocatable :: cnt, rperm, cperm
    logical, dimension(:), allocatable :: rused
    logical :: lsymmetric, lnonsingular, lsort
@@ -132,8 +179,8 @@ subroutine random_matrix_generate(state, matrix_type, m, n, nnz, ptr, row, &
          cnt(cperm(:)) = cnt(cperm(:)) + 1
       endif
       ! Generate column assignments of remaining entries
-      i = nnz; if(lnonsingular) i = nnz - min(m,n) ! Allow for forced non-sing
-      do i = 1, i
+      ii = nnz; if(lnonsingular) ii = nnz - min(m,n) ! Allow for forced non-sing
+      do ii = 1, ii
          j = random_sym_wt_integer(state, n)
          do while(cnt(j).ge.m-j+1)
             j = random_sym_wt_integer(state, n)
@@ -156,8 +203,8 @@ subroutine random_matrix_generate(state, matrix_type, m, n, nnz, ptr, row, &
          where(cperm(:).le.min(m,n)) cnt(:) = 1
       endif
       ! Generate column assignments of remaining entries
-      i = nnz; if(lnonsingular) i = nnz - min(m,n) ! Allow for forced non-sing
-      do i = 1, i
+      ii = nnz; if(lnonsingular) ii = nnz - min(m,n) ! Allow for forced non-sing
+      do ii = 1, ii
          j = random_integer(state, n)
          do while(cnt(j).ge.m)
             j = random_integer(state, n)
@@ -175,30 +222,30 @@ subroutine random_matrix_generate(state, matrix_type, m, n, nnz, ptr, row, &
    do i = 1, n
       ! Determine end of col
       ptr(i+1) = ptr(i) + cnt(i)
-      j = ptr(i)
+      jj = ptr(i)
       ! Add non-singular entry if required
       if(lnonsingular) then
          if(cperm(i).le.min(m,n)) then
             k = rperm(cperm(i))
-            row(j) = k
+            row(jj) = k
             rused(k) = .true.
-            j = j + 1
+            jj = jj + 1
          endif
       endif
       ! Add normal entries
       minidx = 1
       if(lsymmetric) minidx = i
-      do j = j, ptr(i+1)-1
+      do jj = jj, ptr(i+1)-1
          k = random_integer_in_range(state, minidx, m)
          do while(rused(k))
             k = random_integer_in_range(state, minidx, m)
          end do
-         row(j) = k
+         row(jj) = k
          rused(k) = .true.
       end do
       ! Reset rused(:)
-      do j = ptr(i), ptr(i+1)-1
-         rused(row(j)) = .false.
+      do jj = ptr(i), ptr(i+1)-1
+         rused(row(jj)) = .false.
       end do
    end do
 
@@ -210,8 +257,8 @@ subroutine random_matrix_generate(state, matrix_type, m, n, nnz, ptr, row, &
 
    ! Determine values
    if(present(val)) then
-      do i = 1, ptr(n+1)-1
-         val(i) = random_real(state)
+      do jj = 1, ptr(n+1)-1
+         val(jj) = random_real(state)
       end do
    endif
 
@@ -222,7 +269,7 @@ subroutine random_matrix_generate(state, matrix_type, m, n, nnz, ptr, row, &
    flag = ERROR_ALLOCATION
    if(present(stat)) stat = st
    return
-end subroutine random_matrix_generate
+end subroutine random_matrix_generate64
 
 !
 ! Returns a random number in range [1,n] weighted by number of entries in
@@ -290,12 +337,14 @@ end subroutine random_perm
 subroutine dbl_tr_sort(m, n, ptr, row, st)
    integer, intent(in) :: m
    integer, intent(in) :: n
-   integer, dimension(n+1), intent(in) :: ptr
+   integer(long), dimension(n+1), intent(in) :: ptr
    integer, dimension(ptr(n+1)-1), intent(inout) :: row
    integer, intent(out) :: st
 
    integer :: i, j, node
-   integer, dimension(:), allocatable :: ptr2, nptr, col
+   integer(long) :: ii, jj
+   integer, dimension(:), allocatable :: col
+   integer(long), dimension(:), allocatable :: ptr2, nptr
 
    allocate(ptr2(m+2), stat=st)
    if(st.ne.0) return
@@ -303,8 +352,8 @@ subroutine dbl_tr_sort(m, n, ptr, row, st)
 
    ! Count number of entries in each row. ptr2(i+2) = #entries in row i
    do node = 1, n
-      do i = ptr(node), ptr(node+1)-1
-         j = row(i)
+      do ii = ptr(node), ptr(node+1)-1
+         j = row(ii)
          ptr2(j+2) = ptr2(j+2) + 1
       end do
    end do
@@ -315,14 +364,14 @@ subroutine dbl_tr_sort(m, n, ptr, row, st)
       ptr2(i+2) = ptr2(i+1) + ptr2(i+2)
    end do
 
-   j = ptr2(m+2)-1 ! total number of entries
-   allocate(col(j), stat=st)
+   jj = ptr2(m+2)-1 ! total number of entries
+   allocate(col(jj), stat=st)
    if(st.ne.0) return
 
    ! Now fill in col array
    do node = 1, n
-      do i = ptr(node), ptr(node+1)-1
-         j = row(i) ! row entry
+      do ii = ptr(node), ptr(node+1)-1
+         j = row(ii) ! row entry
          col( ptr2(j+1) ) = node
          ptr2(j+1) = ptr2(j+1) + 1
       end do
@@ -333,8 +382,8 @@ subroutine dbl_tr_sort(m, n, ptr, row, st)
    if(st.ne.0) return
    nptr(:) = ptr(1:n)
    do i = 1, m
-      do j = ptr2(i), ptr2(i+1)-1
-         node = col(j)
+      do jj = ptr2(i), ptr2(i+1)-1
+         node = col(jj)
          row(nptr(node)) = i
          nptr(node) = nptr(node) + 1
       end do
