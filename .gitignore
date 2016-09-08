@@ -9,3 +9,5 @@ depcomp
 install-sh
 missing
 test-driver
+build/*
+*.swp
