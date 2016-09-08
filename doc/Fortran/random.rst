@@ -35,7 +35,9 @@ Random Number Generation
    Return an integer uniformly at random from the interval :math:`[1,n]`.
 
    :p random_state state [inout]: current state of the RNG.
-   :p integer n [in]: largest value in range to be sampled.
+   :p integer n [in]: largest value in range to be sampled. Both default 
+      and long kinds are supported (in the latter case the return type
+      changes to match).
    :r random_integer: Sampled value.
    :rtype random_integer: integer
 
@@ -91,16 +93,18 @@ The following code:
 Produces the following output::
 
    Some random values
-   Sample Unif(-1,1)       =   0.951878630556
-   Sample Unif(0,1)        =   0.395779648796
-   Sample Unif(1, ..., 20) =                3
-   Sample B(1,0.5)         =                F
+   Sample Unif(-1,1)               =   0.951878630556
+   Sample Unif(0,1)                =   0.395779648796
+   Sample Unif(1, ..., 20)         =                3
+   Sample Unif(1, ..., 20*huge(0)) =      33572664025
+   Sample B(1,0.5)                 =                F
 
    The same random values again
-   Sample Unif(-1,1)       =   0.951878630556
-   Sample Unif(0,1)        =   0.395779648796
-   Sample Unif(1, ..., 20) =                3
-   Sample B(1,0.5)         =                F
+   Sample Unif(-1,1)               =   0.951878630556
+   Sample Unif(0,1)                =   0.395779648796
+   Sample Unif(1, ..., 20)         =                3
+   Sample Unif(1, ..., 20*huge(0)) =      33572664025
+   Sample B(1,0.5)                 =                F
 
 ======
 Method
