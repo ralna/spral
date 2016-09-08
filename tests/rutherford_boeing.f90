@@ -308,6 +308,7 @@ subroutine get_simple_matrix(m, n, ptr, row, val)
    ! (    1  3  2   )
    ! (       2      )
    ! (    8       2 )
+   m = 5
    n = 5
    ptr(1:n+1)        = (/ 1,        3,             6,      8,8,   9 /)
    row(1:ptr(n+1)-1) = (/ 1,   2,   2,   3,   5,   3,   4,   5   /)
@@ -353,7 +354,9 @@ subroutine test_random()
    ! Matrix data (to read)
    character(len=72) :: title_in
    character(len=8) :: id_in
+   character(len=3) :: type_code_in
    integer :: m_in, n_in
+   integer(long) :: nelt_in, nvar_in, nval_in
    integer(long), dimension(:), allocatable :: ptr64_in
    integer, dimension(:), allocatable :: ptr32_in, row_in
    real(wp), dimension(:), allocatable :: val_in
@@ -365,7 +368,6 @@ subroutine test_random()
    ! Working variables
    integer :: problem, flag
    integer(long) :: nnz
-   real(wp) :: vdiff
 
    write(*, "(a)")
    write(*, "(a)") "======================="
@@ -388,7 +390,7 @@ subroutine test_random()
       ! Write status line
       write(*,"(a,i5,a,i12,a,2i5,i8,a,i2,a)", advance="no") &
          "Test ", problem, " state ", random_get_seed(state), &
-         " dimn =", m, n, nnz, " type =", matrix_type, " ... "
+         " dimn =", m, n, nnz, " type =", matrix_type, "... "
 
       ! Generate random_matrix
       call random_matrix_generate(state, matrix_type, m, n, nnz, ptr64, row, &
@@ -401,13 +403,36 @@ subroutine test_random()
       ! Write random matrix
       write(title, "(a,i5)") "Test matrix ", problem
       write(id, "(a2,i6)") "ID", problem
-      call rb_write(filename, matrix_type_to_sym(matrix_type), &
-         m, n, ptr64, row, val, write_options, flag, title=title, identifier=id)
+      if(random_logical(state)) then
+         ! 32-bit ptr
+         ptr32(1:n+1) = int( ptr64(1:n+1) )
+         call rb_write(filename, matrix_type_to_sym(matrix_type), &
+            m, n, ptr32, row, val, write_options, flag, title=title, &
+            identifier=id)
+      else
+         ! 64-bit ptr
+         call rb_write(filename, matrix_type_to_sym(matrix_type), &
+            m, n, ptr64, row, val, write_options, flag, title=title, &
+            identifier=id)
+      endif
       if(flag.ne.0) then
          write(*, "(a,/,a,i3)") "fail", "rb_write() returned", flag
          errors = errors + 1
          cycle
       endif
+
+      ! Peek random matrix
+      call rb_peek(filename, flag, m=m_in, n=n_in, nelt=nelt_in, nvar=nvar_in, &
+         nval=nval_in, type_code=type_code_in, title=title_in, identifier=id_in)
+      if(flag.ne.0) then
+         write(*, "(a,/,a,i3)") "fail", "rb_peek() returned", flag
+         errors = errors + 1
+         cycle
+      endif
+      ! Check data
+      if(.not.check_data(m,m_in,n,n_in,title=title,title2=title_in, &
+         id=id,id2=id_in,advance="no")) cycle
+      write(*, "(a)", advance="no") "... "
 
       ! Read random matrix
       call rb_read(filename, m_in, n_in, ptr64_in, row_in, val_in, &
@@ -418,51 +443,90 @@ subroutine test_random()
          cycle
       endif
 
-      ! Check we read the same data we wrote
-      if(m .ne. m_in) then
-         write(*, "(a,/,a,2i8)") "fail", "m != m_in", m, m_in
-         errors = errors + 1
-         cycle
-      endif
-      if(n .ne. n_in) then
-         write(*, "(a,/,a,2i8)") "fail", "n != n_in", n, n_in
-         errors = errors + 1
-         cycle
-      endif
-      if(any(ptr64(1:n+1) .ne. ptr64_in(1:n+1))) then
-         write(*, "(a,/,a)") "fail", "ptr != ptr_in"
-         errors = errors + 1
-         cycle
-      endif
-      if(any(row(1:ptr64(n+1)-1) .ne. row_in(1:ptr64(n+1)-1))) then
-         write(*, "(a,/,a)") "fail", "row != row_in"
-         errors = errors + 1
-         cycle
-      endif
-      vdiff = maxval(abs( val(1:ptr64(n+1)-1) - val_in(1:ptr64(n+1)-1) ))
-      if(vdiff.gt.epsilon(1.0_wp)) then
-         write(*, "(a,/,a,e10.2)") "fail", "val != val_in", vdiff
-         errors = errors + 1
-         cycle
-      endif
-      if(title .ne. title_in) then
-         write(*, "(a,/,a,'''',a,'''',1x,'''',a,'''')") &
-            "fail", "title != title_in", title, title_in
-         errors = errors + 1
-         cycle
-      endif
-      if(id .ne. id_in) then
-         write(*, "(a,/,a,'''',a,'''',1x,'''',a,'''')") &
-            "fail", "id != id_in", id, id_in
-         errors = errors + 1
-         cycle
-      endif
+      ! Check data
+      if(.not.check_data(m,m_in,n,n_in,ptr64,ptr64_in,row,row_in,val,val_in, &
+         title,title_in,id,id_in)) cycle
 
-      ! Otherwise ok
-      write(*, "(a)") "ok"
    end do
 
 end subroutine test_random
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!> Check if two versions of data match. Return .true. if they do, else .false.
+!> Print "pass" or "fail"+details depending on whether it works
+logical function check_data(m, m2, n, n2, ptr, ptr2, row, row2, val, val2, &
+      title, title2, id, id2, advance)
+   integer, intent(in) :: m, m2, n, n2
+   integer, optional, intent(in) :: row(:), row2(:)
+   integer(long), optional, intent(in) :: ptr(:), ptr2(:)
+   real(wp), optional, intent(in) :: val(:), val2(:)
+   character(len=72), optional :: title, title2
+   character(len=8), optional :: id, id2
+   character(len=*), optional :: advance
+
+   real(wp) :: vdiff
+
+   ! Check we read the same data we wrote
+   if(m .ne. m2) then
+      write(*, "(a,/,a,2i8)") "fail", "m != m2", m, m2
+      errors = errors + 1
+      check_data = .false.
+      return
+   endif
+   if(n .ne. n2) then
+      write(*, "(a,/,a,2i8)") "fail", "n != n2", n, n2
+      errors = errors + 1
+      check_data = .false.
+      return
+   endif
+   if(present(ptr)) then
+      if(any(ptr(1:n+1) .ne. ptr2(1:n+1))) then
+         write(*, "(a,/,a)") "fail", "ptr != ptr2"
+         errors = errors + 1
+         check_data = .false.
+         return
+      endif
+   endif
+   if(present(row)) then
+      if(any(row(1:ptr(n+1)-1) .ne. row2(1:ptr(n+1)-1))) then
+         write(*, "(a,/,a)") "fail", "row != row2"
+         errors = errors + 1
+         check_data = .false.
+         return
+      endif
+   endif
+   if(present(val)) then
+      vdiff = maxval(abs( val(1:ptr(n+1)-1) - val2(1:ptr(n+1)-1) ))
+      if(vdiff.gt.epsilon(1.0_wp)) then
+         write(*, "(a,/,a,e10.2)") "fail", "val != val2", vdiff
+         errors = errors + 1
+         check_data = .false.
+         return
+      endif
+   endif
+   if(title .ne. title2) then
+      write(*, "(a,/,a,'''',a,'''',1x,'''',a,'''')") &
+         "fail", "title != title2", title, title2
+      errors = errors + 1
+      check_data = .false.
+      return
+   endif
+   if(id .ne. id2) then
+      write(*, "(a,/,a,'''',a,'''',1x,'''',a,'''')") &
+         "fail", "id != id2", id, id2
+      errors = errors + 1
+      check_data = .false.
+      return
+   endif
+
+   ! Otherwise ok
+   check_data = .true.
+   if(present(advance)) then
+      write(*, "(a)", advance=advance) "pass"
+   else
+      write(*, "(a)") "pass"
+   endif
+end function check_data
 
 character(len=1) function matrix_type_to_sym(matrix_type)
    integer, intent(in) :: matrix_type
