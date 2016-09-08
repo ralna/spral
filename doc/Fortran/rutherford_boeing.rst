@@ -138,9 +138,9 @@ Subroutines
    :p rb_write_options options [in]: Options for writing matrix (see
       :f:type:`rb_write_options`).
    :p integer inform [out]: Exit status, see :ref:`table below <exit_status>`.
-   :o character(len=72) title [out]: Title field of file. Defaults to
+   :o character(len=72) title [in]: Title field of file. Defaults to
       ``"Matrix"`` if not present.
-   :o character(len=8) identifier [out]: Identifier field of file. Defaults to
+   :o character(len=8) identifier [in]: Identifier field of file. Defaults to
       ``"0"`` if not present.
 
 Exit status codes
