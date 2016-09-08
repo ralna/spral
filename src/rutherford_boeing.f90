@@ -250,6 +250,7 @@ contains
 
       ! FIXME: Add an error code if ne > maxint
       if(allocated(ptr64)) then
+         deallocate(ptr, stat=st)
          allocate(ptr(n+1), stat=st)
          if(st.ne.0) then
             info = ERROR_ALLOC
