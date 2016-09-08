@@ -15,8 +15,8 @@ module spral_rutherford_boeing
    public :: rb_peek, &             ! Peeks at the header of a RB file
              rb_read, &             ! Reads a RB file
              rb_write               ! Writes a RB file
-   public :: rb_reader_options, &   ! Options that control what rb_read returns
-             rb_writer_options      ! Options that control what rb_write does
+   public :: rb_read_options, &     ! Options that control what rb_read returns
+             rb_write_options       ! Options that control what rb_write does
 
    ! Possible values control%lwr_upr_full
    integer, parameter :: TRI_LWR  = 1 ! Lower triangle
@@ -46,16 +46,16 @@ module spral_rutherford_boeing
    ! Possible warnings
    integer, parameter :: WARN_AUX_FILE     = 1 ! values in auxiliary file
 
-   type rb_reader_options
+   type rb_read_options
       logical  :: add_diagonal = .false.        ! Add missing diagonal entries
       real     :: extra_space = 1.0             ! Array sizes are mult by this
       integer  :: lwr_upr_full = TRI_LWR   ! Ensure entries in lwr/upr tri
       integer  :: values = VALUES_FILE     ! As per file
-   end type rb_reader_options
+   end type rb_read_options
 
-   type rb_writer_options
+   type rb_write_options
       character(len=20) :: val_format = "(3e24.16)"
-   end type rb_writer_options
+   end type rb_write_options
 
    interface rb_peek
       module procedure rb_peek_file, rb_peek_unit
@@ -237,7 +237,7 @@ contains
       integer, dimension(:), allocatable, target, intent(out) :: row
       integer, dimension(:), allocatable, target, intent(out) :: col
       real(wp), dimension(:), allocatable, target, intent(out) :: val
-      type(rb_reader_options), intent(in) :: control ! control variables
+      type(rb_read_options), intent(in) :: control ! control variables
       integer, intent(out) :: info ! return code
       character(len=3), optional, intent(out) :: type_code ! file data type
       character(len=72), optional, intent(out) :: title ! file title
@@ -271,7 +271,7 @@ contains
       integer, dimension(:), allocatable, target, intent(out) :: row
       integer, dimension(:), allocatable, target, intent(out) :: col
       real(wp), dimension(:), allocatable, target, intent(out) :: val
-      type(rb_reader_options), intent(in) :: control ! control variables
+      type(rb_read_options), intent(in) :: control ! control variables
       integer, intent(out) :: info ! return code
       character(len=3), optional, intent(out) :: type_code ! file data type
       character(len=72), optional, intent(out) :: title ! file title
@@ -595,7 +595,7 @@ contains
       integer, dimension(n+1), intent(in) :: ptr
       integer, dimension(ptr(n+1)-1), intent(in) :: row
       real(wp), dimension(ptr(n+1)-1), intent(in) :: val
-      type(rb_writer_options), intent(in) :: options
+      type(rb_write_options), intent(in) :: options
       integer, intent(out) :: inform
 
       integer(long), dimension(:), allocatable :: ptr64
@@ -638,7 +638,7 @@ contains
       integer(long), dimension(n+1), intent(in) :: ptr
       integer, dimension(ptr(n+1)-1), intent(in) :: row
       real(wp), dimension(ptr(n+1)-1), intent(in) :: val
-      type(rb_writer_options), intent(in) :: options
+      type(rb_write_options), intent(in) :: options
       integer, intent(out) :: inform
       character(len=72), optional, intent(in) :: title
       character(len=8), optional, intent(in) :: id

@@ -8,7 +8,7 @@ program run_prob
 
    integer, parameter :: wp = kind(0d0)
 
-   type(rb_reader_options) :: rb_options
+   type(rb_read_options) :: rb_options
    integer :: rb_flag
 
    ! Matrix description

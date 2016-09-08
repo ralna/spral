@@ -11,13 +11,13 @@ module spral_rutherford_boeing_ciface
       real(C_DOUBLE), dimension(:), allocatable :: val
    end type handle_type
 
-   type, bind(C) :: spral_rboptions
+   type, bind(C) :: spral_rb_read_options
       integer(C_INT) :: array_base
       logical(C_BOOL) :: add_diagonal
       real(C_FLOAT) :: extra_space
       integer(C_INT) :: lwr_upr_full
       integer(C_INT) :: values
-   end type spral_rboptions
+   end type spral_rb_read_options
 
    interface
       !integer(C_SIZE_T) pure function strlen(string) bind(C)
@@ -32,8 +32,8 @@ module spral_rutherford_boeing_ciface
 
 contains
    subroutine copy_options_in(coptions, foptions, cindexed)
-      type(spral_rboptions), intent(in) :: coptions
-      type(rb_reader_options), intent(out) :: foptions
+      type(spral_rb_read_options), intent(in) :: coptions
+      type(rb_read_options), intent(out) :: foptions
       logical, intent(out) :: cindexed
 
       cindexed                = (coptions%array_base.eq.0)
@@ -44,20 +44,20 @@ contains
    end subroutine copy_options_in
 end module spral_rutherford_boeing_ciface
 
-subroutine spral_rb_default_options(coptions) bind(C)
+subroutine spral_rb_read_default_options(coptions) bind(C)
    use spral_rutherford_boeing_ciface
    implicit none
 
-   type(spral_rboptions), intent(out) :: coptions
+   type(spral_rb_read_options), intent(out) :: coptions
 
-   type(rb_reader_options) :: foptions
+   type(rb_read_options) :: foptions
 
    coptions%array_base     = 0
    coptions%add_diagonal   = foptions%add_diagonal
    coptions%extra_space    = foptions%extra_space
    coptions%lwr_upr_full   = foptions%lwr_upr_full
    coptions%values         = foptions%values
-end subroutine spral_rb_default_options
+end subroutine spral_rb_read_default_options
 
 integer(C_INT) function spral_rb_read_i32d(filename, handle, m, n, ptr, row, &
       col, val, options, type_code, title, identifier) bind(C)
@@ -72,7 +72,7 @@ integer(C_INT) function spral_rb_read_i32d(filename, handle, m, n, ptr, row, &
    type(C_PTR), intent(out) :: row
    type(C_PTR), intent(out) :: col
    type(C_PTR), intent(out) :: val
-   type(spral_rboptions), intent(in) :: options
+   type(spral_rb_read_options), intent(in) :: options
    type(C_PTR), value :: type_code
    type(C_PTR), value :: title
    type(C_PTR), value :: identifier
@@ -84,7 +84,7 @@ integer(C_INT) function spral_rb_read_i32d(filename, handle, m, n, ptr, row, &
    character(len=3) :: ftype_code
    character(len=72) :: ftitle
    character(len=8) :: fidentifier
-   type(rb_reader_options) :: foptions
+   type(rb_read_options) :: foptions
    logical :: cindexed
 
    integer :: i
@@ -157,7 +157,7 @@ integer(C_INT) function spral_rb_read_i64d(filename, handle, m, n, ptr, row, &
    type(C_PTR), intent(out) :: row
    type(C_PTR), intent(out) :: col
    type(C_PTR), intent(out) :: val
-   type(spral_rboptions), intent(in) :: options
+   type(spral_rb_read_options), intent(in) :: options
    type(C_PTR), value :: type_code
    type(C_PTR), value :: title
    type(C_PTR), value :: identifier
@@ -169,7 +169,7 @@ integer(C_INT) function spral_rb_read_i64d(filename, handle, m, n, ptr, row, &
    character(len=3) :: ftype_code
    character(len=72) :: ftitle
    character(len=8) :: fidentifier
-   type(rb_reader_options) :: foptions
+   type(rb_read_options) :: foptions
    logical :: cindexed
 
    integer :: i
