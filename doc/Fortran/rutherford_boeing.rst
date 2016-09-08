@@ -93,7 +93,7 @@ Subroutines
    :o logical no_rewind [in]: If present and `.true.`, the file is not rewound
       after reading the header.
 
-.. f:subroutine rb_read(filename,m,n,ptr,row,val,options,inform,type_code,title,identifier,state)
+.. f:subroutine:: rb_read(filename,m,n,ptr,row,val,options,inform,type_code,title,identifier,state)
 
    Reads a CSC format matrix from the specified file.
 
@@ -191,6 +191,17 @@ Derived types
    :f real extra_space [default=1.0]: Proportion of extra space to allow in
       `row(:)` and `val(:)` arrays. They are allocated to have size
       `options%extra_space * (ptr(n+1)-1)`.
+   :f integer lwr_upr_full [default=1]: Return lower triangle, upper triangle
+      or both for symmetric and skew-symmetric matrices. One of:
+
+      +-------------+---------------------------------------------------------+
+      | 1 (default) | Lower triangular entries only.                          |
+      +-------------+---------------------------------------------------------+
+      | 2           | Upper triangular entries only.                          |
+      +-------------+---------------------------------------------------------+
+      | 3           | Both lower and upper triangular entries.                |
+      +-------------+---------------------------------------------------------+
+
    :f integer values [default=0]: Whether to read and/or generate values. One
       of:
 
