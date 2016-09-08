@@ -84,6 +84,11 @@ include_HEADERS += include/spral_rutherford_boeing.h
 libspral_a_SOURCES += \
 	src/rutherford_boeing.f90 \
 	interfaces/C/rutherford_boeing.f90
+check_PROGRAMS += \
+	examples/Fortran/rutherford_boeing/rb_read
+examples_Fortran_rutherford_boeing_rb_read_SOURCES = \
+	examples/Fortran/rutherford_boeing/rb_read.f90
+examples/Fortran/rutherford_boeing/rb_read.$(OBJEXT): libspral.a
 
 # SCALING
 include_HEADERS += include/spral_scaling.h
