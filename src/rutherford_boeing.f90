@@ -626,7 +626,7 @@ contains
    !> @param title Title to use in file, defaults to "Matrix"
    !> @param id Matrix name/identifyer to use in file, defaults to "0"
    subroutine rb_write_double_int64(filename, sym, m, n, ptr, row, val, &
-         options, inform, title, id)
+         options, inform, title, identifier)
       character(len=*), intent(in) :: filename
       character(len=1), intent(in) :: sym
       integer, intent(in) :: m
@@ -637,7 +637,7 @@ contains
       type(rb_write_options), intent(in) :: options
       integer, intent(out) :: inform
       character(len=*), optional, intent(in) :: title
-      character(len=*), optional, intent(in) :: id
+      character(len=*), optional, intent(in) :: identifier
 
       character(len=3) :: type
       integer :: i, iunit
@@ -692,7 +692,7 @@ contains
       the_title = "Matrix"
       if(present(title)) the_title = title
       the_id = "0"
-      if(present(id)) the_id = id
+      if(present(identifier)) the_id = identifier
       write(iunit, "(a72,a8)") the_title, the_id
       write(iunit, "(i14, 1x, i13, 1x, i13, 1x, i13)") &
          total_lines, ptr_lines, row_lines, val_lines
@@ -705,6 +705,9 @@ contains
       write(iunit, ptr_format) ptr(:)
       write(iunit, row_format) row(:)
       write(iunit, options%val_format) val(:)
+
+      ! Close file
+      close(iunit)
    end subroutine rb_write_double_int64
 
    character(len=16) function create_format(per_line, prec)
