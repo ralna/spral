@@ -15,7 +15,6 @@ module spral_rutherford_boeing_ciface
       integer(C_INT) :: array_base
       logical(C_BOOL) :: add_diagonal
       real(C_FLOAT) :: extra_space
-      integer(C_INT) :: format
       integer(C_INT) :: lwr_upr_full
       integer(C_INT) :: values
    end type spral_rboptions
@@ -40,7 +39,6 @@ contains
       cindexed                = (coptions%array_base.eq.0)
       foptions%add_diagonal   = coptions%add_diagonal
       foptions%extra_space    = coptions%extra_space
-      foptions%format         = coptions%format
       foptions%lwr_upr_full   = coptions%lwr_upr_full
       foptions%values         = coptions%values
    end subroutine copy_options_in
@@ -57,7 +55,6 @@ subroutine spral_rb_default_options(coptions) bind(C)
    coptions%array_base     = 0
    coptions%add_diagonal   = foptions%add_diagonal
    coptions%extra_space    = foptions%extra_space
-   coptions%format         = foptions%format
    coptions%lwr_upr_full   = foptions%lwr_upr_full
    coptions%values         = foptions%values
 end subroutine spral_rb_default_options

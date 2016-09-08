@@ -18,11 +18,6 @@ module spral_rutherford_boeing
    public :: rb_reader_options, &   ! Options that control what rb_read returns
              rb_writer_options      ! Options that control what rb_write does
 
-   ! Possible values of control%format
-   integer, parameter :: FORMAT_CSC = 1 ! Compressed Sparse Column
-   integer, parameter :: FORMAT_CSR = 2 ! Compressed Sparse Row
-   integer, parameter :: FORMAT_COO = 3 ! Coordinate
-
    ! Possible values control%lwr_upr_full
    integer, parameter :: TRI_LWR  = 1 ! Lower triangle
    integer, parameter :: TRI_UPR  = 2 ! Upper triangle
@@ -45,7 +40,6 @@ module spral_rutherford_boeing
    integer, parameter :: ERROR_ELT_ASM     = -6 ! Read elt as asm or v/v
    integer, parameter :: ERROR_EXTRA_SPACE = -10 ! control%extra_space<1.0
    integer, parameter :: ERROR_LWR_UPR_FULL= -11 ! control%lwr_up_full oor
-   integer, parameter :: ERROR_FORMAT      = -12 ! control%format oor
    integer, parameter :: ERROR_VALUES      = -13 ! control%values oor
    integer, parameter :: ERROR_ALLOC       = -20 ! failed on allocate
 
@@ -55,7 +49,6 @@ module spral_rutherford_boeing
    type rb_reader_options
       logical  :: add_diagonal = .false.        ! Add missing diagonal entries
       real     :: extra_space = 1.0             ! Array sizes are mult by this
-      integer  :: format = FORMAT_CSC      ! Format to manipulate to
       integer  :: lwr_upr_full = TRI_LWR   ! Ensure entries in lwr/upr tri
       integer  :: values = VALUES_FILE     ! As per file
    end type rb_reader_options
@@ -81,15 +74,15 @@ contains
    !
    subroutine rb_peek_file(filename, info, m, n, nelt, nvar, nval, &
          type_code, title, identifier)
-      character(len=*), intent(in) :: filename  ! File to peek at
-      integer, intent(out) :: info              ! Return code
-      integer, optional, intent(out) :: m       ! number of rows
-      integer, optional, intent(out) :: n       ! number of columns
-      integer, optional, intent(out) :: nelt    ! number of elements (0 if asm)
-      integer, optional, intent(out) :: nvar    ! number of indices in file
-      integer, optional, intent(out) :: nval    ! number of values in file
+      character(len=*), intent(in) :: filename     ! File to peek at
+      integer, intent(out) :: info                 ! Return code
+      integer, optional, intent(out) :: m          ! # rows
+      integer, optional, intent(out) :: n          ! # columns
+      integer(long), optional, intent(out) :: nelt ! # elements (0 if asm)
+      integer(long), optional, intent(out) :: nvar ! # indices in file
+      integer(long), optional, intent(out) :: nval ! # values in file
       character(len=3), optional, intent(out) :: type_code ! eg "rsa"
-      character(len=72), optional, intent(out) :: title ! title field of file
+      character(len=72), optional, intent(out) :: title  ! title field of file
       character(len=8), optional, intent(out) :: identifier ! id field of file
 
       integer :: iunit ! unit file is open on
@@ -121,13 +114,13 @@ contains
 
    subroutine rb_peek_unit(iunit, info, m, n, nelt, nvar, nval, &
          type_code, title, identifier, rewind)
-      integer, intent(in) :: iunit           ! unit file is open on
-      integer, intent(out) :: info           ! return code
-      integer, optional, intent(out) :: m    ! number of rows
-      integer, optional, intent(out) :: n    ! number of columns
-      integer, optional, intent(out) :: nelt ! number of elements (0 if asm)
-      integer, optional, intent(out) :: nvar ! number of indices in file
-      integer, optional, intent(out) :: nval ! number of values in file
+      integer, intent(in) :: iunit                 ! unit file is open on
+      integer, intent(out) :: info                 ! return code
+      integer, optional, intent(out) :: m          ! # rows
+      integer, optional, intent(out) :: n          ! # columns
+      integer(long), optional, intent(out) :: nelt ! # elements (0 if asm)
+      integer(long), optional, intent(out) :: nvar ! # indices in file
+      integer(long), optional, intent(out) :: nval ! # values in file
       character(len=3), optional, intent(out) :: type_code ! eg "rsa"
       character(len=72), optional, intent(out) :: title ! title field of file
       character(len=8), optional, intent(out) :: identifier ! id field of file
@@ -302,19 +295,19 @@ contains
       real(wp), pointer, dimension(:) :: vptr => null()
 
       real(wp), target :: temp(1) ! place holder array
-      integer :: i, k ! loop indices
+      integer :: k ! loop indices
       integer(long) :: j ! loop indices
       integer :: r, c ! loop indices
-      integer :: nnz ! number of non-zeroes
-      integer :: nelt ! number of elements in file, should be 0
-      integer :: len, len2 ! length of arrays to allocate
+      integer(long) :: nnz ! number of non-zeroes
+      integer(long) :: nelt ! number of elements in file, should be 0
+      integer(long) :: len, len2 ! length of arrays to allocate
       integer :: iunit ! unit we open the file on
       integer :: st, iost ! error codes from allocate and file operations
       logical :: symmetric ! .true. if file claims to be (skew) symmetric or H
       logical :: skew ! .true. if file claims to be skew symmetric
       logical :: pattern ! .true. if we are only storing the pattern
       logical :: expanded ! .true. if pattern has been expanded
-      type(random_state) :: state2 ! random number state used if state not present
+      type(random_state) :: state2 ! random state used if state not present
       integer, dimension(:), allocatable :: iw34 ! work array used by mc34
 
       info = SUCCESS
@@ -330,11 +323,6 @@ contains
       endif
       if(control%lwr_upr_full.lt.1 .or. control%lwr_upr_full.gt.3) then
          info = ERROR_LWR_UPR_FULL
-         return
-      endif
-      if(control%format.lt.FORMAT_CSC .or. &
-            control%format.gt.FORMAT_COO) then
-         info = ERROR_FORMAT
          return
       endif
       if(control%values.eq.-1 .or. abs(control%values).gt.4) then
@@ -368,7 +356,7 @@ contains
 
       ! ptr
       len = n + 1
-      len = max(len, int(len * control%extra_space))
+      len = max(len, int(real(len,wp) * control%extra_space, long))
       allocate(ptr(len), stat=st)
       if(st.ne.0) goto 200
 
@@ -395,40 +383,16 @@ contains
          if(control%add_diagonal) len = len + n
       end select
       len2 = len
-      len = max(len, int(len * control%extra_space))
-      select case (control%format)
-      case(FORMAT_CSC)
-         allocate(row(len), stat=st)
-         if(st.ne.0) goto 200
-         rcptr => row
-         if(symmetric .and. control%lwr_upr_full.eq.TRI_UPR) then
-            ! We need to read into %col then copy into %row as we flip
-            ! from lwr to upr
-            allocate(col(len2), stat=st)
-            rcptr => col
-         endif
-      case(FORMAT_CSR)
-         allocate(col(len), stat=st)
-         if(st.ne.0) goto 200
+      len = max(len, int(real(len,wp) * control%extra_space, long))
+      allocate(row(len), stat=st)
+      if(st.ne.0) goto 200
+      rcptr => row
+      if(symmetric .and. control%lwr_upr_full.eq.TRI_UPR) then
+         ! We need to read into %col then copy into %row as we flip
+         ! from lwr to upr
+         allocate(col(len2), stat=st)
          rcptr => col
-         if(symmetric .and. control%lwr_upr_full.eq.TRI_LWR) then
-            ! We need to read into %row then copy into %col as we flip
-            ! from upr to lwr
-            allocate(row(len2), stat=st)
-            rcptr => row
-         endif
-      case(FORMAT_COO)
-         allocate(col(len), stat=st)
-         if(st.ne.0) goto 200
-         allocate(row(len), stat=st)
-         if(control%lwr_upr_full.eq.TRI_UPR) then
-            ! Store as CSR to avoid need to flip from lwr to upr
-            rcptr => col
-         else
-            ! Store as CSC as this is natural format
-            rcptr => row
-         endif
-      end select
+      endif
       if(st.ne.0) goto 200
 
       ! Allocate val if required
@@ -548,30 +512,17 @@ contains
       if(symmetric) then
          select case (control%lwr_upr_full)
          case(TRI_LWR)
-            if(control%format.eq.FORMAT_CSR) then
-               ! Only need to flip from upr to lwr if want to end up as CSR
-               if(associated(vptr, val)) then
-                  call flip_lwr_upr(n, ptr, row, &
-                     col, st, val)
-               else
-                  call flip_lwr_upr(n, ptr, row, &
-                     col, st)
-               endif
-               if(st.ne.0) goto 200
-               deallocate(row)
-            endif
+            ! No-op
          case(TRI_UPR)
-            if(control%format.eq.FORMAT_CSC) then
-               ! Only need to flip from upr to lwr if want to end up as CSC
-               if(pattern) then
-                  call flip_lwr_upr(n, ptr, col, &
-                     row, st)
-               else
-                  call flip_lwr_upr(n, ptr, col, &
-                     row, st, val)
-               endif
-               if(st.ne.0) goto 200
+            ! Only need to flip from upr to lwr if want to end up as CSC
+            if(pattern) then
+               call flip_lwr_upr(n, ptr, col, &
+                  row, st)
+            else
+               call flip_lwr_upr(n, ptr, col, &
+                  row, st, val)
             endif
+            if(st.ne.0) goto 200
             if(skew .and. associated(vptr, val)) then
                call sym_to_skew(n, ptr, row, col, val)
             endif
@@ -593,28 +544,6 @@ contains
                endif
             endif
          end select
-      endif
-
-      !
-      ! Convert to coordinate storage if desired
-      ! Note: To avoid going to/from lower and upper we have read into
-      ! %row or %col depending on the value of control%lwr_upr_full
-      !
-      if(control%format.eq.FORMAT_COO) then
-         if(control%lwr_upr_full.eq.TRI_UPR) then
-            ! Matrix is currently in CSR
-            ! Fill in the row indices and deallocate ptr
-            do i = 1, n
-               row(ptr(i) : ptr(i+1)-1) = i
-            end do
-         else
-            ! Matrix is currently in CSC
-            ! Fill in the column indices and deallocate ptr
-            do i = 1, n
-               col(ptr(i) : ptr(i+1)-1) = i
-            end do
-         endif
-         deallocate(ptr)
       endif
 
       100 continue
@@ -973,7 +902,7 @@ contains
          ! depending on whether matrix is assembled or unassembled.
       integer, intent(out) :: nvec ! Number of columns or the number of elements
          ! depending on whether matrix is assembled or unassembled.
-      integer, intent(out) :: ne ! Number of entries in matrix
+      integer(long), intent(out) :: ne ! Number of entries in matrix
       integer(long), dimension(*), intent(out) :: ip ! Column/Element pointers
       integer, dimension(*), intent(out) :: ind ! Row/Element indices
       integer, intent(out) :: flag ! Return code
@@ -982,8 +911,8 @@ contains
          ! data.
 
       character(len=80) :: buffer1, buffer2
-      integer :: i
-      integer :: neltvl, np1, nreal
+      integer :: neltvl, np1
+      integer(long) :: nreal
       character(len=16) :: ptrfmt, indfmt
       character(len=20) :: valfmt
 
@@ -1006,10 +935,10 @@ contains
       ! Read ip array
       np1 = nvec+1
       if (dattyp(3:3).eq.'e' .and. dattyp(2:2).eq.'r') np1=2*nvec+1
-      read(lunit,ptrfmt) (ip(i),i=1,np1)
+      read(lunit,ptrfmt) ip(1:np1)
 
       ! Read ind array
-      read(lunit,indfmt) (ind(i),i=1,ne)
+      read(lunit,indfmt) ind(1:ne)
 
       if (dattyp(1:1).eq.'p' .or. dattyp(1:1).eq.'x') return ! pattern only
 
@@ -1017,7 +946,7 @@ contains
          ! read values
          nreal = ne
          if (neltvl.gt.0) nreal = neltvl
-         read(lunit,valfmt) (val(i),i=1,nreal)
+         read(lunit,valfmt) val(1:nreal)
       endif
 
    end subroutine read_data_real
@@ -1036,7 +965,7 @@ contains
          ! depending on whether matrix is assembled or unassembled.
       integer, intent(out) :: nvec ! Number of columns or the number of elements
          ! depending on whether matrix is assembled or unassembled.
-      integer, intent(out) :: ne ! Number of entries in matrix
+      integer(long), intent(out) :: ne ! Number of entries in matrix
       integer(long), dimension(*), intent(out) :: ip ! Column/Element pointers
       integer, dimension(*), intent(out) :: ind ! Row/Element indices
       integer, intent(out) :: flag ! Return code
@@ -1045,8 +974,8 @@ contains
          ! data.
 
       character(len=80) :: buffer1, buffer2
-      integer :: i
-      integer :: neltvl, np1, nreal
+      integer :: neltvl, np1
+      integer(long) :: nreal
       character(len=16) :: ptrfmt, indfmt
       character(len=20) :: valfmt
 
@@ -1069,10 +998,10 @@ contains
       ! Read ip array
       np1 = nvec+1
       if (dattyp(3:3).eq.'e' .and. dattyp(2:2).eq.'r') np1=2*nvec+1
-      read(lunit,ptrfmt) (ip(i),i=1,np1)
+      read(lunit,ptrfmt) ip(1:np1)
 
       ! Read ind array
-      read(lunit,indfmt) (ind(i),i=1,ne)
+      read(lunit,indfmt) ind(1:ne)
 
       if (dattyp(1:1).eq.'p' .or. dattyp(1:1).eq.'x') return ! pattern only
 
@@ -1080,7 +1009,7 @@ contains
          ! read values
          nreal = ne
          if (neltvl.gt.0) nreal = neltvl
-         read(lunit,valfmt) (val(i),i=1,nreal)
+         read(lunit,valfmt) val(1:nreal)
       endif
 
    end subroutine read_data_integer
