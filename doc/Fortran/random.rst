@@ -4,6 +4,10 @@
 .. f:module:: spral_random
    :synopsis: Random number generator
 
+=======
+Purpose
+=======
+
 This package generates pseudo-random numbers using a linear congruential
 generator. It should generate the same random numbers using any standards
 compliant Fortran compiler on any architecture so long as the default
@@ -11,12 +15,21 @@ integer and real kinds are the same.
 
 The seed can optionally be observed or specified by the user.
 
+Version history
+---------------
+
+2016-09-08 Version 1.1.0
+   Add support for long integers
+
+2014-04-07 Version 1.0.0
+   Initial release
+
 ========
 Routines
 ========
 
 Random Number Generation
-""""""""""""""""""""""""
+------------------------
 
 .. f:function:: random_real(state[, positive])
 
@@ -35,11 +48,10 @@ Random Number Generation
    Return an integer uniformly at random from the interval :math:`[1,n]`.
 
    :p random_state state [inout]: current state of the RNG.
-   :p integer n [in]: largest value in range to be sampled. Both default 
-      and long kinds are supported (in the latter case the return type
-      changes to match).
+   :p integer(kind) n [in]: largest value in range to be sampled. Both default 
+      and long integer kinds are supported (return type will match).
    :r random_integer: Sampled value.
-   :rtype random_integer: integer
+   :rtype random_integer: integer(kind)
 
 .. f:function:: random_logical(state)
 
@@ -50,7 +62,7 @@ Random Number Generation
    :rtype random_logical: logical
 
 Get/Set Random Seed
-"""""""""""""""""""
+-------------------
 
 .. f:function:: random_get_seed(state)
    
@@ -133,7 +145,7 @@ user to get and set the current value of :math:`X_n`. The default seed is
 :math:`X_0 = 486502`.
 
 In :f:func:`random_real`
-""""""""""""""""""""""""
+------------------------
 
 Samples from :math:`\mathrm{Unif}(0,1)` are generated as
 
@@ -148,7 +160,7 @@ and samples from :math:`\mathrm{Unif}(-1,1)` are generated as
    1−\frac{\mathrm{real}(2X_n)}{\mathrm{real}(m)}.
 
 In :f:func:`random_integer`
-"""""""""""""""""""""""""""
+---------------------------
 
 Samples from :math:`\mathrm{Unif}(1,\ldots,n)` are generated as
 
@@ -157,7 +169,7 @@ Samples from :math:`\mathrm{Unif}(1,\ldots,n)` are generated as
    \mathrm{int}\left(X_n\frac{\mathrm{real}(n)}{\mathrm{real}(m)}\right) + 1
 
 In :f:func:`random_logical`
-""""""""""""""""""""""""""""
+----------------------------
 
 Returns the value of the Fortran expression
 
