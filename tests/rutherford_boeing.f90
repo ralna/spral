@@ -12,8 +12,21 @@ program rutherford_boeing_test
 
    integer :: errors
 
+   ! Possible error returns
+   integer, parameter :: SUCCESS           =  0 ! No errors
+   integer, parameter :: ERROR_BAD_FILE    = -1 ! Failed to open file
+   integer, parameter :: ERROR_NOT_RB      = -2 ! Header not valid for RB
+   integer, parameter :: ERROR_IO          = -3 ! Error return from io
+   integer, parameter :: ERROR_TYPE        = -4 ! Tried to read bad type
+   integer, parameter :: ERROR_ELT_ASM     = -5 ! Read elt as asm or v/v
+   integer, parameter :: ERROR_EXTRA_SPACE = -10 ! control%extra_space<1.0
+   integer, parameter :: ERROR_LWR_UPR_FULL= -11 ! control%lwr_up_full oor
+   integer, parameter :: ERROR_VALUES      = -13 ! control%values oor
+   integer, parameter :: ERROR_ALLOC       = -20 ! failed on allocate
+
    errors = 0
 
+   call test_errors
    call test_random
 
    write(*, "(/a)") "=========================="
@@ -22,6 +35,175 @@ program rutherford_boeing_test
    if(errors.ne.0) stop 1 ! ERROR CODE for make check script
 
 contains
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!> Test error codes
+subroutine test_errors()
+   integer :: m, n, inform, iunit
+   integer, dimension(:), allocatable :: ptr, row
+   real(wp), dimension(:), allocatable :: val
+   type(rb_read_options) :: read_options, default_read_options
+
+   write(*, "(a)")
+   write(*, "(a)") "====================="
+   write(*, "(a)") "Testing error returns"
+   write(*, "(a)") "====================="
+
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   write(*,"(/,a)") "rb_peek():"
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   ! Failure to open a non-existent file
+   write(*,"(a)",advance="no") " * Failure to open file......................"
+   call rb_peek("non_existent.rb", inform, m=m, n=n)
+   call test_eq(inform, ERROR_BAD_FILE)
+
+   ! Failure on i/o operation (e.g. file is too short)
+   open(newunit=iunit,file=filename,status='replace')
+   write(iunit,"(a72,a8)") "Matrix", "ID"
+   close(iunit)
+   write(*,"(a)",advance="no") " * Failure on i/o operation.................."
+   call rb_peek(filename, inform, m=m, n=n)
+   call test_eq(inform, ERROR_IO)
+
+   ! Not an RB file
+   open(newunit=iunit,file=filename,status='replace')
+   write(iunit,"(a80/a80/a14,4(1x,i13))") &
+      "This is", "not an RB file", "xxx", 1, 2, 3, 4
+   close(iunit)
+   write(*,"(a)",advance="no") " * Not a valid RB file......................."
+   call rb_peek(filename, inform, m=m, n=n)
+   call test_eq(inform, ERROR_NOT_RB)
+
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   write(*,"(/,a)") "rb_read():"
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   ! Failure to open a non-existent file
+   read_options = default_read_options
+   write(*,"(a)",advance="no") " * Failure to open file......................"
+   call rb_read("non_existent.rb", m, n, ptr, row, val, read_options, inform)
+   call test_eq(inform, ERROR_BAD_FILE)
+
+   ! Failure on i/o operation (e.g. file is too short)
+   open(newunit=iunit,file=filename,status='replace')
+   write(iunit,"(a72,a8)") "Matrix", "ID"
+   write(iunit,"(i14, 1x, i13, 1x, i13, 1x, i13)") 5, 1, 1, 3
+   write(iunit, "(a3, 11x, i14, 1x, i13, 1x, i13, 1x, i13)") &
+      "rsa", 5, 5, 8, 0
+   write(iunit, "(a16, a16, a20)") "(40i2)", "(40i2)", "(3e24.16)"
+   write(iunit, "(40i2)") 1, 3, 6, 8, 8, 9
+   close(iunit)
+   read_options = default_read_options
+   write(*,"(a)",advance="no") " * Failure on i/o operation.................."
+   call rb_read(filename, m, n, ptr, row, val, read_options, inform)
+   call test_eq(inform, ERROR_IO)
+
+   ! Not an RB file
+   open(newunit=iunit,file=filename,status='replace')
+   write(iunit,"(a80/a80/a14,4(1x,i13))") &
+      "This is", "not an RB file", "xxx", 1, 2, 3, 4
+   close(iunit)
+   read_options = default_read_options
+   write(*,"(a)",advance="no") " * Not a valid RB file......................."
+   call rb_read(filename, m, n, ptr, row, val, read_options, inform)
+   call test_eq(inform, ERROR_NOT_RB)
+
+   ! Unsupported type: complex
+   open(newunit=iunit,file=filename,status='replace')
+   write(iunit,"(a72,a8)") "Matrix", "ID"
+   write(iunit,"(i14, 1x, i13, 1x, i13, 1x, i13)") 5, 1, 1, 3
+   write(iunit, "(a3, 11x, i14, 1x, i13, 1x, i13, 1x, i13)") &
+      "csa", 5, 5, 8, 0
+   write(iunit, "(a16, a16, a20)") "(40i2)", "(40i2)", "(3e24.16)"
+   write(iunit, "(40i2)") 1, 3, 6, 8, 8, 9
+   close(iunit)
+   read_options = default_read_options
+   write(*,"(a)",advance="no") " * Unsupported type: complex................."
+   call rb_read(filename, m, n, ptr, row, val, read_options, inform)
+   call test_eq(inform, ERROR_TYPE)
+
+   ! Unsupported type: element
+   open(newunit=iunit,file=filename,status='replace')
+   write(iunit,"(a72,a8)") "Matrix", "ID"
+   write(iunit,"(i14, 1x, i13, 1x, i13, 1x, i13)") 5, 1, 1, 3
+   write(iunit, "(a3, 11x, i14, 1x, i13, 1x, i13, 1x, i13)") &
+      "rse", 5, 5, 8, 0
+   write(iunit, "(a16, a16, a20)") "(40i2)", "(40i2)", "(3e24.16)"
+   write(iunit, "(40i2)") 1, 3, 6, 8, 8, 9
+   close(iunit)
+   read_options = default_read_options
+   write(*,"(a)",advance="no") " * Unsupported type: element................."
+   call rb_read(filename, m, n, ptr, row, val, read_options, inform)
+   call test_eq(inform, ERROR_ELT_ASM)
+
+   ! options%extra_space < 1.0
+   call write_simple_matrix()
+   read_options = default_read_options
+   read_options%extra_space = 0.9
+   write(*,"(a)",advance="no") " * option%extra_space < 1.0.................."
+   call rb_read(filename, m, n, ptr, row, val, read_options, inform)
+   call test_eq(inform, ERROR_EXTRA_SPACE)
+
+   ! options%lwr_up_full invalid value
+   call write_simple_matrix()
+   read_options = default_read_options
+   read_options%lwr_upr_full = -1
+   write(*,"(a)",advance="no") " * option%lwr_upr_full = -1.................."
+   call rb_read(filename, m, n, ptr, row, val, read_options, inform)
+   call test_eq(inform, ERROR_LWR_UPR_FULL)
+
+   ! options%lwr_up_full invalid value
+   call write_simple_matrix()
+   read_options = default_read_options
+   read_options%values = 100
+   write(*,"(a)",advance="no") " * option%values = 100......................."
+   call rb_read(filename, m, n, ptr, row, val, read_options, inform)
+   call test_eq(inform, ERROR_VALUES)
+
+end subroutine test_errors
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!> Test (actual.eq.expected).
+!> If test passes, print "pass"
+!> If test fails, print "fail" and values, and increment errors
+subroutine test_eq(actual, expected)
+   integer, intent(in) :: actual
+   integer, intent(in) :: expected
+
+   if(actual.eq.expected) then
+      write(*, "(a)") "pass"
+   else
+      write(*, "(a)") "fail"
+      write(*, "(2(a,i4))") "actual =", actual, " expected =", expected
+      errors = errors + 1
+   endif
+end subroutine test_eq
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!> Write simple matrix to file
+subroutine write_simple_matrix()
+   integer :: n, ptr(5), row(8), inform
+   real(wp) :: val(8)
+   type(rb_write_options) :: options
+
+   ! Data for symmetric matrix
+   ! ( 2  1         )
+   ! ( 1  4  1    8 )
+   ! (    1  3  2   )
+   ! (       2      )
+   ! (    8       2 )
+   n = 5
+   ptr(1:n+1)        = (/ 1,        3,             6,      8,8,   9 /)
+   row(1:ptr(n+1)-1) = (/ 1,   2,   2,   3,   5,   3,   4,   5   /)
+   val(1:ptr(n+1)-1) = (/ 2.0, 1.0, 4.0, 1.0, 8.0, 3.0, 2.0, 2.0 /)
+
+   call rb_write(filename, 's', n, n, ptr, row, val, options, inform)
+   if(inform.ne.0) then
+      print *, "write_simple_matrix: rb_write error. Aborting.", inform
+      stop -2
+   endif
+end subroutine write_simple_matrix
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !> Tests writing then peeking at and reading random matrices
