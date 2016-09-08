@@ -226,16 +226,13 @@ contains
    !
    ! This subroutine reads an assembled matrix
    !
-   ! FIXME: Should only need two of ptr, row, col, but any change will require
-   ! extensive testing.
-   subroutine rb_read_double_int32(filename, m, n, ptr, row, col, val, &
+   subroutine rb_read_double_int32(filename, m, n, ptr, row, val, &
          control, info, type_code, title, identifier, state)
       character(len=*), intent(in) :: filename ! File to read
       integer, intent(out) :: m
       integer, intent(out) :: n
       integer, dimension(:), allocatable, intent(out) :: ptr
       integer, dimension(:), allocatable, target, intent(out) :: row
-      integer, dimension(:), allocatable, target, intent(out) :: col
       real(wp), dimension(:), allocatable, target, intent(out) :: val
       type(rb_read_options), intent(in) :: control ! control variables
       integer, intent(out) :: info ! return code
@@ -248,7 +245,7 @@ contains
       integer(long), dimension(:), allocatable :: ptr64
       integer :: st
 
-      call rb_read_double_int64(filename, m, n, ptr64, row, col, val, &
+      call rb_read_double_int64(filename, m, n, ptr64, row, val, &
          control, info, type_code=type_code, title=title, &
          identifier=identifier, state=state)
 
@@ -262,14 +259,13 @@ contains
          ptr(1:n+1) = int(ptr64(1:n+1)) ! Forced conversion, FIXME: add guard
       endif
    end subroutine rb_read_double_int32
-   subroutine rb_read_double_int64(filename, m, n, ptr, row, col, val, &
+   subroutine rb_read_double_int64(filename, m, n, ptr, row, val, &
          control, info, type_code, title, identifier, state)
       character(len=*), intent(in) :: filename ! File to read
       integer, intent(out) :: m
       integer, intent(out) :: n
       integer(long), dimension(:), allocatable, intent(out) :: ptr
       integer, dimension(:), allocatable, target, intent(out) :: row
-      integer, dimension(:), allocatable, target, intent(out) :: col
       real(wp), dimension(:), allocatable, target, intent(out) :: val
       type(rb_read_options), intent(in) :: control ! control variables
       integer, intent(out) :: info ! return code
@@ -309,6 +305,8 @@ contains
       logical :: expanded ! .true. if pattern has been expanded
       type(random_state) :: state2 ! random state used if state not present
       integer, dimension(:), allocatable :: iw34 ! work array used by mc34
+      integer, dimension(:), allocatable, target :: col ! work array in case we
+         ! need to flip from lwr to upr.
 
       info = SUCCESS
 
@@ -388,7 +386,7 @@ contains
       if(st.ne.0) goto 200
       rcptr => row
       if(symmetric .and. control%lwr_upr_full.eq.TRI_UPR) then
-         ! We need to read into %col then copy into %row as we flip
+         ! We need to read into col then copy into row as we flip
          ! from lwr to upr
          allocate(col(len2), stat=st)
          rcptr => col
@@ -516,11 +514,9 @@ contains
          case(TRI_UPR)
             ! Only need to flip from upr to lwr if want to end up as CSC
             if(pattern) then
-               call flip_lwr_upr(n, ptr, col, &
-                  row, st)
+               call flip_lwr_upr(n, ptr, col, row, st)
             else
-               call flip_lwr_upr(n, ptr, col, &
-                  row, st, val)
+               call flip_lwr_upr(n, ptr, col, row, st, val)
             endif
             if(st.ne.0) goto 200
             if(skew .and. associated(vptr, val)) then

@@ -13,7 +13,7 @@ program run_prob
 
    ! Matrix description
    integer :: m, n
-   integer, dimension(:), allocatable :: ptr, row, col
+   integer, dimension(:), allocatable :: ptr, row
    real(wp), dimension(:), allocatable :: val
 
    type(ssids_inform) :: inform
@@ -53,7 +53,7 @@ program run_prob
    ! Read in a matrix
    write(*, "(a)") "Reading..."
    rb_options%values = 2 ! make up values if necessary
-   call rb_read("matrix.rb", m, n, ptr, row, col, val, rb_options, rb_flag)
+   call rb_read("matrix.rb", m, n, ptr, row, val, rb_options, rb_flag)
    if(rb_flag.ne.0) then
       print *, "Rutherford-Boeing read failed with error ", rb_flag
       stop

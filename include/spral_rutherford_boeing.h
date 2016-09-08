@@ -14,13 +14,13 @@ struct spral_rb_read_options {
    int values;
 };
 
-void spral_rb_read_default_options(struct spral_rb_read_options *options);
+void spral_rb_default_read_options(struct spral_rb_read_options *options);
 int spral_rb_read_i32d(const char *filename, void **handle, int *m, int *n,
-      int **ptr, int **row, int **col, double **val,
+      int **ptr, int **row, double **val,
       const struct spral_rb_read_options *options, char *type_code, char *title,
       char *identifier);
 int spral_rb_read_i64d(const char *filename, void **handle, int *m, int *n,
-      long **ptr, int **row, int **col, double **val,
+      long **ptr, int **row, double **val,
       const struct spral_rb_read_options *options, char *type_code, char *title,
       char *identifier);
 void spral_rb_free_handle(void **handle);

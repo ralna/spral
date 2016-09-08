@@ -7,7 +7,6 @@ module spral_rutherford_boeing_ciface
       integer(C_INT), dimension(:), allocatable :: ptr32
       integer(C_LONG), dimension(:), allocatable :: ptr64
       integer(C_INT), dimension(:), allocatable :: row
-      integer(C_INT), dimension(:), allocatable :: col
       real(C_DOUBLE), dimension(:), allocatable :: val
    end type handle_type
 
@@ -44,7 +43,7 @@ contains
    end subroutine copy_options_in
 end module spral_rutherford_boeing_ciface
 
-subroutine spral_rb_read_default_options(coptions) bind(C)
+subroutine spral_rb_default_read_options(coptions) bind(C)
    use spral_rutherford_boeing_ciface
    implicit none
 
@@ -57,10 +56,10 @@ subroutine spral_rb_read_default_options(coptions) bind(C)
    coptions%extra_space    = foptions%extra_space
    coptions%lwr_upr_full   = foptions%lwr_upr_full
    coptions%values         = foptions%values
-end subroutine spral_rb_read_default_options
+end subroutine spral_rb_default_read_options
 
 integer(C_INT) function spral_rb_read_i32d(filename, handle, m, n, ptr, row, &
-      col, val, options, type_code, title, identifier) bind(C)
+      val, options, type_code, title, identifier) bind(C)
    use spral_rutherford_boeing_ciface
    implicit none
 
@@ -70,7 +69,6 @@ integer(C_INT) function spral_rb_read_i32d(filename, handle, m, n, ptr, row, &
    integer(C_INT), intent(out) :: n
    type(C_PTR), intent(out) :: ptr
    type(C_PTR), intent(out) :: row
-   type(C_PTR), intent(out) :: col
    type(C_PTR), intent(out) :: val
    type(spral_rb_read_options), intent(in) :: options
    type(C_PTR), value :: type_code
@@ -104,18 +102,16 @@ integer(C_INT) function spral_rb_read_i32d(filename, handle, m, n, ptr, row, &
 
    ! Main function call
    ! FIXME: Add support for random state
-   call rb_read(ffilename, m, n, matrix%ptr32, matrix%row, matrix%col, &
-      matrix%val, foptions, info, type_code=ftype_code, title=ftitle, &
+   call rb_read(ffilename, m, n, matrix%ptr32, matrix%row, matrix%val, &
+      foptions, info, type_code=ftype_code, title=ftitle, &
       identifier=fidentifier)
 
    ! Convert to C indexing (if required)
    if(cindexed .and. allocated(matrix%ptr32)) matrix%ptr32(:) = matrix%ptr32(:) - 1
    if(cindexed .and. allocated(matrix%row)) matrix%row(:) = matrix%row(:) - 1
-   if(cindexed .and. allocated(matrix%col)) matrix%col(:) = matrix%col(:) - 1
-   ! Determine pointers for ptr, row, col and val
+   ! Determine pointers for ptr, row, and val
    if(allocated(matrix%ptr32)) ptr = C_LOC(matrix%ptr32)
    if(allocated(matrix%row)) row = C_LOC(matrix%row)
-   if(allocated(matrix%col)) col = C_LOC(matrix%col)
    if(allocated(matrix%val)) val = C_LOC(matrix%val)
    ! Handle optional strings
    if(C_ASSOCIATED(type_code)) then
@@ -145,7 +141,7 @@ integer(C_INT) function spral_rb_read_i32d(filename, handle, m, n, ptr, row, &
 end function spral_rb_read_i32d
 
 integer(C_INT) function spral_rb_read_i64d(filename, handle, m, n, ptr, row, &
-      col, val, options, type_code, title, identifier) bind(C)
+      val, options, type_code, title, identifier) bind(C)
    use spral_rutherford_boeing_ciface
    implicit none
 
@@ -155,7 +151,6 @@ integer(C_INT) function spral_rb_read_i64d(filename, handle, m, n, ptr, row, &
    integer(C_INT), intent(out) :: n
    type(C_PTR), intent(out) :: ptr
    type(C_PTR), intent(out) :: row
-   type(C_PTR), intent(out) :: col
    type(C_PTR), intent(out) :: val
    type(spral_rb_read_options), intent(in) :: options
    type(C_PTR), value :: type_code
@@ -189,17 +184,16 @@ integer(C_INT) function spral_rb_read_i64d(filename, handle, m, n, ptr, row, &
 
    ! Main function call
    ! FIXME: Add support for random state
-   call rb_read(ffilename, m, n, matrix%ptr64, matrix%row, matrix%col, matrix%val, foptions, &
-      info, type_code=ftype_code, title=ftitle, identifier=fidentifier)
+   call rb_read(ffilename, m, n, matrix%ptr64, matrix%row, matrix%val, &
+      foptions, info, type_code=ftype_code, title=ftitle, &
+      identifier=fidentifier)
 
    ! Convert to C indexing (if required)
    if(cindexed .and. allocated(matrix%ptr64)) matrix%ptr64(:) = matrix%ptr64(:) - 1
    if(cindexed .and. allocated(matrix%row)) matrix%row(:) = matrix%row(:) - 1
-   if(cindexed .and. allocated(matrix%col)) matrix%col(:) = matrix%col(:) - 1
-   ! Determine pointers for ptr, row, col and val
+   ! Determine pointers for ptr, row, and val
    if(allocated(matrix%ptr64)) ptr = C_LOC(matrix%ptr64)
    if(allocated(matrix%row)) row = C_LOC(matrix%row)
-   if(allocated(matrix%col)) col = C_LOC(matrix%col)
    if(allocated(matrix%val)) val = C_LOC(matrix%val)
    ! Handle optional strings
    if(C_ASSOCIATED(type_code)) then
