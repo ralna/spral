@@ -154,17 +154,15 @@ Exit status codes
    +============+=============================================================+
    | 0          | Success                                                     |
    +------------+-------------------------------------------------------------+
-   | -1         | Failed to find a free unit.                                 |
+   | -1         | Failed to open file.                                        |
    +------------+-------------------------------------------------------------+
-   | -2         | Failed to open file.                                        |
+   | -2         | Not a valid for Rutherford-Boeing file.                     |
    +------------+-------------------------------------------------------------+
-   | -3         | Not a valid for Rutherford-Boeing file.                     |
+   | -3         | Error on i/o operation.                                     |
    +------------+-------------------------------------------------------------+
-   | -4         | Error on i/o operation.                                     |
+   | -4         | Attempted to read data type not supported by routine.       |
    +------------+-------------------------------------------------------------+
-   | -5         | Attempted to read data type not supported by routine.       |
-   +------------+-------------------------------------------------------------+
-   | -6         | Attempted to read element as assembled or vice versa.       |
+   | -5         | Attempted to read element as assembled or vice versa.       |
    +------------+-------------------------------------------------------------+
    | -10        | `options%extra_space<1.0`.                                  |
    +------------+-------------------------------------------------------------+
