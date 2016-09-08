@@ -100,13 +100,13 @@ Subroutines
    :p character(len=*) filename [in]: File to read.
    :p integer m [out]: Number of rows in :math:`A`.
    :p integer n [out]: Number of columns in :math:`A`.
-   :p integer ptr(:) [allocatable, out]: Column pointers
+   :p integer ptr(\:) [allocatable, out]: Column pointers
       (see :doc:`CSC format <csc_format>`). Will be allocated by the routine
       to have sufficient size.
-   :p integer row(:) [allocatable, out]: Row indices
+   :p integer row(\:) [allocatable, out]: Row indices
       (see :doc:`CSC format <csc_format>`). Will be allocated by the routine
       to have sufficient size.
-   :p real val(:) [allocatable, out]: Values of non-zero entries
+   :p real val(\:) [allocatable, out]: Values of non-zero entries
       (see :doc:`CSC format <csc_format>`) if present and requested.
       Will be allocated by the routine to have sufficient size.
    :p rb_read_options options [in]: Options for reading matrix (see
