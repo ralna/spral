@@ -576,7 +576,7 @@ contains
    !> @param options User-specifyable options.
    !> @param info Status on output, 0 for success.
    subroutine rb_write_double_int32(filename, sym, m, n, ptr, row, val, &
-         options, inform)
+         options, inform, title, identifier)
       character(len=*), intent(in) :: filename
       character(len=1), intent(in) :: sym
       integer, intent(in) :: m
@@ -586,6 +586,8 @@ contains
       real(wp), dimension(ptr(n+1)-1), intent(in) :: val
       type(rb_write_options), intent(in) :: options
       integer, intent(out) :: inform
+      character(len=*), optional, intent(in) :: title
+      character(len=*), optional, intent(in) :: identifier
 
       integer(long), dimension(:), allocatable :: ptr64
       integer :: st
@@ -599,7 +601,7 @@ contains
       ptr64(:) = ptr(:)
 
       call rb_write_double_int64(filename, sym, m, n, ptr64, row, val, &
-         options, inform)
+         options, inform, title=title, identifier=identifier)
    end subroutine rb_write_double_int32
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
