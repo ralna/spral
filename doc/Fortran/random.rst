@@ -48,8 +48,8 @@ Random Number Generation
    Return an integer uniformly at random from the interval :math:`[1,n]`.
 
    :p random_state state [inout]: current state of the RNG.
-   :p integer(kind) n [in]: largest value in range to be sampled. Both default 
-      and long integer kinds are supported (return type will match).
+   :p integer(kind) n [in]: largest value in range to be sampled. `kind` may be
+      either default or long integer (return type will match).
    :r random_integer: Sampled value.
    :rtype random_integer: integer(kind)
 

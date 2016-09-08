@@ -19,8 +19,11 @@ row indices can be sorted within columns.
 Version history
 ---------------
 
+2016-09-08 Version 1.1.0
+   Add long support
+
 2014-03-06 Version 1.0.0
-    Initial release
+   Initial release
 
 ===================
 Seed Initialization
@@ -98,6 +101,11 @@ Routines
    +--------+-----------------------------------------------------------------+
    | -5     |  A non-singular matrix was requested, but :math:`nnz<\min(m,n)`.|
    +--------+-----------------------------------------------------------------+
+
+.. c:function:: int spral_random_matrix_generate_long(int *state, enum spral_matrix_type matrix_type, int m, int n, long nnz, long ptr[n+1], int row[nnz], double *val, int flags)
+
+   As :c:func:`spral_random_matrix_generate`, except ``nnz`` and ``ptr`` are
+   ``long``.
 
 ======
 Macros

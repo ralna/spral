@@ -17,6 +17,9 @@ row indices can be sorted within columns.
 Version history
 ---------------
 
+2016-09-08 Version 1.1.0
+   Add long support
+
 2014-03-06 Version 1.0.0
     Initial release
 
@@ -60,9 +63,11 @@ Routines
 
    :p integer m [in]: Number of rows in the matrix.
    :p integer n [in]: Number of columns in the matrix.
-   :p integer nnz [in]: Number of non-zeroes in the matrix.
-   :p integer ptr (n+1) [out]: Column pointers of the matrix
-      (see :doc:`CSC format<csc format>`).
+   :p integer(kind) nnz [in]: Number of non-zeroes in the matrix. `kind`
+      may be either default or long integer (matches `ptr`).
+   :p integer(kind) ptr (n+1) [out]: Column pointers of the matrix
+      (see :doc:`CSC format<csc format>`). `kind`
+      may be either default or long integer (matches `nnz`).
    :p integer row (nnz) [out]: Row indices of the matrix
       (see :doc:`CSC format<csc format>`).
    :p integer flag [out]: Exit status of the algorithm, 0 on success, otherwise
