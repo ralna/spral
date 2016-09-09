@@ -35,7 +35,7 @@ AS_IF([test $ac_status = 0], [
    AC_MSG_RESULT(none);spral_no_fort_main_done="yes"
    ])
 # -nofor_main
-AS_IF([test "x$spral_no_fort_main_done"=="x"],[
+AS_IF([test "x$spral_no_fort_main_done" == "x"],[
    NO_FORT_MAIN="-nofor_main"
    echo "Trying '$NO_FORT_MAIN'" >> config.log
    save_FCFLAGS=$FCFLAGS
