@@ -198,7 +198,7 @@ public:
          // Assembly of node (not of contribution block)
          int* map = work.get_ptr<int>(symb_.symb_.n+1);
          assemble_pre
-            (false, symb_.symb_[ni], old_nodes_[ni], factor_alloc,
+            (symb_.symb_[ni], old_nodes_[ni], factor_alloc,
              pool_alloc, map, aval, scaling);
          // Update stats
          int nrow = symb_.symb_[ni].nrow + old_nodes_[ni].ndelay_in;
@@ -217,7 +217,6 @@ public:
 
 private:
    void assemble_pre(
-         bool posdef,
          SymbolicNode const& snode,
          NumericNode<T,PoolAllocator>& node,
          FactorAllocator& factor_alloc,
@@ -241,8 +240,7 @@ private:
       /* Get space for node now we know it size using Fortran allocator + zero it*/
       // NB L is  nrow x ncol and D is 2 x ncol (but no D if posdef)
       size_t ldl = align_lda<double>(nrow);
-      size_t len = posdef ?  ldl    * ncol  // posdef
-                          : (ldl+2) * ncol; // indef (includes D)
+      size_t len = (ldl+2) * ncol; // +2 is for D
       node.lcol = FADoubleTraits::allocate(factor_alloc_double, len);
       memset(node.lcol, 0, len*sizeof(T));
 
