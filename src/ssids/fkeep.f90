@@ -99,6 +99,7 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
       call omp_set_num_threads(akeep%topology(numa_region)%nproc)
    endif
    ! Split into threads for this NUMA region (unless we're running a GPU)
+   exec_loc = -1 ! avoid compiler warning re uninitialized
 !$omp parallel proc_bind(close) default(shared) &
 !$omp    num_threads(akeep%topology(numa_region)%nproc) &
 !$omp    if(my_loc.le.size(akeep%topology))
