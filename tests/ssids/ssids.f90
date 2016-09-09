@@ -7,6 +7,7 @@
 ! * Change fred_small to 1e-6
 !
 program main
+   use spral_hw_topology, only : numa_region
    use spral_matrix_util, only : SPRAL_MATRIX_REAL_SYM_PSDEF, &
       SPRAL_MATRIX_REAL_SYM_INDEF, print_matrix
    use spral_metis_wrapper, only : metis_order
@@ -1868,6 +1869,12 @@ subroutine test_random
    integer :: cuda_error
    logical :: check, coord
    real(wp) :: num_flops
+   type(numa_region), dimension(2) :: fake_topology
+
+   do i = 1, 2
+      fake_topology(i)%nproc = 2
+      allocate(fake_topology(i)%gpus(0))
+   end do
 
    options%unit_error = we_unit
    options%unit_diagnostics = dl_unit
@@ -1969,8 +1976,15 @@ subroutine test_random
            end do
          end do
 
-         call ssids_analyse_coord(a%n, ne, a%row, a%col, &
-              akeep, options, info, order)
+         if(random_logical(state)) then
+            ! Use fake_topology
+            call ssids_analyse_coord(a%n, ne, a%row, a%col, &
+                 akeep, options, info, order, topology=fake_topology)
+         else
+            ! Use real topology
+            call ssids_analyse_coord(a%n, ne, a%row, a%col, &
+                 akeep, options, info, order)
+         endif
          coord = .true.
       else
          call ssids_analyse(check, a%n, a%ptr, a%row, akeep, options, info, &
@@ -2419,8 +2433,6 @@ subroutine test_random_scale
    allocate(x1(maxn),rhs1d(maxn),scale(2*maxn))
    allocate(bindex(maxn), xindex(maxn), lflag(maxn))
 
-   posdef = .false.
-
    options%action = .false.
    options%nstream = 2
 
@@ -2429,6 +2441,7 @@ subroutine test_random_scale
       !print *, random_get_seed(state)
 
       ! Generate parameters
+      posdef = random_logical(state)
       a%n = random_integer(state,  maxn)
       if (prblm < 21) a%n = prblm ! check very small problems
       i = a%n**2/2 - a%n
