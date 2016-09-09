@@ -32,8 +32,9 @@ AC_LANG(C++)
 AC_OPENMP
 AC_LANG_POP(C++)
 
-# Establish linking flags C->Fortran
+# Establish linking flags C->Fortran and how to link C with fortran
 AC_FC_LIBRARY_LDFLAGS
+SPRAL_NO_FORT_MAIN
 
 # Establish -lstdc++ or equivalent
 if test "x$CXXLIB" == "x"; then

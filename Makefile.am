@@ -318,7 +318,7 @@ examples_C_ssids_LDADD = $(LDADD) $(SPRAL_LINK_LIBS)
 spral_ssids_LINK = $(SPRALLINK)
 ssids_test_LINK = $(SPRALLINK)
 examples_Fortran_ssids_LINK = $(SPRALLINK)
-examples_C_ssids_LINK = $(SPRALLINK)
+examples_C_ssids_LINK = $(SPRALLINK) $(NO_FORT_MAIN)
 
 # SSMFE
 include_HEADERS += include/spral_ssmfe.h
