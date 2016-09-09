@@ -36,7 +36,6 @@ module spral_ssids_datatypes
    integer, parameter, public :: SSIDS_ERROR_VAL               = -9
    integer, parameter, public :: SSIDS_ERROR_X_SIZE            = -10
    integer, parameter, public :: SSIDS_ERROR_JOB_OOR           = -11
-   integer, parameter, public :: SSIDS_ERROR_PRESOLVE_INCOMPAT = -12
    integer, parameter, public :: SSIDS_ERROR_NOT_LLT           = -13
    integer, parameter, public :: SSIDS_ERROR_NOT_LDLT          = -14
    integer, parameter, public :: SSIDS_ERROR_NO_SAVED_SCALING  = -15
