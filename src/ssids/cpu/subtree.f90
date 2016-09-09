@@ -276,7 +276,7 @@ function factor(this, posdef, aval, child_contrib, options, inform, scaling)
    endif
 
    ! Extract to Fortran data structures
-   call cpu_copy_stats_out(this%n, cstats, inform)
+   call cpu_copy_stats_out(cstats, inform)
 
    ! Success, set result and return
    factor => cpu_factor

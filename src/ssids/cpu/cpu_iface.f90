@@ -66,8 +66,7 @@ end subroutine cpu_copy_options_in
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !> @brief Copy subset of ssids_inform from interoperable type
-subroutine cpu_copy_stats_out(n, cstats, finform)
-   integer, intent(in) :: n
+subroutine cpu_copy_stats_out(cstats, finform)
    type(cpu_factor_stats), intent(in) :: cstats
    type(ssids_inform), intent(inout) :: finform
 
