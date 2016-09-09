@@ -5,6 +5,7 @@
  */
 #include "ssids/cpu/NumericSubtree.hxx"
 
+#include <cassert>
 #include <cstdio>
 #include <memory>
 
@@ -208,16 +209,11 @@ void spral_ssids_cpu_subtree_alter_dbl(
       double const* d   // new diagonal entries
       ) {
 
+   assert(!posdef); // Should never be called on positive definite matrices.
+
    // Call method
-   if(posdef) { // Converting from runtime to compile time posdef value
-      auto &subtree =
-         *static_cast<NumericSubtreePosdef*>(subtree_ptr);
-      subtree.alter(d);
-   } else {
-      auto &subtree =
-         *static_cast<NumericSubtreeIndef*>(subtree_ptr);
-      subtree.alter(d);
-   }
+   auto &subtree = *static_cast<NumericSubtreeIndef*>(subtree_ptr);
+   subtree.alter(d);
 }
 
 /* Double precision wrapper around templated routines */
