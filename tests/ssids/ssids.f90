@@ -1899,7 +1899,7 @@ subroutine test_random
    options%min_gpu_work = 0 ! alway allow some gpu working
 
    do prblm = 1, nprob
-      if(errors>0) stop ! FIXME: rm
+      !if(errors>0) stop
       !call random_set_seed(state, 1963535693)
       !print *, random_get_seed(state)
 
