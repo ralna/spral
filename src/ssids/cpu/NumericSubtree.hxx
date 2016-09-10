@@ -92,28 +92,33 @@ public:
                firstprivate(si) \
                shared(aval, options, scaling, thread_stats, work) \
                depend(in: parent_lcol[0:1])
-            try {
-               int this_thread = omp_get_thread_num();
+            {
+               #pragma omp cancellation point taskgroup
+               try {
+                  int this_thread = omp_get_thread_num();
 #ifdef PROFILE
-               Profile::Task task_subtree("TA_SUBTREE");
+                  Profile::Task task_subtree("TA_SUBTREE");
 #endif
-               auto const& leaf = symb_.small_leafs_[si];
-               new (&small_leafs_[si]) SLNS(leaf, nodes_, aval, scaling,
-                     factor_alloc_, pool_alloc_, work,
-                     options, thread_stats[this_thread]);
-               if(thread_stats[this_thread].flag<Flag::SUCCESS) {
+                  auto const& leaf = symb_.small_leafs_[si];
+                  new (&small_leafs_[si]) SLNS(leaf, nodes_, aval, scaling,
+                        factor_alloc_, pool_alloc_, work,
+                        options, thread_stats[this_thread]);
+                  if(thread_stats[this_thread].flag<Flag::SUCCESS) {
+                     #pragma omp cancel taskgroup
+                  }
+#ifdef PROFILE
+                  task_subtree.done();
+#endif
+               } catch (std::bad_alloc const&) {
+                  thread_stats[omp_get_thread_num()].flag =
+                     Flag::ERROR_ALLOCATION;
+                  #pragma omp cancel taskgroup
+               } catch (SingularError const&) {
+                  thread_stats[omp_get_thread_num()].flag =
+                     Flag::ERROR_SINGULAR;
                   #pragma omp cancel taskgroup
                }
-#ifdef PROFILE
-               task_subtree.done();
-#endif
-            } catch (std::bad_alloc const&) {
-               thread_stats[omp_get_thread_num()].flag = Flag::ERROR_ALLOCATION;
-               #pragma omp cancel taskgroup
-            } catch (SingularError const&) {
-               thread_stats[omp_get_thread_num()].flag = Flag::ERROR_SINGULAR;
-               #pragma omp cancel taskgroup
-            }
+            } // task
          }
 
          /* Loop over singleton nodes in order */
@@ -127,39 +132,45 @@ public:
                       work) \
                depend(inout: this_lcol[0:1]) \
                depend(in: parent_lcol[0:1])
-            try {
-               /*printf("%d: Node %d parent %d (of %d) size %d x %d\n",
-                     omp_get_thread_num(), ni, symb_[ni].parent, symb_.nnodes_,
-                     symb_[ni].nrow, symb_[ni].ncol);*/
-               int this_thread = omp_get_thread_num();
-               // Assembly of node (not of contribution block)
-               assemble_pre
-                  (posdef, symb_.n, symb_[ni], child_contrib, nodes_[ni],
-                   factor_alloc_, pool_alloc_, work, aval, scaling);
-               // Update stats
-               int nrow = symb_[ni].nrow + nodes_[ni].ndelay_in;
-               thread_stats[this_thread].maxfront = std::max(thread_stats[this_thread].maxfront, nrow);
+            {
+               #pragma omp cancellation point taskgroup
+               try {
+                  /*printf("%d: Node %d parent %d (of %d) size %d x %d\n",
+                        omp_get_thread_num(), ni, symb_[ni].parent,
+                        symb_.nnodes_, symb_[ni].nrow, symb_[ni].ncol);*/
+                  int this_thread = omp_get_thread_num();
+                  // Assembly of node (not of contribution block)
+                  assemble_pre
+                     (posdef, symb_.n, symb_[ni], child_contrib, nodes_[ni],
+                      factor_alloc_, pool_alloc_, work, aval, scaling);
+                  // Update stats
+                  int nrow = symb_[ni].nrow + nodes_[ni].ndelay_in;
+                  thread_stats[this_thread].maxfront =
+                     std::max(thread_stats[this_thread].maxfront, nrow);
 
-               // Factorization
-               factor_node<posdef>
-                  (ni, symb_[ni], &nodes_[ni], options,
-                   thread_stats[this_thread], work,
-                   pool_alloc_);
-               if(thread_stats[this_thread].flag<Flag::SUCCESS) {
+                  // Factorization
+                  factor_node<posdef>
+                     (ni, symb_[ni], &nodes_[ni], options,
+                      thread_stats[this_thread], work,
+                      pool_alloc_);
+                  if(thread_stats[this_thread].flag<Flag::SUCCESS) {
+                     #pragma omp cancel taskgroup
+                  }
+
+                  // Assemble children into contribution block
+                  assemble_post(symb_.n, symb_[ni], child_contrib, nodes_[ni],
+                        pool_alloc_, work);
+               } catch (std::bad_alloc const&) {
+                  thread_stats[omp_get_thread_num()].flag =
+                     Flag::ERROR_ALLOCATION;
+                  #pragma omp cancel taskgroup
+               } catch (SingularError const&) {
+                  thread_stats[omp_get_thread_num()].flag =
+                     Flag::ERROR_SINGULAR;
                   #pragma omp cancel taskgroup
                }
-
-               // Assemble children into contribution block
-               assemble_post(symb_.n, symb_[ni], child_contrib, nodes_[ni],
-                     pool_alloc_, work);
-            } catch (std::bad_alloc const&) {
-               thread_stats[omp_get_thread_num()].flag = Flag::ERROR_ALLOCATION;
-               #pragma omp cancel taskgroup
-            } catch (SingularError const&) {
-               thread_stats[omp_get_thread_num()].flag = Flag::ERROR_SINGULAR;
-               #pragma omp cancel taskgroup
             }
-         }
+         } // task
       } // taskgroup
 
       // Reduce thread_stats
