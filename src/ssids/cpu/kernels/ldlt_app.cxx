@@ -1285,7 +1285,8 @@ private:
                    options, work, alloc, flag) \
             depend(inout: a[blk*block_size*lda+blk*block_size:1]) \
             depend(inout: perm[blk*block_size:1])
-         if(flag==0) { try {
+         { try {
+            #pragma omp cancellation point taskgroup
 #ifdef PROFILE
             Profile::Task task("TA_LDLT_DIAG");
 #endif
@@ -1297,7 +1298,10 @@ private:
             int nelim = dblk.template factor<Allocator>(
                   next_elim, perm, d, options, work, alloc
                   );
-            if(nelim<0) flag = nelim;
+            if(nelim<0) {
+               #pragma omp cancel taskgroup
+               flag = nelim;
+            }
             // Init threshold check (non locking => task dependencies)
             cdata[blk].init_passed(nelim);
 #ifdef PROFILE
@@ -1305,20 +1309,22 @@ private:
 #endif
          } catch(std::bad_alloc const&) {
             flag = Flag::ERROR_ALLOCATION;
+            #pragma omp cancel taskgroup
          } catch(SingularError const&) {
             flag = Flag::ERROR_SINGULAR;
-         }
-         }
+            #pragma omp cancel taskgroup
+         } }
          
          // Loop over off-diagonal blocks applying pivot
          for(int jblk=0; jblk<blk; jblk++) {
             #pragma omp task default(none) \
                firstprivate(blk, jblk) \
-               shared(a, backup, cdata, options, flag) \
+               shared(a, backup, cdata, options) \
                depend(in: a[blk*block_size*lda+blk*block_size:1]) \
                depend(inout: a[jblk*block_size*lda+blk*block_size:1]) \
                depend(in: perm[blk*block_size:1])
-             if(flag==0) {
+            {
+               #pragma omp cancellation point taskgroup
 #ifdef PROFILE
                Profile::Task task("TA_LDLT_APPLY");
 #endif
@@ -1344,11 +1350,12 @@ private:
          for(int iblk=blk+1; iblk<mblk; iblk++) {
             #pragma omp task default(none) \
                firstprivate(blk, iblk) \
-               shared(a, backup, cdata, options, flag) \
+               shared(a, backup, cdata, options) \
                depend(in: a[blk*block_size*lda+blk*block_size:1]) \
                depend(inout: a[blk*block_size*lda+iblk*block_size:1]) \
                depend(in: perm[blk*block_size:1])
-            if(flag==0) {
+            {
+               #pragma omp cancellation point taskgroup
 #ifdef PROFILE
                Profile::Task task("TA_LDLT_APPLY");
 #endif
@@ -1374,9 +1381,10 @@ private:
          // number of passed columns.
          #pragma omp task default(none) \
             firstprivate(blk) \
-            shared(cdata, next_elim, flag) \
+            shared(cdata, next_elim) \
             depend(inout: perm[blk*block_size:1])
-         if(flag==0) {
+         {
+            #pragma omp cancellation point taskgroup
 #ifdef PROFILE
             Profile::Task task("TA_LDLT_ADJUST");
 #endif
@@ -1396,12 +1404,13 @@ private:
                                          : iblk*block_size*lda + blk*block_size;
                #pragma omp task default(none) \
                   firstprivate(blk, iblk, jblk) \
-                  shared(a, cdata, backup, work, flag)\
+                  shared(a, cdata, backup, work)\
                   depend(inout: a[jblk*block_size*lda+iblk*block_size:1]) \
                   depend(in: perm[blk*block_size:1]) \
                   depend(in: a[jblk*block_size*lda+blk*block_size:1]) \
                   depend(in: a[adep_idx:1])
-               if(flag==0) {
+               {
+                  #pragma omp cancellation point taskgroup
 #ifdef PROFILE
                   Profile::Task task("TA_LDLT_UPDA");
 #endif
@@ -1428,12 +1437,13 @@ private:
             for(int iblk=jblk; iblk<mblk; iblk++) {
                #pragma omp task default(none) \
                   firstprivate(blk, iblk, jblk) \
-                  shared(a, cdata, backup, work, upd, flag) \
+                  shared(a, cdata, backup, work, upd) \
                   depend(inout: a[jblk*block_size*lda+iblk*block_size:1]) \
                   depend(in: perm[blk*block_size:1]) \
                   depend(in: a[blk*block_size*lda+iblk*block_size:1]) \
                   depend(in: a[blk*block_size*lda+jblk*block_size:1])
-               if(flag==0) {
+               {
+                  #pragma omp cancellation point taskgroup
 #ifdef PROFILE
                   Profile::Task task("TA_LDLT_UPDA");
 #endif
@@ -1465,12 +1475,13 @@ private:
                                  (iblk-nblk)*block_size];
                #pragma omp task default(none) \
                   firstprivate(iblk, jblk, blk, upd_ij) \
-                  shared(a, upd2, cdata, work, flag) \
+                  shared(a, upd2, cdata, work) \
                   depend(inout: upd_ij[0:1]) \
                   depend(in: perm[blk*block_size:1]) \
                   depend(in: a[blk*block_size*lda+iblk*block_size:1]) \
                   depend(in: a[blk*block_size*lda+jblk*block_size:1])
-               if(flag==0) {
+               {
+                  #pragma omp cancellation point taskgroup
 #ifdef PROFILE
                   Profile::Task task("TA_LDLT_UPDC");
 #endif
@@ -1679,6 +1690,7 @@ private:
                    options, work, alloc, up_to_date, flag) \
             depend(inout: a[blk*block_size*lda+blk*block_size:1])
          { try {
+            #pragma omp cancellation point taskgroup
 #ifdef PROFILE
             Profile::Task task("TA_LDLT_DIAG");
 #endif
@@ -1719,6 +1731,7 @@ private:
                depend(in: a[blk*block_size*lda+blk*block_size:1]) \
                depend(inout: a[jblk*block_size*lda+blk*block_size:1])
             {
+               #pragma omp cancellation point taskgroup
 #ifdef PROFILE
                Profile::Task task("TA_LDLT_APPLY");
 #endif
@@ -1744,6 +1757,7 @@ private:
                depend(in: a[blk*block_size*lda+blk*block_size:1]) \
                depend(inout: a[blk*block_size*lda+iblk*block_size:1])
             {
+               #pragma omp cancellation point taskgroup
 #ifdef PROFILE
                Profile::Task task("TA_LDLT_APPLY");
 #endif
@@ -1782,6 +1796,7 @@ private:
                   depend(in: a[blk*block_size*lda+iblk*block_size:1]) \
                   depend(in: a[blk*block_size*lda+jblk*block_size:1])
                {
+                  #pragma omp cancellation point taskgroup
 #ifdef PROFILE
                   Profile::Task task("TA_LDLT_UPDA");
 #endif
@@ -1818,6 +1833,7 @@ private:
                   depend(in: a[blk*block_size*lda+iblk*block_size:1]) \
                   depend(in: a[blk*block_size*lda+jblk*block_size:1])
                {
+                  #pragma omp cancellation point taskgroup
 #ifdef PROFILE
                   Profile::Task task("TA_LDLT_UPDC");
 #endif
