@@ -985,6 +985,7 @@ public:
                   cdata_[i_].d, ld, INNER_BLOCK_SIZE, options.action,
                   options.u, options.small
                   );
+            if(cdata_[i_].nelim < 0) return cdata_[i_].nelim;
             int* temp = work[omp_get_thread_num()].get_ptr<int>(ncol());
             int* blkperm = &perm[i_*INNER_BLOCK_SIZE];
             for(int i=0; i<ncol(); ++i)
@@ -1677,7 +1678,7 @@ private:
             shared(a, perm, backup, cdata, next_elim, d, \
                    options, work, alloc, up_to_date, flag) \
             depend(inout: a[blk*block_size*lda+blk*block_size:1])
-         try {
+         { try {
 #ifdef PROFILE
             Profile::Task task("TA_LDLT_DIAG");
 #endif
@@ -1708,7 +1709,7 @@ private:
          } catch(SingularError const&) {
             flag = Flag::ERROR_SINGULAR;
             #pragma omp cancel taskgroup
-         }
+         } }
          
          // Loop over off-diagonal blocks applying pivot
          for(int jblk=0; jblk<blk; jblk++) {
