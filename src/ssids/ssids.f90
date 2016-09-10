@@ -41,6 +41,12 @@ module spral_ssids
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+   !> \brief Caches user OpenMP ICV values for later restoration
+   type :: omp_settings
+      logical :: nested
+      integer :: max_active_levels
+   end type omp_settings
+
    ! Make interfaces generic.
    interface ssids_analyse
       module procedure analyse_double
@@ -686,6 +692,7 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
    type(equilib_options) :: esoptions
    type(equilib_inform) :: esinform
 
+   type(omp_settings) :: user_omp_settings
    type(rb_writer_options) :: rb_options
    integer :: flag
    
@@ -709,21 +716,25 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
    st = 0
    n = akeep%n
 
-   ! Immediate return if analyse detected singularity and options%action=false
-   if(.not.options%action .and. akeep%n.ne.akeep%inform%matrix_rank) then
-      inform%flag = SSIDS_ERROR_SINGULAR
+   ! Ensure OpenMP setup is as required
+   call push_omp_settings(user_omp_settings, inform%flag)
+   if(inform%flag.lt.0) then
       fkeep%inform = inform
       call inform%print_flag(options, context)
       return
+   endif
+
+   ! Immediate return if analyse detected singularity and options%action=false
+   if(.not.options%action .and. akeep%n.ne.akeep%inform%matrix_rank) then
+      inform%flag = SSIDS_ERROR_SINGULAR
+      goto 100
    end if
 
    ! Immediate return for trivial matrix
    if (akeep%nnodes.eq.0) then
       inform%flag = SSIDS_SUCCESS
       inform%matrix_rank = 0
-      fkeep%inform = inform
-      call inform%print_flag(options, context)
-      return
+      goto 100
    end if
 
    fkeep%pos_def = posdef
@@ -746,8 +757,7 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
       if (.not.present(row)) inform%flag = SSIDS_ERROR_PTR_ROW
       if (inform%flag < 0) then
          fkeep%inform = inform
-         call inform%print_flag(options, context)
-         return
+         goto 100
       end if
       nz = akeep%ne
    end if
@@ -768,9 +778,7 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
       endif
       if(flag.ne.0) then
          inform%flag = SSIDS_ERROR_UNKNOWN
-         fkeep%inform = inform
-         call inform%print_flag(options, context)
-         return
+         goto 100
       endif
    endif
 
@@ -824,9 +832,7 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
       case(-2)
          ! Structually singular matrix and control%action=.false.
          inform%flag = SSIDS_ERROR_SINGULAR
-         fkeep%inform = inform
-         call inform%print_flag(options, context)
-         return
+         goto 100
       end select
       ! Permute scaling to correct order
       do i = 1, n
@@ -871,9 +877,7 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
       if (.not.allocated(akeep%scaling)) then
          ! No scaling saved from analyse phase
          inform%flag = SSIDS_ERROR_NO_SAVED_SCALING
-         fkeep%inform = inform
-         call inform%print_flag(options, context)
-         return
+         goto 100
       end if
       do i = 1, n
          fkeep%scaling(i) = akeep%scaling(akeep%invp(i))
@@ -933,8 +937,7 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
    endif
    if(inform%flag .lt. 0) then
       fkeep%inform = inform
-      call inform%print_flag(options, context)
-      return
+      goto 100
    endif
 
    if(akeep%n.ne.inform%matrix_rank) then
@@ -973,8 +976,12 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
  
    end if
 
+   ! Normal return just drops through
+   100 continue
+   ! Clean up and return
    fkeep%inform = inform
    call inform%print_flag(options, context)
+   call pop_omp_settings(user_omp_settings)
    return
    !!!!!!!!!!!!!!!!!!!!
 
@@ -984,9 +991,7 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
    10 continue
    inform%flag = SSIDS_ERROR_ALLOCATION
    inform%stat = st
-   fkeep%inform = inform
-   call inform%print_flag(options, context)
-   return
+   goto 100
 
 end subroutine ssids_factor_double
 
@@ -1293,5 +1298,43 @@ subroutine free_both_double(akeep, fkeep, cuda_error)
    call free_fkeep_double(fkeep, cuda_error)
    if(cuda_error.ne.0) return
 end subroutine free_both_double
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!> \brief Ensure OpenMP ICVs are as required, and store user versions for
+!>        later restoration.
+!> \sa pop_omp_settings()
+subroutine push_omp_settings(user_settings, flag)
+   type(omp_settings), intent(out) :: user_settings
+   integer, intent(inout) :: flag
+
+   ! issue an error if we don't have cancellation (could lead to segfaults)
+   if(.not.omp_get_cancellation()) then
+      flag = SSIDS_ERROR_OMP_CANCELLATION
+      return
+   endif
+
+   ! issue a warning if proc_bind is not enabled
+   if(omp_get_proc_bind().eq.OMP_PROC_BIND_FALSE) &
+      flag = SSIDS_WARNING_OMP_PROC_BIND
+
+   ! must have nested enabled
+   user_settings%nested = omp_get_nested()
+   if(.not.user_settings%nested) call omp_set_nested(.true.)
+
+   ! we will need at least 2 active levels
+   user_settings%max_active_levels = omp_get_max_active_levels()
+   if(user_settings%max_active_levels < 2) call omp_set_max_active_levels(2)
+end subroutine push_omp_settings
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!> \brief Restore user OpenMP ICV values.
+!> \sa push_omp_settings()
+subroutine pop_omp_settings(user_settings)
+   type(omp_settings), intent(in) :: user_settings
+
+   if(.not.user_settings%nested) call omp_set_nested(user_settings%nested)
+   if(user_settings%max_active_levels < 2) &
+      call omp_set_max_active_levels(user_settings%max_active_levels)
+end subroutine pop_omp_settings
 
 end module spral_ssids
