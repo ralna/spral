@@ -131,6 +131,8 @@ function flag_to_character(this) result(msg)
       msg = 'Matrix found to be singular'
    case(SSIDS_WARNING_MATCH_ORD_NO_SCALE)
       msg = 'Matching-based ordering used but associated scaling ignored'
+   case(SSIDS_WARNING_OMP_PROC_BIND)
+      msg = 'OMP_PROC_BIND=false, this may reduce performance'
    case default
       msg = 'SSIDS Internal Error'
    end select
