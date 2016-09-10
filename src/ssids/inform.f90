@@ -108,6 +108,8 @@ function flag_to_character(this) result(msg)
    case(SSIDS_ERROR_CUBLAS_UNKNOWN)
       msg = 'Unhandled CUBLAS error:'
       ! FIXME?
+   case(SSIDS_ERROR_OMP_CANCELLATION)
+      msg = 'SSIDS CPU code requires OMP cancellation to be enabled'
 
    !
    ! Warnings

@@ -19,6 +19,7 @@ enum Flag : int {
    ERROR_SINGULAR          = -5,
    ERROR_NOT_POS_DEF       = -6,
    ERROR_ALLOCATION        = -50,
+   ERROR_OMP_CANCELLATION  = -53,
 
    WARNING_FACT_SINGULAR   = 7
 };

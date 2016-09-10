@@ -38,10 +38,15 @@ void* spral_ssids_cpu_create_num_subtree_dbl(
       ) {
    auto const& symbolic_subtree = *static_cast<SymbolicSubtree const*>(symbolic_subtree_ptr);
 
-   spral::omp::warn_if_no_cancel();
+   // Ensure we have correct OpenMP settings
+   if(!spral::omp::cancel_support()) {
+      stats->flag = Flag::ERROR_OMP_CANCELLATION;
+      return nullptr;
+   }
    spral::omp::warn_if_no_nested();
    spral::omp::warn_if_no_proc_bind();
 
+   // Perform factorization
    if(posdef) {
       auto* subtree = new NumericSubtreePosdef
          (symbolic_subtree, aval, scaling, child_contrib, *options, *stats);
