@@ -7,6 +7,7 @@
 ! * Change fred_small to 1e-6
 !
 program main
+!$ use omp_lib
    use spral_hw_topology, only : numa_region
    use spral_matrix_util, only : SPRAL_MATRIX_REAL_SYM_PSDEF, &
       SPRAL_MATRIX_REAL_SYM_INDEF, print_matrix
