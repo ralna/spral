@@ -19,4 +19,9 @@
 namespace std {
 void* align(std::size_t alignment, std::size_t size, void*& ptr, std::size_t& space);
 } /* namespace std */
-#endif
+#endif /* HAVE_STD_ALIGN */
+
+#ifndef _OPENMP
+inline int omp_get_thread_num(void) { return 0; }
+inline int omp_get_num_threads(void) { return 1; }
+#endif /* _OPENMP */
