@@ -58,7 +58,7 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
    type(ssids_inform), intent(inout) :: inform
 
    integer :: i, numa_region, exec_loc, my_loc
-   integer :: total_threads, max_gpus, to_launch
+   integer :: total_threads, max_gpus, to_launch, thread_num
    logical :: all_region
    type(contrib_type), dimension(:), allocatable :: child_contrib
    type(ssids_inform), dimension(:), allocatable :: thread_inform
@@ -88,15 +88,17 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
    if(inform%stat.ne.0) goto 100
    all_region = .false.
 !$omp parallel proc_bind(spread) num_threads(to_launch) &
-!$omp    default(none) private(i, exec_loc, numa_region, my_loc) &
+!$omp    default(none) private(i, exec_loc, numa_region, my_loc, thread_num) &
 !$omp    shared(akeep, fkeep, val, options, thread_inform, child_contrib, &
 !$omp           all_region) &
 !$omp    if(to_launch.gt.1)
-   numa_region = mod(omp_get_thread_num(), size(akeep%topology)) + 1
-   my_loc = omp_get_thread_num() + 1
-   if(omp_get_thread_num() < size(akeep%topology)) then
+   thread_num = 0
+!$ thread_num = omp_get_thread_num()
+   numa_region = mod(thread_num, size(akeep%topology)) + 1
+   my_loc = thread_num + 1
+   if(thread_num < size(akeep%topology)) then
       ! CPU, control number of inner threads (not needed for gpu)
-      call omp_set_num_threads(akeep%topology(numa_region)%nproc)
+!$    call omp_set_num_threads(akeep%topology(numa_region)%nproc)
    endif
    ! Split into threads for this NUMA region (unless we're running a GPU)
    exec_loc = -1 ! avoid compiler warning re uninitialized
@@ -146,7 +148,7 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
 
    if(all_region) then
       ! At least some all region subtrees exist
-      call omp_set_num_threads(total_threads)
+!$    call omp_set_num_threads(total_threads)
       do i = 1, akeep%nparts
          exec_loc = akeep%subtree(i)%exec_loc
          if(exec_loc.ne.-1) cycle

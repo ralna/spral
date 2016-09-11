@@ -738,7 +738,7 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
    character(50)  :: context ! Procedure name (used when printing).
    integer, dimension(:), allocatable :: contrib_dest, exec_loc, level
 
-   integer :: numa_region, device, my_loc
+   integer :: numa_region, device, my_loc, thread_num
    integer :: max_gpus, to_launch
    integer :: nemin, flag
    integer :: blkm, blkn
@@ -828,10 +828,12 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
    end do
    to_launch = size(akeep%topology)*(1+max_gpus)
 !$omp parallel proc_bind(spread) num_threads(to_launch) &
-!$omp    default(shared) private(i, numa_region, my_loc, device) &
+!$omp    default(shared) private(i, numa_region, my_loc, device, thread_num) &
 !$omp    if(to_launch.gt.1)
-   numa_region = mod(omp_get_thread_num(), size(akeep%topology)) + 1
-   my_loc = omp_get_thread_num() + 1
+   thread_num = 0
+!$ thread_num = omp_get_thread_num()
+   numa_region = mod(thread_num, size(akeep%topology)) + 1
+   my_loc = thread_num + 1
    do i = 1, akeep%nparts
       ! only initialize subtree if this is the correct region: note that
       ! an "all region" subtree with location -1 is initialised by region 0
