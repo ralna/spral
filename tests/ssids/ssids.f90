@@ -1869,12 +1869,24 @@ subroutine test_random
    integer :: cuda_error
    logical :: check, coord
    real(wp) :: num_flops
-   type(numa_region), dimension(2) :: fake_topology
+   integer :: max_threads
+   type(numa_region), dimension(:), allocatable :: fake_topology
 
-   do i = 1, 2
-      fake_topology(i)%nproc = 2
-      allocate(fake_topology(i)%gpus(0))
-   end do
+   max_threads = 1
+!$ max_threads = omp_get_max_threads()
+   if(max_threads > 1) then
+      allocate(fake_topology(2))
+      do i = 1, 2
+         fake_topology(i)%nproc = 2
+         allocate(fake_topology(i)%gpus(0))
+      end do
+   else
+      allocate(fake_topology(1))
+      do i = 1, 1
+         fake_topology(i)%nproc = 1
+         allocate(fake_topology(i)%gpus(0))
+      end do
+   end if
 
    options%unit_error = we_unit
    options%unit_diagnostics = dl_unit
