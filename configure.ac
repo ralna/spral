@@ -8,6 +8,11 @@ AC_ARG_ENABLE([gpu],
    AS_HELP_STRING([--disable-gpu], [Do not attempt to compile GPU code (otherwise presence of nvcc is autodetected)])
    )
 
+# Allow disabling of OpenMP
+AC_ARG_ENABLE([openmp],
+   AS_HELP_STRING([--disable-openmp], [Disable OpenMP parallelism. Not recommended.])
+   )
+
 # Allow user to enable profiling
 AC_ARG_ENABLE([profile],
    AS_HELP_STRING([--enable-profile], [Enable support for profile generation. Require gtg library.])
@@ -26,11 +31,15 @@ AM_CONDITIONAL([HAVE_NVCC], [test -n "$NVCC"])
 
 # Add OpenMP support, set language standards
 AC_LANG_PUSH(C)
-AC_OPENMP
 AC_PROG_CC_C99
-AC_LANG(C++)
-AC_OPENMP
-AC_LANG_POP(C++)
+AC_LANG_POP(C)
+AS_IF([test "x$enable_openmp" != "xno"], [
+   AC_LANG_PUSH(C)
+   AC_OPENMP
+   AC_LANG(C++)
+   AC_OPENMP
+   AC_LANG_POP(C++)
+   ])
 
 # Establish linking flags C->Fortran and how to link C with fortran
 AC_FC_LIBRARY_LDFLAGS
