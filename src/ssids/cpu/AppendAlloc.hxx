@@ -25,7 +25,9 @@ class Page {
 public:
    Page(size_t sz, Page* next=nullptr)
    : next(next), mem_(calloc(sz+align, 1)), ptr_(mem_), space_(sz+align)
-   {}
+   {
+      if(!mem_) throw std::bad_alloc();
+   }
    ~Page() {
 #ifdef MEM_STATS
       uintptr_t used =
@@ -39,7 +41,7 @@ public:
       free(mem_);
    }
    void* allocate(size_t sz) {
-      if(!std::align(32, sz, ptr_, space_)) return nullptr;
+      if(!std::align(align, sz, ptr_, space_)) return nullptr;
       void* ret = ptr_;
       ptr_ = (char*)ptr_ + sz;
       space_ -= sz;
