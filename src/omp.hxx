@@ -8,7 +8,9 @@
  */
 #pragma once
 
+#ifdef _OPENMP
 #include <omp.h>
+#endif /* _OPENMP */
 
 /* This file wraps the C interface for OpenMP in C++ for style/safety */
 namespace spral { namespace omp {
@@ -27,26 +29,40 @@ public:
    Lock(Lock const&) =delete;
    Lock& operator=(Lock const&) =delete;
    Lock() {
+#ifdef _OPENMP
       omp_init_lock(&lock_);
+#endif /* _OPENMP */
    }
    ~Lock() {
+#ifdef _OPENMP
       omp_destroy_lock(&lock_);
+#endif /* _OPENMP */
    }
 private:
    inline
    void set() {
+#ifdef _OPENMP
       omp_set_lock(&lock_);
+#endif /* _OPENMP */
    }
    inline
    void unset() {
+#ifdef _OPENMP
       omp_unset_lock(&lock_);
+#endif /* _OPENMP */
    }
    inline
    bool test() {
+#ifdef _OPENMP
       return omp_test_lock(&lock_);
+#else
+      return true;
+#endif /* _OPENMP */
    }
 
+#ifdef _OPENMP
    omp_lock_t lock_;
+#endif /* _OPENMP */
 
    friend class AcquiredLock;
 };
