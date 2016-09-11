@@ -10,7 +10,11 @@
 #include <cstddef>
 #include <sstream>
 #include <stdexcept>
+
+#ifdef _OPENMP
 #include <omp.h>
+#endif /* _OPENMP */
+
 /* SPRAL headers */
 #include "ssids/profile.hxx"
 #include "ssids/cpu/cpu_iface.hxx"
