@@ -1302,8 +1302,12 @@ private:
                   next_elim, perm, d, options, work, alloc
                   );
             if(nelim<0) {
-               #pragma omp cancel taskgroup
                flag = nelim;
+#ifdef _OPENMP
+               #pragma omp cancel taskgroup
+#else
+            return flag;
+#endif /* _OPENMP */
             }
             // Init threshold check (non locking => task dependencies)
             cdata[blk].init_passed(nelim);
@@ -1312,10 +1316,18 @@ private:
 #endif
          } catch(std::bad_alloc const&) {
             flag = Flag::ERROR_ALLOCATION;
+#ifdef _OPENMP
             #pragma omp cancel taskgroup
+#else
+            return flag;
+#endif /* _OPENMP */
          } catch(SingularError const&) {
             flag = Flag::ERROR_SINGULAR;
+#ifdef _OPENMP
             #pragma omp cancel taskgroup
+#else
+            return flag;
+#endif /* _OPENMP */
          } }
          
          // Loop over off-diagonal blocks applying pivot
@@ -1709,7 +1721,11 @@ private:
                   );
             if(nelim < get_ncol(blk, n, block_size)) {
                cdata[blk].init_passed(0); // diagonal block has NOT passed
+#ifdef _OPENMP
                #pragma omp cancel taskgroup
+#else
+               return cdata.calc_nelim(m);
+#endif /* _OPENMP */
             } else {
                cdata[blk].first_elim = (blk==0);
                cdata[blk].init_passed(1); // diagonal block has passed
@@ -1720,10 +1736,18 @@ private:
 #endif
          } catch(std::bad_alloc const&) {
             flag = Flag::ERROR_ALLOCATION;
+#ifdef _OPENMP
             #pragma omp cancel taskgroup
+#else
+            return flag;
+#endif /* _OPENMP */
          } catch(SingularError const&) {
             flag = Flag::ERROR_SINGULAR;
+#ifdef _OPENMP
             #pragma omp cancel taskgroup
+#else
+            return flag;
+#endif /* _OPENMP */
          } }
          
          // Loop over off-diagonal blocks applying pivot
@@ -1779,7 +1803,11 @@ private:
                int blkpass = rblk.apply_pivot_app(dblk, options.u, options.small);
                // Update column's passed pivot count
                if(cdata[blk].test_fail(blkpass)) {
+#ifdef _OPENMP
                   #pragma omp cancel taskgroup
+#else
+                  return cdata.calc_nelim(m);
+#endif /* _OPENMP */
                }
 #ifdef PROFILE
                task.done();

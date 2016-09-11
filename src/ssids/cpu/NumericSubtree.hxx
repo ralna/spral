@@ -104,7 +104,12 @@ public:
                         factor_alloc_, pool_alloc_, work,
                         options, thread_stats[this_thread]);
                   if(thread_stats[this_thread].flag<Flag::SUCCESS) {
+#ifdef _OPENMP
                      #pragma omp cancel taskgroup
+#else
+                     stats += thread_stats[this_thread];
+                     return;
+#endif /* _OPENMP */
                   }
 #ifdef PROFILE
                   task_subtree.done();
@@ -112,11 +117,21 @@ public:
                } catch (std::bad_alloc const&) {
                   thread_stats[omp_get_thread_num()].flag =
                      Flag::ERROR_ALLOCATION;
+#ifdef _OPENMP
                   #pragma omp cancel taskgroup
+#else
+                  stats += thread_stats[0];
+                  return;
+#endif /* _OPENMP */
                } catch (SingularError const&) {
                   thread_stats[omp_get_thread_num()].flag =
                      Flag::ERROR_SINGULAR;
+#ifdef _OPENMP
                   #pragma omp cancel taskgroup
+#else
+                  stats += thread_stats[0];
+                  return;
+#endif /* _OPENMP */
                }
             } // task
          }
@@ -154,7 +169,12 @@ public:
                       thread_stats[this_thread], work,
                       pool_alloc_);
                   if(thread_stats[this_thread].flag<Flag::SUCCESS) {
+#ifdef _OPENMP
                      #pragma omp cancel taskgroup
+#else
+                     stats += thread_stats[0];
+                     return;
+#endif /* _OPENMP */
                   }
 
                   // Assemble children into contribution block
@@ -163,11 +183,21 @@ public:
                } catch (std::bad_alloc const&) {
                   thread_stats[omp_get_thread_num()].flag =
                      Flag::ERROR_ALLOCATION;
+#ifdef _OPENMP
                   #pragma omp cancel taskgroup
+#else
+                  stats += thread_stats[0];
+                  return;
+#endif /* _OPENMP */
                } catch (SingularError const&) {
                   thread_stats[omp_get_thread_num()].flag =
                      Flag::ERROR_SINGULAR;
+#ifdef _OPENMP
                   #pragma omp cancel taskgroup
+#else
+                  stats += thread_stats[0];
+                  return;
+#endif /* _OPENMP */
                }
             }
          } // task
