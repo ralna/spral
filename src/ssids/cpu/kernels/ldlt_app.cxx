@@ -17,8 +17,11 @@
 #include <sstream>
 #include <utility>
 
+#ifdef _OPENMP
 #include <omp.h>
+#endif /* _OPENMP */
 
+#include "compat.hxx"
 #include "ssids/profile.hxx"
 #include "ssids/cpu/BlockPool.hxx"
 #include "ssids/cpu/BuddyAllocator.hxx"
