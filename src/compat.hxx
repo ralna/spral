@@ -24,4 +24,5 @@ void* align(std::size_t alignment, std::size_t size, void*& ptr, std::size_t& sp
 #ifndef _OPENMP
 inline int omp_get_thread_num(void) { return 0; }
 inline int omp_get_num_threads(void) { return 1; }
+inline int omp_get_max_threads(void) { return 1; }
 #endif /* _OPENMP */
