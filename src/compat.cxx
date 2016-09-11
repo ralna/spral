@@ -18,7 +18,7 @@ namespace std {
 void* align(std::size_t alignment, std::size_t size, void*& ptr, std::size_t& space) {
    auto cptr = reinterpret_cast<uintptr_t>(ptr);
    auto pad = cptr % alignment;
-   if(pad == 0) return ptr;
+   if(pad == 0) return (size>space) ? nullptr : ptr;
    pad = alignment - pad;
    if(size+pad > space) return nullptr;
    cptr += pad;
