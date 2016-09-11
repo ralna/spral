@@ -72,7 +72,7 @@ public:
       }
 
       /* Allocate workspaces */
-      int num_threads = omp_get_max_threads();
+      int num_threads = omp_get_num_threads();
       std::vector<ThreadStats> thread_stats(num_threads);
       std::vector<Workspace> work;
       work.reserve(num_threads);
