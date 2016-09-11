@@ -1307,23 +1307,23 @@ subroutine push_omp_settings(user_settings, flag)
    type(omp_settings), intent(out) :: user_settings
    integer, intent(inout) :: flag
 
-   ! issue an error if we don't have cancellation (could lead to segfaults)
-   if(.not.omp_get_cancellation()) then
-      flag = SSIDS_ERROR_OMP_CANCELLATION
-      return
-   endif
-
-   ! issue a warning if proc_bind is not enabled
-   if(omp_get_proc_bind().eq.OMP_PROC_BIND_FALSE) &
-      flag = SSIDS_WARNING_OMP_PROC_BIND
-
-   ! must have nested enabled
-   user_settings%nested = omp_get_nested()
-   if(.not.user_settings%nested) call omp_set_nested(.true.)
-
-   ! we will need at least 2 active levels
-   user_settings%max_active_levels = omp_get_max_active_levels()
-   if(user_settings%max_active_levels < 2) call omp_set_max_active_levels(2)
+!$ ! issue an error if we don't have cancellation (could lead to segfaults)
+!$ if(.not.omp_get_cancellation()) then
+!$    flag = SSIDS_ERROR_OMP_CANCELLATION
+!$    return
+!$ endif
+!$
+!$ ! issue a warning if proc_bind is not enabled
+!$ if(omp_get_proc_bind().eq.OMP_PROC_BIND_FALSE) &
+!$    flag = SSIDS_WARNING_OMP_PROC_BIND
+!$
+!$ ! must have nested enabled
+!$ user_settings%nested = omp_get_nested()
+!$ if(.not.user_settings%nested) call omp_set_nested(.true.)
+!$
+!$ ! we will need at least 2 active levels
+!$ user_settings%max_active_levels = omp_get_max_active_levels()
+!$ if(user_settings%max_active_levels < 2) call omp_set_max_active_levels(2)
 end subroutine push_omp_settings
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1332,9 +1332,9 @@ end subroutine push_omp_settings
 subroutine pop_omp_settings(user_settings)
    type(omp_settings), intent(in) :: user_settings
 
-   if(.not.user_settings%nested) call omp_set_nested(user_settings%nested)
-   if(user_settings%max_active_levels < 2) &
-      call omp_set_max_active_levels(user_settings%max_active_levels)
+!$ if(.not.user_settings%nested) call omp_set_nested(user_settings%nested)
+!$ if(user_settings%max_active_levels < 2) &
+!$    call omp_set_max_active_levels(user_settings%max_active_levels)
 end subroutine pop_omp_settings
 
 end module spral_ssids
