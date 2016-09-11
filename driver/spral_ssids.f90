@@ -83,7 +83,8 @@ program run_prob
 
    if(flat_topology) then
       allocate(topology(1))
-      topology(1)%nproc = min(omp_get_max_threads(),omp_get_thread_limit())
+      topology(1)%nproc = 1
+!$    topology(1)%nproc = min(omp_get_max_threads(),omp_get_thread_limit())
       allocate(topology(1)%gpus(0))
    endif
 
