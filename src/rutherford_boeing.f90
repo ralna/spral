@@ -419,8 +419,14 @@ contains
 
       select case(r_type_code(1:1))
       case ("r") ! Real
-         call read_data_real(iunit, r_title, r_identifier, &
-            r_type_code, m, n, nnz, ptr, rcptr, info, val=vptr)
+         if(abs(control%values).ne.VALUES_PATTERN) then
+            call read_data_real(iunit, r_title, r_identifier, &
+               r_type_code, m, n, nnz, ptr, rcptr, info, val=vptr)
+         else
+            ! Want pattern only
+            call read_data_real(iunit, r_title, r_identifier, &
+               r_type_code, m, n, nnz, ptr, rcptr, info)
+         endif
       case ("c") ! Complex
          info = ERROR_TYPE
          goto 100
