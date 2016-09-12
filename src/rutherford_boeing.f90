@@ -506,7 +506,7 @@ contains
             endif
             if(st.ne.0) goto 200
             if(skew .and. associated(vptr, val)) then
-               call sym_to_skew(n, ptr, row, col, val)
+               call sym_to_skew(n, ptr, row, val)
             endif
          case(TRI_FULL)
             if(.not. allocated(iw34)) allocate(iw34(n),stat=st)
@@ -521,7 +521,7 @@ contains
                if(skew .and. allocated(val)) then
                   ! HSL_MC34 doesn't cope with skew symmetry, need to flip
                   ! -ive all entries in upper triangle.
-                  call sym_to_skew(n, ptr, row, col, val)
+                  call sym_to_skew(n, ptr, row, val)
                endif
             endif
          end select
@@ -718,38 +718,26 @@ contains
    end function create_format
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-   !> \brief Convert symmetric matrix in full CSC format (lwr+upr) to skew
-   !>        symmetric.
+   !> \brief Convert symmetric matrix to skew symmetric.
    !>
-   !> This is done by setting all entries in the upper triangle to minus their
-   !> original value.
-   subroutine sym_to_skew(n, ptr, row, col, val)
+   !> Sets all entries in the upper triangle to minus their original value.
+   !> (i.e. this is a no-op if matrix is only stored as lower triangle).
+   subroutine sym_to_skew(n, ptr, row, val)
       integer, intent(inout) :: n
       integer(long), dimension(n+1), intent(inout) :: ptr
       integer, dimension(:), allocatable, intent(inout) :: row
-      integer, dimension(:), allocatable, intent(inout) :: col
       real(wp), dimension(ptr(n+1)-1), intent(inout) :: val
 
       integer :: i
       integer(long) :: j
 
-      if(allocated(row)) then
-         ! CSC format
-         do i = 1, n
-            do j = ptr(i), ptr(i+1)-1
-               if(row(j).ge.i) cycle ! in lower triangle
-               val(j) = -val(j)
-            end do
+      ! CSC format
+      do i = 1, n
+         do j = ptr(i), ptr(i+1)-1
+            if(row(j).ge.i) cycle ! in lower triangle
+            val(j) = -val(j)
          end do
-      else
-         ! CSR format
-         do i = 1, n
-            do j = ptr(i), ptr(i+1)-1
-               if(i.ge.col(j)) cycle ! in lower triangle
-               val(j) = -val(j)
-            end do
-         end do
-      endif
+      end do
    end subroutine sym_to_skew
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
