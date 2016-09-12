@@ -72,7 +72,7 @@ contains
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
    !> Read header information from file (filename version).
    subroutine rb_peek_file(filename, info, m, n, nelt, nvar, nval, &
-         type_code, title, identifier)
+         matrix_type, type_code, title, identifier)
       character(len=*), intent(in) :: filename     !< File to peek at
       integer, intent(out) :: info                 !< Return code
       integer, optional, intent(out) :: m          !< # rows
@@ -80,6 +80,7 @@ contains
       integer(long), optional, intent(out) :: nelt !< # elements (0 if asm)
       integer(long), optional, intent(out) :: nvar !< # indices in file
       integer(long), optional, intent(out) :: nval !< # values in file
+      integer, optional, intent(out) :: matrix_type !< SPRAL matrix type
       character(len=3), optional, intent(out) :: type_code !< eg "rsa"
       character(len=72), optional, intent(out) :: title  !< title field of file
       character(len=8), optional, intent(out) :: identifier !< id field of file
@@ -99,8 +100,9 @@ contains
 
       ! Call unit version to do hard work, no need to rewind as we will close
       ! file immediately
-      call rb_peek_unit(iunit, info, m, n, nelt, nvar, nval, type_code, &
-         title, identifier, rewind=.false.)
+      call rb_peek_unit(iunit, info, m=m, n=n, nelt=nelt, nvar=nvar, &
+         nval=nval, matrix_type=matrix_type, type_code=type_code, title=title, &
+         identifier=identifier, no_rewind=.true.)
 
       ! Close file
       close(iunit, iostat=iost)
@@ -114,7 +116,7 @@ contains
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
    !> Read header information from file (unit version).
    subroutine rb_peek_unit(iunit, info, m, n, nelt, nvar, nval, &
-         type_code, title, identifier, rewind)
+         matrix_type, type_code, title, identifier, no_rewind)
       integer, intent(in) :: iunit                 ! unit file is open on
       integer, intent(out) :: info                 ! return code
       integer, optional, intent(out) :: m          ! # rows
@@ -122,10 +124,11 @@ contains
       integer(long), optional, intent(out) :: nelt ! # elements (0 if asm)
       integer(long), optional, intent(out) :: nvar ! # indices in file
       integer(long), optional, intent(out) :: nval ! # values in file
+      integer, optional, intent(out) :: matrix_type ! spral matrix type code
       character(len=3), optional, intent(out) :: type_code ! eg "rsa"
       character(len=72), optional, intent(out) :: title ! title field of file
       character(len=8), optional, intent(out) :: identifier ! id field of file
-      logical, optional, intent(in) :: rewind ! If present and false, don't
+      logical, optional, intent(in) :: no_rewind ! If present and true, don't
          ! backspace unit to start
 
       ! "shadow" versions of file data - can't rely on arguments being present
@@ -148,7 +151,7 @@ contains
       info = SUCCESS
 
       r_rewind = .true.
-      if(present(rewind)) r_rewind = rewind
+      if(present(no_rewind)) r_rewind = .not.no_rewind
 
       ! Nibble top of file to find desired information, then return to original
       ! position if required
@@ -219,6 +222,8 @@ contains
       if(present(nelt)) nelt = r_nelt
       if(present(nvar)) nvar = r_nvar
       if(present(nval)) nval = r_nval
+      if(present(matrix_type)) &
+         matrix_type = sym_to_matrix_type(r_type_code(2:2))
       if(present(type_code)) type_code = r_type_code
       if(present(title)) title = r_title
       if(present(identifier)) identifier = r_identifier
@@ -261,7 +266,7 @@ contains
       endif
    end subroutine rb_read_double_int32
    subroutine rb_read_double_int64(filename, m, n, ptr, row, val, &
-         options, info, type_code, title, identifier, state)
+         options, info, matrix_type, type_code, title, identifier, state)
       character(len=*), intent(in) :: filename ! File to read
       integer, intent(out) :: m
       integer, intent(out) :: n
@@ -270,6 +275,7 @@ contains
       real(wp), dimension(:), allocatable, target, intent(out) :: val
       type(rb_read_options), intent(in) :: options ! control variables
       integer, intent(out) :: info ! return code
+      integer, optional, intent(out) :: matrix_type ! spral matrix type code
       character(len=3), optional, intent(out) :: type_code ! file data type
       character(len=72), optional, intent(out) :: title ! file title
       character(len=8), optional, intent(out) :: identifier ! file identifier
@@ -334,8 +340,8 @@ contains
 
       ! Read top of file (and rewind) to determine space required
       call rb_peek_unit(iunit, info, m=m, n=n, nelt=nelt, &
-         nval=nnz, type_code=r_type_code, title=title, &
-         identifier=identifier)
+         nval=nnz, matrix_type=matrix_type, type_code=r_type_code, &
+         title=title, identifier=identifier)
       if(info.ne.0) goto 100
 
       if(nelt.ne.0) then
@@ -957,5 +963,25 @@ contains
          matrix_type_to_sym = "z"
       end select
    end function matrix_type_to_sym
+
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   !> Convert type_code(2:2) character to SPRAL matrix type code
+   integer function sym_to_matrix_type(sym)
+      character(len=1), intent(in) :: sym
+
+      select case(sym)
+      case("r")
+         sym_to_matrix_type = SPRAL_MATRIX_REAL_RECT
+      case("s")
+         sym_to_matrix_type = SPRAL_MATRIX_REAL_SYM_INDEF
+      case("u")
+         sym_to_matrix_type = SPRAL_MATRIX_REAL_UNSYM
+      case("z")
+         sym_to_matrix_type = SPRAL_MATRIX_REAL_SKEW
+      case default
+         ! This should never happen
+         sym_to_matrix_type = SPRAL_MATRIX_UNSPECIFIED
+      end select
+   end function sym_to_matrix_type
 
 end module spral_rutherford_boeing
