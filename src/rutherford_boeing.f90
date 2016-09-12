@@ -277,7 +277,6 @@ contains
          ! random number generation
 
       ! Below variables are required for calling f77 MC56
-      integer, dimension(10) :: icntl
       integer, dimension(:), allocatable :: ival
 
       ! Shadow variables for type_code, title and identifier (as arguments
@@ -301,7 +300,7 @@ contains
       integer :: st, iost ! error codes from allocate and file operations
       logical :: symmetric ! .true. if file claims to be (skew) symmetric or H
       logical :: skew ! .true. if file claims to be skew symmetric
-      logical :: pattern ! .true. if we are only storing the pattern
+      logical :: read_val ! .true. if we are only reading pattern from file
       logical :: expanded ! .true. if pattern has been expanded
       type(random_state) :: state2 ! random state used if state not present
       integer, dimension(:), allocatable :: iw34 ! work array used by mc34
@@ -409,17 +408,17 @@ contains
       !
       ! Read matrix in its native format (real/integer)
       !
+      if(r_type_code(1:1).eq."q") info = WARN_AUX_FILE
 
-      icntl(1) = iunit
-      ! Determine whether we need to read values from file or not
-      icntl(2) = 0
-      if(control%values.lt.0 .or. control%values.eq.VALUES_PATTERN) &
-         icntl(2) = 1
-      pattern = icntl(2).eq.1 ! .true. if we are only storing the pattern
+      ! Determine whether we are reading values from file or not
+      read_val = (control%values.ge.0 .and. control%values.ne.VALUES_PATTERN)
+      read_val = read_val .and. r_type_code(1:1).ne."p"
+      read_val = read_val .and. r_type_code(1:1).ne."q"
 
       select case(r_type_code(1:1))
       case ("r") ! Real
-         if(abs(control%values).ne.VALUES_PATTERN) then
+         if(read_val) then
+            ! Want pattern and values
             call read_data_real(iunit, r_title, r_identifier, &
                r_type_code, m, n, nnz, ptr, rcptr, info, val=vptr)
          else
@@ -431,25 +430,19 @@ contains
          info = ERROR_TYPE
          goto 100
       case ("i") ! Integer
-         if(icntl(2).ne.1) then
+         if(read_val) then
             allocate(ival(nnz), stat=st)
+            if(st.ne.0) goto 200
+            call read_data_integer(iunit, r_title, r_identifier, &
+               r_type_code, m, n, nnz, ptr, rcptr, info, val=ival)
+            val(1:nnz) = real(ival)
          else
-            allocate(ival(1), stat=st)
+            call read_data_integer(iunit, r_title, r_identifier, &
+               r_type_code, m, n, nnz, ptr, rcptr, info)
          endif
-         if(st.ne.0) goto 200
-         call read_data_integer(iunit, r_title, r_identifier, &
-            r_type_code, m, n, nnz, ptr, rcptr, info, val=ival)
-         if(icntl(2).ne.1) val(1:nnz) = real(ival)
       case ("p", "q") ! Pattern only
-         ! Note: if "q", then values are in an auxilary file we cannot read,
-         ! so warn the user.
-         if(r_type_code(1:1).eq."q") then
-            icntl(2) = 1 ! Work around MC56 not recognising a 'q' file
-            info = WARN_AUX_FILE
-         endif
          call read_data_real(iunit, r_title, r_identifier, &
             r_type_code, m, n, nnz, ptr, rcptr, info)
-         pattern = .true.
       end select
       if(info.lt.0) goto 100 ! error
 
@@ -457,20 +450,18 @@ contains
       ! Add any missing diagonal entries
       !
       if(control%add_diagonal .or. &
-            (symmetric .and. pattern .and. abs(control%values).eq.3)) then
-         if(pattern) then
-            call add_missing_diag(m, n, ptr, &
-               rcptr)
+            (symmetric .and. .not.read_val .and. abs(control%values).eq.3)) then
+         if(read_val) then
+            call add_missing_diag(m, n, ptr, rcptr, val=val)
          else
-            call add_missing_diag(m, n, ptr, &
-               rcptr, val=val)
+            call add_missing_diag(m, n, ptr, rcptr)
          endif
       endif
 
       !
       ! Expand pattern if we need to generate unsymmetric values for it
       !
-      if( ( (pattern .and. abs(control%values).eq.VALUES_UNSYM) ) &
+      if( ( (.not.read_val .and. abs(control%values).eq.VALUES_UNSYM) ) &
             .and. symmetric .and. control%lwr_upr_full.eq.TRI_FULL) then
          allocate(iw34(n),stat=st)
          if(st.ne.0) goto 200
@@ -483,7 +474,7 @@ contains
       !
       ! Generate values if required
       !
-      if(pattern .and. (control%values.lt.0 .or. control%values.ge.2)) then
+      if(.not.read_val .and. (control%values.lt.0.or.control%values.ge.2)) then
          do c = 1, n
             k = int( ptr(c+1) - ptr(c) )
             if(present(state)) then
@@ -502,7 +493,6 @@ contains
                end do
             endif
          end do
-         pattern = .false.
       end if
 
       !
@@ -514,10 +504,10 @@ contains
             ! No-op
          case(TRI_UPR)
             ! Only need to flip from upr to lwr if want to end up as CSC
-            if(pattern) then
-               call flip_lwr_upr(n, ptr, col, row, st)
+            if(allocated(val)) then
+               call flip_lwr_upr(n, ptr, col, row, st, val=val)
             else
-               call flip_lwr_upr(n, ptr, col, row, st, val)
+               call flip_lwr_upr(n, ptr, col, row, st)
             endif
             if(st.ne.0) goto 200
             if(skew .and. associated(vptr, val)) then
@@ -527,14 +517,13 @@ contains
             if(.not. allocated(iw34)) allocate(iw34(n),stat=st)
             if(st.ne.0) goto 200
             if(.not. expanded) then
-               if(pattern) then
-                  call half_to_full(n, rcptr, ptr, iw34)
+               if(allocated(val)) then
+                  call half_to_full(n, rcptr, ptr, iw34, a=val)
                else
-                  call half_to_full(n, rcptr, ptr, iw34, &
-                     a=val)
+                  call half_to_full(n, rcptr, ptr, iw34)
                endif
                expanded = .true.
-               if(skew .and. .not.pattern) then
+               if(skew .and. allocated(val)) then
                   ! HSL_MC34 doesn't cope with skew symmetry, need to flip
                   ! -ive all entries in upper triangle.
                   call sym_to_skew(n, ptr, row, col, val)
