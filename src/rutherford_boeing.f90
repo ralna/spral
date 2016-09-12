@@ -419,12 +419,10 @@ contains
       case ("r") ! Real
          if(read_val) then
             ! Want pattern and values
-            call read_data_real(iunit, r_title, r_identifier, &
-               r_type_code, m, n, nnz, ptr, rcptr, info, val=vptr)
+            call read_data_real(iunit, n, nnz, ptr, rcptr, info, val=vptr)
          else
             ! Want pattern only
-            call read_data_real(iunit, r_title, r_identifier, &
-               r_type_code, m, n, nnz, ptr, rcptr, info)
+            call read_data_real(iunit, n, nnz, ptr, rcptr, info)
          endif
       case ("c") ! Complex
          info = ERROR_TYPE
@@ -433,16 +431,13 @@ contains
          if(read_val) then
             allocate(ival(nnz), stat=st)
             if(st.ne.0) goto 200
-            call read_data_integer(iunit, r_title, r_identifier, &
-               r_type_code, m, n, nnz, ptr, rcptr, info, val=ival)
+            call read_data_integer(iunit, n, nnz, ptr, rcptr, info, val=ival)
             val(1:nnz) = real(ival)
          else
-            call read_data_integer(iunit, r_title, r_identifier, &
-               r_type_code, m, n, nnz, ptr, rcptr, info)
+            call read_data_integer(iunit, n, nnz, ptr, rcptr, info)
          endif
       case ("p", "q") ! Pattern only
-         call read_data_real(iunit, r_title, r_identifier, &
-            r_type_code, m, n, nnz, ptr, rcptr, info)
+         call read_data_real(iunit, n, nnz, ptr, rcptr, info)
       end select
       if(info.lt.0) goto 100 ! error
 
@@ -535,8 +530,6 @@ contains
       100 continue
 
       if(present(type_code)) type_code = r_type_code
-      if(present(title)) title = r_title
-      if(present(identifier)) identifier = r_identifier
 
       close(iunit, iostat=iost)
       if(iost.ne.0 .and. info.eq.SUCCESS) then
@@ -879,181 +872,104 @@ contains
 
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-   !>  Code for reading files in Rutherford-Boeing format:
-   !>  (originally based on MC56). Real-valued version
-   subroutine read_data_real(lunit, title, key, dattyp, m, nvec, ne, ip, &
-         ind, inform, val)
-      integer, intent(in) :: lunit ! unit from which to read data
-      character(len=72), intent(out) :: title   ! Title read from file
-      character(len=8), intent(out) :: key      ! Key read from file
-      character(len=3), intent(out) :: dattyp   ! Indicates type of data read:
-         ! For matrix data this takes the form 'xyz', where
-         ! x ... r, c, i, p, or x.
-         ! y ... s, u, h, z, or r.
-         ! z ... a or e.
-      integer, intent(out) :: m ! Number of rows or the largest index used
-         ! depending on whether matrix is assembled or unassembled.
-      integer, intent(out) :: nvec ! Number of columns or the number of elements
-         ! depending on whether matrix is assembled or unassembled.
-      integer(long), intent(out) :: ne ! Number of entries in matrix
-      integer(long), dimension(*), intent(out) :: ip ! Column/Element pointers
-      integer, dimension(*), intent(out) :: ind ! Row/Element indices
+   !>  Read data from file: Real-valued version
+   subroutine read_data_real(lunit, n, nnz, ptr, row, inform, val)
+      integer, intent(in) :: lunit !< unit from which to read data
+      integer, intent(in) :: n !< Number of columns to read
+      integer(long), intent(in) :: nnz ! Number of entries to read
+      integer(long), dimension(*), intent(out) :: ptr ! Column pointers
+      integer, dimension(*), intent(out) :: row ! Row indices
       integer, intent(inout) :: inform ! Return code
       real(wp), dimension(*), optional, intent(out) :: val ! If present,
-         ! and DATTYP is not equal to ord, ipt, or icv, returns the numerical
-         ! data.
+         ! returns the numerical data.
 
-      character(len=80) :: buffer1, buffer2
-      integer :: neltvl, np1
-      integer(long) :: nreal
-      character(len=16) :: ptrfmt, indfmt
-      character(len=20) :: valfmt
+      character(len=80) :: buffer1, buffer2, buffer3
+      character(len=16) :: ptr_format, row_format
+      character(len=20) :: val_format
       integer :: iost
 
-      ! Read in header block
-      read (lunit,'(a72,a8/a80/a80)', iostat=iost) title, key, buffer1, buffer2
-      if(iost.ne.0) then
-         inform = ERROR_IO
-         return
-      endif
+      ! Skip past header information that isn't formats
+      read (lunit,'(a80/a80/a80)', iostat=iost) buffer1, buffer2, buffer3
+      if(iost.ne.0) goto 10
 
-      ! Check we have matrix data
-      if (buffer2(3:3).ne.'e' .and. buffer2(3:3).ne.'a') then
-         ! Not matrix data
-         inform = ERROR_TYPE
-         return
-      endif
+      ! Read formats
+      read(lunit,'(2a16,a20)',iostat=iost) ptr_format, row_format, val_format
+      if(iost.ne.0) goto 10
 
-      ! Read matrix header information
-      read(buffer2,'(a3,11x,4(1x,i13))',iostat=iost) dattyp, m, nvec, ne, neltvl
-      if(iost.ne.0) then
-         inform = ERROR_IO
-         return
-      endif
-      read(lunit,'(2a16,a20)',iostat=iost) ptrfmt, indfmt, valfmt
-      if(iost.ne.0) then
-         inform = ERROR_IO
-         return
-      endif
+      ! Read column pointers
+      read(lunit,ptr_format,iostat=iost) ptr(1:n+1)
+      if(iost.ne.0) goto 10
 
-      ! Read ip array
-      np1 = nvec+1
-      if (dattyp(3:3).eq.'e' .and. dattyp(2:2).eq.'r') np1=2*nvec+1
-      read(lunit,ptrfmt,iostat=iost) ip(1:np1)
-      if(iost.ne.0) then
-         inform = ERROR_IO
-         return
-      endif
+      ! Read row indices
+      read(lunit,row_format,iostat=iost) row(1:nnz)
+      if(iost.ne.0) goto 10
 
-      ! Read ind array
-      read(lunit,indfmt,iostat=iost) ind(1:ne)
-      if(iost.ne.0) then
-         inform = ERROR_IO
-         return
-      endif
-
-      if (dattyp(1:1).eq.'p' .or. dattyp(1:1).eq.'x') return ! pattern only
-
+      ! Read values if desired
       if(present(val)) then
-         ! read values
-         nreal = ne
-         if (neltvl.gt.0) nreal = neltvl
-         read(lunit,valfmt,iostat=iost) val(1:nreal)
-         if(iost.ne.0) then
-            inform = ERROR_IO
-            return
-         endif
+         read(lunit,val_format,iostat=iost) val(1:nnz)
+         if(iost.ne.0) goto 10
       endif
 
+      return
+
+      10 continue
+      inform = ERROR_IO
+      return
    end subroutine read_data_real
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-   !>  Code for reading files in Rutherford-Boeing format:
-   !>  (originally based on MC56). Integer-valued version
-   subroutine read_data_integer(lunit, title, key, dattyp, m, nvec, ne, ip, &
-         ind, inform, val)
-      integer, intent(in) :: lunit ! unit from which to read data
-      character(len=72), intent(out) :: title   ! Title read from file
-      character(len=8), intent(out) :: key      ! Key read from file
-      character(len=3), intent(out) :: dattyp   ! Indicates type of data read:
-         ! For matrix data this takes the form 'xyz', where
-         ! x ... r, c, i, p, or x.
-         ! y ... s, u, h, z, or r.
-         ! z ... a or e.
-      integer, intent(out) :: m ! Number of rows or the largest index used
-         ! depending on whether matrix is assembled or unassembled.
-      integer, intent(out) :: nvec ! Number of columns or the number of elements
-         ! depending on whether matrix is assembled or unassembled.
-      integer(long), intent(out) :: ne ! Number of entries in matrix
-      integer(long), dimension(*), intent(out) :: ip ! Column/Element pointers
-      integer, dimension(*), intent(out) :: ind ! Row/Element indices
+   !>  Read data from file: Integer-valued version
+   subroutine read_data_integer(lunit, n, nnz, ptr, row, inform, val)
+      integer, intent(in) :: lunit !< unit from which to read data
+      integer, intent(in) :: n !< Number of columns to read
+      integer(long), intent(in) :: nnz ! Number of entries to read
+      integer(long), dimension(*), intent(out) :: ptr ! Column pointers
+      integer, dimension(*), intent(out) :: row ! Row indices
       integer, intent(inout) :: inform ! Return code
       integer, dimension(*), optional, intent(out) :: val ! If present,
-         ! and DATTYP is not equal to ord, ipt, or icv, returns the numerical
-         ! data.
+         ! returns the numerical data.
 
-      character(len=80) :: buffer1, buffer2
-      integer :: neltvl, np1
-      integer(long) :: nreal
-      character(len=16) :: ptrfmt, indfmt
-      character(len=20) :: valfmt
+      character(len=80) :: buffer1, buffer2, buffer3
+      character(len=16) :: ptr_format, row_format
+      character(len=20) :: val_format
       integer :: iost
 
-      ! Read in header block
-      read (lunit,'(a72,a8/a80/a80)',iostat=iost) title, key, buffer1, buffer2
+      ! Skip past header information that isn't formats
+      read (lunit,'(a80/a80/a80)', iostat=iost) buffer1, buffer2, buffer3
       if(iost.ne.0) then
          inform = ERROR_IO
          return
       endif
 
-      ! Check we have matrix data
-      if (buffer2(3:3).ne.'e' .and. buffer2(3:3).ne.'a') then
-         ! Not matrix data
-         inform = ERROR_TYPE
-         return
-      endif
-
-      ! Read matrix header information
-      read(buffer2,'(a3,11x,4(1x,i13))',iostat=iost) dattyp, m, nvec, ne, neltvl
-      if(iost.ne.0) then
-         inform = ERROR_IO
-         return
-      endif
-      read(lunit,'(2a16,a20)',iostat=iost) ptrfmt, indfmt, valfmt
+      ! Read formats
+      read(lunit,'(2a16,a20)',iostat=iost) ptr_format, row_format, val_format
       if(iost.ne.0) then
          inform = ERROR_IO
          return
       endif
 
-      ! Read ip array
-      np1 = nvec+1
-      if (dattyp(3:3).eq.'e' .and. dattyp(2:2).eq.'r') np1=2*nvec+1
-      read(lunit,ptrfmt,iostat=iost) ip(1:np1)
+      ! Read column pointers
+      read(lunit,ptr_format,iostat=iost) ptr(1:n+1)
       if(iost.ne.0) then
          inform = ERROR_IO
          return
       endif
 
-      ! Read ind array
-      read(lunit,indfmt,iostat=iost) ind(1:ne)
+      ! Read row indices
+      read(lunit,row_format,iostat=iost) row(1:nnz)
       if(iost.ne.0) then
          inform = ERROR_IO
          return
       endif
 
-      if (dattyp(1:1).eq.'p' .or. dattyp(1:1).eq.'x') return ! pattern only
-
+      ! Read values if desired
       if(present(val)) then
-         ! read values
-         nreal = ne
-         if (neltvl.gt.0) nreal = neltvl
-         read(lunit,valfmt,iostat=iost) val(1:nreal)
+         read(lunit,val_format,iostat=iost) val(1:nnz)
          if(iost.ne.0) then
             inform = ERROR_IO
             return
          endif
       endif
-
    end subroutine read_data_integer
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
