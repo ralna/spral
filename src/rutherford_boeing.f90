@@ -416,10 +416,10 @@ contains
       case ("r") ! Real
          if(read_val) then
             ! Want pattern and values
-            call read_data_real(iunit, n, nnz, ptr, rcptr, info, val=vptr)
+            call read_data_real(iunit, n, nnz, ptr, rcptr, iost, val=vptr)
          else
             ! Want pattern only
-            call read_data_real(iunit, n, nnz, ptr, rcptr, info)
+            call read_data_real(iunit, n, nnz, ptr, rcptr, iost)
          endif
       case ("c") ! Complex
          info = ERROR_TYPE
@@ -428,15 +428,18 @@ contains
          if(read_val) then
             allocate(ival(nnz), stat=st)
             if(st.ne.0) goto 200
-            call read_data_integer(iunit, n, nnz, ptr, rcptr, info, val=ival)
-            val(1:nnz) = real(ival)
+            call read_data_integer(iunit, n, nnz, ptr, rcptr, iost, val=ival)
+            if(iost.ne.0) val(1:nnz) = real(ival)
          else
-            call read_data_integer(iunit, n, nnz, ptr, rcptr, info)
+            call read_data_integer(iunit, n, nnz, ptr, rcptr, iost)
          endif
       case ("p", "q") ! Pattern only
-         call read_data_real(iunit, n, nnz, ptr, rcptr, info)
+         call read_data_real(iunit, n, nnz, ptr, rcptr, iost)
       end select
-      if(info.lt.0) goto 100 ! error
+      if(iost.ne.0) then
+         info = ERROR_IO
+         goto 100 ! error
+      endif
 
       !
       ! Add any missing diagonal entries
@@ -858,102 +861,79 @@ contains
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
    !>  Read data from file: Real-valued version
-   subroutine read_data_real(lunit, n, nnz, ptr, row, inform, val)
+   subroutine read_data_real(lunit, n, nnz, ptr, row, iost, val)
       integer, intent(in) :: lunit !< unit from which to read data
       integer, intent(in) :: n !< Number of columns to read
       integer(long), intent(in) :: nnz ! Number of entries to read
       integer(long), dimension(*), intent(out) :: ptr ! Column pointers
       integer, dimension(*), intent(out) :: row ! Row indices
-      integer, intent(inout) :: inform ! Return code
+      integer, intent(out) :: iost ! iostat from failed op, or 0
       real(wp), dimension(*), optional, intent(out) :: val ! If present,
          ! returns the numerical data.
 
       character(len=80) :: buffer1, buffer2, buffer3
       character(len=16) :: ptr_format, row_format
       character(len=20) :: val_format
-      integer :: iost
 
       ! Skip past header information that isn't formats
       read (lunit,'(a80/a80/a80)', iostat=iost) buffer1, buffer2, buffer3
-      if(iost.ne.0) goto 10
+      if(iost.ne.0) return
 
       ! Read formats
       read(lunit,'(2a16,a20)',iostat=iost) ptr_format, row_format, val_format
-      if(iost.ne.0) goto 10
+      if(iost.ne.0) return
 
       ! Read column pointers
       read(lunit,ptr_format,iostat=iost) ptr(1:n+1)
-      if(iost.ne.0) goto 10
+      if(iost.ne.0) return
 
       ! Read row indices
       read(lunit,row_format,iostat=iost) row(1:nnz)
-      if(iost.ne.0) goto 10
+      if(iost.ne.0) return
 
       ! Read values if desired
       if(present(val)) then
          read(lunit,val_format,iostat=iost) val(1:nnz)
-         if(iost.ne.0) goto 10
+         if(iost.ne.0) return
       endif
-
-      return
-
-      10 continue
-      inform = ERROR_IO
-      return
    end subroutine read_data_real
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
    !>  Read data from file: Integer-valued version
-   subroutine read_data_integer(lunit, n, nnz, ptr, row, inform, val)
+   subroutine read_data_integer(lunit, n, nnz, ptr, row, iost, val)
       integer, intent(in) :: lunit !< unit from which to read data
       integer, intent(in) :: n !< Number of columns to read
       integer(long), intent(in) :: nnz ! Number of entries to read
       integer(long), dimension(*), intent(out) :: ptr ! Column pointers
       integer, dimension(*), intent(out) :: row ! Row indices
-      integer, intent(inout) :: inform ! Return code
+      integer, intent(out) :: iost ! iostat from failed op, or 0
       integer, dimension(*), optional, intent(out) :: val ! If present,
          ! returns the numerical data.
 
       character(len=80) :: buffer1, buffer2, buffer3
       character(len=16) :: ptr_format, row_format
       character(len=20) :: val_format
-      integer :: iost
 
       ! Skip past header information that isn't formats
       read (lunit,'(a80/a80/a80)', iostat=iost) buffer1, buffer2, buffer3
-      if(iost.ne.0) then
-         inform = ERROR_IO
-         return
-      endif
+      if(iost.ne.0) return
 
       ! Read formats
       read(lunit,'(2a16,a20)',iostat=iost) ptr_format, row_format, val_format
-      if(iost.ne.0) then
-         inform = ERROR_IO
-         return
-      endif
+      if(iost.ne.0) return
 
       ! Read column pointers
       read(lunit,ptr_format,iostat=iost) ptr(1:n+1)
-      if(iost.ne.0) then
-         inform = ERROR_IO
-         return
-      endif
+      if(iost.ne.0) return
 
       ! Read row indices
       read(lunit,row_format,iostat=iost) row(1:nnz)
-      if(iost.ne.0) then
-         inform = ERROR_IO
-         return
-      endif
+      if(iost.ne.0) return
 
       ! Read values if desired
       if(present(val)) then
          read(lunit,val_format,iostat=iost) val(1:nnz)
-         if(iost.ne.0) then
-            inform = ERROR_IO
-            return
-         endif
+         if(iost.ne.0) return
       endif
    end subroutine read_data_integer
 
