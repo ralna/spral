@@ -18,12 +18,12 @@ module spral_rutherford_boeing
    public :: rb_read_options, &     ! Options that control what rb_read returns
              rb_write_options       ! Options that control what rb_write does
 
-   ! Possible values control%lwr_upr_full
+   ! Possible values options%lwr_upr_full
    integer, parameter :: TRI_LWR  = 1 ! Lower triangle
    integer, parameter :: TRI_UPR  = 2 ! Upper triangle
    integer, parameter :: TRI_FULL = 3 ! Both lower and upper triangles
 
-   ! Possible values of control%values
+   ! Possible values of options%values
    integer, parameter :: VALUES_FILE       = 0 ! As per file
    integer, parameter :: VALUES_PATTERN    = 1 ! Pattern only
    integer, parameter :: VALUES_SYM        = 2 ! Random values, symmetric
@@ -38,9 +38,9 @@ module spral_rutherford_boeing
    integer, parameter :: ERROR_TYPE        = -4 ! Tried to read bad type
    integer, parameter :: ERROR_ELT_ASM     = -5 ! Read elt as asm or v/v
    integer, parameter :: ERROR_MATRIX_TYPE = -6 ! Bad value of matrix_type
-   integer, parameter :: ERROR_EXTRA_SPACE = -10 ! control%extra_space<1.0
-   integer, parameter :: ERROR_LWR_UPR_FULL= -11 ! control%lwr_up_full oor
-   integer, parameter :: ERROR_VALUES      = -13 ! control%values oor
+   integer, parameter :: ERROR_EXTRA_SPACE = -10 ! options%extra_space<1.0
+   integer, parameter :: ERROR_LWR_UPR_FULL= -11 ! options%lwr_up_full oor
+   integer, parameter :: ERROR_VALUES      = -13 ! options%values oor
    integer, parameter :: ERROR_ALLOC       = -20 ! failed on allocate
 
    ! Possible warnings
@@ -227,14 +227,14 @@ contains
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
    !> Read a matrix from a Rutherford Boeing file
    subroutine rb_read_double_int32(filename, m, n, ptr, row, val, &
-         control, info, type_code, title, identifier, state)
+         options, info, type_code, title, identifier, state)
       character(len=*), intent(in) :: filename ! File to read
       integer, intent(out) :: m
       integer, intent(out) :: n
       integer, dimension(:), allocatable, intent(out) :: ptr
       integer, dimension(:), allocatable, target, intent(out) :: row
       real(wp), dimension(:), allocatable, target, intent(out) :: val
-      type(rb_read_options), intent(in) :: control ! control variables
+      type(rb_read_options), intent(in) :: options ! control variables
       integer, intent(out) :: info ! return code
       character(len=3), optional, intent(out) :: type_code ! file data type
       character(len=72), optional, intent(out) :: title ! file title
@@ -246,7 +246,7 @@ contains
       integer :: st
 
       call rb_read_double_int64(filename, m, n, ptr64, row, val, &
-         control, info, type_code=type_code, title=title, &
+         options, info, type_code=type_code, title=title, &
          identifier=identifier, state=state)
 
       ! FIXME: Add an error code if ne > maxint
@@ -261,14 +261,14 @@ contains
       endif
    end subroutine rb_read_double_int32
    subroutine rb_read_double_int64(filename, m, n, ptr, row, val, &
-         control, info, type_code, title, identifier, state)
+         options, info, type_code, title, identifier, state)
       character(len=*), intent(in) :: filename ! File to read
       integer, intent(out) :: m
       integer, intent(out) :: n
       integer(long), dimension(:), allocatable, intent(out) :: ptr
       integer, dimension(:), allocatable, target, intent(out) :: row
       real(wp), dimension(:), allocatable, target, intent(out) :: val
-      type(rb_read_options), intent(in) :: control ! control variables
+      type(rb_read_options), intent(in) :: options ! control variables
       integer, intent(out) :: info ! return code
       character(len=3), optional, intent(out) :: type_code ! file data type
       character(len=72), optional, intent(out) :: title ! file title
@@ -310,16 +310,16 @@ contains
       symmetric = .false.
       skew = .false.
 
-      ! Validate control paramters
-      if(control%extra_space < 1.0) then
+      ! Validate options paramters
+      if(options%extra_space < 1.0) then
          info = ERROR_EXTRA_SPACE
          return
       endif
-      if(control%lwr_upr_full.lt.1 .or. control%lwr_upr_full.gt.3) then
+      if(options%lwr_upr_full.lt.1 .or. options%lwr_upr_full.gt.3) then
          info = ERROR_LWR_UPR_FULL
          return
       endif
-      if(control%values.eq.-1 .or. abs(control%values).gt.4) then
+      if(options%values.eq.-1 .or. abs(options%values).gt.4) then
          info = ERROR_VALUES
          return
       endif
@@ -350,7 +350,7 @@ contains
 
       ! ptr
       len = n + 1
-      len = max(len, int(real(len,wp) * control%extra_space, long))
+      len = max(len, int(real(len,wp) * options%extra_space, long))
       allocate(ptr(len), stat=st)
       if(st.ne.0) goto 200
 
@@ -362,11 +362,11 @@ contains
          skew = (r_type_code(2:2) .eq. "z")
          ! Do we need to allow for expansion?
          ! (a) to get both upper and lower triangles
-         if(control%lwr_upr_full .eq. TRI_FULL) len = len * 2
+         if(options%lwr_upr_full .eq. TRI_FULL) len = len * 2
          ! (b) to add additional diagonal entries
-         if(control%add_diagonal .or. &
-               control%values.eq.-VALUES_DIAG_DOM .or. &
-               ( control%values.eq.VALUES_DIAG_DOM .and. &
+         if(options%add_diagonal .or. &
+               options%values.eq.-VALUES_DIAG_DOM .or. &
+               ( options%values.eq.VALUES_DIAG_DOM .and. &
                (r_type_code(1:1).eq."p" .or. r_type_code(1:1).eq."q")) ) then
             len = len + n
          endif
@@ -374,14 +374,14 @@ contains
          symmetric = .false.
          ! Unsymmetric or rectangular, no need to worry about upr/lwr, but
          ! may need to add diagonal.
-         if(control%add_diagonal) len = len + n
+         if(options%add_diagonal) len = len + n
       end select
       len2 = len
-      len = max(len, int(real(len,wp) * control%extra_space, long))
+      len = max(len, int(real(len,wp) * options%extra_space, long))
       allocate(row(len), stat=st)
       if(st.ne.0) goto 200
       rcptr => row
-      if(symmetric .and. control%lwr_upr_full.eq.TRI_UPR) then
+      if(symmetric .and. options%lwr_upr_full.eq.TRI_UPR) then
          ! We need to read into col then copy into row as we flip
          ! from lwr to upr
          allocate(col(len2), stat=st)
@@ -390,8 +390,8 @@ contains
       if(st.ne.0) goto 200
 
       ! Allocate val if required
-      if(abs(control%values).ge.VALUES_SYM .or. &
-            (control%values.eq.0 .and. r_type_code(1:1).ne."p" .and. &
+      if(abs(options%values).ge.VALUES_SYM .or. &
+            (options%values.eq.0 .and. r_type_code(1:1).ne."p" .and. &
             r_type_code(1:1).ne."q")) then
          ! We are actually going to store some values
          allocate(val(len), stat=st)
@@ -408,7 +408,7 @@ contains
       if(r_type_code(1:1).eq."q") info = WARN_AUX_FILE
 
       ! Determine whether we are reading values from file or not
-      read_val = (control%values.ge.0 .and. control%values.ne.VALUES_PATTERN)
+      read_val = (options%values.ge.0 .and. options%values.ne.VALUES_PATTERN)
       read_val = read_val .and. r_type_code(1:1).ne."p"
       read_val = read_val .and. r_type_code(1:1).ne."q"
 
@@ -444,8 +444,8 @@ contains
       !
       ! Add any missing diagonal entries
       !
-      if(control%add_diagonal .or. &
-            (symmetric .and. .not.read_val .and. abs(control%values).eq.3)) then
+      if(options%add_diagonal .or. &
+            (symmetric .and. .not.read_val .and. abs(options%values).eq.3)) then
          if(read_val) then
             call add_missing_diag(m, n, ptr, rcptr, val=val)
          else
@@ -456,8 +456,8 @@ contains
       !
       ! Expand pattern if we need to generate unsymmetric values for it
       !
-      if( ( (.not.read_val .and. abs(control%values).eq.VALUES_UNSYM) ) &
-            .and. symmetric .and. control%lwr_upr_full.eq.TRI_FULL) then
+      if( ( (.not.read_val .and. abs(options%values).eq.VALUES_UNSYM) ) &
+            .and. symmetric .and. options%lwr_upr_full.eq.TRI_FULL) then
          allocate(iw34(n),stat=st)
          if(st.ne.0) goto 200
          call half_to_full(n, rcptr, ptr, iw34)
@@ -469,21 +469,21 @@ contains
       !
       ! Generate values if required
       !
-      if(.not.read_val .and. (control%values.lt.0.or.control%values.ge.2)) then
+      if(.not.read_val .and. (options%values.lt.0.or.options%values.ge.2)) then
          do c = 1, n
             k = int( ptr(c+1) - ptr(c) )
             if(present(state)) then
                do j = ptr(c), ptr(c+1)-1
                   val(j) = random_real(state, .false.)
                   r = rcptr(j)
-                  if(abs(control%values).eq.3 .and. r.eq.c .and. symmetric)&
+                  if(abs(options%values).eq.3 .and. r.eq.c .and. symmetric)&
                      val(j) = max(100, 10*k)
                end do
             else
                do j = ptr(c), ptr(c+1)-1
                   val(j) = random_real(state2, .false.)
                   r = rcptr(j)
-                  if(abs(control%values).eq.3 .and. r.eq.c .and. symmetric)&
+                  if(abs(options%values).eq.3 .and. r.eq.c .and. symmetric)&
                      val(j) = max(100, 10*k)
                end do
             endif
@@ -494,7 +494,7 @@ contains
       ! Expand to full storage or flip lwr/upr as required
       !
       if(symmetric) then
-         select case (control%lwr_upr_full)
+         select case (options%lwr_upr_full)
          case(TRI_LWR)
             ! No-op
          case(TRI_UPR)
