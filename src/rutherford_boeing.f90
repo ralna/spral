@@ -279,11 +279,8 @@ contains
       ! Below variables are required for calling f77 MC56
       integer, dimension(:), allocatable :: ival
 
-      ! Shadow variables for type_code, title and identifier (as arguments
-      !  are optional we need a real copy)
+      ! Shadow variable for type_code (actual argument is optional)
       character(len=3) :: r_type_code
-      character(len=72) :: r_title
-      character(len=8) :: r_identifier
 
       ! Pointers to simplify which array we are reading in to.
       integer, pointer, dimension(:) :: rcptr => null()
