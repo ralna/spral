@@ -3,6 +3,8 @@ module spral_rutherford_boeing_ciface
    use spral_rutherford_boeing
    implicit none
 
+   integer, parameter :: long = selected_int_kind(18)
+
    type handle_type
       integer(C_INT), dimension(:), allocatable :: ptr32
       integer(C_LONG), dimension(:), allocatable :: ptr64
@@ -41,7 +43,103 @@ contains
       foptions%lwr_upr_full   = coptions%lwr_upr_full
       foptions%values         = coptions%values
    end subroutine copy_options_in
+
+   subroutine convert_string_c2f(cstr, fstr)
+      type(C_PTR), intent(in) :: cstr
+      character(len=:), allocatable, intent(out) :: fstr
+
+      integer :: i
+      character(C_CHAR), dimension(:), pointer :: cstrptr
+
+      allocate(character(len=strlen(cstr)) :: fstr)
+      call c_f_pointer(cstr, cstrptr, shape = (/ strlen(cstr)+1 /))
+      do i = 1, size(cstrptr)
+         fstr(i:i) = cstrptr(i)
+      end do
+   end subroutine convert_string_c2f
+
+   ! WARNING: Assumes cstr points to a sufficiently large buffer.
+   subroutine convert_string_f2c(fstr, cstr)
+      character(len=*), intent(in) :: fstr
+      type(C_PTR), intent(inout) :: cstr
+
+      integer :: i
+      character(C_CHAR), dimension(:), pointer :: cstrptr
+
+      call c_f_pointer(cstr, cstrptr, shape = (/ len(fstr)+1 /))
+      do i = 1, len(fstr)
+         cstrptr(i) = fstr(i:i)
+      end do
+      cstrptr(len(fstr)+1) = C_NULL_CHAR
+   end subroutine convert_string_f2c
 end module spral_rutherford_boeing_ciface
+
+integer(C_INT) function spral_rb_peek(filename, m, n, nelt, nvar, nval, &
+      matrix_type, type_code, title, identifier) bind(C)
+   use spral_rutherford_boeing_ciface
+   implicit none
+
+   type(C_PTR), value :: filename
+   type(C_PTR), value :: m
+   type(C_PTR), value :: n
+   type(C_PTR), value :: nelt
+   type(C_PTR), value :: nvar
+   type(C_PTR), value :: nval
+   type(C_PTR), value :: matrix_type
+   type(C_PTR), value :: type_code
+   type(C_PTR), value :: title
+   type(C_PTR), value :: identifier
+
+   integer :: fm, fn, fmatrix_type
+   integer(long) :: fnelt, fnvar, fnval
+   character(len=:), allocatable :: ffilename
+   character(len=3) :: ftype_code
+   character(len=72) :: ftitle
+   character(len=8) :: fidentifier
+
+   integer(C_INT), pointer :: temp_int
+   integer(C_LONG), pointer :: temp_long
+
+   ! Convert filename to Fortran string
+   call convert_string_c2f(filename, ffilename)
+
+   ! Call Fortran routine
+   call rb_peek(ffilename, spral_rb_peek, m=fm, n=fn, nelt=fnelt, nvar=fnvar, &
+      nval=fnval, matrix_type=fmatrix_type, type_code=ftype_code, &
+      title=ftitle, identifier=fidentifier)
+
+   ! Copy results out as approriate
+   if(c_associated(m)) then
+      call c_f_pointer(m, temp_int)
+      temp_int = fm
+   endif
+   if(c_associated(n)) then
+      call c_f_pointer(n, temp_int)
+      temp_int = fn
+   endif
+   if(c_associated(nelt)) then
+      call c_f_pointer(nelt, temp_long)
+      temp_long = fnelt
+   endif
+   if(c_associated(nvar)) then
+      call c_f_pointer(nvar, temp_long)
+      temp_long = fnvar
+   endif
+   if(c_associated(nval)) then
+      call c_f_pointer(nval, temp_long)
+      temp_long = fnval
+   endif
+   if(c_associated(matrix_type)) then
+      call c_f_pointer(matrix_type, temp_int)
+      temp_int = fmatrix_type
+   endif
+   if(c_associated(type_code)) &
+      call convert_string_f2c(ftype_code, type_code)
+   if(c_associated(title)) &
+      call convert_string_f2c(ftitle, title)
+   if(c_associated(identifier)) &
+      call convert_string_f2c(fidentifier, identifier)
+end function spral_rb_peek
 
 subroutine spral_rb_default_read_options(coptions) bind(C)
    use spral_rutherford_boeing_ciface
