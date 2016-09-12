@@ -232,7 +232,7 @@ contains
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
    !> Read a matrix from a Rutherford Boeing file
    subroutine rb_read_double_int32(filename, m, n, ptr, row, val, &
-         options, info, type_code, title, identifier, state)
+         options, info, matrix_type, type_code, title, identifier, state)
       character(len=*), intent(in) :: filename ! File to read
       integer, intent(out) :: m
       integer, intent(out) :: n
@@ -241,6 +241,7 @@ contains
       real(wp), dimension(:), allocatable, target, intent(out) :: val
       type(rb_read_options), intent(in) :: options ! control variables
       integer, intent(out) :: info ! return code
+      integer, optional, intent(out) :: matrix_type ! spral matrix type code
       character(len=3), optional, intent(out) :: type_code ! file data type
       character(len=72), optional, intent(out) :: title ! file title
       character(len=8), optional, intent(out) :: identifier ! file identifier
@@ -251,8 +252,8 @@ contains
       integer :: st
 
       call rb_read_double_int64(filename, m, n, ptr64, row, val, &
-         options, info, type_code=type_code, title=title, &
-         identifier=identifier, state=state)
+         options, info, matrix_type=matrix_type, type_code=type_code, &
+         title=title, identifier=identifier, state=state)
 
       ! FIXME: Add an error code if ne > maxint
       if(allocated(ptr64)) then

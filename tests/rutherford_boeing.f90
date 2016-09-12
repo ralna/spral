@@ -430,6 +430,7 @@ subroutine test_random()
    character(len=72) :: title_in
    character(len=8) :: id_in
    character(len=3) :: type_code_in
+   integer :: matrix_type_in
    integer :: m_in, n_in
    integer(long) :: nelt_in, nvar_in, nval_in
    integer(long), dimension(:), allocatable :: ptr64_in
@@ -496,14 +497,16 @@ subroutine test_random()
 
       ! Peek random matrix
       call rb_peek(filename, flag, m=m_in, n=n_in, nelt=nelt_in, nvar=nvar_in, &
-         nval=nval_in, type_code=type_code_in, title=title_in, identifier=id_in)
+         nval=nval_in, matrix_type=matrix_type_in, type_code=type_code_in,     &
+         title=title_in, identifier=id_in)
       if(flag.ne.0) then
          write(*, "(a,/,a,i3)") "fail", "rb_peek() returned", flag
          errors = errors + 1
          cycle
       endif
       ! Check data
-      if(.not.check_data(m,m_in,n,n_in,title=title,title2=title_in, &
+      if(.not.check_data(m,m_in,n,n_in,matrix_type=matrix_type, &
+         matrix_type2=matrix_type_in, title=title,title2=title_in, &
          id=id,id2=id_in,advance="no")) cycle
       write(*, "(a)", advance="no") "... "
 
@@ -512,7 +515,8 @@ subroutine test_random()
       if(random_logical(state)) then
          ! 32-bit ptr
          call rb_read(filename, m_in, n_in, ptr32_in, row_in, val_in, &
-            read_options, flag, title=title_in, identifier=id_in)
+            read_options, flag, matrix_type=matrix_type_in, &
+            title=title_in, identifier=id_in)
          if(allocated(ptr32_in)) then
             deallocate(ptr64_in, stat=st)
             allocate(ptr64_in(n_in+1))
@@ -521,7 +525,8 @@ subroutine test_random()
       else
          ! 64-bit ptr
          call rb_read(filename, m_in, n_in, ptr64_in, row_in, val_in, &
-            read_options, flag, title=title_in, identifier=id_in)
+            read_options, flag, matrix_type=matrix_type_in, &
+            title=title_in, identifier=id_in)
       endif
       if(flag.ne.0) then
          write(*, "(a,/,a,i3)") "fail", "rb_read() returned", flag
@@ -530,8 +535,10 @@ subroutine test_random()
       endif
 
       ! Check data
-      if(.not.check_data(m,m_in,n,n_in,ptr64,ptr64_in,row,row_in,val,val_in, &
-         title,title_in,id,id_in)) cycle
+      if(.not.check_data(m,m_in,n,n_in,ptr=ptr64,ptr2=ptr64_in, &
+         row=row,row2=row_in,val=val,val2=val_in,matrix_type=matrix_type, &
+         matrix_type2=matrix_type_in,title=title,title2=title_in, &
+         id=id,id2=id_in)) cycle
 
       ! Generate non-default read_options and test those too
       read_options%add_diagonal = random_logical(state)
@@ -562,8 +569,8 @@ end subroutine test_random
 !> Check if two versions of data match. Return .true. if they do, else .false.
 !> Print "pass" or "fail"+details depending on whether it works
 logical function check_data(m, m2, n, n2, ptr, ptr2, row, row2, val, val2, &
-      title, title2, id, id2, advance)
-   integer, intent(in) :: m, m2, n, n2
+      matrix_type, matrix_type2, title, title2, id, id2, advance)
+   integer, intent(in) :: m, m2, n, n2, matrix_type, matrix_type2
    integer, optional, intent(in) :: row(:), row2(:)
    integer(long), optional, intent(in) :: ptr(:), ptr2(:)
    real(wp), optional, intent(in) :: val(:), val2(:)
@@ -571,6 +578,7 @@ logical function check_data(m, m2, n, n2, ptr, ptr2, row, row2, val, val2, &
    character(len=8), optional :: id, id2
    character(len=*), optional :: advance
 
+   integer :: mtexpect
    real(wp) :: vdiff
 
    ! Check we read the same data we wrote
@@ -610,6 +618,16 @@ logical function check_data(m, m2, n, n2, ptr, ptr2, row, row2, val, val2, &
          check_data = .false.
          return
       endif
+   endif
+   mtexpect = matrix_type
+   if(matrix_type.eq.SPRAL_MATRIX_REAL_SYM_PSDEF) &
+      mtexpect = SPRAL_MATRIX_REAL_SYM_INDEF
+   if(mtexpect .ne. matrix_type2) then
+      write(*, "(a,/,a,'''',a,'''',1x,'''',a,'''')") &
+         "fail", "matrix_type != matrix_type2", matrix_type, matrix_type2
+      errors = errors + 1
+      check_data = .false.
+      return
    endif
    if(title .ne. title2) then
       write(*, "(a,/,a,'''',a,'''',1x,'''',a,'''')") &
