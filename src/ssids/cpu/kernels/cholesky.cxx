@@ -16,8 +16,8 @@ namespace spral { namespace ssids { namespace cpu {
 /** Perform Cholesky factorization of lower triangular matrix a[] in place.
  * Optionally calculates the contribution block (beta*C) - LL^T.
  *
- * Note that calling this routine just enqueues tasks, these will not
- * necessarily be complete until an omp taskwait construct is encountered.
+ * \warning This routine just enqueues tasks. The caller must use a taskgroup
+ *    or taskwait construct to ensure completion.
  *
  * \param m the number of rows
  * \param n the number of columns
