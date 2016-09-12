@@ -21,7 +21,7 @@ program rutherford_boeing_test
    integer, parameter :: ERROR_ELT_ASM     = -5    ! Read elt as asm or v/v
    integer, parameter :: ERROR_MATRIX_TYPE = -6 ! Bad value of matrix_type
    integer, parameter :: ERROR_EXTRA_SPACE = -10   ! control%extra_space<1.0
-   integer, parameter :: ERROR_LWR_UPR_FULL= -11   ! control%lwr_up_full oor
+   integer, parameter :: ERROR_LWR_UPR_FULL= -11   ! control%lwr_upr_full oor
    integer, parameter :: ERROR_VALUES      = -13   ! control%values oor
    integer, parameter :: ERROR_ALLOC       = -20   ! failed on allocate
    integer, parameter :: WARN_AUX_FILE     = 1     ! values in auxiliary file
@@ -212,7 +212,7 @@ subroutine test_errors()
    call rb_read(filename, m, n, ptr, row, val, read_options, inform)
    call test_eq(inform, ERROR_EXTRA_SPACE)
 
-   ! options%lwr_up_full invalid value
+   ! options%lwr_upr_full invalid value
    call write_simple_matrix()
    read_options = default_read_options
    read_options%lwr_upr_full = -1
@@ -220,7 +220,7 @@ subroutine test_errors()
    call rb_read(filename, m, n, ptr, row, val, read_options, inform)
    call test_eq(inform, ERROR_LWR_UPR_FULL)
 
-   ! options%lwr_up_full invalid value
+   ! options%lwr_upr_full invalid value
    call write_simple_matrix()
    read_options = default_read_options
    read_options%values = 100
@@ -385,7 +385,7 @@ subroutine test_random()
    real(wp), dimension(:), allocatable :: val_in
 
    ! Options
-   type(rb_read_options) :: read_options
+   type(rb_read_options) :: read_options, default_read_options
    type(rb_write_options) :: write_options
 
    ! Working variables
@@ -456,6 +456,7 @@ subroutine test_random()
       write(*, "(a)", advance="no") "... "
 
       ! Read random matrix
+      read_options = default_read_options
       if(random_logical(state)) then
          ! 32-bit ptr
          call rb_read(filename, m_in, n_in, ptr32_in, row_in, val_in, &
@@ -479,6 +480,20 @@ subroutine test_random()
       ! Check data
       if(.not.check_data(m,m_in,n,n_in,ptr64,ptr64_in,row,row_in,val,val_in, &
          title,title_in,id,id_in)) cycle
+
+      ! Generate non-default read_options and test those too
+      read_options%add_diagonal = random_logical(state)
+      read_options%lwr_upr_full = random_integer(state, 3)
+      read_options%values = random_integer(state, 7) - 3
+      if(read_options%values.le.0) &
+         read_options%values = read_options%values - 2
+      call rb_read(filename, m_in, n_in, ptr64_in, row_in, val_in, &
+         read_options, flag, title=title_in, identifier=id_in)
+      if(flag.ne.0) then
+         write(*, "(a,/,a,i3)") "fail", "rb_read() returned", flag
+         errors = errors + 1
+         cycle
+      endif
 
    end do
 
