@@ -487,8 +487,15 @@ subroutine test_random()
       read_options%values = random_integer(state, 7) - 3
       if(read_options%values.le.0) &
          read_options%values = read_options%values - 2
-      call rb_read(filename, m_in, n_in, ptr64_in, row_in, val_in, &
-         read_options, flag, title=title_in, identifier=id_in)
+      if(random_logical(state)) then
+         ! Pass state in
+         call rb_read(filename, m_in, n_in, ptr64_in, row_in, val_in, &
+            read_options, flag, title=title_in, identifier=id_in, state=state)
+      else
+         ! Don't pass state in
+         call rb_read(filename, m_in, n_in, ptr64_in, row_in, val_in, &
+            read_options, flag, title=title_in, identifier=id_in)
+      endif
       if(flag.ne.0) then
          write(*, "(a,/,a,i3)") "fail", "rb_read() returned", flag
          errors = errors + 1
