@@ -30,6 +30,7 @@ program rutherford_boeing_test
 
    call test_errors
    call test_warnings
+   call test_special
    call test_random
 
    write(*, "(/a)") "=========================="
@@ -293,6 +294,39 @@ subroutine test_warnings
    call rb_read(filename, m, n, ptr, row, val, read_options, inform)
    call test_eq(inform, WARN_AUX_FILE)
 end subroutine test_warnings
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!> Test special cases that aren't covered elsewhere
+subroutine test_special
+   integer :: m, n, inform, iunit
+   integer, dimension(:), allocatable :: ptr, row
+   real(wp), dimension(:), allocatable :: val
+   type(rb_read_options) :: read_options
+
+   write(*, "(a)")
+   write(*, "(a)") "======================="
+   write(*, "(a)") "Testing special"
+   write(*, "(a)") "======================="
+
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   write(*,"(/,a)") "rb_read():"
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   ! Values in auxiliary file
+   open(newunit=iunit,file=filename,status='replace')
+   write(iunit,"(a72,a8)") "Matrix", "ID"
+   write(iunit,"(i14, 1x, i13, 1x, i13, 1x, i13)") 2, 1, 1, 0
+   write(iunit, "(a3, 11x, i14, 1x, i13, 1x, i13, 1x, i13)") &
+      "isa", 5, 5, 8, 0
+   write(iunit, "(a16, a16, a20)") "(40i2)", "(40i2)", "(40i2)"
+   write(iunit, "(40i2)") 1, 3, 6, 8, 8, 9
+   write(iunit, "(40i2)") 1, 2, 2, 3, 5, 3, 4, 5
+   write(iunit, "(40i2)") 1, 2, 3, 4, 5, 6, 7, 8
+   close(iunit)
+   write(*,"(a)",advance="no") " * Integer input............................."
+   call rb_read(filename, m, n, ptr, row, val, read_options, inform)
+   call test_eq(inform, SUCCESS)
+end subroutine test_special
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !> Test (actual.eq.expected).
