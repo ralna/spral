@@ -37,6 +37,7 @@ module spral_rutherford_boeing
    integer, parameter :: ERROR_IO          = -3 ! Error return from io
    integer, parameter :: ERROR_TYPE        = -4 ! Tried to read bad type
    integer, parameter :: ERROR_ELT_ASM     = -5 ! Read elt as asm or v/v
+   integer, parameter :: ERROR_MATRIX_TYPE = -6 ! Bad value of matrix_type
    integer, parameter :: ERROR_EXTRA_SPACE = -10 ! control%extra_space<1.0
    integer, parameter :: ERROR_LWR_UPR_FULL= -11 ! control%lwr_up_full oor
    integer, parameter :: ERROR_VALUES      = -13 ! control%values oor
@@ -68,21 +69,20 @@ module spral_rutherford_boeing
       module procedure rb_write_double_int32, rb_write_double_int64
    end interface rb_write
 contains
-   !
-   ! This subroutine reads the header information for a file.
-   !
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   !> Read header information from file (filename version).
    subroutine rb_peek_file(filename, info, m, n, nelt, nvar, nval, &
          type_code, title, identifier)
-      character(len=*), intent(in) :: filename     ! File to peek at
-      integer, intent(out) :: info                 ! Return code
-      integer, optional, intent(out) :: m          ! # rows
-      integer, optional, intent(out) :: n          ! # columns
-      integer(long), optional, intent(out) :: nelt ! # elements (0 if asm)
-      integer(long), optional, intent(out) :: nvar ! # indices in file
-      integer(long), optional, intent(out) :: nval ! # values in file
-      character(len=3), optional, intent(out) :: type_code ! eg "rsa"
-      character(len=72), optional, intent(out) :: title  ! title field of file
-      character(len=8), optional, intent(out) :: identifier ! id field of file
+      character(len=*), intent(in) :: filename     !< File to peek at
+      integer, intent(out) :: info                 !< Return code
+      integer, optional, intent(out) :: m          !< # rows
+      integer, optional, intent(out) :: n          !< # columns
+      integer(long), optional, intent(out) :: nelt !< # elements (0 if asm)
+      integer(long), optional, intent(out) :: nvar !< # indices in file
+      integer(long), optional, intent(out) :: nval !< # values in file
+      character(len=3), optional, intent(out) :: type_code !< eg "rsa"
+      character(len=72), optional, intent(out) :: title  !< title field of file
+      character(len=8), optional, intent(out) :: identifier !< id field of file
 
       integer :: iunit ! unit file is open on
       integer :: iost ! stat parameter for io calls
@@ -111,6 +111,8 @@ contains
       endif
    end subroutine rb_peek_file
 
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   !> Read header information from file (unit version).
    subroutine rb_peek_unit(iunit, info, m, n, nelt, nvar, nval, &
          type_code, title, identifier, rewind)
       integer, intent(in) :: iunit                 ! unit file is open on
@@ -222,9 +224,8 @@ contains
       if(present(identifier)) identifier = r_identifier
    end subroutine rb_peek_unit
 
-   !
-   ! This subroutine reads an assembled matrix
-   !
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   !> Read a matrix from a Rutherford Boeing file
    subroutine rb_read_double_int32(filename, m, n, ptr, row, val, &
          control, info, type_code, title, identifier, state)
       character(len=*), intent(in) :: filename ! File to read
@@ -642,12 +643,15 @@ contains
       character(len=16) :: ptr_format, row_format
       character(len=72) :: the_title
       character(len=8) :: the_id
-      character(len=1) :: sym
       integer :: st
 
-      ! FIXME: check args? incl char lens
-
       inform = 0 ! by default, success
+
+      ! Check arguments
+      if(matrix_type.lt.0 .or. matrix_type.gt.6 .or. matrix_type.eq.5) then
+         inform = ERROR_MATRIX_TYPE
+         return
+      endif
 
       ! Open file
       open(file=filename, newunit=iunit, status='replace', iostat=st)
@@ -725,11 +729,12 @@ contains
       endif
    end function create_format
 
-   !
-   ! This subroutine takes a matrix in CSC full format that is symmetric
-   ! and returns the skew symmetric interpreation obtained by setting all
-   ! entries in the upper triangle to minus their original value
-   !
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   !> \brief Convert symmetric matrix in full CSC format (lwr+upr) to skew
+   !>        symmetric.
+   !>
+   !> This is done by setting all entries in the upper triangle to minus their
+   !> original value.
    subroutine sym_to_skew(n, ptr, row, col, val)
       integer, intent(inout) :: n
       integer(long), dimension(n+1), intent(inout) :: ptr
@@ -759,12 +764,12 @@ contains
       endif
    end subroutine sym_to_skew
 
-   !
-   ! This subroutine will transpose a matrix. To reduce copying we supply
-   ! the destination integer matrix distinct from the source. The destination
-   ! val and ptr arrays is the same as the source (if required).
-   ! The matrix must be symmetric.
-   !
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   !> \brief Transpose a symmetric matrix
+   !>
+   !> To reduce copying we supply the destination integer matrix distinct from
+   !> the source. The destination val and ptr arrays is the same as the source
+   !> (if required). The matrix must be symmetric.
    subroutine flip_lwr_upr(n, ptr, row, col, st, val)
       integer, intent(in) :: n ! Number of rows.columns in matrix (is symmetric)
       integer(long), dimension(n+1), intent(inout) :: ptr ! ptrs into row/col
@@ -825,9 +830,8 @@ contains
       if(present(val)) val(1:ptr(n+1)-1) = wval(1:ptr(n+1)-1)
    end subroutine flip_lwr_upr
    
-   !
-   ! Add any missing values to matrix (assumed to be in CSC)
-   !
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   !> Add any missing values to matrix
    subroutine add_missing_diag(m, n, ptr, row, val)
       integer, intent(in) :: m
       integer, intent(in) :: n
@@ -879,11 +883,9 @@ contains
    end subroutine add_missing_diag
 
 
-   !  ==================================================
-   !  Code for reading files in Rutherford-Boeing format:
-   !  (originally based on MC56)
-   !  ==================================================
-
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   !>  Code for reading files in Rutherford-Boeing format:
+   !>  (originally based on MC56). Real-valued version
    subroutine read_data_real(lunit, title, key, dattyp, m, nvec, ne, ip, &
          ind, inform, val)
       integer, intent(in) :: lunit ! unit from which to read data
@@ -970,6 +972,9 @@ contains
 
    end subroutine read_data_real
 
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   !>  Code for reading files in Rutherford-Boeing format:
+   !>  (originally based on MC56). Integer-valued version
    subroutine read_data_integer(lunit, title, key, dattyp, m, nvec, ne, ip, &
          ind, inform, val)
       integer, intent(in) :: lunit ! unit from which to read data

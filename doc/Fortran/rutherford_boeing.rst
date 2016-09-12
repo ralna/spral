@@ -139,10 +139,10 @@ Subroutines
    :p rb_write_options options [in]: Options for writing matrix (see
       :f:type:`rb_write_options`).
    :p integer inform [out]: Exit status, see :ref:`table below <exit_status>`.
-   :o character(len=72) title [in]: Title field of file. Defaults to
-      ``"Matrix"`` if not present.
-   :o character(len=8) identifier [in]: Identifier field of file. Defaults to
-      ``"0"`` if not present.
+   :o character(len=*) title [in]: Title field of file. Maximum length is 72
+      character. Defaults to ``"Matrix"`` if not present.
+   :o character(len=*) identifier [in]: Identifier field of file. Maximum
+      length is 8 characters. Defaults to ``"0"`` if not present.
 
 Exit status codes
 -----------------
@@ -164,6 +164,8 @@ Exit status codes
    | -4         | Attempted to read data type not supported by routine.       |
    +------------+-------------------------------------------------------------+
    | -5         | Attempted to read element as assembled or vice versa.       |
+   +------------+-------------------------------------------------------------+
+   | -6         | Invalid matrix type.                                        |
    +------------+-------------------------------------------------------------+
    | -10        | `options%extra_space<1.0`.                                  |
    +------------+-------------------------------------------------------------+

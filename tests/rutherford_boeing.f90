@@ -19,6 +19,7 @@ program rutherford_boeing_test
    integer, parameter :: ERROR_IO          = -3    ! Error return from io
    integer, parameter :: ERROR_TYPE        = -4    ! Tried to read bad type
    integer, parameter :: ERROR_ELT_ASM     = -5    ! Read elt as asm or v/v
+   integer, parameter :: ERROR_MATRIX_TYPE = -6 ! Bad value of matrix_type
    integer, parameter :: ERROR_EXTRA_SPACE = -10   ! control%extra_space<1.0
    integer, parameter :: ERROR_LWR_UPR_FULL= -11   ! control%lwr_up_full oor
    integer, parameter :: ERROR_VALUES      = -13   ! control%values oor
@@ -238,6 +239,27 @@ subroutine test_errors()
    call rb_write("/does/not/exist/matrix.rb", SPRAL_MATRIX_REAL_SYM_INDEF, m, &
       n, ptr, row, val, write_options, inform)
    call test_eq(inform, ERROR_BAD_FILE)
+
+   ! Invalid matrix_type: complex matrix_type to real call
+   write(*,"(a)",advance="no") " * Complex matrix_type on call to real......."
+   write_options = default_write_options
+   call get_simple_matrix(m,n,ptr,row,val)
+   call rb_write(filename, -1, m, n, ptr, row, val, write_options, inform)
+   call test_eq(inform, ERROR_MATRIX_TYPE)
+
+   ! Invalid matrix_type: matrix_type = 5 (undefined)
+   write(*,"(a)",advance="no") " * matrix_type = 5 (undefined)..............."
+   write_options = default_write_options
+   call get_simple_matrix(m,n,ptr,row,val)
+   call rb_write(filename, 5, m, n, ptr, row, val, write_options, inform)
+   call test_eq(inform, ERROR_MATRIX_TYPE)
+
+   ! Invalid matrix_type: matrix_type = 7 (out-of-range)
+   write(*,"(a)",advance="no") " * matrix_type = 7 (out-of-range)............"
+   write_options = default_write_options
+   call get_simple_matrix(m,n,ptr,row,val)
+   call rb_write(filename, 7, m, n, ptr, row, val, write_options, inform)
+   call test_eq(inform, ERROR_MATRIX_TYPE)
 end subroutine test_errors
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
