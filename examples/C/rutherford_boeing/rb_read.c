@@ -22,7 +22,7 @@ int main(void) {
 
    /* Print matrix */
    printf("Matrix '%s'\n", title);
-   spral_print_matrix(-1, matrix_type, m, n, ptr, row, val, 0);
+   spral_print_matrix_i64d(-1, matrix_type, m, n, ptr, row, val, 0);
 
    /* Free handle */
    spral_rb_free_handle(&handle);

@@ -59,7 +59,7 @@ contains
 
       allocate(character(len=strlen(cstr)) :: fstr)
       call c_f_pointer(cstr, cstrptr, shape = (/ strlen(cstr)+1 /))
-      do i = 1, size(cstrptr)
+      do i = 1, size(cstrptr)-1
          fstr(i:i) = cstrptr(i)
       end do
    end subroutine convert_string_c2f
@@ -193,7 +193,7 @@ integer(C_INT) function spral_rb_read(filename, handle, matrix_type, m, n, &
    type(spral_rb_read_options), intent(in) :: options
    type(C_PTR), value :: title
    type(C_PTR), value :: identifier
-   integer(C_INT), intent(inout) :: state
+   type(C_PTR), value :: state
 
    integer :: info
    type(handle_type), pointer :: matrix
@@ -204,6 +204,8 @@ integer(C_INT) function spral_rb_read(filename, handle, matrix_type, m, n, &
    logical :: cindexed
    type(random_state) :: fstate
 
+   integer(C_INT), pointer :: cstate
+
    ! Convert filename to Fortran string
    call convert_string_c2f(filename, ffilename)
    ! Create object to store data in
@@ -213,11 +215,18 @@ integer(C_INT) function spral_rb_read(filename, handle, matrix_type, m, n, &
    call copy_options_in(options, foptions, cindexed)
 
    ! Main function call
-   call random_set_seed(fstate, state)
-   call rb_read(ffilename, m, n, matrix%ptr64, matrix%row, matrix%val, &
-      foptions, info, matrix_type=matrix_type, title=ftitle, &
-      identifier=fidentifier)
-   state = random_get_seed(fstate)
+   if(c_associated(state)) then
+      call c_f_pointer(state, cstate)
+      call random_set_seed(fstate, cstate)
+      call rb_read(ffilename, m, n, matrix%ptr64, matrix%row, matrix%val, &
+         foptions, info, matrix_type=matrix_type, title=ftitle, &
+         identifier=fidentifier, state=fstate)
+      cstate = random_get_seed(fstate)
+   else
+      call rb_read(ffilename, m, n, matrix%ptr64, matrix%row, matrix%val, &
+         foptions, info, matrix_type=matrix_type, title=ftitle, &
+         identifier=fidentifier)
+   endif
 
    ! Convert to C indexing (if required)
    if(cindexed .and. allocated(matrix%ptr64)) &
