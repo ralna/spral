@@ -63,7 +63,7 @@ support reading such files).
 Subroutines
 ===========
 
-.. f:subroutine:: rb_peek(filename,inform[,m,n,nelt,nvar,nval,type_code,title,identifier])
+.. f:subroutine:: rb_peek(filename,inform[,m,n,nelt,nvar,nval,matrix_type,type_code,title,identifier])
 
    Returns information about a matrix :math:`A` stored in specified file (only
    information from the file header is accessed).
@@ -76,24 +76,21 @@ Subroutines
       is assembled, 0 is returned.
    :o integer(long) nvar [out]: Number of row indices in file.
    :o integer(long) nval [out]: Number of reals in file.
+   :o integer matrix_type [out]: Type of matrix to write, one of the values
+      defined in :f:mod:`spral_matrix_util`. Note that RB files do not
+      distguish between symmetric positive-definite and symmetric indefinite
+      matrices, so the latter matrix type is used for type code `'s'`.
    :o character(len=3) type_code [out]: The three letter type code from the
       file (see :ref:`table <type_code>`).
    :o character(len=72) title [out]: Title field of file.
    :o character(len=8) identifier [out]: Identifier field of file.
 
-.. f:subroutine:: rb_peek_unit(unit,info[,m,n,nelt,nvar,nval,type_code,title,identifier,no_rewind])
+   .. note::
 
-   Returns information about a matrix :math:`A` accessible on the specified
-   Fortran unit. The unit will be rewound to its original location unless
-   ``no_rewind=.true.`` is specified.
+      An alternate version of this routine is also available that accepts a
+      unit number instead of a filename, refer to source code if required.
 
-   Arguments are as for :f:subr:`rb_peek()`, except:
-
-   :p integer unit [in]: Fortran unit from which to read file.
-   :o logical no_rewind [in]: If present and `.true.`, the file is not rewound
-      after reading the header.
-
-.. f:subroutine:: rb_read(filename,m,n,ptr,row,val,options,inform[,type_code,title,identifier,state])
+.. f:subroutine:: rb_read(filename,m,n,ptr,row,val,options,inform[,matrix_type,type_code,title,identifier,state])
 
    Reads a CSC format matrix from the specified file.
 
@@ -112,6 +109,10 @@ Subroutines
    :p rb_read_options options [in]: Options for reading matrix (see
       :f:type:`rb_read_options`).
    :p integer inform [out]: Exit status, see :ref:`table below <exit_status>`.
+   :o integer matrix_type [out]: Type of matrix to write, one of the values
+      defined in :f:mod:`spral_matrix_util`. Note that RB files do not
+      distguish between symmetric positive-definite and symmetric indefinite
+      matrices, so the latter matrix type is used for type code `'s'`.
    :o character(len=3) type_code [out]: The three letter type code from the
       file (see :ref:`table <type_code>`).
    :o character(len=72) title [out]: Title field of file.
