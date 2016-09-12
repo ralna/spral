@@ -32,7 +32,7 @@ program rb_write_example
    val(1:ptr(n+1)-1) = (/ 2.0, 1.0, 4.0, 1.0, 8.0, 3.0, 2.0, 2.0 /)
 
    ! Write matrix
-   call rb_write("matrix.rb", "s", n, n, ptr, row, val, options, inform, &
-      title="SPRAL_RUTHERFORD_BOEING test matrix")
+   call rb_write("matrix.rb", SPRAL_MATRIX_REAL_SYM_INDEF, n, n, ptr, row, &
+      val, options, inform, title="SPRAL_RUTHERFORD_BOEING test matrix")
 
 end program rb_write_example

@@ -3,7 +3,7 @@
 !
 ! Based on modified versions of MC56 and HSL_MC56.
 module spral_rutherford_boeing
-   use spral_matrix_util, only : half_to_full
+   use spral_matrix_util
    use spral_random, only : random_state, random_real
    implicit none
 
@@ -566,8 +566,7 @@ contains
    !> @brief Write a CSC matrix to the specified file
    !> @param filename File to write to. If it already exists, it will be
    !>        overwritten.
-   !> @param sym One of 's'ymmetric, 'u'nsymmetric, 'h'ermitian,
-   !>        'z' skew symmetric, 'r'ectangular.
+   !> @param matrix_type SPRAL matrix type, as defined in matrix_utils.
    !> @param m Number of rows in matrix.
    !> @param n Number of columns in matrix.
    !> @param ptr Column pointers for matrix. Column i has entries corresponding
@@ -576,10 +575,10 @@ contains
    !> @param val Floating point values for matrix.
    !> @param options User-specifyable options.
    !> @param info Status on output, 0 for success.
-   subroutine rb_write_double_int32(filename, sym, m, n, ptr, row, val, &
-         options, inform, title, identifier)
+   subroutine rb_write_double_int32(filename, matrix_type, m, n, ptr, row, &
+         val, options, inform, title, identifier)
       character(len=*), intent(in) :: filename
-      character(len=1), intent(in) :: sym
+      integer, intent(in) :: matrix_type
       integer, intent(in) :: m
       integer, intent(in) :: n
       integer, dimension(n+1), intent(in) :: ptr
@@ -601,7 +600,7 @@ contains
       endif
       ptr64(:) = ptr(:)
 
-      call rb_write_double_int64(filename, sym, m, n, ptr64, row, val, &
+      call rb_write_double_int64(filename, matrix_type, m, n, ptr64, row, val, &
          options, inform, title=title, identifier=identifier)
    end subroutine rb_write_double_int32
 
@@ -609,8 +608,7 @@ contains
    !> @brief Write a CSC matrix to the specified file
    !> @param filename File to write to. If it already exists, it will be
    !>        overwritten.
-   !> @param sym One of 's'ymmetric, 'u'nsymmetric, 'h'ermitian,
-   !>        'z' skew symmetric, 'r'ectangular.
+   !> @param matrix_type SPRAL matrix type, as defined in matrix_utils.
    !> @param m Number of rows in matrix.
    !> @param n Number of columns in matrix.
    !> @param ptr Column pointers for matrix. Column i has entries corresponding
@@ -621,10 +619,10 @@ contains
    !> @param inform Status on output, 0 for success.
    !> @param title Title to use in file, defaults to "Matrix"
    !> @param id Matrix name/identifyer to use in file, defaults to "0"
-   subroutine rb_write_double_int64(filename, sym, m, n, ptr, row, val, &
-         options, inform, title, identifier)
+   subroutine rb_write_double_int64(filename, matrix_type, m, n, ptr, row, &
+         val, options, inform, title, identifier)
       character(len=*), intent(in) :: filename
-      character(len=1), intent(in) :: sym
+      integer, intent(in) :: matrix_type
       integer, intent(in) :: m
       integer, intent(in) :: n
       integer(long), dimension(n+1), intent(in) :: ptr
@@ -644,6 +642,7 @@ contains
       character(len=16) :: ptr_format, row_format
       character(len=72) :: the_title
       character(len=8) :: the_id
+      character(len=1) :: sym
       integer :: st
 
       ! FIXME: check args? incl char lens
@@ -681,7 +680,7 @@ contains
 
       ! Determine type string
       type(1:1) = 'r' ! real
-      type(2:2) = sym
+      type(2:2) = matrix_type_to_sym(matrix_type)
       type(3:3) = 'a' ! assembled
 
       ! Write header
@@ -1056,5 +1055,26 @@ contains
       endif
 
    end subroutine read_data_integer
+
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   !> Convert SPRAL matrix type code to type_code(2:2) character
+   character(len=1) function matrix_type_to_sym(matrix_type)
+      integer, intent(in) :: matrix_type
+
+      select case(matrix_type)
+      case(SPRAL_MATRIX_UNSPECIFIED)
+         matrix_type_to_sym = "r"
+      case(SPRAL_MATRIX_REAL_RECT)
+         matrix_type_to_sym = "r"
+      case(SPRAL_MATRIX_REAL_UNSYM)
+         matrix_type_to_sym = "u"
+      case(SPRAL_MATRIX_REAL_SYM_PSDEF)
+         matrix_type_to_sym = "s"
+      case(SPRAL_MATRIX_REAL_SYM_INDEF)
+         matrix_type_to_sym = "s"
+      case(SPRAL_MATRIX_REAL_SKEW)
+         matrix_type_to_sym = "z"
+      end select
+   end function matrix_type_to_sym
 
 end module spral_rutherford_boeing

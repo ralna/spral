@@ -119,14 +119,15 @@ Subroutines
    :o random_state state [inout]: Random state to use for random number
       generation (if required).
 
-.. f:subroutine:: rb_write(filename,sym,m,n,ptr,row,val,options,inform[,title,identifier])
+.. f:subroutine:: rb_write(filename,matrix_type,m,n,ptr,row,val,options,inform[,title,identifier])
 
    Writes a CSC format matrix to the specified file.
 
    :p character(len=*) filename [in]: File to write. Existing files will be
       overwritten.
-   :p character(len=1) sym [in]: Specifies character type of matrix, as per
-      second character in :ref:`type code <type_code>`. One of {s, u, h, z, r}.
+   :p integer matrix_type [in]: Type of matrix to write, one of the values
+      defined in :f:mod:`spral_matrix_util` (will be converted into the second
+      character of the :ref:`type code <type_code>`).
    :p integer m [in]: Number of rows in matrix.
    :p integer n [in]: Number of columns in matrix.
    :p integer ptr(n+1) [in]: Column pointers

@@ -19,12 +19,10 @@ Version history
    API still open to redefinition: only documented entries are considered at
    all "fixed".
 
-==========
-Data types
-==========
 
+=================
 Matrix type codes
------------------
+=================
 
 .. f:variable:: integer SPRAL_MATRIX_UNSPECIFIED = 0
 
