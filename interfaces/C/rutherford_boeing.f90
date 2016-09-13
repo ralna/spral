@@ -6,6 +6,8 @@ module spral_rutherford_boeing_ciface
 
    integer, parameter :: long = selected_int_kind(18)
 
+   integer, parameter :: ERROR_ALLOCATION = -20
+
    type handle_type
       integer(C_INT), dimension(:), allocatable :: ptr32
       integer(C_LONG), dimension(:), allocatable :: ptr64
@@ -27,18 +29,18 @@ module spral_rutherford_boeing_ciface
    end type
 
    interface
-      !integer(C_SIZE_T) pure function strlen(string) bind(C)
-      !   use :: iso_c_binding
-      !   character(C_CHAR), dimension(*), intent(in) :: string
-      !end function strlen
       integer(C_SIZE_T) pure function strlen(string) bind(C)
          use :: iso_c_binding
          type(C_PTR), value, intent(in) :: string
       end function strlen
    end interface
 
+   interface copy_options_in
+      module procedure copy_read_options_in, copy_write_options_in
+   end interface
+
 contains
-   subroutine copy_options_in(coptions, foptions, cindexed)
+   subroutine copy_read_options_in(coptions, foptions, cindexed)
       type(spral_rb_read_options), intent(in) :: coptions
       type(rb_read_options), intent(out) :: foptions
       logical, intent(out) :: cindexed
@@ -48,7 +50,23 @@ contains
       foptions%extra_space    = coptions%extra_space
       foptions%lwr_upr_full   = coptions%lwr_upr_full
       foptions%values         = coptions%values
-   end subroutine copy_options_in
+   end subroutine copy_read_options_in
+
+   subroutine copy_write_options_in(coptions, foptions, cindexed)
+      type(spral_rb_write_options), target, intent(in) :: coptions
+      type(rb_write_options), intent(out) :: foptions
+      logical, intent(out) :: cindexed
+
+      integer :: i
+
+      cindexed                = (coptions%array_base.eq.0)
+      do i = 1, int(strlen(C_LOC(coptions%val_format)))
+         foptions%val_format(i:i) = coptions%val_format(i)
+      end do
+      do i = int(strlen(C_LOC(coptions%val_format)))+1, len(foptions%val_format)
+         foptions%val_format(i:i) = ' '
+      end do
+   end subroutine copy_write_options_in
 
    subroutine convert_string_c2f(cstr, fstr)
       type(C_PTR), intent(in) :: cstr
@@ -72,11 +90,11 @@ contains
       integer :: i
       character(C_CHAR), dimension(:), pointer :: cstrptr
 
-      call c_f_pointer(cstr, cstrptr, shape = (/ len(fstr)+1 /))
-      do i = 1, len(fstr)
+      call c_f_pointer(cstr, cstrptr, shape = (/ len_trim(fstr)+1 /))
+      do i = 1, len_trim(fstr)
          cstrptr(i) = fstr(i:i)
       end do
-      cstrptr(len(fstr)+1) = C_NULL_CHAR
+      cstrptr(len_trim(fstr)+1) = C_NULL_CHAR
    end subroutine convert_string_f2c
 end module spral_rutherford_boeing_ciface
 
@@ -105,9 +123,10 @@ subroutine spral_rb_default_write_options(coptions) bind(C)
    type(rb_write_options) :: foptions
 
    coptions%array_base     = 0
-   do i = 1, len(foptions%val_format)
+   do i = 1, len_trim(foptions%val_format)
       coptions%val_format(i) = foptions%val_format(i:i)
    end do
+   coptions%val_format(len_trim(foptions%val_format)+1) = C_NULL_CHAR
 end subroutine spral_rb_default_write_options
 
 integer(C_INT) function spral_rb_peek(filename, m, n, nelt, nvar, nval, &
@@ -305,6 +324,78 @@ integer(C_INT) function spral_rb_read_ptr32(filename, handle, matrix_type, &
    ! Set return code
    spral_rb_read_ptr32 = info
 end function spral_rb_read_ptr32
+
+integer(C_INT) function spral_rb_write(filename, matrix_type, m, n, &
+      ptr, row, val, options, title, identifier) bind(C)
+   use spral_rutherford_boeing_ciface
+   implicit none
+
+   type(C_PTR), value :: filename
+   integer(C_INT), value :: matrix_type
+   integer(C_INT), value :: m
+   integer(C_INT), value :: n
+   integer(C_LONG), dimension(n+1), target, intent(in) :: ptr
+   integer(C_INT), dimension(ptr(n+1)), target, intent(in) :: row
+   type(C_PTR), value :: val
+   type(spral_rb_write_options), intent(in) :: options
+   type(C_PTR), value :: title
+   type(C_PTR), value :: identifier
+
+   integer :: info, st
+   character(len=:), allocatable :: ffilename, ftitle, fidentifier
+   type(rb_write_options) :: foptions
+   logical :: cindexed
+   integer(C_LONG), dimension(:), pointer :: fptr
+   integer(C_INT), dimension(:), pointer :: frow
+   real(C_DOUBLE), dimension(:), pointer :: fval
+
+   ! Convert C strings to Fortran strings
+   call convert_string_c2f(filename, ffilename)
+   if(c_associated(title)) then
+      call convert_string_c2f(title, ftitle)
+   else
+      ftitle = "Matrix"
+   endif
+   if(c_associated(identifier)) then
+      call convert_string_c2f(identifier, fidentifier)
+   else
+      fidentifier = "0"
+   endif
+   ! Copy options
+   call copy_options_in(options, foptions, cindexed)
+   ! Sort out arrays
+   if(cindexed) then
+      allocate(fptr(n+1), frow(ptr(n+1)), stat=st)
+      if(st.ne.0) then
+         spral_rb_write = ERROR_ALLOCATION
+         return
+      endif
+      fptr(1:n+1) = ptr(1:n+1) + 1
+      frow(1:fptr(n+1)-1) = row(1:fptr(n+1)-1) + 1
+   else
+      fptr(1:n+1) => ptr(1:n+1)
+      frow(1:ptr(n+1)-1) => row(1:ptr(n+1)-1)
+   endif
+
+   ! Main function call
+   if(c_associated(val)) then
+      call c_f_pointer(val, fval, shape=(/ fptr(n+1)-1 /))
+      call rb_write(ffilename, matrix_type, m, n, fptr, frow, fval, foptions, &
+         info, title=ftitle, identifier=fidentifier)
+   else
+      call rb_write(ffilename, matrix_type, m, n, fptr, frow, fval, foptions, &
+         info, title=ftitle, identifier=fidentifier)
+   endif
+
+   ! Free any intermediate memory
+   if(cindexed) then
+      deallocate(fptr)
+      deallocate(frow)
+   endif
+
+   ! Set return code
+   spral_rb_write = info
+end function spral_rb_write
 
 subroutine spral_rb_free_handle(handle) bind(C)
    use spral_rutherford_boeing_ciface

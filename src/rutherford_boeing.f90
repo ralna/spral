@@ -17,6 +17,7 @@ module spral_rutherford_boeing
              rb_write               ! Writes a RB file
    public :: rb_read_options, &     ! Options that control what rb_read returns
              rb_write_options       ! Options that control what rb_write does
+   public :: rb_write_double_int64
 
    ! Possible values options%lwr_upr_full
    integer, parameter :: TRI_LWR  = 1 ! Lower triangle

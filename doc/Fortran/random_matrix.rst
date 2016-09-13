@@ -66,15 +66,15 @@ Routines
    :p integer(kind) nnz [in]: Number of non-zeroes in the matrix. `kind`
       may be either default or long integer (matches `ptr`).
    :p integer(kind) ptr (n+1) [out]: Column pointers of the matrix
-      (see :doc:`CSC format<csc format>`). `kind`
+      (see :doc:`CSC format<csc_format>`). `kind`
       may be either default or long integer (matches `nnz`).
    :p integer row (nnz) [out]: Row indices of the matrix
-      (see :doc:`CSC format<csc format>`).
+      (see :doc:`CSC format<csc_format>`).
    :p integer flag [out]: Exit status of the algorithm, 0 on success, otherwise
       an error occured, see table below.
    :o integer stat [out]: Stat parameter of last ``allocate()`` call.
    :o integer val (nnz) [out]: non-zero values of the matrix
-      (see :doc:`CSC format<csc format>`).
+      (see :doc:`CSC format<csc_format>`).
    :o logical nonsingular [in]: Ensure matrix is non-singular if present with
       value ``.true.``. Such a matrix is guaranteed to have a transversal of
       size :math:`\min({\tt m}, {\tt n})`. In the symmetric or skew

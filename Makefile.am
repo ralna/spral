@@ -88,7 +88,8 @@ check_PROGRAMS += \
 	rutherford_boeing_test \
 	examples/Fortran/rutherford_boeing/rb_read \
 	examples/Fortran/rutherford_boeing/rb_write \
-	examples/C/rutherford_boeing/rb_read
+	examples/C/rutherford_boeing/rb_read \
+	examples/C/rutherford_boeing/rb_write
 rutherford_boeing_test_SOURCES = tests/rutherford_boeing.f90
 examples_Fortran_rutherford_boeing_rb_read_SOURCES = \
 	examples/Fortran/rutherford_boeing/rb_read.f90
@@ -96,10 +97,13 @@ examples_Fortran_rutherford_boeing_rb_write_SOURCES = \
 	examples/Fortran/rutherford_boeing/rb_write.f90
 examples_C_rutherford_boeing_rb_read_SOURCES = \
 	examples/C/rutherford_boeing/rb_read.c
+examples_C_rutherford_boeing_rb_write_SOURCES = \
+	examples/C/rutherford_boeing/rb_write.c
 tests/rutherford_boeing.$(OBJEXT): libspral.a
 examples/Fortran/rutherford_boeing/rb_read.$(OBJEXT): libspral.a
 examples/Fortran/rutherford_boeing/rb_write.$(OBJEXT): libspral.a
 examples/C/rutherford_boeing/rb_read.$(OBJEXT): libspral.a
+examples/C/rutherford_boeing/rb_write.$(OBJEXT): libspral.a
 TESTS += rutherford_boeing_test
 
 # SCALING

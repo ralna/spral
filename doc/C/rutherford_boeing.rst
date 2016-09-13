@@ -104,7 +104,7 @@ Subroutines
       character buffer. Identifier field of file.
    :returns: Exit status, see :ref:`table below <exit_status>`.
 
-.. c:function:: int spral_rb_read(const char *filename, void **handle, enum spral_matrix_type *matrix_type, int *m, int *n, long **ptr, int **row, double **val, struct spral_rb_read_options *options, char *title, char *identifier, int *state)
+.. c:function:: int spral_rb_read(const char *filename, void **handle, enum spral_matrix_type *matrix_type, int *m, int *n, long **ptr, int **row, double **val, const struct spral_rb_read_options *options, char *title, char *identifier, int *state)
 
    Reads a CSC format matrix from the specified file.
    
@@ -145,44 +145,57 @@ Subroutines
       generation (see :doc:`random`).
    :returns: Exit status, see :ref:`table below <exit_status>`.
 
-.. c:function:: int spral_rb_read_ptr32(const char *filename, void **handle, enum spral_matrix_type *matrix_type, int *m, int *n, int **ptr, int **row, double **val, struct spral_rb_read_options *options, char *title, char *identifier, int *state)
+.. c:function:: int spral_rb_read_ptr32(const char *filename, void **handle, enum spral_matrix_type *matrix_type, int *m, int *n, int **ptr, int **row, double **val, const struct spral_rb_read_options *options, char *title, char *identifier, int *state)
 
    As :c:func:`spral_rb_read()` except ``ptr`` has type ``int``.
-   Users are encouraged to prefer the 64-bit version.
 
-.. f:subroutine:: rb_write(filename,matrix_type,m,n,ptr,row,val,options,inform[,title,identifier])
+   .. note::
+
+      This is just a wrapper around the 64-bit call.
+
+      Users are encouraged to prefer the 64-bit version.
+
+.. c:function:: int spral_rb_write(const char *filename, enum spral_matrix_type matrix_type, int m, int n, const long *ptr, const int *row, const double * val, const struct spral_rb_write_options *options, const char *title, const char *identifier)
 
    Writes a CSC format matrix to the specified file.
 
-   :p character(len=*) filename [in]: File to write. Existing files will be
-      overwritten.
-   :p integer matrix_type [in]: Type of matrix to write, one of the values
-      defined in :f:mod:`spral_matrix_util` (will be converted into the second
+   :param filename: File to write. Existing files will be overwritten.
+   :param matrix_type: Type of matrix to write, see
+      :c:type:`enum spral_matrix_type`. (will be converted into the second
       character of the :ref:`type code <type_code>`).
-   :p integer m [in]: Number of rows in matrix.
-   :p integer n [in]: Number of columns in matrix.
-   :p integer ptr(n+1) [in]: Column pointers
+   :param m: Number of rows in matrix.
+   :param n: Number of columns in matrix.
+   :param ptr[n]: Column pointers (see :doc:`CSC format <csc_format>`).
+   :param row[ptr[n]]: Row indices (see :doc:`CSC format <csc_format>`).
+   :param val[ptr[n]]: Values of non-zero entries
       (see :doc:`CSC format <csc_format>`).
-   :p integer row(ptr(n+1)-1) [in]: Row indices
-      (see :doc:`CSC format <csc_format>`).
-   :p real val(ptr(n+1)-1) [in]: Values of non-zero entries
-      (see :doc:`CSC format <csc_format>`).
-   :p rb_write_options options [in]: Options for writing matrix (see
-      :f:type:`rb_write_options`).
-   :p integer inform [out]: Exit status, see :ref:`table below <exit_status>`.
-   :o character(len=*) title [in]: Title field of file. Maximum length is 72
-      character. Defaults to ``"Matrix"`` if not present.
-   :o character(len=*) identifier [in]: Identifier field of file. Maximum
-      length is 8 characters. Defaults to ``"0"`` if not present.
+   :param options: Options for writing matrix (see
+      :c:type:`spral_rb_write_options`).
+   :param title: The title field for the file. Maximum length is 72 characters.
+      Defaults to ``"Matrix"`` if `NULL`.
+   :param identifier: Identifier field of file. Maximum
+      length is 8 characters. Defaults to ``"0"`` if `NULL`.
+   :returns: Exit status, see :ref:`table below <exit_status>`.
 
-Exit status codes
------------------
+.. c:function:: int spral_rb_write_ptr32(const char *filename, enum spral_matrix_type matrix_type, int m, int n, const int *ptr, const int *row, const double * val, const struct spral_rb_write_options *options, const char *title, const char *identifier)
 
-.. table:: Exit status codes
+   As :c:func:`spral_rb_write()` except ``ptr`` has type ``int``.
+
+   .. note::
+
+      This is just a wrapper around the 64-bit call.
+
+      Users are encouraged to prefer the 64-bit version.
+
+
+Return codes
+------------
+
+.. table:: Return codes
    :name: exit_status
 
    +------------+-------------------------------------------------------------+
-   | ``inform`` | Status                                                      |
+   | `inform`   | Status                                                      |
    +============+=============================================================+
    | 0          | Success                                                     |
    +------------+-------------------------------------------------------------+
@@ -214,16 +227,24 @@ Exit status codes
 Derived types
 =============
 
-.. f:type:: rb_read_options
+.. c:type:: struct spral rb_read_options
 
    Specify options for reading matrices.
 
-   :f logical add_diagonal [default=.false.]: Add any diagonal entries that are
-      missing.
-   :f real extra_space [default=1.0]: Proportion of extra space to allow in
-      `row(:)` and `val(:)` arrays. They are allocated to have size
-      `options%extra_space * (ptr(n+1)-1)`.
-   :f integer lwr_upr_full [default=1]: Return lower triangle, upper triangle
+   .. c:member:: bool add_diagonal
+   
+      Add any diagonal entries that are missing if true.
+      Default is false
+
+   .. c:member:: float extra_space
+   
+      Proportion of extra space to allow in `row[]` and `val[]` arrays.
+      They are allocated to have size `options.extra_space * ptr[n]`.
+      Default is 1.0.
+
+   .. c:member:: int lwr_upr_full
+   
+      Return lower triangle, upper triangle
       or both for symmetric and skew-symmetric matrices. One of:
 
       +-------------+---------------------------------------------------------+
@@ -234,8 +255,11 @@ Derived types
       | 3           | Both lower and upper triangular entries.                |
       +-------------+---------------------------------------------------------+
 
-   :f integer values [default=0]: Whether to read and/or generate values. One
-      of:
+      Default is 1.
+
+   .. c:member:: int values
+   
+      Whether to read and/or generate values. One of:
 
       +-------------+---------------------------------------------------------+
       | 0 (default) | Read values from file, only if present.                 |
@@ -262,13 +286,17 @@ Derived types
       |             | file are ignored.                                       |
       +-------------+---------------------------------------------------------+
 
-.. f:type:: rb_write_options
+      Default is 0.
+
+.. c:type:: struct spral_rb_write_options
 
    Specify options for writing matrices.
    
-   :f character(len=20) val_format [default="(3e24.16)"]: Fortran format
-      string to use when writing values. Should not exceed 80 characters per
-      line.
+   .. c:member:: char val_format[20]
+   
+      Fortran format string to use when writing values. Should not exceed 80
+      characters per line.
+      Default is "(3e24.16)".
 
 =======
 Example
@@ -279,28 +307,27 @@ Reading a matrix
 
 The following code reads a matrix from the file "matrix.rb":
 
-.. literalinclude:: ../../examples/Fortran/rutherford_boeing/rb_read.f90
-   :language: Fortran
+.. literalinclude:: ../../examples/C/rutherford_boeing/rb_read.c
+   :language: C
 
 This produces the following output, when run on the file generated by the
-`rb_read.f90` example in the next section::
+`rb_write.c` example in the next section::
 
-   Matrix 'SPRAL_RUTHERFORD_BOEING test matrix'
-   Real symmetric indefinite matrix, dimension 5x5 with 8 entries.
-   1:   2.0000E+00   1.0000E+00                                       
-   2:   1.0000E+00   4.0000E+00   1.0000E+00                8.0000E+00
-   3:                1.0000E+00   3.0000E+00   2.0000E+00             
-   4:                             2.0000E+00                          
-   5:                8.0000E+00                             2.0000E+00
-
+Matrix 'SPRAL_RUTHERFORD_BOEING test matrix'
+Real symmetric indefinite matrix, dimension 5x5 with 8 entries.
+0:   2.0000E+00   1.0000E+00                                       
+1:   1.0000E+00   4.0000E+00   1.0000E+00                8.0000E+00
+2:                1.0000E+00   3.0000E+00   2.0000E+00             
+3:                             2.0000E+00                          
+4:                8.0000E+00                             2.0000E+00
 
 Writing a matrix
 ----------------
 
 The following code writes a matrix to the file "matrix.rb":
 
-.. literalinclude:: ../../examples/Fortran/rutherford_boeing/rb_write.f90
-   :language: Fortran
+.. literalinclude:: ../../examples/C/rutherford_boeing/rb_write.c
+   :language: C
 
 This produces the following file::
 
