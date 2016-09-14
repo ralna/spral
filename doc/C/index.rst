@@ -6,6 +6,13 @@
 The Sparse Parallel Robust Algorithms Library
 =============================================
 
+Introduction
+
+.. toctree::
+   :maxdepth: 1
+
+   install
+
 Data Formats
 
 .. toctree::
