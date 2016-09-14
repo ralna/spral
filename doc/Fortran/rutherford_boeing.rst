@@ -1,22 +1,22 @@
-****************************************************
-:f:mod:`spral_rutherford_boeing` - RB File Utilities
-****************************************************
+***********************************************************
+:f:mod:`spral_rutherford_boeing` - RB File Format Utilities
+***********************************************************
 .. f:module spral_rutherford_boeing
-   :synopsis: Rutherford Boeing Rile Utilities
+   :synopsis: Rutherford Boeing File Format Utilities
 
 =======
 Purpose
 =======
 
 This package provides routines to read and write matrices stored in
-Rutherford-Boeing format.
+files using the :ref:`Rutherford-Boeing format <rb_format>`.
 
 At present, reading and writing of supplementary data (e.g. right-hand sides)
 is not supported. If it is required to read and write these files, we
 recommend the use of the HSL routines
 `MC55 <http://www.hsl.rl.ac.uk/catalogue/mc55.html>`_ and
 `MC56 <http://www.hsl.rl.ac.uk/catalogue/mc56.html>`_ that are available
-for free (though redistribution is not permitted).
+without charge (although redistribution is not permitted).
 
 Version history
 ---------------
@@ -26,64 +26,33 @@ Version history
 
 [For detailed history, see ChangeLog]
 
-===========================
-Data formats and type codes
-===========================
-
-A Rutherford Boeing (RB) file may either contain a sparse matrix or
-supplementary data. This package only supports the former.
-
-The RB format support storage of sparse matrices in either
-:doc:`CSC format <csc_format>` or in :doc:`Element format <element_format>`.
-Additionally a three letter type code is supplied that encodes additional
-information, as per the following table:
-
-.. table:: Type code
-   :name: type_code
-
-   +-----------------+-----------------------+-------------------------+
-   | First character | Second character      | Third character         |
-   +=================+=======================+=========================+
-   | **r**: real     | **s**: symmetric      | **a**: CSC format       |
-   +-----------------+-----------------------+-------------------------+
-   | **c**: complex  | **u**: unsymmetric    | **e**: Elemental format |
-   +-----------------+-----------------------+-------------------------+
-   | **i**: integer  | **h**: Hermitian      |                         |
-   +-----------------+-----------------------+-------------------------+
-   | **p**: pattern  | **z**: skew symmetric |                         |
-   +-----------------+-----------------------+-------------------------+
-   | **q**: pattern  | **r**: rectangular    |                         |
-   +-----------------+-----------------------+-------------------------+
-
-The difference between the `p` and `q` pattern types is that the latter
-indicates that values are supplied in an auxiliary file (this package does not
-support reading such files).
-
 ===========
 Subroutines
 ===========
 
 .. f:subroutine:: rb_peek(filename,inform[,m,n,nelt,nvar,nval,matrix_type,type_code,title,identifier])
 
-   Returns information about a matrix :math:`A` stored in specified file (only
-   information from the file header is accessed).
+   Returns information about a matrix :math:`A` stored in a specified file using
+   Rutherford Boring format (only information from the file header is accessed).
 
    :p character(len=*) filename [in]: File to read.
    :p integer inform [out]: Exit status, see :ref:`table below <exit_status>`.
    :o integer m [out]: Number of rows in :math:`A`.
    :o integer n [out]: Number of columns in :math:`A`.
-   :o integer(long) nelt [out]: Number of elements in file. If the matrix
-      is assembled, 0 is returned.
+   :o integer(long) nelt [out]: Number of elements in file if matrix is
+      stored in elemental format, or 0 otherwise.
    :o integer(long) nvar [out]: Number of row indices in file.
    :o integer(long) nval [out]: Number of reals in file.
-   :o integer matrix_type [out]: Type of matrix to write, one of the values
+   :o integer matrix_type [out]: Type of matrix, one of the values
       defined in :f:mod:`spral_matrix_util`. Note that RB files do not
       distguish between symmetric positive-definite and symmetric indefinite
-      matrices, so the latter matrix type is used for type code `'s'`.
+      matrices, so the latter matrix type is used for all symmetric matrices.
    :o character(len=3) type_code [out]: The three letter type code from the
       file (see :ref:`table <type_code>`).
-   :o character(len=72) title [out]: Title field of file.
-   :o character(len=8) identifier [out]: Identifier field of file.
+   :o character(len=72) title [out]: Title field of file, usually the matrix
+      name.
+   :o character(len=8) identifier [out]: Identifier field of file, usually an
+      id number.
 
    .. note::
 
@@ -92,12 +61,12 @@ Subroutines
 
 .. f:subroutine:: rb_read(filename,m,n,ptr,row,val,options,inform[,matrix_type,type_code,title,identifier,state])
 
-   Reads a CSC format matrix from the specified file.
+   Reads a CSC matrix from a file stored in RB format.
 
    :p character(len=*) filename [in]: File to read.
    :p integer m [out]: Number of rows in :math:`A`.
    :p integer n [out]: Number of columns in :math:`A`.
-   :p integer ptr(\:) [allocatable, out]: Column pointers
+   :p integer(long) ptr(\:) [allocatable, out]: Column pointers
       (see :doc:`CSC format <csc_format>`). Will be allocated by the routine
       to have sufficient size.
    :p integer row(\:) [allocatable, out]: Row indices
@@ -109,10 +78,10 @@ Subroutines
    :p rb_read_options options [in]: Options for reading matrix (see
       :f:type:`rb_read_options`).
    :p integer inform [out]: Exit status, see :ref:`table below <exit_status>`.
-   :o integer matrix_type [out]: Type of matrix to write, one of the values
+   :o integer matrix_type [out]: Type of matrix, one of the values
       defined in :f:mod:`spral_matrix_util`. Note that RB files do not
       distguish between symmetric positive-definite and symmetric indefinite
-      matrices, so the latter matrix type is used for type code `'s'`.
+      matrices, so the latter matrix type is used for all symmetric matrices.
    :o character(len=3) type_code [out]: The three letter type code from the
       file (see :ref:`table <type_code>`).
    :o character(len=72) title [out]: Title field of file.
@@ -120,18 +89,24 @@ Subroutines
    :o random_state state [inout]: Random state to use for random number
       generation (if required).
 
+   .. note::
+   
+      A version with `ptr(:)` as default integer is also supplied, but users
+      are recommended to use the long integer version to ensure support for
+      large matrices.
+
 .. f:subroutine:: rb_write(filename,matrix_type,m,n,ptr,row,val,options,inform[,title,identifier])
 
-   Writes a CSC format matrix to the specified file.
+   Writes a CSC format matrix to the specified file in RB format.
 
-   :p character(len=*) filename [in]: File to write. Existing files will be
+   :p character(len=*) filename [in]: File to write. Any existing file will be
       overwritten.
    :p integer matrix_type [in]: Type of matrix to write, one of the values
       defined in :f:mod:`spral_matrix_util` (will be converted into the second
       character of the :ref:`type code <type_code>`).
-   :p integer m [in]: Number of rows in matrix.
-   :p integer n [in]: Number of columns in matrix.
-   :p integer ptr(n+1) [in]: Column pointers
+   :p integer m [in]: Number of rows in :math:`A`.
+   :p integer n [in]: Number of columns in :math:`A`.
+   :p integer(long) ptr(n+1) [in]: Column pointers
       (see :doc:`CSC format <csc_format>`).
    :p integer row(ptr(n+1)-1) [in]: Row indices
       (see :doc:`CSC format <csc_format>`).
@@ -144,6 +119,12 @@ Subroutines
       character. Defaults to ``"Matrix"`` if not present.
    :o character(len=*) identifier [in]: Identifier field of file. Maximum
       length is 8 characters. Defaults to ``"0"`` if not present.
+
+   .. note::
+   
+      A version with `ptr(:)` as default integer is also supplied, but users
+      are recommended to use the long integer version to ensure support for
+      large matrices.
 
 Exit status codes
 -----------------
@@ -158,13 +139,13 @@ Exit status codes
    +------------+-------------------------------------------------------------+
    | -1         | Failed to open file.                                        |
    +------------+-------------------------------------------------------------+
-   | -2         | Not a valid for Rutherford-Boeing file.                     |
+   | -2         | Not a valid Rutherford-Boeing file.                         |
    +------------+-------------------------------------------------------------+
    | -3         | Error on i/o operation.                                     |
    +------------+-------------------------------------------------------------+
    | -4         | Attempted to read data type not supported by routine.       |
    +------------+-------------------------------------------------------------+
-   | -5         | Attempted to read element as assembled or vice versa.       |
+   | -5         | Attempted to read matrix in elemental format.               |
    +------------+-------------------------------------------------------------+
    | -6         | Invalid matrix type.                                        |
    +------------+-------------------------------------------------------------+
@@ -240,6 +221,11 @@ Derived types
       string to use when writing values. Should not exceed 80 characters per
       line.
 
+   .. note::
+   
+      Formats for integer data will be automatically determined based on the
+      maximum values to be represented.
+
 =======
 Example
 =======
@@ -296,13 +282,44 @@ If a diagonally dominant matrix is requested, the diagonal entry in each
 row is set to :math:`\max(100, 10k)`, where `k` is the number of entries
 in the column.
 
-If a random `state` isn't provided by the user, the default initial state
+If a random `state` is not provided by the user, the default initial state
 from the :f:mod:`spral_random` module is used.
 
-File format
------------
+.. _rb_format:
 
-The Rutherford Boeing file format is described in the following report:
+Rutherford Boeing File format
+-----------------------------
+
+The Rutherford Boeing file format is described in the following report [1]_.
+A file may either contain a sparse matrix or supplementary data. However, this
+package only supports the former.
+
+Sparse matrices are stored in either :doc:`CSC format <csc_format>` or
+`Elemental format`. A three letter type code is used to encodes this and
+additional information, as per the following table:
+
+.. table:: Type code
+   :name: type_code
+
+   +-----------------+-----------------------+-------------------------+
+   | First character | Second character      | Third character         |
+   +=================+=======================+=========================+
+   | **r**: real     | **s**: symmetric      | **a**: CSC format       |
+   +-----------------+-----------------------+-------------------------+
+   | **c**: complex  | **u**: unsymmetric    | **e**: Elemental format |
+   +-----------------+-----------------------+-------------------------+
+   | **i**: integer  | **h**: Hermitian      |                         |
+   +-----------------+-----------------------+-------------------------+
+   | **p**: pattern  | **z**: skew symmetric |                         |
+   +-----------------+-----------------------+-------------------------+
+   | **q**: pattern  | **r**: rectangular    |                         |
+   +-----------------+-----------------------+-------------------------+
+
+The difference between the **p** and **q** pattern types is that the latter
+indicates that values are supplied in an auxiliary file (this package does not
+support reading such files).
+
+Further information may be found in:
 
 .. [1] I.S. Duff, R.G. Grimes and J.G. Lewis (1997).
    *The Rutherford-Boeing Sparse Matrix Collection*.

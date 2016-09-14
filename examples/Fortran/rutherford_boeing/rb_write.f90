@@ -2,8 +2,7 @@
 ! Example code for SPRAL_RUTHERFORD_BOEING
 program rb_write_example
    use spral_rutherford_boeing
-   use spral_matrix_util, only: print_matrix, &
-                                SPRAL_MATRIX_REAL_SYM_INDEF
+   use spral_matrix_util, only: SPRAL_MATRIX_REAL_SYM_INDEF
    implicit none
 
    ! Parameters
