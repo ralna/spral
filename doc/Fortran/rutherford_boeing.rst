@@ -116,7 +116,7 @@ Subroutines
       :f:type:`rb_write_options`).
    :p integer inform [out]: Exit status, see :ref:`table below <exit_status>`.
    :o character(len=*) title [in]: Title field of file. Maximum length is 72
-      character. Defaults to ``"Matrix"`` if not present.
+      characters. Defaults to ``"Matrix"`` if not present.
    :o character(len=*) identifier [in]: Identifier field of file. Maximum
       length is 8 characters. Defaults to ``"0"`` if not present.
 
@@ -133,7 +133,7 @@ Exit status codes
    :name: exit_status
 
    +------------+-------------------------------------------------------------+
-   | ``inform`` | Status                                                      |
+   | `inform`   | Status                                                      |
    +============+=============================================================+
    | 0          | Success                                                     |
    +------------+-------------------------------------------------------------+
