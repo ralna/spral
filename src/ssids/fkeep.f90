@@ -59,7 +59,7 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
 
    integer :: i, numa_region, exec_loc, my_loc
    integer :: total_threads, max_gpus, to_launch, thread_num
-   logical :: all_region
+   logical :: abort, all_region
    type(contrib_type), dimension(:), allocatable :: child_contrib
    type(ssids_inform), dimension(:), allocatable :: thread_inform
 
@@ -88,7 +88,8 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
    if(inform%stat.ne.0) goto 100
    all_region = .false.
 !$omp parallel proc_bind(spread) num_threads(to_launch) &
-!$omp    default(none) private(i, exec_loc, numa_region, my_loc, thread_num) &
+!$omp    default(none) &
+!$omp    private(abort, i, exec_loc, numa_region, my_loc, thread_num) &
 !$omp    shared(akeep, fkeep, val, options, thread_inform, child_contrib, &
 !$omp           all_region) &
 !$omp    if(to_launch.gt.1)
@@ -102,17 +103,19 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
    endif
    ! Split into threads for this NUMA region (unless we're running a GPU)
    exec_loc = -1 ! avoid compiler warning re uninitialized
+   abort = .false.
 !$omp parallel proc_bind(close) default(shared) &
 !$omp    num_threads(akeep%topology(numa_region)%nproc) &
 !$omp    if(my_loc.le.size(akeep%topology))
-!$omp taskgroup
 !$omp single
+!$omp taskgroup
    do i = 1, akeep%nparts
       exec_loc = akeep%subtree(i)%exec_loc
       if(numa_region.eq.1 .and. exec_loc.eq.-1) all_region = .true.
       if(exec_loc.ne.my_loc) cycle
 !$omp task untied default(shared) firstprivate(i, exec_loc) &
 !$omp    if(my_loc.le.size(akeep%topology))
+      if(abort) goto 10
       if(allocated(fkeep%scaling)) then
          fkeep%subtree(i)%ptr => akeep%subtree(i)%ptr%factor( &
             fkeep%pos_def, val, &
@@ -127,7 +130,9 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
             )
       endif
       if(thread_inform(my_loc)%flag.lt.0) then
-!$omp    cancel taskgroup
+         abort = .true.
+         goto 10
+! !$omp    cancel taskgroup
       endif
       if(akeep%contrib_idx(i).le.akeep%nparts) then
          ! There is a parent subtree to contribute to
@@ -136,10 +141,11 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
 !$omp    flush
          child_contrib(akeep%contrib_idx(i))%ready = .true.
       endif
+      10 continue ! jump target for abort
 !$omp end task
    end do
-!$omp end single
 !$omp end taskgroup
+!$omp end single
 !$omp end parallel
 !$omp end parallel
    do i = 1, size(thread_inform)
