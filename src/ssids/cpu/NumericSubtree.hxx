@@ -83,6 +83,7 @@ public:
       // Whilst this isn't really what's happening it does ensure our
       // ordering is correct: each node cannot be scheduled until all its
       // children are done, but its children to run in any order.
+      bool abort = false; // Set to true to abort remaining tasks
       #pragma omp taskgroup
       {
          /* Loop over small leaf subtrees */
@@ -90,10 +91,10 @@ public:
             auto* parent_lcol = &nodes_[symb_.small_leafs_[si].get_parent()];
             #pragma omp task default(none) \
                firstprivate(si) \
-               shared(aval, options, scaling, thread_stats, work) \
+               shared(aval, abort, options, scaling, thread_stats, work) \
                depend(in: parent_lcol[0:1])
-            {
-               #pragma omp cancellation point taskgroup
+            { if(!abort) {
+               //#pragma omp cancellation point taskgroup
                try {
                   int this_thread = omp_get_thread_num();
 #ifdef PROFILE
@@ -105,7 +106,8 @@ public:
                         options, thread_stats[this_thread]);
                   if(thread_stats[this_thread].flag<Flag::SUCCESS) {
 #ifdef _OPENMP
-                     #pragma omp cancel taskgroup
+                     abort = true;
+                     //#pragma omp cancel taskgroup
 #else
                      stats += thread_stats[this_thread];
                      return;
@@ -118,7 +120,8 @@ public:
                   thread_stats[omp_get_thread_num()].flag =
                      Flag::ERROR_ALLOCATION;
 #ifdef _OPENMP
-                  #pragma omp cancel taskgroup
+                  abort = true;
+                  //#pragma omp cancel taskgroup
 #else
                   stats += thread_stats[0];
                   return;
@@ -127,13 +130,14 @@ public:
                   thread_stats[omp_get_thread_num()].flag =
                      Flag::ERROR_SINGULAR;
 #ifdef _OPENMP
-                  #pragma omp cancel taskgroup
+                  abort = true;
+                  //#pragma omp cancel taskgroup
 #else
                   stats += thread_stats[0];
                   return;
 #endif /* _OPENMP */
                }
-            } // task
+            } } // task/abort
          }
 
          /* Loop over singleton nodes in order */
@@ -143,12 +147,12 @@ public:
             auto* parent_lcol = &nodes_[symb_[ni].parent]; // for depend
             #pragma omp task default(none) \
                firstprivate(ni) \
-               shared(aval, child_contrib, options, scaling, thread_stats, \
-                      work) \
+               shared(aval, abort, child_contrib, options, scaling, \
+                      thread_stats, work) \
                depend(inout: this_lcol[0:1]) \
                depend(in: parent_lcol[0:1])
-            {
-               #pragma omp cancellation point taskgroup
+            { if(!abort) {
+               //#pragma omp cancellation point taskgroup
                try {
                   /*printf("%d: Node %d parent %d (of %d) size %d x %d\n",
                         omp_get_thread_num(), ni, symb_[ni].parent,
@@ -170,7 +174,8 @@ public:
                       pool_alloc_);
                   if(thread_stats[this_thread].flag<Flag::SUCCESS) {
 #ifdef _OPENMP
-                     #pragma omp cancel taskgroup
+                     abort = true;
+                     //#pragma omp cancel taskgroup
 #else
                      stats += thread_stats[0];
                      return;
@@ -178,13 +183,15 @@ public:
                   }
 
                   // Assemble children into contribution block
-                  assemble_post(symb_.n, symb_[ni], child_contrib, nodes_[ni],
-                        pool_alloc_, work);
+                  if(!abort)
+                     assemble_post(symb_.n, symb_[ni], child_contrib,
+                           nodes_[ni], pool_alloc_, work);
                } catch (std::bad_alloc const&) {
                   thread_stats[omp_get_thread_num()].flag =
                      Flag::ERROR_ALLOCATION;
 #ifdef _OPENMP
-                  #pragma omp cancel taskgroup
+                  abort = true;
+                  //#pragma omp cancel taskgroup
 #else
                   stats += thread_stats[0];
                   return;
@@ -193,14 +200,15 @@ public:
                   thread_stats[omp_get_thread_num()].flag =
                      Flag::ERROR_SINGULAR;
 #ifdef _OPENMP
-                  #pragma omp cancel taskgroup
+                  abort = true;
+                  //#pragma omp cancel taskgroup
 #else
                   stats += thread_stats[0];
                   return;
 #endif /* _OPENMP */
                }
-            }
-         } // task
+            } } // task/abort
+         }
       } // taskgroup
 
       // Reduce thread_stats

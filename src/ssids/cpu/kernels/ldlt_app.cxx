@@ -1274,6 +1274,7 @@ private:
       int flag = 0;
 
       /* Inner loop - iterate over block columns */
+      bool abort=false;
       #pragma omp taskgroup
       for(int blk=from_blk; blk<nblk; blk++) {
          /*if(debug) {
@@ -1284,62 +1285,68 @@ private:
          // Factor diagonal: depend on perm[blk*block_size] as we init npass
          #pragma omp task default(none) \
             firstprivate(blk) \
-            shared(a, perm, backup, cdata, next_elim, d, \
+            shared(a, abort, perm, backup, cdata, next_elim, d, \
                    options, work, alloc, flag) \
             depend(inout: a[blk*block_size*lda+blk*block_size:1]) \
             depend(inout: perm[blk*block_size:1])
-         { try {
-            #pragma omp cancellation point taskgroup
+         { if(!abort) {
+            try {
+               //#pragma omp cancellation point taskgroup
 #ifdef PROFILE
-            Profile::Task task("TA_LDLT_DIAG");
+               Profile::Task task("TA_LDLT_DIAG");
 #endif
-            if(debug) printf("Factor(%d)\n", blk);
-            BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
-            // Store a copy for recovery in case of a failed column
-            dblk.backup(backup);
-            // Perform actual factorization
-            int nelim = dblk.template factor<Allocator>(
-                  next_elim, perm, d, options, work, alloc
-                  );
-            if(nelim<0) {
-               flag = nelim;
+               if(debug) printf("Factor(%d)\n", blk);
+               BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
+               // Store a copy for recovery in case of a failed column
+               dblk.backup(backup);
+               // Perform actual factorization
+               int nelim = dblk.template factor<Allocator>(
+                     next_elim, perm, d, options, work, alloc
+                     );
+               if(nelim<0) {
+                  flag = nelim;
 #ifdef _OPENMP
-               #pragma omp cancel taskgroup
+                  abort = true;
+                  //#pragma omp cancel taskgroup
 #else
-            return flag;
+                  return flag;
+#endif /* _OPENMP */
+               } else {
+                  // Init threshold check (non locking => task dependencies)
+                  cdata[blk].init_passed(nelim);
+               }
+#ifdef PROFILE
+               task.done();
+#endif
+            } catch(std::bad_alloc const&) {
+               flag = Flag::ERROR_ALLOCATION;
+#ifdef _OPENMP
+               abort = true;
+               //#pragma omp cancel taskgroup
+#else
+               return flag;
+#endif /* _OPENMP */
+            } catch(SingularError const&) {
+               flag = Flag::ERROR_SINGULAR;
+#ifdef _OPENMP
+               abort = true;
+               //#pragma omp cancel taskgroup
+#else
+               return flag;
 #endif /* _OPENMP */
             }
-            // Init threshold check (non locking => task dependencies)
-            cdata[blk].init_passed(nelim);
-#ifdef PROFILE
-            task.done();
-#endif
-         } catch(std::bad_alloc const&) {
-            flag = Flag::ERROR_ALLOCATION;
-#ifdef _OPENMP
-            #pragma omp cancel taskgroup
-#else
-            return flag;
-#endif /* _OPENMP */
-         } catch(SingularError const&) {
-            flag = Flag::ERROR_SINGULAR;
-#ifdef _OPENMP
-            #pragma omp cancel taskgroup
-#else
-            return flag;
-#endif /* _OPENMP */
-         } }
+         } } /* task/abort */
          
          // Loop over off-diagonal blocks applying pivot
          for(int jblk=0; jblk<blk; jblk++) {
             #pragma omp task default(none) \
                firstprivate(blk, jblk) \
-               shared(a, backup, cdata, options) \
+               shared(a, abort, backup, cdata, options) \
                depend(in: a[blk*block_size*lda+blk*block_size:1]) \
                depend(inout: a[jblk*block_size*lda+blk*block_size:1]) \
                depend(in: perm[blk*block_size:1])
-            {
-               #pragma omp cancellation point taskgroup
+            { if(!abort) {
+               //#pragma omp cancellation point taskgroup
 #ifdef PROFILE
                Profile::Task task("TA_LDLT_APPLY");
 #endif
@@ -1360,17 +1367,17 @@ private:
 #ifdef PROFILE
                task.done();
 #endif
-            }
+            } } /* task/abort */
          }
          for(int iblk=blk+1; iblk<mblk; iblk++) {
             #pragma omp task default(none) \
                firstprivate(blk, iblk) \
-               shared(a, backup, cdata, options) \
+               shared(a, abort, backup, cdata, options) \
                depend(in: a[blk*block_size*lda+blk*block_size:1]) \
                depend(inout: a[blk*block_size*lda+iblk*block_size:1]) \
                depend(in: perm[blk*block_size:1])
-            {
-               #pragma omp cancellation point taskgroup
+            { if(!abort) {
+               //#pragma omp cancellation point taskgroup
 #ifdef PROFILE
                Profile::Task task("TA_LDLT_APPLY");
 #endif
@@ -1389,17 +1396,17 @@ private:
 #ifdef PROFILE
                task.done();
 #endif
-            }
+            } } /* task/abort */
          }
 
          // Adjust column once all applys have finished and we know final
          // number of passed columns.
          #pragma omp task default(none) \
             firstprivate(blk) \
-            shared(cdata, next_elim) \
+            shared(abort, cdata, next_elim) \
             depend(inout: perm[blk*block_size:1])
-         {
-            #pragma omp cancellation point taskgroup
+         { if(!abort) {
+            //#pragma omp cancellation point taskgroup
 #ifdef PROFILE
             Profile::Task task("TA_LDLT_ADJUST");
 #endif
@@ -1408,7 +1415,7 @@ private:
 #ifdef PROFILE
             task.done();
 #endif
-         }
+         } } /* task/abort */
 
          // Update uneliminated columns
          for(int jblk=0; jblk<blk; jblk++) {
@@ -1419,13 +1426,13 @@ private:
                                          : iblk*block_size*lda + blk*block_size;
                #pragma omp task default(none) \
                   firstprivate(blk, iblk, jblk) \
-                  shared(a, cdata, backup, work)\
+                  shared(a, abort, cdata, backup, work)\
                   depend(inout: a[jblk*block_size*lda+iblk*block_size:1]) \
                   depend(in: perm[blk*block_size:1]) \
                   depend(in: a[jblk*block_size*lda+blk*block_size:1]) \
                   depend(in: a[adep_idx:1])
-               {
-                  #pragma omp cancellation point taskgroup
+               { if(!abort) {
+                  //#pragma omp cancellation point taskgroup
 #ifdef PROFILE
                   Profile::Task task("TA_LDLT_UPDA");
 #endif
@@ -1445,20 +1452,20 @@ private:
 #ifdef PROFILE
                   task.done();
 #endif
-               }
+               } } /* task/abort */
             }
          }
          for(int jblk=blk; jblk<nblk; jblk++) {
             for(int iblk=jblk; iblk<mblk; iblk++) {
                #pragma omp task default(none) \
                   firstprivate(blk, iblk, jblk) \
-                  shared(a, cdata, backup, work, upd) \
+                  shared(a, abort, cdata, backup, work, upd) \
                   depend(inout: a[jblk*block_size*lda+iblk*block_size:1]) \
                   depend(in: perm[blk*block_size:1]) \
                   depend(in: a[blk*block_size*lda+iblk*block_size:1]) \
                   depend(in: a[blk*block_size*lda+jblk*block_size:1])
-               {
-                  #pragma omp cancellation point taskgroup
+               { if(!abort) {
+                  //#pragma omp cancellation point taskgroup
 #ifdef PROFILE
                   Profile::Task task("TA_LDLT_UPDA");
 #endif
@@ -1476,7 +1483,7 @@ private:
 #ifdef PROFILE
                   task.done();
 #endif
-               }
+               } } /* task/abort */
             }
          }
 
@@ -1490,13 +1497,13 @@ private:
                                  (iblk-nblk)*block_size];
                #pragma omp task default(none) \
                   firstprivate(iblk, jblk, blk, upd_ij) \
-                  shared(a, upd2, cdata, work) \
+                  shared(a, abort, upd2, cdata, work) \
                   depend(inout: upd_ij[0:1]) \
                   depend(in: perm[blk*block_size:1]) \
                   depend(in: a[blk*block_size*lda+iblk*block_size:1]) \
                   depend(in: a[blk*block_size*lda+jblk*block_size:1])
-               {
-                  #pragma omp cancellation point taskgroup
+               { if(!abort) {
+                  //#pragma omp cancellation point taskgroup
 #ifdef PROFILE
                   Profile::Task task("TA_LDLT_UPDC");
 #endif
@@ -1511,7 +1518,7 @@ private:
 #ifdef PROFILE
                   task.done();
 #endif
-               }
+               } } /* task/abort */
             }
          }
       } // taskgroup and for
@@ -1691,6 +1698,7 @@ private:
       int flag = 0;
 
       /* Inner loop - iterate over block columns */
+      bool abort = false;
       #pragma omp taskgroup
       for(int blk=0; blk<nblk; blk++) {
          /*if(debug) {
@@ -1701,64 +1709,69 @@ private:
          // Factor diagonal
          #pragma omp task default(none) \
             firstprivate(blk) \
-            shared(a, perm, backup, cdata, next_elim, d, \
+            shared(a, abort, perm, backup, cdata, next_elim, d, \
                    options, work, alloc, up_to_date, flag) \
             depend(inout: a[blk*block_size*lda+blk*block_size:1])
-         { try {
-            #pragma omp cancellation point taskgroup
+         { if(!abort) {
+            try {
+               //#pragma omp cancellation point taskgroup
 #ifdef PROFILE
-            Profile::Task task("TA_LDLT_DIAG");
+               Profile::Task task("TA_LDLT_DIAG");
 #endif
-            if(debug) printf("Factor(%d)\n", blk);
-            BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
-            // On first access to this block, store copy in case of failure
-            if(blk==0) dblk.backup(backup);
-            // Record block state as assuming we've done up to col blk
-            up_to_date[blk*mblk+blk] = blk;
-            // Perform actual factorization
-            int nelim = dblk.template factor<Allocator>(
-                  next_elim, perm, d, options, work, alloc
-                  );
-            if(nelim < get_ncol(blk, n, block_size)) {
-               cdata[blk].init_passed(0); // diagonal block has NOT passed
+               if(debug) printf("Factor(%d)\n", blk);
+               BlockSpec dblk(blk, blk, m, n, cdata, a, lda, block_size);
+               // On first access to this block, store copy in case of failure
+               if(blk==0) dblk.backup(backup);
+               // Record block state as assuming we've done up to col blk
+               up_to_date[blk*mblk+blk] = blk;
+               // Perform actual factorization
+               int nelim = dblk.template factor<Allocator>(
+                     next_elim, perm, d, options, work, alloc
+                     );
+               if(nelim < get_ncol(blk, n, block_size)) {
+                  cdata[blk].init_passed(0); // diagonal block has NOT passed
 #ifdef _OPENMP
-               #pragma omp cancel taskgroup
+                  abort = true;
+                  //#pragma omp cancel taskgroup
 #else
-               return cdata.calc_nelim(m);
+                  return cdata.calc_nelim(m);
 #endif /* _OPENMP */
-            } else {
-               cdata[blk].first_elim = (blk==0);
-               cdata[blk].init_passed(1); // diagonal block has passed
-               next_elim += nelim; // we're assuming everything works
+               } else {
+                  cdata[blk].first_elim = (blk==0);
+                  cdata[blk].init_passed(1); // diagonal block has passed
+                  next_elim += nelim; // we're assuming everything works
+               }
+#ifdef PROFILE
+               task.done();
+#endif
+            } catch(std::bad_alloc const&) {
+               flag = Flag::ERROR_ALLOCATION;
+#ifdef _OPENMP
+               abort = true;
+               //#pragma omp cancel taskgroup
+#else
+               return flag;
+#endif /* _OPENMP */
+            } catch(SingularError const&) {
+               flag = Flag::ERROR_SINGULAR;
+#ifdef _OPENMP
+               abort = true;
+               //#pragma omp cancel taskgroup
+#else
+               return flag;
+#endif /* _OPENMP */
             }
-#ifdef PROFILE
-            task.done();
-#endif
-         } catch(std::bad_alloc const&) {
-            flag = Flag::ERROR_ALLOCATION;
-#ifdef _OPENMP
-            #pragma omp cancel taskgroup
-#else
-            return flag;
-#endif /* _OPENMP */
-         } catch(SingularError const&) {
-            flag = Flag::ERROR_SINGULAR;
-#ifdef _OPENMP
-            #pragma omp cancel taskgroup
-#else
-            return flag;
-#endif /* _OPENMP */
-         } }
+         } } /* task/abort */
          
          // Loop over off-diagonal blocks applying pivot
          for(int jblk=0; jblk<blk; jblk++) {
             #pragma omp task default(none) \
                firstprivate(blk, jblk) \
-               shared(a, backup, cdata, options, work, up_to_date) \
+               shared(a, abort, backup, cdata, options, work, up_to_date) \
                depend(in: a[blk*block_size*lda+blk*block_size:1]) \
                depend(inout: a[jblk*block_size*lda+blk*block_size:1])
-            {
-               #pragma omp cancellation point taskgroup
+            { if(!abort) {
+               //#pragma omp cancellation point taskgroup
 #ifdef PROFILE
                Profile::Task task("TA_LDLT_APPLY");
 #endif
@@ -1775,16 +1788,16 @@ private:
 #ifdef PROFILE
                task.done();
 #endif
-            }
+            } } /* task/abort */
          }
          for(int iblk=blk+1; iblk<mblk; iblk++) {
             #pragma omp task default(none) \
                firstprivate(blk, iblk) \
-               shared(a, backup, cdata, options, work, up_to_date) \
+               shared(a, abort, backup, cdata, options, work, up_to_date) \
                depend(in: a[blk*block_size*lda+blk*block_size:1]) \
                depend(inout: a[blk*block_size*lda+iblk*block_size:1])
-            {
-               #pragma omp cancellation point taskgroup
+            { if(!abort) {
+               //#pragma omp cancellation point taskgroup
 #ifdef PROFILE
                Profile::Task task("TA_LDLT_APPLY");
 #endif
@@ -1804,7 +1817,8 @@ private:
                // Update column's passed pivot count
                if(cdata[blk].test_fail(blkpass)) {
 #ifdef _OPENMP
-                  #pragma omp cancel taskgroup
+                  abort = true;
+                  //#pragma omp cancel taskgroup
 #else
                   return cdata.calc_nelim(m);
 #endif /* _OPENMP */
@@ -1812,7 +1826,7 @@ private:
 #ifdef PROFILE
                task.done();
 #endif
-            }
+            } } /* task/abort */
          }
 
          // Update uneliminated columns
@@ -1822,12 +1836,12 @@ private:
             for(int iblk=jblk; iblk<mblk; iblk++) {
                #pragma omp task default(none) \
                   firstprivate(blk, iblk, jblk) \
-                  shared(a, cdata, backup, work, upd, up_to_date) \
+                  shared(a, abort, cdata, backup, work, upd, up_to_date) \
                   depend(inout: a[jblk*block_size*lda+iblk*block_size:1]) \
                   depend(in: a[blk*block_size*lda+iblk*block_size:1]) \
                   depend(in: a[blk*block_size*lda+jblk*block_size:1])
-               {
-                  #pragma omp cancellation point taskgroup
+               { if(!abort) {
+                  //#pragma omp cancellation point taskgroup
 #ifdef PROFILE
                   Profile::Task task("TA_LDLT_UPDA");
 #endif
@@ -1845,7 +1859,7 @@ private:
 #ifdef PROFILE
                   task.done();
 #endif
-               }
+               } } /* task/abort */
             }
          }
 
@@ -1859,12 +1873,12 @@ private:
                                  (iblk-nblk)*block_size];
                #pragma omp task default(none) \
                   firstprivate(iblk, jblk, blk, upd_ij) \
-                  shared(a, upd2, cdata, work, up_to_date) \
+                  shared(a, abort, upd2, cdata, work, up_to_date) \
                   depend(inout: upd_ij[0:1]) \
                   depend(in: a[blk*block_size*lda+iblk*block_size:1]) \
                   depend(in: a[blk*block_size*lda+jblk*block_size:1])
-               {
-                  #pragma omp cancellation point taskgroup
+               { if(!abort) {
+                  //#pragma omp cancellation point taskgroup
 #ifdef PROFILE
                   Profile::Task task("TA_LDLT_UPDC");
 #endif
@@ -1882,7 +1896,7 @@ private:
 #ifdef PROFILE
                   task.done();
 #endif
-               }
+               } } /* task/abort */
             }
          }
       } // taskgroup and for
