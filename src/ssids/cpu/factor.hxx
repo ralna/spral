@@ -133,7 +133,6 @@ void factor_node_posdef(
    cholesky_factor(
          m, n, lcol, ldl, beta, contrib, m-n, options.cpu_task_block_size, &flag
          );
-   #pragma omp taskwait
    if(flag!=-1) {
       node.nelim = flag+1;
       stats.flag = Flag::ERROR_NOT_POS_DEF;

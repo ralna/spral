@@ -16,9 +16,6 @@ namespace spral { namespace ssids { namespace cpu {
 /** Perform Cholesky factorization of lower triangular matrix a[] in place.
  * Optionally calculates the contribution block (beta*C) - LL^T.
  *
- * \warning This routine just enqueues tasks. The caller must use a taskgroup
- *    or taskwait construct to ensure completion.
- *
  * \param m the number of rows
  * \param n the number of columns
  * \param a the matrix to be factorized, only lower triangle is used, however
@@ -40,22 +37,15 @@ void cholesky_factor(int m, int n, double* a, int lda, double beta, double* upd,
 
    *info = -1;
 
-   /* NOTE: as we rely on the user to taskwait in an appropriate position, we
-    * can't use shared attribute on arguments they've passed in, as these may
-    * cease to exist on exit from this routine. So we take a private copy using
-    * firstprivate instead. Ick.
-    * We use the convention here that the first firstprivate clause is for
-    * properly private things, and the second would be shared except for the
-    * above. */
-
    /* FIXME: Would this be better row-wise to ensure critical path, rather than
     * its current col-wise implementation ensuring maximum work available??? */
+   #pragma omp taskgroup
    for(int j=0; j<n; j+=blksz) {
       int blkn = std::min(blksz, n-j);
       /* Diagonal Block Factorization Task */
       #pragma omp task default(none) \
          firstprivate(j, blkn) \
-         firstprivate(m, a, lda, blksz, info, beta, upd, ldupd) \
+         shared(m, a, lda, blksz, info, beta, upd, ldupd) \
          depend(inout: a[j*(lda+1):1])
       if(*info==-1) {
 #ifdef PROFILE
@@ -86,7 +76,7 @@ void cholesky_factor(int m, int n, double* a, int lda, double beta, double* upd,
          int blkm = std::min(blksz, m-i);
          #pragma omp task default(none) \
             firstprivate(i, j, blkn, blkm) \
-            firstprivate(a, lda, info, beta, upd, ldupd, blksz, n) \
+            shared(a, lda, info, beta, upd, ldupd, blksz, n) \
             depend(in: a[j*(lda+1):1]) \
             depend(inout: a[j*lda + i:1])
          if(*info==-1) {
@@ -112,7 +102,7 @@ void cholesky_factor(int m, int n, double* a, int lda, double beta, double* upd,
          for(int i=k; i<m; i+=blksz) {
             #pragma omp task default(none) \
                firstprivate(i, j, k, blkn, blkk) \
-               firstprivate(m, a, lda, blksz, info, beta, upd, ldupd, n) \
+               shared(m, a, lda, blksz, info, beta, upd, ldupd, n) \
                depend(in: a[j*lda+k:1]) \
                depend(in: a[j*lda+i:1]) \
                depend(inout: a[k*lda+i:1])
@@ -151,7 +141,7 @@ void cholesky_factor(int m, int n, double* a, int lda, double beta, double* upd,
             for(int i=k; i<m; i+=blksz) {
                #pragma omp task default(none) \
                   firstprivate(i, j, k, blkn, blkk) \
-                  firstprivate(m, n, a, lda, blksz, info, beta, upd, ldupd) \
+                  shared(m, n, a, lda, blksz, info, beta, upd, ldupd) \
                   depend(in: a[j*lda+k:1]) \
                   depend(in: a[j*lda+i:1]) \
                   depend(inout: upd[(k-n)*lda+(i-n):1])
