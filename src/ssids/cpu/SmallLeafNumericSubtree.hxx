@@ -60,9 +60,8 @@ public:
          int nrow = symb_.symb_[ni].nrow;
          stats.maxfront = std::max(stats.maxfront, nrow);
          // Factorization
-         factor_node<true>
-            (ni, symb_.symb_[ni], &old_nodes_[ni], options, stats,
-             work_vec, pool_alloc, 1.0);
+         factor_node_posdef
+            (1.0, symb_.symb_[ni], old_nodes_[ni], options, stats);
          if(stats.flag<Flag::SUCCESS) return;
       }
    }

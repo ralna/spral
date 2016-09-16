@@ -32,6 +32,7 @@ template <bool posdef, //< true for Cholesky factoriztion, false for indefinte
           >
 class NumericSubtree {
    typedef BuddyAllocator<T,std::allocator<T>> PoolAllocator;
+   //typedef SimpleAlignedAllocator<T> PoolAllocator;
    typedef SmallLeafNumericSubtree<posdef, T, FactorAllocator, PoolAllocator> SLNS;
 public:
    /* Delete copy constructors for safety re allocated memory */
@@ -169,7 +170,7 @@ public:
 
                   // Factorization
                   factor_node<posdef>
-                     (ni, symb_[ni], &nodes_[ni], options,
+                     (ni, symb_[ni], nodes_[ni], options,
                       thread_stats[this_thread], work,
                       pool_alloc_);
                   if(thread_stats[this_thread].flag<Flag::SUCCESS) {
