@@ -28,7 +28,7 @@ public:
       sz_ = sz+align;
       mem_ = ::operator new(sz_);
       mem_aligned_ = mem_;
-      std::align(align, sz, mem_aligned_, sz_);
+      if(!std::align(align, sz, mem_aligned_, sz_)) throw std::bad_alloc();
    }
    template <typename T>
    T* get_ptr(size_t len) {
