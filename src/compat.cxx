@@ -15,7 +15,7 @@
 // define std::align, so we do it ourselves.
 // If there is insufficient space, return nullptr
 namespace std {
-void* align(std::size_t alignment, std::size_t size, void*& ptr, std::size_t& space) {
+void* align(std::size_t alignment, std::size_t size, void*& ptr, std::size_t& space) noexcept {
    auto cptr = reinterpret_cast<uintptr_t>(ptr);
    auto pad = cptr % alignment;
    if(pad == 0) return (size>space) ? nullptr : ptr;
