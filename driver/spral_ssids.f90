@@ -85,6 +85,7 @@ program run_prob
       allocate(topology(1))
       topology(1)%nproc = 1
 !$    topology(1)%nproc = min(omp_get_max_threads(),omp_get_thread_limit())
+      print *, "Forcing topology to ", topology(1)%nproc
       allocate(topology(1)%gpus(0))
    endif
 
@@ -190,6 +191,7 @@ program run_prob
 
    ! Free memory to ensure we pass leak-check tests
    deallocate(ptr, rhs, soln, res)
+   if(allocated(topology)) deallocate(topology)
 
 contains
 
