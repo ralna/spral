@@ -104,7 +104,7 @@ function flag_to_character(this) result(msg)
       msg = 'Functionality not yet implemented'
    case(SSIDS_ERROR_CUDA_UNKNOWN)
       write(msg,'(2a)') ' Unhandled CUDA error: ', &
-         cudaGetErrorString(this%cuda_error)
+         trim(cudaGetErrorString(this%cuda_error))
    case(SSIDS_ERROR_CUBLAS_UNKNOWN)
       msg = 'Unhandled CUBLAS error:'
       ! FIXME?
