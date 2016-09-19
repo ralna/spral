@@ -48,8 +48,9 @@ void asm_col(int n, int const* idx, T const* src, T* dest) {
    */
 template <typename T, typename NumericNode>
 void add_a_block(int from, int to, NumericNode& node, T const* aval,
-      size_t ldl, T const* scaling) {
+      T const* scaling) {
    SymbolicNode const& snode = node.symb;
+   size_t ldl = node.get_ldl();
    if(scaling) {
       /* Scaling to apply */
       for(int i=from; i<to; ++i) {
@@ -142,7 +143,7 @@ void assemble_pre(
    int const add_a_blk_sz = 256;
    if(snode.num_a < add_a_blk_sz) {
       // Single block
-      add_a_block(0, snode.num_a, node, aval, ldl, scaling);
+      add_a_block(0, snode.num_a, node, aval, scaling);
    } else {
       // Multiple blocks
       #pragma omp taskgroup
@@ -151,7 +152,7 @@ void assemble_pre(
             firstprivate(iblk) \
             shared(snode, node, aval, scaling, ldl) \
             if(iblk+add_a_blk_sz < snode.num_a)
-         add_a_block(iblk, std::min(iblk+add_a_blk_sz,snode.num_a), node, aval, ldl, scaling);
+         add_a_block(iblk, std::min(iblk+add_a_blk_sz,snode.num_a), node, aval, scaling);
       }
    }
 #ifdef PROFILE

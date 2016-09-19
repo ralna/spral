@@ -50,6 +50,11 @@ public:
       contrib = nullptr;
    }
 
+   /** \brief Return leading dimension of node's lcol member. */
+   size_t get_ldl() {
+      return align_lda<T>(symb.nrow + ndelay_in);
+   }
+
 public:
    /* Symbolic node associate with this one */
    SymbolicNode const& symb;
