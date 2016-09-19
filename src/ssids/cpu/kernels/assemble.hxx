@@ -36,6 +36,47 @@ void asm_col(int n, int const* idx, T const* src, T* dest) {
       dest[ idx[j] ] += src[j];
 }
 
+/**
+   * \brief Add \f$A\f$ to a given block column of a node.
+   *
+   * \param from First column of target block column.
+   * \param to One more than last column of target block column.
+   * \param node Supernode to add to.
+   * \param aval Values of \f$A\f$.
+   * \param ldl Leading dimension of node.
+   * \param scaling Scaling to apply (none if null).
+   */
+template <typename T, typename NumericNode>
+void add_a_block(int from, int to, NumericNode& node, T const* aval,
+      size_t ldl, T const* scaling) {
+   SymbolicNode const& snode = node.symb;
+   if(scaling) {
+      /* Scaling to apply */
+      for(int i=from; i<to; ++i) {
+         long src  = snode.amap[2*i+0] - 1; // amap contains 1-based values
+         long dest = snode.amap[2*i+1] - 1; // amap contains 1-based values
+         int c = dest / snode.nrow;
+         int r = dest % snode.nrow;
+         long k = c*ldl + r;
+         if(r >= snode.ncol) k += node.ndelay_in;
+         T rscale = scaling[ snode.rlist[r]-1 ];
+         T cscale = scaling[ snode.rlist[c]-1 ];
+         node.lcol[k] = rscale * aval[src] * cscale;
+      }
+   } else {
+      /* No scaling to apply */
+      for(int i=from; i<to; ++i) {
+         long src  = snode.amap[2*i+0] - 1; // amap contains 1-based values
+         long dest = snode.amap[2*i+1] - 1; // amap contains 1-based values
+         int c = dest / snode.nrow;
+         int r = dest % snode.nrow;
+         long k = c*ldl + r;
+         if(r >= snode.ncol) k += node.ndelay_in;
+         node.lcol[k] = aval[src];
+      }
+   }
+}
+
 template <typename T,
           typename FactorAlloc,
           typename PoolAlloc>
@@ -99,39 +140,19 @@ void assemble_pre(
 
    /* Add A */
    int const add_a_blk_sz = 256;
-   for(int iblk=0; iblk<snode.num_a; iblk+=add_a_blk_sz) {
-      #pragma omp task default(none) \
-         firstprivate(iblk) \
-         shared(snode, node, aval, scaling, ldl) \
-         if(iblk+add_a_blk_sz < snode.num_a)
-      if(scaling) {
-         /* Scaling to apply */
-         for(int i=iblk; i<std::min(iblk+add_a_blk_sz,snode.num_a); ++i) {
-            long src  = snode.amap[2*i+0] - 1; // amap contains 1-based values
-            long dest = snode.amap[2*i+1] - 1; // amap contains 1-based values
-            int c = dest / snode.nrow;
-            int r = dest % snode.nrow;
-            long k = c*ldl + r;
-            if(r >= snode.ncol) k += node.ndelay_in;
-            T rscale = scaling[ snode.rlist[r]-1 ];
-            T cscale = scaling[ snode.rlist[c]-1 ];
-            node.lcol[k] = rscale * aval[src] * cscale;
-         }
-      } else {
-         /* No scaling to apply */
-         for(int i=iblk; i<std::min(iblk+add_a_blk_sz,snode.num_a); ++i) {
-            long src  = snode.amap[2*i+0] - 1; // amap contains 1-based values
-            long dest = snode.amap[2*i+1] - 1; // amap contains 1-based values
-            int c = dest / snode.nrow;
-            int r = dest % snode.nrow;
-            long k = c*ldl + r;
-            if(r >= snode.ncol) k += node.ndelay_in;
-            node.lcol[k] = aval[src];
-         }
+   if(snode.num_a < add_a_blk_sz) {
+      // Single block
+      add_a_block(0, snode.num_a, node, aval, ldl, scaling);
+   } else {
+      // Multiple blocks
+      #pragma omp taskgroup
+      for(int iblk=0; iblk<snode.num_a; iblk+=add_a_blk_sz) {
+         #pragma omp task default(none) \
+            firstprivate(iblk) \
+            shared(snode, node, aval, scaling, ldl) \
+            if(iblk+add_a_blk_sz < snode.num_a)
+         add_a_block(iblk, std::min(iblk+add_a_blk_sz,snode.num_a), node, aval, ldl, scaling);
       }
-   }
-   if(add_a_blk_sz < snode.num_a) {
-      #pragma omp taskwait
    }
 #ifdef PROFILE
    if(!node.first_child) task_asm_pre.done();
