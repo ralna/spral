@@ -78,6 +78,64 @@ void add_a_block(int from, int to, NumericNode& node, T const* aval,
    }
 }
 
+/**
+ * \brief Assemble expected entries (i.e. not delays) into block column of
+ *        the factors \f$L\f$
+ * \param from First column of block column.
+ * \param to Last column of block column.
+ * \param node Node to assemble into.
+ * \param cnode Node to assemble from.
+ * \param map Map of node's entries.
+ * \param cache Length cm lookup vector.
+ */
+template <typename T, typename PoolAlloc, typename MapVector>
+void assemble_expected(int from, int to, NumericNode<T,PoolAlloc>& node, NumericNode<T,PoolAlloc> const& cnode, MapVector const& map, int* cache) {
+   SymbolicNode const& csnode = cnode.symb;
+   int cm = csnode.nrow - csnode.ncol;
+   for(int j=from; j<cm; ++j)
+      cache[j] = map[ csnode.rlist[csnode.ncol+j] ];
+   for(int i=from; i<to; i++) {
+      int c = cache[i];
+      T *src = &cnode.contrib[i*cm];
+      // NB: we handle contribution to contrib in assemble_post()
+      if(c < node.symb.ncol) {
+         // Contribution added to lcol
+         int ldd = node.get_ldl();
+         T *dest = &node.lcol[c*ldd];
+         asm_col(cm-i, &cache[i], &src[i], dest);
+      }
+   }
+}
+
+/**
+ * \brief Assemble expected entries (i.e. not delays) into contribution block.
+ * \param from First column of block column.
+ * \param to Last column of block column.
+ * \param node Node to assemble into.
+ * \param cnode Node to assemble from.
+ * \param map Map of node's entries.
+ * \param cache Length cm lookup vector.
+ */
+template <typename T, typename PoolAlloc, typename MapVector>
+void assemble_expected_contrib(int from, int to, NumericNode<T,PoolAlloc>& node, NumericNode<T,PoolAlloc> const& cnode, MapVector const& map, int* cache) {
+   SymbolicNode const& csnode = cnode.symb;
+   int cm = csnode.nrow - csnode.ncol;
+   int ncol = node.symb.ncol + node.ndelay_in;
+   for(int j=from; j<cm; ++j)
+      cache[j] = map[ csnode.rlist[csnode.ncol+j] ] - ncol;
+   for(int i=from; i<to; i++) {
+      int c = cache[i]+ncol;
+      T *src = &cnode.contrib[i*cm];
+      // NB: only interested in contribution to generated element
+      if(c >= node.symb.ncol) {
+         // Contribution added to contrib
+         int ldd = node.symb.nrow - node.symb.ncol;
+         T *dest = &node.contrib[(c-ncol)*ldd];
+         asm_col(cm-i, &cache[i], &src[i], dest);
+      }
+   }
+}
+
 template <typename T,
           typename FactorAlloc,
           typename PoolAlloc>
@@ -150,8 +208,7 @@ void assemble_pre(
       for(int iblk=0; iblk<snode.num_a; iblk+=add_a_blk_sz) {
          #pragma omp task default(none) \
             firstprivate(iblk) \
-            shared(snode, node, aval, scaling, ldl) \
-            if(iblk+add_a_blk_sz < snode.num_a)
+            shared(snode, node, aval, scaling, ldl)
          add_a_block(iblk, std::min(iblk+add_a_blk_sz,snode.num_a), node, aval, scaling);
       }
    }
@@ -213,37 +270,29 @@ void assemble_pre(
       if(child->contrib) {
          int cm = csnode.nrow - csnode.ncol;
          int const block_size = 256; // FIXME: make configurable?
-         for(int iblk=0; iblk<cm; iblk+=block_size) {
-            #pragma omp task default(none) \
-               firstprivate(iblk) \
-               shared(map, child, snode, node, csnode, cm, nrow, work) \
-               if(iblk+block_size<cm)
-            {
+         if(cm < block_size) {
+            // Single block
+            int* cache = work[omp_get_thread_num()].get_ptr<int>(cm);
+            assemble_expected(0, cm, node, *child, map, cache);
+         } else {
+            // Multiple blocks
+            #pragma omp taskgroup
+            for(int iblk=0; iblk<cm; iblk+=block_size) {
+               #pragma omp task default(none) \
+                  firstprivate(iblk) \
+                  shared(map, child, snode, node, csnode, cm, nrow, work)
+               {
 #ifdef PROFILE
-               Profile::Task task_asm_pre("TA_ASM_PRE");
+                  Profile::Task task_asm_pre("TA_ASM_PRE");
 #endif
-               int* cache = work[omp_get_thread_num()].get_ptr<int>(cm);
-               for(int j=iblk; j<cm; ++j)
-                  cache[j] = map[ csnode.rlist[csnode.ncol+j] ];
-               for(int i=iblk; i<std::min(iblk+block_size,cm); i++) {
-                  int c = cache[i];
-                  T *src = &child->contrib[i*cm];
-                  // NB: we handle contribution to contrib in assemble_post()
-                  if(c < snode.ncol) {
-                     // Contribution added to lcol
-                     int ldd = align_lda<T>(nrow);
-                     T *dest = &node.lcol[c*ldd];
-                     asm_col(cm-i, &cache[i], &src[i], dest);
-                  }
-               }
+                  int* cache = work[omp_get_thread_num()].get_ptr<int>(cm);
+                  assemble_expected(iblk, std::min(iblk+block_size,cm), node,
+                        *child, map, cache);
 #ifdef PROFILE
-               task_asm_pre.done();
+                  task_asm_pre.done();
 #endif
-            } /* task */
-         }
-         if(cm > block_size) {
-            // only wait if we've actually created tasks
-            #pragma omp taskwait
+               } /* task */
+            }
          }
       }
    }
@@ -331,37 +380,27 @@ void assemble_post(
          if(!child->contrib) continue;
          int cm = csnode.nrow - csnode.ncol;
          int const block_size = 256;
-         for(int iblk=0; iblk<cm; iblk+=block_size) {
-            #pragma omp task default(none) \
-               firstprivate(iblk) \
-               shared(map, child, snode, node, cm, csnode, ncol, work) \
-               if(iblk+block_size<cm)
-            {
+         if(cm < block_size) {
+            int* cache = work[omp_get_thread_num()].get_ptr<int>(cm);
+            assemble_expected_contrib(0, cm, node, *child, map, cache);
+         } else {
+            #pragma omp taskgroup
+            for(int iblk=0; iblk<cm; iblk+=block_size) {
+               #pragma omp task default(none) \
+                  firstprivate(iblk) \
+                  shared(map, child, node, cm, work)
+               {
 #ifdef PROFILE
-               Profile::Task task_asm("TA_ASM_POST");
+                  Profile::Task task_asm("TA_ASM_POST");
 #endif
-               int* cache = work[omp_get_thread_num()].get_ptr<int>(cm);
-               for(int j=iblk; j<cm; ++j)
-                  cache[j] = map[ csnode.rlist[csnode.ncol+j] ] - ncol;
-               for(int i=iblk; i<std::min(iblk+block_size,cm); i++) {
-                  int c = cache[i]+ncol;
-                  T *src = &child->contrib[i*cm];
-                  // NB: only interested in contribution to generated element
-                  if(c >= snode.ncol) {
-                     // Contribution added to contrib
-                     int ldd = snode.nrow - snode.ncol;
-                     T *dest = &node.contrib[(c-ncol)*ldd];
-                     asm_col(cm-i, &cache[i], &src[i], dest);
-                  }
-               }
+                  int* cache = work[omp_get_thread_num()].get_ptr<int>(cm);
+                  assemble_expected_contrib(iblk, std::min(iblk+block_size,cm),
+                        node, *child, map, cache);
 #ifdef PROFILE
-               task_asm.done();
+                  task_asm.done();
 #endif
-            } /* task */
-         }
-         if(cm > block_size) {
-            // Only wait if we've actually lanuched tasks
-            #pragma omp taskwait
+               } /* task */
+            }
          }
          /* Free memory from child contribution block */
          child->free_contrib();
