@@ -260,7 +260,7 @@ subroutine fwd_solve_gpu(posdef, child_ptr, child_list, n, nnodes, nodes, &
    ! Apply any contribution above subtree to x directly
    if(stream_data%fwd_slv_contrib_lookup%nscatter > 0) then
       call run_slv_contrib_fwd(stream_data%fwd_slv_contrib_lookup, gpu_x, &
-         cvalues(nnodes), stream_handle)
+         cvalues(cvmap(nnodes)+1), stream_handle)
    endif
 
    ! Free memory
