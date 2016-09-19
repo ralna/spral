@@ -49,18 +49,19 @@ program run_prob
    logical :: force_psdef, pos_def, time_scaling, flat_topology
 
    type(numa_region), dimension(:), allocatable :: topology
+   character(len=:), allocatable :: filename
 
    options%use_gpu_solve = .true.
 
-   call proc_args(options, force_psdef, pos_def, nrhs, time_scaling, &
+   call proc_args(filename, options, force_psdef, pos_def, nrhs, time_scaling, &
          flat_topology)
    if ( nrhs < 1 ) stop
 
    ! Read in a matrix
-   write(*, "(a)") "Reading..."
+   write(*, "(3a)") "Reading '", filename, "'..."
    if(force_psdef) rb_options%values = 3 ! Force diagonal dominance
    rb_options%values = 2 ! make up values if necessary
-   call rb_read("matrix.rb", m, n, ptr, row, col, val, rb_options, rb_flag)
+   call rb_read(filename, m, n, ptr, row, col, val, rb_options, rb_flag)
    if(rb_flag.ne.0) then
       print *, "Rutherford-Boeing read failed with error ", rb_flag
       stop
@@ -195,8 +196,9 @@ program run_prob
 
 contains
 
-   subroutine proc_args(options, force_psdef, pos_def, nrhs, time_scaling, &
-         flat_topology)
+   subroutine proc_args(filename, options, force_psdef, pos_def, nrhs, &
+         time_scaling, flat_topology)
+      character(len=:), allocatable :: filename
       type(ssids_options), intent(inout) :: options
       logical, intent(out) :: force_psdef
       logical, intent(out) :: pos_def
@@ -207,6 +209,7 @@ contains
       integer :: argnum, narg
       integer :: i
       character(len=200) :: argval
+      logical :: seen_fname
       
       ! Defaults
       nrhs = 1
@@ -214,6 +217,8 @@ contains
       pos_def = .false.
       time_scaling = .false.
       flat_topology = .false.
+      filename = "matrix.rb"
+      seen_fname = .false.
 
       ! Process args
       narg = command_argument_count()
@@ -308,8 +313,13 @@ contains
             read( argval, * ) options%cpu_task_block_size
             print *, 'CPU block size = ', options%cpu_task_block_size
          case default
-            print *, "Unrecognised command line argument: ", argval
-            stop
+            if(seen_fname) then
+               print *, "Unrecognised command line argument: ", argval
+               stop
+            else
+               filename = trim(argval)
+               seen_fname = .true.
+            endif
          end select
       end do
    end subroutine proc_args
