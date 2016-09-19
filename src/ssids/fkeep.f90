@@ -411,6 +411,7 @@ subroutine free_fkeep(fkeep, flag)
          if(associated(fkeep%subtree(i)%ptr)) then
             call fkeep%subtree(i)%ptr%cleanup()
             deallocate(fkeep%subtree(i)%ptr)
+            nullify(fkeep%subtree(i)%ptr)
          endif
       end do
       deallocate(fkeep%subtree)

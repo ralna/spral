@@ -43,6 +43,7 @@ module spral_ssids_gpu_subtree
 
    type, extends(numeric_subtree_base) :: gpu_numeric_subtree
       logical :: posdef
+      integer :: device ! Have own copy as symbolic may be freed first
       type(gpu_symbolic_subtree), pointer :: symbolic
       type(C_PTR) :: stream_handle
       type(gpu_type) :: stream_data
@@ -331,6 +332,7 @@ function factor(this, posdef, aval, child_contrib, options, inform, scaling)
    if(st.ne.0) goto 10
    gpu_factor%symbolic => this
    gpu_factor%posdef = posdef
+   gpu_factor%device = this%device
 
    ! Allocate memory
    gpu_factor%host_factors = .false.
@@ -455,7 +457,11 @@ subroutine numeric_cleanup(this)
 
    ! FIXME: error handling?
 
-   cuda_error = cudaSetDevice(this%symbolic%device)
+   cuda_error = cudaSetDevice(this%device)
+   if(cuda_error.ne.0) then
+      print *, "Failed to set device in numeric_cleanup ", cuda_error
+      stop
+   endif
 
    ! Skip if nothing intialized
    if (.not.allocated(this%nodes)) return

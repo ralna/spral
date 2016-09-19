@@ -1293,9 +1293,10 @@ subroutine free_both_double(akeep, fkeep, cuda_error)
    type(ssids_fkeep), intent(inout) :: fkeep
    integer, intent(out) :: cuda_error
 
-   call free_akeep_double(akeep, cuda_error)
-   if(cuda_error.ne.0) return
+   ! NB: Must free fkeep first as it may reference akeep
    call free_fkeep_double(fkeep, cuda_error)
+   if(cuda_error.ne.0) return
+   call free_akeep_double(akeep, cuda_error)
    if(cuda_error.ne.0) return
 end subroutine free_both_double
 
