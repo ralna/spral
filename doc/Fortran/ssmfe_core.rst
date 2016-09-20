@@ -72,11 +72,11 @@ The latter applies to the case of positive definite
 :math:`A` and requires a matrix or an operator :math:`T`, called *a
 preconditioner*, such that the vector :math:`v = T f` is an
 approximation to the solution :math:`u` of the system :math:`A u = f`
-(see the simple example :ref:`below <example>`). Note: This
+(see the simple example :ref:`below <ssmfe_core_example>`). Note: This
 technique is only recommended for experienced users.
 
 For futher detail on the algorithm, see the outline in the
-:ref:`method section <method_section>` below, and associated references.
+:ref:`method section <ssmfe_core_method>` below, and associated references.
 
 The routine :f:mod:`spral_ssmfe` provides a user-friendly interface to this
 algorithm, whilst :f:mod:`spral_ssmfe_expert` provides an interface that allows
@@ -455,7 +455,7 @@ Derived types
    |              | of non-converged eigenpairs.                              |
    +--------------+-----------------------------------------------------------+
 
-.. _example:
+.. _ssmfe_core_example:
 
 ========
 Examples
@@ -491,7 +491,7 @@ This code produces the following output:
      lambda(4) = 1.7770878E-01
      lambda(5) = 2.2040061E-01
 
-.. _method_section:
+.. _ssmfe_core_method:
 
 ======
 Method

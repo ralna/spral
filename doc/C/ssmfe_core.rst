@@ -306,10 +306,7 @@ these eigenpairs and they must be moved by the user to separate storage
       ``rci.job=5``, can be set to zero if sufficient have been found.
    :param right: Number of left eigenpairs to find. On return with
       ``rci.job=5``, can be set to zero if sufficient have been found.
-   :param mep: Number of working eigenpairs.
-      See :ref:`method section <method>` for guidance on selecting a good
-      value. Must be at least `left+right`.
-   :param lambda[mep]: Current eigenvalue estimates in ascending
+   :param lambda[m]: Current eigenvalue estimates in ascending
       order.
    :param m: Block size of workspace `W`. Must be at least `2`.
    :param rr[3][2*m][2*m]: reverse communication workspace.
@@ -323,6 +320,44 @@ these eigenpairs and they must be moved by the user to separate storage
 
    As :c:func:`spral_ssmfe_double()`, but types of ``rci`` and ``rr`` changed
    to support type ``double complex``.
+
+.. c:function:: void spral_ssmfe_largest_double(struct spral_ssmfe_rcid *rci, int problem, int nep, int m, double *lambda, double *rr, int *ind, void **keep, const struct spral_ssmfe_core_options *options, struct spral_ssmfe_inform *inform)
+
+   Computes specified number of eigenvalues of largest magnitude and
+   corresponding eigenvectors.
+
+   Uses reverse-communication. Upon return the user must perform a task
+   specified by the `rci` parameter and recall the routine. Possible values of
+   `rci` and associated tasks are as for :c:func:`spral_ssmfe_double()` above.
+
+   :param rci: Reverse communication type.
+      :c:member:`rci.job <spral_ssmfe_rcid.job>` must be
+      set to `0` before the first call.
+   :param problem: Problem to be solved, one of:
+
+      +----+-----------------------+
+      | 0  | :math:`Ax=\lambda x`  |
+      +----+-----------------------+
+      | >0 | :math:`Ax=\lambda Bx` |
+      +----+-----------------------+
+      | <0 | :math:`ABx=\lambda x` |
+      +----+-----------------------+
+
+   :param nep: Number of eigenpairs to find.
+   :param lambda[m]: Current eigenvalue estimates in ascending
+      order.
+   :param m: Block size of workspace `W`. Must be at least `2`.
+   :param rr[3][2*m][2*m]: reverse communication workspace.
+   :param ind[m]: reverse communication workspace.
+   :param keep: Internal workspace used by routine.
+   :param options: specifies algorithm options to be used.
+   :param inform: returns information about the exection of the
+      routine.
+
+.. c:function:: void spral_ssmfe_largest_double_complex(struct spral_ssmfe_rciz *rci, int problem, int nep, int m, double *lambda, spral_double_complex *rr, int *ind, void **keep, const struct spral_ssmfe_core_options *options, struct spral_ssmfe_inform *inform)
+
+   As :c:func:`spral_ssmfe_largest_double()`, but types of ``rci`` and ``rr``
+   changed to support type ``double complex``.
 
 .. c:function:: void spral_ssmfe_core_free(void **keep, struct spral_ssmfe_inform *inform)
 
