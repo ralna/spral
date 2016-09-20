@@ -26,7 +26,7 @@ Routines
 
 .. f:function:: random_matrix_generate(state,matrix_type,m,n,nnz,ptr,row,flag[,stat,val,nonsingular,sort])
 
-   Generate an :math:`m\times n` random matrix with `math:`nnz` non-zero
+   Generate an :math:`m\times n` random matrix with :math:`nnz` non-zero
    entries.
 
    If `matrix_type` specifies a symmetric or skew symmetric matrix, only
@@ -60,8 +60,8 @@ Routines
 
    :p integer m [in]: Number of rows in the matrix.
    :p integer n [in]: Number of columns in the matrix.
-   :p integer nnz [in]: Number of non-zeroes in the matrix.
-   :p integer ptr (n+1) [out]: Column pointers of the matrix
+   :p integer(long) nnz [in]: Number of non-zeroes in the matrix.
+   :p integer(long) ptr (n+1) [out]: Column pointers of the matrix
       (see :doc:`CSC format<csc format>`).
    :p integer row (nnz) [out]: Row indices of the matrix
       (see :doc:`CSC format<csc format>`).
@@ -81,7 +81,6 @@ Routines
       present with value ``.true.``.
       Otherwise entries may be in any order within a column.
 
-
    Possible exit status values are:
 
    +--------+-----------------------------------------------------------------+
@@ -99,6 +98,12 @@ Routines
    +--------+-----------------------------------------------------------------+
    | -5     |  A non-singular matrix was requested, but :math:`nnz<\min(m,n)`.|
    +--------+-----------------------------------------------------------------+
+
+   .. note::
+
+      A version is also provided in which ``nnz`` and ``ptr`` have type default
+      integer, however users are encouraged to use 64-bit integers to ensure
+      code can handle large matrices.
 
 =======
 Example

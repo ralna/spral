@@ -135,13 +135,17 @@ Subroutines
 
 .. f:subroutine:: lsmr_free(keep,stat)
 
-   Free memory allocated in `keep`. Unnecessary if `keep` is going out of scope.
-   If a series of problems is being solved sequentially, the same keep may be
-   used without calling :f:subr:`lsmr_free()` between each solution.
+   Free memory allocated in `keep` (unnecessary if `keep` is going out of
+   scope).
 
    :p lsmr_keep [inout]: private data to be freed.
    :p integer stat [out]: return 0 on success, or Fortran stat parameter on
       failed deallocation.
+
+   .. note::
+
+      If a series of problems is being solved sequentially, the same keep may be
+      used without calling :f:subr:`lsmr_free()` between each solution.
 
 =============
 Derived types
@@ -163,14 +167,14 @@ Derived types
       Printing is suppressed if negative.
    :f real atol [default=sqrt(epsilon(1.0d0))]: Relative error in :math:`A`.
       i.e. if :math:`A` is accurate to about 6 digits, set atol to 1.0d-6.
-      Only used if `%ctest=3`.
+      Only used if `options%ctest=3`.
    :f real btol [default=sqrt(epsilon(1.0d0))]: Relative error in :math:`b`.
       i.e. if :math:`b` is accurate to about 6 digits, set btol to 1.0d-6.
-      Only used if `%ctest=3`.
+      Only used if `options%ctest=3`.
    :f real conlim [default=1/(10*sqrt(epsilon(1.0d0))]: Upper limit on
       :math:`cond(\bar{A})`, apparent condition number of :math:`\bar{A}`.
-      Only used if `%ctest=3`.
-   :f integer ctest [default=3]: Convergence test to use. Options are:
+      Only used if `options%ctest=3`.
+   :f integer ctest [default=3]: Convergence test to use, one of:
       
       +-------------+----------------------------------------------------------+
       | 1           | User to test convergence (`action=3`).                   |

@@ -9,7 +9,8 @@ generator. It should generate the same random numbers using any standards
 compliant Fortran compiler on any architecture so long as the default
 integer and real kinds are the same.
 
-The seed can optionally be observed or specified by the user.
+The seed can optionally be observed or specified by the user. Otherwise
+a default seed of 486502 is used.
 
 ========
 Routines
