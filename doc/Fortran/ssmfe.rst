@@ -487,13 +487,14 @@ Derived types
    |              | of non-converged eigenpairs.                              |
    +--------------+-----------------------------------------------------------+
 
-   If the computation is terminated with the error code 2 or 3, it can be
-   resumed with larger values of `max_iterations` and/or `mep`. In this case
-   the user should set `options%user_x` to `info%left + info%right`
-   and restart the reverse communication loop. An alternative option is to
-   use one of the advanced solver procedures from :f:mod:`spral_ssmfe_expert`
-   or :f:mod:`spral_ssmfe_core` that delegate the storage of computed eigenpairs
-   and the termination of the computation to the user.
+   If the computation is terminated with the error code 2 or 3, the computation
+   is not complete, but may be restarted with larger values of `max_iterations`
+   and/or `mep`. In this case the user should set `options%user_x` to
+   `info%left + info%right` and restart the reverse communication loop. An
+   alternative option is to use one of the advanced solver procedures from
+   :f:mod:`spral_ssmfe_expert` or :f:mod:`spral_ssmfe_core` that delegate the
+   storage of computed eigenpairs and the termination of the computation to the
+   user.
 
 ========
 Examples

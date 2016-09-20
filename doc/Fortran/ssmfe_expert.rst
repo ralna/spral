@@ -107,6 +107,12 @@ each setup:
  | buckling          |     7      |     7      |     N/A    |     N/A    |
  +-------------------+------------+------------+------------+------------+
 
+Further, the user must also store the converged eigenvectors :math:`X`, and
+(for generalised problems) their :math:`B`-images :math:`BX` using
+separate storage, e.g. ``X(n,mep), BX(n,mep)``.
+In addition to being output, the routine may need to
+reorthagonalise against these from time to time.
+
 .. f:subroutine:: ssmfe_standard(rci,left,mep,lambda,m,rr,ind,keep,options,inform)
 
    Computes the left-most eigenpairs of the standard eigenvalue problem
@@ -132,7 +138,7 @@ each setup:
    +----------+---------------------------------------------------------------+
    |  2       | Apply preconditioner :math:`\bar{V} = TU`. (Copy if T=I).     |
    +----------+---------------------------------------------------------------+
-   |  5       | Save converged eigenvectors:                                  |
+   |  5       | Copy converged eigenvectors :math:`X` to user storage:        |
    |          |                                                               |
    |          | * If `rci%i>0`: ``W(:,rci%jx:rci%jx+rci%nx-1,rci%kx)``.       |
    |          | * Else:         ``W(:,rci%jx-rci%nx+1:rci%jx,rci%kx)``.       |
@@ -199,18 +205,21 @@ each setup:
    |          |                                                               |
    |          | .. math:: U = U - XQ                                          |
    +----------+---------------------------------------------------------------+
-   | 999      | Restart suggested (if not possible, just recall the routine). |
+   | 999      | Restart:                                                      |
    |          |                                                               |
-   |          | If `rci%k>0`: Restart with larger block size                  |
+   |          | If `rci%k>0`: Restart suggested with larger block size        |
    |          | `m >= m + rci%nx + rci%i + rci%j`, adjusting workspace size   |
-   |          | to match. Set `rci%i=0` and `rci%j=0` and recall the routing. |
+   |          | to match. Set `rci%i=0` and `rci%j=0` and recall the routine. |
+   |          | If a restart is not desirable, routine may be recalled with   |
+   |          | no change to parameters.                                      |
    |          |                                                               |
-   |          | If `rci%k=0`: Restart with the same block size.               |
+   |          | If `rci%k=0`: Restart required with the same block size.      |
    |          |                                                               |
    |          | In both cases, the first block ``W(:,:,0)`` should retain     |
    |          | vectors ``rci%jx:rci%jx+rci%nx-1``, filling remaining vectors |
    |          | randomly such that the entire set of columns is linearly      |
-   |          | independent.                                                  |
+   |          | independent from each other and also from the converged       |
+   |          | eigenvectors.                                                 |
    +----------+---------------------------------------------------------------+
 
    The matrices are defined as follows:
@@ -221,7 +230,9 @@ each setup:
    * :math:`R` = ``rr(rci%i:rci%i+rci%nx-1, rci%j:rci%j+rci%ny-1, rci%k)``
 
    and :math:`\alpha` and :math:`\beta` are given by ``rci%alpha`` and
-   ``rci%beta`` respectively.
+   ``rci%beta`` respectively. We use the notation :math:`r_{ii}` to refer
+   to the :math:`i`-th diagonal element of :math:`R`, being
+   ``rr(rci%i+i-1,rci%j+i-1,rci%k)``.
 
    :p ssmfe_rcid rci [inout]: Reverse communication type. `rci%job` must be
       set to `0` before the first call. (Type :f:type:`ssmfe_rciz` in complex
@@ -263,7 +274,7 @@ each setup:
    +----------+---------------------------------------------------------------+
    |  2       | Apply preconditioner :math:`\bar{V} = TU`. (Copy if T=I).     |
    +----------+---------------------------------------------------------------+
-   |  5       | Save converged eigenvectors:                                  |
+   |  5       | Copy converged eigenvectors :math:`X` to user storage:        |
    |          |                                                               |
    |          | * If `rci%i>0`: ``W(:,rci%jx:rci%jx+rci%nx-1,rci%kx)``.       |
    |          | * Else:         ``W(:,rci%jx-rci%nx+1:rci%jx,rci%kx)``.       |
@@ -332,18 +343,21 @@ each setup:
    |          |                                                               |
    |          | .. math:: U = U - XQ                                          |
    +----------+---------------------------------------------------------------+
-   | 999      | Restart suggested (if not possible, just recall the routine). |
+   | 999      | Restart:                                                      |
    |          |                                                               |
-   |          | If `rci%k>0`: Restart with larger block size                  |
+   |          | If `rci%k>0`: Restart suggested with larger block size        |
    |          | `m >= m + rci%nx + rci%i + rci%j`, adjusting workspace size   |
-   |          | to match. Set `rci%i=0` and `rci%j=0` and recall the routing. |
+   |          | to match. Set `rci%i=0` and `rci%j=0` and recall the routine. |
+   |          | If a restart is not desirable, routine may be recalled with   |
+   |          | no change to parameters.                                      |
    |          |                                                               |
-   |          | If `rci%k=0`: Restart with the same block size.               |
+   |          | If `rci%k=0`: Restart required with the same block size.      |
    |          |                                                               |
    |          | In both cases, the first block ``W(:,:,0)`` should retain     |
    |          | vectors ``rci%jx:rci%jx+rci%nx-1``, filling remaining vectors |
    |          | randomly such that the entire set of columns is linearly      |
-   |          | independent.                                                  |
+   |          | independent from each other and also from the converged       |
+   |          | eigenvectors.                                                 |
    +----------+---------------------------------------------------------------+
 
    The matrices are defined as follows:
@@ -354,7 +368,9 @@ each setup:
    * :math:`R` = ``rr(rci%i:rci%i+rci%nx-1, rci%j:rci%j+rci%ny-1, rci%k)``
 
    and :math:`\alpha` and :math:`\beta` are given by ``rci%alpha`` and
-   ``rci%beta`` respectively.
+   ``rci%beta`` respectively. We use the notation :math:`r_{ii}` to refer
+   to the :math:`i`-th diagonal element of :math:`R`, being
+   ``rr(rci%i+i-1,rci%j+i-1,rci%k)``.
 
    :p ssmfe_rcid rci [inout]: Reverse communication type. `rci%job` must be
       set to `0` before the first call. (Type :f:type:`ssmfe_rciz` in complex
@@ -402,7 +418,7 @@ each setup:
    +----------+---------------------------------------------------------------+
    |  3       | Compute :math:`\bar{V} = BU`                                  |
    +----------+---------------------------------------------------------------+
-   |  5       | Save converged eigenvectors:                                  |
+   |  5       | Copy converged eigenvectors :math:`X` to user storage:        |
    |          |                                                               |
    |          | * If `rci%i>0`: ``W(:,rci%jx:rci%jx+rci%nx-1,rci%kx)``.       |
    |          | * Else:         ``W(:,rci%jx-rci%nx+1:rci%jx,rci%kx)``.       |
@@ -472,27 +488,30 @@ each setup:
    |          |                                                               |
    |          | .. math:: \bar{V} = BU                                        |
    +----------+---------------------------------------------------------------+
-   | 22       | Orthogonalize columns of :math:`U` to all vectors :math:`X`   |
-   |          | by solving                                                    |
+   | 22       | :math:`B`-orthogonalize columns of :math:`U` to all vectors   |
+   |          | :math:`X` by solving                                          |
    |          |                                                               |
-   |          | .. math:: (X^TX) Q = X^T U                                    |
+   |          | .. math:: (X^TBX) Q = X^T U                                   |
    |          |                                                               |
    |          | for :math:`Q` and updating                                    |
    |          |                                                               |
    |          | .. math:: U = U - BXQ                                         |
    +----------+---------------------------------------------------------------+
-   | 999      | Restart suggested (if not possible, just recall the routine). |
+   | 999      | Restart:                                                      |
    |          |                                                               |
-   |          | If `rci%k>0`: Restart with larger block size                  |
+   |          | If `rci%k>0`: Restart suggested with larger block size        |
    |          | `m >= m + rci%nx + rci%i + rci%j`, adjusting workspace size   |
-   |          | to match. Set `rci%i=0` and `rci%j=0` and recall the routing. |
+   |          | to match. Set `rci%i=0` and `rci%j=0` and recall the routine. |
+   |          | If a restart is not desirable, routine may be recalled with   |
+   |          | no change to parameters.                                      |
    |          |                                                               |
-   |          | If `rci%k=0`: Restart with the same block size.               |
+   |          | If `rci%k=0`: Restart required with the same block size.      |
    |          |                                                               |
    |          | In both cases, the first block ``W(:,:,0)`` should retain     |
    |          | vectors ``rci%jx:rci%jx+rci%nx-1``, filling remaining vectors |
    |          | randomly such that the entire set of columns is linearly      |
-   |          | independent.                                                  |
+   |          | independent from each other and also from the converged       |
+   |          | eigenvectors.                                                 |
    +----------+---------------------------------------------------------------+
 
    The matrices are defined as follows:
@@ -503,7 +522,9 @@ each setup:
    * :math:`R` = ``rr(rci%i:rci%i+rci%nx-1, rci%j:rci%j+rci%ny-1, rci%k)``
 
    and :math:`\alpha` and :math:`\beta` are given by ``rci%alpha`` and
-   ``rci%beta`` respectively.
+   ``rci%beta`` respectively. We use the notation :math:`r_{ii}` to refer
+   to the :math:`i`-th diagonal element of :math:`R`, being
+   ``rr(rci%i+i-1,rci%j+i-1,rci%k)``.
 
    :p ssmfe_rcid rci [inout]: Reverse communication type. `rci%job` must be
       set to `0` before the first call. (Type :f:type:`ssmfe_rciz` in complex
@@ -545,7 +566,7 @@ each setup:
    +----------+---------------------------------------------------------------+
    |  3       | Compute :math:`\bar{V} = BU`                                  |
    +----------+---------------------------------------------------------------+
-   |  5       | Save converged eigenvectors:                                  |
+   |  5       | Copy converged eigenvectors :math:`X` to user storage:        |
    |          |                                                               |
    |          | * If `rci%i>0`: ``W(:,rci%jx:rci%jx+rci%nx-1,rci%kx)``.       |
    |          | * Else:         ``W(:,rci%jx-rci%nx+1:rci%jx,rci%kx)``.       |
@@ -617,27 +638,30 @@ each setup:
    |          |                                                               |
    |          | .. math:: \bar{V} = BU                                        |
    +----------+---------------------------------------------------------------+
-   | 22       | Orthogonalize columns of :math:`U` to all vectors :math:`X`   |
-   |          | by solving                                                    |
+   | 22       | :math:`B`-orthogonalize columns of :math:`U` to all vectors   |
+   |          | :math:`X` by solving                                          |
    |          |                                                               |
-   |          | .. math:: (X^TX) Q = X^T U                                    |
+   |          | .. math:: (X^TBX) Q = X^T U                                   |
    |          |                                                               |
    |          | for :math:`Q` and updating                                    |
    |          |                                                               |
    |          | .. math:: U = U - BXQ                                         |
    +----------+---------------------------------------------------------------+
-   | 999      | Restart suggested (if not possible, just recall the routine). |
+   | 999      | Restart:                                                      |
    |          |                                                               |
-   |          | If `rci%k>0`: Restart with larger block size                  |
+   |          | If `rci%k>0`: Restart suggested with larger block size        |
    |          | `m >= m + rci%nx + rci%i + rci%j`, adjusting workspace size   |
-   |          | to match. Set `rci%i=0` and `rci%j=0` and recall the routing. |
+   |          | to match. Set `rci%i=0` and `rci%j=0` and recall the routine. |
+   |          | If a restart is not desirable, routine may be recalled with   |
+   |          | no change to parameters.                                      |
    |          |                                                               |
-   |          | If `rci%k=0`: Restart with the same block size.               |
+   |          | If `rci%k=0`: Restart required with the same block size.      |
    |          |                                                               |
    |          | In both cases, the first block ``W(:,:,0)`` should retain     |
    |          | vectors ``rci%jx:rci%jx+rci%nx-1``, filling remaining vectors |
    |          | randomly such that the entire set of columns is linearly      |
-   |          | independent.                                                  |
+   |          | independent from each other and also from the converged       |
+   |          | eigenvectors.                                                 |
    +----------+---------------------------------------------------------------+
 
    The matrices are defined as follows:
@@ -648,7 +672,9 @@ each setup:
    * :math:`R` = ``rr(rci%i:rci%i+rci%nx-1, rci%j:rci%j+rci%ny-1, rci%k)``
 
    and :math:`\alpha` and :math:`\beta` are given by ``rci%alpha`` and
-   ``rci%beta`` respectively.
+   ``rci%beta`` respectively. We use the notation :math:`r_{ii}` to refer
+   to the :math:`i`-th diagonal element of :math:`R`, being
+   ``rr(rci%i+i-1,rci%j+i-1,rci%k)``.
 
    :p ssmfe_rcid rci [inout]: Reverse communication type. `rci%job` must be
       set to `0` before the first call. (Type :f:type:`ssmfe_rciz` in complex
@@ -692,7 +718,7 @@ each setup:
    +----------+---------------------------------------------------------------+
    |  3       | Compute :math:`\bar{V} = BU`                                  |
    +----------+---------------------------------------------------------------+
-   |  5       | Save converged eigenvectors:                                  |
+   |  5       | Copy converged eigenvectors :math:`X` to user storage:        |
    |          |                                                               |
    |          | * If `rci%i>0`: ``W(:,rci%jx:rci%jx+rci%nx-1,rci%kx)``.       |
    |          | * Else:         ``W(:,rci%jx-rci%nx+1:rci%jx,rci%kx)``.       |
@@ -764,27 +790,30 @@ each setup:
    |          |                                                               |
    |          | .. math:: \bar{V} = BU                                        |
    +----------+---------------------------------------------------------------+
-   | 22       | Orthogonalize columns of :math:`U` to all vectors :math:`X`   |
-   |          | by solving                                                    |
+   | 22       | :math:`B`-orthogonalize columns of :math:`U` to all vectors   |
+   |          | :math:`X` by solving                                          |
    |          |                                                               |
-   |          | .. math:: (X^TX) Q = X^T U                                    |
+   |          | .. math:: (X^TBX) Q = X^T U                                   |
    |          |                                                               |
    |          | for :math:`Q` and updating                                    |
    |          |                                                               |
    |          | .. math:: U = U - BXQ                                         |
    +----------+---------------------------------------------------------------+
-   | 999      | Restart suggested (if not possible, just recall the routine). |
+   | 999      | Restart:                                                      |
    |          |                                                               |
-   |          | If `rci%k>0`: Restart with larger block size                  |
+   |          | If `rci%k>0`: Restart suggested with larger block size        |
    |          | `m >= m + rci%nx + rci%i + rci%j`, adjusting workspace size   |
-   |          | to match. Set `rci%i=0` and `rci%j=0` and recall the routing. |
+   |          | to match. Set `rci%i=0` and `rci%j=0` and recall the routine. |
+   |          | If a restart is not desirable, routine may be recalled with   |
+   |          | no change to parameters.                                      |
    |          |                                                               |
-   |          | If `rci%k=0`: Restart with the same block size.               |
+   |          | If `rci%k=0`: Restart required with the same block size.      |
    |          |                                                               |
    |          | In both cases, the first block ``W(:,:,0)`` should retain     |
    |          | vectors ``rci%jx:rci%jx+rci%nx-1``, filling remaining vectors |
    |          | randomly such that the entire set of columns is linearly      |
-   |          | independent.                                                  |
+   |          | independent from each other and also from the converged       |
+   |          | eigenvectors.                                                 |
    +----------+---------------------------------------------------------------+
 
    The matrices are defined as follows:
@@ -795,7 +824,9 @@ each setup:
    * :math:`R` = ``rr(rci%i:rci%i+rci%nx-1, rci%j:rci%j+rci%ny-1, rci%k)``
 
    and :math:`\alpha` and :math:`\beta` are given by ``rci%alpha`` and
-   ``rci%beta`` respectively.
+   ``rci%beta`` respectively. We use the notation :math:`r_{ii}` to refer
+   to the :math:`i`-th diagonal element of :math:`R`, being
+   ``rr(rci%i+i-1,rci%j+i-1,rci%k)``.
 
    :p ssmfe_rcid rci [inout]: Reverse communication type. `rci%job` must be
       set to `0` before the first call. (Type :f:type:`ssmfe_rciz` in complex
