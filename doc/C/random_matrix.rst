@@ -53,11 +53,11 @@ Routines
    :param n: Number of columns in the matrix.
    :param nnz: Number of non-zeroes in the matrix.
    :param ptr: Column pointers of the matrix
-      (see :doc:`CSC format<csc format>`).
+      (see :doc:`CSC format<csc_format>`).
    :param row: Row indices of the matrix
-      (see :doc:`CSC format<csc format>`).
+      (see :doc:`CSC format<csc_format>`).
    :param val: If not `NULL`, array of size `nnz` for non-zero values of the
-      matrix (see :doc:`CSC format<csc format>`).
+      matrix (see :doc:`CSC format<csc_format>`).
    :param flags: Logical combination (i.e. bitwise-or) of the following
       possible values:
 
