@@ -28,7 +28,7 @@ eigenpairs :math:`\{\lambda_i, x_i\}` of the following eigenvalue problems:
 where :math:`A` and :math:`B` are **real symmetric** (or **Hermitian**) matrices
 and :math:`B` is **positive definite**.
 
-The module :doc:`SSMFE <ssmfe>` provides a more user-friendly wrapper around
+The package :doc:`SSMFE <ssmfe>` provides a more user-friendly wrapper around
 this code. Conversely, :doc:`SSMFE_CORE <ssmfe_core>` provides a lower level
 implementation of the core solver, which this package provides a wrapper for.
 
@@ -571,7 +571,7 @@ reorthagonalise against these from time to time.
 .. c:function:: void spral_ssmfe_expert_generalized_double_complex(struct spral_ssmfe_rciz *rci, int left, int mep, double *lambda, int m, double complex *rr, int *ind, void **keep, const struct spral_ssmfe_options *options, struct spral_ssmfe_inform *inform)
 
    As :c:func:`spral_ssmfe_expert_generalized_double()`, but types of
-   ``rci``, and ``rr`` changed to support type ``double complex``.
+   ``rci`` and ``rr`` changed to support type ``double complex``.
 
 .. c:function:: void spral_ssmfe_expert_generalized_shift_double(struct spral_ssmfe_rcid *rci, double sigma, int left, int right, int mep, double *lambda, int m, double *rr, int *ind, void **keep, const struct spral_ssmfe_options *options, struct spral_ssmfe_inform *inform)
 
