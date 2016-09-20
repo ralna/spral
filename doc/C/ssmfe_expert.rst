@@ -110,10 +110,17 @@ of `kw` for each setup:
 
 Further, the user must also store the converged eigenvectors :math:`X`, and
 (for generalised problems) their :math:`B`-images :math:`BX` using
-separate storage, e.g. ``X[mep][n], BX[mep][n]``. We use the Fortran-like
-notation ``x[0:n-1]`` to refer to the vector of entries ``x[0], ..., x[n-1]``.
+separate storage, e.g. ``X[mep][n], BX[mep][n]``.
+For convienence of notation we use the convention that ``x[i:j]``
+denotes indices `i` through `j` (inclusive) of the vector `x[]`.
 In addition to being output, the routine may need to
 reorthagonalise against these from time to time.
+
+.. c:function:: void spral_ssmfe_default_options(struct spral_ssmfe_options *options)
+
+   Intialises members of options structure to default values.
+
+   :param options: Structure to be initialised.
 
 .. c:function:: void spral_ssmfe_expert_standard_double(struct spral_ssmfe_rcid *rci, int left, int mep, double *lambda, int m, double *rr, int *ind, void **keep, const struct spral_ssmfe_options *options, struct spral_ssmfe_inform *inform)
 
