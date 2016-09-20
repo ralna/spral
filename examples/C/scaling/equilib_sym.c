@@ -1,4 +1,4 @@
-/* examples/C/scaling/equilib_sym.f90 - Example code for SPRAL_SCALING */
+/* examples/C/scaling/equilib_sym.c - Example code for SPRAL_SCALING */
 #include <stdlib.h>
 #include <stdio.h>
 #include "spral.h"

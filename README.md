@@ -10,7 +10,9 @@ STFC Rutherford Appleton Laboratory [hsl@stfc.ac.uk](mailto:hsl@stfc.ac.uk).
 
 ## Packages
 
-- **RANDOM_MATRIX** - Generates random matrices for testing purposes
+- **LSMR**          - Solves sparse least squares problems using LSMR algorithm.
+- **RANDOM**        - Pseudo-random number generator.
+- **RANDOM_MATRIX** - Generates random matrices for testing purposes.
 - **SCALING**       - Calculates matrix scalings through a variety of algorithms
 - **SSIDS**         - Sparse Symmetric Indefinite Direct Solver. Requires an
                       NVIDIA GPU!
