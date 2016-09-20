@@ -1,4 +1,4 @@
-/* examples/C/scaling/hungarian_unsym.f90 - Example code for SPRAL_SCALING */
+/* examples/C/scaling/hungarian_unsym.c - Example code for SPRAL_SCALING */
 #include <stdlib.h>
 #include <stdio.h>
 #include "spral.h"
