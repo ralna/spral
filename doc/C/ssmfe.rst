@@ -119,8 +119,9 @@ Subroutines
       :c:member:`rci.job <spral_ssmfe_rcid.job>` must be
       set to `0` before the first call.
    :param left: Number of left eigenpairs to find.
-   :param mep: Number of working eigenpairs. See :ref:`method section <method>`
-      for guidance on selecting a good value. Must be at least `left`.
+   :param mep: Number of working eigenpairs.
+      See :ref:`method section <method>` for guidance on selecting a good
+      value. Must be at least `left`.
    :param lambda[mep]: Current eigenvalue estimates in ascending
       order.
    :param n: Size of matrix :math:`A`.
@@ -174,8 +175,9 @@ Subroutines
    :param sigma: Shift value :math:`sigma`.
    :param left: Number of left eigenpairs to find.
    :param right: Number of right eigenpairs to find.
-   :param mep: Number of working eigenpairs. See :ref:`method section <method>`
-      for guidance on selecting a good value. Must be at least `left+right`.
+   :param mep: Number of working eigenpairs.
+      See :ref:`method section <method>` for guidance on selecting a good
+      value. Must be at least `left+right`.
    :param lambda[mep]: Current eigenvalue estimates in ascending
       order.
    :param n: Size of matrix :math:`A`.
@@ -229,8 +231,9 @@ Subroutines
       :c:member:`rci.job <spral_ssmfe_rcid.job>` must be
       set to `0` before the first call.
    :param left: Number of left eigenpairs to find.
-   :param mep: Number of working eigenpairs. See :ref:`method section <method>`
-      for guidance on selecting a good value. Must be at least `left`.
+   :param mep: Number of working eigenpairs.
+      See :ref:`method section <method>` for guidance on selecting a good
+      value. Must be at least `left`.
    :param lambda[mep]: Current eigenvalue estimates in ascending
       order.
    :param n: Size of matrix :math:`A`.
@@ -286,8 +289,9 @@ Subroutines
    :param sigma: Shift value :math:`sigma`.
    :param left: Number of left eigenpairs to find.
    :param right: Number of right eigenpairs to find.
-   :param mep: Number of working eigenpairs. See :ref:`method section <method>`
-      for guidance on selecting a good value. Must be at least `left+right`.
+   :param mep: Number of working eigenpairs.
+      See :ref:`method section <method>` for guidance on selecting a good
+      value. Must be at least `left+right`.
    :param lambda[mep]: Current eigenvalue estimates in ascending
       order.
    :param n: Size of matrix :math:`A`.
@@ -343,8 +347,9 @@ Subroutines
    :param sigma: Shift value :math:`sigma`.
    :param left: Number of left eigenpairs to find.
    :param right: Number of right eigenpairs to find.
-   :param mep: Number of working eigenpairs. See :ref:`method section <method>`
-      for guidance on selecting a good value. Must be at least `left+right`.
+   :param mep: Number of working eigenpairs.
+      See :ref:`method section <method>` for guidance on selecting a good
+      value. Must be at least `left+right`.
    :param lambda[mep]: Current eigenvalue estimates in ascending
       order.
    :param n: Size of matrix :math:`A`.
@@ -674,13 +679,13 @@ backward update of the Gauss-Seidel method to the system
 
 This code produces the following output::
 
-      6 eigenpairs converged in 19 iterations
-     lambda( 1) = 4.4676695E-02
-     lambda( 2) = 1.1119274E-01
-     lambda( 3) = 1.1119274E-01
-     lambda( 4) = 1.7770878E-01
-     lambda( 5) = 2.2040061E-01
-     lambda( 6) = 2.2040061E-01
+   6 eigenpairs converged in 19 iterations
+    lambda[0] = 4.4676695e-02
+    lambda[1] = 1.1119274e-01
+    lambda[2] = 1.1119274e-01
+    lambda[3] = 1.7770878e-01
+    lambda[4] = 2.2040061e-01
+    lambda[5] = 2.2040061e-01
 
 Note that the code computed one extra eigenpair because of the
 insufficient gap between the 5th and 6th eigenvalues.
@@ -705,16 +710,16 @@ D-factor.
 
 This code produces the following output::
 
-     Eigenvalues near  1.00E+00 (took  5 iterations)
-     lambda( 1) = 2.4122952E-01
-     lambda( 2) = 5.8852587E-01
-     lambda( 3) = 5.8852587E-01
-     lambda( 4) = 9.3582223E-01
-     lambda( 5) = 1.1206148E+00
-     lambda( 6) = 1.1206148E+00
-     lambda( 7) = 1.4679111E+00
-     lambda( 8) = 1.4679111E+00
-     lambda( 9) = 1.7733184E+00
+   Eigenvalues near 1.000000e+00 (took 5 iterations)
+    lambda[0] = 2.4122952e-01
+    lambda[1] = 5.8852587e-01
+    lambda[2] = 5.8852587e-01
+    lambda[3] = 9.3582223e-01
+    lambda[4] = 1.1206148e+00
+    lambda[5] = 1.1206148e+00
+    lambda[6] = 1.4679111e+00
+    lambda[7] = 1.4679111e+00
+    lambda[8] = 1.7733184e+00
 
 Hermitian example
 -----------------
@@ -724,17 +729,17 @@ differential operator :math:`i \frac{d}{dx}` acting in the space of
 periodic functions discretized by central differences on a uniform mesh
 of 80 steps.
 
-.. literalinclude:: ../../examples/Fortran/ssmfe/hermitian.f90
-   :language: Fortran
+.. literalinclude:: ../../examples/C/ssmfe/hermitian.c
+   :language: C
 
 This code produces the following output::
 
-     5 eigenpairs converged in 25 iterations
-     lambda( 1) = -2.0000000E+00
-     lambda( 2) = -1.9938347E+00
-     lambda( 3) = -1.9938347E+00
-     lambda( 4) = -1.9753767E+00
-     lambda( 5) = -1.9753767E+00
+   5 eigenpairs converged in 25 iterations
+    lambda[0] = -2.0000000e+00
+    lambda[1] = -1.9938347e+00
+    lambda[2] = -1.9938347e+00
+    lambda[3] = -1.9753767e+00
+    lambda[4] = -1.9753767e+00
 
 .. _method:
 

@@ -70,7 +70,7 @@ The latter applies to the case of positive definite
 :math:`A` and requires a matrix or an operator :math:`T`, called *a
 preconditioner*, such that the vector :math:`v = T f` is an
 approximation to the solution :math:`u` of the system :math:`A u = f`
-(see a simple example in Section [ssmfe:example:precond]). Note: This
+(see the simple :ref:`example below <example>`). Note: This
 technique is only recommended for experienced users.
 
 ===========
@@ -109,8 +109,9 @@ Subroutines
       set to `0` before the first call. (Type :f:type:`ssmfe_rciz` in complex
       version).
    :p integer left [in]: Number of left eigenpairs to find.
-   :p integer mep [in]: Number of working eigenpairs. See [method] section for
-      guidance on selecting a good value. Must be at least `left`.
+   :p integer mep [in]: Number of working eigenpairs.
+      See :ref:`method section <method>` for guidance on selecting a good
+      value. Must be at least `left`.
    :p real lambda (mep) [inout]: Current eigenvalue estimates in ascending
       order.
    :p integer n [in]: Size of matrix :math:`A`.
@@ -158,8 +159,9 @@ Subroutines
    :p real sigma [in]: Shift value :math:`sigma`.
    :p integer left [in]: Number of left eigenpairs to find.
    :p integer right [in]: Number of right eigenpairs to find.
-   :p integer mep [in]: Number of working eigenpairs. See [method] section for
-      guidance on selecting a good value. Must be at least `left+right`.
+   :p integer mep [in]: Number of working eigenpairs.
+      See :ref:`method section <method>` for guidance on selecting a good
+      value. Must be at least `left+right`.
    :p real lambda (mep) [inout]: Current eigenvalue estimates in ascending
       order.
    :p integer n [in]: Size of matrix :math:`A`.
@@ -207,8 +209,9 @@ Subroutines
       set to `0` before the first call. (Type :f:type:`ssmfe_rciz` in complex
       version).
    :p integer left [in]: Number of left eigenpairs to find.
-   :p integer mep [in]: Number of working eigenpairs. See [method] section for
-      guidance on selecting a good value. Must be at least `left`.
+   :p integer mep [in]: Number of working eigenpairs.
+      See :ref:`method section <method>` for guidance on selecting a good
+      value. Must be at least `left`.
    :p real lambda (mep) [inout]: Current eigenvalue estimates in ascending
       order.
    :p integer n [in]: Size of matrix :math:`A`.
@@ -258,8 +261,9 @@ Subroutines
    :p real sigma [in]: Shift value :math:`sigma`.
    :p integer left [in]: Number of left eigenpairs to find.
    :p integer right [in]: Number of right eigenpairs to find.
-   :p integer mep [in]: Number of working eigenpairs. See [method] section for
-      guidance on selecting a good value. Must be at least `left+right`.
+   :p integer mep [in]: Number of working eigenpairs.
+      See :ref:`method section <method>` for guidance on selecting a good
+      value. Must be at least `left+right`.
    :p real lambda (mep) [inout]: Current eigenvalue estimates in ascending
       order.
    :p integer n [in]: Size of matrix :math:`A`.
@@ -309,8 +313,9 @@ Subroutines
    :p real sigma [in]: Shift value :math:`sigma`.
    :p integer left [in]: Number of left eigenpairs to find.
    :p integer right [in]: Number of right eigenpairs to find.
-   :p integer mep [in]: Number of working eigenpairs. See [method] section for
-      guidance on selecting a good value. Must be at least `left+right`.
+   :p integer mep [in]: Number of working eigenpairs.
+      See :ref:`method section <method>` for guidance on selecting a good
+      value. Must be at least `left+right`.
    :p real lambda (mep) [inout]: Current eigenvalue estimates in ascending
       order.
    :p integer n [in]: Size of matrix :math:`A`.
@@ -519,9 +524,7 @@ backward update of the Gauss-Seidel method to the system
 .. literalinclude:: ../../examples/Fortran/ssmfe/precond_ssmfe.f90
    :language: Fortran
 
-This code produces the following output:
-
-::
+This code produces the following output::
 
       6 eigenpairs converged in 19 iterations
      lambda( 1) = 4.4676695E-02
@@ -578,9 +581,7 @@ of 80 steps.
 .. literalinclude:: ../../examples/Fortran/ssmfe/hermitian.f90
    :language: Fortran
 
-This code produces the following output:
-
-::
+This code produces the following output::
 
       5 eigenpairs converged in 25 iterations
      lambda( 1) = -2.0000000E+00
@@ -588,6 +589,8 @@ This code produces the following output:
      lambda( 3) = -1.9938347E+00
      lambda( 4) = -1.9753767E+00
      lambda( 5) = -1.9753767E+00
+
+.. _method:
 
 ======
 Method
