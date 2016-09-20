@@ -295,9 +295,41 @@ these eigenpairs and they must be moved by the user to separate storage
       ``rci%job=5``, can be set to zero if sufficient have been found.
    :p integer right [in]: Number of right eigenpairs to find. On return with
       ``rci%job=5``, can be set to zero if sufficient have been found.
-   :p integer mep [in]: Number of working eigenpairs. See [method] section for
-      guidance on selecting a good value. Must be at least `left`.
-   :p real lambda (mep) [inout]: Current eigenvalue estimates in ascending
+   :p real lambda (m) [inout]: Current eigenvalue estimates in ascending
+      order.
+   :p integer m [in]: Block size of workspace `W`. Must be at least `2`.
+   :p real rr (2*m,2*m,3) [inout]: reverse communication workspace.
+      (Type `complex` in complex version).
+   :p integer ind (m) [inout]: reverse communication workspace.
+   :p ssmfe_core_keep keep [inout]: Internal workspace used by routine.
+   :p ssmfe_core_options options [in]: specifies algorithm options to be used.
+   :p ssmfe_inform inform [inout]: returns information about the exection of
+      the routine.
+
+.. f:subroutine:: ssmfe_largest(rci,problem,nep,m,lambda,rr,ind,keep,options,inform)
+
+   Computes specified number of eigenvalues of largest magnitude and
+   corresponding eigenvectors.
+
+   Uses reverse-communication. Upon return the user must perform a task
+   specified by the `rci` parameter and recall the routine. Possible values of
+   `rci` and associated tasks are as for :f:subr:`ssmfe()` above.
+
+   :p ssmfe_rcid rci [inout]: Reverse communication type. `rci%job` must be
+      set to `0` before the first call. (Type :f:type:`ssmfe_rciz` in complex
+      version).
+   :p integer problem [in]: Problem to be solved, one of:
+
+      +----+-----------------------+
+      | 0  | :math:`Ax=\lambda x`  |
+      +----+-----------------------+
+      | >0 | :math:`Ax=\lambda Bx` |
+      +----+-----------------------+
+      | <0 | :math:`ABx=\lambda x` |
+      +----+-----------------------+
+
+   :p integer nep [in]: Number of eigenpairs to find.
+   :p real lambda (m) [inout]: Current eigenvalue estimates in ascending
       order.
    :p integer m [in]: Block size of workspace `W`. Must be at least `2`.
    :p real rr (2*m,2*m,3) [inout]: reverse communication workspace.
