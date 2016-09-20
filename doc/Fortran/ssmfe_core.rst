@@ -72,7 +72,7 @@ The latter applies to the case of positive definite
 :math:`A` and requires a matrix or an operator :math:`T`, called *a
 preconditioner*, such that the vector :math:`v = T f` is an
 approximation to the solution :math:`u` of the system :math:`A u = f`
-(see a simple example in Section [ssmfe:example:precond]). Note: This
+(see the simple example :ref:`below <example>`). Note: This
 technique is only recommended for experienced users.
 
 For futher detail on the algorithm, see the outline in the
@@ -128,7 +128,7 @@ first call to a solver procedure.
 The number of desired eigenpairs may exceed :math:`m`: whenever converged
 eigenpairs have been detected, a solver procedure reports the indices of
 these eigenpairs and they must be moved by the user to separate storage
-(``X(:))``.
+(``X(:)``).
 
 .. f:subroutine:: ssmfe(rci,problem,left,right,m,lambda,rr,ind,keep,options,inform)
 
@@ -169,7 +169,7 @@ these eigenpairs and they must be moved by the user to separate storage
    |          | * If `rci%i>0`: ``W(:,rci%jx:rci%jx+rci%nx-1,rci%kx)``.       |
    |          | * Else:         ``W(:,rci%jx-rci%nx+1:rci%jx,rci%kx)``.       |
    |          |                                                               |
-   |          | Optionally save their :math:`B`-images (if :math:`B\neI`)     |
+   |          | Optionally save their :math:`B`-images (if :math:`B\ne I`)    |
    |          |                                                               |
    |          | * If `rci%i>0`: ``W(:,rci%jx:rci%jx+rci%nx-1,rci%ky)``.       |
    |          | * Else:         ``W(:,rci%jx-rci%nx+1:rci%jx,rci%ky)``.       |
@@ -229,7 +229,8 @@ these eigenpairs and they must be moved by the user to separate storage
    |          |                                                               |
    |          |    U       & = & U - XQ \\                                    |
    |          |                                                               |
-   |          | If :math:`B\neI`, the :\math:`\bar{V}` must also be updated as|
+   |          | If :math:`B\ne I`, the :\math:`\bar{V}` must also be updated  |
+   |          | as                                                            |
    |          |                                                               |
    |          | .. math::                                                     |
    |          |                                                               |
@@ -421,6 +422,8 @@ Derived types
    |              | The value of `inform%non_converged` is set to the number  |
    |              | of non-converged eigenpairs.                              |
    +--------------+-----------------------------------------------------------+
+
+.. _example:
 
 ========
 Examples
