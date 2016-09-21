@@ -17,6 +17,9 @@ row indices can be sorted within columns.
 Version history
 ---------------
 
+2016-09-08 Version 1.1.0
+   Add long support
+
 2014-03-06 Version 1.0.0
     Initial release
 
@@ -64,12 +67,12 @@ Routines
    :p integer(long) ptr (n+1) [out]: Column pointers of the matrix
       (see :doc:`CSC format<csc format>`).
    :p integer row (nnz) [out]: Row indices of the matrix
-      (see :doc:`CSC format<csc format>`).
+      (see :doc:`CSC format<csc_format>`).
    :p integer flag [out]: Exit status of the algorithm, 0 on success, otherwise
       an error occured, see table below.
    :o integer stat [out]: Stat parameter of last ``allocate()`` call.
    :o integer val (nnz) [out]: non-zero values of the matrix
-      (see :doc:`CSC format<csc format>`).
+      (see :doc:`CSC format<csc_format>`).
    :o logical nonsingular [in]: Ensure matrix is non-singular if present with
       value ``.true.``. Such a matrix is guaranteed to have a transversal of
       size :math:`\min({\tt m}, {\tt n})`. In the symmetric or skew

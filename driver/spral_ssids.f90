@@ -11,12 +11,12 @@ program run_prob
 
    integer, parameter :: wp = kind(0d0)
 
-   type(rb_reader_options) :: rb_options
+   type(rb_read_options) :: rb_options
    integer :: rb_flag
 
    ! Matrix description
    integer :: m, n
-   integer, dimension(:), allocatable :: ptr, row, col
+   integer, dimension(:), allocatable :: ptr, row
    real(wp), dimension(:), allocatable :: val
 
    type(ssids_inform) :: inform
@@ -61,7 +61,7 @@ program run_prob
    write(*, "(3a)") "Reading '", filename, "'..."
    if(force_psdef) rb_options%values = 3 ! Force diagonal dominance
    rb_options%values = 2 ! make up values if necessary
-   call rb_read(filename, m, n, ptr, row, col, val, rb_options, rb_flag)
+   call rb_read(filename, m, n, ptr, row, val, rb_options, rb_flag)
    if(rb_flag.ne.0) then
       print *, "Rutherford-Boeing read failed with error ", rb_flag
       stop

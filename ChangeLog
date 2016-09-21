@@ -3,6 +3,9 @@ SSIDS v2 major new release
 * Adds CPU, multi-GPU and hetrogeneous execution support.
 * Removes presolve option due to lack of resource for maintenance.
 
+2016-09-21  Jonathan Hogg <jonathan.hogg@stfc.ac.uk>
+Tidy up and publish rutherford boeing file utilities.
+
 2016-06-26  Jonathan Hogg <jonathan.hogg@stfc.ac.uk>
 Rename lsmr() to lsmr_solve() to avoid namespace issues with C interface
 (change was deemed acceptable as it's not yet been part of formal release).
