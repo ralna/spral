@@ -1956,7 +1956,6 @@ subroutine test_random
       if(debug) call print_matrix(6, -1, mt, a%n, a%n, a%ptr, a%row, a%val)
 
       options%ordering = random_integer(state, 2) - 1 ! user or metis
-      options%use_gpu_solve = ( 1.ne.random_integer(state,3) )
 
       if(random_logical(state)) then
          options%nstream = random_integer(state, 4)
@@ -2550,11 +2549,7 @@ subroutine test_random_scale
          cycle
       endif
 
-      if(.not.options%use_gpu_solve) then
-         nrhs = random_integer(state,  maxnrhs)
-      else
-         nrhs = 1
-      endif
+      nrhs = random_integer(state,  maxnrhs)
 
       if(prblm.eq.nprob) then
          options%print_level = 2
