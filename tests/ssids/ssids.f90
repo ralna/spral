@@ -18,6 +18,9 @@ program main
       hungarian_inform
    use spral_ssids
    implicit none
+   
+   integer, parameter :: long = selected_int_kind(18)
+
 
    integer, parameter :: wp = kind(0d0)
 !   real(wp), parameter :: err_tol = 5e-12
@@ -36,7 +39,8 @@ program main
    character(len=6) :: dl_file = "dl.out"
 
    type :: matrix_type
-      integer :: n, ne
+      integer :: n
+      integer(long) :: ne
       integer, dimension(:), allocatable :: ptr, row, col
       real(wp), dimension(:), allocatable :: val
    end type matrix_type
@@ -110,7 +114,7 @@ subroutine test_errors
    logical :: check
    integer :: i
    integer :: n
-   integer :: ne
+   integer(long) :: ne
    logical :: posdef
    integer :: nrhs
    integer :: temp
@@ -837,7 +841,7 @@ subroutine test_warnings
    logical :: check
    integer :: i
    logical :: posdef
-   integer :: ne
+   integer(long) :: ne
    integer, dimension(:), allocatable :: order
    real(wp), dimension(:,:), allocatable :: rhs
    real(wp), dimension(:,:), allocatable :: res
@@ -1310,7 +1314,7 @@ subroutine test_special
    write(*,"(a)",advance="no") &
       " * Testing n>1e5, ne<3.0*n, order=1......"
    a%n = big_test_n
-   call gen_random_indef(a, 2*big_test_n, state)
+   call gen_random_indef(a, 2_long*big_test_n, state)
    options%ordering = 1
    call ssids_analyse(check, a%n, a%ptr, a%row, akeep, options, info)
    call print_result(info%flag,SSIDS_SUCCESS)
@@ -1319,7 +1323,7 @@ subroutine test_special
    write(*,"(a)",advance="no") &
       " * Testing n>1e5, ne>3.0*n, order=1......"
    a%n = big_test_n
-   call gen_random_indef(a, 4*big_test_n, state)
+   call gen_random_indef(a, 4_long*big_test_n, state)
    options%ordering = 1
    call ssids_analyse(check, a%n, a%ptr, a%row, akeep, options, info)
    call print_result(info%flag,SSIDS_SUCCESS)
@@ -1328,7 +1332,7 @@ subroutine test_special
    write(*,"(a)",advance="no") &
       " * Testing n>1e5, ne>3.0*n, order=2......"
    a%n = big_test_n
-   call gen_random_indef(a, 4*big_test_n, state)
+   call gen_random_indef(a, 4_long*big_test_n, state)
    options%ordering = 2
    call ssids_analyse(check, a%n, a%ptr, a%row, akeep, options, info, val=a%val)
    call print_result(info%flag,SSIDS_SUCCESS)
@@ -1861,7 +1865,8 @@ subroutine test_random
    real(wp), allocatable, dimension(:, :) :: res
 
    logical :: posdef
-   integer :: ne, nza, prblm, i, j, k, n1, nrhs, mt
+   integer :: prblm, i, j, k, n1, nrhs, mt
+   integer(long) :: ne, nza
    integer, dimension(:), allocatable :: order, piv_order
    integer, dimension(:), allocatable :: xindex, bindex
    logical, dimension(:), allocatable :: lflag
@@ -2323,11 +2328,10 @@ subroutine test_big
    write(*, "(a, i9, a, i11, a, i2, a)",advance="no") &
       " * n = ", a%n, " nza = ", a%ne, "..."
 
-   i = a%ne
    if(posdef) then
-      call gen_random_posdef(a, i, state)
+      call gen_random_posdef(a, a%ne, state)
    else
-      call gen_random_indef(a, i, state)
+      call gen_random_indef(a, a%ne, state)
    endif
    
    ! Peform analyse
@@ -2424,7 +2428,8 @@ subroutine test_random_scale
    logical, dimension(:), allocatable :: lflag
 
    logical :: posdef
-   integer :: nza, prblm, i, j, k, n1, nrhs, ne
+   integer :: prblm, i, j, k, n1, nrhs
+   integer(long) :: ne, nza
    integer, dimension(:), allocatable :: order
    logical :: check
    real(wp) :: num_flops
@@ -2747,14 +2752,14 @@ end subroutine test_random_scale
 ! generate random symmetric indefinite matrix (lower part)
 subroutine gen_random_indef_fred(a, nza, state)
    type(matrix_type), intent(inout) :: a
-   integer, intent(in) :: nza
+   integer(long), intent(in) :: nza
    type(random_state), intent(inout) :: state
 
    integer :: i, k, l, flag
 
-   ! Generate a
+   ! Generate a FIXME: move to 64-bit
    call random_matrix_generate(state, SPRAL_MATRIX_REAL_SYM_INDEF, a%n, a%n, &
-      nza, a%ptr, a%row, flag, val=a%val, sort=.true.)
+      int(nza), a%ptr, a%row, flag, val=a%val, sort=.true.)
    if(flag.ne.0) print *, "Bad flag from random_matrix_generate()"
 
    if (a%n.gt.3) then
@@ -2830,16 +2835,16 @@ end subroutine simple_metis_order
 
 subroutine gen_random_indef(a, nza, state, zr)
    type(matrix_type), intent(inout) :: a
-   integer, intent(in) :: nza
+   integer(long), intent(in) :: nza
    type(random_state), intent(inout) :: state
    integer, optional, intent(in) :: zr ! if present, all entries in
      ! row zr are zero
 
    integer :: i, k, l, flag
 
-   ! Generate a
+   ! Generate a FIXME: move to 64-bit
    call random_matrix_generate(state, SPRAL_MATRIX_REAL_SYM_INDEF, a%n, a%n, &
-      nza, a%ptr, a%row, flag, val=a%val, nonsingular=.true., sort=.true.)
+      int(nza), a%ptr, a%row, flag, val=a%val, nonsingular=.true., sort=.true.)
    if(flag.ne.0) print *, "Bad flag from random_matrix_generate()"
 
    if (present(zr)) then
@@ -2875,15 +2880,15 @@ end subroutine gen_random_indef
 
 subroutine gen_random_posdef(a, nza, state)
    type(matrix_type), intent(inout) :: a
-   integer, intent(in) :: nza
+   integer(long), intent(in) :: nza
    type(random_state), intent(inout) :: state
 
    integer :: i, j, k, flag
    real(wp) :: tempv
 
-   ! Generate matrix
+   ! Generate matrix FIXME: move to 64-bit
    call random_matrix_generate(state, SPRAL_MATRIX_REAL_SYM_PSDEF, a%n, a%n, &
-      nza, a%ptr, a%row, flag, val=a%val, nonsingular=.true., sort=.true.)
+      int(nza), a%ptr, a%row, flag, val=a%val, nonsingular=.true., sort=.true.)
    if(flag.ne.0) print *, "Bad flag from random_matrix_generate()"
 
    ! Make a diagonally dominant, observing first entry in column

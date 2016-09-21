@@ -19,7 +19,7 @@ struct SymbolicNode {
    SymbolicNode* next_child; //< Pointer to second child in linked list
    int const* rlist; //< Pointer to row lists
    int num_a; //< Number of entries mapped from A to L
-   int const* amap; //< Pointer to map from A to L locations
+   long const* amap; //< Pointer to map from A to L locations
    int parent; //< index of parent node
    std::vector<int> contrib; //< index of expected contribution(s)
 };

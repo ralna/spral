@@ -14,7 +14,7 @@ module spral_core_analyse
    public :: basic_analyse ! Perform a full analysis for a given matrix ordering
 
    integer, parameter :: long = selected_int_kind(18)
-   integer, parameter :: ptr_kind = kind(0) ! integer kind used for user's
+   integer, parameter :: ptr_kind = long ! integer kind used for user's
       ! column pointers (rptr is always long) - integer or long
 
    integer, parameter :: minsz_ms = 16 ! minimum size to use merge sort

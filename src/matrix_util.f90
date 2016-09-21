@@ -110,6 +110,11 @@ type dup_list
    integer :: dest
    type(dup_list), pointer :: next => null()
 end type dup_list
+type dup_list64
+   integer(long) :: src
+   integer(long) :: dest
+   type(dup_list64), pointer :: next => null()
+end type dup_list64
 
 interface cscl_verify
    module procedure cscl_verify_double
@@ -118,17 +123,24 @@ interface print_matrix
    module procedure print_matrix_int_double, print_matrix_long_double
 end interface
 interface apply_conversion_map
-   module procedure apply_conversion_map_double
+   module procedure apply_conversion_map_ptr32_double, &
+         apply_conversion_map_ptr64_double
 end interface apply_conversion_map
 interface clean_cscl_oop
-   module procedure clean_cscl_oop_double
+   module procedure clean_cscl_oop_ptr32_double, clean_cscl_oop_ptr64_double
 end interface clean_cscl_oop
 interface convert_coord_to_cscl
-   module procedure convert_coord_to_cscl_double
+   module procedure convert_coord_to_cscl_ptr32_double, &
+      convert_coord_to_cscl_ptr64_double
 end interface convert_coord_to_cscl
 interface half_to_full
    module procedure half_to_full_int32, half_to_full_int64
 end interface half_to_full
+
+! internal routines
+interface cleanup_dup
+   module procedure cleanup_dup32, cleanup_dup64
+end interface
 
 contains
 
@@ -519,8 +531,8 @@ end function digit_format
 ! Clean CSC matrix out of place. Lower entries only for symmetric,
 ! skew-symmetric and Hermitian matrices to standard format
 !
-subroutine clean_cscl_oop_double(matrix_type, m, n, ptr_in, row_in, ptr_out,&
-      row_out, flag, val_in, val_out, lmap, map, lp, noor, ndup) 
+subroutine clean_cscl_oop_ptr32_double(matrix_type, m, n, ptr_in, row_in, &
+      ptr_out, row_out, flag, val_in, val_out, lmap, map, lp, noor, ndup) 
    integer, intent(in) :: matrix_type ! what sort of symmetry is there?
    integer, intent(in) :: m ! number of rows
    integer, intent(in) :: n ! number of columns
@@ -561,10 +573,63 @@ subroutine clean_cscl_oop_double(matrix_type, m, n, ptr_in, row_in, ptr_out,&
       return
    end if
 
+   call clean_cscl_oop_main_ptr32(context, 1, matrix_type, m, n, &
+      ptr_in, row_in, ptr_out, row_out, flag, val_in, val_out, lmap, map, &
+      lp, noor, ndup) 
+end subroutine clean_cscl_oop_ptr32_double
+
+!****************************************
+
+!
+! Clean CSC matrix out of place. Lower entries only for symmetric,
+! skew-symmetric and Hermitian matrices to standard format
+!
+subroutine clean_cscl_oop_ptr64_double(matrix_type, m, n, ptr_in, row_in, &
+      ptr_out, row_out, flag, val_in, val_out, lmap, map, lp, noor, ndup) 
+   integer, intent(in) :: matrix_type ! what sort of symmetry is there?
+   integer, intent(in) :: m ! number of rows
+   integer, intent(in) :: n ! number of columns
+   integer(long), dimension(*), intent(in) :: ptr_in ! column pointers on input
+   integer, dimension(*), intent(in) :: row_in ! row indices on input.
+      ! These may be unordered within each column and may contain
+      ! duplicates and/or out-of-range entries
+   integer(long), dimension(*), intent(out) :: ptr_out ! col ptr output
+   integer, allocatable, dimension(:), intent(out) :: row_out ! row indices out
+      ! Duplicates and out-of-range entries are dealt with and
+      ! the entries within each column are ordered by increasing row index.
+   integer, intent(out) :: flag ! return code
+   real(wp), optional, dimension(*), intent(in) :: val_in ! values input
+   real(wp), optional, allocatable, dimension(:) :: val_out
+      ! values on output
+   integer(long), optional, intent(out) :: lmap
+   integer(long), optional, allocatable, dimension(:) :: map
+      ! map(1:size(val_out)) gives src: map(i) = j means val_out(i)=val_in(j).
+      ! map(size(val_out)+1:) gives pairs: map(i:i+1) = (j,k) means
+      !     val_out(j) = val_out(j) + val_in(k)
+   integer, optional, intent(in) :: lp ! unit for printing output if wanted
+   integer, optional, intent(out) :: noor ! number of out-of-range entries
+   integer, optional, intent(out) :: ndup ! number of duplicates summed
+
+   ! Local variables
+   character(50)  :: context  ! Procedure name (used when printing).
+   integer :: nout ! output unit (set to -1 if nout not present)
+
+   context = 'clean_cscl_oop'
+
+   nout = -1
+   if(present(lp)) nout = lp
+
+   ! Note: have to change this test for complex code
+   if(matrix_type < 0 .or. matrix_type == 5 .or. matrix_type > 6) then
+      flag = ERROR_MATRIX_TYPE
+      call print_matrix_flag(context,nout,flag)
+      return
+   end if
+
    call clean_cscl_oop_main(context, 1, matrix_type, m, n, &
       ptr_in, row_in, ptr_out, row_out, flag, val_in, val_out, lmap, map, &
       lp, noor, ndup) 
-end subroutine clean_cscl_oop_double
+end subroutine clean_cscl_oop_ptr64_double
 
 !****************************************
 
@@ -574,7 +639,7 @@ end subroutine clean_cscl_oop_double
 ! Also used for symmetric, skew-symmetric and Hermitian matrices in upper
 ! CSR format
 !
-subroutine clean_cscl_oop_main(context, multiplier, matrix_type, m, n, &
+subroutine clean_cscl_oop_main_ptr32(context, multiplier, matrix_type, m, n, &
       ptr_in, row_in, ptr_out, row_out, flag, val_in, val_out, lmap, map, &
       lp, noor, ndup) 
    character(50), intent(in) :: context ! Procedure name (used when printing).
@@ -702,7 +767,7 @@ subroutine clean_cscl_oop_main(context, multiplier, matrix_type, m, n, &
             return
          endif
          if(i.ne.0) then
-            call sort(row_out(ptr_out(col):k-1), i, map=map(ptr_out(col):k-1))
+            call sort32(row_out(ptr_out(col):k-1), i, map=map(ptr_out(col):k-1))
             ! Loop over sorted list and drop duplicates
             i = k-1 ! last entry in column
             k = ptr_out(col)+1 ! insert position
@@ -790,7 +855,7 @@ subroutine clean_cscl_oop_main(context, multiplier, matrix_type, m, n, &
             return
          endif
          if(i.ne.0) then
-            call sort(row_out(ptr_out(col):k-1), i, &
+            call sort32(row_out(ptr_out(col):k-1), i, &
                val=val_out(ptr_out(col):k-1))
             ! Loop over sorted list and drop duplicates
             i = k-1 ! last entry in column
@@ -853,7 +918,7 @@ subroutine clean_cscl_oop_main(context, multiplier, matrix_type, m, n, &
             return
          endif
          if(i.ne.0) then
-            call sort(row_out(ptr_out(col):k-1), i)
+            call sort32(row_out(ptr_out(col):k-1), i)
             ! Loop over sorted list and drop duplicates
             i = k-1 ! last entry in column
             k = ptr_out(col)+1 ! insert position
@@ -946,6 +1011,390 @@ subroutine clean_cscl_oop_main(context, multiplier, matrix_type, m, n, &
       call print_matrix_flag(context,nout,flag)
     end if
 
+end subroutine clean_cscl_oop_main_ptr32
+
+!****************************************
+
+!
+! Converts CSC (with lower entries only for symmetric, skew-symmetric and
+! Hermitian matrices) to standard format.
+! Also used for symmetric, skew-symmetric and Hermitian matrices in upper
+! CSR format
+!
+subroutine clean_cscl_oop_main(context, multiplier, matrix_type, m, n, &
+      ptr_in, row_in, ptr_out, row_out, flag, val_in, val_out, lmap, map, &
+      lp, noor, ndup) 
+   character(50), intent(in) :: context ! Procedure name (used when printing).
+   integer, intent(in) :: multiplier ! -1 or 1, differs for csc/csr
+   integer, intent(in) :: matrix_type ! what sort of symmetry is there?
+   integer, intent(in) :: m ! number of rows
+   integer, intent(in) :: n ! number of columns
+   integer(long), dimension(*), intent(in) :: ptr_in ! column pointers on input
+   integer, dimension(*), intent(in) :: row_in ! row indices on input.
+      ! These may be unordered within each column and may contain
+      ! duplicates and/or out-of-range entries
+   integer(long), dimension(*), intent(out) :: ptr_out ! col ptr output
+   integer, allocatable, dimension(:), intent(out) :: row_out ! row indices out
+      ! Duplicates and out-of-range entries are dealt with and
+      ! the entries within each column are ordered by increasing row index.
+   integer, intent(out) :: flag ! return code
+   real(wp), optional, dimension(*), intent(in) :: val_in ! values input
+   real(wp), optional, allocatable, dimension(:) :: val_out
+      ! values on output
+   integer(long), optional, intent(out) :: lmap
+   integer(long), optional, allocatable, dimension(:) :: map
+      ! map(1:size(val_out)) gives src: map(i) = j means val_out(i)=val_in(j).
+      ! map(size(val_out)+1:) gives pairs: map(i:i+1) = (j,k) means
+      !     val_out(j) = val_out(j) + val_in(k)
+   integer, optional, intent(in) :: lp ! unit for printing output if wanted
+   integer, optional, intent(out) :: noor ! number of out-of-range entries
+   integer, optional, intent(out) :: ndup ! number of duplicates summed
+
+
+   ! Local variables
+   integer :: col ! current column
+   integer :: i
+   integer(long) :: ii
+   integer :: idiag
+   integer :: idup
+   integer :: ioor
+   integer :: j
+   integer(long) :: kk
+   integer :: nout ! output unit (set to -1 if nout not present)
+   integer :: st ! stat parameter
+   integer :: minidx
+
+   type(dup_list64), pointer :: dup
+   type(dup_list64), pointer :: duphead
+
+   ! ---------------------------------------------
+   ! Check that restrictions are adhered to
+   ! ---------------------------------------------
+
+   nullify(dup, duphead)
+
+   flag = SUCESS
+
+   nout = -1
+   if(present(lp)) nout = lp
+
+   if(n < 0 .or. m < 0) then
+      flag = ERROR_N_OOR
+      call print_matrix_flag(context,nout,flag)
+      return
+   end if
+
+   if(ptr_in(1) < 1) then
+      flag = ERROR_PTR_1
+      call print_matrix_flag(context,nout,flag)
+      return
+   end if
+
+   if(present(val_in).neqv.present(val_out)) then
+      flag = ERROR_VAL_MISS
+      call print_matrix_flag(context,nout,flag)
+      return
+   end if
+
+   if(present(map).neqv.present(lmap)) then
+      flag = ERROR_LMAP_MISS
+      call print_matrix_flag(context,nout,flag)
+      return
+   end if
+
+   ! ---------------------------------------------
+
+   ! ensure output arrays are not allocated
+
+   deallocate(row_out,stat=st)
+   if(present(val_out)) deallocate(val_out,stat=st)
+   if(present(map)) deallocate(map,stat=st)
+
+   idup = 0; ioor = 0; idiag = 0
+
+   allocate(row_out(ptr_in(n+1)-1),stat=st)
+   if(st.ne.0) goto 100
+   if(present(map)) then
+      ! Allocate map for worst case where all bar one are duplicates
+      allocate(map(2*ptr_in(n+1)-2),stat=st)
+      kk = 1 ! insert location
+      do col = 1, n
+         ptr_out(col) = kk
+         if(ptr_in(col+1).lt.ptr_in(col)) then
+            flag = ERROR_PTR_MONO
+            call print_matrix_flag(context,nout,flag)
+            call cleanup_dup(duphead)
+            return
+         endif
+         minidx = 1
+         if(abs(matrix_type).ge.SPRAL_MATRIX_REAL_SYM_PSDEF) minidx = col
+         if(abs(matrix_type).eq.SPRAL_MATRIX_REAL_SKEW) minidx = col + 1
+         ! Loop over column, copy across while dropping any out of range entries
+         do ii = ptr_in(col), ptr_in(col+1)-1
+            j = row_in(ii)
+            if(j.lt.minidx .or. j.gt.m) then
+               ! out of range, ignore
+               ioor = ioor + 1
+               cycle
+            endif
+            row_out(kk) = row_in(ii)
+            map(kk) = multiplier*ii
+            kk = kk + 1
+         end do
+         ! Sort entries into order
+         i = int(kk - ptr_out(col))
+         if(i.eq.0 .and. ptr_in(col+1)-ptr_in(col).ne.0) then
+            flag = ERROR_ALL_OOR
+            call print_matrix_flag(context,nout,flag)
+            call cleanup_dup(duphead)
+            return
+         endif
+         if(i.ne.0) then
+            call sort64(row_out(ptr_out(col):kk-1), i, &
+               map=map(ptr_out(col):kk-1))
+            ! Loop over sorted list and drop duplicates
+            ii = kk-1 ! last entry in column
+            kk = ptr_out(col)+1 ! insert position
+            ! Note: we are skipping the first entry as it cannot be a duplicate
+            if(row_out(ptr_out(col)).eq.col) then
+               idiag = idiag + 1
+            elseif(abs(matrix_type).eq.SPRAL_MATRIX_REAL_SYM_PSDEF) then
+               flag = ERROR_MISSING_DIAGONAL
+               call print_matrix_flag(context,nout,flag)
+               call cleanup_dup(duphead)
+               return
+            endif
+            do ii = ptr_out(col)+1, ii
+               if(row_out(ii).eq.row_out(ii-1)) then
+                  ! duplicate, drop
+                  idup = idup + 1
+                  allocate(dup,stat=st)
+                  if(st.ne.0) goto 100
+                  dup%next => duphead
+                  duphead => dup
+                  dup%src = map(ii)
+                  dup%dest = kk-1
+                  cycle
+               endif
+               if(row_out(ii).eq.col) idiag = idiag + 1
+               row_out(kk) = row_out(ii)
+               map(kk) = map(ii)
+               kk = kk + 1
+            end do
+         elseif(abs(matrix_type).eq.SPRAL_MATRIX_REAL_SYM_PSDEF) then
+            flag = ERROR_MISSING_DIAGONAL
+            call print_matrix_flag(context,nout,flag)
+            call cleanup_dup(duphead)
+            return
+         endif
+      end do
+      ptr_out(n+1) = kk
+      lmap = kk-1
+   elseif(present(val_out)) then
+      allocate(val_out(ptr_in(n+1)-1),stat=st)
+      if(st.ne.0) goto 100
+      kk = 1 ! insert location
+      do col = 1, n
+         ptr_out(col) = kk
+         if(ptr_in(col+1).lt.ptr_in(col)) then
+            flag = ERROR_PTR_MONO
+            call print_matrix_flag(context,nout,flag)
+            return
+         endif
+         minidx = 1
+         if(abs(matrix_type).ge.SPRAL_MATRIX_REAL_SYM_PSDEF) minidx = col
+         if(abs(matrix_type).eq.SPRAL_MATRIX_REAL_SKEW) minidx = col + 1
+         ! Loop over column, copy across while dropping any out of range entries
+         select case(matrix_type)
+         case(SPRAL_MATRIX_REAL_SKEW)
+            do ii = ptr_in(col), ptr_in(col+1)-1
+               j = row_in(ii)
+               if(j.lt.minidx .or. j.gt.m) then
+                  ! out of range, ignore
+                  ioor = ioor + 1
+                  cycle
+               endif
+               row_out(kk) = row_in(ii)
+               val_out(kk) = multiplier*val_in(ii)
+               kk = kk + 1
+            end do
+         case default
+            do ii = ptr_in(col), ptr_in(col+1)-1
+               j = row_in(ii)
+               if(j.lt.minidx .or. j.gt.m) then
+                  ! out of range, ignore
+                  ioor = ioor + 1
+                  cycle
+               endif
+               row_out(kk) = row_in(ii)
+               val_out(kk) = val_in(ii)
+               kk = kk + 1
+            end do
+         end select
+         ! Sort entries into order
+         i = int(kk - ptr_out(col))
+         if(i.eq.0 .and. ptr_in(col+1)-ptr_in(col).ne.0) then
+            flag = ERROR_ALL_OOR
+            call print_matrix_flag(context,nout,flag)
+            return
+         endif
+         if(i.ne.0) then
+            call sort32(row_out(ptr_out(col):kk-1), i, &
+               val=val_out(ptr_out(col):kk-1))
+            ! Loop over sorted list and drop duplicates
+            ii = kk-1 ! last entry in column
+            kk = ptr_out(col)+1 ! insert position
+            ! Note: we are skipping the first entry as it cannot be a duplicate
+            if(row_out(ptr_out(col)).eq.col) then
+               idiag = idiag + 1
+            elseif(abs(matrix_type).eq.SPRAL_MATRIX_REAL_SYM_PSDEF) then
+               flag = ERROR_MISSING_DIAGONAL
+               call print_matrix_flag(context,nout,flag)
+               return
+            endif
+            do ii = ptr_out(col)+1, ii
+               if(row_out(ii).eq.row_out(ii-1)) then
+                  ! duplicate, sum then drop from pattern
+                  idup = idup + 1
+                  val_out(ii-1) = val_out(ii-1) + val_out(ii)
+                  cycle
+               endif
+               if(row_out(ii).eq.col) idiag = idiag + 1
+               row_out(kk) = row_out(ii)
+               val_out(kk) = val_out(ii)
+               kk = kk + 1
+            end do
+         elseif(abs(matrix_type).eq.SPRAL_MATRIX_REAL_SYM_PSDEF) then
+            flag = ERROR_MISSING_DIAGONAL
+            call print_matrix_flag(context,nout,flag)
+            return
+         endif
+      end do
+      ptr_out(n+1) = kk
+   else ! pattern only
+      kk = 1 ! insert location
+      do col = 1, n
+         ptr_out(col) = kk
+         if(ptr_in(col+1).lt.ptr_in(col)) then
+            flag = ERROR_PTR_MONO
+            call print_matrix_flag(context,nout,flag)
+            return
+         endif
+         minidx = 1
+         if(abs(matrix_type).ge.SPRAL_MATRIX_REAL_SYM_PSDEF) minidx = col
+         if(abs(matrix_type).eq.SPRAL_MATRIX_REAL_SKEW) minidx = col + 1
+         ! Loop over column, copy across while dropping any out of range entries
+         do ii = ptr_in(col), ptr_in(col+1)-1
+            j = row_in(ii)
+            if(j.lt.minidx .or. j.gt.m) then
+               ! out of range, ignore
+               ioor = ioor + 1
+               cycle
+            endif
+            row_out(kk) = row_in(ii)
+            kk = kk + 1
+         end do
+         ! Sort entries into order
+         i = int(kk - ptr_out(col))
+         if(i.eq.0 .and. ptr_in(col+1)-ptr_in(col).ne.0) then
+            flag = ERROR_ALL_OOR
+            call print_matrix_flag(context,nout,flag)
+            return
+         endif
+         if(i.ne.0) then
+            call sort32(row_out(ptr_out(col):kk-1), i)
+            ! Loop over sorted list and drop duplicates
+            ii = kk-1 ! last entry in column
+            kk = ptr_out(col)+1 ! insert position
+            ! Note: we are skipping the first entry as it cannot be a duplicate
+            if(row_out(ptr_out(col)).eq.col) then
+               idiag = idiag + 1
+            elseif(abs(matrix_type).eq.SPRAL_MATRIX_REAL_SYM_PSDEF) then
+               flag = ERROR_MISSING_DIAGONAL
+               call print_matrix_flag(context,nout,flag)
+               return
+            endif
+            do ii = ptr_out(col)+1, ii
+               if(row_out(ii).eq.row_out(ii-1)) then
+                  ! duplicate, drop
+                  idup = idup + 1
+                  cycle
+               endif
+               if(row_out(ii).eq.col) idiag = idiag + 1
+               row_out(kk) = row_out(ii)
+               kk = kk + 1
+            end do
+         elseif(abs(matrix_type).eq.SPRAL_MATRIX_REAL_SYM_PSDEF) then
+            flag = ERROR_MISSING_DIAGONAL
+            call print_matrix_flag(context,nout,flag)
+            return
+         end if
+      end do
+      ptr_out(n+1) = kk
+   endif
+
+   if(present(map)) then
+      ! Append duplicates to map
+      do while(associated(duphead))
+         idup = idup + 1
+         map(lmap+1) = duphead%dest
+         map(lmap+2) = duphead%src
+         lmap = lmap + 2
+         dup => duphead%next
+         deallocate(duphead)
+         duphead => dup
+      end do
+      if(present(val_out)) then
+         allocate(val_out(ptr_out(n+1)-1), stat=st)
+         if(st.ne.0) goto 100
+         call apply_conversion_map(matrix_type, lmap, map, val_in, &
+            ptr_out(n+1)-1, val_out)
+      endif
+   endif
+
+   if(present(val_out)) then
+      select case(matrix_type)
+      case(SPRAL_MATRIX_REAL_SYM_PSDEF)
+         ! Check for positive diagonal entries
+         do j = 1,n
+            kk = ptr_out(j)
+            ! ps def case - can't reach here unless all entries have diagonal
+            if(real(val_out(kk))<=zero) then
+               flag = ERROR_MISSING_DIAGONAL
+               call print_matrix_flag(context,nout,flag)
+               return
+            end if 
+         end do
+      end select
+   endif
+
+   ! Check whether a warning needs to be raised
+   if(ioor > 0 .or. idup > 0 .or. idiag < n) then
+     if(ioor > 0) flag = WARNING_IDX_OOR
+     if(idup > 0) flag = WARNING_DUP_IDX
+     if(idup > 0 .and. ioor > 0) flag = WARNING_DUP_AND_OOR
+     if(abs(matrix_type) .ne. SPRAL_MATRIX_REAL_SKEW) then
+         if(idiag < n .and. ioor > 0) then
+            flag = WARNING_MISS_DIAG_OORDUP
+         else if(idiag < n .and. idup > 0) then
+            flag = WARNING_MISS_DIAG_OORDUP
+         else if(idiag < n) then
+            flag = WARNING_MISSING_DIAGONAL
+         end if
+      endif
+      call print_matrix_flag(context,nout,flag)
+   end if
+
+   if(present(noor)) noor = ioor
+   if(present(ndup)) ndup = idup
+
+   return
+
+100 if(st /= 0) then
+      flag = ERROR_ALLOCATION
+      call print_matrix_flag(context,nout,flag)
+    end if
+
 end subroutine clean_cscl_oop_main
 
 !****************************************
@@ -955,7 +1404,7 @@ end subroutine clean_cscl_oop_main
 ! (skew-)symmetric problems. Entries within each column ordered by increasing
 ! row index (standard format)
 !
-subroutine convert_coord_to_cscl_double(matrix_type, m, n, ne, row, col, &
+subroutine convert_coord_to_cscl_ptr32_double(matrix_type, m, n, ne, row, col, &
       ptr_out, row_out, flag, val_in, val_out, lmap, map, lp, noor, ndup) 
    integer, intent(in) :: matrix_type ! what sort of symmetry is there?
    integer, intent(in) :: m ! number of rows in matrix
@@ -1283,7 +1732,7 @@ subroutine convert_coord_to_cscl_double(matrix_type, m, n, ne, row, col, &
          l2 = ptr_out(j+1)-1
          ! sort(row_out(l1:l2)) and permute map(l1:l2) accordingly
          l = l2-l1+1
-         if(l.gt.1) call sort ( row_out(l1:l2),l, map=map(l1:l2) )
+         if(l.gt.1) call sort32 ( row_out(l1:l2),l, map=map(l1:l2) )
       end do
 
       ! work through removing duplicates
@@ -1329,7 +1778,7 @@ subroutine convert_coord_to_cscl_double(matrix_type, m, n, ne, row, col, &
          l1 = ptr_out(j)
          l2 = ptr_out(j+1)-1
          l = l2-l1+1
-         if(l.gt.1) call sort( row_out(l1:l2),l,val=val_out(l1:l2) )
+         if(l.gt.1) call sort32( row_out(l1:l2),l,val=val_out(l1:l2) )
          ! ADD
       end do 
 
@@ -1368,7 +1817,7 @@ subroutine convert_coord_to_cscl_double(matrix_type, m, n, ne, row, col, &
          l1 = ptr_out(j)
          l2 = ptr_out(j+1)-1
          l = l2-l1+1
-         if(l.gt.1)call sort ( row_out(l1:l2),l)
+         if(l.gt.1)call sort32 ( row_out(l1:l2),l)
          ! ADD
       end do
 
@@ -1496,14 +1945,565 @@ subroutine convert_coord_to_cscl_double(matrix_type, m, n, ne, row, col, &
    end if
    return
 
-end subroutine convert_coord_to_cscl_double
+end subroutine convert_coord_to_cscl_ptr32_double
+
+!****************************************
+
+!
+! Converts COOR format to CSC with only lower entries present for
+! (skew-)symmetric problems. Entries within each column ordered by increasing
+! row index (standard format)
+!
+subroutine convert_coord_to_cscl_ptr64_double(matrix_type, m, n, ne, row, col, &
+      ptr_out, row_out, flag, val_in, val_out, lmap, map, lp, noor, ndup) 
+   integer, intent(in) :: matrix_type ! what sort of symmetry is there?
+   integer, intent(in) :: m ! number of rows in matrix
+   integer, intent(in) :: n ! number of columns in matrix
+   integer(long), intent(in) :: ne ! number of input nonzero entries
+   integer, dimension(:), intent(in) :: row(ne) ! row indices on input.
+      ! These may be unordered within each column and may contain
+      ! duplicates and/or out-of-range entries
+   integer, dimension(:), intent(in) :: col(ne) ! column indices on input.
+      ! These may be unordered within each column and may contain
+      ! duplicates and/or out-of-range entries
+   integer(long), dimension(:), intent(out) :: ptr_out(n+1) ! col ptr output
+   integer, allocatable, dimension(:), intent(out) :: row_out ! row indices out
+      ! Duplicates and out-of-range entries are dealt with and
+      ! the entries within each column are ordered by increasing row index.
+   integer, intent(out) :: flag ! return code
+   real(wp), optional, dimension(*), intent(in) :: val_in ! values input
+   real(wp), optional, allocatable, dimension(:) :: val_out
+      ! values on output
+   integer(long), optional, intent(out) :: lmap
+   integer(long), optional, allocatable, dimension(:) :: map
+      ! map(1:size(val_out)) gives source: map(i) = j means
+      ! val_out(i)=val_in(j).
+      ! map(size(val_out)+1:) gives pairs: map(i:i+1) = (j,k) means
+      !     val_out(j) = val_out(j) + val_in(k)
+   integer, optional, intent(in) :: lp ! unit for printing output if wanted
+   integer, optional, intent(out) :: noor ! number of out-of-range entries
+   integer, optional, intent(out) :: ndup ! number of duplicates summed
+
+   ! Local variables
+   character(50)  :: context  ! Procedure name (used when printing).
+   integer :: i
+   integer :: idiag
+   integer :: idup
+   integer :: ioor
+   integer :: j
+   integer :: l
+   integer(long) :: ii, ll, l1, l2, kk
+   integer(long) :: ne_new
+   integer :: nout ! output unit (set to -1 if lp not present)
+   integer :: st ! stat parameter
+
+   type(dup_list64), pointer :: dup
+   type(dup_list64), pointer :: duphead
+
+   nullify(dup, duphead)
+
+   context = 'convert_coord_to_cscl'
+
+   flag = SUCESS
+
+   nout = -1
+   if(present(lp)) nout = lp
+
+   ! ---------------------------------------------
+   ! Check that restrictions are adhered to
+   ! ---------------------------------------------
+
+   ! Note: have to change this test for complex code
+   if(matrix_type < 0 .or. matrix_type == 5 .or. matrix_type > 6) then
+      flag = ERROR_MATRIX_TYPE
+      call print_matrix_flag(context,nout,flag)
+      return
+   end if
+
+   if(m < 0 .or. n < 0) then
+      flag = ERROR_N_OOR
+      call print_matrix_flag(context,nout,flag)
+      return
+   end if
+
+   if(abs(matrix_type).ge.SPRAL_MATRIX_REAL_UNSYM .and. m.ne.n) then
+      flag = ERROR_M_NE_N
+      call print_matrix_flag(context,nout,flag)
+      return
+   end if
+
+   if(present(val_in).neqv.present(val_out)) then
+      flag = ERROR_VAL_MISS
+      call print_matrix_flag(context,nout,flag)
+      return
+   end if
+
+   if(present(map).neqv.present(lmap)) then
+      flag = ERROR_LMAP_MISS
+      call print_matrix_flag(context,nout,flag)
+      return
+   end if
+
+   ! ---------------------------------------------
+
+   ! allocate output and work arrays
+
+   deallocate(row_out,stat=st)
+   if(present(val_out)) deallocate(val_out,stat=st)
+   if(present(map)) deallocate(map,stat=st)
+
+
+   ! ---------------------------------------------
+   ! check for duplicates and/or out-of-range. check diagonal present.
+   ! first do the case where values not present
+
+   idup = 0; ioor = 0; idiag = 0
+
+   !
+   ! First pass, count number of entries in each col of the matrix
+   ! matrix. Count is at an offset of 1 to allow us to play tricks
+   ! (ie. ptr_out(i+1) set to hold number of entries in column i
+   ! of expanded matrix).
+   ! Excludes out of range entries. Includes duplicates.
+   !
+   ptr_out(1:n+1) = 0
+   do ll = 1, ne
+      i = row(ll)
+      j = col(ll)
+      if(j.lt.1 .or. j.gt.n .or. i.lt.1 .or. i.gt.m) then
+         ioor = ioor + 1
+         cycle
+      endif
+
+      if(abs(matrix_type).eq.SPRAL_MATRIX_REAL_SKEW .and. i.eq.j) then
+         ioor = ioor + 1
+         cycle
+      endif
+   
+      select case (abs(matrix_type))
+      case (SPRAL_MATRIX_REAL_SYM_PSDEF:)
+         if(i.ge.j) then
+            ptr_out(j+1) = ptr_out(j+1) + 1
+         else
+            ptr_out(i+1) = ptr_out(i+1) + 1
+         end if
+      case default
+          ptr_out(j+1) = ptr_out(j+1) + 1
+      end select
+   end do
+
+
+   ! Determine column starts for transposed expanded matrix such 
+   ! that column i starts at ptr_out(i)
+   ne_new = 0
+   ptr_out(1) = 1
+   do i = 2, n+1
+      ne_new = ne_new + ptr_out(i)
+      ptr_out(i) = ptr_out(i) + ptr_out(i-1)
+   end do
+
+   ! Check whether all entries out of range
+   if(ne.gt.0 .and. ne_new.eq.0) then
+      flag = ERROR_ALL_OOR
+      call print_matrix_flag(context,nout,flag)
+      return
+   end if
+
+   !
+   ! Second pass, drop entries into place for conjugate of transposed
+   ! expanded matrix
+   !
+   allocate(row_out(ne_new), stat=st)
+   if(st.ne.0) goto 100
+   if(present(map)) then
+      if(allocated(map)) deallocate(map,stat=st)
+      allocate(map(2*ne), stat=st)
+      if(st.ne.0) goto 100
+      map(:) = 0
+      select case(matrix_type)
+      case(SPRAL_MATRIX_REAL_SKEW)
+         do ll = 1, ne
+            i = row(ll)
+            j = col(ll)
+            if(j.lt.1 .or. j.gt.n .or. i.lt.1 .or. i.gt.m .or. i.eq.j) cycle
+            if(i.ge.j) then
+               kk=ptr_out(j)
+               ptr_out(j) = kk+1
+               row_out(kk) = i
+               map(kk) = ll
+            else
+               kk=ptr_out(i)
+               ptr_out(i) = kk+1
+               row_out(kk) = j
+               map(kk) = -ll
+            end if
+         end do
+
+      case(SPRAL_MATRIX_REAL_SYM_PSDEF, SPRAL_MATRIX_REAL_SYM_INDEF)
+         do ll = 1, ne
+            i = row(ll)
+            j = col(ll)
+            if(j.lt.1 .or. j.gt.n .or. i.lt.1 .or. i.gt.m) cycle
+            if(i.ge.j) then
+               kk=ptr_out(j)
+               ptr_out(j) = kk+1
+               row_out(kk) = i
+               map(kk) = ll
+            else
+               kk=ptr_out(i)
+               ptr_out(i) = kk+1
+               row_out(kk) = j
+               map(kk) = ll
+            end if
+         end do
+      case default
+         do ll = 1, ne
+            i = row(ll)
+            j = col(ll)
+            if(j.lt.1 .or. j.gt.n .or. i.lt.1 .or. i.gt.m) cycle
+            kk=ptr_out(j)
+            ptr_out(j) = kk+1
+            row_out(kk) = i
+            map(kk) = ll
+         end do
+      end select
+   elseif(present(val_out)) then
+      allocate(val_out(ne_new), stat=st)
+      if(st.ne.0) goto 100
+      select case(matrix_type)
+      case(SPRAL_MATRIX_REAL_SKEW)
+         do ll = 1, ne
+            i = row(ll)
+            j = col(ll)
+            if(j.lt.1 .or. j.gt.n .or. i.lt.1 .or. i.gt.m .or. i.eq.j) cycle
+            if(i.ge.j) then
+               kk=ptr_out(j)
+               ptr_out(j) = kk+1
+               row_out(kk) = i
+               val_out(kk) = val_in(ll)
+            else
+               kk=ptr_out(i)
+               ptr_out(i) = kk+1
+               row_out(kk) = j
+               val_out(kk) = -val_in(ll)
+            end if
+         end do
+
+      case(SPRAL_MATRIX_REAL_SYM_PSDEF, SPRAL_MATRIX_REAL_SYM_INDEF)
+         do ll = 1, ne
+            i = row(ll)
+            j = col(ll)
+            if(j.lt.1 .or. j.gt.n .or. i.lt.1 .or. i.gt.m) cycle
+            if(i.ge.j) then
+               kk=ptr_out(j)
+               ptr_out(j) = kk+1
+               row_out(kk) = i
+               val_out(kk) = val_in(ll)
+            else
+               kk=ptr_out(i)
+               ptr_out(i) = kk+1
+               row_out(kk) = j
+               val_out(kk) = val_in(ll)
+            end if
+         end do
+      case default
+         do ll = 1, ne
+            i = row(ll)
+            j = col(ll)
+            if(j.lt.1 .or. j.gt.n .or. i.lt.1 .or. i.gt.m) cycle
+            kk=ptr_out(j)
+            ptr_out(j) = kk+1
+            row_out(kk) = i
+            val_out(kk) = val_in(ll)
+         end do
+      end select
+
+
+   else
+      ! neither val_out or map present
+      select case(matrix_type)
+      case(SPRAL_MATRIX_REAL_SKEW)
+         do ll = 1, ne
+            i = row(ll)
+            j = col(ll)
+            if(j.lt.1 .or. j.gt.n .or. i.lt.1 .or. i.gt.m .or. i.eq.j) cycle
+            if(i.ge.j) then
+               kk=ptr_out(j)
+               ptr_out(j) = kk+1
+               row_out(kk) = i
+            else
+               kk=ptr_out(i)
+               ptr_out(i) = kk+1
+               row_out(kk) = j
+            end if
+         end do
+
+      case(SPRAL_MATRIX_REAL_SYM_PSDEF, SPRAL_MATRIX_REAL_SYM_INDEF)
+          do ll = 1, ne
+            i = row(ll)
+            j = col(ll)
+            if(j.lt.1 .or. j.gt.n .or. i.lt.1 .or. i.gt.m) cycle
+            if(i.ge.j) then
+               kk=ptr_out(j)
+               ptr_out(j) = kk+1
+               row_out(kk) = i
+            else
+               kk=ptr_out(i)
+               ptr_out(i) = kk+1
+               row_out(kk) = j
+            end if
+         end do
+      case default
+         do ll = 1, ne
+            i = row(ll)
+            j = col(ll)
+            if(j.lt.1 .or. j.gt.n .or. i.lt.1 .or. i.gt.m) cycle
+            kk=ptr_out(j)
+            ptr_out(j) = kk+1
+            row_out(kk) = i
+         end do
+      end select
+   endif
+
+   do j=n,2,-1
+      ptr_out(j) = ptr_out(j-1)
+   end do
+   ptr_out(1) = 1
+
+   !
+   ! Third pass, in place sort and removal of duplicates
+   ! Also checks for diagonal entries in pos. def. case.
+   ! Uses a modified insertion sort for best speed on already ordered data
+   !
+   idup=0
+   if(present(map)) then
+      do j = 1, n
+         l1 = ptr_out(j)
+         l2 = ptr_out(j+1)-1
+         ! sort(row_out(l1:l2)) and permute map(l1:l2) accordingly
+         l = int(l2-l1+1)
+         if(l.gt.1) call sort64 ( row_out(l1:l2),l, map=map(l1:l2) )
+      end do
+
+      ! work through removing duplicates
+      kk = 1 ! insert position      
+      do j = 1, n
+         l1 = ptr_out(j)
+         l2 = ptr_out(j+1)-1
+         ptr_out(j) = kk
+         ! sort(row_out(l1:l2)) and permute map(l1:l2) accordingly
+         l = int(l2-l1+1)
+         if(l.eq.0) cycle ! no entries
+
+         ! Move first entry of column forward
+         if(row_out(l1).eq.j) idiag = idiag + 1
+         row_out(kk) = row_out(l1)
+         map(kk) = map(l1)
+         kk = kk + 1
+         ! Loop over remaining entries
+         do ii = l1+1, l2
+            if(row_out(ii).eq.row_out(kk-1)) then
+               ! Duplicate
+               idup = idup + 1
+               allocate(dup,stat=st)
+               if(st.ne.0) goto 100
+               dup%next => duphead
+               duphead => dup
+               dup%src = map(ii)
+               dup%dest = kk-1
+               cycle
+            endif
+            ! Pull entry forwards
+            if(row_out(ii).eq.j) idiag = idiag + 1
+            row_out(kk) = row_out(ii)
+            map(kk) = map(ii)
+            kk = kk + 1
+         end do
+      end do
+      ptr_out(n+1) = kk
+      lmap = kk-1
+   else if(present(val_out)) then
+      ! ADD
+      do j = 1, n
+         l1 = ptr_out(j)
+         l2 = ptr_out(j+1)-1
+         l = int(l2-l1+1)
+         if(l.gt.1) call sort32( row_out(l1:l2),l,val=val_out(l1:l2) )
+         ! ADD
+      end do 
+
+      ! work through removing duplicates
+      kk = 1 ! insert position      
+      do j = 1, n
+         l1 = ptr_out(j)
+         l2 = ptr_out(j+1)-1
+         ptr_out(j) = kk
+         ! sort(row_out(l1:l2)) and permute map(l1:l2) accordingly
+         l = int(l2-l1+1)
+         if(l.eq.0) cycle ! no entries
+
+         ! Move first entry of column forward
+         if(row_out(l1).eq.j) idiag = idiag + 1
+         row_out(kk) = row_out(l1)
+         val_out(kk) = val_out(l1)
+         kk = kk + 1
+         ! Loop over remaining entries
+         do ii = l1+1, l2
+            if(row_out(ii).eq.row_out(kk-1)) then
+              idup = idup + 1
+              val_out(kk-1) = val_out(kk-1)+val_out(ii)
+              cycle
+            end if
+            ! Pull entry forwards
+            if(row_out(ii).eq.j) idiag = idiag + 1
+            row_out(kk) = row_out(ii)
+            val_out(kk) = val_out(ii)
+            kk = kk + 1
+         end do
+      end do
+      ptr_out(n+1) = kk
+   else
+      do j = 1, n
+         l1 = ptr_out(j)
+         l2 = ptr_out(j+1)-1
+         l = int(l2-l1+1)
+         if(l.gt.1)call sort32 ( row_out(l1:l2),l)
+         ! ADD
+      end do
+
+      ! work through removing duplicates
+      kk = 1 ! insert position      
+      do j = 1, n
+         l1 = ptr_out(j)
+         l2 = ptr_out(j+1)-1
+         ptr_out(j) = kk
+         ! sort(row_out(l1:l2)) and permute map(l1:l2) accordingly
+         l = int(l2-l1+1)
+         if(l.eq.0) cycle ! no entries
+
+         ! Move first entry of column forward
+         if(row_out(l1).eq.j) idiag = idiag + 1
+         row_out(kk) = row_out(l1)
+         kk = kk + 1
+         ! Loop over remaining entries
+         do ii = l1+1, l2
+            if(row_out(ii).eq.row_out(kk-1)) then
+              idup = idup + 1
+              cycle
+            end if
+            ! Pull entry forwards
+            if(row_out(ii).eq.j) idiag = idiag + 1
+            row_out(kk) = row_out(ii)
+            kk = kk + 1
+         end do
+      end do
+      ptr_out(n+1) = kk
+   
+   endif
+
+
+   ! Check for missing diagonals in pos def and indef cases
+   ! Note: change this test for complex case
+   if(abs(matrix_type) == SPRAL_MATRIX_REAL_SYM_PSDEF) then
+      do j = 1,n
+         if(ptr_out(j).lt.ptr_out(n+1)) then
+            if(row_out(ptr_out(j)) .ne. j) then
+               flag = ERROR_MISSING_DIAGONAL
+               call print_matrix_flag(context,nout,flag)
+               return
+            end if
+         end if
+      end do
+   end if
+
+   if(present(map)) then
+      ! Append duplicates to map
+      do while(associated(duphead))
+         map(lmap+1) = duphead%dest
+         map(lmap+2) = duphead%src
+         lmap = lmap + 2
+         dup => duphead%next
+         deallocate(duphead)
+         duphead => dup
+      end do
+      if(present(val_out)) then
+         allocate(val_out(ptr_out(n+1)-1), stat=st)
+         if(st.ne.0) goto 100
+         call apply_conversion_map(matrix_type, lmap, map, val_in, &
+            ptr_out(n+1)-1, val_out)
+      endif
+   endif
+
+   if(present(val_out)) then
+      select case(matrix_type)
+      case(SPRAL_MATRIX_REAL_SYM_PSDEF)
+         ! Check for positive diagonal entries
+         do j = 1,n
+            kk = ptr_out(j)
+            ! ps def case - can't reach here unless all entries have diagonal
+            if(real(val_out(kk))<=zero) then
+               flag = ERROR_MISSING_DIAGONAL
+               call print_matrix_flag(context,nout,flag)
+               return
+            end if 
+         end do
+      end select
+   endif
+
+   ! Check whether a warning needs to be raised
+   if(ioor > 0 .or. idup > 0 .or. idiag < n) then
+     if(ioor > 0) flag = WARNING_IDX_OOR
+     if(idup > 0) flag = WARNING_DUP_IDX
+     if(idup > 0 .and. ioor > 0) flag = WARNING_DUP_AND_OOR
+     if(abs(matrix_type) .ne. SPRAL_MATRIX_REAL_SKEW) then
+         if(idiag < n .and. ioor > 0) then
+            flag = WARNING_MISS_DIAG_OORDUP
+         else if(idiag < n .and. idup > 0) then
+            flag = WARNING_MISS_DIAG_OORDUP
+         else if(idiag < n) then
+            flag = WARNING_MISSING_DIAGONAL
+         end if
+      endif
+      call print_matrix_flag(context,nout,flag)
+   end if
+
+   ! Check whether a warning needs to be raised
+   if(ioor > 0 .or. idup > 0 .or. idiag < n) then
+      if(ioor > 0) flag = WARNING_IDX_OOR
+      if(idup > 0) flag = WARNING_DUP_IDX
+      if(idup > 0 .and. ioor > 0) flag = WARNING_DUP_AND_OOR
+      if(abs(matrix_type).eq.SPRAL_MATRIX_REAL_SYM_INDEF .and. &
+            idiag<n .and. ioor>0) then
+         flag = WARNING_MISS_DIAG_OORDUP
+      else if(abs(matrix_type).eq.SPRAL_MATRIX_REAL_SYM_INDEF .and. &
+            idiag<n .and. idup>0) then
+         flag = WARNING_MISS_DIAG_OORDUP
+      else if(abs(matrix_type).eq.SPRAL_MATRIX_REAL_SYM_INDEF.and.idiag<n) then
+         flag = WARNING_MISSING_DIAGONAL
+      end if
+      call print_matrix_flag(context,nout,flag)
+   end if
+
+   if(present(noor)) noor = ioor
+   if(present(ndup)) ndup = idup
+   return
+
+   100 continue
+   if(st /= 0) then
+      flag = ERROR_ALLOCATION
+      call print_matrix_flag(context,nout,flag)
+   end if
+   return
+
+end subroutine convert_coord_to_cscl_ptr64_double
 
 !*************************************************
 
 !
 ! This subroutine will use map to translate the values of val to val_out
 !
-subroutine apply_conversion_map_double(matrix_type, lmap, map, val, ne, val_out)
+subroutine apply_conversion_map_ptr32_double(matrix_type, lmap, map, val, ne, &
+      val_out)
    integer, intent(in) :: matrix_type
    integer, intent(in) :: lmap
    integer, dimension(lmap), intent(in) :: map
@@ -1549,7 +2549,61 @@ subroutine apply_conversion_map_double(matrix_type, lmap, map, val, ne, val_out)
          val_out(j) = val_out(j) + sign(1.0,real(map(i+1)))*val(k)
       end do
    end select
-end subroutine apply_conversion_map_double
+end subroutine apply_conversion_map_ptr32_double
+
+!*************************************************
+
+!
+! This subroutine will use map to translate the values of val to val_out
+!
+subroutine apply_conversion_map_ptr64_double(matrix_type, lmap, map, val, ne, &
+      val_out)
+   integer, intent(in) :: matrix_type
+   integer(long), intent(in) :: lmap
+   integer(long), dimension(lmap), intent(in) :: map
+   real(wp), dimension(*), intent(in) :: val
+   integer(long), intent(in) :: ne
+   real(wp), dimension(ne), intent(out) :: val_out
+
+   integer(long) :: i, j, k
+
+   select case(matrix_type)
+   case default
+      !
+      ! Rectangular, Unsymmetric or Symmetric Matrix
+      !
+
+      ! First set val_out using first part of map
+      do i = 1, ne
+         j = abs(map(i))
+         val_out(i) = val(j)
+      end do
+
+      ! Second examine list of duplicates
+      do i = ne+1, lmap, 2
+         j = abs(map(i))
+         k = abs(map(i+1))
+         val_out(j) = val_out(j) + val(k)
+      end do
+   case(SPRAL_MATRIX_REAL_SKEW)
+      !
+      ! Skew symmetric Matrix
+      !
+
+      ! First set val_out using first part of map
+      do i = 1, ne
+         j = abs(map(i))
+         val_out(i) = sign(1.0,real(map(i)))*val(j)
+      end do
+
+      ! Second examine list of duplicates
+      do i = ne+1, lmap, 2
+         j = abs(map(i))
+         k = abs(map(i+1))
+         val_out(j) = val_out(j) + sign(1.0,real(map(i+1)))*val(k)
+      end do
+   end select
+end subroutine apply_conversion_map_ptr64_double
 
 !*************************************************
 
@@ -1618,7 +2672,7 @@ end subroutine print_matrix_flag
 !
 !   Sort an integer array by heapsort into ascending order.
 !
-subroutine sort( array, n, map, val )
+subroutine sort32( array, n, map, val )
    integer, intent(in) :: n       ! Size of array to be sorted
    integer, dimension(n), intent(inout) :: array ! Array to be sorted
    integer, dimension(n), optional, intent(inout) :: map
@@ -1641,7 +2695,7 @@ subroutine sort( array, n, map, val )
    ! location
    root = n / 2
    do root = root, 1, -1
-      call pushdown(root, n, array, val=val, map=map)
+      call pushdown32(root, n, array, val=val, map=map)
    end do
 
    !
@@ -1663,15 +2717,70 @@ subroutine sort( array, n, map, val )
          map(1) = map(i)
          map(i) = temp
       endif
-      call pushdown(1,i-1, array, val=val, map=map)
+      call pushdown32(1,i-1, array, val=val, map=map)
    end do
-end subroutine sort
+end subroutine sort32
+
+!************************************************************************
+
+!
+!   Sort an integer array by heapsort into ascending order.
+!
+subroutine sort64( array, n, map, val )
+   integer, intent(in) :: n       ! Size of array to be sorted
+   integer, dimension(n), intent(inout) :: array ! Array to be sorted
+   integer(long), dimension(n), optional, intent(inout) :: map
+   real(wp), dimension(n), optional, intent(inout) :: val ! Apply same
+      ! permutation to val
+
+   integer :: i
+   integer :: temp
+   integer(long) :: ltemp
+   real(wp) :: vtemp
+   integer :: root
+
+   if(n.le.1) return ! nothing to do
+
+   !
+   ! Turn array into a heap with largest element on top (as this will be pushed
+   ! on the end of the array in the next phase)
+   !
+   ! We start at the bottom of the heap (i.e. 3 above) and work our way
+   ! upwards ensuring the new "root" of each subtree is in the correct
+   ! location
+   root = n / 2
+   do root = root, 1, -1
+      call pushdown64(root, n, array, val=val, map=map)
+   end do
+
+   !
+   ! Repeatedly take the largest value and swap it to the back of the array
+   ! then repeat above code to sort the array
+   !
+   do i = n, 2, -1
+      ! swap a(i) and head of heap a(1)
+      temp = array(1)
+      array(1) = array(i)
+      array(i) = temp
+      if(present(val)) then
+         vtemp = val(1)
+         val(1) = val(i)
+         val(i) = vtemp
+      endif
+      if(present(map)) then
+         ltemp = map(1)
+         map(1) = map(i)
+         map(i) = ltemp
+      endif
+      call pushdown64(1,i-1, array, val=val, map=map)
+   end do
+end subroutine sort64
 
 !****************************************
 
 ! This subroutine will assume everything below head is a heap and will
 ! push head downwards into the correct location for it
-subroutine pushdown(root, last, array, val, map)
+subroutine pushdown32(root, last, array, val, map)
    integer, intent(in) :: root
    integer, intent(in) :: last
    integer, dimension(last), intent(inout) :: array
@@ -1776,11 +2885,122 @@ subroutine pushdown(root, last, array, val, map)
       array(insert) = root_idx
    endif
 
-end subroutine pushdown
+end subroutine pushdown32
 
 !****************************************
 
-subroutine cleanup_dup(duphead)
+! This subroutine will assume everything below head is a heap and will
+! push head downwards into the correct location for it
+subroutine pushdown64(root, last, array, val, map)
+   integer, intent(in) :: root
+   integer, intent(in) :: last
+   integer, dimension(last), intent(inout) :: array
+   real(wp), dimension(last), optional, intent(inout) :: val
+   integer(long), dimension(last), optional, intent(inout) :: map
+
+   integer :: insert ! current insert position
+   integer :: test ! current position to test
+   integer :: root_idx ! value of array(root) at start of iteration
+   real(wp) :: root_val ! value of val(root) at start of iteration
+   integer(long) :: root_map ! value of map(root) at start of iteration
+
+   ! NB a heap is a (partial) binary tree with the property that given a
+   ! parent and a child, array(child)>=array(parent).
+   ! If we label as
+   !                      1
+   !                    /   \
+   !                   2     3
+   !                  / \   / \
+   !                 4   5 6   7
+   ! Then node i has nodes 2*i and 2*i+1 as its children
+
+   if(present(val) .and. present(map)) then ! both val and map
+      root_idx = array(root)
+      root_val = val(root)
+      root_map = map(root)
+      insert = root
+      test = 2*insert
+      do while(test.le.last)
+         ! First check for largest child branch to descend
+         if(test.ne.last) then
+            if(array(test+1).gt.array(test)) test = test + 1
+         endif
+         if(array(test).le.root_idx) exit ! root gets tested here
+         ! Otherwise, move on to next level down, percolating value up
+         array(insert) = array(test);
+         val(insert) = val(test);
+         map(insert) = map(test)
+         insert = test
+         test = 2*insert
+      end do
+      ! Finally drop root value into location found
+      array(insert) = root_idx
+      val(insert) = root_val
+      map(insert) = root_map
+   elseif(present(val)) then ! val only, not map
+      root_idx = array(root)
+      root_val = val(root)
+      insert = root
+      test = 2*insert
+      do while(test.le.last)
+         ! First check for largest child branch to descend
+         if(test.ne.last) then
+            if(array(test+1).gt.array(test)) test = test + 1
+         endif
+         if(array(test).le.root_idx) exit ! root gets tested here
+         ! Otherwise, move on to next level down, percolating value up
+         array(insert) = array(test)
+         val(insert) = val(test)
+         insert = test
+         test = 2*insert
+      end do
+      ! Finally drop root value into location found
+      array(insert) = root_idx
+      val(insert) = root_val
+   elseif(present(map)) then ! map only, not val
+      root_idx = array(root)
+      root_map = map(root)
+      insert = root
+      test = 2*insert
+      do while(test.le.last)
+         ! First check for largest child branch to descend
+         if(test.ne.last) then
+            if(array(test+1).gt.array(test)) test = test + 1
+         endif
+         if(array(test).le.root_idx) exit ! root gets tested here
+         ! Otherwise, move on to next level down, percolating mapue up
+         array(insert) = array(test)
+         map(insert) = map(test)
+         insert = test
+         test = 2*insert
+      end do
+      ! Finally drop root mapue into location found
+      array(insert) = root_idx
+      map(insert) = root_map
+   else ! neither map nor val
+      root_idx = array(root)
+      insert = root
+      test = 2*insert
+      do while(test.le.last)
+         ! First check for largest child branch to descend
+         if(test.ne.last) then
+            if(array(test+1).gt.array(test)) test = test + 1
+         endif
+         if(array(test).le.root_idx) exit ! root gets tested here
+         ! Otherwise, move on to next level down, percolating value up
+         array(insert) = array(test)
+         insert = test
+         test = 2*insert
+      end do
+      ! Finally drop root value into location found
+      array(insert) = root_idx
+   endif
+
+end subroutine pushdown64
+
+!****************************************
+
+subroutine cleanup_dup32(duphead)
    type(dup_list), pointer :: duphead ! NB: can't have both intent() and pointer
 
    type(dup_list), pointer :: dup
@@ -1790,7 +3010,18 @@ subroutine cleanup_dup(duphead)
       deallocate(duphead)
       duphead => dup
    end do
-end subroutine cleanup_dup
+end subroutine cleanup_dup32
+subroutine cleanup_dup64(duphead)
+   type(dup_list64), pointer :: duphead ! NB: can't be both intent() and pointer
+
+   type(dup_list64), pointer :: dup
+
+   do while(associated(duphead))
+      dup => duphead%next
+      deallocate(duphead)
+      duphead => dup
+   end do
+end subroutine cleanup_dup64
 
 !
 ! Generate the expanded structure for a

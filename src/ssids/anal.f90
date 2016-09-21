@@ -36,19 +36,20 @@ contains
 !
 subroutine expand_pattern(n,nz,ptr,row,aptr,arow)
    integer, intent(in) :: n ! order of system
-   integer, intent(in) :: nz
-   integer, intent(in) :: ptr(n+1)
+   integer(long), intent(in) :: nz
+   integer(long), intent(in) :: ptr(n+1)
    integer, intent(in) :: row(nz)
-   integer, intent(out) :: aptr(n+1)
+   integer(long), intent(out) :: aptr(n+1)
    integer, intent(out) :: arow(2*nz)
 
-   integer :: i,j,k
+   integer :: i,j
+   integer(long) :: kk
 
    ! Set aptr(j) to hold no. nonzeros in column j
    aptr(:) = 0
    do j = 1, n
-      do k = ptr(j), ptr(j+1) - 1
-         i = row(k)
+      do kk = ptr(j), ptr(j+1) - 1
+         i = row(kk)
          aptr(i) = aptr(i) + 1
          if (j.eq.i) cycle
          aptr(j) = aptr(j) + 1
@@ -63,8 +64,8 @@ subroutine expand_pattern(n,nz,ptr,row,aptr,arow)
 
    ! Fill arow and aptr
    do j = 1, n
-      do k = ptr(j), ptr(j+1) - 1
-         i = row(k)
+      do kk = ptr(j), ptr(j+1) - 1
+         i = row(kk)
          arow(aptr(i)) = j
          aptr(i) = aptr(i) - 1
          if (j.eq.i) cycle
@@ -85,22 +86,23 @@ end subroutine expand_pattern
 subroutine expand_matrix(n,nz,ptr,row,val,aptr,arow,aval)
 
    integer, intent(in)   :: n ! order of system
-   integer, intent(in)   :: nz
-   integer, intent(in)   :: ptr(n+1)
+   integer(long), intent(in)   :: nz
+   integer(long), intent(in)   :: ptr(n+1)
    integer, intent(in)   :: row(nz)
    real(wp), intent(in)  :: val(nz)
-   integer, intent(out)  :: aptr(n+1)
+   integer(long), intent(out)  :: aptr(n+1)
    integer, intent(out)  :: arow(2*nz)
    real(wp), intent(out) :: aval(2*nz)
 
-   integer :: i,j,k,ipos,jpos
+   integer :: i,j
+   integer(long) :: kk, ipos, jpos
    real(wp) :: atemp
 
    ! Set aptr(j) to hold no. nonzeros in column j
    aptr(:) = 0
    do j = 1, n
-      do k = ptr(j), ptr(j+1) - 1
-         i = row(k)
+      do kk = ptr(j), ptr(j+1) - 1
+         i = row(kk)
          aptr(i) = aptr(i) + 1
          if (j.eq.i) cycle
          aptr(j) = aptr(j) + 1
@@ -115,9 +117,9 @@ subroutine expand_matrix(n,nz,ptr,row,val,aptr,arow,aval)
 
    ! Fill arow, aval and aptr
    do j = 1, n
-      do k = ptr(j), ptr(j+1) - 1
-         i = row(k)
-         atemp = val(k)
+      do kk = ptr(j), ptr(j+1) - 1
+         i = row(kk)
+         atemp = val(kk)
          ipos = aptr(i)
          arow(ipos) = j
          aval(ipos) = atemp
@@ -722,9 +724,9 @@ end subroutine create_size_order
 subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
       akeep, options, inform)
    integer, intent(in) :: n ! order of system
-   integer, intent(in) :: ptr(n+1) ! col pointers (lower triangle) 
+   integer(long), intent(in) :: ptr(n+1) ! col pointers (lower triangle) 
    integer, intent(in) :: row(ptr(n+1)-1) ! row indices (lower triangle)
-   integer, intent(in) :: ptr2(n+1) ! col pointers (whole matrix)
+   integer(long), intent(in) :: ptr2(n+1) ! col pointers (whole matrix)
    integer, intent(in) :: row2(ptr2(n+1)-1) ! row indices (whole matrix)
    integer, dimension(n), intent(inout) :: order
       !  On exit, holds the pivot order to be used by factorization.
@@ -744,7 +746,7 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
    integer :: blkm, blkn
    integer :: i, j
    integer :: nout, nout1 ! streams for errors and warnings
-   integer :: nz ! ptr(n+1)-1
+   integer(long) :: nz ! ptr(n+1)-1
    integer :: st
 
    context = 'ssids_analyse'
@@ -904,7 +906,7 @@ subroutine build_map(n, ptr, row, perm, invp, nnodes, sptr, rptr, rlist, &
       nptr, nlist, st)
    ! Original matrix A
    integer, intent(in) :: n
-   integer, dimension(n+1), intent(in) :: ptr
+   integer(long), dimension(n+1), intent(in) :: ptr
    integer, dimension(ptr(n+1)-1), intent(in) :: row
    ! Permutation and its inverse (some entries of perm may be negative to
    ! act as flags for 2x2 pivots, so need to use abs(perm))
@@ -917,17 +919,18 @@ subroutine build_map(n, ptr, row, perm, invp, nnodes, sptr, rptr, rlist, &
    integer(long), dimension(nnodes+1), intent(in) :: rptr
    integer, dimension(rptr(nnodes+1)-1), intent(in) :: rlist
    ! Output mapping
-   integer, dimension(nnodes+1), intent(out) :: nptr
-   integer, dimension(2, ptr(n+1)-1), intent(out) :: nlist
+   integer(long), dimension(nnodes+1), intent(out) :: nptr
+   integer(long), dimension(2, ptr(n+1)-1), intent(out) :: nlist
    ! Error check paramter
    integer, intent(out) :: st
 
-   integer :: i, j, k, p
-   integer(long) :: jj
+   integer :: i, j, k
+   integer(long) :: ii, jj, pp
    integer :: blkm
    integer :: col
    integer :: node
-   integer, dimension(:), allocatable :: ptr2, row2, origin
+   integer, dimension(:), allocatable :: ptr2, row2
+   integer(long), dimension(:), allocatable :: origin
    integer, dimension(:), allocatable :: map
 
    allocate(map(n), ptr2(n+3), row2(ptr(n+1)-1), origin(ptr(n+1)-1), stat=st)
@@ -940,8 +943,8 @@ subroutine build_map(n, ptr, row, perm, invp, nnodes, sptr, rptr, rlist, &
    ! Count number of entries in row i in ptr2(i+2). Don't include diagonals.
    ptr2(:) = 0
    do i = 1, n
-      do j = ptr(i), ptr(i+1)-1
-         k = row(j)
+      do jj = ptr(i), ptr(i+1)-1
+         k = row(jj)
          if (k.eq.i) cycle
          ptr2(k+2) = ptr2(k+2) + 1
       end do
@@ -953,11 +956,11 @@ subroutine build_map(n, ptr, row, perm, invp, nnodes, sptr, rptr, rlist, &
    end do
    ! Drop entries into place
    do i = 1, n
-      do j = ptr(i), ptr(i+1)-1
-         k = row(j)
+      do jj = ptr(i), ptr(i+1)-1
+         k = row(jj)
          if (k.eq.i) cycle
          row2(ptr2(k+1)) = i
-         origin(ptr2(k+1)) = j
+         origin(ptr2(k+1)) = jj
          ptr2(k+1) = ptr2(k+1) + 1
       end do
    end do
@@ -965,10 +968,10 @@ subroutine build_map(n, ptr, row, perm, invp, nnodes, sptr, rptr, rlist, &
    !
    ! Build nptr, nlist map
    !
-   p = 1
+   pp = 1
    do node = 1, nnodes
       blkm = int(rptr(node+1) - rptr(node))
-      nptr(node) = p
+      nptr(node) = pp
 
       ! Build map for node indices
       do jj = rptr(node), rptr(node+1)-1
@@ -981,25 +984,25 @@ subroutine build_map(n, ptr, row, perm, invp, nnodes, sptr, rptr, rlist, &
          do i = ptr2(col), ptr2(col+1)-1
             k = abs(perm(row2(i))) ! row of L
             if (k<j) cycle
-            nlist(2,p) = (j-sptr(node))*blkm + map(k)
-            nlist(1,p) = origin(i)
-            p = p + 1
+            nlist(2,pp) = (j-sptr(node))*blkm + map(k)
+            nlist(1,pp) = origin(i)
+            pp = pp + 1
          end do
       end do
 
       ! Build nlist from A-lower
       do j = sptr(node), sptr(node+1)-1
          col = invp(j)
-         do i = ptr(col), ptr(col+1)-1
-            k = abs(perm(row(i))) ! row of L
+         do ii = ptr(col), ptr(col+1)-1
+            k = abs(perm(row(ii))) ! row of L
             if (k<j) cycle
-            nlist(2,p) = (j-sptr(node))*blkm + map(k)
-            nlist(1,p) = i
-            p = p + 1
+            nlist(2,pp) = (j-sptr(node))*blkm + map(k)
+            nlist(1,pp) = ii
+            pp = pp + 1
          end do
       end do
    end do
-   nptr(nnodes+1) = p
+   nptr(nnodes+1) = pp
    
 end subroutine build_map
 

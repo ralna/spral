@@ -195,7 +195,7 @@ subroutine spral_ssids_analyse_coord(n, corder, ne, crow, ccol, cval, cakeep, &
 
    integer(C_INT), value :: n
    type(C_PTR), value :: corder
-   integer(C_INT), value :: ne
+   integer(C_LONG), value :: ne
    type(C_PTR), value :: crow
    type(C_PTR), value :: ccol
    type(C_PTR), value :: cval

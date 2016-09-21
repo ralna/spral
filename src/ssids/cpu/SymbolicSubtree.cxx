@@ -10,7 +10,7 @@ using namespace spral::ssids::cpu;
 extern "C"
 void* spral_ssids_cpu_create_symbolic_subtree(
       int n, int sa, int en, int const* sptr, int const* sparent,
-      long const* rptr, int const* rlist, int const* nptr, int const* nlist,
+      long const* rptr, int const* rlist, long const* nptr, long const* nlist,
       int ncontrib, int const* contrib_idx,
       struct cpu_factor_options const* options) {
    return (void*) new SymbolicSubtree(

@@ -16,7 +16,7 @@ namespace spral { namespace ssids { namespace cpu {
 /** Symbolic factorization of a subtree to be factored on the CPU */
 class SymbolicSubtree {
 public:
-   SymbolicSubtree(int n, int sa, int en, int const* sptr, int const* sparent, long const* rptr, int const* rlist, int const* nptr, int const* nlist, int ncontrib, int const* contrib_idx, struct cpu_factor_options const& options)
+   SymbolicSubtree(int n, int sa, int en, int const* sptr, int const* sparent, long const* rptr, int const* rlist, long const* nptr, long const* nlist, int ncontrib, int const* contrib_idx, struct cpu_factor_options const& options)
    : n(n), nnodes_(en-sa), nodes_(nnodes_+1)
    {
       // Adjust sa to C indexing (en is not used except in nnodes_ init above)

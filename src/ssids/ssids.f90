@@ -49,7 +49,7 @@ module spral_ssids
 
    ! Make interfaces generic.
    interface ssids_analyse
-      module procedure analyse_double
+      module procedure analyse_double, analyse_double_ptr32
    end interface ssids_analyse
 
    interface ssids_analyse_coord
@@ -85,55 +85,86 @@ module spral_ssids
 
 contains
 
-!****************************************************************************
-!
-! Analyse phase.
-! Matrix entered in CSC format (lower triangle).
-! The user optionally inputs the pivot order. If not, metis called. 
-! Structure is then expanded.
-! Supervariables are computed
-! and then the assembly tree is constructed and the data structures
-! required by the factorization are set up.
-! There is no checking of the user's data if check = .false.
-! Otherwise, matrix_util routines are used to clean data.
-!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!> @brief Analyse phase (32-bit wrapper).
+!>
+!> This routine provides a wrapper around analyse_double() that copies the
+!> 32-bit ptr to a 64-bit array before calling the 64-bit version.
+subroutine analyse_double_ptr32(check, n, ptr, row, akeep, options, inform, &
+      order, val, topology)
+   logical, intent(in) :: check
+   integer, intent(in) :: n
+   integer, intent(in) :: ptr(:)
+   integer, intent(in) :: row(:)
+   type(ssids_akeep), intent(inout) :: akeep
+   type(ssids_options), intent(in) :: options
+   type(ssids_inform), intent(out) :: inform
+   integer, optional, intent(inout) :: order(:)
+   real(wp), optional, intent(in) :: val(:)
+   type(numa_region), dimension(:), optional, intent(in) :: topology
+
+   integer(long), dimension(:), allocatable :: ptr64
+
+   ! Copy 32-bit ptr to 64-bit version
+   allocate(ptr64(n+1), stat=inform%stat)
+   if(inform%stat.ne.0) then
+      inform%flag = SSIDS_ERROR_ALLOCATION
+      akeep%inform = inform
+      call inform%print_flag(options, 'ssids_analyse')
+      return
+   end if
+   ptr64(1:n+1) = ptr(1:n+1)
+
+   ! Call 64-bit version of routine
+   call analyse_double(check, n, ptr64, row, akeep, options, inform, &
+      order=order, val=val, topology=topology)
+end subroutine analyse_double_ptr32
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!> @brief Analyse phase.
+!>
+!> Matrix entered in CSC format (lower triangle).
+!> The user optionally inputs the pivot order. If not, metis called. 
+!> Structure is then expanded.
+!> Supervariables are computed
+!> and then the assembly tree is constructed and the data structures
+!> required by the factorization are set up.
+!> There is no checking of the user's data if check = .false.
+!> Otherwise, matrix_util routines are used to clean data.
+!>
+!> See user documentation for full detail on parameters.
+!>
+!> @param check Clean matrix data if true (cleaned version stored in akeep).
+!> @param n Order of A.
+!> @param ptr Column pointers of A.
+!> @param row Row indices of A.
+!> @param akeep Symbolic factorization out.
+!> @param options User-supplied options.
+!> @param inform Stats/information returned to user.
+!> @param order Return ordering to user / allow user to supply order.
+!> @param val Values of A. Only required if matching-based ordering requested.
+!> @param topology Specify machine topology to work with.
 subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
       order, val, topology)
-   logical, intent(in) :: check ! if set to true, matrix data is checked
-     ! and cleaned data stored in akeep
-   integer, intent(in) :: n ! order of A
-   integer, intent(in) :: row(:) ! row indices of lower triangular part
-   integer, intent(in) :: ptr(:) ! col pointers for lower triangular part
-   type(ssids_akeep), intent(inout) :: akeep ! See derived-type declaration
-   type(ssids_options), intent(in) :: options ! See derived-type declaration
-   type(ssids_inform), intent(out) :: inform  ! See derived-type declaration
+   logical, intent(in) :: check
+   integer, intent(in) :: n
+   integer(long), intent(in) :: ptr(:)
+   integer, intent(in) :: row(:)
+   type(ssids_akeep), intent(inout) :: akeep
+   type(ssids_options), intent(in) :: options
+   type(ssids_inform), intent(out) :: inform
    integer, optional, intent(inout) :: order(:)
-     ! Must be present and set on entry if options%ordering = 0.
-     ! If options%ordering = 0 and i is used to index a variable, |order(i)|
-     ! must hold its position in the pivot sequence. If a 1x1 pivot i is
-     ! required, the user must set order(i)>0. If a 2x2 pivot involving
-     ! variables i and j is required, the user must set
-     ! order(i)<0, order(j)<0 and |order(j)| = |order(i)|+1.
-     ! If i is not used to index a variable,
-     ! order(i) must be set to zero.
-     ! On exit, holds the pivot order to be used by factorization.
-     ! Note: this input is consistent with our out-of-core solvers.
-     !!!!! Note: although we allow 2x2 pivots to be input, we actually ignore 
-     ! the signs (we reset signs of order after call to hsl_mc68 or hsl_mc80)
-   real(wp), optional, intent(in) :: val(:) ! must be present
-     ! if a matching-based elimination ordering is required
-     ! (options%ordering 2).
-     ! If present,  val(k) must hold the value of the entry in row(k).
+   real(wp), optional, intent(in) :: val(:)
    type(numa_region), dimension(:), optional, intent(in) :: topology
 
    character(50)  :: context      ! Procedure name (used when printing).
-   integer :: mu_flag       ! error flag for matrix_util routines
-   integer :: nz           ! entries in expanded matrix
+   integer :: mu_flag      ! error flag for matrix_util routines
+   integer(long) :: nz     ! entries in expanded matrix
    integer :: st           ! stat parameter
    integer :: flag         ! error flag for metis
 
    integer, dimension(:), allocatable :: order2
-   integer, dimension(:), allocatable :: ptr2 ! col. pointers for expanded mat
+   integer(long), dimension(:), allocatable :: ptr2 ! col ptrs for expanded mat
    integer, dimension(:), allocatable :: row2 ! row indices for expanded matrix
 
    ! The following are only used for matching-based orderings
@@ -201,8 +232,6 @@ subroutine analyse_double(check, n, ptr, row, akeep, options, inform, &
          return
       end if
    end if
-
-   akeep%ne = ptr(n+1)-1
 
    st = 0
    if (check) then
@@ -424,7 +453,7 @@ end subroutine squash_topology
 subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
       inform, order, val, topology)
    integer, intent(in) :: n ! order of A
-   integer, intent(in) :: ne ! entries to be input by user
+   integer(long), intent(in) :: ne ! entries to be input by user
    integer, intent(in) :: row(:) ! row indices
    integer, intent(in) :: col(:) ! col indices
    type(ssids_akeep), intent(inout) :: akeep ! See derived-type declaration
@@ -444,7 +473,7 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
    type(numa_region), dimension(:), optional, intent(in) :: topology
      ! user specified topology
 
-   integer, dimension(:), allocatable :: ptr2 ! col. pointers for expanded mat
+   integer(long), dimension(:), allocatable :: ptr2 ! col ptrs for expanded mat
    integer, dimension(:), allocatable :: row2 ! row indices for expanded matrix
    integer, dimension(:), allocatable :: order2 ! pivot order
 
@@ -455,8 +484,8 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
    real(wp), dimension(:), allocatable :: val2 ! expanded matrix (val present)
 
    character(50)  :: context      ! Procedure name (used when printing).
-   integer :: mu_flag       ! error flag for matrix_util routines
-   integer :: nz           ! entries in expanded matrix
+   integer :: mu_flag      ! error flag for matrix_util routines
+   integer(long) :: nz     ! entries in expanded matrix
    integer :: flag         ! error flag for metis
    integer :: st           ! stat parameter
    integer :: free_flag
@@ -486,7 +515,6 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
 
    akeep%check = .true.
    akeep%n = n
-   akeep%ne = ne
 
    !
    ! Checking of matrix data
@@ -678,7 +706,8 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
    character(len=50) :: context
 
    integer :: i
-   integer :: n, nz
+   integer :: n
+   integer(long) :: nz
    integer :: st
    ! Solve parameters. Tree is broken up into multiple chunks. Parent-child
    ! relations between chunks are stored in fwd_ptr and fwd (see solve routine
@@ -759,7 +788,6 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
          fkeep%inform = inform
          goto 100
       end if
-      nz = akeep%ne
    end if
 
    ! At this point, either  ptr, row, val   

@@ -33,6 +33,10 @@ module spral_match_order
    ! warning flags
    integer, parameter :: WARNING_SINGULAR      = 1
 
+   interface match_order_metis
+      module procedure match_order_metis_ptr32, match_order_metis_ptr64
+   end interface match_order_metis
+
 contains
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -43,7 +47,7 @@ contains
 ! this reduces amount of copies of matrix required (so slightly
 ! more efficient on memory and does not need to expand supplied matrix)
 !  
-subroutine match_order_metis(n, ptr, row, val, order, scale, &
+subroutine match_order_metis_ptr32(n, ptr, row, val, order, scale, &
       flag, stat)
    integer, intent(in) :: n
    integer, dimension(:), intent(in) :: ptr
@@ -116,7 +120,90 @@ subroutine match_order_metis(n, ptr, row, val, order, scale, &
 
    scale(1:n) = exp( scale(1:n) )
 
-end subroutine match_order_metis
+end subroutine match_order_metis_ptr32
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!
+! On input ptr, row , val hold the ** lower AND upper ** triangular 
+! parts of the matrix.
+! this reduces amount of copies of matrix required (so slightly
+! more efficient on memory and does not need to expand supplied matrix)
+!  
+subroutine match_order_metis_ptr64(n, ptr, row, val, order, scale, &
+      flag, stat)
+   integer, intent(in) :: n
+   integer(long), dimension(:), intent(in) :: ptr
+   integer, dimension(:), intent(in) :: row
+   real(wp), dimension(:), intent(in) :: val
+   integer, dimension(:), intent(out) :: order ! order(i)  holds the position
+      ! of variable i in the elimination order (pivot sequence). 
+   real(wp), dimension(n), intent(out) :: scale ! returns the mc64 symmetric
+      ! scaling
+   integer, intent(out) :: flag ! return value
+   integer, intent(out) :: stat ! stat value returned on failed allocation
+
+   integer, dimension(:), allocatable :: cperm ! used to hold matching
+   integer(long), dimension(:), allocatable :: ptr2 ! column pointers for
+      ! expanded matrix. 
+   integer, dimension(:), allocatable :: row2 ! row indices for expanded matrix 
+   real(wp), dimension(:), allocatable :: val2 ! entries of expanded matrix.
+
+   integer :: i
+   integer(long) :: j, k, ne
+
+   flag = 0
+   stat = 0
+
+   ! check n has valid value
+   if (n < 0) then
+     flag = ERROR_A_N_OOR
+     return
+   end if
+
+   ! just return with no action if n = 0
+   if (n.eq.0) return
+
+   !
+   ! Remove any explicit zeroes and take absolute values
+   !
+   ne = ptr(n+1) - 1
+   allocate(ptr2(n+1), row2(ne), val2(ne), cperm(n), stat=stat)
+   if (stat.ne.0) then
+      flag = ERROR_ALLOCATION
+      return
+   end if
+
+   k = 1
+   do i = 1, n
+      ptr2(i) = k
+      do j = ptr(i), ptr(i+1)-1
+         if (val(j).eq.0.0) cycle
+         row2(k) = row(j)
+         val2(k) = abs(val(j))
+         k = k + 1
+      end do
+   end do
+   ptr2(n+1) = k
+
+   ! Compute matching and scaling
+
+   call mo_scale(n,ptr2,row2,val2,scale,flag,stat,perm=cperm)
+   deallocate(val2, stat=stat)
+
+   if (flag.lt.0) return
+
+   ! Note: row j is matched with column cperm(j)
+   ! write (*,'(a,15i4)') 'cperm',cperm(1:min(15,n))
+   !
+   ! Split matching into 1- and 2-cycles only and then
+   ! compress matrix and order.
+
+   call mo_split(n,row2,ptr2,order,cperm,flag,stat)
+
+   scale(1:n) = exp( scale(1:n) )
+
+end subroutine match_order_metis_ptr64
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 

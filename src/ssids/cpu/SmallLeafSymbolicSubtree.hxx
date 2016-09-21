@@ -71,7 +71,7 @@ public:
     *        nlist[2*i+1] of the relevant supernode (as per nptr) of \f$ L \f$.
     * \param symb Underlying SymbolicSubtree for containing parttree.
     */
-   SmallLeafSymbolicSubtree(int sa, int en, int part_offset, int const* sptr, int const* sparent, long const* rptr, int const* rlist, int const* nptr, int const* nlist, SymbolicSubtree const& symb)
+   SmallLeafSymbolicSubtree(int sa, int en, int part_offset, int const* sptr, int const* sparent, long const* rptr, int const* rlist, long const* nptr, long const* nlist, SymbolicSubtree const& symb)
    : sa_(sa), en_(en), nnodes_(en-sa+1), parent_(sparent[part_offset+en]-1-part_offset),
      nodes_(nnodes_),
      rlist_(new int[rptr[part_offset+en+1]-rptr[part_offset+sa]], std::default_delete<int[]>()),
@@ -119,8 +119,8 @@ protected:
    int parent_; //< Parent of subtree in parttree.
    std::vector<Node> nodes_; //< Nodes of this subtree.
    std::shared_ptr<int> rlist_; //< Row entries of this subtree.
-   int const* nptr_; //< Node mapping into nlist_.
-   int const* nlist_; //< Mapping from \f$ A \f$ to \f$ L \f$.
+   long const* nptr_; //< Node mapping into nlist_.
+   long const* nlist_; //< Mapping from \f$ A \f$ to \f$ L \f$.
    SymbolicSubtree const& symb_; //< Underlying parttree
    
    template <bool posdef, typename T, typename FactorAllocator,

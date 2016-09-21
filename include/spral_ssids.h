@@ -59,7 +59,7 @@ void spral_ssids_analyse(bool check, int n, int *order, const int *ptr,
       const struct spral_ssids_options *options,
       struct spral_ssids_inform *inform);
 /* Perform analysis phase for coordinate data */
-void spral_ssids_analyse_coord(int n, int *order, int ne, const int *row,
+void spral_ssids_analyse_coord(int n, int *order, long ne, const int *row,
       const int *col, const double *val, void **akeep,
       const struct spral_ssids_options *options,
       struct spral_ssids_inform *inform);

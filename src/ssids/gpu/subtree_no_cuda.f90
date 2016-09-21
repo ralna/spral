@@ -45,8 +45,8 @@ function construct_gpu_symbolic_subtree(device, n, sa, en, sptr, sparent, &
    integer, dimension(*), target, intent(in) :: sparent
    integer(long), dimension(*), target, intent(in) :: rptr
    integer, dimension(*), target, intent(in) :: rlist
-   integer, dimension(*), target, intent(in) :: nptr
-   integer, dimension(2,*), target, intent(in) :: nlist
+   integer(long), dimension(*), target, intent(in) :: nptr
+   integer(long), dimension(2,*), target, intent(in) :: nlist
    class(ssids_options), intent(in) :: options
 
    print *, "construct_gpu_symbolic_subtree() called without GPU support."

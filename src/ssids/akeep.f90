@@ -25,7 +25,6 @@ module spral_ssids_akeep
    type ssids_akeep
       logical :: check ! copy of check as input to analyse phase
       integer :: n ! Dimension of matrix
-      integer :: ne ! Set to number of entries input by user.
       integer :: nnodes = -1 ! Number of nodes in assembly tree
 
       ! Subtree partition
@@ -37,11 +36,11 @@ module spral_ssids_akeep
 
       integer(C_INT), dimension(:), allocatable :: invp ! inverse of pivot order
          ! that is passed to factorize phase
-      integer, dimension(:,:), allocatable :: nlist ! map from A to factors
-         ! For nodes i, the entries nlist(1:2, nptr(i):nptr(i+1)-1) define
-         ! a relationship:
+      integer(long), dimension(:,:), allocatable :: nlist ! map from A to
+         ! factors. For nodes i, the entries nlist(1:2, nptr(i):nptr(i+1)-1)
+         ! define a relationship:
          ! nodes(node)%lcol( nlist(2,j) ) = val( nlist(1,j) )
-     integer, dimension(:), allocatable :: nptr ! Entries into nlist for
+     integer(long), dimension(:), allocatable :: nptr ! Entries into nlist for
          ! nodes of the assembly tree. Has length nnodes+1
       integer, dimension(:), allocatable :: rlist ! rlist(rptr(i):rptr(i+1)-1)
          ! contains the row indices for node i of the assembly tree. 
@@ -63,10 +62,10 @@ module spral_ssids_akeep
       ! as used if the user wants to do scaling.
       ! These components are NOT used if check is set to .false.
       ! on call to ssids_analyse.
-      integer, allocatable :: ptr(:) ! column pointers
-      integer, allocatable :: row(:)! row indices
-      integer :: lmap ! used by hsl_mc69
-      integer, allocatable :: map(:) ! used by hsl_mc69
+      integer(long), allocatable :: ptr(:) ! column pointers
+      integer, allocatable :: row(:) ! row indices
+      integer(long) :: lmap ! length of map
+      integer(long), allocatable :: map(:) ! map from old A to cleaned A
 
       ! Scaling from matching-based ordering
       real(wp), dimension(:), allocatable :: scaling

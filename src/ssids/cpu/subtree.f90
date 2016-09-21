@@ -53,8 +53,8 @@ module spral_ssids_cpu_subtree
          integer(C_INT), dimension(*), intent(in) :: sparent
          integer(C_LONG), dimension(*), intent(in) :: rptr
          integer(C_INT), dimension(*), intent(in) :: rlist
-         integer(C_INT), dimension(*), intent(in) :: nptr
-         integer(C_INT), dimension(*), intent(in) :: nlist
+         integer(C_LONG), dimension(*), intent(in) :: nptr
+         integer(C_LONG), dimension(*), intent(in) :: nlist
          integer(C_INT), value :: ncontrib
          integer(C_INT), dimension(*), intent(in) :: contrib_idx
          type(cpu_factor_options), intent(in) :: options
@@ -195,8 +195,8 @@ function construct_cpu_symbolic_subtree(n, sa, en, sptr, sparent, rptr, &
    integer, dimension(*), intent(in) :: sparent
    integer(long), dimension(*), target, intent(in) :: rptr
    integer, dimension(*), target, intent(in) :: rlist
-   integer, dimension(*), target, intent(in) :: nptr
-   integer, dimension(2,*), target, intent(in) :: nlist
+   integer(long), dimension(*), target, intent(in) :: nptr
+   integer(long), dimension(2,*), target, intent(in) :: nlist
    integer, dimension(:), intent(in) :: contrib_idx
    class(ssids_options), intent(in) :: options
 
