@@ -23,7 +23,7 @@ module spral_ssids
    use spral_ssids_akeep, only : ssids_akeep
    use spral_ssids_fkeep, only : ssids_fkeep
    use spral_ssids_inform, only : ssids_inform
-   use spral_rutherford_boeing, only : rb_writer_options, rb_write
+   use spral_rutherford_boeing, only : rb_write_options, rb_write
    implicit none
 
    private
@@ -693,7 +693,7 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
    type(equilib_inform) :: esinform
 
    type(omp_settings) :: user_omp_settings
-   type(rb_writer_options) :: rb_options
+   type(rb_write_options) :: rb_options
    integer :: flag
    
    ! Setup for any printing we may require
@@ -770,11 +770,11 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
    if(allocated(options%rb_dump)) then
       write(options%unit_warning,*) "Dumping matrix to '", options%rb_dump, "'"
       if (akeep%check) then
-         call rb_write(options%rb_dump, 's', n, n, akeep%ptr, akeep%row, val2, &
-            rb_options, flag)
+         call rb_write(options%rb_dump, SPRAL_MATRIX_REAL_SYM_INDEF, &
+            n, n, akeep%ptr, akeep%row, rb_options, flag, val=val2)
       else
-         call rb_write(options%rb_dump, 's', n, n, ptr, row, val, rb_options, &
-            flag)
+         call rb_write(options%rb_dump, SPRAL_MATRIX_REAL_SYM_INDEF, &
+            n, n, ptr, row, rb_options, flag, val=val)
       endif
       if(flag.ne.0) then
          inform%flag = SSIDS_ERROR_UNKNOWN
