@@ -4,6 +4,10 @@
 .. f:module:: spral_random
    :synopsis: Random number generator
 
+=======
+Purpose
+=======
+
 This package generates pseudo-random numbers using a linear congruential
 generator. It should generate the same random numbers using any standards
 compliant Fortran compiler on any architecture so long as the default
@@ -12,12 +16,21 @@ integer and real kinds are the same.
 The seed can optionally be observed or specified by the user. Otherwise
 a default seed of 486502 is used.
 
+Version history
+---------------
+
+2016-09-08 Version 1.1.0
+   Add support for long integers
+
+2014-04-07 Version 1.0.0
+   Initial release
+
 ========
 Routines
 ========
 
 Random Number Generation
-""""""""""""""""""""""""
+------------------------
 
 .. f:function:: random_real(state[, positive])
 
@@ -36,9 +49,10 @@ Random Number Generation
    Return an integer uniformly at random from the interval :math:`[1,n]`.
 
    :p random_state state [inout]: current state of the RNG.
-   :p integer n [in]: largest value in range to be sampled.
+   :p integer(kind) n [in]: largest value in range to be sampled. `kind` may be
+      either default or long integer (return type will match).
    :r random_integer: Sampled value.
-   :rtype random_integer: integer
+   :rtype random_integer: integer(kind)
 
 .. f:function:: random_logical(state)
 
@@ -49,7 +63,7 @@ Random Number Generation
    :rtype random_logical: logical
 
 Get/Set Random Seed
-"""""""""""""""""""
+-------------------
 
 .. f:function:: random_get_seed(state)
    
@@ -92,16 +106,18 @@ The following code:
 Produces the following output::
 
    Some random values
-   Sample Unif(-1,1)       =   0.951878630556
-   Sample Unif(0,1)        =   0.395779648796
-   Sample Unif(1, ..., 20) =                3
-   Sample B(1,0.5)         =                F
+   Sample Unif(-1,1)               =   0.951878630556
+   Sample Unif(0,1)                =   0.395779648796
+   Sample Unif(1, ..., 20)         =                3
+   Sample Unif(1, ..., 20*huge(0)) =      33572664025
+   Sample B(1,0.5)                 =                F
 
    The same random values again
-   Sample Unif(-1,1)       =   0.951878630556
-   Sample Unif(0,1)        =   0.395779648796
-   Sample Unif(1, ..., 20) =                3
-   Sample B(1,0.5)         =                F
+   Sample Unif(-1,1)               =   0.951878630556
+   Sample Unif(0,1)                =   0.395779648796
+   Sample Unif(1, ..., 20)         =                3
+   Sample Unif(1, ..., 20*huge(0)) =      33572664025
+   Sample B(1,0.5)                 =                F
 
 ======
 Method
@@ -130,7 +146,7 @@ user to get and set the current value of :math:`X_n`. The default seed is
 :math:`X_0 = 486502`.
 
 In :f:func:`random_real`
-""""""""""""""""""""""""
+------------------------
 
 Samples from :math:`\mathrm{Unif}(0,1)` are generated as
 
@@ -145,7 +161,7 @@ and samples from :math:`\mathrm{Unif}(-1,1)` are generated as
    1−\frac{\mathrm{real}(2X_n)}{\mathrm{real}(m)}.
 
 In :f:func:`random_integer`
-"""""""""""""""""""""""""""
+---------------------------
 
 Samples from :math:`\mathrm{Unif}(1,\ldots,n)` are generated as
 
@@ -154,7 +170,7 @@ Samples from :math:`\mathrm{Unif}(1,\ldots,n)` are generated as
    \mathrm{int}\left(X_n\frac{\mathrm{real}(n)}{\mathrm{real}(m)}\right) + 1
 
 In :f:func:`random_logical`
-""""""""""""""""""""""""""""
+----------------------------
 
 Returns the value of the Fortran expression
 

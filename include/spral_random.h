@@ -13,6 +13,8 @@ extern "C" {
 double spral_random_real(int *state, bool positive);
 /* Generate a sample from discrete Unif(1,...,n) */
 int spral_random_integer(int *state, int n);
+/* Generate a sample from discrete Unif(1,...,n) */
+long spral_random_long(int *state, long n);
 /* Generate a sample with equal probability of true or false */
 bool spral_random_logical(int *state);
 

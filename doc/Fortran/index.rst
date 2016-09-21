@@ -11,6 +11,7 @@ Introduction
 .. toctree::
    :maxdepth: 1
 
+   conventions
    install
 
 Data Formats
@@ -27,6 +28,7 @@ Packages:
    :maxdepth: 1
 
    lsmr
+   matrix_util
    random
    random_matrix
    rutherford_boeing

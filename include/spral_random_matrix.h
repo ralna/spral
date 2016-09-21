@@ -15,6 +15,10 @@ extern "C" {
 /* Generate an m x n random matrix with nnz non-zero entries */
 int spral_random_matrix_generate(int *state, enum spral_matrix_type matrix_type,
       int m, int n, int nnz, int *ptr, int *row, double *val, int flags);
+/* Generate an m x n random matrix with nnz non-zero entries (nnz,ptr long) */
+int spral_random_matrix_generate_long(int *state,
+      enum spral_matrix_type matrix_type, int m, int n, long nnz, long *ptr,
+      int *row, double *val, int flags);
 
 #ifdef __cplusplus
 } /* extern "C" */

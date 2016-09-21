@@ -55,7 +55,15 @@ Routines
 
 .. c:function:: int spral_random_integer(int *state, int n)
 
-   Return an integer uniformly at random from the interval :math:`[1,n]`.
+   Return an int uniformly at random from the interval :math:`[1,n]`.
+
+   :param state: current state of the RNG.
+   :param n: largest value in range to be sampled.
+   :returns: Sampled value.
+
+.. c:function:: long spral_random_long(int *state, long n)
+
+   Return a long uniformly at random from the interval :math:`[1,n]`.
 
    :param state: current state of the RNG.
    :param n: largest value in range to be sampled.
@@ -79,16 +87,18 @@ The following code:
 Produces the following output::
 
    Some random values
-   Sample Unif(-1,1)       =   0.951878630556
-   Sample Unif(0,1)        =   0.395779648796
-   Sample Unif(1, ..., 20) =                3
-   Sample B(1,0.5)         =            false
+   Sample Unif(-1,1)               =   0.951878630556
+   Sample Unif(0,1)                =   0.395779648796
+   Sample Unif(1, ..., 20)         =                3
+   Sample Unif(1, ..., 20*INT_MAX) =      33572664025
+   Sample B(1,0.5)                 =            false
 
    The same random values again
-   Sample Unif(-1,1)       =   0.951878630556
-   Sample Unif(0,1)        =   0.395779648796
-   Sample Unif(1, ..., 20) =                3
-   Sample B(1,0.5)         =            false
+   Sample Unif(-1,1)               =   0.951878630556
+   Sample Unif(0,1)                =   0.395779648796
+   Sample Unif(1, ..., 20)         =                3
+   Sample Unif(1, ..., 20*INT_MAX) =      33572664025
+   Sample B(1,0.5)                 =            false
 
 ======
 Method

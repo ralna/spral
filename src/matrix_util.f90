@@ -28,7 +28,7 @@ module spral_matrix_util
    real(wp), parameter :: zero = 0.0_wp
 
    ! matrix types : real
-   integer, parameter :: SPRAL_MATRIX_UNSPECIFIED      =  0 ! undefined/unknown
+   integer, parameter :: SPRAL_MATRIX_UNSPECIFIED    =  0 ! undefined/unknown
    integer, parameter :: SPRAL_MATRIX_REAL_RECT      =  1 ! real rectangular
    integer, parameter :: SPRAL_MATRIX_REAL_UNSYM     =  2 ! real unsymmetric
    integer, parameter :: SPRAL_MATRIX_REAL_SYM_PSDEF =  3 ! real symmetric

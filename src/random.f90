@@ -28,6 +28,10 @@ module spral_random
       integer :: x = 486502
    end type random_state
 
+   interface random_integer
+      module procedure random_integer32, random_integer64
+   end interface random_integer
+
 contains
 
    !
@@ -80,12 +84,12 @@ contains
    !  Integer random number in the range [1,n] if n > 1.
    !  otherwise, the value n is returned
    !
-   integer function random_integer(state, n)
+   integer(long) function random_integer64(state, n)
       type(random_state), intent(inout) :: state
-      integer, intent(in) :: n
+      integer(long), intent(in) :: n
 
       if(n.le.0) then
-         random_integer = n
+         random_integer64 = n
          return
       endif
 
@@ -93,9 +97,21 @@ contains
       state%x = int(mod(a*state%x+c, m))
       
       ! Take modulo n for return value
-      random_integer = int( state%x * (real(n,wp)/real(m,wp)) ) + 1
+      random_integer64 = int(state%x * (real(n,wp)/real(m,wp)), long) + 1
 
-   end function random_integer
+   end function random_integer64
+
+   !
+   !  Integer random number in the range [1,n] if n > 1.
+   !  otherwise, the value n is returned
+   !
+   integer function random_integer32(state, n)
+      type(random_state), intent(inout) :: state
+      integer, intent(in) :: n
+
+      ! Just call 64-bit version with type casts
+      random_integer32 = int(random_integer64(state, int(n,long)))
+   end function random_integer32
 
    !
    !  Generate a random logical value
