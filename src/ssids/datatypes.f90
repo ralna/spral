@@ -208,6 +208,19 @@ module spral_ssids_datatypes
          ! node for amalgamation not to be considered.
 
       !
+      ! High level subtree splitting parameters
+      !
+      logical :: ignore_numa = .true. ! If true, treat entire machine as single
+         ! NUMA region for purposes of subtree allocation.
+      logical :: use_gpu = .true. ! Use GPUs if present
+      integer(long) :: min_gpu_work = 10**10_long ! Only assign subtree to GPU
+         ! if it contains at least this many flops
+      real :: max_load_inbalance = 1.5 ! Maximum permissible load inbalance
+         ! when dividing tree into subtrees
+      real :: gpu_perf_coeff = 1.5 ! How many times better is a GPU than a
+         ! single NUMA region's worth of processors
+
+      !
       ! Options used by ssids_factor() [both indef+posdef]
       !
       integer :: scaling = 0 ! controls use of scaling. 
@@ -218,12 +231,25 @@ module spral_ssids_datatypes
          !  >=4: Norm equilibriation algorithm (MC77-like)
 
       !
+      ! CPU-specific
+      !
+      integer(long) :: small_subtree_threshold = 4*10**6 ! Flops below
+         ! which we treat a subtree as small and use the single core kernel
+      integer :: cpu_block_size = 256 ! block size to use for task
+         ! generation on larger nodes
+
+      !
       ! Options used by ssids_factor() with posdef=.false.
       !
       logical :: action = .true. ! used in indefinite case only.
          ! If true and the matrix is found to be
          ! singular, computation continues with a warning.
          ! Otherwise, terminates with error SSIDS_ERROR_SINGULAR.
+      integer :: pivot_method = PIVOT_METHOD_APP_BLOCK
+         ! Type of pivoting to use on CPU side:
+         ! 0 - A posteori pivoting, roll back entire front on pivot failure
+         ! 1 - A posteori pivoting, roll back on block column level for failure
+         ! 2 - Traditional threshold partial pivoting (serial, inefficient!)
       real(wp) :: small = 1e-20_wp ! Minimum pivot size (absolute value of a
          ! pivot must be of size at least small to be accepted).
       real(wp) :: u = 0.01
@@ -237,28 +263,6 @@ module spral_ssids_datatypes
       type(auction_options) :: auction ! Auction algorithm parameters
       real :: min_loadbalance = 0.8 ! Minimum load balance required when
          ! finding level set used for multiple streams
-
-      !
-      ! New and undocumented - FIXME decide whether to document before release
-      !
-      integer(long) :: small_subtree_threshold = 4*10**6 ! Flops below
-         ! which we treat a subtree as small and use the single core kernel
-      integer :: cpu_block_size = 256 ! block size to use for task
-         ! generation on larger nodes
-      integer(long) :: min_gpu_work = 10**10_long ! Only assign subtree to GPU
-         ! if it contains at least this many flops
-      real :: max_load_inbalance = 1.5 ! Maximum permissible load inbalance
-         ! when dividing tree into subtrees
-      real :: gpu_perf_coeff = 1.5 ! How many times better is a GPU than a
-         ! single NUMA region's worth of processors
-      integer :: pivot_method = PIVOT_METHOD_APP_BLOCK
-         ! Type of pivoting to use on CPU side:
-         ! 0 - A posteori pivoting, roll back entire front on pivot failure
-         ! 1 - A posteori pivoting, roll back on block column level for failure
-         ! 2 - Traditional threshold partial pivoting (serial, inefficient!)
-      logical :: ignore_numa = .true. ! If true, treat entire machine as single
-         ! NUMA region for purposes of subtree allocation.
-      logical :: use_gpu = .true. ! Use GPUs if present
       character(len=:), allocatable :: rb_dump ! Filename to dump matrix in
          ! prior to factorization. No dump takes place if not allocated (the
          ! default).

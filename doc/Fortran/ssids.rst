@@ -370,6 +370,16 @@ Derived types
    :f integer nemin [default=32]: supernode amalgamation threshold. Two
       neighbours in the elimination tree are merged if they both involve fewer
       than nemin eliminations. The default is used if nemin<1.
+   :f ignore_numa [default=true]: If true, all CPUs and GPUs are treated as
+      belonging to a single NUMA region.
+   :f use_gpu [default=true]: Use an NVIDIA GPU if present.
+   :f integer(long) min_gpu_work [default=1e10]: Minimum number of flops
+      in subtree before scheduling on GPU.
+   :f real max_load_inbalance [default=1.5]: Maximum permissiable load
+      inbalance for leaf subtree allocations. Values less than 1.0 are treated
+      as 1.0.
+   :f real gpu_perf_coeff [default=1.5]: GPU perfromance coefficient. How many
+      times faster a GPU is than CPU at factoring a subtree.
    :f integer scaling [default=0]: scaling algorithm to use:
 
       +---------------+-------------------------------------------------------+
@@ -396,19 +406,33 @@ Derived types
       |               | Ruiz.                                                 |
       +---------------+-------------------------------------------------------+
 
+   :f integer(long) small_subtree_threshold [default=4e6]: Maximum number of
+      flops in a subtree treated as a single task. See
+      :ref:`method section <ssids_small_leaf>`.
+   :f integer cpu_block_size [default=256]: Block size to use for
+      parallelization of large nodes on CPU resources.
    :f logical action [default=.true.]: continue factorization of singular matrix
       on discovery of zero pivot if true (a warning is issued), or abort if
       false.
+   :f integer pivot_method [default=1]: Pivot method to be used on CPU, one of:
+
+      +-------------+----------------------------------------------------------+
+      | 0           | Aggressive a posteori pivoting. Cholesky-like            |
+      |             | communication pattern is used, but a single failed pivot |
+      |             | requires restart of node factorization and potential     |
+      |             | recalculation of all uneliminated entries.               |
+      +-------------+----------------------------------------------------------+
+      | 1 (default) | Block a posteori pivoting. A failed pivot only requires  |
+      |             | recalculation of entries within its own block column.    |
+      +-------------+----------------------------------------------------------+
+      | 2           | Threshold Partial Pivoting. Not parallel.                |
+      +-------------+----------------------------------------------------------+
+
    :f real small [default=1d-20]: threshold below which an entry is treated as
       equivalent to `0.0`.
    :f real u [default=0.01]: relative pivot threshold used in symmetric
       indefinite case. Values outside of the range :math:`[0,0.5]` are treated
       as the closest value in that range.
-   :f integer(long) small_subtree_threshold: Maximum number of flops in a
-      subtree treated as a single task. See
-      :ref:`method section <ssids_small_leaf>`.
-   :f integer cpu_block_size: Block size to use for parallelization of large
-      nodes on CPU resources.
 
 .. f:type:: ssids_inform
 
@@ -639,6 +663,8 @@ algorithm chooses to employ.
 
 Full details of the algorithms used are provided in [1]_ for GPUs and [2]_ for
 CPUs.
+
+.. _ssids_small_leaf:
 
 Small Leaf Subtrees
 -------------------
