@@ -425,6 +425,7 @@ subroutine test_random()
    integer(long), dimension(:), allocatable :: ptr64
    integer, dimension(:), allocatable :: ptr32, row
    real(wp), dimension(:), allocatable :: val
+   logical :: pattern
 
    ! Matrix data (to read)
    character(len=72) :: title_in
@@ -462,6 +463,7 @@ subroutine test_random()
          m = random_integer(state, maxn)
       nnz = m*n/2 - max(m,n)
       nnz = max(m, n) + random_integer(state, nnz)
+      pattern = random_logical(state)
 
       ! Write status line
       write(*,"(a,i5,a,i12,a,2i5,i8,a,i2,a)", advance="no") &
@@ -482,12 +484,22 @@ subroutine test_random()
       if(random_logical(state)) then
          ! 32-bit ptr
          ptr32(1:n+1) = int( ptr64(1:n+1) )
-         call rb_write(filename, matrix_type, m, n, ptr32, row, write_options, &
-            flag, val=val, title=title, identifier=id)
+         if(pattern) then
+            call rb_write(filename, matrix_type, m, n, ptr32, row, &
+               write_options, flag, title=title, identifier=id)
+         else
+            call rb_write(filename, matrix_type, m, n, ptr32, row, &
+               write_options, flag, val=val, title=title, identifier=id)
+         endif
       else
          ! 64-bit ptr
-         call rb_write(filename, matrix_type, m, n, ptr64, row, write_options, &
-            flag, val=val, title=title, identifier=id)
+         if(pattern) then
+            call rb_write(filename, matrix_type, m, n, ptr64, row, &
+               write_options, flag, title=title, identifier=id)
+         else
+            call rb_write(filename, matrix_type, m, n, ptr64, row, &
+               write_options, flag, val=val, title=title, identifier=id)
+         endif
       endif
       if(flag.ne.0) then
          write(*, "(a,/,a,i3)") "fail", "rb_write() returned", flag
@@ -506,8 +518,9 @@ subroutine test_random()
       endif
       ! Check data
       if(.not.check_data(m,m_in,n,n_in,matrix_type=matrix_type, &
-         matrix_type2=matrix_type_in, title=title,title2=title_in, &
-         id=id,id2=id_in,advance="no")) cycle
+         matrix_type2=matrix_type_in,title=title,title2=title_in, &
+         id=id,id2=id_in,type_code=type_code_in,pattern=pattern, &
+         advance="no")) cycle
       write(*, "(a)", advance="no") "... "
 
       ! Read random matrix
@@ -535,10 +548,23 @@ subroutine test_random()
       endif
 
       ! Check data
-      if(.not.check_data(m,m_in,n,n_in,ptr=ptr64,ptr2=ptr64_in, &
-         row=row,row2=row_in,val=val,val2=val_in,matrix_type=matrix_type, &
-         matrix_type2=matrix_type_in,title=title,title2=title_in, &
-         id=id,id2=id_in)) cycle
+      if(pattern) then
+         if(.not.check_data(m,m_in,n,n_in,ptr=ptr64,ptr2=ptr64_in, &
+            row=row,row2=row_in,matrix_type=matrix_type, &
+            matrix_type2=matrix_type_in,title=title,title2=title_in, &
+            id=id,id2=id_in)) cycle
+         if(allocated(val_in)) then
+            write(*, "(a,/,a)") &
+               "fail", "Read pattern matrix, but val is allocated"
+            errors = errors + 1
+            cycle
+         endif
+      else
+         if(.not.check_data(m,m_in,n,n_in,ptr=ptr64,ptr2=ptr64_in, &
+            row=row,row2=row_in,val=val,val2=val_in,matrix_type=matrix_type, &
+            matrix_type2=matrix_type_in,title=title,title2=title_in, &
+            id=id,id2=id_in)) cycle
+      endif
 
       ! Generate non-default read_options and test those too
       read_options%add_diagonal = random_logical(state)
@@ -569,13 +595,16 @@ end subroutine test_random
 !> Check if two versions of data match. Return .true. if they do, else .false.
 !> Print "pass" or "fail"+details depending on whether it works
 logical function check_data(m, m2, n, n2, ptr, ptr2, row, row2, val, val2, &
-      matrix_type, matrix_type2, title, title2, id, id2, advance)
+      matrix_type, matrix_type2, title, title2, id, id2, pattern, type_code, &
+      advance)
    integer, intent(in) :: m, m2, n, n2, matrix_type, matrix_type2
    integer, optional, intent(in) :: row(:), row2(:)
    integer(long), optional, intent(in) :: ptr(:), ptr2(:)
    real(wp), optional, intent(in) :: val(:), val2(:)
    character(len=72), optional :: title, title2
    character(len=8), optional :: id, id2
+   logical, optional :: pattern
+   character(len=3), optional :: type_code
    character(len=*), optional :: advance
 
    integer :: mtexpect
@@ -642,6 +671,22 @@ logical function check_data(m, m2, n, n2, ptr, ptr2, row, row2, val, val2, &
       errors = errors + 1
       check_data = .false.
       return
+   endif
+   if(present(pattern)) then
+      if(pattern .and. type_code(1:1).ne."p") then
+         write(*, "(a,/,a,a1)") &
+            "fail", "pattern=true but type_code(1:1)=", type_code(1:1)
+         errors = errors + 1
+         check_data = .false.
+         return
+      endif
+      if(.not.pattern .and. type_code(1:1).ne."r") then
+         write(*, "(a,/,a,a1)") &
+            "fail", "pattern=false but type_code(1:1)=", type_code(1:1)
+         errors = errors + 1
+         check_data = .false.
+         return
+      endif
    endif
 
    ! Otherwise ok
