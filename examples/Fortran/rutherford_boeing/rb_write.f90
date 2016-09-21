@@ -32,6 +32,6 @@ program rb_write_example
 
    ! Write matrix
    call rb_write("matrix.rb", SPRAL_MATRIX_REAL_SYM_INDEF, n, n, ptr, row, &
-      val, options, inform, title="SPRAL_RUTHERFORD_BOEING test matrix")
+      options, inform, val=val, title="SPRAL_RUTHERFORD_BOEING test matrix")
 
 end program rb_write_example

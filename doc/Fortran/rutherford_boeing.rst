@@ -95,7 +95,7 @@ Subroutines
       are recommended to use the long integer version to ensure support for
       large matrices.
 
-.. f:subroutine:: rb_write(filename,matrix_type,m,n,ptr,row,val,options,inform[,title,identifier])
+.. f:subroutine:: rb_write(filename,matrix_type,m,n,ptr,row,options,inform[,val,title,identifier])
 
    Writes a CSC format matrix to the specified file in RB format.
 
@@ -110,11 +110,11 @@ Subroutines
       (see :doc:`CSC format <csc_format>`).
    :p integer row(ptr(n+1)-1) [in]: Row indices
       (see :doc:`CSC format <csc_format>`).
-   :p real val(ptr(n+1)-1) [in]: Values of non-zero entries
-      (see :doc:`CSC format <csc_format>`).
    :p rb_write_options options [in]: Options for writing matrix (see
       :f:type:`rb_write_options`).
    :p integer inform [out]: Exit status, see :ref:`table below <exit_status>`.
+   :o real val(ptr(n+1)-1) [in]: Values of non-zero entries
+      (see :doc:`CSC format <csc_format>`).
    :o character(len=*) title [in]: Title field of file. Maximum length is 72
       characters. Defaults to ``"Matrix"`` if not present.
    :o character(len=*) identifier [in]: Identifier field of file. Maximum

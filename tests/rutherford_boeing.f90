@@ -238,28 +238,28 @@ subroutine test_errors()
    write_options = default_write_options
    call get_simple_matrix(m,n,ptr,row,val)
    call rb_write("/does/not/exist/matrix.rb", SPRAL_MATRIX_REAL_SYM_INDEF, m, &
-      n, ptr, row, val, write_options, inform)
+      n, ptr, row, write_options, inform)
    call test_eq(inform, ERROR_BAD_FILE)
 
    ! Invalid matrix_type: complex matrix_type to real call
    write(*,"(a)",advance="no") " * Complex matrix_type on call to real......."
    write_options = default_write_options
    call get_simple_matrix(m,n,ptr,row,val)
-   call rb_write(filename, -1, m, n, ptr, row, val, write_options, inform)
+   call rb_write(filename, -1, m, n, ptr, row, write_options, inform, val=val)
    call test_eq(inform, ERROR_MATRIX_TYPE)
 
    ! Invalid matrix_type: matrix_type = 5 (undefined)
    write(*,"(a)",advance="no") " * matrix_type = 5 (undefined)..............."
    write_options = default_write_options
    call get_simple_matrix(m,n,ptr,row,val)
-   call rb_write(filename, 5, m, n, ptr, row, val, write_options, inform)
+   call rb_write(filename, 5, m, n, ptr, row, write_options, inform)
    call test_eq(inform, ERROR_MATRIX_TYPE)
 
    ! Invalid matrix_type: matrix_type = 7 (out-of-range)
    write(*,"(a)",advance="no") " * matrix_type = 7 (out-of-range)............"
    write_options = default_write_options
    call get_simple_matrix(m,n,ptr,row,val)
-   call rb_write(filename, 7, m, n, ptr, row, val, write_options, inform)
+   call rb_write(filename, 7, m, n, ptr, row, write_options, inform)
    call test_eq(inform, ERROR_MATRIX_TYPE)
 end subroutine test_errors
 
@@ -398,8 +398,8 @@ subroutine write_simple_matrix()
    type(rb_write_options) :: options
 
    call get_simple_matrix(m, n, ptr, row, val)
-   call rb_write(filename, SPRAL_MATRIX_REAL_SYM_INDEF, m, n, ptr, row, val, &
-      options, inform)
+   call rb_write(filename, SPRAL_MATRIX_REAL_SYM_INDEF, m, n, ptr, row, &
+      options, inform, val=val)
    if(inform.ne.0) then
       print *, "write_simple_matrix: rb_write error. Aborting.", inform
       stop -2
@@ -482,12 +482,12 @@ subroutine test_random()
       if(random_logical(state)) then
          ! 32-bit ptr
          ptr32(1:n+1) = int( ptr64(1:n+1) )
-         call rb_write(filename, matrix_type, m, n, ptr32, row, val, &
-            write_options, flag, title=title, identifier=id)
+         call rb_write(filename, matrix_type, m, n, ptr32, row, write_options, &
+            flag, val=val, title=title, identifier=id)
       else
          ! 64-bit ptr
-         call rb_write(filename, matrix_type, m, n, ptr64, row, val, &
-            write_options, flag, title=title, identifier=id)
+         call rb_write(filename, matrix_type, m, n, ptr64, row, write_options, &
+            flag, val=val, title=title, identifier=id)
       endif
       if(flag.ne.0) then
          write(*, "(a,/,a,i3)") "fail", "rb_write() returned", flag

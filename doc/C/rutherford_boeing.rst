@@ -85,7 +85,7 @@ Subroutines
    :param handle: Handle for underlying memory holding matrix. Must be freed
       using :c:func:`spral_rb_free_handle()` after last access to `ptr`, `row`
       and `val`.
-   :param matrix_type: Type of matrix to write
+   :param matrix_type: Type of matrix to read
       (see :c:type:`spral_matrix_type`). Note that RB files do not
       distguish between symmetric positive-definite and symmetric indefinite
       matrices, so the latter matrix type is used for all symmetric matrices.
@@ -135,7 +135,8 @@ Subroutines
    :param ptr[n]: Column pointers (see :doc:`CSC format <csc_format>`).
    :param row[ptr[n]]: Row indices (see :doc:`CSC format <csc_format>`).
    :param val[ptr[n]]: Values of non-zero entries
-      (see :doc:`CSC format <csc_format>`).
+      (see :doc:`CSC format <csc_format>`). If `NULL` a pattern only matrix
+      is written.
    :param options: Options for writing matrix (see
       :c:type:`spral_rb_write_options`).
    :param title: The title field for the file. Maximum length is 72

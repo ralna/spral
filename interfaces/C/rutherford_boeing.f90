@@ -380,11 +380,11 @@ integer(C_INT) function spral_rb_write(filename, matrix_type, m, n, &
    ! Main function call
    if(c_associated(val)) then
       call c_f_pointer(val, fval, shape=(/ fptr(n+1)-1 /))
-      call rb_write(ffilename, matrix_type, m, n, fptr, frow, fval, foptions, &
-         info, title=ftitle, identifier=fidentifier)
+      call rb_write(ffilename, matrix_type, m, n, fptr, frow, foptions, info, &
+         val=fval, title=ftitle, identifier=fidentifier)
    else
-      call rb_write(ffilename, matrix_type, m, n, fptr, frow, fval, foptions, &
-         info, title=ftitle, identifier=fidentifier)
+      call rb_write(ffilename, matrix_type, m, n, fptr, frow, foptions, info, &
+         title=ftitle, identifier=fidentifier)
    endif
 
    ! Free any intermediate memory
@@ -396,6 +396,78 @@ integer(C_INT) function spral_rb_write(filename, matrix_type, m, n, &
    ! Set return code
    spral_rb_write = info
 end function spral_rb_write
+
+integer(C_INT) function spral_rb_write_ptr32(filename, matrix_type, m, n, &
+      ptr, row, val, options, title, identifier) bind(C)
+   use spral_rutherford_boeing_ciface
+   implicit none
+
+   type(C_PTR), value :: filename
+   integer(C_INT), value :: matrix_type
+   integer(C_INT), value :: m
+   integer(C_INT), value :: n
+   integer(C_INT), dimension(n+1), target, intent(in) :: ptr
+   integer(C_INT), dimension(ptr(n+1)), target, intent(in) :: row
+   type(C_PTR), value :: val
+   type(spral_rb_write_options), intent(in) :: options
+   type(C_PTR), value :: title
+   type(C_PTR), value :: identifier
+
+   integer :: info, st
+   character(len=:), allocatable :: ffilename, ftitle, fidentifier
+   type(rb_write_options) :: foptions
+   logical :: cindexed
+   integer(C_INT), dimension(:), pointer :: fptr
+   integer(C_INT), dimension(:), pointer :: frow
+   real(C_DOUBLE), dimension(:), pointer :: fval
+
+   ! Convert C strings to Fortran strings
+   call convert_string_c2f(filename, ffilename)
+   if(c_associated(title)) then
+      call convert_string_c2f(title, ftitle)
+   else
+      ftitle = "Matrix"
+   endif
+   if(c_associated(identifier)) then
+      call convert_string_c2f(identifier, fidentifier)
+   else
+      fidentifier = "0"
+   endif
+   ! Copy options
+   call copy_options_in(options, foptions, cindexed)
+   ! Sort out arrays
+   if(cindexed) then
+      allocate(fptr(n+1), frow(ptr(n+1)), stat=st)
+      if(st.ne.0) then
+         spral_rb_write_ptr32 = ERROR_ALLOCATION
+         return
+      endif
+      fptr(1:n+1) = ptr(1:n+1) + 1
+      frow(1:fptr(n+1)-1) = row(1:fptr(n+1)-1) + 1
+   else
+      fptr(1:n+1) => ptr(1:n+1)
+      frow(1:ptr(n+1)-1) => row(1:ptr(n+1)-1)
+   endif
+
+   ! Main function call
+   if(c_associated(val)) then
+      call c_f_pointer(val, fval, shape=(/ fptr(n+1)-1 /))
+      call rb_write(ffilename, matrix_type, m, n, fptr, frow, foptions, info, &
+         val=fval, title=ftitle, identifier=fidentifier)
+   else
+      call rb_write(ffilename, matrix_type, m, n, fptr, frow, foptions, info, &
+         title=ftitle, identifier=fidentifier)
+   endif
+
+   ! Free any intermediate memory
+   if(cindexed) then
+      deallocate(fptr)
+      deallocate(frow)
+   endif
+
+   ! Set return code
+   spral_rb_write_ptr32 = info
+end function spral_rb_write_ptr32
 
 subroutine spral_rb_free_handle(handle) bind(C)
    use spral_rutherford_boeing_ciface

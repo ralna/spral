@@ -573,16 +573,16 @@ contains
    !> @param options User-specifyable options.
    !> @param info Status on output, 0 for success.
    subroutine rb_write_double_int32(filename, matrix_type, m, n, ptr, row, &
-         val, options, inform, title, identifier)
+         options, inform, val, title, identifier)
       character(len=*), intent(in) :: filename
       integer, intent(in) :: matrix_type
       integer, intent(in) :: m
       integer, intent(in) :: n
       integer, dimension(n+1), intent(in) :: ptr
       integer, dimension(ptr(n+1)-1), intent(in) :: row
-      real(wp), dimension(ptr(n+1)-1), intent(in) :: val
       type(rb_write_options), intent(in) :: options
       integer, intent(out) :: inform
+      real(wp), dimension(ptr(n+1)-1), optional, intent(in) :: val
       character(len=*), optional, intent(in) :: title
       character(len=*), optional, intent(in) :: identifier
 
@@ -597,8 +597,8 @@ contains
       endif
       ptr64(:) = ptr(:)
 
-      call rb_write_double_int64(filename, matrix_type, m, n, ptr64, row, val, &
-         options, inform, title=title, identifier=identifier)
+      call rb_write_double_int64(filename, matrix_type, m, n, ptr64, row, &
+         options, inform, val=val, title=title, identifier=identifier)
    end subroutine rb_write_double_int32
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -617,16 +617,16 @@ contains
    !> @param title Title to use in file, defaults to "Matrix"
    !> @param id Matrix name/identifyer to use in file, defaults to "0"
    subroutine rb_write_double_int64(filename, matrix_type, m, n, ptr, row, &
-         val, options, inform, title, identifier)
+         options, inform, val, title, identifier)
       character(len=*), intent(in) :: filename
       integer, intent(in) :: matrix_type
       integer, intent(in) :: m
       integer, intent(in) :: n
       integer(long), dimension(n+1), intent(in) :: ptr
       integer, dimension(ptr(n+1)-1), intent(in) :: row
-      real(wp), dimension(ptr(n+1)-1), intent(in) :: val
       type(rb_write_options), intent(in) :: options
       integer, intent(out) :: inform
+      real(wp), dimension(ptr(n+1)-1), optional, intent(in) :: val
       character(len=*), optional, intent(in) :: title
       character(len=*), optional, intent(in) :: identifier
 
@@ -675,11 +675,19 @@ contains
       read(options%val_format(2:i-1), *) val_per_line
       ptr_lines = (size(ptr)-1) / ptr_per_line + 1
       row_lines = (size(row)-1) / row_per_line + 1
-      val_lines = (size(val)-1) / val_per_line + 1
+      if(present(val)) then
+         val_lines = (size(val)-1) / val_per_line + 1
+      else
+         val_lines = 0
+      endif
       total_lines = ptr_lines + row_lines + val_lines
 
       ! Determine type string
-      type(1:1) = 'r' ! real
+      if(present(val)) then
+         type(1:1) = 'r' ! real
+      else
+         type(1:1) = 'p' ! pattern
+      endif
       type(2:2) = matrix_type_to_sym(matrix_type)
       type(3:3) = 'a' ! assembled
 
@@ -699,7 +707,8 @@ contains
       ! Write matrix
       write(iunit, ptr_format) ptr(:)
       write(iunit, row_format) row(:)
-      write(iunit, options%val_format) val(:)
+      if(present(val)) &
+         write(iunit, options%val_format) val(:)
 
       ! Close file
       close(iunit)
