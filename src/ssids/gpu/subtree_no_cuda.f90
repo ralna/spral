@@ -56,7 +56,7 @@ function construct_gpu_symbolic_subtree(device, n, sa, en, sptr, sparent, &
    ! Dummy operations to prevent warnings
    nullify(this)
    this%dummy = device+n+sa+en+sptr(1)+sparent(1)+rptr(1)+rlist(1)+nptr(1)+&
-      nlist(1,1)+options%cpu_small_subtree_threshold
+      nlist(1,1)+options%print_level
 end function construct_gpu_symbolic_subtree
 
 subroutine symbolic_cleanup(this)

@@ -229,14 +229,6 @@ module spral_ssids_datatypes
       real(wp) :: u = 0.01
 
       !
-      ! Options used by ssids_factor() and ssids_solve()
-      !
-      logical :: use_gpu_factor = .true. ! Use GPU for factor phase if true
-         ! or CPU if false
-      logical :: use_gpu_solve = .true. ! Use GPU for solve phase if true
-         ! or CPU if false
-
-      !
       ! Undocumented
       !
       integer :: nstream = 1 ! Number of streams to use
@@ -249,9 +241,9 @@ module spral_ssids_datatypes
       !
       ! New and undocumented - FIXME decide whether to document before release
       !
-      integer(long) :: cpu_small_subtree_threshold = 4*10**6 ! Flops below
+      integer(long) :: small_subtree_threshold = 4*10**6 ! Flops below
          ! which we treat a subtree as small and use the single core kernel
-      integer :: cpu_task_block_size = 256 ! block size to use for task
+      integer :: block_size = 256 ! block size to use for task
          ! generation on larger nodes
       integer(long) :: min_gpu_work = 10**10_long ! Only assign subtree to GPU
          ! if it contains at least this many flops

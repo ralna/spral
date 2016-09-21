@@ -51,8 +51,6 @@ program run_prob
    type(numa_region), dimension(:), allocatable :: topology
    character(len=:), allocatable :: filename
 
-   options%use_gpu_solve = .true.
-
    call proc_args(filename, options, force_psdef, pos_def, nrhs, time_scaling, &
          flat_topology)
    if ( nrhs < 1 ) stop
@@ -304,14 +302,14 @@ contains
          case("--small-subtree-threshold")
             call get_command_argument(argnum, argval)
             argnum = argnum + 1
-            read( argval, * ) options%cpu_small_subtree_threshold
-            print *, 'CPU Small subtree treshold = ', &
-               options%cpu_small_subtree_threshold
+            read( argval, * ) options%small_subtree_threshold
+            print *, 'Small subtree treshold = ', &
+               options%small_subtree_threshold
          case("--nb")
             call get_command_argument(argnum, argval)
             argnum = argnum + 1
-            read( argval, * ) options%cpu_task_block_size
-            print *, 'CPU block size = ', options%cpu_task_block_size
+            read( argval, * ) options%block_size
+            print *, 'CPU block size = ', options%block_size
          case default
             if(seen_fname) then
                print *, "Unrecognised command line argument: ", argval
