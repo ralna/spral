@@ -57,7 +57,7 @@ module spral_ssids
    end interface ssids_analyse_coord
 
    interface ssids_factor
-      module procedure ssids_factor_double
+      module procedure ssids_factor_ptr32_double, ssids_factor_ptr64_double
    end interface ssids_factor
 
    interface ssids_solve
@@ -677,13 +677,47 @@ subroutine ssids_analyse_coord_double(n, ne, row, col, akeep, options, &
     
 end subroutine ssids_analyse_coord_double
 
+!****************************************************************************
+!
+! Factorize phase - 32-bit wrapper around 64-bit version
+! Note ptr is non-optional
+!
+subroutine ssids_factor_ptr32_double(posdef, val, akeep, fkeep, options, &
+      inform, scale, ptr, row)
+   logical, intent(in) :: posdef 
+   real(wp), dimension(*), target, intent(in) :: val
+   type(ssids_akeep), intent(in) :: akeep
+   type(ssids_fkeep), intent(inout) :: fkeep
+   type(ssids_options), intent(in) :: options
+   type(ssids_inform), intent(out) :: inform
+   real(wp), dimension(:), optional, intent(inout) :: scale
+   integer, dimension(akeep%n+1), intent(in) :: ptr
+   integer, dimension(*), optional, intent(in) :: row 
+
+   integer(long), dimension(:), allocatable :: ptr64
+
+   ! Copy from 32-bit to 64-bit ptr
+   allocate(ptr64(akeep%n+1), stat=inform%stat)
+   if(inform%stat.ne.0) then
+      inform%flag = SSIDS_ERROR_ALLOCATION
+      call inform%print_flag(options, 'ssids_factor')
+      fkeep%inform = inform
+      return
+   endif
+   ptr64(1:akeep%n+1) = ptr(1:akeep%n+1)
+
+   ! Call 64-bit routine
+   call ssids_factor_ptr64_double(posdef, val, akeep, fkeep, options, &
+      inform, scale=scale, ptr=ptr64, row=row)
+
+end subroutine ssids_factor_ptr32_double
 
 !****************************************************************************
 !
 ! Factorize phase
 !
-subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
-      scale, ptr, row)
+subroutine ssids_factor_ptr64_double(posdef, val, akeep, fkeep, options, &
+      inform, scale, ptr, row)
    logical, intent(in) :: posdef 
    real(wp), dimension(*), target, intent(in) :: val ! A values (lwr triangle)
    type(ssids_akeep), intent(in) :: akeep
@@ -695,7 +729,7 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
       ! options%scaling <= 0
       ! Note: Has to be assumed shape, not assumed size or fixed size to work
       ! around funny compiler bug
-   integer, dimension(akeep%n+1), optional, intent(in) :: ptr ! must be
+   integer(long), dimension(akeep%n+1), optional, intent(in) :: ptr ! must be
       ! present if on call to analyse phase, check = .false.. Must be unchanged 
       ! since that call.
    integer, dimension(*), optional, intent(in) :: row ! must be present if
@@ -1021,7 +1055,7 @@ subroutine ssids_factor_double(posdef, val, akeep, fkeep, options, inform, &
    inform%stat = st
    goto 100
 
-end subroutine ssids_factor_double
+end subroutine ssids_factor_ptr64_double
 
 !*************************************************************************
 !
