@@ -2,13 +2,14 @@
 # SPRAL: The Sparse Parallel Robust Algorithm Library
 An open-source (BSD) library for sparse linear algebra and associated
 algorithms. It is primarily developed by the Numerical Analysis group at
-STFC Rutherford Appleton Laboratory [hsl@stfc.ac.uk](mailto:hsl@stfc.ac.uk).
+STFC Rutherford Appleton Laboratory ([hsl@stfc.ac.uk](mailto:hsl@stfc.ac.uk)).
 
 ## Packages
 
 - **LSMR**          - Solves sparse least squares problems using LSMR algorithm.
 - **RANDOM**        - Pseudo-random number generator.
 - **RANDOM_MATRIX** - Generates random matrices for testing purposes.
+- **RUTHERFORD_BOEING** - Read and write matrices in Rutherford-Boeing format.
 - **SCALING**       - Calculates matrix scalings through a variety of algorithms
 - **SSIDS**         - Sparse Symmetric Indefinite Direct Solver. Requires an
                       NVIDIA GPU!
