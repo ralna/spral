@@ -15,8 +15,7 @@ STFC Rutherford Appleton Laboratory ([hsl@stfc.ac.uk](mailto:hsl@stfc.ac.uk)).
 - **RANDOM_MATRIX** - Generates random matrices for testing purposes.
 - **RUTHERFORD_BOEING** - Read and write matrices in Rutherford-Boeing format.
 - **SCALING**       - Calculates matrix scalings through a variety of algorithms
-- **SSIDS**         - Sparse Symmetric Indefinite Direct Solver. Requires an
-                      NVIDIA GPU!
+- **SSIDS**         - Sparse Symmetric Indefinite Direct Solver.
 - **SSMFE**         - Sparse Symmetric Matrix-Free Eigensolver. Uses
                       Jacobi-conjugate preconditioned gradients method.
 
@@ -27,6 +26,7 @@ our proprietary licenced [HSL Library](http://www.hsl.rl.ac.uk/)
 ## Installation
 We use a standard autotools-based build:
 ```bash
+./autogen.sh # If compiling from fresh git checkout
 ./configure
 make
 make install
