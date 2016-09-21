@@ -548,6 +548,10 @@ Derived types
    |             | matching-based ordering ignored                             |
    |             | (consider setting options%scaling=3).                       |
    +-------------+-------------------------------------------------------------+
+   | +50         | OpenMP processor binding is disabled. Consider setting      |
+   |             | the environment variable OMP_PROC_BIND=true (this may       |
+   |             | affect performance on NUMA systems).                        |
+   +-------------+-------------------------------------------------------------+
 
 .. _ssids_example:
 
