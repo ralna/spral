@@ -307,8 +307,8 @@ int ldlt_test(T u, T small, bool delays, bool singular, bool dblk_singular, int 
    options.small = small;
    options.u = u;
    options.print_level = 0;
-   options.cpu_small_subtree_threshold = 100*100*100;
-   options.cpu_task_block_size = 256;
+   options.small_subtree_threshold = 100*100*100;
+   options.cpu_block_size = 256;
    options.pivot_method = (aggressive) ? PivotMethod::app_aggressive
                                        : PivotMethod::app_block;
 

@@ -21,8 +21,8 @@ struct cpu_factor_options {
    double small;
    double u;
    double multiplier;
-   long cpu_small_subtree_threshold;
-   int cpu_task_block_size;
+   long small_subtree_threshold;
+   int cpu_block_size;
    PivotMethod pivot_method;
 };
 

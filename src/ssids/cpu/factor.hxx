@@ -131,7 +131,7 @@ void factor_node_posdef(
    /* Perform factorization */
    int flag;
    cholesky_factor(
-         m, n, lcol, ldl, beta, contrib, m-n, options.cpu_task_block_size, &flag
+         m, n, lcol, ldl, beta, contrib, m-n, options.cpu_block_size, &flag
          );
    if(flag!=-1) {
       node.nelim = flag+1;

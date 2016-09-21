@@ -60,7 +60,7 @@ public:
          for(int k=0; k<nodes_[ni].ncol; ++k)
             flops[ni] += (nodes_[ni].nrow - k)*(nodes_[ni].nrow - k);
          if(nodes_[ni].contrib.size() > 0) // not a leaf!
-            flops[ni] += options.cpu_small_subtree_threshold;
+            flops[ni] += options.small_subtree_threshold;
          int parent = std::min(nodes_[ni].parent, nnodes_);
          flops[parent] += flops[ni];
       }
@@ -69,7 +69,7 @@ public:
          if(nodes_[ni].first_child) { ++ni; continue; } // Not a leaf
          int last = ni;
          for(int current=ni; current<nnodes_; current=nodes_[current].parent) {
-            if(flops[current] >= options.cpu_small_subtree_threshold) break;
+            if(flops[current] >= options.small_subtree_threshold) break;
             last = current;
          }
          if(last==ni) { ++ni; continue; } // No point for a single node

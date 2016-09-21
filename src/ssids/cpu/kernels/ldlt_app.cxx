@@ -2428,7 +2428,7 @@ int ldlt_app_factor(int m, int n, int* perm, T* a, int lda, T* d, T beta, T* upd
    // has roughly blksz**2 entries
    // FIXME: Decide if this reshape is actually useful, given it will generate
    //        a lot more update tasks instead?
-   int outer_block_size = options.cpu_task_block_size;
+   int outer_block_size = options.cpu_block_size;
    /*if(n < outer_block_size) {
        outer_block_size = int((long(outer_block_size)*outer_block_size) / n);
    }*/
