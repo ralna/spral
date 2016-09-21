@@ -25,7 +25,7 @@ module spral_ssids_cpu_iface
       real(C_DOUBLE) :: u
       real(C_DOUBLE) :: multiplier
       integer(C_LONG) :: small_subtree_threshold
-      integer(C_INT) :: block_size
+      integer(C_INT) :: cpu_block_size
       integer(C_INT) :: pivot_method
    end type cpu_factor_options
 
@@ -60,7 +60,7 @@ subroutine cpu_copy_options_in(foptions, coptions)
    coptions%u              = foptions%u
    coptions%multiplier     = foptions%multiplier
    coptions%small_subtree_threshold = foptions%small_subtree_threshold
-   coptions%block_size     = foptions%block_size
+   coptions%cpu_block_size = foptions%cpu_block_size
    coptions%pivot_method   = foptions%pivot_method
 end subroutine cpu_copy_options_in
 

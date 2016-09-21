@@ -407,8 +407,8 @@ Derived types
    :f integer(long) small_subtree_threshold: Maximum number of flops in a
       subtree treated as a single task. See
       :ref:`method section <ssids_small_leaf>`.
-   :f integer block_size: Block size to use for parallelization of large nodes
-      on CPU resources.
+   :f integer cpu_block_size: Block size to use for parallelization of large
+      nodes on CPU resources.
 
 .. f:type:: ssids_inform
 

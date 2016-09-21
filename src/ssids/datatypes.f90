@@ -243,7 +243,7 @@ module spral_ssids_datatypes
       !
       integer(long) :: small_subtree_threshold = 4*10**6 ! Flops below
          ! which we treat a subtree as small and use the single core kernel
-      integer :: block_size = 256 ! block size to use for task
+      integer :: cpu_block_size = 256 ! block size to use for task
          ! generation on larger nodes
       integer(long) :: min_gpu_work = 10**10_long ! Only assign subtree to GPU
          ! if it contains at least this many flops

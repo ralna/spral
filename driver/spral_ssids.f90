@@ -305,11 +305,11 @@ contains
             read( argval, * ) options%small_subtree_threshold
             print *, 'Small subtree treshold = ', &
                options%small_subtree_threshold
-         case("--nb")
+         case("--cpu-block-size")
             call get_command_argument(argnum, argval)
             argnum = argnum + 1
-            read( argval, * ) options%block_size
-            print *, 'CPU block size = ', options%block_size
+            read( argval, * ) options%cpu_block_size
+            print *, 'CPU block size = ', options%cpu_block_size
          case default
             if(seen_fname) then
                print *, "Unrecognised command line argument: ", argval
