@@ -57,6 +57,11 @@ module spral_metis_wrapper
    integer, parameter :: ERROR_N_OOR = -2
    integer, parameter :: ERROR_NE_OOR = -3
    integer, parameter :: ERROR_UNKNOWN = -999
+
+   interface metis_order
+      module procedure metis_order32, metis_order64
+   end interface
+
 contains
 
 !
