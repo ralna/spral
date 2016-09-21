@@ -57,10 +57,6 @@ module spral_rutherford_boeing
       character(len=20) :: val_format = "(3e24.16)"
    end type rb_write_options
 
-   type rb_writer_options
-      character(len=20) :: val_format = "(3e24.16)"
-   end type rb_writer_options
-
    interface rb_peek
       module procedure rb_peek_file, rb_peek_unit
    end interface rb_peek
