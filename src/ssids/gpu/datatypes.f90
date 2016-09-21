@@ -30,11 +30,11 @@ module spral_ssids_gpu_datatypes
 
 
    type, bind(C) :: load_nodes_type
-      integer(C_INT) :: nnz   ! Number of entries to map
+      integer(C_LONG) :: nnz   ! Number of entries to map
       integer(C_INT) :: lda   ! Leading dimension of A
       integer(C_INT) :: ldl   ! Leading dimension of L
       type(C_PTR) :: lcol     ! Pointer to non-delay part of L
-      integer(C_INT) :: offn  ! Offset into nlist
+      integer(C_LONG) :: offn  ! Offset into nlist
       integer(C_LONG) :: offr ! Offset into rlist
    end type load_nodes_type
 

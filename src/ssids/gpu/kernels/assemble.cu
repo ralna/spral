@@ -18,11 +18,11 @@
 namespace /* anon */ {
 
 struct load_nodes_type {
-   int nnz;    // Number of entries to map
+   long nnz;    // Number of entries to map
    int lda;    // Leading dimension of A
    int ldl;    // Leading dimension of L
    double *lcol; // Pointer to non-delay part of L
-   int offn;   // Offset into nlist
+   long offn;   // Offset into nlist
    long offr;  // Offset into rlist
 };
 
@@ -36,22 +36,22 @@ struct load_nodes_type {
 __global__ void
 cu_load_nodes(
       const struct load_nodes_type *lndata,
-      const int* nlist,
+      const long* nlist,
       const double* aval) {
 
    lndata += blockIdx.x;
-   int nnz = lndata->nnz;
+   long nnz = lndata->nnz;
    int lda = lndata->lda;
    int ldl = lndata->ldl;
 
    nlist += 2*lndata->offn;
    double *lval = lndata->lcol;
   
-   for ( int i = threadIdx.x; i < nnz; i += blockDim.x ) {
+   for ( long i = threadIdx.x; i < nnz; i += blockDim.x ) {
       // Note: nlist is 1-indexed, not 0 indexed, so we have to adjust
       int r = (nlist[2*i+1] - 1) % lda; // row index
       int c = (nlist[2*i+1] - 1) / lda; // col index
-      int sidx = nlist[2*i+0] - 1; // source index
+      long sidx = nlist[2*i+0] - 1; // source index
       lval[r + c*ldl] = aval[sidx];
    }
 }
@@ -67,7 +67,7 @@ cu_load_nodes(
 __global__ void
 cu_load_nodes_sc(
       const struct load_nodes_type *lndata,
-      const int* nlist,
+      const long* nlist,
       const int* rlist,
       const double* scale,
       const double* aval) {
@@ -85,7 +85,7 @@ cu_load_nodes_sc(
       // Note: nlist and rlist are 1-indexed, not 0 indexed, so we adjust
       int r = (nlist[2*i+1] - 1) % lda; // row index
       int c = (nlist[2*i+1] - 1) / lda; // col index
-      int sidx = nlist[2*i+0] - 1; // source index
+      long sidx = nlist[2*i+0] - 1; // source index
       double rs = scale[rlist[r] - 1]; // row scaling
       double cs = scale[rlist[c] - 1]; // col scaling
       lval[r + c*ldl] = rs * aval[sidx] * cs;
@@ -322,7 +322,7 @@ void spral_ssids_assemble(const cudaStream_t *stream, int nblk, int blkoffset,
 
 // Note: modified value lval is passed in via pointer in lndata, not as argument
 void spral_ssids_load_nodes( const cudaStream_t *stream, int nblocks,
-      const struct load_nodes_type *lndata, const int* list,
+      const struct load_nodes_type *lndata, const long* list,
       const double* mval ) {
   for ( int i = 0; i < nblocks; i += MAX_CUDA_BLOCKS ) {
     int nb = min(MAX_CUDA_BLOCKS, nblocks - i);
@@ -333,7 +333,7 @@ void spral_ssids_load_nodes( const cudaStream_t *stream, int nblocks,
 
 // Note: modified value lval is passed in via pointer in lndata, not as argument
 void spral_ssids_load_nodes_sc( const cudaStream_t *stream, int nblocks,
-      const struct load_nodes_type *lndata, const int* list, const int* rlist,
+      const struct load_nodes_type *lndata, const long* list, const int* rlist,
       const double* scale, const double* mval ) {
   for ( int i = 0; i < nblocks; i += MAX_CUDA_BLOCKS ) {
     int nb = min(MAX_CUDA_BLOCKS, nblocks - i);

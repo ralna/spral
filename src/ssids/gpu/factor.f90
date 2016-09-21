@@ -48,7 +48,7 @@ subroutine parfactor(pos_def, child_ptr, child_list, n, nptr, gpu_nlist,      &
    integer, dimension(*), intent(in) :: child_ptr
    integer, dimension(*), intent(in) :: child_list
    integer, intent(in) :: n
-   integer, dimension(*), intent(in) :: nptr
+   integer(long), dimension(*), intent(in) :: nptr
    type(C_PTR), intent(in) :: gpu_nlist
    type(C_PTR), intent(in) :: ptr_val
    ! Note: gfortran-4.3 bug requires explicit size of nodes array
@@ -243,7 +243,7 @@ subroutine subtree_factor_gpu(stream, pos_def, child_ptr, child_list, n,   &
    integer, dimension(*), intent(in) :: child_ptr
    integer, dimension(*), intent(in) :: child_list
    integer, intent(in) :: n
-   integer, dimension(*), intent(in) :: nptr
+   integer(long), dimension(*), intent(in) :: nptr
    type(C_PTR), intent(in) :: gpu_nlist
    type(C_PTR), intent(in) :: ptr_val
    ! Note: gfortran-4.3 bug requires explicit size of nodes array
@@ -289,10 +289,6 @@ subroutine subtree_factor_gpu(stream, pos_def, child_ptr, child_list, n,   &
    integer :: LDLT_size, max_LDLT_size
    integer(long) :: pc_size
    integer :: ncb, max_ncb
-   integer :: tile_size
-   integer :: maxnelm
-   integer :: maxtc
-   integer :: ntlev
   
    integer :: nch
    logical :: free_contrib
@@ -300,8 +296,6 @@ subroutine subtree_factor_gpu(stream, pos_def, child_ptr, child_list, n,   &
   
    ! per-node assembly info
    type(asmtype), dimension(:), allocatable :: asminf
-
-   integer, allocatable :: iwork(:,:), jwork(:)
 
    real(wp) :: delta = 0.01, eps = tiny(1.0)
    real(wp), target :: s
@@ -885,7 +879,7 @@ subroutine init_L_with_A(stream, lev, lvlptr, lvllist, nodes, ncb, level_size, &
    type(node_type), dimension(*), intent(in) :: nodes
    integer, intent(in) :: ncb
    integer(long), intent(in) :: level_size
-   integer, dimension(*), intent(in) :: nptr
+   integer(long), dimension(*), intent(in) :: nptr
    integer(long), dimension(*), intent(in) :: rptr
    type(C_PTR), intent(in) :: gpu_nlist
    type(C_PTR), intent(in) :: gpu_rlist

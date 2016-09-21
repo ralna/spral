@@ -23,7 +23,7 @@ module spral_ssids_gpu_subtree
       integer :: en
       integer :: nnodes
       integer(long) :: nfactor
-      integer, dimension(:), allocatable :: nptr
+      integer(long), dimension(:), allocatable :: nptr
       integer, dimension(:), allocatable :: child_ptr
       integer, dimension(:), allocatable :: child_list
       integer, dimension(:), pointer :: sptr
@@ -238,8 +238,8 @@ end subroutine build_rlist_direct
 !
 subroutine copy_analyse_data_to_device(lnlist, nlist, lrlist, rlist, &
       rlist_direct, gpu_nlist, gpu_rlist, gpu_rlist_direct, cuda_error)
-   integer, intent(in) :: lnlist
-   integer(C_INT), dimension(lnlist), target, intent(in) :: nlist
+   integer(long), intent(in) :: lnlist
+   integer(C_LONG), dimension(lnlist), target, intent(in) :: nlist
    integer(long), intent(in) :: lrlist
    integer(C_INT), dimension(lrlist), target, intent(in) :: rlist
    integer(C_INT), dimension(lrlist), target, intent(in) :: rlist_direct
