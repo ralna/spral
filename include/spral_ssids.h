@@ -19,11 +19,18 @@ struct spral_ssids_options {
    int unit_warning;
    int ordering;
    int nemin;
+   bool ignore_numa;
+   bool use_gpu;
+   long min_gpu_work;
+   float max_load_inbalance;
+   float gpu_perf_coeff;
    int scaling;
+   long small_subtree_threshold;
+   int cpu_block_size;
    bool action;
+   int pivot_method;
+   double small;
    double u;
-   bool use_gpu_solve;
-   int presolve;
    char unused[80]; // Allow for future expansion
 };
 

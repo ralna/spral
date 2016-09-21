@@ -11,8 +11,17 @@ module spral_ssids_ciface
       integer(C_INT) :: unit_warning
       integer(C_INT) :: ordering
       integer(C_INT) :: nemin
+      logical(C_BOOL) :: ignore_numa
+      logical(C_BOOL) :: use_gpu
+      integer(C_LONG) :: min_gpu_work
+      real(C_FLOAT) :: max_load_inbalance
+      real(C_FLOAT) :: gpu_perf_coeff
       integer(C_INT) :: scaling
+      integer(C_LONG) :: small_subtree_threshold
+      integer(C_INT) :: cpu_block_size
       logical(C_BOOL) :: action
+      integer(C_INT) :: pivot_method
+      real(C_DOUBLE) :: small
       real(C_DOUBLE) :: u
       character(C_CHAR) :: unused(80)
    end type spral_ssids_options
@@ -50,8 +59,17 @@ contains
       foptions%unit_warning      = coptions%unit_warning
       foptions%ordering          = coptions%ordering
       foptions%nemin             = coptions%nemin
+      foptions%ignore_numa       = coptions%ignore_numa
+      foptions%use_gpu           = coptions%use_gpu
+      foptions%min_gpu_work      = coptions%min_gpu_work
+      foptions%max_load_inbalance= coptions%max_load_inbalance
+      foptions%gpu_perf_coeff    = coptions%gpu_perf_coeff
       foptions%scaling           = coptions%scaling
+      foptions%small_subtree_threshold = coptions%small_subtree_threshold
+      foptions%cpu_block_size    = coptions%cpu_block_size
       foptions%action            = coptions%action
+      foptions%pivot_method      = coptions%pivot_method
+      foptions%small             = coptions%small
       foptions%u                 = coptions%u
    end subroutine copy_options_in
 
@@ -93,8 +111,17 @@ subroutine spral_ssids_default_options(coptions) bind(C)
    coptions%unit_warning      = default_options%unit_warning
    coptions%ordering          = default_options%ordering
    coptions%nemin             = default_options%nemin
+   coptions%ignore_numa       = default_options%ignore_numa
+   coptions%use_gpu           = default_options%use_gpu
+   coptions%min_gpu_work      = default_options%min_gpu_work
+   coptions%max_load_inbalance= default_options%max_load_inbalance
+   coptions%gpu_perf_coeff    = default_options%gpu_perf_coeff
    coptions%scaling           = default_options%scaling
+   coptions%small_subtree_threshold = default_options%small_subtree_threshold
+   coptions%cpu_block_size    = default_options%cpu_block_size
    coptions%action            = default_options%action
+   coptions%pivot_method      = default_options%pivot_method
+   coptions%small             = default_options%small
    coptions%u                 = default_options%u
 end subroutine spral_ssids_default_options
 
