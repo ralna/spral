@@ -88,26 +88,39 @@ In addition, advanced users may use the following routines:
 Basic Subroutines
 =================
 
-Note: For the most efficient use of the routine, CSC format should be used
-without checking.
+In the below, all reals are double precision unless otherwise indicated (as
+described in :doc:`conventions`.
+
+.. note::
+
+   Note: For the most efficient use of the routine, CSC format should be used
+   without checking.
 
 .. f:subroutine:: ssids_analyse(check,n,ptr,row,akeep,options,inform[,order,val,topology])
 
    Perform the analyse (symbolic) phase of the factorization for a matrix
    supplied in :doc:`CSC format<csc_format>`. The resulting symbolic factors
-   stored in :f:type:`akeep` should be passed unaltered in the following call to
+   stored in `akeep` should be passed unaltered in the subsequent calls to
    ssids_factor().
 
    :p logical check [in]: if true, matrix data is checked. Out-of-range entries
       are dropped and duplicate entries are summed.
    :p integer n [in]: number of columns in :math:`A`.
-   :p integer(long) ptr(n+1) [in]: column pointers for :math:`A` (see :doc:`CSC format<csc_format>`).
-   :p integer row(ptr(n+1)-1) [in]: row indices for :math:`A` (see :doc:`CSC format<csc_format>`).
-   :p ssids_akeep akeep [out]: returns symbolic factorization, to be passed unchanged to subsequent routines.
-   :p ssids_options options [in]: specifies algorithm options to be used (see [ssids:type:option]).
-   :p ssids_inform inform [out]: returns information about the execution of the routine (see [ssids:type:inform]).
-   :o integer order(n) [inout]: on entry a user-supplied ordering (options%ordering=0). On return, the actual ordering used (if present).
-   :o real val(ptr(n+1)-1) [in]: non-zero values for :math:`A` (see :doc:`CSC format<csc_format>`). Only used if a matching-based ordering is requested.
+   :p integer(long) ptr(n+1) [in]: column pointers for :math:`A`
+      (see :doc:`CSC format<csc_format>`).
+   :p integer row(ptr(n+1)-1) [in]: row indices for :math:`A`
+      (see :doc:`CSC format<csc_format>`).
+   :p ssids_akeep akeep [out]: returns symbolic factorization, to be passed
+      unchanged to subsequent routines.
+   :p ssids_options options [in]: specifies algorithm options to be used
+      (see :f:type:`ssids_options`).
+   :p ssids_inform inform [out]: returns information about the execution of the
+      routine (see :f:type:`ssids_inform`]).
+   :o integer order(n) [inout]: on entry a user-supplied ordering
+      (options%ordering=0). On return, the actual ordering used (if present).
+   :o real val(ptr(n+1)-1) [in]: non-zero values for :math:`A`
+      (see :doc:`CSC format<csc_format>`). Only used if a matching-based
+      ordering is requested.
    :o numa_region topology(*) [in]: If present, specifies the machine topology
       to be exploited. The size of the machine is the number of independent
       NUMA regions. Region `i` will use `topology(i)%nproc` threads and is
@@ -123,9 +136,9 @@ without checking.
       If a user-supplied ordering is used, it may be altered by this routine,
       with the altered version returned in order(:). This version will be
       equivalent to the original ordering, except that some supernodes may have
-      been amalgamated, a topographic ordering may have been applied to the tree
-      and the order of columns within a supernode may have been adjusted to
-      improve cache locality.
+      been amalgamated, a topographic ordering may have been applied to the
+      assembly tree and the order of columns within a supernode may have been
+      adjusted to improve cache locality.
 
    .. note::
 
@@ -143,7 +156,7 @@ without checking.
 
 .. f:subroutine::  ssids_factor(posdef,val,akeep,fkeep,options,inform[,scale,ptr,row])
 
-   :p logical posdef [in]: true if matrix is matrix is positive-definite
+   :p logical posdef [in]: true if matrix is positive-definite
    :p real val(*) [in]: non-zero values for :math:`A` in same format as for
       the call to :f:subr:`ssids_analyse()` or :f:subr:`ssids_analyse_coord()`.
    :p ssids_akeep akeep [in]: symbolic factorization returned by preceding call
@@ -151,11 +164,11 @@ without checking.
    :p ssids_fkeep fkeep [inout]: returns numeric factorization, to be passed
       unchanged to subsequent routines.
    :p ssids_options options [in]: specifies algorithm options to be used
-      (see [ssids:type:option]).
+      (see :f:type:`ssids_options`).
    :p ssids_inform inform [out]: returns information about the execution of the
-      routine (see [ssids:type:inform]).
+      routine (see :f:type:`ssids_inform`).
    :o real scale(n) [inout]: diagonal scaling. scale(i) contains entry
-      :math:`S_ii` of :math:`S`. Must be supplied by user if
+      :math:`S_{ii}` of :math:`S`. Must be supplied by user if
       options%scaling=0 (user-supplied scaling). On exit, return scaling used.
    :o integer(long) ptr(n+1) [in]: column pointers for :math:`A`, only required
       if :f:type:`akeep` was obtained by running :f:subr:`ssids_analyse()` with
@@ -201,9 +214,9 @@ without checking.
    :p ssids_fkeep fkeep [in]: numeric factorization returned by preceding
       call to :f:subr:`ssids_factor()`.
    :p ssids_options options [in]: specifies algorithm options to be used
-      (see [ssids:type:option]).
+      (see :f:type:`ssids_options`).
    :p ssids_inform inform [out]: returns information about the execution of the
-      routine (see [ssids:type:inform]).
+      routine (see :f:type:`ssids_inform`).
    :o integer job [in]: specifies equation to solve, as per above table.
 
 .. f:subroutine:: ssids_solve(nrhs,x,ldx,akeep,fkeep,options,inform[,job])
@@ -238,9 +251,9 @@ without checking.
    :p ssids_fkeep fkeep [in]: numeric factorization returned by preceding
       call to :f:subr:`ssids_factor()`.
    :p ssids_options options [in]: specifies algorithm options to be used
-      (see [ssids:type:option]).
+      (see :f:type:`ssids_options`).
    :p ssids_inform inform [out]: returns information about the execution of the
-      routine (see [ssids:type:inform]).
+      routine (see :f:type:`ssids_inform`).
    :o integer job [in]: specifies equation to solve, as per above table.
 
 .. f:subroutine:: ssids_free([akeep,fkeep,]cuda_error)
@@ -274,9 +287,9 @@ Advanced subroutines
    :p ssids_fkeep fkeep [in]: numeric factorization returned by preceding
       call to :f:subr:`ssids_factor()`.
    :p ssids_options options [in]: specifies algorithm options to be used
-      (see [ssids:type:option]).
+      (see :f:type:`ssids_options`).
    :p ssids_inform inform [out]: returns information about the execution of the
-      routine (see [ssids:type:inform]).
+      routine (see :f:type:`ssids_inform`).
    :p real d (n) [out]: returns the diagonal of :math:`L`. d(i) stores the
       entry :math:`L_{ii}`.
 
@@ -290,11 +303,11 @@ Advanced subroutines
    :p ssids_fkeep fkeep [in]: numeric factorization returned by preceding
       call to :f:subr:`ssids_factor()`.
    :p ssids_options options [in]: specifies algorithm options to be used
-      (see [ssids:type:option]).
+      (see :f:type:`ssids_options`).
    :p ssids_inform inform [out]: returns information about the execution of the
-      routine (see [ssids:type:inform]).
+      routine (see :f:type:`ssids_inform`).
    :o integer piv_order (n) [out]: returns the pivot order.
-      :math:`|\,\texttt{piv\_order(i)}|` gives the position of variable
+      :math:`|\,\texttt{piv_order(i)}|` gives the position of variable
       :math:`i` in the pivot order. The sign will be positive if :math:`i` is a
       :math:`1\times1` pivot, and negative if :math:`i` is
       part of a :math:`2 \times 2` pivot.
@@ -314,9 +327,9 @@ Advanced subroutines
    :p ssids_fkeep fkeep [in]: numeric factorization returned by preceding
       call to :f:subr:`ssids_factor()`.
    :p ssids_options options [in]: specifies algorithm options to be used
-      (see [ssids:type:option]).
+      (see :f:type:`ssids_options`).
    :p ssids_inform inform [out]: returns information about the execution of the
-      routine (see [ssids:type:inform]).
+      routine (see :f:type:`ssids_inform`).
 
 =============
 Derived types
@@ -331,15 +344,15 @@ Derived types
    :f integer print_level [default=0]: the level of printing. The different
       levels are:
 
-      +-----+-------------------------------------------------+
-      | < 0 | No printing.                                    |
-      +-----+-------------------------------------------------+
-      | = 0 | Error and warning messages only.                |
-      +-----+-------------------------------------------------+
-      | = 1 | As 0, plus basic diagnostic printing.           |
-      +-----+-------------------------------------------------+
-      | > 1 | As 1, plus some additional diagnostic printing. |
-      +-----+-------------------------------------------------+
+      +----------+-------------------------------------------------+
+      | < 0      | No printing.                                    |
+      +----------+-------------------------------------------------+
+      | = 0      | Error and warning messages only.                |
+      +----------+-------------------------------------------------+
+      | = 1      | As 0, plus basic diagnostic printing.           |
+      +----------+-------------------------------------------------+
+      | > 1      | As 1, plus some additional diagnostic printing. |
+      +----------+-------------------------------------------------+
 
    :f integer unit_diagnostics [default=6]: Fortran unit number for
       diagnostics printing. Printing is suppressed if <0.
@@ -397,13 +410,13 @@ Derived types
       +---------------+-------------------------------------------------------+
       | =3            | Use matching-based ordering generated during the      |
       |               | analyse phase using options%ordering=2. The scaling   |
-      |               | will be the same as that generated with %scaling= 1   |
-      |               | if the matrix values have not changed. This option    |
-      |               | will generate an error if a matching-based ordering   |
-      |               | was not used during analysis.                         |
+      |               | will be the same as that generated with               |
+      |               | options%scaling= 1 if the matrix values have not      |
+      |               | changed. This option will generate an error if a      |
+      |               | matching-based ordering was not used during analysis. |
       +---------------+-------------------------------------------------------+
       | >=4           | Compute using the norm-equilibration algorithm of     |
-      |               | Ruiz.                                                 |
+      |               | Ruiz (see :doc:`scaling`)                             |
       +---------------+-------------------------------------------------------+
 
    :f integer(long) small_subtree_threshold [default=4e6]: Maximum number of
@@ -425,7 +438,7 @@ Derived types
       | 1 (default) | Block a posteori pivoting. A failed pivot only requires  |
       |             | recalculation of entries within its own block column.    |
       +-------------+----------------------------------------------------------+
-      | 2           | Threshold Partial Pivoting. Not parallel.                |
+      | 2           | Threshold partial pivoting. Not parallel.                |
       +-------------+----------------------------------------------------------+
 
    :f real small [default=1d-20]: threshold below which an entry is treated as
@@ -438,6 +451,11 @@ Derived types
 
    Used to return information about the progress and needs of the algorithm.
 
+   :f integer cublas_error: CUBLAS error code in the event of a CUBLAS error
+      (0 otherwise).
+   :f integer cuda_error: CUDA error code in the event of a CUDA error
+      (0 otherwise). Note that due to asynchronous execution, CUDA errors may 
+      not be reported by the call that caused them.
    :f integer flag: exit status of the algorithm (see table below).
    :f integer matrix_dup: number of duplicate entries encountered (if
       :f:subr:`ssids_analyse()` called with check=true, or any call to
@@ -469,11 +487,6 @@ Derived types
       factorization (i.e. in the matrix :math:`D`).
    :f integer stat: Fortran allocation status parameter in event of allocation
       error (0 otherwise).
-   :f integer cublas_error: CUBLAS error code in the event of a CUBLAS error
-      (0 otherwise).
-   :f integer cuda_error: CUDA error code in the event of a CUDA error
-      (0 otherwise). Note that due to asynchronous execution, CUDA errors may 
-      not be reported by the call that caused them.
 
    +-------------+-------------------------------------------------------------+
    | inform%flag | Return status                                               |
@@ -494,7 +507,7 @@ Derived types
    +-------------+-------------------------------------------------------------+
    | -5          | Matrix is singular and options%action=.false.               |
    +-------------+-------------------------------------------------------------+
-   | -6          | Matrix found not to be positive definite.                   |
+   | -6          | Matrix found not to be positive definite but posdef=true.   |
    +-------------+-------------------------------------------------------------+
    | -7          | ptr(:) and/or row(:) not present, but required as           |
    |             | :f:subr:`ssids_analyse()` was called with check=.false,.    |
@@ -614,7 +627,7 @@ Once the ordering has been determined and the assembly tree determined in the
 analyse phase, the tree is broken into a number of leaf subtrees rooted at a
 single node, leaving a root subtree/forest consisting of all remaining nodes
 above those. Each leaf subtree is pre-assigned to a particular NUMA region or
-GPU for the factorization phase. Exact details of the algorithm used for
+GPU for the factorization phase. Details of the algorithm used for
 finding these subtrees and their assignment can be found in the paper [2]_.
 
 The factorization phase has two steps. In the first, leaf subtrees are
@@ -690,5 +703,5 @@ References
    [`Preprint RAL-P-2014-006 <https://epubs.stfc.ac.uk/work/12189719>`_]
 
 .. [2] J.D. Hogg. (2016).
-   *A new sparse LDL^T solver using a posteriori threshold pivoting*.
+   *A new sparse LDLT solver using a posteriori threshold pivoting*.
    RAL Technical Report. RAL-TR-2016-0xx, to appear.
