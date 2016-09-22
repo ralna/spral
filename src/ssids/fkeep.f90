@@ -154,7 +154,8 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
 
    if(all_region) then
       ! At least some all region subtrees exist
-!$    call omp_set_num_threads(total_threads)
+!$omp parallel num_threads(total_threads) default(shared)
+!$omp single
       do i = 1, akeep%nparts
          exec_loc = akeep%subtree(i)%exec_loc
          if(exec_loc.ne.-1) cycle
@@ -177,6 +178,8 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
 !$omp    flush
          child_contrib(akeep%contrib_idx(i))%ready = .true.
       end do
+!$omp end single
+!$omp end parallel
    end if
 
    ! End profile trace (noop if not enabled)
