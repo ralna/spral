@@ -89,7 +89,7 @@ Basic Subroutines
 =================
 
 In the below, all reals are double precision unless otherwise indicated (as
-described in :doc:`conventions`.
+described in :doc:`conventions`).
 
 .. note::
 
