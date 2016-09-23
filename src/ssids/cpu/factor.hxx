@@ -73,7 +73,8 @@ void factor_node_indef(
    /* Finish factorization worth simplistic code */
    if(node.nelim < n) {
       int nelim = node.nelim;
-      stats.not_first_pass += n-nelim;
+      if(options.pivot_method!=PivotMethod::tpp)
+         stats.not_first_pass += n-nelim;
       // Only use TPP to finish off if we're a root node, it's not finishing
       // off but actually doing it, or failed_pivot_method says to do so
       if(m==n || options.pivot_method==PivotMethod::tpp ||
@@ -99,7 +100,11 @@ void factor_node_indef(
                   -1.0, &lcol[nelim*ldl+n], ldl, ld, ldld,
                   rbeta, node.contrib, m-n);
          }
-         stats.not_second_pass += n - node.nelim;
+         if(options.pivot_method==PivotMethod::tpp) {
+            stats.not_first_pass += n - node.nelim;
+         } else {
+            stats.not_second_pass += n - node.nelim;
+         }
 #ifdef profile
          task_tpp.done();
 #endif
