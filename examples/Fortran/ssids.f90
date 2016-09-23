@@ -3,6 +3,8 @@ program ssids_example
    use spral_ssids
    implicit none
 
+   integer, parameter :: long = selected_int_kind(16)
+
    ! Derived types
    type (ssids_akeep)   :: akeep
    type (ssids_fkeep)   :: fkeep
@@ -14,7 +16,8 @@ program ssids_example
 
    ! Matrix data
    logical :: posdef
-   integer :: n, ptr(6), row(8)
+   integer :: n, row(8)
+   integer(long) :: ptr(6)
    real(wp) :: val(8)
 
    ! Other variables
