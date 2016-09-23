@@ -316,6 +316,9 @@ contains
             argnum = argnum + 1
             read( argval, * ) options%cpu_block_size
             print *, 'CPU block size = ', options%cpu_block_size
+         case("--no-ignore-numa")
+            options%ignore_numa = .false.
+            print *, 'Using separate NUMA regions'
          case default
             if(seen_fname) then
                print *, "Unrecognised command line argument: ", argval
