@@ -54,7 +54,7 @@ void factor_node_indef(
 
    /* Perform factorization */
    //Verify<T> verifier(m, n, perm, lcol, ldl);
-   if(options.pivot_method == PivotMethod::tpp) {
+   if(options.pivot_method != PivotMethod::tpp) {
       // Use an APP based pivot method
       node.nelim = ldlt_app_factor(
             m, n, perm, lcol, ldl, d, 0.0, contrib, m-n, options, work,
@@ -74,7 +74,9 @@ void factor_node_indef(
    if(node.nelim < n) {
       int nelim = node.nelim;
       stats.not_first_pass += n-nelim;
-      if(options.pivot_method==PivotMethod::tpp ||
+      // Only use TPP to finish off if we're a root node, it's not finishing
+      // off but actually doing it, or failed_pivot_method says to do so
+      if(m==n || options.pivot_method==PivotMethod::tpp ||
             options.failed_pivot_method==FailedPivotMethod::tpp) {
 #ifdef PROFILE
          Profile::Task task_tpp("TA_LDLT_TPP");
