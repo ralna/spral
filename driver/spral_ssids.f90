@@ -287,6 +287,12 @@ contains
          case("--pivot-method=tpp")
             options%pivot_method = 3
             print *, 'Pivoting method TPP'
+         case("--failed-pivot-method=tpp")
+            options%failed_pivot_method = 1
+            print *, 'Failed pivot method TPP'
+         case("--failed-pivot-method=pass")
+            options%failed_pivot_method = 2
+            print *, 'Failed pivot method PASS'
          case("--flat-topology")
             flat_topology = .true.
             print *, 'Forcing flat topology'

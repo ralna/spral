@@ -27,6 +27,7 @@ module spral_ssids_cpu_iface
       integer(C_LONG) :: small_subtree_threshold
       integer(C_INT) :: cpu_block_size
       integer(C_INT) :: pivot_method
+      integer(C_INT) :: failed_pivot_method
    end type cpu_factor_options
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -61,7 +62,8 @@ subroutine cpu_copy_options_in(foptions, coptions)
    coptions%multiplier     = foptions%multiplier
    coptions%small_subtree_threshold = foptions%small_subtree_threshold
    coptions%cpu_block_size = foptions%cpu_block_size
-   coptions%pivot_method   = foptions%pivot_method
+   coptions%pivot_method   = min(3, max(1, foptions%pivot_method))
+   coptions%failed_pivot_method = min(2, max(1, foptions%failed_pivot_method))
 end subroutine cpu_copy_options_in
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

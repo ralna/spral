@@ -64,10 +64,14 @@ module spral_ssids_datatypes
    integer, parameter, public :: SSIDS_SOLVE_JOB_BWD     = 3 !(PL)^TX = B
    integer, parameter, public :: SSIDS_SOLVE_JOB_DIAG_BWD= 4 !D(PL)^TX=B (indef)
 
-   ! NB: the below must match enum pivot_method in cpu/cpu_iface.hxx
+   ! NB: the below must match enum PivotMethod in cpu/cpu_iface.hxx
    integer, parameter, public :: PIVOT_METHOD_APP_AGGRESIVE = 1
    integer, parameter, public :: PIVOT_METHOD_APP_BLOCK     = 2
    integer, parameter, public :: PIVOT_METHOD_TPP           = 3
+
+   ! NB: the below must match enum FailedPivotMethod in cpu/cpu_iface.hxx
+   integer, parameter, public :: FAILED_PIVOT_METHOD_TPP    = 1
+   integer, parameter, public :: FAILED_PIVOT_METHOD_PASS   = 2
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -266,6 +270,11 @@ module spral_ssids_datatypes
       character(len=:), allocatable :: rb_dump ! Filename to dump matrix in
          ! prior to factorization. No dump takes place if not allocated (the
          ! default).
+      integer :: failed_pivot_method = FAILED_PIVOT_METHOD_TPP
+         ! What to do with failed pivots:
+         !     <= 1  Attempt to eliminate with TPP pass
+         !     >= 2  Pass straight to parent
+
    contains
       procedure :: print_summary_analyse
       procedure :: print_summary_factor

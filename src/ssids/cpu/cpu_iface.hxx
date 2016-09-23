@@ -15,6 +15,11 @@ enum struct PivotMethod : int {
    tpp            = 3
 };
 
+enum struct FailedPivotMethod : int {
+   tpp            = 1,
+   pass           = 2
+};
+
 struct cpu_factor_options {
    int print_level;
    bool action;
@@ -24,6 +29,7 @@ struct cpu_factor_options {
    long small_subtree_threshold;
    int cpu_block_size;
    PivotMethod pivot_method;
+   FailedPivotMethod failed_pivot_method;
 };
 
 /** Return nearest value greater than supplied lda that is multiple of alignment */

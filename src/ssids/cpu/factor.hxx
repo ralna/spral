@@ -54,44 +54,54 @@ void factor_node_indef(
 
    /* Perform factorization */
    //Verify<T> verifier(m, n, perm, lcol, ldl);
-   node.nelim = ldlt_app_factor(
-         m, n, perm, lcol, ldl, d, 0.0, contrib, m-n, options, work, pool_alloc
-         );
-   if(node.nelim < 0) {
-      stats.flag = static_cast<Flag>(node.nelim);
-      return;
+   if(options.pivot_method == PivotMethod::tpp) {
+      // Use an APP based pivot method
+      node.nelim = ldlt_app_factor(
+            m, n, perm, lcol, ldl, d, 0.0, contrib, m-n, options, work,
+            pool_alloc
+            );
+      if(node.nelim < 0) {
+         stats.flag = static_cast<Flag>(node.nelim);
+         return;
+      }
+   } else {
+      // Otherwise, force use of TPP
+      node.nelim = 0;
    }
    //verifier.verify(node.nelim, perm, lcol, ldl, d);
 
    /* Finish factorization worth simplistic code */
    if(node.nelim < n) {
-#ifdef PROFILE
-      Profile::Task task_tpp("TA_LDLT_TPP");
-#endif
       int nelim = node.nelim;
       stats.not_first_pass += n-nelim;
-      T *ld = work[omp_get_thread_num()].get_ptr<T>(2*(m-nelim));
-      node.nelim += ldlt_tpp_factor(
-            m-nelim, n-nelim, &perm[nelim], &lcol[nelim*(ldl+1)], ldl,
-            &d[2*nelim], ld, m-nelim, options.action, options.u, options.small,
-            nelim, &lcol[nelim], ldl
-            );
-      if(m-n>0 && node.nelim>nelim) {
-         int nelim2 = node.nelim - nelim;
-         int ldld = align_lda<T>(m-n);
-         T *ld = work[omp_get_thread_num()].get_ptr<T>(nelim2*ldld);
-         calcLD<OP_N>(
-               m-n, nelim2, &lcol[nelim*ldl+n], ldl, &d[2*nelim], ld, ldld
-               );
-         T rbeta = (nelim==0) ? 0.0 : 1.0;
-         host_gemm<T>(OP_N, OP_T, m-n, m-n, nelim2,
-               -1.0, &lcol[nelim*ldl+n], ldl, ld, ldld,
-               rbeta, node.contrib, m-n);
-      }
-      stats.not_second_pass += n - node.nelim;
-#ifdef profile
-      task_tpp.done();
+      if(options.pivot_method==PivotMethod::tpp ||
+            options.failed_pivot_method==FailedPivotMethod::tpp) {
+#ifdef PROFILE
+         Profile::Task task_tpp("TA_LDLT_TPP");
 #endif
+         T *ld = work[omp_get_thread_num()].get_ptr<T>(2*(m-nelim));
+         node.nelim += ldlt_tpp_factor(
+               m-nelim, n-nelim, &perm[nelim], &lcol[nelim*(ldl+1)], ldl,
+               &d[2*nelim], ld, m-nelim, options.action, options.u,
+               options.small, nelim, &lcol[nelim], ldl
+               );
+         if(m-n>0 && node.nelim>nelim) {
+            int nelim2 = node.nelim - nelim;
+            int ldld = align_lda<T>(m-n);
+            T *ld = work[omp_get_thread_num()].get_ptr<T>(nelim2*ldld);
+            calcLD<OP_N>(
+                  m-n, nelim2, &lcol[nelim*ldl+n], ldl, &d[2*nelim], ld, ldld
+                  );
+            T rbeta = (nelim==0) ? 0.0 : 1.0;
+            host_gemm<T>(OP_N, OP_T, m-n, m-n, nelim2,
+                  -1.0, &lcol[nelim*ldl+n], ldl, ld, ldld,
+                  rbeta, node.contrib, m-n);
+         }
+         stats.not_second_pass += n - node.nelim;
+#ifdef profile
+         task_tpp.done();
+#endif
+      }
    }
 
 #ifdef PROFILE
