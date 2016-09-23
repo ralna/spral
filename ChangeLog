@@ -1,4 +1,4 @@
-2016-XX-XX  Jonathan Hogg <jonathan.hogg@stfc.ac.uk>
+2016-09-23  Jonathan Hogg <jonathan.hogg@stfc.ac.uk>
 SSIDS v2 major new release
 * Adds CPU, multi-GPU and hetrogeneous execution support.
 * Removes presolve option due to lack of resource for maintenance.
