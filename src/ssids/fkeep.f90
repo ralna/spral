@@ -68,7 +68,7 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
 
    ! Allocate space for subtrees
    allocate(fkeep%subtree(akeep%nparts), stat=inform%stat)
-   if(inform%stat.ne.0) goto 100
+   if(inform%stat.ne.0) goto 200
 
    ! Determine resources
    total_threads = 0
@@ -80,12 +80,12 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
 
    ! Call subtree factor routines
    allocate(child_contrib(akeep%nparts), stat=inform%stat)
-   if(inform%stat.ne.0) goto 100
+   if(inform%stat.ne.0) goto 200
    ! Split into numa regions; parallelism within a region is responsibility
    ! of subtrees.
    to_launch = size(akeep%topology)*(1+max_gpus)
    allocate(thread_inform(to_launch), stat=inform%stat)
-   if(inform%stat.ne.0) goto 100
+   if(inform%stat.ne.0) goto 200
    all_region = .false.
 !$omp parallel proc_bind(spread) num_threads(to_launch) &
 !$omp    default(none) &
@@ -151,6 +151,7 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
    do i = 1, size(thread_inform)
       call inform%reduce(thread_inform(i))
    end do
+   if(inform%flag.lt.0) goto 100 ! cleanup and exit
 
    if(all_region) then
       ! At least some all region subtrees exist
@@ -182,14 +183,16 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
 !$omp end parallel
    end if
 
+   100 continue ! cleanup and exit
+
    ! End profile trace (noop if not enabled)
    call profile_end()
 
    return
 
-   100 continue
+   200 continue
    inform%flag = SSIDS_ERROR_ALLOCATION
-   return
+   goto 100 ! cleanup and exit
 end subroutine inner_factor_cpu
 
 subroutine inner_solve_cpu(local_job, nrhs, x, ldx, akeep, fkeep, inform)
