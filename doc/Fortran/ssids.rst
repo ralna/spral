@@ -451,12 +451,14 @@ Derived types
 
    Used to return information about the progress and needs of the algorithm.
 
+   :f integer(long) cpu_flops: number of flops performed on CPU
    :f integer cublas_error: CUBLAS error code in the event of a CUBLAS error
       (0 otherwise).
    :f integer cuda_error: CUDA error code in the event of a CUDA error
       (0 otherwise). Note that due to asynchronous execution, CUDA errors may 
       not be reported by the call that caused them.
    :f integer flag: exit status of the algorithm (see table below).
+   :f integer(long) gpu_flops: number of flops performed on GPU
    :f integer matrix_dup: number of duplicate entries encountered (if
       :f:subr:`ssids_analyse()` called with check=true, or any call to
       :f:subr:`ssids_analyse_coord()`).

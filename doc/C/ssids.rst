@@ -554,6 +554,10 @@ Derived types
 
    Used to return information about the progress and needs of the algorithm.
 
+   .. c:member:: long cpu_flops
+
+      Number of flops performed on CPU
+
    .. c:member:: int cublas_error
    
       CUBLAS error code in the event of a CUBLAS error (0 otherwise).
@@ -567,6 +571,10 @@ Derived types
    .. c:member:: int flag
       
       Exit status of the algorithm (see table below).
+
+   .. c:member:: long gpu_flops
+
+      Number of flops performed on GPU
 
    .. c:member:: int matrix_dup
    
@@ -670,7 +678,6 @@ Derived types
    | -10         | ldx<n or nrhs<1.                                            |
    +-------------+-------------------------------------------------------------+
    | -11         | job is out-of-range.                                        |
-   +-------------+-------------------------------------------------------------+
    +-------------+-------------------------------------------------------------+
    | -13         | Called :c:func:`spral_ssids_enquire_posdef()` on indefinite |
    |             | factorization.                                              |
