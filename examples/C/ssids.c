@@ -17,16 +17,16 @@ void main(void) {
     * ( 2  1         )
     * ( 1  4  1    1 )
     * (    1  3  2   )
-    * (       2      )
+    * (       2 -1   )
     * (    1       2 ) */
    bool posdef = false;
    int n = 5;
-   int ptr[]    = { 1,        3,             6,      8,8,   9 };
-   int row[]    = { 1,   2,   2,   3,   5,   3,   4,   5   };
-   double val[] = { 2.0, 1.0, 4.0, 1.0, 1.0, 3.0, 2.0, 2.0 };
+   long ptr[]   = { 1,        3,             6,         8,   9,  10 };
+   int row[]    = { 1,   2,   2,   3,   5,   3,   4,    4,   5   };
+   double val[] = { 2.0, 1.0, 4.0, 1.0, 1.0, 3.0, 2.0, -1.0, 2.0 };
 
    /* The right-hand side with solution (1.0, 2.0, 3.0, 4.0, 5.0) */
-   double x[] = { 4.0, 17.0, 19.0, 6.0, 12.0 };
+   double x[] = { 4.0, 17.0, 19.0, 2.0, 12.0 };
 
    /* Perform analyse and factorise with data checking */
    bool check = true;

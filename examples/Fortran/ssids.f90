@@ -16,9 +16,9 @@ program ssids_example
 
    ! Matrix data
    logical :: posdef
-   integer :: n, row(8)
+   integer :: n, row(9)
    integer(long) :: ptr(6)
-   real(wp) :: val(8)
+   real(wp) :: val(9)
 
    ! Other variables
    integer :: piv_order(5), cuda_error
@@ -29,16 +29,16 @@ program ssids_example
    ! ( 2  1         )
    ! ( 1  4  1    1 )
    ! (    1  3  2   )
-   ! (       2      )
+   ! (       2 -1   )
    ! (    1       2 )
    posdef = .false.
    n = 5
-   ptr(1:n+1)        = (/ 1,        3,             6,      8,8,   9 /)
-   row(1:ptr(n+1)-1) = (/ 1,   2,   2,   3,   5,   3,   4,   5   /)
-   val(1:ptr(n+1)-1) = (/ 2.0, 1.0, 4.0, 1.0, 1.0, 3.0, 2.0, 2.0 /)
+   ptr(1:n+1)        = (/ 1,        3,             6,        8,    9,  10 /)
+   row(1:ptr(n+1)-1) = (/ 1,   2,   2,   3,   5,   3,   4,   4,    5   /)
+   val(1:ptr(n+1)-1) = (/ 2.0, 1.0, 4.0, 1.0, 1.0, 3.0, 2.0, -1.0, 2.0 /)
 
    ! The right-hand side with solution (1.0, 2.0, 3.0, 4.0, 5.0)
-   x(1:n) = (/ 4.0, 17.0, 19.0, 6.0, 12.0 /)
+   x(1:n) = (/ 4.0, 17.0, 19.0, 2.0, 12.0 /)
 
    ! Perform analyse and factorise with data checking
    check = .true.
@@ -50,7 +50,7 @@ program ssids_example
    ! Solve
    call ssids_solve(x,akeep,fkeep,options,inform)
    if(inform%flag<0) go to 100
-   write(*,'(/a,/,(3es18.10))') ' The computed solution is:', x(1:n)
+   write(*,'(a,/,(3es18.10))') ' The computed solution is:', x(1:n)
 
    ! Determine and print the pivot order
    call ssids_enquire_indef(akeep, fkeep, options, inform, piv_order=piv_order)
