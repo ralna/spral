@@ -218,8 +218,8 @@ reorthagonalise against these from time to time.
    +----------+---------------------------------------------------------------+
    | 999      | Restart:                                                      |
    |          |                                                               |
-   |          | If `rci.k>0`: Restart suggested with larger block size        |
-   |          | `m >= m + rci.nx + rci.i + rci.j`, adjusting workspace size   |
+   |          | If `rci.k>0`: Restart suggested with block size               |
+   |          | `m >= rci.nx + rci.i + rci.j`, adjusting workspace size       |
    |          | to match. Set `rci.i=0` and `rci.j=0` and recall the routine. |
    |          | If a restart is not desirable, routine may be recalled with   |
    |          | no change to parameters.                                      |
@@ -363,8 +363,8 @@ reorthagonalise against these from time to time.
    +----------+---------------------------------------------------------------+
    | 999      | Restart:                                                      |
    |          |                                                               |
-   |          | If `rci.k>0`: Restart suggested with larger block size        |
-   |          | `m >= m + rci.nx + rci.i + rci.j`, adjusting workspace size   |
+   |          | If `rci.k>0`: Restart suggested with block size               |
+   |          | `m >= rci.nx + rci.i + rci.j`, adjusting workspace size       |
    |          | to match. Set `rci.i=0` and `rci.j=0` and recall the routine. |
    |          | If a restart is not desirable, routine may be recalled with   |
    |          | no change to parameters.                                      |
@@ -524,8 +524,8 @@ reorthagonalise against these from time to time.
    +----------+---------------------------------------------------------------+
    | 999      | Restart:                                                      |
    |          |                                                               |
-   |          | If `rci.k>0`: Restart suggested with larger block size        |
-   |          | `m >= m + rci.nx + rci.i + rci.j`, adjusting workspace size   |
+   |          | If `rci.k>0`: Restart suggested with block size               |
+   |          | `m >= rci.nx + rci.i + rci.j`, adjusting workspace size       |
    |          | to match. Set `rci.i=0` and `rci.j=0` and recall the routine. |
    |          | If a restart is not desirable, routine may be recalled with   |
    |          | no change to parameters.                                      |
@@ -681,8 +681,8 @@ reorthagonalise against these from time to time.
    +----------+---------------------------------------------------------------+
    | 999      | Restart:                                                      |
    |          |                                                               |
-   |          | If `rci.k>0`: Restart suggested with larger block size        |
-   |          | `m >= m + rci.nx + rci.i + rci.j`, adjusting workspace size   |
+   |          | If `rci.k>0`: Restart suggested with block size               |
+   |          | `m >= rci.nx + rci.i + rci.j`, adjusting workspace size       |
    |          | to match. Set `rci.i=0` and `rci.j=0` and recall the routine. |
    |          | If a restart is not desirable, routine may be recalled with   |
    |          | no change to parameters.                                      |
@@ -840,8 +840,8 @@ reorthagonalise against these from time to time.
    +----------+---------------------------------------------------------------+
    | 999      | Restart:                                                      |
    |          |                                                               |
-   |          | If `rci.k>0`: Restart suggested with larger block size        |
-   |          | `m >= m + rci.nx + rci.i + rci.j`, adjusting workspace size   |
+   |          | If `rci.k>0`: Restart suggested with block size               |
+   |          | `m >= rci.nx + rci.i + rci.j`, adjusting workspace size       |
    |          | to match. Set `rci.i=0` and `rci.j=0` and recall the routine. |
    |          | If a restart is not desirable, routine may be recalled with   |
    |          | no change to parameters.                                      |
