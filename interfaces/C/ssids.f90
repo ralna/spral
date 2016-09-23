@@ -140,6 +140,93 @@ subroutine spral_ssids_analyse(ccheck, n, corder, cptr, crow, cval, cakeep, &
    type(spral_ssids_options), intent(in) :: coptions
    type(spral_ssids_inform), intent(out) :: cinform
 
+   integer(C_LONG), dimension(:), pointer :: fptr
+   integer(C_LONG), dimension(:), allocatable, target :: fptr_alloc
+   integer(C_INT), dimension(:), pointer :: frow
+   integer(C_INT), dimension(:), allocatable, target :: frow_alloc
+   logical :: fcheck
+   integer(C_INT), dimension(:), pointer :: forder
+   real(C_DOUBLE), dimension(:), pointer :: fval
+   type(ssids_akeep), pointer :: fakeep
+   type(ssids_options) :: foptions
+   type(ssids_inform) :: finform
+
+   logical :: cindexed
+
+   ! Copy options in first to find out whether we use Fortran or C indexing
+   call copy_options_in(coptions, foptions, cindexed)
+
+   ! Translate arguments
+   fcheck = ccheck
+   if(C_ASSOCIATED(corder)) then
+      call C_F_POINTER(corder, forder, shape=(/ n /))
+   else
+      nullify(forder)
+   endif
+   call C_F_POINTER(cptr, fptr, shape=(/ n+1 /))
+   if(.not.cindexed) then
+      allocate(fptr_alloc(n+1))
+      fptr_alloc(:) = fptr(:) + 1
+      fptr => fptr_alloc
+   endif
+   call C_F_POINTER(crow, frow, shape=(/ fptr(n+1)-1 /))
+   if(.not.cindexed) then
+      allocate(frow_alloc(n+1))
+      frow_alloc(:) = frow(:) + 1
+      frow => frow_alloc
+   endif
+   if(C_ASSOCIATED(cval)) then
+      call C_F_POINTER(cval, fval, shape=(/ fptr(n+1)-1 /))
+   else
+      nullify(fval)
+   endif
+   if(C_ASSOCIATED(cakeep)) then
+      ! Reuse old pointer
+      call C_F_POINTER(cakeep, fakeep)
+   else
+      ! Create new pointer
+      allocate(fakeep)
+      cakeep = C_LOC(fakeep)
+   endif
+
+   ! Call Fortran routine
+   if(ASSOCIATED(forder)) then
+      if(ASSOCIATED(fval)) then
+         call ssids_analyse(fcheck, n, fptr, frow, fakeep, foptions, finform, &
+            order=forder, val=fval)
+      else
+         call ssids_analyse(fcheck, n, fptr, frow, fakeep, foptions, finform, &
+            order=forder)
+      endif
+   else
+      if(ASSOCIATED(fval)) then
+         call ssids_analyse(fcheck, n, fptr, frow, fakeep, foptions, finform, &
+            val=fval)
+      else
+         call ssids_analyse(fcheck, n, fptr, frow, fakeep, foptions, finform)
+      endif
+   endif
+
+   ! Copy arguments out
+   if(ASSOCIATED(forder) .and. cindexed) forder(:) = forder(:) - 1
+   call copy_inform_out(finform, cinform)
+end subroutine spral_ssids_analyse
+
+subroutine spral_ssids_analyse_ptr32(ccheck, n, corder, cptr, crow, cval, &
+      cakeep, coptions, cinform) bind(C)
+   use spral_ssids_ciface
+   implicit none
+
+   logical(C_BOOL), value :: ccheck
+   integer(C_INT), value :: n
+   type(C_PTR), value :: corder
+   type(C_PTR), value :: cptr
+   type(C_PTR), value :: crow
+   type(C_PTR), value :: cval
+   type(C_PTR), intent(inout) :: cakeep
+   type(spral_ssids_options), intent(in) :: coptions
+   type(spral_ssids_inform), intent(out) :: cinform
+
    integer(C_INT), dimension(:), pointer :: fptr
    integer(C_INT), dimension(:), allocatable, target :: fptr_alloc
    integer(C_INT), dimension(:), pointer :: frow
@@ -210,7 +297,7 @@ subroutine spral_ssids_analyse(ccheck, n, corder, cptr, crow, cval, cakeep, &
    ! Copy arguments out
    if(ASSOCIATED(forder) .and. cindexed) forder(:) = forder(:) - 1
    call copy_inform_out(finform, cinform)
-end subroutine spral_ssids_analyse
+end subroutine spral_ssids_analyse_ptr32
 
 subroutine spral_ssids_analyse_coord(n, corder, ne, crow, ccol, cval, cakeep, &
       coptions, cinform) bind(C)

@@ -61,7 +61,11 @@ struct spral_ssids_inform {
 /* Initialize options to defaults */
 void spral_ssids_default_options(struct spral_ssids_options *options);
 /* Perform analysis phase for CSC data */
-void spral_ssids_analyse(bool check, int n, int *order, const int *ptr,
+void spral_ssids_analyse(bool check, int n, int *order, const long *ptr,
+      const int *row, const double *val, void **akeep,
+      const struct spral_ssids_options *options,
+      struct spral_ssids_inform *inform);
+void spral_ssids_analyse_ptr32(bool check, int n, int *order, const int *ptr,
       const int *row, const double *val, void **akeep,
       const struct spral_ssids_options *options,
       struct spral_ssids_inform *inform);
