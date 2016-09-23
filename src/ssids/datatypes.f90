@@ -217,11 +217,11 @@ module spral_ssids_datatypes
       logical :: ignore_numa = .true. ! If true, treat entire machine as single
          ! NUMA region for purposes of subtree allocation.
       logical :: use_gpu = .true. ! Use GPUs if present
-      integer(long) :: min_gpu_work = 10**10_long ! Only assign subtree to GPU
+      integer(long) :: min_gpu_work = 5*10**9_long ! Only assign subtree to GPU
          ! if it contains at least this many flops
-      real :: max_load_inbalance = 1.5 ! Maximum permissible load inbalance
+      real :: max_load_inbalance = 1.2 ! Maximum permissible load inbalance
          ! when dividing tree into subtrees
-      real :: gpu_perf_coeff = 1.5 ! How many times better is a GPU than a
+      real :: gpu_perf_coeff = 1.0 ! How many times better is a GPU than a
          ! single NUMA region's worth of processors
 
       !

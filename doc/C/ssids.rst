@@ -451,20 +451,20 @@ Derived types
    
       Minimum number of flops
       in subtree before scheduling on GPU.
-      Default is `1e10`.
+      Default is `5e9`.
 
    .. c:member: float max_load_inbalance
    
       Maximum permissiable load
       inbalance for leaf subtree allocations. Values less than 1.0 are treated
       as 1.0.
-      Default is `1.5`.
+      Default is `1.2`.
 
    .. c:member:: float gpu_perf_coeff
    
       GPU perfromance coefficient. How many
       times faster a GPU is than CPU at factoring a subtree.
-      Default is `1.5`.
+      Default is `1.0`.
 
    .. c:member:: int scaling
    

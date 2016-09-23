@@ -386,12 +386,12 @@ Derived types
    :f logical ignore_numa [default=true]: If true, all CPUs and GPUs are
       treated as belonging to a single NUMA region.
    :f logical use_gpu [default=true]: Use an NVIDIA GPU if present.
-   :f integer(long) min_gpu_work [default=1e10]: Minimum number of flops
+   :f integer(long) min_gpu_work [default=5e9]: Minimum number of flops
       in subtree before scheduling on GPU.
-   :f real max_load_inbalance [default=1.5]: Maximum permissiable load
+   :f real max_load_inbalance [default=1.2]: Maximum permissiable load
       inbalance for leaf subtree allocations. Values less than 1.0 are treated
       as 1.0.
-   :f real gpu_perf_coeff [default=1.5]: GPU perfromance coefficient. How many
+   :f real gpu_perf_coeff [default=1.0]: GPU perfromance coefficient. How many
       times faster a GPU is than CPU at factoring a subtree.
    :f integer scaling [default=0]: scaling algorithm to use:
 
