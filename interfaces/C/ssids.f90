@@ -400,6 +400,93 @@ subroutine spral_ssids_factor(cposdef, cptr, crow, val, cscale, cakeep, cfkeep,&
    type(spral_ssids_inform), intent(out) :: cinform
 
    logical :: fposdef
+   integer(C_LONG), dimension(:), pointer :: fptr
+   integer(C_LONG), dimension(:), allocatable, target :: fptr_alloc
+   integer(C_INT), dimension(:), pointer :: frow
+   integer(C_INT), dimension(:), allocatable, target :: frow_alloc
+   real(C_DOUBLE), dimension(:), pointer :: fscale
+   type(ssids_akeep), pointer :: fakeep
+   type(ssids_fkeep), pointer :: ffkeep
+   type(ssids_options) :: foptions
+   type(ssids_inform) :: finform
+
+   logical :: cindexed
+
+   ! Copy options in first to find out whether we use Fortran or C indexing
+   call copy_options_in(coptions, foptions, cindexed)
+
+   ! Translate arguments
+   fposdef = cposdef
+   call C_F_POINTER(cakeep, fakeep) ! Pulled forward so we can use it
+   if(C_ASSOCIATED(cptr) .and. C_ASSOCIATED(crow)) then
+      call C_F_POINTER(cptr, fptr, shape=(/ fakeep%n+1 /))
+      if(.not.cindexed) then
+         allocate(fptr_alloc(fakeep%n+1))
+         fptr_alloc(:) = fptr(:) + 1
+         fptr => fptr_alloc
+      endif
+      call C_F_POINTER(crow, frow, shape=(/ fptr(fakeep%n+1)-1 /))
+      if(.not.cindexed) then
+         allocate(frow_alloc(fakeep%n+1))
+         frow_alloc(:) = frow(:) + 1
+         frow => frow_alloc
+      endif
+   else
+      nullify(fptr)
+      nullify(frow)
+   endif
+   if(C_ASSOCIATED(cscale)) then
+      call C_F_POINTER(cscale, fscale, shape=(/ fakeep%n /))
+   else
+      nullify(fscale)
+   endif
+   if(C_ASSOCIATED(cfkeep)) then
+      ! Reuse old pointer
+      call C_F_POINTER(cfkeep, ffkeep)
+   else
+      ! Create new pointer
+      allocate(ffkeep)
+      cfkeep = C_LOC(ffkeep)
+   endif
+
+   ! Call Fortran routine
+   if(ASSOCIATED(fptr) .and. ASSOCIATED(frow)) then
+      if(ASSOCIATED(fscale)) then
+         call ssids_factor(fposdef, val, fakeep, ffkeep, foptions, finform, &
+            ptr=fptr, row=frow, scale=fscale)
+      else
+         call ssids_factor(fposdef, val, fakeep, ffkeep, foptions, finform, &
+            ptr=fptr, row=frow)
+      endif
+   else
+      if(ASSOCIATED(fscale)) then
+         call ssids_factor(fposdef, val, fakeep, ffkeep, foptions, finform, &
+            scale=fscale)
+      else
+         call ssids_factor(fposdef, val, fakeep, ffkeep, foptions, finform)
+      endif
+   endif
+
+   ! Copy arguments out
+   call copy_inform_out(finform, cinform)
+end subroutine spral_ssids_factor
+
+subroutine spral_ssids_factor_ptr32(cposdef, cptr, crow, val, cscale, cakeep, &
+      cfkeep, coptions, cinform) bind(C)
+   use spral_ssids_ciface
+   implicit none
+
+   logical(C_BOOL), value :: cposdef
+   type(C_PTR), value :: cptr
+   type(C_PTR), value :: crow
+   real(C_DOUBLE), dimension(*), intent(in) :: val
+   type(C_PTR), value :: cscale
+   type(C_PTR), value :: cakeep
+   type(C_PTR), intent(inout) :: cfkeep
+   type(spral_ssids_options), intent(in) :: coptions
+   type(spral_ssids_inform), intent(out) :: cinform
+
+   logical :: fposdef
    integer(C_INT), dimension(:), pointer :: fptr
    integer(C_INT), dimension(:), allocatable, target :: fptr_alloc
    integer(C_INT), dimension(:), pointer :: frow
@@ -469,7 +556,7 @@ subroutine spral_ssids_factor(cposdef, cptr, crow, val, cscale, cakeep, cfkeep,&
 
    ! Copy arguments out
    call copy_inform_out(finform, cinform)
-end subroutine spral_ssids_factor
+end subroutine spral_ssids_factor_ptr32
 
 subroutine spral_ssids_solve1(job, cx1, cakeep, cfkeep, coptions, cinform) &
       bind(C)

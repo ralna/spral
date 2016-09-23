@@ -75,7 +75,11 @@ void spral_ssids_analyse_coord(int n, int *order, long ne, const int *row,
       const struct spral_ssids_options *options,
       struct spral_ssids_inform *inform);
 /* Perform numerical factorization */
-void spral_ssids_factor(bool posdef, const int *ptr, const int *row,
+void spral_ssids_factor(bool posdef, const long *ptr, const int *row,
+      const double *val, double *scale, void *akeep, void **fkeep,
+      const struct spral_ssids_options *options,
+      struct spral_ssids_inform *inform);
+void spral_ssids_factor_ptr32(bool posdef, const int *ptr, const int *row,
       const double *val, double *scale, void *akeep, void **fkeep,
       const struct spral_ssids_options *options,
       struct spral_ssids_inform *inform);
