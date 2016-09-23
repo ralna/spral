@@ -57,7 +57,7 @@ program run_prob
 
    ! Read in a matrix
    write(*, "(3a)") "Reading '", filename, "'..."
-   if(force_psdef) rb_options%values = 3 ! Force diagonal dominance
+   if(force_psdef) rb_options%values = -3 ! Force diagonal dominance
    rb_options%values = 2 ! make up values if necessary
    call rb_read(filename, m, n, ptr, row, val, rb_options, rb_flag)
    if(rb_flag.ne.0) then
