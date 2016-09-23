@@ -310,6 +310,7 @@ contains
       integer, dimension(:), allocatable :: iw34 ! work array used by mc34
       integer, dimension(:), allocatable, target :: col ! work array in case we
          ! need to flip from lwr to upr.
+      integer, dimension(:), allocatable :: nzrow ! number of entries in row
 
       info = SUCCESS
 
@@ -477,21 +478,30 @@ contains
       ! Generate values if required
       !
       if(.not.read_val .and. (options%values.lt.0.or.options%values.ge.2)) then
+         if(abs(options%values).eq.3) then
+            allocate(nzrow(n), stat=st)
+            if(st.ne.0) goto 200
+            nzrow(:) = 0
+         endif
          do c = 1, n
             k = int( ptr(c+1) - ptr(c) )
             if(present(state)) then
                do j = ptr(c), ptr(c+1)-1
                   val(j) = random_real(state, .false.)
                   r = rcptr(j)
-                  if(abs(options%values).eq.3 .and. r.eq.c .and. symmetric)&
-                     val(j) = max(100, 10*k)
+                  if(abs(options%values).eq.3 .and. symmetric) then
+                     nzrow(r) = nzrow(r) + 1
+                     if(r.eq.c) val(j) = max(100, 10*(k+nzrow(r)-1))
+                  endif
                end do
             else
                do j = ptr(c), ptr(c+1)-1
                   val(j) = random_real(state2, .false.)
                   r = rcptr(j)
-                  if(abs(options%values).eq.3 .and. r.eq.c .and. symmetric)&
-                     val(j) = max(100, 10*k)
+                  if(abs(options%values).eq.3 .and. symmetric) then
+                     nzrow(r) = nzrow(r) + 1
+                     if(r.eq.c) val(j) = max(100, 10*(k+nzrow(r)-1))
+                  endif
                end do
             endif
          end do
