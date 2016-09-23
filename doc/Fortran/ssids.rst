@@ -93,7 +93,7 @@ described in :doc:`conventions`).
 
 .. note::
 
-   Note: For the most efficient use of the routine, CSC format should be used
+   For the most efficient use of the package, CSC format should be used
    without checking.
 
 .. f:subroutine:: ssids_analyse(check,n,ptr,row,akeep,options,inform[,order,val,topology])
@@ -383,9 +383,9 @@ Derived types
    :f integer nemin [default=32]: supernode amalgamation threshold. Two
       neighbours in the elimination tree are merged if they both involve fewer
       than nemin eliminations. The default is used if nemin<1.
-   :f ignore_numa [default=true]: If true, all CPUs and GPUs are treated as
-      belonging to a single NUMA region.
-   :f use_gpu [default=true]: Use an NVIDIA GPU if present.
+   :f logical ignore_numa [default=true]: If true, all CPUs and GPUs are
+      treated as belonging to a single NUMA region.
+   :f logical use_gpu [default=true]: Use an NVIDIA GPU if present.
    :f integer(long) min_gpu_work [default=1e10]: Minimum number of flops
       in subtree before scheduling on GPU.
    :f real max_load_inbalance [default=1.5]: Maximum permissiable load
@@ -416,7 +416,7 @@ Derived types
       |               | matching-based ordering was not used during analysis. |
       +---------------+-------------------------------------------------------+
       | >=4           | Compute using the norm-equilibration algorithm of     |
-      |               | Ruiz (see :doc:`scaling`)                             |
+      |               | Ruiz (see :doc:`scaling`).                            |
       +---------------+-------------------------------------------------------+
 
    :f integer(long) small_subtree_threshold [default=4e6]: Maximum number of

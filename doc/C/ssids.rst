@@ -11,8 +11,7 @@ Purpose
 =======
 
 This package solves one or more sets of :math:`n\times n`
-sparse **symmetric** equations  :math:`AX = B` using a multifrontal method on an
-**NVIDIA GPU**.
+sparse **symmetric** equations  :math:`AX = B` using a multifrontal method.
 The following cases are covered:
 
 1. :math:`A` is **indefinite**.
@@ -37,6 +36,8 @@ where :math:`P` is a permutation matrix and :math:`L` is lower triangular.
 *However, as SSIDS is designed primarily for indefinite
 systems, this may be slower than a dedicated Cholesky solver.*
 
+The code optionally supports hybrid computation using one or more NVIDIA GPUs.
+
 SSIDS returns bit-compatible results.
 
 An option exists to scale the matrix. In this case, the factorization of
@@ -46,10 +47,15 @@ where :math:`S` is a diagonal scaling matrix.
 Version history
 ---------------
 
-2014-03-17 Version 1.0.0
-   Initial release
-
 [For detail, see ChangeLog]
+
+2016-09-23 Version 2.0.0
+   * Add support for CPU and hybrid execution.
+   * Add support for 64-bit ptr(:) on input matrix :math:`A`.
+   * options%presolve removed.
+
+2014-03-17 Version 1.0.0
+   * Initial release: GPU only
 
 ==============
 Usage overview
@@ -88,8 +94,10 @@ In addition, advanced users may use the following routines:
 Basic Subroutines
 =================
 
-Note: For the most efficient use of the package, CSC format should be used
-without checking.
+.. note::
+   
+   For the most efficient use of the package, CSC format should be used
+   without checking.
 
 .. c:function:: void spral_ssids_default_options(struct spral_ssids_options *options)
 
@@ -97,7 +105,7 @@ without checking.
 
    :param options: Structure to be initialised.
 
-.. c:function:: void spral_ssids_analyse(bool check, int n, int *order, const int *ptr, const int *row, const double *val, void **akeep, const struct spral_ssids_options *options, struct spral_ssids_inform *inform)
+.. c:function:: void spral_ssids_analyse(bool check, int n, int *order, const long *ptr, const int *row, const double *val, void **akeep, const struct spral_ssids_options *options, struct spral_ssids_inform *inform)
 
    Perform the analyse (symbolic) phase of the factorization for a matrix
    supplied in :doc:`CSC format<csc_format>`. The resulting symbolic factors
@@ -126,46 +134,35 @@ without checking.
    :param inform: returns information about the execution of the routine
       (see :c:type:`spral_ssids_inform`).
 
-   **Note:** If a user-supplied ordering is used, it may be altered by this
-   routine, with the altered version returned in `order[]`. This version will be
-   equivalent to the original ordering, except that some supernodes may have
-   been amalgamated, a topographic ordering may have been applied to the tree
-   and the order of columns within a supernode may have been adjusted to improve
-   cache locality.
+   .. note::
 
-.. c:function:: void spral_ssids_analyse_coord(int n, int *order, int ne, const int *row, const int *col, const double *val, void **akeep, const struct spral_ssids_options *options, struct spral_ssids_inform *inform)
+      If a user-supplied ordering is used, it may be altered by this routine,
+      with the altered version returned in `order[]`. This version will be
+      equivalent to the original ordering, except that some supernodes may have
+      been amalgamated, a topographic ordering may have been applied to the
+      assembly tree and the order of columns within a supernode may have been
+      adjusted to improve cache locality.
 
-   :param n: number of columns in :math:`A`.
-   :param order: may be `NULL`; otherwise must be an array of size `n`
-      used on entry a user-supplied ordering
-      (:c:type:`options.ordering=0 <spral_ssids_options.ordering>`).
-      On return, the actual ordering used.
+.. c:function:: void spral_ssids_analyse_ptr32(bool check, int n, int *order, const int *ptr, const int *row, const double *val, void **akeep, const struct spral_ssids_options *options, struct spral_ssids_inform *inform)
+
+   As :c:func:`spral_ssids_analyse()`, except ptr has type ``int``.
+   Provided for backwards comptability, users are encourage to use 64-bit ptr
+   in new code.
+
+.. c:function:: void spral_ssids_analyse_coord(int n, int *order, long ne, const int *row, const int *col, const double *val, void **akeep, const struct spral_ssids_options *options, struct spral_ssids_inform *inform)
+
+   As :c:func:`spral_ssids_analyse()`, but for coordinate data. The variant
+   parameters are:
+
    :param ne: number of non-zero entries in :math:`A`.
    :param row[ne]: row indices for :math:`A`
       (see :doc:`Coordinate format<coord_format>`).
    :param col[ne]: column indices for :math:`A`
       (see :doc:`Coordinate format<coord_format>`).
-   :param val: may be `NULL`; otherwise must be an array of size `ne`
-      containing non-zero values for :math:`A`
-      (see :doc:`Coordinate format<coord_format>`).
-      Only used if a matching-based ordering is requested.
-   :param akeep: returns symbolic factorization, to be passed unchanged to
-      subsequent routines.
-   :param options: specifies algorithm options to be used
-      (see :c:type:`spral_ssids_options`).
-   :param inform: returns information about the execution of the routine
-      (see :c:type:`spral_ssids_inform`).
 
-   **Note:** If a user-supplied ordering is used, it may be altered by this
-   routine, with the altered version returned in `order[]`. This version will be
-   equivalent to the original ordering, except that some supernodes may have
-   been amalgamated, a topographic ordering may have been applied to the tree
-   and the order of columns within a supernode may have been adjusted to improve
-   cache locality.
+.. c:function:: void spral_ssids_factor(bool posdef, const long *ptr, const int *row, const double *val, double *scale, void *akeep, void **fkeep, const struct spral_ssids_options *options, struct spral_ssids_inform *inform)
 
-.. c:function:: void spral_ssids_factor(bool posdef, const int *ptr, const int *row, const double *val, double *scale, void *akeep, void **fkeep, const struct spral_ssids_options *options, struct spral_ssids_inform *inform)
-
-   :param posdef: true if matrix is matrix is positive-definite
+   :param posdef: true if matrix is positive-definite
    :param ptr: may be `NULL`; otherwise a length `n+1` array of column pointers
       for :math:`A`, only required if :f:type:`akeep` was obtained by running
       :c:func:`spral_ssids_analyse()` with `check=true`, in which case it must
@@ -180,7 +177,7 @@ without checking.
    :param scale: may be `NULL`; otherwise a length `n` array for diagonal
       scaling. `scale[i-1]` contains entry :math:`S_ii` of :math:`S`. Must be
       supplied by user on entry if
-      c:member:`options%scaling=0 <spral_ssids_options.scaling>` (user-supplied
+      :c:member:`options.scaling=0 <spral_ssids_options.scaling>` (user-supplied
       scaling). On exit, returns scaling used.
    :param akeep: symbolic factorization returned by preceding call to
       :c:func:`ssids_analyse()` or :c:func:`ssids_analyse_coord()`.
@@ -439,6 +436,36 @@ Derived types
       The default is used if `nemin<1`.
       The default is 8.
 
+   .. c:member bool ignore_numa:
+   
+      If true, all CPUs and GPUs are treated as
+      belonging to a single NUMA region.
+      Default is `true`.
+
+   .. c:member bool use_gpu
+   
+      Use an NVIDIA GPU if present.
+      Default is `true`.
+
+   .. c:memeber long min_gpu_work
+   
+      Minimum number of flops
+      in subtree before scheduling on GPU.
+      Default is `1e10`.
+
+   .. c:member: float max_load_inbalance
+   
+      Maximum permissiable load
+      inbalance for leaf subtree allocations. Values less than 1.0 are treated
+      as 1.0.
+      Default is `1.5`.
+
+   .. c:member:: float gpu_perf_coeff
+   
+      GPU perfromance coefficient. How many
+      times faster a GPU is than CPU at factoring a subtree.
+      Default is `1.5`.
+
    .. c:member:: int scaling
    
       Scaling algorithm to use:
@@ -467,10 +494,23 @@ Derived types
       |               | was not used during analysis.                         |
       +---------------+-------------------------------------------------------+
       | >=4           | Compute using the norm-equilibration algorithm of     |
-      |               | Ruiz.                                                 |
+      |               | Ruiz (see :doc:`scaling`).                            |
       +---------------+-------------------------------------------------------+
 
       The default is 0.
+
+   .. c:member:: long small_subtree_threshold
+   
+      Maximum number of
+      flops in a subtree treated as a single task. See
+      :ref:`method section <ssids_small_leaf>`.
+      The default is `4e6`.
+
+   .. c:member:: int cpu_block_size
+   
+      Block size to use for
+      parallelization of large nodes on CPU resources.
+      Default is `256`.
 
    .. c:member:: bool action
    
@@ -478,45 +518,51 @@ Derived types
       true (a warning is issued), or abort if false.
       The default is true.
 
+   .. c:member:: int pivot_method
+   
+      Pivot method to be used on CPU, one of:
+
+      +-------------+----------------------------------------------------------+
+      | 0           | Aggressive a posteori pivoting. Cholesky-like            |
+      |             | communication pattern is used, but a single failed pivot |
+      |             | requires restart of node factorization and potential     |
+      |             | recalculation of all uneliminated entries.               |
+      +-------------+----------------------------------------------------------+
+      | 1 (default) | Block a posteori pivoting. A failed pivot only requires  |
+      |             | recalculation of entries within its own block column.    |
+      +-------------+----------------------------------------------------------+
+      | 2           | Threshold partial pivoting. Not parallel.                |
+      +-------------+----------------------------------------------------------+
+
+      Default is `1`.
+
+   .. c:member:: double small
+   
+      Threshold below which an entry is treated as
+      equivalent to `0.0`.
+      The default is `1e-20`.
+
    .. c:member:: double u
    
       Relative pivot threshold used in symmetric indefinite case. Values outside
       of the range :math:`[0,0.5]` are treated as the closest value in that
       range.
-      The default is 0.01.
+      The default is `0.01`.
 
-   .. c:member:: bool use_gpu_solve
-      
-      Use GPU for solve phase if true, or CPU if false. 
-      The default is true.
-
-   .. c:member:: int presolve
-      
-      Perform presolve operations during factorize to accelerate solves.
-      It may take the following values:
-
-      +-------------+----------------------------------------------------------+
-      | 0 (default) | Minimal work is performed during                         |
-      |             | :c:func:`spral_ssids_factor()` to prepare for the solve. |
-      +-------------+----------------------------------------------------------+
-      | 1           | The explicit inverse of the                              |
-      |             | :math:`\mathrm{nelim}\times\mathrm{nelim}` block in each |
-      |             | supernode is precalculated during                        |
-      |             | :c:func:`spral_ssids_factor()` (where ``nelim`` is the   |
-      |             | number of variables eliminated at that supernode). As the|
-      |             | matrix :math:`L` is overwritten, the routine             |
-      |             | :c:func:`spral_ssids_alter() cannot be used.             |
-      |             |                                                          |
-      |             | This option requires                                     |
-      |             | :c:member:`options%use_gpu_solve=true                    |
-      |             | <spral_ssids_options.use_gpu_solve>`                     |
-      +-------------+----------------------------------------------------------+
-
-      The default is 0.
 
 .. c:type:: struct spral_ssids_inform
 
    Used to return information about the progress and needs of the algorithm.
+
+   .. c:member:: int cublas_error
+   
+      CUBLAS error code in the event of a CUBLAS error (0 otherwise).
+
+   .. c:member:: int cuda_error
+   
+      CUDA error code in the event of a CUDA error (0 otherwise).
+      Note that due to asynchronous execution, CUDA errors may 
+      not be reported by the call that caused them.
 
    .. c:member:: int flag
       
@@ -592,16 +638,6 @@ Derived types
       Fortran allocation status parameter in event of allocation error
       (0 otherwise).
 
-   .. c:member:: int cublas_error
-   
-      CUBLAS error code in the event of a CUBLAS error (0 otherwise).
-
-   .. c:member:: int cuda_error
-   
-      CUDA error code in the event of a CUDA error (0 otherwise).
-      Note that due to asynchronous execution, CUDA errors may 
-      not be reported by the call that caused them.
-
    +-------------+-------------------------------------------------------------+
    | inform.flag | Return status                                               |
    +=============+=============================================================+
@@ -635,9 +671,6 @@ Derived types
    +-------------+-------------------------------------------------------------+
    | -11         | job is out-of-range.                                        |
    +-------------+-------------------------------------------------------------+
-   | -12         | The combination of options.use_gpu_solve and                |
-   |             | options.presolve are not compatible with the requested      |
-   |             | operation.                                                  |
    +-------------+-------------------------------------------------------------+
    | -13         | Called :c:func:`spral_ssids_enquire_posdef()` on indefinite |
    |             | factorization.                                              |
@@ -679,6 +712,12 @@ Derived types
    |             | matching-based ordering ignored                             |
    |             | (consider setting options.scaling=3).                       |
    +-------------+-------------------------------------------------------------+
+   | +50         | OpenMP processor binding is disabled. Consider setting      |
+   |             | the environment variable OMP_PROC_BIND=true (this may       |
+   |             | affect performance on NUMA systems).                        |
+   +-------------+-------------------------------------------------------------+
+
+.. _ssids_example:
 
 =======
 Example
@@ -727,98 +766,89 @@ This produces the following output::
 Method
 ======
 
-:c:func:`spral_ssids_analyse()` and :c:func:`spral_ssids_analyse_coord()`
--------------------------------------------------------------------------
+Partition of work across available resources
+--------------------------------------------
 
-If check is set to true on the call to :c:func:`spral_ssids_analyse()` or if
-:c:func:`spral_ssids_analyse_coord()` is called, the user-supplied matrix data
-is checked for errors. The cleaned integer matrix data (duplicates are
-summed and out-of-range indices discarded) is stored in akeep. The use of
-checking is optional on a call to :c:func:`spral_ssids_analyse()` as it incurs
-both time and memory overheads. However, it is recommended since the
+Once the ordering has been determined and the assembly tree determined in the
+analyse phase, the tree is broken into a number of leaf subtrees rooted at a
+single node, leaving a root subtree/forest consisting of all remaining nodes
+above those. Each leaf subtree is pre-assigned to a particular NUMA region or
+GPU for the factorization phase. Details of the algorithm used for
+finding these subtrees and their assignment can be found in the paper [2]_.
+
+The factorization phase has two steps. In the first, leaf subtrees are
+factorized in parallel on their assigned resources. Once all leaf subtrees are
+factored, the second phase begins where all CPU resources cooperate to factorize
+the root subtree.
+
+At present the solve phase is performed in serial.
+
+Data checking
+-------------
+
+If check is set to .true. on the call to :c:func:`spral_ssids_analyse()` or if
+:c:func:`spral_ssids_analyse_coord()` is called, the user-supplied matrix data is
+checked for errors. The cleaned integer matrix data (duplicates are
+summed and out-of-range indices discarded) is stored in akeep. The use
+of checking is optional on a call to :c:func:`spral_ssids_analyse()` as it incurs both
+time and memory overheads. However, it is recommended since the
 behaviour of the other routines in the package is unpredictable if
 duplicates and/or out-of-range variable indices are entered.
 
 If the user has supplied an elimination order it is checked for errors.
 Otherwise, an elimination order is generated by the package. The
 elimination order is used to construct an assembly tree. On exit from
-:c:func:`spral_ssids_analyse()` (and :c:func:`spral_ssids_analyse_coord()`),
-`order[]` is set so that `order[i]` holds the position of variable :math:`i` in
-the elimination order. If an ordering was supplied by the user, this order may
+:c:func:`spral_ssids_analyse()` (and :c:func:`spral_ssids_analyse_coord()`), `order[]` is
+set so that `order[i]` holds the position of variable :math:`i` in the
+elimination order. If an ordering was supplied by the user, this order may
 differ, but will be equivalent in terms of fill-in.
 
-:c:func:`spral_ssids_factor()`
-------------------------------
+Factorization performed
+-----------------------
 
-:c:func:`spral_ssids_factor()` optionally computes a scaling and then performs
-the numerical factorization. The user must specify whether or not the matrix
-is positive definite. If `posdef` is set to `true`, no pivoting is
-performed and the computation will terminate with an error if a
-non-positive pivot is encountered.
+The factorization performed depends on the value of `posdef`.
 
-The factorization uses the assembly tree that was set up by the analyse
-phase. At each node, entries from :math:`A` and, if it is not a leaf
-node, the generated elements and any delayed pivots from its child nodes
-must be assembled. Separate kernels handle each of these.
+If **posdef=true**, a Cholesky factorization is performed:
 
-The kernel that performs the assembly from the child nodes considers one
-parent-child assembly at a time. Each generated element from a child is
-divided into a number of tiles, and a thread block launched to assemble
-each tile into a dense submatrix using a simple mapping array to
-determine the destination row and column of each entry.
-Bit-compatibility is achieved by ensuring the child entries are always
-assembled in the same order.
+.. math:: SAS = PL(PL)^T.
 
-A dense partial factorization of the fully summed columns is then
-performed. The fully summed columns are split into a number of tiles
-that are each handled by an associated block. Factorization proceeds one
-column of tiles at a time. The pivoting condition is chosen to ensure
-that all entries of :math:`L` have absolute value less than
-:math:`u^{-1}`. This limits the growth of the entries of the
-:math:`D` factor and ensures that any solves will be backwards stable.
-The details are described in [1]_.
+Pivoting is not performed, so :math:`P` is the permutation determined in the
+analysis phase. :math:`S` is a diagonal scaling matrix.
 
-If a pivot candidate does not pass the pivot tests at a node, it is
-delayed to its parent node, where further elimination operations may
-make it acceptable. Delaying pivots leads to additional fill-in and
-floating-point operations beyond that predicted by
-:c:func:`spral_ssids_analyse()` (or :c:func:`spral_ssids_analyse_coord()`),
-and may result in additional memory allocations being required. The number of
-delayed pivots can often be reduced by using appropriate scaling.
+If **posdef=false**, a symmetric indefinite factorization is performed:
 
-At each non-root node, the majority of the floating-point operations
-involve the formation of the generated element. This is handled by a
-single dedicated kernel; again, see [1]_ for details.
+.. math:: SAS = PLD(PL)^T
 
-At the end of the factorization, data structures for use in future calls
-to :c:func:`spral_ssids_solve()` are prepared. If :c:member:`options.presolve=1
-<spral_ssids_options.presolve>`, the block of :math:`L` corresponding to the
-eliminated variables is explicitly inverted to accelerate future calls to
-:c:func:`spral_ssids_solve()` at the cost of making
-:c:func:`spral_ssids_factor()` slower.
+Pivoting is performed, so :math:`P` may differ from the permutation determined
+in the analysis phase, though it is kept as close as possible to minimize fill.
+The exact pivoting algorithm varies depending on the particular kernel the
+algorithm chooses to employ.
 
-:c:func:`spral_ssids_solve()`
------------------------------
+Full details of the algorithms used are provided in [1]_ for GPUs and [2]_ for
+CPUs.
 
-The routine :c:func:`spral_ssids_solve1()` is just a wrapper around
-:c:func:`spral_ssids_solve()`.
+.. _ssids_small_leaf:
 
-If :c:member:`options.use_gpu_solve=false <spral_ssids_options.use_gpu_solve>`,
-data is moved to the CPU if required and the BLAS calls are used to perform a
-solve using the assembly tree and factors generated on previous calls.
+Small Leaf Subtrees
+-------------------
 
-Otherwise, the solve is conducted on the GPU in a similar fashion. If
-:c:member:`options.presolve=0 <spral_ssids_options.presolve>`, custom GPU
-implementations of ``_trsv()`` and ``_gemv()`` are used to handle multiple
-independent operations. If multiple right-hand sides are to be solved for, the
-single right-hand side solve is looped over. If :c:member:`options.presolve=1
-<spral_ssids_options.presolve>`, ``_trsv()`` can be replaced by the much more
-parallel (and hence faster) ``_gemv()``. In this case multiple right-hand sides
-are handled at the same time.
+For subtrees allocated to run on the CPU, the factorization of small nodes near
+the leaves of the tree can be amalgamated into a single parallel task (normally
+each would be treated as its own OpenMP task to be scheduled). This can reduce
+scheduling overheads, especially on small problems. If the total number of
+operations for a subtree root at a given node is less than
+:c:member:`options.small_subtree_threshold <spral_ssids_options.small_subtree_threshold>`,
+that subtree is treated as a single task.
 
 References
 ----------
 
 .. [1] J.D. Hogg, E. Ovtchinnikov and J.A. Scott. (2014).
-   A sparse symmetric indefinite direct solver for GPU architectures.
-   RAL Technical Report. RAL-P-2014-0xx, to appear.
+   *A sparse symmetric indefinite direct solver for GPU architectures*.
+   ACM Transactions on Mathematical Software 42(1), Article 1, 25 pages.
+   [`DOI: 10.1145/2756548 <https://doi.org/10.1145/2756548>`_]
+   [`Preprint RAL-P-2014-006 <https://epubs.stfc.ac.uk/work/12189719>`_]
+
+.. [2] J.D. Hogg. (2016).
+   *A new sparse LDLT solver using a posteriori threshold pivoting*.
+   RAL Technical Report. RAL-TR-2016-0xx, to appear.
