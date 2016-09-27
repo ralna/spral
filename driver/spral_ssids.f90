@@ -299,6 +299,12 @@ contains
          case("--disable-gpu")
             options%use_gpu = .false.
             print *, 'Disabling GPUs'
+         case("--min-gpu-work")
+            call get_command_argument(argnum, argval)
+            argnum = argnum + 1
+            read( argval, * ) options%min_gpu_work
+            print *, 'Min GPU work = ', &
+               options%min_gpu_work
          case("--gpu-perf-coeff")
             call get_command_argument(argnum, argval)
             argnum = argnum + 1
