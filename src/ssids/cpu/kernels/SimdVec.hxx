@@ -9,7 +9,9 @@
 #include <cstdio>
 #include <limits>
 
+#if defined(__AVX2__) || defined(__AVX__)
 #include <immintrin.h>
+#endif
 
 namespace spral { namespace ssids { namespace cpu {
 

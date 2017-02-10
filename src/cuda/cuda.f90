@@ -322,7 +322,7 @@ integer(C_INT) function cudaMemcpy_h2d_int(dest, n, src)
    integer, intent(in) :: n
    integer(C_INT), dimension(n), target, intent(in) :: src
 
-   cudaMemcpy_h2d_int = cudaMemcpy(dest, C_LOC(src), C_SIZEOF(src), &
+   cudaMemcpy_h2d_int = cudaMemcpy(dest, C_LOC(src), n * C_SIZEOF(src(1)), &
       cudaMemcpyHostToDevice)
 end function cudaMemcpy_h2d_int
 integer(C_INT) function cudaMemcpy_h2d_double(dest, n, src)
@@ -330,7 +330,7 @@ integer(C_INT) function cudaMemcpy_h2d_double(dest, n, src)
    integer, intent(in) :: n
    real(C_DOUBLE), dimension(n), target, intent(in) :: src
 
-   cudaMemcpy_h2d_double = cudaMemcpy(dest, C_LOC(src), C_SIZEOF(src), &
+   cudaMemcpy_h2d_double = cudaMemcpy(dest, C_LOC(src), n * C_SIZEOF(src(1)), &
       cudaMemcpyHostToDevice)
 end function cudaMemcpy_h2d_double
 integer(C_INT) function cudaMemcpy_d2h(dest, src, bytes)
