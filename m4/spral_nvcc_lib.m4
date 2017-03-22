@@ -20,7 +20,7 @@ AC_CHECK_HEADER([cuda_runtime_api.h], [spral_nvcc_inc_ok=yes])
 # Check in CUDA_HOME/include
 if test x"$spral_nvcc_inc_ok" != xyes; then
    NVCC_INCLUDE_FLAGS="$NVCC_INCLUDE_FLAGS -I$CUDA_HOME/include"
-   save_CPPFLAGS="$CCPFLAGS"; CPPFLAGS="$CPPFLAGS $NVCC_INCLUDE_FLAGS"
+   save_CPPFLAGS="$CPPFLAGS"; CPPFLAGS="$CPPFLAGS $NVCC_INCLUDE_FLAGS"
    AC_CHECK_HEADER([cuda_runtime_api.h], [spral_nvcc_inc_ok=yes])
    CPPFLAGS=$save_CPPFLAGS
 fi
