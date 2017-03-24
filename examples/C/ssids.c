@@ -62,4 +62,6 @@ int main(void) {
 
    int cuda_error = spral_ssids_free(&akeep, &fkeep);
    if(cuda_error!=0) exit(1);
+   
+   return 0;
 }
