@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-void main(void) {
+int main(void) {
    /* Derived types */
    void *akeep, *fkeep;
    struct spral_ssids_options options;
