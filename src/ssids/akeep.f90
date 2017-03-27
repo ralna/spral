@@ -16,7 +16,7 @@ module spral_ssids_akeep
 
    type symbolic_subtree_ptr
       integer :: exec_loc
-      class(symbolic_subtree_base), pointer :: ptr
+      class(symbolic_subtree_base), pointer :: ptr => null()
    end type symbolic_subtree_ptr
 
    !
