@@ -55,8 +55,8 @@ subroutine spral_ssids_contrib_get_data(ccontrib, n, val, ldval, rlist, &
    call c_f_pointer(ccontrib, fcontrib)
 
    do while(.not.fcontrib%ready)
-      ! FIXME: make below a taskyield?
-!$omp flush
+      ! FIXME: make below a taskyield? (was: flush)
+      !$omp taskyield
    end do
 
    n = fcontrib%n

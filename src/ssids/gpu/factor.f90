@@ -1218,7 +1218,7 @@ subroutine factor_indef( stream, lev, lvlptr, nnodes, nodes, lvllist, sparent, &
    integer :: ind_len, B_len
    integer :: i, j, k, p
    integer :: ncb, last_ln, llist, maxr
-   integer :: ndelay, blkm, blkn, nelim, parent, node
+   integer :: ndelay, blkm, blkn, nelim, parent, node, dif
    integer, dimension(:), pointer :: lperm
 
    type(C_PTR) :: ptr_D, ptr_L, ptr_LD
@@ -1417,8 +1417,10 @@ subroutine factor_indef( stream, lev, lvlptr, nnodes, nodes, lvllist, sparent, &
          ! Record delays
          nodes(node)%nelim = nelim
          if(blkn.lt.blkm) then
-!$OMP ATOMIC
-            nodes(parent)%ndelay = nodes(parent)%ndelay + (blkn - nelim)
+            dif = blkn - nelim
+!$OMP ATOMIC UPDATE
+            nodes(parent)%ndelay = nodes(parent)%ndelay + dif
+!$OMP END ATOMIC
          endif
          stats%num_delay = stats%num_delay + blkn - nelim
          do j = blkm, blkm-nelim+1, -1
