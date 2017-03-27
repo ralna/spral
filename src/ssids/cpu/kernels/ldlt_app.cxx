@@ -70,6 +70,7 @@ public:
     *  \param passed number of variables passing a posteori pivot test in block
     */
    void init_passed(int passed) {
+      spral::omp::AcquiredLock scopeLock(lock_);
       npass_ = passed;
    }
    /** \brief Update number of passed columns.
@@ -93,7 +94,7 @@ public:
       bool fail = (passed < nelim);
       if(!fail) {
          // Record number of blocks in column passing this test
-         #pragma omp atomic update
+         spral::omp::AcquiredLock scopeLock(lock_);
          ++npass_;
       }
       return fail;
@@ -110,6 +111,7 @@ public:
    void adjust(int& next_elim) {
       // Test if last passed column was first part of a 2x2: if so,
       // decrement npass
+      spral::omp::AcquiredLock scopeLock(lock_);
       if(npass_>0) {
          T d11 = d[2*(npass_-1)+0];
          T d21 = d[2*(npass_-1)+1];
@@ -148,10 +150,13 @@ public:
    }
 
    /** \brief return number of passed columns */
-   int get_npass() const { return npass_; }
+   int get_npass() const {
+     spral::omp::AcquiredLock scopeLock(lock_);
+     return npass_;
+   }
 
 private:
-   spral::omp::Lock lock_; ///< lock for altering npass
+   mutable spral::omp::Lock lock_; ///< lock for altering npass
    int npass_=0; ///< reduction variable for nelim
 };
 
