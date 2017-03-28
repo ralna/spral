@@ -38,9 +38,15 @@ class Page {
    // \{
    typedef typename std::allocator_traits<CharAllocator>::template rebind_traits<int> IntAllocTraits;
    // \}
-   static int const nlevel=16; ///< Number of divisions to smallest allocation
-                               ///  unit.
-   static int const align=32; ///< Underlying alignment of all pointers returned
+   static int const nlevel=16; ///< Number of divisions to smallest allocation unit.
+  
+#if defined(__AVX512F__)
+  static int const align=64; ///< Underlying alignment of all pointers returned
+#elif defined(__AVX__)
+  static int const align=32; ///< Underlying alignment of all pointers returned
+#else
+  static int const align=16; ///< Underlying alignment of all pointers returned
+#endif
    static int const ISSUED_FLAG = -2; ///< Flag: value is issued
 public:
    // \{

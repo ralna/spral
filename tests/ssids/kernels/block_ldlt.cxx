@@ -177,7 +177,14 @@ void find_maxloc_simple(const int from, const T *a, int lda, T &bestv, int &rloc
 template<typename T, int BLOCK_SIZE, bool debug=false>
 int test_maxloc(int from, bool zero=false) {
    int const lda = 2*BLOCK_SIZE;
-   alignas(32) T a[BLOCK_SIZE*lda];
+#if defined(__AVX512F__)
+   alignas(64)
+#elif defined(__AVX__)
+   alignas(32)
+#else
+   alignas(16)
+#endif
+     T a[BLOCK_SIZE*lda];
 
    /* Setup a random matrix. Entries in lwr triangle < 1.0, others = 100.0 */
    for(int j=0; j<from; j++)

@@ -15,7 +15,13 @@ namespace spral { namespace ssids { namespace cpu {
  * function provides a pointer to it after ensuring it is of at least the
  * given size. */
 class Workspace {
-   static int const align = 32;
+#if defined(__AVX512F__)
+  static int const align = 64;
+#elif defined(__AVX__)
+  static int const align = 32;
+#else
+  static int const align = 16;
+#endif
 public:
    Workspace(size_t sz)
    {

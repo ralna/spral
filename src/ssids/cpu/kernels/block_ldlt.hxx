@@ -179,8 +179,16 @@ void find_maxloc(const int from, const T *a, int lda, T &bestv_out, int &rloc, i
    bestr = blend(bestr, bestr2, v_gt_bestv);
    bestc = blend(bestc, bestc2, v_gt_bestv);
    // Extract results
+#if defined(__AVX512F__)
+   T __attribute__((aligned(64))) bv2[SimdVecT::vector_length];
+   intT __attribute__((aligned(64))) br2[SimdVecT::vector_length], bc2[SimdVecT::vector_length];
+#elif defined(__AVX__)
    T __attribute__((aligned(32))) bv2[SimdVecT::vector_length];
    intT __attribute__((aligned(32))) br2[SimdVecT::vector_length], bc2[SimdVecT::vector_length];
+#else
+   T __attribute__((aligned(16))) bv2[SimdVecT::vector_length];
+   intT __attribute__((aligned(16))) br2[SimdVecT::vector_length], bc2[SimdVecT::vector_length];
+#endif
    bestv.store_aligned(bv2);
    bestr.store_aligned(&br2[0].d);
    bestc.store_aligned(&bc2[0].d);

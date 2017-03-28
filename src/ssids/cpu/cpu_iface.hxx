@@ -35,7 +35,13 @@ struct cpu_factor_options {
 /** Return nearest value greater than supplied lda that is multiple of alignment */
 template<typename T>
 size_t align_lda(size_t lda) {
-   int const align = 32;
+#if defined(__AVX512F__)
+  int const align = 64;
+#elif defined(__AVX__)
+  int const align = 32;
+#else
+  int const align = 16;
+#endif
    static_assert(align % sizeof(T) == 0, "Can only align if T divides align");
    int const Talign = align / sizeof(T);
    return Talign*((lda-1)/Talign + 1);

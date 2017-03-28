@@ -20,7 +20,13 @@ namespace spral { namespace ssids { namespace cpu {
  */
 template <typename T>
 int offset_to_align(T* ptr) {
-   int const align = 32;
+#if defined(__AVX512F__)
+  int const align = 64;
+#elif defined(__AVX__)
+  int const align = 32;
+#else
+  int const align = 16;
+#endif
    uintptr_t offset = align - (reinterpret_cast<uintptr_t>(ptr) % align);
    offset /= sizeof(T);
    if((reinterpret_cast<uintptr_t>(ptr+offset) % align) == 0) return offset;

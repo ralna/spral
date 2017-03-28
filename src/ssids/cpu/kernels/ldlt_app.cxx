@@ -240,7 +240,13 @@ private:
 
 /** Returns true if ptr is suitably aligned for AVX, false if not */
 bool is_aligned(void* ptr) {
-   const int align = 32;
+#if defined(__AVX512F__)
+  const int align = 64;
+#elif defined(__AVX__)
+  const int align = 32;
+#else
+  const int align = 16;
+#endif
    return (reinterpret_cast<uintptr_t>(ptr) % align == 0);
 }
 
@@ -2423,7 +2429,13 @@ using namespace spral::ssids::cpu::ldlt_app_internal;
 
 template<typename T>
 size_t ldlt_app_factor_mem_required(int m, int n, int block_size) {
-   int const align = 32;
+#if defined(__AVX512F__)
+  int const align = 64;
+#elif defined(__AVX__)
+  int const align = 32;
+#else
+  int const align = 16;
+#endif
    return align_lda<T>(m) * n * sizeof(T) + align; // CopyBackup
 }
 
