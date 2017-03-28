@@ -1076,8 +1076,11 @@ subroutine ssids_solve_one_double(x1, akeep, fkeep, options, inform, job)
    integer :: ldx
 
    ldx = size(x1)
-   call ssids_solve_mult_double(1, x1, ldx, akeep, fkeep, options, inform, &
-      job=job)
+   if (present(job)) then
+      call ssids_solve_mult_double(1, x1, ldx, akeep, fkeep, options, inform, job)
+   else
+      call ssids_solve_mult_double(1, x1, ldx, akeep, fkeep, options, inform)
+   end if
 end subroutine ssids_solve_one_double
 
 !*************************************************************************
