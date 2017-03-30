@@ -1373,6 +1373,10 @@ subroutine push_omp_settings(user_settings, flag)
    type(omp_settings), intent(out) :: user_settings
    integer, intent(inout) :: flag
 
+   ! dummy operations if no OpenMP
+   user_settings%nested = .true.
+   user_settings%max_active_levels = 2
+
 ! !$ ! issue an error if we don't have cancellation (could lead to segfaults)
 ! !$ if(.not.omp_get_cancellation()) then
 ! !$    flag = SSIDS_ERROR_OMP_CANCELLATION
