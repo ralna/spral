@@ -1,6 +1,6 @@
 program run_prob
    use, intrinsic :: iso_c_binding
-   use omp_lib
+!$ use omp_lib
    use cuda_helper
    use spral_hw_topology
    use spral_rutherford_boeing

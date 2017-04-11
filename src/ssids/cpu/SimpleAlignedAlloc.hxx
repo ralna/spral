@@ -18,7 +18,13 @@ namespace spral { namespace ssids { namespace cpu {
  */
 template <typename T>
 class SimpleAlignedAllocator {
-   int const align = 32;
+#if defined(__AVX512F__)
+  int const align = 64;
+#elif defined(__AVX__)
+  int const align = 32;
+#else
+  int const align = 16;
+#endif
 public:
    typedef T value_type;
 

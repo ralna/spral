@@ -6,7 +6,7 @@
 !> \brief Define ssids_fkeep type and associated procedures (CPU version)
 module spral_ssids_fkeep
    use, intrinsic :: iso_c_binding
-   use :: omp_lib
+!$ use :: omp_lib
    use spral_ssids_akeep, only : ssids_akeep
    use spral_ssids_contrib, only : contrib_type
    use spral_ssids_datatypes
@@ -22,7 +22,7 @@ module spral_ssids_fkeep
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
    type numeric_subtree_ptr
-      class(numeric_subtree_base), pointer :: ptr
+      class(numeric_subtree_base), pointer :: ptr => null()
    end type numeric_subtree_ptr
 
    !

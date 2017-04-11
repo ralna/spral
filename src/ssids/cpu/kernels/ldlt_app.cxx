@@ -70,6 +70,7 @@ public:
     *  \param passed number of variables passing a posteori pivot test in block
     */
    void init_passed(int passed) {
+      spral::omp::AcquiredLock scopeLock(lock_);
       npass_ = passed;
    }
    /** \brief Update number of passed columns.
@@ -93,7 +94,7 @@ public:
       bool fail = (passed < nelim);
       if(!fail) {
          // Record number of blocks in column passing this test
-         #pragma omp atomic update
+         spral::omp::AcquiredLock scopeLock(lock_);
          ++npass_;
       }
       return fail;
@@ -110,6 +111,7 @@ public:
    void adjust(int& next_elim) {
       // Test if last passed column was first part of a 2x2: if so,
       // decrement npass
+      spral::omp::AcquiredLock scopeLock(lock_);
       if(npass_>0) {
          T d11 = d[2*(npass_-1)+0];
          T d21 = d[2*(npass_-1)+1];
@@ -148,10 +150,13 @@ public:
    }
 
    /** \brief return number of passed columns */
-   int get_npass() const { return npass_; }
+   int get_npass() const {
+     spral::omp::AcquiredLock scopeLock(lock_);
+     return npass_;
+   }
 
 private:
-   spral::omp::Lock lock_; ///< lock for altering npass
+   mutable spral::omp::Lock lock_; ///< lock for altering npass
    int npass_=0; ///< reduction variable for nelim
 };
 
@@ -235,7 +240,13 @@ private:
 
 /** Returns true if ptr is suitably aligned for AVX, false if not */
 bool is_aligned(void* ptr) {
-   const int align = 32;
+#if defined(__AVX512F__)
+  const int align = 64;
+#elif defined(__AVX__)
+  const int align = 32;
+#else
+  const int align = 16;
+#endif
    return (reinterpret_cast<uintptr_t>(ptr) % align == 0);
 }
 
@@ -2418,7 +2429,13 @@ using namespace spral::ssids::cpu::ldlt_app_internal;
 
 template<typename T>
 size_t ldlt_app_factor_mem_required(int m, int n, int block_size) {
-   int const align = 32;
+#if defined(__AVX512F__)
+  int const align = 64;
+#elif defined(__AVX__)
+  int const align = 32;
+#else
+  int const align = 16;
+#endif
    return align_lda<T>(m) * n * sizeof(T) + align; // CopyBackup
 }
 

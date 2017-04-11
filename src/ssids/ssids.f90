@@ -1076,8 +1076,11 @@ subroutine ssids_solve_one_double(x1, akeep, fkeep, options, inform, job)
    integer :: ldx
 
    ldx = size(x1)
-   call ssids_solve_mult_double(1, x1, ldx, akeep, fkeep, options, inform, &
-      job=job)
+   if (present(job)) then
+      call ssids_solve_mult_double(1, x1, ldx, akeep, fkeep, options, inform, job)
+   else
+      call ssids_solve_mult_double(1, x1, ldx, akeep, fkeep, options, inform)
+   end if
 end subroutine ssids_solve_one_double
 
 !*************************************************************************
@@ -1369,6 +1372,10 @@ end subroutine free_both_double
 subroutine push_omp_settings(user_settings, flag)
    type(omp_settings), intent(out) :: user_settings
    integer, intent(inout) :: flag
+
+   ! dummy operations if no OpenMP
+   user_settings%nested = .true.
+   user_settings%max_active_levels = 2
 
 ! !$ ! issue an error if we don't have cancellation (could lead to segfaults)
 ! !$ if(.not.omp_get_cancellation()) then
