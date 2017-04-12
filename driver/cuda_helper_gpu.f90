@@ -1,21 +1,33 @@
 module cuda_helper
-   use spral_cuda
-   use, intrinsic :: iso_c_binding
-   implicit none
+
+  use spral_cuda
+  use, intrinsic :: iso_c_binding
+  implicit none
 
 contains
 
-   ! Do some pointless CUDA operation to force an initialization
-   subroutine cuda_init()
-      type(C_PTR) :: ptr, cublas
-      integer :: cuda_error
+  ! Return number of CUDA devices available, or < 0 for error
+  subroutine cuda_init(cnt)
+    implicit none
 
-      cuda_error = cudaMalloc(ptr, 1_C_SIZE_T)
-      cuda_error = cudaFree(ptr)
+    integer(C_INT), parameter :: cudaSuccess                 =  0_C_INT
+    integer(C_INT), parameter :: cudaErrorInsufficientDriver = 35_C_INT
+    integer(C_INT), parameter :: cudaErrorNoDevice           = 38_C_INT
 
-      cuda_error = cublasCreate(cublas)
-      cuda_error = cublasDestroy(cublas)
+    integer(C_INT), intent(out) :: cnt
+    integer(C_INT) :: cuda_error
 
-      cuda_error = cudaDeviceSynchronize()
-   end subroutine cuda_init
+    cuda_error = cudaGetDeviceCount(cnt)
+    select case (cuda_error)
+    case (cudaSuccess)
+       continue
+    case (cudaErrorInsufficientDriver)
+       cnt = -1_C_INT
+    case (cudaErrorNoDevice)
+       cnt = 0_C_INT
+    case default
+       cnt = -2_C_INT
+    end select
+  end subroutine cuda_init
+
 end module cuda_helper

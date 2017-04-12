@@ -40,6 +40,8 @@ subroutine spral_ssids_contrib_free_dbl(ccontrib) bind(C)
 
    type(contrib_type), pointer :: fcontrib
 
-   call c_f_pointer(ccontrib, fcontrib)
-   call contrib_free(fcontrib)
+   if (c_associated(ccontrib)) then
+      call c_f_pointer(ccontrib, fcontrib)
+      call contrib_free(fcontrib)
+   end if
 end subroutine spral_ssids_contrib_free_dbl
