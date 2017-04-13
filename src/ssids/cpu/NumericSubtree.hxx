@@ -84,7 +84,9 @@ public:
       // Whilst this isn't really what's happening it does ensure our
       // ordering is correct: each node cannot be scheduled until all its
       // children are done, but its children to run in any order.
-      bool abort = false; // Set to true to abort remaining tasks
+      bool abort;
+      #pragma omp atomic write
+      abort = false; // Set to true to abort remaining tasks
       #pragma omp taskgroup
       {
          /* Loop over small leaf subtrees */
@@ -94,7 +96,10 @@ public:
                firstprivate(si) \
                shared(aval, abort, options, scaling, thread_stats, work) \
                depend(in: parent_lcol[0:1])
-            { if(!abort) {
+            {
+              #pragma omp atomic read
+              const bool my_abort = abort;
+              if (!my_abort) {
                //#pragma omp cancellation point taskgroup
                try {
                   int this_thread = omp_get_thread_num();
@@ -107,6 +112,7 @@ public:
                         options, thread_stats[this_thread]);
                   if(thread_stats[this_thread].flag<Flag::SUCCESS) {
 #ifdef _OPENMP
+                     #pragma omp atomic write
                      abort = true;
                      //#pragma omp cancel taskgroup
 #else
@@ -121,6 +127,7 @@ public:
                   thread_stats[omp_get_thread_num()].flag =
                      Flag::ERROR_ALLOCATION;
 #ifdef _OPENMP
+                  #pragma omp atomic write
                   abort = true;
                   //#pragma omp cancel taskgroup
 #else
@@ -131,6 +138,7 @@ public:
                   thread_stats[omp_get_thread_num()].flag =
                      Flag::ERROR_SINGULAR;
 #ifdef _OPENMP
+                  #pragma omp atomic write
                   abort = true;
                   //#pragma omp cancel taskgroup
 #else
@@ -152,7 +160,11 @@ public:
                       thread_stats, work) \
                depend(inout: this_lcol[0:1]) \
                depend(in: parent_lcol[0:1])
-            { if(!abort) {
+            {
+              bool my_abort;
+              #pragma omp atomic read
+              my_abort = abort;
+              if (!my_abort) {
                //#pragma omp cancellation point taskgroup
                try {
                   /*printf("%d: Node %d parent %d (of %d) size %d x %d\n",
@@ -175,6 +187,7 @@ public:
                       pool_alloc_);
                   if(thread_stats[this_thread].flag<Flag::SUCCESS) {
 #ifdef _OPENMP
+                     #pragma omp atomic write
                      abort = true;
                      //#pragma omp cancel taskgroup
 #else
@@ -184,13 +197,16 @@ public:
                   }
 
                   // Assemble children into contribution block
-                  if(!abort)
+                  #pragma omp atomic read
+                  my_abort = abort;
+                  if (!my_abort)
                      assemble_post(symb_.n, symb_[ni], child_contrib,
                            nodes_[ni], pool_alloc_, work);
                } catch (std::bad_alloc const&) {
                   thread_stats[omp_get_thread_num()].flag =
                      Flag::ERROR_ALLOCATION;
 #ifdef _OPENMP
+                  #pragma omp atomic write
                   abort = true;
                   //#pragma omp cancel taskgroup
 #else
@@ -201,6 +217,7 @@ public:
                   thread_stats[omp_get_thread_num()].flag =
                      Flag::ERROR_SINGULAR;
 #ifdef _OPENMP
+                  #pragma omp atomic write
                   abort = true;
                   //#pragma omp cancel taskgroup
 #else
