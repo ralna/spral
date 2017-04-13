@@ -5,7 +5,6 @@
 !
 !> \brief Define ssids_fkeep type and associated procedures (CPU version)
 module spral_ssids_fkeep
-
   use, intrinsic :: iso_c_binding
 !$ use :: omp_lib
   use spral_ssids_akeep, only : ssids_akeep
@@ -89,14 +88,13 @@ contains
     allocate(thread_inform(to_launch), stat=inform%stat)
     if (inform%stat .ne. 0) goto 200
     all_region = .false.
-!$omp parallel proc_bind(spread) num_threads(to_launch) &
-!$omp    default(none) &
-!$omp    private(abort, i, exec_loc, numa_region, my_loc, thread_num) &
-!$omp    shared(akeep, fkeep, val, options, thread_inform, child_contrib, &
-!$omp           all_region) &
+!$omp parallel proc_bind(spread) num_threads(to_launch)                               &
+!$omp    default(none)                                                                &
+!$omp    private(abort, i, exec_loc, numa_region, my_loc, thread_num)                 &
+!$omp    shared(akeep, fkeep, val, options, thread_inform, child_contrib, all_region) &
 !$omp    if(to_launch .gt. 1)
     thread_num = 0
-!$ thread_num = omp_get_thread_num()
+!$  thread_num = omp_get_thread_num()
     numa_region = mod(thread_num, size(akeep%topology)) + 1
     my_loc = thread_num + 1
     if (thread_num < size(akeep%topology)) then
@@ -106,9 +104,9 @@ contains
     ! Split into threads for this NUMA region (unless we're running a GPU)
     exec_loc = -1 ! avoid compiler warning re uninitialized
     abort = .false.
-!$omp parallel proc_bind(close) default(shared) &
+!$omp parallel proc_bind(close) default(shared)         &
 !$omp    num_threads(akeep%topology(numa_region)%nproc) &
-!$omp    if(my_loc.le.size(akeep%topology))
+!$omp    if(my_loc .le. size(akeep%topology))
 !$omp single
 !$omp taskgroup
     do i = 1, akeep%nparts

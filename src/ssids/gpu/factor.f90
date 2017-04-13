@@ -1424,7 +1424,7 @@ contains
           ! Record delays
           nodes(node)%nelim = nelim
           if (blkn .lt. blkm) then
-!$OMP ATOMIC
+             !$omp atomic update
              nodes(parent)%ndelay = nodes(parent)%ndelay + (blkn - nelim)
           end if
           stats%num_delay = stats%num_delay + blkn - nelim
