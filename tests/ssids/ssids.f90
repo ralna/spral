@@ -473,7 +473,7 @@ subroutine test_errors
       a%row, a%val, state)
    call ssids_analyse(check, a%n, a%ptr, a%row, akeep, options, info, val=a%val)
    call ssids_factor(.true., a%val, akeep, fkeep, options, info)
-   call print_result(info%flag,SSIDS_ERROR_NOT_POS_DEF)
+   call print_result(info%flag, SSIDS_ERROR_NOT_POS_DEF)
    call ssids_free(akeep, fkeep, cuda_error)
 
 !!!!!!!!!
