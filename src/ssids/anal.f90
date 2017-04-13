@@ -508,7 +508,7 @@ contains
        ngpu = ngpu + size(topology(i)%gpus)
        max_gpu = max(max_gpu, size(topology(i)%gpus))
     end do
-    allocate(map(nregion+ngpu)), stat=st)
+    allocate(map(nregion+ngpu), stat=st)
     if (st .ne. 0) return
 
     if (gpu_perf_coeff .gt. 1.0) then
