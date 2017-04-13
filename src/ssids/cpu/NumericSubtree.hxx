@@ -97,8 +97,9 @@ public:
                shared(aval, abort, options, scaling, thread_stats, work) \
                depend(in: parent_lcol[0:1])
             {
+              bool my_abort;
               #pragma omp atomic read
-              const bool my_abort = abort;
+              my_abort = abort;
               if (!my_abort) {
                //#pragma omp cancellation point taskgroup
                try {

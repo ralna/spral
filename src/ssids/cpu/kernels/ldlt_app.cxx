@@ -1303,8 +1303,9 @@ private:
             depend(inout: a[blk*block_size*lda+blk*block_size:1]) \
             depend(inout: perm[blk*block_size:1])
          {
+           bool my_abort;
            #pragma omp atomic read
-           const bool my_abort = abort;
+           my_abort = abort;
            if (!my_abort) {
              try {
                //#pragma omp cancellation point taskgroup
@@ -1363,8 +1364,9 @@ private:
                depend(inout: a[jblk*block_size*lda+blk*block_size:1]) \
                depend(in: perm[blk*block_size:1])
             {
+              bool my_abort;
               #pragma omp atomic read
-              const bool my_abort = abort;
+              my_abort = abort;
               if (!my_abort) {
                 //#pragma omp cancellation point taskgroup
 #ifdef PROFILE
@@ -1395,8 +1397,9 @@ private:
                depend(inout: a[blk*block_size*lda+iblk*block_size:1]) \
                depend(in: perm[blk*block_size:1])
             {
+              bool my_abort;
               #pragma omp atomic read
-              const bool my_abort = abort;
+              my_abort = abort;
               if (!my_abort) {
                 //#pragma omp cancellation point taskgroup
 #ifdef PROFILE
@@ -1427,8 +1430,9 @@ private:
             shared(abort, cdata, next_elim)       \
             depend(inout: perm[blk*block_size:1])
          {
+           bool my_abort;
            #pragma omp atomic read
-           const bool my_abort = abort;
+           my_abort = abort;
            if (!my_abort) {
              //#pragma omp cancellation point taskgroup
 #ifdef PROFILE
@@ -1456,8 +1460,9 @@ private:
                   depend(in: a[jblk*block_size*lda+blk*block_size:1])     \
                   depend(in: a[adep_idx:1])
                {
+                 bool my_abort;
                  #pragma omp atomic read
-                 const bool my_abort = abort;
+                 my_abort = abort;
                  if (!my_abort) {
                   //#pragma omp cancellation point taskgroup
 #ifdef PROFILE
@@ -1492,8 +1497,9 @@ private:
                   depend(in: a[blk*block_size*lda+iblk*block_size:1])     \
                   depend(in: a[blk*block_size*lda+jblk*block_size:1])
                {
+                 bool my_abort;
                  #pragma omp atomic read
-                 const bool my_abort = abort;
+                 my_abort = abort;
                  if (!my_abort) {
                    //#pragma omp cancellation point taskgroup
 #ifdef PROFILE
@@ -1531,8 +1537,9 @@ private:
                   depend(in: a[blk*block_size*lda+iblk*block_size:1]) \
                   depend(in: a[blk*block_size*lda+jblk*block_size:1])
                 {
+                  bool my_abort;
                   #pragma omp atomic read
-                  const bool my_abort = abort;
+                  my_abort = abort;
                   if (!my_abort) {
                     //#pragma omp cancellation point taskgroup
 #ifdef PROFILE
@@ -1744,8 +1751,9 @@ private:
                    options, work, alloc, up_to_date, flag)      \
             depend(inout: a[blk*block_size*lda+blk*block_size:1])
          {
+           bool my_abort;
            #pragma omp atomic read
-           const bool my_abort = abort;
+           my_abort = abort;
            if (!my_abort) {
              try {
                //#pragma omp cancellation point taskgroup
@@ -1806,8 +1814,9 @@ private:
                depend(in: a[blk*block_size*lda+blk*block_size:1])         \
                depend(inout: a[jblk*block_size*lda+blk*block_size:1])
             {
+              bool my_abort;
               #pragma omp atomic read
-              const bool my_abort = abort;
+              my_abort = abort;
               if (!my_abort) {
                 //#pragma omp cancellation point taskgroup
 #ifdef PROFILE
@@ -1835,8 +1844,9 @@ private:
                depend(in: a[blk*block_size*lda+blk*block_size:1])         \
                depend(inout: a[blk*block_size*lda+iblk*block_size:1])
             {
+              bool my_abort;
               #pragma omp atomic read
-              const bool my_abort = abort;
+              my_abort = abort;
               if (!my_abort) {
                 //#pragma omp cancellation point taskgroup
 #ifdef PROFILE
@@ -1883,8 +1893,9 @@ private:
                   depend(in: a[blk*block_size*lda+iblk*block_size:1])     \
                   depend(in: a[blk*block_size*lda+jblk*block_size:1])
                {
+                 bool my_abort;
                  #pragma omp atomic read
-                 const bool my_abort = abort;
+                 my_abort = abort;
                  if (!my_abort) {
                    //#pragma omp cancellation point taskgroup
 #ifdef PROFILE
@@ -1922,8 +1933,9 @@ private:
                   depend(in: a[blk*block_size*lda+iblk*block_size:1]) \
                   depend(in: a[blk*block_size*lda+jblk*block_size:1])
                {
+                 bool my_abort;
                  #pragma omp atomic read
-                 const bool my_abort = abort;
+                 my_abort = abort;
                  if (!my_abort) {
                    //#pragma omp cancellation point taskgroup
 #ifdef PROFILE
