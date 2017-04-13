@@ -243,9 +243,11 @@ contains
 !> @param parts List of part ranges. Part i consists of supernodes
 !>        part(i):part(i+1)-1.
 !> @param exec_loc Execution location. Part i should be run on partition
-!>        mod(exec_loc(i), size(topology)). It should be run on the CPUs
-!>        if exec_loc(i) < size(topology), otherwise it should be run on
-!>        GPU number exec_loc(i)/size(topology).
+!>        mod((exec_loc(i) - 1), size(topology)) + 1.
+!>        It should be run on the CPUs if
+!>        exec_loc(i) <= size(topology),
+!>        otherwise it should be run on GPU number
+!>        (exec_loc(i) - 1)/size(topology).
 !> @param contrib_ptr Contribution pointer. Part i has contribution from
 !>        subtrees contrib_idx(contrib_ptr(i):contrib_ptr(i+1)-1).
 !> @param contrib_idx List of contributing subtrees, see contrib_ptr.
@@ -265,10 +267,10 @@ contains
     type(numa_region), dimension(:), intent(in) :: topology
     integer, intent(out) :: nparts
     integer, dimension(:), allocatable, intent(inout) :: part
-    integer, dimension(:), allocatable, intent(inout) :: exec_loc ! 0=cpu, 1=gpu
+    integer, dimension(:), allocatable, intent(out) :: exec_loc
     integer, dimension(:), allocatable, intent(inout) :: contrib_ptr
     integer, dimension(:), allocatable, intent(inout) :: contrib_idx
-    integer, dimension(:), allocatable, intent(inout) :: contrib_dest
+    integer, dimension(:), allocatable, intent(out) :: contrib_dest
     type(ssids_inform), intent(inout) :: inform
     integer, intent(out) :: st
 
@@ -460,10 +462,12 @@ contains
 !> @param min_gpu_work Minimum work before allocation to GPU is useful.
 !> @param gpu_perf_coeff The value of \f$ \alpha_i \f$ used for all GPUs,
 !>        assuming that used for all NUMA region CPUs is 1.0.
-!> @param exec_loc Execution location. Part i will be run on partition
-!>        mod(exec_loc(i), size(topology)). It should be run on the CPUs
-!>        if exec_loc(i) < size(topology), otherwise it should be run on
-!>        GPU number exec_loc(i)/size(topology).
+!> @param exec_loc Execution location. Part i should be run on partition
+!>        mod((exec_loc(i) - 1), size(topology)) + 1.
+!>        It should be run on the CPUs if
+!>        exec_loc(i) <= size(topology),
+!>        otherwise it should be run on GPU number
+!>        (exec_loc(i) - 1)/size(topology).
 !> @param st Allocation status parameter. If non-zero an allocation error
 !>        occurred.
 !> @returns Load balance value as detailed in subroutine description.
@@ -504,14 +508,15 @@ contains
        ngpu = ngpu + size(topology(i)%gpus)
        max_gpu = max(max_gpu, size(topology(i)%gpus))
     end do
-    allocate(map(nregion+ngpu), stat=st)
+    allocate(map(nregion+ngpu)), stat=st)
     if (st .ne. 0) return
+
     if (gpu_perf_coeff .gt. 1.0) then
        ! GPUs are more powerful than CPUs
        next = 1
        do i = 1, size(topology)
           do p = 1, size(topology(i)%gpus)
-             map(next) = p*nregion + p
+             map(next) = p*nregion + i
              next = next + 1
           end do
        end do
@@ -528,7 +533,7 @@ contains
        end do
        do i = 1, size(topology)
           do p = 1, size(topology(i)%gpus)
-             map(next) = p*nregion + p
+             map(next) = p*nregion + i
              next = next + 1
           end do
        end do
@@ -548,7 +553,7 @@ contains
        pflops = flops(part(p+1)-1)
        if (pflops .lt. min_gpu_work) then
           ! Avoid GPUs
-          do while(map(next) .gt. nregion)
+          do while (map(next) .gt. nregion)
              next = next + 1
              if (next .gt. size(map)) next = 1
           end do
@@ -746,7 +751,7 @@ contains
     character(50)  :: context ! Procedure name (used when printing).
     integer, dimension(:), allocatable :: contrib_dest, exec_loc, level
 
-    integer :: numa_region, device, my_loc, thread_num
+    integer :: numa_region, device, thread_num !, my_loc
     integer :: max_gpus, to_launch
     integer :: nemin, flag
     integer :: blkm, blkn
@@ -835,20 +840,23 @@ contains
        max_gpus = max(max_gpus, size(akeep%topology(i)%gpus))
     end do
     to_launch = size(akeep%topology)*(1+max_gpus)
+    !!!WAS: private my_loc
 !$omp parallel proc_bind(spread) num_threads(to_launch) &
-!$omp    default(shared) private(i, numa_region, my_loc, device, thread_num) &
+!$omp    default(shared) private(i, numa_region, device, thread_num) &
 !$omp    if(to_launch .gt. 1)
     thread_num = 0
 !$  thread_num = omp_get_thread_num()
+    !!!FIXME: This assumes a very particular binding of OpenMP threads to actual NUMA regions!
+    !!!FIXME: There should be in place a more robust way of querying which NUMA region the thread is bound to!
     numa_region = mod(thread_num, size(akeep%topology)) + 1
-    my_loc = thread_num + 1
+    !!!my_loc = thread_num + 1
     do i = 1, akeep%nparts
        ! only initialize subtree if this is the correct region: note that
        ! an "all region" subtree with location -1 is initialised by region 0
-       if ((exec_loc(i) .ne. my_loc) .and. &
-            .not. ((exec_loc(i) .eq. -1) .and. (my_loc .eq. 1))) cycle
+       if ((exec_loc(i) .ne. numa_region) .and. & !!!FIXME: WAS: ... .ne. my_loc ???
+            .not. ((exec_loc(i) .eq. -1) .and. (numa_region .eq. 1))) cycle !!!FIXME: WAS: my_loc .eq. 1 ???
        akeep%subtree(i)%exec_loc = exec_loc(i)
-       if (my_loc .le. size(akeep%topology)) then
+       if (numa_region .le. size(akeep%topology)) then !!!FIXME: WAS: if (my_loc .le. ... ???
           ! CPU
           !print *, numa_region, "init cpu subtree ", i, akeep%part(i), &
           !   akeep%part(i+1)-1
@@ -859,7 +867,7 @@ contains
                options)
        else
           ! GPU
-          device = (my_loc-1) / size(akeep%topology)
+          device = (exec_loc(i)-1) / size(akeep%topology) !!!WAS: (my_loc-1) instead of (exec_loc(i)-1)
           device = akeep%topology(numa_region)%gpus(device)
           !print *, numa_region, "init gpu subtree ", i, akeep%part(i), &
           !   akeep%part(i+1)-1, "device", device
