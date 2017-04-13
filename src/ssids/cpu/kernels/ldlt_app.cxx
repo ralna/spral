@@ -1282,12 +1282,15 @@ private:
 
       /* Setup */
       int next_elim = from_blk*block_size;
-      int flag = 0;
+      int flag;
+      #pragma omp atomic write
+      flag = 0;
 
       /* Inner loop - iterate over block columns */
       bool abort;
       #pragma omp atomic write
       abort = false;
+
       #pragma omp taskgroup
       for (int blk = from_blk; blk < nblk; blk++) {
          /*if(debug) {
@@ -1319,6 +1322,7 @@ private:
                // Perform actual factorization
                int nelim = dblk.template factor<Allocator>(next_elim, perm, d, options, work, alloc);
                if (nelim < 0) {
+                 #pragma omp atomic write
                  flag = nelim;
 #ifdef _OPENMP
                  #pragma omp atomic write
@@ -1335,6 +1339,7 @@ private:
                task.done();
 #endif
             } catch(std::bad_alloc const&) {
+               #pragma omp atomic write
                flag = Flag::ERROR_ALLOCATION;
 #ifdef _OPENMP
                #pragma omp atomic write
@@ -1344,6 +1349,7 @@ private:
                return flag;
 #endif /* _OPENMP */
             } catch(SingularError const&) {
+               #pragma omp atomic write
                flag = Flag::ERROR_SINGULAR;
 #ifdef _OPENMP
                #pragma omp atomic write
@@ -1558,7 +1564,10 @@ private:
               }
          }
       } // taskgroup and for
-      if (flag < 0) return flag; // Error
+      int my_flag;
+      #pragma omp atomic read
+      my_flag = flag;
+      if (my_flag < 0) return my_flag; // Error
 
       /*if(debug) {
          printf("PostElim:\n");
@@ -1731,7 +1740,9 @@ private:
 
       /* Setup */
       int next_elim = 0;
-      int flag = 0;
+      int flag;
+      #pragma omp atomic write
+      flag = 0;
 
       /* Inner loop - iterate over block columns */
       bool abort;
@@ -1786,6 +1797,7 @@ private:
                task.done();
 #endif
             } catch(std::bad_alloc const&) {
+               #pragma omp atomic write
                flag = Flag::ERROR_ALLOCATION;
 #ifdef _OPENMP
                #pragma omp atomic write
@@ -1795,6 +1807,7 @@ private:
                return flag;
 #endif /* _OPENMP */
             } catch(SingularError const&) {
+               #pragma omp atomic write
                flag = Flag::ERROR_SINGULAR;
 #ifdef _OPENMP
                #pragma omp atomic write
@@ -1963,7 +1976,10 @@ private:
          print_mat(mblk, nblk, m, n, blkdata, cdata, lda);
       }*/
 
-      if (flag < 0) return flag;
+      int my_flag;
+      #pragma omp atomic read
+      my_flag = flag;
+      if (my_flag < 0) return my_flag;
       return cdata.calc_nelim(m);
    }
 
