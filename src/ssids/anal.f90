@@ -853,8 +853,11 @@ contains
     do i = 1, akeep%nparts
        ! only initialize subtree if this is the correct region: note that
        ! an "all region" subtree with location -1 is initialised by region 0
-       if (((mod((exec_loc(i)-1), size(akeep%topology))+1) .ne. numa_region) .and. &
-            .not. ((exec_loc(i) .eq. -1) .and. (numa_region .eq. 1))) cycle !!!FIXME: WAS: my_loc .eq. 1 ???
+       if (exec_loc(i) .eq. -1) then
+          if (numa_region .ne. 1) cycle
+       else if ((mod((exec_loc(i)-1), size(akeep%topology))+1) .ne. numa_region) then
+          cycle
+       end if
        akeep%subtree(i)%exec_loc = exec_loc(i)
        if (numa_region .le. size(akeep%topology)) then !!!FIXME: WAS: if (my_loc .le. ... ???
           ! CPU
