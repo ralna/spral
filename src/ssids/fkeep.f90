@@ -132,13 +132,13 @@ contains
        if (thread_inform(my_loc)%flag .lt. 0) then
           abort = .true.
           goto 10
-! !$omp    cancel taskgroup
+!$omp     cancel taskgroup
        end if
        if (akeep%contrib_idx(i) .le. akeep%nparts) then
           ! There is a parent subtree to contribute to
           child_contrib(akeep%contrib_idx(i)) = &
                fkeep%subtree(i)%ptr%get_contrib()
-!$omp    flush
+!$omp     flush
           child_contrib(akeep%contrib_idx(i))%ready = .true.
        end if
 10     continue ! jump target for abort
