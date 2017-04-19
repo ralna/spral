@@ -101,7 +101,7 @@ public:
               #pragma omp atomic read
               my_abort = abort;
               if (!my_abort) {
-               //#pragma omp cancellation point taskgroup
+               #pragma omp cancellation point taskgroup
                try {
                   int this_thread = omp_get_thread_num();
 #ifdef PROFILE
@@ -115,7 +115,7 @@ public:
 #ifdef _OPENMP
                      #pragma omp atomic write
                      abort = true;
-                     //#pragma omp cancel taskgroup
+                     #pragma omp cancel taskgroup
 #else
                      stats += thread_stats[this_thread];
                      return;
@@ -130,7 +130,7 @@ public:
 #ifdef _OPENMP
                   #pragma omp atomic write
                   abort = true;
-                  //#pragma omp cancel taskgroup
+                  #pragma omp cancel taskgroup
 #else
                   stats += thread_stats[0];
                   return;
@@ -141,7 +141,7 @@ public:
 #ifdef _OPENMP
                   #pragma omp atomic write
                   abort = true;
-                  //#pragma omp cancel taskgroup
+                  #pragma omp cancel taskgroup
 #else
                   stats += thread_stats[0];
                   return;
@@ -166,7 +166,7 @@ public:
               #pragma omp atomic read
               my_abort = abort;
               if (!my_abort) {
-               //#pragma omp cancellation point taskgroup
+               #pragma omp cancellation point taskgroup
                try {
                   /*printf("%d: Node %d parent %d (of %d) size %d x %d\n",
                         omp_get_thread_num(), ni, symb_[ni].parent,
@@ -190,7 +190,7 @@ public:
 #ifdef _OPENMP
                      #pragma omp atomic write
                      abort = true;
-                     //#pragma omp cancel taskgroup
+                     #pragma omp cancel taskgroup
 #else
                      stats += thread_stats[0];
                      return;
@@ -209,7 +209,7 @@ public:
 #ifdef _OPENMP
                   #pragma omp atomic write
                   abort = true;
-                  //#pragma omp cancel taskgroup
+                  #pragma omp cancel taskgroup
 #else
                   stats += thread_stats[0];
                   return;
@@ -220,7 +220,7 @@ public:
 #ifdef _OPENMP
                   #pragma omp atomic write
                   abort = true;
-                  //#pragma omp cancel taskgroup
+                  #pragma omp cancel taskgroup
 #else
                   stats += thread_stats[0];
                   return;

@@ -1311,7 +1311,7 @@ private:
            my_abort = abort;
            if (!my_abort) {
              try {
-               //#pragma omp cancellation point taskgroup
+               #pragma omp cancellation point taskgroup
 #ifdef PROFILE
                Profile::Task task("TA_LDLT_DIAG");
 #endif
@@ -1327,7 +1327,7 @@ private:
 #ifdef _OPENMP
                  #pragma omp atomic write
                  abort = true;
-                 //#pragma omp cancel taskgroup
+                 #pragma omp cancel taskgroup
 #else
                  return flag;
 #endif /* _OPENMP */
@@ -1344,7 +1344,7 @@ private:
 #ifdef _OPENMP
                #pragma omp atomic write
                abort = true;
-               //#pragma omp cancel taskgroup
+               #pragma omp cancel taskgroup
 #else
                return flag;
 #endif /* _OPENMP */
@@ -1354,7 +1354,7 @@ private:
 #ifdef _OPENMP
                #pragma omp atomic write
                abort = true;
-               //#pragma omp cancel taskgroup
+               #pragma omp cancel taskgroup
 #else
                return flag;
 #endif /* _OPENMP */
@@ -1374,7 +1374,7 @@ private:
               #pragma omp atomic read
               my_abort = abort;
               if (!my_abort) {
-                //#pragma omp cancellation point taskgroup
+                #pragma omp cancellation point taskgroup
 #ifdef PROFILE
                 Profile::Task task("TA_LDLT_APPLY");
 #endif
@@ -1407,7 +1407,7 @@ private:
               #pragma omp atomic read
               my_abort = abort;
               if (!my_abort) {
-                //#pragma omp cancellation point taskgroup
+                #pragma omp cancellation point taskgroup
 #ifdef PROFILE
                 Profile::Task task("TA_LDLT_APPLY");
 #endif
@@ -1440,7 +1440,7 @@ private:
            #pragma omp atomic read
            my_abort = abort;
            if (!my_abort) {
-             //#pragma omp cancellation point taskgroup
+             #pragma omp cancellation point taskgroup
 #ifdef PROFILE
              Profile::Task task("TA_LDLT_ADJUST");
 #endif
@@ -1470,7 +1470,7 @@ private:
                  #pragma omp atomic read
                  my_abort = abort;
                  if (!my_abort) {
-                  //#pragma omp cancellation point taskgroup
+                  #pragma omp cancellation point taskgroup
 #ifdef PROFILE
                   Profile::Task task("TA_LDLT_UPDA");
 #endif
@@ -1507,7 +1507,7 @@ private:
                  #pragma omp atomic read
                  my_abort = abort;
                  if (!my_abort) {
-                   //#pragma omp cancellation point taskgroup
+                   #pragma omp cancellation point taskgroup
 #ifdef PROFILE
                    Profile::Task task("TA_LDLT_UPDA");
 #endif
@@ -1547,7 +1547,7 @@ private:
                   #pragma omp atomic read
                   my_abort = abort;
                   if (!my_abort) {
-                    //#pragma omp cancellation point taskgroup
+                    #pragma omp cancellation point taskgroup
 #ifdef PROFILE
                     Profile::Task task("TA_LDLT_UPDC");
 #endif
@@ -1767,7 +1767,7 @@ private:
            my_abort = abort;
            if (!my_abort) {
              try {
-               //#pragma omp cancellation point taskgroup
+               #pragma omp cancellation point taskgroup
 #ifdef PROFILE
                Profile::Task task("TA_LDLT_DIAG");
 #endif
@@ -1784,7 +1784,7 @@ private:
 #ifdef _OPENMP
                  #pragma omp atomic write
                  abort = true;
-                 //#pragma omp cancel taskgroup
+                 #pragma omp cancel taskgroup
 #else
                  return cdata.calc_nelim(m);
 #endif /* _OPENMP */
@@ -1802,7 +1802,7 @@ private:
 #ifdef _OPENMP
                #pragma omp atomic write
                abort = true;
-               //#pragma omp cancel taskgroup
+               #pragma omp cancel taskgroup
 #else
                return flag;
 #endif /* _OPENMP */
@@ -1812,7 +1812,7 @@ private:
 #ifdef _OPENMP
                #pragma omp atomic write
                abort = true;
-               //#pragma omp cancel taskgroup
+               #pragma omp cancel taskgroup
 #else
                return flag;
 #endif /* _OPENMP */
@@ -1831,7 +1831,7 @@ private:
               #pragma omp atomic read
               my_abort = abort;
               if (!my_abort) {
-                //#pragma omp cancellation point taskgroup
+                #pragma omp cancellation point taskgroup
 #ifdef PROFILE
                 Profile::Task task("TA_LDLT_APPLY");
 #endif
@@ -1861,7 +1861,7 @@ private:
               #pragma omp atomic read
               my_abort = abort;
               if (!my_abort) {
-                //#pragma omp cancellation point taskgroup
+                #pragma omp cancellation point taskgroup
 #ifdef PROFILE
                 Profile::Task task("TA_LDLT_APPLY");
 #endif
@@ -1883,7 +1883,7 @@ private:
 #ifdef _OPENMP
                   #pragma omp atomic write
                   abort = true;
-                  //#pragma omp cancel taskgroup
+                  #pragma omp cancel taskgroup
 #else
                   return cdata.calc_nelim(m);
 #endif /* _OPENMP */
@@ -1910,7 +1910,7 @@ private:
                  #pragma omp atomic read
                  my_abort = abort;
                  if (!my_abort) {
-                   //#pragma omp cancellation point taskgroup
+                   #pragma omp cancellation point taskgroup
 #ifdef PROFILE
                    Profile::Task task("TA_LDLT_UPDA");
 #endif
@@ -1950,7 +1950,7 @@ private:
                  #pragma omp atomic read
                  my_abort = abort;
                  if (!my_abort) {
-                   //#pragma omp cancellation point taskgroup
+                   #pragma omp cancellation point taskgroup
 #ifdef PROFILE
                    Profile::Task task("TA_LDLT_UPDC");
 #endif
