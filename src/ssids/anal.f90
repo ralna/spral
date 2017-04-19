@@ -751,8 +751,7 @@ contains
     character(50)  :: context ! Procedure name (used when printing).
     integer, dimension(:), allocatable :: contrib_dest, exec_loc, level
 
-    integer :: numa_region, device, thread_num !, my_loc
-    integer :: max_gpus, to_launch
+    integer :: numa_region, device, thread_num
     integer :: nemin, flag
     integer :: blkm, blkn
     integer :: i, j
@@ -835,21 +834,14 @@ contains
     allocate(akeep%subtree(akeep%nparts))
 
     ! Split into one thread per numa region for setup (assume mem is first touch)
-    max_gpus = 0
-    do i = 1, size(akeep%topology)
-       max_gpus = max(max_gpus, size(akeep%topology(i)%gpus))
-    end do
-    to_launch = size(akeep%topology)*(1+max_gpus)
-    !!!WAS: private my_loc
-!$omp parallel proc_bind(spread) num_threads(to_launch) &
+!$omp parallel proc_bind(spread) num_threads(size(akeep%topology)) &
 !$omp    default(shared) private(i, numa_region, device, thread_num) &
-!$omp    if(to_launch .gt. 1)
+!$omp    if(size(akeep%topology) .gt. 1)
     thread_num = 0
 !$  thread_num = omp_get_thread_num()
     !!!FIXME: This assumes a very particular binding of OpenMP threads to actual NUMA regions!
     !!!FIXME: There should be in place a more robust way of querying which NUMA region the thread is bound to!
     numa_region = mod(thread_num, size(akeep%topology)) + 1
-    !!!my_loc = thread_num + 1
     do i = 1, akeep%nparts
        ! only initialize subtree if this is the correct region: note that
        ! an "all region" subtree with location -1 is initialised by region 0
@@ -859,7 +851,7 @@ contains
           cycle
        end if
        akeep%subtree(i)%exec_loc = exec_loc(i)
-       if (numa_region .le. size(akeep%topology)) then !!!FIXME: WAS: if (my_loc .le. ... ???
+       if (numa_region .le. size(akeep%topology)) then
           ! CPU
           !print *, numa_region, "init cpu subtree ", i, akeep%part(i), &
           !   akeep%part(i+1)-1
@@ -870,7 +862,7 @@ contains
                options)
        else
           ! GPU
-          device = (exec_loc(i)-1) / size(akeep%topology) !!!WAS: (my_loc-1) instead of (exec_loc(i)-1)
+          device = (exec_loc(i)-1) / size(akeep%topology)
           device = akeep%topology(numa_region)%gpus(device)
           !print *, numa_region, "init gpu subtree ", i, akeep%part(i), &
           !   akeep%part(i+1)-1, "device", device
