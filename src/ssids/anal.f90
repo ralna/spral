@@ -853,14 +853,16 @@ contains
        if (exec_loc(i) .eq. -1) then
           if (numa_region .ne. 1) cycle
           if (tid_in_region .ne. 1) cycle
+          device = 0
        else if ((mod((exec_loc(i)-1), size(akeep%topology))+1) .ne. numa_region) then
           cycle
+       else
+          device = (exec_loc(i)-1) / size(akeep%topology)
        end if
-       device = (exec_loc(i)-1) / size(akeep%topology)
-       ! First thread in region for the CPU, others for the GPUs.
+       ! First thread in a region for the CPU, others for the GPUs.
        if ((device + 1) .ne. tid_in_region) cycle
        akeep%subtree(i)%exec_loc = exec_loc(i)
-       if (exec_loc(i) .le. size(akeep%topology)) then
+       if (device .eq. 0) then
           ! CPU
           !print *, numa_region, "init cpu subtree ", i, akeep%part(i), &
           !   akeep%part(i+1)-1
