@@ -839,8 +839,6 @@ contains
 !$omp    if(size(akeep%topology) .gt. 1)
     thread_num = 0
 !$  thread_num = omp_get_thread_num()
-    !!!FIXME: This assumes a very particular binding of OpenMP threads to actual NUMA regions!
-    !!!FIXME: There should be in place a more robust way of querying which NUMA region the thread is bound to!
     numa_region = mod(thread_num, size(akeep%topology)) + 1
     do i = 1, akeep%nparts
        ! only initialize subtree if this is the correct region: note that
@@ -851,7 +849,7 @@ contains
           cycle
        end if
        akeep%subtree(i)%exec_loc = exec_loc(i)
-       if (numa_region .le. size(akeep%topology)) then
+       if (exec_loc(i) .le. size(akeep%topology)) then
           ! CPU
           !print *, numa_region, "init cpu subtree ", i, akeep%part(i), &
           !   akeep%part(i+1)-1
