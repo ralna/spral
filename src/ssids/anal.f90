@@ -751,8 +751,8 @@ contains
     character(50)  :: context ! Procedure name (used when printing).
     integer, dimension(:), allocatable :: contrib_dest, exec_loc, level
 
-    integer :: max_gpus, to_launch
-    integer :: numa_region, device, thread_num, tid_in_region
+    integer :: to_launch
+    integer :: numa_region, device, thread_num
     integer :: nemin, flag
     integer :: blkm, blkn
     integer :: i, j
@@ -835,32 +835,23 @@ contains
     allocate(akeep%subtree(akeep%nparts))
 
     ! Split into NUMA regions for setup (assume mem is first touch)
-    max_gpus = 0
-    do i = 1, size(akeep%topology)
-       max_gpus = max(max_gpus, size(akeep%topology(i)%gpus))
-    end do
-    to_launch = size(akeep%topology)*(1+max_gpus)
+    to_launch = size(akeep%topology)
 !$omp parallel proc_bind(spread) num_threads(to_launch) default(shared) &
-!$omp    private(i, numa_region, device, thread_num, tid_in_region)     &
-!$omp    if(to_launch .gt. 1)
+!$omp    private(i, numa_region, device, thread_num)
     thread_num = 0
 !$  thread_num = omp_get_thread_num()
-    numa_region = mod(thread_num, size(akeep%topology)) + 1
-    tid_in_region = (thread_num / size(akeep%topology)) + 1
+    numa_region = thread_num + 1
     do i = 1, akeep%nparts
        ! only initialize subtree if this is the correct region: note that
        ! an "all region" subtree with location -1 is initialised by region 0
        if (exec_loc(i) .eq. -1) then
           if (numa_region .ne. 1) cycle
-          if (tid_in_region .ne. 1) cycle
           device = 0
        else if ((mod((exec_loc(i)-1), size(akeep%topology))+1) .ne. numa_region) then
           cycle
        else
           device = (exec_loc(i)-1) / size(akeep%topology)
        end if
-       ! First thread in a region for the CPU, others for the GPUs.
-       if ((device + 1) .ne. tid_in_region) cycle
        akeep%subtree(i)%exec_loc = exec_loc(i)
        if (device .eq. 0) then
           ! CPU
