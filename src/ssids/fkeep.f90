@@ -51,23 +51,26 @@ module spral_ssids_fkeep
 contains
 
   subroutine inner_factor_numa(fkeep, akeep, val, options, inform, &
-       child_contrib, first_cpu, cpus, gpus)
+       child_contrib, all_region)
     implicit none
     type(ssids_akeep), intent(in) :: akeep
     class(ssids_fkeep), intent(inout) :: fkeep
     real(wp), dimension(*), target, intent(in) :: val
     type(ssids_options), intent(in) :: options
-    type(ssids_inform), dimension(cpus), intent(out) :: inform
+    type(ssids_inform), dimension(*), intent(inout) :: inform
     type(contrib_type), dimension(*), intent(inout) :: child_contrib
-    integer, intent(in) :: first_cpu, cpus, gpus
+    logical, intent(inout) :: all_region
 
-    integer :: i, numa_region, exec_loc, my_loc
+    integer :: i, to_launch, numa_region, exec_loc, my_loc
     logical :: abort, my_abort
 
     numa_region = 0
 !$  numa_region = omp_get_thread_num()
     numa_region = numa_region + 1
-!$  call omp_set_num_threads(cpus)
+
+    to_launch = akeep%topology(numa_region)%nproc
+    if (to_launch .le. 0) return
+!$  call omp_set_num_threads(to_launch)
 
 !$omp atomic write
     abort = .false.
@@ -77,12 +80,17 @@ contains
 !$omp parallel proc_bind(close)                 &
 !$omp    default(shared)                        &
 !$omp    private(i, exec_loc, my_abort, my_loc) &
-!$omp    num_threads(cpus)
+!$omp    num_threads(to_launch)
 !$omp single
 !$omp taskgroup
     do i = 1, akeep%nparts
        exec_loc = akeep%subtree(i)%exec_loc
-       if (exec_loc .eq. -1) cycle
+       if (exec_loc .eq. -1) then
+!$omp atomic write
+          all_region = .true.
+!$omp end atomic
+          cycle
+       end if
        if ((mod((exec_loc-1), size(akeep%topology))+1) .ne. numa_region) cycle
        my_abort = .false.
        my_loc = 0
@@ -138,15 +146,11 @@ contains
     type(ssids_inform), intent(inout) :: inform
 
     integer :: i, numa_region, exec_loc, my_loc
-    integer :: max_cpus, max_threads
-    logical :: all_region
+    integer :: numa_regions, region_threads !, device
+    integer :: max_cpus, max_cpus_per_numa, total_threads
+    logical :: all_region, my_all_region
     type(contrib_type), dimension(:), allocatable :: child_contrib
     type(ssids_inform), dimension(:), allocatable :: thread_inform
-
-    integer :: numa_regions, device, region_devices
-    integer, dimension(:), allocatable :: cpus_per_numa
-    integer, dimension(:), allocatable :: gpus_per_numa
-    integer, dimension(:), allocatable :: first_cpu
 
     ! Begin profile trace (noop if not enabled)
     call profile_begin()
@@ -158,56 +162,26 @@ contains
     numa_regions = size(akeep%topology)
     if (numa_regions .eq. 0) numa_regions = 1
 
-    allocate(cpus_per_numa(numa_regions), stat=inform%stat)
-    if (inform%stat .ne. 0) goto 200
+    ! do i = 1, akeep%nparts
+    !    exec_loc = akeep%subtree(i)%exec_loc
+    !    if (exec_loc .eq. -1) then
+    !       numa_region = 0
+    !       device = 0
+    !       all_region = .true.
+    !    else
+    !       numa_region = mod((exec_loc-1), numa_regions) + 1
+    !       device = ((exec_loc-1) / numa_regions) + 1
+    !    end if
+    ! end do
 
-    allocate(gpus_per_numa(numa_regions), stat=inform%stat)
-    if (inform%stat .ne. 0) goto 200
-
-    allocate(first_cpu(numa_regions), stat=inform%stat)
-    if (inform%stat .ne. 0) goto 200
-
+    max_cpus_per_numa = 0
+    total_threads = 0
     do numa_region = 1, numa_regions
-       cpus_per_numa(numa_region) = 0
-       gpus_per_numa(numa_region) = 0
+       region_threads = akeep%topology(numa_region)%nproc
+       max_cpus_per_numa = max(max_cpus_per_numa, region_threads)
+       total_threads = total_threads + region_threads
     end do
-
-    all_region = .false.
-    do i = 1, akeep%nparts
-       exec_loc = akeep%subtree(i)%exec_loc
-       if (exec_loc .eq. -1) then
-          numa_region = 0
-          device = 0
-          all_region = .true.
-       else
-          numa_region = mod((exec_loc-1), numa_regions) + 1
-          device = ((exec_loc-1) / numa_regions) + 1
-       end if
-       ! Assume one thread for each GPU in a region, as well.
-       if (numa_region .gt. 0) &
-            cpus_per_numa(numa_region) = cpus_per_numa(numa_region) + 1
-       if (device .gt. 0) &
-            gpus_per_numa(numa_region) = gpus_per_numa(numa_region) + 1
-    end do
-
-    max_cpus = 0
-    max_threads = 0
-    do numa_region = 1, numa_regions
-       ! Avoid oversubscribing a region.
-       ! A region can stay undersubscribed, to reduce cache contention, e.g.
-       if (cpus_per_numa(numa_region) .gt. akeep%topology(numa_region)%nproc) &
-            cpus_per_numa(numa_region) = akeep%topology(numa_region)%nproc
-       max_cpus = max_cpus + cpus_per_numa(numa_region)
-       max_threads = max_threads + akeep%topology(numa_region)%nproc
-       region_devices = size(akeep%topology(numa_region)%gpus)
-       if (gpus_per_numa(numa_region) .gt. region_devices) &
-            gpus_per_numa(numa_region) = region_devices
-    end do
-
-    first_cpu(1) = 1
-    do numa_region = 2, numa_regions
-       first_cpu(numa_region) = first_cpu(numa_region-1) + cpus_per_numa(numa_region-1)
-    end do
+    max_cpus = max_cpus_per_numa * numa_regions
 
     allocate(child_contrib(akeep%nparts), stat=inform%stat)
     if (inform%stat .ne. 0) goto 200
@@ -218,27 +192,33 @@ contains
     ! Split into numa regions; parallelism within a region is responsibility
     ! of subtrees.
 
-!$omp parallel proc_bind(spread) num_threads(numa_regions)       &
-!$omp    default(none) shared(akeep, fkeep, val, options,        &
-!$omp    thread_inform, first_cpu, child_contrib, cpus_per_numa, &
-!$omp    gpus_per_numa) private(numa_region)
+!$omp atomic write
+    all_region = .false.
+!$omp end atomic 
+
+!$omp parallel proc_bind(spread) num_threads(numa_regions) &
+!$omp    default(none)                                     &
+!$omp    shared(akeep, fkeep, val, options, thread_inform, &
+!$omp       child_contrib, all_region, max_cpus_per_numa)  &
+!$omp    private(i,numa_region)
     numa_region = 0
 !$  numa_region = omp_get_thread_num()
     numa_region = numa_region + 1
-    if (cpus_per_numa(numa_region) .gt. 0) &
-         call inner_factor_numa(fkeep, akeep, val, options, &
-         thread_inform(first_cpu(numa_region)), &
-         child_contrib, first_cpu(numa_region), &
-         cpus_per_numa(numa_region), gpus_per_numa(numa_region))
+    i = (numa_region-1)*max_cpus_per_numa + 1
+    call inner_factor_numa(fkeep, akeep, val, options, &
+         thread_inform(i), child_contrib, all_region)
 !$omp end parallel
     do i = 1, max_cpus
        call inform%reduce(thread_inform(i))
     end do
     if (inform%flag .lt. 0) goto 100 ! cleanup and exit
 
-    if (all_region) then
+!$omp atomic read
+    my_all_region = all_region
+!$omp end atomic
+    if (my_all_region) then
        ! At least some all region subtrees exist
-!$omp parallel num_threads(max_threads) default(shared) private(i,exec_loc)
+!$omp parallel num_threads(total_threads) default(shared) private(i,exec_loc)
 !$omp single
        do i = 1, akeep%nparts
           exec_loc = akeep%subtree(i)%exec_loc
