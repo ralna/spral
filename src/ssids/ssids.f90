@@ -396,11 +396,15 @@ contains
     type(ssids_options), intent(in) :: options
     integer, intent(out) :: st
 
+    logical :: no_omp
     integer :: i, ngpu
     type(numa_region), dimension(:), allocatable :: new_topology
 
     st = 0
 
+    no_omp = .true.
+!$  no_omp = .false.
+    
     ! Get rid of GPUs if we're not using them
     if (.not. options%use_gpu) then
        do i = 1, size(topology)
@@ -412,8 +416,34 @@ contains
        end do
     end if
 
+    ! FIXME: One can envisage a sensible coexistence of both
+    ! no_omp=.true. AND options%ignore_numa=.false. (e.g., choose the
+    ! "best" NUMA node, with the least utilised CPUs and/or GPUs...).
+    if (no_omp) then
+       allocate(new_topology(1), stat=st)
+       if (st .ne. 0) return
+       new_topology(1)%nproc = 1
+       ! Count resources to reallocate
+       ngpu = 0
+       do i = 1, size(topology)
+          ngpu = ngpu + size(topology(i)%gpus)
+       end do
+       ! Store list of GPUs
+       allocate(new_topology(1)%gpus(ngpu), stat=st)
+       if (st .ne. 0) return
+       if (ngpu .gt. 0) then
+          ngpu = 0
+          do i = 1, size(topology)
+             new_topology(1)%gpus(ngpu+1:ngpu+size(topology(i)%gpus)) = &
+                  topology(i)%gpus(:)
+             ngpu = ngpu + size(topology(i)%gpus)
+          end do
+       end if
+       ! Move new_topology into place, deallocating old one
+       deallocate(topology)
+       call move_alloc(new_topology, topology)
     ! Squash everything to single NUMA region if we're ignoring numa
-    if ((size(topology) .gt. 1) .and. options%ignore_numa) then
+    else if ((size(topology) .gt. 1) .and. options%ignore_numa) then
        allocate(new_topology(1), stat=st)
        if (st .ne. 0) return
        ! Count resources to reallocate
