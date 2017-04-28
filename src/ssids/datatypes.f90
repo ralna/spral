@@ -217,6 +217,7 @@ module spral_ssids_datatypes
      logical :: ignore_numa = .false. ! If true, treat entire machine as single
        ! NUMA region for purposes of subtree allocation.
      logical :: use_gpu = .true. ! Use GPUs if present
+     logical :: gpu_only = .false. ! FIXME: not yet implemented.
      integer(long) :: min_gpu_work = 5*10**9_long ! Only assign subtree to GPU
        ! if it contains at least this many flops
      real :: max_load_inbalance = 1.2 ! Maximum permissible load inbalance

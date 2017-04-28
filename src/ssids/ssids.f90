@@ -397,14 +397,14 @@ contains
     integer, intent(out) :: st
 
     logical :: no_omp
-    integer :: i, ngpu
+    integer :: i, j, ngpu
     type(numa_region), dimension(:), allocatable :: new_topology
 
     st = 0
 
     no_omp = .true.
 !$  no_omp = .false.
-    
+
     ! Get rid of GPUs if we're not using them
     if (.not. options%use_gpu) then
        do i = 1, size(topology)
@@ -428,16 +428,29 @@ contains
        do i = 1, size(topology)
           ngpu = ngpu + size(topology(i)%gpus)
        end do
+       ! FIXME: if no_omp=.true. AND options%ignore_numa=.true.,
+       ! then take the "first" GPU (whichever it might be), only.
+       ! A combination not meant for production, only for testing!
+       if (options%ignore_numa) ngpu = min(ngpu, 1)
        ! Store list of GPUs
        allocate(new_topology(1)%gpus(ngpu), stat=st)
        if (st .ne. 0) return
        if (ngpu .gt. 0) then
-          ngpu = 0
-          do i = 1, size(topology)
-             new_topology(1)%gpus(ngpu+1:ngpu+size(topology(i)%gpus)) = &
-                  topology(i)%gpus(:)
-             ngpu = ngpu + size(topology(i)%gpus)
-          end do
+          if (options%ignore_numa) then
+             new_topology(1)%gpus(1) = huge(new_topology(1)%gpus(1))
+             do i = 1, size(topology)
+                new_topology(1)%gpus(1) = &
+                     min(new_topology(1)%gpus(1), minval(topology(i)%gpus))
+             end do
+          else
+             ngpu = 0
+             do i = 1, size(topology)
+                do j = 1, size(topology(i)%gpus)
+                   new_topology(1)%gpus(ngpu + j) = topology(i)%gpus(j)
+                end do
+                ngpu = ngpu + size(topology(i)%gpus)
+             end do
+          end if
        end if
        ! Move new_topology into place, deallocating old one
        deallocate(topology)
@@ -459,8 +472,9 @@ contains
        if (ngpu .gt. 0) then
           ngpu = 0
           do i = 1, size(topology)
-             new_topology(1)%gpus(ngpu+1:ngpu+size(topology(i)%gpus)) = &
-                  topology(i)%gpus(:)
+             do j = 1, size(topology(i)%gpus)
+                new_topology(1)%gpus(ngpu + j) = topology(i)%gpus(j)
+             end do
              ngpu = ngpu + size(topology(i)%gpus)
           end do
        end if
