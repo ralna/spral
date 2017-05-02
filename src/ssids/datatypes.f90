@@ -55,7 +55,7 @@ module spral_ssids_datatypes
   integer, parameter, public :: SSIDS_WARNING_ANAL_SINGULAR    = 6
   integer, parameter, public :: SSIDS_WARNING_FACT_SINGULAR    = 7
   integer, parameter, public :: SSIDS_WARNING_MATCH_ORD_NO_SCALE=8
-  integer, parameter, public :: SSIDS_WARNING_OMP_PROC_BIND    = 50
+!$ integer, parameter, public :: SSIDS_WARNING_OMP_PROC_BIND    = 50
 
   ! solve job values
   integer, parameter, public :: SSIDS_SOLVE_JOB_ALL     = 0 !PLD(PL)^TX = B
