@@ -429,7 +429,7 @@ contains
    inform%num_flops = inform%num_flops+stats%num_flops
    inform%num_delay = inform%num_delay+stats%num_delay
    inform%num_neg = inform%num_neg+stats%num_neg
-   inform%num_two = inform%num_neg+stats%num_two
+   inform%num_two = inform%num_two+stats%num_two
    inform%matrix_rank = inform%matrix_rank - stats%num_zero
    if (stats%cuda_error .ne. 0) inform%cuda_error = stats%cuda_error
    if (stats%cublas_error .ne. 0) inform%cublas_error = stats%cublas_error
