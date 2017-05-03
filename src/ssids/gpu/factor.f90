@@ -332,15 +332,15 @@ contains
 
     ! Initialize CUBLAS handle
     stats%cublas_error = cublasCreate(cublas_handle)
-    if(stats%cublas_error .ne. 0) goto 300
+    if (stats%cublas_error .ne. 0) goto 300
     stats%cublas_error = cublasSetStream(cublas_handle, stream)
-    if(stats%cublas_error .ne. 0) goto 300
+    if (stats%cublas_error .ne. 0) goto 300
 
     ! Initialize CUDA stats
     stats%cuda_error = cudaMalloc(gpu_custats, C_SIZEOF(custats))
-    if(stats%cuda_error .ne. 0) goto 200
+    if (stats%cuda_error .ne. 0) goto 200
     stats%cuda_error = cudaMemsetAsync(gpu_custats, 0, C_SIZEOF(custats), stream)
-    if(stats%cuda_error .ne. 0) goto 200
+    if (stats%cuda_error .ne. 0) goto 200
 
     ! Precalculate level information
     max_LDLT_size = 0
@@ -586,7 +586,7 @@ contains
        ! Free allocs specific to this level
        if (.not. pos_def) then
           stats%cuda_error = cudaFree(ptr_levLD)
-          if(stats%cuda_error.ne.0) goto 200
+          if (stats%cuda_error.ne.0) goto 200
        end if
 
        ! Store pointers for use on next level
@@ -1537,7 +1537,7 @@ contains
           npassed = asminf(cnode)%npassed
           npassl = asminf(cnode)%npassl
           ! We are only doing the contribution block of the parent
-          if((npassed-npassl) .le. 0) cycle
+          if ((npassed-npassl) .le. 0) cycle
           cpdata(cpi)%cm = npassed - npassl
           cpdata(cpi)%cn = npassed - npassl
           cpdata(cpi)%ldp = blkm - blkn
@@ -1587,7 +1587,7 @@ contains
                 by = (cpdata(cpi)%cn-1) / HOGG_ASSEMBLE_TY + 1
                 do blkj = 0, by-1
                    do blki = 0, bx-1
-                      if((blki+1)*HOGG_ASSEMBLE_TX<(blkj+1)*HOGG_ASSEMBLE_TY) &
+                      if ((blki+1)*HOGG_ASSEMBLE_TX .lt. (blkj+1)*HOGG_ASSEMBLE_TY) &
                            cycle ! Entirely in upper triangle
                       blkdata(bi)%cp = cpi-1
                       blkdata(bi)%blk = blkj*bx + blki
