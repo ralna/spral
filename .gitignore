@@ -10,5 +10,6 @@ install-sh
 missing
 test-driver
 config.h.in
+config.h.in~
 build/*
 *.swp

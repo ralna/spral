@@ -65,8 +65,8 @@ AC_TRY_LINK([#include <sched.h>], [sched_getcpu();],
 
 
 # Check for required libraries
-ACX_BLAS(,[AC_MSG_ERROR([No BLAS library found.])])
-ACX_LAPACK(,[AC_MSG_ERROR([No LAPACK library found.])])
+AX_BLAS(,[AC_MSG_ERROR([No BLAS library found.])])
+AX_LAPACK(,[AC_MSG_ERROR([No LAPACK library found.])])
 SPRAL_METIS(,
    [AC_MSG_ERROR([No MeTiS library found.])]
    )
