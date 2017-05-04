@@ -299,7 +299,7 @@ contains
     ! per-node assembly info
     type(asmtype), dimension(:), allocatable :: asminf
 
-    real(wp) :: delta = 0.01, eps = tiny(1.0)
+    real(wp) :: delta, eps
     real(wp), target :: s
     real(wp) :: dummy_real
 
@@ -324,6 +324,8 @@ contains
     type(C_PTR) :: gpu_custats
 
     gpu_LDLT = C_NULL_PTR
+    delta = 0.01_wp
+    eps = tiny(1.0_wp)
 
     if (gpu%num_levels .eq. 0) return ! Shortcut empty streams (v. small matrices)
   
