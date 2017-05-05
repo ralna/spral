@@ -3,14 +3,14 @@ AC_CONFIG_SRCDIR([src/ssids/ssids.f90])
 AC_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE
 
-# Allow disabling of GPU if desired
-AC_ARG_ENABLE([gpu],
-   AS_HELP_STRING([--disable-gpu], [Do not attempt to compile GPU code (otherwise presence of nvcc is autodetected)])
-   )
-
 # Allow disabling of OpenMP
 AC_ARG_ENABLE([openmp],
    AS_HELP_STRING([--disable-openmp], [Disable OpenMP parallelism. Not recommended.])
+   )
+
+# Allow disabling of GPU if desired
+AC_ARG_ENABLE([gpu],
+   AS_HELP_STRING([--disable-gpu], [Do not attempt to compile GPU code (otherwise presence of nvcc is autodetected).])
    )
 
 # Allow user to enable profiling
@@ -24,10 +24,6 @@ AC_PROG_CXX
 AC_PROG_F77
 AC_PROG_FC
 AC_PROG_RANLIB
-AS_IF([test "x$enable_gpu" != "xno"], [
-   SPRAL_PROG_NVCC
-   ])
-AM_CONDITIONAL([HAVE_NVCC], [test -n "$NVCC"])
 
 # Add OpenMP support, set language standards
 AC_LANG_PUSH(C)
@@ -40,6 +36,13 @@ AS_IF([test "x$enable_openmp" != "xno"], [
    AC_OPENMP
    AC_LANG_POP(C++)
    ])
+AM_CONDITIONAL([HAVE_OPENMP], [test -n "$OPENMP_CXXFLAGS"])
+
+# Check for NVCC
+AS_IF([test "x$enable_gpu" != "xno"], [
+   SPRAL_PROG_NVCC
+   ])
+AM_CONDITIONAL([HAVE_NVCC], [test -n "$NVCC"])
 
 # Establish linking flags C->Fortran and how to link C with fortran
 AC_FC_LIBRARY_LDFLAGS

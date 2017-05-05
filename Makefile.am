@@ -5,9 +5,12 @@ SUFFIXES = .cu
 
 # NVCC setup
 PTX_FLAGS = -v
-#NVCCFLAGS = -Iinclude -arch=sm_20 -g -Xptxas="${PTX_FLAGS}"
-OPENMP_LIB = -lgomp # FIXME: autoconf this
-AM_NVCC_FLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src
+if HAVE_OPENMP
+OPENMP_LIB = -Xcompiler="$(OPENMP_CXXFLAGS)"
+else
+OPENMP_LIB = #-lgomp # FIXME: autoconf this
+endif
+AM_NVCC_FLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src -Xptxas="${PTX_FLAGS}"
 AM_LD_FLAGS = -lcuda
 NVCCLINK = \
 	$(NVCC) $(NVCCFLAGS) $(AM_NVCC_FLAGS) $(AM_LD_FLAGS) $(LDFLAGS) $(OPENMP_LIB) -o $@
@@ -22,12 +25,14 @@ AM_CXXFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src -std=c++11 \
 AM_FCFLAGS = $(OPENMP_CXXFLAGS) # assume CXX and FC use same flags...
 
 # FIXME: make below configurable
-LDADD = -L. -lspral $(METIS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(GTG_LIBS) \
-		  $(HWLOC_LIBS) $(FCLIBS) -lrt
 if HAVE_NVCC
+LDADD = -L. -lspral $(METIS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(GTG_LIBS) \
+		  -L$(CUDA_HOME)/lib64 $(HWLOC_LIBS) $(FCLIBS) -lrt
 SPRAL_LINK_LIBS = -lcublas
 SPRALLINK = $(NVCCLINK)
 else
+LDADD = -L. -lspral $(METIS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(GTG_LIBS) \
+		  $(HWLOC_LIBS) $(FCLIBS) -lrt
 SPRAL_LINK_LIBS = $(CXXLIB)
 SPRALLINK = $(FCLINK)
 endif
@@ -140,7 +145,7 @@ TESTS += rutherford_boeing_test
 # SCALING
 include_HEADERS += include/spral_scaling.h
 libspral_a_SOURCES += \
-  	src/scaling.f90 \
+	src/scaling.f90 \
 	interfaces/C/scaling.f90
 check_PROGRAMS += \
 	scaling_test \
@@ -186,7 +191,7 @@ TESTS += scaling_test
 
 # TIMER
 libspral_a_SOURCES += \
-  	src/timer.f90
+	src/timer.f90
 
 # RANDOM
 include_HEADERS += include/spral_random.h
