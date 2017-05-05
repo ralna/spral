@@ -1227,7 +1227,7 @@ contains
     integer :: ind_len, B_len
     integer :: i, j, k, p
     integer :: ncb, last_ln, llist, maxr
-    integer :: ndelay, blkm, blkn, nelim, parent, node
+    integer :: ndelay, blkm, blkn, nelim, parent, node, dif
     integer, dimension(:), pointer :: lperm
 
     type(C_PTR) :: ptr_D, ptr_L, ptr_LD
@@ -1426,8 +1426,10 @@ contains
           ! Record delays
           nodes(node)%nelim = nelim
           if (blkn .lt. blkm) then
+             dif = blkn - nelim
              !$omp atomic update
-             nodes(parent)%ndelay = nodes(parent)%ndelay + (blkn - nelim)
+             nodes(parent)%ndelay = nodes(parent)%ndelay + dif
+             !$omp end atomic
           end if
           stats%num_delay = stats%num_delay + blkn - nelim
           do j = blkm, blkm-nelim+1, -1
