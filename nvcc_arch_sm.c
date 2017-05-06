@@ -1,4 +1,7 @@
 /* nvcc -DNDEBUG nvcc_arch_sm.c -o nvcc_arch_sm -lcuda */
+/* If nvcc is not functioning properly, use the native compiler; e.g.,
+ * on macOS Sierra with CUDA 8 and the latest Clang releases, call:
+ * clang -DNDEBUG -I$CUDADIR/include nvcc_arch_sm.c -o nvcc_arch_sm -L$CUDADIR/lib -lcuda */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,6 +18,7 @@ int main(int argc, char *argv[])
   int major_max = 0;
   int minor_min = 0;
   int minor_max = 0;
+  int chosen = 0;
 
   switch (result = cuInit(0u)) {
   case CUDA_ERROR_INVALID_VALUE:
@@ -153,26 +157,37 @@ int main(int argc, char *argv[])
   if (major_max == major_min) {
     /* uniform GPUs */
     if (minor_max == minor_min) {
-      (void)fprintf(stdout, " -arch=sm_%d%d\n", major_max, minor_max);
+      (void)fprintf(stdout, "-arch=sm_%d%d\n", major_max, minor_max);
       return EXIT_SUCCESS;
     }
     else if (major_max == 2) {
-      (void)fprintf(stdout, " -arch=compute_20 -code=sm_20,sm_21\n");
+      (void)fprintf(stdout, "-arch=compute_20 -code=sm_20,sm_21\n");
       return EXIT_SUCCESS;
     }
   }
 
   for (dev = 0; dev < count; ++dev) {
     int seen = 0;
+#if defined(__CUDA_API_VERSION) && __CUDA_API_VERSION >= 8000
+    /* CC <= 1.x not supported in CUDA >= 8. */
+    if (major[dev] <= 1)
+      continue;
+#endif /* __CUDA_API_VERSION */
     for (CUdevice prev = dev - 1; prev >= 0; --prev)
       if (seen = ((major[prev] == major[dev]) && (minor[prev] == minor[dev])))
         break;
     if (seen)
       continue;
-    (void)fprintf(stdout, " -gencode arch=compute_%d%d,code=sm_%d%d", major[dev], minor[dev], major[dev], minor[dev]);
+    if (chosen++)
+      (void)fprintf(stdout, " ");
+    (void)fprintf(stdout, "-gencode arch=compute_%d%d,code=sm_%d%d", major[dev], minor[dev], major[dev], minor[dev]);
     (void)fflush(stdout);
   }
   free(major);
-  (void)fprintf(stdout, "\n");
-  return EXIT_SUCCESS;
+  if (chosen) {
+    (void)fprintf(stdout, "\n");
+    return EXIT_SUCCESS;
+  }
+  /* signal no GPUs by returning the failure code */
+  return EXIT_FAILURE;
 }
