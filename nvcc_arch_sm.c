@@ -168,12 +168,13 @@ int main(int argc, char *argv[])
 
   for (dev = 0; dev < count; ++dev) {
     int seen = 0;
+    CUdevice prev = (CUdevice)-1;
 #if defined(__CUDA_API_VERSION) && __CUDA_API_VERSION >= 8000
     /* CC <= 1.x not supported in CUDA >= 8. */
     if (major[dev] <= 1)
       continue;
 #endif /* __CUDA_API_VERSION */
-    for (CUdevice prev = dev - 1; prev >= 0; --prev)
+    for (prev = dev - 1; prev >= 0; --prev)
       if (seen = ((major[prev] == major[dev]) && (minor[prev] == minor[dev])))
         break;
     if (seen)
