@@ -12,11 +12,10 @@ contains
   ! Convert a CUDA error code to a Fortran character string
   character(len=200) function cudaGetErrorString(error)
     implicit none
-    integer(C_INT) :: error
+    integer(C_INT), intent(in) :: error
 
     write(cudaGetErrorString, "(a,i3)") "Not compiled with CUDA support ", error
   end function cudaGetErrorString
-
 
   ! Return true if a GPU is present and code is compiled with CUDA support
   logical function detect_gpu()
