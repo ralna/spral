@@ -12,6 +12,8 @@ module spral_cuda
        cudaSharedMemBankSizeEightByte
   ! #define values for cudaEventCreateWithFlags
   public :: cudaEventDefault, cudaEventBlockingSync, cudaEventDisableTiming
+  ! enum values for cudaError
+  public :: cudaSuccess, cudaErrorInsufficientDriver, cudaErrorNoDevice
   ! Literal interfaces to C functions in CUDA API
   public :: cudaDeviceEnablePeerAccess, cudaDeviceSynchronize, cudaFree, &
        cudaGetDeviceCount, cudaGetLastError, cudaMalloc, cudaMemset, &
