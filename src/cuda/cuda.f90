@@ -1,6 +1,5 @@
 ! Provides interface definitions for CUDA functions
-module spral_cuda
-  
+module spral_cuda  
   use, intrinsic :: iso_c_binding
   implicit none
 
@@ -35,21 +34,27 @@ module spral_cuda
   ! Utility functions
   public :: detect_gpu
 
-  ! Based on enum in cuda.h
-  integer, parameter :: cudaMemcpyHostToHost      = 0
-  integer, parameter :: cudaMemcpyHostToDevice    = 1
-  integer, parameter :: cudaMemcpyDeviceToHost    = 2
-  integer, parameter :: cudaMemcpyDeviceToDevice  = 3
+  ! Based on enum in driver_types.h
+  integer(C_INT), parameter :: cudaMemcpyHostToHost     = 0_C_INT
+  integer(C_INT), parameter :: cudaMemcpyHostToDevice   = 1_C_INT
+  integer(C_INT), parameter :: cudaMemcpyDeviceToHost   = 2_C_INT
+  integer(C_INT), parameter :: cudaMemcpyDeviceToDevice = 3_C_INT
+  integer(C_INT), parameter :: cudaMemcpyDefault        = 4_C_INT
 
-  ! Based on enum in cuda.h
-  integer, parameter :: cudaSharedMemBankSizeDefault    = 0
-  integer, parameter :: cudaSharedMemBankSizeFourByte   = 1
-  integer, parameter :: cudaSharedMemBankSizeEightByte  = 2
+  ! Based on enum in driver_types.h
+  integer(C_INT), parameter :: cudaSharedMemBankSizeDefault   = 0_C_INT
+  integer(C_INT), parameter :: cudaSharedMemBankSizeFourByte  = 1_C_INT
+  integer(C_INT), parameter :: cudaSharedMemBankSizeEightByte = 2_C_INT
 
   ! Based on #define in driver_types.h
-  integer, parameter :: cudaEventDefault       = 0
-  integer, parameter :: cudaEventBlockingSync  = 1
-  integer, parameter :: cudaEventDisableTiming = 2
+  integer(C_INT), parameter :: cudaEventDefault       = 0_C_INT
+  integer(C_INT), parameter :: cudaEventBlockingSync  = 1_C_INT
+  integer(C_INT), parameter :: cudaEventDisableTiming = 2_C_INT
+
+  ! Based on enum in driver_types.h
+  integer(C_INT), parameter :: cudaSuccess                 =  0_C_INT
+  integer(C_INT), parameter :: cudaErrorInsufficientDriver = 35_C_INT
+  integer(C_INT), parameter :: cudaErrorNoDevice           = 38_C_INT
 
   ! CUDA C provided functions (listed alphabetically)
   interface
@@ -405,10 +410,11 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   ! Return true if a GPU is present and code is compiled with CUDA support
-  ! FIXME: actually detect gpus
   logical function detect_gpu()
     implicit none
+    integer(C_INT) :: cnt
+    cnt = 0_C_INT
+    detect_gpu = ((cudaGetDeviceCount(cnt) .eq. cudaSuccess) .and. (cnt .gt. 0))
     detect_gpu = .true.
   end function detect_gpu
-
 end module spral_cuda
