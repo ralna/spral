@@ -17,7 +17,9 @@
 
 #define MAX_CUDA_BLOCKS 65535
 
-#define SM_3X (__CUDA_ARCH__ == 300 || __CUDA_ARCH__ == 350)
+//#define SM_3X (__CUDA_ARCH__ == 300 || __CUDA_ARCH__ == 350 || __CUDA_ARCH__ == 370)
+//FIXME: Verify if the code for Keplers (sm_3x) is still correct for the later GPUs.
+#define SM_3X (__CUDA_ARCH__ >= 300)
 
 using namespace spral::ssids::gpu;
 
