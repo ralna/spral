@@ -9,6 +9,7 @@
 #  variables are defined:
 #     $NVCC          The CUDA compiler command
 #     $NVCCFLAGS     The flags pased to the CUDA compiler
+#     $NVCC_ARCH_SM  The CUDA architectures to compile for
 #
 
 AC_DEFUN([SPRAL_PROG_NVCC], [
