@@ -11,7 +11,7 @@ else
 OPENMP_LIB = #-lgomp # FIXME: autoconf this
 endif
 if HAVE_GPUDBG
-AM_NVCC_FLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src -Xptxas="${PTX_FLAGS}" -G
+AM_NVCC_FLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src -Xptxas="${PTX_FLAGS}" -G -src-in-ptx
 else
 AM_NVCC_FLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src -Xptxas="${PTX_FLAGS}"
 endif
