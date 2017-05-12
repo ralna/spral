@@ -269,6 +269,10 @@ contains
    cuda_error = cudaMemcpy_h2d(gpu_rlist_direct, C_LOC(rlist_direct), &
         lrlist*C_SIZEOF(rlist_direct(1)))
    if (cuda_error .ne. 0) return
+
+   ! Synchronise the device, see:
+   ! http://docs.nvidia.com/cuda/cuda-runtime-api/api-sync-behavior.html#api-sync-behavior
+   cuda_error = cudaDeviceSynchronize()
  end subroutine copy_analyse_data_to_device
  
  subroutine symbolic_cleanup(this)
@@ -371,7 +375,19 @@ contains
    if (cuda_error .ne. 0) goto 200
    cuda_error = cudaMemcpy_h2d(gpu_val, C_LOC(aval), sz*C_SIZEOF(aval(1)))
    if (cuda_error .ne. 0) goto 200
-   
+   if (present(scaling)) then
+      ! Copy scaling vector to GPU
+      cuda_error = cudaMalloc(gpu_scaling, this%n*C_SIZEOF(scaling(1)))
+      if (cuda_error .ne. 0) goto 200
+      cuda_error = cudaMemcpy_h2d(gpu_scaling, C_LOC(scaling), &
+           this%n*C_SIZEOF(scaling(1)))
+      if (cuda_error .ne. 0) goto 200
+   end if
+   ! Synchronise the device, see:
+   ! http://docs.nvidia.com/cuda/cuda-runtime-api/api-sync-behavior.html#api-sync-behavior
+   cuda_error = cudaDeviceSynchronize()
+   if (cuda_error .ne. 0) goto 200
+
    ! Initialize stream and contrib_wait event
    cuda_error = cudaStreamCreate(gpu_factor%stream_handle)
    if (cuda_error .ne. 0) goto 200
@@ -381,12 +397,12 @@ contains
 
    ! Call main factorization routine
    if (present(scaling)) then
-      ! Copy scaling vector to GPU
-      cuda_error = cudaMalloc(gpu_scaling, this%n*C_SIZEOF(scaling(1)))
-      if (cuda_error .ne. 0) goto 200
-      cuda_error = cudaMemcpy_h2d(gpu_scaling, C_LOC(scaling), &
-           this%n*C_SIZEOF(scaling(1)))
-      if (cuda_error .ne. 0) goto 200
+      ! ! Copy scaling vector to GPU
+      ! cuda_error = cudaMalloc(gpu_scaling, this%n*C_SIZEOF(scaling(1)))
+      ! if (cuda_error .ne. 0) goto 200
+      ! cuda_error = cudaMemcpy_h2d(gpu_scaling, C_LOC(scaling), &
+      !      this%n*C_SIZEOF(scaling(1)))
+      ! if (cuda_error .ne. 0) goto 200
 
       ! Perform factorization
       call parfactor(posdef, this%child_ptr, this%child_list, this%n,         &
@@ -944,6 +960,10 @@ contains
             blkm*(blkn+0_long)*C_SIZEOF(real_dummy))
          cuda_error = cudaMemcpy_h2d(srcptr, C_LOC(d2), &
             2*nptr%nelim*C_SIZEOF(d2(1)))
+         if (cuda_error .ne. 0) goto 200
+         ! Synchronise the device, see:
+         ! http://docs.nvidia.com/cuda/cuda-runtime-api/api-sync-behavior.html#api-sync-behavior
+         cuda_error = cudaDeviceSynchronize()
          if (cuda_error .ne. 0) goto 200
       end do
    !endif
