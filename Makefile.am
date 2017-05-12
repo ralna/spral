@@ -10,7 +10,11 @@ OPENMP_LIB = -Xcompiler="$(OPENMP_CXXFLAGS)"
 else
 OPENMP_LIB = #-lgomp # FIXME: autoconf this
 endif
+if HAVE_GPUDBG
+AM_NVCC_FLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src -Xptxas="${PTX_FLAGS}" -G
+else
 AM_NVCC_FLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src -Xptxas="${PTX_FLAGS}"
+endif
 AM_LD_FLAGS = -lcuda
 NVCCLINK = \
 	$(NVCC) $(NVCCFLAGS) $(AM_NVCC_FLAGS) $(AM_LD_FLAGS) $(LDFLAGS) $(OPENMP_LIB) -o $@

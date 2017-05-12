@@ -18,6 +18,11 @@ AC_ARG_ENABLE([profile],
    AS_HELP_STRING([--enable-profile], [Enable support for profile generation. Require gtg library.])
    )
 
+# Allow debugging of CUDA code
+AC_ARG_ENABLE([gpudbg],
+   AS_HELP_STRING([--enable-gpudbg], [Enable debugging of CUDA code.])
+   )
+
 # Check for compilers
 AC_PROG_CC
 AC_PROG_CXX
@@ -43,6 +48,11 @@ AS_IF([test "x$enable_gpu" != "xno"], [
    SPRAL_PROG_NVCC
    ])
 AM_CONDITIONAL([HAVE_NVCC], [test -n "$NVCC"])
+
+AS_IF([test "x$enable_gpudbg" = "xyes"], [
+   GPUDBG=yes
+   ])
+AM_CONDITIONAL([HAVE_GPUDBG], [test -n "$GPUDBG"])
 
 # Establish linking flags C->Fortran and how to link C with fortran
 AC_FC_LIBRARY_LDFLAGS
