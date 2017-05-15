@@ -56,7 +56,7 @@ module spral_ssids_gpu_subtree
      type(node_type), dimension(:), allocatable :: nodes ! Stores pointers
        ! to information about nodes
      type(contrib_type) :: contrib
-     type(C_PTR) :: contrib_wait
+     type(C_PTR) :: contrib_wait = C_NULL_PTR
    contains
      procedure :: get_contrib
      procedure :: solve_fwd
