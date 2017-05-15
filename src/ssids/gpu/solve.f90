@@ -38,6 +38,10 @@ contains
     if (cuda_error .ne. 0) return
     cuda_error = cudaMemcpy_h2d(gpu_x, C_LOC(x), n*C_SIZEOF(x(1)))
     if (cuda_error .ne. 0) return
+    ! Synchronise the device, see:
+    ! http://docs.nvidia.com/cuda/cuda-runtime-api/api-sync-behavior.html#api-sync-behavior
+    cuda_error = cudaDeviceSynchronize()
+    if (cuda_error .ne. 0) return
 
     ! Backwards solve
     call subtree_bwd_solve_gpu(job, posdef, stream_data%num_levels, &
@@ -135,6 +139,10 @@ contains
 
     ! Push x on to GPU
     cuda_error = cudaMemcpy_h2d(gpu_x, C_LOC(x), n*C_SIZEOF(x(1)))
+    if (cuda_error .ne. 0) return
+    ! Synchronise the device, see:
+    ! http://docs.nvidia.com/cuda/cuda-runtime-api/api-sync-behavior.html#api-sync-behavior
+    cuda_error = cudaDeviceSynchronize()
     if (cuda_error .ne. 0) return
 
     call subtree_d_solve_gpu(stream_data%num_levels, &
@@ -252,6 +260,10 @@ contains
     end do
     cuda_error = cudaMemcpy_h2d(gpu_cvalues, C_LOC(cvalues), &
          nnodes*C_SIZEOF(cvalues(1)))
+    if (cuda_error .ne. 0) return
+    ! Synchronise the device, see:
+    ! http://docs.nvidia.com/cuda/cuda-runtime-api/api-sync-behavior.html#api-sync-behavior
+    cuda_error = cudaDeviceSynchronize()
     if (cuda_error .ne. 0) return
 
     ! Forwards solve
@@ -969,6 +981,10 @@ contains
          nnodes*C_SIZEOF(clists_direct(1)))
     if (cuda_error .ne. 0) return
     cuda_error = cudaMemcpy_h2d(gpu_clen, C_LOC(clen), nnodes*C_SIZEOF(clen(1)))
+    if (cuda_error .ne. 0) return
+    ! Synchronise the device, see:
+    ! http://docs.nvidia.com/cuda/cuda-runtime-api/api-sync-behavior.html#api-sync-behavior
+    cuda_error = cudaDeviceSynchronize()
     if (cuda_error .ne. 0) return
 
     !
