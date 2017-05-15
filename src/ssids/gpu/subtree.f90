@@ -517,9 +517,15 @@ contains
       if (flag .ne. 0) return
    end if
 
+   ! Release event
+   flag = cudaEventDestroy(this%contrib_wait)
+   if (flag .ne. 0) return
+   this%contrib_wait = C_NULL_PTR
+
    ! Release stream
    flag = cudaStreamDestroy(this%stream_handle)
    if (flag .ne. 0) return
+   this%stream_handle = C_NULL_PTR
  end subroutine numeric_cleanup
 
  function get_contrib(this)
@@ -535,8 +541,12 @@ contains
    get_contrib%owner = 1 ! gpu
 
    ! Now wait until data copy has finished before releasing result
-   cuda_error = cudaEventSynchronize(this%contrib_wait)
    ! FIXME: handle cuda_error?
+   cuda_error = cudaEventSynchronize(this%contrib_wait)
+   ! Play safe and synchronize the entire stream.
+   ! FIXME: handle cuda_error?
+   ! FIXME: remove if not needed
+   cuda_error = cudaStreamSynchronize(this%stream_handle)
  end function get_contrib
 
  subroutine gpu_free_contrib(contrib)
