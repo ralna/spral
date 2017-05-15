@@ -44,7 +44,7 @@ module spral_ssids_gpu_subtree
      logical :: posdef
      integer :: device ! Have own copy as symbolic may be freed first
      type(gpu_symbolic_subtree), pointer :: symbolic
-     type(C_PTR) :: stream_handle
+     type(C_PTR) :: stream_handle = C_NULL_PTR
      type(gpu_type) :: stream_data
      type(C_PTR) :: gpu_rlist_with_delays = C_NULL_PTR
      type(C_PTR) :: gpu_rlist_direct_with_delays = C_NULL_PTR
