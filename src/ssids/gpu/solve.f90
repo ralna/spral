@@ -1,8 +1,6 @@
 module spral_ssids_gpu_solve
   use iso_c_binding
   use spral_cuda
-  use spral_ssids_gpu_alloc, only : cuda_stack_alloc_type, custack_init, &
-       custack_alloc, custack_free, custack_finalize
   use spral_ssids_gpu_datatypes
   use spral_ssids_gpu_interfaces
   use spral_ssids_datatypes

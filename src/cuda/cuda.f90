@@ -406,8 +406,8 @@ contains
 
     integer(C_SIZE_T), parameter :: alignon = 256
 
-    aligned_size = (sz-1) / alignon + 1
-    aligned_size = aligned_size*alignon
+    aligned_size = (sz + (alignon - 1)) / alignon
+    aligned_size = aligned_size * alignon
   end function aligned_size
 
   !

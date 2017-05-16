@@ -1,6 +1,6 @@
 module spral_ssids_gpu_alloc
   use, intrinsic :: iso_c_binding
-  use spral_cuda, only : cudaMalloc, cudaFree, aligned_size, c_ptr_plus
+  use spral_cuda
   implicit none
 
   private
@@ -44,10 +44,16 @@ contains
        if (cuda_error .ne. 0) return
     end if
 
+    ! Always align!
+    stack%stack_sz = aligned_size(bytes)
+
     ! Allocate stack to new size
-    cuda_error = cudaMalloc(stack%stack, bytes)
+    cuda_error = cudaMalloc(stack%stack, stack%stack_sz)
     if (cuda_error .ne. 0) return
-    stack%stack_sz = bytes
+
+    ! -1 for integers, max. val. for unsigneds, qNaN for reals
+    cuda_error = cudaMemset(stack%stack, -1, stack%stack_sz)
+    if (cuda_error .ne. 0) return
   end subroutine custack_init
 
   subroutine custack_finalize(stack, cuda_error)
