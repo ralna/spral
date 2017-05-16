@@ -50,10 +50,6 @@ contains
     ! Allocate stack to new size
     cuda_error = cudaMalloc(stack%stack, stack%stack_sz)
     if (cuda_error .ne. 0) return
-
-    ! -1 for integers, max. val. for unsigneds, qNaN for reals
-    cuda_error = cudaMemset(stack%stack, -1, stack%stack_sz)
-    if (cuda_error .ne. 0) return
   end subroutine custack_init
 
   subroutine custack_finalize(stack, cuda_error)

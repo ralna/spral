@@ -971,12 +971,13 @@ contains
          cuda_error = cudaMemcpy_h2d(srcptr, C_LOC(d2), &
             2*nptr%nelim*C_SIZEOF(d2(1)))
          if (cuda_error .ne. 0) goto 200
-         ! Synchronise the device, see:
-         ! http://docs.nvidia.com/cuda/cuda-runtime-api/api-sync-behavior.html#api-sync-behavior
-         cuda_error = cudaDeviceSynchronize()
-         if (cuda_error .ne. 0) goto 200
       end do
    !endif
+
+   ! Synchronise the device, see:
+   ! http://docs.nvidia.com/cuda/cuda-runtime-api/api-sync-behavior.html#api-sync-behavior
+   cuda_error = cudaDeviceSynchronize()
+   if (cuda_error .ne. 0) goto 200
 
    return ! Normal return
 
