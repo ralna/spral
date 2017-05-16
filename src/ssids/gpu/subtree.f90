@@ -250,21 +250,21 @@ contains
    integer, intent(out) :: cuda_error ! Non-zero on error
 
    ! Copy nlist
-   cuda_error = cudaMalloc(gpu_nlist, lnlist*C_SIZEOF(nlist(1)))
+   cuda_error = cudaMalloc(gpu_nlist, aligned_size(lnlist*C_SIZEOF(nlist(1))))
    if (cuda_error .ne. 0) return
    cuda_error = cudaMemcpy_h2d(gpu_nlist, C_LOC(nlist), &
         lnlist*C_SIZEOF(nlist(1)))
    if (cuda_error .ne. 0) return
 
    ! Copy rlist
-   cuda_error = cudaMalloc(gpu_rlist, lrlist*C_SIZEOF(rlist(1)))
+   cuda_error = cudaMalloc(gpu_rlist, aligned_size(lrlist*C_SIZEOF(rlist(1))))
    if (cuda_error .ne. 0) return
    cuda_error = cudaMemcpy_h2d(gpu_rlist, C_LOC(rlist), &
         lrlist*C_SIZEOF(rlist(1)))
    if (cuda_error .ne. 0) return
 
    ! Copy rlist_direct
-   cuda_error = cudaMalloc(gpu_rlist_direct, lrlist*C_SIZEOF(rlist_direct(1)))
+   cuda_error = cudaMalloc(gpu_rlist_direct, aligned_size(lrlist*C_SIZEOF(rlist_direct(1))))
    if (cuda_error .ne. 0) return
    cuda_error = cudaMemcpy_h2d(gpu_rlist_direct, C_LOC(rlist_direct), &
         lrlist*C_SIZEOF(rlist_direct(1)))
@@ -371,13 +371,13 @@ contains
 
    ! Copy A values to GPU
    sz = this%max_a_idx
-   cuda_error = cudaMalloc(gpu_val, sz*C_SIZEOF(aval(1)))
+   cuda_error = cudaMalloc(gpu_val, aligned_size(sz*C_SIZEOF(aval(1))))
    if (cuda_error .ne. 0) goto 200
    cuda_error = cudaMemcpy_h2d(gpu_val, C_LOC(aval), sz*C_SIZEOF(aval(1)))
    if (cuda_error .ne. 0) goto 200
    if (present(scaling)) then
       ! Copy scaling vector to GPU
-      cuda_error = cudaMalloc(gpu_scaling, this%n*C_SIZEOF(scaling(1)))
+      cuda_error = cudaMalloc(gpu_scaling, aligned_size(this%n*C_SIZEOF(scaling(1))))
       if (cuda_error .ne. 0) goto 200
       cuda_error = cudaMemcpy_h2d(gpu_scaling, C_LOC(scaling), &
            this%n*C_SIZEOF(scaling(1)))
@@ -398,7 +398,7 @@ contains
    ! Call main factorization routine
    if (present(scaling)) then
       ! ! Copy scaling vector to GPU
-      ! cuda_error = cudaMalloc(gpu_scaling, this%n*C_SIZEOF(scaling(1)))
+      ! cuda_error = cudaMalloc(gpu_scaling, aligned_size(this%n*C_SIZEOF(scaling(1))))
       ! if (cuda_error .ne. 0) goto 200
       ! cuda_error = cudaMemcpy_h2d(gpu_scaling, C_LOC(scaling), &
       !      this%n*C_SIZEOF(scaling(1)))

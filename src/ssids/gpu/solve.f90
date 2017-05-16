@@ -32,7 +32,7 @@ contains
     cuda_error = 0
 
     ! Push x on to GPU
-    cuda_error = cudaMalloc(gpu_x, n*C_SIZEOF(x(1)))
+    cuda_error = cudaMalloc(gpu_x, aligned_size(n*C_SIZEOF(x(1))))
     if (cuda_error .ne. 0) return
     cuda_error = cudaMemcpy_h2d(gpu_x, C_LOC(x), n*C_SIZEOF(x(1)))
     if (cuda_error .ne. 0) return
@@ -95,9 +95,9 @@ contains
     end if
 
     ! Allocate workspace
-    cuda_error = cudaMalloc(gpu_work, lwork*C_SIZEOF(dummy_real))
+    cuda_error = cudaMalloc(gpu_work, aligned_size(lwork*C_SIZEOF(dummy_real)))
     if (cuda_error .ne. 0) return
-    cuda_error = cudaMalloc(gpu_sync, 2*nsync*C_SIZEOF(dummy_int))
+    cuda_error = cudaMalloc(gpu_sync, aligned_size(2*nsync*C_SIZEOF(dummy_int)))
     if (cuda_error .ne. 0) return
    
     ! Backwards solve DL^Tx = z or L^Tx = z
@@ -214,7 +214,7 @@ contains
     cuda_error = 0
 
     ! Push x on to GPU
-    cuda_error = cudaMalloc(gpu_x, n*C_SIZEOF(x(1)))
+    cuda_error = cudaMalloc(gpu_x, aligned_size(n*C_SIZEOF(x(1))))
     if (cuda_error .ne. 0) return
     cuda_error = cudaMemcpy_h2d(gpu_x, C_LOC(x), n*C_SIZEOF(x(1)))
     if (cuda_error .ne. 0) return
@@ -239,13 +239,13 @@ contains
        blkm = int(rptr(node+1) - rptr(node)) + ndelay
        stack_ptr = stack_ptr + blkm-nelim
     end do
-    cuda_error = cudaMalloc(gpu_stack, stack_ptr*C_SIZEOF(dummy_real))
+    cuda_error = cudaMalloc(gpu_stack, aligned_size(stack_ptr*C_SIZEOF(dummy_real)))
     if (cuda_error .ne. 0) return
 
     ! Build index map for use of "stack" and copy to GPU
     allocate(cvalues(nnodes), stat=st)
     if (st .ne. 0) return
-    cuda_error = cudaMalloc(gpu_cvalues, nnodes*C_SIZEOF(cvalues(1)))
+    cuda_error = cudaMalloc(gpu_cvalues, aligned_size(nnodes*C_SIZEOF(cvalues(1))))
     if (cuda_error .ne. 0) return
     stack_ptr = 0
     do node = 1, nnodes
@@ -316,13 +316,13 @@ contains
     cposdef = posdef ! convert from Fortran to C logical size
 
     ! Do actual work
-    cuda_error = cudaMalloc(gpu_sync, 2*nsync*C_SIZEOF(dummy_int))
+    cuda_error = cudaMalloc(gpu_sync, aligned_size(2*nsync*C_SIZEOF(dummy_int)))
     if (cuda_error .ne. 0) return
-    cuda_error = cudaMalloc(gpu_asm_sync, (1+nasm_sync)*C_SIZEOF(dummy_int))
+    cuda_error = cudaMalloc(gpu_asm_sync, aligned_size((1+nasm_sync)*C_SIZEOF(dummy_int)))
     if (cuda_error .ne. 0) return
-    cuda_error = cudaMalloc(gpu_xlocal, nlocal*C_SIZEOF(dummy_real))
+    cuda_error = cudaMalloc(gpu_xlocal, aligned_size(nlocal*C_SIZEOF(dummy_real)))
     if (cuda_error .ne. 0) return
-    cuda_error = cudaMalloc(gpu_work, lwork*C_SIZEOF(dummy_real))
+    cuda_error = cudaMalloc(gpu_work, aligned_size(lwork*C_SIZEOF(dummy_real)))
     if (cuda_error .ne. 0) return
     do lvl = 1, num_levels
        call run_fwd_solve_kernels(cposdef, fwd_slv_lookup(lvl), gpu_xlocal, &
@@ -893,7 +893,7 @@ contains
        rptr_with_delays(node+1) = rptr_with_delays(node) + &
             C_SIZEOF(dummy_int)*blkm
     end do
-    cuda_error = cudaMalloc(gpu_rlist_with_delays, rptr_with_delays(nnodes+1))
+    cuda_error = cudaMalloc(gpu_rlist_with_delays, aligned_size(rptr_with_delays(nnodes+1)))
     if (cuda_error .ne. 0) return
     int_data = rptr_with_delays(nnodes+1)
     allocate(rlist2(rptr_with_delays(nnodes+1)/C_SIZEOF(dummy_int)), stat=st)
@@ -926,7 +926,7 @@ contains
          rmap(0:n-1), stat=st)
     if (st .ne. 0) return
     cuda_error = cudaMalloc(gpu_rlist_direct_with_delays, &
-         rptr_with_delays(nnodes+1))
+         aligned_size(rptr_with_delays(nnodes+1)))
     if (cuda_error .ne. 0) return
     do node = 1, nnodes
        nelim = nodes(node)%nelim
@@ -951,11 +951,11 @@ contains
     allocate(clists(nnodes), clists_direct(nnodes), cvmap(nnodes), &
          clen(nnodes), stat=st)
     if (st .ne. 0) return
-    cuda_error = cudaMalloc(gpu_clists, nnodes*C_SIZEOF(clists(1)))
+    cuda_error = cudaMalloc(gpu_clists, aligned_size(nnodes*C_SIZEOF(clists(1))))
     if (cuda_error .ne. 0) return
-    cuda_error = cudaMalloc(gpu_clists_direct, nnodes*C_SIZEOF(clists_direct(1)))
+    cuda_error = cudaMalloc(gpu_clists_direct, aligned_size(nnodes*C_SIZEOF(clists_direct(1))))
     if (cuda_error .ne. 0) return
-    cuda_error = cudaMalloc(gpu_clen, nnodes*C_SIZEOF(dummy_int))
+    cuda_error = cudaMalloc(gpu_clen, aligned_size(nnodes*C_SIZEOF(dummy_int)))
     if (cuda_error .ne. 0) return
     cvmap(:) = child_ptr(nnodes+1)-1 ! default for no parent
     do node = 1, nnodes
@@ -1079,7 +1079,7 @@ contains
        allocate(scatter_lookup(fwd_slv_contrib_lookup%nscatter), stat=st)
        if (st .ne. 0) return
        cuda_error = cudaMalloc(fwd_slv_contrib_lookup%scatter, &
-            fwd_slv_contrib_lookup%nscatter*C_SIZEOF(scatter_lookup(1)))
+            aligned_size(fwd_slv_contrib_lookup%nscatter*C_SIZEOF(scatter_lookup(1))))
        if (cuda_error .ne. 0) return
        do i = 0, fwd_slv_contrib_lookup%nscatter-1
           scatter_lookup(i+1)%n = &

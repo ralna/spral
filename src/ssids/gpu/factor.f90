@@ -339,7 +339,7 @@ contains
     if (stats%cublas_error .ne. 0) goto 300
 
     ! Initialize CUDA stats
-    stats%cuda_error = cudaMalloc(gpu_custats, C_SIZEOF(custats))
+    stats%cuda_error = cudaMalloc(gpu_custats, aligned_size(C_SIZEOF(custats)))
     if (stats%cuda_error .ne. 0) goto 200
     stats%cuda_error = cudaMemsetAsync(gpu_custats, 0, C_SIZEOF(custats), stream)
     if (stats%cuda_error .ne. 0) goto 200
@@ -374,7 +374,7 @@ contains
     end do
   
     ii = nptr(nnodes + 1) - 1
-    stats%cuda_error = cudaMalloc(gpu_LDLT, 2*max_LDLT_size*C_SIZEOF(dummy_real))
+    stats%cuda_error = cudaMalloc(gpu_LDLT, aligned_size(2*max_LDLT_size*C_SIZEOF(dummy_real)))
     if (stats%cuda_error .ne. 0) goto 200
   
     allocate(gpu%values_L(gpu%num_levels), gpu%off_L(nnodes), &
@@ -446,12 +446,12 @@ contains
        end if
 
        stats%cuda_error = &
-            cudaMalloc(gpu%values_L(lev)%ptr_levL, level_size*C_SIZEOF(dummy_real))
+            cudaMalloc(gpu%values_L(lev)%ptr_levL, aligned_size(level_size*C_SIZEOF(dummy_real)))
        if (stats%cuda_error .ne. 0) goto 200
        ptr_levL = gpu%values_L(lev)%ptr_levL
        if (.not. pos_def) then
           stats%cuda_error = &
-               cudaMalloc(ptr_levLD, level_size*C_SIZEOF(dummy_real))
+               cudaMalloc(ptr_levLD, aligned_size(level_size*C_SIZEOF(dummy_real)))
           if (stats%cuda_error .ne. 0) goto 200
 
           ! Initialize pointers to LD storage
