@@ -1488,7 +1488,7 @@ void spral_ssids_multiblock_ldlt( cudaStream_t stream, int nblocks,
 void spral_ssids_multiblock_ldlt_setup( cudaStream_t stream, int nblocks,
       struct multinode_fact_type *ndata, struct multiblock_fact_type *mbfdata,
       int step, int block_size, int blocks, int* stat, int* ind, int* ncb ) {
-  dim3 threads(10,8);
+  dim3 threads(16,8);
   for ( int i = 0; i < nblocks; i += MAX_CUDA_BLOCKS ) {
     int nb = min(MAX_CUDA_BLOCKS, nblocks - i);
     cu_multiblock_fact_setup
@@ -1517,7 +1517,7 @@ void spral_ssids_multiblock_llt( cudaStream_t stream, int nblocks,
 void spral_ssids_multiblock_llt_setup( cudaStream_t stream, int nblocks,
       struct multinode_fact_type *ndata, struct multiblock_fact_type *mbfdata,
       int step, int block_size, int blocks, int* stat, int* ncb ) {
-  dim3 threads(10,8);
+  dim3 threads(16,8);
   for ( int i = 0; i < nblocks; i += MAX_CUDA_BLOCKS ) {
     int nb = min(MAX_CUDA_BLOCKS, nblocks - i);
     cu_multiblock_fact_setup
