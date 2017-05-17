@@ -3,7 +3,11 @@
 #ifndef CUDA_CHECK_H
 #define CUDA_CHECK_H
 
+#ifdef __cplusplus
+#include <cstdio>
+#else
 #include <stdio.h>
+#endif
 
 #define CudaSafeCall( err )     __cudaSafeCall( err, __FILE__, __LINE__ )
 #define CudaCheckError()        __cudaCheckError( __FILE__, __LINE__ )

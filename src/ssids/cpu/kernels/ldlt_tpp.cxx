@@ -21,20 +21,20 @@ namespace {
 bool check_col_small(int idx, int from, int to, double const* a, int lda, double small) {
    bool check = true;
    for(int c=from; c<idx; ++c)
-      check = check && (std::abs(a[c*lda+idx]) < small);
+      check = check && (fabs(a[c*lda+idx]) < small);
    for(int r=idx; r<to; ++r)
-      check = check && (std::abs(a[idx*lda+r]) < small);
+      check = check && (fabs(a[idx*lda+r]) < small);
    return check;
 }
 
 /** Returns col index of largest entry in row starting at a */
 int find_row_abs_max(int from, int to, double const* a, int lda) {
    if(from>=to) return -1;
-   int best_idx=from; double best_val=std::abs(a[from*lda]);
+   int best_idx=from; double best_val=fabs(a[from*lda]);
    for(int idx=from+1; idx<to; ++idx)
-      if(std::abs(a[idx*lda]) > best_val) {
+      if(fabs(a[idx*lda]) > best_val) {
          best_idx = idx;
-         best_val = std::abs(a[idx*lda]);
+         best_val = fabs(a[idx*lda]);
       }
    return best_idx;
 }
@@ -76,11 +76,11 @@ double find_rc_abs_max_exclude(int col, int nelim, int m, double const* a, int l
    double best = 0.0;
    for(int c=nelim; c<col; ++c) {
       if(c==exclude) continue;
-      best = std::max(best, std::abs(a[c*lda+col]));
+      best = std::max(best, fabs(a[c*lda+col]));
    }
    for(int r=col+1; r<m; ++r) {
       if(r==exclude) continue;
-      best = std::max(best, std::abs(a[col*lda+r]));
+      best = std::max(best, fabs(a[col*lda+r]));
    }
    return best;
 }
@@ -94,7 +94,7 @@ bool test_2x2(int t, int p, double maxt, double maxp, double const* a, int lda, 
    double a21 = a[t*lda+p];
    double a22 = a[p*lda+p];
    //printf("Testing 2x2 pivot (%d, %d) %e %e %e vs %e %e\n", t, p, a11, a21, a22, maxt, maxp);
-   double maxpiv = std::max(std::abs(a11), std::max(std::abs(a21), std::abs(a22)));
+   double maxpiv = std::max(fabs(a11), std::max(fabs(a21), fabs(a22)));
    if(maxpiv < small) return false;
 
    // Ensure non-singular and not afflicted by cancellation
@@ -102,8 +102,8 @@ bool test_2x2(int t, int p, double maxt, double maxp, double const* a, int lda, 
    double detpiv0 = (a11*detscale)*a22;
    double detpiv1 = (a21*detscale)*a21;
    double detpiv = detpiv0 - detpiv1;
-   //printf("t1 %e < %e %e %e?\n", std::abs(detpiv), small, std::abs(detpiv0/2), std::abs(detpiv1/2));
-   if(std::abs(detpiv) < std::max(small, std::max(std::abs(detpiv0/2), std::abs(detpiv1/2)))) return false;
+   //printf("t1 %e < %e %e %e?\n", fabs(detpiv), small, fabs(detpiv0/2), fabs(detpiv1/2));
+   if(fabs(detpiv) < std::max(small, std::max(fabs(detpiv0/2), fabs(detpiv1/2)))) return false;
 
    // Finally apply threshold pivot check
    d[0] = (a22*detscale)/detpiv;
@@ -112,8 +112,8 @@ bool test_2x2(int t, int p, double maxt, double maxp, double const* a, int lda, 
    d[3] = (a11*detscale)/detpiv;
    //printf("t2 %e < %e?\n", std::max(maxp, maxt), small);
    if(std::max(maxp, maxt) < small) return true; // Rest of col small
-   double x1 = std::abs(d[0])*maxt + std::abs(d[1])*maxp;
-   double x2 = std::abs(d[1])*maxt + std::abs(d[3])*maxp;
+   double x1 = fabs(d[0])*maxt + fabs(d[1])*maxp;
+   double x2 = fabs(d[1])*maxt + fabs(d[3])*maxp;
    //printf("t3 %e < %e?\n", std::max(x1, x2), 1.0/u);
    return ( u*std::max(x1, x2) < 1.0 );
 }
@@ -222,8 +222,8 @@ int ldlt_tpp_factor(int m, int n, int* perm, double* a, int lda, double* d,
          }
           
          // Try p as 1x1 pivot
-         maxp = std::max(maxp, std::abs(a[t*lda+p]));
-         if( std::abs(a[p*lda+p]) >= u*maxp ) {
+         maxp = std::max(maxp, fabs(a[t*lda+p]));
+         if( fabs(a[p*lda+p]) >= u*maxp ) {
             //printf("1x1 pivot\n");
             swap_cols(p, nelim, m, n, perm, a, lda, nleft, aleft, ldleft);
             d[2*nelim] = 1 / a[nelim*lda+nelim];
@@ -242,7 +242,7 @@ int ldlt_tpp_factor(int m, int n, int* perm, double* a, int lda, double* d,
          // Try 1x1 pivot on p=nelim as last resort (we started at p=nelim+1)
          p = nelim;
          double maxp = find_rc_abs_max_exclude(p, nelim, m, a, lda, -1);
-         if( std::abs(a[p*lda+p]) >= u*maxp ) {
+         if( fabs(a[p*lda+p]) >= u*maxp ) {
             //printf("1x1 pivot %d\n", p);
             swap_cols(p, nelim, m, n, perm, a, lda, nleft, aleft, ldleft);
             d[2*nelim] = 1 / a[nelim*lda+nelim];

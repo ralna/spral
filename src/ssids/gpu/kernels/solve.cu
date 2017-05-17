@@ -8,8 +8,6 @@
  * This code has not yet been publically released under any licence.
  */
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <cublas_v2.h>
 #include "cuda/cuda_check.h"
 

@@ -5,8 +5,11 @@
  * of dense submatrices.
  */
 
-#include <stdlib.h>
-#include <stdio.h>
+#ifdef __cplusplus
+#include <cmath>
+#else
+#include <math.h>
+#endif
 
 #include <cuda_runtime.h>
 #include <cuda_runtime_api.h>
@@ -33,8 +36,11 @@ namespace /* anon */ {
 extern __shared__ double SharedMemory[];
 
 __global__ void
-cu_block_ldlt_init(const int ncols, int *const stat, int *const ind)
-{
+cu_block_ldlt_init(
+    const int ncols,
+    int *const stat,
+    int *const ind
+) {
   if (threadIdx.x == 0) {
     stat[0] = ncols; // successful pivots
     stat[1] = 0;
@@ -50,14 +56,13 @@ unsigned int TILES
 >
 __device__ void
 dev_init_chol_fact(
-                const unsigned int block,
-                const int nrows, // number of rows of the factorized matrix
-                const int ncols, // number of columns thereof
-                const ELEMENT_TYPE *const a, // array of elements of A
-                const int lda, // leading dimension of a
-                ELEMENT_TYPE *const fs // initial L factor (shared mem)
-             )
-{
+    const unsigned int block,
+    const int nrows, // number of rows of the factorized matrix
+    const int ncols, // number of columns thereof
+    const ELEMENT_TYPE *const a, // array of elements of A
+    const int lda, // leading dimension of a
+    ELEMENT_TYPE *const fs // initial L factor (shared mem)
+) {
   if (TILES > 0) { // load the diagonal (pivot) tile
     const int SIZE_X = TILES * TILE_SIZE;
     
@@ -84,14 +89,13 @@ unsigned int TILES
 >
 __device__ void
 dev_save_chol_fact(
-                const unsigned int block,
-                const int nrows, // number of rows of the factorized matrix
-                const int ncols, // number of columns thereof
-                const ELEMENT_TYPE *const fs, // initial L factor (shared mem)
-                ELEMENT_TYPE *const f, // array of elements of L
-                const int ldf // leading dimension of f
-             )
-{
+    const unsigned int block,
+    const int nrows, // number of rows of the factorized matrix
+    const int ncols, // number of columns thereof
+    const ELEMENT_TYPE *const fs, // initial L factor (shared mem)
+    ELEMENT_TYPE *const f, // array of elements of L
+    const int ldf // leading dimension of f
+) {
   if (TILES > 0) {
     const int SIZE_X = TILES * TILE_SIZE;
 
@@ -121,16 +125,15 @@ unsigned int TILES
 >
 __device__ void
 dev_block_chol(
-                const int block,
-                const int nrows,
-                const int ncols,
-                const ELEMENT_TYPE *const a,
-                const int lda,
-                ELEMENT_TYPE *const f,
-                const int ldf,
-                int *const stat
-              )
-{
+    const int block,
+    const int nrows,
+    const int ncols,
+    const ELEMENT_TYPE *const a,
+    const int lda,
+    ELEMENT_TYPE *const f,
+    const int ldf,
+    int *const stat
+) {
   const int SIZE_X = TILES * TILE_SIZE;
 
   int ip;
@@ -186,15 +189,14 @@ unsigned int TILES
 >
 __global__ void
 cu_block_chol(
-               const int nrows,
-               const int ncols,
-               const ELEMENT_TYPE *const a,
-               const int lda,
-               ELEMENT_TYPE *const f,
-               const int ldf,
-               int *const stat
-             )
-{
+    const int nrows,
+    const int ncols,
+    const ELEMENT_TYPE *const a,
+    const int lda,
+    ELEMENT_TYPE *const f,
+    const int ldf,
+    int *const stat
+) {
   dev_block_chol< ELEMENT_TYPE, TILE_SIZE, TILES >
     ( blockIdx.x, nrows, ncols, a, lda, f, ldf, stat );
 }
@@ -222,16 +224,16 @@ struct multiblock_fact_type {
 
 __global__ void
 cu_multiblock_fact_setup(
-                         struct multinode_fact_type *ndata,
-                         struct multiblock_fact_type *const mbfdata,
-                         const int step,
-                         const int block_size,
-                         const int blocks,
-                         const int offb,
-                         int *const stat,
-                         int *const ind, int *const nl
-                         )
-{
+    struct multinode_fact_type *ndata,
+    struct multiblock_fact_type *const mbfdata,
+    const int step,
+    const int block_size,
+    const int blocks,
+    const int offb,
+    int *const stat,
+    int *const ind,
+    int *const nl
+) {
   ndata += blockIdx.x;
   const int ncols = ndata->ncols;
   const int nrows = ndata->nrows;
@@ -292,16 +294,11 @@ cu_multiblock_fact_setup(
   int k = (rb - cb - 1)/(block_size*(blocks - 1)) + 1;
 
   __shared__ int ncb;
-  //int &ncb = *(int*)SharedMemory;
   if ((threadIdx.x == 0) && (threadIdx.y == 0))
     ncb = atomicAdd(&nl[0], k);
   
   __shared__ int iwork[9];
-  //int *const iwork = ((int*)SharedMemory) + 1;
   __shared__ double *lptr, *ldptr, *dptr;
-  //double* &lptr = *(double**)&(SharedMemory[5]);
-  //double* &ldptr = *(double**)&(SharedMemory[6]);
-  //double* &dptr = *(double**)&(SharedMemory[7]);
   if ((threadIdx.x == 0) && (threadIdx.y == 0)) {
     iwork[0] = cb;
     iwork[1] = rb;
@@ -388,16 +385,15 @@ unsigned int TILES
 >
 __device__ void
 dev_init_fact(
-                const unsigned int block, // relative CUDA block number
-                const int nrows, 
-                const int ncols, 
-                const int offp,
-                const ELEMENT_TYPE *const a, // array of elements of A
-                const int lda, // leading dimension of a
-                ELEMENT_TYPE *const fs, // initial L factor (shared mem)
-                ELEMENT_TYPE *const ds // initial D**(-1) (shared mem)
-             )
-{
+    const unsigned int block, // relative CUDA block number
+    const int nrows, 
+    const int ncols, 
+    const int offp,
+    const ELEMENT_TYPE *const a, // array of elements of A
+    const int lda, // leading dimension of a
+    ELEMENT_TYPE *const fs, // initial L factor (shared mem)
+    ELEMENT_TYPE *const ds // initial D**(-1) (shared mem)
+) {
   const int SIZE_X = TILES * TILE_SIZE;
 
   int x, y; // position indices
@@ -448,21 +444,20 @@ unsigned int TILES
 >
 __device__ void
 dev_save_fact(
-                const unsigned int block,
-                const int nrows,
-                const int ncols,
-                const int offp, 
-                const int my, // save only if my is non-zero
-                const ELEMENT_TYPE *const fs, // L (shared mem)
-                const ELEMENT_TYPE *const fds, // L*D (shared mem)
-                const ELEMENT_TYPE *const ds, // 2 diags of D**(-1) (shared mem)
-                ELEMENT_TYPE *const f, // L (global mem)
-                const int ldf, // leading dimension of f
-                ELEMENT_TYPE *const fd, // L*D (global mem)
-                const int ldfd, // leading dimension of fd
-                ELEMENT_TYPE *const d // 2 diags of D**(-1) (global mem)
-             )
-{
+    const unsigned int block,
+    const int nrows,
+    const int ncols,
+    const int offp, 
+    const int my, // save only if my is non-zero
+    const ELEMENT_TYPE *const fs, // L (shared mem)
+    const ELEMENT_TYPE *const fds, // L*D (shared mem)
+    const ELEMENT_TYPE *const ds, // 2 diags of D**(-1) (shared mem)
+    ELEMENT_TYPE *const f, // L (global mem)
+    const int ldf, // leading dimension of f
+    ELEMENT_TYPE *const fd, // L*D (global mem)
+    const int ldfd, // leading dimension of fd
+    ELEMENT_TYPE *const d // 2 diags of D**(-1) (global mem)
+) {
   const int SIZE_X = TILES * TILE_SIZE;
 
   int x, y; // position indices
@@ -519,15 +514,14 @@ unsigned int TILES
 >
 __device__ void
 dev_init_max(
-              const int ncols,
-              const ELEMENT_TYPE *const fs,
-              const int mx, // this thread mask
-              int *const mask, // pivot index/mask
-              bool *const not_max, // "not largest" flag
-              int& jps, // the index of the largest element
-              int& quit // pivoting failure flag
-            )
-{
+    const int ncols,
+    const ELEMENT_TYPE *const fs,
+    const int mx, // this thread mask
+    int *const mask, // pivot index/mask
+    bool *const not_max, // "not largest" flag
+    int& jps, // the index of the largest element
+    int& quit // pivoting failure flag
+) {
   const int SIZE_X = TILES*TILE_SIZE;
 
   if (threadIdx.y == 0) {
@@ -552,7 +546,6 @@ dev_init_max(
   if ((threadIdx.y == 0) && (not_max[threadIdx.x] == 0))
     atomicMin(&jps, threadIdx.x); // in case of a tie, choose the leftmost
   __syncthreads();
-
 }
 
 /*
@@ -580,18 +573,17 @@ The pivot that has the smallest inverse is selected.
 template< typename ELEMENT_TYPE >
 __device__ void
 dev_select_pivots_at_root( 
-                  const ELEMENT_TYPE* fs, 
-                  int ld, // leading dimension of fs
-                  int& ip, 
-                  int& jp,
-                  ELEMENT_TYPE& a11,
-                  ELEMENT_TYPE& a12,
-                  ELEMENT_TYPE& a22,
-                  ELEMENT_TYPE& det
-                 )
-{
+    const ELEMENT_TYPE* fs,
+    int ld, // leading dimension of fs
+    int& ip,
+    int& jp,
+    ELEMENT_TYPE& a11,
+    ELEMENT_TYPE& a12,
+    ELEMENT_TYPE& a22,
+    ELEMENT_TYPE& det
+) {
   // select the pivot based on the row's largest element index
-  if ( ip != jp ) { // choose between 1x1 and 2x2 pivots
+  if (ip != jp) { // choose between 1x1 and 2x2 pivots
     a11 = fs[ip + ld*ip];
     a12 = fs[ip + ld*jp];
     a22 = fs[jp + ld*jp];
@@ -618,18 +610,17 @@ dev_select_pivots_at_root(
 template< typename ELEMENT_TYPE >
 __device__ void
 dev_select_pivots( 
-                  const ELEMENT_TYPE* fs, 
-                  int ld, // leading dimension of fs
-                  int& ip, 
-                  int& jp,
-                  ELEMENT_TYPE& a11,
-                  ELEMENT_TYPE& a12,
-                  ELEMENT_TYPE& a22,
-                  ELEMENT_TYPE& det
-                 )
-{
+    const ELEMENT_TYPE* fs, 
+    int ld, // leading dimension of fs
+    int& ip, 
+    int& jp,
+    ELEMENT_TYPE& a11,
+    ELEMENT_TYPE& a12,
+    ELEMENT_TYPE& a22,
+    ELEMENT_TYPE& det
+) {
   // select the pivot based on the row's largest element index
-  if ( ip != jp ) { // choose between 1x1 and 2x2 pivots
+  if (ip != jp) { // choose between 1x1 and 2x2 pivots
     a11 = fs[ip + ld*ip];
     a12 = fs[ip + ld*jp];
     a22 = fs[jp + ld*jp];
@@ -658,16 +649,15 @@ dev_select_pivots(
 template< typename ELEMENT_TYPE >
 __device__ bool
 dev_1x1_pivot_fails(
-                int x,
-                int ip,
-                ELEMENT_TYPE* fs,
-                ELEMENT_TYPE* fds,
-                int ld,
-                ELEMENT_TYPE det,
-                ELEMENT_TYPE delta,
-                ELEMENT_TYPE eps
-               )
-{
+    int x,
+    int ip,
+    ELEMENT_TYPE* fs,
+    ELEMENT_TYPE* fds,
+    int ld,
+    ELEMENT_TYPE det,
+    ELEMENT_TYPE delta,
+    ELEMENT_TYPE eps
+) {
   // the column of fds is that of fs before the division by pivot
   ELEMENT_TYPE u = fds[x + ld*ip] = fs[x + ld*ip];
   if ( fabs(det) <= eps ) { // the pivot is considered to be zero
@@ -693,20 +683,19 @@ dev_1x1_pivot_fails(
 template< typename ELEMENT_TYPE >
 __device__ bool
 dev_2x2_pivot_fails(
-                int x,
-                int ip,
-                int jp,
-                ELEMENT_TYPE* fs,
-                ELEMENT_TYPE* fds,
-                int ld,
-                ELEMENT_TYPE a11,
-                ELEMENT_TYPE a12,
-                ELEMENT_TYPE a22,
-                ELEMENT_TYPE det,
-                ELEMENT_TYPE delta,
-                ELEMENT_TYPE eps
-               )
-{
+    int x,
+    int ip,
+    int jp,
+    ELEMENT_TYPE* fs,
+    ELEMENT_TYPE* fds,
+    int ld,
+    ELEMENT_TYPE a11,
+    ELEMENT_TYPE a12,
+    ELEMENT_TYPE a22,
+    ELEMENT_TYPE det,
+    ELEMENT_TYPE delta,
+    ELEMENT_TYPE eps
+) {
   // the columns of fds is those of fd before division by pivot
   ELEMENT_TYPE u = fds[x + ld*ip] = fs[x + ld*ip];
   ELEMENT_TYPE v = fds[x + ld*jp] = fs[x + ld*jp];
@@ -754,14 +743,13 @@ unsigned int TILES // = 7 for a single node and = 11 for many nodes
 >
 __device__ void
 dev_eliminate_1x1(
-                  int& x, // row for this thread
-                  int y, // column for this thread
-                  int ip, // pivoted column
-                  ELEMENT_TYPE* fs,
-                  int ld,
-                  ELEMENT_TYPE p // pivot value
-                 )
-{
+    int& x, // row for this thread
+    int y, // column for this thread
+    int ip, // pivoted column
+    ELEMENT_TYPE* fs,
+    int ld,
+    ELEMENT_TYPE p // pivot value
+) {
   if ( x != ip )
     fs[x + ld*y] -= p * fs[x + ld*ip];
   x += 2*TILE_SIZE; // move to the next tile pair
@@ -780,16 +768,15 @@ template< typename ELEMENT_TYPE,
 unsigned int TILE_SIZE, unsigned int TILES >
 __device__ void
 dev_eliminate_2x2(
-                  int& x,
-                  int y,
-                  int ip,
-                  int jp,
-                  ELEMENT_TYPE* fs,
-                  int ld,
-                  ELEMENT_TYPE pi,
-                  ELEMENT_TYPE pj
-                 )
-{
+    int& x,
+    int y,
+    int ip,
+    int jp,
+    ELEMENT_TYPE* fs,
+    int ld,
+    ELEMENT_TYPE pi,
+    ELEMENT_TYPE pj
+) {
   if ( x != ip && x != jp )
     fs[x + ld*y] -= pi * fs[x + ld*ip] + pj * fs[x + ld*jp];
   x += 2*TILE_SIZE; // move to the next tile pair
@@ -807,16 +794,15 @@ dev_eliminate_2x2(
 template< typename ELEMENT_TYPE, unsigned int TILE_SIZE >
 inline __device__ void
 dev_eliminate(
-              int& x,
-              int y,
-              int ip,
-              int jp,
-              ELEMENT_TYPE* fs,
-              int ld,
-              ELEMENT_TYPE pi,
-              ELEMENT_TYPE pj
-             )
-{
+    int& x,
+    int y,
+    int ip,
+    int jp,
+    ELEMENT_TYPE* fs,
+    int ld,
+    ELEMENT_TYPE pi,
+    ELEMENT_TYPE pj
+) {
   x += TILE_SIZE;
   if ( ip == jp )
       fs[x + ld*y] -= pi * fs[x + ld*ip];
@@ -846,23 +832,22 @@ template< typename ELEMENT_TYPE,
 unsigned int TILE_SIZE, unsigned int TILES >
 __device__ void
 dev_block_ldlt(
-                unsigned int block,
-                int nrows, // number of rows of the factorized matrix
-                int ncols, // number of columns thereof
-                int offp, // number of rows above the pivot block
-                ELEMENT_TYPE* a, // array of elements of A
-                int lda, // leading dimension of a
-                ELEMENT_TYPE* f, // array of elements of the L factor
-                int ldf, // leading dimension of f
-                ELEMENT_TYPE* fd, // array of elements of L*D
-                int ldfd, // leading dimension of fd
-                ELEMENT_TYPE* d, // array for main diagonal and subdiagonal of D
-                ELEMENT_TYPE delta, // pivoting threashold
-                ELEMENT_TYPE eps, // zero pivot threashold
-                int* index, // pivot order index
-                int* stat  // number of successful pivots
-              )
-{
+    unsigned int block,
+    int nrows, // number of rows of the factorized matrix
+    int ncols, // number of columns thereof
+    int offp, // number of rows above the pivot block
+    ELEMENT_TYPE* a, // array of elements of A
+    int lda, // leading dimension of a
+    ELEMENT_TYPE* f, // array of elements of the L factor
+    int ldf, // leading dimension of f
+    ELEMENT_TYPE* fd, // array of elements of L*D
+    int ldfd, // leading dimension of fd
+    ELEMENT_TYPE* d, // array for main diagonal and subdiagonal of D
+    ELEMENT_TYPE delta, // pivoting threashold
+    ELEMENT_TYPE eps, // zero pivot threashold
+    int* index, // pivot order index
+    int* stat  // number of successful pivots
+) {
   const int SIZE_X = TILES*TILE_SIZE;
 
   int ip, jp; // pivot row and col indices
@@ -1062,29 +1047,28 @@ dev_block_ldlt(
 
 template
 < 
-typename ELEMENT_TYPE, 
-unsigned int TILE_SIZE, 
-unsigned int TILES 
+typename ELEMENT_TYPE,
+unsigned int TILE_SIZE,
+unsigned int TILES
 >
 __global__ void
 cu_block_ldlt(
-      int nrows, // n.o. rows in A
-      int ncols, // n.o. cols in A (<= TILE_SIZE)
-      int offp,  // n.o. rows in A_u
-      ELEMENT_TYPE* a, // array of A's elements
-      int lda, // leading dimension of a
-      ELEMENT_TYPE* f, // array of L's elements
-      int ldf, // leading dimension of f
-      ELEMENT_TYPE* fd, // array of (L*D)'s elements
-      int ldfd, // leading dimension of fd
-      ELEMENT_TYPE* d, // array of D**(-1)'s diagonal and subdiagonal elements
-      ELEMENT_TYPE delta, // pivoting threshold
-      ELEMENT_TYPE eps, // zero column threshold:
-                        // the column is zeroed if all elements are <= eps
-      int* index, // pivot index (cf. permutation matrix P)
-      int* stat // n.o. successful pivots
-             )
-{
+    int nrows, // n.o. rows in A
+    int ncols, // n.o. cols in A (<= TILE_SIZE)
+    int offp,  // n.o. rows in A_u
+    ELEMENT_TYPE* a, // array of A's elements
+    int lda, // leading dimension of a
+    ELEMENT_TYPE* f, // array of L's elements
+    int ldf, // leading dimension of f
+    ELEMENT_TYPE* fd, // array of (L*D)'s elements
+    int ldfd, // leading dimension of fd
+    ELEMENT_TYPE* d, // array of D**(-1)'s diagonal and subdiagonal elements
+    ELEMENT_TYPE delta, // pivoting threshold
+    ELEMENT_TYPE eps, // zero column threshold:
+    // the column is zeroed if all elements are <= eps
+    int* index, // pivot index (cf. permutation matrix P)
+    int* stat // n.o. successful pivots
+) {
    dev_block_ldlt< ELEMENT_TYPE, TILE_SIZE, TILES >
       ( blockIdx.x, nrows, ncols, offp, a, lda, f, ldf,
          fd, ldfd, d, delta, eps, index, stat );
@@ -1103,15 +1087,13 @@ unsigned int TILES
 >
 __global__ void
 cu_multiblock_ldlt(
-      struct multiblock_fact_type *mbfdata, // factorization data
-      ELEMENT_TYPE* f, // same for L
-      ELEMENT_TYPE delta, // same as in cu_block_fact
-      ELEMENT_TYPE eps, // same as in cu_block_fact
-      int* index, // array of all pivot indices
-      int* stat // array of successful pivots' numbers
-      ) 
-{
-
+    struct multiblock_fact_type *mbfdata, // factorization data
+    ELEMENT_TYPE* f, // same for L
+    ELEMENT_TYPE delta, // same as in cu_block_fact
+    ELEMENT_TYPE eps, // same as in cu_block_fact
+    int* index, // array of all pivot indices
+    int* stat // array of successful pivots' numbers
+) {
    /*
     * Read information on what to do from global memory
     */
@@ -1160,19 +1142,18 @@ cu_multiblock_ldlt(
 */
 template< typename ELEMENT_TYPE >
 __global__ void
-cu_square_ldlt( 
-                int n, 
-                ELEMENT_TYPE* a, // A on input, L on output
-                ELEMENT_TYPE* f, // L
-                ELEMENT_TYPE* w, // L*D
-                ELEMENT_TYPE* d, // main diag and subdiag of the inverse of D
-                int ld, // leading dimension of a, f, w
-                ELEMENT_TYPE delta, // same as above
-                ELEMENT_TYPE eps, // same as above
-                int* ind, // same as in cu_block_fact
-                int* stat // same as in cu_block_fact
-              )
-{
+cu_square_ldlt(
+    int n, 
+    ELEMENT_TYPE* a, // A on input, L on output
+    ELEMENT_TYPE* f, // L
+    ELEMENT_TYPE* w, // L*D
+    ELEMENT_TYPE* d, // main diag and subdiag of the inverse of D
+    int ld, // leading dimension of a, f, w
+    ELEMENT_TYPE delta, // same as above
+    ELEMENT_TYPE eps, // same as above
+    int* ind, // same as in cu_block_fact
+    int* stat // same as in cu_block_fact
+) {
   int x, y;
   int col;
   int ip, jp;
@@ -1357,18 +1338,17 @@ cu_square_ldlt(
 }
 
 template
-< 
-typename ELEMENT_TYPE, 
+<
+typename ELEMENT_TYPE,
 unsigned int TILE_SIZE,
-unsigned int TILES 
+unsigned int TILES
 >
 __global__ void
 cu_multiblock_chol(
-                    struct multiblock_fact_type *mbfdata,
-                    ELEMENT_TYPE* f, // array of L nodes
-                    int* stat // execution status
-                  )
-{
+    struct multiblock_fact_type *mbfdata,
+    ELEMENT_TYPE* f, // array of L nodes
+    int* stat // execution status
+) {
    /*
     * Read information on what to do from global memory
     */
@@ -1389,14 +1369,14 @@ cu_multiblock_chol(
 }
   
 struct cstat_data_type {
-   int nelim;
-   double *dval;
+  int nelim;
+  double *dval;
 };
 
 __global__ void 
 cu_collect_stats(
-      const struct cstat_data_type *csdata, 
-      struct cuda_stats *stats
+    const struct cstat_data_type *csdata, 
+    struct cuda_stats *stats
 ) {
    // Designed to be run with a single thread
    csdata += blockIdx.x;
@@ -1454,15 +1434,14 @@ cu_collect_stats(
 extern "C" {
 
 void spral_ssids_block_ldlt(
-            cudaStream_t stream, int nrows, int ncols, int p,
-            double* a, int lda,
-            double* f, int ldf,
-            double* fd, int ldfd,
-            double* d,
-            double delta, double eps,
-            int* index, int* stat
-           )
-{
+    cudaStream_t stream, int nrows, int ncols, int p,
+    double* a, int lda,
+    double* f, int ldf,
+    double* fd, int ldfd,
+    double* d,
+    double delta, double eps,
+    int* index, int* stat
+) {
    int nblocks = (nrows - ncols - 1)/(BLOCK_SIZE*(BLOCKS - 1)) + 1;
    cu_block_ldlt_init<<< 1, BLOCK_SIZE, 0, stream >>>( ncols, stat, index );
   
@@ -1513,7 +1492,7 @@ void spral_ssids_multiblock_ldlt_setup( cudaStream_t stream, int nblocks,
   for ( int i = 0; i < nblocks; i += MAX_CUDA_BLOCKS ) {
     int nb = min(MAX_CUDA_BLOCKS, nblocks - i);
     cu_multiblock_fact_setup
-      <<< nb, threads, 0 /*(10*8)*(8*8)*/, stream >>>
+      <<< nb, threads, 0, stream >>>
       ( ndata + i, mbfdata, step, block_size, blocks, 
         i, stat + i, ind + block_size*i, ncb );
   }
@@ -1542,23 +1521,23 @@ void spral_ssids_multiblock_llt_setup( cudaStream_t stream, int nblocks,
   for ( int i = 0; i < nblocks; i += MAX_CUDA_BLOCKS ) {
     int nb = min(MAX_CUDA_BLOCKS, nblocks - i);
     cu_multiblock_fact_setup
-      <<< nb, threads, 0 /*(10*8)*(8*8)*/, stream >>>
+      <<< nb, threads, 0, stream >>>
       ( ndata + i, mbfdata, step, block_size, blocks, i, stat + i, 0, ncb );
   }
 }
 
 void spral_ssids_square_ldlt( 
-            cudaStream_t stream, 
-            int n, 
-            double* a, 
-            double* f, 
-            double* w,
-            double* d,
-            int ld,
-            double delta, double eps,
-            int* index,
-            int* stat
-           )
+    cudaStream_t stream, 
+    int n, 
+    double* a, 
+    double* f, 
+    double* w,
+    double* d,
+    int ld,
+    double delta, double eps,
+    int* index,
+    int* stat
+)
 {
   int nt = min(n, 256);
   int sm = nt*sizeof(double) + (nt + 2)*sizeof(int);

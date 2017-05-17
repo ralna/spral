@@ -1,5 +1,8 @@
-#include <stdlib.h>
-#include <stdio.h>
+#ifdef __cplusplus
+#include <cmath>
+#else
+#include <math.h>
+#endif
 
 #include <cuda_runtime.h>
 #include <cuda_runtime_api.h>
@@ -103,7 +106,7 @@ cu_max_abs( long n, ELEMENT_TYPE* u, ELEMENT_TYPE* maxabs )
   tmax[threadIdx.x] = 0.0;
   for ( long i = threadIdx.x + blockDim.x*blockIdx.x; i < n; 
         i += blockDim.x*gridDim.x ) {
-    ELEMENT_TYPE v = abs(u[i]);
+    ELEMENT_TYPE v = fabs(u[i]);
     if ( v > tmax[threadIdx.x] )
       tmax[threadIdx.x] = v;
   }

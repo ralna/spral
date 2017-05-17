@@ -1,5 +1,8 @@
-#include <stdlib.h>
-#include <stdio.h>
+#ifdef __cplusplus
+#include <cmath>
+#else
+#include <math.h>
+#endif
 
 #include <cuda_runtime.h>
 #include <cuda_runtime_api.h>
