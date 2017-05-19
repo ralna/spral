@@ -181,7 +181,7 @@ cu_reorder_cols2( int nrows, int ncols,
 {
   int ix = threadIdx.x + blockIdx.x*blockDim.x;
 
-  __shared__ ELEMENT_TYPE work[SIZE_X*SIZE_Y];
+  __shared__ volatile ELEMENT_TYPE work[SIZE_X*SIZE_Y];
 
   if ( blockIdx.y  ) {
     if ( mode > 0 ) {
@@ -224,7 +224,7 @@ cu_reorder_rows2( int nrows, int ncols,
 {
   int iy = threadIdx.y + blockIdx.x*blockDim.y;
 
-  __shared__ ELEMENT_TYPE work[SIZE_X*SIZE_Y];
+  __shared__ volatile ELEMENT_TYPE work[SIZE_X*SIZE_Y];
 
   if ( blockIdx.y ) {
     if ( mode > 0 ) {
@@ -285,9 +285,9 @@ copy_L_LD_no_perm(
    [in case it overlaps itself] */
 template < int SIZE_X >
 __device__ void
-shuffle_perm_shmem( int n, const int *indr, int *perm ) {
+shuffle_perm_shmem( int n, volatile const int *const indr, int *perm ) {
    // Update permutation
-   __shared__ int iwork[SIZE_X];
+   __shared__ volatile int iwork[SIZE_X];
    if ( threadIdx.x < n && threadIdx.y == 0 )
       iwork[indr[threadIdx.x] - 1] = perm[threadIdx.x];
    __syncthreads();
@@ -310,15 +310,15 @@ copy_L_LD_perm_shmem(
       int ib, int jb,
       int offc, int offp,
       int ld,
-      int *indr,
+      volatile int *const indr,
       double *a, double *b, const double *c,
       int *perm
 ) {
-   __shared__ ELEMENT_TYPE work1[SIZE_X*SIZE_Y];
-   __shared__ ELEMENT_TYPE work2[SIZE_X*SIZE_Y];
+   __shared__ volatile ELEMENT_TYPE work1[SIZE_X*SIZE_Y];
+   __shared__ volatile ELEMENT_TYPE work2[SIZE_X*SIZE_Y];
 #if (!SM_3X)
-   __shared__ ELEMENT_TYPE work3[SIZE_X*SIZE_Y];
-   __shared__ ELEMENT_TYPE work4[SIZE_X*SIZE_Y];
+   __shared__ volatile ELEMENT_TYPE work3[SIZE_X*SIZE_Y];
+   __shared__ volatile ELEMENT_TYPE work4[SIZE_X*SIZE_Y];
 #endif 
 
    // Extend permutation array to cover non-pivoted columns
@@ -537,7 +537,7 @@ copy_L_LD_perm_noshmem(
       int offc, int offp,
       int ld,
       const int *ind,
-      int *indf,
+      const volatile int *const indf,
       double *a, double *b, const double *c,
       int *perm
 ) {
@@ -719,9 +719,9 @@ cu_multireorder(
                 const int* ind,
                 int* perm,
                 int* ncb) {
-   __shared__ int indf[SIZE_X]; // index from node_fact
-   __shared__ int indr[SIZE_X]; // reorder index
-   __shared__ int simple;
+   __shared__ volatile int indf[SIZE_X]; // index from node_fact
+   __shared__ volatile int indr[SIZE_X]; // reorder index
+   __shared__ volatile int simple;
 
    // Reset ncb ready for next call of muliblock_fact_setup()
    if ( blockIdx.x == 0 && threadIdx.x == 0 && threadIdx.y == 0 ) {
@@ -760,7 +760,7 @@ cu_multireorder(
       if ( jb - ib + 1 > delayed )
          indr[delayed + threadIdx.x] = next;
       if ( indf[threadIdx.x] != threadIdx.x + 1 )
-         atomicMin(&simple, 0);
+         atomicMin((int*)&simple, 0);
    }
    __syncthreads();
 

@@ -21,12 +21,12 @@
 namespace /* anon */ {
 
 struct load_nodes_type {
-   long nnz;    // Number of entries to map
-   int lda;    // Leading dimension of A
-   int ldl;    // Leading dimension of L
-   double *lcol; // Pointer to non-delay part of L
-   long offn;   // Offset into nlist
-   long offr;  // Offset into rlist
+  long nnz;    // Number of entries to map
+  int lda;    // Leading dimension of A
+  int ldl;    // Leading dimension of L
+  double *lcol; // Pointer to non-delay part of L
+  long offn;   // Offset into nlist
+  long offr;  // Offset into rlist
 };
 
 /*
@@ -38,24 +38,24 @@ struct load_nodes_type {
  */
 __global__ void
 cu_load_nodes(
-      const struct load_nodes_type *lndata,
-      const long* nlist,
-      const double* aval) {
-
+    const struct load_nodes_type *lndata,
+    const long *nlist,
+    const double *aval
+) {
    lndata += blockIdx.x;
-   long nnz = lndata->nnz;
-   int lda = lndata->lda;
-   int ldl = lndata->ldl;
+   const long nnz = lndata->nnz;
+   const int lda = lndata->lda;
+   const int ldl = lndata->ldl;
 
    nlist += 2*lndata->offn;
-   double *lval = lndata->lcol;
+   double *const lval = lndata->lcol;
   
-   for ( long i = threadIdx.x; i < nnz; i += blockDim.x ) {
-      // Note: nlist is 1-indexed, not 0 indexed, so we have to adjust
-      int r = (nlist[2*i+1] - 1) % lda; // row index
-      int c = (nlist[2*i+1] - 1) / lda; // col index
-      long sidx = nlist[2*i+0] - 1; // source index
-      lval[r + c*ldl] = aval[sidx];
+   for (int i = threadIdx.x; i < nnz; i += blockDim.x) {
+     // Note: nlist is 1-indexed, not 0 indexed, so we have to adjust
+     const int r = (nlist[2*i+1] - 1) % lda; // row index
+     const int c = (nlist[2*i+1] - 1) / lda; // col index
+     const long sidx = nlist[2*i+0] - 1; // source index
+     lval[r + c*ldl] = aval[sidx];
    }
 }
 
@@ -69,28 +69,28 @@ cu_load_nodes(
  */
 __global__ void
 cu_load_nodes_sc(
-      const struct load_nodes_type *lndata,
-      const long* nlist,
-      const int* rlist,
-      const double* scale,
-      const double* aval) {
-
+    const struct load_nodes_type *lndata,
+    const long *nlist,
+    const int *rlist,
+    const double *scale,
+    const double *aval
+) {
    lndata += blockIdx.x;
-   int nnz = lndata->nnz;
-   int lda = lndata->lda;
-   int ldl = lndata->ldl;
+   const int nnz = lndata->nnz;
+   const int lda = lndata->lda;
+   const int ldl = lndata->ldl;
 
    nlist += 2*lndata->offn;
-   double *lval = lndata->lcol;
+   double *const lval = lndata->lcol;
    rlist += lndata->offr;
   
-   for ( int i = threadIdx.x; i < nnz; i += blockDim.x ) {
+   for (int i = threadIdx.x; i < nnz; i += blockDim.x) {
       // Note: nlist and rlist are 1-indexed, not 0 indexed, so we adjust
-      int r = (nlist[2*i+1] - 1) % lda; // row index
-      int c = (nlist[2*i+1] - 1) / lda; // col index
-      long sidx = nlist[2*i+0] - 1; // source index
-      double rs = scale[rlist[r] - 1]; // row scaling
-      double cs = scale[rlist[c] - 1]; // col scaling
+      const int r = (nlist[2*i+1] - 1) % lda; // row index
+      const int c = (nlist[2*i+1] - 1) / lda; // col index
+      const long sidx = nlist[2*i+0] - 1; // source index
+      const double rs = scale[rlist[r] - 1]; // row scaling
+      const double cs = scale[rlist[c] - 1]; // col scaling
       lval[r + c*ldl] = rs * aval[sidx] * cs;
    }
 }
@@ -99,14 +99,14 @@ cu_load_nodes_sc(
 // maxabs must be initialized to zeros
 template< typename ELEMENT_TYPE, unsigned int BLOCK_SIZE >
 __global__ void
-cu_max_abs( long n, ELEMENT_TYPE* u, ELEMENT_TYPE* maxabs )
+cu_max_abs( const long n, const ELEMENT_TYPE *const u, ELEMENT_TYPE *const maxabs )
 {
   __shared__ volatile ELEMENT_TYPE tmax[BLOCK_SIZE];
   
   tmax[threadIdx.x] = 0.0;
   for ( long i = threadIdx.x + blockDim.x*blockIdx.x; i < n; 
         i += blockDim.x*gridDim.x ) {
-    ELEMENT_TYPE v = fabs(u[i]);
+    const ELEMENT_TYPE v = fabs(u[i]);
     if ( v > tmax[threadIdx.x] )
       tmax[threadIdx.x] = v;
   }
@@ -125,37 +125,37 @@ cu_max_abs( long n, ELEMENT_TYPE* u, ELEMENT_TYPE* maxabs )
 
 /* Following data type describes a single child-parent assembly */
 struct assemble_cp_type {
-   // Parent data
-   int pvoffset; // Offset to start of parent node values
-   double *pval; // Pointer to non-delay part of parent L
-   int ldp; // Leading dimension of parent
+  // Parent data
+  int pvoffset; // Offset to start of parent node values
+  double *pval; // Pointer to non-delay part of parent L
+  int ldp; // Leading dimension of parent
 
-   // Child data
-   int cm; // Number of rows in child
-   int cn; // Number of columns in child
-   int ldc; // Leading dimension of child
-   long cvoffset; // Offset to start of child node values
-   double *cv; // Pointer to start of child node values
+  // Child data
+  int cm; // Number of rows in child
+  int cn; // Number of columns in child
+  int ldc; // Leading dimension of child
+  long cvoffset; // Offset to start of child node values
+  double *cv; // Pointer to start of child node values
 
-   // Alignment data
-   int *rlist_direct; // Pointer to start of child's rlist
-   int *ind; // Pointer to start of child's contribution index
+  // Alignment data
+  int *rlist_direct; // Pointer to start of child's rlist
+  int *ind; // Pointer to start of child's contribution index
 
-   // Sync data
-   int sync_offset; // we watch sync[sync_offset]
-   int sync_wait_for; // and wait for it to have value >= sync_wait_for
+  // Sync data
+  int sync_offset; // we watch sync[sync_offset]
+  int sync_wait_for; // and wait for it to have value >= sync_wait_for
 };
 
 /* Following data type describes actions of single CUDA block */
 struct assemble_blk_type {
-   int cp; // node we're assembling into
-   int blk; // block number of that node
+  int cp; // node we're assembling into
+  int blk; // block number of that node
 };
 
 /* Used to force volatile load of a declared non-volatile variable */
 template <typename T_ELEM>
-__inline__ __device__ T_ELEM loadVolatile(volatile T_ELEM *vptr) {
-   return *vptr;
+__inline__ __device__ T_ELEM loadVolatile(volatile T_ELEM *const vptr) {
+  return *vptr;
 }
 
 /* Performs sparse assembly of a m x n child into a parent as dictated by
@@ -170,15 +170,15 @@ __inline__ __device__ T_ELEM loadVolatile(volatile T_ELEM *vptr) {
 template <unsigned int blk_sz_x, unsigned int blk_sz_y,
           unsigned int ntx, unsigned nty>
 void __global__ assemble(
-      const struct assemble_blk_type *blkdata, // block mapping
-      const struct assemble_cp_type *cpdata, // child-parent data
-      const double *children, // pointer to array containing children
-      double *parents, // pointer to array containing parents
-      unsigned int *next_blk, // gmem location used to determine next block
-      unsigned int *sync // sync[cp] is #blocks completed so far for cp
-      ) {
+    const struct assemble_blk_type *blkdata, // block mapping
+    const struct assemble_cp_type *cpdata, // child-parent data
+    const double *const children, // pointer to array containing children
+    double *const parents, // pointer to array containing parents
+    unsigned int *const next_blk, // gmem location used to determine next block
+    volatile unsigned int *const sync // sync[cp] is #blocks completed so far for cp
+) {
    // Get block number
-   unsigned int __shared__ mynext_blk;
+   __shared__ volatile unsigned int mynext_blk;
    if(threadIdx.x==0 && threadIdx.y==0)
       mynext_blk = atomicAdd(next_blk, 1);
    __syncthreads();
@@ -204,7 +204,7 @@ void __global__ assemble(
 
    // Wait for previous child of this parent to complete
    if(threadIdx.x==0 && threadIdx.y==0) {
-      while(loadVolatile(&sync[cpdata->sync_offset]) < cpdata->sync_wait_for);
+      while(sync[cpdata->sync_offset] < cpdata->sync_wait_for) /**/;
    }
    __syncthreads();
 
@@ -225,37 +225,37 @@ void __global__ assemble(
    // Record that we're done
    __syncthreads();
    if(threadIdx.x==0 && threadIdx.y==0) {
-      atomicAdd(&sync[blkdata->cp], 1);
+      atomicAdd((int*)&(sync[blkdata->cp]), 1);
    }
 }
 
 struct assemble_delay_type {
-   int dskip; // Number of rows to skip for delays from later children
-   int m; // Number of rows in child to copy
-   int n; // Number of cols in child to copy
-   int ldd; // Leading dimension of dest (parent)
-   int lds; // Leading dimension of src (child)
-   double *dval; // Pointer to dest (parent)
-   double *sval; // Pointer to src (child)
-   long roffset; // Offset to rlist_direct
+  int dskip; // Number of rows to skip for delays from later children
+  int m; // Number of rows in child to copy
+  int n; // Number of cols in child to copy
+  int ldd; // Leading dimension of dest (parent)
+  int lds; // Leading dimension of src (child)
+  double *dval; // Pointer to dest (parent)
+  double *sval; // Pointer to src (child)
+  long roffset; // Offset to rlist_direct
 };
 
 /* Copies delays from child to parent using one block per parent 
  * Note: src and dest pointers both contained in dinfo
  */
 void __global__ add_delays(
-      struct assemble_delay_type *dinfo, // information on each block
-      int* rlist_direct // children's rows indices in parents
-      ) {
+    struct assemble_delay_type *dinfo, // information on each block
+    const int *rlist_direct // children's rows indices in parents
+) {
    dinfo += blockIdx.x;
-   int dskip = dinfo->dskip; // number of delays
-   int m = dinfo->m; // number of rows
-   int n = dinfo->n; // number of cols
-   int ldd = dinfo->ldd; // leading dimension of dest
-   int lds = dinfo->lds; // leading dimension of src
+   const int dskip = dinfo->dskip; // number of delays
+   const int m = dinfo->m; // number of rows
+   const int n = dinfo->n; // number of cols
+   const int ldd = dinfo->ldd; // leading dimension of dest
+   const int lds = dinfo->lds; // leading dimension of src
 
-   double *dest = dinfo->dval;
-   const double *src = dinfo->sval;
+   double *const dest = dinfo->dval;
+   const double *const src = dinfo->sval;
    rlist_direct += dinfo->roffset;
 
    for ( int y = threadIdx.y; y < n; y += blockDim.y ) {

@@ -34,8 +34,8 @@ namespace /* anon */ {
 
 /* Perform the assignment xdense(:) = xsparse( idx(:) ) */
 template <int threadsx, int threadsy>
-void __device__ gather(int n, const int *idx, const double *xsparse,
-      double *xdense) {
+void __device__ gather(const int n, const int *const idx, const double *const xsparse,
+      volatile double *const xdense) {
    int tid = threadsx*threadIdx.y + threadIdx.x;
    for(int i=tid; i<n; i+=threadsx*threadsy)
       xdense[i] = xsparse[ idx[i] ];
@@ -69,9 +69,9 @@ void __global__ gemv_transpose_sps_rhs(struct gemv_transpose_lookup *lookup,
       ) {
 
    // Reuse shmem for two different purposes
-   double __shared__ shmem[maxn*threadsx];
-   double *partSum = shmem;
-   double *xlocal = shmem;
+   __shared__ volatile double shmem[maxn*threadsx];
+   volatile double *const partSum = shmem;
+   volatile double *const xlocal = shmem;
 
    double partSumReg[maxn / threadsy]; // Assumes neat division
 
@@ -91,7 +91,7 @@ void __global__ gemv_transpose_sps_rhs(struct gemv_transpose_lookup *lookup,
    /* Perform matrix-vector multiply with answer y in register that
       is then stored in partSum for later reduction. */
    if(m==maxm) {
-      double *xl = xlocal + threadIdx.x;
+      volatile double *const xl = xlocal + threadIdx.x;
 #pragma unroll
       for(int iLoop=0; iLoop<maxn/threadsy; iLoop++) { // row
          int i = iLoop * threadsy + threadIdx.y;
@@ -334,12 +334,12 @@ void __global__ simple_gemv(int m, int n, const double *a, int lda,
    x += blockIdx.y*maxn;
    y += m*blockIdx.y + maxm*blockIdx.x;
 
-   double __shared__ partSum[maxm*threadsy];
+   __shared__ volatile double partSum[maxm*threadsy];
 
    m = MIN(maxm, m-blockIdx.x*maxm);
    n = MIN(maxn, n-blockIdx.y*maxn);
 
-   double *ps = partSum + maxm*threadIdx.y;
+   volatile double *const ps = partSum + maxm*threadIdx.y;
    for(int j=threadIdx.x; j<m; j+=threadsx) {
       ps[j] = 0;
    }
@@ -382,9 +382,9 @@ void __global__ simple_gemv_lookup(const double *x, double *y,
    x += lookup->x_offset;
    y += lookup->y_offset;
 
-   double __shared__ partSum[maxm*threadsy];
+   __shared__ volatile double partSum[maxm*threadsy];
 
-   double *ps = partSum + maxm*threadIdx.y;
+   volatile double *const ps = partSum + maxm*threadIdx.y;
 
    // Templated parameters for shortcut
    if (maxm <= threadsx) {
@@ -491,15 +491,15 @@ struct assemble_lookup2 {
    int sync_waitfor;
 };
 
-void __device__ wait_for_sync(int tid, volatile int *sync, int target) {
+void __device__ wait_for_sync(const int tid, volatile int *const sync, const int target) {
    if(tid==0) {
       while(*sync < target) {}
    }
    __syncthreads();
 }
 
-void __global__ assemble_lvl(struct assemble_lookup2 *lookup, struct assemble_blk_type *blkdata, double *xlocal, int *next_blk, int *sync, double * const* cvalues) {
-   int __shared__ thisblk;
+void __global__ assemble_lvl(struct assemble_lookup2 *lookup, struct assemble_blk_type *blkdata, double *xlocal, int *next_blk, volatile int *sync, double * const* cvalues) {
+   __shared__ volatile int thisblk;
    if(threadIdx.x==0)
       thisblk = atomicAdd(next_blk, 1);
    __syncthreads();
@@ -516,7 +516,7 @@ void __global__ assemble_lvl(struct assemble_lookup2 *lookup, struct assemble_bl
    xlocal += lookup->x_offset;
 
    // Wait for previous children to complete
-   wait_for_sync(threadIdx.x, &sync[lookup->sync_offset], lookup->sync_waitfor);
+   wait_for_sync(threadIdx.x, &(sync[lookup->sync_offset]), lookup->sync_waitfor);
 
    // Add block increments
    m = MIN(ASSEMBLE_NB, m-blk*ASSEMBLE_NB);
@@ -537,7 +537,7 @@ void __global__ assemble_lvl(struct assemble_lookup2 *lookup, struct assemble_bl
    __threadfence();
    __syncthreads();
    if(threadIdx.x==0) {
-      atomicAdd(&sync[lookup->sync_offset], 1);
+      atomicAdd((int*)&(sync[lookup->sync_offset]), 1);
    }
 }
 

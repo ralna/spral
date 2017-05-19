@@ -28,7 +28,7 @@ namespace /* anon */ {
 
 template< int WIDTH >
 inline __device__ void 
-loadDevToSmem_generic( double* __restrict__ as, double* __restrict__ bs, 
+loadDevToSmem_generic( volatile double *const __restrict__ as, volatile double *const __restrict__ bs, 
                const double* __restrict__ a, const double* __restrict__ b, 
                int bx, int by, int offa, int lda, int ldb, 
                int n, int i, int k) 
@@ -193,17 +193,17 @@ cu_multisyrk_lc_r4x4(
 #endif
 
 #if (USE_DOUBLE2)
-  __shared__ double2 as[32 * SYRK_WIDTH];
-  __shared__ ELEMENT_TYPE bs[32 * SYRK_WIDTH];
+  __shared__ volatile double2 as[32 * SYRK_WIDTH];
+  __shared__ volatile ELEMENT_TYPE bs[32 * SYRK_WIDTH];
 #if (DOUBLE_BUFFERED)
-  __shared__ double2 as2[32 * SYRK_WIDTH];
-  __shared__ ELEMENT_TYPE bs2[32 * SYRK_WIDTH];
+  __shared__ volatile double2 as2[32 * SYRK_WIDTH];
+  __shared__ volatile ELEMENT_TYPE bs2[32 * SYRK_WIDTH];
 #endif
 
 #else
-  __shared__ ELEMENT_TYPE as[32 * SYRK_WIDTH], bs[32 * SYRK_WIDTH];
+  __shared__ volatile ELEMENT_TYPE as[32 * SYRK_WIDTH], bs[32 * SYRK_WIDTH];
 #if (DOUBLE_BUFFERED)
-  __shared__ ELEMENT_TYPE as2[32 * SYRK_WIDTH], bs2[32 * SYRK_WIDTH];
+  __shared__ volatile ELEMENT_TYPE as2[32 * SYRK_WIDTH], bs2[32 * SYRK_WIDTH];
 #endif
 #endif
   
@@ -247,7 +247,7 @@ cu_multisyrk_lc_r4x4(
     
     
 #if (SYRK_WIDTH <= 2 && DOUBLE_BUFFERED)
-  loadDevToSmem_generic<SYRK_WIDTH>( (double*)as, bs, a, b, bx, by, 0, lda, ldb, n, 0, k );    
+  loadDevToSmem_generic<SYRK_WIDTH>( (volatile double*)as, bs, a, b, bx, by, 0, lda, ldb, n, 0, k );    
 #endif
     
   for ( int i = 0; i < k; i += SYRK_WIDTH ) {
@@ -261,12 +261,12 @@ cu_multisyrk_lc_r4x4(
     // challenge to get it working without spilling.
 #if (DOUBLE_BUFFERED)
     if ( i + SYRK_WIDTH < k ) {
-       loadDevToSmem_generic<SYRK_WIDTH>( (double*)as2, bs2, a, b, bx, by, 0, lda, ldb, n, i + SYRK_WIDTH, k );
+       loadDevToSmem_generic<SYRK_WIDTH>( (volatile double*)as2, bs2, a, b, bx, by, 0, lda, ldb, n, i + SYRK_WIDTH, k );
     }
 #endif // (DOUBLE_BUFFERED)
 
 #if (SYRK_WIDTH > 2 || DOUBLE_BUFFERED)
-    loadDevToSmem_generic<SYRK_WIDTH>( (double*)as, bs, a, b, bx, by, 0, lda, ldb, n, i, k );
+    loadDevToSmem_generic<SYRK_WIDTH>( (volatile double*)as, bs, a, b, bx, by, 0, lda, ldb, n, i, k );
 #endif
     __syncthreads();
 
@@ -297,7 +297,7 @@ cu_multisyrk_lc_r4x4(
     __syncthreads();
     if ( i + SYRK_WIDTH < k ) {
 #if (SYRK_WIDTH <= 2)
-       loadDevToSmem_generic<SYRK_WIDTH>( (double*)as, bs, a, b, bx, by, 0, lda, ldb, n, i + SYRK_WIDTH, k );
+       loadDevToSmem_generic<SYRK_WIDTH>( (volatile double*)as, bs, a, b, bx, by, 0, lda, ldb, n, i + SYRK_WIDTH, k );
 #endif
     }
     
@@ -415,12 +415,12 @@ cu_multisyrk_r4x4(
   #define DOUBLE_BUFFERED 0
 #endif
 
-  __shared__ ELEMENT_TYPE as[32 * SYRK_WIDTH];
-  __shared__ ELEMENT_TYPE bs[32 * SYRK_WIDTH];
+  __shared__ volatile ELEMENT_TYPE as[32 * SYRK_WIDTH];
+  __shared__ volatile ELEMENT_TYPE bs[32 * SYRK_WIDTH];
 
 #if (DOUBLE_BUFFERED)
-  __shared__ ELEMENT_TYPE as2[32 * SYRK_WIDTH];
-  __shared__ ELEMENT_TYPE bs2[32 * SYRK_WIDTH];
+  __shared__ volatile ELEMENT_TYPE as2[32 * SYRK_WIDTH];
+  __shared__ volatile ELEMENT_TYPE bs2[32 * SYRK_WIDTH];
 #endif  
 
   mdata += blockIdx.x;
@@ -464,12 +464,12 @@ cu_multisyrk_r4x4(
   }
 
 #if (DOUBLE_BUFFERED)
-  loadDevToSmem_generic<SYRK_WIDTH>( (double*)as, bs, a, b, bx, by, offa, lda, ldb, n, 0, k );
+  loadDevToSmem_generic<SYRK_WIDTH>( (volatile double*)as, bs, a, b, bx, by, offa, lda, ldb, n, 0, k );
 #endif
   
   for ( int i = 0; i < k; i += SYRK_WIDTH ) {
 #if (!DOUBLE_BUFFERED)
-    loadDevToSmem_generic<SYRK_WIDTH>( (double*)as, bs, a, b, bx, by, offa, lda, ldb, n, i, k );
+    loadDevToSmem_generic<SYRK_WIDTH>( (volatile double*)as, bs, a, b, bx, by, offa, lda, ldb, n, i, k );
 #endif
 
     __syncthreads();
@@ -531,7 +531,7 @@ cu_syrk_r4x4(
 ){
   ELEMENT_TYPE s[16];
 
-  __shared__ ELEMENT_TYPE as[128], bs[128];
+  __shared__ volatile ELEMENT_TYPE as[128], bs[128];
 
   for ( int i = 0; i < 16; i++ )
     s[i] = 0;
