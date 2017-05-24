@@ -17,7 +17,7 @@ module spral_ssids_contrib
   ! but alas Fortran/C interop causes severe problems, so we just have the
   ! owner value instead and if statements to call the right thing).
   type :: contrib_type
-     logical :: ready = .false.
+     logical, volatile :: ready = .false.
      integer :: n ! size of block
      real(C_DOUBLE), dimension(:), pointer :: val ! n x n lwr triangular matrix
      integer(C_INT) :: ldval
