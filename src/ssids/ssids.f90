@@ -43,7 +43,7 @@ module spral_ssids
 
   !> \brief Caches user OpenMP ICV values for later restoration
   type :: omp_settings
-     logical :: nested
+     logical :: nested, dynamic
      integer :: max_active_levels
   end type omp_settings
 
@@ -396,10 +396,14 @@ contains
     type(ssids_options), intent(in) :: options
     integer, intent(out) :: st
 
-    integer :: i, ngpu
+    logical :: no_omp
+    integer :: i, j, ngpu
     type(numa_region), dimension(:), allocatable :: new_topology
 
     st = 0
+
+    no_omp = .true.
+!$  no_omp = .false.
 
     ! Get rid of GPUs if we're not using them
     if (.not. options%use_gpu) then
@@ -412,8 +416,47 @@ contains
        end do
     end if
 
+    ! FIXME: One can envisage a sensible coexistence of both
+    ! no_omp=.true. AND options%ignore_numa=.false. (e.g., choose the
+    ! "best" NUMA node, with the least utilised CPUs and/or GPUs...).
+    if (no_omp) then
+       allocate(new_topology(1), stat=st)
+       if (st .ne. 0) return
+       new_topology(1)%nproc = 1
+       ! Count resources to reallocate
+       ngpu = 0
+       do i = 1, size(topology)
+          ngpu = ngpu + size(topology(i)%gpus)
+       end do
+       ! FIXME: if no_omp=.true. AND options%ignore_numa=.true.,
+       ! then take the "first" GPU (whichever it might be), only.
+       ! A combination not meant for production, only for testing!
+       if (options%ignore_numa) ngpu = min(ngpu, 1)
+       ! Store list of GPUs
+       allocate(new_topology(1)%gpus(ngpu), stat=st)
+       if (st .ne. 0) return
+       if (ngpu .gt. 0) then
+          if (options%ignore_numa) then
+             new_topology(1)%gpus(1) = huge(new_topology(1)%gpus(1))
+             do i = 1, size(topology)
+                new_topology(1)%gpus(1) = &
+                     min(new_topology(1)%gpus(1), minval(topology(i)%gpus))
+             end do
+          else
+             ngpu = 0
+             do i = 1, size(topology)
+                do j = 1, size(topology(i)%gpus)
+                   new_topology(1)%gpus(ngpu + j) = topology(i)%gpus(j)
+                end do
+                ngpu = ngpu + size(topology(i)%gpus)
+             end do
+          end if
+       end if
+       ! Move new_topology into place, deallocating old one
+       deallocate(topology)
+       call move_alloc(new_topology, topology)
     ! Squash everything to single NUMA region if we're ignoring numa
-    if ((size(topology) .gt. 1) .and. options%ignore_numa) then
+    else if ((size(topology) .gt. 1) .and. options%ignore_numa) then
        allocate(new_topology(1), stat=st)
        if (st .ne. 0) return
        ! Count resources to reallocate
@@ -429,8 +472,9 @@ contains
        if (ngpu .gt. 0) then
           ngpu = 0
           do i = 1, size(topology)
-             new_topology(1)%gpus(ngpu+1:ngpu+size(topology(i)%gpus)) = &
-                  topology(i)%gpus(:)
+             do j = 1, size(topology(i)%gpus)
+                new_topology(1)%gpus(ngpu + j) = topology(i)%gpus(j)
+             end do
              ngpu = ngpu + size(topology(i)%gpus)
           end do
        end if
@@ -1381,23 +1425,27 @@ contains
     user_settings%nested = .true.
     user_settings%max_active_levels = huge(user_settings%max_active_levels)
 
-! !$    ! issue an error if we don't have cancellation (could lead to segfaults)
-! !$    if (.not. omp_get_cancellation()) then
-! !$       flag = SSIDS_ERROR_OMP_CANCELLATION
-! !$       return
-! !$    end if
+!$  ! issue an error if we don't have cancellation (could lead to segfaults)
+!$  if (.not. omp_get_cancellation()) then
+!$     flag = SSIDS_ERROR_OMP_CANCELLATION
+!$     return
+!$  end if
 
-!$    ! issue a warning if proc_bind is not enabled
-!$    if (omp_get_proc_bind() .eq. OMP_PROC_BIND_FALSE) &
-!$         flag = SSIDS_WARNING_OMP_PROC_BIND
+!$  ! issue a warning if proc_bind is not enabled
+!$  if (omp_get_proc_bind() .eq. OMP_PROC_BIND_FALSE) &
+!$       flag = SSIDS_WARNING_OMP_PROC_BIND
 
-!$    ! must have nested enabled
-!$    user_settings%nested = omp_get_nested()
-!$    if (.not. user_settings%nested) call omp_set_nested(.true.)
+!$  ! must have nested enabled
+!$  user_settings%nested = omp_get_nested()
+!$  if (.not. user_settings%nested) call omp_set_nested(.true.)
 
-!$    ! we will need at least 2 active levels
-!$    user_settings%max_active_levels = omp_get_max_active_levels()
-!$    if (user_settings%max_active_levels .lt. 2) call omp_set_max_active_levels(2)
+!$  ! we need OMP_DYNAMIC to be unset, to guarantee the number of threads
+!$  user_settings%dynamic = omp_get_dynamic()
+!$  if (user_settings%dynamic) call omp_set_dynamic(.false.)
+
+!$  ! we will need at least 2 active levels
+!$  user_settings%max_active_levels = omp_get_max_active_levels()
+!$  if (user_settings%max_active_levels .lt. 2) call omp_set_max_active_levels(2)
   end subroutine push_omp_settings
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1407,9 +1455,10 @@ contains
     implicit none
     type(omp_settings), intent(in) :: user_settings
 
-!$    if (.not. user_settings%nested) call omp_set_nested(user_settings%nested)
-!$    if (user_settings%max_active_levels .lt. 2) &
-!$         call omp_set_max_active_levels(user_settings%max_active_levels)
+!$  if (.not. user_settings%nested) call omp_set_nested(user_settings%nested)
+!$  if (user_settings%dynamic) call omp_set_dynamic(user_settings%dynamic)    
+!$  if (user_settings%max_active_levels .lt. 2) &
+!$       call omp_set_max_active_levels(user_settings%max_active_levels)
   end subroutine pop_omp_settings
 
 end module spral_ssids

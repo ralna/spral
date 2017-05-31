@@ -1,202 +1,202 @@
 program run_prob
-   use, intrinsic :: iso_c_binding
+  use, intrinsic :: iso_c_binding
 !$ use omp_lib
-   use cuda_helper
-   use spral_hw_topology
-   use spral_rutherford_boeing
-   use spral_ssids
-   use spral_matrix_util, only : cscl_verify, SPRAL_MATRIX_REAL_SYM_INDEF
-   use spral_scaling
-   implicit none
+  use cuda_helper
+  use spral_hw_topology
+  use spral_rutherford_boeing
+  use spral_ssids
+  use spral_matrix_util, only : cscl_verify, SPRAL_MATRIX_REAL_SYM_INDEF
+  use spral_scaling
+  implicit none
 
-   integer, parameter :: wp = kind(0d0)
+  integer, parameter :: wp = kind(0d0)
 
-   type(rb_read_options) :: rb_options
-   integer :: rb_flag
+  type(rb_read_options) :: rb_options
+  integer :: rb_flag
 
-   ! Matrix description
-   integer :: m, n
-   integer, dimension(:), allocatable :: ptr, row
-   real(wp), dimension(:), allocatable :: val
+  ! Matrix description
+  integer :: m, n
+  integer, dimension(:), allocatable :: ptr, row
+  real(wp), dimension(:), allocatable :: val
 
-   type(ssids_inform) :: inform
-   type(ssids_akeep) :: akeep
-   type(ssids_fkeep) :: fkeep
-   type(ssids_options) :: options
-   integer :: cuda_error
-   double precision, dimension(:, :), allocatable :: rhs, soln
-   double precision, dimension(:), allocatable :: res, scaling
+  type(ssids_inform) :: inform
+  type(ssids_akeep) :: akeep
+  type(ssids_fkeep) :: fkeep
+  type(ssids_options) :: options
+  integer :: cuda_error
+  double precision, dimension(:, :), allocatable :: rhs, soln
+  double precision, dimension(:), allocatable :: res, scaling
 
-   integer :: i, j, k, r
+  integer :: i, j, k, r
 
-   integer :: start_t, stop_t, rate_t
-   integer :: flag, more
+  integer :: start_t, stop_t, rate_t
+  integer :: flag, more
 
-   ! integer, parameter :: unit_rhs = 14
+  ! integer, parameter :: unit_rhs = 14
 
-   real :: smanal, smfact, smaflop, smafact
+  real :: smanal, smfact, smaflop, smafact
 
-   integer, parameter :: nfact = 1
-   ! integer, parameter :: nfact = 50
-   ! integer, parameter :: nfact = 100
+  integer, parameter :: nfact = 1
+  ! integer, parameter :: nfact = 50
+  ! integer, parameter :: nfact = 100
 
-   integer, parameter :: nslv = 1
-   ! integer, parameter :: nslv = 10
-   ! integer, parameter :: nslv = 100
+  integer, parameter :: nslv = 1
+  ! integer, parameter :: nslv = 10
+  ! integer, parameter :: nslv = 100
    
-   integer :: nrhs
+  integer :: nrhs
    
-   logical :: force_psdef, pos_def, time_scaling, flat_topology
+  logical :: force_psdef, pos_def, time_scaling, flat_topology
 
-   type(numa_region), dimension(:), allocatable :: topology
-   character(len=:), allocatable :: filename
+  type(numa_region), dimension(:), allocatable :: topology
+  character(len=:), allocatable :: filename
 
-   integer(C_INT) :: cnt
+  integer(C_INT) :: cnt
 
-   call proc_args(filename, options, force_psdef, pos_def, nrhs, time_scaling, &
-        flat_topology)
-   if ( nrhs < 1 ) stop
+  call proc_args(filename, options, force_psdef, pos_def, nrhs, time_scaling, &
+       flat_topology)
+  if (nrhs .lt. 1) stop
 
-   ! Read in a matrix
-   write(*, "(3a)") "Reading '", filename, "'..."
-   if (force_psdef) rb_options%values = -3 ! Force diagonal dominance
-   rb_options%values = 2 ! make up values if necessary
-   call rb_read(filename, m, n, ptr, row, val, rb_options, rb_flag)
-   if (rb_flag .ne. 0) then
-      print *, "Rutherford-Boeing read failed with error ", rb_flag
-      stop
-   end if
-   write(*, "(a)") "ok"
+  ! Read in a matrix
+  write (*, "(3a)") "Reading '", filename, "'..."
+  if (force_psdef) rb_options%values = -3 ! Force diagonal dominance
+  rb_options%values = 2 ! make up values if necessary
+  call rb_read(filename, m, n, ptr, row, val, rb_options, rb_flag)
+  if (rb_flag .ne. 0) then
+     print *, "Rutherford-Boeing read failed with error ", rb_flag
+     stop
+  end if
+  write(*, "(a)") "ok"
 
-   ! Make up a rhs
-   allocate(rhs(n, nrhs), soln(n, nrhs))
-   rhs = 0
-   do r = 1, nrhs
-      do i = 1, n
-         do j = ptr(i), ptr(i+1)-1
-            k = row(j)
-            rhs(k, r) = rhs(k, r) + val(j)
-            if (i .eq. k) cycle
-            rhs(i, r) = rhs(i, r) + val(j)
-         end do
-      end do
-   end do
+  ! Make up a rhs
+  allocate(rhs(n, nrhs), soln(n, nrhs))
+  rhs = 0
+  do r = 1, nrhs
+     do i = 1, n
+        do j = ptr(i), ptr(i+1)-1
+           k = row(j)
+           rhs(k, r) = rhs(k, r) + val(j)
+           if (i .eq. k) cycle
+           rhs(i, r) = rhs(i, r) + val(j)
+        end do
+     end do
+  end do
 
-   if (flat_topology) then
-      allocate(topology(1))
-      topology(1)%nproc = 1
-!$    topology(1)%nproc = min(omp_get_max_threads(),omp_get_thread_limit())
-      print *, "Forcing topology to ", topology(1)%nproc
-      allocate(topology(1)%gpus(0))
-   end if
+  if (flat_topology) then
+     allocate(topology(1))
+     topology(1)%nproc = 1
+!$   topology(1)%nproc = min(omp_get_max_threads(),omp_get_thread_limit())
+     print *, "Forcing topology to ", topology(1)%nproc
+     allocate(topology(1)%gpus(0))
+  end if
 
-   call cscl_verify(6, SPRAL_MATRIX_REAL_SYM_INDEF, n, n, &
-        ptr, row, flag, more)
-   if (flag .ne. 0) then
-      print *, "CSCL_VERIFY failed: ", flag, more
-      stop
-   end if
+  call cscl_verify(6, SPRAL_MATRIX_REAL_SYM_INDEF, n, n, &
+       ptr, row, flag, more)
+  if (flag .ne. 0) then
+     print *, "CSCL_VERIFY failed: ", flag, more
+     stop
+  end if
 
-   call cuda_init(cnt)
-   if (cnt .lt. 0) then
-      print *, "CUDA_INIT failed: ", cnt
-      stop
-   end if
+  call cuda_init(cnt)
+  if (cnt .lt. 0) then
+     print *, "CUDA_INIT failed: ", cnt
+     stop
+  end if
 
-   ! Analyse and factor
-   call system_clock(start_t, rate_t)
-   if (allocated(topology)) then
-      call ssids_analyse(.false., n, ptr, row, akeep, &
-           options, inform, val=val, topology=topology)
-   else
-      call ssids_analyse(.false., n, ptr, row, akeep, &
-           options, inform, val=val)
-   end if
-   call system_clock(stop_t)
-   print *, "Used order ", options%ordering
-   if (inform%flag .lt. 0) then
-      print *, "oops on analyse ", inform%flag
-      stop
-   end if
-   write(*, "(a)") "ok"
-   print *, "Analyse took ", (stop_t - start_t)/real(rate_t)
-   !print *, "Used maximum memory of ", inform%maxmem
-   smanal = (stop_t - start_t)/real(rate_t)
-   print "(a,es10.2)", "Predict nfact = ", real(inform%num_factor)
-   print "(a,es10.2)", "Predict nflop = ", real(inform%num_flops)
-   print "(a6, i10)", "nparts", inform%nparts
-   print "(a6, es10.2)", "cpu_flops", real(inform%cpu_flops)
-   print "(a6, es10.2)", "gpu_flops", real(inform%gpu_flops)
-   smaflop = real(inform%num_flops)
-   smafact = real(inform%num_factor)
+  ! Analyse and factor
+  call system_clock(start_t, rate_t)
+  if (allocated(topology)) then
+     call ssids_analyse(.false., n, ptr, row, akeep, &
+          options, inform, val=val, topology=topology)
+  else
+     call ssids_analyse(.false., n, ptr, row, akeep, &
+          options, inform, val=val)
+  end if
+  call system_clock(stop_t)
+  print *, "Used order ", options%ordering
+  if (inform%flag .lt. 0) then
+     print *, "oops on analyse ", inform%flag
+     stop
+  end if
+  write (*, "(a)") "ok"
+  print *, "Analyse took ", (stop_t - start_t)/real(rate_t)
+  !print *, "Used maximum memory of ", inform%maxmem
+  smanal = (stop_t - start_t)/real(rate_t)
+  print "(a,es10.2)", "Predict nfact = ", real(inform%num_factor)
+  print "(a,es10.2)", "Predict nflop = ", real(inform%num_flops)
+  print "(a6, i10)", "nparts", inform%nparts
+  print "(a6, es10.2)", "cpu_flops", real(inform%cpu_flops)
+  print "(a6, es10.2)", "gpu_flops", real(inform%gpu_flops)
+  smaflop = real(inform%num_flops)
+  smafact = real(inform%num_factor)
 
-   if (time_scaling .and. (options%scaling .ne. 0)) then
-      allocate(scaling(n))
-      call do_timed_scaling(n, ptr, row, val, scaling)
-      options%scaling = 0 ! We will user-supply
-   end if
+  if (time_scaling .and. (options%scaling .ne. 0)) then
+     allocate(scaling(n))
+     call do_timed_scaling(n, ptr, row, val, scaling)
+     options%scaling = 0 ! We will user-supply
+  end if
 
-   write(*, "(a)") "Factorize..."
-   call system_clock(start_t, rate_t)
-   do i = 1, nfact
-      if (allocated(scaling)) then
-         call ssids_factor(pos_def, val, akeep, fkeep, &
-              options, inform, ptr=ptr, row=row, scale=scaling)
-      else
-         call ssids_factor(pos_def, val, akeep, fkeep, &
-              options, inform, ptr=ptr, row=row)
-      end if
-   end do
-   call system_clock(stop_t)
-   if (inform%flag .lt. 0) then
-      print *, "oops on factorize ", inform%flag
-      stop
-   end if
-   write(*, "(a)") "ok"
-   print *, "Factor took ", (stop_t - start_t)/real(rate_t)
-   smfact = (stop_t - start_t)/real(rate_t)
+  write (*, "(a)") "Factorize..."
+  call system_clock(start_t, rate_t)
+  do i = 1, nfact
+     if (allocated(scaling)) then
+        call ssids_factor(pos_def, val, akeep, fkeep, &
+             options, inform, ptr=ptr, row=row, scale=scaling)
+     else
+        call ssids_factor(pos_def, val, akeep, fkeep, &
+             options, inform, ptr=ptr, row=row)
+     end if
+  end do
+  call system_clock(stop_t)
+  if (inform%flag .lt. 0) then
+     print *, "oops on factorize ", inform%flag
+     stop
+  end if
+  write (*, "(a)") "ok"
+  print *, "Factor took ", (stop_t - start_t)/real(rate_t)
+  smfact = (stop_t - start_t)/real(rate_t)
 
-   ! Solve
-   write(*, "(a)") "Solve..."
-   call system_clock(start_t, rate_t)
-   do i = 1, nslv
-      soln = rhs
-      call ssids_solve(nrhs,soln,n,akeep,fkeep,options,inform)
-   end do
-   call system_clock(stop_t)
-   if (inform%flag .lt. 0) then
-      print *, "oops on solve ", inform%flag
-      stop
-   end if
-   write(*, "(a)") "ok"
-   print *, "Solve took ", (stop_t - start_t)/real(rate_t)
+  ! Solve
+  write (*, "(a)") "Solve..."
+  call system_clock(start_t, rate_t)
+  do i = 1, nslv
+     soln = rhs
+     call ssids_solve(nrhs,soln,n,akeep,fkeep,options,inform)
+  end do
+  call system_clock(stop_t)
+  if (inform%flag .lt. 0) then
+     print *, "oops on solve ", inform%flag
+     stop
+  end if
+  write(*, "(a)") "ok"
+  print *, "Solve took ", (stop_t - start_t)/real(rate_t)
 
-   print *, "number bad cmp = ", count(abs(soln(1:n,1) - dble(1.0)) .ge. dble(1e-6))
-   print *, "fwd error || ||_inf = ", maxval(abs(soln(1:n,1) - dble(1.0)))
-   allocate(res(nrhs))
-   call internal_calc_norm(n, ptr, row, val, soln, rhs, nrhs, res)
-   print *, "bwd error scaled = ", res
+  print *, "number bad cmp = ", count(abs(soln(1:n,1) - dble(1.0)) .ge. dble(1e-6))
+  print *, "fwd error || ||_inf = ", maxval(abs(soln(1:n,1) - dble(1.0)))
+  allocate(res(nrhs))
+  call internal_calc_norm(n, ptr, row, val, soln, rhs, nrhs, res)
+  print *, "bwd error scaled = ", res
 
-   call ssids_free(akeep, fkeep, cuda_error)
+  call ssids_free(akeep, fkeep, cuda_error)
 
-   print "(a6, a10)", "cmp:","SMFCT"
-   print "(a6, f10.2)", "anal:", smanal
-   print "(a6, f10.2)", "fact:", smfact
-   print "(a6, es10.2)", "afact:", smafact
-   print "(a6, es10.2)", "aflop:", smaflop
-   print "(a6, es10.2)", "nfact:", real(inform%num_factor)
-   print "(a6, es10.2)", "nflop:", real(inform%num_flops)
-   print "(a6, i10)", "delay:", inform%num_delay
-   print "(a6, 3i10)", "inertia:", inform%num_neg, n-inform%matrix_rank,&
-        inform%matrix_rank-inform%num_neg
-   print "(a6, i10)", "2x2piv:", inform%num_two
-   print "(a6, i10)", "maxfront:", inform%maxfront
-   print "(a6, i10)", "not_first_pass:", inform%not_first_pass
-   print "(a6, i10)", "not_second_pass:", inform%not_second_pass
+  print "(a6, a10)", "cmp:","SMFCT"
+  print "(a6, f10.2)", "anal:", smanal
+  print "(a6, f10.2)", "fact:", smfact
+  print "(a6, es10.2)", "afact:", smafact
+  print "(a6, es10.2)", "aflop:", smaflop
+  print "(a6, es10.2)", "nfact:", real(inform%num_factor)
+  print "(a6, es10.2)", "nflop:", real(inform%num_flops)
+  print "(a6, i10)", "delay:", inform%num_delay
+  print "(a6, 3i10)", "inertia:", inform%num_neg, n-inform%matrix_rank,&
+       inform%matrix_rank-inform%num_neg
+  print "(a6, i10)", "2x2piv:", inform%num_two
+  print "(a6, i10)", "maxfront:", inform%maxfront
+  print "(a6, i10)", "not_first_pass:", inform%not_first_pass
+  print "(a6, i10)", "not_second_pass:", inform%not_second_pass
 
-   ! Free memory to ensure we pass leak-check tests
-   deallocate(ptr, rhs, soln, res)
-   if (allocated(topology)) deallocate(topology)
+  ! Free memory to ensure we pass leak-check tests
+  deallocate(ptr, rhs, soln, res)
+  if (allocated(topology)) deallocate(topology)
 
 contains
 
@@ -224,7 +224,7 @@ contains
     flat_topology = .false.
     filename = "matrix.rb"
     seen_fname = .false.
-
+    
     ! Process args
     narg = command_argument_count()
     argnum = 1
@@ -358,29 +358,29 @@ contains
     type(hungarian_options) :: hoptions
     type(hungarian_inform) :: hinform
 
-    write(*, "(a)") "Scaling..."
+    write (*, "(a)") "Scaling..."
 
     call system_clock(start_t, rate_t)
     ! Note: we assume no checking required
     select case (options%scaling)
-    case(1) ! Hungarian algorithm
+    case (1) ! Hungarian algorithm
        hoptions%scale_if_singular = .true.
        call hungarian_scale_sym(n, ptr, row, val, scaling, hoptions, hinform)
        if (hinform%flag .le. 0) then
           print *, "Error from hungarian_scale_sym()"
           stop
        end if
-    case(2) ! Auction algorithm
+    case (2) ! Auction algorithm
        call auction_scale_sym(n, ptr, row, val, scaling, &
             options%auction, ainform)
        if (ainform%flag .ne. 0) then
           print *, "Error from auction_scale_sym() flag = ", ainform%flag
           stop
        end if
-    case(3) ! From ordering
+    case (3) ! From ordering
        print *, "--time-scaling not supported with matching-based ordering"
        stop
-    case(4) ! MC77-like
+    case (4) ! MC77-like
        call equilib_scale_sym(n, ptr, row, val, scaling, eoptions, einform)
        if (einform%flag .ne. 0) then
           print *, "Error from equilib_scale_sym()"
@@ -388,7 +388,7 @@ contains
        end if
     end select
     call system_clock(stop_t)
-    write(*, "(a)") "ok"
+    write (*, "(a)") "ok"
     print *, "Scaling took ", (stop_t - start_t)/real(rate_t)
   end subroutine do_timed_scaling
 

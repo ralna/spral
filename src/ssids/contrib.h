@@ -13,11 +13,12 @@
 extern "C" {
 #endif
 
-void spral_ssids_contrib_get_data(void const* contrib, int* n,
-      double const** val, int* ldval, int const** rlist, int* ndelay,
-      int const** delay_perm, double const** delay_val, int* lddelay);
+void spral_ssids_contrib_get_data(const void *const contrib, int *const n,
+      const double* *const val, int *const ldval, const int* *const rlist,
+      int *const ndelay, const int* *const delay_perm,
+      const double* *const delay_val, int *const lddelay);
 
-void spral_ssids_contrib_free_dbl(void* contrib);
+void spral_ssids_contrib_free_dbl(void *const contrib);
 
 #ifdef __cplusplus
 }

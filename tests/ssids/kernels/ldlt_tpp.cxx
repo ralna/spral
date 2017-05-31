@@ -254,7 +254,7 @@ double find_l_abs_max(int n, double *a, int lda) {
    double best = 0.0;
    for(int c=0; c<n; ++c)
    for(int r=c; r<n; ++r)
-      best = std::max(best, std::abs(a[c*lda+r]));
+      best = std::max(best, fabs(a[c*lda+r]));
    return best;
 }
 

@@ -1,18 +1,21 @@
 ! Provides interface definitions for CUDA functions
-module spral_cuda
-  
+module spral_cuda  
   use, intrinsic :: iso_c_binding
   implicit none
 
   private
   ! enum values for cudaMemcpy
   public :: cudaMemcpyHostToHost, cudaMemcpyHostToDevice, &
-       cudaMemcpyDeviceToHost, cudaMemcpyDeviceToDevice
+       cudaMemcpyDeviceToHost, cudaMemcpyDeviceToDevice, &
+       cudaMemcpyDefault
   ! enum values for cudaDeviceGetSharedMemConfig
   public :: cudaSharedMemBankSizeDefault, cudaSharedMemBankSizeFourByte, &
        cudaSharedMemBankSizeEightByte
   ! #define values for cudaEventCreateWithFlags
-  public :: cudaEventDefault, cudaEventBlockingSync, cudaEventDisableTiming
+  public :: cudaEventDefault, cudaEventBlockingSync, cudaEventDisableTiming, &
+       cudaEventInterprocess
+  ! enum values for cudaError
+  public :: cudaSuccess, cudaErrorInsufficientDriver, cudaErrorNoDevice
   ! Literal interfaces to C functions in CUDA API
   public :: cudaDeviceEnablePeerAccess, cudaDeviceSynchronize, cudaFree, &
        cudaGetDeviceCount, cudaGetLastError, cudaMalloc, cudaMemset, &
@@ -23,7 +26,7 @@ module spral_cuda
        cudaEventSynchronize, cudaMemcpyAsync, cudaMemcpy2DAsync, &
        cudaMemsetAsync, cudaStreamCreate, cudaStreamDestroy, &
        cudaStreamSynchronize
-  ! Wrapper interfaces to C function provided by CUBLAS API
+  ! Wrapper interfaces to C function provided by cuBLAS API
   public :: cublasCreate, cublasDestroy, cublasDgemm, cublasSetStream
   ! Helper functions for dealing with type(C_PTR)
   public :: c_ptr_plus, c_print_ptr, c_ptr_plus_aligned, aligned_size
@@ -35,21 +38,28 @@ module spral_cuda
   ! Utility functions
   public :: detect_gpu
 
-  ! Based on enum in cuda.h
-  integer, parameter :: cudaMemcpyHostToHost      = 0
-  integer, parameter :: cudaMemcpyHostToDevice    = 1
-  integer, parameter :: cudaMemcpyDeviceToHost    = 2
-  integer, parameter :: cudaMemcpyDeviceToDevice  = 3
+  ! Based on enum in driver_types.h
+  integer(C_INT), parameter :: cudaMemcpyHostToHost     = 0_C_INT
+  integer(C_INT), parameter :: cudaMemcpyHostToDevice   = 1_C_INT
+  integer(C_INT), parameter :: cudaMemcpyDeviceToHost   = 2_C_INT
+  integer(C_INT), parameter :: cudaMemcpyDeviceToDevice = 3_C_INT
+  integer(C_INT), parameter :: cudaMemcpyDefault        = 4_C_INT
 
-  ! Based on enum in cuda.h
-  integer, parameter :: cudaSharedMemBankSizeDefault    = 0
-  integer, parameter :: cudaSharedMemBankSizeFourByte   = 1
-  integer, parameter :: cudaSharedMemBankSizeEightByte  = 2
+  ! Based on enum in driver_types.h
+  integer(C_INT), parameter :: cudaSharedMemBankSizeDefault   = 0_C_INT
+  integer(C_INT), parameter :: cudaSharedMemBankSizeFourByte  = 1_C_INT
+  integer(C_INT), parameter :: cudaSharedMemBankSizeEightByte = 2_C_INT
 
   ! Based on #define in driver_types.h
-  integer, parameter :: cudaEventDefault       = 0
-  integer, parameter :: cudaEventBlockingSync  = 1
-  integer, parameter :: cudaEventDisableTiming = 2
+  integer(C_INT), parameter :: cudaEventDefault       = 0_C_INT
+  integer(C_INT), parameter :: cudaEventBlockingSync  = 1_C_INT
+  integer(C_INT), parameter :: cudaEventDisableTiming = 2_C_INT
+  integer(C_INT), parameter :: cudaEventInterprocess  = 4_C_INT
+
+  ! Based on enum in driver_types.h
+  integer(C_INT), parameter :: cudaSuccess                 =  0_C_INT
+  integer(C_INT), parameter :: cudaErrorInsufficientDriver = 35_C_INT
+  integer(C_INT), parameter :: cudaErrorNoDevice           = 38_C_INT
 
   ! CUDA C provided functions (listed alphabetically)
   interface
@@ -126,28 +136,20 @@ module spral_cuda
      end function cudaSetDevice
   end interface
 
-  ! Stream functions - all wrapped as cudaStream_t not interoperable
+  ! Stream functions
   interface
      integer(C_INT) function cudaStreamCreate(pStream) &
-          bind(C, name="spral_cudaStreamCreate")
+          bind(C, name="cudaStreamCreate")
        use, intrinsic :: iso_c_binding
        type(C_PTR), intent(out) :: pStream
      end function cudaStreamCreate
      integer(C_INT) function cudaStreamDestroy(stream) &
-          bind(C, name="spral_cudaStreamDestroy")
+          bind(C, name="cudaStreamDestroy")
        use, intrinsic :: iso_c_binding
        type(C_PTR), value :: stream
      end function cudaStreamDestroy
-     integer(C_INT) function cudaMemsetAsync(devPtr, val, cnt, stream) &
-          bind(C, name="spral_cudaMemsetAsync")
-       use, intrinsic :: iso_c_binding
-       type(C_PTR), value :: devPtr
-       integer(C_INT), value :: val
-       integer(C_SIZE_T), value :: cnt
-       type(C_PTR), value :: stream
-     end function cudaMemsetAsync
      integer(C_INT) function cudaMemcpyAsync(dst, src, cnt, knd, &
-          stream) bind(C, name="spral_cudaMemcpyAsync")
+          stream) bind(C, name="cudaMemcpyAsync")
        use, intrinsic :: iso_c_binding
        type(C_PTR), value :: dst
        type(C_PTR), value :: src
@@ -156,7 +158,7 @@ module spral_cuda
        type(C_PTR), value :: stream
      end function cudaMemcpyAsync
      integer(C_INT) function cudaMemcpy2DAsync(dst, dpitch, src, spitch, &
-          width, height, knd, stream) bind(C, name="spral_cudaMemcpy2DAsync")
+          width, height, knd, stream) bind(C, name="cudaMemcpy2DAsync")
        use, intrinsic :: iso_c_binding
        type(C_PTR), value :: dst
        integer(C_SIZE_T), value :: dpitch
@@ -167,48 +169,130 @@ module spral_cuda
        integer(C_INT), value :: knd
        type(C_PTR), value :: stream
      end function cudaMemcpy2DAsync
+     integer(C_INT) function cudaMemsetAsync(devPtr, val, cnt, stream) &
+          bind(C, name="cudaMemsetAsync")
+       use, intrinsic :: iso_c_binding
+       type(C_PTR), value :: devPtr
+       integer(C_INT), value :: val
+       integer(C_SIZE_T), value :: cnt
+       type(C_PTR), value :: stream
+     end function cudaMemsetAsync
      integer(C_INT) function cudaStreamSynchronize(stream) &
-          bind(C, name="spral_cudaStreamSynchronize")
+          bind(C, name="cudaStreamSynchronize")
        use, intrinsic :: iso_c_binding
        type(C_PTR), value :: stream
      end function cudaStreamSynchronize
   end interface
-  
-  ! Event functions - all wrapped as cudaEvent_t and cudaStream_t don't interop
+
+  ! ! Stream functions - all wrapped as cudaStream_t not interoperable
+  ! interface
+  !    integer(C_INT) function cudaStreamCreate(pStream) &
+  !         bind(C, name="spral_cudaStreamCreate")
+  !      use, intrinsic :: iso_c_binding
+  !      type(C_PTR), intent(out) :: pStream
+  !    end function cudaStreamCreate
+  !    integer(C_INT) function cudaStreamDestroy(stream) &
+  !         bind(C, name="spral_cudaStreamDestroy")
+  !      use, intrinsic :: iso_c_binding
+  !      type(C_PTR), value :: stream
+  !    end function cudaStreamDestroy
+  !    integer(C_INT) function cudaMemcpyAsync(dst, src, cnt, knd, &
+  !         stream) bind(C, name="spral_cudaMemcpyAsync")
+  !      use, intrinsic :: iso_c_binding
+  !      type(C_PTR), value :: dst
+  !      type(C_PTR), value :: src
+  !      integer(C_SIZE_T), value :: cnt
+  !      integer(C_INT), value :: knd
+  !      type(C_PTR), value :: stream
+  !    end function cudaMemcpyAsync
+  !    integer(C_INT) function cudaMemcpy2DAsync(dst, dpitch, src, spitch, &
+  !         width, height, knd, stream) bind(C, name="spral_cudaMemcpy2DAsync")
+  !      use, intrinsic :: iso_c_binding
+  !      type(C_PTR), value :: dst
+  !      integer(C_SIZE_T), value :: dpitch
+  !      type(C_PTR), value :: src
+  !      integer(C_SIZE_T), value :: spitch
+  !      integer(C_SIZE_T), value :: width
+  !      integer(C_SIZE_T), value :: height
+  !      integer(C_INT), value :: knd
+  !      type(C_PTR), value :: stream
+  !    end function cudaMemcpy2DAsync
+  !    integer(C_INT) function cudaMemsetAsync(devPtr, val, cnt, stream) &
+  !         bind(C, name="spral_cudaMemsetAsync")
+  !      use, intrinsic :: iso_c_binding
+  !      type(C_PTR), value :: devPtr
+  !      integer(C_INT), value :: val
+  !      integer(C_SIZE_T), value :: cnt
+  !      type(C_PTR), value :: stream
+  !    end function cudaMemsetAsync
+  !    integer(C_INT) function cudaStreamSynchronize(stream) &
+  !         bind(C, name="spral_cudaStreamSynchronize")
+  !      use, intrinsic :: iso_c_binding
+  !      type(C_PTR), value :: stream
+  !    end function cudaStreamSynchronize
+  ! end interface
+
+  ! Event functions
   interface
      integer(C_INT) function cudaEventCreateWithFlags(event, flags) &
-          bind(C, name="spral_cudaEventCreateWithFlags")
+          bind(C, name="cudaEventCreateWithFlags")
        use, intrinsic :: iso_c_binding
-       type(C_PTR) :: event
+       type(C_PTR), intent(out) :: event
        integer(C_INT), value :: flags
      end function cudaEventCreateWithFlags
      integer(C_INT) function cudaEventDestroy(event) &
-          bind(C, name="spral_cudaEventDestroy")
+          bind(C, name="cudaEventDestroy")
        use, intrinsic :: iso_c_binding
        type(C_PTR), value :: event
      end function cudaEventDestroy
      integer(C_INT) function cudaEventRecord(event, stream) &
-          bind(C, name="spral_cudaEventRecord")
+          bind(C, name="cudaEventRecord")
        use, intrinsic :: iso_c_binding
        type(C_PTR), value :: event
        type(C_PTR), value :: stream
      end function cudaEventRecord
      integer(C_INT) function cudaEventSynchronize(event) &
-          bind(C, name="spral_cudaEventSynchronize")
+          bind(C, name="cudaEventSynchronize")
        use, intrinsic :: iso_c_binding
        type(C_PTR), value :: event
      end function cudaEventSynchronize
   end interface
 
-  ! CUBLAS functions - all wrapped as cublasHandle_t not interoperable
+  ! ! Event functions - all wrapped as cudaEvent_t and cudaStream_t don't interop
+  ! interface
+  !    integer(C_INT) function cudaEventCreateWithFlags(event, flags) &
+  !         bind(C, name="spral_cudaEventCreateWithFlags")
+  !      use, intrinsic :: iso_c_binding
+  !      type(C_PTR) :: event
+  !      integer(C_INT), value :: flags
+  !    end function cudaEventCreateWithFlags
+  !    integer(C_INT) function cudaEventDestroy(event) &
+  !         bind(C, name="spral_cudaEventDestroy")
+  !      use, intrinsic :: iso_c_binding
+  !      type(C_PTR), value :: event
+  !    end function cudaEventDestroy
+  !    integer(C_INT) function cudaEventRecord(event, stream) &
+  !         bind(C, name="spral_cudaEventRecord")
+  !      use, intrinsic :: iso_c_binding
+  !      type(C_PTR), value :: event
+  !      type(C_PTR), value :: stream
+  !    end function cudaEventRecord
+  !    integer(C_INT) function cudaEventSynchronize(event) &
+  !         bind(C, name="spral_cudaEventSynchronize")
+  !      use, intrinsic :: iso_c_binding
+  !      type(C_PTR), value :: event
+  !    end function cudaEventSynchronize
+  ! end interface
+
+  ! cuBLAS functions
   interface
      integer(C_INT) function cublasCreate(handle) &
-          bind(C, name="spral_cublasCreate")
+          bind(C, name="cublasCreate_v2")
        use, intrinsic :: iso_c_binding
        type(C_PTR), intent(out) :: handle
      end function cublasCreate
      integer(C_INT) function cublasDestroy(handle) &
-          bind(C, name="spral_cublasDestroy")
+          bind(C, name="cublasDestroy_v2")
        use, intrinsic :: iso_c_binding
        type(C_PTR), value :: handle
      end function cublasDestroy
@@ -216,7 +300,7 @@ module spral_cuda
           m, n, k, alpha, devPtrA, lda, devPtrB, ldb, beta, devPtrC, ldc) &
           bind(C, name="spral_cublasDgemm")
        use, intrinsic :: iso_c_binding
-       type(C_PTR), value :: handle
+       type(C_PTR), intent(in) :: handle
        character(C_CHAR), intent(in) :: transa
        character(C_CHAR), intent(in) :: transb
        integer(C_INT), intent(in) :: m
@@ -232,12 +316,51 @@ module spral_cuda
        integer(C_INT), intent(in) :: ldc
      end function cublasDgemm
      integer(C_INT) function cublasSetStream(handle, streamId) &
-          bind(C, name="spral_cublasSetStream")
+          bind(C, name="cublasSetStream_v2")
        use, intrinsic :: iso_c_binding
        type(C_PTR), value :: handle
        type(C_PTR), value :: streamId
      end function cublasSetStream
   end interface
+
+  ! ! cuBLAS functions - all wrapped as cublasHandle_t not interoperable
+  ! interface
+  !    integer(C_INT) function cublasCreate(handle) &
+  !         bind(C, name="spral_cublasCreate")
+  !      use, intrinsic :: iso_c_binding
+  !      type(C_PTR), intent(out) :: handle
+  !    end function cublasCreate
+  !    integer(C_INT) function cublasDestroy(handle) &
+  !         bind(C, name="spral_cublasDestroy")
+  !      use, intrinsic :: iso_c_binding
+  !      type(C_PTR), value :: handle
+  !    end function cublasDestroy
+  !    integer(C_INT) function cublasDgemm(handle, transa, transb, &
+  !         m, n, k, alpha, devPtrA, lda, devPtrB, ldb, beta, devPtrC, ldc) &
+  !         bind(C, name="spral_cublasDgemm")
+  !      use, intrinsic :: iso_c_binding
+  !      type(C_PTR), value :: handle
+  !      character(C_CHAR), intent(in) :: transa
+  !      character(C_CHAR), intent(in) :: transb
+  !      integer(C_INT), intent(in) :: m
+  !      integer(C_INT), intent(in) :: n
+  !      integer(C_INT), intent(in) :: k
+  !      real(C_DOUBLE), intent(in) :: alpha
+  !      real(C_DOUBLE), intent(in) :: beta
+  !      type(C_PTR), value :: devPtrA
+  !      type(C_PTR), value :: devPtrB
+  !      type(C_PTR), value :: devPtrC
+  !      integer(C_INT), intent(in) :: lda
+  !      integer(C_INT), intent(in) :: ldb
+  !      integer(C_INT), intent(in) :: ldc
+  !    end function cublasDgemm
+  !    integer(C_INT) function cublasSetStream(handle, streamId) &
+  !         bind(C, name="spral_cublasSetStream")
+  !      use, intrinsic :: iso_c_binding
+  !      type(C_PTR), value :: handle
+  !      type(C_PTR), value :: streamId
+  !    end function cublasSetStream
+  ! end interface
 
   ! Additional functions that are hard to use CUDA without
   interface
@@ -283,8 +406,8 @@ contains
 
     integer(C_SIZE_T), parameter :: alignon = 256
 
-    aligned_size = (sz-1) / alignon + 1
-    aligned_size = aligned_size*alignon
+    aligned_size = (sz + (alignon - 1)) / alignon
+    aligned_size = aligned_size * alignon
   end function aligned_size
 
   !
@@ -320,6 +443,35 @@ contains
        end do
     end if
   end function cudaGetErrorString
+
+  ! FIXME: for debugging purposes only, remove when not needed and re-enable the C interface above!
+  ! function cudaMalloc(dev_ptr, bytes)
+  !   use, intrinsic :: iso_c_binding
+  !   implicit none
+
+  !   type(C_PTR), intent(out) :: dev_ptr
+  !   integer(C_SIZE_T), intent(in) :: bytes
+  !   integer(C_INT) :: cudaMalloc
+
+  !   integer(C_SIZE_T) :: sz
+
+  !   interface
+  !      function c_cudaMalloc(dev_ptr, bytes) bind(C, name="cudaMalloc")
+  !        use, intrinsic :: iso_c_binding
+  !        implicit none
+  !        type(C_PTR), intent(out) :: dev_ptr
+  !        integer(C_SIZE_T), intent(in), value :: bytes
+  !        integer(C_INT) :: c_cudaMalloc
+  !      end function c_cudaMalloc
+  !   end interface
+
+  !   sz = aligned_size(bytes)
+  !   cudaMalloc = c_cudaMalloc(dev_ptr, sz)
+  !   if (cudaMalloc .ne. cudaSuccess) return
+
+  !   ! -1 for integers, max. val. for unsigneds, qNaN for reals
+  !   cudaMalloc = cudaMemset(dev_ptr, -1, sz)
+  ! end function cudaMalloc
 
   !
   ! Convieniece functions to avoid longwinded parameter passing in code
@@ -405,10 +557,11 @@ contains
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   ! Return true if a GPU is present and code is compiled with CUDA support
-  ! FIXME: actually detect gpus
   logical function detect_gpu()
     implicit none
+    integer(C_INT) :: cnt
+    cnt = 0_C_INT
+    detect_gpu = ((cudaGetDeviceCount(cnt) .eq. cudaSuccess) .and. (cnt .gt. 0))
     detect_gpu = .true.
   end function detect_gpu
-
 end module spral_cuda

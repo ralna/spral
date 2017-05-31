@@ -1,5 +1,4 @@
 module cuda_helper
-
   use spral_cuda
   use, intrinsic :: iso_c_binding
   implicit none
@@ -10,11 +9,8 @@ contains
   subroutine cuda_init(cnt)
     implicit none
 
-    integer(C_INT), parameter :: cudaSuccess                 =  0_C_INT
-    integer(C_INT), parameter :: cudaErrorInsufficientDriver = 35_C_INT
-    integer(C_INT), parameter :: cudaErrorNoDevice           = 38_C_INT
-
     integer(C_INT), intent(out) :: cnt
+
     integer(C_INT) :: cuda_error
 
     cuda_error = cudaGetDeviceCount(cnt)
@@ -29,5 +25,4 @@ contains
        cnt = -2_C_INT
     end select
   end subroutine cuda_init
-
 end module cuda_helper

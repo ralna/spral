@@ -44,7 +44,7 @@ module spral_ssids_gpu_subtree
      logical :: posdef
      integer :: device ! Have own copy as symbolic may be freed first
      type(gpu_symbolic_subtree), pointer :: symbolic
-     type(C_PTR) :: stream_handle
+     type(C_PTR) :: stream_handle = C_NULL_PTR
      type(gpu_type) :: stream_data
      type(C_PTR) :: gpu_rlist_with_delays = C_NULL_PTR
      type(C_PTR) :: gpu_rlist_direct_with_delays = C_NULL_PTR
@@ -56,7 +56,7 @@ module spral_ssids_gpu_subtree
      type(node_type), dimension(:), allocatable :: nodes ! Stores pointers
        ! to information about nodes
      type(contrib_type) :: contrib
-     type(C_PTR) :: contrib_wait
+     type(C_PTR) :: contrib_wait = C_NULL_PTR
    contains
      procedure :: get_contrib
      procedure :: solve_fwd
@@ -250,25 +250,29 @@ contains
    integer, intent(out) :: cuda_error ! Non-zero on error
 
    ! Copy nlist
-   cuda_error = cudaMalloc(gpu_nlist, lnlist*C_SIZEOF(nlist(1)))
+   cuda_error = cudaMalloc(gpu_nlist, aligned_size(lnlist*C_SIZEOF(nlist(1))))
    if (cuda_error .ne. 0) return
    cuda_error = cudaMemcpy_h2d(gpu_nlist, C_LOC(nlist), &
         lnlist*C_SIZEOF(nlist(1)))
    if (cuda_error .ne. 0) return
 
    ! Copy rlist
-   cuda_error = cudaMalloc(gpu_rlist, lrlist*C_SIZEOF(rlist(1)))
+   cuda_error = cudaMalloc(gpu_rlist, aligned_size(lrlist*C_SIZEOF(rlist(1))))
    if (cuda_error .ne. 0) return
    cuda_error = cudaMemcpy_h2d(gpu_rlist, C_LOC(rlist), &
         lrlist*C_SIZEOF(rlist(1)))
    if (cuda_error .ne. 0) return
 
    ! Copy rlist_direct
-   cuda_error = cudaMalloc(gpu_rlist_direct, lrlist*C_SIZEOF(rlist_direct(1)))
+   cuda_error = cudaMalloc(gpu_rlist_direct, aligned_size(lrlist*C_SIZEOF(rlist_direct(1))))
    if (cuda_error .ne. 0) return
    cuda_error = cudaMemcpy_h2d(gpu_rlist_direct, C_LOC(rlist_direct), &
         lrlist*C_SIZEOF(rlist_direct(1)))
    if (cuda_error .ne. 0) return
+
+   ! Synchronise the device, see:
+   ! http://docs.nvidia.com/cuda/cuda-runtime-api/api-sync-behavior.html#api-sync-behavior
+   cuda_error = cudaDeviceSynchronize()
  end subroutine copy_analyse_data_to_device
  
  subroutine symbolic_cleanup(this)
@@ -367,11 +371,23 @@ contains
 
    ! Copy A values to GPU
    sz = this%max_a_idx
-   cuda_error = cudaMalloc(gpu_val, sz*C_SIZEOF(aval(1)))
+   cuda_error = cudaMalloc(gpu_val, aligned_size(sz*C_SIZEOF(aval(1))))
    if (cuda_error .ne. 0) goto 200
    cuda_error = cudaMemcpy_h2d(gpu_val, C_LOC(aval), sz*C_SIZEOF(aval(1)))
    if (cuda_error .ne. 0) goto 200
-   
+   if (present(scaling)) then
+      ! Copy scaling vector to GPU
+      cuda_error = cudaMalloc(gpu_scaling, aligned_size(this%n*C_SIZEOF(scaling(1))))
+      if (cuda_error .ne. 0) goto 200
+      cuda_error = cudaMemcpy_h2d(gpu_scaling, C_LOC(scaling), &
+           this%n*C_SIZEOF(scaling(1)))
+      if (cuda_error .ne. 0) goto 200
+   end if
+   ! Synchronise the device, see:
+   ! http://docs.nvidia.com/cuda/cuda-runtime-api/api-sync-behavior.html#api-sync-behavior
+   cuda_error = cudaDeviceSynchronize()
+   if (cuda_error .ne. 0) goto 200
+
    ! Initialize stream and contrib_wait event
    cuda_error = cudaStreamCreate(gpu_factor%stream_handle)
    if (cuda_error .ne. 0) goto 200
@@ -381,12 +397,12 @@ contains
 
    ! Call main factorization routine
    if (present(scaling)) then
-      ! Copy scaling vector to GPU
-      cuda_error = cudaMalloc(gpu_scaling, this%n*C_SIZEOF(scaling(1)))
-      if (cuda_error .ne. 0) goto 200
-      cuda_error = cudaMemcpy_h2d(gpu_scaling, C_LOC(scaling), &
-           this%n*C_SIZEOF(scaling(1)))
-      if (cuda_error .ne. 0) goto 200
+      ! ! Copy scaling vector to GPU
+      ! cuda_error = cudaMalloc(gpu_scaling, aligned_size(this%n*C_SIZEOF(scaling(1))))
+      ! if (cuda_error .ne. 0) goto 200
+      ! cuda_error = cudaMemcpy_h2d(gpu_scaling, C_LOC(scaling), &
+      !      this%n*C_SIZEOF(scaling(1)))
+      ! if (cuda_error .ne. 0) goto 200
 
       ! Perform factorization
       call parfactor(posdef, this%child_ptr, this%child_list, this%n,         &
@@ -429,7 +445,7 @@ contains
    inform%num_flops = inform%num_flops+stats%num_flops
    inform%num_delay = inform%num_delay+stats%num_delay
    inform%num_neg = inform%num_neg+stats%num_neg
-   inform%num_two = inform%num_neg+stats%num_two
+   inform%num_two = inform%num_two+stats%num_two
    inform%matrix_rank = inform%matrix_rank - stats%num_zero
    if (stats%cuda_error .ne. 0) inform%cuda_error = stats%cuda_error
    if (stats%cublas_error .ne. 0) inform%cublas_error = stats%cublas_error
@@ -501,9 +517,15 @@ contains
       if (flag .ne. 0) return
    end if
 
+   ! Release event
+   flag = cudaEventDestroy(this%contrib_wait)
+   if (flag .ne. 0) return
+   this%contrib_wait = C_NULL_PTR
+
    ! Release stream
    flag = cudaStreamDestroy(this%stream_handle)
    if (flag .ne. 0) return
+   this%stream_handle = C_NULL_PTR
  end subroutine numeric_cleanup
 
  function get_contrib(this)
@@ -519,8 +541,12 @@ contains
    get_contrib%owner = 1 ! gpu
 
    ! Now wait until data copy has finished before releasing result
-   cuda_error = cudaEventSynchronize(this%contrib_wait)
    ! FIXME: handle cuda_error?
+   cuda_error = cudaEventSynchronize(this%contrib_wait)
+   ! Play safe and synchronize the entire stream.
+   ! FIXME: handle cuda_error?
+   ! FIXME: remove if not needed
+   cuda_error = cudaStreamSynchronize(this%stream_handle)
  end function get_contrib
 
  subroutine gpu_free_contrib(contrib)
@@ -947,6 +973,11 @@ contains
          if (cuda_error .ne. 0) goto 200
       end do
    !endif
+
+   ! Synchronise the device, see:
+   ! http://docs.nvidia.com/cuda/cuda-runtime-api/api-sync-behavior.html#api-sync-behavior
+   cuda_error = cudaDeviceSynchronize()
+   if (cuda_error .ne. 0) goto 200
 
    return ! Normal return
 

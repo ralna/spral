@@ -55,7 +55,7 @@ module spral_ssids_datatypes
   integer, parameter, public :: SSIDS_WARNING_ANAL_SINGULAR    = 6
   integer, parameter, public :: SSIDS_WARNING_FACT_SINGULAR    = 7
   integer, parameter, public :: SSIDS_WARNING_MATCH_ORD_NO_SCALE=8
-  integer, parameter, public :: SSIDS_WARNING_OMP_PROC_BIND    = 50
+!$ integer, parameter, public :: SSIDS_WARNING_OMP_PROC_BIND    = 50
 
   ! solve job values
   integer, parameter, public :: SSIDS_SOLVE_JOB_ALL     = 0 !PLD(PL)^TX = B
@@ -214,9 +214,10 @@ module spral_ssids_datatypes
      !
      ! High level subtree splitting parameters
      !
-     logical :: ignore_numa = .true. ! If true, treat entire machine as single
+     logical :: ignore_numa = .false. ! If true, treat entire machine as single
        ! NUMA region for purposes of subtree allocation.
      logical :: use_gpu = .true. ! Use GPUs if present
+     logical :: gpu_only = .false. ! FIXME: not yet implemented.
      integer(long) :: min_gpu_work = 5*10**9_long ! Only assign subtree to GPU
        ! if it contains at least this many flops
      real :: max_load_inbalance = 1.2 ! Maximum permissible load inbalance

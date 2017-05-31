@@ -299,7 +299,7 @@ contains
     ! per-node assembly info
     type(asmtype), dimension(:), allocatable :: asminf
 
-    real(wp) :: delta = 0.01, eps = tiny(1.0)
+    real(wp) :: delta, eps
     real(wp), target :: s
     real(wp) :: dummy_real
 
@@ -324,6 +324,8 @@ contains
     type(C_PTR) :: gpu_custats
 
     gpu_LDLT = C_NULL_PTR
+    delta = 0.01_wp
+    eps = tiny(1.0_wp)
 
     if (gpu%num_levels .eq. 0) return ! Shortcut empty streams (v. small matrices)
   
@@ -332,15 +334,15 @@ contains
 
     ! Initialize CUBLAS handle
     stats%cublas_error = cublasCreate(cublas_handle)
-    if(stats%cublas_error .ne. 0) goto 300
+    if (stats%cublas_error .ne. 0) goto 300
     stats%cublas_error = cublasSetStream(cublas_handle, stream)
-    if(stats%cublas_error .ne. 0) goto 300
+    if (stats%cublas_error .ne. 0) goto 300
 
     ! Initialize CUDA stats
-    stats%cuda_error = cudaMalloc(gpu_custats, C_SIZEOF(custats))
-    if(stats%cuda_error .ne. 0) goto 200
+    stats%cuda_error = cudaMalloc(gpu_custats, aligned_size(C_SIZEOF(custats)))
+    if (stats%cuda_error .ne. 0) goto 200
     stats%cuda_error = cudaMemsetAsync(gpu_custats, 0, C_SIZEOF(custats), stream)
-    if(stats%cuda_error .ne. 0) goto 200
+    if (stats%cuda_error .ne. 0) goto 200
 
     ! Precalculate level information
     max_LDLT_size = 0
@@ -372,7 +374,7 @@ contains
     end do
   
     ii = nptr(nnodes + 1) - 1
-    stats%cuda_error = cudaMalloc(gpu_LDLT, 2*max_LDLT_size*C_SIZEOF(dummy_real))
+    stats%cuda_error = cudaMalloc(gpu_LDLT, aligned_size(2*max_LDLT_size*C_SIZEOF(dummy_real)))
     if (stats%cuda_error .ne. 0) goto 200
   
     allocate(gpu%values_L(gpu%num_levels), gpu%off_L(nnodes), &
@@ -444,12 +446,12 @@ contains
        end if
 
        stats%cuda_error = &
-            cudaMalloc(gpu%values_L(lev)%ptr_levL, level_size*C_SIZEOF(dummy_real))
+            cudaMalloc(gpu%values_L(lev)%ptr_levL, aligned_size(level_size*C_SIZEOF(dummy_real)))
        if (stats%cuda_error .ne. 0) goto 200
        ptr_levL = gpu%values_L(lev)%ptr_levL
        if (.not. pos_def) then
           stats%cuda_error = &
-               cudaMalloc(ptr_levLD, level_size*C_SIZEOF(dummy_real))
+               cudaMalloc(ptr_levLD, aligned_size(level_size*C_SIZEOF(dummy_real)))
           if (stats%cuda_error .ne. 0) goto 200
 
           ! Initialize pointers to LD storage
@@ -586,7 +588,7 @@ contains
        ! Free allocs specific to this level
        if (.not. pos_def) then
           stats%cuda_error = cudaFree(ptr_levLD)
-          if(stats%cuda_error.ne.0) goto 200
+          if (stats%cuda_error.ne.0) goto 200
        end if
 
        ! Store pointers for use on next level
@@ -1225,7 +1227,7 @@ contains
     integer :: ind_len, B_len
     integer :: i, j, k, p
     integer :: ncb, last_ln, llist, maxr
-    integer :: ndelay, blkm, blkn, nelim, parent, node
+    integer :: ndelay, blkm, blkn, nelim, parent, node, dif
     integer, dimension(:), pointer :: lperm
 
     type(C_PTR) :: ptr_D, ptr_L, ptr_LD
@@ -1370,7 +1372,10 @@ contains
              end do
              k = k + blkn
              nodes(node)%nelim = nelim
-             nodes(parent)%ndelay = nodes(parent)%ndelay + blkn - nelim
+             dif = blkn - nelim
+             !$omp atomic update
+             nodes(parent)%ndelay = nodes(parent)%ndelay + dif
+             !$omp end atomic
              stats%num_delay &
                   = stats%num_delay + blkn - nelim
              do j = blkm, blkm-nelim+1, -1
@@ -1424,8 +1429,10 @@ contains
           ! Record delays
           nodes(node)%nelim = nelim
           if (blkn .lt. blkm) then
-!$OMP ATOMIC
-             nodes(parent)%ndelay = nodes(parent)%ndelay + (blkn - nelim)
+             dif = blkn - nelim
+             !$omp atomic update
+             nodes(parent)%ndelay = nodes(parent)%ndelay + dif
+             !$omp end atomic
           end if
           stats%num_delay = stats%num_delay + blkn - nelim
           do j = blkm, blkm-nelim+1, -1
@@ -1537,7 +1544,7 @@ contains
           npassed = asminf(cnode)%npassed
           npassl = asminf(cnode)%npassl
           ! We are only doing the contribution block of the parent
-          if((npassed-npassl) .le. 0) cycle
+          if ((npassed-npassl) .le. 0) cycle
           cpdata(cpi)%cm = npassed - npassl
           cpdata(cpi)%cn = npassed - npassl
           cpdata(cpi)%ldp = blkm - blkn
@@ -1587,7 +1594,7 @@ contains
                 by = (cpdata(cpi)%cn-1) / HOGG_ASSEMBLE_TY + 1
                 do blkj = 0, by-1
                    do blki = 0, bx-1
-                      if((blki+1)*HOGG_ASSEMBLE_TX<(blkj+1)*HOGG_ASSEMBLE_TY) &
+                      if ((blki+1)*HOGG_ASSEMBLE_TX .lt. (blkj+1)*HOGG_ASSEMBLE_TY) &
                            cycle ! Entirely in upper triangle
                       blkdata(bi)%cp = cpi-1
                       blkdata(bi)%blk = blkj*bx + blki

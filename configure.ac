@@ -3,19 +3,24 @@ AC_CONFIG_SRCDIR([src/ssids/ssids.f90])
 AC_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE
 
-# Allow disabling of GPU if desired
-AC_ARG_ENABLE([gpu],
-   AS_HELP_STRING([--disable-gpu], [Do not attempt to compile GPU code (otherwise presence of nvcc is autodetected)])
-   )
-
 # Allow disabling of OpenMP
 AC_ARG_ENABLE([openmp],
    AS_HELP_STRING([--disable-openmp], [Disable OpenMP parallelism. Not recommended.])
    )
 
+# Allow disabling of GPU if desired
+AC_ARG_ENABLE([gpu],
+   AS_HELP_STRING([--disable-gpu], [Do not attempt to compile GPU code (otherwise presence of nvcc is autodetected).])
+   )
+
 # Allow user to enable profiling
 AC_ARG_ENABLE([profile],
    AS_HELP_STRING([--enable-profile], [Enable support for profile generation. Require gtg library.])
+   )
+
+# Allow debugging of CUDA code
+AC_ARG_ENABLE([gpudbg],
+   AS_HELP_STRING([--enable-gpudbg], [Enable debugging of CUDA code.])
    )
 
 # Check for compilers
@@ -24,10 +29,6 @@ AC_PROG_CXX
 AC_PROG_F77
 AC_PROG_FC
 AC_PROG_RANLIB
-AS_IF([test "x$enable_gpu" != "xno"], [
-   SPRAL_PROG_NVCC
-   ])
-AM_CONDITIONAL([HAVE_NVCC], [test -n "$NVCC"])
 
 # Add OpenMP support, set language standards
 AC_LANG_PUSH(C)
@@ -40,6 +41,18 @@ AS_IF([test "x$enable_openmp" != "xno"], [
    AC_OPENMP
    AC_LANG_POP(C++)
    ])
+AM_CONDITIONAL([HAVE_OPENMP], [test -n "$OPENMP_CXXFLAGS"])
+
+# Check for NVCC
+AS_IF([test "x$enable_gpu" != "xno"], [
+   SPRAL_PROG_NVCC
+   ])
+AM_CONDITIONAL([HAVE_NVCC], [test -n "$NVCC"])
+
+AS_IF([test "x$enable_gpudbg" = "xyes"], [
+   GPUDBG=yes
+   ])
+AM_CONDITIONAL([HAVE_GPUDBG], [test -n "$GPUDBG"])
 
 # Establish linking flags C->Fortran and how to link C with fortran
 AC_FC_LIBRARY_LDFLAGS
@@ -65,8 +78,8 @@ AC_TRY_LINK([#include <sched.h>], [sched_getcpu();],
 
 
 # Check for required libraries
-ACX_BLAS(,[AC_MSG_ERROR([No BLAS library found.])])
-ACX_LAPACK(,[AC_MSG_ERROR([No LAPACK library found.])])
+AX_BLAS(,[AC_MSG_ERROR([No BLAS library found.])])
+AX_LAPACK(,[AC_MSG_ERROR([No LAPACK library found.])])
 SPRAL_METIS(,
    [AC_MSG_ERROR([No MeTiS library found.])]
    )
