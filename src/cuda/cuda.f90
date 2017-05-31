@@ -97,12 +97,12 @@ module spral_cuda
           bind(C, name="cudaGetLastError")
        use, intrinsic :: iso_c_binding
      end function cudaGetLastError
-     ! integer(C_INT) function cudaMalloc(dev_ptr, bytes) &
-     !      bind(C, name="cudaMalloc")
-     !   use, intrinsic :: iso_c_binding
-     !   type(C_PTR), intent(out) :: dev_ptr
-     !   integer(C_SIZE_T), intent(in), value :: bytes
-     ! end function cudaMalloc
+     integer(C_INT) function cudaMalloc(dev_ptr, bytes) &
+          bind(C, name="cudaMalloc")
+       use, intrinsic :: iso_c_binding
+       type(C_PTR), intent(out) :: dev_ptr
+       integer(C_SIZE_T), intent(in), value :: bytes
+     end function cudaMalloc
      integer(C_INT) function cudaMemset(devPtr, val, cnt) &
           bind(C, name="cudaMemset")
        use, intrinsic :: iso_c_binding
@@ -445,33 +445,33 @@ contains
   end function cudaGetErrorString
 
   ! FIXME: for debugging purposes only, remove when not needed and re-enable the C interface above!
-  function cudaMalloc(dev_ptr, bytes)
-    use, intrinsic :: iso_c_binding
-    implicit none
+  ! function cudaMalloc(dev_ptr, bytes)
+  !   use, intrinsic :: iso_c_binding
+  !   implicit none
 
-    type(C_PTR), intent(out) :: dev_ptr
-    integer(C_SIZE_T), intent(in) :: bytes
-    integer(C_INT) :: cudaMalloc
+  !   type(C_PTR), intent(out) :: dev_ptr
+  !   integer(C_SIZE_T), intent(in) :: bytes
+  !   integer(C_INT) :: cudaMalloc
 
-    integer(C_SIZE_T) :: sz
+  !   integer(C_SIZE_T) :: sz
 
-    interface
-       function c_cudaMalloc(dev_ptr, bytes) bind(C, name="cudaMalloc")
-         use, intrinsic :: iso_c_binding
-         implicit none
-         type(C_PTR), intent(out) :: dev_ptr
-         integer(C_SIZE_T), intent(in), value :: bytes
-         integer(C_INT) :: c_cudaMalloc
-       end function c_cudaMalloc
-    end interface
+  !   interface
+  !      function c_cudaMalloc(dev_ptr, bytes) bind(C, name="cudaMalloc")
+  !        use, intrinsic :: iso_c_binding
+  !        implicit none
+  !        type(C_PTR), intent(out) :: dev_ptr
+  !        integer(C_SIZE_T), intent(in), value :: bytes
+  !        integer(C_INT) :: c_cudaMalloc
+  !      end function c_cudaMalloc
+  !   end interface
 
-    sz = aligned_size(bytes)
-    cudaMalloc = c_cudaMalloc(dev_ptr, sz)
-    if (cudaMalloc .ne. cudaSuccess) return
+  !   sz = aligned_size(bytes)
+  !   cudaMalloc = c_cudaMalloc(dev_ptr, sz)
+  !   if (cudaMalloc .ne. cudaSuccess) return
 
-    ! -1 for integers, max. val. for unsigneds, qNaN for reals
-    cudaMalloc = cudaMemset(dev_ptr, -1, sz)
-  end function cudaMalloc
+  !   ! -1 for integers, max. val. for unsigneds, qNaN for reals
+  !   cudaMalloc = cudaMemset(dev_ptr, -1, sz)
+  ! end function cudaMalloc
 
   !
   ! Convieniece functions to avoid longwinded parameter passing in code
