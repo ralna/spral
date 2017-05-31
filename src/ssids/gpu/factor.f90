@@ -1372,7 +1372,10 @@ contains
              end do
              k = k + blkn
              nodes(node)%nelim = nelim
-             nodes(parent)%ndelay = nodes(parent)%ndelay + blkn - nelim
+             dif = blkn - nelim
+             !$omp atomic update
+             nodes(parent)%ndelay = nodes(parent)%ndelay + dif
+             !$omp end atomic
              stats%num_delay &
                   = stats%num_delay + blkn - nelim
              do j = blkm, blkm-nelim+1, -1
