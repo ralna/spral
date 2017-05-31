@@ -50,7 +50,7 @@ subroutine spral_ssids_contrib_get_data(ccontrib, n, val, ldval, rlist, &
   type(C_PTR), intent(out) :: delay_val
   integer(C_INT), intent(out) :: lddelay
 
-  type(contrib_type), pointer :: fcontrib
+  type(contrib_type), pointer, volatile :: fcontrib
 
   if (c_associated(ccontrib)) then
      call c_f_pointer(ccontrib, fcontrib)
