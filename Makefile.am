@@ -5,8 +5,7 @@ SUFFIXES = .cu
 
 # NVCC setup
 PTX_FLAGS = -v
-#NVCCFLAGS = -Iinclude -arch=sm_20 -g -Xptxas="${PTX_FLAGS}"
-AM_NVCC_FLAGS = -I$(top_srcdir)/include
+AM_NVCC_FLAGS = -I$(top_srcdir)/include -Xptxas="${PTX_FLAGS}"
 AM_LD_FLAGS = -lcuda
 NVCCLINK = \
 	$(NVCC) $(NVCCFLAGS) $(AM_NVCC_FLAGS) $(AM_LD_FLAGS) $(LDFLAGS) -o $@
@@ -70,7 +69,7 @@ libspral_a_SOURCES += \
 # SCALING
 include_HEADERS += include/spral_scaling.h
 libspral_a_SOURCES += \
-  	src/scaling.f90 \
+	src/scaling.f90 \
 	interfaces/C/scaling.f90
 check_PROGRAMS = \
 	scaling_test \
@@ -116,7 +115,7 @@ TESTS = scaling_test
 
 # TIMER
 libspral_a_SOURCES += \
-  	src/timer.f90
+	src/timer.f90
 
 # RANDOM
 include_HEADERS += include/spral_random.h
