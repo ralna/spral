@@ -14,7 +14,7 @@ AC_PROG_F77
 AC_PROG_FC
 AC_PROG_RANLIB
 AS_IF([test "x$enable_gpu" != "xno"], [
-   ACX_PROG_NVCC
+   SPRAL_PROG_NVCC
    ])
 AM_CONDITIONAL([HAVE_NVCC], [test -n "$NVCC"])
 
