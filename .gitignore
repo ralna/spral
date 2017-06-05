@@ -1,3 +1,4 @@
+Makefile
 Makefile.in
 aclocal.m4
 autom4te.cache
@@ -11,3 +12,11 @@ missing
 config.h.in
 config.h.in~
 nvcc_arch_sm
+test-driver
+config.log
+config.status
+examples/C/.deps
+examples/C/scaling/.deps
+examples/C/ssmfe/.deps
+tests/ssmfe/.deps
+my_cfg.sh
