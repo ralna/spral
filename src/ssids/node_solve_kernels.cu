@@ -987,21 +987,21 @@ cu_multinode_solve_t_few_8x8(
 // C interface for cu_init_presolve
 void
 cuda_init_presolve( 
-   const cudaStream_t *stream,
+   const cudaStream_t stream,
    int nblocks, 
    node_data< double >* data 
 ){
   dim3 threads(8, 8);
   for ( int i = 0; i < nblocks; i += 65535 ) {
     int blocks = min(65535, nblocks - i);
-    cu_init_presolve< double ><<< blocks, threads, 0, *stream >>>( data + i );
+    cu_init_presolve< double ><<< blocks, threads, 0, stream >>>( data + i );
   }
 }
 
 // C interface for cu_tile_presolve
 void
 cuda_tile_presolve( 
-  const cudaStream_t *stream,
+  const cudaStream_t stream,
   int nblocks, 
   int tile_size, 
   tile_presolve_data< double >* data,
@@ -1014,17 +1014,17 @@ cuda_tile_presolve(
     dim3 threads(24,24);
     if ( nud )
       cu_tile_presolve< double, true >
-        <<< blocks, nt, sms, *stream >>>( tile_size, data + i );
+        <<< blocks, nt, sms, stream >>>( tile_size, data + i );
     else
       cu_tile_presolve< double, false >
-        <<< blocks, nt, sms, *stream >>>( tile_size, data + i );
+        <<< blocks, nt, sms, stream >>>( tile_size, data + i );
   }
 }
 
 // C interface for cu_multi_l_inv
 void
 cuda_multi_l_inv( 
-  const cudaStream_t *stream, 
+  const cudaStream_t stream, 
   int nblocks, 
   l_inv_data< double >* data, 
   int tile_size, 
@@ -1035,14 +1035,14 @@ cuda_multi_l_inv(
   for ( int i = 0; i < nblocks; i += 65535 ) {
     int blocks = min(65535, nblocks - i);
     cu_multi_l_inv< double >
-      <<< blocks, threads, 0, *stream >>>( data + i, tile_size, step );
+      <<< blocks, threads, 0, stream >>>( data + i, tile_size, step );
   }
 }
 
 // C interface for cu_multi_l_inv_copy
 void
 cuda_multi_l_inv_copy( 
-  const cudaStream_t *stream, 
+  const cudaStream_t stream, 
   int nblocks, 
   l_inv_data< double >* data, 
   int tile_size
@@ -1052,7 +1052,7 @@ cuda_multi_l_inv_copy(
   for ( int i = 0; i < nblocks; i += 65535 ) {
     int blocks = min(65535, nblocks - i);
     cu_multi_l_inv_copy< double >
-      <<< blocks, threads, 0, *stream >>>( data + i, tile_size );
+      <<< blocks, threads, 0, stream >>>( data + i, tile_size );
   }
 }
 
@@ -1126,7 +1126,7 @@ extern "C" {
 
 // gathers <nrows> rows of a sparse matrix <ncols> columns wide
 // into a dense <nrows>-by-<ncols> matrix
-void spral_ssids_gather(const cudaStream_t *stream, int nrows, int ncols,
+void spral_ssids_gather(const cudaStream_t stream, int nrows, int ncols,
       double* src, int lds, double* dst, int ldd, int* ind) {
   int nt = ((nrows*ncols - 1)/32 + 1)*32;
   if ( nt > 1024 )
@@ -1139,25 +1139,25 @@ void spral_ssids_gather(const cudaStream_t *stream, int nrows, int ncols,
   int nx = (nrows - 1)/tx + 1;
   int ny = (ncols - 1)/ty + 1;
   dim3 grid(nx, ny);
-  cu_gather< double ><<< grid, threads, 0, *stream >>>
+  cu_gather< double ><<< grid, threads, 0, stream >>>
     ( nrows, ncols, src, lds, dst, ldd, ind );
 }
 
 // gathers nodes' D factor pieces from the level data array into
 // a coniguous array of diagonal and offdiagonal values' pairs
-void spral_ssids_gather_diag(const cudaStream_t *stream, int n, double* src,
+void spral_ssids_gather_diag(const cudaStream_t stream, int n, double* src,
       double* dst, long* ind) {
    int nt = ((n - 1)/32 + 1)*32;
    if ( nt > 1024 )
       nt = 1024;
    int nb = (n - 1)/nt + 1;
-   cu_gather_diag< double ><<< nb, nt, 0, *stream >>>( n, src, dst, ind );
+   cu_gather_diag< double ><<< nb, nt, 0, stream >>>( n, src, dst, ind );
 }
 
 // gathers <nrows> rows from rhs/solution matrix of the backward solve
 // into a dense <nrows>-by-<ncols> matrix;
 // rhs part is simultaneously multiplied by D
-void spral_ssids_gather_dx(const cudaStream_t *stream, int nrows, int ncols,
+void spral_ssids_gather_dx(const cudaStream_t stream, int nrows, int ncols,
       double* d, double* u, int ldu, double* v, int ldv, int* indd, int* indx) {
   int nt = ((nrows*ncols - 1)/32 + 1)*32;
   if ( nt > 1024 )
@@ -1170,13 +1170,13 @@ void spral_ssids_gather_dx(const cudaStream_t *stream, int nrows, int ncols,
   int nx = (nrows - 1)/tx + 1;
   int ny = (ncols - 1)/ty + 1;
   dim3 grid(nx, ny);
-  cu_gather_dx< double ><<< grid, threads, 0, *stream >>>
+  cu_gather_dx< double ><<< grid, threads, 0, stream >>>
     ( nrows, ncols, d, u, ldu, v, ldv, indd, indx );
 }
 
 // gathers <nrows> rows from rhs/solution matrix of the backward solve
 // multiplies by D and puts into a dense <nrows>-by-<ncols> matrix
-void spral_ssids_apply_d(const cudaStream_t *stream, int nrows, int ncols,
+void spral_ssids_apply_d(const cudaStream_t stream, int nrows, int ncols,
       double* d, double* u, int ldu, double* v, int ldv, int* indx) {
   int nt = ((nrows*ncols - 1)/32 + 1)*32;
   if ( nt > 1024 )
@@ -1189,12 +1189,12 @@ void spral_ssids_apply_d(const cudaStream_t *stream, int nrows, int ncols,
   int nx = (nrows - 1)/tx + 1;
   int ny = (ncols - 1)/ty + 1;
   dim3 grid(nx, ny);
-  cu_apply_d< double ><<< grid, threads, 0, *stream >>>
+  cu_apply_d< double ><<< grid, threads, 0, stream >>>
     ( nrows, ncols, d, u, ldu, v, ldv, indx );
 }
 
 // multiplies several matrices simultaneously
-void spral_ssids_multinode_dgemm_n(const cudaStream_t *stream, int nblocks,
+void spral_ssids_multinode_dgemm_n(const cudaStream_t stream, int nblocks,
       node_solve_data< double >* data, double a) {
   dim3 threads(8, 8);
   
@@ -1210,7 +1210,7 @@ void spral_ssids_multinode_dgemm_n(const cudaStream_t *stream, int nblocks,
 // of the nodal matrix is put into an array poined by ptr_u
 // member of the node_solve_data structure,
 // the rest goes into one pointed by ptr_v
-void spral_ssids_multinode_solve_n(const cudaStream_t *stream, int nblocks,
+void spral_ssids_multinode_solve_n(const cudaStream_t stream, int nblocks,
       int nrhs, double* a, double* b, double* u, double* v,
       node_solve_data< double >* data) {
   for ( int i = 0; i < nblocks; i += 65535 ) {
@@ -1219,64 +1219,64 @@ void spral_ssids_multinode_solve_n(const cudaStream_t *stream, int nblocks,
       dim3 threads(16, 2);
       int ny = (nrhs - 1)/8 + 1;
       dim3 grid(blocks, ny);
-      cu_multinode_solve_n_16x2< double ><<< grid, threads, 0, *stream >>>
+      cu_multinode_solve_n_16x2< double ><<< grid, threads, 0, stream >>>
           ( nrhs, a, b, u, v, data + i, i );
     }
     else if ( nrhs == 14 ) {
-      cu_multinode_solve_n_few_64< double, 14 ><<< blocks, 64, 0, *stream >>>
+      cu_multinode_solve_n_few_64< double, 14 ><<< blocks, 64, 0, stream >>>
          ( a, b, u, v, data + i, i );
     }
     else if ( nrhs == 13 ) {
-      cu_multinode_solve_n_few_64< double, 13 ><<< blocks, 64, 0, *stream >>>
+      cu_multinode_solve_n_few_64< double, 13 ><<< blocks, 64, 0, stream >>>
          ( a, b, u, v, data + i, i );
     }
     else if ( nrhs == 12 ) {
-      cu_multinode_solve_n_few_64< double, 12 ><<< blocks, 64, 0, *stream >>>
+      cu_multinode_solve_n_few_64< double, 12 ><<< blocks, 64, 0, stream >>>
          ( a, b, u, v, data + i, i );
     }
     else if ( nrhs == 11 ) {
-      cu_multinode_solve_n_few_64< double, 11 ><<< blocks, 64, 0, *stream >>>
+      cu_multinode_solve_n_few_64< double, 11 ><<< blocks, 64, 0, stream >>>
          ( a, b, u, v, data + i, i );
     }
     else if ( nrhs == 10 ) {
-      cu_multinode_solve_n_few_64< double, 10 ><<< blocks, 64, 0, *stream >>>
+      cu_multinode_solve_n_few_64< double, 10 ><<< blocks, 64, 0, stream >>>
          ( a, b, u, v, data + i, i );
     }
     else if ( nrhs == 9 ) {
-      cu_multinode_solve_n_few_64< double, 9 ><<< blocks, 64, 0, *stream >>>
+      cu_multinode_solve_n_few_64< double, 9 ><<< blocks, 64, 0, stream >>>
          ( a, b, u, v, data + i, i );
     }
     else if ( nrhs == 8 ) {
-      cu_multinode_solve_n_few_64< double, 8 ><<< blocks, 64, 0, *stream >>>
+      cu_multinode_solve_n_few_64< double, 8 ><<< blocks, 64, 0, stream >>>
          ( a, b, u, v, data + i, i );
     }
     else if ( nrhs == 7 ) {
-      cu_multinode_solve_n_few_64< double, 7 ><<< blocks, 64, 0, *stream >>>
+      cu_multinode_solve_n_few_64< double, 7 ><<< blocks, 64, 0, stream >>>
          ( a, b, u, v, data + i, i );
     }
     else if ( nrhs == 6 ) {
-      cu_multinode_solve_n_few_64< double, 6 ><<< blocks, 64, 0, *stream >>>
+      cu_multinode_solve_n_few_64< double, 6 ><<< blocks, 64, 0, stream >>>
          ( a, b, u, v, data + i, i );
     }
     else if ( nrhs == 5 ) {
-      cu_multinode_solve_n_few_64< double, 5 ><<< blocks, 64, 0, *stream >>>
+      cu_multinode_solve_n_few_64< double, 5 ><<< blocks, 64, 0, stream >>>
          ( a, b, u, v, data + i, i );
     }
     else if ( nrhs == 4 ) {
-      cu_multinode_solve_n_few_64< double, 4 ><<< blocks, 64, 0, *stream >>>
+      cu_multinode_solve_n_few_64< double, 4 ><<< blocks, 64, 0, stream >>>
          ( a, b, u, v, data + i, i );
     }
     else if ( nrhs == 3 ) {
-      cu_multinode_solve_n_few_64< double, 3 ><<< blocks, 64, 0, *stream >>>
+      cu_multinode_solve_n_few_64< double, 3 ><<< blocks, 64, 0, stream >>>
          ( a, b, u, v, data + i, i );
     }
     else if ( nrhs == 2 ) {
-      cu_multinode_solve_n_few_64< double, 2 ><<< blocks, 64, 0, *stream >>>
+      cu_multinode_solve_n_few_64< double, 2 ><<< blocks, 64, 0, stream >>>
          ( a, b, u, v, data + i, i );
     }
     else {
       dim3 threads(64, 2);
-      cu_multinode_solve_n_few_64< double, 1 ><<< blocks, 64, 0, *stream >>>
+      cu_multinode_solve_n_few_64< double, 1 ><<< blocks, 64, 0, stream >>>
          ( a, b, u, v, data + i, i );
     }
   }
@@ -1286,7 +1286,7 @@ void spral_ssids_multinode_solve_n(const cudaStream_t *stream, int nblocks,
 // using the modified nodal matrices from presolve;
 // the solution is the sum of two parts placed into arrays pointed to
 // by ptr_u and ptr_v members of node_solve_data structure
-void spral_ssids_multinode_solve_t(const cudaStream_t *stream, int nblocks,
+void spral_ssids_multinode_solve_t(const cudaStream_t stream, int nblocks,
       int nrhs, double* a, double* b, double* u, double* v,
       node_solve_data< double >* data) {
   for ( int i = 0; i < nblocks; i += 65535 ) {
@@ -1295,91 +1295,91 @@ void spral_ssids_multinode_solve_t(const cudaStream_t *stream, int nblocks,
       dim3 threads(2, 2, 8);
       int ny = (nrhs - 1)/8 + 1;
       dim3 grid(blocks, ny, 2);
-      cu_multinode_solve_t_mp_2x2x8< double ><<< grid, threads, 0, *stream >>>
+      cu_multinode_solve_t_mp_2x2x8< double ><<< grid, threads, 0, stream >>>
         ( nrhs, a, b, u, v, data + i, i );
     }
     else if ( nrhs == 14 ) {
       dim3 threads(8, 8);
       dim3 grid(blocks, 2);
-      cu_multinode_solve_t_few_8x8< double, 14 ><<< grid, threads, 0, *stream >>>
+      cu_multinode_solve_t_few_8x8< double, 14 ><<< grid, threads, 0, stream >>>
         ( a, b, u, v, data + i, i );
     }
     else if ( nrhs == 13 ) {
       dim3 threads(8, 8);
       dim3 grid(blocks, 2);
-      cu_multinode_solve_t_few_8x8< double, 13 ><<< grid, threads, 0, *stream >>>
+      cu_multinode_solve_t_few_8x8< double, 13 ><<< grid, threads, 0, stream >>>
         ( a, b, u, v, data + i, i );
     }
     else if ( nrhs == 12 ) {
       dim3 threads(8, 8);
       dim3 grid(blocks, 2);
-      cu_multinode_solve_t_few_8x8< double, 12 ><<< grid, threads, 0, *stream >>>
+      cu_multinode_solve_t_few_8x8< double, 12 ><<< grid, threads, 0, stream >>>
         ( a, b, u, v, data + i, i );
     }
     else if ( nrhs == 11 ) {
       dim3 threads(8, 8);
       dim3 grid(blocks, 2);
-      cu_multinode_solve_t_few_8x8< double, 11 ><<< grid, threads, 0, *stream >>>
+      cu_multinode_solve_t_few_8x8< double, 11 ><<< grid, threads, 0, stream >>>
         ( a, b, u, v, data + i, i );
     }
     else if ( nrhs == 10 ) {
       dim3 threads(8, 8);
       dim3 grid(blocks, 2);
-      cu_multinode_solve_t_few_8x8< double, 10 ><<< grid, threads, 0, *stream >>>
+      cu_multinode_solve_t_few_8x8< double, 10 ><<< grid, threads, 0, stream >>>
         ( a, b, u, v, data + i, i );
     }
     else if ( nrhs == 9 ) {
       dim3 threads(8, 8);
       dim3 grid(blocks, 2);
-      cu_multinode_solve_t_few_8x8< double, 9 ><<< grid, threads, 0, *stream >>>
+      cu_multinode_solve_t_few_8x8< double, 9 ><<< grid, threads, 0, stream >>>
         ( a, b, u, v, data + i, i );
     }
     else if ( nrhs == 8 ) {
       dim3 threads(8, 8);
       dim3 grid(blocks, 2);
-      cu_multinode_solve_t_few_8x8< double, 8 ><<< grid, threads, 0, *stream >>>
+      cu_multinode_solve_t_few_8x8< double, 8 ><<< grid, threads, 0, stream >>>
         ( a, b, u, v, data + i, i );
     }
     else if ( nrhs == 7 ) {
       dim3 threads(8, 8);
       dim3 grid(blocks, 2);
-      cu_multinode_solve_t_few_8x8< double, 7 ><<< grid, threads, 0, *stream >>>
+      cu_multinode_solve_t_few_8x8< double, 7 ><<< grid, threads, 0, stream >>>
         ( a, b, u, v, data + i, i );
     }
     else if ( nrhs == 6 ) {
       dim3 threads(8, 8);
       dim3 grid(blocks, 2);
-      cu_multinode_solve_t_few_8x8< double, 6 ><<< grid, threads, 0, *stream >>>
+      cu_multinode_solve_t_few_8x8< double, 6 ><<< grid, threads, 0, stream >>>
         ( a, b, u, v, data + i, i );
     }
     else if ( nrhs == 5 ) {
       dim3 threads(8, 8);
       dim3 grid(blocks, 2);
-      cu_multinode_solve_t_few_8x8< double, 5 ><<< grid, threads, 0, *stream >>>
+      cu_multinode_solve_t_few_8x8< double, 5 ><<< grid, threads, 0, stream >>>
         ( a, b, u, v, data + i, i );
     }
     else if ( nrhs == 4 ) {
       dim3 threads(8, 8);
       dim3 grid(blocks, 2);
-      cu_multinode_solve_t_few_8x8< double, 4 ><<< grid, threads, 0, *stream >>>
+      cu_multinode_solve_t_few_8x8< double, 4 ><<< grid, threads, 0, stream >>>
         ( a, b, u, v, data + i, i );
     }
     else if ( nrhs == 3 ) {
       dim3 threads(8, 8);
       dim3 grid(blocks, 2);
-      cu_multinode_solve_t_few_8x8< double, 3 ><<< grid, threads, 0, *stream >>>
+      cu_multinode_solve_t_few_8x8< double, 3 ><<< grid, threads, 0, stream >>>
         ( a, b, u, v, data + i, i );
     }
     else if ( nrhs == 2 ) {
       dim3 threads(8, 8);
       dim3 grid(blocks, 2);
-      cu_multinode_solve_t_few_8x8< double, 2 ><<< grid, threads, 0, *stream >>>
+      cu_multinode_solve_t_few_8x8< double, 2 ><<< grid, threads, 0, stream >>>
         ( a, b, u, v, data + i, i );
     }
     else {
       dim3 threads(8, 8);
       dim3 grid(blocks, 2);
-      cu_multinode_solve_t_one_8x8< double ><<< grid, threads, 0, *stream >>>
+      cu_multinode_solve_t_one_8x8< double ><<< grid, threads, 0, stream >>>
         ( a, b, u, v, data + i, i );
     }
   }
@@ -1396,7 +1396,7 @@ void spral_ssids_scale( int nrows, int ncols, double* a, int lda, double* s,
 }
 
 // the opposite of spral_ssids_gather
-void spral_ssids_scatter(const cudaStream_t *stream, int nrows, int ncols,
+void spral_ssids_scatter(const cudaStream_t stream, int nrows, int ncols,
       double* src, int lds, double* dst, int ldd, int* ind) {
   int nt = ((nrows*ncols - 1)/32 + 1)*32;
   if ( nt > 1024 )
@@ -1409,13 +1409,13 @@ void spral_ssids_scatter(const cudaStream_t *stream, int nrows, int ncols,
   int nx = (nrows - 1)/tx + 1;
   int ny = (ncols - 1)/ty + 1;
   dim3 grid(nx, ny);
-  cu_scatter< double ><<< grid, threads, 0, *stream >>>
+  cu_scatter< double ><<< grid, threads, 0, stream >>>
     ( nrows, ncols, src, lds, dst, ldd, ind );
 }
 
 // scatters the sum of the two backward solution parts
 // produced by spral_ssids_multinode_solve_t
-void spral_ssids_scatter_sum(const cudaStream_t *stream, int nrows, int ncols,
+void spral_ssids_scatter_sum(const cudaStream_t stream, int nrows, int ncols,
       double* u, int ldu, double* v, int ldv, double* dst, int ldd, int* ind) {
   int nt = ((nrows*ncols - 1)/32 + 1)*32;
   if ( nt > 1024 )
@@ -1428,13 +1428,13 @@ void spral_ssids_scatter_sum(const cudaStream_t *stream, int nrows, int ncols,
   int nx = (nrows - 1)/tx + 1;
   int ny = (ncols - 1)/ty + 1;
   dim3 grid(nx, ny);
-  cu_scatter_sum< double ><<< grid, threads, 0, *stream >>>
+  cu_scatter_sum< double ><<< grid, threads, 0, stream >>>
     ( nrows, ncols, u, ldu, v, ldv, dst, ldd, ind );
 }
 
 // simultaneously computes inverses of the diagonal blocks of several
 // tiled nodal matrices of the same tile-width
-int spral_ssids_multi_Ld_inv(const cudaStream_t *stream, int nnodes,
+int spral_ssids_multi_Ld_inv(const cudaStream_t stream, int nnodes,
       node_data< double >* data, int tile_size, double* d_work) {
   int nblocks;
   int nrows, ncols;
@@ -1489,7 +1489,7 @@ int spral_ssids_multi_Ld_inv(const cudaStream_t *stream, int nnodes,
     if ( status )
       break;
     status = cudaMemcpyAsync(d_inv_data, inv_data, n, cudaMemcpyHostToDevice,
-      *stream);
+      stream);
     if ( status )
       break;
 
@@ -1516,7 +1516,7 @@ int spral_ssids_multi_Ld_inv(const cudaStream_t *stream, int nnodes,
 // initializes the inversion of the previous kernel by inverting
 // the diagonal tiles of blocks to be inverted and applying the inverses
 // to respective tile columns
-int spral_ssids_multi_Ld_inv_init(const cudaStream_t *stream, int nnodes,
+int spral_ssids_multi_Ld_inv_init(const cudaStream_t stream, int nnodes,
       node_data< double >* data, int tile_size, int nud, double* d_work) {
   int ntiles;
   int nrows, ncols;
@@ -1553,7 +1553,7 @@ int spral_ssids_multi_Ld_inv_init(const cudaStream_t *stream, int nnodes,
     if ( status )
       break;
     status = cudaMemcpyAsync(d_init_data, init_data, n, cudaMemcpyHostToDevice,
-      *stream);
+      stream);
     if ( status )
       break;
     cuda_init_presolve( stream, nnodes, d_init_data );
@@ -1583,7 +1583,7 @@ int spral_ssids_multi_Ld_inv_init(const cudaStream_t *stream, int nnodes,
     if ( status )
       break;
     status = cudaMemcpyAsync(d_tile_data, tile_data, n, cudaMemcpyHostToDevice,
-      *stream);
+      stream);
     if ( status )
       break;
     

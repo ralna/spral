@@ -1442,7 +1442,7 @@ using namespace spral::ssids;
 extern "C" {
 
 void spral_ssids_block_ldlt(
-            cudaStream_t *stream, int nrows, int ncols, int p,
+            cudaStream_t stream, int nrows, int ncols, int p,
             double* a, int lda,
             double* f, int ldf,
             double* fd, int ldfd,
@@ -1452,36 +1452,36 @@ void spral_ssids_block_ldlt(
            )
 {
    int nblocks = (nrows - ncols - 1)/(BLOCK_SIZE*(BLOCKS - 1)) + 1;
-   cu_block_ldlt_init<<< 1, BLOCK_SIZE, 0, *stream >>>( ncols, stat, index );
+   cu_block_ldlt_init<<< 1, BLOCK_SIZE, 0, stream >>>( ncols, stat, index );
   
    dim3 threads(BLOCK_SIZE, 2*BLOCK_SIZE);
    cu_block_ldlt
       < double, BLOCK_SIZE, BLOCKS >
-      <<< nblocks, threads, 0, *stream >>>
+      <<< nblocks, threads, 0, stream >>>
       ( nrows, ncols, p, a, lda, f, ldf, fd, ldfd, d, delta, eps, index, stat );
 }
 
-void spral_ssids_block_llt( cudaStream_t *stream, int nrows, int ncols,
+void spral_ssids_block_llt( cudaStream_t stream, int nrows, int ncols,
       double* a, int lda, double* f, int ldf, int* stat ) {
    int smsize = CBLOCKS*BLOCK_SIZE*BLOCK_SIZE*sizeof(double);
    int nblocks = (nrows - ncols - 1)/(BLOCK_SIZE*(CBLOCKS - 1)) + 1;
    dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
    cu_block_chol
       < double, BLOCK_SIZE, CBLOCKS >
-      <<< nblocks, threads, smsize, *stream >>>
+      <<< nblocks, threads, smsize, stream >>>
       ( nrows, ncols, a, lda, f, ldf, stat );
 }
 
-void spral_ssids_collect_stats(cudaStream_t *stream, int nblk,
+void spral_ssids_collect_stats(cudaStream_t stream, int nblk,
       const struct cstat_data_type *csdata, struct cuda_stats *stats) {
    for(int i=0; i<nblk; i+=MAX_CUDA_BLOCKS) {
       int nb = min(MAX_CUDA_BLOCKS, nblk-i);
-      cu_collect_stats <<<nb, 1, 0, *stream>>> (csdata+i, stats);
+      cu_collect_stats <<<nb, 1, 0, stream>>> (csdata+i, stats);
       CudaCheckError();
    }
 }
 
-void spral_ssids_multiblock_ldlt( cudaStream_t *stream, int nblocks,
+void spral_ssids_multiblock_ldlt( cudaStream_t stream, int nblocks,
       struct multiblock_fact_type *mbfdata, double* f, double delta,
       double eps, int* index, int* stat ) {
    dim3 threads(BLOCK_SIZE, 2*BLOCK_SIZE);
@@ -1489,25 +1489,25 @@ void spral_ssids_multiblock_ldlt( cudaStream_t *stream, int nblocks,
       int nb = min(MAX_CUDA_BLOCKS, nblocks - i);
       cu_multiblock_ldlt
          < double, BLOCK_SIZE, MBLOCKS >
-         <<< nb, threads, 0, *stream >>>
+         <<< nb, threads, 0, stream >>>
          ( mbfdata + i, f, delta, eps, index, stat );
    }
 }
 
-void spral_ssids_multiblock_ldlt_setup( cudaStream_t *stream, int nblocks,
+void spral_ssids_multiblock_ldlt_setup( cudaStream_t stream, int nblocks,
       struct multinode_fact_type *ndata, struct multiblock_fact_type *mbfdata,
       int step, int block_size, int blocks, int* stat, int* ind, int* ncb ) {
    dim3 threads(10,8);
    for ( int i = 0; i < nblocks; i += MAX_CUDA_BLOCKS ) {
       int nb = min(MAX_CUDA_BLOCKS, nblocks - i);
       cu_multiblock_fact_setup
-         <<< nb, threads, 0, *stream >>>
+         <<< nb, threads, 0, stream >>>
          ( ndata + i, mbfdata, step, block_size, blocks, 
          i, stat + i, ind + block_size*i, ncb );
    }
 }
 
-void spral_ssids_multiblock_llt( cudaStream_t *stream, int nblocks,
+void spral_ssids_multiblock_llt( cudaStream_t stream, int nblocks,
       struct multiblock_fact_type *mbfdata, double* f, int* stat ) {
    if ( nblocks < 1 )
       return;
@@ -1518,25 +1518,25 @@ void spral_ssids_multiblock_llt( cudaStream_t *stream, int nblocks,
       int nb = min(MAX_CUDA_BLOCKS, nblocks - i);
       cu_multiblock_chol
          < double, BLOCK_SIZE, MCBLOCKS > 
-         <<< nb, threads, smsize, *stream >>>
+         <<< nb, threads, smsize, stream >>>
          ( mbfdata + i, f, stat );
    }
 }
 
-void spral_ssids_multiblock_llt_setup( cudaStream_t *stream, int nblocks,
+void spral_ssids_multiblock_llt_setup( cudaStream_t stream, int nblocks,
       struct multinode_fact_type *ndata, struct multiblock_fact_type *mbfdata,
       int step, int block_size, int blocks, int* stat, int* ncb ) {
    dim3 threads(10,8);
    for ( int i = 0; i < nblocks; i += MAX_CUDA_BLOCKS ) {
       int nb = min(MAX_CUDA_BLOCKS, nblocks - i);
       cu_multiblock_fact_setup
-         <<< nb, threads, 0, *stream >>>
+         <<< nb, threads, 0, stream >>>
          ( ndata + i, mbfdata, step, block_size, blocks, i, stat + i, 0, ncb );
    }
 }
 
 void spral_ssids_square_ldlt( 
-            cudaStream_t *stream, 
+            cudaStream_t stream, 
             int n, 
             double* a, 
             double* f, 
@@ -1550,7 +1550,7 @@ void spral_ssids_square_ldlt(
 {
   int nt = min(n, 256);
   int sm = nt*sizeof(double) + (nt + 2)*sizeof(int);
-  cu_square_ldlt< double ><<< 1, nt, sm, *stream >>>
+  cu_square_ldlt< double ><<< 1, nt, sm, stream >>>
     ( n, a, f, w, d, ld, delta, eps, index, stat );
 }
 

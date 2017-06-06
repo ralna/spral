@@ -1,0 +1,8 @@
+./spral_ssids, with CUDA 8 @ sm_30:
+
+* Testing n>1e5, ne>3.0*n, order=2......fail
+returned  -51, expected    0
+...
+Total number of errors =    1
+Note: The following floating-point exceptions are signalling: IEEE_INVALID_FLAG IEEE_UNDERFLOW_FLAG
+STOP 1
