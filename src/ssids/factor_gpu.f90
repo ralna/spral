@@ -1122,7 +1122,7 @@ contains
     integer(long), dimension(*), intent(in) :: rptr
     integer, dimension(*), intent(out) :: stptr
     integer, dimension(*), intent(out) :: stlist
-    real :: min_loadbalance
+    real, intent(in) :: min_loadbalance
     integer, intent(out) :: st
 
     integer :: node
@@ -1135,6 +1135,7 @@ contains
     integer :: n_lth, nbelow, nchild, stream
     integer, dimension(:), allocatable :: L_th
     real :: loadbalance
+    integer(long) :: minv, maxv
 
     integer :: i, j
     integer(long) :: jj, blkm, blkn, w
@@ -1198,7 +1199,13 @@ contains
           sthead(stream) = node
           stwork(stream) = stwork(stream) + nwork(node)%work_below
        end do
-       loadbalance = real(minval(stwork(:))) / real(maxval(stwork(:)))
+       minv = minval(stwork(:))
+       maxv = maxval(stwork(:))
+       if (minv .eq. maxv) then
+          loadbalance = 1.0
+       else
+          loadbalance = real(dble(minv) / dble(maxv))
+       end if
     end do
 
     ! Store stream's work
