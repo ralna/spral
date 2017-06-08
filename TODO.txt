@@ -9,4 +9,3 @@ STOP 1
 
 dtrsv.h
 dense_factor_kernels.cu
-reorder_kernels.cu

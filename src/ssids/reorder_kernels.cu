@@ -13,47 +13,47 @@
 #define BLOCK_SIZE 8
 #define MAX_CUDA_BLOCKS 65535
 
-#define SM_3X (__CUDA_ARCH__ == 300 || __CUDA_ARCH__ == 350)
+#define SM_3X (__CUDA_ARCH__ >= 300)
 
 namespace spral { namespace ssids {
 
 template< typename ELEMENT_TYPE >
 __global__ void
-cu_copy_mc( int nrows, int ncols,
-            ELEMENT_TYPE* a, int lda,
-            ELEMENT_TYPE* b, int ldb,
-            int* mask )
+cu_copy_mc( const int nrows, const int ncols,
+            const ELEMENT_TYPE *const a, const int lda,
+            ELEMENT_TYPE *const b, const int ldb,
+            const int *const mask )
 {
-  int i = threadIdx.x + blockDim.x*blockIdx.x;
-  int j = threadIdx.y + blockDim.y*blockIdx.y;
+  const int i = threadIdx.x + blockDim.x*blockIdx.x;
+  const int j = threadIdx.y + blockDim.y*blockIdx.y;
   if ( i < nrows && j < ncols && mask[j] > 0 )
     b[i + ldb*j] = a[i + lda*j];
 }
 
 template< typename ELEMENT_TYPE >
 __global__ void
-cu_copy_ic( int nrows, int ncols,
-            ELEMENT_TYPE* a, int lda,
-            ELEMENT_TYPE* b, int ldb,
-            int* ind )
+cu_copy_ic( const int nrows, const int ncols,
+            const ELEMENT_TYPE *const a, const int lda,
+            ELEMENT_TYPE *const b, const int ldb,
+            const int *const ind )
 {
-  int i = threadIdx.x + blockDim.x*blockIdx.x;
-  int j = threadIdx.y + blockDim.y*blockIdx.y;
+  const int i = threadIdx.x + blockDim.x*blockIdx.x;
+  const int j = threadIdx.y + blockDim.y*blockIdx.y;
   if ( i < nrows && j < ncols && ind[j] > 0 )
     b[i + ldb*(ind[j] - 1)] = a[i + lda*j];
 }
 
 template< typename ELEMENT_TYPE >
 __global__ void
-cu_swap_ni2D_ic( int nrows, int ncols,
-                 ELEMENT_TYPE* a, int lda,
-                 ELEMENT_TYPE* b, int ldb,
-                 int* index )
+cu_swap_ni2D_ic( const int nrows, const int ncols,
+                 ELEMENT_TYPE *const a, const int lda,
+                 ELEMENT_TYPE *const b, const int ldb,
+                 const int *const index )
 // swaps columns of non-intersecting 2D arrays a(1:n,index(1:m)) and b(1:n,1:m)
 // index is one-based
 {
-  int i = threadIdx.x + blockDim.x*blockIdx.x;
-  int j = threadIdx.y + blockDim.y*blockIdx.y;
+  const int i = threadIdx.x + blockDim.x*blockIdx.x;
+  const int j = threadIdx.y + blockDim.y*blockIdx.y;
   int k;
   double s;
 
@@ -66,15 +66,15 @@ cu_swap_ni2D_ic( int nrows, int ncols,
 
 template< typename ELEMENT_TYPE >
 __global__ void
-cu_swap_ni2D_ir( int nrows, int ncols,
-                 ELEMENT_TYPE* a, int lda,
-                 ELEMENT_TYPE* b, int ldb,
-                 int* index )
+cu_swap_ni2D_ir( const int nrows, const int ncols,
+                 ELEMENT_TYPE *const a, const int lda,
+                 ELEMENT_TYPE *const b, const int ldb,
+                 const int *const index )
 // swaps rows of non-intersecting 2D arrays a(index(1:n),1:m) and b(1:n,1:m)
 // index is one-based
 {
-  int i = threadIdx.x + blockDim.x*blockIdx.x;
-  int j = threadIdx.y + blockDim.y*blockIdx.y;
+  const int i = threadIdx.x + blockDim.x*blockIdx.x;
+  const int j = threadIdx.y + blockDim.y*blockIdx.y;
   int k;
   double s;
 
@@ -86,12 +86,12 @@ cu_swap_ni2D_ir( int nrows, int ncols,
 }
 
 struct multiswap_type {
-   int nrows;
-   int ncols;
-   int k;
-   double *lcol;
-   int lda;
-   int off;
+  int nrows;
+  int ncols;
+  int k;
+  double *lcol;
+  int lda;
+  int off;
 };
 
 template< typename ELEMENT_TYPE >
@@ -100,14 +100,14 @@ cu_multiswap_ni2D_c( struct multiswap_type *swapdata )
 // swaps non-intersecting rows or cols of a 2D multiarray a
 {
   swapdata += blockIdx.x;
-  int nrows = swapdata->nrows;
+  const int nrows = swapdata->nrows;
   if ( blockIdx.y*blockDim.x >= nrows )
     return;
 
-  int k     = swapdata->k;
-  ELEMENT_TYPE *a = swapdata->lcol;
-  int lda   = swapdata->lda;
-  int off  = lda*swapdata->off;
+  const int k     = swapdata->k;
+  ELEMENT_TYPE *const a = swapdata->lcol;
+  const int lda   = swapdata->lda;
+  const int off  = lda*swapdata->off;
   ELEMENT_TYPE s;
 
   for ( int i = threadIdx.x + blockIdx.y*blockDim.x; i < nrows;
@@ -125,14 +125,14 @@ cu_multiswap_ni2D_r( struct multiswap_type *swapdata )
 // swaps non-intersecting rows or cols of a 2D multiarray a
 {
   swapdata += blockIdx.x;
-  int ncols = swapdata->ncols;
+  const int ncols = swapdata->ncols;
   if ( blockIdx.y*blockDim.y >= ncols )
     return;
 
-  int k     = swapdata->k;
-  ELEMENT_TYPE *a = swapdata->lcol;
-  int lda   = swapdata->lda;
-  int off  = swapdata->off;
+  const int k     = swapdata->k;
+  ELEMENT_TYPE *const a = swapdata->lcol;
+  const int lda   = swapdata->lda;
+  const int off  = swapdata->off;
   ELEMENT_TYPE s;
 
   for ( int i = threadIdx.x; i < k; i += blockDim.x )
@@ -147,14 +147,14 @@ cu_multiswap_ni2D_r( struct multiswap_type *swapdata )
 template< typename ELEMENT_TYPE >
 __global__ void
 cu_reorder_rows(
-                int nrows, int ncols,
-                ELEMENT_TYPE* a, int lda,
-                ELEMENT_TYPE* b, int ldb,
-                int* index
+                const int nrows, const int ncols,
+                ELEMENT_TYPE *const a, const int lda,
+                ELEMENT_TYPE *const b, const int ldb,
+                const int *const index
                )
 {
   int x;
-  int y = threadIdx.y + blockIdx.y*blockDim.y;
+  const int y = threadIdx.y + blockIdx.y*blockDim.y;
 
   for ( x = threadIdx.x; x < nrows; x += blockDim.x )
     if ( y < ncols )
@@ -167,14 +167,14 @@ cu_reorder_rows(
 
 template< typename ELEMENT_TYPE, unsigned int SIZE_X, unsigned int SIZE_Y >
 __global__ void
-cu_reorder_cols2( int nrows, int ncols,
-                  ELEMENT_TYPE* a, int lda,
-                  ELEMENT_TYPE* b, int ldb,
-                  int* index, int mode )
+cu_reorder_cols2( const int nrows, const int ncols,
+                  ELEMENT_TYPE *const a, const int lda,
+                  ELEMENT_TYPE *const b, const int ldb,
+                  const int *const index, const int mode )
 {
-  int ix = threadIdx.x + blockIdx.x*blockDim.x;
+  const int ix = threadIdx.x + blockIdx.x*blockDim.x;
 
-  __shared__ ELEMENT_TYPE work[SIZE_X*SIZE_Y];
+  __shared__ volatile ELEMENT_TYPE work[SIZE_X*SIZE_Y];
 
   if ( blockIdx.y  ) {
     if ( mode > 0 ) {
@@ -210,14 +210,14 @@ cu_reorder_cols2( int nrows, int ncols,
 
 template< typename ELEMENT_TYPE, unsigned int SIZE_X, unsigned int SIZE_Y >
 __global__ void
-cu_reorder_rows2( int nrows, int ncols,
-                  ELEMENT_TYPE* a, int lda,
-                  ELEMENT_TYPE* b, int ldb,
-                  int* index, int mode )
+cu_reorder_rows2( const int nrows, const int ncols,
+                  ELEMENT_TYPE *const a, const int lda,
+                  ELEMENT_TYPE *const b, const int ldb,
+                  const int *const index, const int mode )
 {
-  int iy = threadIdx.y + blockIdx.x*blockDim.y;
+  const int iy = threadIdx.y + blockIdx.x*blockDim.y;
 
-  __shared__ ELEMENT_TYPE work[SIZE_X*SIZE_Y];
+  __shared__ volatile ELEMENT_TYPE work[SIZE_X*SIZE_Y];
 
   if ( blockIdx.y ) {
     if ( mode > 0 ) {
@@ -258,13 +258,13 @@ template< typename ELEMENT_TYPE, int NTX >
 __device__ void
 __forceinline__ // Required to avoid errors about reg counts compiling with -G
 copy_L_LD_no_perm(
-      int nblk, int bidx, int tid,
-      int nrows, int ncols,
-      ELEMENT_TYPE *dest, int ldd,
-      const ELEMENT_TYPE *src, int lds
+      const int nblk, const int bidx, const int tid,
+      int nrows, const int ncols,
+      ELEMENT_TYPE *dest, const int ldd,
+      const ELEMENT_TYPE *src, const int lds
 ) {
-   int tx = tid % NTX;
-   int ty = tid / NTX;
+   const int tx = tid % NTX;
+   const int ty = tid / NTX;
    src += NTX*bidx;
    dest += NTX*bidx;
    nrows -= NTX*bidx;
@@ -278,9 +278,9 @@ copy_L_LD_no_perm(
    [in case it overlaps itself] */
 template < int SIZE_X >
 __device__ void
-shuffle_perm_shmem( int n, const int *indr, int *perm ) {
+shuffle_perm_shmem( const int n, const volatile int *const indr, int *const perm ) {
    // Update permutation
-   __shared__ int iwork[SIZE_X];
+   __shared__ volatile int iwork[SIZE_X];
    if ( threadIdx.x < n && threadIdx.y == 0 )
       iwork[indr[threadIdx.x] - 1] = perm[threadIdx.x];
    __syncthreads();
@@ -297,21 +297,21 @@ template< typename ELEMENT_TYPE, unsigned int SIZE_X, unsigned int SIZE_Y >
 __device__ void
 __forceinline__ // Required to avoid errors about reg counts compiling with -G
 copy_L_LD_perm_shmem(
-      int block, int nblocks,
-      int done, int pivoted, int delayed,
-      int nrows, int ncols,
-      int ib, int jb,
-      int offc, int offp,
-      int ld,
-      int *indr,
-      double *a, double *b, const double *c,
-      int *perm
+      const int block, const int nblocks,
+      const int done, const int pivoted, const int delayed,
+      const int nrows, const int ncols,
+      const int ib, const int jb,
+      const int offc, const int offp,
+      const int ld,
+      volatile int *const indr,
+      double *const a, double *const b, const double *const c,
+      int *const perm
 ) {
-   __shared__ ELEMENT_TYPE work1[SIZE_X*SIZE_Y];
-   __shared__ ELEMENT_TYPE work2[SIZE_X*SIZE_Y];
+   __shared__ volatile ELEMENT_TYPE work1[SIZE_X*SIZE_Y];
+   __shared__ volatile ELEMENT_TYPE work2[SIZE_X*SIZE_Y];
 #if (!SM_3X)
-   __shared__ ELEMENT_TYPE work3[SIZE_X*SIZE_Y];
-   __shared__ ELEMENT_TYPE work4[SIZE_X*SIZE_Y];
+   __shared__ volatile ELEMENT_TYPE work3[SIZE_X*SIZE_Y];
+   __shared__ volatile ELEMENT_TYPE work4[SIZE_X*SIZE_Y];
 #endif 
 
    // Extend permutation array to cover non-pivoted columns
@@ -344,9 +344,9 @@ copy_L_LD_perm_shmem(
       for ( int i = jb + blockDim.x*(block - 1); i < nrows + baseStep;
             i += baseStep * 2 ) {
 #endif
-         int ix = i + threadIdx.x;
+         const int ix = i + threadIdx.x;
 #if (!SM_3X)
-         int ix2 = ix + baseStep;
+         const int ix2 = ix + baseStep;
 #endif
          __syncthreads();
          
@@ -419,9 +419,9 @@ copy_L_LD_perm_shmem(
       for ( int i = blockDim.y*(block - 1); i < ncols + baseStep;
             i += baseStep * 2 ) {
 #endif
-         int iy = i + threadIdx.y;
+         const int iy = i + threadIdx.y;
 #if (!SM_3X)
-         int iy2 = iy + baseStep;
+         const int iy2 = iy + baseStep;
 #endif
          __syncthreads();
 
@@ -465,7 +465,7 @@ copy_L_LD_perm_shmem(
       // row /and/ column permutations.
       shuffle_perm_shmem< SIZE_X > ( delayed + jb - ib + 1, indr, &perm[offp + done] );
 
-      int pass = threadIdx.x < jb - done && threadIdx.y < jb - done;
+      const int pass = threadIdx.x < jb - done && threadIdx.y < jb - done;
 
       // Handle L and LD
       if ( pass ) {
@@ -522,22 +522,22 @@ template< typename ELEMENT_TYPE, unsigned int SIZE_X, unsigned int SIZE_Y >
 __device__ void
 __forceinline__ // Required to avoid errors about reg counts compiling with -G
 copy_L_LD_perm_noshmem(
-      int node,
-      int block, int nblocks,
-      int done, int pivoted, int delayed,
-      int nrows, int ncols,
-      int ib, int jb,
-      int offc, int offp,
-      int ld,
-      const int *ind,
-      int *indf,
-      double *a, double *b, const double *c,
-      int *perm
+      const int node,
+      const int block, const int nblocks,
+      const int done, const int pivoted, const int delayed,
+      const int nrows, const int ncols,
+      const int ib, const int jb,
+      const int offc, const int offp,
+      const int ld,
+      const int *const ind,
+      volatile int *const indf,
+      double *const a, double *const b, const double *const c,
+      int *const perm
 ) {
 
-   int off1 = done;
-   int off2 = ib - 1;
-   int offi = node*SIZE_Y/2;
+   const int off1 = done;
+   const int off2 = ib - 1;
+   const int offi = node*SIZE_Y/2;
 
    // We handle the two pivoted x pivoted blocks where row and columns cross
    // over seperately using the first block.
@@ -545,13 +545,13 @@ copy_L_LD_perm_noshmem(
    // All remaining rows and columns are handlded by the remaining blocks.
    if ( block ) {
       // Handle parts of matrix that require EITHER row OR col shuffle
-      int tx = (threadIdx.y < SIZE_Y/2) ? threadIdx.x : threadIdx.x + blockDim.x;
-      int ty = (threadIdx.y < SIZE_Y/2) ? threadIdx.y : threadIdx.y - SIZE_Y/2;
+      const int tx = (threadIdx.y < SIZE_Y/2) ? threadIdx.x : threadIdx.x + blockDim.x;
+      const int ty = (threadIdx.y < SIZE_Y/2) ? threadIdx.y : threadIdx.y - SIZE_Y/2;
       // Swap a[:,done:done+pivoted] and a[:,ib:jb] pulling in c[] as we go
       for ( int x = tx + 2*blockDim.x*(block - 1);
             x < nrows && ty < jb - ib + 1;
             x += 2*blockDim.x*(nblocks - 1) ) {
-         int y = ind[offi + ty] - 1;
+         const int y = ind[offi + ty] - 1;
          if ( (x >= done   && x < done + jb - ib + 1)
                || (x >= ib - 1 && x < jb) || y < 0 )
             continue; // handled separately
@@ -562,11 +562,11 @@ copy_L_LD_perm_noshmem(
       for ( int x = tx + 2*blockDim.x*(block - 1);
             x < nrows && ty < jb - ib + 1;
             x += 2*blockDim.x*(nblocks - 1) ) {
-         int y = ind[offi + ty] - 1;
+         const int y = ind[offi + ty] - 1;
          if ( ( x >= done && x < done + jb - ib + 1 )
                || ( x >= ib - 1 && x < jb ) || y < 0)
             continue; // handled separately
-         ELEMENT_TYPE s = b[x + ld*(off1 + y)];
+         const ELEMENT_TYPE s = b[x + ld*(off1 + y)];
          b[x + ld*(off1 + y)] =
          b[x + ld*(off2 + ty)];
          b[x + ld*(off2 + ty)] = s;
@@ -577,11 +577,11 @@ copy_L_LD_perm_noshmem(
       for ( int y = threadIdx.y + blockDim.y*(block - 1);
             y < ncols && threadIdx.x < jb - ib + 1;
             y += blockDim.y*(nblocks - 1) ) {
-         int x = ind[offi + threadIdx.x] - 1;
+         const int x = ind[offi + threadIdx.x] - 1;
          if ( (y >= done && y < done + jb - ib + 1)
                || (y >= ib - 1 && y < jb) || x < 0 )
             continue; // handled separately
-         ELEMENT_TYPE s = a[off1 + x + ld*y];
+         const ELEMENT_TYPE s = a[off1 + x + ld*y];
          a[off1 + x + ld*y] = a[off2 + threadIdx.x + ld*y];
          a[off2 + threadIdx.x + ld*y] = s;
       }
@@ -589,11 +589,11 @@ copy_L_LD_perm_noshmem(
       for ( int y = threadIdx.y + blockDim.y*(block - 1);
             y < ncols && threadIdx.x < jb - ib + 1;
             y += blockDim.y*(nblocks - 1) ) {
-         int x = ind[offi + threadIdx.x] - 1;
+         const int x = ind[offi + threadIdx.x] - 1;
          if ( (y >= done   && y < done + jb - ib + 1)
                || (y >= ib - 1 && y < jb) || x < 0)
             continue; // handled separately
-         ELEMENT_TYPE s = b[off1 + x + ld*y];
+         const ELEMENT_TYPE s = b[off1 + x + ld*y];
          b[off1 + x + ld*y] = b[off2 + threadIdx.x + ld*y];
          b[off2 + threadIdx.x + ld*y] = s;
       }
@@ -602,9 +602,9 @@ copy_L_LD_perm_noshmem(
       // Handle part of matrix that requires BOTH row AND col shuffle
       if ( threadIdx.x < jb - ib + 1 && threadIdx.y == 0 ) {
          // Update permutation
-         int i = indf[threadIdx.x] - 1;
+         const int i = indf[threadIdx.x] - 1;
          if ( i >= 0 ) {
-            int s = perm[offp + ib - 1 + threadIdx.x];
+            const int s = perm[offp + ib - 1 + threadIdx.x];
             perm[offp + ib - 1 + threadIdx.x] = perm[offp + done + i];
             perm[offp + done + i] = s;
          }
@@ -636,7 +636,7 @@ copy_L_LD_perm_noshmem(
       x = ind[offi + threadIdx.x] - 1;
       y = done + threadIdx.y;
       if ( threadIdx.x < jb - ib + 1 && y < done + jb - ib + 1 && x >= 0 ) {
-         ELEMENT_TYPE s = a[off1 + x + ld*y];
+         const ELEMENT_TYPE s = a[off1 + x + ld*y];
          a[off1 + x + ld*y] = a[off2 + threadIdx.x + ld*y];
          a[off2 + threadIdx.x + ld*y] = s;
       }
@@ -644,7 +644,7 @@ copy_L_LD_perm_noshmem(
       x = ind[offi + threadIdx.x] - 1;
       y = ib - 1 + threadIdx.y;
       if ( threadIdx.x < jb - ib + 1 && y < jb && x >= 0 ) {
-         ELEMENT_TYPE s = a[off1 + x + ld*y];
+         const ELEMENT_TYPE s = a[off1 + x + ld*y];
          a[off1 + x + ld*y] = a[off2 + threadIdx.x + ld*y];
          a[off2 + threadIdx.x + ld*y] = s;
       }
@@ -655,7 +655,7 @@ copy_L_LD_perm_noshmem(
       y = ind[offi + threadIdx.y] - 1;
       if ( x < done + jb - ib + 1 && threadIdx.y < jb - ib + 1
             && y >= 0 ) {
-         ELEMENT_TYPE s = b[x + ld*(off1 + y)];
+         const ELEMENT_TYPE s = b[x + ld*(off1 + y)];
          b[x + ld*(off1 + y)] =
             b[x + ld*(off2 + threadIdx.y)];
          b[x + ld*(off2 + threadIdx.y)] = s;
@@ -665,7 +665,7 @@ copy_L_LD_perm_noshmem(
       y = ind[offi + threadIdx.y] - 1;
       if ( x < jb && threadIdx.y < jb - ib + 1
             && y >= 0 ) {
-         ELEMENT_TYPE s = b[x + ld*(off1 + y)];
+         const ELEMENT_TYPE s = b[x + ld*(off1 + y)];
          b[x + ld*(off1 + y)] =
             b[x + ld*(off2 + threadIdx.y)];
          b[x + ld*(off2 + threadIdx.y)] = s;
@@ -676,7 +676,7 @@ copy_L_LD_perm_noshmem(
       x = ind[offi + threadIdx.x] - 1;
       y = done + threadIdx.y;
       if ( threadIdx.x < jb - ib + 1 && y < done + jb - ib + 1 && x >= 0 ) {
-         ELEMENT_TYPE s = b[off1 + x + ld*y];
+         const ELEMENT_TYPE s = b[off1 + x + ld*y];
          b[off1 + x + ld*y] = b[off2 + threadIdx.x + ld*y];
          b[off2 + threadIdx.x + ld*y] = s;
       }
@@ -684,7 +684,7 @@ copy_L_LD_perm_noshmem(
       x = ind[offi + threadIdx.x] - 1;
       y = ib - 1 + threadIdx.y;
       if ( threadIdx.x < jb - ib + 1 && y < jb && x >= 0 ) {
-         ELEMENT_TYPE s = b[off1 + x + ld*y];
+         const ELEMENT_TYPE s = b[off1 + x + ld*y];
          b[off1 + x + ld*y] = b[off2 + threadIdx.x + ld*y];
          b[off2 + threadIdx.x + ld*y] = s;
       }
@@ -692,9 +692,9 @@ copy_L_LD_perm_noshmem(
 }
 
 struct multireorder_data {
-   int node;
-   int block;
-   int nblocks;
+  int node;
+  int block;
+  int nblocks;
 };
 
 template< typename ELEMENT_TYPE, unsigned int SIZE_X, unsigned int SIZE_Y >
@@ -707,14 +707,14 @@ __global__ void
 cu_multireorder(
                 const struct multinode_fact_type *ndata,
                 const struct multireorder_data* rdata,
-                const ELEMENT_TYPE* c,
-                const int* stat,
-                const int* ind,
-                int* perm,
-                int* ncb) {
-   __shared__ int indf[SIZE_X]; // index from node_fact
-   __shared__ int indr[SIZE_X]; // reorder index
-   __shared__ int simple;
+                const ELEMENT_TYPE *const c,
+                const int *const stat,
+                const int *const ind,
+                int *const perm,
+                int *const ncb) {
+   __shared__ volatile int indf[SIZE_X]; // index from node_fact
+   __shared__ volatile int indr[SIZE_X]; // reorder index
+   __shared__ volatile int simple;
 
    // Reset ncb ready for next call of muliblock_fact_setup()
    if ( blockIdx.x == 0 && threadIdx.x == 0 && threadIdx.y == 0 ) {
@@ -724,24 +724,24 @@ cu_multireorder(
 
    // Load data on block
    rdata += blockIdx.x;
-   int node = rdata->node;
+   const int node = rdata->node;
    ndata += node;
-   int ib   = ndata->ib;
-   int jb   = ndata->jb;
+   const int ib   = ndata->ib;
+   const int jb   = ndata->jb;
    if ( jb < ib )
       return;
-   int pivoted = stat[node];
+   const int pivoted = stat[node];
    if ( pivoted < 1 )
       return;
-   int nrows = ndata->nrows;
-   int bidx = rdata->block;
+   const int nrows = ndata->nrows;
+   const int bidx = rdata->block;
    if ( bidx > 1 && (bidx - 1)*blockDim.x >= nrows )
       return;
 
-   int done = ndata->done;
+   const int done = ndata->done;
 
-   int ld = nrows;
-   int delayed = ib - done - 1; // Number delayed before most recent factor
+   const int ld = nrows;
+   const int delayed = ib - done - 1; // Number delayed before most recent factor
 
    if ( threadIdx.x == 0 && threadIdx.y == 0 )
       simple = (delayed == 0); // true if we don't need to offset
@@ -753,14 +753,14 @@ cu_multireorder(
       if ( jb - ib + 1 > delayed )
          indr[delayed + threadIdx.x] = next;
       if ( indf[threadIdx.x] != threadIdx.x + 1 )
-         atomicMin(&simple, 0);
+         atomicMin((int*)&simple, 0);
    }
    __syncthreads();
 
-   ELEMENT_TYPE *a = ndata->lval;
-   ELEMENT_TYPE *b = ndata->ldval;
-   int offc = ndata->lbuf;
-   int nblk = rdata->nblocks;
+   ELEMENT_TYPE *const a = ndata->lval;
+   ELEMENT_TYPE *const b = ndata->ldval;
+   const int offc = ndata->lbuf;
+   const int nblk = rdata->nblocks;
    if ( simple ) {
       // Copy successful columns from workspace c to factors a without an
       // offset or permutation.
@@ -770,8 +770,8 @@ cu_multireorder(
    }
    else {
       // We need a permutation
-      int ncols = ndata->ncols;
-      int offp = ndata->offp;
+      const int ncols = ndata->ncols;
+      const int offp = ndata->offp;
       if ( jb - ib + 1 > delayed ) {
          // Can't just shuffle along, as pivoted columns overlap with where they
          // need to be. However, we know that pivoted+delayed < 2*BLOCK_SIZE, so
@@ -795,10 +795,10 @@ template< typename ELEMENT_TYPE, unsigned int SIZE_X, unsigned int SIZE_Y >
 __global__ void
 cu_multicopy(
               const struct multinode_fact_type *ndata,
-              const struct multireorder_data* rdata,
-              ELEMENT_TYPE* b,
-              int* stat,
-              int* ncb
+              const struct multireorder_data *rdata,
+              ELEMENT_TYPE *const b,
+              int *const stat,
+              int *const ncb
             )
 {
 
@@ -808,24 +808,24 @@ cu_multicopy(
    }
 
    rdata += blockIdx.x;
-   int node = rdata->node;
+   const int node = rdata->node;
    ndata += node;
-   int ib   = ndata->ib;
-   int jb   = ndata->jb;
+   const int ib   = ndata->ib;
+   const int jb   = ndata->jb;
    if ( jb < ib )
       return;
-   int pivoted = stat[node];
+   const int pivoted = stat[node];
    if ( pivoted < 1 )
       return;
-   int nrows = ndata->nrows;
-   int block = rdata->block;
-   int nblocks = rdata->nblocks;
+   const int nrows = ndata->nrows;
+   const int block = rdata->block;
+   const int nblocks = rdata->nblocks;
    if ( block > 1 && (block - 1)*blockDim.x >= nrows )
       return;
 
-   int done = ndata->done;
-   ELEMENT_TYPE *a = ndata->lval;
-   int offb = ndata->lbuf;
+   const int done = ndata->done;
+   ELEMENT_TYPE *const a = ndata->lval;
+   const int offb = ndata->lbuf;
    for ( int x = threadIdx.x + blockDim.x*block;
         x < nrows && threadIdx.y < pivoted;
         x += blockDim.x*nblocks ) {
@@ -834,9 +834,9 @@ cu_multicopy(
 }
 
 struct multisymm_type {
-   double *lcol;
-   int ncols;
-   int nrows;
+  double *lcol;
+  int ncols;
+  int nrows;
 };
 
 /*
@@ -846,12 +846,12 @@ struct multisymm_type {
  */
 template< typename ELEMENT_TYPE >
 __global__ void
-cu_multisymm( const struct multisymm_type* msdata )
+cu_multisymm( const struct multisymm_type *msdata )
 {
   msdata += blockIdx.x;
-  ELEMENT_TYPE *a = msdata->lcol;
-  int ncols = msdata->ncols;
-  int nrows = msdata->nrows;
+  ELEMENT_TYPE *const a = msdata->lcol;
+  const int ncols = msdata->ncols;
+  const int nrows = msdata->nrows;
   for ( int i = threadIdx.x + blockDim.x*blockIdx.y; i < ncols;
         i += blockDim.x*gridDim.y )
     for ( int j = threadIdx.y + blockDim.y*blockIdx.z; j < i;
@@ -869,59 +869,59 @@ using namespace spral::ssids;
 
 extern "C" {
 
-void spral_ssids_copy_ic(cudaStream_t stream, int nrows, int ncols,
-    double* a, int lda, double* b, int ldb, int* ind) {
-  int rb = (nrows - 1)/BLOCK_SIZE + 1;
-  int cb = (ncols - 1)/BLOCK_SIZE + 1;
-  dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
-  dim3 grid(rb, cb);
+void spral_ssids_copy_ic(const cudaStream_t stream, const int nrows, const int ncols,
+    double *const a, const int lda, double *const b, const int ldb, int *const ind) {
+  const int rb = (nrows + (BLOCK_SIZE - 1))/BLOCK_SIZE;
+  const int cb = (ncols + (BLOCK_SIZE - 1))/BLOCK_SIZE;
+  const dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
+  const dim3 grid(rb, cb);
   cu_copy_ic< double >
     <<< grid, threads, 0, stream >>>
     ( nrows, ncols, a, lda, b, ldb, ind );
 }
 
-void spral_ssids_copy_mc(cudaStream_t stream, int nrows, int ncols, double* a,
-      int lda, double* b, int ldb, int* mask) {
-  int rb = (nrows - 1)/BLOCK_SIZE + 1;
-  int cb = (ncols - 1)/BLOCK_SIZE + 1;
-  dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
-  dim3 grid(rb, cb);
+void spral_ssids_copy_mc(const cudaStream_t stream, const int nrows, const int ncols, double *const a,
+      const int lda, double *const b, const int ldb, int *const mask) {
+  const int rb = (nrows + (BLOCK_SIZE - 1))/BLOCK_SIZE;
+  const int cb = (ncols + (BLOCK_SIZE - 1))/BLOCK_SIZE;
+  const dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
+  const dim3 grid(rb, cb);
   cu_copy_mc< double >
     <<< grid, threads, 0, stream >>>
     ( nrows, ncols, a, lda, b, ldb, mask );
 }
 
-void spral_ssids_multisymm(cudaStream_t stream, int nblocks,
-      const struct multisymm_type* msdata) {
-  dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
+void spral_ssids_multisymm(const cudaStream_t stream, const int nblocks,
+      const struct multisymm_type *const msdata) {
+  const dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
   for ( int i = 0; i < nblocks; i += MAX_CUDA_BLOCKS ) {
-    int nb = min(MAX_CUDA_BLOCKS, nblocks - i);
-    dim3 grid(nb,4,4);
+    const int nb = min(MAX_CUDA_BLOCKS, nblocks - i);
+    const dim3 grid(nb,4,4);
     cu_multisymm< double ><<< grid, threads, 0, stream >>>( msdata + i );
   }
 }
 
-void spral_ssids_multicopy(cudaStream_t stream, int nblocks,
-      const struct multinode_fact_type *ndata, 
-      const struct multireorder_data *rdata,
-      double* a, double* b, int* stat, int* ncb) {
-  dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
+void spral_ssids_multicopy(const cudaStream_t stream, const int nblocks,
+      const struct multinode_fact_type *const ndata,
+      const struct multireorder_data *const rdata,
+      double *const a, double *const b, int *const stat, int *const ncb) {
+  const dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
   for ( int i = 0; i < nblocks; i += MAX_CUDA_BLOCKS ) {
-    int nb = min(MAX_CUDA_BLOCKS, nblocks - i);
+    const int nb = min(MAX_CUDA_BLOCKS, nblocks - i);
     cu_multicopy< double, BLOCK_SIZE, BLOCK_SIZE >
       <<< nb, threads, 0, stream >>>
       ( ndata, rdata + i, b, stat, ncb );
   }
 }
 
-void spral_ssids_multireorder(cudaStream_t stream, int nblocks,
-      const struct multinode_fact_type *ndata, 
-      const struct multireorder_data *rdata,
-      double* c, int* stat, int* ind, int* index, int* ncb) {
-  dim3 threads(2*BLOCK_SIZE, 2*BLOCK_SIZE);
+void spral_ssids_multireorder(const cudaStream_t stream, const int nblocks,
+      const struct multinode_fact_type *const ndata,
+      const struct multireorder_data *const rdata,
+      double *const c, int *const stat, int *const ind, int *const index, int *const ncb) {
+  const dim3 threads(2*BLOCK_SIZE, 2*BLOCK_SIZE);
   for ( int i = 0; i < nblocks; i += MAX_CUDA_BLOCKS ) {
-    int nb = min(MAX_CUDA_BLOCKS, nblocks - i);
-    dim3 grid(nb,1);
+    const int nb = min(MAX_CUDA_BLOCKS, nblocks - i);
+    const dim3 grid(nb,1);
     cu_multireorder< double, 2*BLOCK_SIZE, 2*BLOCK_SIZE >
       <<< grid, threads, 0, stream >>>
       ( ndata, rdata + i, c, stat, ind, index, ncb );
@@ -929,62 +929,62 @@ void spral_ssids_multireorder(cudaStream_t stream, int nblocks,
 }
 
 // ncols <= 2*BLOCK_SIZE
-void spral_ssids_reorder_cols2(cudaStream_t stream, int nrows, int ncols,
-    double* a, int lda, double* b, int ldb, int* index, int mode ) {
-  int rb = (nrows - 1)/BLOCK_SIZE + 1;
-  dim3 grid(rb, 2);
+void spral_ssids_reorder_cols2(const cudaStream_t stream, const int nrows, const int ncols,
+    double *const a, const int lda, double *const b, const int ldb, int *const index, const int mode ) {
+  const int rb = (nrows + (BLOCK_SIZE - 1))/BLOCK_SIZE;
+  const dim3 grid(rb, 2);
 
   if ( ncols <= BLOCK_SIZE ) {
-    dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
+    const dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
     cu_reorder_cols2< double, BLOCK_SIZE, BLOCK_SIZE >
       <<< grid, threads, 0, stream >>>
       ( nrows, ncols, a, lda, b, ldb, index, mode );
   }
   else if ( ncols <= 2*BLOCK_SIZE ) {
-    dim3 threads(BLOCK_SIZE, 2*BLOCK_SIZE);
+    const dim3 threads(BLOCK_SIZE, 2*BLOCK_SIZE);
     cu_reorder_cols2< double, BLOCK_SIZE, 2*BLOCK_SIZE >
       <<< grid, threads, 0, stream >>>
       ( nrows, ncols, a, lda, b, ldb, index, mode );
   }
 }
 
-void spral_ssids_reorder_rows(cudaStream_t stream, int nrows, int ncols,
-      double* a, int lda, double* b, int ldb, int* index) {
-  int cb = (ncols - 1)/BLOCK_SIZE + 1;
-  dim3 grid(1, cb);
-  int tx = min(nrows, 1024/BLOCK_SIZE);
-  dim3 threads(tx, BLOCK_SIZE);
+void spral_ssids_reorder_rows(const cudaStream_t stream, const int nrows, const int ncols,
+      double *const a, const int lda, double *const b, const int ldb, int *const index) {
+  const int cb = (ncols + (BLOCK_SIZE - 1))/BLOCK_SIZE;
+  const dim3 grid(1, cb);
+  const int tx = min(nrows, 1024/BLOCK_SIZE);
+  const dim3 threads(tx, BLOCK_SIZE);
   cu_reorder_rows< double >
     <<< grid, threads, 0, stream >>>
     ( nrows, ncols, a, lda, b, ldb, index );
 }
 
 // nrows <= 2*BLOCK_SIZE
-void spral_ssids_reorder_rows2(cudaStream_t stream, int nrows, int ncols,
-    double* a, int lda, double* b, int ldb, int* index, int mode ) {
-  int cb = (ncols - 1)/BLOCK_SIZE + 1;
-  dim3 grid(cb, 2);
+void spral_ssids_reorder_rows2(const cudaStream_t stream, const int nrows, const int ncols,
+    double *const a, const int lda, double *const b, const int ldb, int *const index, const int mode ) {
+  const int cb = (ncols + (BLOCK_SIZE - 1))/BLOCK_SIZE;
+  const dim3 grid(cb, 2);
 
   if ( nrows <= BLOCK_SIZE ) {
-    dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
+    const dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
     cu_reorder_rows2< double, BLOCK_SIZE, BLOCK_SIZE >
       <<< grid, threads, 0, stream >>>
       ( nrows, ncols, a, lda, b, ldb, index, mode );
   }
   else if ( nrows <= 2*BLOCK_SIZE ) {
-    dim3 threads(2*BLOCK_SIZE, BLOCK_SIZE);
+    const dim3 threads(2*BLOCK_SIZE, BLOCK_SIZE);
     cu_reorder_rows2< double, 2*BLOCK_SIZE, BLOCK_SIZE >
       <<< grid, threads, 0, stream >>>
       ( nrows, ncols, a, lda, b, ldb, index, mode );
   }
 }
 
-void spral_ssids_swap_ni2Dm(cudaStream_t stream, int nblocks,
-      struct multiswap_type *swapdata) {
-   dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
+void spral_ssids_swap_ni2Dm(const cudaStream_t stream, const int nblocks,
+      struct multiswap_type *const swapdata) {
+   const dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
    for ( int i = 0; i < nblocks; i += MAX_CUDA_BLOCKS ) {
-      int nb = min(MAX_CUDA_BLOCKS, nblocks - i);
-      dim3 grid(nb,8);
+      const int nb = min(MAX_CUDA_BLOCKS, nblocks - i);
+      const dim3 grid(nb,8);
       cu_multiswap_ni2D_c
          < double >
          <<< grid, threads, 0, stream >>>
@@ -996,23 +996,23 @@ void spral_ssids_swap_ni2Dm(cudaStream_t stream, int nblocks,
    }
 }
 
-void spral_ssids_swap_ni2D_ic(cudaStream_t stream, int nrows, int ncols,
-      double* a, int lda, double* b, int ldb, int* index) {
-  int rb = (nrows - 1)/BLOCK_SIZE + 1;
-  int cb = (ncols - 1)/BLOCK_SIZE + 1;
-  dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
-  dim3 grid(rb, cb);
+void spral_ssids_swap_ni2D_ic(const cudaStream_t stream, const int nrows, const int ncols,
+      double *const a, const int lda, double *const b, const int ldb, int *const index) {
+  const int rb = (nrows + (BLOCK_SIZE - 1))/BLOCK_SIZE;
+  const int cb = (ncols + (BLOCK_SIZE - 1))/BLOCK_SIZE;
+  const dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
+  const dim3 grid(rb, cb);
   cu_swap_ni2D_ic< double >
     <<< grid, threads, 0, stream >>>
     ( nrows, ncols, a, lda, b, ldb, index );
 }
 
-void spral_ssids_swap_ni2D_ir(cudaStream_t stream, int nrows, int ncols,
-    double* a, int lda, double* b, int ldb, int* index) {
-  int rb = (nrows - 1)/BLOCK_SIZE + 1;
-  int cb = (ncols - 1)/BLOCK_SIZE + 1;
-  dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
-  dim3 grid(rb, cb);
+void spral_ssids_swap_ni2D_ir(const cudaStream_t stream, const int nrows, const int ncols,
+    double *const a, const int lda, double *const b, const int ldb, int *const index) {
+  const int rb = (nrows + (BLOCK_SIZE - 1))/BLOCK_SIZE;
+  const int cb = (ncols + (BLOCK_SIZE - 1))/BLOCK_SIZE;
+  const dim3 threads(BLOCK_SIZE, BLOCK_SIZE);
+  const dim3 grid(rb, cb);
   cu_swap_ni2D_ir< double >
     <<< grid, threads, 0, stream >>>
     ( nrows, ncols, a, lda, b, ldb, index );
