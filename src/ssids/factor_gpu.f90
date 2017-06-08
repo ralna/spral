@@ -3617,6 +3617,7 @@ contains
        end do
        off = (2*nd + 1)*C_SIZEOF(dummy_real)
        gpu_u = c_ptr_plus(fact_data%gpu_diag, off)
+       if (max_lx_size .lt. nc) stop 'gpu_v shorter than lwork'
        cuda_error = cudaMemcpyAsync_H2D(gpu_v, C_LOC(lwork), &
             nc*C_SIZEOF(lwork(1)), stream)
        if (cuda_error .ne. 0) return

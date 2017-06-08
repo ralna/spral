@@ -31,27 +31,27 @@ struct tile_presolve_data {
 // input data for cu_multinode_dgemm_n and cu_multinode_solve_n/t
 template< typename ELEMENT_TYPE >
 struct node_solve_data {
-   // pointers are used by cu_multinode_dgemm_n
-   ELEMENT_TYPE* ptr_a;
-   ELEMENT_TYPE* ptr_b;
-   ELEMENT_TYPE* ptr_u;
-   ELEMENT_TYPE* ptr_v;
-   // leading dimensions
-   int lda;
-   int ldb;
-   int ldu;
-   int ldv;
-   // sizes
-   int nrows;
-   int ncols;
-   int nrhs;
-   // this CUDA block data offset
-   int offb;
-   // array offsets are used by cu_node_solve_n/t
-   long off_a;
-   int off_b;
-   int off_u;
-   int off_v;
+  // pointers are used by cu_multinode_dgemm_n
+  ELEMENT_TYPE* ptr_a;
+  ELEMENT_TYPE* ptr_b;
+  ELEMENT_TYPE* ptr_u;
+  ELEMENT_TYPE* ptr_v;
+  // leading dimensions
+  int lda;
+  int ldb;
+  int ldu;
+  int ldv;
+  // sizes
+  int nrows;
+  int ncols;
+  int nrhs;
+  // this CUDA block data offset
+  int offb;
+  // array offsets are used by cu_node_solve_n/t
+  long off_a;
+  int off_b;
+  int off_u;
+  int off_v;
 };
 
 ///////////////////////////////////
@@ -86,26 +86,26 @@ extern __shared__ char SharedMemory[];
 template< typename ELEMENT_TYPE >
 __global__ void
 cu_scale( 
-  int nrows, int ncols, 
-  ELEMENT_TYPE* a, int lda, 
-  ELEMENT_TYPE* s, 
-  int* ind 
+  const int nrows, const int ncols, 
+  ELEMENT_TYPE *const a, const int lda, 
+  ELEMENT_TYPE *const s, 
+  int *const ind
 ){
-    for ( int y = threadIdx.y + blockIdx.y*blockDim.y; y < ncols; 
-              y += blockDim.y*gridDim.y )
-  for ( int x = threadIdx.x + blockIdx.x*blockDim.x; x < nrows; 
-            x += blockDim.x*gridDim.x )
+  for ( int y = threadIdx.y + blockIdx.y*blockDim.y; y < ncols; 
+        y += blockDim.y*gridDim.y )
+    for ( int x = threadIdx.x + blockIdx.x*blockDim.x; x < nrows; 
+          x += blockDim.x*gridDim.x )
       a[ind[x] - 1 + y*lda] *= s[x];
 }
 
 // gathers D**(-1) from nodes' data into a coniguous array
 template< typename ELEMENT_TYPE >
 __global__ void
-cu_gather_diag( int n, ELEMENT_TYPE* src, ELEMENT_TYPE* dst, long* ind )
+cu_gather_diag( const int n, ELEMENT_TYPE *const src, ELEMENT_TYPE *const dst, long *const ind )
 {
   for ( int x = threadIdx.x + blockIdx.x*blockDim.x; x < n;
-             x += gridDim.x*blockDim.x ) {
-    int i = ind[x] - 1;
+        x += gridDim.x*blockDim.x ) {
+    const long i = ind[x] - 1;
     dst[2*x] = src[i];
     dst[2*x + 1] = src[i + 1];
   }
@@ -120,21 +120,21 @@ cu_gather_diag( int n, ELEMENT_TYPE* src, ELEMENT_TYPE* dst, long* ind )
 template< typename ELEMENT_TYPE >
 __global__ void
 cu_gather_dx( 
-  int nrows, int ncols,
-  ELEMENT_TYPE* d, 
-  ELEMENT_TYPE* u, int ldu,
-  ELEMENT_TYPE* v, int ldv,
-  int* drow,
-  int* urow
+  const int nrows, const int ncols,
+  ELEMENT_TYPE *const d,
+  ELEMENT_TYPE *const u, const int ldu,
+  ELEMENT_TYPE *const v, const int ldv,
+  const int *const drow,
+  const int *const urow
 ){
   for ( int x = threadIdx.x + blockIdx.x*blockDim.x; x < nrows; 
-             x += blockDim.x*gridDim.x ) {
-    int dr = drow[x];
-    int ur = urow[x];
+        x += blockDim.x*gridDim.x ) {
+    const int dr = drow[x];
+    const int ur = urow[x];
     if ( dr ) {
-      int i = 2*(dr - 1) + 1;
+      const int i = 2*(dr - 1) + 1;
       for ( int y = threadIdx.y + blockIdx.y*blockDim.y; y < ncols; 
-                y += blockDim.y*gridDim.y ) {
+            y += blockDim.y*gridDim.y ) {
         ELEMENT_TYPE s = d[i]*u[ur - 1 + ldu*y];
         if ( d[i - 1] )
           s += d[i - 1]*u[urow[x - 1] - 1 + ldu*y];
@@ -145,7 +145,7 @@ cu_gather_dx(
     }
     else {
       for ( int y = threadIdx.y + blockIdx.y*blockDim.y; y < ncols; 
-                 y += blockDim.y*gridDim.y )
+            y += blockDim.y*gridDim.y )
         v[x + ldv*y] = u[ur - 1 + ldu*y];
     }
   }
@@ -155,24 +155,24 @@ cu_gather_dx(
 template< typename ELEMENT_TYPE >
 __global__ void
 cu_apply_d( 
-  int nrows, int ncols,
-  ELEMENT_TYPE* d, 
-  ELEMENT_TYPE* u, int ldu,
-  ELEMENT_TYPE* v, int ldv,
-  int* urow
+  const int nrows, const int ncols,
+  ELEMENT_TYPE *const d,
+  ELEMENT_TYPE *const u, const int ldu,
+  ELEMENT_TYPE *const v, const int ldv,
+  const int *const urow
 ){
   for ( int x = threadIdx.x + blockIdx.x*blockDim.x; x < nrows; 
-             x += blockDim.x*gridDim.x ) {
-    int ur = urow[x];
-    int i = 2*x + 1;
+        x += blockDim.x*gridDim.x ) {
+    const int ur = urow[x];
+    const int i = 2*x + 1;
     for ( int y = threadIdx.y + blockIdx.y*blockDim.y; y < ncols; 
-              y += blockDim.y*gridDim.y ) {
-       ELEMENT_TYPE s = d[i]*u[ur - 1 + ldu*y];
-       if ( d[i - 1] )
-         s += d[i - 1]*u[urow[x - 1] - 1 + ldu*y];
-       if ( d[i + 1] )
-         s += d[i + 1]*u[urow[x + 1] - 1 + ldu*y];
-       v[x + ldv*y] = s;
+          y += blockDim.y*gridDim.y ) {
+      ELEMENT_TYPE s = d[i]*u[ur - 1 + ldu*y];
+      if ( d[i - 1] )
+        s += d[i - 1]*u[urow[x - 1] - 1 + ldu*y];
+      if ( d[i + 1] )
+        s += d[i + 1]*u[urow[x + 1] - 1 + ldu*y];
+      v[x + ldv*y] = s;
     }
   }
 }
@@ -181,17 +181,17 @@ cu_apply_d(
 template< typename ELEMENT_TYPE >
 __global__ void
 cu_gather(
-  int nrows,
-  int ncols, 
-  ELEMENT_TYPE* src, int lds, 
-  ELEMENT_TYPE* dst, int ldd,
-  int* ind
+  const int nrows,
+  const int ncols,
+  ELEMENT_TYPE *const src, const int lds,
+  ELEMENT_TYPE *const dst, const int ldd,
+  int *const ind
 ){
   for ( int x = threadIdx.x + blockIdx.x*blockDim.x; x < nrows;
-             x += gridDim.x*blockDim.x ) {
-    int i = ind[x] - 1;
+        x += gridDim.x*blockDim.x ) {
+    const int i = ind[x] - 1;
     for ( int y = threadIdx.y + blockIdx.y*blockDim.y; y < ncols;
-               y += gridDim.y*blockDim.y )
+          y += gridDim.y*blockDim.y )
       dst[x + y*ldd] = src[i + y*lds];
   }
 }
@@ -200,18 +200,18 @@ cu_gather(
 template< typename ELEMENT_TYPE >
 __global__ void
 cu_scatter_sum(
-  int nrows,
-  int ncols, 
-  ELEMENT_TYPE* u, int ldu, 
-  ELEMENT_TYPE* v, int ldv, 
-  ELEMENT_TYPE* dst, int ldd,
-  int* ind
+  const int nrows,
+  const int ncols, 
+  ELEMENT_TYPE *const u, const int ldu,
+  ELEMENT_TYPE *const v, const int ldv,
+  ELEMENT_TYPE *const dst, const int ldd,
+  const int *const ind
 ){
   for ( int x = threadIdx.x + blockIdx.x*blockDim.x; x < nrows;
-             x += gridDim.x*blockDim.x ) {
-    int i = ind[x] - 1;
+        x += gridDim.x*blockDim.x ) {
+    const int i = ind[x] - 1;
     for ( int y = threadIdx.y + blockIdx.y*blockDim.y; y < ncols;
-               y += gridDim.y*blockDim.y )
+          y += gridDim.y*blockDim.y )
       dst[i + y*ldd] = u[x + y*ldu] + v[x + y*ldv];
   }
 }
@@ -220,17 +220,17 @@ cu_scatter_sum(
 template< typename ELEMENT_TYPE >
 __global__ void
 cu_scatter(
-  int nrows,
-  int ncols, 
-  ELEMENT_TYPE* src, int lds, 
-  ELEMENT_TYPE* dst, int ldd,
-  int* ind
+  const int nrows,
+  const int ncols,
+  ELEMENT_TYPE *const src, const int lds,
+  ELEMENT_TYPE *const dst, const int ldd,
+  const int *const ind
 ){
   for ( int x = threadIdx.x + blockIdx.x*blockDim.x; x < nrows;
-             x += gridDim.x*blockDim.x ) {
-    int i = ind[x] - 1;
+        x += gridDim.x*blockDim.x ) {
+    const int i = ind[x] - 1;
     for ( int y = threadIdx.y + blockIdx.y*blockDim.y; y < ncols;
-               y += gridDim.y*blockDim.y )
+          y += gridDim.y*blockDim.y )
       dst[i + y*ldd] = src[x + y*lds];
   }
 }
@@ -299,12 +299,12 @@ cu_scatter(
 // blockDim.x = blockDim.y = tile_size
 template< typename ELEMENT_TYPE >
 __global__ void
-cu_init_presolve( node_data< ELEMENT_TYPE >* data )
+cu_init_presolve( node_data< ELEMENT_TYPE > *data )
 {
   data += blockIdx.x;
-  int n = data->ncols;  
-  int ld = data->ld;
-  ELEMENT_TYPE* v = data->ptr_v;
+  const int n = data->ncols;  
+  const int ld = data->ld;
+  ELEMENT_TYPE *const v = data->ptr_v;
   for ( int x = threadIdx.x; x < n; x += blockDim.x )
     for ( int y = threadIdx.y; y < n; y += blockDim.y )
       v[x + y*ld] = (x == y) ? 1.0 : 0.0;
@@ -318,26 +318,26 @@ cu_init_presolve( node_data< ELEMENT_TYPE >* data )
 template< typename ELEMENT_TYPE, bool NONUNIT_DIAG > 
 __global__ void
 cu_tile_presolve( 
-  int tile_size, 
-  tile_presolve_data< ELEMENT_TYPE >* data 
+  const int tile_size,
+  tile_presolve_data< ELEMENT_TYPE > *data
 ){
   const int LDW = 2*tile_size;
 
-  ELEMENT_TYPE* work = (ELEMENT_TYPE*)SharedMemory;
+  volatile ELEMENT_TYPE *const work = (volatile ELEMENT_TYPE*)SharedMemory;
 
   data += blockIdx.x;
 
-  int ldo   = data->ldo;
-  int nrows = data->nrows;
-  int ncols = data->ncols;
+  const int ldo   = data->ldo;
+  const int nrows = data->nrows;
+  const int ncols = data->ncols;
 
-  ELEMENT_TYPE* offd = data->ptr_offd;
+  ELEMENT_TYPE *const offd = data->ptr_offd;
   
-  int x = threadIdx.x % tile_size;
-  int y = threadIdx.x / tile_size;
+  const int x = threadIdx.x % tile_size;
+  const int y = threadIdx.x / tile_size;
   
   {
-    int ldd = data->ldd;
+    const int ldd = data->ldd;
     work[x + LDW*y] = 
       (x < ncols && y <= x) ? data->ptr_diag[x + ldd*y] : 0.0;
   }
@@ -367,20 +367,20 @@ cu_tile_presolve(
 // with its inverse
 template< typename ELEMENT_TYPE >
 __global__ void
-cu_multi_l_inv_copy( l_inv_data< ELEMENT_TYPE >* data, int tile_size )
+cu_multi_l_inv_copy( l_inv_data< ELEMENT_TYPE > *data, const int tile_size )
 {
   data += blockIdx.x;
-  int n     = data->n;
-  int ldl   = data->ldl;
-  int ldi   = data->ldi;
-  int block = data->block;
-  int nb    = data->nb;
+  const int n     = data->n;
+  const int ldl   = data->ldl;
+  const int ldi   = data->ldi;
+  const int block = data->block;
+  const int nb    = data->nb;
   
   for ( int i = threadIdx.x + blockDim.x*(threadIdx.y + block*blockDim.y);
-             i < n*n;
-             i += nb*blockDim.x*blockDim.y ) {
-    int x = i % n;
-    int y = i / n;
+        i < n*n;
+        i += nb*blockDim.x*blockDim.y ) {
+    const int x = i % n;
+    const int y = i / n;
     data->ptr_l[x + ldl*y] = data->ptr_i[x + ldi*y];
   }
 }
@@ -395,21 +395,21 @@ cu_multi_l_inv_copy( l_inv_data< ELEMENT_TYPE >* data, int tile_size )
 // computed and subtracted.
 template< typename ELEMENT_TYPE >
 __global__ void
-cu_multi_l_inv( l_inv_data< ELEMENT_TYPE >* data, int tile_size, int step )
+cu_multi_l_inv( l_inv_data< ELEMENT_TYPE > *data, const int tile_size, const int step )
 {
   data += blockIdx.x;
 
   const int tid = threadIdx.x + blockDim.x*threadIdx.y;
   ELEMENT_TYPE s[16];
 
-  __shared__ ELEMENT_TYPE as[128], bs[128];
-  __shared__ ELEMENT_TYPE* ptr_l;
-  __shared__ ELEMENT_TYPE* ptr_i;
-  __shared__ int n, m, k, ldl, ldi, block, bx, by;
+  __shared__ volatile ELEMENT_TYPE as[128], bs[128];
+  __shared__ ELEMENT_TYPE *volatile ptr_l;
+  __shared__ ELEMENT_TYPE *volatile ptr_i;
+  __shared__ volatile int n, m, k, ldl, ldi, block, bx, by;
 
   if ( tid == 0 ) {
     n = data->n;
-    int tiles = (n - 1)/tile_size + 1;
+    const int tiles = (n + (tile_size - 1))/tile_size;
     m = (tiles - step)*tile_size;
     n -= m;
     k = min(n, tile_size);
@@ -423,7 +423,7 @@ cu_multi_l_inv( l_inv_data< ELEMENT_TYPE >* data, int tile_size, int step )
     bx = block % bx;
   }
   __syncthreads();
-  if ( m < 1 || by > (m - 1)/32 + 1 )
+  if ( m < 1 || by > (m + 31)/32 )
     return;
 
   for ( int i = 0; i < 16; i++ )
@@ -470,8 +470,8 @@ cu_multi_l_inv( l_inv_data< ELEMENT_TYPE >* data, int tile_size, int step )
 
   for ( int iy = 0; iy < 4; iy++ )
     for ( int ix = 0; ix < 4; ix++ ) {
-      int x = threadIdx.x + (ix + bx*4)*8;
-      int y = threadIdx.y + (iy + by*4)*8;
+      const int x = threadIdx.x + (ix + bx*4)*8;
+      const int y = threadIdx.y + (iy + by*4)*8;
       if ( y < m && x < n )
         ptr_i[m + x + y*ldi] -= s[ix + iy*4];
     }
@@ -483,17 +483,17 @@ cu_multi_l_inv( l_inv_data< ELEMENT_TYPE >* data, int tile_size, int step )
 template< typename ELEMENT_TYPE >
 __global__ void
 cu_multinode_dgemm_n( 
-  node_solve_data< ELEMENT_TYPE >* data, 
-  ELEMENT_TYPE alpha,
-  int off )
+  node_solve_data< ELEMENT_TYPE > *data, 
+  const ELEMENT_TYPE alpha,
+  const int off )
 {
   data += blockIdx.x;
 
   const int tid = threadIdx.x + blockDim.x*threadIdx.y;
   ELEMENT_TYPE s[16];
 
-  __shared__ ELEMENT_TYPE as[128], bs[128];
-  __shared__ int n, m, k, lda, ldb, ldu, offb, bx, by;
+  __shared__ volatile ELEMENT_TYPE as[128], bs[128];
+  __shared__ volatile int n, m, k, lda, ldb, ldu, offb, bx, by;
 
   if ( tid == 0 ) {
     n = data->nrows;
@@ -508,7 +508,7 @@ cu_multinode_dgemm_n(
     bx = (off + blockIdx.x - offb) % bx;
   }
   __syncthreads();
-  if ( by > (m - 1)/32 + 1 )
+  if ( by > (m + 31)/32 )
     return;
 
   for ( int i = 0; i < 16; i++ )
@@ -555,8 +555,8 @@ cu_multinode_dgemm_n(
 
   for ( int iy = 0; iy < 4; iy++ )
     for ( int ix = 0; ix < 4; ix++ ) {
-      int x = threadIdx.x + (ix + bx*4)*8;
-      int y = threadIdx.y + (iy + by*4)*8;
+      const int x = threadIdx.x + (ix + bx*4)*8;
+      const int y = threadIdx.y + (iy + by*4)*8;
       if ( x < n && y < m )
         data->ptr_u[x + y*ldu] = alpha*s[ix + iy*4];
     }
@@ -587,10 +587,10 @@ cu_multinode_dgemm_n(
 template< typename ELEMENT_TYPE >
 __global__ void
 cu_multinode_solve_n_16x2( 
-  int m, 
-  double* a, double* b, double* u, double* v,
-  node_solve_data< ELEMENT_TYPE >* data, 
-  int off 
+  const int m,
+  double *const a, double *const b, double *const u, double *const v,
+  node_solve_data< ELEMENT_TYPE > *data,
+  const int off
 )
 {
   data += blockIdx.x;
@@ -598,9 +598,9 @@ cu_multinode_solve_n_16x2(
   const int tid = threadIdx.x + blockDim.x*threadIdx.y;
   ELEMENT_TYPE s[16];
 
-  __shared__ ELEMENT_TYPE as[256], bs[32];
-  __shared__ int n, k, lda, ldb, ldu, ldv, offb, bx, by;
-  __shared__ int off_a, off_b, off_u, off_v;
+  __shared__ volatile ELEMENT_TYPE as[256], bs[32];
+  __shared__ volatile int n, k, lda, ldb, ldu, ldv, offb, bx, by;
+  __shared__ volatile int off_a, off_b, off_u, off_v;
 
   if ( tid == 0 ) {
     n = data->nrows;
@@ -618,7 +618,7 @@ cu_multinode_solve_n_16x2(
     by = blockIdx.y;
   }
   __syncthreads();
-  if ( by > (m - 1)/8 + 1 )
+  if ( by > (m + 7)/8 )
     return;
 
   for ( int i = 0; i < 16; i++ )
@@ -657,8 +657,8 @@ cu_multinode_solve_n_16x2(
 
   for ( int iy = 0; iy < 4; iy++ )
     for ( int ix = 0; ix < 4; ix++ ) {
-      int x = threadIdx.x + (ix + bx*4)*16;
-      int y = threadIdx.y + (iy + by*4)*2;
+      const int x = threadIdx.x + (ix + bx*4)*16;
+      const int y = threadIdx.y + (iy + by*4)*2;
       if ( y < m )
         if ( x < k )
           u[off_u + x + y*ldu] = s[ix + iy*4];
@@ -686,9 +686,9 @@ cu_multinode_solve_n_16x2(
 template< typename ELEMENT_TYPE, unsigned int NRHS >
 __global__ void
 cu_multinode_solve_n_few_64( 
-  double* a, double* b, double* u, double* v,
-  node_solve_data< ELEMENT_TYPE >* data, 
-  int off 
+  double *const a, double *const b, double *const u, double *const v,
+  node_solve_data< ELEMENT_TYPE > *data,
+  const int off
 ){
   ELEMENT_TYPE s[NRHS];
   int n, k, lda, ldb, ldu, ldv, offb;
@@ -747,10 +747,10 @@ cu_multinode_solve_n_few_64(
 template< typename ELEMENT_TYPE >
 __global__ void
 cu_multinode_solve_t_mp_2x2x8( 
-  int m, 
-  double* a, double* b, double* u, double* v,
-  node_solve_data< ELEMENT_TYPE >* data, 
-  int off 
+  int m,
+  double *const a, double *const b, double *const u, double *const v,
+  node_solve_data< ELEMENT_TYPE > *data,
+  const int off
 ){
   data += blockIdx.x;
 
@@ -759,9 +759,9 @@ cu_multinode_solve_t_mp_2x2x8(
                  + threadIdx.z*blockDim.x*blockDim.y;
   ELEMENT_TYPE s[16];
 
-  __shared__ ELEMENT_TYPE ws[512];
-  __shared__ int n, k, lda, ldb, ldu, ldv, offb, bx, by;
-  __shared__ int off_a, off_b, off_u, off_v;
+  __shared__ volatile ELEMENT_TYPE ws[512];
+  __shared__ volatile int n, k, lda, ldb, ldu, ldv, offb, bx, by;
+  __shared__ volatile int off_a, off_b, off_u, off_v;
 
   if ( tid == 0 ) {
     k = data->nrows;
@@ -779,7 +779,7 @@ cu_multinode_solve_t_mp_2x2x8(
     by = blockIdx.y;
   }
   __syncthreads();
-  if ( by > (m - 1)/8 + 1 )
+  if ( by > (m + 7)/8 )
     return;
 
   for ( int i = 0; i < 16; i++ )
@@ -788,8 +788,8 @@ cu_multinode_solve_t_mp_2x2x8(
   for ( int row = 0; row < k; row += 32*gridDim.z ) {
     {
       int x = tid % 4;
-      int y = tid / 4;
-      int i = row + 32*blockIdx.z;
+      const int y = tid / 4;
+      const int i = row + 32*blockIdx.z;
       for ( int j = 0; j < 8; j++, x += 4 ) {
         if ( i + x < k && 8*bx + y < n )
           ws[x + 32*y] = a[off_a + i + x + lda*(8*bx + y)];
@@ -805,7 +805,7 @@ cu_multinode_solve_t_mp_2x2x8(
 
     for ( int j = 0; j < 4; j++ ) {
       for ( int i = 0; i < 4; i++ ) {
-        int l = i + 4*threadIdx.z;
+        const int l = i + 4*threadIdx.z;
         s[j*4    ] += ws[32*(threadIdx.x    ) + l]*ws[256 + 32*(threadIdx.y + 2*j) + l];
         s[j*4 + 1] += ws[32*(threadIdx.x + 2) + l]*ws[256 + 32*(threadIdx.y + 2*j) + l];
         s[j*4 + 2] += ws[32*(threadIdx.x + 4) + l]*ws[256 + 32*(threadIdx.y + 2*j) + l];
@@ -827,7 +827,7 @@ cu_multinode_solve_t_mp_2x2x8(
     s[0] += ws[tid + i*64];
     s[1] += ws[tid + i*64 + 32];
   }
-  int x = tid % 8 + bx*8;
+  const int x = tid % 8 + bx*8;
   int y = tid / 8 + by*8;
   if ( blockIdx.z ) {
     if ( x < n && y < m )
@@ -864,14 +864,14 @@ cu_multinode_solve_t_mp_2x2x8(
 template< typename ELEMENT_TYPE >
 __global__ void
 cu_multinode_solve_t_one_8x8( 
-  double* a, double* b, double* u, double* v,
-  node_solve_data< ELEMENT_TYPE >* data, 
-  int off 
+  double *const a, double *const b, double *const u, double *const v,
+  node_solve_data< ELEMENT_TYPE > *data,
+  const int off
 ){
   ELEMENT_TYPE s;
-  __shared__ ELEMENT_TYPE ws[64];
-  __shared__ int n, k, lda, offb; //, bx;
-  __shared__ int off_a, off_b, off_u, off_v;
+  __shared__ volatile ELEMENT_TYPE ws[64];
+  __shared__ volatile int n, k, lda, offb; //, bx;
+  __shared__ volatile int off_a, off_b, off_u, off_v;
 
   data += blockIdx.x;
   if ( threadIdx.x == 0 && threadIdx.y == 0 ) {
@@ -886,7 +886,7 @@ cu_multinode_solve_t_one_8x8(
   }
   __syncthreads();
 
-  int y = threadIdx.y + 8*(off + blockIdx.x - offb);
+  const int y = threadIdx.y + 8*(off + blockIdx.x - offb);
 
   s = 0.0;
   if ( y < n )
@@ -929,12 +929,12 @@ cu_multinode_solve_t_one_8x8(
 template< typename ELEMENT_TYPE, unsigned int NRHS >
 __global__ void
 cu_multinode_solve_t_few_8x8( 
-  double* a, double* b, double* u, double* v,
-  node_solve_data< ELEMENT_TYPE >* data, 
-  int off 
+  double *const a, double *const b, double *const u, double *const v,
+  node_solve_data< ELEMENT_TYPE > *data,
+  const int off
 ){
   ELEMENT_TYPE s[NRHS];
-  __shared__ ELEMENT_TYPE ws[64*NRHS];
+  __shared__ volatile ELEMENT_TYPE ws[64*NRHS];
   int n, k, lda, ldb, ldu, ldv, offb;
   int off_a, off_b, off_u, off_v;
 
@@ -951,7 +951,7 @@ cu_multinode_solve_t_few_8x8(
   ldv = data->ldv;
   offb = data->offb;
 
-  int y = threadIdx.y + 8*(off + blockIdx.x - offb);
+  const int y = threadIdx.y + 8*(off + blockIdx.x - offb);
 
   for ( int i = 0; i < NRHS; i++ )
     s[i] = 0.0;
@@ -988,12 +988,12 @@ cu_multinode_solve_t_few_8x8(
 void
 cuda_init_presolve( 
    const cudaStream_t stream,
-   int nblocks, 
-   node_data< double >* data 
+   const int nblocks, 
+   node_data< double > *const data 
 ){
-  dim3 threads(8, 8);
+  const dim3 threads(8, 8);
   for ( int i = 0; i < nblocks; i += 65535 ) {
-    int blocks = min(65535, nblocks - i);
+    const int blocks = min(65535, nblocks - i);
     cu_init_presolve< double ><<< blocks, threads, 0, stream >>>( data + i );
   }
 }
@@ -1002,16 +1002,16 @@ cuda_init_presolve(
 void
 cuda_tile_presolve( 
   const cudaStream_t stream,
-  int nblocks, 
-  int tile_size, 
-  tile_presolve_data< double >* data,
-  int nud
+  const int nblocks,
+  const int tile_size, 
+  tile_presolve_data< double > *const data,
+  const int nud
 ){
-  int nt = tile_size*tile_size;
-  int sms = 2*nt*sizeof(double);
+  const int nt = tile_size*tile_size;
+  const int sms = 2*nt*sizeof(double);
   for ( int i = 0; i < nblocks; i += 65535 ) {
-    int blocks = min(65535, nblocks - i);
-    dim3 threads(24,24);
+    const int blocks = min(65535, nblocks - i);
+    const dim3 threads(24,24);
     if ( nud )
       cu_tile_presolve< double, true >
         <<< blocks, nt, sms, stream >>>( tile_size, data + i );
@@ -1025,15 +1025,15 @@ cuda_tile_presolve(
 void
 cuda_multi_l_inv( 
   const cudaStream_t stream, 
-  int nblocks, 
-  l_inv_data< double >* data, 
-  int tile_size, 
-  int step
+  const int nblocks,
+  l_inv_data< double > *const data,
+  const int tile_size,
+  const int step
 ){
-  dim3 threads(8, 8);
+  const dim3 threads(8, 8);
   
   for ( int i = 0; i < nblocks; i += 65535 ) {
-    int blocks = min(65535, nblocks - i);
+    const int blocks = min(65535, nblocks - i);
     cu_multi_l_inv< double >
       <<< blocks, threads, 0, stream >>>( data + i, tile_size, step );
   }
@@ -1043,14 +1043,14 @@ cuda_multi_l_inv(
 void
 cuda_multi_l_inv_copy( 
   const cudaStream_t stream, 
-  int nblocks, 
-  l_inv_data< double >* data, 
-  int tile_size
+  const int nblocks,
+  l_inv_data< double > *const data,
+  const int tile_size
 ){
-  dim3 threads(8, 8);
+  const dim3 threads(8, 8);
   
   for ( int i = 0; i < nblocks; i += 65535 ) {
-    int blocks = min(65535, nblocks - i);
+    const int blocks = min(65535, nblocks - i);
     cu_multi_l_inv_copy< double >
       <<< blocks, threads, 0, stream >>>( data + i, tile_size );
   }
@@ -1059,38 +1059,38 @@ cuda_multi_l_inv_copy(
 // computes the number of tiles needed for performing the tile pre-solve step
 // on a nrows-by-ncols node matrix
 int
-tile_presolve_ntiles( int tile_size, int nrows, int ncols )
+tile_presolve_ntiles( const int tile_size, const int nrows, const int ncols )
 {
-  int ntcols = (ncols - 1)/tile_size + 1;
+  const int ntcols = (ncols + (tile_size - 1))/tile_size;
   return ntcols + (ntcols*(ntcols - 1))/2;
 }
 
 // computes the number of CUDA blocks needed to invert the diagonal block
 // L_d of size n
 int
-l_inv_nblocks( int tile_size, int n )
+l_inv_nblocks( const int tile_size, const int n )
 {
-  int nt = (n - 1)/tile_size + 1;
+  const int nt = (n + (tile_size - 1))/tile_size;
   int nb = 1;
   for ( int t = 1; t < nt; t++ ) {
-    int nx = t*tile_size;
-    int ny = (nt - t)*tile_size;
-    nb = max(nb, ((nx - 1)/32 + 1)*((ny - 1)/32 + 1));
+    const int nx = t*tile_size;
+    const int ny = (nt - t)*tile_size;
+    nb = max(nb, ((nx + 31)/32)*((ny + 31)/32));
   }
   return nb;
 }
 
 // fills the input data structure for the tile pre-solve step
 int 
-tile_presolve_setup( int tile_size, 
-                    int nrows, int ncols, 
-                    double* node, int ldn,
-                    double* invd, int ldi,
-                    tile_presolve_data< double >* tile_data,
-                    int off
+tile_presolve_setup( const int tile_size, 
+                    const int nrows, const int ncols, 
+                    double *const node, const int ldn,
+                    double *const invd, const int ldi,
+                    tile_presolve_data< double > *tile_data,
+                    const int off
 )
 {
-  int ntcols = (ncols - 1)/tile_size + 1;
+  const int ntcols = (ncols + (tile_size - 1))/tile_size;
   int k = 0;
   
   tile_data += off;
@@ -1126,80 +1126,80 @@ extern "C" {
 
 // gathers <nrows> rows of a sparse matrix <ncols> columns wide
 // into a dense <nrows>-by-<ncols> matrix
-void spral_ssids_gather(const cudaStream_t stream, int nrows, int ncols,
-      double* src, int lds, double* dst, int ldd, int* ind) {
-  int nt = ((nrows*ncols - 1)/32 + 1)*32;
+void spral_ssids_gather(const cudaStream_t stream, const int nrows, const int ncols,
+      double *const src, const int lds, double *const dst, const int ldd, int *const ind) {
+  int nt = ((nrows*ncols + 31)/32)*32;
   if ( nt > 1024 )
     nt = 1024;
-  int ty = ((ncols - 1)/4 + 1)*4;
+  int ty = ((ncols + 3)/4)*4;
   if ( ty > nt/4 )
     ty = nt/4;
-  int tx = nt/ty;
-  dim3 threads(tx, ty);
-  int nx = (nrows - 1)/tx + 1;
-  int ny = (ncols - 1)/ty + 1;
-  dim3 grid(nx, ny);
+  const int tx = nt/ty;
+  const dim3 threads(tx, ty);
+  const int nx = (nrows + (tx - 1))/tx;
+  const int ny = (ncols + (ty - 1))/ty;
+  const dim3 grid(nx, ny);
   cu_gather< double ><<< grid, threads, 0, stream >>>
     ( nrows, ncols, src, lds, dst, ldd, ind );
 }
 
 // gathers nodes' D factor pieces from the level data array into
 // a coniguous array of diagonal and offdiagonal values' pairs
-void spral_ssids_gather_diag(const cudaStream_t stream, int n, double* src,
-      double* dst, long* ind) {
-   int nt = ((n - 1)/32 + 1)*32;
+void spral_ssids_gather_diag(const cudaStream_t stream, int n, double *const src,
+      double *const dst, long *const ind) {
+   int nt = ((n + 31)/32)*32;
    if ( nt > 1024 )
       nt = 1024;
-   int nb = (n - 1)/nt + 1;
+   const int nb = (n + (nt - 1))/nt;
    cu_gather_diag< double ><<< nb, nt, 0, stream >>>( n, src, dst, ind );
 }
 
 // gathers <nrows> rows from rhs/solution matrix of the backward solve
 // into a dense <nrows>-by-<ncols> matrix;
 // rhs part is simultaneously multiplied by D
-void spral_ssids_gather_dx(const cudaStream_t stream, int nrows, int ncols,
-      double* d, double* u, int ldu, double* v, int ldv, int* indd, int* indx) {
-  int nt = ((nrows*ncols - 1)/32 + 1)*32;
+void spral_ssids_gather_dx(const cudaStream_t stream, const int nrows, const int ncols,
+      double *const d, double *const u, const int ldu, double *const v, const int ldv, int *const indd, int *const indx) {
+  int nt = ((nrows*ncols + 31)/32)*32;
   if ( nt > 1024 )
     nt = 1024;
-  int ty = ((ncols - 1)/4 + 1)*4;
+  int ty = ((ncols + 3)/4)*4;
   if ( ty > nt/4 )
     ty = nt/4;
-  int tx = nt/ty;
-  dim3 threads(tx, ty);
-  int nx = (nrows - 1)/tx + 1;
-  int ny = (ncols - 1)/ty + 1;
-  dim3 grid(nx, ny);
+  const int tx = nt/ty;
+  const dim3 threads(tx, ty);
+  const int nx = (nrows + (tx - 1))/tx;
+  const int ny = (ncols + (ty - 1))/ty;
+  const dim3 grid(nx, ny);
   cu_gather_dx< double ><<< grid, threads, 0, stream >>>
     ( nrows, ncols, d, u, ldu, v, ldv, indd, indx );
 }
 
 // gathers <nrows> rows from rhs/solution matrix of the backward solve
 // multiplies by D and puts into a dense <nrows>-by-<ncols> matrix
-void spral_ssids_apply_d(const cudaStream_t stream, int nrows, int ncols,
-      double* d, double* u, int ldu, double* v, int ldv, int* indx) {
-  int nt = ((nrows*ncols - 1)/32 + 1)*32;
+void spral_ssids_apply_d(const cudaStream_t stream, const int nrows, const int ncols,
+      double *const d, double *const u, const int ldu, double *const v, const int ldv, int *const indx) {
+  int nt = ((nrows*ncols + 31)/32)*32;
   if ( nt > 1024 )
     nt = 1024;
-  int ty = ((ncols - 1)/4 + 1)*4;
+  int ty = ((ncols + 3)/4)*4;
   if ( ty > nt/4 )
     ty = nt/4;
-  int tx = nt/ty;
-  dim3 threads(tx, ty);
-  int nx = (nrows - 1)/tx + 1;
-  int ny = (ncols - 1)/ty + 1;
-  dim3 grid(nx, ny);
+  const int tx = nt/ty;
+  const dim3 threads(tx, ty);
+  const int nx = (nrows + (tx - 1))/tx;
+  const int ny = (ncols + (ty - 1))/ty;
+  const dim3 grid(nx, ny);
   cu_apply_d< double ><<< grid, threads, 0, stream >>>
     ( nrows, ncols, d, u, ldu, v, ldv, indx );
 }
 
 // multiplies several matrices simultaneously
-void spral_ssids_multinode_dgemm_n(const cudaStream_t stream, int nblocks,
-      node_solve_data< double >* data, double a) {
-  dim3 threads(8, 8);
+void spral_ssids_multinode_dgemm_n(const cudaStream_t stream, const int nblocks,
+      node_solve_data< double > *const data, const double a) {
+  const dim3 threads(8, 8);
   
   for ( int i = 0; i < nblocks; i += 65535 ) {
-    int blocks = min(65535, nblocks - i);
+    const int blocks = min(65535, nblocks - i);
     cu_multinode_dgemm_n< double ><<< blocks, threads >>>( data + i, a, i );
   }
 }
@@ -1210,15 +1210,15 @@ void spral_ssids_multinode_dgemm_n(const cudaStream_t stream, int nblocks,
 // of the nodal matrix is put into an array poined by ptr_u
 // member of the node_solve_data structure,
 // the rest goes into one pointed by ptr_v
-void spral_ssids_multinode_solve_n(const cudaStream_t stream, int nblocks,
-      int nrhs, double* a, double* b, double* u, double* v,
-      node_solve_data< double >* data) {
+void spral_ssids_multinode_solve_n(const cudaStream_t stream, const int nblocks,
+      const int nrhs, double *const a, double *const b, double *const u, double *const v,
+      node_solve_data< double > *const data) {
   for ( int i = 0; i < nblocks; i += 65535 ) {
-    int blocks = min(65535, nblocks - i);
+    const int blocks = min(65535, nblocks - i);
     if ( nrhs > 14 ) {
-      dim3 threads(16, 2);
-      int ny = (nrhs - 1)/8 + 1;
-      dim3 grid(blocks, ny);
+      const dim3 threads(16, 2);
+      const int ny = (nrhs + 7)/8;
+      const dim3 grid(blocks, ny);
       cu_multinode_solve_n_16x2< double ><<< grid, threads, 0, stream >>>
           ( nrhs, a, b, u, v, data + i, i );
     }
@@ -1275,7 +1275,7 @@ void spral_ssids_multinode_solve_n(const cudaStream_t stream, int nblocks,
          ( a, b, u, v, data + i, i );
     }
     else {
-      dim3 threads(64, 2);
+      const dim3 threads(64, 2);
       cu_multinode_solve_n_few_64< double, 1 ><<< blocks, 64, 0, stream >>>
          ( a, b, u, v, data + i, i );
     }
@@ -1286,99 +1286,99 @@ void spral_ssids_multinode_solve_n(const cudaStream_t stream, int nblocks,
 // using the modified nodal matrices from presolve;
 // the solution is the sum of two parts placed into arrays pointed to
 // by ptr_u and ptr_v members of node_solve_data structure
-void spral_ssids_multinode_solve_t(const cudaStream_t stream, int nblocks,
-      int nrhs, double* a, double* b, double* u, double* v,
-      node_solve_data< double >* data) {
+void spral_ssids_multinode_solve_t(const cudaStream_t stream, const int nblocks,
+      const int nrhs, double *const a, double *const b, double *const u, double *const v,
+      node_solve_data< double > *const data) {
   for ( int i = 0; i < nblocks; i += 65535 ) {
-    int blocks = min(65535, nblocks - i);
+    const int blocks = min(65535, nblocks - i);
     if ( nrhs > 14 ) {
-      dim3 threads(2, 2, 8);
-      int ny = (nrhs - 1)/8 + 1;
-      dim3 grid(blocks, ny, 2);
+      const dim3 threads(2, 2, 8);
+      const int ny = (nrhs + 7)/8;
+      const dim3 grid(blocks, ny, 2);
       cu_multinode_solve_t_mp_2x2x8< double ><<< grid, threads, 0, stream >>>
         ( nrhs, a, b, u, v, data + i, i );
     }
     else if ( nrhs == 14 ) {
-      dim3 threads(8, 8);
-      dim3 grid(blocks, 2);
+      const dim3 threads(8, 8);
+      const dim3 grid(blocks, 2);
       cu_multinode_solve_t_few_8x8< double, 14 ><<< grid, threads, 0, stream >>>
         ( a, b, u, v, data + i, i );
     }
     else if ( nrhs == 13 ) {
-      dim3 threads(8, 8);
-      dim3 grid(blocks, 2);
+      const dim3 threads(8, 8);
+      const dim3 grid(blocks, 2);
       cu_multinode_solve_t_few_8x8< double, 13 ><<< grid, threads, 0, stream >>>
         ( a, b, u, v, data + i, i );
     }
     else if ( nrhs == 12 ) {
-      dim3 threads(8, 8);
-      dim3 grid(blocks, 2);
+      const dim3 threads(8, 8);
+      const dim3 grid(blocks, 2);
       cu_multinode_solve_t_few_8x8< double, 12 ><<< grid, threads, 0, stream >>>
         ( a, b, u, v, data + i, i );
     }
     else if ( nrhs == 11 ) {
-      dim3 threads(8, 8);
-      dim3 grid(blocks, 2);
+      const dim3 threads(8, 8);
+      const dim3 grid(blocks, 2);
       cu_multinode_solve_t_few_8x8< double, 11 ><<< grid, threads, 0, stream >>>
         ( a, b, u, v, data + i, i );
     }
     else if ( nrhs == 10 ) {
-      dim3 threads(8, 8);
-      dim3 grid(blocks, 2);
+      const dim3 threads(8, 8);
+      const dim3 grid(blocks, 2);
       cu_multinode_solve_t_few_8x8< double, 10 ><<< grid, threads, 0, stream >>>
         ( a, b, u, v, data + i, i );
     }
     else if ( nrhs == 9 ) {
-      dim3 threads(8, 8);
-      dim3 grid(blocks, 2);
+      const dim3 threads(8, 8);
+      const dim3 grid(blocks, 2);
       cu_multinode_solve_t_few_8x8< double, 9 ><<< grid, threads, 0, stream >>>
         ( a, b, u, v, data + i, i );
     }
     else if ( nrhs == 8 ) {
-      dim3 threads(8, 8);
-      dim3 grid(blocks, 2);
+      const dim3 threads(8, 8);
+      const dim3 grid(blocks, 2);
       cu_multinode_solve_t_few_8x8< double, 8 ><<< grid, threads, 0, stream >>>
         ( a, b, u, v, data + i, i );
     }
     else if ( nrhs == 7 ) {
-      dim3 threads(8, 8);
-      dim3 grid(blocks, 2);
+      const dim3 threads(8, 8);
+      const dim3 grid(blocks, 2);
       cu_multinode_solve_t_few_8x8< double, 7 ><<< grid, threads, 0, stream >>>
         ( a, b, u, v, data + i, i );
     }
     else if ( nrhs == 6 ) {
-      dim3 threads(8, 8);
-      dim3 grid(blocks, 2);
+      const dim3 threads(8, 8);
+      const dim3 grid(blocks, 2);
       cu_multinode_solve_t_few_8x8< double, 6 ><<< grid, threads, 0, stream >>>
         ( a, b, u, v, data + i, i );
     }
     else if ( nrhs == 5 ) {
-      dim3 threads(8, 8);
-      dim3 grid(blocks, 2);
+      const dim3 threads(8, 8);
+      const dim3 grid(blocks, 2);
       cu_multinode_solve_t_few_8x8< double, 5 ><<< grid, threads, 0, stream >>>
         ( a, b, u, v, data + i, i );
     }
     else if ( nrhs == 4 ) {
-      dim3 threads(8, 8);
-      dim3 grid(blocks, 2);
+      const dim3 threads(8, 8);
+      const dim3 grid(blocks, 2);
       cu_multinode_solve_t_few_8x8< double, 4 ><<< grid, threads, 0, stream >>>
         ( a, b, u, v, data + i, i );
     }
     else if ( nrhs == 3 ) {
-      dim3 threads(8, 8);
-      dim3 grid(blocks, 2);
+      const dim3 threads(8, 8);
+      const dim3 grid(blocks, 2);
       cu_multinode_solve_t_few_8x8< double, 3 ><<< grid, threads, 0, stream >>>
         ( a, b, u, v, data + i, i );
     }
     else if ( nrhs == 2 ) {
-      dim3 threads(8, 8);
-      dim3 grid(blocks, 2);
+      const dim3 threads(8, 8);
+      const dim3 grid(blocks, 2);
       cu_multinode_solve_t_few_8x8< double, 2 ><<< grid, threads, 0, stream >>>
         ( a, b, u, v, data + i, i );
     }
     else {
-      dim3 threads(8, 8);
-      dim3 grid(blocks, 2);
+      const dim3 threads(8, 8);
+      const dim3 grid(blocks, 2);
       cu_multinode_solve_t_one_8x8< double ><<< grid, threads, 0, stream >>>
         ( a, b, u, v, data + i, i );
     }
@@ -1386,67 +1386,67 @@ void spral_ssids_multinode_solve_t(const cudaStream_t stream, int nblocks,
 }
 
 // performs indexed scaling of <nrows>-by-<ncols> matrix
-void spral_ssids_scale( int nrows, int ncols, double* a, int lda, double* s,
-      int* ind ) {
-  dim3 threads(8,8);
-  int nx = min(64, (nrows - 1)/8 + 1);
-  int ny = min(8, (ncols - 1)/8 + 1);
-  dim3 grid(nx,ny);
+void spral_ssids_scale( const int nrows, const int ncols, double *const a, const int lda, double *const s,
+      int *const ind ) {
+  const dim3 threads(8,8);
+  const int nx = min(64, (nrows + 7)/8);
+  const int ny = min(8, (ncols + 7)/8);
+  const dim3 grid(nx,ny);
   cu_scale< double ><<< grid, threads >>>( nrows, ncols, a, lda, s, ind );
 }
 
 // the opposite of spral_ssids_gather
-void spral_ssids_scatter(const cudaStream_t stream, int nrows, int ncols,
-      double* src, int lds, double* dst, int ldd, int* ind) {
-  int nt = ((nrows*ncols - 1)/32 + 1)*32;
+void spral_ssids_scatter(const cudaStream_t stream, const int nrows, const int ncols,
+      double *const src, const int lds, double *const dst, const int ldd, int *const ind) {
+  int nt = ((nrows*ncols + 31)/32)*32;
   if ( nt > 1024 )
     nt = 1024;
-  int ty = ((ncols - 1)/4 + 1)*4;
+  int ty = ((ncols + 3)/4)*4;
   if ( ty > nt/4 )
     ty = nt/4;
-  int tx = nt/ty;
-  dim3 threads(tx, ty);
-  int nx = (nrows - 1)/tx + 1;
-  int ny = (ncols - 1)/ty + 1;
-  dim3 grid(nx, ny);
+  const int tx = nt/ty;
+  const dim3 threads(tx, ty);
+  const int nx = (nrows + (tx - 1))/tx;
+  const int ny = (ncols + (ty - 1))/ty;
+  const dim3 grid(nx, ny);
   cu_scatter< double ><<< grid, threads, 0, stream >>>
     ( nrows, ncols, src, lds, dst, ldd, ind );
 }
 
 // scatters the sum of the two backward solution parts
 // produced by spral_ssids_multinode_solve_t
-void spral_ssids_scatter_sum(const cudaStream_t stream, int nrows, int ncols,
-      double* u, int ldu, double* v, int ldv, double* dst, int ldd, int* ind) {
-  int nt = ((nrows*ncols - 1)/32 + 1)*32;
+void spral_ssids_scatter_sum(const cudaStream_t stream, const int nrows, const int ncols,
+      double *const u, const int ldu, double *const v, const int ldv, double *const dst, const int ldd, int *const ind) {
+  int nt = ((nrows*ncols + 31)/32)*32;
   if ( nt > 1024 )
     nt = 1024;
-  int ty = ((ncols - 1)/4 + 1)*4;
+  int ty = ((ncols + 3)/4)*4;
   if ( ty > nt/4 )
     ty = nt/4;
-  int tx = nt/ty;
-  dim3 threads(tx, ty);
-  int nx = (nrows - 1)/tx + 1;
-  int ny = (ncols - 1)/ty + 1;
-  dim3 grid(nx, ny);
+  const int tx = nt/ty;
+  const dim3 threads(tx, ty);
+  const int nx = (nrows + (tx - 1))/tx;
+  const int ny = (ncols + (ty - 1))/ty;
+  const dim3 grid(nx, ny);
   cu_scatter_sum< double ><<< grid, threads, 0, stream >>>
     ( nrows, ncols, u, ldu, v, ldv, dst, ldd, ind );
 }
 
 // simultaneously computes inverses of the diagonal blocks of several
 // tiled nodal matrices of the same tile-width
-int spral_ssids_multi_Ld_inv(const cudaStream_t stream, int nnodes,
-      node_data< double >* data, int tile_size, double* d_work) {
+int spral_ssids_multi_Ld_inv(const cudaStream_t stream, const int nnodes,
+      node_data< double > *const data, const int tile_size, double *const d_work) {
   int nblocks;
   int nrows, ncols;
   int maxcols;
   int k, n;
   int status;
 
-  l_inv_data< double >* inv_data = 0;
-  l_inv_data< double >* d_inv_data = 0;
+  l_inv_data< double > *inv_data = 0;
+  l_inv_data< double > *d_inv_data = 0;
 
-  double* d_node_ptr;
-  double* d_invd_ptr;
+  double *d_node_ptr = 0;
+  double *d_invd_ptr = 0;
   
   status = 0;
   
@@ -1471,7 +1471,7 @@ int spral_ssids_multi_Ld_inv(const cudaStream_t stream, int nnodes,
       d_node_ptr = data[n].ptr_v;
       ncols = data[n].ncols;
       nrows = data[n].nrows;
-      int nb = l_inv_nblocks(tile_size, ncols);
+      const int nb = l_inv_nblocks(tile_size, ncols);
       for ( int i = 0; i < nb; i++, k++ ) {
         inv_data[k].ptr_l = d_node_ptr;
         inv_data[k].ptr_i = d_invd_ptr;
@@ -1516,22 +1516,22 @@ int spral_ssids_multi_Ld_inv(const cudaStream_t stream, int nnodes,
 // initializes the inversion of the previous kernel by inverting
 // the diagonal tiles of blocks to be inverted and applying the inverses
 // to respective tile columns
-int spral_ssids_multi_Ld_inv_init(const cudaStream_t stream, int nnodes,
-      node_data< double >* data, int tile_size, int nud, double* d_work) {
+int spral_ssids_multi_Ld_inv_init(const cudaStream_t stream, const int nnodes,
+      node_data< double > *const data, const int tile_size, const int nud, double *const d_work) {
   int ntiles;
   int nrows, ncols;
   int maxcols;
   int k, n;
   int status;
 
-  node_data< double >* init_data = 0;
-  node_data< double >* d_init_data = 0;
+  node_data< double > *init_data = 0;
+  node_data< double > *d_init_data = 0;
 
-  tile_presolve_data< double >* tile_data = 0;
-  tile_presolve_data< double >* d_tile_data = 0;
+  tile_presolve_data< double > *tile_data = 0;
+  tile_presolve_data< double > *d_tile_data = 0;
 
-  double* d_node_ptr;
-  double* d_invd_ptr;
+  double *d_node_ptr = 0;
+  double *d_invd_ptr = 0;
   
   status = 0;
   
@@ -1605,11 +1605,11 @@ int spral_ssids_multi_Ld_inv_init(const cudaStream_t stream, int nnodes,
 }
 
 // sets up data for spral_ssids_multinode_dgemm_n
-int spral_ssids_multinode_dgemm_setup(int nrows, int ncols, int nrhs, double* a,
-      int lda, double* b, int ldb, double* u, int ldu, double* v, int ldv,
-      node_solve_data< double >* data,int off) {
-  int nr = (nrows - 1)/32 + 1;
-  int nc = (ncols - 1)/32 + 1;
+int spral_ssids_multinode_dgemm_setup(const int nrows, const int ncols, const int nrhs, double *const a,
+      const int lda, double *const b, const int ldb, double *const u, const int ldu, double *const v, const int ldv,
+      node_solve_data< double > *data, const int off) {
+  const int nr = (nrows + 31)/32;
+  const int nc = (ncols + 31)/32;
 
   data += off;
   for ( int i = 0; i < nr*nc; i++ ) {

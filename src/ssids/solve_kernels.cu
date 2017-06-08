@@ -34,10 +34,10 @@ namespace spral { namespace ssids {
 
 /* Perform the assignment xdense(:) = xsparse( idx(:) ) */
 template <int threadsx, int threadsy>
-void __device__ gather(int n, const int *idx, const double *xsparse,
-      double *xdense) {
-   int tid = threadsx*threadIdx.y + threadIdx.x;
-   for(int i=tid; i<n; i+=threadsx*threadsy)
+void __device__ gather(const int n, const int *const idx, const double *const xsparse,
+      volatile double *const xdense) {
+   const int tid = threadsx*threadIdx.y + threadIdx.x;
+   for (int i=tid; i<n; i+=threadsx*threadsy)
       xdense[i] = xsparse[ idx[i] ];
 }
 
@@ -46,12 +46,12 @@ void __device__ gather(int n, const int *idx, const double *xsparse,
 /***********************************************************************/
 
 struct gemv_transpose_lookup {
-   int m; // number of rows of L (cols of L^T) for block
-   int n; // number of cols of L (rows of L^T) for block
-   const double *a;
-   int lda; // leading dimension of a
-   const int *rlist;
-   int yoffset; // offset into y for answer
+  int m; // number of rows of L (cols of L^T) for block
+  int n; // number of cols of L (rows of L^T) for block
+  const double *a;
+  int lda; // leading dimension of a
+  const int *rlist;
+  int yoffset; // offset into y for answer
 };
 
 /* This subroutine performs a matrix-vector multiplication y = Ax where
@@ -65,23 +65,23 @@ struct gemv_transpose_lookup {
 template <int threadsx, int threadsy, int maxm, int maxn>
 __launch_bounds__(threadsx*threadsy, 6)
 void __global__ gemv_transpose_sps_rhs(struct gemv_transpose_lookup *lookup,
-      double *x, double *y
+      double *const x, double *y
       ) {
 
    // Reuse shmem for two different purposes
-   double __shared__ shmem[maxn*threadsx];
-   double *partSum = shmem;
-   double *xlocal = shmem;
+   __shared__ volatile double shmem[maxn*threadsx];
+   volatile double *const partSum = shmem;
+   volatile double *const xlocal = shmem;
 
    double partSumReg[maxn / threadsy]; // Assumes neat division
 
 
    lookup += blockIdx.x;
-   int m = lookup->m;
-   int n = lookup->n;
-   const double *a = lookup->a;
-   const int *rlist = lookup->rlist;
-   int lda = lookup->lda;
+   const int m = lookup->m;
+   const int n = lookup->n;
+   const double *const a = lookup->a;
+   const int *const rlist = lookup->rlist;
+   const int lda = lookup->lda;
    y += lookup->yoffset;
 
    /* Read x(rlist(:)) into xlocal(:) */
@@ -90,26 +90,26 @@ void __global__ gemv_transpose_sps_rhs(struct gemv_transpose_lookup *lookup,
 
    /* Perform matrix-vector multiply with answer y in register that
       is then stored in partSum for later reduction. */
-   if(m==maxm) {
-      double *xl = xlocal + threadIdx.x;
+   if (m==maxm) {
+      volatile double *const xl = xlocal + threadIdx.x;
 #pragma unroll
-      for(int iLoop=0; iLoop<maxn/threadsy; iLoop++) { // row
-         int i = iLoop * threadsy + threadIdx.y;
+      for (int iLoop=0; iLoop<maxn/threadsy; iLoop++) { // row
+         const int i = iLoop * threadsy + threadIdx.y;
          partSumReg[iLoop] = 0;
          if (i < n) {
-            const double *arow = a+i*lda+threadIdx.x;
-            for(int j=0; j<maxm; j+=threadsx)
+            const double *const arow = a+i*lda+threadIdx.x;
+            for (int j=0; j<maxm; j+=threadsx)
                partSumReg[iLoop] += xl[j] * arow[j];
          }
       }
    } else {
 #pragma unroll
-      for(int iLoop=0; iLoop<maxn/threadsy; iLoop++) { // row
-         int i = iLoop * threadsy + threadIdx.y;
+      for (int iLoop=0; iLoop<maxn/threadsy; iLoop++) { // row
+         const int i = iLoop * threadsy + threadIdx.y;
          partSumReg[iLoop] = 0;
          if (i < n) {
-            const double *arow = a+i*lda;
-            for(int j=threadIdx.x; j<m; j+=threadsx)
+            const double *const arow = a+i*lda;
+            for (int j=threadIdx.x; j<m; j+=threadsx)
                partSumReg[iLoop] += xlocal[j] * arow[j];
          }
       }
@@ -117,8 +117,8 @@ void __global__ gemv_transpose_sps_rhs(struct gemv_transpose_lookup *lookup,
 
    __syncthreads(); // Wait till done with xlocal=shmem before using partSum
 #pragma unroll
-   for(int iLoop=0; iLoop<maxn/threadsy; iLoop++) { // row
-      int i = iLoop * threadsy + threadIdx.y;
+   for (int iLoop=0; iLoop<maxn/threadsy; iLoop++) { // row
+      const int i = iLoop * threadsy + threadIdx.y;
       if (i < n) {
          partSum[i*threadsx+threadIdx.x] = partSumReg[iLoop];
       }
@@ -127,12 +127,12 @@ void __global__ gemv_transpose_sps_rhs(struct gemv_transpose_lookup *lookup,
    __syncthreads();
 
    /* Reduce partSum across threads to get y contribution from this block */
-   if(threadIdx.y==0) {
-      for(int i=threadIdx.x; i<n; i+=threadsx) {
-         double val = 0;
+   if (threadIdx.y==0) {
+      for (int i=threadIdx.x; i<n; i+=threadsx) {
+         double val = 0.0;
          /* The offset avoids large bank conflicts. */
-         for(int j=threadIdx.x; j<threadsx+threadIdx.x; j++) {
-            int j2 = (j >= threadsx ? j - threadsx : j);
+         for (int j=threadIdx.x; j<threadsx+threadIdx.x; j++) {
+            const int j2 = (j >= threadsx ? j - threadsx : j);
             val += partSum[i*threadsx+j2];
          }
          y[i] = val;
@@ -146,13 +146,13 @@ void __global__ gemv_transpose_sps_rhs(struct gemv_transpose_lookup *lookup,
 /***********************************************************************/
 
 struct reducing_d_solve_lookup {
-   int first_idx; // Index of supernode for thread 0 of this block.
-   int m; // Number of columns in upd to reduce.
-   int n; // Number of rows THIS BLOCK is responisble for.
-   int ldupd; // Leading dimension of upd.
-   int updoffset; // Offset into upd for supernode.
-   const double *d;
-   const int *perm; // Offset into perm for supernode.
+  int first_idx; // Index of supernode for thread 0 of this block.
+  int m; // Number of columns in upd to reduce.
+  int n; // Number of rows THIS BLOCK is responisble for.
+  int ldupd; // Leading dimension of upd.
+  int updoffset; // Offset into upd for supernode.
+  const double *d;
+  const int *perm; // Offset into perm for supernode.
 };
 
 /* This subroutine performs two unrelated tasks and subtracts the result of the
@@ -166,40 +166,40 @@ struct reducing_d_solve_lookup {
  */
 template <int threadsx, bool DSOLVE>
 void __global__ reducing_d_solve(struct reducing_d_solve_lookup *lookup,
-      double *upd, const double *x
+      double *upd, const double *const x
       ) {
 
    /* Read details from lookup */
    lookup += blockIdx.x;
-   int idx = lookup->first_idx + threadIdx.x;
-   int m = lookup->m;
-   int n = lookup->n;
-   int ldupd = lookup->ldupd;
+   const int idx = lookup->first_idx + threadIdx.x;
+   const int m = lookup->m;
+   const int n = lookup->n;
+   const int ldupd = lookup->ldupd;
    upd += lookup->updoffset;
-   const double *d = lookup->d;
-   const int *perm = lookup->perm;
+   const double *const d = lookup->d;
+   const int *const perm = lookup->perm;
 
 
    /* Don't do anything on threads past end of arrays */
-   if(threadIdx.x>=m) return;
+   if (threadIdx.x>=m) return;
 
    /* Task 1: Sum upd and negate */
    double val = upd[idx];
-   for(int j=1; j<n; j++)
+   for (int j=1; j<n; j++)
       val += upd[j*ldupd+idx];
    val = -val;
 
    /* Task 2: D solve (note that D is actually stored as inverse already) */
-   if(DSOLVE) {
-      int rp = perm[idx];
-      if(idx!=0 && d[2*idx-1] != 0) {
+   if (DSOLVE) {
+      const int rp = perm[idx];
+      if (idx!=0 && d[2*idx-1] != 0) {
          /* second part of 2x2 */
-         int rp2 = perm[idx-1];
+         const int rp2 = perm[idx-1];
          val += d[2*idx-1] * x[rp2] +
                 d[2*idx]   * x[rp];
       } else if (d[2*idx+1] != 0) {
          /* first part of 2x2 */
-         int rp2 = perm[idx+1];
+         const int rp2 = perm[idx+1];
          val += d[2*idx]   * x[rp] +
                 d[2*idx+1] * x[rp2];
       } else {
@@ -207,7 +207,7 @@ void __global__ reducing_d_solve(struct reducing_d_solve_lookup *lookup,
          val += x[rp]*d[2*idx];
       }
    } else {
-      int rp = perm[idx];
+      const int rp = perm[idx];
       val += x[rp];
    }
 
@@ -226,29 +226,29 @@ void __global__ reducing_d_solve(struct reducing_d_solve_lookup *lookup,
  */
 template <int threadsx>
 void __global__ d_solve(struct reducing_d_solve_lookup *lookup,
-      const double *x, double *y) {
+      const double *const x, double *const y) {
 
    /* Read details from lookup */
    lookup += blockIdx.x;
-   int idx = lookup->first_idx + threadIdx.x;
-   int m = lookup->m;
-   const double *d = lookup->d;
-   const int *perm = lookup->perm;
+   const int idx = lookup->first_idx + threadIdx.x;
+   const int m = lookup->m;
+   const double *const d = lookup->d;
+   const int *const perm = lookup->perm;
 
    /* Don't do anything on threads past end of arrays */
-   if(threadIdx.x>=m) return;
+   if (threadIdx.x>=m) return;
 
    /* D solve (note that D is actually stored as inverse already) */
-   int rp = perm[idx];
+   const int rp = perm[idx];
    double val;
-   if(idx!=0 && d[2*idx-1] != 0) {
+   if (idx!=0 && d[2*idx-1] != 0) {
       /* second part of 2x2 */
-      int rp2 = perm[idx-1];
+      const int rp2 = perm[idx-1];
       val = d[2*idx-1] * x[rp2] +
             d[2*idx]   * x[rp];
    } else if (d[2*idx+1] != 0) {
       /* first part of 2x2 */
-      int rp2 = perm[idx+1];
+      const int rp2 = perm[idx+1];
       val = d[2*idx]   * x[rp] +
             d[2*idx+1] * x[rp2];
    } else {
@@ -265,10 +265,10 @@ void __global__ d_solve(struct reducing_d_solve_lookup *lookup,
 /***********************************************************************/
 
 struct scatter_lookup {
-   int n;
-   int src_offset;
-   const int *index;
-   int dest_offset;
+  int n;
+  int src_offset;
+  const int *index;
+  int dest_offset;
 };
 
 /* This subroutine performs the scatter operation dest( index(:) ) = src(:)
@@ -278,13 +278,13 @@ void __global__ scatter(struct scatter_lookup *lookup, const double *src,
       ) {
 
    lookup += blockIdx.x;
-   if(threadIdx.x >= lookup->n) return; // Skip on out of range threads
+   if (threadIdx.x >= lookup->n) return; // Skip on out of range threads
    src += lookup->src_offset;
-   const int *index = lookup->index;
+   const int *const index = lookup->index;
    dest += lookup->dest_offset;
 
 
-   int idx = index[threadIdx.x];
+   const int idx = index[threadIdx.x];
    dest[idx] = src[threadIdx.x];
 
 }
@@ -294,14 +294,14 @@ void __global__ scatter(struct scatter_lookup *lookup, const double *src,
 /***********************************************************************/
 
 struct lookups_gpu_bwd {
-   int ngemv;
-   int nrds;
-   int ntrsv;
-   int nscatter;
-   struct gemv_transpose_lookup *gemv;
-   struct reducing_d_solve_lookup *rds;
-   struct trsv_lookup *trsv;
-   struct scatter_lookup *scatter;
+  int ngemv;
+  int nrds;
+  int ntrsv;
+  int nscatter;
+  struct gemv_transpose_lookup *gemv;
+  struct reducing_d_solve_lookup *rds;
+  struct trsv_lookup *trsv;
+  struct scatter_lookup *scatter;
 };
 
 /*
@@ -310,33 +310,33 @@ struct lookups_gpu_bwd {
  * externally.
  */
 template <int threadsx, int threadsy, int maxm, int maxn>
-void __global__ simple_gemv(int m, int n, const double *a, int lda,
+void __global__ simple_gemv(const int m, const int n, const double *a, const int lda,
       const double *x, double *y) {
    a += blockIdx.x*maxm + (blockIdx.y*maxn)*lda;
    x += blockIdx.y*maxn;
    y += m*blockIdx.y + maxm*blockIdx.x;
 
-   double __shared__ partSum[maxm*threadsy];
+   __shared__ volatile double partSum[maxm*threadsy];
 
    m = MIN(maxm, m-blockIdx.x*maxm);
    n = MIN(maxn, n-blockIdx.y*maxn);
 
-   double *ps = partSum + maxm*threadIdx.y;
-   for(int j=threadIdx.x; j<m; j+=threadsx) {
+   double *const ps = partSum + maxm*threadIdx.y;
+   for (int j=threadIdx.x; j<m; j+=threadsx) {
       ps[j] = 0;
    }
-   for(int i=threadIdx.y; i<n; i+=threadsy) {
-      double xv = x[i];
-      for(int j=threadIdx.x; j<m; j+=threadsx) {
+   for (int i=threadIdx.y; i<n; i+=threadsy) {
+      const double xv = x[i];
+      for (int j=threadIdx.x; j<m; j+=threadsx) {
          ps[j] += a[i*lda+j]*xv;
       }
    }
 
    __syncthreads();
-   if(threadIdx.y==0) {
-      for(int j=threadIdx.x; j<m; j+=threadsx) {
+   if (threadIdx.y==0) {
+      for (int j=threadIdx.x; j<m; j+=threadsx) {
          double val = ps[j];
-         for(int i=1; i<threadsy; i++) {
+         for (int i=1; i<threadsy; i++) {
             val += ps[j+i*maxm];
          }
          y[j] = val;
@@ -345,67 +345,67 @@ void __global__ simple_gemv(int m, int n, const double *a, int lda,
 }
 
 struct gemv_notrans_lookup {
-   int m;
-   int n;
-   const double *a;
-   int lda;
-   int x_offset;
-   int y_offset;
+  int m;
+  int n;
+  const double *a;
+  int lda;
+  int x_offset;
+  int y_offset;
 };
 
 template <int threadsx, int threadsy, int maxm, int maxn>
 void __global__ simple_gemv_lookup(const double *x, double *y,
       struct gemv_notrans_lookup *lookup) {
    lookup += blockIdx.x;
-   int m = lookup->m;
-   int n = lookup->n;
-   double const* a = lookup->a;
-   int lda = lookup->lda;
+   const int m = lookup->m;
+   const int n = lookup->n;
+   const double *const a = lookup->a;
+   const int lda = lookup->lda;
    x += lookup->x_offset;
    y += lookup->y_offset;
 
-   double __shared__ partSum[maxm*threadsy];
+   __shared__ volatile double partSum[maxm*threadsy];
 
-   double *ps = partSum + maxm*threadIdx.y;
+   volatile double *const ps = partSum + maxm*threadIdx.y;
 
    // Templated parameters for shortcut
    if (maxm <= threadsx) {
-      ps[threadIdx.x] = 0;
+     ps[threadIdx.x] = 0.0;
    }
    else {
-      for(int j=threadIdx.x; j<m; j+=threadsx) {
-         ps[j] = 0;
-      }
+     for (int j=threadIdx.x; j<m; j+=threadsx) {
+       ps[j] = 0;
+     }
    }
-   for(int i=threadIdx.y; i<n; i+=threadsy) {
-      double xv = x[i];
+   for (int i=threadIdx.y; i<n; i+=threadsy) {
+      const double xv = x[i];
       // Templated parameters for shortcut - this reads out of bounds so shouldn't be uncommented
       /*if (maxm <= threadsx) {
          ps[threadIdx.x] += a[i*lda+threadIdx.x]*xv;
       }
       else {*/
-         for(int j=threadIdx.x; j<m; j+=threadsx) {
+         for (int j=threadIdx.x; j<m; j+=threadsx) {
             ps[j] += a[i*lda+j]*xv;
          }
       //}
    }
 
    __syncthreads();
-   if(threadIdx.y==0) {
+   if (threadIdx.y==0) {
       // Templated parameters for shortcut
       if (maxm <= threadsx) {
          if (threadIdx.x < m) {
             double val = ps[threadIdx.x];
-            for(int i=1; i<threadsy; i++) {
+            for (int i=1; i<threadsy; i++) {
                val += ps[threadIdx.x+i*maxm];
             }
             y[threadIdx.x] = val;
          }
       }
       else {
-         for(int j=threadIdx.x; j<m; j+=threadsx) {
+         for (int j=threadIdx.x; j<m; j+=threadsx) {
             double val = ps[j];
-            for(int i=1; i<threadsy; i++) {
+            for (int i=1; i<threadsy; i++) {
                val += ps[j+i*maxm];
             }
             y[j] = val;
@@ -415,62 +415,61 @@ void __global__ simple_gemv_lookup(const double *x, double *y,
 }
 
 struct reduce_notrans_lookup {
-   int m;
-   int n;
-   int src_offset;
-   int ldsrc;
-   int dest_idx;
-   int dest_offset;
+  int m;
+  int n;
+  int src_offset;
+  int ldsrc;
+  int dest_idx;
+  int dest_offset;
 };
 
-void __global__ gemv_reduce_lookup(const double *src, double **dest, int numLookups, struct reduce_notrans_lookup *lookup) {
-   int offset = blockIdx.x * blockDim.y + threadIdx.y;
+void __global__ gemv_reduce_lookup(const double *src, double **const dest, const int numLookups, struct reduce_notrans_lookup *lookup) {
+   const int offset = blockIdx.x * blockDim.y + threadIdx.y;
    if (offset >= numLookups) return;
 
    lookup += offset;
-   int m = lookup->m;
-   if(threadIdx.x>=m) return;
-   int n = lookup->n;
+   const int m = lookup->m;
+   if (threadIdx.x>=m) return;
+   const int n = lookup->n;
    src += lookup->src_offset + threadIdx.x;
-   int ldsrc = lookup->ldsrc;
-   double *d = dest[lookup->dest_idx] + lookup->dest_offset;
+   const int ldsrc = lookup->ldsrc;
+   double *const d = dest[lookup->dest_idx] + lookup->dest_offset;
 
-   double val = 0;
-   for(int i=0; i<n; i++)
+   double val = 0.0;
+   for (int i=0; i<n; i++)
       val += src[i*ldsrc];
    d[threadIdx.x] -= val;
 }
 
-void __global__ gemv_reduce(int m, int n, const double *src, double **dest) {
-   int idx = blockIdx.x*blockDim.x + threadIdx.x;
-   if(idx>=m) return;
+void __global__ gemv_reduce(const int m, const int n, const double *src, double **const dest) {
+   const int idx = blockIdx.x*blockDim.x + threadIdx.x;
+   if (idx>=m) return;
    src += idx;
-   double val = 0;
-   for(int i=0; i<n; i++)
+   double val = 0.0;
+   for (int i=0; i<n; i++)
       val += src[i*m];
    (*dest)[idx] -= val;
 }
 
 /* Each thread looks after exactly one entry of x only */
-void __global__ assemble(int m, int nelim, int const* list, double *xlocal,
-      double **xstack, const double *x, int nchild, int const* clen,
-      int * const* clists, double * const* cvalues) {
+void __global__ assemble(const int m, const int nelim, const int *const list, double *const xlocal,
+      double **const xstack, const double *const x, const int nchild, const int *const clen,
+      const int **const clists, const double **const cvalues) {
 
    /* Calculate entry, return if out of range */
-   int idx = blockIdx.x*blockDim.x + threadIdx.x;
-   if(idx>=m) return;
-   int row = list[idx];
+   const int idx = blockIdx.x*blockDim.x + threadIdx.x;
+   if (idx>=m) return;
+   const int row = list[idx];
 
    /* Accumulate contribution */
-   double val=0;
-   for(int child=0; child<nchild; child++) {
-      const int *clist = clists[child];
-      const double *cval = cvalues[child];
-      int i;
+   double val=0.0;
+   for (int child=0; child<nchild; child++) {
+      const int *const clist = clists[child];
+      const double *const cval = cvalues[child];
       /* Note: If we want to optimize this, try fixing the upper bound, but
          beware: delays can cause the child rlist to be out of order! */
-      for(i=0; i<clen[child]; i++) {
-         if(clist[i] == row) {
+      for (int i=0; i<clen[child]; i++) {
+         if (clist[i] == row) {
             val += cval[i];
             break;
          }
@@ -478,64 +477,64 @@ void __global__ assemble(int m, int nelim, int const* list, double *xlocal,
    }
 
    /* Add to x or xstack as appropriate */
-   if(idx<nelim)  xlocal[idx] = x[row] + val;
-   else           (*xstack)[idx-nelim] = val;
+   if (idx<nelim)  xlocal[idx] = x[row] + val;
+   else            (*xstack)[idx-nelim] = val;
 }
 
 // FIXME: move to common header?
 struct assemble_blk_type {
-   int cp;
-   int blk;
+  int cp;
+  int blk;
 };
 
 struct assemble_lookup {
-   int m;
-   int xend;
-   int const* list;
-   int x_offset;
-   int contrib_idx;
-   int contrib_offset;
-   int nchild;
-   int const* clen;
-   int * const* clists;
-   int * const* clists_direct;
-   int cvalues_offset;
-   int first; // First index of node. Used to shortcut searching
+  int m;
+  int xend;
+  int const* list;
+  int x_offset;
+  int contrib_idx;
+  int contrib_offset;
+  int nchild;
+  int const* clen;
+  int * const* clists;
+  int * const* clists_direct;
+  int cvalues_offset;
+  int first; // First index of node. Used to shortcut searching
 };
 
 struct assemble_lookup2 {
-   int m;
-   int nelim;
-   int x_offset;
-   int *const* list;
-   int cvparent;
-   int cvchild;
-   int sync_offset;
-   int sync_waitfor;
+  int m;
+  int nelim;
+  int x_offset;
+  int *const* list;
+  int cvparent;
+  int cvchild;
+  int sync_offset;
+  int sync_waitfor;
 };
 
-void __device__ wait_for_sync(int tid, volatile int *sync, int target) {
-   if(tid==0) {
-      while(*sync < target) {}
+void __device__ wait_for_sync(const int tid, volatile int *const sync, const int target) {
+   if (tid==0) {
+     while (*sync < target) {}
    }
    __syncthreads();
 }
 
-void __global__ assemble_lvl(struct assemble_lookup2 *lookup, struct assemble_blk_type *blkdata, double *xlocal, int *next_blk, int *sync, double * const* cvalues) {
-   int __shared__ thisblk;
-   if(threadIdx.x==0)
-      thisblk = atomicAdd(next_blk, 1);
+void __global__ assemble_lvl(struct assemble_lookup2 *lookup, struct assemble_blk_type *blkdata, double *xlocal, int *const next_blk, int *const sync, double **const cvalues) {
+   __shared__ volatile int thisblk;
+   if (threadIdx.x==0)
+     thisblk = atomicAdd(next_blk, 1);
    __syncthreads();
 
    blkdata += thisblk;
    lookup += blkdata->cp;
 
-   int blk = blkdata->blk;
+   const int blk = blkdata->blk;
    int m = lookup->m;
-   int nelim = lookup->nelim;
-   double *xparent = cvalues[lookup->cvparent];
+   const int nelim = lookup->nelim;
+   double *const xparent = cvalues[lookup->cvparent];
    volatile const double *xchild = cvalues[lookup->cvchild];
-   const int * list = *(lookup->list);
+   const int *list = *(lookup->list);
    xlocal += lookup->x_offset;
 
    // Wait for previous children to complete
@@ -547,9 +546,9 @@ void __global__ assemble_lvl(struct assemble_lookup2 *lookup, struct assemble_bl
    xchild += blk*ASSEMBLE_NB;
 
    // Perform actual assembly
-   for(int i=threadIdx.x; i<m; i+=blockDim.x) {
-      int j = list[i];
-      if(j < nelim) {
+   for (int i=threadIdx.x; i<m; i+=blockDim.x) {
+      const int j = list[i];
+      if (j < nelim) {
          xlocal[j] += xchild[i];
       } else {
          xparent[j-nelim] += xchild[i];
@@ -557,47 +556,46 @@ void __global__ assemble_lvl(struct assemble_lookup2 *lookup, struct assemble_bl
    }
 
    // Wait for all threads to complete, then increment sync object
-   __threadfence();
    __syncthreads();
-   if(threadIdx.x==0) {
+   if (threadIdx.x==0) {
       atomicAdd(&sync[lookup->sync_offset], 1);
    }
 }
 
-void __global__ grabx(double *xlocal, double **xstack, const double *x,
+void __global__ grabx(double *xlocal, double **const xstack, const double *const x,
       struct assemble_lookup *lookup) {
 
    lookup += blockIdx.x;
-   if(threadIdx.x>=lookup->m) return;
-   int xend = lookup->xend;
-   double *contrib =
+   if (threadIdx.x>=lookup->m) return;
+   const int xend = lookup->xend;
+   double *const contrib =
       (threadIdx.x>=xend) ?
          xstack[lookup->contrib_idx]+lookup->contrib_offset :
          NULL;
    xlocal += lookup->x_offset;
 
-   int row = lookup->list[threadIdx.x];
+   const int row = lookup->list[threadIdx.x];
 
-   if(threadIdx.x<xend) xlocal[threadIdx.x] = x[row];
-   else                 contrib[threadIdx.x] = 0.0;
+   if (threadIdx.x<xend) xlocal[threadIdx.x] = x[row];
+   else                  contrib[threadIdx.x] = 0.0;
 }
 
 struct lookups_gpu_fwd {
-   int nassemble;
-   int nasm_sync;
-   int nassemble2;
-   int nasmblk;
-   int ntrsv;
-   int ngemv;
-   int nreduce;
-   int nscatter;
-   struct assemble_lookup *assemble;
-   struct assemble_lookup2 *assemble2;
-   struct assemble_blk_type *asmblk;
-   struct trsv_lookup *trsv;
-   struct gemv_notrans_lookup *gemv;
-   struct reduce_notrans_lookup *reduce;
-   struct scatter_lookup *scatter;
+  int nassemble;
+  int nasm_sync;
+  int nassemble2;
+  int nasmblk;
+  int ntrsv;
+  int ngemv;
+  int nreduce;
+  int nscatter;
+  struct assemble_lookup *assemble;
+  struct assemble_lookup2 *assemble2;
+  struct assemble_blk_type *asmblk;
+  struct trsv_lookup *trsv;
+  struct gemv_notrans_lookup *gemv;
+  struct reduce_notrans_lookup *reduce;
+  struct scatter_lookup *scatter;
 };
 
 } } // end namespace spral::ssids
@@ -610,36 +608,36 @@ using namespace spral::ssids;
 
 extern "C" {
 
-void spral_ssids_run_fwd_solve_kernels(bool posdef,
-      struct lookups_gpu_fwd const* gpu, double *xlocal_gpu,
-      double **xstack_gpu, double *x_gpu, double ** cvalues_gpu,
-      double *work_gpu, int nsync, int *sync, int nasm_sync, int *asm_sync,
+void spral_ssids_run_fwd_solve_kernels(const bool posdef,
+      const struct lookups_gpu_fwd *const gpu, double *const xlocal_gpu,
+      double **const xstack_gpu, double *const x_gpu, double **const cvalues_gpu,
+      double *const work_gpu, const int nsync, int *sync, const int nasm_sync, int *const asm_sync,
       const cudaStream_t stream) {
 
-   if(nsync>0) {
-      for(int i=0; i<nsync; i+=65535)
+   if (nsync>0) {
+      for (int i=0; i<nsync; i+=65535)
          trsv_init <<<MIN(65535,nsync-i), 1, 0, stream>>> (sync+2*i);
       CudaCheckError();
    }
-   for(int i=0; i<gpu->nassemble; i+=65535)
+   for (int i=0; i<gpu->nassemble; i+=65535)
       grabx
          <<<MIN(65535,gpu->nassemble-i), ASSEMBLE_NB, 0, stream>>>
          (xlocal_gpu, xstack_gpu, x_gpu, gpu->assemble+i);
    cudaMemset(asm_sync, 0, (1+gpu->nasm_sync)*sizeof(int));
-   for(int i=0; i<gpu->nasmblk; i+=65535)
+   for (int i=0; i<gpu->nasmblk; i+=65535)
       assemble_lvl
          <<<MIN(65535,gpu->nasmblk-i), ASSEMBLE_NB, 0, stream>>>
          (gpu->assemble2, gpu->asmblk, xlocal_gpu, &asm_sync[0], &asm_sync[1], cvalues_gpu);
    CudaCheckError();
-   if(gpu->ntrsv>0) {
-      if(posdef) {
-         for(int i=0; i<gpu->ntrsv; i+=65535)
+   if (gpu->ntrsv>0) {
+      if (posdef) {
+         for (int i=0; i<gpu->ntrsv; i+=65535)
             trsv_ln_exec
                <double,TRSV_NB_TASK,THREADSX_TASK,THREADSY_TASK,false>
                <<<MIN(65535,gpu->ntrsv-i), dim3(THREADSX_TASK,THREADSY_TASK), 0, stream>>>
                (xlocal_gpu, sync, gpu->trsv+i);
       } else {
-         for(int i=0; i<gpu->ntrsv; i+=65535)
+         for (int i=0; i<gpu->ntrsv; i+=65535)
             trsv_ln_exec
                <double,TRSV_NB_TASK,THREADSX_TASK,THREADSY_TASK,true>
                <<<MIN(65535,gpu->ntrsv-i), dim3(THREADSX_TASK,THREADSY_TASK), 0, stream>>>
@@ -647,31 +645,31 @@ void spral_ssids_run_fwd_solve_kernels(bool posdef,
       }
       CudaCheckError();
    }
-   if(gpu->ngemv>0) {
-      for(int i=0; i<gpu->ngemv; i+=65535)
+   if (gpu->ngemv>0) {
+      for (int i=0; i<gpu->ngemv; i+=65535)
          simple_gemv_lookup
             <GEMV_THREADSX, GEMV_THREADSY, GEMV_NX, GEMV_NY>
             <<<MIN(65535,gpu->ngemv-i), dim3(GEMV_THREADSX,GEMV_THREADSY), 0, stream>>>
             (xlocal_gpu, work_gpu, gpu->gemv+i);
       CudaCheckError();
    }
-   if(gpu->nreduce>0) {
-      if((gpu->nreduce + 4 - 1) / 4 > 65535)
+   if (gpu->nreduce>0) {
+      if ((gpu->nreduce + 4 - 1) / 4 > 65535)
          printf("Unhandled error! fwd solve gemv_reduce_lookup()\n");
       gemv_reduce_lookup
          <<<dim3((gpu->nreduce + 4 - 1) / 4), dim3(GEMV_NX, 4), 0, stream>>>
          (work_gpu, cvalues_gpu, gpu->nreduce, gpu->reduce);
       CudaCheckError();
    }
-   for(int i=0; i<gpu->nscatter; i+=65535)
+   for (int i=0; i<gpu->nscatter; i+=65535)
       scatter
          <<<MIN(65535,gpu->nscatter-i), SCATTER_NB, 0, stream>>>
          (gpu->scatter+i, xlocal_gpu, x_gpu);
    CudaCheckError();
 }
 
-void spral_ssids_run_d_solve_kernel(double *x_gpu, double *y_gpu,
-      struct lookups_gpu_bwd *gpu, const cudaStream_t stream) {
+void spral_ssids_run_d_solve_kernel(double *const x_gpu, double *const y_gpu,
+      struct lookups_gpu_bwd *const gpu, const cudaStream_t stream) {
 
    if(gpu->nrds>0) {
       d_solve
@@ -682,18 +680,18 @@ void spral_ssids_run_d_solve_kernel(double *x_gpu, double *y_gpu,
    }
 }
 
-void spral_ssids_run_bwd_solve_kernels(bool dsolve, bool unit_diagonal,
-      double *x_gpu, double *work_gpu, int nsync, int *sync_gpu,
-      struct lookups_gpu_bwd *gpu, const cudaStream_t stream) {
+void spral_ssids_run_bwd_solve_kernels(const bool dsolve, const bool unit_diagonal,
+      double *const x_gpu, double *const work_gpu, const int nsync, int *const sync_gpu,
+      struct lookups_gpu_bwd *const gpu, const cudaStream_t stream) {
 
    /* === Kernel Launches === */
-   if(nsync>0) {
-      for(int i=0; i<nsync; i+=65535)
+   if (nsync>0) {
+      for (int i=0; i<nsync; i+=65535)
          trsv_init <<<MIN(65535,nsync-i), 1, 0, stream>>> (sync_gpu+2*i);
       CudaCheckError();
    }
-   if(gpu->ngemv>0) {
-      for(int i=0; i<gpu->ngemv; i+=65535)
+   if (gpu->ngemv>0) {
+      for (int i=0; i<gpu->ngemv; i+=65535)
          gemv_transpose_sps_rhs
             <TRSM_TR_THREADSX, TRSM_TR_THREADSY, TRSM_TR_NBX, TRSM_TR_NBY>
             <<<MIN(65535,gpu->ngemv-i), dim3(TRSM_TR_THREADSX,TRSM_TR_THREADSY), 0, stream>>>
@@ -701,15 +699,15 @@ void spral_ssids_run_bwd_solve_kernels(bool dsolve, bool unit_diagonal,
       CudaCheckError();
    }
 
-   if(gpu->nrds>0) {
-      if(dsolve) {
-         for(int i=0; i<gpu->nrds; i+=65535)
+   if (gpu->nrds>0) {
+      if (dsolve) {
+         for (int i=0; i<gpu->nrds; i+=65535)
             reducing_d_solve
                <REDUCING_D_SOLVE_THREADS_PER_BLOCK, true>
                <<<MIN(65535,gpu->nrds-i), REDUCING_D_SOLVE_THREADS_PER_BLOCK, 0, stream>>>
                (gpu->rds+i, work_gpu, x_gpu);
       } else {
-         for(int i=0; i<gpu->nrds; i+=65535)
+         for (int i=0; i<gpu->nrds; i+=65535)
             reducing_d_solve
                <REDUCING_D_SOLVE_THREADS_PER_BLOCK, false>
                <<<MIN(65535,gpu->nrds-i), REDUCING_D_SOLVE_THREADS_PER_BLOCK, 0, stream>>>
@@ -718,15 +716,15 @@ void spral_ssids_run_bwd_solve_kernels(bool dsolve, bool unit_diagonal,
       CudaCheckError();
    }
 
-   if(gpu->ntrsv>0) {
-      if(unit_diagonal) {
-         for(int i=0; i<gpu->ntrsv; i+=65535)
+   if (gpu->ntrsv>0) {
+      if (unit_diagonal) {
+         for (int i=0; i<gpu->ntrsv; i+=65535)
             trsv_lt_exec
                <double,TRSV_NB_TASK,THREADSX_TASK,THREADSY_TASK,true>
                <<<MIN(65535,gpu->ntrsv-i), dim3(THREADSX_TASK,THREADSY_TASK), 0, stream>>>
                (gpu->trsv+i, work_gpu, sync_gpu);
       } else {
-         for(int i=0; i<gpu->ntrsv; i+=65535)
+         for (int i=0; i<gpu->ntrsv; i+=65535)
             trsv_lt_exec
                <double,TRSV_NB_TASK,THREADSX_TASK,THREADSY_TASK,false>
                <<<MIN(65535,gpu->ntrsv-i), dim3(THREADSX_TASK,THREADSY_TASK), 0, stream>>>
@@ -735,8 +733,8 @@ void spral_ssids_run_bwd_solve_kernels(bool dsolve, bool unit_diagonal,
       CudaCheckError();
    }
 
-   if(gpu->nscatter>0) {
-      for(int i=0; i<gpu->nscatter; i+=65535)
+   if (gpu->nscatter>0) {
+      for (int i=0; i<gpu->nscatter; i+=65535)
          scatter
             <<<MIN(65535,gpu->nscatter-i), SCATTER_NB, 0, stream>>>
             (gpu->scatter+i, work_gpu, x_gpu);

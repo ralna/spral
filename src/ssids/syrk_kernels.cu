@@ -17,7 +17,7 @@
 
 #define MAX_CUDA_BLOCKS 65535
 
-#define SM_3X (__CUDA_ARCH__ == 300 || __CUDA_ARCH__ == 350)
+#define SM_3X (__CUDA_ARCH__ >= 300)
 
 namespace spral { namespace ssids {
 
@@ -25,16 +25,16 @@ namespace spral { namespace ssids {
 
 template< int WIDTH >
 inline __device__ void 
-loadDevToSmem_generic( double* __restrict__ as, double* __restrict__ bs, 
-               const double* __restrict__ a, const double* __restrict__ b, 
-               int bx, int by, int offa, int lda, int ldb, 
-               int n, int i, int k) 
+loadDevToSmem_generic( volatile double *const __restrict__ as, volatile double *const __restrict__ bs, 
+               const double *const __restrict__ a, const double *const __restrict__ b, 
+               const int bx, const int by, const int offa, const int lda, const int ldb, 
+               const int n, const int i, const int k) 
 {
   switch (WIDTH) {
     case 4:
     if ( i + 3 < k ) {
       if ( threadIdx.y < 4 ) {
-        int x = threadIdx.x + (threadIdx.y + bx*4)*8;
+        const int x = threadIdx.x + (threadIdx.y + bx*4)*8;
         if ( x < n ) {
           as[threadIdx.x + threadIdx.y*8     ] = a[offa + x + i*lda];
           as[threadIdx.x + threadIdx.y*8 + 32] = a[offa + x + (i + 1)*lda];
@@ -43,7 +43,7 @@ loadDevToSmem_generic( double* __restrict__ as, double* __restrict__ bs,
         }
       }
       else {
-        int x = threadIdx.x + (threadIdx.y - 4 + by*4)*8;
+        const int x = threadIdx.x + (threadIdx.y - 4 + by*4)*8;
         if ( x < n ) {
           bs[threadIdx.x + (threadIdx.y - 4)*8     ] = b[offa + x + i*ldb];
           bs[threadIdx.x + (threadIdx.y - 4)*8 + 32] = b[offa + x + (i + 1)*ldb];
@@ -54,7 +54,7 @@ loadDevToSmem_generic( double* __restrict__ as, double* __restrict__ bs,
     }
     else if ( i + 2 < k ) {
       if ( threadIdx.y < 4 ) {
-        int x = threadIdx.x + (threadIdx.y + bx*4)*8;
+        const int x = threadIdx.x + (threadIdx.y + bx*4)*8;
         if ( x < n ) {
           as[threadIdx.x + threadIdx.y*8     ] = a[offa + x + i*lda];
           as[threadIdx.x + threadIdx.y*8 + 32] = a[offa + x + (i + 1)*lda];
@@ -63,7 +63,7 @@ loadDevToSmem_generic( double* __restrict__ as, double* __restrict__ bs,
         }
       }
       else {
-        int x = threadIdx.x + (threadIdx.y - 4 + by*4)*8;
+        const int x = threadIdx.x + (threadIdx.y - 4 + by*4)*8;
         if ( x < n ) {
           bs[threadIdx.x + (threadIdx.y - 4)*8     ] = b[offa + x + i*ldb];
           bs[threadIdx.x + (threadIdx.y - 4)*8 + 32] = b[offa + x + (i + 1)*ldb];
@@ -74,7 +74,7 @@ loadDevToSmem_generic( double* __restrict__ as, double* __restrict__ bs,
     }
     else if ( i + 1 < k ) {
       if ( threadIdx.y < 4 ) {
-        int x = threadIdx.x + (threadIdx.y + bx*4)*8;
+        const int x = threadIdx.x + (threadIdx.y + bx*4)*8;
         if ( x < n ) {
           as[threadIdx.x + threadIdx.y*8     ] = a[offa + x + i*lda];
           as[threadIdx.x + threadIdx.y*8 + 32] = a[offa + x + (i + 1)*lda];
@@ -83,7 +83,7 @@ loadDevToSmem_generic( double* __restrict__ as, double* __restrict__ bs,
         }
       }
       else {
-        int x = threadIdx.x + (threadIdx.y - 4 + by*4)*8;
+        const int x = threadIdx.x + (threadIdx.y - 4 + by*4)*8;
         if ( x < n ) {
           bs[threadIdx.x + (threadIdx.y - 4)*8     ] = b[offa + x + i*ldb];
           bs[threadIdx.x + (threadIdx.y - 4)*8 + 32] = b[offa + x + (i + 1)*ldb];
@@ -94,7 +94,7 @@ loadDevToSmem_generic( double* __restrict__ as, double* __restrict__ bs,
     }
     else {
       if ( threadIdx.y < 4 ) {
-        int x = threadIdx.x + (threadIdx.y + bx*4)*8;
+        const int x = threadIdx.x + (threadIdx.y + bx*4)*8;
         if ( x < n ) {
           as[threadIdx.x + threadIdx.y*8     ] = a[offa + x + i*lda];
           as[threadIdx.x + threadIdx.y*8 + 32] = 0.0;
@@ -103,7 +103,7 @@ loadDevToSmem_generic( double* __restrict__ as, double* __restrict__ bs,
         }
       }
       else {
-        int x = threadIdx.x + (threadIdx.y - 4 + by*4)*8;
+        const int x = threadIdx.x + (threadIdx.y - 4 + by*4)*8;
         if ( x < n ) {
           bs[threadIdx.x + (threadIdx.y - 4)*8     ] = b[offa + x + i*ldb];
           bs[threadIdx.x + (threadIdx.y - 4)*8 + 32] = 0.0;
@@ -117,14 +117,14 @@ loadDevToSmem_generic( double* __restrict__ as, double* __restrict__ bs,
 case 2:
     if ( i + 1 < k ) {
       if ( threadIdx.y < 4 ) {
-        int x = threadIdx.x + (threadIdx.y + bx*4)*8;
+        const int x = threadIdx.x + (threadIdx.y + bx*4)*8;
         if ( x < n ) {
           as[threadIdx.x + threadIdx.y*8     ] = a[offa + x + i*lda];
           as[threadIdx.x + threadIdx.y*8 + 32] = a[offa + x + (i + 1)*lda];
         }
       }
       else {
-        int x = threadIdx.x + (threadIdx.y - 4 + by*4)*8;
+        const int x = threadIdx.x + (threadIdx.y - 4 + by*4)*8;
         if ( x < n ) {
           bs[threadIdx.x + (threadIdx.y - 4)*8     ] = b[offa + x + i*ldb];
           bs[threadIdx.x + (threadIdx.y - 4)*8 + 32] = b[offa + x + (i + 1)*ldb];
@@ -133,14 +133,14 @@ case 2:
     }
     else {
       if ( threadIdx.y < 4 ) {
-        int x = threadIdx.x + (threadIdx.y + bx*4)*8;
+        const int x = threadIdx.x + (threadIdx.y + bx*4)*8;
         if ( x < n ) {
           as[threadIdx.x + threadIdx.y*8     ] = a[offa + x + i*lda];
           as[threadIdx.x + threadIdx.y*8 + 32] = 0.0;
         }
       }
       else {
-        int x = threadIdx.x + (threadIdx.y - 4 + by*4)*8;
+        const int x = threadIdx.x + (threadIdx.y - 4 + by*4)*8;
         if ( x < n ) {
           bs[threadIdx.x + (threadIdx.y - 4)*8     ] = b[offa + x + i*ldb];
           bs[threadIdx.x + (threadIdx.y - 4)*8 + 32] = 0.0;
@@ -174,7 +174,7 @@ __launch_bounds__(64, 14)
 #endif
 __global__ void
 cu_multisyrk_lc_r4x4(
-  const struct multisyrk_type* msdata, int off, ELEMENT_TYPE* c
+  const struct multisyrk_type *msdata, const int off, ELEMENT_TYPE *const c
 ){
 
 // The number of elements we want in each shared memory buffer depends on the shared memory:register ratio
@@ -190,29 +190,29 @@ cu_multisyrk_lc_r4x4(
 #endif
 
 #if (USE_DOUBLE2)
-  __shared__ double2 as[32 * SYRK_WIDTH];
-  __shared__ ELEMENT_TYPE bs[32 * SYRK_WIDTH];
+  __shared__ volatile double2 as[32 * SYRK_WIDTH];
+  __shared__ volatile ELEMENT_TYPE bs[32 * SYRK_WIDTH];
 #if (DOUBLE_BUFFERED)
-  __shared__ double2 as2[32 * SYRK_WIDTH];
-  __shared__ ELEMENT_TYPE bs2[32 * SYRK_WIDTH];
+  __shared__ volatile double2 as2[32 * SYRK_WIDTH];
+  __shared__ volatile ELEMENT_TYPE bs2[32 * SYRK_WIDTH];
 #endif
 
 #else
-  __shared__ ELEMENT_TYPE as[32 * SYRK_WIDTH], bs[32 * SYRK_WIDTH];
+  __shared__ volatile ELEMENT_TYPE as[32 * SYRK_WIDTH], bs[32 * SYRK_WIDTH];
 #if (DOUBLE_BUFFERED)
-  __shared__ ELEMENT_TYPE as2[32 * SYRK_WIDTH], bs2[32 * SYRK_WIDTH];
+  __shared__ volatile ELEMENT_TYPE as2[32 * SYRK_WIDTH], bs2[32 * SYRK_WIDTH];
 #endif
 #endif
   
   msdata += blockIdx.x;
-  int first = msdata->first;
-  const ELEMENT_TYPE * __restrict__ a = msdata->lval;
-  const ELEMENT_TYPE * __restrict__ b = msdata->ldval;
-  int offc  = msdata->offc;
-  int n     = msdata->n;
-  int k     = msdata->k;
-  int lda   = msdata->lda;
-  int ldb   = msdata->ldb;
+  const int first = msdata->first;
+  const ELEMENT_TYPE *const __restrict__ a = msdata->lval;
+  const ELEMENT_TYPE *const __restrict__ b = msdata->ldval;
+  const int offc  = msdata->offc;
+  const int n     = msdata->n;
+  const int k     = msdata->k;
+  const int lda   = msdata->lda;
+  const int ldb   = msdata->ldb;
 
   if ( n < 1 )
     return;
@@ -220,7 +220,7 @@ cu_multisyrk_lc_r4x4(
 
   int bx, by;
   {
-    int nb = (n - 1)/32 + 1;
+    const int nb = (n + 31)/32;
     for ( bx = 0, by = 0; by < nb; by++ ) {
       if ( off + blockIdx.x - first - bx < nb - by ) {
         bx = off + blockIdx.x - first - bx + by;
@@ -244,7 +244,7 @@ cu_multisyrk_lc_r4x4(
     
     
 #if (SYRK_WIDTH <= 2 && DOUBLE_BUFFERED)
-  loadDevToSmem_generic<SYRK_WIDTH>( (double*)as, bs, a, b, bx, by, 0, lda, ldb, n, 0, k );    
+  loadDevToSmem_generic<SYRK_WIDTH>( (volatile double*)as, bs, a, b, bx, by, 0, lda, ldb, n, 0, k );    
 #endif
     
   for ( int i = 0; i < k; i += SYRK_WIDTH ) {
@@ -258,12 +258,12 @@ cu_multisyrk_lc_r4x4(
     // challenge to get it working without spilling.
 #if (DOUBLE_BUFFERED)
     if ( i + SYRK_WIDTH < k ) {
-       loadDevToSmem_generic<SYRK_WIDTH>( (double*)as2, bs2, a, b, bx, by, 0, lda, ldb, n, i + SYRK_WIDTH, k );
+      loadDevToSmem_generic<SYRK_WIDTH>( (volatile double*)as2, bs2, a, b, bx, by, 0, lda, ldb, n, i + SYRK_WIDTH, k );
     }
 #endif // (DOUBLE_BUFFERED)
 
 #if (SYRK_WIDTH > 2 || DOUBLE_BUFFERED)
-    loadDevToSmem_generic<SYRK_WIDTH>( (double*)as, bs, a, b, bx, by, 0, lda, ldb, n, i, k );
+    loadDevToSmem_generic<SYRK_WIDTH>( (volatile double*)as, bs, a, b, bx, by, 0, lda, ldb, n, i, k );
 #endif
     __syncthreads();
 
@@ -294,7 +294,7 @@ cu_multisyrk_lc_r4x4(
     __syncthreads();
     if ( i + SYRK_WIDTH < k ) {
 #if (SYRK_WIDTH <= 2)
-       loadDevToSmem_generic<SYRK_WIDTH>( (double*)as, bs, a, b, bx, by, 0, lda, ldb, n, i + SYRK_WIDTH, k );
+      loadDevToSmem_generic<SYRK_WIDTH>( (volatile double*)as, bs, a, b, bx, by, 0, lda, ldb, n, i + SYRK_WIDTH, k );
 #endif
     }
     
@@ -324,7 +324,7 @@ cu_multisyrk_lc_r4x4(
   for ( int iy = 0; iy < 4; iy++ ) {
     for ( int ix = 0; ix < 2; ix++ ) {
       int x = threadIdx.x * 2 + ix*16 + bx*32;
-      int y = threadIdx.y + iy*8 + by*32;
+      const int y = threadIdx.y + iy*8 + by*32;
       if ( x < n && y < n && y <= x ) {
         c[offc + x + y*n] = -s[ix + iy*2].x;
       }
@@ -336,19 +336,19 @@ cu_multisyrk_lc_r4x4(
     }
   }
 #else  
-  int xMaxBase = (3 + bx*4)*8;
-  int yMaxBase = (3 + by*4)*8;
+  const int xMaxBase = (3 + bx*4)*8;
+  const int yMaxBase = (3 + by*4)*8;
 
-  int XNPass = xMaxBase + 8 < n;
-  int YNPass = yMaxBase + 8 < n;
-  int YXPass = yMaxBase + 8 <= xMaxBase;
+  const int XNPass = xMaxBase + 8 < n;
+  const int YNPass = yMaxBase + 8 < n;
+  const int YXPass = yMaxBase + 8 <= xMaxBase;
   
   // This is only a small improvement (~1%)
   if (XNPass && YNPass && YXPass) {
     for ( int iy = 0; iy < 4; iy++ ) {
       for ( int ix = 0; ix < 4; ix++ ) {
-        int x = threadIdx.x + (ix + bx*4)*8;
-        int y = threadIdx.y + (iy + by*4)*8;
+        const int x = threadIdx.x + (ix + bx*4)*8;
+        const int y = threadIdx.y + (iy + by*4)*8;
         c[offc + x + y*n] = -s[ix + iy*4];
       }
     }
@@ -356,8 +356,8 @@ cu_multisyrk_lc_r4x4(
   else if (XNPass && YNPass) {
     for ( int iy = 0; iy < 4; iy++ ) {
       for ( int ix = 0; ix < 4; ix++ ) {
-        int x = threadIdx.x + (ix + bx*4)*8;
-        int y = threadIdx.y + (iy + by*4)*8;
+        const int x = threadIdx.x + (ix + bx*4)*8;
+        const int y = threadIdx.y + (iy + by*4)*8;
         if ( y <= x )
           c[offc + x + y*n] = -s[ix + iy*4];
       }
@@ -366,8 +366,8 @@ cu_multisyrk_lc_r4x4(
   else {
     for ( int iy = 0; iy < 4; iy++ ) {
       for ( int ix = 0; ix < 4; ix++ ) {
-        int x = threadIdx.x + (ix + bx*4)*8;
-        int y = threadIdx.y + (iy + by*4)*8;
+        const int x = threadIdx.x + (ix + bx*4)*8;
+        const int y = threadIdx.y + (iy + by*4)*8;
         if ( x < n && y < n && y <= x )
           c[offc + x + y*n] = -s[ix + iy*4];
       }
@@ -392,10 +392,10 @@ template< typename ELEMENT_TYPE >
 //#endif
 __global__ void
 cu_multisyrk_r4x4(
-    bool posdef,
-    int* stat,
-    multielm_data* mdata,
-    int off,
+    const bool posdef,
+    int *const stat,
+    multielm_data *mdata,
+    const int off,
     struct multinode_fact_type *ndatat 
 ){
   int bx, by;
@@ -412,12 +412,12 @@ cu_multisyrk_r4x4(
   #define DOUBLE_BUFFERED 0
 #endif
 
-  __shared__ ELEMENT_TYPE as[32 * SYRK_WIDTH];
-  __shared__ ELEMENT_TYPE bs[32 * SYRK_WIDTH];
+  __shared__ volatile ELEMENT_TYPE as[32 * SYRK_WIDTH];
+  __shared__ volatile ELEMENT_TYPE bs[32 * SYRK_WIDTH];
 
 #if (DOUBLE_BUFFERED)
-  __shared__ ELEMENT_TYPE as2[32 * SYRK_WIDTH];
-  __shared__ ELEMENT_TYPE bs2[32 * SYRK_WIDTH];
+  __shared__ volatile ELEMENT_TYPE as2[32 * SYRK_WIDTH];
+  __shared__ volatile ELEMENT_TYPE bs2[32 * SYRK_WIDTH];
 #endif  
 
   mdata += blockIdx.x;
@@ -437,9 +437,9 @@ cu_multisyrk_r4x4(
   if ( by >= n || by >= m )
     return;
 
-  const double * __restrict__ a = ndatat->lval;
-  const double * __restrict__ b = posdef ? ndatat->lval : ndatat->ldval;
-  double * __restrict__ c = ndatat->lval;
+  const double *const __restrict__ a = ndatat->lval;
+  const double *const __restrict__ b = posdef ? ndatat->lval : ndatat->ldval;
+  double *const __restrict__ c = ndatat->lval;
 
   offa = by + lda*n;
   offc = by + by*n;
@@ -461,12 +461,12 @@ cu_multisyrk_r4x4(
   }
 
 #if (DOUBLE_BUFFERED)
-  loadDevToSmem_generic<SYRK_WIDTH>( (double*)as, bs, a, b, bx, by, offa, lda, ldb, n, 0, k );
+  loadDevToSmem_generic<SYRK_WIDTH>( as, bs, a, b, bx, by, offa, lda, ldb, n, 0, k );
 #endif
   
   for ( int i = 0; i < k; i += SYRK_WIDTH ) {
 #if (!DOUBLE_BUFFERED)
-    loadDevToSmem_generic<SYRK_WIDTH>( (double*)as, bs, a, b, bx, by, offa, lda, ldb, n, i, k );
+    loadDevToSmem_generic<SYRK_WIDTH>( as, bs, a, b, bx, by, offa, lda, ldb, n, i, k );
 #endif
 
     __syncthreads();
@@ -475,7 +475,7 @@ cu_multisyrk_r4x4(
     if (i + SYRK_WIDTH < k) {
       loadDevToSmem_generic<SYRK_WIDTH>( as2, bs2, a, b, bx, by, offa, lda, ldb, n, i + SYRK_WIDTH, k );
     }
-#endif  
+#endif
     
     #pragma unroll
     for ( int ix = 0; ix < SYRK_WIDTH; ix++) {
@@ -512,8 +512,8 @@ cu_multisyrk_r4x4(
   
   for ( int iy = 0; iy < 4; iy++ )
     for ( int ix = 0; ix < 4; ix++ ) {
-      int x = threadIdx.x + (ix + bx*4)*8;
-      int y = threadIdx.y + (iy + by*4)*8;
+      const int x = threadIdx.x + (ix + bx*4)*8;
+      const int y = threadIdx.y + (iy + by*4)*8;
       if ( x < n && y < m )
         c[offc + x + y*lda] = c[offc + x + y*lda] - s[ix + iy*4];
     }
@@ -522,13 +522,13 @@ cu_multisyrk_r4x4(
 template< typename ELEMENT_TYPE >
 __global__ void
 cu_syrk_r4x4(
-  int n, int m, int k,
-  double alpha, const double* a, int lda, const double* b, int ldb,
-  double beta, double* c, int ldc
+  const int n, const int m, const int k,
+  const double alpha, const double *const a, const int lda, const double *const b, const int ldb,
+  const double beta, double *const c, const int ldc
 ){
   ELEMENT_TYPE s[16];
 
-  __shared__ ELEMENT_TYPE as[128], bs[128];
+  __shared__ volatile ELEMENT_TYPE as[128], bs[128];
 
   for ( int i = 0; i < 16; i++ )
     s[i] = 0;
@@ -573,8 +573,8 @@ cu_syrk_r4x4(
   if ( beta ) {
     for ( int iy = 0; iy < 4; iy++ )
       for ( int ix = 0; ix < 4; ix++ ) {
-        int x = threadIdx.x + (ix + blockIdx.x*4)*8;
-        int y = threadIdx.y + (iy + blockIdx.y*4)*8;
+        const int x = threadIdx.x + (ix + blockIdx.x*4)*8;
+        const int y = threadIdx.y + (iy + blockIdx.y*4)*8;
         if ( x < n && y < m )
           c[x + y*ldc] = beta*c[x + y*ldc] + alpha*s[ix + iy*4];
       }
@@ -582,8 +582,8 @@ cu_syrk_r4x4(
   else {
     for ( int iy = 0; iy < 4; iy++ )
       for ( int ix = 0; ix < 4; ix++ ) {
-        int x = threadIdx.x + (ix + blockIdx.x*4)*8;
-        int y = threadIdx.y + (iy + blockIdx.y*4)*8;
+        const int x = threadIdx.x + (ix + blockIdx.x*4)*8;
+        const int y = threadIdx.y + (iy + blockIdx.y*4)*8;
         if ( x < n && y < m )
           c[x + y*ldc] = alpha*s[ix + iy*4];
       }
@@ -601,35 +601,34 @@ using namespace spral::ssids;
 
 extern "C" {
 
-void spral_ssids_dsyrk(cudaStream_t stream, int n, int m, int k, double alpha,
-      const double* a, int lda, const double* b, int ldb, double beta,
-      double* c, int ldc) {
-  int nx, ny;
-  nx = (n - 1)/32 + 1;
-  ny = (m - 1)/32 + 1;
-  dim3 threads(8,8);
-  dim3 grid(nx,ny);
+void spral_ssids_dsyrk(const cudaStream_t stream, const int n, const int m, const int k, const double alpha,
+      const double *const a, const int lda, const double *const b, const int ldb, const double beta,
+      double *const c, const int ldc) {
+  const int nx = (n + 31)/32;
+  const int ny = (m + 31)/32;
+  const dim3 threads(8,8);
+  const dim3 grid(nx,ny);
   cu_syrk_r4x4< double > <<< grid, threads, 0, stream >>>
     ( n, m, k, alpha, a, lda, b, ldb, beta, c, ldc );
 }
 
-void spral_ssids_multidsyrk(cudaStream_t stream, bool posdef, int nb,
-      int* stat, struct multielm_data* mdata, 
-      struct multinode_fact_type *ndata) {
-  dim3 threads(8,8);
+void spral_ssids_multidsyrk(const cudaStream_t stream, const bool posdef, const int nb,
+      int *const stat, struct multielm_data *const mdata, 
+      struct multinode_fact_type *const ndata) {
+  const dim3 threads(8,8);
   for ( int i = 0; i < nb; i += MAX_CUDA_BLOCKS ) {
-    int blocks = min(MAX_CUDA_BLOCKS, nb - i);
+    const int blocks = min(MAX_CUDA_BLOCKS, nb - i);
     cu_multisyrk_r4x4< double >
       <<< blocks, threads, 0, stream >>>
       ( posdef, stat, mdata + i, i, ndata );
   }
 }
 
-void spral_ssids_multidsyrk_low_col(cudaStream_t stream, int nb,
-      struct multisyrk_type* msdata, double* c) {
-  dim3 threads(8,8);
+void spral_ssids_multidsyrk_low_col(const cudaStream_t stream, const int nb,
+      struct multisyrk_type *const msdata, double *const c) {
+  const dim3 threads(8,8);
   for ( int i = 0; i < nb; i += MAX_CUDA_BLOCKS ) {
-    int blocks = min(MAX_CUDA_BLOCKS, nb - i);
+    const int blocks = min(MAX_CUDA_BLOCKS, nb - i);
     cu_multisyrk_lc_r4x4< double >
       <<< blocks, threads, 0, stream >>>( msdata + i, i, c );
   }

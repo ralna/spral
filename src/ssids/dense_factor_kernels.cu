@@ -5,6 +5,7 @@
  * of dense submatrices.
  */
 
+#include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -530,7 +531,7 @@ dev_init_max(
   // of the first row is (one of) the largest one(s)
   if ( threadIdx.x < ncols && threadIdx.y < ncols &&
        threadIdx.x != threadIdx.y &&
-       abs(fs[SIZE_X*threadIdx.x]) < abs(fs[SIZE_X*threadIdx.y]) )
+       fabs(fs[SIZE_X*threadIdx.x]) < fabs(fs[SIZE_X*threadIdx.y]) )
     not_max[threadIdx.x] = 1; // no good: a larger value exists elsewhere
   __syncthreads();
 
@@ -582,8 +583,8 @@ dev_select_pivots_at_root(
     a12 = fs[ip + ld*jp];
     a22 = fs[jp + ld*jp];
     det = a11*a22 - a12*a12; // determinant of 2x2 pivot stored in det
-    if ( (abs(a12) + abs(a11) + abs(a22))*abs(a11) > abs(det) ) {
-      if ( abs(a11) > abs(a22) ) { // choose the best 1x1 alternative
+    if ( (fabs(a12) + fabs(a11) + fabs(a22))*fabs(a11) > fabs(det) ) {
+      if ( fabs(a11) > fabs(a22) ) { // choose the best 1x1 alternative
         jp = ip; // select a11
         det = a11; // pivot value stored in det
       }
@@ -592,7 +593,7 @@ dev_select_pivots_at_root(
         det = a22; // pivot value stored in det
       }
     }
-    else if ( (abs(a12) + abs(a11) + abs(a22))*abs(a22) > abs(det) ) {
+    else if ( (fabs(a12) + fabs(a11) + fabs(a22))*fabs(a22) > fabs(det) ) {
       ip = jp; // select a22
       det = a22; // pivot value stored in det
     }
@@ -620,8 +621,8 @@ dev_select_pivots(
     a12 = fs[ip + ld*jp];
     a22 = fs[jp + ld*jp];
     det = a11*a22 - a12*a12; // determinant of 2x2 pivot stored in det
-    if ( (abs(a12) + abs(a11) + abs(a22))*abs(a11) > FAVOUR2x2*abs(det) ) {
-      if ( abs(a11) > abs(a22) ) { // choose the best 1x1 alternative
+    if ( (fabs(a12) + fabs(a11) + fabs(a22))*fabs(a11) > FAVOUR2x2*fabs(det) ) {
+      if ( fabs(a11) > fabs(a22) ) { // choose the best 1x1 alternative
         jp = ip; // select a11
         det = a11; // pivot value stored in det
       }
@@ -630,7 +631,7 @@ dev_select_pivots(
         det = a22; // pivot value stored in det
       }
     }
-    else if ( (abs(a12) + abs(a11) + abs(a22))*abs(a22) > FAVOUR2x2*abs(det) ) {
+    else if ( (fabs(a12) + fabs(a11) + fabs(a22))*fabs(a22) > FAVOUR2x2*fabs(det) ) {
       ip = jp; // select a22
       det = a22; // pivot value stored in det
     }
@@ -656,8 +657,8 @@ dev_1x1_pivot_fails(
 {
   // the column of fds is that of fs before the division by pivot
   ELEMENT_TYPE u = fds[x + ld*ip] = fs[x + ld*ip];
-  if ( abs(det) <= eps ) { // the pivot is considered to be zero
-    if ( abs(u) <= eps ) { // the off-diagonal is considered to be zero
+  if ( fabs(det) <= eps ) { // the pivot is considered to be zero
+    if ( fabs(u) <= eps ) { // the off-diagonal is considered to be zero
       if ( x == ip )
         fs[x + ld*ip] = 1.0;
       else
@@ -667,7 +668,7 @@ dev_1x1_pivot_fails(
       return 1; // this column to be delayed
     }
   }
-  else if ( abs(det) <= delta*abs(u) ) // pivot too small ->
+  else if ( fabs(det) <= delta*fabs(u) ) // pivot too small ->
     return 1; // this column to be delayed
   else
     fs[x + ld*ip] = u/det; // ok to divide
@@ -696,14 +697,14 @@ dev_2x2_pivot_fails(
   // the columns of fds is those of fd before division by pivot
   ELEMENT_TYPE u = fds[x + ld*ip] = fs[x + ld*ip];
   ELEMENT_TYPE v = fds[x + ld*jp] = fs[x + ld*jp];
-  if ( abs(det) <= abs(a11)*abs(a22)*1.0e-15 ||
+  if ( fabs(det) <= fabs(a11)*fabs(a22)*1.0e-15 ||
        // the determinant is smaller than round-off errors ->
        // the pivot is considered to be zero
-       abs(det) <= eps*(abs(a11) + abs(a22) + abs(a12)) 
+       fabs(det) <= eps*(fabs(a11) + fabs(a22) + fabs(a12)) 
        // the inverse of the pivot is of the order 1/eps ->
        // the pivot is considered to be zero
     ) {
-    if ( max(abs(u), abs(v)) <= eps ) { // the off-diagonal is "zero"
+    if ( max(fabs(u), fabs(v)) <= eps ) { // the off-diagonal is "zero"
       if ( x == ip ) {
         fs[x + ld*ip] = 1.0;
         fs[x + ld*jp] = 0.0;
@@ -720,8 +721,8 @@ dev_2x2_pivot_fails(
     else // non-zero off-diagonal element found ->
       return 1; // this column to be delayed
   }
-  else if ( abs(det) <= 
-             delta*max(abs(a22*u - a12*v), abs(a11*v - a12*u)) )
+  else if ( fabs(det) <= 
+             delta*max(fabs(a22*u - a12*v), fabs(a11*v - a12*u)) )
              // pivot too small ->
     return 1; // this column to be delayed
   else { // ok to divide
@@ -910,13 +911,13 @@ dev_block_ldlt(
       if ( threadIdx.x == 0 && threadIdx.y == TILE_SIZE + 4 ) {
         mask[ip] = pivoted + 1; // assume pivot is ok for now
         if ( ip == jp ) {
-          if ( abs(det) > eps )
+          if ( fabs(det) > eps )
             ds[2*pivoted] = 1.0/det; // ok to invert
         }
         else {
           mask[jp] = pivoted + 2; // assume pivot is ok for now
-          if ( abs(det) > abs(a11)*abs(a22)*1.0e-15 &&
-               abs(det) > eps*(abs(a11) + abs(a22) + abs(a12)) ) {          
+          if ( fabs(det) > fabs(a11)*fabs(a22)*1.0e-15 &&
+               fabs(det) > eps*(fabs(a11) + fabs(a22) + fabs(a12)) ) {          
             ds[2*pivoted    ] = a22/det;
             ds[2*pivoted + 1] = -a12/det;
             ds[2*pivoted + 2] = a11/det;
@@ -1002,8 +1003,8 @@ dev_block_ldlt(
       if ( row < ncols ) {
         // check the element in column threadIdx.x
         if ( threadIdx.x != threadIdx.y && mx == 0 && my == 0 &&
-             abs(fs[row + SIZE_X*threadIdx.x]) < 
-             abs(fs[row + SIZE_X*threadIdx.y]) )
+             fabs(fs[row + SIZE_X*threadIdx.x]) < 
+             fabs(fs[row + SIZE_X*threadIdx.y]) )
           not_max[threadIdx.x] = 1; // no good: a larger value exists elsewhere
       }
     }
@@ -1203,7 +1204,7 @@ cu_square_ldlt(
       y = -1;
       for ( x = threadIdx.x; x < n; x += blockDim.x ) {
         if ( ind[x] == 0 ) {
-          a12 = abs(f[x + ld*col]);
+          a12 = fabs(f[x + ld*col]);
           if ( a12 >= a11 ) {
             a11 = a12;
             y = x;
@@ -1273,13 +1274,13 @@ cu_square_ldlt(
         // mark pivoted columns and invert the pivot if possible
         ind[ip] = pivoted + 1;
         if ( ip == jp ) {
-          if ( abs(det) > eps ) // ok to invert
+          if ( fabs(det) > eps ) // ok to invert
             d[2*pivoted] = 1.0/det;
         }
         else {
           ind[jp] = pivoted + 2;
-          if ( abs(det) > abs(a11)*abs(a22)*1.0e-15 &&
-               abs(det) > eps*(abs(a11) + abs(a22) + abs(a12)) ) {
+          if ( fabs(det) > fabs(a11)*fabs(a22)*1.0e-15 &&
+               fabs(det) > eps*(fabs(a11) + fabs(a22) + fabs(a12)) ) {
             // ok to invert          
             d[2*pivoted    ] = a22/det;
             d[2*pivoted + 1] = -a12/det;

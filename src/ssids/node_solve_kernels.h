@@ -58,50 +58,50 @@ struct l_inv_data {
 
 void
 cuda_init_presolve( 
-   const cudaStream_t *stream, 
-   int nblocks, 
-   node_data< double >* data 
+   const cudaStream_t stream,
+   const int nblocks,
+   node_data< double > *const data
 );
 
 void
 cuda_tile_presolve( 
-   const cudaStream_t *stream, 
-   int nblocks, 
-   int tile_size, 
-   tile_presolve_data< double >* data,
-   int nud
+   const cudaStream_t stream,
+   const int nblocks,
+   const int tile_size,
+   tile_presolve_data< double > *const data,
+   const int nud
 );
 
 void
 cuda_multi_l_inv( 
-   const cudaStream_t *stream, 
-   int nblocks, 
-   l_inv_data< double >* data, 
-   int tile_size, 
-   int step
+   const cudaStream_t stream,
+   const int nblocks,
+   l_inv_data< double > *const data,
+   const int tile_size,
+   const int step
 );
 
 void
-cuda_multi_l_inv_copy( 
-   const cudaStream_t *stream, 
-   int nblocks, 
-   l_inv_data< double >* data, 
-   int tile_size
+cuda_multi_l_inv_copy(
+   const cudaStream_t stream, 
+   const int nblocks,
+   l_inv_data< double > *const data,
+   const int tile_size
 );
 
 int
-tile_presolve_ntiles(int tile_size, int nrows, int ncols);
+tile_presolve_ntiles(const int tile_size, const int nrows, const int ncols);
 
 int
-l_inv_nblocks(int tile_size, int n);
+l_inv_nblocks(const int tile_size, const int n);
 
 int
-tile_presolve_setup(int tile_size, 
-                    int nrows, int ncols, 
-                    double* node, int ldn,
-                    double* invd, int ldi,
-                    tile_presolve_data< double >* tile_data,
-                    int off);
+tile_presolve_setup(const int tile_size, 
+                    const int nrows, const int ncols, 
+                    double *const node, const int ldn,
+                    double *const invd, const int ldi,
+                    tile_presolve_data< double > *tile_data,
+                    const int off);
 
 //////////////////////////////////////////////
 }} // namespace spral::ssids
@@ -110,61 +110,60 @@ tile_presolve_setup(int tile_size,
 extern "C"
 void
 spral_ssids_multinode_dgemm_n( 
-   const cudaStream_t *stream, 
-   int nblocks, 
-   node_solve_data< double >* data, 
-   double a 
+   const cudaStream_t stream, 
+   const int nblocks,
+   node_solve_data< double > *const data,
+   const double a
 );
 
 extern "C"
 void
 spral_ssids_multinode_solve_n( 
-  const cudaStream_t *stream, 
-  int nblocks, 
-  int nrhs, 
-  double* a, double* b, double* u, double* v,
-  node_solve_data< double >* data 
+  const cudaStream_t stream, 
+  const int nblocks,
+  const int nrhs,
+  double *const a, double *const b, double *const u, double *const v,
+  node_solve_data< double > *const data 
 );
 
 extern "C"
 void
-spral_ssids_multinode_solve_t( 
-  const cudaStream_t *stream, 
-  int nblocks, 
-  int nrhs,
-  double* a, double* b, double* u, double* v,
-  node_solve_data< double >* data 
+spral_ssids_multinode_solve_t(
+  const cudaStream_t stream,
+  const int nblocks,
+  const int nrhs,
+  double *const a, double *const b, double *const u, double *const v,
+  node_solve_data< double > *const data
 );
 
 extern "C"
 int
-spral_ssids_multi_Ld_inv_init( 
-  const cudaStream_t *stream, 
-  int nnodes,
-  node_data< double >* data,
-  int tile_size,
-  int nud,
-  double* d_work 
+spral_ssids_multi_Ld_inv_init(
+  const cudaStream_t stream,
+  const int nnodes,
+  node_data< double > *const data,
+  const int tile_size,
+  const int nud,
+  double *const d_work 
 );
 
 extern "C"
 int
 spral_ssids_multi_Ld_inv( 
-  const cudaStream_t *stream, 
-  int nnodes,
-  node_data< double >* data,
-  int tile_size,
-  double* d_work 
+  const cudaStream_t stream, 
+  const int nnodes,
+  node_data< double > *const data,
+  const int tile_size,
+  double *const d_work
 );
 
 extern "C"
 int
 spral_ssids_node_solve_setup(
-                  int nrows, int ncols, int nrhs,
-                  double* a, int lda, double* b, int ldb,
-                  double* u, int ldu, double* v, int ldv,
-                  node_solve_data< double >* data,
-                  int off );
+  const int nrows, const int ncols, const int nrhs,
+  double *const a, const int lda, double *const b, const int ldb,
+  double *const u, const int ldu, double *const v, const int ldv,
+  node_solve_data< double > *data, const int off );
 
 #endif
 
