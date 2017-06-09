@@ -45,42 +45,42 @@ __inline__ __device__ T_ELEM loadVolatile(volatile T_ELEM *vptr) {
 #endif
 
 unsigned int __inline__ __device__ getSM(void) {
-   unsigned int output;
-   asm("mov.u32 %0,%smid;" : "=r"(output) : );
-   return output;
+  volatile unsigned int output;
+  asm volatile("mov.u32 %0,%smid;" : "=r"(output) : );
+  return output;
 }
 
 /* Performs trsv on a blksz x blksz tile.
  * IMPORTANT blkSize <= warpSize
  */
 template <typename T_ELEM, int blkSize, bool ISUNIT>
-void __device__ dblkSolve(const T_ELEM *minus_a, int lda, T_ELEM &val) {
+void __device__ dblkSolve(const volatile T_ELEM *const minus_a, const int lda, T_ELEM &val) {
 
    volatile T_ELEM __shared__ xs;
 
 #pragma unroll 16
-   for(int i=0; i<blkSize; i++) {
-      if(threadIdx.x==i) {
-         if(!ISUNIT) val *= minus_a[i*lda+i];
+   for (int i=0; i<blkSize; i++) {
+      if (threadIdx.x==i) {
+         if (!ISUNIT) val *= minus_a[i*lda+i];
          xs = val;
       }
-      if(threadIdx.x>i)
+      if (threadIdx.x>i)
          val += minus_a[i*lda+threadIdx.x] * xs;
    }
 }
 
 template <typename T_ELEM, int blkSize, bool ISUNIT>
-void __device__ dblkSolve_trans(const T_ELEM *minus_a, int lda, T_ELEM &val) {
+void __device__ dblkSolve_trans(const volatile T_ELEM *const minus_a, const int lda, T_ELEM &val) {
 
    volatile T_ELEM __shared__ xs;
 
 #pragma unroll 16
-   for(int i=blkSize-1; i>=0; i--) {
-      if(threadIdx.x==i) {
-         if(!ISUNIT) val *= minus_a[i*lda+i];
+   for (int i=blkSize-1; i>=0; i--) {
+      if (threadIdx.x==i) {
+         if (!ISUNIT) val *= minus_a[i*lda+i];
          xs = val;
       }
-      if(threadIdx.x < i)
+      if (threadIdx.x < i)
          val += minus_a[i*lda+threadIdx.x] * xs;
    }
 }
@@ -89,23 +89,23 @@ void __device__ dblkSolve_trans(const T_ELEM *minus_a, int lda, T_ELEM &val) {
  * Copies -a and only the half triangle
  */
 template <typename T_ELEM, unsigned int nbi, unsigned int ntid, bool TRANS, bool ISUNIT>
-void __device__ tocache(unsigned int tid, const T_ELEM *a, int lda,
-      T_ELEM *cache) {
-   int x = tid % nbi;
-   int y = tid / nbi;
-   int ty = ntid/nbi;
+void __device__ tocache(const unsigned int tid, const T_ELEM *const a, const int lda,
+      volatile T_ELEM *const cache) {
+   const int x = tid % nbi;
+   const int y = tid / nbi;
+   const int ty = ntid/nbi;
 
-   if(!TRANS) {
-      for(int i=0; i<nbi; i+=ty) {
-         if(x>(i+y)) cache[(i+y)*nbi+x] = -a[(i+y)*lda+x];
-         else if((i+y)<nbi) cache[(i+y)*nbi+x] = 0.0;
-         if((!ISUNIT) && (x==(i+y)) ) cache[(i+y)*nbi+x] = 1 / a[(i+y)*lda+x];
+   if (!TRANS) {
+      for (int i=0; i<nbi; i+=ty) {
+         if (x>(i+y)) cache[(i+y)*nbi+x] = -a[(i+y)*lda+x];
+         else if ((i+y)<nbi) cache[(i+y)*nbi+x] = 0.0;
+         if ((!ISUNIT) && (x==(i+y)) ) cache[(i+y)*nbi+x] = 1.0 / a[(i+y)*lda+x];
       }
    } else {
-      for(int i=0; i<nbi; i+=ty) {
-         if(x>(i+y)) cache[(i+y)+nbi*x] = -a[(i+y)*lda+x];
-         else if((i+y)<nbi) cache[(i+y)+nbi*x] = 0.0;
-         if((!ISUNIT) && (x==(i+y)) ) cache[(i+y)+nbi*x] = 1 / a[(i+y)*lda+x];
+      for (int i=0; i<nbi; i+=ty) {
+         if (x>(i+y)) cache[(i+y)+nbi*x] = -a[(i+y)*lda+x];
+         else if ((i+y)<nbi) cache[(i+y)+nbi*x] = 0.0;
+         if ((!ISUNIT) && (x==(i+y)) ) cache[(i+y)+nbi*x] = 1.0 / a[(i+y)*lda+x];
       }
    }
 }
@@ -115,24 +115,24 @@ void __device__ tocache(unsigned int tid, const T_ELEM *a, int lda,
  * ntid is the number of participating threads, tid is the thread id.
  */
 template <typename T_ELEM, unsigned int nbi, unsigned int ntid, bool TRANS, bool ISUNIT>
-void __device__ tocache_small(int n, unsigned int tid, const T_ELEM *a,
-      int lda, T_ELEM *cache) {
-   int x = tid % nbi;
-   int y = tid / nbi;
-   int ty = ntid/nbi;
-   if(!TRANS) {
-      for(int i=0; i<n; i+=ty) {
-         if(i+y>=nbi) continue; // past end of cache array
-         if((i+y)<n && (x>(i+y) && x<n)) cache[(i+y)*nbi+x] = -a[(i+y)*lda+x];
-         else                            cache[(i+y)*nbi+x] = 0.0;
-         if((!ISUNIT) && x==(i+y) && x<n) cache[(i+y)*nbi+x] = 1 / a[(i+y)*lda+x];
+void __device__ tocache_small(const int n, const unsigned int tid, const T_ELEM *const a,
+      const int lda, volatile T_ELEM *const cache) {
+   const int x = tid % nbi;
+   const int y = tid / nbi;
+   const int ty = ntid/nbi;
+   if (!TRANS) {
+      for (int i=0; i<n; i+=ty) {
+         if (i+y>=nbi) continue; // past end of cache array
+         if ((i+y)<n && (x>(i+y) && x<n)) cache[(i+y)*nbi+x] = -a[(i+y)*lda+x];
+         else                             cache[(i+y)*nbi+x] = 0.0;
+         if ((!ISUNIT) && x==(i+y) && x<n) cache[(i+y)*nbi+x] = 1 / a[(i+y)*lda+x];
       }
    } else {
-      for(int i=0; i<nbi; i+=ty) {
-         if(i+y>=nbi) continue; // past end of cache array
-         if((i+y)<n && x>(i+y) && x<n) cache[(i+y)+nbi*x] = -a[(i+y)*lda+x];
-         else                          cache[(i+y)+nbi*x] = 0.0;
-         if((!ISUNIT) && x==(i+y) && x<n) cache[(i+y)+nbi*x] = 1 / a[(i+y)*lda+x];
+      for (int i=0; i<nbi; i+=ty) {
+         if (i+y>=nbi) continue; // past end of cache array
+         if ((i+y)<n && x>(i+y) && x<n) cache[(i+y)+nbi*x] = -a[(i+y)*lda+x];
+         else                           cache[(i+y)+nbi*x] = 0.0;
+         if ((!ISUNIT) && x==(i+y) && x<n) cache[(i+y)+nbi*x] = 1 / a[(i+y)*lda+x];
       }
    }
 }
@@ -140,11 +140,11 @@ void __device__ tocache_small(int n, unsigned int tid, const T_ELEM *a,
 /* loops until *sync > val.
  * Needs to be seperate function to force volatile onto *sync.
  */
-void __device__ wait_until_ge(int tid, volatile int *sync, int col_to_wait, int *col_done) {
-   if(tid == 0) {
+void __device__ wait_until_ge(const int tid, volatile int *const sync, const int col_to_wait, int *const col_done) {
+   if (tid == 0) {
       /* Only read global memory when necessary */
       if (*col_done < col_to_wait) {
-         while(*sync < col_to_wait) {}
+        while (*sync < col_to_wait) {}
          *col_done = *sync;
       }
    }
@@ -152,9 +152,9 @@ void __device__ wait_until_ge(int tid, volatile int *sync, int col_to_wait, int 
 }
 
 /* Returns next block row index that requires processing */
-int __device__ nextRow(int *address) {
+int __device__ nextRow(int *const address) {
    volatile int __shared__ old;
-   if(threadIdx.x==0 && threadIdx.y==0)
+   if (threadIdx.x==0 && threadIdx.y==0)
       old = atomicAdd(address, 1);
    __syncthreads();
    return old;
@@ -166,7 +166,7 @@ int __device__ nextRow(int *address) {
    for X_21.
 */
 template <typename T_ELEM, int n, int lda, int threadsx, int threadsy, bool ISUNIT>
-void __device__ slv21(const T_ELEM *x11, T_ELEM *a21, const T_ELEM *l22, volatile T_ELEM *xsarray) {
+void __device__ slv21(const volatile T_ELEM *const x11, volatile T_ELEM *const a21, const volatile T_ELEM *const l22, volatile T_ELEM *const xsarray) {
 
    const int tid = threadsx*threadIdx.y+threadIdx.x;
    const int ntid = threadsx*threadsy;
@@ -176,29 +176,29 @@ void __device__ slv21(const T_ELEM *x11, T_ELEM *a21, const T_ELEM *l22, volatil
 
    /* Note: as different threads within a warp can work on different
       columns, we need different xs variables (one per col being worked on) */
-   volatile T_ELEM *xs = &xsarray[y];
+   volatile T_ELEM *const xs = &xsarray[y];
 
-   if(y>n) return;
+   if (y>n) return;
 
 #pragma unroll
-   for(int j=0; j<n; j+=ty) {
-      if(j+y>=n) continue;
+   for (int j=0; j<n; j+=ty) {
+      if (j+y>=n) continue;
 
       /* construct col (j+y) of -L_21 X_11 */
-      T_ELEM val = 0;
-      for(int k=j; k<n; k++) {
-         if(k+y<n) val += a21[(k+y)*lda+x] * x11[(j+y)*lda+k+y];
+      T_ELEM val = 0.0;
+      for (int k=j; k<n; k++) {
+         if (k+y<n) val += a21[(k+y)*lda+x] * x11[(j+y)*lda+k+y];
       }
       val = -val;
 
       /* solve L_22 X_21(col j) = a21(col j) in place */
 #pragma unroll 2
-      for(int k=0; k<n; k++) { // Column of l22, must be done in order
-         if(x==k) {
-            if(!ISUNIT) val *= l22[k*lda+k];
+      for (int k=0; k<n; k++) { // Column of l22, must be done in order
+         if (x==k) {
+            if (!ISUNIT) val *= l22[k*lda+k];
             xs[0] = val;
          }
-         if(x>k)
+         if (x>k)
             val += l22[k*lda+x]*xs[0];
       }
       a21[(j+y)*lda+x] = -val;
@@ -207,9 +207,9 @@ void __device__ slv21(const T_ELEM *x11, T_ELEM *a21, const T_ELEM *l22, volatil
 
 /* Take transpose of a matrix in shared memory */
 template <typename T_ELEM, int threadsy, int lda>
-void __device__ transpose(int n, const T_ELEM *a, T_ELEM *at) {
-   if(threadIdx.y==0 && threadIdx.x<n) {
-      for(int j=0; j<n; j++)
+void __device__ transpose(const int n, const volatile T_ELEM *const a, volatile T_ELEM *const at) {
+   if (threadIdx.y==0 && threadIdx.x<n) {
+      for (int j=0; j<n; j++)
          at[j*lda+threadIdx.x] = a[threadIdx.x*lda+j];
    }
 }
@@ -225,11 +225,11 @@ void __device__ transpose(int n, const T_ELEM *a, T_ELEM *at) {
  * Stability of parallel triangular system solvers, Higham, 1995)
  */
 template <typename T_ELEM, int n, int lda, int threadsx, int threadsy, bool ISUNIT, bool TRANS>
-void __device__ invert(T_ELEM *a, volatile T_ELEM /*__shared__*/ *xsarray) {
+void __device__ invert(volatile T_ELEM *const a, volatile T_ELEM /*__shared__*/ *const xsarray) {
 
-   if(n==2) {
-      if(threadIdx.x==0 && threadIdx.y==0) {
-         if(ISUNIT) {
+   if (n==2) {
+      if (threadIdx.x==0 && threadIdx.y==0) {
+         if (ISUNIT) {
             a[0] = 1;
             a[lda+1] = 1;
             a[1] = a[1];
@@ -238,13 +238,13 @@ void __device__ invert(T_ELEM *a, volatile T_ELEM /*__shared__*/ *xsarray) {
             a[lda+1] = a[lda+1];
             a[1] = a[1]*(a[0]*a[lda+1]);
          }
-         if(TRANS) a[lda] = a[1];
+         if (TRANS) a[lda] = a[1];
       }
    } else {
       invert<T_ELEM, n/2, lda, threadsx, threadsy, ISUNIT, TRANS>(a, xsarray); // A_11
       __syncthreads();
       slv21<T_ELEM, n/2, lda, threadsx, threadsy, ISUNIT>(a, &a[n/2], &a[(lda+1)*n/2], xsarray); // A_21
-      if(TRANS) {
+      if (TRANS) {
          __syncthreads();
          transpose<T_ELEM, threadsy, lda> (n/2, &a[n/2], &a[(n/2)*lda]);
       }
@@ -258,28 +258,28 @@ void __device__ invert(T_ELEM *a, volatile T_ELEM /*__shared__*/ *xsarray) {
  * (so actually a triangular matrix-vector multiply)
  */
 template<typename T_ELEM, int n, int threadsy>
-void __device__ slvinv(const T_ELEM *a, T_ELEM *xshared, T_ELEM &val,
-      T_ELEM *partSum) {
+void __device__ slvinv(const volatile T_ELEM *a, volatile T_ELEM *xshared, T_ELEM &val,
+      volatile T_ELEM *const partSum) {
 
    a += threadIdx.y*n+threadIdx.x;
    xshared += threadIdx.y;
 
-   if(threadIdx.y==0) {
+   if (threadIdx.y==0) {
       xshared[threadIdx.x] = val;
    }
    __syncthreads();
 
    /* matrix-vector multiply for solution */
-   if(threadIdx.y<threadsy && threadIdx.x<n) {
+   if (threadIdx.y<threadsy && threadIdx.x<n) {
       val=0;
-      for(int j=0; j<n; j+=threadsy) {
+      for (int j=0; j<n; j+=threadsy) {
          val += a[j*n] * xshared[j];
       }
       partSum[threadIdx.y*n+threadIdx.x] = val;
    }
    __syncthreads();
-   if(threadIdx.y==0) {
-      for(int i=1; i<threadsy; i++)
+   if (threadIdx.y==0) {
+      for (int i=1; i<threadsy; i++)
          val += partSum[i*n+threadIdx.x];
    }
 }
@@ -289,30 +289,30 @@ void __device__ slvinv(const T_ELEM *a, T_ELEM *xshared, T_ELEM &val,
  * (so actually a transpose triangular matrix-vector multiply)
  */
 template<typename T_ELEM, int n, int threadsy>
-void __device__ slvinv_trans(const T_ELEM *a, T_ELEM *xshared, T_ELEM &val,
-      T_ELEM *partSum, int row) {
+void __device__ slvinv_trans(const volatile T_ELEM *a, volatile T_ELEM *xshared, T_ELEM &val,
+      volatile T_ELEM *const partSum, const int row) {
 
    a += threadIdx.y*n+threadIdx.x;
    xshared += threadIdx.y;
 
-   if(threadIdx.y==0) {
+   if (threadIdx.y==0) {
       xshared[threadIdx.x] = val;
    }
    __syncthreads();
 
    /* matrix-vector multiply for solution */
    val=0;
-   if(threadIdx.x<n) {
-      for(int j=0; j<n; j+=threadsy) {
-         if(threadIdx.x <= j+threadIdx.y) {
+   if (threadIdx.x<n) {
+      for (int j=0; j<n; j+=threadsy) {
+         if (threadIdx.x <= j+threadIdx.y) {
             val += a[j*n] * xshared[j];
          }
       }
    }
    partSum[threadIdx.y*n+threadIdx.x] = val;
    __syncthreads();
-   if(threadIdx.y==0) {
-      for(int i=1; i<threadsy; i++)
+   if (threadIdx.y==0) {
+      for (int i=1; i<threadsy; i++)
          val += partSum[i*n+threadIdx.x];
    }
 }
@@ -325,18 +325,18 @@ void __global__ trsv_init(int *sync) {
 }
 
 struct trsv_lookup {
-   int n;
-   const double *a;
-   int lda;
-   int x_offset;
-   int sync_offset;
+  int n;
+  const double *a;
+  int lda;
+  int x_offset;
+  int sync_offset;
 };
 
 #ifdef TIMING
 struct trsv_times {
-   unsigned int sm;
-   unsigned int sa;
-   unsigned int en;
+  unsigned int sm;
+  unsigned int sa;
+  unsigned int en;
 };
 #endif
 
@@ -354,46 +354,46 @@ void __global__ trsv_lt_exec(const struct trsv_lookup *lookup, T_ELEM *xglobal,
       ) {
 
    lookup += blockIdx.x;
-   int n = lookup->n;
-   const T_ELEM *a = lookup->a;
-   int lda = lookup->lda;
+   const int n = lookup->n;
+   const T_ELEM *const a = lookup->a;
+   const int lda = lookup->lda;
    xglobal += lookup->x_offset;
    sync += lookup->sync_offset;
 
 #ifdef TIMING
-   unsigned int sa = clock();
+   const unsigned int sa = clock();
 #endif
 
-   int nblk = (n-1) / nb + 1;
-   int tid = threadsx*threadIdx.y + threadIdx.x;
+   const int nblk = (n + (nb-1)) / nb;
+   const int tid = threadsx*threadIdx.y + threadIdx.x;
 
    /* sync components:
     *    sync[0] => nblk - Last ready column [init to -1]
     *    sync[1] => nblk - Next row to assign [init to 0]
     */
 
-   T_ELEM __shared__ partSum[threadsy*threadsx];
-   T_ELEM __shared__ cache[nb*nb];
+   __shared__ volatile T_ELEM partSum[threadsy*threadsx];
+   __shared__ volatile T_ELEM cache[nb*nb];
    T_ELEM regcache[nb/threadsy];
    T_ELEM ps[nb/threadsy];
 
    /* Get row handled by this block */
-   int row = nblk-1 - nextRow(&sync[1]);
+   const int row = nblk-1 - nextRow(&sync[1]);
 
-   bool short_row = ((n-1)/nb==row && n%nb!=0); /* requires special handling */
+   const bool short_row = ((n-1)/nb==row && n%nb!=0); /* requires special handling */
 
-   if(row!=nblk-1) {
-      const T_ELEM *aval = &a[(row*nb+threadIdx.x)*lda+(row+1)*nb+threadIdx.y];
+   if (row!=nblk-1) {
+      const T_ELEM *const aval = &a[(row*nb+threadIdx.x)*lda+(row+1)*nb+threadIdx.y];
 #pragma unroll
-      for(int j=0; j<nb; j+=threadsy)
+      for (int j=0; j<nb; j+=threadsy)
          regcache[j/threadsy] = aval[j];
    }
 
    /* Copy diagonal block to shared memory */
-   if(!short_row) {
+   if (!short_row) {
       /* on a block row of full size */
 #ifdef INV_AFTER
-      if(nblk-1-row>=INV_AFTER) {
+      if (nblk-1-row>=INV_AFTER) {
          tocache <T_ELEM,nb,threadsx*threadsy,false,ISUNIT> (tid, &a[row*nb*lda+row*nb], lda, cache);
       } else {
          tocache <T_ELEM,nb,threadsx*threadsy,true,ISUNIT> (tid, &a[row*nb*lda+row*nb], lda, cache);
@@ -404,7 +404,7 @@ void __global__ trsv_lt_exec(const struct trsv_lookup *lookup, T_ELEM *xglobal,
    } else {
       /* on last row, smaller than full blkSize */
 #ifdef INV_AFTER
-      if(nblk-1-row>=INV_AFTER) {
+      if (nblk-1-row>=INV_AFTER) {
          tocache_small <T_ELEM,nb,threadsx*threadsy,false,ISUNIT> (n%nb, tid, &a[row*nb*lda+row*nb], lda, cache);
       } else {
          tocache_small <T_ELEM,nb,threadsx*threadsy,true,ISUNIT> (n%nb, tid, &a[row*nb*lda+row*nb], lda, cache);
@@ -416,127 +416,127 @@ void __global__ trsv_lt_exec(const struct trsv_lookup *lookup, T_ELEM *xglobal,
    __syncthreads();
 
 #ifdef INV_AFTER
-   if(nblk-1-row>=INV_AFTER)
+   if (nblk-1-row>=INV_AFTER)
       invert<T_ELEM, nb, nb, threadsx, threadsy, ISUNIT, true>(cache, partSum);
 #endif /* INV_AFTER */
 
    /* Loop over blocks as they become available */
-   volatile T_ELEM __shared__ soln[nb];
-   if(threadIdx.y==0) {
-      if(!short_row) {
+   volatile __shared__ T_ELEM soln[nb];
+   if (threadIdx.y==0) {
+      if (!short_row) {
          soln[threadIdx.x] = xglobal[int(row*nb+threadIdx.x)];
       } else {
-         if(threadIdx.x<n%nb)
+         if (threadIdx.x<n%nb)
             soln[threadIdx.x] = xglobal[int(row*nb+threadIdx.x)];
          else 
             soln[threadIdx.x] = 0;
       }
    }
 #pragma unroll
-   for(int j=0; j<nb/threadsy; j++) ps[j] = 0;
+   for (int j=0; j<nb/threadsy; j++) ps[j] = 0;
    int col_done = -1;
-   for(int col=nblk-1; col>row+1; col--) {
+   for (int col=nblk-1; col>row+1; col--) {
       /* apply update from block (row, col) */
-      const T_ELEM *aval = &a[(row*nb+threadIdx.y)*lda + col*nb+threadIdx.x];
-      T_ELEM *xg = &xglobal[int(col*nb)];
+      const T_ELEM *const aval = &a[(row*nb+threadIdx.y)*lda + col*nb+threadIdx.x];
+      T_ELEM *const xg = &xglobal[int(col*nb)];
       wait_until_ge(tid, &sync[0], nblk-1-col, &col_done); // Wait for diagonal block to be done
       T_ELEM xl;
-      if(col<nblk-1) {
+      if (col<nblk-1) {
          xl = loadVolatile(&xg[int(threadIdx.x)]);
       } else {
-         if(threadIdx.x<(n-1)%nb+1) xl = loadVolatile(&xg[int(threadIdx.x)]);
+         if (threadIdx.x<(n-1)%nb+1) xl = loadVolatile(&xg[int(threadIdx.x)]);
          else                       xl = 0;
       }
-      if(nb % threadsy == 0) {
-        if(col!=nblk-1 || n%nb==0) {
+      if (nb % threadsy == 0) {
+        if (col!=nblk-1 || n%nb==0) {
 #pragma unroll
-            for(int j=0; j<nb; j+=threadsy) // do j=0,nb-1,threadsy
+            for (int j=0; j<nb; j+=threadsy) // do j=0,nb-1,threadsy
                ps[j/threadsy] += aval[j*lda] * xl;
         } else {
-            for(int j=0; j<nb; j+=threadsy) // do j=0,nb-1,threadsy
+            for (int j=0; j<nb; j+=threadsy) // do j=0,nb-1,threadsy
                if(threadIdx.x<n%nb) ps[j/threadsy] += aval[j*lda] * xl;
         }
       } else {
 #pragma unroll
-         for(int j=0; j<nb; j+=threadsy) // do j=0,nb-1,threadsy
-            if(j+threadIdx.y<nb)
+         for (int j=0; j<nb; j+=threadsy) // do j=0,nb-1,threadsy
+            if (j+threadIdx.y<nb)
                ps[j/threadsy] += aval[j*lda] * xl;
       }
    }
-   T_ELEM val = 0;
+   T_ELEM val = 0.0;
 #pragma unroll
-   for(int i=0; i<nb; i+=threadsy) {
+   for (int i=0; i<nb; i+=threadsy) {
       partSum[threadIdx.x*threadsy+threadIdx.y] = ps[i/threadsy];
       __syncthreads();
-      if(threadIdx.y==0 && threadIdx.x>=i && threadIdx.x<i+threadsy) {
-         for(int j=0; j<nb; j++)
+      if (threadIdx.y==0 && threadIdx.x>=i && threadIdx.x<i+threadsy) {
+         for (int j=0; j<nb; j++)
             val += partSum[(threadIdx.x-i)+threadsy*j];
       }
       __syncthreads();
    }
-   if(row!=nblk-1) {
+   if (row!=nblk-1) {
       /* apply update from block (row, col) */
       const int col = row+1;
-      T_ELEM *xg = &xglobal[int(col*nb)];
+      T_ELEM *const xg = &xglobal[int(col*nb)];
       wait_until_ge(tid, &sync[0], nblk-1-col, &col_done); // Wait for diagonal block to be done
-      T_ELEM __shared__ xlocal[nb];
-      T_ELEM *xl = xlocal+threadIdx.y;
-      if(col<nblk-1) {
-         if(tid<nb) xlocal[tid] = loadVolatile(&xg[int(tid)]);
+      __shared__ volatile T_ELEM xlocal[nb];
+      volatile T_ELEM *const xl = xlocal+threadIdx.y;
+      if (col<nblk-1) {
+         if (tid<nb) xlocal[tid] = loadVolatile(&xg[int(tid)]);
          __syncthreads();
 #pragma unroll
-         for(int j=0; j<nb; j+=threadsy) // do j=0,nb-1,threadsy
+         for (int j=0; j<nb; j+=threadsy) // do j=0,nb-1,threadsy
             val += regcache[j/threadsy] * xl[j];
       } else {
-         if(tid<(n-1)%nb+1) xlocal[tid] = loadVolatile(&xg[int(tid)]);
+         if (tid<(n-1)%nb+1) xlocal[tid] = loadVolatile(&xg[int(tid)]);
          __syncthreads();
 #pragma unroll
-         for(int j=0; j<(n-1)%nb+1; j+=threadsy) // do j=0,nb-1,threadsy
-            if(j+threadIdx.y<(n-1)%nb+1) val += regcache[j/threadsy] * xl[j];
+         for (int j=0; j<(n-1)%nb+1; j+=threadsy) // do j=0,nb-1,threadsy
+            if (j+threadIdx.y<(n-1)%nb+1) val += regcache[j/threadsy] * xl[j];
       }
    }
    partSum[threadIdx.y*threadsx+threadIdx.x] = val;
    __syncthreads();
-   if(threadIdx.y==0) {
-      for(int i=1; i<threadsy; i++)
+   if (threadIdx.y==0) {
+      for (int i=1; i<threadsy; i++)
          val += partSum[i*threadsx+threadIdx.x];
       val = soln[threadIdx.x]-val;
    }
 
    /* Apply update from diagonal block (row, row) */
 #ifdef INV_AFTER
-      if(nblk-1-row>=INV_AFTER) {
-         T_ELEM __shared__ xshared[nb];
+      if (nblk-1-row>=INV_AFTER) {
+         __shared__ volatile T_ELEM xshared[nb];
          slvinv_trans<T_ELEM, nb, threadsy>(cache, xshared, val, partSum, row);
-         if(!short_row || threadIdx.x<n%nb) {
-            if(threadIdx.y==0) {
+         if (!short_row || threadIdx.x<n%nb) {
+            if (threadIdx.y==0) {
                xglobal[int(row*nb+tid)] = val;
             }
          }
       } else {
-         if(threadIdx.y==0) {
+         if (threadIdx.y==0) {
             dblkSolve_trans<T_ELEM,nb,ISUNIT>(cache, nb, val);
-            if(!short_row || threadIdx.x<n%nb) {
+            if (!short_row || threadIdx.x<n%nb) {
                xglobal[int(row*nb+tid)] = val;
             }
          }
       }
 #else /* INV_AFTER */
-      if(threadIdx.y==0) {
+      if (threadIdx.y==0) {
          dblkSolve_trans<T_ELEM,nb,ISUNIT>(cache, nb, val);
-         if(!short_row || threadIdx.x<n%nb) {
+         if (!short_row || threadIdx.x<n%nb) {
             xglobal[int(row*nb+tid)] = val;
          }
       }
 #endif /* INV_AFTER */
    /* Notify other blocks that soln is ready for this row */
-   __threadfence(); // Wait for xglobal to be visible to other blocks
-   if(tid==0) atomicAdd(&sync[0],1); // Use atomicAdd to bypass L1 miss
-   __threadfence(); // Flush sync[0] asap
+   __threadfence_system(); // Wait for xglobal to be visible to other blocks
+   if (tid==0) atomicAdd(&sync[0],1); // Use atomicAdd to bypass L1 miss
+   __threadfence_system(); // Flush sync[0] asap
 
 #ifdef TIMING
-   unsigned int en = clock();
-   if(threadIdx.x==0 && threadIdx.y==0) {
+   const unsigned int en = clock();
+   if (threadIdx.x==0 && threadIdx.y==0) {
       times += blockIdx.x;
       times->sm = getSM();
       times->sa = sa;
@@ -554,45 +554,45 @@ template <typename T_ELEM, unsigned int nb, unsigned int threadsx,
 __launch_bounds__(threadsx*threadsy, 4)
 /* Note: setting above occupany to 5 causes random errors on large problems:
    suspect compiler bug */
-void __global__ trsv_ln_exec(T_ELEM* __restrict__ xglobal,
-      int* __restrict__ sync, struct trsv_lookup *lookup) {
+void __global__ trsv_ln_exec(T_ELEM *__restrict__ xglobal,
+      int *__restrict__ sync, struct trsv_lookup *lookup) {
 
    lookup += blockIdx.x;
-   int n = lookup->n;
-   T_ELEM const* a = lookup->a;
-   int lda = lookup->lda;
+   const int n = lookup->n;
+   const T_ELEM *const a = lookup->a;
+   const int lda = lookup->lda;
    xglobal += lookup->x_offset;
    sync += lookup->sync_offset;
-   const int incx=1;
+   const int incx = 1;
 
-   int tid = threadsx*threadIdx.y + threadIdx.x;
+   const int tid = threadsx*threadIdx.y + threadIdx.x;
 
    /* sync components:
     *    sync[0] => Last ready column [init to -1]
     *    sync[1] => Next row to assign [init to 0]
     */
 
-   T_ELEM __shared__ partSum[threadsy*threadsx];
-   T_ELEM __shared__ cache[nb*nb];
-   T_ELEM __shared__ xlocal[nb];
+   __shared__ volatile T_ELEM partSum[threadsy*threadsx];
+   __shared__ volatile T_ELEM cache[nb*nb];
+   __shared__ volatile T_ELEM xlocal[nb];
    T_ELEM regcache[nb/threadsy];
 
-   if(incx<0) xglobal+=(1-n)*incx;
+   if (incx<0) xglobal+=(1-n)*incx;
 
    /* Get row handled by this block */
-   int row = nextRow(&sync[1]);
+   const int row = nextRow(&sync[1]);
 
-   bool short_row = ((n-1)/nb==row && n%nb!=0); /* requires special handling */
+   const bool short_row = ((n-1)/nb==row && n%nb!=0); /* requires special handling */
 
-   if(row!=0) {
-      const T_ELEM *aval = &a[((row-1)*nb+threadIdx.y)*lda+row*nb+threadIdx.x];
+   if (row!=0) {
+      const T_ELEM *const aval = &a[((row-1)*nb+threadIdx.y)*lda+row*nb+threadIdx.x];
 #pragma unroll
-      for(int j=0; j<nb; j+=threadsy)
+      for (int j=0; j<nb; j+=threadsy)
          regcache[j/threadsy] = aval[j*lda];
    }
 
    /* Copy diagonal block to shared memory */
-   if(!short_row) {
+   if (!short_row) {
       /* on a block row of full size */
       tocache <T_ELEM,nb,threadsx*threadsy,false,ISUNIT> (tid, &a[row*nb*lda+row*nb], lda, cache);
    } else {
@@ -602,88 +602,88 @@ void __global__ trsv_ln_exec(T_ELEM* __restrict__ xglobal,
    __syncthreads();
 
 #ifdef INV_AFTER
-      if(row>=INV_AFTER)
+      if (row>=INV_AFTER)
          invert<T_ELEM, nb, nb, threadsx, threadsy, ISUNIT, false>(cache, partSum);
 #endif /* INV_AFTER */
 
    /* Loop over blocks as they become available */
-   T_ELEM val = 0;
-   if(threadIdx.y==0) {
-      if(!short_row) {
+   T_ELEM val = 0.0;
+   if (threadIdx.y==0) {
+      if (!short_row) {
          val = -xglobal[int(row*nb+threadIdx.x)*incx];
       } else {
-         if(threadIdx.x<n%nb) val = -xglobal[int(row*nb+threadIdx.x)*incx];
+         if (threadIdx.x<n%nb) val = -xglobal[int(row*nb+threadIdx.x)*incx];
       }
    }
    int col_done = -1;
-   for(int col=0; col<row-1; col++) {
+   for (int col=0; col<row-1; col++) {
       /* apply update from block (row, col) */
-      const T_ELEM *aval = &a[(col*nb+threadIdx.y)*lda + row*nb+threadIdx.x];
-      T_ELEM *xg = &xglobal[int(col*nb)*incx];
+      const T_ELEM *const aval = &a[(col*nb+threadIdx.y)*lda + row*nb+threadIdx.x];
+      T_ELEM *const xg = &xglobal[int(col*nb)*incx];
       wait_until_ge(tid, &sync[0], col, &col_done); // Wait for diagonal block to be done
-      T_ELEM *xl = xlocal+threadIdx.y;
-      if(tid<nb) xlocal[tid] = loadVolatile(&xg[int(tid)*incx]);
+      volatile T_ELEM *const xl = xlocal+threadIdx.y;
+      if (tid<nb) xlocal[tid] = loadVolatile(&xg[int(tid)*incx]);
       __syncthreads();
-      if(nb % threadsy == 0) {
+      if (nb % threadsy == 0) {
 #pragma unroll
-         for(int j=0; j<nb; j+=threadsy)
+         for (int j=0; j<nb; j+=threadsy)
             val += aval[j*lda] * xl[j];
       } else {
 #pragma unroll
-         for(int j=0; j<nb; j+=threadsy)
-            if(j+threadIdx.y<nb) val += aval[j*lda] * xl[j];
+         for (int j=0; j<nb; j+=threadsy)
+            if (j+threadIdx.y<nb) val += aval[j*lda] * xl[j];
       }
    }
-   if(row!=0) {
+   if (row!=0) {
       const int col = row-1;
       /* apply update from block (row, col) */
-      T_ELEM *xg = &xglobal[int(col*nb)*incx];
+      T_ELEM *const xg = &xglobal[int(col*nb)*incx];
       wait_until_ge(tid, &sync[0], col, &col_done); // Wait for diagonal block to be done
-      T_ELEM *xl = xlocal+threadIdx.y;
-      if(tid<nb) xlocal[tid] = loadVolatile(&xg[int(tid)*incx]);
+      volatile T_ELEM *const xl = xlocal+threadIdx.y;
+      if (tid<nb) xlocal[tid] = loadVolatile(&xg[int(tid)*incx]);
       __syncthreads();
 #pragma unroll
-      for(int j=0; j<nb; j+=threadsy) // do j=0,nb-1,threadsy
+      for (int j=0; j<nb; j+=threadsy) // do j=0,nb-1,threadsy
          val += regcache[j/threadsy] * xl[j];
    }
    partSum[threadIdx.y*threadsx+threadIdx.x] = val;
    __syncthreads();
-   if(threadIdx.y==0) {
-      for(int i=1; i<threadsy; i++)
+   if (threadIdx.y==0) {
+      for (int i=1; i<threadsy; i++)
          val += partSum[i*threadsx+threadIdx.x];
       val = -val;
-      if(short_row && threadIdx.x>=n%nb) val = 0.0;
+      if (short_row && threadIdx.x>=n%nb) val = 0.0;
    }
 
    /* Apply update from diagonal block (row, row) */
 #ifdef INV_AFTER
-      if(row>=INV_AFTER) {
+      if (row>=INV_AFTER) {
          slvinv<T_ELEM, nb, threadsy>(cache, xlocal, val, partSum);
-         if(!short_row || threadIdx.x<n%nb) {
-            if(threadIdx.y==0) {
+         if (!short_row || threadIdx.x<n%nb) {
+            if (threadIdx.y==0) {
                xglobal[int(row*nb+tid)*incx] = val;
             }
          }
       } else {
-         if(threadIdx.y==0) {
+         if (threadIdx.y==0) {
             dblkSolve<T_ELEM,nb,ISUNIT>(cache, nb, val);
-            if(!short_row || threadIdx.x<n%nb) {
+            if (!short_row || threadIdx.x<n%nb) {
                xglobal[int(row*nb+tid)*incx] = val;
             }
          }
       }
 #else /* INV_AFTER */
-      if(threadIdx.y==0) {
+      if (threadIdx.y==0) {
          dblkSolve<T_ELEM,nb,ISUNIT>(cache, nb, val);
-         if(!short_row || threadIdx.x<n%nb) {
+         if (!short_row || threadIdx.x<n%nb) {
             xglobal[int(row*nb+tid)*incx] = val;
          }
       }
 #endif /* INV_AFTER */
    /* Notify other blocks that soln is ready for this row */
-   __threadfence(); // Wait for xglobal to be visible to other blocks
-   if(tid==0) atomicAdd(&sync[0],1); // Use atomicAdd to bypass L1 miss
-   __threadfence(); // Flush sync[0] asap
+   __threadfence_system(); // Wait for xglobal to be visible to other blocks
+   if (tid==0) atomicAdd(&sync[0],1); // Use atomicAdd to bypass L1 miss
+   __threadfence_system(); // Flush sync[0] asap
 }
 
 } } // end namespace spral::ssids
