@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-void main(void) {
+int main(void) {
    int state = SPRAL_RANDOM_INITIAL_SEED;
 
    int m=4, n=5, nnz=8;
@@ -22,4 +22,6 @@ void main(void) {
    /* Print matrix using utility routine from SPRAL_MATRIX_UTILS package */
    printf("Generated matrix:\n");
    spral_print_matrix(-1, 0, m, n, ptr, row, val, 0);
+
+   return 0;
 }

@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-void main(void) {
+int main(void) {
    /* Derived types */
    void *akeep, *fkeep;
    struct spral_ssids_options options;
@@ -62,4 +62,6 @@ void main(void) {
 
    int cuda_error = spral_ssids_free(&akeep, &fkeep);
    if(cuda_error!=0) exit(1);
+
+   return 0;
 }

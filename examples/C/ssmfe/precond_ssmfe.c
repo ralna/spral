@@ -9,7 +9,7 @@
 /* Header that implements Laplacian and preconditioners */
 #include "laplace2d.h"
 
-void main(void) {
+int main(void) {
    const int m   = 20;     /* grid points along each side */
    const int n   = m*m;    /* problem size */
    const int nep = 5;      /* eigenpairs wanted */
@@ -47,4 +47,6 @@ finished:
    for(int i=0; i<inform.left; i++)
       printf(" lambda[%1d] = %13.7e\n", i, lambda[i]);
    spral_ssmfe_free_double(&keep, &inform);
+
+   return 0;
 }

@@ -20,7 +20,7 @@ void apply_idx(int n, int m, const double complex *x_ptr, double complex *y_ptr)
 }
 
 /* main routine */
-void main(void) {
+int main(void) {
    const int n   = 80;                 /* problem size */
    const int nep = 5;                  /* eigenpairs wanted */
 
@@ -54,4 +54,6 @@ finished:
    for(int i=0; i<inform.left; i++)
       printf(" lambda[%1d] = %13.7e\n", i, lambda[i]);
    spral_ssmfe_free_double_complex(&keep, &inform);
+
+   return 0;
 }

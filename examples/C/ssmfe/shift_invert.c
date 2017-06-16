@@ -10,7 +10,7 @@
 #include "laplace2d.h"
 #include "ldltf.h"
 
-void main(void) {
+int main(void) {
    const int nx = 8;          /* grid points along x */
    const int ny = 8;          /* grid points along y */
    const int n = nx*ny;       /* problem size */
@@ -66,4 +66,6 @@ finished:
    for(int i=0; i<inform.left+inform.right; i++)
       printf(" lambda[%1d] = %13.7e\n", i, lambda[i]);
    spral_ssmfe_free_double(&keep, &inform);
+
+   return 0;
 }

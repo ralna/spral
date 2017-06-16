@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include "spral.h"
 
-void main(void) {
+int main(void) {
    /* Derived types */
    struct spral_scaling_auction_options options;
    struct spral_scaling_auction_inform inform;
@@ -50,4 +50,6 @@ void main(void) {
    }
    printf("Scaled matrix:\n");
    spral_print_matrix(-1, SPRAL_MATRIX_REAL_UNSYM, m, n, ptr, row, val, 0);
+
+   return 0;
 }
