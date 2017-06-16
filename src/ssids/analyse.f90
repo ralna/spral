@@ -548,24 +548,24 @@ contains
     integer, intent(out) :: cuda_error ! Non-zero on error
 
     ! Copy nlist
-    cuda_error = cudaMalloc(gpu_nlist, C_SIZEOF(nlist))
+    cuda_error = cudaMalloc(gpu_nlist, C_SIZEOF(nlist(1)) * lnlist)
     if (cuda_error .ne. 0) return
     cuda_error = cudaMemcpy_h2d(gpu_nlist, C_LOC(nlist), &
-         C_SIZEOF(nlist))
+         C_SIZEOF(nlist(1)) * lnlist)
     if (cuda_error .ne. 0) return
 
     ! Copy rlist
-    cuda_error = cudaMalloc(gpu_rlist, C_SIZEOF(rlist))
+    cuda_error = cudaMalloc(gpu_rlist, C_SIZEOF(rlist(1)) * lrlist)
     if (cuda_error .ne. 0) return
     cuda_error = cudaMemcpy_h2d(gpu_rlist, C_LOC(rlist), &
-         C_SIZEOF(rlist))
+         C_SIZEOF(rlist(1)) * lrlist)
     if (cuda_error .ne. 0) return
 
     ! Copy rlist_direct
-    cuda_error = cudaMalloc(gpu_rlist_direct, C_SIZEOF(rlist_direct))
+    cuda_error = cudaMalloc(gpu_rlist_direct, C_SIZEOF(rlist_direct(1)) * lrlist)
     if (cuda_error .ne. 0) return
     cuda_error = cudaMemcpy_h2d(gpu_rlist_direct, C_LOC(rlist_direct), &
-         C_SIZEOF(rlist_direct))
+         C_SIZEOF(rlist_direct(1)) * lrlist)
     if (cuda_error .ne. 0) return
 
   end subroutine copy_analyse_data_to_device
