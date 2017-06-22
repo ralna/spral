@@ -51,7 +51,7 @@ public:
    /** \brief Return vector of Numa nodes or just machine object */
    std::vector<hwloc_obj_t> get_numa_nodes() const {
       std::vector<hwloc_obj_t> regions;
-      int nregions = hwloc_get_nbobjs_by_type(topology_, HWLOC_OBJ_NUMANODE);
+      int nregions = hwloc_get_nbobjs_by_type(topology_, HWLOC_OBJ_NODE);
       if(nregions==0) {
          // No regions, just give machine
          regions.push_back(
@@ -63,7 +63,7 @@ public:
          regions.reserve(nregions);
          for(int i=0; i<nregions; ++i)
             regions.push_back(
-                  hwloc_get_obj_by_type(topology_, HWLOC_OBJ_NUMANODE, i)
+                  hwloc_get_obj_by_type(topology_, HWLOC_OBJ_NODE, i)
                   );
          return regions;
       }
