@@ -208,5 +208,6 @@ tests/ssmfe/.dirstamp
 tests/ssmfe/ssmfe.o
 tests/ssmfe/ssmfe_ciface.o
 we.out
+*.rb
 my_cfg.sh
 my_cfg.sh~

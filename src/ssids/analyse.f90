@@ -14,9 +14,65 @@ module spral_ssids_analyse
   public :: analyse_phase,   & ! Calls core analyse and builds data strucutres
             check_order,     & ! Check order is a valid permutation
             expand_pattern,  & ! Specialised half->full matrix conversion
+            expand_pattern64,& ! Specialised half->full matrix conversion
             expand_matrix      ! Specialised half->full matrix conversion
 
 contains
+
+!****************************************************************************
+
+!
+! Given lower triangular part of A held in row and ptr, expand to
+! upper and lower triangular parts (pattern only). No checks.
+!
+! Note: we do not use half_to_full here to expand A since, if we did, we would
+! need an extra copy of the lower triangle into the full structure before
+! calling half_to_full
+!
+  subroutine expand_pattern64(n,nz,ptr,row,aptr,arow)
+    implicit none
+    integer, intent(in) :: n ! order of system
+    integer(long), intent(in) :: nz
+    integer(long), intent(in) :: ptr(n+1)
+    integer, intent(in) :: row(nz)
+    integer(long), intent(out) :: aptr(n+1)
+    integer, intent(out) :: arow(2*nz)
+
+    integer :: i,j
+    integer(long) :: k
+
+    ! Set aptr(j) to hold no. nonzeros in column j
+    aptr(:) = 0
+    do j = 1, n
+       do k = ptr(j), ptr(j+1) - 1
+          i = row(k)
+          aptr(i) = aptr(i) + 1
+          if (j .eq. i) cycle
+          aptr(j) = aptr(j) + 1
+       end do
+    end do
+
+    ! Set aptr(j) to point to where row indices will end in arow
+    do j = 2, n
+       aptr(j) = aptr(j-1) + aptr(j)
+    end do
+    aptr(n+1) = aptr(n) + 1
+
+    ! Fill arow and aptr
+    do j = 1, n
+       do k = ptr(j), ptr(j+1) - 1
+          i = row(k)
+          arow(aptr(i)) = j
+          aptr(i) = aptr(i) - 1
+          if (j .eq. i) cycle
+          arow(aptr(j)) = i
+          aptr(j) = aptr(j) - 1
+       end do
+    end do
+    do j = 1,n
+       aptr(j) = aptr(j) + 1
+    end do
+  end subroutine expand_pattern64
 
 !****************************************************************************
 
