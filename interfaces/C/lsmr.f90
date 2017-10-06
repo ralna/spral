@@ -48,6 +48,22 @@ contains
     foptions%unit_error        = coptions%unit_error
   end subroutine copy_options_in
 
+  subroutine copy_inform_in(cinform, finform)
+    implicit none
+    type(spral_lsmr_inform), intent(in) :: cinform
+    type(lsmr_inform), intent(out) :: finform
+
+    finform%flag      = cinform%flag
+    finform%itn       = cinform%itn
+    finform%stat      = cinform%stat
+    finform%normb     = cinform%normb
+    finform%normAP    = cinform%normAP
+    finform%condAP    = cinform%condAP
+    finform%normr     = cinform%normr
+    finform%normAPr   = cinform%normAPr
+    finform%normy     = cinform%normy
+  end subroutine copy_inform_in
+
   subroutine copy_inform_out(finform, cinform)
     implicit none
     type(lsmr_inform), intent(in) :: finform
@@ -99,7 +115,7 @@ integer(C_INT) function spral_lsmr_solve(action, m, n, u, v, y, ckeep, &
   real(C_DOUBLE), dimension(*), intent(inout) :: y
   type(C_PTR), intent(inout) :: ckeep
   type(spral_lsmr_options), intent(in) :: coptions
-  type(spral_lsmr_inform), intent(out) :: cinform
+  type(spral_lsmr_inform), intent(inout) :: cinform
   type(C_PTR), value :: cdamp
 
   type(lsmr_keep), pointer :: fkeep
@@ -110,6 +126,10 @@ integer(C_INT) function spral_lsmr_solve(action, m, n, u, v, y, ckeep, &
 
   ! Copy options in
   call copy_options_in(coptions, foptions)
+
+  ! We must also copy inform in because lsmr_solve assumes that these are
+  ! persistent between calls.
+  call copy_inform_in(cinform, finform)
 
   ! Translate arguments
   if (c_associated(ckeep)) then
