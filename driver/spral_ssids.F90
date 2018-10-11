@@ -53,8 +53,10 @@ program run_prob
 
   integer(C_INT) :: cnt
 
+  integer :: ngpus = 0
+  
   call proc_args(filename, options, force_psdef, pos_def, nrhs, time_scaling, &
-       flat_topology)
+       flat_topology, ngpus)
   if (nrhs .lt. 1) stop
 
   ! Read in a matrix
@@ -82,28 +84,32 @@ program run_prob
      end do
   end do
 
+  call cuda_init(cnt)
+  if (cnt .lt. 0) then
+     print *, "CUDA_INIT failed: ", cnt
+     stop
+  else if (cnt .gt. 0) then
+     print *, "Number of CUDA devices: ", cnt
+     ngpus = min(ngpus, cnt)
+  end if
+  
   if (flat_topology) then
      allocate(topology(1))
      topology(1)%nproc = 1
 !$   topology(1)%nproc = min(omp_get_max_threads(),omp_get_thread_limit())
      print *, "Forcing topology to ", topology(1)%nproc
-#if defined(HAVE_NVCC)
-     allocate(topology(1)%gpus(1))
-#else
-     allocate(topology(1)%gpus(0))
-#endif
+     print *, "Using", ngpus, "GPUs"  
+     if (ngpus .gt. 0) then
+        allocate(topology(1)%gpus(ngpus))
+     else
+        allocate(topology(1)%gpus(0))
+     end if
   end if
 
   call cscl_verify(6, SPRAL_MATRIX_REAL_SYM_INDEF, n, n, &
        ptr, row, flag, more)
   if (flag .ne. 0) then
      print *, "CSCL_VERIFY failed: ", flag, more
-     stop
-  end if
-
-  call cuda_init(cnt)
-  if (cnt .lt. 0) then
-     print *, "CUDA_INIT failed: ", cnt
      stop
   end if
 
@@ -205,7 +211,7 @@ program run_prob
 contains
 
   subroutine proc_args(filename, options, force_psdef, pos_def, nrhs, &
-       time_scaling, flat_topology)
+       time_scaling, flat_topology, ngpus)
     implicit none
     character(len=:), allocatable :: filename
     type(ssids_options), intent(inout) :: options
@@ -214,6 +220,7 @@ contains
     integer, intent(out) :: nrhs
     logical, intent(out) :: time_scaling
     logical, intent(out) :: flat_topology
+    integer, intent(out) :: ngpus
 
     integer :: argnum, narg
     integer :: i
@@ -228,6 +235,7 @@ contains
     flat_topology = .false.
     filename = "matrix.rb"
     seen_fname = .false.
+    ngpus = 0
     
     ! Process args
     narg = command_argument_count()
@@ -336,6 +344,11 @@ contains
        case("--no-ignore-numa")
           options%ignore_numa = .false.
           print *, 'Using separate NUMA regions'
+       case("--ngpus")
+          call get_command_argument(argnum, argval)
+          argnum = argnum + 1
+          read (argval, *) ngpus
+          print *, 'NGPUS = ', ngpus
        case default
           if (seen_fname) then
              print *, "Unrecognised command line argument: ", argval
