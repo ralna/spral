@@ -87,7 +87,11 @@ program run_prob
      topology(1)%nproc = 1
 !$   topology(1)%nproc = min(omp_get_max_threads(),omp_get_thread_limit())
      print *, "Forcing topology to ", topology(1)%nproc
+#if defined(HAVE_NVCC)
+     allocate(topology(1)%gpus(1))
+#else
      allocate(topology(1)%gpus(0))
+#endif
   end if
 
   call cscl_verify(6, SPRAL_MATRIX_REAL_SYM_INDEF, n, n, &

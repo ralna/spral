@@ -324,7 +324,7 @@ contains
     do i = 1, size(topology)
        ngpu = ngpu + size(topology(i)%gpus)
     end do
-    !print *, "running on ", nregion, " regions and ", ngpu, " gpus"
+    ! print *, "running on ", nregion, " regions and ", ngpu, " gpus"
 
     ! Keep splitting until we meet balance criterion
     best_load_balance = huge(best_load_balance)
@@ -809,12 +809,12 @@ contains
     if (st .ne. 0) go to 100
 
     ! Sort out subtrees
-    !print *, "Input topology"
-    !do i = 1, size(akeep%topology)
-    !   print *, "Region ", i, " with ", akeep%topology(i)%nproc, " cores"
-    !   if(size(akeep%topology(i)%gpus).gt.0) &
-    !      print *, "---> gpus ", akeep%topology(i)%gpus
-    !end do
+    print *, "Input topology"
+    do i = 1, size(akeep%topology)
+      print *, "Region ", i, " with ", akeep%topology(i)%nproc, " cores"
+      if(size(akeep%topology(i)%gpus).gt.0) &
+         print *, "---> gpus ", akeep%topology(i)%gpus
+    end do
     call find_subtree_partition(akeep%nnodes, akeep%sptr, akeep%sparent,           &
          akeep%rptr, options, akeep%topology, akeep%nparts, akeep%part,            &
          exec_loc, akeep%contrib_ptr, akeep%contrib_idx, contrib_dest, inform, st)

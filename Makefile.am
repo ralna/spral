@@ -306,7 +306,7 @@ libspral_a_SOURCES += \
 	interfaces/C/ssids.f90
 bin_PROGRAMS = spral_ssids
 spral_ssids_SOURCES = \
-	driver/spral_ssids.f90
+	driver/spral_ssids.F90
 if HAVE_NVCC
 spral_ssids_SOURCES += \
 	driver/cuda_helper_gpu.f90
