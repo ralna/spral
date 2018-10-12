@@ -53,7 +53,7 @@ program run_prob
 
   integer(C_INT) :: cnt
 
-  integer :: ngpus = 0
+  integer :: ngpus
   
   call proc_args(filename, options, force_psdef, pos_def, nrhs, time_scaling, &
        flat_topology, ngpus)
@@ -101,6 +101,9 @@ program run_prob
      print *, "Using", ngpus, "GPUs"  
      if (ngpus .gt. 0) then
         allocate(topology(1)%gpus(ngpus))
+        do i=1,ngpus
+           topology(1)%gpus(i) = i-1 
+        end do
      else
         allocate(topology(1)%gpus(0))
      end if

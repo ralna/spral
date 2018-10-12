@@ -91,7 +91,7 @@ contains
     integer :: cuda_error, st
 
     nullify(this)
-
+    ! print *, "[construct_gpu_symbolic_subtree] device = ", device
     ! Specify which device we're using
     cuda_error = cudaSetDevice(device)
     if (cuda_error .ne. 0) then

@@ -19,8 +19,8 @@ module spral_cuda
   ! Literal interfaces to C functions in CUDA API
   public :: cudaDeviceEnablePeerAccess, cudaDeviceSynchronize, cudaFree, &
        cudaGetDeviceCount, cudaGetLastError, cudaMalloc, cudaMemset, &
-       cudaMemcpy, cudaMemcpy2D, cudaSetDevice, cudaDeviceGetSharedMemConfig, &
-       cudaDeviceSetSharedMemConfig
+       cudaMemcpy, cudaMemcpy2D, cudaMemGetInfo, cudaSetDevice, & 
+       cudaDeviceGetSharedMemConfig, cudaDeviceSetSharedMemConfig
   ! Wrapper interfaces to C functions provided by CUDA API
   public :: cudaEventCreateWithFlags, cudaEventDestroy, cudaEventRecord, &
        cudaEventSynchronize, cudaMemcpyAsync, cudaMemcpy2DAsync, &
@@ -129,6 +129,12 @@ module spral_cuda
        integer(C_SIZE_T), value :: height
        integer(C_INT), value :: kind
      end function cudaMemcpy2D
+     integer(C_INT) function cudaMemGetInfo(free, total) &
+          bind(C, name="cudaMemGetInfo")
+       use, intrinsic :: iso_c_binding
+       integer(C_SIZE_T), intent(out) :: free
+       integer(C_SIZE_T), intent(out) :: total
+     end function cudaMemGetInfo
      integer(C_INT) function cudaSetDevice(device) &
           bind(C, name="cudaSetDevice")
        use, intrinsic :: iso_c_binding

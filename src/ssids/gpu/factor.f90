@@ -107,7 +107,7 @@ contains
       stream_data, alloc, options, stats, ptr_scale)
     if (stats%flag .lt. 0) return
     if (stats%cuda_error .ne. 0) goto 200
-
+    
     ! Extract contribution to parent of subtree (if any)
     if (C_ASSOCIATED(gpu_LDLT)) then
        call transfer_contrib(nnodes, sptr, rptr, rlist, nodes, gpu_contribs, &
@@ -505,7 +505,7 @@ contains
           end do
     
        end do
-      
+
        ! Initialize L to 0, and add A to it.
        call init_L_with_A(stream, lev, gpu%lvlptr, gpu%lvllist, nodes, ncb,  &
             level_size, nptr, rptr, gpu_nlist, gpu_rlist, ptr_val, ptr_levL, &
@@ -636,7 +636,7 @@ contains
     ! Destroy CUBLAS handle
     stats%cublas_error = cublasDestroy(cublas_handle)
     if (stats%cuda_error .ne. 0) goto 300
-
+    
     return ! Normal return
 
 100 continue ! Fortran Memory allocation error
