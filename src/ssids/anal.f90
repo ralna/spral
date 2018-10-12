@@ -342,6 +342,7 @@ contains
        if (st .ne. 0) return
     end do
 
+    print *, "[find_subtree_partition] load_balance = ", best_load_balance 
     ! Consolidate adjacent non-children nodes into same part and regen exec_alloc
     !print *
     !print *, "pre merge", part(1:nparts+1)
@@ -867,10 +868,16 @@ contains
     do i = 1, nparts
 
        region = mod((exec_loc(i)-1), size(topology))+1
+       ! print *, "part = ", i, ", exec_loc = ", exec_loc(i), ", region = ", region 
        
        write(part_str, '(i5)')part(i)
        write(2, *)"subgraph cluster"// adjustl(trim(part_str)) // " {"
        write(2, *)"color=black"
+       write(2, '("label=""")', advance="no")
+       write(2, '("part:", i5,"\n")', advance="no")i
+       write(2, '("region:", i5,"\n")', advance="no")region
+       write(2, '("exec_loc:", i5,"\n")', advance="no")exec_loc(i)
+       write(2, '("""")', advance="no")
 
        do node = part(i), part(i+1)-1
 
