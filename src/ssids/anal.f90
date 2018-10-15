@@ -868,7 +868,11 @@ contains
        
        write(part_str, '(i5)')part(i)
        write(2, *)"subgraph cluster"// adjustl(trim(part_str)) // " {"
-       write(2, *)"color=black"
+       if ( exec_loc(i) .gt. size(topology)) then ! GPU subtree
+          write(2, *)"color=red"
+       else
+          write(2, *)"color=black"
+       end if
        write(2, '("label=""")', advance="no")
        write(2, '("part:", i5,"\n")', advance="no")i
        write(2, '("region:", i5,"\n")', advance="no")region

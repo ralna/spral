@@ -68,7 +68,12 @@ contains
 !$  numa_region = omp_get_thread_num()
     numa_region = numa_region + 1
 
-    to_launch = akeep%topology(numa_region)%nproc
+    if (numa_region .le. size(akeep%topology)) then ! CPU driver
+       to_launch = akeep%topology(numa_region)%nproc
+    else ! GPU driver
+       to_launch = 1
+    end if
+
     if (to_launch .le. 0) return
 !$  call omp_set_num_threads(to_launch)
 
@@ -80,11 +85,13 @@ contains
 !$omp parallel proc_bind(close)                 &
 !$omp    default(shared)                        &
 !$omp    private(i, exec_loc, my_abort, my_loc) &
-!$omp    num_threads(to_launch)
+!$omp    num_threads(to_launch)                 &
+!$omp    if (to_launch.gt.1)
 !$omp single
 !$omp taskgroup
     do i = 1, akeep%nparts
        exec_loc = akeep%subtree(i)%exec_loc
+
        if (exec_loc .eq. -1) then
 !$omp atomic write
           all_region = .true.
@@ -92,11 +99,14 @@ contains
           cycle
        end if
        if ((mod((exec_loc-1), size(akeep%topology))+1) .ne. numa_region) cycle
+       ! if (exec_loc.ne.numa_region) cycle
+       ! print *, "partition = ", i
        my_abort = .false.
        my_loc = 0
 !$omp task untied                                    &
 !$omp    default(shared)                             &
-!$omp    firstprivate(i, exec_loc, my_abort, my_loc)
+!$omp    firstprivate(i, exec_loc, my_abort, my_loc) &
+!$omp    if (to_launch.gt.1)
 !$omp atomic read
        my_abort = abort
 !$omp end atomic
@@ -148,9 +158,11 @@ contains
     integer :: i, numa_region, exec_loc, my_loc
     integer :: numa_regions, region_threads !, device
     integer :: max_cpus, max_cpus_per_numa, total_threads
+    integer :: max_gpus_per_numa
     logical :: all_region, my_all_region
     type(contrib_type), dimension(:), allocatable :: child_contrib
     type(ssids_inform), dimension(:), allocatable :: thread_inform
+    integer :: num_drivers
 
     ! Begin profile trace (noop if not enabled)
     call profile_begin()
@@ -175,10 +187,14 @@ contains
     ! end do
 
     max_cpus_per_numa = 0
+    max_gpus_per_numa = 0
     total_threads = 0
     do numa_region = 1, numa_regions
        region_threads = akeep%topology(numa_region)%nproc
        max_cpus_per_numa = max(max_cpus_per_numa, region_threads)
+       if (allocated(akeep%topology(numa_region)%gpus)) then
+          max_gpus_per_numa = max(max_gpus_per_numa, size(akeep%topology(numa_region)%gpus))
+       end if
        total_threads = total_threads + region_threads
     end do
     max_cpus = max_cpus_per_numa * numa_regions
@@ -192,11 +208,15 @@ contains
     ! Split into numa regions; parallelism within a region is responsibility
     ! of subtrees.
 
+    ! Number of drivers needed (one per NUMA region, one per GPU) 
+    ! num_drivers = numa_regions
+    num_drivers = numa_regions + max_gpus_per_numa
+
 !$omp atomic write
     all_region = .false.
 !$omp end atomic 
 
-!$omp parallel proc_bind(spread) num_threads(numa_regions) &
+!$omp parallel proc_bind(spread) num_threads(num_drivers) &
 !$omp    default(none)                                     &
 !$omp    shared(akeep, fkeep, val, options, thread_inform, &
 !$omp       child_contrib, all_region, max_cpus_per_numa)  &
@@ -205,10 +225,11 @@ contains
 !$  numa_region = omp_get_thread_num()
     numa_region = numa_region + 1
     i = (numa_region-1)*max_cpus_per_numa + 1
+
     call inner_factor_numa(fkeep, akeep, val, options, &
          thread_inform(i), child_contrib, all_region)
 !$omp end parallel
-    do i = 1, max_cpus
+    do i = 1, size(thread_inform)
        call inform%reduce(thread_inform(i))
     end do
     if (inform%flag .lt. 0) goto 100 ! cleanup and exit
