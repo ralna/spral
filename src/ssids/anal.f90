@@ -199,6 +199,32 @@ contains
 !****************************************************************************
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !> @brief Compute flops for processing a node
+  !> @param akeep Information generated in analysis phase by SSIDS  
+  !> @param node Node
+  function compute_flops(nnodes, sptr, rptr, node)
+    implicit none
+
+    integer, intent(in) :: nnodes
+    integer, dimension(nnodes+1), intent(in) :: sptr
+    integer(long), dimension(nnodes+1), intent(in) :: rptr
+    integer, intent(in) :: node ! node index
+    integer(long) :: compute_flops ! return value
+
+    integer :: n, m ! node sizes
+    integer(long) :: jj
+
+    compute_flops = 0
+
+    m = int(rptr(node+1)-rptr(node))
+    n = sptr(node+1)-sptr(node)
+    do jj = m-n+1, m
+       compute_flops = compute_flops + jj**2
+    end do
+
+  end function compute_flops
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !> @brief Partition an elimination tree for execution on different NUMA regions
 !>        and GPUs.
 !>
@@ -289,14 +315,10 @@ contains
     if (st .ne. 0) return
     flops(:) = 0
     do node = 1, nnodes
-       m = int(rptr(node+1)-rptr(node))
-       n = sptr(node+1)-sptr(node)
-       do jj = m-n+1, m
-          flops(node) = flops(node) + jj**2
-       end do
+       flops(node) = flops(node) + compute_flops(nnodes, sptr, rptr, node)
        j = sparent(node)
        flops(j) = flops(j) + flops(node)
-       !print *, "Node ", node, "parent", j, " flops ", flops(node)
+       ! !print *, "Node ", node, "parent", j, " flops ", flops(node)
     end do
     !print *, "Total flops ", flops(nnodes+1)
 
@@ -721,32 +743,6 @@ contains
        size_order(j) = i
     end do
   end subroutine create_size_order
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  !> @brief Compute flops for processing a node
-  !> @param akeep Information generated in analysis phase by SSIDS  
-  !> @param node Node
-  function compute_flops(nnodes, sptr, rptr, node)
-    implicit none
-
-    integer, intent(in) :: nnodes
-    integer, dimension(nnodes+1), intent(in) :: sptr
-    integer(long), dimension(nnodes+1), intent(in) :: rptr
-    integer, intent(in) :: node ! node index
-    integer(long) :: compute_flops ! return value
-
-    integer :: n, m ! node sizes
-    integer(long) :: jj
-
-    compute_flops = 0
-
-    m = int(rptr(node+1)-rptr(node))
-    n = sptr(node+1)-sptr(node)
-    do jj = m-n+1, m
-       compute_flops = compute_flops + jj**2
-    end do
-
-  end function compute_flops
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   !> @brief Prints assembly tree
