@@ -782,7 +782,7 @@ contains
 
        weight = real(flops(node)) / tot_weight 
 
-       if (weight .lt. 0.001) cycle ! Prune smallest nodes
+       if (weight .lt. 0.01) cycle ! Prune smallest nodes
 
        n = sptr(node+1) - sptr(node) 
        m = int(rptr(node+1) - rptr(node))

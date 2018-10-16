@@ -61,7 +61,7 @@ contains
     type(contrib_type), dimension(*), intent(inout) :: child_contrib
     logical, intent(inout) :: all_region
 
-    integer :: i, to_launch, numa_region, exec_loc, my_loc
+    integer :: i, to_launch, numa_region, exec_loc
     logical :: abort, my_abort
 
     numa_region = 0
@@ -75,8 +75,9 @@ contains
     end if
 
     if (to_launch .le. 0) return
+    if (to_launch .gt. 1) then
 !$  call omp_set_num_threads(to_launch)
-
+    end if
 !$omp atomic write
     abort = .false.
 !$omp end atomic
@@ -84,7 +85,7 @@ contains
     ! Split into threads for this NUMA region
 !$omp parallel proc_bind(close)                 &
 !$omp    default(shared)                        &
-!$omp    private(i, exec_loc, my_abort, my_loc) &
+!$omp    private(i, exec_loc, my_abort)         &
 !$omp    num_threads(to_launch)                 &
 !$omp    if (to_launch.gt.1)
 !$omp single
@@ -98,35 +99,35 @@ contains
 !$omp end atomic
           cycle
        end if
-       if ((mod((exec_loc-1), size(akeep%topology))+1) .ne. numa_region) cycle
-       ! if (exec_loc.ne.numa_region) cycle
-       ! print *, "partition = ", i
+       ! if ((mod((exec_loc-1), size(akeep%topology))+1) .ne. numa_region) cycle
+       if (exec_loc.ne.numa_region) cycle
+       ! print *, "[inner_factor_numa] driver = ", numa_region, "partition = ", i, ", to_launch = ", to_launch
        my_abort = .false.
-       my_loc = 0
+
 !$omp task untied                                    &
 !$omp    default(shared)                             &
-!$omp    firstprivate(i, exec_loc, my_abort, my_loc) &
+!$omp    firstprivate(i, exec_loc, my_abort)         &
 !$omp    if (to_launch.gt.1)
 !$omp atomic read
        my_abort = abort
 !$omp end atomic
        if (my_abort) goto 10
-!$     my_loc = omp_get_thread_num()
-       my_loc = my_loc + 1
+! !$     my_loc = omp_get_thread_num()
+!        my_loc = my_loc + 1
        if (allocated(fkeep%scaling)) then
           fkeep%subtree(i)%ptr => akeep%subtree(i)%ptr%factor(               &
                fkeep%pos_def, val,                                           &
                child_contrib(akeep%contrib_ptr(i):akeep%contrib_ptr(i+1)-1), &
-               options, inform(my_loc), scaling=fkeep%scaling                &
+               options, inform(numa_region), scaling=fkeep%scaling                &
                )
        else
           fkeep%subtree(i)%ptr => akeep%subtree(i)%ptr%factor(               &
                fkeep%pos_def, val,                                           &
                child_contrib(akeep%contrib_ptr(i):akeep%contrib_ptr(i+1)-1), &
-               options, inform(my_loc)                                       &
+               options, inform(numa_region)                                       &
                )
        end if
-       if (inform(my_loc)%flag .lt. 0) then
+       if (inform(numa_region)%flag .lt. 0) then
 !$omp atomic write
           abort = .true.
 !$omp end atomic
@@ -155,14 +156,15 @@ contains
     type(ssids_options), intent(in) :: options
     type(ssids_inform), intent(inout) :: inform
 
-    integer :: i, numa_region, exec_loc, my_loc
+    integer :: i, exec_loc, numa_region
+    ! integer :: my_loc
     integer :: numa_regions, region_threads !, device
     integer :: max_cpus, max_cpus_per_numa, total_threads
     integer :: max_gpus_per_numa
     logical :: all_region, my_all_region
     type(contrib_type), dimension(:), allocatable :: child_contrib
     type(ssids_inform), dimension(:), allocatable :: thread_inform
-    integer :: num_drivers
+    integer :: driver, num_drivers
 
     ! Begin profile trace (noop if not enabled)
     call profile_begin()
@@ -199,18 +201,20 @@ contains
     end do
     max_cpus = max_cpus_per_numa * numa_regions
 
+    ! Number of drivers needed (one per NUMA region, one per GPU)
+    ! FIXME: Use one drivers per CUDA streams?
+    ! num_drivers = numa_regions
+    num_drivers = numa_regions * (1 + max_gpus_per_numa)
+
     allocate(child_contrib(akeep%nparts), stat=inform%stat)
     if (inform%stat .ne. 0) goto 200
-    allocate(thread_inform(max_cpus), stat=inform%stat)
+    ! One inform per driver (NUMA or GPU drivers)
+    allocate(thread_inform(num_drivers), stat=inform%stat)
     if (inform%stat .ne. 0) goto 200
 
     ! Call subtree factor routines
     ! Split into numa regions; parallelism within a region is responsibility
     ! of subtrees.
-
-    ! Number of drivers needed (one per NUMA region, one per GPU) 
-    ! num_drivers = numa_regions
-    num_drivers = numa_regions + max_gpus_per_numa
 
 !$omp atomic write
     all_region = .false.
@@ -220,15 +224,17 @@ contains
 !$omp    default(none)                                     &
 !$omp    shared(akeep, fkeep, val, options, thread_inform, &
 !$omp       child_contrib, all_region, max_cpus_per_numa)  &
-!$omp    private(i,numa_region)
-    numa_region = 0
-!$  numa_region = omp_get_thread_num()
-    numa_region = numa_region + 1
-    i = (numa_region-1)*max_cpus_per_numa + 1
+!$omp    private(driver)
+    driver = 0
+!$  driver = omp_get_thread_num()
+    driver = driver + 1
+    ! i = (numa_region-1)*max_cpus_per_numa + 1
 
     call inner_factor_numa(fkeep, akeep, val, options, &
-         thread_inform(i), child_contrib, all_region)
+         thread_inform, child_contrib, all_region)
+    print *, "[inner_factor_cpu] driver = ", driver, "all_region = ", all_region
 !$omp end parallel
+
     do i = 1, size(thread_inform)
        call inform%reduce(thread_inform(i))
     end do
@@ -239,11 +245,17 @@ contains
 !$omp end atomic
     if (my_all_region) then
        ! At least some all region subtrees exist
-!$omp parallel num_threads(total_threads) default(shared) private(i,exec_loc)
+!$omp parallel num_threads(total_threads) default(shared) &
+!$omp          private(i,exec_loc, driver)
 !$omp single
+       driver = 0 
+!$     driver = omp_get_thread_num()
+       driver = driver + 1
+       print *, "[inner_factor_cpu] All region subtree, driver = ", driver
        do i = 1, akeep%nparts
           exec_loc = akeep%subtree(i)%exec_loc
           if (exec_loc .ne. -1) cycle
+          print *, "[inner_factor_cpu] partition = ", i, ", total_threads = ", total_threads
           if (allocated(fkeep%scaling)) then
              fkeep%subtree(i)%ptr => akeep%subtree(i)%ptr%factor( &
                   fkeep%pos_def, val, &
@@ -257,6 +269,7 @@ contains
                   options, inform &
                   )
           end if
+          print *, "[inner_factor_cpu] done with partition = ", i
           if (akeep%contrib_idx(i) .gt. akeep%nparts) cycle ! part is a root
           child_contrib(akeep%contrib_idx(i)) = &
                fkeep%subtree(i)%ptr%get_contrib()
