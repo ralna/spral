@@ -20,7 +20,13 @@ namespace spral { namespace ssids { namespace cpu {
 template <typename T, typename Allocator>
 class BlockPool {
    typedef typename std::allocator_traits<Allocator>::template rebind_traits<char> CharAllocTraits;
-   static const std::size_t align_ = 32; //< Alignement for AVX is 32 bytes
+#if defined(__AVX512F__)
+  static const std::size_t align_ = 64; //< Alignment for AVX512 is 64 bytes
+#elif defined(__AVX__)
+  static const std::size_t align_ = 32; //< Alignment for AVX(2) is 32 bytes
+#else
+  static const std::size_t align_ = 16; //< Alignment for SSE(2,3,4.1,4.2) or Power's VSX is 16 bytes
+#endif
 public:
    /* Not copyable */
    BlockPool(BlockPool const&) =delete;
