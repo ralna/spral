@@ -9,7 +9,9 @@
 #include <cstdio>
 #include <limits>
 
+#if defined(__AVX2__) || defined(__AVX__)
 #include <immintrin.h>
+#endif
 
 namespace spral { namespace ssids { namespace cpu {
 
@@ -165,7 +167,15 @@ public:
    /// Extract indvidual elements of vector (messy and inefficient)
    /// idx MUST be < vector_length.
    double operator[](size_t idx) const {
-      double __attribute__((aligned(32))) val_as_array[vector_length];
+      double
+#if defined(__AVX512F__)
+        __attribute__((aligned(64)))
+#elif defined(__AVX__)
+        __attribute__((aligned(32)))
+#else
+        __attribute__((aligned(16)))
+#endif
+        val_as_array[vector_length];
       store_aligned(val_as_array);
       return val_as_array[idx];
    }
