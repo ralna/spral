@@ -12,10 +12,13 @@ module spral_cuda
       cudaSharedMemBankSizeEightByte
    ! #define values for cudaEventCreateWithFlags
    public :: cudaEventDefault, cudaEventBlockingSync, cudaEventDisableTiming
+   ! enum values for cudaError
+   public :: cudaSuccess, cudaErrorInsufficientDriver, cudaErrorNoDevice
    ! Literal interfaces to C functions in CUDA API
    public :: cudaDeviceEnablePeerAccess, cudaDeviceSynchronize, cudaFree, &
-      cudaGetLastError, cudaMalloc, cudaMemset, cudaMemcpy, cudaMemcpy2D, &
-      cudaSetDevice, cudaDeviceGetSharedMemConfig, cudaDeviceSetSharedMemConfig
+        cudaGetDeviceCount, cudaGetLastError, cudaMalloc, cudaMemset, &
+        cudaMemcpy, cudaMemcpy2D, cudaSetDevice, &
+        cudaDeviceGetSharedMemConfig, cudaDeviceSetSharedMemConfig
    ! Wrapper interfaces to C functions provided by CUDA API
    public :: cudaEventCreateWithFlags, cudaEventDestroy, cudaEventRecord, &
       cudaEventSynchronize, cudaMemcpyAsync, cudaMemcpy2DAsync, &
@@ -49,6 +52,11 @@ module spral_cuda
    integer, parameter :: cudaEventBlockingSync  = 1
    integer, parameter :: cudaEventDisableTiming = 2
 
+   ! Based on enum in driver_types.h
+   integer(C_INT), parameter :: cudaSuccess                 =  0_C_INT
+   integer(C_INT), parameter :: cudaErrorInsufficientDriver = 35_C_INT
+   integer(C_INT), parameter :: cudaErrorNoDevice           = 38_C_INT
+
    ! CUDA C provided functions (listed alphabetically)
    interface
       integer(C_INT) function cudaDeviceEnablePeerAccess(peerDevice, flags) &
@@ -75,6 +83,11 @@ module spral_cuda
          use, intrinsic :: iso_c_binding
          type(C_PTR), value :: dev_ptr
       end function cudaFree
+      integer(C_INT) function cudaGetDeviceCount(cnt) &
+           bind(C, name="cudaGetDeviceCount")
+        use, intrinsic :: iso_c_binding
+        integer(C_INT), intent(out) :: cnt
+      end function cudaGetDeviceCount
       integer(C_INT) function cudaGetLastError() &
             bind(C, name="cudaGetLastError")
          use, intrinsic :: iso_c_binding
@@ -111,6 +124,12 @@ module spral_cuda
          integer(C_SIZE_T), value :: height
          integer(C_INT), value :: kind
       end function cudaMemcpy2D
+      integer(C_INT) function cudaMemGetInfo(free, total) &
+           bind(C, name="cudaMemGetInfo")
+        use, intrinsic :: iso_c_binding
+        integer(C_SIZE_T), intent(out) :: free
+        integer(C_SIZE_T), intent(out) :: total
+      end function cudaMemGetInfo
       integer(C_INT) function cudaSetDevice(device) &
             bind(C, name="cudaSetDevice")
          use, intrinsic :: iso_c_binding
