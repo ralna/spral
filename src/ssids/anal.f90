@@ -761,7 +761,7 @@ end subroutine create_size_order
     character(len=5) :: part_str 
     real :: small
 
-    print *, "[print_atree_part] topology size = ", size(topology)
+    ! print *, "[print_atree_part] topology size = ", size(topology)
     
     small = 0.001
 

@@ -10,5 +10,7 @@ install-sh
 missing
 test-driver
 config.h.in
+config.h.in~
+nvcc_arch_sm
 build/*
 *.swp
