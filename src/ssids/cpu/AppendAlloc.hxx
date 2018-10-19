@@ -21,7 +21,13 @@ namespace append_alloc_internal {
  * Deallocation is not supported.
  */
 class Page {
-   static const int align = 32; // 32 byte alignment
+#if defined(__AVX512F__)
+  static const int align = 64; // 64 byte alignment
+#elif defined(__AVX__)
+  static const int align = 32; // 32 byte alignment
+#else
+  static const int align = 16; // 16 byte alignment
+#endif
 public:
    Page(size_t sz, Page* next=nullptr)
    : next(next), mem_(calloc(sz+align, 1)), ptr_(mem_), space_(sz+align)
