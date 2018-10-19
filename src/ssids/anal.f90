@@ -711,6 +711,141 @@ subroutine create_size_order(nparts, part, flops, size_order)
    end do
 end subroutine create_size_order
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !> @brief Compute flops for processing a node
+  !> @param akeep Information generated in analysis phase by SSIDS  
+  !> @param node Node
+  function compute_flops(nnodes, sptr, rptr, node)
+    implicit none
+
+    integer, intent(in) :: nnodes
+    integer, dimension(nnodes+1), intent(in) :: sptr
+    integer(long), dimension(nnodes+1), intent(in) :: rptr
+    integer, intent(in) :: node ! node index
+    integer(long) :: compute_flops ! return value
+
+    integer :: n, m ! node sizes
+    integer(long) :: jj
+
+    compute_flops = 0
+
+    m = int(rptr(node+1)-rptr(node))
+    n = sptr(node+1)-sptr(node)
+    do jj = m-n+1, m
+       compute_flops = compute_flops + jj**2
+    end do
+
+  end function compute_flops
+  
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !> @brief Prints assembly tree with partitions
+  subroutine print_atree_part(nnodes, sptr, sparent, rptr, topology, nparts, & 
+       part, exec_loc)
+    implicit none
+
+    integer, intent(in) :: nnodes
+    integer, dimension(nnodes+1), intent(in) :: sptr
+    integer, dimension(nnodes), intent(in) :: sparent
+    integer(long), dimension(nnodes+1), intent(in) :: rptr
+    type(numa_region), dimension(:), intent(in) :: topology
+    integer, intent(in) :: nparts
+    integer, dimension(:), allocatable, intent(in) :: part
+    integer, dimension(:), allocatable, intent(in) :: exec_loc
+
+    integer :: node
+    integer :: n, m ! Node dimensions
+    integer :: region ! Where to execute node
+    integer(long), dimension(:), allocatable :: flops
+    real :: tot_weight, weight
+    integer :: i, j
+    character(len=5) :: part_str 
+    real :: small
+
+    print *, "[print_atree_part] topology size = ", size(topology)
+    
+    small = 0.001
+
+    ! Count flops below each node
+    allocate(flops(nnodes+1))
+    flops(:) = 0
+    do node = 1, nnodes
+       flops(node) = flops(node) + compute_flops(nnodes, sptr, rptr, node)
+       j = sparent(node)
+       if(j .gt. 0) flops(j) = flops(j) + flops(node)
+       !print *, "Node ", node, "parent", j, " flops ", flops(node)
+    end do
+    tot_weight = real(flops(nnodes))
+
+    open(2, file="atree_part.dot")
+
+    write(2, '("graph atree {")')
+    write(2, '("node [")')
+    write(2, '("style=filled")')
+    write(2, '("]")')
+
+    do i = 1, nparts
+
+       region = mod((exec_loc(i)-1), size(topology))+1
+       ! print *, "part = ", i, ", exec_loc = ", exec_loc(i), ", region = ", region 
+
+       write(part_str, '(i5)')part(i)
+       write(2, *)"subgraph cluster"// adjustl(trim(part_str)) // " {"
+       if ( exec_loc(i) .gt. size(topology)) then ! GPU subtree
+          write(2, *)"color=red"
+       else
+          write(2, *)"color=black"
+       end if
+       write(2, '("label=""")', advance="no")
+       write(2, '("part:", i5,"\n")', advance="no")i
+       write(2, '("region:", i5,"\n")', advance="no")region
+       write(2, '("exec_loc:", i5,"\n")', advance="no")exec_loc(i)
+       write(2, '("""")', advance="no")
+
+       do node = part(i), part(i+1)-1
+
+          weight = real(flops(node)) / tot_weight 
+          if (weight .lt. small) cycle ! Prune smallest nodes
+
+          n = sptr(node+1) - sptr(node) 
+          m = int(rptr(node+1) - rptr(node))
+
+          ! node idx
+          write(2, '(i10)', advance="no") node
+          write(2, '(" ")', advance="no")
+          write(2, '("[")', advance="no")
+
+          ! Node label 
+          write(2, '("label=""")', advance="no")
+          write(2, '("node:", i5,"\n")', advance="no")node
+          write(2, '("m:", i5,"\n")', advance="no")m
+          write(2, '("n:", i5,"\n")', advance="no")n
+          write(2, '("w:", f6.2,"\n")', advance="no")100*weight
+          write(2, '("""")', advance="no")
+
+          ! Node color
+          write(2, '(" fillcolor=white")', advance="no")
+
+          write(2, '("]")', advance="no")
+          write(2, '(" ")')
+
+       end do
+
+       write(2, '("}")') ! Subgraph
+
+       do node = part(i), part(i+1)-1
+          weight = real(flops(node)) / tot_weight
+          if (weight .lt. small) cycle ! Prune smallest nodes
+          if(sparent(node) .ne. -1) write(2, '(i10, "--", i10)')sparent(node), node
+       end do
+
+    end do
+
+    write(2, '("}")') ! Graph
+
+    close(2)
+
+  end subroutine print_atree_part
+
 !****************************************************************************
 
 !
@@ -819,6 +954,11 @@ subroutine analyse_phase(n, ptr, row, ptr2, row2, order, invp, &
    !print *, "contrib_idx = ", akeep%contrib_idx(1:akeep%nparts)
    !print *, "contrib_dest = ", &
    !   contrib_dest(1:akeep%contrib_ptr(akeep%nparts+1)-1)
+
+   ! Generate dot file for assembly tree
+   ! call print_atree(akeep%nnodes, akeep%sptr, akeep%sparent, akeep%rptr)
+   call print_atree_part(akeep%nnodes, akeep%sptr, akeep%sparent, akeep%rptr, &
+        akeep%topology, akeep%nparts, akeep%part, exec_loc)
 
    ! Construct symbolic subtrees
    allocate(akeep%subtree(akeep%nparts))
