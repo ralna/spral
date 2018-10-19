@@ -14,7 +14,14 @@ namespace spral { namespace test {
 template <class T>
 class AlignedAllocator {
 public:
-   const int alignment = 32; // Number of bytes boundary we align to
+  // Number of bytes boundary we align to
+#if defined(__AVX512F__)
+  const int alignment = 64;
+#elif defined(__AVX__)
+  const int alignment = 32;
+#else
+  const int alignment = 16;
+#endif
 
    typedef T value_type;
 
