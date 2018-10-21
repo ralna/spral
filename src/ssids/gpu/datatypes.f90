@@ -79,7 +79,7 @@ module spral_ssids_gpu_datatypes
       type(C_PTR) :: rlist
       integer(C_SIZE_T) :: ndone
       integer(C_SIZE_T) :: upd
-   end type
+   end type smblk
 
    type, bind(C) :: gemv_transpose_lookup
       integer(C_INT) :: m
@@ -88,7 +88,7 @@ module spral_ssids_gpu_datatypes
       integer(C_INT) :: lda
       type(C_PTR) :: rlist
       integer(C_INT) :: yoffset
-   end type
+   end type gemv_transpose_lookup
 
    type, bind(C) :: reducing_d_solve_lookup
       integer(C_INT) :: first_idx
@@ -98,7 +98,7 @@ module spral_ssids_gpu_datatypes
       integer(C_INT) :: updoffset
       type(C_PTR) :: d
       type(C_PTR) :: perm
-   end type
+   end type reducing_d_solve_lookup
 
    type, bind(C) :: trsv_lookup_type
       integer(C_INT) :: n
@@ -106,14 +106,14 @@ module spral_ssids_gpu_datatypes
       integer(C_INT) :: lda
       integer(C_INT) :: x_offset
       integer(C_INT) :: sync_offset
-   end type
+   end type trsv_lookup_type
 
    type, bind(C) :: scatter_lookup_type
       integer(C_INT) :: n
       integer(C_INT) :: src_offset
       type(C_PTR) :: index
       integer(C_INT) :: dest_offset
-   end type
+   end type scatter_lookup_type
 
    type, bind(C) :: gemv_notrans_lookup
       integer(C_INT) :: m
@@ -122,7 +122,7 @@ module spral_ssids_gpu_datatypes
       integer(C_INT) :: lda
       integer(C_INT) :: x_offset
       integer(C_INT) :: y_offset
-   end type
+   end type gemv_notrans_lookup
 
    type, bind(C) :: reduce_notrans_lookup
       integer(C_INT) :: m
@@ -131,7 +131,7 @@ module spral_ssids_gpu_datatypes
       integer(C_INT) :: ldsrc
       integer(C_INT) :: dest_idx
       integer(C_INT) :: dest_offset
-   end type
+   end type reduce_notrans_lookup
 
    type, bind(C) :: assemble_lookup_type
       integer(C_INT) :: m
@@ -146,7 +146,7 @@ module spral_ssids_gpu_datatypes
       type(C_PTR) :: clists_direct
       integer(C_INT) :: cvalues_offset
       integer(C_INT) :: first
-   end type
+   end type assemble_lookup_type
 
    type, bind(C) :: assemble_lookup2_type
       integer(C_INT) :: m
@@ -157,7 +157,7 @@ module spral_ssids_gpu_datatypes
       integer(C_INT) :: cvchild
       integer(C_INT) :: sync_offset
       integer(C_INT) :: sync_waitfor
-   end type
+   end type assemble_lookup2_type
 
    type, bind(C) :: lookups_gpu_fwd ! for fwd slv
       integer(C_INT) :: nassemble
@@ -175,7 +175,7 @@ module spral_ssids_gpu_datatypes
       type(C_PTR) :: gemv
       type(C_PTR) :: reduce
       type(C_PTR) :: scatter
-   end type
+   end type lookups_gpu_fwd
 
    type, bind(C) :: lookup_contrib_fwd ! for fwd slv, contrib to parent subtree
       integer(C_INT) :: nscatter
@@ -195,7 +195,7 @@ module spral_ssids_gpu_datatypes
       type(C_PTR) :: rds_times
       type(C_PTR) :: trsv_times
       type(C_PTR) :: scatter_times
-   end type
+   end type lookups_gpu_bwd
 
    type eltree_level
       type(C_PTR) :: ptr_levL ! device pointer to L-factor level data
@@ -320,7 +320,7 @@ module spral_ssids_gpu_datatypes
       integer(C_INT) :: k
       integer(C_INT) :: lda
       integer(C_INT) :: ldb
-   end type
+   end type multisyrk_type
 
    type, bind(C) :: node_data
     type(C_PTR) :: ptr_v
@@ -330,10 +330,10 @@ module spral_ssids_gpu_datatypes
    end type node_data
 
    type, bind(C) :: node_solve_data
-    type(C_PTR) :: ptr_a;
-    type(C_PTR) :: ptr_b;
-    type(C_PTR) :: ptr_u;
-    type(C_PTR) :: ptr_v;
+    type(C_PTR) :: ptr_a
+    type(C_PTR) :: ptr_b
+    type(C_PTR) :: ptr_u
+    type(C_PTR) :: ptr_v
     integer(C_INT) :: lda
     integer(C_INT) :: ldb
     integer(C_INT) :: ldu
@@ -379,6 +379,7 @@ module spral_ssids_gpu_datatypes
 contains
 
 subroutine free_gpu_type(sdata, cuda_error)
+   implicit none
    type(gpu_type), intent(inout) :: sdata
    integer, intent(out) :: cuda_error
 
@@ -389,35 +390,35 @@ subroutine free_gpu_type(sdata, cuda_error)
       do lev = 1, sdata%num_levels
          cuda_error = cudaFree(sdata%values_L(lev)%ptr_levL)
          if(cuda_error.ne.0) return
-         if ( sdata%values_L(lev)%ncp_pre > 0 ) then
+         if (sdata%values_L(lev)%ncp_pre .gt. 0) then
             sdata%values_L(lev)%ncp_pre = 0
             cuda_error = cudaFree(sdata%values_L(lev)%gpu_cpdata_pre)
             if(cuda_error.ne.0) return
             cuda_error = cudaFree(sdata%values_L(lev)%gpu_blkdata_pre)
             if(cuda_error.ne.0) return
          end if
-         if ( sdata%values_L(lev)%ncp_post > 0 ) then
+         if (sdata%values_L(lev)%ncp_post .gt. 0) then
             sdata%values_L(lev)%ncp_post = 0
             cuda_error = cudaFree(sdata%values_L(lev)%gpu_cpdata_post)
             if(cuda_error.ne.0) return
             cuda_error = cudaFree(sdata%values_L(lev)%gpu_blkdata_post)
             if(cuda_error.ne.0) return
          end if
-         if ( sdata%values_L(lev)%ncb_slv_n > 0 ) then
+         if (sdata%values_L(lev)%ncb_slv_n .gt. 0) then
             sdata%values_L(lev)%ncb_slv_n = 0
             cuda_error = cudaFree(sdata%values_L(lev)%gpu_solve_n_data)
             if(cuda_error.ne.0) return
          end if
-         if ( sdata%values_L(lev)%ncb_slv_t > 0 ) then
+         if (sdata%values_L(lev)%ncb_slv_t .gt. 0) then
             sdata%values_L(lev)%ncb_slv_t = 0
             cuda_error = cudaFree(sdata%values_L(lev)%gpu_solve_t_data)
             if(cuda_error.ne.0) return
          end if
-         if ( sdata%values_L(lev)%nexp > 0 ) then
+         if (sdata%values_L(lev)%nexp .gt. 0) then
             sdata%values_L(lev)%nexp = 0
             deallocate( sdata%values_L(lev)%export )
          end if
-         if ( sdata%values_L(lev)%nimp > 0 ) then
+         if (sdata%values_L(lev)%nimp .gt. 0) then
             sdata%values_L(lev)%nimp = 0
             deallocate( sdata%values_L(lev)%import )
          end if
@@ -465,6 +466,7 @@ subroutine free_gpu_type(sdata, cuda_error)
 end subroutine free_gpu_type
 
 subroutine free_lookup_gpu_bwd(gpul, cuda_error)
+   implicit none
    type(lookups_gpu_bwd), intent(inout) :: gpul
    integer, intent(out) :: cuda_error
 
@@ -477,6 +479,7 @@ subroutine free_lookup_gpu_bwd(gpul, cuda_error)
 end subroutine free_lookup_gpu_bwd
 
 subroutine free_lookup_gpu_fwd(gpu, cuda_error)
+   implicit none
    type(lookups_gpu_fwd), intent(inout) :: gpu
    integer, intent(out) :: cuda_error
 
