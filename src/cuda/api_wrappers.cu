@@ -61,26 +61,30 @@ extern "C" {
 
 // Following wrappers needed as cublasHandle_T not interoperable
 extern "C" {
-   cublasStatus_t spral_cublasCreate(cublasHandle_t **handle){
-       *handle = (cublasHandle_t*) malloc(sizeof(cublasHandle_t));
-       return cublasCreate(*handle);
+   cublasStatus_t spral_cublasCreate(cublasHandle_t **const handle)
+   {
+      *handle = (cublasHandle_t*)malloc(sizeof(cublasHandle_t));
+      return cublasCreate(*handle);
    }
-   cublasStatus_t spral_cublasDestroy(cublasHandle_t *handle){
-       cublasStatus_t error = cublasDestroy(*handle);
-       free(handle);
-       return error;
+   cublasStatus_t spral_cublasDestroy(cublasHandle_t *const handle)
+   {
+      const cublasStatus_t error = cublasDestroy(*handle);
+      free(handle);
+      return error;
    }
-   cublasStatus_t spral_cublasDgemm(cublasHandle_t* handle, char* transa,
-         char* transb, int* m, int* n, int* k, double* alpha,
-         const double *devPtrA, int* lda, const double *devPtrB, int* ldb,
-         double* beta, double *devPtrC, int* ldc) {
+   cublasStatus_t spral_cublasDgemm(cublasHandle_t *const handle, const char *const transa,
+      const char *const transb, const int *const m, const int *const n, const int *const k,
+      const double *const alpha, const double *const devPtrA, const int *const lda,
+      const double *const devPtrB, const int *const ldb, const double *const beta,
+      double *const devPtrC, const int *const ldc)
+  {
       cublasOperation_t tA, tB;
-      if(toupper(*transa) == 'N') 
-         tA = CUBLAS_OP_N;
+      if (toupper(*transa) == 'N') 
+        tA = CUBLAS_OP_N;
       else
-         tA = CUBLAS_OP_T;
-      if(toupper(*transb) == 'N') 
-         tB = CUBLAS_OP_N;
+        tA = CUBLAS_OP_T;
+      if (toupper(*transb) == 'N') 
+        tB = CUBLAS_OP_N;
       else
          tB = CUBLAS_OP_T;
       return cublasDgemm(*handle, tA, tB, *m, *n, *k, alpha, devPtrA, *lda, 
@@ -98,12 +102,14 @@ extern "C" {
 
 // Used to provide pointer arithmetic in Fortran
 extern "C"
-void *spral_c_ptr_plus(void *base, size_t sz) {
-   return (void *) (((char *) base) + sz);
+void *spral_c_ptr_plus(void *const base, const size_t sz)
+{
+  return (void*)(((char*)base) + sz);
 }
 
 // Allow pretty printing of a C pointer in Fortran
 extern "C"
-void spral_c_print_ptr(void *ptr) {
-   printf("ptr = %p\n", ptr);
+void spral_c_print_ptr(void *const ptr)
+{
+  (void)printf("ptr = %p\n", ptr);
 }

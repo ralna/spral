@@ -2,6 +2,7 @@
 !> \copyright 2016 The Science and Technology Facilities Council (STFC)
 !> \licence   BSD licence, see LICENCE file for details
 !> \author    Jonathan Hogg
+!> \author    Florent Lopez
 module spral_ssids_profile
    use, intrinsic :: iso_c_binding
    implicit none
@@ -11,7 +12,8 @@ module spral_ssids_profile
              profile_end, &
              profile_task_type, &
              profile_create_task, &
-             profile_set_state
+             profile_set_state, &
+             profile_add_event
 
    type :: profile_task_type
       private
@@ -45,9 +47,18 @@ module spral_ssids_profile
          character(C_CHAR), dimension(*), intent(in) :: type
          character(C_CHAR), dimension(*), intent(in) :: name
       end subroutine c_set_state
+      subroutine c_add_event(type, val, thread) &
+        bind(C, name="spral_ssids_profile_add_event")
+        use, intrinsic :: iso_c_binding
+        implicit none
+        character(C_CHAR), dimension(*), intent(in) :: type
+        character(C_CHAR), dimension(*), intent(in) :: val
+        integer(C_INT), value :: thread
+      end subroutine c_add_event
    end interface
 
 contains
+
    type(profile_task_type) function profile_create_task(name, thread)
       character(len=*), intent(in) :: name
       integer, optional, intent(in) :: thread
@@ -81,6 +92,25 @@ contains
       call c_set_state(ccontainer, ctype, cname)
    end subroutine profile_set_state
 
+   subroutine profile_add_event(type, val, thread)
+     implicit none
+
+     character(len=*), intent(in) :: type
+     character(len=*), intent(in) :: val
+     integer, optional, intent(in) :: thread
+
+     integer(C_INT) :: mythread
+     character(C_CHAR), dimension(200) :: ctype, cval
+
+     call f2c_string(type, ctype)
+     call f2c_string(val, cval)
+     mythread = -1 ! autodetect
+     if(present(thread)) mythread = thread
+
+     call c_add_event(ctype, cval, mythread)
+
+   end subroutine profile_add_event
+   
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
    !> @brief Convert Fortran character to C string, adding null terminator.
    !> @param fstring Fortran string to convert.

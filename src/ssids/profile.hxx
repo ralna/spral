@@ -191,6 +191,7 @@ public:
       addEntityValue("GT_FACTOR", "ST_GPU_TASK", "Factor", GTG_RED);
       // Define events
       addEventType("EV_AGG_FAIL", "CT_THREAD", "Aggressive pivot fail");
+      addEventType("EV_ALL_REGIONS", "CT_THREAD", "All regions subtree");
       // Initialise start time
       clock_gettime(CLOCK_REALTIME, &tstart);
 #endif

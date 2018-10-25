@@ -338,6 +338,7 @@ subroutine find_subtree_partition(nnodes, sptr, sparent, rptr, options, &
       if(st.ne.0) return
    end do
 
+   print *, "[find_subtree_partition] load_balance = ", best_load_balance 
    ! Consolidate adjacent non-children nodes into same part and regen exec_alloc
    !print *
    !print *, "pre merge", part(1:nparts+1)
