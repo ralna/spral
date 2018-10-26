@@ -98,6 +98,7 @@ contains
     call c_begin(nregions, c_regions)
 
     ! TODO free data structures
+
   end subroutine profile_begin
 
   type(profile_task_type) function profile_create_task(name, thread)
