@@ -67,7 +67,7 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
   type(ssids_inform), dimension(:), allocatable :: thread_inform
 
   ! Begin profile trace (noop if not enabled)
-  call profile_begin()
+  call profile_begin(akeep%topology)
 
   ! Allocate space for subtrees
   allocate(fkeep%subtree(akeep%nparts), stat=inform%stat)

@@ -13,8 +13,8 @@ struct timespec spral::ssids::Profile::tstart;
 using namespace spral::ssids;
 
 extern "C"
-void spral_ssids_profile_begin() {
-   Profile::init();
+void spral_ssids_profile_begin(int nregions, void const* regions) {
+   Profile::init(nregions, (spral::hw_topology::NumaRegion*)regions);
 }
 
 extern "C"

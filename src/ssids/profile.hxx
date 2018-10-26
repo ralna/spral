@@ -132,7 +132,8 @@ public:
     * \note Times are all measured from the end of this subroutine.
     */
    static
-   void init(void) {
+   // void init(int nregions, spral::hw_topology::NumaRegion* regions) {
+   void init(int nnodes, spral::hw_topology::NumaRegion* nodes) {
 #if defined(PROFILE) && defined(HAVE_GTG)
       // Initialise profiling
       setTraceType(PAJE);
@@ -141,9 +142,9 @@ public:
       addContType("CT_NODE", "0", "Node");
       addContType("CT_THREAD", "CT_NODE", "Thread");
       addContType("CT_GPU", "CT_NODE", "GPU");
-      int nnodes = 0;
-      spral::hw_topology::NumaRegion* nodes;
-      spral_hw_topology_guess(&nnodes, &nodes);
+      // int nnodes = 0;
+      // spral::hw_topology::NumaRegion* nodes;
+      // spral_hw_topology_guess(&nnodes, &nodes);
       int core_idx=0;
       for(int node=0; node<nnodes; ++node) {
          char node_id[100], node_name[100];
