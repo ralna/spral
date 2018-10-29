@@ -62,6 +62,7 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
   integer :: i, numa_region, exec_loc, my_loc
   integer :: total_threads, max_gpus, to_launch, thread_num
   integer :: nth ! Number of threads within a region
+  integer :: ngpus ! Number of GPUs in a given NUMA region
   logical :: abort, all_region
   type(contrib_type), dimension(:), allocatable :: child_contrib
   type(ssids_inform), dimension(:), allocatable :: thread_inform
@@ -94,7 +95,7 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
   !$omp parallel proc_bind(spread) num_threads(to_launch) &
   !$omp    default(none) &
   !$omp    private(abort, i, exec_loc, numa_region, my_loc, thread_num) &
-  !$omp    private(nth) &
+  !$omp    private(nth, ngpus) &
   !$omp    shared(akeep, fkeep, val, options, thread_inform, child_contrib, &
   !$omp           all_region) &
   !$omp    if(to_launch.gt.1)
@@ -103,12 +104,15 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
   !$ thread_num = omp_get_thread_num()
   numa_region = mod(thread_num, size(akeep%topology)) + 1
   my_loc = thread_num + 1
-  if(thread_num < size(akeep%topology)) then
+  if (thread_num .lt. size(akeep%topology)) then
+     ngpus = size(akeep%topology(numa_region)%gpus,1)
      ! CPU, control number of inner threads (not needed for gpu)
      nth = akeep%topology(numa_region)%nproc
+     ! nth = nth - ngpus
   else
      nth = 1
   endif
+
   !$ call omp_set_num_threads(nth)
   ! Split into threads for this NUMA region (unless we're running a GPU)
   exec_loc = -1 ! avoid compiler warning re uninitialized
@@ -116,7 +120,6 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
 
   !$omp parallel proc_bind(close) default(shared) &
   !$omp    num_threads(nth) &
-  ! !$omp    num_threads(akeep%topology(numa_region)%nproc) &
   !$omp    if(my_loc.le.size(akeep%topology))
 
   !$omp single
@@ -129,8 +132,8 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
 
      !$omp task untied default(shared) firstprivate(i, exec_loc) &
      !$omp    if(my_loc.le.size(akeep%topology))
-     if(abort) goto 10
-     if(allocated(fkeep%scaling)) then
+     if (abort) goto 10
+     if (allocated(fkeep%scaling)) then
         fkeep%subtree(i)%ptr => akeep%subtree(i)%ptr%factor( &
              fkeep%pos_def, val, &
              child_contrib(akeep%contrib_ptr(i):akeep%contrib_ptr(i+1)-1), &
@@ -143,12 +146,12 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
              options, thread_inform(my_loc) &
              )
      endif
-     if(thread_inform(my_loc)%flag.lt.0) then
+     if (thread_inform(my_loc)%flag .lt. 0) then
         abort = .true.
         goto 10
         ! !$omp    cancel taskgroup
      endif
-     if(akeep%contrib_idx(i).le.akeep%nparts) then
+     if (akeep%contrib_idx(i) .le. akeep%nparts) then
         ! There is a parent subtree to contribute to
         child_contrib(akeep%contrib_idx(i)) = &
              fkeep%subtree(i)%ptr%get_contrib()
@@ -168,19 +171,19 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
   do i = 1, size(thread_inform)
      call inform%reduce(thread_inform(i))
   end do
-  if(inform%flag.lt.0) goto 100 ! cleanup and exit
+  if (inform%flag.lt.0) goto 100 ! cleanup and exit
 
-  if(all_region) then
+  if (all_region) then
      
      ! At least some all region subtrees exist
      call profile_add_event("EV_ALL_REGIONS", "Starting processing root subtree", 0)
-
+     
      !$omp parallel num_threads(total_threads) default(shared)
      !$omp single
      do i = 1, akeep%nparts
         exec_loc = akeep%subtree(i)%exec_loc
-        if(exec_loc.ne.-1) cycle
-        if(allocated(fkeep%scaling)) then
+        if (exec_loc.ne.-1) cycle
+        if (allocated(fkeep%scaling)) then
            fkeep%subtree(i)%ptr => akeep%subtree(i)%ptr%factor( &
                 fkeep%pos_def, val, &
                 child_contrib(akeep%contrib_ptr(i):akeep%contrib_ptr(i+1)-1), &
@@ -193,7 +196,7 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
                 options, inform &
                 )
         endif
-        if(akeep%contrib_idx(i).gt.akeep%nparts) cycle ! part is a root
+        if (akeep%contrib_idx(i) .gt. akeep%nparts) cycle ! part is a root
         child_contrib(akeep%contrib_idx(i)) = &
              fkeep%subtree(i)%ptr%get_contrib()
         !$omp    flush

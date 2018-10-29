@@ -251,7 +251,7 @@ private:
 #ifdef HAVE_SCHED_GETCPU
       return sched_getcpu();
 #else /* HAVE_SCHED_GETCPU */
-      return omp::get_global_thread_num()
+      return omp::get_global_thread_num();
 #endif /* HAVE_SCHED_GETCPU */
    }
 
