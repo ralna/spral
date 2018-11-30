@@ -13,11 +13,18 @@
 AC_DEFUN([SPRAL_NVCC_LIB], [
 AC_REQUIRE([SPRAL_PROG_NVCC])
 
-# Check in CUDA_HOME/include
-NVCC_INCLUDE_FLAGS="$NVCC_INCLUDE_FLAGS -I$CUDA_HOME/include"
-save_CPPFLAGS="$CPPFLAGS"; CPPFLAGS="$CPPFLAGS $NVCC_INCLUDE_FLAGS"
+# Check in default path first
+NVCC_INCLUDE_FLAGS="$NVCC_INCLUDE_FLAGS"
 AC_CHECK_HEADER([cuda_runtime_api.h], [spral_nvcc_inc_ok=yes])
-CPPFLAGS=$save_CPPFLAGS
+
+# Check in CUDA_HOME/include
+if test x"$spral_nvcc_inc_ok" != xyes; then
+   AS_UNSET([ac_cv_header_cuda_runtime_api_h])
+   NVCC_INCLUDE_FLAGS="$NVCC_INCLUDE_FLAGS -I$CUDA_HOME/include"
+   save_CPPFLAGS="$CPPFLAGS"; CPPFLAGS="$CPPFLAGS $NVCC_INCLUDE_FLAGS"
+   AC_CHECK_HEADER([cuda_runtime_api.h], [spral_nvcc_inc_ok=yes])
+   CPPFLAGS=$save_CPPFLAGS
+fi
 
 # Handle success or failure
 AC_SUBST(NVCC_INCLUDE_FLAGS)
