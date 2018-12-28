@@ -232,7 +232,7 @@ contains
 
     call inner_factor_numa(fkeep, akeep, val, options, &
          thread_inform, child_contrib, all_region)
-    print *, "[inner_factor_cpu] driver = ", driver, "all_region = ", all_region
+    !print *, "[inner_factor_cpu] driver = ", driver, "all_region = ", all_region
 !$omp end parallel
 
     do i = 1, size(thread_inform)
