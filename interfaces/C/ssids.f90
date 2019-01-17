@@ -679,7 +679,13 @@ subroutine spral_ssids_solve(job, nrhs, cx, ldx, cakeep, cfkeep, coptions, &
   end if
 
   ! Call Fortran routine
-  call ssids_solve(nrhs, fx, ldx, fakeep, ffkeep, foptions, finform, job=job)
+  ! call ssids_solve(nrhs, fx, ldx, fakeep, ffkeep, foptions, finform, job=job)
+
+  if (job .eq. 0) then
+     call ssids_solve(nrhs, fx, ldx, fakeep, ffkeep, foptions, finform)
+  else
+     call ssids_solve(nrhs, fx, ldx, fakeep, ffkeep, foptions, finform, job=job)
+  end if
 
   ! Copy arguments out
   call copy_inform_out(finform, cinform)
