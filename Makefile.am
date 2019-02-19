@@ -20,7 +20,7 @@ AM_NVCC_FLAGS += -gencode arch=compute_50,code=sm_50
 AM_NVCC_FLAGS += -gencode arch=compute_60,code=sm_60
 AM_NVCC_FLAGS += -gencode arch=compute_61,code=sm_61
 AM_NVCC_FLAGS += -gencode arch=compute_70,code=sm_70
-AM_NVCC_FLAGS += -gencode arch=compute_75,code=sm_75
+# AM_NVCC_FLAGS += -gencode arch=compute_75,code=sm_75
 
 AM_LD_FLAGS = -lcuda
 NVCCLINK = \
