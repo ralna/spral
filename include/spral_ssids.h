@@ -113,6 +113,12 @@ void spral_ssids_alter(const double *d, const void *akeep, void *fkeep,
       const struct spral_ssids_options *options,
       struct spral_ssids_inform *inform);
 
+/* Undocumented */
+   
+void spral_ssids_assign_nodes_to_levels(
+      int nnodes, int *sparent, void *gpu_contribs, int *num_levels,
+      int **lvlptr, int **lvllist);
+   
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

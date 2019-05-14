@@ -20,7 +20,8 @@ module spral_ssids_gpu_factor
 
   private
   public :: parfactor ! Performs factorization phase using multiple streams
-
+  public :: assign_nodes_to_levels
+  
   type :: ntype
      integer :: level = 1
      integer :: subtree = 0
