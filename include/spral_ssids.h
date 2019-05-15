@@ -114,11 +114,18 @@ void spral_ssids_alter(const double *d, const void *akeep, void *fkeep,
       struct spral_ssids_inform *inform);
 
 /* Undocumented */
-   
+
 void spral_ssids_assign_nodes_to_levels(
-      int nnodes, int *sparent, void *gpu_contribs, int *num_levels,
-      int **lvlptr, int **lvllist);
-   
+      int nnodes, int const* sparent, void *gpu_contribs, int *num_levels,
+      int *lvlptr, int *lvllist);
+
+void spral_ssids_build_child_pointers(
+      int nnodes, int const* sparent, int **child_ptr, int **child_list);
+
+void spral_ssids_build_rlist_direct(
+      int n, int nnodes, int const* sparent, long const* rptr, 
+      int const* rlist, int *rlist_direct);
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

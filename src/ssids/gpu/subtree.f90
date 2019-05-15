@@ -14,6 +14,8 @@ module spral_ssids_gpu_subtree
   private
   public :: gpu_symbolic_subtree, construct_gpu_symbolic_subtree
   public :: gpu_numeric_subtree, gpu_free_contrib
+  ! C interfaces
+  public :: spral_ssids_build_child_pointers
 
   type, extends(symbolic_subtree_base) :: gpu_symbolic_subtree
      integer :: device
@@ -1006,5 +1008,96 @@ contains
       end do
    end do
  end subroutine alter_gpu_cpu
+
+ ! C interfaces
+
+ subroutine spral_ssids_build_rlist_direct(n, nnodes, c_sparent, c_rptr, &
+      c_rlist, c_rlist_direct) bind (C)
+   implicit none
+
+   integer(c_int), value :: n
+   integer(c_int), value :: nnodes
+   type(c_ptr), intent(in), value :: c_sparent
+   type(c_ptr), intent(in), value :: c_rptr
+   type(c_ptr), intent(in), value :: c_rlist
+   type(c_ptr), value :: c_rlist_direct
+
+   integer, dimension(:), pointer :: sparent
+   integer(long), dimension(:), pointer :: rptr
+   integer, dimension(:), pointer :: rlist
+   integer, dimension(:), pointer :: rlist_direct
+   integer :: st
+
+   if (C_ASSOCIATED(c_sparent)) then
+      call C_F_POINTER(c_sparent, sparent, shape=(/ nnodes /))
+   else
+      print *, "Error c_sparent is NULL"
+      return
+   end if
+
+   if (C_ASSOCIATED(c_rptr)) then
+      call C_F_POINTER(c_rptr, rptr, shape=(/ nnodes+1 /))
+   else
+      print *, "Error c_rptr is NULL"
+      return
+   end if
+
+   if (C_ASSOCIATED(c_rlist)) then
+      call C_F_POINTER(c_rlist, rlist, shape=(/ rptr(nnodes+1)-1 /))
+   else
+      print *, "Error c_rlist is NULL"
+      return
+   end if
+
+   if (C_ASSOCIATED(c_rlist_direct)) then
+      call C_F_POINTER(c_rlist_direct, rlist_direct, shape=(/ rptr(nnodes+1)-1 /))
+   else
+      print *, "Error c_rlist_direct is NULL"
+      return
+   end if
+   
+   call build_rlist_direct(n, nnodes, sparent, rptr, rlist, rlist_direct, st)
+   if (st .ne. 0) goto 100
+
+200 continue
+    return
+100 continue
+    print *, "Error memory allocation"
+    goto 200
+ end subroutine spral_ssids_build_rlist_direct
+   
+ subroutine spral_ssids_build_child_pointers(nnodes, c_sparent, c_child_ptr, &
+      c_child_list) bind (C) 
+   implicit none
+
+   integer(c_int), value :: nnodes
+   type(c_ptr), intent(in), value :: c_sparent
+   type(c_ptr) :: c_child_ptr 
+   type(c_ptr) :: c_child_list
+
+   integer, dimension(:), pointer :: sparent
+   integer, dimension(:), allocatable, target :: child_ptr
+   integer, dimension(:), allocatable, target :: child_list
+   integer :: st
+
+   if (C_ASSOCIATED(c_sparent)) then
+      call C_F_POINTER(c_sparent, sparent, shape=(/ nnodes /))
+   else
+      print *, "Error sparent not associated"
+      return
+   end if
+
+   call build_child_pointers(nnodes, sparent, child_ptr, child_list, st)
+   if (st .ne. 0) goto 100
+
+   c_child_ptr = c_loc(child_ptr(1))
+   c_child_list = c_loc(child_list(1))
+
+200 continue
+   return
+100 continue
+   print *, "Error memory allocation"
+   goto 200     
+ end subroutine spral_ssids_build_child_pointers
 
 end module spral_ssids_gpu_subtree

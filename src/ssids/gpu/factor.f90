@@ -20,7 +20,8 @@ module spral_ssids_gpu_factor
 
   private
   public :: parfactor ! Performs factorization phase using multiple streams
-  public :: assign_nodes_to_levels
+  ! C interfaces
+  public :: spral_ssids_assign_nodes_to_levels
   
   type :: ntype
      integer :: level = 1
@@ -1980,5 +1981,72 @@ contains
        end do
     end do
   end subroutine assemble_fully_summed
+
+  ! C interfaces
+  
+  subroutine spral_ssids_assign_nodes_to_levels(nnodes, c_sparent, c_gpu_contribs, c_num_levels, &
+       c_lvlptr, c_lvllist) bind (C)
+    implicit none
+    
+    integer(c_int), value :: nnodes
+    type(c_ptr), intent(in), value :: c_sparent
+    type(c_ptr), value :: c_gpu_contribs
+    integer(c_int) :: c_num_levels
+    type(c_ptr), value :: c_lvlptr 
+    type(c_ptr), value :: c_lvllist
+
+    integer, dimension(:), pointer :: sparent
+    type(C_PTR), dimension(:), pointer :: gpu_contribs
+    integer :: num_levels
+    integer, dimension(:), pointer :: lvlptr
+    integer, dimension(:), pointer :: lvllist
+    integer :: st
+
+    if (C_ASSOCIATED(c_sparent)) then
+       call C_F_POINTER(c_sparent, sparent, shape=(/ nnodes /))
+    else
+       print *, "Error sparent not associated"
+       return
+    end if
+
+    if (C_ASSOCIATED(c_gpu_contribs)) then
+       call C_F_POINTER(c_gpu_contribs, gpu_contribs, shape=(/ nnodes /))
+    else
+       allocate(gpu_contribs(nnodes), stat=st)
+       gpu_contribs(:) = c_null_ptr
+    end if
+
+    if (C_ASSOCIATED(c_lvlptr)) then
+       call C_F_POINTER(c_lvlptr, lvlptr, shape=(/ nnodes+1 /))
+    else
+       print *, "Error lvlptr not associated"
+       return        
+    end if
+
+    if (C_ASSOCIATED(c_lvllist)) then
+       call C_F_POINTER(c_lvllist, lvllist, shape=(/ nnodes /))
+    else
+       print *, "Error lvllist not associated"
+       return
+    end if
+    ! allocate(lvllist(nnodes), lvlptr(nnodes+1), stat=st)
+    ! if (st .ne. 0) goto 100
+
+    call assign_nodes_to_levels(nnodes, sparent, gpu_contribs, num_levels, &
+         lvlptr, lvllist, st)
+    if (st .ne. 0) goto 100
+
+    c_num_levels = num_levels 
+    ! c_lvlptr = c_loc(lvlptr(1))
+    ! c_lvllist = c_loc(lvllist(1))
+
+200 continue
+    if (.not. C_ASSOCIATED(c_gpu_contribs) .and. &
+         associated(gpu_contribs)) deallocate(gpu_contribs)
+    return
+100 continue
+    print *, "Allocation error"
+    goto 200
+  end subroutine spral_ssids_assign_nodes_to_levels
 
 end module spral_ssids_gpu_factor
