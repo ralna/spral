@@ -1983,6 +1983,102 @@ contains
   end subroutine assemble_fully_summed
 
   ! C interfaces
+
+  ! Init custack for level lev
+  subroutine spral_ssids_level_custack_init(lev, nnodes, c_lvlptr, c_lvllist, &
+       c_child_ptr, c_child_list, c_nodes, c_sptr, c_rptr, c_asminf, c_gwork, &
+       cuerr) bind (C) 
+    implicit none
+    
+    integer(c_int), value :: lev
+    integer(c_int), value :: nnodes
+    type(c_ptr), value, intent(in) :: c_lvlptr 
+    type(c_ptr), value, intent(in) :: c_lvllist
+    type(c_ptr), value, intent(in) :: c_child_ptr 
+    type(c_ptr), value, intent(in) :: c_child_list 
+    type(c_ptr), value, intent(in) :: c_nodes 
+    type(c_ptr), value, intent(in) :: c_sptr 
+    type(c_ptr), value, intent(in) :: c_rptr 
+    type(c_ptr), value, intent(in) :: c_asminf 
+    type(c_ptr) :: c_gwork    
+    integer(c_int) :: cuerr
+
+    integer, dimension(:), pointer :: lvlptr
+    integer, dimension(:), pointer :: lvllist    
+    integer, dimension(:), pointer :: child_ptr
+    integer, dimension(:), pointer :: child_list
+    type(node_type), dimension(:), pointer :: nodes
+    integer, dimension(:), pointer :: sptr
+    integer(long), dimension(:), pointer :: rptr
+    type(asmtype), dimension(:), pointer :: asminf
+    type(cuda_stack_alloc_type), target :: gwork
+    integer(C_SIZE_T) :: lgpu_work
+
+    if (C_ASSOCIATED(c_lvlptr)) then
+       call C_F_POINTER(c_lvlptr, lvlptr, shape=(/ nnodes+1 /))
+    else
+       print *, "Error lvlptr not associated"
+       return        
+    end if
+
+    if (C_ASSOCIATED(c_lvllist)) then
+       call C_F_POINTER(c_lvllist, lvllist, shape=(/ nnodes /))
+    else
+       print *, "Error lvllist not associated"
+       return
+    end if
+
+    if (C_ASSOCIATED(c_child_ptr)) then
+       call C_F_POINTER(c_child_ptr, child_ptr, shape=(/ nnodes+2 /))
+    else
+       print *, "Error child_ptr not associated"
+       return        
+    end if
+
+    if (C_ASSOCIATED(c_child_list)) then
+       call C_F_POINTER(c_child_list, child_list, shape=(/ nnodes /))
+    else
+       print *, "Error child_list not associated"
+       return        
+    end if
+
+    if (C_ASSOCIATED(c_nodes)) then
+       call C_F_POINTER(c_nodes, nodes, shape=(/ nnodes+1 /))
+    else
+       print *, "Error nodes not associated"
+       return        
+    end if
+
+    if (C_ASSOCIATED(c_sptr)) then
+       call C_F_POINTER(c_sptr, sptr, shape=(/ nnodes+1 /))
+    else
+       print *, "Error sptr not associated"
+       return        
+    end if
+
+    if (C_ASSOCIATED(c_rptr)) then
+       call C_F_POINTER(c_rptr, rptr, shape=(/ nnodes+1 /))
+    else
+       print *, "Error rptr not associated"
+       return        
+    end if
+
+    if (C_ASSOCIATED(c_asminf)) then
+       call C_F_POINTER(c_asminf, asminf, shape=(/ nnodes /))
+    else
+       print *, "Error rptr not associated"
+       return        
+    end if
+
+    c_gwork = c_null_ptr    
+    lgpu_work = level_gpu_work_size(lev, lvlptr, lvllist, child_ptr, &
+         child_list, nodes, sptr, rptr, asminf)
+    call custack_init(gwork, lgpu_work, cuerr)
+    if (cuerr .ne. 0) return
+    
+    c_gwork = c_loc(gwork)
+    
+  end subroutine spral_ssids_level_custack_init
   
   subroutine spral_ssids_assign_nodes_to_levels(nnodes, c_sparent, c_gpu_contribs, c_num_levels, &
        c_lvlptr, c_lvllist) bind (C)
