@@ -445,6 +445,9 @@ contains
       if(cuda_error.ne.0) return
 
       ! Set SSIDS specific values
+      !
+      ! Note: The following option has no effect on Pascal and newer
+      ! architectures
       cuda_error = cudaDeviceSetSharedMemConfig(cudaSharedMemBankSizeEightByte)
       if(cuda_error.ne.0) return
       

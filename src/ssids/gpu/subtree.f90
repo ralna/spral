@@ -345,7 +345,7 @@ contains
    if (st .ne. 0) goto 10
    gpu_factor%nodes(:)%ndelay = 0
 
-   allocate(map(0:this%n), stat=st)
+   allocate(map(0:this%n), stat=st) ! TODO cleanup
    if (st .ne. 0) goto 10
    map(0) = -1 ! initally map unassociated with any node
 
@@ -360,6 +360,9 @@ contains
    ! * options%multiplier * (nfactor+2*n) reals    (for nodes(:)%lcol)
    ! FIXME: do we really need this multiplier memory????
    ! FIXME: In posdef case ints and reals not needed!
+   !
+   ! FIXME: It seems that the memory allocated for the factors should
+   ! only be needed when factors are stored on the host.
    allocate(gpu_factor%alloc, stat=st)
    if (st .ne. 0) goto 10
    call smalloc_setup(gpu_factor%alloc, &
@@ -1011,8 +1014,32 @@ contains
 
  ! C interfaces
 
+ subroutine spral_ssids_nodes_init(nnodes, c_nodes) bind(C)
+   use, intrinsic :: iso_c_binding
+   implicit none
+
+   integer(c_int), value :: nnodes
+   type(c_ptr) :: c_nodes
+
+   type(node_type), dimension(:), pointer :: nodes
+   integer :: st
+
+   c_nodes = c_null_ptr
+   allocate(nodes(nnodes+1), stat=st)
+   if (st .ne. 0) goto 100
+   nodes(:)%ndelay = 0
+   
+   c_nodes = c_loc(nodes(1))
+   
+200 continue
+    return
+100 continue
+    print *, "Error: memory allocation"
+    goto 200
+ end subroutine spral_ssids_nodes_init
+ 
  subroutine spral_ssids_build_rlist_direct(n, nnodes, c_sparent, c_rptr, &
-      c_rlist, c_rlist_direct) bind (C)
+      c_rlist, c_rlist_direct) bind(C)
    implicit none
 
    integer(c_int), value :: n
@@ -1076,20 +1103,24 @@ contains
    type(c_ptr) :: c_child_list
 
    integer, dimension(:), pointer :: sparent
-   integer, dimension(:), allocatable, target :: child_ptr
-   integer, dimension(:), allocatable, target :: child_list
+   integer, dimension(:), allocatable, target, save :: child_ptr
+   integer, dimension(:), allocatable, target, save :: child_list
    integer :: st
 
+   nullify(sparent)
+   c_child_ptr = c_null_ptr
+   c_child_list = c_null_ptr
+   
    if (C_ASSOCIATED(c_sparent)) then
       call C_F_POINTER(c_sparent, sparent, shape=(/ nnodes /))
    else
-      print *, "Error sparent not associated"
+      print *, "Error: sparent not associated"
       return
    end if
 
    call build_child_pointers(nnodes, sparent, child_ptr, child_list, st)
    if (st .ne. 0) goto 100
-
+   
    c_child_ptr = c_loc(child_ptr(1))
    c_child_list = c_loc(child_list(1))
 

@@ -1982,15 +1982,159 @@ contains
     end do
   end subroutine assemble_fully_summed
 
+  subroutine asminf_init(nnodes, child_ptr, child_list, sptr, rptr, rlist_direct, asminf)
+    implicit none
+
+    integer, intent(in) :: nnodes
+    integer, dimension(*), intent(in) :: child_ptr
+    integer, dimension(*), intent(in) :: child_list
+    integer, dimension(*), intent(in) :: sptr
+    integer(long), dimension(*), intent(in) :: rptr
+    integer, dimension(*), intent(in) :: rlist_direct
+    type(asmtype), dimension(*), intent(out) :: asminf
+
+    integer :: node, cnode
+    integer :: blkm
+    integer :: blkn
+    integer :: cblkm
+    integer :: cblkn
+    integer :: m
+    integer :: cn
+    integer :: ii
+
+    do node = 1, nnodes
+       blkm = int(rptr(node + 1) - rptr(node))
+       blkn = sptr(node + 1) - sptr(node)
+       do cn = child_ptr(node), child_ptr(node+1)-1
+          cnode = child_list(cn)
+          cblkn = sptr(cnode + 1) - sptr(cnode)
+          cblkm = int(rptr(cnode + 1) - rptr(cnode))
+          m = 0
+          do ii = rptr(cnode) + cblkn, rptr(cnode + 1) - 1
+             if (rlist_direct(ii) .gt. blkn) exit
+             m = m + 1
+          end do
+          asminf(cnode)%npassed = cblkm - cblkn
+          asminf(cnode)%npassl = m
+          asminf(cnode)%offset = rptr(cnode) + cblkn - 1
+       end do
+    end do
+
+  end subroutine asminf_init
+
   ! C interfaces
 
-  ! Init custack for level lev
-  subroutine spral_ssids_level_custack_init(lev, nnodes, c_lvlptr, c_lvllist, &
+  !> @brief Init asminf array
+  subroutine spral_ssids_asminf_init(nnodes, c_child_ptr, c_child_list, &
+       c_sptr, c_rptr, c_rlist_direct, c_asminf) bind (C) 
+    implicit none
+
+    integer(c_int), value :: nnodes
+    type(c_ptr), value, intent(in) :: c_child_ptr 
+    type(c_ptr), value, intent(in) :: c_child_list 
+    type(c_ptr), value, intent(in) :: c_sptr
+    type(c_ptr), value, intent(in) :: c_rptr
+    type(c_ptr), value :: c_rlist_direct
+    type(c_ptr) :: c_asminf
+
+    integer, dimension(:), pointer :: child_ptr
+    integer, dimension(:), pointer :: child_list
+    integer, dimension(:), pointer :: sptr
+    integer(long), dimension(:), pointer :: rptr
+    integer, dimension(:), pointer :: rlist_direct
+    type(asmtype), dimension(:), pointer :: asminf
+    integer :: st
+
+    ! child_ptr
+    if (C_ASSOCIATED(c_child_ptr)) then
+       call C_F_POINTER(c_child_ptr, child_ptr, shape=(/ nnodes+2 /))
+    else
+       print *, "Error: child_ptr not associated"
+       return        
+    end if
+
+    ! child_list
+    if (C_ASSOCIATED(c_child_list)) then
+       call C_F_POINTER(c_child_list, child_list, shape=(/ nnodes /))
+    else
+       print *, "Error: child_list not associated"
+       return        
+    end if
+    
+    ! sptr
+    if (C_ASSOCIATED(c_sptr)) then
+       call C_F_POINTER(c_sptr, sptr, shape=(/ nnodes+1 /))
+    else
+       print *, "Error: sptr not associated"
+       return        
+    end if
+
+    ! rptr
+    if (C_ASSOCIATED(c_rptr)) then
+       call C_F_POINTER(c_rptr, rptr, shape=(/ nnodes+1 /))
+    else
+       print *, "Error: rptr not associated"
+       return        
+    end if
+
+    ! rlist_direct
+    if (C_ASSOCIATED(c_rlist_direct)) then
+       call C_F_POINTER(c_rlist_direct, rlist_direct, shape=(/ rptr(nnodes+1)-1 /))
+    else
+       print *, "Error: c_rlist_direct is NULL"
+       return
+    end if
+
+    c_asminf = c_null_ptr
+    allocate(asminf(nnodes), stat=st)
+    if (st .ne. 0) goto 100
+    
+    call asminf_init(nnodes, child_ptr, child_list, sptr, rptr, rlist_direct, asminf)
+
+    ! Update C pointer with location of asminf array
+    c_asminf = c_loc(asminf(1))
+    
+200 continue
+    return
+100 continue
+    print *, "Error: Allocation"
+    goto 200
+  end subroutine spral_ssids_asminf_init
+
+  !> @brief Init custack and set C pointer to it  
+  subroutine spral_ssids_custack_init(c_gwork) bind(C)
+    use, intrinsic :: iso_c_binding
+    implicit none
+
+    type(c_ptr) :: c_gwork
+
+    type(cuda_stack_alloc_type), pointer :: gwork
+    integer :: st
+
+    nullify(gwork)
+    c_gwork = c_null_ptr    
+    allocate(gwork, stat=st)
+    if (st .ne. 0) goto 100
+
+    c_gwork = c_loc(gwork)
+    
+200 continue
+    return
+100 continue
+    print *, "Error: Allocation"
+    goto 200
+  end subroutine spral_ssids_custack_init
+
+  !> @brief Init custack for level lev
+  !> @param lev Level index that is C-indexed i.e. 0-based
+  !> @param[out] c_gwork C pointer to the cuda stack initialized for level lev  
+  subroutine spral_ssids_level_custack_init(c_lev, nnodes, c_lvlptr, c_lvllist, &
        c_child_ptr, c_child_list, c_nodes, c_sptr, c_rptr, c_asminf, c_gwork, &
-       cuerr) bind (C) 
+       cuerr) bind(C)
+    use, intrinsic :: iso_c_binding
     implicit none
     
-    integer(c_int), value :: lev
+    integer(c_int), value :: c_lev
     integer(c_int), value :: nnodes
     type(c_ptr), value, intent(in) :: c_lvlptr 
     type(c_ptr), value, intent(in) :: c_lvllist
@@ -2000,9 +2144,10 @@ contains
     type(c_ptr), value, intent(in) :: c_sptr 
     type(c_ptr), value, intent(in) :: c_rptr 
     type(c_ptr), value, intent(in) :: c_asminf 
-    type(c_ptr) :: c_gwork    
+    type(c_ptr), value, intent(in) :: c_gwork    
     integer(c_int) :: cuerr
 
+    integer :: lev
     integer, dimension(:), pointer :: lvlptr
     integer, dimension(:), pointer :: lvllist    
     integer, dimension(:), pointer :: child_ptr
@@ -2011,7 +2156,7 @@ contains
     integer, dimension(:), pointer :: sptr
     integer(long), dimension(:), pointer :: rptr
     type(asmtype), dimension(:), pointer :: asminf
-    type(cuda_stack_alloc_type), target :: gwork
+    type(cuda_stack_alloc_type), pointer :: gwork
     integer(C_SIZE_T) :: lgpu_work
 
     if (C_ASSOCIATED(c_lvlptr)) then
@@ -2059,29 +2204,37 @@ contains
     if (C_ASSOCIATED(c_rptr)) then
        call C_F_POINTER(c_rptr, rptr, shape=(/ nnodes+1 /))
     else
-       print *, "Error rptr not associated"
+       print *, "Error: rptr not associated"
        return        
     end if
 
     if (C_ASSOCIATED(c_asminf)) then
        call C_F_POINTER(c_asminf, asminf, shape=(/ nnodes /))
     else
-       print *, "Error rptr not associated"
+       print *, "Error: rptr not associated"
        return        
     end if
 
-    c_gwork = c_null_ptr    
+    ! gwork
+    if (C_ASSOCIATED(c_gwork)) then
+       call C_F_POINTER(c_gwork, gwork)
+    else
+       print *, "Error: gwork not associated"
+       return        
+    end if
+
+    lev = c_lev + 1 ! c_lev is 0-based
+    
     lgpu_work = level_gpu_work_size(lev, lvlptr, lvllist, child_ptr, &
          child_list, nodes, sptr, rptr, asminf)
     call custack_init(gwork, lgpu_work, cuerr)
     if (cuerr .ne. 0) return
     
-    c_gwork = c_loc(gwork)
-    
   end subroutine spral_ssids_level_custack_init
   
   subroutine spral_ssids_assign_nodes_to_levels(nnodes, c_sparent, c_gpu_contribs, c_num_levels, &
        c_lvlptr, c_lvllist) bind (C)
+    use, intrinsic :: iso_c_binding
     implicit none
     
     integer(c_int), value :: nnodes

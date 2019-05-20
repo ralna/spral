@@ -115,6 +115,21 @@ void spral_ssids_alter(const double *d, const void *akeep, void *fkeep,
 
 /* Undocumented */
 
+void spral_ssids_nodes_init(int nnodes, void **nodes);
+   
+void spral_ssids_asminf_init(
+      int nnodes, int const* child_ptr, int const* child_list,
+      int const* sptr, long const* rptr, int const* rlist_direct,
+      void **asminf);
+
+void spral_ssids_custack_init(void **gwork);
+
+void spral_ssids_level_custack_init(
+      int lev, int nnodes, int const* lvlptr, int const* lvllist,
+      int const* child_ptr, int const* child_list, void const* nodes,
+      int const* sptr, long const* rptr, void const* asminf, void const* gwork, 
+      int *cuerr);
+   
 void spral_ssids_assign_nodes_to_levels(
       int nnodes, int const* sparent, void *gpu_contribs, int *num_levels,
       int *lvlptr, int *lvllist);
