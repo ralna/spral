@@ -115,8 +115,18 @@ void spral_ssids_alter(const double *d, const void *akeep, void *fkeep,
 
 /* Undocumented */
 
-void spral_ssids_nodes_init(int nnodes, void **nodes);
+void spral_ssids_init_l_with_a(
+      cudaStream_t *stream, int nnodes, int lev, int const* lvlptr,
+      int const* lvllist, void const* nodes, int ncb, long level_size,
+      long const* nptr, long const* rptr, void const* gpu_nlist, 
+      void const* gpu_rlist, void const* ptr_val, void *ptr_levL,
+      void const* gwork, int *cuda_error, void const* ptr_scale);
    
+void spral_ssids_nodes_init(int nnodes, void **nodes);
+
+void spral_ssids_node_set_gpu_lcol(
+      int nnodes, void const* nodes, int node, void const* gpu_lcol);
+
 void spral_ssids_asminf_init(
       int nnodes, int const* child_ptr, int const* child_list,
       int const* sptr, long const* rptr, int const* rlist_direct,

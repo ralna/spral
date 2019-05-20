@@ -2024,9 +2024,139 @@ contains
 
   ! C interfaces
 
+  !> @brief Init factor L with original entries from matrix A
+  subroutine spral_ssids_init_l_with_a(stream, nnodes, c_lev, c_lvlptr, &
+       c_lvllist, c_nodes, ncb, level_size, c_nptr, c_rptr, gpu_nlist, &
+       gpu_rlist, ptr_val, ptr_levL, c_gwork, cuda_error, ptr_scale) bind(C)
+    use, intrinsic :: iso_c_binding
+    implicit none
+
+    type(c_ptr), value :: stream
+    integer(c_int), value :: nnodes 
+    integer(c_int), value :: c_lev ! 0-based level index 
+    type(c_ptr), value, intent(in) :: c_lvlptr 
+    type(c_ptr), value, intent(in) :: c_lvllist
+    type(c_ptr), value, intent(in) :: c_nodes
+    integer(c_int), value :: ncb ! Number of nodes in level
+    integer(c_long), value :: level_size ! Number of (fully-summed) entries in level  
+    type(c_ptr), value, intent(in) :: c_nptr
+    type(c_ptr), value, intent(in) :: c_rptr
+    type(c_ptr), value, intent(in) :: gpu_nlist ! nlist array on the GPU
+    type(c_ptr), value, intent(in) :: gpu_rlist ! rlist array on the GPU
+    type(c_ptr), value, intent(in) :: ptr_val ! A matrix entries on the GPU
+    type(c_ptr), value :: ptr_levL ! fully-summed entries on the GPU in level 
+    type(c_ptr), value, intent(in) :: c_gwork
+    integer(c_int) :: cuda_error ! CUDA error
+    type(c_ptr), value, intent(in) :: ptr_scale
+    
+    integer :: lev ! Fortran-indexed level index 
+    integer, dimension(:), pointer :: lvlptr
+    integer, dimension(:), pointer :: lvllist
+    type(node_type), dimension(:), pointer :: nodes ! Nodes collection
+    integer(long), dimension(:), pointer :: nptr
+    integer(long), dimension(:), pointer :: rptr
+    
+    type(cuda_stack_alloc_type), pointer :: gwork ! GPU memory workspace allocator
+    integer :: st ! Allocation error
+
+    lev = c_lev+1
+
+    ! lvlptr
+    if (C_ASSOCIATED(c_lvlptr)) then
+       call C_F_POINTER(c_lvlptr, lvlptr, shape=(/ nnodes+1 /))
+    else
+       print *, "Error: lvlptr not associated"
+       return        
+    end if
+
+    ! lvllist
+    if (C_ASSOCIATED(c_lvllist)) then
+       call C_F_POINTER(c_lvllist, lvllist, shape=(/ nnodes /))
+    else
+       print *, "Error: lvllist not associated"
+       return
+    end if
+
+    ! nodes
+    if (C_ASSOCIATED(c_nodes)) then
+       call C_F_POINTER(c_nodes, nodes, shape=(/ nnodes+1 /))
+    else
+       print *, "Error: nodes not associated"
+       return        
+    end if
+
+    ! gwork
+    if (C_ASSOCIATED(c_gwork)) then
+       call C_F_POINTER(c_gwork, gwork)
+    else
+       print *, "Error: gwork not associated"
+       return        
+    end if
+
+    ! nptr
+    if (C_ASSOCIATED(c_nptr)) then
+       call C_F_POINTER(c_nptr, nptr, shape=(/ nnodes+1 /))
+    else
+       print *, "Error: nptr not associated"
+       return        
+    end if
+
+    ! rptr
+    if (C_ASSOCIATED(c_rptr)) then
+       call C_F_POINTER(c_rptr, rptr, shape=(/ nnodes+1 /))
+    else
+       print *, "Error: rptr not associated"
+       return        
+    end if
+
+    if (c_associated(ptr_scale)) then
+       call init_L_with_A(stream, lev, lvlptr, lvllist, nodes, ncb, level_size, &
+            nptr, rptr, gpu_nlist, gpu_rlist, ptr_val, ptr_levL, &
+            gwork, st, cuda_error, ptr_scale)
+    else
+       call init_L_with_A(stream, lev, lvlptr, lvllist, nodes, ncb, level_size, &
+            nptr, rptr, gpu_nlist, gpu_rlist, ptr_val, ptr_levL, &
+            gwork, st, cuda_error)
+    end if
+
+200 continue
+    return
+100 continue
+    print *, "Error: Memory allocation"
+    goto 200
+  end subroutine spral_ssids_init_l_with_a
+  
+  !> @brief Set gpu_lcol to c_gpu_lcol for given node
+  subroutine spral_ssids_node_set_gpu_lcol(nnodes, c_nodes, c_node, &
+       c_gpu_lcol) bind(C)
+    use, intrinsic :: iso_c_binding
+    implicit none
+
+    integer(c_int), value :: nnodes ! Number of nodes
+    type(c_ptr), value :: c_nodes ! C pointer to (Fortran) nodes structure
+    integer(c_int), value :: c_node ! Node index, C-indexed
+    type(c_ptr), value :: c_gpu_lcol ! C pointer to GPU memory for lcol 
+    
+    type(node_type), dimension(:), pointer :: nodes
+    integer :: node
+
+    if (C_ASSOCIATED(c_nodes)) then
+       call C_F_POINTER(c_nodes, nodes, shape=(/ nnodes+1 /))
+    else
+       print *, "Error: nodes not associated"
+       return        
+    end if
+
+    node = c_node+1
+
+    nodes(node)%gpu_lcol = c_gpu_lcol
+    
+  end subroutine spral_ssids_node_set_gpu_lcol
+    
   !> @brief Init asminf array
   subroutine spral_ssids_asminf_init(nnodes, c_child_ptr, c_child_list, &
        c_sptr, c_rptr, c_rlist_direct, c_asminf) bind (C) 
+    use, intrinsic :: iso_c_binding
     implicit none
 
     integer(c_int), value :: nnodes
@@ -2097,7 +2227,7 @@ contains
 200 continue
     return
 100 continue
-    print *, "Error: Allocation"
+    print *, "Error: Memory allocation"
     goto 200
   end subroutine spral_ssids_asminf_init
 
@@ -2162,35 +2292,35 @@ contains
     if (C_ASSOCIATED(c_lvlptr)) then
        call C_F_POINTER(c_lvlptr, lvlptr, shape=(/ nnodes+1 /))
     else
-       print *, "Error lvlptr not associated"
+       print *, "Error: lvlptr not associated"
        return        
     end if
 
     if (C_ASSOCIATED(c_lvllist)) then
        call C_F_POINTER(c_lvllist, lvllist, shape=(/ nnodes /))
     else
-       print *, "Error lvllist not associated"
+       print *, "Error: lvllist not associated"
        return
     end if
 
     if (C_ASSOCIATED(c_child_ptr)) then
        call C_F_POINTER(c_child_ptr, child_ptr, shape=(/ nnodes+2 /))
     else
-       print *, "Error child_ptr not associated"
+       print *, "Error: child_ptr not associated"
        return        
     end if
 
     if (C_ASSOCIATED(c_child_list)) then
        call C_F_POINTER(c_child_list, child_list, shape=(/ nnodes /))
     else
-       print *, "Error child_list not associated"
+       print *, "Error: child_list not associated"
        return        
     end if
 
     if (C_ASSOCIATED(c_nodes)) then
        call C_F_POINTER(c_nodes, nodes, shape=(/ nnodes+1 /))
     else
-       print *, "Error nodes not associated"
+       print *, "Error: nodes not associated"
        return        
     end if
 
