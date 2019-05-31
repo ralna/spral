@@ -1027,7 +1027,8 @@ contains
    c_nodes = c_null_ptr
    allocate(nodes(nnodes+1), stat=st)
    if (st .ne. 0) goto 100
-   nodes(:)%ndelay = 0
+   nodes(:)%ndelay = 0 ! Number of incoming delays
+   nodes(:)%nelim = 0 ! Number of eliminated columns
    
    c_nodes = c_loc(nodes(1))
    

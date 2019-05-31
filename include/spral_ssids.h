@@ -115,25 +115,47 @@ void spral_ssids_alter(const double *d, const void *akeep, void *fkeep,
 
 /* Undocumented */
 
+void spral_ssids_assemble_contrib(
+      cudaStream_t *stream, int nnodes, int total_nch, int lev,
+      int const* lvlptr, int const* lvllist,
+      int const* child_ptr, int const* child_list,
+      long const* rptr, int const* sptr, void const* asminf, long pc_size,
+      long const* off_LDLT, void const* ptr_ccval, void const* gpu_contribs,  
+      void *ptr_levLDLT, void const* gpu_rlist_direct, void *gwork);
+   
+void spral_ssids_form_contrib(
+      cudaStream_t *stream, int nnodes, int lev, int const* lvlptr,
+      int const* lvllist, void const* nodes, long const* rptr,
+      int const* sptr, long const* off_LDLT, void *ptr_levLDLT, void *gwork);
+         
+void spral_ssids_factor_posdef(
+      cudaStream_t *stream, int nnodes, int lev, int const* lvlptr,
+      int const* lvllist, void const* nodes, long const* rptr,
+      int const* sptr, void *ptr_levL, cublasHandle_t *cublas_handle,
+      void *gwork);
+   
 void spral_ssids_assemble_fully_summed(
       cudaStream_t *stream, int nnodes, int total_nch, int lev, int const* lvlptr,
       int const* lvllist, void const* nodes, void const* gpu_ccval,
       void const* gpu_contribs, void const* ptr_levL,
       void const* gpu_rlist_direct, int const* child_ptr, int const* child_list,
       long const* off_LDLT, void const* asminf, long const* rptr,
-      int const* sptr, void const* gwork, int *cuda_error);
+      int const* sptr, void *gwork, int *cuda_error);
    
 void spral_ssids_init_l_with_a(
       cudaStream_t *stream, int nnodes, int lev, int const* lvlptr,
       int const* lvllist, void const* nodes, int ncb, long level_size,
       long const* nptr, long const* rptr, void const* gpu_nlist, 
       void const* gpu_rlist, void const* ptr_val, void *ptr_levL,
-      void const* gwork, int *cuda_error, void const* ptr_scale);
+      void *gwork, int *cuda_error, void const* ptr_scale);
    
 void spral_ssids_nodes_init(int nnodes, void **nodes);
 
 void spral_ssids_node_set_gpu_lcol(
       int nnodes, void const* nodes, int node, void const* gpu_lcol);
+
+void spral_ssids_node_init_lperm(
+      int nnodes, void const* nodes, int node, int const* sptr);
 
 void spral_ssids_asminf_init(
       int nnodes, int const* child_ptr, int const* child_list,
