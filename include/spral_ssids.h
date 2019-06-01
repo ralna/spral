@@ -167,7 +167,7 @@ void spral_ssids_custack_init(void **gwork);
 void spral_ssids_level_custack_init(
       int lev, int nnodes, int const* lvlptr, int const* lvllist,
       int const* child_ptr, int const* child_list, void const* nodes,
-      int const* sptr, long const* rptr, void const* asminf, void const* gwork, 
+      int const* sptr, long const* rptr, void const* asminf, void *gwork, 
       int *cuerr);
    
 void spral_ssids_assign_nodes_to_levels(

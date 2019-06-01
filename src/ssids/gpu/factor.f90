@@ -1111,6 +1111,7 @@ contains
        if (stats%st .ne. 0) return
        if ((stats%cuda_error .ne. 0) .or. (stats%cublas_error .ne. 0)) return
        if (stats%flag .lt. 0) return
+
        ! Store outcome of factorization
        ncb = 0
        do llist = lvlptr(lev), lvlptr(lev + 1) - 1
@@ -1127,7 +1128,7 @@ contains
           end if
        end do
     end if
-   
+
     !
     ! Factor root nodes
     !
@@ -2259,10 +2260,10 @@ contains
 300 continue
     return
 200 continue
-    print *, "[Error][spral_ssids_assemble_fully_summed] Unknown error"
+    print *, "[Error][spral_ssids_assemble_form_contrib] Unknown error"
     goto 300
 100 continue
-    print *, "[Error][spral_ssids_assemble_fully_summed] Allocation error"
+    print *, "[Error][spral_ssids_assemble_form_contrib] Allocation error"
     goto 300
   end subroutine spral_ssids_form_contrib
 
@@ -2283,7 +2284,7 @@ contains
     type(c_ptr), value :: ptr_levL ! GPU (*ptr_levL) points to L storage
     ! for current level
     type(c_ptr), value, intent(in) :: cublas_handle ! cuBLAS handle
-    type(c_ptr), value, intent(in) :: c_gwork ! GPU workspace allocator 
+    type(c_ptr), value             :: c_gwork ! GPU workspace allocator 
 
     integer :: lev ! Fortran-indexed level index 
     integer, dimension(:), pointer :: lvlptr
@@ -2293,7 +2294,8 @@ contains
     integer(long), dimension(:), pointer :: rptr
     type(cuda_stack_alloc_type), pointer :: gwork ! GPU memory workspace allocator
     type(thread_stats) :: stats
-
+    integer :: p, n
+    
     lev = c_lev+1
 
     ! lvlptr
@@ -2346,14 +2348,35 @@ contains
 
     call factor_posdef(stream, lev, lvlptr, nodes, lvllist, &
          sptr, rptr, ptr_levL, cublas_handle, stats, gwork)
-    if (stats%flag .ne. SSIDS_SUCCESS) goto 100
+    if (stats%st .ne. 0) goto 100
+    if (stats%flag .ne. SSIDS_SUCCESS) then
+       if (stats%flag .eq. SSIDS_ERROR_NOT_POS_DEF) then
+          goto 300
+       else
+          goto 200
+       end if
+    end if
+    if (stats%cuda_error .ne. 0) goto 400
+
+    do p = lvlptr(lev), lvlptr(lev + 1) - 1
+       n = lvllist(p)
+       print *, "node = ", n, ", nelim = ", nodes(n)%nelim 
+    end do
     
-    
-200 continue
+1000 continue
     return
+400 continue
+    print *, "[Error][spral_ssids_factor_posdef] CUDA error: ", cudaGetErrorString(stats%cuda_error)
+    goto 1000
+300 continue
+    print *, "[Error][spral_ssids_factor_posdef] Matrix not posdef"
+    goto 1000
+200 continue
+    print *, "[Error][spral_ssids_factor_posdef] Unknown error"
+    goto 1000
 100 continue
-    print *, "[Error][spral_ssids_assemble_fully_summed] Unknown error"
-    goto 200    
+    print *, "[Error][spral_ssids_factor_posdef] Allocation error"
+    goto 1000
   end subroutine spral_ssids_factor_posdef
     
   !> @brief Assemble fully-summed colmuns
@@ -2497,12 +2520,16 @@ contains
          child_ptr, child_list, off_LDLT, asminf, rptr, sptr, gwork, &
          st, cuda_error)
     if (st .ne. 0) goto 100
+    if (cuda_error .ne. 0) goto 200
 
-200 continue
+1000 continue
     return
+200 continue
+    print *, "[Error][spral_ssids_assemble_fully_summed] CUDA error"
+    goto 1000
 100 continue
     print *, "[Error][spral_ssids_assemble_fully_summed] Memory allocation"
-    goto 200
+    goto 1000
   end subroutine spral_ssids_assemble_fully_summed
   
   !> @brief Init factor L with original entries from matrix A
@@ -2807,8 +2834,8 @@ contains
     type(c_ptr), value, intent(in) :: c_sptr 
     type(c_ptr), value, intent(in) :: c_rptr 
     type(c_ptr), value, intent(in) :: c_asminf 
-    type(c_ptr), value, intent(in) :: c_gwork    
-    integer(c_int) :: cuerr
+    type(c_ptr), value             :: c_gwork    
+    integer(c_int)                 :: cuerr
 
     integer :: lev
     integer, dimension(:), pointer :: lvlptr
@@ -2891,8 +2918,15 @@ contains
     lgpu_work = level_gpu_work_size(lev, lvlptr, lvllist, child_ptr, &
          child_list, nodes, sptr, rptr, asminf)
     call custack_init(gwork, lgpu_work, cuerr)
-    if (cuerr .ne. 0) return
+    if (cuerr .ne. 0) goto 100
+
+    ! print *, "lgpu_work = ", lgpu_work
     
+200 continue
+    return
+100 continue
+    print *, "[Error][spral_ssids_level_custack_init] CUDA error"
+    goto 200
   end subroutine spral_ssids_level_custack_init
   
   subroutine spral_ssids_assign_nodes_to_levels(nnodes, c_sparent, c_gpu_contribs, c_num_levels, &
