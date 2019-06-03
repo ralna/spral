@@ -2028,7 +2028,7 @@ contains
   !> @brief Assemble contribution block
   subroutine spral_ssids_assemble_contrib(stream, nnodes, total_nch, c_lev, &
        c_lvlptr, c_lvllist, c_child_ptr, c_child_list, c_rptr, c_sptr, &
-       c_asminf, pc_size, c_off_LDLT, ptr_ccval, c_gpu_contribs, ptr_levLDLT, &
+       c_asminf, pc_size, off_LDLT, ptr_ccval, c_gpu_contribs, ptr_levLDLT, &
        gpu_rlist_direct, c_gwork) bind(C)
     use, intrinsic :: iso_c_binding
     implicit none
@@ -2045,7 +2045,8 @@ contains
     type(c_ptr), value, intent(in) :: c_sptr
     type(c_ptr), value, intent(in) :: c_asminf
     integer(c_long), value, intent(in) :: pc_size
-    type(c_ptr), value, intent(in) :: c_off_LDLT
+    ! type(c_ptr), value, intent(in) :: c_off_LDLT
+    integer(c_long), dimension(*), intent(in) :: off_LDLT
     type(c_ptr), value, intent(in) :: ptr_ccval ! GPU (*ptr_ccval) points to previous
       ! level's contribution blocks
     type(c_ptr), value, intent(in) :: c_gpu_contribs
@@ -2061,7 +2062,7 @@ contains
     integer, dimension(:), pointer :: sptr
     integer(long), dimension(:), pointer :: rptr
     type(asmtype), dimension(:), pointer :: asminf ! Assembly info
-    integer(long), dimension(:), pointer :: off_LDLT
+    ! integer(long), dimension(:), pointer :: off_LDLT
     type(c_ptr), dimension(:), pointer :: gpu_contribs
     type(cuda_stack_alloc_type), pointer :: gwork ! GPU memory workspace allocator
     type(thread_stats) :: stats
@@ -2124,13 +2125,13 @@ contains
        return
     end if
 
-    ! off_LDLT
-    if (C_ASSOCIATED(c_off_LDLT)) then
-       call C_F_POINTER(c_off_LDLT, off_LDLT, shape=(/ nnodes /))
-    else
-       print *, "Error: off_LDLT not associated"
-       return
-    end if
+    ! ! off_LDLT
+    ! if (C_ASSOCIATED(c_off_LDLT)) then
+    !    call C_F_POINTER(c_off_LDLT, off_LDLT, shape=(/ nnodes /))
+    ! else
+    !    print *, "Error: off_LDLT not associated"
+    !    return
+    ! end if
 
     ! gpu_contribs
     if (C_ASSOCIATED(c_gpu_contribs)) then
@@ -2158,16 +2159,16 @@ contains
 300 continue
     return
 200 continue
-    print *, "[Error][spral_ssids_assemble_fully_summed] CUDA error"
+    print *, "[Error][spral_ssids_assemble_contrib] CUDA error"
     goto 300
 100 continue
-    print *, "[Error][spral_ssids_assemble_fully_summed] Allocation error"
+    print *, "[Error][spral_ssids_assemble_contrib] Allocation error"
     goto 300  
   end subroutine spral_ssids_assemble_contrib
     
   !> @brief Form contribution block
   subroutine spral_ssids_form_contrib(stream, nnodes, c_lev, c_lvlptr, c_lvllist, &
-       c_nodes, c_rptr, c_sptr, c_off_LDLT, ptr_levLDLT, c_gwork) bind(C)
+       c_nodes, c_rptr, c_sptr, off_LDLT, ptr_levLDLT, c_gwork) bind(C)
     use, intrinsic :: iso_c_binding
     implicit none
 
@@ -2179,7 +2180,8 @@ contains
     type(c_ptr), value, intent(in) :: c_nodes
     type(c_ptr), value, intent(in) :: c_rptr
     type(c_ptr), value, intent(in) :: c_sptr
-    type(c_ptr), value, intent(in) :: c_off_LDLT
+    integer(c_long), dimension(*), intent(in) :: off_LDLT
+    ! type(c_ptr), value, intent(in) :: c_off_LDLT
     type(c_ptr), value             :: ptr_levLDLT 
     type(c_ptr), value             :: c_gwork ! GPU workspace allocator 
 
@@ -2189,7 +2191,7 @@ contains
     type(node_type), dimension(:), pointer :: nodes ! Nodes collection
     integer, dimension(:), pointer :: sptr
     integer(long), dimension(:), pointer :: rptr
-    integer(long), dimension(:), pointer :: off_LDLT
+    ! integer(long), dimension(:), pointer :: off_LDLT
     type(cuda_stack_alloc_type), pointer :: gwork ! GPU memory workspace allocator
     type(thread_stats) :: stats
 
@@ -2235,13 +2237,13 @@ contains
        return        
     end if
 
-    ! off_LDLT
-    if (C_ASSOCIATED(c_off_LDLT)) then
-       call C_F_POINTER(c_off_LDLT, off_LDLT, shape=(/ nnodes /))
-    else
-       print *, "Error: off_LDLT not associated"
-       return
-    end if
+    ! ! off_LDLT
+    ! if (C_ASSOCIATED(c_off_LDLT)) then
+    !    call C_F_POINTER(c_off_LDLT, off_LDLT, shape=(/ nnodes /))
+    ! else
+    !    print *, "Error: off_LDLT not associated"
+    !    return
+    ! end if
 
     ! gwork
     if (C_ASSOCIATED(c_gwork)) then
@@ -2382,7 +2384,7 @@ contains
   !> @brief Assemble fully-summed colmuns
   subroutine spral_ssids_assemble_fully_summed(stream, nnodes, total_nch, &
        c_lev, c_lvlptr, c_lvllist, c_nodes, gpu_ccval, c_gpu_contribs, &
-       ptr_levL, gpu_rlist_direct, c_child_ptr, c_child_list, c_off_LDLT, &
+       ptr_levL, gpu_rlist_direct, c_child_ptr, c_child_list, off_LDLT, &
        c_asminf, c_rptr, c_sptr, c_gwork, cuda_error) bind(C)
     use, intrinsic :: iso_c_binding
     implicit none
@@ -2403,7 +2405,8 @@ contains
     type(c_ptr), value, intent(in) :: gpu_rlist_direct
     type(c_ptr), value, intent(in) :: c_child_ptr 
     type(c_ptr), value, intent(in) :: c_child_list 
-    type(c_ptr), value, intent(in) :: c_off_LDLT
+    ! type(c_ptr), value, intent(in) :: c_off_LDLT
+    integer(c_long), dimension(*) :: off_LDLT
     type(c_ptr), value, intent(in) :: c_asminf ! Assembly info 
     type(c_ptr), value, intent(in) :: c_rptr
     type(c_ptr), value, intent(in) :: c_sptr
@@ -2417,7 +2420,7 @@ contains
     type(c_ptr), dimension(:), pointer :: gpu_contribs
     integer, dimension(:), pointer :: child_ptr
     integer, dimension(:), pointer :: child_list
-    integer(long), dimension(:), pointer :: off_LDLT
+    ! integer(long), dimension(:), pointer :: off_LDLT
     type(asmtype), dimension(:), pointer :: asminf ! Assembly info
     integer, dimension(:), pointer :: sptr
     integer(long), dimension(:), pointer :: rptr
@@ -2475,13 +2478,13 @@ contains
        return  
     end if
 
-    ! off_LDLT
-    if (C_ASSOCIATED(c_off_LDLT)) then
-       call C_F_POINTER(c_off_LDLT, off_LDLT, shape=(/ nnodes /))
-    else
-       print *, "Error: off_LDLT not associated"
-       return
-    end if
+    ! ! off_LDLT
+    ! if (C_ASSOCIATED(c_off_LDLT)) then
+    !    call C_F_POINTER(c_off_LDLT, off_LDLT, shape=(/ nnodes /))
+    ! else
+    !    print *, "Error: off_LDLT not associated"
+    !    return
+    ! end if
     
     ! asminf
     if (C_ASSOCIATED(c_asminf)) then
