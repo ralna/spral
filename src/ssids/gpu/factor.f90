@@ -2360,10 +2360,10 @@ contains
     end if
     if (stats%cuda_error .ne. 0) goto 400
 
-    do p = lvlptr(lev), lvlptr(lev + 1) - 1
-       n = lvllist(p)
-       print *, "node = ", n, ", nelim = ", nodes(n)%nelim 
-    end do
+    ! do p = lvlptr(lev), lvlptr(lev + 1) - 1
+    !    n = lvllist(p)
+    !    print *, "node = ", n, ", nelim = ", nodes(n)%nelim 
+    ! end do
     
 1000 continue
     return
