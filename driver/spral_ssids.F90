@@ -235,7 +235,7 @@ contains
     force_psdef = .false.
     pos_def = .false.
     time_scaling = .false.
-    flat_topology = .false.
+    flat_topology = .true.
     filename = "matrix.rb"
     seen_fname = .false.
     ngpus = 0
@@ -318,6 +318,9 @@ contains
        case("--flat-topology")
           flat_topology = .true.
           print *, 'Forcing flat topology'
+       case("--no-flat-topology")
+          flat_topology = .false.
+          print *, 'Using machine topology'
        case("--disable-gpu")
           options%use_gpu = .false.
           print *, 'Disabling GPUs'
