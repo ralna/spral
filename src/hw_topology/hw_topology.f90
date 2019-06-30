@@ -14,7 +14,8 @@ module spral_hw_topology
   private
   public :: numa_region ! datatype describing regions
   public :: guess_topology ! returns best guess of hardware topology
-
+  public :: c_numa_region
+  
   !> Fortran interoperable definition of spral::hw_topology::NumaRegion
   type, bind(C) :: c_numa_region
      integer(C_INT) :: nproc
