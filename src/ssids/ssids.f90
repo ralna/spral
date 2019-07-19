@@ -498,6 +498,22 @@ contains
        deallocate(topology)
        call move_alloc(new_topology, topology)
     end if
+    
+    ! Print output topology
+    if (options%print_level .ge. DETAIL_PRINT_LEVEL) then
+       mp = options%unit_diagnostics
+
+       write(mp, '(/a)') 'Topology on output to squash_topology'
+       do i = 1, size(topology)
+          write(mp, '(a, i8)') 'Region: ', i
+          write(mp, '(a, i8)') '  CPU cores: ', topology(i)%nproc
+          if(size(topology(i)%gpus) .gt. 0) then
+             write(mp, '(a, i8)') '  GPU devices: ', &
+                  size(topology(i)%gpus)
+          end if
+       end do
+    end if
+
   end subroutine squash_topology
 
 !****************************************************************************
