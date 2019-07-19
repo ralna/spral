@@ -358,6 +358,7 @@ contains
           call get_command_argument(argnum, argval)
           argnum = argnum + 1
           read (argval, *) ngpus
+          options%ngpus = ngpus
           print *, 'NGPUS = ', ngpus
        case default
           if (seen_fname) then

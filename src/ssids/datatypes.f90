@@ -244,6 +244,12 @@ module spral_ssids_datatypes
        ! generation on larger nodes
 
      !
+     ! GPU-specific
+     !
+
+     integer :: ngpus = 0 ! Number of GPUs 
+     
+     !
      ! Options used by ssids_factor() with posdef=.false.
      !
      logical :: action = .true. ! used in indefinite case only.

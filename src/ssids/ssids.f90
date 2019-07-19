@@ -397,8 +397,10 @@ contains
     integer, intent(out) :: st
 
     logical :: no_omp
-    integer :: i, j, ngpu
+    integer :: i, j
+    integer :: ngpu, ngpu_region
     type(numa_region), dimension(:), allocatable :: new_topology
+    integer, dimension(:), allocatable :: new_gpus
     integer :: mp
 
     ! Print input topology
@@ -412,6 +414,8 @@ contains
           if(size(topology(i)%gpus) .gt. 0) then
              write(mp, '(a, i8)') '  GPU devices: ', &
                   size(topology(i)%gpus)
+
+             write(mp, *) 'GPU idx: ', topology(i)%gpus 
           end if
        end do
     end if
@@ -428,6 +432,33 @@ contains
              deallocate(topology(i)%gpus)
              allocate(topology(i)%gpus(0), stat=st)
              if (st .ne. 0) return
+          end if
+       end do
+    else
+       ! Adjust the number of GPUs
+       ngpu = 0
+       do i = 1, size(topology)
+
+          ! Exit if we reached the number of GPUs requested
+          if (ngpu .ge. options%ngpus) then
+             if (allocated(topology(i)%gpus)) then
+                deallocate(topology(i)%gpus)
+                allocate(topology(i)%gpus(0))
+             end if
+          else
+             
+             ngpu_region = size(topology(i)%gpus)
+             if (ngpu_region .gt. 0) then
+                if ((ngpu + ngpu_region) .gt. options%ngpus) then
+                   allocate(new_gpus(options%ngpus-ngpu))
+                   new_gpus = topology(i)%gpus(1:options%ngpus-ngpu)
+                   deallocate(topology(i)%gpus)
+                   call move_alloc(new_gpus, topology(i)%gpus)
+                   ngpu = options%ngpus
+                else
+                   ngpu = ngpu + ngpu_region
+                end if
+             end if
           end if
        end do
     end if
@@ -473,6 +504,7 @@ contains
        call move_alloc(new_topology, topology)
     ! Squash everything to single NUMA region if we're ignoring numa
     else if ((size(topology) .gt. 1) .and. options%ignore_numa) then
+       
        allocate(new_topology(1), stat=st)
        if (st .ne. 0) return
        ! Count resources to reallocate
@@ -510,6 +542,7 @@ contains
           if(size(topology(i)%gpus) .gt. 0) then
              write(mp, '(a, i8)') '  GPU devices: ', &
                   size(topology(i)%gpus)
+             write(mp, *) 'GPU idx: ', topology(i)%gpus 
           end if
        end do
     end if
