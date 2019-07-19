@@ -54,6 +54,10 @@ program run_prob
   integer(C_INT) :: cnt
 
   integer :: ngpus
+
+  ! Detailed printing
+  ! options%print_level = 0
+  options%print_level = 2 ! Detailed print level
   
   call proc_args(filename, options, force_psdef, pos_def, nrhs, time_scaling, &
        flat_topology, ngpus)

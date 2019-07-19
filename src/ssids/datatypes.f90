@@ -292,6 +292,9 @@ module spral_ssids_datatypes
   integer, parameter, public :: EXEC_LOC_GPU = 1
 
   integer, parameter, public :: DEBUG_PRINT_LEVEL = 9999 
+  integer, parameter, public :: ERROR_PRINT_LEVEL = 0
+  integer, parameter, public :: BASIC_PRINT_LEVEL = 1
+  integer, parameter, public :: DETAIL_PRINT_LEVEL = 2
 
 contains
 
