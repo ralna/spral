@@ -91,7 +91,8 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
   allocate(thread_inform(to_launch), stat=inform%stat)
   if(inform%stat.ne.0) goto 200
   all_region = .false.
-
+  !print *, '[inner_factor_cpu] to_launch = ', to_launch
+  
   !$omp parallel proc_bind(spread) num_threads(to_launch) &
   !$omp    default(none) &
   !$omp    private(abort, i, exec_loc, numa_region, my_loc, thread_num) &

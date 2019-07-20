@@ -425,8 +425,8 @@ contains
     no_omp = .true.
 !$  no_omp = .false.
 
-    ! Get rid of GPUs if we're not using them
     if (.not. options%use_gpu) then
+       ! Get rid of GPUs if we're not using them
        do i = 1, size(topology)
           if (size(topology(i)%gpus) .ne. 0) then
              deallocate(topology(i)%gpus)
@@ -435,7 +435,7 @@ contains
           end if
        end do
     else
-       ! Adjust the number of GPUs
+       ! Adjust the number of GPUs to options%ngpus
        ngpu = 0
        do i = 1, size(topology)
 

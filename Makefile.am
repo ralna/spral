@@ -16,6 +16,7 @@ else
 AM_NVCC_FLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src -Xptxas="${PTX_FLAGS}"
 endif
 
+AM_NVCC_FLAGS += -gencode arch=compute_35,code=sm_35
 AM_NVCC_FLAGS += -gencode arch=compute_50,code=sm_50
 AM_NVCC_FLAGS += -gencode arch=compute_60,code=sm_60
 AM_NVCC_FLAGS += -gencode arch=compute_61,code=sm_61

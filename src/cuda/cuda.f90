@@ -17,7 +17,7 @@ module spral_cuda
   ! Literal interfaces to C functions in CUDA API
   public :: cudaDeviceEnablePeerAccess, cudaDeviceSynchronize, cudaFree, &
        cudaGetDeviceCount, cudaGetLastError, cudaMalloc, cudaMemset, &
-       cudaMemcpy, cudaMemcpy2D, cudaSetDevice, &
+       cudaMemcpy, cudaMemcpy2D, cudaSetDevice, cudaGetDevice, &
        cudaDeviceGetSharedMemConfig, cudaDeviceSetSharedMemConfig
   ! Wrapper interfaces to C functions provided by CUDA API
   public :: cudaEventCreateWithFlags, cudaEventDestroy, cudaEventRecord, &
@@ -138,6 +138,11 @@ module spral_cuda
        use, intrinsic :: iso_c_binding
        integer(C_INT), value :: device
      end function cudaSetDevice
+     integer(C_INT) function cudaGetDevice(device) &
+          bind(C, name="cudaGetDevice")
+       use, intrinsic :: iso_c_binding
+       integer(C_INT), intent(out) :: device
+     end function cudaGetDevice
   end interface
 
   ! Stream functions - all wrapped as cudaStream_t not interoperable

@@ -93,7 +93,7 @@ contains
     integer :: cuda_error, st
 
     nullify(this)
-    ! print *, "[construct_gpu_symbolic_subtree] device = ", device
+    !print *, "[construct_gpu_symbolic_subtree] device = ", device
     ! Specify which device we're using
     cuda_error = cudaSetDevice(device)
     if (cuda_error .ne. 0) then
@@ -329,6 +329,7 @@ contains
    nullify(factor)
 
    ! Specify which device we're using
+   !print *, '[factor] device = ', this%device
    cuda_error = cudaSetDevice(this%device)
    if (cuda_error .ne. 0) goto 200
 
@@ -565,7 +566,8 @@ contains
    ! Specify which device we're using
    cuda_error = cudaSetDevice(this%symbolic%device)
    if (cuda_error .ne. 0) goto 200
-
+   !print *, '[solve_fwd] device = ', this%symbolic%device
+   
    ! NB: gpu solve doesn't support nrhs > 1, so just loop instead
    do r = 0, nrhs-1
       call fwd_solve_gpu(this%posdef, this%symbolic%child_ptr,      &

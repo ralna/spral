@@ -1078,7 +1078,7 @@ contains
        else
           ! GPU
           device = akeep%topology(numa_region)%gpus(device)
-          !print *, numa_region, "init gpu subtree ", i, akeep%part(i), &
+          ! print *, numa_region, "init gpu subtree ", i, akeep%part(i), &
           !   akeep%part(i+1)-1, "device", device
           akeep%subtree(i)%ptr => construct_gpu_symbolic_subtree(device,        &
                akeep%n, akeep%part(i), akeep%part(i+1), akeep%sptr,             &

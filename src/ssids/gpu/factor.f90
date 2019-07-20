@@ -87,8 +87,15 @@ contains
 
     type(cuda_settings_type) :: user_settings
 
+    character(len=6) :: prof_gpuidx
+    integer :: device = -1
+
+    stats%cuda_error = cudaGetDevice(device)
+    if (stats%cuda_error .ne. 0) goto 200
+    write(prof_gpuidx, '(a5,i1)') 'C_GPU', device
     ! Start recording profile
-    call profile_set_state("C_GPU0", "ST_GPU_TASK", "GT_FACTOR")
+    !call profile_set_state("C_GPU0", "ST_GPU_TASK", "GT_FACTOR")
+    call profile_set_state(prof_gpuidx, "ST_GPU_TASK", "GT_FACTOR")
 
     ! Set GPU device settings as we wish
     call push_ssids_cuda_settings(user_settings, stats%cuda_error)
@@ -137,7 +144,8 @@ contains
     if (stats%cuda_error .ne. 0) goto 200
 
     ! Stop recording profile
-    call profile_set_state("C_GPU0", "ST_GPU_TASK", "0")
+    !call profile_set_state("C_GPU0", "ST_GPU_TASK", "0")
+    call profile_set_state(prof_gpuidx, "ST_GPU_TASK", "0")
 
     return
 
