@@ -123,6 +123,7 @@ contains
 
    ! Calculate derived quantities
    this%max_a_idx = maxval(nlist(1,nptr(sa):nptr(en)-1)) ! needed for aval copy
+
    this%nfactor = 0
    do node = 1, this%nnodes
       this%nfactor = this%nfactor + &
@@ -329,10 +330,10 @@ contains
    nullify(factor)
 
    ! Specify which device we're using
-   !print *, '[factor] device = ', this%device
    cuda_error = cudaSetDevice(this%device)
    if (cuda_error .ne. 0) goto 200
-
+   !print *, '[factor] device = ', this%device
+   
    ! Allocate cpu_factor for output
    allocate(gpu_factor, stat=st)
    if (st .ne. 0) goto 10

@@ -960,7 +960,7 @@ contains
     integer, dimension(:), allocatable :: contrib_dest, exec_loc, level
 
     integer :: to_launch
-    integer :: numa_region, device, thread_num
+    integer :: numa_region_idx, device, thread_num
     integer :: nemin, flag
     integer :: blkm, blkn
     integer :: i, j
@@ -1022,21 +1022,31 @@ contains
     !   print *, "Region ", i, " with ", akeep%topology(i)%nproc, " cores"
     !   if(size(akeep%topology(i)%gpus).gt.0) &
     !      print *, "---> gpus ", akeep%topology(i)%gpus
-    ! end do
+    ! end do    
     call find_subtree_partition(akeep%nnodes, akeep%sptr, akeep%sparent,           &
          akeep%rptr, options, akeep%topology, akeep%nparts, akeep%part,            &
          exec_loc, akeep%contrib_ptr, akeep%contrib_idx, contrib_dest, inform, st)
     if (st .ne. 0) go to 100
-    !print *, "invp = ", akeep%invp
-    !print *, "sptr = ", akeep%sptr(1:akeep%nnodes+1)
-    !print *, "sparent = ", akeep%sparent
-    !print *, "Partition suggests ", akeep%nparts, " parts"
-    !print *, "akeep%part = ", akeep%part(1:akeep%nparts+1)
-    !print *, "exec_loc   = ", exec_loc(1:akeep%nparts)
-    !print *, "parents = ", akeep%sparent(akeep%part(2:akeep%nparts+1)-1)
-    !print *, "contrib_ptr = ", akeep%contrib_ptr(1:akeep%nparts+1)
-    !print *, "contrib_idx = ", akeep%contrib_idx(1:akeep%nparts)
-    !print *, "contrib_dest = ", &
+
+    ! Force tree factorization on the GPU device 
+    ! akeep%nparts = 1
+    ! akeep%part(1) = 1
+    ! akeep%part(2) = akeep%nnodes+1
+    ! akeep%contrib_ptr(1) = 1
+    ! akeep%contrib_ptr(2) = 1
+    ! akeep%contrib_idx(1) = 2
+    ! exec_loc = size(akeep%topology)+1
+    
+    ! !print *, "invp = ", akeep%invp
+    ! !print *, "sptr = ", akeep%sptr(1:akeep%nnodes+1)
+    ! !print *, "sparent = ", akeep%sparent
+    ! print *, "Partition suggests ", akeep%nparts, " parts"
+    ! print *, "akeep%part = ", akeep%part(1:akeep%nparts+1)
+    ! print *, "exec_loc   = ", exec_loc(1:akeep%nparts)
+    ! print *, "parents = ", akeep%sparent(akeep%part(2:akeep%nparts+1)-1)
+    ! print *, "contrib_ptr = ", akeep%contrib_ptr(1:akeep%nparts+1)
+    ! print *, "contrib_idx = ", akeep%contrib_idx(1:akeep%nparts)
+    ! print *, "contrib_dest = ", &
     !   contrib_dest(1:akeep%contrib_ptr(akeep%nparts+1)-1)
 
     ! Generate dot file for assembly tree
@@ -1050,25 +1060,26 @@ contains
     ! Split into NUMA regions for setup (assume mem is first touch)
     to_launch = size(akeep%topology)
 !$omp parallel proc_bind(spread) num_threads(to_launch) default(shared) &
-!$omp    private(i, numa_region, device, thread_num)
+!$omp    private(i, numa_region_idx, device, thread_num)
     thread_num = 0
 !$  thread_num = omp_get_thread_num()
-    numa_region = thread_num + 1
+    numa_region_idx = thread_num + 1
     do i = 1, akeep%nparts
        ! only initialize subtree if this is the correct region: note that
        ! an "all region" subtree with location -1 is initialised by region 0
        if (exec_loc(i) .eq. -1) then
-          if (numa_region .ne. 1) cycle
+          if (numa_region_idx .ne. 1) cycle
           device = 0
-       else if ((mod((exec_loc(i)-1), size(akeep%topology))+1) .ne. numa_region) then
+       else if ((mod((exec_loc(i)-1), size(akeep%topology))+1) .ne. numa_region_idx) then
           cycle
        else
           device = (exec_loc(i)-1) / size(akeep%topology)
        end if
        akeep%subtree(i)%exec_loc = exec_loc(i)
+
        if (device .eq. 0) then
           ! CPU
-          !print *, numa_region, "init cpu subtree ", i, akeep%part(i), &
+          !print *, numa_region_idx, "init cpu subtree ", i, akeep%part(i), &
           !   akeep%part(i+1)-1
           akeep%subtree(i)%ptr => construct_cpu_symbolic_subtree(akeep%n,   &
                akeep%part(i), akeep%part(i+1), akeep%sptr, akeep%sparent,   &
@@ -1077,8 +1088,8 @@ contains
                options)
        else
           ! GPU
-          device = akeep%topology(numa_region)%gpus(device)
-          ! print *, numa_region, "init gpu subtree ", i, akeep%part(i), &
+          device = akeep%topology(numa_region_idx)%gpus(device)
+          ! print *, numa_region_idx, "init gpu subtree ", i, akeep%part(i), &
           !   akeep%part(i+1)-1, "device", device
           akeep%subtree(i)%ptr => construct_gpu_symbolic_subtree(device,        &
                akeep%n, akeep%part(i), akeep%part(i+1), akeep%sptr,             &

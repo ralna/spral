@@ -415,7 +415,7 @@ contains
              write(mp, '(a, i8)') '  GPU devices: ', &
                   size(topology(i)%gpus)
 
-             write(mp, *) 'GPU idx: ', topology(i)%gpus 
+             write(mp, *) '  GPU idx: ', topology(i)%gpus 
           end if
        end do
     end if

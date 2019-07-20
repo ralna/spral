@@ -108,7 +108,7 @@ contains
     call assign_nodes_to_levels(nnodes, sparent, gpu_contribs, &
          stream_data%num_levels, stream_data%lvlptr, stream_data%lvllist, stats%st)
     if (stats%st .ne. 0) goto 100
-
+    
     ! Perform actual factorization
     call subtree_factor_gpu(stream_handle, pos_def, child_ptr, child_list, &
       n, nptr, gpu_nlist, ptr_val, nnodes, nodes, sptr, sparent, rptr,     &
@@ -382,11 +382,11 @@ contains
        max_ncb = max(max_ncb, ncb)
        max_idata_size = max(max_idata_size, idata_size)
     end do
-  
+
     ii = nptr(nnodes + 1) - 1
     stats%cuda_error = cudaMalloc(gpu_LDLT, aligned_size(2*max_LDLT_size*C_SIZEOF(dummy_real)))
     if (stats%cuda_error .ne. 0) goto 200
-  
+    
     allocate(gpu%values_L(gpu%num_levels), gpu%off_L(nnodes), &
          off_LDLT(nnodes), asminf(nnodes), stat=stats%st)
     if (stats%st .ne. 0) goto 100
