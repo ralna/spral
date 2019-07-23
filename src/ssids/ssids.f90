@@ -530,7 +530,7 @@ contains
        deallocate(topology)
        call move_alloc(new_topology, topology)
     end if
-    
+        
     ! Print output topology
     if (options%print_level .ge. DETAIL_PRINT_LEVEL) then
        mp = options%unit_diagnostics

@@ -1037,17 +1037,17 @@ contains
     ! akeep%contrib_idx(1) = 2
     ! exec_loc = size(akeep%topology)+1
     
-    ! !print *, "invp = ", akeep%invp
-    ! !print *, "sptr = ", akeep%sptr(1:akeep%nnodes+1)
-    ! !print *, "sparent = ", akeep%sparent
-    ! print *, "Partition suggests ", akeep%nparts, " parts"
-    ! print *, "akeep%part = ", akeep%part(1:akeep%nparts+1)
-    ! print *, "exec_loc   = ", exec_loc(1:akeep%nparts)
-    ! print *, "parents = ", akeep%sparent(akeep%part(2:akeep%nparts+1)-1)
-    ! print *, "contrib_ptr = ", akeep%contrib_ptr(1:akeep%nparts+1)
-    ! print *, "contrib_idx = ", akeep%contrib_idx(1:akeep%nparts)
-    ! print *, "contrib_dest = ", &
-    !   contrib_dest(1:akeep%contrib_ptr(akeep%nparts+1)-1)
+    !print *, "invp = ", akeep%invp
+    !print *, "sptr = ", akeep%sptr(1:akeep%nnodes+1)
+    !print *, "sparent = ", akeep%sparent
+    print *, "Partition suggests ", akeep%nparts, " parts"
+    print *, "akeep%part = ", akeep%part(1:akeep%nparts+1)
+    print *, "exec_loc   = ", exec_loc(1:akeep%nparts)
+    print *, "parents = ", akeep%sparent(akeep%part(2:akeep%nparts+1)-1)
+    print *, "contrib_ptr = ", akeep%contrib_ptr(1:akeep%nparts+1)
+    print *, "contrib_idx = ", akeep%contrib_idx(1:akeep%nparts)
+    print *, "contrib_dest = ", &
+      contrib_dest(1:akeep%contrib_ptr(akeep%nparts+1)-1)
 
     ! Generate dot file for assembly tree
     ! call print_atree(akeep%nnodes, akeep%sptr, akeep%sparent, akeep%rptr)

@@ -41,17 +41,119 @@ module spral_ssids_fkeep
       type(ssids_inform) :: inform
 
    contains
-      procedure, pass(fkeep) :: inner_factor => inner_factor_cpu ! Do actual factorization
-      procedure, pass(fkeep) :: inner_solve => inner_solve_cpu ! Do actual solve
-      procedure, pass(fkeep) :: enquire_posdef => enquire_posdef_cpu
-      procedure, pass(fkeep) :: enquire_indef => enquire_indef_cpu
-      procedure, pass(fkeep) :: alter => alter_cpu ! Alter D values
-      procedure, pass(fkeep) :: free => free_fkeep ! Frees memory
+     procedure, pass(fkeep) :: inner_factor => inner_factor_cpu ! Do actual factorization
+     !procedure, pass(fkeep) :: inner_factor => inner_factor_cpu_seq ! Do actual factorization
+     procedure, pass(fkeep) :: inner_solve => inner_solve_cpu ! Do actual solve
+     procedure, pass(fkeep) :: enquire_posdef => enquire_posdef_cpu
+     procedure, pass(fkeep) :: enquire_indef => enquire_indef_cpu
+     procedure, pass(fkeep) :: alter => alter_cpu ! Alter D values
+     procedure, pass(fkeep) :: free => free_fkeep ! Frees memory
    end type ssids_fkeep
 
 contains
 
-subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
+  ! Factor routine for debug purpose
+  subroutine inner_factor_cpu_seq(fkeep, akeep, val, options, inform)
+    implicit none 
+
+    type(ssids_akeep), intent(in) :: akeep
+    class(ssids_fkeep), target, intent(inout) :: fkeep
+    real(wp), dimension(*), target, intent(in) :: val
+    type(ssids_options), intent(in) :: options
+    type(ssids_inform), intent(inout) :: inform
+
+    type(contrib_type), dimension(:), allocatable :: child_contrib
+    type(ssids_inform), dimension(:), allocatable :: thread_inform
+    integer :: i, exec_loc
+
+    ! Begin profile trace (noop if not enabled)
+    call profile_begin(akeep%topology)
+
+    print *, "Entering inner_factor_cpu_seq"
+    
+    ! Allocate space for subtrees
+    allocate(fkeep%subtree(akeep%nparts), stat=inform%stat)
+    if(inform%stat.ne.0) goto 200
+
+    ! Call subtree factor routines
+    allocate(child_contrib(akeep%nparts), stat=inform%stat)
+    if(inform%stat.ne.0) goto 200
+    
+    allocate(thread_inform(1), stat=inform%stat)
+    if(inform%stat.ne.0) goto 200
+    ! Factor subtrees
+    do i = 1, akeep%nparts
+
+       exec_loc = akeep%subtree(i)%exec_loc
+       if(exec_loc .eq. -1) cycle
+
+       if (allocated(fkeep%scaling)) then
+          fkeep%subtree(i)%ptr => akeep%subtree(i)%ptr%factor( &
+               fkeep%pos_def, val, &
+               child_contrib(akeep%contrib_ptr(i):akeep%contrib_ptr(i+1)-1), &
+               options, thread_inform(1), scaling=fkeep%scaling &
+               )
+       else
+          fkeep%subtree(i)%ptr => akeep%subtree(i)%ptr%factor( &
+               fkeep%pos_def, val, &
+               child_contrib(akeep%contrib_ptr(i):akeep%contrib_ptr(i+1)-1), &
+               options, thread_inform(1) &
+               )
+       endif
+       if (thread_inform(1)%flag .lt. 0) then
+          goto 100
+       endif
+
+       if (akeep%contrib_idx(i) .le. akeep%nparts) then
+          ! There is a parent subtree to contribute to
+          child_contrib(akeep%contrib_idx(i)) = &
+               fkeep%subtree(i)%ptr%get_contrib()
+          child_contrib(akeep%contrib_idx(i))%ready = .true.
+       endif
+
+    end do
+
+    ! Factor root subtree
+    call profile_add_event("EV_ALL_REGIONS", "Starting processing root subtree", 0)
+
+    do i = 1, akeep%nparts
+
+       exec_loc = akeep%subtree(i)%exec_loc
+       if (exec_loc.ne.-1) cycle
+
+       if (allocated(fkeep%scaling)) then
+          fkeep%subtree(i)%ptr => akeep%subtree(i)%ptr%factor( &
+               fkeep%pos_def, val, &
+               child_contrib(akeep%contrib_ptr(i):akeep%contrib_ptr(i+1)-1), &
+               options, inform, scaling=fkeep%scaling &
+               )
+       else
+          fkeep%subtree(i)%ptr => akeep%subtree(i)%ptr%factor( &
+               fkeep%pos_def, val, &
+               child_contrib(akeep%contrib_ptr(i):akeep%contrib_ptr(i+1)-1), &
+               options, inform &
+               )
+       endif
+       if (akeep%contrib_idx(i) .gt. akeep%nparts) cycle ! part is a root
+       child_contrib(akeep%contrib_idx(i)) = &
+            fkeep%subtree(i)%ptr%get_contrib()
+       !$omp    flush
+       child_contrib(akeep%contrib_idx(i))%ready = .true.
+    end do
+
+100 continue
+
+    ! End profile trace (noop if not enabled)
+    call profile_end()
+
+    return
+200 continue
+
+    print *, "Error in inner_factor_cpu_seq, flag = "
+    goto 100
+  end subroutine inner_factor_cpu_seq
+
+  subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
   implicit none 
   type(ssids_akeep), intent(in) :: akeep
   class(ssids_fkeep), target, intent(inout) :: fkeep
@@ -91,8 +193,9 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
   allocate(thread_inform(to_launch), stat=inform%stat)
   if(inform%stat.ne.0) goto 200
   all_region = .false.
-  !print *, '[inner_factor_cpu] to_launch = ', to_launch
-  
+
+  ! FIXME make this work when GPU code is enabled but OpenMP disabled
+
   !$omp parallel proc_bind(spread) num_threads(to_launch) &
   !$omp    default(none) &
   !$omp    private(abort, i, exec_loc, numa_region, my_loc, thread_num) &
@@ -104,6 +207,7 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
   thread_num = 0
   !$ thread_num = omp_get_thread_num()
   numa_region = mod(thread_num, size(akeep%topology)) + 1
+
   my_loc = thread_num + 1
   if (thread_num .lt. size(akeep%topology)) then
      ngpus = size(akeep%topology(numa_region)%gpus,1)
@@ -252,11 +356,12 @@ subroutine inner_solve_cpu(local_job, nrhs, x, ldx, akeep, fkeep, inform)
          x2(1:n, r) = x(akeep%invp(1:n), r)
       end do
    end if
-
+   
    ! Perform relevant solves
    if (local_job.eq.SSIDS_SOLVE_JOB_FWD .or. &
          local_job.eq.SSIDS_SOLVE_JOB_ALL) then
       do part = 1, akeep%nparts
+
          call fkeep%subtree(part)%ptr%solve_fwd(nrhs, x2, n, inform)
          if (inform%stat .ne. 0) goto 100
       end do
