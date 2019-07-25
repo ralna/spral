@@ -215,8 +215,21 @@ void __global__ assemble(
          for(int i=0; i<blk_sz_x/ntx; i++) {
             if( threadIdx.x+i*ntx < m ) {
                int row = rows[threadIdx.x+i*ntx]-1;
+#if  __CUDA_ARCH__ >= 600               
+               // FIXME: using the following atomicAdd fixes
+               // concurrent accesses on assembled entries observed on
+               // a V100 GPU. However this should not happened as
+               // dependencies is handled blockwise. In addition this
+               // means that bit-compatibility might be broken.
+               atomicAdd(&dest[row + col*ldp],
+                         src[threadIdx.x+i*ntx + (threadIdx.y+j*nty)*ldc]);
+
+               // dest[row + col*ldp] += 
+               //    src[threadIdx.x+i*ntx + (threadIdx.y+j*nty)*ldc];
+#else
                dest[row + col*ldp] += 
                   src[threadIdx.x+i*ntx + (threadIdx.y+j*nty)*ldc];
+#endif
             }
          }
       }

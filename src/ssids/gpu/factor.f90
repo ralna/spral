@@ -2936,7 +2936,7 @@ contains
 200 continue
     return
 100 continue
-    print *, "[Error][spral_ssids_level_custack_init] CUDA error"
+    print *, "[Error][spral_ssids_level_custack_init] CUDA error (" //  trim(cudaGetErrorString(cuerr)) // ")"
     goto 200
   end subroutine spral_ssids_level_custack_init
   
