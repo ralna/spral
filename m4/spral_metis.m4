@@ -59,4 +59,25 @@ AC_TRY_LINK_FUNC([METIS_Free],
                   ])
 AC_SUBST(METIS_VERSION)
 LIBS="$save_LIBS"
+
+AC_DEFINE(SPRAL_HAVE_METIS_H, [0])
+
+# Check for metis include
+AC_ARG_WITH([metis_inc_dir],
+        [AC_HELP_STRING([--with-metis-inc-dir=<inc-dir>],
+        [user METIS include directory <inc-dir>])],
+        [
+                metis_inc_dir="$withval"
+        ],
+        [metis_inc_dir=no])
+
+if test "$metis_inc_dir" != "no" ; then
+   CFLAGS="-I$metis_inc_dir $CFLAGS"
+   FFLAGS="-I$metis_inc_dir $FFLAGS"
+   AC_CHECK_HEADERS([metis.h], [AC_DEFINE([SPRAL_HAVE_METIS_H], [1], [Define to 1 if you have metis.h.])])
+
+   AC_CHECK_SIZEOF([idx_t], [], [[#include <metis.h>]])
+fi
+
 ])dnl SPRAL_METIS
+

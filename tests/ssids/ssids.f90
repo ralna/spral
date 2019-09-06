@@ -969,7 +969,6 @@ subroutine test_warnings
       SSIDS_WARNING_MISSING_DIAGONAL)
    call ssids_free(akeep, cuda_error)
 
-
    write(*,"(a)", advance="no") " * Testing missing diagonal and out of range.."
    call simple_mat_lower(a)
    a%ptr = (/ 1, 4, 5, 6, 8 /)

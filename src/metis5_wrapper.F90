@@ -4,6 +4,11 @@
 ! 
 ! This version is used to support METIS v5 (different API to v4)
 !
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 module spral_metis_wrapper
    use, intrinsic :: iso_c_binding
    implicit none
@@ -13,24 +18,59 @@ module spral_metis_wrapper
 
    integer, parameter :: long = C_LONG
 
+#if SPRAL_HAVE_METIS_H
+! metis header is available, check for index types 
+#if SIZEOF_IDX_T == 8
+   integer, parameter :: metis_idx_t = c_int64_t
+#else
+   integer, parameter :: metis_idx_t = c_int   
+#endif
+#else
+   ! metis header is not available, default to 32-bit index types 
+   integer, parameter :: metis_idx_t = c_int
+#endif
+   
    ! We use the C interface to METIS via the following interoperable interfaces
-   interface
-      subroutine METIS_SetDefaultOptions(options) &
-            bind(C, name="METIS_SetDefaultOptions")
-         use iso_c_binding
-         implicit none
-         integer(C_INT), dimension(*), intent(out) :: options
-      end subroutine METIS_SetDefaultOptions
-      integer(C_INT) function METIS_NodeND(nvtxs, xadj, adjncy, vwgt, options, &
+   interface METIS_SetDefaultOptions
+      ! METIS_SetDefaultOptions 32-bit integer interface
+      subroutine METIS_SetDefaultOptions_32(options) &
+           bind(C, name="METIS_SetDefaultOptions")
+        use iso_c_binding
+        implicit none
+        integer(c_int), dimension(*), intent(out) :: options
+      end subroutine METIS_SetDefaultOptions_32
+      ! METIS_SetDefaultOptions 64-bit integer interface
+      subroutine METIS_SetDefaultOptions_64(options) &
+           bind(C, name="METIS_SetDefaultOptions")
+        use iso_c_binding
+        implicit none
+        integer(c_int64_t), dimension(*), intent(out) :: options
+      end subroutine METIS_SetDefaultOptions_64
+   end interface METIS_SetDefaultOptions
+
+   interface METIS_NodeND
+      ! METIS_NodeND 32-bit integer interface
+      integer(c_int) function METIS_NodeND_32(nvtxs, xadj, adjncy, vwgt, options, &
             perm, iperm) bind(C, name="METIS_NodeND")
          use iso_c_binding
          implicit none
-         integer(C_INT), intent(in) :: nvtxs
-         integer(C_INT), dimension(*), intent(in) :: xadj, adjncy, options
+         integer(c_int), intent(in) :: nvtxs
+         integer(c_int), dimension(*), intent(in) :: xadj, adjncy, options
          type(C_PTR), value :: vwgt
-         integer(C_INT), dimension(*), intent(out) :: perm, iperm
-      end function METIS_NodeND
-   end interface
+         integer(c_int), dimension(*), intent(out) :: perm, iperm
+       end function METIS_NodeND_32
+       ! METIS_NodeND 64-bit integer interface
+      integer(c_int) function METIS_NodeND_64(nvtxs, xadj, adjncy, vwgt, options, &
+            perm, iperm) bind(C, name="METIS_NodeND")
+         use iso_c_binding
+         implicit none
+         integer(c_int64_t), intent(in) :: nvtxs
+         integer(c_int64_t), dimension(*), intent(in) :: xadj, adjncy, options
+         type(C_PTR), value :: vwgt
+         integer(c_int64_t), dimension(*), intent(out) :: perm, iperm
+       end function METIS_NodeND_64
+   end interface METIS_NodeND
+   
    ! Following array size based on #define in metis.h
    integer, parameter :: METIS_NOPTIONS = 40
    ! Following are based on enum in metis.h, adjusted to Fortran indexing.
@@ -62,6 +102,11 @@ module spral_metis_wrapper
       module procedure metis_order32, metis_order64
    end interface
 
+   interface half_to_full_drop_diag
+      module procedure half_to_full_drop_diag32_32, half_to_full_drop_diag64_32, &
+           half_to_full_drop_diag32_64, half_to_full_drop_diag64_64
+   end interface half_to_full_drop_diag
+   
 contains
 
 !
@@ -82,10 +127,12 @@ subroutine metis_order32(n,ptr,row,perm,invp,flag,stat)
    ! ---------------------------------------------
    ! Local variables
    ! ---------------------------------------------
-   integer, allocatable :: ptr2(:) ! copy of pointers which is later modified
-   integer, allocatable :: row2(:) ! copy of row indices
-   integer :: metis_opts(METIS_NOPTIONS) ! metis options array
+   integer(metis_idx_t), allocatable :: ptr2(:) ! copy of pointers which is later modified
+   integer(metis_idx_t), allocatable :: row2(:) ! copy of row indices
+   integer(metis_idx_t) :: metis_opts(METIS_NOPTIONS) ! metis options array
    integer :: iwlen ! length of iw
+   integer(metis_idx_t) :: perm2(n) ! Holds elimination order computed by metis
+   integer(metis_idx_t) :: invp2(n) ! Holds inverse of elimination order computed by metis
 
    integer :: metis_flag
 
@@ -118,12 +165,12 @@ subroutine metis_order32(n,ptr,row,perm,invp,flag,stat)
    endif
 
    ! Expand matrix, dropping diagonal entries
-   call half_to_full_drop_diag32_32(n, ptr, row, ptr2, row2)
+   call half_to_full_drop_diag(n, ptr, row, ptr2, row2)
 
    ! Carry out ordering
    call METIS_SetDefaultOptions(metis_opts)
    metis_opts(METIS_OPTION_NUMBERING) = 1 ! Fortran-style numbering
-   metis_flag = METIS_NodeND(n, ptr2, row2, C_NULL_PTR, metis_opts, invp, perm)
+   metis_flag = METIS_NodeND(int(n, kind=metis_idx_t), ptr2, row2, C_NULL_PTR, metis_opts, invp2, perm2)
    select case(metis_flag)
    case(METIS_OK)
       ! Everything OK, do nothing
@@ -138,7 +185,11 @@ subroutine metis_order32(n,ptr,row,perm,invp,flag,stat)
       print *, "Unknown metis error with code ", metis_flag
       flag = ERROR_UNKNOWN
    end select
-end subroutine metis_order32
+   ! FIXME: If perm and perm2 (or invp and invp2) have the same type, it is not necessary to make a copy
+   perm = perm2
+   invp = invp2
+
+ end subroutine metis_order32
 
 !
 ! Fortran wrapper around metis
@@ -158,10 +209,12 @@ subroutine metis_order64(n,ptr,row,perm,invp,flag,stat)
    ! ---------------------------------------------
    ! Local variables
    ! ---------------------------------------------
-   integer, allocatable :: ptr2(:) ! copy of pointers which is later modified
-   integer, allocatable :: row2(:) ! copy of row indices
-   integer :: metis_opts(METIS_NOPTIONS) ! metis options array
+   integer(metis_idx_t), allocatable :: ptr2(:) ! copy of pointers which is later modified
+   integer(metis_idx_t), allocatable :: row2(:) ! copy of row indices
+   integer(metis_idx_t) :: metis_opts(METIS_NOPTIONS) ! metis options array
    integer(long) :: iwlen ! length of iw
+   integer(metis_idx_t) :: perm2(n) ! Holds elimination order computed by metis
+   integer(metis_idx_t) :: invp2(n) ! Holds inverse of elimination order computed by metis
 
    integer :: metis_flag
 
@@ -199,12 +252,12 @@ subroutine metis_order64(n,ptr,row,perm,invp,flag,stat)
    endif
 
    ! Expand matrix, dropping diagonal entries
-   call half_to_full_drop_diag64_32(n, ptr, row, ptr2, row2)
+   call half_to_full_drop_diag(n, ptr, row, ptr2, row2)
 
    ! Carry out ordering
    call METIS_SetDefaultOptions(metis_opts)
    metis_opts(METIS_OPTION_NUMBERING) = 1 ! Fortran-style numbering
-   metis_flag = METIS_NodeND(n, ptr2, row2, C_NULL_PTR, metis_opts, invp, perm)
+   metis_flag = METIS_NodeND(int(n, kind=metis_idx_t), ptr2, row2, C_NULL_PTR, metis_opts, invp2, perm2)
    select case(metis_flag)
    case(METIS_OK)
       ! Everything OK, do nothing
@@ -219,7 +272,11 @@ subroutine metis_order64(n,ptr,row,perm,invp,flag,stat)
       print *, "Unknown metis error with code ", metis_flag
       flag = ERROR_UNKNOWN
    end select
-end subroutine metis_order64
+   ! FIXME: If perm and perm2 (or invp and invp2) have the same type, it is not necessary to make a copy
+   perm = perm2
+   invp = invp2
+   
+ end subroutine metis_order64
 
 ! Convert a matrix in half storage to one in full storage.
 ! Drops any diagonal entries.
@@ -270,6 +327,53 @@ end subroutine half_to_full_drop_diag32_32
 
 ! Convert a matrix in half storage to one in full storage.
 ! Drops any diagonal entries.
+subroutine half_to_full_drop_diag32_64(n, ptr, row, ptr2, row2)
+   integer, intent(in) :: n
+   integer, dimension(n+1), intent(in) :: ptr
+   integer, dimension(ptr(n+1)-1), intent(in) :: row
+   integer(c_int64_t), dimension(*), intent(out) :: ptr2
+   integer(c_int64_t), dimension(*), intent(out) :: row2
+
+   integer :: i, j, k
+
+   ! Set ptr2(j) to hold no. nonzeros in column j
+   ptr2(1:n+1) = 0
+   do j = 1, n
+      do k = ptr(j), ptr(j+1) - 1
+         i = row(k)
+         if (j.ne.i) then
+            ptr2(i) = ptr2(i) + 1
+            ptr2(j) = ptr2(j) + 1
+         end if
+      end do
+   end do
+
+   ! Set ptr2(j) to point to where row indices will end in row2
+   do j = 2, n
+      ptr2(j) = ptr2(j-1) + ptr2(j)
+   end do
+   ptr2(n+1) = ptr2(n) + 1
+
+   ! Fill ptr2 and row2
+   do j = 1, n
+      do k = ptr(j), ptr(j+1) - 1
+         i = row(k)
+         if (j.ne.i) then
+            row2(ptr2(i)) = j
+            row2(ptr2(j)) = i
+            ptr2(i) = ptr2(i) - 1
+            ptr2(j) = ptr2(j) - 1
+         end if
+      end do
+   end do
+   do j = 1, n
+      ptr2(j) = ptr2(j) + 1
+   end do
+
+ end subroutine half_to_full_drop_diag32_64
+
+! Convert a matrix in half storage to one in full storage.
+! Drops any diagonal entries.
 ! 64-bit to 32-bit ptr version. User must ensure no oor entries prior to call.
 subroutine half_to_full_drop_diag64_32(n, ptr, row, ptr2, row2)
    integer, intent(in) :: n
@@ -316,5 +420,54 @@ subroutine half_to_full_drop_diag64_32(n, ptr, row, ptr2, row2)
    end do
 
 end subroutine half_to_full_drop_diag64_32
+
+! Convert a matrix in half storage to one in full storage.
+! Drops any diagonal entries.
+! 64-bit to 32-bit ptr version. User must ensure no oor entries prior to call.
+subroutine half_to_full_drop_diag64_64(n, ptr, row, ptr2, row2)
+   integer, intent(in) :: n
+   integer(long), dimension(n+1), intent(in) :: ptr
+   integer, dimension(ptr(n+1)-1), intent(in) :: row
+   integer(c_int64_t), dimension(*), intent(out) :: ptr2
+   integer(c_int64_t), dimension(*), intent(out) :: row2
+
+   integer :: i, j
+   integer(long) :: kk
+
+   ! Set ptr2(j) to hold no. nonzeros in column j
+   ptr2(1:n+1) = 0
+   do j = 1, n
+      do kk = ptr(j), ptr(j+1) - 1
+         i = row(kk)
+         if (j.ne.i) then
+            ptr2(i) = ptr2(i) + 1
+            ptr2(j) = ptr2(j) + 1
+         end if
+      end do
+   end do
+
+   ! Set ptr2(j) to point to where row indices will end in row2
+   do j = 2, n
+      ptr2(j) = ptr2(j-1) + ptr2(j)
+   end do
+   ptr2(n+1) = ptr2(n) + 1
+
+   ! Fill ptr2 and row2
+   do j = 1, n
+      do kk = ptr(j), ptr(j+1) - 1
+         i = row(kk)
+         if (j.ne.i) then
+            row2(ptr2(i)) = j
+            row2(ptr2(j)) = i
+            ptr2(i) = ptr2(i) - 1
+            ptr2(j) = ptr2(j) - 1
+         end if
+      end do
+   end do
+   do j = 1, n
+      ptr2(j) = ptr2(j) + 1
+   end do
+
+ end subroutine half_to_full_drop_diag64_64
 
 end module spral_metis_wrapper
