@@ -8,16 +8,27 @@ An open-source (BSD) library for sparse linear algebra and associated
 algorithms. It is primarily developed by the Numerical Analysis group at
 STFC Rutherford Appleton Laboratory ([hsl@stfc.ac.uk](mailto:hsl@stfc.ac.uk)).
 
+## Documentation
+
+For detailed information about the SPRAL packages and API see [Fortran
+documentation](http://www.numerical.rl.ac.uk/spral/doc/latest/Fortran/)
+or [C
+documentation](http://www.numerical.rl.ac.uk/spral/doc/latest/C/).
+
 ## Packages
 
-- **LSMR**          - Solves sparse least squares problems using LSMR algorithm.
-- **RANDOM**        - Pseudo-random number generator.
+- **LSMR** - Solves sparse least squares problems using LSMR
+  algorithm.
+- **RANDOM** - Pseudo-random number generator.
 - **RANDOM_MATRIX** - Generates random matrices for testing purposes.
-- **RUTHERFORD_BOEING** - Read and write matrices in Rutherford-Boeing format.
-- **SCALING**       - Calculates matrix scalings through a variety of algorithms
-- **SSIDS**         - Sparse Symmetric Indefinite Direct Solver.
-- **SSMFE**         - Sparse Symmetric Matrix-Free Eigensolver. Uses
-                      Jacobi-conjugate preconditioned gradients method.
+- **RUTHERFORD_BOEING** - Read and write matrices in Rutherford-Boeing
+  format.
+- **SCALING** - Calculates matrix scalings through a variety of
+  algorithms
+- **SSIDS** - Sparse Symmetric Indefinite Direct Solver.
+- **SSMFE** - Sparse Symmetric Matrix-Free Eigensolver. Uses
+                      Jacobi-conjugate preconditioned gradients
+                      method.
 
 If the functionality you are looking for is not support, it may be offered by
 our proprietary licenced [HSL Library](http://www.hsl.rl.ac.uk/)
