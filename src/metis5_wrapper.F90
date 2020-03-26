@@ -130,10 +130,10 @@ subroutine metis_order32(n,ptr,row,perm,invp,flag,stat)
    integer(metis_idx_t), allocatable :: ptr2(:) ! copy of pointers which is later modified
    integer(metis_idx_t), allocatable :: row2(:) ! copy of row indices
    integer(metis_idx_t) :: metis_opts(METIS_NOPTIONS) ! metis options array
-   integer :: iwlen ! length of iw
    integer(metis_idx_t) :: perm2(n) ! Holds elimination order computed by metis
    integer(metis_idx_t) :: invp2(n) ! Holds inverse of elimination order computed by metis
-
+   integer(metis_idx_t) :: iwlen ! length of iw
+   integer(metis_idx_t) :: n64
    integer :: metis_flag
 
    ! Initialise flag and stat
@@ -153,9 +153,9 @@ subroutine metis_order32(n,ptr,row,perm,invp,flag,stat)
       perm(1) = 1
       return
    endif
-
+   n64 = n
    ! Set length of iw
-   iwlen = 2*ptr(n+1) - 2
+   iwlen = 2*ptr(n64+1) - 2
 
    ! Allocate arrays
    allocate (ptr2(n+1),row2(iwlen),stat=stat)
@@ -170,7 +170,8 @@ subroutine metis_order32(n,ptr,row,perm,invp,flag,stat)
    ! Carry out ordering
    call METIS_SetDefaultOptions(metis_opts)
    metis_opts(METIS_OPTION_NUMBERING) = 1 ! Fortran-style numbering
-   metis_flag = METIS_NodeND(int(n, kind=metis_idx_t), ptr2, row2, C_NULL_PTR, metis_opts, invp2, perm2)
+   n64 = n
+   metis_flag = METIS_NodeND(n64, ptr2, row2, C_NULL_PTR, metis_opts, invp2, perm2)
    select case(metis_flag)
    case(METIS_OK)
       ! Everything OK, do nothing
@@ -212,10 +213,10 @@ subroutine metis_order64(n,ptr,row,perm,invp,flag,stat)
    integer(metis_idx_t), allocatable :: ptr2(:) ! copy of pointers which is later modified
    integer(metis_idx_t), allocatable :: row2(:) ! copy of row indices
    integer(metis_idx_t) :: metis_opts(METIS_NOPTIONS) ! metis options array
-   integer(long) :: iwlen ! length of iw
    integer(metis_idx_t) :: perm2(n) ! Holds elimination order computed by metis
    integer(metis_idx_t) :: invp2(n) ! Holds inverse of elimination order computed by metis
-
+   integer*8 n64
+   integer*8 iwlen
    integer :: metis_flag
 
    ! Initialise flag and stat
@@ -225,6 +226,7 @@ subroutine metis_order64(n,ptr,row,perm,invp,flag,stat)
    !
    ! Check that restrictions are adhered to
    !
+   n64 = n;
    if (n.lt.1) then
       flag = ERROR_N_OOR
       return
@@ -237,9 +239,9 @@ subroutine metis_order64(n,ptr,row,perm,invp,flag,stat)
    endif
 
    ! Set length of iw
-   iwlen = 2*ptr(n+1) - 2
+   iwlen = 2*ptr(n64+1) - 2
    if(iwlen.gt.huge(ptr2)) then
-      ! Can't accomodate this many entries with 32-bit interface to metis
+      ! Can't accomodate this many entries
       flag = ERROR_NE_OOR
       return
    endif
@@ -257,7 +259,7 @@ subroutine metis_order64(n,ptr,row,perm,invp,flag,stat)
    ! Carry out ordering
    call METIS_SetDefaultOptions(metis_opts)
    metis_opts(METIS_OPTION_NUMBERING) = 1 ! Fortran-style numbering
-   metis_flag = METIS_NodeND(int(n, kind=metis_idx_t), ptr2, row2, C_NULL_PTR, metis_opts, invp2, perm2)
+   metis_flag = METIS_NodeND(n64, ptr2, row2, C_NULL_PTR, metis_opts, invp2, perm2)
    select case(metis_flag)
    case(METIS_OK)
       ! Everything OK, do nothing
