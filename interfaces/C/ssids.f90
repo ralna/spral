@@ -170,7 +170,7 @@ subroutine spral_ssids_analyse(ccheck, n, corder, cptr, crow, cval, cakeep, &
   else
      nullify(fptr)
   end if
-  if (.not. cindexed) then
+  if (cindexed) then
      allocate(fptr_alloc(n+1))
      fptr_alloc(:) = fptr(:) + 1
      fptr => fptr_alloc
@@ -180,7 +180,7 @@ subroutine spral_ssids_analyse(ccheck, n, corder, cptr, crow, cval, cakeep, &
   else
      nullify(frow)
   end if
-  if (.not. cindexed) then
+  if (cindexed) then
      allocate(frow_alloc(n+1))
      frow_alloc(:) = frow(:) + 1
      frow => frow_alloc
@@ -265,7 +265,7 @@ subroutine spral_ssids_analyse_ptr32(ccheck, n, corder, cptr, crow, cval, &
   else
      nullify(fptr)
   end if
-  if (.not. cindexed) then
+  if (cindexed) then
      allocate(fptr_alloc(n+1))
      fptr_alloc(:) = fptr(:) + 1
      fptr => fptr_alloc
@@ -275,7 +275,7 @@ subroutine spral_ssids_analyse_ptr32(ccheck, n, corder, cptr, crow, cval, &
   else
      nullify(frow)
   end if
-  if (.not. cindexed) then
+  if (cindexed) then
      allocate(frow_alloc(n+1))
      frow_alloc(:) = frow(:) + 1
      frow => frow_alloc
@@ -358,7 +358,7 @@ subroutine spral_ssids_analyse_coord(n, corder, ne, crow, ccol, cval, cakeep, &
   else
      nullify(frow)
   end if
-  if (.not. cindexed) then
+  if (cindexed) then
      allocate(frow_alloc(n+1))
      frow_alloc(:) = frow(:) + 1
      frow => frow_alloc
@@ -368,7 +368,7 @@ subroutine spral_ssids_analyse_coord(n, corder, ne, crow, ccol, cval, cakeep, &
   else
      nullify(fcol)
   end if
-  if (.not. cindexed) then
+  if (cindexed) then
      allocate(fcol_alloc(n+1))
      fcol_alloc(:) = fcol(:) + 1
      fcol => fcol_alloc
@@ -446,13 +446,13 @@ subroutine spral_ssids_factor(cposdef, cptr, crow, val, cscale, cakeep, cfkeep,&
   call C_F_POINTER(cakeep, fakeep) ! Pulled forward so we can use it
   if (C_ASSOCIATED(cptr) .and. C_ASSOCIATED(crow)) then
      call C_F_POINTER(cptr, fptr, shape=(/ fakeep%n+1 /))
-     if (.not. cindexed) then
+     if (cindexed) then
         allocate(fptr_alloc(fakeep%n+1))
         fptr_alloc(:) = fptr(:) + 1
         fptr => fptr_alloc
      end if
      call C_F_POINTER(crow, frow, shape=(/ fptr(fakeep%n+1)-1 /))
-     if (.not. cindexed) then
+     if (cindexed) then
         allocate(frow_alloc(fakeep%n+1))
         frow_alloc(:) = frow(:) + 1
         frow => frow_alloc
@@ -533,13 +533,13 @@ subroutine spral_ssids_factor_ptr32(cposdef, cptr, crow, val, cscale, cakeep, &
   call C_F_POINTER(cakeep, fakeep) ! Pulled forward so we can use it
   if (C_ASSOCIATED(cptr) .and. C_ASSOCIATED(crow)) then
      call C_F_POINTER(cptr, fptr, shape=(/ fakeep%n+1 /))
-     if (.not. cindexed) then
+     if (cindexed) then
         allocate(fptr_alloc(fakeep%n+1))
         fptr_alloc(:) = fptr(:) + 1
         fptr => fptr_alloc
      end if
      call C_F_POINTER(crow, frow, shape=(/ fptr(fakeep%n+1)-1 /))
-     if (.not. cindexed) then
+     if (cindexed) then
         allocate(frow_alloc(fakeep%n+1))
         frow_alloc(:) = frow(:) + 1
         frow => frow_alloc
