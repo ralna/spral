@@ -181,7 +181,7 @@ subroutine spral_ssids_analyse(ccheck, n, corder, cptr, crow, cval, cakeep, &
      nullify(frow)
   end if
   if (cindexed) then
-     allocate(frow_alloc(n+1))
+     allocate(frow_alloc(fptr(n+1)-1))
      frow_alloc(:) = frow(:) + 1
      frow => frow_alloc
   end if
@@ -276,7 +276,7 @@ subroutine spral_ssids_analyse_ptr32(ccheck, n, corder, cptr, crow, cval, &
      nullify(frow)
   end if
   if (cindexed) then
-     allocate(frow_alloc(n+1))
+     allocate(frow_alloc(fptr(n+1)-1))
      frow_alloc(:) = frow(:) + 1
      frow => frow_alloc
   end if
@@ -359,7 +359,7 @@ subroutine spral_ssids_analyse_coord(n, corder, ne, crow, ccol, cval, cakeep, &
      nullify(frow)
   end if
   if (cindexed) then
-     allocate(frow_alloc(n+1))
+     allocate(frow_alloc(ne))
      frow_alloc(:) = frow(:) + 1
      frow => frow_alloc
   end if
@@ -369,7 +369,7 @@ subroutine spral_ssids_analyse_coord(n, corder, ne, crow, ccol, cval, cakeep, &
      nullify(fcol)
   end if
   if (cindexed) then
-     allocate(fcol_alloc(n+1))
+     allocate(fcol_alloc(ne))
      fcol_alloc(:) = fcol(:) + 1
      fcol => fcol_alloc
   end if
