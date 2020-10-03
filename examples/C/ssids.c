@@ -12,6 +12,7 @@ int main(void) {
    /* Initialize derived types */
    akeep = NULL; fkeep = NULL; /* Important that these are NULL to start with */
    spral_ssids_default_options(&options);
+   options.array_base = 1; /* Need to set to 1 if using Fortran 1-based indexing */
 
    /* Data for matrix:
     * ( 2  1         )
