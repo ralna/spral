@@ -81,7 +81,7 @@ public:
       int ngpu;
       cudaError_t cuda_error = cudaGetDeviceCount(&ngpu);
       if(cuda_error != cudaSuccess) {
-         printf("Error using CUDA. Assuming no GPUs.\n");
+         //printf("Error using CUDA. Assuming no GPUs.\n");
          return gpus; // empty
       }
       /* Now for each device search up its topology tree and see if we
