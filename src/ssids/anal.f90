@@ -1036,8 +1036,8 @@ contains
 
     ! Generate dot file for assembly tree
     ! call print_atree(akeep%nnodes, akeep%sptr, akeep%sparent, akeep%rptr)
-    call print_atree_part(akeep%nnodes, akeep%sptr, akeep%sparent, akeep%rptr, &
-         akeep%topology, akeep%nparts, akeep%part, exec_loc)
+    !call print_atree_part(akeep%nnodes, akeep%sptr, akeep%sparent, akeep%rptr, &
+    !     akeep%topology, akeep%nparts, akeep%part, exec_loc)
 
     ! Construct symbolic subtrees
     allocate(akeep%subtree(akeep%nparts))
