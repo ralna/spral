@@ -67,8 +67,10 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
   type(contrib_type), dimension(:), allocatable :: child_contrib
   type(ssids_inform), dimension(:), allocatable :: thread_inform
 
+#ifdef PROFILE
   ! Begin profile trace (noop if not enabled)
   call profile_begin(akeep%topology)
+#endif
 
   ! Allocate space for subtrees
   allocate(fkeep%subtree(akeep%nparts), stat=inform%stat)
@@ -174,9 +176,11 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
   if (inform%flag.lt.0) goto 100 ! cleanup and exit
 
   if (all_region) then
-     
+
+#ifdef PROFILE
      ! At least some all region subtrees exist
      call profile_add_event("EV_ALL_REGIONS", "Starting processing root subtree", 0)
+#endif
      
      !$omp parallel num_threads(total_threads) default(shared)
      !$omp single
@@ -208,8 +212,10 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
 
 100 continue ! cleanup and exit
 
+#ifdef PROFILE
   ! End profile trace (noop if not enabled)
   call profile_end()
+#endif
 
   return
 
