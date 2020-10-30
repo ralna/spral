@@ -239,11 +239,13 @@ private:
       return thread_name[thread];
    }
 
+#ifdef PROFILE
    /** \brief Return difference in seconds between t1 and t2. */
    static
    double tdiff(struct timespec t1, struct timespec t2) {
       return (t2.tv_sec - t1.tv_sec) + 1e-9*(t2.tv_nsec - t1.tv_nsec);
    }
+#endif
 
    /** \brief Return best guess at processor id. */
    static
