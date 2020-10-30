@@ -14,7 +14,9 @@ module spral_ssids_fkeep
    use spral_ssids_inform, only : ssids_inform
    use spral_ssids_subtree, only : numeric_subtree_base
    use spral_ssids_cpu_subtree, only : cpu_numeric_subtree
-   use spral_ssids_profile, only : profile_begin, profile_end, profile_add_event 
+#ifdef PROFILE
+   use spral_ssids_profile, only : profile_begin, profile_end, profile_add_event
+#endif
    implicit none
 
    private
