@@ -364,7 +364,9 @@ contains
        if (st .ne. 0) return
     end do
 
-    print *, "[find_subtree_partition] load_balance = ", best_load_balance 
+    if (options%print_level >= 0) then
+       print *, "[find_subtree_partition] load_balance = ", best_load_balance
+    end if
     ! Consolidate adjacent non-children nodes into same part and regen exec_alloc
     !print *
     !print *, "pre merge", part(1:nparts+1)
@@ -1012,12 +1014,14 @@ contains
     if (st .ne. 0) go to 100
 
     ! Sort out subtrees
-    print *, "Input topology"
-    do i = 1, size(akeep%topology)
-      print *, "Region ", i, " with ", akeep%topology(i)%nproc, " cores"
-      if(size(akeep%topology(i)%gpus).gt.0) &
-         print *, "---> gpus ", akeep%topology(i)%gpus
-    end do
+    if (options%print_level >= 0) then
+       print *, "Input topology"
+       do i = 1, size(akeep%topology)
+         print *, "Region ", i, " with ", akeep%topology(i)%nproc, " cores"
+         if(size(akeep%topology(i)%gpus).gt.0) &
+            print *, "---> gpus ", akeep%topology(i)%gpus
+       end do
+    end if
     call find_subtree_partition(akeep%nnodes, akeep%sptr, akeep%sparent,           &
          akeep%rptr, options, akeep%topology, akeep%nparts, akeep%part,            &
          exec_loc, akeep%contrib_ptr, akeep%contrib_idx, contrib_dest, inform, st)
