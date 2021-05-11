@@ -64,19 +64,6 @@ matrix:
                  - libatlas-base-dev
                  - liblapack-dev
         env: COMP_VER=10
-      - compiler: gcc-11
-        addons:
-           apt:
-              sources:
-                 - ubuntu-toolchain-r-test
-              packages:
-                 - gfortran-11
-                 - gcc-11
-                 - g++-11
-                 - libmetis-dev
-                 - libatlas-base-dev
-                 - liblapack-dev
-        env: COMP_VER=11
 
 # Don't worry about high git depth, we don't need it
 git:
