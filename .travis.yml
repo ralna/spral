@@ -12,32 +12,6 @@ env:
 # Define matrix of builds with different compiler versions
 matrix:
    include:
-      - compiler: gcc-5
-        addons:
-           apt:
-              sources:
-                 - ubuntu-toolchain-r-test
-              packages:
-                 - gfortran-5
-                 - gcc-5
-                 - g++-5
-                 - libmetis-dev
-                 - libatlas-dev
-                 - liblapack-dev
-        env: COMP_VER=5
-      - compiler: gcc-6
-        addons:
-           apt:
-              sources:
-                 - ubuntu-toolchain-r-test
-              packages:
-                 - gfortran-6
-                 - gcc-6
-                 - g++-6
-                 - libmetis-dev
-                 - libatlas-dev
-                 - liblapack-dev
-        env: COMP_VER=6
       - compiler: gcc-7
         addons:
            apt:
@@ -48,7 +22,7 @@ matrix:
                  - gcc-7
                  - g++-7
                  - libmetis-dev
-                 - libatlas-dev
+                 - libatlas-base-dev
                  - liblapack-dev
         env: COMP_VER=7
       - compiler: gcc-8
@@ -61,7 +35,7 @@ matrix:
                  - gcc-8
                  - g++-8
                  - libmetis-dev
-                 - libatlas-dev
+                 - libatlas-base-dev
                  - liblapack-dev
         env: COMP_VER=8
       - compiler: gcc-9
@@ -74,7 +48,7 @@ matrix:
                  - gcc-9
                  - g++-9
                  - libmetis-dev
-                 - libatlas-dev
+                 - libatlas-base-dev
                  - liblapack-dev
         env: COMP_VER=9
       - compiler: gcc-10
@@ -87,7 +61,7 @@ matrix:
                  - gcc-10
                  - g++-10
                  - libmetis-dev
-                 - libatlas-dev
+                 - libatlas-base-dev
                  - liblapack-dev
         env: COMP_VER=10
       - compiler: gcc-11
@@ -100,7 +74,7 @@ matrix:
                  - gcc-11
                  - g++-11
                  - libmetis-dev
-                 - libatlas-dev
+                 - libatlas-base-dev
                  - liblapack-dev
         env: COMP_VER=11
 
