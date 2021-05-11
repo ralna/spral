@@ -87,7 +87,9 @@ public:
       /* Now for each device search up its topology tree and see if we
        * encounter obj. */
       for(int i=0; i<ngpu; ++i) {
-         hwloc_obj_t p = hwloc_cudart_get_device_osdev_by_index(topology_, i);
+         // TODO: Switch between the two calls below as appropriate.
+         // hwloc_obj_t p = hwloc_cudart_get_device_osdev_by_index(topology_, i);
+         hwloc_obj_t p = hwloc_cudart_get_device_pcidev(topology_, i);
          for(; p; p=p->parent) {
             if(p==obj) {
                gpus.push_back(i);

@@ -38,7 +38,17 @@ our proprietary licenced [HSL Library](http://www.hsl.rl.ac.uk/)
 We use a standard autotools-based build:
 ```bash
 ./autogen.sh # If compiling from fresh git checkout
-./configure
+mkdir build
+cd build
+../configure
 make
 make install
+```
+
+## Usage at a Glance
+When using SSIDS, ensure the following environment variables are set:
+```bash
+export OMP_CANCELLATION=TRUE
+export OMP_NESTED=TRUE
+export OMP_PROC_BIND=TRUE
 ```
