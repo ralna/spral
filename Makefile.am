@@ -36,12 +36,12 @@ AM_FCFLAGS = $(OPENMP_CXXFLAGS) # assume CXX and FC use same flags...
 # FIXME: make below configurable
 if HAVE_NVCC
 LDADD = -L. -lspral $(METIS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(GTG_LIBS) \
-		  -L$(CUDA_HOME)/lib64 $(HWLOC_LIBS) $(FCLIBS) -lrt
+		  -L$(CUDA_HOME)/lib64 $(HWLOC_LIBS) $(FCLIBS)
 SPRAL_LINK_LIBS = -lcublas
 SPRALLINK = $(NVCCLINK)
 else
 LDADD = -L. -lspral $(METIS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(GTG_LIBS) \
-		  $(HWLOC_LIBS) $(FCLIBS) -lrt
+		  $(HWLOC_LIBS) $(FCLIBS)
 SPRAL_LINK_LIBS = $(CXXLIB)
 SPRALLINK = $(FCLINK)
 endif
