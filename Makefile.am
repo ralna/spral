@@ -15,11 +15,16 @@ AM_NVCC_FLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src -Xptxas="${PTX_FLAGS
 else
 AM_NVCC_FLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src -Xptxas="${PTX_FLAGS}"
 endif
+AM_NVCC_FLAGS += -gencode arch=compute_50,code=sm_50
+AM_NVCC_FLAGS += -gencode arch=compute_60,code=sm_60
+AM_NVCC_FLAGS += -gencode arch=compute_61,code=sm_61
+AM_NVCC_FLAGS += -gencode arch=compute_70,code=sm_70
+# AM_NVCC_FLAGS += -gencode arch=compute_75,code=sm_75
 AM_LD_FLAGS = -lcuda
 NVCCLINK = \
 	$(NVCC) $(NVCCFLAGS) $(AM_NVCC_FLAGS) $(AM_LD_FLAGS) $(LDFLAGS) $(OPENMP_LIB) -o $@
 .cu.o:
-	$(NVCC) $(NVCCFLAGS) $(AM_NVCC_FLAGS) -dc -o $@ $<
+	$(NVCC) $(NVCCFLAGS) $(AM_NVCC_FLAGS) -rdc false -c -o $@ $<
 
 # Include directory for standard C
 AM_CFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src $(OPENMP_CFLAGS) \

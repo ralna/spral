@@ -229,7 +229,7 @@ contains
     integer :: i
     character(len=200) :: argval
     logical :: seen_fname
-      
+
     ! Defaults
     nrhs = 1
     force_psdef = .false.
