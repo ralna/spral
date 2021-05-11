@@ -1,7 +1,7 @@
 language: c++
 # Enable trusty so we have access to libmetis-dev
 sudo: required
-dist: trusty
+dist: focal
 # Make OpenMP happy
 env:
    global:
@@ -77,6 +77,32 @@ matrix:
                  - libatlas-dev
                  - liblapack-dev
         env: COMP_VER=9
+      - compiler: gcc-10
+        addons:
+           apt:
+              sources:
+                 - ubuntu-toolchain-r-test
+              packages:
+                 - gfortran-10
+                 - gcc-10
+                 - g++-10
+                 - libmetis-dev
+                 - libatlas-dev
+                 - liblapack-dev
+        env: COMP_VER=10
+      - compiler: gcc-11
+        addons:
+           apt:
+              sources:
+                 - ubuntu-toolchain-r-test
+              packages:
+                 - gfortran-11
+                 - gcc-11
+                 - g++-11
+                 - libmetis-dev
+                 - libatlas-dev
+                 - liblapack-dev
+        env: COMP_VER=11
 
 # Don't worry about high git depth, we don't need it
 git:
