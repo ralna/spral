@@ -229,7 +229,7 @@ subroutine spral_scaling_auction_sym_long(n, ptr, row, val, scaling, cmatch, &
   implicit none
 
   integer(C_INT), value :: n
-  integer(C_LONG), dimension(*), intent(in) :: ptr
+  integer(C_LONG_LONG), dimension(*), intent(in) :: ptr
   integer(C_INT), dimension(*), intent(in) :: row
   real(C_DOUBLE), dimension(*), intent(in) :: val
   real(C_DOUBLE), dimension(*), intent(out) :: scaling
@@ -325,7 +325,7 @@ subroutine spral_scaling_equilib_sym_long(n, ptr, row, val, scaling, &
   implicit none
 
   integer(C_INT), value :: n
-  integer(C_LONG), dimension(*), intent(in) :: ptr
+  integer(C_LONG_LONG), dimension(*), intent(in) :: ptr
   integer(C_INT), dimension(*), intent(in) :: row
   real(C_DOUBLE), dimension(*), intent(in) :: val
   real(C_DOUBLE), dimension(*), intent(out) :: scaling
@@ -421,7 +421,7 @@ subroutine spral_scaling_hungarian_sym_long(n, ptr, row, val, scaling, cmatch, &
   implicit none
 
   integer(C_INT), value :: n
-  integer(C_LONG), dimension(*), intent(in) :: ptr
+  integer(C_LONG_LONG), dimension(*), intent(in) :: ptr
   integer(C_INT), dimension(*), intent(in) :: row
   real(C_DOUBLE), dimension(*), intent(in) :: val
   real(C_DOUBLE), dimension(*), intent(out) :: scaling
@@ -544,7 +544,7 @@ subroutine spral_scaling_auction_unsym_long(m, n, ptr, row, val, rscaling, &
 
   integer(C_INT), value :: m
   integer(C_INT), value :: n
-  integer(C_LONG), dimension(*), intent(in) :: ptr
+  integer(C_LONG_LONG), dimension(*), intent(in) :: ptr
   integer(C_INT), dimension(*), intent(in) :: row
   real(C_DOUBLE), dimension(*), intent(in) :: val
   real(C_DOUBLE), dimension(*), intent(out) :: rscaling
@@ -646,7 +646,7 @@ subroutine spral_scaling_equilib_unsym_long(m, n, ptr, row, val, rscaling, &
 
   integer(C_INT), value :: m
   integer(C_INT), value :: n
-  integer(C_LONG), dimension(*), intent(in) :: ptr
+  integer(C_LONG_LONG), dimension(*), intent(in) :: ptr
   integer(C_INT), dimension(*), intent(in) :: row
   real(C_DOUBLE), dimension(*), intent(in) :: val
   real(C_DOUBLE), dimension(*), intent(out) :: rscaling
@@ -748,7 +748,7 @@ subroutine spral_scaling_hungarian_unsym_long(m, n, ptr, row, val, rscaling, &
 
   integer(C_INT), value :: m
   integer(C_INT), value :: n
-  integer(C_LONG), dimension(*), intent(in) :: ptr
+  integer(C_LONG_LONG), dimension(*), intent(in) :: ptr
   integer(C_INT), dimension(*), intent(in) :: row
   real(C_DOUBLE), dimension(*), intent(in) :: val
   real(C_DOUBLE), dimension(*), intent(out) :: rscaling
