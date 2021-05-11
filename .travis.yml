@@ -38,6 +38,46 @@ matrix:
                  - libatlas-dev
                  - liblapack-dev
         env: COMP_VER=6
+      - compiler: gcc-7
+        addons:
+           apt:
+              sources:
+                 - ubuntu-toolchain-r-test
+              packages:
+                 - gfortran-7
+                 - gcc-7
+                 - g++-7
+                 - libmetis-dev
+                 - libatlas-dev
+                 - liblapack-dev
+        env: COMP_VER=7
+      - compiler: gcc-8
+        addons:
+           apt:
+              sources:
+                 - ubuntu-toolchain-r-test
+              packages:
+                 - gfortran-8
+                 - gcc-8
+                 - g++-8
+                 - libmetis-dev
+                 - libatlas-dev
+                 - liblapack-dev
+        env: COMP_VER=8
+      - compiler: gcc-9
+        addons:
+           apt:
+              sources:
+                 - ubuntu-toolchain-r-test
+              packages:
+                 - gfortran-9
+                 - gcc-9
+                 - g++-9
+                 - libmetis-dev
+                 - libatlas-dev
+                 - liblapack-dev
+        env: COMP_VER=9
+
 # Don't worry about high git depth, we don't need it
 git:
    depth: 3
