@@ -40,13 +40,13 @@ integer(C_INT) function spral_random_integer(cstate, n) bind(C)
    cstate = random_get_seed(fstate)
 end function spral_random_integer
 
-integer(C_LONG) function spral_random_long(cstate, n) bind(C)
+integer(C_LONG_LONG) function spral_random_long(cstate, n) bind(C)
    use iso_c_binding
    use spral_random
    implicit none
 
    integer(C_INT), intent(inout) :: cstate
-   integer(C_LONG), value :: n
+   integer(C_LONG_LONG), value :: n
 
    type(random_state) :: fstate
 

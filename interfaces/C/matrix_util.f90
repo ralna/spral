@@ -40,7 +40,7 @@ subroutine spral_print_matrix_i64d(lines, matrix_type, m, n, ptr, row, cval, &
   integer(C_INT), value :: matrix_type
   integer(C_INT), value :: m
   integer(C_INT), value :: n
-  integer(C_LONG), dimension(*), intent(in) :: ptr
+  integer(C_LONG_LONG), dimension(*), intent(in) :: ptr
   integer(C_INT), dimension(*), intent(in) :: row
   type(C_PTR), value :: cval
   integer(C_INT), value :: base
@@ -68,7 +68,7 @@ subroutine spral_half_to_full_i64d(n, ptr, row, cval, base) bind(C)
   implicit none
 
   integer(C_INT), value :: n
-  integer(C_LONG), dimension(*), intent(inout) :: ptr
+  integer(C_LONG_LONG), dimension(*), intent(inout) :: ptr
   integer(C_INT),  dimension(*),intent(inout) :: row
   type(C_PTR), value :: cval
   integer(C_INT), value :: base
