@@ -1,7 +1,7 @@
 language: c++
 # Enable trusty so we have access to libmetis-dev
 sudo: required
-dist: trusty
+dist: focal
 # Make OpenMP happy
 env:
    global:
@@ -12,32 +12,59 @@ env:
 # Define matrix of builds with different compiler versions
 matrix:
    include:
-      - compiler: gcc-5
+      - compiler: gcc-7
         addons:
            apt:
               sources:
                  - ubuntu-toolchain-r-test
               packages:
-                 - gfortran-5
-                 - gcc-5
-                 - g++-5
+                 - gfortran-7
+                 - gcc-7
+                 - g++-7
                  - libmetis-dev
-                 - libatlas-dev
+                 - libatlas-base-dev
                  - liblapack-dev
-        env: COMP_VER=5
-      - compiler: gcc-6
+        env: COMP_VER=7
+      - compiler: gcc-8
         addons:
            apt:
               sources:
                  - ubuntu-toolchain-r-test
               packages:
-                 - gfortran-6
-                 - gcc-6
-                 - g++-6
+                 - gfortran-8
+                 - gcc-8
+                 - g++-8
                  - libmetis-dev
-                 - libatlas-dev
+                 - libatlas-base-dev
                  - liblapack-dev
-        env: COMP_VER=6
+        env: COMP_VER=8
+      - compiler: gcc-9
+        addons:
+           apt:
+              sources:
+                 - ubuntu-toolchain-r-test
+              packages:
+                 - gfortran-9
+                 - gcc-9
+                 - g++-9
+                 - libmetis-dev
+                 - libatlas-base-dev
+                 - liblapack-dev
+        env: COMP_VER=9
+      - compiler: gcc-10
+        addons:
+           apt:
+              sources:
+                 - ubuntu-toolchain-r-test
+              packages:
+                 - gfortran-10
+                 - gcc-10
+                 - g++-10
+                 - libmetis-dev
+                 - libatlas-base-dev
+                 - liblapack-dev
+        env: COMP_VER=10
+
 # Don't worry about high git depth, we don't need it
 git:
    depth: 3
