@@ -396,7 +396,7 @@ int ldlt_test(T u, T small, bool delays, bool singular, bool dblk_singular, int 
    // Check residual
    T bwderr = backward_error(m, a, lda, b, 1, soln, m);
    if(debug) printf("bwderr = %le\n", bwderr);
-   EXPECT_LE(bwderr, 5e-14) << "(test " << test << " seed " << seed << ")" << std::endl;
+   EXPECT_LE(bwderr, 1e-13) << "(test " << test << " seed " << seed << ")" << std::endl;
 
    // Cleanup memory
    delete[] a; allocT.deallocate(l, m*lda);
