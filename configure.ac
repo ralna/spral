@@ -3,6 +3,19 @@ AC_CONFIG_SRCDIR([src/ssids/ssids.f90])
 AC_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE
 
+# AC_CANONICAL_HOST is needed to access the 'host_os' variable
+AC_CANONICAL_HOST
+
+build_windows=no
+case "${host_os}" in
+	cygwin*|mingw*)
+		build_windows=yes
+		;;
+esac
+
+# Pass the conditional to automake
+AM_CONDITIONAL([BUILD_WINDOWS], [test "$build_windows" = "yes"])
+
 # Allow disabling of OpenMP
 AC_ARG_ENABLE([openmp],
    AS_HELP_STRING([--disable-openmp], [Disable OpenMP parallelism. Not recommended.])
