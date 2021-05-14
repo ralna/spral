@@ -593,10 +593,10 @@ int run_ldlt_app_tests() {
 
    /* Torture tests */
    TEST((
-      ldlt_torture_test<double, 16, 500, false, false> (0.01, 1e-20, 8*16, 8*16)
+      ldlt_torture_test<double, 16, false, 500, false> (0.01, 1e-20, 8*16, 8*16)
       ));
    TEST((
-      ldlt_torture_test<double, 16, 500, false, false> (0.01, 1e-20, 8*16, 3*16)
+      ldlt_torture_test<double, 16, false, 500, false> (0.01, 1e-20, 8*16, 3*16)
       ));
 
    return nerr;
