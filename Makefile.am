@@ -35,25 +35,21 @@ AM_FCFLAGS = $(OPENMP_CXXFLAGS) # assume CXX and FC use same flags...
 
 # FIXME: make below configurable
 if HAVE_NVCC
-	if BUILD_WINDOWS
-		LDADD = -L. -lspral $(METIS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(GTG_LIBS) \
-		-L$(CUDA_HOME)/lib64 $(HWLOC_LIBS) $(FCLIBS)
-	else
-		LDADD = -L. -lspral $(METIS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(GTG_LIBS) \
-		-L$(CUDA_HOME)/lib64 $(HWLOC_LIBS) $(FCLIBS) -lrt
-	endif
-	SPRAL_LINK_LIBS = -lcublas
-	SPRALLINK = $(NVCCLINK)
+if BUILD_WINDOWS
+LDADD = -L. -lspral $(METIS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(GTG_LIBS) -L$(CUDA_HOME)/lib64 $(HWLOC_LIBS) $(FCLIBS)
 else
-	if BUILD_WINDOWS
-		LDADD = -L. -lspral $(METIS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(GTG_LIBS) \
-		$(HWLOC_LIBS) $(FCLIBS)
-	else
-		LDADD = -L. -lspral $(METIS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(GTG_LIBS) \
-		$(HWLOC_LIBS) $(FCLIBS) -lrt
-	endif
-	SPRAL_LINK_LIBS = $(CXXLIB)
-	SPRALLINK = $(FCLINK)
+LDADD = -L. -lspral $(METIS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(GTG_LIBS) -L$(CUDA_HOME)/lib64 $(HWLOC_LIBS) $(FCLIBS) -lrt
+endif
+SPRAL_LINK_LIBS = -lcublas
+SPRALLINK = $(NVCCLINK)
+else
+if BUILD_WINDOWS
+LDADD = -L. -lspral $(METIS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(GTG_LIBS) $(HWLOC_LIBS) $(FCLIBS)
+else
+LDADD = -L. -lspral $(METIS_LIBS) $(LAPACK_LIBS) $(BLAS_LIBS) $(GTG_LIBS) $(HWLOC_LIBS) $(FCLIBS) -lrt
+endif
+SPRAL_LINK_LIBS = $(CXXLIB)
+SPRALLINK = $(FCLINK)
 endif
 
 lib_LIBRARIES = libspral.a
