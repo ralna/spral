@@ -169,29 +169,29 @@ contains
     if (options%print_level .lt. 0) nout = -1
 
     if (size(order) .lt. n) then
-      ! Order is too short
-      inform%flag = SSIDS_ERROR_ORDER
-      return
+       ! Order is too short
+       inform%flag = SSIDS_ERROR_ORDER
+       return
     end if
 
     ! initialise
     invp(:) = 0
 
-    do i = 1,n
-      order(i) = abs(order(i))
+    do i = 1, n
+       order(i) = abs(order(i))
     end do
-      
+
     ! Check user-supplied order and copy the absolute values to invp.
     ! Also add up number of variables that are not used (null rows)
     do i = 1, n
-      j = order(i)
-      if (j.le.0 .or. j.gt.n) exit ! Out of range entry
-      if (invp(j) .ne. 0) exit ! Duplicate found
-      invp(j) = i
+       j = order(i)
+       if ((j .le. 0) .or. (j .gt. n)) exit ! Out of range entry
+       if (invp(j) .ne. 0) exit ! Duplicate found
+       invp(j) = i
     end do
-    if (i-1 .ne. n) then
-      inform%flag = SSIDS_ERROR_ORDER
-      return
+    if ((i-1) .ne. n) then
+       inform%flag = SSIDS_ERROR_ORDER
+       return
     end if
   end subroutine check_order
 
@@ -470,7 +470,7 @@ contains
 ! FIXME: Consider case when gpu_perf_coeff > 2.0 ???
 !        (Round robin may not be correct thing)
 real function calc_exec_alloc(nparts, part, size_order, is_child, flops, &
-    topology, min_gpu_work, gpu_perf_coeff, exec_loc, st)
+     topology, min_gpu_work, gpu_perf_coeff, exec_loc, st)
   integer, intent(in) :: nparts
   integer, dimension(nparts+1), intent(in) :: part
   integer, dimension(nparts), intent(in) :: size_order
