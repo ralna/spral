@@ -48,33 +48,33 @@ contains
     ! Set aptr(j) to hold no. nonzeros in column j
     aptr(:) = 0
     do j = 1, n
-      do kk = ptr(j), ptr(j+1) - 1
-        i = row(kk)
-        aptr(i) = aptr(i) + 1
-        if (j.eq.i) cycle
-        aptr(j) = aptr(j) + 1
-      end do
+       do kk = ptr(j), ptr(j+1) - 1
+          i = row(kk)
+          aptr(i) = aptr(i) + 1
+          if (j .eq. i) cycle
+          aptr(j) = aptr(j) + 1
+       end do
     end do
 
     ! Set aptr(j) to point to where row indices will end in arow
     do j = 2, n
-      aptr(j) = aptr(j-1) + aptr(j)
+       aptr(j) = aptr(j-1) + aptr(j)
     end do
     aptr(n+1) = aptr(n) + 1
 
     ! Fill arow and aptr
     do j = 1, n
-      do kk = ptr(j), ptr(j+1) - 1
-        i = row(kk)
-        arow(aptr(i)) = j
-        aptr(i) = aptr(i) - 1
-        if (j.eq.i) cycle
-        arow(aptr(j)) = i
-        aptr(j) = aptr(j) - 1
-      end do
+       do kk = ptr(j), ptr(j+1) - 1
+          i = row(kk)
+          arow(aptr(i)) = j
+          aptr(i) = aptr(i) - 1
+          if (j .eq. i) cycle
+          arow(aptr(j)) = i
+          aptr(j) = aptr(j) - 1
+       end do
     end do
     do j = 1,n
-      aptr(j) = aptr(j) + 1
+       aptr(j) = aptr(j) + 1
     end do
   end subroutine expand_pattern
 
@@ -101,38 +101,38 @@ contains
     ! Set aptr(j) to hold no. nonzeros in column j
     aptr(:) = 0
     do j = 1, n
-      do kk = ptr(j), ptr(j+1) - 1
-        i = row(kk)
-        aptr(i) = aptr(i) + 1
-        if (j.eq.i) cycle
-        aptr(j) = aptr(j) + 1
-      end do
+       do kk = ptr(j), ptr(j+1) - 1
+          i = row(kk)
+          aptr(i) = aptr(i) + 1
+          if (j .eq. i) cycle
+          aptr(j) = aptr(j) + 1
+       end do
     end do
 
     ! Set aptr(j) to point to where row indices will end in arow
     do j = 2, n
-      aptr(j) = aptr(j-1) + aptr(j)
+       aptr(j) = aptr(j-1) + aptr(j)
     end do
     aptr(n+1) = aptr(n) + 1
 
     ! Fill arow, aval and aptr
     do j = 1, n
-      do kk = ptr(j), ptr(j+1) - 1
-        i = row(kk)
-        atemp = val(kk)
-        ipos = aptr(i)
-        arow(ipos) = j
-        aval(ipos) = atemp
-        aptr(i) = ipos - 1
-        if (j.eq.i) cycle
-        jpos = aptr(j)
-        arow(jpos) = i
-        aval(jpos) = atemp
-        aptr(j) = jpos - 1
-      end do
+       do kk = ptr(j), ptr(j+1) - 1
+          i = row(kk)
+          atemp = val(kk)
+          ipos = aptr(i)
+          arow(ipos) = j
+          aval(ipos) = atemp
+          aptr(i) = ipos - 1
+          if (j .eq. i) cycle
+          jpos = aptr(j)
+          arow(jpos) = i
+          aval(jpos) = atemp
+          aptr(j) = jpos - 1
+       end do
     end do
     do j = 1,n
-      aptr(j) = aptr(j) + 1
+       aptr(j) = aptr(j) + 1
     end do
 
   end subroutine expand_matrix
@@ -145,8 +145,8 @@ contains
 ! and returns an error if not. Also sets perm, invp.
 !
   subroutine check_order(n, order, invp, options, inform)
-     integer, intent(in) :: n ! order of system
-     integer, intent(inout) :: order(:)
+    integer, intent(in) :: n ! order of system
+    integer, intent(inout) :: order(:)
       ! If i is used to index a variable, |order(i)| must
       ! hold its position in the pivot sequence. If 1x1 pivot i required,
       ! the user must set order(i)>0. If a 2x2 pivot involving variables
@@ -166,9 +166,9 @@ contains
 
     context = 'ssids_analyse'
     nout = options%unit_error
-    if (options%print_level < 0) nout = -1
+    if (options%print_level .lt. 0) nout = -1
 
-    if (size(order) < n) then
+    if (size(order) .lt. n) then
       ! Order is too short
       inform%flag = SSIDS_ERROR_ORDER
       return
