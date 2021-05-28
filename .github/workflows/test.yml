@@ -22,7 +22,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install gcc-${{ matrix.gcc_ver }} \
                                gfortran-${{ matrix.gcc_ver }} \
-                               g++-${{ matrix.gcc_ver_ver}} \
+                               g++-${{ matrix.gcc_ver_ver }} \
                                libmetis-dev \
                                libatlas-base-dev \
                                liblapack-dev
