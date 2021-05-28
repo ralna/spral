@@ -1,0 +1,45 @@
+name: 'Tests'
+
+on:
+  push:
+    branches:
+      - 'master'
+  pull_request:
+    branches:
+      - 'master'
+  workflow_dispatch:
+
+jobs:
+  linux-tests:
+    strategy:
+      matrix:
+        gcc_ver: [7, 8, 9, 10]
+    name: 'Linux (gcc-${{ matrix.gcc_ver }})'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Install dependencies'
+        run: |
+          apt update
+          apt install gcc-${{ matrix.gcc_ver }} \
+                      gfortran-${{ matrix.gcc_ver }} \
+                      g++-${{ matrix.gcc_ver_ver}} \
+                      libmetis-dev \
+                      libatlas-base-dev \
+                      liblapack-dev
+      - name: 'Checkout code'
+        uses: actions/checkout@v2
+      - name: 'Build'
+        run: |
+          ./autogen.sh
+          ./configure CC=gcc-${{ matrix.gcc_ver }} \
+                      CXX=g++-${{ matrix.gcc_ver }} \
+                      F77=gfortran-${{ matrix.gcc_ver }} \
+                      FC=gfortran-${{ matrix.gcc_ver }} \
+                      CFLAGS="-g -O2 -Wall" \
+                      CXXFLAGS="-g -O2 -Wall" \
+                      FCFLAGS="-g -O2 -Wall -pedantic"
+          make
+      - name: 'Test'
+        run: |
+          make check
+
