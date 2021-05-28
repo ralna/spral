@@ -19,13 +19,13 @@ jobs:
     steps:
       - name: 'Install dependencies'
         run: |
-          apt-get update
-          apt-get install gcc-${{ matrix.gcc_ver }} \
-                          gfortran-${{ matrix.gcc_ver }} \
-                          g++-${{ matrix.gcc_ver_ver}} \
-                          libmetis-dev \
-                          libatlas-base-dev \
-                          liblapack-dev
+          sudo apt-get update
+          sudo apt-get install gcc-${{ matrix.gcc_ver }} \
+                               gfortran-${{ matrix.gcc_ver }} \
+                               g++-${{ matrix.gcc_ver_ver}} \
+                               libmetis-dev \
+                               libatlas-base-dev \
+                               liblapack-dev
       - name: 'Checkout code'
         uses: actions/checkout@v2
       - name: 'Build'
