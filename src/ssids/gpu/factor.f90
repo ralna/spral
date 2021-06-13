@@ -103,10 +103,17 @@ contains
     if (stats%st .ne. 0) goto 100
 
     ! Perform actual factorization
-    call subtree_factor_gpu(stream_handle, pos_def, child_ptr, child_list, &
-      n, nptr, gpu_nlist, ptr_val, nnodes, nodes, sptr, sparent, rptr,     &
-      rlist_direct, gpu_rlist, gpu_rlist_direct, gpu_contribs, gpu_LDLT,   &
-      stream_data, alloc, options, stats, ptr_scale)
+    if (present(ptr_scale)) then
+       call subtree_factor_gpu(stream_handle, pos_def, child_ptr, child_list, &
+         n, nptr, gpu_nlist, ptr_val, nnodes, nodes, sptr, sparent, rptr,     &
+         rlist_direct, gpu_rlist, gpu_rlist_direct, gpu_contribs, gpu_LDLT,   &
+         stream_data, alloc, options, stats, ptr_scale)
+    else
+       call subtree_factor_gpu(stream_handle, pos_def, child_ptr, child_list, &
+         n, nptr, gpu_nlist, ptr_val, nnodes, nodes, sptr, sparent, rptr,     &
+         rlist_direct, gpu_rlist, gpu_rlist_direct, gpu_contribs, gpu_LDLT,   &
+         stream_data, alloc, options, stats)
+    end if
     if (stats%flag .lt. 0) return
     if (stats%cuda_error .ne. 0) goto 200
     
@@ -509,9 +516,15 @@ contains
        end do
 
        ! Initialize L to 0, and add A to it.
-       call init_L_with_A(stream, lev, gpu%lvlptr, gpu%lvllist, nodes, ncb,  &
-            level_size, nptr, rptr, gpu_nlist, gpu_rlist, ptr_val, ptr_levL, &
-            gwork, stats%st, stats%cuda_error, ptr_scale=ptr_scale)
+       if (present(ptr_scale)) then
+          call init_L_with_A(stream, lev, gpu%lvlptr, gpu%lvllist, nodes, ncb,  &
+               level_size, nptr, rptr, gpu_nlist, gpu_rlist, ptr_val, ptr_levL, &
+               gwork, stats%st, stats%cuda_error, ptr_scale=ptr_scale)
+       else
+          call init_L_with_A(stream, lev, gpu%lvlptr, gpu%lvllist, nodes, ncb,  &
+               level_size, nptr, rptr, gpu_nlist, gpu_rlist, ptr_val, ptr_levL, &
+               gwork, stats%st, stats%cuda_error)
+       end if
        if (stats%st .ne. 0) goto 100
        if (stats%cuda_error .ne. 0) goto 200
 

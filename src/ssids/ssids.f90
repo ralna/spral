@@ -117,8 +117,30 @@ contains
     ptr64(1:n+1) = ptr(1:n+1)
 
     ! Call 64-bit version of routine
-    call analyse_double(check, n, ptr64, row, akeep, options, inform, &
-         order=order, val=val, topology=topology)
+    if (present(order) .and. present(val) .and. present(topology)) then
+       call analyse_double(check, n, ptr64, row, akeep, options, inform, &
+            order=order, val=val, topology=topology)
+    else if (present(order) .and. present(val)) then
+       call analyse_double(check, n, ptr64, row, akeep, options, inform, &
+            order=order, val=val)
+    else if (present(order) .and. present(topology)) then
+       call analyse_double(check, n, ptr64, row, akeep, options, inform, &
+            order=order, topology=topology)
+    else if (present(val) .and. present(topology)) then
+       call analyse_double(check, n, ptr64, row, akeep, options, inform, &
+            val=val, topology=topology)
+    else if (present(order)) then
+       call analyse_double(check, n, ptr64, row, akeep, options, inform, &
+            order=order)
+    else if (present(val)) then
+       call analyse_double(check, n, ptr64, row, akeep, options, inform, &
+            val=val)
+    else if (present(topology)) then
+       call analyse_double(check, n, ptr64, row, akeep, options, inform, &
+            topology=topology)
+    else
+       call analyse_double(check, n, ptr64, row, akeep, options, inform)
+    end if
   end subroutine analyse_double_ptr32
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -753,12 +775,18 @@ contains
     ptr64(1:akeep%n+1) = ptr(1:akeep%n+1)
 
     ! Call 64-bit routine
-    if (present(scale)) then
-      call ssids_factor_ptr64_double(posdef, val, akeep, fkeep, options, &
-           inform, scale=scale, ptr=ptr64, row=row)
+    if (present(scale) .and. present(row)) then
+       call ssids_factor_ptr64_double(posdef, val, akeep, fkeep, options, &
+            inform, scale=scale, ptr=ptr64, row=row)
+    else if (present(scale)) then
+       call ssids_factor_ptr64_double(posdef, val, akeep, fkeep, options, &
+            inform, scale=scale, ptr=ptr64)
+    else if (present(row)) then
+       call ssids_factor_ptr64_double(posdef, val, akeep, fkeep, options, &
+            inform, ptr=ptr64, row=row)
     else
-      call ssids_factor_ptr64_double(posdef, val, akeep, fkeep, options, &
-           inform, ptr=ptr64, row=row)
+       call ssids_factor_ptr64_double(posdef, val, akeep, fkeep, options, &
+            inform, ptr=ptr64)
     end if
   end subroutine ssids_factor_ptr32_double
 

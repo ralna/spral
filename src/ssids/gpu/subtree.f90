@@ -762,7 +762,15 @@ contains
 
    if (this%host_factors) then
       ! Call CPU version instead
-      call enquire_indef_gpu_cpu(this, piv_order=piv_order, d=d)
+      if (present(piv_order) .and. present(d)) then
+         call enquire_indef_gpu_cpu(this, piv_order=piv_order, d=d)
+      else if (present(piv_order)) then
+         call enquire_indef_gpu_cpu(this, piv_order=piv_order)
+      else if (present(d)) then
+         call enquire_indef_gpu_cpu(this, d=d)
+      else
+         call enquire_indef_gpu_cpu(this)
+      end if
       return
    end if
 

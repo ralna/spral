@@ -452,7 +452,11 @@ contains
     end do
     ptr2(n+1) = k
 
-    call mo_match(n,row2,ptr2,val2,scale,flag,stat,perm=perm)
+    if (present(perm)) then
+       call mo_match(n,row2,ptr2,val2,scale,flag,stat,perm=perm)
+    else
+       call mo_match(n,row2,ptr2,val2,scale,flag,stat)
+    end if
     if (flag .lt. 0) return
 
     if (struct_rank .ne. n) then

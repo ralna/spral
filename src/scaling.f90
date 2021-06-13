@@ -127,8 +127,13 @@ contains
     end if
     ptr64(1:n+1) = ptr(1:n+1)
 
-    call hungarian_scale_sym_int64(n, ptr64, row, val, scaling, options, &
-         inform, match=match)
+    if (present(match)) then
+       call hungarian_scale_sym_int64(n, ptr64, row, val, scaling, options, &
+            inform, match=match)
+    else
+       call hungarian_scale_sym_int64(n, ptr64, row, val, scaling, options, &
+            inform)
+    end if
   end subroutine hungarian_scale_sym_int32
   
   subroutine hungarian_scale_sym_int64(n, ptr, row, val, scaling, options, &
@@ -197,8 +202,13 @@ contains
     end if
     ptr64(1:n+1) = ptr(1:n+1)
 
-    call hungarian_scale_unsym_int64(m, n, ptr64, row, val, rscaling, cscaling, &
-         options, inform, match=match)
+    if (present(match)) then
+       call hungarian_scale_unsym_int64(m, n, ptr64, row, val, rscaling, cscaling, &
+            options, inform, match=match)
+    else
+       call hungarian_scale_unsym_int64(m, n, ptr64, row, val, rscaling, cscaling, &
+            options, inform)
+    end if
   end subroutine hungarian_scale_unsym_int32
 
   subroutine hungarian_scale_unsym_int64(m, n, ptr, row, val, rscaling, cscaling,&
@@ -262,8 +272,12 @@ contains
     end if
     ptr64(1:n+1) = ptr(1:n+1)
 
-    call auction_scale_sym_int64(n, ptr64, row, val, scaling, options, inform, &
-         match=match)
+    if (present(match)) then
+       call auction_scale_sym_int64(n, ptr64, row, val, scaling, options, inform, &
+            match=match)
+    else
+       call auction_scale_sym_int64(n, ptr64, row, val, scaling, options, inform)
+    end if
   end subroutine auction_scale_sym_int32
 
   subroutine auction_scale_sym_int64(n, ptr, row, val, scaling, options, inform, &
@@ -335,8 +349,13 @@ contains
     end if
     ptr64(1:n+1) = ptr(1:n+1)
 
-    call auction_scale_unsym_int64(m, n, ptr64, row, val, rscaling, cscaling, &
-         options, inform, match=match)
+    if (present(match)) then
+       call auction_scale_unsym_int64(m, n, ptr64, row, val, rscaling, cscaling, &
+            options, inform, match=match)
+    else
+       call auction_scale_unsym_int64(m, n, ptr64, row, val, rscaling, cscaling, &
+            options, inform)
+    end if
   end subroutine auction_scale_unsym_int32
   
   subroutine auction_scale_unsym_int64(m, n, ptr, row, val, rscaling, cscaling, &
