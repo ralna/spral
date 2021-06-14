@@ -1,3 +1,7 @@
+# build directory
+build/*
+
+# autotools
 Makefile.in
 aclocal.m4
 autom4te.cache
@@ -10,7 +14,20 @@ install-sh
 missing
 test-driver
 config.h.in
-config.h.in~
+**/.deps/
+**/.dirstamp/
+
+# cuda
 nvcc_arch_sm
-build/*
+
+# temporary files
 *.swp
+*~
+
+# compiled files
+*.mod
+*.o
+*.log
+
+# static library
+libspral.a
