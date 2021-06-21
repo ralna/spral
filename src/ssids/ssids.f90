@@ -753,13 +753,8 @@ contains
     ptr64(1:akeep%n+1) = ptr(1:akeep%n+1)
 
     ! Call 64-bit routine
-    if (present(scale)) then
-      call ssids_factor_ptr64_double(posdef, val, akeep, fkeep, options, &
-           inform, scale=scale, ptr=ptr64, row=row)
-    else
-      call ssids_factor_ptr64_double(posdef, val, akeep, fkeep, options, &
-           inform, ptr=ptr64, row=row)
-    end if
+    call ssids_factor_ptr64_double(posdef, val, akeep, fkeep, options, &
+         inform, scale=scale, ptr=ptr64, row=row)
   end subroutine ssids_factor_ptr32_double
 
 !****************************************************************************
