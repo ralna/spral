@@ -14,8 +14,8 @@ install-sh
 missing
 test-driver
 config.h.in
-**/.deps/
-**/.dirstamp/
+.deps/
+.dirstamp/
 
 # cuda
 nvcc_arch_sm
