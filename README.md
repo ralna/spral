@@ -35,12 +35,14 @@ our proprietary licenced [HSL Library](http://www.hsl.rl.ac.uk/)
 (free to academics).
 
 ## Installation
+Please note that we require [METIS](http://glaros.dtc.umn.edu/gkhome/metis/metis/overview) to be installed.
+
 We use a standard autotools-based build:
 ```bash
 ./autogen.sh # If compiling from fresh git checkout
 mkdir build
 cd build
-../configure
+../configure --with-metis="-L/path/to/metis -lmetis"
 make
 make install
 ```
