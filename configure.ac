@@ -103,6 +103,11 @@ AS_IF([test "x$enable_profile" == "xyes"], [
    echo "Bite me $enable_profile"
    ])
 
+# Fix for broken CBLAS/LAPACKE (see https://lwn.net/Articles/791393/)
+AC_LANG_PUSH(Fortran)
+AX_APPEND_COMPILE_FLAGS([-fno-optimize-sibling-calls])
+AC_LANG_POP(Fortran)
+
 # Output data
 AC_CONFIG_FILES(Makefile)
 AC_OUTPUT
