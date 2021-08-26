@@ -2,8 +2,6 @@
 
 # SPRAL: The Sparse Parallel Robust Algorithm Library
 
-[![travis status](https://travis-ci.org/ralna/spral.svg?branch=master)](https://travis-ci.org/ralna/spral)
-
 An open-source (BSD) library for sparse linear algebra and associated
 algorithms. It is primarily developed by the Numerical Analysis group at
 STFC Rutherford Appleton Laboratory ([hsl@stfc.ac.uk](mailto:hsl@stfc.ac.uk)).
