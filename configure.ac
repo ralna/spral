@@ -23,6 +23,11 @@ AC_ARG_ENABLE([gpudbg],
    AS_HELP_STRING([--enable-gpudbg], [Enable debugging of CUDA code.])
    )
 
+# Allow debugging of SSIDS analyse phase
+AC_ARG_ENABLE([analdbg],
+   AS_HELP_STRING([--enable-analdbg], [Enable debugging of SSIDS analyse phase.])
+   )
+
 # Check for compilers
 AC_PROG_CC
 AC_PROG_CXX
@@ -53,6 +58,10 @@ AS_IF([test "x$enable_gpudbg" = "xyes"], [
    GPUDBG=yes
    ])
 AM_CONDITIONAL([HAVE_GPUDBG], [test -n "$GPUDBG"])
+
+AS_IF([test "x$enable_analdbg" = "xyes"], [
+   AC_DEFINE(ANALDBG,1,[Define to 1 to enable analyse debugging])
+   ])
 
 # Establish linking flags C->Fortran and how to link C with fortran
 AC_FC_LIBRARY_LDFLAGS
