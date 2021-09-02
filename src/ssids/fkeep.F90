@@ -5,6 +5,11 @@
 !> \author    Florent Lopez
 !
 !> \brief Define ssids_fkeep type and associated procedures (CPU version)
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 module spral_ssids_fkeep
    use, intrinsic :: iso_c_binding
    use :: omp_lib
@@ -54,7 +59,7 @@ module spral_ssids_fkeep
 contains
 
 subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
-  implicit none 
+  implicit none
   type(ssids_akeep), intent(in) :: akeep
   class(ssids_fkeep), target, intent(inout) :: fkeep
   real(wp), dimension(*), target, intent(in) :: val
@@ -183,7 +188,7 @@ subroutine inner_factor_cpu(fkeep, akeep, val, options, inform)
      ! At least some all region subtrees exist
      call profile_add_event("EV_ALL_REGIONS", "Starting processing root subtree", 0)
 #endif
-     
+
      !$omp parallel num_threads(total_threads) default(shared)
      !$omp single
      do i = 1, akeep%nparts
@@ -341,7 +346,7 @@ subroutine enquire_posdef_cpu(akeep, fkeep, d)
          end select
       end associate
    end do
-   
+
 end subroutine enquire_posdef_cpu
 
 !****************************************************************************
