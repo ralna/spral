@@ -2,6 +2,11 @@
 !> \licence   BSD licence, see LICENCE file for details
 !> \author    Jonathan Hogg
 !> \note      Originally based on HSL_MA97 v2.2.0
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 module spral_ssids_anal
   use, intrinsic :: iso_c_binding
 !$ use :: omp_lib
