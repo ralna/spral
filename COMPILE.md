@@ -51,7 +51,7 @@ export NVCC_INCLUDE_FLAGS="${NVCC_INCLUDE_FLAGS}:-I${CUDA_HOME}/include"
 To compile with only multicore CPU support, execute
 ```bash
 cd ${HOME}/Software
-git clone https://github.com/lanl-ansi/spral.git
+git clone https://github.com/ralna/spral.git
 cd spral
 ./autogen.sh # If compiling from scratch.
 mkdir build
@@ -68,7 +68,7 @@ make && make install
 To compile with multicore CPU and NVIDIA GPU support, execute
 ```bash
 cd ${HOME}/Software
-git clone https://github.com/lanl-ansi/spral.git
+git clone https://github.com/ralna/spral.git
 cd spral
 ./autogen.sh # If compiling from scratch.
 mkdir build
