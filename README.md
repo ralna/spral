@@ -28,12 +28,14 @@ documentation](http://www.numerical.rl.ac.uk/spral/doc/latest/C/).
                       Jacobi-conjugate preconditioned gradients
                       method.
 
-If the functionality you are looking for is not support, it may be offered by
+If the functionality you are looking for is not supported, it may be offered by
 our proprietary licenced [HSL Library](http://www.hsl.rl.ac.uk/)
 (free to academics).
 
 ## Installation
-Please note that we require [METIS](http://glaros.dtc.umn.edu/gkhome/metis/metis/overview) to be installed.
+Please note that we require [METIS](http://glaros.dtc.umn.edu/gkhome/metis/metis/overview) 
+and [hwloc](https://www.open-mpi.org/projects/hwloc/) to be installed 
+(hwloc should be compiled with CUDA support if building for GPU).
 
 We use a standard autotools-based build:
 ```bash
