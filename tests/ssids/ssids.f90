@@ -1655,15 +1655,15 @@ subroutine chk_answer(posdef, a, akeep, options, rhs, x, res, &
    write(*,"(a)",advance="no") " *    checking answer...................."
 
    nrhs = 1
-   if(present(fs) .and. .false.) then
-      call ssids_factor_solve(posdef,a%val,nrhs,x,a%n,akeep,fkeep,myoptions, &
-         info)
-      if(info%flag .ne. expected_flag) then
-         write(*, "(a,2i4)") "fail on factor_solve",info%flag,expected_flag
-         errors = errors + 1
-         go to 99
-      endif
-   else
+   !if(present(fs) .and. .false.) then
+   !   call ssids_factor_solve(posdef,a%val,nrhs,x,a%n,akeep,fkeep,myoptions, &
+   !      info)
+   !   if(info%flag .ne. expected_flag) then
+   !      write(*, "(a,2i4)") "fail on factor_solve",info%flag,expected_flag
+   !      errors = errors + 1
+   !      go to 99
+   !   endif
+   !else
       call ssids_factor(posdef,a%val,akeep,fkeep,myoptions,info)
       if(info%flag .ne. expected_flag) then
          write(*, "(a,2i4)") "fail on factor",info%flag,expected_flag
@@ -1677,7 +1677,7 @@ subroutine chk_answer(posdef, a, akeep, options, rhs, x, res, &
          errors = errors + 1
          go to 99
       endif
-   endif
+   !endif
 
    ! Check residual
    call compute_resid(nrhs,a,x,a%n,rhs,a%n,res,a%n)
