@@ -434,7 +434,7 @@ Derived types
       Supernode amalgamation threshold. Two neighbours in the elimination tree
       are merged if they both involve fewer than `nemin` eliminations.
       The default is used if `nemin<1`.
-      The default is 8.
+      The default is 32.
 
    .. c:member bool ignore_numa:
    
