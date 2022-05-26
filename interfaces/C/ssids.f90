@@ -46,6 +46,9 @@ module spral_ssids_ciface
      character(C_CHAR) :: unused(80)
   end type spral_ssids_inform
 
+  integer(C_INT), target :: spral_ssids_empty_dummy_array_int(0)
+  real(C_DOUBLE), target :: spral_ssids_empty_dummy_array_double(0)
+
 contains
   subroutine copy_options_in(coptions, foptions, cindexed)
     implicit none
@@ -184,7 +187,7 @@ subroutine spral_ssids_analyse(ccheck, n, corder, cptr, crow, cval, cakeep, &
   if (C_ASSOCIATED(crow)) then
      call C_F_POINTER(crow, frow, shape=(/ fptr(n+1)-1 /))
   else
-     nullify(frow)
+     frow => spral_ssids_empty_dummy_array_int
   end if
   if (cindexed) then
      allocate(frow_alloc(fptr(n+1)-1))
@@ -288,7 +291,7 @@ subroutine spral_ssids_analyse_ptr32(ccheck, n, corder, cptr, crow, cval, &
   if (C_ASSOCIATED(crow)) then
      call C_F_POINTER(crow, frow, shape=(/ fptr(n+1)-1 /))
   else
-     nullify(frow)
+     frow => spral_ssids_empty_dummy_array_int
   end if
   if (cindexed) then
      allocate(frow_alloc(fptr(n+1)-1))
@@ -380,7 +383,7 @@ subroutine spral_ssids_analyse_coord(n, corder, ne, crow, ccol, cval, cakeep, &
   if (C_ASSOCIATED(crow)) then
      call C_F_POINTER(crow, frow, shape=(/ ne /))
   else
-     nullify(frow)
+     frow => spral_ssids_empty_dummy_array_int
   end if
   if (cindexed) then
      allocate(frow_alloc(ne))
@@ -390,7 +393,7 @@ subroutine spral_ssids_analyse_coord(n, corder, ne, crow, ccol, cval, cakeep, &
   if (C_ASSOCIATED(ccol)) then
      call C_F_POINTER(ccol, fcol, shape=(/ ne /))
   else
-     nullify(fcol)
+     fcol => spral_ssids_empty_dummy_array_int
   end if
   if (cindexed) then
      allocate(fcol_alloc(ne))
@@ -648,7 +651,7 @@ subroutine spral_ssids_solve1(job, cx1, cakeep, cfkeep, coptions, cinform) &
   if (C_ASSOCIATED(cx1)) then
      call C_F_POINTER(cx1, fx1, shape=(/ fakeep%n /))
   else
-     nullify(fx1)
+     fx1 => spral_ssids_empty_dummy_array_double
   end if
 
   ! Call Fortran routine
@@ -692,7 +695,7 @@ subroutine spral_ssids_solve(job, nrhs, cx, ldx, cakeep, cfkeep, coptions, &
   if (C_ASSOCIATED(cx)) then
      call C_F_POINTER(cx, fx, shape=(/ ldx,nrhs /))
   else
-     nullify(fx)
+     fx(1:ldx,1:nrhs) => spral_ssids_empty_dummy_array_double
   end if
   if (C_ASSOCIATED(cakeep)) then
      call C_F_POINTER(cakeep, fakeep)
