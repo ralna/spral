@@ -135,12 +135,12 @@ subroutine spral_ssids_analyse(ccheck, n, corder, cptr, crow, cval, cakeep, &
   logical(C_BOOL), value :: ccheck
   integer(C_INT), value :: n
   type(C_PTR), value :: corder
-  type(C_PTR), value :: cptr
-  type(C_PTR), value :: crow
+  integer(C_LONG_LONG), target, dimension(n+1) :: cptr
   type(C_PTR), value :: cval
   type(C_PTR), intent(inout) :: cakeep
   type(spral_ssids_options), intent(in) :: coptions
   type(spral_ssids_inform), intent(out) :: cinform
+  integer(C_INT), target, dimension(cptr(n+1)-coptions%array_base) :: crow
 
   integer(C_LONG_LONG), dimension(:), pointer :: fptr
   integer(C_LONG_LONG), dimension(:), allocatable, target :: fptr_alloc
@@ -171,21 +171,13 @@ subroutine spral_ssids_analyse(ccheck, n, corder, cptr, crow, cval, cakeep, &
      forder_alloc(:) = forder(:) + 1
      forder => forder_alloc
   endif
-  if (C_ASSOCIATED(cptr)) then
-     call C_F_POINTER(cptr, fptr, shape=(/ n+1 /))
-  else
-     nullify(fptr)
-  end if
+  fptr => cptr
   if (cindexed) then
      allocate(fptr_alloc(n+1))
      fptr_alloc(:) = fptr(:) + 1
      fptr => fptr_alloc
   end if
-  if (C_ASSOCIATED(crow)) then
-     call C_F_POINTER(crow, frow, shape=(/ fptr(n+1)-1 /))
-  else
-     nullify(frow)
-  end if
+  frow => crow
   if (cindexed) then
      allocate(frow_alloc(fptr(n+1)-1))
      frow_alloc(:) = frow(:) + 1
@@ -239,12 +231,12 @@ subroutine spral_ssids_analyse_ptr32(ccheck, n, corder, cptr, crow, cval, &
   logical(C_BOOL), value :: ccheck
   integer(C_INT), value :: n
   type(C_PTR), value :: corder
-  type(C_PTR), value :: cptr
-  type(C_PTR), value :: crow
+  integer(C_INT), target, dimension(n+1) :: cptr
   type(C_PTR), value :: cval
   type(C_PTR), intent(inout) :: cakeep
   type(spral_ssids_options), intent(in) :: coptions
   type(spral_ssids_inform), intent(out) :: cinform
+  integer(C_INT), target, dimension(cptr(n+1)-coptions%array_base) :: crow
 
   integer(C_INT), dimension(:), pointer :: fptr
   integer(C_INT), dimension(:), allocatable, target :: fptr_alloc
@@ -275,21 +267,13 @@ subroutine spral_ssids_analyse_ptr32(ccheck, n, corder, cptr, crow, cval, &
      forder_alloc(:) = forder(:) + 1
      forder => forder_alloc
   endif
-  if (C_ASSOCIATED(cptr)) then
-     call C_F_POINTER(cptr, fptr, shape=(/ n+1 /))
-  else
-     nullify(fptr)
-  end if
+  fptr => cptr
   if (cindexed) then
      allocate(fptr_alloc(n+1))
      fptr_alloc(:) = fptr(:) + 1
      fptr => fptr_alloc
   end if
-  if (C_ASSOCIATED(crow)) then
-     call C_F_POINTER(crow, frow, shape=(/ fptr(n+1)-1 /))
-  else
-     nullify(frow)
-  end if
+  frow => crow
   if (cindexed) then
      allocate(frow_alloc(fptr(n+1)-1))
      frow_alloc(:) = frow(:) + 1
@@ -343,8 +327,8 @@ subroutine spral_ssids_analyse_coord(n, corder, ne, crow, ccol, cval, cakeep, &
   integer(C_INT), value :: n
   type(C_PTR), value :: corder
   integer(C_LONG_LONG), value :: ne
-  type(C_PTR), value :: crow
-  type(C_PTR), value :: ccol
+  integer(C_INT), target, dimension(ne) :: crow
+  integer(C_INT), target, dimension(ne) :: ccol
   type(C_PTR), value :: cval
   type(C_PTR), intent(inout) :: cakeep
   type(spral_ssids_options), intent(in) :: coptions
@@ -377,21 +361,13 @@ subroutine spral_ssids_analyse_coord(n, corder, ne, crow, ccol, cval, cakeep, &
      forder_alloc(:) = forder(:) + 1
      forder => forder_alloc
   endif
-  if (C_ASSOCIATED(crow)) then
-     call C_F_POINTER(crow, frow, shape=(/ ne /))
-  else
-     nullify(frow)
-  end if
+  frow => crow
   if (cindexed) then
      allocate(frow_alloc(ne))
      frow_alloc(:) = frow(:) + 1
      frow => frow_alloc
   end if
-  if (C_ASSOCIATED(ccol)) then
-     call C_F_POINTER(ccol, fcol, shape=(/ ne /))
-  else
-     nullify(fcol)
-  end if
+  fcol => ccol
   if (cindexed) then
      allocate(fcol_alloc(ne))
      fcol_alloc(:) = fcol(:) + 1
@@ -617,7 +593,7 @@ subroutine spral_ssids_solve1(job, cx1, cakeep, cfkeep, coptions, cinform) &
   implicit none
 
   integer(C_INT), value :: job
-  type(C_PTR), value :: cx1
+  real(C_DOUBLE), target, dimension(*) :: cx1
   type(C_PTR), value :: cakeep
   type(C_PTR), value :: cfkeep
   type(spral_ssids_options), intent(in) :: coptions
@@ -645,11 +621,7 @@ subroutine spral_ssids_solve1(job, cx1, cakeep, cfkeep, coptions, cinform) &
   else
      nullify(ffkeep)
   end if
-  if (C_ASSOCIATED(cx1)) then
-     call C_F_POINTER(cx1, fx1, shape=(/ fakeep%n /))
-  else
-     nullify(fx1)
-  end if
+  fx1 => cx1(1:fakeep%n)
 
   ! Call Fortran routine
   if (job .eq. 0) then
@@ -663,21 +635,20 @@ subroutine spral_ssids_solve1(job, cx1, cakeep, cfkeep, coptions, cinform) &
   call copy_inform_out(finform, cinform)
 end subroutine spral_ssids_solve1
 
-subroutine spral_ssids_solve(job, nrhs, cx, ldx, cakeep, cfkeep, coptions, &
+subroutine spral_ssids_solve(job, nrhs, x, ldx, cakeep, cfkeep, coptions, &
      cinform) bind(C)
   use spral_ssids_ciface
   implicit none
 
   integer(C_INT), value :: job
   integer(C_INT), value :: nrhs
-  type(C_PTR), value :: cx
+  real(C_DOUBLE), dimension(ldx,nrhs) :: x
   integer(C_INT), value :: ldx
   type(C_PTR), value :: cakeep
   type(C_PTR), value :: cfkeep
   type(spral_ssids_options), intent(in) :: coptions
   type(spral_ssids_inform), intent(out) :: cinform
 
-  real(C_DOUBLE), dimension(:,:), pointer :: fx
   type(ssids_akeep), pointer :: fakeep
   type(ssids_fkeep), pointer :: ffkeep
   type(ssids_options) :: foptions
@@ -689,11 +660,6 @@ subroutine spral_ssids_solve(job, nrhs, cx, ldx, cakeep, cfkeep, coptions, &
   call copy_options_in(coptions, foptions, cindexed)
 
   ! Translate arguments
-  if (C_ASSOCIATED(cx)) then
-     call C_F_POINTER(cx, fx, shape=(/ ldx,nrhs /))
-  else
-     nullify(fx)
-  end if
   if (C_ASSOCIATED(cakeep)) then
      call C_F_POINTER(cakeep, fakeep)
   else
@@ -707,9 +673,9 @@ subroutine spral_ssids_solve(job, nrhs, cx, ldx, cakeep, cfkeep, coptions, &
 
   ! Call Fortran routine
   if (job .eq. 0) then
-     call ssids_solve(nrhs, fx, ldx, fakeep, ffkeep, foptions, finform)
+     call ssids_solve(nrhs, x, ldx, fakeep, ffkeep, foptions, finform)
   else
-     call ssids_solve(nrhs, fx, ldx, fakeep, ffkeep, foptions, finform, job=job)
+     call ssids_solve(nrhs, x, ldx, fakeep, ffkeep, foptions, finform, job=job)
   end if
 
   ! Copy arguments out
