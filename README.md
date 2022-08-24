@@ -1,5 +1,3 @@
-![STFC logo](http://www.stfc.ac.uk/stfc/includes/themes/MuraSTFC/assets/legacy/2473_web_2.png)
-
 # SPRAL: The Sparse Parallel Robust Algorithm Library
 
 An open-source (BSD) library for sparse linear algebra and associated
