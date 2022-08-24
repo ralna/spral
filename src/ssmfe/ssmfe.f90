@@ -2170,9 +2170,15 @@ contains
 
       k = ilaenv(1, 'ZHETRD', 'U', nep, -1, -1, -1)
       k = max(2*nep - 1, (k + 2)*nep) + 3*nep - 1    
+      allocate ( dwork(max(3*nep - 2, 1), 1), stat = inform%stat )
+      if ( inform%stat /= 0 ) inform%flag = OUT_OF_MEMORY
+      if ( inform%stat /= 0 ) rci%job = SSMFE_ABORT
+      if ( inform%stat /= 0 ) call ssmfe_errmsg( options, inform )
+      if ( inform%stat /= 0 ) return
       call zhegv &
         ( 1, 'V', 'U', nep, keep%V, nep, keep%V(1,1,2), nep, lambda, &
-          keep%U(3*nep, 1), k, keep%U, i )
+          keep%U(3*nep, 1), k, dwork, i )
+      deallocate ( dwork )
       call gemm &
         ( 'N', 'N', n, nep, nep, UNIT, keep%W, n, keep%V, nep, NIL, X, ldX )
 
