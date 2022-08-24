@@ -5,7 +5,8 @@ module spral_blas_iface
   private
   public :: daxpy, dcopy, ddot, dnrm2, dscal
   public :: zaxpy, zcopy, zdotc, dznrm2, zscal
-  public :: dgemm, dtrsm
+  public :: dgemv, dtrsv
+  public :: dgemm, dsyrk, dtrsm
   public :: zgemm, ztrsm
 
   ! Level 1 BLAS
@@ -78,6 +79,26 @@ module spral_blas_iface
     end subroutine zaxpy
   end interface
 
+  ! Level 2 BLAS
+  interface
+    subroutine dgemv( trans, m, n, alpha, a, lda, x, incx, beta, y, incy )
+      implicit none
+      character, intent(in) :: trans
+      integer, intent(in) :: m, n, lda, incx, incy
+      double precision, intent(in) :: alpha, beta
+      double precision, intent(in   ), dimension(lda, n) :: a
+      double precision, intent(in   ), dimension(*) :: x
+      double precision, intent(inout), dimension(*) :: y
+    end subroutine dgemv
+    subroutine dtrsv( uplo, trans, diag, n, a, lda, x, incx )
+      implicit none
+      character, intent(in) :: uplo, trans, diag
+      integer, intent(in) :: n, lda, incx
+      double precision, intent(in   ), dimension(lda, n) :: a
+      double precision, intent(inout), dimension(*) :: x
+    end subroutine dtrsv
+  end interface
+
   ! Level 3 BLAS
   interface
     subroutine dgemm( ta, tb, m, n, k, alpha, a, lda, b, ldb, beta, c, ldc )
@@ -90,6 +111,14 @@ module spral_blas_iface
       double precision, intent(in   ), dimension(ldb, *) :: b
       double precision, intent(inout), dimension(ldc, *) :: c
     end subroutine dgemm
+    subroutine dsyrk( uplo, trans, n, k, alpha, a, lda, beta, c, ldc)
+      implicit none
+      character, intent(in) :: uplo, trans
+      integer, intent(in) :: n, k, lda, ldc
+      double precision, intent(in) :: alpha, beta
+      double precision, intent(in   ), dimension(lda, *) :: a
+      double precision, intent(inout), dimension(ldc, n) :: c
+    end subroutine dsyrk
     subroutine dtrsm( side, uplo, trans, diag, m, n, alpha, a, lda, b, ldb )
       implicit none
       character, intent(in) :: side, uplo, trans, diag

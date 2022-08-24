@@ -3,7 +3,7 @@ module spral_lapack_iface
   implicit none
 
   private
-  public :: dpotrf, dlacpy
+  public :: dpotrf, dlacpy, dsytrf
   public :: zpotrf, zlacpy
 
   interface
@@ -21,6 +21,15 @@ module spral_lapack_iface
       double precision, intent(in ) :: a(lda, n)
       double precision, intent(out) :: b(ldb, n)
     end subroutine dlacpy
+    subroutine dsytrf( uplo, n, a, lda, ipiv, work, lwork, info )
+      implicit none
+      character, intent(in) :: uplo
+      integer, intent(in) :: n, lda, lwork
+      integer, intent(out), dimension(n) :: ipiv
+      integer, intent(out) :: info
+      double precision, intent(inout), dimension(lda, *) :: a
+      double precision, intent(out  ), dimension(*) :: work
+    end subroutine dsytrf
   end interface
 
   interface
