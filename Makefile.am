@@ -23,6 +23,7 @@ AM_NVCC_FLAGS += -gencode arch=compute_75,code=sm_75
 AM_NVCC_FLAGS += -gencode arch=compute_80,code=sm_80
 AM_NVCC_FLAGS += -gencode arch=compute_86,code=sm_86
 AM_NVCC_FLAGS += -gencode arch=compute_87,code=sm_87
+AM_NVCC_FLAGS += -gencode arch=compute_86,code=compute_86
 AM_LD_FLAGS = -lcuda
 NVCCLINK = \
 	$(NVCC) $(NVCCFLAGS) $(AM_NVCC_FLAGS) $(AM_LD_FLAGS) $(LDFLAGS) $(OPENMP_LIB) -o $@
