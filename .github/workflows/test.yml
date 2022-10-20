@@ -13,7 +13,7 @@ jobs:
   linux-tests:
     strategy:
       matrix:
-        gcc_ver: [7, 8, 9, 10]
+        gcc_ver: [9, 10, 11]
     name: 'Linux (gcc-${{ matrix.gcc_ver }})'
     runs-on: ubuntu-latest
     env:
