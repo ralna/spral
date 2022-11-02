@@ -469,6 +469,7 @@ public:
          int ldl = align_lda<T>(blkm);
          int nelim = nodes_[ni].nelim;
          double* dptr = &nodes_[ni].lcol[blkn*ldl];
+         double dum;
          for(int i=0; i<nelim; ) {
             if(i+1==nelim || std::isfinite(dptr[2*i+2])) {
                /* 1x1 pivot */
