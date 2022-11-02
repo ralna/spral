@@ -110,6 +110,8 @@ contains
        msg = 'Unhandled CUBLAS error:'
 !$  case(SSIDS_ERROR_OMP_CANCELLATION)
 !$     msg = 'SSIDS CPU code requires OMP cancellation to be enabled'
+    case(SSIDS_ERROR_NO_METIS)
+       msg = 'METIS is not available'
 
        !
        ! Warnings
