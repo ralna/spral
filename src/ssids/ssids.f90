@@ -1306,6 +1306,7 @@ contains
       ! entries will be placed in d(2,:). The entries are held in pivot order.
 
     character(50)  :: context      ! Procedure name (used when printing).
+    integer :: i, po               ! For shifting C-based pivot order
 
     context = 'ssids_enquire_indef' 
     inform%flag = SSIDS_SUCCESS
@@ -1331,6 +1332,19 @@ contains
     end if
 
     call fkeep%enquire_indef(akeep, inform, piv_order, d)
+
+    ! convert C 0-based pivot order to Fortran 1-based pivot order
+    if (present(piv_order)) then
+      do i = 1, akeep%n
+        po = piv_order(i)
+        if (po >= 0) then
+          piv_order(i) = po + 1
+        else
+          piv_order(i) = po - 1
+        end if
+      end do
+    end if
+
     call inform%print_flag(options, context)
   end subroutine ssids_enquire_indef_double
 
