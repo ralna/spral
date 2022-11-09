@@ -69,8 +69,8 @@ integer(C_INT) function spral_random_matrix_generate_long(cstate, matrix_type, &
   integer(C_INT), value :: matrix_type
   integer(C_INT), value :: m
   integer(C_INT), value :: n
-  integer(C_LONG_LONG), value :: nnz
-  integer(C_LONG_LONG), dimension(n+1), intent(out) :: ptr
+  integer(C_INT64_T), value :: nnz
+  integer(C_INT64_T), dimension(n+1), intent(out) :: ptr
   integer(C_INT), dimension(nnz), intent(out) :: row
   type(C_PTR), value :: cval
   integer(C_INT), value :: flags

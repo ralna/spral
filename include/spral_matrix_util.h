@@ -1,3 +1,5 @@
+#include <stdint.h>
+
 #ifndef SPRAL_MATRIX_UTIL_H
 #define SPRAL_MATRIX_UTIL_H
 
@@ -24,11 +26,11 @@ enum spral_matrix_type {
    SPRAL_MATRIX_REAL_SKEW=6,        SPRAL_MATRIX_CPLX_SKEW=-6
 };
 
-void spral_half_to_full_i64d(int n, long *ptr, int *row, double *a, int base);
+void spral_half_to_full_i64d(int n, int64_t *ptr, int *row, double *a, int base);
 void spral_print_matrix(int lines, enum spral_matrix_type matrix_type, int m,
       int n, const int *ptr, const int *row, const double *val, int base);
 void spral_print_matrix_i64d(int lines, enum spral_matrix_type matrix_type,
-      int m, int n, const long *ptr, const int *row, const double *val,
+      int m, int n, const int64_t *ptr, const int *row, const double *val,
       int base);
 
 #ifdef __cplusplus
