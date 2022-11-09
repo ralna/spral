@@ -13,11 +13,11 @@ module spral_ssids_ciface
      integer(C_INT) :: nemin
      logical(C_BOOL) :: ignore_numa
      logical(C_BOOL) :: use_gpu
-     integer(C_LONG_LONG) :: min_gpu_work
+     integer(C_INT64_T) :: min_gpu_work
      real(C_FLOAT) :: max_load_inbalance
      real(C_FLOAT) :: gpu_perf_coeff
      integer(C_INT) :: scaling
-     integer(C_LONG_LONG) :: small_subtree_threshold
+     integer(C_INT64_T) :: small_subtree_threshold
      integer(C_INT) :: cpu_block_size
      logical(C_BOOL) :: action
      integer(C_INT) :: pivot_method
@@ -35,8 +35,8 @@ module spral_ssids_ciface
      integer(C_INT) :: maxdepth
      integer(C_INT) :: maxfront
      integer(C_INT) :: num_delay
-     integer(C_LONG_LONG) :: num_factor
-     integer(C_LONG_LONG) :: num_flops
+     integer(C_INT64_T) :: num_factor
+     integer(C_INT64_T) :: num_flops
      integer(C_INT) :: num_neg
      integer(C_INT) :: num_sup
      integer(C_INT) :: num_two
@@ -135,15 +135,15 @@ subroutine spral_ssids_analyse(ccheck, n, corder, cptr, crow, cval, cakeep, &
   logical(C_BOOL), value :: ccheck
   integer(C_INT), value :: n
   type(C_PTR), value :: corder
-  integer(C_LONG_LONG), target, dimension(n+1) :: cptr
+  integer(C_INT64_T), target, dimension(n+1) :: cptr
   type(C_PTR), value :: cval
   type(C_PTR), intent(inout) :: cakeep
   type(spral_ssids_options), intent(in) :: coptions
   type(spral_ssids_inform), intent(out) :: cinform
   integer(C_INT), target, dimension(cptr(n+1)-coptions%array_base) :: crow
 
-  integer(C_LONG_LONG), dimension(:), pointer :: fptr
-  integer(C_LONG_LONG), dimension(:), allocatable, target :: fptr_alloc
+  integer(C_INT64_T), dimension(:), pointer :: fptr
+  integer(C_INT64_T), dimension(:), allocatable, target :: fptr_alloc
   integer(C_INT), dimension(:), pointer :: frow
   integer(C_INT), dimension(:), allocatable, target :: frow_alloc
   logical :: fcheck
@@ -326,7 +326,7 @@ subroutine spral_ssids_analyse_coord(n, corder, ne, crow, ccol, cval, cakeep, &
 
   integer(C_INT), value :: n
   type(C_PTR), value :: corder
-  integer(C_LONG_LONG), value :: ne
+  integer(C_INT64_T), value :: ne
   integer(C_INT), target, dimension(ne) :: crow
   integer(C_INT), target, dimension(ne) :: ccol
   type(C_PTR), value :: cval
@@ -429,8 +429,8 @@ subroutine spral_ssids_factor(cposdef, cptr, crow, val, cscale, cakeep, cfkeep,&
   type(spral_ssids_inform), intent(out) :: cinform
   
   logical :: fposdef
-  integer(C_LONG_LONG), dimension(:), pointer :: fptr
-  integer(C_LONG_LONG), dimension(:), allocatable, target :: fptr_alloc
+  integer(C_INT64_T), dimension(:), pointer :: fptr
+  integer(C_INT64_T), dimension(:), allocatable, target :: fptr_alloc
   integer(C_INT), dimension(:), pointer :: frow
   integer(C_INT), dimension(:), allocatable, target :: frow_alloc
   real(C_DOUBLE), dimension(:), pointer :: fscale

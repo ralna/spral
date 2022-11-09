@@ -10,7 +10,7 @@ module spral_rutherford_boeing_ciface
 
   type handle_type
      integer(C_INT), dimension(:), allocatable :: ptr32
-     integer(C_LONG_LONG), dimension(:), allocatable :: ptr64
+     integer(C_INT64_T), dimension(:), allocatable :: ptr64
      integer(C_INT), dimension(:), allocatable :: row
      real(C_DOUBLE), dimension(:), allocatable :: val
   end type handle_type
@@ -163,7 +163,7 @@ integer(C_INT) function spral_rb_peek(filename, m, n, nelt, nvar, nval, &
   character(len=8) :: fidentifier
 
   integer(C_INT), pointer :: temp_int
-  integer(C_LONG_LONG), pointer :: temp_long
+  integer(C_INT64_T), pointer :: temp_long
 
   ! Convert filename to Fortran string
   call convert_string_c2f(filename, ffilename)
@@ -344,7 +344,7 @@ integer(C_INT) function spral_rb_write(filename, matrix_type, m, n, &
   integer(C_INT), value :: matrix_type
   integer(C_INT), value :: m
   integer(C_INT), value :: n
-  integer(C_LONG_LONG), dimension(n+1), target, intent(in) :: ptr
+  integer(C_INT64_T), dimension(n+1), target, intent(in) :: ptr
   integer(C_INT), dimension(ptr(n+1)), target, intent(in) :: row
   type(C_PTR), value :: val
   type(spral_rb_write_options), intent(in) :: options
@@ -355,7 +355,7 @@ integer(C_INT) function spral_rb_write(filename, matrix_type, m, n, &
   character(len=:), allocatable :: ffilename, ftitle, fidentifier
   type(rb_write_options) :: foptions
   logical :: cindexed
-  integer(C_LONG_LONG), dimension(:), pointer :: fptr
+  integer(C_INT64_T), dimension(:), pointer :: fptr
   integer(C_INT), dimension(:), pointer :: frow
   real(C_DOUBLE), dimension(:), pointer :: fval
 

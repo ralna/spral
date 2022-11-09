@@ -7,7 +7,7 @@ module spral_timespec
 
    type, bind(C) :: timespec
       integer(C_INT) :: tv_sec
-      integer(C_LONG_LONG) :: tv_nsec
+      integer(C_INT64_T) :: tv_nsec
    end type timespec
 end module spral_timespec
 

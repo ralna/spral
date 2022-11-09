@@ -6,6 +6,7 @@ extern "C" {
 #endif
 
 #include <stdbool.h>
+#include <stdint.h>
 
 /************************************
  * Derived types
@@ -21,11 +22,11 @@ struct spral_ssids_options {
    int nemin;
    bool ignore_numa;
    bool use_gpu;
-   long min_gpu_work;
+   int64_t min_gpu_work;
    float max_load_inbalance;
    float gpu_perf_coeff;
    int scaling;
-   long small_subtree_threshold;
+   int64_t small_subtree_threshold;
    int cpu_block_size;
    bool action;
    int pivot_method;
@@ -43,8 +44,8 @@ struct spral_ssids_inform {
    int maxdepth;
    int maxfront;
    int num_delay;
-   long num_factor;
-   long num_flops;
+   int64_t num_factor;
+   int64_t num_flops;
    int num_neg;
    int num_sup;
    int num_two;
@@ -55,13 +56,13 @@ struct spral_ssids_inform {
 };
 
 /************************************
- * Basic subroutines 
+ * Basic subroutines
  ************************************/
 
 /* Initialize options to defaults */
 void spral_ssids_default_options(struct spral_ssids_options *options);
 /* Perform analysis phase for CSC data */
-void spral_ssids_analyse(bool check, int n, int *order, const long *ptr,
+void spral_ssids_analyse(bool check, int n, int *order, const int64_t *ptr,
       const int *row, const double *val, void **akeep,
       const struct spral_ssids_options *options,
       struct spral_ssids_inform *inform);
@@ -70,12 +71,12 @@ void spral_ssids_analyse_ptr32(bool check, int n, int *order, const int *ptr,
       const struct spral_ssids_options *options,
       struct spral_ssids_inform *inform);
 /* Perform analysis phase for coordinate data */
-void spral_ssids_analyse_coord(int n, int *order, long ne, const int *row,
+void spral_ssids_analyse_coord(int n, int *order, int64_t ne, const int *row,
       const int *col, const double *val, void **akeep,
       const struct spral_ssids_options *options,
       struct spral_ssids_inform *inform);
 /* Perform numerical factorization */
-void spral_ssids_factor(bool posdef, const long *ptr, const int *row,
+void spral_ssids_factor(bool posdef, const int64_t *ptr, const int *row,
       const double *val, double *scale, void *akeep, void **fkeep,
       const struct spral_ssids_options *options,
       struct spral_ssids_inform *inform);
@@ -97,7 +98,7 @@ int spral_ssids_free_fkeep(void **fkeep);
 int spral_ssids_free(void **akeep, void **fkeep);
 
 /************************************
- * Advanced subroutines 
+ * Advanced subroutines
  ************************************/
 
 /* Retrieve information on pivots (positive-definite case) */
