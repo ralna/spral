@@ -16,7 +16,7 @@ extern "C" {
 int spral_random_matrix_generate(int *state, enum spral_matrix_type matrix_type,
       int m, int n, int nnz, int *ptr, int *row, double *val, int flags);
 /* Generate an m x n random matrix with nnz non-zero entries (nnz,ptr int64_t) */
-int spral_random_matrix_generate_int64_t(int *state,
+int spral_random_matrix_generate_long(int *state,
       enum spral_matrix_type matrix_type, int m, int n, int64_t nnz, int64_t *ptr,
       int *row, double *val, int flags);
 
