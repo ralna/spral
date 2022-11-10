@@ -22,7 +22,7 @@ jobs:
     steps:
       - name: 'Install dependencies'
         run: |
-          brew install hwloc metis
+          brew install automake hwloc metis
       - name: 'Checkout code'
         uses: actions/checkout@v2
       - name: 'Build'
