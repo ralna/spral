@@ -1,0 +1,58 @@
+name: 'Linux Intel Tests'
+
+on:
+  push:
+    branches:
+      - 'master'
+  pull_request:
+    branches:
+      - 'master'
+  workflow_dispatch:
+
+jobs:
+  linux-intel-tests:
+    name: 'Linux Intel (latest)'
+    runs-on: ubuntu-latest
+    env:
+      # Set environ for OpenMP
+      OMP_NESTED: true
+      OMP_CANCELLATION: true
+      OMP_PROC_BIND: true
+      OMP_NUM_THREADS: 4
+    steps:
+      - name: Intel APT repository
+        run: |
+          wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2023.PUB
+          sudo apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS-2023.PUB
+          rm GPG-PUB-KEY-INTEL-SW-PRODUCTS-2023.PUB
+          echo "deb https://apt.repos.intel.com/oneapi all main" | sudo tee /etc/apt/sources.list.d/oneAPI.list
+          sudo apt-get update
+      - name: 'Install dependencies'
+        run: |
+          sudo apt-get update
+          sudo apt-get install intel-oneapi-compiler-fortran \
+                               intel-oneapi-compiler-dpcpp-cpp-and-cpp-classic \
+                               libmetis-dev \
+                               libatlas-base-dev \
+                               liblapack-dev
+      - name: 'Checkout code'
+        uses: actions/checkout@v2
+      - name: Setup Intel oneAPI environment
+        run: |
+          source /opt/intel/oneapi/setvars.sh
+          printenv >> $GITHUB_ENV
+      - name: 'Build'
+        run: |
+          ./autogen.sh
+          ./configure CC=icc \
+                      CXX=icpc \
+                      F77=ifort \
+                      FC=ifort \
+                      CFLAGS="-g -O2 -Wall" \
+                      CXXFLAGS="-g -O2 -Wall -Wextra" \
+                      FCFLAGS="-g -O2 -Wall"
+          make
+      - name: 'Test'
+        run: |
+          make check
+
