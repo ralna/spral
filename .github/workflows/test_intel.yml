@@ -50,7 +50,7 @@ jobs:
                       FC=ifort \
                       CFLAGS="-g -O2 -Wall" \
                       CXXFLAGS="-g -O2 -Wall -Wextra" \
-                      FCFLAGS="-g -O2 -Wall"
+                      FCFLAGS="-g -O2 -warn all"
           make
       - name: 'Test'
         run: |
