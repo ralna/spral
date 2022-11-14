@@ -30,8 +30,8 @@ jobs:
           ./autogen.sh
           ./configure CC=clang \
                       CXX=clang++ \
-                      F77=flang \
-                      FC=flang \
+                      F77=gfortran-11 \
+                      FC=gfortran-11 \
                       CFLAGS="-g -O2 -Wall" \
                       CXXFLAGS="-g -O2 -Wall" \
                       FCFLAGS="-g -O2 -Wall -pedantic"
