@@ -78,7 +78,6 @@ fi
 AC_SUBST(CXXLIB)
 
 # Check for features we want
-SPRAL_STD_ALIGN # Check for std::align
 AC_MSG_CHECKING(for sched_getcpu())
 AC_TRY_LINK([#include <sched.h>], [sched_getcpu();],
    AC_MSG_RESULT(yes); AC_DEFINE(HAVE_SCHED_GETCPU, 1, [Define to 1 if you have sched_getcpu().]),
