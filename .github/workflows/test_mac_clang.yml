@@ -33,7 +33,7 @@ jobs:
                       F77=gfortran-11 \
                       FC=gfortran-11 \
                       CFLAGS="-g -O2 -Wall" \
-                      CXXFLAGS="-g -O2 -Wall" \
+                      CXXFLAGS="-g -O2 -Wall -std=c++17" \
                       FCFLAGS="-g -O2 -Wall -pedantic"
           make
       - name: 'Test'
