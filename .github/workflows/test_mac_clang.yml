@@ -30,11 +30,12 @@ jobs:
           ./autogen.sh
           ./configure CC=clang \
                       CXX=clang++ \
-                      F77=gfortran-11 \
-                      FC=gfortran-11 \
+                      F77=gfortran-12 \
+                      FC=gfortran-12 \
                       CFLAGS="-g -O2 -Wall" \
                       CXXFLAGS="-g -O2 -Wall -std=c++17" \
-                      FCFLAGS="-g -O2 -Wall -pedantic"
+                      FCFLAGS="-g -O2 -Wall -pedantic" \
+                      --with-metis="-L$(brew --prefix metis)/lib -lmetis"
           make
       - name: 'Test'
         run: |
