@@ -10,8 +10,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  mac-tests:
-    name: 'MacOS (clang)'
+  mac-intel-tests:
+    name: 'MacOS (intel)'
     runs-on: macos-latest
     env:
       # Set environ for OpenMP
@@ -22,20 +22,24 @@ jobs:
     steps:
       - name: 'Install dependencies'
         run: |
-          brew install automake hwloc metis openblas
+          brew install automake hwloc metis
+          pip install intel-fortran-rt dpcpp-cpp-rt
       - name: 'Checkout code'
         uses: actions/checkout@v2
+      - name: Setup Intel oneAPI environment
+        run: |
+          source /opt/intel/oneapi/setvars.sh
+          printenv >> $GITHUB_ENV
       - name: 'Build'
         run: |
           ./autogen.sh
-          ./configure CC=clang \
-                      CXX=clang++ \
-                      F77=gfortran-12 \
-                      FC=gfortran-12 \
-                      CFLAGS="-g -O2 -Wall -I$(brew --prefix openblas)/include" \
-                      CXXFLAGS="-g -O2 -Wall -std=c++17 -I$(brew --prefix openblas)/include" \
-                      FCFLAGS="-g -O2 -Wall -pedantic" \
-                      LIBS="-lc++ -L$(brew --prefix openblas)/lib -lopenblas" \
+          ./configure CC=icc \
+                      CXX=icpc \
+                      F77=ifort \
+                      FC=ifort \
+                      CFLAGS="-g -O2 -Wall -diag-disable=10441" \
+                      CXXFLAGS="-g -O2 -Wall -Wextra -diag-disable=10441" \
+                      FCFLAGS="-g -O2 -warn all" \
                       --with-metis="-L$(brew --prefix metis)/lib -lmetis"
           make
       - name: 'Test'
