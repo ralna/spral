@@ -48,8 +48,8 @@ jobs:
                       CXX=icpc \
                       F77=ifort \
                       FC=ifort \
-                      CFLAGS="-g -O2 -Wall" \
-                      CXXFLAGS="-g -O2 -Wall -Wextra" \
+                      CFLAGS="-g -O2 -Wall -diag-disable=10441" \
+                      CXXFLAGS="-g -O2 -Wall -Wextra -diag-disable=10441" \
                       FCFLAGS="-g -O2 -warn all"
           make
       - name: 'Test'
