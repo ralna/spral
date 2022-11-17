@@ -1,4 +1,4 @@
-name: 'Linux Intel Tests'
+name: 'Linux Tests'
 
 on:
   push:
@@ -11,7 +11,7 @@ on:
 
 jobs:
   linux-intel-tests:
-    name: 'Linux Intel (latest)'
+    name: 'Linux (intel)'
     runs-on: ubuntu-latest
     env:
       # Set environ for OpenMP
