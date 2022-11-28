@@ -32,7 +32,7 @@ namespace spral { namespace ssids { namespace cpu {
 void cholesky_factor(int m, int n, double* a, int lda, double beta, double* upd, int ldupd, int blksz, int *info) {
    if(n < blksz) {
       // Adjust so blocks have blksz**2 entries
-      blksz = int((long(blksz)*blksz) / n);
+      blksz = int((int64_t(blksz)*blksz) / n);
    }
 
    #pragma omp atomic write

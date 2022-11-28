@@ -125,7 +125,7 @@ void factor_node_indef(
       node.free_contrib();
    } else if(node.nelim==0) {
       // FIXME: If we fix the above, we don't need this explict zeroing
-      long contrib_size = m-n;
+      int64_t contrib_size = m-n;
       memset(node.contrib, 0, contrib_size*contrib_size*sizeof(T));
    }
 }
