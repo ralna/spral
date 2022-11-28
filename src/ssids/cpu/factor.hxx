@@ -8,6 +8,7 @@
 /* Standard headers */
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <sstream>
 #include <stdexcept>
 

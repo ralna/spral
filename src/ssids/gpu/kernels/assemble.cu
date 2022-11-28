@@ -1,7 +1,9 @@
 #ifdef __cplusplus
 #include <cmath>
+#include <cstdint>
 #else
 #include <math.h>
+#include <stdint.h>
 #endif
 
 #include <cuda_runtime.h>

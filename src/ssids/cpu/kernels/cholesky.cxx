@@ -6,6 +6,7 @@
 #include "ssids/cpu/kernels/cholesky.hxx"
 
 #include <algorithm>
+#include <cstdint>
 #include <cstdio> // FIXME: remove as only used for debug
 
 #include "ssids/profile.hxx"
