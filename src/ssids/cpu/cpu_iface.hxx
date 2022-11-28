@@ -6,6 +6,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 
 namespace spral { namespace ssids { namespace cpu {
 
