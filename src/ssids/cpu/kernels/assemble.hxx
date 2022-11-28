@@ -54,11 +54,11 @@ void add_a_block(int from, int to, NumericNode& node, T const* aval,
    if(scaling) {
       /* Scaling to apply */
       for(int i=from; i<to; ++i) {
-         long src  = snode.amap[2*i+0] - 1; // amap contains 1-based values
-         long dest = snode.amap[2*i+1] - 1; // amap contains 1-based values
+         int64_t src  = snode.amap[2*i+0] - 1; // amap contains 1-based values
+         int64_t dest = snode.amap[2*i+1] - 1; // amap contains 1-based values
          int c = dest / snode.nrow;
          int r = dest % snode.nrow;
-         long k = c*ldl + r;
+         int64_t k = c*ldl + r;
          if(r >= snode.ncol) k += node.ndelay_in;
          T rscale = scaling[ snode.rlist[r]-1 ];
          T cscale = scaling[ snode.rlist[c]-1 ];
@@ -67,11 +67,11 @@ void add_a_block(int from, int to, NumericNode& node, T const* aval,
    } else {
       /* No scaling to apply */
       for(int i=from; i<to; ++i) {
-         long src  = snode.amap[2*i+0] - 1; // amap contains 1-based values
-         long dest = snode.amap[2*i+1] - 1; // amap contains 1-based values
+         int64_t src  = snode.amap[2*i+0] - 1; // amap contains 1-based values
+         int64_t dest = snode.amap[2*i+1] - 1; // amap contains 1-based values
          int c = dest / snode.nrow;
          int r = dest % snode.nrow;
-         long k = c*ldl + r;
+         int64_t k = c*ldl + r;
          if(r >= snode.ncol) k += node.ndelay_in;
          node.lcol[k] = aval[src];
       }

@@ -16,7 +16,7 @@ namespace spral { namespace ssids { namespace cpu {
 /** Symbolic factorization of a subtree to be factored on the CPU */
 class SymbolicSubtree {
 public:
-   SymbolicSubtree(int n, int sa, int en, int const* sptr, int const* sparent, long const* rptr, int const* rlist, long const* nptr, long const* nlist, int ncontrib, int const* contrib_idx, struct cpu_factor_options const& options)
+   SymbolicSubtree(int n, int sa, int en, int const* sptr, int const* sparent, int64_t const* rptr, int const* rlist, int64_t const* nptr, int64_t const* nlist, int ncontrib, int const* contrib_idx, struct cpu_factor_options const& options)
    : n(n), nnodes_(en-sa), nodes_(nnodes_+1)
    {
       // Adjust sa to C indexing (en is not used except in nnodes_ init above)
@@ -55,7 +55,7 @@ public:
          nfactor_ += static_cast<size_t>(nodes_[ni].nrow)*nodes_[ni].ncol;
       /* Find small leaf subtrees */
       // Count flops below each node
-      std::vector<long> flops(nnodes_+1, 0);
+      std::vector<int64_t> flops(nnodes_+1, 0);
       for(int ni=0; ni<nnodes_; ++ni) {
          for(int k=0; k<nodes_[ni].ncol; ++k)
             flops[ni] += (nodes_[ni].nrow - k)*(nodes_[ni].nrow - k);

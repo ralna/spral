@@ -34,7 +34,7 @@ class SmallLeafNumericSubtree<true, T, FactorAllocator, PoolAllocator> {
    typedef typename std::allocator_traits<FactorAllocator>::template rebind_traits<int> FAIntTraits;
    typedef std::allocator_traits<PoolAllocator> PATraits;
 public:
-   SmallLeafNumericSubtree(SmallLeafSymbolicSubtree const& symb, std::vector<NumericNode<T,PoolAllocator>>& old_nodes, T const* aval, T const* scaling, FactorAllocator& factor_alloc, PoolAllocator& pool_alloc, std::vector<Workspace>& work_vec, struct cpu_factor_options const& options, ThreadStats& stats) 
+   SmallLeafNumericSubtree(SmallLeafSymbolicSubtree const& symb, std::vector<NumericNode<T,PoolAllocator>>& old_nodes, T const* aval, T const* scaling, FactorAllocator& factor_alloc, PoolAllocator& pool_alloc, std::vector<Workspace>& work_vec, struct cpu_factor_options const& options, ThreadStats& stats)
       : old_nodes_(old_nodes), symb_(symb), lcol_(FADoubleTraits::allocate(factor_alloc, symb.nfactor_))
    {
       Workspace& work = work_vec[omp_get_thread_num()];
@@ -78,8 +78,8 @@ void add_a(
    if(scaling) {
       /* Scaling to apply */
       for(int i=0; i<snode.num_a; i++) {
-         long src  = snode.amap[2*i+0] - 1; // amap contains 1-based values
-         long dest = snode.amap[2*i+1] - 1; // amap contains 1-based values
+         int64_t src  = snode.amap[2*i+0] - 1; // amap contains 1-based values
+         int64_t dest = snode.amap[2*i+1] - 1; // amap contains 1-based values
          int c = dest / snode.nrow;
          int r = dest % snode.nrow;
          T rscale = scaling[ snode.rlist[r]-1 ];
@@ -90,8 +90,8 @@ void add_a(
    } else {
       /* No scaling to apply */
       for(int i=0; i<snode.num_a; i++) {
-         long src  = snode.amap[2*i+0] - 1; // amap contains 1-based values
-         long dest = snode.amap[2*i+1] - 1; // amap contains 1-based values
+         int64_t src  = snode.amap[2*i+0] - 1; // amap contains 1-based values
+         int64_t dest = snode.amap[2*i+1] - 1; // amap contains 1-based values
          int c = dest / snode.nrow;
          int r = dest % snode.nrow;
          size_t k = c*ldl + r;
@@ -118,7 +118,7 @@ void assemble(
    int ncol = snode.ncol;
 
    /* Get space for contribution block + zero it */
-   long contrib_dimn = snode.nrow - snode.ncol;
+   int64_t contrib_dimn = snode.nrow - snode.ncol;
    node->contrib = (contrib_dimn > 0) ? PATraits::allocate(pool_alloc, contrib_dimn*contrib_dimn) : nullptr;
    if(node->contrib)
       memset(node->contrib, 0, contrib_dimn*contrib_dimn*sizeof(T));
@@ -186,7 +186,7 @@ class SmallLeafNumericSubtree<false, T, FactorAllocator, PoolAllocator> {
    typedef typename std::allocator_traits<FactorAllocator>::template rebind_traits<int> FAIntTraits;
    typedef std::allocator_traits<PoolAllocator> PATraits;
 public:
-   SmallLeafNumericSubtree(SmallLeafSymbolicSubtree const& symb, std::vector<NumericNode<T,PoolAllocator>>& old_nodes, T const* aval, T const* scaling, FactorAllocator& factor_alloc, PoolAllocator& pool_alloc, std::vector<Workspace>& work_vec, struct cpu_factor_options const& options, ThreadStats& stats) 
+   SmallLeafNumericSubtree(SmallLeafSymbolicSubtree const& symb, std::vector<NumericNode<T,PoolAllocator>>& old_nodes, T const* aval, T const* scaling, FactorAllocator& factor_alloc, PoolAllocator& pool_alloc, std::vector<Workspace>& work_vec, struct cpu_factor_options const& options, ThreadStats& stats)
    : old_nodes_(old_nodes), symb_(symb)
    {
       Workspace& work = work_vec[omp_get_thread_num()];
@@ -244,7 +244,7 @@ private:
       memset(node.lcol, 0, len*sizeof(T));
 
       /* Get space for contribution block + (explicitly do not zero it!) */
-      long contrib_dimn = snode.nrow - snode.ncol;
+      int64_t contrib_dimn = snode.nrow - snode.ncol;
       node.contrib = (contrib_dimn > 0) ? PATraits::allocate(pool_alloc, contrib_dimn*contrib_dimn) : nullptr;
 
       /* Alloc + set perm for expected eliminations at this node (delays are set
@@ -257,11 +257,11 @@ private:
       if(scaling) {
          /* Scaling to apply */
          for(int i=0; i<snode.num_a; i++) {
-            long src  = snode.amap[2*i+0] - 1; // amap contains 1-based values
-            long dest = snode.amap[2*i+1] - 1; // amap contains 1-based values
+            int64_t src  = snode.amap[2*i+0] - 1; // amap contains 1-based values
+            int64_t dest = snode.amap[2*i+1] - 1; // amap contains 1-based values
             int c = dest / snode.nrow;
             int r = dest % snode.nrow;
-            long k = c*ldl + r;
+            int64_t k = c*ldl + r;
             if(r >= snode.ncol) k += node.ndelay_in;
             T rscale = scaling[ snode.rlist[r]-1 ];
             T cscale = scaling[ snode.rlist[c]-1 ];
@@ -270,11 +270,11 @@ private:
       } else {
          /* No scaling to apply */
          for(int i=0; i<snode.num_a; i++) {
-            long src  = snode.amap[2*i+0] - 1; // amap contains 1-based values
-            long dest = snode.amap[2*i+1] - 1; // amap contains 1-based values
+            int64_t src  = snode.amap[2*i+0] - 1; // amap contains 1-based values
+            int64_t dest = snode.amap[2*i+1] - 1; // amap contains 1-based values
             int c = dest / snode.nrow;
             int r = dest % snode.nrow;
-            long k = c*ldl + r;
+            int64_t k = c*ldl + r;
             if(r >= snode.ncol) k += node.ndelay_in;
             node.lcol[k] = aval[src];
          }
@@ -384,7 +384,7 @@ private:
          node->free_contrib();
       } else if(node->nelim==0) {
          // FIXME: If we fix the above, we don't need this explict zeroing
-         long contrib_size = m-n;
+         int64_t contrib_size = m-n;
          memset(node->contrib, 0, contrib_size*contrib_size*sizeof(T));
       }
    }
