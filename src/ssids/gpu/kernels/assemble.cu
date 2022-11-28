@@ -21,12 +21,12 @@
 namespace /* anon */ {
 
 struct load_nodes_type {
-  long nnz;    // Number of entries to map
+  int64_t nnz;    // Number of entries to map
   int lda;    // Leading dimension of A
   int ldl;    // Leading dimension of L
   double *lcol; // Pointer to non-delay part of L
-  long offn;   // Offset into nlist
-  long offr;  // Offset into rlist
+  int64_t offn;   // Offset into nlist
+  int64_t offr;  // Offset into rlist
 };
 
 /*
@@ -39,22 +39,22 @@ struct load_nodes_type {
 __global__ void
 cu_load_nodes(
     const struct load_nodes_type *lndata,
-    const long *nlist,
+    const int64_t *nlist,
     const double *aval
 ) {
    lndata += blockIdx.x;
-   const long nnz = lndata->nnz;
+   const int64_t nnz = lndata->nnz;
    const int lda = lndata->lda;
    const int ldl = lndata->ldl;
 
    nlist += 2*lndata->offn;
    double *const lval = lndata->lcol;
-  
+
    for (int i = threadIdx.x; i < nnz; i += blockDim.x) {
      // Note: nlist is 1-indexed, not 0 indexed, so we have to adjust
      const int r = (nlist[2*i+1] - 1) % lda; // row index
      const int c = (nlist[2*i+1] - 1) / lda; // col index
-     const long sidx = nlist[2*i+0] - 1; // source index
+     const int64_t sidx = nlist[2*i+0] - 1; // source index
      lval[r + c*ldl] = aval[sidx];
    }
 }
@@ -70,7 +70,7 @@ cu_load_nodes(
 __global__ void
 cu_load_nodes_sc(
     const struct load_nodes_type *lndata,
-    const long *nlist,
+    const int64_t *nlist,
     const int *rlist,
     const double *scale,
     const double *aval
@@ -83,12 +83,12 @@ cu_load_nodes_sc(
    nlist += 2*lndata->offn;
    double *const lval = lndata->lcol;
    rlist += lndata->offr;
-  
+
    for (int i = threadIdx.x; i < nnz; i += blockDim.x) {
       // Note: nlist and rlist are 1-indexed, not 0 indexed, so we adjust
       const int r = (nlist[2*i+1] - 1) % lda; // row index
       const int c = (nlist[2*i+1] - 1) / lda; // col index
-      const long sidx = nlist[2*i+0] - 1; // source index
+      const int64_t sidx = nlist[2*i+0] - 1; // source index
       const double rs = scale[rlist[r] - 1]; // row scaling
       const double cs = scale[rlist[c] - 1]; // col scaling
       lval[r + c*ldl] = rs * aval[sidx] * cs;
@@ -99,19 +99,19 @@ cu_load_nodes_sc(
 // maxabs must be initialized to zeros
 template< typename ELEMENT_TYPE, unsigned int BLOCK_SIZE >
 __global__ void
-cu_max_abs( const long n, const ELEMENT_TYPE *const u, ELEMENT_TYPE *const maxabs )
+cu_max_abs( const int64_t n, const ELEMENT_TYPE *const u, ELEMENT_TYPE *const maxabs )
 {
   __shared__ volatile ELEMENT_TYPE tmax[BLOCK_SIZE];
-  
+
   tmax[threadIdx.x] = 0.0;
-  for ( long i = threadIdx.x + blockDim.x*blockIdx.x; i < n; 
+  for ( int64_t i = threadIdx.x + blockDim.x*blockIdx.x; i < n;
         i += blockDim.x*gridDim.x ) {
     const ELEMENT_TYPE v = fabs(u[i]);
     if ( v > tmax[threadIdx.x] )
       tmax[threadIdx.x] = v;
   }
   __syncthreads();
-  
+
   for ( int inc = 1; inc < BLOCK_SIZE; inc *= 2 ) {
     if ( 2*inc*threadIdx.x + inc < BLOCK_SIZE
         && tmax[2*inc*threadIdx.x + inc] > tmax[2*inc*threadIdx.x] )
@@ -134,7 +134,7 @@ struct assemble_cp_type {
   int cm; // Number of rows in child
   int cn; // Number of columns in child
   int ldc; // Leading dimension of child
-  long cvoffset; // Offset to start of child node values
+  int64_t cvoffset; // Offset to start of child node values
   double *cv; // Pointer to start of child node values
 
   // Alignment data
@@ -196,7 +196,7 @@ void __global__ assemble(
    // Initialize local information
    int m = min(blk_sz_x, cpdata->cm - bx*blk_sz_x);
    int n = min(blk_sz_y, cpdata->cn - by*blk_sz_y);
-   const double *src = 
+   const double *src =
       cpdata->cv + ldc*by*blk_sz_y + bx*blk_sz_x;
    double *dest = cpdata->pval;
    int *rows = cpdata->rlist_direct + bx*blk_sz_x;
@@ -215,7 +215,7 @@ void __global__ assemble(
          for(int i=0; i<blk_sz_x/ntx; i++) {
             if( threadIdx.x+i*ntx < m ) {
                int row = rows[threadIdx.x+i*ntx]-1;
-               dest[row + col*ldp] += 
+               dest[row + col*ldp] +=
                   src[threadIdx.x+i*ntx + (threadIdx.y+j*nty)*ldc];
             }
          }
@@ -237,10 +237,10 @@ struct assemble_delay_type {
   int lds; // Leading dimension of src (child)
   double *dval; // Pointer to dest (parent)
   double *sval; // Pointer to src (child)
-  long roffset; // Offset to rlist_direct
+  int64_t roffset; // Offset to rlist_direct
 };
 
-/* Copies delays from child to parent using one block per parent 
+/* Copies delays from child to parent using one block per parent
  * Note: src and dest pointers both contained in dinfo
  */
 void __global__ add_delays(
@@ -269,7 +269,7 @@ void __global__ add_delays(
          }
       }
    }
-} 
+}
 
 } /* anon namespace */
 
@@ -325,7 +325,7 @@ void spral_ssids_assemble(const cudaStream_t *stream, int nblk, int blkoffset,
 
 // Note: modified value lval is passed in via pointer in lndata, not as argument
 void spral_ssids_load_nodes( const cudaStream_t *stream, int nblocks,
-      const struct load_nodes_type *lndata, const long* list,
+      const struct load_nodes_type *lndata, const int64_t* list,
       const double* mval ) {
   for ( int i = 0; i < nblocks; i += MAX_CUDA_BLOCKS ) {
     int nb = min(MAX_CUDA_BLOCKS, nblocks - i);
@@ -336,7 +336,7 @@ void spral_ssids_load_nodes( const cudaStream_t *stream, int nblocks,
 
 // Note: modified value lval is passed in via pointer in lndata, not as argument
 void spral_ssids_load_nodes_sc( const cudaStream_t *stream, int nblocks,
-      const struct load_nodes_type *lndata, const long* list, const int* rlist,
+      const struct load_nodes_type *lndata, const int64_t* list, const int* rlist,
       const double* scale, const double* mval ) {
   for ( int i = 0; i < nblocks; i += MAX_CUDA_BLOCKS ) {
     int nb = min(MAX_CUDA_BLOCKS, nblocks - i);
@@ -345,8 +345,8 @@ void spral_ssids_load_nodes_sc( const cudaStream_t *stream, int nblocks,
   }
 }
 
-void spral_ssids_max_abs( const cudaStream_t *stream, 
-      int nb, long n, double* u, double* buff, double* maxabs )
+void spral_ssids_max_abs( const cudaStream_t *stream,
+      int nb, int64_t n, double* u, double* buff, double* maxabs )
 {
   cudaMemsetAsync(buff, 0, nb*sizeof(double), *stream);
   cudaStreamSynchronize(*stream);
