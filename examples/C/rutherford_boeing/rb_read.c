@@ -1,5 +1,6 @@
 /* examples/C/rutherford_boeing/rb_read.c
  * Example code for SPRAL_RUTHERFORD_BOEING */
+#include <stdint.h>
 #include <stdio.h>
 #include "spral.h"
 
@@ -8,7 +9,7 @@ int main(void) {
    void *handle;
    char title[73]; // Maximum length 72 character + '\0'
    int matrix_type, m, n;
-   long *ptr;
+   int64_t *ptr;
    int *row;
    double *val;
 

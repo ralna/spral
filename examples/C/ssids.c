@@ -1,6 +1,7 @@
 /* examples/C/ssids.c - Example code for SPRAL_SSIDS package */
 #include "spral.h"
 #include <stdlib.h>
+#include <stdint.h>
 #include <stdio.h>
 
 int main(void) {
@@ -22,7 +23,7 @@ int main(void) {
     * (    1       2 ) */
    bool posdef = false;
    int n = 5;
-   long ptr[]   = { 1,        3,             6,         8,   9,  10 };
+   int64_t ptr[]   = { 1,        3,             6,         8,   9,  10 };
    int row[]    = { 1,   2,   2,   3,   5,   3,   4,    4,   5   };
    double val[] = { 2.0, 1.0, 4.0, 1.0, 1.0, 3.0, 2.0, -1.0, 2.0 };
 

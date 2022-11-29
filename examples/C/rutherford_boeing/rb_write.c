@@ -1,5 +1,6 @@
 /* examples/C/rutherford_boeing/rb_write.c
  * Example code for SPRAL_RUTHERFORD_BOEING */
+#include <stdint.h>
 #include <stdio.h>
 #include "spral.h"
 
@@ -15,7 +16,7 @@ int main(void) {
     * (       2      )
     * (    8       2 ) */
    int n = 5;
-   long ptr[]   = { 0,        2,             5,      7,7,   8 };
+   int64_t ptr[]   = { 0,        2,             5,      7,7,   8 };
    int row[]    = { 0,   1,   1,   2,   4,   2,   3,   4   };
    double val[] = { 2.0, 1.0, 4.0, 1.0, 8.0, 3.0, 2.0, 2.0 };
 

@@ -1,6 +1,7 @@
 /* examples/C/random.c - Example code for SPRAL_RANDOM package */
 #include "spral.h"
 #include <limits.h>
+#include <stdint.h>
 #include <stdio.h>
 
 #define bool2str(VAL) ( (VAL) ? "true" : "false" )
@@ -20,7 +21,7 @@ int main(void) {
    printf("Sample Unif(1, ..., 20)         = %16d\n",
          spral_random_integer(&state, 20));
    printf("Sample Unif(1, ..., 20*INT_MAX) = %16ld\n",
-         spral_random_long(&state, 20l*INT_MAX));
+         spral_random_long(&state,((int64_t)20)*INT_MAX));
    printf("Sample B(1,0.5)                 = %16s\n",
          bool2str(spral_random_logical(&state)));
 
@@ -36,7 +37,7 @@ int main(void) {
    printf("Sample Unif(1, ..., 20)         = %16d\n",
          spral_random_integer(&state, 20));
    printf("Sample Unif(1, ..., 20*INT_MAX) = %16ld\n",
-         spral_random_long(&state, 20l*INT_MAX));
+         spral_random_long(&state, ((int64_t)20)*INT_MAX));
    printf("Sample B(1,0.5)                 = %16s\n",
          bool2str(spral_random_logical(&state)));
 
