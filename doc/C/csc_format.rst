@@ -8,7 +8,7 @@ This standard data format consists of the following data:
 
    int    m;                  /* number of rows (unsymmetric only) */
    int    n;                  /* number of columns */
-   int    ptr[n+1];           /* column pointers (may have type long) */
+   int    ptr[n+1];           /* column pointers (may have type int64_t) */
    int    row[ ptr[n]-1 ];    /* row indices */
    double val[ ptr[n]-1 ];    /* numerical values */
 
@@ -18,7 +18,7 @@ the row number and `val[k]` holds the value of the k-th entry.
 The `ptr[]` array stores column pointers such that `ptr[i]` is
 the position in `row[]` and `val[]` of
 the first entry in the i-th column, and `ptr[n]` is
-the total number of entries. `ptr[]` may be either `int` or `long`.
+the total number of entries. `ptr[]` may be either `int` or `int64_t`.
 There must be no duplicate or out of range entries.
 Entries that are zero, including those on the diagonal, need not be specified.
 
