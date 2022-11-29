@@ -46,7 +46,7 @@ Subroutines
 
    :param options: Structure to be initialised.
 
-.. c:function:: int rb_peek(const char *filename, int *m, int *n, long *nelt, long *nvar, long *nval, enum spral_matrix_type *matrix_type, char *type_code, char *title, char *identifier)
+.. c:function:: int rb_peek(const char *filename, int *m, int *n, int64_t *nelt, int64_t *nvar, int64_t *nval, enum spral_matrix_type *matrix_type, char *type_code, char *title, char *identifier)
 
    Returns information about a matrix :math:`A` stored in a specified file using
    Rutherford Boring format (only information from the file header is accessed).
@@ -71,7 +71,7 @@ Subroutines
       character buffer. Identifier field of file.
    :returns: Exit status, see :ref:`table below <exit_status>`.
 
-.. c:function:: int spral_rb_read(const char *filename, void **handle, enum spral_matrix_type *matrix_type, int *m, int *n, long **ptr, int **row, double **val, const struct spral_rb_read_options *options, char *title, char *identifier, int *state)
+.. c:function:: int spral_rb_read(const char *filename, void **handle, enum spral_matrix_type *matrix_type, int *m, int *n, int64_t **ptr, int **row, double **val, const struct spral_rb_read_options *options, char *title, char *identifier, int *state)
 
    Reads a CSC matrix from a file stored in RB format.
    
@@ -122,7 +122,7 @@ Subroutines
 
       Users are encouraged to prefer the 64-bit version.
 
-.. c:function:: int spral_rb_write(const char *filename, enum spral_matrix_type matrix_type, int m, int n, const long *ptr, const int *row, const double * val, const struct spral_rb_write_options *options, const char *title, const char *identifier)
+.. c:function:: int spral_rb_write(const char *filename, enum spral_matrix_type matrix_type, int m, int n, const int64_t *ptr, const int *row, const double * val, const struct spral_rb_write_options *options, const char *title, const char *identifier)
 
    Writes a CSC format matrix to the specified file in RB format.
 

@@ -105,7 +105,7 @@ Basic Subroutines
 
    :param options: Structure to be initialised.
 
-.. c:function:: void spral_ssids_analyse(bool check, int n, int *order, const long *ptr, const int *row, const double *val, void **akeep, const struct spral_ssids_options *options, struct spral_ssids_inform *inform)
+.. c:function:: void spral_ssids_analyse(bool check, int n, int *order, const int64_t *ptr, const int *row, const double *val, void **akeep, const struct spral_ssids_options *options, struct spral_ssids_inform *inform)
 
    Perform the analyse (symbolic) phase of the factorization for a matrix
    supplied in :doc:`CSC format<csc_format>`. The resulting symbolic factors
@@ -149,7 +149,7 @@ Basic Subroutines
    Provided for backwards comptability, users are encourage to use 64-bit ptr
    in new code.
 
-.. c:function:: void spral_ssids_analyse_coord(int n, int *order, long ne, const int *row, const int *col, const double *val, void **akeep, const struct spral_ssids_options *options, struct spral_ssids_inform *inform)
+.. c:function:: void spral_ssids_analyse_coord(int n, int *order, int64_t ne, const int *row, const int *col, const double *val, void **akeep, const struct spral_ssids_options *options, struct spral_ssids_inform *inform)
 
    As :c:func:`spral_ssids_analyse()`, but for coordinate data. The variant
    parameters are:
@@ -160,7 +160,7 @@ Basic Subroutines
    :param col[ne]: column indices for :math:`A`
       (see :doc:`Coordinate format<coord_format>`).
 
-.. c:function:: void spral_ssids_factor(bool posdef, const long *ptr, const int *row, const double *val, double *scale, void *akeep, void **fkeep, const struct spral_ssids_options *options, struct spral_ssids_inform *inform)
+.. c:function:: void spral_ssids_factor(bool posdef, const int64_t *ptr, const int *row, const double *val, double *scale, void *akeep, void **fkeep, const struct spral_ssids_options *options, struct spral_ssids_inform *inform)
 
    :param posdef: true if matrix is positive-definite
    :param ptr: may be `NULL`; otherwise a length `n+1` array of column pointers
@@ -447,7 +447,7 @@ Derived types
       Use an NVIDIA GPU if present.
       Default is `true`.
 
-   .. c:memeber long min_gpu_work
+   .. c:memeber int64_t min_gpu_work
    
       Minimum number of flops
       in subtree before scheduling on GPU.
@@ -499,7 +499,7 @@ Derived types
 
       The default is 0.
 
-   .. c:member:: long small_subtree_threshold
+   .. c:member:: int64_t small_subtree_threshold
    
       Maximum number of
       flops in a subtree treated as a single task. See
@@ -554,7 +554,7 @@ Derived types
 
    Used to return information about the progress and needs of the algorithm.
 
-   .. c:member:: long cpu_flops
+   .. c:member:: int64_t cpu_flops
 
       Number of flops performed on CPU
 
@@ -572,7 +572,7 @@ Derived types
       
       Exit status of the algorithm (see table below).
 
-   .. c:member:: long gpu_flops
+   .. c:member:: int64_t gpu_flops
 
       Number of flops performed on GPU
 
@@ -615,12 +615,12 @@ Derived types
       considerations. If a variable is passed further up the tree, it will be
       counted again.
 
-   .. c:member:: long num_factor
+   .. c:member:: int64_t num_factor
    
       Number of entries in :math:`L` (without pivoting after analyse phase,
       with pivoting after factorize phase).
 
-   .. c:member:: long num_flops
+   .. c:member:: int64_t num_flops
    
       Number of floating-point operations for Cholesky factorization (indefinte
       needs slightly more). Without pivoting after analyse phase, with pivoting

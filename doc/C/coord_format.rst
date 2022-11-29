@@ -8,7 +8,7 @@ This standard data format consists of the following data:
 
    int    m;         /* number of rows (unsymmetric only) */
    int    n;         /* number of columns */
-   int    ne;        /* number of entries in matrix (may have type long) */
+   int    ne;        /* number of entries in matrix (may have type int64_t) */
    int    row[ne];   /* row indices */
    int    col[ne];   /* column indices */
    double val[ne];   /* numerical values */

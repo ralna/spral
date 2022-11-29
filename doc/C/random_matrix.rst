@@ -102,10 +102,10 @@ Routines
    | -5     |  A non-singular matrix was requested, but :math:`nnz<\min(m,n)`.|
    +--------+-----------------------------------------------------------------+
 
-.. c:function:: int spral_random_matrix_generate_long(int *state, enum spral_matrix_type matrix_type, int m, int n, long nnz, long ptr[n+1], int row[nnz], double *val, int flags)
+.. c:function:: int spral_random_matrix_generate_long(int *state, enum spral_matrix_type matrix_type, int m, int n, int64_t nnz, int64_t ptr[n+1], int row[nnz], double *val, int flags)
 
    As :c:func:`spral_random_matrix_generate`, except ``nnz`` and ``ptr`` are
-   ``long``.
+   ``int64_t``.
 
 ======
 Macros

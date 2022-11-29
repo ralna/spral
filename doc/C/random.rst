@@ -61,9 +61,9 @@ Routines
    :param n: largest value in range to be sampled.
    :returns: Sampled value.
 
-.. c:function:: long spral_random_long(int *state, long n)
+.. c:function:: int64_t spral_random_long(int *state, int64_t n)
 
-   Return a long uniformly at random from the interval :math:`[1,n]`.
+   Return a int64_t uniformly at random from the interval :math:`[1,n]`.
 
    :param state: current state of the RNG.
    :param n: largest value in range to be sampled.
