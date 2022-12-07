@@ -13,7 +13,7 @@ jobs:
   linux-tests:
     strategy:
       matrix:
-        gcc_ver: [9, 10, 11]
+        gcc_ver: [11]
     name: 'MacOS (gcc-${{ matrix.gcc_ver }})'
     runs-on: macos-latest
     env:
