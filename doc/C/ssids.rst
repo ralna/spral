@@ -523,18 +523,18 @@ Derived types
       Pivot method to be used on CPU, one of:
 
       +-------------+----------------------------------------------------------+
-      | 0           | Aggressive a posteori pivoting. Cholesky-like            |
+      | 1           | Aggressive a posteori pivoting. Cholesky-like            |
       |             | communication pattern is used, but a single failed pivot |
       |             | requires restart of node factorization and potential     |
       |             | recalculation of all uneliminated entries.               |
       +-------------+----------------------------------------------------------+
-      | 1 (default) | Block a posteori pivoting. A failed pivot only requires  |
+      | 2 (default) | Block a posteori pivoting. A failed pivot only requires  |
       |             | recalculation of entries within its own block column.    |
       +-------------+----------------------------------------------------------+
-      | 2           | Threshold partial pivoting. Not parallel.                |
+      | 3           | Threshold partial pivoting. Not parallel.                |
       +-------------+----------------------------------------------------------+
 
-      Default is `1`.
+      Default is `2`.
 
    .. c:member:: double small
    

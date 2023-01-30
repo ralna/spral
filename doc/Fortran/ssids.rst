@@ -427,18 +427,18 @@ Derived types
    :f logical action [default=.true.]: continue factorization of singular matrix
       on discovery of zero pivot if true (a warning is issued), or abort if
       false.
-   :f integer pivot_method [default=1]: Pivot method to be used on CPU, one of:
+   :f integer pivot_method [default=2]: Pivot method to be used on CPU, one of:
 
       +-------------+----------------------------------------------------------+
-      | 0           | Aggressive a posteori pivoting. Cholesky-like            |
+      | 1           | Aggressive a posteori pivoting. Cholesky-like            |
       |             | communication pattern is used, but a single failed pivot |
       |             | requires restart of node factorization and potential     |
       |             | recalculation of all uneliminated entries.               |
       +-------------+----------------------------------------------------------+
-      | 1 (default) | Block a posteori pivoting. A failed pivot only requires  |
+      | 2 (default) | Block a posteori pivoting. A failed pivot only requires  |
       |             | recalculation of entries within its own block column.    |
       +-------------+----------------------------------------------------------+
-      | 2           | Threshold partial pivoting. Not parallel.                |
+      | 3           | Threshold partial pivoting. Not parallel.                |
       +-------------+----------------------------------------------------------+
 
    :f real small [default=1d-20]: threshold below which an entry is treated as

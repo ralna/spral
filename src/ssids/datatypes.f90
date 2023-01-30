@@ -253,9 +253,9 @@ module spral_ssids_datatypes
        ! Otherwise, terminates with error SSIDS_ERROR_SINGULAR.
      integer :: pivot_method = PIVOT_METHOD_APP_BLOCK
        ! Type of pivoting to use on CPU side:
-       ! 0 - A posteori pivoting, roll back entire front on pivot failure
-       ! 1 - A posteori pivoting, roll back on block column level for failure
-       ! 2 - Traditional threshold partial pivoting (serial, inefficient!)
+       ! 1 - A posteori pivoting, roll back entire front on pivot failure
+       ! 2 - A posteori pivoting, roll back on block column level for failure
+       ! 3 - Traditional threshold partial pivoting (serial, inefficient!)
      real(wp) :: small = 1e-20_wp ! Minimum pivot size (absolute value of a
        ! pivot must be of size at least small to be accepted).
      real(wp) :: u = 0.01
