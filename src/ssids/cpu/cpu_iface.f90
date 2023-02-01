@@ -39,6 +39,8 @@ module spral_ssids_cpu_iface
    type, bind(C) :: cpu_factor_stats
       integer(C_INT) :: flag
       integer(C_INT) :: num_delay
+      integer(C_INT64_T) :: num_factor
+      integer(C_INT64_T) :: num_flops
       integer(C_INT) :: num_neg
       integer(C_INT) :: num_two
       integer(C_INT) :: num_zero
@@ -79,6 +81,8 @@ subroutine cpu_copy_stats_out(cstats, finform)
       finform%flag = max(finform%flag, cstats%flag) ! success or warning
    endif
    finform%num_delay    = finform%num_delay + cstats%num_delay
+   finform%num_factor   = finform%num_factor + cstats%num_factor
+   finform%num_flops    = finform%num_flops + cstats%num_flops
    finform%num_neg      = finform%num_neg + cstats%num_neg
    finform%num_two      = finform%num_two + cstats%num_two
    finform%maxfront     = max(finform%maxfront, cstats%maxfront)
