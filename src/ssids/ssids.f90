@@ -825,6 +825,8 @@ contains
 
     ! Initialize
     inform = akeep%inform
+    inform%num_factor = 0
+    inform%num_flops = 0
     st = 0
     n = akeep%n
 

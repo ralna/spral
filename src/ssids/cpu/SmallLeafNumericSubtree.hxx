@@ -377,6 +377,10 @@ private:
       /* Record information */
       node->ndelay_out = n - node->nelim;
       stats.num_delay += node->ndelay_out;
+      for (int64_t j = m; j >= m-(node->nelim)+1; --j) {
+         stats.num_factor += j;
+         stats.num_flops += j*j;
+      }
 
       /* Mark as no contribution if we make no contribution */
       if(node->nelim==0 && !node->first_child) {
