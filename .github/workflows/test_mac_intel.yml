@@ -35,7 +35,7 @@ jobs:
                       F77=ifort \
                       FC=ifort \
                       CFLAGS="-g -O2 -Wall -diag-disable=10441" \
-                      CXXFLAGS="-g -O2 -Wall -Wextra -diag-disable=10441" \
+                      CXXFLAGS="-g -O2 -std=c++17 -Wall -Wextra -diag-disable=10441" \
                       FCFLAGS="-g -O2 -warn all" \
                       --with-metis="-L$(brew --prefix metis)/lib -lmetis"
           make
