@@ -23,13 +23,10 @@ jobs:
       - name: 'Install dependencies'
         run: |
           brew install automake hwloc metis
-          pip install intel-fortran-rt dpcpp-cpp-rt
+      - name: Install Intel oneAPI compilers
+        uses: modflowpy/install-intelfortran-action@v1
       - name: 'Checkout code'
         uses: actions/checkout@v2
-      - name: Setup Intel oneAPI environment
-        run: |
-          source /opt/intel/oneapi/setvars.sh
-          printenv >> $GITHUB_ENV
       - name: 'Build'
         run: |
           ./autogen.sh
