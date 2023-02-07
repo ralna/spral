@@ -34,9 +34,10 @@ jobs:
                       CXX=icpc \
                       F77=ifort \
                       FC=ifort \
-                      CFLAGS="-g -O2 -Wall -diag-disable=10441" \
-                      CXXFLAGS="-g -O2 -std=c++17 -Wall -Wextra -diag-disable=10441" \
+                      CFLAGS="-g -O2 -Wall -diag-disable=10441 -I$(brew --prefix openblas)/include" \
+                      CXXFLAGS="-g -O2 -std=c++17 -Wall -Wextra -diag-disable=10441 -I$(brew --prefix openblas)/include" \
                       FCFLAGS="-g -O2 -warn all" \
+                      LIBS="-lc++ -L$(brew --prefix openblas)/lib -lopenblas" \
                       --with-metis="-L$(brew --prefix metis)/lib -lmetis"
           make
       - name: 'Test'
