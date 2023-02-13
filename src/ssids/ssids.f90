@@ -1068,12 +1068,14 @@ contains
        write (options%unit_diagnostics,'(/a)') &
             ' Completed factorisation with:'
        write (options%unit_diagnostics, &
-            '(a,2(/a,i12),2(/a,es12.4),5(/a,i12))') &
+            '(a,3(/a,i12),2(/a,es12.4),5(/a,i12))') &
             ' information parameters (inform%) :', &
             ' flag                   Error flag                               = ',&
             inform%flag, &
             ' maxfront               Maximum frontsize                        = ',&
             inform%maxfront, &
+            ' maxsupernode           Maximum supernode size                   = ',&
+            inform%maxsupernode, &
             ' num_factor             Number of entries in L                   = ',&
             real(inform%num_factor), &
             ' num_flops              Number of flops performed                = ',&

@@ -25,6 +25,7 @@ module spral_ssids_inform
      integer :: matrix_rank = 0 ! Rank of matrix (anal=structral, fact=actual)
      integer :: maxdepth = 0 ! Maximum depth of tree
      integer :: maxfront = 0 ! Maximum front size
+     integer :: maxsupernode = 0 ! Maximum supernode size
      integer :: num_delay = 0 ! Number of delayed variables
      integer(long) :: num_factor = 0_long ! Number of entries in factors
      integer(long) :: num_flops = 0_long ! Number of floating point operations
@@ -195,6 +196,7 @@ contains
     this%matrix_rank = this%matrix_rank + other%matrix_rank
     this%maxdepth = max(this%maxdepth, other%maxdepth)
     this%maxfront = max(this%maxfront, other%maxfront)
+    this%maxsupernode = max(this%maxsupernode, other%maxsupernode)
     this%num_delay = this%num_delay + other%num_delay
     this%num_factor = this%num_factor + other%num_factor
     this%num_flops = this%num_flops + other%num_flops

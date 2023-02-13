@@ -60,6 +60,8 @@ public:
          // Update stats
          int nrow = symb_.symb_[ni].nrow;
          stats.maxfront = std::max(stats.maxfront, nrow);
+         int ncol = symb_.symb_[ni].ncol;
+         stats.maxsupernode = std::max(stats.maxsupernode, ncol);
          // Factorization
          factor_node_posdef
             (1.0, symb_.symb_[ni], old_nodes_[ni], options, stats);
@@ -203,6 +205,8 @@ public:
          // Update stats
          int nrow = symb_.symb_[ni].nrow + old_nodes_[ni].ndelay_in;
          stats.maxfront = std::max(stats.maxfront, nrow);
+         int ncol = symb_.symb_[ni].ncol + old_nodes_[ni].ndelay_in;
+         stats.maxsupernode = std::max(stats.maxsupernode, ncol);
 
          // Factorization
          factor_node

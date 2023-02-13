@@ -473,6 +473,8 @@ Derived types
    :f integer maxdepth: maximum depth of the assembly tree.
    :f integer maxfront: maximum front size (without pivoting after analyse
       phase, with pivoting after factorize phase).
+   :f integer maxsupernode: maximum supernode size (without pivoting after
+      analyse phase, with pivoting after factorize phase).
    :f integer num_delay: number of delayed pivots. That is, the total
       number of fully-summed variables that were passed to the father node
       because of stability considerations. If a variable is passed further
