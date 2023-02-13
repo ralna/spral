@@ -1107,7 +1107,7 @@ contains
        blkn = akeep%sptr(i+1) - akeep%sptr(i)
        blkm = int(akeep%rptr(i+1) - akeep%rptr(i))
        level(i) = level(akeep%sparent(i)) + 1
-       inform%maxfront = max(inform%maxfront, blkn)
+       inform%maxfront = max(inform%maxfront, blkm)
        inform%maxdepth = max(inform%maxdepth, level(i))
     end do
     deallocate(level, stat=st)
