@@ -52,7 +52,8 @@ struct spral_ssids_inform {
    int stat;
    int cuda_error;
    int cublas_error;
-   char unused[80]; // Allow for future expansion
+   int maxsupernode;
+   char unused[76]; // Allow for future expansion
 };
 
 /************************************

@@ -204,6 +204,7 @@ program run_prob
        inform%matrix_rank-inform%num_neg
   print "(a6, i10)", "2x2piv:", inform%num_two
   print "(a6, i10)", "maxfront:", inform%maxfront
+  print "(a6, i10)", "maxsupernode:", inform%maxsupernode
   print "(a6, i10)", "not_first_pass:", inform%not_first_pass
   print "(a6, i10)", "not_second_pass:", inform%not_second_pass
 

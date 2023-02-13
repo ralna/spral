@@ -608,6 +608,11 @@ Derived types
       Maximum front size (without pivoting after analyse phase, with pivoting
       after factorize phase).
 
+   .. c:member:: int maxsupernode
+
+      Maximum supernode size (without pivoting after analyse phase, with
+      pivoting after factorize phase).
+
    .. c:member:: int num_delay
    
       Number of delayed pivots. That is, the total number of fully-summed

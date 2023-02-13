@@ -180,6 +180,9 @@ public:
                   int nrow = symb_[ni].nrow + nodes_[ni].ndelay_in;
                   thread_stats[this_thread].maxfront =
                      std::max(thread_stats[this_thread].maxfront, nrow);
+                  int ncol = symb_[ni].ncol + nodes_[ni].ndelay_in;
+                  thread_stats[this_thread].maxsupernode =
+                     std::max(thread_stats[this_thread].maxsupernode, ncol);
                   
                   // Factorization
                   factor_node<posdef>

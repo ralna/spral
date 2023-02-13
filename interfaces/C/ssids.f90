@@ -43,7 +43,8 @@ module spral_ssids_ciface
      integer(C_INT) :: stat
      integer(C_INT) :: cuda_error
      integer(C_INT) :: cublas_error
-     character(C_CHAR) :: unused(80)
+     integer(C_INT) :: maxsupernode
+     character(C_CHAR) :: unused(76)
   end type spral_ssids_inform
 
 contains
@@ -86,6 +87,7 @@ contains
     cinform%matrix_rank           = finform%matrix_rank
     cinform%maxdepth              = finform%maxdepth
     cinform%maxfront              = finform%maxfront
+    cinform%maxsupernode          = finform%maxsupernode
     cinform%num_delay             = finform%num_delay
     cinform%num_factor            = finform%num_factor
     cinform%num_flops             = finform%num_flops

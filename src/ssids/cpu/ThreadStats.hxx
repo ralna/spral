@@ -53,6 +53,7 @@ struct ThreadStats {
    int num_two = 0;     ///< Number of 2x2 pivots
    int num_zero = 0;    ///< Number of zero pivots
    int maxfront = 0;    ///< Maximum front size
+   int maxsupernode = 0;      ///< Maximum supernode size
    int not_first_pass = 0;    ///< Number of pivots not eliminated in APP
    int not_second_pass = 0;   ///< Number of pivots not eliminated in APP or TPP
 

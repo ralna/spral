@@ -45,6 +45,7 @@ module spral_ssids_cpu_iface
       integer(C_INT) :: num_two
       integer(C_INT) :: num_zero
       integer(C_INT) :: maxfront
+      integer(C_INT) :: maxsupernode
       integer(C_INT) :: not_first_pass
       integer(C_INT) :: not_second_pass
    end type cpu_factor_stats
@@ -86,6 +87,7 @@ subroutine cpu_copy_stats_out(cstats, finform)
    finform%num_neg      = finform%num_neg + cstats%num_neg
    finform%num_two      = finform%num_two + cstats%num_two
    finform%maxfront     = max(finform%maxfront, cstats%maxfront)
+   finform%maxsupernode = max(finform%maxsupernode, cstats%maxsupernode)
    finform%not_first_pass = finform%not_first_pass + cstats%not_first_pass
    finform%not_second_pass = finform%not_second_pass + cstats%not_second_pass
    finform%matrix_rank  = finform%matrix_rank - cstats%num_zero

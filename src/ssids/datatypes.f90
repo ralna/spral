@@ -160,6 +160,7 @@ module spral_ssids_datatypes
      integer :: cuda_error = 0
      integer :: cublas_error = 0
      integer :: maxfront = 0 ! Maximum front size
+     integer :: maxsupernode = 0 ! Maximum supernode size
      integer(long) :: num_factor = 0_long ! Number of entries in factors
      integer(long) :: num_flops = 0_long ! Number of floating point operations
      integer :: num_delay = 0 ! Number of delayed variables
