@@ -25,7 +25,7 @@ jobs:
     steps:
       - name: 'Install dependencies'
         run: |
-          brew install automake hwloc metis openblas
+          brew install automake pkgconf hwloc metis openblas
       - name: 'Checkout code'
         uses: actions/checkout@v2
       - name: 'Build'
