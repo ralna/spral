@@ -39,6 +39,7 @@ We use a standard autotools-based build:
 ```bash
 ./autogen.sh # If compiling from fresh git checkout
 mkdir build
+cp nvcc_arch_sm.c build/ # If building for GPU
 cd build
 ../configure --with-metis="-L/path/to/metis -lmetis"
 make
