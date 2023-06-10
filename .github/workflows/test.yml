@@ -70,7 +70,7 @@ jobs:
       - name: Install dependencies on MacOS
         if: matrix.os == 'macos-latest'
         run: |
-          brew install metis openblas
+          brew install automake hwloc metis openblas
 
       - name: Install GNU C and C++ compilers
         if: matrix.compiler == 'gnu'
@@ -103,13 +103,25 @@ jobs:
       - name: 'Build'
         run: |
           ./autogen.sh
-          ./configure CC=${{matrix.cc}} \
-                      CXX=${{matrix.cxx}} \
-                      F77=${{matrix.fc}} \
-                      FC=${{matrix.fc}} \
-                      CFLAGS="-g -O2 -Wall" \
-                      CXXFLAGS="-g -O2 -Wall" \
-                      FCFLAGS="-g -O2 -Wall -pedantic"
+          if [[ "${{matrix.os}}" == "macos-latest" ]]; then
+            ./configure CC=${{matrix.cc}} \
+              CXX=${{matrix.cxx}} \
+              F77=${{matrix.fc}} \
+              FC=${{matrix.fc}} \
+              CFLAGS="-g -O2 -Wall -I$(brew --prefix openblas)/include" \
+              CXXFLAGS="-g -O2 -Wall -I$(brew --prefix openblas)/include" \
+              FCFLAGS="-g -O2 -Wall -pedantic" \
+              LIBS="-L$(brew --prefix openblas)/lib -lopenblas" \
+              --with-metis="-L$(brew --prefix metis)/lib -lmetis"
+          else
+            ./configure CC=${{matrix.cc}} \
+                        CXX=${{matrix.cxx}} \
+                        F77=${{matrix.fc}} \
+                        FC=${{matrix.fc}} \
+                        CFLAGS="-g -O2 -Wall" \
+                        CXXFLAGS="-g -O2 -Wall" \
+                        FCFLAGS="-g -O2 -Wall -pedantic"
+          fi
           make
       - name: 'Test'
         run: |
