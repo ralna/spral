@@ -1,4 +1,5 @@
-name: 'Linux Tests'
+# All actions have a name that will be displayed in the "Actions" page in GitHub.
+name: 'CI'
 
 on:
   push:
@@ -7,39 +8,90 @@ on:
   pull_request:
     branches:
       - 'master'
-  workflow_dispatch:
 
 jobs:
-  linux-tests:
+  build:
+    name: GALAHAD/${{ matrix.os }}/${{ matrix.compiler }}/${{ matrix.compiler_version }}
     strategy:
+      fail-fast: false
       matrix:
-        gcc_ver: [9, 10, 11]
-    name: 'Linux (gcc-${{ matrix.gcc_ver }})'
-    runs-on: ubuntu-latest
+        os: [windows-latest, ubuntu-latest, macos-latest]
+        compiler_version: [9, 10, 11, 12]
+        include:
+          - compiler: gnu
+            cc: gcc
+            fc: gfortran
+            cxx: g++
+          - os: ubuntu-latest
+            compiler: intel
+            compiler_version: 2021.9
+            cc: icc
+            fc: ifort
+            cxx: icpc
+          - os: macos-latest
+            compiler: intel
+            compiler_version: 2021.9
+            cc: icc
+            fc: ifort
+            cxx: icpc
+          - os: ubuntu-latest
+            compiler: intel-llvm
+            compiler_version: 2023.1
+            cc: icx
+            fc: ifort
+            cxx: icpx
+          - os: macos-latest
+            compiler: clang
+            compiler_version: latest
+            cc: clang
+            fc: gfortran
+            cxx: clang++
+    runs-on: ${{ matrix.os }}
     env:
       # Set environ for OpenMP
       OMP_CANCELLATION: true
       OMP_PROC_BIND: true
       OMP_NUM_THREADS: 4
     steps:
-      - name: 'Install dependencies'
-        run: |
-          sudo apt-get update
-          sudo apt-get install gcc-${{ matrix.gcc_ver }} \
-                               gfortran-${{ matrix.gcc_ver }} \
-                               g++-${{ matrix.gcc_ver }} \
-                               libmetis-dev \
-                               libatlas-base-dev \
-                               liblapack-dev
-      - name: 'Checkout code'
-        uses: actions/checkout@v2
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      # Usually this is always needed
+      - uses: actions/checkout@v3
+
+      - name: Install GNU C and C++ compilers
+        if: matrix.config.compiler == 'gnu'
+        uses: awvwgk/setup-fortran@main
+        with:
+          compiler: gcc
+          version: ${{matrix.compiler_version}}
+
+      - name: Install GNU C and C++ compilers
+        if: matrix.config.compiler == 'clang'
+        uses: awvwgk/setup-fortran@main
+        with:
+          compiler: gcc
+          version: 12
+
+      - name: Install classic Intel C and C++ compilers
+        if: matrix.config.compiler == 'intel'
+        uses: awvwgk/setup-fortran@main
+        with:
+          compiler: intel-classic
+          version: ${{matrix.compiler_version}}
+
+      - name: Install nextgen Intel C and C++ compilers
+        if: matrix.config.compiler == 'intel-llvm'
+        uses: awvwgk/setup-fortran@main
+        with:
+          compiler: intel
+          version: ${{matrix.compiler_version}}
+
       - name: 'Build'
         run: |
           ./autogen.sh
-          ./configure CC=gcc-${{ matrix.gcc_ver }} \
-                      CXX=g++-${{ matrix.gcc_ver }} \
-                      F77=gfortran-${{ matrix.gcc_ver }} \
-                      FC=gfortran-${{ matrix.gcc_ver }} \
+          ./configure CC=${{matrix.cc}} \
+                      CXX=${{matrix.cxx}} \
+                      F77=${{matrix.fc}} \
+                      FC=${{matrix.fc}} \
                       CFLAGS="-g -O2 -Wall" \
                       CXXFLAGS="-g -O2 -Wall" \
                       FCFLAGS="-g -O2 -Wall -pedantic"
@@ -47,4 +99,3 @@ jobs:
       - name: 'Test'
         run: |
           make check
-
