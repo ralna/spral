@@ -35,7 +35,7 @@ AM_CFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src $(OPENMP_CFLAGS) \
 				$(HWLOC_CFLAGS) -std=c99
 AM_CXXFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src -std=c++11 \
 				  $(OPENMP_CXXFLAGS) $(GTG_INCLUDE) $(HWLOC_CFLAGS)
-AM_FCFLAGS = $(OPENMP_CXXFLAGS) # assume CXX and FC use same flags...
+AM_FCFLAGS = $(OPENMP_FCFLAGS)
 
 # FIXME: make below configurable
 if HAVE_NVCC

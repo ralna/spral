@@ -35,16 +35,17 @@ AC_PROG_F77
 AC_PROG_FC
 AC_PROG_RANLIB
 
-# Add OpenMP support, set language standards
-AC_LANG_PUSH(C)
-AC_PROG_CC_C99
-AC_LANG_POP(C)
+# Add OpenMP support
 AS_IF([test "x$enable_openmp" != "xno"], [
    AC_LANG_PUSH(C)
    AC_OPENMP
-   AC_LANG(C++)
+   AC_LANG_POP(C)
+   AC_LANG_PUSH(C++)
    AC_OPENMP
    AC_LANG_POP(C++)
+   AC_LANG_PUSH(Fortran)
+   AC_OPENMP
+   AC_LANG_POP(Fortran)
    ])
 AM_CONDITIONAL([HAVE_OPENMP], [test -n "$OPENMP_CXXFLAGS"])
 
