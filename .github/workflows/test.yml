@@ -71,13 +71,6 @@ jobs:
           wget https://sourceforge.net/projects/gnuwin32/files/autoconf/2.63/autoconf-2.63-bin.zip/download -O autoconf-2.63-bin.zip
           mkdir autoconf
           unzip autoconf-2.63-bin.zip -d autoconf
-          cp -v autoconf/bin/autoreconf ./autoreconf
-          cp -v autoconf/bin/autoconf ./autoconf
-          cp -v autoconf/bin/autoscan ./autoscan
-          cp -v autoconf/bin/autoupdate ./autoupdate
-          cp -v autoconf/bin/autoheader ./autoheader
-          cp -v autoconf/bin/autom4te ./autom4te
-          cp -v autoconf/bin/ifnames ./ifnames
 
       - name: Install dependencies on Ubuntu
         if: matrix.os == 'ubuntu-latest'
@@ -123,7 +116,7 @@ jobs:
           if [[ "${{matrix.os}}" != "windows-latest" ]]; then
             ./autogen.sh
           else
-            ./autoreconf -ivf
+            ./autoconf/bin/autoreconf -ivf
           fi
           PENDANTIC=""
           if [[ "${{matrix.compiler}}" == "gnu" ]]; then
