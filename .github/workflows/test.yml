@@ -120,9 +120,10 @@ jobs:
       - name: 'Build'
         shell: bash
         run: |
-          ls
           if [[ "${{matrix.os}}" != "windows-latest" ]]; then
             ./autogen.sh
+          else
+            ./autoreconf -ivf
           fi
           PENDANTIC=""
           if [[ "${{matrix.compiler}}" == "gnu" ]]; then
