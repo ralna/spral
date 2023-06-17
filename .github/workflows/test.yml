@@ -126,7 +126,7 @@ jobs:
             LIBDIR_OPENBLAS="-L$(brew --prefix openblas)/lib"
             LIBDIR_METIS="-L$(brew --prefix metis)/lib"
           fi
-          if [[ "${{matrix.os}}" == "macos-latest" ]]; then
+          if [[ "${{matrix.os}}" == "windows-latest" ]]; then
             INCLUDEDIR_OPENBLAS="-I./openblas/include"
             LIBDIR_OPENBLAS="-L./openblas/bin"
             LIBDIR_METIS="-L./metis/bin"
