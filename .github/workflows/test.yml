@@ -62,7 +62,7 @@ jobs:
         run: |
           choco install wget
           choco install cygwin
-          cygwinsetup.exe -q -P make,unzip,automake,autoconf,zip
+          cygwin -q -P make,automake,autoconf
           wget https://github.com/JuliaBinaryWrappers/OpenBLAS32_jll.jl/releases/download/OpenBLAS32-v0.3.23%2B0/OpenBLAS32.v0.3.23.x86_64-w64-mingw32-libgfortran5.tar.gz
           mkdir openblas
           tar -xzvf OpenBLAS32.v0.3.23.x86_64-w64-mingw32-libgfortran5.tar.gz -C openblas
