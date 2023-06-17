@@ -60,7 +60,12 @@ jobs:
       - name: Install dependencies on Windows
         if: matrix.os == 'windows-latest'
         run: |
-          choco install metis openblas
+          wget https://github.com/JuliaBinaryWrappers/OpenBLAS32_jll.jl/releases/download/OpenBLAS32-v0.3.23%2B0/OpenBLAS32.v0.3.23.x86_64-w64-mingw32-libgfortran5.tar.gz
+          mkdir openblas
+          tar -xzvf OpenBLAS32.v0.3.23.x86_64-w64-mingw32-libgfortran5.tar.gz -C openblas
+          wget https://github.com/JuliaBinaryWrappers/METIS_jll.jl/releases/download/METIS-v5.1.2%2B0/METIS.v5.1.2.x86_64-w64-mingw32.tar.gz
+          mkdir metis
+          tar -xzvf METIS.v5.1.2.x86_64-w64-mingw32.tar.gz -C metis
 
       - name: Install dependencies on Ubuntu
         if: matrix.os == 'ubuntu-latest'
@@ -113,6 +118,16 @@ jobs:
               FCFLAGS="-g -O2 -Wall -pedantic" \
               LIBS="-L$(brew --prefix openblas)/lib -lopenblas" \
               --with-metis="-L$(brew --prefix metis)/lib -lmetis"
+          elif [[ "${{matrix.os}}" == "windows-latest" ]]; then
+            ./configure CC=${{matrix.cc}} \
+              CXX=${{matrix.cxx}} \
+              F77=${{matrix.fc}} \
+              FC=${{matrix.fc}} \
+              CFLAGS="-g -O2 -Wall -I./openblas/include" \
+              CXXFLAGS="-g -O2 -Wall -I./openblas/include" \
+              FCFLAGS="-g -O2 -Wall -pedantic" \
+              LIBS="-L./openblas/bin -lopenblas" \
+              --with-metis="-L./metis/bin -lmetis"
           else
             ./configure CC=${{matrix.cc}} \
                         CXX=${{matrix.cxx}} \
