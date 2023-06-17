@@ -124,7 +124,7 @@ jobs:
           if [[ "${{matrix.os}}" != "windows-latest" ]]; then
             ./autogen.sh
           else
-            ./autoconf/bin/autoreconf -ivf
+            autoreconf -ivf
           fi
           PENDANTIC=""
           if [[ "${{matrix.compiler}}" == "gnu" ]]; then
