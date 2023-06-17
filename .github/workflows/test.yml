@@ -60,6 +60,7 @@ jobs:
       - name: Install dependencies on Windows
         if: matrix.os == 'windows-latest'
         run: |
+          choco install wget
           wget https://github.com/JuliaBinaryWrappers/OpenBLAS32_jll.jl/releases/download/OpenBLAS32-v0.3.23%2B0/OpenBLAS32.v0.3.23.x86_64-w64-mingw32-libgfortran5.tar.gz
           mkdir openblas
           tar -xzvf OpenBLAS32.v0.3.23.x86_64-w64-mingw32-libgfortran5.tar.gz -C openblas
