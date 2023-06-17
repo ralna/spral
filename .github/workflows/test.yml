@@ -107,37 +107,40 @@ jobs:
           version: ${{matrix.compiler_version}}
 
       - name: 'Build'
+        shell: bash
         run: |
           ./autogen.sh
-          if [[ "${{matrix.os}}" == "macos-latest" ]]; then
-            ./configure CC=${{matrix.cc}} \
-              CXX=${{matrix.cxx}} \
-              F77=${{matrix.fc}} \
-              FC=${{matrix.fc}} \
-              CFLAGS="-g -O2 -Wall -I$(brew --prefix openblas)/include" \
-              CXXFLAGS="-g -O2 -Wall -I$(brew --prefix openblas)/include" \
-              FCFLAGS="-g -O2 -Wall -pedantic" \
-              LIBS="-L$(brew --prefix openblas)/lib -lopenblas" \
-              --with-metis="-L$(brew --prefix metis)/lib -lmetis"
-          elif [[ "${{matrix.os}}" == "windows-latest" ]]; then
-            ./configure CC=${{matrix.cc}} \
-              CXX=${{matrix.cxx}} \
-              F77=${{matrix.fc}} \
-              FC=${{matrix.fc}} \
-              CFLAGS="-g -O2 -Wall -I./openblas/include" \
-              CXXFLAGS="-g -O2 -Wall -I./openblas/include" \
-              FCFLAGS="-g -O2 -Wall -pedantic" \
-              LIBS="-L./openblas/bin -lopenblas" \
-              --with-metis="-L./metis/bin -lmetis"
-          else
-            ./configure CC=${{matrix.cc}} \
-                        CXX=${{matrix.cxx}} \
-                        F77=${{matrix.fc}} \
-                        FC=${{matrix.fc}} \
-                        CFLAGS="-g -O2 -Wall" \
-                        CXXFLAGS="-g -O2 -Wall" \
-                        FCFLAGS="-g -O2 -Wall -pedantic"
+          INTEL=""
+          if [[ "${{matrix.compiler}}" == "intel" ]]; then
+            INTEL="-diag-disable=10441"
           fi
+          OPENMP="-fopenmp"
+          if [[ "${{matrix.compiler}}" == "intel" ]] || [[ "${{matrix.compiler}}" == "intel-llvm" ]]; then
+            OPENMP="-qopenmp"
+          fi
+          INCLUDEDIR_OPENBLAS=""
+          LIBDIR_OPENBLAS=""
+          LIBDIR_METIS=""
+          if [[ "${{matrix.os}}" == "macos-latest" ]]; then
+            INCLUDEDIR_OPENBLAS="-I$(brew --prefix openblas)/include"
+            LIBDIR_OPENBLAS="-L$(brew --prefix openblas)/lib"
+            LIBDIR_METIS="-L$(brew --prefix metis)/lib"
+          fi
+          if [[ "${{matrix.os}}" == "macos-latest" ]]; then
+            INCLUDEDIR_OPENBLAS="-I./openblas/include"
+            LIBDIR_OPENBLAS="-L./openblas/bin"
+            LIBDIR_METIS="-L./metis/bin"
+          fi
+          ./configure CC=${{matrix.cc}} \
+            CXX=${{matrix.cxx}} \
+            F77=${{matrix.fc}} \
+            FC=${{matrix.fc}} \
+            CFLAGS="-g -O2 -Wall $OPENMP $INTEL ${INCLUDEDIR_OPENBLAS}" \
+            CXXFLAGS="-g -O2 -Wall $OPENMP $INTEL ${INCLUDEDIR_OPENBLAS}" \
+            FCFLAGS="-g -O2 -Wall $OPENMP -pedantic" \
+            --with-blas="${LIBDIR_OPENBLAS} -lopenblas" \
+            --with-lapack="${LIBDIR_OPENBLAS} -lopenblas" \
+            --with-metis="${LIBDIR_METIS} -lmetis"
           make
       - name: 'Test'
         run: |
