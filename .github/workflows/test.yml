@@ -69,7 +69,7 @@ jobs:
           tar -xzvf METIS.v5.1.2.x86_64-w64-mingw32.tar.gz -C metis
           wget https://sourceforge.net/projects/gnuwin32/files/autoconf/2.63/autoconf-2.63-bin.zip/download
           mkdir autoconf
-          tar -xzvf autoconf-2.63-bin.zip -C autoconf
+          unzip autoconf-2.63-bin.zip -d autoconf
           cp autoconf/bin/autoreconf ./autoreconf
           cp autoconf/bin/autoconf ./autoconf
           cp autoconf/bin/autoscan ./autoscan
