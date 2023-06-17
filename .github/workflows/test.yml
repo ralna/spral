@@ -67,7 +67,7 @@ jobs:
           wget https://github.com/JuliaBinaryWrappers/METIS_jll.jl/releases/download/METIS-v5.1.2%2B0/METIS.v5.1.2.x86_64-w64-mingw32.tar.gz
           mkdir metis
           tar -xzvf METIS.v5.1.2.x86_64-w64-mingw32.tar.gz -C metis
-          wget https://downloads.sourceforge.net/project/gnuwin32/autoconf/2.63/autoconf-2.63-bin.zip?ts=gAAAAABkjfxDPKJIRhtt9_Y6joWLo9A_Hct9qme-ZYAzjb9zGAAwNIWv9AhrW3naCREdS39XYxwofatwULmMvZScR4B7Nwa4IQ%3D%3D&r=https%3A%2F%2Fsourceforge.net%2Fprojects%2Fgnuwin32%2Ffiles%2Fautoconf%2F2.63%2Fautoconf-2.63-bin.zip%2Fdownload%3Fuse_mirror%3Dphoenixnap
+          wget https://sourceforge.net/projects/gnuwin32/files/autoconf/2.63/autoconf-2.63-bin.zip/download
           mkdir autoconf
           tar -xzvf autoconf-2.63-bin.zip -C autoconf
           cp autoconf/bin/autoreconf ./autoreconf
