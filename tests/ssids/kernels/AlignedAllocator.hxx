@@ -7,6 +7,9 @@
 
 #include <cstddef>
 #include <cstdlib>
+#ifdef _WIN32
+# include <malloc.h>  // _aligned_malloc, _aligned_free
+#endif
 #include <new>
 
 namespace spral { namespace test {
@@ -32,7 +35,9 @@ public:
    T* allocate(size_t n) {
       // NB: size allocated must be multiple of alignment
       size_t sz = alignment*( ( n*sizeof(T)-1 )/alignment + 1);
-#ifdef _ISOC11_SOURCE /* FIXME: is this ever true in C++? */
+#ifdef _WIN32
+      auto ptr = _aligned_malloc(sz, alignment);
+#elif defined(_ISOC11_SOURCE) /* FIXME: is this ever true in C++? */
       auto ptr = aligned_alloc(alignment, sz);
 #else /* _POSIX_C_SOURCE > 200112L || _XOPEN_SOURCE >= 600 */
       void *ptr;
@@ -44,7 +49,11 @@ public:
    }
 
    void deallocate(T *p, size_t n) {
+#ifdef _WIN32
+      _aligned_free(p);
+#else
       free(p);
+#endif
    }
 };
 
