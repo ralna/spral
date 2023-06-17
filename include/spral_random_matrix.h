@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-#include <stdbool.h>
+#include <stdint.h>
 #include "spral_matrix_util.h"
 
 #define SPRAL_RANDOM_MATRIX_FINDEX        1
