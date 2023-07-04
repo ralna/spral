@@ -16,7 +16,7 @@ namespace spral { namespace ssids { namespace cpu {
 namespace append_alloc_internal {
 
 /** A single fixed size page of memory with allocate function.
- * We are required to guaruntee it is zero'd, so use calloc rather than anything
+ * We are required to guarantee it is zero'd, so use calloc rather than anything
  * else for the allocation.
  * Deallocation is not supported.
  */
@@ -66,6 +66,8 @@ private:
  */
 class Pool {
    const size_t PAGE_SIZE = 0; // 0MB
+   // Changed to 0MB to allow pages of no minimum size for performance
+   // see https://github.com/ralna/spral/issues/119 for more details
 public:
    Pool(size_t initial_size)
    : top_page_(new Page(std::max(PAGE_SIZE, initial_size)))
