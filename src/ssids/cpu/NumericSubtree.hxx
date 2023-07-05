@@ -80,6 +80,10 @@ public:
       for(int i=0; i<num_threads; ++i)
          work.emplace_back(PAGE_SIZE);
 
+      // initialise stats already so we can safely early-return in case of
+      // failure if not compiled with OpenMP (instead of omp cancel)
+      stats = ThreadStats();
+
       // Each node is depend(inout) on itself and depend(in) on its parent.
       // Whilst this isn't really what's happening it does ensure our
       // ordering is correct: each node cannot be scheduled until all its
@@ -234,8 +238,7 @@ public:
       } // taskgroup
 
 
-      // Reduce thread_stats
-      stats = ThreadStats(); // initialise
+      // Reduce thread_stats (stats already initialised above)
       for(auto tstats : thread_stats)
          stats += tstats;
       if(stats.flag < 0) return;
