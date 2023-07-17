@@ -86,13 +86,6 @@ jobs:
           compiler: gcc
           version: ${{matrix.compiler_version}}
 
-      - name: Install GNU C and C++ compilers
-        if: matrix.compiler == 'clang'
-        uses: awvwgk/setup-fortran@main
-        with:
-          compiler: gcc
-          version: 12
-
       - name: Install classic Intel C and C++ compilers
         if: matrix.compiler == 'intel'
         uses: awvwgk/setup-fortran@main
@@ -113,9 +106,9 @@ jobs:
           if [[ "${{matrix.os}}" != "windows-latest" ]]; then
             ./autogen.sh
           else
-            ls autoconf
-            ls automake
-            /automake/autoreconf -ivf
+            ls autoconf/bin
+            ls automake/bin
+            /automake/bin/autoreconf -ivf
           fi
           ./autogen.sh
           PENDANTIC=""
