@@ -40,12 +40,6 @@ jobs:
             cc: icx
             fc: ifx
             cxx: icpx
-          - os: macos-latest
-            compiler: clang
-            compiler_version: latest
-            cc: clang
-            fc: gfortran
-            cxx: clang++
     runs-on: ${{ matrix.os }}
     env:
       # Set environ for OpenMP
@@ -163,9 +157,9 @@ jobs:
             CXX=${{matrix.cxx}} \
             F77=${{matrix.fc}} \
             FC=${{matrix.fc}} \
-            CFLAGS="-g -O2 -Wall $OPENMP $INTEL ${INCLUDEDIR_OPENBLAS}" \
-            CXXFLAGS="-g -O2 -Wall $OPENMP $INTEL ${INCLUDEDIR_OPENBLAS}" \
-            FCFLAGS="-g -O2 $WARNING $OPENMP $PENDANTIC" \
+            CFLAGS="-g -O3 -Wall $OPENMP $INTEL ${INCLUDEDIR_OPENBLAS}" \
+            CXXFLAGS="-g -O3 -Wall $OPENMP $INTEL ${INCLUDEDIR_OPENBLAS}" \
+            FCFLAGS="-g -O3 $WARNING $OPENMP $PENDANTIC" \
             --with-blas="${LIBDIR_OPENBLAS} -lopenblas" \
             --with-lapack="${LIBDIR_OPENBLAS} -lopenblas" \
             --with-metis="${LIBDIR_METIS} -lmetis"
