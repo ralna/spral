@@ -51,14 +51,6 @@ jobs:
       # Usually this is always needed
       - uses: actions/checkout@v3
 
-      - name: Install autoconf
-        if: matrix.os == 'windows-latest'
-        uses: msys2/setup-msys2@v2
-        with:
-          update: true
-          install: >-
-            autotools
-
       - name: Install dependencies on Windows
         shell: bash
         if: matrix.os == 'windows-latest'
