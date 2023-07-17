@@ -56,7 +56,7 @@ jobs:
         if: matrix.os == 'windows-latest'
         run: |
           choco install wget
-          choco install strawberryperl
+          choco install gnuwin32-m4
           wget https://github.com/JuliaBinaryWrappers/OpenBLAS32_jll.jl/releases/download/OpenBLAS32-v0.3.23%2B0/OpenBLAS32.v0.3.23.x86_64-w64-mingw32-libgfortran5.tar.gz
           mkdir openblas
           tar -xzvf OpenBLAS32.v0.3.23.x86_64-w64-mingw32-libgfortran5.tar.gz -C openblas
@@ -69,10 +69,6 @@ jobs:
           wget https://sourceforge.net/projects/gnuwin32/files/automake/1.9.4/automake-1.9.4-bin.zip/download -O automake-1.9.4-bin.zip
           mkdir automake
           unzip automake-1.9.4-bin.zip -d automake
-          # echo $(pwd)/openblas >> $GITHUB_PATH
-          # echo $(pwd)/metis >> $GITHUB_PATH
-          # echo $(pwd)/autoconf >> $GITHUB_PATH
-          # echo $(pwd)/automake >> $GITHUB_PATH
 
       - name: Install dependencies on Ubuntu
         if: matrix.os == 'ubuntu-latest'
