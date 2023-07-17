@@ -67,7 +67,7 @@ jobs:
           unzip autoconf-2.63-bin.zip -d autoconf
           wget https://sourceforge.net/projects/gnuwin32/files/automake/1.9.4/automake-1.9.4-bin.zip/download -O automake-1.9.4-bin.zip
           mkdir automake
-          unzip autoconf-2.63-bin.zip -d automake
+          unzip automake-1.9.4-bin.zip -d automake
 
       - name: Install dependencies on Ubuntu
         if: matrix.os == 'ubuntu-latest'
@@ -108,7 +108,7 @@ jobs:
           else
             ls autoconf/bin
             ls automake/bin
-            /automake/bin/autoreconf -ivf
+            ./autoconf/bin/autoreconf -ivf
           fi
           ./autogen.sh
           PENDANTIC=""
