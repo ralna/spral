@@ -68,6 +68,11 @@ jobs:
           wget https://sourceforge.net/projects/gnuwin32/files/automake/1.9.4/automake-1.9.4-bin.zip/download -O automake-1.9.4-bin.zip
           mkdir automake
           unzip automake-1.9.4-bin.zip -d automake
+          export PATH="$PATH;"
+          echo $(pwd)/openblas >> $GITHUB_PATH
+          echo $(pwd)/metis >> $GITHUB_PATH
+          echo $(pwd)/autoconf >> $GITHUB_PATH
+          echo $(pwd)/automake >> $GITHUB_PATH
 
       - name: Install dependencies on Ubuntu
         if: matrix.os == 'ubuntu-latest'
@@ -106,9 +111,7 @@ jobs:
           if [[ "${{matrix.os}}" != "windows-latest" ]]; then
             ./autogen.sh
           else
-            ls autoconf/bin
-            ls automake/bin
-            ./autoconf/bin/autoreconf -ivf
+            autoreconf -ivf
           fi
           ./autogen.sh
           PENDANTIC=""
