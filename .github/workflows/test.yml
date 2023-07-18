@@ -11,7 +11,7 @@ on:
 
 jobs:
   build:
-    name: GALAHAD/${{ matrix.os }}/${{ matrix.compiler }}/${{ matrix.compiler_version }}
+    name: GALAHAD/${{ matrix.os }}/${{ matrix.fc }}/${{ matrix.compiler_version }}
     strategy:
       fail-fast: false
       matrix:
@@ -51,7 +51,6 @@ jobs:
         run: |
           choco install wget
           choco install gnuwin32-m4
-          choco install pkgconfiglite
           wget https://github.com/JuliaBinaryWrappers/OpenBLAS32_jll.jl/releases/download/OpenBLAS32-v0.3.23%2B0/OpenBLAS32.v0.3.23.x86_64-w64-mingw32-libgfortran5.tar.gz
           mkdir openblas
           tar -xzvf OpenBLAS32.v0.3.23.x86_64-w64-mingw32-libgfortran5.tar.gz -C openblas
