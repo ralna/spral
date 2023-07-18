@@ -46,6 +46,19 @@ make
 make install
 ```
 
+## Generate shared library
+
+```bash
+# Linux
+gfortran -fPIC -shared -Wl,--whole-archive libspral.a -Wl,--no-whole-archive -lgomp -lblas -llapack -lhwloc -lmetis -lstdc++ -o libspral.so
+
+# Windows
+gfortran -fPIC -shared -Wl,--whole-archive libspral.a -Wl,--no-whole-archive -lgomp -lopenblas -lhwloc -lmetis -lstdc++ -o libspral.dll
+
+# Mac
+gfortran -fPIC -shared -Wl,-all_load libspral.a -Wl,-noall_load -lgomp -lopenblas -lhwloc -lmetis -lstdc++ -o libspral.dylib
+```
+
 ## Usage at a Glance
 When using SSIDS, ensure the following environment variables are set:
 ```bash
