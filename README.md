@@ -46,8 +46,18 @@ make
 make install
 ```
 
+## Usage at a Glance
+When using SSIDS, ensure the following environment variables are set:
+```bash
+export OMP_CANCELLATION=TRUE
+export OMP_NESTED=TRUE
+export OMP_PROC_BIND=TRUE
+```
+
 ## Generate shared library
 
+SPRAL must be compiled with `-fPIC` to be able to generate a shared library.
+The static library `libspral.a` can be converted to a shared library using one of the following commands:
 ```bash
 # Linux
 gfortran -fPIC -shared -Wl,--whole-archive libspral.a -Wl,--no-whole-archive -lgomp -lblas -llapack -lhwloc -lmetis -lstdc++ -o libspral.so
@@ -57,12 +67,4 @@ gfortran -fPIC -shared -Wl,--whole-archive libspral.a -Wl,--no-whole-archive -lg
 
 # Mac
 gfortran -fPIC -shared -Wl,-all_load libspral.a -Wl,-noall_load -lgomp -lopenblas -lhwloc -lmetis -lstdc++ -o libspral.dylib
-```
-
-## Usage at a Glance
-When using SSIDS, ensure the following environment variables are set:
-```bash
-export OMP_CANCELLATION=TRUE
-export OMP_NESTED=TRUE
-export OMP_PROC_BIND=TRUE
 ```
