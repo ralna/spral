@@ -43,7 +43,7 @@ module spral_ssids
 
   !> \brief Caches user OpenMP ICV values for later restoration
   type :: omp_settings
-     logical :: nested, dynamic
+     logical :: dynamic
      integer :: max_active_levels
   end type omp_settings
 
@@ -1443,7 +1443,6 @@ contains
     integer, intent(inout) :: flag
 
     ! Dummy, for now.
-    user_settings%nested = .true.
     user_settings%max_active_levels = huge(user_settings%max_active_levels)
 
 !$  ! issue an error if we don't have cancellation (could lead to segfaults)
@@ -1472,7 +1471,6 @@ contains
     implicit none
     type(omp_settings), intent(in) :: user_settings
 
-!$  if (.not. user_settings%nested) call omp_set_nested(user_settings%nested)
 !$  if (user_settings%dynamic) call omp_set_dynamic(user_settings%dynamic)
 !$  if (user_settings%max_active_levels .lt. 2) &
 !$       call omp_set_max_active_levels(user_settings%max_active_levels)
