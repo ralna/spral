@@ -31,8 +31,8 @@ our proprietary licenced [HSL Library](http://www.hsl.rl.ac.uk/)
 (free to academics).
 
 ## Installation
-Please note that we require [METIS](http://glaros.dtc.umn.edu/gkhome/metis/metis/overview) 
-and [hwloc](https://www.open-mpi.org/projects/hwloc/) to be installed 
+Please note that we require [METIS](http://glaros.dtc.umn.edu/gkhome/metis/metis/overview)
+and [hwloc](https://www.open-mpi.org/projects/hwloc/) to be installed
 (hwloc should be compiled with CUDA support if building for GPU).
 
 We use a standard autotools-based build:
@@ -50,7 +50,6 @@ make install
 When using SSIDS, ensure the following environment variables are set:
 ```bash
 export OMP_CANCELLATION=TRUE
-export OMP_NESTED=TRUE
 export OMP_PROC_BIND=TRUE
 ```
 

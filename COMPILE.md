@@ -93,6 +93,5 @@ from the `${HOME}/Software/spral` directory.
 Also, ensure the following environment variables are set when using the library:
 ```bash
 export OMP_CANCELLATION=TRUE
-export OMP_NESTED=TRUE
 export OMP_PROC_BIND=TRUE
 ```

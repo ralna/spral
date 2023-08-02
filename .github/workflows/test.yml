@@ -18,7 +18,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # Set environ for OpenMP
-      OMP_NESTED: true
       OMP_CANCELLATION: true
       OMP_PROC_BIND: true
       OMP_NUM_THREADS: 4
