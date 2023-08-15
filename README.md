@@ -67,3 +67,21 @@ gfortran -fPIC -shared -Wl,--whole-archive libspral.a -Wl,--no-whole-archive -lg
 # Mac
 gfortran -fPIC -shared -Wl,-all_load libspral.a -Wl,-noall_load -lgomp -lopenblas -lhwloc -lmetis -lstdc++ -o libspral.dylib
 ```
+
+## Citing
+To cite SSIDS, please use the following reference:
+
+J. Hogg, E. Ovtchinnikov, and J. Scott, (2016). A sparse symmetric indefinite direct solver for GPU architectures. ACM Transactions on Mathematical Software (TOMS), 42(1), 1-25, https://dx.doi.org/10.1145/275654
+
+In BibTeX, the citation is:
+
+@article{hogg2016sparse,
+  title={A sparse symmetric indefinite direct solver for GPU architectures},
+  author={Hogg, Jonathan D and Ovtchinnikov, Evgueni and Scott, Jennifer A},
+  journal={ACM Transactions on Mathematical Software (TOMS)},
+  volume={42},
+  number={1},
+  pages={1--25},
+  year={2016},
+  publisher={ACM New York, NY, USA}
+}
