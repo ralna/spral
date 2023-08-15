@@ -75,6 +75,8 @@ J. Hogg, E. Ovtchinnikov, and J. Scott, (2016). A sparse symmetric indefinite di
 
 In BibTeX, the citation is:
 
+
+```
 @article{hogg2016sparse,
   title={A sparse symmetric indefinite direct solver for GPU architectures},
   author={Hogg, Jonathan D and Ovtchinnikov, Evgueni and Scott, Jennifer A},
@@ -85,3 +87,4 @@ In BibTeX, the citation is:
   year={2016},
   publisher={ACM New York, NY, USA}
 }
+```
