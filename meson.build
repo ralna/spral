@@ -91,16 +91,15 @@ spral_c_tests = []
 # Headers
 spral_headers = []
 libspral_include = []
-libspral_include += include_directories('src')
+libspral_include += include_directories('include', 'src')
 
 # Sources
 subdir('include')
 subdir('interfaces/C')
 subdir('src')
 subdir('driver')
-
-# subdir('examples')
-# subdir('tests')
+subdir('examples')
+subdir('tests')
 
 # Library
 libspral = library('spral',
