@@ -53,7 +53,7 @@ export OMP_CANCELLATION=TRUE
 export OMP_PROC_BIND=TRUE
 ```
 
-## Generate shared library
+## Generating a shared library
 
 SPRAL must be compiled with `-fPIC` to be able to generate a shared library.
 The static library `libspral.a` can be converted to a shared library using one of the following commands:
@@ -68,13 +68,12 @@ gfortran -fPIC -shared -Wl,--whole-archive libspral.a -Wl,--no-whole-archive -lg
 gfortran -fPIC -shared -Wl,-all_load libspral.a -Wl,-noall_load -lgomp -lopenblas -lhwloc -lmetis -lstdc++ -o libspral.dylib
 ```
 
-## Citing
-To cite SSIDS, please use the following reference:
+## Citing SPRAL or SSIDS
+If you write a paper using software from SPRAL, please cite an appropriate paper (a list can usually be found in the method section of the user documentation). To cite SSIDS, please use the following reference:
 
-J. Hogg, E. Ovtchinnikov, and J. Scott (2016). A sparse symmetric indefinite direct solver for GPU architectures. ACM Transactions on Mathematical Software (TOMS), 42(1), 1-25, [https://dx.doi.org/10.1145/275654](https://doi.org/10.1145/2756548)
+> J. Hogg, E. Ovtchinnikov, and J. Scott (2016). A sparse symmetric indefinite direct solver for GPU architectures. ACM Transactions on Mathematical Software (TOMS), 42(1), 1-25, [https://dx.doi.org/10.1145/275654](https://doi.org/10.1145/2756548)
 
 In BibTeX, the citation is:
-
 
 ```
 @article{hogg2016sparse,
@@ -88,3 +87,7 @@ In BibTeX, the citation is:
   publisher={ACM New York, NY, USA}
 }
 ```
+
+If no paper is listed, a citation of the SPRAL GitHub website should be used, for example:
+
+> SPRAL: an open-source library for sparse linear algebra, Version 2023-08-02, https://github.com/ralna/spral, August 2023.
