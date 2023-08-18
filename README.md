@@ -71,7 +71,7 @@ gfortran -fPIC -shared -Wl,-all_load libspral.a -Wl,-noall_load -lgomp -lopenbla
 ## Citing
 To cite SSIDS, please use the following reference:
 
-J. Hogg, E. Ovtchinnikov, and J. Scott, (2016). A sparse symmetric indefinite direct solver for GPU architectures. ACM Transactions on Mathematical Software (TOMS), 42(1), 1-25, https://dx.doi.org/10.1145/275654
+J. Hogg, E. Ovtchinnikov, and J. Scott (2016). A sparse symmetric indefinite direct solver for GPU architectures. ACM Transactions on Mathematical Software (TOMS), 42(1), 1-25, [https://dx.doi.org/10.1145/275654](https://doi.org/10.1145/2756548)
 
 In BibTeX, the citation is:
 
