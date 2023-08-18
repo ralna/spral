@@ -14,3 +14,8 @@
 .wy-table-responsive th {
    white-space: normal !important;
 }
+
+/* Ensure documentation spans full screen width */
+.wy-nav-content {
+   max-width: none;
+}

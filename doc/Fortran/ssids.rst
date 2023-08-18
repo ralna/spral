@@ -42,19 +42,6 @@ An option exists to scale the matrix. In this case, the factorization of
 the scaled matrix  :math:`\overline{A} = S A S` is computed,
 where :math:`S` is a diagonal scaling matrix.
 
-Version history
----------------
-
-[For detail, see ChangeLog]
-
-2016-09-XX Version 2.0.0
-   * Add support for CPU and hybrid execution.
-   * Add support for 64-bit ptr(:) on input matrix :math:`A`.
-   * options%presolve removed.
-
-2014-03-17 Version 1.0.0
-   * Initial release: GPU only
-
 ==============
 Usage overview
 ==============

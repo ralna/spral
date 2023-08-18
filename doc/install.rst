@@ -39,7 +39,7 @@ Notes
   the user documentation). If none is listed, a citation of the library
   website should be used:
 
-     SPRAL: an open-source library for sparse linear algebra, Version 2014-03-20, `<http://www.numerical.rl.ac.uk/spral>`_, March 2014.
+     SPRAL: an open-source library for sparse linear algebra, Version 2023-08-02, `<http://www.numerical.rl.ac.uk/spral>`_, August 2023.
 
 Third-party libraries
 =====================
@@ -50,8 +50,7 @@ Many of our packages use the METIS graph partitioning library to find good
 orderings. You can obtain a copy of METIS from
 `<http://www.cs.umn.edu/~metis>`_.
 We support both version 4 and version 5 (the latter is available under the open
-source Apache Licence). At present, we recommend version 4 as it is faster than
-version 5, though this may change in the future.\\
+source Apache Licence).
 If the METIS library is not available on the default link path, the
 ``--with-metis`` option to `configure` should be used to specify
 how to link against METIS. For example, if ``libmetis.a`` is in the directory 
@@ -75,7 +74,7 @@ If the BLAS library is not available on the default link path, or if
 `configure` detects the wrong BLAS library, the ``--with-blas``
 option to `configure` should be used to specify how to link against
 the BLAS library. For example, to link against the Intel MKL using the GNU
-compiler suite, use: \\
+compiler suite, use:
 
 .. code-block:: bash
 
@@ -130,7 +129,7 @@ an issue on our github: `<https://github.com/ralna/spral/issues>`_.
 
 Licence
 =======
-Copyright (c) 2014-6, The Science and Technology Facilities Council (STFC)
+Copyright (c) 2014-2023, The Science and Technology Facilities Council (STFC)
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
