@@ -1,0 +1,55 @@
+option('modules',
+       type : 'boolean',
+       value : true,
+       description : 'option to install Fortran modules')
+
+option('gpu',
+       type : 'boolean',
+       value : true,
+       description : 'option to compile SPRAL with GPU support')
+
+option('examples',
+       type : 'boolean',
+       value : true,
+       description : 'whether to generate the examples')
+
+option('tests',
+       type : 'boolean',
+       value : true,
+       description : 'whether to generate the tests')
+
+option('libblas',
+       type : 'string',
+       value : 'blas',
+       description : 'BLAS library against which to link')
+
+option('liblapack',
+       type : 'string',
+       value : 'lapack',
+       description : 'LAPACK library against which to link')
+
+option('libmetis',
+       type : 'string',
+       value : 'metis',
+       description : 'METIS library against which to link')
+
+option('libblas_path',
+       type : 'array',
+       value : [],
+       description : 'Additional directories to search for the BLAS library')
+
+option('liblapack_path',
+       type : 'array',
+       value : [],
+       description : 'Additional directories to search for the LAPACK library')
+
+option('libmetis_path',
+       type : 'array',
+       value : [],
+       description : 'Additional directories to search for the METIS library')
+
+option('libmetis_version',
+       type : 'combo',
+       choices : ['4', '5'],
+       value : '5',
+       description : 'Version of the METIS library')
