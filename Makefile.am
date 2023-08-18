@@ -49,7 +49,10 @@ SPRALLINK = $(FCLINK)
 endif
 
 lib_LIBRARIES = libspral.a
-include_HEADERS = include/spral.h
+# Note: first so not +=
+include_HEADERS = \
+   include/spral.h \
+   include/spral_complex.h
 
 # BLAS_IFACE
 # Note: first so not +=
