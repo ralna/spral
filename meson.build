@@ -77,7 +77,7 @@ elif cxx.get_id() == 'intel' or cxx.get_id() == 'intel-cl' or cxx.get_id() == 'i
   add_global_arguments('-qopenmp', language : 'cpp')
 endif
 
-
+binspral_src = []
 libspral_src = []
 libspral_cpp_src = []
 libspral_nvcc_src = []
@@ -103,12 +103,19 @@ subdir('tests')
 
 # Library
 libspral = library('spral',
-                   sources : libspral_src + libspral_cpp_src,
+                   sources : libspral_src + libspral_cpp_src + libspral_nvcc_src,
                    dependencies : libspral_deps,
                    link_language : 'fortran',
                    link_args : '-lstdc++',
                    include_directories: libspral_include,
                    install : true)
+
+# Binary
+executable('spral_ssids',
+           sources : binspral_src,
+           link_with : libspral,
+           link_language : 'fortran',
+           install : true)
 
 # Headers
 install_headers(spral_headers)
