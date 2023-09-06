@@ -1,7 +1,7 @@
 ! COPYRIGHT (c) 2007-2013 Science & Technology Facilities Council
 ! Authors: Sue Thorne and Jonathan Hogg
 ! Origin: Heavily modified version of hsl_mc68
-! 
+!
 ! This version is used to support METIS v5 (different API to v4)
 !
 
@@ -19,17 +19,17 @@ module spral_metis_wrapper
    integer, parameter :: long = C_INT64_T
 
 #if SPRAL_HAVE_METIS_H
-! metis header is available, check for index types 
+! metis header is available, check for index types
 #if SIZEOF_IDX_T == 8
    integer, parameter :: metis_idx_t = c_int64_t
 #else
-   integer, parameter :: metis_idx_t = c_int   
-#endif
-#else
-   ! metis header is not available, default to 32-bit index types 
    integer, parameter :: metis_idx_t = c_int
 #endif
-   
+#else
+   ! metis header is not available, default to 32-bit index types
+   integer, parameter :: metis_idx_t = c_int
+#endif
+
    ! We use the C interface to METIS via the following interoperable interfaces
    interface METIS_SetDefaultOptions
       ! METIS_SetDefaultOptions 32-bit integer interface
@@ -70,27 +70,14 @@ module spral_metis_wrapper
          integer(c_int64_t), dimension(*), intent(out) :: perm, iperm
        end function METIS_NodeND_64
    end interface METIS_NodeND
-   
+
    ! Following array size based on #define in metis.h
    integer, parameter :: METIS_NOPTIONS = 40
-   ! Following are based on enum in metis.h, adjusted to Fortran indexing.
-   integer, parameter :: METIS_OPTION_CTYPE     =  3, &
-                         METIS_OPTION_RTYPE     =  5, &
-                         METIS_OPTION_DBGLVL    =  6, &
-                         METIS_OPTION_NITER     =  7, &
-                         METIS_OPTION_SEED      =  8, &
-                         METIS_OPTION_NO2HOP    = 10, &
-                         METIS_OPTION_COMPRESS  = 13, &
-                         METIS_OPTION_CCORDER   = 14, &
-                         METIS_OPTION_PFACTOR   = 15, &
-                         METIS_OPTION_NSEPS     = 16, &
-                         METIS_OPTION_UFACTOR   = 17, &
-                         METIS_OPTION_NUMBERING = 18
    ! Following return codes based on enum in metis.h
    integer, parameter :: METIS_OK            =  1, &
                          METIS_ERROR_INPUT   = -2, &
                          METIS_ERROR_MEMORY  = -3, &
-                         METIS_ERROR         = -4 
+                         METIS_ERROR         = -4
 
    ! Constants for this package
    integer, parameter :: ERROR_ALLOC = -1
@@ -106,7 +93,7 @@ module spral_metis_wrapper
       module procedure half_to_full_drop_diag32_32, half_to_full_drop_diag64_32, &
            half_to_full_drop_diag32_64, half_to_full_drop_diag64_64
    end interface half_to_full_drop_diag
-   
+
 contains
 
 !
@@ -167,9 +154,12 @@ subroutine metis_order32(n,ptr,row,perm,invp,flag,stat)
    ! Expand matrix, dropping diagonal entries
    call half_to_full_drop_diag(n, ptr, row, ptr2, row2)
 
+   ! Convert to C-style (0-based) indexing as expected by METIS
+   ptr2 = ptr2 - 1
+   row2 = row2 - 1
+
    ! Carry out ordering
-   call METIS_SetDefaultOptions(metis_opts)
-   metis_opts(METIS_OPTION_NUMBERING) = 1 ! Fortran-style numbering
+   call METIS_SetDefaultOptions(metis_opts) ! C-style (0-based) indexing
    metis_flag = METIS_NodeND(int(n, kind=metis_idx_t), ptr2, row2, C_NULL_PTR, metis_opts, invp2, perm2)
    select case(metis_flag)
    case(METIS_OK)
@@ -186,8 +176,8 @@ subroutine metis_order32(n,ptr,row,perm,invp,flag,stat)
       flag = ERROR_UNKNOWN
    end select
    ! FIXME: If perm and perm2 (or invp and invp2) have the same type, it is not necessary to make a copy
-   perm = perm2
-   invp = invp2
+   perm = perm2 + 1 ! Convert to Fortran-style (1-based) indexing
+   invp = invp2 + 1 ! Convert to Fortran-style (1-based) indexing
 
  end subroutine metis_order32
 
@@ -254,9 +244,12 @@ subroutine metis_order64(n,ptr,row,perm,invp,flag,stat)
    ! Expand matrix, dropping diagonal entries
    call half_to_full_drop_diag(n, ptr, row, ptr2, row2)
 
+   ! Convert to C-style (0-based) indexing as expected by METIS
+   ptr2 = ptr2 - 1
+   row2 = row2 - 1
+
    ! Carry out ordering
-   call METIS_SetDefaultOptions(metis_opts)
-   metis_opts(METIS_OPTION_NUMBERING) = 1 ! Fortran-style numbering
+   call METIS_SetDefaultOptions(metis_opts) ! C-style (0-based) indexing
    metis_flag = METIS_NodeND(int(n, kind=metis_idx_t), ptr2, row2, C_NULL_PTR, metis_opts, invp2, perm2)
    select case(metis_flag)
    case(METIS_OK)
@@ -273,9 +266,9 @@ subroutine metis_order64(n,ptr,row,perm,invp,flag,stat)
       flag = ERROR_UNKNOWN
    end select
    ! FIXME: If perm and perm2 (or invp and invp2) have the same type, it is not necessary to make a copy
-   perm = perm2
-   invp = invp2
-   
+   perm = perm2 + 1 ! Convert to Fortran-style (1-based) indexing
+   invp = invp2 + 1 ! Convert to Fortran-style (1-based) indexing
+
  end subroutine metis_order64
 
 ! Convert a matrix in half storage to one in full storage.
