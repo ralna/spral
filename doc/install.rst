@@ -39,7 +39,7 @@ Notes
   the user documentation). If none is listed, a citation of the library
   website should be used:
 
-     SPRAL: an open-source library for sparse linear algebra, Version 2023-08-02, `<http://www.numerical.rl.ac.uk/spral>`_, August 2023.
+     SPRAL: an open-source library for sparse linear algebra, Version 2023-09-07, `<http://www.numerical.rl.ac.uk/spral>`_, September 2023.
 
 Third-party libraries
 =====================
@@ -90,7 +90,7 @@ variables:
 CC
    specifies the C compiler to use.
 FC
-   specifies the Fortran 90/95/2003/2008 compiler to use.
+   specifies the Fortran 90/95/2003/2008/2018 compiler to use.
 NVCC
    specifies the CUDA compiler to use.
 
