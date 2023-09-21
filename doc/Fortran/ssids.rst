@@ -530,6 +530,8 @@ Derived types
    | -52         | CUBLAS error. The CUBLAS error return value is returned in  |
    |             | inform%cublas_error.                                        |
    +-------------+-------------------------------------------------------------+
+   | -53         | The SSIDS CPU code requires OMP cancellation to be enabled. |
+   +-------------+-------------------------------------------------------------+
    | +1          | Out-of-range variable indices found and ignored in input    |
    |             | data. inform%matrix_outrange is set to the number of such   |
    |             | entries.                                                    |
