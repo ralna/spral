@@ -95,7 +95,7 @@ public:
       {
          /* Loop over small leaf subtrees */
          for(unsigned int si=0; si<symb_.small_leafs_.size(); ++si) {
-            auto* parent_lcol = &nodes_[symb_.small_leafs_[si].get_parent()];
+            auto* parent_lcol = nodes_.data() + symb_.small_leafs_[si].get_parent();
             #pragma omp task default(none) \
                firstprivate(si) \
                shared(aval, abort, options, scaling, thread_stats, work) \
@@ -158,7 +158,7 @@ public:
          for(int ni=0; ni<symb_.nnodes_; ++ni) {
             if(symb_[ni].insmallleaf) continue; // already handled
             auto* this_lcol = &nodes_[ni]; // for depend
-            auto* parent_lcol = &nodes_[symb_[ni].parent]; // for depend
+            auto* parent_lcol = nodes_.data() + symb_[ni].parent; // for depend
             #pragma omp task default(none) \
                firstprivate(ni) \
                shared(aval, abort, child_contrib, options, scaling, \
