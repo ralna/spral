@@ -24,7 +24,7 @@ jobs:
             cxx: g++
           - os: ubuntu-latest
             compiler: intel-classic
-            compiler_version: 2021.10
+            compiler_version: 2021.9
             cc: icc
             fc: ifort
             cxx: icpc
