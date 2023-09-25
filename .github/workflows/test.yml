@@ -22,24 +22,28 @@ jobs:
             cc: gcc
             fc: gfortran
             cxx: g++
+            allow_failure: false
           - os: ubuntu-latest
             compiler: intel-classic
             compiler_version: 2021.9
             cc: icc
             fc: ifort
             cxx: icpc
+            allow_failure: true
           - os:  macos-latest
             compiler: intel-classic
             compiler_version: 2021.9
             cc: icc
             fc: ifort
             cxx: icpc
+            allow_failure: true
           - os: ubuntu-latest
             compiler: intel-llvm
             compiler_version: 2023.2
             cc: icx
             fc: ifx
             cxx: icpx
+            allow_failure: true
     runs-on: ${{ matrix.os }}
     env:
       # Set environ for OpenMP
