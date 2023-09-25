@@ -28,8 +28,8 @@ jobs:
             cc: icc
             fc: ifort
             cxx: icpc
-          - os: ubuntu-latest
-            compiler: macos-latest
+          - os:  macos-latest
+            compiler: intel-classic
             compiler_version: 2021.9
             cc: icc
             fc: ifort
