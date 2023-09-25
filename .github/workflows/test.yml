@@ -15,22 +15,22 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]
-        compiler_version: [9, 10, 11, 12]
+        os: [ubuntu-latest, macos-latest]
+        compiler_version: [10, 11, 12]
         include:
           - compiler: gnu
             cc: gcc
             fc: gfortran
             cxx: g++
           - os: ubuntu-latest
-            compiler: intel-llvm
-            compiler_version: 2023.1
-            cc: icx
+            compiler: intel-classic
+            compiler_version: 2021.10
+            cc: icc
             fc: ifort
-            cxx: icpx
+            cxx: icpc
           - os: ubuntu-latest
             compiler: intel-llvm
-            compiler_version: 2023.1
+            compiler_version: 2023.2
             cc: icx
             fc: ifx
             cxx: icpx
@@ -44,25 +44,6 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       # Usually this is always needed
       - uses: actions/checkout@v3
-
-      - name: Install dependencies on Windows
-        shell: bash
-        if: matrix.os == 'windows-latest'
-        run: |
-          choco install wget
-          choco install gnuwin32-m4
-          wget https://github.com/JuliaBinaryWrappers/OpenBLAS32_jll.jl/releases/download/OpenBLAS32-v0.3.23%2B0/OpenBLAS32.v0.3.23.x86_64-w64-mingw32-libgfortran5.tar.gz
-          mkdir openblas
-          tar -xzvf OpenBLAS32.v0.3.23.x86_64-w64-mingw32-libgfortran5.tar.gz -C openblas
-          wget https://github.com/JuliaBinaryWrappers/METIS_jll.jl/releases/download/METIS-v5.1.2%2B0/METIS.v5.1.2.x86_64-w64-mingw32.tar.gz
-          mkdir metis
-          tar -xzvf METIS.v5.1.2.x86_64-w64-mingw32.tar.gz -C metis
-          wget https://sourceforge.net/projects/gnuwin32/files/autoconf/2.63/autoconf-2.63-bin.zip/download -O autoconf-2.63-bin.zip
-          mkdir autoconf
-          unzip autoconf-2.63-bin.zip -d autoconf
-          wget https://sourceforge.net/projects/gnuwin32/files/automake/1.9.4/automake-1.9.4-bin.zip/download -O automake-1.9.4-bin.zip
-          mkdir automake
-          unzip automake-1.9.4-bin.zip -d automake
 
       - name: Install dependencies on Ubuntu
         if: matrix.os == 'ubuntu-latest'
@@ -82,7 +63,7 @@ jobs:
           version: ${{matrix.compiler_version}}
 
       - name: Install classic Intel C and C++ compilers
-        if: matrix.compiler == 'intel'
+        if: matrix.compiler == 'intel-classic'
         uses: awvwgk/setup-fortran@main
         with:
           compiler: intel-classic
@@ -102,25 +83,18 @@ jobs:
       - name: 'Build'
         shell: bash
         run: |
-          if [[ "${{matrix.os}}" != "windows-latest" ]]; then
-            ./autogen.sh
-          else
-            ls autoconf/bin
-            ls automake/bin
-            ./autoconf/bin/autoreconf -ivf
-          fi
           ./autogen.sh
           PENDANTIC=""
           if [[ "${{matrix.compiler}}" == "gnu" ]]; then
             PENDANTIC="-pedantic"
           fi
           INTEL=""
-          if [[ "${{matrix.compiler}}" == "intel" ]]; then
+          if [[ "${{matrix.compiler}}" == "intel-classic" ]]; then
             INTEL="-diag-disable=10441"
           fi
           WARNING="-Wall"
           OPENMP="-fopenmp"
-          if [[ "${{matrix.compiler}}" == "intel" ]] || [[ "${{matrix.compiler}}" == "intel-llvm" ]]; then
+          if [[ "${{matrix.compiler}}" == "intel-classic" ]] || [[ "${{matrix.compiler}}" == "intel-llvm" ]]; then
             OPENMP="-qopenmp"
             WARNING="-warn all"
           fi
@@ -131,11 +105,6 @@ jobs:
             INCLUDEDIR_OPENBLAS="-I$(brew --prefix openblas)/include"
             LIBDIR_OPENBLAS="-L$(brew --prefix openblas)/lib"
             LIBDIR_METIS="-L$(brew --prefix metis)/lib"
-          fi
-          if [[ "${{matrix.os}}" == "windows-latest" ]]; then
-            INCLUDEDIR_OPENBLAS="-I./openblas/include"
-            LIBDIR_OPENBLAS="-L./openblas/bin"
-            LIBDIR_METIS="-L./metis/bin"
           fi
           ./configure CC=${{matrix.cc}} \
             CXX=${{matrix.cxx}} \
