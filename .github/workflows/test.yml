@@ -108,6 +108,8 @@ jobs:
           if [[ "${{matrix.compiler}}" == "intel-classic" ]] || [[ "${{matrix.compiler}}" == "intel-llvm" ]]; then
             OPENMP="-qopenmp"
             WARNING="-warn all"
+          fi
+          if [[ "${{matrix.os}}" == "macos-latest" ]] && [[ "${{matrix.compiler}}" == "intel-classic" ]]; then
             LIBCPP="-lc++"
           fi
           INCLUDEDIR_OPENBLAS=""
