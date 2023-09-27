@@ -58,7 +58,7 @@ jobs:
       - name: Install dependencies on Ubuntu
         if: matrix.os == 'ubuntu-latest'
         run: |
-          sudo apt-get install libmetis-dev libopenblas-dev
+          sudo apt-get install libhwloc-dev libmetis-dev libopenblas-dev
 
       - name: Install dependencies on MacOS
         if: matrix.os == 'macos-latest'
@@ -110,7 +110,6 @@ jobs:
           WARNING="-Wall"
           INCDIR_BLAS=""
           LIBDIR_BLAS="-lopenblas"
-          LIBDIR_METIS="-lmetis"
           if [[ "${{matrix.compiler}}" == "intel-classic" ]] || [[ "${{matrix.compiler}}" == "intel-llvm" ]]; then
             OPENMP="-qopenmp"
             WARNING="-warn all"
@@ -119,6 +118,9 @@ jobs:
           if [[ "${{matrix.os}}" == "macos-latest" ]] && [[ "${{matrix.compiler}}" == "gnu" ]]; then
             INCDIR_BLAS="-I$(brew --prefix openblas)/include"
             LIBDIR_BLAS="-L$(brew --prefix openblas)/lib -lopenblas"
+          fi
+          LIBDIR_METIS="-lmetis"
+          if [[ "${{matrix.os}}" == "macos-latest" ]]; then
             LIBDIR_METIS="-L$(brew --prefix metis)/lib -lmetis"
           fi
           ./configure CC=${{matrix.cc}} \
