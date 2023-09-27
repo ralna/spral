@@ -11,7 +11,7 @@ on:
 
 jobs:
   build:
-    name: GALAHAD/${{ matrix.os }}/${{ matrix.fc }}/${{ matrix.compiler_version }}
+    name: SPRAL/${{ matrix.os }}/${{ matrix.fc }}/${{ matrix.compiler_version }}
     strategy:
       fail-fast: false
       matrix:
