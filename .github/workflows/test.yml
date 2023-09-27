@@ -11,7 +11,7 @@ on:
 
 jobs:
   build:
-    name: GALAHAD/${{ matrix.os }}/${{ matrix.fc }}/${{ matrix.compiler_version }}
+    name: SPRAL/${{ matrix.os }}/${{ matrix.fc }}/${{ matrix.compiler_version }}
     strategy:
       fail-fast: false
       matrix:
@@ -23,20 +23,20 @@ jobs:
             fc: gfortran
             cxx: g++
             allow_failure: false
-          - os: ubuntu-latest
-            compiler: intel-classic
-            compiler_version: 2021.9
-            cc: icc
-            fc: ifort
-            cxx: icpc
-            allow_failure: true
-          - os:  macos-latest
-            compiler: intel-classic
-            compiler_version: 2021.9
-            cc: icc
-            fc: ifort
-            cxx: icpc
-            allow_failure: true
+          #- os: ubuntu-latest
+          #  compiler: intel-classic
+          #  compiler_version: 2021.9
+          #  cc: icc
+          #  fc: ifort
+          #  cxx: icpc
+          #  allow_failure: true
+          #- os:  macos-latest
+          #  compiler: intel-classic
+          #  compiler_version: 2021.9
+          #  cc: icc
+          #  fc: ifort
+          #  cxx: icpc
+          #  allow_failure: true
           # - os: ubuntu-latest
           #   compiler: intel-llvm
           #   compiler_version: 2023.2
@@ -58,7 +58,7 @@ jobs:
       - name: Install dependencies on Ubuntu
         if: matrix.os == 'ubuntu-latest'
         run: |
-          sudo apt-get install libmetis-dev libopenblas-dev
+          sudo apt-get install libhwloc-dev libudev-dev libmetis-dev libopenblas-dev
 
       - name: Install dependencies on MacOS
         if: matrix.os == 'macos-latest'
@@ -102,35 +102,38 @@ jobs:
           if [[ "${{matrix.compiler}}" == "intel-classic" ]]; then
             INTEL="-diag-disable=10441"
           fi
-          WARNING="-Wall"
+          LIB_CPP="-lstdc++"
+          if [[ "${{matrix.os}}" == "macos-latest" ]] && [[ "${{matrix.compiler}}" == "intel-classic" ]]; then
+            LIB_CPP="-lc++"
+          fi
           OPENMP="-fopenmp"
-          LIBCPP="-lstdc++"
+          WARNING="-Wall"
+          INC_BLAS=""
+          LIB_BLAS="-lopenblas"
           if [[ "${{matrix.compiler}}" == "intel-classic" ]] || [[ "${{matrix.compiler}}" == "intel-llvm" ]]; then
             OPENMP="-qopenmp"
             WARNING="-warn all"
+            LIB_BLAS="-lmkl_rt"
           fi
-          if [[ "${{matrix.os}}" == "macos-latest" ]] && [[ "${{matrix.compiler}}" == "intel-classic" ]]; then
-            LIBCPP="-lc++"
+          if [[ "${{matrix.os}}" == "macos-latest" ]] && [[ "${{matrix.compiler}}" == "gnu" ]]; then
+            INC_BLAS="-I$(brew --prefix openblas)/include"
+            LIB_BLAS="-L$(brew --prefix openblas)/lib -lopenblas"
           fi
-          INCLUDEDIR_OPENBLAS=""
-          LIBDIR_OPENBLAS=""
-          LIBDIR_METIS=""
+          LIB_METIS="-lmetis"
           if [[ "${{matrix.os}}" == "macos-latest" ]]; then
-            INCLUDEDIR_OPENBLAS="-I$(brew --prefix openblas)/include"
-            LIBDIR_OPENBLAS="-L$(brew --prefix openblas)/lib"
-            LIBDIR_METIS="-L$(brew --prefix metis)/lib"
+            LIB_METIS="-L$(brew --prefix metis)/lib -lmetis"
           fi
           ./configure CC=${{matrix.cc}} \
             CXX=${{matrix.cxx}} \
             F77=${{matrix.fc}} \
             FC=${{matrix.fc}} \
-            LIBS=${LIBCPP} \
-            CFLAGS="-g -O3 -Wall $OPENMP $INTEL ${INCLUDEDIR_OPENBLAS}" \
-            CXXFLAGS="-g -O3 -std=c++17 -Wall $OPENMP $INTEL ${INCLUDEDIR_OPENBLAS}" \
+            LIBS=${LIB_CPP} \
+            CFLAGS="-g -O3 -Wall $OPENMP $INTEL ${INC_BLAS}" \
+            CXXFLAGS="-g -O3 -std=c++17 -Wall $OPENMP $INTEL ${INC_BLAS}" \
             FCFLAGS="-g -O3 $WARNING $OPENMP $PENDANTIC" \
-            --with-blas="${LIBDIR_OPENBLAS} -lopenblas" \
-            --with-lapack="${LIBDIR_OPENBLAS} -lopenblas" \
-            --with-metis="${LIBDIR_METIS} -lmetis"
+            --with-blas="${LIB_BLAS}" \
+            --with-lapack="${LIB_BLAS}" \
+            --with-metis="${LIB_METIS}"
           make
       - name: 'Test'
         run: |
