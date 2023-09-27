@@ -23,20 +23,20 @@ jobs:
             fc: gfortran
             cxx: g++
             allow_failure: false
-          - os: ubuntu-latest
-            compiler: intel-classic
-            compiler_version: 2021.9
-            cc: icc
-            fc: ifort
-            cxx: icpc
-            allow_failure: true
-          - os:  macos-latest
-            compiler: intel-classic
-            compiler_version: 2021.9
-            cc: icc
-            fc: ifort
-            cxx: icpc
-            allow_failure: true
+          #- os: ubuntu-latest
+          #  compiler: intel-classic
+          #  compiler_version: 2021.9
+          #  cc: icc
+          #  fc: ifort
+          #  cxx: icpc
+          #  allow_failure: true
+          #- os:  macos-latest
+          #  compiler: intel-classic
+          #  compiler_version: 2021.9
+          #  cc: icc
+          #  fc: ifort
+          #  cxx: icpc
+          #  allow_failure: true
           # - os: ubuntu-latest
           #   compiler: intel-llvm
           #   compiler_version: 2023.2
@@ -110,17 +110,14 @@ jobs:
           WARNING="-Wall"
           INC_BLAS=""
           LIB_BLAS="-lopenblas"
-          LIB_LAPACK="-lopenblas"
           if [[ "${{matrix.compiler}}" == "intel-classic" ]] || [[ "${{matrix.compiler}}" == "intel-llvm" ]]; then
             OPENMP="-qopenmp"
             WARNING="-warn all"
-            LIB_BLAS="-lblas"
-            LIB_LAPACK="-llapack"
+            LIB_BLAS="-lmkl_rt"
           fi
           if [[ "${{matrix.os}}" == "macos-latest" ]] && [[ "${{matrix.compiler}}" == "gnu" ]]; then
             INC_BLAS="-I$(brew --prefix openblas)/include"
             LIB_BLAS="-L$(brew --prefix openblas)/lib -lopenblas"
-            LIB_LAPACK="-L$(brew --prefix openblas)/lib -lopenblas"
           fi
           LIB_METIS="-lmetis"
           if [[ "${{matrix.os}}" == "macos-latest" ]]; then
@@ -135,7 +132,7 @@ jobs:
             CXXFLAGS="-g -O3 -std=c++17 -Wall $OPENMP $INTEL ${INC_BLAS}" \
             FCFLAGS="-g -O3 $WARNING $OPENMP $PENDANTIC" \
             --with-blas="${LIB_BLAS}" \
-            --with-lapack="${LIB_LAPACK}" \
+            --with-lapack="${LIB_BLAS}" \
             --with-metis="${LIB_METIS}"
           make
       - name: 'Test'
