@@ -58,7 +58,7 @@ jobs:
       - name: Install dependencies on Ubuntu
         if: matrix.os == 'ubuntu-latest'
         run: |
-          sudo apt-get install libhwloc-dev libmetis-dev libopenblas-dev
+          sudo apt-get install libhwloc-dev libudev-dev libmetis-dev libopenblas-dev
 
       - name: Install dependencies on MacOS
         if: matrix.os == 'macos-latest'
