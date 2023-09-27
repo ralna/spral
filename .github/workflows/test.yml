@@ -104,9 +104,11 @@ jobs:
           fi
           WARNING="-Wall"
           OPENMP="-fopenmp"
+          LIBCPP="-lstdc++"
           if [[ "${{matrix.compiler}}" == "intel-classic" ]] || [[ "${{matrix.compiler}}" == "intel-llvm" ]]; then
             OPENMP="-qopenmp"
             WARNING="-warn all"
+            LIBCPP="-lc++"
           fi
           INCLUDEDIR_OPENBLAS=""
           LIBDIR_OPENBLAS=""
@@ -120,8 +122,9 @@ jobs:
             CXX=${{matrix.cxx}} \
             F77=${{matrix.fc}} \
             FC=${{matrix.fc}} \
+            LIBS=${LIBCPP} \
             CFLAGS="-g -O3 -Wall $OPENMP $INTEL ${INCLUDEDIR_OPENBLAS}" \
-            CXXFLAGS="-g -O3 -Wall $OPENMP $INTEL ${INCLUDEDIR_OPENBLAS}" \
+            CXXFLAGS="-g -O3 -std=c++17 -Wall $OPENMP $INTEL ${INCLUDEDIR_OPENBLAS}" \
             FCFLAGS="-g -O3 $WARNING $OPENMP $PENDANTIC" \
             --with-blas="${LIBDIR_OPENBLAS} -lopenblas" \
             --with-lapack="${LIBDIR_OPENBLAS} -lopenblas" \
