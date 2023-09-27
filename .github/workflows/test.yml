@@ -1,4 +1,5 @@
-name: 'Linux Tests'
+# All actions have a name that will be displayed in the "Actions" page in GitHub.
+name: 'CI'
 
 on:
   push:
@@ -7,44 +8,128 @@ on:
   pull_request:
     branches:
       - 'master'
-  workflow_dispatch:
 
 jobs:
-  linux-tests:
+  build:
+    name: GALAHAD/${{ matrix.os }}/${{ matrix.fc }}/${{ matrix.compiler_version }}
     strategy:
+      fail-fast: false
       matrix:
-        gcc_ver: [9, 10, 11]
-    name: 'Linux (gcc-${{ matrix.gcc_ver }})'
-    runs-on: ubuntu-latest
+        os: [ubuntu-latest, macos-latest]
+        compiler_version: [10, 11, 12]
+        include:
+          - compiler: gnu
+            cc: gcc
+            fc: gfortran
+            cxx: g++
+            allow_failure: false
+          - os: ubuntu-latest
+            compiler: intel-classic
+            compiler_version: 2021.9
+            cc: icc
+            fc: ifort
+            cxx: icpc
+            allow_failure: true
+          - os:  macos-latest
+            compiler: intel-classic
+            compiler_version: 2021.9
+            cc: icc
+            fc: ifort
+            cxx: icpc
+            allow_failure: true
+          # - os: ubuntu-latest
+          #   compiler: intel-llvm
+          #   compiler_version: 2023.2
+          #   cc: icx
+          #   fc: ifx
+          #   cxx: icpx
+          #   allow_failure: true
+    runs-on: ${{ matrix.os }}
     env:
       # Set environ for OpenMP
       OMP_CANCELLATION: true
       OMP_PROC_BIND: true
       OMP_NUM_THREADS: 4
     steps:
-      - name: 'Install dependencies'
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      # Usually this is always needed
+      - uses: actions/checkout@v3
+
+      - name: Install dependencies on Ubuntu
+        if: matrix.os == 'ubuntu-latest'
         run: |
-          sudo apt-get update
-          sudo apt-get install gcc-${{ matrix.gcc_ver }} \
-                               gfortran-${{ matrix.gcc_ver }} \
-                               g++-${{ matrix.gcc_ver }} \
-                               libmetis-dev \
-                               libatlas-base-dev \
-                               liblapack-dev
-      - name: 'Checkout code'
-        uses: actions/checkout@v2
+          sudo apt-get install libmetis-dev libopenblas-dev
+
+      - name: Install dependencies on MacOS
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew install automake autoconf hwloc metis openblas
+
+      - name: Install GNU C and C++ compilers
+        if: matrix.compiler == 'gnu'
+        uses: awvwgk/setup-fortran@main
+        with:
+          compiler: gcc
+          version: ${{matrix.compiler_version}}
+
+      - name: Install classic Intel C and C++ compilers
+        if: matrix.compiler == 'intel-classic'
+        uses: awvwgk/setup-fortran@main
+        with:
+          compiler: intel-classic
+          version: ${{matrix.compiler_version}}
+
+      - name: Install nextgen Intel C and C++ compilers
+        if: matrix.compiler == 'intel-llvm'
+        uses: awvwgk/setup-fortran@main
+        with:
+          compiler: intel
+          version: ${{matrix.compiler_version}}
+
+      # Uncomment this section to obtain ssh access to VM
+      # - name: Setup tmate session
+      #   uses: mxschmitt/action-tmate@v3
+
       - name: 'Build'
+        shell: bash
         run: |
           ./autogen.sh
-          ./configure CC=gcc-${{ matrix.gcc_ver }} \
-                      CXX=g++-${{ matrix.gcc_ver }} \
-                      F77=gfortran-${{ matrix.gcc_ver }} \
-                      FC=gfortran-${{ matrix.gcc_ver }} \
-                      CFLAGS="-g -O2 -Wall" \
-                      CXXFLAGS="-g -O2 -Wall" \
-                      FCFLAGS="-g -O2 -Wall -pedantic"
+          PENDANTIC=""
+          if [[ "${{matrix.compiler}}" == "gnu" ]]; then
+            PENDANTIC="-pedantic"
+          fi
+          INTEL=""
+          if [[ "${{matrix.compiler}}" == "intel-classic" ]]; then
+            INTEL="-diag-disable=10441"
+          fi
+          WARNING="-Wall"
+          OPENMP="-fopenmp"
+          LIBCPP="-lstdc++"
+          if [[ "${{matrix.compiler}}" == "intel-classic" ]] || [[ "${{matrix.compiler}}" == "intel-llvm" ]]; then
+            OPENMP="-qopenmp"
+            WARNING="-warn all"
+            LIBCPP="-lc++"
+          fi
+          INCLUDEDIR_OPENBLAS=""
+          LIBDIR_OPENBLAS=""
+          LIBDIR_METIS=""
+          if [[ "${{matrix.os}}" == "macos-latest" ]]; then
+            INCLUDEDIR_OPENBLAS="-I$(brew --prefix openblas)/include"
+            LIBDIR_OPENBLAS="-L$(brew --prefix openblas)/lib"
+            LIBDIR_METIS="-L$(brew --prefix metis)/lib"
+          fi
+          ./configure CC=${{matrix.cc}} \
+            CXX=${{matrix.cxx}} \
+            F77=${{matrix.fc}} \
+            FC=${{matrix.fc}} \
+            LIBS=${LIBCPP} \
+            CFLAGS="-g -O3 -Wall $OPENMP $INTEL ${INCLUDEDIR_OPENBLAS}" \
+            CXXFLAGS="-g -O3 -std=c++17 -Wall $OPENMP $INTEL ${INCLUDEDIR_OPENBLAS}" \
+            FCFLAGS="-g -O3 $WARNING $OPENMP $PENDANTIC" \
+            --with-blas="${LIBDIR_OPENBLAS} -lopenblas" \
+            --with-lapack="${LIBDIR_OPENBLAS} -lopenblas" \
+            --with-metis="${LIBDIR_METIS} -lmetis"
           make
       - name: 'Test'
         run: |
           make check
-
