@@ -102,38 +102,41 @@ jobs:
           if [[ "${{matrix.compiler}}" == "intel-classic" ]]; then
             INTEL="-diag-disable=10441"
           fi
-          LIBCPP="-lstdc++"
+          LIB_CPP="-lstdc++"
           if [[ "${{matrix.os}}" == "macos-latest" ]] && [[ "${{matrix.compiler}}" == "intel-classic" ]]; then
-            LIBCPP="-lc++"
+            LIB_CPP="-lc++"
           fi
           OPENMP="-fopenmp"
           WARNING="-Wall"
-          INCDIR_BLAS=""
-          LIBDIR_BLAS="-lopenblas"
+          INC_BLAS=""
+          LIB_BLAS="-lopenblas"
+          LIB_LAPACK="-lopenblas"
           if [[ "${{matrix.compiler}}" == "intel-classic" ]] || [[ "${{matrix.compiler}}" == "intel-llvm" ]]; then
             OPENMP="-qopenmp"
             WARNING="-warn all"
-            LIBDIR_BLAS="-lmkl_rt"
+            LIB_BLAS="-lblas"
+            LIB_LAPACK="-llapack"
           fi
           if [[ "${{matrix.os}}" == "macos-latest" ]] && [[ "${{matrix.compiler}}" == "gnu" ]]; then
-            INCDIR_BLAS="-I$(brew --prefix openblas)/include"
-            LIBDIR_BLAS="-L$(brew --prefix openblas)/lib -lopenblas"
+            INC_BLAS="-I$(brew --prefix openblas)/include"
+            LIB_BLAS="-L$(brew --prefix openblas)/lib -lopenblas"
+            LIB_LAPACK="-L$(brew --prefix openblas)/lib -lopenblas"
           fi
-          LIBDIR_METIS="-lmetis"
+          LIB_METIS="-lmetis"
           if [[ "${{matrix.os}}" == "macos-latest" ]]; then
-            LIBDIR_METIS="-L$(brew --prefix metis)/lib -lmetis"
+            LIB_METIS="-L$(brew --prefix metis)/lib -lmetis"
           fi
           ./configure CC=${{matrix.cc}} \
             CXX=${{matrix.cxx}} \
             F77=${{matrix.fc}} \
             FC=${{matrix.fc}} \
-            LIBS=${LIBCPP} \
-            CFLAGS="-g -O3 -Wall $OPENMP $INTEL ${INCDIR_BLAS}" \
-            CXXFLAGS="-g -O3 -std=c++17 -Wall $OPENMP $INTEL ${INCDIR_BLAS}" \
+            LIBS=${LIB_CPP} \
+            CFLAGS="-g -O3 -Wall $OPENMP $INTEL ${INC_BLAS}" \
+            CXXFLAGS="-g -O3 -std=c++17 -Wall $OPENMP $INTEL ${INC_BLAS}" \
             FCFLAGS="-g -O3 $WARNING $OPENMP $PENDANTIC" \
-            --with-blas="${LIBDIR_BLAS}" \
-            --with-lapack="${LIBDIR_BLAS}" \
-            --with-metis="${LIBDIR_METIS}"
+            --with-blas="${LIB_BLAS}" \
+            --with-lapack="${LIB_LAPACK}" \
+            --with-metis="${LIB_METIS}"
           make
       - name: 'Test'
         run: |
