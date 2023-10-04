@@ -7,12 +7,16 @@
  *  Implements HwlocTopology wrapper around hwloc library
  */
 #pragma once
+
+#ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
+
 #ifdef HAVE_HWLOC
 
 #include <vector>
-
 #include <hwloc.h>
+
 #ifdef HAVE_NVCC
 #include <cuda_runtime_api.h>
 #include <hwloc/cudart.h>

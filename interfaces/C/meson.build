@@ -1,0 +1,10 @@
+libspral_src += files('lsmr.f90',
+                      'matrix_util.f90',
+                      'random.f90',
+                      'random_matrix.f90',
+                      'rutherford_boeing.f90',
+                      'scaling.f90',
+                      'ssids.f90',
+                      'ssmfe.f90',
+                      'ssmfe_core.f90',
+                      'ssmfe_expert.f90')

@@ -8,7 +8,10 @@
  */
 #include "hw_topology/guess_topology.hxx"
 
+#ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
+
 #ifdef _OPENMP
 #include <omp.h>
 #endif /* _OPENMP */

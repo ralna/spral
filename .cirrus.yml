@@ -1,0 +1,40 @@
+task:
+  matrix:
+    - name: FreeBSD
+      freebsd_instance:
+        image: freebsd-13-2-release-amd64
+    - name: MacOS M1
+      macos_instance:
+        image: ghcr.io/cirruslabs/macos-monterey-base:latest
+  dependencies_script: |
+    echo $(uname)
+    if [ "$(uname)" = "FreeBSD" ]; then
+      pkg install -y py39-pip meson bash gcc12 metis hwloc openblas
+    else
+      brew install python meson gcc metis hwloc openblas
+    fi
+    echo "OMP_CANCELLATION=TRUE" >> $CIRRUS_ENV
+    echo "OMP_PROC_BIND=TRUE" >> $CIRRUS_ENV
+  configure_script: |
+    if [ "$(uname -s)" = "FreeBSD" ]; then
+      FC=gfortran12 CC=gcc12 CXX=g++12 meson setup builddir -Dexamples=true -Dtests=true \
+                                                            -Dlibblas=openblas -Dliblapack=openblas
+    else
+      FC=gfortran-12 CC=gcc-12 CXX=g++-12 /opt/homebrew/opt/meson/bin/meson setup builddir -Dexamples=true -Dtests=true \
+                                                               -Dlibblas_path=/opt/homebrew/opt/openblas/lib \
+                                                               -Dliblapack_path=/opt/homebrew/opt/openblas/lib \
+                                                               -Dlibmetis_path=/opt/homebrew/opt/metis/lib \
+                                                               -Dlibmetis_include=/opt/homebrew/opt/metis/include \
+                                                               -Dlibhwloc_path=/opt/homebrew/opt/hwloc/lib \
+                                                               -Dlibhwloc_include=/opt/homebrew/opt/hwloc/include \
+                                                               -Dlibblas=openblas -Dliblapack=openblas
+    fi
+  build_script: |
+    meson compile -C builddir
+  install_script: |
+    meson install -C builddir
+  test_script: |
+    meson test -C builddir
+  on_failure:
+    log_artifacts:
+      path: builddir/meson-logs/*log.txt

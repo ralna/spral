@@ -1,0 +1,10 @@
+spral_headers += files('spral.h',
+                       'spral_complex.h',
+                       'spral_lsmr.h',
+                       'spral_matrix_util.h',
+                       'spral_random.h',
+                       'spral_random_matrix.h',
+                       'spral_rutherford_boeing.h',
+                       'spral_scaling.h',
+                       'spral_ssids.h',
+                       'spral_ssmfe.h')
