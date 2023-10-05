@@ -43,6 +43,11 @@ option('libblas_path',
        value : [],
        description : 'Additional directories to search for the BLAS library')
 
+option('libblas_include',
+       type : 'string',
+       value : '',
+       description : 'Additional directory to search for the BLAS header files')
+
 option('liblapack_path',
        type : 'array',
        value : [],

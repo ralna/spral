@@ -141,15 +141,17 @@ jobs:
           fi
           if [[ "${{matrix.compiler}}" == "gnu" ]]; then
             meson setup builddir --prefix=$GITHUB_WORKSPACE/../meson -Dexamples=true -Dtests=true \
-                                 -Dlibmetis_path=$DEPS/deps/$LIBDIR -Dlibmetis_include=../deps/include \
-                                 -Dlibblas_path=$DEPS/deps/$LIBDIR -Dlibblas=openblas \
+                                 -Dlibmetis_path=$DEPS/deps/$LIBDIR -Dlibmetis=$LIBMETIS \
+                                 -Dlibmetis_include=../deps/include -Dlibblas_path=$DEPS/deps/$LIBDIR \
+                                 -Dlibblas=openblas -Dlibblas_include=$DEPS/deps/$LIBDIR \
                                  -Dliblapack_path=$DEPS/deps/$LIBDIR -Dliblapack=openblas \
                                  -Dlibhwloc_path=$DEPS/deps/$LIBDIR -Dlibhwloc=$LIBHWLOC \
-                                 -Dlibhwloc_include=../deps/include -Dlibmetis=$LIBMETIS
+                                 -Dlibhwloc_include=../deps/include
           else
             meson setup builddir --prefix=$GITHUB_WORKSPACE/../meson -Dexamples=true -Dtests=true \
-                                 -Dlibmetis_path=$DEPS/deps/$LIBDIR -Dlibmetis_include=../deps/include \
-                                 -Dlibblas_path=$DEPS/deps/$LIBDIR -Dlibblas=mkl_rt \
+                                 -Dlibmetis_path=$DEPS/deps/$LIBDIR -Dlibmetis=$LIBMETIS \
+                                 -Dlibmetis_include=../deps/include -Dlibblas_path=$DEPS/deps/$LIBDIR \
+                                 -Dlibblas=mkl_rt -Dlibblas_include=$DEPS/deps/$LIBDIR \
                                  -Dliblapack_path=$DEPS/deps/$LIBDIR -Dliblapack=mkl_rt \
                                  -Dlibhwloc_path=$DEPS/deps/$LIBDIR -Dlibhwloc=$LIBHWLOC \
                                  -Dlibhwloc_include=../deps/include -Dlibmetis=$LIBMETIS

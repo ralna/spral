@@ -41,6 +41,7 @@ build_examples = get_option('examples')
 
 libblas_name = get_option('libblas')
 libblas_path = get_option('libblas_path')
+libblas_include = include_directories(get_option('libblas_include'))
 
 liblapack_name = get_option('liblapack')
 liblapack_path = get_option('liblapack_path')
@@ -65,6 +66,9 @@ libspral_deps = [libblas, liblapack, libmetis, libhwloc, libcuda, lm]
 
 # METIS
 has_metish = cc.has_header('metis.h', include_directories : libmetis_include)
+
+# CBLAS
+has_cblash = cc.has_header('cblas.h', include_directories : libblas_include)
 
 if has_metish
   add_global_arguments('-DSPRAL_HAVE_METIS_H', language : 'fortran')

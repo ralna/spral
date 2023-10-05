@@ -4,9 +4,9 @@
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <cblas.h>
 
 /* Headers that implements Laplacian and preconditioners and LDLT support */
-#include "cblas.h"
 #include "laplace2d.h"
 #include "ldltf.h"
 

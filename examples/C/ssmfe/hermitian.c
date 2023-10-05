@@ -4,7 +4,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "cblas.h"
+#include <cblas.h>
 
 /* central differences for i d/dx */
 void apply_idx(int n, int m, const double complex *x_ptr, double complex *y_ptr) {
