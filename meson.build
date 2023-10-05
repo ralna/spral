@@ -126,6 +126,7 @@ libspral_include = []
 libspral_include += include_directories('include', 'src')
 libspral_include += libmetis_include
 libspral_include += libhwloc_include
+libspral_include += libblas_include
 
 # Sources
 subdir('include')
@@ -147,7 +148,6 @@ libspral = library('spral',
 # Binary
 executable('spral_ssids',
            sources : binspral_src,
-           dependencies : libspral_deps,
            link_with : libspral,
            link_language : 'fortran',
            install : true)
