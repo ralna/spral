@@ -143,6 +143,7 @@ libspral = library('spral',
 # Binary
 executable('spral_ssids',
            sources : binspral_src,
+           dependencies : libspral_deps,
            link_with : libspral,
            link_language : 'fortran',
            install : true)
