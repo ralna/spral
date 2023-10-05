@@ -7,7 +7,7 @@ on:
     types: [opened, synchronize, reopened]
 jobs:
   build:
-    name: SPRAL/${{ matrix.os }}/${{ matrix.fc_cmd }}/${{ matrix.compiler_version }}/${{ matrix.metis }}
+    name: SPRAL/${{ matrix.os }}/${{ matrix.fc_cmd }}/${{ matrix.compiler_version }}/METIS ${{ matrix.metis }}
     strategy:
       fail-fast: false
       matrix:
@@ -53,17 +53,19 @@ jobs:
           DEPS="$GITHUB_WORKSPACE/.."
           cd $DEPS
           mkdir deps
-          PLATFORM=""
           if [[ "${{matrix.os}}" == "ubuntu-latest" ]]; then
             DLEXT="so"
+            LIBDIR="lib"
             PLATFORM="x86_64-linux-gnu"
           fi
           if [[ "${{matrix.os}}" == "macos-latest" ]]; then
             DLEXT="dylib"
+            LIBDIR="lib"
             PLATFORM=x86_64-apple-darwin""
           fi
           if [[ "${{matrix.os}}" == "windows-latest" ]]; then
             DLEXT="dll"
+            LIBDIR="bin"
             PLATFORM="x86_64-w64-mingw32"
             choco install wget
           fi
