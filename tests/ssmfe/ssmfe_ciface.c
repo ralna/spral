@@ -3,8 +3,8 @@
 #include "spral.h"
 #include <stdlib.h>
 #include <stdio.h>
-#include <math.h>
 #include <cblas.h>
+#include <math.h>
 
 /* Header that implements Laplacian and preconditioners */
 #include "laplace2d.h"
