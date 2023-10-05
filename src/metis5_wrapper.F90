@@ -20,7 +20,7 @@ module spral_metis_wrapper
 
 #if SPRAL_HAVE_METIS_H
 ! metis header is available, check for index types
-#if SIZEOF_IDX_T == 8
+#if IDXTYPEWIDTH == 64
    integer, parameter :: metis_idx_t = c_int64_t
 #else
    integer, parameter :: metis_idx_t = c_int
