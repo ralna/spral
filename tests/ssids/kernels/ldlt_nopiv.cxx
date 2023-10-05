@@ -2,10 +2,7 @@
  *
  * Authors: Jonathan Hogg (STFC)
  *
- * IMPORTANT: This file is NOT licenced under the BSD licence. If you wish to
- * licence this code, please contact STFC via hsl@stfc.ac.uk
- * (We are currently deciding what licence to release this code under if it
- * proves to be useful beyond our own academic experiments)
+ * Licence: BSD licence, see LICENCE file for details
  *
  */
 #include "ldlt_nopiv.hxx"
@@ -27,7 +24,7 @@ int test_ldlt(int m, int n, bool debug=false) {
    /* Take a copy */
    double *l = new double[m*lda];
    memcpy(l, a, m*lda*sizeof(double));
-   
+
    /* Factor first m x n part with our code */
    double *work = new double[2*m];
    if(debug) { printf("PRE:\n"); print_mat(" %e", m, l, lda); }

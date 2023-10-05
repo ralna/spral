@@ -2,10 +2,7 @@
  *
  * Authors: Jonathan Hogg (STFC)
  *
- * IMPORTANT: This file is NOT licenced under the BSD licence. If you wish to
- * licence this code, please contact STFC via hsl@stfc.ac.uk
- * (We are currently deciding what licence to release this code under if it
- * proves to be useful beyond our own academic experiments)
+ * Licence: BSD licence, see LICENCE file for details
  *
  */
 #include "framework.hxx"
@@ -103,7 +100,7 @@ double backward_error(int n, double const* a, int lda, double const* rhs, int nr
       for(int i=0; i<n; ++i) {
          rhsnorm = std::max(rhsnorm, fabs(rhs[i]));
          residnorm = std::max(residnorm, fabs(resid[i]));
-         if(std::isnan(resid[i])) residnorm = resid[i]; 
+         if(std::isnan(resid[i])) residnorm = resid[i];
          solnnorm = std::max(solnnorm, fabs(r*ldsoln+soln[i]));
       }
 

@@ -2,10 +2,7 @@
  *
  * Authors: Jonathan Hogg (STFC)
  *
- * IMPORTANT: This file is NOT licenced under the BSD licence. If you wish to
- * licence this code, please contact STFC via hsl@stfc.ac.uk
- * (We are currently deciding what licence to release this code under if it
- * proves to be useful beyond our own academic experiments)
+ * Licence: BSD licence, see LICENCE file for details
  *
  */
 #include "ldlt_tpp.hxx"
@@ -83,7 +80,7 @@ void solve(int m, int n, const int *perm, const T *l, int ldl, const T *d, const
 template <typename T>
 void make_singular(int n, int col1, int col2, T *a, int lda) {
    T *col = new T[n];
-   
+
    T a11 = a[col1*(lda+1)];
    T a21 = (col1 < col2) ? a[col1*lda + col2]
                          : a[col2*lda + col1];
@@ -337,7 +334,7 @@ template <typename T>
 void print_mat (int n, int *perm, T *a, int lda) {
    for(int i=0; i<n; i++) {
       printf("%d:", perm[i]);
-      for(int j=0; j<n; j++) 
+      for(int j=0; j<n; j++)
          printf(" %le", a[j*lda+i]);
       printf("\n");
    }
