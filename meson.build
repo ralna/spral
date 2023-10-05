@@ -65,7 +65,6 @@ libspral_deps = [libblas, liblapack, libmetis, libhwloc, libcuda, lm]
 
 # METIS
 has_metish = cc.has_header('metis.h', include_directories : libmetis_include)
-has_cblash = cc.has_header('cblas.h')
 
 if has_metish
   add_global_arguments('-DSPRAL_HAVE_METIS_H', language : 'fortran')

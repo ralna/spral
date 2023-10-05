@@ -7,12 +7,13 @@ on:
     types: [opened, synchronize, reopened]
 jobs:
   build:
-    name: SPRAL/${{ matrix.os }}/${{ matrix.fc_cmd }}/${{ matrix.compiler_version }}
+    name: SPRAL/${{ matrix.os }}/${{ matrix.fc_cmd }}/${{ matrix.compiler_version }}/${{ matrix.metis }}
     strategy:
       fail-fast: false
       matrix:
         os: [windows-latest, ubuntu-latest, macos-latest]
         compiler_version: [12]
+        metis: [32, 64]
         include:
           - compiler: gnu
             cc_cmd: gcc
@@ -24,6 +25,7 @@ jobs:
             cc_cmd: icx
             fc_cmd: ifort
             cxx_cmd: icpx
+            metis: 32
             allow_failure: true
           # - os: ubuntu-latest
           #   compiler: intel-llvm
@@ -53,21 +55,30 @@ jobs:
           mkdir deps
           PLATFORM=""
           if [[ "${{matrix.os}}" == "ubuntu-latest" ]]; then
+            DLEXT="so"
             PLATFORM="x86_64-linux-gnu"
           fi
           if [[ "${{matrix.os}}" == "macos-latest" ]]; then
+            DLEXT="dylib"
             PLATFORM=x86_64-apple-darwin""
           fi
           if [[ "${{matrix.os}}" == "windows-latest" ]]; then
+            DLEXT="dll"
             PLATFORM="x86_64-w64-mingw32"
             choco install wget
+          fi
+          wget https://github.com/JuliaBinaryWrappers/METIS_jll.jl/releases/download/METIS-v5.1.2%2B0/METIS.v5.1.2.$PLATFORM.tar.gz
+          tar -xzvf METIS.v5.1.2.$PLATFORM.tar.gz -C deps
+          if [[ "${{matrix.metis}}" == "64" ]]; then
+            rm deps/include/metis.h
+            rm deps/$LIBDIR/libmetis.$DLEXT
+            cp deps/$LIBDIR/metis/metis_Int64_Real32/include/metis.h deps/include/metis.h
+            cp deps/$LIBDIR/metis/metis_Int64_Real32/$LIBDIR/libmetis_Int64_Real32.$DLEXT deps/$LIBDIR/libmetis.$DLEXT
           fi
           wget https://github.com/JuliaBinaryWrappers/MUMPS_seq_jll.jl/releases/download/MUMPS_seq-v5.4.1%2B0/MUMPS_seq.v5.4.1.$PLATFORM-libgfortran5.tar.gz
           tar -xzvf MUMPS_seq.v5.4.1.$PLATFORM-libgfortran5.tar.gz -C deps
           wget https://github.com/JuliaBinaryWrappers/OpenBLAS32_jll.jl/releases/download/OpenBLAS32-v0.3.23%2B0/OpenBLAS32.v0.3.23.$PLATFORM-libgfortran5.tar.gz
           tar -xzvf OpenBLAS32.v0.3.23.$PLATFORM-libgfortran5.tar.gz -C deps
-          wget https://github.com/JuliaBinaryWrappers/METIS_jll.jl/releases/download/METIS-v5.1.2%2B0/METIS.v5.1.2.$PLATFORM.tar.gz
-          tar -xzvf METIS.v5.1.2.$PLATFORM.tar.gz -C deps
           wget https://github.com/JuliaBinaryWrappers/Hwloc_jll.jl/releases/download/Hwloc-v2.9.3%2B0/Hwloc.v2.9.3.$PLATFORM.tar.gz
           tar -xzvf Hwloc.v2.9.3.$PLATFORM.tar.gz -C deps
           wget https://github.com/JuliaBinaryWrappers/MKL_jll.jl/releases/download/MKL-v2023.2.0%2B0/MKL.v2023.2.0.$PLATFORM.tar.gz
