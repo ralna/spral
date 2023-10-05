@@ -2,10 +2,7 @@
  *
  * Authors: Jonathan Hogg (STFC)
  *
- * IMPORTANT: This file is NOT licenced under the BSD licence. If you wish to
- * licence this code, please contact STFC via hsl@stfc.ac.uk
- * (We are currently deciding what licence to release this code under if it
- * proves to be useful beyond our own academic experiments)
+ * Licence: BSD licence, see LICENCE file for details
  *
  */
 #include "block_ldlt.hxx"
@@ -132,7 +129,7 @@ void print_d(int n, T *d) {
 template <typename T>
 void make_singular(int n, int col1, int col2, T *a, int lda) {
    T *col = new T[n];
-   
+
    T a11 = a[col1*(lda+1)];
    T a21 = (col1 < col2) ? a[col1*lda + col2]
                          : a[col2*lda + col1];
@@ -208,7 +205,7 @@ int test_maxloc(int from, bool zero=false) {
       }
    }
 
-   /* Call both simple and avx versions and check they get the same answer */ 
+   /* Call both simple and avx versions and check they get the same answer */
    T mv1, mv2;
    int rloc1, cloc1, rloc2, cloc2;
 
