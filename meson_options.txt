@@ -68,10 +68,10 @@ option('libmetis_path',
        value : [],
        description : 'Additional directories to search for the METIS library')
 
-option('libmetis_include',
-       type : 'string',
-       value : '',
-       description : 'Additional directory to search for the METIS header files')
+option('metis64',
+       type : 'boolean',
+       value : false,
+       description : 'option to use METIS compiled with 64 bits integer')
 
 option('libmetis_version',
        type : 'combo',

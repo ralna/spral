@@ -9,10 +9,6 @@
 #include "config.h"
 #endif
 
-#if SPRAL_HAVE_METIS_H
-#include "metis.h"
-#endif
-
 module spral_metis_wrapper
    use, intrinsic :: iso_c_binding
    implicit none
@@ -22,9 +18,9 @@ module spral_metis_wrapper
 
    integer, parameter :: long = C_INT64_T
 
-#ifdef IDXTYPEWIDTH
+#if SPRAL_HAVE_METIS_H
 ! metis header is available, check for index types
-#if IDXTYPEWIDTH == 64
+#if SIZEOF_IDX_T == 8
    integer, parameter :: metis_idx_t = c_int64_t
 #else
    integer, parameter :: metis_idx_t = c_int

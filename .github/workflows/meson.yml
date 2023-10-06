@@ -132,17 +132,19 @@ jobs:
           LIBDIR="lib"
           LIBHWLOC="hwloc"
           LIBMETIS="metis"
+          METIS64="false"
           if [[ "${{matrix.os}}" == "windows-latest" ]]; then
             LIBDIR="bin"
             LIBHWLOC="hwloc-15"
           fi
           if [[ "${{matrix.metis}}" == "64" ]]; then
             LIBMETIS="metis_Int64_Real32"
+            METIS64="true"
           fi
           if [[ "${{matrix.compiler}}" == "gnu" ]]; then
             meson setup builddir --prefix=$GITHUB_WORKSPACE/../meson -Dexamples=true -Dtests=true \
                                  -Dlibmetis_path=$DEPS/deps/$LIBDIR -Dlibmetis=$LIBMETIS \
-                                 -Dlibmetis_include=../deps/include -Dlibblas_path=$DEPS/deps/$LIBDIR \
+                                 -Dmetis64=$METIS64 -Dlibblas_path=$DEPS/deps/$LIBDIR \
                                  -Dlibblas=openblas -Dlibblas_include=../deps/include \
                                  -Dliblapack_path=$DEPS/deps/$LIBDIR -Dliblapack=openblas \
                                  -Dlibhwloc_path=$DEPS/deps/$LIBDIR -Dlibhwloc=$LIBHWLOC \
@@ -150,7 +152,7 @@ jobs:
           else
             meson setup builddir --prefix=$GITHUB_WORKSPACE/../meson -Dexamples=true -Dtests=true \
                                  -Dlibmetis_path=$DEPS/deps/$LIBDIR -Dlibmetis=$LIBMETIS \
-                                 -Dlibmetis_include=../deps/include -Dlibblas_path=$DEPS/deps/$LIBDIR \
+                                 -Dmetis64=$METIS64 -Dlibblas_path=$DEPS/deps/$LIBDIR \
                                  -Dlibblas=mkl_rt -Dlibblas_include=../deps/include \
                                  -Dliblapack_path=$DEPS/deps/$LIBDIR -Dliblapack=mkl_rt \
                                  -Dlibhwloc_path=$DEPS/deps/$LIBDIR -Dlibhwloc=$LIBHWLOC \

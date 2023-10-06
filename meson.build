@@ -52,8 +52,8 @@ libhwloc_include = include_directories(get_option('libhwloc_include'))
 
 libmetis_name = get_option('libmetis')
 libmetis_path = get_option('libmetis_path')
-libmetis_include = include_directories(get_option('libmetis_include'))
 libmetis_version = get_option('libmetis_version')
+metis64 = get_option('metis64')
 
 # Dependencies
 libblas = fc.find_library(libblas_name, dirs : libblas_path, required : true)
@@ -64,16 +64,12 @@ libcuda = dependency('cuda', version : '>=10', modules : ['cublas'], required : 
 lm = cc.find_library('m', required : false)
 libspral_deps = [libblas, liblapack, libmetis, libhwloc, libcuda, lm]
 
-# METIS
-has_metish = cc.has_header('metis.h', include_directories : libmetis_include)
-
 # CBLAS
 has_cblash = cc.has_header('cblas.h', include_directories : libblas_include)
 
-if has_metish
-  add_global_arguments('-DSPRAL_HAVE_METIS_H=1', language : 'fortran')
-else
-  add_global_arguments('-DSPRAL_HAVE_METIS_H=0', language : 'fortran')
+# METIS
+if metis64
+  add_global_arguments('-DSPRAL_HAVE_METIS_H=1 -DSIZEOF_IDX_T=8', language : 'fortran')
 endif
 
 # HWLOC
@@ -127,7 +123,6 @@ spral_cpp_tests = []
 spral_headers = []
 libspral_include = []
 libspral_include += include_directories('include', 'src')
-libspral_include += libmetis_include
 libspral_include += libhwloc_include
 libspral_include += libblas_include
 
