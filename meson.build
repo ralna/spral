@@ -69,7 +69,8 @@ has_cblash = cc.has_header('cblas.h', include_directories : libblas_include)
 
 # METIS
 if metis64
-  add_global_arguments('-DSPRAL_HAVE_METIS_H=1 -DSIZEOF_IDX_T=8', language : 'fortran')
+  add_global_arguments('-DSPRAL_HAVE_METIS_H=1', language : 'fortran')
+  add_global_arguments('-DSIZEOF_IDX_T=8', language : 'fortran')
 endif
 
 # HWLOC
