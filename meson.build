@@ -72,16 +72,19 @@ has_cblash = cc.has_header('cblas.h', include_directories : libblas_include)
 
 if has_metish
   add_global_arguments('-DSPRAL_HAVE_METIS_H=1', language : 'fortran')
+else
+  add_global_arguments('-DSPRAL_HAVE_METIS_H=0', language : 'fortran')
 endif
 
 # HWLOC
 has_hwloch = cc.has_header('hwloc.h', include_directories : libhwloc_include)
 if libhwloc.found() and has_hwloch
-  add_global_arguments('-DHAVE_HWLOC=1', language : 'cpp')
+  add_global_arguments('-DHAVE_HWLOC', language : 'cpp')
 endif
 
+# SCHED_GETCPU
 if host_machine.system() == 'linux'
-  add_global_arguments('-DHAVE_SCHED_GETCPU=1', language : 'cpp')
+  add_global_arguments('-DHAVE_SCHED_GETCPU', language : 'cpp')
 endif
 
 # OpenMP

@@ -34,7 +34,7 @@ using namespace spral::hw_topology;
  */
 extern "C"
 void spral_hw_topology_guess(int* nregions, NumaRegion** regions) {
-#if HAVE_HWLOC
+#ifdef HAVE_HWLOC
    // Compiled with hwloc support
    HwlocTopology topology;
    auto numa_nodes = topology.get_numa_nodes();
