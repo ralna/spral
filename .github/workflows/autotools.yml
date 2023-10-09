@@ -1,5 +1,5 @@
 # All actions have a name that will be displayed in the "Actions" page in GitHub.
-name: 'CI'
+name: 'Autotools'
 
 on:
   push:

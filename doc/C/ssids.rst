@@ -82,7 +82,7 @@ Basic Subroutines
 =================
 
 .. note::
-   
+
    For the most efficient use of the package, CSC format should be used
    without checking.
 
@@ -176,7 +176,7 @@ Basic Subroutines
       (see :c:type:`spral_ssids_inform`).
 
 .. c:function:: void spral_ssids_solve1(int job, double *x1, void *akeep, void *fkeep, const struct spral_ssids_options *options, struct spral_ssids_inform *inform)
-   
+
    Solve (for a single right-hand side) one of the following equations:
 
    +---------------+--------------------------+
@@ -194,7 +194,7 @@ Basic Subroutines
    +---------------+--------------------------+
 
    Recall :math:`A` has been factorized as either:
-   
+
    * :math:`SAS = (PL)(PL)^T~` (positive-definite case); or
    * :math:`SAS = (PL)D(PL)^T` (indefinite case).
 
@@ -212,7 +212,7 @@ Basic Subroutines
       (see :c:type:`spral_ssids_inform`).
 
 .. c:function:: void spral_ssids_solve(int job, int nrhs, double *x, int ldx, void *akeep, void *fkeep, const struct spral_ssids_options *options, struct spral_ssids_inform *inform)
-   
+
    Solve (for multiple right-hand sides) one of the following equations:
 
    +---------------+--------------------------+
@@ -230,7 +230,7 @@ Basic Subroutines
    +---------------+--------------------------+
 
    Recall :math:`A` has been factorized as either:
-   
+
    * :math:`SAS = (PL)(PL)^T~` (positive-definite case); or
    * :math:`SAS = (PL)D(PL)^T` (indefinite case).
 
@@ -358,7 +358,7 @@ Derived types
       Default is 0.
 
    .. c:member:: int print_level
-   
+
       Level of printing:
 
       +---------------+-------------------------------------------------+
@@ -374,25 +374,25 @@ Derived types
       The default is 0.
 
    .. c:member:: int unit_diagnostics
-   
+
       Fortran unit number for diagnostics printing.
       Printing is suppressed if <0.
       The default is 6 (stdout).
 
    .. c:member:: int unit_error
-   
+
       Fortran unit number for printing of error messages.
       Printing is suppressed if <0.
       The default is 6 (stdout).
 
    .. c:member:: int unit_warning
-   
+
       Fortran unit number for printing of warning messages.
       Printing is suppressed if <0.
       The default is 6 (stdout).
 
    .. c:member:: int ordering
-   
+
       Ordering method to use in analyse phase:
 
       +-------------+---------------------------------------------------------+
@@ -417,44 +417,44 @@ Derived types
       The default is 1.
 
    .. c:member:: int nemin
-   
+
       Supernode amalgamation threshold. Two neighbours in the elimination tree
       are merged if they both involve fewer than `nemin` eliminations.
       The default is used if `nemin<1`.
       The default is 32.
 
    .. c:member bool ignore_numa:
-   
+
       If true, all CPUs and GPUs are treated as
       belonging to a single NUMA region.
       Default is `true`.
 
    .. c:member bool use_gpu
-   
+
       Use an NVIDIA GPU if present.
       Default is `true`.
 
    .. c:memeber int64_t min_gpu_work
-   
+
       Minimum number of flops
       in subtree before scheduling on GPU.
       Default is `5e9`.
 
    .. c:member: float max_load_inbalance
-   
+
       Maximum permissiable load
       inbalance for leaf subtree allocations. Values less than 1.0 are treated
       as 1.0.
       Default is `1.2`.
 
    .. c:member:: float gpu_perf_coeff
-   
+
       GPU perfromance coefficient. How many
       times faster a GPU is than CPU at factoring a subtree.
       Default is `1.0`.
 
    .. c:member:: int scaling
-   
+
       Scaling algorithm to use:
 
       +---------------+-------------------------------------------------------+
@@ -487,26 +487,26 @@ Derived types
       The default is 0.
 
    .. c:member:: int64_t small_subtree_threshold
-   
+
       Maximum number of
       flops in a subtree treated as a single task. See
       :ref:`method section <ssids_small_leaf>`.
       The default is `4e6`.
 
    .. c:member:: int cpu_block_size
-   
+
       Block size to use for
       parallelization of large nodes on CPU resources.
       Default is `256`.
 
    .. c:member:: bool action
-   
+
       Continue factorization of singular matrix on discovery of zero pivot if
       true (a warning is issued), or abort if false.
       The default is true.
 
    .. c:member:: int pivot_method
-   
+
       Pivot method to be used on CPU, one of:
 
       +-------------+----------------------------------------------------------+
@@ -524,13 +524,13 @@ Derived types
       Default is `2`.
 
    .. c:member:: double small
-   
+
       Threshold below which an entry is treated as
       equivalent to `0.0`.
       The default is `1e-20`.
 
    .. c:member:: double u
-   
+
       Relative pivot threshold used in symmetric indefinite case. Values outside
       of the range :math:`[0,0.5]` are treated as the closest value in that
       range.
@@ -546,17 +546,17 @@ Derived types
       Number of flops performed on CPU
 
    .. c:member:: int cublas_error
-   
+
       CUBLAS error code in the event of a CUBLAS error (0 otherwise).
 
    .. c:member:: int cuda_error
-   
+
       CUDA error code in the event of a CUDA error (0 otherwise).
-      Note that due to asynchronous execution, CUDA errors may 
+      Note that due to asynchronous execution, CUDA errors may
       not be reported by the call that caused them.
 
    .. c:member:: int flag
-      
+
       Exit status of the algorithm (see table below).
 
    .. c:member:: int64_t gpu_flops
@@ -564,34 +564,34 @@ Derived types
       Number of flops performed on GPU
 
    .. c:member:: int matrix_dup
-   
+
       Number of duplicate entries encountered (if
       :c:func:`spral_ssids_analyse()` called with check=true, or any call to
       :c:func:`spral_ssids_analyse_coord()`).
 
    .. c:member:: int matrix_missing_diag
-   
+
       Number of diagonal entries without an explicit value (if
       :c:func:`spral_ssids_analyse()` called with check=true, or
       any call to :c:func:`spral_ssids_analyse_coord()`).
 
    .. c:member:: int matrix_outrange
-   
+
       Number of out-of-range entries encountered (if
       :c:func:`spral_ssids_analyse()` called with check=true, or any call to
       :c:func:`spral_ssids_analyse_coord()`).
 
    .. c:member:: int matrix_rank
-   
+
       (Estimated) rank (structural after analyse phase, numerical after
       factorize phase).
 
    .. c:member:: int maxdepth
-   
+
       Maximum depth of the assembly tree.
 
    .. c:member:: int maxfront
-   
+
       Maximum front size (without pivoting after analyse phase, with pivoting
       after factorize phase).
 
@@ -601,40 +601,40 @@ Derived types
       pivoting after factorize phase).
 
    .. c:member:: int num_delay
-   
+
       Number of delayed pivots. That is, the total number of fully-summed
       variables that were passed to the father node because of stability
       considerations. If a variable is passed further up the tree, it will be
       counted again.
 
    .. c:member:: int64_t num_factor
-   
+
       Number of entries in :math:`L` (without pivoting after analyse phase,
       with pivoting after factorize phase).
 
    .. c:member:: int64_t num_flops
-   
+
       Number of floating-point operations for Cholesky factorization (indefinte
       needs slightly more). Without pivoting after analyse phase, with pivoting
       after factorize phase.
 
 
    .. c:member:: int num_neg
-   
+
       Number of negative eigenvalues of the matrix :math:`D` after factorize
       phase.
 
    .. c:member:: int num_sup
-   
+
       Number of supernodes in assembly tree.
 
    .. c:member:: int num_two
-   
+
       Number of :math:`2 \times 2` pivots used by the factorization (i.e. in
       the matrix :math:`D`).
 
    .. c:member:: int stat
-      
+
       Fortran allocation status parameter in event of allocation error
       (0 otherwise).
 
@@ -689,7 +689,8 @@ Derived types
    | -52         | CUBLAS error. The CUBLAS error return value is returned in  |
    |             | inform.cublas_error.                                        |
    +-------------+-------------------------------------------------------------+
-   | -53         | The SSIDS CPU code requires OMP cancellation to be enabled. |
+   | -53         | OpenMP cancellation is disabled. Please set the environment |
+   |             | variable OMP_CANCELLATION=true.                             |
    +-------------+-------------------------------------------------------------+
    | +1          | Out-of-range variable indices found and ignored in input    |
    |             | data. inform.matrix_outrange is set to the number of such   |

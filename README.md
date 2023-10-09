@@ -35,7 +35,15 @@ Please note that we require [METIS](http://glaros.dtc.umn.edu/gkhome/metis/metis
 and [hwloc](https://www.open-mpi.org/projects/hwloc/) to be installed
 (hwloc should be compiled with CUDA support if building for GPU).
 
-We use a standard autotools-based build:
+We now support building with the [Meson Build system](https://mesonbuild.com):
+```bash
+meson setup builddir -Dexamples=true -Dtests=true -Dlibblas=openblas -Dliblapack=openblas
+meson compile -C builddir
+meson install -C builddir
+```
+For more options (including how to specify paths to the above libraries) please see `meson_options.txt`.
+
+Alternatively, you can use a standard autotools-based build system:
 ```bash
 ./autogen.sh # If compiling from fresh git checkout
 mkdir build
@@ -90,4 +98,4 @@ In BibTeX, the citation is:
 
 If no paper is listed, a citation of the SPRAL GitHub website should be used, for example:
 
-> SPRAL: an open-source library for sparse linear algebra, Version 2023-08-02, https://github.com/ralna/spral, August 2023.
+> SPRAL: an open-source library for sparse linear algebra, Version 2023-09-07, https://github.com/ralna/spral, September 2023.

@@ -5,10 +5,11 @@
  */
 #pragma once
 
+#ifdef HAVE_CONFIG_H
 #include "config.h"
-#include <time.h>
+#endif
 
-//#define PROFILE
+#include <time.h>
 
 #if defined(PROFILE) && !defined(HAVE_GTG)
 #error "Cannot enable profiling without GTG library"

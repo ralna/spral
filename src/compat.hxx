@@ -11,7 +11,9 @@
 #include <cstdint>
 #include <cstdio>
 
+#ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
 
 #ifndef _OPENMP
 inline int omp_get_thread_num(void) { return 0; }
