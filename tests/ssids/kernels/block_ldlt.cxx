@@ -152,9 +152,10 @@ void make_singular(int n, int col1, int col2, T *a, int lda) {
 }
 
 template<typename T, int BLOCK_SIZE>
-void find_maxloc_simple(const int from, const T *a, int lda, T &bestv, int &rloc, int &cloc) {
+void find_maxloc_simple(const int from, const T *a, int lda, T &bestv, int &rloc, int &cloc, int &count) {
    bestv = -1.0;
    rloc = INT_MAX; cloc = INT_MAX;
+   count = 0;
    for(int c=from; c<BLOCK_SIZE; c++) {
       for(int r=c; r<BLOCK_SIZE; r++) {
          T v = a[c*lda+r];
@@ -162,6 +163,9 @@ void find_maxloc_simple(const int from, const T *a, int lda, T &bestv, int &rloc
             bestv = fabs(v);
             rloc = r;
             cloc = c;
+            count = 1;
+         } else if (fabs(v) == bestv) {
+            count += 1;
          }
       }
    }
@@ -207,16 +211,24 @@ int test_maxloc(int from, bool zero=false) {
 
    /* Call both simple and avx versions and check they get the same answer */
    T mv1, mv2;
-   int rloc1, cloc1, rloc2, cloc2;
+   int rloc1, cloc1, rloc2, cloc2, count;
 
-   find_maxloc_simple<T, BLOCK_SIZE>(from, a, lda, mv1, rloc1, cloc1);
+   find_maxloc_simple<T, BLOCK_SIZE>(from, a, lda, mv1, rloc1, cloc1, count);
    block_ldlt_internal::find_maxloc<T, BLOCK_SIZE>(from, a, lda, mv2, rloc2, cloc2);
 
    // Compare them
    ASSERT_LE(fabs(mv1), 1.0); // If this is wrong, find_maxloc_simple is wrong
-   ASSERT_EQ(mv1, mv2);
-   ASSERT_EQ(rloc1, rloc2);
-   ASSERT_EQ(cloc1, cloc2);
+   if(count > 1) {
+      // if there are multiple entries with the same absolute value as the
+      // maximum, we cannot assume that both versions will find it at the same
+      // location, since they essentially look through the matrix in a different
+      // order. Only thing we can check for is the absolute values being equal.
+      ASSERT_EQ(fabs(mv1), fabs(mv2));
+   } else {
+      ASSERT_EQ(mv1, mv2);
+      ASSERT_EQ(rloc1, rloc2);
+      ASSERT_EQ(cloc1, cloc2);
+   }
 
    return 0; // Success
 }
