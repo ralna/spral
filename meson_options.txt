@@ -71,10 +71,10 @@ option('libmetis_path',
 option('metis64',
        type : 'boolean',
        value : false,
-       description : 'option to use METIS compiled with 64 bits integer')
+       description : 'option to use METIS compiled with 64bit integer support')
 
 option('libmetis_version',
        type : 'combo',
        choices : ['4', '5'],
        value : '5',
-       description : 'Version of the METIS library')
+       description : 'Version of the METIS library to use')

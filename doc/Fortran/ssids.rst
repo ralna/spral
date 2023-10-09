@@ -172,7 +172,7 @@ described in :doc:`conventions`).
       backwards compatibility.
 
 .. f:subroutine:: ssids_solve(x,akeep,fkeep,options,inform[,job])
-   
+
    Solve (for a single right-hand side) one of the following equations:
 
    +---------------+--------------------------+
@@ -190,7 +190,7 @@ described in :doc:`conventions`).
    +---------------+--------------------------+
 
    Recall :math:`A` has been factorized as either:
-   
+
    * :math:`SAS = (PL)(PL)^T~` (positive-definite case); or
    * :math:`SAS = (PL)D(PL)^T` (indefinite case).
 
@@ -207,7 +207,7 @@ described in :doc:`conventions`).
    :o integer job [in]: specifies equation to solve, as per above table.
 
 .. f:subroutine:: ssids_solve(nrhs,x,ldx,akeep,fkeep,options,inform[,job])
-   
+
    Solve (for multiple right-hand sides) one of the following equations:
 
    +---------------+--------------------------+
@@ -225,7 +225,7 @@ described in :doc:`conventions`).
    +---------------+--------------------------+
 
    Recall :math:`A` has been factorized as either:
-   
+
    * :math:`SAS = (PL)(PL)^T~` (positive-definite case); or
    * :math:`SAS = (PL)D(PL)^T` (indefinite case).
 
@@ -442,7 +442,7 @@ Derived types
    :f integer cublas_error: CUBLAS error code in the event of a CUBLAS error
       (0 otherwise).
    :f integer cuda_error: CUDA error code in the event of a CUDA error
-      (0 otherwise). Note that due to asynchronous execution, CUDA errors may 
+      (0 otherwise). Note that due to asynchronous execution, CUDA errors may
       not be reported by the call that caused them.
    :f integer flag: exit status of the algorithm (see table below).
    :f integer(long) gpu_flops: number of flops performed on GPU
@@ -530,7 +530,8 @@ Derived types
    | -52         | CUBLAS error. The CUBLAS error return value is returned in  |
    |             | inform%cublas_error.                                        |
    +-------------+-------------------------------------------------------------+
-   | -53         | The SSIDS CPU code requires OMP cancellation to be enabled. |
+   | -53         | OpenMP cancellation is disabled. Please set the environment |
+   |             | variable OMP_CANCELLATION=true.                             |
    +-------------+-------------------------------------------------------------+
    | +1          | Out-of-range variable indices found and ignored in input    |
    |             | data. inform%matrix_outrange is set to the number of such   |
