@@ -142,7 +142,8 @@ jobs:
             METIS64="true"
           fi
           if [[ "${{matrix.compiler}}" == "gnu" ]]; then
-            meson setup builddir --prefix=$GITHUB_WORKSPACE/../meson -Dexamples=true -Dtests=true \
+            meson setup builddir --prefix=$GITHUB_WORKSPACE/../meson --buildtype=debug \
+                                 -Dexamples=true -Dtests=true \
                                  -Dlibmetis_path=$DEPS/deps/$LIBDIR -Dlibmetis=$LIBMETIS \
                                  -Dmetis64=$METIS64 -Dlibblas_path=$DEPS/deps/$LIBDIR \
                                  -Dlibblas=openblas -Dlibblas_include=../deps/include \
@@ -150,7 +151,8 @@ jobs:
                                  -Dlibhwloc_path=$DEPS/deps/$LIBDIR -Dlibhwloc=$LIBHWLOC \
                                  -Dlibhwloc_include=../deps/include
           else
-            meson setup builddir --prefix=$GITHUB_WORKSPACE/../meson -Dexamples=true -Dtests=true \
+            meson setup builddir --prefix=$GITHUB_WORKSPACE/../meson --buildtype=debug \
+                                 -Dexamples=true -Dtests=true \
                                  -Dlibmetis_path=$DEPS/deps/$LIBDIR -Dlibmetis=$LIBMETIS \
                                  -Dmetis64=$METIS64 -Dlibblas_path=$DEPS/deps/$LIBDIR \
                                  -Dlibblas=mkl_rt -Dlibblas_include=../deps/include \
