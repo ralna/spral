@@ -148,6 +148,7 @@ jobs:
           if [[ "${{matrix.os}}" == "windows-latest" ]]; then
             LIBDIR="bin"
             LIBHWLOC="hwloc-15"
+            LIBMKL="openblas"
           fi
           if [[ "${{matrix.metis}}" == "64" ]]; then
             LIBMETIS="metis_Int64_Real32"
