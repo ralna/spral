@@ -149,7 +149,8 @@ jobs:
                                  -Dlibblas=openblas -Dlibblas_include=../deps/include \
                                  -Dliblapack_path=$DEPS/deps/$LIBDIR -Dliblapack=openblas \
                                  -Dlibhwloc_path=$DEPS/deps/$LIBDIR -Dlibhwloc=$LIBHWLOC \
-                                 -Dlibhwloc_include=../deps/include
+                                 -Dlibhwloc_include=../deps/include \
+                                 -Db_sanitize=address,undefined
           else
             meson setup builddir --prefix=$GITHUB_WORKSPACE/../meson --buildtype=debug \
                                  -Dexamples=true -Dtests=true \
@@ -158,7 +159,8 @@ jobs:
                                  -Dlibblas=mkl_rt -Dlibblas_include=../deps/include \
                                  -Dliblapack_path=$DEPS/deps/$LIBDIR -Dliblapack=mkl_rt \
                                  -Dlibhwloc_path=$DEPS/deps/$LIBDIR -Dlibhwloc=$LIBHWLOC \
-                                 -Dlibhwloc_include=../deps/include -Dlibmetis=$LIBMETIS
+                                 -Dlibhwloc_include=../deps/include -Dlibmetis=$LIBMETIS \
+                                 -Db_sanitize=address,undefined
           fi
         env:
           CC: ${{ matrix.cc_cmd }}

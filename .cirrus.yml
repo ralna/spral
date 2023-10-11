@@ -18,7 +18,8 @@ task:
   configure_script: |
     if [ "$(uname -s)" = "FreeBSD" ]; then
       FC=gfortran12 CC=gcc12 CXX=g++12 meson setup builddir --buildtype=debug -Dexamples=true -Dtests=true \
-                                                            -Dmetis64=true -Dlibblas=openblas -Dliblapack=openblas
+                                                            -Dmetis64=true -Dlibblas=openblas -Dliblapack=openblas \
+                                                            -Db_sanitize=address,undefined
     else
       FC=gfortran-12 CC=gcc-12 CXX=g++-12 /opt/homebrew/opt/meson/bin/meson setup builddir --buildtype=debug \
                                                                -Dexamples=true -Dtests=true \
@@ -29,7 +30,8 @@ task:
                                                                -Dmetis64=false \
                                                                -Dlibhwloc_path=/opt/homebrew/opt/hwloc/lib \
                                                                -Dlibhwloc_include=/opt/homebrew/opt/hwloc/include \
-                                                               -Dlibblas=openblas -Dliblapack=openblas
+                                                               -Dlibblas=openblas -Dliblapack=openblas \
+                                                               -Db_sanitize=address,undefined
     fi
   build_script: |
     meson compile -C builddir
