@@ -140,10 +140,12 @@ jobs:
           LIBDIR="lib"
           LIBHWLOC="hwloc"
           LIBMETIS="metis"
+          LIBMKL="mkl_rt"
           METIS64="false"
           if [[ "${{matrix.os}}" == "windows-latest" ]]; then
             LIBDIR="bin"
             LIBHWLOC="hwloc-15"
+            LIBMKL="mkl_rt.2"
           fi
           if [[ "${{matrix.metis}}" == "64" ]]; then
             LIBMETIS="metis_Int64_Real32"
@@ -164,7 +166,7 @@ jobs:
                                  -Dlibmetis_path=$DEPS/deps/$LIBDIR -Dlibmetis=$LIBMETIS \
                                  -Dmetis64=$METIS64 -Dlibblas_path=$DEPS/deps/$LIBDIR \
                                  -Dlibblas=mkl_rt -Dlibblas_include=../deps/include \
-                                 -Dliblapack_path=$DEPS/deps/$LIBDIR -Dliblapack=mkl_rt \
+                                 -Dliblapack_path=$DEPS/deps/$LIBDIR -Dliblapack=$LIBMKL \
                                  -Dlibhwloc_path=$DEPS/deps/$LIBDIR -Dlibhwloc=$LIBHWLOC \
                                  -Dlibhwloc_include=../deps/include -Dlibmetis=$LIBMETIS
           fi
