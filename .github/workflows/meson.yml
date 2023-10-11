@@ -165,7 +165,7 @@ jobs:
                                  -Dexamples=true -Dtests=true \
                                  -Dlibmetis_path=$DEPS/deps/$LIBDIR -Dlibmetis=$LIBMETIS \
                                  -Dmetis64=$METIS64 -Dlibblas_path=$DEPS/deps/$LIBDIR \
-                                 -Dlibblas=mkl_rt -Dlibblas_include=../deps/include \
+                                 -Dlibblas=$LIBMKL -Dlibblas_include=../deps/include \
                                  -Dliblapack_path=$DEPS/deps/$LIBDIR -Dliblapack=$LIBMKL \
                                  -Dlibhwloc_path=$DEPS/deps/$LIBDIR -Dlibhwloc=$LIBHWLOC \
                                  -Dlibhwloc_include=../deps/include -Dlibmetis=$LIBMETIS
