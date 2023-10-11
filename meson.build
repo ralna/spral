@@ -56,10 +56,10 @@ libmetis_version = get_option('libmetis_version')
 metis64 = get_option('metis64')
 
 # Dependencies
-libblas = fc.find_library(libblas_name, dirs : libblas_path, required : true)
-liblapack = fc.find_library(liblapack_name, dirs : liblapack_path, required : true)
-libmetis = fc.find_library(libmetis_name, dirs : libmetis_path, required : true)
-libhwloc = fc.find_library(libhwloc_name, dirs : libhwloc_path, required : false)
+libblas = cc.find_library(libblas_name, dirs : libblas_path, required : true)
+liblapack = cc.find_library(liblapack_name, dirs : liblapack_path, required : true)
+libmetis = cc.find_library(libmetis_name, dirs : libmetis_path, required : true)
+libhwloc = cc.find_library(libhwloc_name, dirs : libhwloc_path, required : false)
 libcuda = dependency('cuda', version : '>=10', modules : ['cublas'], required : false)
 lm = cc.find_library('m', required : false)
 libspral_deps = [libblas, liblapack, libmetis, libhwloc, libcuda, lm]
