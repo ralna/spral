@@ -17,11 +17,12 @@ task:
     echo "OMP_PROC_BIND=TRUE" >> $CIRRUS_ENV
   configure_script: |
     if [ "$(uname -s)" = "FreeBSD" ]; then
-      FC=gfortran12 CC=gcc12 CXX=g++12 meson setup builddir --buildtype=debug -Dexamples=true -Dtests=true \
-                                                            -Dmetis64=true -Dlibblas=openblas -Dliblapack=openblas
+      FC=gfortran12 CC=gcc12 CXX=g++12 meson setup builddir --buildtype=debug --warnlevel=everything \
+                                                            -Dexamples=true -Dtests=true -Dmetis64=true \
+                                                            -Dlibblas=openblas -Dliblapack=openblas
     else
       FC=gfortran-12 CC=gcc-12 CXX=g++-12 /opt/homebrew/opt/meson/bin/meson setup builddir --buildtype=debug \
-                                                               -Dexamples=true -Dtests=true \
+                                                               --warnlevel=everything -Dexamples=true -Dtests=true \
                                                                -Dlibblas_path=/opt/homebrew/opt/openblas/lib \
                                                                -Dliblapack_path=/opt/homebrew/opt/openblas/lib \
                                                                -Dlibblas_include=/opt/homebrew/opt/openblas/include \
