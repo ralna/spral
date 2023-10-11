@@ -100,6 +100,9 @@ jobs:
           wget https://github.com/JuliaBinaryWrappers/MKL_jll.jl/releases/download/MKL-v2023.2.0%2B0/MKL.v2023.2.0.$PLATFORM.tar.gz
           tar -xzvf MKL.v2023.2.0.$PLATFORM.tar.gz -C deps
           rm *.tar.gz
+          if [[ "${{matrix.os}}" == "windows-latest" ]]; then
+            mv deps/$LIBDIR/mkl_rt.2.dll deps/$LIBDIR/mkl_rt.dll
+          fi
 
       - name: Set environment variables for OpenMP
         shell: bash
@@ -145,7 +148,6 @@ jobs:
           if [[ "${{matrix.os}}" == "windows-latest" ]]; then
             LIBDIR="bin"
             LIBHWLOC="hwloc-15"
-            LIBMKL="mkl_rt.2"
           fi
           if [[ "${{matrix.metis}}" == "64" ]]; then
             LIBMETIS="metis_Int64_Real32"
