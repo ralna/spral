@@ -375,10 +375,10 @@ Derived types
    :f logical use_gpu [default=true]: Use an NVIDIA GPU if present.
    :f integer(long) min_gpu_work [default=5e9]: Minimum number of flops
       in subtree before scheduling on GPU.
-   :f real max_load_inbalance [default=1.2]: Maximum permissiable load
+   :f real max_load_inbalance [default=1.2]: Maximum permissible load
       inbalance for leaf subtree allocations. Values less than 1.0 are treated
       as 1.0.
-   :f real gpu_perf_coeff [default=1.0]: GPU perfromance coefficient. How many
+   :f real gpu_perf_coeff [default=1.0]: GPU performance coefficient. How many
       times faster a GPU is than CPU at factoring a subtree.
    :f integer scaling [default=0]: scaling algorithm to use:
 
@@ -604,6 +604,46 @@ This produces the following output::
     Pivot order:   -3    4   -1    0   -2
 
 .. _ssids_method:
+
+==============
+Driver Program
+==============
+
+SSIDS ships with a driver program :f:prog:`spral_ssids` that allows reading a
+matrix in Rutherford-Boeing format specified as a command-line argument and
+factorizing it. There are a number of other command-line arguments that
+configure the factorization.
+
+.. f:program:: spral_ssids
+
+   SSIDS driver program.
+
+   :a filename: Rutherford-Boeing matrix filename (default if not specified is `matrix.rb`).
+
+    --scale=none  use no scaling (the default).
+    --scale=mc64  use the Hungarian scaling algorithm (as in `MC64`).
+    --scale=auction  use the Auction scaling algorithm.
+    --scale=mc77  use the norm-equilibration scaling algorithm (as in `MC77`).
+    --ordering=mc64-metis  use matching-based ordering and scaling (`scale` is overwritten).
+    --force-posdef  force the matrix to be positive definite
+    --posdef  assume the matrix is positive definite.
+    --time-scaling  time the scaling routine.
+    --nrhs  set the number of right-hand sides `[integer,default=1]`.
+    --nemin  set the supernode amalgamation threshold `[integer,default=32]`.
+    --u  set the relative pivot threshold used in the symmetric indefinite case `[real,default=0.01]`.
+    --max-load-inbalance  set the maximum permissible load inbalance for leaf subtree allocations `[real,default=1.2]`.
+    --pivot-method=app-aggressive  use aggressive a posteori pivoting.
+    --pivot-method=app-block  use block a posteori pivoting (the default).
+    --pivot-method=tpp  use threshold partial pivoting.
+    --flat-topology  force a flat machine topology (the default).
+    --no-flat-topology  use the actual machine topology.
+    --disable-gpu  don't use an NVIDIA GPU if present.
+    --min-gpu-work  set the minimum number of flops in a subtree before scheduling on GPU `[integer(long),default=5e9]`.
+    --gpu-perf-coeff  set the GPU performance coefficient (how many times faster a GPU is than CPU at factoring a subtree) `[real,default=1.0]`.
+    --small-subtree-threshold  set the maximum number of flops in a subtree treated as a single task `[integer(long),default=4e6]`.
+    --cpu-block-size  set the block size to use for parallelization of large nodes on CPU resources `[integer ,default=256]`.
+    --no-ignore-numa  don't treat all CPUs and GPUs as belonging to a single NUMA region (which is the default).
+    --ngpus  set the number of NVIDIA GPUs to use `[integer,default=0]`.
 
 ======
 Method

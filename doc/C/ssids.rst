@@ -442,14 +442,14 @@ Derived types
 
    .. c:member: float max_load_inbalance
 
-      Maximum permissiable load
+      Maximum permissible load
       inbalance for leaf subtree allocations. Values less than 1.0 are treated
       as 1.0.
       Default is `1.2`.
 
    .. c:member:: float gpu_perf_coeff
 
-      GPU perfromance coefficient. How many
+      GPU performance coefficient. How many
       times faster a GPU is than CPU at factoring a subtree.
       Default is `1.0`.
 
