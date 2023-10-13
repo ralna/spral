@@ -603,8 +603,6 @@ This produces the following output::
      4.0000000000E+00  5.0000000000E+00
     Pivot order:   -3    4   -1    0   -2
 
-.. _ssids_method:
-
 ==============
 Driver Program
 ==============
@@ -644,6 +642,55 @@ configure the factorization.
     --cpu-block-size  set the block size to use for parallelization of large nodes on CPU resources `[integer ,default=256]`.
     --no-ignore-numa  don't treat all CPUs and GPUs as belonging to a single NUMA region (which is the default).
     --ngpus  set the number of NVIDIA GPUs to use `[integer,default=0]`.
+
+For example, to use auction scaling with two right-hand sides on the `linverse.rb` matrix::
+
+    ./spral_ssids linverse.rb --scale=auction --nrhs 2
+
+This produces output similar to the following::
+
+    The computed solution is:
+
+     Set scaling to Auction
+     solving for           2 right-hand sides
+    Reading 'linverse.rb'...
+    ok
+     Number of CUDA devices:            0
+     Forcing topology to           32
+     Using           0 GPUs
+     Used order            1
+    ok
+     Analyse took    5.20000011E-02
+    Predict nfact =   3.03E+05
+    Predict nflop =   9.25E+06
+    nparts         1
+    cpu_fl  9.25E+06
+    gpu_fl  0.00E+00
+    Factorize...
+    ok
+     Factor took    1.20000001E-02
+    Solve...
+    ok
+     Solve took    1.00000005E-03
+     number bad cmp =            0
+     fwd error || ||_inf =    3.8014036363165360E-013
+     bwd error scaled =    4.2549737582555113E-015   4.2549737582555113E-015
+      cmp:     SMFCT
+     anal:      0.05
+     fact:      0.01
+    afact:  3.03E+05
+    aflop:  9.25E+06
+    nfact:  3.03E+05
+    nflop:  9.25E+06
+    delay:         0
+    inerti      2838         0      9161
+    2x2piv      5502
+    maxfro        55
+    maxsup        52
+    not_fi         0
+    not_se         0
+
+.. _ssids_method:
 
 ======
 Method
