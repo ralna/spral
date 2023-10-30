@@ -13,13 +13,13 @@ int cwrap_dsytrs(char uplo, int n, int nrhs, double *a, int lda, int *ipiv, doub
 }
 
 /* Counts negative eigenvalues of factor D */
-int num_neg_D(int n, int ld, double LDLT[n][ld], int ipiv[n]) {
+int num_neg_D(int n, int ld, double (*LDLT)[n][ld], int *ipiv) {
    int nneg = 0;
    for(int i=0; i<n; ) {
-      double s = LDLT[i][i];
+      double s = (*LDLT)[i][i];
       if( ipiv[i] < 0 ) {
-         double t = LDLT[i][i+1];
-         double r = LDLT[i+1][i+1];
+         double t = (*LDLT)[i][i+1];
+         double r = (*LDLT)[i+1][i+1];
          if( s*r - t*t < 0.0 ) {
             nneg++;
          } else if ( s*r - t*t > 0.0 && s + r < 0.0 ){ 

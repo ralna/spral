@@ -8,13 +8,14 @@
 
 /* central differences for i d/dx */
 void apply_idx(int n, int m, const double complex *x_ptr, double complex *y_ptr) {
-   const double complex (*x)[n] = (const double complex (*)[n]) x_ptr;
-   double complex (*y)[n] = (double complex (*)[n]) y_ptr;
+   /* Use "variable-modified types" to simplify matrix indexing */
+   const double complex (*x)[m][n] = (const double complex (*)[m][n]) x_ptr;
+   double complex (*y)[m][n] = (double complex (*)[m][n]) y_ptr;
    for(int j=0; j<m; j++) {
       for(int i=0; i<n; i++) {
          int il = (i==0)   ? n-1 : i-1;
          int ir = (i==n-1) ? 0   : i+1;
-         y[j][i] = _Complex_I * (x[j][ir] - x[j][il]);
+         (*y)[j][i] = _Complex_I * ((*x)[j][ir] - (*x)[j][il]);
       }
    }
 }
@@ -24,8 +25,8 @@ int main(void) {
    const int n   = 80;                 /* problem size */
    const int nep = 5;                  /* eigenpairs wanted */
 
-   double lambda[nep];                 /* eigenvalues */
-   double complex X[nep][n];           /* eigenvectors */
+   double *lambda = malloc(nep * sizeof(*lambda));   /* eigenvalues */
+   double complex (*X)[nep][n] = malloc(sizeof(*X)); /* eigenvectors */
    struct spral_ssmfe_rciz rci;        /* reverse communication data */
    struct spral_ssmfe_options options; /* options */
    void *keep;                         /* private data */
@@ -37,7 +38,7 @@ int main(void) {
    rci.job = 0; keep = NULL;
    while(true) { /* reverse communication loop */
       spral_ssmfe_standard_double_complex(&rci, nep, nep, lambda, n,
-         &X[0][0], n, &keep, &options, &inform);
+         &(*X)[0][0], n, &keep, &options, &inform);
       switch ( rci.job ) {
       case 1:
          apply_idx(n, rci.nx, rci.x, rci.y);
@@ -54,6 +55,8 @@ finished:
    for(int i=0; i<inform.left; i++)
       printf(" lambda[%1d] = %13.7e\n", i, lambda[i]);
    spral_ssmfe_free_double_complex(&keep, &inform);
+   free(lambda);
+   free(X);
 
    /* Success */
    return 0;
