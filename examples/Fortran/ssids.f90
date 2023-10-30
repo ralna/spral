@@ -3,7 +3,7 @@ program ssids_example
    use spral_ssids
    implicit none
 
-   integer, parameter :: long = selected_int_kind(16)
+   integer, parameter :: long = selected_int_kind(18)
 
    ! Derived types
    type (ssids_akeep)   :: akeep
