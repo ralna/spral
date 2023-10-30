@@ -18,7 +18,9 @@ endif
 AM_NVCC_FLAGS += -gencode arch=compute_52,code=sm_52
 AM_NVCC_FLAGS += -gencode arch=compute_60,code=sm_60
 AM_NVCC_FLAGS += -gencode arch=compute_61,code=sm_61
+AM_NVCC_FLAGS += -gencode arch=compute_62,code=sm_62
 AM_NVCC_FLAGS += -gencode arch=compute_70,code=sm_70
+AM_NVCC_FLAGS += -gencode arch=compute_72,code=sm_72
 AM_NVCC_FLAGS += -gencode arch=compute_75,code=sm_75
 AM_NVCC_FLAGS += -gencode arch=compute_80,code=sm_80
 AM_NVCC_FLAGS += -gencode arch=compute_86,code=sm_86
