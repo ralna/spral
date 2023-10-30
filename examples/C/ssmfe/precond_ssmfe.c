@@ -14,8 +14,8 @@ int main(void) {
    const int n   = m*m;    /* problem size */
    const int nep = 5;      /* eigenpairs wanted */
 
-   double lambda[2*nep];                  /* eigenvalues */
-   double X[2*nep][n];                    /* eigenvectors */
+   double *lambda = malloc(2*nep * sizeof(*lambda)); /* eigenvalues */
+   double (*X)[2*nep][n] = malloc(sizeof(*X));       /* eigenvectors */
    struct spral_ssmfe_rcid rci;           /* reverse communication data */
    struct spral_ssmfe_options options;    /* options */
    void *keep;                            /* private data */
@@ -29,7 +29,7 @@ int main(void) {
 
    rci.job = 0; keep = NULL;
    while(true) { /* reverse communication loop */
-      spral_ssmfe_standard_double(&rci, nep, 2*nep, lambda, n, &X[0][0], n,
+      spral_ssmfe_standard_double(&rci, nep, 2*nep, lambda, n, &(*X)[0][0], n,
          &keep, &options, &inform);
       switch ( rci.job ) {
       case 1:
@@ -47,6 +47,8 @@ finished:
    for(int i=0; i<inform.left; i++)
       printf(" lambda[%1d] = %13.7e\n", i, lambda[i]);
    spral_ssmfe_free_double(&keep, &inform);
+   free(lambda);
+   free(X);
 
    /* Success */
    return 0;

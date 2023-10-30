@@ -16,12 +16,12 @@ int main(void) {
    const int n = nx*ny;       /* problem size */
    const double sigma = 1.0;  /* shift */
 
-   int ipiv[n];               /* LDLT pivot index */
-   double lambda[n];          /* eigenvalues */
-   double X[n][n];            /* eigenvectors */
-   double A[n][n];            /* matrix */
-   double LDLT[n][n];         /* factors */
-   double work[n][n];         /* work array for dsytrf */
+   int *ipiv = malloc(n * sizeof(*ipiv));        /* LDLT pivot index */
+   double *lambda = malloc(n * sizeof(*lambda)); /* eigenvalues */
+   double (*X)[n][n] = malloc(sizeof(*X));       /* eigenvectors */
+   double (*A)[n][n] = malloc(sizeof(*A));       /* matrix */
+   double (*LDLT)[n][n] = malloc(sizeof(*LDLT)); /* factors */
+   double (*work)[n][n] = malloc(sizeof(*work)); /* work array for dsytrf */
    struct spral_ssmfe_options options;    /* eigensolver options */
    struct spral_ssmfe_inform inform;      /* information */
    struct spral_ssmfe_rcid rci;           /* reverse communication data */
@@ -34,9 +34,9 @@ int main(void) {
    set_laplacian_matrix(nx, ny, n, A);
    for(int j=0; j<n; j++)
    for(int i=0; i<n; i++)
-      LDLT[j][i] = (i==j) ? A[j][i] - sigma
-                          : A[j][i];
-   cwrap_dsytrf('L', n, &LDLT[0][0], n, ipiv, &work[0][0], n*n);
+      (*LDLT)[j][i] = (i==j) ? (*A)[j][i] - sigma
+                             : (*A)[j][i];
+   cwrap_dsytrf('L', n, &(*LDLT)[0][0], n, ipiv, &(*work)[0][0], n*n);
 
    /* Main loop */
    int left = num_neg_D(n, n, LDLT, ipiv);   /* all evalues to left of sigma */
@@ -44,18 +44,18 @@ int main(void) {
    rci.job = 0; keep = NULL;
    while(true) {
       spral_ssmfe_standard_shift_double(&rci, sigma, left, right, n, lambda,
-            n, &X[0][0], n, &keep, &options, &inform);
+            n, &(*X)[0][0], n, &keep, &options, &inform);
       switch( rci.job ) {
       case 1:
          cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, n, rci.nx, n,
-            1.0, &A[0][0], n, rci.x, n, 0.0, rci.y, n);
+            1.0, &(*A)[0][0], n, rci.x, n, 0.0, rci.y, n);
          break;
       case 2:
          // No preconditioning
          break;
       case 9:
          cblas_dcopy(n*rci.nx, rci.x, 1, rci.y, 1);
-         cwrap_dsytrs('L', n, rci.nx, &LDLT[0][0], n, ipiv, rci.y, n);
+         cwrap_dsytrs('L', n, rci.nx, &(*LDLT)[0][0], n, ipiv, rci.y, n);
          break;
       default:
          goto finished;
@@ -66,6 +66,12 @@ finished:
    for(int i=0; i<inform.left+inform.right; i++)
       printf(" lambda[%1d] = %13.7e\n", i, lambda[i]);
    spral_ssmfe_free_double(&keep, &inform);
+   free(ipiv);
+   free(lambda);
+   free(X);
+   free(A);
+   free(LDLT);
+   free(work);
 
    /* Success */
    return 0;
