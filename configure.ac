@@ -70,11 +70,15 @@ SPRAL_NO_FORT_MAIN
 
 # Establish -lstdc++ or equivalent
 if test "x$CXXLIB" == "x"; then
-   if test "x$CXX" == "xifort"; then
-      CXXLIB="-cxxlib"
-   else
-      CXXLIB="-lstdc++"
-   fi
+if test "x$CXX" == "xifort"; then
+   CXXLIB="-cxxlib"
+else
+if test "x$CXX" == "xclang"; then
+   CXXLIB="-lc++"
+else
+   CXXLIB="-lstdc++"
+fi
+fi
 fi
 AC_SUBST(CXXLIB)
 
