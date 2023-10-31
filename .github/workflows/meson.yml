@@ -37,7 +37,7 @@ jobs:
             allow_failure: true
           - os: macos-latest
             compiler: clang
-            compiler_version: 14
+            compiler_version: 12
             cc_cmd: clang
             fc_cmd: gfortran
             cxx_cmd: clang++
@@ -109,6 +109,13 @@ jobs:
 
       - name: Install GNU compilers
         if: matrix.compiler == 'gnu'
+        uses: awvwgk/setup-fortran@main
+        with:
+          compiler: gcc
+          version: ${{ matrix.compiler_version }}
+
+      - name: Install Clang compilers
+        if: matrix.compiler == 'clang'
         uses: awvwgk/setup-fortran@main
         with:
           compiler: gcc
