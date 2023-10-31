@@ -73,7 +73,7 @@ if test "x$CXXLIB" == "x"; then
 if test "x$CXX" == "xifort"; then
    CXXLIB="-cxxlib"
 else
-if test "x$CXX" == "xclang"; then
+if test "x$CXX" == "xclang++"; then
    CXXLIB="-lc++"
 else
    CXXLIB="-lstdc++"
