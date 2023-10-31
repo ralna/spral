@@ -143,6 +143,9 @@ jobs:
       - name: Setup SPRAL
         shell: bash
         run: |
+          if [[ "${{matrix.compiler}}" == "clang" ]]; then
+            brew install libomp
+          fi
           DEPS="$GITHUB_WORKSPACE/.."
           LIBDIR="lib"
           LIBHWLOC="hwloc"
