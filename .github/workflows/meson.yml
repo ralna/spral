@@ -35,6 +35,14 @@ jobs:
             cxx_cmd: icpx
             metis: 64
             allow_failure: true
+          - os: macos-latest
+            compiler: clang
+            compiler_version: 14
+            cc_cmd: clang
+            fc_cmd: gfortran
+            cxx_cmd: clang++
+            metis: 32
+            allow_failure: true
           # - os: ubuntu-latest
           #   compiler: intel-llvm
           #   compiler_version: 2023.2
