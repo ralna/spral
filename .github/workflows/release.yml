@@ -12,11 +12,12 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v4
-      - name: build artifacts
+      - name: julia
         uses: julia-actions/setup-julia@v1
         with:
           version: 1
           arch: x64
+      - name: build artifacts
         run: |
           julia --color=yes -e 'using Pkg; Pkg.add("BinaryBuilder")'
           julia --color=yes .github/julia/build_tarballs.jl x86_64-linux-gnu-libgfortran5 --verbose
