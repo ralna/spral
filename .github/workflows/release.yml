@@ -1,0 +1,73 @@
+name: Release
+on:
+  push:
+    # Sequence of patterns matched against refs/tags
+    tags:
+      - 'v*' # Push events to matching v*, i.e. v1.0, v2023.11.15
+
+jobs:
+  build:
+    name: Precompile SPRAL
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+      - name: build artifacts
+        uses: julia-actions/setup-julia@v1
+        with:
+          version: 1
+          arch: x64
+        run: |
+          julia --color=yes -e 'using Pkg; Pkg.add("BinaryBuilder")'
+          julia --color=yes .github/julia/build_tarballs.jl x86_64-linux-gnu-libgfortran5 --verbose
+          julia --color=yes .github/julia/build_tarballs.jl x86_64-w64-mingw32-libgfortran5 --verbose
+          julia --color=yes .github/julia/build_tarballs.jl x86_64-apple-darwin-libgfortran5 --verbose
+          julia --color=yes .github/julia/build_tarballs.jl aarch64-apple-darwin-libgfortran5 --verbose
+          julia --color=yes .github/julia/generate_binaries.jl
+      - name: release
+        uses: actions/create-release@v1
+        id: create_release
+        with:
+          draft: false
+          prerelease: false
+          release_name: ${{ github.ref }}
+          tag_name: ${{ github.ref }}
+          body_path: ChangeLog
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: upload Linux artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./SPRAL_binaries.${{ github.ref }}.x86_64-linux-gnu-libgfortran5.tar.gz
+          asset_name: SPRAL.${{ github.ref }}.linux.tar.gz
+          asset_content_type: application/gzip
+      - name: upload Mac (Intel) artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./SPRAL_binaries.${{ github.ref }}.x86_64-apple-darwin-libgfortran5.tar.gz
+          asset_name: SPRAL.${{ github.ref }}.mac-intel.tar.gz
+          asset_content_type: application/gzip
+      - name: upload Mac (ARM) artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./SPRAL_binaries.${{ github.ref }}.aarch64-apple-darwin-libgfortran5.tar.gz
+          asset_name: SPRAL.${{ github.ref }}.mac-arm.tar.gz
+          asset_content_type: application/gzip
+      - name: upload Windows artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./SPRAL_binaries.${{ github.ref }}.x86_64-w64-mingw32-libgfortran5.zip
+          asset_name: SPRAL.${{ github.ref }}.windows.zip
+          asset_content_type: application/zip
