@@ -1,5 +1,5 @@
 # Version
-version = "2023.11.15"
+version = v"2023.11.18"
 
 platforms = [
    ("aarch64-apple-darwin-libgfortran5"  , "lib", "dylib"),
@@ -60,8 +60,8 @@ for (platform, libdir, ext) in platforms
       rm("products/$platform/deps.tar.gz", recursive=true)
 
       # Create the archives for SPRAL_binaries
-      isfile("SPRAL_binaries.$version.$platform.tar.gz") && rm("SPRAL_binaries.$version.$platform.tar.gz")
-      isfile("SPRAL_binaries.$version.$platform.zip") && rm("SPRAL_binaries.$version.$platform.zip")
+      isfile("SPRAL_binaries.v$version.$platform.tar.gz") && rm("SPRAL_binaries.v$version.$platform.tar.gz")
+      isfile("SPRAL_binaries.v$version.$platform.zip") && rm("SPRAL_binaries.v$version.$platform.zip")
       cd("products/$platform")
 
       # Create a folder with the version number of SPRAL
@@ -72,9 +72,9 @@ for (platform, libdir, ext) in platforms
 
       cd("SPRAL_binaries.$version")
       if ext == "dll"
-        run(`zip -r --symlinks ../../../SPRAL_binaries.$version.$platform.zip include share modules lib bin examples tests`)
+        run(`zip -r --symlinks ../../../SPRAL_binaries.v$version.$platform.zip include share modules lib bin examples tests`)
       else
-        run(`tar -czf ../../../SPRAL_binaries.$version.$platform.tar.gz include share modules lib bin examples tests`)
+        run(`tar -czf ../../../SPRAL_binaries.v$version.$platform.tar.gz include share modules lib bin examples tests`)
       end
       cd("../../..")
 
