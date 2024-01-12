@@ -98,7 +98,7 @@ elif fc.get_id() == 'intel-cl' or fc.get_id() == 'intel-llvm-cl'
   add_global_arguments('/Qopenmp', language : 'fortran')
 endif
 
-if cxx.get_id() == 'gcc' or cxx.get_id() == 'clang'
+if cxx.get_id() == 'gcc' or cxx.get_id() == 'clang' or cxx.get_id() == 'clang-cl'
   add_global_arguments('-fopenmp', language : 'cpp')
   add_global_link_arguments('-fopenmp', language : 'cpp')
 elif cxx.get_id() == 'intel' or cxx.get_id() == 'intel-cl'
@@ -106,6 +106,20 @@ elif cxx.get_id() == 'intel' or cxx.get_id() == 'intel-cl'
   add_global_link_arguments('-qopenmp', language : 'cpp')
 elif cxx.get_id() == 'intel-cl' or cxx.get_id() == 'intel-llvm-cl'
   add_global_arguments('/Qopenmp', language : 'cpp')
+endif
+
+# Link flag for C++
+lstdcpp = '-lstdc++'
+if host_machine.system() != 'linux'
+  if cxx.get_id() == 'clang' or cxx.get_id() == 'clang-cl'
+    lstdcpp = '-lc++'
+  endif
+  if cxx.get_id() == 'intel' or cxx.get_id() == 'intel-cl'
+    lstdcpp = '-cxxlib'
+  endif
+  if cxx.get_id() == 'intel-cl' or cxx.get_id() == 'intel-llvm-cl'
+    lstdcpp = '/Qcxxlib'
+  endif
 endif
 
 binspral_src = []
@@ -140,7 +154,7 @@ libspral = library('spral',
                    sources : libspral_src + libspral_cpp_src + libspral_nvcc_src,
                    dependencies : libspral_deps,
                    link_language : 'fortran',
-                   link_args : '-lstdc++',
+                   link_args : lstdcpp,
                    include_directories: libspral_include,
                    install : true)
 
