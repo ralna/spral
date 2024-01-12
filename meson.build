@@ -101,7 +101,7 @@ endif
 if cxx.get_id() == 'gcc' or cxx.get_id() == 'clang' or cxx.get_id() == 'clang-cl'
   add_global_arguments('-fopenmp', language : 'cpp')
   add_global_link_arguments('-fopenmp', language : 'cpp')
-elif cxx.get_id() == 'intel' or cxx.get_id() == 'intel-cl'
+elif cxx.get_id() == 'intel' or cxx.get_id() == 'intel-llvm'
   add_global_arguments('-qopenmp', language : 'cpp')
   add_global_link_arguments('-qopenmp', language : 'cpp')
 elif cxx.get_id() == 'intel-cl' or cxx.get_id() == 'intel-llvm-cl'
@@ -114,7 +114,7 @@ if host_machine.system() != 'linux'
   if cxx.get_id() == 'clang' or cxx.get_id() == 'clang-cl'
     lstdcpp = '-lc++'
   endif
-  if cxx.get_id() == 'intel' or cxx.get_id() == 'intel-cl'
+  if cxx.get_id() == 'intel' or cxx.get_id() == 'intel-llvm'
     lstdcpp = '-cxxlib'
   endif
   if cxx.get_id() == 'intel-cl' or cxx.get_id() == 'intel-llvm-cl'
