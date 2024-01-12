@@ -7,40 +7,49 @@ on:
     types: [opened, synchronize, reopened]
 jobs:
   build:
-    name: SPRAL/${{ matrix.os }}/${{ matrix.fc_cmd }}/${{ matrix.compiler_version }}/METIS ${{ matrix.metis }}
+    name: SPRAL/${{ matrix.os }}/${{ matrix.compiler }}/${{ matrix.version }}/METIS ${{ matrix.metis }}
     strategy:
       fail-fast: false
       matrix:
         os: [windows-latest, ubuntu-latest, macos-latest]
-        compiler_version: [12]
+        version: ['12']
         metis: [32, 64]
         include:
-          - compiler: gnu
-            cc_cmd: gcc
-            fc_cmd: gfortran
-            cxx_cmd: g++
+          - compiler: gcc
           - os: ubuntu-latest
-            compiler: intel-llvm
-            compiler_version: 2023.2
-            cc_cmd: icx
-            fc_cmd: ifort
-            cxx_cmd: icpx
+            compiler: intel
+            version: '2023.2'
             metis: 32
             allow_failure: true
           - os: ubuntu-latest
-            compiler: intel-llvm
-            compiler_version: 2023.2
-            cc_cmd: icx
-            fc_cmd: ifort
-            cxx_cmd: icpx
+            compiler: intel
+            version: '2023.2'
             metis: 64
             allow_failure: true
+          # - os: windows-latest
+          #   compiler: intel
+          #   version: '2023.2'
+          #   metis: 32
+          #   allow_failure: true
+          # - os: windows-latest
+          #   compiler: intel-classic
+          #   version: '2021.10'
+          #   metis: 32
+          #   allow_failure: true
           # - os: ubuntu-latest
-          #   compiler: intel-llvm
-          #   compiler_version: 2023.2
-          #   cc_cmd: icx
-          #   fc_cmd: ifx
-          #   cxx_cmd: icpx
+          #   compiler: intel-classic
+          #   version: '2021.10'
+          #   metis: 32
+          #   allow_failure: true
+          # - os: macos-latest
+          #   compiler: intel-classic
+          #   version: '2021.10'
+          #   metis: 32
+          #   allow_failure: true
+          # - os: ubuntu-latest
+          #   compiler: nvidia-hpc
+          #   version: '23.11'
+          #   metis: 32
           #   allow_failure: true
     runs-on: ${{ matrix.os }}
     steps:
@@ -87,10 +96,12 @@ jobs:
           fi
           wget https://github.com/JuliaBinaryWrappers/OpenBLAS32_jll.jl/releases/download/OpenBLAS32-v0.3.23%2B0/OpenBLAS32.v0.3.23.$PLATFORM-libgfortran5.tar.gz
           tar -xzvf OpenBLAS32.v0.3.23.$PLATFORM-libgfortran5.tar.gz -C deps
-          wget https://github.com/JuliaBinaryWrappers/Hwloc_jll.jl/releases/download/Hwloc-v2.9.3%2B0/Hwloc.v2.9.3.$PLATFORM.tar.gz
-          tar -xzvf Hwloc.v2.9.3.$PLATFORM.tar.gz -C deps
-          wget https://github.com/JuliaBinaryWrappers/MKL_jll.jl/releases/download/MKL-v2023.2.0%2B0/MKL.v2023.2.0.$PLATFORM.tar.gz
-          tar -xzvf MKL.v2023.2.0.$PLATFORM.tar.gz -C deps
+          wget https://github.com/JuliaBinaryWrappers/Hwloc_jll.jl/releases/download/Hwloc-v2.10.0%2B0/Hwloc.v2.10.0.$PLATFORM.tar.gz
+          tar -xzvf Hwloc.v2.10.0.$PLATFORM.tar.gz -C deps
+          if [[ "${{matrix.os}}" != "macos-latest" ]]; then
+            wget https://github.com/JuliaBinaryWrappers/MKL_jll.jl/releases/download/MKL-v2024.0.0%2B0/MKL.v2024.0.0.$PLATFORM.tar.gz
+            tar -xzvf MKL.v2024.0.0.$PLATFORM.tar.gz -C deps
+          fi
           rm *.tar.gz
 
       - name: Set environment variables for OpenMP
@@ -99,26 +110,16 @@ jobs:
           echo "OMP_CANCELLATION=TRUE" >> $GITHUB_ENV
           echo "OMP_PROC_BIND=TRUE" >> $GITHUB_ENV
 
-      - name: Install GNU compilers
-        if: matrix.compiler == 'gnu'
-        uses: awvwgk/setup-fortran@main
+      - name: Install compilers
+        uses: fortran-lang/setup-fortran@main
         with:
-          compiler: gcc
-          version: ${{ matrix.compiler_version }}
+          compiler: ${{ matrix.compiler }}
+          version: ${{ matrix.version }}
 
-      - name: Install classic Intel compilers
+      - name: Update Intel compilers
         if: matrix.compiler == 'intel'
-        uses: awvwgk/setup-fortran@main
-        with:
-          compiler: intel-classic
-          version: ${{ matrix.compiler_version }}
-
-      - name: Install nextgen Intel compilers
-        if: matrix.compiler == 'intel-llvm'
-        uses: awvwgk/setup-fortran@main
-        with:
-          compiler: intel
-          version: ${{ matrix.compiler_version }}
+        shell: bash
+        run: echo "FC=ifort" >> $GITHUB_ENV
 
       # Uncomment this section to obtain ssh access to VM
       # - name: Setup tmate session
@@ -133,6 +134,10 @@ jobs:
           LIBHWLOC="hwloc"
           LIBMETIS="metis"
           METIS64="false"
+          LIBBLAS="openblas"
+          LIBLAPACK="openblas"
+          CSTD="c99"
+          CPPSTD="c++11"
           if [[ "${{matrix.os}}" == "windows-latest" ]]; then
             LIBDIR="bin"
             LIBHWLOC="hwloc-15"
@@ -141,29 +146,22 @@ jobs:
             LIBMETIS="metis_Int64_Real32"
             METIS64="true"
           fi
-          if [[ "${{matrix.compiler}}" == "gnu" ]]; then
-            meson setup builddir --prefix=$GITHUB_WORKSPACE/../meson --buildtype=debug \
-                                 -Dexamples=true -Dtests=true \
-                                 -Dlibmetis_path=$DEPS/deps/$LIBDIR -Dlibmetis=$LIBMETIS \
-                                 -Dmetis64=$METIS64 -Dlibblas_path=$DEPS/deps/$LIBDIR \
-                                 -Dlibblas=openblas -Dlibblas_include=../deps/include \
-                                 -Dliblapack_path=$DEPS/deps/$LIBDIR -Dliblapack=openblas \
-                                 -Dlibhwloc_path=$DEPS/deps/$LIBDIR -Dlibhwloc=$LIBHWLOC \
-                                 -Dlibhwloc_include=../deps/include
-          else
-            meson setup builddir --prefix=$GITHUB_WORKSPACE/../meson --buildtype=debug \
-                                 -Dexamples=true -Dtests=true \
-                                 -Dlibmetis_path=$DEPS/deps/$LIBDIR -Dlibmetis=$LIBMETIS \
-                                 -Dmetis64=$METIS64 -Dlibblas_path=$DEPS/deps/$LIBDIR \
-                                 -Dlibblas=mkl_rt -Dlibblas_include=../deps/include \
-                                 -Dliblapack_path=$DEPS/deps/$LIBDIR -Dliblapack=mkl_rt \
-                                 -Dlibhwloc_path=$DEPS/deps/$LIBDIR -Dlibhwloc=$LIBHWLOC \
-                                 -Dlibhwloc_include=../deps/include -Dlibmetis=$LIBMETIS
+          if [[ "${{matrix.compiler}}" == "intel" ]]; then
+            LIBBLAS="mkl_rt"
+            LIBLAPACK="mkl_rt"
           fi
-        env:
-          CC: ${{ matrix.cc_cmd }}
-          FC: ${{ matrix.fc_cmd }}
-          CXX: ${{ matrix.cxx_cmd }}
+          if [[ "${{matrix.compiler}}" == "nvidia-hpc" ]]; then
+            CSTD="none"
+            CPPSTD="none"
+          fi
+          meson setup builddir --prefix=$GITHUB_WORKSPACE/../meson --buildtype=debug \
+                               -Dexamples=true -Dtests=true \
+                               -Dlibmetis_path=$DEPS/deps/$LIBDIR -Dlibmetis=$LIBMETIS \
+                               -Dmetis64=$METIS64 -Dlibblas_path=$DEPS/deps/$LIBDIR \
+                               -Dlibblas=$LIBBLAS -Dlibblas_include=../deps/include \
+                               -Dliblapack_path=$DEPS/deps/$LIBDIR -Dliblapack=$LIBLAPACK \
+                               -Dlibhwloc_path=$DEPS/deps/$LIBDIR -Dlibhwloc=$LIBHWLOC \
+                               -Dlibhwloc_include=../deps/include -Dc_std=$CSTD -Dcpp_std=$CPPSTD \
 
       - name: Build SPRAL
         shell: bash
@@ -172,7 +170,7 @@ jobs:
       - uses: actions/upload-artifact@v3
         if: failure()
         with:
-          name: ${{ matrix.os }}_${{ matrix.fc_cmd }}_${{ matrix.compiler_version }}_METIS_${{ matrix.metis }}_meson-log.txt
+          name: ${{ matrix.os }}_${{ matrix.compiler }}_${{ matrix.version }}_METIS_${{ matrix.metis }}_meson-log.txt
           path: builddir/meson-logs/meson-log.txt
 
       - name: Install SPRAL
@@ -182,7 +180,7 @@ jobs:
       - uses: actions/upload-artifact@v3
         if: failure()
         with:
-          name: ${{ matrix.os }}_${{ matrix.fc_cmd }}_${{ matrix.compiler_version }}_METIS_${{ matrix.metis }}_install-log.txt
+          name: ${{ matrix.os }}_${{ matrix.compiler }}_${{ matrix.version }}_METIS_${{ matrix.metis }}_install-log.txt
           path: builddir/meson-logs/install-log.txt
 
       - name: Test SPRAL
@@ -192,5 +190,5 @@ jobs:
       - uses: actions/upload-artifact@v3
         if: failure()
         with:
-          name: ${{ matrix.os }}_${{ matrix.fc_cmd }}_${{ matrix.compiler_version }}_METIS_${{ matrix.metis }}_testlog.txt
+          name: ${{ matrix.os }}_${{ matrix.compiler }}_${{ matrix.version }}_METIS_${{ matrix.metis }}_testlog.txt
           path: builddir/meson-logs/testlog.txt
