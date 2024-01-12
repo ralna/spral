@@ -1,6 +1,6 @@
 project(
   'SPRAL',
-  'c', 'cpp', 'fortran',
+  'c', 'cpp', 'fortran', 'cuda',
   version: '2023.11.15',
   license: 'BSD-3',
   meson_version: '>= 0.63.0',
@@ -175,6 +175,7 @@ libspral = library('spral',
 # Binary
 executable('spral_ssids',
            sources : binspral_src,
+           dependencies : libcuda,
            link_with : libspral,
            link_language : 'fortran',
            install : true)
@@ -198,7 +199,7 @@ if build_tests
     file = test[1]
     test(name,
          executable(name, file, link_with : libspral, dependencies : libspral_deps, link_language : 'fortran',
-                    include_directories: libspral_include , install : true, install_dir : fortran_tests_folder),
+                    include_directories: libspral_include, install : true, install_dir : fortran_tests_folder),
          timeout : 300, is_parallel : false)
   endforeach
 

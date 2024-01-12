@@ -5,6 +5,7 @@ if build_gpu and libcuda.found()
                         'cpu_solve.f90',
                         'datatypes.f90',
                         'dense_factor.f90',
+                        'factor.f90',
                         'interfaces.f90',
                         'smalloc.f90',
                         'solve.f90',
