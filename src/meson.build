@@ -24,4 +24,3 @@ if libmetis_version == '4'
 else
   libspral_src += files('metis5_wrapper.F90')
 endif
-
