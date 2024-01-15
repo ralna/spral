@@ -49,7 +49,7 @@ Routines
 .. f:subroutine:: auction_scale_sym(n, ptr, row, val, scaling, options, inform[, match])
 
    Find a matching-based symmetric scaling using the auction algorithm.
-   
+
    The scaled matrix is such that the entry of maximum absolute value in each
    row and column is (approximately) :math:`1.0`.
 
@@ -66,7 +66,7 @@ Routines
 .. f:subroutine:: auction_scale_unsym(m, n, ptr, row, val, rscaling, cscaling, options, inform[, match])
 
    Find a matching-based unsymmetric scaling using the auction algorithm.
-   
+
    The scaled matrix is such that the entry of maximum absolute value in each
    row and column is (approximately) :math:`1.0`.
 
@@ -137,19 +137,19 @@ The above code produces the following output::
 
    Initial matrix:
    Real symmetric indefinite matrix, dimension 5x5 with 8 entries.
-   1:   2.0000E+00   1.0000E+00                                       
+   1:   2.0000E+00   1.0000E+00
    2:   1.0000E+00   4.0000E+00   1.0000E+00                8.0000E+00
-   3:                1.0000E+00   3.0000E+00   2.0000E+00             
-   4:                             2.0000E+00                          
+   3:                1.0000E+00   3.0000E+00   2.0000E+00
+   4:                             2.0000E+00
    5:                8.0000E+00                             2.0000E+00
    Matching:         1         5         4         3         2
    Scaling:   7.07E-01  1.62E-01  2.78E-01  1.80E+00  7.72E-01
    Scaled matrix:
    Real symmetric indefinite matrix, dimension 5x5 with 8 entries.
-   1:   1.0000E+00   1.1443E-01                                       
+   1:   1.0000E+00   1.1443E-01
    2:   1.1443E-01   1.0476E-01   4.5008E-02                1.0000E+00
-   3:                4.5008E-02   2.3204E-01   1.0000E+00             
-   4:                             1.0000E+00                          
+   3:                4.5008E-02   2.3204E-01   1.0000E+00
+   4:                             1.0000E+00
    5:                1.0000E+00                             1.1932E+00
 
 .. _auction_algorithm_method:
@@ -261,7 +261,7 @@ Routines
 .. f:subroutine:: equilib_scale_sym(n, ptr, row, val, scaling, options, inform)
 
    Find a matching-based symmetric scaling using the norm-equilibration algorithm.
-   
+
    The scaled matrix is such that the infinity norm of each row and column are
    equal to :math:`1.0`.
 
@@ -276,7 +276,7 @@ Routines
 .. f:subroutine:: equilib_scale_unsym(m, n, ptr, row, val, rscaling, cscaling, options, inform)
 
    Find a matching-based unsymmetric scaling using the norm-equilibration algorithm.
-   
+
    The scaled matrix is such that the infinity norm of each row and column are
    equal to :math:`1.0`.
 
@@ -335,18 +335,18 @@ The above code produces the following output::
 
    Initial matrix:
    Real symmetric indefinite matrix, dimension 5x5 with 8 entries.
-   1:   2.0000E+00   1.0000E+00                                       
+   1:   2.0000E+00   1.0000E+00
    2:   1.0000E+00   4.0000E+00   1.0000E+00                8.0000E+00
-   3:                1.0000E+00   3.0000E+00   2.0000E+00             
-   4:                             2.0000E+00                          
+   3:                1.0000E+00   3.0000E+00   2.0000E+00
+   4:                             2.0000E+00
    5:                8.0000E+00                             2.0000E+00
    Scaling:   7.07E-01  3.54E-01  5.77E-01  8.66E-01  3.54E-01
    Scaled matrix:
    Real symmetric indefinite matrix, dimension 5x5 with 8 entries.
-   1:   1.0000E+00   2.5000E-01                                       
+   1:   1.0000E+00   2.5000E-01
    2:   2.5000E-01   5.0000E-01   2.0412E-01                1.0000E+00
-   3:                2.0412E-01   1.0000E+00   9.9960E-01             
-   4:                             9.9960E-01                          
+   3:                2.0412E-01   1.0000E+00   9.9960E-01
+   4:                             9.9960E-01
    5:                1.0000E+00                             2.5000E-01
 
 .. _equilib_algorithm_method:
@@ -387,7 +387,7 @@ Routines
 .. f:subroutine:: hungarian_scale_sym(n, ptr, row, val, scaling, options, inform[, match])
 
    Find a matching-based symmetric scaling using the Hungarian algorithm.
-   
+
    The scaled matrix is such that the entry of maximum absolute value in each
    row and column is :math:`1.0`.
 
@@ -404,7 +404,7 @@ Routines
 .. f:subroutine:: hungarian_scale_unsym(m, n, ptr, row, val, rscaling, cscaling, options, inform[, match])
 
    Find a matching-based symmetric scaling using the Hungarian algorithm.
-   
+
    The scaled matrix is such that the entry of maximum absolute value in each
    row and column is :math:`1.0`.
 
@@ -482,20 +482,20 @@ The above code produces the following output::
 
    Initial matrix:
    Real unsymmetric matrix, dimension 5x5 with 10 entries.
-   1:   2.0000E+00   5.0000E+00                                       
+   1:   2.0000E+00   5.0000E+00
    2:   1.0000E+00   4.0000E+00                             7.0000E+00
-   3:                1.0000E+00                2.0000E+00             
-   4:                             3.0000E+00                          
+   3:                1.0000E+00                2.0000E+00
+   4:                             3.0000E+00
    5:                8.0000E+00                             2.0000E+00
    Matching:         1         5         4         3         2
    Row Scaling:   5.22E-01  5.22E-01  5.22E-01  5.22E-01  5.22E-01
    Col Scaling:   9.59E-01  2.40E-01  6.39E-01  9.59E-01  2.74E-01
    Scaled matrix:
    Real unsymmetric matrix, dimension 5x5 with 10 entries.
-   1:   1.0000E+00   6.2500E-01                                       
+   1:   1.0000E+00   6.2500E-01
    2:   5.0000E-01   5.0000E-01                             1.0000E+00
-   3:                1.2500E-01                1.0000E+00             
-   4:                             1.0000E+00                          
+   3:                1.2500E-01                1.0000E+00
+   4:                             1.0000E+00
    5:                1.0000E+00                             2.8571E-01
 
 .. _hungarian_algorithm_method:
@@ -535,7 +535,7 @@ To obtain a scaling we define scaling matrices :math:`D_r` and :math:`D_c` as
 .. math::
    d^r_i = e^{u_i},
 
-   d^c_i = e^{v_i}. 
+   d^c_i = e^{v_i}.
 
 If a symmetric scaling is required, we average these as
 

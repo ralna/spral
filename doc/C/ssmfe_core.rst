@@ -278,7 +278,7 @@ these eigenpairs and they must be moved by the user to separate storage
    +----------+---------------------------------------------------------------+
 
    The matrices are defined as follows:
-    
+
    * :math:`U` = ``W[rci.kx][rci.jx:rci.jx+rci.nx-1][:]``
    * :math:`V` = ``W[rci.ky][rci.jy:rci.jy+rci.ny-1][:]``
    * :math:`\bar{V}` = ``W[rci.ky][rci.jy:rci.jy+rci.nx-1][:]``
@@ -367,7 +367,7 @@ these eigenpairs and they must be moved by the user to separate storage
    :param inform: Information type to be freed.
 
    .. warning::
-   
+
       As memory in ``keep`` and ``inform`` has been allocated using Fortran
       functions, this routine **must** be called to avoid a memory leak.
 
@@ -379,11 +379,11 @@ Derived types
 
    Options that control the algorithm.
 
-   
+
    .. c:member:: int err_est
-   
+
       Error estimation scheme, one of:
-      
+
       +-------------+---------------------------------------------------------+
       | 1           | Residual error bounds: modified Davis-Kahan estimate for|
       |             | eigenvector error and Lehmann bounds for eigenvale error|
@@ -394,38 +394,38 @@ Derived types
 
       Default is `2`.
 
-   
+
    .. c:member:: int extra_left
-   
+
       Number of extra approximate eigenvectors
       corresponding to leftmost eigenvalues used to enhance convergence.
       Default is `0`.
-   
+
    .. c:member:: int extra_right
-   
+
       Number of extra approximate eigenvectors
       corresponding to rightmost eigenvalues used to enhance convergence.
       Default is `0`.
 
-   
+
    .. c:member:: bool minAprod
-   
+
       If true, minimize number of
       multiplications with :math:`A` by requiring 2 additional blocks of memory
       for the workspace ``W[:][:][:]``. If false, three returns with `rci.job=1`
       occur per iteration instead of one. Must be true if ``problem < 0``.
       Default is `true`.
-   
+
    .. c:member:: bool minBprod
-   
+
       If true, minimize number of
       multiplications with :math:`B` by requiring 2 additional blocks of memory
       for the workspace ``W[:][:][:]``. If false, at least three returns with
       `rci.job=3` occur per iteration instead of one.
       Default is `true`.
-   
+
    .. c:member:: double min_gap
-   
+
       Restart sensitivity: if the relative
       distance between the last eigenvalue of interest on either margin of
       the spectrum and the rest of the spectrum is smaller than `min_gap`,
@@ -435,9 +435,9 @@ Derived types
       eigenvalues of interest, causing slow convergence. The default value
       of 0.0 means no restart is ever suggested. Must be in the range
       :math:`[0.0,1.0]`.
-   
+
    .. c:member:: double cf_max
-   
+
       Stagnation sensitivity: if the value
       :math:`q_{ij}` (see method section) is greater than `cf_max` for
       :math:`i > 5`, the eigenpair is marked as stagnated by setting
@@ -451,46 +451,46 @@ Derived types
    Information on progress of the algorithm.
 
    .. c:member:: int converged[mep]
-   
+
       Convergence status.
-   
+
       * If ``converged[j]>0``, the eigenpair `(lambda[j], X[j])` converged
         on iteration `converged[j]`.
       * If ``converged[j]=0``, the eigenpair `(lambda[j], X[j])` is still
         converging.
       * If ``converged[j]<0``, the eigenpair `(lambda[j], X[j])` stagnated
         at iteration `converged[j]`.
-   
+
       This component is allocated by the routine.
-   
+
    .. c:member:: double err_lambda[mep]
-   
+
       Estimated eigenvalue errors for
       converged and stagnated eigenvalues.
       This component is allocated by the routine.
-   
+
    .. c:member:: double err_x[mep]
-   
+
       Estimated eigenvector errors for
       converged and stagnated eigenvectors.
       This component is allocated by the routine.
-   
+
    .. c:member:: int flag
-   
+
       Return status of algorithm. See table below.
-   
+
    .. c:member:: int iteration
-   
+
       Number of iterations.
-   
+
    .. c:member:: double residual_norms[mep]
-   
+
       Euclidean norms of residuals
       for `(lambda[:], X[:])` on return with ``rci.job=4, 5``.
       This component is allocated by the routine.
-   
+
    .. c:member:: int stat
-   
+
       Fortran allocation status in event of failure
 
    +--------------+-----------------------------------------------------------+

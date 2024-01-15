@@ -51,7 +51,7 @@ int main(void) {
          printf("\n");
          done = true;
          break;
-   
+
       case 1: /* Compute v = v + A'*u without altering u */
          matrix_mult_trans(m, n, ptr, row, val, u, v);
          break;

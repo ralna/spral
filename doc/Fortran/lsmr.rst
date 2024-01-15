@@ -8,7 +8,7 @@
 Purpose
 =======
 
-This package uses the LSMR iterative method to solve sparse linear 
+This package uses the LSMR iterative method to solve sparse linear
 equations and sparse least-squares problems of the form:
 
 .. math::
@@ -18,7 +18,7 @@ equations and sparse least-squares problems of the form:
          \mbox{minimize } \|x\|_2 \mbox{ subject to }Ax = b, \\
       \mbox{2. Linear least squares:} & \mbox{minimize  } \|Ax - b\|_2^2,\\
       \mbox{3. Regularized least squares:} &
-         \mbox{minimize  } \|Ax - b\|_2^2 + \lambda^2\|x\|_2^2, 
+         \mbox{minimize  } \|Ax - b\|_2^2 + \lambda^2\|x\|_2^2,
    \end{array}
 
 where the :math:`m \times n` matrix :math:`A` may be square or rectangular, and
@@ -26,7 +26,7 @@ may have any rank. The scalar :math:`\lambda` is a damping parameter. If
 :math:`\lambda > 0`, the solution is regularized in the sense that a unique
 soluton always exists, and :math:`\|x\|_2` is always bounded.
 
-Preconditioning may be used to try to reduce the number of iterations. 
+Preconditioning may be used to try to reduce the number of iterations.
 A suitable choice for the preconditioner depends on the user's knowledge of
 :math:`A`. For a user-chosen :math:`n \times n` nonsingular matrix :math:`P`,
 LSMR solves
@@ -38,7 +38,7 @@ LSMR solves
          \mbox{minimize  } \|Py\|_2 \mbox{  subject to }APy = b, \\
       \mbox{2. Linear least squares:} & \mbox{minimize  } \|APy - b\|_2^2 ,\\
       \mbox{3. Regularized least squares:} &
-         \mbox{minimize  } \|APy - b\|_2^2 + \lambda^2\|Py\|_2^2 , 
+         \mbox{minimize  } \|APy - b\|_2^2 + \lambda^2\|Py\|_2^2 ,
    \end{array}
 
 The user must then recover the final solution :math:`x` by computing
@@ -48,11 +48,11 @@ significantly better conditioned than :math:`A`.
 Reverse communication is used for preconditioning operations :math:`Pz` and
 :math:`P^Tz` and matrix-vector products of the form :math:`Av` and :math:`A^Tu`.
 
-The method used is based on the Golub-Kahan bidiagonalization process. 
-It is algebraically equivalent to applying MINRES to the normal 
+The method used is based on the Golub-Kahan bidiagonalization process.
+It is algebraically equivalent to applying MINRES to the normal
 equation :math:`(A^TA+\lambda^2I)x=A^Tb` (or
 :math:`((AP)^T(AP)+\lambda^2I)y=(AP)^Tb`), but has better numerical properties,
-especially if :math:`A` is ill-conditioned. 
+especially if :math:`A` is ill-conditioned.
 
 Notation
 --------
@@ -175,7 +175,7 @@ Derived types
       :math:`cond(\bar{A})`, apparent condition number of :math:`\bar{A}`.
       Only used if `options%ctest=3`.
    :f integer ctest [default=3]: Convergence test to use, one of:
-      
+
       +-------------+----------------------------------------------------------+
       | 1           | User to test convergence (`action=3`).                   |
       |             | *Without*  computation of norms in inform.               |

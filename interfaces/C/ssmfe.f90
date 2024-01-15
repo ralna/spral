@@ -52,7 +52,7 @@ subroutine spral_ssmfe_standard_double(crci, left, mep, lambda, n, x, ldx, &
   ! Call Fortran routine
   call ssmfe_standard(fcikeep%rci, left, mep, lambda, n, x, ldx, &
        fcikeep%keep, foptions, fcikeep%inform)
-  
+
   ! Copy arguments out
   call copy_rci_out(fcikeep%rci, crci, cindexed)
   call copy_inform_out(fcikeep%inform, cinform)
@@ -271,7 +271,7 @@ subroutine spral_ssmfe_generalized_shift_double(crci, sigma, left, right, mep, &
      lambda, n, x, ldx, ckeep, coptions, cinform) bind(C)
   use spral_ssmfe_ciface
   implicit none
-  
+
   type(spral_ssmfe_rcid), intent(inout) :: crci
   real(C_DOUBLE), value :: sigma
   integer(C_INT), value :: left
@@ -459,7 +459,7 @@ subroutine spral_ssmfe_free_double(ckeep, cinform) bind(C)
 
   ! Associate fkeep
   call c_f_pointer(ckeep, fcikeep)
-  
+
   ! Call Fortran cleanup
   call ssmfe_free(fcikeep%keep, fcikeep%inform)
 

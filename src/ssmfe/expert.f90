@@ -9,12 +9,12 @@ module SPRAL_ssmfe_expert
     ssmfe, ssmfe_free, &
     ssmfe_core_keep, ssmfe_core_options, ssmfe_inform, ssmfe_rcid, ssmfe_rciz
   implicit none
-  
+
   private
 
   ! double precision to be used
   integer, parameter :: PRECISION = kind(1.0D0)
-  
+
   ! input error flags
   integer, parameter :: WRONG_BLOCK_SIZE   =  -2
   integer, parameter :: WRONG_ERR_EST      =  -3
@@ -23,7 +23,7 @@ module SPRAL_ssmfe_expert
   integer, parameter :: WRONG_RIGHT        = -12
   integer, parameter :: WRONG_STORAGE_SIZE = -13
   integer, parameter :: WRONG_SIGMA        = -14
-  
+
   ! fatal execution error flags
   integer, parameter :: OUT_OF_MEMORY           = -100
   integer, parameter :: B_NOT_POSITIVE_DEFINITE = -200
@@ -40,7 +40,7 @@ module SPRAL_ssmfe_expert
 
   ! default error estimation scheme, see the spec
   integer, parameter :: SSMFE_KINEMATIC = 2
-  
+
   public :: ssmfe_standard, ssmfe_standard_shift
   public :: ssmfe_generalized, ssmfe_generalized_shift
   public :: ssmfe_buckling
@@ -49,59 +49,59 @@ module SPRAL_ssmfe_expert
   public :: ssmfe_errmsg
   public :: ssmfe_options, ssmfe_expert_keep
   public :: ssmfe_rcid, ssmfe_rciz, ssmfe_inform
-  
+
   interface ssmfe_standard
     module procedure &
       ssmfe_expert_double, &
       ssmfe_expert_double_complex
   end interface
-  
+
   interface ssmfe_generalized
     module procedure &
       ssmfe_expert_gen_double, &
       ssmfe_expert_gen_double_complex
   end interface
-  
+
   interface ssmfe_standard_shift
     module procedure &
       ssmfe_expert_shift_double, &
       ssmfe_expert_shift_double_complex
   end interface
-  
+
   interface ssmfe_generalized_shift
     module procedure &
       ssmfe_expert_gen_shift_double, &
       ssmfe_expert_gen_shift_double_complex
   end interface
-  
+
   interface ssmfe_buckling
     module procedure &
       ssmfe_expert_buckling_double, &
       ssmfe_expert_buckling_double_complex
   end interface
-  
+
   interface ssmfe_solve
     module procedure &
       ssmfe_inverse_rci_double, &
       ssmfe_direct_rci_double, &
       ssmfe_inverse_rci_double_complex, &
       ssmfe_direct_rci_double_complex
-  end interface 
+  end interface
 
   interface ssmfe_free
     module procedure &
       ssmfe_expert_free_double, &
       ssmfe_expert_free_keep_double
-  end interface 
-  
+  end interface
+
   type ssmfe_options ! see the spec
-  
+
     integer :: print_level = 0
 
     integer :: unit_error      = 6
-    integer :: unit_warning    = 6 
+    integer :: unit_warning    = 6
     integer :: unit_diagnostic = 6
-        
+
     integer :: max_iterations = 100
 
     integer :: user_x = 0
@@ -113,12 +113,12 @@ module SPRAL_ssmfe_expert
     real(PRECISION) :: abs_tol_residual =  0.0
     real(PRECISION) :: rel_tol_residual =  0.0
     real(PRECISION) :: tol_x            = -1.0
-    
+
     real(PRECISION) :: left_gap  = 0.0
     real(PRECISION) :: right_gap = 0.0
 
     integer :: extra_left  = -1
-    integer :: extra_right = -1    
+    integer :: extra_right = -1
 
     integer :: max_left  = -1
     integer :: max_right = -1
@@ -127,13 +127,13 @@ module SPRAL_ssmfe_expert
     logical :: minBprod = .true.
 
   end type ssmfe_options
-  
+
   ! private subroutines and types
 
   type ssmfe_expert_keep
-  
+
     private
-    
+
     ! convergence flags for eigenvalues
     logical :: left_converged  = .false. ! leftmost/left-of-the-shift
     logical :: right_converged = .false. ! right of the shift
@@ -157,7 +157,7 @@ module SPRAL_ssmfe_expert
     ! in block 0 of the vector workspace
     integer :: first = 1
     integer :: last  = 0
-    
+
     ! estimated average distance between eigenvalues
     real(PRECISION) :: av_dist = 0
 
@@ -191,7 +191,7 @@ contains
     type(ssmfe_expert_keep   ), intent(inout) :: keep
     type(ssmfe_options), intent(in   ) :: options
     type(ssmfe_inform ), intent(inout) :: inform
-    
+
     call ssmfe_direct_rci_double &
       ( 0, left, mep, lambda, m, rr, ind, rci, keep, options, inform )
 
@@ -214,7 +214,7 @@ contains
     type(ssmfe_expert_keep), intent(inout) :: keep
     type(ssmfe_options    ), intent(in   ) :: options
     type(ssmfe_inform     ), intent(inout) :: inform
-    
+
     call ssmfe_direct_rci_double_complex &
       ( 0, left, mep, lambda, m, rr, ind, rci, keep, options, inform )
 
@@ -238,7 +238,7 @@ contains
     type(ssmfe_expert_keep), intent(inout) :: keep
     type(ssmfe_options    ), intent(in   ) :: options
     type(ssmfe_inform     ), intent(inout) :: inform
-    
+
     call ssmfe_direct_rci_double &
       ( 1, left, mep, lambda, m, rr, ind, rci, keep, options, inform )
 
@@ -261,14 +261,14 @@ contains
     type(ssmfe_expert_keep), intent(inout) :: keep
     type(ssmfe_options    ), intent(in   ) :: options
     type(ssmfe_inform     ), intent(inout) :: inform
-    
+
     call ssmfe_direct_rci_double_complex &
       ( 1, left, mep, lambda, m, rr, ind, rci, keep, options, inform )
 
   end subroutine ssmfe_expert_gen_double_complex
 
 !*************************************************************************
-! real RCI for computing eigenpairs {lambda, x} of A x = lambda x 
+! real RCI for computing eigenpairs {lambda, x} of A x = lambda x
 ! with lambda near the shift sigma, see ssmfe spec for the arguments
 !
   subroutine ssmfe_expert_shift_double &
@@ -287,7 +287,7 @@ contains
     type(ssmfe_expert_keep), intent(inout) :: keep
     type(ssmfe_options    ), intent(in   ) :: options
     type(ssmfe_inform     ), intent(inout) :: inform
-    
+
     call ssmfe_inverse_rci_double &
       ( 0, sigma, left, right, mep, lambda, m, rr, ind, &
         rci, keep, options, inform )
@@ -295,7 +295,7 @@ contains
   end subroutine ssmfe_expert_shift_double
 
 !*************************************************************************
-! complex RCI for computing eigenpairs {lambda, x} of A x = lambda x 
+! complex RCI for computing eigenpairs {lambda, x} of A x = lambda x
 ! with lambda near the shift sigma, see ssmfe spec for the arguments
 !
   subroutine ssmfe_expert_shift_double_complex &
@@ -314,7 +314,7 @@ contains
     type(ssmfe_expert_keep), intent(inout) :: keep
     type(ssmfe_options    ), intent(in   ) :: options
     type(ssmfe_inform     ), intent(inout) :: inform
-    
+
     call ssmfe_inverse_rci_double_complex &
       ( 0, sigma, left, right, mep, lambda, m, rr, ind, &
         rci, keep, options, inform )
@@ -341,7 +341,7 @@ contains
     type(ssmfe_expert_keep), intent(inout) :: keep
     type(ssmfe_options    ), intent(in   ) :: options
     type(ssmfe_inform     ), intent(inout) :: inform
-    
+
     call ssmfe_inverse_rci_double &
       ( 1, sigma, left, right, mep, lambda, m, rr, ind, &
         rci, keep, options, inform )
@@ -349,7 +349,7 @@ contains
   end subroutine ssmfe_expert_gen_shift_double
 
 !*****************************************************************************
-! complex RCI for computing eigenpairs {lambda, x} of A x = lambda B x, B > 0, 
+! complex RCI for computing eigenpairs {lambda, x} of A x = lambda B x, B > 0,
 ! with lambda near the shift sigma, see ssmfe spec for the arguments
 !
   subroutine ssmfe_expert_gen_shift_double_complex &
@@ -368,7 +368,7 @@ contains
     type(ssmfe_expert_keep), intent(inout) :: keep
     type(ssmfe_options    ), intent(in   ) :: options
     type(ssmfe_inform     ), intent(inout) :: inform
-    
+
     call ssmfe_inverse_rci_double_complex &
       ( 1, sigma, left, right, mep, lambda, m, rr, ind, &
         rci, keep, options, inform )
@@ -395,7 +395,7 @@ contains
     type(ssmfe_expert_keep), intent(inout) :: keep
     type(ssmfe_options    ), intent(in   ) :: options
     type(ssmfe_inform     ), intent(inout) :: inform
-    
+
     call ssmfe_inverse_rci_double &
       ( 2, sigma, left, right, mep, lambda, m, rr, ind, &
         rci, keep, options, inform )
@@ -422,7 +422,7 @@ contains
     type(ssmfe_expert_keep), intent(inout) :: keep
     type(ssmfe_options    ), intent(in   ) :: options
     type(ssmfe_inform     ), intent(inout) :: inform
-    
+
     call ssmfe_inverse_rci_double_complex &
       ( 2, sigma, left, right, mep, lambda, m, rr, ind, &
         rci, keep, options, inform )
@@ -446,7 +446,7 @@ contains
     integer, parameter :: NONE = -1
 
     real(PRECISION), parameter :: ZERO = 0.0D0, ONE = 1.0D0
-    
+
     real(kind = PRECISION), parameter :: MIN_REL_GAP = 1E-3
 
     ! problem type
@@ -496,12 +496,12 @@ contains
     integer :: u_diag
     integer :: m, mep, new, ncon, first, last, step
     integer :: i, j, k, l
-    
+
     real(PRECISION) :: left_gap
     real(PRECISION) :: right_gap
     real(PRECISION) :: delta
     real(PRECISION) :: q, r, s, t
-    
+
     ! short names for options
 
     u_diag    = options%unit_diagnostic
@@ -509,9 +509,9 @@ contains
     right_gap = options%right_gap
 
     info%flag = 0
-    
+
     ! check for the input data errors
-    
+
     if ( left < 0 &
         .or. options%max_left >= 0 .and. options%max_left < left ) then
       info%flag = WRONG_LEFT
@@ -534,21 +534,21 @@ contains
       call ssmfe_errmsg( options, info )
       return
     end if
-    
+
     if ( block_size < 2 ) then
       info%flag = WRONG_BLOCK_SIZE
       rci%job = SSMFE_ABORT
       call ssmfe_errmsg( options, info )
       return
     end if
-    
+
     if ( problem == 2 .and. sigma == ZERO ) then
       info%flag = WRONG_SIGMA
       rci%job = SSMFE_QUIT
       call ssmfe_errmsg( options, info )
       return
     end if
-    
+
     ! things to do on (re)start
     if ( rci%job == SSMFE_START .or. rci%job == SSMFE_RESTART &
         .and. (rci%i == 0 .and. rci%j == 0 .or. rci%k == 0) ) then
@@ -610,7 +610,7 @@ contains
         else
           keep%options%extra_right = options%extra_right ! take user's value
         end if
-        
+
         if ( options%max_left >= 0 ) keep%options%extra_left = &
           min(keep%options%extra_left, options%max_left - left)
         if ( options%max_right >= 0 ) keep%options%extra_right = &
@@ -623,7 +623,7 @@ contains
       ! exceeds the block size m, they are computed in portions
       ! of sizes keep%left (those left of sigma) and keep%right (right of it);
       ! once a portion is computed, iterations are restarted (see below)
-      ! (note that more than wanted + extra eigenpairs are needed if gaps in 
+      ! (note that more than wanted + extra eigenpairs are needed if gaps in
       ! the spectrum separating wanted eigenvalues from the rest are sought)
 
       if ( keep%left > 0 ) then
@@ -633,7 +633,7 @@ contains
           ! the total numers of eigenvalues right of sigma to be computed
           j = right + keep%options%extra_right
           ! workspace for eigenvectors corresponding to left eigenvalues
-          l = m*i/(i + j) 
+          l = m*i/(i + j)
           keep%left = left ! assumingly can be computed in one go
           if ( l < i .or. left_gap /= ZERO ) then ! not enough space
             keep%options%extra_left = min(keep%options%extra_left, l/2)
@@ -681,7 +681,7 @@ contains
 
         keep%lcon = 0 ! the number of converged eigenpairs left of sigma
         keep%rcon = 0 ! the number of converged eigenpairs right of sigma
-        
+
         ! initialize the convergence flags
         keep%left_converged = left == 0
         keep%right_converged = right == 0
@@ -696,7 +696,7 @@ contains
         else
           keep%max_right = options%max_right
         end if
-        
+
       else
 
         if ( allocated(keep%lmd) ) deallocate ( keep%lmd )
@@ -719,16 +719,16 @@ contains
 
       if ( rci%job == SSMFE_RESTART .and. rci%k == 0 ) &
         rci%job = SSMFE_START
-      
+
     else if ( rci%job == SSMFE_SAVE_CONVERGED .and. rci%i < 0 ) then
-    
+
       ! some converged eigenpairs just saved to storage,
       ! decide on whether to go for more
 
       mep = max_nep
       m = block_size
       ncon = keep%lcon + keep%rcon
-      
+
       if ( .not. (keep%left_converged .and. keep%right_converged) ) then
 
         ! check the number of iterations performed
@@ -769,7 +769,7 @@ contains
           end if
         end if
       end if
-      
+
       if ( rci%job < 0 ) then ! computation terminated
         info%non_converged = &
           max(0, left - keep%lcon) + max(0, right - keep%rcon)
@@ -782,18 +782,18 @@ contains
       end if
 
     end if
-    
+
     ! call the core solver
 1   call ssmfe &
       ( rci, keep%problem, keep%left, keep%right, block_size, &
         keep%lmd, rr_matrices, ind, keep%keep, keep%options, keep%info )
 
     select case (rci%job)
-    
+
     case (SSMFE_APPLY_A)
-    
+
       rci%job = SSMFE_DO_SHIFTED_SOLVE
-    
+
     case (SSMFE_SAVE_CONVERGED)
 
       ! the number of newly converged eigenpairs
@@ -801,7 +801,7 @@ contains
       ! number of eigenpairs converged previously
       ncon = keep%lcon + keep%rcon
       mep = max_nep
-      
+
       ! rci%i > 0: save left converged eigenvalues data
       ! rci%i < 0: save right converged eigenvalues data
 
@@ -868,11 +868,11 @@ contains
         end if
         keep%last = j
       end if
-      
+
       ! report the convergence situation
       if ( options%print_level == 2 .and. u_diag > NONE ) then
-      
-        ! print data up to the first non-converged eigenpair 
+
+        ! print data up to the first non-converged eigenpair
         ! on each side of sigma only
 
         frmt = '(i7, i8, es23.14, a, es10.1, 2es11.1)'
@@ -928,7 +928,7 @@ contains
           if ( keep%info%converged(i) == 0 ) exit
 
         end do
-        
+
       end if
 
       ! update the numbers of converged eigenpairs
@@ -938,9 +938,9 @@ contains
         keep%rcon = keep%rcon + new
       end if
       ncon = keep%lcon + keep%rcon
-      
+
       if ( options%print_level > 2 .and. rci%i < 0 .and. u_diag > NONE ) then
-      
+
         ! print data for all recently computed eigenpairs
 
         write( u_diag, '(/a, i5, a, i4, i4)' ) &
@@ -958,17 +958,17 @@ contains
 
         write( u_diag, '(a/a)' ) &
           trim(line), trim(head)
-        write( u_diag, '(a)' ) trim(neck) 
+        write( u_diag, '(a)' ) trim(neck)
         write( u_diag, '(a)' ) trim(line)
-          
+
         do i = 1, block_size
-        
+
           if ( keep%info%converged(i) /= 0 ) then
             word = '   yes'
           else
             word = '    no'
           end if
-          
+
           s = keep%lmd(i)
           t = keep%info%err_lambda(block_size + i)
           if ( t >= ZERO ) t = si_map_err(problem, sigma, s, t)
@@ -980,14 +980,14 @@ contains
 
         end do ! i = 1, block_size
 
-        write( u_diag, '(a)' ) trim(line) 
+        write( u_diag, '(a)' ) trim(line)
 
       end if ! print_level > 2
 
       ! find whether all wanted eigenpairs have converged
 
       select case ( rci%i )
-      
+
       case ( 1 )
 
         if ( left_gap == ZERO ) then
@@ -1005,7 +1005,7 @@ contains
           end if
 
         else
-          
+
           ! check if there is a sufficient gap between the last
           ! converged eigenvalue and the rest of the spectrum
 
@@ -1016,7 +1016,7 @@ contains
             t = abs(left_gap) * keep%av_dist
             q = MIN_REL_GAP
           end if
-          
+
           keep%left_converged = keep%left == 0 .or. keep%lcon >= keep%max_left
           ! look for a sufficient gap between the converged eigenvalues
           do i = keep%lcon, left + 1, -1
@@ -1071,7 +1071,7 @@ contains
 
 
         else
-          
+
           if ( right_gap > 0 ) then
             t = right_gap
             q = ZERO
@@ -1114,19 +1114,19 @@ contains
       end select ! case ( rci%i )
 
     case (SSMFE_CHECK_CONVERGENCE)
-    
+
       mep = max_nep
       m = block_size
-      
+
       ! estimate the average distance between eigenvalues
 
       ! maximal eigenvector error for a 'trusted' eigenvalue
       delta = max(options%tol_x, sqrt(options%rel_tol_lambda))
       delta = sqrt(max(delta, epsilon(ONE)))
-      
+
       r = ZERO
       k = 0
-      
+
       ! initial 'trusted' eigenvalues count
       l = keep%lcon
 
@@ -1179,7 +1179,7 @@ contains
       end do
 
       if ( k == 0 .and. l == 0 ) then
-        keep%av_dist = ZERO ! assume not available yet      
+        keep%av_dist = ZERO ! assume not available yet
       else if ( k == 0 ) then
         ! no 'trusted' eigenvalues left of sigma, use those to the right
         ! t is the 'trusted' eigenvalue closest to sigma
@@ -1203,7 +1203,7 @@ contains
         ! divided by their number
         keep%av_dist = (s - r)/(k + l)
       end if
-      
+
       ! are residual norms to be checked?
       check_res = options%abs_tol_residual > 0 &
              .or. options%rel_tol_residual > 0
@@ -1213,20 +1213,20 @@ contains
 
       ! round-off errors level
       t = 10*epsilon(ONE)
-      
+
       do i = 1, m
 
         ! skip previously converged
         if ( keep%info%converged(i) /= 0 ) cycle
 
         converged = check_res .or. check_lmd .or. options%tol_x /= 0
-        
+
         if ( check_res ) then
           s = abs(keep%lmd(i)) * max(options%rel_tol_residual, t)
           s = max(s, options%abs_tol_residual)
           converged = keep%info%residual_norms(i) <= s
         end if
-        
+
         if ( check_lmd ) then
           if ( keep%info%err_lambda(i) >= ZERO ) then
             s = keep%av_dist * max(options%rel_tol_lambda, t*t)
@@ -1237,7 +1237,7 @@ contains
             converged = .false.
           end if
         end if
-        
+
         if ( options%tol_x > ZERO ) then
           ! check the eigenvector error against user-defined tolerance
           converged = converged &
@@ -1247,20 +1247,20 @@ contains
           ! use default tolerance
           converged = converged &
           .and. keep%info%err_x(i) >= ZERO &
-          .and. keep%info%err_x(i) <= sqrt(epsilon(ONE)) 
+          .and. keep%info%err_x(i) <= sqrt(epsilon(ONE))
         end if
 
         ! for extra reliability make sure the eigenvector error is small
         converged = converged .and. abs(keep%info%err_x(m + i)) < 0.05
 
         if ( converged ) keep%info%converged(i) = 1 ! mark as converged
-        
+
       end do ! i = 1, m
 
       if ( keep%info%iteration > 0 ) info%iteration = info%iteration + 1
-      
+
       go to 1
-        
+
     end select
 
     if ( rci%job < 0 ) then
@@ -1280,7 +1280,7 @@ contains
   contains
 
     ! reverse shift-invert mapping: for a given eigenvalue mu
-    ! of (A - sigma B)^{-1} B (problem = 1) 
+    ! of (A - sigma B)^{-1} B (problem = 1)
     ! or (B - sigma A)^{-1} B (problem = 2)
     ! returns the corresponding eigenvalue lambda of
     ! A x = lambda B x
@@ -1321,7 +1321,7 @@ contains
     integer, parameter :: NONE = -1
 
     real(PRECISION), parameter :: ZERO = 0.0D0, ONE = 1.0D0
-    
+
     real(kind = PRECISION), parameter :: MIN_REL_GAP = 1E-3
 
     ! problem type
@@ -1329,7 +1329,7 @@ contains
     ! 1: A x = lambda B x
     ! A = A', B = B' > 0
     integer, intent(in) :: problem
-    
+
     ! number of wanted eigenpairs
     integer, intent(in) :: nep
 
@@ -1364,11 +1364,11 @@ contains
     integer :: u_diag
     integer :: first, last
     integer :: i, j, k, l
-    
+
     real(PRECISION) :: gap
     real(PRECISION) :: delta
     real(PRECISION) :: q, r, s, t
-    
+
     ! short names for options
 
     u_diag = options%unit_diagnostic
@@ -1377,7 +1377,7 @@ contains
     info%flag = 0
 
     ! check for the input data errors
-    
+
     if ( nep < 0 &
         .or. options%max_left >= 0 .and. options%max_left < nep ) then
       info%flag = WRONG_LEFT
@@ -1392,14 +1392,14 @@ contains
       call ssmfe_errmsg( options, info )
       return
     end if
-    
+
     if ( block_size < 1 ) then
       info%flag = WRONG_BLOCK_SIZE
       rci%job = SSMFE_ABORT
       call ssmfe_errmsg( options, info )
       return
     end if
-    
+
     ! things to do on (re)start
     if ( rci%job == SSMFE_START .or. rci%job == SSMFE_RESTART &
         .and. (rci%i == 0 .and. rci%j == 0 .or. rci%k == 0) ) then
@@ -1455,7 +1455,7 @@ contains
       ! exceeds the block size m, they are computed in portions
       ! of sizes keep%left (those left of sigma);
       ! once a portion is computed, iterations are restarted (see below)
-      ! (note that more than wanted + extra eigenpairs are needed if gaps in 
+      ! (note that more than wanted + extra eigenpairs are needed if gaps in
       ! the spectrum separating wanted eigenvalues from the rest are sought)
 
       i = nep + keep%options%extra_left
@@ -1504,7 +1504,7 @@ contains
       call ssmfe_msg( problem, options, nep, 0, block_size )
 
       if ( rci%job == SSMFE_RESTART .and. rci%k == 0 ) rci%job = SSMFE_START
-      
+
     else if ( rci%job == SSMFE_SAVE_CONVERGED .and. rci%i < 0 ) then
 
       ! some converged eigenpairs just saved to storage,
@@ -1539,7 +1539,7 @@ contains
           end if
         end if
       end if
-      
+
       if ( rci%job < 0 ) then ! computation terminated
         info%non_converged = max(0, nep - keep%lcon)
         if ( rci%job /= SSMFE_DONE ) then
@@ -1550,7 +1550,7 @@ contains
       end if
 
     end if
-    
+
     ! call the core solver
 1   call ssmfe &
       ( rci, problem, keep%left, keep%right, &
@@ -1558,9 +1558,9 @@ contains
         keep%keep, keep%options, keep%info )
 
     select case (rci%job)
-    
+
     case (SSMFE_SAVE_CONVERGED)
-    
+
       if ( rci%i < 0 ) return
 
       ! if the number of converged eigenpairs exceeds the storage size
@@ -1632,22 +1632,22 @@ contains
 
         write( u_diag, '(a/a)' ) &
           trim(line), trim(head)
-        write( u_diag, '(a)' ) trim(neck) 
+        write( u_diag, '(a)' ) trim(neck)
         write( u_diag, '(a)' ) trim(line)
-          
-        do i = 1, block_size        
+
+        do i = 1, block_size
           if ( keep%info%converged(i) > 0 ) then
             word = '   yes'
           else
             word = '    no'
-          end if          
+          end if
           write( u_diag, frmt ) &
             keep%lmd(i), ' |', word, ' |', keep%info%residual_norms(i), '  |', &
             keep%info%err_lambda(block_size + i), '  |', &
             keep%info%err_X(block_size + i)
         end do ! i = 1, block_size
 
-        write( u_diag, '(a)' ) trim(line) 
+        write( u_diag, '(a)' ) trim(line)
 
       end if ! print_level > 2
 
@@ -1663,7 +1663,7 @@ contains
         end if
 
       else
-          
+
         if ( gap > 0 ) then
           t = gap
           q = ZERO
@@ -1698,10 +1698,10 @@ contains
       end if
 
     case (SSMFE_CHECK_CONVERGENCE)
-    
+
       delta = max(options%tol_X, sqrt(options%rel_tol_lambda))
       delta = sqrt(max(delta, epsilon(ONE)))
-      
+
       l = keep%lcon
       if ( keep%lcon > 0 ) then
         t = lambda(keep%lcon)
@@ -1716,37 +1716,37 @@ contains
         l = l + 1
         s = keep%lmd(i)
       end do
-        
+
       if ( keep%lcon > 0 ) then
         t = lambda(1)
       else
         t = keep%lmd(1)
       end if
       keep%av_dist = (s - t)/l
-      
+
       r = ZERO
       if ( keep%lcon > 0 ) r = abs(lambda(1))
       r = r*epsilon(ONE)
-        
+
       check_res = options%abs_tol_residual > 0 &
              .or. options%rel_tol_residual > 0
       check_lmd = options%abs_tol_lambda > 0 &
              .or. options%rel_tol_lambda > 0
 
       t = 10*epsilon(ONE)
-      
+
       do i = 1, block_size
 
         if ( keep%info%converged(i) /= 0 ) cycle
 
         converged = check_res .or. check_lmd .or. options%tol_X /= 0
-        
+
         if ( check_res ) then
           s = abs(keep%lmd(i)) * max(options%rel_tol_residual, t)
           s = max(s, options%abs_tol_residual)
           converged = keep%info%residual_norms(i) <= s
         end if
-        
+
         if ( check_lmd ) then
           if ( keep%info%err_lambda(i) >= ZERO ) then
             s = keep%av_dist * max(options%rel_tol_lambda, t*t)
@@ -1756,7 +1756,7 @@ contains
             converged = .false.
           end if
         end if
-        
+
         if ( options%tol_X > ZERO ) then
           converged = converged &
           .and. keep%info%err_X(i) >= ZERO &
@@ -1764,19 +1764,19 @@ contains
         else if ( options%tol_X < ZERO ) then
           converged = converged &
           .and. keep%info%err_X(i) >= ZERO &
-          .and. keep%info%err_X(i) <= sqrt(epsilon(ONE)) 
+          .and. keep%info%err_X(i) <= sqrt(epsilon(ONE))
         end if
 
         converged = converged .and. abs(keep%info%err_X(block_size + i)) < 0.05
 
         if ( converged ) keep%info%converged(i) = 1
-        
+
       end do ! i = 1, block_size
 
       if ( keep%info%iteration > 0 ) info%iteration = info%iteration + 1
-      
+
       go to 1
-        
+
     end select
 
     if ( rci%job < 0 ) then
@@ -1791,7 +1791,7 @@ contains
       if ( info%flag /= 0 ) call ssmfe_errmsg( options, info )
 
     end if
-      
+
   end subroutine ssmfe_direct_rci_double
 
   subroutine ssmfe_expert_free_keep_double( keep )
@@ -1805,7 +1805,7 @@ contains
   subroutine ssmfe_expert_free_double( keep, info )
     type(ssmfe_expert_keep), intent(inout) :: keep
     type(ssmfe_inform), intent(inout) :: info
-    
+
     call ssmfe_free( keep )
     call ssmfe_free( info )
 
@@ -1825,7 +1825,7 @@ contains
     integer, parameter :: NONE = -1
 
     real(PRECISION), parameter :: ZERO = 0.0D0, ONE = 1.0D0
-    
+
     real(kind = PRECISION), parameter :: MIN_REL_GAP = 1E-3
 
     integer, intent(in) :: problem
@@ -1852,19 +1852,19 @@ contains
     integer :: u_diag
     integer :: m, mep, new, ncon, first, last, step
     integer :: i, j, k, l
-    
+
     real(PRECISION) :: left_gap
     real(PRECISION) :: right_gap
     real(PRECISION) :: delta
     real(PRECISION) :: q, r, s, t
-    
+
     u_diag = options%unit_diagnostic
-    
+
     left_gap = options%left_gap
     right_gap = options%right_gap
 
     info%flag = 0
-    
+
     if ( left < 0 &
         .or. options%max_left >= 0 .and. options%max_left < left ) then
       info%flag = WRONG_LEFT
@@ -1887,21 +1887,21 @@ contains
       call ssmfe_errmsg( options, info )
       return
     end if
-    
+
     if ( block_size < 2 ) then
       info%flag = WRONG_BLOCK_SIZE
       rci%job = SSMFE_ABORT
       call ssmfe_errmsg( options, info )
       return
     end if
-    
+
     if ( problem == 2 .and. sigma == ZERO ) then
       info%flag = WRONG_SIGMA
       rci%job = SSMFE_QUIT
       call ssmfe_errmsg( options, info )
       return
     end if
-    
+
     if ( rci%job == SSMFE_START .or. rci%job == SSMFE_RESTART &
         .and. (rci%i == 0 .and. rci%j == 0 .or. rci%k == 0) ) then
 
@@ -1955,7 +1955,7 @@ contains
         else
           keep%options%extra_right = options%extra_right ! take user's value
         end if
-        
+
         if ( options%max_left >= 0 ) keep%options%extra_left = &
           min(keep%options%extra_left, options%max_left - left)
         if ( options%max_right >= 0 ) keep%options%extra_right = &
@@ -1963,7 +1963,7 @@ contains
 
         keep%options%minAprod = options%minAprod
         keep%options%minBprod = options%minBprod
-        
+
       end if
 
       m = block_size
@@ -1971,7 +1971,7 @@ contains
       ! exceeds the block size m, they are computed in portions
       ! of sizes keep%left (those left of sigma) and keep%right (right of it);
       ! once a portion is computed, iterations are restarted (see below)
-      ! (note that more than wanted + extra eigenpairs are needed if gaps in 
+      ! (note that more than wanted + extra eigenpairs are needed if gaps in
       ! the spectrum separating wanted eigenvalues from the rest are sought)
 
       if ( keep%left > 0 ) then
@@ -1981,7 +1981,7 @@ contains
           ! the total numers of eigenvalues right of sigma to be computed
           j = right + keep%options%extra_right
           ! workspace for eigenvectors corresponding to left eigenvalues
-          l = m*i/(i + j) 
+          l = m*i/(i + j)
           keep%left = left ! assumingly can be computed in one go
           if ( l < i .or. left_gap /= ZERO ) then ! not enough space
             keep%options%extra_left = min(keep%options%extra_left, l/2)
@@ -2029,7 +2029,7 @@ contains
 
         keep%lcon = 0
         keep%rcon = 0
-        
+
         ! initialize the convergence flags
         keep%left_converged = left == 0
         keep%right_converged = right == 0
@@ -2044,7 +2044,7 @@ contains
         else
           keep%max_right = options%max_right
         end if
-        
+
       else
 
         if ( allocated(keep%lmd) ) deallocate ( keep%lmd )
@@ -2068,13 +2068,13 @@ contains
 
       if ( rci%job == SSMFE_RESTART .and. rci%k == 0 ) &
         rci%job = SSMFE_START
-      
+
     else if ( rci%job == SSMFE_SAVE_CONVERGED .and. rci%i < 0 ) then
 
       mep = max_nep
       m = block_size
       ncon = keep%lcon + keep%rcon
-      
+
       if ( .not. (keep%left_converged .and. keep%right_converged) ) then
         if ( info%iteration >= options%max_iterations ) then
           rci%job = SSMFE_QUIT
@@ -2094,7 +2094,7 @@ contains
 
         if ( keep%left_converged ) keep%left = 0
         if ( keep%right_converged ) keep%right = 0
-        
+
         if ( keep%left_converged .and. keep%right_converged ) then
           rci%job = SSMFE_DONE
         else
@@ -2110,7 +2110,7 @@ contains
         end if
 
       end if
-      
+
       if ( rci%job < 0 ) then
         info%non_converged = &
           max(0, left - keep%lcon) + max(0, right - keep%rcon)
@@ -2123,20 +2123,20 @@ contains
       end if
 
     end if
-    
+
     ! call the engine
 1   call ssmfe &
       ( rci, keep%problem, keep%left, keep%right, block_size, &
         keep%lmd, rr_matrices, ind, keep%keep, keep%options, keep%info )
 
     select case (rci%job)
-    
+
     case (SSMFE_APPLY_A)
-    
+
       rci%job = SSMFE_DO_SHIFTED_SOLVE
-    
+
     case (SSMFE_SAVE_CONVERGED)
-    
+
       ! the number of newly converged eigenpairs
       new = rci%nx
       ! number of eigenpairs converged previously
@@ -2259,7 +2259,7 @@ contains
           if ( keep%info%converged(i) == 0 ) exit
 
         end do
-        
+
       end if
 
       ! update the numbers of converged eigenpairs
@@ -2269,7 +2269,7 @@ contains
         keep%rcon = keep%rcon + new
       end if
       ncon = keep%lcon + keep%rcon
-      
+
       if ( options%print_level > 2 .and. rci%i < 0 .and. u_diag > NONE ) then
 
         write( u_diag, '(/a, i5, a, i4, i4)' ) &
@@ -2287,17 +2287,17 @@ contains
 
         write( u_diag, '(a/a)' ) &
           trim(line), trim(head)
-        write( u_diag, '(a)' ) trim(neck) 
+        write( u_diag, '(a)' ) trim(neck)
         write( u_diag, '(a)' ) trim(line)
-          
+
         do i = 1, block_size
-        
+
           if ( keep%info%converged(i) /= 0 ) then
             word = '   yes'
           else
             word = '    no'
           end if
-          
+
           s = keep%lmd(i)
           t = keep%info%err_lambda(block_size + i)
           if ( t >= ZERO ) t = si_map_err(problem, sigma, s, t)
@@ -2309,12 +2309,12 @@ contains
 
         end do ! i = 1, block_size
 
-        write( u_diag, '(a)' ) trim(line) 
+        write( u_diag, '(a)' ) trim(line)
 
       end if ! print_level > 2
 
       select case ( rci%i )
-      
+
       case ( 1 )
 
         if ( left_gap == ZERO ) then
@@ -2330,7 +2330,7 @@ contains
           end if
 
         else
-          
+
           if ( left_gap > 0 ) then
             t = left_gap
             q = ZERO
@@ -2384,7 +2384,7 @@ contains
           end if
 
         else
-          
+
           if ( right_gap > 0 ) then
             t = right_gap
             q = ZERO
@@ -2425,16 +2425,16 @@ contains
       end select ! case ( rci%i )
 
     case (SSMFE_CHECK_CONVERGENCE)
-    
+
       mep = max_nep
       m = block_size
 
       delta = max(options%tol_X, sqrt(options%rel_tol_lambda))
       delta = sqrt(max(delta, epsilon(ONE)))
-      
+
       r = ZERO
       k = 0
-      
+
       l = keep%lcon
       if ( keep%lcon > 0 ) then
         t = lambda(keep%lcon)
@@ -2471,7 +2471,7 @@ contains
           last = first + 1
         end if
       end do
-        
+
       if ( k == 0 .and. l == 0 ) then
         keep%av_dist = ZERO
       else if ( k == 0 ) then
@@ -2491,26 +2491,26 @@ contains
       else
         keep%av_dist = (s - r)/(k + l)
       end if
-      
+
       check_res = options%abs_tol_residual > 0 &
              .or. options%rel_tol_residual > 0
       check_lmd = options%abs_tol_lambda > 0 &
              .or. options%rel_tol_lambda > 0
 
       t = 10*epsilon(ONE)
-      
+
       do i = 1, m
 
         if ( keep%info%converged(i) /= 0 ) cycle
 
         converged = check_res .or. check_lmd .or. options%tol_X /= 0
-        
+
         if ( check_res ) then
           s = abs(keep%lmd(i)) * max(options%rel_tol_residual, t)
           s = max(s, options%abs_tol_residual)
           converged = keep%info%residual_norms(i) <= s
         end if
-        
+
         if ( check_lmd ) then
           if ( keep%info%err_lambda(i) >= ZERO ) then
             s = keep%av_dist * max(options%rel_tol_lambda, t*t)
@@ -2521,7 +2521,7 @@ contains
             converged = .false.
           end if
         end if
-        
+
         if ( options%tol_X > ZERO ) then
           converged = converged &
           .and. keep%info%err_X(i) >= ZERO &
@@ -2529,19 +2529,19 @@ contains
         else if ( options%tol_X < ZERO ) then
           converged = converged &
           .and. keep%info%err_X(i) >= ZERO &
-          .and. keep%info%err_X(i) <= sqrt(epsilon(ONE)) 
+          .and. keep%info%err_X(i) <= sqrt(epsilon(ONE))
         end if
 
         converged = converged .and. abs(keep%info%err_X(m + i)) < 0.05
 
         if ( converged ) keep%info%converged(i) = 1
-        
+
       end do ! i = 1, m
 
       if ( keep%info%iteration > 0 ) info%iteration = info%iteration + 1
-      
+
       go to 1
-        
+
     end select
 
     if ( rci%job < 0 ) then
@@ -2594,7 +2594,7 @@ contains
     integer, parameter :: NONE = -1
 
     real(PRECISION), parameter :: ZERO = 0.0D0, ONE = 1.0D0
-    
+
     real(kind = PRECISION), parameter :: MIN_REL_GAP = 1E-3
 
     type(ssmfe_rciz), intent(inout) :: rci
@@ -2619,17 +2619,17 @@ contains
     integer :: u_diag
     integer :: first, last
     integer :: i, j, k, l
-    
+
     real(PRECISION) :: gap
     real(PRECISION) :: delta
     real(PRECISION) :: q, r, s, t
-    
+
     u_diag = options%unit_diagnostic
-    
+
     gap = options%left_gap
 
     info%flag = 0
-    
+
     if ( nep < 0 &
         .or. options%max_left >= 0 .and. options%max_left < nep ) then
       info%flag = WRONG_LEFT
@@ -2644,14 +2644,14 @@ contains
       call ssmfe_errmsg( options, info )
       return
     end if
-    
+
     if ( block_size < 1 ) then
       info%flag = WRONG_BLOCK_SIZE
       rci%job = SSMFE_ABORT
       call ssmfe_errmsg( options, info )
       return
     end if
-    
+
     if ( rci%job == SSMFE_START .or. rci%job == SSMFE_RESTART &
         .and. (rci%i == 0 .and. rci%j == 0 .or. rci%k == 0) ) then
 
@@ -2702,7 +2702,7 @@ contains
       ! exceeds the block size m, they are computed in portions
       ! of sizes keep%left (those left of sigma) and keep%right (right of it);
       ! once a portion is computed, iterations are restarted (see below)
-      ! (note that more than wanted + extra eigenpairs are needed if gaps in 
+      ! (note that more than wanted + extra eigenpairs are needed if gaps in
       ! the spectrum separating wanted eigenvalues from the rest are sought)
 
       i = nep + keep%options%extra_left
@@ -2747,7 +2747,7 @@ contains
       call ssmfe_msg( problem, options, nep, 0, block_size )
 
       if ( rci%job == SSMFE_RESTART .and. rci%k == 0 ) rci%job = SSMFE_START
-      
+
     else if ( rci%job == SSMFE_SAVE_CONVERGED .and. rci%i < 0 ) then
 
       if ( .not. keep%left_converged ) then
@@ -2775,7 +2775,7 @@ contains
         end if
 
       end if
-      
+
       if ( rci%job < 0 ) then
         info%non_converged = max(0, nep - keep%lcon)
         if ( rci%job /= SSMFE_DONE ) then
@@ -2786,17 +2786,17 @@ contains
       end if
 
     end if
-    
+
     ! call the engine
 1   call ssmfe &
       ( rci, problem, keep%left, keep%right, &
         block_size, keep%lmd, rr_matrices, ind, &
         keep%keep, keep%options, keep%info )
-    
+
     select case (rci%job)
-    
+
     case (SSMFE_SAVE_CONVERGED)
-    
+
       if ( rci%i < 0 ) return
 
       ! if the number of converged eigenpairs exceeds the storage size
@@ -2868,22 +2868,22 @@ contains
 
         write( u_diag, '(a/a)' ) &
           trim(line), trim(head)
-        write( u_diag, '(a)' ) trim(neck) 
+        write( u_diag, '(a)' ) trim(neck)
         write( u_diag, '(a)' ) trim(line)
-          
-        do i = 1, block_size        
+
+        do i = 1, block_size
           if ( keep%info%converged(i) /= 0 ) then
             word = '   yes'
           else
             word = '    no'
-          end if          
+          end if
           write( u_diag, frmt ) &
             keep%lmd(i), ' |', word, ' |', keep%info%residual_norms(i), '  |', &
             keep%info%err_lambda(block_size + i), '  |', &
             keep%info%err_X(block_size + i)
         end do ! i = 1, block_size
 
-        write( u_diag, '(a)' ) trim(line) 
+        write( u_diag, '(a)' ) trim(line)
 
       end if ! print_level > 2
 
@@ -2899,7 +2899,7 @@ contains
         end if
 
       else
-          
+
         if ( gap > 0 ) then
           t = gap
           q = ZERO
@@ -2907,7 +2907,7 @@ contains
           t = abs(gap) * keep%av_dist
           q = MIN_REL_GAP
         end if
-        
+
         keep%left_converged = keep%left == 0 .or. keep%lcon >= keep%max_left
         do i = keep%lcon, nep + 1, -1
           j = maxloc(lambda(1 : i - 1), 1)
@@ -2934,10 +2934,10 @@ contains
       end if
 
     case (SSMFE_CHECK_CONVERGENCE)
-    
+
       delta = max(options%tol_X, sqrt(options%rel_tol_lambda))
       delta = sqrt(max(delta, epsilon(ONE)))
-      
+
       l = keep%lcon
       if ( keep%lcon > 0 ) then
         t = lambda(keep%lcon)
@@ -2952,37 +2952,37 @@ contains
         l = l + 1
         s = keep%lmd(i)
       end do
-        
+
       if ( keep%lcon > 0 ) then
         t = lambda(1)
       else
         t = keep%lmd(1)
       end if
       keep%av_dist = (s - t)/l
-      
+
       r = ZERO
       if ( keep%lcon > 0 ) r = abs(lambda(1))
       r = r*epsilon(ONE)
-        
+
       check_res = options%abs_tol_residual > 0 &
              .or. options%rel_tol_residual > 0
       check_lmd = options%abs_tol_lambda > 0 &
              .or. options%rel_tol_lambda > 0
 
       t = 10*epsilon(ONE)
-      
+
       do i = 1, block_size
 
         if ( keep%info%converged(i) /= 0 ) cycle
 
         converged = check_res .or. check_lmd .or. options%tol_X /= 0
-        
+
         if ( check_res ) then
           s = abs(keep%lmd(i)) * max(options%rel_tol_residual, t)
           s = max(s, options%abs_tol_residual)
           converged = keep%info%residual_norms(i) <= s
         end if
-        
+
         if ( check_lmd ) then
           if ( keep%info%err_lambda(i) >= ZERO ) then
             s = keep%av_dist * max(options%rel_tol_lambda, t*t)
@@ -2992,7 +2992,7 @@ contains
             converged = .false.
           end if
         end if
-        
+
         if ( options%tol_X > ZERO ) then
           converged = converged &
           .and. keep%info%err_X(i) >= ZERO &
@@ -3000,19 +3000,19 @@ contains
         else if ( options%tol_X < ZERO ) then
           converged = converged &
           .and. keep%info%err_X(i) >= ZERO &
-          .and. keep%info%err_X(i) <= sqrt(epsilon(ONE)) 
+          .and. keep%info%err_X(i) <= sqrt(epsilon(ONE))
         end if
 
         converged = converged .and. abs(keep%info%err_X(block_size + i)) < 0.05
 
         if ( converged ) keep%info%converged(i) = 1
-        
+
       end do ! i = 1, block_size
 
       if ( keep%info%iteration > 0 ) info%iteration = info%iteration + 1
-      
+
       go to 1
-        
+
     end select
 
     if ( rci%job < 0 ) then
@@ -3027,27 +3027,27 @@ contains
       if ( info%flag /= 0 ) call ssmfe_errmsg( options, info )
 
     end if
-      
+
   end subroutine ssmfe_direct_rci_double_complex
-  
+
   subroutine ssmfe_errmsg( options, inform )
     integer, parameter :: NONE = -1
 
     type(ssmfe_options) :: options
     type(ssmfe_inform) :: inform
-    
+
     logical :: oom
-  
+
     integer :: u_errr, u_warn
 
     u_errr    = options%unit_error
     u_warn    = options%unit_warning
-    
+
     oom = inform%flag == OUT_OF_MEMORY .and. u_errr > NONE
     if ( oom ) write( u_errr, '(/a/)' ) '??? Out of memory'
 
     select case ( inform%flag )
-    
+
     case ( WRONG_LEFT )
 
       if ( u_errr > NONE ) &
@@ -3097,7 +3097,7 @@ contains
           '??? Wrong B or linear depended initial vectors'
 
     case ( NO_SEARCH_DIRECTIONS_LEFT )
-    
+
       if ( u_warn > NONE ) &
         write( u_warn, '(/a,a/)' ) &
           '??? WARNING: iterations terminated because no further progress ', &
@@ -3123,7 +3123,7 @@ contains
     type(ssmfe_options) :: options
     integer :: problem, left, right, m
     intent(in) :: options, left, right, m
-    
+
     integer, parameter :: NONE = -1
 
     logical :: minAprod, minBprod
@@ -3161,13 +3161,13 @@ contains
           'rightmost eigenpairs requested:', right
       write( u_diag, '(a, i4 )' ) 'iterated subspace dimension:', m
       if ( abs_res >= 0 .and. rel_res >= 0 .and. abs_res + rel_res > 0 ) &
-        write( u_diag, '(a, es8.0, a, es8.0 )' ) & 
+        write( u_diag, '(a, es8.0, a, es8.0 )' ) &
           'residual tolerances: absolute =', abs_res, &
-          ', relative = ', rel_res 
+          ', relative = ', rel_res
       if ( abs_tol >= 0 .and. rel_tol >= 0 .and. abs_tol + rel_tol > 0 ) &
-        write( u_diag, '(a, es8.0, a, es8.0 )' ) & 
+        write( u_diag, '(a, es8.0, a, es8.0 )' ) &
           'eigenvalue error tolerances: absolute =', abs_tol, &
-          ', relative = ', rel_tol 
+          ', relative = ', rel_tol
       if ( tol > 0.0 ) then
         write( u_diag, '(a, es8.0)' ) &
           'eigenvector error tolerance:', tol
@@ -3184,8 +3184,8 @@ contains
     end if
 
     if ( print_lev == 2 .and. max_it > 0 ) &
-      write( u_diag, '(/60x,a/a,2x,a,7x,a,6x,a,2x,a,2x,a,1x,a/)' ) & 
-        'Estimated Errors', & 
+      write( u_diag, '(/60x,a/a,2x,a,7x,a,6x,a,2x,a,2x,a,1x,a/)' ) &
+        'Estimated Errors', &
         'Iteration', 'Index', 'Eigenvalue', 'Locked', 'Residual', &
         'Eigenvalue', 'Eigenvector'
 

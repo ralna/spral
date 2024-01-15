@@ -292,7 +292,7 @@ contains
        r1 = random_integer(state, n)
        r2 = random_integer(state, n)
     end do
-   
+
     random_sym_wt_integer = r1
   end function random_sym_wt_integer
 

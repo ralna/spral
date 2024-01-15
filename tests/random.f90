@@ -46,7 +46,7 @@ subroutine test_real_dist
    write(*, "(a)") "Testing random_real()"
    write(*, "(a)") "====================================="
 
-   
+
    !
    ! Test (-1,1) distribution
    !
@@ -68,7 +68,7 @@ subroutine test_real_dist
          chisq_pval(nbins-1, require_confidence)
       errors = errors + 1
    endif
-   
+
    !
    ! Test (0,1) distribution
    !
@@ -173,7 +173,7 @@ subroutine test_logical_dist
    write(*, "(a)") "Testing random_logical()"
    write(*, "(a)") "====================================="
 
-   
+
    !
    ! Test (1,...,n) distribution
    !
@@ -199,7 +199,7 @@ subroutine test_logical_dist
          chisq_pval(1, require_confidence)
       errors = errors + 1
    endif
-   
+
 end subroutine test_logical_dist
 
 real(wp) function chisq_pval(dof, p)

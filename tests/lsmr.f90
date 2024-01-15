@@ -21,10 +21,10 @@
 ! INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
 ! CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ! ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-! POSSIBILITY OF SUCH DAMAGE. 
+! POSSIBILITY OF SUCH DAMAGE.
 !
 ! Test code. Originally developed by Michael Saunders <saunders@stanford.edu>.
-! Extended and redesigned to provide more comprehensive testing 
+! Extended and redesigned to provide more comprehensive testing
 ! (as required by SPRAL) and for reverse communication interface.
 !
 program spral_lsmr_test
@@ -71,7 +71,7 @@ program spral_lsmr_test
   ! Local variables
   integer(ip)  :: flag
   integer(ip)  :: m,n,nbar,ndamp,nduplc,nfail,npower
-  integer(ip)  :: localSize  ! No. of vectors involved in local 
+  integer(ip)  :: localSize  ! No. of vectors involved in local
                              ! reorthogonalization (>= 0)
   integer(ip) :: prob
   real(wp)    :: damp
@@ -92,7 +92,7 @@ program spral_lsmr_test
   ! this file is for tests with printing on
   if (pout.gt.0) open(pout,file='LSMR_print_output',status="replace")
 
-  ! the output in LSMR_Mtests.output can be directly compared with the output  
+  ! the output in LSMR_Mtests.output can be directly compared with the output
   ! from Michael's code.
   if (mout.gt.0) open(mout,file='LSMR_Mtests.output',status='replace')
 
@@ -242,7 +242,7 @@ contains
    real(wp)    :: u(maxm), v(maxn) ! reverse communication arrays
    real(wp)    :: w(maxn) , z(maxm)
 
-    type ( lsmr_keep )    :: keep 
+    type ( lsmr_keep )    :: keep
     type ( lsmr_options ) :: options
     type ( lsmr_inform )  :: inform
 
@@ -282,7 +282,7 @@ contains
          write(nout,"(a)") "======================================"
      end if
    end if
- 
+
          call matrix_gen(state, maxm, m, maxn, n, ne, ptr, row, val, b, a, &
             flag)
 
@@ -476,7 +476,7 @@ contains
                    lsmr_stop_compatible)
               end if
 
-              ! recover solution 
+              ! recover solution
               x(1:n) = y(1:n)
 
               exit
@@ -518,7 +518,7 @@ contains
               ! test for convergence (only occurs if options%ctest = 1 or 2)
 
               if (options%ctest.eq.2) then
-                 ! we can use the data in inform for testing 
+                 ! we can use the data in inform for testing
                  normr = inform%normr
                  normAr = inform%normAPr
                  ratio = (normAr/normr)/(normAb/normb)
@@ -591,7 +591,7 @@ contains
      !     end if
      !   end if
         !!!!!!!!!!!!!!!!!!!!!!!!!
-   
+
         ! use Lapack to check the solution
         ! First find size of workspace
         lwork = -1
@@ -673,7 +673,7 @@ contains
    real(wp)    :: u(maxm), v(maxn) ! reverse communication arrays
    real(wp)    :: d(maxn), w(maxn) , z(maxm)
 
-    type ( lsmr_keep )    :: keep 
+    type ( lsmr_keep )    :: keep
     type ( lsmr_options ) :: options
     type ( lsmr_inform )  :: inform
 
@@ -699,7 +699,7 @@ contains
     end if
 
  main: do prblm = 1,nprob
- 
+
          call matrix_gen(state, maxm, m, maxn, n, ne, ptr, row, val, b, a, &
             flag)
 
@@ -717,11 +717,11 @@ contains
          ! switch off printing
          options%unit_diagnostics = -1
          options%unit_error       = -1
-  
+
          i = random_integer(state, 10)
          options%ctest = i
          if (i.gt.3) options%ctest = 3 ! Michael's stopping criteria
-         ! choose these small values to get results that are close to 
+         ! choose these small values to get results that are close to
          ! lapack results
       !   options%ctest = 1
          options%atol = 10d-12
@@ -731,7 +731,7 @@ contains
          options%localSize = random_integer(state, 100)
          if (options%localSize.gt.min(m,n)) options%localSize = 0
 
-         ! decide whether to use preconditioning 
+         ! decide whether to use preconditioning
          precond = .true.
          i = random_integer(state, 10)
          if (i.lt.5) precond = .false.
@@ -824,7 +824,7 @@ contains
               ! test for convergence (only occurs if options%ctest = 1 or 2)
 
               if (options%ctest.eq.2 .and. .not.precond) then
-                 ! we can use the data in inform for testing 
+                 ! we can use the data in inform for testing
                  normr = inform%normr
                  normAr = inform%normAPr
                  ratio = (normAr/normr)/(normAb/normb)
@@ -905,7 +905,7 @@ contains
         end if
 
         !!!!!!!!!!!!!!!!!!!!!!!!!
-   
+
         ! use Lapack to check the solution
         ! First find size of workspace
         lwork = -1
@@ -995,7 +995,7 @@ contains
       end subroutine set_controls
 
 !********************************************
-      ! Generate random rectangular matrix 
+      ! Generate random rectangular matrix
       ! Stored in CSC format using ptr, row, val.
       ! Also held as dense matrix in a(1:m,1:n)
 
@@ -1106,7 +1106,7 @@ contains
 
       integer:: i,j,k
       real(wp) :: sum
-      
+
       if (beta.ne.zero) then
          do j = 1,n
             sum = zero
@@ -1143,7 +1143,7 @@ contains
 
       integer:: i,j,k
       real(wp) :: temp
-     
+
          call dscal(m,beta,u,1)
 
          do j = 1,n
@@ -1190,7 +1190,7 @@ contains
     real(wp) :: dnrm2
 
     integer(ip)     :: action
-    type ( lsmr_keep )    :: keep 
+    type ( lsmr_keep )    :: keep
     type ( lsmr_options ) :: options
     type ( lsmr_inform )  :: inform
 
@@ -1231,8 +1231,8 @@ contains
                      condA,normr,line,line
 
     ! Check Aprod1, Aprod2. Use u,v as work arrays.
-    allocate( w1(m), w2(n) ) 
-    call Acheck(m,n,Aprod1,Aprod2,mout,flag, u, v, w1, w2)     
+    allocate( w1(m), w2(n) )
+    call Acheck(m,n,Aprod1,Aprod2,mout,flag, u, v, w1, w2)
     if (flag > 0) then
        if (mout.gt.0) write(mout,'(a)') 'Check tol in subroutine Acheck'
        flag = -1
@@ -1314,10 +1314,10 @@ contains
  50 continue
 
     deallocate( wn )
-    deallocate( wm ) 
-    deallocate( hz ) 
+    deallocate( wm )
+    deallocate( hz )
     deallocate( hy )
-    deallocate( d ) 
+    deallocate( d )
     deallocate (u)
     deallocate (v)
     deallocate ( b )
@@ -1366,7 +1366,7 @@ contains
 
     s = s + s
     x = x - s*z
-    
+
   end subroutine Hprod
 
   !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1442,7 +1442,7 @@ contains
 
     !-------------------------------------------------------------------
     ! lstp  generates a sparse least-squares test problem of the form
-    !           (   A    )*x = ( b ) 
+    !           (   A    )*x = ( b )
     !           ( damp*I )     ( 0 )
     ! for solution by LSMR, or a sparse underdetermined system
     !            Ax + damp*s = b
@@ -1579,7 +1579,7 @@ contains
     !                  if 3/4 of the available digits agree.
     !                  power = 0.5 seems a reasonable requirement
     !                  (asking for half the digits to agree).
-    !                    
+    !
     ! History:
     ! 04 Sep 1991  Initial design and code.
     !              Michael Saunders, Dept of Operations Research,
@@ -1610,18 +1610,18 @@ contains
        t    = t + one
        x(j) = sqrt(t)
     end do
- 
+
     t = one
     do i=1,m
        t    = t + one
        y(i) = one/sqrt(t)
     end do
- 
+
     alfa = dnrm2 (n,x,1)
     beta = dnrm2 (m,y,1)
     call dscal (n, (one/alfa), x, 1)
     call dscal (m, (one/beta), y, 1)
-      
+
     !===================================================================
     ! Test if y'(y + Ax) = x'(x + A'y).
     !===================================================================
@@ -1629,10 +1629,10 @@ contains
     v(1:n) = x(1:n)
     call Aprod1(m,n,x,w)
     call Aprod2(m,n,v,y)
-      
+
     alfa   = ddot  (m,y,1,w,1)    ! Now set    alfa = y'w,  beta = x'v.
     beta   = ddot  (n,x,1,v,1)
-    test1  = abs(alfa - beta)            
+    test1  = abs(alfa - beta)
     test2  = one + abs(alfa) + abs(beta)
     test3  = test1 / test2
 
@@ -1651,7 +1651,7 @@ contains
         ' Aprod1, Aprod2 seem OK.  Relative error =', e10.1)
  1020 format(1p, &
         ' Aprod1, Aprod2 seem incorrect.  Relative error =', e10.1)
-	          
+
   end subroutine Acheck
 
   !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1722,16 +1722,16 @@ contains
 
     r(1:m) = -b(1:m)        ! Compute the residual r = b - Ax
     call Aprod1(m,n,x,r)    ! via  r = -b + Ax,
-    r(1:m) = -r(1:m)        !      r = -r. 
+    r(1:m) = -r(1:m)        !      r = -r.
 
     v(1:n) = zero           ! Compute v = A'r
-    call Aprod2(m,n,v,r)    ! via  v = 0,  v = v + A'r. 
+    call Aprod2(m,n,v,r)    ! via  v = 0,  v = v + A'r.
 
     bnorm  = dnrm2 (m,b,1)  ! Compute the norms of b, x, r, v.
     xnorm  = dnrm2 (n,x,1)
     rho1   = dnrm2 (m,r,1)
     sigma1 = dnrm2 (n,v,1)
-      
+
     if (nout > 0) write(nout,2200) damp, xnorm, rho1, sigma1
 
     if (damp == zero) then
@@ -1762,7 +1762,7 @@ contains
        if (rho1  > zero) test2  = sigma1 / (Anorm*rho1)
        test3  = test2
        if (rho2  > zero) test3  = sigma2 / (Anorm*rho2)
-       
+
        if (test3 <= tol) inform = 3
        if (test2 <= tol) inform = 2
        if (test1 <= tol) inform = 1

@@ -9,9 +9,9 @@ module SPRAL_ssmfe
     ssmfe_errmsg, ssmfe_solve, ssmfe_free, &
     ssmfe_inform, ssmfe_expert_keep, ssmfe_options, ssmfe_rcid, ssmfe_rciz
   implicit none
-  
+
   private
-  
+
   ! double precision to be used
   integer, parameter :: PRECISION = kind(1.0D0)
 
@@ -36,15 +36,15 @@ module SPRAL_ssmfe
   ! in RCI loop, real version
   !
   type ssmfe_keepd
-  
+
     private
-    
+
     integer :: block_size = 0 ! BJCG block size
     ! no. converged leftmost/left-of-the-shift eigenvalues
     integer :: lcon = 0
     integer :: rcon = 0 ! no. converged eigenvalues right of the shift
     integer :: step = 0 ! main computational step number
-    
+
     ! integer work array for reordering work vectors
     integer, dimension(:), allocatable :: ind
 
@@ -61,20 +61,20 @@ module SPRAL_ssmfe
     type(ssmfe_expert_keep) :: keep
 
   end type ssmfe_keepd
-  
+
   !
   ! data type to hold information between calls to solver procedures
   ! in RCI loop, complex version
   !
   type ssmfe_keepz
-  
+
     private
-    
+
     integer :: block_size = 0
     integer :: lcon = 0
     integer :: rcon = 0
     integer :: step = 0
-    
+
     integer, dimension(:), allocatable :: ind
 
     complex(PRECISION), dimension(:,:  ), allocatable :: BX
@@ -85,27 +85,27 @@ module SPRAL_ssmfe
     type(ssmfe_expert_keep) :: keep
 
   end type ssmfe_keepz
-  
+
   interface ssmfe_standard
     module procedure ssmfe_std_double, ssmfe_std_double_complex
   end interface
-  
+
   interface ssmfe_generalized
     module procedure ssmfe_gen_double, ssmfe_gen_double_complex
   end interface
-  
+
   interface ssmfe_standard_shift
     module procedure ssmfe_shift_double, ssmfe_shift_double_complex
   end interface
-  
+
   interface ssmfe_generalized_shift
     module procedure ssmfe_gen_shift_double,  ssmfe_gen_shift_double_complex
   end interface
-  
+
   interface ssmfe_buckling
     module procedure ssmfe_buckling_double, ssmfe_buckling_double_complex
   end interface
-  
+
   interface ssmfe_vector_operations
     module procedure &
       ssmfe_vector_operations_double, &
@@ -119,7 +119,7 @@ module SPRAL_ssmfe
       ssmfe_free_keep_double, &
       ssmfe_free_keep_double_complex
   end interface
-  
+
   public :: ssmfe_standard, ssmfe_standard_shift
   public :: ssmfe_generalized, ssmfe_generalized_shift
   public :: ssmfe_buckling
@@ -146,7 +146,7 @@ contains
     type(ssmfe_keepd  ), intent(inout) :: keep
     type(ssmfe_options), intent(in   ) :: options
     type(ssmfe_inform ), intent(inout) :: inform
-    
+
     call ssmfe_direct_srci_double &
       ( 0, left, mep, lambda, n, X, ldX, rci, keep, options, inform )
 
@@ -169,14 +169,14 @@ contains
     type(ssmfe_keepd  ), intent(inout) :: keep
     type(ssmfe_options), intent(in   ) :: options
     type(ssmfe_inform ), intent(inout) :: inform
-    
+
     call ssmfe_direct_srci_double &
       ( 1, left, mep, lambda, n, X, ldX, rci, keep, options, inform )
 
   end subroutine ssmfe_gen_double
 
 !*************************************************************************
-! real RCI for computing eigenpairs {lambda, x} of A x = lambda x 
+! real RCI for computing eigenpairs {lambda, x} of A x = lambda x
 ! with lambda near the shift sigma, see ssmfe spec for the arguments
 !
   subroutine ssmfe_shift_double &
@@ -267,7 +267,7 @@ contains
     type(ssmfe_keepz  ), intent(inout) :: keep
     type(ssmfe_options), intent(in   ) :: options
     type(ssmfe_inform ), intent(inout) :: inform
-    
+
     call ssmfe_direct_srci_double_complex &
       ( 0, left, mep, lambda, n, X, ldX, rci, keep, options, inform )
 
@@ -290,14 +290,14 @@ contains
     type(ssmfe_keepz  ), intent(inout) :: keep
     type(ssmfe_options), intent(in   ) :: options
     type(ssmfe_inform ), intent(inout) :: inform
-    
+
     call ssmfe_direct_srci_double_complex &
       ( 1, left, mep, lambda, n, X, ldX, rci, keep, options, inform )
 
   end subroutine ssmfe_gen_double_complex
 
 !*************************************************************************
-! complex RCI for computing eigenpairs {lambda, x} of A x = lambda x 
+! complex RCI for computing eigenpairs {lambda, x} of A x = lambda x
 ! with lambda near the shift sigma, see ssmfe spec for the arguments
 !
   subroutine ssmfe_shift_double_complex &
@@ -322,7 +322,7 @@ contains
   end subroutine ssmfe_shift_double_complex
 
 !*****************************************************************************
-! complex RCI for computing eigenpairs {lambda, x} of A x = lambda B x, B > 0, 
+! complex RCI for computing eigenpairs {lambda, x} of A x = lambda B x, B > 0,
 ! with lambda near the shift sigma, see ssmfe spec for the arguments
 !
   subroutine ssmfe_gen_shift_double_complex &
@@ -390,7 +390,7 @@ contains
     integer, parameter :: SSMFE_APPLY_CONSTRAINTS  = 21
     integer, parameter :: SSMFE_APPLY_ADJ_CONSTRS  = 22
     integer, parameter :: SSMFE_RESTART            = 999
-    
+
     integer, parameter :: NONE = -1
 
     real(PRECISION), parameter :: ZERO = 0.0D0
@@ -419,7 +419,7 @@ contains
 
     ! eigenvector storage
     real(PRECISION), intent(inout) :: X(ldX, max_nep)
-    
+
     ! ssmfe types - see the spec
     type(ssmfe_rcid   ), intent(inout) :: rci
     type(ssmfe_options), intent(in   ) :: options
@@ -432,9 +432,9 @@ contains
     integer :: kw
     integer :: ldBX
     integer :: i, j, k
-    
+
     ! check for the input data errors
-    
+
     if ( n < 1 ) then
       inform%flag = WRONG_PROBLEM_SIZE
       rci%job = SSMFE_QUIT
@@ -443,7 +443,7 @@ contains
           '??? Wrong problem size', n
       return
     end if
-    
+
     if ( ldx < n ) then
       inform%flag = WRONG_LDX
       rci%job = SSMFE_QUIT
@@ -452,7 +452,7 @@ contains
           '??? Wrong leading dimension of x', ldx
       return
     end if
-    
+
     if ( left < 0 .or. left >= n/2 ) then
       inform%flag = WRONG_LEFT
       rci%job = SSMFE_QUIT
@@ -542,9 +542,9 @@ contains
       end if
 
     end if
-    
+
     ldBX = n
-    
+
     do
       ! call ssmfe_expert solver
       call ssmfe_solve &
@@ -562,7 +562,7 @@ contains
             keep%ind, keep%U )
 
       case ( SSMFE_SAVE_CONVERGED )
-      
+
         if ( rci%nx < 1 ) cycle
 
         ! only leftmost eigenpairs computed (cf. ssmfe_expert solver)
@@ -577,7 +577,7 @@ contains
             ! save their products with the matrix B in keep%BX
             call copy( n, keep%W(1, rci%jy + k, rci%ky), 1, keep%BX(1,j), 1 )
         end do
-        
+
         ! update the Gram matrix for the converged eigenvectors
 
         ! newly converged eigenvectors are in columns
@@ -641,7 +641,7 @@ contains
 
       case ( SSMFE_APPLY_CONSTRAINTS )
 
-        ! apply I - Y H Y'B to W, where W holds the columns of keep%W 
+        ! apply I - Y H Y'B to W, where W holds the columns of keep%W
         ! specified by rci%jx, rci%kx and rci%nx,
         ! Y is the left part of X containing the converged eigenvectors
         ! and H is the inverse of the gram matrix G = Y' B Y
@@ -683,13 +683,13 @@ contains
         end if
 
       case ( SSMFE_APPLY_A, SSMFE_APPLY_B )
-      
+
         ! pass pointers to columns of keep%W to the user for
         ! multiplying by A or B
 
         rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
         rci%y => keep%W(:, rci%jy : rci%jy + rci%nx - 1, rci%ky)
-        
+
         return
 
       case ( SSMFE_APPLY_PREC )
@@ -706,25 +706,25 @@ contains
         return
 
       case ( SSMFE_RESTART )
-      
+
         if ( rci%k == 0 .and. rci%jx > 1 ) then
           ! fill the columns specified by rci%jx with random numbers
           call random_number( keep%W(:, 1 : rci%jx - 1, 0) )
           keep%W(:, 1 : rci%jx - 1, 0) = 2*keep%W(:, 1 : rci%jx - 1, 0) - ONE
         end if
-          
+
         return
-        
+
       case ( : SSMFE_DONE )
-      
+
         return
 
       end select
-    
+
     end do
-      
+
   end subroutine ssmfe_direct_srci_double
-  
+
   subroutine ssmfe_inverse_srci_double &
       ( problem, sigma, left, right, max_nep, lambda, n, X, ldX, &
         rci, keep, options, inform )
@@ -740,7 +740,7 @@ contains
     integer, parameter :: SSMFE_APPLY_CONSTRAINTS  = 21
     integer, parameter :: SSMFE_APPLY_ADJ_CONSTRS  = 22
     integer, parameter :: SSMFE_RESTART            = 999
-    
+
     integer, parameter :: NONE = -1
 
     integer, intent(in) :: problem
@@ -756,7 +756,7 @@ contains
     type(ssmfe_options), intent(in   ) :: options
     type(ssmfe_inform ), intent(inout) :: inform
     type(ssmfe_keepd  ), intent(inout), target :: keep
-    
+
     character, parameter :: TR = 'T'
     real(PRECISION), parameter :: ZERO = 0.0D0
     real(PRECISION), parameter :: ONE = 1.0D0
@@ -767,13 +767,13 @@ contains
     integer :: kw
     integer :: ldBX
     integer :: i, j, k, m
-    
+
     integer :: ilaenv
-    
+
     real(PRECISION) :: s
-    
+
     ! check for the input data errors
-    
+
     if ( n < 1 ) then
       inform%flag = WRONG_PROBLEM_SIZE
       rci%job = SSMFE_QUIT
@@ -782,7 +782,7 @@ contains
           '??? Wrong problem size', n
       return
     end if
-    
+
     if ( ldx < n ) then
       inform%flag = WRONG_LDX
       rci%job = SSMFE_QUIT
@@ -791,7 +791,7 @@ contains
           '??? Wrong leading dimension of x', ldx
       return
     end if
-    
+
     if ( left < 0 .or. left >= right .and. left + right > n/2 ) then
       inform%flag = WRONG_LEFT
       rci%job = SSMFE_QUIT
@@ -842,7 +842,7 @@ contains
         total_left = min(total_left, options%max_left)
       if ( options%max_right >= 0 ) &
         total_right = min(total_right, options%max_right)
-      
+
       ! BJCG block size
       keep%block_size = max(2, total_left + total_right)
       keep%block_size = min(keep%block_size, max(1, n/2 - 1))
@@ -860,7 +860,7 @@ contains
       if ( inform%stat /= 0 ) rci%job = SSMFE_ABORT
       if ( inform%stat /= 0 ) call ssmfe_errmsg( options, inform )
       if ( inform%stat /= 0 ) return
-      
+
       if ( problem == 0 ) then
         ! the number of blocks in the main work array keep%W
         kw = 5
@@ -889,7 +889,7 @@ contains
         call mxcopy &
           ( 'A', n, min(keep%block_size, options%user_X), X, ldx, keep%W, n )
 
-      ! initialize the Gram matrix for the converged eigenvectors to the 
+      ! initialize the Gram matrix for the converged eigenvectors to the
       ! identity matrix of size max_nep
       keep%U = ZERO
       do i = 1, max_nep
@@ -909,12 +909,12 @@ contains
       end if
 
     end if
-    
+
     ldBX = n
     nep = inform%left + inform%right
 
     select case ( keep%step )
-    
+
     case ( 0 )
 
       do
@@ -927,7 +927,7 @@ contains
         select case ( rci%job )
 
         case ( 11:19 )
-        
+
           ! apply some standard operations to vectors in W
           k = max(1, rci%k) ! cover for the case rci%k = 0
           call ssmfe_vector_operations_double &
@@ -935,7 +935,7 @@ contains
               keep%ind, keep%U )
 
         case ( SSMFE_SAVE_CONVERGED )
-      
+
           if ( rci%nx < 1 ) cycle
 
           ! save the converged eigenvectors in X
@@ -955,13 +955,13 @@ contains
           ! update the Gram matrix for the converged eigenvectors
           ! stored as four blocks (two diagonal and two off-diagonal)
           ! of a matrix G_X of size max_nep in the array keep%U:
-          
+
           !       | G_l  0   F  |
           ! G_X = |  0   I   0  |
           !       !  F'  0  G_r |
 
           ! where
-          
+
           ! G_l = X(:, 1:keep%lcon)' B X(:, 1:keep%lcon)
           ! G_r = X(:, 1:keep%rcon)' B X(:, 1:keep%rcon)
           ! F   = X(:, 1:keep%lcon)' B X(:, 1:keep%rcon)
@@ -1032,9 +1032,9 @@ contains
           end if
 
         case ( SSMFE_APPLY_ADJ_CONSTRS )
-      
-          ! apply I - B Y Y' to W, where W holds the  columns of keep%W 
-          ! specified by rci%jx, rci%kx and rci%nx, and Y is holds 
+
+          ! apply I - B Y Y' to W, where W holds the  columns of keep%W
+          ! specified by rci%jx, rci%kx and rci%nx, and Y is holds
           ! the columns of X containing the converged eigenvectors
 
           ! rci%x points to W
@@ -1064,8 +1064,8 @@ contains
         case ( SSMFE_APPLY_CONSTRAINTS )
 
           if ( keep%lcon == 0 .and. keep%rcon == 0 ) cycle
-          
-          ! apply I - Y H Y'B to W, where W holds the  columns of keep%W 
+
+          ! apply I - Y H Y'B to W, where W holds the  columns of keep%W
           ! specified by rci%jx, rci%kx and rci%nx, Y holds columns on the
           ! left and right margins of X containing the converged eigenvectors,
           ! and H is the inverse of the Gram matrix G = Y' B Y
@@ -1096,14 +1096,14 @@ contains
 
           ! | U_l |
           ! | U_r |
-          
+
           ! where U_l is keep%lcon by rci%nx and U_r is keep%rcon by rci%nx,
           ! which is equivalent to applying H_X = 2I - G_X to
-          
+
           ! | U_l |
           ! !  0  |
           ! | U_r |
-          
+
           ! and collecting the first keep%lcon and last keep%rcon rows
           ! of the result
 
@@ -1145,7 +1145,7 @@ contains
 
           rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
           rci%y => keep%W(:, rci%jy : rci%jy + rci%nx - 1, rci%ky)
-          
+
           return
 
         case ( SSMFE_APPLY_PREC )
@@ -1162,7 +1162,7 @@ contains
           return
 
         case ( SSMFE_RESTART )
-      
+
           if ( rci%k == 0 ) then
             ! fill the columns specified by rci with random numbers
             if ( rci%jx > 1 ) then
@@ -1177,18 +1177,18 @@ contains
                 2*keep%W(:, rci%jx + rci%nx : keep%block_size, 0) - ONE
             end if
           end if
-          
+
           return
 
         case ( SSMFE_QUIT, SSMFE_DONE )
-        
+
           ! total number of converged eigenpairs
           nep = inform%left + inform%right
-          
+
           if ( nep < 1 ) return
-          
+
           rci%k = rci%job
-          
+
           if ( inform%right > 0 ) then
             ! bring the eigenpairs together
             do j = 1, inform%right
@@ -1200,12 +1200,12 @@ contains
           end if
 
           ! apply one more block shifted solve to the converged eigenvectors
-          ! and the Rayleigh-Ritz procedure in the trial subspace spanned by 
+          ! and the Rayleigh-Ritz procedure in the trial subspace spanned by
           ! them
-      
+
           k = ilaenv(1, 'DSYTRD', 'U', nep, -1, -1, -1)
           k = max(3*nep - 1, (k + 2)*nep)
-    
+
           ! reallocate the work arrays
           deallocate ( keep%W, keep%V, keep%U )
           allocate &
@@ -1241,20 +1241,20 @@ contains
             rci%y => keep%W(:,:,1)
             keep%step = 1
           end if
-          
+
           return
-          
+
         case ( SSMFE_ABORT )
 
           return
 
         end select
-      
+
       end do
-      
+
     case ( 1 )
 
-      ! compute Y = (A - sigma B)^{-1} B X 
+      ! compute Y = (A - sigma B)^{-1} B X
       ! (or Y = (B - sigma A)^{-1} B X in the buckling case)
       rci%job = SSMFE_DO_SHIFTED_SOLVE
       rci%nx = nep
@@ -1287,7 +1287,7 @@ contains
       end if
 
     case ( 3 )
-    
+
       ! compute B Y
       rci%job = SSMFE_APPLY_B
       rci%nx = nep
@@ -1298,9 +1298,9 @@ contains
       rci%x => keep%W(:,:,1)
       rci%y => keep%W(:,:,3)
       keep%step = 4
-      
+
     case ( 4 )
-    
+
       ! perform the Rayleigh-Ritz procedure in the subspace spanned by
       ! the columns of Y to obtain better approximations to eigenvectors
 
@@ -1331,7 +1331,7 @@ contains
           lambda(i) = -ONE/lambda(i)
         end do
       end if
-      
+
       rci%job = rci%k
 
     end select
@@ -1341,7 +1341,7 @@ contains
   subroutine ssmfe_free_double( keep, inform )
     type(ssmfe_keepd), intent(inout) :: keep
     type(ssmfe_inform), intent(inout) :: inform
-    
+
     call ssmfe_free( keep )
     call ssmfe_free( inform )
 
@@ -1349,7 +1349,7 @@ contains
 
   subroutine ssmfe_free_keep_double( keep )
     type(ssmfe_keepd), intent(inout) :: keep
-    
+
     if ( allocated(keep%ind) ) deallocate ( keep%ind )
     if ( allocated(keep%V  ) ) deallocate ( keep%V   )
     if ( allocated(keep%W  ) ) deallocate ( keep%W   )
@@ -1402,9 +1402,9 @@ contains
     integer :: kw
     integer :: ldBX
     integer :: i, j, k
-    
+
     real(PRECISION), allocatable :: dwork(:,:)
-    
+
     if ( n < 1 ) then
       inform%flag = WRONG_PROBLEM_SIZE
       rci%job = SSMFE_QUIT
@@ -1413,7 +1413,7 @@ contains
           '??? Wrong problem size', n
       return
     end if
-    
+
     if ( ldx < n ) then
       inform%flag = WRONG_LDX
       rci%job = SSMFE_QUIT
@@ -1422,7 +1422,7 @@ contains
           '??? Wrong leading dimension of x', ldx
       return
     end if
-    
+
     if ( left < 0 .or. left > n/2 ) then
       inform%flag = WRONG_LEFT
       rci%job = SSMFE_QUIT
@@ -1500,9 +1500,9 @@ contains
     end if
 
     ldBX = n
-    
+
     do
-    
+
       call ssmfe_solve &
         ( problem, left, max_nep, lambda, keep%block_size, keep%V, keep%ind, &
           rci, keep%keep, options, inform )
@@ -1518,7 +1518,7 @@ contains
             keep%ind, keep%U )
 
       case ( SSMFE_SAVE_CONVERGED )
-      
+
         if ( rci%nx < 1 ) cycle
         if ( rci%i < 0 ) cycle
         do i = 1, rci%nx
@@ -1562,7 +1562,7 @@ contains
         keep%lcon = keep%lcon + rci%nx
 
       case ( SSMFE_APPLY_ADJ_CONSTRS )
-      
+
         rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
         rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
         if ( keep%lcon > 0 ) then
@@ -1609,7 +1609,7 @@ contains
 
         rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
         rci%y => keep%W(:, rci%jy : rci%jy + rci%nx - 1, rci%ky)
-        
+
         return
 
       case ( SSMFE_APPLY_PREC )
@@ -1621,7 +1621,7 @@ contains
         return
 
       case ( SSMFE_RESTART )
-      
+
         if ( rci%k == 0 ) then
           allocate ( dwork(n, keep%block_size), stat = inform%stat )
           if ( inform%stat /= 0 ) inform%flag = OUT_OF_MEMORY
@@ -1633,19 +1633,19 @@ contains
             keep%W(:, 1 : rci%jx - 1, 0) = 2*dwork(:, 1 : rci%jx - 1) - ONE
           deallocate ( dwork )
         end if
-          
+
         return
-        
+
       case ( : SSMFE_DONE )
 
         return
 
       end select
-    
+
     end do
-      
+
   end subroutine ssmfe_direct_srci_double_complex
-  
+
   subroutine ssmfe_inverse_srci_double_complex &
       ( problem, sigma, left, right, max_nep, lambda, n, X, ldX, &
         rci, keep, options, inform )
@@ -1677,7 +1677,7 @@ contains
     type(ssmfe_options), intent(in   ) :: options
     type(ssmfe_inform ), intent(inout) :: inform
     type(ssmfe_keepz  ), intent(inout), target :: keep
-    
+
     character, parameter :: TR = 'C'
     real(PRECISION), parameter :: ZERO = 0.0D0
     real(PRECISION), parameter :: ONE = 1.0D0
@@ -1691,15 +1691,15 @@ contains
     integer :: kw
     integer :: ldBX
     integer :: i, j, k
-    
+
     integer :: ilaenv
-    
+
     real(PRECISION) :: s
-    
+
     real(PRECISION), allocatable :: dwork(:,:)
-    
+
     complex(PRECISION) :: z
-    
+
     if ( n < 1 ) then
       inform%flag = WRONG_PROBLEM_SIZE
       rci%job = SSMFE_QUIT
@@ -1708,7 +1708,7 @@ contains
           '??? Wrong problem size', n
       return
     end if
-    
+
     if ( ldx < n ) then
       inform%flag = WRONG_LDX
       rci%job = SSMFE_QUIT
@@ -1717,7 +1717,7 @@ contains
           '??? Wrong leading dimension of x', ldx
       return
     end if
-    
+
     if ( left < 0 .or. left >= right .and. left + right > n/2 ) then
       inform%flag = WRONG_LEFT
       rci%job = SSMFE_QUIT
@@ -1817,12 +1817,12 @@ contains
         return
       end if
     end if
-    
+
     ldBX = n
     nep = inform%left + inform%right
 
     select case ( keep%step )
-    
+
     case ( 0 )
 
       do
@@ -1843,7 +1843,7 @@ contains
               keep%ind, keep%U )
 
         case ( SSMFE_SAVE_CONVERGED )
-      
+
           if ( rci%nx < 1 ) cycle
 
           do i = 1, rci%nx
@@ -1921,7 +1921,7 @@ contains
           end if
 
         case ( SSMFE_APPLY_ADJ_CONSTRS )
-      
+
           rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
           rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
 
@@ -1947,7 +1947,7 @@ contains
         case ( SSMFE_APPLY_CONSTRAINTS )
 
           if ( keep%lcon == 0 .and. keep%rcon == 0 ) cycle
-          
+
           rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
           rci%y => keep%W(:, rci%jy : rci%jy + rci%ny - 1, rci%ky)
 
@@ -1999,7 +1999,7 @@ contains
 
           rci%x => keep%W(:, rci%jx : rci%jx + rci%nx - 1, rci%kx)
           rci%y => keep%W(:, rci%jy : rci%jy + rci%nx - 1, rci%ky)
-          
+
           return
 
         case ( SSMFE_APPLY_PREC )
@@ -2012,7 +2012,7 @@ contains
           return
 
         case ( SSMFE_RESTART )
-      
+
           if ( rci%k == 0 ) then
             allocate ( dwork(n, keep%block_size), stat = inform%stat )
             if ( inform%stat /= 0 ) inform%flag = OUT_OF_MEMORY
@@ -2027,16 +2027,16 @@ contains
                 2*dwork(:, rci%jx + rci%nx : keep%block_size) - ONE
             deallocate ( dwork )
           end if
-          
+
           return
 
         case ( SSMFE_DONE, SSMFE_QUIT )
 
           nep = inform%left + inform%right
           if ( nep < 1 ) return
-          
+
           rci%k = rci%job
-      
+
           if ( inform%left > 0 ) then
             do j = 1, inform%left/2
               s = lambda(j)
@@ -2067,7 +2067,7 @@ contains
 
           k = ilaenv(1, 'ZHETRD', 'U', nep, -1, -1, -1)
           k = max(2*nep - 1, (k + 2)*nep) + 3*nep - 1
-    
+
           deallocate ( keep%W, keep%V, keep%U )
           allocate &
             ( keep%W(n, nep, 3), keep%V(nep, nep, 3), keep%U(k, 1), &
@@ -2102,15 +2102,15 @@ contains
           end if
 
           return
-          
+
         case ( SSMFE_ABORT )
 
           return
 
         end select
-      
+
       end do
-      
+
     case ( 1 )
 
       rci%job = SSMFE_DO_SHIFTED_SOLVE
@@ -2143,7 +2143,7 @@ contains
       end if
 
     case ( 3 )
-    
+
       rci%job = SSMFE_APPLY_B
       rci%nx = nep
       rci%jx = 1
@@ -2153,7 +2153,7 @@ contains
       rci%x => keep%W(:,:,1)
       rci%y => keep%W(:,:,3)
       keep%step = 4
-      
+
     case ( 4 )
 
       if ( problem == 2 ) then
@@ -2169,7 +2169,7 @@ contains
           NIL, keep%V(1,1,2), nep )
 
       k = ilaenv(1, 'ZHETRD', 'U', nep, -1, -1, -1)
-      k = max(2*nep - 1, (k + 2)*nep) + 3*nep - 1    
+      k = max(2*nep - 1, (k + 2)*nep) + 3*nep - 1
       allocate ( dwork(max(3*nep - 2, 1), 1), stat = inform%stat )
       if ( inform%stat /= 0 ) inform%flag = OUT_OF_MEMORY
       if ( inform%stat /= 0 ) rci%job = SSMFE_ABORT
@@ -2202,7 +2202,7 @@ contains
       scal => dscal, &
       axpy => daxpy, &
       gemm => dgemm
-      
+
     use SPRAL_lapack_iface, mxcopy => dlacpy
     integer :: n, m, ldW
     real(PRECISION) :: W(ldW, m, 0:*), V(m + m, m + m), U(m)
@@ -2210,7 +2210,7 @@ contains
     type(ssmfe_rcid) :: rci
     intent(in) :: n, m, ldW, rci
     intent(inout) :: W, V, U, ind
-    
+
     integer, parameter :: SSMFE_COPY_VECTORS       = 11
     integer, parameter :: SSMFE_COMPUTE_DOTS       = 12
     integer, parameter :: SSMFE_SCALE_VECTORS      = 13
@@ -2218,7 +2218,7 @@ contains
     integer, parameter :: SSMFE_COMPUTE_XY         = 15
     integer, parameter :: SSMFE_COMPUTE_XQ         = 16
     integer, parameter :: SSMFE_TRANSFORM_X        = 17
-    
+
     real(PRECISION), parameter :: ZERO = 0.0D0, ONE = 1.0D0
     real(PRECISION), parameter :: NIL = ZERO
     real(PRECISION), parameter :: UNIT = ONE
@@ -2227,9 +2227,9 @@ contains
 
     real(PRECISION) :: alpha, beta, s
     character, parameter :: TRANS = 'T'
-    
+
     mm = m + m
-    
+
     if ( rci%job == SSMFE_TRANSFORM_X ) then
       alpha = UNIT
       beta = NIL
@@ -2241,7 +2241,7 @@ contains
     select case (rci%job)
 
     case (SSMFE_COPY_VECTORS)
-    
+
       if ( rci%nx < 1 ) return
 
       if ( rci%i == 0 ) then
@@ -2304,7 +2304,7 @@ contains
         call axpy( n, s, W(1, rci%jx + i, rci%kx), 1, &
                          W(1, rci%jy + i, rci%ky), 1 )
       end do ! i
-    
+
     case (SSMFE_COMPUTE_XY)
 
       if ( rci%nx < 1 .or. rci%ny < 1 ) return
@@ -2313,7 +2313,7 @@ contains
                  beta, V(rci%i, rci%j), mm )
 
     case (SSMFE_COMPUTE_XQ, SSMFE_TRANSFORM_X)
-    
+
       if ( rci%ny < 1 ) return
       call gemm &
         ( 'N', 'N', n, rci%ny, rci%nx, &
@@ -2323,11 +2323,11 @@ contains
         call mxcopy &
           ( 'A', n, rci%ny, W(1, rci%jy, rci%ky), ldW, &
                             W(1, rci%jx, rci%kx), ldW )
-          
+
     end select
 
   end subroutine ssmfe_vector_operations_double
-  
+
   subroutine ssmfe_vector_operations_double_complex &
       ( rci, n, m, W, ldW, V, ind, U )
 
@@ -2345,7 +2345,7 @@ contains
     type(ssmfe_rciz) :: rci
     intent(in) :: n, m, ldW, rci
     intent(inout) :: W, V, U, ind
-    
+
     character, parameter :: TRANS = 'C'
     integer, parameter :: SSMFE_COPY_VECTORS       = 11
     integer, parameter :: SSMFE_COMPUTE_DOTS       = 12
@@ -2354,7 +2354,7 @@ contains
     integer, parameter :: SSMFE_COMPUTE_XY         = 15
     integer, parameter :: SSMFE_COMPUTE_XQ         = 16
     integer, parameter :: SSMFE_TRANSFORM_X        = 17
-    
+
     real(PRECISION), parameter :: ZERO = 0.0D0, ONE = 1.0D0
     complex(PRECISION), parameter :: NIL(1) = ZERO
     complex(PRECISION), parameter :: UNIT = ONE
@@ -2363,9 +2363,9 @@ contains
 
     real(PRECISION) ::  s
     complex(PRECISION) :: alpha, beta
-    
+
     mm = m + m
-    
+
     if ( rci%job == SSMFE_TRANSFORM_X ) then
       alpha = UNIT
       beta = NIL(1)
@@ -2377,7 +2377,7 @@ contains
     select case (rci%job)
 
     case (SSMFE_COPY_VECTORS)
-    
+
       if ( rci%nx < 1 ) return
 
       if ( rci%i == 0 ) then
@@ -2440,7 +2440,7 @@ contains
           ( n, -V(rci%i + i, rci%j + i), &
             W(1, rci%jx + i, rci%kx), 1, W(1, rci%jy + i, rci%ky), 1 )
       end do ! i
-    
+
     case (SSMFE_COMPUTE_XY)
 
       if ( rci%nx < 1 .or. rci%ny < 1 ) return
@@ -2450,7 +2450,7 @@ contains
           beta, V(rci%i, rci%j), mm )
 
     case (SSMFE_COMPUTE_XQ, SSMFE_TRANSFORM_X)
-    
+
       if ( rci%ny < 1 ) return
       call gemm &
         ( 'N', 'N', n, rci%ny, rci%nx, &
@@ -2460,15 +2460,15 @@ contains
         call mxcopy &
           ( 'A', n, rci%ny, W(1, rci%jy, rci%ky), ldW, &
                             W(1, rci%jx, rci%kx), ldW )
-          
+
     end select
 
   end subroutine ssmfe_vector_operations_double_complex
-  
+
   subroutine ssmfe_free_double_complex( keep, inform )
     type(ssmfe_keepz), intent(inout) :: keep
     type(ssmfe_inform), intent(inout) :: inform
-    
+
     call ssmfe_free( keep )
     call ssmfe_free( inform )
 
@@ -2476,7 +2476,7 @@ contains
 
   subroutine ssmfe_free_keep_double_complex( keep )
     type(ssmfe_keepz), intent(inout) :: keep
-    
+
     if ( allocated(keep%ind) ) deallocate ( keep%ind )
     if ( allocated(keep%BX ) ) deallocate ( keep%BX  )
     if ( allocated(keep%U  ) ) deallocate ( keep%U   )

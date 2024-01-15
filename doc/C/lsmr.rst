@@ -10,7 +10,7 @@ LSMR - Sparse Least Squares LSMR Solver
 Purpose
 =======
 
-This package uses the LSMR iterative method to solve sparse linear 
+This package uses the LSMR iterative method to solve sparse linear
 equations and sparse least-squares problems of the form:
 
 .. math::
@@ -20,7 +20,7 @@ equations and sparse least-squares problems of the form:
          \mbox{minimize } \|x\|_2 \mbox{ subject to }Ax = b, \\
       \mbox{2. Linear least squares:} & \mbox{minimize  } \|Ax - b\|_2^2,\\
       \mbox{3. Regularized least squares:} &
-         \mbox{minimize  } \|Ax - b\|_2^2 + \lambda^2\|x\|_2^2, 
+         \mbox{minimize  } \|Ax - b\|_2^2 + \lambda^2\|x\|_2^2,
    \end{array}
 
 where the :math:`m \times n` matrix :math:`A` may be square or rectangular, and
@@ -28,7 +28,7 @@ may have any rank. The scalar :math:`\lambda` is a damping parameter. If
 :math:`\lambda > 0`, the solution is regularized in the sense that a unique
 soluton always exists, and :math:`\|x\|_2` is always bounded.
 
-Preconditioning may be used to try to reduce the number of iterations. 
+Preconditioning may be used to try to reduce the number of iterations.
 A suitable choice for the preconditioner depends on the user's knowledge of
 :math:`A`. For a user-chosen :math:`n \times n` nonsingular matrix :math:`P`,
 LSMR solves
@@ -40,7 +40,7 @@ LSMR solves
          \mbox{minimize  } \|Py\|_2 \mbox{  subject to }APy = b, \\
       \mbox{2. Linear least squares:} & \mbox{minimize  } \|APy - b\|_2^2 ,\\
       \mbox{3. Regularized least squares:} &
-         \mbox{minimize  } \|APy - b\|_2^2 + \lambda^2\|Py\|_2^2 , 
+         \mbox{minimize  } \|APy - b\|_2^2 + \lambda^2\|Py\|_2^2 ,
    \end{array}
 
 The user must then recover the final solution :math:`x` by computing
@@ -50,11 +50,11 @@ significantly better conditioned than :math:`A`.
 Reverse communication is used for preconditioning operations :math:`Pz` and
 :math:`P^Tz` and matrix-vector products of the form :math:`Av` and :math:`A^Tu`.
 
-The method used is based on the Golub-Kahan bidiagonalization process. 
-It is algebraically equivalent to applying MINRES to the normal 
+The method used is based on the Golub-Kahan bidiagonalization process.
+It is algebraically equivalent to applying MINRES to the normal
 equation :math:`(A^TA+\lambda^2I)x=A^Tb` (or
 :math:`((AP)^T(AP)+\lambda^2I)y=(AP)^Tb`), but has better numerical properties,
-especially if :math:`A` is ill-conditioned. 
+especially if :math:`A` is ill-conditioned.
 
 Notation
 --------
@@ -168,34 +168,34 @@ Derived types
       Default is 20.
 
    .. c:member:: int print_freq_itn
-   
+
       Frequency of printing status.
       There is printing on each of the first `print_freq_itn` iterations and
       then printing every `print_freq_itn` iterations.
       Default is 10.
 
    .. c:member:: int unit_diagnostics
-   
+
       Fortran unit for diagnostic
       printing. Printing is suppressed if negative.
       Default is 6.
 
 
    .. c:member:: int unit_error
-   
+
       Fortran unit for printing error messages.
       Printing is suppressed if negative.
       Default is 6.
 
    .. c:member:: double atol
-   
+
       Relative error in :math:`A`.
       i.e. if :math:`A` is accurate to about 6 digits, set atol to 1.0e-6.
       Only used if :c:member:`spral_lsmr_options.ctest` =3.
       Default is ``sqrt(DBL_EPSILON)``.
 
    .. c:member:: double btol
-   
+
       Relative error in :math:`b`.
       i.e. if :math:`b` is accurate to about 6 digits, set btol to 1.0e-6.
       Only used if :c:member:`spral_lsmr_options.ctest` =3.
@@ -203,16 +203,16 @@ Derived types
 
    .. c:member:: double conlim
 
-      
+
       Upper limit on
       :math:`cond(\bar{A})`, apparent condition number of :math:`\bar{A}`.
       Only used if :c:member:`spral_lsmr_options.ctest` =3.
-      Default is ``1/(10*sqrt(DBL_EPSILON))``: 
+      Default is ``1/(10*sqrt(DBL_EPSILON))``:
 
    .. c:member:: int ctest
 
       Convergence test to use. Options are:
-      
+
       +-------------+----------------------------------------------------------+
       | 1           | User to test convergence (`action=3`).                   |
       |             | *Without*  computation of norms in inform.               |
@@ -233,11 +233,11 @@ Derived types
       Default is -1.
 
    .. c:member:: int itn_test
-   
+
       Number of iterations between user
       convergence tests. If negative, use :math:`\min(n,10)`.
       Default is -1.
-      
+
    .. c:member:: int localSize
 
       Number of historical vectors to use for
@@ -249,7 +249,7 @@ Derived types
    Information about progress of algorithm.
 
    .. c:member:: double condAP
-   
+
       Estimate of :math:`cond(\bar{A})`. A very high value of
       condAP may again indicate an error in the products with :math:`A`,
       :math:`A^T`, :math:`P`, or :math:`P^T`. A negative value indicates that
@@ -257,15 +257,15 @@ Derived types
       This component is not used if :c:member:`spral_lsmr_options.ctest` =1.
 
    .. c:member:: int flag
-   
+
       Exit status of algorithm. See table below.
 
    .. c:member:: int itn
-   
+
       Number of iterations performed
 
    .. c:member:: double normAP
-   
+
       Estimate of Frobenius norm of :math:`\bar{A}`. If
       :math:`\lambda` is small and the columns of :math:`AP` have all been
       scaled to have length 1.0, normAP should increase to roughly
@@ -276,7 +276,7 @@ Derived types
       This component is not used if :c:member:`spral_lsmr_options.ctest` =1.
 
    .. c:member:: double normAP
-   
+
       Estimate of :math:`\|\bar{A}^T\bar{r}\|_2`, (normal
       equations residual). This should be small in all cases. Note that
       normAPr will often be smaller than the true value.
@@ -284,20 +284,20 @@ Derived types
       This component is not used if :c:member:`spral_lsmr_options.ctest` =1.
 
    .. c:member:: double normr
-   
+
       Estimate of :math:`\|\bar{r}\|_2`. This will be small
       if :math:`Ax = b` has a solution. A negative value indicates that no
       estimate is currently available.
       This component is not used if :c:member:`spral_lsmr_options.ctest` =1.
 
    .. c:member:: double normy
-   
+
       Estimate of :math:`\|y\|_2`. A negative value indicates that
       no estimate is currently available.
       This component is not used if :c:member:`spral_lsmr_options.ctest` =1.
 
    .. c:member:: int stat
-      
+
       The Fortran stat parameter in the event of a failed
       allocation.
 

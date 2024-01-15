@@ -21,7 +21,7 @@
 ! INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
 ! CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ! ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-! POSSIBILITY OF SUCH DAMAGE. 
+! POSSIBILITY OF SUCH DAMAGE.
 !
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !                                LSMR
@@ -52,9 +52,9 @@
 !              Nick Gould and Jennifer Scott.
 !              lsmrDataModule.f90 no longer used.
 !              Automatic arrays no longer used.
-!              Option for user to test convergence (or to use Fong and 
+!              Option for user to test convergence (or to use Fong and
 !              Saunders test).
-!              Uses dnrm2 and dscal (for closer compatibility with 
+!              Uses dnrm2 and dscal (for closer compatibility with
 !              Fong and Saunders code ... easier to compare results).
 !              Sent to Saunders; made available on above SOL webpage.
 ! 20 May 2014: initial reverse-communication version written by Nick Gould
@@ -128,7 +128,7 @@ module spral_lsmr
   ! where A is a matrix with m rows and n columns, b is an m-vector,
   ! and damp is a scalar.  (All quantities are real.)
   ! The matrix A is treated as a linear operator.  It is accessed
-  ! by reverse communication, that is requests for matrix-vector 
+  ! by reverse communication, that is requests for matrix-vector
   ! products are passed back to the user.
   !
   ! If preconditioning used, solves
@@ -176,8 +176,8 @@ module spral_lsmr
   ! 2. Use LSMR to solve the system  A*dx = r0.
   ! 3. Add the correction dx to obtain a final solution x = x0 + dx.
   !
-  ! This requires that x0 be available before the first call 
-  ! to LSMR and after the final call. 
+  ! This requires that x0 be available before the first call
+  ! to LSMR and after the final call.
   ! To judge the benefits, suppose LSMR takes k1 iterations
   ! to solve A*x = b and k2 iterations to solve A*dx = r0.
   ! If x0 is "good", norm(r0) will be smaller than norm(b).
@@ -249,35 +249,35 @@ module spral_lsmr
   ! These may be set before first call and must not be altered between calls.
   type :: lsmr_options
 
-     real(wp)    :: atol = sqrt(epsilon(one))  
+     real(wp)    :: atol = sqrt(epsilon(one))
      ! Used if ctest = 3 (Fong and Saunders stopping criteria)
      ! In which case, must hold an estimate of the relative error in the data
      ! defining the matrix A.  For example, if A is accurate to about 6 digits,
      ! set atol = 1.0e-6.
 
-     real(wp)    :: btol = sqrt(epsilon(one)) 
+     real(wp)    :: btol = sqrt(epsilon(one))
      ! Used if ctest = 3 (Fong and Saunders stopping criteria)
      ! In which case, must hold an estimate of the relative error in the data
      ! defining the rhs b.  For example, if b is
      ! accurate to about 6 digits, set btol = 1.0e-6.
 
-     real(wp)    :: conlim = 1/(10*sqrt(epsilon(one))) 
+     real(wp)    :: conlim = 1/(10*sqrt(epsilon(one)))
      ! Used if ctest = 3 (Fong and Saunders stopping criteria)
      ! In which case, must hold an upper limit on cond(Abar), the apparent
-     ! condition number of the matrix Abar. Iterations will be terminated 
+     ! condition number of the matrix Abar. Iterations will be terminated
      ! if a computed estimate of cond(Abar) exceeds conlim.
      ! This is intended to prevent certain small or
      ! zero singular values of A or Abar from
      ! coming into effect and causing unwanted growth in the computed solution.
-    
+
      ! conlim and damp may be used separately or
      ! together to regularize ill-conditioned systems.
-    
+
      ! Normally, conlim should be in the range 1000 to 1/eps.
      ! Suggested value:
      ! conlim = 1/(100*eps)  for compatible systems,
      ! conlim = 1/(10*sqrt(eps)) for least squares.
-    
+
      ! Note: Any or all of atol, btol, conlim may be set to zero.
      ! The effect will be the same as the values eps, eps, 1/eps.
 
@@ -288,11 +288,11 @@ module spral_lsmr
      !     The code will only terminate if allocation (or deallocation) error
      !     or if itnlim is reached. Thus user is responsible for
      !     for determining when to stop.
-     ! 2 : As 1 but inform holds the latest estimates of normAP, condAP, normr,  
+     ! 2 : As 1 but inform holds the latest estimates of normAP, condAP, normr,
      !     normAPr, normy  which the user may wish to use to monitor convergence.
-     ! 3 : The code determines if convergence has been achieved using 
+     ! 3 : The code determines if convergence has been achieved using
      !     Fong and Saunders stopping criteria.
-     !     inform holds the latest estimates of normAP, condAP, normr, normAPr, 
+     !     inform holds the latest estimates of normAP, condAP, normr, normAPr,
      !     normy.
 
      integer(ip) :: itnlim = -1
@@ -302,26 +302,26 @@ module spral_lsmr
      ! itnlim = 4*n  otherwise. If itnlim = -1 then we use 4*n.
 
      integer(ip) :: itn_test = -1
-     ! Determines how often control is passed to use to allow convergence 
+     ! Determines how often control is passed to use to allow convergence
      ! testing. It itn_test = -1 we use min(n,10).
-    
-     integer(ip) :: localSize = 0 
+
+     integer(ip) :: localSize = 0
      ! No. of vectors for local reorthogonalization.
      ! 0       No reorthogonalization is performed.
      ! >0      This many n-vectors "v" (the most recent ones)
      !         are saved for reorthogonalizing the next v.
      !         localSize need not be more than min(m,n).
      !         At most min(m,n) vectors will be allocated.
-    
+
      integer(ip) :: print_freq_head = 20 ! print frequency for the heading
 
      integer(ip) :: print_freq_itn  = 10 ! print frequency (iterations)
 
-     integer(ip) :: unit_diagnostics = 6 ! unit number for diagnostic printing. 
-     !  Printing is suppressed if <0. 
+     integer(ip) :: unit_diagnostics = 6 ! unit number for diagnostic printing.
+     !  Printing is suppressed if <0.
 
-     integer(ip) :: unit_error = 6 ! unit number for error printing. 
-     !  Printing is suppressed if <0. 
+     integer(ip) :: unit_error = 6 ! unit number for error printing.
+     !  Printing is suppressed if <0.
 
   end type lsmr_options
 
@@ -337,16 +337,16 @@ module spral_lsmr
      !
      ! lsmr_stop_compatible     The equations A*x = b are probably compatible.
      !                    Norm(A*x - b) is sufficiently small, given the
-     !                    values of atol and btol. 
-     !                    options%ctest = 3 only. 
+     !                    values of atol and btol.
+     !                    options%ctest = 3 only.
      !
      ! lsmr_stop_LS_atol  If damp is zero:  A least-squares solution has
      !                    been obtained that is sufficiently accurate,
-     !                    given the value of atol.  
+     !                    given the value of atol.
      !                    If damp is nonzero:  A damped least-squares
      !                    solution has been obtained that is sufficiently
-     !                    accurate, given the value of atol. 
-     !                    options%ctest = 3 only. 
+     !                    accurate, given the value of atol.
+     !                    options%ctest = 3 only.
      !
      ! lsmr_stop_ill      An estimate of cond(Abar) has exceeded conlim.
      !                    The system A*x = b appears to be ill-conditioned,
@@ -355,12 +355,12 @@ module spral_lsmr
      !                    options%ctest = 3 only.
      !
      !  lsmr_stop_Ax       Ax - b is small enough for this machine.
-     !                    options%ctest = 3 only. 
+     !                    options%ctest = 3 only.
      !
      !  lsmr_stop_LS      The least-squares solution is good enough for this
      !                    machine. options%ctest = 3 only.
      !
-     ! lmsr_stop_condAP    The estimate of cond(Abar) seems to be too large 
+     ! lmsr_stop_condAP    The estimate of cond(Abar) seems to be too large
      !                    for this machine. options%ctest = 3 only.
      !
      ! lsmr_stop_itnlim       :  The iteration limit has been reached.
@@ -381,7 +381,7 @@ module spral_lsmr
      real(wp)    :: normAP  ! Only holds information if options%ctest = 2 or 3.
      ! In this case, holds estimate of the Frobenius norm of Abar.
      ! This is the square-root of the sum of squares of the elements of Abar.
-     ! If damp is small and the columns of A have all been scaled to have 
+     ! If damp is small and the columns of A have all been scaled to have
      ! length 1.0, normAP should increase to roughly sqrt(n).
      ! A radically different value for normAP may
      ! indicate an error in the user-supplied
@@ -391,20 +391,20 @@ module spral_lsmr
      real(wp)    :: condAP  ! Only holds information if options%ctest = 2 or 3.
      ! In this case, holds estimate of cond(Abar), the condition
      ! number of Abar.  A very high value of condAP
-     ! may again indicate an error in the products 
+     ! may again indicate an error in the products
      ! with A or A'. A negative value indicates
      ! that no estimate is currently available.
      !
      real(wp)    :: normr  ! Only holds information if options%ctest = 2 or 3.
      ! In this case, holds estimate of the value of norm(rbar),
-     ! the function being minimized (see notation above).  This will be 
+     ! the function being minimized (see notation above).  This will be
      ! small if A*x = b has a solution. A negative value
      ! indicates that no estimate is currently available.
      !
      real(wp)    :: normAPr  ! Only holds information if options%ctest = 2 or 3.
      ! In this case, holds estimate of the value of
      ! norm( Abar'*rbar ), the norm of the residual for the normal equations.
-     ! This should be small in all cases.  (normAPr  will often be smaller 
+     ! This should be small in all cases.  (normAPr  will often be smaller
      ! than the true value computed from the output vector x.) A negative value
      ! indicates that no estimate is currently available.
      !
@@ -451,18 +451,18 @@ contains
     ! then made (see below).
     ! On return, action determines what the user is required to do.
     ! Possible values and their consequences are:
-    ! 
+    !
     ! 0. Computation has terminated.
     !    action = 0 is returned if either an error has been encountered
     !    or convergence has been achieved with options%ctest = 3.
     !    It is also returned after a call with action = 3 (see below).
     !
-    ! 1. The caller must compute v = v + A'*u without altering u, and 
-    ! then re-call the subroutine. The vectors u and v are avaialble 
+    ! 1. The caller must compute v = v + A'*u without altering u, and
+    ! then re-call the subroutine. The vectors u and v are avaialble
     ! in the arrays u and v (see below). Only v should be altered.
     !
-    ! 2. The caller must compute u = u + A*v  without altering v, and 
-    ! then re-call the subroutine. The vectors u and v are avaialble 
+    ! 2. The caller must compute u = u + A*v  without altering v, and
+    ! then re-call the subroutine. The vectors u and v are avaialble
     ! in the arrays u and v (see below). Only u should be altered.
     !
     ! FINAL CALL: If the user wishes to deallocate components of keep
@@ -475,16 +475,16 @@ contains
     integer(ip), intent(in)  :: n  ! the number of columns in A.
 
     real(wp),    intent(inout) :: u(m) ! Prior to the first call, u
-    ! must hold the rhs vector b. u is then the vector used to communicate u 
+    ! must hold the rhs vector b. u is then the vector used to communicate u
     ! when further action is required (see action, above).
 
-    real(wp),    intent(inout) :: v(n) ! The vector used to communicate v 
+    real(wp),    intent(inout) :: v(n) ! The vector used to communicate v
     !  when further action is required (see action, above).
 
     real(wp),    intent(inout) :: y(n) ! Returns the computed solution y
     ! of the preconditioned system.
 
-    type ( lsmr_keep ), intent( inout) :: keep 
+    type ( lsmr_keep ), intent( inout) :: keep
     ! A variable of type lsmr_keep that is used to
     ! preserve internal data between reverse-communication
     ! calls. The components are private.
@@ -497,12 +497,12 @@ contains
     ! A variable of type lsmr_info_type that is used to hold information.
     ! It should not be altered by the user.
 
-    real(wp),intent(in), optional  :: damp ! The damping parameter for problem 3 
-    ! above. (damp should be absent or set to 0.0 for problems 1 and 2.) 
-    ! If the system A*x = b 
+    real(wp),intent(in), optional  :: damp ! The damping parameter for problem 3
+    ! above. (damp should be absent or set to 0.0 for problems 1 and 2.)
+    ! If the system A*x = b
     ! is incompatible, values of damp in the range 0 to sqrt(eps)*norm(A)
-    ! will probably have a negligible effect. Larger values of damp will tend 
-    ! to decrease the norm of x and reduce the number of 
+    ! will probably have a negligible effect. Larger values of damp will tend
+    ! to decrease the norm of x and reduce the number of
     ! iterations required by LSMR.
     !
     ! The work per iteration and the storage needed
@@ -544,10 +544,10 @@ contains
        keep%flag = 0
     end if
 
-    ! Immediate return if we have already had an error 
+    ! Immediate return if we have already had an error
     if (keep%flag .gt. 0) return
 
-    ! on other calls, jump to the appropriate place after 
+    ! on other calls, jump to the appropriate place after
     ! reverse-communication
 
     select case ( keep%branch )
@@ -563,7 +563,7 @@ contains
 
     ! Initialize.
     inform%flag = 0
-    keep%flag   = 0 
+    keep%flag   = 0
     inform%itn  = 0
     inform%normb  = -one
     inform%normr  = -one
@@ -606,7 +606,7 @@ contains
        action = 0
        return
     end if
-    
+
     keep%pcount     = 0            ! print counter
     keep%test_count = 0            ! testing for convergence counter
     keep%itn_test   = options%itn_test  ! how often to test for convergence
@@ -858,12 +858,12 @@ contains
              call dscal (n, (one/keep%alpha), v, 1)
           end if
        end if
-    
+
        ! At this point, beta = beta_{k+1}, alpha = alpha_{k+1}.
-    
+
        !----------------------------------------------------------------
        ! Construct rotation Qhat_{k,2k+1}.
-    
+
        alphahat = keep%alphabar
        chat     = keep%alphabar/alphahat
        shat     = zero
@@ -885,7 +885,7 @@ contains
        keep%alphabar = c*keep%alpha
 
        ! Use a plane rotation (Qbar_i) to turn R_i^T into R_i^bar.
-    
+
        rhobarold      = keep%rhobar
        keep%zetaold   = keep%zeta
        thetabar       = keep%sbar*keep%rho
@@ -905,7 +905,7 @@ contains
        keep%h(1:n)     = v(1:n) - (thetanew/keep%rho)*keep%h(1:n)
 
        ! Estimate ||r||.
-    
+
        ! Apply rotation Qhat_{k,2k+1}.
        betaacute =   chat* keep%betadd
        betacheck = - shat* keep%betadd
@@ -935,15 +935,15 @@ contains
 
        if ((options%ctest .eq. 2) .or. (options%ctest .eq. 3)) then
           inform%normr  = sqrt(keep%d + (keep%betad - taud)**2 + keep%betadd**2)
-    
+
           ! Estimate ||A||.
           keep%normA2   = keep%normA2 + keep%beta**2
           inform%normAP  = sqrt(keep%normA2)
           keep%normA2   = keep%normA2 + keep%alpha**2
-    
+
           ! Estimate cond(A).
           keep%maxrbar    = max(keep%maxrbar,rhobarold)
-          if (inform%itn .gt. 1) then 
+          if (inform%itn .gt. 1) then
              keep%minrbar = min(keep%minrbar,rhobarold)
           end if
           inform%condAP    = max(keep%maxrbar,rhotemp)/min(keep%minrbar,rhotemp)
@@ -1017,7 +1017,7 @@ contains
 
           if (prnt) then        ! Print a line for this iteration
              ! Check whether to print a heading first
-             if (keep%pcount .ge. options%print_freq_head) then 
+             if (keep%pcount .ge. options%print_freq_head) then
                 keep%pcount = 0
                 if (options%ctest .eq. 3) then
                    if (keep%damped) then
@@ -1062,7 +1062,7 @@ contains
        keep%flag = inform%flag
 
        if (keep%show) then ! Print the stopping condition.
-          if ((options%ctest .eq. 2) .or. (options%ctest .eq. 3)) then 
+          if ((options%ctest .eq. 2) .or. (options%ctest .eq. 3)) then
              write (keep%nout, 2000)                 &
                   exitt,inform%flag,inform%itn,      &
                   exitt,inform%normAP,inform%condAP, &
@@ -1205,7 +1205,7 @@ contains
     ! by nonzero stat value. No printing.
 
     integer(ip), intent(out)           :: stat ! Fortran stat parameter
-    type ( lsmr_keep ), intent( inout) :: keep 
+    type ( lsmr_keep ), intent( inout) :: keep
 
     integer :: st
 

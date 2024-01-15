@@ -168,7 +168,7 @@ integer(C_INT) function spral_lsmr_free(ckeep) bind(C)
   implicit none
 
   type(C_PTR), intent(inout) :: ckeep
-   
+
   type(lsmr_keep), pointer :: fkeep
 
   if (.not. c_associated(ckeep)) then
@@ -179,7 +179,7 @@ integer(C_INT) function spral_lsmr_free(ckeep) bind(C)
 
   ! Otherwise, ckeep is not NULL
   call c_f_pointer(ckeep, fkeep)
-   
+
   ! Call Fortran routine, capture stat as return parameter
   call lsmr_free(fkeep, spral_lsmr_free)
 

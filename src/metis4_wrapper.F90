@@ -1,7 +1,7 @@
 ! COPYRIGHT (c) 2007-2013 Science & Technology Facilities Council
 ! Authors: Sue Thorne and Jonathan Hogg
 ! Origin: Heavily modified version of hsl_mc68
-! 
+!
 module spral_metis_wrapper
 
   use, intrinsic :: iso_c_binding
