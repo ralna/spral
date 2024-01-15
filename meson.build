@@ -1,6 +1,6 @@
 project(
   'SPRAL',
-  'c', 'cpp', 'fortran', 'cuda',
+  'c', 'cpp', 'fortran',
   version: '2023.11.15',
   license: 'BSD-3',
   meson_version: '>= 0.63.0',
@@ -14,9 +14,11 @@ project(
   ],
 )
 
+# Compilers
 cc = meson.get_compiler('c')
 cxx = meson.get_compiler('cpp')
 fc = meson.get_compiler('fortran')
+nvcc_available = add_languages('cuda', required: false)
 
 # Remove messages about deprecated Intel compilers
 if cc.get_id() == 'intel'
