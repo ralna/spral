@@ -61,7 +61,7 @@ Routines
 .. c:function:: void spral_scaling_auction_sym(int n, const int *ptr, const int *row, const double *val, double *scaling, int *match, const struct spral_scaling_auction_options *options, struct spral_scaling_auction_inform *inform)
 
    Find a matching-based symmetric scaling using the auction algorithm.
-   
+
    The scaled matrix is such that the entry of maximum absolute value in each
    row and column is (approximately) :math:`1.0`.
 
@@ -83,7 +83,7 @@ Routines
 .. c:function:: void spral_scaling_auction_unsym(int m, int n, const int *ptr, const int *row, const double *val, double *rscaling, double *cscaling, int *match, const struct spral_scaling_auction_options *options, struct spral_scaling_auction_inform *inform)
 
    Find a matching-based unsymmetric scaling using the auction algorithm.
-   
+
    The scaled matrix is such that the entry of maximum absolute value in each
    row and column is (approximately) :math:`1.0`.
 
@@ -123,22 +123,22 @@ Data-types
       Default is 0.
 
    .. c:member:: float eps_initial
-   
+
       Initial value of improvement parameter :math:`\epsilon`.
       Default is 0.01.
 
    .. c:member:: int max_iterations
-   
+
       Maximum number of iterations.
       Default is 30000.
 
    .. c:member:: int max_unchanged[3]
-   
+
       Together with `min_proportion[]`, specifies termination conditions.
       Default is `{10, 100, 100}`.
 
    .. c:member:: float min_proportion[3]
-   
+
       Together with `max_unchanged[]`, specifies termination conditions.
       Default is `{0.9, 0.0, 0.0}`.
 
@@ -147,24 +147,24 @@ Data-types
    Used to return information about the execution of the algorithm.
 
    .. c:member:: int flag
-   
+
       Gives the exit status of the algorithm (see table below)
 
    .. c:member:: int iterations
-   
+
       Number of iterations performed.
 
    .. c:member:: int matched
-   
+
       Number of rows and columns that have been matched.
 
    .. c:member:: int stat
-   
+
       Fortran stat parameter in the event of an allocation failure (set to 0
       otherwise).
 
    .. c:member:: int unmatchable
-   
+
       Number of columns designated as unmatchable
       (there is no way to match it that improves the quality of the matching).
 
@@ -195,19 +195,19 @@ The above code produces the following output::
 
    Initial matrix:
    Real symmetric indefinite matrix, dimension 5x5 with 8 entries.
-   0:   2.0000E+00   1.0000E+00                                       
+   0:   2.0000E+00   1.0000E+00
    1:   1.0000E+00   4.0000E+00   1.0000E+00                8.0000E+00
-   2:                1.0000E+00   3.0000E+00   2.0000E+00             
-   3:                             2.0000E+00                          
+   2:                1.0000E+00   3.0000E+00   2.0000E+00
+   3:                             2.0000E+00
    4:                8.0000E+00                             2.0000E+00
    Matching:          0         4         3         2         1
    Scaling:    7.07E-01  1.62E-01  2.78E-01  1.80E+00  7.72E-01
    Scaled matrix:
    Real symmetric indefinite matrix, dimension 5x5 with 8 entries.
-   0:   1.0000E+00   1.1443E-01                                       
+   0:   1.0000E+00   1.1443E-01
    1:   1.1443E-01   1.0476E-01   4.5008E-02                1.0000E+00
-   2:                4.5008E-02   2.3204E-01   1.0000E+00             
-   3:                             1.0000E+00                          
+   2:                4.5008E-02   2.3204E-01   1.0000E+00
+   3:                             1.0000E+00
    4:                1.0000E+00                             1.1932E+00
 
 .. _auction_algorithm_method:
@@ -330,7 +330,7 @@ Routines
 
    Find a matching-based symmetric scaling using the norm-equilibration
    algorithm.
-   
+
    The scaled matrix is such that the infinity norm of each row and column are
    equal to :math:`1.0`.
 
@@ -350,7 +350,7 @@ Routines
 
    Find a matching-based unsymmetric scaling using the norm-equilibration
    algorithm.
-   
+
    The scaled matrix is such that the infinity norm of each row and column are
    equal to :math:`1.0`.
 
@@ -387,12 +387,12 @@ Data-types
       Default is 0.
 
    .. c:member:: int max_iterations
-   
+
       Maximum number of iterations.
       Default is 10.
 
    .. c:member:: float tol
-   
+
       Convergence tolerance :math:`\tau`.
       Default is 1e-8.
 
@@ -401,7 +401,7 @@ Data-types
    Used to return information about the execution of the algorithm.
 
    .. c:member:: int flag
-      
+
       Gives the exit status of the algorithm (see table below).
 
    .. c:member:: int iterations
@@ -409,7 +409,7 @@ Data-types
       Number of iteration performed.
 
    .. c:member:: int stat
-      
+
       Holds the Fortran stat parameter in the event of an
       allocation failure (set to 0 otherwise).
 
@@ -435,18 +435,18 @@ The above code produces the following output::
 
    Initial matrix:
    Real symmetric indefinite matrix, dimension 5x5 with 8 entries.
-   0:   2.0000E+00   1.0000E+00                                       
+   0:   2.0000E+00   1.0000E+00
    1:   1.0000E+00   4.0000E+00   1.0000E+00                8.0000E+00
-   2:                1.0000E+00   3.0000E+00   2.0000E+00             
-   3:                             2.0000E+00                          
+   2:                1.0000E+00   3.0000E+00   2.0000E+00
+   3:                             2.0000E+00
    4:                8.0000E+00                             2.0000E+00
    Scaling:    7.07e-01   3.54e-01   5.77e-01   8.66e-01   3.54e-01
    Scaled matrix:
    Real symmetric indefinite matrix, dimension 5x5 with 8 entries.
-   0:   1.0000E+00   2.5000E-01                                       
+   0:   1.0000E+00   2.5000E-01
    1:   2.5000E-01   5.0000E-01   2.0412E-01                1.0000E+00
-   2:                2.0412E-01   1.0000E+00   9.9960E-01             
-   3:                             9.9960E-01                          
+   2:                2.0412E-01   1.0000E+00   9.9960E-01
+   3:                             9.9960E-01
    4:                1.0000E+00                             2.5000E-01
 
 .. _equilib_algorithm_method:
@@ -493,7 +493,7 @@ Routines
 .. c:function:: void spral_scaling_hungarian_sym(int n, const int *ptr, const int *row, const double *val, double *scaling, int *match, const struct spral_scaling_hungarian_options *options, struct spral_scaling_hungarian_inform *inform)
 
    Find a matching-based symmetric scaling using the Hungarian algorithm.
-   
+
    The scaled matrix is such that the entry of maximum absolute value in each
    row and column is :math:`1.0`.
 
@@ -515,7 +515,7 @@ Routines
 .. c:function:: void spral_scaling_hungarian_unsym(int m, int n, const int *ptr, const int *row, const double *val, double *rscaling, double *cscaling, int *match, const struct spral_scaling_hungarian_options *options, struct spral_scaling_hungarian_inform *inform)
 
    Find a matching-based symmetric scaling using the Hungarian algorithm.
-   
+
    The scaled matrix is such that the entry of maximum absolute value in each
    row and column is :math:`1.0`.
 
@@ -555,7 +555,7 @@ Data-types
       Default is 0.
 
    .. c:member:: bool scale_if_singular
-   
+
       Behaviour for structurally singular matrices. If `true`, a partial scaling
       corresponding to a maximum cardinality matching will be returned.
       If `false`, an identity scaling is returned with an error code.
@@ -572,15 +572,15 @@ Data-types
    Used to return information about the execution of the algorithm.
 
    .. c:member:: int flag
-   
+
       Exit status of the algorithm (see table below)
 
    .. c:member:: int matched
-   
+
       Number of rows and columns that have been matched.
 
    .. c:member:: int stat
-   
+
       Holds the Fortran stat parameter in the event of an allocation failure
       (set to 0 otherwise).
 
@@ -617,19 +617,19 @@ The above code produces the following output::
 
    Initial matrix:
    Real symmetric indefinite matrix, dimension 5x5 with 8 entries.
-   0:   2.0000E+00   1.0000E+00                                       
+   0:   2.0000E+00   1.0000E+00
    1:   1.0000E+00   4.0000E+00   1.0000E+00                8.0000E+00
-   2:                1.0000E+00   3.0000E+00   2.0000E+00             
-   3:                             2.0000E+00                          
+   2:                1.0000E+00   3.0000E+00   2.0000E+00
+   3:                             2.0000E+00
    4:                8.0000E+00                             2.0000E+00
    Matching:          0          4          3          2          1
    Scaling:    7.07e-01   3.54e-01   5.77e-01   8.66e-01   3.54e-01
    Scaled matrix:
    Real symmetric indefinite matrix, dimension 5x5 with 8 entries.
-   0:   1.0000E+00   2.5000E-01                                       
+   0:   1.0000E+00   2.5000E-01
    1:   2.5000E-01   5.0000E-01   2.0412E-01                1.0000E+00
-   2:                2.0412E-01   1.0000E+00   1.0000E+00             
-   3:                             1.0000E+00                          
+   2:                2.0412E-01   1.0000E+00   1.0000E+00
+   3:                             1.0000E+00
    4:                1.0000E+00                             2.5000E-01
 
 
@@ -670,7 +670,7 @@ To obtain a scaling we define scaling matrices :math:`D_r` and :math:`D_c` as
 .. math::
    d^r_i = e^{u_i},
 
-   d^c_i = e^{v_i}. 
+   d^c_i = e^{v_i}.
 
 If a symmetric scaling is required, we average these as
 

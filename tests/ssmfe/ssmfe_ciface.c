@@ -23,16 +23,16 @@ int test_ssmfe_z(int);
 void zdcopy( int n, double complex* x, double* y );
 void dzcopy( int n, double* y, double complex* x );
 void vector_operations_d
-  ( struct spral_ssmfe_rcid rci, 
+  ( struct spral_ssmfe_rcid rci,
     int n, int m, int kw, int *ind,
-    double (*W)[kw][m][n], 
+    double (*W)[kw][m][n],
     double (*rr)[3][2*m][2*m],
     double *U);
 
 void vector_operations_z
-  ( struct spral_ssmfe_rciz rci, 
+  ( struct spral_ssmfe_rciz rci,
     int n, int m, int kw, int *ind,
-    double complex (*W)[kw][m][n], 
+    double complex (*W)[kw][m][n],
     double complex (*rr)[3][2*m][2*m],
     double complex *U);
 
@@ -74,7 +74,7 @@ int test_core(void) {
   else
     fprintf(stdout, "ok\n");
   errors += err;
-  
+
   fprintf(stdout, "testing generalized_double...");
   err = test_core_d(1, 0);
   if ( err != 0 )
@@ -82,7 +82,7 @@ int test_core(void) {
   else
     fprintf(stdout, "ok\n");
   errors += err;
-  
+
   fprintf(stdout, "testing largest_double...");
   err = test_core_d(0, 1);
   if ( err != 0 )
@@ -90,7 +90,7 @@ int test_core(void) {
   else
     fprintf(stdout, "ok\n");
   errors += err;
-  
+
   fprintf(stdout, "testing standard_double_complex...");
   err = test_core_z(0, 0);
   if ( err != 0 )
@@ -98,7 +98,7 @@ int test_core(void) {
   else
     fprintf(stdout, "ok\n");
   errors += err;
-  
+
   fprintf(stdout, "testing generalized_double_complex...");
   err = test_core_z(1, 0);
   if ( err != 0 )
@@ -106,7 +106,7 @@ int test_core(void) {
   else
     fprintf(stdout, "ok\n");
   errors += err;
-  
+
   fprintf(stdout, "testing largest_double_complex...");
   err = test_core_z(0, 1);
   if ( err != 0 )
@@ -114,7 +114,7 @@ int test_core(void) {
   else
     fprintf(stdout, "ok\n");
   errors += err;
-  
+
   return errors;
 
 }
@@ -124,11 +124,11 @@ int test_core_d(int problem, int largest) {
    const int n     = ngrid*ngrid; /* problem size */
    const int nep   = 5;           /* eigenpairs wanted */
    const int m     = 3;           /* dimension of the iterated subspace */
-   
+
    const int ncon_x = 5;
    const double lambda_x[] = { /* expected eigenvalues */
-      4.4676695e-02, 
-      1.1119274e-01, 
+      4.4676695e-02,
+      1.1119274e-01,
       1.1119274e-01,
       1.7770878e-01,
       2.2040061e-01
@@ -187,8 +187,8 @@ int test_core_d(int problem, int largest) {
          break;
       case 2:
          if ( largest != 0 )
-            cblas_dcopy( 
-               n*rci.nx, &(*W)[rci.kx][rci.jx][0], 1, &(*W)[rci.ky][rci.jy][0], 1 
+            cblas_dcopy(
+               n*rci.nx, &(*W)[rci.kx][rci.jx][0], 1, &(*W)[rci.ky][rci.jy][0], 1
                );
          else
             apply_gauss_seidel_step (
@@ -196,8 +196,8 @@ int test_core_d(int problem, int largest) {
                );
          break;
       case 3:
-         cblas_dcopy( 
-            n*rci.nx, &(*W)[rci.kx][rci.jx][0], 1, &(*W)[rci.ky][rci.jy][0], 1 
+         cblas_dcopy(
+            n*rci.nx, &(*W)[rci.kx][rci.jx][0], 1, &(*W)[rci.ky][rci.jy][0], 1
             );
          break;
       case 4:
@@ -217,7 +217,7 @@ int test_core_d(int problem, int largest) {
          }
          ncon += rci.nx;
          if ( ncon >= nep || inform.iteration > 300 )
-            goto finished; 
+            goto finished;
          break;
       case 11:
       case 12:
@@ -226,7 +226,7 @@ int test_core_d(int problem, int largest) {
       case 15:
       case 16:
       case 17:
-        vector_operations_d( rci, n, m, 8, ind, W, rr, V ); 
+        vector_operations_d( rci, n, m, 8, ind, W, rr, V );
          break;
       case 21: // Fall through to 22
       case 22:
@@ -266,7 +266,7 @@ finished:
    if ( largest != 0 ) {
      for ( int i = 0; i < ncon && i < ncon_x; i++ )
         if ( fabs(lambda[i] - lambda_lx[i]) > 1e-6 ) errors++;
-   } 
+   }
    else {
      for ( int i = 0; i < ncon && i < ncon_x; i++ )
         if ( fabs(lambda[i] - lambda_x[i]) > 1e-6 ) errors++;
@@ -289,11 +289,11 @@ int test_core_z(int problem, int largest) {
    const int n     = ngrid*ngrid; /* problem size */
    const int nep   = 5;           /* eigenpairs wanted */
    const int m     = 3;           /* dimension of the iterated subspace */
-   
+
    const int ncon_x = 5;       /* expected number of converged eigenpairs */
    const double lambda_x[] = { /* expected eigenvalues */
-      4.4676695e-02, 
-      1.1119274e-01, 
+      4.4676695e-02,
+      1.1119274e-01,
       1.1119274e-01,
       1.7770878e-01,
       2.2040061e-01
@@ -309,7 +309,7 @@ int test_core_z(int problem, int largest) {
    const double complex ZERO = 0.0;
    const double complex ONE = 1.0;
    const double complex MINUS_ONE = -1.0;
-   
+
    int errors;
 
    int state = SPRAL_RANDOM_INITIAL_SEED; /* PRNG state */
@@ -329,7 +329,7 @@ int test_core_z(int problem, int largest) {
    struct spral_ssmfe_core_options options;/* options */
    void *keep;                             /* private data */
    struct spral_ssmfe_inform inform;       /* information */
-   
+
    /* Initialize options to default values */
    spral_ssmfe_core_default_options(&options);
 
@@ -357,8 +357,8 @@ int test_core_z(int problem, int largest) {
          break;
       case 2:
          if ( largest != 0 )
-            cblas_zcopy( 
-               n*rci.nx, &(*W)[rci.kx][rci.jx][0], 1, &(*W)[rci.ky][rci.jy][0], 1 
+            cblas_zcopy(
+               n*rci.nx, &(*W)[rci.kx][rci.jx][0], 1, &(*W)[rci.ky][rci.jy][0], 1
                );
          else
             apply_gauss_seidel_step_z (
@@ -366,8 +366,8 @@ int test_core_z(int problem, int largest) {
                );
          break;
       case 3:
-         cblas_zcopy( 
-            n*rci.nx, &(*W)[rci.kx][rci.jx][0], 1, &(*W)[rci.ky][rci.jy][0], 1 
+         cblas_zcopy(
+            n*rci.nx, &(*W)[rci.kx][rci.jx][0], 1, &(*W)[rci.ky][rci.jy][0], 1
             );
          break;
       case 4:
@@ -387,7 +387,7 @@ int test_core_z(int problem, int largest) {
          }
          ncon += rci.nx;
          if ( ncon >= nep || inform.iteration > 300 )
-            goto finished; 
+            goto finished;
          break;
       case 11:
       case 12:
@@ -396,7 +396,7 @@ int test_core_z(int problem, int largest) {
       case 15:
       case 16:
       case 17:
-        vector_operations_z( rci, n, m, 8, ind, W, rr, V ); 
+        vector_operations_z( rci, n, m, 8, ind, W, rr, V );
          break;
       case 21: // Fall through to 22
       case 22:
@@ -438,7 +438,7 @@ finished:
    if ( largest != 0 ) {
      for ( int i = 0; i < ncon && i < ncon_x; i++ )
         if ( fabs(lambda[i] - lambda_lx[i]) > 1e-6 ) errors++;
-   } 
+   }
    else {
      for ( int i = 0; i < ncon && i < ncon_x; i++ )
         if ( fabs(lambda[i] - lambda_x[i]) > 1e-6 ) errors++;
@@ -549,11 +549,11 @@ int test_expert_d(int problem) {
    const int ngrid = 20;          /* grid points along each side */
    const int n     = ngrid*ngrid; /* problem size */
    const int m     = 3;           /* dimension of the iterated subspace */
-   
+
    const int ncon_x = 6;
    const double lambda_x[] = {
-      4.4676695e-02, 
-      1.1119274e-01, 
+      4.4676695e-02,
+      1.1119274e-01,
       1.1119274e-01,
       1.7770878e-01,
       2.2040061e-01,
@@ -696,7 +696,7 @@ int test_expert_d(int problem) {
       case 15:
       case 16:
       case 17:
-        vector_operations_d( rci, n, m, 8, ind, W, rr, V ); 
+        vector_operations_d( rci, n, m, 8, ind, W, rr, V );
          break;
       case 21: // Fall through to 22
       case 22:
@@ -716,7 +716,7 @@ int test_expert_d(int problem) {
                  );
             else if ( problem == 4 )
                apply_laplacian(
-                  ngrid, ngrid, rci.nx, &(*W)[rci.kx][rci.jx][0], 
+                  ngrid, ngrid, rci.nx, &(*W)[rci.kx][rci.jx][0],
                   &(*W)[rci.ky][rci.jy][0]
                   );
          }
@@ -767,11 +767,11 @@ int test_expert_z(int problem) {
    const int ngrid = 20;          /* grid points along each side */
    const int n     = ngrid*ngrid; /* problem size */
    const int m     = 3;           /* dimension of the iterated subspace */
-   
+
    const int ncon_x = 6;
    const double lambda_x[] = {
-      4.4676695e-02, 
-      1.1119274e-01, 
+      4.4676695e-02,
+      1.1119274e-01,
       1.1119274e-01,
       1.7770878e-01,
       2.2040061e-01,
@@ -789,7 +789,7 @@ int test_expert_z(int problem) {
    const double complex ZERO = 0.0;
    const double complex ONE = 1.0;
    const double complex NONE = -1.0;
-   
+
    int errors;
    int nep = 5;
 
@@ -814,7 +814,7 @@ int test_expert_z(int problem) {
    struct spral_ssmfe_options options;     /* options */
    void *keep;                             /* private data */
    struct spral_ssmfe_inform inform;       /* information */
-   
+
    if ( problem > 1 ) {
      sigma = 1.0;
 //     set_laplacian_matrix_z(ngrid, ngrid, n, A);
@@ -923,7 +923,7 @@ int test_expert_z(int problem) {
       case 15:
       case 16:
       case 17:
-        vector_operations_z( rci, n, m, 8, ind, &(*W), &(*rr), V ); 
+        vector_operations_z( rci, n, m, 8, ind, &(*W), &(*rr), V );
          break;
       case 21: // Fall through to 22
       case 22:
@@ -943,7 +943,7 @@ int test_expert_z(int problem) {
                  );
             else if ( problem == 4 )
                apply_laplacian_z(
-                  ngrid, ngrid, rci.nx, &(*W)[rci.kx][rci.jx][0], 
+                  ngrid, ngrid, rci.nx, &(*W)[rci.kx][rci.jx][0],
                   &(*W)[rci.ky][rci.jy][0]
                   );
          }
@@ -1076,17 +1076,17 @@ int test_ssmfe(void) {
 
   return errors;
 }
-  
+
 int test_ssmfe_d(int problem) {
 
    const int m   = 20;     /* grid points along each side */
    const int n   = m*m;    /* problem size */
-   
+
    const int ncon_x = 6;
    const double sigma = 1.0;  /* shift */
    const double lambda_x[] = {
-      4.4676695e-02, 
-      1.1119274e-01, 
+      4.4676695e-02,
+      1.1119274e-01,
       1.1119274e-01,
       1.7770878e-01,
       2.2040061e-01,
@@ -1207,12 +1207,12 @@ int test_ssmfe_z(int problem) {
 
    const int m   = 20;     /* grid points along each side */
    const int n   = m*m;    /* problem size */
-   
+
    const int ncon_x = 6;
    const double sigma = 1.0;  /* shift */
    const double lambda_x[] = {
-      4.4676695e-02, 
-      1.1119274e-01, 
+      4.4676695e-02,
+      1.1119274e-01,
       1.1119274e-01,
       1.7770878e-01,
       2.2040061e-01,
@@ -1262,27 +1262,27 @@ int test_ssmfe_z(int problem) {
    while(true) { /* reverse communication loop */
       switch ( problem ) {
       case 0:
-         spral_ssmfe_standard_double_complex( 
+         spral_ssmfe_standard_double_complex(
             &rci, nep, 2*nep, lambda, n, &(*X)[0][0], n,
             &keep, &options, &inform );
          break;
       case 1:
-         spral_ssmfe_standard_double_complex( 
+         spral_ssmfe_standard_double_complex(
             &rci, nep, 2*nep, lambda, n, &(*X)[0][0], n,
             &keep, &options, &inform );
          break;
       case 2:
-         spral_ssmfe_standard_shift_double_complex( 
+         spral_ssmfe_standard_shift_double_complex(
             &rci, sigma, nep, 0, n, lambda,
             n, &(*X)[0][0], n, &keep, &options, &inform );
          break;
       case 3:
-         spral_ssmfe_generalized_shift_double_complex( 
+         spral_ssmfe_generalized_shift_double_complex(
             &rci, sigma, nep, 0, n, lambda,
             n, &(*X)[0][0], n, &keep, &options, &inform );
          break;
       case 4:
-         spral_ssmfe_buckling_double_complex( 
+         spral_ssmfe_buckling_double_complex(
             &rci, sigma, nep, 0, n, lambda,
             n, &(*X)[0][0], n, &keep, &options, &inform );
          break;
@@ -1351,9 +1351,9 @@ void dzcopy( int n, double* x, double complex* y ) {
 }
 
 void vector_operations_d
-  ( struct spral_ssmfe_rcid rci, 
+  ( struct spral_ssmfe_rcid rci,
     int n, int m, int kw, int *ind,
-    double (*W)[kw][m][n], 
+    double (*W)[kw][m][n],
     double (*rr)[3][2*m][2*m],
     double *U) {
 
@@ -1451,17 +1451,17 @@ void vector_operations_d
 }
 
 void vector_operations_z
-  ( struct spral_ssmfe_rciz rci, 
+  ( struct spral_ssmfe_rciz rci,
     int n, int m, int kw, int *ind,
-    double complex (*W)[kw][m][n], 
+    double complex (*W)[kw][m][n],
     double complex (*rr)[3][2*m][2*m],
     double complex *U) {
-    
+
    const double complex ZERO = 0.0;
    const double complex ONE = 1.0;
-   
+
    double complex z;
-   
+
     switch ( rci.job ) {
     case 11:
        if ( rci.i == 0 ) {

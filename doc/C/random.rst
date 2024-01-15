@@ -32,7 +32,7 @@ preprocessor macro is defined.
    Example of use:
 
    .. code-block:: C
-      
+
       int state = SPRAL_RANDOM_INITIAL_SEED;
 
 The user may change the seed at any time, for example to restore a previous

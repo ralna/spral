@@ -79,7 +79,7 @@ contains
     implicit none
     type(ssids_inform), intent(in) :: finform
     type(spral_ssids_inform), intent(out) :: cinform
-    
+
     cinform%flag                  = finform%flag
     cinform%matrix_dup            = finform%matrix_dup
     cinform%matrix_missing_diag   = finform%matrix_missing_diag
@@ -429,7 +429,7 @@ subroutine spral_ssids_factor(cposdef, cptr, crow, val, cscale, cakeep, cfkeep,&
   type(C_PTR), intent(inout) :: cfkeep
   type(spral_ssids_options), intent(in) :: coptions
   type(spral_ssids_inform), intent(out) :: cinform
-  
+
   logical :: fposdef
   integer(C_INT64_T), dimension(:), pointer :: fptr
   integer(C_INT64_T), dimension(:), allocatable, target :: fptr_alloc
@@ -687,7 +687,7 @@ end subroutine spral_ssids_solve
 integer(C_INT) function spral_ssids_free_akeep(cakeep) bind(C)
   use spral_ssids_ciface
   implicit none
-   
+
   type(C_PTR), intent(inout) :: cakeep
 
   type(ssids_akeep), pointer :: fakeep
@@ -707,7 +707,7 @@ end function spral_ssids_free_akeep
 integer(C_INT) function spral_ssids_free_fkeep(cfkeep) bind(C)
   use spral_ssids_ciface
   implicit none
-   
+
   type(C_PTR), intent(inout) :: cfkeep
 
   type(ssids_fkeep), pointer :: ffkeep
@@ -727,7 +727,7 @@ end function spral_ssids_free_fkeep
 integer(C_INT) function spral_ssids_free(cakeep, cfkeep) bind(C)
   use spral_ssids_ciface
   implicit none
-   
+
   type(C_PTR), intent(inout) :: cakeep
   type(C_PTR), intent(inout) :: cfkeep
 

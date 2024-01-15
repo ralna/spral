@@ -30,7 +30,7 @@ program ssmfe_expert_precond_example
   type(ssmfe_options    ) :: options  ! options
   type(ssmfe_expert_keep) :: keep     ! private data
   type(ssmfe_inform     ) :: inform   ! information
-  
+
   ! the gap between the last converged eigenvalue and the rest of the spectrum
   ! must be at least 0.1 times average gap between computed eigenvalues
   options%left_gap = -0.1
@@ -43,7 +43,7 @@ program ssmfe_expert_precond_example
       W(i,j,0) = random_real(state, positive=.true.)
     end do
   end do
-  
+
   ncon = 0
   rci%job = 0
   do ! reverse communication loop
@@ -124,14 +124,14 @@ program ssmfe_expert_precond_example
         s = -rr(rci%i + i, rci%j + i, rci%k)
         call daxpy&
           ( n, s, W(1, rci%jx + i, rci%kx), 1, W(1, rci%jy + i, rci%ky), 1 )
-      end do    
+      end do
     case ( 15 )
       if ( rci%nx > 0 .and. rci%ny > 0 ) &
         call dgemm &
           ( 'T', 'N', rci%nx, rci%ny, n, &
             rci%alpha, W(1, rci%jx, rci%kx), n, W(1, rci%jy, rci%ky), n, &
             rci%beta, rr(rci%i, rci%j, rci%k), 2*m )
-    case ( 16, 17 )    
+    case ( 16, 17 )
       if ( rci%ny < 1 ) cycle
       if ( rci%nx < 1 ) then
         if ( rci%job == 17 ) cycle
@@ -175,7 +175,7 @@ program ssmfe_expert_precond_example
             end do
           end do
         endif
-      end if        
+      end if
     case ( :-1 )
       exit
     end select

@@ -140,7 +140,7 @@ Subroutines
    changed to support type ``double complex``.
 
 .. c:function:: void spral_ssmfe_standard_shift_double(struct spral_ssmfe_rcid *rci, double sigma, int left, int right, int mep, double *lambda, int n, double *x, int ldx, void **keep, const struct spral_ssmfe_options *options, struct spral_ssmfe_inform *inform)
-   
+
    Computes eigenpairs of the standard eigenvalue problem
 
    .. math:: Ax = \lambda x
@@ -252,7 +252,7 @@ Subroutines
    ``x`` changed to support type ``double complex``.
 
 .. c:function:: void spral_ssmfe_generalized_shift_double(struct spral_ssmfe_rcid *rci, double sigma, int left, int right, int mep, double *lambda, int n, double *x, int ldx, void **keep, const struct spral_ssmfe_options *options, struct spral_ssmfe_inform *inform)
-   
+
    Computes eigenpairs of the generalized eigenvalue problem
 
    .. math:: Ax = \lambda B x
@@ -310,7 +310,7 @@ Subroutines
    ``x`` changed to support type ``double complex``.
 
 .. c:function:: void spral_ssmfe_buckling_double(struct spral_ssmfe_rcid *rci, double sigma, int left, int right, int mep, double *lambda, int n, double *x, int ldx, void **keep, const struct spral_ssmfe_options *options, struct spral_ssmfe_inform *inform)
-   
+
    Computes eigenpairs of the buckling problem
 
    .. math:: Bx = \lambda A x
@@ -375,7 +375,7 @@ Subroutines
    :param inform: Information type to be freed.
 
    .. warning::
-   
+
       As memory in ``keep`` and ``inform`` has been allocated using Fortran
       functions, this routine **must** be called to avoid a memory leak.
 
@@ -393,7 +393,7 @@ Derived types
    Real-valued reverse communication interface (RCI) type.
 
    .. c:member:: int job
-   
+
       Reverse-communication task to perform.
 
    .. c:member:: int nx
@@ -405,7 +405,7 @@ Derived types
       Vector to be transformed by RCI task. Allocated by routine.
 
    .. c:member:: double y[nx][n]
-   
+
       Vector to store result of RCI task. Allocated by routine.
 
 .. c:type:: struct spral_ssmfe_rciz
@@ -413,7 +413,7 @@ Derived types
    Complex-valued reverse communication interface (RCI) type.
 
    .. c:member:: int job
-   
+
       Reverse-communication task to perform.
 
    .. c:member:: int nx
@@ -425,7 +425,7 @@ Derived types
       Vector to be transformed by RCI task. Allocated by routine.
 
    .. c:member:: double complex y[nx][n]
-   
+
       Vector to store result of RCI task. Allocated by routine.
 
 .. c:type:: struct spral_ssmfe_options
@@ -433,33 +433,33 @@ Derived types
    Options that control the algorithm.
 
    .. c:member:: double abs_tol_lambda.
-   
+
       Absolute tolerance for estimated
       eigenvalue convergence test, see :ref:`method section <method>`.
       Negative values are treated as the default.
       Default is `0.0`.
 
    .. c:member:: double abs_tol_residual
-   
+
       Absolute tolerance for residual
       convergence test, see :ref:`method section <method>`.
       Negative values are treated as the default.
       Default is `0.0`.
 
    .. c:member:: int max_iterations
-   
+
       Maximum number of iterations.
       Default is `100`.
 
    .. c:member:: double rel_tol_lambda
-   
+
       Relative tolerance for estimated eigenvalue error convergence test, see
       :ref:`method section <method>`. Negative
       values are treated as the default.
       Default is `0.0`.
 
    .. c:member:: double rel_tol_residual
-   
+
       Relative tolerance for residual
       convergence test, see :ref:`method section <method>`. If both
       `abs_tol_residual` and `rel_tol_residual` are 0.0, then the
@@ -468,7 +468,7 @@ Derived types
       Default is `0.0`.
 
    .. c:member:: double tol_x
-   
+
       Tolerance for estimated eigenvector error
       convergence test, see :ref:`method section <method>`.
       If tol_x is set to `0.0`, the eigenvector error is not estimated. If
@@ -477,7 +477,7 @@ Derived types
       Default is `-1.0`.
 
    .. c:member:: int print_level
-   
+
       Amount of printing. Possible values are:
 
       +----+------------------------------------------------------------------+
@@ -507,26 +507,26 @@ Derived types
       Default is `0`.
 
    .. c:member:: int unit_error
-   
+
       Fortran unit number for error messages. Printing
       suppressed if negative.
       Default is `6` (stdout).
 
    .. c:member:: int unit_diagnostic
-   
+
       Fortran unit number for diagnostic messages.
       Printing suppressed if negative.
       Default is `6` (stdout).
 
 
    .. c:member:: int unit_warning
-   
+
       Fortran unit number for warning messages.
       Printing suppressed if negative.
       Default is `6` (stdout).
 
    .. c:member:: double left_gap
-   
+
       Minimal acceptable distance between last
       computed left eigenvalue and rest of spectrum.
       For :c:func:`spral_ssmfe_standard_double` and
@@ -541,25 +541,25 @@ Derived types
       Default is `0.0`.
 
    .. c:member:: int max_left
-   
+
       Number of eigenvalues to left of
       :math:`\sigma`, or a negative value if not known.
       Default is `-1`.
 
    .. c:member:: int max_right
-   
+
       Number of eigenvalues to right of
       :math:`\sigma`, or a negative value if not known.
       Default is `-1`.
 
    .. c:member:: double right_gap
-   
+
       As :c:member:`left_gap <spral_ssmfe_options.left_gap>`, but for right
       eigenvalues.
       Default is `0.0`.
 
    .. c:member:: int user_x
-   
+
       Number of eigenvectors for which an initial
       guess is supplied in `x(:,:)` on the first call. Such eigenvectors must
       be lineraly independent.
@@ -570,37 +570,37 @@ Derived types
    Information on progress of the algorithm.
 
    .. c:member:: int flag
-   
+
       Return status of algorithm. See table below.
 
    .. c:member:: int iteration
-      
+
       Number of iterations.
 
    .. c:member:: int left
-   
+
       Number of converged left eigenvalues.
 
    .. c:member:: double next_left
-   
+
       Upon completion, next left eigenvalue in spectrum
       (see :c:member:`options.left_gap <spral_ssmfe_options.left_gap>`).
 
    .. c:member:: double next_right
-   
+
       Upon completion, next right eigenvalue in spectrum
       (see :c:member:`options.right_gap <spral_ssmfe_options.right_gap>`).
 
    .. c:member:: int non_converged
-   
+
       Number of non-converged eigenpairs.
 
    .. c:member:: int right
-   
+
       Number of converged right eigenvalues.
 
    .. c:member:: int stat
-   
+
       Fortran allocation status in event of failure
 
    +--------------+-----------------------------------------------------------+

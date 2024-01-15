@@ -22,7 +22,7 @@ int num_neg_D(int n, int ld, double (*LDLT)[n][ld], int *ipiv) {
          double r = (*LDLT)[i+1][i+1];
          if( s*r - t*t < 0.0 ) {
             nneg++;
-         } else if ( s*r - t*t > 0.0 && s + r < 0.0 ){ 
+         } else if ( s*r - t*t > 0.0 && s + r < 0.0 ){
             nneg+=2;
          }
          i += 2;

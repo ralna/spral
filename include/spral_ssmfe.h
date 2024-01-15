@@ -103,7 +103,7 @@ struct spral_ssmfe_inform {
 };
 
 /************************************
- * SSMFE subroutines 
+ * SSMFE subroutines
  ************************************/
 
 /* Initialize options to defaults */
@@ -233,7 +233,7 @@ void spral_ssmfe_expert_buckling_double_complex(struct spral_ssmfe_rciz *rci,
 void spral_ssmfe_expert_free(void **keep, struct spral_ssmfe_inform *inform);
 
 /************************************
- * SSMFE_CORE subroutines 
+ * SSMFE_CORE subroutines
  ************************************/
 
 /* Initialize options to defaults */

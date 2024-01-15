@@ -37,7 +37,7 @@ struct spral_lsmr_inform {
 };
 
 /************************************
- * Subroutines 
+ * Subroutines
  ************************************/
 
 /* Initalise options structure to defaults */

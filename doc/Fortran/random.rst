@@ -66,7 +66,7 @@ Get/Set Random Seed
 -------------------
 
 .. f:function:: random_get_seed(state)
-   
+
    Return the current random seed stored in state.
 
    The stream of random numbers generated after this call can be reproduced

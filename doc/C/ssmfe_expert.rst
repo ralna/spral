@@ -234,7 +234,7 @@ reorthagonalise against these from time to time.
    +----------+---------------------------------------------------------------+
 
    The matrices are defined as follows:
-    
+
    * :math:`U` = ``W[rci.kx][rci.jx:rci.jx+rci.nx-1][:]``
    * :math:`V` = ``W[rci.ky][rci.jy:rci.jy+rci.ny-1][:]``
    * :math:`\bar{V}` = ``W[rci.ky][rci.jy:rci.jy+rci.nx-1][:]``
@@ -379,7 +379,7 @@ reorthagonalise against these from time to time.
    +----------+---------------------------------------------------------------+
 
    The matrices are defined as follows:
-    
+
    * :math:`U` = ``W[rci.kx][rci.jx:rci.jx+rci.nx-1][:]``
    * :math:`V` = ``W[rci.ky][rci.jy:rci.jy+rci.ny-1][:]``
    * :math:`\bar{V}` = ``W[rci.ky][rci.jy:rci.jy+rci.nx-1][:]``
@@ -540,7 +540,7 @@ reorthagonalise against these from time to time.
    +----------+---------------------------------------------------------------+
 
    The matrices are defined as follows:
-    
+
    * :math:`U` = ``W[rci.kx][rci.jx:rci.jx+rci.nx-1][:]``
    * :math:`V` = ``W[rci.ky][rci.jy:rci.jy+rci.ny-1][:]``
    * :math:`\bar{V}` = ``W[rci.ky][rci.jy:rci.jy+rci.nx-1][:]``
@@ -550,7 +550,7 @@ reorthagonalise against these from time to time.
    ``rci.beta`` respectively. We use the notation :math:`r_{ii}` to refer
    to the :math:`i`-th diagonal element of :math:`R`, being
    ``rr[rci.k][rci.j+i-1][rci.i+i-1]``.
-    
+
    :param rci: Reverse communication type.
       :c:member:`rci.job <spral_ssmfe_rcid.job>` must be
       set to `0` before the first call.
@@ -697,7 +697,7 @@ reorthagonalise against these from time to time.
    +----------+---------------------------------------------------------------+
 
    The matrices are defined as follows:
-    
+
    * :math:`U` = ``W[rci.kx][rci.jx:rci.jx+rci.nx-1][:]``
    * :math:`V` = ``W[rci.ky][rci.jy:rci.jy+rci.ny-1][:]``
    * :math:`\bar{V}` = ``W[rci.ky][rci.jy:rci.jy+rci.nx-1][:]``
@@ -856,7 +856,7 @@ reorthagonalise against these from time to time.
    +----------+---------------------------------------------------------------+
 
    The matrices are defined as follows:
-    
+
    * :math:`U` = ``W[rci.kx][rci.jx:rci.jx+rci.nx-1][:]``
    * :math:`V` = ``W[rci.ky][rci.jy:rci.jy+rci.ny-1][:]``
    * :math:`\bar{V}` = ``W[rci.ky][rci.jy:rci.jy+rci.nx-1][:]``
@@ -899,7 +899,7 @@ reorthagonalise against these from time to time.
    :param inform: Information type to be freed.
 
    .. warning::
-   
+
       As memory in ``keep`` and ``inform`` has been allocated using Fortran
       functions, this routine **must** be called to avoid a memory leak.
 
@@ -912,52 +912,52 @@ Derived types
    Real-valued reverse communication interface (RCI) type.
 
    .. c:member:: int job
-   
+
       Reverse-communication task to perform.
 
    .. c:member:: int jx
-      
+
       First column of :math:`U` in block.
 
    .. c:member:: int kx
-      
+
       Block to which :math:`U` belongs.
 
    .. c:member:: int nx
-   
+
       Number of columns in :math:`U` and :math:`\bar{V}`, and
       number of rows in :math:`R`.
 
    .. c:member:: int jy
-   
+
       First column of :math:`V` in block.
 
    .. c:member:: int ky
-   
+
       Block to which :math:`V` belongs.
 
    .. c:member:: int ny
-   
+
       Number of columns in :math:`V` and :math:`R`.
 
    .. c:member:: int i
-   
+
       First row of :math:`R` in ``rr(:,:,:)``.
 
    .. c:member:: int j
-      
+
       First column of :math:`R` in ``rr(:,:,:)``.
 
    .. c:member:: int k
-   
+
       Block of :math:`R` in ``rr(:,:,:)``.
 
    .. c:member:: double alpha
-   
+
       Coefficient for matrix multiplication.
 
    .. c:member:: double beta
-   
+
       Coefficient for matrix multiplication.
 
 .. c:type:: struct spral_ssmfe_rciz
@@ -965,52 +965,52 @@ Derived types
    Complex-valued reverse communication interface (RCI) type.
 
    .. c:member:: int job
-   
+
       Reverse-communication task to perform.
 
    .. c:member:: int jx
-      
+
       First column of :math:`U` in block.
 
    .. c:member:: int kx
-      
+
       Block to which :math:`U` belongs.
 
    .. c:member:: int nx
-   
+
       Number of columns in :math:`U` and :math:`\bar{V}`, and
       number of rows in :math:`R`.
 
    .. c:member:: int jy
-   
+
       First column of :math:`V` in block.
 
    .. c:member:: int ky
-   
+
       Block to which :math:`V` belongs.
 
    .. c:member:: int ny
-   
+
       Number of columns in :math:`V` and :math:`R`.
 
    .. c:member:: int i
-   
+
       First row of :math:`R` in ``rr(:,:,:)``.
 
    .. c:member:: int j
-      
+
       First column of :math:`R` in ``rr(:,:,:)``.
 
    .. c:member:: int k
-   
+
       Block of :math:`R` in ``rr(:,:,:)``.
 
    .. c:member:: double complex alpha
-   
+
       Coefficient for matrix multiplication.
 
    .. c:member:: double complex beta
-   
+
       Coefficient for matrix multiplication.
 
 .. c:type:: struct spral_ssmfe_options
@@ -1018,33 +1018,33 @@ Derived types
    Options that control the algorithm.
 
    .. c:member:: double abs_tol_lambda
-   
+
       Absolute tolerance for estimated
       eigenvalue convergence test, see :ref:`method section <method>`.
       Negative values are treated as the default.
       Default is `0.0`.
 
    .. c:member:: double abs_tol_residual
-   
+
       Absolute tolerance for residual
       convergence test, see :ref:`method section <method>`. Negative values are
       treated as the default.
       Default is `0.0`.
 
    .. c:member:: int max_iterations
-   
+
       Maximum number of iterations.
       Default is `100`.
 
    .. c:member:: double rel_tol_lambda
-   
+
       Relative tolerance for estimated
       eigenvalue error convergence test, see :ref:`method section <method>`.
       Negative values are treated as the default.
       Default is `0.0`.
 
    .. c:member:: double rel_tol_residual
-   
+
       Relative tolerance for residual
       convergence test, see :ref:`method section <method>`. If both
       `abs_tol_residual` and `rel_tol_residual` are 0.0, then the
@@ -1054,7 +1054,7 @@ Derived types
       Default is `0.0`.
 
    .. c:member:: double tol_x
-   
+
       Tolerance for estimated eigenvector error
       convergence test, see :ref:`method section <method>`.
       If tol_x is set to `0.0`, the eigenvector error is not estimated. If
@@ -1063,7 +1063,7 @@ Derived types
       Default is `-1.0`.
 
    .. c:member:: int print_level
-   
+
       Amount of printing. Possible values are:
 
       +----+------------------------------------------------------------------+
@@ -1093,27 +1093,27 @@ Derived types
       Default is `0`.
 
    .. c:member:: int unit_error
-   
+
       Fortran unit number for error messages. Printing
       suppressed if negative.
       Default is `6` (stdout).
 
    .. c:member:: int unit_diagnostic
-   
+
       Fortran unit number for diagnostic messages.
       Printing suppressed if negative.
       Default is `6` (stdout).
 
    .. c:member:: int unit_warning
-   
+
       Fortran unit number for warning messages.
       Printing suppressed if negative.
       Default is `6` (stdout).
 
    .. c:member:: int err_est
-   
+
       Error estimation scheme, one of:
-      
+
       +-------------+---------------------------------------------------------+
       | 1           | Residual error bounds: modified Davis-Kahan estimate for|
       |             | eigenvector error and Lehmann bounds for eigenvale error|
@@ -1125,19 +1125,19 @@ Derived types
       Default is `2`.
 
    .. c:member:: int extra_left
-   
+
       Number of extra approximate eigenvectors
       corresponding to leftmost eigenvalues used to enhance convergence.
       Default is `0`.
-      
+
    .. c:member:: int extra_right
-   
+
       Number of extra approximate eigenvectors
       corresponding to rightmost eigenvalues used to enhance convergence.
       Default is `0`.
 
    .. c:member:: double left_gap
-   
+
       Minimal acceptable distance between last
       computed left eigenvalue and rest of spectrum.
       For :c:func:`spral_ssmfe_expert_standard_double()` and
@@ -1152,19 +1152,19 @@ Derived types
       Default is `0`.
 
    .. c:member:: int max_left
-   
+
       Number of eigenvalues to left of
       :math:`\sigma`, or a negative value if not known.
       Default is `-1`.
 
    .. c:member:: int max_right
-   
+
       Number of eigenvalues to right of
       :math:`\sigma`, or a negative value if not known.
       Default is `-1`.
 
    .. c:member:: bool minAprod
-   
+
       If true, minimize number of
       multiplications with :math:`A` by requiring 2 additional blocks of memory
       for the workspace ``W[:][:][:]``. Must be true for calls to
@@ -1174,20 +1174,20 @@ Derived types
       Default is `true`.
 
    .. c:member:: bool minBprod
-   
+
       If true, minimize number of
       multiplications with :math:`B` by requiring 2 additional blocks of memory
       for the workspace ``W[:][:][:]``.
       Default is `true`.
 
    .. c:member:: double right_gap
-   
+
       As :c:member:`options.left_gap <spral_ssmfe_options.left_gap>`, but for
       right eigenvalues.
       Default is `0.0`.
 
    .. c:member:: int user_x
-   
+
       Number of eigenvectors for which an initial
       guess is supplied in `x[:][:]` on the first call. Such eigenvectors must
       be lineraly independent.
@@ -1199,9 +1199,9 @@ Derived types
    Information on progress of the algorithm.
 
    .. c:member:: int converged[mep]
-   
+
       Convergence status.
-   
+
       * If ``converged[j]>0``, the eigenpair `(lambda(j), X(j))` converged
         on iteration `converged[j]`.
       * If ``converged[j]=0``, the eigenpair `(lambda(j), X(j))` is still
@@ -1210,57 +1210,57 @@ Derived types
         at iteration `-converged[j]`.
 
       This component is allocated by the routine.
-   
+
    .. c:member:: double err_lambda[mep]:
-   
+
       Estimated eigenvalue errors for
       converged and stagnated eigenvalues.
       This component is allocated by the routine.
 
    .. c:member:: double err_x[mep]
-   
+
       Estimated eigenvector errors for
       converged and stagnated eigenvectors.
       This component is allocated by the routine.
 
    .. c:member:: int flag
-   
+
       Return status of algorithm. See table below.
 
    .. c:member:: int iteration
-   
+
       Number of iterations.
 
    .. c:member:: int left
-   
+
       Number of converged left eigenvalues.
 
    .. c:member:: double next_left
-   
+
       Upon completion, next left eigenvalue in spectrum
       (see `options.left_gap`).
 
    .. c:member:: double next_right
-   
+
       Upon completion, next right eigenvalue in spectrum
       (see `options.right_gap`).
 
    .. c:member:: double residual_norms[mep]
-   
+
       Euclidean norms of residuals
       for `(lambda[:], X[:])` on return with ``rci.job=5``.
       This component is allocated by the routine.
 
    .. c:member:: int non_converged
-   
+
       Number of non-converged eigenpairs.
 
    .. c:member:: int right
-   
+
       Number of converged right eigenvalues.
 
    .. c:member:: int stat
-   
+
       Fortran allocation status in event of failure.
 
    +--------------+-----------------------------------------------------------+

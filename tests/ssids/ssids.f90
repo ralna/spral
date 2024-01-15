@@ -18,7 +18,7 @@ program main
       hungarian_inform
    use spral_ssids
    implicit none
-   
+
    integer, parameter :: long = selected_int_kind(18)
 
 
@@ -911,8 +911,8 @@ subroutine test_warnings
    ne = a%ptr(a%n+1)-1
    a%ne = ne
    a%ptr(a%n+1) = a%ptr(a%n+1) + 1
-   a%row(ne+1) = a%n 
-   a%val(ne+1) = 10. 
+   a%row(ne+1) = a%n
+   a%val(ne+1) = 10.
    a%ne = ne + 1
    call gen_rhs(a, rhs, x1, x, res, 1)
    if (allocated(order)) deallocate(order)
@@ -932,9 +932,9 @@ subroutine test_warnings
    a%ne = ne
    a%ptr(a%n+1) = a%ptr(a%n+1) + 2
    a%row(ne+1) = a%n + 1
-   a%val(ne+1) = 10. 
-   a%row(ne+2) = a%n 
-   a%val(ne+2) = 10. 
+   a%val(ne+1) = 10.
+   a%row(ne+2) = a%n
+   a%val(ne+2) = 10.
    a%ne = ne + 2
    call gen_rhs(a, rhs, x1, x, res, 1)
    if (allocated(order)) deallocate(order)
@@ -1318,7 +1318,7 @@ subroutine test_special
    call ssids_analyse(check, a%n, a%ptr, a%row, akeep, options, info)
    call print_result(info%flag,SSIDS_SUCCESS)
    call ssids_free(akeep, cuda_error)
-   
+
    write(*,"(a)",advance="no") &
       " * Testing n>1e5, ne>3.0*n, order=1......"
    a%n = big_test_n
@@ -1546,7 +1546,7 @@ subroutine simple_sing_mat(a)
    !
    ! Create the simple singular sparse matrix:
    !
-   !  0.0  2.0 
+   !  0.0  2.0
    !  2.0  0.0  1.0
    !       1.0  0.0
    !
@@ -1928,7 +1928,7 @@ subroutine test_random
          posdef = .true.
          mt = SPRAL_MATRIX_REAL_SYM_PSDEF
       endif
-      
+
       ! Generate parameters
       a%n = random_integer(state, maxn)
       if (prblm < 21) a%n = prblm ! check very small problems
@@ -1973,7 +1973,7 @@ subroutine test_random
 
       ! Peform analyse
       n1 = random_integer(state, maxn)
-      
+
       if ( posdef ) then
          write(*, "(a, i3, a, i5, a, i7, a, i2, a)",advance="no") &
             " + no. ", prblm,  " n = ", a%n, " nza = ", nza, "..."
@@ -1986,7 +1986,7 @@ subroutine test_random
          ne = a%ptr(a%n+1) - 1
          if (allocated(a%col)) deallocate(a%col)
          allocate (a%col(ne))
-         do i = 1,a%n 
+         do i = 1,a%n
            do j = a%ptr(i),a%ptr(i+1)-1
               a%col(j) = i
            end do
@@ -2257,7 +2257,7 @@ subroutine test_random
            write (*,'(a)') ' Unexpected error from ssids_enquire_indef'
            call ssids_free(akeep, fkeep, cuda_error)
            errors = errors + 1
-           cycle 
+           cycle
          endif
 
          call ssids_alter(d,akeep,fkeep,options,info)
@@ -2265,7 +2265,7 @@ subroutine test_random
             write (*,'(a)') ' Unexpected error from ssids_alter'
             call ssids_free(akeep, fkeep, cuda_error)
             errors = errors + 1
-            cycle 
+            cycle
          endif
       else
          call ssids_enquire_posdef(akeep,fkeep,options,info,d1)
@@ -2274,7 +2274,7 @@ subroutine test_random
            write (*,'(a)') ' Unexpected error from ssids_enquire_posdef'
            call ssids_free(akeep, fkeep, cuda_error)
            errors = errors + 1
-           cycle 
+           cycle
          endif
       endif
 
@@ -2331,7 +2331,7 @@ subroutine test_big
    else
       call gen_random_indef(a, a%ne, state)
    endif
-   
+
    ! Peform analyse
    call ssids_analyse(.false., a%n, a%ptr, a%row, akeep, options, info)
    if(info%flag .ne. SSIDS_SUCCESS) then
@@ -2519,7 +2519,7 @@ subroutine test_random_scale
          ne = a%ptr(a%n+1) - 1
          if (allocated(a%col)) deallocate(a%col)
          allocate (a%col(ne))
-         do i = 1,a%n 
+         do i = 1,a%n
            do j = a%ptr(i),a%ptr(i+1)-1
               a%col(j) = i
            end do
@@ -2538,7 +2538,7 @@ subroutine test_random_scale
                order)
          else
             call ssids_analyse(check, a%n, a%ptr, a%row, akeep, options, info, &
-               order, val=a%val)  
+               order, val=a%val)
          endif
       endif
       num_flops = info%num_flops
@@ -2775,7 +2775,7 @@ end subroutine gen_random_indef_fred
 ! sparse matrix-vector multiplication y=a*x when only
 ! lower triangle held
 subroutine matvec_lower(a,x,y)
-   type(matrix_type), intent(in) :: a ! Holds the matrix 
+   type(matrix_type), intent(in) :: a ! Holds the matrix
    real(wp), intent(in) :: x(*) ! input vector
    real(wp), intent(out) :: y(*) ! output vector y=a*x
 
@@ -2793,12 +2793,12 @@ subroutine matvec_lower(a,x,y)
          k = a%row(j)
          sum = sum + a%val(j)*x(k)
          if (k.eq.i) cycle
-         y(k) = y(k) + a%val(j)*x(i) 
+         y(k) = y(k) + a%val(j)*x(i)
       end do
       y(i) = y(i) + sum
       jstrt = jstop
    end do
-      
+
 end subroutine matvec_lower
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

@@ -66,7 +66,7 @@ module spral_ssmfe_core_ciface
      type(C_PTR) :: err_X
      character(C_CHAR) :: unused(80)
   end type spral_ssmfe_inform
-   
+
   type ssmfe_core_ciface_keep
      type(ssmfe_core_keep) :: keep
      type(ssmfe_rcid) :: rcid

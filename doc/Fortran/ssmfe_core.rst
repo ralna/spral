@@ -267,7 +267,7 @@ these eigenpairs and they must be moved by the user to separate storage
    +----------+---------------------------------------------------------------+
 
    The matrices are defined as follows:
-    
+
    * :math:`U` = ``W(:, rci%jx:rci%jx+rci%nx-1, rci%kx)``
    * :math:`V` = ``W(:, rci%jy:rci%jy+rci%ny-1, rci%ky)``
    * :math:`\bar{V}` = ``W(:, rci%jy:rci%jy+rci%nx-1, rci%ky)``
@@ -357,7 +357,7 @@ Derived types
    Options that control the algorithm.
 
    :f integer err_est [default=2]: error estimation scheme, one of:
-      
+
       +-------------+---------------------------------------------------------+
       | 1           | Residual error bounds: modified Davis-Kahan estimate for|
       |             | eigenvector error and Lehmann bounds for eigenvale error|
@@ -400,14 +400,14 @@ Derived types
    Information on progress of the algorithm.
 
    :f integer converged (mep) [allocatable]: Convergence status.
-   
+
       * If ``converged(j)>0``, the eigenpair `(lambda(j), X(j))` converged
         on iteration `converged(j)`.
       * If ``converged(j)=0``, the eigenpair `(lambda(j), X(j))` is still
         converging.
       * If ``converged(j)<0``, the eigenpair `(lambda(j), X(j))` stagnated
         at iteration `converged(j)`.
-   
+
    :f real err_lambda (mep) [allocatable]: estimated eigenvalue errors for
       converged and stagnated eigenvalues.
    :f real err_x (mep) [allocatable]: estimated eigenvector errors for

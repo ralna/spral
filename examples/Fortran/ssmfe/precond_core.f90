@@ -53,7 +53,7 @@ program ssmfe_core_precond_example
           W(1 : n, rci%jy : rci%jy + rci%nx - 1, rci%ky ) )
       call dscal( n*rci%nx, -1.0D0, W(1, rci%jy, rci%ky), 1 )
     case ( 2 )
-      call dcopy( n*rci%nx, W(1, rci%jx, rci%kx), 1, W(1, rci%jy, rci%ky), 1 ) 
+      call dcopy( n*rci%nx, W(1, rci%jx, rci%kx), 1, W(1, rci%jy, rci%ky), 1 )
 !      call apply_gauss_seidel_step &
 !        ( l, l, rci%nx, W(1 : n, rci%jx : rci%jx + rci%nx - 1, rci%kx), &
 !          W(1 : n, rci%jy : rci%jy + rci%nx - 1, rci%ky ) )
@@ -136,14 +136,14 @@ program ssmfe_core_precond_example
         s = -rr(rci%i + i, rci%j + i, rci%k)
         call daxpy&
           ( n, s, W(1, rci%jx + i, rci%kx), 1, W(1, rci%jy + i, rci%ky), 1 )
-      end do    
+      end do
     case ( 15 )
       if ( rci%nx > 0 .and. rci%ny > 0 ) &
         call dgemm &
           ( 'T', 'N', rci%nx, rci%ny, n, &
             rci%alpha, W(1, rci%jx, rci%kx), n, W(1, rci%jy, rci%ky), n, &
             rci%beta, rr(rci%i, rci%j, rci%k), 2*m )
-    case ( 16, 17 )    
+    case ( 16, 17 )
       if ( rci%ny < 1 ) cycle
       if ( rci%nx < 1 ) then
         if ( rci%job == 17 ) cycle

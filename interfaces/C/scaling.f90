@@ -49,7 +49,7 @@ module spral_scaling_ciface
      integer(C_INT) :: matched
      character(C_CHAR) :: unused(80)
   end type spral_scaling_hungarian_inform
- 
+
 contains
    ! Auction-related data types
   subroutine copy_auction_options_in(coptions, foptions, cindexed)
@@ -634,7 +634,7 @@ subroutine spral_scaling_equilib_unsym(m, n, ptr, row, val, rscaling, &
      call equilib_scale_unsym(m, n, ptr, row, val, rscaling, cscaling, &
           foptions, finform)
   end if
-   
+
   ! Copy info out
   call copy_equilib_inform_out(finform, cinform)
 end subroutine spral_scaling_equilib_unsym

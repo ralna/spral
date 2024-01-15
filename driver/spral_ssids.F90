@@ -43,9 +43,9 @@ program run_prob
   integer, parameter :: nslv = 1
   ! integer, parameter :: nslv = 10
   ! integer, parameter :: nslv = 100
-   
+
   integer :: nrhs
-   
+
   logical :: force_psdef, pos_def, time_scaling, flat_topology
 
   type(numa_region), dimension(:), allocatable :: topology
@@ -54,7 +54,7 @@ program run_prob
   integer(C_INT) :: cnt
 
   integer :: ngpus
-  
+
   call proc_args(filename, options, force_psdef, pos_def, nrhs, time_scaling, &
        flat_topology, ngpus)
   if (nrhs .lt. 1) stop
@@ -92,17 +92,17 @@ program run_prob
      print *, "Number of CUDA devices: ", cnt
      ngpus = min(ngpus, cnt)
   end if
-  
+
   if (flat_topology) then
      allocate(topology(1))
      topology(1)%nproc = 1
 !$   topology(1)%nproc = min(omp_get_max_threads(),omp_get_thread_limit())
      print *, "Forcing topology to ", topology(1)%nproc
-     print *, "Using", ngpus, "GPUs"  
+     print *, "Using", ngpus, "GPUs"
      if (ngpus .gt. 0) then
         allocate(topology(1)%gpus(ngpus))
         do i=1,ngpus
-           topology(1)%gpus(i) = i-1 
+           topology(1)%gpus(i) = i-1
         end do
      else
         allocate(topology(1)%gpus(0))
@@ -240,7 +240,7 @@ contains
     filename = "matrix.rb"
     seen_fname = .false.
     ngpus = 0
-    
+
     ! Process args
     narg = command_argument_count()
     argnum = 1
@@ -281,7 +281,7 @@ contains
           call get_command_argument(argnum, argval)
           argnum = argnum + 1
           read (argval, *) nrhs
-          print *, 'solving for', nrhs, 'right-hand sides'         
+          print *, 'solving for', nrhs, 'right-hand sides'
        case("--nemin")
           call get_command_argument(argnum, argval)
           argnum = argnum + 1
@@ -497,7 +497,7 @@ contains
        row_norm(row(i)) = row_norm(row(i)) + abs(val(i))
     end do
 
-    norm = maxval(row_norm) 
+    norm = maxval(row_norm)
   end subroutine matrix_inf_norm
 
   ! subroutine perm_mat(matrix, perm)

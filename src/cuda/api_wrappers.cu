@@ -24,10 +24,10 @@ extern "C" {
          enum cudaMemcpyKind kind, cudaStream_t *stream) {
       return cudaMemcpyAsync(dst, src, count, kind, *stream);
    }
-   cudaError_t spral_cudaMemcpy2DAsync(void *dst, size_t dpitch, 
+   cudaError_t spral_cudaMemcpy2DAsync(void *dst, size_t dpitch,
          const void *src, size_t spitch, size_t width, size_t height,
          enum cudaMemcpyKind kind, cudaStream_t *stream) {
-      return cudaMemcpy2DAsync(dst, dpitch, src, spitch, width, height, kind, 
+      return cudaMemcpy2DAsync(dst, dpitch, src, spitch, width, height, kind,
          *stream);
    }
    cudaError_t spral_cudaMemsetAsync(void *devPtr, int value, size_t count,
@@ -79,15 +79,15 @@ extern "C" {
       double *const devPtrC, const int *const ldc)
   {
       cublasOperation_t tA, tB;
-      if (toupper(*transa) == 'N') 
+      if (toupper(*transa) == 'N')
         tA = CUBLAS_OP_N;
       else
         tA = CUBLAS_OP_T;
-      if (toupper(*transb) == 'N') 
+      if (toupper(*transb) == 'N')
         tB = CUBLAS_OP_N;
       else
          tB = CUBLAS_OP_T;
-      return cublasDgemm(*handle, tA, tB, *m, *n, *k, alpha, devPtrA, *lda, 
+      return cublasDgemm(*handle, tA, tB, *m, *n, *k, alpha, devPtrA, *lda,
          devPtrB, *ldb, beta, devPtrC, *ldc);
    }
    cublasStatus_t spral_cublasSetStream(cublasHandle_t *handle,

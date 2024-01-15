@@ -22,7 +22,7 @@ void apply_laplacian(
 }
 
 void apply_laplacian_z(
-      int mx, int my, int nx, 
+      int mx, int my, int nx,
       const double complex *x_ptr, double complex *Ax_ptr
       ) {
    /* Use "variable-modified types" to simplify matrix indexing */
@@ -117,7 +117,7 @@ void apply_gauss_seidel_step(
 }
 
 void apply_gauss_seidel_step_z(
-      int mx, int my, int nx, 
+      int mx, int my, int nx,
       const double complex *x_ptr, double complex *Tx_ptr
       ) {
    /* Use "variable-modified types" to simplify matrix indexing */

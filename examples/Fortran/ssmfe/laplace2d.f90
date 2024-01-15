@@ -15,13 +15,13 @@ module laplace2d_double
 contains
 
   subroutine apply_laplacian_double( mx, my, nx, x, Ax)
-  
+
     implicit none
-    
+
     integer, intent(in) :: mx, my, nx
     double precision, intent(in) :: x(mx*my, nx)
     double precision, intent(out) :: Ax(mx*my, nx)
-    
+
     call apply_lap_double( mx, my, nx, x, Ax)
 
   end subroutine apply_laplacian_double
@@ -41,14 +41,14 @@ contains
       do i = 1, mx
         do j = 1, my
           z = 4*x(i, j, k)
-          if ( i > 1 ) z = z - x(i - 1, j, k) 
-          if ( j > 1 ) z = z - x(i, j - 1, k) 
-          if ( i < mx ) z = z - x(i + 1, j, k) 
-          if ( j < my ) z = z - x(i, j + 1, k) 
+          if ( i > 1 ) z = z - x(i - 1, j, k)
+          if ( j > 1 ) z = z - x(i, j - 1, k)
+          if ( i < mx ) z = z - x(i + 1, j, k)
+          if ( j < my ) z = z - x(i, j + 1, k)
           Ax(i, j, k) = z
-        end do    
-      end do    
-    end do    
+        end do
+      end do
+    end do
 
   end subroutine apply_lap_double
 
@@ -99,24 +99,24 @@ contains
       do i = 1, mx ! forward update
         do j = 1, my
           z = 0
-          if ( i > 1 ) z = z + Tx(i - 1, j, k) 
-          if ( j > 1 ) z = z + Tx(i, j - 1, k) 
-          if ( i < mx ) z = z + Tx(i + 1, j, k) 
-          if ( j < my ) z = z + Tx(i, j + 1, k) 
+          if ( i > 1 ) z = z + Tx(i - 1, j, k)
+          if ( j > 1 ) z = z + Tx(i, j - 1, k)
+          if ( i < mx ) z = z + Tx(i + 1, j, k)
+          if ( j < my ) z = z + Tx(i, j + 1, k)
           Tx(i, j, k) = (Tx(i, j, k) + z/4)/4
         end do
-      end do    
+      end do
       do i = mx, 1, -1 ! backward update
         do j = my, 1, -1
           z = 0
-          if ( i > 1 ) z = z + Tx(i - 1, j, k) 
-          if ( j > 1 ) z = z + Tx(i, j - 1, k) 
-          if ( i < mx ) z = z + Tx(i + 1, j, k) 
-          if ( j < my ) z = z + Tx(i, j + 1, k) 
+          if ( i > 1 ) z = z + Tx(i - 1, j, k)
+          if ( j > 1 ) z = z + Tx(i, j - 1, k)
+          if ( i < mx ) z = z + Tx(i + 1, j, k)
+          if ( j < my ) z = z + Tx(i, j + 1, k)
           Tx(i, j, k) = (Tx(i, j, k) + z/4)/4
         end do
-      end do    
-    end do    
+      end do
+    end do
   end subroutine apply_gs_double
 
 end module laplace2d_double

@@ -126,7 +126,7 @@ Subroutines
       routine.
 
 .. f:subroutine:: ssmfe_standard_shift(rci,sigma,left,right,mep,lambda,n,x,ldx,keep,options,inform)
-   
+
    Computes eigenpairs of the standard eigenvalue problem
 
    .. math:: Ax = \lambda x
@@ -226,7 +226,7 @@ Subroutines
       routine.
 
 .. f:subroutine:: ssmfe_generalized_shift(rci,sigma,left,right,mep,lambda,n,x,ldx,keep,options,inform)
-   
+
    Computes eigenpairs of the generalized eigenvalue problem
 
    .. math:: Ax = \lambda B x
@@ -278,7 +278,7 @@ Subroutines
       routine.
 
 .. f:subroutine:: ssmfe_buckling(rci,sigma,left,right,mep,lambda,n,x,ldx,keep,options,inform)
-   
+
    Computes eigenpairs of the buckling problem
 
    .. math:: Bx = \lambda A x

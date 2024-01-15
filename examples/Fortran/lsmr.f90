@@ -2,10 +2,10 @@
 program spral_lsmr_example
     use  spral_lsmr
     implicit none
-  
+
     integer, parameter :: wp = kind( 1.0d+0 )
 
-    type ( lsmr_keep )    :: keep 
+    type ( lsmr_keep )    :: keep
     type ( lsmr_options ) :: options
     type ( lsmr_inform )  :: inform
 
@@ -74,7 +74,7 @@ program spral_lsmr_example
 
       integer:: i,j,k
       real(wp) :: temp
-    
+
          do j = 1,n
             temp = v(j)
             do k = ptr(j),ptr(j+1)-1
@@ -97,7 +97,7 @@ program spral_lsmr_example
 
       integer:: i,j,k
       real(wp) :: sum
-      
+
          do j = 1,n
             sum = 0.0_wp
             do k = ptr(j),ptr(j+1)-1
