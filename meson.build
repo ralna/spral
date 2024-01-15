@@ -18,7 +18,7 @@ project(
 cc = meson.get_compiler('c')
 cxx = meson.get_compiler('cpp')
 fc = meson.get_compiler('fortran')
-nvcc_available = add_languages('cuda', required: false)
+nvcc_available = add_languages('cuda', required: false, native: false)
 
 # Remove messages about deprecated Intel compilers
 if cc.get_id() == 'intel'
