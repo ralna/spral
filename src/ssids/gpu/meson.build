@@ -1,6 +1,6 @@
 subdir('kernels')
 
-if build_gpu and libcuda.found()
+if build_gpu and nvcc_available and libcuda.found()
   libspral_src += files('alloc.f90',
                         'cpu_solve.f90',
                         'datatypes.f90',
