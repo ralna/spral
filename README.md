@@ -54,12 +54,12 @@ make
 make install
 ```
 
-## Usage at a Glance
-When using SSIDS, ensure the following environment variables are set:
+When using SSIDS please ensure the following environment variables are set:
 ```bash
 export OMP_CANCELLATION=TRUE
 export OMP_PROC_BIND=TRUE
 ```
+failure to do so will result in SSIDS failing with `Error flag = -53`.
 
 ## Generating a shared library
 
@@ -98,4 +98,4 @@ In BibTeX, the citation is:
 
 If no paper is listed, a citation of the SPRAL GitHub website should be used, for example:
 
-> SPRAL: an open-source library for sparse linear algebra, Version 2023-09-07, https://github.com/ralna/spral, September 2023.
+> SPRAL: an open-source library for sparse linear algebra, Version 2023-11-15, https://github.com/ralna/spral, November 2023.
