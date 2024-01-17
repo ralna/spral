@@ -54,7 +54,7 @@ for (platform, libdir, ext) in platforms
 
       # Copy the shared library of each dependency
       for file in readdir("products/$platform/deps")
-        any(endswith.(file, [ext, ".a"])) && cp("products/$platform/deps/$file", "products/$platform/$libdir/$file")
+        cp("products/$platform/deps/$file", "products/$platform/$libdir/$file")
       end
 
       # Remove the folder used to unzip the tarball of the dependencies
