@@ -1,6 +1,7 @@
 # Version
 haskey(ENV, "SPRAL_RELEASE") || error("The environment variable SPRAL_RELEASE is not defined.")
 version = VersionNumber(ENV["SPRAL_RELEASE"])
+version2 = ENV["SPRAL_RELEASE"]
 package = "SPRAL"
 
 platforms = [
@@ -62,21 +63,21 @@ for (platform, libdir, ext) in platforms
       rm("products/$platform/deps.tar.gz", recursive=true)
 
       # Create the archives *_binaries
-      isfile("$(package)_binaries.v$version.$platform.tar.gz") && rm("$(package)_binaries.v$version.$platform.tar.gz")
-      isfile("$(package)_binaries.v$version.$platform.zip") && rm("$(package)_binaries.v$version.$platform.zip")
+      isfile("$(package)_binaries.$version2.$platform.tar.gz") && rm("$(package)_binaries.$version2.$platform.tar.gz")
+      isfile("$(package)_binaries.$version2.$platform.zip") && rm("$(package)_binaries.$version2.$platform.zip")
       cd("products/$platform")
 
       # Create a folder with the version number of the package
-      mkdir("$(package)_binaries.$version")
+      mkdir("$(package)_binaries.$version2")
       for folder in ("include", "share", "modules", "lib", "bin", "examples", "tests")
-        cp(folder, "$(package)_binaries.$version/$folder")
+        cp(folder, "$(package)_binaries.$version2/$folder")
       end
 
-      cd("$(package)_binaries.$version")
+      cd("$(package)_binaries.$version2")
       if ext == "dll"
-        run(`zip -r --symlinks ../../../$(package)_binaries.v$version.$platform.zip include share modules lib bin examples tests`)
+        run(`zip -r --symlinks ../../../$(package)_binaries.$version2.$platform.zip include share modules lib bin examples tests`)
       else
-        run(`tar -czf ../../../$(package)_binaries.v$version.$platform.tar.gz include share modules lib bin examples tests`)
+        run(`tar -czf ../../../$(package)_binaries.$version2.$platform.tar.gz include share modules lib bin examples tests`)
       end
       cd("../../..")
 
