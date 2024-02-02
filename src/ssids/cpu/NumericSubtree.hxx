@@ -21,13 +21,13 @@ namespace spral { namespace ssids { namespace cpu {
  *
  * \tparam posdef true for Cholesky factorization, false for indefinite LDL^T
  * \tparam T underlying numerical type e.g. double
- * \tparam PAGE_SIZE initial size to be used for thread Workspace
+ * \tparam SSIDS_PAGE_SIZE initial size to be used for thread Workspace
  * \tparam FactorAllocator allocator to be used for factor storage. It must
  *         zero memory upon allocation (eg through calloc or memset).
  * */
 template <bool posdef, //< true for Cholesky factoriztion, false for indefinte
           typename T,
-          size_t PAGE_SIZE,
+          size_t SSIDS_PAGE_SIZE,
           typename FactorAllocator
           >
 class NumericSubtree {
@@ -78,7 +78,7 @@ public:
       std::vector<Workspace> work;
       work.reserve(num_threads);
       for(int i=0; i<num_threads; ++i)
-         work.emplace_back(PAGE_SIZE);
+         work.emplace_back(SSIDS_PAGE_SIZE);
 
       // initialise stats already so we can safely early-return in case of
       // failure if not compiled with OpenMP (instead of omp cancel)

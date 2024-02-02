@@ -319,9 +319,9 @@ int ldlt_test(T u, T small, bool delays, bool singular, bool dblk_singular, int 
    // First m x n matrix
    CopyBackup<T> backup(m, n, outer_block_size);
    std::vector<Workspace> work;
-   const int PAGE_SIZE = 8*1024*1024; // 8 MB
+   const int SSIDS_PAGE_SIZE = 8*1024*1024; // 8 MB
    for(int i=0; i<omp_get_num_threads(); ++i)
-      work.emplace_back(PAGE_SIZE);
+      work.emplace_back(SSIDS_PAGE_SIZE);
    int const use_tasks = true;
    int q1 = LDLT
          <T, INNER_BLOCK_SIZE, CopyBackup<T>, use_tasks, debug>

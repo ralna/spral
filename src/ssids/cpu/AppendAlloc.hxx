@@ -65,12 +65,12 @@ private:
  * Deallocation is not supported.
  */
 class Pool {
-   const size_t PAGE_SIZE = 0; // 0MB
+   const size_t SSIDS_PAGE_SIZE = 0; // 0MB
    // Changed to 0MB to allow pages of no minimum size for performance
    // see https://github.com/ralna/spral/issues/119 for more details
 public:
    Pool(size_t initial_size)
-   : top_page_(new Page(std::max(PAGE_SIZE, initial_size)))
+   : top_page_(new Page(std::max(SSIDS_PAGE_SIZE, initial_size)))
    {}
    Pool(const Pool&) =delete; // Not copyable
    Pool& operator=(const Pool&) =delete; // Not copyable
@@ -88,7 +88,7 @@ public:
       {
          ptr = top_page_->allocate(sz);
          if(!ptr) { // Insufficient space on current top page, make a new one
-            top_page_ = new Page(std::max(PAGE_SIZE, sz), top_page_);
+            top_page_ = new Page(std::max(SSIDS_PAGE_SIZE, sz), top_page_);
             ptr = top_page_->allocate(sz);
          }
       }
