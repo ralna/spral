@@ -19,9 +19,9 @@ using namespace spral::ssids::cpu;
 namespace {
 
 typedef double T;
-const int PAGE_SIZE = 8*1024*1024; // 8MB
-typedef NumericSubtree<true, T, PAGE_SIZE, AppendAlloc<T>> NumericSubtreePosdef;
-typedef NumericSubtree<false, T, PAGE_SIZE, AppendAlloc<T>> NumericSubtreeIndef;
+const int SSIDS_PAGE_SIZE = 8*1024*1024; // 8MB
+typedef NumericSubtree<true, T, SSIDS_PAGE_SIZE, AppendAlloc<T>> NumericSubtreePosdef;
+typedef NumericSubtree<false, T, SSIDS_PAGE_SIZE, AppendAlloc<T>> NumericSubtreeIndef;
 
 } /* end of anon namespace */
 //////////////////////////////////////////////////////////////////////////
