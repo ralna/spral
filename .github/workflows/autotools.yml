@@ -67,21 +67,21 @@ jobs:
 
       - name: Install GNU C and C++ compilers
         if: matrix.compiler == 'gnu'
-        uses: awvwgk/setup-fortran@main
+        uses: fortran-lang/setup-fortran@main
         with:
           compiler: gcc
           version: ${{matrix.compiler_version}}
 
       - name: Install classic Intel C and C++ compilers
         if: matrix.compiler == 'intel-classic'
-        uses: awvwgk/setup-fortran@main
+        uses: fortran-lang/setup-fortran@main
         with:
           compiler: intel-classic
           version: ${{matrix.compiler_version}}
 
       - name: Install nextgen Intel C and C++ compilers
         if: matrix.compiler == 'intel-llvm'
-        uses: awvwgk/setup-fortran@main
+        uses: fortran-lang/setup-fortran@main
         with:
           compiler: intel
           version: ${{matrix.compiler_version}}
