@@ -118,8 +118,7 @@ jobs:
           if [[ "${{matrix.os}}" == "macos-13" ]] && [[ "${{matrix.compiler}}" == "gnu" ]]; then
             INC_BLAS="-I$(brew --prefix openblas)/include"
             LIB_BLAS="-L$(brew --prefix openblas)/lib -lopenblas"
-            LD_CLASSIC=""
-            # LD_CLASSIC="-Wl,-ld_classic"
+            LD_CLASSIC="-Wl,-ld_classic"
           fi
           LIB_METIS="-lmetis"
           if [[ "${{matrix.os}}" == "macos-13" ]]; then
