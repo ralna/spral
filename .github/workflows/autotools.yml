@@ -16,7 +16,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        compiler_version: ['12']
+        compiler_version: ['13']
         include:
           - compiler: gnu
             cc: gcc
