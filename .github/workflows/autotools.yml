@@ -118,6 +118,7 @@ jobs:
           if [[ "${{matrix.os}}" == "macos-latest" ]] && [[ "${{matrix.compiler}}" == "gnu" ]]; then
             INC_BLAS="-I$(brew --prefix openblas)/include"
             LIB_BLAS="-L$(brew --prefix openblas)/lib -lopenblas"
+            LD_CLASSIC="-Wl,-ld_classic"
           fi
           LIB_METIS="-lmetis"
           if [[ "${{matrix.os}}" == "macos-latest" ]]; then
@@ -129,8 +130,8 @@ jobs:
             FC=${{matrix.fc}} \
             LIBS=${LIB_CPP} \
             CFLAGS="-g -O3 -Wall $OPENMP $INTEL ${INC_BLAS}" \
-            CXXFLAGS="-g -O3 -std=c++17 -Wall $OPENMP $INTEL ${INC_BLAS}" \
-            FCFLAGS="-g -O3 $WARNING $OPENMP $PENDANTIC" \
+            CXXFLAGS="-g -O3 -std=c++17 -Wall $OPENMP $INTEL ${INC_BLAS} ${LD_CLASSIC}" \
+            FCFLAGS="-g -O3 $WARNING $OPENMP $PENDANTIC ${LD_CLASSIC}" \
             --with-blas="${LIB_BLAS}" \
             --with-lapack="${LIB_BLAS}" \
             --with-metis="${LIB_METIS}"
