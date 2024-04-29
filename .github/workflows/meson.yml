@@ -176,7 +176,8 @@ jobs:
                                -Dlibhwloc_include=../deps/include \
                                -Dc_std=$CSTD \
                                -Dcpp_std=$CPPSTD \
-                               -Dfortran_link_args=${LD_CLASSIC}
+                               -Dfortran_link_args=${LD_CLASSIC} \
+                               -Dcpp_link_args=${LD_CLASSIC}
 
       - name: Build SPRAL
         shell: bash
