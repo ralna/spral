@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]
+        os: [windows-latest, ubuntu-latest, macos-13]
         compiler_version: ['13']
         arch: ['x64']
         metis: [32, 64]
@@ -42,7 +42,7 @@ jobs:
           #   compiler_version: '2021.10'
           #   metis: 32
           #   allow_failure: true
-          # - os: macos-latest
+          # - os: macos-13
           #   compiler: intel-classic
           #   compiler_version: '2021.10'
           #   metis: 32
@@ -76,7 +76,7 @@ jobs:
             LIBDIR="lib"
             PLATFORM="x86_64-linux-gnu"
           fi
-          if [[ "${{matrix.os}}" == "macos-latest" ]]; then
+          if [[ "${{matrix.os}}" == "macos-13" ]]; then
             DLEXT="dylib"
             LIBDIR="lib"
             PLATFORM=x86_64-apple-darwin""
@@ -99,7 +99,7 @@ jobs:
           tar -xzvf OpenBLAS32.v0.3.23.$PLATFORM-libgfortran5.tar.gz -C deps
           wget https://github.com/JuliaBinaryWrappers/Hwloc_jll.jl/releases/download/Hwloc-v2.10.0%2B0/Hwloc.v2.10.0.$PLATFORM.tar.gz
           tar -xzvf Hwloc.v2.10.0.$PLATFORM.tar.gz -C deps
-          if [[ "${{matrix.os}}" != "macos-latest" ]]; then
+          if [[ "${{matrix.os}}" != "macos-13" ]]; then
             wget https://github.com/JuliaBinaryWrappers/MKL_jll.jl/releases/download/MKL-v2024.0.0%2B0/MKL.v2024.0.0.$PLATFORM.tar.gz
             tar -xzvf MKL.v2024.0.0.$PLATFORM.tar.gz -C deps
           fi
