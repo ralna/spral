@@ -7,48 +7,49 @@ on:
     types: [opened, synchronize, reopened]
 jobs:
   build:
-    name: SPRAL/${{ matrix.os }}/${{ matrix.compiler }}/${{ matrix.version }}/METIS ${{ matrix.metis }}
+    name: SPRAL/${{ matrix.os }}/${{ matrix.compiler }}/${{ matrix.compiler_version }}/METIS ${{ matrix.metis }}
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]
-        version: ['12']
+        os: [windows-latest, ubuntu-latest, macos-13]
+        compiler_version: ['12']
+        arch: ['x64']
         metis: [32, 64]
         include:
           - compiler: gcc
           - os: ubuntu-latest
             compiler: intel
-            version: '2023.2'
+            compiler_version: '2023.2'
             metis: 32
             allow_failure: true
           - os: ubuntu-latest
             compiler: intel
-            version: '2023.2'
+            compiler_version: '2023.2'
             metis: 64
             allow_failure: true
           # - os: windows-latest
           #   compiler: intel
-          #   version: '2023.2'
+          #   compiler_version: '2023.2'
           #   metis: 32
           #   allow_failure: true
           # - os: windows-latest
           #   compiler: intel-classic
-          #   version: '2021.10'
+          #   compiler_version: '2021.10'
           #   metis: 32
           #   allow_failure: true
           # - os: ubuntu-latest
           #   compiler: intel-classic
-          #   version: '2021.10'
+          #   compiler_version: '2021.10'
           #   metis: 32
           #   allow_failure: true
-          # - os: macos-latest
+          # - os: macos-13
           #   compiler: intel-classic
-          #   version: '2021.10'
+          #   compiler_version: '2021.10'
           #   metis: 32
           #   allow_failure: true
           # - os: ubuntu-latest
           #   compiler: nvidia-hpc
-          #   version: '23.11'
+          #   compiler_version: '23.11'
           #   metis: 32
           #   allow_failure: true
     runs-on: ${{ matrix.os }}
@@ -59,7 +60,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - name: Install Meson and Ninja
         run: pip install meson ninja
@@ -75,7 +76,7 @@ jobs:
             LIBDIR="lib"
             PLATFORM="x86_64-linux-gnu"
           fi
-          if [[ "${{matrix.os}}" == "macos-latest" ]]; then
+          if [[ "${{matrix.os}}" == "macos-13" ]]; then
             DLEXT="dylib"
             LIBDIR="lib"
             PLATFORM=x86_64-apple-darwin""
@@ -98,7 +99,7 @@ jobs:
           tar -xzvf OpenBLAS32.v0.3.23.$PLATFORM-libgfortran5.tar.gz -C deps
           wget https://github.com/JuliaBinaryWrappers/Hwloc_jll.jl/releases/download/Hwloc-v2.10.0%2B0/Hwloc.v2.10.0.$PLATFORM.tar.gz
           tar -xzvf Hwloc.v2.10.0.$PLATFORM.tar.gz -C deps
-          if [[ "${{matrix.os}}" != "macos-latest" ]]; then
+          if [[ "${{matrix.os}}" != "macos-13" ]]; then
             wget https://github.com/JuliaBinaryWrappers/MKL_jll.jl/releases/download/MKL-v2024.0.0%2B0/MKL.v2024.0.0.$PLATFORM.tar.gz
             tar -xzvf MKL.v2024.0.0.$PLATFORM.tar.gz -C deps
           fi
@@ -114,7 +115,7 @@ jobs:
         uses: fortran-lang/setup-fortran@main
         with:
           compiler: ${{ matrix.compiler }}
-          version: ${{ matrix.version }}
+          version: ${{ matrix.compiler_version }}
 
       - name: Update Intel compilers
         if: matrix.compiler == 'intel'
@@ -138,9 +139,13 @@ jobs:
           LIBLAPACK="openblas"
           CSTD="c99"
           CPPSTD="c++11"
+          LD_CLASSIC=""
           if [[ "${{matrix.os}}" == "windows-latest" ]]; then
             LIBDIR="bin"
             LIBHWLOC="hwloc-15"
+          fi
+          if [[ "${{matrix.os}}" == "macos-13" ]]; then
+            LD_CLASSIC="-Wl,-ld_classic"
           fi
           if [[ "${{matrix.metis}}" == "64" ]]; then
             LIBMETIS="metis_Int64_Real32"
@@ -154,14 +159,25 @@ jobs:
             CSTD="none"
             CPPSTD="none"
           fi
-          meson setup builddir --prefix=$GITHUB_WORKSPACE/../meson --buildtype=debug \
-                               -Dexamples=true -Dtests=true \
-                               -Dlibmetis_path=$DEPS/deps/$LIBDIR -Dlibmetis=$LIBMETIS \
-                               -Dmetis64=$METIS64 -Dlibblas_path=$DEPS/deps/$LIBDIR \
-                               -Dlibblas=$LIBBLAS -Dlibblas_include=../deps/include \
-                               -Dliblapack_path=$DEPS/deps/$LIBDIR -Dliblapack=$LIBLAPACK \
-                               -Dlibhwloc_path=$DEPS/deps/$LIBDIR -Dlibhwloc=$LIBHWLOC \
-                               -Dlibhwloc_include=../deps/include -Dc_std=$CSTD -Dcpp_std=$CPPSTD \
+          meson setup builddir --prefix=$GITHUB_WORKSPACE/../meson \
+                               --buildtype=debug \
+                               -Dexamples=true \
+                               -Dtests=true \
+                               -Dlibmetis_path=$DEPS/deps/$LIBDIR \
+                               -Dlibmetis=$LIBMETIS \
+                               -Dmetis64=$METIS64 \
+                               -Dlibblas_path=$DEPS/deps/$LIBDIR \
+                               -Dlibblas=$LIBBLAS \
+                               -Dlibblas_include=../deps/include \
+                               -Dliblapack_path=$DEPS/deps/$LIBDIR \
+                               -Dliblapack=$LIBLAPACK \
+                               -Dlibhwloc_path=$DEPS/deps/$LIBDIR \
+                               -Dlibhwloc=$LIBHWLOC \
+                               -Dlibhwloc_include=../deps/include \
+                               -Dc_std=$CSTD \
+                               -Dcpp_std=$CPPSTD \
+                               -Dfortran_link_args=${LD_CLASSIC} \
+                               -Dcpp_link_args=${LD_CLASSIC}
 
       - name: Build SPRAL
         shell: bash
@@ -170,7 +186,7 @@ jobs:
       - uses: actions/upload-artifact@v3
         if: failure()
         with:
-          name: ${{ matrix.os }}_${{ matrix.compiler }}_${{ matrix.version }}_METIS_${{ matrix.metis }}_meson-log.txt
+          name: ${{ matrix.os }}_${{ matrix.compiler }}_${{ matrix.compiler_version }}_METIS_${{ matrix.metis }}_meson-log.txt
           path: builddir/meson-logs/meson-log.txt
 
       - name: Install SPRAL
@@ -180,7 +196,7 @@ jobs:
       - uses: actions/upload-artifact@v3
         if: failure()
         with:
-          name: ${{ matrix.os }}_${{ matrix.compiler }}_${{ matrix.version }}_METIS_${{ matrix.metis }}_install-log.txt
+          name: ${{ matrix.os }}_${{ matrix.compiler }}_${{ matrix.compiler_version }}_METIS_${{ matrix.metis }}_install-log.txt
           path: builddir/meson-logs/install-log.txt
 
       - name: Test SPRAL
@@ -190,5 +206,5 @@ jobs:
       - uses: actions/upload-artifact@v3
         if: failure()
         with:
-          name: ${{ matrix.os }}_${{ matrix.compiler }}_${{ matrix.version }}_METIS_${{ matrix.metis }}_testlog.txt
+          name: ${{ matrix.os }}_${{ matrix.compiler }}_${{ matrix.compiler_version }}_METIS_${{ matrix.metis }}_testlog.txt
           path: builddir/meson-logs/testlog.txt
