@@ -5,7 +5,7 @@ task:
         image: freebsd-13-2-release-amd64
     - name: MacOS M1
       macos_instance:
-        image: ghcr.io/cirruslabs/macos-monterey-base:latest
+        image: ghcr.io/cirruslabs/macos-sonoma-base:latest
   dependencies_script: |
     echo $(uname)
     if [ "$(uname)" = "FreeBSD" ]; then
