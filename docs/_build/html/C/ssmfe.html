@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SSMFE - Sparse Symmetric Matrix-Free Eigensolver &mdash; spral v2024-05-08 [C] documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="SSMFE_EXPERT - Sparse Symmetric Matrix-Free Eigensolver (Expert interface)" href="ssmfe_expert.html" />
+    <link rel="prev" title="SSIDS - Sparse Symmetric Indefinite Direct Solver" href="ssids.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            spral
+              <img src="_static/STFC-Logo.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                v2024-05-08 [C]
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="csc_format.html">Compressed Sparse Column (CSC) Format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="coord_format.html">Coordinate (Coord) Format</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="lsmr.html">LSMR - Sparse Least Squares LSMR Solver</a></li>
+<li class="toctree-l1"><a class="reference internal" href="matrix_util.html">MATRIX_UTIL - Matrix utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="random.html">RANDOM - Pseudo-random number generator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="random_matrix.html">RANDOM_MATRIX - Pseudo-random Matrix Generator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rutherford_boeing.html">RUTHERFORD_BOEING - RB File Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="scaling.html">SCALING - Sparse matrix scalings</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssids.html">SSIDS - Sparse Symmetric Indefinite Direct Solver</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">SSMFE - Sparse Symmetric Matrix-Free Eigensolver</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#purpose">Purpose</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#version-history">Version history</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#usage-overview">Usage overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#subroutines">Subroutines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#derived-types">Derived types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#examples">Examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#preconditioning-example">Preconditioning example</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#shift-and-invert-example">Shift-and-invert example</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#hermitian-example">Hermitian example</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#method">Method</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#references">References</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="ssmfe_expert.html">SSMFE_EXPERT - Sparse Symmetric Matrix-Free Eigensolver (Expert interface)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssmfe_core.html">SSMFE_CORE - Sparse Symmetric Matrix-Free Eigensolver (Core Algorithm)</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">spral</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">SSMFE - Sparse Symmetric Matrix-Free Eigensolver</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/ssmfe.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="ssmfe-sparse-symmetric-matrix-free-eigensolver">
+<h1>SSMFE - Sparse Symmetric Matrix-Free Eigensolver<a class="headerlink" href="#ssmfe-sparse-symmetric-matrix-free-eigensolver" title="Permalink to this heading"></a></h1>
+<div class="highlight-C notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;spral_ssmfe.h&gt;</span><span class="c1"> /* or &lt;spral.h&gt; for all packages */</span>
+</pre></div>
+</div>
+<section id="purpose">
+<h2>Purpose<a class="headerlink" href="#purpose" title="Permalink to this heading"></a></h2>
+<p>This package computes extreme (leftmost and/or rightmost)
+eigenpairs <span class="math notranslate nohighlight">\(\{\lambda_i, x_i\}\)</span> of the following eigenvalue problems:</p>
+<ul>
+<li><p>the standard eigenvalue problem</p>
+<blockquote>
+<div><div class="math notranslate nohighlight">
+\[A x = \lambda x,\]</div>
+</div></blockquote>
+</li>
+<li><p>the generalized eigenvalue problem</p>
+<blockquote>
+<div><div class="math notranslate nohighlight">
+\[A x = \lambda B x,\]</div>
+</div></blockquote>
+</li>
+<li><p>the buckling problem</p>
+<blockquote>
+<div><div class="math notranslate nohighlight">
+\[B x = \lambda A x,\]</div>
+</div></blockquote>
+</li>
+</ul>
+<p>where <span class="math notranslate nohighlight">\(A\)</span> and <span class="math notranslate nohighlight">\(B\)</span> are <strong>real symmetric</strong> (or <strong>Hermitian</strong>) matrices
+and <span class="math notranslate nohighlight">\(B\)</span> is <strong>positive definite</strong>.</p>
+<p>This package provides a user-friendly wrapper around
+<code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssmfe_expert</span></code>, which in turn provides a wrapper around
+<code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssmfe_core</span></code>. If more fine-tuned control of the eigensolver is
+required, use those modules instead.</p>
+<section id="version-history">
+<h3>Version history<a class="headerlink" href="#version-history" title="Permalink to this heading"></a></h3>
+<dl class="simple">
+<dt>2015-04-20 Version 1.0.0</dt><dd><p>Initial release</p>
+</dd>
+</dl>
+<p>[for detail please see ChangeLog]</p>
+</section>
+</section>
+<section id="usage-overview">
+<h2>Usage overview<a class="headerlink" href="#usage-overview" title="Permalink to this heading"></a></h2>
+<p>The eigensolver subroutines behind this package implement a block
+iterative algorithm. The block nature of this algorithm allows the user
+to benefit from highly optimized linear algebra subroutines and from the
+ubiquitous multicore architecture of modern computers. It also makes
+this algorithm more reliable than Krylov-based algorithms employed e.g.
+by ARPACK in the presence of clustered eigenvalues. However, convergence
+of the iterations may be slow if the density of the spectrum is high.</p>
+<p>Thus, good performance (in terms of speed) is contingent on the
+following two factors:</p>
+<ol class="lowerroman simple">
+<li><p>the number of desired eigenpairs must be substantial (e.g. not fewer
+than the number of CPU cores), and</p></li>
+<li><p>the employment of a convergence acceleration technique.</p></li>
+</ol>
+<p>The acceleration techniques that can be used are shift-and-invert and
+preconditioning.</p>
+<p>The former requires the direct solution of linear systems
+with the matrix <span class="math notranslate nohighlight">\(A\)</span> or its linear combination with <span class="math notranslate nohighlight">\(B\)</span>, for which a
+sparse symmetric indefinite solver (such as HSL_MA97 or SPRAL_SSIDS)
+can be employed.</p>
+<p>The latter applies to the case of positive definite
+<span class="math notranslate nohighlight">\(A\)</span> and requires a matrix or an operator <span class="math notranslate nohighlight">\(T\)</span>, called <em>a
+preconditioner</em>, such that the vector <span class="math notranslate nohighlight">\(v = T f\)</span> is an
+approximation to the solution <span class="math notranslate nohighlight">\(u\)</span> of the system <span class="math notranslate nohighlight">\(A u = f\)</span>
+(see the simple <a class="reference internal" href="ssmfe_expert.html#example"><span class="std std-ref">example below</span></a>). Note: This
+technique is only recommended for experienced users.</p>
+</section>
+<section id="subroutines">
+<h2>Subroutines<a class="headerlink" href="#subroutines" title="Permalink to this heading"></a></h2>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.spral_ssmfe_default_options">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssmfe_default_options</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssmfe_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssmfe_default_options" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Intialises members of options structure to default values.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>options</strong> – Structure to be initialised.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.spral_ssmfe_standard_double">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssmfe_standard_double</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssmfe_rcid</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">rci</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">left</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">mep</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">lambda</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">n</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">x</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">ldx</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">keep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssmfe_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.spral_ssmfe_inform" title="spral_ssmfe_inform"><span class="n"><span class="pre">spral_ssmfe_inform</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssmfe_standard_double" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Computes the left-most eigenpairs of the standard eigenvalue problem</p>
+<div class="math notranslate nohighlight">
+\[Ax = \lambda x\]</div>
+<p>Optionally uses preconditioning.</p>
+<p>Uses reverse-communication. Upon return the user must perform a task
+specified by the <cite>rci</cite> parameter and recall the routine. Possible values of
+<cite>rci</cite> and associated tasks are:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p><cite>rci.job</cite></p></th>
+<th class="head"><p>Task to be performed</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>-3</p></td>
+<td><p>None. Fatal error, see <a class="reference internal" href="#c.spral_ssmfe_inform.flag" title="spral_ssmfe_inform.flag"><code class="xref c c-member docutils literal notranslate"><span class="pre">inform.flag</span></code></a>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-2</p></td>
+<td><p>Restart computation. Non-fatal error, see
+<a class="reference internal" href="#c.spral_ssmfe_inform.flag" title="spral_ssmfe_inform.flag"><code class="xref c c-member docutils literal notranslate"><span class="pre">inform.flag</span></code></a>.</p></td>
+</tr>
+<tr class="row-even"><td><p>-1</p></td>
+<td><p>None. Computation complete.</p></td>
+</tr>
+<tr class="row-odd"><td><p>1</p></td>
+<td><p>Calculate <span class="math notranslate nohighlight">\(Y = AX\)</span>.</p></td>
+</tr>
+<tr class="row-even"><td><p>2</p></td>
+<td><p>Apply preconditioner <span class="math notranslate nohighlight">\(Y = TX\)</span>.</p></td>
+</tr>
+</tbody>
+</table>
+<p>The matrices <span class="math notranslate nohighlight">\(X\)</span> and <span class="math notranslate nohighlight">\(Y\)</span> are pointed to by components of <cite>rci</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>rci</strong> – Reverse communication type.
+<code class="xref c c-member docutils literal notranslate"><span class="pre">rci.job</span></code> must be
+set to <cite>0</cite> before the first call.</p></li>
+<li><p><strong>left</strong> – Number of left eigenpairs to find.</p></li>
+<li><p><strong>mep</strong> – Number of working eigenpairs.
+See <a class="reference internal" href="ssmfe_expert.html#method"><span class="std std-ref">method section</span></a> for guidance on selecting a good
+value. Must be at least <cite>left</cite>.</p></li>
+<li><p><strong>lambda[mep]</strong> – Current eigenvalue estimates in ascending
+order.</p></li>
+<li><p><strong>n</strong> – Size of matrix <span class="math notranslate nohighlight">\(A\)</span>.</p></li>
+<li><p><strong>x[n][ldx]</strong> – Current eigenvector estimates corresponding to
+eigenvalues in <cite>lambda</cite>. Used to supply initial estimates if
+<code class="xref c c-member docutils literal notranslate"><span class="pre">options.user_x&gt;0</span></code>.</p></li>
+<li><p><strong>ldx</strong> – Leading dimension of <cite>x</cite>.</p></li>
+<li><p><strong>keep</strong> – Internal workspace used by routine.</p></li>
+<li><p><strong>options</strong> – specifies algorithm options to be used.</p></li>
+<li><p><strong>inform</strong> – returns information about the exection of the
+routine.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.spral_ssmfe_standard_double_complex">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssmfe_standard_double_complex</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssmfe_rciz</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">rci</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">left</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">mep</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">lambda</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">n</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="kt"><span class="pre">complex</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">x</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">ldx</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">keep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssmfe_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.spral_ssmfe_inform" title="spral_ssmfe_inform"><span class="n"><span class="pre">spral_ssmfe_inform</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssmfe_standard_double_complex" title="Permalink to this definition"></a><br /></dt>
+<dd><p>As <a class="reference internal" href="#c.spral_ssmfe_standard_double" title="spral_ssmfe_standard_double"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssmfe_standard_double()</span></code></a>, but types of <code class="docutils literal notranslate"><span class="pre">rci</span></code> and <code class="docutils literal notranslate"><span class="pre">x</span></code>
+changed to support type <code class="docutils literal notranslate"><span class="pre">double</span> <span class="pre">complex</span></code>.</p>
+</dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.spral_ssmfe_standard_shift_double">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssmfe_standard_shift_double</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssmfe_rcid</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">rci</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="n"><span class="pre">sigma</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">left</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">right</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">mep</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">lambda</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">n</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">x</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">ldx</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">keep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssmfe_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.spral_ssmfe_inform" title="spral_ssmfe_inform"><span class="n"><span class="pre">spral_ssmfe_inform</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssmfe_standard_shift_double" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Computes eigenpairs of the standard eigenvalue problem</p>
+<div class="math notranslate nohighlight">
+\[Ax = \lambda x\]</div>
+<p>in the vicinity of a given value <span class="math notranslate nohighlight">\(\sigma\)</span>.</p>
+<p>Uses reverse-communication. Upon return the user must perform a task
+specified by the <cite>rci</cite> parameter and recall the routine. Possible values of
+<cite>rci</cite> and associated tasks are:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p><cite>rci.job</cite></p></th>
+<th class="head"><p>Task to be performed</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>-3</p></td>
+<td><p>None. Fatal error, see <a class="reference internal" href="#c.spral_ssmfe_inform.flag" title="spral_ssmfe_inform.flag"><code class="xref c c-member docutils literal notranslate"><span class="pre">inform.flag</span></code></a>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-2</p></td>
+<td><p>Restart computation. Non-fatal error, see
+<a class="reference internal" href="#c.spral_ssmfe_inform.flag" title="spral_ssmfe_inform.flag"><code class="xref c c-member docutils literal notranslate"><span class="pre">inform.flag</span></code></a>.</p></td>
+</tr>
+<tr class="row-even"><td><p>-1</p></td>
+<td><p>None. Computation complete.</p></td>
+</tr>
+<tr class="row-odd"><td><p>1</p></td>
+<td><p>Calculate <span class="math notranslate nohighlight">\(Y = AX\)</span>.</p></td>
+</tr>
+<tr class="row-even"><td><p>9</p></td>
+<td><p>Solve <span class="math notranslate nohighlight">\((A-\sigma I)Y = X\)</span> for Y.</p></td>
+</tr>
+</tbody>
+</table>
+<p>The matrices <span class="math notranslate nohighlight">\(X\)</span> and <span class="math notranslate nohighlight">\(Y\)</span> are components of <cite>rci</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>rci</strong> – Reverse communication type.
+<code class="xref c c-member docutils literal notranslate"><span class="pre">rci.job</span></code> must be
+set to <cite>0</cite> before the first call.</p></li>
+<li><p><strong>sigma</strong> – Shift value <span class="math notranslate nohighlight">\(sigma\)</span>.</p></li>
+<li><p><strong>left</strong> – Number of left eigenpairs to find.</p></li>
+<li><p><strong>right</strong> – Number of right eigenpairs to find.</p></li>
+<li><p><strong>mep</strong> – Number of working eigenpairs.
+See <a class="reference internal" href="ssmfe_expert.html#method"><span class="std std-ref">method section</span></a> for guidance on selecting a good
+value. Must be at least <cite>left+right</cite>.</p></li>
+<li><p><strong>lambda[mep]</strong> – Current eigenvalue estimates in ascending
+order.</p></li>
+<li><p><strong>n</strong> – Size of matrix <span class="math notranslate nohighlight">\(A\)</span>.</p></li>
+<li><p><strong>x[n][ldx]</strong> – Current eigenvector estimates corresponding to
+eigenvalues in <cite>lambda</cite>. Used to supply initial estimates if
+<code class="xref c c-member docutils literal notranslate"><span class="pre">options.user_x&gt;0</span></code>.</p></li>
+<li><p><strong>ldx</strong> – Leading dimension of <cite>x</cite>.</p></li>
+<li><p><strong>keep</strong> – Internal workspace used by routine.</p></li>
+<li><p><strong>options</strong> – specifies algorithm options to be used.</p></li>
+<li><p><strong>inform</strong> – returns information about the exection of the
+routine.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.spral_ssmfe_standard_shift_double_complex">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssmfe_standard_shift_double_complex</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssmfe_rciz</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">rci</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="n"><span class="pre">sigma</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">left</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">right</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">mep</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">lambda</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">n</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="kt"><span class="pre">complex</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">x</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">ldx</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">keep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssmfe_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.spral_ssmfe_inform" title="spral_ssmfe_inform"><span class="n"><span class="pre">spral_ssmfe_inform</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssmfe_standard_shift_double_complex" title="Permalink to this definition"></a><br /></dt>
+<dd><p>As <a class="reference internal" href="#c.spral_ssmfe_standard_shift_double" title="spral_ssmfe_standard_shift_double"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssmfe_standard_shift_double()</span></code></a>, but types of <code class="docutils literal notranslate"><span class="pre">rci</span></code>
+and <code class="docutils literal notranslate"><span class="pre">x</span></code> changed to support type <code class="docutils literal notranslate"><span class="pre">double</span> <span class="pre">complex</span></code>.</p>
+</dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.spral_ssmfe_generalized_double">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssmfe_generalized_double</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssmfe_rcid</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">rci</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">left</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">mep</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">lambda</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">n</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">x</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">ldx</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">keep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssmfe_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.spral_ssmfe_inform" title="spral_ssmfe_inform"><span class="n"><span class="pre">spral_ssmfe_inform</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssmfe_generalized_double" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Computes the left-most eigenpairs of the generalized eigenvalue problem</p>
+<div class="math notranslate nohighlight">
+\[Ax = \lambda B x\]</div>
+<p>Optionally uses preconditioning.</p>
+<p>Uses reverse-communication. Upon return the user must perform a task
+specified by the <cite>rci</cite> parameter and recall the routine. Possible values of
+<cite>rci</cite> and associated tasks are:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p><cite>rci.job</cite></p></th>
+<th class="head"><p>Task to be performed</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>-3</p></td>
+<td><p>None. Fatal error, see <a class="reference internal" href="#c.spral_ssmfe_inform.flag" title="spral_ssmfe_inform.flag"><code class="xref c c-member docutils literal notranslate"><span class="pre">inform.flag</span></code></a>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-2</p></td>
+<td><p>Restart computation. Non-fatal error, see
+<a class="reference internal" href="#c.spral_ssmfe_inform.flag" title="spral_ssmfe_inform.flag"><code class="xref c c-member docutils literal notranslate"><span class="pre">inform.flag</span></code></a>.</p></td>
+</tr>
+<tr class="row-even"><td><p>-1</p></td>
+<td><p>None. Computation complete.</p></td>
+</tr>
+<tr class="row-odd"><td><p>1</p></td>
+<td><p>Calculate <span class="math notranslate nohighlight">\(Y = AX\)</span>.</p></td>
+</tr>
+<tr class="row-even"><td><p>2</p></td>
+<td><p>Apply preconditioner <span class="math notranslate nohighlight">\(Y = TX\)</span>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>3</p></td>
+<td><p>Calculate <span class="math notranslate nohighlight">\(Y = BX\)</span>.</p></td>
+</tr>
+</tbody>
+</table>
+<p>The matrices <span class="math notranslate nohighlight">\(X\)</span> and <span class="math notranslate nohighlight">\(Y\)</span> are components of <cite>rci</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>rci</strong> – Reverse communication type.
+<code class="xref c c-member docutils literal notranslate"><span class="pre">rci.job</span></code> must be
+set to <cite>0</cite> before the first call.</p></li>
+<li><p><strong>left</strong> – Number of left eigenpairs to find.</p></li>
+<li><p><strong>mep</strong> – Number of working eigenpairs.
+See <a class="reference internal" href="ssmfe_expert.html#method"><span class="std std-ref">method section</span></a> for guidance on selecting a good
+value. Must be at least <cite>left</cite>.</p></li>
+<li><p><strong>lambda[mep]</strong> – Current eigenvalue estimates in ascending
+order.</p></li>
+<li><p><strong>n</strong> – Size of matrix <span class="math notranslate nohighlight">\(A\)</span>.</p></li>
+<li><p><strong>x[n][ldx]</strong> – Current eigenvector estimates corresponding to
+eigenvalues in <cite>lambda</cite>. Used to supply initial estimates if
+<code class="xref c c-member docutils literal notranslate"><span class="pre">options.user_x&gt;0</span></code>.</p></li>
+<li><p><strong>ldx</strong> – Leading dimension of <cite>x</cite>.</p></li>
+<li><p><strong>keep</strong> – Internal workspace used by routine.</p></li>
+<li><p><strong>options</strong> – specifies algorithm options to be used.</p></li>
+<li><p><strong>inform</strong> – returns information about the exection of the
+routine.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.spral_ssmfe_generalized_double_complex">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssmfe_generalized_double_complex</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssmfe_rciz</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">rci</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">left</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">mep</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">lambda</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">n</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="kt"><span class="pre">complex</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">x</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">ldx</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">keep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssmfe_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.spral_ssmfe_inform" title="spral_ssmfe_inform"><span class="n"><span class="pre">spral_ssmfe_inform</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssmfe_generalized_double_complex" title="Permalink to this definition"></a><br /></dt>
+<dd><p>As <a class="reference internal" href="#c.spral_ssmfe_generalized_double" title="spral_ssmfe_generalized_double"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssmfe_generalized_double()</span></code></a>, but types of <code class="docutils literal notranslate"><span class="pre">rci</span></code> and
+<code class="docutils literal notranslate"><span class="pre">x</span></code> changed to support type <code class="docutils literal notranslate"><span class="pre">double</span> <span class="pre">complex</span></code>.</p>
+</dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.spral_ssmfe_generalized_shift_double">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssmfe_generalized_shift_double</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssmfe_rcid</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">rci</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="n"><span class="pre">sigma</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">left</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">right</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">mep</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">lambda</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">n</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">x</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">ldx</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">keep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssmfe_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.spral_ssmfe_inform" title="spral_ssmfe_inform"><span class="n"><span class="pre">spral_ssmfe_inform</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssmfe_generalized_shift_double" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Computes eigenpairs of the generalized eigenvalue problem</p>
+<div class="math notranslate nohighlight">
+\[Ax = \lambda B x\]</div>
+<p>in the vicinity of a given value <span class="math notranslate nohighlight">\(\sigma\)</span>.</p>
+<p>Uses reverse-communication. Upon return the user must perform a task
+specified by the <cite>rci</cite> parameter and recall the routine. Possible values of
+<cite>rci</cite> and associated tasks are:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p><cite>rci.job</cite></p></th>
+<th class="head"><p>Task to be performed</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>-3</p></td>
+<td><p>None. Fatal error, see <a class="reference internal" href="#c.spral_ssmfe_inform.flag" title="spral_ssmfe_inform.flag"><code class="xref c c-member docutils literal notranslate"><span class="pre">inform.flag</span></code></a>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-2</p></td>
+<td><p>Restart computation. Non-fatal error, see
+<a class="reference internal" href="#c.spral_ssmfe_inform.flag" title="spral_ssmfe_inform.flag"><code class="xref c c-member docutils literal notranslate"><span class="pre">inform.flag</span></code></a>.</p></td>
+</tr>
+<tr class="row-even"><td><p>-1</p></td>
+<td><p>None. Computation complete.</p></td>
+</tr>
+<tr class="row-odd"><td><p>1</p></td>
+<td><p>Calculate <span class="math notranslate nohighlight">\(Y = AX\)</span>.</p></td>
+</tr>
+<tr class="row-even"><td><p>3</p></td>
+<td><p>Calculate <span class="math notranslate nohighlight">\(Y = BX\)</span>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>9</p></td>
+<td><p>Solve <span class="math notranslate nohighlight">\((A-\sigma B)Y = X\)</span> for Y.</p></td>
+</tr>
+</tbody>
+</table>
+<p>The matrices <span class="math notranslate nohighlight">\(X\)</span> and <span class="math notranslate nohighlight">\(Y\)</span> are components of <cite>rci</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>rci</strong> – Reverse communication type.
+<code class="xref c c-member docutils literal notranslate"><span class="pre">rci.job</span></code> must be
+set to <cite>0</cite> before the first call.</p></li>
+<li><p><strong>sigma</strong> – Shift value <span class="math notranslate nohighlight">\(sigma\)</span>.</p></li>
+<li><p><strong>left</strong> – Number of left eigenpairs to find.</p></li>
+<li><p><strong>right</strong> – Number of right eigenpairs to find.</p></li>
+<li><p><strong>mep</strong> – Number of working eigenpairs.
+See <a class="reference internal" href="ssmfe_expert.html#method"><span class="std std-ref">method section</span></a> for guidance on selecting a good
+value. Must be at least <cite>left+right</cite>.</p></li>
+<li><p><strong>lambda[mep]</strong> – Current eigenvalue estimates in ascending
+order.</p></li>
+<li><p><strong>n</strong> – Size of matrix <span class="math notranslate nohighlight">\(A\)</span>.</p></li>
+<li><p><strong>x[n][ldx]</strong> – Current eigenvector estimates corresponding to
+eigenvalues in <cite>lambda</cite>. Used to supply initial estimates if
+<code class="xref c c-member docutils literal notranslate"><span class="pre">options.user_x&gt;0</span></code>.</p></li>
+<li><p><strong>ldx</strong> – Leading dimension of <cite>x</cite>.</p></li>
+<li><p><strong>keep</strong> – Internal workspace used by routine.</p></li>
+<li><p><strong>options</strong> – specifies algorithm options to be used.</p></li>
+<li><p><strong>inform</strong> – returns information about the exection of the
+routine.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.spral_ssmfe_generalized_shift_double_complex">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssmfe_generalized_shift_double_complex</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssmfe_rciz</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">rci</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="n"><span class="pre">sigma</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">left</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">right</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">mep</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">lambda</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">n</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="kt"><span class="pre">complex</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">x</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">ldx</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">keep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssmfe_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.spral_ssmfe_inform" title="spral_ssmfe_inform"><span class="n"><span class="pre">spral_ssmfe_inform</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssmfe_generalized_shift_double_complex" title="Permalink to this definition"></a><br /></dt>
+<dd><p>As <a class="reference internal" href="#c.spral_ssmfe_generalized_shift_double" title="spral_ssmfe_generalized_shift_double"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssmfe_generalized_shift_double()</span></code></a>, but types of <code class="docutils literal notranslate"><span class="pre">rci</span></code> and
+<code class="docutils literal notranslate"><span class="pre">x</span></code> changed to support type <code class="docutils literal notranslate"><span class="pre">double</span> <span class="pre">complex</span></code>.</p>
+</dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.spral_ssmfe_buckling_double">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssmfe_buckling_double</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssmfe_rcid</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">rci</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="n"><span class="pre">sigma</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">left</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">right</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">mep</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">lambda</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">n</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">x</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">ldx</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">keep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssmfe_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.spral_ssmfe_inform" title="spral_ssmfe_inform"><span class="n"><span class="pre">spral_ssmfe_inform</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssmfe_buckling_double" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Computes eigenpairs of the buckling problem</p>
+<div class="math notranslate nohighlight">
+\[Bx = \lambda A x\]</div>
+<p>in the vicinity of a given value <span class="math notranslate nohighlight">\(\sigma\)</span>.</p>
+<p>Uses reverse-communication. Upon return the user must perform a task
+specified by the <cite>rci</cite> parameter and recall the routine. Possible values of
+<cite>rci</cite> and associated tasks are:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p><cite>rci.job</cite></p></th>
+<th class="head"><p>Task to be performed</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>-3</p></td>
+<td><p>None. Fatal error, see <a class="reference internal" href="#c.spral_ssmfe_inform.flag" title="spral_ssmfe_inform.flag"><code class="xref c c-member docutils literal notranslate"><span class="pre">inform.flag</span></code></a>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-2</p></td>
+<td><p>Restart computation. Non-fatal error, see
+<a class="reference internal" href="#c.spral_ssmfe_inform.flag" title="spral_ssmfe_inform.flag"><code class="xref c c-member docutils literal notranslate"><span class="pre">inform.flag</span></code></a>.</p></td>
+</tr>
+<tr class="row-even"><td><p>-1</p></td>
+<td><p>None. Computation complete.</p></td>
+</tr>
+<tr class="row-odd"><td><p>1</p></td>
+<td><p>Calculate <span class="math notranslate nohighlight">\(Y = AX\)</span>.</p></td>
+</tr>
+<tr class="row-even"><td><p>3</p></td>
+<td><p>Calculate <span class="math notranslate nohighlight">\(Y = BX\)</span>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>9</p></td>
+<td><p>Solve <span class="math notranslate nohighlight">\((B-\sigma A)Y = X\)</span> for Y.</p></td>
+</tr>
+</tbody>
+</table>
+<p>The matrices <span class="math notranslate nohighlight">\(X\)</span> and <span class="math notranslate nohighlight">\(Y\)</span> are components of <cite>rci</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>rci</strong> – Reverse communication type.
+<code class="xref c c-member docutils literal notranslate"><span class="pre">rci.job</span></code> must be
+set to <cite>0</cite> before the first call.</p></li>
+<li><p><strong>sigma</strong> – Shift value <span class="math notranslate nohighlight">\(sigma\)</span>.</p></li>
+<li><p><strong>left</strong> – Number of left eigenpairs to find.</p></li>
+<li><p><strong>right</strong> – Number of right eigenpairs to find.</p></li>
+<li><p><strong>mep</strong> – Number of working eigenpairs.
+See <a class="reference internal" href="ssmfe_expert.html#method"><span class="std std-ref">method section</span></a> for guidance on selecting a good
+value. Must be at least <cite>left+right</cite>.</p></li>
+<li><p><strong>lambda[mep]</strong> – Current eigenvalue estimates in ascending
+order.</p></li>
+<li><p><strong>n</strong> – Size of matrix <span class="math notranslate nohighlight">\(A\)</span>.</p></li>
+<li><p><strong>x[n][ldx]</strong> – Current eigenvector estimates corresponding to
+eigenvalues in <cite>lambda</cite>. Used to supply initial estimates if
+<code class="xref c c-member docutils literal notranslate"><span class="pre">options.user_x&gt;0</span></code>.</p></li>
+<li><p><strong>ldx</strong> – Leading dimension of <cite>x</cite>.</p></li>
+<li><p><strong>keep</strong> – Internal workspace used by routine.</p></li>
+<li><p><strong>options</strong> – specifies algorithm options to be used.</p></li>
+<li><p><strong>inform</strong> – returns information about the exection of the
+routine.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.spral_ssmfe_buckling_double_complex">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssmfe_buckling_double_complex</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssmfe_rciz</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">rci</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="n"><span class="pre">sigma</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">left</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">right</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">mep</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">lambda</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">n</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="kt"><span class="pre">complex</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">x</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">ldx</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">keep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssmfe_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.spral_ssmfe_inform" title="spral_ssmfe_inform"><span class="n"><span class="pre">spral_ssmfe_inform</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssmfe_buckling_double_complex" title="Permalink to this definition"></a><br /></dt>
+<dd><p>As <a class="reference internal" href="#c.spral_ssmfe_buckling_double" title="spral_ssmfe_buckling_double"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssmfe_buckling_double()</span></code></a>, but types of <code class="docutils literal notranslate"><span class="pre">rci</span></code> and
+<code class="docutils literal notranslate"><span class="pre">x</span></code> changed to support type <code class="docutils literal notranslate"><span class="pre">double</span> <span class="pre">complex</span></code>.</p>
+</dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.spral_ssmfe_free_double">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssmfe_free_double</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">keep</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.spral_ssmfe_inform" title="spral_ssmfe_inform"><span class="n"><span class="pre">spral_ssmfe_inform</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssmfe_free_double" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Free memory allocated in <cite>keep</cite> and <cite>inform</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>keep</strong> – Workspace to be freed.</p></li>
+<li><p><strong>inform</strong> – Information type to be freed.</p></li>
+</ul>
+</dd>
+</dl>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>As memory in <code class="docutils literal notranslate"><span class="pre">keep</span></code> and <code class="docutils literal notranslate"><span class="pre">inform</span></code> has been allocated using Fortran
+functions, this routine <strong>must</strong> be called to avoid a memory leak.</p>
+</div>
+</dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.spral_ssmfe_free_double_complex">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssmfe_free_double_complex</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">keep</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="#c.spral_ssmfe_inform" title="spral_ssmfe_inform"><span class="n"><span class="pre">spral_ssmfe_inform</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssmfe_free_double_complex" title="Permalink to this definition"></a><br /></dt>
+<dd><p>As <a class="reference internal" href="#c.spral_ssmfe_free_double" title="spral_ssmfe_free_double"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssmfe_free_double()</span></code></a>, but for <cite>double complex</cite> versions
+of types.</p>
+</dd></dl>
+
+</section>
+<section id="derived-types">
+<h2>Derived types<a class="headerlink" href="#derived-types" title="Permalink to this heading"></a></h2>
+<dl class="c type">
+<dt class="sig sig-object c">
+<span class="sig-name descname"><span class="pre">struct</span> <span class="pre">spral_ssmfe_rcid</span></span></dt>
+<dd><p>Real-valued reverse communication interface (RCI) type.</p>
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.job">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">job</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.job" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Reverse-communication task to perform.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.nx">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">nx</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.nx" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Number of columns in <cite>x</cite> and <cite>y</cite>.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.x">
+<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">x</span></span></span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#c.PhonyNameDueToError.nx" title="nx"><span class="n"><span class="pre">nx</span></span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">[</span></span><span class="n"><span class="pre">n</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#c.PhonyNameDueToError.x" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Vector to be transformed by RCI task. Allocated by routine.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.y">
+<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">y</span></span></span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#c.PhonyNameDueToError.nx" title="nx"><span class="n"><span class="pre">nx</span></span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">[</span></span><span class="n"><span class="pre">n</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#c.PhonyNameDueToError.y" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Vector to store result of RCI task. Allocated by routine.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="c type">
+<dt class="sig sig-object c">
+<span class="sig-name descname"><span class="pre">struct</span> <span class="pre">spral_ssmfe_rciz</span></span></dt>
+<dd><p>Complex-valued reverse communication interface (RCI) type.</p>
+<dl class="c member">
+<dt class="sig sig-object c">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">job</span></span></span><br /></dt>
+<dd><p>Reverse-communication task to perform.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">nx</span></span></span><br /></dt>
+<dd><p>Number of columns in <cite>x</cite> and <cite>y</cite>.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c">
+<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="kt"><span class="pre">complex</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">x</span></span></span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#c.PhonyNameDueToError.nx" title="nx"><span class="n"><span class="pre">nx</span></span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">[</span></span><span class="n"><span class="pre">n</span></span><span class="p"><span class="pre">]</span></span><br /></dt>
+<dd><p>Vector to be transformed by RCI task. Allocated by routine.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c">
+<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="kt"><span class="pre">complex</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">y</span></span></span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#c.PhonyNameDueToError.nx" title="nx"><span class="n"><span class="pre">nx</span></span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">[</span></span><span class="n"><span class="pre">n</span></span><span class="p"><span class="pre">]</span></span><br /></dt>
+<dd><p>Vector to store result of RCI task. Allocated by routine.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="c type">
+<dt class="sig sig-object c">
+<span class="sig-name descname"><span class="pre">struct</span> <span class="pre">spral_ssmfe_options</span></span></dt>
+<dd><p>Options that control the algorithm.</p>
+<dl class="c member">
+<dt class="sig sig-object c">
+<span class="sig-name descname"><span class="pre">double</span> <span class="pre">abs_tol_lambda.</span></span></dt>
+<dd><p>Absolute tolerance for estimated
+eigenvalue convergence test, see <a class="reference internal" href="ssmfe_expert.html#method"><span class="std std-ref">method section</span></a>.
+Negative values are treated as the default.
+Default is <cite>0.0</cite>.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.abs_tol_residual">
+<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">abs_tol_residual</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.abs_tol_residual" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Absolute tolerance for residual
+convergence test, see <a class="reference internal" href="ssmfe_expert.html#method"><span class="std std-ref">method section</span></a>.
+Negative values are treated as the default.
+Default is <cite>0.0</cite>.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.max_iterations">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">max_iterations</span></span></span><br /></dt>
+<dd><p>Maximum number of iterations.
+Default is <cite>100</cite>.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.rel_tol_lambda">
+<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">rel_tol_lambda</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.rel_tol_lambda" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Relative tolerance for estimated eigenvalue error convergence test, see
+<a class="reference internal" href="ssmfe_expert.html#method"><span class="std std-ref">method section</span></a>. Negative
+values are treated as the default.
+Default is <cite>0.0</cite>.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.rel_tol_residual">
+<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">rel_tol_residual</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.rel_tol_residual" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Relative tolerance for residual
+convergence test, see <a class="reference internal" href="ssmfe_expert.html#method"><span class="std std-ref">method section</span></a>. If both
+<cite>abs_tol_residual</cite> and <cite>rel_tol_residual</cite> are 0.0, then the
+residual norms are not taken into consideration by the convergence
+test. Negative values are treated as the default.
+Default is <cite>0.0</cite>.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.tol_x">
+<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">tol_x</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.tol_x" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Tolerance for estimated eigenvector error
+convergence test, see <a class="reference internal" href="ssmfe_expert.html#method"><span class="std std-ref">method section</span></a>.
+If tol_x is set to <cite>0.0</cite>, the eigenvector error is not estimated. If
+a negative value is assigned, the tolerance is set to
+<cite>sqrt(DBL_EPSILON)</cite>.
+Default is <cite>-1.0</cite>.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.print_level">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">print_level</span></span></span><br /></dt>
+<dd><p>Amount of printing. Possible values are:</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>&lt;0</p></td>
+<td><p>no printing</p></td>
+</tr>
+<tr class="row-even"><td><p>0</p></td>
+<td><p>error and warning messages only</p></td>
+</tr>
+<tr class="row-odd"><td><p>1</p></td>
+<td><p>the type (standard or generalized) and the size of the problem,
+the number of eigenpairs requested, the error tolerances and the
+size of the subspace are printed before the iterations start</p></td>
+</tr>
+<tr class="row-even"><td><p>2</p></td>
+<td><p>as above but, for each eigenpair tested for convergence, the
+iteration number, the index of the eigenpair, the eigenvalue,
+whether it has converged, the residual norm, and the error
+estimates are also printed</p></td>
+</tr>
+<tr class="row-odd"><td><p>&gt;2</p></td>
+<td><p>as 1 but with all eigenvalues, whether converged, residual norms
+and eigenvalue/eigenvector error estimates printed on each
+iteration.</p></td>
+</tr>
+</tbody>
+</table>
+<p>Note that for eigenpairs that are far from convergence, ‘rough’ error
+estimates are printed (the estimates that are actually used by the
+stopping criteria, see Section [ssmfe:method], only become available on
+the last few iterations).</p>
+<p>Default is <cite>0</cite>.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.unit_error">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">unit_error</span></span></span><br /></dt>
+<dd><p>Fortran unit number for error messages. Printing
+suppressed if negative.
+Default is <cite>6</cite> (stdout).</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.unit_diagnostic">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">unit_diagnostic</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.unit_diagnostic" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Fortran unit number for diagnostic messages.
+Printing suppressed if negative.
+Default is <cite>6</cite> (stdout).</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.unit_warning">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">unit_warning</span></span></span><br /></dt>
+<dd><p>Fortran unit number for warning messages.
+Printing suppressed if negative.
+Default is <cite>6</cite> (stdout).</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.left_gap">
+<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">left_gap</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.left_gap" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Minimal acceptable distance between last
+computed left eigenvalue and rest of spectrum.
+For <a class="reference internal" href="#c.spral_ssmfe_standard_double" title="spral_ssmfe_standard_double"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssmfe_standard_double()</span></code></a> and
+<a class="reference internal" href="#c.spral_ssmfe_generalized_double" title="spral_ssmfe_generalized_double"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssmfe_generalized_double()</span></code></a> the
+last computed left eigenvalue is the rightmost of those computed.
+For other routines it is the leftmost.
+If set to a negative value <span class="math notranslate nohighlight">\(\delta\)</span>, the minimal distance is taken
+as <span class="math notranslate nohighlight">\(|\delta|\)</span> times the average distance between the computed
+eigenvalues. Note that for this option to have any effect, the value of
+<cite>mep</cite> must be larger than <cite>left+right</cite>.
+See <a class="reference internal" href="ssmfe_expert.html#method"><span class="std std-ref">method section</span></a> for further explanation.
+Default is <cite>0.0</cite>.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.max_left">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">max_left</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.max_left" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Number of eigenvalues to left of
+<span class="math notranslate nohighlight">\(\sigma\)</span>, or a negative value if not known.
+Default is <cite>-1</cite>.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.max_right">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">max_right</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.max_right" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Number of eigenvalues to right of
+<span class="math notranslate nohighlight">\(\sigma\)</span>, or a negative value if not known.
+Default is <cite>-1</cite>.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.right_gap">
+<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">right_gap</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.right_gap" title="Permalink to this definition"></a><br /></dt>
+<dd><p>As <code class="xref c c-member docutils literal notranslate"><span class="pre">left_gap</span></code>, but for right
+eigenvalues.
+Default is <cite>0.0</cite>.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.user_x">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">user_x</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.user_x" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Number of eigenvectors for which an initial
+guess is supplied in <cite>x(:,:)</cite> on the first call. Such eigenvectors must
+be lineraly independent.
+Default is <cite>0</cite>.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="c type">
+<dt class="sig sig-object c" id="c.spral_ssmfe_inform">
+<span class="k"><span class="pre">type</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssmfe_inform</span></span></span><a class="headerlink" href="#c.spral_ssmfe_inform" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Information on progress of the algorithm.</p>
+<dl class="c member">
+<dt class="sig sig-object c" id="c.spral_ssmfe_inform.flag">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">flag</span></span></span><a class="headerlink" href="#c.spral_ssmfe_inform.flag" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Return status of algorithm. See table below.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.spral_ssmfe_inform.iteration">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">iteration</span></span></span><a class="headerlink" href="#c.spral_ssmfe_inform.iteration" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Number of iterations.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.spral_ssmfe_inform.left">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">left</span></span></span><a class="headerlink" href="#c.spral_ssmfe_inform.left" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Number of converged left eigenvalues.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.spral_ssmfe_inform.next_left">
+<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">next_left</span></span></span><a class="headerlink" href="#c.spral_ssmfe_inform.next_left" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Upon completion, next left eigenvalue in spectrum
+(see <code class="xref c c-member docutils literal notranslate"><span class="pre">options.left_gap</span></code>).</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.spral_ssmfe_inform.next_right">
+<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">next_right</span></span></span><a class="headerlink" href="#c.spral_ssmfe_inform.next_right" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Upon completion, next right eigenvalue in spectrum
+(see <code class="xref c c-member docutils literal notranslate"><span class="pre">options.right_gap</span></code>).</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.spral_ssmfe_inform.non_converged">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">non_converged</span></span></span><a class="headerlink" href="#c.spral_ssmfe_inform.non_converged" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Number of non-converged eigenpairs.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.spral_ssmfe_inform.right">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">right</span></span></span><a class="headerlink" href="#c.spral_ssmfe_inform.right" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Number of converged right eigenvalues.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.spral_ssmfe_inform.stat">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">stat</span></span></span><a class="headerlink" href="#c.spral_ssmfe_inform.stat" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Fortran allocation status in event of failure</p>
+</dd></dl>
+
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p><cite>inform.flag</cite></p></th>
+<th class="head"></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>-1</p></td>
+<td><p>rci.job is out-of-range.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-9</p></td>
+<td><p>n is out-of-range.</p></td>
+</tr>
+<tr class="row-even"><td><p>-10</p></td>
+<td><p>ldx is out-of-range.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-11</p></td>
+<td><p>left is out-of-range.</p></td>
+</tr>
+<tr class="row-even"><td><p>-12</p></td>
+<td><p>right is out-of-range.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-13</p></td>
+<td><p>mep is less than the number of desired eigenpairs.</p></td>
+</tr>
+<tr class="row-even"><td><p>-100</p></td>
+<td><p>Not enough memory; <cite>inform.stat</cite> contains the value of the
+Fortran stat parameter.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-200</p></td>
+<td><p><span class="math notranslate nohighlight">\(B\)</span> is not positive definite or <cite>user_x&gt;0</cite> and
+linearly dependent initial guesses were supplied.</p></td>
+</tr>
+<tr class="row-even"><td><p>+1</p></td>
+<td><p>The iterations have been terminated because no further
+improvement in accuracy is possible (this may happen if
+<span class="math notranslate nohighlight">\(B\)</span> or the preconditioner is not positive definite,
+or if the components of the residual vectors are so small
+that the round-off errors make them essentially random).
+The value of <cite>inform.non_converged</cite> is set to the number
+of non-converged eigenpairs.</p></td>
+</tr>
+<tr class="row-odd"><td><p>+2</p></td>
+<td><p>The maximum number of iterations <cite>max_iterations</cite> has been
+exceeded. The value of <cite>inform.non_converged</cite> is set to
+the number of non-converged eigenpairs.</p></td>
+</tr>
+<tr class="row-even"><td><p>+3</p></td>
+<td><p>The solver had run out of storage space for the converged
+eigenpairs before the gap in the spectrum required by
+<cite>options.left_gap</cite> and/or <cite>options.right_gap</cite> was reached.
+The value of <cite>inform.non_converged</cite> is set to the number
+of non-converged eigenpairs.</p></td>
+</tr>
+</tbody>
+</table>
+<p>If the computation is terminated with the error code 2 or 3, the computation
+is not complete, but may be restarted with larger values of <cite>max_iterations</cite>
+and/or <cite>mep</cite>. In this case the user should set <cite>options.user_x</cite> to
+<cite>info.left + info.right</cite> and restart the reverse communication loop. An
+alternative option is to use one of the advanced solver procedures from
+<a class="reference internal" href="ssmfe_expert.html"><span class="doc">SSMFE_EXPERT - Sparse Symmetric Matrix-Free Eigensolver (Expert interface)</span></a> or <a class="reference internal" href="ssmfe_core.html"><span class="doc">SSMFE_CORE - Sparse Symmetric Matrix-Free Eigensolver (Core Algorithm)</span></a> that delegate the
+storage of computed eigenpairs and the termination of the computation to the
+user.</p>
+</dd></dl>
+
+</section>
+<section id="examples">
+<span id="example"></span><h2>Examples<a class="headerlink" href="#examples" title="Permalink to this heading"></a></h2>
+<section id="preconditioning-example">
+<h3>Preconditioning example<a class="headerlink" href="#preconditioning-example" title="Permalink to this heading"></a></h3>
+<p>The following code computes the 5 leftmost eigenpairs of the matrix
+<span class="math notranslate nohighlight">\(A\)</span> of order 100 that approximates the two-dimensional Laplacian
+operator on a 20-by-20 grid. One forward and one backward Gauss-Seidel
+update are used for preconditioning, which halves the number of
+iterations compared with solving the same problem without
+preconditioning. The header <cite>laplace2d.h</cite>
+(examples/C/ssmfe/laplace2d.h) supplies a subroutine
+<cite>apply_laplacian()</cite> that multiplies a block of vectors by <span class="math notranslate nohighlight">\(A\)</span>, and
+a subroutine <cite>apply_gauss_seidel_step()</cite> that computes <span class="math notranslate nohighlight">\(y = T x\)</span>
+for a block of vectors <span class="math notranslate nohighlight">\(x\)</span> by applying one forward and one
+backward update of the Gauss-Seidel method to the system
+<span class="math notranslate nohighlight">\(A y = x\)</span>.</p>
+<div class="highlight-C notranslate"><div class="highlight"><pre><span></span><span class="cm">/* examples/C/ssmfe/precond_ssmfe.c */</span>
+<span class="cm">/* Laplacian on a square grid (using SPRAL_SSMFE routines) */</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;spral.h&quot;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;math.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdlib.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;cblas.h&gt;</span>
+
+<span class="cm">/* Header that implements Laplacian and preconditioners */</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;laplace2d.h&quot;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">   </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">m</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="mi">20</span><span class="p">;</span><span class="w">     </span><span class="cm">/* grid points along each side */</span>
+<span class="w">   </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">n</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="n">m</span><span class="o">*</span><span class="n">m</span><span class="p">;</span><span class="w">    </span><span class="cm">/* problem size */</span>
+<span class="w">   </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">nep</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span><span class="w">      </span><span class="cm">/* eigenpairs wanted */</span>
+
+<span class="w">   </span><span class="kt">double</span><span class="w"> </span><span class="o">*</span><span class="n">lambda</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">malloc</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">nep</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="o">*</span><span class="n">lambda</span><span class="p">));</span><span class="w"> </span><span class="cm">/* eigenvalues */</span>
+<span class="w">   </span><span class="kt">double</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="n">X</span><span class="p">)[</span><span class="mi">2</span><span class="o">*</span><span class="n">nep</span><span class="p">][</span><span class="n">n</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">malloc</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="o">*</span><span class="n">X</span><span class="p">));</span><span class="w">       </span><span class="cm">/* eigenvectors */</span>
+<span class="w">   </span><span class="k">struct</span><span class="w"> </span><span class="nc">spral_ssmfe_rcid</span><span class="w"> </span><span class="n">rci</span><span class="p">;</span><span class="w">           </span><span class="cm">/* reverse communication data */</span>
+<span class="w">   </span><span class="k">struct</span><span class="w"> </span><span class="nc">spral_ssmfe_options</span><span class="w"> </span><span class="n">options</span><span class="p">;</span><span class="w">    </span><span class="cm">/* options */</span>
+<span class="w">   </span><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="n">keep</span><span class="p">;</span><span class="w">                            </span><span class="cm">/* private data */</span>
+<span class="w">   </span><span class="k">struct</span><span class="w"> </span><span class="nc">spral_ssmfe_inform</span><span class="w"> </span><span class="n">inform</span><span class="p">;</span><span class="w">      </span><span class="cm">/* information */</span>
+
+<span class="w">   </span><span class="cm">/* Initialize options to default values */</span>
+<span class="w">   </span><span class="n">spral_ssmfe_default_options</span><span class="p">(</span><span class="o">&amp;</span><span class="n">options</span><span class="p">);</span>
+<span class="w">   </span><span class="cm">/* gap between the last converged eigenvalue and the rest of the spectrum</span>
+<span class="cm">    * must be at least 0.1 times average gap between computed eigenvalues */</span>
+<span class="w">   </span><span class="n">options</span><span class="p">.</span><span class="n">left_gap</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">-0.1</span><span class="p">;</span>
+
+<span class="w">   </span><span class="n">rci</span><span class="p">.</span><span class="n">job</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">keep</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">NULL</span><span class="p">;</span>
+<span class="w">   </span><span class="k">while</span><span class="p">(</span><span class="nb">true</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="cm">/* reverse communication loop */</span>
+<span class="w">      </span><span class="n">spral_ssmfe_standard_double</span><span class="p">(</span><span class="o">&amp;</span><span class="n">rci</span><span class="p">,</span><span class="w"> </span><span class="n">nep</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="o">*</span><span class="n">nep</span><span class="p">,</span><span class="w"> </span><span class="n">lambda</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">X</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="n">n</span><span class="p">,</span>
+<span class="w">         </span><span class="o">&amp;</span><span class="n">keep</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">options</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">inform</span><span class="p">);</span>
+<span class="w">      </span><span class="k">switch</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">job</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="k">case</span><span class="w"> </span><span class="mi">1</span><span class="p">:</span>
+<span class="w">         </span><span class="n">apply_laplacian</span><span class="p">(</span><span class="n">m</span><span class="p">,</span><span class="w"> </span><span class="n">m</span><span class="p">,</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">nx</span><span class="p">,</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">y</span><span class="p">);</span>
+<span class="w">         </span><span class="k">break</span><span class="p">;</span>
+<span class="w">      </span><span class="k">case</span><span class="w"> </span><span class="mi">2</span><span class="p">:</span>
+<span class="w">         </span><span class="n">apply_gauss_seidel_step</span><span class="p">(</span><span class="n">m</span><span class="p">,</span><span class="w"> </span><span class="n">m</span><span class="p">,</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">nx</span><span class="p">,</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">y</span><span class="p">);</span>
+<span class="w">         </span><span class="k">break</span><span class="p">;</span>
+<span class="w">      </span><span class="k">default</span><span class="o">:</span>
+<span class="w">         </span><span class="k">goto</span><span class="w"> </span><span class="n">finished</span><span class="p">;</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="w">   </span><span class="p">}</span>
+<span class="nl">finished</span><span class="p">:</span>
+<span class="w">   </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%d eigenpairs converged in %d iterations</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">inform</span><span class="p">.</span><span class="n">left</span><span class="p">,</span><span class="w"> </span><span class="n">inform</span><span class="p">.</span><span class="n">iteration</span><span class="p">);</span>
+<span class="w">   </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">&lt;</span><span class="n">inform</span><span class="p">.</span><span class="n">left</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span>
+<span class="w">      </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot; lambda[%1d] = %13.7e</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="n">lambda</span><span class="p">[</span><span class="n">i</span><span class="p">]);</span>
+<span class="w">   </span><span class="n">spral_ssmfe_free_double</span><span class="p">(</span><span class="o">&amp;</span><span class="n">keep</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">inform</span><span class="p">);</span>
+<span class="w">   </span><span class="n">free</span><span class="p">(</span><span class="n">lambda</span><span class="p">);</span>
+<span class="w">   </span><span class="n">free</span><span class="p">(</span><span class="n">X</span><span class="p">);</span>
+
+<span class="w">   </span><span class="cm">/* Success */</span>
+<span class="w">   </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>This code produces the following output:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mi">6</span> <span class="n">eigenpairs</span> <span class="n">converged</span> <span class="ow">in</span> <span class="mi">19</span> <span class="n">iterations</span>
+ <span class="k">lambda</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">4.4676695e-02</span>
+ <span class="k">lambda</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.1119274e-01</span>
+ <span class="k">lambda</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.1119274e-01</span>
+ <span class="k">lambda</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.7770878e-01</span>
+ <span class="k">lambda</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">=</span> <span class="mf">2.2040061e-01</span>
+ <span class="k">lambda</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span> <span class="o">=</span> <span class="mf">2.2040061e-01</span>
+</pre></div>
+</div>
+<p>Note that the code computed one extra eigenpair because of the
+insufficient gap between the 5th and 6th eigenvalues.</p>
+</section>
+<section id="shift-and-invert-example">
+<h3>Shift-and-invert example<a class="headerlink" href="#shift-and-invert-example" title="Permalink to this heading"></a></h3>
+<p>The following code computes the eigenpairs of the matrix of order 64
+that approximates the two-dimensional Laplacian operator on 8-by-8 grid
+with eigenvalues near the shift <cite>sigma=1.0</cite>. For the shifted
+solve, LAPACK subroutines DSYTRS and DSYTRF are used, which perform the
+LDLT-factorization and the solution of the factorized system
+respectively. The matrix of the discretized Laplacian is computed by the
+subroutine <cite>set_2d_laplacian_matrix()</cite> from the <cite>laplace2d.h</cite> header
+(examples/C/ssmfe/laplace2d.h). The header <cite>ldltf.h</cite>
+(examples/C/ssmfe/ldltf.h) supplies the function
+<cite>num_neg_D()</cite> that counts the number of negative eigenvalues of the
+D-factor.</p>
+<div class="highlight-C notranslate"><div class="highlight"><pre><span></span><span class="cm">/* examples/C/ssmfe/shift_invert.c */</span>
+<span class="cm">/* Laplacian on a rectangular grid by shift-invert via LDLT factorization */</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;spral.h&quot;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;math.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdlib.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;cblas.h&gt;</span>
+
+<span class="cm">/* Headers that implements Laplacian and preconditioners and LDLT support */</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;laplace2d.h&quot;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;ldltf.h&quot;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">   </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">nx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">8</span><span class="p">;</span><span class="w">          </span><span class="cm">/* grid points along x */</span>
+<span class="w">   </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">ny</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">8</span><span class="p">;</span><span class="w">          </span><span class="cm">/* grid points along y */</span>
+<span class="w">   </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">n</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">nx</span><span class="o">*</span><span class="n">ny</span><span class="p">;</span><span class="w">       </span><span class="cm">/* problem size */</span>
+<span class="w">   </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">sigma</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">1.0</span><span class="p">;</span><span class="w">  </span><span class="cm">/* shift */</span>
+
+<span class="w">   </span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">ipiv</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">malloc</span><span class="p">(</span><span class="n">n</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="o">*</span><span class="n">ipiv</span><span class="p">));</span><span class="w">        </span><span class="cm">/* LDLT pivot index */</span>
+<span class="w">   </span><span class="kt">double</span><span class="w"> </span><span class="o">*</span><span class="n">lambda</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">malloc</span><span class="p">(</span><span class="n">n</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="o">*</span><span class="n">lambda</span><span class="p">));</span><span class="w"> </span><span class="cm">/* eigenvalues */</span>
+<span class="w">   </span><span class="kt">double</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="n">X</span><span class="p">)[</span><span class="n">n</span><span class="p">][</span><span class="n">n</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">malloc</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="o">*</span><span class="n">X</span><span class="p">));</span><span class="w">       </span><span class="cm">/* eigenvectors */</span>
+<span class="w">   </span><span class="kt">double</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="n">A</span><span class="p">)[</span><span class="n">n</span><span class="p">][</span><span class="n">n</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">malloc</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="o">*</span><span class="n">A</span><span class="p">));</span><span class="w">       </span><span class="cm">/* matrix */</span>
+<span class="w">   </span><span class="kt">double</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="n">LDLT</span><span class="p">)[</span><span class="n">n</span><span class="p">][</span><span class="n">n</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">malloc</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="o">*</span><span class="n">LDLT</span><span class="p">));</span><span class="w"> </span><span class="cm">/* factors */</span>
+<span class="w">   </span><span class="kt">double</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="n">work</span><span class="p">)[</span><span class="n">n</span><span class="p">][</span><span class="n">n</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">malloc</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="o">*</span><span class="n">work</span><span class="p">));</span><span class="w"> </span><span class="cm">/* work array for dsytrf */</span>
+<span class="w">   </span><span class="k">struct</span><span class="w"> </span><span class="nc">spral_ssmfe_options</span><span class="w"> </span><span class="n">options</span><span class="p">;</span><span class="w">    </span><span class="cm">/* eigensolver options */</span>
+<span class="w">   </span><span class="k">struct</span><span class="w"> </span><span class="nc">spral_ssmfe_inform</span><span class="w"> </span><span class="n">inform</span><span class="p">;</span><span class="w">      </span><span class="cm">/* information */</span>
+<span class="w">   </span><span class="k">struct</span><span class="w"> </span><span class="nc">spral_ssmfe_rcid</span><span class="w"> </span><span class="n">rci</span><span class="p">;</span><span class="w">           </span><span class="cm">/* reverse communication data */</span>
+<span class="w">   </span><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="n">keep</span><span class="p">;</span><span class="w">                            </span><span class="cm">/* private data */</span>
+
+<span class="w">   </span><span class="cm">/* Initialize options to default values */</span>
+<span class="w">   </span><span class="n">spral_ssmfe_default_options</span><span class="p">(</span><span class="o">&amp;</span><span class="n">options</span><span class="p">);</span>
+
+<span class="w">   </span><span class="cm">/* Set up then perform LDLT factorization of the shifted matrix */</span>
+<span class="w">   </span><span class="n">set_laplacian_matrix</span><span class="p">(</span><span class="n">nx</span><span class="p">,</span><span class="w"> </span><span class="n">ny</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">A</span><span class="p">);</span>
+<span class="w">   </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">j</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="o">&lt;</span><span class="n">n</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="o">++</span><span class="p">)</span>
+<span class="w">   </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">&lt;</span><span class="n">n</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span>
+<span class="w">      </span><span class="p">(</span><span class="o">*</span><span class="n">LDLT</span><span class="p">)[</span><span class="n">j</span><span class="p">][</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">i</span><span class="o">==</span><span class="n">j</span><span class="p">)</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="n">A</span><span class="p">)[</span><span class="n">j</span><span class="p">][</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">sigma</span>
+<span class="w">                             </span><span class="o">:</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="n">A</span><span class="p">)[</span><span class="n">j</span><span class="p">][</span><span class="n">i</span><span class="p">];</span>
+<span class="w">   </span><span class="n">cwrap_dsytrf</span><span class="p">(</span><span class="sc">&#39;L&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">LDLT</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">ipiv</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">work</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="n">n</span><span class="o">*</span><span class="n">n</span><span class="p">);</span>
+
+<span class="w">   </span><span class="cm">/* Main loop */</span>
+<span class="w">   </span><span class="kt">int</span><span class="w"> </span><span class="n">left</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">num_neg_D</span><span class="p">(</span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">LDLT</span><span class="p">,</span><span class="w"> </span><span class="n">ipiv</span><span class="p">);</span><span class="w">   </span><span class="cm">/* all evalues to left of sigma */</span>
+<span class="w">   </span><span class="kt">int</span><span class="w"> </span><span class="n">right</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span><span class="w">                            </span><span class="cm">/* 5 evalues to right of sigma */</span>
+<span class="w">   </span><span class="n">rci</span><span class="p">.</span><span class="n">job</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">keep</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">NULL</span><span class="p">;</span>
+<span class="w">   </span><span class="k">while</span><span class="p">(</span><span class="nb">true</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="n">spral_ssmfe_standard_shift_double</span><span class="p">(</span><span class="o">&amp;</span><span class="n">rci</span><span class="p">,</span><span class="w"> </span><span class="n">sigma</span><span class="p">,</span><span class="w"> </span><span class="n">left</span><span class="p">,</span><span class="w"> </span><span class="n">right</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">lambda</span><span class="p">,</span>
+<span class="w">            </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">X</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">keep</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">options</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">inform</span><span class="p">);</span>
+<span class="w">      </span><span class="k">switch</span><span class="p">(</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">job</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="k">case</span><span class="w"> </span><span class="mi">1</span><span class="p">:</span>
+<span class="w">         </span><span class="n">cblas_dgemm</span><span class="p">(</span><span class="n">CblasColMajor</span><span class="p">,</span><span class="w"> </span><span class="n">CblasNoTrans</span><span class="p">,</span><span class="w"> </span><span class="n">CblasNoTrans</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">nx</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span>
+<span class="w">            </span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">A</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">y</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">);</span>
+<span class="w">         </span><span class="k">break</span><span class="p">;</span>
+<span class="w">      </span><span class="k">case</span><span class="w"> </span><span class="mi">2</span><span class="p">:</span>
+<span class="w">         </span><span class="c1">// No preconditioning</span>
+<span class="w">         </span><span class="k">break</span><span class="p">;</span>
+<span class="w">      </span><span class="k">case</span><span class="w"> </span><span class="mi">9</span><span class="p">:</span>
+<span class="w">         </span><span class="n">cblas_dcopy</span><span class="p">(</span><span class="n">n</span><span class="o">*</span><span class="n">rci</span><span class="p">.</span><span class="n">nx</span><span class="p">,</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">y</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+<span class="w">         </span><span class="n">cwrap_dsytrs</span><span class="p">(</span><span class="sc">&#39;L&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">nx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">LDLT</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">ipiv</span><span class="p">,</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">y</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">);</span>
+<span class="w">         </span><span class="k">break</span><span class="p">;</span>
+<span class="w">      </span><span class="k">default</span><span class="o">:</span>
+<span class="w">         </span><span class="k">goto</span><span class="w"> </span><span class="n">finished</span><span class="p">;</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="w">   </span><span class="p">}</span>
+<span class="nl">finished</span><span class="p">:</span>
+<span class="w">   </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Eigenvalues near %e (took %d iterations)</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">sigma</span><span class="p">,</span><span class="w"> </span><span class="n">inform</span><span class="p">.</span><span class="n">iteration</span><span class="p">);</span>
+<span class="w">   </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">&lt;</span><span class="n">inform</span><span class="p">.</span><span class="n">left</span><span class="o">+</span><span class="n">inform</span><span class="p">.</span><span class="n">right</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span>
+<span class="w">      </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot; lambda[%1d] = %13.7e</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="n">lambda</span><span class="p">[</span><span class="n">i</span><span class="p">]);</span>
+<span class="w">   </span><span class="n">spral_ssmfe_free_double</span><span class="p">(</span><span class="o">&amp;</span><span class="n">keep</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">inform</span><span class="p">);</span>
+<span class="w">   </span><span class="n">free</span><span class="p">(</span><span class="n">ipiv</span><span class="p">);</span>
+<span class="w">   </span><span class="n">free</span><span class="p">(</span><span class="n">lambda</span><span class="p">);</span>
+<span class="w">   </span><span class="n">free</span><span class="p">(</span><span class="n">X</span><span class="p">);</span>
+<span class="w">   </span><span class="n">free</span><span class="p">(</span><span class="n">A</span><span class="p">);</span>
+<span class="w">   </span><span class="n">free</span><span class="p">(</span><span class="n">LDLT</span><span class="p">);</span>
+<span class="w">   </span><span class="n">free</span><span class="p">(</span><span class="n">work</span><span class="p">);</span>
+
+<span class="w">   </span><span class="cm">/* Success */</span>
+<span class="w">   </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>This code produces the following output:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Eigenvalues</span> <span class="n">near</span> <span class="mf">1.000000e+00</span> <span class="p">(</span><span class="n">took</span> <span class="mi">5</span> <span class="n">iterations</span><span class="p">)</span>
+ <span class="k">lambda</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">2.4122952e-01</span>
+ <span class="k">lambda</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mf">5.8852587e-01</span>
+ <span class="k">lambda</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="mf">5.8852587e-01</span>
+ <span class="k">lambda</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="mf">9.3582223e-01</span>
+ <span class="k">lambda</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.1206148e+00</span>
+ <span class="k">lambda</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.1206148e+00</span>
+ <span class="k">lambda</span><span class="p">[</span><span class="mi">6</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.4679111e+00</span>
+ <span class="k">lambda</span><span class="p">[</span><span class="mi">7</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.4679111e+00</span>
+ <span class="k">lambda</span><span class="p">[</span><span class="mi">8</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.7733184e+00</span>
+</pre></div>
+</div>
+</section>
+<section id="hermitian-example">
+<h3>Hermitian example<a class="headerlink" href="#hermitian-example" title="Permalink to this heading"></a></h3>
+<p>The following code computes the 5 leftmost eigenpairs of the
+differential operator <span class="math notranslate nohighlight">\(i \frac{d}{dx}\)</span> acting in the space of
+periodic functions discretized by central differences on a uniform mesh
+of 80 steps.</p>
+<div class="highlight-C notranslate"><div class="highlight"><pre><span></span><span class="cm">/* examples/C/ssmfe/hermitian.c - Example code for SPRAL_SSMFE package */</span>
+<span class="cm">/* Hermitian operator example */</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;spral.h&quot;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;math.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdlib.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;cblas.h&gt;</span>
+
+<span class="cm">/* central differences for i d/dx */</span>
+<span class="kt">void</span><span class="w"> </span><span class="nf">apply_idx</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">m</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="k">complex</span><span class="w"> </span><span class="o">*</span><span class="n">x_ptr</span><span class="p">,</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="k">complex</span><span class="w"> </span><span class="o">*</span><span class="n">y_ptr</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">   </span><span class="cm">/* Use &quot;variable-modified types&quot; to simplify matrix indexing */</span>
+<span class="w">   </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="k">complex</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="n">x</span><span class="p">)[</span><span class="n">m</span><span class="p">][</span><span class="n">n</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="k">complex</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="p">)[</span><span class="n">m</span><span class="p">][</span><span class="n">n</span><span class="p">])</span><span class="w"> </span><span class="n">x_ptr</span><span class="p">;</span>
+<span class="w">   </span><span class="kt">double</span><span class="w"> </span><span class="k">complex</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="n">y</span><span class="p">)[</span><span class="n">m</span><span class="p">][</span><span class="n">n</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="kt">double</span><span class="w"> </span><span class="k">complex</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="p">)[</span><span class="n">m</span><span class="p">][</span><span class="n">n</span><span class="p">])</span><span class="w"> </span><span class="n">y_ptr</span><span class="p">;</span>
+<span class="w">   </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">j</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="o">&lt;</span><span class="n">m</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">&lt;</span><span class="n">n</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">         </span><span class="kt">int</span><span class="w"> </span><span class="n">il</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">i</span><span class="o">==</span><span class="mi">0</span><span class="p">)</span><span class="w">   </span><span class="o">?</span><span class="w"> </span><span class="n">n</span><span class="mi">-1</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">i</span><span class="mi">-1</span><span class="p">;</span>
+<span class="w">         </span><span class="kt">int</span><span class="w"> </span><span class="n">ir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">i</span><span class="o">==</span><span class="n">n</span><span class="mi">-1</span><span class="p">)</span><span class="w"> </span><span class="o">?</span><span class="w"> </span><span class="mi">0</span><span class="w">   </span><span class="o">:</span><span class="w"> </span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">;</span>
+<span class="w">         </span><span class="p">(</span><span class="o">*</span><span class="n">y</span><span class="p">)[</span><span class="n">j</span><span class="p">][</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">_Complex_I</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="p">((</span><span class="o">*</span><span class="n">x</span><span class="p">)[</span><span class="n">j</span><span class="p">][</span><span class="n">ir</span><span class="p">]</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="n">x</span><span class="p">)[</span><span class="n">j</span><span class="p">][</span><span class="n">il</span><span class="p">]);</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="w">   </span><span class="p">}</span>
+<span class="p">}</span>
+
+<span class="cm">/* main routine */</span>
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">   </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">n</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="mi">80</span><span class="p">;</span><span class="w">                 </span><span class="cm">/* problem size */</span>
+<span class="w">   </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">nep</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span><span class="w">                  </span><span class="cm">/* eigenpairs wanted */</span>
+
+<span class="w">   </span><span class="kt">double</span><span class="w"> </span><span class="o">*</span><span class="n">lambda</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">malloc</span><span class="p">(</span><span class="n">nep</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="o">*</span><span class="n">lambda</span><span class="p">));</span><span class="w">   </span><span class="cm">/* eigenvalues */</span>
+<span class="w">   </span><span class="kt">double</span><span class="w"> </span><span class="k">complex</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="n">X</span><span class="p">)[</span><span class="n">nep</span><span class="p">][</span><span class="n">n</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">malloc</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="o">*</span><span class="n">X</span><span class="p">));</span><span class="w"> </span><span class="cm">/* eigenvectors */</span>
+<span class="w">   </span><span class="k">struct</span><span class="w"> </span><span class="nc">spral_ssmfe_rciz</span><span class="w"> </span><span class="n">rci</span><span class="p">;</span><span class="w">        </span><span class="cm">/* reverse communication data */</span>
+<span class="w">   </span><span class="k">struct</span><span class="w"> </span><span class="nc">spral_ssmfe_options</span><span class="w"> </span><span class="n">options</span><span class="p">;</span><span class="w"> </span><span class="cm">/* options */</span>
+<span class="w">   </span><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="n">keep</span><span class="p">;</span><span class="w">                         </span><span class="cm">/* private data */</span>
+<span class="w">   </span><span class="k">struct</span><span class="w"> </span><span class="nc">spral_ssmfe_inform</span><span class="w"> </span><span class="n">inform</span><span class="p">;</span><span class="w">   </span><span class="cm">/* information */</span>
+
+<span class="w">   </span><span class="cm">/* Initialize options to default values */</span>
+<span class="w">   </span><span class="n">spral_ssmfe_default_options</span><span class="p">(</span><span class="o">&amp;</span><span class="n">options</span><span class="p">);</span>
+
+<span class="w">   </span><span class="n">rci</span><span class="p">.</span><span class="n">job</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">keep</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">NULL</span><span class="p">;</span>
+<span class="w">   </span><span class="k">while</span><span class="p">(</span><span class="nb">true</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="cm">/* reverse communication loop */</span>
+<span class="w">      </span><span class="n">spral_ssmfe_standard_double_complex</span><span class="p">(</span><span class="o">&amp;</span><span class="n">rci</span><span class="p">,</span><span class="w"> </span><span class="n">nep</span><span class="p">,</span><span class="w"> </span><span class="n">nep</span><span class="p">,</span><span class="w"> </span><span class="n">lambda</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span>
+<span class="w">         </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">X</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">keep</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">options</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">inform</span><span class="p">);</span>
+<span class="w">      </span><span class="k">switch</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">job</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="k">case</span><span class="w"> </span><span class="mi">1</span><span class="p">:</span>
+<span class="w">         </span><span class="n">apply_idx</span><span class="p">(</span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">nx</span><span class="p">,</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">y</span><span class="p">);</span>
+<span class="w">         </span><span class="k">break</span><span class="p">;</span>
+<span class="w">      </span><span class="k">case</span><span class="w"> </span><span class="mi">2</span><span class="p">:</span>
+<span class="w">         </span><span class="c1">// No preconditioning</span>
+<span class="w">         </span><span class="k">break</span><span class="p">;</span>
+<span class="w">      </span><span class="k">default</span><span class="o">:</span>
+<span class="w">         </span><span class="k">goto</span><span class="w"> </span><span class="n">finished</span><span class="p">;</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="w">   </span><span class="p">}</span>
+<span class="nl">finished</span><span class="p">:</span>
+<span class="w">   </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%d eigenpairs converged in %d iterations</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">inform</span><span class="p">.</span><span class="n">left</span><span class="p">,</span><span class="w"> </span><span class="n">inform</span><span class="p">.</span><span class="n">iteration</span><span class="p">);</span>
+<span class="w">   </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">&lt;</span><span class="n">inform</span><span class="p">.</span><span class="n">left</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span>
+<span class="w">      </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot; lambda[%1d] = %13.7e</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="n">lambda</span><span class="p">[</span><span class="n">i</span><span class="p">]);</span>
+<span class="w">   </span><span class="n">spral_ssmfe_free_double_complex</span><span class="p">(</span><span class="o">&amp;</span><span class="n">keep</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">inform</span><span class="p">);</span>
+<span class="w">   </span><span class="n">free</span><span class="p">(</span><span class="n">lambda</span><span class="p">);</span>
+<span class="w">   </span><span class="n">free</span><span class="p">(</span><span class="n">X</span><span class="p">);</span>
+
+<span class="w">   </span><span class="cm">/* Success */</span>
+<span class="w">   </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>This code produces the following output:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="mi">5</span> <span class="n">eigenpairs</span> <span class="n">converged</span> <span class="ow">in</span> <span class="mi">25</span> <span class="n">iterations</span>
+ <span class="k">lambda</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mf">2.0000000e+00</span>
+ <span class="k">lambda</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.9938347e+00</span>
+ <span class="k">lambda</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.9938347e+00</span>
+ <span class="k">lambda</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.9753767e+00</span>
+ <span class="k">lambda</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.9753767e+00</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="method">
+<span id="id1"></span><h2>Method<a class="headerlink" href="#method" title="Permalink to this heading"></a></h2>
+<p><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssmfe_core`</span></code>, upon which <code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssmfe</span></code> is built,
+implements a block iterative algorithm based on the Jacobi-conjugate
+preconditioned gradients (JCPG) method <a class="footnote-reference brackets" href="#id5" id="id2" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a>, <a class="footnote-reference brackets" href="#id6" id="id3" role="doc-noteref"><span class="fn-bracket">[</span>3<span class="fn-bracket">]</span></a>. This algorithm
+simultaneously computes <span class="math notranslate nohighlight">\(m &lt; n\)</span> approximate eigenpairs, where the block
+size <span class="math notranslate nohighlight">\(m\)</span> exceeds the number <span class="math notranslate nohighlight">\(n_e\)</span> of desired eigenpairs for the
+sake of better convergence, namely, <span class="math notranslate nohighlight">\(m = n_e + \min(10, 0.1 n_e)\)</span>.</p>
+<p>An approximate eigenpair <span class="math notranslate nohighlight">\(\{x,\lambda\}\)</span> is considered to have
+converged if the following three conditions are all satisfied:</p>
+<ol class="arabic simple">
+<li><p>if <cite>options.abs_tol_lambda</cite> and <cite>options.rel_tol_lambda</cite> are not both
+equal to zero, then the estimated error in the approximate eigenvalue
+must be less than or equal to
+<span class="math notranslate nohighlight">\(\max(\mathrm{options.abs\_tol\_lambda}, \delta*\mathrm{options.rel\_tol\_lambda})\)</span>,
+where <span class="math notranslate nohighlight">\(\delta\)</span> is the estimated average distance between
+eigenvalues.</p></li>
+<li><p>if <cite>options.tol_x</cite> is not zero, then the estimated sine of the angle
+between the approximate eigenvector and the invariant subspace
+corresponding to the eigenvalue approximated by <span class="math notranslate nohighlight">\(\lambda\)</span> must
+be less than or equal to <cite>options.tol_x</cite>.</p></li>
+<li><p>if <cite>options.abs_tol_residual</cite> and <cite>options.rel_tol_residual</cite> are not
+both equal to zero, then the Euclidean norm of the residual,
+<span class="math notranslate nohighlight">\(\|A x - \lambda B x\|_2\)</span>, must be less than or equal to
+<span class="math notranslate nohighlight">\(\max(\mathrm{options.abs\_tol\_residual}, \mathrm{options.rel\_tol\_residual}*\|\lambda B x\|_2)\)</span>.</p></li>
+</ol>
+<p>The extra eigenpairs are not checked for convergence, as their role is
+purely auxiliary.</p>
+<p>If the gap between the last computed eigenvalue and the rest of the
+spectrum is small, then the accuracy of the corresponding eigenvector
+may be very low. To prevent this from happening, the user should set the
+eigenpairs storage size mep to a value that is larger than the number of
+desired eigenpairs, and set the options <cite>options.left_gap</cite> and
+<cite>options.right_gap</cite> to non-zero values <span class="math notranslate nohighlight">\(\delta_l\)</span> and
+<span class="math notranslate nohighlight">\(\delta_r\)</span>. These values determine the size of the minimal
+acceptable gaps between the computed eigenvalues and the rest of the
+spectrum, <span class="math notranslate nohighlight">\(\delta_l\)</span> referring to either leftmost eigenvalues (for
+<code class="xref f f-subr docutils literal notranslate"><span class="pre">ssmfe_standard()</span></code> and <code class="xref f f-subr docutils literal notranslate"><span class="pre">ssmfe_generalized()</span></code> only) or those
+to the left of the shift <cite>sigma</cite>, and <span class="math notranslate nohighlight">\(\delta_r\)</span> to those to the right of
+the shift <cite>sigma</cite>. Positive values of <span class="math notranslate nohighlight">\(\delta_l\)</span> and <span class="math notranslate nohighlight">\(\delta_r\)</span> set
+the gap explicitely, and negative values require the gap to be not less than
+their absolute value times the average distance between the computed
+eigenvalues. A recommended value of <span class="math notranslate nohighlight">\(\delta_l\)</span> and
+<span class="math notranslate nohighlight">\(\delta_r\)</span> is <cite>-0.1</cite>. The value of <cite>mep</cite> has little effect on
+the speed of computation, hence it might be set to any reasonably large
+value. The larger the value of <cite>mep</cite>, the larger the size of an eigenvalue
+cluster for which accurate eigenvectors can be computed, notably: to
+safeguard against clusters of size up to <span class="math notranslate nohighlight">\(k\)</span>, it is sufficient to
+set <cite>mep</cite> to the number of desired eigenpairs plus <span class="math notranslate nohighlight">\(k - 1\)</span>.</p>
+<p>When using the solver procedures that employ the shift-and-invert
+technique, it is very important to ensure that the numbers of desired
+eigenvalues each side of the shift do not exceed the actual numbers of
+these eigenvalues, as the eigenpairs ‘approximating’ non-existing
+eigenpairs of the problem will not converge. It is therefore strongly
+recommended that the user employs a linear system solver that performs
+the <span class="math notranslate nohighlight">\(LDL^T\)</span> factorization of the shifted system, e.g. <cite>HSL_MA97</cite> or
+<cite>SPRAL_SSIDS</cite>. The <span class="math notranslate nohighlight">\(LDL^T\)</span> factorization of the matrix
+<span class="math notranslate nohighlight">\(A - \sigma B\)</span> consists in finding a lower triangular matrix <span class="math notranslate nohighlight">\(L\)</span>, a
+block-diagonal matrix <span class="math notranslate nohighlight">\(D\)</span> with <span class="math notranslate nohighlight">\(1\times 1\)</span> and
+<span class="math notranslate nohighlight">\(2\times 2\)</span> blocks on the diagonal and a permutation matrix
+<span class="math notranslate nohighlight">\(P\)</span> such that <span class="math notranslate nohighlight">\(P^T(A - \sigma B)P = L D L^T\)</span>. By the inertia
+theorem, the number of eigenvalues to the left and right from the shift
+<span class="math notranslate nohighlight">\(\sigma\)</span> is equal to the number of negative and positive
+eigenvalues of <span class="math notranslate nohighlight">\(D\)</span>, which allows quick computation of the
+eigenvalue numbers each side of the shift.</p>
+<section id="references">
+<h3>References<a class="headerlink" href="#references" title="Permalink to this heading"></a></h3>
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="id4" role="note">
+<span class="label"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></span>
+<p>E. E. Ovtchinnikov and J. Reid (2010).
+<em>A preconditioned block conjugate gradient algorithm for computing extreme
+eigenpairs of symmetric and Hermitian problems</em>.
+Technical Report RAL-TR-2010-19.</p>
+</aside>
+<aside class="footnote brackets" id="id5" role="note">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id2">2</a><span class="fn-bracket">]</span></span>
+<p>E. E. Ovtchinnikov (2008).
+<em>Jacobi correction equation, line search and conjugate gradients in
+Hermitian eigenvalue computation I: Computing an extreme eigenvalue</em>.
+SIAM J. Numer. Anal., 46:2567–2592.</p>
+</aside>
+<aside class="footnote brackets" id="id6" role="note">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id3">3</a><span class="fn-bracket">]</span></span>
+<p>E. E. Ovtchinnikov (2008).
+<em>Jacobi correction equation, line search and conjugate gradients in
+Hermitian eigenvalue computation II: Computing several extreme eigenvalues</em>.
+SIAM J. Numer. Anal., 46:2593–2619.</p>
+</aside>
+</aside>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="ssids.html" class="btn btn-neutral float-left" title="SSIDS - Sparse Symmetric Indefinite Direct Solver" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="ssmfe_expert.html" class="btn btn-neutral float-right" title="SSMFE_EXPERT - Sparse Symmetric Matrix-Free Eigensolver (Expert interface)" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Computational Mathematics Group, STFC Rutherford Appleton Laboratory.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

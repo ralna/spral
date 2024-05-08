@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>spral_rutherford_boeing - RB File Format Utilities &mdash; spral v2024-05-08 [Fortran] documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="spral_scaling - Sparse matrix scalings" href="scaling.html" />
+    <link rel="prev" title="spral_random_matrix - Pseudo-random Matrix Generator" href="random_matrix.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            spral
+              <img src="_static/STFC-Logo.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                v2024-05-08 [Fortran]
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="conventions.html">Data types and conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="csc_format.html">Compressed Sparse Column (CSC) Format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="coord_format.html">Coordinate (Coord) Format</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="lsmr.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_lsmr</span></code> - Sparse Least Squares LSMR Solver</a></li>
+<li class="toctree-l1"><a class="reference internal" href="matrix_util.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_matrix_util</span></code> - Matrix utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="random.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_random</span></code> - Pseudo-random number generator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="random_matrix.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_random_matrix</span></code> - Pseudo-random Matrix Generator</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_rutherford_boeing</span></code> - RB File Format Utilities</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#purpose">Purpose</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#version-history">Version history</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#subroutines">Subroutines</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#exit-status-codes">Exit status codes</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#derived-types">Derived types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#example">Example</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#reading-a-matrix">Reading a matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#writing-a-matrix">Writing a matrix</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#method">Method</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#generation-of-random-values">Generation of random values</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#rutherford-boeing-file-format">Rutherford Boeing File format</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="scaling.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_scaling</span></code> - Sparse matrix scalings</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssids.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssids</span></code> - Sparse Symmetric Indefinite Direct Solver</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssmfe.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssmfe</span></code> - Sparse Symmetric Matrix-Free Eigensolver</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssmfe_expert.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssmfe_expert</span></code> - Sparse Symmetric Matrix-Free Eigensolver (Expert interface)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssmfe_core.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssmfe_core</span></code> - Sparse Symmetric Matrix-Free Eigensolver (Core Algorithm)</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">spral</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_rutherford_boeing</span></code> - RB File Format Utilities</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/rutherford_boeing.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="spral-rutherford-boeing-rb-file-format-utilities">
+<h1><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_rutherford_boeing</span></code> - RB File Format Utilities<a class="headerlink" href="#spral-rutherford-boeing-rb-file-format-utilities" title="Permalink to this heading"></a></h1>
+<section id="purpose">
+<h2>Purpose<a class="headerlink" href="#purpose" title="Permalink to this heading"></a></h2>
+<p>This package provides routines to read and write matrices stored in
+files using the <a class="reference internal" href="#rb-format"><span class="std std-ref">Rutherford-Boeing format</span></a>.</p>
+<p>At present, reading and writing of supplementary data (e.g. right-hand sides)
+is not supported. If it is required to read and write these files, we
+recommend the use of the HSL routines
+<a class="reference external" href="http://www.hsl.rl.ac.uk/catalogue/mc55.html">MC55</a> and
+<a class="reference external" href="http://www.hsl.rl.ac.uk/catalogue/mc56.html">MC56</a> that are available
+without charge (although redistribution is not permitted).</p>
+<section id="version-history">
+<h3>Version history<a class="headerlink" href="#version-history" title="Permalink to this heading"></a></h3>
+<dl class="simple">
+<dt>2016-09-08 Version 1.0.0</dt><dd><p>Initial release.</p>
+</dd>
+</dl>
+<p>[For detailed history, see ChangeLog]</p>
+</section>
+</section>
+<section id="subroutines">
+<h2>Subroutines<a class="headerlink" href="#subroutines" title="Permalink to this heading"></a></h2>
+<dl>
+<dt class="sig sig-object f" id="f/_/rb_peek">
+<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">rb_peek</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">filename</span></em>, <em class="sig-param"><span class="pre">inform</span></em><span class="optional">[</span>, <em class="sig-param"><span class="pre">m</span></em>, <em class="sig-param"><span class="pre">n</span></em>, <em class="sig-param"><span class="pre">nelt</span></em>, <em class="sig-param"><span class="pre">nvar</span></em>, <em class="sig-param"><span class="pre">nval</span></em>, <em class="sig-param"><span class="pre">matrix_type</span></em>, <em class="sig-param"><span class="pre">type_code</span></em>, <em class="sig-param"><span class="pre">title</span></em>, <em class="sig-param"><span class="pre">identifier</span></em><span class="optional">]</span><span class="sig-paren">)</span><a class="headerlink" href="#f/_/rb_peek" title="Permalink to this definition"></a></dt>
+<dd><p>Returns information about a matrix <span class="math notranslate nohighlight">\(A\)</span> stored in a specified file using
+Rutherford Boring format (only information from the file header is accessed).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filename</strong><em> [</em><em>character(len=*)</em><em>,</em><em>in</em><em>]</em> :: File to read.</p></li>
+<li><p><strong>inform</strong><em> [</em><em>integer </em><em>,</em><em>out</em><em>]</em> :: Exit status, see <a class="reference internal" href="#exit-status"><span class="std std-ref">table below</span></a>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Options<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>m</strong><em> [</em><em>integer </em><em>,</em><em>out</em><em>]</em> :: Number of rows in <span class="math notranslate nohighlight">\(A\)</span>.</p></li>
+<li><p><strong>n</strong><em> [</em><em>integer </em><em>,</em><em>out</em><em>]</em> :: Number of columns in <span class="math notranslate nohighlight">\(A\)</span>.</p></li>
+<li><p><strong>nelt</strong><em> [</em><em>integer(long)</em><em>,</em><em>out</em><em>]</em> :: Number of elements in file if matrix is
+stored in elemental format, or 0 otherwise.</p></li>
+<li><p><strong>nvar</strong><em> [</em><em>integer(long)</em><em>,</em><em>out</em><em>]</em> :: Number of row indices in file.</p></li>
+<li><p><strong>nval</strong><em> [</em><em>integer(long)</em><em>,</em><em>out</em><em>]</em> :: Number of reals in file.</p></li>
+<li><p><strong>matrix_type</strong><em> [</em><em>integer </em><em>,</em><em>out</em><em>]</em> :: Type of matrix, one of the values
+defined in <a class="reference internal" href="matrix_util.html#f/spral_matrix_util" title="f/spral_matrix_util: Matrix utilities"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_matrix_util</span></code></a>. Note that RB files do not
+distguish between symmetric positive-definite and symmetric indefinite
+matrices, so the latter matrix type is used for all symmetric matrices.</p></li>
+<li><p><strong>type_code</strong><em> [</em><em>character(len=3)</em><em>,</em><em>out</em><em>]</em> :: The three letter type code from the
+file (see <a class="reference internal" href="#type-code"><span class="std std-ref">table</span></a>).</p></li>
+<li><p><strong>title</strong><em> [</em><em>character(len=72)</em><em>,</em><em>out</em><em>]</em> :: Title field of file, usually the matrix
+name.</p></li>
+<li><p><strong>identifier</strong><em> [</em><em>character(len=8)</em><em>,</em><em>out</em><em>]</em> :: Identifier field of file, usually an
+id number.</p></li>
+</ul>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>An alternate version of this routine is also available that accepts a
+unit number instead of a filename, refer to source code if required.</p>
+</div>
+</dd></dl>
+
+<dl>
+<dt class="sig sig-object f" id="f/_/rb_read">
+<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">rb_read</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">filename</span></em>, <em class="sig-param"><span class="pre">m</span></em>, <em class="sig-param"><span class="pre">n</span></em>, <em class="sig-param"><span class="pre">ptr</span></em>, <em class="sig-param"><span class="pre">row</span></em>, <em class="sig-param"><span class="pre">val</span></em>, <em class="sig-param"><span class="pre">options</span></em>, <em class="sig-param"><span class="pre">inform</span></em><span class="optional">[</span>, <em class="sig-param"><span class="pre">matrix_type</span></em>, <em class="sig-param"><span class="pre">type_code</span></em>, <em class="sig-param"><span class="pre">title</span></em>, <em class="sig-param"><span class="pre">identifier</span></em>, <em class="sig-param"><span class="pre">state</span></em><span class="optional">]</span><span class="sig-paren">)</span><a class="headerlink" href="#f/_/rb_read" title="Permalink to this definition"></a></dt>
+<dd><p>Reads a CSC matrix from a file stored in RB format.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filename</strong><em> [</em><em>character(len=*)</em><em>,</em><em>in</em><em>]</em> :: File to read.</p></li>
+<li><p><strong>m</strong><em> [</em><em>integer </em><em>,</em><em>out</em><em>]</em> :: Number of rows in <span class="math notranslate nohighlight">\(A\)</span>.</p></li>
+<li><p><strong>n</strong><em> [</em><em>integer </em><em>,</em><em>out</em><em>]</em> :: Number of columns in <span class="math notranslate nohighlight">\(A\)</span>.</p></li>
+<li><p><strong>ptr</strong> (*)<em> [</em><em>integer(long)</em><em>,</em><em>allocatable, out</em><em>]</em> :: Column pointers
+(see <a class="reference internal" href="csc_format.html"><span class="doc">CSC format</span></a>). Will be allocated by the routine
+to have sufficient size.</p></li>
+<li><p><strong>row</strong> (*)<em> [</em><em>integer </em><em>,</em><em>allocatable, out</em><em>]</em> :: Row indices
+(see <a class="reference internal" href="csc_format.html"><span class="doc">CSC format</span></a>). Will be allocated by the routine
+to have sufficient size.</p></li>
+<li><p><strong>val</strong> (*)<em> [</em><em>real </em><em>,</em><em>allocatable, out</em><em>]</em> :: Values of non-zero entries
+(see <a class="reference internal" href="csc_format.html"><span class="doc">CSC format</span></a>) if present and requested.
+Will be allocated by the routine to have sufficient size.</p></li>
+<li><p><strong>options</strong><em> [</em><em>rb_read_options </em><em>,</em><em>in</em><em>]</em> :: Options for reading matrix (see
+<a class="reference internal" href="#f/_/rb_read_options" title="f/_/rb_read_options"><code class="xref f f-type docutils literal notranslate"><span class="pre">rb_read_options</span></code></a>).</p></li>
+<li><p><strong>inform</strong><em> [</em><em>integer </em><em>,</em><em>out</em><em>]</em> :: Exit status, see <a class="reference internal" href="#exit-status"><span class="std std-ref">table below</span></a>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Options<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>matrix_type</strong><em> [</em><em>integer </em><em>,</em><em>out</em><em>]</em> :: Type of matrix, one of the values
+defined in <a class="reference internal" href="matrix_util.html#f/spral_matrix_util" title="f/spral_matrix_util: Matrix utilities"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_matrix_util</span></code></a>. Note that RB files do not
+distguish between symmetric positive-definite and symmetric indefinite
+matrices, so the latter matrix type is used for all symmetric matrices.</p></li>
+<li><p><strong>type_code</strong><em> [</em><em>character(len=3)</em><em>,</em><em>out</em><em>]</em> :: The three letter type code from the
+file (see <a class="reference internal" href="#type-code"><span class="std std-ref">table</span></a>).</p></li>
+<li><p><strong>title</strong><em> [</em><em>character(len=72)</em><em>,</em><em>out</em><em>]</em> :: Title field of file.</p></li>
+<li><p><strong>identifier</strong><em> [</em><em>character(len=8)</em><em>,</em><em>out</em><em>]</em> :: Identifier field of file.</p></li>
+<li><p><strong>state</strong><em> [</em><em>random_state </em><em>,</em><em>inout</em><em>]</em> :: Random state to use for random number
+generation (if required).</p></li>
+</ul>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>A version with <cite>ptr(:)</cite> as default integer is also supplied, but users
+are recommended to use the long integer version to ensure support for
+large matrices.</p>
+</div>
+</dd></dl>
+
+<dl>
+<dt class="sig sig-object f" id="f/_/rb_write">
+<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">rb_write</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">filename</span></em>, <em class="sig-param"><span class="pre">matrix_type</span></em>, <em class="sig-param"><span class="pre">m</span></em>, <em class="sig-param"><span class="pre">n</span></em>, <em class="sig-param"><span class="pre">ptr</span></em>, <em class="sig-param"><span class="pre">row</span></em>, <em class="sig-param"><span class="pre">options</span></em>, <em class="sig-param"><span class="pre">inform</span></em><span class="optional">[</span>, <em class="sig-param"><span class="pre">val</span></em>, <em class="sig-param"><span class="pre">title</span></em>, <em class="sig-param"><span class="pre">identifier</span></em><span class="optional">]</span><span class="sig-paren">)</span><a class="headerlink" href="#f/_/rb_write" title="Permalink to this definition"></a></dt>
+<dd><p>Writes a CSC format matrix to the specified file in RB format.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filename</strong><em> [</em><em>character(len=*)</em><em>,</em><em>in</em><em>]</em> :: File to write. Any existing file will be
+overwritten.</p></li>
+<li><p><strong>matrix_type</strong><em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: Type of matrix to write, one of the values
+defined in <a class="reference internal" href="matrix_util.html#f/spral_matrix_util" title="f/spral_matrix_util: Matrix utilities"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_matrix_util</span></code></a> (will be converted into the second
+character of the <a class="reference internal" href="#type-code"><span class="std std-ref">type code</span></a>).</p></li>
+<li><p><strong>m</strong><em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: Number of rows in <span class="math notranslate nohighlight">\(A\)</span>.</p></li>
+<li><p><strong>n</strong><em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: Number of columns in <span class="math notranslate nohighlight">\(A\)</span>.</p></li>
+<li><p><strong>ptr</strong> (n+1)<em> [</em><em>integer(long)</em><em>,</em><em>in</em><em>]</em> :: Column pointers
+(see <a class="reference internal" href="csc_format.html"><span class="doc">CSC format</span></a>).</p></li>
+<li><p><strong>row</strong> (ptr(n+1)-1)<em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: Row indices
+(see <a class="reference internal" href="csc_format.html"><span class="doc">CSC format</span></a>).</p></li>
+<li><p><strong>options</strong><em> [</em><em>rb_write_options </em><em>,</em><em>in</em><em>]</em> :: Options for writing matrix (see
+<a class="reference internal" href="#f/_/rb_write_options" title="f/_/rb_write_options"><code class="xref f f-type docutils literal notranslate"><span class="pre">rb_write_options</span></code></a>).</p></li>
+<li><p><strong>inform</strong><em> [</em><em>integer </em><em>,</em><em>out</em><em>]</em> :: Exit status, see <a class="reference internal" href="#exit-status"><span class="std std-ref">table below</span></a>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Options<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>val</strong> (ptr(n+1)-1)<em> [</em><em>real </em><em>,</em><em>in</em><em>]</em> :: Values of non-zero entries
+(see <a class="reference internal" href="csc_format.html"><span class="doc">CSC format</span></a>).</p></li>
+<li><p><strong>title</strong><em> [</em><em>character(len=*)</em><em>,</em><em>in</em><em>]</em> :: Title field of file. Maximum length is 72
+characters. Defaults to <code class="docutils literal notranslate"><span class="pre">&quot;Matrix&quot;</span></code> if not present.</p></li>
+<li><p><strong>identifier</strong><em> [</em><em>character(len=*)</em><em>,</em><em>in</em><em>]</em> :: Identifier field of file. Maximum
+length is 8 characters. Defaults to <code class="docutils literal notranslate"><span class="pre">&quot;0&quot;</span></code> if not present.</p></li>
+</ul>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>A version with <cite>ptr(:)</cite> as default integer is also supplied, but users
+are recommended to use the long integer version to ensure support for
+large matrices.</p>
+</div>
+</dd></dl>
+
+<section id="exit-status-codes">
+<h3>Exit status codes<a class="headerlink" href="#exit-status-codes" title="Permalink to this heading"></a></h3>
+<table class="docutils align-default" id="exit-status">
+<caption><span class="caption-text">Exit status codes</span><a class="headerlink" href="#exit-status" title="Permalink to this table"></a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p><cite>inform</cite></p></th>
+<th class="head"><p>Status</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>0</p></td>
+<td><p>Success</p></td>
+</tr>
+<tr class="row-odd"><td><p>-1</p></td>
+<td><p>Failed to open file.</p></td>
+</tr>
+<tr class="row-even"><td><p>-2</p></td>
+<td><p>Not a valid Rutherford-Boeing file.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-3</p></td>
+<td><p>Error on i/o operation.</p></td>
+</tr>
+<tr class="row-even"><td><p>-4</p></td>
+<td><p>Attempted to read data type not supported by routine.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-5</p></td>
+<td><p>Attempted to read matrix in elemental format.</p></td>
+</tr>
+<tr class="row-even"><td><p>-6</p></td>
+<td><p>Invalid matrix type.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-10</p></td>
+<td><p><cite>options%extra_space&lt;1.0</cite>.</p></td>
+</tr>
+<tr class="row-even"><td><p>-11</p></td>
+<td><p><cite>options%lwr_upr_full</cite> has invalid value.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-12</p></td>
+<td><p><cite>options%values</cite> has invalid value.</p></td>
+</tr>
+<tr class="row-even"><td><p>-20</p></td>
+<td><p>Memory allocation failed.</p></td>
+</tr>
+<tr class="row-odd"><td><p>+1</p></td>
+<td><p>Values are stored in an auxiliary file (not read)</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="derived-types">
+<h2>Derived types<a class="headerlink" href="#derived-types" title="Permalink to this heading"></a></h2>
+<dl>
+<dt class="sig sig-object f" id="f/_/rb_read_options">
+<em class="property"><span class="pre">type</span>&#160; </em><span class="sig-name descname"><span class="pre">rb_read_options</span></span><a class="headerlink" href="#f/_/rb_read_options" title="Permalink to this definition"></a></dt>
+<dd><p>Specify options for reading matrices.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type fields<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">add_diagonal</span><em> [</em><em>logical </em><em>,</em><em>default=.false.</em><em>]</em> :: Add any diagonal entries that are
+missing.</p></li>
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">extra_space</span><em> [</em><em>real </em><em>,</em><em>default=1.0</em><em>]</em> :: Proportion of extra space to allow in
+<cite>row(:)</cite> and <cite>val(:)</cite> arrays. They are allocated to have size
+<cite>options%extra_space * (ptr(n+1)-1)</cite>.</p></li>
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">lwr_upr_full</span><em> [</em><em>integer </em><em>,</em><em>default=1</em><em>]</em> :: <p>Return lower triangle, upper triangle
+or both for symmetric and skew-symmetric matrices. One of:</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>1 (default)</p></td>
+<td><p>Lower triangular entries only.</p></td>
+</tr>
+<tr class="row-even"><td><p>2</p></td>
+<td><p>Upper triangular entries only.</p></td>
+</tr>
+<tr class="row-odd"><td><p>3</p></td>
+<td><p>Both lower and upper triangular entries.</p></td>
+</tr>
+</tbody>
+</table>
+</p></li>
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">values</span><em> [</em><em>integer </em><em>,</em><em>default=0</em><em>]</em> :: <p>Whether to read and/or generate values. One
+of:</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>0 (default)</p></td>
+<td><p>Read values from file, only if present.</p></td>
+</tr>
+<tr class="row-even"><td><p>1</p></td>
+<td><p>Do not read or generate value, return pattern only.</p></td>
+</tr>
+<tr class="row-odd"><td><p>2</p></td>
+<td><p>Read values from file. If no values are present,
+randomly generate symmetric values.</p></td>
+</tr>
+<tr class="row-even"><td><p>3</p></td>
+<td><p>Read values from file. If no values are present,
+randomly generate symmetric, diagonally dominant
+values.</p></td>
+</tr>
+<tr class="row-odd"><td><p>4</p></td>
+<td><p>Read values from file. If no values are present,
+randomly generate (unsymmetric) values.</p></td>
+</tr>
+<tr class="row-even"><td><p>-2</p></td>
+<td><p>Randomly generate symmetric values. Any values in file
+are ignored.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-3</p></td>
+<td><p>Randomly generate symmetric, diagonally dominant
+values. Any values in file are ignored.</p></td>
+</tr>
+<tr class="row-even"><td><p>-4</p></td>
+<td><p>Randomly generate (unsymmetric) values. Any values in
+file are ignored.</p></td>
+</tr>
+</tbody>
+</table>
+</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl>
+<dt class="sig sig-object f" id="f/_/rb_write_options">
+<em class="property"><span class="pre">type</span>&#160; </em><span class="sig-name descname"><span class="pre">rb_write_options</span></span><a class="headerlink" href="#f/_/rb_write_options" title="Permalink to this definition"></a></dt>
+<dd><p>Specify options for writing matrices.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type fields<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">val_format</span><em> [</em><em>character(len=20)</em><em>,</em><em>default=”(3e24.16)”</em><em>]</em> :: Fortran format
+string to use when writing values. Should not exceed 80 characters per
+line.</p></li>
+</ul>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Formats for integer data will be automatically determined based on the
+maximum values to be represented.</p>
+</div>
+</dd></dl>
+
+</section>
+<section id="example">
+<h2>Example<a class="headerlink" href="#example" title="Permalink to this heading"></a></h2>
+<section id="reading-a-matrix">
+<h3>Reading a matrix<a class="headerlink" href="#reading-a-matrix" title="Permalink to this heading"></a></h3>
+<p>The following code reads a matrix from the file “matrix.rb”:</p>
+<div class="highlight-Fortran notranslate"><div class="highlight"><pre><span></span><span class="c">! examples/Fortran/rutherford_boeing/rb_read.f90</span>
+<span class="c">! Example code for SPRAL_RUTHERFORD_BOEING</span>
+<span class="k">program </span><span class="n">rb_read_example</span>
+<span class="w">   </span><span class="k">use </span><span class="n">spral_rutherford_boeing</span>
+<span class="w">   </span><span class="k">use </span><span class="n">spral_matrix_util</span><span class="p">,</span><span class="w"> </span><span class="k">only</span><span class="p">:</span><span class="w"> </span><span class="n">print_matrix</span><span class="p">,</span><span class="w"> </span><span class="p">&amp;</span>
+<span class="w">                                </span><span class="n">SPRAL_MATRIX_REAL_SYM_INDEF</span>
+<span class="w">   </span><span class="k">implicit none</span>
+
+<span class="w">   </span><span class="c">! Parameters</span>
+<span class="w">   </span><span class="kt">integer</span><span class="p">,</span><span class="w"> </span><span class="k">parameter</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="nb">long</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">selected_int_kind</span><span class="p">(</span><span class="mi">18</span><span class="p">)</span>
+<span class="w">   </span><span class="kt">integer</span><span class="p">,</span><span class="w"> </span><span class="k">parameter</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">wp</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">kind</span><span class="p">(</span><span class="mi">0</span><span class="n">d0</span><span class="p">)</span>
+
+<span class="w">   </span><span class="c">! Matrix data</span>
+<span class="w">   </span><span class="kt">character</span><span class="p">(</span><span class="nb">len</span><span class="o">=</span><span class="mi">72</span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">title</span>
+<span class="w">   </span><span class="kt">integer</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">m</span><span class="p">,</span><span class="w"> </span><span class="n">n</span>
+<span class="w">   </span><span class="kt">integer</span><span class="p">(</span><span class="nb">long</span><span class="p">),</span><span class="w"> </span><span class="k">dimension</span><span class="p">(:),</span><span class="w"> </span><span class="k">allocatable</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">ptr</span>
+<span class="w">   </span><span class="kt">integer</span><span class="p">,</span><span class="w"> </span><span class="k">dimension</span><span class="p">(:),</span><span class="w"> </span><span class="k">allocatable</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">row</span>
+<span class="w">   </span><span class="kt">real</span><span class="p">(</span><span class="n">wp</span><span class="p">),</span><span class="w"> </span><span class="k">dimension</span><span class="p">(:),</span><span class="w"> </span><span class="k">allocatable</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">val</span>
+
+<span class="w">   </span><span class="c">! rb_read options and inform</span>
+<span class="w">   </span><span class="k">type</span><span class="p">(</span><span class="n">rb_read_options</span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="k">options</span>
+<span class="k">   </span><span class="kt">integer</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">inform</span>
+
+<span class="w">   </span><span class="c">! Read matrix</span>
+<span class="w">   </span><span class="k">call </span><span class="n">rb_read</span><span class="p">(</span><span class="s2">&quot;matrix.rb&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">m</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="n">row</span><span class="p">,</span><span class="w"> </span><span class="n">val</span><span class="p">,</span><span class="w"> </span><span class="k">options</span><span class="p">,</span><span class="w"> </span><span class="n">inform</span><span class="p">,</span><span class="w"> </span><span class="p">&amp;</span>
+<span class="w">      </span><span class="n">title</span><span class="o">=</span><span class="n">title</span><span class="p">)</span>
+
+<span class="w">   </span><span class="c">! Print matrix</span>
+<span class="w">   </span><span class="k">write</span><span class="p">(</span><span class="o">*</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;(3a)&quot;</span><span class="p">)</span><span class="w"> </span><span class="s2">&quot;Matrix &#39;&quot;</span><span class="p">,</span><span class="w"> </span><span class="nb">trim</span><span class="p">(</span><span class="n">title</span><span class="p">),</span><span class="w"> </span><span class="s2">&quot;&#39;&quot;</span>
+<span class="w">   </span><span class="k">call </span><span class="n">print_matrix</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span><span class="w"> </span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">SPRAL_MATRIX_REAL_SYM_INDEF</span><span class="p">,</span><span class="w"> </span><span class="n">m</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="n">row</span><span class="p">,</span><span class="w"> </span><span class="n">val</span><span class="p">)</span>
+
+<span class="k">end program </span><span class="n">rb_read_example</span>
+</pre></div>
+</div>
+<p>This produces the following output, when run on the file generated by the
+<cite>rb_write.f90</cite> example in the next section:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Matrix</span> <span class="s1">&#39;SPRAL_RUTHERFORD_BOEING test matrix&#39;</span>
+<span class="n">Real</span> <span class="n">symmetric</span> <span class="n">indefinite</span> <span class="n">matrix</span><span class="p">,</span> <span class="n">dimension</span> <span class="mi">5</span><span class="n">x5</span> <span class="k">with</span> <span class="mi">8</span> <span class="n">entries</span><span class="o">.</span>
+<span class="mi">1</span><span class="p">:</span>   <span class="mf">2.0000E+00</span>   <span class="mf">1.0000E+00</span>
+<span class="mi">2</span><span class="p">:</span>   <span class="mf">1.0000E+00</span>   <span class="mf">4.0000E+00</span>   <span class="mf">1.0000E+00</span>                <span class="mf">8.0000E+00</span>
+<span class="mi">3</span><span class="p">:</span>                <span class="mf">1.0000E+00</span>   <span class="mf">3.0000E+00</span>   <span class="mf">2.0000E+00</span>
+<span class="mi">4</span><span class="p">:</span>                             <span class="mf">2.0000E+00</span>
+<span class="mi">5</span><span class="p">:</span>                <span class="mf">8.0000E+00</span>                             <span class="mf">2.0000E+00</span>
+</pre></div>
+</div>
+</section>
+<section id="writing-a-matrix">
+<h3>Writing a matrix<a class="headerlink" href="#writing-a-matrix" title="Permalink to this heading"></a></h3>
+<p>The following code writes a matrix to the file “matrix.rb”:</p>
+<div class="highlight-Fortran notranslate"><div class="highlight"><pre><span></span><span class="c">! examples/Fortran/rutherford_boeing/rb_write.f90</span>
+<span class="c">! Example code for SPRAL_RUTHERFORD_BOEING</span>
+<span class="k">program </span><span class="n">rb_write_example</span>
+<span class="w">   </span><span class="k">use </span><span class="n">spral_rutherford_boeing</span>
+<span class="w">   </span><span class="k">use </span><span class="n">spral_matrix_util</span><span class="p">,</span><span class="w"> </span><span class="k">only</span><span class="p">:</span><span class="w"> </span><span class="n">SPRAL_MATRIX_REAL_SYM_INDEF</span>
+<span class="w">   </span><span class="k">implicit none</span>
+
+<span class="w">   </span><span class="c">! Parameters</span>
+<span class="w">   </span><span class="kt">integer</span><span class="p">,</span><span class="w"> </span><span class="k">parameter</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="nb">long</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">selected_int_kind</span><span class="p">(</span><span class="mi">18</span><span class="p">)</span>
+<span class="w">   </span><span class="kt">integer</span><span class="p">,</span><span class="w"> </span><span class="k">parameter</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">wp</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">kind</span><span class="p">(</span><span class="mi">0</span><span class="n">d0</span><span class="p">)</span>
+
+<span class="w">   </span><span class="c">! Matrix data</span>
+<span class="w">   </span><span class="kt">integer</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">n</span>
+<span class="w">   </span><span class="kt">integer</span><span class="p">(</span><span class="nb">long</span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">ptr</span><span class="p">(</span><span class="mi">6</span><span class="p">)</span>
+<span class="w">   </span><span class="kt">integer</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">row</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
+<span class="w">   </span><span class="kt">real</span><span class="p">(</span><span class="n">wp</span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">val</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
+
+<span class="w">   </span><span class="c">! rb_read options and inform</span>
+<span class="w">   </span><span class="k">type</span><span class="p">(</span><span class="n">rb_write_options</span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="k">options</span>
+<span class="k">   </span><span class="kt">integer</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">inform</span>
+
+<span class="w">   </span><span class="c">! Data for symmetric matrix</span>
+<span class="w">   </span><span class="c">! ( 2  1         )</span>
+<span class="w">   </span><span class="c">! ( 1  4  1    8 )</span>
+<span class="w">   </span><span class="c">! (    1  3  2   )</span>
+<span class="w">   </span><span class="c">! (       2      )</span>
+<span class="w">   </span><span class="c">! (    8       2 )</span>
+<span class="w">   </span><span class="n">n</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span>
+<span class="w">   </span><span class="n">ptr</span><span class="p">(</span><span class="mi">1</span><span class="p">:</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="w">        </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="o">/</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">        </span><span class="mi">3</span><span class="p">,</span><span class="w">             </span><span class="mi">6</span><span class="p">,</span><span class="w">      </span><span class="mi">8</span><span class="p">,</span><span class="mi">8</span><span class="p">,</span><span class="w">   </span><span class="mi">9</span><span class="w"> </span><span class="o">/</span><span class="p">)</span>
+<span class="w">   </span><span class="n">row</span><span class="p">(</span><span class="mi">1</span><span class="p">:</span><span class="n">ptr</span><span class="p">(</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="o">/</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">   </span><span class="mi">2</span><span class="p">,</span><span class="w">   </span><span class="mi">2</span><span class="p">,</span><span class="w">   </span><span class="mi">3</span><span class="p">,</span><span class="w">   </span><span class="mi">5</span><span class="p">,</span><span class="w">   </span><span class="mi">3</span><span class="p">,</span><span class="w">   </span><span class="mi">4</span><span class="p">,</span><span class="w">   </span><span class="mi">5</span><span class="w">   </span><span class="o">/</span><span class="p">)</span>
+<span class="w">   </span><span class="n">val</span><span class="p">(</span><span class="mi">1</span><span class="p">:</span><span class="n">ptr</span><span class="p">(</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="o">/</span><span class="w"> </span><span class="mf">2.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="mf">4.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="mf">8.0</span><span class="p">,</span><span class="w"> </span><span class="mf">3.0</span><span class="p">,</span><span class="w"> </span><span class="mf">2.0</span><span class="p">,</span><span class="w"> </span><span class="mf">2.0</span><span class="w"> </span><span class="o">/</span><span class="p">)</span>
+
+<span class="w">   </span><span class="c">! Write matrix</span>
+<span class="w">   </span><span class="k">call </span><span class="n">rb_write</span><span class="p">(</span><span class="s2">&quot;matrix.rb&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">SPRAL_MATRIX_REAL_SYM_INDEF</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="n">row</span><span class="p">,</span><span class="w"> </span><span class="p">&amp;</span>
+<span class="w">      </span><span class="k">options</span><span class="p">,</span><span class="w"> </span><span class="n">inform</span><span class="p">,</span><span class="w"> </span><span class="n">val</span><span class="o">=</span><span class="n">val</span><span class="p">,</span><span class="w"> </span><span class="n">title</span><span class="o">=</span><span class="s2">&quot;SPRAL_RUTHERFORD_BOEING test matrix&quot;</span><span class="p">)</span>
+
+<span class="k">end program </span><span class="n">rb_write_example</span>
+</pre></div>
+</div>
+<p>This produces the following file:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">SPRAL_RUTHERFORD_BOEING</span> <span class="n">test</span> <span class="n">matrix</span>                                     <span class="mi">0</span>
+             <span class="mi">5</span>             <span class="mi">1</span>             <span class="mi">1</span>             <span class="mi">3</span>
+<span class="n">rsa</span>                        <span class="mi">5</span>             <span class="mi">5</span>             <span class="mi">8</span>             <span class="mi">0</span>
+<span class="p">(</span><span class="mi">40</span><span class="n">i2</span><span class="p">)</span>          <span class="p">(</span><span class="mi">40</span><span class="n">i2</span><span class="p">)</span>          <span class="p">(</span><span class="mf">3e24.16</span><span class="p">)</span>
+ <span class="mi">1</span> <span class="mi">3</span> <span class="mi">6</span> <span class="mi">8</span> <span class="mi">8</span> <span class="mi">9</span>
+ <span class="mi">1</span> <span class="mi">2</span> <span class="mi">2</span> <span class="mi">3</span> <span class="mi">5</span> <span class="mi">3</span> <span class="mi">4</span> <span class="mi">5</span>
+  <span class="mf">0.2000000000000000E+01</span>  <span class="mf">0.1000000000000000E+01</span>  <span class="mf">0.4000000000000000E+01</span>
+  <span class="mf">0.1000000000000000E+01</span>  <span class="mf">0.8000000000000000E+01</span>  <span class="mf">0.3000000000000000E+01</span>
+  <span class="mf">0.2000000000000000E+01</span>  <span class="mf">0.2000000000000000E+01</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="method">
+<h2>Method<a class="headerlink" href="#method" title="Permalink to this heading"></a></h2>
+<section id="generation-of-random-values">
+<h3>Generation of random values<a class="headerlink" href="#generation-of-random-values" title="Permalink to this heading"></a></h3>
+<p>Values are generated uniformly at random from <span class="math notranslate nohighlight">\([-1,1]\)</span>.
+If a diagonally dominant matrix is requested, the diagonal entry in each
+row is set to <span class="math notranslate nohighlight">\(\max(100, 10k)\)</span>, where <cite>k</cite> is the number of entries
+in the column.</p>
+<p>If a random <cite>state</cite> is not provided by the user, the default initial state
+from the <a class="reference internal" href="random.html#f/spral_random" title="f/spral_random: Random number generator"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_random</span></code></a> module is used.</p>
+</section>
+<section id="rutherford-boeing-file-format">
+<span id="rb-format"></span><h3>Rutherford Boeing File format<a class="headerlink" href="#rutherford-boeing-file-format" title="Permalink to this heading"></a></h3>
+<p>The Rutherford Boeing file format is described in the following report <a class="footnote-reference brackets" href="#id2" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a>.
+A file may either contain a sparse matrix or supplementary data. However, this
+package only supports the former.</p>
+<p>Sparse matrices are stored in either <a class="reference internal" href="csc_format.html"><span class="doc">CSC format</span></a> or
+<cite>Elemental format</cite>. A three letter type code is used to encodes this and
+additional information, as per the following table:</p>
+<table class="docutils align-default" id="type-code">
+<caption><span class="caption-text">Type code</span><a class="headerlink" href="#type-code" title="Permalink to this table"></a></caption>
+<thead>
+<tr class="row-odd"><th class="head"><p>First character</p></th>
+<th class="head"><p>Second character</p></th>
+<th class="head"><p>Third character</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><strong>r</strong>: real</p></td>
+<td><p><strong>s</strong>: symmetric</p></td>
+<td><p><strong>a</strong>: CSC format</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>c</strong>: complex</p></td>
+<td><p><strong>u</strong>: unsymmetric</p></td>
+<td><p><strong>e</strong>: Elemental format</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>i</strong>: integer</p></td>
+<td><p><strong>h</strong>: Hermitian</p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><strong>p</strong>: pattern</p></td>
+<td><p><strong>z</strong>: skew symmetric</p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><strong>q</strong>: pattern</p></td>
+<td><p><strong>r</strong>: rectangular</p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>The difference between the <strong>p</strong> and <strong>q</strong> pattern types is that the latter
+indicates that values are supplied in an auxiliary file (this package does not
+support reading such files).</p>
+<p>Further information may be found in:</p>
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="id2" role="note">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">1</a><span class="fn-bracket">]</span></span>
+<p>I.S. Duff, R.G. Grimes and J.G. Lewis (1997).
+<em>The Rutherford-Boeing Sparse Matrix Collection</em>.
+RAL Technical Report <a class="reference external" href="http://purl.org/net/epubs/work/26879">RAL-TR-97-031</a>.</p>
+</aside>
+</aside>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="random_matrix.html" class="btn btn-neutral float-left" title="spral_random_matrix - Pseudo-random Matrix Generator" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="scaling.html" class="btn btn-neutral float-right" title="spral_scaling - Sparse matrix scalings" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Computational Mathematics Group, STFC Rutherford Appleton Laboratory.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

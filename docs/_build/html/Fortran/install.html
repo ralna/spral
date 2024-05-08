@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Installation &mdash; spral v2024-05-08 [Fortran] documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Compressed Sparse Column (CSC) Format" href="csc_format.html" />
+    <link rel="prev" title="Data types and conventions" href="conventions.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            spral
+              <img src="_static/STFC-Logo.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                v2024-05-08 [Fortran]
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="conventions.html">Data types and conventions</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#building-with-meson">Building with Meson:</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#options-to-meson">Options to <code class="docutils literal notranslate"><span class="pre">meson</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#building-with-autotools">Building with Autotools:</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#notes">Notes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#third-party-libraries">Third-party libraries</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#metis">METIS</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#blas">BLAS</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#compilers-and-compiler-options">Compilers and compiler options</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#other-options-to-configure">Other options to <cite>configure</cite></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#citing-spral-or-ssids">Citing SPRAL or SSIDS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#support">Support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#licence">Licence</a></li>
+</ul>
+</li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="csc_format.html">Compressed Sparse Column (CSC) Format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="coord_format.html">Coordinate (Coord) Format</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="lsmr.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_lsmr</span></code> - Sparse Least Squares LSMR Solver</a></li>
+<li class="toctree-l1"><a class="reference internal" href="matrix_util.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_matrix_util</span></code> - Matrix utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="random.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_random</span></code> - Pseudo-random number generator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="random_matrix.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_random_matrix</span></code> - Pseudo-random Matrix Generator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rutherford_boeing.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_rutherford_boeing</span></code> - RB File Format Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="scaling.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_scaling</span></code> - Sparse matrix scalings</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssids.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssids</span></code> - Sparse Symmetric Indefinite Direct Solver</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssmfe.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssmfe</span></code> - Sparse Symmetric Matrix-Free Eigensolver</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssmfe_expert.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssmfe_expert</span></code> - Sparse Symmetric Matrix-Free Eigensolver (Expert interface)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssmfe_core.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssmfe_core</span></code> - Sparse Symmetric Matrix-Free Eigensolver (Core Algorithm)</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">spral</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Installation</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/install.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="installation">
+<h1>Installation<a class="headerlink" href="#installation" title="Permalink to this heading"></a></h1>
+<section id="building-with-meson">
+<h2>Building with Meson:<a class="headerlink" href="#building-with-meson" title="Permalink to this heading"></a></h2>
+<p>We now support building with the <a class="reference external" href="https://mesonbuild.com">Meson Build system</a>.
+Under Linux, or macOS, or Windows:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Setup SPRAL</span>
+meson<span class="w"> </span>setup<span class="w"> </span>builddir<span class="w"> </span>-Dexamples<span class="o">=</span><span class="nb">true</span><span class="w"> </span>-Dtests<span class="o">=</span><span class="nb">true</span><span class="w"> </span>-Dlibblas<span class="o">=</span>openblas<span class="w"> </span>-Dliblapack<span class="o">=</span>openblas
+
+<span class="c1"># Compile SPRAL</span>
+meson<span class="w"> </span>compile<span class="w"> </span>-C<span class="w"> </span>builddir
+
+<span class="c1"># Install SPRAL</span>
+meson<span class="w"> </span>install<span class="w"> </span>-C<span class="w"> </span>builddir
+
+<span class="c1"># Test SPRAL</span>
+meson<span class="w"> </span><span class="nb">test</span><span class="w"> </span>-C<span class="w"> </span>builddir
+</pre></div>
+</div>
+<section id="options-to-meson">
+<h3>Options to <code class="docutils literal notranslate"><span class="pre">meson</span></code><a class="headerlink" href="#options-to-meson" title="Permalink to this heading"></a></h3>
+<p>In particular, the following options may be of interest:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">--prefix=PREFIX</span></code> specifies the installation path prefix (by default
+<code class="docutils literal notranslate"><span class="pre">/usr/local/</span></code> under Linux).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-Dtests=true</span></code> whether to generate the tests.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-Dlibblas=blas</span></code> BLAS library against which to link.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-Dliblapack=lapack</span></code> LAPACK library against which to link.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-Dlibhwloc=hwloc</span></code> HWLOC library against which to link.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-Dlibmetis=metis</span></code> METIS library against which to link.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-Dlibmetis_version=5</span></code> Version of the METIS library to use.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-Dmetis64=true</span></code> option to use METIS compiled with 64bit integer support.</p></li>
+</ul>
+<p>For more options (including how to specify paths to the above libraries) please see <code class="docutils literal notranslate"><span class="pre">meson_options.txt</span></code>.</p>
+</section>
+</section>
+<section id="building-with-autotools">
+<h2>Building with Autotools:<a class="headerlink" href="#building-with-autotools" title="Permalink to this heading"></a></h2>
+<p>Under Linux, or macOS:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Get latest development version from github and run dev scripts</span>
+git<span class="w"> </span>clone<span class="w"> </span>--depth<span class="o">=</span><span class="m">1</span><span class="w"> </span>https://github.com/ralna/spral.git
+<span class="nb">cd</span><span class="w"> </span>spral
+./autogen.sh
+
+<span class="c1"># Build and install library</span>
+<span class="nv">BUILDDIR</span><span class="o">=</span>build<span class="p">;</span><span class="w"> </span>mkdir<span class="w"> </span><span class="nv">$BUILDDIR</span><span class="p">;</span><span class="w"> </span><span class="nb">cd</span><span class="w"> </span><span class="nv">$BUILDDIR</span>
+cp<span class="w"> </span>../nvcc_arch_sm.c<span class="w"> </span>.<span class="w"> </span><span class="c1"># If building for GPU</span>
+../configure<span class="w"> </span>--with-metis<span class="o">=</span><span class="s2">&quot;-L/path/to/metis -lmetis&quot;</span>
+make
+sudo<span class="w"> </span>make<span class="w"> </span>install<span class="w"> </span><span class="c1"># Optional</span>
+
+<span class="c1"># Link against library</span>
+<span class="nb">cd</span><span class="w"> </span>/path/to/your/code
+gfortran<span class="w"> </span>-o<span class="w"> </span>myprog<span class="w"> </span>myobj.o<span class="w"> </span>-lspral<span class="w"> </span>-lmetis<span class="w"> </span>-lblas
+</pre></div>
+</div>
+<section id="notes">
+<h3>Notes<a class="headerlink" href="#notes" title="Permalink to this heading"></a></h3>
+<ul class="simple">
+<li><p>The above instructions perform an out-of-path build: we recommend you
+change the value of <code class="docutils literal notranslate"><span class="pre">$BUILDDIR</span></code> to reflect the compiler used, for
+example <code class="docutils literal notranslate"><span class="pre">BUILDDIR=build-gfortran-13.2</span></code>.</p></li>
+<li><p>The above will build the SPRAL library and a number of driver programs.
+To build the example and test codes, use <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">check</span></code>.</p></li>
+<li><p>Installation is not required: in many cases it will be sufficient to
+just link against the static library found in the <code class="docutils literal notranslate"><span class="pre">.libs</span></code>
+subdirectory.</p></li>
+</ul>
+</section>
+<section id="third-party-libraries">
+<h3>Third-party libraries<a class="headerlink" href="#third-party-libraries" title="Permalink to this heading"></a></h3>
+<section id="metis">
+<h4>METIS<a class="headerlink" href="#metis" title="Permalink to this heading"></a></h4>
+<p>Many of our packages use the METIS graph partitioning library to find good
+orderings. You can obtain a copy of METIS from
+<a class="reference external" href="http://www.cs.umn.edu/~metis">http://www.cs.umn.edu/~metis</a>.
+We support both version 4 and version 5 (the latter is available under the open
+source Apache Licence).
+If the METIS library is not available on the default link path, the
+<code class="docutils literal notranslate"><span class="pre">--with-metis</span></code> option to <cite>configure</cite> should be used to specify
+how to link against METIS. For example, if <code class="docutils literal notranslate"><span class="pre">libmetis.a</span></code> is in the directory
+<code class="docutils literal notranslate"><span class="pre">/usr/local/metis-4.0</span></code>, use:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>../configure<span class="w"> </span>--with-metis<span class="o">=</span><span class="s2">&quot;-L/usr/local/metis-4.0 -lmetis&quot;</span>
+</pre></div>
+</div>
+</section>
+<section id="blas">
+<h4>BLAS<a class="headerlink" href="#blas" title="Permalink to this heading"></a></h4>
+<p>Many of our packages require a high performance BLAS library to efficiently
+perform dense linear algebra operations. For best performance, please use the
+library recommended by your computer manufacturer (normally the Intel MKL).
+If this is not available, use an optimized alternative, such as OpenBLAS.
+The reference BLAS from netlib are at least an order of magnitude slower than
+modern optimized BLAS, and should be avoided. If bit-compatible results are
+desired, a bit-compatible BLAS library must be used.</p>
+<p>If the BLAS library is not available on the default link path, or if
+<cite>configure</cite> detects the wrong BLAS library, the <code class="docutils literal notranslate"><span class="pre">--with-blas</span></code>
+option to <cite>configure</cite> should be used to specify how to link against
+the BLAS library. For example, to link against the Intel MKL using the GNU
+compiler suite, use:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>../configure<span class="w"> </span>--with-blas<span class="o">=</span><span class="s2">&quot;-L/opt/intel/mkl/lib/intel64 -lmkl_gf_lp64 -lmkl_gnu_thread -lmkl_core&quot;</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="compilers-and-compiler-options">
+<h3>Compilers and compiler options<a class="headerlink" href="#compilers-and-compiler-options" title="Permalink to this heading"></a></h3>
+<p>If no compiler is specified, <cite>configure</cite> will pick a default
+compiler to use. If <cite>configure</cite> cannot find an appropriate compiler, or
+you wish to specify a different compiler you can do so by setting the following
+variables:</p>
+<dl class="simple">
+<dt>CC</dt><dd><p>specifies the C compiler to use.</p>
+</dd>
+<dt>FC</dt><dd><p>specifies the Fortran 90/95/2003/2008/2018 compiler to use.</p>
+</dd>
+<dt>NVCC</dt><dd><p>specifies the CUDA compiler to use.</p>
+</dd>
+</dl>
+<p>Additionally, compiler flags can be specified using the following variables:</p>
+<dl class="simple">
+<dt>CFLAGS</dt><dd><p>specifies options passed to the C compiler.</p>
+</dd>
+<dt>FCFLAGS</dt><dd><p>specifies options passed to the Fortran compiler</p>
+</dd>
+<dt>NVCCFLAGS</dt><dd><p>specifies options passed to the CUDA compiler.</p>
+</dd>
+</dl>
+<p>For example, to compile with <code class="docutils literal notranslate"><span class="pre">ifort</span> <span class="pre">-g</span> <span class="pre">-O3</span> <span class="pre">-ip</span></code> we could use:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>../configure<span class="w"> </span><span class="nv">FC</span><span class="o">=</span>ifort<span class="w"> </span><span class="nv">FCFLAGS</span><span class="o">=</span><span class="s2">&quot;-g -O3 -ip&quot;</span>
+</pre></div>
+</div>
+</section>
+<section id="other-options-to-configure">
+<h3>Other options to <cite>configure</cite><a class="headerlink" href="#other-options-to-configure" title="Permalink to this heading"></a></h3>
+<p>The <cite>configure</cite> script is generated by <cite>autoconf</cite>, and hence
+offers many standard options that can be listed using the command
+<code class="docutils literal notranslate"><span class="pre">configure</span> <span class="pre">--help</span></code>.</p>
+<p>In particular, the following options may be of interest:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">--prefix=PREFIX</span></code> specifies the installation path prefix (by default
+<code class="docutils literal notranslate"><span class="pre">/usr/local/</span></code> under Linux).</p></li>
+</ul>
+</section>
+</section>
+<section id="citing-spral-or-ssids">
+<h2>Citing SPRAL or SSIDS<a class="headerlink" href="#citing-spral-or-ssids" title="Permalink to this heading"></a></h2>
+<p>If you write a paper using software from SPRAL, please cite an
+appropriate paper (a list can usually be found in the method section of
+the user documentation).</p>
+<blockquote>
+<div><p>J. Hogg, E. Ovtchinnikov, and J. Scott (2016). A sparse symmetric indefinite direct solver for GPU architectures.
+ACM Transactions on Mathematical Software (TOMS), 42(1), 1-25, <a class="reference external" href="https://dx.doi.org/10.1145/275654">https://dx.doi.org/10.1145/275654</a></p>
+</div></blockquote>
+<p>If no paper is listed, a citation of the SPRAL GitHub website should be used, for example:</p>
+<blockquote>
+<div><p>SPRAL: an open-source library for sparse linear algebra, Version 2024-05-08, <a class="reference external" href="http://www.numerical.rl.ac.uk/spral">http://www.numerical.rl.ac.uk/spral</a>, May 2024.</p>
+</div></blockquote>
+</section>
+<section id="support">
+<h2>Support<a class="headerlink" href="#support" title="Permalink to this heading"></a></h2>
+<p>Feeback may be sent to <a class="reference external" href="mailto:hsl&#37;&#52;&#48;stfc&#46;ac&#46;uk">hsl<span>&#64;</span>stfc<span>&#46;</span>ac<span>&#46;</span>uk</a> or by filing
+an issue on our github: <a class="reference external" href="https://github.com/ralna/spral/issues">https://github.com/ralna/spral/issues</a>.</p>
+</section>
+<section id="licence">
+<h2>Licence<a class="headerlink" href="#licence" title="Permalink to this heading"></a></h2>
+<p>Copyright (c) 2014-2023, The Science and Technology Facilities Council (STFC)
+All rights reserved.</p>
+<p>Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:</p>
+<ul class="simple">
+<li><p>Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.</p></li>
+<li><p>Redistributions in binary form must reproduce the above copyright
+notice, this list of conditions and the following disclaimer in the
+documentation and/or other materials provided with the distribution.</p></li>
+<li><p>Neither the name of the STFC nor the names of its contributors may be
+used to endorse or promote products derived from this software without
+specific prior written permission.</p></li>
+</ul>
+<p>THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS” AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL STFC BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="conventions.html" class="btn btn-neutral float-left" title="Data types and conventions" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="csc_format.html" class="btn btn-neutral float-right" title="Compressed Sparse Column (CSC) Format" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Computational Mathematics Group, STFC Rutherford Appleton Laboratory.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

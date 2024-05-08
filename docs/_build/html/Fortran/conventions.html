@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Data types and conventions &mdash; spral v2024-05-08 [Fortran] documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Installation" href="install.html" />
+    <link rel="prev" title="The Sparse Parallel Robust Algorithms Library" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            spral
+              <img src="_static/STFC-Logo.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                v2024-05-08 [Fortran]
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Data types and conventions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#data-types">Data types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#optional-arguments">Optional arguments</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="csc_format.html">Compressed Sparse Column (CSC) Format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="coord_format.html">Coordinate (Coord) Format</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="lsmr.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_lsmr</span></code> - Sparse Least Squares LSMR Solver</a></li>
+<li class="toctree-l1"><a class="reference internal" href="matrix_util.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_matrix_util</span></code> - Matrix utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="random.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_random</span></code> - Pseudo-random number generator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="random_matrix.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_random_matrix</span></code> - Pseudo-random Matrix Generator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rutherford_boeing.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_rutherford_boeing</span></code> - RB File Format Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="scaling.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_scaling</span></code> - Sparse matrix scalings</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssids.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssids</span></code> - Sparse Symmetric Indefinite Direct Solver</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssmfe.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssmfe</span></code> - Sparse Symmetric Matrix-Free Eigensolver</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssmfe_expert.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssmfe_expert</span></code> - Sparse Symmetric Matrix-Free Eigensolver (Expert interface)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssmfe_core.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssmfe_core</span></code> - Sparse Symmetric Matrix-Free Eigensolver (Core Algorithm)</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">spral</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Data types and conventions</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/conventions.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="data-types-and-conventions">
+<h1>Data types and conventions<a class="headerlink" href="#data-types-and-conventions" title="Permalink to this heading"></a></h1>
+<section id="data-types">
+<h2>Data types<a class="headerlink" href="#data-types" title="Permalink to this heading"></a></h2>
+<p>In this documentation, we use:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><strong>integer(long)</strong> to denote 64 bit integers, where
+<strong>long = selected_int_kind(18)</strong>.</p></li>
+<li><p><strong>real</strong> to mean either 32-bit or 64-bit floating point. Most packages
+only implement the latter (i.e. double precision).</p></li>
+</ul>
+</div></blockquote>
+</section>
+<section id="optional-arguments">
+<h2>Optional arguments<a class="headerlink" href="#optional-arguments" title="Permalink to this heading"></a></h2>
+<p>Optional arguments are indicated by square brackets [] in argument lists.
+We strongly recommend the use of keywords in argument lists when using
+optional arguments, rather than relying on position to indicate which you are
+using. For example,</p>
+<div class="highlight-Fortran notranslate"><div class="highlight"><pre><span></span><span class="k">call </span><span class="n">rb_peek</span><span class="p">(</span><span class="s2">&quot;matrix.rb&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">inform</span><span class="p">,</span><span class="w"> </span><span class="n">matrix_type</span><span class="o">=</span><span class="n">mat_type</span><span class="p">,</span><span class="w"> </span><span class="n">title</span><span class="o">=</span><span class="n">mat_title</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="The Sparse Parallel Robust Algorithms Library" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="install.html" class="btn btn-neutral float-right" title="Installation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Computational Mathematics Group, STFC Rutherford Appleton Laboratory.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

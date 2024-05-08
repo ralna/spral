@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SSMFE_CORE - Sparse Symmetric Matrix-Free Eigensolver (Core Algorithm) &mdash; spral v2024-05-08 [C] documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="SSMFE_EXPERT - Sparse Symmetric Matrix-Free Eigensolver (Expert interface)" href="ssmfe_expert.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            spral
+              <img src="_static/STFC-Logo.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                v2024-05-08 [C]
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="csc_format.html">Compressed Sparse Column (CSC) Format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="coord_format.html">Coordinate (Coord) Format</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="lsmr.html">LSMR - Sparse Least Squares LSMR Solver</a></li>
+<li class="toctree-l1"><a class="reference internal" href="matrix_util.html">MATRIX_UTIL - Matrix utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="random.html">RANDOM - Pseudo-random number generator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="random_matrix.html">RANDOM_MATRIX - Pseudo-random Matrix Generator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rutherford_boeing.html">RUTHERFORD_BOEING - RB File Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="scaling.html">SCALING - Sparse matrix scalings</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssids.html">SSIDS - Sparse Symmetric Indefinite Direct Solver</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssmfe.html">SSMFE - Sparse Symmetric Matrix-Free Eigensolver</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssmfe_expert.html">SSMFE_EXPERT - Sparse Symmetric Matrix-Free Eigensolver (Expert interface)</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">SSMFE_CORE - Sparse Symmetric Matrix-Free Eigensolver (Core Algorithm)</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#purpose">Purpose</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#major-version-history">Major version history</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#usage-overview">Usage overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#subroutines">Subroutines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#derived-types">Derived types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#examples">Examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#preconditioning-example">Preconditioning example</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#method">Method</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#the-algorithm">The algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#error-estimation">Error estimation</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#standard-problem">Standard problem</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#generalized-problems">Generalized problems</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#references">References</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">spral</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">SSMFE_CORE - Sparse Symmetric Matrix-Free Eigensolver (Core Algorithm)</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/ssmfe_core.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="ssmfe-core-sparse-symmetric-matrix-free-eigensolver-core-algorithm">
+<h1>SSMFE_CORE - Sparse Symmetric Matrix-Free Eigensolver (Core Algorithm)<a class="headerlink" href="#ssmfe-core-sparse-symmetric-matrix-free-eigensolver-core-algorithm" title="Permalink to this heading"></a></h1>
+<div class="highlight-C notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;spral_ssmfe.h&gt;</span><span class="c1"> /* or &lt;spral.h&gt; for all packages */</span>
+</pre></div>
+</div>
+<section id="purpose">
+<h2>Purpose<a class="headerlink" href="#purpose" title="Permalink to this heading"></a></h2>
+<p>This package computes extreme (leftmost and/or rightmost)
+eigenpairs <span class="math notranslate nohighlight">\(\{\lambda_i, x_i\}\)</span> of the following eigenvalue problems:</p>
+<ul>
+<li><p>the standard eigenvalue problem</p>
+<blockquote>
+<div><div class="math notranslate nohighlight">
+\[A x = \lambda x,\]</div>
+</div></blockquote>
+</li>
+<li><p>the generalized eigenvalue problem</p>
+<blockquote>
+<div><div class="math notranslate nohighlight">
+\[A x = \lambda B x,\]</div>
+</div></blockquote>
+</li>
+<li><p>the eigenvalue problem</p>
+<blockquote>
+<div><div class="math notranslate nohighlight">
+\[AB x = \lambda x\]</div>
+</div></blockquote>
+</li>
+</ul>
+<p>where <span class="math notranslate nohighlight">\(A\)</span> and <span class="math notranslate nohighlight">\(B\)</span> are <strong>real symmetric</strong> (or <strong>Hermitian</strong>) matrices
+and <span class="math notranslate nohighlight">\(B\)</span> is <strong>positive definite</strong>.</p>
+<p>The packages <a class="reference internal" href="ssmfe.html"><span class="doc">SPRAL_SSMFE</span></a> and
+<a class="reference internal" href="ssmfe_expert.html"><span class="doc">SPRAL_SSMFE_EXPERT</span></a> provide a
+simplified interface to this routine, and should be used if the user does not
+require access to low level features provided in this package.</p>
+<section id="major-version-history">
+<h3>Major version history<a class="headerlink" href="#major-version-history" title="Permalink to this heading"></a></h3>
+<dl class="simple">
+<dt>2014-11-20 Version 1.0.0</dt><dd><p>Initial release</p>
+</dd>
+</dl>
+</section>
+</section>
+<section id="usage-overview">
+<h2>Usage overview<a class="headerlink" href="#usage-overview" title="Permalink to this heading"></a></h2>
+<p>This package implements a block iterative algorithm for
+simultaneous computation of several eigenpairs for the problems above.
+The block nature of this
+algorithm allows the user to benefit from highly optimized linear
+algebra subroutines and from the ubiquitous multicore architecture of
+modern computers. It also makes this algorithm more reliable than
+Krylov-based algorithms employed by e.g. ARPACK in the presence of
+clustered eigenvalues. However, convergence of the iterations may be
+slow if the density of the spectrum is high.</p>
+<p>Thus, good performance (in terms of speed) is contingent on the
+following two factors:</p>
+<ol class="lowerroman simple">
+<li><p>the number of desired eigenpairs must be substantial (e.g. not fewer than
+the number of CPU cores), and</p></li>
+<li><p>the employment of a convergence acceleration technique.</p></li>
+</ol>
+<p>The acceleration techniques that can be used are shift-and-invert and
+preconditioning.</p>
+<p>The former rewrites the eigenvalue problem for a matrix <span class="math notranslate nohighlight">\(M\)</span> as
+<span class="math notranslate nohighlight">\(Ax = \lambda x\)</span> with <span class="math notranslate nohighlight">\(A = (M - \sigma I)^{-1}\)</span>, where
+<span class="math notranslate nohighlight">\(I\)</span> is the identity matrix and <span class="math notranslate nohighlight">\(\sigma\)</span> is a real value near
+eigenvalues of interest, and the generalized problem <span class="math notranslate nohighlight">\(M x = \mu B x\)</span> as
+the <span class="math notranslate nohighlight">\(Ax = \lambda B x\)</span> with <span class="math notranslate nohighlight">\(A = (M - \sigma B)^{-1}\)</span>.</p>
+<p>The latter applies to the case of positive definite
+<span class="math notranslate nohighlight">\(A\)</span> and requires a matrix or an operator <span class="math notranslate nohighlight">\(T\)</span>, called <em>a
+preconditioner</em>, such that the vector <span class="math notranslate nohighlight">\(v = T f\)</span> is an
+approximation to the solution <span class="math notranslate nohighlight">\(u\)</span> of the system <span class="math notranslate nohighlight">\(A u = f\)</span>
+(see the simple example <a class="reference internal" href="#ssmfe-core-example"><span class="std std-ref">below</span></a>). Note: This
+technique is only recommended for experienced users.</p>
+<p>For futher detail on the algorithm, see the outline in the
+<a class="reference internal" href="#ssmfe-core-method"><span class="std std-ref">method section</span></a> below, and associated references.</p>
+<p>The package <a class="reference internal" href="ssmfe.html"><span class="doc">SSMFE</span></a> provides a user-friendly interface to this
+algorithm, whilst <a class="reference internal" href="ssmfe_expert.html"><span class="doc">SSMFE_EXPERT</span></a> provides an interface
+that allows users to manage their own memory. If this routine is used instead
+of <a class="reference internal" href="ssmfe_expert.html"><span class="doc">SSMFE_EXPERT</span></a>, the user is additionally responsible for
+deciding when a sufficient number of eigenpairs have been computed to
+sufficient accuracy. The amount of computation performed by the solver
+subroutines in this package and the memory they use are negligible. These
+features facilitate the use of these subroutines for shared-memory,
+out-of-core and hybrid computation.</p>
+</section>
+<section id="subroutines">
+<h2>Subroutines<a class="headerlink" href="#subroutines" title="Permalink to this heading"></a></h2>
+<p>To use the solver procedures, the user must maintain a workspace of <cite>(kw+1)</cite>
+blocks each containing <cite>m</cite> vectors of size <cite>n</cite>. For notational convienience
+we refer to this workspace as a Fortran array <code class="docutils literal notranslate"><span class="pre">W[kw+1][m][n]</span></code>, but the user
+is free to store it as they wish. Note the block dimension is indexed from
+zero, not from one. The following table provides minimum values of <cite>kw</cite> for
+each setup:</p>
+<blockquote>
+<div><table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"></th>
+<th class="head" colspan="2"><p>minAprod=T</p></th>
+<th class="head" colspan="2"><p>minAprod=F</p></th>
+</tr>
+<tr class="row-even"><th class="head"><p>Problem</p></th>
+<th class="head"><p>minBprod=T</p></th>
+<th class="head"><p>minBprod=F</p></th>
+<th class="head"><p>minBprod=T</p></th>
+<th class="head"><p>minBprod=F</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-odd"><td><p>standard</p></td>
+<td><p>7</p></td>
+<td><p>5</p></td>
+<td><p>3</p></td>
+<td><p>3</p></td>
+</tr>
+<tr class="row-even"><td><p>standard_shift</p></td>
+<td><p>7</p></td>
+<td><p>5</p></td>
+<td><p>N/A</p></td>
+<td><p>N/A</p></td>
+</tr>
+<tr class="row-odd"><td><p>generalized</p></td>
+<td><p>7</p></td>
+<td><p>5</p></td>
+<td><p>5</p></td>
+<td><p>3</p></td>
+</tr>
+<tr class="row-even"><td><p>generalized_shift</p></td>
+<td><p>7</p></td>
+<td><p>7</p></td>
+<td><p>N/A</p></td>
+<td><p>N/A</p></td>
+</tr>
+<tr class="row-odd"><td><p>buckling</p></td>
+<td><p>7</p></td>
+<td><p>7</p></td>
+<td><p>N/A</p></td>
+<td><p>N/A</p></td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+<p>Further, the user must also store the converged eigenvectors <span class="math notranslate nohighlight">\(X\)</span>, and
+(for generalised problems) their <span class="math notranslate nohighlight">\(B\)</span>-images <span class="math notranslate nohighlight">\(BX\)</span> using
+separate storage, e.g. <code class="docutils literal notranslate"><span class="pre">X[mep][n],</span> <span class="pre">BX[mep][n]</span></code>.
+In addition to being output, the routine may need to
+reorthagonalise against these from time to time.</p>
+<p>The first (zero-indexed) block holds the eigenvector approximations: the user
+must fill this block with <span class="math notranslate nohighlight">\(m\)</span> linearly independent vectors before the
+first call to a solver procedure.</p>
+<p>The number of desired eigenpairs may exceed <span class="math notranslate nohighlight">\(m\)</span>: whenever converged
+eigenpairs have been detected, a solver procedure reports the indices of
+these eigenpairs and they must be moved by the user to separate storage
+(<code class="docutils literal notranslate"><span class="pre">X(:)</span></code>).</p>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.spral_ssmfe_core_default_options">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssmfe_core_default_options</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssmfe_core_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssmfe_core_default_options" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Intialises members of options structure to default values.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>options</strong> – Structure to be initialised.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.spral_ssmfe_double">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssmfe_double</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssmfe_rcid</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">rci</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">problem</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">left</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">right</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">m</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">lambda</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">rr</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">ind</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">keep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssmfe_core_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="ssmfe.html#c.spral_ssmfe_inform" title="spral_ssmfe_inform"><span class="n"><span class="pre">spral_ssmfe_inform</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssmfe_double" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Computes specified number of leftmost and rightmost eigenvalues and
+corresponding eigenvectors.</p>
+<p>Uses reverse-communication. Upon return the user must perform a task
+specified by the <cite>rci</cite> parameter and recall the routine. Possible values of
+<cite>rci</cite> and associated tasks are:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p><cite>rci.job</cite></p></th>
+<th class="head"><p>Task to be performed</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>-3</p></td>
+<td><p>None. Fatal error, see <a class="reference internal" href="ssmfe.html#c.spral_ssmfe_inform.flag" title="spral_ssmfe_inform.flag"><code class="xref c c-member docutils literal notranslate"><span class="pre">inform.flag</span></code></a>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-2</p></td>
+<td><p>Failed to converge, see
+<a class="reference internal" href="ssmfe.html#c.spral_ssmfe_inform.flag" title="spral_ssmfe_inform.flag"><code class="xref c c-member docutils literal notranslate"><span class="pre">inform.flag</span></code></a>.</p></td>
+</tr>
+<tr class="row-even"><td><p>-1</p></td>
+<td><p>None. Computation complete.</p></td>
+</tr>
+<tr class="row-odd"><td><p>1</p></td>
+<td><p>Calculate <span class="math notranslate nohighlight">\(\bar{V} = AU\)</span>.</p></td>
+</tr>
+<tr class="row-even"><td><p>2</p></td>
+<td><p>Apply preconditioner <span class="math notranslate nohighlight">\(\bar{V} = TU\)</span>. (Copy if T=I).</p></td>
+</tr>
+<tr class="row-odd"><td><p>3</p></td>
+<td><p>Compute <span class="math notranslate nohighlight">\(\bar{V} = BU\)</span></p></td>
+</tr>
+<tr class="row-even"><td><p>4</p></td>
+<td><p>Test convergence for each of <span class="math notranslate nohighlight">\(m\)</span> eigenvalues:</p>
+<ul class="simple">
+<li><p>If eigenpair <cite>i</cite> has converged, set <cite>inform.converged[i]</cite> to
+a positive number.</p></li>
+<li><p>Otherwise, leave at current value.</p></li>
+</ul>
+<p>Tests may use the estimated eigenvalue errors
+<code class="docutils literal notranslate"><span class="pre">inform.err_lambda[i]</span></code> and eigenvector errors
+<code class="docutils literal notranslate"><span class="pre">inform.err_x[i]</span></code>.</p>
+</td>
+</tr>
+<tr class="row-odd"><td><p>5</p></td>
+<td><p>Copy converged eigenvectors <span class="math notranslate nohighlight">\(X\)</span> to user storage:</p>
+<ul class="simple">
+<li><p>If <cite>rci.i&gt;0</cite>: <code class="docutils literal notranslate"><span class="pre">W[rci.kx][rci.jx:rci.jx+rci.nx-1][:]</span></code>.</p></li>
+<li><p>Else:         <code class="docutils literal notranslate"><span class="pre">W[rci.kx][rci.jx-rci.nx+1:rci.jx][:]</span></code>.</p></li>
+</ul>
+<p>Optionally save their <span class="math notranslate nohighlight">\(B\)</span>-images:</p>
+<ul class="simple">
+<li><p>If <cite>rci.i&gt;0</cite>: <code class="docutils literal notranslate"><span class="pre">W[rci.ky][rci.jx:rci.jx+rci.nx-1][:]</span></code>.</p></li>
+<li><p>Else:         <code class="docutils literal notranslate"><span class="pre">W[rci.ky][rci.jx-rci.nx+1:rci.jx][:]</span></code>.</p></li>
+</ul>
+</td>
+</tr>
+<tr class="row-even"><td><p>11</p></td>
+<td><p>If <cite>rci.i == 0</cite>, copy <span class="math notranslate nohighlight">\(\bar{V} = U\)</span>.</p>
+<p>Otherwise, reorder columns of block <cite>rci.kx</cite> such that column
+<cite>ind[j]</cite> becomes the new column <cite>j</cite> for <cite>j=0, …, rci.nx-1</cite></p>
+<p>Note: if <code class="docutils literal notranslate"><span class="pre">rci.kx</span> <span class="pre">==</span> <span class="pre">rci.ky</span></code>, only reorder once.</p>
+</td>
+</tr>
+<tr class="row-odd"><td><p>12</p></td>
+<td><p>Compute the dot products</p>
+<div class="math notranslate nohighlight">
+\[r_{ii} = U_i \cdot \bar{V}_i\]</div>
+</td>
+</tr>
+<tr class="row-even"><td><p>13</p></td>
+<td><p>Perform the scalings</p>
+<div class="math notranslate nohighlight">
+\[U_i = U_i/\sqrt{(U_i\cdot \bar{V}_i)}\]</div>
+<p>and</p>
+<div class="math notranslate nohighlight">
+\[\bar{V}_i = \bar{V}_i/\sqrt{(U_i\cdot \bar{V}_i)}\]</div>
+<p>for each column <span class="math notranslate nohighlight">\(U_i\)</span> and <span class="math notranslate nohighlight">\(\bar{V}_i\)</span> of <span class="math notranslate nohighlight">\(U\)</span>
+and <span class="math notranslate nohighlight">\(\bar{V}\)</span>.</p>
+<p>Note: if <code class="docutils literal notranslate"><span class="pre">rci.kx</span> <span class="pre">==</span> <span class="pre">rci.ky</span></code>, only scale once.</p>
+</td>
+</tr>
+<tr class="row-odd"><td><p>14</p></td>
+<td><p>Perform the updates</p>
+<div class="math notranslate nohighlight">
+\[\bar{V}_i = \bar{V}_i + r_{ii} U_i\]</div>
+<p>for each column <span class="math notranslate nohighlight">\(\bar{V}_i\)</span> of <span class="math notranslate nohighlight">\(\bar{V}\)</span></p>
+</td>
+</tr>
+<tr class="row-even"><td><p>15</p></td>
+<td><p>Perform the update</p>
+<div class="math notranslate nohighlight">
+\[R = \alpha U^T V + \beta R\]</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p>16</p></td>
+<td><p>Perform the update</p>
+<div class="math notranslate nohighlight">
+\[V = \alpha U R + \beta V\]</div>
+</td>
+</tr>
+<tr class="row-even"><td><p>17</p></td>
+<td><p>Perform the update</p>
+<div class="math notranslate nohighlight">
+\[U = \alpha U R\]</div>
+<p>Note: <span class="math notranslate nohighlight">\(V\)</span> may be used as a workspace</p>
+</td>
+</tr>
+<tr class="row-odd"><td><p>21</p></td>
+<td><p><span class="math notranslate nohighlight">\(B\)</span>-orthogonalize columns of <span class="math notranslate nohighlight">\(V\)</span> to all vectors
+<span class="math notranslate nohighlight">\(X\)</span> by solving</p>
+<div class="math notranslate nohighlight">
+\[(X^TBX) Q = X^T \bar{V}\]</div>
+<p>for <span class="math notranslate nohighlight">\(Q\)</span> and updating</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}U       &amp; = &amp; U - XQ \\\end{split}\]</div>
+<p>If <span class="math notranslate nohighlight">\(B\ne I\)</span>, the :math:<cite>bar{V}</cite> must also be updated
+as</p>
+<div class="math notranslate nohighlight">
+\[\bar{V} &amp; = &amp; \bar{V} - BXQ,\]</div>
+<p>or</p>
+<div class="math notranslate nohighlight">
+\[\bar{V} = BU\]</div>
+</td>
+</tr>
+<tr class="row-even"><td><p>22</p></td>
+<td><p><span class="math notranslate nohighlight">\(B\)</span>-orthogonalize columns of <span class="math notranslate nohighlight">\(U\)</span> to all vectors
+<span class="math notranslate nohighlight">\(X\)</span> by solving</p>
+<div class="math notranslate nohighlight">
+\[(X^TBX) Q = X^T U\]</div>
+<p>for <span class="math notranslate nohighlight">\(Q\)</span> and updating</p>
+<div class="math notranslate nohighlight">
+\[U = U - BXQ\]</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p>999</p></td>
+<td><p>Restart:</p>
+<p>If <cite>rci.k&gt;0</cite>: Restart suggested with block size
+<cite>m &gt;= rci.nx + rci.i + rci.j</cite>, adjusting workspace size
+to match. Set <cite>rci.i=0</cite> and <cite>rci.j=0</cite> and recall the routine.
+If a restart is not desirable, routine may be recalled with
+no change to parameters.</p>
+<p>If <cite>rci.k=0</cite>: Restart required with the same block size.</p>
+<p>In both cases, the first block <code class="docutils literal notranslate"><span class="pre">W[0][:][:]</span></code> should retain
+vectors <code class="docutils literal notranslate"><span class="pre">rci.jx:rci.jx+rci.nx-1</span></code>, filling remaining vectors
+randomly such that the entire set of columns is linearly
+independent from each other and also from the converged
+eigenvectors.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>The matrices are defined as follows:</p>
+<ul class="simple">
+<li><p><span class="math notranslate nohighlight">\(U\)</span> = <code class="docutils literal notranslate"><span class="pre">W[rci.kx][rci.jx:rci.jx+rci.nx-1][:]</span></code></p></li>
+<li><p><span class="math notranslate nohighlight">\(V\)</span> = <code class="docutils literal notranslate"><span class="pre">W[rci.ky][rci.jy:rci.jy+rci.ny-1][:]</span></code></p></li>
+<li><p><span class="math notranslate nohighlight">\(\bar{V}\)</span> = <code class="docutils literal notranslate"><span class="pre">W[rci.ky][rci.jy:rci.jy+rci.nx-1][:]</span></code></p></li>
+<li><p><span class="math notranslate nohighlight">\(R\)</span> = <code class="docutils literal notranslate"><span class="pre">rr[rci.k][rci.j:rci.j+rci.ny-1][rci.i:rci.i+rci.nx-1]</span></code></p></li>
+</ul>
+<p>and <span class="math notranslate nohighlight">\(\alpha\)</span> and <span class="math notranslate nohighlight">\(\beta\)</span> are given by <code class="docutils literal notranslate"><span class="pre">rci.alpha</span></code> and
+<code class="docutils literal notranslate"><span class="pre">rci.beta</span></code> respectively. We use the notation <span class="math notranslate nohighlight">\(r_{ii}\)</span> to refer
+to the <span class="math notranslate nohighlight">\(i\)</span>-th diagonal element of <span class="math notranslate nohighlight">\(R\)</span>, being
+<code class="docutils literal notranslate"><span class="pre">rr[rci.k][rci.j+i-1][rci.i+i-1]</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>rci</strong> – Reverse communication type.
+<code class="xref c c-member docutils literal notranslate"><span class="pre">rci.job</span></code> must be
+set to <cite>0</cite> before the first call.</p></li>
+<li><p><strong>problem</strong> – <p>Problem to be solved, one of:</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>0</p></td>
+<td><p><span class="math notranslate nohighlight">\(Ax=\lambda x\)</span></p></td>
+</tr>
+<tr class="row-even"><td><p>&gt;0</p></td>
+<td><p><span class="math notranslate nohighlight">\(Ax=\lambda Bx\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;0</p></td>
+<td><p><span class="math notranslate nohighlight">\(ABx=\lambda x\)</span></p></td>
+</tr>
+</tbody>
+</table>
+</p></li>
+<li><p><strong>left</strong> – Number of left eigenpairs to find. On return with
+<code class="docutils literal notranslate"><span class="pre">rci.job=5</span></code>, can be set to zero if sufficient have been found.</p></li>
+<li><p><strong>right</strong> – Number of left eigenpairs to find. On return with
+<code class="docutils literal notranslate"><span class="pre">rci.job=5</span></code>, can be set to zero if sufficient have been found.</p></li>
+<li><p><strong>lambda[m]</strong> – Current eigenvalue estimates in ascending
+order.</p></li>
+<li><p><strong>m</strong> – Block size of workspace <cite>W</cite>. Must be at least <cite>2</cite>.</p></li>
+<li><p><strong>rr[3][2*m][2*m]</strong> – reverse communication workspace.</p></li>
+<li><p><strong>ind[m]</strong> – reverse communication workspace.</p></li>
+<li><p><strong>keep</strong> – Internal workspace used by routine.</p></li>
+<li><p><strong>options</strong> – specifies algorithm options to be used.</p></li>
+<li><p><strong>inform</strong> – returns information about the exection of the
+routine.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.spral_ssmfe_double_complex">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssmfe_double_complex</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssmfe_rciz</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">rci</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">problem</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">left</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">right</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">m</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">lambda</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="kt"><span class="pre">complex</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">rr</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">ind</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">keep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssmfe_core_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="ssmfe.html#c.spral_ssmfe_inform" title="spral_ssmfe_inform"><span class="n"><span class="pre">spral_ssmfe_inform</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssmfe_double_complex" title="Permalink to this definition"></a><br /></dt>
+<dd><p>As <a class="reference internal" href="#c.spral_ssmfe_double" title="spral_ssmfe_double"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssmfe_double()</span></code></a>, but types of <code class="docutils literal notranslate"><span class="pre">rci</span></code> and <code class="docutils literal notranslate"><span class="pre">rr</span></code> changed
+to support type <code class="docutils literal notranslate"><span class="pre">double</span> <span class="pre">complex</span></code>.</p>
+</dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.spral_ssmfe_largest_double">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssmfe_largest_double</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssmfe_rcid</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">rci</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">problem</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">nep</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">m</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">lambda</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">rr</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">ind</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">keep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssmfe_core_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="ssmfe.html#c.spral_ssmfe_inform" title="spral_ssmfe_inform"><span class="n"><span class="pre">spral_ssmfe_inform</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssmfe_largest_double" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Computes specified number of eigenvalues of largest magnitude and
+corresponding eigenvectors.</p>
+<p>Uses reverse-communication. Upon return the user must perform a task
+specified by the <cite>rci</cite> parameter and recall the routine. Possible values of
+<cite>rci</cite> and associated tasks are as for <a class="reference internal" href="#c.spral_ssmfe_double" title="spral_ssmfe_double"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssmfe_double()</span></code></a> above.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>rci</strong> – Reverse communication type.
+<code class="xref c c-member docutils literal notranslate"><span class="pre">rci.job</span></code> must be
+set to <cite>0</cite> before the first call.</p></li>
+<li><p><strong>problem</strong> – <p>Problem to be solved, one of:</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>0</p></td>
+<td><p><span class="math notranslate nohighlight">\(Ax=\lambda x\)</span></p></td>
+</tr>
+<tr class="row-even"><td><p>&gt;0</p></td>
+<td><p><span class="math notranslate nohighlight">\(Ax=\lambda Bx\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p>&lt;0</p></td>
+<td><p><span class="math notranslate nohighlight">\(ABx=\lambda x\)</span></p></td>
+</tr>
+</tbody>
+</table>
+</p></li>
+<li><p><strong>nep</strong> – Number of eigenpairs to find.</p></li>
+<li><p><strong>lambda[m]</strong> – Current eigenvalue estimates in ascending
+order.</p></li>
+<li><p><strong>m</strong> – Block size of workspace <cite>W</cite>. Must be at least <cite>2</cite>.</p></li>
+<li><p><strong>rr[3][2*m][2*m]</strong> – reverse communication workspace.</p></li>
+<li><p><strong>ind[m]</strong> – reverse communication workspace.</p></li>
+<li><p><strong>keep</strong> – Internal workspace used by routine.</p></li>
+<li><p><strong>options</strong> – specifies algorithm options to be used.</p></li>
+<li><p><strong>inform</strong> – returns information about the exection of the
+routine.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.spral_ssmfe_largest_double_complex">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssmfe_largest_double_complex</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssmfe_rciz</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">rci</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">problem</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">nep</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">m</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">lambda</span></span>, <span class="n"><span class="pre">spral_double_complex</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">rr</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">ind</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">keep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssmfe_core_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="ssmfe.html#c.spral_ssmfe_inform" title="spral_ssmfe_inform"><span class="n"><span class="pre">spral_ssmfe_inform</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssmfe_largest_double_complex" title="Permalink to this definition"></a><br /></dt>
+<dd><p>As <a class="reference internal" href="#c.spral_ssmfe_largest_double" title="spral_ssmfe_largest_double"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssmfe_largest_double()</span></code></a>, but types of <code class="docutils literal notranslate"><span class="pre">rci</span></code> and <code class="docutils literal notranslate"><span class="pre">rr</span></code>
+changed to support type <code class="docutils literal notranslate"><span class="pre">double</span> <span class="pre">complex</span></code>.</p>
+</dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.spral_ssmfe_core_free">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssmfe_core_free</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">keep</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><a class="reference internal" href="ssmfe.html#c.spral_ssmfe_inform" title="spral_ssmfe_inform"><span class="n"><span class="pre">spral_ssmfe_inform</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssmfe_core_free" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Free memory allocated in <cite>keep</cite> and <cite>inform</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>keep</strong> – Workspace to be freed.</p></li>
+<li><p><strong>inform</strong> – Information type to be freed.</p></li>
+</ul>
+</dd>
+</dl>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>As memory in <code class="docutils literal notranslate"><span class="pre">keep</span></code> and <code class="docutils literal notranslate"><span class="pre">inform</span></code> has been allocated using Fortran
+functions, this routine <strong>must</strong> be called to avoid a memory leak.</p>
+</div>
+</dd></dl>
+
+</section>
+<section id="derived-types">
+<h2>Derived types<a class="headerlink" href="#derived-types" title="Permalink to this heading"></a></h2>
+<dl class="c type">
+<dt class="sig sig-object c">
+<span class="sig-name descname"><span class="pre">struct</span> <span class="pre">spral_ssmfe_core_options</span></span></dt>
+<dd><p>Options that control the algorithm.</p>
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.err_est">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">err_est</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.err_est" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Error estimation scheme, one of:</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>1</p></td>
+<td><p>Residual error bounds: modified Davis-Kahan estimate for
+eigenvector error and Lehmann bounds for eigenvale error
+(see method section).</p></td>
+</tr>
+<tr class="row-even"><td><p>2 (default)</p></td>
+<td><p>Convergence curve-based estimate.</p></td>
+</tr>
+</tbody>
+</table>
+<p>Default is <cite>2</cite>.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.extra_left">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">extra_left</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.extra_left" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Number of extra approximate eigenvectors
+corresponding to leftmost eigenvalues used to enhance convergence.
+Default is <cite>0</cite>.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.extra_right">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">extra_right</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.extra_right" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Number of extra approximate eigenvectors
+corresponding to rightmost eigenvalues used to enhance convergence.
+Default is <cite>0</cite>.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.minAprod">
+<span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">minAprod</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.minAprod" title="Permalink to this definition"></a><br /></dt>
+<dd><p>If true, minimize number of
+multiplications with <span class="math notranslate nohighlight">\(A\)</span> by requiring 2 additional blocks of memory
+for the workspace <code class="docutils literal notranslate"><span class="pre">W[:][:][:]</span></code>. If false, three returns with <cite>rci.job=1</cite>
+occur per iteration instead of one. Must be true if <code class="docutils literal notranslate"><span class="pre">problem</span> <span class="pre">&lt;</span> <span class="pre">0</span></code>.
+Default is <cite>true</cite>.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.minBprod">
+<span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">minBprod</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.minBprod" title="Permalink to this definition"></a><br /></dt>
+<dd><p>If true, minimize number of
+multiplications with <span class="math notranslate nohighlight">\(B\)</span> by requiring 2 additional blocks of memory
+for the workspace <code class="docutils literal notranslate"><span class="pre">W[:][:][:]</span></code>. If false, at least three returns with
+<cite>rci.job=3</cite> occur per iteration instead of one.
+Default is <cite>true</cite>.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.min_gap">
+<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">min_gap</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.min_gap" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Restart sensitivity: if the relative
+distance between the last eigenvalue of interest on either margin of
+the spectrum and the rest of the spectrum is smaller than <cite>min_gap</cite>,
+the solver procedure suggests restart (<cite>rci.job=999</cite>).
+The values <cite>rci.i</cite> and <cite>rci.j</cite> are set to the numbers of eigenvalues on
+the left and right margin of the spectrum that are too close to the
+eigenvalues of interest, causing slow convergence. The default value
+of 0.0 means no restart is ever suggested. Must be in the range
+<span class="math notranslate nohighlight">\([0.0,1.0]\)</span>.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.cf_max">
+<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">cf_max</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.cf_max" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Stagnation sensitivity: if the value
+<span class="math notranslate nohighlight">\(q_{ij}\)</span> (see method section) is greater than <cite>cf_max</cite> for
+<span class="math notranslate nohighlight">\(i &gt; 5\)</span>, the eigenpair is marked as stagnated by setting
+<cite>inform.converged(j)</cite> to a negative value. The default value of
+<cite>1.0</cite> indicates that the estimated asymptotic convergence
+factor is not used for stagnation detection.
+Must be in the range <span class="math notranslate nohighlight">\([0.5, 1.0]\)</span>.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="c type">
+<dt class="sig sig-object c">
+<span class="sig-name descname"><span class="pre">struct</span> <span class="pre">spral_ssmfe_infrom</span></span></dt>
+<dd><p>Information on progress of the algorithm.</p>
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.converged">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">converged</span></span></span><span class="p"><span class="pre">[</span></span><span class="n"><span class="pre">mep</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#c.PhonyNameDueToError.converged" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Convergence status.</p>
+<ul class="simple">
+<li><p>If <code class="docutils literal notranslate"><span class="pre">converged[j]&gt;0</span></code>, the eigenpair <cite>(lambda[j], X[j])</cite> converged
+on iteration <cite>converged[j]</cite>.</p></li>
+<li><p>If <code class="docutils literal notranslate"><span class="pre">converged[j]=0</span></code>, the eigenpair <cite>(lambda[j], X[j])</cite> is still
+converging.</p></li>
+<li><p>If <code class="docutils literal notranslate"><span class="pre">converged[j]&lt;0</span></code>, the eigenpair <cite>(lambda[j], X[j])</cite> stagnated
+at iteration <cite>converged[j]</cite>.</p></li>
+</ul>
+<p>This component is allocated by the routine.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.err_lambda">
+<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">err_lambda</span></span></span><span class="p"><span class="pre">[</span></span><span class="n"><span class="pre">mep</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#c.PhonyNameDueToError.err_lambda" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Estimated eigenvalue errors for
+converged and stagnated eigenvalues.
+This component is allocated by the routine.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.err_x">
+<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">err_x</span></span></span><span class="p"><span class="pre">[</span></span><span class="n"><span class="pre">mep</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#c.PhonyNameDueToError.err_x" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Estimated eigenvector errors for
+converged and stagnated eigenvectors.
+This component is allocated by the routine.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.flag">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">flag</span></span></span><br /></dt>
+<dd><p>Return status of algorithm. See table below.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.iteration">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">iteration</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.iteration" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Number of iterations.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.residual_norms">
+<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">residual_norms</span></span></span><span class="p"><span class="pre">[</span></span><span class="n"><span class="pre">mep</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#c.PhonyNameDueToError.residual_norms" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Euclidean norms of residuals
+for <cite>(lambda[:], X[:])</cite> on return with <code class="docutils literal notranslate"><span class="pre">rci.job=4,</span> <span class="pre">5</span></code>.
+This component is allocated by the routine.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.stat">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">stat</span></span></span><br /></dt>
+<dd><p>Fortran allocation status in event of failure</p>
+</dd></dl>
+
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p><cite>inform.flag</cite></p></th>
+<th class="head"></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>-1</p></td>
+<td><p>m is out-of-range.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-2</p></td>
+<td><p>rci.job is out-of-range.</p></td>
+</tr>
+<tr class="row-even"><td><p>-3</p></td>
+<td><p>options.err_est is out-of-range.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-4</p></td>
+<td><p>options.minAprod is incompatible with selected routine.</p></td>
+</tr>
+<tr class="row-even"><td><p>-5</p></td>
+<td><p>options.extra_left or options.extra_right is out-of-range.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-6</p></td>
+<td><p>options.min_gap is out-of-range.</p></td>
+</tr>
+<tr class="row-even"><td><p>-7</p></td>
+<td><p>options.cf_max is out-of-range.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-11</p></td>
+<td><p>left is out-of-range (<a class="reference internal" href="#c.spral_ssmfe_double" title="spral_ssmfe_double"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssmfe_double()</span></code></a>) or
+nep is out-of-range
+(<a class="reference internal" href="#c.spral_ssmfe_largest_double" title="spral_ssmfe_largest_double"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssmfe_largest_double()</span></code></a>).</p></td>
+</tr>
+<tr class="row-even"><td><p>-12</p></td>
+<td><p>right is out-of-range.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-100</p></td>
+<td><p>Not enough memory; <cite>inform.stat</cite> contains the value of the
+Fortran stat parameter.</p></td>
+</tr>
+<tr class="row-even"><td><p>-200</p></td>
+<td><p><span class="math notranslate nohighlight">\(B\)</span> is not positive definite or <cite>user_x&gt;0</cite> and
+linearly dependent initial guesses were supplied.</p></td>
+</tr>
+<tr class="row-odd"><td><p>+1</p></td>
+<td><p>The iterations have been terminated because no further
+improvement in accuracy is possible (this may happen if
+<span class="math notranslate nohighlight">\(B\)</span> or the preconditioner is not positive definite,
+or if the components of the residual vectors are so small
+that the round-off errors make them essentially random).
+The value of <cite>inform.non_converged</cite> is set to the number
+of non-converged eigenpairs.</p></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</section>
+<section id="examples">
+<span id="ssmfe-core-example"></span><h2>Examples<a class="headerlink" href="#examples" title="Permalink to this heading"></a></h2>
+<section id="preconditioning-example">
+<h3>Preconditioning example<a class="headerlink" href="#preconditioning-example" title="Permalink to this heading"></a></h3>
+<p>The following code computes the 5 leftmost eigenpairs of the matrix
+<span class="math notranslate nohighlight">\(A\)</span> of order 100 that approximates the two-dimensional Laplacian
+operator on a 20-by-20 grid. One forward and one backward Gauss-Seidel
+update are used for preconditioning, which halves the number of
+iterations compared with solving the same problem without
+preconditioning. The header <cite>laplace2d/h</cite>
+(examples/C/ssmfe/laplace2d.h) supplies the subroutine
+<cite>apply_laplacian()</cite> that multiplies a block of vectors by <span class="math notranslate nohighlight">\(A\)</span>, and
+the subroutine <cite>apply_gauss_seidel_step()</cite> that computes <span class="math notranslate nohighlight">\(y = T x\)</span>
+for a block of vectors <span class="math notranslate nohighlight">\(x\)</span> by applying one forward and one
+backward update of the Gauss-Seidel method to the system
+<span class="math notranslate nohighlight">\(A y = x\)</span>.</p>
+<div class="highlight-C notranslate"><div class="highlight"><pre><span></span><span class="cm">/* examples/C/ssmfe/precond_core.f90 */</span>
+<span class="cm">/* Laplacian on a square grid (using SPRAL_SSMFE_CORE routines) */</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;spral.h&quot;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;math.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdlib.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;cblas.h&gt;</span>
+
+<span class="cm">/* Header that implements Laplacian and preconditioners */</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;laplace2d.h&quot;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">   </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">ngrid</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">20</span><span class="p">;</span><span class="w">         </span><span class="cm">/* grid points along each side */</span>
+<span class="w">   </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">n</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ngrid</span><span class="o">*</span><span class="n">ngrid</span><span class="p">;</span><span class="w">    </span><span class="cm">/* problem size */</span>
+<span class="w">   </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">nep</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span><span class="w">            </span><span class="cm">/* eigenpairs wanted */</span>
+<span class="w">   </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">m</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span><span class="w">              </span><span class="cm">/* dimension of the iterated subspace */</span>
+<span class="w">   </span><span class="k">const</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="n">tol</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">1.</span><span class="n">e</span><span class="mi">-6</span><span class="p">;</span><span class="w">     </span><span class="cm">/* eigenvector tolerance */</span>
+
+<span class="w">   </span><span class="kt">int</span><span class="w"> </span><span class="n">state</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">SPRAL_RANDOM_INITIAL_SEED</span><span class="p">;</span><span class="w"> </span><span class="cm">/* PRNG state */</span>
+
+<span class="w">   </span><span class="kt">int</span><span class="w"> </span><span class="o">*</span><span class="n">ind</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">malloc</span><span class="p">(</span><span class="n">m</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="o">*</span><span class="n">ind</span><span class="p">));</span><span class="w">          </span><span class="cm">/* permutation index */</span>
+<span class="w">   </span><span class="kt">double</span><span class="w"> </span><span class="o">*</span><span class="n">lambda</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">malloc</span><span class="p">(</span><span class="n">n</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="o">*</span><span class="n">lambda</span><span class="p">));</span><span class="w"> </span><span class="cm">/* eigenvalues */</span>
+<span class="w">   </span><span class="kt">double</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="n">X</span><span class="p">)[</span><span class="n">n</span><span class="p">][</span><span class="n">n</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">malloc</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="o">*</span><span class="n">X</span><span class="p">));</span><span class="w">       </span><span class="cm">/* eigenvectors */</span>
+<span class="w">   </span><span class="cm">/* Work arrays */</span>
+<span class="w">   </span><span class="kt">double</span><span class="w"> </span><span class="o">*</span><span class="n">lmd</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">malloc</span><span class="p">(</span><span class="n">m</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">sizeof</span><span class="p">(</span><span class="o">*</span><span class="n">lmd</span><span class="p">));</span>
+<span class="w">   </span><span class="kt">double</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="n">rr</span><span class="p">)[</span><span class="mi">3</span><span class="p">][</span><span class="mi">2</span><span class="o">*</span><span class="n">m</span><span class="p">][</span><span class="mi">2</span><span class="o">*</span><span class="n">m</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">malloc</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="o">*</span><span class="n">rr</span><span class="p">));</span>
+<span class="w">   </span><span class="kt">double</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="n">W</span><span class="p">)[</span><span class="mi">7</span><span class="p">][</span><span class="n">m</span><span class="p">][</span><span class="n">n</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">malloc</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="o">*</span><span class="n">W</span><span class="p">));</span>
+<span class="w">   </span><span class="kt">double</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="n">U</span><span class="p">)[</span><span class="n">m</span><span class="p">][</span><span class="n">n</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">malloc</span><span class="p">(</span><span class="k">sizeof</span><span class="p">(</span><span class="o">*</span><span class="n">U</span><span class="p">));</span>
+
+<span class="w">   </span><span class="cm">/* Derived types */</span>
+<span class="w">   </span><span class="k">struct</span><span class="w"> </span><span class="nc">spral_ssmfe_rcid</span><span class="w"> </span><span class="n">rci</span><span class="p">;</span><span class="w">              </span><span class="cm">/* reverse communication data */</span>
+<span class="w">   </span><span class="k">struct</span><span class="w"> </span><span class="nc">spral_ssmfe_core_options</span><span class="w"> </span><span class="n">options</span><span class="p">;</span><span class="w">  </span><span class="cm">/* options */</span>
+<span class="w">   </span><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="n">keep</span><span class="p">;</span><span class="w">                               </span><span class="cm">/* private data */</span>
+<span class="w">   </span><span class="k">struct</span><span class="w"> </span><span class="nc">spral_ssmfe_inform</span><span class="w"> </span><span class="n">inform</span><span class="p">;</span><span class="w">         </span><span class="cm">/* information */</span>
+
+<span class="w">   </span><span class="cm">/* Initialize options to default values */</span>
+<span class="w">   </span><span class="n">spral_ssmfe_core_default_options</span><span class="p">(</span><span class="o">&amp;</span><span class="n">options</span><span class="p">);</span>
+
+<span class="w">   </span><span class="cm">/* Initialize W to lin indep vectors by randomizing */</span>
+<span class="w">   </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">&lt;</span><span class="n">n</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span>
+<span class="w">   </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">j</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="o">&lt;</span><span class="n">m</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="o">++</span><span class="p">)</span>
+<span class="w">      </span><span class="p">(</span><span class="o">*</span><span class="n">W</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="n">j</span><span class="p">][</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">spral_random_real</span><span class="p">(</span><span class="o">&amp;</span><span class="n">state</span><span class="p">,</span><span class="w"> </span><span class="nb">true</span><span class="p">);</span>
+
+<span class="w">   </span><span class="kt">int</span><span class="w"> </span><span class="n">ncon</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w">        </span><span class="cm">/* number of converged eigenpairs */</span>
+<span class="w">   </span><span class="n">rci</span><span class="p">.</span><span class="n">job</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">keep</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">NULL</span><span class="p">;</span>
+<span class="w">   </span><span class="k">while</span><span class="p">(</span><span class="nb">true</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="cm">/* reverse communication loop */</span>
+<span class="w">      </span><span class="n">spral_ssmfe_double</span><span class="p">(</span><span class="o">&amp;</span><span class="n">rci</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">nep</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">m</span><span class="p">,</span><span class="w"> </span><span class="n">lmd</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">rr</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="n">ind</span><span class="p">,</span>
+<span class="w">         </span><span class="o">&amp;</span><span class="n">keep</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">options</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">inform</span><span class="p">);</span>
+<span class="w">      </span><span class="k">switch</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">job</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="k">case</span><span class="w"> </span><span class="mi">1</span><span class="p">:</span>
+<span class="w">         </span><span class="n">apply_laplacian</span><span class="p">(</span>
+<span class="w">            </span><span class="n">ngrid</span><span class="p">,</span><span class="w"> </span><span class="n">ngrid</span><span class="p">,</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">nx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">W</span><span class="p">)[</span><span class="n">rci</span><span class="p">.</span><span class="n">kx</span><span class="p">][</span><span class="n">rci</span><span class="p">.</span><span class="n">jx</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">W</span><span class="p">)[</span><span class="n">rci</span><span class="p">.</span><span class="n">ky</span><span class="p">][</span><span class="n">rci</span><span class="p">.</span><span class="n">jy</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+<span class="w">            </span><span class="p">);</span>
+<span class="w">         </span><span class="k">break</span><span class="p">;</span>
+<span class="w">      </span><span class="k">case</span><span class="w"> </span><span class="mi">2</span><span class="p">:</span>
+<span class="w">         </span><span class="n">apply_gauss_seidel_step</span><span class="w"> </span><span class="p">(</span>
+<span class="w">            </span><span class="n">ngrid</span><span class="p">,</span><span class="w"> </span><span class="n">ngrid</span><span class="p">,</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">nx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">W</span><span class="p">)[</span><span class="n">rci</span><span class="p">.</span><span class="n">kx</span><span class="p">][</span><span class="n">rci</span><span class="p">.</span><span class="n">jx</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">W</span><span class="p">)[</span><span class="n">rci</span><span class="p">.</span><span class="n">ky</span><span class="p">][</span><span class="n">rci</span><span class="p">.</span><span class="n">jy</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+<span class="w">            </span><span class="p">);</span>
+<span class="w">         </span><span class="k">break</span><span class="p">;</span>
+<span class="w">      </span><span class="k">case</span><span class="w"> </span><span class="mi">4</span><span class="p">:</span>
+<span class="w">         </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">j</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="o">&lt;</span><span class="n">m</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="n">inform</span><span class="p">.</span><span class="n">converged</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="k">continue</span><span class="p">;</span>
+<span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="n">inform</span><span class="p">.</span><span class="n">err_X</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">inform</span><span class="p">.</span><span class="n">err_X</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">tol</span><span class="w"> </span><span class="p">)</span>
+<span class="w">               </span><span class="n">inform</span><span class="p">.</span><span class="n">converged</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="w">         </span><span class="p">}</span>
+<span class="w">         </span><span class="k">break</span><span class="p">;</span>
+<span class="w">      </span><span class="k">case</span><span class="w"> </span><span class="mi">5</span><span class="p">:</span>
+<span class="w">         </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="k">continue</span><span class="p">;</span>
+<span class="w">         </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">k</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">k</span><span class="o">&lt;</span><span class="n">rci</span><span class="p">.</span><span class="n">nx</span><span class="p">;</span><span class="w"> </span><span class="n">k</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">           </span><span class="kt">int</span><span class="w"> </span><span class="n">j</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ncon</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">k</span><span class="p">;</span>
+<span class="w">           </span><span class="n">lambda</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">lmd</span><span class="p">[</span><span class="n">rci</span><span class="p">.</span><span class="n">jx</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">k</span><span class="p">];</span>
+<span class="w">           </span><span class="n">cblas_dcopy</span><span class="p">(</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">W</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="n">rci</span><span class="p">.</span><span class="n">jx</span><span class="o">+</span><span class="n">k</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">X</span><span class="p">)[</span><span class="n">j</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="p">);</span>
+<span class="w">         </span><span class="p">}</span>
+<span class="w">         </span><span class="n">ncon</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">nx</span><span class="p">;</span>
+<span class="w">         </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="n">ncon</span><span class="w"> </span><span class="o">&gt;=</span><span class="w"> </span><span class="n">nep</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">inform</span><span class="p">.</span><span class="n">iteration</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">300</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="k">goto</span><span class="w"> </span><span class="n">finished</span><span class="p">;</span>
+<span class="w">         </span><span class="k">break</span><span class="p">;</span>
+<span class="w">      </span><span class="k">case</span><span class="w"> </span><span class="mi">11</span><span class="p">:</span>
+<span class="w">         </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">i</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">kx</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">ky</span><span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">jx</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">jy</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">               </span><span class="n">cblas_dcopy</span><span class="p">(</span><span class="n">n</span><span class="o">*</span><span class="n">rci</span><span class="p">.</span><span class="n">nx</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">W</span><span class="p">)[</span><span class="n">rci</span><span class="p">.</span><span class="n">kx</span><span class="p">][</span><span class="n">rci</span><span class="p">.</span><span class="n">jx</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">W</span><span class="p">)[</span><span class="n">rci</span><span class="p">.</span><span class="n">ky</span><span class="p">][</span><span class="n">rci</span><span class="p">.</span><span class="n">jy</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+<span class="w">            </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">jx</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">jy</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">               </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">j</span><span class="o">=</span><span class="n">rci</span><span class="p">.</span><span class="n">nx</span><span class="mi">-1</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="o">&gt;=</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="o">--</span><span class="p">)</span>
+<span class="w">                  </span><span class="n">cblas_dcopy</span><span class="p">(</span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">W</span><span class="p">)[</span><span class="n">rci</span><span class="p">.</span><span class="n">kx</span><span class="p">][</span><span class="n">rci</span><span class="p">.</span><span class="n">jx</span><span class="o">+</span><span class="n">j</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">W</span><span class="p">)[</span><span class="n">rci</span><span class="p">.</span><span class="n">ky</span><span class="p">][</span><span class="n">rci</span><span class="p">.</span><span class="n">jy</span><span class="o">+</span><span class="n">j</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">         </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">&lt;</span><span class="n">n</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">               </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">j</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="o">&lt;</span><span class="n">rci</span><span class="p">.</span><span class="n">nx</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="o">++</span><span class="p">)</span>
+<span class="w">                  </span><span class="p">(</span><span class="o">*</span><span class="n">U</span><span class="p">)[</span><span class="n">j</span><span class="p">][</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="n">W</span><span class="p">)[</span><span class="n">rci</span><span class="p">.</span><span class="n">kx</span><span class="p">][</span><span class="n">ind</span><span class="p">[</span><span class="n">j</span><span class="p">]][</span><span class="n">i</span><span class="p">];</span>
+<span class="w">               </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">j</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="o">&lt;</span><span class="n">rci</span><span class="p">.</span><span class="n">nx</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="o">++</span><span class="p">)</span>
+<span class="w">                  </span><span class="p">(</span><span class="o">*</span><span class="n">W</span><span class="p">)[</span><span class="n">rci</span><span class="p">.</span><span class="n">kx</span><span class="p">][</span><span class="n">j</span><span class="p">][</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="n">U</span><span class="p">)[</span><span class="n">j</span><span class="p">][</span><span class="n">i</span><span class="p">];</span>
+<span class="w">               </span><span class="k">if</span><span class="p">(</span><span class="n">rci</span><span class="p">.</span><span class="n">ky</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">kx</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                  </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">j</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="o">&lt;</span><span class="n">rci</span><span class="p">.</span><span class="n">nx</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="o">++</span><span class="p">)</span>
+<span class="w">                    </span><span class="p">(</span><span class="o">*</span><span class="n">U</span><span class="p">)[</span><span class="n">j</span><span class="p">][</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="n">W</span><span class="p">)[</span><span class="n">rci</span><span class="p">.</span><span class="n">ky</span><span class="p">][</span><span class="n">ind</span><span class="p">[</span><span class="n">j</span><span class="p">]][</span><span class="n">i</span><span class="p">];</span>
+<span class="w">                  </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">j</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="o">&lt;</span><span class="n">rci</span><span class="p">.</span><span class="n">nx</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="o">++</span><span class="p">)</span>
+<span class="w">                    </span><span class="p">(</span><span class="o">*</span><span class="n">W</span><span class="p">)[</span><span class="n">rci</span><span class="p">.</span><span class="n">ky</span><span class="p">][</span><span class="n">j</span><span class="p">][</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="o">*</span><span class="n">U</span><span class="p">)[</span><span class="n">j</span><span class="p">][</span><span class="n">i</span><span class="p">];</span>
+<span class="w">               </span><span class="p">}</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">         </span><span class="p">}</span>
+<span class="w">         </span><span class="k">break</span><span class="p">;</span>
+<span class="w">      </span><span class="k">case</span><span class="w"> </span><span class="mi">12</span><span class="p">:</span>
+<span class="w">         </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">&lt;</span><span class="n">rci</span><span class="p">.</span><span class="n">nx</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span>
+<span class="w">           </span><span class="p">(</span><span class="o">*</span><span class="n">rr</span><span class="p">)[</span><span class="n">rci</span><span class="p">.</span><span class="n">k</span><span class="p">][</span><span class="n">rci</span><span class="p">.</span><span class="n">j</span><span class="o">+</span><span class="n">i</span><span class="p">][</span><span class="n">rci</span><span class="p">.</span><span class="n">i</span><span class="o">+</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">=</span>
+<span class="w">             </span><span class="n">cblas_ddot</span><span class="p">(</span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">W</span><span class="p">)[</span><span class="n">rci</span><span class="p">.</span><span class="n">kx</span><span class="p">][</span><span class="n">rci</span><span class="p">.</span><span class="n">jx</span><span class="o">+</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">W</span><span class="p">)[</span><span class="n">rci</span><span class="p">.</span><span class="n">ky</span><span class="p">][</span><span class="n">rci</span><span class="p">.</span><span class="n">jy</span><span class="o">+</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+<span class="w">         </span><span class="k">break</span><span class="p">;</span>
+<span class="w">      </span><span class="k">case</span><span class="w"> </span><span class="mi">13</span><span class="p">:</span>
+<span class="w">         </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">&lt;</span><span class="n">rci</span><span class="p">.</span><span class="n">nx</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="k">if</span><span class="p">(</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">kx</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">ky</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">               </span><span class="kt">double</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">cblas_dnrm2</span><span class="p">(</span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">W</span><span class="p">)[</span><span class="n">rci</span><span class="p">.</span><span class="n">kx</span><span class="p">][</span><span class="n">rci</span><span class="p">.</span><span class="n">jx</span><span class="o">+</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+<span class="w">               </span><span class="k">if</span><span class="p">(</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">)</span>
+<span class="w">                  </span><span class="n">cblas_dscal</span><span class="p">(</span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="o">/</span><span class="n">s</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">W</span><span class="p">)[</span><span class="n">rci</span><span class="p">.</span><span class="n">kx</span><span class="p">][</span><span class="n">rci</span><span class="p">.</span><span class="n">jx</span><span class="o">+</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+<span class="w">            </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">               </span><span class="kt">double</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sqrt</span><span class="p">(</span><span class="n">fabs</span><span class="p">(</span><span class="n">cblas_ddot</span><span class="p">(</span>
+<span class="w">                  </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">W</span><span class="p">)[</span><span class="n">rci</span><span class="p">.</span><span class="n">kx</span><span class="p">][</span><span class="n">rci</span><span class="p">.</span><span class="n">jx</span><span class="o">+</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">W</span><span class="p">)[</span><span class="n">rci</span><span class="p">.</span><span class="n">ky</span><span class="p">][</span><span class="n">rci</span><span class="p">.</span><span class="n">jy</span><span class="o">+</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="mi">1</span><span class="p">)</span>
+<span class="w">                  </span><span class="p">));</span>
+<span class="w">               </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                  </span><span class="n">cblas_dscal</span><span class="p">(</span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="o">/</span><span class="n">s</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">W</span><span class="p">)[</span><span class="n">rci</span><span class="p">.</span><span class="n">kx</span><span class="p">][</span><span class="n">rci</span><span class="p">.</span><span class="n">jx</span><span class="o">+</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+<span class="w">                  </span><span class="n">cblas_dscal</span><span class="p">(</span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="o">/</span><span class="n">s</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">W</span><span class="p">)[</span><span class="n">rci</span><span class="p">.</span><span class="n">ky</span><span class="p">][</span><span class="n">rci</span><span class="p">.</span><span class="n">jy</span><span class="o">+</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+<span class="w">               </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                  </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">j</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="o">&lt;</span><span class="n">n</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="o">++</span><span class="p">)</span>
+<span class="w">                     </span><span class="p">(</span><span class="o">*</span><span class="n">W</span><span class="p">)[</span><span class="n">rci</span><span class="p">.</span><span class="n">ky</span><span class="p">][</span><span class="n">rci</span><span class="p">.</span><span class="n">jy</span><span class="o">+</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.0</span><span class="p">;</span>
+<span class="w">               </span><span class="p">}</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">         </span><span class="p">}</span>
+<span class="w">         </span><span class="k">break</span><span class="p">;</span>
+<span class="w">      </span><span class="k">case</span><span class="w"> </span><span class="mi">14</span><span class="p">:</span>
+<span class="w">         </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">&lt;</span><span class="n">rci</span><span class="p">.</span><span class="n">nx</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">           </span><span class="kt">double</span><span class="w"> </span><span class="n">s</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">-</span><span class="p">(</span><span class="o">*</span><span class="n">rr</span><span class="p">)[</span><span class="n">rci</span><span class="p">.</span><span class="n">k</span><span class="p">][</span><span class="n">rci</span><span class="p">.</span><span class="n">j</span><span class="o">+</span><span class="n">i</span><span class="p">][</span><span class="n">rci</span><span class="p">.</span><span class="n">i</span><span class="o">+</span><span class="n">i</span><span class="p">];</span>
+<span class="w">           </span><span class="n">cblas_daxpy</span><span class="p">(</span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">s</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">W</span><span class="p">)[</span><span class="n">rci</span><span class="p">.</span><span class="n">kx</span><span class="p">][</span><span class="n">rci</span><span class="p">.</span><span class="n">jx</span><span class="o">+</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">W</span><span class="p">)[</span><span class="n">rci</span><span class="p">.</span><span class="n">ky</span><span class="p">][</span><span class="n">rci</span><span class="p">.</span><span class="n">jy</span><span class="o">+</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+<span class="w">         </span><span class="p">}</span>
+<span class="w">         </span><span class="k">break</span><span class="p">;</span>
+<span class="w">      </span><span class="k">case</span><span class="w"> </span><span class="mi">15</span><span class="p">:</span>
+<span class="w">         </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">nx</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">ny</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">)</span>
+<span class="w">            </span><span class="n">cblas_dgemm</span><span class="p">(</span>
+<span class="w">               </span><span class="n">CblasColMajor</span><span class="p">,</span><span class="w"> </span><span class="n">CblasTrans</span><span class="p">,</span><span class="w"> </span><span class="n">CblasNoTrans</span><span class="p">,</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">nx</span><span class="p">,</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">ny</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span>
+<span class="w">               </span><span class="n">rci</span><span class="p">.</span><span class="n">alpha</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">W</span><span class="p">)[</span><span class="n">rci</span><span class="p">.</span><span class="n">kx</span><span class="p">][</span><span class="n">rci</span><span class="p">.</span><span class="n">jx</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">W</span><span class="p">)[</span><span class="n">rci</span><span class="p">.</span><span class="n">ky</span><span class="p">][</span><span class="n">rci</span><span class="p">.</span><span class="n">jy</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="n">n</span><span class="p">,</span>
+<span class="w">               </span><span class="n">rci</span><span class="p">.</span><span class="n">beta</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">rr</span><span class="p">)[</span><span class="n">rci</span><span class="p">.</span><span class="n">k</span><span class="p">][</span><span class="n">rci</span><span class="p">.</span><span class="n">j</span><span class="p">][</span><span class="n">rci</span><span class="p">.</span><span class="n">i</span><span class="p">],</span><span class="w"> </span><span class="mi">2</span><span class="o">*</span><span class="n">m</span>
+<span class="w">               </span><span class="p">);</span>
+<span class="w">         </span><span class="k">break</span><span class="p">;</span>
+<span class="w">      </span><span class="k">case</span><span class="w"> </span><span class="mi">16</span><span class="p">:</span><span class="w"> </span><span class="c1">// Fall through to 17</span>
+<span class="w">      </span><span class="k">case</span><span class="w"> </span><span class="mi">17</span><span class="p">:</span>
+<span class="w">         </span><span class="k">if</span><span class="p">(</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">ny</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="k">continue</span><span class="p">;</span>
+<span class="w">         </span><span class="k">if</span><span class="p">(</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">nx</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="k">if</span><span class="p">(</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">job</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">17</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="k">continue</span><span class="p">;</span>
+<span class="w">            </span><span class="k">if</span><span class="p">(</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">beta</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mf">1.0</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="k">continue</span><span class="p">;</span>
+<span class="w">            </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">j</span><span class="o">=</span><span class="n">rci</span><span class="p">.</span><span class="n">jy</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="o">&lt;</span><span class="n">rci</span><span class="p">.</span><span class="n">jy</span><span class="o">+</span><span class="n">rci</span><span class="p">.</span><span class="n">ny</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="o">++</span><span class="p">)</span>
+<span class="w">               </span><span class="n">cblas_dscal</span><span class="p">(</span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">beta</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">W</span><span class="p">)[</span><span class="n">rci</span><span class="p">.</span><span class="n">ky</span><span class="p">][</span><span class="n">j</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+<span class="w">            </span><span class="k">continue</span><span class="p">;</span>
+<span class="w">         </span><span class="p">}</span>
+<span class="w">         </span><span class="k">if</span><span class="p">(</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">job</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">17</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">cblas_dgemm</span><span class="p">(</span>
+<span class="w">               </span><span class="n">CblasColMajor</span><span class="p">,</span><span class="w"> </span><span class="n">CblasNoTrans</span><span class="p">,</span><span class="w"> </span><span class="n">CblasNoTrans</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">ny</span><span class="p">,</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">nx</span><span class="p">,</span>
+<span class="w">               </span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">W</span><span class="p">)[</span><span class="n">rci</span><span class="p">.</span><span class="n">kx</span><span class="p">][</span><span class="n">rci</span><span class="p">.</span><span class="n">jx</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">rr</span><span class="p">)[</span><span class="n">rci</span><span class="p">.</span><span class="n">k</span><span class="p">][</span><span class="n">rci</span><span class="p">.</span><span class="n">j</span><span class="p">][</span><span class="n">rci</span><span class="p">.</span><span class="n">i</span><span class="p">],</span><span class="w"> </span><span class="mi">2</span><span class="o">*</span><span class="n">m</span><span class="p">,</span>
+<span class="w">               </span><span class="mf">0.0</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">W</span><span class="p">)[</span><span class="n">rci</span><span class="p">.</span><span class="n">ky</span><span class="p">][</span><span class="n">rci</span><span class="p">.</span><span class="n">jy</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="n">n</span>
+<span class="w">               </span><span class="p">);</span>
+<span class="w">            </span><span class="n">cblas_dcopy</span><span class="p">(</span><span class="n">n</span><span class="o">*</span><span class="n">rci</span><span class="p">.</span><span class="n">ny</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">W</span><span class="p">)[</span><span class="n">rci</span><span class="p">.</span><span class="n">ky</span><span class="p">][</span><span class="n">rci</span><span class="p">.</span><span class="n">jy</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">W</span><span class="p">)[</span><span class="n">rci</span><span class="p">.</span><span class="n">kx</span><span class="p">][</span><span class="n">rci</span><span class="p">.</span><span class="n">jx</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="mi">1</span><span class="p">);</span>
+<span class="w">         </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">cblas_dgemm</span><span class="p">(</span>
+<span class="w">               </span><span class="n">CblasColMajor</span><span class="p">,</span><span class="w"> </span><span class="n">CblasNoTrans</span><span class="p">,</span><span class="w"> </span><span class="n">CblasNoTrans</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">ny</span><span class="p">,</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">nx</span><span class="p">,</span>
+<span class="w">               </span><span class="n">rci</span><span class="p">.</span><span class="n">alpha</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">W</span><span class="p">)[</span><span class="n">rci</span><span class="p">.</span><span class="n">kx</span><span class="p">][</span><span class="n">rci</span><span class="p">.</span><span class="n">jx</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">rr</span><span class="p">)[</span><span class="n">rci</span><span class="p">.</span><span class="n">k</span><span class="p">][</span><span class="n">rci</span><span class="p">.</span><span class="n">j</span><span class="p">][</span><span class="n">rci</span><span class="p">.</span><span class="n">i</span><span class="p">],</span>
+<span class="w">               </span><span class="mi">2</span><span class="o">*</span><span class="n">m</span><span class="p">,</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">beta</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">W</span><span class="p">)[</span><span class="n">rci</span><span class="p">.</span><span class="n">ky</span><span class="p">][</span><span class="n">rci</span><span class="p">.</span><span class="n">jy</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="n">n</span>
+<span class="w">               </span><span class="p">);</span>
+<span class="w">         </span><span class="p">}</span>
+<span class="w">         </span><span class="k">break</span><span class="p">;</span>
+<span class="w">      </span><span class="k">case</span><span class="w"> </span><span class="mi">21</span><span class="p">:</span><span class="w"> </span><span class="c1">// Fall through to 22</span>
+<span class="w">      </span><span class="k">case</span><span class="w"> </span><span class="mi">22</span><span class="p">:</span>
+<span class="w">         </span><span class="k">if</span><span class="p">(</span><span class="w"> </span><span class="n">ncon</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">cblas_dgemm</span><span class="p">(</span>
+<span class="w">               </span><span class="n">CblasColMajor</span><span class="p">,</span><span class="w"> </span><span class="n">CblasTrans</span><span class="p">,</span><span class="w"> </span><span class="n">CblasNoTrans</span><span class="p">,</span><span class="w"> </span><span class="n">ncon</span><span class="p">,</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">nx</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span>
+<span class="w">               </span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">X</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">W</span><span class="p">)[</span><span class="n">rci</span><span class="p">.</span><span class="n">ky</span><span class="p">][</span><span class="n">rci</span><span class="p">.</span><span class="n">jy</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">U</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="n">n</span>
+<span class="w">               </span><span class="p">);</span>
+<span class="w">            </span><span class="n">cblas_dgemm</span><span class="p">(</span>
+<span class="w">               </span><span class="n">CblasColMajor</span><span class="p">,</span><span class="w"> </span><span class="n">CblasNoTrans</span><span class="p">,</span><span class="w"> </span><span class="n">CblasNoTrans</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">rci</span><span class="p">.</span><span class="n">nx</span><span class="p">,</span><span class="w"> </span><span class="n">ncon</span><span class="p">,</span>
+<span class="w">               </span><span class="mf">-1.0</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">X</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">U</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="p">(</span><span class="o">*</span><span class="n">W</span><span class="p">)[</span><span class="n">rci</span><span class="p">.</span><span class="n">kx</span><span class="p">][</span><span class="n">rci</span><span class="p">.</span><span class="n">jx</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="n">n</span>
+<span class="w">               </span><span class="p">);</span>
+<span class="w">         </span><span class="p">}</span>
+<span class="w">         </span><span class="k">break</span><span class="p">;</span>
+<span class="w">      </span><span class="k">default</span><span class="o">:</span>
+<span class="w">         </span><span class="k">goto</span><span class="w"> </span><span class="n">finished</span><span class="p">;</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="w">   </span><span class="p">}</span>
+<span class="nl">finished</span><span class="p">:</span>
+<span class="w">   </span><span class="k">if</span><span class="p">(</span><span class="n">inform</span><span class="p">.</span><span class="n">flag</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;inform.flag = %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">inform</span><span class="p">.</span><span class="n">flag</span><span class="p">);</span>
+<span class="w">   </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;%3d eigenpairs converged in %d iterations</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">ncon</span><span class="p">,</span><span class="w"> </span><span class="n">inform</span><span class="p">.</span><span class="n">iteration</span><span class="p">);</span>
+<span class="w">   </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">&lt;</span><span class="n">ncon</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span>
+<span class="w">      </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot; lambda[%1d] = %13.7e</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="n">lambda</span><span class="p">[</span><span class="n">i</span><span class="p">]);</span>
+<span class="w">   </span><span class="n">spral_ssmfe_core_free</span><span class="p">(</span><span class="o">&amp;</span><span class="n">keep</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">inform</span><span class="p">);</span>
+<span class="w">   </span><span class="n">free</span><span class="p">(</span><span class="n">ind</span><span class="p">);</span>
+<span class="w">   </span><span class="n">free</span><span class="p">(</span><span class="n">lambda</span><span class="p">);</span>
+<span class="w">   </span><span class="n">free</span><span class="p">(</span><span class="n">X</span><span class="p">);</span>
+<span class="w">   </span><span class="n">free</span><span class="p">(</span><span class="n">lmd</span><span class="p">);</span>
+<span class="w">   </span><span class="n">free</span><span class="p">(</span><span class="n">rr</span><span class="p">);</span>
+<span class="w">   </span><span class="n">free</span><span class="p">(</span><span class="n">W</span><span class="p">);</span>
+<span class="w">   </span><span class="n">free</span><span class="p">(</span><span class="n">U</span><span class="p">);</span>
+
+<span class="w">   </span><span class="cm">/* Success */</span>
+<span class="w">   </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>This code produces the following output:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span> <span class="mi">5</span> <span class="n">eigenpairs</span> <span class="n">converged</span> <span class="ow">in</span> <span class="mi">72</span> <span class="n">iterations</span>
+<span class="k">lambda</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">4.4676695e-02</span>
+<span class="k">lambda</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.1119274e-01</span>
+<span class="k">lambda</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.1119274e-01</span>
+<span class="k">lambda</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.7770878e-01</span>
+<span class="k">lambda</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">=</span> <span class="mf">2.2040061e-01</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="method">
+<span id="ssmfe-core-method"></span><h2>Method<a class="headerlink" href="#method" title="Permalink to this heading"></a></h2>
+<section id="the-algorithm">
+<h3>The algorithm<a class="headerlink" href="#the-algorithm" title="Permalink to this heading"></a></h3>
+<p>The algorithm implemented by <a class="reference internal" href="#c.spral_ssmfe_double" title="spral_ssmfe_double"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssmfe_double()</span></code></a> and
+<a class="reference internal" href="#c.spral_ssmfe_largest_double" title="spral_ssmfe_largest_double"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssmfe_largest_double()</span></code></a>
+is based on the Jacobi-conjugate preconditioned gradients (JCPG) method. The
+outline of the algorithm, assuming for simplicity that <span class="math notranslate nohighlight">\(0 &lt; left \le m\)</span>
+and <span class="math notranslate nohighlight">\(right = 0\)</span> and using Matlab notation, is as follows.</p>
+<ul>
+<li><p><strong>Initialization.</strong> Perform the Rayleigh-Ritz procedure in the trial
+subspace spanned by the columns of an <span class="math notranslate nohighlight">\({\tt n} \times {\tt m}\)</span>
+matrix <span class="math notranslate nohighlight">\(X\)</span> i.e. compute</p>
+<ul class="simple">
+<li><p><span class="math notranslate nohighlight">\(L = X’*A*X\)</span>, if <code class="docutils literal notranslate"><span class="pre">problem</span> <span class="pre">&gt;=</span> <span class="pre">0</span></code>, and <span class="math notranslate nohighlight">\(L = X’*B*A*B*X\)</span>
+otherwise,</p></li>
+<li><p><span class="math notranslate nohighlight">\(M = X’*B*X\)</span> (<span class="math notranslate nohighlight">\(B=I\)</span> if <code class="docutils literal notranslate"><span class="pre">problem</span> <span class="pre">=</span> <span class="pre">0</span></code>),</p></li>
+</ul>
+<p>and solve the generalized eigenvalue problem for the matrix pencil
+<span class="math notranslate nohighlight">\(L - t*M\)</span>, i.e. compute an <span class="math notranslate nohighlight">\(m\times m\)</span>
+matrix <span class="math notranslate nohighlight">\(Q\)</span> such that <span class="math notranslate nohighlight">\(Q’*M*Q\)</span> is the identity matrix and
+<span class="math notranslate nohighlight">\(D = Q’*L*Q\)</span> is a diagonal matrix. Compute <span class="math notranslate nohighlight">\(X = X*Q\)</span> and set
+<span class="math notranslate nohighlight">\(Z = F = []\)</span>.</p>
+</li>
+<li><p><strong>Main loop.</strong></p>
+<p>DO</p>
+<ol class="arabic">
+<li><p>If <code class="docutils literal notranslate"><span class="pre">problem&gt;=0</span></code>, compute the residual matrix <span class="math notranslate nohighlight">\(R = A*X - B*X*D\)</span>,
+where <span class="math notranslate nohighlight">\(D\)</span> is a diagonal matrix with entries</p>
+<div class="math notranslate nohighlight">
+\[D(j,j) = \frac{X(:,j)'*A*X(:,j)}{X(:,j)'*B*X(:,j)}\]</div>
+<p>else compute <span class="math notranslate nohighlight">\(R = A*B*X - X*D\)</span>, where <span class="math notranslate nohighlight">\(D\)</span> is a diagonal
+matrix with entries</p>
+<div class="math notranslate nohighlight">
+\[D(j,j) = \frac{X(:,j)'*B*A*B*X(:,j)}{X(:,j)'*B*X(:,j)}.\]</div>
+</li>
+<li><p>Perform the orthogonalization of <span class="math notranslate nohighlight">\(R\)</span> to constraints <span class="math notranslate nohighlight">\(C\)</span> by
+updating <span class="math notranslate nohighlight">\(R = R - B*C*(C’*R)\)</span>.</p></li>
+<li><p>If <code class="docutils literal notranslate"><span class="pre">options.err_est=</span> <span class="pre">1</span></code>, compute <span class="math notranslate nohighlight">\(R’*B*R\)</span> and use it to compute
+error bounds; otherwise only compute the diagonal of this matrix and use
+to compute error bounds. Test for converged eigenpairs and move
+converged eigenvectors from <span class="math notranslate nohighlight">\(X\)</span> to <span class="math notranslate nohighlight">\(C\)</span> and reduce <span class="math notranslate nohighlight">\(m\)</span>
+accordingly. Exit the main loop if <span class="math notranslate nohighlight">\(X = []\)</span>.</p></li>
+<li><p>If problem is non-negative, compute the preconditioned gradient
+matrix <span class="math notranslate nohighlight">\(Y = T*R\)</span>.</p></li>
+<li><p>If <span class="math notranslate nohighlight">\(Z\)</span> is not empty, conjugate <span class="math notranslate nohighlight">\(Y\)</span> to <span class="math notranslate nohighlight">\(Z\)</span>, i.e.</p>
+<ol class="loweralpha">
+<li><p>if problem is non-negative, then compute <span class="math notranslate nohighlight">\(P = Z’*A*Y\)</span>,
+otherwise compute <span class="math notranslate nohighlight">\(P = Z’*B*A*B*Y\)</span>;</p></li>
+<li><p>compute <span class="math notranslate nohighlight">\(S = Z’*B*Y\)</span>;</p></li>
+<li><p>update <span class="math notranslate nohighlight">\(Y = Y + Z*H\)</span>, where</p>
+<div class="math notranslate nohighlight">
+\[H(i,j) = \frac{P(i,j) - S(i,j)*D(j,j)}{F(i,i) - D(j,j)}\]</div>
+<p>where <span class="math notranslate nohighlight">\(F\)</span> is described in the final step below..</p>
+</li>
+</ol>
+</li>
+<li><p>Perform orthogonalization of the search direction matrix <span class="math notranslate nohighlight">\(Y\)</span> to
+constraints <span class="math notranslate nohighlight">\(C\)</span> by updating <span class="math notranslate nohighlight">\(Y = Y - C*(C’*B*Y)\)</span>.</p></li>
+<li><p><span class="math notranslate nohighlight">\(B\)</span>-normalize the columns of <span class="math notranslate nohighlight">\(Y\)</span> and reorder them so that
+the <span class="math notranslate nohighlight">\(B\)</span>-norm of the projection of <span class="math notranslate nohighlight">\(Y(:,j)\)</span> onto the linear
+span of <span class="math notranslate nohighlight">\(X\)</span> and <span class="math notranslate nohighlight">\(Y(:,1:j-1)\)</span> is an increasing function of
+<span class="math notranslate nohighlight">\(j\)</span>. Compute <span class="math notranslate nohighlight">\(M = [X Y]’*B*[X Y]\)</span>. If the condition number
+of <span class="math notranslate nohighlight">\(M\)</span> is greater than the allowed limit of <span class="math notranslate nohighlight">\(10^4\)</span> then
+start removing the last columns of <span class="math notranslate nohighlight">\(Y\)</span> and <span class="math notranslate nohighlight">\(M\)</span> and
+respective rows of <span class="math notranslate nohighlight">\(M\)</span> until the condition number falls below the
+limit.</p></li>
+<li><p>Perform the Rayleigh-Ritz procedure in the linear span of columns of
+<span class="math notranslate nohighlight">\([X Y]\)</span>. Update <span class="math notranslate nohighlight">\(X\)</span> by selecting Ritz vectors corresponding
+to the leftmost <span class="math notranslate nohighlight">\(m\)</span> Ritz values, and place the remaining Ritz
+vectors into <span class="math notranslate nohighlight">\(Z\)</span> and corresponding Ritz values onto the diagonal
+of <span class="math notranslate nohighlight">\(F\)</span>.</p></li>
+</ol>
+<p>END DO</p>
+</li>
+</ul>
+<p>The orthogonalization to constraints on step 2 ensures that the
+algorithm deals with the residuals for the constrained problem rather
+than with those for the unconstrained one, which may not go to zeros if
+the constraints are not close enough to exact eigenvectors.</p>
+<p>The definition of <span class="math notranslate nohighlight">\(H(i,j)\)</span> in step 5c ensures optimality of the new
+search direction vector <span class="math notranslate nohighlight">\(Y(:,j)\)</span>, notably, the search for the minimum of
+the Rayleigh quotient <span class="math notranslate nohighlight">\(D(j,j)\)</span> in the direction of this vector produces
+the asymptotically smallest possible value.</p>
+<p>The search directions cleanup procedure employed on step 7 ensures that the
+convergence of iterations is not damaged by the computational errors of
+the LAPACK eigensolver _SYGV, in the Rayleigh-Ritz procedure of step 8.
+The accuracy of _SYGV is affected by the condition number of <span class="math notranslate nohighlight">\(M\)</span>.
+If the latter is very large, poor accuracy in the computed Ritz vectors may
+lead to convergence failure. The ordering of <span class="math notranslate nohighlight">\(Y(:,j)\)</span> ensures that the
+‘least important’ search direction is dropped if the condition number of
+<span class="math notranslate nohighlight">\(M\)</span> is unacceptably large. In practice, the loss of search direction is
+rare and does not lead to convergence problems.</p>
+<p>If the number of sought eigenpairs exceeds <span class="math notranslate nohighlight">\(m\)</span>, then <span class="math notranslate nohighlight">\(m\)</span> is not
+reduced on step 3. Instead, the approximate eigenvectors moved to <span class="math notranslate nohighlight">\(C\)</span>
+are replaced with vectors from <span class="math notranslate nohighlight">\(Z\)</span>.</p>
+</section>
+<section id="error-estimation">
+<h3>Error estimation<a class="headerlink" href="#error-estimation" title="Permalink to this heading"></a></h3>
+<section id="standard-problem">
+<h4>Standard problem<a class="headerlink" href="#standard-problem" title="Permalink to this heading"></a></h4>
+<p>If <code class="docutils literal notranslate"><span class="pre">options.err_est</span> <span class="pre">=</span> <span class="pre">1</span></code>, the error estimates for the eigenvalues are
+based on the eigenvalues of a matrix of the form</p>
+<div class="math notranslate nohighlight">
+\[\hat A = \tilde\Lambda_k - S_k^T S_k,\]</div>
+<p>where <span class="math notranslate nohighlight">\(\tilde\Lambda_k\)</span> is a diagonal matrix with the <span class="math notranslate nohighlight">\(k-1\)</span>
+leftmost Ritz values <span class="math notranslate nohighlight">\(\tilde\lambda_j\)</span> on the diagonal, and the
+columns of <span class="math notranslate nohighlight">\(S_k\)</span> are the respective residual vectors
+<span class="math notranslate nohighlight">\(r_j = A \tilde x_j - \tilde\lambda_j \tilde x_j\)</span> divided by
+<span class="math notranslate nohighlight">\(\sqrt{\lambda_k - \tilde\lambda_j}\)</span>. If <span class="math notranslate nohighlight">\(k\)</span> is such that
+<span class="math notranslate nohighlight">\(\tilde\lambda_{k-1} &lt; \lambda_k\)</span>, then the eigenvalues of
+<span class="math notranslate nohighlight">\(\hat A\)</span> are the left-hand side bounds for eigenvalues
+<span class="math notranslate nohighlight">\(\lambda_i\)</span>, and thus the difference
+<span class="math notranslate nohighlight">\(\tilde\lambda_j - \hat\lambda_j\)</span> estimates the eigenvalue error
+<span class="math notranslate nohighlight">\(\tilde\lambda_j - \lambda_j\)</span>. The unknown <span class="math notranslate nohighlight">\(\lambda_k\)</span> is
+replaced by <span class="math notranslate nohighlight">\(\tilde\lambda_k\)</span>, and select the maximal
+<span class="math notranslate nohighlight">\(k \le m\)</span> for which the distance between
+<span class="math notranslate nohighlight">\(\tilde\lambda_{k-1}\)</span> and <span class="math notranslate nohighlight">\(\tilde\lambda_k\)</span> exceeds the sum
+of the absolute error tolerance for eigenvalues and the Frobenius norm
+of the matrix formed by the residuals <span class="math notranslate nohighlight">\(r_j, j = 1,\ldots,k-1\)</span>. If
+<span class="math notranslate nohighlight">\(\tilde\lambda_j - \hat\lambda_j\)</span> is close to the machine
+accuracy, it may be too polluted by round-off errors to rely upon. In
+such case, we use instead</p>
+<div class="math notranslate nohighlight">
+\[\tilde\lambda_j - \lambda_j \le \delta_j \approx
+\frac{\|r_j\|^2}{\tilde\lambda_k - \lambda_j}.\]</div>
+<p>The eigenvector errors are estimated based on the Davis-Kahan
+inequality:</p>
+<div class="math notranslate nohighlight">
+\[\min_{x \in \mathcal{X}_{k-1}}
+\sin\{\tilde x_j; x\} \le
+\frac{\|r_j\|}{\lambda_k - \tilde\lambda_j} \approx
+\frac{\|r_j\|}{\tilde\lambda_k - \tilde\lambda_j},\]</div>
+<p>where <span class="math notranslate nohighlight">\(\mathcal{X}_{k-1}\)</span> is the invariant subspace corresponding
+to <span class="math notranslate nohighlight">\(k-1\)</span> leftmost eigenvalues.</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">options.err_est</span> <span class="pre">=</span> <span class="pre">2</span></code> the errors are estimated based on the
+eigenvalue decrements history, which produces an estimate for the
+asymptotic convergence facotr, the geometrical average of the eigenvalue
+error reduction per iteration:</p>
+<div class="math notranslate nohighlight">
+\[q_{ij} = \left|
+      \frac{\lambda_j^i - \lambda_j^{i-1}} {\lambda_j^i - \lambda_j^0}
+   \right|^{\frac{1}{i}}
+   \approx\left|
+      \frac{\lambda_j - \lambda_j^{i-1}} {\lambda_j - \lambda_j^0}
+   \right|^{\frac{1}{i}} = \left|
+      \frac{\lambda_j - \lambda_j^{i-1}} {\lambda_j - \lambda_j^{i-2}}
+      \cdots
+      \frac{\lambda_j - \lambda_j^1} {\lambda_j - \lambda_j^0}
+   \right|^{\frac{1}{i}}\]</div>
+<p>where <span class="math notranslate nohighlight">\(\lambda_j^i\)</span> is the approximation to <span class="math notranslate nohighlight">\(\lambda_j\)</span> on
+<span class="math notranslate nohighlight">\(i\)</span>-th iteration (see Technical Report <a class="footnote-reference brackets" href="#id2" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a> for further
+details). Unlike the residual estimates mentioned in this section, such
+‘kinematic’ error estimates are not guaranteed to be upper bounds for
+the actual errors. However, the numerical tests have demonstrated that
+kinematic error estimates are significantly more accurate, i.e. closer
+to the actual error, than the residual-based estimates. Furthermore,
+they straightforwardly apply to the generalized case as well.</p>
+</section>
+<section id="generalized-problems">
+<h4>Generalized problems<a class="headerlink" href="#generalized-problems" title="Permalink to this heading"></a></h4>
+<p>In the case of the generalized eigenvalue problem , all of the residual
+norms in the previous section must be replaced with
+<span class="math notranslate nohighlight">\(\|\cdot\|_{B^{-1}}\)</span>-norm of the residual
+<span class="math notranslate nohighlight">\(r_j = A \tilde x_j - \tilde\lambda_j B \tilde x_j\)</span>
+(<span class="math notranslate nohighlight">\(\|r_j\|_{B^{-1}}^2 = r_j^* B^{-1} r_j\)</span>) or its upper estimate,
+e.g. <span class="math notranslate nohighlight">\(\beta_1^{-1/2}\|\cdot\|\)</span>, where <span class="math notranslate nohighlight">\(\beta_1\)</span> is the
+smallest eigenvalue of <span class="math notranslate nohighlight">\(B\)</span>. Hence, if <span class="math notranslate nohighlight">\(\beta_1\)</span> is known,
+then the error tolerances for eigenvalues and eigenvectors must be
+multiplied by <span class="math notranslate nohighlight">\(\beta_1\)</span> and <span class="math notranslate nohighlight">\(\sqrt{\beta_1}\)</span> respectively.
+If no estimate for <span class="math notranslate nohighlight">\(\|\cdot\|_{B^{-1}}\)</span>-norm is available, then
+the use of non-zero residual tolerances and
+<code class="docutils literal notranslate"><span class="pre">options.err_est</span> <span class="pre">=</span> <span class="pre">1</span></code> is not recommended. In the case of
+problem , the residuals are computed as
+<span class="math notranslate nohighlight">\(r_j = A B \tilde x_j - \tilde \lambda_j \tilde x_j\)</span>,
+<span class="math notranslate nohighlight">\(B\)</span>-norms of <span class="math notranslate nohighlight">\(r_j\)</span> are used in and , and Lehmann matrix
+becomes <span class="math notranslate nohighlight">\(\hat A = \tilde\Lambda_k - S_k^T B\ S_k\)</span>.</p>
+</section>
+</section>
+<section id="references">
+<h3>References<a class="headerlink" href="#references" title="Permalink to this heading"></a></h3>
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="id2" role="note">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">1</a><span class="fn-bracket">]</span></span>
+<p>E. E. Ovtchinnikov and J. Reid (2010).
+<em>A preconditioned block conjugate gradient algorithm for computing extreme
+eigenpairs of symmetric and Hermitian problems</em>.
+Technical Report RAL-TR-2010-19.</p>
+</aside>
+<aside class="footnote brackets" id="id3" role="note">
+<span class="label"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></span>
+<p>E. E. Ovtchinnikov (2008).
+<em>Jacobi correction equation, line search and conjugate gradients in
+Hermitian eigenvalue computation I: Computing an extreme eigenvalue</em>.
+SIAM J. Numer. Anal., 46:2567–2592.</p>
+</aside>
+<aside class="footnote brackets" id="id4" role="note">
+<span class="label"><span class="fn-bracket">[</span>3<span class="fn-bracket">]</span></span>
+<p>E. E. Ovtchinnikov (2008).
+<em>Jacobi correction equation, line search and conjugate gradients in
+Hermitian eigenvalue computation II: Computing several extreme eigenvalues</em>.
+SIAM J. Numer. Anal., 46:2593–2619.</p>
+</aside>
+</aside>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="ssmfe_expert.html" class="btn btn-neutral float-left" title="SSMFE_EXPERT - Sparse Symmetric Matrix-Free Eigensolver (Expert interface)" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Computational Mathematics Group, STFC Rutherford Appleton Laboratory.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

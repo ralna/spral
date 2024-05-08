@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RANDOM - Pseudo-random number generator &mdash; spral v2024-05-08 [C] documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="RANDOM_MATRIX - Pseudo-random Matrix Generator" href="random_matrix.html" />
+    <link rel="prev" title="MATRIX_UTIL - Matrix utilities" href="matrix_util.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            spral
+              <img src="_static/STFC-Logo.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                v2024-05-08 [C]
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="csc_format.html">Compressed Sparse Column (CSC) Format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="coord_format.html">Coordinate (Coord) Format</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="lsmr.html">LSMR - Sparse Least Squares LSMR Solver</a></li>
+<li class="toctree-l1"><a class="reference internal" href="matrix_util.html">MATRIX_UTIL - Matrix utilities</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">RANDOM - Pseudo-random number generator</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#purpose">Purpose</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#random-seed">Random Seed</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#routines">Routines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#method">Method</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#in-spral-random-real">In <code class="xref c c-func docutils literal notranslate"><span class="pre">spral_random_real()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#in-spral-random-integer">In <code class="xref c c-func docutils literal notranslate"><span class="pre">spral_random_integer()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#in-spral-random-logical">In <code class="xref c c-func docutils literal notranslate"><span class="pre">spral_random_logical()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="random_matrix.html">RANDOM_MATRIX - Pseudo-random Matrix Generator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rutherford_boeing.html">RUTHERFORD_BOEING - RB File Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="scaling.html">SCALING - Sparse matrix scalings</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssids.html">SSIDS - Sparse Symmetric Indefinite Direct Solver</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssmfe.html">SSMFE - Sparse Symmetric Matrix-Free Eigensolver</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssmfe_expert.html">SSMFE_EXPERT - Sparse Symmetric Matrix-Free Eigensolver (Expert interface)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssmfe_core.html">SSMFE_CORE - Sparse Symmetric Matrix-Free Eigensolver (Core Algorithm)</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">spral</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">RANDOM - Pseudo-random number generator</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/random.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="random-pseudo-random-number-generator">
+<h1>RANDOM - Pseudo-random number generator<a class="headerlink" href="#random-pseudo-random-number-generator" title="Permalink to this heading"></a></h1>
+<div class="highlight-C notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;spral_random.h&gt;</span><span class="c1"> /* or &lt;spral.h&gt; for all packages */</span>
+</pre></div>
+</div>
+<section id="purpose">
+<h2>Purpose<a class="headerlink" href="#purpose" title="Permalink to this heading"></a></h2>
+<p>This package generates pseudo-random numbers using a linear congruential
+generator. It should generate the same random numbers using any standards
+compliant Fortran compiler on any architecture so long as the default
+integer and real kinds are the same.</p>
+<p>The seed can optionally be observed or specified by the user.</p>
+</section>
+<section id="random-seed">
+<h2>Random Seed<a class="headerlink" href="#random-seed" title="Permalink to this heading"></a></h2>
+<p>The random number generator’s state is stored in the variable <cite>state</cite> that
+is common to all calls. Before its first use, <cite>state</cite> should be initialized
+by the user to an initial seed value. For convienience the following
+preprocessor macro is defined.</p>
+<dl class="c macro">
+<dt class="sig sig-object c">
+<span class="sig-name descname"><span class="pre">SPRAL_RANDOM_INITIAL_SEED</span> <span class="pre">486502</span></span></dt>
+<dd><p>Convience macro for initial random seed.</p>
+<p>Example of use:</p>
+<div class="highlight-C notranslate"><div class="highlight"><pre><span></span><span class="kt">int</span><span class="w"> </span><span class="n">state</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">SPRAL_RANDOM_INITIAL_SEED</span><span class="p">;</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<p>The user may change the seed at any time, for example to restore a previous
+value. The same sequence of calls following the (re-)initialization of <cite>seed</cite>
+to the same value will produce the same sequence of pseudo-random values.</p>
+</section>
+<section id="routines">
+<h2>Routines<a class="headerlink" href="#routines" title="Permalink to this heading"></a></h2>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.spral_random_real">
+<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_random_real</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">state</span></span>, <span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="n"><span class="pre">positive</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_random_real" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Return a real uniformly at random from the interval <span class="math notranslate nohighlight">\((-1,1)\)</span>
+(<cite>positive=true</cite>) or <span class="math notranslate nohighlight">\((0,1)\)</span> (<cite>positive=false</cite>).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> – current state of RNG.</p></li>
+<li><p><strong>positive</strong> – if true, sample from <span class="math notranslate nohighlight">\((0,1)\)</span>;
+otherwise, sample from <span class="math notranslate nohighlight">\((-1,1)\)</span>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Sampled value.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.spral_random_integer">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_random_integer</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">state</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">n</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_random_integer" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Return an int uniformly at random from the interval <span class="math notranslate nohighlight">\([1,n]\)</span>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> – current state of the RNG.</p></li>
+<li><p><strong>n</strong> – largest value in range to be sampled.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Sampled value.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.spral_random_long">
+<span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_random_long</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">state</span></span>, <span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n"><span class="pre">n</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_random_long" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Return a int64_t uniformly at random from the interval <span class="math notranslate nohighlight">\([1,n]\)</span>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> – current state of the RNG.</p></li>
+<li><p><strong>n</strong> – largest value in range to be sampled.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Sampled value.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.spral_random_logical">
+<span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_random_logical</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">state</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_random_logical" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Return a logical with equal probability of being <cite>true</cite> or <cite>false</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> – current state of the RNG.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Sampled value.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="example">
+<h2>Example<a class="headerlink" href="#example" title="Permalink to this heading"></a></h2>
+<p>The following code:</p>
+<div class="highlight-C notranslate"><div class="highlight"><pre><span></span><span class="cm">/* examples/C/random.c - Example code for SPRAL_RANDOM package */</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;spral.h&quot;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;limits.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdint.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+
+<span class="cp">#define bool2str(VAL) ( (VAL) ? &quot;true&quot; : &quot;false&quot; )</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">   </span><span class="kt">int</span><span class="w"> </span><span class="n">state</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">SPRAL_RANDOM_INITIAL_SEED</span><span class="p">;</span>
+
+<span class="w">   </span><span class="c1">// Store initial random seed so we can reuse it later</span>
+<span class="w">   </span><span class="kt">int</span><span class="w"> </span><span class="n">initial_seed</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">state</span><span class="p">;</span>
+
+<span class="w">   </span><span class="c1">// Generate some random values</span>
+<span class="w">   </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">Some random values</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+<span class="w">   </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Sample Unif(-1,1)               = %16.12f</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span>
+<span class="w">         </span><span class="n">spral_random_real</span><span class="p">(</span><span class="o">&amp;</span><span class="n">state</span><span class="p">,</span><span class="w"> </span><span class="nb">false</span><span class="p">));</span>
+<span class="w">   </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Sample Unif(0,1)                = %16.12f</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span>
+<span class="w">         </span><span class="n">spral_random_real</span><span class="p">(</span><span class="o">&amp;</span><span class="n">state</span><span class="p">,</span><span class="w"> </span><span class="nb">true</span><span class="p">));</span>
+<span class="w">   </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Sample Unif(1, ..., 20)         = %16d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span>
+<span class="w">         </span><span class="n">spral_random_integer</span><span class="p">(</span><span class="o">&amp;</span><span class="n">state</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">));</span>
+<span class="w">   </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Sample Unif(1, ..., 20*INT_MAX) = %16ld</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span>
+<span class="w">         </span><span class="n">spral_random_long</span><span class="p">(</span><span class="o">&amp;</span><span class="n">state</span><span class="p">,((</span><span class="kt">int64_t</span><span class="p">)</span><span class="mi">20</span><span class="p">)</span><span class="o">*</span><span class="n">INT_MAX</span><span class="p">));</span>
+<span class="w">   </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Sample B(1,0.5)                 = %16s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span>
+<span class="w">         </span><span class="n">bool2str</span><span class="p">(</span><span class="n">spral_random_logical</span><span class="p">(</span><span class="o">&amp;</span><span class="n">state</span><span class="p">)));</span>
+
+<span class="w">   </span><span class="c1">// Restore initial seed</span>
+<span class="w">   </span><span class="n">state</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">initial_seed</span><span class="p">;</span>
+
+<span class="w">   </span><span class="c1">// Generate the same random values</span>
+<span class="w">   </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">The same random values again</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+<span class="w">   </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Sample Unif(-1,1)               = %16.12f</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span>
+<span class="w">         </span><span class="n">spral_random_real</span><span class="p">(</span><span class="o">&amp;</span><span class="n">state</span><span class="p">,</span><span class="w"> </span><span class="nb">false</span><span class="p">));</span>
+<span class="w">   </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Sample Unif(0,1)                = %16.12f</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span>
+<span class="w">         </span><span class="n">spral_random_real</span><span class="p">(</span><span class="o">&amp;</span><span class="n">state</span><span class="p">,</span><span class="w"> </span><span class="nb">true</span><span class="p">));</span>
+<span class="w">   </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Sample Unif(1, ..., 20)         = %16d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span>
+<span class="w">         </span><span class="n">spral_random_integer</span><span class="p">(</span><span class="o">&amp;</span><span class="n">state</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">));</span>
+<span class="w">   </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Sample Unif(1, ..., 20*INT_MAX) = %16ld</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span>
+<span class="w">         </span><span class="n">spral_random_long</span><span class="p">(</span><span class="o">&amp;</span><span class="n">state</span><span class="p">,</span><span class="w"> </span><span class="p">((</span><span class="kt">int64_t</span><span class="p">)</span><span class="mi">20</span><span class="p">)</span><span class="o">*</span><span class="n">INT_MAX</span><span class="p">));</span>
+<span class="w">   </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Sample B(1,0.5)                 = %16s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span>
+<span class="w">         </span><span class="n">bool2str</span><span class="p">(</span><span class="n">spral_random_logical</span><span class="p">(</span><span class="o">&amp;</span><span class="n">state</span><span class="p">)));</span>
+
+<span class="w">   </span><span class="cm">/* Success */</span>
+<span class="w">   </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Produces the following output:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Some</span> <span class="n">random</span> <span class="n">values</span>
+<span class="n">Sample</span> <span class="n">Unif</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>               <span class="o">=</span>   <span class="mf">0.951878630556</span>
+<span class="n">Sample</span> <span class="n">Unif</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>                <span class="o">=</span>   <span class="mf">0.395779648796</span>
+<span class="n">Sample</span> <span class="n">Unif</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span>         <span class="o">=</span>                <span class="mi">3</span>
+<span class="n">Sample</span> <span class="n">Unif</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mi">20</span><span class="o">*</span><span class="n">INT_MAX</span><span class="p">)</span> <span class="o">=</span>      <span class="mi">33572664025</span>
+<span class="n">Sample</span> <span class="n">B</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mf">0.5</span><span class="p">)</span>                 <span class="o">=</span>            <span class="n">false</span>
+
+<span class="n">The</span> <span class="n">same</span> <span class="n">random</span> <span class="n">values</span> <span class="n">again</span>
+<span class="n">Sample</span> <span class="n">Unif</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>               <span class="o">=</span>   <span class="mf">0.951878630556</span>
+<span class="n">Sample</span> <span class="n">Unif</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>                <span class="o">=</span>   <span class="mf">0.395779648796</span>
+<span class="n">Sample</span> <span class="n">Unif</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span>         <span class="o">=</span>                <span class="mi">3</span>
+<span class="n">Sample</span> <span class="n">Unif</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">...</span><span class="p">,</span> <span class="mi">20</span><span class="o">*</span><span class="n">INT_MAX</span><span class="p">)</span> <span class="o">=</span>      <span class="mi">33572664025</span>
+<span class="n">Sample</span> <span class="n">B</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mf">0.5</span><span class="p">)</span>                 <span class="o">=</span>            <span class="n">false</span>
+</pre></div>
+</div>
+</section>
+<section id="method">
+<h2>Method<a class="headerlink" href="#method" title="Permalink to this heading"></a></h2>
+<p>We use a linear congruential generator of the following form:</p>
+<div class="math notranslate nohighlight">
+\[X_{n+1} = (aX_n + c)\quad \mathrm{mod}\; m\]</div>
+<p>with the following constants</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}a = 1103515245, \\
+c = 12345, \\
+m = 2^{31}.\end{split}\]</div>
+<p>According to Wikipedia, this is the same as used in glibc.</p>
+<p>The LCG is evolved before each sample is taken, and the sample is based on the
+new value.</p>
+<p>The variable <cite>state</cite> stores the current value of <span class="math notranslate nohighlight">\(X_n\)</span>.</p>
+<section id="in-spral-random-real">
+<h3>In <a class="reference internal" href="#c.spral_random_real" title="spral_random_real"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_random_real()</span></code></a><a class="headerlink" href="#in-spral-random-real" title="Permalink to this heading"></a></h3>
+<p>Samples from <span class="math notranslate nohighlight">\(\mathrm{Unif}(0,1)\)</span> are generated as</p>
+<div class="math notranslate nohighlight">
+\[\frac{\mathrm{real}(X_n)}{\mathrm{real}(m)},\]</div>
+<p>and samples from <span class="math notranslate nohighlight">\(\mathrm{Unif}(-1,1)\)</span> are generated as</p>
+<div class="math notranslate nohighlight">
+\[1−\frac{\mathrm{real}(2X_n)}{\mathrm{real}(m)}.\]</div>
+</section>
+<section id="in-spral-random-integer">
+<h3>In <a class="reference internal" href="#c.spral_random_integer" title="spral_random_integer"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_random_integer()</span></code></a><a class="headerlink" href="#in-spral-random-integer" title="Permalink to this heading"></a></h3>
+<p>Samples from <span class="math notranslate nohighlight">\(\mathrm{Unif}(1,\ldots,n)\)</span> are generated as</p>
+<div class="math notranslate nohighlight">
+\[\mathrm{int}\left(X_n\frac{\mathrm{real}(n)}{\mathrm{real}(m)}\right) + 1\]</div>
+</section>
+<section id="in-spral-random-logical">
+<h3>In <a class="reference internal" href="#c.spral_random_logical" title="spral_random_logical"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_random_logical()</span></code></a><a class="headerlink" href="#in-spral-random-logical" title="Permalink to this heading"></a></h3>
+<p>Returns the value of the Fortran expression</p>
+<div class="highlight-Fortran notranslate"><div class="highlight"><pre><span></span><span class="p">(</span><span class="mi">1</span><span class="w"> </span><span class="p">.</span><span class="n">eq</span><span class="p">.</span><span class="w"> </span><span class="n">spral_random_integer</span><span class="p">(</span><span class="n">state</span><span class="p">,</span><span class="mi">2</span><span class="p">))</span>
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="matrix_util.html" class="btn btn-neutral float-left" title="MATRIX_UTIL - Matrix utilities" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="random_matrix.html" class="btn btn-neutral float-right" title="RANDOM_MATRIX - Pseudo-random Matrix Generator" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Computational Mathematics Group, STFC Rutherford Appleton Laboratory.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

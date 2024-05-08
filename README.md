@@ -7,9 +7,9 @@ STFC Rutherford Appleton Laboratory ([hsl@stfc.ac.uk](mailto:hsl@stfc.ac.uk)).
 ## Documentation
 
 For detailed information about the SPRAL packages and API see [Fortran
-documentation](http://www.numerical.rl.ac.uk/spral/doc/latest/Fortran/)
+documentation](https://ralna.github.io/spral/_build/html/Fortran/)
 or [C
-documentation](http://www.numerical.rl.ac.uk/spral/doc/latest/C/).
+documentation](https://ralna.github.io/spral/_build/html/C/).
 
 ## Packages
 

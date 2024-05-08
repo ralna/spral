@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>spral_scaling - Sparse matrix scalings &mdash; spral v2024-05-08 [Fortran] documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="spral_ssids - Sparse Symmetric Indefinite Direct Solver" href="ssids.html" />
+    <link rel="prev" title="spral_rutherford_boeing - RB File Format Utilities" href="rutherford_boeing.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            spral
+              <img src="_static/STFC-Logo.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                v2024-05-08 [Fortran]
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="conventions.html">Data types and conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="csc_format.html">Compressed Sparse Column (CSC) Format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="coord_format.html">Coordinate (Coord) Format</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="lsmr.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_lsmr</span></code> - Sparse Least Squares LSMR Solver</a></li>
+<li class="toctree-l1"><a class="reference internal" href="matrix_util.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_matrix_util</span></code> - Matrix utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="random.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_random</span></code> - Pseudo-random number generator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="random_matrix.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_random_matrix</span></code> - Pseudo-random Matrix Generator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rutherford_boeing.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_rutherford_boeing</span></code> - RB File Format Utilities</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_scaling</span></code> - Sparse matrix scalings</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#auction-algorithm">Auction Algorithm</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#routines">Routines</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#data-types">Data-types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#example">Example</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#method">Method</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#norm-equilibration-algorithm">Norm-equilibration Algorithm</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id3">Routines</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id4">Data-types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id5">Example</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#equilib-algorithm-method">Method</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#hungarian-algorithm">Hungarian Algorithm</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id9">Routines</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id10">Data-types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id11">Example</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#hungarian-algorithm-method">Method</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="ssids.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssids</span></code> - Sparse Symmetric Indefinite Direct Solver</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssmfe.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssmfe</span></code> - Sparse Symmetric Matrix-Free Eigensolver</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssmfe_expert.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssmfe_expert</span></code> - Sparse Symmetric Matrix-Free Eigensolver (Expert interface)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssmfe_core.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssmfe_core</span></code> - Sparse Symmetric Matrix-Free Eigensolver (Core Algorithm)</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">spral</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_scaling</span></code> - Sparse matrix scalings</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/scaling.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="f/spral_scaling">
+<span id="spral-scaling-sparse-matrix-scalings"></span><h1><a class="reference internal" href="#f/spral_scaling" title="f/spral_scaling: Sparse matrix scalings"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_scaling</span></code></a> - Sparse matrix scalings<a class="headerlink" href="#f/spral_scaling" title="Permalink to this heading"></a></h1>
+<p>This package generates various scalings (and matchings) of real sparse matrices.</p>
+<p>Given a <strong>symmetric</strong> matrix <span class="math notranslate nohighlight">\(A\)</span>, it finds a diagonal matrix <span class="math notranslate nohighlight">\(D\)</span>
+such that the scaled matrix</p>
+<div class="math notranslate nohighlight">
+\[\hat{A} = DAD\]</div>
+<p>has specific numerical properties.</p>
+<p>Given an <strong>unsymmetric</strong> or <strong>rectangular</strong> matrix <span class="math notranslate nohighlight">\(A\)</span>, it finds
+diagonal matrices <span class="math notranslate nohighlight">\(D_r\)</span> and <span class="math notranslate nohighlight">\(D_c\)</span> such that the scaled matrix</p>
+<div class="math notranslate nohighlight">
+\[\hat{A} = D_r A D_c\]</div>
+<p>has specific numerical properties.</p>
+<p>The specific numerical properties delivered depends on the algorithm used:</p>
+<dl class="simple">
+<dt>Matching-based</dt><dd><p>algorithms scale <span class="math notranslate nohighlight">\(A\)</span> such that the maximum (absolute) value in each row
+and column of <span class="math notranslate nohighlight">\(\hat{A}\)</span> is exactly <span class="math notranslate nohighlight">\(1.0\)</span>, where the entries of
+maximum value form a maximum cardinality matching. The
+<a class="reference internal" href="#hungarian-algorithm"><span class="std std-ref">Hungarian algorithm</span></a> delivers an optimal matching
+slowly, whereas the <a class="reference internal" href="#auction-algorithm"><span class="std std-ref">auction algorithm</span></a> delivers an
+approximate matching quickly.</p>
+</dd>
+<dt>Norm-equilibration</dt><dd><p>algorithms scale <span class="math notranslate nohighlight">\(A\)</span> such that the infinity norm of each row and
+column of <span class="math notranslate nohighlight">\(\hat{A}\)</span> is <span class="math notranslate nohighlight">\(1.0\pm \tau\)</span> (for some user specified
+tolerance <span class="math notranslate nohighlight">\(\tau\)</span>).</p>
+</dd>
+</dl>
+<section id="auction-algorithm">
+<span id="id1"></span><h2>Auction Algorithm<a class="headerlink" href="#auction-algorithm" title="Permalink to this heading"></a></h2>
+<section id="routines">
+<h3>Routines<a class="headerlink" href="#routines" title="Permalink to this heading"></a></h3>
+<dl>
+<dt class="sig sig-object f" id="f/spral_scaling/auction_scale_sym">
+<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">auction_scale_sym</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">n</span></em>, <em class="sig-param"><span class="pre">ptr</span></em>, <em class="sig-param"><span class="pre">row</span></em>, <em class="sig-param"><span class="pre">val</span></em>, <em class="sig-param"><span class="pre">scaling</span></em>, <em class="sig-param"><span class="pre">options</span></em>, <em class="sig-param"><span class="pre">inform</span></em><span class="optional">[</span>, <em class="sig-param"><span class="pre">match</span></em><span class="optional">]</span><span class="sig-paren">)</span><a class="headerlink" href="#f/spral_scaling/auction_scale_sym" title="Permalink to this definition"></a></dt>
+<dd><p>Find a matching-based symmetric scaling using the auction algorithm.</p>
+<p>The scaled matrix is such that the entry of maximum absolute value in each
+row and column is (approximately) <span class="math notranslate nohighlight">\(1.0\)</span>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>n</strong><em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: number of columns in <span class="math notranslate nohighlight">\(A\)</span>.</p></li>
+<li><p><strong>ptr</strong> (n+1)<em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: columns pointers for <span class="math notranslate nohighlight">\(A\)</span> (see <a class="reference internal" href="csc_format.html"><span class="doc">CSC format</span></a>).</p></li>
+<li><p><strong>row</strong> (ptr(n+1)-1)<em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: row indices for <span class="math notranslate nohighlight">\(A\)</span> (see <a class="reference internal" href="csc_format.html"><span class="doc">CSC format</span></a>).</p></li>
+<li><p><strong>val</strong> (ptr(n+1)-1)<em> [</em><em>real </em><em>,</em><em>in</em><em>]</em> :: non-zero values for <span class="math notranslate nohighlight">\(A\)</span> (see <a class="reference internal" href="csc_format.html"><span class="doc">CSC format</span></a>).</p></li>
+<li><p><strong>scaling</strong> (n)<em> [</em><em>real </em><em>,</em><em>out</em><em>]</em> :: returns scaling found by routine.</p></li>
+<li><p><strong>options</strong><em> [</em><em>auction_options </em><em>,</em><em>in</em><em>]</em> :: controls behaviour of routine.</p></li>
+<li><p><strong>inform</strong><em> [</em><em>auction_inform </em><em>,</em><em>out</em><em>]</em> :: returns information on execution of routine.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Options<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>match</strong> (n)<em> [</em><em>integer </em><em>,</em><em>out</em><em>]</em> :: returns matching found by routine. Row i is
+matched to column match(i), or is unmatched if match(i)=0.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl>
+<dt class="sig sig-object f" id="f/spral_scaling/auction_scale_unsym">
+<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">auction_scale_unsym</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">m</span></em>, <em class="sig-param"><span class="pre">n</span></em>, <em class="sig-param"><span class="pre">ptr</span></em>, <em class="sig-param"><span class="pre">row</span></em>, <em class="sig-param"><span class="pre">val</span></em>, <em class="sig-param"><span class="pre">rscaling</span></em>, <em class="sig-param"><span class="pre">cscaling</span></em>, <em class="sig-param"><span class="pre">options</span></em>, <em class="sig-param"><span class="pre">inform</span></em><span class="optional">[</span>, <em class="sig-param"><span class="pre">match</span></em><span class="optional">]</span><span class="sig-paren">)</span><a class="headerlink" href="#f/spral_scaling/auction_scale_unsym" title="Permalink to this definition"></a></dt>
+<dd><p>Find a matching-based unsymmetric scaling using the auction algorithm.</p>
+<p>The scaled matrix is such that the entry of maximum absolute value in each
+row and column is (approximately) <span class="math notranslate nohighlight">\(1.0\)</span>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>m</strong><em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: number of rows in <span class="math notranslate nohighlight">\(A\)</span></p></li>
+<li><p><strong>n</strong><em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: number of columns in <span class="math notranslate nohighlight">\(A\)</span></p></li>
+<li><p><strong>ptr</strong> (n+1)<em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: columns pointers for <span class="math notranslate nohighlight">\(A\)</span> (see <a class="reference internal" href="csc_format.html"><span class="doc">CSC format</span></a>)</p></li>
+<li><p><strong>row</strong> (ptr(n+1)-1)<em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: row indices for <span class="math notranslate nohighlight">\(A\)</span> (see <a class="reference internal" href="csc_format.html"><span class="doc">CSC format</span></a>)</p></li>
+<li><p><strong>val</strong> (ptr(n+1)-1)<em> [</em><em>real </em><em>,</em><em>in</em><em>]</em> :: non-zero values for <span class="math notranslate nohighlight">\(A\)</span> (see <a class="reference internal" href="csc_format.html"><span class="doc">CSC format</span></a>)</p></li>
+<li><p><strong>rscaling</strong> (m)<em> [</em><em>real </em><em>,</em><em>out</em><em>]</em> :: returns row scaling found by routine</p></li>
+<li><p><strong>cscaling</strong> (n)<em> [</em><em>real </em><em>,</em><em>out</em><em>]</em> :: returns column scaling found by routine</p></li>
+<li><p><strong>options</strong><em> [</em><em>auction_options </em><em>,</em><em>in</em><em>]</em> :: controls behaviour of routine</p></li>
+<li><p><strong>inform</strong><em> [</em><em>auction_inform </em><em>,</em><em>out</em><em>]</em> :: returns information on execution of routine</p></li>
+</ul>
+</dd>
+<dt class="field-even">Options<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>match</strong> (n)<em> [</em><em>integer </em><em>,</em><em>out</em><em>]</em> :: returns matching found by routine. Row i is
+matched to column match(i), or is unmatched if match(i)=0.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="data-types">
+<h3>Data-types<a class="headerlink" href="#data-types" title="Permalink to this heading"></a></h3>
+<dl>
+<dt class="sig sig-object f" id="f/spral_scaling/auction_options">
+<em class="property"><span class="pre">type</span>&#160; </em><span class="sig-name descname"><span class="pre">auction_options</span></span><a class="headerlink" href="#f/spral_scaling/auction_options" title="Permalink to this definition"></a></dt>
+<dd><p>Used to specify options to the routines <a class="reference internal" href="#f/spral_scaling/auction_scale_sym" title="f/spral_scaling/auction_scale_sym"><code class="xref f f-subr docutils literal notranslate"><span class="pre">auction_scale_sym()</span></code></a> and
+<a class="reference internal" href="#f/spral_scaling/auction_scale_unsym" title="f/spral_scaling/auction_scale_unsym"><code class="xref f f-subr docutils literal notranslate"><span class="pre">auction_scale_unsym()</span></code></a>. Components are automatically given default
+values in the definition of the type.</p>
+<p>Please refer to the <a class="reference internal" href="#auction-algorithm-method"><span class="std std-ref">method section</span></a> for
+details on how these parameters are used.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type fields<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">eps_initial</span><em> [</em><em>real </em><em>,</em><em>default=0.01</em><em>]</em> :: initial value of improvement parameter <span class="math notranslate nohighlight">\(\epsilon\)</span>.</p></li>
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">max_iterations</span><em> [</em><em>integer </em><em>,</em><em>default=30000</em><em>]</em> :: maximum number of iterations.</p></li>
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">max_unchanged</span> (3)<em> [</em><em>integer </em><em>,</em><em>default=10,100,100</em><em>]</em> :: together with min_proportion(:), specifies termination conditions.</p></li>
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">min_proportion</span> (3)<em> [</em><em>real </em><em>,</em><em>default=0.9,0.0,0.0</em><em>]</em> :: together with max_unchanged(:), specifies termination conditions.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl>
+<dt class="sig sig-object f" id="f/spral_scaling/auction_inform">
+<em class="property"><span class="pre">type</span>&#160; </em><span class="sig-name descname"><span class="pre">auction_inform</span></span><a class="headerlink" href="#f/spral_scaling/auction_inform" title="Permalink to this definition"></a></dt>
+<dd><p>Used to return information about the execution of the algorithm.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type fields<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">flag</span><em> [</em><em>integer </em><em>]</em> :: gives the exit status of the algorithm (see table below)</p></li>
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">iterations</span><em> [</em><em>integer </em><em>]</em> :: number of iteration performed.</p></li>
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">matched</span><em> [</em><em>integer </em><em>]</em> :: number of rows and columns that have been matched.</p></li>
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">stat</span><em> [</em><em>integer </em><em>]</em> :: holds the Fortran stat parameter in the event of an
+allocation failure (set to 0 otherwise).</p></li>
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">unmatchable</span> :: holds the number of columns designated as unmatchable
+(there is no way to match it that improves the quality of the matching).</p></li>
+</ul>
+</dd>
+</dl>
+<p>Note: As the algorithm may terminate before a full matching is obtained,
+inform%matched provides only a lower bound on the structural rank. However,
+inform%unmatchable provides an approximate lower bound on the structural
+rank deficiency.</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>inform%flag</p></th>
+<th class="head"><p>Return status</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>0</p></td>
+<td><p>Success.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-1</p></td>
+<td><p>Allocation error. Fortran stat value is returned in
+inform%stat.</p></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</section>
+<section id="example">
+<h3>Example<a class="headerlink" href="#example" title="Permalink to this heading"></a></h3>
+<p>The following code shows an example usage of <a class="reference internal" href="#f/spral_scaling/auction_scale_sym" title="f/spral_scaling/auction_scale_sym"><code class="xref f f-subr docutils literal notranslate"><span class="pre">auction_scale_sym()</span></code></a>.</p>
+<div class="highlight-Fortran notranslate"><div class="highlight"><pre><span></span><span class="c">! examples/Fortran/scaling/auction_sym.f90 - Example code for SPRAL_SCALING</span>
+<span class="k">program </span><span class="n">auction_scale_sym_example</span>
+<span class="w">   </span><span class="k">use </span><span class="n">spral_scaling</span>
+<span class="w">   </span><span class="k">use </span><span class="n">spral_matrix_util</span><span class="p">,</span><span class="w"> </span><span class="k">only</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="n">print_matrix</span><span class="p">,</span><span class="w"> </span><span class="p">&amp;</span>
+<span class="w">                                 </span><span class="n">SPRAL_MATRIX_REAL_SYM_INDEF</span>
+<span class="w">   </span><span class="k">implicit none</span>
+
+<span class="w">   </span><span class="c">! Derived types</span>
+<span class="w">   </span><span class="k">type</span><span class="w"> </span><span class="p">(</span><span class="n">auction_options</span><span class="p">)</span><span class="w">  </span><span class="kd">::</span><span class="w"> </span><span class="k">options</span>
+<span class="k">   type</span><span class="w"> </span><span class="p">(</span><span class="n">auction_inform</span><span class="p">)</span><span class="w">   </span><span class="kd">::</span><span class="w"> </span><span class="n">inform</span>
+
+<span class="w">   </span><span class="c">! Parameters</span>
+<span class="w">   </span><span class="kt">integer</span><span class="p">,</span><span class="w"> </span><span class="k">parameter</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">wp</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">kind</span><span class="p">(</span><span class="mf">0.0d0</span><span class="p">)</span>
+
+<span class="w">   </span><span class="c">! Matrix data</span>
+<span class="w">   </span><span class="kt">integer</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">ptr</span><span class="p">(</span><span class="mi">6</span><span class="p">),</span><span class="w"> </span><span class="n">row</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
+<span class="w">   </span><span class="kt">real</span><span class="p">(</span><span class="n">wp</span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">val</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
+
+<span class="w">   </span><span class="c">! Other variables</span>
+<span class="w">   </span><span class="kt">integer</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">match</span><span class="p">(</span><span class="mi">5</span><span class="p">),</span><span class="w"> </span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="n">j</span>
+<span class="w">   </span><span class="kt">real</span><span class="p">(</span><span class="n">wp</span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">scaling</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+
+<span class="w">   </span><span class="c">! Data for symmetric matrix:</span>
+<span class="w">   </span><span class="c">! ( 2  1         )</span>
+<span class="w">   </span><span class="c">! ( 1  4  1    8 )</span>
+<span class="w">   </span><span class="c">! (    1  3  2   )</span>
+<span class="w">   </span><span class="c">! (       2      )</span>
+<span class="w">   </span><span class="c">! (    8       2 )</span>
+<span class="w">   </span><span class="n">n</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span>
+<span class="w">   </span><span class="n">ptr</span><span class="p">(</span><span class="mi">1</span><span class="p">:</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="w">        </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="o">/</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">        </span><span class="mi">3</span><span class="p">,</span><span class="w">             </span><span class="mi">6</span><span class="p">,</span><span class="w">      </span><span class="mi">8</span><span class="p">,</span><span class="mi">8</span><span class="p">,</span><span class="w">   </span><span class="mi">9</span><span class="w"> </span><span class="o">/</span><span class="p">)</span>
+<span class="w">   </span><span class="n">row</span><span class="p">(</span><span class="mi">1</span><span class="p">:</span><span class="n">ptr</span><span class="p">(</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="o">/</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">   </span><span class="mi">2</span><span class="p">,</span><span class="w">   </span><span class="mi">2</span><span class="p">,</span><span class="w">   </span><span class="mi">3</span><span class="p">,</span><span class="w">   </span><span class="mi">5</span><span class="p">,</span><span class="w">   </span><span class="mi">3</span><span class="p">,</span><span class="w">   </span><span class="mi">4</span><span class="p">,</span><span class="w">   </span><span class="mi">5</span><span class="w">   </span><span class="o">/</span><span class="p">)</span>
+<span class="w">   </span><span class="n">val</span><span class="p">(</span><span class="mi">1</span><span class="p">:</span><span class="n">ptr</span><span class="p">(</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="o">/</span><span class="w"> </span><span class="mf">2.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="mf">4.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="mf">8.0</span><span class="p">,</span><span class="w"> </span><span class="mf">3.0</span><span class="p">,</span><span class="w"> </span><span class="mf">2.0</span><span class="p">,</span><span class="w"> </span><span class="mf">2.0</span><span class="w"> </span><span class="o">/</span><span class="p">)</span>
+<span class="w">   </span><span class="k">write</span><span class="p">(</span><span class="o">*</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;(a)&quot;</span><span class="p">)</span><span class="w"> </span><span class="s2">&quot;Initial matrix:&quot;</span>
+<span class="w">   </span><span class="k">call </span><span class="n">print_matrix</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span><span class="w"> </span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">SPRAL_MATRIX_REAL_SYM_INDEF</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="n">row</span><span class="p">,</span><span class="w"> </span><span class="n">val</span><span class="p">)</span>
+
+<span class="w">   </span><span class="c">! Perform symmetric scaling</span>
+<span class="w">   </span><span class="k">call </span><span class="n">auction_scale_sym</span><span class="p">(</span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="n">row</span><span class="p">,</span><span class="w"> </span><span class="n">val</span><span class="p">,</span><span class="w"> </span><span class="n">scaling</span><span class="p">,</span><span class="w"> </span><span class="k">options</span><span class="p">,</span><span class="w"> </span><span class="n">inform</span><span class="p">,</span><span class="w"> </span><span class="p">&amp;</span>
+<span class="w">      </span><span class="n">match</span><span class="o">=</span><span class="n">match</span><span class="p">)</span>
+<span class="w">   </span><span class="k">if</span><span class="p">(</span><span class="n">inform</span><span class="p">%</span><span class="n">flag</span><span class="o">&lt;</span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="k">then</span>
+<span class="k">      write</span><span class="p">(</span><span class="o">*</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;(a, i5)&quot;</span><span class="p">)</span><span class="w"> </span><span class="s2">&quot;auction_scale_sym() returned with error &quot;</span><span class="p">,</span><span class="w"> </span><span class="p">&amp;</span>
+<span class="w">         </span><span class="n">inform</span><span class="p">%</span><span class="n">flag</span>
+<span class="w">      </span><span class="k">stop</span>
+<span class="k">   endif</span>
+
+<span class="w">   </span><span class="c">! Print scaling and matching</span>
+<span class="w">   </span><span class="k">write</span><span class="p">(</span><span class="o">*</span><span class="p">,</span><span class="s2">&quot;(a,10i10)&quot;</span><span class="p">)</span><span class="w">    </span><span class="s1">&#39;Matching:&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">match</span><span class="p">(</span><span class="mi">1</span><span class="p">:</span><span class="n">n</span><span class="p">)</span>
+<span class="w">   </span><span class="k">write</span><span class="p">(</span><span class="o">*</span><span class="p">,</span><span class="s2">&quot;(a,10es10.2)&quot;</span><span class="p">)</span><span class="w"> </span><span class="s1">&#39;Scaling: &#39;</span><span class="p">,</span><span class="w"> </span><span class="n">scaling</span><span class="p">(</span><span class="mi">1</span><span class="p">:</span><span class="n">n</span><span class="p">)</span>
+
+<span class="w">   </span><span class="c">! Calculate scaled matrix and print it</span>
+<span class="w">   </span><span class="k">do </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">n</span>
+<span class="w">      </span><span class="k">do </span><span class="n">j</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ptr</span><span class="p">(</span><span class="n">i</span><span class="p">),</span><span class="w"> </span><span class="n">ptr</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span>
+<span class="w">         </span><span class="n">val</span><span class="p">(</span><span class="n">j</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scaling</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">val</span><span class="p">(</span><span class="n">j</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">scaling</span><span class="p">(</span><span class="n">row</span><span class="p">(</span><span class="n">j</span><span class="p">))</span>
+<span class="w">      </span><span class="k">end do</span>
+<span class="k">   end do</span>
+<span class="k">   write</span><span class="p">(</span><span class="o">*</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;(a)&quot;</span><span class="p">)</span><span class="w"> </span><span class="s2">&quot;Scaled matrix:&quot;</span>
+<span class="w">   </span><span class="k">call </span><span class="n">print_matrix</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span><span class="w"> </span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">SPRAL_MATRIX_REAL_SYM_INDEF</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="n">row</span><span class="p">,</span><span class="w"> </span><span class="n">val</span><span class="p">)</span>
+
+<span class="k">end program </span><span class="n">auction_scale_sym_example</span>
+</pre></div>
+</div>
+<p>The above code produces the following output:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Initial</span> <span class="n">matrix</span><span class="p">:</span>
+<span class="n">Real</span> <span class="n">symmetric</span> <span class="n">indefinite</span> <span class="n">matrix</span><span class="p">,</span> <span class="n">dimension</span> <span class="mi">5</span><span class="n">x5</span> <span class="k">with</span> <span class="mi">8</span> <span class="n">entries</span><span class="o">.</span>
+<span class="mi">1</span><span class="p">:</span>   <span class="mf">2.0000E+00</span>   <span class="mf">1.0000E+00</span>
+<span class="mi">2</span><span class="p">:</span>   <span class="mf">1.0000E+00</span>   <span class="mf">4.0000E+00</span>   <span class="mf">1.0000E+00</span>                <span class="mf">8.0000E+00</span>
+<span class="mi">3</span><span class="p">:</span>                <span class="mf">1.0000E+00</span>   <span class="mf">3.0000E+00</span>   <span class="mf">2.0000E+00</span>
+<span class="mi">4</span><span class="p">:</span>                             <span class="mf">2.0000E+00</span>
+<span class="mi">5</span><span class="p">:</span>                <span class="mf">8.0000E+00</span>                             <span class="mf">2.0000E+00</span>
+<span class="n">Matching</span><span class="p">:</span>         <span class="mi">1</span>         <span class="mi">5</span>         <span class="mi">4</span>         <span class="mi">3</span>         <span class="mi">2</span>
+<span class="n">Scaling</span><span class="p">:</span>   <span class="mf">7.07E-01</span>  <span class="mf">1.62E-01</span>  <span class="mf">2.78E-01</span>  <span class="mf">1.80E+00</span>  <span class="mf">7.72E-01</span>
+<span class="n">Scaled</span> <span class="n">matrix</span><span class="p">:</span>
+<span class="n">Real</span> <span class="n">symmetric</span> <span class="n">indefinite</span> <span class="n">matrix</span><span class="p">,</span> <span class="n">dimension</span> <span class="mi">5</span><span class="n">x5</span> <span class="k">with</span> <span class="mi">8</span> <span class="n">entries</span><span class="o">.</span>
+<span class="mi">1</span><span class="p">:</span>   <span class="mf">1.0000E+00</span>   <span class="mf">1.1443E-01</span>
+<span class="mi">2</span><span class="p">:</span>   <span class="mf">1.1443E-01</span>   <span class="mf">1.0476E-01</span>   <span class="mf">4.5008E-02</span>                <span class="mf">1.0000E+00</span>
+<span class="mi">3</span><span class="p">:</span>                <span class="mf">4.5008E-02</span>   <span class="mf">2.3204E-01</span>   <span class="mf">1.0000E+00</span>
+<span class="mi">4</span><span class="p">:</span>                             <span class="mf">1.0000E+00</span>
+<span class="mi">5</span><span class="p">:</span>                <span class="mf">1.0000E+00</span>                             <span class="mf">1.1932E+00</span>
+</pre></div>
+</div>
+</section>
+<section id="method">
+<span id="auction-algorithm-method"></span><h3>Method<a class="headerlink" href="#method" title="Permalink to this heading"></a></h3>
+<p>This algorithm finds a fast approximation to the matching and scaling produced
+by the HSL package MC64. If an optimal matching is required, use the
+Hungarian algorithm instead. The algorithm works by solving the following
+maximum product optimization problem using an auction algorithm. The scaling
+is derived from the dual variables associated with the solution.</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\max_{\sigma} &amp; \prod_{i=1}^m\prod_{j=1}^n |a_{ij}|\sigma_{ij} &amp; \\
+\mathrm{s.t.} &amp; \sum_{i=1}^m\sigma_{ij} = 1, &amp; \forall j=1,n \\
+              &amp; \sum_{j=1}^n\sigma_{ij} = 1, &amp; \forall i=1,m \\
+              &amp; \sigma_{ij} \in \{0,1\}.\end{split}\]</div>
+<p>The array <span class="math notranslate nohighlight">\(\sigma\)</span> gives a matching of rows to columns.</p>
+<p>By using the transformation</p>
+<div class="math notranslate nohighlight">
+\[w_{ij} = \log c_j - \log |a_{ij}|,\]</div>
+<p>where <span class="math notranslate nohighlight">\(c_j = \max_i |a_{ij}|\)</span>, the maximum product problem in
+<span class="math notranslate nohighlight">\(a_{ij}\)</span> is replaced by a minimum sum problem in <span class="math notranslate nohighlight">\(w_{ij}\)</span> where all
+entries are positive. By standard optimization theory, there exist dual
+variables <span class="math notranslate nohighlight">\(u\)</span> and <span class="math notranslate nohighlight">\(v\)</span> corresponding to the constraints that satisfy
+the first order optimality conditions</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}w_{ij} - u_i - v_j = 0, &amp; \mbox{ if } \sigma_{ij }=1, \\
+w_{ij} - u_i - v_j \ge 0, &amp; \mbox{ if } \sigma_{ij }=0.\end{split}\]</div>
+<p>To obtain a scaling we define scaling matrices <span class="math notranslate nohighlight">\(D_r\)</span> and <span class="math notranslate nohighlight">\(D_c\)</span> as</p>
+<div class="math notranslate nohighlight">
+\[ \begin{align}\begin{aligned}d^r_i = e^{u_i},\\d^c_i = e^{v_i}.\end{aligned}\end{align} \]</div>
+<p>If a symmetric scaling is required, we average these as</p>
+<div class="math notranslate nohighlight">
+\[d_i = \sqrt{d^r_id^c_i}.\]</div>
+<p>By the first order optimality conditions, these scaling matrices guarantee that</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}d^r_i|a_{ij}|d^c_j = 1, &amp;&amp; \mbox{if } \sigma_{ij}=1, \\
+d^r_i|a_{ij}|d^c_j \le 1, &amp;&amp; \mbox{if } \sigma_{ij}=0.\end{split}\]</div>
+<p>To solve the minimum sum problem an auction algorithm is used. The
+algorithm is <strong>not</strong> guaranteed to find an optimal matching. However it
+can find an approximate matching very quickly. A matching is maintained along
+with the row pricing vector <span class="math notranslate nohighlight">\(u\)</span>. In each major iteration, we loop over
+each column in turn. If the column <span class="math notranslate nohighlight">\(j\)</span> is unmatched, we calculate the
+value <span class="math notranslate nohighlight">\(p_i = w_{ij} - u_i\)</span> for each entry and find the maximum across the
+column. If this maximum is positive, the current matching can be improved by
+matching column <span class="math notranslate nohighlight">\(j\)</span> with row <span class="math notranslate nohighlight">\(i\)</span>. This may mean that the previous
+match of row <span class="math notranslate nohighlight">\(i\)</span> now becomes unmatched. We update the price of row
+<span class="math notranslate nohighlight">\(i\)</span>, that is <span class="math notranslate nohighlight">\(u_i\)</span>, to reflect this new benefit and continue to the
+next column.</p>
+<p>To prevent incremental shuffling, we insist that the value of adding a new
+column is at least a threshold value <span class="math notranslate nohighlight">\(\epsilon\)</span> above zero, where
+<span class="math notranslate nohighlight">\(\epsilon\)</span> is based on the last iteration in which row <span class="math notranslate nohighlight">\(i\)</span> changed
+its match. This is done by adding <span class="math notranslate nohighlight">\(\epsilon\)</span> to the price <span class="math notranslate nohighlight">\(u_i\)</span>,
+where <span class="math notranslate nohighlight">\(\epsilon = \mathrm{options\%eps\_initial} + \mathrm{itr} / (n+1)\)</span>,
+where itr is the current iteration number.</p>
+<p>The algorithm terminates if any of the following are satsified:</p>
+<ul class="simple">
+<li><p>All entries are matched.</p></li>
+<li><p>The number of major iterations exceeds options%max_iterations.</p></li>
+<li><p>At least options%max_unchanged(1) iterations have passed without the
+cardinality of the matching increasing, and the proportion of matched columns
+is options%min_proportion(1).</p></li>
+<li><p>At least options%max_unchanged(2) iterations have passed without the
+cardinality of the matching increasing, and the proportion of matched columns
+is options%min_proportion(2).</p></li>
+<li><p>At least options%max_unchanged(3) iterations have passed without the
+cardinality of the matching increasing, and the proportion of matched columns
+is options%min_proportion(3).</p></li>
+</ul>
+<p>The different combinations given by options%max_unchanged(1:3) and
+options%min_proportion(1:3) allow a wide range of termination
+heuristics to be specified by the user depending on their particular needs.
+Note that the matching and scaling produced will always be approximate as
+<span class="math notranslate nohighlight">\(\epsilon\)</span> is non-zero.</p>
+<p>Further details are given in the following paper:</p>
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="id2" role="note">
+<span class="label"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></span>
+<p>J.D. Hogg and J.A. Scott. (2014). On the efficient scaling of sparse symmetric matrices using an auction algorithm. RAL Technical Report RAL-P-2014-002. [<a class="reference external" href="https://epubs.stfc.ac.uk/work/11539865">STFC TR</a>]</p>
+</aside>
+</aside>
+</section>
+</section>
+<section id="norm-equilibration-algorithm">
+<h2>Norm-equilibration Algorithm<a class="headerlink" href="#norm-equilibration-algorithm" title="Permalink to this heading"></a></h2>
+<section id="id3">
+<h3>Routines<a class="headerlink" href="#id3" title="Permalink to this heading"></a></h3>
+<dl>
+<dt class="sig sig-object f" id="f/spral_scaling/equilib_scale_sym">
+<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">equilib_scale_sym</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">n</span></em>, <em class="sig-param"><span class="pre">ptr</span></em>, <em class="sig-param"><span class="pre">row</span></em>, <em class="sig-param"><span class="pre">val</span></em>, <em class="sig-param"><span class="pre">scaling</span></em>, <em class="sig-param"><span class="pre">options</span></em>, <em class="sig-param"><span class="pre">inform</span></em><span class="sig-paren">)</span><a class="headerlink" href="#f/spral_scaling/equilib_scale_sym" title="Permalink to this definition"></a></dt>
+<dd><p>Find a matching-based symmetric scaling using the norm-equilibration algorithm.</p>
+<p>The scaled matrix is such that the infinity norm of each row and column are
+equal to <span class="math notranslate nohighlight">\(1.0\)</span>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>n</strong><em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: number of columns in <span class="math notranslate nohighlight">\(A\)</span>.</p></li>
+<li><p><strong>ptr</strong> (n+1)<em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: columns pointers for <span class="math notranslate nohighlight">\(A\)</span> (see <a class="reference internal" href="csc_format.html"><span class="doc">CSC format</span></a>).</p></li>
+<li><p><strong>row</strong> (ptr(n+1)-1)<em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: row indices for <span class="math notranslate nohighlight">\(A\)</span> (see <a class="reference internal" href="csc_format.html"><span class="doc">CSC format</span></a>).</p></li>
+<li><p><strong>val</strong> (ptr(n+1)-1)<em> [</em><em>real </em><em>,</em><em>in</em><em>]</em> :: non-zero values for <span class="math notranslate nohighlight">\(A\)</span> (see <a class="reference internal" href="csc_format.html"><span class="doc">CSC format</span></a>).</p></li>
+<li><p><strong>scaling</strong> (n)<em> [</em><em>real </em><em>,</em><em>out</em><em>]</em> :: returns scaling found by routine.</p></li>
+<li><p><strong>options</strong><em> [</em><em>equilib_options </em><em>,</em><em>in</em><em>]</em> :: controls behaviour of routine.</p></li>
+<li><p><strong>inform</strong><em> [</em><em>equilib_inform </em><em>,</em><em>out</em><em>]</em> :: returns information on execution of routine.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl>
+<dt class="sig sig-object f" id="f/spral_scaling/equilib_scale_unsym">
+<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">equilib_scale_unsym</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">m</span></em>, <em class="sig-param"><span class="pre">n</span></em>, <em class="sig-param"><span class="pre">ptr</span></em>, <em class="sig-param"><span class="pre">row</span></em>, <em class="sig-param"><span class="pre">val</span></em>, <em class="sig-param"><span class="pre">rscaling</span></em>, <em class="sig-param"><span class="pre">cscaling</span></em>, <em class="sig-param"><span class="pre">options</span></em>, <em class="sig-param"><span class="pre">inform</span></em><span class="sig-paren">)</span><a class="headerlink" href="#f/spral_scaling/equilib_scale_unsym" title="Permalink to this definition"></a></dt>
+<dd><p>Find a matching-based unsymmetric scaling using the norm-equilibration algorithm.</p>
+<p>The scaled matrix is such that the infinity norm of each row and column are
+equal to <span class="math notranslate nohighlight">\(1.0\)</span>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>m</strong><em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: number of rows in <span class="math notranslate nohighlight">\(A\)</span>.</p></li>
+<li><p><strong>n</strong><em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: number of columns in <span class="math notranslate nohighlight">\(A\)</span>.</p></li>
+<li><p><strong>ptr</strong> (n+1)<em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: columns pointers for <span class="math notranslate nohighlight">\(A\)</span> (see <a class="reference internal" href="csc_format.html"><span class="doc">CSC format</span></a>).</p></li>
+<li><p><strong>row</strong> (ptr(n+1)-1)<em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: row indices for <span class="math notranslate nohighlight">\(A\)</span> (see <a class="reference internal" href="csc_format.html"><span class="doc">CSC format</span></a>).</p></li>
+<li><p><strong>val</strong> (ptr(n+1)-1)<em> [</em><em>real </em><em>,</em><em>in</em><em>]</em> :: non-zero values for <span class="math notranslate nohighlight">\(A\)</span> (see <a class="reference internal" href="csc_format.html"><span class="doc">CSC format</span></a>).</p></li>
+<li><p><strong>rscaling</strong> (m)<em> [</em><em>real </em><em>,</em><em>out</em><em>]</em> :: returns row scaling found by routine.</p></li>
+<li><p><strong>cscaling</strong> (n)<em> [</em><em>real </em><em>,</em><em>out</em><em>]</em> :: returns column scaling found by routine.</p></li>
+<li><p><strong>options</strong><em> [</em><em>equilib_options </em><em>,</em><em>in</em><em>]</em> :: controls behaviour of routine.</p></li>
+<li><p><strong>inform</strong><em> [</em><em>equilib_inform </em><em>,</em><em>out</em><em>]</em> :: returns information on execution of routine.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="id4">
+<h3>Data-types<a class="headerlink" href="#id4" title="Permalink to this heading"></a></h3>
+<dl>
+<dt class="sig sig-object f" id="f/spral_scaling/equilib_options">
+<em class="property"><span class="pre">type</span>&#160; </em><span class="sig-name descname"><span class="pre">equilib_options</span></span><a class="headerlink" href="#f/spral_scaling/equilib_options" title="Permalink to this definition"></a></dt>
+<dd><p>Used to specify options to the routines <a class="reference internal" href="#f/spral_scaling/equilib_scale_sym" title="f/spral_scaling/equilib_scale_sym"><code class="xref f f-subr docutils literal notranslate"><span class="pre">equilib_scale_sym()</span></code></a> and
+<a class="reference internal" href="#f/spral_scaling/equilib_scale_unsym" title="f/spral_scaling/equilib_scale_unsym"><code class="xref f f-subr docutils literal notranslate"><span class="pre">equilib_scale_unsym()</span></code></a>. Components are automatically given default
+values in the definition of the type.</p>
+<p>Please refer to the <a class="reference internal" href="#equilib-algorithm-method"><span class="std std-ref">method section</span></a> for
+details on how these parameters are used.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type fields<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">max_iterations</span><em> [</em><em>integer </em><em>,</em><em>default=10</em><em>]</em> :: maximum number of iterations.</p></li>
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">tol</span><em> [</em><em>real </em><em>,</em><em>default=1e-8</em><em>]</em> :: convergence tolerance <span class="math notranslate nohighlight">\(tau\)</span>.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl>
+<dt class="sig sig-object f" id="f/spral_scaling/equilib_inform">
+<em class="property"><span class="pre">type</span>&#160; </em><span class="sig-name descname"><span class="pre">equilib_inform</span></span><a class="headerlink" href="#f/spral_scaling/equilib_inform" title="Permalink to this definition"></a></dt>
+<dd><p>Used to return information about the execution of the algorithm.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type fields<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">flag</span><em> [</em><em>integer </em><em>]</em> :: gives the exit status of the algorithm (see table below)</p></li>
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">iterations</span><em> [</em><em>integer </em><em>]</em> :: number of iteration performed.</p></li>
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">stat</span><em> [</em><em>integer </em><em>]</em> :: holds the Fortran stat parameter in the event of an
+allocation failure (set to 0 otherwise).</p></li>
+</ul>
+</dd>
+</dl>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>inform%flag</p></th>
+<th class="head"><p>Return status</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>0</p></td>
+<td><p>Success.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-1</p></td>
+<td><p>Allocation error. Fortran stat value is returned in
+inform%stat.</p></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</section>
+<section id="id5">
+<h3>Example<a class="headerlink" href="#id5" title="Permalink to this heading"></a></h3>
+<p>The following code shows an example usage of <a class="reference internal" href="#f/spral_scaling/equilib_scale_sym" title="f/spral_scaling/equilib_scale_sym"><code class="xref f f-subr docutils literal notranslate"><span class="pre">equilib_scale_sym()</span></code></a>.</p>
+<div class="highlight-Fortran notranslate"><div class="highlight"><pre><span></span><span class="c">! examples/Fortran/scaling/equilib_sym.f90 - Example code for SPRAL_SCALING</span>
+<span class="k">program </span><span class="n">equilib_scale_sym_example</span>
+<span class="w">   </span><span class="k">use </span><span class="n">spral_scaling</span>
+<span class="w">   </span><span class="k">use </span><span class="n">spral_matrix_util</span><span class="p">,</span><span class="w"> </span><span class="k">only</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="n">print_matrix</span><span class="p">,</span><span class="w"> </span><span class="p">&amp;</span>
+<span class="w">                                 </span><span class="n">SPRAL_MATRIX_REAL_SYM_INDEF</span>
+<span class="w">   </span><span class="k">implicit none</span>
+
+<span class="w">   </span><span class="c">! Derived types</span>
+<span class="w">   </span><span class="k">type</span><span class="w"> </span><span class="p">(</span><span class="n">equilib_options</span><span class="p">)</span><span class="w">  </span><span class="kd">::</span><span class="w"> </span><span class="k">options</span>
+<span class="k">   type</span><span class="w"> </span><span class="p">(</span><span class="n">equilib_inform</span><span class="p">)</span><span class="w">   </span><span class="kd">::</span><span class="w"> </span><span class="n">inform</span>
+
+<span class="w">   </span><span class="c">! Parameters</span>
+<span class="w">   </span><span class="kt">integer</span><span class="p">,</span><span class="w"> </span><span class="k">parameter</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">wp</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">kind</span><span class="p">(</span><span class="mf">0.0d0</span><span class="p">)</span>
+
+<span class="w">   </span><span class="c">! Matrix data</span>
+<span class="w">   </span><span class="kt">integer</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">ptr</span><span class="p">(</span><span class="mi">6</span><span class="p">),</span><span class="w"> </span><span class="n">row</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
+<span class="w">   </span><span class="kt">real</span><span class="p">(</span><span class="n">wp</span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">val</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
+
+<span class="w">   </span><span class="c">! Other variables</span>
+<span class="w">   </span><span class="kt">integer</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="n">j</span>
+<span class="w">   </span><span class="kt">real</span><span class="p">(</span><span class="n">wp</span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">scaling</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+
+<span class="w">   </span><span class="c">! Data for symmetric matrix:</span>
+<span class="w">   </span><span class="c">! ( 2  1         )</span>
+<span class="w">   </span><span class="c">! ( 1  4  1    8 )</span>
+<span class="w">   </span><span class="c">! (    1  3  2   )</span>
+<span class="w">   </span><span class="c">! (       2      )</span>
+<span class="w">   </span><span class="c">! (    8       2 )</span>
+<span class="w">   </span><span class="n">n</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span>
+<span class="w">   </span><span class="n">ptr</span><span class="p">(</span><span class="mi">1</span><span class="p">:</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="w">        </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="o">/</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">        </span><span class="mi">3</span><span class="p">,</span><span class="w">             </span><span class="mi">6</span><span class="p">,</span><span class="w">      </span><span class="mi">8</span><span class="p">,</span><span class="mi">8</span><span class="p">,</span><span class="w">   </span><span class="mi">9</span><span class="w"> </span><span class="o">/</span><span class="p">)</span>
+<span class="w">   </span><span class="n">row</span><span class="p">(</span><span class="mi">1</span><span class="p">:</span><span class="n">ptr</span><span class="p">(</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="o">/</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">   </span><span class="mi">2</span><span class="p">,</span><span class="w">   </span><span class="mi">2</span><span class="p">,</span><span class="w">   </span><span class="mi">3</span><span class="p">,</span><span class="w">   </span><span class="mi">5</span><span class="p">,</span><span class="w">   </span><span class="mi">3</span><span class="p">,</span><span class="w">   </span><span class="mi">4</span><span class="p">,</span><span class="w">   </span><span class="mi">5</span><span class="w">   </span><span class="o">/</span><span class="p">)</span>
+<span class="w">   </span><span class="n">val</span><span class="p">(</span><span class="mi">1</span><span class="p">:</span><span class="n">ptr</span><span class="p">(</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="o">/</span><span class="w"> </span><span class="mf">2.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="mf">4.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="mf">8.0</span><span class="p">,</span><span class="w"> </span><span class="mf">3.0</span><span class="p">,</span><span class="w"> </span><span class="mf">2.0</span><span class="p">,</span><span class="w"> </span><span class="mf">2.0</span><span class="w"> </span><span class="o">/</span><span class="p">)</span>
+<span class="w">   </span><span class="k">write</span><span class="p">(</span><span class="o">*</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;(a)&quot;</span><span class="p">)</span><span class="w"> </span><span class="s2">&quot;Initial matrix:&quot;</span>
+<span class="w">   </span><span class="k">call </span><span class="n">print_matrix</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span><span class="w"> </span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">SPRAL_MATRIX_REAL_SYM_INDEF</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="n">row</span><span class="p">,</span><span class="w"> </span><span class="n">val</span><span class="p">)</span>
+
+<span class="w">   </span><span class="c">! Perform symmetric scaling</span>
+<span class="w">   </span><span class="k">call </span><span class="n">equilib_scale_sym</span><span class="p">(</span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="n">row</span><span class="p">,</span><span class="w"> </span><span class="n">val</span><span class="p">,</span><span class="w"> </span><span class="n">scaling</span><span class="p">,</span><span class="w"> </span><span class="k">options</span><span class="p">,</span><span class="w"> </span><span class="n">inform</span><span class="p">)</span>
+<span class="w">   </span><span class="k">if</span><span class="p">(</span><span class="n">inform</span><span class="p">%</span><span class="n">flag</span><span class="o">&lt;</span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="k">then</span>
+<span class="k">      write</span><span class="p">(</span><span class="o">*</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;(a, i5)&quot;</span><span class="p">)</span><span class="w"> </span><span class="s2">&quot;equilib_scale_sym() returned with error &quot;</span><span class="p">,</span><span class="w"> </span><span class="p">&amp;</span>
+<span class="w">         </span><span class="n">inform</span><span class="p">%</span><span class="n">flag</span>
+<span class="w">      </span><span class="k">stop</span>
+<span class="k">   endif</span>
+
+<span class="w">   </span><span class="c">! Print scaling and matching</span>
+<span class="w">   </span><span class="k">write</span><span class="p">(</span><span class="o">*</span><span class="p">,</span><span class="s2">&quot;(a,10es10.2)&quot;</span><span class="p">)</span><span class="w"> </span><span class="s1">&#39;Scaling: &#39;</span><span class="p">,</span><span class="w"> </span><span class="n">scaling</span><span class="p">(</span><span class="mi">1</span><span class="p">:</span><span class="n">n</span><span class="p">)</span>
+
+<span class="w">   </span><span class="c">! Calculate scaled matrix and print it</span>
+<span class="w">   </span><span class="k">do </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">n</span>
+<span class="w">      </span><span class="k">do </span><span class="n">j</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ptr</span><span class="p">(</span><span class="n">i</span><span class="p">),</span><span class="w"> </span><span class="n">ptr</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span>
+<span class="w">         </span><span class="n">val</span><span class="p">(</span><span class="n">j</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scaling</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">val</span><span class="p">(</span><span class="n">j</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">scaling</span><span class="p">(</span><span class="n">row</span><span class="p">(</span><span class="n">j</span><span class="p">))</span>
+<span class="w">      </span><span class="k">end do</span>
+<span class="k">   end do</span>
+<span class="k">   write</span><span class="p">(</span><span class="o">*</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;(a)&quot;</span><span class="p">)</span><span class="w"> </span><span class="s2">&quot;Scaled matrix:&quot;</span>
+<span class="w">   </span><span class="k">call </span><span class="n">print_matrix</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span><span class="w"> </span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">SPRAL_MATRIX_REAL_SYM_INDEF</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="n">row</span><span class="p">,</span><span class="w"> </span><span class="n">val</span><span class="p">)</span>
+
+<span class="k">end program </span><span class="n">equilib_scale_sym_example</span>
+</pre></div>
+</div>
+<p>The above code produces the following output:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Initial</span> <span class="n">matrix</span><span class="p">:</span>
+<span class="n">Real</span> <span class="n">symmetric</span> <span class="n">indefinite</span> <span class="n">matrix</span><span class="p">,</span> <span class="n">dimension</span> <span class="mi">5</span><span class="n">x5</span> <span class="k">with</span> <span class="mi">8</span> <span class="n">entries</span><span class="o">.</span>
+<span class="mi">1</span><span class="p">:</span>   <span class="mf">2.0000E+00</span>   <span class="mf">1.0000E+00</span>
+<span class="mi">2</span><span class="p">:</span>   <span class="mf">1.0000E+00</span>   <span class="mf">4.0000E+00</span>   <span class="mf">1.0000E+00</span>                <span class="mf">8.0000E+00</span>
+<span class="mi">3</span><span class="p">:</span>                <span class="mf">1.0000E+00</span>   <span class="mf">3.0000E+00</span>   <span class="mf">2.0000E+00</span>
+<span class="mi">4</span><span class="p">:</span>                             <span class="mf">2.0000E+00</span>
+<span class="mi">5</span><span class="p">:</span>                <span class="mf">8.0000E+00</span>                             <span class="mf">2.0000E+00</span>
+<span class="n">Scaling</span><span class="p">:</span>   <span class="mf">7.07E-01</span>  <span class="mf">3.54E-01</span>  <span class="mf">5.77E-01</span>  <span class="mf">8.66E-01</span>  <span class="mf">3.54E-01</span>
+<span class="n">Scaled</span> <span class="n">matrix</span><span class="p">:</span>
+<span class="n">Real</span> <span class="n">symmetric</span> <span class="n">indefinite</span> <span class="n">matrix</span><span class="p">,</span> <span class="n">dimension</span> <span class="mi">5</span><span class="n">x5</span> <span class="k">with</span> <span class="mi">8</span> <span class="n">entries</span><span class="o">.</span>
+<span class="mi">1</span><span class="p">:</span>   <span class="mf">1.0000E+00</span>   <span class="mf">2.5000E-01</span>
+<span class="mi">2</span><span class="p">:</span>   <span class="mf">2.5000E-01</span>   <span class="mf">5.0000E-01</span>   <span class="mf">2.0412E-01</span>                <span class="mf">1.0000E+00</span>
+<span class="mi">3</span><span class="p">:</span>                <span class="mf">2.0412E-01</span>   <span class="mf">1.0000E+00</span>   <span class="mf">9.9960E-01</span>
+<span class="mi">4</span><span class="p">:</span>                             <span class="mf">9.9960E-01</span>
+<span class="mi">5</span><span class="p">:</span>                <span class="mf">1.0000E+00</span>                             <span class="mf">2.5000E-01</span>
+</pre></div>
+</div>
+</section>
+<section id="equilib-algorithm-method">
+<span id="id6"></span><h3>Method<a class="headerlink" href="#equilib-algorithm-method" title="Permalink to this heading"></a></h3>
+<p>This algorithm is very similar to that used by the HSL routine MC77.
+An iterative method is used to scale the infinity norm of both rows and columns
+to <span class="math notranslate nohighlight">\(1.0\)</span> with an asymptotic linear rate of convergence of
+<span class="math notranslate nohighlight">\(\frac{1}{2}\)</span>, preserving symmetry if the matrix is symmetric.</p>
+<p>For unsymmetric matrices, the algorithm outline is as follows:</p>
+<ul>
+<li><p><span class="math notranslate nohighlight">\(D_r^{(0)} = I, D_c^{(0)}=I\)</span></p></li>
+<li><p><strong>for</strong> (<span class="math notranslate nohighlight">\(k=1,\)</span> options%max_iterations)</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><span class="math notranslate nohighlight">\(A^{(k-1)} = D_r^{(k-1)} A D_c^{(k-1)}\)</span></p></li>
+<li><p><span class="math notranslate nohighlight">\((D_r^{(k)})_{ii} = (D_r^{(k-1)})_{ii}\; /\; \sqrt{\max_j(A^{(k-1)})_{ij}}\)</span></p></li>
+<li><p><span class="math notranslate nohighlight">\((D_c^{(k)})_{jj} = (D_c^{(k-1)})_{jj}\; /\; \sqrt{\max_i(A^{(k-1)})_{ij}}\)</span></p></li>
+<li><p><strong>if</strong> ( <span class="math notranslate nohighlight">\(|1-\|A^{(k-1)}\|_{\max}|\le\)</span> options%tol ) <strong>exit</strong></p></li>
+</ul>
+</div></blockquote>
+</li>
+</ul>
+<p>For symmetric matrices, <span class="math notranslate nohighlight">\(A^{(k-1)}\)</span> is symmetric, so <span class="math notranslate nohighlight">\(D_r^{(k)} = D_c^{(k)}\)</span>, and some operations can be skipped.</p>
+<p>Further details are given in the following paper:</p>
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="id7" role="note">
+<span class="label"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></span>
+<ol class="upperalpha simple" start="16">
+<li><p>Knight, D. Ruiz and B. Ucar. (2012). A symmetry preserving algorithm for matrix scaling. INRIA Research Report 7552. [<a class="reference external" href="https://hal.inria.fr/inria-00569250v3/document">INRIA TR</a>]</p></li>
+</ol>
+</aside>
+</aside>
+</section>
+</section>
+<section id="hungarian-algorithm">
+<span id="id8"></span><h2>Hungarian Algorithm<a class="headerlink" href="#hungarian-algorithm" title="Permalink to this heading"></a></h2>
+<section id="id9">
+<h3>Routines<a class="headerlink" href="#id9" title="Permalink to this heading"></a></h3>
+<dl>
+<dt class="sig sig-object f" id="f/spral_scaling/hungarian_scale_sym">
+<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">hungarian_scale_sym</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">n</span></em>, <em class="sig-param"><span class="pre">ptr</span></em>, <em class="sig-param"><span class="pre">row</span></em>, <em class="sig-param"><span class="pre">val</span></em>, <em class="sig-param"><span class="pre">scaling</span></em>, <em class="sig-param"><span class="pre">options</span></em>, <em class="sig-param"><span class="pre">inform</span></em><span class="optional">[</span>, <em class="sig-param"><span class="pre">match</span></em><span class="optional">]</span><span class="sig-paren">)</span><a class="headerlink" href="#f/spral_scaling/hungarian_scale_sym" title="Permalink to this definition"></a></dt>
+<dd><p>Find a matching-based symmetric scaling using the Hungarian algorithm.</p>
+<p>The scaled matrix is such that the entry of maximum absolute value in each
+row and column is <span class="math notranslate nohighlight">\(1.0\)</span>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>n</strong><em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: number of columns in <span class="math notranslate nohighlight">\(A\)</span>.</p></li>
+<li><p><strong>ptr</strong> (n+1)<em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: columns pointers for <span class="math notranslate nohighlight">\(A\)</span> (see <a class="reference internal" href="csc_format.html"><span class="doc">CSC format</span></a>).</p></li>
+<li><p><strong>row</strong> (ptr(n+1)-1)<em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: row indices for <span class="math notranslate nohighlight">\(A\)</span> (see <a class="reference internal" href="csc_format.html"><span class="doc">CSC format</span></a>).</p></li>
+<li><p><strong>val</strong> (ptr(n+1)-1)<em> [</em><em>real </em><em>,</em><em>in</em><em>]</em> :: non-zero values for <span class="math notranslate nohighlight">\(A\)</span> (see <a class="reference internal" href="csc_format.html"><span class="doc">CSC format</span></a>).</p></li>
+<li><p><strong>scaling</strong> (n)<em> [</em><em>real </em><em>,</em><em>out</em><em>]</em> :: returns scaling found by routine.</p></li>
+<li><p><strong>options</strong><em> [</em><em>hungarian_options </em><em>,</em><em>in</em><em>]</em> :: controls behaviour of routine.</p></li>
+<li><p><strong>inform</strong><em> [</em><em>hungarian_inform </em><em>,</em><em>out</em><em>]</em> :: returns information on execution of routine.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Options<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>match</strong> (n)<em> [</em><em>integer </em><em>,</em><em>out</em><em>]</em> :: returns matching found by routine. Row i is
+matched to column match(i), or is unmatched if match(i)=0.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl>
+<dt class="sig sig-object f" id="f/spral_scaling/hungarian_scale_unsym">
+<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">hungarian_scale_unsym</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">m</span></em>, <em class="sig-param"><span class="pre">n</span></em>, <em class="sig-param"><span class="pre">ptr</span></em>, <em class="sig-param"><span class="pre">row</span></em>, <em class="sig-param"><span class="pre">val</span></em>, <em class="sig-param"><span class="pre">rscaling</span></em>, <em class="sig-param"><span class="pre">cscaling</span></em>, <em class="sig-param"><span class="pre">options</span></em>, <em class="sig-param"><span class="pre">inform</span></em><span class="optional">[</span>, <em class="sig-param"><span class="pre">match</span></em><span class="optional">]</span><span class="sig-paren">)</span><a class="headerlink" href="#f/spral_scaling/hungarian_scale_unsym" title="Permalink to this definition"></a></dt>
+<dd><p>Find a matching-based symmetric scaling using the Hungarian algorithm.</p>
+<p>The scaled matrix is such that the entry of maximum absolute value in each
+row and column is <span class="math notranslate nohighlight">\(1.0\)</span>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>m</strong><em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: number of rows in <span class="math notranslate nohighlight">\(A\)</span>.</p></li>
+<li><p><strong>n</strong><em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: number of columns in <span class="math notranslate nohighlight">\(A\)</span>.</p></li>
+<li><p><strong>ptr</strong> (n+1)<em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: columns pointers for <span class="math notranslate nohighlight">\(A\)</span> (see <a class="reference internal" href="csc_format.html"><span class="doc">CSC format</span></a>).</p></li>
+<li><p><strong>row</strong> (ptr(n+1)-1)<em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: row indices for <span class="math notranslate nohighlight">\(A\)</span> (see <a class="reference internal" href="csc_format.html"><span class="doc">CSC format</span></a>).</p></li>
+<li><p><strong>val</strong> (ptr(n+1)-1)<em> [</em><em>real </em><em>,</em><em>in</em><em>]</em> :: non-zero values for <span class="math notranslate nohighlight">\(A\)</span> (see <a class="reference internal" href="csc_format.html"><span class="doc">CSC format</span></a>).</p></li>
+<li><p><strong>rscaling</strong> (m)<em> [</em><em>real </em><em>,</em><em>out</em><em>]</em> :: returns row scaling found by routine.</p></li>
+<li><p><strong>cscaling</strong> (n)<em> [</em><em>real </em><em>,</em><em>out</em><em>]</em> :: returns column scaling found by routine.</p></li>
+<li><p><strong>options</strong><em> [</em><em>hungarian_options </em><em>,</em><em>in</em><em>]</em> :: controls behaviour of routine.</p></li>
+<li><p><strong>inform</strong><em> [</em><em>hungarian_inform </em><em>,</em><em>out</em><em>]</em> :: returns information on execution of routine.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Options<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>match</strong> (n)<em> [</em><em>integer </em><em>,</em><em>out</em><em>]</em> :: returns matching found by routine. Row i is
+matched to column match(i), or is unmatched if match(i)=0.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="id10">
+<h3>Data-types<a class="headerlink" href="#id10" title="Permalink to this heading"></a></h3>
+<dl>
+<dt class="sig sig-object f" id="f/spral_scaling/hungarian_options">
+<em class="property"><span class="pre">type</span>&#160; </em><span class="sig-name descname"><span class="pre">hungarian_options</span></span><a class="headerlink" href="#f/spral_scaling/hungarian_options" title="Permalink to this definition"></a></dt>
+<dd><p>Used to specify options to the routines <a class="reference internal" href="#f/spral_scaling/hungarian_scale_sym" title="f/spral_scaling/hungarian_scale_sym"><code class="xref f f-subr docutils literal notranslate"><span class="pre">hungarian_scale_sym()</span></code></a> and
+<a class="reference internal" href="#f/spral_scaling/hungarian_scale_unsym" title="f/spral_scaling/hungarian_scale_unsym"><code class="xref f f-subr docutils literal notranslate"><span class="pre">hungarian_scale_unsym()</span></code></a>. Components are automatically given default
+values in the definition of the type.</p>
+<p>Please refer to the <a class="reference internal" href="#hungarian-algorithm-method"><span class="std std-ref">method section</span></a> for
+details on how these parameters are used.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type fields<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">scale_if_singular</span><em> [</em><em>logical </em><em>,</em><em>default=.false.</em><em>]</em> :: specifies behaviour for
+structurally singular matrices. If true, a partial scaling corresponding
+to a maximum cardinality matching will be returned.
+If false, an identity scaling is returned with an error code.</p></li>
+</ul>
+</dd>
+</dl>
+<p>Note: If options%scale_if_singular=true, the resulting scaling will only
+be maximal for the matched rows/columns, and extreme care shuold be taken
+to ensure its use is meaningful!</p>
+</dd></dl>
+
+<dl>
+<dt class="sig sig-object f" id="f/spral_scaling/hungarian_inform">
+<em class="property"><span class="pre">type</span>&#160; </em><span class="sig-name descname"><span class="pre">hungarian_inform</span></span><a class="headerlink" href="#f/spral_scaling/hungarian_inform" title="Permalink to this definition"></a></dt>
+<dd><p>Used to return information about the execution of the algorithm.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type fields<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">flag</span><em> [</em><em>integer </em><em>]</em> :: gives the exit status of the algorithm (see table below)</p></li>
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">matched</span><em> [</em><em>integer </em><em>]</em> :: number of rows and columns that have been matched.</p></li>
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">stat</span><em> [</em><em>integer </em><em>]</em> :: holds the Fortran stat parameter in the event of an
+allocation failure (set to 0 otherwise).</p></li>
+</ul>
+</dd>
+</dl>
+<p>Note: The number matched gives the structural rank of the matrix.</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>inform%flag</p></th>
+<th class="head"><p>Return status</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>0</p></td>
+<td><p>Success.</p></td>
+</tr>
+<tr class="row-odd"><td><p>+1</p></td>
+<td><p>Warning: Matrix is structurally rank-deficient.
+Only returned if options%scale_if_singular=true.</p></td>
+</tr>
+<tr class="row-even"><td><p>-1</p></td>
+<td><p>Error: Allocation failed.
+Fortran stat value is returned in inform%stat.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-2</p></td>
+<td><p>Error: Matrix is structurally rank-deficient.
+Only returned if options%scale_if_singular=false. Scaling
+vector(s) will be set to the identity, and a maximum
+cardinality matching will be returned in match(:) (if
+present).</p></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</section>
+<section id="id11">
+<h3>Example<a class="headerlink" href="#id11" title="Permalink to this heading"></a></h3>
+<p>The following code shows an example usage of <a class="reference internal" href="#f/spral_scaling/hungarian_scale_sym" title="f/spral_scaling/hungarian_scale_sym"><code class="xref f f-subr docutils literal notranslate"><span class="pre">hungarian_scale_sym()</span></code></a>.</p>
+<div class="highlight-Fortran notranslate"><div class="highlight"><pre><span></span><span class="c">! examples/Fortran/scaling/hungarian_sym.f90 - Example code for SPRAL_SCALING</span>
+<span class="k">program </span><span class="n">hungarian_scale_sym_example</span>
+<span class="w">   </span><span class="k">use </span><span class="n">spral_scaling</span>
+<span class="w">   </span><span class="k">use </span><span class="n">spral_matrix_util</span><span class="p">,</span><span class="w"> </span><span class="k">only</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="n">print_matrix</span><span class="p">,</span><span class="w"> </span><span class="p">&amp;</span>
+<span class="w">                                 </span><span class="n">SPRAL_MATRIX_REAL_SYM_INDEF</span>
+<span class="w">   </span><span class="k">implicit none</span>
+
+<span class="w">   </span><span class="c">! Derived types</span>
+<span class="w">   </span><span class="k">type</span><span class="w"> </span><span class="p">(</span><span class="n">hungarian_options</span><span class="p">)</span><span class="w">  </span><span class="kd">::</span><span class="w"> </span><span class="k">options</span>
+<span class="k">   type</span><span class="w"> </span><span class="p">(</span><span class="n">hungarian_inform</span><span class="p">)</span><span class="w">   </span><span class="kd">::</span><span class="w"> </span><span class="n">inform</span>
+
+<span class="w">   </span><span class="c">! Parameters</span>
+<span class="w">   </span><span class="kt">integer</span><span class="p">,</span><span class="w"> </span><span class="k">parameter</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">wp</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">kind</span><span class="p">(</span><span class="mf">0.0d0</span><span class="p">)</span>
+
+<span class="w">   </span><span class="c">! Matrix data</span>
+<span class="w">   </span><span class="kt">integer</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">ptr</span><span class="p">(</span><span class="mi">6</span><span class="p">),</span><span class="w"> </span><span class="n">row</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
+<span class="w">   </span><span class="kt">real</span><span class="p">(</span><span class="n">wp</span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">val</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
+
+<span class="w">   </span><span class="c">! Other variables</span>
+<span class="w">   </span><span class="kt">integer</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">match</span><span class="p">(</span><span class="mi">5</span><span class="p">),</span><span class="w"> </span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="n">j</span>
+<span class="w">   </span><span class="kt">real</span><span class="p">(</span><span class="n">wp</span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">scaling</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+
+<span class="w">   </span><span class="c">! Data for symmetric matrix:</span>
+<span class="w">   </span><span class="c">! ( 2  1         )</span>
+<span class="w">   </span><span class="c">! ( 1  4  1    8 )</span>
+<span class="w">   </span><span class="c">! (    1  3  2   )</span>
+<span class="w">   </span><span class="c">! (       2      )</span>
+<span class="w">   </span><span class="c">! (    8       2 )</span>
+<span class="w">   </span><span class="n">n</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span>
+<span class="w">   </span><span class="n">ptr</span><span class="p">(</span><span class="mi">1</span><span class="p">:</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="w">        </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="o">/</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">        </span><span class="mi">3</span><span class="p">,</span><span class="w">             </span><span class="mi">6</span><span class="p">,</span><span class="w">      </span><span class="mi">8</span><span class="p">,</span><span class="mi">8</span><span class="p">,</span><span class="w">   </span><span class="mi">9</span><span class="w"> </span><span class="o">/</span><span class="p">)</span>
+<span class="w">   </span><span class="n">row</span><span class="p">(</span><span class="mi">1</span><span class="p">:</span><span class="n">ptr</span><span class="p">(</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="o">/</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">   </span><span class="mi">2</span><span class="p">,</span><span class="w">   </span><span class="mi">2</span><span class="p">,</span><span class="w">   </span><span class="mi">3</span><span class="p">,</span><span class="w">   </span><span class="mi">5</span><span class="p">,</span><span class="w">   </span><span class="mi">3</span><span class="p">,</span><span class="w">   </span><span class="mi">4</span><span class="p">,</span><span class="w">   </span><span class="mi">5</span><span class="w">   </span><span class="o">/</span><span class="p">)</span>
+<span class="w">   </span><span class="n">val</span><span class="p">(</span><span class="mi">1</span><span class="p">:</span><span class="n">ptr</span><span class="p">(</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="o">/</span><span class="w"> </span><span class="mf">2.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="mf">4.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="mf">8.0</span><span class="p">,</span><span class="w"> </span><span class="mf">3.0</span><span class="p">,</span><span class="w"> </span><span class="mf">2.0</span><span class="p">,</span><span class="w"> </span><span class="mf">2.0</span><span class="w"> </span><span class="o">/</span><span class="p">)</span>
+<span class="w">   </span><span class="k">write</span><span class="p">(</span><span class="o">*</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;(a)&quot;</span><span class="p">)</span><span class="w"> </span><span class="s2">&quot;Initial matrix:&quot;</span>
+<span class="w">   </span><span class="k">call </span><span class="n">print_matrix</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span><span class="w"> </span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">SPRAL_MATRIX_REAL_SYM_INDEF</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="n">row</span><span class="p">,</span><span class="w"> </span><span class="n">val</span><span class="p">)</span>
+
+<span class="w">   </span><span class="c">! Perform symmetric scaling</span>
+<span class="w">   </span><span class="k">call </span><span class="n">hungarian_scale_sym</span><span class="p">(</span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="n">row</span><span class="p">,</span><span class="w"> </span><span class="n">val</span><span class="p">,</span><span class="w"> </span><span class="n">scaling</span><span class="p">,</span><span class="w"> </span><span class="k">options</span><span class="p">,</span><span class="w"> </span><span class="n">inform</span><span class="p">,</span><span class="w"> </span><span class="p">&amp;</span>
+<span class="w">      </span><span class="n">match</span><span class="o">=</span><span class="n">match</span><span class="p">)</span>
+<span class="w">   </span><span class="k">if</span><span class="p">(</span><span class="n">inform</span><span class="p">%</span><span class="n">flag</span><span class="o">&lt;</span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="k">then</span>
+<span class="k">      write</span><span class="p">(</span><span class="o">*</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;(a, i5)&quot;</span><span class="p">)</span><span class="w"> </span><span class="s2">&quot;hungarian_scale_sym() returned with error &quot;</span><span class="p">,</span><span class="w"> </span><span class="p">&amp;</span>
+<span class="w">         </span><span class="n">inform</span><span class="p">%</span><span class="n">flag</span>
+<span class="w">      </span><span class="k">stop</span>
+<span class="k">   endif</span>
+
+<span class="w">   </span><span class="c">! Print scaling and matching</span>
+<span class="w">   </span><span class="k">write</span><span class="p">(</span><span class="o">*</span><span class="p">,</span><span class="s2">&quot;(a,10i10)&quot;</span><span class="p">)</span><span class="w">    </span><span class="s1">&#39;Matching:&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">match</span><span class="p">(</span><span class="mi">1</span><span class="p">:</span><span class="n">n</span><span class="p">)</span>
+<span class="w">   </span><span class="k">write</span><span class="p">(</span><span class="o">*</span><span class="p">,</span><span class="s2">&quot;(a,10es10.2)&quot;</span><span class="p">)</span><span class="w"> </span><span class="s1">&#39;Scaling: &#39;</span><span class="p">,</span><span class="w"> </span><span class="n">scaling</span><span class="p">(</span><span class="mi">1</span><span class="p">:</span><span class="n">n</span><span class="p">)</span>
+
+<span class="w">   </span><span class="c">! Calculate scaled matrix and print it</span>
+<span class="w">   </span><span class="k">do </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">n</span>
+<span class="w">      </span><span class="k">do </span><span class="n">j</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ptr</span><span class="p">(</span><span class="n">i</span><span class="p">),</span><span class="w"> </span><span class="n">ptr</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span>
+<span class="w">         </span><span class="n">val</span><span class="p">(</span><span class="n">j</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">scaling</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">val</span><span class="p">(</span><span class="n">j</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">scaling</span><span class="p">(</span><span class="n">row</span><span class="p">(</span><span class="n">j</span><span class="p">))</span>
+<span class="w">      </span><span class="k">end do</span>
+<span class="k">   end do</span>
+<span class="k">   write</span><span class="p">(</span><span class="o">*</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;(a)&quot;</span><span class="p">)</span><span class="w"> </span><span class="s2">&quot;Scaled matrix:&quot;</span>
+<span class="w">   </span><span class="k">call </span><span class="n">print_matrix</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span><span class="w"> </span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">SPRAL_MATRIX_REAL_SYM_INDEF</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="n">row</span><span class="p">,</span><span class="w"> </span><span class="n">val</span><span class="p">)</span>
+
+<span class="k">end program </span><span class="n">hungarian_scale_sym_example</span>
+</pre></div>
+</div>
+<p>The above code produces the following output:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Initial</span> <span class="n">matrix</span><span class="p">:</span>
+<span class="n">Real</span> <span class="n">unsymmetric</span> <span class="n">matrix</span><span class="p">,</span> <span class="n">dimension</span> <span class="mi">5</span><span class="n">x5</span> <span class="k">with</span> <span class="mi">10</span> <span class="n">entries</span><span class="o">.</span>
+<span class="mi">1</span><span class="p">:</span>   <span class="mf">2.0000E+00</span>   <span class="mf">5.0000E+00</span>
+<span class="mi">2</span><span class="p">:</span>   <span class="mf">1.0000E+00</span>   <span class="mf">4.0000E+00</span>                             <span class="mf">7.0000E+00</span>
+<span class="mi">3</span><span class="p">:</span>                <span class="mf">1.0000E+00</span>                <span class="mf">2.0000E+00</span>
+<span class="mi">4</span><span class="p">:</span>                             <span class="mf">3.0000E+00</span>
+<span class="mi">5</span><span class="p">:</span>                <span class="mf">8.0000E+00</span>                             <span class="mf">2.0000E+00</span>
+<span class="n">Matching</span><span class="p">:</span>         <span class="mi">1</span>         <span class="mi">5</span>         <span class="mi">4</span>         <span class="mi">3</span>         <span class="mi">2</span>
+<span class="n">Row</span> <span class="n">Scaling</span><span class="p">:</span>   <span class="mf">5.22E-01</span>  <span class="mf">5.22E-01</span>  <span class="mf">5.22E-01</span>  <span class="mf">5.22E-01</span>  <span class="mf">5.22E-01</span>
+<span class="n">Col</span> <span class="n">Scaling</span><span class="p">:</span>   <span class="mf">9.59E-01</span>  <span class="mf">2.40E-01</span>  <span class="mf">6.39E-01</span>  <span class="mf">9.59E-01</span>  <span class="mf">2.74E-01</span>
+<span class="n">Scaled</span> <span class="n">matrix</span><span class="p">:</span>
+<span class="n">Real</span> <span class="n">unsymmetric</span> <span class="n">matrix</span><span class="p">,</span> <span class="n">dimension</span> <span class="mi">5</span><span class="n">x5</span> <span class="k">with</span> <span class="mi">10</span> <span class="n">entries</span><span class="o">.</span>
+<span class="mi">1</span><span class="p">:</span>   <span class="mf">1.0000E+00</span>   <span class="mf">6.2500E-01</span>
+<span class="mi">2</span><span class="p">:</span>   <span class="mf">5.0000E-01</span>   <span class="mf">5.0000E-01</span>                             <span class="mf">1.0000E+00</span>
+<span class="mi">3</span><span class="p">:</span>                <span class="mf">1.2500E-01</span>                <span class="mf">1.0000E+00</span>
+<span class="mi">4</span><span class="p">:</span>                             <span class="mf">1.0000E+00</span>
+<span class="mi">5</span><span class="p">:</span>                <span class="mf">1.0000E+00</span>                             <span class="mf">2.8571E-01</span>
+</pre></div>
+</div>
+</section>
+<section id="hungarian-algorithm-method">
+<span id="id12"></span><h3>Method<a class="headerlink" href="#hungarian-algorithm-method" title="Permalink to this heading"></a></h3>
+<p>This algorithm is the same as used by the HSL package MC64. A scaling
+is derived from dual variables found during the solution of the below
+maximum product optimization problem using the Hungarian algorithm.</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\max_{\sigma} &amp; \prod_{i=1}^m\prod_{j=1}^n |a_{ij}|\sigma_{ij} &amp; \\
+\mathrm{s.t.} &amp; \sum_{i=1}^m\sigma_{ij} = 1, &amp; \forall j=1,n \\
+              &amp; \sum_{j=1}^n\sigma_{ij} = 1, &amp; \forall i=1,m \\
+              &amp; \sigma_{ij} \in \{0,1\}.\end{split}\]</div>
+<p>The array <span class="math notranslate nohighlight">\(\sigma\)</span> gives a matching of rows to columns.</p>
+<p>By using the transformation</p>
+<div class="math notranslate nohighlight">
+\[w_{ij} = \log c_j - \log |a_{ij}|,\]</div>
+<p>where <span class="math notranslate nohighlight">\(c_j = \max_i |a_{ij}|\)</span>, the maximum product problem in
+<span class="math notranslate nohighlight">\(a_{ij}\)</span> is replaced by a minimum sum problem in <span class="math notranslate nohighlight">\(w_{ij}\)</span> where all
+entries are positive. By standard optimization theory, there exist dual
+variables <span class="math notranslate nohighlight">\(u\)</span> and <span class="math notranslate nohighlight">\(v\)</span> corresponding to the constraints that satisfy
+the first order optimality conditions</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}w_{ij} - u_i - v_j = 0, &amp; \mbox{if } \sigma_{ij }=1, \\
+w_{ij} - u_i - v_j \ge 0, &amp; \mbox{if } \sigma_{ij }=0.\end{split}\]</div>
+<p>To obtain a scaling we define scaling matrices <span class="math notranslate nohighlight">\(D_r\)</span> and <span class="math notranslate nohighlight">\(D_c\)</span> as</p>
+<div class="math notranslate nohighlight">
+\[ \begin{align}\begin{aligned}d^r_i = e^{u_i},\\d^c_i = e^{v_i}.\end{aligned}\end{align} \]</div>
+<p>If a symmetric scaling is required, we average these as</p>
+<div class="math notranslate nohighlight">
+\[d_i = \sqrt{d^r_id^c_i}.\]</div>
+<p>By the first order optimality conditions, these scaling matrices guarantee that</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}d^r_i|a_{ij}|d^c_j = 1, &amp;&amp; \mbox{if } \sigma_{ij}=1, \\
+d^r_i|a_{ij}|d^c_j \le 1, &amp;&amp; \mbox{if } \sigma_{ij}=0.\end{split}\]</div>
+<p>To solve the minimum sum problem, the Hungarian algorithm maintains an optimal
+matching on a subset of the rows and columns. It proceeds to grow this set by
+finding augmenting paths from an unmatched row to an unmatched column. The
+algorithm is guaranteed to find the optimal solution in a fixed number of steps,
+but can be very slow as it may need to explore the full matrix a number of
+times equal to the dimension of the matrix. To minimize the solution time, a
+warmstarting heuristic is used to construct an initial optimal subset matching.</p>
+<p>Further details are given in the following paper:</p>
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="id13" role="note">
+<span class="label"><span class="fn-bracket">[</span>3<span class="fn-bracket">]</span></span>
+<p>I.S. Duff and J. Koster. (1997). The design and use of algorithms for permuting large entries to the diagonal of sparse matrices. SIAM J. Matrix Anal. Applics. 20(4), pp 889–901. [<a class="reference external" href="http://dx.doi.org/10.1137/S0895479897317661">Journal</a>] [<a class="reference external" href="https://epubs.stfc.ac.uk/work/33194">Preprint</a>]</p>
+</aside>
+</aside>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="rutherford_boeing.html" class="btn btn-neutral float-left" title="spral_rutherford_boeing - RB File Format Utilities" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="ssids.html" class="btn btn-neutral float-right" title="spral_ssids - Sparse Symmetric Indefinite Direct Solver" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Computational Mathematics Group, STFC Rutherford Appleton Laboratory.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LSMR - Sparse Least Squares LSMR Solver &mdash; spral v2024-05-08 [C] documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="MATRIX_UTIL - Matrix utilities" href="matrix_util.html" />
+    <link rel="prev" title="Coordinate (Coord) Format" href="coord_format.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            spral
+              <img src="_static/STFC-Logo.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                v2024-05-08 [C]
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="csc_format.html">Compressed Sparse Column (CSC) Format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="coord_format.html">Coordinate (Coord) Format</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">LSMR - Sparse Least Squares LSMR Solver</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#purpose">Purpose</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#notation">Notation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#version-history">Version history</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#subroutines">Subroutines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#derived-types">Derived types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#method">Method</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#algorithm">Algorithm</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#scaling">Scaling</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#initial-estimate">Initial estimate</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#references">References</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="matrix_util.html">MATRIX_UTIL - Matrix utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="random.html">RANDOM - Pseudo-random number generator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="random_matrix.html">RANDOM_MATRIX - Pseudo-random Matrix Generator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rutherford_boeing.html">RUTHERFORD_BOEING - RB File Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="scaling.html">SCALING - Sparse matrix scalings</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssids.html">SSIDS - Sparse Symmetric Indefinite Direct Solver</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssmfe.html">SSMFE - Sparse Symmetric Matrix-Free Eigensolver</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssmfe_expert.html">SSMFE_EXPERT - Sparse Symmetric Matrix-Free Eigensolver (Expert interface)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssmfe_core.html">SSMFE_CORE - Sparse Symmetric Matrix-Free Eigensolver (Core Algorithm)</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">spral</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">LSMR - Sparse Least Squares LSMR Solver</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/lsmr.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="lsmr-sparse-least-squares-lsmr-solver">
+<h1>LSMR - Sparse Least Squares LSMR Solver<a class="headerlink" href="#lsmr-sparse-least-squares-lsmr-solver" title="Permalink to this heading"></a></h1>
+<div class="highlight-C notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;spral_lsmr.h&gt;</span><span class="c1"> /* or &lt;spral.h&gt; for all packages */</span>
+</pre></div>
+</div>
+<section id="purpose">
+<h2>Purpose<a class="headerlink" href="#purpose" title="Permalink to this heading"></a></h2>
+<p>This package uses the LSMR iterative method to solve sparse linear
+equations and sparse least-squares problems of the form:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{array}{ll}
+   \mbox{1. Nonsymmetric equations:} &amp;
+      \mbox{minimize } \|x\|_2 \mbox{ subject to }Ax = b, \\
+   \mbox{2. Linear least squares:} &amp; \mbox{minimize  } \|Ax - b\|_2^2,\\
+   \mbox{3. Regularized least squares:} &amp;
+      \mbox{minimize  } \|Ax - b\|_2^2 + \lambda^2\|x\|_2^2,
+\end{array}\end{split}\]</div>
+<p>where the <span class="math notranslate nohighlight">\(m \times n\)</span> matrix <span class="math notranslate nohighlight">\(A\)</span> may be square or rectangular, and
+may have any rank. The scalar <span class="math notranslate nohighlight">\(\lambda\)</span> is a damping parameter. If
+<span class="math notranslate nohighlight">\(\lambda &gt; 0\)</span>, the solution is regularized in the sense that a unique
+soluton always exists, and <span class="math notranslate nohighlight">\(\|x\|_2\)</span> is always bounded.</p>
+<p>Preconditioning may be used to try to reduce the number of iterations.
+A suitable choice for the preconditioner depends on the user’s knowledge of
+<span class="math notranslate nohighlight">\(A\)</span>. For a user-chosen <span class="math notranslate nohighlight">\(n \times n\)</span> nonsingular matrix <span class="math notranslate nohighlight">\(P\)</span>,
+LSMR solves</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\begin{array}{ll}
+   \mbox{1. Nonsymmetric equations:} &amp;
+      \mbox{minimize  } \|Py\|_2 \mbox{  subject to }APy = b, \\
+   \mbox{2. Linear least squares:} &amp; \mbox{minimize  } \|APy - b\|_2^2 ,\\
+   \mbox{3. Regularized least squares:} &amp;
+      \mbox{minimize  } \|APy - b\|_2^2 + \lambda^2\|Py\|_2^2 ,
+\end{array}\end{split}\]</div>
+<p>The user must then recover the final solution <span class="math notranslate nohighlight">\(x\)</span> by computing
+<span class="math notranslate nohighlight">\(x=Py\)</span>. <span class="math notranslate nohighlight">\(P\)</span> will be a good preconditioner if <span class="math notranslate nohighlight">\(AP\)</span> is
+significantly better conditioned than <span class="math notranslate nohighlight">\(A\)</span>.</p>
+<p>Reverse communication is used for preconditioning operations <span class="math notranslate nohighlight">\(Pz\)</span> and
+<span class="math notranslate nohighlight">\(P^Tz\)</span> and matrix-vector products of the form <span class="math notranslate nohighlight">\(Av\)</span> and <span class="math notranslate nohighlight">\(A^Tu\)</span>.</p>
+<p>The method used is based on the Golub-Kahan bidiagonalization process.
+It is algebraically equivalent to applying MINRES to the normal
+equation <span class="math notranslate nohighlight">\((A^TA+\lambda^2I)x=A^Tb\)</span> (or
+<span class="math notranslate nohighlight">\(((AP)^T(AP)+\lambda^2I)y=(AP)^Tb\)</span>), but has better numerical properties,
+especially if <span class="math notranslate nohighlight">\(A\)</span> is ill-conditioned.</p>
+<section id="notation">
+<h3>Notation<a class="headerlink" href="#notation" title="Permalink to this heading"></a></h3>
+<p>In the rest of this documentation, we use the following notation:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\bar{A} = \left( \begin{array}{c}
+         A \\
+         \lambda I
+      \end{array} \right)P, \hspace{1cm} \bar{b} = \left( \begin{array}{c}
+         b \\
+         0
+      \end{array} \right),\end{split}\]</div>
+<p>and</p>
+<div class="math notranslate nohighlight">
+\[r = b - APy , \hspace{1cm}  \bar{r} = \bar{b} - \bar{A}y,
+      \hspace{1cm}  x = Py.\]</div>
+</section>
+<section id="version-history">
+<h3>Version history<a class="headerlink" href="#version-history" title="Permalink to this heading"></a></h3>
+<dl class="simple">
+<dt>2016-05-10 Version 1.0.0.</dt><dd><p>Initial release.</p>
+</dd>
+</dl>
+<p>[For detailed history, see ChangeLog]</p>
+</section>
+</section>
+<section id="subroutines">
+<h2>Subroutines<a class="headerlink" href="#subroutines" title="Permalink to this heading"></a></h2>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.spral_lsmr_default_options">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_lsmr_default_options</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_lsmr_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_lsmr_default_options" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Initialises options to default values.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>options</strong> – data structure to be initialised.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.spral_lsmr_solve">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_lsmr_solve</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">action</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">m</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">n</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="n"><span class="pre">u</span></span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#c.spral_lsmr_solve" title="m"><span class="n"><span class="pre">m</span></span></a><span class="p"><span class="pre">]</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="n"><span class="pre">v</span></span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#c.spral_lsmr_solve" title="n"><span class="n"><span class="pre">n</span></span></a><span class="p"><span class="pre">]</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="n"><span class="pre">y</span></span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#c.spral_lsmr_solve" title="n"><span class="n"><span class="pre">n</span></span></a><span class="p"><span class="pre">]</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">keep</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_lsmr_options</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_lsmr_inform</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">damp</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_lsmr_solve" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Solve the least squares problem. Uses reverse communication. Upon return the
+user must perform a task specified by the <cite>action</cite> parameter and recall the
+routine. Possible values of action and associated tasks are:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p><cite>action</cite></p></th>
+<th class="head"><p>Task to be performed</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>0</p></td>
+<td><p>None. Computation has terminated. Check inform.flag for reason.</p></td>
+</tr>
+<tr class="row-odd"><td><p>1</p></td>
+<td><p>The user must compute</p>
+<div class="math notranslate nohighlight">
+\[v = v + P^TA^Tu\]</div>
+<p>without altering <span class="math notranslate nohighlight">\(u\)</span>.</p>
+</td>
+</tr>
+<tr class="row-even"><td><p>2</p></td>
+<td><p>The user must compute</p>
+<div class="math notranslate nohighlight">
+\[u = u + APv\]</div>
+<p>without altering <span class="math notranslate nohighlight">\(v\)</span>.</p>
+</td>
+</tr>
+<tr class="row-odd"><td><p>3</p></td>
+<td><p>The user may test for convergence.</p>
+<p>To continue, recall without changing any of the arguments.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>action</strong> – reverse communication task (see table above).
+Must be 0 on first call.</p></li>
+<li><p><strong>m</strong> – number of rows in <span class="math notranslate nohighlight">\(A\)</span>.</p></li>
+<li><p><strong>n</strong> – number of columns in <span class="math notranslate nohighlight">\(A\)</span>.</p></li>
+<li><p><strong>u</strong> – the vector <span class="math notranslate nohighlight">\(u\)</span>. Must contain <span class="math notranslate nohighlight">\(b\)</span> on first
+call.</p></li>
+<li><p><strong>v</strong> – the vector <span class="math notranslate nohighlight">\(v\)</span>.</p></li>
+<li><p><strong>y</strong> – the current solution <span class="math notranslate nohighlight">\(y\)</span> of the preconditioned
+problem (note <span class="math notranslate nohighlight">\(x=Py\)</span>).</p></li>
+<li><p><strong>keep</strong> – private internal data for LSMR.</p></li>
+<li><p><strong>options</strong> – controls execution of algorithm.</p></li>
+<li><p><strong>inform</strong> – information about execution of algorithm.
+Must not be changed by the user.</p></li>
+<li><p><strong>damp</strong> – Damping parameter <span class="math notranslate nohighlight">\(\lambda\)</span>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Value of <code class="xref c c-member docutils literal notranslate"><span class="pre">spral_lsmr_inform.flag</span></code>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.lsmr_free">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">lsmr_free</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">keep</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.lsmr_free" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Free memory allocated in <cite>keep</cite>.
+If a series of problems is being solved sequentially, the same keep may be
+used without calling <code class="xref c c-func docutils literal notranslate"><span class="pre">spral_lsmr_free()</span></code> between each solution.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>keep</strong> – private data to be freed.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>0 on success, or Fortran stat parameter on
+failed deallocation.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="derived-types">
+<h2>Derived types<a class="headerlink" href="#derived-types" title="Permalink to this heading"></a></h2>
+<dl class="c type">
+<dt class="sig sig-object c">
+<span class="sig-name descname"><span class="pre">struct</span> <span class="pre">spral_lsmr_options</span></span></dt>
+<dd><p>Specify options used by LSMR algorithm.</p>
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.print_freq_head">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">print_freq_head</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.print_freq_head" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Frequency of printing heading
+information (that is, how many lines are printed before the heading
+information is reprinted).
+Default is 20.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.print_freq_itn">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">print_freq_itn</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.print_freq_itn" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Frequency of printing status.
+There is printing on each of the first <cite>print_freq_itn</cite> iterations and
+then printing every <cite>print_freq_itn</cite> iterations.
+Default is 10.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.unit_diagnostics">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">unit_diagnostics</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.unit_diagnostics" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Fortran unit for diagnostic
+printing. Printing is suppressed if negative.
+Default is 6.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.unit_error">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">unit_error</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.unit_error" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Fortran unit for printing error messages.
+Printing is suppressed if negative.
+Default is 6.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.atol">
+<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">atol</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.atol" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Relative error in <span class="math notranslate nohighlight">\(A\)</span>.
+i.e. if <span class="math notranslate nohighlight">\(A\)</span> is accurate to about 6 digits, set atol to 1.0e-6.
+Only used if <code class="xref c c-member docutils literal notranslate"><span class="pre">spral_lsmr_options.ctest</span></code> =3.
+Default is <code class="docutils literal notranslate"><span class="pre">sqrt(DBL_EPSILON)</span></code>.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.btol">
+<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">btol</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.btol" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Relative error in <span class="math notranslate nohighlight">\(b\)</span>.
+i.e. if <span class="math notranslate nohighlight">\(b\)</span> is accurate to about 6 digits, set btol to 1.0e-6.
+Only used if <code class="xref c c-member docutils literal notranslate"><span class="pre">spral_lsmr_options.ctest</span></code> =3.
+Default is <code class="docutils literal notranslate"><span class="pre">sqrt(DBL_EPSILON)</span></code>.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.conlim">
+<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">conlim</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.conlim" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Upper limit on
+<span class="math notranslate nohighlight">\(cond(\bar{A})\)</span>, apparent condition number of <span class="math notranslate nohighlight">\(\bar{A}\)</span>.
+Only used if <code class="xref c c-member docutils literal notranslate"><span class="pre">spral_lsmr_options.ctest</span></code> =3.
+Default is <code class="docutils literal notranslate"><span class="pre">1/(10*sqrt(DBL_EPSILON))</span></code>:</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.ctest">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ctest</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.ctest" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Convergence test to use. Options are:</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>1</p></td>
+<td><p>User to test convergence (<cite>action=3</cite>).
+<em>Without</em>  computation of norms in inform.</p></td>
+</tr>
+<tr class="row-even"><td><p>2</p></td>
+<td><p>User to test convergence (<cite>action=3</cite>).
+<em>With</em>  computation of norms in inform.</p></td>
+</tr>
+<tr class="row-odd"><td><p>3 (default)</p></td>
+<td><p>Convergence test of Fond and Saunders (in preconditioner
+norm).</p></td>
+</tr>
+</tbody>
+</table>
+<p>Default is 3.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.itnlim">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">itnlim</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.itnlim" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Maximum number of iterations. If negative,
+the limit used is <span class="math notranslate nohighlight">\(4n\)</span>.
+Default is -1.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.itn_test">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">itn_test</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.itn_test" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Number of iterations between user
+convergence tests. If negative, use <span class="math notranslate nohighlight">\(\min(n,10)\)</span>.
+Default is -1.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.localSize">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">localSize</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.localSize" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Number of historical vectors to use for
+reorthogonalization.
+Default is 0.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="c type">
+<dt class="sig sig-object c">
+<span class="sig-name descname"><span class="pre">struct</span> <span class="pre">spral_lsmr_inform</span></span></dt>
+<dd><p>Information about progress of algorithm.</p>
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.condAP">
+<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">condAP</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.condAP" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Estimate of <span class="math notranslate nohighlight">\(cond(\bar{A})\)</span>. A very high value of
+condAP may again indicate an error in the products with <span class="math notranslate nohighlight">\(A\)</span>,
+<span class="math notranslate nohighlight">\(A^T\)</span>, <span class="math notranslate nohighlight">\(P\)</span>, or <span class="math notranslate nohighlight">\(P^T\)</span>. A negative value indicates that
+no estimate is currently available.
+This component is not used if <code class="xref c c-member docutils literal notranslate"><span class="pre">spral_lsmr_options.ctest</span></code> =1.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.flag">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">flag</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.flag" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Exit status of algorithm. See table below.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.itn">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">itn</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.itn" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Number of iterations performed</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.normAP">
+<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">normAP</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.normAP" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Estimate of Frobenius norm of <span class="math notranslate nohighlight">\(\bar{A}\)</span>. If
+<span class="math notranslate nohighlight">\(\lambda\)</span> is small and the columns of <span class="math notranslate nohighlight">\(AP\)</span> have all been
+scaled to have length 1.0, normAP should increase to roughly
+<span class="math notranslate nohighlight">\(\sqrt{n}\)</span>. A radically different value for normAP may indicate an
+error in the user-supplied products with <span class="math notranslate nohighlight">\(A\)</span>, <span class="math notranslate nohighlight">\(A^T\)</span>,
+<span class="math notranslate nohighlight">\(P\)</span>, or <span class="math notranslate nohighlight">\(P^T\)</span>. A negative value indicates that no estimate is
+currently available.
+This component is not used if <code class="xref c c-member docutils literal notranslate"><span class="pre">spral_lsmr_options.ctest</span></code> =1.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c">
+<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">normAP</span></span></span><br /></dt>
+<dd><p>Estimate of <span class="math notranslate nohighlight">\(\|\bar{A}^T\bar{r}\|_2\)</span>, (normal
+equations residual). This should be small in all cases. Note that
+normAPr will often be smaller than the true value.
+A negative value indicates that no estimate is currently available.
+This component is not used if <code class="xref c c-member docutils literal notranslate"><span class="pre">spral_lsmr_options.ctest</span></code> =1.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.normr">
+<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">normr</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.normr" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Estimate of <span class="math notranslate nohighlight">\(\|\bar{r}\|_2\)</span>. This will be small
+if <span class="math notranslate nohighlight">\(Ax = b\)</span> has a solution. A negative value indicates that no
+estimate is currently available.
+This component is not used if <code class="xref c c-member docutils literal notranslate"><span class="pre">spral_lsmr_options.ctest</span></code> =1.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.normy">
+<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">normy</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.normy" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Estimate of <span class="math notranslate nohighlight">\(\|y\|_2\)</span>. A negative value indicates that
+no estimate is currently available.
+This component is not used if <code class="xref c c-member docutils literal notranslate"><span class="pre">spral_lsmr_options.ctest</span></code> =1.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.stat">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">stat</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.stat" title="Permalink to this definition"></a><br /></dt>
+<dd><p>The Fortran stat parameter in the event of a failed
+allocation.</p>
+</dd></dl>
+
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>inform.flag</p></th>
+<th class="head"><p>Interpretation</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>0</p></td>
+<td><p><span class="math notranslate nohighlight">\(x = 0.0\)</span> is the exact solution.
+No iterations were performed.</p></td>
+</tr>
+<tr class="row-odd"><td><p>1</p></td>
+<td><p>The equations <span class="math notranslate nohighlight">\(Ax = b\)</span> are probably compatible.
+<span class="math notranslate nohighlight">\(\|Ax - b\|_2\)</span> is sufficiently small, given the values
+of <code class="xref c c-member docutils literal notranslate"><span class="pre">spral_lsmr_options.atol</span></code> and
+<code class="xref c c-member docutils literal notranslate"><span class="pre">spral_lsmr_options.btol</span></code>.
+(<code class="xref c c-member docutils literal notranslate"><span class="pre">spral_lsmr_options.ctest</span></code> =3 only).</p></td>
+</tr>
+<tr class="row-even"><td><p>2</p></td>
+<td><p>If damp is not present or is zero then the system
+<span class="math notranslate nohighlight">\(Ax = b\)</span> is probably not compatible. A least-squares
+solution has been obtained that is sufficiently accurate,
+given the value of <code class="xref c c-member docutils literal notranslate"><span class="pre">spral_lsmr_options.atol</span></code>.
+Otherwise, damped least-squares solution has been obtained
+that is sufficiently accurate, given the value of
+<code class="xref c c-member docutils literal notranslate"><span class="pre">spral_lsmr_options.atol</span></code>.
+(<code class="xref c c-member docutils literal notranslate"><span class="pre">spral_lsmr_options.ctest</span></code> =3 only).</p></td>
+</tr>
+<tr class="row-odd"><td><p>3</p></td>
+<td><p>An estimate of cond(<span class="math notranslate nohighlight">\(\bar{A}\)</span>) has exceeded
+<code class="xref c c-member docutils literal notranslate"><span class="pre">spral_lsmr_options.conlim</span></code>. The system
+<span class="math notranslate nohighlight">\(Ax = b\)</span> appears to be ill-conditioned, or there
+could be an error in the products with <span class="math notranslate nohighlight">\(A\)</span>,
+<span class="math notranslate nohighlight">\(A^T\)</span>, <span class="math notranslate nohighlight">\(P\)</span>, or <span class="math notranslate nohighlight">\(P^T\)</span>.
+(<code class="xref c c-member docutils literal notranslate"><span class="pre">spral_lsmr_options.ctest</span></code> =3 only).</p></td>
+</tr>
+<tr class="row-even"><td><p>4</p></td>
+<td><p><span class="math notranslate nohighlight">\(\|APy - b \|_2\)</span> is small enough for this machine.
+(<code class="xref c c-member docutils literal notranslate"><span class="pre">spral_lsmr_options.ctest</span></code> =3 only).</p></td>
+</tr>
+<tr class="row-odd"><td><p>5</p></td>
+<td><p>The least-squares solution is good enough for this machine.
+(<code class="xref c c-member docutils literal notranslate"><span class="pre">spral_lsmr_options.ctest</span></code> =3 only).</p></td>
+</tr>
+<tr class="row-even"><td><p>6</p></td>
+<td><p>The estimate <code class="xref c c-member docutils literal notranslate"><span class="pre">spral_lsmr_inform.condAP</span></code> appears
+to be too large for this machine.
+(<code class="xref c c-member docutils literal notranslate"><span class="pre">spral_lsmr_options.ctest</span></code> =3 only).</p></td>
+</tr>
+<tr class="row-odd"><td><p>7</p></td>
+<td><p>The iteration limit <code class="xref c c-member docutils literal notranslate"><span class="pre">spral_lsmr_options.itnlim</span></code>
+has been reached.</p></td>
+</tr>
+<tr class="row-even"><td><p>8</p></td>
+<td><p>An array allocation failed.</p></td>
+</tr>
+<tr class="row-odd"><td><p>9</p></td>
+<td><p>An array deallocation failed.</p></td>
+</tr>
+<tr class="row-even"><td><p>10</p></td>
+<td><p>Either <cite>m&lt;0</cite> or <cite>n&lt;0</cite>.</p></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</section>
+<section id="example">
+<h2>Example<a class="headerlink" href="#example" title="Permalink to this heading"></a></h2>
+<p>The following code illustrates the use of LMSR</p>
+<div class="highlight-C notranslate"><div class="highlight"><pre><span></span><span class="cm">/* examples/C/lsmr.c - Example code for SPRAL_LSMR package */</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;spral.h&quot;</span>
+
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdlib.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+
+<span class="kt">void</span><span class="w"> </span><span class="nf">matrix_mult</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">m</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="o">*</span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="o">*</span><span class="n">row</span><span class="p">,</span>
+<span class="w">      </span><span class="kt">double</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="o">*</span><span class="n">val</span><span class="p">,</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="o">*</span><span class="n">v</span><span class="p">,</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="o">*</span><span class="n">u</span><span class="p">);</span>
+<span class="kt">void</span><span class="w"> </span><span class="nf">matrix_mult_trans</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">m</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="o">*</span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="o">*</span><span class="n">row</span><span class="p">,</span>
+<span class="w">      </span><span class="kt">double</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="o">*</span><span class="n">val</span><span class="p">,</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="o">*</span><span class="n">u</span><span class="p">,</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="o">*</span><span class="n">v</span><span class="p">);</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">   </span><span class="cm">/* Derived types */</span>
+<span class="w">   </span><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="n">keep</span><span class="p">;</span>
+<span class="w">   </span><span class="k">struct</span><span class="w"> </span><span class="nc">spral_lsmr_options</span><span class="w"> </span><span class="n">options</span><span class="p">;</span>
+<span class="w">   </span><span class="k">struct</span><span class="w"> </span><span class="nc">spral_lsmr_inform</span><span class="w"> </span><span class="n">inform</span><span class="p">;</span>
+
+<span class="w">   </span><span class="cm">/* Initialize derived types */</span>
+<span class="w">   </span><span class="n">keep</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">NULL</span><span class="p">;</span>
+<span class="w">   </span><span class="n">spral_lsmr_default_options</span><span class="p">(</span><span class="o">&amp;</span><span class="n">options</span><span class="p">);</span>
+<span class="w">   </span><span class="n">options</span><span class="p">.</span><span class="n">unit_diagnostics</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">-1</span><span class="p">;</span><span class="w"> </span><span class="cm">/* Switch off diagnostic printing */</span>
+
+<span class="w">   </span><span class="cm">/* Data for matrix:</span>
+<span class="cm">    * ( 1.0     -1.0 )</span>
+<span class="cm">    * (     2.0      )</span>
+<span class="cm">    * ( 2.0      2.0 )</span>
+<span class="cm">    * ( 5.0 3.0 -2.0 )</span>
+<span class="cm">    * (          6.0 ) */</span>
+<span class="w">   </span><span class="k">const</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">m</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span>
+<span class="w">   </span><span class="kt">int</span><span class="w"> </span><span class="n">ptr</span><span class="p">[]</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w">   </span><span class="mi">0</span><span class="p">,</span><span class="w">             </span><span class="mi">3</span><span class="p">,</span><span class="w">         </span><span class="mi">5</span><span class="p">,</span><span class="w">                 </span><span class="mi">9</span><span class="w"> </span><span class="p">};</span>
+<span class="w">   </span><span class="kt">int</span><span class="w"> </span><span class="n">row</span><span class="p">[]</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w">   </span><span class="mi">0</span><span class="p">,</span><span class="w">   </span><span class="mi">2</span><span class="p">,</span><span class="w">   </span><span class="mi">3</span><span class="p">,</span><span class="w">   </span><span class="mi">1</span><span class="p">,</span><span class="w">   </span><span class="mi">3</span><span class="p">,</span><span class="w">    </span><span class="mi">0</span><span class="p">,</span><span class="w">   </span><span class="mi">2</span><span class="p">,</span><span class="w">    </span><span class="mi">3</span><span class="p">,</span><span class="w">   </span><span class="mi">4</span><span class="w"> </span><span class="p">};</span>
+<span class="w">   </span><span class="kt">double</span><span class="w"> </span><span class="n">val</span><span class="p">[]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="mf">2.0</span><span class="p">,</span><span class="w"> </span><span class="mf">5.0</span><span class="p">,</span><span class="w"> </span><span class="mf">2.0</span><span class="p">,</span><span class="w"> </span><span class="mf">3.0</span><span class="p">,</span><span class="w"> </span><span class="mf">-1.0</span><span class="p">,</span><span class="w"> </span><span class="mf">2.0</span><span class="p">,</span><span class="w"> </span><span class="mf">-2.0</span><span class="p">,</span><span class="w"> </span><span class="mf">6.0</span><span class="w"> </span><span class="p">};</span>
+<span class="w">   </span><span class="cm">/* Data for rhs b */</span>
+<span class="w">   </span><span class="kt">double</span><span class="w"> </span><span class="n">b</span><span class="p">[]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="w"> </span><span class="p">};</span>
+
+<span class="w">   </span><span class="cm">/* prepare for LSMR calls (using no preconditioning) */</span>
+<span class="w">   </span><span class="kt">int</span><span class="w"> </span><span class="n">action</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">   </span><span class="kt">double</span><span class="w"> </span><span class="n">u</span><span class="p">[</span><span class="n">m</span><span class="p">],</span><span class="w"> </span><span class="n">v</span><span class="p">[</span><span class="n">n</span><span class="p">],</span><span class="w"> </span><span class="n">x</span><span class="p">[</span><span class="n">n</span><span class="p">];</span>
+<span class="w">   </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">&lt;</span><span class="n">m</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="n">u</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">b</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+
+<span class="w">   </span><span class="kt">bool</span><span class="w"> </span><span class="n">done</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span>
+<span class="w">   </span><span class="k">while</span><span class="p">(</span><span class="o">!</span><span class="n">done</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="n">spral_lsmr_solve</span><span class="p">(</span><span class="o">&amp;</span><span class="n">action</span><span class="p">,</span><span class="w"> </span><span class="n">m</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">u</span><span class="p">,</span><span class="w"> </span><span class="n">v</span><span class="p">,</span><span class="w"> </span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">keep</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">options</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">inform</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">);</span>
+
+<span class="w">      </span><span class="k">switch</span><span class="p">(</span><span class="n">action</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="k">case</span><span class="w"> </span><span class="mi">0</span><span class="p">:</span><span class="w"> </span><span class="cm">/* we are done */</span>
+<span class="w">         </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Exit LSMR with inform.flag = %d and inform.itn = %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span>
+<span class="w">               </span><span class="n">inform</span><span class="p">.</span><span class="n">flag</span><span class="p">,</span><span class="w"> </span><span class="n">inform</span><span class="p">.</span><span class="n">itn</span><span class="p">);</span>
+<span class="w">         </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;LS solution is:</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+<span class="w">         </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">&lt;</span><span class="n">n</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot; %10.2f&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">]);</span>
+<span class="w">         </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+<span class="w">         </span><span class="n">done</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">true</span><span class="p">;</span>
+<span class="w">         </span><span class="k">break</span><span class="p">;</span>
+
+<span class="w">      </span><span class="k">case</span><span class="w"> </span><span class="mi">1</span><span class="p">:</span><span class="w"> </span><span class="cm">/* Compute v = v + A&#39;*u without altering u */</span>
+<span class="w">         </span><span class="n">matrix_mult_trans</span><span class="p">(</span><span class="n">m</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="n">row</span><span class="p">,</span><span class="w"> </span><span class="n">val</span><span class="p">,</span><span class="w"> </span><span class="n">u</span><span class="p">,</span><span class="w"> </span><span class="n">v</span><span class="p">);</span>
+<span class="w">         </span><span class="k">break</span><span class="p">;</span>
+
+<span class="w">      </span><span class="k">case</span><span class="w"> </span><span class="mi">2</span><span class="p">:</span><span class="w"> </span><span class="cm">/* Compute u = u + A*v  without altering v */</span>
+<span class="w">         </span><span class="n">matrix_mult</span><span class="p">(</span><span class="n">m</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="n">row</span><span class="p">,</span><span class="w"> </span><span class="n">val</span><span class="p">,</span><span class="w"> </span><span class="n">v</span><span class="p">,</span><span class="w"> </span><span class="n">u</span><span class="p">);</span>
+<span class="w">         </span><span class="k">break</span><span class="p">;</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="w">   </span><span class="p">}</span>
+
+<span class="w">   </span><span class="n">spral_lsmr_free</span><span class="p">(</span><span class="o">&amp;</span><span class="n">keep</span><span class="p">);</span>
+<span class="w">   </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="c1">// Success</span>
+<span class="p">}</span>
+
+<span class="cm">/* Takes b and computes u = u + A * v (A in CSC format) */</span>
+<span class="kt">void</span><span class="w"> </span><span class="nf">matrix_mult</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">m</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="o">*</span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="o">*</span><span class="n">row</span><span class="p">,</span>
+<span class="w">      </span><span class="kt">double</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="o">*</span><span class="n">val</span><span class="p">,</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="o">*</span><span class="n">v</span><span class="p">,</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="o">*</span><span class="n">u</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">   </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">j</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="o">&lt;</span><span class="n">n</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">j</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">k</span><span class="o">=</span><span class="n">ptr</span><span class="p">[</span><span class="n">j</span><span class="p">];</span><span class="w"> </span><span class="n">k</span><span class="o">&lt;</span><span class="n">ptr</span><span class="p">[</span><span class="n">j</span><span class="o">+</span><span class="mi">1</span><span class="p">];</span><span class="w"> </span><span class="o">++</span><span class="n">k</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">         </span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">row</span><span class="p">[</span><span class="n">k</span><span class="p">];</span>
+<span class="w">         </span><span class="n">u</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">val</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">*</span><span class="n">v</span><span class="p">[</span><span class="n">j</span><span class="p">];</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="w">   </span><span class="p">}</span>
+<span class="p">}</span>
+
+<span class="cm">/* Takes b and computes v = v + A^T * u (A in CSC format) */</span>
+<span class="kt">void</span><span class="w"> </span><span class="nf">matrix_mult_trans</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">m</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="o">*</span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="o">*</span><span class="n">row</span><span class="p">,</span>
+<span class="w">      </span><span class="kt">double</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="o">*</span><span class="n">val</span><span class="p">,</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="o">*</span><span class="n">u</span><span class="p">,</span><span class="w"> </span><span class="kt">double</span><span class="w"> </span><span class="o">*</span><span class="n">v</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">   </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">j</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">j</span><span class="o">&lt;</span><span class="n">n</span><span class="p">;</span><span class="w"> </span><span class="o">++</span><span class="n">j</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">k</span><span class="o">=</span><span class="n">ptr</span><span class="p">[</span><span class="n">j</span><span class="p">];</span><span class="w"> </span><span class="n">k</span><span class="o">&lt;</span><span class="n">ptr</span><span class="p">[</span><span class="n">j</span><span class="o">+</span><span class="mi">1</span><span class="p">];</span><span class="w"> </span><span class="o">++</span><span class="n">k</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">         </span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">row</span><span class="p">[</span><span class="n">k</span><span class="p">];</span>
+<span class="w">         </span><span class="n">v</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">val</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">*</span><span class="n">u</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="w">   </span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>This returns the following output:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Exit</span> <span class="n">LSMR</span> <span class="k">with</span> <span class="n">inform</span><span class="o">.</span><span class="n">flag</span> <span class="o">=</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">inform</span><span class="o">.</span><span class="n">itn</span> <span class="o">=</span> <span class="mi">3</span>
+<span class="n">LS</span> <span class="n">solution</span> <span class="ow">is</span><span class="p">:</span>
+       <span class="mf">0.18</span>      <span class="mf">0.26</span>      <span class="mf">0.17</span>
+</pre></div>
+</div>
+</section>
+<section id="method">
+<h2>Method<a class="headerlink" href="#method" title="Permalink to this heading"></a></h2>
+<section id="algorithm">
+<h3>Algorithm<a class="headerlink" href="#algorithm" title="Permalink to this heading"></a></h3>
+<p>The method used is based on the Golub-Kahan bidiagonalization process.
+It is algebraically equivalent to applying MINRES to the normal equation
+<span class="math notranslate nohighlight">\((A^TA+\lambda^2I)x=A^Tb\)</span> (or <span class="math notranslate nohighlight">\(((AP)^T(AP)+\lambda^2I)y=(AP)^Tb\)</span>,
+<span class="math notranslate nohighlight">\(Py = x\)</span>, if preconditioning is used), but has better numerical
+properties, especially if <span class="math notranslate nohighlight">\(A\)</span> is ill-conditioned. Full details may be
+found in <a class="footnote-reference brackets" href="#id2" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a>.</p>
+</section>
+<section id="scaling">
+<h3>Scaling<a class="headerlink" href="#scaling" title="Permalink to this heading"></a></h3>
+<p>LSMR uses an iterative method to approximate the solution. The number of
+iterations required to reach a certain accuracy depends strongly on the
+scaling of the problem. Poor scaling of the rows or columns of
+<span class="math notranslate nohighlight">\(A\)</span> should therefore be avoided where possible. For example, in
+problem 1 the solution is unaltered by row-scaling. If a row of
+<span class="math notranslate nohighlight">\(A\)</span> is very small or large compared to the other rows of
+<span class="math notranslate nohighlight">\(A\)</span>, the corresponding row of <span class="math notranslate nohighlight">\(( A\;  b )\)</span> should be scaled
+up or down.</p>
+<p>In problems 1 and 2, the solution <span class="math notranslate nohighlight">\(x\)</span> is easily recovered
+following column-scaling. Unless better information is known, the
+nonzero columns of <span class="math notranslate nohighlight">\(A\)</span> should be scaled so that they all have the
+same Euclidean norm (e.g., 1.0). In problem 3, there is no freedom to
+re-scale if <cite>damp</cite> is nonzero. However, the value of <cite>damp</cite> should be
+assigned only after attention has been paid to the scaling of <span class="math notranslate nohighlight">\(A\)</span>.</p>
+<p>The parameter <cite>damp</cite> is intended to help regularize ill-conditioned
+systems, by preventing the true solution from being very large. Another
+aid to regularization is provided by the <code class="xref c c-member docutils literal notranslate"><span class="pre">spral_lsmr_inform.condAP</span></code>,
+which may be used to terminate iterations before the computed solution becomes
+very large.</p>
+</section>
+<section id="initial-estimate">
+<h3>Initial estimate<a class="headerlink" href="#initial-estimate" title="Permalink to this heading"></a></h3>
+<p>Note that <span class="math notranslate nohighlight">\(x\)</span> (or <span class="math notranslate nohighlight">\(y\)</span> for the preconditioned problem) is not
+an input parameter. If some initial estimate <span class="math notranslate nohighlight">\(x_0\)</span> of <span class="math notranslate nohighlight">\(x\)</span> is
+known and if <span class="math notranslate nohighlight">\(\lambda = 0\)</span>, one could proceed as follows:</p>
+<ol class="arabic simple">
+<li><p>Compute a residual vector <span class="math notranslate nohighlight">\(r_0 = b - Ax_0\)</span>.</p></li>
+<li><p>Use LSMR to solve the system <span class="math notranslate nohighlight">\(A \delta x = r_0\)</span>.</p></li>
+<li><p>Add the correction <span class="math notranslate nohighlight">\(\delta x\)</span> to obtain a final solution
+<span class="math notranslate nohighlight">\(x = x_0 + \delta x\)</span>.</p></li>
+</ol>
+<p>This can be generalized for the preconditioned case. The guess <span class="math notranslate nohighlight">\(x_0\)</span> has
+to be available before and after the calls to <a class="reference internal" href="#c.spral_lsmr_solve" title="spral_lsmr_solve"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_lsmr_solve()</span></code></a>.
+To judge the benefits, suppose <a class="reference internal" href="#c.spral_lsmr_solve" title="spral_lsmr_solve"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_lsmr_solve()</span></code></a> takes <span class="math notranslate nohighlight">\(k_1\)</span>
+iterations to solve <span class="math notranslate nohighlight">\(Ax = b\)</span> and <span class="math notranslate nohighlight">\(k_2\)</span> iterations to solve
+<span class="math notranslate nohighlight">\(A \delta x = r_0\)</span>. If <span class="math notranslate nohighlight">\(x_0\)</span> is “good”, <span class="math notranslate nohighlight">\(\|r_0\|_2\)</span> will be
+smaller than <span class="math notranslate nohighlight">\(\|b\|_2\)</span>. If the same stopping tolerances
+<code class="xref c c-member docutils literal notranslate"><span class="pre">spral_lsmr_options.atol</span></code> and <code class="xref c c-member docutils literal notranslate"><span class="pre">spral_lsmr_options.btol</span></code> are
+used for each system, <span class="math notranslate nohighlight">\(k_1\)</span> and <span class="math notranslate nohighlight">\(k_2\)</span> will
+be similar, but the final solution <span class="math notranslate nohighlight">\(x = x_0 + \delta x\)</span> should be more
+accurate. The only way to reduce the total work is to use a larger stopping
+tolerance for the second system. If some value
+<code class="xref c c-member docutils literal notranslate"><span class="pre">spral_lsmr_options.btol</span></code> is suitable for
+<span class="math notranslate nohighlight">\(Ax=b\)</span>, the larger value
+<span class="math notranslate nohighlight">\(\mathrm{spral\_lsmr\_options.btol}*\|b\|_2 / \|r_0\|_2\)</span> should be
+suitable for <span class="math notranslate nohighlight">\(A \delta x = r_0\)</span>.</p>
+</section>
+<section id="references">
+<h3>References<a class="headerlink" href="#references" title="Permalink to this heading"></a></h3>
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="id2" role="note">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">1</a><span class="fn-bracket">]</span></span>
+<p>D.C.-L. Fong and M.A. Saunders (2011).
+<em>LSMR: An iterative algorithm for sparse least-squares problems</em>.
+SIAM J. Sci. Comput. 33:5, 2950-2971.
+[<a class="reference external" href="https://doi.org/10.1137/10079687X">DOI: 10.1137/10079687X</a>]</p>
+</aside>
+</aside>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="coord_format.html" class="btn btn-neutral float-left" title="Coordinate (Coord) Format" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="matrix_util.html" class="btn btn-neutral float-right" title="MATRIX_UTIL - Matrix utilities" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Computational Mathematics Group, STFC Rutherford Appleton Laboratory.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

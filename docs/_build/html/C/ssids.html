@@ -1,0 +1,1378 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SSIDS - Sparse Symmetric Indefinite Direct Solver &mdash; spral v2024-05-08 [C] documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="SSMFE - Sparse Symmetric Matrix-Free Eigensolver" href="ssmfe.html" />
+    <link rel="prev" title="SCALING - Sparse matrix scalings" href="scaling.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            spral
+              <img src="_static/STFC-Logo.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                v2024-05-08 [C]
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="csc_format.html">Compressed Sparse Column (CSC) Format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="coord_format.html">Coordinate (Coord) Format</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="lsmr.html">LSMR - Sparse Least Squares LSMR Solver</a></li>
+<li class="toctree-l1"><a class="reference internal" href="matrix_util.html">MATRIX_UTIL - Matrix utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="random.html">RANDOM - Pseudo-random number generator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="random_matrix.html">RANDOM_MATRIX - Pseudo-random Matrix Generator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rutherford_boeing.html">RUTHERFORD_BOEING - RB File Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="scaling.html">SCALING - Sparse matrix scalings</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">SSIDS - Sparse Symmetric Indefinite Direct Solver</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#purpose">Purpose</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#usage-overview">Usage overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#basic-subroutines">Basic Subroutines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#advanced-subroutines">Advanced subroutines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#derived-types">Derived types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#driver-program">Driver Program</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#method">Method</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#partition-of-work-across-available-resources">Partition of work across available resources</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#data-checking">Data checking</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#factorization-performed">Factorization performed</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#small-leaf-subtrees">Small Leaf Subtrees</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#references">References</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="ssmfe.html">SSMFE - Sparse Symmetric Matrix-Free Eigensolver</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssmfe_expert.html">SSMFE_EXPERT - Sparse Symmetric Matrix-Free Eigensolver (Expert interface)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssmfe_core.html">SSMFE_CORE - Sparse Symmetric Matrix-Free Eigensolver (Core Algorithm)</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">spral</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">SSIDS - Sparse Symmetric Indefinite Direct Solver</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/ssids.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="ssids-sparse-symmetric-indefinite-direct-solver">
+<h1>SSIDS - Sparse Symmetric Indefinite Direct Solver<a class="headerlink" href="#ssids-sparse-symmetric-indefinite-direct-solver" title="Permalink to this heading"></a></h1>
+<div class="highlight-C notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;spral_ssids.h&gt;</span><span class="c1"> /* or &lt;spral.h&gt; for all packages */</span>
+</pre></div>
+</div>
+<section id="purpose">
+<h2>Purpose<a class="headerlink" href="#purpose" title="Permalink to this heading"></a></h2>
+<p>This package solves one or more sets of <span class="math notranslate nohighlight">\(n\times n\)</span>
+sparse <strong>symmetric</strong> equations  <span class="math notranslate nohighlight">\(AX = B\)</span> using a multifrontal method.
+The following cases are covered:</p>
+<p>1. <span class="math notranslate nohighlight">\(A\)</span> is <strong>indefinite</strong>.
+SSIDS computes the sparse factorization</p>
+<div class="math notranslate nohighlight">
+\[A =  PLD(PL)^T\]</div>
+<p>where <span class="math notranslate nohighlight">\(P\)</span> is a permutation matrix, <span class="math notranslate nohighlight">\(L\)</span> is unit lower triangular,
+and <span class="math notranslate nohighlight">\(D\)</span> is block diagonal with blocks of size <span class="math notranslate nohighlight">\(1 \times 1\)</span>
+and <span class="math notranslate nohighlight">\(2 \times 2\)</span>.</p>
+<p>2. <span class="math notranslate nohighlight">\(A\)</span> is <strong>positive definite</strong>.
+SSIDS computes the <strong>sparse Cholesky factorization</strong></p>
+<div class="math notranslate nohighlight">
+\[A =  PL(PL)^T\]</div>
+<p>where <span class="math notranslate nohighlight">\(P\)</span> is a permutation matrix and <span class="math notranslate nohighlight">\(L\)</span> is lower triangular.
+<em>However, as SSIDS is designed primarily for indefinite
+systems, this may be slower than a dedicated Cholesky solver.</em></p>
+<p>The code optionally supports hybrid computation using one or more NVIDIA GPUs.</p>
+<p>SSIDS returns bit-compatible results.</p>
+<p>An option exists to scale the matrix. In this case, the factorization of
+the scaled matrix  <span class="math notranslate nohighlight">\(\overline{A} = S A S\)</span> is computed,
+where <span class="math notranslate nohighlight">\(S\)</span> is a diagonal scaling matrix.</p>
+</section>
+<section id="usage-overview">
+<h2>Usage overview<a class="headerlink" href="#usage-overview" title="Permalink to this heading"></a></h2>
+<p>Solving <span class="math notranslate nohighlight">\(AX=B\)</span> using SSIDS is a four stage process.</p>
+<ol class="arabic simple">
+<li><p>Call <a class="reference internal" href="#c.spral_ssids_analyse" title="spral_ssids_analyse"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_analyse()</span></code></a> to perform a symbolic factorization,
+stored in <cite>akeep</cite>.</p></li>
+<li><p>Call <a class="reference internal" href="#c.spral_ssids_factor" title="spral_ssids_factor"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_factor()</span></code></a> to perform a numeric factorization,
+stored in <cite>fkeep</cite>. More than one numeric factorization can refer to the same
+<cite>akeep</cite>.</p></li>
+<li><p>Call <a class="reference internal" href="#c.spral_ssids_solve1" title="spral_ssids_solve1"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_solve1()</span></code></a> or <a class="reference internal" href="#c.spral_ssids_solve" title="spral_ssids_solve"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_solve()</span></code></a> to
+perform a solve with the factors. More than one solve can be performed with
+the same <cite>fkeep</cite>.</p></li>
+<li><p>Once all desired solutions have been performed, free memory with
+<a class="reference internal" href="#c.spral_ssids_free" title="spral_ssids_free"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_free()</span></code></a>.</p></li>
+</ol>
+<p>In addition, advanced users may use the following routines:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#c.spral_ssids_enquire_posdef" title="spral_ssids_enquire_posdef"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_enquire_posdef()</span></code></a> and
+<a class="reference internal" href="#c.spral_ssids_enquire_indef" title="spral_ssids_enquire_indef"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_enquire_indef()</span></code></a> return
+the diagonal entries of the factors and the pivot sequence.</p></li>
+<li><p><a class="reference internal" href="#c.spral_ssids_alter" title="spral_ssids_alter"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_alter()</span></code></a> allows altering the diagonal entries of the
+factors.</p></li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><strong>Bit-compatibility:</strong>
+If used with bit-compatible BLAS and compiler options, this routine will
+return bit compatible results. That is, consecutive runs with the same data
+on the same machine produces exactly the same solution.</p>
+</div>
+</section>
+<section id="basic-subroutines">
+<h2>Basic Subroutines<a class="headerlink" href="#basic-subroutines" title="Permalink to this heading"></a></h2>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>For the most efficient use of the package, CSC format should be used
+without checking.</p>
+</div>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.spral_ssids_default_options">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssids_default_options</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssids_default_options" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Intialises members of options structure to default values.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>options</strong> – Structure to be initialised.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.spral_ssids_analyse">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssids_analyse</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="n"><span class="pre">check</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">n</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">order</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">ptr</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">row</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">val</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">akeep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_inform</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssids_analyse" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Perform the analyse (symbolic) phase of the factorization for a matrix
+supplied in <a class="reference internal" href="csc_format.html"><span class="doc">CSC format</span></a>. The resulting symbolic factors
+stored in <a class="reference internal" href="#c.spral_ssids_analyse" title="akeep"><code class="xref c c-type docutils literal notranslate"><span class="pre">akeep</span></code></a> should be passed unaltered in the following call to
+<a class="reference internal" href="#c.spral_ssids_factor" title="spral_ssids_factor"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_factor()</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>check</strong> – if true, matrix data is checked. Out-of-range entries
+are dropped and duplicate entries are summed.</p></li>
+<li><p><strong>n</strong> – number of columns in <span class="math notranslate nohighlight">\(A\)</span>.</p></li>
+<li><p><strong>order</strong> – may be <cite>NULL</cite>; otherwise must be an array of size <cite>n</cite>
+used on entry a user-supplied ordering
+(<code class="xref c c-type docutils literal notranslate"><span class="pre">options.ordering=0</span></code>).
+On return, the actual ordering used.</p></li>
+<li><p><strong>ptr[n+1]</strong> – column pointers for <span class="math notranslate nohighlight">\(A\)</span>
+(see <a class="reference internal" href="csc_format.html"><span class="doc">CSC format</span></a>).</p></li>
+<li><p><strong>row[ptr[n]]</strong> – row indices for <span class="math notranslate nohighlight">\(A\)</span>
+(see <a class="reference internal" href="csc_format.html"><span class="doc">CSC format</span></a>).</p></li>
+<li><p><strong>val</strong> – may be <cite>NULL</cite>; otherwise must be an array of size <cite>ptr[n]</cite>
+containing non-zero values for <span class="math notranslate nohighlight">\(A\)</span>
+(see <a class="reference internal" href="csc_format.html"><span class="doc">CSC format</span></a>).
+Only used if a matching-based ordering is requested.</p></li>
+<li><p><strong>akeep</strong> – returns symbolic factorization, to be passed unchanged to
+subsequent routines.</p></li>
+<li><p><strong>options</strong> – specifies algorithm options to be used
+(see <code class="xref c c-type docutils literal notranslate"><span class="pre">spral_ssids_options</span></code>).</p></li>
+<li><p><strong>inform</strong> – returns information about the execution of the routine
+(see <code class="xref c c-type docutils literal notranslate"><span class="pre">spral_ssids_inform</span></code>).</p></li>
+</ul>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If a user-supplied ordering is used, it may be altered by this routine,
+with the altered version returned in <cite>order[]</cite>. This version will be
+equivalent to the original ordering, except that some supernodes may have
+been amalgamated, a topographic ordering may have been applied to the
+assembly tree and the order of columns within a supernode may have been
+adjusted to improve cache locality.</p>
+</div>
+</dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.spral_ssids_analyse_ptr32">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssids_analyse_ptr32</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="n"><span class="pre">check</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">n</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">order</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">ptr</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">row</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">val</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">akeep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_inform</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssids_analyse_ptr32" title="Permalink to this definition"></a><br /></dt>
+<dd><p>As <a class="reference internal" href="#c.spral_ssids_analyse" title="spral_ssids_analyse"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_analyse()</span></code></a>, except ptr has type <code class="docutils literal notranslate"><span class="pre">int</span></code>.
+Provided for backwards comptability, users are encourage to use 64-bit ptr
+in new code.</p>
+</dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.spral_ssids_analyse_coord">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssids_analyse_coord</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">n</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">order</span></span>, <span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n"><span class="pre">ne</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">row</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">col</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">val</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">akeep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_inform</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssids_analyse_coord" title="Permalink to this definition"></a><br /></dt>
+<dd><p>As <a class="reference internal" href="#c.spral_ssids_analyse" title="spral_ssids_analyse"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_analyse()</span></code></a>, but for coordinate data. The variant
+parameters are:</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ne</strong> – number of non-zero entries in <span class="math notranslate nohighlight">\(A\)</span>.</p></li>
+<li><p><strong>row[ne]</strong> – row indices for <span class="math notranslate nohighlight">\(A\)</span>
+(see <a class="reference internal" href="coord_format.html"><span class="doc">Coordinate format</span></a>).</p></li>
+<li><p><strong>col[ne]</strong> – column indices for <span class="math notranslate nohighlight">\(A\)</span>
+(see <a class="reference internal" href="coord_format.html"><span class="doc">Coordinate format</span></a>).</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.spral_ssids_factor">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssids_factor</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="n"><span class="pre">posdef</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">ptr</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">row</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">val</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">scale</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">akeep</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">fkeep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_inform</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssids_factor" title="Permalink to this definition"></a><br /></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>posdef</strong> – true if matrix is positive-definite</p></li>
+<li><p><strong>ptr</strong> – may be <cite>NULL</cite>; otherwise a length <cite>n+1</cite> array of column pointers
+for <span class="math notranslate nohighlight">\(A\)</span>, only required if <code class="xref f f-type docutils literal notranslate"><span class="pre">akeep</span></code> was obtained by running
+<a class="reference internal" href="#c.spral_ssids_analyse" title="spral_ssids_analyse"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_analyse()</span></code></a> with <cite>check=true</cite>, in which case it must
+be unchanged since that call.</p></li>
+<li><p><strong>row</strong> – may be <cite>NULL</cite>; otherwise a length <cite>ptr[n]</cite> array of row indices
+for <span class="math notranslate nohighlight">\(A\)</span>, only required if <code class="xref f f-type docutils literal notranslate"><span class="pre">akeep</span></code> was obtained by running
+<a class="reference internal" href="#c.spral_ssids_analyse" title="spral_ssids_analyse"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_analyse()</span></code></a> with <cite>check=true</cite>, in which case it must
+be unchanged since that call.</p></li>
+<li><p><strong>val[]</strong> – non-zero values for <span class="math notranslate nohighlight">\(A\)</span> in same format as for
+the call to <a class="reference internal" href="#c.spral_ssids_analyse" title="spral_ssids_analyse"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_analyse()</span></code></a> or
+<a class="reference internal" href="#c.spral_ssids_analyse_coord" title="spral_ssids_analyse_coord"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_analyse_coord()</span></code></a>.</p></li>
+<li><p><strong>scale</strong> – may be <cite>NULL</cite>; otherwise a length <cite>n</cite> array for diagonal
+scaling. <cite>scale[i-1]</cite> contains entry <span class="math notranslate nohighlight">\(S_ii\)</span> of <span class="math notranslate nohighlight">\(S\)</span>. Must be
+supplied by user on entry if
+<code class="xref c c-member docutils literal notranslate"><span class="pre">options.scaling=0</span></code> (user-supplied
+scaling). On exit, returns scaling used.</p></li>
+<li><p><strong>akeep</strong> – symbolic factorization returned by preceding call to
+<code class="xref c c-func docutils literal notranslate"><span class="pre">ssids_analyse()</span></code> or <code class="xref c c-func docutils literal notranslate"><span class="pre">ssids_analyse_coord()</span></code>.</p></li>
+<li><p><strong>fkeep</strong> – returns numeric factorization, to be passed unchanged
+to subsequent routines.</p></li>
+<li><p><strong>options</strong> – specifies algorithm options to be used
+(see <code class="xref c c-type docutils literal notranslate"><span class="pre">spral_ssids_options</span></code>).</p></li>
+<li><p><strong>inform</strong> – returns information about the execution of the routine
+(see <code class="xref c c-type docutils literal notranslate"><span class="pre">spral_ssids_inform</span></code>).</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.spral_ssids_solve1">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssids_solve1</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">job</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">x1</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">akeep</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">fkeep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_inform</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssids_solve1" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Solve (for a single right-hand side) one of the following equations:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p><cite>job</cite></p></th>
+<th class="head"><p>Equation solved</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>0</p></td>
+<td><p><span class="math notranslate nohighlight">\(Ax=b\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p>1</p></td>
+<td><p><span class="math notranslate nohighlight">\(PLx=Sb\)</span></p></td>
+</tr>
+<tr class="row-even"><td><p>2</p></td>
+<td><p><span class="math notranslate nohighlight">\(Dx=b\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p>3</p></td>
+<td><p><span class="math notranslate nohighlight">\((PL)^TS^{-1}x=b\)</span></p></td>
+</tr>
+<tr class="row-even"><td><p>4</p></td>
+<td><p><span class="math notranslate nohighlight">\(D(PL)^TS^{-1}x=b\)</span></p></td>
+</tr>
+</tbody>
+</table>
+<p>Recall <span class="math notranslate nohighlight">\(A\)</span> has been factorized as either:</p>
+<ul class="simple">
+<li><p><span class="math notranslate nohighlight">\(SAS = (PL)(PL)^T~\)</span> (positive-definite case); or</p></li>
+<li><p><span class="math notranslate nohighlight">\(SAS = (PL)D(PL)^T\)</span> (indefinite case).</p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>job</strong> – specifies equation to solve, as per above table.</p></li>
+<li><p><strong>x1[n]</strong> – right-hand side <span class="math notranslate nohighlight">\(b\)</span> on entry, solution <span class="math notranslate nohighlight">\(x\)</span>
+on exit.</p></li>
+<li><p><strong>akeep</strong> – symbolic factorization returned by preceding
+call to <a class="reference internal" href="#c.spral_ssids_analyse" title="spral_ssids_analyse"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_analyse()</span></code></a> or
+<a class="reference internal" href="#c.spral_ssids_analyse_coord" title="spral_ssids_analyse_coord"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_analyse_coord()</span></code></a>.</p></li>
+<li><p><strong>fkeep</strong> – numeric factorization returned by preceding
+call to <a class="reference internal" href="#c.spral_ssids_factor" title="spral_ssids_factor"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_factor()</span></code></a>.</p></li>
+<li><p><strong>options</strong> – specifies algorithm options to be used
+(see <code class="xref c c-type docutils literal notranslate"><span class="pre">spral_ssids_options</span></code>).</p></li>
+<li><p><strong>inform</strong> – returns information about the execution of the routine
+(see <code class="xref c c-type docutils literal notranslate"><span class="pre">spral_ssids_inform</span></code>).</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.spral_ssids_solve">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssids_solve</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">job</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">nrhs</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">x</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">ldx</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">akeep</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">fkeep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_inform</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssids_solve" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Solve (for multiple right-hand sides) one of the following equations:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p><cite>job</cite></p></th>
+<th class="head"><p>Equation solved</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>0</p></td>
+<td><p><span class="math notranslate nohighlight">\(AX=B\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p>1</p></td>
+<td><p><span class="math notranslate nohighlight">\(PLX=SB\)</span></p></td>
+</tr>
+<tr class="row-even"><td><p>2</p></td>
+<td><p><span class="math notranslate nohighlight">\(DX=B\)</span></p></td>
+</tr>
+<tr class="row-odd"><td><p>3</p></td>
+<td><p><span class="math notranslate nohighlight">\((PL)^TS^{-1}X=B\)</span></p></td>
+</tr>
+<tr class="row-even"><td><p>4</p></td>
+<td><p><span class="math notranslate nohighlight">\(D(PL)^TS^{-1}X=B\)</span></p></td>
+</tr>
+</tbody>
+</table>
+<p>Recall <span class="math notranslate nohighlight">\(A\)</span> has been factorized as either:</p>
+<ul class="simple">
+<li><p><span class="math notranslate nohighlight">\(SAS = (PL)(PL)^T~\)</span> (positive-definite case); or</p></li>
+<li><p><span class="math notranslate nohighlight">\(SAS = (PL)D(PL)^T\)</span> (indefinite case).</p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>job</strong> – specifies equation to solve, as per above table.</p></li>
+<li><p><strong>nrhs</strong> – number of right-hand sides.</p></li>
+<li><p><strong>x[ldx*nrhs]</strong> – right-hand sides <span class="math notranslate nohighlight">\(B\)</span> on entry,
+solutions <span class="math notranslate nohighlight">\(X\)</span> on exit. The <cite>i</cite>-th entry of right-hand side <cite>j</cite>
+is in position <cite>x[j*ldx+i]</cite>.</p></li>
+<li><p><strong>ldx</strong> – leading dimension of <cite>x</cite>.</p></li>
+<li><p><strong>akeep</strong> – symbolic factorization returned by preceding
+call to <a class="reference internal" href="#c.spral_ssids_analyse" title="spral_ssids_analyse"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_analyse()</span></code></a> or
+<a class="reference internal" href="#c.spral_ssids_analyse_coord" title="spral_ssids_analyse_coord"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_analyse_coord()</span></code></a>.</p></li>
+<li><p><strong>fkeep</strong> – numeric factorization returned by preceding
+call to <a class="reference internal" href="#c.spral_ssids_factor" title="spral_ssids_factor"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_factor()</span></code></a>.</p></li>
+<li><p><strong>options</strong> – specifies algorithm options to be used
+(see <code class="xref c c-type docutils literal notranslate"><span class="pre">spral_ssids_options</span></code>).</p></li>
+<li><p><strong>inform</strong> – returns information about the execution of the routine
+(see <code class="xref c c-type docutils literal notranslate"><span class="pre">spral_ssids_inform</span></code>).</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.spral_ssids_free_akeep">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssids_free_akeep</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">akeep</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssids_free_akeep" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Frees memory and resources associated with <a class="reference internal" href="#c.spral_ssids_free_akeep" title="akeep"><code class="xref c c-type docutils literal notranslate"><span class="pre">akeep</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>akeep</strong> – symbolic factors to be freed.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>0 on success, or a CUDA error code on failure.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.spral_ssids_free_fkeep">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssids_free_fkeep</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">fkeep</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssids_free_fkeep" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Frees memory and resources associated with <a class="reference internal" href="#c.spral_ssids_free_fkeep" title="fkeep"><code class="xref c c-type docutils literal notranslate"><span class="pre">fkeep</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fkeep</strong> – numeric factors to be freed.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>0 on success, or a CUDA error code on failure.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.spral_ssids_free">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssids_free</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">akeep</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">fkeep</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssids_free" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Frees memory and resources associated with <a class="reference internal" href="#c.spral_ssids_free" title="akeep"><code class="xref c c-type docutils literal notranslate"><span class="pre">akeep</span></code></a> and
+<a class="reference internal" href="#c.spral_ssids_free" title="fkeep"><code class="xref c c-type docutils literal notranslate"><span class="pre">fkeep</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>akeep</strong> – symbolic factors to be freed.</p></li>
+<li><p><strong>fkeep</strong> – numeric factors to be freed.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>0 on success, or a CUDA error code on failure.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The free routine(s) must be called by the user. Merely deallocating
+<code class="xref c c-type docutils literal notranslate"><span class="pre">akeep</span></code> or <code class="xref c c-type docutils literal notranslate"><span class="pre">fkeep</span></code>, or allowing them to go out of scope will
+result in memory leaks. <code class="xref c c-type docutils literal notranslate"><span class="pre">akeep</span></code> should only be deallocated after all
+associated numeric factorizations <code class="xref c c-type docutils literal notranslate"><span class="pre">fkeep</span></code> have been freed.</p>
+</div>
+</section>
+<section id="advanced-subroutines">
+<h2>Advanced subroutines<a class="headerlink" href="#advanced-subroutines" title="Permalink to this heading"></a></h2>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.spral_ssids_enquire_posdef">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssids_enquire_posdef</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">akeep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">fkeep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_inform</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">d</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssids_enquire_posdef" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Return the diagonal entries of the Cholesky factor.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>akeep</strong> – symbolic factorization returned by preceding
+call to <a class="reference internal" href="#c.spral_ssids_analyse" title="spral_ssids_analyse"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_analyse()</span></code></a> or
+<a class="reference internal" href="#c.spral_ssids_analyse_coord" title="spral_ssids_analyse_coord"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_analyse_coord()</span></code></a>.</p></li>
+<li><p><strong>fkeep</strong> – numeric factorization returned by preceding
+call to <a class="reference internal" href="#c.spral_ssids_factor" title="spral_ssids_factor"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_factor()</span></code></a>.</p></li>
+<li><p><strong>options</strong> – specifies algorithm options to be used
+(see <code class="xref c c-type docutils literal notranslate"><span class="pre">spral_ssids_options</span></code>).</p></li>
+<li><p><strong>inform</strong> – returns information about the execution of the routine
+(see <code class="xref c c-type docutils literal notranslate"><span class="pre">spral_ssids_inform</span></code>).</p></li>
+<li><p><strong>d[n]</strong> – returns the diagonal of <span class="math notranslate nohighlight">\(L\)</span>. d[i-1] stores the
+entry <span class="math notranslate nohighlight">\(L_{ii}\)</span>.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.spral_ssids_enquire_indef">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssids_enquire_indef</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">akeep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">fkeep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_inform</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">piv_order</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">d</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssids_enquire_indef" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Return the pivot order and/or values of <span class="math notranslate nohighlight">\(D\)</span> of the Symmetric Indefinite
+Factorization.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>akeep</strong> – symbolic factorization returned by preceding
+call to <a class="reference internal" href="#c.spral_ssids_analyse" title="spral_ssids_analyse"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_analyse()</span></code></a> or
+<a class="reference internal" href="#c.spral_ssids_analyse_coord" title="spral_ssids_analyse_coord"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_analyse_coord()</span></code></a>.</p></li>
+<li><p><strong>fkeep</strong> – numeric factorization returned by preceding
+call to <a class="reference internal" href="#c.spral_ssids_factor" title="spral_ssids_factor"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_factor()</span></code></a>.</p></li>
+<li><p><strong>options</strong> – specifies algorithm options to be used
+(see <code class="xref c c-type docutils literal notranslate"><span class="pre">spral_ssids_options</span></code>).</p></li>
+<li><p><strong>inform</strong> – returns information about the execution of the routine
+(see <code class="xref c c-type docutils literal notranslate"><span class="pre">spral_ssids_inform</span></code>).</p></li>
+<li><p><strong>piv_order</strong> – may be <cite>NULL</cite>; otherwise a length <cite>n</cite> array for the pivot
+order. On return, <span class="math notranslate nohighlight">\(|\,\texttt{piv_order[i]}|\)</span> gives the position
+of variable <span class="math notranslate nohighlight">\(i\)</span> in the pivot order.</p></li>
+<li><p><strong>d</strong> – may be <cite>NULL</cite>; otherwise a length <cite>2*n</cite> array for the
+<span class="math notranslate nohighlight">\(2\times2\)</span> block diagonal of <span class="math notranslate nohighlight">\(D\)</span>. <cite>d[2*(i-1)+0]</cite> stores
+<span class="math notranslate nohighlight">\(D_{ii}\)</span> and <cite>d[2*(i-1)+1]</cite> stores <span class="math notranslate nohighlight">\(D_{(i+1)i}\)</span>.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.spral_ssids_alter">
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssids_alter</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">d</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">akeep</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">fkeep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_inform</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssids_alter" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Alter the entries of the diagonal factor <span class="math notranslate nohighlight">\(D\)</span> for a symmetric indefinite
+factorization. The pivot order remains the same.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>d[2*n]</strong> – New entries of <span class="math notranslate nohighlight">\(D\)</span>.
+<cite>d[2*(i-1)+0]</cite> stores <span class="math notranslate nohighlight">\(D_{ii}\)</span> and <cite>d[2*(i-1)+1]</cite> stores
+<span class="math notranslate nohighlight">\(D_{(i+1)i}\)</span>.</p></li>
+<li><p><strong>akeep</strong> – symbolic factorization returned by preceding
+call to <a class="reference internal" href="#c.spral_ssids_analyse" title="spral_ssids_analyse"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_analyse()</span></code></a> or
+<a class="reference internal" href="#c.spral_ssids_analyse_coord" title="spral_ssids_analyse_coord"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_analyse_coord()</span></code></a>.</p></li>
+<li><p><strong>fkeep</strong> – numeric factorization returned by preceding
+call to <a class="reference internal" href="#c.spral_ssids_factor" title="spral_ssids_factor"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_factor()</span></code></a>.</p></li>
+<li><p><strong>options</strong> – specifies algorithm options to be used
+(see <code class="xref c c-type docutils literal notranslate"><span class="pre">spral_ssids_options</span></code>).</p></li>
+<li><p><strong>inform</strong> – returns information about the execution of the routine
+(see <code class="xref c c-type docutils literal notranslate"><span class="pre">spral_ssids_inform</span></code>).</p></li>
+</ul>
+</dd>
+</dl>
+<p><strong>Note:</strong> This routine is not compatabile with the option
+<code class="xref c c-member docutils literal notranslate"><span class="pre">options.presolve=1</span></code>.</p>
+</dd></dl>
+
+</section>
+<section id="derived-types">
+<h2>Derived types<a class="headerlink" href="#derived-types" title="Permalink to this heading"></a></h2>
+<dl class="c type">
+<dt class="sig sig-object c">
+<span class="sig-name descname"><span class="pre">struct</span> <span class="pre">spral_ssids_options</span></span></dt>
+<dd><p>The derived data type ssids_options is used to specify the options
+used within <code class="docutils literal notranslate"><span class="pre">SSIDS</span></code>. The components, that are automatically given
+default values in the definition of the type, are:</p>
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.array_base">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">array_base</span></span></span><br /></dt>
+<dd><p>Indexing base for arrays. Either 0 (C indexing) or 1 (Fortran indexing).
+Default is 0.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.print_level">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">print_level</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.print_level" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Level of printing:</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>&lt; 0</p></td>
+<td><p>No printing.</p></td>
+</tr>
+<tr class="row-even"><td><p>= 0 (default)</p></td>
+<td><p>Error and warning messages only.</p></td>
+</tr>
+<tr class="row-odd"><td><p>= 1</p></td>
+<td><p>As 0, plus basic diagnostic printing.</p></td>
+</tr>
+<tr class="row-even"><td><p>&gt; 1</p></td>
+<td><p>As 1, plus some additional diagnostic printing.</p></td>
+</tr>
+</tbody>
+</table>
+<p>The default is 0.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.unit_diagnostics">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">unit_diagnostics</span></span></span><br /></dt>
+<dd><p>Fortran unit number for diagnostics printing.
+Printing is suppressed if &lt;0.
+The default is 6 (stdout).</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.unit_error">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">unit_error</span></span></span><br /></dt>
+<dd><p>Fortran unit number for printing of error messages.
+Printing is suppressed if &lt;0.
+The default is 6 (stdout).</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.unit_warning">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">unit_warning</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.unit_warning" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Fortran unit number for printing of warning messages.
+Printing is suppressed if &lt;0.
+The default is 6 (stdout).</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.ordering">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ordering</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.ordering" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Ordering method to use in analyse phase:</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>0</p></td>
+<td><p>User-supplied ordering is used (<cite>order</cite> argument to
+<a class="reference internal" href="#c.spral_ssids_analyse" title="spral_ssids_analyse"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_analyse()</span></code></a> or
+<a class="reference internal" href="#c.spral_ssids_analyse_coord" title="spral_ssids_analyse_coord"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_analyse_coord()</span></code></a>).</p></td>
+</tr>
+<tr class="row-even"><td><p>1 (default)</p></td>
+<td><p>METIS ordering with default settings.</p></td>
+</tr>
+<tr class="row-odd"><td><p>2</p></td>
+<td><p>Matching-based elimination ordering is computed (the
+Hungarian algorithm is used to identify large
+off-diagonal entries. A restricted METIS ordering is
+then used that forces these on to the subdiagonal).</p>
+<p><strong>Note:</strong> This option should only be chosen for
+indefinite systems. A scaling is also computed that may
+be used in <a class="reference internal" href="#c.spral_ssids_factor" title="spral_ssids_factor"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_factor()</span></code></a> (see
+<code class="xref c c-member docutils literal notranslate"><span class="pre">scaling</span></code>
+below).</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>The default is 1.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.nemin">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">nemin</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.nemin" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Supernode amalgamation threshold. Two neighbours in the elimination tree
+are merged if they both involve fewer than <cite>nemin</cite> eliminations.
+The default is used if <cite>nemin&lt;1</cite>.
+The default is 32.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.gpu_perf_coeff">
+<span class="kt"><span class="pre">float</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">gpu_perf_coeff</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.gpu_perf_coeff" title="Permalink to this definition"></a><br /></dt>
+<dd><p>GPU performance coefficient. How many
+times faster a GPU is than CPU at factoring a subtree.
+Default is <cite>1.0</cite>.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.scaling">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">scaling</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.scaling" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Scaling algorithm to use:</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>&lt;=0 (default)</p></td>
+<td><p>No scaling (if <code class="docutils literal notranslate"><span class="pre">scale[]</span></code> is not present on call to
+<a class="reference internal" href="#c.spral_ssids_factor" title="spral_ssids_factor"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_factor()</span></code></a>, or user-supplied
+scaling (if <code class="docutils literal notranslate"><span class="pre">scale[]</span></code> is present).</p></td>
+</tr>
+<tr class="row-even"><td><p>=1</p></td>
+<td><p>Compute using weighted bipartite matching via the
+Hungarian Algorithm (MC64 algorithm).</p></td>
+</tr>
+<tr class="row-odd"><td><p>=2</p></td>
+<td><p>Compute using a weighted bipartite matching via the
+Auction Algorithm (may be lower quality than that
+computed using the Hungarian Algorithm, but can be
+considerably faster).</p></td>
+</tr>
+<tr class="row-even"><td><p>=3</p></td>
+<td><p>Use matching-based ordering generated during the
+analyse phase using <code class="xref c c-member docutils literal notranslate"><span class="pre">options.ordering=2</span></code>. The scaling
+will be the same as that generated with
+<code class="xref c c-member docutils literal notranslate"><span class="pre">options.scaling=1</span></code>
+if the matrix values have not changed. This option
+will generate an error if a matching-based ordering
+was not used during analysis.</p></td>
+</tr>
+<tr class="row-odd"><td><p>&gt;=4</p></td>
+<td><p>Compute using the norm-equilibration algorithm of
+Ruiz (see <a class="reference internal" href="scaling.html"><span class="doc">SCALING - Sparse matrix scalings</span></a>).</p></td>
+</tr>
+</tbody>
+</table>
+<p>The default is 0.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.small_subtree_threshold">
+<span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">small_subtree_threshold</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.small_subtree_threshold" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Maximum number of
+flops in a subtree treated as a single task. See
+<a class="reference internal" href="#ssids-small-leaf"><span class="std std-ref">method section</span></a>.
+The default is <cite>4e6</cite>.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.cpu_block_size">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">cpu_block_size</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.cpu_block_size" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Block size to use for
+parallelization of large nodes on CPU resources.
+Default is <cite>256</cite>.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.action">
+<span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">action</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.action" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Continue factorization of singular matrix on discovery of zero pivot if
+true (a warning is issued), or abort if false.
+The default is true.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.pivot_method">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">pivot_method</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.pivot_method" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Pivot method to be used on CPU, one of:</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>1</p></td>
+<td><p>Aggressive a posteori pivoting. Cholesky-like
+communication pattern is used, but a single failed pivot
+requires restart of node factorization and potential
+recalculation of all uneliminated entries.</p></td>
+</tr>
+<tr class="row-even"><td><p>2 (default)</p></td>
+<td><p>Block a posteori pivoting. A failed pivot only requires
+recalculation of entries within its own block column.</p></td>
+</tr>
+<tr class="row-odd"><td><p>3</p></td>
+<td><p>Threshold partial pivoting. Not parallel.</p></td>
+</tr>
+</tbody>
+</table>
+<p>Default is <cite>2</cite>.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.small">
+<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">small</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.small" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Threshold below which an entry is treated as
+equivalent to <cite>0.0</cite>.
+The default is <cite>1e-20</cite>.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.u">
+<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">u</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.u" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Relative pivot threshold used in symmetric indefinite case. Values outside
+of the range <span class="math notranslate nohighlight">\([0,0.5]\)</span> are treated as the closest value in that
+range.
+The default is <cite>0.01</cite>.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="c type">
+<dt class="sig sig-object c">
+<span class="sig-name descname"><span class="pre">struct</span> <span class="pre">spral_ssids_inform</span></span></dt>
+<dd><p>Used to return information about the progress and needs of the algorithm.</p>
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.cpu_flops">
+<span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">cpu_flops</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.cpu_flops" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Number of flops performed on CPU</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.cublas_error">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">cublas_error</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.cublas_error" title="Permalink to this definition"></a><br /></dt>
+<dd><p>CUBLAS error code in the event of a CUBLAS error (0 otherwise).</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.cuda_error">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">cuda_error</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.cuda_error" title="Permalink to this definition"></a><br /></dt>
+<dd><p>CUDA error code in the event of a CUDA error (0 otherwise).
+Note that due to asynchronous execution, CUDA errors may
+not be reported by the call that caused them.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.flag">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">flag</span></span></span><br /></dt>
+<dd><p>Exit status of the algorithm (see table below).</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.gpu_flops">
+<span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">gpu_flops</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.gpu_flops" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Number of flops performed on GPU</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.matrix_dup">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">matrix_dup</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.matrix_dup" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Number of duplicate entries encountered (if
+<a class="reference internal" href="#c.spral_ssids_analyse" title="spral_ssids_analyse"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_analyse()</span></code></a> called with check=true, or any call to
+<a class="reference internal" href="#c.spral_ssids_analyse_coord" title="spral_ssids_analyse_coord"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_analyse_coord()</span></code></a>).</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.matrix_missing_diag">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">matrix_missing_diag</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.matrix_missing_diag" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Number of diagonal entries without an explicit value (if
+<a class="reference internal" href="#c.spral_ssids_analyse" title="spral_ssids_analyse"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_analyse()</span></code></a> called with check=true, or
+any call to <a class="reference internal" href="#c.spral_ssids_analyse_coord" title="spral_ssids_analyse_coord"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_analyse_coord()</span></code></a>).</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.matrix_outrange">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">matrix_outrange</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.matrix_outrange" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Number of out-of-range entries encountered (if
+<a class="reference internal" href="#c.spral_ssids_analyse" title="spral_ssids_analyse"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_analyse()</span></code></a> called with check=true, or any call to
+<a class="reference internal" href="#c.spral_ssids_analyse_coord" title="spral_ssids_analyse_coord"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_analyse_coord()</span></code></a>).</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.matrix_rank">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">matrix_rank</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.matrix_rank" title="Permalink to this definition"></a><br /></dt>
+<dd><p>(Estimated) rank (structural after analyse phase, numerical after
+factorize phase).</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.maxdepth">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">maxdepth</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.maxdepth" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Maximum depth of the assembly tree.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.maxfront">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">maxfront</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.maxfront" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Maximum front size (without pivoting after analyse phase, with pivoting
+after factorize phase).</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.maxsupernode">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">maxsupernode</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.maxsupernode" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Maximum supernode size (without pivoting after analyse phase, with
+pivoting after factorize phase).</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.num_delay">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">num_delay</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.num_delay" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Number of delayed pivots. That is, the total number of fully-summed
+variables that were passed to the father node because of stability
+considerations. If a variable is passed further up the tree, it will be
+counted again.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.num_factor">
+<span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">num_factor</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.num_factor" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Number of entries in <span class="math notranslate nohighlight">\(L\)</span> (without pivoting after analyse phase,
+with pivoting after factorize phase).</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.num_flops">
+<span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">num_flops</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.num_flops" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Number of floating-point operations for Cholesky factorization (indefinte
+needs slightly more). Without pivoting after analyse phase, with pivoting
+after factorize phase.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.num_neg">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">num_neg</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.num_neg" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Number of negative eigenvalues of the matrix <span class="math notranslate nohighlight">\(D\)</span> after factorize
+phase.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.num_sup">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">num_sup</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.num_sup" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Number of supernodes in assembly tree.</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.num_two">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">num_two</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.num_two" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Number of <span class="math notranslate nohighlight">\(2 \times 2\)</span> pivots used by the factorization (i.e. in
+the matrix <span class="math notranslate nohighlight">\(D\)</span>).</p>
+</dd></dl>
+
+<dl class="c member">
+<dt class="sig sig-object c" id="c.PhonyNameDueToError.stat">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">stat</span></span></span><br /></dt>
+<dd><p>Fortran allocation status parameter in event of allocation error
+(0 otherwise).</p>
+</dd></dl>
+
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>inform.flag</p></th>
+<th class="head"><p>Return status</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>0</p></td>
+<td><p>Success.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-1</p></td>
+<td><p>Error in sequence of calls (may be caused by failure of a
+preceding call).</p></td>
+</tr>
+<tr class="row-even"><td><p>-2</p></td>
+<td><p>n&lt;0 or ne&lt;1.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-3</p></td>
+<td><p>Error in ptr[].</p></td>
+</tr>
+<tr class="row-even"><td><p>-4</p></td>
+<td><p>CSC format: All variable indices in one or more columns are
+out-of-range.</p>
+<p>Coordinate format: All entries are out-of-range.</p>
+</td>
+</tr>
+<tr class="row-odd"><td><p>-5</p></td>
+<td><p>Matrix is singular and options.action=false</p></td>
+</tr>
+<tr class="row-even"><td><p>-6</p></td>
+<td><p>Matrix found not to be positive definite.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-7</p></td>
+<td><p>ptr[] and/or row[] not present, but required as
+<a class="reference internal" href="#c.spral_ssids_analyse" title="spral_ssids_analyse"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_analyse()</span></code></a> was called with check=false.</p></td>
+</tr>
+<tr class="row-even"><td><p>-8</p></td>
+<td><p>options.ordering out of range, or options.ordering=0 and
+order parameter not provided or not a valid permutation.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-9</p></td>
+<td><p>options.ordering=-2 but val[] was not supplied.</p></td>
+</tr>
+<tr class="row-even"><td><p>-10</p></td>
+<td><p>ldx&lt;n or nrhs&lt;1.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-11</p></td>
+<td><p>job is out-of-range.</p></td>
+</tr>
+<tr class="row-even"><td><p>-13</p></td>
+<td><p>Called <a class="reference internal" href="#c.spral_ssids_enquire_posdef" title="spral_ssids_enquire_posdef"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_enquire_posdef()</span></code></a> on indefinite
+factorization.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-14</p></td>
+<td><p>Called <a class="reference internal" href="#c.spral_ssids_enquire_indef" title="spral_ssids_enquire_indef"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_enquire_indef()</span></code></a> on
+positive-definite factorization.</p></td>
+</tr>
+<tr class="row-even"><td><p>-15</p></td>
+<td><p>options.scaling=3 but a matching-based ordering was not
+performed during analyse phase.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-50</p></td>
+<td><p>Allocation error. If available, the stat parameter is
+returned in inform.stat.</p></td>
+</tr>
+<tr class="row-even"><td><p>-51</p></td>
+<td><p>CUDA error. The CUDA error return value is returned in
+inform.cuda_error.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-52</p></td>
+<td><p>CUBLAS error. The CUBLAS error return value is returned in
+inform.cublas_error.</p></td>
+</tr>
+<tr class="row-even"><td><p>-53</p></td>
+<td><p>OpenMP cancellation is disabled. Please set the environment
+variable OMP_CANCELLATION=true.</p></td>
+</tr>
+<tr class="row-odd"><td><p>+1</p></td>
+<td><p>Out-of-range variable indices found and ignored in input
+data. inform.matrix_outrange is set to the number of such
+entries.</p></td>
+</tr>
+<tr class="row-even"><td><p>+2</p></td>
+<td><p>Duplicate entries found and summed in input data.
+inform.matrix_dup is set to the number of such entries.</p></td>
+</tr>
+<tr class="row-odd"><td><p>+3</p></td>
+<td><p>Combination of +1 and +2.</p></td>
+</tr>
+<tr class="row-even"><td><p>+4</p></td>
+<td><p>One or more diagonal entries of <span class="math notranslate nohighlight">\(A\)</span> are missing.</p></td>
+</tr>
+<tr class="row-odd"><td><p>+5</p></td>
+<td><p>Combination of +4 and +1 or +2.</p></td>
+</tr>
+<tr class="row-even"><td><p>+6</p></td>
+<td><p>Matrix is found be (structurally) singular during analyse
+phase. This will overwrite any of the above warning flags.</p></td>
+</tr>
+<tr class="row-odd"><td><p>+7</p></td>
+<td><p>Matrix is found to be singular during factorize phase.</p></td>
+</tr>
+<tr class="row-even"><td><p>+8</p></td>
+<td><p>Matching-based scaling found as side-effect of
+matching-based ordering ignored
+(consider setting options.scaling=3).</p></td>
+</tr>
+<tr class="row-odd"><td><p>+50</p></td>
+<td><p>OpenMP processor binding is disabled. Consider setting
+the environment variable OMP_PROC_BIND=true (this may
+affect performance on NUMA systems).</p></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</section>
+<section id="example">
+<span id="ssids-example"></span><h2>Example<a class="headerlink" href="#example" title="Permalink to this heading"></a></h2>
+<p>Suppose we wish to factorize the matrix</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}A = \left(\begin{array}{ccccc}
+   2. &amp; 1.                \\
+   1. &amp; 4. &amp; 1. &amp;    &amp; 1. \\
+      &amp; 1. &amp; 3. &amp; 2.      \\
+      &amp;    &amp; 2. &amp; -1. &amp;    \\
+      &amp; 1. &amp;    &amp;    &amp; 2.
+\end{array}\right)\end{split}\]</div>
+<p>and then solve for the right-hand side</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}B = \left(\begin{array}{c}
+   4.    \\
+   17.   \\
+   19.   \\
+   2.    \\
+   12.
+\end{array}\right).\end{split}\]</div>
+<p>The following code may be used.</p>
+<div class="highlight-C notranslate"><div class="highlight"><pre><span></span><span class="cm">/* examples/C/ssids.c - Example code for SPRAL_SSIDS package */</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;spral.h&quot;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdlib.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdint.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">   </span><span class="cm">/* Derived types */</span>
+<span class="w">   </span><span class="kt">void</span><span class="w"> </span><span class="o">*</span><span class="n">akeep</span><span class="p">,</span><span class="w"> </span><span class="o">*</span><span class="n">fkeep</span><span class="p">;</span>
+<span class="w">   </span><span class="k">struct</span><span class="w"> </span><span class="nc">spral_ssids_options</span><span class="w"> </span><span class="n">options</span><span class="p">;</span>
+<span class="w">   </span><span class="k">struct</span><span class="w"> </span><span class="nc">spral_ssids_inform</span><span class="w"> </span><span class="n">inform</span><span class="p">;</span>
+
+<span class="w">   </span><span class="cm">/* Initialize derived types */</span>
+<span class="w">   </span><span class="n">akeep</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">NULL</span><span class="p">;</span><span class="w"> </span><span class="n">fkeep</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">NULL</span><span class="p">;</span><span class="w"> </span><span class="cm">/* Important that these are NULL to start with */</span>
+<span class="w">   </span><span class="n">spral_ssids_default_options</span><span class="p">(</span><span class="o">&amp;</span><span class="n">options</span><span class="p">);</span>
+<span class="w">   </span><span class="n">options</span><span class="p">.</span><span class="n">array_base</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span><span class="w"> </span><span class="cm">/* Need to set to 1 if using Fortran 1-based indexing */</span>
+
+<span class="w">   </span><span class="cm">/* Data for matrix:</span>
+<span class="cm">    * ( 2  1         )</span>
+<span class="cm">    * ( 1  4  1    1 )</span>
+<span class="cm">    * (    1  3  2   )</span>
+<span class="cm">    * (       2 -1   )</span>
+<span class="cm">    * (    1       2 ) */</span>
+<span class="w">   </span><span class="kt">bool</span><span class="w"> </span><span class="n">posdef</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span>
+<span class="w">   </span><span class="kt">int</span><span class="w"> </span><span class="n">n</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span>
+<span class="w">   </span><span class="kt">int64_t</span><span class="w"> </span><span class="n">ptr</span><span class="p">[]</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">        </span><span class="mi">3</span><span class="p">,</span><span class="w">             </span><span class="mi">6</span><span class="p">,</span><span class="w">         </span><span class="mi">8</span><span class="p">,</span><span class="w">   </span><span class="mi">9</span><span class="p">,</span><span class="w">  </span><span class="mi">10</span><span class="w"> </span><span class="p">};</span>
+<span class="w">   </span><span class="kt">int</span><span class="w"> </span><span class="n">row</span><span class="p">[]</span><span class="w">    </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">   </span><span class="mi">2</span><span class="p">,</span><span class="w">   </span><span class="mi">2</span><span class="p">,</span><span class="w">   </span><span class="mi">3</span><span class="p">,</span><span class="w">   </span><span class="mi">5</span><span class="p">,</span><span class="w">   </span><span class="mi">3</span><span class="p">,</span><span class="w">   </span><span class="mi">4</span><span class="p">,</span><span class="w">    </span><span class="mi">4</span><span class="p">,</span><span class="w">   </span><span class="mi">5</span><span class="w">   </span><span class="p">};</span>
+<span class="w">   </span><span class="kt">double</span><span class="w"> </span><span class="n">val</span><span class="p">[]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="mf">2.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="mf">4.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0</span><span class="p">,</span><span class="w"> </span><span class="mf">3.0</span><span class="p">,</span><span class="w"> </span><span class="mf">2.0</span><span class="p">,</span><span class="w"> </span><span class="mf">-1.0</span><span class="p">,</span><span class="w"> </span><span class="mf">2.0</span><span class="w"> </span><span class="p">};</span>
+
+<span class="w">   </span><span class="cm">/* The right-hand side with solution (1.0, 2.0, 3.0, 4.0, 5.0) */</span>
+<span class="w">   </span><span class="kt">double</span><span class="w"> </span><span class="n">x</span><span class="p">[]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="mf">4.0</span><span class="p">,</span><span class="w"> </span><span class="mf">17.0</span><span class="p">,</span><span class="w"> </span><span class="mf">19.0</span><span class="p">,</span><span class="w"> </span><span class="mf">2.0</span><span class="p">,</span><span class="w"> </span><span class="mf">12.0</span><span class="w"> </span><span class="p">};</span>
+
+<span class="w">   </span><span class="cm">/* Perform analyse and factorise with data checking */</span>
+<span class="w">   </span><span class="kt">bool</span><span class="w"> </span><span class="n">check</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">true</span><span class="p">;</span>
+<span class="w">   </span><span class="n">spral_ssids_analyse</span><span class="p">(</span><span class="n">check</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">,</span><span class="w"> </span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="n">row</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">akeep</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">options</span><span class="p">,</span>
+<span class="w">         </span><span class="o">&amp;</span><span class="n">inform</span><span class="p">);</span>
+<span class="w">   </span><span class="k">if</span><span class="p">(</span><span class="n">inform</span><span class="p">.</span><span class="n">flag</span><span class="o">&lt;</span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="n">spral_ssids_free</span><span class="p">(</span><span class="o">&amp;</span><span class="n">akeep</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">fkeep</span><span class="p">);</span>
+<span class="w">      </span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+<span class="w">   </span><span class="p">}</span>
+<span class="w">   </span><span class="n">spral_ssids_factor</span><span class="p">(</span><span class="n">posdef</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">,</span><span class="w"> </span><span class="n">val</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">,</span><span class="w"> </span><span class="n">akeep</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">fkeep</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">options</span><span class="p">,</span>
+<span class="w">         </span><span class="o">&amp;</span><span class="n">inform</span><span class="p">);</span>
+<span class="w">   </span><span class="k">if</span><span class="p">(</span><span class="n">inform</span><span class="p">.</span><span class="n">flag</span><span class="o">&lt;</span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="n">spral_ssids_free</span><span class="p">(</span><span class="o">&amp;</span><span class="n">akeep</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">fkeep</span><span class="p">);</span>
+<span class="w">      </span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+<span class="w">   </span><span class="p">}</span>
+
+<span class="w">   </span><span class="cm">/* Solve */</span>
+<span class="w">   </span><span class="n">spral_ssids_solve1</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">akeep</span><span class="p">,</span><span class="w"> </span><span class="n">fkeep</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">options</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">inform</span><span class="p">);</span>
+<span class="w">   </span><span class="k">if</span><span class="p">(</span><span class="n">inform</span><span class="p">.</span><span class="n">flag</span><span class="o">&lt;</span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="n">spral_ssids_free</span><span class="p">(</span><span class="o">&amp;</span><span class="n">akeep</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">fkeep</span><span class="p">);</span>
+<span class="w">      </span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+<span class="w">   </span><span class="p">}</span>
+<span class="w">   </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;The computed solution is:</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+<span class="w">   </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">&lt;</span><span class="n">n</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot; %18.10e&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">]);</span>
+<span class="w">   </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+
+<span class="w">   </span><span class="cm">/* Determine and print the pivot order */</span>
+<span class="w">   </span><span class="kt">int</span><span class="w"> </span><span class="n">piv_order</span><span class="p">[</span><span class="mi">5</span><span class="p">];</span>
+<span class="w">   </span><span class="n">spral_ssids_enquire_indef</span><span class="p">(</span><span class="n">akeep</span><span class="p">,</span><span class="w"> </span><span class="n">fkeep</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">options</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">inform</span><span class="p">,</span><span class="w"> </span><span class="n">piv_order</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">);</span>
+<span class="w">   </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Pivot order:&quot;</span><span class="p">);</span>
+<span class="w">   </span><span class="k">for</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">&lt;</span><span class="n">n</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot; %5d&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">piv_order</span><span class="p">[</span><span class="n">i</span><span class="p">]);</span>
+<span class="w">   </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+
+<span class="w">   </span><span class="kt">int</span><span class="w"> </span><span class="n">cuda_error</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">spral_ssids_free</span><span class="p">(</span><span class="o">&amp;</span><span class="n">akeep</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">fkeep</span><span class="p">);</span>
+<span class="w">   </span><span class="k">if</span><span class="p">(</span><span class="n">cuda_error</span><span class="o">!=</span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+
+<span class="w">   </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>This produces the following output:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">The</span> <span class="n">computed</span> <span class="n">solution</span> <span class="ow">is</span><span class="p">:</span>
+   <span class="mf">1.0000000000e+00</span>   <span class="mf">2.0000000000e+00</span>   <span class="mf">3.0000000000e+00</span>   <span class="mf">4.0000000000e+00</span>   <span class="mf">5.0000000000e+00</span>
+<span class="n">Pivot</span> <span class="n">order</span><span class="p">:</span>     <span class="mi">2</span>     <span class="mi">3</span>     <span class="mi">0</span>    <span class="o">-</span><span class="mi">1</span>     <span class="mi">1</span>
+</pre></div>
+</div>
+</section>
+<section id="driver-program">
+<h2>Driver Program<a class="headerlink" href="#driver-program" title="Permalink to this heading"></a></h2>
+<p>SSIDS ships with a driver program <code class="docutils literal notranslate"><span class="pre">spral_ssids</span></code> that allows reading a
+matrix in Rutherford-Boeing format specified as a command-line argument and
+factorizing it. There are a number of other command-line arguments that
+configure the factorization.</p>
+<dl class="c function">
+<dt class="sig sig-object c">
+<span class="sig-name descname"><span class="pre">spral_ssids</span></span></dt>
+<dd><p>SSIDS driver program.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filename</strong> – <p>Rutherford-Boeing matrix filename (default if not specified is <cite>matrix.rb</cite>).</p>
+<dl class="option-list">
+<dt><kbd><span class="option">--scale=<var>none</var></span></kbd></dt>
+<dd><p>use no scaling (the default).</p>
+</dd>
+<dt><kbd><span class="option">--scale=<var>mc64</var></span></kbd></dt>
+<dd><p>use the Hungarian scaling algorithm (as in <cite>MC64</cite>).</p>
+</dd>
+<dt><kbd><span class="option">--scale=<var>auction</var></span></kbd></dt>
+<dd><p>use the Auction scaling algorithm.</p>
+</dd>
+<dt><kbd><span class="option">--scale=<var>mc77</var></span></kbd></dt>
+<dd><p>use the norm-equilibration scaling algorithm (as in <cite>MC77</cite>).</p>
+</dd>
+<dt><kbd><span class="option">--ordering=<var>mc64-metis</var></span></kbd></dt>
+<dd><p>use matching-based ordering and scaling (<cite>scale</cite> is overwritten).</p>
+</dd>
+<dt><kbd><span class="option">--force-posdef</span></kbd></dt>
+<dd><p>force the matrix to be positive definite</p>
+</dd>
+<dt><kbd><span class="option">--posdef</span></kbd></dt>
+<dd><p>assume the matrix is positive definite.</p>
+</dd>
+<dt><kbd><span class="option">--time-scaling</span></kbd></dt>
+<dd><p>time the scaling routine.</p>
+</dd>
+<dt><kbd><span class="option">--nrhs</span></kbd></dt>
+<dd><p>set the number of right-hand sides <cite>[integer,default=1]</cite>.</p>
+</dd>
+<dt><kbd><span class="option">--nemin</span></kbd></dt>
+<dd><p>set the supernode amalgamation threshold <cite>[integer,default=32]</cite>.</p>
+</dd>
+<dt><kbd><span class="option">--u</span></kbd></dt>
+<dd><p>set the relative pivot threshold used in the symmetric indefinite case <cite>[real,default=0.01]</cite>.</p>
+</dd>
+<dt><kbd><span class="option">--max-load-inbalance</span></kbd></dt>
+<dd><p>set the maximum permissible load inbalance for leaf subtree allocations <cite>[real,default=1.2]</cite>.</p>
+</dd>
+<dt><kbd><span class="option">--pivot-method=<var>app-aggressive</var></span></kbd></dt>
+<dd><p>use aggressive a posteori pivoting.</p>
+</dd>
+<dt><kbd><span class="option">--pivot-method=<var>app-block</var></span></kbd></dt>
+<dd><p>use block a posteori pivoting (the default).</p>
+</dd>
+<dt><kbd><span class="option">--pivot-method=<var>tpp</var></span></kbd></dt>
+<dd><p>use threshold partial pivoting.</p>
+</dd>
+<dt><kbd><span class="option">--flat-topology</span></kbd></dt>
+<dd><p>force a flat machine topology (the default).</p>
+</dd>
+<dt><kbd><span class="option">--no-flat-topology</span></kbd></dt>
+<dd><p>use the actual machine topology.</p>
+</dd>
+<dt><kbd><span class="option">--disable-gpu</span></kbd></dt>
+<dd><p>don’t use an NVIDIA GPU if present.</p>
+</dd>
+<dt><kbd><span class="option">--min-gpu-work</span></kbd></dt>
+<dd><p>set the minimum number of flops in a subtree before scheduling on GPU <cite>[integer(long),default=5e9]</cite>.</p>
+</dd>
+<dt><kbd><span class="option">--gpu-perf-coeff</span></kbd></dt>
+<dd><p>set the GPU performance coefficient (how many times faster a GPU is than CPU at factoring a subtree) <cite>[real,default=1.0]</cite>.</p>
+</dd>
+<dt><kbd><span class="option">--small-subtree-threshold</span></kbd></dt>
+<dd><p>set the maximum number of flops in a subtree treated as a single task <cite>[integer(long),default=4e6]</cite>.</p>
+</dd>
+<dt><kbd><span class="option">--cpu-block-size</span></kbd></dt>
+<dd><p>set the block size to use for parallelization of large nodes on CPU resources <cite>[integer ,default=256]</cite>.</p>
+</dd>
+<dt><kbd><span class="option">--no-ignore-numa</span></kbd></dt>
+<dd><p>don’t treat all CPUs and GPUs as belonging to a single NUMA region (which is the default).</p>
+</dd>
+<dt><kbd><span class="option">--ngpus</span></kbd></dt>
+<dd><p>set the number of NVIDIA GPUs to use <cite>[integer,default=0]</cite>.</p>
+</dd>
+</dl>
+</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<p>For example, to use auction scaling with two right-hand sides on the <cite>linverse.rb</cite> matrix:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">./</span><span class="n">spral_ssids</span> <span class="n">linverse</span><span class="o">.</span><span class="n">rb</span> <span class="o">--</span><span class="n">scale</span><span class="o">=</span><span class="n">auction</span> <span class="o">--</span><span class="n">nrhs</span> <span class="mi">2</span>
+</pre></div>
+</div>
+<p>This produces output similar to the following:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">The</span> <span class="n">computed</span> <span class="n">solution</span> <span class="ow">is</span><span class="p">:</span>
+
+ <span class="n">Set</span> <span class="n">scaling</span> <span class="n">to</span> <span class="n">Auction</span>
+ <span class="n">solving</span> <span class="k">for</span>           <span class="mi">2</span> <span class="n">right</span><span class="o">-</span><span class="n">hand</span> <span class="n">sides</span>
+<span class="n">Reading</span> <span class="s1">&#39;linverse.rb&#39;</span><span class="o">...</span>
+<span class="n">ok</span>
+ <span class="n">Number</span> <span class="n">of</span> <span class="n">CUDA</span> <span class="n">devices</span><span class="p">:</span>            <span class="mi">0</span>
+ <span class="n">Forcing</span> <span class="n">topology</span> <span class="n">to</span>           <span class="mi">32</span>
+ <span class="n">Using</span>           <span class="mi">0</span> <span class="n">GPUs</span>
+ <span class="n">Used</span> <span class="n">order</span>            <span class="mi">1</span>
+<span class="n">ok</span>
+ <span class="n">Analyse</span> <span class="n">took</span>    <span class="mf">5.20000011E-02</span>
+<span class="n">Predict</span> <span class="n">nfact</span> <span class="o">=</span>   <span class="mf">3.03E+05</span>
+<span class="n">Predict</span> <span class="n">nflop</span> <span class="o">=</span>   <span class="mf">9.25E+06</span>
+<span class="n">nparts</span>         <span class="mi">1</span>
+<span class="n">cpu_fl</span>  <span class="mf">9.25E+06</span>
+<span class="n">gpu_fl</span>  <span class="mf">0.00E+00</span>
+<span class="n">Factorize</span><span class="o">...</span>
+<span class="n">ok</span>
+ <span class="n">Factor</span> <span class="n">took</span>    <span class="mf">1.20000001E-02</span>
+<span class="n">Solve</span><span class="o">...</span>
+<span class="n">ok</span>
+ <span class="n">Solve</span> <span class="n">took</span>    <span class="mf">1.00000005E-03</span>
+ <span class="n">number</span> <span class="n">bad</span> <span class="n">cmp</span> <span class="o">=</span>            <span class="mi">0</span>
+ <span class="n">fwd</span> <span class="n">error</span> <span class="o">||</span> <span class="o">||</span><span class="n">_inf</span> <span class="o">=</span>    <span class="mf">3.8014036363165360E-013</span>
+ <span class="n">bwd</span> <span class="n">error</span> <span class="n">scaled</span> <span class="o">=</span>    <span class="mf">4.2549737582555113E-015</span>   <span class="mf">4.2549737582555113E-015</span>
+  <span class="n">cmp</span><span class="p">:</span>     <span class="n">SMFCT</span>
+ <span class="n">anal</span><span class="p">:</span>      <span class="mf">0.05</span>
+ <span class="n">fact</span><span class="p">:</span>      <span class="mf">0.01</span>
+<span class="n">afact</span><span class="p">:</span>  <span class="mf">3.03E+05</span>
+<span class="n">aflop</span><span class="p">:</span>  <span class="mf">9.25E+06</span>
+<span class="n">nfact</span><span class="p">:</span>  <span class="mf">3.03E+05</span>
+<span class="n">nflop</span><span class="p">:</span>  <span class="mf">9.25E+06</span>
+<span class="n">delay</span><span class="p">:</span>         <span class="mi">0</span>
+<span class="n">inerti</span>      <span class="mi">2838</span>         <span class="mi">0</span>      <span class="mi">9161</span>
+<span class="mi">2</span><span class="n">x2piv</span>      <span class="mi">5502</span>
+<span class="n">maxfro</span>        <span class="mi">55</span>
+<span class="n">maxsup</span>        <span class="mi">52</span>
+<span class="n">not_fi</span>         <span class="mi">0</span>
+<span class="n">not_se</span>         <span class="mi">0</span>
+</pre></div>
+</div>
+</section>
+<section id="method">
+<span id="ssids-method"></span><h2>Method<a class="headerlink" href="#method" title="Permalink to this heading"></a></h2>
+<section id="partition-of-work-across-available-resources">
+<h3>Partition of work across available resources<a class="headerlink" href="#partition-of-work-across-available-resources" title="Permalink to this heading"></a></h3>
+<p>Once the ordering has been determined and the assembly tree determined in the
+analyse phase, the tree is broken into a number of leaf subtrees rooted at a
+single node, leaving a root subtree/forest consisting of all remaining nodes
+above those. Each leaf subtree is pre-assigned to a particular NUMA region or
+GPU for the factorization phase. Details of the algorithm used for
+finding these subtrees and their assignment can be found in the paper <a class="footnote-reference brackets" href="#id5" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a>.</p>
+<p>The factorization phase has two steps. In the first, leaf subtrees are
+factorized in parallel on their assigned resources. Once all leaf subtrees are
+factored, the second phase begins where all CPU resources cooperate to factorize
+the root subtree.</p>
+<p>At present the solve phase is performed in serial.</p>
+</section>
+<section id="data-checking">
+<h3>Data checking<a class="headerlink" href="#data-checking" title="Permalink to this heading"></a></h3>
+<p>If check is set to .true. on the call to <a class="reference internal" href="#c.spral_ssids_analyse" title="spral_ssids_analyse"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_analyse()</span></code></a> or if
+<a class="reference internal" href="#c.spral_ssids_analyse_coord" title="spral_ssids_analyse_coord"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_analyse_coord()</span></code></a> is called, the user-supplied matrix data is
+checked for errors. The cleaned integer matrix data (duplicates are
+summed and out-of-range indices discarded) is stored in akeep. The use
+of checking is optional on a call to <a class="reference internal" href="#c.spral_ssids_analyse" title="spral_ssids_analyse"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_analyse()</span></code></a> as it incurs both
+time and memory overheads. However, it is recommended since the
+behaviour of the other routines in the package is unpredictable if
+duplicates and/or out-of-range variable indices are entered.</p>
+<p>If the user has supplied an elimination order it is checked for errors.
+Otherwise, an elimination order is generated by the package. The
+elimination order is used to construct an assembly tree. On exit from
+<a class="reference internal" href="#c.spral_ssids_analyse" title="spral_ssids_analyse"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_analyse()</span></code></a> (and <a class="reference internal" href="#c.spral_ssids_analyse_coord" title="spral_ssids_analyse_coord"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_analyse_coord()</span></code></a>), <cite>order[]</cite> is
+set so that <cite>order[i]</cite> holds the position of variable <span class="math notranslate nohighlight">\(i\)</span> in the
+elimination order. If an ordering was supplied by the user, this order may
+differ, but will be equivalent in terms of fill-in.</p>
+</section>
+<section id="factorization-performed">
+<h3>Factorization performed<a class="headerlink" href="#factorization-performed" title="Permalink to this heading"></a></h3>
+<p>The factorization performed depends on the value of <cite>posdef</cite>.</p>
+<p>If <strong>posdef=true</strong>, a Cholesky factorization is performed:</p>
+<div class="math notranslate nohighlight">
+\[SAS = PL(PL)^T.\]</div>
+<p>Pivoting is not performed, so <span class="math notranslate nohighlight">\(P\)</span> is the permutation determined in the
+analysis phase. <span class="math notranslate nohighlight">\(S\)</span> is a diagonal scaling matrix.</p>
+<p>If <strong>posdef=false</strong>, a symmetric indefinite factorization is performed:</p>
+<div class="math notranslate nohighlight">
+\[SAS = PLD(PL)^T\]</div>
+<p>Pivoting is performed, so <span class="math notranslate nohighlight">\(P\)</span> may differ from the permutation determined
+in the analysis phase, though it is kept as close as possible to minimize fill.
+The exact pivoting algorithm varies depending on the particular kernel the
+algorithm chooses to employ.</p>
+<p>Full details of the algorithms used are provided in <a class="footnote-reference brackets" href="#id4" id="id2" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a> for GPUs and <a class="footnote-reference brackets" href="#id5" id="id3" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a> for
+CPUs.</p>
+</section>
+<section id="small-leaf-subtrees">
+<span id="ssids-small-leaf"></span><h3>Small Leaf Subtrees<a class="headerlink" href="#small-leaf-subtrees" title="Permalink to this heading"></a></h3>
+<p>For subtrees allocated to run on the CPU, the factorization of small nodes near
+the leaves of the tree can be amalgamated into a single parallel task (normally
+each would be treated as its own OpenMP task to be scheduled). This can reduce
+scheduling overheads, especially on small problems. If the total number of
+operations for a subtree root at a given node is less than
+<code class="xref c c-member docutils literal notranslate"><span class="pre">options.small_subtree_threshold</span></code>,
+that subtree is treated as a single task.</p>
+</section>
+<section id="references">
+<h3>References<a class="headerlink" href="#references" title="Permalink to this heading"></a></h3>
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="id4" role="note">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id2">1</a><span class="fn-bracket">]</span></span>
+<p>J.D. Hogg, E. Ovtchinnikov and J.A. Scott. (2014).
+<em>A sparse symmetric indefinite direct solver for GPU architectures</em>.
+ACM Transactions on Mathematical Software 42(1), Article 1, 25 pages.
+[<a class="reference external" href="https://doi.org/10.1145/2756548">DOI: 10.1145/2756548</a>]
+[<a class="reference external" href="https://epubs.stfc.ac.uk/work/12189719">Preprint RAL-P-2014-006</a>]</p>
+</aside>
+<aside class="footnote brackets" id="id5" role="note">
+<span class="label"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></span>
+<span class="backrefs">(<a role="doc-backlink" href="#id1">1</a>,<a role="doc-backlink" href="#id3">2</a>)</span>
+<p>J.D. Hogg. (2016).
+<em>A new sparse LDLT solver using a posteriori threshold pivoting</em>.
+RAL Technical Report. RAL-TR-2016-0xx, to appear.</p>
+</aside>
+</aside>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="scaling.html" class="btn btn-neutral float-left" title="SCALING - Sparse matrix scalings" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="ssmfe.html" class="btn btn-neutral float-right" title="SSMFE - Sparse Symmetric Matrix-Free Eigensolver" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Computational Mathematics Group, STFC Rutherford Appleton Laboratory.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>spral_ssmfe - Sparse Symmetric Matrix-Free Eigensolver &mdash; spral v2024-05-08 [Fortran] documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="spral_ssmfe_expert - Sparse Symmetric Matrix-Free Eigensolver (Expert interface)" href="ssmfe_expert.html" />
+    <link rel="prev" title="spral_ssids - Sparse Symmetric Indefinite Direct Solver" href="ssids.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            spral
+              <img src="_static/STFC-Logo.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                v2024-05-08 [Fortran]
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="conventions.html">Data types and conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="csc_format.html">Compressed Sparse Column (CSC) Format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="coord_format.html">Coordinate (Coord) Format</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="lsmr.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_lsmr</span></code> - Sparse Least Squares LSMR Solver</a></li>
+<li class="toctree-l1"><a class="reference internal" href="matrix_util.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_matrix_util</span></code> - Matrix utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="random.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_random</span></code> - Pseudo-random number generator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="random_matrix.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_random_matrix</span></code> - Pseudo-random Matrix Generator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rutherford_boeing.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_rutherford_boeing</span></code> - RB File Format Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="scaling.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_scaling</span></code> - Sparse matrix scalings</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssids.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssids</span></code> - Sparse Symmetric Indefinite Direct Solver</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssmfe</span></code> - Sparse Symmetric Matrix-Free Eigensolver</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#purpose">Purpose</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#version-history">Version history</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#usage-overview">Usage overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#subroutines">Subroutines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#derived-types">Derived types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#examples">Examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#preconditioning-example">Preconditioning example</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#shift-and-invert-example">Shift-and-invert example</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#hermitian-example">Hermitian example</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#method">Method</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#references">References</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="ssmfe_expert.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssmfe_expert</span></code> - Sparse Symmetric Matrix-Free Eigensolver (Expert interface)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssmfe_core.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssmfe_core</span></code> - Sparse Symmetric Matrix-Free Eigensolver (Core Algorithm)</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">spral</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssmfe</span></code> - Sparse Symmetric Matrix-Free Eigensolver</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/ssmfe.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="f/spral_ssmfe">
+<span id="spral-ssmfe-sparse-symmetric-matrix-free-eigensolver"></span><h1><a class="reference internal" href="#f/spral_ssmfe" title="f/spral_ssmfe: Sparse Symmetric Matrix-Free Eigensolver"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssmfe</span></code></a> - Sparse Symmetric Matrix-Free Eigensolver<a class="headerlink" href="#f/spral_ssmfe" title="Permalink to this heading"></a></h1>
+<section id="purpose">
+<h2>Purpose<a class="headerlink" href="#purpose" title="Permalink to this heading"></a></h2>
+<p>This package computes extreme (leftmost and/or rightmost)
+eigenpairs <span class="math notranslate nohighlight">\(\{\lambda_i, x_i\}\)</span> of the following eigenvalue problems:</p>
+<ul>
+<li><p>the standard eigenvalue problem</p>
+<blockquote>
+<div><div class="math notranslate nohighlight">
+\[A x = \lambda x,\]</div>
+</div></blockquote>
+</li>
+<li><p>the generalized eigenvalue problem</p>
+<blockquote>
+<div><div class="math notranslate nohighlight">
+\[A x = \lambda B x,\]</div>
+</div></blockquote>
+</li>
+<li><p>the buckling problem</p>
+<blockquote>
+<div><div class="math notranslate nohighlight">
+\[B x = \lambda A x,\]</div>
+</div></blockquote>
+</li>
+</ul>
+<p>where <span class="math notranslate nohighlight">\(A\)</span> and <span class="math notranslate nohighlight">\(B\)</span> are <strong>real symmetric</strong> (or <strong>Hermitian</strong>) matrices
+and <span class="math notranslate nohighlight">\(B\)</span> is <strong>positive definite</strong>.</p>
+<p>This package provides a user-friendly wrapper around
+<a class="reference internal" href="ssmfe_expert.html#f/spral_ssmfe_expert" title="f/spral_ssmfe_expert: Sparse Symmetric Matrix-Free Eigensolver (Expert interface)"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssmfe_expert</span></code></a>, which in turn provides a wrapper around
+<a class="reference internal" href="ssmfe_core.html#f/spral_ssmfe_core" title="f/spral_ssmfe_core: Sparse Symmetric Matrix-Free Eigensolver (Core Algorithm)"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssmfe_core</span></code></a>. If more fine-tuned control of the eigensolver is
+required, use those modules instead.</p>
+<section id="version-history">
+<h3>Version history<a class="headerlink" href="#version-history" title="Permalink to this heading"></a></h3>
+<dl class="simple">
+<dt>2015-04-20 Version 1.0.0</dt><dd><p>Initial release</p>
+</dd>
+</dl>
+<p>[for detail please see ChangeLog]</p>
+</section>
+</section>
+<section id="usage-overview">
+<h2>Usage overview<a class="headerlink" href="#usage-overview" title="Permalink to this heading"></a></h2>
+<p>The eigensolver subroutines behind <a class="reference internal" href="#f/spral_ssmfe" title="f/spral_ssmfe: Sparse Symmetric Matrix-Free Eigensolver"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssmfe</span></code></a> implement a block
+iterative algorithm. The block nature of this algorithm allows the user
+to benefit from highly optimized linear algebra subroutines and from the
+ubiquitous multicore architecture of modern computers. It also makes
+this algorithm more reliable than Krylov-based algorithms employed e.g.
+by ARPACK in the presence of clustered eigenvalues. However, convergence
+of the iterations may be slow if the density of the spectrum is high.</p>
+<p>Thus, good performance (in terms of speed) is contingent on the
+following two factors:</p>
+<ol class="lowerroman simple">
+<li><p>the number of desired eigenpairs must be substantial (e.g. not fewer
+than the number of CPU cores), and</p></li>
+<li><p>the employment of a convergence acceleration technique.</p></li>
+</ol>
+<p>The acceleration techniques that can be used are shift-and-invert and
+preconditioning.</p>
+<p>The former requires the direct solution of linear systems
+with the matrix <span class="math notranslate nohighlight">\(A\)</span> or its linear combination with <span class="math notranslate nohighlight">\(B\)</span>, for which a
+sparse symmetric indefinite solver (such as HSL_MA97 or SPRAL_SSIDS)
+can be employed.</p>
+<p>The latter applies to the case of positive definite
+<span class="math notranslate nohighlight">\(A\)</span> and requires a matrix or an operator <span class="math notranslate nohighlight">\(T\)</span>, called <em>a
+preconditioner</em>, such that the vector <span class="math notranslate nohighlight">\(v = T f\)</span> is an
+approximation to the solution <span class="math notranslate nohighlight">\(u\)</span> of the system <span class="math notranslate nohighlight">\(A u = f\)</span>
+(see the simple <span class="xref std std-ref">example below</span>). Note: This
+technique is only recommended for experienced users.</p>
+</section>
+<section id="subroutines">
+<h2>Subroutines<a class="headerlink" href="#subroutines" title="Permalink to this heading"></a></h2>
+<dl>
+<dt class="sig sig-object f" id="f/spral_ssmfe/ssmfe_standard">
+<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">ssmfe_standard</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">rci</span></em>, <em class="sig-param"><span class="pre">left</span></em>, <em class="sig-param"><span class="pre">mep</span></em>, <em class="sig-param"><span class="pre">lambda</span></em>, <em class="sig-param"><span class="pre">n</span></em>, <em class="sig-param"><span class="pre">x</span></em>, <em class="sig-param"><span class="pre">ldx</span></em>, <em class="sig-param"><span class="pre">keep</span></em>, <em class="sig-param"><span class="pre">options</span></em>, <em class="sig-param"><span class="pre">inform</span></em><span class="sig-paren">)</span><a class="headerlink" href="#f/spral_ssmfe/ssmfe_standard" title="Permalink to this definition"></a></dt>
+<dd><p>Computes the left-most eigenpairs of the standard eigenvalue problem</p>
+<div class="math notranslate nohighlight">
+\[Ax = \lambda x\]</div>
+<p>Optionally uses preconditioning.</p>
+<p>Uses reverse-communication. Upon return the user must perform a task
+specified by the <cite>rci</cite> parameter and recall the routine. Possible values of
+<cite>rci</cite> and associated tasks are:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p><cite>rci%job</cite></p></th>
+<th class="head"><p>Task to be performed</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>-3</p></td>
+<td><p>None. Fatal error, see <cite>inform%flag</cite>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-2</p></td>
+<td><p>Restart computation. Non-fatal error, see <cite>inform%flag</cite>.</p></td>
+</tr>
+<tr class="row-even"><td><p>-1</p></td>
+<td><p>None. Computation complete.</p></td>
+</tr>
+<tr class="row-odd"><td><p>1</p></td>
+<td><p>Calculate <span class="math notranslate nohighlight">\(Y = AX\)</span>.</p></td>
+</tr>
+<tr class="row-even"><td><p>2</p></td>
+<td><p>Apply preconditioner <span class="math notranslate nohighlight">\(Y = TX\)</span>.</p></td>
+</tr>
+</tbody>
+</table>
+<p>The matrices <span class="math notranslate nohighlight">\(X\)</span> and <span class="math notranslate nohighlight">\(Y\)</span> are components of <cite>rci</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>rci</strong><em> [</em><em>ssmfe_rcid </em><em>,</em><em>inout</em><em>]</em> :: Reverse communication type. <cite>rci%job</cite> must be
+set to <cite>0</cite> before the first call. (Type <a class="reference internal" href="#f/spral_ssmfe/ssmfe_rciz" title="f/spral_ssmfe/ssmfe_rciz"><code class="xref f f-type docutils literal notranslate"><span class="pre">ssmfe_rciz</span></code></a> in complex
+version).</p></li>
+<li><p><strong>left</strong><em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: Number of left eigenpairs to find.</p></li>
+<li><p><strong>mep</strong><em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: Number of working eigenpairs.
+See <a class="reference internal" href="#method"><span class="std std-ref">method section</span></a> for guidance on selecting a good
+value. Must be at least <cite>left</cite>.</p></li>
+<li><p><strong>lambda</strong> (mep)<em> [</em><em>real </em><em>,</em><em>inout</em><em>]</em> :: Current eigenvalue estimates in ascending
+order.</p></li>
+<li><p><strong>n</strong><em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: Size of matrix <span class="math notranslate nohighlight">\(A\)</span>.</p></li>
+<li><p><strong>x</strong> (ldx, n)<em> [</em><em>real </em><em>,</em><em>inout</em><em>]</em> :: Current eigenvector estimates corresponding to
+eigenvalues in <cite>lambda</cite>. Used to supply initial estimates if
+<cite>options%user_x&gt;0</cite>. (Type complex in complex version).</p></li>
+<li><p><strong>ldx</strong><em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: Leading dimension of <cite>x</cite>.</p></li>
+<li><p><strong>keep</strong><em> [</em><em>ssmfe_keepd </em><em>,</em><em>inout</em><em>]</em> :: Internal workspace used by routine. (Type
+<code class="xref f f-type docutils literal notranslate"><span class="pre">ssmfe_keepz</span></code> in complex version).</p></li>
+<li><p><strong>options</strong><em> [</em><em>ssmfe_options </em><em>,</em><em>in</em><em>]</em> :: specifies algorithm options to be used.</p></li>
+<li><p><strong>inform</strong><em> [</em><em>ssmfe_inform </em><em>,</em><em>inout</em><em>]</em> :: returns information about the exection of the
+routine.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl>
+<dt class="sig sig-object f" id="f/spral_ssmfe/ssmfe_standard_shift">
+<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">ssmfe_standard_shift</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">rci</span></em>, <em class="sig-param"><span class="pre">sigma</span></em>, <em class="sig-param"><span class="pre">left</span></em>, <em class="sig-param"><span class="pre">right</span></em>, <em class="sig-param"><span class="pre">mep</span></em>, <em class="sig-param"><span class="pre">lambda</span></em>, <em class="sig-param"><span class="pre">n</span></em>, <em class="sig-param"><span class="pre">x</span></em>, <em class="sig-param"><span class="pre">ldx</span></em>, <em class="sig-param"><span class="pre">keep</span></em>, <em class="sig-param"><span class="pre">options</span></em>, <em class="sig-param"><span class="pre">inform</span></em><span class="sig-paren">)</span><a class="headerlink" href="#f/spral_ssmfe/ssmfe_standard_shift" title="Permalink to this definition"></a></dt>
+<dd><p>Computes eigenpairs of the standard eigenvalue problem</p>
+<div class="math notranslate nohighlight">
+\[Ax = \lambda x\]</div>
+<p>in the vicinity of a given value <span class="math notranslate nohighlight">\(\sigma\)</span>.</p>
+<p>Uses reverse-communication. Upon return the user must perform a task
+specified by the <cite>rci</cite> parameter and recall the routine. Possible values of
+<cite>rci</cite> and associated tasks are:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p><cite>rci%job</cite></p></th>
+<th class="head"><p>Task to be performed</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>-3</p></td>
+<td><p>None. Fatal error, see <cite>inform%flag</cite>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-2</p></td>
+<td><p>Restart computation. Non-fatal error, see <cite>inform%flag</cite>.</p></td>
+</tr>
+<tr class="row-even"><td><p>-1</p></td>
+<td><p>None. Computation complete.</p></td>
+</tr>
+<tr class="row-odd"><td><p>1</p></td>
+<td><p>Calculate <span class="math notranslate nohighlight">\(Y = AX\)</span>.</p></td>
+</tr>
+<tr class="row-even"><td><p>9</p></td>
+<td><p>Solve <span class="math notranslate nohighlight">\((A-\sigma I)Y = X\)</span> for Y.</p></td>
+</tr>
+</tbody>
+</table>
+<p>The matrices <span class="math notranslate nohighlight">\(X\)</span> and <span class="math notranslate nohighlight">\(Y\)</span> are components of <cite>rci</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>rci</strong><em> [</em><em>ssmfe_rcid </em><em>,</em><em>inout</em><em>]</em> :: Reverse communication type. <cite>rci%job</cite> must be
+set to <cite>0</cite> before the first call. (Type <a class="reference internal" href="#f/spral_ssmfe/ssmfe_rciz" title="f/spral_ssmfe/ssmfe_rciz"><code class="xref f f-type docutils literal notranslate"><span class="pre">ssmfe_rciz</span></code></a> in complex
+version).</p></li>
+<li><p><strong>sigma</strong><em> [</em><em>real </em><em>,</em><em>in</em><em>]</em> :: Shift value <span class="math notranslate nohighlight">\(sigma\)</span>.</p></li>
+<li><p><strong>left</strong><em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: Number of left eigenpairs to find.</p></li>
+<li><p><strong>right</strong><em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: Number of right eigenpairs to find.</p></li>
+<li><p><strong>mep</strong><em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: Number of working eigenpairs.
+See <a class="reference internal" href="#method"><span class="std std-ref">method section</span></a> for guidance on selecting a good
+value. Must be at least <cite>left+right</cite>.</p></li>
+<li><p><strong>lambda</strong> (mep)<em> [</em><em>real </em><em>,</em><em>inout</em><em>]</em> :: Current eigenvalue estimates in ascending
+order.</p></li>
+<li><p><strong>n</strong><em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: Size of matrix <span class="math notranslate nohighlight">\(A\)</span>.</p></li>
+<li><p><strong>x</strong> (ldx, n)<em> [</em><em>real </em><em>,</em><em>inout</em><em>]</em> :: Current eigenvector estimates corresponding to
+eigenvalues in <cite>lambda</cite>. Used to supply initial estimates if
+<cite>options%user_x&gt;0</cite>. (Type complex in complex version).</p></li>
+<li><p><strong>ldx</strong><em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: Leading dimension of <cite>x</cite>.</p></li>
+<li><p><strong>keep</strong><em> [</em><em>ssmfe_keepd </em><em>,</em><em>inout</em><em>]</em> :: Internal workspace used by routine. (Type
+<code class="xref f f-type docutils literal notranslate"><span class="pre">ssmfe_keepz</span></code> in complex version).</p></li>
+<li><p><strong>options</strong><em> [</em><em>ssmfe_options </em><em>,</em><em>in</em><em>]</em> :: specifies algorithm options to be used.</p></li>
+<li><p><strong>inform</strong><em> [</em><em>ssmfe_inform </em><em>,</em><em>inout</em><em>]</em> :: returns information about the exection of the
+routine.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl>
+<dt class="sig sig-object f" id="f/spral_ssmfe/ssmfe_generalized">
+<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">ssmfe_generalized</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">rci</span></em>, <em class="sig-param"><span class="pre">left</span></em>, <em class="sig-param"><span class="pre">mep</span></em>, <em class="sig-param"><span class="pre">lambda</span></em>, <em class="sig-param"><span class="pre">n</span></em>, <em class="sig-param"><span class="pre">x</span></em>, <em class="sig-param"><span class="pre">ldx</span></em>, <em class="sig-param"><span class="pre">keep</span></em>, <em class="sig-param"><span class="pre">options</span></em>, <em class="sig-param"><span class="pre">inform</span></em><span class="sig-paren">)</span><a class="headerlink" href="#f/spral_ssmfe/ssmfe_generalized" title="Permalink to this definition"></a></dt>
+<dd><p>Computes the left-most eigenpairs of the generalized eigenvalue problem</p>
+<div class="math notranslate nohighlight">
+\[Ax = \lambda B x\]</div>
+<p>Optionally uses preconditioning.</p>
+<p>Uses reverse-communication. Upon return the user must perform a task
+specified by the <cite>rci</cite> parameter and recall the routine. Possible values of
+<cite>rci</cite> and associated tasks are:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p><cite>rci%job</cite></p></th>
+<th class="head"><p>Task to be performed</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>-3</p></td>
+<td><p>None. Fatal error, see <cite>inform%flag</cite>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-2</p></td>
+<td><p>Restart computation. Non-fatal error, see <cite>inform%flag</cite>.</p></td>
+</tr>
+<tr class="row-even"><td><p>-1</p></td>
+<td><p>None. Computation complete.</p></td>
+</tr>
+<tr class="row-odd"><td><p>1</p></td>
+<td><p>Calculate <span class="math notranslate nohighlight">\(Y = AX\)</span>.</p></td>
+</tr>
+<tr class="row-even"><td><p>2</p></td>
+<td><p>Apply preconditioner <span class="math notranslate nohighlight">\(Y = TX\)</span>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>3</p></td>
+<td><p>Calculate <span class="math notranslate nohighlight">\(Y = BX\)</span>.</p></td>
+</tr>
+</tbody>
+</table>
+<p>The matrices <span class="math notranslate nohighlight">\(X\)</span> and <span class="math notranslate nohighlight">\(Y\)</span> are components of <cite>rci</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>rci</strong><em> [</em><em>ssmfe_rcid </em><em>,</em><em>inout</em><em>]</em> :: Reverse communication type. <cite>rci%job</cite> must be
+set to <cite>0</cite> before the first call. (Type <a class="reference internal" href="#f/spral_ssmfe/ssmfe_rciz" title="f/spral_ssmfe/ssmfe_rciz"><code class="xref f f-type docutils literal notranslate"><span class="pre">ssmfe_rciz</span></code></a> in complex
+version).</p></li>
+<li><p><strong>left</strong><em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: Number of left eigenpairs to find.</p></li>
+<li><p><strong>mep</strong><em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: Number of working eigenpairs.
+See <a class="reference internal" href="#method"><span class="std std-ref">method section</span></a> for guidance on selecting a good
+value. Must be at least <cite>left</cite>.</p></li>
+<li><p><strong>lambda</strong> (mep)<em> [</em><em>real </em><em>,</em><em>inout</em><em>]</em> :: Current eigenvalue estimates in ascending
+order.</p></li>
+<li><p><strong>n</strong><em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: Size of matrix <span class="math notranslate nohighlight">\(A\)</span>.</p></li>
+<li><p><strong>x</strong> (ldx, n)<em> [</em><em>real </em><em>,</em><em>inout</em><em>]</em> :: Current eigenvector estimates corresponding to
+eigenvalues in <cite>lambda</cite>. Used to supply initial estimates if
+<cite>options%user_x&gt;0</cite>. (Type complex in complex version).</p></li>
+<li><p><strong>ldx</strong><em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: Leading dimension of <cite>x</cite>.</p></li>
+<li><p><strong>keep</strong><em> [</em><em>ssmfe_keepd </em><em>,</em><em>inout</em><em>]</em> :: Internal workspace used by routine. (Type
+<code class="xref f f-type docutils literal notranslate"><span class="pre">ssmfe_keepz</span></code> in complex version).</p></li>
+<li><p><strong>options</strong><em> [</em><em>ssmfe_options </em><em>,</em><em>in</em><em>]</em> :: specifies algorithm options to be used.</p></li>
+<li><p><strong>inform</strong><em> [</em><em>ssmfe_inform </em><em>,</em><em>inout</em><em>]</em> :: returns information about the exection of the
+routine.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl>
+<dt class="sig sig-object f" id="f/spral_ssmfe/ssmfe_generalized_shift">
+<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">ssmfe_generalized_shift</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">rci</span></em>, <em class="sig-param"><span class="pre">sigma</span></em>, <em class="sig-param"><span class="pre">left</span></em>, <em class="sig-param"><span class="pre">right</span></em>, <em class="sig-param"><span class="pre">mep</span></em>, <em class="sig-param"><span class="pre">lambda</span></em>, <em class="sig-param"><span class="pre">n</span></em>, <em class="sig-param"><span class="pre">x</span></em>, <em class="sig-param"><span class="pre">ldx</span></em>, <em class="sig-param"><span class="pre">keep</span></em>, <em class="sig-param"><span class="pre">options</span></em>, <em class="sig-param"><span class="pre">inform</span></em><span class="sig-paren">)</span><a class="headerlink" href="#f/spral_ssmfe/ssmfe_generalized_shift" title="Permalink to this definition"></a></dt>
+<dd><p>Computes eigenpairs of the generalized eigenvalue problem</p>
+<div class="math notranslate nohighlight">
+\[Ax = \lambda B x\]</div>
+<p>in the vicinity of a given value <span class="math notranslate nohighlight">\(\sigma\)</span>.</p>
+<p>Uses reverse-communication. Upon return the user must perform a task
+specified by the <cite>rci</cite> parameter and recall the routine. Possible values of
+<cite>rci</cite> and associated tasks are:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p><cite>rci%job</cite></p></th>
+<th class="head"><p>Task to be performed</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>-3</p></td>
+<td><p>None. Fatal error, see <cite>inform%flag</cite>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-2</p></td>
+<td><p>Restart computation. Non-fatal error, see <cite>inform%flag</cite>.</p></td>
+</tr>
+<tr class="row-even"><td><p>-1</p></td>
+<td><p>None. Computation complete.</p></td>
+</tr>
+<tr class="row-odd"><td><p>1</p></td>
+<td><p>Calculate <span class="math notranslate nohighlight">\(Y = AX\)</span>.</p></td>
+</tr>
+<tr class="row-even"><td><p>3</p></td>
+<td><p>Calculate <span class="math notranslate nohighlight">\(Y = BX\)</span>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>9</p></td>
+<td><p>Solve <span class="math notranslate nohighlight">\((A-\sigma B)Y = X\)</span> for Y.</p></td>
+</tr>
+</tbody>
+</table>
+<p>The matrices <span class="math notranslate nohighlight">\(X\)</span> and <span class="math notranslate nohighlight">\(Y\)</span> are components of <cite>rci</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>rci</strong><em> [</em><em>ssmfe_rcid </em><em>,</em><em>inout</em><em>]</em> :: Reverse communication type. <cite>rci%job</cite> must be
+set to <cite>0</cite> before the first call. (Type <a class="reference internal" href="#f/spral_ssmfe/ssmfe_rciz" title="f/spral_ssmfe/ssmfe_rciz"><code class="xref f f-type docutils literal notranslate"><span class="pre">ssmfe_rciz</span></code></a> in complex
+version).</p></li>
+<li><p><strong>sigma</strong><em> [</em><em>real </em><em>,</em><em>in</em><em>]</em> :: Shift value <span class="math notranslate nohighlight">\(sigma\)</span>.</p></li>
+<li><p><strong>left</strong><em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: Number of left eigenpairs to find.</p></li>
+<li><p><strong>right</strong><em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: Number of right eigenpairs to find.</p></li>
+<li><p><strong>mep</strong><em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: Number of working eigenpairs.
+See <a class="reference internal" href="#method"><span class="std std-ref">method section</span></a> for guidance on selecting a good
+value. Must be at least <cite>left+right</cite>.</p></li>
+<li><p><strong>lambda</strong> (mep)<em> [</em><em>real </em><em>,</em><em>inout</em><em>]</em> :: Current eigenvalue estimates in ascending
+order.</p></li>
+<li><p><strong>n</strong><em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: Size of matrix <span class="math notranslate nohighlight">\(A\)</span>.</p></li>
+<li><p><strong>x</strong> (ldx, n)<em> [</em><em>real </em><em>,</em><em>inout</em><em>]</em> :: Current eigenvector estimates corresponding to
+eigenvalues in <cite>lambda</cite>. Used to supply initial estimates if
+<cite>options%user_x&gt;0</cite>. (Type complex in complex version).</p></li>
+<li><p><strong>ldx</strong><em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: Leading dimension of <cite>x</cite>.</p></li>
+<li><p><strong>keep</strong><em> [</em><em>ssmfe_keepd </em><em>,</em><em>inout</em><em>]</em> :: Internal workspace used by routine. (Type
+<code class="xref f f-type docutils literal notranslate"><span class="pre">ssmfe_keepz</span></code> in complex version).</p></li>
+<li><p><strong>options</strong><em> [</em><em>ssmfe_options </em><em>,</em><em>in</em><em>]</em> :: specifies algorithm options to be used.</p></li>
+<li><p><strong>inform</strong><em> [</em><em>ssmfe_inform </em><em>,</em><em>inout</em><em>]</em> :: returns information about the exection of the
+routine.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl>
+<dt class="sig sig-object f" id="f/spral_ssmfe/ssmfe_buckling">
+<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">ssmfe_buckling</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">rci</span></em>, <em class="sig-param"><span class="pre">sigma</span></em>, <em class="sig-param"><span class="pre">left</span></em>, <em class="sig-param"><span class="pre">right</span></em>, <em class="sig-param"><span class="pre">mep</span></em>, <em class="sig-param"><span class="pre">lambda</span></em>, <em class="sig-param"><span class="pre">n</span></em>, <em class="sig-param"><span class="pre">x</span></em>, <em class="sig-param"><span class="pre">ldx</span></em>, <em class="sig-param"><span class="pre">keep</span></em>, <em class="sig-param"><span class="pre">options</span></em>, <em class="sig-param"><span class="pre">inform</span></em><span class="sig-paren">)</span><a class="headerlink" href="#f/spral_ssmfe/ssmfe_buckling" title="Permalink to this definition"></a></dt>
+<dd><p>Computes eigenpairs of the buckling problem</p>
+<div class="math notranslate nohighlight">
+\[Bx = \lambda A x\]</div>
+<p>in the vicinity of a given value <span class="math notranslate nohighlight">\(\sigma\)</span>.</p>
+<p>Uses reverse-communication. Upon return the user must perform a task
+specified by the <cite>rci</cite> parameter and recall the routine. Possible values of
+<cite>rci</cite> and associated tasks are:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p><cite>rci%job</cite></p></th>
+<th class="head"><p>Task to be performed</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>-3</p></td>
+<td><p>None. Fatal error, see <cite>inform%flag</cite>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-2</p></td>
+<td><p>Restart computation. Non-fatal error, see <cite>inform%flag</cite>.</p></td>
+</tr>
+<tr class="row-even"><td><p>-1</p></td>
+<td><p>None. Computation complete.</p></td>
+</tr>
+<tr class="row-odd"><td><p>1</p></td>
+<td><p>Calculate <span class="math notranslate nohighlight">\(Y = AX\)</span>.</p></td>
+</tr>
+<tr class="row-even"><td><p>3</p></td>
+<td><p>Calculate <span class="math notranslate nohighlight">\(Y = BX\)</span>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>9</p></td>
+<td><p>Solve <span class="math notranslate nohighlight">\((B-\sigma A)Y = X\)</span> for Y.</p></td>
+</tr>
+</tbody>
+</table>
+<p>The matrices <span class="math notranslate nohighlight">\(X\)</span> and <span class="math notranslate nohighlight">\(Y\)</span> are components of <cite>rci</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>rci</strong><em> [</em><em>ssmfe_rcid </em><em>,</em><em>inout</em><em>]</em> :: Reverse communication type. <cite>rci%job</cite> must be
+set to <cite>0</cite> before the first call. (Type <a class="reference internal" href="#f/spral_ssmfe/ssmfe_rciz" title="f/spral_ssmfe/ssmfe_rciz"><code class="xref f f-type docutils literal notranslate"><span class="pre">ssmfe_rciz</span></code></a> in complex
+version).</p></li>
+<li><p><strong>sigma</strong><em> [</em><em>real </em><em>,</em><em>in</em><em>]</em> :: Shift value <span class="math notranslate nohighlight">\(sigma\)</span>.</p></li>
+<li><p><strong>left</strong><em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: Number of left eigenpairs to find.</p></li>
+<li><p><strong>right</strong><em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: Number of right eigenpairs to find.</p></li>
+<li><p><strong>mep</strong><em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: Number of working eigenpairs.
+See <a class="reference internal" href="#method"><span class="std std-ref">method section</span></a> for guidance on selecting a good
+value. Must be at least <cite>left+right</cite>.</p></li>
+<li><p><strong>lambda</strong> (mep)<em> [</em><em>real </em><em>,</em><em>inout</em><em>]</em> :: Current eigenvalue estimates in ascending
+order.</p></li>
+<li><p><strong>n</strong><em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: Size of matrix <span class="math notranslate nohighlight">\(A\)</span>.</p></li>
+<li><p><strong>x</strong> (ldx, n)<em> [</em><em>real </em><em>,</em><em>inout</em><em>]</em> :: Current eigenvector estimates corresponding to
+eigenvalues in <cite>lambda</cite>. Used to supply initial estimates if
+<cite>options%user_x&gt;0</cite>. (Type complex in complex version).</p></li>
+<li><p><strong>ldx</strong><em> [</em><em>integer </em><em>,</em><em>in</em><em>]</em> :: Leading dimension of <cite>x</cite>.</p></li>
+<li><p><strong>keep</strong><em> [</em><em>ssmfe_keepd </em><em>,</em><em>inout</em><em>]</em> :: Internal workspace used by routine. (Type
+<code class="xref f f-type docutils literal notranslate"><span class="pre">ssmfe_keepz</span></code> in complex version).</p></li>
+<li><p><strong>options</strong><em> [</em><em>ssmfe_options </em><em>,</em><em>in</em><em>]</em> :: specifies algorithm options to be used.</p></li>
+<li><p><strong>inform</strong><em> [</em><em>ssmfe_inform </em><em>,</em><em>inout</em><em>]</em> :: returns information about the exection of the
+routine.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl>
+<dt class="sig sig-object f" id="f/spral_ssmfe/ssmfe_free">
+<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">ssmfe_free</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">keep</span></em>, <em class="sig-param"><span class="pre">inform</span></em><span class="sig-paren">)</span><a class="headerlink" href="#f/spral_ssmfe/ssmfe_free" title="Permalink to this definition"></a></dt>
+<dd><p>Free memory allocated in <cite>keep</cite> and <cite>inform</cite>. Unnecessary if both are going
+out of scope.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>keep</strong><em> [</em><em>ssmfe_keepd </em><em>,</em><em>inout</em><em>]</em> :: Workspace to be freed.
+(Type <code class="xref f f-type docutils literal notranslate"><span class="pre">ssmfe_keepz</span></code> in complex version).</p></li>
+<li><p><strong>inform</strong><em> [</em><em>ssmfe_inform </em><em>,</em><em>inout</em><em>]</em> :: Information type to be freed.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="derived-types">
+<h2>Derived types<a class="headerlink" href="#derived-types" title="Permalink to this heading"></a></h2>
+<dl>
+<dt class="sig sig-object f" id="f/spral_ssmfe/ssmfe_rcid">
+<em class="property"><span class="pre">type</span>&#160; </em><span class="sig-name descname"><span class="pre">ssmfe_rcid</span></span><a class="headerlink" href="#f/spral_ssmfe/ssmfe_rcid" title="Permalink to this definition"></a></dt>
+<dd><p>Real-valued reverse communication interface (RCI) type.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type fields<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">job</span><em> [</em><em>integer </em><em>]</em> :: Reverse-communication task to perform.</p></li>
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">nx</span><em> [</em><em>integer </em><em>]</em> :: Number of columns in <cite>x</cite> and <cite>y</cite>.</p></li>
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">x</span> (n, nx)<em> [</em><em>real </em><em>]</em> :: Vector to be transformed by RCI task.</p></li>
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">y</span> (n, nx)<em> [</em><em>real </em><em>]</em> :: Vector to store result of RCI task.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl>
+<dt class="sig sig-object f" id="f/spral_ssmfe/ssmfe_rciz">
+<em class="property"><span class="pre">type</span>&#160; </em><span class="sig-name descname"><span class="pre">ssmfe_rciz</span></span><a class="headerlink" href="#f/spral_ssmfe/ssmfe_rciz" title="Permalink to this definition"></a></dt>
+<dd><p>Complex-valued reverse communication interface (RCI) type.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type fields<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">job</span><em> [</em><em>integer </em><em>]</em> :: Reverse-communication task to perform.</p></li>
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">nx</span><em> [</em><em>integer </em><em>]</em> :: Number of columns in <cite>x</cite> and <cite>y</cite>.</p></li>
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">x</span> (n, nx)<em> [</em><em>complex </em><em>]</em> :: Vector to be transformed by RCI task.</p></li>
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">y</span> (n, nx)<em> [</em><em>complex </em><em>]</em> :: Vector to store result of RCI task.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl>
+<dt class="sig sig-object f" id="f/spral_ssmfe/ssmfe_options">
+<em class="property"><span class="pre">type</span>&#160; </em><span class="sig-name descname"><span class="pre">ssmfe_options</span></span><a class="headerlink" href="#f/spral_ssmfe/ssmfe_options" title="Permalink to this definition"></a></dt>
+<dd><p>Options that control the algorithm.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type fields<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">abs_tol_lambda</span><em> [</em><em>real </em><em>,</em><em>default=0.0</em><em>]</em> :: absolute tolerance for estimated
+eigenvalue convergence test, see Section [ssmfe:method].
+Negative values are treated as the default.</p></li>
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">abs_tol_residual</span><em> [</em><em>real </em><em>,</em><em>default=0.0</em><em>]</em> :: absolute tolerance for residual
+convergence test, see Section [ssmfe:method]. Negative values are
+treated as the default.</p></li>
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">max_iterations</span><em> [</em><em>integer </em><em>,</em><em>default=100</em><em>]</em> :: maximum number of iterations.</p></li>
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">rel_tol_lambda</span><em> [</em><em>real </em><em>,</em><em>default=0.0</em><em>]</em> :: relative tolerance for estimated
+eigenvalue error convergence test, see Section [ssmfe:method]. Negative
+values are treated as the default.</p></li>
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">rel_tol_residual</span><em> [</em><em>real </em><em>,</em><em>default=0.0</em><em>]</em> :: relative tolerance for residual
+convergence test, see Section [ssmfe:method]. If both
+<cite>abs_tol_residual</cite> and <cite>rel_tol_residual</cite> are 0.0, then the
+residual norms are not taken into consideration by the convergence
+test, see Section [ssmfe:method]. Negative values are treated as the
+default.</p></li>
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">tol_x</span><em> [</em><em>real </em><em>,</em><em>default=-1.0</em><em>]</em> :: tolerance for estimated eigenvector error
+convergence test, see Section [ssmfe:method].
+If tol_x is set to <cite>0.0</cite>, the eigenvector error is not estimated. If
+a negative value is assigned, the tolerance is set to
+<cite>sqrt(epsilon(lambda))</cite>.</p></li>
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">print_level</span><em> [</em><em>integer </em><em>,</em><em>default=0</em><em>]</em> :: <p>amount of printing. Possible values
+are:</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>&lt;0</p></td>
+<td><p>no printing</p></td>
+</tr>
+<tr class="row-even"><td><p>0</p></td>
+<td><p>error and warning messages only</p></td>
+</tr>
+<tr class="row-odd"><td><p>1</p></td>
+<td><p>the type (standard or generalized) and the size of the problem,
+the number of eigenpairs requested, the error tolerances and the
+size of the subspace are printed before the iterations start</p></td>
+</tr>
+<tr class="row-even"><td><p>2</p></td>
+<td><p>as above but, for each eigenpair tested for convergence, the
+iteration number, the index of the eigenpair, the eigenvalue,
+whether it has converged, the residual norm, and the error
+estimates are also printed</p></td>
+</tr>
+<tr class="row-odd"><td><p>&gt;2</p></td>
+<td><p>as 1 but with all eigenvalues, whether converged, residual norms
+and eigenvalue/eigenvector error estimates printed on each
+iteration.</p></td>
+</tr>
+</tbody>
+</table>
+<p>Note that for eigenpairs that are far from convergence, ‘rough’ error
+estimates are printed (the estimates that are actually used by the
+stopping criteria, see Section [ssmfe:method], only become available on
+the last few iterations).</p>
+</p></li>
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">unit_error</span><em> [</em><em>integer </em><em>,</em><em>default=6</em><em>]</em> :: unit number for error messages. Printing
+suppressed if negative.</p></li>
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">unit_diagnostic</span><em> [</em><em>integer </em><em>,</em><em>default=6</em><em>]</em> :: unit number for diagnostic messages.
+Printing suppressed if negative.</p></li>
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">unit_warning</span><em> [</em><em>integer </em><em>,</em><em>default=6</em><em>]</em> :: unit number for warning messages.
+Printing suppressed if negative.</p></li>
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">left_gap</span><em> [</em><em>real </em><em>,</em><em>default=0.0</em><em>]</em> :: minimal acceptable distance between last
+computed left eigenvalue and rest of spectrum.
+For <a class="reference internal" href="#f/spral_ssmfe/ssmfe_standard" title="f/spral_ssmfe/ssmfe_standard"><code class="xref f f-subr docutils literal notranslate"><span class="pre">ssmfe_standard()</span></code></a> and <a class="reference internal" href="#f/spral_ssmfe/ssmfe_generalized" title="f/spral_ssmfe/ssmfe_generalized"><code class="xref f f-subr docutils literal notranslate"><span class="pre">ssmfe_generalized()</span></code></a> the
+last computed left eigenvalue is the rightmost of those computed.
+For other routines it is the leftmost.
+If set to a negative value <span class="math notranslate nohighlight">\(\delta\)</span>, the minimal distance is taken
+as <span class="math notranslate nohighlight">\(|\delta|\)</span> times the average distance between the computed
+eigenvalues. Note that for this option to have any effect, the value of
+<cite>mep</cite> must be larger than <cite>left+right</cite>. See Section [ssmfe:method] for
+further explanation.</p></li>
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">max_left</span><em> [</em><em>integer </em><em>,</em><em>default=-1</em><em>]</em> :: number of eigenvalues to left of
+<span class="math notranslate nohighlight">\(\sigma\)</span>, or a negative value if not known.</p></li>
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">max_right</span><em> [</em><em>integer </em><em>,</em><em>default=-1</em><em>]</em> :: number of eigenvalues to right of
+<span class="math notranslate nohighlight">\(\sigma\)</span>, or a negative value if not known.</p></li>
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">right_gap</span><em> [</em><em>real </em><em>,</em><em>default=0.0</em><em>]</em> :: as <cite>left_gap</cite>, but for right eigenvalues.</p></li>
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">user_x</span><em> [</em><em>integer </em><em>,</em><em>default=0</em><em>]</em> :: number of eigenvectors for which an initial
+guess is supplied in <cite>x(:,:)</cite> on the first call. Such eigenvectors must
+be lineraly independent.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl>
+<dt class="sig sig-object f" id="f/spral_ssmfe/ssmfe_inform">
+<em class="property"><span class="pre">type</span>&#160; </em><span class="sig-name descname"><span class="pre">ssmfe_inform</span></span><a class="headerlink" href="#f/spral_ssmfe/ssmfe_inform" title="Permalink to this definition"></a></dt>
+<dd><p>Information on progress of the algorithm.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type fields<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">flag</span><em> [</em><em>integer </em><em>]</em> :: return status of algorithm. See table below.</p></li>
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">iteration</span><em> [</em><em>integer </em><em>]</em> :: number of iterations.</p></li>
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">left</span><em> [</em><em>integer </em><em>]</em> :: number of converged left eigenvalues.</p></li>
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">next_left</span><em> [</em><em>real </em><em>]</em> :: upon completion, next left eigenvalue in spectrum
+(see <cite>options%left_gap</cite>).</p></li>
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">next_right</span><em> [</em><em>real </em><em>]</em> :: upon completion, next right eigenvalue in spectrum
+(see <cite>options%right_gap</cite>).</p></li>
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">non_converged</span><em> [</em><em>integer </em><em>]</em> :: number of non-converged eigenpairs.</p></li>
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">right</span><em> [</em><em>integer </em><em>]</em> :: number of converged right eigenvalues.</p></li>
+<li><p><span class="sig-name descname">% </span><span class="sig-name descname">stat</span><em> [</em><em>integer </em><em>]</em> :: allocation status in event of failure</p></li>
+</ul>
+</dd>
+</dl>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p><cite>inform%flag</cite></p></th>
+<th class="head"></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>-1</p></td>
+<td><p>rci%job is out-of-range.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-9</p></td>
+<td><p>n is out-of-range.</p></td>
+</tr>
+<tr class="row-even"><td><p>-10</p></td>
+<td><p>ldx is out-of-range.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-11</p></td>
+<td><p>left is out-of-range.</p></td>
+</tr>
+<tr class="row-even"><td><p>-12</p></td>
+<td><p>right is out-of-range.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-13</p></td>
+<td><p>mep is less than the number of desired eigenpairs.</p></td>
+</tr>
+<tr class="row-even"><td><p>-100</p></td>
+<td><p>Not enough memory; <cite>inform%stat</cite> contains the value of the
+Fortran stat parameter.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-200</p></td>
+<td><p><span class="math notranslate nohighlight">\(B\)</span> is not positive definite or <cite>user_x&gt;0</cite> and
+linearly dependent initial guesses were supplied.</p></td>
+</tr>
+<tr class="row-even"><td><p>+1</p></td>
+<td><p>The iterations have been terminated because no further
+improvement in accuracy is possible (this may happen if
+<span class="math notranslate nohighlight">\(B\)</span> or the preconditioner is not positive definite,
+or if the components of the residual vectors are so small
+that the round-off errors make them essentially random).
+The value of <cite>inform%non_converged</cite> is set to the number
+of non-converged eigenpairs.</p></td>
+</tr>
+<tr class="row-odd"><td><p>+2</p></td>
+<td><p>The maximum number of iterations <cite>max_iterations</cite> has been
+exceeded. The value of <cite>inform%non_converged</cite> is set to
+the number of non-converged eigenpairs.</p></td>
+</tr>
+<tr class="row-even"><td><p>+3</p></td>
+<td><p>The solver had run out of storage space for the converged
+eigenpairs before the gap in the spectrum required by
+<cite>options%left_gap</cite> and/or <cite>options%right_gap</cite> was reached.
+The value of <cite>inform%non_converged</cite> is set to the number
+of non-converged eigenpairs.</p></td>
+</tr>
+</tbody>
+</table>
+<p>If the computation is terminated with the error code 2 or 3, the computation
+is not complete, but may be restarted with larger values of <cite>max_iterations</cite>
+and/or <cite>mep</cite>. In this case the user should set <cite>options%user_x</cite> to
+<cite>info%left + info%right</cite> and restart the reverse communication loop. An
+alternative option is to use one of the advanced solver procedures from
+<a class="reference internal" href="ssmfe_expert.html#f/spral_ssmfe_expert" title="f/spral_ssmfe_expert: Sparse Symmetric Matrix-Free Eigensolver (Expert interface)"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssmfe_expert</span></code></a> or <a class="reference internal" href="ssmfe_core.html#f/spral_ssmfe_core" title="f/spral_ssmfe_core: Sparse Symmetric Matrix-Free Eigensolver (Core Algorithm)"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssmfe_core</span></code></a> that delegate the
+storage of computed eigenpairs and the termination of the computation to the
+user.</p>
+</dd></dl>
+
+</section>
+<section id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Permalink to this heading"></a></h2>
+<section id="preconditioning-example">
+<h3>Preconditioning example<a class="headerlink" href="#preconditioning-example" title="Permalink to this heading"></a></h3>
+<p>The following code computes the 5 leftmost eigenpairs of the matrix
+<span class="math notranslate nohighlight">\(A\)</span> of order 100 that approximates the two-dimensional Laplacian
+operator on a 20-by-20 grid. One forward and one backward Gauss-Seidel
+update are used for preconditioning, which halves the number of
+iterations compared with solving the same problem without
+preconditioning. The module <cite>laplace2d</cite>
+(examples/Fortran/ssmfe/laplace2d.f90) supplies a subroutine
+<cite>apply_laplacian()</cite> that multiplies a block of vectors by <span class="math notranslate nohighlight">\(A\)</span>, and
+a subroutine <cite>apply_gauss_seidel_step()</cite> that computes <span class="math notranslate nohighlight">\(y = T x\)</span>
+for a block of vectors <span class="math notranslate nohighlight">\(x\)</span> by applying one forward and one
+backward update of the Gauss-Seidel method to the system
+<span class="math notranslate nohighlight">\(A y = x\)</span>.</p>
+<div class="highlight-Fortran notranslate"><div class="highlight"><pre><span></span><span class="c">! examples/Fortran/ssmfe/precond_ssmfe.f90</span>
+<span class="c">! Laplacian on a square grid (using SPRAL_SSMFE routines)</span>
+<span class="k">program </span><span class="n">ssmfe_precond_example</span>
+<span class="w">  </span><span class="k">use </span><span class="n">spral_ssmfe</span>
+<span class="w">  </span><span class="k">use </span><span class="n">laplace2d</span><span class="w"> </span><span class="c">! implement Lapalacian and preconditioners</span>
+<span class="w">  </span><span class="k">implicit none</span>
+
+<span class="k">  </span><span class="kt">integer</span><span class="p">,</span><span class="w"> </span><span class="k">parameter</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">wp</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">kind</span><span class="p">(</span><span class="mi">0</span><span class="n">d0</span><span class="p">)</span><span class="w"> </span><span class="c">! Working precision is double</span>
+
+<span class="w">  </span><span class="kt">integer</span><span class="p">,</span><span class="w"> </span><span class="k">parameter</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">m</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="mi">20</span><span class="w">    </span><span class="c">! grid points along each side</span>
+<span class="w">  </span><span class="kt">integer</span><span class="p">,</span><span class="w"> </span><span class="k">parameter</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">n</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="n">m</span><span class="o">*</span><span class="n">m</span><span class="w">   </span><span class="c">! problem size</span>
+<span class="w">  </span><span class="kt">integer</span><span class="p">,</span><span class="w"> </span><span class="k">parameter</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">nep</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="w">     </span><span class="c">! eigenpairs wanted</span>
+
+<span class="w">  </span><span class="kt">real</span><span class="p">(</span><span class="n">wp</span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">lambda</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">nep</span><span class="p">)</span><span class="w">         </span><span class="c">! eigenvalues</span>
+<span class="w">  </span><span class="kt">real</span><span class="p">(</span><span class="n">wp</span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">X</span><span class="p">(</span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="o">*</span><span class="n">nep</span><span class="p">)</span><span class="w">           </span><span class="c">! eigenvectors</span>
+<span class="w">  </span><span class="k">type</span><span class="p">(</span><span class="n">ssmfe_rcid</span><span class="w">   </span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">rci</span><span class="w">        </span><span class="c">! reverse communication data</span>
+<span class="w">  </span><span class="k">type</span><span class="p">(</span><span class="n">ssmfe_options</span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="k">options</span><span class="w">    </span><span class="c">! options</span>
+<span class="w">  </span><span class="k">type</span><span class="p">(</span><span class="n">ssmfe_keepd</span><span class="w">  </span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">keep</span><span class="w">       </span><span class="c">! private data</span>
+<span class="w">  </span><span class="k">type</span><span class="p">(</span><span class="n">ssmfe_inform</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">inform</span><span class="w">     </span><span class="c">! information</span>
+<span class="w">  </span><span class="kt">integer</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">i</span><span class="w">                      </span><span class="c">! loop index</span>
+
+<span class="w">  </span><span class="c">! the gap between the last converged eigenvalue and the rest of the spectrum</span>
+<span class="w">  </span><span class="c">! must be at least 0.1 times average gap between computed eigenvalues</span>
+<span class="w">  </span><span class="k">options</span><span class="p">%</span><span class="n">left_gap</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">-</span><span class="mf">0.1</span>
+<span class="w">  </span><span class="n">rci</span><span class="p">%</span><span class="n">job</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span>
+<span class="w">  </span><span class="k">do</span><span class="w"> </span><span class="c">! reverse communication loop</span>
+<span class="w">    </span><span class="k">call </span><span class="n">ssmfe_standard</span><span class="w"> </span><span class="p">&amp;</span>
+<span class="w">      </span><span class="p">(</span><span class="w"> </span><span class="n">rci</span><span class="p">,</span><span class="w"> </span><span class="n">nep</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="o">*</span><span class="n">nep</span><span class="p">,</span><span class="w"> </span><span class="n">lambda</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">X</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">keep</span><span class="p">,</span><span class="w"> </span><span class="k">options</span><span class="p">,</span><span class="w"> </span><span class="n">inform</span><span class="w"> </span><span class="p">)</span>
+<span class="w">    </span><span class="k">select case</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="n">rci</span><span class="p">%</span><span class="n">job</span><span class="w"> </span><span class="p">)</span>
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="p">)</span>
+<span class="w">      </span><span class="k">call </span><span class="n">apply_laplacian</span><span class="p">(</span><span class="w"> </span><span class="n">m</span><span class="p">,</span><span class="w"> </span><span class="n">m</span><span class="p">,</span><span class="w"> </span><span class="n">rci</span><span class="p">%</span><span class="n">nx</span><span class="p">,</span><span class="w"> </span><span class="n">rci</span><span class="p">%</span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">rci</span><span class="p">%</span><span class="n">y</span><span class="w"> </span><span class="p">)</span>
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="p">)</span>
+<span class="w">      </span><span class="k">call </span><span class="n">apply_gauss_seidel_step</span><span class="p">(</span><span class="w"> </span><span class="n">m</span><span class="p">,</span><span class="w"> </span><span class="n">m</span><span class="p">,</span><span class="w"> </span><span class="n">rci</span><span class="p">%</span><span class="n">nx</span><span class="p">,</span><span class="w"> </span><span class="n">rci</span><span class="p">%</span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">rci</span><span class="p">%</span><span class="n">y</span><span class="w"> </span><span class="p">)</span>
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="w"> </span><span class="p">)</span>
+<span class="w">      </span><span class="k">exit</span>
+<span class="k">    end select</span>
+<span class="k">  end do</span>
+<span class="k">  print</span><span class="w"> </span><span class="s1">&#39;(i3, 1x, a, i3, 1x, a)&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">inform</span><span class="p">%</span><span class="n">left</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;eigenpairs converged in&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">&amp;</span>
+<span class="w">     </span><span class="n">inform</span><span class="p">%</span><span class="n">iteration</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;iterations&#39;</span>
+<span class="w">  </span><span class="k">print</span><span class="w"> </span><span class="s1">&#39;(1x, a, i2, a, es13.7)&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">&amp;</span>
+<span class="w">    </span><span class="p">(</span><span class="s1">&#39;lambda(&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;) = &#39;</span><span class="p">,</span><span class="w"> </span><span class="n">lambda</span><span class="p">(</span><span class="n">i</span><span class="p">),</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">inform</span><span class="p">%</span><span class="n">left</span><span class="p">)</span>
+<span class="w">  </span><span class="k">call </span><span class="n">ssmfe_free</span><span class="p">(</span><span class="w"> </span><span class="n">keep</span><span class="p">,</span><span class="w"> </span><span class="n">inform</span><span class="w"> </span><span class="p">)</span>
+<span class="k">end program </span><span class="n">ssmfe_precond_example</span>
+</pre></div>
+</div>
+<p>This code produces the following output:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span> <span class="mi">6</span> <span class="n">eigenpairs</span> <span class="n">converged</span> <span class="ow">in</span> <span class="mi">19</span> <span class="n">iterations</span>
+<span class="k">lambda</span><span class="p">(</span> <span class="mi">1</span><span class="p">)</span> <span class="o">=</span> <span class="mf">4.4676695E-02</span>
+<span class="k">lambda</span><span class="p">(</span> <span class="mi">2</span><span class="p">)</span> <span class="o">=</span> <span class="mf">1.1119274E-01</span>
+<span class="k">lambda</span><span class="p">(</span> <span class="mi">3</span><span class="p">)</span> <span class="o">=</span> <span class="mf">1.1119274E-01</span>
+<span class="k">lambda</span><span class="p">(</span> <span class="mi">4</span><span class="p">)</span> <span class="o">=</span> <span class="mf">1.7770878E-01</span>
+<span class="k">lambda</span><span class="p">(</span> <span class="mi">5</span><span class="p">)</span> <span class="o">=</span> <span class="mf">2.2040061E-01</span>
+<span class="k">lambda</span><span class="p">(</span> <span class="mi">6</span><span class="p">)</span> <span class="o">=</span> <span class="mf">2.2040061E-01</span>
+</pre></div>
+</div>
+<p>Note that the code computed one extra eigenpair because of the
+insufficient gap between the 5th and 6th eigenvalues.</p>
+</section>
+<section id="shift-and-invert-example">
+<h3>Shift-and-invert example<a class="headerlink" href="#shift-and-invert-example" title="Permalink to this heading"></a></h3>
+<p>The following code computes the eigenpairs of the matrix of order 64
+that approximates the two-dimensional Laplacian operator on 8-by-8 grid
+with eigenvalues near the shift <cite>sigma=1.0</cite>. For the shifted
+solve, LAPACK subroutines DSYTRS and DSYTRF are used, which perform the
+LDLT-factorization and the solution of the factorized system
+respectively. The matrix of the discretized Laplacian is computed by the
+subroutine <cite>set_2d_laplacian_matrix()</cite> from the <cite>laplace2d</cite> module
+(examples/Fortran/ssmfe/laplace2d.f90). The module <cite>ldltf</cite>
+(examples/Fortran/ssmfe/ldltf.f90) supplies the function
+<cite>num_neg_D()</cite> that counts the number of negative eigenvalues of the
+D-factor.</p>
+<div class="highlight-Fortran notranslate"><div class="highlight"><pre><span></span><span class="c">! examples/Fortran/ssmfe/shift_invert.f90</span>
+<span class="c">! Laplacian on a rectangular grid by shift-invert via LDLT factorization</span>
+<span class="k">program </span><span class="n">ssmfe_shift_invert_example</span>
+<span class="w">  </span><span class="k">use </span><span class="n">spral_ssmfe</span>
+<span class="w">  </span><span class="k">use </span><span class="n">laplace2d</span><span class="w"> </span><span class="c">! implement Lapalacian and preconditioners</span>
+<span class="w">  </span><span class="k">use </span><span class="n">ldltf</span><span class="w">     </span><span class="c">! implements LDLT support routines</span>
+<span class="w">  </span><span class="k">implicit none</span>
+
+<span class="k">  </span><span class="kt">integer</span><span class="p">,</span><span class="w"> </span><span class="k">parameter</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">wp</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">kind</span><span class="p">(</span><span class="mi">0</span><span class="n">d0</span><span class="p">)</span><span class="w"> </span><span class="c">! Working precision</span>
+
+<span class="w">  </span><span class="kt">integer</span><span class="p">,</span><span class="w"> </span><span class="k">parameter</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">nx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">8</span><span class="w">    </span><span class="c">! grid points along x</span>
+<span class="w">  </span><span class="kt">integer</span><span class="p">,</span><span class="w"> </span><span class="k">parameter</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">ny</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">8</span><span class="w">    </span><span class="c">! grid points along y</span>
+<span class="w">  </span><span class="kt">integer</span><span class="p">,</span><span class="w"> </span><span class="k">parameter</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">n</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">nx</span><span class="o">*</span><span class="n">ny</span><span class="w"> </span><span class="c">! problem size</span>
+<span class="w">  </span><span class="kt">real</span><span class="p">(</span><span class="n">wp</span><span class="p">),</span><span class="w"> </span><span class="k">parameter</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">sigma</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">1.0</span><span class="w"> </span><span class="c">! shift</span>
+
+<span class="w">  </span><span class="kt">integer</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">ipiv</span><span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="w">               </span><span class="c">! LDLT pivot index</span>
+<span class="w">  </span><span class="kt">real</span><span class="p">(</span><span class="n">wp</span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">lambda</span><span class="p">(</span><span class="n">n</span><span class="p">)</span><span class="w">            </span><span class="c">! eigenvalues</span>
+<span class="w">  </span><span class="kt">real</span><span class="p">(</span><span class="n">wp</span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">X</span><span class="p">(</span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">)</span><span class="w">              </span><span class="c">! eigenvectors</span>
+<span class="w">  </span><span class="kt">real</span><span class="p">(</span><span class="n">wp</span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">A</span><span class="p">(</span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">)</span><span class="w">              </span><span class="c">! matrix</span>
+<span class="w">  </span><span class="kt">real</span><span class="p">(</span><span class="n">wp</span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">LDLT</span><span class="p">(</span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">)</span><span class="w">           </span><span class="c">! factors</span>
+<span class="w">  </span><span class="kt">real</span><span class="p">(</span><span class="n">wp</span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">work</span><span class="p">(</span><span class="n">n</span><span class="o">*</span><span class="n">n</span><span class="p">)</span><span class="w">            </span><span class="c">! work array for dsytrf</span>
+<span class="w">  </span><span class="kt">integer</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">lwork</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">n</span><span class="o">*</span><span class="n">n</span><span class="w">           </span><span class="c">! size of work</span>
+<span class="w">  </span><span class="kt">integer</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">left</span><span class="p">,</span><span class="w"> </span><span class="n">right</span><span class="w">           </span><span class="c">! wanted eigenvalues left and right of sigma</span>
+<span class="w">  </span><span class="kt">integer</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">i</span><span class="w">                     </span><span class="c">! index</span>
+<span class="w">  </span><span class="k">type</span><span class="p">(</span><span class="n">ssmfe_options</span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="k">options</span><span class="w">   </span><span class="c">! eigensolver options</span>
+<span class="w">  </span><span class="k">type</span><span class="p">(</span><span class="n">ssmfe_inform</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">inform</span><span class="w">    </span><span class="c">! information</span>
+<span class="w">  </span><span class="k">type</span><span class="p">(</span><span class="n">ssmfe_rcid</span><span class="w">   </span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">rci</span><span class="w">       </span><span class="c">! reverse communication data</span>
+<span class="w">  </span><span class="k">type</span><span class="p">(</span><span class="n">ssmfe_keepd</span><span class="w">  </span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">keep</span><span class="w">      </span><span class="c">! private data</span>
+
+<span class="w">  </span><span class="k">call </span><span class="n">set_laplacian_matrix</span><span class="p">(</span><span class="w"> </span><span class="n">nx</span><span class="p">,</span><span class="w"> </span><span class="n">ny</span><span class="p">,</span><span class="w"> </span><span class="n">A</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="w"> </span><span class="p">)</span>
+
+<span class="w">  </span><span class="c">! perform LDLT factorization of the shifted matrix</span>
+<span class="w">  </span><span class="n">LDLT</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">A</span>
+<span class="w">  </span><span class="k">forall</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="n">n</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="n">LDLT</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">A</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="n">i</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">sigma</span>
+<span class="w">  </span><span class="n">lwork</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">n</span><span class="o">*</span><span class="n">n</span>
+<span class="w">  </span><span class="k">call </span><span class="n">dsytrf</span><span class="p">(</span><span class="w"> </span><span class="s1">&#39;L&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">LDLT</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">ipiv</span><span class="p">,</span><span class="w"> </span><span class="n">work</span><span class="p">,</span><span class="w"> </span><span class="n">lwork</span><span class="p">,</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="p">)</span>
+
+<span class="w">  </span><span class="n">left</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">num_neg_D</span><span class="p">(</span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">LDLT</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">ipiv</span><span class="p">)</span><span class="w"> </span><span class="c">! all eigenvalues to the left from sigma</span>
+<span class="w">  </span><span class="n">right</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="w">                          </span><span class="c">!   5 eigenvalues to the right from sigma</span>
+<span class="w">  </span><span class="n">rci</span><span class="p">%</span><span class="n">job</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span>
+<span class="w">  </span><span class="k">do</span>
+<span class="k">    call </span><span class="n">ssmfe_standard_shift</span><span class="w"> </span><span class="p">&amp;</span>
+<span class="w">      </span><span class="p">(</span><span class="w"> </span><span class="n">rci</span><span class="p">,</span><span class="w"> </span><span class="n">sigma</span><span class="p">,</span><span class="w"> </span><span class="n">left</span><span class="p">,</span><span class="w"> </span><span class="n">right</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">lambda</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">X</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">keep</span><span class="p">,</span><span class="w"> </span><span class="k">options</span><span class="p">,</span><span class="w"> </span><span class="n">inform</span><span class="w"> </span><span class="p">)</span>
+<span class="w">    </span><span class="k">select case</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="n">rci</span><span class="p">%</span><span class="n">job</span><span class="w"> </span><span class="p">)</span>
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="p">)</span>
+<span class="w">      </span><span class="k">call </span><span class="n">dgemm</span><span class="w"> </span><span class="p">&amp;</span>
+<span class="w">        </span><span class="p">(</span><span class="w"> </span><span class="s1">&#39;N&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;N&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">rci</span><span class="p">%</span><span class="n">nx</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0_wp</span><span class="p">,</span><span class="w"> </span><span class="n">A</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">rci</span><span class="p">%</span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="mf">0.0_wp</span><span class="p">,</span><span class="w"> </span><span class="n">rci</span><span class="p">%</span><span class="n">y</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="w"> </span><span class="p">)</span>
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="mi">9</span><span class="w"> </span><span class="p">)</span>
+<span class="w">      </span><span class="k">call </span><span class="n">dcopy</span><span class="p">(</span><span class="w"> </span><span class="n">n</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">rci</span><span class="p">%</span><span class="n">nx</span><span class="p">,</span><span class="w"> </span><span class="n">rci</span><span class="p">%</span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">rci</span><span class="p">%</span><span class="n">y</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="p">)</span>
+<span class="w">      </span><span class="k">call </span><span class="n">dsytrs</span><span class="p">(</span><span class="w"> </span><span class="s1">&#39;L&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">rci</span><span class="p">%</span><span class="n">nx</span><span class="p">,</span><span class="w"> </span><span class="n">LDLT</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">ipiv</span><span class="p">,</span><span class="w"> </span><span class="n">rci</span><span class="p">%</span><span class="n">y</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="p">)</span>
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="w"> </span><span class="p">)</span>
+<span class="w">      </span><span class="k">exit</span>
+<span class="k">    end select</span>
+<span class="k">  end do</span>
+<span class="k">  print</span><span class="w"> </span><span class="s1">&#39;(1x, a, es10.2, 1x, a, i3, 1x, a)&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;Eigenvalues near&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">sigma</span><span class="p">,</span><span class="w"> </span><span class="p">&amp;</span>
+<span class="w">     </span><span class="s1">&#39;(took&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">inform</span><span class="p">%</span><span class="n">iteration</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;iterations)&#39;</span>
+<span class="w">  </span><span class="k">print</span><span class="w"> </span><span class="s1">&#39;(1x, a, i2, a, es13.7)&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">&amp;</span>
+<span class="w">    </span><span class="p">(</span><span class="s1">&#39;lambda(&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;) = &#39;</span><span class="p">,</span><span class="w"> </span><span class="n">lambda</span><span class="p">(</span><span class="n">i</span><span class="p">),</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">inform</span><span class="p">%</span><span class="n">left</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">inform</span><span class="p">%</span><span class="n">right</span><span class="p">)</span>
+<span class="w">  </span><span class="k">call </span><span class="n">ssmfe_free</span><span class="p">(</span><span class="w"> </span><span class="n">keep</span><span class="p">,</span><span class="w"> </span><span class="n">inform</span><span class="w"> </span><span class="p">)</span>
+<span class="k">end program </span><span class="n">ssmfe_shift_invert_example</span>
+</pre></div>
+</div>
+<p>This code produces the following output:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Eigenvalues</span> <span class="n">near</span>  <span class="mf">1.00E+00</span> <span class="p">(</span><span class="n">took</span>  <span class="mi">5</span> <span class="n">iterations</span><span class="p">)</span>
+<span class="k">lambda</span><span class="p">(</span> <span class="mi">1</span><span class="p">)</span> <span class="o">=</span> <span class="mf">2.4122952E-01</span>
+<span class="k">lambda</span><span class="p">(</span> <span class="mi">2</span><span class="p">)</span> <span class="o">=</span> <span class="mf">5.8852587E-01</span>
+<span class="k">lambda</span><span class="p">(</span> <span class="mi">3</span><span class="p">)</span> <span class="o">=</span> <span class="mf">5.8852587E-01</span>
+<span class="k">lambda</span><span class="p">(</span> <span class="mi">4</span><span class="p">)</span> <span class="o">=</span> <span class="mf">9.3582223E-01</span>
+<span class="k">lambda</span><span class="p">(</span> <span class="mi">5</span><span class="p">)</span> <span class="o">=</span> <span class="mf">1.1206148E+00</span>
+<span class="k">lambda</span><span class="p">(</span> <span class="mi">6</span><span class="p">)</span> <span class="o">=</span> <span class="mf">1.1206148E+00</span>
+<span class="k">lambda</span><span class="p">(</span> <span class="mi">7</span><span class="p">)</span> <span class="o">=</span> <span class="mf">1.4679111E+00</span>
+<span class="k">lambda</span><span class="p">(</span> <span class="mi">8</span><span class="p">)</span> <span class="o">=</span> <span class="mf">1.4679111E+00</span>
+<span class="k">lambda</span><span class="p">(</span> <span class="mi">9</span><span class="p">)</span> <span class="o">=</span> <span class="mf">1.7733184E+00</span>
+</pre></div>
+</div>
+</section>
+<section id="hermitian-example">
+<h3>Hermitian example<a class="headerlink" href="#hermitian-example" title="Permalink to this heading"></a></h3>
+<p>The following code computes the 5 leftmost eigenpairs of the
+differential operator <span class="math notranslate nohighlight">\(i \frac{d}{dx}\)</span> acting in the space of
+periodic functions discretized by central differences on a uniform mesh
+of 80 steps.</p>
+<div class="highlight-Fortran notranslate"><div class="highlight"><pre><span></span><span class="c">! examples/Fortran/ssmfe/hermitian.f90 - Example code for SPRAL_SSMFE package</span>
+<span class="c">! Hermitian operator example</span>
+<span class="k">program </span><span class="n">ssmfe_hermitian_example</span>
+<span class="w">  </span><span class="k">use </span><span class="n">spral_ssmfe</span>
+<span class="w">  </span><span class="k">implicit none</span>
+
+<span class="k">  </span><span class="kt">integer</span><span class="p">,</span><span class="w"> </span><span class="k">parameter</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">wp</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">kind</span><span class="p">(</span><span class="mi">0</span><span class="n">d0</span><span class="p">)</span><span class="w"> </span><span class="c">! working precision</span>
+
+<span class="w">  </span><span class="kt">integer</span><span class="p">,</span><span class="w"> </span><span class="k">parameter</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">n</span><span class="w">   </span><span class="o">=</span><span class="w"> </span><span class="mi">80</span><span class="w">     </span><span class="c">! problem size</span>
+<span class="w">  </span><span class="kt">integer</span><span class="p">,</span><span class="w"> </span><span class="k">parameter</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">nep</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="w">      </span><span class="c">! eigenpairs wanted</span>
+
+<span class="w">  </span><span class="kt">real</span><span class="p">(</span><span class="n">wp</span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">lambda</span><span class="p">(</span><span class="n">nep</span><span class="p">)</span><span class="w">            </span><span class="c">! eigenvalues</span>
+<span class="w">  </span><span class="kt">complex</span><span class="p">(</span><span class="n">wp</span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">X</span><span class="p">(</span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">nep</span><span class="p">)</span><span class="w">           </span><span class="c">! eigenvectors</span>
+<span class="w">  </span><span class="k">type</span><span class="p">(</span><span class="n">ssmfe_rciz</span><span class="w">   </span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">rci</span><span class="w">         </span><span class="c">! reverse communication data</span>
+<span class="w">  </span><span class="k">type</span><span class="p">(</span><span class="n">ssmfe_options</span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="k">options</span><span class="w">     </span><span class="c">! options</span>
+<span class="w">  </span><span class="k">type</span><span class="p">(</span><span class="n">ssmfe_keepz</span><span class="w">  </span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">keep</span><span class="w">        </span><span class="c">! private data</span>
+<span class="w">  </span><span class="k">type</span><span class="p">(</span><span class="n">ssmfe_inform</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">inform</span><span class="w">      </span><span class="c">! information</span>
+<span class="w">  </span><span class="kt">integer</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">i</span><span class="w">                       </span><span class="c">! loop index</span>
+
+<span class="w">  </span><span class="n">rci</span><span class="p">%</span><span class="n">job</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span>
+<span class="w">  </span><span class="k">do</span><span class="w"> </span><span class="c">! reverse communication loop</span>
+<span class="w">    </span><span class="k">call </span><span class="n">ssmfe_standard</span><span class="p">(</span><span class="w"> </span><span class="n">rci</span><span class="p">,</span><span class="w"> </span><span class="n">nep</span><span class="p">,</span><span class="w"> </span><span class="n">nep</span><span class="p">,</span><span class="w"> </span><span class="n">lambda</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">X</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">keep</span><span class="p">,</span><span class="w"> </span><span class="k">options</span><span class="p">,</span><span class="w"> </span><span class="n">inform</span><span class="w"> </span><span class="p">)</span>
+<span class="w">    </span><span class="k">select case</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="n">rci</span><span class="p">%</span><span class="n">job</span><span class="w"> </span><span class="p">)</span>
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="p">)</span>
+<span class="w">      </span><span class="k">call </span><span class="n">apply_idx</span><span class="p">(</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">rci</span><span class="p">%</span><span class="n">nx</span><span class="p">,</span><span class="w"> </span><span class="n">rci</span><span class="p">%</span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">rci</span><span class="p">%</span><span class="n">y</span><span class="w"> </span><span class="p">)</span>
+<span class="w">    </span><span class="k">case</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="w"> </span><span class="p">)</span>
+<span class="w">      </span><span class="k">exit</span>
+<span class="k">    end select</span>
+<span class="k">  end do</span>
+<span class="k">  print</span><span class="w"> </span><span class="s1">&#39;(i3, 1x, a, i3, 1x, a)&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">inform</span><span class="p">%</span><span class="n">left</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;eigenpairs converged in&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">&amp;</span>
+<span class="w">     </span><span class="n">inform</span><span class="p">%</span><span class="n">iteration</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;iterations&#39;</span>
+<span class="w">  </span><span class="k">print</span><span class="w"> </span><span class="s1">&#39;(1x, a, i2, a, es14.7)&#39;</span><span class="p">,</span><span class="w"> </span><span class="p">&amp;</span>
+<span class="w">    </span><span class="p">(</span><span class="s1">&#39;lambda(&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;) = &#39;</span><span class="p">,</span><span class="w"> </span><span class="n">lambda</span><span class="p">(</span><span class="n">i</span><span class="p">),</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">inform</span><span class="p">%</span><span class="n">left</span><span class="p">)</span>
+<span class="w">  </span><span class="k">call </span><span class="n">ssmfe_free</span><span class="p">(</span><span class="w"> </span><span class="n">keep</span><span class="p">,</span><span class="w"> </span><span class="n">inform</span><span class="w"> </span><span class="p">)</span>
+
+<span class="k">contains</span>
+
+<span class="k">  subroutine </span><span class="n">apply_idx</span><span class="p">(</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">m</span><span class="p">,</span><span class="w"> </span><span class="n">x</span><span class="p">,</span><span class="w"> </span><span class="n">y</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="c">! central differences for i d/dx</span>
+<span class="w">    </span><span class="k">implicit none</span>
+<span class="k">    </span><span class="kt">complex</span><span class="p">(</span><span class="n">wp</span><span class="p">),</span><span class="w"> </span><span class="k">parameter</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">IM_ONE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="mf">0.0D0</span><span class="p">,</span><span class="w"> </span><span class="mf">1.0D0</span><span class="p">)</span>
+<span class="w">    </span><span class="kt">integer</span><span class="p">,</span><span class="w"> </span><span class="k">intent</span><span class="p">(</span><span class="n">in</span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">m</span>
+<span class="w">    </span><span class="kt">complex</span><span class="p">(</span><span class="n">wp</span><span class="p">),</span><span class="w"> </span><span class="k">intent</span><span class="p">(</span><span class="n">in</span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">x</span><span class="p">(</span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">m</span><span class="p">)</span>
+<span class="w">    </span><span class="kt">complex</span><span class="p">(</span><span class="n">wp</span><span class="p">),</span><span class="w"> </span><span class="k">intent</span><span class="p">(</span><span class="n">out</span><span class="p">)</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">y</span><span class="p">(</span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">m</span><span class="p">)</span>
+<span class="w">    </span><span class="kt">integer</span><span class="w"> </span><span class="kd">::</span><span class="w"> </span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="n">j</span><span class="p">,</span><span class="w"> </span><span class="n">il</span><span class="p">,</span><span class="w"> </span><span class="n">ir</span>
+<span class="w">    </span><span class="k">do </span><span class="n">j</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">m</span>
+<span class="w">      </span><span class="k">do </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">n</span>
+<span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="k">then</span>
+<span class="k">          </span><span class="n">il</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">n</span>
+<span class="w">        </span><span class="k">else</span>
+<span class="k">          </span><span class="n">il</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span>
+<span class="w">        </span><span class="k">end if</span>
+<span class="k">        if</span><span class="w"> </span><span class="p">(</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">n</span><span class="w"> </span><span class="p">)</span><span class="w"> </span><span class="k">then</span>
+<span class="k">          </span><span class="n">ir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span>
+<span class="w">        </span><span class="k">else</span>
+<span class="k">          </span><span class="n">ir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span>
+<span class="w">        </span><span class="k">end if</span>
+<span class="k">        </span><span class="n">y</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="n">j</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">IM_ONE</span><span class="o">*</span><span class="p">(</span><span class="n">x</span><span class="p">(</span><span class="n">ir</span><span class="p">,</span><span class="w"> </span><span class="n">j</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">x</span><span class="p">(</span><span class="n">il</span><span class="p">,</span><span class="w"> </span><span class="n">j</span><span class="p">))</span>
+<span class="w">      </span><span class="k">end do</span>
+<span class="k">    end do</span>
+<span class="k">  end subroutine </span><span class="n">apply_idx</span>
+
+<span class="k">end program </span><span class="n">ssmfe_hermitian_example</span>
+</pre></div>
+</div>
+<p>This code produces the following output:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span> <span class="mi">5</span> <span class="n">eigenpairs</span> <span class="n">converged</span> <span class="ow">in</span> <span class="mi">25</span> <span class="n">iterations</span>
+<span class="k">lambda</span><span class="p">(</span> <span class="mi">1</span><span class="p">)</span> <span class="o">=</span> <span class="o">-</span><span class="mf">2.0000000E+00</span>
+<span class="k">lambda</span><span class="p">(</span> <span class="mi">2</span><span class="p">)</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.9938347E+00</span>
+<span class="k">lambda</span><span class="p">(</span> <span class="mi">3</span><span class="p">)</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.9938347E+00</span>
+<span class="k">lambda</span><span class="p">(</span> <span class="mi">4</span><span class="p">)</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.9753767E+00</span>
+<span class="k">lambda</span><span class="p">(</span> <span class="mi">5</span><span class="p">)</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.9753767E+00</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="method">
+<span id="id1"></span><h2>Method<a class="headerlink" href="#method" title="Permalink to this heading"></a></h2>
+<p><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssmfe_core`</span></code>, upon which <a class="reference internal" href="#f/spral_ssmfe" title="f/spral_ssmfe: Sparse Symmetric Matrix-Free Eigensolver"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssmfe</span></code></a> is built,
+implements a block iterative algorithm based on the Jacobi-conjugate
+preconditioned gradients (JCPG) method <a class="footnote-reference brackets" href="#id5" id="id2" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a>, <a class="footnote-reference brackets" href="#id6" id="id3" role="doc-noteref"><span class="fn-bracket">[</span>3<span class="fn-bracket">]</span></a>. This algorithm
+simultaneously computes <span class="math notranslate nohighlight">\(m &lt; n\)</span> approximate eigenpairs, where the block
+size <span class="math notranslate nohighlight">\(m\)</span> exceeds the number <span class="math notranslate nohighlight">\(n_e\)</span> of desired eigenpairs for the
+sake of better convergence, namely, <span class="math notranslate nohighlight">\(m = n_e + \min(10, 0.1 n_e)\)</span>.</p>
+<p>An approximate eigenpair <span class="math notranslate nohighlight">\(\{x,\lambda\}\)</span> is considered to have
+converged if the following three conditions are all satisfied:</p>
+<ol class="arabic simple">
+<li><p>if <cite>options%abs_tol_lambda</cite> and <cite>options%rel_tol_lambda</cite> are not both
+equal to zero, then the estimated error in the approximate eigenvalue
+must be less than or equal to
+<span class="math notranslate nohighlight">\(\max(\mathrm{options\%abs\_tol\_lambda}, \delta*\mathrm{options\%rel\_tol\_lambda})\)</span>,
+where <span class="math notranslate nohighlight">\(\delta\)</span> is the estimated average distance between
+eigenvalues.</p></li>
+<li><p>if <cite>options%tol_x</cite> is not zero, then the estimated sine of the angle
+between the approximate eigenvector and the invariant subspace
+corresponding to the eigenvalue approximated by <span class="math notranslate nohighlight">\(\lambda\)</span> must
+be less than or equal to <cite>options%tol_x</cite>.</p></li>
+<li><p>if <cite>options%abs_tol_residual</cite> and <cite>options%rel_tol_residual</cite> are not
+both equal to zero, then the Euclidean norm of the residual,
+<span class="math notranslate nohighlight">\(\|A x - \lambda B x\|_2\)</span>, must be less than or equal to
+<span class="math notranslate nohighlight">\(\max(\mathrm{options\%abs\_tol\_residual}, \mathrm{options\%rel\_tol\_residual}*\|\lambda B x\|_2)\)</span>.</p></li>
+</ol>
+<p>The extra eigenpairs are not checked for convergence, as their role is
+purely auxiliary.</p>
+<p>If the gap between the last computed eigenvalue and the rest of the
+spectrum is small, then the accuracy of the corresponding eigenvector
+may be very low. To prevent this from happening, the user should set the
+eigenpairs storage size mep to a value that is larger than the number of
+desired eigenpairs, and set the options <cite>options%left_gap</cite> and
+<cite>options%right_gap</cite> to non-zero values <span class="math notranslate nohighlight">\(\delta_l\)</span> and
+<span class="math notranslate nohighlight">\(\delta_r\)</span>. These values determine the size of the minimal
+acceptable gaps between the computed eigenvalues and the rest of the
+spectrum, <span class="math notranslate nohighlight">\(\delta_l\)</span> referring to either leftmost eigenvalues (for
+<a class="reference internal" href="#f/spral_ssmfe/ssmfe_standard" title="f/spral_ssmfe/ssmfe_standard"><code class="xref f f-subr docutils literal notranslate"><span class="pre">ssmfe_standard()</span></code></a> and <a class="reference internal" href="#f/spral_ssmfe/ssmfe_generalized" title="f/spral_ssmfe/ssmfe_generalized"><code class="xref f f-subr docutils literal notranslate"><span class="pre">ssmfe_generalized()</span></code></a> only) or those
+to the left of the shift <cite>sigma</cite>, and <span class="math notranslate nohighlight">\(\delta_r\)</span> to those to the right of
+the shift <cite>sigma</cite>. Positive values of <span class="math notranslate nohighlight">\(\delta_l\)</span> and <span class="math notranslate nohighlight">\(\delta_r\)</span> set
+the gap explicitely, and negative values require the gap to be not less than
+their absolute value times the average distance between the computed
+eigenvalues. A recommended value of <span class="math notranslate nohighlight">\(\delta_l\)</span> and
+<span class="math notranslate nohighlight">\(\delta_r\)</span> is <cite>-0.1</cite>. The value of <cite>mep</cite> has little effect on
+the speed of computation, hence it might be set to any reasonably large
+value. The larger the value of <cite>mep</cite>, the larger the size of an eigenvalue
+cluster for which accurate eigenvectors can be computed, notably: to
+safeguard against clusters of size up to <span class="math notranslate nohighlight">\(k\)</span>, it is sufficient to
+set <cite>mep</cite> to the number of desired eigenpairs plus <span class="math notranslate nohighlight">\(k - 1\)</span>.</p>
+<p>When using the solver procedures that employ the shift-and-invert
+technique, it is very important to ensure that the numbers of desired
+eigenvalues each side of the shift do not exceed the actual numbers of
+these eigenvalues, as the eigenpairs ‘approximating’ non-existing
+eigenpairs of the problem will not converge. It is therefore strongly
+recommended that the user employs a linear system solver that performs
+the <span class="math notranslate nohighlight">\(LDL^T\)</span> factorization of the shifted system, e.g. <cite>HSL_MA97</cite> or
+<cite>SPRAL_SSIDS</cite>. The <span class="math notranslate nohighlight">\(LDL^T\)</span> factorization of the matrix
+<span class="math notranslate nohighlight">\(A - \sigma B\)</span> consists in finding a lower triangular matrix <span class="math notranslate nohighlight">\(L\)</span>, a
+block-diagonal matrix <span class="math notranslate nohighlight">\(D\)</span> with <span class="math notranslate nohighlight">\(1\times 1\)</span> and
+<span class="math notranslate nohighlight">\(2\times 2\)</span> blocks on the diagonal and a permutation matrix
+<span class="math notranslate nohighlight">\(P\)</span> such that <span class="math notranslate nohighlight">\(P^T(A - \sigma B)P = L D L^T\)</span>. By the inertia
+theorem, the number of eigenvalues to the left and right from the shift
+<span class="math notranslate nohighlight">\(\sigma\)</span> is equal to the number of negative and positive
+eigenvalues of <span class="math notranslate nohighlight">\(D\)</span>, which allows quick computation of the
+eigenvalue numbers each side of the shift.</p>
+<section id="references">
+<h3>References<a class="headerlink" href="#references" title="Permalink to this heading"></a></h3>
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="id4" role="note">
+<span class="label"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></span>
+<p>E. E. Ovtchinnikov and J. Reid (2010).
+<em>A preconditioned block conjugate gradient algorithm for computing extreme
+eigenpairs of symmetric and Hermitian problems</em>.
+Technical Report RAL-TR-2010-19.</p>
+</aside>
+<aside class="footnote brackets" id="id5" role="note">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id2">2</a><span class="fn-bracket">]</span></span>
+<p>E. E. Ovtchinnikov (2008).
+<em>Jacobi correction equation, line search and conjugate gradients in
+Hermitian eigenvalue computation I: Computing an extreme eigenvalue</em>.
+SIAM J. Numer. Anal., 46:2567–2592.</p>
+</aside>
+<aside class="footnote brackets" id="id6" role="note">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id3">3</a><span class="fn-bracket">]</span></span>
+<p>E. E. Ovtchinnikov (2008).
+<em>Jacobi correction equation, line search and conjugate gradients in
+Hermitian eigenvalue computation II: Computing several extreme eigenvalues</em>.
+SIAM J. Numer. Anal., 46:2593–2619.</p>
+</aside>
+</aside>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="ssids.html" class="btn btn-neutral float-left" title="spral_ssids - Sparse Symmetric Indefinite Direct Solver" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="ssmfe_expert.html" class="btn btn-neutral float-right" title="spral_ssmfe_expert - Sparse Symmetric Matrix-Free Eigensolver (Expert interface)" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Computational Mathematics Group, STFC Rutherford Appleton Laboratory.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

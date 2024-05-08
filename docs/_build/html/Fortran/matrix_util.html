@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>spral_matrix_util - Matrix utilities &mdash; spral v2024-05-08 [Fortran] documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="spral_random - Pseudo-random number generator" href="random.html" />
+    <link rel="prev" title="spral_lsmr - Sparse Least Squares LSMR Solver" href="lsmr.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            spral
+              <img src="_static/STFC-Logo.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                v2024-05-08 [Fortran]
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="conventions.html">Data types and conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="csc_format.html">Compressed Sparse Column (CSC) Format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="coord_format.html">Coordinate (Coord) Format</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="lsmr.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_lsmr</span></code> - Sparse Least Squares LSMR Solver</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_matrix_util</span></code> - Matrix utilities</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#purpose">Purpose</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#version-history">Version history</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#matrix-type-codes">Matrix type codes</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="random.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_random</span></code> - Pseudo-random number generator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="random_matrix.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_random_matrix</span></code> - Pseudo-random Matrix Generator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="rutherford_boeing.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_rutherford_boeing</span></code> - RB File Format Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="scaling.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_scaling</span></code> - Sparse matrix scalings</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssids.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssids</span></code> - Sparse Symmetric Indefinite Direct Solver</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssmfe.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssmfe</span></code> - Sparse Symmetric Matrix-Free Eigensolver</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssmfe_expert.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssmfe_expert</span></code> - Sparse Symmetric Matrix-Free Eigensolver (Expert interface)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssmfe_core.html"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssmfe_core</span></code> - Sparse Symmetric Matrix-Free Eigensolver (Core Algorithm)</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">spral</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_matrix_util</span></code> - Matrix utilities</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/matrix_util.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="f/spral_matrix_util">
+<span id="spral-matrix-util-matrix-utilities"></span><h1><a class="reference internal" href="#f/spral_matrix_util" title="f/spral_matrix_util: Matrix utilities"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_matrix_util</span></code></a> - Matrix utilities<a class="headerlink" href="#f/spral_matrix_util" title="Permalink to this heading"></a></h1>
+<section id="purpose">
+<h2>Purpose<a class="headerlink" href="#purpose" title="Permalink to this heading"></a></h2>
+<dl class="simple">
+<dt>This packages contains assorted utility routines and datatypes for:</dt><dd><ul class="simple">
+<li><p>matrix data storage and format conversion</p></li>
+<li><p>printing of matrices</p></li>
+</ul>
+</dd>
+</dl>
+<section id="version-history">
+<h3>Version history<a class="headerlink" href="#version-history" title="Permalink to this heading"></a></h3>
+<dl class="simple">
+<dt>2016-09-07 Version 0.1.0</dt><dd><p>API still open to redefinition: only documented entries are considered at
+all “fixed”.</p>
+</dd>
+</dl>
+</section>
+</section>
+<section id="matrix-type-codes">
+<h2>Matrix type codes<a class="headerlink" href="#matrix-type-codes" title="Permalink to this heading"></a></h2>
+<dl class="f variable">
+<dt class="sig sig-object f">
+<span class="sig-name descname"><span class="pre">integer</span> <span class="pre">SPRAL_MATRIX_UNSPECIFIED</span> <span class="pre">=</span> <span class="pre">0</span></span></dt>
+<dd><p>User doesn’t wish to specify matrix type, use default behaviour for
+routine.</p>
+</dd></dl>
+
+<dl class="f variable">
+<dt class="sig sig-object f">
+<span class="sig-name descname"><span class="pre">integer</span> <span class="pre">SPRAL_MATRIX_REAL_RECT</span> <span class="pre">=</span> <span class="pre">1</span></span></dt>
+<dd><p>Rectangular real-valued matrix, <span class="math notranslate nohighlight">\(m\ne n\)</span>.</p>
+</dd></dl>
+
+<dl class="f variable">
+<dt class="sig sig-object f">
+<span class="sig-name descname"><span class="pre">integer</span> <span class="pre">SPRAL_REAL_UNSYM</span> <span class="pre">=</span> <span class="pre">2</span></span></dt>
+<dd><p>Square real-valued unsymmetric matrix, <span class="math notranslate nohighlight">\(m=n\)</span>.</p>
+</dd></dl>
+
+<dl class="f variable">
+<dt class="sig sig-object f">
+<span class="sig-name descname"><span class="pre">integer</span> <span class="pre">SPRAL_REAL_SYM_PSDEF</span> <span class="pre">=</span> <span class="pre">3</span></span></dt>
+<dd><p>Symmetric real-valued positive-definite matrix.</p>
+</dd></dl>
+
+<dl class="f variable">
+<dt class="sig sig-object f">
+<span class="sig-name descname"><span class="pre">integer</span> <span class="pre">SPRAL_REAL_SYM_INDEF</span> <span class="pre">=</span> <span class="pre">4</span></span></dt>
+<dd><p>Symmetric real-valued indefinite matrix.</p>
+</dd></dl>
+
+<dl class="f variable">
+<dt class="sig sig-object f">
+<span class="sig-name descname"><span class="pre">integer</span> <span class="pre">SPRAL_REAL_SKEW</span> <span class="pre">=</span> <span class="pre">6</span></span></dt>
+<dd><p>Skew-symmetric real-valued matrix.</p>
+</dd></dl>
+
+<dl class="f variable">
+<dt class="sig sig-object f">
+<span class="sig-name descname"><span class="pre">integer</span> <span class="pre">SPRAL_MATRIX_CPLX_RECT</span> <span class="pre">=</span> <span class="pre">-1</span></span></dt>
+<dd><p>Rectangular complex-valued matrix, <span class="math notranslate nohighlight">\(m\ne n\)</span>.</p>
+</dd></dl>
+
+<dl class="f variable">
+<dt class="sig sig-object f">
+<span class="sig-name descname"><span class="pre">integer</span> <span class="pre">SPRAL_CPLX_UNSYM</span> <span class="pre">=</span> <span class="pre">-2</span></span></dt>
+<dd><p>Square complex-valued unsymmetric matrix, <span class="math notranslate nohighlight">\(m=n\)</span>.</p>
+</dd></dl>
+
+<dl class="f variable">
+<dt class="sig sig-object f">
+<span class="sig-name descname"><span class="pre">integer</span> <span class="pre">SPRAL_CPLX_HERM_PSDEF</span> <span class="pre">=</span> <span class="pre">-3</span></span></dt>
+<dd><p>Hermitian complex-valued positive-definite matrix.</p>
+</dd></dl>
+
+<dl class="f variable">
+<dt class="sig sig-object f">
+<span class="sig-name descname"><span class="pre">integer</span> <span class="pre">SPRAL_CPLX_SYM_INDEF</span> <span class="pre">=</span> <span class="pre">-4</span></span></dt>
+<dd><p>Hermitian complex-valued indefinite matrix.</p>
+</dd></dl>
+
+<dl class="f variable">
+<dt class="sig sig-object f">
+<span class="sig-name descname"><span class="pre">integer</span> <span class="pre">SPRAL_CPLX_SYM</span> <span class="pre">=</span> <span class="pre">-5</span></span></dt>
+<dd><p>Symmetric complex-valued matrix.</p>
+</dd></dl>
+
+<dl class="f variable">
+<dt class="sig sig-object f">
+<span class="sig-name descname"><span class="pre">integer</span> <span class="pre">SPRAL_CPLX_SKEW</span> <span class="pre">=</span> <span class="pre">-6</span></span></dt>
+<dd><p>Skew-symmetric complex-valued matrix.</p>
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="lsmr.html" class="btn btn-neutral float-left" title="spral_lsmr - Sparse Least Squares LSMR Solver" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="random.html" class="btn btn-neutral float-right" title="spral_random - Pseudo-random number generator" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Computational Mathematics Group, STFC Rutherford Appleton Laboratory.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

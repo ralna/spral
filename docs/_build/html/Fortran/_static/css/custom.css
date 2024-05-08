@@ -1,0 +1,21 @@
+/* Set STFC colours for logo background */
+.wy-side-nav-search {
+   background: -webkit-linear-gradient(0deg, #022e67, #114a8d); /* For Safari 5.1 to 6.0 */
+   background: -o-linear-gradient(0deg, #022e67, #114a8d); /* For Opera 11.1 to 12.0 */
+   background: -moz-linear-gradient(0deg, #022e67, #114a8d); /* For Firefox 3.6 to 15 */
+   background: linear-gradient(0deg, #022e67, #114a8d); /* Standard syntax (must be last) */
+   filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#114a8d', endColorstr='#022e67',GradientType=0 ); /* IE6-9 */
+}
+
+/* Ensure tables wrap nicely on full screen. */
+.wy-table-responsive td {
+   white-space: normal !important;
+}
+.wy-table-responsive th {
+   white-space: normal !important;
+}
+
+/* Ensure documentation spans full screen width */
+.wy-nav-content {
+   max-width: none;
+}

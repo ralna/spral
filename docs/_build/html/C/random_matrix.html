@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RANDOM_MATRIX - Pseudo-random Matrix Generator &mdash; spral v2024-05-08 [C] documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="RUTHERFORD_BOEING - RB File Utilities" href="rutherford_boeing.html" />
+    <link rel="prev" title="RANDOM - Pseudo-random number generator" href="random.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            spral
+              <img src="_static/STFC-Logo.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                v2024-05-08 [C]
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="csc_format.html">Compressed Sparse Column (CSC) Format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="coord_format.html">Coordinate (Coord) Format</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="lsmr.html">LSMR - Sparse Least Squares LSMR Solver</a></li>
+<li class="toctree-l1"><a class="reference internal" href="matrix_util.html">MATRIX_UTIL - Matrix utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="random.html">RANDOM - Pseudo-random number generator</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">RANDOM_MATRIX - Pseudo-random Matrix Generator</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#purpose">Purpose</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#version-history">Version history</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#seed-initialization">Seed Initialization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#routines">Routines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#macros">Macros</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#method">Method</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="rutherford_boeing.html">RUTHERFORD_BOEING - RB File Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="scaling.html">SCALING - Sparse matrix scalings</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssids.html">SSIDS - Sparse Symmetric Indefinite Direct Solver</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssmfe.html">SSMFE - Sparse Symmetric Matrix-Free Eigensolver</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssmfe_expert.html">SSMFE_EXPERT - Sparse Symmetric Matrix-Free Eigensolver (Expert interface)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ssmfe_core.html">SSMFE_CORE - Sparse Symmetric Matrix-Free Eigensolver (Core Algorithm)</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">spral</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">RANDOM_MATRIX - Pseudo-random Matrix Generator</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/random_matrix.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="random-matrix-pseudo-random-matrix-generator">
+<h1>RANDOM_MATRIX - Pseudo-random Matrix Generator<a class="headerlink" href="#random-matrix-pseudo-random-matrix-generator" title="Permalink to this heading"></a></h1>
+<div class="highlight-C notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;spral_random_matrix.h&gt;</span><span class="c1"> /* or &lt;spral.h&gt; for all packages */</span>
+</pre></div>
+</div>
+<section id="purpose">
+<h2>Purpose<a class="headerlink" href="#purpose" title="Permalink to this heading"></a></h2>
+<p>This package generates a random sparse matrix of specified size and density in
+compressed sparse column format. Either the pattern or both the pattern and
+values can be generated. Both symmetric and unsymmetric matrices can be
+generated, and structural non-degeneracy can optionally be ensured, and the
+row indices can be sorted within columns.</p>
+<section id="version-history">
+<h3>Version history<a class="headerlink" href="#version-history" title="Permalink to this heading"></a></h3>
+<dl class="simple">
+<dt>2016-09-08 Version 1.1.0</dt><dd><p>Add long support</p>
+</dd>
+<dt>2014-03-06 Version 1.0.0</dt><dd><p>Initial release</p>
+</dd>
+</dl>
+</section>
+</section>
+<section id="seed-initialization">
+<h2>Seed Initialization<a class="headerlink" href="#seed-initialization" title="Permalink to this heading"></a></h2>
+<p>Prior to first use, the random number generator state must be initialised:</p>
+<div class="highlight-C notranslate"><div class="highlight"><pre><span></span><span class="kt">int</span><span class="w"> </span><span class="n">state</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">SPRAL_RANDOM_INITIAL_SEED</span><span class="p">;</span>
+</pre></div>
+</div>
+<p>See :doc:&lt;random&gt; documentation for further information.</p>
+</section>
+<section id="routines">
+<h2>Routines<a class="headerlink" href="#routines" title="Permalink to this heading"></a></h2>
+<dl class="c function">
+<dt class="sig sig-object c" id="c.spral_random_matrix_generate">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_random_matrix_generate</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">state</span></span>, <span class="k"><span class="pre">enum</span></span><span class="w"> </span><span class="n"><span class="pre">spral_matrix_type</span></span><span class="w"> </span><span class="n"><span class="pre">matrix_type</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">m</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">n</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">nnz</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">ptr</span></span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#c.spral_random_matrix_generate" title="n"><span class="n"><span class="pre">n</span></span></a><span class="w"> </span><span class="o"><span class="pre">+</span></span><span class="w"> </span><span class="m"><span class="pre">1</span></span><span class="p"><span class="pre">]</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">row</span></span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#c.spral_random_matrix_generate" title="nnz"><span class="n"><span class="pre">nnz</span></span></a><span class="p"><span class="pre">]</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">val</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">flags</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_random_matrix_generate" title="Permalink to this definition"></a><br /></dt>
+<dd><p>Generate an <span class="math notranslate nohighlight">\(m\times n\)</span> random matrix with <cite>math:`nnz</cite> non-zero
+entries.</p>
+<p>If <cite>matrix_type</cite> specifies a symmetric or skew symmetric matrix, only
+the lower half matrix will be returned to the user.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> – State of the pseudo-random number generator to use.</p></li>
+<li><p><strong>matrix_type</strong> – Type of matrix to generate, see
+<code class="xref c c-type docutils literal notranslate"><span class="pre">spral_matrix_type</span></code>.</p></li>
+<li><p><strong>m</strong> – Number of rows in the matrix.</p></li>
+<li><p><strong>n</strong> – Number of columns in the matrix.</p></li>
+<li><p><strong>nnz</strong> – Number of non-zeroes in the matrix.</p></li>
+<li><p><strong>ptr</strong> – Column pointers of the matrix
+(see <a class="reference internal" href="csc_format.html"><span class="doc">CSC format</span></a>).</p></li>
+<li><p><strong>row</strong> – Row indices of the matrix
+(see <a class="reference internal" href="csc_format.html"><span class="doc">CSC format</span></a>).</p></li>
+<li><p><strong>val</strong> – If not <cite>NULL</cite>, array of size <cite>nnz</cite> for non-zero values of the
+matrix (see <a class="reference internal" href="csc_format.html"><span class="doc">CSC format</span></a>).</p></li>
+<li><p><strong>flags</strong> – <p>Logical combination (i.e. bitwise-or) of the following
+possible values:</p>
+<blockquote>
+<div><dl class="simple">
+<dt>SPRAL_RANDOM_MATRIX_FINDEX</dt><dd><p>Entries in the arrays <cite>ptr[]</cite> and <cite>row[]</cite> should be numbered from
+1 (i.e. Fortran indexing). If this flag is not set, these arrays
+will be numbered from 0 (i.e. C indexing).</p>
+</dd>
+<dt>SPRAL_RANDOM_MATRIX_NONSINGULAR</dt><dd><p>Matrix will have a transversal of size
+<span class="math notranslate nohighlight">\(\min({\tt m}, {\tt n})\)</span>. In the symmetric or skew
+symmetric case this will be the natural diagonal. In the unsymmetric
+and rectangular cases a random matching is used. If this flag is not
+set, the matrix may or may not be structurally singular.
+Note that symmetric positive-definite matrices are always
+non-singular.</p>
+</dd>
+<dt>SPRAL_RANDOM_MATRIX_SORT</dt><dd><p>Matrix will have entries sorted into ascending order within columns.
+If this flag is not set, entries may occur in any order.</p>
+</dd>
+</dl>
+</div></blockquote>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>0 on success, otherwise refer to table below for error code.</p>
+</dd>
+</dl>
+<p>Possible exit status values are:</p>
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p>0</p></td>
+<td><p>Success</p></td>
+</tr>
+<tr class="row-even"><td><p>-1</p></td>
+<td><p>An allocation error has occurred. If present, <cite>stat</cite> will
+contain the Fortran stat value returned by the failed
+allocate() call.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-2</p></td>
+<td><p>An invalid value of matrix_type was supplied.</p></td>
+</tr>
+<tr class="row-even"><td><p>-3</p></td>
+<td><p>At least one of m, n, or nnz was less than 1.</p></td>
+</tr>
+<tr class="row-odd"><td><p>-4</p></td>
+<td><p>The (in)equality of m and n was inconsistent with matrix_type.</p></td>
+</tr>
+<tr class="row-even"><td><p>-5</p></td>
+<td><p>A non-singular matrix was requested, but <span class="math notranslate nohighlight">\(nnz&lt;\min(m,n)\)</span>.</p></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="c function">
+<dt class="sig sig-object c" id="c.spral_random_matrix_generate_long">
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_random_matrix_generate_long</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">state</span></span>, <span class="k"><span class="pre">enum</span></span><span class="w"> </span><span class="n"><span class="pre">spral_matrix_type</span></span><span class="w"> </span><span class="n"><span class="pre">matrix_type</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">m</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">n</span></span>, <span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n"><span class="pre">nnz</span></span>, <span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n"><span class="pre">ptr</span></span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#c.spral_random_matrix_generate_long" title="n"><span class="n"><span class="pre">n</span></span></a><span class="w"> </span><span class="o"><span class="pre">+</span></span><span class="w"> </span><span class="m"><span class="pre">1</span></span><span class="p"><span class="pre">]</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">row</span></span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#c.spral_random_matrix_generate_long" title="nnz"><span class="n"><span class="pre">nnz</span></span></a><span class="p"><span class="pre">]</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">val</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">flags</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_random_matrix_generate_long" title="Permalink to this definition"></a><br /></dt>
+<dd><p>As <a class="reference internal" href="#c.spral_random_matrix_generate" title="spral_random_matrix_generate"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_random_matrix_generate()</span></code></a>, except <code class="docutils literal notranslate"><span class="pre">nnz</span></code> and <code class="docutils literal notranslate"><span class="pre">ptr</span></code> are
+<code class="docutils literal notranslate"><span class="pre">int64_t</span></code>.</p>
+</dd></dl>
+
+</section>
+<section id="macros">
+<h2>Macros<a class="headerlink" href="#macros" title="Permalink to this heading"></a></h2>
+<p>The following preprocessor macros are defined:</p>
+<dl class="c macro">
+<dt class="sig sig-object c">
+<span class="sig-name descname"><span class="pre">SPRAL_RANDOM_MATRIX_FINDEX</span> <span class="pre">1</span></span></dt>
+<dd><p>Flag to use Fortran indexing on call to
+<a class="reference internal" href="#c.spral_random_matrix_generate" title="spral_random_matrix_generate"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_random_matrix_generate()</span></code></a>.</p>
+</dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c">
+<span class="sig-name descname"><span class="pre">SPRAL_RANDOM_MATRIX_NONSINGULAR</span> <span class="pre">2</span></span></dt>
+<dd><p>Flag to generate non-singular matrix on call to
+<a class="reference internal" href="#c.spral_random_matrix_generate" title="spral_random_matrix_generate"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_random_matrix_generate()</span></code></a>.</p>
+</dd></dl>
+
+<dl class="c macro">
+<dt class="sig sig-object c">
+<span class="sig-name descname"><span class="pre">SPRAL_RANDOM_MATRIX_SORT</span> <span class="pre">4</span></span></dt>
+<dd><p>Flag to sort row indices on call to
+<a class="reference internal" href="#c.spral_random_matrix_generate" title="spral_random_matrix_generate"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_random_matrix_generate()</span></code></a>.</p>
+</dd></dl>
+
+</section>
+<section id="example">
+<h2>Example<a class="headerlink" href="#example" title="Permalink to this heading"></a></h2>
+<p>The following code generates a random <span class="math notranslate nohighlight">\(4 \times 5\)</span> matrix with
+<span class="math notranslate nohighlight">\(8\)</span> non-zeroes that is non-singular.</p>
+<div class="highlight-C notranslate"><div class="highlight"><pre><span></span><span class="cm">/* examples/C/random_matrix.c - Example code for SPRAL_RANDOM_MATRIX package */</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;spral.h&quot;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdio.h&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;stdlib.h&gt;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">   </span><span class="kt">int</span><span class="w"> </span><span class="n">state</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">SPRAL_RANDOM_INITIAL_SEED</span><span class="p">;</span>
+
+<span class="w">   </span><span class="kt">int</span><span class="w"> </span><span class="n">m</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="n">nnz</span><span class="o">=</span><span class="mi">8</span><span class="p">;</span>
+<span class="w">   </span><span class="kt">int</span><span class="w"> </span><span class="n">ptr</span><span class="p">[</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">],</span><span class="w"> </span><span class="n">row</span><span class="p">[</span><span class="n">nnz</span><span class="p">];</span>
+<span class="w">   </span><span class="kt">double</span><span class="w"> </span><span class="n">val</span><span class="p">[</span><span class="n">nnz</span><span class="p">];</span>
+
+<span class="w">   </span><span class="cm">/* Generate matrix */</span>
+<span class="w">   </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Generating a %d x %d non-singular matrix with %d non-zeroes</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span>
+<span class="w">         </span><span class="n">m</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">nnz</span><span class="p">);</span>
+<span class="w">   </span><span class="k">if</span><span class="p">(</span><span class="n">spral_random_matrix_generate</span><span class="p">(</span><span class="o">&amp;</span><span class="n">state</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">m</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">nnz</span><span class="p">,</span><span class="w"> </span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="n">row</span><span class="p">,</span><span class="w"> </span><span class="n">val</span><span class="p">,</span>
+<span class="w">            </span><span class="n">SPRAL_RANDOM_MATRIX_NONSINGULAR</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Error return from spral_random_matrix_generate()</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+<span class="w">      </span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+<span class="w">   </span><span class="p">}</span>
+
+<span class="w">   </span><span class="cm">/* Print matrix using utility routine from SPRAL_MATRIX_UTILS package */</span>
+<span class="w">   </span><span class="n">printf</span><span class="p">(</span><span class="s">&quot;Generated matrix:</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+<span class="w">   </span><span class="n">spral_print_matrix</span><span class="p">(</span><span class="mi">-1</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">m</span><span class="p">,</span><span class="w"> </span><span class="n">n</span><span class="p">,</span><span class="w"> </span><span class="n">ptr</span><span class="p">,</span><span class="w"> </span><span class="n">row</span><span class="p">,</span><span class="w"> </span><span class="n">val</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">);</span>
+
+<span class="w">   </span><span class="cm">/* Success */</span>
+<span class="w">   </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>This produces the following output:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Generating</span> <span class="n">a</span> <span class="mi">4</span> <span class="n">x</span>  <span class="mi">5</span> <span class="n">non</span><span class="o">-</span><span class="n">singular</span> <span class="n">matrix</span> <span class="k">with</span> <span class="mi">8</span> <span class="n">non</span><span class="o">-</span><span class="n">zeroes</span>
+<span class="n">Generated</span> <span class="n">matrix</span><span class="p">:</span>
+<span class="n">Matrix</span> <span class="n">of</span> <span class="n">undefined</span> <span class="nb">type</span><span class="p">,</span> <span class="n">dimension</span> <span class="mi">4</span><span class="n">x5</span> <span class="k">with</span> <span class="mi">8</span> <span class="n">entries</span><span class="o">.</span>
+<span class="mi">0</span><span class="p">:</span>                                         <span class="o">-</span><span class="mf">1.0744E-01</span>   <span class="mf">9.1000E-01</span>
+<span class="mi">1</span><span class="p">:</span>                             <span class="mf">9.5364E-01</span>                <span class="mf">1.0912E-01</span>
+<span class="mi">2</span><span class="p">:</span>                                          <span class="mf">1.1631E-01</span>  <span class="o">-</span><span class="mf">5.8957E-01</span>
+<span class="mi">3</span><span class="p">:</span>  <span class="o">-</span><span class="mf">9.0631E-01</span>                                          <span class="mf">7.7313E-01</span>
+</pre></div>
+</div>
+</section>
+<section id="method">
+<h2>Method<a class="headerlink" href="#method" title="Permalink to this heading"></a></h2>
+<p>If structural non-singularity is requested, first
+<span class="math notranslate nohighlight">\(\min(m, n)\)</span> entries are generated as follows:</p>
+<dl class="simple">
+<dt>Unsymmetric or Rectangular</dt><dd><p>Random permutations of the rows and columns are generated. The first
+<span class="math notranslate nohighlight">\(\min(m, n)\)</span> entries of these permutations are
+used to specify the entries of a maximum transversal.</p>
+</dd>
+<dt>Symmetric</dt><dd><p>The diagonal is added to the matrix explicitly.</p>
+</dd>
+</dl>
+<p>The remaining non-zero entries are then assigned to columns uniformally
+at random. In the symmetric case, a weighting is used in proportion to
+the number of entries below the diagonal. If the selected column for a
+given non-zero is already full, a new random sample is drawn.</p>
+<p>Once the number of entries in each column has been determined, and any
+required maximum transversal inserted, row indices are determined
+uniformally at random. Should a non-zero in that row already be present
+in the column, a new random sample is drawn.</p>
+<p>In all cases, values are drawn uniformally at random from the range
+<span class="math notranslate nohighlight">\((-1,1)\)</span>. In the positive-definite case, a post-processing step
+sums the absolute values of all the entries in each column and replaces
+the diagonal with this value.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="random.html" class="btn btn-neutral float-left" title="RANDOM - Pseudo-random number generator" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="rutherford_boeing.html" class="btn btn-neutral float-right" title="RUTHERFORD_BOEING - RB File Utilities" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Computational Mathematics Group, STFC Rutherford Appleton Laboratory.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
