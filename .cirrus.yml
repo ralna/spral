@@ -11,7 +11,7 @@ task:
     if [ "$(uname)" = "FreeBSD" ]; then
       pkg install -y py39-pip meson bash gcc12 metis hwloc openblas
     else
-      brew install python meson gcc metis hwloc openblas
+      brew install python meson gcc@13 metis hwloc openblas
     fi
     echo "OMP_CANCELLATION=TRUE" >> $CIRRUS_ENV
     echo "OMP_PROC_BIND=TRUE" >> $CIRRUS_ENV
