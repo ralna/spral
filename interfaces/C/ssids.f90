@@ -545,7 +545,7 @@ subroutine spral_ssids_factor_ptr32(cposdef, cptr, crow, val, cscale, cakeep, &
      end if
      call C_F_POINTER(crow, frow, shape=(/ fptr(fakeep%n+1)-1 /))
      if (cindexed) then
-        allocate(frow_alloc(fakeep%n+1))
+        allocate(frow_alloc(fptr(fakeep%n+1)-1))
         frow_alloc(:) = frow(:) + 1
         frow => frow_alloc
      end if
