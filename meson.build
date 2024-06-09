@@ -201,7 +201,7 @@ if build_tests
     file = test[1]
     test(name,
          executable(name, file, link_with : libspral, dependencies : libspral_deps, link_language : 'fortran',
-                    include_directories: libspral_include, install : true, install_dir : fortran_tests_folder),
+                    include_directories: libspral_include, install : false, install_dir : fortran_tests_folder),
          timeout : 300, is_parallel : false)
   endforeach
 
@@ -212,7 +212,7 @@ if build_tests
     file = test[1]
     test(name,
          executable(name, file, link_with : libspral, dependencies : libspral_deps, link_language : 'c',
-                    include_directories : libspral_include, install : true, install_dir : c_tests_folder),
+                    include_directories : libspral_include, install : false, install_dir : c_tests_folder),
          timeout : 300, is_parallel : false)
   endforeach
 
@@ -223,7 +223,7 @@ if build_tests
     file = test[1]
     test(name,
          executable(name, file, link_with : libspral, dependencies : libspral_deps, link_language : 'cpp',
-                    include_directories : libspral_include, install : true, install_dir : cpp_tests_folder),
+                    include_directories : libspral_include, install : false, install_dir : cpp_tests_folder),
          timeout : 300, is_parallel : false)
   endforeach
 endif
