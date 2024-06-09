@@ -195,6 +195,7 @@ endif
 if build_tests
 
   fortran_tests_folder = 'tests/Fortran'
+  env = ['OMP_CANCELLATION=true', 'OMP_PROC_BIND=true']
 
   foreach test: spral_tests
     name = test[0]
@@ -202,7 +203,7 @@ if build_tests
     test(name,
          executable(name, file, link_with : libspral, dependencies : libspral_deps, link_language : 'fortran',
                     include_directories: libspral_include, install : false, install_dir : fortran_tests_folder),
-         timeout : 300, is_parallel : false)
+         timeout : 300, is_parallel : false, env: env)
   endforeach
 
   c_tests_folder = 'tests/C'
@@ -213,7 +214,7 @@ if build_tests
     test(name,
          executable(name, file, link_with : libspral, dependencies : libspral_deps, link_language : 'c',
                     include_directories : libspral_include, install : false, install_dir : c_tests_folder),
-         timeout : 300, is_parallel : false)
+         timeout : 300, is_parallel : false, env: env)
   endforeach
 
   cpp_tests_folder = 'tests/C++'
@@ -224,7 +225,7 @@ if build_tests
     test(name,
          executable(name, file, link_with : libspral, dependencies : libspral_deps, link_language : 'cpp',
                     include_directories : libspral_include, install : false, install_dir : cpp_tests_folder),
-         timeout : 300, is_parallel : false)
+         timeout : 300, is_parallel : false, env: env)
   endforeach
 endif
 
