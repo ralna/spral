@@ -191,41 +191,37 @@ if install_modules
   meson.add_install_script(script_modules)
 endif
 
+# OMP-related environment variables
+omp_env = ['OMP_CANCELLATION=true', 'OMP_PROC_BIND=true']
+
 # Tests
 if build_tests
-
-  fortran_tests_folder = 'tests/Fortran'
-  env = ['OMP_CANCELLATION=true', 'OMP_PROC_BIND=true']
 
   foreach test: spral_tests
     name = test[0]
     file = test[1]
     test(name,
-         executable(name, file, link_with : libspral, dependencies : libspral_deps, link_language : 'fortran',
-                    include_directories: libspral_include, install : false, install_dir : fortran_tests_folder),
-         timeout : 300, is_parallel : false, env: env)
+         executable(name, file, link_with : libspral, dependencies : libspral_deps,
+                    link_language : 'fortran', include_directories: libspral_include),
+         timeout : 300, is_parallel : false, env: omp_env)
   endforeach
-
-  c_tests_folder = 'tests/C'
 
   foreach test: spral_c_tests
     name = test[0]
     file = test[1]
     test(name,
-         executable(name, file, link_with : libspral, dependencies : libspral_deps, link_language : 'c',
-                    include_directories : libspral_include, install : false, install_dir : c_tests_folder),
-         timeout : 300, is_parallel : false, env: env)
+         executable(name, file, link_with : libspral, dependencies : libspral_deps,
+                    link_language : 'c', include_directories : libspral_include),
+         timeout : 300, is_parallel : false, env: omp_env)
   endforeach
-
-  cpp_tests_folder = 'tests/C++'
 
   foreach test: spral_cpp_tests
     name = test[0]
     file = test[1]
     test(name,
-         executable(name, file, link_with : libspral, dependencies : libspral_deps, link_language : 'cpp',
-                    include_directories : libspral_include, install : false, install_dir : cpp_tests_folder),
-         timeout : 300, is_parallel : false, env: env)
+         executable(name, file, link_with : libspral, dependencies : libspral_deps,
+                    link_language : 'cpp', include_directories : libspral_include),
+         timeout : 300, is_parallel : false, env: omp_env)
   endforeach
 endif
 
@@ -240,7 +236,7 @@ if build_examples
     test(name,
          executable(name, file, link_with : libspral, dependencies : libspral_deps, link_language : 'fortran',
          include_directories : libspral_include, install : true, install_dir : fortran_examples_folder),
-         timeout : 300, is_parallel : false)
+         timeout : 300, is_parallel : false, env: omp_env)
   endforeach
 
   c_examples_folder = 'examples/C'
@@ -251,6 +247,6 @@ if build_examples
     test(name,
          executable(name, file, link_with : libspral, dependencies : libspral_deps, link_language : 'c',
                     include_directories : libspral_include, install : true, install_dir : c_examples_folder),
-         timeout : 300, is_parallel : false)
+         timeout : 300, is_parallel : false, env: omp_env)
   endforeach
 endif
