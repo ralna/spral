@@ -105,12 +105,6 @@ jobs:
           fi
           rm *.tar.gz
 
-      - name: Set environment variables for OpenMP
-        shell: bash
-        run: |
-          echo "OMP_CANCELLATION=TRUE" >> $GITHUB_ENV
-          echo "OMP_PROC_BIND=TRUE" >> $GITHUB_ENV
-
       - name: Install compilers
         uses: fortran-lang/setup-fortran@main
         with:
