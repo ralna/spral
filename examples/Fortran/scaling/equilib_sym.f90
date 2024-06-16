@@ -41,7 +41,7 @@ program equilib_scale_sym_example
       stop
    endif
 
-   ! Print scaling and matching
+   ! Print scaling
    write(*,"(a,10es10.2)") 'Scaling: ', scaling(1:n)
 
    ! Calculate scaled matrix and print it

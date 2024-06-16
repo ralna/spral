@@ -33,7 +33,7 @@ int main(void) {
       exit(1);
    }
 
-   /* Print scaling and matching */
+   /* Print scaling */
    printf("Row Scaling: ");
    for(int i=0; i<m; i++) printf(" %10.2le", rscaling[i]);
    printf("\nCol Scaling: ");
