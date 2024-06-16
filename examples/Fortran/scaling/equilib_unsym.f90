@@ -42,7 +42,7 @@ program equilib_scale_unsym_example
       stop
    endif
 
-   ! Print scaling and matching
+   ! Print scaling
    write(*,"(a,10es10.2)") 'Row Scaling: ', rscaling(1:m)
    write(*,"(a,10es10.2)") 'Col Scaling: ', cscaling(1:n)
 

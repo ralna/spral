@@ -260,7 +260,7 @@ Routines
 
 .. f:subroutine:: equilib_scale_sym(n, ptr, row, val, scaling, options, inform)
 
-   Find a matching-based symmetric scaling using the norm-equilibration algorithm.
+   Find a symmetric scaling using the norm-equilibration algorithm.
 
    The scaled matrix is such that the infinity norm of each row and column are
    equal to :math:`1.0`.
@@ -275,7 +275,7 @@ Routines
 
 .. f:subroutine:: equilib_scale_unsym(m, n, ptr, row, val, rscaling, cscaling, options, inform)
 
-   Find a matching-based unsymmetric scaling using the norm-equilibration algorithm.
+   Find an unsymmetric scaling using the norm-equilibration algorithm.
 
    The scaled matrix is such that the infinity norm of each row and column are
    equal to :math:`1.0`.
