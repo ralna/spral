@@ -89,21 +89,30 @@ contains
     end if
   end subroutine convert_string_c2f
 
-  ! WARNING: Assumes cstr points to a sufficiently large buffer.
-  subroutine convert_string_f2c(fstr, cstr)
+  ! WARNING: Assumes cstr points to a buffer of size of at least `maxlen`.
+  subroutine convert_string_f2c(fstr, cstr, maxlen)
     implicit none
     character(len=*), intent(in) :: fstr
     type(C_PTR), intent(inout) :: cstr
+    integer, intent(in) :: maxlen
 
+    integer :: len
     integer :: i
     character(C_CHAR), dimension(:), pointer :: cstrptr
 
+    len = len_trim(fstr) + 1
+    len = min(len, maxlen - 1)
+
+    if (len == 0) then
+       return
+    endif
+
     if (C_ASSOCIATED(cstr)) then
-       call c_f_pointer(cstr, cstrptr, shape = (/ len_trim(fstr)+1 /))
-       do i = 1, len_trim(fstr)
+       call c_f_pointer(cstr, cstrptr, shape = (/ len /))
+       do i = 1, len - 1
           cstrptr(i) = fstr(i:i)
        end do
-       cstrptr(len_trim(fstr)+1) = C_NULL_CHAR
+       cstrptr(len) = C_NULL_CHAR
     end if
   end subroutine convert_string_f2c
 end module spral_rutherford_boeing_ciface
@@ -199,11 +208,11 @@ integer(C_INT) function spral_rb_peek(filename, m, n, nelt, nvar, nval, &
      temp_int = fmatrix_type
   end if
   if (c_associated(type_code)) &
-       call convert_string_f2c(ftype_code, type_code)
+       call convert_string_f2c(ftype_code, type_code, LEN(ftype_code))
   if (c_associated(title)) &
-       call convert_string_f2c(ftitle, title)
+       call convert_string_f2c(ftitle, title, LEN(ftitle))
   if (c_associated(identifier)) &
-       call convert_string_f2c(fidentifier, identifier)
+       call convert_string_f2c(fidentifier, identifier, LEN(fidentifier))
 end function spral_rb_peek
 
 integer(C_INT) function spral_rb_read(filename, handle, matrix_type, m, n, &
@@ -267,9 +276,9 @@ integer(C_INT) function spral_rb_read(filename, handle, matrix_type, m, n, &
   if (allocated(matrix%val)) val = C_LOC(matrix%val)
   ! Handle optional strings
   if (C_ASSOCIATED(title)) &
-       call convert_string_f2c(ftitle, title)
+       call convert_string_f2c(ftitle, title, LEN(ftitle))
   if (C_ASSOCIATED(identifier)) &
-       call convert_string_f2c(fidentifier, identifier)
+       call convert_string_f2c(fidentifier, identifier, LEN(fidentifier))
 
   ! Set return code
   spral_rb_read = info
@@ -327,9 +336,9 @@ integer(C_INT) function spral_rb_read_ptr32(filename, handle, matrix_type, &
   if (allocated(matrix%val)) val = C_LOC(matrix%val)
   ! Handle optional strings
   if (C_ASSOCIATED(title)) &
-       call convert_string_f2c(ftitle, title)
+       call convert_string_f2c(ftitle, title, LEN(ftitle))
   if (C_ASSOCIATED(identifier)) &
-       call convert_string_f2c(fidentifier, identifier)
+       call convert_string_f2c(fidentifier, identifier, LEN(fidentifier))
 
   ! Set return code
   spral_rb_read_ptr32 = info
