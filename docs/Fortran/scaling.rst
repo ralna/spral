@@ -79,7 +79,7 @@ Routines
    :p real cscaling(n) [out]: returns column scaling found by routine
    :p auction_options options [in]: controls behaviour of routine
    :p auction_inform inform [out]: returns information on execution of routine
-   :o integer match(n) [out]: returns matching found by routine. Row i is
+   :o integer match(m) [out]: returns matching found by routine. Row i is
       matched to column match(i), or is unmatched if match(i)=0.
 
 Data-types
@@ -417,7 +417,7 @@ Routines
    :p real cscaling(n) [out]: returns column scaling found by routine.
    :p hungarian_options options [in]: controls behaviour of routine.
    :p hungarian_inform inform [out]: returns information on execution of routine.
-   :o integer match(n) [out]: returns matching found by routine. Row i is
+   :o integer match(m) [out]: returns matching found by routine. Row i is
       matched to column match(i), or is unmatched if match(i)=0.
 
 Data-types
