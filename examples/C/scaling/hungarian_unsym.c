@@ -36,7 +36,7 @@ int main(void) {
 
    /* Print scaling and matching */
    printf("Matching:");
-   for(int i=0; i<n; i++) printf(" %10d", match[i]);
+   for(int i=0; i<m; i++) printf(" %10d", match[i]);
    printf("\nRow Scaling: ");
    for(int i=0; i<m; i++) printf(" %10.2le", rscaling[i]);
    printf("\nCol Scaling: ");
