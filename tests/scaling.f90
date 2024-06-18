@@ -299,7 +299,7 @@ subroutine test_auction_unsym_random
          errors = errors + 1
          cycle prblm_loop
       endif
-      if(any(cnt(1:a%m).gt.1)) then
+      if(any(cnt(1:a%n).gt.1)) then
          write(*, "(a)") "Mismatched row"
          errors = errors + 1
          cycle prblm_loop
@@ -809,7 +809,7 @@ subroutine test_hungarian_unsym_random
          errors = errors + 1
          cycle prblm_loop
       endif
-      if(any(cnt(1:a%m).gt.1)) then
+      if(any(cnt(1:a%n).gt.1)) then
          write(*, "(a)") "Mismatched row"
          errors = errors + 1
          cycle prblm_loop
