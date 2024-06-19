@@ -532,7 +532,7 @@ subroutine test_equilib_unsym_random
       !
       ! Ensure inf norm of all scaled rows  is close to 1.0
       !
-      rinf(1:a%n) = 0.0
+      rinf(1:a%m) = 0.0
       do i = 1, a%n
          if(a%ptr(i).eq.a%ptr(i+1)) cycle ! Empty column
          cmax = 0.0;
@@ -548,7 +548,7 @@ subroutine test_equilib_unsym_random
          endif
       end do
 
-      do i = 1, a%n
+      do i = 1, a%m
          if((1.0-rinf(i)) > 0.05) then
             ! Check non-empty row before we complain
             rcnt = 0
