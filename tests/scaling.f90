@@ -64,9 +64,10 @@ subroutine test_auction_sym_random
    write(*, "(a)") "Testing auction_scaling_sym() with random matrices"
    write(*, "(a)") "=================================================="
 
-   allocate(a%ptr(maxn+1))
-   allocate(a%row(2*maxnz), a%val(2*maxnz))
-   allocate(scaling(maxn), match(maxn), rmax(maxn), cnt(maxn))
+   ! dummy allocations to simplify reallocating specific test case size in loop
+   allocate(a%ptr(0))
+   allocate(a%row(0), a%val(0))
+   allocate(scaling(0), match(0), rmax(0), cnt(0))
 
    prblm_loop: &
    do prblm = 1, nprob
@@ -87,6 +88,11 @@ subroutine test_auction_sym_random
          write(*, "(a,i8,a,i8)") "or nza = ", nza, " > maxnz = ", maxnz
          cycle
       endif
+
+      deallocate(a%ptr, a%row, a%val, scaling, match, rmax, cnt)
+      allocate(a%ptr(a%n+1))
+      allocate(a%row(nza), a%val(nza))
+      allocate(scaling(a%n), match(a%n), rmax(a%n), cnt(a%n))
 
       call gen_random_sym(a, nza, state)
       !print *, "n = ", a%n
@@ -212,9 +218,10 @@ subroutine test_auction_unsym_random
    write(*, "(a)") "Testing auction_scaling_unsym() with random matrices"
    write(*, "(a)") "===================================================="
 
-   allocate(a%ptr(maxn+1))
-   allocate(a%row(2*maxnz), a%val(2*maxnz))
-   allocate(rscaling(maxn), cscaling(maxn), match(maxn), rmax(maxn), cnt(maxn))
+   ! dummy allocations to simplify reallocating specific test case size in loop
+   allocate(a%ptr(0))
+   allocate(a%row(0), a%val(0))
+   allocate(rscaling(0), cscaling(0), match(0), rmax(0), cnt(0))
 
    prblm_loop: &
    do prblm = 1, nprob
@@ -240,6 +247,11 @@ subroutine test_auction_unsym_random
       !   write(*, "(a,i8,a,i8)") "or nza = ", nza, " > maxnz = ", maxnz
       !   cycle
       !endif
+
+      deallocate(a%ptr, a%row, a%val, rscaling, cscaling, match, rmax, cnt)
+      allocate(a%ptr(a%n+1))
+      allocate(a%row(nza), a%val(nza))
+      allocate(rscaling(a%m), cscaling(a%n), match(a%m), rmax(a%m), cnt(a%n))
 
       call gen_random_unsym(a, nza, state)
       !print *, "n = ", a%n
@@ -388,9 +400,10 @@ subroutine test_equilib_sym_random
    write(*, "(a)") "Testing equilib_scaling_sym() with random matrices"
    write(*, "(a)") "=================================================="
 
-   allocate(a%ptr(maxn+1))
-   allocate(a%row(2*maxnz), a%val(2*maxnz))
-   allocate(scaling(maxn), rinf(maxn))
+   ! dummy allocations to simplify reallocating specific test case size in loop
+   allocate(a%ptr(0))
+   allocate(a%row(0), a%val(0))
+   allocate(scaling(0), rinf(0))
 
    prblm_loop: &
    do prblm = 1, nprob
@@ -411,6 +424,11 @@ subroutine test_equilib_sym_random
          write(*, "(a,i8,a,i8)") "or nza = ", nza, " > maxnz = ", maxnz
          cycle
       endif
+
+      deallocate(a%ptr, a%row, a%val, scaling, rinf)
+      allocate(a%ptr(a%n+1))
+      allocate(a%row(nza), a%val(nza))
+      allocate(scaling(a%n), rinf(a%n))
 
       call gen_random_sym(a, nza, state)
       !print *, "n = ", a%n
@@ -480,9 +498,10 @@ subroutine test_equilib_unsym_random
    write(*, "(a)") "Testing equilib_scaling_unsym() with random matrices"
    write(*, "(a)") "===================================================="
 
-   allocate(a%ptr(maxn+1))
-   allocate(a%row(2*maxnz), a%val(2*maxnz))
-   allocate(rscaling(maxn), cscaling(maxn), rinf(maxn))
+   ! dummy allocations to simplify reallocating specific test case size in loop
+   allocate(a%ptr(0))
+   allocate(a%row(0), a%val(0))
+   allocate(rscaling(0), cscaling(0), rinf(0))
 
    prblm_loop: &
    do prblm = 1, nprob
@@ -509,6 +528,11 @@ subroutine test_equilib_unsym_random
          write(*, "(a,i8,a,i8)") "or nza = ", nza, " > maxnz = ", maxnz
          cycle
       endif
+
+      deallocate(a%ptr, a%row, a%val, rscaling, cscaling, rinf)
+      allocate(a%ptr(a%n+1))
+      allocate(a%row(nza), a%val(nza))
+      allocate(rscaling(a%m), cscaling(a%n), rinf(a%m))
 
       call gen_random_unsym(a, nza, state)
       !print *, "n = ", a%n
@@ -594,9 +618,10 @@ subroutine test_hungarian_sym_random
    write(*, "(a)") "Testing hungarian_scaling_sym() with random matrices"
    write(*, "(a)") "==================================================="
 
-   allocate(a%ptr(maxn+1))
-   allocate(a%row(2*maxnz), a%val(2*maxnz))
-   allocate(scaling(maxn), match(maxn), rmax(maxn), cnt(maxn))
+   ! dummy allocations to simplify reallocating specific test case size in loop
+   allocate(a%ptr(0))
+   allocate(a%row(0), a%val(0))
+   allocate(scaling(0), match(0), rmax(0), cnt(0))
 
    prblm_loop: &
    do prblm = 1, nprob
@@ -617,6 +642,11 @@ subroutine test_hungarian_sym_random
          write(*, "(a,i8,a,i8)") "or nza = ", nza, " > maxnz = ", maxnz
          cycle
       endif
+
+      deallocate(a%ptr, a%row, a%val, scaling, match, rmax, cnt)
+      allocate(a%ptr(a%n+1))
+      allocate(a%row(nza), a%val(nza))
+      allocate(scaling(a%n), match(a%n), rmax(a%n), cnt(a%n))
 
       call gen_random_sym(a, nza, state)
       !print *, "n = ", a%n
@@ -726,9 +756,10 @@ subroutine test_hungarian_unsym_random
    write(*, "(a)") "Testing hungarian_scaling_unsym() with random matrices"
    write(*, "(a)") "======================================================"
 
-   allocate(a%ptr(maxn+1))
-   allocate(a%row(2*maxnz), a%val(2*maxnz))
-   allocate(rscaling(maxn), cscaling(maxn), match(maxn), rmax(maxn), cnt(maxn))
+   ! dummy allocations to simplify reallocating specific test case size in loop
+   allocate(a%ptr(0))
+   allocate(a%row(0), a%val(0))
+   allocate(rscaling(0), cscaling(0), match(0), rmax(0), cnt(0))
 
    prblm_loop: &
    do prblm = 1, nprob
@@ -747,6 +778,11 @@ subroutine test_hungarian_unsym_random
 
       write(*, "(a, i3, a, i5, a, i5, a, i7, a, i2, a)",advance="no") &
          " - no. ", prblm,  " m = ", a%m, " n = ", a%n, " nza = ", nza, "..."
+
+      deallocate(a%ptr, a%row, a%val, rscaling, cscaling, match, rmax, cnt)
+      allocate(a%ptr(a%n+1))
+      allocate(a%row(nza), a%val(nza))
+      allocate(rscaling(a%m), cscaling(a%n), match(a%m), rmax(a%m), cnt(a%n))
 
       if(nza.gt.maxnz .or. a%n.gt.maxn .or. a%m.gt.maxn) then
          write(*, "(a)") "bad random matrix."
