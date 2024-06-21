@@ -32,6 +32,8 @@ program main
    call test_equilib_sym_random
    call test_equilib_unsym_random
    call test_hungarian_sym_random
+   call test_hungarian_unsym_singular
+   call test_hungarian_sym_singular
    call test_hungarian_unsym_random
 
    write(*, "(/a)") "=========================="
@@ -594,6 +596,104 @@ subroutine test_equilib_unsym_random
    end do prblm_loop
 
 end subroutine test_equilib_unsym_random
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+subroutine test_hungarian_unsym_singular
+  integer :: m = 3
+  integer :: n = 5
+  integer :: nz = 6
+  integer :: ising = 3
+  type(matrix_type) :: a
+
+  type(hungarian_options) :: options
+  type(hungarian_inform) :: inform
+
+  integer, allocatable, dimension(:) :: match
+  real(wp), allocatable, dimension(:) :: rscaling, cscaling
+
+  write(*, "(a)")
+  write(*, "(a)") "===================================================="
+  write(*, "(a)") "Testing hungarian_scale_unsym() with singular matrix"
+  write(*, "(a)") "===================================================="
+
+  allocate(a%ptr(n+1))
+  allocate(a%row(nz), a%val(nz))
+  allocate(rscaling(m), cscaling(n), match(m))
+
+  ! Produce warning rather than error
+  options%scale_if_singular = .true.
+
+  a%n = n
+  a%m = m
+
+  a%ptr(1:n+1)          = (/   1,   3,   5,   6,   6,   7 /)
+  a%row(1:a%ptr(n+1)-1) = (/   1,   2,   1,   2,   2,   2 /)
+  a%val(1:a%ptr(n+1)-1) = (/ 2.0, 1.0, 1.0, 4.0, 1.0, 1.0 /)
+
+  call hungarian_scale_unsym(a%m, a%n, a%ptr, a%row, a%val, rscaling, &
+         cscaling, options, inform, match=match)
+
+  if(inform%flag .ne. 1) then
+     write(*, "(a, i5)") "Returned inform%flag = ", inform%flag
+     errors = errors + 1
+  endif
+
+  if(match(ising) .ne. 0) then
+     write(*, "(a, i5, a, i5)") "Singular column ", ising, "matched to ", match(ising)
+     errors = errors + 1
+  endif
+
+end  subroutine test_hungarian_unsym_singular
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+subroutine test_hungarian_sym_singular
+  integer :: m = 3
+  integer :: n = 3
+  integer :: nz = 6
+  integer :: ising = 3
+  type(matrix_type) :: a
+
+  type(hungarian_options) :: options
+  type(hungarian_inform) :: inform
+
+  integer, allocatable, dimension(:) :: match
+  real(wp), allocatable, dimension(:) :: scaling
+
+  write(*, "(a)")
+  write(*, "(a)") "===================================================="
+  write(*, "(a)") "Testing hungarian_scale_unsym() with singular matrix"
+  write(*, "(a)") "===================================================="
+
+  allocate(a%ptr(n+1))
+  allocate(a%row(nz), a%val(nz))
+  allocate(scaling(n), match(m))
+
+  ! Produce warning rather than error
+  options%scale_if_singular = .true.
+
+  a%n = n
+  a%m = m
+
+  a%ptr(1:n+1)          = (/   1,   2,   3,  3 /)
+  a%row(1:a%ptr(n+1)-1) = (/   1,   2/)
+  a%val(1:a%ptr(n+1)-1) = (/ 2.0, 1.0/)
+
+  call hungarian_scale_sym(a%n, a%ptr, a%row, a%val, scaling, &
+         options, inform, match=match)
+
+  if(inform%flag .ne. 1) then
+     write(*, "(a, i5)") "Returned inform%flag = ", inform%flag
+     errors = errors + 1
+  endif
+
+  if(match(ising) >= 0) then
+     write(*, "(a, i5, a, i5)") "Singular column ", ising, " has value ", match(ising)
+     errors = errors + 1
+  endif
+
+end  subroutine test_hungarian_sym_singular
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
