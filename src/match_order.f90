@@ -568,7 +568,7 @@ contains
 
     k = 0
     do i = 1, n
-       if (cperm(i) .lt. 0) then
+       if (cperm(i) .eq. 0) then
           ! row i and col j are not part of the matching
           old_to_new(i) = -1
        else
@@ -590,11 +590,11 @@ contains
        j1 = j2
        j2 = ptr2(i+1)
        ! skip over unmatched entries
-       if (cperm(i) .lt. 0) cycle
+       if (cperm(i) .eq. 0) cycle
        k = k + 1
        do jlong = j1, j2-1
           jj = row2(jlong)
-          if (cperm(jj) .lt. 0) cycle
+          if (cperm(jj) .eq. 0) cycle
           nne = nne + 1
           row2(nne) = old_to_new(jj)
           val2(nne) = val2(jlong)
@@ -611,7 +611,7 @@ contains
 
     do i = 1, n
        j = old_to_new(i)
-       if (j .lt. 0) then
+       if (j .eq. 0) then
           scale(i) = -huge(scale)
        else
           ! Note: we need to subtract col max using old matrix numbering

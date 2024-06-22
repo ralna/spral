@@ -1168,29 +1168,6 @@ contains
    ! Zero dual row variables for unmatched rows
    where (iperm(1:m) .eq. 0) dualu(1:m) = 0.0
 
-   ! Return if matrix has full structural rank
-   if (num .eq. min(m,n)) return
-
-   ! Otherwise, matrix is structurally singular, complete iperm.
-   ! jperm, out are work arrays
-   jperm(1:n) = 0
-   k = 0
-   do i = 1, m
-      if (iperm(i) .eq. 0) then
-         k = k + 1
-         out(k) = i
-      else
-         j = iperm(i)
-         jperm(j) = i
-      end if
-   end do
-   k = 0
-   do j = 1, n
-      if (jperm(j) .ne. 0) cycle
-      k = k + 1
-      jdum = int(out(k))
-      iperm(jdum) = -j
-   end do
  end subroutine hungarian_match
 
 !**********************************************************************
