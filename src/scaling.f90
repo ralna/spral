@@ -664,6 +664,10 @@ contains
     end if
 
     if (inform%matched .ne. min(m,n)) then
+       ! Zero out negative matching entries for
+       ! structurally singular matrices
+       where (match(1:m) .lt. 0) match(1:m) = 0
+
        ! Singular matrix
        if (options%scale_if_singular) then
           ! Just issue warning then continue
