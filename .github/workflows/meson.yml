@@ -27,6 +27,18 @@ jobs:
             compiler_version: '2023.2'
             metis: 64
             allow_failure: true
+          - os: macos-latest
+            compiler: gcc
+            compiler_version: '13'
+            arch: 'arm64'
+            metis: 32
+            allow_failure: true
+          - os: macos-latest
+            compiler: gcc
+            compiler_version: '13'
+            arch: 'arm64'
+            metis: 64
+            allow_failure: true
           # - os: windows-latest
           #   compiler: intel
           #   compiler_version: '2023.2'
@@ -79,7 +91,12 @@ jobs:
           if [[ "${{matrix.os}}" == "macos-13" ]]; then
             DLEXT="dylib"
             LIBDIR="lib"
-            PLATFORM=x86_64-apple-darwin""
+            PLATFORM="x86_64-apple-darwin"
+          fi
+          if [[ "${{matrix.os}}" == "macos-latest" ]]; then
+            DLEXT="dylib"
+            LIBDIR="lib"
+            PLATFORM="aarch64-apple-darwin"
           fi
           if [[ "${{matrix.os}}" == "windows-latest" ]]; then
             DLEXT="dll"
@@ -87,21 +104,25 @@ jobs:
             PLATFORM="x86_64-w64-mingw32"
             choco install wget
           fi
-          wget https://github.com/JuliaBinaryWrappers/METIS_jll.jl/releases/download/METIS-v5.1.2%2B0/METIS.v5.1.2.$PLATFORM.tar.gz
-          tar -xzvf METIS.v5.1.2.$PLATFORM.tar.gz -C deps
+          METIS_VERSION="5.1.2"
+          OPENBLAS_VERSION="0.3.23"
+          HWLOC_VERSION="2.10.0"
+          MKL_VERSION="2024.0.0"
+          wget https://github.com/JuliaBinaryWrappers/METIS_jll.jl/releases/download/METIS-v${METIS_VERSION}%2B0/METIS.v${METIS_VERSION}.$PLATFORM.tar.gz
+          tar -xzvf METIS.v${METIS_VERSION}.$PLATFORM.tar.gz -C deps
           if [[ "${{matrix.metis}}" == "64" ]]; then
             rm deps/include/metis.h
             rm deps/$LIBDIR/libmetis.$DLEXT
             cp deps/$LIBDIR/metis/metis_Int64_Real32/include/metis.h deps/include/metis.h
             cp deps/$LIBDIR/metis/metis_Int64_Real32/$LIBDIR/libmetis_Int64_Real32.$DLEXT deps/$LIBDIR/libmetis_Int64_Real32.$DLEXT
           fi
-          wget https://github.com/JuliaBinaryWrappers/OpenBLAS32_jll.jl/releases/download/OpenBLAS32-v0.3.23%2B0/OpenBLAS32.v0.3.23.$PLATFORM-libgfortran5.tar.gz
-          tar -xzvf OpenBLAS32.v0.3.23.$PLATFORM-libgfortran5.tar.gz -C deps
-          wget https://github.com/JuliaBinaryWrappers/Hwloc_jll.jl/releases/download/Hwloc-v2.10.0%2B0/Hwloc.v2.10.0.$PLATFORM.tar.gz
-          tar -xzvf Hwloc.v2.10.0.$PLATFORM.tar.gz -C deps
-          if [[ "${{matrix.os}}" != "macos-13" ]]; then
-            wget https://github.com/JuliaBinaryWrappers/MKL_jll.jl/releases/download/MKL-v2024.0.0%2B0/MKL.v2024.0.0.$PLATFORM.tar.gz
-            tar -xzvf MKL.v2024.0.0.$PLATFORM.tar.gz -C deps
+          wget https://github.com/JuliaBinaryWrappers/OpenBLAS32_jll.jl/releases/download/OpenBLAS32-v${OPENBLAS_VERSION}%2B0/OpenBLAS32.v${OPENBLAS_VERSION}.$PLATFORM-libgfortran5.tar.gz
+          tar -xzvf OpenBLAS32.v${OPENBLAS_VERSION}.$PLATFORM-libgfortran5.tar.gz -C deps
+          wget https://github.com/JuliaBinaryWrappers/Hwloc_jll.jl/releases/download/Hwloc-v${HWLOC_VERSION}%2B0/Hwloc.v${HWLOC_VERSION}.$PLATFORM.tar.gz
+          tar -xzvf Hwloc.v${HWLOC_VERSION}.$PLATFORM.tar.gz -C deps
+          if [[ "${{matrix.os}}" == "ubuntu-latest" ]]; then
+            wget https://github.com/JuliaBinaryWrappers/MKL_jll.jl/releases/download/MKL-v${MKL_VERSION}%2B0/MKL.v${MKL_VERSION}.$PLATFORM.tar.gz
+            tar -xzvf MKL.v${MKL_VERSION}.$PLATFORM.tar.gz -C deps
           fi
           rm *.tar.gz
 
@@ -138,7 +159,7 @@ jobs:
             LIBDIR="bin"
             LIBHWLOC="hwloc-15"
           fi
-          if [[ "${{matrix.os}}" == "macos-13" ]]; then
+          if [[ "${{matrix.os}}" == "macos-13" || "${{matrix.os}}" == "macos-latest" ]]; then
             LD_CLASSIC="-Wl,-ld_classic"
           fi
           if [[ "${{matrix.metis}}" == "64" ]]; then
