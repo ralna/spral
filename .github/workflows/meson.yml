@@ -198,7 +198,7 @@ jobs:
         shell: bash
         run: |
           meson compile -C builddir
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: ${{ matrix.os }}_${{ matrix.compiler }}_${{ matrix.compiler_version }}_METIS_${{ matrix.metis }}_meson-log.txt
@@ -208,7 +208,7 @@ jobs:
         shell: bash
         run: |
           meson install -C builddir
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: ${{ matrix.os }}_${{ matrix.compiler }}_${{ matrix.compiler_version }}_METIS_${{ matrix.metis }}_install-log.txt
@@ -218,7 +218,7 @@ jobs:
         shell: bash
         run: |
           meson test -C builddir
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: ${{ matrix.os }}_${{ matrix.compiler }}_${{ matrix.compiler_version }}_METIS_${{ matrix.metis }}_testlog.txt
