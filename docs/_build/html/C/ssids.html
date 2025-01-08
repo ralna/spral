@@ -1,24 +1,24 @@
+
+
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="./">
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SSIDS - Sparse Symmetric Indefinite Direct Solver &mdash; spral v2024-05-08 [C] documentation</title>
-      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
-    <link rel="shortcut icon" href="_static/favicon.ico"/>
-  <!--[if lt IE 9]>
-    <script src="_static/js/html5shiv.min.js"></script>
-  <![endif]-->
+  <title>SSIDS - Sparse Symmetric Indefinite Direct Solver &mdash; spral v2025-01-08 [C] documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/css/custom.css?v=99edb77c" />
+
   
-        <script src="_static/jquery.js"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-        <script src="_static/doctools.js"></script>
-        <script src="_static/sphinx_highlight.js"></script>
-        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=2f8e677e"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -38,9 +38,6 @@
             spral
               <img src="_static/STFC-Logo.png" class="logo" alt="Logo"/>
           </a>
-              <div class="version">
-                v2024-05-08 [C]
-              </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
@@ -111,12 +108,12 @@
            <div itemprop="articleBody">
              
   <section id="ssids-sparse-symmetric-indefinite-direct-solver">
-<h1>SSIDS - Sparse Symmetric Indefinite Direct Solver<a class="headerlink" href="#ssids-sparse-symmetric-indefinite-direct-solver" title="Permalink to this heading"></a></h1>
+<h1>SSIDS - Sparse Symmetric Indefinite Direct Solver<a class="headerlink" href="#ssids-sparse-symmetric-indefinite-direct-solver" title="Link to this heading"></a></h1>
 <div class="highlight-C notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;spral_ssids.h&gt;</span><span class="c1"> /* or &lt;spral.h&gt; for all packages */</span>
 </pre></div>
 </div>
 <section id="purpose">
-<h2>Purpose<a class="headerlink" href="#purpose" title="Permalink to this heading"></a></h2>
+<h2>Purpose<a class="headerlink" href="#purpose" title="Link to this heading"></a></h2>
 <p>This package solves one or more sets of <span class="math notranslate nohighlight">\(n\times n\)</span>
 sparse <strong>symmetric</strong> equations  <span class="math notranslate nohighlight">\(AX = B\)</span> using a multifrontal method.
 The following cases are covered:</p>
@@ -141,7 +138,7 @@ the scaled matrix  <span class="math notranslate nohighlight">\(\overline{A} = S
 where <span class="math notranslate nohighlight">\(S\)</span> is a diagonal scaling matrix.</p>
 </section>
 <section id="usage-overview">
-<h2>Usage overview<a class="headerlink" href="#usage-overview" title="Permalink to this heading"></a></h2>
+<h2>Usage overview<a class="headerlink" href="#usage-overview" title="Link to this heading"></a></h2>
 <p>Solving <span class="math notranslate nohighlight">\(AX=B\)</span> using SSIDS is a four stage process.</p>
 <ol class="arabic simple">
 <li><p>Call <a class="reference internal" href="#c.spral_ssids_analyse" title="spral_ssids_analyse"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_analyse()</span></code></a> to perform a symbolic factorization,
@@ -172,7 +169,7 @@ on the same machine produces exactly the same solution.</p>
 </div>
 </section>
 <section id="basic-subroutines">
-<h2>Basic Subroutines<a class="headerlink" href="#basic-subroutines" title="Permalink to this heading"></a></h2>
+<h2>Basic Subroutines<a class="headerlink" href="#basic-subroutines" title="Link to this heading"></a></h2>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>For the most efficient use of the package, CSC format should be used
@@ -180,7 +177,7 @@ without checking.</p>
 </div>
 <dl class="c function">
 <dt class="sig sig-object c" id="c.spral_ssids_default_options">
-<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssids_default_options</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssids_default_options" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssids_default_options</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssids_default_options" title="Link to this definition"></a><br /></dt>
 <dd><p>Intialises members of options structure to default values.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -193,7 +190,7 @@ without checking.</p>
 
 <dl class="c function">
 <dt class="sig sig-object c" id="c.spral_ssids_analyse">
-<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssids_analyse</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="n"><span class="pre">check</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">n</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">order</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">ptr</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">row</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">val</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">akeep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_inform</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssids_analyse" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssids_analyse</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="n"><span class="pre">check</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">n</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">order</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">ptr</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">row</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">val</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">akeep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_inform</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssids_analyse" title="Link to this definition"></a><br /></dt>
 <dd><p>Perform the analyse (symbolic) phase of the factorization for a matrix
 supplied in <a class="reference internal" href="csc_format.html"><span class="doc">CSC format</span></a>. The resulting symbolic factors
 stored in <a class="reference internal" href="#c.spral_ssids_analyse" title="akeep"><code class="xref c c-type docutils literal notranslate"><span class="pre">akeep</span></code></a> should be passed unaltered in the following call to
@@ -238,7 +235,7 @@ adjusted to improve cache locality.</p>
 
 <dl class="c function">
 <dt class="sig sig-object c" id="c.spral_ssids_analyse_ptr32">
-<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssids_analyse_ptr32</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="n"><span class="pre">check</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">n</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">order</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">ptr</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">row</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">val</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">akeep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_inform</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssids_analyse_ptr32" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssids_analyse_ptr32</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="n"><span class="pre">check</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">n</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">order</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">ptr</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">row</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">val</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">akeep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_inform</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssids_analyse_ptr32" title="Link to this definition"></a><br /></dt>
 <dd><p>As <a class="reference internal" href="#c.spral_ssids_analyse" title="spral_ssids_analyse"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_analyse()</span></code></a>, except ptr has type <code class="docutils literal notranslate"><span class="pre">int</span></code>.
 Provided for backwards comptability, users are encourage to use 64-bit ptr
 in new code.</p>
@@ -246,7 +243,7 @@ in new code.</p>
 
 <dl class="c function">
 <dt class="sig sig-object c" id="c.spral_ssids_analyse_coord">
-<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssids_analyse_coord</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">n</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">order</span></span>, <span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n"><span class="pre">ne</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">row</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">col</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">val</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">akeep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_inform</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssids_analyse_coord" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssids_analyse_coord</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">n</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">order</span></span>, <span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n"><span class="pre">ne</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">row</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">col</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">val</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">akeep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_inform</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssids_analyse_coord" title="Link to this definition"></a><br /></dt>
 <dd><p>As <a class="reference internal" href="#c.spral_ssids_analyse" title="spral_ssids_analyse"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_analyse()</span></code></a>, but for coordinate data. The variant
 parameters are:</p>
 <dl class="field-list simple">
@@ -264,7 +261,7 @@ parameters are:</p>
 
 <dl class="c function">
 <dt class="sig sig-object c" id="c.spral_ssids_factor">
-<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssids_factor</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="n"><span class="pre">posdef</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">ptr</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">row</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">val</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">scale</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">akeep</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">fkeep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_inform</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssids_factor" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssids_factor</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="n"><span class="pre">posdef</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">ptr</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">row</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">val</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">scale</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">akeep</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">fkeep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_inform</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssids_factor" title="Link to this definition"></a><br /></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -300,7 +297,7 @@ to subsequent routines.</p></li>
 
 <dl class="c function">
 <dt class="sig sig-object c" id="c.spral_ssids_solve1">
-<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssids_solve1</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">job</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">x1</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">akeep</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">fkeep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_inform</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssids_solve1" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssids_solve1</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">job</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">x1</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">akeep</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">fkeep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_inform</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssids_solve1" title="Link to this definition"></a><br /></dt>
 <dd><p>Solve (for a single right-hand side) one of the following equations:</p>
 <table class="docutils align-default">
 <thead>
@@ -353,7 +350,7 @@ call to <a class="reference internal" href="#c.spral_ssids_factor" title="spral_
 
 <dl class="c function">
 <dt class="sig sig-object c" id="c.spral_ssids_solve">
-<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssids_solve</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">job</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">nrhs</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">x</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">ldx</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">akeep</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">fkeep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_inform</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssids_solve" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssids_solve</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">job</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">nrhs</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">x</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">ldx</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">akeep</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">fkeep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_inform</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssids_solve" title="Link to this definition"></a><br /></dt>
 <dd><p>Solve (for multiple right-hand sides) one of the following equations:</p>
 <table class="docutils align-default">
 <thead>
@@ -409,7 +406,7 @@ call to <a class="reference internal" href="#c.spral_ssids_factor" title="spral_
 
 <dl class="c function">
 <dt class="sig sig-object c" id="c.spral_ssids_free_akeep">
-<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssids_free_akeep</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">akeep</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssids_free_akeep" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssids_free_akeep</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">akeep</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssids_free_akeep" title="Link to this definition"></a><br /></dt>
 <dd><p>Frees memory and resources associated with <a class="reference internal" href="#c.spral_ssids_free_akeep" title="akeep"><code class="xref c c-type docutils literal notranslate"><span class="pre">akeep</span></code></a>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -425,7 +422,7 @@ call to <a class="reference internal" href="#c.spral_ssids_factor" title="spral_
 
 <dl class="c function">
 <dt class="sig sig-object c" id="c.spral_ssids_free_fkeep">
-<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssids_free_fkeep</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">fkeep</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssids_free_fkeep" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssids_free_fkeep</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">fkeep</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssids_free_fkeep" title="Link to this definition"></a><br /></dt>
 <dd><p>Frees memory and resources associated with <a class="reference internal" href="#c.spral_ssids_free_fkeep" title="fkeep"><code class="xref c c-type docutils literal notranslate"><span class="pre">fkeep</span></code></a>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -441,7 +438,7 @@ call to <a class="reference internal" href="#c.spral_ssids_factor" title="spral_
 
 <dl class="c function">
 <dt class="sig sig-object c" id="c.spral_ssids_free">
-<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssids_free</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">akeep</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">fkeep</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssids_free" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssids_free</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">akeep</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">fkeep</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssids_free" title="Link to this definition"></a><br /></dt>
 <dd><p>Frees memory and resources associated with <a class="reference internal" href="#c.spral_ssids_free" title="akeep"><code class="xref c c-type docutils literal notranslate"><span class="pre">akeep</span></code></a> and
 <a class="reference internal" href="#c.spral_ssids_free" title="fkeep"><code class="xref c c-type docutils literal notranslate"><span class="pre">fkeep</span></code></a>.</p>
 <dl class="field-list simple">
@@ -466,10 +463,10 @@ associated numeric factorizations <code class="xref c c-type docutils literal no
 </div>
 </section>
 <section id="advanced-subroutines">
-<h2>Advanced subroutines<a class="headerlink" href="#advanced-subroutines" title="Permalink to this heading"></a></h2>
+<h2>Advanced subroutines<a class="headerlink" href="#advanced-subroutines" title="Link to this heading"></a></h2>
 <dl class="c function">
 <dt class="sig sig-object c" id="c.spral_ssids_enquire_posdef">
-<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssids_enquire_posdef</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">akeep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">fkeep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_inform</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">d</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssids_enquire_posdef" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssids_enquire_posdef</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">akeep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">fkeep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_inform</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">d</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssids_enquire_posdef" title="Link to this definition"></a><br /></dt>
 <dd><p>Return the diagonal entries of the Cholesky factor.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -492,7 +489,7 @@ entry <span class="math notranslate nohighlight">\(L_{ii}\)</span>.</p></li>
 
 <dl class="c function">
 <dt class="sig sig-object c" id="c.spral_ssids_enquire_indef">
-<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssids_enquire_indef</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">akeep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">fkeep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_inform</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">piv_order</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">d</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssids_enquire_indef" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssids_enquire_indef</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">akeep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">fkeep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_inform</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">piv_order</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">d</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssids_enquire_indef" title="Link to this definition"></a><br /></dt>
 <dd><p>Return the pivot order and/or values of <span class="math notranslate nohighlight">\(D\)</span> of the Symmetric Indefinite
 Factorization.</p>
 <dl class="field-list simple">
@@ -520,7 +517,7 @@ of variable <span class="math notranslate nohighlight">\(i\)</span> in the pivot
 
 <dl class="c function">
 <dt class="sig sig-object c" id="c.spral_ssids_alter">
-<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssids_alter</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">d</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">akeep</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">fkeep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_inform</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssids_alter" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_ssids_alter</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">d</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">akeep</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">fkeep</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_ssids_inform</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_ssids_alter" title="Link to this definition"></a><br /></dt>
 <dd><p>Alter the entries of the diagonal factor <span class="math notranslate nohighlight">\(D\)</span> for a symmetric indefinite
 factorization. The pivot order remains the same.</p>
 <dl class="field-list simple">
@@ -547,7 +544,7 @@ call to <a class="reference internal" href="#c.spral_ssids_factor" title="spral_
 
 </section>
 <section id="derived-types">
-<h2>Derived types<a class="headerlink" href="#derived-types" title="Permalink to this heading"></a></h2>
+<h2>Derived types<a class="headerlink" href="#derived-types" title="Link to this heading"></a></h2>
 <dl class="c type">
 <dt class="sig sig-object c">
 <span class="sig-name descname"><span class="pre">struct</span> <span class="pre">spral_ssids_options</span></span></dt>
@@ -563,7 +560,7 @@ Default is 0.</p>
 
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.print_level">
-<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">print_level</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.print_level" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">print_level</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.print_level" title="Link to this definition"></a><br /></dt>
 <dd><p>Level of printing:</p>
 <table class="docutils align-default">
 <tbody>
@@ -602,7 +599,7 @@ The default is 6 (stdout).</p>
 
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.unit_warning">
-<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">unit_warning</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.unit_warning" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">unit_warning</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.unit_warning" title="Link to this definition"></a><br /></dt>
 <dd><p>Fortran unit number for printing of warning messages.
 Printing is suppressed if &lt;0.
 The default is 6 (stdout).</p>
@@ -610,7 +607,7 @@ The default is 6 (stdout).</p>
 
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.ordering">
-<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ordering</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.ordering" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ordering</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.ordering" title="Link to this definition"></a><br /></dt>
 <dd><p>Ordering method to use in analyse phase:</p>
 <table class="docutils align-default">
 <tbody>
@@ -641,7 +638,7 @@ below).</p>
 
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.nemin">
-<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">nemin</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.nemin" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">nemin</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.nemin" title="Link to this definition"></a><br /></dt>
 <dd><p>Supernode amalgamation threshold. Two neighbours in the elimination tree
 are merged if they both involve fewer than <cite>nemin</cite> eliminations.
 The default is used if <cite>nemin&lt;1</cite>.
@@ -650,7 +647,7 @@ The default is 32.</p>
 
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.gpu_perf_coeff">
-<span class="kt"><span class="pre">float</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">gpu_perf_coeff</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.gpu_perf_coeff" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">float</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">gpu_perf_coeff</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.gpu_perf_coeff" title="Link to this definition"></a><br /></dt>
 <dd><p>GPU performance coefficient. How many
 times faster a GPU is than CPU at factoring a subtree.
 Default is <cite>1.0</cite>.</p>
@@ -658,7 +655,7 @@ Default is <cite>1.0</cite>.</p>
 
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.scaling">
-<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">scaling</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.scaling" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">scaling</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.scaling" title="Link to this definition"></a><br /></dt>
 <dd><p>Scaling algorithm to use:</p>
 <table class="docutils align-default">
 <tbody>
@@ -697,7 +694,7 @@ Ruiz (see <a class="reference internal" href="scaling.html"><span class="doc">SC
 
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.small_subtree_threshold">
-<span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">small_subtree_threshold</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.small_subtree_threshold" title="Permalink to this definition"></a><br /></dt>
+<span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">small_subtree_threshold</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.small_subtree_threshold" title="Link to this definition"></a><br /></dt>
 <dd><p>Maximum number of
 flops in a subtree treated as a single task. See
 <a class="reference internal" href="#ssids-small-leaf"><span class="std std-ref">method section</span></a>.
@@ -706,7 +703,7 @@ The default is <cite>4e6</cite>.</p>
 
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.cpu_block_size">
-<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">cpu_block_size</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.cpu_block_size" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">cpu_block_size</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.cpu_block_size" title="Link to this definition"></a><br /></dt>
 <dd><p>Block size to use for
 parallelization of large nodes on CPU resources.
 Default is <cite>256</cite>.</p>
@@ -714,7 +711,7 @@ Default is <cite>256</cite>.</p>
 
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.action">
-<span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">action</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.action" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">action</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.action" title="Link to this definition"></a><br /></dt>
 <dd><p>Continue factorization of singular matrix on discovery of zero pivot if
 true (a warning is issued), or abort if false.
 The default is true.</p>
@@ -722,7 +719,7 @@ The default is true.</p>
 
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.pivot_method">
-<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">pivot_method</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.pivot_method" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">pivot_method</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.pivot_method" title="Link to this definition"></a><br /></dt>
 <dd><p>Pivot method to be used on CPU, one of:</p>
 <table class="docutils align-default">
 <tbody>
@@ -746,7 +743,7 @@ recalculation of entries within its own block column.</p></td>
 
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.small">
-<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">small</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.small" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">small</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.small" title="Link to this definition"></a><br /></dt>
 <dd><p>Threshold below which an entry is treated as
 equivalent to <cite>0.0</cite>.
 The default is <cite>1e-20</cite>.</p>
@@ -754,7 +751,7 @@ The default is <cite>1e-20</cite>.</p>
 
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.u">
-<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">u</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.u" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">u</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.u" title="Link to this definition"></a><br /></dt>
 <dd><p>Relative pivot threshold used in symmetric indefinite case. Values outside
 of the range <span class="math notranslate nohighlight">\([0,0.5]\)</span> are treated as the closest value in that
 range.
@@ -769,19 +766,19 @@ The default is <cite>0.01</cite>.</p>
 <dd><p>Used to return information about the progress and needs of the algorithm.</p>
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.cpu_flops">
-<span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">cpu_flops</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.cpu_flops" title="Permalink to this definition"></a><br /></dt>
+<span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">cpu_flops</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.cpu_flops" title="Link to this definition"></a><br /></dt>
 <dd><p>Number of flops performed on CPU</p>
 </dd></dl>
 
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.cublas_error">
-<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">cublas_error</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.cublas_error" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">cublas_error</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.cublas_error" title="Link to this definition"></a><br /></dt>
 <dd><p>CUBLAS error code in the event of a CUBLAS error (0 otherwise).</p>
 </dd></dl>
 
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.cuda_error">
-<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">cuda_error</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.cuda_error" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">cuda_error</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.cuda_error" title="Link to this definition"></a><br /></dt>
 <dd><p>CUDA error code in the event of a CUDA error (0 otherwise).
 Note that due to asynchronous execution, CUDA errors may
 not be reported by the call that caused them.</p>
@@ -795,13 +792,13 @@ not be reported by the call that caused them.</p>
 
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.gpu_flops">
-<span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">gpu_flops</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.gpu_flops" title="Permalink to this definition"></a><br /></dt>
+<span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">gpu_flops</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.gpu_flops" title="Link to this definition"></a><br /></dt>
 <dd><p>Number of flops performed on GPU</p>
 </dd></dl>
 
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.matrix_dup">
-<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">matrix_dup</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.matrix_dup" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">matrix_dup</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.matrix_dup" title="Link to this definition"></a><br /></dt>
 <dd><p>Number of duplicate entries encountered (if
 <a class="reference internal" href="#c.spral_ssids_analyse" title="spral_ssids_analyse"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_analyse()</span></code></a> called with check=true, or any call to
 <a class="reference internal" href="#c.spral_ssids_analyse_coord" title="spral_ssids_analyse_coord"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_analyse_coord()</span></code></a>).</p>
@@ -809,7 +806,7 @@ not be reported by the call that caused them.</p>
 
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.matrix_missing_diag">
-<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">matrix_missing_diag</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.matrix_missing_diag" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">matrix_missing_diag</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.matrix_missing_diag" title="Link to this definition"></a><br /></dt>
 <dd><p>Number of diagonal entries without an explicit value (if
 <a class="reference internal" href="#c.spral_ssids_analyse" title="spral_ssids_analyse"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_analyse()</span></code></a> called with check=true, or
 any call to <a class="reference internal" href="#c.spral_ssids_analyse_coord" title="spral_ssids_analyse_coord"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_analyse_coord()</span></code></a>).</p>
@@ -817,7 +814,7 @@ any call to <a class="reference internal" href="#c.spral_ssids_analyse_coord" ti
 
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.matrix_outrange">
-<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">matrix_outrange</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.matrix_outrange" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">matrix_outrange</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.matrix_outrange" title="Link to this definition"></a><br /></dt>
 <dd><p>Number of out-of-range entries encountered (if
 <a class="reference internal" href="#c.spral_ssids_analyse" title="spral_ssids_analyse"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_analyse()</span></code></a> called with check=true, or any call to
 <a class="reference internal" href="#c.spral_ssids_analyse_coord" title="spral_ssids_analyse_coord"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_analyse_coord()</span></code></a>).</p>
@@ -825,34 +822,34 @@ any call to <a class="reference internal" href="#c.spral_ssids_analyse_coord" ti
 
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.matrix_rank">
-<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">matrix_rank</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.matrix_rank" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">matrix_rank</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.matrix_rank" title="Link to this definition"></a><br /></dt>
 <dd><p>(Estimated) rank (structural after analyse phase, numerical after
 factorize phase).</p>
 </dd></dl>
 
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.maxdepth">
-<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">maxdepth</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.maxdepth" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">maxdepth</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.maxdepth" title="Link to this definition"></a><br /></dt>
 <dd><p>Maximum depth of the assembly tree.</p>
 </dd></dl>
 
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.maxfront">
-<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">maxfront</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.maxfront" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">maxfront</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.maxfront" title="Link to this definition"></a><br /></dt>
 <dd><p>Maximum front size (without pivoting after analyse phase, with pivoting
 after factorize phase).</p>
 </dd></dl>
 
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.maxsupernode">
-<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">maxsupernode</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.maxsupernode" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">maxsupernode</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.maxsupernode" title="Link to this definition"></a><br /></dt>
 <dd><p>Maximum supernode size (without pivoting after analyse phase, with
 pivoting after factorize phase).</p>
 </dd></dl>
 
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.num_delay">
-<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">num_delay</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.num_delay" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">num_delay</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.num_delay" title="Link to this definition"></a><br /></dt>
 <dd><p>Number of delayed pivots. That is, the total number of fully-summed
 variables that were passed to the father node because of stability
 considerations. If a variable is passed further up the tree, it will be
@@ -861,14 +858,14 @@ counted again.</p>
 
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.num_factor">
-<span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">num_factor</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.num_factor" title="Permalink to this definition"></a><br /></dt>
+<span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">num_factor</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.num_factor" title="Link to this definition"></a><br /></dt>
 <dd><p>Number of entries in <span class="math notranslate nohighlight">\(L\)</span> (without pivoting after analyse phase,
 with pivoting after factorize phase).</p>
 </dd></dl>
 
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.num_flops">
-<span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">num_flops</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.num_flops" title="Permalink to this definition"></a><br /></dt>
+<span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">num_flops</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.num_flops" title="Link to this definition"></a><br /></dt>
 <dd><p>Number of floating-point operations for Cholesky factorization (indefinte
 needs slightly more). Without pivoting after analyse phase, with pivoting
 after factorize phase.</p>
@@ -876,20 +873,20 @@ after factorize phase.</p>
 
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.num_neg">
-<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">num_neg</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.num_neg" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">num_neg</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.num_neg" title="Link to this definition"></a><br /></dt>
 <dd><p>Number of negative eigenvalues of the matrix <span class="math notranslate nohighlight">\(D\)</span> after factorize
 phase.</p>
 </dd></dl>
 
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.num_sup">
-<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">num_sup</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.num_sup" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">num_sup</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.num_sup" title="Link to this definition"></a><br /></dt>
 <dd><p>Number of supernodes in assembly tree.</p>
 </dd></dl>
 
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.num_two">
-<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">num_two</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.num_two" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">num_two</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.num_two" title="Link to this definition"></a><br /></dt>
 <dd><p>Number of <span class="math notranslate nohighlight">\(2 \times 2\)</span> pivots used by the factorization (i.e. in
 the matrix <span class="math notranslate nohighlight">\(D\)</span>).</p>
 </dd></dl>
@@ -1019,7 +1016,7 @@ affect performance on NUMA systems).</p></td>
 
 </section>
 <section id="example">
-<span id="ssids-example"></span><h2>Example<a class="headerlink" href="#example" title="Permalink to this heading"></a></h2>
+<span id="ssids-example"></span><h2>Example<a class="headerlink" href="#example" title="Link to this heading"></a></h2>
 <p>Suppose we wish to factorize the matrix</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}A = \left(\begin{array}{ccccc}
@@ -1118,7 +1115,7 @@ affect performance on NUMA systems).</p></td>
 </div>
 </section>
 <section id="driver-program">
-<h2>Driver Program<a class="headerlink" href="#driver-program" title="Permalink to this heading"></a></h2>
+<h2>Driver Program<a class="headerlink" href="#driver-program" title="Link to this heading"></a></h2>
 <p>SSIDS ships with a driver program <code class="docutils literal notranslate"><span class="pre">spral_ssids</span></code> that allows reading a
 matrix in Rutherford-Boeing format specified as a command-line argument and
 factorizing it. There are a number of other command-line arguments that
@@ -1260,9 +1257,9 @@ configure the factorization.</p>
 </div>
 </section>
 <section id="method">
-<span id="ssids-method"></span><h2>Method<a class="headerlink" href="#method" title="Permalink to this heading"></a></h2>
+<span id="ssids-method"></span><h2>Method<a class="headerlink" href="#method" title="Link to this heading"></a></h2>
 <section id="partition-of-work-across-available-resources">
-<h3>Partition of work across available resources<a class="headerlink" href="#partition-of-work-across-available-resources" title="Permalink to this heading"></a></h3>
+<h3>Partition of work across available resources<a class="headerlink" href="#partition-of-work-across-available-resources" title="Link to this heading"></a></h3>
 <p>Once the ordering has been determined and the assembly tree determined in the
 analyse phase, the tree is broken into a number of leaf subtrees rooted at a
 single node, leaving a root subtree/forest consisting of all remaining nodes
@@ -1276,7 +1273,7 @@ the root subtree.</p>
 <p>At present the solve phase is performed in serial.</p>
 </section>
 <section id="data-checking">
-<h3>Data checking<a class="headerlink" href="#data-checking" title="Permalink to this heading"></a></h3>
+<h3>Data checking<a class="headerlink" href="#data-checking" title="Link to this heading"></a></h3>
 <p>If check is set to .true. on the call to <a class="reference internal" href="#c.spral_ssids_analyse" title="spral_ssids_analyse"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_analyse()</span></code></a> or if
 <a class="reference internal" href="#c.spral_ssids_analyse_coord" title="spral_ssids_analyse_coord"><code class="xref c c-func docutils literal notranslate"><span class="pre">spral_ssids_analyse_coord()</span></code></a> is called, the user-supplied matrix data is
 checked for errors. The cleaned integer matrix data (duplicates are
@@ -1294,7 +1291,7 @@ elimination order. If an ordering was supplied by the user, this order may
 differ, but will be equivalent in terms of fill-in.</p>
 </section>
 <section id="factorization-performed">
-<h3>Factorization performed<a class="headerlink" href="#factorization-performed" title="Permalink to this heading"></a></h3>
+<h3>Factorization performed<a class="headerlink" href="#factorization-performed" title="Link to this heading"></a></h3>
 <p>The factorization performed depends on the value of <cite>posdef</cite>.</p>
 <p>If <strong>posdef=true</strong>, a Cholesky factorization is performed:</p>
 <div class="math notranslate nohighlight">
@@ -1312,7 +1309,7 @@ algorithm chooses to employ.</p>
 CPUs.</p>
 </section>
 <section id="small-leaf-subtrees">
-<span id="ssids-small-leaf"></span><h3>Small Leaf Subtrees<a class="headerlink" href="#small-leaf-subtrees" title="Permalink to this heading"></a></h3>
+<span id="ssids-small-leaf"></span><h3>Small Leaf Subtrees<a class="headerlink" href="#small-leaf-subtrees" title="Link to this heading"></a></h3>
 <p>For subtrees allocated to run on the CPU, the factorization of small nodes near
 the leaves of the tree can be amalgamated into a single parallel task (normally
 each would be treated as its own OpenMP task to be scheduled). This can reduce
@@ -1322,9 +1319,9 @@ operations for a subtree root at a given node is less than
 that subtree is treated as a single task.</p>
 </section>
 <section id="references">
-<h3>References<a class="headerlink" href="#references" title="Permalink to this heading"></a></h3>
+<h3>References<a class="headerlink" href="#references" title="Link to this heading"></a></h3>
 <aside class="footnote-list brackets">
-<aside class="footnote brackets" id="id4" role="note">
+<aside class="footnote brackets" id="id4" role="doc-footnote">
 <span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id2">1</a><span class="fn-bracket">]</span></span>
 <p>J.D. Hogg, E. Ovtchinnikov and J.A. Scott. (2014).
 <em>A sparse symmetric indefinite direct solver for GPU architectures</em>.
@@ -1332,7 +1329,7 @@ ACM Transactions on Mathematical Software 42(1), Article 1, 25 pages.
 [<a class="reference external" href="https://doi.org/10.1145/2756548">DOI: 10.1145/2756548</a>]
 [<a class="reference external" href="https://epubs.stfc.ac.uk/work/12189719">Preprint RAL-P-2014-006</a>]</p>
 </aside>
-<aside class="footnote brackets" id="id5" role="note">
+<aside class="footnote brackets" id="id5" role="doc-footnote">
 <span class="label"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></span>
 <span class="backrefs">(<a role="doc-backlink" href="#id1">1</a>,<a role="doc-backlink" href="#id3">2</a>)</span>
 <p>J.D. Hogg. (2016).
@@ -1355,7 +1352,7 @@ RAL Technical Report. RAL-TR-2016-0xx, to appear.</p>
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2024, Computational Mathematics Group, STFC Rutherford Appleton Laboratory.</p>
+    <p>&#169; Copyright 2025, Computational Mathematics Group, STFC Rutherford Appleton Laboratory.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

@@ -162,7 +162,7 @@ the user documentation).
 
 If no paper is listed, a citation of the SPRAL GitHub website should be used, for example:
 
-    SPRAL: an open-source library for sparse linear algebra, Version 2024-05-08, `<http://www.numerical.rl.ac.uk/spral>`_, May 2024.
+    SPRAL: an open-source library for sparse linear algebra, Version 2025-01-08, `<http://www.numerical.rl.ac.uk/spral>`_, January 2025.
 
 Support
 =======

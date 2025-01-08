@@ -1,24 +1,24 @@
+
+
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="./">
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>spral_ssids - Sparse Symmetric Indefinite Direct Solver &mdash; spral v2024-05-08 [Fortran] documentation</title>
-      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
-    <link rel="shortcut icon" href="_static/favicon.ico"/>
-  <!--[if lt IE 9]>
-    <script src="_static/js/html5shiv.min.js"></script>
-  <![endif]-->
+  <title>spral_ssids - Sparse Symmetric Indefinite Direct Solver &mdash; spral v2025-01-08 [Fortran] documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/css/custom.css?v=99edb77c" />
+
   
-        <script src="_static/jquery.js"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-        <script src="_static/doctools.js"></script>
-        <script src="_static/sphinx_highlight.js"></script>
-        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=9fe63759"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -38,9 +38,6 @@
             spral
               <img src="_static/STFC-Logo.png" class="logo" alt="Logo"/>
           </a>
-              <div class="version">
-                v2024-05-08 [Fortran]
-              </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
@@ -111,10 +108,10 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="f/spral_ssids">
-<span id="spral-ssids-sparse-symmetric-indefinite-direct-solver"></span><h1><a class="reference internal" href="#f/spral_ssids" title="f/spral_ssids: Sparse Symmetric Indefinite Direct Solver"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssids</span></code></a> - Sparse Symmetric Indefinite Direct Solver<a class="headerlink" href="#f/spral_ssids" title="Permalink to this heading"></a></h1>
+  <section id="spral-ssids-sparse-symmetric-indefinite-direct-solver">
+<h1><a class="reference internal" href="#f/spral_ssids" title="f/spral_ssids: Sparse Symmetric Indefinite Direct Solver"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssids</span></code></a> - Sparse Symmetric Indefinite Direct Solver<a class="headerlink" href="#spral-ssids-sparse-symmetric-indefinite-direct-solver" title="Link to this heading"></a></h1>
 <section id="purpose">
-<h2>Purpose<a class="headerlink" href="#purpose" title="Permalink to this heading"></a></h2>
+<span id="f/spral_ssids"></span><h2>Purpose<a class="headerlink" href="#purpose" title="Link to this heading"></a></h2>
 <p>This package solves one or more sets of <span class="math notranslate nohighlight">\(n\times n\)</span>
 sparse <strong>symmetric</strong> equations  <span class="math notranslate nohighlight">\(AX = B\)</span> using a multifrontal method.
 The following cases are covered:</p>
@@ -139,7 +136,7 @@ the scaled matrix  <span class="math notranslate nohighlight">\(\overline{A} = S
 where <span class="math notranslate nohighlight">\(S\)</span> is a diagonal scaling matrix.</p>
 </section>
 <section id="usage-overview">
-<h2>Usage overview<a class="headerlink" href="#usage-overview" title="Permalink to this heading"></a></h2>
+<h2>Usage overview<a class="headerlink" href="#usage-overview" title="Link to this heading"></a></h2>
 <p>Solving <span class="math notranslate nohighlight">\(AX=B\)</span> using SSIDS is a four stage process.</p>
 <ol class="arabic simple">
 <li><p>Call <a class="reference internal" href="#f/spral_ssids/ssids_analyse" title="f/spral_ssids/ssids_analyse"><code class="xref f f-subr docutils literal notranslate"><span class="pre">ssids_analyse()</span></code></a> to perform a symbolic factorization, stored
@@ -166,7 +163,7 @@ on the same machine produces exactly the same solution.</p>
 </div>
 </section>
 <section id="basic-subroutines">
-<h2>Basic Subroutines<a class="headerlink" href="#basic-subroutines" title="Permalink to this heading"></a></h2>
+<h2>Basic Subroutines<a class="headerlink" href="#basic-subroutines" title="Link to this heading"></a></h2>
 <p>In the below, all reals are double precision unless otherwise indicated (as
 described in <a class="reference internal" href="conventions.html"><span class="doc">Data types and conventions</span></a>).</p>
 <div class="admonition note">
@@ -176,7 +173,7 @@ without checking.</p>
 </div>
 <dl>
 <dt class="sig sig-object f" id="f/spral_ssids/ssids_analyse">
-<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">ssids_analyse</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">check</span></em>, <em class="sig-param"><span class="pre">n</span></em>, <em class="sig-param"><span class="pre">ptr</span></em>, <em class="sig-param"><span class="pre">row</span></em>, <em class="sig-param"><span class="pre">akeep</span></em>, <em class="sig-param"><span class="pre">options</span></em>, <em class="sig-param"><span class="pre">inform</span></em><span class="optional">[</span>, <em class="sig-param"><span class="pre">order</span></em>, <em class="sig-param"><span class="pre">val</span></em>, <em class="sig-param"><span class="pre">topology</span></em><span class="optional">]</span><span class="sig-paren">)</span><a class="headerlink" href="#f/spral_ssids/ssids_analyse" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">ssids_analyse</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">check</span></em>, <em class="sig-param"><span class="pre">n</span></em>, <em class="sig-param"><span class="pre">ptr</span></em>, <em class="sig-param"><span class="pre">row</span></em>, <em class="sig-param"><span class="pre">akeep</span></em>, <em class="sig-param"><span class="pre">options</span></em>, <em class="sig-param"><span class="pre">inform</span></em><span class="optional">[</span>, <em class="sig-param"><span class="pre">order</span></em>, <em class="sig-param"><span class="pre">val</span></em>, <em class="sig-param"><span class="pre">topology</span></em><span class="optional">]</span><span class="sig-paren">)</span><a class="headerlink" href="#f/spral_ssids/ssids_analyse" title="Link to this definition"></a></dt>
 <dd><p>Perform the analyse (symbolic) phase of the factorization for a matrix
 supplied in <a class="reference internal" href="csc_format.html"><span class="doc">CSC format</span></a>. The resulting symbolic factors
 stored in <cite>akeep</cite> should be passed unaltered in the subsequent calls to
@@ -236,7 +233,7 @@ backwards compatibility.</p>
 
 <dl>
 <dt class="sig sig-object f" id="f/spral_ssids/ssids_analyse_coord">
-<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">ssids_analyse_coord</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">n</span></em>, <em class="sig-param"><span class="pre">ne</span></em>, <em class="sig-param"><span class="pre">row</span></em>, <em class="sig-param"><span class="pre">col</span></em>, <em class="sig-param"><span class="pre">akeep</span></em>, <em class="sig-param"><span class="pre">options</span></em>, <em class="sig-param"><span class="pre">inform</span></em><span class="optional">[</span>, <em class="sig-param"><span class="pre">order</span></em>, <em class="sig-param"><span class="pre">val</span></em>, <em class="sig-param"><span class="pre">topology</span></em><span class="optional">]</span><span class="sig-paren">)</span><a class="headerlink" href="#f/spral_ssids/ssids_analyse_coord" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">ssids_analyse_coord</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">n</span></em>, <em class="sig-param"><span class="pre">ne</span></em>, <em class="sig-param"><span class="pre">row</span></em>, <em class="sig-param"><span class="pre">col</span></em>, <em class="sig-param"><span class="pre">akeep</span></em>, <em class="sig-param"><span class="pre">options</span></em>, <em class="sig-param"><span class="pre">inform</span></em><span class="optional">[</span>, <em class="sig-param"><span class="pre">order</span></em>, <em class="sig-param"><span class="pre">val</span></em>, <em class="sig-param"><span class="pre">topology</span></em><span class="optional">]</span><span class="sig-paren">)</span><a class="headerlink" href="#f/spral_ssids/ssids_analyse_coord" title="Link to this definition"></a></dt>
 <dd><p>As <a class="reference internal" href="#f/spral_ssids/ssids_analyse" title="f/spral_ssids/ssids_analyse"><code class="xref f f-subr docutils literal notranslate"><span class="pre">ssids_analyse()</span></code></a>, but for coordinate data. The variant parameters
 are:</p>
 <dl class="field-list simple">
@@ -252,7 +249,7 @@ are:</p>
 
 <dl>
 <dt class="sig sig-object f" id="f/spral_ssids/ssids_factor">
-<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">ssids_factor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">posdef</span></em>, <em class="sig-param"><span class="pre">val</span></em>, <em class="sig-param"><span class="pre">akeep</span></em>, <em class="sig-param"><span class="pre">fkeep</span></em>, <em class="sig-param"><span class="pre">options</span></em>, <em class="sig-param"><span class="pre">inform</span></em><span class="optional">[</span>, <em class="sig-param"><span class="pre">scale</span></em>, <em class="sig-param"><span class="pre">ptr</span></em>, <em class="sig-param"><span class="pre">row</span></em><span class="optional">]</span><span class="sig-paren">)</span><a class="headerlink" href="#f/spral_ssids/ssids_factor" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">ssids_factor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">posdef</span></em>, <em class="sig-param"><span class="pre">val</span></em>, <em class="sig-param"><span class="pre">akeep</span></em>, <em class="sig-param"><span class="pre">fkeep</span></em>, <em class="sig-param"><span class="pre">options</span></em>, <em class="sig-param"><span class="pre">inform</span></em><span class="optional">[</span>, <em class="sig-param"><span class="pre">scale</span></em>, <em class="sig-param"><span class="pre">ptr</span></em>, <em class="sig-param"><span class="pre">row</span></em><span class="optional">]</span><span class="sig-paren">)</span><a class="headerlink" href="#f/spral_ssids/ssids_factor" title="Link to this definition"></a></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -294,7 +291,7 @@ backwards compatibility.</p>
 
 <dl>
 <dt class="sig sig-object f" id="f/spral_ssids/ssids_solve">
-<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">ssids_solve</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">x</span></em>, <em class="sig-param"><span class="pre">akeep</span></em>, <em class="sig-param"><span class="pre">fkeep</span></em>, <em class="sig-param"><span class="pre">options</span></em>, <em class="sig-param"><span class="pre">inform</span></em><span class="optional">[</span>, <em class="sig-param"><span class="pre">job</span></em><span class="optional">]</span><span class="sig-paren">)</span><a class="headerlink" href="#f/spral_ssids/ssids_solve" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">ssids_solve</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">x</span></em>, <em class="sig-param"><span class="pre">akeep</span></em>, <em class="sig-param"><span class="pre">fkeep</span></em>, <em class="sig-param"><span class="pre">options</span></em>, <em class="sig-param"><span class="pre">inform</span></em><span class="optional">[</span>, <em class="sig-param"><span class="pre">job</span></em><span class="optional">]</span><span class="sig-paren">)</span><a class="headerlink" href="#f/spral_ssids/ssids_solve" title="Link to this definition"></a></dt>
 <dd><p>Solve (for a single right-hand side) one of the following equations:</p>
 <table class="docutils align-default">
 <thead>
@@ -404,7 +401,7 @@ routine (see <a class="reference internal" href="#f/spral_ssids/ssids_inform" ti
 
 <dl>
 <dt class="sig sig-object f" id="f/spral_ssids/ssids_free">
-<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">ssids_free</span></span><span class="sig-paren">(</span><span class="optional">[</span><em class="sig-param"><span class="pre">akeep</span></em>, <em class="sig-param"><span class="pre">fkeep</span></em>, <span class="optional">]</span><em class="sig-param"><span class="pre">cuda_error</span></em><span class="sig-paren">)</span><a class="headerlink" href="#f/spral_ssids/ssids_free" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">ssids_free</span></span><span class="sig-paren">(</span><span class="optional">[</span><em class="sig-param"><span class="pre">akeep</span></em>, <em class="sig-param"><span class="pre">fkeep</span></em>, <span class="optional">]</span><em class="sig-param"><span class="pre">cuda_error</span></em><span class="sig-paren">)</span><a class="headerlink" href="#f/spral_ssids/ssids_free" title="Link to this definition"></a></dt>
 <dd><p>Frees memory and resources associated with <code class="xref f f-type docutils literal notranslate"><span class="pre">akeep</span></code> and/or
 <code class="xref f f-type docutils literal notranslate"><span class="pre">fkeep</span></code>, at least one of which must be present.</p>
 <dl class="field-list simple">
@@ -429,10 +426,10 @@ freed.</p>
 
 </section>
 <section id="advanced-subroutines">
-<h2>Advanced subroutines<a class="headerlink" href="#advanced-subroutines" title="Permalink to this heading"></a></h2>
+<h2>Advanced subroutines<a class="headerlink" href="#advanced-subroutines" title="Link to this heading"></a></h2>
 <dl>
 <dt class="sig sig-object f" id="f/spral_ssids/ssids_enquire_posdef">
-<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">ssids_enquire_posdef</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">akeep</span></em>, <em class="sig-param"><span class="pre">fkeep</span></em>, <em class="sig-param"><span class="pre">options</span></em>, <em class="sig-param"><span class="pre">inform</span></em>, <em class="sig-param"><span class="pre">d</span></em><span class="sig-paren">)</span><a class="headerlink" href="#f/spral_ssids/ssids_enquire_posdef" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">ssids_enquire_posdef</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">akeep</span></em>, <em class="sig-param"><span class="pre">fkeep</span></em>, <em class="sig-param"><span class="pre">options</span></em>, <em class="sig-param"><span class="pre">inform</span></em>, <em class="sig-param"><span class="pre">d</span></em><span class="sig-paren">)</span><a class="headerlink" href="#f/spral_ssids/ssids_enquire_posdef" title="Link to this definition"></a></dt>
 <dd><p>Return the diagonal entries of the Cholesky factor.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -454,7 +451,7 @@ entry <span class="math notranslate nohighlight">\(L_{ii}\)</span>.</p></li>
 
 <dl>
 <dt class="sig sig-object f" id="f/spral_ssids/ssids_enquire_indef">
-<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">ssids_enquire_indef</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">akeep</span></em>, <em class="sig-param"><span class="pre">fkeep</span></em>, <em class="sig-param"><span class="pre">options</span></em>, <em class="sig-param"><span class="pre">inform</span></em><span class="optional">[</span>, <em class="sig-param"><span class="pre">piv_order</span></em>, <em class="sig-param"><span class="pre">d</span></em><span class="optional">]</span><span class="sig-paren">)</span><a class="headerlink" href="#f/spral_ssids/ssids_enquire_indef" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">ssids_enquire_indef</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">akeep</span></em>, <em class="sig-param"><span class="pre">fkeep</span></em>, <em class="sig-param"><span class="pre">options</span></em>, <em class="sig-param"><span class="pre">inform</span></em><span class="optional">[</span>, <em class="sig-param"><span class="pre">piv_order</span></em>, <em class="sig-param"><span class="pre">d</span></em><span class="optional">]</span><span class="sig-paren">)</span><a class="headerlink" href="#f/spral_ssids/ssids_enquire_indef" title="Link to this definition"></a></dt>
 <dd><p>Return the pivot order and/or values of <span class="math notranslate nohighlight">\(D\)</span> of the Symmetric Indefinite
 Factorization.</p>
 <dl class="field-list simple">
@@ -487,7 +484,7 @@ part of a <span class="math notranslate nohighlight">\(2 \times 2\)</span> pivot
 
 <dl>
 <dt class="sig sig-object f" id="f/spral_ssids/ssids_alter">
-<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">ssids_alter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">d</span></em>, <em class="sig-param"><span class="pre">akeep</span></em>, <em class="sig-param"><span class="pre">fkeep</span></em>, <em class="sig-param"><span class="pre">options</span></em>, <em class="sig-param"><span class="pre">inform</span></em><span class="sig-paren">)</span><a class="headerlink" href="#f/spral_ssids/ssids_alter" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">ssids_alter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">d</span></em>, <em class="sig-param"><span class="pre">akeep</span></em>, <em class="sig-param"><span class="pre">fkeep</span></em>, <em class="sig-param"><span class="pre">options</span></em>, <em class="sig-param"><span class="pre">inform</span></em><span class="sig-paren">)</span><a class="headerlink" href="#f/spral_ssids/ssids_alter" title="Link to this definition"></a></dt>
 <dd><p>Alter the entries of the diagonal factor <span class="math notranslate nohighlight">\(D\)</span> for a symmetric indefinite
 factorization. The pivot order remains the same.</p>
 <dl class="field-list simple">
@@ -510,10 +507,10 @@ routine (see <a class="reference internal" href="#f/spral_ssids/ssids_inform" ti
 
 </section>
 <section id="derived-types">
-<h2>Derived types<a class="headerlink" href="#derived-types" title="Permalink to this heading"></a></h2>
+<h2>Derived types<a class="headerlink" href="#derived-types" title="Link to this heading"></a></h2>
 <dl>
 <dt class="sig sig-object f" id="f/spral_ssids/ssids_options">
-<em class="property"><span class="pre">type</span>&#160; </em><span class="sig-name descname"><span class="pre">ssids_options</span></span><a class="headerlink" href="#f/spral_ssids/ssids_options" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">type</span>&#160; </em><span class="sig-name descname"><span class="pre">ssids_options</span></span><a class="headerlink" href="#f/spral_ssids/ssids_options" title="Link to this definition"></a></dt>
 <dd><p>The derived data type ssids_options is used to specify the options
 used within <code class="docutils literal notranslate"><span class="pre">SSIDS</span></code>. The components, that are automatically given
 default values in the definition of the type, are:</p>
@@ -655,7 +652,7 @@ as the closest value in that range.</p></li>
 
 <dl>
 <dt class="sig sig-object f" id="f/spral_ssids/ssids_inform">
-<em class="property"><span class="pre">type</span>&#160; </em><span class="sig-name descname"><span class="pre">ssids_inform</span></span><a class="headerlink" href="#f/spral_ssids/ssids_inform" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">type</span>&#160; </em><span class="sig-name descname"><span class="pre">ssids_inform</span></span><a class="headerlink" href="#f/spral_ssids/ssids_inform" title="Link to this definition"></a></dt>
 <dd><p>Used to return information about the progress and needs of the algorithm.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type fields<span class="colon">:</span></dt>
@@ -821,7 +818,7 @@ affect performance on NUMA systems).</p></td>
 
 </section>
 <section id="example">
-<span id="ssids-example"></span><h2>Example<a class="headerlink" href="#example" title="Permalink to this heading"></a></h2>
+<span id="ssids-example"></span><h2>Example<a class="headerlink" href="#example" title="Link to this heading"></a></h2>
 <p>Suppose we wish to factorize the matrix</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}A = \left(\begin{array}{ccccc}
@@ -914,7 +911,7 @@ affect performance on NUMA systems).</p></td>
 </div>
 </section>
 <section id="driver-program">
-<h2>Driver Program<a class="headerlink" href="#driver-program" title="Permalink to this heading"></a></h2>
+<h2>Driver Program<a class="headerlink" href="#driver-program" title="Link to this heading"></a></h2>
 <p>SSIDS ships with a driver program <a class="reference internal" href="#f/spral_ssids" title="f/spral_ssids: Sparse Symmetric Indefinite Direct Solver"><code class="xref f f-prog docutils literal notranslate"><span class="pre">spral_ssids</span></code></a> that allows reading a
 matrix in Rutherford-Boeing format specified as a command-line argument and
 factorizing it. There are a number of other command-line arguments that
@@ -1054,9 +1051,9 @@ configure the factorization.</p>
 </div>
 </section>
 <section id="method">
-<span id="ssids-method"></span><h2>Method<a class="headerlink" href="#method" title="Permalink to this heading"></a></h2>
+<span id="ssids-method"></span><h2>Method<a class="headerlink" href="#method" title="Link to this heading"></a></h2>
 <section id="partition-of-work-across-available-resources">
-<h3>Partition of work across available resources<a class="headerlink" href="#partition-of-work-across-available-resources" title="Permalink to this heading"></a></h3>
+<h3>Partition of work across available resources<a class="headerlink" href="#partition-of-work-across-available-resources" title="Link to this heading"></a></h3>
 <p>Once the ordering has been determined and the assembly tree determined in the
 analyse phase, the tree is broken into a number of leaf subtrees rooted at a
 single node, leaving a root subtree/forest consisting of all remaining nodes
@@ -1070,7 +1067,7 @@ the root subtree.</p>
 <p>At present the solve phase is performed in serial.</p>
 </section>
 <section id="data-checking">
-<h3>Data checking<a class="headerlink" href="#data-checking" title="Permalink to this heading"></a></h3>
+<h3>Data checking<a class="headerlink" href="#data-checking" title="Link to this heading"></a></h3>
 <p>If check is set to .true. on the call to <a class="reference internal" href="#f/spral_ssids/ssids_analyse" title="f/spral_ssids/ssids_analyse"><code class="xref f f-subr docutils literal notranslate"><span class="pre">ssids_analyse()</span></code></a> or if
 <a class="reference internal" href="#f/spral_ssids/ssids_analyse_coord" title="f/spral_ssids/ssids_analyse_coord"><code class="xref f f-subr docutils literal notranslate"><span class="pre">ssids_analyse_coord()</span></code></a> is called, the user-supplied matrix data is
 checked for errors. The cleaned integer matrix data (duplicates are
@@ -1088,7 +1085,7 @@ elimination order. If an ordering was supplied by the user, this order may
 differ, but will be equivalent in terms of fill-in.</p>
 </section>
 <section id="factorization-performed">
-<h3>Factorization performed<a class="headerlink" href="#factorization-performed" title="Permalink to this heading"></a></h3>
+<h3>Factorization performed<a class="headerlink" href="#factorization-performed" title="Link to this heading"></a></h3>
 <p>The factorization performed depends on the value of <cite>posdef</cite>.</p>
 <p>If <strong>posdef=true</strong>, a Cholesky factorization is performed:</p>
 <div class="math notranslate nohighlight">
@@ -1106,7 +1103,7 @@ algorithm chooses to employ.</p>
 CPUs.</p>
 </section>
 <section id="small-leaf-subtrees">
-<span id="ssids-small-leaf"></span><h3>Small Leaf Subtrees<a class="headerlink" href="#small-leaf-subtrees" title="Permalink to this heading"></a></h3>
+<span id="ssids-small-leaf"></span><h3>Small Leaf Subtrees<a class="headerlink" href="#small-leaf-subtrees" title="Link to this heading"></a></h3>
 <p>For subtrees allocated to run on the CPU, the factorization of small nodes near
 the leaves of the tree can be amalgamated into a single parallel task (normally
 each would be treated as its own OpenMP task to be scheduled). This can reduce
@@ -1115,9 +1112,9 @@ operations for a subtree root at a given node is less than
 <cite>options.small_subtree_threshold</cite>, that subtree is treated as a single task.</p>
 </section>
 <section id="references">
-<h3>References<a class="headerlink" href="#references" title="Permalink to this heading"></a></h3>
+<h3>References<a class="headerlink" href="#references" title="Link to this heading"></a></h3>
 <aside class="footnote-list brackets">
-<aside class="footnote brackets" id="id4" role="note">
+<aside class="footnote brackets" id="id4" role="doc-footnote">
 <span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id2">1</a><span class="fn-bracket">]</span></span>
 <p>J.D. Hogg, E. Ovtchinnikov and J.A. Scott. (2014).
 <em>A sparse symmetric indefinite direct solver for GPU architectures</em>.
@@ -1125,7 +1122,7 @@ ACM Transactions on Mathematical Software 42(1), Article 1, 25 pages.
 [<a class="reference external" href="https://doi.org/10.1145/2756548">DOI: 10.1145/2756548</a>]
 [<a class="reference external" href="https://epubs.stfc.ac.uk/work/12189719">Preprint RAL-P-2014-006</a>]</p>
 </aside>
-<aside class="footnote brackets" id="id5" role="note">
+<aside class="footnote brackets" id="id5" role="doc-footnote">
 <span class="label"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></span>
 <span class="backrefs">(<a role="doc-backlink" href="#id1">1</a>,<a role="doc-backlink" href="#id3">2</a>)</span>
 <p>J.D. Hogg. (2016).
@@ -1148,7 +1145,7 @@ RAL Technical Report. RAL-TR-2016-0xx, to appear.</p>
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2024, Computational Mathematics Group, STFC Rutherford Appleton Laboratory.</p>
+    <p>&#169; Copyright 2025, Computational Mathematics Group, STFC Rutherford Appleton Laboratory.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

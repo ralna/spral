@@ -79,7 +79,7 @@ Routines
    :p real cscaling(n) [out]: returns column scaling found by routine
    :p auction_options options [in]: controls behaviour of routine
    :p auction_inform inform [out]: returns information on execution of routine
-   :o integer match(n) [out]: returns matching found by routine. Row i is
+   :o integer match(m) [out]: returns matching found by routine. Row i is
       matched to column match(i), or is unmatched if match(i)=0.
 
 Data-types
@@ -260,7 +260,7 @@ Routines
 
 .. f:subroutine:: equilib_scale_sym(n, ptr, row, val, scaling, options, inform)
 
-   Find a matching-based symmetric scaling using the norm-equilibration algorithm.
+   Find a symmetric scaling using the norm-equilibration algorithm.
 
    The scaled matrix is such that the infinity norm of each row and column are
    equal to :math:`1.0`.
@@ -275,7 +275,7 @@ Routines
 
 .. f:subroutine:: equilib_scale_unsym(m, n, ptr, row, val, rscaling, cscaling, options, inform)
 
-   Find a matching-based unsymmetric scaling using the norm-equilibration algorithm.
+   Find an unsymmetric scaling using the norm-equilibration algorithm.
 
    The scaled matrix is such that the infinity norm of each row and column are
    equal to :math:`1.0`.
@@ -417,7 +417,7 @@ Routines
    :p real cscaling(n) [out]: returns column scaling found by routine.
    :p hungarian_options options [in]: controls behaviour of routine.
    :p hungarian_inform inform [out]: returns information on execution of routine.
-   :o integer match(n) [out]: returns matching found by routine. Row i is
+   :o integer match(m) [out]: returns matching found by routine. Row i is
       matched to column match(i), or is unmatched if match(i)=0.
 
 Data-types

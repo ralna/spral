@@ -1,23 +1,23 @@
+
+
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="./">
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Installation &mdash; spral v2024-05-08 [Fortran] documentation</title>
-      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
-    <link rel="shortcut icon" href="_static/favicon.ico"/>
-  <!--[if lt IE 9]>
-    <script src="_static/js/html5shiv.min.js"></script>
-  <![endif]-->
+  <title>Installation &mdash; spral v2025-01-08 [Fortran] documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/css/custom.css?v=99edb77c" />
+
   
-        <script src="_static/jquery.js"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-        <script src="_static/doctools.js"></script>
-        <script src="_static/sphinx_highlight.js"></script>
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=9fe63759"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -37,9 +37,6 @@
             spral
               <img src="_static/STFC-Logo.png" class="logo" alt="Logo"/>
           </a>
-              <div class="version">
-                v2024-05-08 [Fortran]
-              </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
@@ -114,9 +111,9 @@
            <div itemprop="articleBody">
              
   <section id="installation">
-<h1>Installation<a class="headerlink" href="#installation" title="Permalink to this heading"></a></h1>
+<h1>Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h1>
 <section id="building-with-meson">
-<h2>Building with Meson:<a class="headerlink" href="#building-with-meson" title="Permalink to this heading"></a></h2>
+<h2>Building with Meson:<a class="headerlink" href="#building-with-meson" title="Link to this heading"></a></h2>
 <p>We now support building with the <a class="reference external" href="https://mesonbuild.com">Meson Build system</a>.
 Under Linux, or macOS, or Windows:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Setup SPRAL</span>
@@ -133,7 +130,7 @@ meson<span class="w"> </span><span class="nb">test</span><span class="w"> </span
 </pre></div>
 </div>
 <section id="options-to-meson">
-<h3>Options to <code class="docutils literal notranslate"><span class="pre">meson</span></code><a class="headerlink" href="#options-to-meson" title="Permalink to this heading"></a></h3>
+<h3>Options to <code class="docutils literal notranslate"><span class="pre">meson</span></code><a class="headerlink" href="#options-to-meson" title="Link to this heading"></a></h3>
 <p>In particular, the following options may be of interest:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">--prefix=PREFIX</span></code> specifies the installation path prefix (by default
@@ -150,7 +147,7 @@ meson<span class="w"> </span><span class="nb">test</span><span class="w"> </span
 </section>
 </section>
 <section id="building-with-autotools">
-<h2>Building with Autotools:<a class="headerlink" href="#building-with-autotools" title="Permalink to this heading"></a></h2>
+<h2>Building with Autotools:<a class="headerlink" href="#building-with-autotools" title="Link to this heading"></a></h2>
 <p>Under Linux, or macOS:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Get latest development version from github and run dev scripts</span>
 git<span class="w"> </span>clone<span class="w"> </span>--depth<span class="o">=</span><span class="m">1</span><span class="w"> </span>https://github.com/ralna/spral.git
@@ -170,7 +167,7 @@ gfortran<span class="w"> </span>-o<span class="w"> </span>myprog<span class="w">
 </pre></div>
 </div>
 <section id="notes">
-<h3>Notes<a class="headerlink" href="#notes" title="Permalink to this heading"></a></h3>
+<h3>Notes<a class="headerlink" href="#notes" title="Link to this heading"></a></h3>
 <ul class="simple">
 <li><p>The above instructions perform an out-of-path build: we recommend you
 change the value of <code class="docutils literal notranslate"><span class="pre">$BUILDDIR</span></code> to reflect the compiler used, for
@@ -183,9 +180,9 @@ subdirectory.</p></li>
 </ul>
 </section>
 <section id="third-party-libraries">
-<h3>Third-party libraries<a class="headerlink" href="#third-party-libraries" title="Permalink to this heading"></a></h3>
+<h3>Third-party libraries<a class="headerlink" href="#third-party-libraries" title="Link to this heading"></a></h3>
 <section id="metis">
-<h4>METIS<a class="headerlink" href="#metis" title="Permalink to this heading"></a></h4>
+<h4>METIS<a class="headerlink" href="#metis" title="Link to this heading"></a></h4>
 <p>Many of our packages use the METIS graph partitioning library to find good
 orderings. You can obtain a copy of METIS from
 <a class="reference external" href="http://www.cs.umn.edu/~metis">http://www.cs.umn.edu/~metis</a>.
@@ -200,7 +197,7 @@ how to link against METIS. For example, if <code class="docutils literal notrans
 </div>
 </section>
 <section id="blas">
-<h4>BLAS<a class="headerlink" href="#blas" title="Permalink to this heading"></a></h4>
+<h4>BLAS<a class="headerlink" href="#blas" title="Link to this heading"></a></h4>
 <p>Many of our packages require a high performance BLAS library to efficiently
 perform dense linear algebra operations. For best performance, please use the
 library recommended by your computer manufacturer (normally the Intel MKL).
@@ -219,7 +216,7 @@ compiler suite, use:</p>
 </section>
 </section>
 <section id="compilers-and-compiler-options">
-<h3>Compilers and compiler options<a class="headerlink" href="#compilers-and-compiler-options" title="Permalink to this heading"></a></h3>
+<h3>Compilers and compiler options<a class="headerlink" href="#compilers-and-compiler-options" title="Link to this heading"></a></h3>
 <p>If no compiler is specified, <cite>configure</cite> will pick a default
 compiler to use. If <cite>configure</cite> cannot find an appropriate compiler, or
 you wish to specify a different compiler you can do so by setting the following
@@ -247,7 +244,7 @@ variables:</p>
 </div>
 </section>
 <section id="other-options-to-configure">
-<h3>Other options to <cite>configure</cite><a class="headerlink" href="#other-options-to-configure" title="Permalink to this heading"></a></h3>
+<h3>Other options to <cite>configure</cite><a class="headerlink" href="#other-options-to-configure" title="Link to this heading"></a></h3>
 <p>The <cite>configure</cite> script is generated by <cite>autoconf</cite>, and hence
 offers many standard options that can be listed using the command
 <code class="docutils literal notranslate"><span class="pre">configure</span> <span class="pre">--help</span></code>.</p>
@@ -259,7 +256,7 @@ offers many standard options that can be listed using the command
 </section>
 </section>
 <section id="citing-spral-or-ssids">
-<h2>Citing SPRAL or SSIDS<a class="headerlink" href="#citing-spral-or-ssids" title="Permalink to this heading"></a></h2>
+<h2>Citing SPRAL or SSIDS<a class="headerlink" href="#citing-spral-or-ssids" title="Link to this heading"></a></h2>
 <p>If you write a paper using software from SPRAL, please cite an
 appropriate paper (a list can usually be found in the method section of
 the user documentation).</p>
@@ -269,16 +266,16 @@ ACM Transactions on Mathematical Software (TOMS), 42(1), 1-25, <a class="referen
 </div></blockquote>
 <p>If no paper is listed, a citation of the SPRAL GitHub website should be used, for example:</p>
 <blockquote>
-<div><p>SPRAL: an open-source library for sparse linear algebra, Version 2024-05-08, <a class="reference external" href="http://www.numerical.rl.ac.uk/spral">http://www.numerical.rl.ac.uk/spral</a>, May 2024.</p>
+<div><p>SPRAL: an open-source library for sparse linear algebra, Version 2025-01-08, <a class="reference external" href="http://www.numerical.rl.ac.uk/spral">http://www.numerical.rl.ac.uk/spral</a>, January 2025.</p>
 </div></blockquote>
 </section>
 <section id="support">
-<h2>Support<a class="headerlink" href="#support" title="Permalink to this heading"></a></h2>
+<h2>Support<a class="headerlink" href="#support" title="Link to this heading"></a></h2>
 <p>Feeback may be sent to <a class="reference external" href="mailto:hsl&#37;&#52;&#48;stfc&#46;ac&#46;uk">hsl<span>&#64;</span>stfc<span>&#46;</span>ac<span>&#46;</span>uk</a> or by filing
 an issue on our github: <a class="reference external" href="https://github.com/ralna/spral/issues">https://github.com/ralna/spral/issues</a>.</p>
 </section>
 <section id="licence">
-<h2>Licence<a class="headerlink" href="#licence" title="Permalink to this heading"></a></h2>
+<h2>Licence<a class="headerlink" href="#licence" title="Link to this heading"></a></h2>
 <p>Copyright (c) 2014-2023, The Science and Technology Facilities Council (STFC)
 All rights reserved.</p>
 <p>Redistribution and use in source and binary forms, with or without
@@ -317,7 +314,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</p>
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2024, Computational Mathematics Group, STFC Rutherford Appleton Laboratory.</p>
+    <p>&#169; Copyright 2025, Computational Mathematics Group, STFC Rutherford Appleton Laboratory.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

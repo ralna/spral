@@ -1,24 +1,24 @@
+
+
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="./">
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>spral_ssmfe - Sparse Symmetric Matrix-Free Eigensolver &mdash; spral v2024-05-08 [Fortran] documentation</title>
-      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
-    <link rel="shortcut icon" href="_static/favicon.ico"/>
-  <!--[if lt IE 9]>
-    <script src="_static/js/html5shiv.min.js"></script>
-  <![endif]-->
+  <title>spral_ssmfe - Sparse Symmetric Matrix-Free Eigensolver &mdash; spral v2025-01-08 [Fortran] documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/css/custom.css?v=99edb77c" />
+
   
-        <script src="_static/jquery.js"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-        <script src="_static/doctools.js"></script>
-        <script src="_static/sphinx_highlight.js"></script>
-        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=9fe63759"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -38,9 +38,6 @@
             spral
               <img src="_static/STFC-Logo.png" class="logo" alt="Logo"/>
           </a>
-              <div class="version">
-                v2024-05-08 [Fortran]
-              </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
@@ -113,10 +110,10 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="f/spral_ssmfe">
-<span id="spral-ssmfe-sparse-symmetric-matrix-free-eigensolver"></span><h1><a class="reference internal" href="#f/spral_ssmfe" title="f/spral_ssmfe: Sparse Symmetric Matrix-Free Eigensolver"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssmfe</span></code></a> - Sparse Symmetric Matrix-Free Eigensolver<a class="headerlink" href="#f/spral_ssmfe" title="Permalink to this heading"></a></h1>
+  <section id="spral-ssmfe-sparse-symmetric-matrix-free-eigensolver">
+<h1><a class="reference internal" href="#f/spral_ssmfe" title="f/spral_ssmfe: Sparse Symmetric Matrix-Free Eigensolver"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssmfe</span></code></a> - Sparse Symmetric Matrix-Free Eigensolver<a class="headerlink" href="#spral-ssmfe-sparse-symmetric-matrix-free-eigensolver" title="Link to this heading"></a></h1>
 <section id="purpose">
-<h2>Purpose<a class="headerlink" href="#purpose" title="Permalink to this heading"></a></h2>
+<span id="f/spral_ssmfe"></span><h2>Purpose<a class="headerlink" href="#purpose" title="Link to this heading"></a></h2>
 <p>This package computes extreme (leftmost and/or rightmost)
 eigenpairs <span class="math notranslate nohighlight">\(\{\lambda_i, x_i\}\)</span> of the following eigenvalue problems:</p>
 <ul>
@@ -146,7 +143,7 @@ and <span class="math notranslate nohighlight">\(B\)</span> is <strong>positive 
 <a class="reference internal" href="ssmfe_core.html#f/spral_ssmfe_core" title="f/spral_ssmfe_core: Sparse Symmetric Matrix-Free Eigensolver (Core Algorithm)"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssmfe_core</span></code></a>. If more fine-tuned control of the eigensolver is
 required, use those modules instead.</p>
 <section id="version-history">
-<h3>Version history<a class="headerlink" href="#version-history" title="Permalink to this heading"></a></h3>
+<h3>Version history<a class="headerlink" href="#version-history" title="Link to this heading"></a></h3>
 <dl class="simple">
 <dt>2015-04-20 Version 1.0.0</dt><dd><p>Initial release</p>
 </dd>
@@ -155,7 +152,7 @@ required, use those modules instead.</p>
 </section>
 </section>
 <section id="usage-overview">
-<h2>Usage overview<a class="headerlink" href="#usage-overview" title="Permalink to this heading"></a></h2>
+<h2>Usage overview<a class="headerlink" href="#usage-overview" title="Link to this heading"></a></h2>
 <p>The eigensolver subroutines behind <a class="reference internal" href="#f/spral_ssmfe" title="f/spral_ssmfe: Sparse Symmetric Matrix-Free Eigensolver"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssmfe</span></code></a> implement a block
 iterative algorithm. The block nature of this algorithm allows the user
 to benefit from highly optimized linear algebra subroutines and from the
@@ -184,10 +181,10 @@ approximation to the solution <span class="math notranslate nohighlight">\(u\)</
 technique is only recommended for experienced users.</p>
 </section>
 <section id="subroutines">
-<h2>Subroutines<a class="headerlink" href="#subroutines" title="Permalink to this heading"></a></h2>
+<h2>Subroutines<a class="headerlink" href="#subroutines" title="Link to this heading"></a></h2>
 <dl>
 <dt class="sig sig-object f" id="f/spral_ssmfe/ssmfe_standard">
-<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">ssmfe_standard</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">rci</span></em>, <em class="sig-param"><span class="pre">left</span></em>, <em class="sig-param"><span class="pre">mep</span></em>, <em class="sig-param"><span class="pre">lambda</span></em>, <em class="sig-param"><span class="pre">n</span></em>, <em class="sig-param"><span class="pre">x</span></em>, <em class="sig-param"><span class="pre">ldx</span></em>, <em class="sig-param"><span class="pre">keep</span></em>, <em class="sig-param"><span class="pre">options</span></em>, <em class="sig-param"><span class="pre">inform</span></em><span class="sig-paren">)</span><a class="headerlink" href="#f/spral_ssmfe/ssmfe_standard" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">ssmfe_standard</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">rci</span></em>, <em class="sig-param"><span class="pre">left</span></em>, <em class="sig-param"><span class="pre">mep</span></em>, <em class="sig-param"><span class="pre">lambda</span></em>, <em class="sig-param"><span class="pre">n</span></em>, <em class="sig-param"><span class="pre">x</span></em>, <em class="sig-param"><span class="pre">ldx</span></em>, <em class="sig-param"><span class="pre">keep</span></em>, <em class="sig-param"><span class="pre">options</span></em>, <em class="sig-param"><span class="pre">inform</span></em><span class="sig-paren">)</span><a class="headerlink" href="#f/spral_ssmfe/ssmfe_standard" title="Link to this definition"></a></dt>
 <dd><p>Computes the left-most eigenpairs of the standard eigenvalue problem</p>
 <div class="math notranslate nohighlight">
 \[Ax = \lambda x\]</div>
@@ -249,7 +246,7 @@ routine.</p></li>
 
 <dl>
 <dt class="sig sig-object f" id="f/spral_ssmfe/ssmfe_standard_shift">
-<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">ssmfe_standard_shift</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">rci</span></em>, <em class="sig-param"><span class="pre">sigma</span></em>, <em class="sig-param"><span class="pre">left</span></em>, <em class="sig-param"><span class="pre">right</span></em>, <em class="sig-param"><span class="pre">mep</span></em>, <em class="sig-param"><span class="pre">lambda</span></em>, <em class="sig-param"><span class="pre">n</span></em>, <em class="sig-param"><span class="pre">x</span></em>, <em class="sig-param"><span class="pre">ldx</span></em>, <em class="sig-param"><span class="pre">keep</span></em>, <em class="sig-param"><span class="pre">options</span></em>, <em class="sig-param"><span class="pre">inform</span></em><span class="sig-paren">)</span><a class="headerlink" href="#f/spral_ssmfe/ssmfe_standard_shift" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">ssmfe_standard_shift</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">rci</span></em>, <em class="sig-param"><span class="pre">sigma</span></em>, <em class="sig-param"><span class="pre">left</span></em>, <em class="sig-param"><span class="pre">right</span></em>, <em class="sig-param"><span class="pre">mep</span></em>, <em class="sig-param"><span class="pre">lambda</span></em>, <em class="sig-param"><span class="pre">n</span></em>, <em class="sig-param"><span class="pre">x</span></em>, <em class="sig-param"><span class="pre">ldx</span></em>, <em class="sig-param"><span class="pre">keep</span></em>, <em class="sig-param"><span class="pre">options</span></em>, <em class="sig-param"><span class="pre">inform</span></em><span class="sig-paren">)</span><a class="headerlink" href="#f/spral_ssmfe/ssmfe_standard_shift" title="Link to this definition"></a></dt>
 <dd><p>Computes eigenpairs of the standard eigenvalue problem</p>
 <div class="math notranslate nohighlight">
 \[Ax = \lambda x\]</div>
@@ -313,7 +310,7 @@ routine.</p></li>
 
 <dl>
 <dt class="sig sig-object f" id="f/spral_ssmfe/ssmfe_generalized">
-<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">ssmfe_generalized</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">rci</span></em>, <em class="sig-param"><span class="pre">left</span></em>, <em class="sig-param"><span class="pre">mep</span></em>, <em class="sig-param"><span class="pre">lambda</span></em>, <em class="sig-param"><span class="pre">n</span></em>, <em class="sig-param"><span class="pre">x</span></em>, <em class="sig-param"><span class="pre">ldx</span></em>, <em class="sig-param"><span class="pre">keep</span></em>, <em class="sig-param"><span class="pre">options</span></em>, <em class="sig-param"><span class="pre">inform</span></em><span class="sig-paren">)</span><a class="headerlink" href="#f/spral_ssmfe/ssmfe_generalized" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">ssmfe_generalized</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">rci</span></em>, <em class="sig-param"><span class="pre">left</span></em>, <em class="sig-param"><span class="pre">mep</span></em>, <em class="sig-param"><span class="pre">lambda</span></em>, <em class="sig-param"><span class="pre">n</span></em>, <em class="sig-param"><span class="pre">x</span></em>, <em class="sig-param"><span class="pre">ldx</span></em>, <em class="sig-param"><span class="pre">keep</span></em>, <em class="sig-param"><span class="pre">options</span></em>, <em class="sig-param"><span class="pre">inform</span></em><span class="sig-paren">)</span><a class="headerlink" href="#f/spral_ssmfe/ssmfe_generalized" title="Link to this definition"></a></dt>
 <dd><p>Computes the left-most eigenpairs of the generalized eigenvalue problem</p>
 <div class="math notranslate nohighlight">
 \[Ax = \lambda B x\]</div>
@@ -378,7 +375,7 @@ routine.</p></li>
 
 <dl>
 <dt class="sig sig-object f" id="f/spral_ssmfe/ssmfe_generalized_shift">
-<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">ssmfe_generalized_shift</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">rci</span></em>, <em class="sig-param"><span class="pre">sigma</span></em>, <em class="sig-param"><span class="pre">left</span></em>, <em class="sig-param"><span class="pre">right</span></em>, <em class="sig-param"><span class="pre">mep</span></em>, <em class="sig-param"><span class="pre">lambda</span></em>, <em class="sig-param"><span class="pre">n</span></em>, <em class="sig-param"><span class="pre">x</span></em>, <em class="sig-param"><span class="pre">ldx</span></em>, <em class="sig-param"><span class="pre">keep</span></em>, <em class="sig-param"><span class="pre">options</span></em>, <em class="sig-param"><span class="pre">inform</span></em><span class="sig-paren">)</span><a class="headerlink" href="#f/spral_ssmfe/ssmfe_generalized_shift" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">ssmfe_generalized_shift</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">rci</span></em>, <em class="sig-param"><span class="pre">sigma</span></em>, <em class="sig-param"><span class="pre">left</span></em>, <em class="sig-param"><span class="pre">right</span></em>, <em class="sig-param"><span class="pre">mep</span></em>, <em class="sig-param"><span class="pre">lambda</span></em>, <em class="sig-param"><span class="pre">n</span></em>, <em class="sig-param"><span class="pre">x</span></em>, <em class="sig-param"><span class="pre">ldx</span></em>, <em class="sig-param"><span class="pre">keep</span></em>, <em class="sig-param"><span class="pre">options</span></em>, <em class="sig-param"><span class="pre">inform</span></em><span class="sig-paren">)</span><a class="headerlink" href="#f/spral_ssmfe/ssmfe_generalized_shift" title="Link to this definition"></a></dt>
 <dd><p>Computes eigenpairs of the generalized eigenvalue problem</p>
 <div class="math notranslate nohighlight">
 \[Ax = \lambda B x\]</div>
@@ -445,7 +442,7 @@ routine.</p></li>
 
 <dl>
 <dt class="sig sig-object f" id="f/spral_ssmfe/ssmfe_buckling">
-<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">ssmfe_buckling</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">rci</span></em>, <em class="sig-param"><span class="pre">sigma</span></em>, <em class="sig-param"><span class="pre">left</span></em>, <em class="sig-param"><span class="pre">right</span></em>, <em class="sig-param"><span class="pre">mep</span></em>, <em class="sig-param"><span class="pre">lambda</span></em>, <em class="sig-param"><span class="pre">n</span></em>, <em class="sig-param"><span class="pre">x</span></em>, <em class="sig-param"><span class="pre">ldx</span></em>, <em class="sig-param"><span class="pre">keep</span></em>, <em class="sig-param"><span class="pre">options</span></em>, <em class="sig-param"><span class="pre">inform</span></em><span class="sig-paren">)</span><a class="headerlink" href="#f/spral_ssmfe/ssmfe_buckling" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">ssmfe_buckling</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">rci</span></em>, <em class="sig-param"><span class="pre">sigma</span></em>, <em class="sig-param"><span class="pre">left</span></em>, <em class="sig-param"><span class="pre">right</span></em>, <em class="sig-param"><span class="pre">mep</span></em>, <em class="sig-param"><span class="pre">lambda</span></em>, <em class="sig-param"><span class="pre">n</span></em>, <em class="sig-param"><span class="pre">x</span></em>, <em class="sig-param"><span class="pre">ldx</span></em>, <em class="sig-param"><span class="pre">keep</span></em>, <em class="sig-param"><span class="pre">options</span></em>, <em class="sig-param"><span class="pre">inform</span></em><span class="sig-paren">)</span><a class="headerlink" href="#f/spral_ssmfe/ssmfe_buckling" title="Link to this definition"></a></dt>
 <dd><p>Computes eigenpairs of the buckling problem</p>
 <div class="math notranslate nohighlight">
 \[Bx = \lambda A x\]</div>
@@ -512,7 +509,7 @@ routine.</p></li>
 
 <dl>
 <dt class="sig sig-object f" id="f/spral_ssmfe/ssmfe_free">
-<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">ssmfe_free</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">keep</span></em>, <em class="sig-param"><span class="pre">inform</span></em><span class="sig-paren">)</span><a class="headerlink" href="#f/spral_ssmfe/ssmfe_free" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">ssmfe_free</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">keep</span></em>, <em class="sig-param"><span class="pre">inform</span></em><span class="sig-paren">)</span><a class="headerlink" href="#f/spral_ssmfe/ssmfe_free" title="Link to this definition"></a></dt>
 <dd><p>Free memory allocated in <cite>keep</cite> and <cite>inform</cite>. Unnecessary if both are going
 out of scope.</p>
 <dl class="field-list simple">
@@ -528,10 +525,10 @@ out of scope.</p>
 
 </section>
 <section id="derived-types">
-<h2>Derived types<a class="headerlink" href="#derived-types" title="Permalink to this heading"></a></h2>
+<h2>Derived types<a class="headerlink" href="#derived-types" title="Link to this heading"></a></h2>
 <dl>
 <dt class="sig sig-object f" id="f/spral_ssmfe/ssmfe_rcid">
-<em class="property"><span class="pre">type</span>&#160; </em><span class="sig-name descname"><span class="pre">ssmfe_rcid</span></span><a class="headerlink" href="#f/spral_ssmfe/ssmfe_rcid" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">type</span>&#160; </em><span class="sig-name descname"><span class="pre">ssmfe_rcid</span></span><a class="headerlink" href="#f/spral_ssmfe/ssmfe_rcid" title="Link to this definition"></a></dt>
 <dd><p>Real-valued reverse communication interface (RCI) type.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type fields<span class="colon">:</span></dt>
@@ -547,7 +544,7 @@ out of scope.</p>
 
 <dl>
 <dt class="sig sig-object f" id="f/spral_ssmfe/ssmfe_rciz">
-<em class="property"><span class="pre">type</span>&#160; </em><span class="sig-name descname"><span class="pre">ssmfe_rciz</span></span><a class="headerlink" href="#f/spral_ssmfe/ssmfe_rciz" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">type</span>&#160; </em><span class="sig-name descname"><span class="pre">ssmfe_rciz</span></span><a class="headerlink" href="#f/spral_ssmfe/ssmfe_rciz" title="Link to this definition"></a></dt>
 <dd><p>Complex-valued reverse communication interface (RCI) type.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type fields<span class="colon">:</span></dt>
@@ -563,7 +560,7 @@ out of scope.</p>
 
 <dl>
 <dt class="sig sig-object f" id="f/spral_ssmfe/ssmfe_options">
-<em class="property"><span class="pre">type</span>&#160; </em><span class="sig-name descname"><span class="pre">ssmfe_options</span></span><a class="headerlink" href="#f/spral_ssmfe/ssmfe_options" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">type</span>&#160; </em><span class="sig-name descname"><span class="pre">ssmfe_options</span></span><a class="headerlink" href="#f/spral_ssmfe/ssmfe_options" title="Link to this definition"></a></dt>
 <dd><p>Options that control the algorithm.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type fields<span class="colon">:</span></dt>
@@ -653,7 +650,7 @@ be lineraly independent.</p></li>
 
 <dl>
 <dt class="sig sig-object f" id="f/spral_ssmfe/ssmfe_inform">
-<em class="property"><span class="pre">type</span>&#160; </em><span class="sig-name descname"><span class="pre">ssmfe_inform</span></span><a class="headerlink" href="#f/spral_ssmfe/ssmfe_inform" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">type</span>&#160; </em><span class="sig-name descname"><span class="pre">ssmfe_inform</span></span><a class="headerlink" href="#f/spral_ssmfe/ssmfe_inform" title="Link to this definition"></a></dt>
 <dd><p>Information on progress of the algorithm.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type fields<span class="colon">:</span></dt>
@@ -739,9 +736,9 @@ user.</p>
 
 </section>
 <section id="examples">
-<h2>Examples<a class="headerlink" href="#examples" title="Permalink to this heading"></a></h2>
+<h2>Examples<a class="headerlink" href="#examples" title="Link to this heading"></a></h2>
 <section id="preconditioning-example">
-<h3>Preconditioning example<a class="headerlink" href="#preconditioning-example" title="Permalink to this heading"></a></h3>
+<h3>Preconditioning example<a class="headerlink" href="#preconditioning-example" title="Link to this heading"></a></h3>
 <p>The following code computes the 5 leftmost eigenpairs of the matrix
 <span class="math notranslate nohighlight">\(A\)</span> of order 100 that approximates the two-dimensional Laplacian
 operator on a 20-by-20 grid. One forward and one backward Gauss-Seidel
@@ -813,7 +810,7 @@ backward update of the Gauss-Seidel method to the system
 insufficient gap between the 5th and 6th eigenvalues.</p>
 </section>
 <section id="shift-and-invert-example">
-<h3>Shift-and-invert example<a class="headerlink" href="#shift-and-invert-example" title="Permalink to this heading"></a></h3>
+<h3>Shift-and-invert example<a class="headerlink" href="#shift-and-invert-example" title="Link to this heading"></a></h3>
 <p>The following code computes the eigenpairs of the matrix of order 64
 that approximates the two-dimensional Laplacian operator on 8-by-8 grid
 with eigenvalues near the shift <cite>sigma=1.0</cite>. For the shifted
@@ -902,7 +899,7 @@ D-factor.</p>
 </div>
 </section>
 <section id="hermitian-example">
-<h3>Hermitian example<a class="headerlink" href="#hermitian-example" title="Permalink to this heading"></a></h3>
+<h3>Hermitian example<a class="headerlink" href="#hermitian-example" title="Link to this heading"></a></h3>
 <p>The following code computes the 5 leftmost eigenpairs of the
 differential operator <span class="math notranslate nohighlight">\(i \frac{d}{dx}\)</span> acting in the space of
 periodic functions discretized by central differences on a uniform mesh
@@ -983,7 +980,7 @@ of 80 steps.</p>
 </section>
 </section>
 <section id="method">
-<span id="id1"></span><h2>Method<a class="headerlink" href="#method" title="Permalink to this heading"></a></h2>
+<span id="id1"></span><h2>Method<a class="headerlink" href="#method" title="Link to this heading"></a></h2>
 <p><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssmfe_core`</span></code>, upon which <a class="reference internal" href="#f/spral_ssmfe" title="f/spral_ssmfe: Sparse Symmetric Matrix-Free Eigensolver"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_ssmfe</span></code></a> is built,
 implements a block iterative algorithm based on the Jacobi-conjugate
 preconditioned gradients (JCPG) method <a class="footnote-reference brackets" href="#id5" id="id2" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a>, <a class="footnote-reference brackets" href="#id6" id="id3" role="doc-noteref"><span class="fn-bracket">[</span>3<span class="fn-bracket">]</span></a>. This algorithm
@@ -1048,23 +1045,23 @@ theorem, the number of eigenvalues to the left and right from the shift
 eigenvalues of <span class="math notranslate nohighlight">\(D\)</span>, which allows quick computation of the
 eigenvalue numbers each side of the shift.</p>
 <section id="references">
-<h3>References<a class="headerlink" href="#references" title="Permalink to this heading"></a></h3>
+<h3>References<a class="headerlink" href="#references" title="Link to this heading"></a></h3>
 <aside class="footnote-list brackets">
-<aside class="footnote brackets" id="id4" role="note">
+<aside class="footnote brackets" id="id4" role="doc-footnote">
 <span class="label"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></span>
 <p>E. E. Ovtchinnikov and J. Reid (2010).
 <em>A preconditioned block conjugate gradient algorithm for computing extreme
 eigenpairs of symmetric and Hermitian problems</em>.
 Technical Report RAL-TR-2010-19.</p>
 </aside>
-<aside class="footnote brackets" id="id5" role="note">
+<aside class="footnote brackets" id="id5" role="doc-footnote">
 <span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id2">2</a><span class="fn-bracket">]</span></span>
 <p>E. E. Ovtchinnikov (2008).
 <em>Jacobi correction equation, line search and conjugate gradients in
 Hermitian eigenvalue computation I: Computing an extreme eigenvalue</em>.
 SIAM J. Numer. Anal., 46:2567–2592.</p>
 </aside>
-<aside class="footnote brackets" id="id6" role="note">
+<aside class="footnote brackets" id="id6" role="doc-footnote">
 <span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id3">3</a><span class="fn-bracket">]</span></span>
 <p>E. E. Ovtchinnikov (2008).
 <em>Jacobi correction equation, line search and conjugate gradients in
@@ -1087,7 +1084,7 @@ SIAM J. Numer. Anal., 46:2593–2619.</p>
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2024, Computational Mathematics Group, STFC Rutherford Appleton Laboratory.</p>
+    <p>&#169; Copyright 2025, Computational Mathematics Group, STFC Rutherford Appleton Laboratory.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

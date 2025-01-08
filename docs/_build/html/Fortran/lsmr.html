@@ -1,24 +1,24 @@
+
+
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="./">
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>spral_lsmr - Sparse Least Squares LSMR Solver &mdash; spral v2024-05-08 [Fortran] documentation</title>
-      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
-    <link rel="shortcut icon" href="_static/favicon.ico"/>
-  <!--[if lt IE 9]>
-    <script src="_static/js/html5shiv.min.js"></script>
-  <![endif]-->
+  <title>spral_lsmr - Sparse Least Squares LSMR Solver &mdash; spral v2025-01-08 [Fortran] documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/css/custom.css?v=99edb77c" />
+
   
-        <script src="_static/jquery.js"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-        <script src="_static/doctools.js"></script>
-        <script src="_static/sphinx_highlight.js"></script>
-        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=9fe63759"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -38,9 +38,6 @@
             spral
               <img src="_static/STFC-Logo.png" class="logo" alt="Logo"/>
           </a>
-              <div class="version">
-                v2024-05-08 [Fortran]
-              </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
@@ -111,10 +108,10 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="f/spral_lsmr">
-<span id="spral-lsmr-sparse-least-squares-lsmr-solver"></span><h1><a class="reference internal" href="#f/spral_lsmr" title="f/spral_lsmr: Sparse Least Squares LSMR Solver"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_lsmr</span></code></a> - Sparse Least Squares LSMR Solver<a class="headerlink" href="#f/spral_lsmr" title="Permalink to this heading"></a></h1>
+  <section id="spral-lsmr-sparse-least-squares-lsmr-solver">
+<h1><a class="reference internal" href="#f/spral_lsmr" title="f/spral_lsmr: Sparse Least Squares LSMR Solver"><code class="xref f f-mod docutils literal notranslate"><span class="pre">spral_lsmr</span></code></a> - Sparse Least Squares LSMR Solver<a class="headerlink" href="#spral-lsmr-sparse-least-squares-lsmr-solver" title="Link to this heading"></a></h1>
 <section id="purpose">
-<h2>Purpose<a class="headerlink" href="#purpose" title="Permalink to this heading"></a></h2>
+<span id="f/spral_lsmr"></span><h2>Purpose<a class="headerlink" href="#purpose" title="Link to this heading"></a></h2>
 <p>This package uses the LSMR iterative method to solve sparse linear
 equations and sparse least-squares problems of the form:</p>
 <div class="math notranslate nohighlight">
@@ -152,7 +149,7 @@ equation <span class="math notranslate nohighlight">\((A^TA+\lambda^2I)x=A^Tb\)<
 <span class="math notranslate nohighlight">\(((AP)^T(AP)+\lambda^2I)y=(AP)^Tb\)</span>), but has better numerical properties,
 especially if <span class="math notranslate nohighlight">\(A\)</span> is ill-conditioned.</p>
 <section id="notation">
-<h3>Notation<a class="headerlink" href="#notation" title="Permalink to this heading"></a></h3>
+<h3>Notation<a class="headerlink" href="#notation" title="Link to this heading"></a></h3>
 <p>In the rest of this documentation, we use the following notation:</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}\bar{A} = \left( \begin{array}{c}
@@ -168,7 +165,7 @@ especially if <span class="math notranslate nohighlight">\(A\)</span> is ill-con
       \hspace{1cm}  x = Py.\]</div>
 </section>
 <section id="version-history">
-<h3>Version history<a class="headerlink" href="#version-history" title="Permalink to this heading"></a></h3>
+<h3>Version history<a class="headerlink" href="#version-history" title="Link to this heading"></a></h3>
 <dl class="simple">
 <dt>2016-05-10 Version 1.0.0.</dt><dd><p>Initial release.</p>
 </dd>
@@ -177,10 +174,10 @@ especially if <span class="math notranslate nohighlight">\(A\)</span> is ill-con
 </section>
 </section>
 <section id="subroutines">
-<h2>Subroutines<a class="headerlink" href="#subroutines" title="Permalink to this heading"></a></h2>
+<h2>Subroutines<a class="headerlink" href="#subroutines" title="Link to this heading"></a></h2>
 <dl>
 <dt class="sig sig-object f" id="f/spral_lsmr/lsmr_solve">
-<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">lsmr_solve</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">action</span></em>, <em class="sig-param"><span class="pre">m</span></em>, <em class="sig-param"><span class="pre">n</span></em>, <em class="sig-param"><span class="pre">u</span></em>, <em class="sig-param"><span class="pre">v</span></em>, <em class="sig-param"><span class="pre">y</span></em>, <em class="sig-param"><span class="pre">keep</span></em>, <em class="sig-param"><span class="pre">options</span></em>, <em class="sig-param"><span class="pre">inform</span></em><span class="optional">[</span>, <em class="sig-param"><span class="pre">damp</span></em><span class="optional">]</span><span class="sig-paren">)</span><a class="headerlink" href="#f/spral_lsmr/lsmr_solve" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">lsmr_solve</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">action</span></em>, <em class="sig-param"><span class="pre">m</span></em>, <em class="sig-param"><span class="pre">n</span></em>, <em class="sig-param"><span class="pre">u</span></em>, <em class="sig-param"><span class="pre">v</span></em>, <em class="sig-param"><span class="pre">y</span></em>, <em class="sig-param"><span class="pre">keep</span></em>, <em class="sig-param"><span class="pre">options</span></em>, <em class="sig-param"><span class="pre">inform</span></em><span class="optional">[</span>, <em class="sig-param"><span class="pre">damp</span></em><span class="optional">]</span><span class="sig-paren">)</span><a class="headerlink" href="#f/spral_lsmr/lsmr_solve" title="Link to this definition"></a></dt>
 <dd><p>Solve the least squares problem. Uses reverse communication. Upon return the
 user must perform a task specified by the <cite>action</cite> parameter and recall the
 routine. Possible values of action and associated tasks are:</p>
@@ -241,7 +238,7 @@ Must not be changed by the user.</p></li>
 
 <dl>
 <dt class="sig sig-object f" id="f/spral_lsmr/lsmr_free">
-<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">lsmr_free</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">keep</span></em>, <em class="sig-param"><span class="pre">stat</span></em><span class="sig-paren">)</span><a class="headerlink" href="#f/spral_lsmr/lsmr_free" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">subroutine</span>&#160; </em><span class="sig-name descname"><span class="pre">lsmr_free</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">keep</span></em>, <em class="sig-param"><span class="pre">stat</span></em><span class="sig-paren">)</span><a class="headerlink" href="#f/spral_lsmr/lsmr_free" title="Link to this definition"></a></dt>
 <dd><p>Free memory allocated in <cite>keep</cite> (unnecessary if <cite>keep</cite> is going out of
 scope).</p>
 <dl class="field-list simple">
@@ -262,10 +259,10 @@ used without calling <a class="reference internal" href="#f/spral_lsmr/lsmr_free
 
 </section>
 <section id="derived-types">
-<h2>Derived types<a class="headerlink" href="#derived-types" title="Permalink to this heading"></a></h2>
+<h2>Derived types<a class="headerlink" href="#derived-types" title="Link to this heading"></a></h2>
 <dl>
 <dt class="sig sig-object f" id="f/spral_lsmr/lsmr_options">
-<em class="property"><span class="pre">type</span>&#160; </em><span class="sig-name descname"><span class="pre">lsmr_options</span></span><a class="headerlink" href="#f/spral_lsmr/lsmr_options" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">type</span>&#160; </em><span class="sig-name descname"><span class="pre">lsmr_options</span></span><a class="headerlink" href="#f/spral_lsmr/lsmr_options" title="Link to this definition"></a></dt>
 <dd><p>Specify options used by LSMR algorithm.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type fields<span class="colon">:</span></dt>
@@ -320,7 +317,7 @@ reorthogonalization.</p></li>
 
 <dl>
 <dt class="sig sig-object f" id="f/spral_lsmr/lsmr_inform">
-<em class="property"><span class="pre">type</span>&#160; </em><span class="sig-name descname"><span class="pre">lsmr_inform</span></span><a class="headerlink" href="#f/spral_lsmr/lsmr_inform" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">type</span>&#160; </em><span class="sig-name descname"><span class="pre">lsmr_inform</span></span><a class="headerlink" href="#f/spral_lsmr/lsmr_inform" title="Link to this definition"></a></dt>
 <dd><p>Information about progress of algorithm.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Type fields<span class="colon">:</span></dt>
@@ -420,7 +417,7 @@ this machine. (<cite>options%ctest=3</cite> only).</p></td>
 
 </section>
 <section id="example">
-<h2>Example<a class="headerlink" href="#example" title="Permalink to this heading"></a></h2>
+<h2>Example<a class="headerlink" href="#example" title="Link to this heading"></a></h2>
 <p>The following code illustrates the use of LMSR</p>
 <div class="highlight-Fortran notranslate"><div class="highlight"><pre><span></span><span class="c">! examples/Fortran/lsmr.f90 - Example code for SPRAL_LSMR package</span>
 <span class="k">program </span><span class="n">spral_lsmr_example</span>
@@ -544,9 +541,9 @@ this machine. (<cite>options%ctest=3</cite> only).</p></td>
 </div>
 </section>
 <section id="method">
-<h2>Method<a class="headerlink" href="#method" title="Permalink to this heading"></a></h2>
+<h2>Method<a class="headerlink" href="#method" title="Link to this heading"></a></h2>
 <section id="algorithm">
-<h3>Algorithm<a class="headerlink" href="#algorithm" title="Permalink to this heading"></a></h3>
+<h3>Algorithm<a class="headerlink" href="#algorithm" title="Link to this heading"></a></h3>
 <p>The method used is based on the Golub-Kahan bidiagonalization process.
 It is algebraically equivalent to applying MINRES to the normal equation
 <span class="math notranslate nohighlight">\((A^TA+\lambda^2I)x=A^Tb\)</span> (or <span class="math notranslate nohighlight">\(((AP)^T(AP)+\lambda^2I)y=(AP)^Tb\)</span>,
@@ -555,7 +552,7 @@ properties, especially if <span class="math notranslate nohighlight">\(A\)</span
 found in <a class="footnote-reference brackets" href="#id2" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a>.</p>
 </section>
 <section id="scaling">
-<h3>Scaling<a class="headerlink" href="#scaling" title="Permalink to this heading"></a></h3>
+<h3>Scaling<a class="headerlink" href="#scaling" title="Link to this heading"></a></h3>
 <p>LSMR uses an iterative method to approximate the solution. The number of
 iterations required to reach a certain accuracy depends strongly on the
 scaling of the problem. Poor scaling of the rows or columns of
@@ -577,7 +574,7 @@ used to terminate iterations before the computed solution becomes very
 large.</p>
 </section>
 <section id="initial-estimate">
-<h3>Initial estimate<a class="headerlink" href="#initial-estimate" title="Permalink to this heading"></a></h3>
+<h3>Initial estimate<a class="headerlink" href="#initial-estimate" title="Link to this heading"></a></h3>
 <p>Note that <span class="math notranslate nohighlight">\(x\)</span> (or <span class="math notranslate nohighlight">\(y\)</span> for the preconditioned problem) is not
 an input parameter. If some initial estimate <span class="math notranslate nohighlight">\(x_0\)</span> of <span class="math notranslate nohighlight">\(x\)</span> is
 known and if <span class="math notranslate nohighlight">\(\lambda = 0\)</span>, one could proceed as follows:</p>
@@ -602,9 +599,9 @@ tolerance for the second system. If some value <cite>options%btol</cite> is suit
 <span class="math notranslate nohighlight">\(A \delta x = r_0\)</span>.</p>
 </section>
 <section id="references">
-<h3>References<a class="headerlink" href="#references" title="Permalink to this heading"></a></h3>
+<h3>References<a class="headerlink" href="#references" title="Link to this heading"></a></h3>
 <aside class="footnote-list brackets">
-<aside class="footnote brackets" id="id2" role="note">
+<aside class="footnote brackets" id="id2" role="doc-footnote">
 <span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">1</a><span class="fn-bracket">]</span></span>
 <p>D.C.-L. Fong and M.A. Saunders (2011).
 <em>LSMR: An iterative algorithm for sparse least-squares problems</em>.
@@ -627,7 +624,7 @@ SIAM J. Sci. Comput. 33:5, 2950-2971.
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2024, Computational Mathematics Group, STFC Rutherford Appleton Laboratory.</p>
+    <p>&#169; Copyright 2025, Computational Mathematics Group, STFC Rutherford Appleton Laboratory.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

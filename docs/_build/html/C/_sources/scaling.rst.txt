@@ -328,7 +328,7 @@ Routines
 
 .. c:function:: void spral_scaling_equilib_sym(int n, const int *ptr, const int *row, const double *val, double *scaling, const struct spral_scaling_equilib_options *options, struct spral_scaling_equilib_inform *inform)
 
-   Find a matching-based symmetric scaling using the norm-equilibration
+   Find a symmetric scaling using the norm-equilibration
    algorithm.
 
    The scaled matrix is such that the infinity norm of each row and column are
@@ -348,7 +348,7 @@ Routines
 
 .. c:function:: void spral_scaling_equilib_unsym(int m, int n, const int *ptr, const int *row, const double *val, double *rscaling, double *cscaling, const struct spral_scaling_equilib_options *options, struct spral_scaling_equilib_inform *inform)
 
-   Find a matching-based unsymmetric scaling using the norm-equilibration
+   Find an unsymmetric scaling using the norm-equilibration
    algorithm.
 
    The scaled matrix is such that the infinity norm of each row and column are

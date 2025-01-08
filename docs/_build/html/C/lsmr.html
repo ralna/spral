@@ -1,24 +1,24 @@
+
+
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="./">
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LSMR - Sparse Least Squares LSMR Solver &mdash; spral v2024-05-08 [C] documentation</title>
-      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
-    <link rel="shortcut icon" href="_static/favicon.ico"/>
-  <!--[if lt IE 9]>
-    <script src="_static/js/html5shiv.min.js"></script>
-  <![endif]-->
+  <title>LSMR - Sparse Least Squares LSMR Solver &mdash; spral v2025-01-08 [C] documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/css/custom.css?v=99edb77c" />
+
   
-        <script src="_static/jquery.js"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-        <script src="_static/doctools.js"></script>
-        <script src="_static/sphinx_highlight.js"></script>
-        <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=2f8e677e"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -38,9 +38,6 @@
             spral
               <img src="_static/STFC-Logo.png" class="logo" alt="Logo"/>
           </a>
-              <div class="version">
-                v2024-05-08 [C]
-              </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
@@ -111,12 +108,12 @@
            <div itemprop="articleBody">
              
   <section id="lsmr-sparse-least-squares-lsmr-solver">
-<h1>LSMR - Sparse Least Squares LSMR Solver<a class="headerlink" href="#lsmr-sparse-least-squares-lsmr-solver" title="Permalink to this heading"></a></h1>
+<h1>LSMR - Sparse Least Squares LSMR Solver<a class="headerlink" href="#lsmr-sparse-least-squares-lsmr-solver" title="Link to this heading"></a></h1>
 <div class="highlight-C notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;spral_lsmr.h&gt;</span><span class="c1"> /* or &lt;spral.h&gt; for all packages */</span>
 </pre></div>
 </div>
 <section id="purpose">
-<h2>Purpose<a class="headerlink" href="#purpose" title="Permalink to this heading"></a></h2>
+<h2>Purpose<a class="headerlink" href="#purpose" title="Link to this heading"></a></h2>
 <p>This package uses the LSMR iterative method to solve sparse linear
 equations and sparse least-squares problems of the form:</p>
 <div class="math notranslate nohighlight">
@@ -154,7 +151,7 @@ equation <span class="math notranslate nohighlight">\((A^TA+\lambda^2I)x=A^Tb\)<
 <span class="math notranslate nohighlight">\(((AP)^T(AP)+\lambda^2I)y=(AP)^Tb\)</span>), but has better numerical properties,
 especially if <span class="math notranslate nohighlight">\(A\)</span> is ill-conditioned.</p>
 <section id="notation">
-<h3>Notation<a class="headerlink" href="#notation" title="Permalink to this heading"></a></h3>
+<h3>Notation<a class="headerlink" href="#notation" title="Link to this heading"></a></h3>
 <p>In the rest of this documentation, we use the following notation:</p>
 <div class="math notranslate nohighlight">
 \[\begin{split}\bar{A} = \left( \begin{array}{c}
@@ -170,7 +167,7 @@ especially if <span class="math notranslate nohighlight">\(A\)</span> is ill-con
       \hspace{1cm}  x = Py.\]</div>
 </section>
 <section id="version-history">
-<h3>Version history<a class="headerlink" href="#version-history" title="Permalink to this heading"></a></h3>
+<h3>Version history<a class="headerlink" href="#version-history" title="Link to this heading"></a></h3>
 <dl class="simple">
 <dt>2016-05-10 Version 1.0.0.</dt><dd><p>Initial release.</p>
 </dd>
@@ -179,10 +176,10 @@ especially if <span class="math notranslate nohighlight">\(A\)</span> is ill-con
 </section>
 </section>
 <section id="subroutines">
-<h2>Subroutines<a class="headerlink" href="#subroutines" title="Permalink to this heading"></a></h2>
+<h2>Subroutines<a class="headerlink" href="#subroutines" title="Link to this heading"></a></h2>
 <dl class="c function">
 <dt class="sig sig-object c" id="c.spral_lsmr_default_options">
-<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_lsmr_default_options</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_lsmr_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_lsmr_default_options" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_lsmr_default_options</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_lsmr_options</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_lsmr_default_options" title="Link to this definition"></a><br /></dt>
 <dd><p>Initialises options to default values.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -195,7 +192,7 @@ especially if <span class="math notranslate nohighlight">\(A\)</span> is ill-con
 
 <dl class="c function">
 <dt class="sig sig-object c" id="c.spral_lsmr_solve">
-<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_lsmr_solve</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">action</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">m</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">n</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="n"><span class="pre">u</span></span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#c.spral_lsmr_solve" title="m"><span class="n"><span class="pre">m</span></span></a><span class="p"><span class="pre">]</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="n"><span class="pre">v</span></span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#c.spral_lsmr_solve" title="n"><span class="n"><span class="pre">n</span></span></a><span class="p"><span class="pre">]</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="n"><span class="pre">y</span></span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#c.spral_lsmr_solve" title="n"><span class="n"><span class="pre">n</span></span></a><span class="p"><span class="pre">]</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">keep</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_lsmr_options</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_lsmr_inform</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">damp</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_lsmr_solve" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">spral_lsmr_solve</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">action</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">m</span></span>, <span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="n"><span class="pre">n</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="n"><span class="pre">u</span></span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#c.spral_lsmr_solve" title="m"><span class="n"><span class="pre">m</span></span></a><span class="p"><span class="pre">]</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="n"><span class="pre">v</span></span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#c.spral_lsmr_solve" title="n"><span class="n"><span class="pre">n</span></span></a><span class="p"><span class="pre">]</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="n"><span class="pre">y</span></span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#c.spral_lsmr_solve" title="n"><span class="n"><span class="pre">n</span></span></a><span class="p"><span class="pre">]</span></span>, <span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">keep</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_lsmr_options</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">options</span></span>, <span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="n"><span class="pre">spral_lsmr_inform</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">inform</span></span>, <span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">damp</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.spral_lsmr_solve" title="Link to this definition"></a><br /></dt>
 <dd><p>Solve the least squares problem. Uses reverse communication. Upon return the
 user must perform a task specified by the <cite>action</cite> parameter and recall the
 routine. Possible values of action and associated tasks are:</p>
@@ -257,7 +254,7 @@ Must not be changed by the user.</p></li>
 
 <dl class="c function">
 <dt class="sig sig-object c" id="c.lsmr_free">
-<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">lsmr_free</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">keep</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.lsmr_free" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">lsmr_free</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">*</span></span><span class="n"><span class="pre">keep</span></span><span class="sig-paren">)</span><a class="headerlink" href="#c.lsmr_free" title="Link to this definition"></a><br /></dt>
 <dd><p>Free memory allocated in <cite>keep</cite>.
 If a series of problems is being solved sequentially, the same keep may be
 used without calling <code class="xref c c-func docutils literal notranslate"><span class="pre">spral_lsmr_free()</span></code> between each solution.</p>
@@ -276,14 +273,14 @@ failed deallocation.</p>
 
 </section>
 <section id="derived-types">
-<h2>Derived types<a class="headerlink" href="#derived-types" title="Permalink to this heading"></a></h2>
+<h2>Derived types<a class="headerlink" href="#derived-types" title="Link to this heading"></a></h2>
 <dl class="c type">
 <dt class="sig sig-object c">
 <span class="sig-name descname"><span class="pre">struct</span> <span class="pre">spral_lsmr_options</span></span></dt>
 <dd><p>Specify options used by LSMR algorithm.</p>
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.print_freq_head">
-<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">print_freq_head</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.print_freq_head" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">print_freq_head</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.print_freq_head" title="Link to this definition"></a><br /></dt>
 <dd><p>Frequency of printing heading
 information (that is, how many lines are printed before the heading
 information is reprinted).
@@ -292,7 +289,7 @@ Default is 20.</p>
 
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.print_freq_itn">
-<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">print_freq_itn</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.print_freq_itn" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">print_freq_itn</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.print_freq_itn" title="Link to this definition"></a><br /></dt>
 <dd><p>Frequency of printing status.
 There is printing on each of the first <cite>print_freq_itn</cite> iterations and
 then printing every <cite>print_freq_itn</cite> iterations.
@@ -301,7 +298,7 @@ Default is 10.</p>
 
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.unit_diagnostics">
-<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">unit_diagnostics</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.unit_diagnostics" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">unit_diagnostics</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.unit_diagnostics" title="Link to this definition"></a><br /></dt>
 <dd><p>Fortran unit for diagnostic
 printing. Printing is suppressed if negative.
 Default is 6.</p>
@@ -309,7 +306,7 @@ Default is 6.</p>
 
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.unit_error">
-<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">unit_error</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.unit_error" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">unit_error</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.unit_error" title="Link to this definition"></a><br /></dt>
 <dd><p>Fortran unit for printing error messages.
 Printing is suppressed if negative.
 Default is 6.</p>
@@ -317,7 +314,7 @@ Default is 6.</p>
 
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.atol">
-<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">atol</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.atol" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">atol</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.atol" title="Link to this definition"></a><br /></dt>
 <dd><p>Relative error in <span class="math notranslate nohighlight">\(A\)</span>.
 i.e. if <span class="math notranslate nohighlight">\(A\)</span> is accurate to about 6 digits, set atol to 1.0e-6.
 Only used if <code class="xref c c-member docutils literal notranslate"><span class="pre">spral_lsmr_options.ctest</span></code> =3.
@@ -326,7 +323,7 @@ Default is <code class="docutils literal notranslate"><span class="pre">sqrt(DBL
 
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.btol">
-<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">btol</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.btol" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">btol</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.btol" title="Link to this definition"></a><br /></dt>
 <dd><p>Relative error in <span class="math notranslate nohighlight">\(b\)</span>.
 i.e. if <span class="math notranslate nohighlight">\(b\)</span> is accurate to about 6 digits, set btol to 1.0e-6.
 Only used if <code class="xref c c-member docutils literal notranslate"><span class="pre">spral_lsmr_options.ctest</span></code> =3.
@@ -335,7 +332,7 @@ Default is <code class="docutils literal notranslate"><span class="pre">sqrt(DBL
 
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.conlim">
-<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">conlim</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.conlim" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">conlim</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.conlim" title="Link to this definition"></a><br /></dt>
 <dd><p>Upper limit on
 <span class="math notranslate nohighlight">\(cond(\bar{A})\)</span>, apparent condition number of <span class="math notranslate nohighlight">\(\bar{A}\)</span>.
 Only used if <code class="xref c c-member docutils literal notranslate"><span class="pre">spral_lsmr_options.ctest</span></code> =3.
@@ -344,7 +341,7 @@ Default is <code class="docutils literal notranslate"><span class="pre">1/(10*sq
 
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.ctest">
-<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ctest</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.ctest" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ctest</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.ctest" title="Link to this definition"></a><br /></dt>
 <dd><p>Convergence test to use. Options are:</p>
 <table class="docutils align-default">
 <tbody>
@@ -367,7 +364,7 @@ norm).</p></td>
 
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.itnlim">
-<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">itnlim</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.itnlim" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">itnlim</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.itnlim" title="Link to this definition"></a><br /></dt>
 <dd><p>Maximum number of iterations. If negative,
 the limit used is <span class="math notranslate nohighlight">\(4n\)</span>.
 Default is -1.</p>
@@ -375,7 +372,7 @@ Default is -1.</p>
 
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.itn_test">
-<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">itn_test</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.itn_test" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">itn_test</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.itn_test" title="Link to this definition"></a><br /></dt>
 <dd><p>Number of iterations between user
 convergence tests. If negative, use <span class="math notranslate nohighlight">\(\min(n,10)\)</span>.
 Default is -1.</p>
@@ -383,7 +380,7 @@ Default is -1.</p>
 
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.localSize">
-<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">localSize</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.localSize" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">localSize</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.localSize" title="Link to this definition"></a><br /></dt>
 <dd><p>Number of historical vectors to use for
 reorthogonalization.
 Default is 0.</p>
@@ -397,7 +394,7 @@ Default is 0.</p>
 <dd><p>Information about progress of algorithm.</p>
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.condAP">
-<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">condAP</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.condAP" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">condAP</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.condAP" title="Link to this definition"></a><br /></dt>
 <dd><p>Estimate of <span class="math notranslate nohighlight">\(cond(\bar{A})\)</span>. A very high value of
 condAP may again indicate an error in the products with <span class="math notranslate nohighlight">\(A\)</span>,
 <span class="math notranslate nohighlight">\(A^T\)</span>, <span class="math notranslate nohighlight">\(P\)</span>, or <span class="math notranslate nohighlight">\(P^T\)</span>. A negative value indicates that
@@ -407,19 +404,19 @@ This component is not used if <code class="xref c c-member docutils literal notr
 
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.flag">
-<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">flag</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.flag" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">flag</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.flag" title="Link to this definition"></a><br /></dt>
 <dd><p>Exit status of algorithm. See table below.</p>
 </dd></dl>
 
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.itn">
-<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">itn</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.itn" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">itn</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.itn" title="Link to this definition"></a><br /></dt>
 <dd><p>Number of iterations performed</p>
 </dd></dl>
 
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.normAP">
-<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">normAP</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.normAP" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">normAP</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.normAP" title="Link to this definition"></a><br /></dt>
 <dd><p>Estimate of Frobenius norm of <span class="math notranslate nohighlight">\(\bar{A}\)</span>. If
 <span class="math notranslate nohighlight">\(\lambda\)</span> is small and the columns of <span class="math notranslate nohighlight">\(AP\)</span> have all been
 scaled to have length 1.0, normAP should increase to roughly
@@ -442,7 +439,7 @@ This component is not used if <code class="xref c c-member docutils literal notr
 
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.normr">
-<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">normr</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.normr" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">normr</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.normr" title="Link to this definition"></a><br /></dt>
 <dd><p>Estimate of <span class="math notranslate nohighlight">\(\|\bar{r}\|_2\)</span>. This will be small
 if <span class="math notranslate nohighlight">\(Ax = b\)</span> has a solution. A negative value indicates that no
 estimate is currently available.
@@ -451,7 +448,7 @@ This component is not used if <code class="xref c c-member docutils literal notr
 
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.normy">
-<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">normy</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.normy" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">double</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">normy</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.normy" title="Link to this definition"></a><br /></dt>
 <dd><p>Estimate of <span class="math notranslate nohighlight">\(\|y\|_2\)</span>. A negative value indicates that
 no estimate is currently available.
 This component is not used if <code class="xref c c-member docutils literal notranslate"><span class="pre">spral_lsmr_options.ctest</span></code> =1.</p>
@@ -459,7 +456,7 @@ This component is not used if <code class="xref c c-member docutils literal notr
 
 <dl class="c member">
 <dt class="sig sig-object c" id="c.PhonyNameDueToError.stat">
-<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">stat</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.stat" title="Permalink to this definition"></a><br /></dt>
+<span class="kt"><span class="pre">int</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">stat</span></span></span><a class="headerlink" href="#c.PhonyNameDueToError.stat" title="Link to this definition"></a><br /></dt>
 <dd><p>The Fortran stat parameter in the event of a failed
 allocation.</p>
 </dd></dl>
@@ -532,7 +529,7 @@ has been reached.</p></td>
 
 </section>
 <section id="example">
-<h2>Example<a class="headerlink" href="#example" title="Permalink to this heading"></a></h2>
+<h2>Example<a class="headerlink" href="#example" title="Link to this heading"></a></h2>
 <p>The following code illustrates the use of LMSR</p>
 <div class="highlight-C notranslate"><div class="highlight"><pre><span></span><span class="cm">/* examples/C/lsmr.c - Example code for SPRAL_LSMR package */</span>
 <span class="cp">#include</span><span class="w"> </span><span class="cpf">&quot;spral.h&quot;</span>
@@ -633,9 +630,9 @@ has been reached.</p></td>
 </div>
 </section>
 <section id="method">
-<h2>Method<a class="headerlink" href="#method" title="Permalink to this heading"></a></h2>
+<h2>Method<a class="headerlink" href="#method" title="Link to this heading"></a></h2>
 <section id="algorithm">
-<h3>Algorithm<a class="headerlink" href="#algorithm" title="Permalink to this heading"></a></h3>
+<h3>Algorithm<a class="headerlink" href="#algorithm" title="Link to this heading"></a></h3>
 <p>The method used is based on the Golub-Kahan bidiagonalization process.
 It is algebraically equivalent to applying MINRES to the normal equation
 <span class="math notranslate nohighlight">\((A^TA+\lambda^2I)x=A^Tb\)</span> (or <span class="math notranslate nohighlight">\(((AP)^T(AP)+\lambda^2I)y=(AP)^Tb\)</span>,
@@ -644,7 +641,7 @@ properties, especially if <span class="math notranslate nohighlight">\(A\)</span
 found in <a class="footnote-reference brackets" href="#id2" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a>.</p>
 </section>
 <section id="scaling">
-<h3>Scaling<a class="headerlink" href="#scaling" title="Permalink to this heading"></a></h3>
+<h3>Scaling<a class="headerlink" href="#scaling" title="Link to this heading"></a></h3>
 <p>LSMR uses an iterative method to approximate the solution. The number of
 iterations required to reach a certain accuracy depends strongly on the
 scaling of the problem. Poor scaling of the rows or columns of
@@ -666,7 +663,7 @@ which may be used to terminate iterations before the computed solution becomes
 very large.</p>
 </section>
 <section id="initial-estimate">
-<h3>Initial estimate<a class="headerlink" href="#initial-estimate" title="Permalink to this heading"></a></h3>
+<h3>Initial estimate<a class="headerlink" href="#initial-estimate" title="Link to this heading"></a></h3>
 <p>Note that <span class="math notranslate nohighlight">\(x\)</span> (or <span class="math notranslate nohighlight">\(y\)</span> for the preconditioned problem) is not
 an input parameter. If some initial estimate <span class="math notranslate nohighlight">\(x_0\)</span> of <span class="math notranslate nohighlight">\(x\)</span> is
 known and if <span class="math notranslate nohighlight">\(\lambda = 0\)</span>, one could proceed as follows:</p>
@@ -693,9 +690,9 @@ tolerance for the second system. If some value
 suitable for <span class="math notranslate nohighlight">\(A \delta x = r_0\)</span>.</p>
 </section>
 <section id="references">
-<h3>References<a class="headerlink" href="#references" title="Permalink to this heading"></a></h3>
+<h3>References<a class="headerlink" href="#references" title="Link to this heading"></a></h3>
 <aside class="footnote-list brackets">
-<aside class="footnote brackets" id="id2" role="note">
+<aside class="footnote brackets" id="id2" role="doc-footnote">
 <span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">1</a><span class="fn-bracket">]</span></span>
 <p>D.C.-L. Fong and M.A. Saunders (2011).
 <em>LSMR: An iterative algorithm for sparse least-squares problems</em>.
@@ -718,7 +715,7 @@ SIAM J. Sci. Comput. 33:5, 2950-2971.
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2024, Computational Mathematics Group, STFC Rutherford Appleton Laboratory.</p>
+    <p>&#169; Copyright 2025, Computational Mathematics Group, STFC Rutherford Appleton Laboratory.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
