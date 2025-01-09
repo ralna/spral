@@ -663,7 +663,7 @@ subroutine test_hungarian_sym_singular
 
   write(*, "(a)")
   write(*, "(a)") "===================================================="
-  write(*, "(a)") "Testing hungarian_scale_unsym() with singular matrix"
+  write(*, "(a)") "Testing hungarian_scale_sym() with singular matrix"
   write(*, "(a)") "===================================================="
 
   allocate(a%ptr(n+1))
@@ -688,7 +688,7 @@ subroutine test_hungarian_sym_singular
      errors = errors + 1
   endif
 
-  if(match(ising) >= 0) then
+  if(match(ising) .ne. 0) then
      write(*, "(a, i5, a, i5)") "Singular column ", ising, " has value ", match(ising)
      errors = errors + 1
   endif
