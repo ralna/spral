@@ -640,7 +640,7 @@ subroutine test_hungarian_unsym_singular
   endif
 
   if(match(ising) .ne. 0) then
-     write(*, "(a, i5, a, i5)") "Singular column ", ising, "matched to ", match(ising)
+     write(*, "(a, i5, a, i5)") "Singular row ", ising, "matched to ", match(ising)
      errors = errors + 1
   endif
 
@@ -651,7 +651,7 @@ end  subroutine test_hungarian_unsym_singular
 subroutine test_hungarian_sym_singular
   integer :: m = 3
   integer :: n = 3
-  integer :: nz = 6
+  integer :: nz = 2
   integer :: ising = 3
   type(matrix_type) :: a
 
