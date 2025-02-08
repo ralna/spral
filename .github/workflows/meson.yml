@@ -17,16 +17,6 @@ jobs:
         metis: [32, 64]
         include:
           - compiler: gcc
-          - os: ubuntu-latest
-            compiler: intel
-            compiler_version: '2023.2'
-            metis: 32
-            allow_failure: true
-          - os: ubuntu-latest
-            compiler: intel
-            compiler_version: '2023.2'
-            metis: 64
-            allow_failure: true
           - os: macos-latest
             compiler: gcc
             compiler_version: '13'
@@ -39,26 +29,6 @@ jobs:
             arch: 'arm64'
             metis: 64
             allow_failure: true
-          # - os: windows-latest
-          #   compiler: intel
-          #   compiler_version: '2023.2'
-          #   metis: 32
-          #   allow_failure: true
-          # - os: windows-latest
-          #   compiler: intel-classic
-          #   compiler_version: '2021.10'
-          #   metis: 32
-          #   allow_failure: true
-          # - os: ubuntu-latest
-          #   compiler: intel-classic
-          #   compiler_version: '2021.10'
-          #   metis: 32
-          #   allow_failure: true
-          # - os: macos-13
-          #   compiler: intel-classic
-          #   compiler_version: '2021.10'
-          #   metis: 32
-          #   allow_failure: true
           # - os: ubuntu-latest
           #   compiler: nvidia-hpc
           #   compiler_version: '23.11'
