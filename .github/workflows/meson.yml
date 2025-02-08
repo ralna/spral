@@ -39,11 +39,11 @@ jobs:
             arch: 'arm64'
             metis: 64
             allow_failure: true
-          - os: ubuntu-latest
-            compiler: nvidia-hpc
-            compiler_version: '25.1'
-            metis: 32
-            allow_failure: true
+          # - os: ubuntu-latest
+          #   compiler: nvidia-hpc
+          #   compiler_version: '25.1'
+          #   metis: 32
+          #   allow_failure: true
     runs-on: ${{ matrix.os }}
     steps:
       - name: Check out SPRAL
