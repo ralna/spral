@@ -124,7 +124,7 @@ elif cxx.get_id() == 'intel-cl' or cxx.get_id() == 'intel-llvm-cl'
   add_global_arguments('/Qopenmp', language : 'cpp')
 endif
 
-# Link flag for C++
+# Link flags for C++
 lstdcpp = '-lstdc++'
 if host_machine.system() != 'linux'
   if cxx.get_id() == 'clang' or cxx.get_id() == 'clang-cl'
@@ -135,6 +135,13 @@ if host_machine.system() != 'linux'
   endif
   if cxx.get_id() == 'intel-cl' or cxx.get_id() == 'intel-llvm-cl'
     lstdcpp = '/Qcxxlib'
+  endif
+endif
+
+libomp = '-lgomp'
+if host_machine.system() == 'darwin' or host_machine.system() == 'freebsd'
+  if cxx.get_id() == 'clang'
+    libomp = '-lomp'
   endif
 endif
 
@@ -170,7 +177,7 @@ libspral = library('spral',
                    sources : libspral_src + libspral_cpp_src + libspral_nvcc_src,
                    dependencies : libspral_deps,
                    link_language : 'fortran',
-                   link_args : lstdcpp,
+                   link_args : [lstdcpp, libomp],
                    include_directories: libspral_include,
                    install : true)
 
