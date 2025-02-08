@@ -117,10 +117,10 @@ elif cxx.get_id() == 'intel-cl' or cxx.get_id() == 'intel-llvm-cl'
   add_global_arguments('/Qopenmp', language : 'cpp')
 endif
 
-libomp = '-lgomp'
+lomp = '-lgomp'
 if host_machine.system() == 'darwin' or host_machine.system() == 'freebsd'
   if cxx.get_id() == 'clang'
-    libomp = '-lomp'
+    lomp = '-lomp'
   endif
 endif
 
@@ -170,7 +170,7 @@ libspral = library('spral',
                    sources : libspral_src + libspral_cpp_src + libspral_nvcc_src,
                    dependencies : libspral_deps,
                    link_language : 'fortran',
-                   link_args : [lstdcpp, libomp],
+                   link_args : [lstdcpp, lomp],
                    include_directories: libspral_include,
                    install : true)
 
@@ -179,7 +179,7 @@ executable('spral_ssids',
            sources : binspral_src,
            dependencies : libcuda,
            link_with : libspral,
-           link_args : libomp,
+           link_args : lomp,
            link_language : 'fortran',
            install : true)
 
@@ -204,7 +204,7 @@ if build_tests
     test(name,
          executable(name, file, link_with : libspral, dependencies : libspral_deps,
                     link_language : 'fortran', include_directories: libspral_include,
-                    link_args : libomp),
+                    link_args : lomp),
          timeout : 300, is_parallel : false, env: omp_env)
   endforeach
 
@@ -214,7 +214,7 @@ if build_tests
     test(name,
          executable(name, file, link_with : libspral, dependencies : libspral_deps,
                     link_language : 'c', include_directories : libspral_include,
-                    link_args : libomp),
+                    link_args : lomp),
          timeout : 300, is_parallel : false, env: omp_env)
   endforeach
 
@@ -224,7 +224,7 @@ if build_tests
     test(name,
          executable(name, file, link_with : libspral, dependencies : libspral_deps,
                     link_language : 'cpp', include_directories : libspral_include,
-                    link_args : libomp),
+                    link_args : lomp),
          timeout : 300, is_parallel : false, env: omp_env)
   endforeach
 endif
@@ -240,7 +240,7 @@ if build_examples
     test(name,
          executable(name, file, link_with : libspral, dependencies : libspral_deps,
                     link_language : 'fortran', include_directories : libspral_include,
-                    install : true, install_dir : fortran_examples_folder, link_args : libomp),
+                    install : true, install_dir : fortran_examples_folder, link_args : lomp),
          timeout : 300, is_parallel : false, env: omp_env)
   endforeach
 
@@ -252,7 +252,7 @@ if build_examples
     test(name,
          executable(name, file, link_with : libspral, dependencies : libspral_deps,
                     link_language : 'c', include_directories : libspral_include,
-                    install : true, install_dir : c_examples_folder, link_args : libomp),
+                    install : true, install_dir : c_examples_folder, link_args : lomp),
          timeout : 300, is_parallel : false, env: omp_env)
   endforeach
 endif
