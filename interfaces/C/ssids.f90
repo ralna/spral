@@ -1,6 +1,7 @@
 module spral_ssids_ciface
   use iso_c_binding
   use spral_ssids
+  use spral_hw_topology, only : numa_region
   implicit none
 
   type, bind(C) :: spral_ssids_options
@@ -224,6 +225,81 @@ subroutine spral_ssids_analyse(ccheck, n, corder, cptr, crow, cval, cakeep, &
   endif
   call copy_inform_out(finform, cinform)
 end subroutine spral_ssids_analyse
+
+subroutine spral_ssids_analyse_topology(ccheck, n, order, ptr, row, val, cakeep, &
+   coptions, cinform, nproc, ngpu, gpus) bind(C)
+use spral_ssids_ciface
+implicit none
+
+logical(C_BOOL), intent(in), value :: ccheck
+integer(C_INT), intent(in), value :: n, nproc, ngpu
+integer(C_INT), intent(inout), dimension(n), optional :: order
+integer(C_INT64_T), intent(in), dimension(n+1) :: ptr
+type(C_PTR), intent(inout) :: cakeep
+type(spral_ssids_options), intent(in) :: coptions
+type(spral_ssids_inform), intent(out) :: cinform
+integer(C_INT), intent(in), dimension(ptr(n+1)-coptions%array_base) :: row
+real(C_DOUBLE), dimension(ptr(n+1)-coptions%array_base), optional :: val
+integer(C_INT), intent(in), dimension(ngpu) :: gpus
+
+integer(C_INT64_T), dimension(:), allocatable :: ptr_find
+integer(C_INT), dimension(:), allocatable :: row_find, order_find
+logical :: fcheck
+type(ssids_akeep), pointer :: fakeep
+type(ssids_options) :: foptions
+type(ssids_inform) :: finform
+type(numa_region), dimension(:), allocatable :: topology
+
+logical :: cindexed
+
+! Copy options in first to find out whether we use Fortran or C indexing
+call copy_options_in(coptions, foptions, cindexed)
+
+! Create topology
+allocate(topology(1))
+topology(1)%nproc = nproc
+allocate(topology(1)%gpus(ngpu))
+topology(1)%gpus = gpus
+
+! Translate arguments
+fcheck = ccheck
+if (cindexed) then
+   allocate(ptr_find(n+1))
+   ptr_find = ptr + 1
+   allocate(row_find(ptr(n+1)-1))
+   row_find = row + 1
+   if (present(order)) then
+      allocate(order_find(n))
+      order_find = order + 1
+   end if
+end if
+
+if (C_ASSOCIATED(cakeep)) then
+   ! Reuse old pointer
+   call C_F_POINTER(cakeep, fakeep)
+else
+   ! Create new pointer
+   allocate(fakeep)
+   cakeep = C_LOC(fakeep)
+end if
+
+! Call Fortran routine
+if (cindexed) then
+   if (present(order)) then
+      call ssids_analyse(fcheck, n, ptr_find, row_find, fakeep, foptions, finform, order=order_find, val=val, topology=topology)
+   else
+      call ssids_analyse(fcheck, n, ptr_find, row_find, fakeep, foptions, finform, val=val, topology=topology)
+   end if
+else
+   call ssids_analyse(fcheck, n, ptr, row, fakeep, foptions, finform, order=order, val=val, topology=topology)
+end if
+
+! Copy arguments out
+if (present(order) .and. cindexed) then
+   order = order_find - 1
+endif
+call copy_inform_out(finform, cinform)
+end subroutine spral_ssids_analyse_topology
 
 subroutine spral_ssids_analyse_ptr32(ccheck, n, corder, cptr, crow, cval, &
      cakeep, coptions, cinform) bind(C)

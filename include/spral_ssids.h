@@ -67,6 +67,11 @@ void spral_ssids_analyse(bool check, int n, int *order, const int64_t *ptr,
       const int *row, const double *val, void **akeep,
       const struct spral_ssids_options *options,
       struct spral_ssids_inform *inform);
+void spral_ssids_analyse_topology(bool check, int n, int *order, const int64_t *ptr,
+      const int *row, const double *val, void **akeep,
+      const struct spral_ssids_options *options,
+      struct spral_ssids_inform *inform,
+      int nproc, int ngpu, const int *gpus);
 void spral_ssids_analyse_ptr32(bool check, int n, int *order, const int *ptr,
       const int *row, const double *val, void **akeep,
       const struct spral_ssids_options *options,
