@@ -42,8 +42,9 @@ void spral_hw_topology_guess(int* nregions, NumaRegion** regions) {
    *regions = new NumaRegion[*nregions];
    for(int i=0; i<*nregions; ++i) {
       NumaRegion& region = (*regions)[i];
-      region.nproc = topology.count_cores(numa_nodes[i]);
-      auto gpus = topology.get_gpus(numa_nodes[i]);
+      auto parent = numa_nodes[i]->parent;
+      region.nproc = topology.count_cores(parent);
+      auto gpus = topology.get_gpus(parent);
       region.ngpu = gpus.size();
       region.gpus = (region.ngpu > 0) ? new int[region.ngpu] : nullptr;
       for(int i=0; i<region.ngpu; ++i)
