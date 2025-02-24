@@ -41,10 +41,10 @@ int main(void) {
    regions[0].nproc = 1;
    regions[0].ngpu = 0;
    regions[0].gpus = NULL;
-   int gpus[] = {0};
+   int gpus[] = {0,1};
    regions[1].nproc = 1;
-   regions[1].ngpu = 1;
-   regions[1].gpus = gpus;
+   regions[1].ngpu = 2;
+   regions[1].gpus = (int *) &gpus;
 
    /* Perform analyse and factorise with data checking */
    bool check = true;
