@@ -48,6 +48,12 @@ module spral_ssids_ciface
      character(C_CHAR) :: unused(76)
   end type spral_ssids_inform
 
+  type, bind(C) :: spral_numa_region
+     integer(C_INT) :: nproc
+     integer(C_INT) :: ngpu
+     type(C_PTR) :: gpus
+  end type spral_numa_region
+
 contains
   subroutine copy_options_in(coptions, foptions, cindexed)
     implicit none
@@ -227,12 +233,12 @@ subroutine spral_ssids_analyse(ccheck, n, corder, cptr, crow, cval, cakeep, &
 end subroutine spral_ssids_analyse
 
 subroutine spral_ssids_analyse_topology(ccheck, n, order, ptr, row, val, cakeep, &
-   coptions, cinform, nproc, ngpu, gpus) bind(C)
+   coptions, cinform, nregions, cregions) bind(C)
 use spral_ssids_ciface
 implicit none
 
 logical(C_BOOL), intent(in), value :: ccheck
-integer(C_INT), intent(in), value :: n, nproc, ngpu
+integer(C_INT), intent(in), value :: n, nregions
 integer(C_INT), intent(inout), dimension(n), optional :: order
 integer(C_INT64_T), intent(in), dimension(n+1) :: ptr
 type(C_PTR), intent(inout) :: cakeep
@@ -240,7 +246,7 @@ type(spral_ssids_options), intent(in) :: coptions
 type(spral_ssids_inform), intent(out) :: cinform
 integer(C_INT), intent(in), dimension(ptr(n+1)-coptions%array_base) :: row
 real(C_DOUBLE), dimension(ptr(n+1)-coptions%array_base), optional :: val
-integer(C_INT), intent(in), dimension(ngpu) :: gpus
+type(spral_numa_region), intent(in), dimension(nregions) :: cregions
 
 integer(C_INT64_T), dimension(:), allocatable :: ptr_find
 integer(C_INT), dimension(:), allocatable :: row_find, order_find
@@ -248,18 +254,27 @@ logical :: fcheck
 type(ssids_akeep), pointer :: fakeep
 type(ssids_options) :: foptions
 type(ssids_inform) :: finform
-type(numa_region), dimension(:), allocatable :: topology
+type(numa_region), dimension(:), allocatable :: fregions
+integer(C_INT), dimension(:), pointer :: fgpus
 
 logical :: cindexed
+integer :: i
 
 ! Copy options in first to find out whether we use Fortran or C indexing
 call copy_options_in(coptions, foptions, cindexed)
 
-! Create topology
-allocate(topology(1))
-topology(1)%nproc = nproc
-allocate(topology(1)%gpus(ngpu))
-topology(1)%gpus = gpus
+! Translate topology
+allocate(fregions(nregions))
+do i = 1, nregions
+   fregions(i)%nproc = cregions(i)%nproc
+   if (cregions(i)%ngpu .gt. 0) then
+      allocate(fregions(i)%gpus(cregions(i)%ngpu))
+      call C_F_POINTER(cregions(i)%gpus, fgpus, shape=(/ cregions(i)%ngpu /))
+      fregions(i)%gpus(:) = fgpus
+   else ! no gpus, need to allocate zero array
+      allocate(fregions(i)%gpus(0))
+   end if
+end do
 
 ! Translate arguments
 fcheck = ccheck
@@ -286,12 +301,12 @@ end if
 ! Call Fortran routine
 if (cindexed) then
    if (present(order)) then
-      call ssids_analyse(fcheck, n, ptr_find, row_find, fakeep, foptions, finform, order=order_find, val=val, topology=topology)
+      call ssids_analyse(fcheck, n, ptr_find, row_find, fakeep, foptions, finform, order=order_find, val=val, topology=fregions)
    else
-      call ssids_analyse(fcheck, n, ptr_find, row_find, fakeep, foptions, finform, val=val, topology=topology)
+      call ssids_analyse(fcheck, n, ptr_find, row_find, fakeep, foptions, finform, val=val, topology=fregions)
    end if
 else
-   call ssids_analyse(fcheck, n, ptr, row, fakeep, foptions, finform, order=order, val=val, topology=topology)
+   call ssids_analyse(fcheck, n, ptr, row, fakeep, foptions, finform, order=order, val=val, topology=fregions)
 end if
 
 ! Copy arguments out
