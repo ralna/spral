@@ -136,6 +136,52 @@ Basic Subroutines
    Provided for backwards comptability, users are encourage to use 64-bit ptr
    in new code.
 
+.. c:function:: void spral_ssids_analyse_topology(bool check, int n, int *order, const int64_t *ptr, const int *row, const double *val, void **akeep, const struct spral_ssids_options *options, struct spral_ssids_inform *inform, int nregions, const struct spral_numa_region *regions)
+
+   Perform the analyse (symbolic) phase of the factorization for a matrix
+   supplied in :doc:`CSC format<csc_format>` and specify the machine topology.
+   The resulting symbolic factors stored in :c:type:`akeep` should be passed
+   unaltered in the following call to :c:func:`spral_ssids_factor()`.
+
+   :param check: if true, matrix data is checked. Out-of-range entries
+      are dropped and duplicate entries are summed.
+   :param n: number of columns in :math:`A`.
+   :param order: may be `NULL`; otherwise must be an array of size `n`
+      used on entry a user-supplied ordering
+      (:c:type:`options.ordering=0 <spral_ssids_options.ordering>`).
+      On return, the actual ordering used.
+   :param ptr[n+1]: column pointers for :math:`A`
+      (see :doc:`CSC format<csc_format>`).
+   :param row[ptr[n]]: row indices for :math:`A`
+      (see :doc:`CSC format<csc_format>`).
+   :param val: may be `NULL`; otherwise must be an array of size `ptr[n]`
+      containing non-zero values for :math:`A`
+      (see :doc:`CSC format<csc_format>`).
+      Only used if a matching-based ordering is requested.
+   :param akeep: returns symbolic factorization, to be passed unchanged to
+      subsequent routines.
+   :param options: specifies algorithm options to be used
+      (see :c:type:`spral_ssids_options`).
+   :param inform: returns information about the execution of the routine
+      (see :c:type:`spral_ssids_inform`).
+   :param nregions: specifies the number of independent NUMA regions in
+      the machine topology.
+   :param regions: specifies the machine topology to be exploited.
+      Region `i` will use `regions[i].nproc` threads and is associated
+      with `regions[i].ngpu` GPUs in the integer array pointed to by
+      `topology[i].gpus`, which may be a NULL pointer. See the
+      :ref:`method section <ssids_method>` for details of how work is
+      divided.
+
+   .. note::
+
+      If a user-supplied ordering is used, it may be altered by this routine,
+      with the altered version returned in `order[]`. This version will be
+      equivalent to the original ordering, except that some supernodes may have
+      been amalgamated, a topographic ordering may have been applied to the
+      assembly tree and the order of columns within a supernode may have been
+      adjusted to improve cache locality.
+
 .. c:function:: void spral_ssids_analyse_coord(int n, int *order, int64_t ne, const int *row, const int *col, const double *val, void **akeep, const struct spral_ssids_options *options, struct spral_ssids_inform *inform)
 
    As :c:func:`spral_ssids_analyse()`, but for coordinate data. The variant
@@ -718,6 +764,23 @@ Derived types
    |             | the environment variable OMP_PROC_BIND=true (this may       |
    |             | affect performance on NUMA systems).                        |
    +-------------+-------------------------------------------------------------+
+
+
+.. c:type:: struct spral_numa_region
+
+   Used to specify information about an independent NUMA region to be exploited.
+
+   .. c:member:: int nproc
+
+      Number of threads in the NUMA region.
+
+   .. c:member:: int ngpu
+
+      Number of GPUs in the NUMA region.
+
+   .. c:member:: int* gpus
+
+      Pointer to an array of the GPUs in the NUMA region.
 
 .. _ssids_example:
 

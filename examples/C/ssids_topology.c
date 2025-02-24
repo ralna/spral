@@ -30,20 +30,15 @@ int main(void) {
    /* The right-hand side with solution (1.0, 2.0, 3.0, 4.0, 5.0) */
    double x[] = { 4.0, 17.0, 19.0, 2.0, 12.0 };
 
-   /* Fake topology:
-    * NUMA_REGION
-    *  CPU #1
-    * NUMA_REGION
-    *  CPU #2
-    *  GPU #1 */
+   /* Fake topology */
    int nregions = 2;
    struct spral_numa_region regions[nregions];
    regions[0].nproc = 1;
    regions[0].ngpu = 0;
    regions[0].gpus = NULL;
-   int gpus[] = {0,1};
    regions[1].nproc = 1;
    regions[1].ngpu = 2;
+   int gpus[] = {0,1};
    regions[1].gpus = (int *) &gpus;
 
    /* Perform analyse and factorise with data checking */
