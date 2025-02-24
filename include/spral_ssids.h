@@ -56,6 +56,12 @@ struct spral_ssids_inform {
    char unused[76]; // Allow for future expansion
 };
 
+struct spral_numa_region {
+   int nproc;
+   int ngpu;
+   int *gpus;
+};
+
 /************************************
  * Basic subroutines
  ************************************/
@@ -71,7 +77,7 @@ void spral_ssids_analyse_topology(bool check, int n, int *order, const int64_t *
       const int *row, const double *val, void **akeep,
       const struct spral_ssids_options *options,
       struct spral_ssids_inform *inform,
-      int nproc, int ngpu, const int *gpus);
+      int nregions, const struct spral_numa_region *regions);
 void spral_ssids_analyse_ptr32(bool check, int n, int *order, const int *ptr,
       const int *row, const double *val, void **akeep,
       const struct spral_ssids_options *options,
