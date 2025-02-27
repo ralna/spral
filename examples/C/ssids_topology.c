@@ -31,7 +31,7 @@ int main(void) {
    double x[] = { 4.0, 17.0, 19.0, 2.0, 12.0 };
 
    /* Fake topology */
-   int nregions = 2;
+   #define nregions 2
    struct spral_numa_region regions[nregions];
    regions[0].nproc = 1;
    regions[0].ngpu = 0;
