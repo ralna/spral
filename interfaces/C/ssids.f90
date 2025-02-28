@@ -1,7 +1,9 @@
 module spral_ssids_ciface
   use iso_c_binding
   use spral_ssids
-  use spral_hw_topology, only : numa_region
+  use spral_hw_topology, only : &
+      numa_region,              &
+      spral_numa_region => c_numa_region
   implicit none
 
   type, bind(C) :: spral_ssids_options
@@ -47,12 +49,6 @@ module spral_ssids_ciface
      integer(C_INT) :: maxsupernode
      character(C_CHAR) :: unused(76)
   end type spral_ssids_inform
-
-  type, bind(C) :: spral_numa_region
-     integer(C_INT) :: nproc
-     integer(C_INT) :: ngpu
-     type(C_PTR) :: gpus
-  end type spral_numa_region
 
 contains
   subroutine copy_options_in(coptions, foptions, cindexed)
@@ -233,87 +229,87 @@ subroutine spral_ssids_analyse(ccheck, n, corder, cptr, crow, cval, cakeep, &
 end subroutine spral_ssids_analyse
 
 subroutine spral_ssids_analyse_topology(ccheck, n, order, ptr, row, val, cakeep, &
-   coptions, cinform, nregions, cregions) bind(C)
-use spral_ssids_ciface
-implicit none
+     coptions, cinform, nregions, cregions) bind(C)
+  use spral_ssids_ciface
+  implicit none
 
-logical(C_BOOL), intent(in), value :: ccheck
-integer(C_INT), intent(in), value :: n, nregions
-integer(C_INT), intent(inout), dimension(n), optional :: order
-integer(C_INT64_T), intent(in), dimension(n+1) :: ptr
-type(C_PTR), intent(inout) :: cakeep
-type(spral_ssids_options), intent(in) :: coptions
-type(spral_ssids_inform), intent(out) :: cinform
-integer(C_INT), intent(in), dimension(ptr(n+1)-coptions%array_base) :: row
-real(C_DOUBLE), dimension(ptr(n+1)-coptions%array_base), optional :: val
-type(spral_numa_region), intent(in), dimension(nregions) :: cregions
+  logical(C_BOOL), intent(in), value :: ccheck
+  integer(C_INT), intent(in), value :: n, nregions
+  integer(C_INT), intent(inout), dimension(n), optional :: order
+  integer(C_INT64_T), intent(in), dimension(n+1) :: ptr
+  type(C_PTR), intent(inout) :: cakeep
+  type(spral_ssids_options), intent(in) :: coptions
+  type(spral_ssids_inform), intent(out) :: cinform
+  integer(C_INT), intent(in), dimension(ptr(n+1)-coptions%array_base) :: row
+  real(C_DOUBLE), dimension(ptr(n+1)-coptions%array_base), optional :: val
+  type(spral_numa_region), intent(in), dimension(nregions) :: cregions
 
-integer(C_INT64_T), dimension(:), allocatable :: ptr_find
-integer(C_INT), dimension(:), allocatable :: row_find, order_find
-logical :: fcheck
-type(ssids_akeep), pointer :: fakeep
-type(ssids_options) :: foptions
-type(ssids_inform) :: finform
-type(numa_region), dimension(:), allocatable :: fregions
-integer(C_INT), dimension(:), pointer :: fgpus
+  integer(C_INT64_T), dimension(:), allocatable :: ptr_fidx
+  integer(C_INT), dimension(:), allocatable :: row_fidx, order_fidx
+  logical :: fcheck
+  type(ssids_akeep), pointer :: fakeep
+  type(ssids_options) :: foptions
+  type(ssids_inform) :: finform
+  type(numa_region), dimension(:), allocatable :: fregions
+  integer(C_INT), dimension(:), pointer :: fgpus
 
-logical :: cindexed
-integer :: i
+  logical :: cindexed
+  integer :: i
 
-! Copy options in first to find out whether we use Fortran or C indexing
-call copy_options_in(coptions, foptions, cindexed)
+  ! Copy options in first to find out whether we use Fortran or C indexing
+  call copy_options_in(coptions, foptions, cindexed)
 
-! Translate topology
-allocate(fregions(nregions))
-do i = 1, nregions
-   fregions(i)%nproc = cregions(i)%nproc
-   if (cregions(i)%ngpu .gt. 0) then
-      allocate(fregions(i)%gpus(cregions(i)%ngpu))
-      call C_F_POINTER(cregions(i)%gpus, fgpus, shape=(/ cregions(i)%ngpu /))
-      fregions(i)%gpus(:) = fgpus
-   else ! no gpus, need to allocate zero array
-      allocate(fregions(i)%gpus(0))
-   end if
-end do
+  ! Translate topology
+  allocate(fregions(nregions))
+  do i = 1, nregions
+    fregions(i)%nproc = cregions(i)%nproc
+    if (cregions(i)%ngpu .gt. 0) then
+        allocate(fregions(i)%gpus(cregions(i)%ngpu))
+        call C_F_POINTER(cregions(i)%gpus, fgpus, shape=(/ cregions(i)%ngpu /))
+        fregions(i)%gpus(:) = fgpus
+    else ! no gpus, need to allocate zero array
+        allocate(fregions(i)%gpus(0))
+    end if
+  end do
 
-! Translate arguments
-fcheck = ccheck
-if (cindexed) then
-   allocate(ptr_find(n+1))
-   ptr_find = ptr + 1
-   allocate(row_find(ptr(n+1)-1))
-   row_find = row + 1
-   if (present(order)) then
-      allocate(order_find(n))
-      order_find = order + 1
-   end if
-end if
+  ! Translate arguments
+  fcheck = ccheck
+  if (cindexed) then
+    allocate(ptr_fidx(n+1))
+    ptr_fidx = ptr + 1
+    allocate(row_fidx(ptr_fidx(n+1)-1))
+    row_fidx = row + 1
+    if (present(order)) then
+        allocate(order_fidx(n))
+        order_fidx = order + 1
+    end if
+  end if
 
-if (C_ASSOCIATED(cakeep)) then
-   ! Reuse old pointer
-   call C_F_POINTER(cakeep, fakeep)
-else
-   ! Create new pointer
-   allocate(fakeep)
-   cakeep = C_LOC(fakeep)
-end if
+  if (C_ASSOCIATED(cakeep)) then
+    ! Reuse old pointer
+    call C_F_POINTER(cakeep, fakeep)
+  else
+    ! Create new pointer
+    allocate(fakeep)
+    cakeep = C_LOC(fakeep)
+  end if
 
-! Call Fortran routine
-if (cindexed) then
-   if (present(order)) then
-      call ssids_analyse(fcheck, n, ptr_find, row_find, fakeep, foptions, finform, order=order_find, val=val, topology=fregions)
-   else
-      call ssids_analyse(fcheck, n, ptr_find, row_find, fakeep, foptions, finform, val=val, topology=fregions)
-   end if
-else
-   call ssids_analyse(fcheck, n, ptr, row, fakeep, foptions, finform, order=order, val=val, topology=fregions)
-end if
+  ! Call Fortran routine
+  if (cindexed) then
+    if (present(order)) then
+        call ssids_analyse(fcheck, n, ptr_fidx, row_fidx, fakeep, foptions, finform, order=order_fidx, val=val, topology=fregions)
+    else
+        call ssids_analyse(fcheck, n, ptr_fidx, row_fidx, fakeep, foptions, finform, val=val, topology=fregions)
+    end if
+  else
+    call ssids_analyse(fcheck, n, ptr, row, fakeep, foptions, finform, order=order, val=val, topology=fregions)
+  end if
 
-! Copy arguments out
-if (present(order) .and. cindexed) then
-   order = order_find - 1
-endif
-call copy_inform_out(finform, cinform)
+  ! Copy arguments out
+  if (present(order) .and. cindexed) then
+    order = order_fidx - 1
+  endif
+  call copy_inform_out(finform, cinform)
 end subroutine spral_ssids_analyse_topology
 
 subroutine spral_ssids_analyse_ptr32(ccheck, n, corder, cptr, crow, cval, &
