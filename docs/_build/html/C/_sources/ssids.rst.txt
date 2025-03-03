@@ -136,6 +136,19 @@ Basic Subroutines
    Provided for backwards comptability, users are encourage to use 64-bit ptr
    in new code.
 
+.. c:function:: void spral_ssids_analyse_topology(bool check, int n, int *order, const int64_t *ptr, const int *row, const double *val, void **akeep, const struct spral_ssids_options *options, struct spral_ssids_inform *inform, int nregions, const struct spral_numa_region *regions)
+
+   As :c:func:`spral_ssids_analyse()` with the following additional arguments.
+
+   :param nregions: specifies the number of independent NUMA regions in
+      the machine topology.
+   :param regions: specifies the machine topology to be exploited.
+      Region `i` will use `regions[i].nproc` threads and is associated
+      with `regions[i].ngpu` GPUs in the integer array pointed to by
+      `regions[i].gpus`, which may be a NULL pointer if `regions[i].ngpu = 0`.
+      See the :ref:`method section <ssids_method>` for details of how work is
+      divided.
+
 .. c:function:: void spral_ssids_analyse_coord(int n, int *order, int64_t ne, const int *row, const int *col, const double *val, void **akeep, const struct spral_ssids_options *options, struct spral_ssids_inform *inform)
 
    As :c:func:`spral_ssids_analyse()`, but for coordinate data. The variant
@@ -718,6 +731,23 @@ Derived types
    |             | the environment variable OMP_PROC_BIND=true (this may       |
    |             | affect performance on NUMA systems).                        |
    +-------------+-------------------------------------------------------------+
+
+
+.. c:type:: struct spral_numa_region
+
+   Used to specify information about an independent NUMA region to be exploited.
+
+   .. c:member:: int nproc
+
+      Number of threads in the NUMA region.
+
+   .. c:member:: int ngpu
+
+      Number of GPUs in the NUMA region.
+
+   .. c:member:: int* gpus
+
+      Pointer to an array of the GPUs in the NUMA region.
 
 .. _ssids_example:
 
