@@ -611,7 +611,7 @@ contains
 
     do i = 1, n
        j = old_to_new(i)
-       if (j .eq. 0) then
+       if (j .lt. 0) then
           scale(i) = -huge(scale)
        else
           ! Note: we need to subtract col max using old matrix numbering
